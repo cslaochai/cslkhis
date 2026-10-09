@@ -1,6 +1,6 @@
 -- ============================================================
 -- 领域 05 医保（目录·对照·备案·结算·审核）（本域 15 表 + 上游参照 5 表 / 23 条关系）
--- 由 workspace/_er/emit.mjs 从 dev 库 information_schema 反向生成，只用于建模，禁止在业务库执行。
+-- 由 workspace/_er/refresh.mjs 从 dev 库 information_schema 反向生成，只用于建模，禁止在业务库执行。
 -- 关系 = *_id 列命名推断 + 真实数据覆盖率验证，逐条证据见 docs/er/relationships.csv。
 -- PowerDesigner：File → Reverse Engineer → Database → 模板选 MySQL 8.0 → 勾选 Script file 指向本文件。
 -- ============================================================
@@ -111,7 +111,6 @@ CREATE TABLE `biz_yb_chronic_reg` (
   `del_flag` tinyint NOT NULL DEFAULT 0,
   `remark` varchar(500),
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_chronic_active` (`patient_id`, `disease_code`, `reg_status`, `valid_end_key`),
   UNIQUE KEY `uk_chronic_reg_no` (`reg_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='门诊慢特病备案';
 
@@ -174,7 +173,7 @@ CREATE TABLE `biz_yb_deduct_notice` (
 
 -- biz_yb_deduct_log  医保扣款处理留痕
 CREATE TABLE `biz_yb_deduct_log` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+  `id` bigint NOT NULL COMMENT '自增主键',
   `notice_id` bigint NOT NULL COMMENT '扣款通知ID',
   `action` tinyint NOT NULL COMMENT '动作（1-新建草稿 2-发起申诉 3-录入申诉结果 4-确认扣款并追责 5-录入缴回 6-作废）',
   `detail` varchar(1000) COMMENT '动作详情/备注',
@@ -214,7 +213,7 @@ CREATE TABLE `biz_yb_inspection` (
 
 -- sys_insurance_policy  医保政策配置
 CREATE TABLE `sys_insurance_policy` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `id` bigint NOT NULL COMMENT '主键ID',
   `policy_name` varchar(100) NOT NULL COMMENT '政策名称',
   `insurance_type` varchar(50) NOT NULL COMMENT '医保类型',
   `settlement_type` tinyint COMMENT '结算方式（2-城镇职工医保 3-城乡居民医保 4-公费医疗）',
@@ -248,12 +247,12 @@ CREATE TABLE `biz_insurance_catalog_rule` (
   `create_by` varchar(64),
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
   `update_by` varchar(64),
-  `update_time` datetime,
+  `update_time` datetime ON UPDATE CURRENT_TIMESTAMP,
   `del_flag` tinyint NOT NULL DEFAULT 0,
   `remark` varchar(500),
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_item_catalog_encounter` (`item_code`, `catalog_type`, `encounter_type`, `insurance_type`, `effective_date`),
-  UNIQUE KEY `uk_rule_no` (`rule_no`)
+  UNIQUE KEY `uk_rule_no` (`rule_no`),
+  UNIQUE KEY `uk_item_catalog_encounter` (`item_code`, `catalog_type`, `encounter_type`, `insurance_type`, `effective_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='医保目录报销规则';
 
 -- biz_insurance_settlement  医保结算清单
@@ -308,8 +307,8 @@ CREATE TABLE `biz_insurance_settlement` (
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_isb_bill` (`bill_id`),
-  UNIQUE KEY `uk_settlement_no` (`settlement_no`)
+  UNIQUE KEY `uk_settlement_no` (`settlement_no`),
+  UNIQUE KEY `uk_isb_bill` (`bill_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='医保结算清单';
 
 -- biz_settlement_diagnosis  结算清单诊断明细
@@ -477,7 +476,7 @@ CREATE TABLE `biz_appoint_info` (
   `refund_time` datetime COMMENT '退号时间',
   `refund_reason` varchar(200) COMMENT '退号原因',
   `bill_id` bigint COMMENT '挂号费结算账单ID',
-  `bill_no` varchar(32) COMMENT '账单号',
+  `bill_no` varchar(32) COMMENT '账单号（快照）',
   `create_by` varchar(64) COMMENT '创建人',
   `create_by_id` bigint COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -548,11 +547,11 @@ CREATE TABLE `biz_settlement_bill` (
   `id` bigint NOT NULL COMMENT '主键（雪花）',
   `bill_no` varchar(32) NOT NULL COMMENT '账单号',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者号',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
+  `patient_no` varchar(32) COMMENT '患者号（快照）',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
   `encounter_type` tinyint NOT NULL COMMENT '就诊类型（1-门诊 2-住院）',
   `encounter_id` bigint NOT NULL COMMENT '就诊标识',
-  `encounter_no` varchar(32) COMMENT '就诊标识单号',
+  `encounter_no` varchar(32) COMMENT '就诊标识单号（快照）',
   `bill_type` tinyint NOT NULL DEFAULT 2 COMMENT '账单类型（1-挂号费结算 2-门诊诊间结算 3-住院中途结算 4-出院结算）',
   `fee_count` int NOT NULL DEFAULT 0 COMMENT '纳入本账单的记账行数',
   `total_amount` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '应收合计',
@@ -569,10 +568,10 @@ CREATE TABLE `biz_settlement_bill` (
   `bill_date` date NOT NULL COMMENT '账务归属日',
   `bill_time` datetime COMMENT '结算生成时间',
   `bill_by_id` bigint COMMENT '结算人员工ID',
-  `bill_by_name` varchar(64) COMMENT '结算人姓名',
+  `bill_by_name` varchar(64) COMMENT '结算人姓名（快照）',
   `pay_time` datetime COMMENT '收讫时间',
   `void_by_id` bigint COMMENT '作废操作人',
-  `void_by_name` varchar(64) COMMENT '作废操作人姓名',
+  `void_by_name` varchar(64) COMMENT '作废操作人姓名（快照）',
   `void_time` datetime COMMENT '作废时间',
   `void_reason` varchar(200) COMMENT '作废原因（必填）',
   `orig_bill_id` bigint COMMENT '红冲指针',
@@ -592,13 +591,14 @@ CREATE TABLE `sys_department` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `dept_code` varchar(32) NOT NULL COMMENT '科室编码（唯一）',
   `dept_name` varchar(100) NOT NULL COMMENT '科室名称',
-  `dept_type` tinyint NOT NULL DEFAULT 1 COMMENT '科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他）',
+  `dept_type` varchar(20) NOT NULL COMMENT '科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他），多个类型逗号分隔',
   `parent_id` bigint NOT NULL DEFAULT 0 COMMENT '父科室ID',
   `sort_order` int NOT NULL DEFAULT 0 COMMENT '排序号',
   `dept_icon` varchar(200) COMMENT '科室图标',
   `dept_desc` varchar(500) COMMENT '科室描述',
   `contact_phone` varchar(20) COMMENT '联系电话',
   `location` varchar(200) COMMENT '科室位置',
+  `dept_leader_id` bigint COMMENT '科室负责人（sys_employee.id)',
   `is_open` tinyint DEFAULT 1 COMMENT '是否开诊（0-否 1-是）',
   `status` tinyint DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
   `create_by` varchar(64) COMMENT '创建人',
@@ -642,7 +642,6 @@ CREATE TABLE `sys_employee` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_emp_code` (`emp_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='员工';
-
 -- ---------------- 参照关系（E-R 连线） ----------------
 ALTER TABLE `biz_compliance_audit` ADD CONSTRAINT `fk_biz_compliance_audit_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_insurance_settlement` (`id`);
 ALTER TABLE `biz_compliance_audit` ADD CONSTRAINT `fk_biz_compliance_audit_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);

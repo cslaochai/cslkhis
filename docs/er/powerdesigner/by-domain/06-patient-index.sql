@@ -1,6 +1,6 @@
 -- ============================================================
 -- 领域 06 患者主索引与健康档案（本域 12 表 + 上游参照 4 表 / 22 条关系）
--- 由 workspace/_er/emit.mjs 从 dev 库 information_schema 反向生成，只用于建模，禁止在业务库执行。
+-- 由 workspace/_er/refresh.mjs 从 dev 库 information_schema 反向生成，只用于建模，禁止在业务库执行。
 -- 关系 = *_id 列命名推断 + 真实数据覆盖率验证，逐条证据见 docs/er/relationships.csv。
 -- PowerDesigner：File → Reverse Engineer → Database → 模板选 MySQL 8.0 → 勾选 Script file 指向本文件。
 -- ============================================================
@@ -94,8 +94,8 @@ CREATE TABLE `biz_patient_allergy` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
-  `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint(1) DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='药物过敏史';
 
@@ -115,7 +115,7 @@ CREATE TABLE `biz_patient_past_disease` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='既往疾病史';
@@ -127,7 +127,7 @@ CREATE TABLE `biz_patient_family_history` (
   `relationship` varchar(50) NOT NULL COMMENT '与患者关系（父亲/母亲/兄弟/姐妹/祖父/祖母/子女）',
   `name` varchar(100) COMMENT '亲属姓名',
   `age` int COMMENT '年龄',
-  `is_alive` tinyint DEFAULT 1 COMMENT '是否在世（0-已故 1-在世）',
+  `is_alive` tinyint(1) DEFAULT 1 COMMENT '是否在世（0-已故 1-在世）',
   `cause_of_death` varchar(200) COMMENT '死亡原因',
   `health_status` varchar(500) COMMENT '健康状况描述',
   `hereditary_disease` varchar(200) COMMENT '遗传性疾病（如：高血压、糖尿病、肿瘤等）',
@@ -136,8 +136,8 @@ CREATE TABLE `biz_patient_family_history` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
-  `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint(1) DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='家族史';
 
@@ -158,8 +158,8 @@ CREATE TABLE `biz_patient_surgery_history` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
-  `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint(1) DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='手术外伤史';
 
@@ -182,8 +182,8 @@ CREATE TABLE `biz_patient_medication_history` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
-  `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint(1) DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='既往用药史';
 
@@ -194,9 +194,8 @@ CREATE TABLE `biz_patient_tag_relation` (
   `tag_id` bigint NOT NULL COMMENT '标签ID',
   `source_type` tinyint DEFAULT 1 COMMENT '标签来源（1-手动打标 2-系统自动打标）',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '打标时间',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_patient_tag` (`patient_id`, `tag_id`)
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='患者标签关联';
 
 -- biz_patient_guardian  就诊人绑定
@@ -222,11 +221,11 @@ CREATE TABLE `biz_patient_merge_log` (
   `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `merge_no` varchar(32) NOT NULL COMMENT '合并流水号',
   `master_id` bigint NOT NULL COMMENT '主档患者ID',
-  `master_no` varchar(32) COMMENT '主档患者号',
-  `master_name` varchar(50) COMMENT '主档姓名',
+  `master_no` varchar(32) COMMENT '主档患者号（快照）',
+  `master_name` varchar(50) COMMENT '主档姓名（快照）',
   `merged_id` bigint NOT NULL COMMENT '被并入的患者ID',
-  `merged_no` varchar(32) COMMENT '被并患者号',
-  `merged_name` varchar(50) COMMENT '被并姓名',
+  `merged_no` varchar(32) COMMENT '被并患者号（快照）',
+  `merged_name` varchar(50) COMMENT '被并姓名（快照）',
   `match_type` tinyint NOT NULL COMMENT '匹配置信级别(强)（1-身份证号相同 2-姓名+性别+出生日期相同 3-姓名+手机号相同 4-人工判定）',
   `match_snapshot` varchar(500) COMMENT '命中依据的字段值快照',
   `master_snapshot` varchar(1000) COMMENT '主档关键字段快照 JSON',
@@ -295,13 +294,14 @@ CREATE TABLE `sys_department` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `dept_code` varchar(32) NOT NULL COMMENT '科室编码（唯一）',
   `dept_name` varchar(100) NOT NULL COMMENT '科室名称',
-  `dept_type` tinyint NOT NULL DEFAULT 1 COMMENT '科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他）',
+  `dept_type` varchar(20) NOT NULL COMMENT '科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他），多个类型逗号分隔',
   `parent_id` bigint NOT NULL DEFAULT 0 COMMENT '父科室ID',
   `sort_order` int NOT NULL DEFAULT 0 COMMENT '排序号',
   `dept_icon` varchar(200) COMMENT '科室图标',
   `dept_desc` varchar(500) COMMENT '科室描述',
   `contact_phone` varchar(20) COMMENT '联系电话',
   `location` varchar(200) COMMENT '科室位置',
+  `dept_leader_id` bigint COMMENT '科室负责人（sys_employee.id)',
   `is_open` tinyint DEFAULT 1 COMMENT '是否开诊（0-否 1-是）',
   `status` tinyint DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
   `create_by` varchar(64) COMMENT '创建人',
@@ -348,12 +348,12 @@ CREATE TABLE `sys_employee` (
 
 -- sys_patient_tag  患者标签
 CREATE TABLE `sys_patient_tag` (
-  `tag_id` bigint NOT NULL AUTO_INCREMENT COMMENT '标签ID',
+  `tag_id` bigint NOT NULL COMMENT '标签ID',
   `tag_name` varchar(50) NOT NULL COMMENT '标签名称',
   `short_name` varchar(2) COMMENT '标签缩写用于展示',
   `tag_color` varchar(20) COMMENT '标签颜色',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`tag_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='患者标签';
 
@@ -380,10 +380,9 @@ CREATE TABLE `sys_user` (
   `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_openid` (`openid`),
-  UNIQUE KEY `uk_user_name` (`user_name`)
+  UNIQUE KEY `uk_user_name` (`user_name`),
+  UNIQUE KEY `uk_openid` (`openid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户';
-
 -- ---------------- 参照关系（E-R 连线） ----------------
 ALTER TABLE `biz_chronic_record` ADD CONSTRAINT `fk_biz_chronic_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
 ALTER TABLE `biz_chronic_record` ADD CONSTRAINT `fk_biz_chronic_record_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);

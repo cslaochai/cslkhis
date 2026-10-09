@@ -1,6 +1,6 @@
 -- ============================================================
 -- 领域 04 临床字典与项目目录（药品·耗材·诊疗项目·诊断编码）（本域 21 表 + 上游参照 2 表 / 10 条关系）
--- 由 workspace/_er/emit.mjs 从 dev 库 information_schema 反向生成，只用于建模，禁止在业务库执行。
+-- 由 workspace/_er/refresh.mjs 从 dev 库 information_schema 反向生成，只用于建模，禁止在业务库执行。
 -- 关系 = *_id 列命名推断 + 真实数据覆盖率验证，逐条证据见 docs/er/relationships.csv。
 -- PowerDesigner：File → Reverse Engineer → Database → 模板选 MySQL 8.0 → 勾选 Script file 指向本文件。
 -- ============================================================
@@ -98,7 +98,7 @@ CREATE TABLE `sys_consumable` (
   `create_by` varchar(64) DEFAULT '' COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) DEFAULT '' COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
@@ -247,7 +247,7 @@ CREATE TABLE `sys_icd9cm3` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime COMMENT '更新时间',
+  `update_time` datetime ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
@@ -278,12 +278,12 @@ CREATE TABLE `sys_supplier` (
 
 -- sys_patient_tag  患者标签
 CREATE TABLE `sys_patient_tag` (
-  `tag_id` bigint NOT NULL AUTO_INCREMENT COMMENT '标签ID',
+  `tag_id` bigint NOT NULL COMMENT '标签ID',
   `tag_name` varchar(50) NOT NULL COMMENT '标签名称',
   `short_name` varchar(2) COMMENT '标签缩写用于展示',
   `tag_color` varchar(20) COMMENT '标签颜色',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`tag_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='患者标签';
 
@@ -356,7 +356,7 @@ CREATE TABLE `sys_checkup_package` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime COMMENT '更新时间',
+  `update_time` datetime ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
@@ -375,7 +375,7 @@ CREATE TABLE `sys_checkup_package_item` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime COMMENT '更新时间',
+  `update_time` datetime ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`)
@@ -387,10 +387,15 @@ CREATE TABLE `biz_shift` (
   `shift_name` varchar(50) NOT NULL COMMENT '班次名称',
   `start_time` varchar(10) NOT NULL COMMENT '开始时间（HH:mm）',
   `end_time` varchar(10) NOT NULL COMMENT '结束时间（HH:mm）',
+  `cross_day` tinyint NOT NULL DEFAULT 0 COMMENT '是否跨零点（0-不跨 1-次日收）',
+  `is_night` tinyint NOT NULL DEFAULT 0 COMMENT '是否夜班（1-夜班 0-白班）：夜班流入判定与连续夜班上限的唯一依据',
+  `need_rest_hours` decimal(4,1) NOT NULL DEFAULT 0.0 COMMENT '下此班后最短休息小时数（0-不限制；夜班通例取16）',
+  `late_grace_minutes` int NOT NULL DEFAULT 15 COMMENT '迟到宽限（分钟）：签到晚于班次开始超过这个数才算迟到',
   `duration_minutes` int NOT NULL DEFAULT 0 COMMENT '时长（分钟）',
   `dept_id` bigint COMMENT '适用科室ID',
   `schedule_type` tinyint COMMENT '班次类型（1-上午 2-下午 3-全天 4-凌晨）',
   `use_scope` tinyint NOT NULL DEFAULT 1 COMMENT '班次适用域（1-门诊 2-病区护理排班）',
+  `apply_staff_type` tinyint COMMENT '适用岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他，空-全部岗位通用）',
   `status` tinyint DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
   `create_by` varchar(64) DEFAULT '' COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -445,13 +450,14 @@ CREATE TABLE `sys_department` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `dept_code` varchar(32) NOT NULL COMMENT '科室编码（唯一）',
   `dept_name` varchar(100) NOT NULL COMMENT '科室名称',
-  `dept_type` tinyint NOT NULL DEFAULT 1 COMMENT '科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他）',
+  `dept_type` varchar(20) NOT NULL COMMENT '科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他），多个类型逗号分隔',
   `parent_id` bigint NOT NULL DEFAULT 0 COMMENT '父科室ID',
   `sort_order` int NOT NULL DEFAULT 0 COMMENT '排序号',
   `dept_icon` varchar(200) COMMENT '科室图标',
   `dept_desc` varchar(500) COMMENT '科室描述',
   `contact_phone` varchar(20) COMMENT '联系电话',
   `location` varchar(200) COMMENT '科室位置',
+  `dept_leader_id` bigint COMMENT '科室负责人（sys_employee.id)',
   `is_open` tinyint DEFAULT 1 COMMENT '是否开诊（0-否 1-是）',
   `status` tinyint DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
   `create_by` varchar(64) COMMENT '创建人',
@@ -495,7 +501,6 @@ CREATE TABLE `sys_employee` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_emp_code` (`emp_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='员工';
-
 -- ---------------- 参照关系（E-R 连线） ----------------
 ALTER TABLE `biz_shift` ADD CONSTRAINT `fk_biz_shift_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
 ALTER TABLE `sys_checkup_package_item` ADD CONSTRAINT `fk_sys_checkup_package_item_package_id` FOREIGN KEY (`package_id`) REFERENCES `sys_checkup_package` (`id`);

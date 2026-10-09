@@ -1,6 +1,6 @@
 -- ============================================================
--- 领域 08 门诊病历与处方（本域 18 表 + 上游参照 13 表 / 58 条关系）
--- 由 workspace/_er/emit.mjs 从 dev 库 information_schema 反向生成，只用于建模，禁止在业务库执行。
+-- 领域 08 门诊病历与处方（本域 19 表 + 上游参照 13 表 / 63 条关系）
+-- 由 workspace/_er/refresh.mjs 从 dev 库 information_schema 反向生成，只用于建模，禁止在业务库执行。
 -- 关系 = *_id 列命名推断 + 真实数据覆盖率验证，逐条证据见 docs/er/relationships.csv。
 -- PowerDesigner：File → Reverse Engineer → Database → 模板选 MySQL 8.0 → 勾选 Script file 指向本文件。
 -- ============================================================
@@ -253,7 +253,7 @@ CREATE TABLE `biz_rx_template_detail` (
 
 -- biz_prescription_audit_log  处方审方流水
 CREATE TABLE `biz_prescription_audit_log` (
-  `id` bigint NOT NULL AUTO_INCREMENT,
+  `id` bigint NOT NULL,
   `prescription_id` bigint COMMENT '处方 id',
   `prescription_no` varchar(40) NOT NULL COMMENT '处方号',
   `record_id` bigint COMMENT '病历 id',
@@ -282,7 +282,7 @@ CREATE TABLE `biz_rx_flow` (
   `flow_status` tinyint NOT NULL DEFAULT 1 COMMENT '流转状态（1-已流转 2-已取药 3-已取消）',
   `flow_time` datetime COMMENT '流转时间',
   `finish_time` datetime COMMENT '完成/取消时间',
-  `total_amount` decimal(10,2) COMMENT '处方总金额',
+  `total_amount` decimal(10,2) COMMENT '处方总金额（快照）',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   `create_by` varchar(64) COMMENT '创建人',
@@ -309,10 +309,9 @@ CREATE TABLE `biz_rx_review_batch` (
   `reviewer_name` varchar(50) COMMENT '点评人姓名',
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `remark` varchar(500) COMMENT '备注',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_batch_no` (`batch_no`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='处方点评批次';
 
 -- biz_rx_review_item  处方点评明细
@@ -321,15 +320,15 @@ CREATE TABLE `biz_rx_review_item` (
   `batch_id` bigint NOT NULL COMMENT '批次ID',
   `batch_no` varchar(32) NOT NULL COMMENT '批次号',
   `prescription_id` bigint NOT NULL COMMENT '处方ID',
-  `prescription_no` varchar(32) NOT NULL COMMENT '处方号',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
-  `dept_name` varchar(100) NOT NULL COMMENT '开方科室',
-  `doctor_id` bigint NOT NULL COMMENT '开方医生ID',
-  `doctor_name` varchar(50) NOT NULL COMMENT '开方医生姓名',
+  `prescription_no` varchar(32) NOT NULL COMMENT '处方号（快照）',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
+  `dept_name` varchar(100) NOT NULL COMMENT '开方科室（快照）',
+  `doctor_id` bigint NOT NULL COMMENT '开方医生ID（快照）',
+  `doctor_name` varchar(50) NOT NULL COMMENT '开方医生姓名（快照）',
   `visit_date` date NOT NULL COMMENT '就诊日期',
-  `diagnosis` varchar(500) COMMENT '诊断',
-  `drug_count` int DEFAULT 0 COMMENT '药品数量',
-  `total_amount` decimal(10,2) DEFAULT 0.00 COMMENT '处方金额',
+  `diagnosis` varchar(500) COMMENT '诊断（快照）',
+  `drug_count` int DEFAULT 0 COMMENT '药品数量（快照）',
+  `total_amount` decimal(10,2) DEFAULT 0.00 COMMENT '处方金额（快照）',
   `prescription_type` tinyint DEFAULT 1 COMMENT '处方类型（1-西药 2-中成药 3-中药饮片）',
   `prescription_source` tinyint DEFAULT 1 COMMENT '处方来源（1-门诊 2-急诊 3-住院）',
   `review_status` tinyint NOT NULL DEFAULT 0 COMMENT '点评状态（0-待点评 1-已点评）',
@@ -343,10 +342,9 @@ CREATE TABLE `biz_rx_review_item` (
   `publicity_by` varchar(50) COMMENT '公示操作人',
   `publicity_time` datetime COMMENT '公示时间',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `remark` varchar(500) COMMENT '备注',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_batch_rx` (`batch_id`, `prescription_id`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='处方点评明细';
 
 -- biz_rx_doctor_talk  医师约谈记录
@@ -355,7 +353,7 @@ CREATE TABLE `biz_rx_doctor_talk` (
   `talk_no` varchar(32) NOT NULL COMMENT '约谈编号',
   `doctor_id` bigint COMMENT '被约谈医师ID',
   `doctor_name` varchar(50) NOT NULL COMMENT '被约谈医师姓名',
-  `dept_name` varchar(100) COMMENT '医师所在科室',
+  `dept_name` varchar(100) COMMENT '医师所在科室（快照）',
   `talk_type` tinyint NOT NULL DEFAULT 1 COMMENT '约谈类型（1-首次约谈 2-警告约谈 3-限制处方权 4-取消处方权 5-恢复处方权）',
   `talk_time` datetime NOT NULL COMMENT '约谈时间',
   `talker_name` varchar(50) NOT NULL COMMENT '约谈人姓名',
@@ -372,10 +370,9 @@ CREATE TABLE `biz_rx_doctor_talk` (
   `doctor_confirm_time` datetime COMMENT '医师确认时间',
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `remark` varchar(500) COMMENT '备注',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_talk_no` (`talk_no`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='医师约谈记录';
 
 -- biz_skin_test  门诊皮试记录
@@ -383,14 +380,14 @@ CREATE TABLE `biz_skin_test` (
   `id` bigint NOT NULL COMMENT '主键（雪花）',
   `test_no` varchar(32) NOT NULL COMMENT '皮试单号',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
   `drug_name` varchar(200) NOT NULL COMMENT '皮试药物名称',
   `treatment_record_id` bigint COMMENT '来源治疗记录ID',
   `test_time` datetime NOT NULL COMMENT '皮试时间',
   `result` tinyint NOT NULL DEFAULT 0 COMMENT '判读结果（0-待判读 1-阴性 2-阳性）',
   `result_time` datetime COMMENT '判读时间',
   `nurse_id` bigint COMMENT '执行护士ID',
-  `nurse_name` varchar(50) COMMENT '执行护士姓名',
+  `nurse_name` varchar(50) COMMENT '执行护士姓名（快照）',
   `create_by` varchar(64),
   `create_time` datetime,
   `update_by` varchar(64),
@@ -407,20 +404,20 @@ CREATE TABLE `biz_tcm_decoct` (
   `decoct_no` varchar(32) NOT NULL COMMENT '代煎单号',
   `prescription_id` bigint NOT NULL COMMENT '处方ID',
   `prescription_no` varchar(32) NOT NULL COMMENT '处方号',
-  `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者号',
-  `patient_name` varchar(50) COMMENT '患者姓名',
+  `patient_id` bigint NOT NULL COMMENT '患者ID（快照）',
+  `patient_no` varchar(32) COMMENT '患者号（快照）',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
   `dept_name` varchar(100) COMMENT '开方科室',
-  `doctor_name` varchar(50) COMMENT '开方医师',
+  `doctor_name` varchar(50) COMMENT '开方医师（快照）',
   `dose_count` int NOT NULL DEFAULT 1 COMMENT '剂数',
   `herb_count` int NOT NULL DEFAULT 0 COMMENT '味数',
   `total_grams` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '全方总克数',
   `method_summary` varchar(500) COMMENT '煎法脚注汇总',
   `decoct_status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1-待煎 2-已煎 3-已取 9-已作废）',
   `pharmacy_id` bigint COMMENT '代煎药房ID',
-  `pharmacy_name` varchar(100) COMMENT '代煎药房名称',
+  `pharmacy_name` varchar(100) COMMENT '代煎药房名称（快照）',
   `operator_id` bigint COMMENT '最近一次状态操作人',
-  `operator_name` varchar(64) COMMENT '最近一次状态操作人姓名',
+  `operator_name` varchar(64) COMMENT '最近一次状态操作人姓名（快照）',
   `decoct_time` datetime COMMENT '煎药完成时间',
   `pickup_time` datetime COMMENT '患者取走时间（终态）',
   `cancel_reason` varchar(200) COMMENT '作废原因',
@@ -482,7 +479,7 @@ CREATE TABLE `biz_narcotic_register` (
   `create_by` varchar(64) DEFAULT '' COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) DEFAULT '' COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
@@ -495,13 +492,13 @@ CREATE TABLE `biz_outp_infusion` (
   `infusion_no` varchar(32) NOT NULL COMMENT '输液单号',
   `treatment_record_id` bigint COMMENT '来源治疗记录ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者编号',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
-  `gender` tinyint COMMENT '性别',
-  `age` int COMMENT '年龄',
+  `patient_no` varchar(32) COMMENT '患者编号（快照）',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
+  `gender` tinyint COMMENT '性别（快照）',
+  `age` int COMMENT '年龄（快照）',
   `drug_summary` varchar(500) COMMENT '输注内容摘要',
   `seat_id` bigint COMMENT '座位ID',
-  `seat_no` varchar(32) COMMENT '座位号',
+  `seat_no` varchar(32) COMMENT '座位号（快照）',
   `skin_test_id` bigint COMMENT '皮试记录ID',
   `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1-待皮试 2-待输注 3-输液中 4-已完成 5-已取消）',
   `start_time` datetime COMMENT '开始输注时间',
@@ -510,7 +507,7 @@ CREATE TABLE `biz_outp_infusion` (
   `adverse_flag` tinyint NOT NULL DEFAULT 0 COMMENT '不良反应（0-无 1-有）',
   `adverse_desc` varchar(500) COMMENT '不良反应描述',
   `nurse_id` bigint COMMENT '责任护士ID',
-  `nurse_name` varchar(50) COMMENT '责任护士姓名',
+  `nurse_name` varchar(50) COMMENT '责任护士姓名（快照）',
   `cancel_reason` varchar(500) COMMENT '取消原因',
   `create_by` varchar(64),
   `create_time` datetime,
@@ -530,7 +527,7 @@ CREATE TABLE `biz_outp_infusion_round` (
   `drip_rate` int COMMENT '滴速（滴/分）',
   `remaining_volume` int COMMENT '余量（ml）',
   `nurse_id` bigint COMMENT '巡视护士ID',
-  `nurse_name` varchar(50) COMMENT '巡视护士姓名',
+  `nurse_name` varchar(50) COMMENT '巡视护士姓名（快照）',
   `create_by` varchar(64),
   `create_time` datetime,
   `update_by` varchar(64),
@@ -560,6 +557,31 @@ CREATE TABLE `biz_infusion_round` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='输液巡视记录';
 
+-- biz_ai_draft_diff  病历草稿AI留痕（草稿与终稿差异，SFT训练原料）
+CREATE TABLE `biz_ai_draft_diff` (
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
+  `record_id` bigint NOT NULL COMMENT '病历ID',
+  `regist_id` bigint COMMENT '挂号ID',
+  `patient_id` bigint COMMENT '患者ID',
+  `patient_no` varchar(50) DEFAULT '' COMMENT '患者号',
+  `patient_name` varchar(50) DEFAULT '' COMMENT '患者姓名',
+  `dept_id` bigint COMMENT '接诊科室ID',
+  `dept_name` varchar(50) DEFAULT '' COMMENT '接诊科室名称',
+  `doctor_id` bigint COMMENT '终审医生ID',
+  `doctor_name` varchar(50) DEFAULT '' COMMENT '终审医生姓名',
+  `draft_text` text COMMENT 'AI草稿原文（截断2000字）',
+  `final_text` text COMMENT '医生终稿（截断2000字）',
+  `diff_json` mediumtext COMMENT '差异分段JSON（0-相同 1-删 2-增）',
+  `changed` tinyint DEFAULT 1 COMMENT '是否修改（1-有修改 0-未修改）',
+  `create_by` varchar(64) DEFAULT '' COMMENT '创建人',
+  `create_time` datetime COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT '' COMMENT '更新人',
+  `update_time` datetime COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT '' COMMENT '备注',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='病历草稿AI留痕（草稿与终稿差异，SFT训练原料）';
+
 -- biz_admission  入院记录
 CREATE TABLE `biz_admission` (
   `admission_id` bigint NOT NULL COMMENT '入院ID',
@@ -567,11 +589,14 @@ CREATE TABLE `biz_admission` (
   `patient_id` bigint NOT NULL COMMENT '患者ID',
   `visit_id` bigint COMMENT '就诊次ID',
   `regist_id` bigint COMMENT '来源挂号ID',
-  `regist_no` varchar(32) COMMENT '来源挂号号',
+  `regist_no` varchar(32) COMMENT '来源挂号号（快照）',
   `admission_order_id` bigint COMMENT '来源住院证ID',
   `admit_dept_id` bigint COMMENT '入院科室ID',
   `dept_id` bigint COMMENT '入院科室ID',
   `ward_id` bigint NOT NULL COMMENT '病区ID',
+  `nursing_level` tinyint COMMENT '护理等级（1-特级 2-一级 3-二级 4-三级，字典 his_nursing_level）',
+  `nursing_level_source` tinyint NOT NULL DEFAULT 1 COMMENT '护理等级来源（1-默认兜底 2-护理记录带出 3-护士长评定）',
+  `nursing_level_time` datetime COMMENT '护理等级评定时间（默认兜底时为写入时间）',
   `bed_id` bigint NOT NULL COMMENT '床位ID',
   `admit_doctor_id` bigint NOT NULL COMMENT '入院医生ID',
   `admit_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '入院时间',
@@ -629,7 +654,7 @@ CREATE TABLE `biz_appoint_info` (
   `refund_time` datetime COMMENT '退号时间',
   `refund_reason` varchar(200) COMMENT '退号原因',
   `bill_id` bigint COMMENT '挂号费结算账单ID',
-  `bill_no` varchar(32) COMMENT '账单号',
+  `bill_no` varchar(32) COMMENT '账单号（快照）',
   `create_by` varchar(64) COMMENT '创建人',
   `create_by_id` bigint COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -682,22 +707,22 @@ CREATE TABLE `biz_emr_signature` (
   `sign_no` varchar(32) NOT NULL COMMENT '签名流水号',
   `biz_type` tinyint NOT NULL COMMENT '签名对象类型',
   `biz_id` bigint NOT NULL COMMENT '签名对象ID',
-  `biz_no` varchar(64) COMMENT '对象单号',
+  `biz_no` varchar(64) COMMENT '对象单号（快照）',
   `patient_id` bigint COMMENT '患者ID',
-  `patient_name` varchar(50) COMMENT '患者姓名',
-  `dept_id` bigint COMMENT '对象所属科室ID',
-  `dept_name` varchar(64) COMMENT '对象所属科室名称',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
+  `dept_id` bigint COMMENT '对象所属科室ID（快照）',
+  `dept_name` varchar(64) COMMENT '对象所属科室名称（快照）',
   `sign_scene` tinyint NOT NULL COMMENT '签名场景',
   `chain_no` int NOT NULL DEFAULT 1 COMMENT '同对象第几次签名',
   `prev_sign_id` bigint COMMENT '前一次签名ID',
   `prev_digest` varchar(128) COMMENT '前一次签名摘要',
   `signer_id` bigint NOT NULL COMMENT '签名人员工ID',
-  `signer_name` varchar(64) NOT NULL COMMENT '签名人姓名',
-  `signer_dept_id` bigint COMMENT '签名人科室ID',
-  `signer_dept_name` varchar(64) COMMENT '签名人科室名称',
+  `signer_name` varchar(64) NOT NULL COMMENT '签名人姓名（快照）',
+  `signer_dept_id` bigint COMMENT '签名人科室ID（快照）',
+  `signer_dept_name` varchar(64) COMMENT '签名人科室名称（快照）',
   `signer_title` varchar(64) COMMENT '签名人职称',
   `cert_id` bigint NOT NULL COMMENT '所用证书ID',
-  `cert_no` varchar(32) NOT NULL COMMENT '所用证书编号',
+  `cert_no` varchar(32) NOT NULL COMMENT '所用证书编号（快照）',
   `digest_algo` varchar(16) NOT NULL COMMENT '摘要算法',
   `sign_algo` varchar(32) NOT NULL COMMENT '签名算法',
   `content_digest` varchar(128) NOT NULL COMMENT '被签内容摘要',
@@ -749,13 +774,13 @@ CREATE TABLE `biz_inpatient_order` (
   `order_no` varchar(32) NOT NULL COMMENT '医嘱号',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者编号',
-  `patient_name` varchar(50) COMMENT '患者姓名',
+  `patient_no` varchar(32) COMMENT '患者编号（快照）',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
   `dept_id` bigint COMMENT '开立科室ID',
-  `dept_name` varchar(64) COMMENT '开立科室名称',
+  `dept_name` varchar(64) COMMENT '开立科室名称（快照）',
   `ward_id` bigint COMMENT '病区ID',
-  `ward_name` varchar(64) COMMENT '病区名称',
-  `bed_no` varchar(32) COMMENT '床号',
+  `ward_name` varchar(64) COMMENT '病区名称（快照）',
+  `bed_no` varchar(32) COMMENT '床号（快照）',
   `order_type` tinyint NOT NULL COMMENT '医嘱类型（1-长期 2-临时）',
   `order_group` varchar(32) COMMENT '组套号',
   `order_class` tinyint NOT NULL COMMENT '医嘱类别',
@@ -914,13 +939,14 @@ CREATE TABLE `sys_department` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `dept_code` varchar(32) NOT NULL COMMENT '科室编码（唯一）',
   `dept_name` varchar(100) NOT NULL COMMENT '科室名称',
-  `dept_type` tinyint NOT NULL DEFAULT 1 COMMENT '科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他）',
+  `dept_type` varchar(20) NOT NULL COMMENT '科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他），多个类型逗号分隔',
   `parent_id` bigint NOT NULL DEFAULT 0 COMMENT '父科室ID',
   `sort_order` int NOT NULL DEFAULT 0 COMMENT '排序号',
   `dept_icon` varchar(200) COMMENT '科室图标',
   `dept_desc` varchar(500) COMMENT '科室描述',
   `contact_phone` varchar(20) COMMENT '联系电话',
   `location` varchar(200) COMMENT '科室位置',
+  `dept_leader_id` bigint COMMENT '科室负责人（sys_employee.id)',
   `is_open` tinyint DEFAULT 1 COMMENT '是否开诊（0-否 1-是）',
   `status` tinyint DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
   `create_by` varchar(64) COMMENT '创建人',
@@ -1035,11 +1061,15 @@ CREATE TABLE `sys_user` (
   `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_openid` (`openid`),
-  UNIQUE KEY `uk_user_name` (`user_name`)
+  UNIQUE KEY `uk_user_name` (`user_name`),
+  UNIQUE KEY `uk_openid` (`openid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户';
-
 -- ---------------- 参照关系（E-R 连线） ----------------
+ALTER TABLE `biz_ai_draft_diff` ADD CONSTRAINT `fk_biz_ai_draft_diff_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_medical_record` (`id`);
+ALTER TABLE `biz_ai_draft_diff` ADD CONSTRAINT `fk_biz_ai_draft_diff_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
+ALTER TABLE `biz_ai_draft_diff` ADD CONSTRAINT `fk_biz_ai_draft_diff_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_ai_draft_diff` ADD CONSTRAINT `fk_biz_ai_draft_diff_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_ai_draft_diff` ADD CONSTRAINT `fk_biz_ai_draft_diff_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_diag_template` ADD CONSTRAINT `fk_biz_diag_template_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_infusion_round` ADD CONSTRAINT `fk_biz_infusion_round_exec_id` FOREIGN KEY (`exec_id`) REFERENCES `biz_inpatient_order_exec` (`id`);
 ALTER TABLE `biz_infusion_round` ADD CONSTRAINT `fk_biz_infusion_round_order_id` FOREIGN KEY (`order_id`) REFERENCES `biz_inpatient_order` (`id`);

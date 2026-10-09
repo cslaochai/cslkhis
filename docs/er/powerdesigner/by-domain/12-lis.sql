@@ -1,6 +1,6 @@
 -- ============================================================
--- 领域 12 检验LIS（申请·结果·质控·室间质评）（本域 10 表 + 上游参照 9 表 / 29 条关系）
--- 由 workspace/_er/emit.mjs 从 dev 库 information_schema 反向生成，只用于建模，禁止在业务库执行。
+-- 领域 12 检验LIS（申请·结果·质控·室间质评）（本域 11 表 + 上游参照 9 表 / 29 条关系）
+-- 由 workspace/_er/refresh.mjs 从 dev 库 information_schema 反向生成，只用于建模，禁止在业务库执行。
 -- 关系 = *_id 列命名推断 + 真实数据覆盖率验证，逐条证据见 docs/er/relationships.csv。
 -- PowerDesigner：File → Reverse Engineer → Database → 模板选 MySQL 8.0 → 勾选 Script file 指向本文件。
 -- ============================================================
@@ -372,6 +372,27 @@ CREATE TABLE `biz_lis_eqa_compare` (
   UNIQUE KEY `uk_compare` (`plan_id`, `sample_seq`, `item_code`, `instrument_a`, `instrument_b`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='室间质评仪器间比对';
 
+-- sys_lab_plain_item  检验项目白话词典（患者端报告解读的规则层地基，人工维护）
+CREATE TABLE `sys_lab_plain_item` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `group_name` varchar(32) NOT NULL COMMENT '所属分组（血常规/肝功能/肾功能/血糖/血脂/炎症/凝血/心肌/电解质/尿常规/大便）',
+  `item_name` varchar(64) NOT NULL COMMENT '检验项目名称（与 biz_lab_result.laboratory_item_name 精确匹配）',
+  `plain_name` varchar(64) NOT NULL COMMENT '白话名（如：血色素、坏胆固醇、心肌损伤指标）',
+  `what_is_it` varchar(200) NOT NULL COMMENT '这项查什么（给患者看的一句话，不含诊断/用药）',
+  `high_text` varchar(200) NOT NULL COMMENT '结果偏高时的白话说明',
+  `low_text` varchar(200) NOT NULL COMMENT '结果偏低时的白话说明',
+  `status` tinyint DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
+  `sort_order` int DEFAULT 0 COMMENT '排序号',
+  `remark` varchar(500) COMMENT '备注',
+  `create_by` varchar(64) COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) COMMENT '更新人',
+  `update_time` datetime ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_item_name` (`item_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='检验项目白话词典（患者端报告解读的规则层地基，人工维护）';
+
 -- biz_appoint_info  挂号信息
 CREATE TABLE `biz_appoint_info` (
   `id` bigint NOT NULL COMMENT '主键ID',
@@ -410,7 +431,7 @@ CREATE TABLE `biz_appoint_info` (
   `refund_time` datetime COMMENT '退号时间',
   `refund_reason` varchar(200) COMMENT '退号原因',
   `bill_id` bigint COMMENT '挂号费结算账单ID',
-  `bill_no` varchar(32) COMMENT '账单号',
+  `bill_no` varchar(32) COMMENT '账单号（快照）',
   `create_by` varchar(64) COMMENT '创建人',
   `create_by_id` bigint COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -453,22 +474,22 @@ CREATE TABLE `biz_emr_signature` (
   `sign_no` varchar(32) NOT NULL COMMENT '签名流水号',
   `biz_type` tinyint NOT NULL COMMENT '签名对象类型',
   `biz_id` bigint NOT NULL COMMENT '签名对象ID',
-  `biz_no` varchar(64) COMMENT '对象单号',
+  `biz_no` varchar(64) COMMENT '对象单号（快照）',
   `patient_id` bigint COMMENT '患者ID',
-  `patient_name` varchar(50) COMMENT '患者姓名',
-  `dept_id` bigint COMMENT '对象所属科室ID',
-  `dept_name` varchar(64) COMMENT '对象所属科室名称',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
+  `dept_id` bigint COMMENT '对象所属科室ID（快照）',
+  `dept_name` varchar(64) COMMENT '对象所属科室名称（快照）',
   `sign_scene` tinyint NOT NULL COMMENT '签名场景',
   `chain_no` int NOT NULL DEFAULT 1 COMMENT '同对象第几次签名',
   `prev_sign_id` bigint COMMENT '前一次签名ID',
   `prev_digest` varchar(128) COMMENT '前一次签名摘要',
   `signer_id` bigint NOT NULL COMMENT '签名人员工ID',
-  `signer_name` varchar(64) NOT NULL COMMENT '签名人姓名',
-  `signer_dept_id` bigint COMMENT '签名人科室ID',
-  `signer_dept_name` varchar(64) COMMENT '签名人科室名称',
+  `signer_name` varchar(64) NOT NULL COMMENT '签名人姓名（快照）',
+  `signer_dept_id` bigint COMMENT '签名人科室ID（快照）',
+  `signer_dept_name` varchar(64) COMMENT '签名人科室名称（快照）',
   `signer_title` varchar(64) COMMENT '签名人职称',
   `cert_id` bigint NOT NULL COMMENT '所用证书ID',
-  `cert_no` varchar(32) NOT NULL COMMENT '所用证书编号',
+  `cert_no` varchar(32) NOT NULL COMMENT '所用证书编号（快照）',
   `digest_algo` varchar(16) NOT NULL COMMENT '摘要算法',
   `sign_algo` varchar(32) NOT NULL COMMENT '签名算法',
   `content_digest` varchar(128) NOT NULL COMMENT '被签内容摘要',
@@ -670,13 +691,14 @@ CREATE TABLE `sys_department` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `dept_code` varchar(32) NOT NULL COMMENT '科室编码（唯一）',
   `dept_name` varchar(100) NOT NULL COMMENT '科室名称',
-  `dept_type` tinyint NOT NULL DEFAULT 1 COMMENT '科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他）',
+  `dept_type` varchar(20) NOT NULL COMMENT '科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他），多个类型逗号分隔',
   `parent_id` bigint NOT NULL DEFAULT 0 COMMENT '父科室ID',
   `sort_order` int NOT NULL DEFAULT 0 COMMENT '排序号',
   `dept_icon` varchar(200) COMMENT '科室图标',
   `dept_desc` varchar(500) COMMENT '科室描述',
   `contact_phone` varchar(20) COMMENT '联系电话',
   `location` varchar(200) COMMENT '科室位置',
+  `dept_leader_id` bigint COMMENT '科室负责人（sys_employee.id)',
   `is_open` tinyint DEFAULT 1 COMMENT '是否开诊（0-否 1-是）',
   `status` tinyint DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
   `create_by` varchar(64) COMMENT '创建人',
@@ -745,7 +767,6 @@ CREATE TABLE `sys_laboratory_item` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_item_code` (`item_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='检验项目字典';
-
 -- ---------------- 参照关系（E-R 连线） ----------------
 ALTER TABLE `biz_critical_value` ADD CONSTRAINT `fk_biz_critical_value_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_laboratory_record` (`id`);
 ALTER TABLE `biz_critical_value` ADD CONSTRAINT `fk_biz_critical_value_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);

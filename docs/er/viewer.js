@@ -89,7 +89,7 @@
   }
 
   function renderSideFocus() {
-    side.innerHTML = '<div class="side-h">全部 302 张表（↑父 ↓子）</div>';
+    side.innerHTML = '<div class="side-h">全部 320 张表（↑父 ↓子）</div>';
     DATA.tables.forEach(function (t) {
       var g = neigh(t[0]);
       var b = document.createElement('button');

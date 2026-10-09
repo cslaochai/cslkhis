@@ -1,6 +1,6 @@
 -- ============================================================
 -- 领域 03 空间与设备主数据（病区·床位·诊室·手术间·设备）（本域 8 表 + 上游参照 2 表 / 8 条关系）
--- 由 workspace/_er/emit.mjs 从 dev 库 information_schema 反向生成，只用于建模，禁止在业务库执行。
+-- 由 workspace/_er/refresh.mjs 从 dev 库 information_schema 反向生成，只用于建模，禁止在业务库执行。
 -- 关系 = *_id 列命名推断 + 真实数据覆盖率验证，逐条证据见 docs/er/relationships.csv。
 -- PowerDesigner：File → Reverse Engineer → Database → 模板选 MySQL 8.0 → 勾选 Script file 指向本文件。
 -- ============================================================
@@ -94,7 +94,7 @@ CREATE TABLE `sys_equipment` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime COMMENT '更新时间',
+  `update_time` datetime ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
@@ -105,8 +105,8 @@ CREATE TABLE `sys_equipment` (
 CREATE TABLE `biz_equipment_maintain` (
   `id` bigint NOT NULL COMMENT '维保记录ID',
   `equipment_id` bigint NOT NULL COMMENT '设备ID',
-  `equipment_code` varchar(32) COMMENT '设备编码',
-  `equipment_name` varchar(200) COMMENT '设备名称',
+  `equipment_code` varchar(32) COMMENT '设备编码（快照）',
+  `equipment_name` varchar(200) COMMENT '设备名称（快照）',
   `maintain_type` tinyint NOT NULL COMMENT '维保类型（1-保养 2-维修 3-巡检）',
   `maintain_date` date NOT NULL COMMENT '维保日期',
   `next_maintain_date` date COMMENT '下次维保日期',
@@ -118,7 +118,7 @@ CREATE TABLE `biz_equipment_maintain` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='设备维保记录';
@@ -127,8 +127,8 @@ CREATE TABLE `biz_equipment_maintain` (
 CREATE TABLE `biz_equipment_metering` (
   `id` bigint NOT NULL COMMENT '计量记录ID',
   `equipment_id` bigint NOT NULL COMMENT '设备ID',
-  `equipment_code` varchar(32) COMMENT '设备编码',
-  `equipment_name` varchar(200) COMMENT '设备名称',
+  `equipment_code` varchar(32) COMMENT '设备编码（快照）',
+  `equipment_name` varchar(200) COMMENT '设备名称（快照）',
   `metering_type` tinyint NOT NULL COMMENT '计量类型（1-强检 2-校准）',
   `metering_date` date NOT NULL COMMENT '计量日期',
   `valid_until` date NOT NULL COMMENT '有效期至',
@@ -138,7 +138,7 @@ CREATE TABLE `biz_equipment_metering` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='设备计量记录';
@@ -217,13 +217,14 @@ CREATE TABLE `sys_department` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `dept_code` varchar(32) NOT NULL COMMENT '科室编码（唯一）',
   `dept_name` varchar(100) NOT NULL COMMENT '科室名称',
-  `dept_type` tinyint NOT NULL DEFAULT 1 COMMENT '科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他）',
+  `dept_type` varchar(20) NOT NULL COMMENT '科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他），多个类型逗号分隔',
   `parent_id` bigint NOT NULL DEFAULT 0 COMMENT '父科室ID',
   `sort_order` int NOT NULL DEFAULT 0 COMMENT '排序号',
   `dept_icon` varchar(200) COMMENT '科室图标',
   `dept_desc` varchar(500) COMMENT '科室描述',
   `contact_phone` varchar(20) COMMENT '联系电话',
   `location` varchar(200) COMMENT '科室位置',
+  `dept_leader_id` bigint COMMENT '科室负责人（sys_employee.id)',
   `is_open` tinyint DEFAULT 1 COMMENT '是否开诊（0-否 1-是）',
   `status` tinyint DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
   `create_by` varchar(64) COMMENT '创建人',
@@ -235,7 +236,6 @@ CREATE TABLE `sys_department` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_dept_code` (`dept_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='科室';
-
 -- ---------------- 参照关系（E-R 连线） ----------------
 ALTER TABLE `biz_equipment_maintain` ADD CONSTRAINT `fk_biz_equipment_maintain_equipment_id` FOREIGN KEY (`equipment_id`) REFERENCES `sys_equipment` (`id`);
 ALTER TABLE `biz_equipment_metering` ADD CONSTRAINT `fk_biz_equipment_metering_equipment_id` FOREIGN KEY (`equipment_id`) REFERENCES `sys_equipment` (`id`);

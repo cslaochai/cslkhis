@@ -1,6 +1,6 @@
 # cslk_his 分域 E-R 图（Mermaid）
 
-> 由 `workspace/_er/emit.mjs` 生成。实体 = 表；连线 = 通过数据覆盖率验证的 `*_id` 外键。
+> 由 `workspace/_er/refresh.mjs` 生成。实体 = 表；连线 = 通过数据覆盖率验证的 `*_id` 外键。
 > 实体名写作 `中文名 · 表名`（Mermaid 实体别名，10.5+ / GitHub 可渲染）；属性行是 `类型 列名 "列中文注释"`。
 > `A ||--o{ B : col` = A 一条对应 B 多条；`||--|{` 表示子表该列 NOT NULL；`||--||` 表示子表该列唯一（1:1）。
 > 每张图只画「本域表 + 被引用到的上游表（只带主键与外键列）」，属性省略非键列。
@@ -14,6 +14,7 @@ erDiagram
     bigint id "主键ID"
     varchar dept_code "科室编码（唯一）"
     bigint parent_id "父科室ID"
+    bigint dept_leader_id "科室负责人（sys_employee.id)"
   }
   sys_role["角色 · sys_role"] {
     bigint id "主键ID"
@@ -85,7 +86,7 @@ erDiagram
     bigint id "主键ID"
     varchar cert_no "证书编号"
     bigint emp_id "签名人员工ID"
-    bigint dept_id "所属科室ID"
+    bigint dept_id "所属科室ID（快照）"
     bigint revoke_by "吊销操作人员工ID"
   }
   sys_tsa_server["时间戳服务注册 · sys_tsa_server"] {
@@ -104,6 +105,7 @@ erDiagram
   sys_employee ||--o{ biz_tech_auth_override : "supervisor_id"
   sys_user ||--o{ sys_attachment : "upload_user_id"
   sys_department ||--|{ sys_department : "parent_id"
+  sys_employee ||--o{ sys_department : "dept_leader_id"
   sys_department ||--o{ sys_employee : "dept_id"
   sys_employee ||--|{ sys_employee_post : "employee_id"
   sys_role ||--|{ sys_employee_post : "role_id"
@@ -593,6 +595,7 @@ erDiagram
   }
   biz_schedule["排班信息 · biz_schedule"] {
     bigint id "主键ID"
+    bigint staff_schedule_id "员工排班ID"
     date schedule_date "排班日期"
     bigint dept_id "科室ID"
     bigint room_id "诊室ID"
@@ -625,6 +628,66 @@ erDiagram
   biz_revisit_fee_policy["复诊收费策略 · biz_revisit_fee_policy"] {
     bigint id "主键（雪花）"
   }
+  biz_previsit_record["患者端预问诊记录（挂号后病史采集 · biz_previsit_record"] {
+    bigint id "主键ID（雪花）"
+    bigint regist_id "挂号ID（一次挂号一份问卷）"
+    bigint patient_id "患者ID"
+    varchar patient_no "患者号"
+    bigint dept_id "就诊科室ID"
+    tinyint del_flag "删除标志（0-正常 1-删除）"
+  }
+  biz_schedule_change_log["排班变更记录 · biz_schedule_change_log"] {
+    bigint id "主键ID（雪花）"
+    bigint staff_schedule_id "员工排班ID"
+    bigint from_employee_id "原值班人"
+    bigint to_employee_id "实际值班人"
+    bigint from_shift_id "原班次ID"
+    bigint to_shift_id "新班次ID"
+  }
+  biz_staff_attendance["实际出勤（闭环第3步：计划 vs · biz_staff_attendance"] {
+    bigint id "主键（雪花）"
+    bigint staff_schedule_id "关联的排班事实ID（biz_staff_schedule.id）；空=无计划的出勤（加班/支援/替班）"
+    bigint employee_id "员工ID"
+    varchar emp_code "工号（快照）"
+    date schedule_date "出勤日期（归属哪一天；夜班签退跨到次日也算这天）"
+    tinyint org_type "实际出勤单元类型（1-科室 2-病区 3-全院）"
+    bigint org_id "实际出勤单元ID（全院级为0）"
+    bigint shift_id "班次ID（0-无班次，如自由工时的加班）"
+    bigint substitute_for "替了谁的班（employee_id）"
+  }
+  biz_staff_demand["人力需求（需求层：排班的驱动源与 · biz_staff_demand"] {
+    bigint id "主键（雪花）"
+    date demand_date "需求日期"
+    tinyint org_type "排班单元类型（1-科室 2-病区 3-全院）"
+    bigint org_id "排班单元ID（全院级为0）"
+    tinyint period_code "时段（0-全天 1-上午 2-下午 3-夜间）"
+    bigint shift_id "班次ID（0-不限班次）"
+    tinyint staff_type "岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政）"
+    bigint source_biz_id "来源业务ID（出诊计划ID/病区ID）"
+  }
+  biz_staff_plan_rule["人力配置标准 · biz_staff_plan_rule"] {
+    bigint id "主键ID（雪花）"
+    tinyint org_type "排班单元类型（1-科室 2-病区 3-全院）"
+    bigint org_id "排班单元ID（全院级为0）"
+    bigint shift_id "标准班次ID（0-该单元全部班次）"
+    tinyint staff_type "岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他）"
+  }
+  biz_staff_schedule["员工排班 · biz_staff_schedule"] {
+    bigint id "主键ID（雪花）"
+    date schedule_date "排班日期"
+    bigint org_id "排班单元ID（全院级为0）"
+    bigint dept_id "科室ID（全院级为0）"
+    bigint employee_id "员工ID"
+    varchar emp_code "工号（快照）"
+    bigint employee_post_id "员工岗位ID（人 × 科室 × 角色）"
+    bigint shift_id "标准班次ID（0-无班次）"
+    bigint template_id "来源排班周模板ID"
+  }
+  biz_triage_rule["智能导诊症状科室映射 · biz_triage_rule"] {
+    bigint id "主键ID"
+    varchar symptom_code "症状编码"
+    bigint dept_id "推荐科室ID"
+  }
   biz_medical_record["门诊病历 · biz_medical_record"] {
     bigint id
   }
@@ -646,6 +709,9 @@ erDiagram
   sys_employee["员工 · sys_employee"] {
     bigint id "主键ID"
   }
+  sys_employee_post["员工岗位（角色×科室） · sys_employee_post"] {
+    bigint id "主键ID"
+  }
   sys_user["用户 · sys_user"] {
     bigint id "主键ID"
   }
@@ -659,26 +725,47 @@ erDiagram
   biz_settlement_bill ||--o{ biz_appoint_info : "bill_id"
   sys_user ||--o{ biz_appoint_info : "create_by_id"
   sys_user ||--o{ biz_appoint_info : "update_by_id"
+  biz_appoint_info ||--|{ biz_previsit_record : "regist_id"
+  biz_patient ||--|{ biz_previsit_record : "patient_id"
+  sys_department ||--o{ biz_previsit_record : "dept_id"
   biz_appoint_info ||--|{ biz_queue : "regist_id"
   biz_patient ||--|{ biz_queue : "patient_id"
   sys_department ||--|{ biz_queue : "dept_id"
   sys_employee ||--o{ biz_queue : "doctor_id"
   sys_clinic_room ||--o{ biz_queue : "room_id"
+  biz_staff_schedule ||--o{ biz_schedule : "staff_schedule_id"
   sys_department ||--|{ biz_schedule : "dept_id"
   sys_clinic_room ||--o{ biz_schedule : "room_id"
   sys_employee ||--|{ biz_schedule : "doctor_id"
   biz_shift ||--o{ biz_schedule : "shift_id"
+  biz_staff_schedule ||--|{ biz_schedule_change_log : "staff_schedule_id"
+  sys_employee ||--o{ biz_schedule_change_log : "from_employee_id"
+  sys_employee ||--o{ biz_schedule_change_log : "to_employee_id"
+  biz_shift ||--o{ biz_schedule_change_log : "from_shift_id"
+  biz_shift ||--o{ biz_schedule_change_log : "to_shift_id"
   biz_schedule ||--|{ biz_schedule_slot : "schedule_id"
   biz_schedule_template ||--|{ biz_schedule_slot_template : "template_id"
   sys_department ||--|{ biz_schedule_template : "dept_id"
   sys_employee ||--|{ biz_schedule_template : "doctor_id"
   biz_shift ||--o{ biz_schedule_template : "shift_id"
   sys_clinic_room ||--o{ biz_schedule_template : "room_id"
+  biz_staff_schedule ||--o{ biz_staff_attendance : "staff_schedule_id"
+  sys_employee ||--|{ biz_staff_attendance : "employee_id"
+  biz_shift ||--|{ biz_staff_attendance : "shift_id"
+  sys_employee ||--o{ biz_staff_attendance : "substitute_for"
+  biz_shift ||--|{ biz_staff_demand : "shift_id"
+  biz_shift ||--|{ biz_staff_plan_rule : "shift_id"
+  sys_department ||--|{ biz_staff_schedule : "dept_id"
+  sys_employee ||--|{ biz_staff_schedule : "employee_id"
+  sys_employee_post ||--o{ biz_staff_schedule : "employee_post_id"
+  biz_shift ||--|{ biz_staff_schedule : "shift_id"
+  biz_schedule_template ||--o{ biz_staff_schedule : "template_id"
   biz_queue ||--|{ biz_triage_record : "queue_id"
   biz_appoint_info ||--o{ biz_triage_record : "regist_id"
   biz_patient ||--o{ biz_triage_record : "patient_id"
   sys_clinic_room ||--o{ biz_triage_record : "room_id"
   sys_employee ||--o{ biz_triage_record : "triage_nurse_id"
+  sys_department ||--|{ biz_triage_rule : "dept_id"
 ```
 
 ## 08 门诊病历与处方
@@ -750,7 +837,7 @@ erDiagram
     bigint id "主键"
     bigint batch_id "批次ID"
     bigint prescription_id "处方ID"
-    bigint doctor_id "开方医生ID"
+    bigint doctor_id "开方医生ID（快照）"
     bigint reviewer_id "点评人员工ID"
   }
   biz_rx_doctor_talk["医师约谈记录 · biz_rx_doctor_talk"] {
@@ -768,7 +855,7 @@ erDiagram
   biz_tcm_decoct["中药代煎单 · biz_tcm_decoct"] {
     bigint id "主键ID（雪花）"
     bigint prescription_id "处方ID"
-    bigint patient_id "患者ID"
+    bigint patient_id "患者ID（快照）"
     bigint pharmacy_id "代煎药房ID"
     bigint operator_id "最近一次状态操作人"
   }
@@ -804,6 +891,15 @@ erDiagram
     bigint order_id "医嘱ID（冗余）"
     bigint admission_id "入院ID（冗余）"
     bigint round_nurse_id "巡视护士ID（员工ID）"
+  }
+  biz_ai_draft_diff["病历草稿AI留痕（草稿与终稿差异 · biz_ai_draft_diff"] {
+    bigint id "主键ID（雪花）"
+    bigint record_id "病历ID"
+    bigint regist_id "挂号ID"
+    bigint patient_id "患者ID"
+    varchar patient_no "患者号"
+    bigint dept_id "接诊科室ID"
+    bigint doctor_id "终审医生ID"
   }
   biz_admission["入院记录 · biz_admission"] {
     bigint admission_id "入院ID"
@@ -844,6 +940,11 @@ erDiagram
   sys_user["用户 · sys_user"] {
     bigint id "主键ID"
   }
+  biz_medical_record ||--|{ biz_ai_draft_diff : "record_id"
+  biz_appoint_info ||--o{ biz_ai_draft_diff : "regist_id"
+  biz_patient ||--o{ biz_ai_draft_diff : "patient_id"
+  sys_department ||--o{ biz_ai_draft_diff : "dept_id"
+  sys_employee ||--o{ biz_ai_draft_diff : "doctor_id"
   sys_employee ||--|{ biz_diag_template : "doctor_id"
   biz_inpatient_order_exec ||--|{ biz_infusion_round : "exec_id"
   biz_inpatient_order ||--|{ biz_infusion_round : "order_id"
@@ -1040,13 +1141,23 @@ erDiagram
     bigint id "主键ID"
     varchar allocate_no "调配单号"
     bigint bed_id "床位ID"
-    bigint ward_id "病区ID"
+    bigint ward_id "病区ID（快照）"
     bigint own_dept_id "床位归属科室ID"
     bigint use_dept_id "实际使用科室ID"
     bigint wait_id "来源等床记录ID"
     bigint patient_id "患者ID"
     bigint operator_id "操作人ID"
     bigint admission_id "转入院后的入院ID"
+  }
+  biz_attending_relation["住院管床关系（主管医生，带时效的 · biz_attending_relation"] {
+    bigint id "主键ID（雪花）"
+    bigint admission_id "住院登记ID"
+    bigint patient_id "患者ID"
+    bigint employee_id "主管医生ID"
+    bigint dept_id "科室ID"
+    bigint ward_id "病区ID"
+    bigint bed_id "床位ID"
+    tinyint relation_type "关系类型（1-主管 2-主诊组长 3-协作）"
   }
   biz_appoint_info["挂号信息 · biz_appoint_info"] {
     bigint id "主键ID"
@@ -1098,6 +1209,12 @@ erDiagram
   sys_department ||--o{ biz_admission_order : "apply_dept_id"
   biz_admission ||--o{ biz_admission_order : "admission_id"
   sys_department ||--o{ biz_admission_order : "admit_dept_id"
+  biz_admission ||--|{ biz_attending_relation : "admission_id"
+  biz_patient ||--|{ biz_attending_relation : "patient_id"
+  sys_employee ||--|{ biz_attending_relation : "employee_id"
+  sys_department ||--|{ biz_attending_relation : "dept_id"
+  sys_ward ||--|{ biz_attending_relation : "ward_id"
+  sys_bed ||--|{ biz_attending_relation : "bed_id"
   sys_bed ||--|{ biz_bed_allocate : "bed_id"
   sys_ward ||--o{ biz_bed_allocate : "ward_id"
   sys_department ||--o{ biz_bed_allocate : "own_dept_id"
@@ -1190,7 +1307,7 @@ erDiagram
     varchar assess_no "评估单号 AS+yyyyMMdd+4位"
     bigint admission_id "入院ID"
     bigint patient_id "患者ID"
-    bigint ward_id "病区ID"
+    bigint ward_id "病区ID（快照）"
     bigint assess_nurse_id "评估护士ID（员工ID）"
   }
   biz_nurse_schedule_rule["护理人力配置标准 · biz_nurse_schedule_rule"] {
@@ -1202,9 +1319,11 @@ erDiagram
     bigint id "主键ID（雪花）"
     bigint ward_id "病区ID"
     bigint dept_id "科室ID"
+    bigint unit_id "排班单元ID（unit_type=1 取 sys_ward.ward_id，=2 取 sys_department.id）"
     date schedule_date "排班日期"
     bigint employee_id "护士ID"
     bigint shift_id "班次ID"
+    bigint staff_schedule_id "关联的出勤事实 biz_staff_schedule.id（护理格子→底座的指路牌）"
   }
   sys_nursing_qc_item["护理质控检查项目录 · sys_nursing_qc_item"] {
     bigint id "主键ID（雪花）"
@@ -1226,7 +1345,7 @@ erDiagram
   biz_nursing_qc_indicator["护理质控指标台账 · biz_nursing_qc_indicator"] {
     bigint id "主键ID（雪花）"
     bigint ward_id "病区ID"
-    bigint dept_id "科室ID"
+    bigint dept_id "科室ID（快照）"
     char stat_month "统计月份 yyyy-MM"
     varchar indicator_code "指标编码"
   }
@@ -1238,6 +1357,9 @@ erDiagram
   }
   biz_shift["班次字典 · biz_shift"] {
     bigint id "主键ID"
+  }
+  biz_staff_schedule["员工排班 · biz_staff_schedule"] {
+    bigint id "主键ID（雪花）"
   }
   sys_department["科室 · sys_department"] {
     bigint id "主键ID"
@@ -1252,6 +1374,7 @@ erDiagram
   sys_department ||--|{ biz_nurse_schedule : "dept_id"
   sys_employee ||--|{ biz_nurse_schedule : "employee_id"
   biz_shift ||--o{ biz_nurse_schedule : "shift_id"
+  biz_staff_schedule ||--o{ biz_nurse_schedule : "staff_schedule_id"
   sys_ward ||--|{ biz_nurse_schedule_rule : "ward_id"
   biz_shift ||--|{ biz_nurse_schedule_rule : "shift_id"
   biz_admission ||--|{ biz_nursing_assessment : "admission_id"
@@ -1369,10 +1492,10 @@ erDiagram
     bigint id "主键ID"
     varchar sign_no "签名流水号"
     bigint patient_id "患者ID"
-    bigint dept_id "对象所属科室ID"
+    bigint dept_id "对象所属科室ID（快照）"
     bigint prev_sign_id "前一次签名ID"
     bigint signer_id "签名人员工ID"
-    bigint signer_dept_id "签名人科室ID"
+    bigint signer_dept_id "签名人科室ID（快照）"
     bigint cert_id "所用证书ID"
     bigint invalid_by "作废操作人员工ID"
   }
@@ -1531,6 +1654,10 @@ erDiagram
     varchar instrument_a "A 组仪器"
     varchar instrument_b "B 组仪器"
   }
+  sys_lab_plain_item["检验项目白话词典（患者端报告解读 · sys_lab_plain_item"] {
+    bigint id "主键ID"
+    varchar item_name "检验项目名称（与 biz_lab_result.laboratory_item_name 精确匹配）"
+  }
   biz_appoint_info["挂号信息 · biz_appoint_info"] {
     bigint id "主键ID"
   }
@@ -1665,13 +1792,13 @@ erDiagram
     bigint doctor_id "申请医生ID"
     bigint item_id "检查项目ID"
     bigint device_id "设备ID"
-    bigint exam_dept_id "检查科室ID"
+    bigint exam_dept_id "检查科室ID（快照）"
   }
   biz_exam_image["检查影像帧 · biz_exam_image"] {
     bigint id "主键ID（雪花）"
     bigint apply_id "申请单ID"
     bigint record_id "执行记录ID"
-    bigint patient_id "患者ID"
+    bigint patient_id "患者ID（快照）"
   }
   biz_exam_film["检查胶片用量 · biz_exam_film"] {
     bigint id "主键ID（雪花）"
@@ -1740,6 +1867,10 @@ erDiagram
   biz_ecg_template["心电报告模板 · biz_ecg_template"] {
     bigint id "主键ID（雪花）"
     varchar template_code "模板编码"
+  }
+  sys_imaging_plain_item["影像检查白话词典（患者端影像报告 · sys_imaging_plain_item"] {
+    bigint id "主键ID"
+    varchar item_name "匹配关键词（报告项目名包含即命中，取最长命中）"
   }
   biz_appoint_info["挂号信息 · biz_appoint_info"] {
     bigint id "主键ID"
@@ -1927,7 +2058,7 @@ erDiagram
     bigint id "主键ID（雪花）"
     varchar followup_no "随访单号"
     bigint record_id "麻醉记录ID"
-    bigint apply_id "手术申请单ID"
+    bigint apply_id "手术申请单ID（快照）"
     bigint admission_id "入院ID"
     bigint patient_id "患者ID"
     bigint followup_doctor_id "随访麻醉医师ID（员工ID）"
@@ -2166,6 +2297,9 @@ erDiagram
     bigint employee_id "值班人"
     bigint dept_id "值班人原属科室ID"
     bigint substitute_emp_id "临时换班后的实际值班人"
+    bigint shift_id "标准班次ID"
+    bigint post_id "值班点位ID"
+    bigint staff_schedule_id "员工排班ID"
   }
   biz_duty_log["总值班值班日志 · biz_duty_log"] {
     bigint id "主键"
@@ -2173,11 +2307,22 @@ erDiagram
     bigint employee_id "值班人"
     bigint handover_emp_id "接班人"
   }
+  biz_duty_post["值班点位 · biz_duty_post"] {
+    bigint id "主键ID（雪花）"
+    varchar post_code "点位编码"
+    bigint org_id "排班单元ID（全院级为0）"
+  }
   biz_admission["入院记录 · biz_admission"] {
     bigint admission_id "入院ID"
   }
   biz_patient["患者基本信息 · biz_patient"] {
     bigint id "主键ID"
+  }
+  biz_shift["班次字典 · biz_shift"] {
+    bigint id "主键ID"
+  }
+  biz_staff_schedule["员工排班 · biz_staff_schedule"] {
+    bigint id "主键ID（雪花）"
   }
   sys_bed["床位 · sys_bed"] {
     bigint bed_id "床位ID"
@@ -2197,6 +2342,9 @@ erDiagram
   sys_employee ||--|{ biz_duty_roster : "employee_id"
   sys_department ||--o{ biz_duty_roster : "dept_id"
   sys_employee ||--o{ biz_duty_roster : "substitute_emp_id"
+  biz_shift ||--o{ biz_duty_roster : "shift_id"
+  biz_duty_post ||--o{ biz_duty_roster : "post_id"
+  biz_staff_schedule ||--o{ biz_duty_roster : "staff_schedule_id"
   biz_patient ||--|{ biz_emergency : "patient_id"
   sys_department ||--o{ biz_emergency : "dept_id"
   sys_employee ||--o{ biz_emergency : "doctor_id"
@@ -2272,8 +2420,8 @@ erDiagram
     varchar dispense_no "摆药单号 WD+yyyyMMdd+4位"
     bigint admission_id "入院ID"
     bigint patient_id "患者ID"
-    bigint ward_id "病区ID"
-    bigint dept_id "入院科室ID"
+    bigint ward_id "病区ID（快照）"
+    bigint dept_id "入院科室ID（快照）"
   }
   biz_ward_dispense_item["住院摆药明细 · biz_ward_dispense_item"] {
     bigint id "主键ID（雪花）"
@@ -2283,7 +2431,7 @@ erDiagram
     bigint order_id "住院医嘱ID"
     bigint admission_id "入院ID（冗余）"
     bigint patient_id "患者ID（冗余）"
-    bigint ward_id "病区ID"
+    bigint ward_id "病区ID（快照）"
     bigint drug_id "药品ID"
     bigint fee_record_id "记账行ID"
     bigint dispenser_id "配药人ID"
@@ -2322,9 +2470,9 @@ erDiagram
     bigint inbound_id "来源入库单ID"
     bigint dispensing_id "发药单ID"
     bigint patient_id "患者ID"
-    bigint regist_id "门诊挂号ID"
-    bigint admission_id "住院ID"
-    bigint dept_id "发药科室ID"
+    bigint regist_id "门诊挂号ID（快照）"
+    bigint admission_id "住院ID（快照）"
+    bigint dept_id "发药科室ID（快照）"
   }
   biz_stocktake["药房盘点单 · biz_stocktake"] {
     bigint id "主键（雪花）"
@@ -2350,8 +2498,8 @@ erDiagram
     date admix_date "调配日期"
     bigint admission_id "入院ID"
     bigint patient_id "患者ID"
-    bigint ward_id "病区ID"
-    bigint dept_id "入院科室ID"
+    bigint ward_id "病区ID（快照）"
+    bigint dept_id "入院科室ID（快照）"
   }
   biz_pivas_item["静配中心调配明细 · biz_pivas_item"] {
     bigint id "主键ID（雪花）"
@@ -2361,7 +2509,7 @@ erDiagram
     bigint order_id "住院医嘱ID"
     bigint admission_id "入院ID（冗余）"
     bigint patient_id "患者ID（冗余）"
-    bigint ward_id "病区ID"
+    bigint ward_id "病区ID（快照）"
     bigint drug_id "药品ID"
     bigint auditor_id "审方药师ID（员工ID）"
     bigint compounder_id "调配人ID"
@@ -2747,7 +2895,7 @@ erDiagram
     bigint patient_id "患者ID"
     bigint regist_id "门诊就诊ID"
     bigint inp_id "住院记录ID"
-    bigint dept_id "发现科室ID"
+    bigint dept_id "发现科室ID（快照）"
     bigint report_by "上报人ID"
   }
   biz_infection_monitor["院感目标性监测登记 · biz_infection_monitor"] {
@@ -2772,7 +2920,7 @@ erDiagram
     bigint patient_id "患者ID"
     bigint regist_id "门诊就诊ID"
     bigint inp_id "住院记录ID"
-    bigint visit_dept_id "发现/就诊科室ID"
+    bigint visit_dept_id "发现/就诊科室ID（快照）"
     bigint disease_id "病种ID"
     bigint report_by "填卡医生ID"
   }
@@ -2938,7 +3086,7 @@ erDiagram
     bigint pathway_id "模板ID"
     bigint admission_id "入院ID"
     bigint patient_id "患者ID"
-    bigint dept_id "入院科室ID"
+    bigint dept_id "入院科室ID（快照）"
   }
   biz_pathway_variance["临床路径变异登记 · biz_pathway_variance"] {
     bigint id "主键ID（雪花）"
@@ -2959,7 +3107,7 @@ erDiagram
   biz_antibiotic_auth["抗菌药物处方权授权 · biz_antibiotic_auth"] {
     bigint id "主键"
     bigint doctor_id "医师ID"
-    bigint dept_id "科室ID"
+    bigint dept_id "科室ID（快照）"
     tinyint auth_level "授权级别（1-非限制使用级 2-限制使用级 3-特殊使用级）"
   }
   biz_antibiotic_stats["抗菌药物使用监测指标 · biz_antibiotic_stats"] {
@@ -2971,7 +3119,7 @@ erDiagram
   biz_antibiotic_incision_review["I 类切口预防用药点评 · biz_antibiotic_incision_review"] {
     bigint id "主键"
     bigint operation_apply_id "手术申请单ID"
-    bigint admission_id "入院ID"
+    bigint admission_id "入院ID（快照）"
     bigint patient_id "患者ID"
     bigint drug_id "预防用药药品ID"
     bigint reviewer_id "点评人员工ID"
@@ -2981,7 +3129,7 @@ erDiagram
     varchar case_no "病例编号"
     bigint disease_id "病种ID"
     bigint admission_id "住院ID"
-    bigint patient_id "患者ID"
+    bigint patient_id "患者ID（快照）"
   }
   biz_vte_stats["VTE 防控月度指标 · biz_vte_stats"] {
     bigint id "主键"
@@ -2993,8 +3141,8 @@ erDiagram
     bigint id "主键"
     bigint admission_id "入院ID"
     bigint patient_id "患者ID"
-    bigint dept_id "科室ID"
-    bigint ward_id "病区ID"
+    bigint dept_id "科室ID（快照）"
+    bigint ward_id "病区ID（快照）"
     bigint assessment_id "来源评估单ID"
     varchar measure_code "措施码"
     bigint executor_id "执行人（员工ID）"
@@ -3003,8 +3151,8 @@ erDiagram
     bigint id "主键"
     bigint admission_id "入院ID"
     bigint patient_id "患者ID"
-    bigint dept_id "科室ID"
-    bigint ward_id "病区ID"
+    bigint dept_id "科室ID（快照）"
+    bigint ward_id "病区ID（快照）"
     bigint reporter_id "登记人（员工ID）"
   }
   biz_nutrition_screen["营养风险筛查记录 · biz_nutrition_screen"] {
@@ -3012,8 +3160,8 @@ erDiagram
     varchar screen_no "筛查编号"
     bigint admission_id "入院ID"
     bigint patient_id "患者ID"
-    bigint dept_id "科室ID"
-    bigint ward_id "病区ID"
+    bigint dept_id "科室ID（快照）"
+    bigint ward_id "病区ID（快照）"
     bigint screener_id "筛查人（员工ID）"
   }
   biz_diet_plan["膳食方案 · biz_diet_plan"] {
@@ -3021,8 +3169,8 @@ erDiagram
     varchar diet_no "膳食方案编号"
     bigint admission_id "入院ID"
     bigint patient_id "患者ID"
-    bigint dept_id "科室ID"
-    bigint ward_id "病区ID"
+    bigint dept_id "科室ID（快照）"
+    bigint ward_id "病区ID（快照）"
     bigint order_id "来源医嘱ID"
     bigint confirmer_id "接收人"
   }
@@ -3031,7 +3179,7 @@ erDiagram
     varchar meal_no "订餐单号"
     bigint admission_id "入院ID"
     bigint patient_id "患者ID"
-    bigint dept_id "科室ID"
+    bigint dept_id "科室ID（快照）"
     bigint ward_id "病区ID"
     bigint diet_plan_id "来源膳食方案ID"
     date meal_date "就餐日期"
@@ -3084,7 +3232,7 @@ erDiagram
     varchar stay_no "入科单号"
     bigint admission_id "入院ID"
     bigint patient_id "患者ID"
-    bigint from_dept_id "入科来源科室ID"
+    bigint from_dept_id "入科来源科室ID（快照）"
     bigint ward_id "ICU 病区ID"
     bigint bed_id "ICU 床位ID"
   }
@@ -3351,6 +3499,35 @@ erDiagram
     bigint user_id "用户ID"
     varchar widget_code "卡片编码"
   }
+  biz_service_message["患者端留言 · biz_service_message"] {
+    bigint id "主键ID"
+    varchar message_no "留言单号"
+    bigint user_id "留言用户ID"
+    bigint patient_id "就诊人ID"
+  }
+  biz_service_ticket_log["工单流转记录（患者端进展时间轴  · biz_service_ticket_log"] {
+    bigint id "主键ID"
+    bigint message_id "工单ID（biz_service_message.id）"
+    varchar message_no "工单号（冗余，排查时不用 join）"
+  }
+  sys_faq["患者端常见问题 · sys_faq"] {
+    bigint id "主键ID"
+    varchar faq_no "常见问题编号"
+  }
+  sys_knowledge_chunk["知识库切块（向量在内存，文本在此 · sys_knowledge_chunk"] {
+    bigint id "切块ID（雪花）"
+    bigint doc_id "所属文档ID"
+  }
+  sys_knowledge_doc["知识库文档 · sys_knowledge_doc"] {
+    bigint id "文档ID（雪花）"
+  }
+  sys_service_trace["客服页自助行为埋点 · sys_service_trace"] {
+    bigint id "主键ID"
+    bigint user_id "用户ID"
+    bigint patient_id "就诊人ID"
+    bigint faq_id "关联常见问题ID"
+    bigint ref_id "关联业务ID（留言ID）"
+  }
   biz_admission["入院记录 · biz_admission"] {
     bigint admission_id "入院ID"
   }
@@ -3397,6 +3574,9 @@ erDiagram
   sys_department ||--o{ biz_referral : "to_dept_id"
   biz_admission ||--o{ biz_referral : "admission_id"
   sys_employee ||--o{ biz_referral : "audit_by"
+  sys_user ||--o{ biz_service_message : "user_id"
+  biz_patient ||--o{ biz_service_message : "patient_id"
+  biz_service_message ||--|{ biz_service_ticket_log : "message_id"
   biz_survey_dispatch ||--|| biz_survey_answer : "dispatch_id"
   biz_survey_template ||--|{ biz_survey_answer : "template_id"
   biz_patient ||--|{ biz_survey_answer : "patient_id"
@@ -3415,7 +3595,12 @@ erDiagram
   biz_admission ||--o{ biz_tele_consult : "admission_id"
   sys_department ||--o{ biz_tele_consult : "apply_dept_id"
   sys_employee ||--o{ biz_tele_consult : "apply_doctor_id"
+  sys_knowledge_doc ||--|{ sys_knowledge_chunk : "doc_id"
   sys_employee ||--|{ sys_message : "receiver_id"
+  sys_user ||--o{ sys_service_trace : "user_id"
+  biz_patient ||--o{ sys_service_trace : "patient_id"
+  sys_faq ||--o{ sys_service_trace : "faq_id"
+  biz_service_message ||--o{ sys_service_trace : "ref_id"
   sys_user ||--|{ sys_workbench_layout : "user_id"
   sys_role ||--|{ sys_workbench_role : "role_id"
   sys_workbench_widget ||--|{ sys_workbench_role : "widget_id"

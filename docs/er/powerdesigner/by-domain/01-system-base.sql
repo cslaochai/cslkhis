@@ -1,6 +1,6 @@
 -- ============================================================
--- 领域 01 系统基础（组织·用户·岗位·权限·参数·字典）（本域 17 表 + 上游参照 1 表 / 22 条关系）
--- 由 workspace/_er/emit.mjs 从 dev 库 information_schema 反向生成，只用于建模，禁止在业务库执行。
+-- 领域 01 系统基础（组织·用户·岗位·权限·参数·字典）（本域 17 表 + 上游参照 1 表 / 23 条关系）
+-- 由 workspace/_er/refresh.mjs 从 dev 库 information_schema 反向生成，只用于建模，禁止在业务库执行。
 -- 关系 = *_id 列命名推断 + 真实数据覆盖率验证，逐条证据见 docs/er/relationships.csv。
 -- PowerDesigner：File → Reverse Engineer → Database → 模板选 MySQL 8.0 → 勾选 Script file 指向本文件。
 -- ============================================================
@@ -11,13 +11,14 @@ CREATE TABLE `sys_department` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `dept_code` varchar(32) NOT NULL COMMENT '科室编码（唯一）',
   `dept_name` varchar(100) NOT NULL COMMENT '科室名称',
-  `dept_type` tinyint NOT NULL DEFAULT 1 COMMENT '科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他）',
+  `dept_type` varchar(20) NOT NULL COMMENT '科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他），多个类型逗号分隔',
   `parent_id` bigint NOT NULL DEFAULT 0 COMMENT '父科室ID',
   `sort_order` int NOT NULL DEFAULT 0 COMMENT '排序号',
   `dept_icon` varchar(200) COMMENT '科室图标',
   `dept_desc` varchar(500) COMMENT '科室描述',
   `contact_phone` varchar(20) COMMENT '联系电话',
   `location` varchar(200) COMMENT '科室位置',
+  `dept_leader_id` bigint COMMENT '科室负责人（sys_employee.id)',
   `is_open` tinyint DEFAULT 1 COMMENT '是否开诊（0-否 1-是）',
   `status` tinyint DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
   `create_by` varchar(64) COMMENT '创建人',
@@ -110,8 +111,8 @@ CREATE TABLE `sys_user` (
   `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_openid` (`openid`),
-  UNIQUE KEY `uk_user_name` (`user_name`)
+  UNIQUE KEY `uk_user_name` (`user_name`),
+  UNIQUE KEY `uk_openid` (`openid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户';
 
 -- sys_employee  员工
@@ -177,8 +178,7 @@ CREATE TABLE `sys_employee_qualification` (
   `update_by` varchar(64) COMMENT '更新人',
   `update_time` datetime COMMENT '更新时间',
   `remark` varchar(512) COMMENT '备注',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_emp_cert_type_no` (`employee_id`, `cert_type`, `cert_no`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='员工资格证书';
 
 -- sys_employee_tech_auth  医疗技术授权台账
@@ -187,7 +187,7 @@ CREATE TABLE `sys_employee_tech_auth` (
   `employee_id` bigint NOT NULL COMMENT '员工ID',
   `employee_name` varchar(50) NOT NULL COMMENT '员工姓名',
   `dept_id` bigint COMMENT '所属科室ID',
-  `dept_name` varchar(200) COMMENT '所属科室名称',
+  `dept_name` varchar(200) COMMENT '所属科室名称（快照）',
   `title` varchar(50) COMMENT '职称',
   `auth_category` tinyint NOT NULL COMMENT '授权类别（1-手术 2-麻醉 3-内镜与介入）',
   `tech_level` tinyint NOT NULL COMMENT '可独立操作的手术级别上限',
@@ -211,8 +211,7 @@ CREATE TABLE `sys_employee_tech_auth` (
   `update_by` varchar(64) COMMENT '更新人',
   `update_time` datetime COMMENT '更新时间',
   `remark` varchar(500) COMMENT '备注',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_emp_cat_from` (`employee_id`, `auth_category`, `valid_from`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='医疗技术授权台账';
 
 -- biz_tech_auth_override  越权授权事后登记
@@ -222,7 +221,7 @@ CREATE TABLE `biz_tech_auth_override` (
   `source_id` bigint NOT NULL COMMENT '来源单据ID',
   `source_no` varchar(64) COMMENT '来源单据号',
   `employee_id` bigint NOT NULL COMMENT '越权操作者（员工ID）',
-  `employee_name` varchar(50) NOT NULL COMMENT '越权操作者姓名',
+  `employee_name` varchar(50) NOT NULL COMMENT '越权操作者姓名（快照）',
   `auth_category` tinyint NOT NULL COMMENT '涉及授权类别',
   `required_level` tinyint NOT NULL COMMENT '该操作要求的级别',
   `held_level` tinyint COMMENT '越权者当时的授权级别上限',
@@ -312,9 +311,9 @@ CREATE TABLE `sys_sign_cert` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `cert_no` varchar(32) NOT NULL COMMENT '证书编号',
   `emp_id` bigint NOT NULL COMMENT '签名人员工ID',
-  `emp_name` varchar(64) NOT NULL COMMENT '签名人姓名',
-  `dept_id` bigint COMMENT '所属科室ID',
-  `dept_name` varchar(64) COMMENT '所属科室名称',
+  `emp_name` varchar(64) NOT NULL COMMENT '签名人姓名（快照）',
+  `dept_id` bigint COMMENT '所属科室ID（快照）',
+  `dept_name` varchar(64) COMMENT '所属科室名称（快照）',
   `key_algo` varchar(16) NOT NULL DEFAULT 'RSA2048' COMMENT '密钥算法',
   `digest_algo` varchar(16) NOT NULL DEFAULT 'SHA256' COMMENT '摘要算法',
   `sign_algo` varchar(32) NOT NULL DEFAULT 'SHA256withRSA' COMMENT '签名算法',
@@ -366,7 +365,7 @@ CREATE TABLE `sys_tsa_server` (
 
 -- sys_field_change_log  字段级修改日志
 CREATE TABLE `sys_field_change_log` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `id` bigint NOT NULL COMMENT '主键ID',
   `biz_type` varchar(32) NOT NULL COMMENT '对象类型',
   `biz_id` varchar(64) NOT NULL COMMENT '对象ID',
   `biz_no` varchar(64) COMMENT '对象编号快照（患者号/工号/病历号）',
@@ -443,12 +442,12 @@ CREATE TABLE `biz_patient` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_patient_no` (`patient_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='患者基本信息';
-
 -- ---------------- 参照关系（E-R 连线） ----------------
 ALTER TABLE `biz_tech_auth_override` ADD CONSTRAINT `fk_biz_tech_auth_override_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_tech_auth_override` ADD CONSTRAINT `fk_biz_tech_auth_override_supervisor_id` FOREIGN KEY (`supervisor_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `sys_attachment` ADD CONSTRAINT `fk_sys_attachment_upload_user_id` FOREIGN KEY (`upload_user_id`) REFERENCES `sys_user` (`id`);
 ALTER TABLE `sys_department` ADD CONSTRAINT `fk_sys_department_parent_id` FOREIGN KEY (`parent_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `sys_department` ADD CONSTRAINT `fk_sys_department_dept_leader_id` FOREIGN KEY (`dept_leader_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `sys_employee` ADD CONSTRAINT `fk_sys_employee_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
 ALTER TABLE `sys_employee_post` ADD CONSTRAINT `fk_sys_employee_post_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `sys_employee_post` ADD CONSTRAINT `fk_sys_employee_post_role_id` FOREIGN KEY (`role_id`) REFERENCES `sys_role` (`id`);

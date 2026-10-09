@@ -1,6 +1,6 @@
 -- ============================================================
--- 领域 16 急诊与全院总值班（本域 5 表 + 上游参照 6 表 / 20 条关系）
--- 由 workspace/_er/emit.mjs 从 dev 库 information_schema 反向生成，只用于建模，禁止在业务库执行。
+-- 领域 16 急诊与全院总值班（本域 6 表 + 上游参照 8 表 / 23 条关系）
+-- 由 workspace/_er/refresh.mjs 从 dev 库 information_schema 反向生成，只用于建模，禁止在业务库执行。
 -- 关系 = *_id 列命名推断 + 真实数据覆盖率验证，逐条证据见 docs/er/relationships.csv。
 -- PowerDesigner：File → Reverse Engineer → Database → 模板选 MySQL 8.0 → 勾选 Script file 指向本文件。
 -- ============================================================
@@ -55,9 +55,9 @@ CREATE TABLE `biz_emergency_handover` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `handover_no` varchar(32) NOT NULL COMMENT '交班单号',
   `dept_id` bigint NOT NULL COMMENT '交班科室ID',
-  `dept_name` varchar(100) NOT NULL COMMENT '交班科室名称',
+  `dept_name` varchar(100) NOT NULL COMMENT '交班科室名称（快照）',
   `from_emp_id` bigint NOT NULL COMMENT '交出人员工ID',
-  `from_emp_name` varchar(50) NOT NULL COMMENT '交出人姓名',
+  `from_emp_name` varchar(50) NOT NULL COMMENT '交出人姓名（快照）',
   `take_emp_id` bigint NOT NULL COMMENT '接班人员工ID',
   `take_emp_name` varchar(50) NOT NULL COMMENT '接班人姓名',
   `shift_name` varchar(32) COMMENT '班次名',
@@ -83,15 +83,15 @@ CREATE TABLE `biz_emergency_handover_item` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `handover_id` bigint NOT NULL COMMENT '交班单ID',
   `emergency_id` bigint NOT NULL COMMENT '急诊记录ID',
-  `emergency_no` varchar(32) NOT NULL COMMENT '急诊号',
+  `emergency_no` varchar(32) NOT NULL COMMENT '急诊号（快照）',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
   `triage_level` tinyint COMMENT '分诊级别',
   `emergency_status` tinyint NOT NULL COMMENT '交班时该患者的急诊状态（1-候诊 2-诊治中 3-留观）',
   `from_doctor_id` bigint COMMENT '交班时的负责医生ID',
-  `from_doctor_name` varchar(50) COMMENT '交班时的负责医生姓名',
+  `from_doctor_name` varchar(50) COMMENT '交班时的负责医生姓名（快照）',
   `take_doctor_id` bigint NOT NULL COMMENT '接续责任人',
-  `take_doctor_name` varchar(50) NOT NULL COMMENT '接续责任人姓名',
+  `take_doctor_name` varchar(50) NOT NULL COMMENT '接续责任人姓名（快照）',
   `disposition` varchar(100) NOT NULL COMMENT '去向/处置交代',
   `handover_note` varchar(300) COMMENT '逐条补充交代（过敏史/管路/家属联系方式等，截到 300）',
   `wait_minutes` bigint COMMENT '候诊已等多久',
@@ -116,23 +116,26 @@ CREATE TABLE `biz_duty_roster` (
   `employee_id` bigint NOT NULL COMMENT '值班人',
   `employee_name` varchar(50) COMMENT '值班人姓名',
   `dept_id` bigint COMMENT '值班人原属科室ID',
-  `dept_name` varchar(100) COMMENT '值班人原属科室名称',
+  `dept_name` varchar(100) COMMENT '值班人原属科室名称（快照）',
   `phone` varchar(32) COMMENT '值班联系电话',
   `start_time` varchar(5) COMMENT '班次开始时间（HH:mm）',
   `end_time` varchar(5) COMMENT '班次结束时间（HH:mm）',
   `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1-有效 0-停用）',
   `substitute_emp_id` bigint COMMENT '临时换班后的实际值班人',
-  `substitute_emp_name` varchar(50) COMMENT '换班后实际值班人姓名',
+  `substitute_emp_name` varchar(50) COMMENT '换班后实际值班人姓名（快照）',
   `substitute_time` datetime COMMENT '换班时间',
   `substitute_reason` varchar(200) COMMENT '换班原因',
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
+  `shift_id` bigint COMMENT '标准班次ID',
+  `post_id` bigint COMMENT '值班点位ID',
+  `staff_schedule_id` bigint COMMENT '员工排班ID',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_duty_date_shift_role` (`duty_date`, `shift_type`, `role_type`)
+  UNIQUE KEY `uk_duty_post_date` (`post_id`, `duty_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='全院总值班排班';
 
 -- biz_duty_log  总值班值班日志
@@ -142,7 +145,7 @@ CREATE TABLE `biz_duty_log` (
   `shift_type` tinyint NOT NULL COMMENT '班次 1-白班 2-夜班（1-白班 2-夜班）',
   `roster_id` bigint COMMENT '所属排班行 biz_duty_roster.id',
   `employee_id` bigint NOT NULL COMMENT '值班人',
-  `employee_name` varchar(64) COMMENT '值班人姓名',
+  `employee_name` varchar(64) COMMENT '值班人姓名（快照）',
   `log_type` tinyint NOT NULL DEFAULT 1 COMMENT '记录类型 1-值班事件 2-遗留事项 3-巡查记录（1-值班事件 2-遗留事项 3-巡查记录）',
   `happen_time` datetime COMMENT '事件发生时间',
   `title` varchar(200) NOT NULL COMMENT '标题',
@@ -150,7 +153,7 @@ CREATE TABLE `biz_duty_log` (
   `handle_result` varchar(1000) COMMENT '处理情况',
   `status` tinyint NOT NULL DEFAULT 0 COMMENT '状态 0-待处理 1-已处理 2-已交班（0-待处理 1-已处理 2-已交班）',
   `handover_emp_id` bigint COMMENT '接班人',
-  `handover_emp_name` varchar(64) COMMENT '接班人姓名',
+  `handover_emp_name` varchar(64) COMMENT '接班人姓名（快照）',
   `handover_time` datetime COMMENT '交班时间',
   `ack_time` datetime COMMENT '接班人签收时间',
   `create_by` varchar(64) COMMENT '记录人',
@@ -162,6 +165,32 @@ CREATE TABLE `biz_duty_log` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='总值班值班日志';
 
+-- biz_duty_post  值班点位
+CREATE TABLE `biz_duty_post` (
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
+  `post_code` varchar(32) NOT NULL COMMENT '点位编码',
+  `post_name` varchar(64) NOT NULL COMMENT '点位名称',
+  `duty_scope` tinyint NOT NULL DEFAULT 1 COMMENT '责任范围（1-全院行政 2-急诊 3-感染 4-总务 5-信息）',
+  `org_type` tinyint NOT NULL DEFAULT 3 COMMENT '排班单元类型（1-科室 2-病区 3-全院）',
+  `org_id` bigint NOT NULL DEFAULT 0 COMMENT '排班单元ID（全院级为0）',
+  `role_type` tinyint NOT NULL DEFAULT 1 COMMENT '班内角色（1-主班 2-副班）',
+  `duty_level` tinyint NOT NULL DEFAULT 0 COMMENT '值班层级（0-不适用 1-一线 2-二线 3-三线）',
+  `attend_mode` tinyint NOT NULL DEFAULT 3 COMMENT '响应形态（1-坐班 2-听班 3-留院值班）',
+  `shift_id` bigint NOT NULL COMMENT '标准班次ID',
+  `required_staff_type` tinyint COMMENT '应到岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他，空-不限）',
+  `phone` varchar(32) COMMENT '点位值班电话',
+  `sort_no` int NOT NULL DEFAULT 0 COMMENT '排序号',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
+  `create_by` varchar(64) COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) COMMENT '更新人',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_duty_post_code` (`post_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='值班点位';
+
 -- biz_admission  入院记录
 CREATE TABLE `biz_admission` (
   `admission_id` bigint NOT NULL COMMENT '入院ID',
@@ -169,11 +198,14 @@ CREATE TABLE `biz_admission` (
   `patient_id` bigint NOT NULL COMMENT '患者ID',
   `visit_id` bigint COMMENT '就诊次ID',
   `regist_id` bigint COMMENT '来源挂号ID',
-  `regist_no` varchar(32) COMMENT '来源挂号号',
+  `regist_no` varchar(32) COMMENT '来源挂号号（快照）',
   `admission_order_id` bigint COMMENT '来源住院证ID',
   `admit_dept_id` bigint COMMENT '入院科室ID',
   `dept_id` bigint COMMENT '入院科室ID',
   `ward_id` bigint NOT NULL COMMENT '病区ID',
+  `nursing_level` tinyint COMMENT '护理等级（1-特级 2-一级 3-二级 4-三级，字典 his_nursing_level）',
+  `nursing_level_source` tinyint NOT NULL DEFAULT 1 COMMENT '护理等级来源（1-默认兜底 2-护理记录带出 3-护士长评定）',
+  `nursing_level_time` datetime COMMENT '护理等级评定时间（默认兜底时为写入时间）',
   `bed_id` bigint NOT NULL COMMENT '床位ID',
   `admit_doctor_id` bigint NOT NULL COMMENT '入院医生ID',
   `admit_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '入院时间',
@@ -246,6 +278,65 @@ CREATE TABLE `biz_patient` (
   UNIQUE KEY `uk_patient_no` (`patient_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='患者基本信息';
 
+-- biz_shift  班次字典
+CREATE TABLE `biz_shift` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `shift_name` varchar(50) NOT NULL COMMENT '班次名称',
+  `start_time` varchar(10) NOT NULL COMMENT '开始时间（HH:mm）',
+  `end_time` varchar(10) NOT NULL COMMENT '结束时间（HH:mm）',
+  `cross_day` tinyint NOT NULL DEFAULT 0 COMMENT '是否跨零点（0-不跨 1-次日收）',
+  `is_night` tinyint NOT NULL DEFAULT 0 COMMENT '是否夜班（1-夜班 0-白班）：夜班流入判定与连续夜班上限的唯一依据',
+  `need_rest_hours` decimal(4,1) NOT NULL DEFAULT 0.0 COMMENT '下此班后最短休息小时数（0-不限制；夜班通例取16）',
+  `late_grace_minutes` int NOT NULL DEFAULT 15 COMMENT '迟到宽限（分钟）：签到晚于班次开始超过这个数才算迟到',
+  `duration_minutes` int NOT NULL DEFAULT 0 COMMENT '时长（分钟）',
+  `dept_id` bigint COMMENT '适用科室ID',
+  `schedule_type` tinyint COMMENT '班次类型（1-上午 2-下午 3-全天 4-凌晨）',
+  `use_scope` tinyint NOT NULL DEFAULT 1 COMMENT '班次适用域（1-门诊 2-病区护理排班）',
+  `apply_staff_type` tinyint COMMENT '适用岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他，空-全部岗位通用）',
+  `status` tinyint DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
+  `create_by` varchar(64) DEFAULT '' COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT '' COMMENT '更新人',
+  `update_time` datetime COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) COMMENT '备注',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='班次字典';
+
+-- biz_staff_schedule  员工排班
+CREATE TABLE `biz_staff_schedule` (
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
+  `schedule_date` date NOT NULL COMMENT '排班日期',
+  `week_day` tinyint NOT NULL COMMENT '星期（1-周一 7-周日）',
+  `org_type` tinyint NOT NULL DEFAULT 1 COMMENT '排班单元类型（1-科室 2-病区 3-全院）',
+  `org_id` bigint NOT NULL DEFAULT 0 COMMENT '排班单元ID（全院级为0）',
+  `org_name` varchar(128) NOT NULL DEFAULT '' COMMENT '排班单元名称（快照）',
+  `dept_id` bigint NOT NULL DEFAULT 0 COMMENT '科室ID（全院级为0）',
+  `dept_name` varchar(128) NOT NULL DEFAULT '' COMMENT '科室名称（快照）',
+  `employee_id` bigint NOT NULL COMMENT '员工ID',
+  `emp_code` varchar(32) COMMENT '工号（快照）',
+  `employee_name` varchar(50) NOT NULL DEFAULT '' COMMENT '姓名（快照）',
+  `employee_post_id` bigint COMMENT '员工岗位ID（人 × 科室 × 角色）',
+  `staff_type` tinyint NOT NULL DEFAULT 1 COMMENT '岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他）',
+  `shift_id` bigint NOT NULL DEFAULT 0 COMMENT '标准班次ID（0-无班次）',
+  `start_time` varchar(5) COMMENT '开始时间（HH:mm，班次快照）',
+  `end_time` varchar(5) COMMENT '结束时间（HH:mm，班次快照，早于开始时间属次日）',
+  `duty_status` tinyint NOT NULL DEFAULT 1 COMMENT '出勤状态（1-上班 2-休息 3-请假 4-培训 5-停班）',
+  `attend_mode` tinyint NOT NULL DEFAULT 1 COMMENT '响应形态（1-坐班 2-听班 3-留院值班）',
+  `clinic_flag` tinyint NOT NULL DEFAULT 0 COMMENT '是否出诊（0-否 1-是）',
+  `work_minutes` int NOT NULL DEFAULT 0 COMMENT '工时（分钟）',
+  `schedule_source` tinyint NOT NULL DEFAULT 1 COMMENT '生成来源（1-手工 2-模板 3-复制周期 4-换班）',
+  `template_id` bigint COMMENT '来源排班周模板ID',
+  `create_by` varchar(64) COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) COMMENT '更新人',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_emp_date_shift` (`employee_id`, `schedule_date`, `shift_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='员工排班';
+
 -- sys_bed  床位
 CREATE TABLE `sys_bed` (
   `bed_id` bigint NOT NULL COMMENT '床位ID',
@@ -270,13 +361,14 @@ CREATE TABLE `sys_department` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `dept_code` varchar(32) NOT NULL COMMENT '科室编码（唯一）',
   `dept_name` varchar(100) NOT NULL COMMENT '科室名称',
-  `dept_type` tinyint NOT NULL DEFAULT 1 COMMENT '科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他）',
+  `dept_type` varchar(20) NOT NULL COMMENT '科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他），多个类型逗号分隔',
   `parent_id` bigint NOT NULL DEFAULT 0 COMMENT '父科室ID',
   `sort_order` int NOT NULL DEFAULT 0 COMMENT '排序号',
   `dept_icon` varchar(200) COMMENT '科室图标',
   `dept_desc` varchar(500) COMMENT '科室描述',
   `contact_phone` varchar(20) COMMENT '联系电话',
   `location` varchar(200) COMMENT '科室位置',
+  `dept_leader_id` bigint COMMENT '科室负责人（sys_employee.id)',
   `is_open` tinyint DEFAULT 1 COMMENT '是否开诊（0-否 1-是）',
   `status` tinyint DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
   `create_by` varchar(64) COMMENT '创建人',
@@ -334,7 +426,6 @@ CREATE TABLE `sys_ward` (
   PRIMARY KEY (`ward_id`),
   UNIQUE KEY `uk_ward_code` (`ward_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='病区';
-
 -- ---------------- 参照关系（E-R 连线） ----------------
 ALTER TABLE `biz_duty_log` ADD CONSTRAINT `fk_biz_duty_log_roster_id` FOREIGN KEY (`roster_id`) REFERENCES `biz_duty_roster` (`id`);
 ALTER TABLE `biz_duty_log` ADD CONSTRAINT `fk_biz_duty_log_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `sys_employee` (`id`);
@@ -342,6 +433,9 @@ ALTER TABLE `biz_duty_log` ADD CONSTRAINT `fk_biz_duty_log_handover_emp_id` FORE
 ALTER TABLE `biz_duty_roster` ADD CONSTRAINT `fk_biz_duty_roster_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_duty_roster` ADD CONSTRAINT `fk_biz_duty_roster_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
 ALTER TABLE `biz_duty_roster` ADD CONSTRAINT `fk_biz_duty_roster_substitute_emp_id` FOREIGN KEY (`substitute_emp_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_duty_roster` ADD CONSTRAINT `fk_biz_duty_roster_shift_id` FOREIGN KEY (`shift_id`) REFERENCES `biz_shift` (`id`);
+ALTER TABLE `biz_duty_roster` ADD CONSTRAINT `fk_biz_duty_roster_post_id` FOREIGN KEY (`post_id`) REFERENCES `biz_duty_post` (`id`);
+ALTER TABLE `biz_duty_roster` ADD CONSTRAINT `fk_biz_duty_roster_staff_schedule_id` FOREIGN KEY (`staff_schedule_id`) REFERENCES `biz_staff_schedule` (`id`);
 ALTER TABLE `biz_emergency` ADD CONSTRAINT `fk_biz_emergency_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
 ALTER TABLE `biz_emergency` ADD CONSTRAINT `fk_biz_emergency_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
 ALTER TABLE `biz_emergency` ADD CONSTRAINT `fk_biz_emergency_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);

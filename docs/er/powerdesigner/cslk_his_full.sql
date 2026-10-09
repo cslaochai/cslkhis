@@ -1,6 +1,6 @@
 -- ============================================================
--- cslk_his 全库 E-R 反查脚本：302 表 / 831 条关系
--- 由 workspace/_er/emit.mjs 从 dev 库 information_schema 反向生成，只用于建模，禁止在业务库执行。
+-- cslk_his 全库 E-R 反查脚本：320 表 / 876 条关系
+-- 由 workspace/_er/refresh.mjs 从 dev 库 information_schema 反向生成，只用于建模，禁止在业务库执行。
 -- 关系 = *_id 列命名推断 + 真实数据覆盖率验证，逐条证据见 docs/er/relationships.csv。
 -- PowerDesigner：File → Reverse Engineer → Database → 模板选 MySQL 8.0 → 勾选 Script file 指向本文件。
 -- ============================================================
@@ -12,11 +12,14 @@ CREATE TABLE `biz_admission` (
   `patient_id` bigint NOT NULL COMMENT '患者ID',
   `visit_id` bigint COMMENT '就诊次ID',
   `regist_id` bigint COMMENT '来源挂号ID',
-  `regist_no` varchar(32) COMMENT '来源挂号号',
+  `regist_no` varchar(32) COMMENT '来源挂号号（快照）',
   `admission_order_id` bigint COMMENT '来源住院证ID',
   `admit_dept_id` bigint COMMENT '入院科室ID',
   `dept_id` bigint COMMENT '入院科室ID',
   `ward_id` bigint NOT NULL COMMENT '病区ID',
+  `nursing_level` tinyint COMMENT '护理等级（1-特级 2-一级 3-二级 4-三级，字典 his_nursing_level）',
+  `nursing_level_source` tinyint NOT NULL DEFAULT 1 COMMENT '护理等级来源（1-默认兜底 2-护理记录带出 3-护士长评定）',
+  `nursing_level_time` datetime COMMENT '护理等级评定时间（默认兜底时为写入时间）',
   `bed_id` bigint NOT NULL COMMENT '床位ID',
   `admit_doctor_id` bigint NOT NULL COMMENT '入院医生ID',
   `admit_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '入院时间',
@@ -41,21 +44,21 @@ CREATE TABLE `biz_admission_order` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `order_no` varchar(32) NOT NULL COMMENT '住院证号',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者编号',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
+  `patient_no` varchar(32) COMMENT '患者编号（快照）',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
   `gender` tinyint COMMENT '性别（1-男 2-女 9-未知）',
-  `age` int COMMENT '年龄',
-  `phone` varchar(20) COMMENT '联系电话',
-  `id_card` varchar(18) COMMENT '身份证号',
+  `age` int COMMENT '年龄（快照）',
+  `phone` varchar(20) COMMENT '联系电话（快照）',
+  `id_card` varchar(18) COMMENT '身份证号（快照）',
   `regist_id` bigint COMMENT '来源挂号ID',
   `regist_no` varchar(32) COMMENT '来源挂号号',
   `visit_id` bigint COMMENT '来源就诊次ID',
   `source_dept_id` bigint COMMENT '开证科室ID',
-  `source_dept_name` varchar(100) COMMENT '开证科室名称',
+  `source_dept_name` varchar(100) COMMENT '开证科室名称（快照）',
   `source_doctor_id` bigint COMMENT '开证医生ID',
-  `source_doctor_name` varchar(50) COMMENT '开证医生姓名',
+  `source_doctor_name` varchar(50) COMMENT '开证医生姓名（快照）',
   `apply_dept_id` bigint COMMENT '拟收治科室ID',
-  `apply_dept_name` varchar(100) COMMENT '拟收治科室名称',
+  `apply_dept_name` varchar(100) COMMENT '拟收治科室名称（快照）',
   `diagnosis_code` varchar(32) COMMENT '拟诊ICD编码',
   `diagnosis_name` varchar(200) COMMENT '拟诊名称',
   `diagnosis_note` varchar(500) COMMENT '病情与收治说明',
@@ -87,9 +90,9 @@ CREATE TABLE `biz_adverse_event` (
   `event_level` tinyint NOT NULL COMMENT '事件等级',
   `acquired_flag` tinyint NOT NULL DEFAULT 1 COMMENT '来源（1-院内获得 2-入院带入）',
   `occur_dept_id` bigint NOT NULL COMMENT '发生科室 sys_department.id',
-  `occur_dept_name` varchar(64) COMMENT '发生科室名称',
+  `occur_dept_name` varchar(64) COMMENT '发生科室名称（快照）',
   `occur_ward_id` bigint COMMENT '发生病区ID',
-  `occur_ward_name` varchar(128) COMMENT '发生病区名称',
+  `occur_ward_name` varchar(128) COMMENT '发生病区名称（快照）',
   `occur_time` datetime NOT NULL COMMENT '发生时间',
   `patient_id` bigint COMMENT '关联患者',
   `patient_name` varchar(64) COMMENT '患者姓名（快照，可空）',
@@ -98,19 +101,19 @@ CREATE TABLE `biz_adverse_event` (
   `description` text NOT NULL COMMENT '事件详细经过',
   `immediate_action` varchar(500) COMMENT '即时处置措施',
   `reporter_id` bigint NOT NULL COMMENT '上报人员工ID',
-  `reporter_name` varchar(64) COMMENT '上报人姓名',
+  `reporter_name` varchar(64) COMMENT '上报人姓名（快照）',
   `report_time` datetime NOT NULL COMMENT '上报时间',
   `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1-已上报待处理 2-处理中 3-已整改 4-已结案）',
   `handler_id` bigint COMMENT '处理人员工ID',
-  `handler_name` varchar(64) COMMENT '处理人姓名',
+  `handler_name` varchar(64) COMMENT '处理人姓名（快照）',
   `handle_remark` varchar(500) COMMENT '处理意见（D）',
   `handle_time` datetime COMMENT '处理时间',
   `rectify_by_id` bigint COMMENT '整改人员工ID',
-  `rectify_by_name` varchar(64) COMMENT '整改人姓名',
+  `rectify_by_name` varchar(64) COMMENT '整改人姓名（快照）',
   `rectify_measures` varchar(500) COMMENT '整改措施（C）',
   `rectify_time` datetime COMMENT '整改时间',
   `close_by_id` bigint COMMENT '结案人员工ID',
-  `close_by_name` varchar(64) COMMENT '结案人姓名',
+  `close_by_name` varchar(64) COMMENT '结案人姓名（快照）',
   `verify_remark` varchar(500) COMMENT '验证结论（A）',
   `close_time` datetime COMMENT '结案时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
@@ -119,6 +122,31 @@ CREATE TABLE `biz_adverse_event` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_event_no` (`event_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='不良事件上报';
+
+-- biz_ai_draft_diff  病历草稿AI留痕（草稿与终稿差异，SFT训练原料）
+CREATE TABLE `biz_ai_draft_diff` (
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
+  `record_id` bigint NOT NULL COMMENT '病历ID',
+  `regist_id` bigint COMMENT '挂号ID',
+  `patient_id` bigint COMMENT '患者ID',
+  `patient_no` varchar(50) DEFAULT '' COMMENT '患者号',
+  `patient_name` varchar(50) DEFAULT '' COMMENT '患者姓名',
+  `dept_id` bigint COMMENT '接诊科室ID',
+  `dept_name` varchar(50) DEFAULT '' COMMENT '接诊科室名称',
+  `doctor_id` bigint COMMENT '终审医生ID',
+  `doctor_name` varchar(50) DEFAULT '' COMMENT '终审医生姓名',
+  `draft_text` text COMMENT 'AI草稿原文（截断2000字）',
+  `final_text` text COMMENT '医生终稿（截断2000字）',
+  `diff_json` mediumtext COMMENT '差异分段JSON（0-相同 1-删 2-增）',
+  `changed` tinyint DEFAULT 1 COMMENT '是否修改（1-有修改 0-未修改）',
+  `create_by` varchar(64) DEFAULT '' COMMENT '创建人',
+  `create_time` datetime COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT '' COMMENT '更新人',
+  `update_time` datetime COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT '' COMMENT '备注',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='病历草稿AI留痕（草稿与终稿差异，SFT训练原料）';
 
 -- biz_alert  预警记录
 CREATE TABLE `biz_alert` (
@@ -141,13 +169,13 @@ CREATE TABLE `biz_anesthesia_followup` (
   `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `followup_no` varchar(32) NOT NULL COMMENT '随访单号',
   `record_id` bigint NOT NULL COMMENT '麻醉记录ID',
-  `record_no` varchar(32) COMMENT '麻醉记录单号',
-  `apply_id` bigint COMMENT '手术申请单ID',
+  `record_no` varchar(32) COMMENT '麻醉记录单号（快照）',
+  `apply_id` bigint COMMENT '手术申请单ID（快照）',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_name` varchar(50) COMMENT '患者姓名',
-  `gender` tinyint COMMENT '性别（1-男 2-女）',
-  `age` int COMMENT '年龄',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
+  `gender` tinyint COMMENT '性别（快照）（1-男 2-女）',
+  `age` int COMMENT '年龄（快照）',
   `followup_time` datetime NOT NULL COMMENT '随访时间',
   `round_no` tinyint NOT NULL DEFAULT 1 COMMENT '随访轮次（1-术后即刻 2-24h 3-48h及以后）',
   `pain_score` int COMMENT '疼痛评分 NRS 0~10',
@@ -157,7 +185,7 @@ CREATE TABLE `biz_anesthesia_followup` (
   `handling` varchar(1000) COMMENT '处理措施与转归',
   `followup_status` tinyint NOT NULL DEFAULT 0 COMMENT '状态（0-草稿 1-已完成）',
   `followup_doctor_id` bigint COMMENT '随访麻醉医师ID（员工ID）',
-  `followup_doctor_name` varchar(64) COMMENT '随访麻醉医师姓名',
+  `followup_doctor_name` varchar(64) COMMENT '随访麻醉医师姓名（快照）',
   `finish_time` datetime COMMENT '随访完成时间',
   `remark` varchar(500) COMMENT '备注',
   `create_by` varchar(64) COMMENT '创建人',
@@ -192,19 +220,19 @@ CREATE TABLE `biz_anesthesia_pacu` (
   `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `pacu_no` varchar(32) NOT NULL COMMENT '复苏单号',
   `record_id` bigint NOT NULL COMMENT '麻醉记录ID',
-  `record_no` varchar(32) COMMENT '麻醉记录单号',
+  `record_no` varchar(32) COMMENT '麻醉记录单号（快照）',
   `apply_id` bigint NOT NULL COMMENT '手术申请单ID',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_name` varchar(50) COMMENT '患者姓名',
-  `gender` tinyint COMMENT '性别（1-男 2-女）',
-  `age` int COMMENT '年龄',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
+  `gender` tinyint COMMENT '性别（快照）（1-男 2-女）',
+  `age` int COMMENT '年龄（快照）',
   `enter_time` datetime COMMENT '入 PACU 时间',
   `leave_time` datetime COMMENT '出 PACU 时间',
   `nurse_id` bigint COMMENT '复苏护士ID（员工ID）',
-  `nurse_name` varchar(64) COMMENT '复苏护士姓名',
+  `nurse_name` varchar(64) COMMENT '复苏护士姓名（快照）',
   `anesthetist_id` bigint COMMENT '负责麻醉医师ID（员工ID）',
-  `anesthetist_name` varchar(64) COMMENT '负责麻醉医师姓名',
+  `anesthetist_name` varchar(64) COMMENT '负责麻醉医师姓名（快照）',
   `score_activity` tinyint COMMENT '肌力/活动（0-无 1-两肢可动 2-四肢可动）',
   `score_respiration` tinyint COMMENT '呼吸（0-需辅助通气 1-呼吸浅 2-深呼吸可咳嗽）',
   `score_circulation` tinyint COMMENT '血压（0-±50mmHg以上波动 1-±20~50 2-±20）',
@@ -230,8 +258,8 @@ CREATE TABLE `biz_anesthesia_pacu` (
   `update_time` datetime COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_pacu_no` (`pacu_no`),
-  UNIQUE KEY `uk_pacu_record` (`record_id`)
+  UNIQUE KEY `uk_pacu_record` (`record_id`),
+  UNIQUE KEY `uk_pacu_no` (`pacu_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='PACU 复苏记录';
 
 -- biz_anesthesia_record  麻醉记录单
@@ -239,17 +267,17 @@ CREATE TABLE `biz_anesthesia_record` (
   `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `record_no` varchar(32) NOT NULL COMMENT '麻醉记录单号',
   `apply_id` bigint NOT NULL COMMENT '手术申请单ID',
-  `apply_no` varchar(32) COMMENT '手术申请单号',
+  `apply_no` varchar(32) COMMENT '手术申请单号（快照）',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_name` varchar(50) COMMENT '患者姓名',
-  `gender` tinyint COMMENT '性别（1-男 2-女）',
-  `age` int COMMENT '年龄',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
+  `gender` tinyint COMMENT '性别（快照）（1-男 2-女）',
+  `age` int COMMENT '年龄（快照）',
   `visit_id` bigint COMMENT '来源术前访视单ID',
   `anesthesia_type` tinyint COMMENT '麻醉方式（1-全麻 2-椎管内 3-神经阻滞 4-局麻 5-其他）',
   `asa_grade` tinyint COMMENT 'ASA 分级',
   `anesthetist_id` bigint COMMENT '麻醉医师ID（员工ID）',
-  `anesthetist_name` varchar(64) COMMENT '麻醉医师姓名',
+  `anesthetist_name` varchar(64) COMMENT '麻醉医师姓名（快照）',
   `assistant_anesthetist_name` varchar(200) COMMENT '麻醉助手姓名',
   `anesthesia_method_detail` varchar(500) COMMENT '麻醉方法描述',
   `airway_device` tinyint COMMENT '气道管理方式（0-无 1-气管插管 2-喉罩 3-面罩 4-其他）',
@@ -273,10 +301,10 @@ CREATE TABLE `biz_anesthesia_record` (
   `postop_disposition` tinyint COMMENT '术后去向（1-回病房 2-入PACU 3-入ICU）',
   `record_status` tinyint NOT NULL DEFAULT 0 COMMENT '记录状态（0-记录中 1-已提交 2-已审核）',
   `submit_doctor_id` bigint COMMENT '提交人ID（员工ID）',
-  `submit_doctor_name` varchar(64) COMMENT '提交人姓名',
+  `submit_doctor_name` varchar(64) COMMENT '提交人姓名（快照）',
   `submit_time` datetime COMMENT '提交时间',
   `audit_doctor_id` bigint COMMENT '审核人ID（员工ID）',
-  `audit_doctor_name` varchar(64) COMMENT '审核人姓名',
+  `audit_doctor_name` varchar(64) COMMENT '审核人姓名（快照）',
   `audit_time` datetime COMMENT '审核时间',
   `charge_status` tinyint NOT NULL DEFAULT 0 COMMENT '计费状态（0-未计费 1-已计费 2-计费异常）',
   `fee_no` varchar(32) COMMENT '记账单号',
@@ -301,13 +329,13 @@ CREATE TABLE `biz_anesthesia_visit` (
   `apply_no` varchar(32) COMMENT '手术申请单号',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_name` varchar(50) COMMENT '患者姓名',
-  `gender` tinyint COMMENT '性别（1-男 2-女）',
-  `age` int COMMENT '年龄',
-  `diagnosis` varchar(500) COMMENT '术前诊断',
-  `planned_operation_code` varchar(32) COMMENT '拟施手术编码',
-  `planned_operation_name` varchar(200) COMMENT '拟施手术名称',
-  `operation_level` tinyint COMMENT '手术级别',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
+  `gender` tinyint COMMENT '性别（快照）（1-男 2-女）',
+  `age` int COMMENT '年龄（快照）',
+  `diagnosis` varchar(500) COMMENT '术前诊断（快照）',
+  `planned_operation_code` varchar(32) COMMENT '拟施手术编码（快照）',
+  `planned_operation_name` varchar(200) COMMENT '拟施手术名称（快照）',
+  `operation_level` tinyint COMMENT '手术级别（快照）',
   `anesthesia_type` tinyint COMMENT '拟施麻醉方式（1-全麻 2-椎管内 3-神经阻滞 4-局麻 5-其他）',
   `is_emergency` tinyint NOT NULL DEFAULT 0 COMMENT '是否急诊手术（0-否 1-是）',
   `asa_grade` tinyint COMMENT 'ASA 分级（1-Ⅰ 2-Ⅱ 3-Ⅲ 4-Ⅳ 5-Ⅴ）',
@@ -333,7 +361,7 @@ CREATE TABLE `biz_anesthesia_visit` (
   `conclusion_note` varchar(1000) COMMENT '结论说明',
   `visit_status` tinyint NOT NULL DEFAULT 0 COMMENT '访视状态（0-草稿 1-已完成）',
   `visit_doctor_id` bigint COMMENT '访视麻醉医师ID（员工ID）',
-  `visit_doctor_name` varchar(64) COMMENT '访视麻醉医师姓名',
+  `visit_doctor_name` varchar(64) COMMENT '访视麻醉医师姓名（快照）',
   `visit_time` datetime COMMENT '访视时间',
   `remark` varchar(500) COMMENT '备注',
   `create_by` varchar(64) COMMENT '创建人',
@@ -370,15 +398,14 @@ CREATE TABLE `biz_anesthesia_vital` (
 CREATE TABLE `biz_antibiotic_alias` (
   `id` bigint NOT NULL COMMENT '主键',
   `drug_id` bigint NOT NULL COMMENT '药品ID',
-  `drug_code` varchar(32) COMMENT '药品编码',
-  `drug_name` varchar(200) COMMENT '药品目录名',
+  `drug_code` varchar(32) COMMENT '药品编码（快照）',
+  `drug_name` varchar(200) COMMENT '药品目录名（快照）',
   `alias_name` varchar(200) NOT NULL COMMENT '别名',
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `remark` varchar(500) COMMENT '备注',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_antibiotic_alias` (`alias_name`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='抗菌药物品名别名';
 
 -- biz_antibiotic_auth  抗菌药物处方权授权
@@ -386,9 +413,9 @@ CREATE TABLE `biz_antibiotic_auth` (
   `id` bigint NOT NULL COMMENT '主键',
   `auth_no` varchar(32) NOT NULL COMMENT '授权编号',
   `doctor_id` bigint NOT NULL COMMENT '医师ID',
-  `doctor_name` varchar(50) NOT NULL COMMENT '医师姓名',
-  `dept_id` bigint COMMENT '科室ID',
-  `dept_name` varchar(100) COMMENT '科室名称',
+  `doctor_name` varchar(50) NOT NULL COMMENT '医师姓名（快照）',
+  `dept_id` bigint COMMENT '科室ID（快照）',
+  `dept_name` varchar(100) COMMENT '科室名称（快照）',
   `title` varchar(50) COMMENT '职称',
   `auth_level` tinyint NOT NULL COMMENT '授权级别（1-非限制使用级 2-限制使用级 3-特殊使用级）',
   `auth_basis` varchar(100) COMMENT '授权依据',
@@ -400,10 +427,9 @@ CREATE TABLE `biz_antibiotic_auth` (
   `revoke_reason` varchar(500) COMMENT '暂停/取消原因',
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `remark` varchar(500) COMMENT '备注',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_antibiotic_auth_doctor` (`doctor_id`, `auth_level`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='抗菌药物处方权授权';
 
 -- biz_antibiotic_incision_review  I 类切口预防用药点评
@@ -411,18 +437,18 @@ CREATE TABLE `biz_antibiotic_incision_review` (
   `id` bigint NOT NULL COMMENT '主键',
   `review_no` varchar(32) NOT NULL COMMENT '点评编号',
   `operation_apply_id` bigint NOT NULL COMMENT '手术申请单ID',
-  `apply_no` varchar(32) COMMENT '手术申请单号',
-  `admission_id` bigint COMMENT '入院ID',
+  `apply_no` varchar(32) COMMENT '手术申请单号（快照）',
+  `admission_id` bigint COMMENT '入院ID（快照）',
   `patient_id` bigint COMMENT '患者ID',
-  `patient_name` varchar(50) COMMENT '患者姓名',
-  `dept_name` varchar(100) COMMENT '手术科室',
-  `operation_name` varchar(200) COMMENT '手术名称',
-  `operation_code` varchar(32) COMMENT '手术编码 ICD-9-CM-3',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
+  `dept_name` varchar(100) COMMENT '手术科室（快照）',
+  `operation_name` varchar(200) COMMENT '手术名称（快照）',
+  `operation_code` varchar(32) COMMENT '手术编码 ICD-9-CM-3（快照）',
   `operation_time` datetime COMMENT '手术开始时间',
-  `surgeon_name` varchar(64) COMMENT '主刀医师',
+  `surgeon_name` varchar(64) COMMENT '主刀医师（快照）',
   `incision_level` tinyint NOT NULL DEFAULT 1 COMMENT '切口等级',
   `drug_id` bigint COMMENT '预防用药药品ID',
-  `drug_name` varchar(200) COMMENT '预防用药名称',
+  `drug_name` varchar(200) COMMENT '预防用药名称（快照）',
   `antibiotic_level` tinyint COMMENT '预防用药分级（快照：1/2/3）',
   `indication_flag` tinyint NOT NULL DEFAULT 0 COMMENT '是否有预防用药指征（0-无 1-有）',
   `timing_type` tinyint COMMENT '给药时机',
@@ -438,10 +464,9 @@ CREATE TABLE `biz_antibiotic_incision_review` (
   `review_time` datetime COMMENT '点评时间',
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `remark` varchar(500) COMMENT '备注',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_incision_apply` (`operation_apply_id`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='I 类切口预防用药点评';
 
 -- biz_antibiotic_stats  抗菌药物使用监测指标
@@ -450,7 +475,7 @@ CREATE TABLE `biz_antibiotic_stats` (
   `stat_month` char(7) NOT NULL COMMENT '统计月份',
   `scope_type` tinyint NOT NULL DEFAULT 1 COMMENT '统计范围（1-全院 2-科室）',
   `dept_id` bigint COMMENT '科室ID',
-  `dept_name` varchar(100) COMMENT '科室名称',
+  `dept_name` varchar(100) COMMENT '科室名称（快照）',
   `op_rx_count` int NOT NULL DEFAULT 0 COMMENT '门急诊处方总数（处方状态 3/4，源 1/2）',
   `op_abx_rx_count` int NOT NULL DEFAULT 0 COMMENT '含抗菌药物的门急诊处方数',
   `op_usage_rate` decimal(6,2) NOT NULL DEFAULT 0.00 COMMENT '门诊抗菌药物使用率（%）',
@@ -467,10 +492,9 @@ CREATE TABLE `biz_antibiotic_stats` (
   `generate_by` varchar(64) COMMENT '生成人',
   `generate_time` datetime COMMENT '生成时间',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `remark` varchar(500) COMMENT '备注',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_antibiotic_stats` (`stat_month`, `scope_type`, `dept_id`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='抗菌药物使用监测指标';
 
 -- biz_appoint_info  挂号信息
@@ -511,7 +535,7 @@ CREATE TABLE `biz_appoint_info` (
   `refund_time` datetime COMMENT '退号时间',
   `refund_reason` varchar(200) COMMENT '退号原因',
   `bill_id` bigint COMMENT '挂号费结算账单ID',
-  `bill_no` varchar(32) COMMENT '账单号',
+  `bill_no` varchar(32) COMMENT '账单号（快照）',
   `create_by` varchar(64) COMMENT '创建人',
   `create_by_id` bigint COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -530,16 +554,16 @@ CREATE TABLE `biz_archive_borrow` (
   `borrow_no` varchar(32) NOT NULL COMMENT '单号 BR+yyyyMMdd+4位',
   `borrow_type` tinyint NOT NULL COMMENT '类型（1-借阅 2-复印）',
   `archive_id` bigint NOT NULL COMMENT '归档记录 biz_medical_record_archive.id',
-  `record_no` varchar(64) COMMENT '病历号',
-  `patient_name` varchar(64) COMMENT '患者姓名',
-  `dept_name` varchar(64) COMMENT '病历所属科室',
+  `record_no` varchar(64) COMMENT '病历号（快照）',
+  `patient_name` varchar(64) COMMENT '患者姓名（快照）',
+  `dept_name` varchar(64) COMMENT '病历所属科室（快照）',
   `applicant_id` bigint NOT NULL COMMENT '申请人员工ID',
-  `applicant_name` varchar(64) COMMENT '申请人姓名',
+  `applicant_name` varchar(64) COMMENT '申请人姓名（快照）',
   `purpose` varchar(500) NOT NULL COMMENT '借阅/复印用途（病历讨论/医保核查/司法取证/科研等）',
   `expect_return_date` date COMMENT '应归还日期',
   `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1-待审核 2-已借出 3-已归还 4-已拒绝 5-已复印）',
   `audit_by_id` bigint COMMENT '审核人员工ID',
-  `audit_by_name` varchar(64) COMMENT '审核人姓名',
+  `audit_by_name` varchar(64) COMMENT '审核人姓名（快照）',
   `audit_remark` varchar(500) COMMENT '审核意见',
   `audit_time` datetime COMMENT '审核时间',
   `lend_time` datetime COMMENT '借出时间',
@@ -556,20 +580,20 @@ CREATE TABLE `biz_archive_code_task` (
   `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `task_no` varchar(32) NOT NULL COMMENT '任务号 CT+yyyyMMdd+4位',
   `archive_id` bigint NOT NULL COMMENT '归档记录 biz_medical_record_archive.id',
-  `record_no` varchar(64) COMMENT '病历号',
-  `patient_name` varchar(64) COMMENT '患者姓名',
-  `dept_name` varchar(64) COMMENT '病历所属科室',
+  `record_no` varchar(64) COMMENT '病历号（快照）',
+  `patient_name` varchar(64) COMMENT '患者姓名（快照）',
+  `dept_name` varchar(64) COMMENT '病历所属科室（快照）',
   `diagnosis` varchar(500) COMMENT '病历诊断',
   `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1-待编码 2-已提交 3-已完成 4-已退修）',
   `coder_id` bigint COMMENT '编码人员工ID',
-  `coder_name` varchar(64) COMMENT '编码员姓名',
+  `coder_name` varchar(64) COMMENT '编码员姓名（快照）',
   `assign_time` datetime COMMENT '分配时间',
   `main_icd_code` varchar(20) COMMENT '主诊断 ICD-10 编码',
   `main_icd_name` varchar(200) COMMENT '主诊断名称',
   `other_icd_text` varchar(500) COMMENT '其他诊断/手术 ICD',
   `submit_time` datetime COMMENT '提交编码时间',
   `audit_by_id` bigint COMMENT '审核人员工ID',
-  `audit_by_name` varchar(64) COMMENT '审核人姓名',
+  `audit_by_name` varchar(64) COMMENT '审核人姓名（快照）',
   `audit_remark` varchar(500) COMMENT '审核意见',
   `audit_time` datetime COMMENT '审核时间',
   `return_count` int NOT NULL DEFAULT 0 COMMENT '累计退修次数',
@@ -589,29 +613,55 @@ CREATE TABLE `biz_arrears_policy` (
   `stop_classes` varchar(64) NOT NULL DEFAULT '2,3,4' COMMENT '被拦截的医嘱类别（2-检查 3-检验 4-治疗）',
   `remark` varchar(500) COMMENT '备注',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='住院欠费管控策略';
+
+-- biz_attending_relation  住院管床关系（主管医生，带时效的归属）
+CREATE TABLE `biz_attending_relation` (
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
+  `admission_id` bigint NOT NULL COMMENT '住院登记ID',
+  `patient_id` bigint NOT NULL COMMENT '患者ID',
+  `patient_name` varchar(50) NOT NULL DEFAULT '' COMMENT '患者姓名（快照）',
+  `employee_id` bigint NOT NULL COMMENT '主管医生ID',
+  `employee_name` varchar(50) NOT NULL DEFAULT '' COMMENT '主管医生姓名（快照）',
+  `dept_id` bigint NOT NULL DEFAULT 0 COMMENT '科室ID',
+  `dept_name` varchar(100) NOT NULL DEFAULT '' COMMENT '科室名称（快照）',
+  `ward_id` bigint NOT NULL DEFAULT 0 COMMENT '病区ID',
+  `bed_id` bigint NOT NULL DEFAULT 0 COMMENT '床位ID',
+  `relation_type` tinyint NOT NULL DEFAULT 1 COMMENT '关系类型（1-主管 2-主诊组长 3-协作）',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1-有效 0-已结束）',
+  `effective_time` datetime COMMENT '生效时间（一般＝入院时间）',
+  `expire_time` datetime COMMENT '失效时间（出院或转交时填）',
+  `create_by` varchar(64) COMMENT '创建人',
+  `create_time` datetime COMMENT '创建时间',
+  `update_by` varchar(64) COMMENT '更新人',
+  `update_time` datetime COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_adm_rel_emp` (`admission_id`, `relation_type`, `employee_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='住院管床关系（主管医生，带时效的归属）';
 
 -- biz_bed_allocate  床位调配台账
 CREATE TABLE `biz_bed_allocate` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `allocate_no` varchar(32) NOT NULL COMMENT '调配单号',
   `bed_id` bigint NOT NULL COMMENT '床位ID',
-  `bed_no` varchar(16) COMMENT '床位号',
-  `ward_id` bigint COMMENT '病区ID',
-  `ward_name` varchar(64) COMMENT '病区名称',
+  `bed_no` varchar(16) COMMENT '床位号（快照）',
+  `ward_id` bigint COMMENT '病区ID（快照）',
+  `ward_name` varchar(64) COMMENT '病区名称（快照）',
   `own_dept_id` bigint COMMENT '床位归属科室ID',
-  `own_dept_name` varchar(100) COMMENT '床位归属科室名称',
+  `own_dept_name` varchar(100) COMMENT '床位归属科室名称（快照）',
   `use_dept_id` bigint COMMENT '实际使用科室ID',
-  `use_dept_name` varchar(100) COMMENT '实际使用科室名称',
+  `use_dept_name` varchar(100) COMMENT '实际使用科室名称（快照）',
   `wait_id` bigint COMMENT '来源等床记录ID',
   `patient_id` bigint COMMENT '患者ID',
-  `patient_name` varchar(50) COMMENT '患者姓名',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
   `alloc_type` tinyint NOT NULL DEFAULT 1 COMMENT '调配类型（1-本科室预留 2-跨科调配 3-急诊占床）',
   `alloc_status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1-已预留 2-已转入院 3-已释放 4-已作废）',
   `operator_id` bigint COMMENT '操作人ID',
-  `operator_name` varchar(50) COMMENT '操作人姓名',
+  `operator_name` varchar(50) COMMENT '操作人姓名（快照）',
   `operate_time` datetime NOT NULL COMMENT '操作时间',
   `release_time` datetime COMMENT '释放时间',
   `release_reason` varchar(200) COMMENT '释放/作废原因',
@@ -632,28 +682,28 @@ CREATE TABLE `biz_bed_wait` (
   `wait_no` varchar(32) NOT NULL COMMENT '等待号',
   `admission_order_id` bigint COMMENT '来源住院证ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者编号',
+  `patient_no` varchar(32) COMMENT '患者编号（快照）',
   `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
   `gender` tinyint COMMENT '性别（1-男 2-女 9-未知）',
-  `age` int COMMENT '年龄',
-  `phone` varchar(20) COMMENT '联系电话',
+  `age` int COMMENT '年龄（快照）',
+  `phone` varchar(20) COMMENT '联系电话（快照）',
   `apply_dept_id` bigint COMMENT '拟收治科室ID',
-  `apply_dept_name` varchar(100) COMMENT '拟收治科室名称',
+  `apply_dept_name` varchar(100) COMMENT '拟收治科室名称（快照）',
   `expect_ward_id` bigint COMMENT '期望病区ID',
   `bed_type` varchar(32) NOT NULL DEFAULT 'normal' COMMENT '需求床型',
   `priority` tinyint NOT NULL DEFAULT 1 COMMENT '优先级（1-普通 2-急 3-危重）',
   `gender_limit` tinyint NOT NULL DEFAULT 0 COMMENT '性别限制（0-不限 1-限男床 2-限女床）',
   `isolation_flag` tinyint NOT NULL DEFAULT 0 COMMENT '隔离需求（0-否 1-是）',
   `expect_admit_date` date COMMENT '预计入院日期',
-  `diagnosis_name` varchar(200) COMMENT '拟诊名称',
+  `diagnosis_name` varchar(200) COMMENT '拟诊名称（快照）',
   `wait_status` tinyint NOT NULL DEFAULT 0 COMMENT '状态（0-等待中 1-已安排床位 2-已收治 3-已取消）',
   `register_time` datetime NOT NULL COMMENT '登记排队时间',
   `assigned_bed_id` bigint COMMENT '已安排的床位ID',
-  `assigned_bed_no` varchar(16) COMMENT '已安排床位号',
+  `assigned_bed_no` varchar(16) COMMENT '已安排床位号（快照）',
   `assigned_ward_id` bigint COMMENT '已安排床位所在病区ID',
-  `assigned_ward_name` varchar(64) COMMENT '已安排病区名称',
+  `assigned_ward_name` varchar(64) COMMENT '已安排病区名称（快照）',
   `assigned_dept_id` bigint COMMENT '已安排床位所属科室ID',
-  `assigned_dept_name` varchar(100) COMMENT '已安排床位所属科室名称',
+  `assigned_dept_name` varchar(100) COMMENT '已安排床位所属科室名称（快照）',
   `assigned_time` datetime COMMENT '安排床位时间',
   `assigned_by` varchar(64) COMMENT '安排人',
   `admission_id` bigint COMMENT '收治后回填的入院ID',
@@ -802,13 +852,13 @@ CREATE TABLE `biz_checkup_record` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `record_no` varchar(32) NOT NULL COMMENT '体检编号',
   `patient_id` bigint NOT NULL COMMENT '体检人ID',
-  `patient_name` varchar(50) NOT NULL COMMENT '体检人姓名',
+  `patient_name` varchar(50) NOT NULL COMMENT '体检人姓名（快照）',
   `gender` tinyint COMMENT '性别（2-女 9-未知）',
   `age` int COMMENT '年龄',
-  `phone` varchar(20) COMMENT '联系电话',
+  `phone` varchar(20) COMMENT '联系电话（快照）',
   `person_type` tinyint NOT NULL DEFAULT 1 COMMENT '体检对象（1-个人 2-团体）',
   `package_id` bigint NOT NULL COMMENT '套餐ID',
-  `package_name` varchar(100) NOT NULL COMMENT '套餐名称',
+  `package_name` varchar(100) NOT NULL COMMENT '套餐名称（快照）',
   `total_amount` decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT '应收金额',
   `checkup_date` date NOT NULL COMMENT '体检日期',
   `record_status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1-已登记 2-检查中 3-已完成 4-已出报告）',
@@ -818,7 +868,7 @@ CREATE TABLE `biz_checkup_record` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime COMMENT '更新时间',
+  `update_time` datetime ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
@@ -840,7 +890,7 @@ CREATE TABLE `biz_checkup_result` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime COMMENT '更新时间',
+  `update_time` datetime ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`)
@@ -960,7 +1010,7 @@ CREATE TABLE `biz_consultation` (
   `admission_id` bigint COMMENT '入院ID',
   `from_dept_id` bigint NOT NULL COMMENT '申请科室ID',
   `apply_doctor_id` bigint COMMENT '申请医生ID',
-  `apply_doctor_name` varchar(64) COMMENT '申请医生姓名',
+  `apply_doctor_name` varchar(64) COMMENT '申请医生姓名（快照）',
   `to_dept_id` bigint NOT NULL COMMENT '会诊科室ID',
   `consult_type` tinyint NOT NULL DEFAULT 2 COMMENT '会诊范围（1-科内 2-科间 3-全院）',
   `consult_category` tinyint NOT NULL DEFAULT 1 COMMENT '会诊类别（1-普通科间 2-营养 3-药学 4-其他）',
@@ -972,7 +1022,7 @@ CREATE TABLE `biz_consultation` (
   `consult_status` tinyint NOT NULL COMMENT '会诊状态（0-待应答 1-已完成 2-已取消 3-已应答）',
   `accept_time` datetime COMMENT '会诊方接诊时间',
   `accept_doctor_id` bigint COMMENT '接诊医生ID（员工ID）',
-  `accept_doctor_name` varchar(64) COMMENT '接诊医生姓名',
+  `accept_doctor_name` varchar(64) COMMENT '接诊医生姓名（快照）',
   `finish_time` datetime COMMENT '会诊完成时间',
   `record_id` bigint COMMENT '回写的住院病历ID',
   `cancel_reason` varchar(500) COMMENT '取消原因',
@@ -992,12 +1042,12 @@ CREATE TABLE `biz_consumable_consume` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `consume_no` varchar(32) NOT NULL COMMENT '领用单号',
   `consumable_id` bigint NOT NULL COMMENT '耗材ID',
-  `consumable_name` varchar(100) COMMENT '耗材名称',
-  `specification` varchar(100) COMMENT '规格',
-  `unit` varchar(20) COMMENT '单位',
+  `consumable_name` varchar(100) COMMENT '耗材名称（快照）',
+  `specification` varchar(100) COMMENT '规格（快照）',
+  `unit` varchar(20) COMMENT '单位（快照）',
   `quantity` decimal(10,2) NOT NULL COMMENT '领用数量',
   `dept_id` bigint COMMENT '领用科室ID',
-  `dept_name` varchar(100) COMMENT '领用科室名称',
+  `dept_name` varchar(100) COMMENT '领用科室名称（快照）',
   `purpose` varchar(200) COMMENT '用途',
   `consume_time` datetime COMMENT '领用时间',
   `operator_name` varchar(50) COMMENT '经办人',
@@ -1006,7 +1056,7 @@ CREATE TABLE `biz_consumable_consume` (
   `create_by` varchar(64) DEFAULT '' COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) DEFAULT '' COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`)
@@ -1028,7 +1078,7 @@ CREATE TABLE `biz_consumable_stock` (
   `create_by` varchar(64) DEFAULT '' COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) DEFAULT '' COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`)
@@ -1051,7 +1101,7 @@ CREATE TABLE `biz_consumable_stock_log` (
   `create_by` varchar(64) DEFAULT '' COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) DEFAULT '' COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`)
@@ -1067,23 +1117,23 @@ CREATE TABLE `biz_consumable_trace` (
   `udi_batch` varchar(64) COMMENT '解析-批号',
   `udi_expiry_date` date COMMENT '解析-有效期',
   `consumable_id` bigint NOT NULL COMMENT '耗材ID',
-  `consumable_code` varchar(32) COMMENT '耗材编码',
-  `consumable_name` varchar(100) COMMENT '耗材名称',
-  `specification` varchar(100) COMMENT '规格',
-  `unit` varchar(20) COMMENT '单位',
-  `reg_cert_no` varchar(100) COMMENT '注册证号',
+  `consumable_code` varchar(32) COMMENT '耗材编码（快照）',
+  `consumable_name` varchar(100) COMMENT '耗材名称（快照）',
+  `specification` varchar(100) COMMENT '规格（快照）',
+  `unit` varchar(20) COMMENT '单位（快照）',
+  `reg_cert_no` varchar(100) COMMENT '注册证号（快照）',
   `retail_price` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '计费单价快照',
   `stock_id` bigint NOT NULL COMMENT '出库批次ID',
-  `batch_no` varchar(50) COMMENT '批号',
+  `batch_no` varchar(50) COMMENT '批号（快照）',
   `supplier` varchar(200) COMMENT '供应商',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者编号',
-  `patient_name` varchar(50) COMMENT '患者姓名',
+  `patient_no` varchar(32) COMMENT '患者编号（快照）',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
   `visit_type` tinyint NOT NULL DEFAULT 1 COMMENT '就诊类型（1-门诊 2-住院）',
   `regist_id` bigint COMMENT '门诊挂号ID',
   `admission_id` bigint COMMENT '住院ID',
   `dept_id` bigint COMMENT '使用科室ID',
-  `dept_name` varchar(100) COMMENT '使用科室名称',
+  `dept_name` varchar(100) COMMENT '使用科室名称（快照）',
   `usage_time` datetime COMMENT '使用时间',
   `operator_name` varchar(50) COMMENT '登记人',
   `charge_status` tinyint NOT NULL DEFAULT 0 COMMENT '计费状态（0-未计费 1-已计费 2-计费失败）',
@@ -1109,15 +1159,15 @@ CREATE TABLE `biz_critical_notice` (
   `notice_no` varchar(32) NOT NULL COMMENT '通知单号',
   `admission_id` bigint NOT NULL COMMENT '住院记录ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
-  `patient_no` varchar(32) COMMENT '患者编号',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
+  `patient_no` varchar(32) COMMENT '患者编号（快照）',
   `gender` tinyint COMMENT '性别（1-男 2-女 3-未知）',
   `age` int COMMENT '年龄',
   `dept_id` bigint COMMENT '开单科室ID',
-  `dept_name` varchar(100) COMMENT '开单科室名称',
-  `ward_name` varchar(64) COMMENT '病区名称',
-  `bed_no` varchar(16) COMMENT '床位号',
-  `admission_no` varchar(32) COMMENT '住院号',
+  `dept_name` varchar(100) COMMENT '开单科室名称（快照）',
+  `ward_name` varchar(64) COMMENT '病区名称（快照）',
+  `bed_no` varchar(16) COMMENT '床位号（快照）',
+  `admission_no` varchar(32) COMMENT '住院号（快照）',
   `notice_type` tinyint NOT NULL COMMENT '通知类别（1-病危 2-病重）',
   `consciousness_status` tinyint NOT NULL DEFAULT 1 COMMENT '患者神志（1-清醒 2-嗜睡 3-意识模糊 4-昏迷 9-其他）',
   `clinical_diagnosis` varchar(500) NOT NULL COMMENT '目前诊断',
@@ -1152,8 +1202,7 @@ CREATE TABLE `biz_critical_notice` (
   `update_time` datetime COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_notice_no` (`notice_no`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='病危重通知回执';
 
 -- biz_critical_value  检验危急值
@@ -1216,7 +1265,7 @@ CREATE TABLE `biz_cssd_pack` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_biz_cssd_pack_no` (`pack_no`)
@@ -1233,7 +1282,7 @@ CREATE TABLE `biz_cssd_pack_template` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='CSSD 器械包模板';
@@ -1255,7 +1304,7 @@ CREATE TABLE `biz_cssd_pack_template_item` (
 CREATE TABLE `biz_cssd_trace` (
   `id` bigint NOT NULL COMMENT '追溯节点ID',
   `pack_id` bigint NOT NULL COMMENT '器械包ID',
-  `pack_no` varchar(32) COMMENT '器械包条码',
+  `pack_no` varchar(32) COMMENT '器械包条码（快照）',
   `node_type` tinyint NOT NULL COMMENT '节点类型（1-回收 2-清洗 3-打包 4-灭菌 5-储存 6-发放）',
   `node_time` datetime NOT NULL COMMENT '节点时间',
   `operator_name` varchar(50) COMMENT '操作人',
@@ -1319,14 +1368,14 @@ CREATE TABLE `biz_day_surgery_apply` (
   `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `apply_no` varchar(32) NOT NULL COMMENT '登记单号',
   `item_id` bigint NOT NULL COMMENT '准入术式ID',
-  `item_code` varchar(32) COMMENT '术式编码',
-  `item_name` varchar(128) COMMENT '术式名称',
+  `item_code` varchar(32) COMMENT '术式编码（快照）',
+  `item_name` varchar(128) COMMENT '术式名称（快照）',
   `max_stay_hours` int COMMENT '最长滞留小时数',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(64) COMMENT '患者编号',
-  `patient_name` varchar(128) COMMENT '患者姓名',
+  `patient_no` varchar(64) COMMENT '患者编号（快照）',
+  `patient_name` varchar(128) COMMENT '患者姓名（快照）',
   `dept_id` bigint COMMENT '手术科室ID',
-  `dept_name` varchar(128) COMMENT '手术科室名称',
+  `dept_name` varchar(128) COMMENT '手术科室名称（快照）',
   `doctor_id` bigint COMMENT '手术医生ID（员工ID）',
   `doctor_name` varchar(64) COMMENT '手术医生姓名',
   `plan_surgery_date` date NOT NULL COMMENT '计划手术日期',
@@ -1386,7 +1435,7 @@ CREATE TABLE `biz_day_surgery_item` (
   `item_code` varchar(32) NOT NULL COMMENT '术式编码',
   `item_name` varchar(128) NOT NULL COMMENT '术式名称',
   `dept_id` bigint COMMENT '适用科室ID',
-  `dept_name` varchar(128) COMMENT '适用科室名称',
+  `dept_name` varchar(128) COMMENT '适用科室名称（快照）',
   `max_stay_hours` int NOT NULL DEFAULT 48 COMMENT '最长滞留小时数',
   `operation_level` tinyint NOT NULL DEFAULT 2 COMMENT '手术级别',
   `anesthesia_type` tinyint COMMENT '麻醉方式（1-局部麻醉 2-椎管内麻醉 3-全身麻醉 4-神经阻滞 5-其他）',
@@ -1409,23 +1458,23 @@ CREATE TABLE `biz_death_certificate` (
   `admission_id` bigint NOT NULL COMMENT '住院记录ID',
   `discharge_id` bigint COMMENT '死亡出院记录ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_name` varchar(50) NOT NULL COMMENT '死者姓名',
+  `patient_name` varchar(50) NOT NULL COMMENT '死者姓名（快照）',
   `gender` tinyint COMMENT '性别（1-男 2-女 3-未知）',
-  `nation` varchar(20) COMMENT '民族',
-  `birth_date` date COMMENT '出生日期',
+  `nation` varchar(20) COMMENT '民族（快照）',
+  `birth_date` date COMMENT '出生日期（快照）',
   `age` int COMMENT '死亡年龄',
   `id_card` varchar(18) COMMENT '身份证号',
-  `occupation` varchar(50) COMMENT '职业',
+  `occupation` varchar(50) COMMENT '职业（快照）',
   `marital_status` tinyint COMMENT '婚姻状况（0-未婚 1-已婚 2-离异 3-丧偶）',
   `death_time` datetime NOT NULL COMMENT '死亡时间',
   `death_place` tinyint NOT NULL COMMENT '死亡地点（1-医院 2-来院途中 3-家中 4-民政管理机构 5-其他机构 9-未指明）',
   `death_dept_id` bigint COMMENT '死亡科室ID',
-  `death_dept_name` varchar(100) COMMENT '死亡科室名称',
-  `death_ward_name` varchar(64) COMMENT '死亡病区名称',
-  `death_bed_no` varchar(16) COMMENT '死亡床位号',
+  `death_dept_name` varchar(100) COMMENT '死亡科室名称（快照）',
+  `death_ward_name` varchar(64) COMMENT '死亡病区名称（快照）',
+  `death_bed_no` varchar(16) COMMENT '死亡床位号（快照）',
   `clinical_diagnosis` varchar(500) NOT NULL COMMENT '死亡诊断',
   `underlying_icd_code` varchar(32) COMMENT '根本死因ICD-10编码',
-  `underlying_icd_name` varchar(200) COMMENT '根本死因名称',
+  `underlying_icd_name` varchar(200) COMMENT '根本死因名称（快照）',
   `past_history` varchar(500) COMMENT '既往病史',
   `autopsy_flag` tinyint NOT NULL DEFAULT 0 COMMENT '是否尸检（0-否 1-是）',
   `autopsy_result` varchar(500) COMMENT '尸检结论/病理诊断',
@@ -1461,8 +1510,7 @@ CREATE TABLE `biz_death_certificate` (
   `update_time` datetime COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_cert_no` (`cert_no`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='死亡医学证明书';
 
 -- biz_death_certificate_cause  死亡证明死因链
@@ -1476,8 +1524,7 @@ CREATE TABLE `biz_death_certificate_cause` (
   `interval_text` varchar(50) COMMENT '发病至死亡间隔',
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime COMMENT '创建时间',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_cert_part_seq` (`cert_id`, `part`, `seq_no`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='死亡证明死因链';
 
 -- biz_death_registration  住院死亡登记簿
@@ -1487,11 +1534,11 @@ CREATE TABLE `biz_death_registration` (
   `admission_id` bigint NOT NULL COMMENT '住院记录ID',
   `cert_id` bigint COMMENT '死亡证明ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_name` varchar(50) NOT NULL COMMENT '死者姓名',
+  `patient_name` varchar(50) NOT NULL COMMENT '死者姓名（快照）',
   `death_time` datetime NOT NULL COMMENT '死亡时间',
   `death_dept_id` bigint COMMENT '死亡科室ID',
-  `death_dept_name` varchar(100) COMMENT '死亡科室名称',
-  `death_bed_no` varchar(16) COMMENT '死亡床位号',
+  `death_dept_name` varchar(100) COMMENT '死亡科室名称（快照）',
+  `death_bed_no` varchar(16) COMMENT '死亡床位号（快照）',
   `death_type` tinyint NOT NULL COMMENT '死亡类型（1-疾病死亡 2-非疾病死亡）',
   `police_flag` tinyint NOT NULL DEFAULT 0 COMMENT '是否已报公安/司法（0-否 1-是）',
   `police_org` varchar(100) COMMENT '受理公安机关',
@@ -1528,7 +1575,7 @@ CREATE TABLE `biz_death_registration` (
 CREATE TABLE `biz_dept_cost_month` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `dept_id` bigint NOT NULL COMMENT '科室ID',
-  `dept_name` varchar(100) NOT NULL COMMENT '科室名称',
+  `dept_name` varchar(100) NOT NULL COMMENT '科室名称（快照）',
   `cost_month` char(7) NOT NULL COMMENT '核算月份',
   `labor_cost` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '人力成本（元）',
   `drug_cost` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '药品成本（元）',
@@ -1539,7 +1586,7 @@ CREATE TABLE `biz_dept_cost_month` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime COMMENT '更新时间',
+  `update_time` datetime ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
@@ -1583,8 +1630,8 @@ CREATE TABLE `biz_dialysis_patient` (
   `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `dialysis_no` varchar(32) NOT NULL COMMENT '透析号',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(64) COMMENT '患者编号',
-  `patient_name` varchar(128) COMMENT '患者姓名',
+  `patient_no` varchar(64) COMMENT '患者编号（快照）',
+  `patient_name` varchar(128) COMMENT '患者姓名（快照）',
   `phone` varchar(32) COMMENT '联系电话',
   `first_dialysis_date` date NOT NULL COMMENT '首次透析日期',
   `cause` varchar(255) COMMENT '原发病/进入透析原因',
@@ -1608,7 +1655,7 @@ CREATE TABLE `biz_dialysis_patient` (
 CREATE TABLE `biz_dialysis_prescription` (
   `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `archive_id` bigint NOT NULL COMMENT '透析档案ID',
-  `patient_name` varchar(128) COMMENT '患者姓名',
+  `patient_name` varchar(128) COMMENT '患者姓名（快照）',
   `dry_weight` decimal(6,2) NOT NULL COMMENT '干体重 kg',
   `duration_min` int NOT NULL DEFAULT 240 COMMENT '单次透析时长（分钟）',
   `blood_flow` int NOT NULL DEFAULT 220 COMMENT '血流量 mL/min',
@@ -1638,17 +1685,17 @@ CREATE TABLE `biz_dialysis_session` (
   `dialysis_date` date NOT NULL COMMENT '透析日期',
   `time_slot` tinyint NOT NULL DEFAULT 1 COMMENT '时段（1-上午 2-下午 3-夜间）',
   `machine_id` bigint NOT NULL COMMENT '机位ID',
-  `machine_no` varchar(32) COMMENT '机位号',
+  `machine_no` varchar(32) COMMENT '机位号（快照）',
   `archive_id` bigint NOT NULL COMMENT '透析档案ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(64) COMMENT '患者编号',
-  `patient_name` varchar(128) COMMENT '患者姓名',
+  `patient_no` varchar(64) COMMENT '患者编号（快照）',
+  `patient_name` varchar(128) COMMENT '患者姓名（快照）',
   `prescription_id` bigint NOT NULL COMMENT '使用的透析处方ID',
   `dry_weight` decimal(6,2) COMMENT '干体重 kg',
-  `duration_min` int COMMENT '处方透析时长分钟',
-  `blood_flow` int COMMENT '处方血流量',
-  `dialyzer` tinyint COMMENT '透析器',
-  `anticoagulant` tinyint COMMENT '抗凝方式',
+  `duration_min` int COMMENT '处方透析时长分钟（快照）',
+  `blood_flow` int COMMENT '处方血流量（快照）',
+  `dialyzer` tinyint COMMENT '透析器（快照）',
+  `anticoagulant` tinyint COMMENT '抗凝方式（快照）',
   `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1-已排班 2-透析中 3-已完成 4-已取消）',
   `before_weight` decimal(6,2) COMMENT '透前体重 kg',
   `access_check` varchar(255) COMMENT '通路评估',
@@ -1668,7 +1715,7 @@ CREATE TABLE `biz_dialysis_session` (
   `update_time` datetime COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(512) COMMENT '备注',
-  `slot_key` varchar(64) COMMENT '机位时段占用键',
+  `slot_key` varchar(64) GENERATED ALWAYS AS (if(((`status` = 4) or (`del_flag` = 1)),NULL,concat(`dialysis_date`,_utf8mb4'-',`time_slot`,_utf8mb4'-',`machine_id`))) STORED COMMENT '机位时段占用键',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_session_no` (`session_no`),
   UNIQUE KEY `uk_session_slot` (`slot_key`)
@@ -1680,13 +1727,13 @@ CREATE TABLE `biz_diet_plan` (
   `diet_no` varchar(32) NOT NULL COMMENT '膳食方案编号',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
   `patient_id` bigint COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者编号',
-  `patient_name` varchar(50) COMMENT '患者姓名',
-  `dept_id` bigint COMMENT '科室ID',
-  `dept_name` varchar(100) COMMENT '科室名称',
-  `ward_id` bigint COMMENT '病区ID',
-  `ward_name` varchar(100) COMMENT '病区名称',
-  `bed_no` varchar(20) COMMENT '床号',
+  `patient_no` varchar(32) COMMENT '患者编号（快照）',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
+  `dept_id` bigint COMMENT '科室ID（快照）',
+  `dept_name` varchar(100) COMMENT '科室名称（快照）',
+  `ward_id` bigint COMMENT '病区ID（快照）',
+  `ward_name` varchar(100) COMMENT '病区名称（快照）',
+  `bed_no` varchar(20) COMMENT '床号（快照）',
   `order_id` bigint COMMENT '来源医嘱ID',
   `order_no` varchar(32) COMMENT '来源医嘱号',
   `source` tinyint NOT NULL DEFAULT 1 COMMENT '来源（1-医嘱校对派生 2-营养师手工登记）',
@@ -1705,17 +1752,16 @@ CREATE TABLE `biz_diet_plan` (
   `confirm_status` tinyint NOT NULL DEFAULT 0 COMMENT '营养科接收状态（0-待接收 1-已接收 2-已退回）',
   `confirm_time` datetime COMMENT '接收/退回时间',
   `confirmer_id` bigint COMMENT '接收人',
-  `confirmer_name` varchar(50) COMMENT '接收人姓名',
+  `confirmer_name` varchar(50) COMMENT '接收人姓名（快照）',
   `reject_reason` varchar(500) COMMENT '退回原因',
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_diet_plan_no` (`diet_no`),
-  UNIQUE KEY `uk_diet_plan_order` (`order_id`)
+  UNIQUE KEY `uk_diet_plan_no` (`diet_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='膳食方案';
 
 -- biz_discharge  出院记录
@@ -1766,7 +1812,7 @@ CREATE TABLE `biz_discharge_drug` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_biz_discharge_drug_no` (`order_no`)
@@ -1780,11 +1826,11 @@ CREATE TABLE `biz_dispute_case` (
   `source_type` tinyint NOT NULL COMMENT '来源（1-来电 2-来访 3-来信 4-政务热线 5-上级交办 6-院内发现 7-其他）',
   `level` tinyint NOT NULL DEFAULT 1 COMMENT '等级（1-一般 2-较大 3-重大）',
   `patient_id` bigint COMMENT '患者ID',
-  `patient_no` varchar(64) COMMENT '患者编号',
-  `patient_name` varchar(128) COMMENT '患者姓名',
+  `patient_no` varchar(64) COMMENT '患者编号（快照）',
+  `patient_name` varchar(128) COMMENT '患者姓名（快照）',
   `admission_id` bigint COMMENT '关联住院ID',
   `dept_id` bigint COMMENT '被投诉科室ID',
-  `dept_name` varchar(128) COMMENT '被投诉科室名称',
+  `dept_name` varchar(128) COMMENT '被投诉科室名称（快照）',
   `involved_staff` varchar(255) COMMENT '涉及人员',
   `complainant` varchar(64) COMMENT '投诉人姓名（可为患者本人/家属/其他）',
   `complainant_rel` varchar(32) COMMENT '与患者关系（1-本人 2-家属 3-代理人 4-其他）',
@@ -1843,9 +1889,9 @@ CREATE TABLE `biz_dispute_flow` (
 CREATE TABLE `biz_drg_sim_result` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `summary_id` bigint NOT NULL COMMENT '病案首页ID',
-  `patient_name` varchar(50) COMMENT '患者姓名',
-  `main_diag_code` varchar(32) COMMENT '分组时使用的主诊断编码',
-  `main_diag_name` varchar(200) COMMENT '主诊断名称',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
+  `main_diag_code` varchar(32) COMMENT '分组时使用的主诊断编码（快照）',
+  `main_diag_name` varchar(200) COMMENT '主诊断名称（快照）',
   `is_surgery` tinyint NOT NULL DEFAULT 0 COMMENT '是否手术',
   `inpatient_days` int COMMENT '住院天数',
   `drg_code` varchar(32) NOT NULL COMMENT '入组编码',
@@ -1860,7 +1906,7 @@ CREATE TABLE `biz_drg_sim_result` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime COMMENT '更新时间',
+  `update_time` datetime ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
@@ -2087,7 +2133,7 @@ CREATE TABLE `biz_drug_stock_log` (
   `create_by` varchar(64) DEFAULT '' COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) DEFAULT '' COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`)
@@ -2126,11 +2172,11 @@ CREATE TABLE `biz_drug_supplier_return_item` (
   `return_id` bigint NOT NULL COMMENT '退货单ID',
   `stock_id` bigint NOT NULL COMMENT '库存批次ID',
   `drug_id` bigint NOT NULL COMMENT '药品ID',
-  `drug_code` varchar(32) COMMENT '药品编码',
-  `drug_name` varchar(200) COMMENT '药品名称',
-  `specification` varchar(100) COMMENT '规格',
-  `unit` varchar(20) COMMENT '单位',
-  `batch_no` varchar(50) COMMENT '批号',
+  `drug_code` varchar(32) COMMENT '药品编码（快照）',
+  `drug_name` varchar(200) COMMENT '药品名称（快照）',
+  `specification` varchar(100) COMMENT '规格（快照）',
+  `unit` varchar(20) COMMENT '单位（快照）',
+  `batch_no` varchar(50) COMMENT '批号（快照）',
   `expiry_date` date COMMENT '有效期',
   `stock_room` tinyint NOT NULL DEFAULT 1 COMMENT '退货库位（1-药库 2-药房）',
   `supplier_id` bigint COMMENT '批次所属供应商ID',
@@ -2158,34 +2204,34 @@ CREATE TABLE `biz_drug_trace` (
   `code_batch_no` varchar(64) COMMENT '解析-码内批号',
   `code_expiry_date` date COMMENT '解析-码内有效期',
   `drug_id` bigint NOT NULL COMMENT '药品ID',
-  `drug_code` varchar(32) COMMENT '药品编码',
-  `drug_name` varchar(100) COMMENT '药品名称',
-  `generic_name` varchar(100) COMMENT '通用名',
-  `specification` varchar(100) COMMENT '规格',
-  `dosage_form` varchar(50) COMMENT '剂型',
-  `unit` varchar(20) COMMENT '单位',
-  `manufacturer` varchar(200) COMMENT '生产厂家',
+  `drug_code` varchar(32) COMMENT '药品编码（快照）',
+  `drug_name` varchar(100) COMMENT '药品名称（快照）',
+  `generic_name` varchar(100) COMMENT '通用名（快照）',
+  `specification` varchar(100) COMMENT '规格（快照）',
+  `dosage_form` varchar(50) COMMENT '剂型（快照）',
+  `unit` varchar(20) COMMENT '单位（快照）',
+  `manufacturer` varchar(200) COMMENT '生产厂家（快照）',
   `approval_number` varchar(100) COMMENT '批准文号',
   `stock_id` bigint COMMENT '采集挂靠批次ID',
-  `stock_batch_no` varchar(50) COMMENT '库存批号',
-  `supplier` varchar(200) COMMENT '供应商',
+  `stock_batch_no` varchar(50) COMMENT '库存批号（快照）',
+  `supplier` varchar(200) COMMENT '供应商（快照）',
   `supplier_id` bigint COMMENT '供应商ID',
   `source_type` tinyint NOT NULL DEFAULT 1 COMMENT '采集来源（1-入库采集 2-存量补采）',
   `inbound_id` bigint COMMENT '来源入库单ID',
-  `inbound_no` varchar(64) COMMENT '来源入库单号',
+  `inbound_no` varchar(64) COMMENT '来源入库单号（快照）',
   `status` tinyint NOT NULL DEFAULT 1 COMMENT '码状态（1-在库 2-已发药核销 3-已作废）',
   `scan_time` datetime COMMENT '采集扫码时间',
   `operator_name` varchar(50) COMMENT '采集人',
   `dispensing_id` bigint COMMENT '发药单ID',
-  `dispensing_no` varchar(64) COMMENT '发药单号',
+  `dispensing_no` varchar(64) COMMENT '发药单号（快照）',
   `patient_id` bigint COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者编号',
-  `patient_name` varchar(50) COMMENT '患者姓名',
+  `patient_no` varchar(32) COMMENT '患者编号（快照）',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
   `visit_type` tinyint COMMENT '就诊类型（1-门诊 2-住院）',
-  `regist_id` bigint COMMENT '门诊挂号ID',
-  `admission_id` bigint COMMENT '住院ID',
-  `dept_id` bigint COMMENT '发药科室ID',
-  `dept_name` varchar(100) COMMENT '发药科室名称',
+  `regist_id` bigint COMMENT '门诊挂号ID（快照）',
+  `admission_id` bigint COMMENT '住院ID（快照）',
+  `dept_id` bigint COMMENT '发药科室ID（快照）',
+  `dept_name` varchar(100) COMMENT '发药科室名称（快照）',
   `dispense_time` datetime COMMENT '发药核销时间',
   `dispense_operator` varchar(50) COMMENT '发药核销人',
   `upload_status` tinyint NOT NULL DEFAULT 0 COMMENT '上传状态（0-待上传 1-已上传 2-上传失败）',
@@ -2202,8 +2248,8 @@ CREATE TABLE `biz_drug_trace` (
   `update_time` datetime COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_drug_trace_code` (`trace_code`),
-  UNIQUE KEY `uk_drug_trace_no` (`trace_no`)
+  UNIQUE KEY `uk_drug_trace_no` (`trace_no`),
+  UNIQUE KEY `uk_drug_trace_code` (`trace_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='药品追溯码台账';
 
 -- biz_drug_transfer  药品调拨单
@@ -2244,13 +2290,13 @@ CREATE TABLE `biz_drug_transfer_item` (
   `stock_id` bigint NOT NULL COMMENT '发出方库存批次ID',
   `in_stock_id` bigint COMMENT '接收方库存批次ID',
   `drug_id` bigint NOT NULL COMMENT '药品ID',
-  `drug_code` varchar(32) COMMENT '药品编码',
-  `drug_name` varchar(200) COMMENT '药品名称',
-  `specification` varchar(100) COMMENT '规格',
-  `unit` varchar(20) COMMENT '单位',
+  `drug_code` varchar(32) COMMENT '药品编码（快照）',
+  `drug_name` varchar(200) COMMENT '药品名称（快照）',
+  `specification` varchar(100) COMMENT '规格（快照）',
+  `unit` varchar(20) COMMENT '单位（快照）',
   `batch_no` varchar(50) COMMENT '批号',
-  `production_date` date COMMENT '生产日期',
-  `expiry_date` date COMMENT '有效期',
+  `production_date` date COMMENT '生产日期（快照）',
+  `expiry_date` date COMMENT '有效期（快照）',
   `cost_price` decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT '批次成本价',
   `apply_quantity` decimal(10,2) NOT NULL COMMENT '调拨数量',
   `locked_quantity` decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT '建单时该批次已锁定量',
@@ -2273,7 +2319,7 @@ CREATE TABLE `biz_duty_log` (
   `shift_type` tinyint NOT NULL COMMENT '班次 1-白班 2-夜班（1-白班 2-夜班）',
   `roster_id` bigint COMMENT '所属排班行 biz_duty_roster.id',
   `employee_id` bigint NOT NULL COMMENT '值班人',
-  `employee_name` varchar(64) COMMENT '值班人姓名',
+  `employee_name` varchar(64) COMMENT '值班人姓名（快照）',
   `log_type` tinyint NOT NULL DEFAULT 1 COMMENT '记录类型 1-值班事件 2-遗留事项 3-巡查记录（1-值班事件 2-遗留事项 3-巡查记录）',
   `happen_time` datetime COMMENT '事件发生时间',
   `title` varchar(200) NOT NULL COMMENT '标题',
@@ -2281,7 +2327,7 @@ CREATE TABLE `biz_duty_log` (
   `handle_result` varchar(1000) COMMENT '处理情况',
   `status` tinyint NOT NULL DEFAULT 0 COMMENT '状态 0-待处理 1-已处理 2-已交班（0-待处理 1-已处理 2-已交班）',
   `handover_emp_id` bigint COMMENT '接班人',
-  `handover_emp_name` varchar(64) COMMENT '接班人姓名',
+  `handover_emp_name` varchar(64) COMMENT '接班人姓名（快照）',
   `handover_time` datetime COMMENT '交班时间',
   `ack_time` datetime COMMENT '接班人签收时间',
   `create_by` varchar(64) COMMENT '记录人',
@@ -2293,6 +2339,32 @@ CREATE TABLE `biz_duty_log` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='总值班值班日志';
 
+-- biz_duty_post  值班点位
+CREATE TABLE `biz_duty_post` (
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
+  `post_code` varchar(32) NOT NULL COMMENT '点位编码',
+  `post_name` varchar(64) NOT NULL COMMENT '点位名称',
+  `duty_scope` tinyint NOT NULL DEFAULT 1 COMMENT '责任范围（1-全院行政 2-急诊 3-感染 4-总务 5-信息）',
+  `org_type` tinyint NOT NULL DEFAULT 3 COMMENT '排班单元类型（1-科室 2-病区 3-全院）',
+  `org_id` bigint NOT NULL DEFAULT 0 COMMENT '排班单元ID（全院级为0）',
+  `role_type` tinyint NOT NULL DEFAULT 1 COMMENT '班内角色（1-主班 2-副班）',
+  `duty_level` tinyint NOT NULL DEFAULT 0 COMMENT '值班层级（0-不适用 1-一线 2-二线 3-三线）',
+  `attend_mode` tinyint NOT NULL DEFAULT 3 COMMENT '响应形态（1-坐班 2-听班 3-留院值班）',
+  `shift_id` bigint NOT NULL COMMENT '标准班次ID',
+  `required_staff_type` tinyint COMMENT '应到岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他，空-不限）',
+  `phone` varchar(32) COMMENT '点位值班电话',
+  `sort_no` int NOT NULL DEFAULT 0 COMMENT '排序号',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
+  `create_by` varchar(64) COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) COMMENT '更新人',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_duty_post_code` (`post_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='值班点位';
+
 -- biz_duty_roster  全院总值班排班
 CREATE TABLE `biz_duty_roster` (
   `id` bigint NOT NULL COMMENT '主键',
@@ -2302,23 +2374,26 @@ CREATE TABLE `biz_duty_roster` (
   `employee_id` bigint NOT NULL COMMENT '值班人',
   `employee_name` varchar(50) COMMENT '值班人姓名',
   `dept_id` bigint COMMENT '值班人原属科室ID',
-  `dept_name` varchar(100) COMMENT '值班人原属科室名称',
+  `dept_name` varchar(100) COMMENT '值班人原属科室名称（快照）',
   `phone` varchar(32) COMMENT '值班联系电话',
   `start_time` varchar(5) COMMENT '班次开始时间（HH:mm）',
   `end_time` varchar(5) COMMENT '班次结束时间（HH:mm）',
   `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1-有效 0-停用）',
   `substitute_emp_id` bigint COMMENT '临时换班后的实际值班人',
-  `substitute_emp_name` varchar(50) COMMENT '换班后实际值班人姓名',
+  `substitute_emp_name` varchar(50) COMMENT '换班后实际值班人姓名（快照）',
   `substitute_time` datetime COMMENT '换班时间',
   `substitute_reason` varchar(200) COMMENT '换班原因',
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
+  `shift_id` bigint COMMENT '标准班次ID',
+  `post_id` bigint COMMENT '值班点位ID',
+  `staff_schedule_id` bigint COMMENT '员工排班ID',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_duty_date_shift_role` (`duty_date`, `shift_type`, `role_type`)
+  UNIQUE KEY `uk_duty_post_date` (`post_id`, `duty_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='全院总值班排班';
 
 -- biz_ecg_holter  Holter 动态心电
@@ -2405,12 +2480,12 @@ CREATE TABLE `biz_ecg_waveform` (
   `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `wave_no` varchar(32) NOT NULL COMMENT '波形号',
   `record_id` bigint NOT NULL COMMENT '检查记录ID',
-  `record_no` varchar(32) COMMENT '检查记录号',
+  `record_no` varchar(32) COMMENT '检查记录号（快照）',
   `apply_id` bigint COMMENT '检查申请单ID（冗余）',
-  `apply_no` varchar(32) COMMENT '申请单号',
+  `apply_no` varchar(32) COMMENT '申请单号（快照）',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者号',
-  `patient_name` varchar(64) COMMENT '患者姓名',
+  `patient_no` varchar(32) COMMENT '患者号（快照）',
+  `patient_name` varchar(64) COMMENT '患者姓名（快照）',
   `ecg_type` tinyint NOT NULL DEFAULT 1 COMMENT '心电类型（1-常规静息心电图 2-24小时动态心电图）',
   `wave_data` longtext COMMENT '波形数据',
   `device_no` varchar(64) COMMENT '采集设备号',
@@ -2475,9 +2550,9 @@ CREATE TABLE `biz_emergency_handover` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `handover_no` varchar(32) NOT NULL COMMENT '交班单号',
   `dept_id` bigint NOT NULL COMMENT '交班科室ID',
-  `dept_name` varchar(100) NOT NULL COMMENT '交班科室名称',
+  `dept_name` varchar(100) NOT NULL COMMENT '交班科室名称（快照）',
   `from_emp_id` bigint NOT NULL COMMENT '交出人员工ID',
-  `from_emp_name` varchar(50) NOT NULL COMMENT '交出人姓名',
+  `from_emp_name` varchar(50) NOT NULL COMMENT '交出人姓名（快照）',
   `take_emp_id` bigint NOT NULL COMMENT '接班人员工ID',
   `take_emp_name` varchar(50) NOT NULL COMMENT '接班人姓名',
   `shift_name` varchar(32) COMMENT '班次名',
@@ -2503,15 +2578,15 @@ CREATE TABLE `biz_emergency_handover_item` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `handover_id` bigint NOT NULL COMMENT '交班单ID',
   `emergency_id` bigint NOT NULL COMMENT '急诊记录ID',
-  `emergency_no` varchar(32) NOT NULL COMMENT '急诊号',
+  `emergency_no` varchar(32) NOT NULL COMMENT '急诊号（快照）',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
   `triage_level` tinyint COMMENT '分诊级别',
   `emergency_status` tinyint NOT NULL COMMENT '交班时该患者的急诊状态（1-候诊 2-诊治中 3-留观）',
   `from_doctor_id` bigint COMMENT '交班时的负责医生ID',
-  `from_doctor_name` varchar(50) COMMENT '交班时的负责医生姓名',
+  `from_doctor_name` varchar(50) COMMENT '交班时的负责医生姓名（快照）',
   `take_doctor_id` bigint NOT NULL COMMENT '接续责任人',
-  `take_doctor_name` varchar(50) NOT NULL COMMENT '接续责任人姓名',
+  `take_doctor_name` varchar(50) NOT NULL COMMENT '接续责任人姓名（快照）',
   `disposition` varchar(100) NOT NULL COMMENT '去向/处置交代',
   `handover_note` varchar(300) COMMENT '逐条补充交代（过敏史/管路/家属联系方式等，截到 300）',
   `wait_minutes` bigint COMMENT '候诊已等多久',
@@ -2533,22 +2608,22 @@ CREATE TABLE `biz_emr_signature` (
   `sign_no` varchar(32) NOT NULL COMMENT '签名流水号',
   `biz_type` tinyint NOT NULL COMMENT '签名对象类型',
   `biz_id` bigint NOT NULL COMMENT '签名对象ID',
-  `biz_no` varchar(64) COMMENT '对象单号',
+  `biz_no` varchar(64) COMMENT '对象单号（快照）',
   `patient_id` bigint COMMENT '患者ID',
-  `patient_name` varchar(50) COMMENT '患者姓名',
-  `dept_id` bigint COMMENT '对象所属科室ID',
-  `dept_name` varchar(64) COMMENT '对象所属科室名称',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
+  `dept_id` bigint COMMENT '对象所属科室ID（快照）',
+  `dept_name` varchar(64) COMMENT '对象所属科室名称（快照）',
   `sign_scene` tinyint NOT NULL COMMENT '签名场景',
   `chain_no` int NOT NULL DEFAULT 1 COMMENT '同对象第几次签名',
   `prev_sign_id` bigint COMMENT '前一次签名ID',
   `prev_digest` varchar(128) COMMENT '前一次签名摘要',
   `signer_id` bigint NOT NULL COMMENT '签名人员工ID',
-  `signer_name` varchar(64) NOT NULL COMMENT '签名人姓名',
-  `signer_dept_id` bigint COMMENT '签名人科室ID',
-  `signer_dept_name` varchar(64) COMMENT '签名人科室名称',
+  `signer_name` varchar(64) NOT NULL COMMENT '签名人姓名（快照）',
+  `signer_dept_id` bigint COMMENT '签名人科室ID（快照）',
+  `signer_dept_name` varchar(64) COMMENT '签名人科室名称（快照）',
   `signer_title` varchar(64) COMMENT '签名人职称',
   `cert_id` bigint NOT NULL COMMENT '所用证书ID',
-  `cert_no` varchar(32) NOT NULL COMMENT '所用证书编号',
+  `cert_no` varchar(32) NOT NULL COMMENT '所用证书编号（快照）',
   `digest_algo` varchar(16) NOT NULL COMMENT '摘要算法',
   `sign_algo` varchar(32) NOT NULL COMMENT '签名算法',
   `content_digest` varchar(128) NOT NULL COMMENT '被签内容摘要',
@@ -2631,8 +2706,8 @@ CREATE TABLE `biz_endoscopy_record` (
 CREATE TABLE `biz_equipment_maintain` (
   `id` bigint NOT NULL COMMENT '维保记录ID',
   `equipment_id` bigint NOT NULL COMMENT '设备ID',
-  `equipment_code` varchar(32) COMMENT '设备编码',
-  `equipment_name` varchar(200) COMMENT '设备名称',
+  `equipment_code` varchar(32) COMMENT '设备编码（快照）',
+  `equipment_name` varchar(200) COMMENT '设备名称（快照）',
   `maintain_type` tinyint NOT NULL COMMENT '维保类型（1-保养 2-维修 3-巡检）',
   `maintain_date` date NOT NULL COMMENT '维保日期',
   `next_maintain_date` date COMMENT '下次维保日期',
@@ -2644,7 +2719,7 @@ CREATE TABLE `biz_equipment_maintain` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='设备维保记录';
@@ -2653,8 +2728,8 @@ CREATE TABLE `biz_equipment_maintain` (
 CREATE TABLE `biz_equipment_metering` (
   `id` bigint NOT NULL COMMENT '计量记录ID',
   `equipment_id` bigint NOT NULL COMMENT '设备ID',
-  `equipment_code` varchar(32) COMMENT '设备编码',
-  `equipment_name` varchar(200) COMMENT '设备名称',
+  `equipment_code` varchar(32) COMMENT '设备编码（快照）',
+  `equipment_name` varchar(200) COMMENT '设备名称（快照）',
   `metering_type` tinyint NOT NULL COMMENT '计量类型（1-强检 2-校准）',
   `metering_date` date NOT NULL COMMENT '计量日期',
   `valid_until` date NOT NULL COMMENT '有效期至',
@@ -2664,7 +2739,7 @@ CREATE TABLE `biz_equipment_metering` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='设备计量记录';
@@ -2675,7 +2750,7 @@ CREATE TABLE `biz_exam_appointment` (
   `appt_no` varchar(32) NOT NULL COMMENT '预约单号',
   `active_flag` tinyint DEFAULT 1 COMMENT '有效标记',
   `apply_id` bigint NOT NULL COMMENT '检查申请单ID',
-  `apply_no` varchar(32) COMMENT '申请单号',
+  `apply_no` varchar(32) COMMENT '申请单号（快照）',
   `prev_apply_status` tinyint COMMENT '预约前申请状态',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
   `patient_no` varchar(32) COMMENT '患者号',
@@ -2687,16 +2762,16 @@ CREATE TABLE `biz_exam_appointment` (
   `doctor_id` bigint COMMENT '申请医生ID',
   `doctor_name` varchar(50) COMMENT '申请医生',
   `item_id` bigint COMMENT '检查项目ID',
-  `item_code` varchar(32) COMMENT '项目编码',
-  `item_name` varchar(200) COMMENT '项目名称',
-  `body_part` varchar(200) COMMENT '检查部位',
+  `item_code` varchar(32) COMMENT '项目编码（快照）',
+  `item_name` varchar(200) COMMENT '项目名称（快照）',
+  `body_part` varchar(200) COMMENT '检查部位（快照）',
   `exam_minutes` int COMMENT '本次占用时长',
   `device_id` bigint NOT NULL COMMENT '设备ID',
-  `device_code` varchar(32) COMMENT '设备编码',
+  `device_code` varchar(32) COMMENT '设备编码（快照）',
   `device_name` varchar(100) COMMENT '设备名称',
-  `exam_dept_id` bigint COMMENT '检查科室ID',
-  `exam_dept_name` varchar(100) COMMENT '检查科室名称',
-  `room_name` varchar(100) COMMENT '检查室',
+  `exam_dept_id` bigint COMMENT '检查科室ID（快照）',
+  `exam_dept_name` varchar(100) COMMENT '检查科室名称（快照）',
+  `room_name` varchar(100) COMMENT '检查室（快照）',
   `exam_date` date NOT NULL COMMENT '检查日期',
   `start_time` char(5) NOT NULL COMMENT '开始时间（HH:mm）',
   `end_time` char(5) NOT NULL COMMENT '结束时间（HH:mm）',
@@ -2716,8 +2791,8 @@ CREATE TABLE `biz_exam_appointment` (
   `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_exam_appt_active` (`apply_id`, `active_flag`),
-  UNIQUE KEY `uk_exam_appt_no` (`appt_no`)
+  UNIQUE KEY `uk_exam_appt_no` (`appt_no`),
+  UNIQUE KEY `uk_exam_appt_active` (`apply_id`, `active_flag`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='检查预约单';
 
 -- biz_exam_device  检查设备档位
@@ -2754,8 +2829,8 @@ CREATE TABLE `biz_exam_device_item` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `device_id` bigint NOT NULL COMMENT '设备ID',
   `item_id` bigint NOT NULL COMMENT '检查项目ID',
-  `item_code` varchar(32) COMMENT '项目编码',
-  `item_name` varchar(200) COMMENT '项目名称',
+  `item_code` varchar(32) COMMENT '项目编码（快照）',
+  `item_name` varchar(200) COMMENT '项目名称（快照）',
   `exam_minutes` int COMMENT '该设备做该项目的时长（分钟）',
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -2772,28 +2847,28 @@ CREATE TABLE `biz_exam_film` (
   `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `film_no` varchar(32) NOT NULL COMMENT '胶片单号',
   `record_id` bigint NOT NULL COMMENT '检查记录ID',
-  `record_no` varchar(32) COMMENT '检查记录号',
+  `record_no` varchar(32) COMMENT '检查记录号（快照）',
   `apply_id` bigint COMMENT '检查申请单ID',
-  `apply_no` varchar(32) COMMENT '申请单号',
+  `apply_no` varchar(32) COMMENT '申请单号（快照）',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者号',
-  `patient_name` varchar(64) COMMENT '患者姓名',
-  `visit_date` date COMMENT '就诊日期',
-  `item_code` varchar(32) COMMENT '检查项目编码',
-  `item_name` varchar(200) COMMENT '检查项目名称',
-  `body_part` varchar(100) COMMENT '检查部位',
+  `patient_no` varchar(32) COMMENT '患者号（快照）',
+  `patient_name` varchar(64) COMMENT '患者姓名（快照）',
+  `visit_date` date COMMENT '就诊日期（快照）',
+  `item_code` varchar(32) COMMENT '检查项目编码（快照）',
+  `item_name` varchar(200) COMMENT '检查项目名称（快照）',
+  `body_part` varchar(100) COMMENT '检查部位（快照）',
   `modality` tinyint COMMENT '影像模态（，快照）',
   `spec_id` bigint NOT NULL COMMENT '胶片规格ID',
-  `spec_code` varchar(32) COMMENT '规格编码',
+  `spec_code` varchar(32) COMMENT '规格编码（快照）',
   `spec_name` varchar(100) NOT NULL COMMENT '规格名称',
   `unit_price` decimal(10,2) NOT NULL COMMENT '单价',
-  `unit` varchar(20) COMMENT '计价单位',
+  `unit` varchar(20) COMMENT '计价单位（快照）',
   `quantity` int NOT NULL COMMENT '胶片张数',
   `amount` decimal(12,2) NOT NULL COMMENT '金额 = 单价 × 张数',
   `film_status` tinyint NOT NULL DEFAULT 1 COMMENT '胶片状态（1-已登记 2-已打印 3-已发放 4-已作废）',
   `charge_flag` tinyint NOT NULL DEFAULT 0 COMMENT '是否已记账（0-未记账 1-已记账）',
   `fee_id` bigint COMMENT '记账流水ID',
-  `fee_no` varchar(32) COMMENT '记账流水号',
+  `fee_no` varchar(32) COMMENT '记账流水号（快照）',
   `print_by` varchar(64) COMMENT '打印人',
   `print_time` datetime COMMENT '打印时间',
   `deliver_by` varchar(64) COMMENT '发放人',
@@ -2815,10 +2890,10 @@ CREATE TABLE `biz_exam_image` (
   `apply_id` bigint NOT NULL COMMENT '申请单ID',
   `apply_no` varchar(64) COMMENT '申请单号',
   `record_id` bigint COMMENT '执行记录ID',
-  `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_name` varchar(64) COMMENT '患者姓名',
+  `patient_id` bigint NOT NULL COMMENT '患者ID（快照）',
+  `patient_name` varchar(64) COMMENT '患者姓名（快照）',
   `item_name` varchar(200) COMMENT '检查/检验项目名称',
-  `body_part` varchar(100) COMMENT '检查部位',
+  `body_part` varchar(100) COMMENT '检查部位（快照）',
   `modality` tinyint COMMENT '影像模态（1-CT 2-MR 3-DR 4-超声 5-心电 6-内镜 7-其他）',
   `seq` int NOT NULL DEFAULT 1 COMMENT '本申请单内的帧序号',
   `file_name` varchar(255) NOT NULL COMMENT '原始文件名',
@@ -2862,15 +2937,15 @@ CREATE TABLE `biz_fee_record` (
   `id` bigint NOT NULL COMMENT '主键（雪花）',
   `fee_no` varchar(32) NOT NULL COMMENT '记账流水号',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者号',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
+  `patient_no` varchar(32) COMMENT '患者号（快照）',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
   `encounter_type` tinyint NOT NULL COMMENT '就诊类型（1-门诊 2-住院）',
   `encounter_id` bigint NOT NULL COMMENT '就诊标识',
   `encounter_no` varchar(32) COMMENT '就诊标识单号',
   `dept_id` bigint COMMENT '费用归属科室',
-  `dept_name` varchar(100) COMMENT '科室名称',
+  `dept_name` varchar(100) COMMENT '科室名称（快照）',
   `doctor_id` bigint COMMENT '开单/执行人员工ID',
-  `doctor_name` varchar(50) COMMENT '开单人姓名',
+  `doctor_name` varchar(50) COMMENT '开单人姓名（快照）',
   `item_type` tinyint NOT NULL COMMENT '项目类型（1-挂号费 2-西药 3-中成药 4-中药饮片 5-检查 6-检验 7-治疗 8-耗材）',
   `item_code` varchar(32) COMMENT '项目/药品编码',
   `item_name` varchar(200) NOT NULL COMMENT '项目名称',
@@ -2888,7 +2963,7 @@ CREATE TABLE `biz_fee_record` (
   `refunded_amount` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '累计已冲金额',
   `book_time` datetime NOT NULL COMMENT '记账时间',
   `book_by_id` bigint COMMENT '记账人员工ID',
-  `book_by_name` varchar(64) COMMENT '记账人姓名',
+  `book_by_name` varchar(64) COMMENT '记账人姓名（快照）',
   `bill_id` bigint COMMENT '所属结算账单ID',
   `create_by` varchar(64),
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
@@ -2929,7 +3004,7 @@ CREATE TABLE `biz_followup_task` (
   `phone` varchar(20) COMMENT '联系电话',
   `diagnosis` varchar(200) COMMENT '诊断',
   `dept_id` bigint COMMENT '随访所属科室ID',
-  `dept_name` varchar(128) COMMENT '科室名称',
+  `dept_name` varchar(128) COMMENT '科室名称（快照）',
   `followup_type` tinyint NOT NULL COMMENT '随访类型（1-复诊提醒 2-慢病随访 3-用药指导 4-术后随访）',
   `followup_content` varchar(500) COMMENT '随访内容',
   `followup_time` datetime NOT NULL COMMENT '计划随访时间',
@@ -2946,6 +3021,12 @@ CREATE TABLE `biz_followup_task` (
   `update_time` datetime COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
+  `patient_reply` text COMMENT '患者反馈内容（小程序回写）',
+  `patient_reply_time` datetime COMMENT '患者反馈时间',
+  `call_channel` tinyint COMMENT '外呼通道（1-人工 2-自动）',
+  `call_status` tinyint NOT NULL DEFAULT 0 COMMENT '外呼状态（0-未外呼 1-待外呼 2-已接通 3-未接通）',
+  `call_time` datetime COMMENT '最近一次外呼登记时间',
+  `call_attempts` int NOT NULL DEFAULT 0 COMMENT '累计外呼登记次数',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_task_no` (`task_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='随访任务';
@@ -2956,8 +3037,8 @@ CREATE TABLE `biz_fund_account` (
   `owner_type` tinyint NOT NULL COMMENT '账户主体（1-患者 2-住院就诊次）',
   `owner_id` bigint NOT NULL COMMENT '主体ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者号',
-  `patient_name` varchar(50) COMMENT '患者姓名',
+  `patient_no` varchar(32) COMMENT '患者号（快照）',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
   `balance` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '余额',
   `version` bigint NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
   `total_recharge` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '累计充值',
@@ -2991,7 +3072,7 @@ CREATE TABLE `biz_fund_account_txn` (
   `pay_method` tinyint COMMENT '充值/退款走的渠道',
   `channel_txn_no` varchar(64) COMMENT '渠道流水号',
   `operator_id` bigint COMMENT '操作人员工ID',
-  `operator_name` varchar(50) COMMENT '操作人姓名',
+  `operator_name` varchar(50) COMMENT '操作人姓名（快照）',
   `txn_time` datetime NOT NULL COMMENT '发生时间',
   `txn_status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1-成功 2-已冲正）',
   `orig_txn_id` bigint COMMENT '冲正指向的原流水ID',
@@ -3010,12 +3091,12 @@ CREATE TABLE `biz_hand_hygiene_obs` (
   `id` bigint NOT NULL COMMENT '主键',
   `obs_date` date NOT NULL COMMENT '观察日期',
   `dept_id` bigint NOT NULL COMMENT '被观察科室ID',
-  `dept_name` varchar(100) NOT NULL COMMENT '被观察科室',
+  `dept_name` varchar(100) NOT NULL COMMENT '被观察科室（快照）',
   `obs_object` tinyint NOT NULL COMMENT '观察对象',
   `opportunity_count` int NOT NULL COMMENT '手卫生时机数',
   `comply_count` int NOT NULL COMMENT '实际执行数',
   `observer_id` bigint NOT NULL COMMENT '观察人ID',
-  `observer_name` varchar(50) NOT NULL COMMENT '观察人姓名',
+  `observer_name` varchar(50) NOT NULL COMMENT '观察人姓名（快照）',
   `obs_time` datetime NOT NULL COMMENT '观察登记时间',
   `create_by` varchar(64),
   `create_time` datetime,
@@ -3066,8 +3147,7 @@ CREATE TABLE `biz_icu_monitor` (
   `update_time` datetime COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(512) COMMENT '备注',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_icu_monitor_time` (`stay_id`, `record_time`, `del_flag`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='ICU 监护记录单';
 
 -- biz_icu_stay  ICU 入出科登记
@@ -3076,14 +3156,14 @@ CREATE TABLE `biz_icu_stay` (
   `stay_no` varchar(32) NOT NULL COMMENT '入科单号',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(64) COMMENT '患者编号',
-  `patient_name` varchar(128) COMMENT '患者姓名',
-  `from_dept_id` bigint COMMENT '入科来源科室ID',
-  `from_dept_name` varchar(128) COMMENT '入科来源科室名称',
+  `patient_no` varchar(64) COMMENT '患者编号（快照）',
+  `patient_name` varchar(128) COMMENT '患者姓名（快照）',
+  `from_dept_id` bigint COMMENT '入科来源科室ID（快照）',
+  `from_dept_name` varchar(128) COMMENT '入科来源科室名称（快照）',
   `ward_id` bigint NOT NULL COMMENT 'ICU 病区ID',
-  `ward_name` varchar(128) COMMENT 'ICU 病区名称',
+  `ward_name` varchar(128) COMMENT 'ICU 病区名称（快照）',
   `bed_id` bigint NOT NULL COMMENT 'ICU 床位ID',
-  `bed_no` varchar(16) COMMENT 'ICU 床位号',
+  `bed_no` varchar(16) COMMENT 'ICU 床位号（快照）',
   `care_level` tinyint NOT NULL DEFAULT 1 COMMENT '监护等级（1-特级 2-I级 3-II级）',
   `in_time` datetime NOT NULL COMMENT '入科时间',
   `in_diag` varchar(255) COMMENT '入科诊断/原因',
@@ -3111,15 +3191,15 @@ CREATE TABLE `biz_infection_case` (
   `id` bigint NOT NULL COMMENT '主键',
   `case_no` varchar(32) NOT NULL COMMENT '病例编号',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) NOT NULL COMMENT '患者编号',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
+  `patient_no` varchar(32) NOT NULL COMMENT '患者编号（快照）',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
   `gender` tinyint COMMENT '性别',
-  `age` int COMMENT '年龄',
+  `age` int COMMENT '年龄（快照）',
   `visit_type` tinyint NOT NULL COMMENT '就诊类型',
   `regist_id` bigint COMMENT '门诊就诊ID',
   `inp_id` bigint COMMENT '住院记录ID',
-  `dept_id` bigint COMMENT '发现科室ID',
-  `dept_name` varchar(100) COMMENT '发现科室',
+  `dept_id` bigint COMMENT '发现科室ID（快照）',
+  `dept_name` varchar(100) COMMENT '发现科室（快照）',
   `case_source` tinyint NOT NULL COMMENT '感染来源',
   `infection_site` varchar(8) NOT NULL COMMENT '感染部位',
   `infection_diag` varchar(200) NOT NULL COMMENT '感染诊断',
@@ -3129,7 +3209,7 @@ CREATE TABLE `biz_infection_case` (
   `case_status` tinyint NOT NULL DEFAULT 1 COMMENT '状态',
   `leak_flag` tinyint NOT NULL DEFAULT 0 COMMENT '漏报标志',
   `report_by` bigint NOT NULL COMMENT '上报人ID',
-  `report_name` varchar(50) NOT NULL COMMENT '上报人姓名',
+  `report_name` varchar(50) NOT NULL COMMENT '上报人姓名（快照）',
   `report_time` datetime NOT NULL COMMENT '上报时间',
   `audit_name` varchar(50) COMMENT '核实人',
   `audit_time` datetime COMMENT '核实时间',
@@ -3149,11 +3229,11 @@ CREATE TABLE `biz_infection_monitor` (
   `id` bigint NOT NULL COMMENT '主键',
   `monitor_no` varchar(32) NOT NULL COMMENT '监测编号',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) NOT NULL COMMENT '患者编号',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
+  `patient_no` varchar(32) NOT NULL COMMENT '患者编号（快照）',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
   `monitor_type` tinyint NOT NULL COMMENT '监测类型',
   `dept_id` bigint COMMENT '监测科室ID',
-  `dept_name` varchar(100) COMMENT '监测科室',
+  `dept_name` varchar(100) COMMENT '监测科室（快照）',
   `insert_date` date NOT NULL COMMENT '置入日期',
   `remove_date` date COMMENT '拔除日期',
   `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态',
@@ -3177,7 +3257,7 @@ CREATE TABLE `biz_infection_monitor_daily` (
   `monitor_id` bigint NOT NULL COMMENT '监测登记ID',
   `monitor_date` date NOT NULL COMMENT '监测日期',
   `recorder_id` bigint NOT NULL COMMENT '记录人ID',
-  `recorder_name` varchar(50) NOT NULL COMMENT '记录人姓名',
+  `recorder_name` varchar(50) NOT NULL COMMENT '记录人姓名（快照）',
   `record_time` datetime NOT NULL COMMENT '记录时间',
   `create_by` varchar(64),
   `create_time` datetime,
@@ -3193,25 +3273,25 @@ CREATE TABLE `biz_infectious_report` (
   `id` bigint NOT NULL COMMENT '主键',
   `report_no` varchar(32) NOT NULL COMMENT '报卡编号',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) NOT NULL COMMENT '患者编号',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
+  `patient_no` varchar(32) NOT NULL COMMENT '患者编号（快照）',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
   `gender` tinyint COMMENT '性别',
-  `age` int COMMENT '年龄',
+  `age` int COMMENT '年龄（快照）',
   `regist_id` bigint COMMENT '门诊就诊ID',
   `inp_id` bigint COMMENT '住院记录ID',
-  `visit_dept_id` bigint COMMENT '发现/就诊科室ID',
-  `visit_dept_name` varchar(100) COMMENT '发现/就诊科室',
+  `visit_dept_id` bigint COMMENT '发现/就诊科室ID（快照）',
+  `visit_dept_name` varchar(100) COMMENT '发现/就诊科室（快照）',
   `disease_id` bigint NOT NULL COMMENT '病种ID',
-  `disease_code` varchar(16) NOT NULL COMMENT '病种编码',
-  `disease_name` varchar(50) NOT NULL COMMENT '病种名称',
+  `disease_code` varchar(16) NOT NULL COMMENT '病种编码（快照）',
+  `disease_name` varchar(50) NOT NULL COMMENT '病种名称（快照）',
   `infectious_class` tinyint NOT NULL COMMENT '传染病类别（快照，1甲/2乙/3丙）',
-  `icd10` varchar(16) COMMENT 'ICD-10',
+  `icd10` varchar(16) COMMENT 'ICD-10（快照）',
   `report_deadline` datetime NOT NULL COMMENT '报卡时限',
   `clinical_desc` varchar(500) COMMENT '临床摘要',
   `report_status` tinyint NOT NULL DEFAULT 1 COMMENT '状态',
   `report_count` int NOT NULL DEFAULT 1 COMMENT '报卡次数',
   `report_by` bigint NOT NULL COMMENT '填卡医生ID',
-  `report_by_name` varchar(50) NOT NULL COMMENT '填卡医生姓名',
+  `report_by_name` varchar(50) NOT NULL COMMENT '填卡医生姓名（快照）',
   `report_time` datetime NOT NULL COMMENT '填卡时间',
   `audit_by_name` varchar(50) COMMENT '审核人姓名',
   `audit_time` datetime COMMENT '审核时间',
@@ -3292,15 +3372,15 @@ CREATE TABLE `biz_inpatient_leave` (
   `leave_no` varchar(32) NOT NULL COMMENT '请假单号',
   `admission_id` bigint NOT NULL COMMENT '住院记录ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
-  `patient_no` varchar(32) COMMENT '患者编号',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
+  `patient_no` varchar(32) COMMENT '患者编号（快照）',
   `gender` tinyint COMMENT '性别（1-男 2-女 9-未知）',
   `age` int COMMENT '年龄',
   `dept_id` bigint COMMENT '申请时点所在科室ID',
-  `dept_name` varchar(100) COMMENT '科室名称',
-  `ward_name` varchar(64) COMMENT '病区名称',
-  `bed_no` varchar(16) COMMENT '床位号',
-  `admission_no` varchar(32) COMMENT '住院号',
+  `dept_name` varchar(100) COMMENT '科室名称（快照）',
+  `ward_name` varchar(64) COMMENT '病区名称（快照）',
+  `bed_no` varchar(16) COMMENT '床位号（快照）',
+  `admission_no` varchar(32) COMMENT '住院号（快照）',
   `leave_type` tinyint NOT NULL COMMENT '请假类别（1-临时外出当日往返 2-离院过夜 9-其他）',
   `reason` varchar(500) NOT NULL COMMENT '请假事由（必填）',
   `destination` varchar(200) NOT NULL COMMENT '去向',
@@ -3346,8 +3426,7 @@ CREATE TABLE `biz_inpatient_leave` (
   `update_time` datetime COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_leave_no` (`leave_no`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='住院请假登记';
 
 -- biz_inpatient_operation  病案首页手术明细
@@ -3382,13 +3461,13 @@ CREATE TABLE `biz_inpatient_order` (
   `order_no` varchar(32) NOT NULL COMMENT '医嘱号',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者编号',
-  `patient_name` varchar(50) COMMENT '患者姓名',
+  `patient_no` varchar(32) COMMENT '患者编号（快照）',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
   `dept_id` bigint COMMENT '开立科室ID',
-  `dept_name` varchar(64) COMMENT '开立科室名称',
+  `dept_name` varchar(64) COMMENT '开立科室名称（快照）',
   `ward_id` bigint COMMENT '病区ID',
-  `ward_name` varchar(64) COMMENT '病区名称',
-  `bed_no` varchar(32) COMMENT '床号',
+  `ward_name` varchar(64) COMMENT '病区名称（快照）',
+  `bed_no` varchar(32) COMMENT '床号（快照）',
   `order_type` tinyint NOT NULL COMMENT '医嘱类型（1-长期 2-临时）',
   `order_group` varchar(32) COMMENT '组套号',
   `order_class` tinyint NOT NULL COMMENT '医嘱类别',
@@ -3466,7 +3545,7 @@ CREATE TABLE `biz_inpatient_order_exec` (
 CREATE TABLE `biz_inpatient_order_template` (
   `id` bigint NOT NULL COMMENT '模板ID（雪花）',
   `doctor_id` bigint COMMENT '归属医生',
-  `doctor_name` varchar(64) COMMENT '医生姓名',
+  `doctor_name` varchar(64) COMMENT '医生姓名（快照）',
   `dept_id` bigint COMMENT '创建时科室ID',
   `scope` tinyint NOT NULL DEFAULT 1 COMMENT '共享范围（1-个人 2-科室 3-全院）',
   `template_name` varchar(100) NOT NULL COMMENT '模板名称',
@@ -3475,7 +3554,7 @@ CREATE TABLE `biz_inpatient_order_template` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注/适用场景说明',
   PRIMARY KEY (`id`)
@@ -3507,16 +3586,16 @@ CREATE TABLE `biz_inpatient_record` (
   `record_no` varchar(32) NOT NULL COMMENT '病历文书号',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者编号',
-  `patient_name` varchar(50) COMMENT '患者姓名',
-  `gender` tinyint COMMENT '性别（1-男 2-女）',
-  `age` int COMMENT '年龄',
-  `age_unit` tinyint COMMENT '年龄单位（1-岁 2-月 3-天）',
+  `patient_no` varchar(32) COMMENT '患者编号（快照）',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
+  `gender` tinyint COMMENT '性别（快照）（1-男 2-女）',
+  `age` int COMMENT '年龄（快照）',
+  `age_unit` tinyint COMMENT '年龄单位（快照）（1-岁 2-月 3-天）',
   `dept_id` bigint COMMENT '科室ID',
-  `dept_name` varchar(64) COMMENT '科室名称',
+  `dept_name` varchar(64) COMMENT '科室名称（快照）',
   `ward_id` bigint COMMENT '病区ID',
-  `ward_name` varchar(64) COMMENT '病区名称',
-  `bed_no` varchar(32) COMMENT '床号',
+  `ward_name` varchar(64) COMMENT '病区名称（快照）',
+  `bed_no` varchar(32) COMMENT '床号（快照）',
   `record_type` tinyint NOT NULL COMMENT '文书类型',
   `record_title` varchar(200) COMMENT '文书标题',
   `record_time` datetime NOT NULL COMMENT '记录时间',
@@ -3613,7 +3692,7 @@ CREATE TABLE `biz_inpatient_settlement` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_biz_inpatient_settlement_no` (`settlement_no`)
@@ -3630,7 +3709,7 @@ CREATE TABLE `biz_inpatient_summary` (
   `age_unit` tinyint COMMENT '年龄单位（1-岁 2-月 3-天）',
   `id_card` varchar(18) COMMENT '身份证号',
   `admit_dept_id` bigint COMMENT '入院科别ID',
-  `admit_dept_name` varchar(64) COMMENT '入院科别名称',
+  `admit_dept_name` varchar(64) COMMENT '入院科别名称（快照）',
   `medical_insurance_no` varchar(32) COMMENT '医保卡号',
   `dept_id` bigint COMMENT '科室ID',
   `dept_name` varchar(50) COMMENT '科室名称',
@@ -3679,30 +3758,30 @@ CREATE TABLE `biz_inpatient_transfer` (
   `id` bigint NOT NULL COMMENT '转科记录ID（雪花）',
   `transfer_no` varchar(32) NOT NULL COMMENT '转科单号',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
-  `admission_no` varchar(32) COMMENT '入院号',
+  `admission_no` varchar(32) COMMENT '入院号（快照）',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_name` varchar(50) COMMENT '患者姓名',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
   `from_dept_id` bigint COMMENT '转出科室ID',
-  `from_dept_name` varchar(64) COMMENT '转出科室名称',
+  `from_dept_name` varchar(64) COMMENT '转出科室名称（快照）',
   `from_ward_id` bigint COMMENT '转出病区ID',
-  `from_ward_name` varchar(64) COMMENT '转出病区名称',
+  `from_ward_name` varchar(64) COMMENT '转出病区名称（快照）',
   `from_bed_id` bigint COMMENT '转出床位ID',
-  `from_bed_no` varchar(32) COMMENT '转出床位号',
+  `from_bed_no` varchar(32) COMMENT '转出床位号（快照）',
   `to_dept_id` bigint NOT NULL COMMENT '转入科室ID',
-  `to_dept_name` varchar(64) COMMENT '转入科室名称',
+  `to_dept_name` varchar(64) COMMENT '转入科室名称（快照）',
   `to_ward_id` bigint NOT NULL COMMENT '转入病区ID',
-  `to_ward_name` varchar(64) COMMENT '转入病区名称',
+  `to_ward_name` varchar(64) COMMENT '转入病区名称（快照）',
   `to_bed_id` bigint NOT NULL COMMENT '转入床位ID',
-  `to_bed_no` varchar(32) COMMENT '转入床位号',
+  `to_bed_no` varchar(32) COMMENT '转入床位号（快照）',
   `transfer_type` tinyint NOT NULL DEFAULT 1 COMMENT '转科类型（1-普通转科 2-急诊转科 3-转入ICU 4-ICU转出）',
   `transfer_reason` varchar(500) NOT NULL COMMENT '转科原因',
   `hospital_days` int COMMENT '发起转科时该次住院的已住院天数',
   `stop_orders_count` int NOT NULL DEFAULT 0 COMMENT '接收时随之停止的长期医嘱条数',
   `order_remark` varchar(500) COMMENT '医嘱处置说明',
   `apply_doctor_id` bigint COMMENT '转出方发起医生ID',
-  `apply_doctor_name` varchar(64) COMMENT '转出方发起医生姓名',
+  `apply_doctor_name` varchar(64) COMMENT '转出方发起医生姓名（快照）',
   `receive_doctor_id` bigint COMMENT '转入方接收医生ID（员工ID）',
-  `receive_doctor_name` varchar(64) COMMENT '转入方接收医生姓名',
+  `receive_doctor_name` varchar(64) COMMENT '转入方接收医生姓名（快照）',
   `record_id` bigint COMMENT '回写的住院病历ID',
   `apply_time` datetime COMMENT '发起时间',
   `receive_time` datetime COMMENT '接收时间',
@@ -3865,12 +3944,12 @@ CREATE TABLE `biz_insurance_catalog_rule` (
   `create_by` varchar(64),
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
   `update_by` varchar(64),
-  `update_time` datetime,
+  `update_time` datetime ON UPDATE CURRENT_TIMESTAMP,
   `del_flag` tinyint NOT NULL DEFAULT 0,
   `remark` varchar(500),
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_item_catalog_encounter` (`item_code`, `catalog_type`, `encounter_type`, `insurance_type`, `effective_date`),
-  UNIQUE KEY `uk_rule_no` (`rule_no`)
+  UNIQUE KEY `uk_rule_no` (`rule_no`),
+  UNIQUE KEY `uk_item_catalog_encounter` (`item_code`, `catalog_type`, `encounter_type`, `insurance_type`, `effective_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='医保目录报销规则';
 
 -- biz_insurance_report  医保报盘报文台账
@@ -3956,8 +4035,8 @@ CREATE TABLE `biz_insurance_settlement` (
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_isb_bill` (`bill_id`),
-  UNIQUE KEY `uk_settlement_no` (`settlement_no`)
+  UNIQUE KEY `uk_settlement_no` (`settlement_no`),
+  UNIQUE KEY `uk_isb_bill` (`bill_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='医保结算清单';
 
 -- biz_invoice  发票
@@ -3967,7 +4046,7 @@ CREATE TABLE `biz_invoice` (
   `invoice_type` tinyint NOT NULL DEFAULT 1 COMMENT '发票类型（1-普通发票 2-电子发票 3-数电发票）',
   `charge_id` bigint COMMENT '旧收费单ID',
   `bill_id` bigint COMMENT '结算账单ID',
-  `bill_no` varchar(32) COMMENT '结算账单号',
+  `bill_no` varchar(32) COMMENT '结算账单号（快照）',
   `orig_invoice_id` bigint COMMENT '红冲链',
   `charge_no` varchar(32) COMMENT '收费单号',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
@@ -4317,16 +4396,16 @@ CREATE TABLE `biz_meal_order` (
   `meal_no` varchar(32) NOT NULL COMMENT '订餐单号',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
   `patient_id` bigint COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者编号',
-  `patient_name` varchar(50) COMMENT '患者姓名',
-  `dept_id` bigint COMMENT '科室ID',
-  `dept_name` varchar(100) COMMENT '科室名称',
+  `patient_no` varchar(32) COMMENT '患者编号（快照）',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
+  `dept_id` bigint COMMENT '科室ID（快照）',
+  `dept_name` varchar(100) COMMENT '科室名称（快照）',
   `ward_id` bigint COMMENT '病区ID',
-  `ward_name` varchar(100) COMMENT '病区名称',
-  `bed_no` varchar(20) COMMENT '床号',
+  `ward_name` varchar(100) COMMENT '病区名称（快照）',
+  `bed_no` varchar(20) COMMENT '床号（快照）',
   `diet_plan_id` bigint COMMENT '来源膳食方案ID',
   `diet_code` varchar(32) COMMENT '饮食类型码',
-  `diet_name` varchar(100) COMMENT '饮食名称',
+  `diet_name` varchar(100) COMMENT '饮食名称（快照）',
   `meal_date` date NOT NULL COMMENT '就餐日期',
   `meal_type` tinyint NOT NULL COMMENT '餐次（1-早餐 2-午餐 3-晚餐 4-加餐）',
   `quantity` int NOT NULL DEFAULT 1 COMMENT '份数',
@@ -4335,7 +4414,7 @@ CREATE TABLE `biz_meal_order` (
   `prepare_time` datetime COMMENT '配餐完成时间',
   `deliver_time` datetime COMMENT '配送出仓时间',
   `deliver_by_id` bigint COMMENT '配送人（员工ID）',
-  `deliver_by_name` varchar(50) COMMENT '配送人姓名',
+  `deliver_by_name` varchar(50) COMMENT '配送人姓名（快照）',
   `sign_time` datetime COMMENT '签收时间',
   `sign_by` varchar(50) COMMENT '签收人（患者/家属/护士姓名）',
   `cancel_time` datetime COMMENT '退订时间',
@@ -4344,12 +4423,11 @@ CREATE TABLE `biz_meal_order` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_meal_no` (`meal_no`),
-  UNIQUE KEY `uk_meal_order` (`admission_id`, `meal_date`, `meal_type`)
+  UNIQUE KEY `uk_meal_no` (`meal_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='住院订餐配送';
 
 -- biz_medical_record  门诊病历
@@ -4482,7 +4560,7 @@ CREATE TABLE `biz_medical_waste` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_biz_medical_waste_no` (`waste_no`)
@@ -4567,7 +4645,7 @@ CREATE TABLE `biz_narcotic_register` (
   `create_by` varchar(64) DEFAULT '' COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) DEFAULT '' COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
@@ -4578,27 +4656,30 @@ CREATE TABLE `biz_narcotic_register` (
 CREATE TABLE `biz_nurse_schedule` (
   `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `ward_id` bigint NOT NULL COMMENT '病区ID',
-  `ward_name` varchar(128) COMMENT '病区名称',
+  `ward_name` varchar(128) COMMENT '病区名称（快照）',
   `dept_id` bigint NOT NULL COMMENT '科室ID',
-  `dept_name` varchar(128) COMMENT '科室名称',
+  `dept_name` varchar(128) COMMENT '科室名称（快照）',
+  `unit_type` tinyint NOT NULL DEFAULT 1 COMMENT '排班单元类型（1-病区 2-门诊科室）',
+  `unit_id` bigint COMMENT '排班单元ID（unit_type=1 取 sys_ward.ward_id，=2 取 sys_department.id）',
   `schedule_date` date NOT NULL COMMENT '排班日期',
   `week_day` tinyint NOT NULL COMMENT '星期（1-周一 7-周日）',
   `employee_id` bigint NOT NULL COMMENT '护士ID',
-  `emp_code` varchar(32) COMMENT '工号',
-  `nurse_name` varchar(50) COMMENT '护士姓名',
+  `emp_code` varchar(32) COMMENT '工号（快照）',
+  `nurse_name` varchar(50) COMMENT '护士姓名（快照）',
   `nurse_title` varchar(50) COMMENT '职称',
   `shift_id` bigint COMMENT '班次ID',
-  `shift_name` varchar(50) COMMENT '班次名称',
-  `start_time` varchar(10) COMMENT '开始时间 HH',
-  `end_time` varchar(10) COMMENT '结束时间 HH',
+  `shift_name` varchar(50) COMMENT '班次名称（快照）',
+  `start_time` varchar(10) COMMENT '开始时间 HH（快照）',
+  `end_time` varchar(10) COMMENT '结束时间 HH（快照）',
   `work_minutes` int NOT NULL DEFAULT 0 COMMENT '工时',
   `schedule_status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1-上班 2-休息 3-请假 4-培训 5-停班）',
-  `schedule_source` tinyint NOT NULL DEFAULT 1 COMMENT '来源（1-手工 2-复制上周）',
+  `schedule_source` tinyint NOT NULL DEFAULT 1 COMMENT '生成来源（1-手工 2-模板 3-复制周期 4-换班）',
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
   `update_time` datetime COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `staff_schedule_id` bigint COMMENT '关联的出勤事实 biz_staff_schedule.id（护理格子→底座的指路牌）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_nurse_date` (`employee_id`, `schedule_date`)
@@ -4608,7 +4689,7 @@ CREATE TABLE `biz_nurse_schedule` (
 CREATE TABLE `biz_nurse_schedule_rule` (
   `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `ward_id` bigint NOT NULL COMMENT '病区ID',
-  `ward_name` varchar(128) COMMENT '病区名称',
+  `ward_name` varchar(128) COMMENT '病区名称（快照）',
   `shift_id` bigint NOT NULL DEFAULT 0 COMMENT '班次ID',
   `shift_name` varchar(50) COMMENT '班次名称',
   `min_staff` tinyint NOT NULL DEFAULT 0 COMMENT '最低在岗人数',
@@ -4617,6 +4698,7 @@ CREATE TABLE `biz_nurse_schedule_rule` (
   `max_consecutive_night_days` tinyint COMMENT '连续夜班天数上限',
   `max_consecutive_work_days` tinyint COMMENT '连续上班天数上限',
   `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
+  `deprecated` tinyint NOT NULL DEFAULT 0 COMMENT '1=已并入 biz_staff_plan_rule（sql/206 起只读，勿再写入）',
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
@@ -4633,11 +4715,11 @@ CREATE TABLE `biz_nursing_assessment` (
   `assess_no` varchar(32) NOT NULL COMMENT '评估单号 AS+yyyyMMdd+4位',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(64) COMMENT '患者编号',
-  `patient_name` varchar(128) COMMENT '患者姓名',
-  `ward_id` bigint COMMENT '病区ID',
-  `ward_name` varchar(128) COMMENT '病区名称',
-  `bed_no` varchar(32) COMMENT '床号',
+  `patient_no` varchar(64) COMMENT '患者编号（快照）',
+  `patient_name` varchar(128) COMMENT '患者姓名（快照）',
+  `ward_id` bigint COMMENT '病区ID（快照）',
+  `ward_name` varchar(128) COMMENT '病区名称（快照）',
+  `bed_no` varchar(32) COMMENT '床号（快照）',
   `assess_type` tinyint NOT NULL COMMENT '评估类型（1-压疮Braden 2-跌倒Morse 3-疼痛NRS）',
   `total_score` int NOT NULL COMMENT '总分',
   `risk_level` tinyint NOT NULL COMMENT '风险等级（1-低风险 2-中风险 3-高风险 4-极高风险）',
@@ -4660,14 +4742,14 @@ CREATE TABLE `biz_nursing_qc_check` (
   `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `check_no` varchar(32) NOT NULL COMMENT '检查单号 QC+yyyyMM+病区序号+类别',
   `ward_id` bigint NOT NULL COMMENT '病区ID',
-  `ward_name` varchar(128) COMMENT '病区名称',
+  `ward_name` varchar(128) COMMENT '病区名称（快照）',
   `dept_id` bigint NOT NULL COMMENT '科室ID',
-  `dept_name` varchar(128) COMMENT '科室名称',
+  `dept_name` varchar(128) COMMENT '科室名称（快照）',
   `check_month` char(7) NOT NULL COMMENT '检查月份 yyyy-MM',
   `check_date` date NOT NULL COMMENT '现场检查日期',
   `category` tinyint NOT NULL COMMENT '检查类别',
   `inspector_id` bigint COMMENT '检查人员工ID',
-  `inspector_name` varchar(50) COMMENT '检查人姓名',
+  `inspector_name` varchar(50) COMMENT '检查人姓名（快照）',
   `sample_count` int NOT NULL DEFAULT 0 COMMENT '抽查总例数',
   `qualified_count` int NOT NULL DEFAULT 0 COMMENT '合格总例数',
   `qualified_rate` decimal(6,2) NOT NULL DEFAULT 0.00 COMMENT '合格率%=合格例数/抽查例数*100',
@@ -4691,12 +4773,12 @@ CREATE TABLE `biz_nursing_qc_check_item` (
   `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `check_id` bigint NOT NULL COMMENT '检查单ID',
   `item_id` bigint NOT NULL COMMENT '检查项ID',
-  `item_code` varchar(32) COMMENT '项目编码',
+  `item_code` varchar(32) COMMENT '项目编码（快照）',
   `item_name` varchar(128) COMMENT '项目名称',
   `category` tinyint NOT NULL COMMENT '检查类别',
   `checked_num` int NOT NULL DEFAULT 0 COMMENT '抽查例数',
   `qualified_num` int NOT NULL DEFAULT 0 COMMENT '合格例数',
-  `full_score` decimal(5,1) NOT NULL DEFAULT 0.0 COMMENT '本项应得分',
+  `full_score` decimal(5,1) NOT NULL DEFAULT 0.0 COMMENT '本项应得分（快照）',
   `score` decimal(5,1) NOT NULL DEFAULT 0.0 COMMENT '本项实得分=应得分*合格/抽查',
   `problem` varchar(500) COMMENT '存在问题',
   `cause_analysis` varchar(500) COMMENT '原因分析',
@@ -4715,12 +4797,12 @@ CREATE TABLE `biz_nursing_qc_check_item` (
 CREATE TABLE `biz_nursing_qc_indicator` (
   `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `ward_id` bigint NOT NULL COMMENT '病区ID',
-  `ward_name` varchar(128) COMMENT '病区名称',
-  `dept_id` bigint NOT NULL COMMENT '科室ID',
-  `dept_name` varchar(128) COMMENT '科室名称',
+  `ward_name` varchar(128) COMMENT '病区名称（快照）',
+  `dept_id` bigint NOT NULL COMMENT '科室ID（快照）',
+  `dept_name` varchar(128) COMMENT '科室名称（快照）',
   `stat_month` char(7) NOT NULL COMMENT '统计月份 yyyy-MM',
   `indicator_code` varchar(32) NOT NULL COMMENT '指标编码',
-  `indicator_name` varchar(64) NOT NULL COMMENT '指标名称',
+  `indicator_name` varchar(64) NOT NULL COMMENT '指标名称（快照）',
   `unit` varchar(16) NOT NULL COMMENT '单位',
   `numerator` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '分子',
   `denominator` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '分母',
@@ -4746,13 +4828,13 @@ CREATE TABLE `biz_nursing_record` (
   `record_no` varchar(32) NOT NULL COMMENT '护理文书号',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者编号',
-  `patient_name` varchar(50) COMMENT '患者姓名',
+  `patient_no` varchar(32) COMMENT '患者编号（快照）',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
   `dept_id` bigint COMMENT '科室ID',
-  `dept_name` varchar(64) COMMENT '科室名称',
+  `dept_name` varchar(64) COMMENT '科室名称（快照）',
   `ward_id` bigint COMMENT '病区ID',
-  `ward_name` varchar(64) COMMENT '病区名称',
-  `bed_no` varchar(32) COMMENT '床号',
+  `ward_name` varchar(64) COMMENT '病区名称（快照）',
+  `bed_no` varchar(32) COMMENT '床号（快照）',
   `nursing_type` tinyint NOT NULL COMMENT '文书类型（1-三测单 2-护理记录单 3-生命体征监测）',
   `measure_time` datetime NOT NULL COMMENT '测量/记录时间',
   `shift` tinyint COMMENT '班次（1-白班 2-小夜班 3-大夜班）',
@@ -4787,13 +4869,13 @@ CREATE TABLE `biz_nutrition_screen` (
   `screen_no` varchar(32) NOT NULL COMMENT '筛查编号',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
   `patient_id` bigint COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者编号',
-  `patient_name` varchar(50) COMMENT '患者姓名',
-  `dept_id` bigint COMMENT '科室ID',
-  `dept_name` varchar(100) COMMENT '科室名称',
-  `ward_id` bigint COMMENT '病区ID',
-  `ward_name` varchar(100) COMMENT '病区名称',
-  `bed_no` varchar(20) COMMENT '床号',
+  `patient_no` varchar(32) COMMENT '患者编号（快照）',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
+  `dept_id` bigint COMMENT '科室ID（快照）',
+  `dept_name` varchar(100) COMMENT '科室名称（快照）',
+  `ward_id` bigint COMMENT '病区ID（快照）',
+  `ward_name` varchar(100) COMMENT '病区名称（快照）',
+  `bed_no` varchar(20) COMMENT '床号（快照）',
   `screen_type` tinyint NOT NULL DEFAULT 1 COMMENT '量表（1-NRS2002 2-PG-SGA 3-MNA）',
   `impair_score` tinyint COMMENT 'NRS2002 营养状态受损评分 0~3（1-体重下降 2-GI手术 3-骨髓移植等）',
   `severity_score` tinyint COMMENT 'NRS2002 疾病严重程度评分 0~3（1-髋骨骨折 2-腹部大手术 3-颅脑损伤）',
@@ -4809,11 +4891,11 @@ CREATE TABLE `biz_nutrition_screen` (
   `items_json` text COMMENT '分项明细 JSON',
   `screen_time` datetime NOT NULL COMMENT '筛查时间',
   `screener_id` bigint COMMENT '筛查人（员工ID）',
-  `screener_name` varchar(50) COMMENT '筛查人姓名',
+  `screener_name` varchar(50) COMMENT '筛查人姓名（快照）',
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
@@ -4826,7 +4908,7 @@ CREATE TABLE `biz_nutrition_stats` (
   `stat_month` char(7) NOT NULL COMMENT '统计月份',
   `scope_type` tinyint NOT NULL DEFAULT 1 COMMENT '统计范围（1-全院 2-科室）',
   `dept_id` bigint COMMENT '科室ID',
-  `dept_name` varchar(100) COMMENT '科室名称',
+  `dept_name` varchar(100) COMMENT '科室名称（快照）',
   `discharge_count` int NOT NULL DEFAULT 0 COMMENT '同期出院患者数',
   `screened_count` int NOT NULL DEFAULT 0 COMMENT '其中出院前做过 NRS2002 筛查的患者数',
   `screen_rate` decimal(6,2) NOT NULL DEFAULT 0.00 COMMENT '营养风险筛查率（%）',
@@ -4845,10 +4927,9 @@ CREATE TABLE `biz_nutrition_stats` (
   `generate_by` varchar(64) COMMENT '生成人',
   `generate_time` datetime COMMENT '生成时间',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `remark` varchar(500) COMMENT '备注',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_nutrition_stats` (`stat_month`, `scope_type`, `dept_id`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='营养膳食月度指标';
 
 -- biz_online_consult  线上问诊
@@ -4856,10 +4937,10 @@ CREATE TABLE `biz_online_consult` (
   `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `consult_no` varchar(32) NOT NULL COMMENT '问诊单号',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(64) COMMENT '患者编号',
-  `patient_name` varchar(128) COMMENT '患者姓名',
+  `patient_no` varchar(64) COMMENT '患者编号（快照）',
+  `patient_name` varchar(128) COMMENT '患者姓名（快照）',
   `dept_id` bigint COMMENT '接诊科室ID',
-  `dept_name` varchar(128) COMMENT '接诊科室名称',
+  `dept_name` varchar(128) COMMENT '接诊科室名称（快照）',
   `doctor_id` bigint COMMENT '接诊医生ID（员工ID）',
   `doctor_name` varchar(64) COMMENT '接诊医生姓名',
   `consult_type` tinyint NOT NULL DEFAULT 1 COMMENT '问诊方式（1-图文问诊 2-电话问诊 3-视频问诊）',
@@ -4890,17 +4971,17 @@ CREATE TABLE `biz_operation_apply` (
   `id` bigint NOT NULL COMMENT '手术申请单ID（雪花）',
   `apply_no` varchar(32) NOT NULL COMMENT '手术申请单号',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
-  `admission_no` varchar(32) COMMENT '入院号',
+  `admission_no` varchar(32) COMMENT '入院号（快照）',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_name` varchar(50) COMMENT '患者姓名',
-  `gender` tinyint COMMENT '性别（1-男 2-女）',
-  `age` int COMMENT '年龄',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
+  `gender` tinyint COMMENT '性别（快照）（1-男 2-女）',
+  `age` int COMMENT '年龄（快照）',
   `apply_dept_id` bigint COMMENT '申请科室ID',
-  `apply_dept_name` varchar(64) COMMENT '申请科室名称',
-  `apply_ward_name` varchar(64) COMMENT '申请时所在病区名称',
-  `apply_bed_no` varchar(32) COMMENT '申请时床号',
+  `apply_dept_name` varchar(64) COMMENT '申请科室名称（快照）',
+  `apply_ward_name` varchar(64) COMMENT '申请时所在病区名称（快照）',
+  `apply_bed_no` varchar(32) COMMENT '申请时床号（快照）',
   `apply_doctor_id` bigint COMMENT '申请医生ID',
-  `apply_doctor_name` varchar(64) COMMENT '申请医生姓名',
+  `apply_doctor_name` varchar(64) COMMENT '申请医生姓名（快照）',
   `apply_time` datetime COMMENT '申请时间',
   `planned_operation_code` varchar(32) COMMENT '拟施手术编码',
   `planned_operation_name` varchar(200) NOT NULL COMMENT '拟施手术名称',
@@ -4915,18 +4996,18 @@ CREATE TABLE `biz_operation_apply` (
   `planned_start_time` datetime COMMENT '计划开始时间',
   `planned_end_time` datetime COMMENT '计划结束时间',
   `surgeon_id` bigint COMMENT '主刀医师ID（员工ID）',
-  `surgeon_name` varchar(64) COMMENT '主刀医师姓名',
+  `surgeon_name` varchar(64) COMMENT '主刀医师姓名（快照）',
   `assistant_name` varchar(200) COMMENT '助手姓名',
   `anesthetist_id` bigint COMMENT '麻醉医师ID（员工ID）',
-  `anesthetist_name` varchar(64) COMMENT '麻醉医师姓名',
+  `anesthetist_name` varchar(64) COMMENT '麻醉医师姓名（快照）',
   `schedule_doctor_id` bigint COMMENT '排台操作人ID（员工ID）',
-  `schedule_doctor_name` varchar(64) COMMENT '排台操作人姓名',
+  `schedule_doctor_name` varchar(64) COMMENT '排台操作人姓名（快照）',
   `schedule_time` datetime COMMENT '排台时间',
   `schedule_remark` varchar(500) COMMENT '排台备注',
   `preop_check_items` varchar(200) COMMENT '术前核对要点码',
   `preop_note` varchar(1000) COMMENT '术前核对补充说明',
   `preop_check_doctor_id` bigint COMMENT '术前核对人ID（员工ID）',
-  `preop_check_doctor_name` varchar(64) COMMENT '术前核对人姓名',
+  `preop_check_doctor_name` varchar(64) COMMENT '术前核对人姓名（快照）',
   `preop_check_time` datetime COMMENT '术前核对时间',
   `actual_operation_code` varchar(32) COMMENT '实际手术编码',
   `actual_operation_name` varchar(200) COMMENT '实际手术名称',
@@ -4938,14 +5019,14 @@ CREATE TABLE `biz_operation_apply` (
   `postop_note` varchar(1000) COMMENT '术后处理与注意事项',
   `specimen_sent` varchar(200) COMMENT '标本送检',
   `finish_doctor_id` bigint COMMENT '完成录入人ID（员工ID）',
-  `finish_doctor_name` varchar(64) COMMENT '完成录入人姓名',
+  `finish_doctor_name` varchar(64) COMMENT '完成录入人姓名（快照）',
   `finish_time` datetime COMMENT '手术完成时间',
   `operation_id` bigint COMMENT '回写病案首页手术明细ID',
   `record_id` bigint COMMENT '回写住院病历ID',
   `operation_status` tinyint NOT NULL DEFAULT 0 COMMENT '状态（0-待排期 1-已排期 2-术前核对完成 3-已完成 4-已取消）',
   `cancel_reason` varchar(500) COMMENT '取消原因',
   `cancel_doctor_id` bigint COMMENT '取消人ID（员工ID）',
-  `cancel_doctor_name` varchar(64) COMMENT '取消人姓名',
+  `cancel_doctor_name` varchar(64) COMMENT '取消人姓名（快照）',
   `cancel_time` datetime COMMENT '取消时间',
   `remark` varchar(500) COMMENT '备注',
   `create_by` varchar(64) COMMENT '创建人',
@@ -4960,16 +5041,16 @@ CREATE TABLE `biz_operation_apply` (
 CREATE TABLE `biz_operation_charge_item` (
   `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `apply_id` bigint NOT NULL COMMENT '手术申请单ID',
-  `apply_no` varchar(32) COMMENT '手术申请单号',
+  `apply_no` varchar(32) COMMENT '手术申请单号（快照）',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(64) COMMENT '患者编号',
-  `patient_name` varchar(50) COMMENT '患者姓名',
+  `patient_no` varchar(64) COMMENT '患者编号（快照）',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
   `source_type` tinyint NOT NULL COMMENT '收费来源（预留）（1-麻醉记录 2-PACU复苏 3-手术）',
   `source_id` bigint NOT NULL COMMENT '来源单据ID',
-  `source_no` varchar(32) COMMENT '来源单据号',
+  `source_no` varchar(32) COMMENT '来源单据号（快照）',
   `item_code` varchar(32) NOT NULL COMMENT '收费项目编码',
-  `item_name` varchar(200) COMMENT '收费项目名称',
+  `item_name` varchar(200) COMMENT '收费项目名称（快照）',
   `item_type` tinyint COMMENT '项目类型',
   `spec` varchar(100) COMMENT '规格',
   `unit` varchar(20) COMMENT '计价单位',
@@ -4995,26 +5076,26 @@ CREATE TABLE `biz_operation_count` (
   `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `count_no` varchar(32) NOT NULL COMMENT '清点单号',
   `apply_id` bigint NOT NULL COMMENT '手术申请单ID',
-  `apply_no` varchar(32) COMMENT '手术申请单号',
+  `apply_no` varchar(32) COMMENT '手术申请单号（快照）',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_name` varchar(50) COMMENT '患者姓名',
-  `operation_room` varchar(64) COMMENT '手术间',
-  `planned_operation_name` varchar(200) COMMENT '手术名称',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
+  `operation_room` varchar(64) COMMENT '手术间（快照）',
+  `planned_operation_name` varchar(200) COMMENT '手术名称（快照）',
   `instrument_nurse_id` bigint COMMENT '器械（洗手）',
-  `instrument_nurse_name` varchar(64) COMMENT '器械护士姓名',
+  `instrument_nurse_name` varchar(64) COMMENT '器械护士姓名（快照）',
   `circulate_nurse_id` bigint COMMENT '巡回护士ID（员工ID）',
-  `circulate_nurse_name` varchar(64) COMMENT '巡回护士姓名',
+  `circulate_nurse_name` varchar(64) COMMENT '巡回护士姓名（快照）',
   `before_nurse_id` bigint COMMENT '术前清点核对人ID',
-  `before_nurse_name` varchar(64) COMMENT '术前清点核对人姓名',
+  `before_nurse_name` varchar(64) COMMENT '术前清点核对人姓名（快照）',
   `before_time` datetime COMMENT '术前清点时间',
   `before_result` tinyint COMMENT '术前清点结果（1-一致 2-不一致）',
   `closure_nurse_id` bigint COMMENT '关体前清点核对人ID（员工ID）',
-  `closure_nurse_name` varchar(64) COMMENT '关体前核对人姓名',
+  `closure_nurse_name` varchar(64) COMMENT '关体前核对人姓名（快照）',
   `closure_time` datetime COMMENT '关体前清点时间',
   `closure_result` tinyint COMMENT '关体前清点结果（1-一致 2-不一致）',
   `final_nurse_id` bigint COMMENT '关体后清点核对人ID（员工ID）',
-  `final_nurse_name` varchar(64) COMMENT '关体后核对人姓名',
+  `final_nurse_name` varchar(64) COMMENT '关体后核对人姓名（快照）',
   `final_time` datetime COMMENT '关体后清点时间',
   `final_result` tinyint COMMENT '关体后清点结果（1-一致 2-不一致）',
   `phase` tinyint NOT NULL DEFAULT 0 COMMENT '当前阶段（0-未开始 1-术前完成 2-关体前完成 3-关体后完成）',
@@ -5057,26 +5138,26 @@ CREATE TABLE `biz_operation_safety_check` (
   `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `check_no` varchar(32) NOT NULL COMMENT '核查单号',
   `apply_id` bigint NOT NULL COMMENT '手术申请单ID',
-  `apply_no` varchar(32) COMMENT '手术申请单号',
+  `apply_no` varchar(32) COMMENT '手术申请单号（快照）',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_name` varchar(50) COMMENT '患者姓名',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
   `operation_name` varchar(200) COMMENT '手术名称（快照，拟施）',
-  `operation_room` varchar(64) COMMENT '手术间',
+  `operation_room` varchar(64) COMMENT '手术间（快照）',
   `phase` tinyint NOT NULL COMMENT '核查时段（1-麻醉诱导前 2-手术开始前 3-患者离开手术室前）',
   `items` varchar(300) NOT NULL COMMENT '核查项码值',
   `note` varchar(1000) COMMENT '异常说明',
   `surgeon_id` bigint NOT NULL COMMENT '手术医师',
-  `surgeon_name` varchar(64) COMMENT '手术医师姓名',
+  `surgeon_name` varchar(64) COMMENT '手术医师姓名（快照）',
   `surgeon_sign_time` datetime COMMENT '手术医师签名时间',
   `anesthetist_id` bigint NOT NULL COMMENT '麻醉医师员工ID',
-  `anesthetist_name` varchar(64) COMMENT '麻醉医师姓名',
+  `anesthetist_name` varchar(64) COMMENT '麻醉医师姓名（快照）',
   `anesthetist_sign_time` datetime COMMENT '麻醉医师签名时间',
   `nurse_id` bigint NOT NULL COMMENT '手术室护士（器械/巡回）',
-  `nurse_name` varchar(64) COMMENT '手术室护士姓名',
+  `nurse_name` varchar(64) COMMENT '手术室护士姓名（快照）',
   `nurse_sign_time` datetime COMMENT '手术室护士签名时间',
   `recorder_id` bigint COMMENT '录入人ID',
-  `recorder_name` varchar(64) COMMENT '录入人姓名',
+  `recorder_name` varchar(64) COMMENT '录入人姓名（快照）',
   `check_time` datetime COMMENT '核查完成时间',
   `remark` varchar(500) COMMENT '备注',
   `create_by` varchar(64) COMMENT '创建人',
@@ -5085,8 +5166,8 @@ CREATE TABLE `biz_operation_safety_check` (
   `update_time` datetime COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_check_apply_phase` (`apply_id`, `phase`),
-  UNIQUE KEY `uk_check_no` (`check_no`)
+  UNIQUE KEY `uk_check_no` (`check_no`),
+  UNIQUE KEY `uk_check_apply_phase` (`apply_id`, `phase`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='手术安全核查单';
 
 -- biz_outp_infusion  门诊输液单
@@ -5095,13 +5176,13 @@ CREATE TABLE `biz_outp_infusion` (
   `infusion_no` varchar(32) NOT NULL COMMENT '输液单号',
   `treatment_record_id` bigint COMMENT '来源治疗记录ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者编号',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
-  `gender` tinyint COMMENT '性别',
-  `age` int COMMENT '年龄',
+  `patient_no` varchar(32) COMMENT '患者编号（快照）',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
+  `gender` tinyint COMMENT '性别（快照）',
+  `age` int COMMENT '年龄（快照）',
   `drug_summary` varchar(500) COMMENT '输注内容摘要',
   `seat_id` bigint COMMENT '座位ID',
-  `seat_no` varchar(32) COMMENT '座位号',
+  `seat_no` varchar(32) COMMENT '座位号（快照）',
   `skin_test_id` bigint COMMENT '皮试记录ID',
   `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1-待皮试 2-待输注 3-输液中 4-已完成 5-已取消）',
   `start_time` datetime COMMENT '开始输注时间',
@@ -5110,7 +5191,7 @@ CREATE TABLE `biz_outp_infusion` (
   `adverse_flag` tinyint NOT NULL DEFAULT 0 COMMENT '不良反应（0-无 1-有）',
   `adverse_desc` varchar(500) COMMENT '不良反应描述',
   `nurse_id` bigint COMMENT '责任护士ID',
-  `nurse_name` varchar(50) COMMENT '责任护士姓名',
+  `nurse_name` varchar(50) COMMENT '责任护士姓名（快照）',
   `cancel_reason` varchar(500) COMMENT '取消原因',
   `create_by` varchar(64),
   `create_time` datetime,
@@ -5130,7 +5211,7 @@ CREATE TABLE `biz_outp_infusion_round` (
   `drip_rate` int COMMENT '滴速（滴/分）',
   `remaining_volume` int COMMENT '余量（ml）',
   `nurse_id` bigint COMMENT '巡视护士ID',
-  `nurse_name` varchar(50) COMMENT '巡视护士姓名',
+  `nurse_name` varchar(50) COMMENT '巡视护士姓名（快照）',
   `create_by` varchar(64),
   `create_time` datetime,
   `update_by` varchar(64),
@@ -5224,7 +5305,7 @@ CREATE TABLE `biz_pathway` (
   `pathway_code` varchar(32) NOT NULL COMMENT '路径编码',
   `pathway_name` varchar(128) NOT NULL COMMENT '路径名称',
   `dept_id` bigint COMMENT '适用科室ID',
-  `dept_name` varchar(128) COMMENT '适用科室名称',
+  `dept_name` varchar(128) COMMENT '适用科室名称（快照）',
   `diagnosis` varchar(255) COMMENT '适用病种/诊断',
   `version` varchar(16) NOT NULL DEFAULT 'V1' COMMENT '版本号',
   `total_days` int NOT NULL DEFAULT 0 COMMENT '路径总日数',
@@ -5245,16 +5326,16 @@ CREATE TABLE `biz_pathway_enroll` (
   `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `enroll_no` varchar(32) NOT NULL COMMENT '入径单号',
   `pathway_id` bigint NOT NULL COMMENT '模板ID',
-  `pathway_code` varchar(32) COMMENT '路径编码',
-  `pathway_name` varchar(128) COMMENT '路径名称',
-  `version` varchar(16) COMMENT '版本号',
+  `pathway_code` varchar(32) COMMENT '路径编码（快照）',
+  `pathway_name` varchar(128) COMMENT '路径名称（快照）',
+  `version` varchar(16) COMMENT '版本号（快照）',
   `total_days` int NOT NULL DEFAULT 0 COMMENT '路径总日数',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(64) COMMENT '患者编号',
-  `patient_name` varchar(128) COMMENT '患者姓名',
-  `dept_id` bigint COMMENT '入院科室ID',
-  `dept_name` varchar(128) COMMENT '入院科室名称',
+  `patient_no` varchar(64) COMMENT '患者编号（快照）',
+  `patient_name` varchar(128) COMMENT '患者姓名（快照）',
+  `dept_id` bigint COMMENT '入院科室ID（快照）',
+  `dept_name` varchar(128) COMMENT '入院科室名称（快照）',
   `diagnosis` varchar(255) COMMENT '入院诊断',
   `enroll_date` date NOT NULL COMMENT '入径日期',
   `enroll_by` varchar(64) COMMENT '入径操作人',
@@ -5383,8 +5464,8 @@ CREATE TABLE `biz_patient_allergy` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
-  `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint(1) DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='药物过敏史';
 
@@ -5414,7 +5495,7 @@ CREATE TABLE `biz_patient_family_history` (
   `relationship` varchar(50) NOT NULL COMMENT '与患者关系（父亲/母亲/兄弟/姐妹/祖父/祖母/子女）',
   `name` varchar(100) COMMENT '亲属姓名',
   `age` int COMMENT '年龄',
-  `is_alive` tinyint DEFAULT 1 COMMENT '是否在世（0-已故 1-在世）',
+  `is_alive` tinyint(1) DEFAULT 1 COMMENT '是否在世（0-已故 1-在世）',
   `cause_of_death` varchar(200) COMMENT '死亡原因',
   `health_status` varchar(500) COMMENT '健康状况描述',
   `hereditary_disease` varchar(200) COMMENT '遗传性疾病（如：高血压、糖尿病、肿瘤等）',
@@ -5423,8 +5504,8 @@ CREATE TABLE `biz_patient_family_history` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
-  `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint(1) DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='家族史';
 
@@ -5465,8 +5546,8 @@ CREATE TABLE `biz_patient_medication_history` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
-  `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint(1) DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='既往用药史';
 
@@ -5475,11 +5556,11 @@ CREATE TABLE `biz_patient_merge_log` (
   `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `merge_no` varchar(32) NOT NULL COMMENT '合并流水号',
   `master_id` bigint NOT NULL COMMENT '主档患者ID',
-  `master_no` varchar(32) COMMENT '主档患者号',
-  `master_name` varchar(50) COMMENT '主档姓名',
+  `master_no` varchar(32) COMMENT '主档患者号（快照）',
+  `master_name` varchar(50) COMMENT '主档姓名（快照）',
   `merged_id` bigint NOT NULL COMMENT '被并入的患者ID',
-  `merged_no` varchar(32) COMMENT '被并患者号',
-  `merged_name` varchar(50) COMMENT '被并姓名',
+  `merged_no` varchar(32) COMMENT '被并患者号（快照）',
+  `merged_name` varchar(50) COMMENT '被并姓名（快照）',
   `match_type` tinyint NOT NULL COMMENT '匹配置信级别(强)（1-身份证号相同 2-姓名+性别+出生日期相同 3-姓名+手机号相同 4-人工判定）',
   `match_snapshot` varchar(500) COMMENT '命中依据的字段值快照',
   `master_snapshot` varchar(1000) COMMENT '主档关键字段快照 JSON',
@@ -5519,7 +5600,7 @@ CREATE TABLE `biz_patient_past_disease` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='既往疾病史';
@@ -5541,8 +5622,8 @@ CREATE TABLE `biz_patient_surgery_history` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
-  `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint(1) DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='手术外伤史';
 
@@ -5553,9 +5634,8 @@ CREATE TABLE `biz_patient_tag_relation` (
   `tag_id` bigint NOT NULL COMMENT '标签ID',
   `source_type` tinyint DEFAULT 1 COMMENT '标签来源（1-手动打标 2-系统自动打标）',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '打标时间',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_patient_tag` (`patient_id`, `tag_id`)
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='患者标签关联';
 
 -- biz_pay_channel_bill  支付渠道对账流水
@@ -5573,7 +5653,7 @@ CREATE TABLE `biz_pay_channel_bill` (
   `match_status` tinyint NOT NULL DEFAULT 0 COMMENT '勾对状态（0-待勾对 1-已勾对 2-长款 3-短款）',
   `match_time` datetime COMMENT '勾对时间',
   `matched_by_id` bigint COMMENT '勾对人员工ID',
-  `matched_by_name` varchar(50) COMMENT '勾对人姓名',
+  `matched_by_name` varchar(50) COMMENT '勾对人姓名（快照）',
   `diff_amount` decimal(10,2) COMMENT '勾对差额（渠道-本地）',
   `handle_remark` varchar(500) COMMENT '长款/短款处理说明',
   `import_batch_no` varchar(40) COMMENT '导入批次号',
@@ -5584,8 +5664,8 @@ CREATE TABLE `biz_pay_channel_bill` (
   `del_flag` tinyint NOT NULL DEFAULT 0,
   `remark` varchar(500),
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_bill_txn` (`local_txn_no`),
-  UNIQUE KEY `uk_channel_trade` (`channel`, `channel_trade_no`)
+  UNIQUE KEY `uk_channel_trade` (`channel`, `channel_trade_no`),
+  UNIQUE KEY `uk_bill_txn` (`local_txn_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='支付渠道对账流水';
 
 -- biz_pay_order  患者端统一支付单
@@ -5605,7 +5685,7 @@ CREATE TABLE `biz_pay_order` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
@@ -5619,8 +5699,8 @@ CREATE TABLE `biz_payment_txn` (
   `bill_id` bigint COMMENT '结算账单ID',
   `bill_no` varchar(32) COMMENT '账单号快照',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者号',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
+  `patient_no` varchar(32) COMMENT '患者号（快照）',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
   `encounter_type` tinyint NOT NULL COMMENT '就诊类型',
   `encounter_id` bigint NOT NULL COMMENT '就诊标识',
   `direction` tinyint NOT NULL DEFAULT 1 COMMENT '资金方向（1-收款 2-退款）',
@@ -5639,7 +5719,7 @@ CREATE TABLE `biz_payment_txn` (
   `insurance_cancelled` tinyint NOT NULL DEFAULT 0 COMMENT '本次退费是否已撤销医保报盘（0-不涉及 1-已发）',
   `reason` varchar(500) COMMENT '退款/冲正原因',
   `apply_id` bigint COMMENT '来源退费申请ID',
-  `apply_no` varchar(32) COMMENT '来源退费申请号',
+  `apply_no` varchar(32) COMMENT '来源退费申请号（快照）',
   `create_by` varchar(64),
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
   `update_by` varchar(64),
@@ -5655,7 +5735,7 @@ CREATE TABLE `biz_payment_txn` (
 CREATE TABLE `biz_perf_result` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `dept_id` bigint NOT NULL COMMENT '科室ID',
-  `dept_name` varchar(100) NOT NULL COMMENT '科室名称',
+  `dept_name` varchar(100) NOT NULL COMMENT '科室名称（快照）',
   `cost_month` char(7) NOT NULL COMMENT '核算月份',
   `revenue` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '科室收入',
   `drug_revenue` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '药品收入',
@@ -5669,7 +5749,7 @@ CREATE TABLE `biz_perf_result` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime COMMENT '更新时间',
+  `update_time` datetime ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
@@ -5683,11 +5763,11 @@ CREATE TABLE `biz_pivas_batch` (
   `admix_date` date NOT NULL COMMENT '调配日期',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(64) COMMENT '患者编号',
-  `patient_name` varchar(128) COMMENT '患者姓名',
-  `ward_id` bigint NOT NULL COMMENT '病区ID',
-  `ward_name` varchar(128) COMMENT '病区名称',
-  `dept_id` bigint COMMENT '入院科室ID',
+  `patient_no` varchar(64) COMMENT '患者编号（快照）',
+  `patient_name` varchar(128) COMMENT '患者姓名（快照）',
+  `ward_id` bigint NOT NULL COMMENT '病区ID（快照）',
+  `ward_name` varchar(128) COMMENT '病区名称（快照）',
+  `dept_id` bigint COMMENT '入院科室ID（快照）',
   `status` tinyint NOT NULL DEFAULT 1 COMMENT '主单状态（1-待审方 2-待排队 3-待调配 4-待核对 5-已完成 6-全拒配）',
   `item_count` int NOT NULL DEFAULT 0 COMMENT '明细条数',
   `generate_by` varchar(64) COMMENT '生成人',
@@ -5701,8 +5781,8 @@ CREATE TABLE `biz_pivas_batch` (
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(512) COMMENT '备注',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_adm_date` (`admission_id`, `admix_date`),
-  UNIQUE KEY `uk_pivas_no` (`pivas_no`)
+  UNIQUE KEY `uk_pivas_no` (`pivas_no`),
+  UNIQUE KEY `uk_adm_date` (`admission_id`, `admix_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='静配中心主单';
 
 -- biz_pivas_item  静配中心调配明细
@@ -5713,18 +5793,18 @@ CREATE TABLE `biz_pivas_item` (
   `admix_date` date NOT NULL COMMENT '调配日期',
   `pivas_seq` int NOT NULL DEFAULT 1 COMMENT '重生成序号',
   `order_id` bigint NOT NULL COMMENT '住院医嘱ID',
-  `order_no` varchar(32) COMMENT '医嘱号',
+  `order_no` varchar(32) COMMENT '医嘱号（快照）',
   `admission_id` bigint NOT NULL COMMENT '入院ID（冗余）',
   `patient_id` bigint NOT NULL COMMENT '患者ID（冗余）',
-  `patient_no` varchar(64) COMMENT '患者编号',
-  `patient_name` varchar(128) COMMENT '患者姓名',
-  `ward_id` bigint COMMENT '病区ID',
+  `patient_no` varchar(64) COMMENT '患者编号（快照）',
+  `patient_name` varchar(128) COMMENT '患者姓名（快照）',
+  `ward_id` bigint COMMENT '病区ID（快照）',
   `drug_id` bigint NOT NULL COMMENT '药品ID',
-  `drug_name` varchar(128) COMMENT '药品名称',
-  `item_code` varchar(64) COMMENT '医嘱项目编码',
-  `item_name` varchar(128) COMMENT '医嘱项目名称',
-  `spec` varchar(64) COMMENT '规格',
-  `unit` varchar(32) COMMENT '单位',
+  `drug_name` varchar(128) COMMENT '药品名称（快照）',
+  `item_code` varchar(64) COMMENT '医嘱项目编码（快照）',
+  `item_name` varchar(128) COMMENT '医嘱项目名称（快照）',
+  `spec` varchar(64) COMMENT '规格（快照）',
+  `unit` varchar(32) COMMENT '单位（快照）',
   `quantity` decimal(12,2) NOT NULL COMMENT '当日调配数量',
   `price` decimal(12,4) NOT NULL DEFAULT 0.0000 COMMENT '单价',
   `amount` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '金额 = quantity × price',
@@ -5772,7 +5852,7 @@ CREATE TABLE `biz_prepay` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_biz_prepay_no` (`prepay_no`)
@@ -5841,7 +5921,7 @@ CREATE TABLE `biz_prescription` (
 
 -- biz_prescription_audit_log  处方审方流水
 CREATE TABLE `biz_prescription_audit_log` (
-  `id` bigint NOT NULL AUTO_INCREMENT,
+  `id` bigint NOT NULL,
   `prescription_id` bigint COMMENT '处方 id',
   `prescription_no` varchar(40) NOT NULL COMMENT '处方号',
   `record_id` bigint COMMENT '病历 id',
@@ -5895,6 +5975,30 @@ CREATE TABLE `biz_prescription_detail` (
   `payment_status` tinyint DEFAULT 0 COMMENT '缴费状态（0-未缴费 1-已缴费 2-已退费）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='处方明细';
+
+-- biz_previsit_record  患者端预问诊记录（挂号后病史采集）
+CREATE TABLE `biz_previsit_record` (
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
+  `regist_id` bigint NOT NULL COMMENT '挂号ID（一次挂号一份问卷）',
+  `patient_id` bigint NOT NULL COMMENT '患者ID',
+  `patient_no` varchar(50) DEFAULT '' COMMENT '患者号',
+  `patient_name` varchar(50) DEFAULT '' COMMENT '患者姓名',
+  `dept_id` bigint COMMENT '就诊科室ID',
+  `dept_name` varchar(50) DEFAULT '' COMMENT '就诊科室名称',
+  `main_symptom` varchar(50) DEFAULT '' COMMENT '主症状',
+  `answers_json` text COMMENT '问答明细JSON（题目与作答回显）',
+  `free_text` text COMMENT '患者补充描述',
+  `summary_ai` text COMMENT '病史摘要（模型凝练或规则模板）',
+  `summary_source` tinyint COMMENT '摘要来源（1-模型 2-规则）',
+  `create_by` varchar(64) DEFAULT '' COMMENT '创建人',
+  `create_time` datetime COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT '' COMMENT '更新人',
+  `update_time` datetime COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT '' COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_regist` (`regist_id`, `del_flag`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='患者端预问诊记录（挂号后病史采集）';
 
 -- biz_public_health_report  公卫上报表
 CREATE TABLE `biz_public_health_report` (
@@ -6058,7 +6162,7 @@ CREATE TABLE `biz_radio_report_template` (
   `template_name` varchar(100) NOT NULL COMMENT '模板名称',
   `modality` tinyint COMMENT '适用模态',
   `item_code` varchar(32) COMMENT '适用检查项目编码',
-  `item_name` varchar(200) COMMENT '适用检查项目名称',
+  `item_name` varchar(200) COMMENT '适用检查项目名称（快照）',
   `body_part` varchar(100) COMMENT '适用检查部位',
   `exam_method` varchar(200) COMMENT '检查方法模板',
   `finding_tpl` text COMMENT '影像所见模板',
@@ -6100,7 +6204,7 @@ CREATE TABLE `biz_record_qc_flow` (
   `create_by` varchar(64),
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
   `update_by` varchar(64),
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `del_flag` tinyint NOT NULL DEFAULT 0,
   `remark` varchar(500),
   PRIMARY KEY (`id`),
@@ -6177,7 +6281,7 @@ CREATE TABLE `biz_refund_apply` (
   `audit_remark` varchar(500) COMMENT '审核意见',
   `refund_by` varchar(64) COMMENT '退费人',
   `refund_time` datetime COMMENT '退费时间',
-  `cancel_by` varchar(64) COMMENT '作废人姓名',
+  `cancel_by` varchar(64) COMMENT '作废人姓名（快照）',
   `cancel_time` datetime COMMENT '作废时间',
   `cancel_reason` varchar(200) COMMENT '作废原因',
   `create_by` varchar(64) COMMENT '创建人',
@@ -6267,7 +6371,7 @@ CREATE TABLE `biz_rx_doctor_talk` (
   `talk_no` varchar(32) NOT NULL COMMENT '约谈编号',
   `doctor_id` bigint COMMENT '被约谈医师ID',
   `doctor_name` varchar(50) NOT NULL COMMENT '被约谈医师姓名',
-  `dept_name` varchar(100) COMMENT '医师所在科室',
+  `dept_name` varchar(100) COMMENT '医师所在科室（快照）',
   `talk_type` tinyint NOT NULL DEFAULT 1 COMMENT '约谈类型（1-首次约谈 2-警告约谈 3-限制处方权 4-取消处方权 5-恢复处方权）',
   `talk_time` datetime NOT NULL COMMENT '约谈时间',
   `talker_name` varchar(50) NOT NULL COMMENT '约谈人姓名',
@@ -6284,10 +6388,9 @@ CREATE TABLE `biz_rx_doctor_talk` (
   `doctor_confirm_time` datetime COMMENT '医师确认时间',
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `remark` varchar(500) COMMENT '备注',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_talk_no` (`talk_no`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='医师约谈记录';
 
 -- biz_rx_flow  处方流转单
@@ -6304,7 +6407,7 @@ CREATE TABLE `biz_rx_flow` (
   `flow_status` tinyint NOT NULL DEFAULT 1 COMMENT '流转状态（1-已流转 2-已取药 3-已取消）',
   `flow_time` datetime COMMENT '流转时间',
   `finish_time` datetime COMMENT '完成/取消时间',
-  `total_amount` decimal(10,2) COMMENT '处方总金额',
+  `total_amount` decimal(10,2) COMMENT '处方总金额（快照）',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   `create_by` varchar(64) COMMENT '创建人',
@@ -6331,10 +6434,9 @@ CREATE TABLE `biz_rx_review_batch` (
   `reviewer_name` varchar(50) COMMENT '点评人姓名',
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `remark` varchar(500) COMMENT '备注',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_batch_no` (`batch_no`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='处方点评批次';
 
 -- biz_rx_review_item  处方点评明细
@@ -6343,15 +6445,15 @@ CREATE TABLE `biz_rx_review_item` (
   `batch_id` bigint NOT NULL COMMENT '批次ID',
   `batch_no` varchar(32) NOT NULL COMMENT '批次号',
   `prescription_id` bigint NOT NULL COMMENT '处方ID',
-  `prescription_no` varchar(32) NOT NULL COMMENT '处方号',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
-  `dept_name` varchar(100) NOT NULL COMMENT '开方科室',
-  `doctor_id` bigint NOT NULL COMMENT '开方医生ID',
-  `doctor_name` varchar(50) NOT NULL COMMENT '开方医生姓名',
+  `prescription_no` varchar(32) NOT NULL COMMENT '处方号（快照）',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
+  `dept_name` varchar(100) NOT NULL COMMENT '开方科室（快照）',
+  `doctor_id` bigint NOT NULL COMMENT '开方医生ID（快照）',
+  `doctor_name` varchar(50) NOT NULL COMMENT '开方医生姓名（快照）',
   `visit_date` date NOT NULL COMMENT '就诊日期',
-  `diagnosis` varchar(500) COMMENT '诊断',
-  `drug_count` int DEFAULT 0 COMMENT '药品数量',
-  `total_amount` decimal(10,2) DEFAULT 0.00 COMMENT '处方金额',
+  `diagnosis` varchar(500) COMMENT '诊断（快照）',
+  `drug_count` int DEFAULT 0 COMMENT '药品数量（快照）',
+  `total_amount` decimal(10,2) DEFAULT 0.00 COMMENT '处方金额（快照）',
   `prescription_type` tinyint DEFAULT 1 COMMENT '处方类型（1-西药 2-中成药 3-中药饮片）',
   `prescription_source` tinyint DEFAULT 1 COMMENT '处方来源（1-门诊 2-急诊 3-住院）',
   `review_status` tinyint NOT NULL DEFAULT 0 COMMENT '点评状态（0-待点评 1-已点评）',
@@ -6365,10 +6467,9 @@ CREATE TABLE `biz_rx_review_item` (
   `publicity_by` varchar(50) COMMENT '公示操作人',
   `publicity_time` datetime COMMENT '公示时间',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `remark` varchar(500) COMMENT '备注',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_batch_rx` (`batch_id`, `prescription_id`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='处方点评明细';
 
 -- biz_rx_template  处方模板
@@ -6419,15 +6520,16 @@ CREATE TABLE `biz_rx_template_detail` (
 -- biz_schedule  排班信息
 CREATE TABLE `biz_schedule` (
   `id` bigint NOT NULL COMMENT '主键ID',
+  `staff_schedule_id` bigint COMMENT '员工排班ID',
   `schedule_date` date NOT NULL COMMENT '排班日期',
-  `week_day` tinyint NOT NULL COMMENT '星期（1-周日 2-周一 3-周二 4-周三 5-周四 6-周五 7-周六）',
+  `week_day` tinyint NOT NULL COMMENT '星期（1-周一 2-周二 3-周三 4-周四 5-周五 6-周六 7-周日）',
   `dept_id` bigint NOT NULL COMMENT '科室ID',
   `dept_name` varchar(100) NOT NULL COMMENT '科室名称',
   `room_id` bigint COMMENT '诊室ID',
   `room_name` varchar(100) COMMENT '诊室名称',
   `doctor_id` bigint NOT NULL COMMENT '医生ID',
   `doctor_name` varchar(50) NOT NULL COMMENT '医生姓名',
-  `staff_type` tinyint NOT NULL DEFAULT 1 COMMENT '排班对象岗位类别（2-护理 3-医技 4-药学 5-收费 6-行政其他）',
+  `staff_type` tinyint NOT NULL DEFAULT 1 COMMENT '排班对象岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他）',
   `schedule_type` tinyint COMMENT '排班类型（1-上午 2-下午 3-全天 4-凌晨）',
   `start_time` varchar(10) NOT NULL COMMENT '开始时间',
   `end_time` varchar(10) NOT NULL COMMENT '结束时间',
@@ -6454,6 +6556,27 @@ CREATE TABLE `biz_schedule` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_schedule_window` (`dept_id`, `doctor_id`, `schedule_date`, `start_time`, `end_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='排班信息';
+
+-- biz_schedule_change_log  排班变更记录
+CREATE TABLE `biz_schedule_change_log` (
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
+  `staff_schedule_id` bigint NOT NULL COMMENT '员工排班ID',
+  `action_type` tinyint NOT NULL COMMENT '变更类型（1-换班 2-代班 3-停班 4-加号 5-减号 6-出诊变更）',
+  `from_employee_id` bigint COMMENT '原值班人',
+  `to_employee_id` bigint COMMENT '实际值班人',
+  `from_shift_id` bigint COMMENT '原班次ID',
+  `to_shift_id` bigint COMMENT '新班次ID',
+  `amount` int COMMENT '变更数量',
+  `reason` varchar(200) COMMENT '变更原因',
+  `occur_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '变更时间',
+  `create_by` varchar(64) COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) COMMENT '更新人',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) COMMENT '备注',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='排班变更记录';
 
 -- biz_schedule_slot  排班时段号源
 CREATE TABLE `biz_schedule_slot` (
@@ -6527,22 +6650,75 @@ CREATE TABLE `biz_schedule_template` (
   `create_by` varchar(64) DEFAULT '' COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) DEFAULT '' COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='排班周模板';
+
+-- biz_service_message  患者端留言
+CREATE TABLE `biz_service_message` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `message_no` varchar(32) NOT NULL COMMENT '留言单号',
+  `user_id` bigint COMMENT '留言用户ID',
+  `patient_id` bigint COMMENT '就诊人ID',
+  `patient_name` varchar(64) COMMENT '就诊人姓名（快照）',
+  `contact_phone` varchar(20) COMMENT '联系电话',
+  `category_code` varchar(32) COMMENT '留言分类（同 sys_faq.category_code）',
+  `content` varchar(1000) NOT NULL COMMENT '留言内容',
+  `status` tinyint DEFAULT 0 COMMENT '工单状态（0-待受理 1-处理中 2-已办结 3-已关闭）',
+  `priority` tinyint DEFAULT 0 COMMENT '优先级（0-普通 1-紧急）',
+  `accept_by` varchar(64) COMMENT '受理人账号（服务端取登录人，不由前端传）',
+  `accept_by_name` varchar(64) COMMENT '受理人姓名',
+  `accept_time` datetime COMMENT '受理时间',
+  `close_by` varchar(64) COMMENT '关闭人账号',
+  `close_time` datetime COMMENT '关闭时间',
+  `close_reason` varchar(200) COMMENT '关闭原因（患者撤单/客服关闭都要写）',
+  `last_reply_time` datetime COMMENT '最后一次客服回复时间',
+  `reply_count` int DEFAULT 0 COMMENT '客服回复次数',
+  `handle_by` varchar(64) COMMENT '处理人',
+  `handle_time` datetime COMMENT '处理时间',
+  `handle_result` varchar(500) COMMENT '处理结果',
+  `create_by` varchar(64) COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) COMMENT '更新人',
+  `update_time` datetime ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_message_no` (`message_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='患者端留言';
+
+-- biz_service_ticket_log  工单流转记录（患者端进展时间轴 + 客服端证据链）
+CREATE TABLE `biz_service_ticket_log` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `message_id` bigint NOT NULL COMMENT '工单ID（biz_service_message.id）',
+  `message_no` varchar(32) COMMENT '工单号（冗余，排查时不用 join）',
+  `action` tinyint NOT NULL COMMENT '动作（0-提交 1-受理 2-客服回复 3-办结 4-患者补充 5-关闭 6-患者撤单 7-患者重开）',
+  `content` varchar(1000) COMMENT '内容（回复正文 / 处理结果 / 撤单原因）',
+  `visible_to_patient` tinyint DEFAULT 1 COMMENT '患者是否可见（0-内部备注 1-患者可见）',
+  `operator_type` tinyint DEFAULT 1 COMMENT '操作人类型（1-患者 2-院内）',
+  `operator` varchar(64) COMMENT '操作人账号',
+  `operator_name` varchar(64) COMMENT '操作人姓名',
+  `create_by` varchar(64) COMMENT '创建人',
+  `create_time` datetime COMMENT '创建时间',
+  `update_by` varchar(64) COMMENT '更新人',
+  `update_time` datetime COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) COMMENT '备注',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='工单流转记录（患者端进展时间轴 + 客服端证据链）';
 
 -- biz_settlement_bill  结算账单
 CREATE TABLE `biz_settlement_bill` (
   `id` bigint NOT NULL COMMENT '主键（雪花）',
   `bill_no` varchar(32) NOT NULL COMMENT '账单号',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者号',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
+  `patient_no` varchar(32) COMMENT '患者号（快照）',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
   `encounter_type` tinyint NOT NULL COMMENT '就诊类型（1-门诊 2-住院）',
   `encounter_id` bigint NOT NULL COMMENT '就诊标识',
-  `encounter_no` varchar(32) COMMENT '就诊标识单号',
+  `encounter_no` varchar(32) COMMENT '就诊标识单号（快照）',
   `bill_type` tinyint NOT NULL DEFAULT 2 COMMENT '账单类型（1-挂号费结算 2-门诊诊间结算 3-住院中途结算 4-出院结算）',
   `fee_count` int NOT NULL DEFAULT 0 COMMENT '纳入本账单的记账行数',
   `total_amount` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '应收合计',
@@ -6559,10 +6735,10 @@ CREATE TABLE `biz_settlement_bill` (
   `bill_date` date NOT NULL COMMENT '账务归属日',
   `bill_time` datetime COMMENT '结算生成时间',
   `bill_by_id` bigint COMMENT '结算人员工ID',
-  `bill_by_name` varchar(64) COMMENT '结算人姓名',
+  `bill_by_name` varchar(64) COMMENT '结算人姓名（快照）',
   `pay_time` datetime COMMENT '收讫时间',
   `void_by_id` bigint COMMENT '作废操作人',
-  `void_by_name` varchar(64) COMMENT '作废操作人姓名',
+  `void_by_name` varchar(64) COMMENT '作废操作人姓名（快照）',
   `void_time` datetime COMMENT '作废时间',
   `void_reason` varchar(200) COMMENT '作废原因（必填）',
   `orig_bill_id` bigint COMMENT '红冲指针',
@@ -6581,20 +6757,20 @@ CREATE TABLE `biz_settlement_bill` (
 CREATE TABLE `biz_settlement_bill_item` (
   `id` bigint NOT NULL COMMENT '主键（雪花）',
   `bill_id` bigint NOT NULL COMMENT '账单ID',
-  `bill_no` varchar(32) NOT NULL COMMENT '账单号',
+  `bill_no` varchar(32) NOT NULL COMMENT '账单号（快照）',
   `fee_record_id` bigint NOT NULL COMMENT '来源记账行ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
   `encounter_type` tinyint NOT NULL COMMENT '就诊类型',
   `encounter_id` bigint NOT NULL COMMENT '就诊标识',
   `dept_id` bigint COMMENT '费用归属科室',
-  `dept_name` varchar(100) COMMENT '科室名称',
+  `dept_name` varchar(100) COMMENT '科室名称（快照）',
   `item_type` tinyint NOT NULL COMMENT '项目类型',
-  `item_code` varchar(32) COMMENT '项目编码',
-  `item_name` varchar(200) NOT NULL COMMENT '项目名称',
-  `specification` varchar(100) COMMENT '规格',
-  `unit` varchar(20) COMMENT '单位',
-  `price` decimal(10,4) NOT NULL COMMENT '单价',
-  `quantity` decimal(10,2) NOT NULL COMMENT '数量',
+  `item_code` varchar(32) COMMENT '项目编码（快照）',
+  `item_name` varchar(200) NOT NULL COMMENT '项目名称（快照）',
+  `specification` varchar(100) COMMENT '规格（快照）',
+  `unit` varchar(20) COMMENT '单位（快照）',
+  `price` decimal(10,4) NOT NULL COMMENT '单价（快照）',
+  `quantity` decimal(10,2) NOT NULL COMMENT '数量（快照）',
   `amount` decimal(12,2) NOT NULL COMMENT '应收金额',
   `discount_amount` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '行级分摊优惠',
   `pool_amount` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '行级医保统筹',
@@ -6659,10 +6835,15 @@ CREATE TABLE `biz_shift` (
   `shift_name` varchar(50) NOT NULL COMMENT '班次名称',
   `start_time` varchar(10) NOT NULL COMMENT '开始时间（HH:mm）',
   `end_time` varchar(10) NOT NULL COMMENT '结束时间（HH:mm）',
+  `cross_day` tinyint NOT NULL DEFAULT 0 COMMENT '是否跨零点（0-不跨 1-次日收）',
+  `is_night` tinyint NOT NULL DEFAULT 0 COMMENT '是否夜班（1-夜班 0-白班）：夜班流入判定与连续夜班上限的唯一依据',
+  `need_rest_hours` decimal(4,1) NOT NULL DEFAULT 0.0 COMMENT '下此班后最短休息小时数（0-不限制；夜班通例取16）',
+  `late_grace_minutes` int NOT NULL DEFAULT 15 COMMENT '迟到宽限（分钟）：签到晚于班次开始超过这个数才算迟到',
   `duration_minutes` int NOT NULL DEFAULT 0 COMMENT '时长（分钟）',
   `dept_id` bigint COMMENT '适用科室ID',
   `schedule_type` tinyint COMMENT '班次类型（1-上午 2-下午 3-全天 4-凌晨）',
   `use_scope` tinyint NOT NULL DEFAULT 1 COMMENT '班次适用域（1-门诊 2-病区护理排班）',
+  `apply_staff_type` tinyint COMMENT '适用岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他，空-全部岗位通用）',
   `status` tinyint DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
   `create_by` varchar(64) DEFAULT '' COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -6679,8 +6860,8 @@ CREATE TABLE `biz_single_disease_case` (
   `case_no` varchar(32) NOT NULL COMMENT '病例编号',
   `disease_id` bigint NOT NULL COMMENT '病种ID',
   `admission_id` bigint NOT NULL COMMENT '住院ID',
-  `patient_id` bigint COMMENT '患者ID',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
+  `patient_id` bigint COMMENT '患者ID（快照）',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
   `main_diagnosis_code` varchar(32) COMMENT '主要诊断编码',
   `main_diagnosis_name` varchar(200) COMMENT '主要诊断名称',
   `inpatient_days` int COMMENT '住院天数',
@@ -6709,14 +6890,14 @@ CREATE TABLE `biz_skin_test` (
   `id` bigint NOT NULL COMMENT '主键（雪花）',
   `test_no` varchar(32) NOT NULL COMMENT '皮试单号',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
   `drug_name` varchar(200) NOT NULL COMMENT '皮试药物名称',
   `treatment_record_id` bigint COMMENT '来源治疗记录ID',
   `test_time` datetime NOT NULL COMMENT '皮试时间',
   `result` tinyint NOT NULL DEFAULT 0 COMMENT '判读结果（0-待判读 1-阴性 2-阳性）',
   `result_time` datetime COMMENT '判读时间',
   `nurse_id` bigint COMMENT '执行护士ID',
-  `nurse_name` varchar(50) COMMENT '执行护士姓名',
+  `nurse_name` varchar(50) COMMENT '执行护士姓名（快照）',
   `create_by` varchar(64),
   `create_time` datetime,
   `update_by` varchar(64),
@@ -6726,6 +6907,125 @@ CREATE TABLE `biz_skin_test` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_test_no` (`test_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='门诊皮试记录';
+
+-- biz_staff_attendance  实际出勤（闭环第3步：计划 vs 实际的对照落点）
+CREATE TABLE `biz_staff_attendance` (
+  `id` bigint NOT NULL COMMENT '主键（雪花）',
+  `staff_schedule_id` bigint COMMENT '关联的排班事实ID（biz_staff_schedule.id）；空=无计划的出勤（加班/支援/替班）',
+  `employee_id` bigint NOT NULL COMMENT '员工ID',
+  `employee_name` varchar(50) COMMENT '姓名（快照）',
+  `emp_code` varchar(32) COMMENT '工号（快照）',
+  `schedule_date` date NOT NULL COMMENT '出勤日期（归属哪一天；夜班签退跨到次日也算这天）',
+  `org_type` tinyint NOT NULL COMMENT '实际出勤单元类型（1-科室 2-病区 3-全院）',
+  `org_id` bigint NOT NULL DEFAULT 0 COMMENT '实际出勤单元ID（全院级为0）',
+  `org_name` varchar(128) COMMENT '单元名称（快照）',
+  `shift_id` bigint NOT NULL DEFAULT 0 COMMENT '班次ID（0-无班次，如自由工时的加班）',
+  `staff_type` tinyint COMMENT '岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政）',
+  `check_in` datetime COMMENT '签到时间（NULL=没签到：缺勤确认或手工登记的工时）',
+  `check_out` datetime COMMENT '签退时间（NULL=还没签退或缺勤）',
+  `actual_minutes` int COMMENT '实际工时（分钟）：打卡则算，无打卡由科室确认后手工填',
+  `planned_minutes` int NOT NULL DEFAULT 0 COMMENT '计划工时（分钟）：biz_staff_schedule.work_minutes 的快照',
+  `overtime_minutes` int NOT NULL DEFAULT 0 COMMENT '超时工时（分钟）：GREATEST(0, 实际-计划)',
+  `attendance_status` tinyint NOT NULL DEFAULT 1 COMMENT '出勤状态（1-正常 2-迟到 3-早退 4-缺勤 5-替班 6-加班 7-支援）',
+  `substitute_for` bigint COMMENT '替了谁的班（employee_id）',
+  `confirm_status` tinyint NOT NULL DEFAULT 0 COMMENT '科室确认（0-待确认 1-已确认 2-有异议）',
+  `confirm_by` varchar(64) COMMENT '确认人',
+  `confirm_time` datetime COMMENT '确认时间',
+  `data_source` tinyint NOT NULL DEFAULT 1 COMMENT '数据来源（1-人工登记 2-考勤机导入 3-系统判定）',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（0-停用 1-生效）',
+  `create_by` varchar(64) COMMENT '创建人',
+  `create_time` datetime COMMENT '创建时间',
+  `update_by` varchar(64) COMMENT '更新人',
+  `update_time` datetime COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_attend` (`employee_id`, `schedule_date`, `org_type`, `org_id`, `shift_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='实际出勤（闭环第3步：计划 vs 实际的对照落点）';
+
+-- biz_staff_demand  人力需求（需求层：排班的驱动源与分母）
+CREATE TABLE `biz_staff_demand` (
+  `id` bigint NOT NULL COMMENT '主键（雪花）',
+  `demand_date` date NOT NULL COMMENT '需求日期',
+  `org_type` tinyint NOT NULL COMMENT '排班单元类型（1-科室 2-病区 3-全院）',
+  `org_id` bigint NOT NULL DEFAULT 0 COMMENT '排班单元ID（全院级为0）',
+  `org_name` varchar(128) COMMENT '排班单元名称（快照）',
+  `period_code` tinyint NOT NULL DEFAULT 0 COMMENT '时段（0-全天 1-上午 2-下午 3-夜间）',
+  `shift_id` bigint NOT NULL DEFAULT 0 COMMENT '班次ID（0-不限班次）',
+  `staff_type` tinyint NOT NULL COMMENT '岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政）',
+  `required_count` int NOT NULL DEFAULT 0 COMMENT '需求人数',
+  `required_level` tinyint COMMENT '能级下限（0-不限；依赖 G-01，未做前一律 NULL）',
+  `demand_source` tinyint NOT NULL COMMENT '来源（1-门诊出诊派生 2-住院患者派生 3-手工调整）',
+  `source_biz_id` bigint COMMENT '来源业务ID（出诊计划ID/病区ID）',
+  `calc_basis` varchar(500) COMMENT '测算依据（怎么算出来的，写给人看的）',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（0-停用 1-生效）',
+  `create_by` varchar(64),
+  `create_time` datetime,
+  `update_by` varchar(64),
+  `update_time` datetime,
+  `del_flag` tinyint NOT NULL DEFAULT 0,
+  `remark` varchar(500),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_demand` (`demand_date`, `org_type`, `org_id`, `period_code`, `shift_id`, `staff_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='人力需求（需求层：排班的驱动源与分母）';
+
+-- biz_staff_plan_rule  人力配置标准
+CREATE TABLE `biz_staff_plan_rule` (
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
+  `org_type` tinyint NOT NULL DEFAULT 1 COMMENT '排班单元类型（1-科室 2-病区 3-全院）',
+  `org_id` bigint NOT NULL DEFAULT 0 COMMENT '排班单元ID（全院级为0）',
+  `org_name` varchar(128) COMMENT '排班单元名称（快照）',
+  `shift_id` bigint NOT NULL DEFAULT 0 COMMENT '标准班次ID（0-该单元全部班次）',
+  `staff_type` tinyint NOT NULL COMMENT '岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他）',
+  `min_staff` tinyint NOT NULL DEFAULT 0 COMMENT '最低在岗人数',
+  `max_staff` tinyint NOT NULL DEFAULT 0 COMMENT '最高在岗人数',
+  `max_week_hours` decimal(5,1) COMMENT '单周工时上限',
+  `max_consecutive_night_days` tinyint COMMENT '连续夜班天数上限',
+  `max_consecutive_work_days` tinyint COMMENT '连续上班天数上限',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
+  `create_by` varchar(64) COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) COMMENT '更新人',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_plan_rule` (`org_type`, `org_id`, `shift_id`, `staff_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='人力配置标准';
+
+-- biz_staff_schedule  员工排班
+CREATE TABLE `biz_staff_schedule` (
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
+  `schedule_date` date NOT NULL COMMENT '排班日期',
+  `week_day` tinyint NOT NULL COMMENT '星期（1-周一 7-周日）',
+  `org_type` tinyint NOT NULL DEFAULT 1 COMMENT '排班单元类型（1-科室 2-病区 3-全院）',
+  `org_id` bigint NOT NULL DEFAULT 0 COMMENT '排班单元ID（全院级为0）',
+  `org_name` varchar(128) NOT NULL DEFAULT '' COMMENT '排班单元名称（快照）',
+  `dept_id` bigint NOT NULL DEFAULT 0 COMMENT '科室ID（全院级为0）',
+  `dept_name` varchar(128) NOT NULL DEFAULT '' COMMENT '科室名称（快照）',
+  `employee_id` bigint NOT NULL COMMENT '员工ID',
+  `emp_code` varchar(32) COMMENT '工号（快照）',
+  `employee_name` varchar(50) NOT NULL DEFAULT '' COMMENT '姓名（快照）',
+  `employee_post_id` bigint COMMENT '员工岗位ID（人 × 科室 × 角色）',
+  `staff_type` tinyint NOT NULL DEFAULT 1 COMMENT '岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他）',
+  `shift_id` bigint NOT NULL DEFAULT 0 COMMENT '标准班次ID（0-无班次）',
+  `start_time` varchar(5) COMMENT '开始时间（HH:mm，班次快照）',
+  `end_time` varchar(5) COMMENT '结束时间（HH:mm，班次快照，早于开始时间属次日）',
+  `duty_status` tinyint NOT NULL DEFAULT 1 COMMENT '出勤状态（1-上班 2-休息 3-请假 4-培训 5-停班）',
+  `attend_mode` tinyint NOT NULL DEFAULT 1 COMMENT '响应形态（1-坐班 2-听班 3-留院值班）',
+  `clinic_flag` tinyint NOT NULL DEFAULT 0 COMMENT '是否出诊（0-否 1-是）',
+  `work_minutes` int NOT NULL DEFAULT 0 COMMENT '工时（分钟）',
+  `schedule_source` tinyint NOT NULL DEFAULT 1 COMMENT '生成来源（1-手工 2-模板 3-复制周期 4-换班）',
+  `template_id` bigint COMMENT '来源排班周模板ID',
+  `create_by` varchar(64) COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) COMMENT '更新人',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_emp_date_shift` (`employee_id`, `schedule_date`, `shift_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='员工排班';
 
 -- biz_stat_daily  日统计汇总
 CREATE TABLE `biz_stat_daily` (
@@ -6828,13 +7128,13 @@ CREATE TABLE `biz_stocktake_item` (
   `stocktake_id` bigint NOT NULL COMMENT '盘点单ID',
   `stock_id` bigint NOT NULL COMMENT '库存批次ID',
   `drug_id` bigint NOT NULL COMMENT '药品ID',
-  `drug_code` varchar(32) COMMENT '药品编码',
-  `drug_name` varchar(200) COMMENT '药品名称',
-  `specification` varchar(100) COMMENT '规格',
-  `unit` varchar(20) COMMENT '单位',
-  `batch_no` varchar(50) COMMENT '批号',
-  `production_date` date COMMENT '生产日期',
-  `expiry_date` date COMMENT '有效期',
+  `drug_code` varchar(32) COMMENT '药品编码（快照）',
+  `drug_name` varchar(200) COMMENT '药品名称（快照）',
+  `specification` varchar(100) COMMENT '规格（快照）',
+  `unit` varchar(20) COMMENT '单位（快照）',
+  `batch_no` varchar(50) COMMENT '批号（快照）',
+  `production_date` date COMMENT '生产日期（快照）',
+  `expiry_date` date COMMENT '有效期（快照）',
   `location` varchar(100) COMMENT '库位',
   `cost_price` decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT '成本价',
   `locked_quantity` decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT '快照时已锁定数量',
@@ -6859,12 +7159,12 @@ CREATE TABLE `biz_survey_answer` (
   `answer_no` varchar(32) NOT NULL COMMENT '答卷编号',
   `dispatch_id` bigint NOT NULL COMMENT '发放单ID',
   `template_id` bigint NOT NULL COMMENT '模板ID',
-  `scene` tinyint NOT NULL COMMENT '场景',
+  `scene` tinyint NOT NULL COMMENT '场景（快照）',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(64) COMMENT '患者编号',
+  `patient_no` varchar(64) COMMENT '患者编号（快照）',
   `patient_name` varchar(128) COMMENT '患者姓名',
   `dept_id` bigint COMMENT '就诊科室ID',
-  `dept_name` varchar(128) COMMENT '科室名称',
+  `dept_name` varchar(128) COMMENT '科室名称（快照）',
   `avg_score` decimal(5,2) NOT NULL COMMENT '李克特均分',
   `score_100` decimal(6,2) NOT NULL COMMENT '百分制得分',
   `nps` tinyint COMMENT 'NPS 推荐度',
@@ -6883,8 +7183,8 @@ CREATE TABLE `biz_survey_answer` (
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(512) COMMENT '备注',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_survey_answer_dispatch` (`dispatch_id`),
-  UNIQUE KEY `uk_survey_answer_no` (`answer_no`)
+  UNIQUE KEY `uk_survey_answer_no` (`answer_no`),
+  UNIQUE KEY `uk_survey_answer_dispatch` (`dispatch_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='满意度答卷';
 
 -- biz_survey_answer_item  满意度逐题答案
@@ -6894,9 +7194,9 @@ CREATE TABLE `biz_survey_answer_item` (
   `item_id` bigint NOT NULL COMMENT '题目ID',
   `template_id` bigint NOT NULL COMMENT '模板ID',
   `dimension` tinyint NOT NULL COMMENT '评价维度',
-  `seq_no` int NOT NULL COMMENT '题号',
-  `title` varchar(255) NOT NULL COMMENT '题干',
-  `question_type` tinyint NOT NULL COMMENT '题型',
+  `seq_no` int NOT NULL COMMENT '题号（快照）',
+  `title` varchar(255) NOT NULL COMMENT '题干（快照）',
+  `question_type` tinyint NOT NULL COMMENT '题型（快照）',
   `score` tinyint COMMENT '得分',
   `option_label` varchar(128) COMMENT '选项文本',
   `text_value` varchar(1000) COMMENT '文本题回答',
@@ -6916,15 +7216,15 @@ CREATE TABLE `biz_survey_dispatch` (
   `dispatch_no` varchar(32) NOT NULL COMMENT '发放单号',
   `template_id` bigint NOT NULL COMMENT '问卷模板ID',
   `template_name` varchar(128) COMMENT '模板名称',
-  `scene` tinyint NOT NULL COMMENT '适用场景',
+  `scene` tinyint NOT NULL COMMENT '适用场景（快照）',
   `source_type` tinyint NOT NULL COMMENT '发放来源（1-随访任务 2-出院结算 3-人工补发）',
   `source_id` bigint NOT NULL COMMENT '来源单据ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(64) COMMENT '患者编号',
-  `patient_name` varchar(128) COMMENT '患者姓名',
+  `patient_no` varchar(64) COMMENT '患者编号（快照）',
+  `patient_name` varchar(128) COMMENT '患者姓名（快照）',
   `phone` varchar(20) COMMENT '联系手机号',
   `dept_id` bigint COMMENT '就诊科室ID',
-  `dept_name` varchar(128) COMMENT '科室名称',
+  `dept_name` varchar(128) COMMENT '科室名称（快照）',
   `channel` tinyint NOT NULL DEFAULT 1 COMMENT '回收渠道（1-电话代填 2-短信 3-微信 4-现场扫码）',
   `dispatch_status` tinyint NOT NULL DEFAULT 1 COMMENT '回收状态（1-待推送 2-已推送待回收 3-已回收 4-已过期 5-已拒答）',
   `push_time` datetime COMMENT '推送/发起时间',
@@ -6986,20 +7286,20 @@ CREATE TABLE `biz_tcm_decoct` (
   `decoct_no` varchar(32) NOT NULL COMMENT '代煎单号',
   `prescription_id` bigint NOT NULL COMMENT '处方ID',
   `prescription_no` varchar(32) NOT NULL COMMENT '处方号',
-  `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者号',
-  `patient_name` varchar(50) COMMENT '患者姓名',
+  `patient_id` bigint NOT NULL COMMENT '患者ID（快照）',
+  `patient_no` varchar(32) COMMENT '患者号（快照）',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
   `dept_name` varchar(100) COMMENT '开方科室',
-  `doctor_name` varchar(50) COMMENT '开方医师',
+  `doctor_name` varchar(50) COMMENT '开方医师（快照）',
   `dose_count` int NOT NULL DEFAULT 1 COMMENT '剂数',
   `herb_count` int NOT NULL DEFAULT 0 COMMENT '味数',
   `total_grams` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '全方总克数',
   `method_summary` varchar(500) COMMENT '煎法脚注汇总',
   `decoct_status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1-待煎 2-已煎 3-已取 9-已作废）',
   `pharmacy_id` bigint COMMENT '代煎药房ID',
-  `pharmacy_name` varchar(100) COMMENT '代煎药房名称',
+  `pharmacy_name` varchar(100) COMMENT '代煎药房名称（快照）',
   `operator_id` bigint COMMENT '最近一次状态操作人',
-  `operator_name` varchar(64) COMMENT '最近一次状态操作人姓名',
+  `operator_name` varchar(64) COMMENT '最近一次状态操作人姓名（快照）',
   `decoct_time` datetime COMMENT '煎药完成时间',
   `pickup_time` datetime COMMENT '患者取走时间（终态）',
   `cancel_reason` varchar(200) COMMENT '作废原因',
@@ -7020,7 +7320,7 @@ CREATE TABLE `biz_tech_auth_override` (
   `source_id` bigint NOT NULL COMMENT '来源单据ID',
   `source_no` varchar(64) COMMENT '来源单据号',
   `employee_id` bigint NOT NULL COMMENT '越权操作者（员工ID）',
-  `employee_name` varchar(50) NOT NULL COMMENT '越权操作者姓名',
+  `employee_name` varchar(50) NOT NULL COMMENT '越权操作者姓名（快照）',
   `auth_category` tinyint NOT NULL COMMENT '涉及授权类别',
   `required_level` tinyint NOT NULL COMMENT '该操作要求的级别',
   `held_level` tinyint COMMENT '越权者当时的授权级别上限',
@@ -7044,11 +7344,11 @@ CREATE TABLE `biz_tele_consult` (
   `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `consult_no` varchar(32) NOT NULL COMMENT '会诊单号',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(64) COMMENT '患者编号',
-  `patient_name` varchar(128) COMMENT '患者姓名',
+  `patient_no` varchar(64) COMMENT '患者编号（快照）',
+  `patient_name` varchar(128) COMMENT '患者姓名（快照）',
   `admission_id` bigint COMMENT '关联住院ID',
   `apply_dept_id` bigint COMMENT '申请科室ID',
-  `apply_dept_name` varchar(128) COMMENT '申请科室名称',
+  `apply_dept_name` varchar(128) COMMENT '申请科室名称（快照）',
   `apply_doctor_id` bigint COMMENT '申请医生ID（员工ID）',
   `apply_doctor` varchar(64) COMMENT '申请医生姓名',
   `consult_type` tinyint NOT NULL DEFAULT 1 COMMENT '会诊类型（1-临床会诊 2-远程影像 3-远程心电 4-远程病理 5-其他）',
@@ -7086,18 +7386,18 @@ CREATE TABLE `biz_transfusion_apply` (
   `id` bigint NOT NULL COMMENT '输血申请单ID（雪花）',
   `apply_no` varchar(32) NOT NULL COMMENT '输血申请单号',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
-  `admission_no` varchar(32) COMMENT '入院号',
+  `admission_no` varchar(32) COMMENT '入院号（快照）',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者号',
-  `patient_name` varchar(50) COMMENT '患者姓名',
-  `gender` tinyint COMMENT '性别（1-男 2-女）',
-  `age` int COMMENT '年龄',
+  `patient_no` varchar(32) COMMENT '患者号（快照）',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
+  `gender` tinyint COMMENT '性别（快照）（1-男 2-女）',
+  `age` int COMMENT '年龄（快照）',
   `apply_dept_id` bigint COMMENT '申请科室ID',
-  `apply_dept_name` varchar(64) COMMENT '申请科室名称',
-  `apply_ward_name` varchar(64) COMMENT '申请时所在病区名称',
-  `apply_bed_no` varchar(32) COMMENT '申请时床号',
+  `apply_dept_name` varchar(64) COMMENT '申请科室名称（快照）',
+  `apply_ward_name` varchar(64) COMMENT '申请时所在病区名称（快照）',
+  `apply_bed_no` varchar(32) COMMENT '申请时床号（快照）',
   `apply_doctor_id` bigint COMMENT '申请医生ID',
-  `apply_doctor_name` varchar(64) COMMENT '申请医生姓名',
+  `apply_doctor_name` varchar(64) COMMENT '申请医生姓名（快照）',
   `apply_time` datetime COMMENT '申请时间',
   `patient_abo` varchar(4) NOT NULL COMMENT '受血者ABO血型',
   `patient_rh` varchar(4) NOT NULL COMMENT '受血者Rh血型',
@@ -7123,20 +7423,20 @@ CREATE TABLE `biz_transfusion_apply` (
   `is_emergency` tinyint NOT NULL DEFAULT 0 COMMENT '是否紧急用血（0-否 1-是）',
   `crossmatch_status` tinyint NOT NULL DEFAULT 0 COMMENT '配血状态（0-待配血 1-配血中 3-存在配血不合）',
   `crossmatch_doctor_id` bigint COMMENT '配血人ID',
-  `crossmatch_doctor_name` varchar(64) COMMENT '配血人姓名',
+  `crossmatch_doctor_name` varchar(64) COMMENT '配血人姓名（快照）',
   `crossmatch_time` datetime COMMENT '配血完成时间',
   `issue_doctor_id` bigint COMMENT '发血人ID（员工ID）',
-  `issue_doctor_name` varchar(64) COMMENT '发血人姓名',
+  `issue_doctor_name` varchar(64) COMMENT '发血人姓名（快照）',
   `issue_time` datetime COMMENT '发血时间',
   `check_items` varchar(200) COMMENT '输血前核对要点码',
   `check_note` varchar(1000) COMMENT '核对补充说明',
   `check_nurse_id` bigint COMMENT '核对护士1 ID（员工ID）',
-  `check_nurse_name` varchar(64) COMMENT '核对护士1 姓名',
+  `check_nurse_name` varchar(64) COMMENT '核对护士1 姓名（快照）',
   `check_nurse2_id` bigint COMMENT '核对护士2 ID',
-  `check_nurse2_name` varchar(64) COMMENT '核对护士2 姓名',
+  `check_nurse2_name` varchar(64) COMMENT '核对护士2 姓名（快照）',
   `check_time` datetime COMMENT '双人核对时间',
   `infusion_nurse_id` bigint COMMENT '输注执行护士ID（员工ID）',
-  `infusion_nurse_name` varchar(64) COMMENT '输注执行护士姓名',
+  `infusion_nurse_name` varchar(64) COMMENT '输注执行护士姓名（快照）',
   `infusion_start_time` datetime COMMENT '输注开始时间',
   `infusion_end_time` datetime COMMENT '输注结束时间',
   `actual_amount` decimal(10,2) COMMENT '实际输注量',
@@ -7147,20 +7447,20 @@ CREATE TABLE `biz_transfusion_apply` (
   `reaction_desc` varchar(1000) COMMENT '反应描述',
   `reaction_handle` varchar(1000) COMMENT '处理措施',
   `reaction_reporter_id` bigint COMMENT '上报人ID（员工ID）',
-  `reaction_reporter_name` varchar(64) COMMENT '上报人姓名',
+  `reaction_reporter_name` varchar(64) COMMENT '上报人姓名（快照）',
   `reaction_time` datetime COMMENT '上报时间',
   `efficacy_eval` varchar(1000) COMMENT '输注后疗效评估',
   `post_hb` decimal(6,2) COMMENT '输血后血红蛋白 Hb（g/L）',
   `post_hct` decimal(5,2) COMMENT '输血后红细胞压积 HCT（%）',
   `post_plt` int COMMENT '输血后血小板 PLT',
   `finish_doctor_id` bigint COMMENT '完成录入人ID（员工ID）',
-  `finish_doctor_name` varchar(64) COMMENT '完成录入人姓名',
+  `finish_doctor_name` varchar(64) COMMENT '完成录入人姓名（快照）',
   `finish_time` datetime COMMENT '完成时间',
   `record_id` bigint COMMENT '回写住院病历ID',
   `transfusion_status` tinyint NOT NULL DEFAULT 0 COMMENT '状态（0-待配血 1-已配血 2-已发血 3-输注中 4-已完成 5-已取消）',
   `cancel_reason` varchar(500) COMMENT '取消原因（仅待配血/已配血/已发血可取消）',
   `cancel_doctor_id` bigint COMMENT '取消人ID（员工ID）',
-  `cancel_doctor_name` varchar(64) COMMENT '取消人姓名',
+  `cancel_doctor_name` varchar(64) COMMENT '取消人姓名（快照）',
   `cancel_time` datetime COMMENT '取消时间',
   `remark` varchar(500) COMMENT '备注',
   `create_by` varchar(64) COMMENT '创建人',
@@ -7179,7 +7479,7 @@ CREATE TABLE `biz_transfusion_approve` (
   `approve_level` tinyint NOT NULL COMMENT '审批级别（1-上级医师 2-科主任 3-医务科）',
   `approve_result` tinyint NOT NULL COMMENT '审批结论（1-通过 2-驳回）',
   `approver_id` bigint COMMENT '审批人ID（员工ID）',
-  `approver_name` varchar(64) COMMENT '审批人姓名',
+  `approver_name` varchar(64) COMMENT '审批人姓名（快照）',
   `approver_title` varchar(32) COMMENT '审批人职称',
   `opinion` varchar(200) COMMENT '审批意见',
   `is_makeup` tinyint NOT NULL DEFAULT 0 COMMENT '是否急诊补审（0-常规 1-补审）',
@@ -7214,7 +7514,7 @@ CREATE TABLE `biz_transfusion_bag` (
   `crossmatch_result` tinyint COMMENT '配血结论（1-相合 2-不合）',
   `crossmatch_time` datetime COMMENT '配血时间',
   `crossmatch_doctor_id` bigint COMMENT '配血人ID（员工ID）',
-  `crossmatch_doctor_name` varchar(64) COMMENT '配血人姓名',
+  `crossmatch_doctor_name` varchar(64) COMMENT '配血人姓名（快照）',
   `bag_status` tinyint NOT NULL DEFAULT 0 COMMENT '血袋状态（0-待配血 1-已配血 2-已发血 3-已输注）',
   `issue_time` datetime COMMENT '发血时间',
   `remark` varchar(500) COMMENT '备注',
@@ -7240,15 +7540,15 @@ CREATE TABLE `biz_treatment_apply` (
   `apply_status` tinyint NOT NULL DEFAULT 0 COMMENT '申请状态（0-待执行 1-已执行 2-已取消）',
   `remark` varchar(500) COMMENT '备注',
   `patient_no` varchar(32) COMMENT '患者编号',
-  `patient_name` varchar(50) COMMENT '患者姓名',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
   `regist_no` varchar(32) COMMENT '挂号单号',
-  `doctor_name` varchar(50) COMMENT '开单医生姓名',
+  `doctor_name` varchar(50) COMMENT '开单医生姓名（快照）',
   `dept_id` bigint COMMENT '开单科室ID',
-  `dept_name` varchar(100) COMMENT '开单科室名称',
+  `dept_name` varchar(100) COMMENT '开单科室名称（快照）',
   `exec_dept_id` bigint COMMENT '建议执行科室ID',
   `exec_dept_name` varchar(100) COMMENT '建议执行科室名称',
-  `item_code` varchar(32) COMMENT '治疗项目编码',
-  `item_name` varchar(200) COMMENT '治疗项目名称',
+  `item_code` varchar(32) COMMENT '治疗项目编码（快照）',
+  `item_name` varchar(200) COMMENT '治疗项目名称（快照）',
   `item_type` tinyint COMMENT '治疗项目类别（1-注射 2-输液 3-换药 4-拆线 5-其他）',
   `price` decimal(10,2) COMMENT '项目单价',
   `total_times` int NOT NULL DEFAULT 1 COMMENT '疗程总次数',
@@ -7292,8 +7592,8 @@ CREATE TABLE `biz_triage_record` (
   `queue_id` bigint NOT NULL COMMENT '队列ID',
   `regist_id` bigint COMMENT '挂号ID',
   `patient_id` bigint COMMENT '患者ID',
-  `patient_name` varchar(50) COMMENT '患者姓名',
-  `patient_no` varchar(32) COMMENT '患者号',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
+  `patient_no` varchar(32) COMMENT '患者号（快照）',
   `temperature` decimal(4,1) COMMENT '体温(℃)',
   `pulse` int COMMENT '脉搏(次/分)',
   `respiration` int COMMENT '呼吸(次/分)',
@@ -7319,6 +7619,29 @@ CREATE TABLE `biz_triage_record` (
   `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='门诊分诊记录';
+
+-- biz_triage_rule  智能导诊症状科室映射
+CREATE TABLE `biz_triage_rule` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `symptom_code` varchar(32) NOT NULL COMMENT '症状编码',
+  `symptom_name` varchar(100) NOT NULL COMMENT '症状名称',
+  `keywords` varchar(500) COMMENT '匹配关键词（顿号分隔）',
+  `dept_id` bigint NOT NULL COMMENT '推荐科室ID',
+  `dept_name` varchar(100) COMMENT '推荐科室名称（快照）',
+  `weight` int DEFAULT 0 COMMENT '推荐权重（越大越靠前）',
+  `urgent_flag` tinyint DEFAULT 0 COMMENT '急症信号（0-否 1-是）',
+  `advice` varchar(500) COMMENT '就诊提示',
+  `status` tinyint DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
+  `sort_order` int DEFAULT 0 COMMENT '排序号',
+  `create_by` varchar(64) COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) COMMENT '更新人',
+  `update_time` datetime COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_symptom_dept` (`symptom_code`, `dept_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='智能导诊症状科室映射';
 
 -- biz_tsa_token  时间戳令牌台账
 CREATE TABLE `biz_tsa_token` (
@@ -7421,12 +7744,12 @@ CREATE TABLE `biz_vte_event` (
   `event_no` varchar(32) NOT NULL COMMENT '事件编号',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
   `patient_id` bigint COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者编号',
-  `patient_name` varchar(50) COMMENT '患者姓名',
-  `dept_id` bigint COMMENT '科室ID',
-  `dept_name` varchar(100) COMMENT '科室名称',
-  `ward_id` bigint COMMENT '病区ID',
-  `ward_name` varchar(100) COMMENT '病区名称',
+  `patient_no` varchar(32) COMMENT '患者编号（快照）',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
+  `dept_id` bigint COMMENT '科室ID（快照）',
+  `dept_name` varchar(100) COMMENT '科室名称（快照）',
+  `ward_id` bigint COMMENT '病区ID（快照）',
+  `ward_name` varchar(100) COMMENT '病区名称（快照）',
   `event_type` tinyint NOT NULL COMMENT '事件类型（1-深静脉血栓DVT 2-肺栓塞PE 3-预防相关出血）',
   `onset_type` tinyint NOT NULL DEFAULT 1 COMMENT '发生时机（1-院内发生 2-入院时已存在）',
   `diagnose_date` date NOT NULL COMMENT '确诊日期',
@@ -7440,7 +7763,7 @@ CREATE TABLE `biz_vte_event` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`)
@@ -7452,16 +7775,16 @@ CREATE TABLE `biz_vte_prevent` (
   `prevent_no` varchar(32) NOT NULL COMMENT '措施记录编号',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
   `patient_id` bigint COMMENT '患者ID',
-  `patient_no` varchar(32) COMMENT '患者编号',
-  `patient_name` varchar(50) COMMENT '患者姓名',
-  `dept_id` bigint COMMENT '科室ID',
-  `dept_name` varchar(100) COMMENT '科室名称',
-  `ward_id` bigint COMMENT '病区ID',
-  `ward_name` varchar(100) COMMENT '病区名称',
-  `bed_no` varchar(20) COMMENT '床号',
+  `patient_no` varchar(32) COMMENT '患者编号（快照）',
+  `patient_name` varchar(50) COMMENT '患者姓名（快照）',
+  `dept_id` bigint COMMENT '科室ID（快照）',
+  `dept_name` varchar(100) COMMENT '科室名称（快照）',
+  `ward_id` bigint COMMENT '病区ID（快照）',
+  `ward_name` varchar(100) COMMENT '病区名称（快照）',
+  `bed_no` varchar(20) COMMENT '床号（快照）',
   `assessment_id` bigint COMMENT '来源评估单ID',
   `caprini_score` int COMMENT 'Caprini 总分',
-  `risk_level` tinyint COMMENT '风险等级（1-低 2-中 3-高 4-极高）',
+  `risk_level` tinyint COMMENT '风险等级（快照）（1-低 2-中 3-高 4-极高）',
   `measure_code` varchar(32) NOT NULL COMMENT '措施码',
   `measure_type` tinyint NOT NULL COMMENT '措施类别（1-基础预防 2-物理预防 3-药物预防）',
   `measure_name` varchar(200) COMMENT '措施名称',
@@ -7474,7 +7797,7 @@ CREATE TABLE `biz_vte_prevent` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
@@ -7487,7 +7810,7 @@ CREATE TABLE `biz_vte_stats` (
   `stat_month` char(7) NOT NULL COMMENT '统计月份',
   `scope_type` tinyint NOT NULL DEFAULT 1 COMMENT '统计范围（1-全院 2-科室）',
   `dept_id` bigint COMMENT '科室ID',
-  `dept_name` varchar(100) COMMENT '科室名称',
+  `dept_name` varchar(100) COMMENT '科室名称（快照）',
   `discharge_count` int NOT NULL DEFAULT 0 COMMENT '同期出院患者数',
   `assessed_count` int NOT NULL DEFAULT 0 COMMENT '其中做过 Caprini 评估的患者数',
   `assess_rate` decimal(6,2) NOT NULL DEFAULT 0.00 COMMENT 'VTE 风险评估率（%）',
@@ -7501,10 +7824,9 @@ CREATE TABLE `biz_vte_stats` (
   `generate_by` varchar(64) COMMENT '生成人',
   `generate_time` datetime COMMENT '生成时间',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `remark` varchar(500) COMMENT '备注',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_vte_stats` (`stat_month`, `scope_type`, `dept_id`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='VTE 防控月度指标';
 
 -- biz_ward_dispense  住院摆药单
@@ -7514,11 +7836,11 @@ CREATE TABLE `biz_ward_dispense` (
   `dispense_date` date NOT NULL COMMENT '摆药日期',
   `admission_id` bigint NOT NULL COMMENT '入院ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(64) COMMENT '患者编号',
-  `patient_name` varchar(128) COMMENT '患者姓名',
-  `ward_id` bigint NOT NULL COMMENT '病区ID',
-  `ward_name` varchar(128) COMMENT '病区名称',
-  `dept_id` bigint COMMENT '入院科室ID',
+  `patient_no` varchar(64) COMMENT '患者编号（快照）',
+  `patient_name` varchar(128) COMMENT '患者姓名（快照）',
+  `ward_id` bigint NOT NULL COMMENT '病区ID（快照）',
+  `ward_name` varchar(128) COMMENT '病区名称（快照）',
+  `dept_id` bigint COMMENT '入院科室ID（快照）',
   `status` tinyint NOT NULL DEFAULT 1 COMMENT '主单状态（1-待配药 2-配药中 3-已配药 4-已核对 5-已退药）',
   `generate_by` varchar(64) COMMENT '生成人（药房）',
   `generate_time` datetime COMMENT '生成时间',
@@ -7540,18 +7862,18 @@ CREATE TABLE `biz_ward_dispense_item` (
   `dispense_date` date NOT NULL COMMENT '摆药日期',
   `dispense_seq` int NOT NULL DEFAULT 1 COMMENT '重摆序号',
   `order_id` bigint NOT NULL COMMENT '住院医嘱ID',
-  `order_no` varchar(32) COMMENT '医嘱号',
+  `order_no` varchar(32) COMMENT '医嘱号（快照）',
   `admission_id` bigint NOT NULL COMMENT '入院ID（冗余）',
   `patient_id` bigint NOT NULL COMMENT '患者ID（冗余）',
-  `patient_no` varchar(64) COMMENT '患者编号',
-  `patient_name` varchar(128) COMMENT '患者姓名',
-  `ward_id` bigint COMMENT '病区ID',
+  `patient_no` varchar(64) COMMENT '患者编号（快照）',
+  `patient_name` varchar(128) COMMENT '患者姓名（快照）',
+  `ward_id` bigint COMMENT '病区ID（快照）',
   `drug_id` bigint NOT NULL COMMENT '药品ID',
-  `drug_name` varchar(128) COMMENT '药品名称',
-  `item_code` varchar(64) COMMENT '医嘱项目编码',
-  `item_name` varchar(128) COMMENT '医嘱项目名称',
-  `spec` varchar(64) COMMENT '规格',
-  `unit` varchar(32) COMMENT '单位',
+  `drug_name` varchar(128) COMMENT '药品名称（快照）',
+  `item_code` varchar(64) COMMENT '医嘱项目编码（快照）',
+  `item_name` varchar(128) COMMENT '医嘱项目名称（快照）',
+  `spec` varchar(64) COMMENT '规格（快照）',
+  `unit` varchar(32) COMMENT '单位（快照）',
   `quantity` decimal(12,2) NOT NULL COMMENT '摆药数量',
   `price` decimal(12,4) NOT NULL DEFAULT 0.0000 COMMENT '单价',
   `amount` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '金额 = quantity × price',
@@ -7661,13 +7983,12 @@ CREATE TABLE `biz_yb_chronic_reg` (
   `del_flag` tinyint NOT NULL DEFAULT 0,
   `remark` varchar(500),
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_chronic_active` (`patient_id`, `disease_code`, `reg_status`, `valid_end_key`),
   UNIQUE KEY `uk_chronic_reg_no` (`reg_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='门诊慢特病备案';
 
 -- biz_yb_deduct_log  医保扣款处理留痕
 CREATE TABLE `biz_yb_deduct_log` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+  `id` bigint NOT NULL COMMENT '自增主键',
   `notice_id` bigint NOT NULL COMMENT '扣款通知ID',
   `action` tinyint NOT NULL COMMENT '动作（1-新建草稿 2-发起申诉 3-录入申诉结果 4-确认扣款并追责 5-录入缴回 6-作废）',
   `detail` varchar(1000) COMMENT '动作详情/备注',
@@ -7892,7 +8213,7 @@ CREATE TABLE `sys_checkup_package` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime COMMENT '更新时间',
+  `update_time` datetime ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
@@ -7911,7 +8232,7 @@ CREATE TABLE `sys_checkup_package_item` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime COMMENT '更新时间',
+  `update_time` datetime ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`)
@@ -7965,7 +8286,7 @@ CREATE TABLE `sys_consumable` (
   `create_by` varchar(64) DEFAULT '' COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) DEFAULT '' COMMENT '更新人',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
@@ -7977,13 +8298,14 @@ CREATE TABLE `sys_department` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `dept_code` varchar(32) NOT NULL COMMENT '科室编码（唯一）',
   `dept_name` varchar(100) NOT NULL COMMENT '科室名称',
-  `dept_type` tinyint NOT NULL DEFAULT 1 COMMENT '科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他）',
+  `dept_type` varchar(20) NOT NULL COMMENT '科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他），多个类型逗号分隔',
   `parent_id` bigint NOT NULL DEFAULT 0 COMMENT '父科室ID',
   `sort_order` int NOT NULL DEFAULT 0 COMMENT '排序号',
   `dept_icon` varchar(200) COMMENT '科室图标',
   `dept_desc` varchar(500) COMMENT '科室描述',
   `contact_phone` varchar(20) COMMENT '联系电话',
   `location` varchar(200) COMMENT '科室位置',
+  `dept_leader_id` bigint COMMENT '科室负责人（sys_employee.id)',
   `is_open` tinyint DEFAULT 1 COMMENT '是否开诊（0-否 1-是）',
   `status` tinyint DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
   `create_by` varchar(64) COMMENT '创建人',
@@ -8240,8 +8562,7 @@ CREATE TABLE `sys_employee_qualification` (
   `update_by` varchar(64) COMMENT '更新人',
   `update_time` datetime COMMENT '更新时间',
   `remark` varchar(512) COMMENT '备注',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_emp_cert_type_no` (`employee_id`, `cert_type`, `cert_no`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='员工资格证书';
 
 -- sys_employee_tech_auth  医疗技术授权台账
@@ -8250,7 +8571,7 @@ CREATE TABLE `sys_employee_tech_auth` (
   `employee_id` bigint NOT NULL COMMENT '员工ID',
   `employee_name` varchar(50) NOT NULL COMMENT '员工姓名',
   `dept_id` bigint COMMENT '所属科室ID',
-  `dept_name` varchar(200) COMMENT '所属科室名称',
+  `dept_name` varchar(200) COMMENT '所属科室名称（快照）',
   `title` varchar(50) COMMENT '职称',
   `auth_category` tinyint NOT NULL COMMENT '授权类别（1-手术 2-麻醉 3-内镜与介入）',
   `tech_level` tinyint NOT NULL COMMENT '可独立操作的手术级别上限',
@@ -8274,8 +8595,7 @@ CREATE TABLE `sys_employee_tech_auth` (
   `update_by` varchar(64) COMMENT '更新人',
   `update_time` datetime COMMENT '更新时间',
   `remark` varchar(500) COMMENT '备注',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_emp_cat_from` (`employee_id`, `auth_category`, `valid_from`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='医疗技术授权台账';
 
 -- sys_equipment  医疗设备台账
@@ -8296,16 +8616,41 @@ CREATE TABLE `sys_equipment` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime COMMENT '更新时间',
+  `update_time` datetime ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_equipment_code` (`equipment_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='医疗设备台账';
 
+-- sys_faq  患者端常见问题
+CREATE TABLE `sys_faq` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `faq_no` varchar(32) NOT NULL COMMENT '常见问题编号',
+  `category_code` varchar(32) NOT NULL COMMENT '分类编码',
+  `category_name` varchar(64) NOT NULL COMMENT '分类名称',
+  `question` varchar(200) NOT NULL COMMENT '问题',
+  `answer` varchar(1000) NOT NULL COMMENT '答案（人工维护，涉时间/价格/比例一律引导式）',
+  `keywords` varchar(500) COMMENT '检索关键词（顿号分隔，含口语同义词）',
+  `hot_flag` tinyint DEFAULT 0 COMMENT '热门（0-否 1-是）',
+  `view_count` int DEFAULT 0 COMMENT '查看次数',
+  `helpful_count` int DEFAULT 0 COMMENT '有帮助次数',
+  `useless_count` int DEFAULT 0 COMMENT '没帮助次数',
+  `status` tinyint DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
+  `sort_order` int DEFAULT 0 COMMENT '排序号',
+  `create_by` varchar(64) COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) COMMENT '更新人',
+  `update_time` datetime ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_faq_no` (`faq_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='患者端常见问题';
+
 -- sys_field_change_log  字段级修改日志
 CREATE TABLE `sys_field_change_log` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `id` bigint NOT NULL COMMENT '主键ID',
   `biz_type` varchar(32) NOT NULL COMMENT '对象类型',
   `biz_id` varchar(64) NOT NULL COMMENT '对象ID',
   `biz_no` varchar(64) COMMENT '对象编号快照（患者号/工号/病历号）',
@@ -8358,12 +8703,32 @@ CREATE TABLE `sys_icd9cm3` (
   `create_by` varchar(64) COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) COMMENT '更新人',
-  `update_time` datetime COMMENT '更新时间',
+  `update_time` datetime ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_op_code` (`op_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='ICD-9-CM-3 手术编码';
+
+-- sys_imaging_plain_item  影像检查白话词典（患者端影像报告解读的规则层地基，人工维护）
+CREATE TABLE `sys_imaging_plain_item` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `group_name` varchar(32) NOT NULL COMMENT '所属分组（放射/超声/心电/内镜）',
+  `item_name` varchar(64) NOT NULL COMMENT '匹配关键词（报告项目名包含即命中，取最长命中）',
+  `plain_name` varchar(64) NOT NULL COMMENT '白话名（如：胸部CT、B超、心电图）',
+  `what_it_does` varchar(200) NOT NULL COMMENT '这项检查是查什么的（给患者看的一句话，不含诊断/用药）',
+  `notice_text` varchar(200) COMMENT '检查前后的注意事项（白话，可为空）',
+  `status` tinyint DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
+  `sort_order` int DEFAULT 0 COMMENT '排序号',
+  `remark` varchar(500) COMMENT '备注',
+  `create_by` varchar(64) COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) COMMENT '更新人',
+  `update_time` datetime ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_item_name` (`item_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='影像检查白话词典（患者端影像报告解读的规则层地基，人工维护）';
 
 -- sys_infectious_disease  法定传染病目录
 CREATE TABLE `sys_infectious_disease` (
@@ -8412,7 +8777,7 @@ CREATE TABLE `sys_inspection_item` (
 
 -- sys_insurance_policy  医保政策配置
 CREATE TABLE `sys_insurance_policy` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `id` bigint NOT NULL COMMENT '主键ID',
   `policy_name` varchar(100) NOT NULL COMMENT '政策名称',
   `insurance_type` varchar(50) NOT NULL COMMENT '医保类型',
   `settlement_type` tinyint COMMENT '结算方式（2-城镇职工医保 3-城乡居民医保 4-公费医疗）',
@@ -8424,6 +8789,62 @@ CREATE TABLE `sys_insurance_policy` (
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='医保政策配置';
+
+-- sys_knowledge_chunk  知识库切块（向量在内存，文本在此）
+CREATE TABLE `sys_knowledge_chunk` (
+  `id` bigint NOT NULL COMMENT '切块ID（雪花）',
+  `doc_id` bigint NOT NULL COMMENT '所属文档ID',
+  `doc_title` varchar(200) DEFAULT '' COMMENT '文档标题（冗余）',
+  `category` varchar(50) DEFAULT '' COMMENT '分类（冗余）',
+  `chunk_index` int DEFAULT 0 COMMENT '块序号',
+  `content` longtext COMMENT '切块文本',
+  `create_by` varchar(64) DEFAULT '' COMMENT '创建人',
+  `create_time` datetime COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT '' COMMENT '更新人',
+  `update_time` datetime COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT '' COMMENT '备注',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='知识库切块（向量在内存，文本在此）';
+
+-- sys_knowledge_doc  知识库文档
+CREATE TABLE `sys_knowledge_doc` (
+  `id` bigint NOT NULL COMMENT '文档ID（雪花）',
+  `title` varchar(200) NOT NULL COMMENT '文档标题',
+  `category` varchar(50) DEFAULT '' COMMENT '分类',
+  `source_type` tinyint DEFAULT 1 COMMENT '来源类型（1-内置示例 2-手工录入 3-文件导入）',
+  `content` longtext COMMENT '原始全文',
+  `chunk_count` int DEFAULT 0 COMMENT '切块数量',
+  `status` tinyint DEFAULT 0 COMMENT '状态（0-正常 1-停用）',
+  `create_by` varchar(64) DEFAULT '' COMMENT '创建人',
+  `create_time` datetime COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT '' COMMENT '更新人',
+  `update_time` datetime COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT '' COMMENT '备注',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='知识库文档';
+
+-- sys_lab_plain_item  检验项目白话词典（患者端报告解读的规则层地基，人工维护）
+CREATE TABLE `sys_lab_plain_item` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `group_name` varchar(32) NOT NULL COMMENT '所属分组（血常规/肝功能/肾功能/血糖/血脂/炎症/凝血/心肌/电解质/尿常规/大便）',
+  `item_name` varchar(64) NOT NULL COMMENT '检验项目名称（与 biz_lab_result.laboratory_item_name 精确匹配）',
+  `plain_name` varchar(64) NOT NULL COMMENT '白话名（如：血色素、坏胆固醇、心肌损伤指标）',
+  `what_is_it` varchar(200) NOT NULL COMMENT '这项查什么（给患者看的一句话，不含诊断/用药）',
+  `high_text` varchar(200) NOT NULL COMMENT '结果偏高时的白话说明',
+  `low_text` varchar(200) NOT NULL COMMENT '结果偏低时的白话说明',
+  `status` tinyint DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
+  `sort_order` int DEFAULT 0 COMMENT '排序号',
+  `remark` varchar(500) COMMENT '备注',
+  `create_by` varchar(64) COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) COMMENT '更新人',
+  `update_time` datetime ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_item_name` (`item_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='检验项目白话词典（患者端报告解读的规则层地基，人工维护）';
 
 -- sys_laboratory_item  检验项目字典
 CREATE TABLE `sys_laboratory_item` (
@@ -8614,12 +9035,12 @@ CREATE TABLE `sys_operation_room` (
 
 -- sys_patient_tag  患者标签
 CREATE TABLE `sys_patient_tag` (
-  `tag_id` bigint NOT NULL AUTO_INCREMENT COMMENT '标签ID',
+  `tag_id` bigint NOT NULL COMMENT '标签ID',
   `tag_name` varchar(50) NOT NULL COMMENT '标签名称',
   `short_name` varchar(2) COMMENT '标签缩写用于展示',
   `tag_color` varchar(20) COMMENT '标签颜色',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`tag_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='患者标签';
 
@@ -8670,14 +9091,33 @@ CREATE TABLE `sys_role_menu` (
   UNIQUE KEY `uk_role_menu` (`role_id`, `menu_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色菜单关联';
 
+-- sys_service_trace  客服页自助行为埋点
+CREATE TABLE `sys_service_trace` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `user_id` bigint COMMENT '用户ID',
+  `patient_id` bigint COMMENT '就诊人ID',
+  `session_id` varchar(64) COMMENT '会话标识（同一次进入客服页）',
+  `event_type` varchar(32) NOT NULL COMMENT '事件类型（visit/card/search/view/helpful/useless/transfer/message）',
+  `event_key` varchar(200) COMMENT '事件对象（卡片名、搜索词、常见问题ID）',
+  `faq_id` bigint COMMENT '关联常见问题ID',
+  `ref_id` bigint COMMENT '关联业务ID（留言ID）',
+  `hit_count` int COMMENT '搜索命中条数（event_type=search 时）',
+  `create_by` varchar(64) COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) COMMENT '更新人',
+  `update_time` datetime ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='客服页自助行为埋点';
+
 -- sys_sign_cert  电子签名证书
 CREATE TABLE `sys_sign_cert` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `cert_no` varchar(32) NOT NULL COMMENT '证书编号',
   `emp_id` bigint NOT NULL COMMENT '签名人员工ID',
-  `emp_name` varchar(64) NOT NULL COMMENT '签名人姓名',
-  `dept_id` bigint COMMENT '所属科室ID',
-  `dept_name` varchar(64) COMMENT '所属科室名称',
+  `emp_name` varchar(64) NOT NULL COMMENT '签名人姓名（快照）',
+  `dept_id` bigint COMMENT '所属科室ID（快照）',
+  `dept_name` varchar(64) COMMENT '所属科室名称（快照）',
   `key_algo` varchar(16) NOT NULL DEFAULT 'RSA2048' COMMENT '密钥算法',
   `digest_algo` varchar(16) NOT NULL DEFAULT 'SHA256' COMMENT '摘要算法',
   `sign_algo` varchar(32) NOT NULL DEFAULT 'SHA256withRSA' COMMENT '签名算法',
@@ -8809,8 +9249,8 @@ CREATE TABLE `sys_user` (
   `del_flag` tinyint DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_openid` (`openid`),
-  UNIQUE KEY `uk_user_name` (`user_name`)
+  UNIQUE KEY `uk_user_name` (`user_name`),
+  UNIQUE KEY `uk_openid` (`openid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户';
 
 -- sys_ward  病区
@@ -8883,6 +9323,210 @@ CREATE TABLE `sys_workbench_widget` (
   UNIQUE KEY `uk_workbench_widget_code` (`widget_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='工作台卡片注册表';
 -- ---------------- 参照关系（E-R 连线） ----------------
+ALTER TABLE `biz_tech_auth_override` ADD CONSTRAINT `fk_biz_tech_auth_override_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_tech_auth_override` ADD CONSTRAINT `fk_biz_tech_auth_override_supervisor_id` FOREIGN KEY (`supervisor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `sys_attachment` ADD CONSTRAINT `fk_sys_attachment_upload_user_id` FOREIGN KEY (`upload_user_id`) REFERENCES `sys_user` (`id`);
+ALTER TABLE `sys_department` ADD CONSTRAINT `fk_sys_department_parent_id` FOREIGN KEY (`parent_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `sys_department` ADD CONSTRAINT `fk_sys_department_dept_leader_id` FOREIGN KEY (`dept_leader_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `sys_employee` ADD CONSTRAINT `fk_sys_employee_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `sys_employee_post` ADD CONSTRAINT `fk_sys_employee_post_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `sys_employee_post` ADD CONSTRAINT `fk_sys_employee_post_role_id` FOREIGN KEY (`role_id`) REFERENCES `sys_role` (`id`);
+ALTER TABLE `sys_employee_post` ADD CONSTRAINT `fk_sys_employee_post_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `sys_employee_qualification` ADD CONSTRAINT `fk_sys_employee_qualification_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `sys_employee_tech_auth` ADD CONSTRAINT `fk_sys_employee_tech_auth_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `sys_employee_tech_auth` ADD CONSTRAINT `fk_sys_employee_tech_auth_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `sys_employee_tech_auth` ADD CONSTRAINT `fk_sys_employee_tech_auth_approver_id` FOREIGN KEY (`approver_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `sys_field_change_log` ADD CONSTRAINT `fk_sys_field_change_log_operator_id` FOREIGN KEY (`operator_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `sys_field_change_log` ADD CONSTRAINT `fk_sys_field_change_log_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `sys_menu` ADD CONSTRAINT `fk_sys_menu_parent_id` FOREIGN KEY (`parent_id`) REFERENCES `sys_menu` (`id`);
+ALTER TABLE `sys_role_menu` ADD CONSTRAINT `fk_sys_role_menu_role_id` FOREIGN KEY (`role_id`) REFERENCES `sys_role` (`id`);
+ALTER TABLE `sys_role_menu` ADD CONSTRAINT `fk_sys_role_menu_menu_id` FOREIGN KEY (`menu_id`) REFERENCES `sys_menu` (`id`);
+ALTER TABLE `sys_sign_cert` ADD CONSTRAINT `fk_sys_sign_cert_emp_id` FOREIGN KEY (`emp_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `sys_sign_cert` ADD CONSTRAINT `fk_sys_sign_cert_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `sys_sign_cert` ADD CONSTRAINT `fk_sys_sign_cert_revoke_by` FOREIGN KEY (`revoke_by`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `sys_user` ADD CONSTRAINT `fk_sys_user_emp_id` FOREIGN KEY (`emp_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `sys_user` ADD CONSTRAINT `fk_sys_user_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `sys_audit_log` ADD CONSTRAINT `fk_sys_audit_log_user_id` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`);
+ALTER TABLE `sys_login_log` ADD CONSTRAINT `fk_sys_login_log_user_id` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`);
+ALTER TABLE `sys_oper_log` ADD CONSTRAINT `fk_sys_oper_log_oper_id` FOREIGN KEY (`oper_id`) REFERENCES `sys_user` (`id`);
+ALTER TABLE `sys_oper_log` ADD CONSTRAINT `fk_sys_oper_log_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_equipment_maintain` ADD CONSTRAINT `fk_biz_equipment_maintain_equipment_id` FOREIGN KEY (`equipment_id`) REFERENCES `sys_equipment` (`id`);
+ALTER TABLE `biz_equipment_metering` ADD CONSTRAINT `fk_biz_equipment_metering_equipment_id` FOREIGN KEY (`equipment_id`) REFERENCES `sys_equipment` (`id`);
+ALTER TABLE `sys_bed` ADD CONSTRAINT `fk_sys_bed_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `sys_bed` ADD CONSTRAINT `fk_sys_bed_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `sys_bed` ADD CONSTRAINT `fk_sys_bed_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `sys_clinic_room` ADD CONSTRAINT `fk_sys_clinic_room_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `sys_equipment` ADD CONSTRAINT `fk_sys_equipment_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `sys_ward` ADD CONSTRAINT `fk_sys_ward_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_shift` ADD CONSTRAINT `fk_biz_shift_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `sys_checkup_package_item` ADD CONSTRAINT `fk_sys_checkup_package_item_package_id` FOREIGN KEY (`package_id`) REFERENCES `sys_checkup_package` (`id`);
+ALTER TABLE `sys_diagnosis` ADD CONSTRAINT `fk_sys_diagnosis_parent_id` FOREIGN KEY (`parent_id`) REFERENCES `sys_diagnosis` (`id`);
+ALTER TABLE `sys_drug_price_history` ADD CONSTRAINT `fk_sys_drug_price_history_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
+ALTER TABLE `sys_drug_price_history` ADD CONSTRAINT `fk_sys_drug_price_history_operator_id` FOREIGN KEY (`operator_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `sys_inspection_item` ADD CONSTRAINT `fk_sys_inspection_item_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `sys_laboratory_item` ADD CONSTRAINT `fk_sys_laboratory_item_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `sys_laboratory_item_detail` ADD CONSTRAINT `fk_sys_laboratory_item_detail_laboratory_item_id` FOREIGN KEY (`laboratory_item_id`) REFERENCES `sys_laboratory_item` (`id`);
+ALTER TABLE `sys_price_change_history` ADD CONSTRAINT `fk_sys_price_change_history_operator_id` FOREIGN KEY (`operator_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `sys_treatment_item` ADD CONSTRAINT `fk_sys_treatment_item_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_compliance_audit` ADD CONSTRAINT `fk_biz_compliance_audit_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_insurance_settlement` (`id`);
+ALTER TABLE `biz_compliance_audit` ADD CONSTRAINT `fk_biz_compliance_audit_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
+ALTER TABLE `biz_compliance_audit_item` ADD CONSTRAINT `fk_biz_compliance_audit_item_audit_id` FOREIGN KEY (`audit_id`) REFERENCES `biz_compliance_audit` (`id`);
+ALTER TABLE `biz_insurance_report` ADD CONSTRAINT `fk_biz_insurance_report_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_insurance_settlement` (`id`);
+ALTER TABLE `biz_insurance_settlement` ADD CONSTRAINT `fk_biz_insurance_settlement_bill_id` FOREIGN KEY (`bill_id`) REFERENCES `biz_settlement_bill` (`id`);
+ALTER TABLE `biz_insurance_settlement` ADD CONSTRAINT `fk_biz_insurance_settlement_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_insurance_settlement` ADD CONSTRAINT `fk_biz_insurance_settlement_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
+ALTER TABLE `biz_insurance_settlement` ADD CONSTRAINT `fk_biz_insurance_settlement_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_insurance_settlement` ADD CONSTRAINT `fk_biz_insurance_settlement_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_settlement_diagnosis` ADD CONSTRAINT `fk_biz_settlement_diagnosis_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_insurance_settlement` (`id`);
+ALTER TABLE `biz_settlement_operation` ADD CONSTRAINT `fk_biz_settlement_operation_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_insurance_settlement` (`id`);
+ALTER TABLE `biz_yb_chronic_reg` ADD CONSTRAINT `fk_biz_yb_chronic_reg_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_yb_chronic_reg` ADD CONSTRAINT `fk_biz_yb_chronic_reg_catalog_id` FOREIGN KEY (`catalog_id`) REFERENCES `biz_yb_chronic_catalog` (`id`);
+ALTER TABLE `biz_yb_chronic_reg` ADD CONSTRAINT `fk_biz_yb_chronic_reg_certify_dept_id` FOREIGN KEY (`certify_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_yb_chronic_reg` ADD CONSTRAINT `fk_biz_yb_chronic_reg_register_dept_id` FOREIGN KEY (`register_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_yb_chronic_reg` ADD CONSTRAINT `fk_biz_yb_chronic_reg_register_emp_id` FOREIGN KEY (`register_emp_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_yb_deduct_log` ADD CONSTRAINT `fk_biz_yb_deduct_log_notice_id` FOREIGN KEY (`notice_id`) REFERENCES `biz_yb_deduct_notice` (`id`);
+ALTER TABLE `biz_yb_deduct_notice` ADD CONSTRAINT `fk_biz_yb_deduct_notice_inspection_id` FOREIGN KEY (`inspection_id`) REFERENCES `biz_yb_inspection` (`id`);
+ALTER TABLE `biz_yb_deduct_notice` ADD CONSTRAINT `fk_biz_yb_deduct_notice_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_insurance_settlement` (`id`);
+ALTER TABLE `biz_yb_deduct_notice` ADD CONSTRAINT `fk_biz_yb_deduct_notice_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_yb_deduct_notice` ADD CONSTRAINT `fk_biz_yb_deduct_notice_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_yb_deduct_notice` ADD CONSTRAINT `fk_biz_yb_deduct_notice_liable_dept_id` FOREIGN KEY (`liable_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_yb_mapping` ADD CONSTRAINT `fk_biz_yb_mapping_catalog_id` FOREIGN KEY (`catalog_id`) REFERENCES `biz_yb_catalog` (`id`);
+ALTER TABLE `biz_chronic_record` ADD CONSTRAINT `fk_biz_chronic_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_chronic_record` ADD CONSTRAINT `fk_biz_chronic_record_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_chronic_record` ADD CONSTRAINT `fk_biz_chronic_record_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_patient` ADD CONSTRAINT `fk_biz_patient_master_id` FOREIGN KEY (`master_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_patient` ADD CONSTRAINT `fk_biz_patient_last_visit_dept` FOREIGN KEY (`last_visit_dept`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_patient` ADD CONSTRAINT `fk_biz_patient_last_visit_doctor` FOREIGN KEY (`last_visit_doctor`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_patient` ADD CONSTRAINT `fk_biz_patient_first_visit_dept_id` FOREIGN KEY (`first_visit_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_patient` ADD CONSTRAINT `fk_biz_patient_first_visit_doctor_id` FOREIGN KEY (`first_visit_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_patient_allergy` ADD CONSTRAINT `fk_biz_patient_allergy_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_patient_contact` ADD CONSTRAINT `fk_biz_patient_contact_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_patient_family_history` ADD CONSTRAINT `fk_biz_patient_family_history_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_patient_guardian` ADD CONSTRAINT `fk_biz_patient_guardian_user_id` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`);
+ALTER TABLE `biz_patient_guardian` ADD CONSTRAINT `fk_biz_patient_guardian_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_patient_medication_history` ADD CONSTRAINT `fk_biz_patient_medication_history_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_patient_merge_log` ADD CONSTRAINT `fk_biz_patient_merge_log_master_id` FOREIGN KEY (`master_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_patient_merge_log` ADD CONSTRAINT `fk_biz_patient_merge_log_merged_id` FOREIGN KEY (`merged_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_patient_merge_log` ADD CONSTRAINT `fk_biz_patient_merge_log_operator_id` FOREIGN KEY (`operator_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_patient_past_disease` ADD CONSTRAINT `fk_biz_patient_past_disease_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_patient_surgery_history` ADD CONSTRAINT `fk_biz_patient_surgery_history_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_patient_tag_relation` ADD CONSTRAINT `fk_biz_patient_tag_relation_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_patient_tag_relation` ADD CONSTRAINT `fk_biz_patient_tag_relation_tag_id` FOREIGN KEY (`tag_id`) REFERENCES `sys_patient_tag` (`tag_id`);
+ALTER TABLE `biz_visit` ADD CONSTRAINT `fk_biz_visit_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_appoint_info` ADD CONSTRAINT `fk_biz_appoint_info_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_appoint_info` ADD CONSTRAINT `fk_biz_appoint_info_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_appoint_info` ADD CONSTRAINT `fk_biz_appoint_info_room_id` FOREIGN KEY (`room_id`) REFERENCES `sys_clinic_room` (`id`);
+ALTER TABLE `biz_appoint_info` ADD CONSTRAINT `fk_biz_appoint_info_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_appoint_info` ADD CONSTRAINT `fk_biz_appoint_info_schedule_id` FOREIGN KEY (`schedule_id`) REFERENCES `biz_schedule` (`id`);
+ALTER TABLE `biz_appoint_info` ADD CONSTRAINT `fk_biz_appoint_info_slot_id` FOREIGN KEY (`slot_id`) REFERENCES `biz_schedule_slot` (`id`);
+ALTER TABLE `biz_appoint_info` ADD CONSTRAINT `fk_biz_appoint_info_revisit_record_id` FOREIGN KEY (`revisit_record_id`) REFERENCES `biz_medical_record` (`id`);
+ALTER TABLE `biz_appoint_info` ADD CONSTRAINT `fk_biz_appoint_info_bill_id` FOREIGN KEY (`bill_id`) REFERENCES `biz_settlement_bill` (`id`);
+ALTER TABLE `biz_appoint_info` ADD CONSTRAINT `fk_biz_appoint_info_create_by_id` FOREIGN KEY (`create_by_id`) REFERENCES `sys_user` (`id`);
+ALTER TABLE `biz_appoint_info` ADD CONSTRAINT `fk_biz_appoint_info_update_by_id` FOREIGN KEY (`update_by_id`) REFERENCES `sys_user` (`id`);
+ALTER TABLE `biz_previsit_record` ADD CONSTRAINT `fk_biz_previsit_record_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
+ALTER TABLE `biz_previsit_record` ADD CONSTRAINT `fk_biz_previsit_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_previsit_record` ADD CONSTRAINT `fk_biz_previsit_record_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_queue` ADD CONSTRAINT `fk_biz_queue_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
+ALTER TABLE `biz_queue` ADD CONSTRAINT `fk_biz_queue_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_queue` ADD CONSTRAINT `fk_biz_queue_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_queue` ADD CONSTRAINT `fk_biz_queue_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_queue` ADD CONSTRAINT `fk_biz_queue_room_id` FOREIGN KEY (`room_id`) REFERENCES `sys_clinic_room` (`id`);
+ALTER TABLE `biz_schedule` ADD CONSTRAINT `fk_biz_schedule_staff_schedule_id` FOREIGN KEY (`staff_schedule_id`) REFERENCES `biz_staff_schedule` (`id`);
+ALTER TABLE `biz_schedule` ADD CONSTRAINT `fk_biz_schedule_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_schedule` ADD CONSTRAINT `fk_biz_schedule_room_id` FOREIGN KEY (`room_id`) REFERENCES `sys_clinic_room` (`id`);
+ALTER TABLE `biz_schedule` ADD CONSTRAINT `fk_biz_schedule_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_schedule` ADD CONSTRAINT `fk_biz_schedule_shift_id` FOREIGN KEY (`shift_id`) REFERENCES `biz_shift` (`id`);
+ALTER TABLE `biz_schedule_change_log` ADD CONSTRAINT `fk_biz_schedule_change_log_staff_schedule_id` FOREIGN KEY (`staff_schedule_id`) REFERENCES `biz_staff_schedule` (`id`);
+ALTER TABLE `biz_schedule_change_log` ADD CONSTRAINT `fk_biz_schedule_change_log_from_employee_id` FOREIGN KEY (`from_employee_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_schedule_change_log` ADD CONSTRAINT `fk_biz_schedule_change_log_to_employee_id` FOREIGN KEY (`to_employee_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_schedule_change_log` ADD CONSTRAINT `fk_biz_schedule_change_log_from_shift_id` FOREIGN KEY (`from_shift_id`) REFERENCES `biz_shift` (`id`);
+ALTER TABLE `biz_schedule_change_log` ADD CONSTRAINT `fk_biz_schedule_change_log_to_shift_id` FOREIGN KEY (`to_shift_id`) REFERENCES `biz_shift` (`id`);
+ALTER TABLE `biz_schedule_slot` ADD CONSTRAINT `fk_biz_schedule_slot_schedule_id` FOREIGN KEY (`schedule_id`) REFERENCES `biz_schedule` (`id`);
+ALTER TABLE `biz_schedule_slot_template` ADD CONSTRAINT `fk_biz_schedule_slot_template_template_id` FOREIGN KEY (`template_id`) REFERENCES `biz_schedule_template` (`id`);
+ALTER TABLE `biz_schedule_template` ADD CONSTRAINT `fk_biz_schedule_template_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_schedule_template` ADD CONSTRAINT `fk_biz_schedule_template_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_schedule_template` ADD CONSTRAINT `fk_biz_schedule_template_shift_id` FOREIGN KEY (`shift_id`) REFERENCES `biz_shift` (`id`);
+ALTER TABLE `biz_schedule_template` ADD CONSTRAINT `fk_biz_schedule_template_room_id` FOREIGN KEY (`room_id`) REFERENCES `sys_clinic_room` (`id`);
+ALTER TABLE `biz_staff_attendance` ADD CONSTRAINT `fk_biz_staff_attendance_staff_schedule_id` FOREIGN KEY (`staff_schedule_id`) REFERENCES `biz_staff_schedule` (`id`);
+ALTER TABLE `biz_staff_attendance` ADD CONSTRAINT `fk_biz_staff_attendance_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_staff_attendance` ADD CONSTRAINT `fk_biz_staff_attendance_shift_id` FOREIGN KEY (`shift_id`) REFERENCES `biz_shift` (`id`);
+ALTER TABLE `biz_staff_attendance` ADD CONSTRAINT `fk_biz_staff_attendance_substitute_for` FOREIGN KEY (`substitute_for`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_staff_demand` ADD CONSTRAINT `fk_biz_staff_demand_shift_id` FOREIGN KEY (`shift_id`) REFERENCES `biz_shift` (`id`);
+ALTER TABLE `biz_staff_plan_rule` ADD CONSTRAINT `fk_biz_staff_plan_rule_shift_id` FOREIGN KEY (`shift_id`) REFERENCES `biz_shift` (`id`);
+ALTER TABLE `biz_staff_schedule` ADD CONSTRAINT `fk_biz_staff_schedule_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_staff_schedule` ADD CONSTRAINT `fk_biz_staff_schedule_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_staff_schedule` ADD CONSTRAINT `fk_biz_staff_schedule_employee_post_id` FOREIGN KEY (`employee_post_id`) REFERENCES `sys_employee_post` (`id`);
+ALTER TABLE `biz_staff_schedule` ADD CONSTRAINT `fk_biz_staff_schedule_shift_id` FOREIGN KEY (`shift_id`) REFERENCES `biz_shift` (`id`);
+ALTER TABLE `biz_staff_schedule` ADD CONSTRAINT `fk_biz_staff_schedule_template_id` FOREIGN KEY (`template_id`) REFERENCES `biz_schedule_template` (`id`);
+ALTER TABLE `biz_triage_record` ADD CONSTRAINT `fk_biz_triage_record_queue_id` FOREIGN KEY (`queue_id`) REFERENCES `biz_queue` (`id`);
+ALTER TABLE `biz_triage_record` ADD CONSTRAINT `fk_biz_triage_record_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
+ALTER TABLE `biz_triage_record` ADD CONSTRAINT `fk_biz_triage_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_triage_record` ADD CONSTRAINT `fk_biz_triage_record_room_id` FOREIGN KEY (`room_id`) REFERENCES `sys_clinic_room` (`id`);
+ALTER TABLE `biz_triage_record` ADD CONSTRAINT `fk_biz_triage_record_triage_nurse_id` FOREIGN KEY (`triage_nurse_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_triage_rule` ADD CONSTRAINT `fk_biz_triage_rule_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_ai_draft_diff` ADD CONSTRAINT `fk_biz_ai_draft_diff_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_medical_record` (`id`);
+ALTER TABLE `biz_ai_draft_diff` ADD CONSTRAINT `fk_biz_ai_draft_diff_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
+ALTER TABLE `biz_ai_draft_diff` ADD CONSTRAINT `fk_biz_ai_draft_diff_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_ai_draft_diff` ADD CONSTRAINT `fk_biz_ai_draft_diff_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_ai_draft_diff` ADD CONSTRAINT `fk_biz_ai_draft_diff_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_diag_template` ADD CONSTRAINT `fk_biz_diag_template_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_infusion_round` ADD CONSTRAINT `fk_biz_infusion_round_exec_id` FOREIGN KEY (`exec_id`) REFERENCES `biz_inpatient_order_exec` (`id`);
+ALTER TABLE `biz_infusion_round` ADD CONSTRAINT `fk_biz_infusion_round_order_id` FOREIGN KEY (`order_id`) REFERENCES `biz_inpatient_order` (`id`);
+ALTER TABLE `biz_infusion_round` ADD CONSTRAINT `fk_biz_infusion_round_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_infusion_round` ADD CONSTRAINT `fk_biz_infusion_round_round_nurse_id` FOREIGN KEY (`round_nurse_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_medical_record` ADD CONSTRAINT `fk_biz_medical_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_medical_record` ADD CONSTRAINT `fk_biz_medical_record_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
+ALTER TABLE `biz_medical_record` ADD CONSTRAINT `fk_biz_medical_record_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_medical_record` ADD CONSTRAINT `fk_biz_medical_record_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_medical_record` ADD CONSTRAINT `fk_biz_medical_record_sign_id` FOREIGN KEY (`sign_id`) REFERENCES `biz_emr_signature` (`id`);
+ALTER TABLE `biz_medical_record_log` ADD CONSTRAINT `fk_biz_medical_record_log_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_medical_record` (`id`);
+ALTER TABLE `biz_medical_record_log` ADD CONSTRAINT `fk_biz_medical_record_log_user_id` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`);
+ALTER TABLE `biz_narcotic_register` ADD CONSTRAINT `fk_biz_narcotic_register_prescription_id` FOREIGN KEY (`prescription_id`) REFERENCES `biz_prescription` (`id`);
+ALTER TABLE `biz_narcotic_register` ADD CONSTRAINT `fk_biz_narcotic_register_dispensing_id` FOREIGN KEY (`dispensing_id`) REFERENCES `biz_drug_dispensing` (`id`);
+ALTER TABLE `biz_narcotic_register` ADD CONSTRAINT `fk_biz_narcotic_register_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_narcotic_register` ADD CONSTRAINT `fk_biz_narcotic_register_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_narcotic_register` ADD CONSTRAINT `fk_biz_narcotic_register_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
+ALTER TABLE `biz_narcotic_register` ADD CONSTRAINT `fk_biz_narcotic_register_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_narcotic_register` ADD CONSTRAINT `fk_biz_narcotic_register_dispense_by_id` FOREIGN KEY (`dispense_by_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_narcotic_register` ADD CONSTRAINT `fk_biz_narcotic_register_checker_id` FOREIGN KEY (`checker_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_outp_infusion` ADD CONSTRAINT `fk_biz_outp_infusion_treatment_record_id` FOREIGN KEY (`treatment_record_id`) REFERENCES `biz_treatment_record` (`record_id`);
+ALTER TABLE `biz_outp_infusion` ADD CONSTRAINT `fk_biz_outp_infusion_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_outp_infusion` ADD CONSTRAINT `fk_biz_outp_infusion_seat_id` FOREIGN KEY (`seat_id`) REFERENCES `biz_infusion_seat` (`id`);
+ALTER TABLE `biz_outp_infusion` ADD CONSTRAINT `fk_biz_outp_infusion_skin_test_id` FOREIGN KEY (`skin_test_id`) REFERENCES `biz_skin_test` (`id`);
+ALTER TABLE `biz_outp_infusion` ADD CONSTRAINT `fk_biz_outp_infusion_nurse_id` FOREIGN KEY (`nurse_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_outp_infusion_round` ADD CONSTRAINT `fk_biz_outp_infusion_round_infusion_id` FOREIGN KEY (`infusion_id`) REFERENCES `biz_outp_infusion` (`id`);
+ALTER TABLE `biz_outp_infusion_round` ADD CONSTRAINT `fk_biz_outp_infusion_round_nurse_id` FOREIGN KEY (`nurse_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_prescription` ADD CONSTRAINT `fk_biz_prescription_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_prescription` ADD CONSTRAINT `fk_biz_prescription_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
+ALTER TABLE `biz_prescription` ADD CONSTRAINT `fk_biz_prescription_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_medical_record` (`id`);
+ALTER TABLE `biz_prescription` ADD CONSTRAINT `fk_biz_prescription_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_prescription` ADD CONSTRAINT `fk_biz_prescription_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_prescription` ADD CONSTRAINT `fk_biz_prescription_doctor_sign_id` FOREIGN KEY (`doctor_sign_id`) REFERENCES `biz_emr_signature` (`id`);
+ALTER TABLE `biz_prescription` ADD CONSTRAINT `fk_biz_prescription_audit_sign_id` FOREIGN KEY (`audit_sign_id`) REFERENCES `biz_emr_signature` (`id`);
+ALTER TABLE `biz_prescription_audit_log` ADD CONSTRAINT `fk_biz_prescription_audit_log_prescription_id` FOREIGN KEY (`prescription_id`) REFERENCES `biz_prescription` (`id`);
+ALTER TABLE `biz_prescription_audit_log` ADD CONSTRAINT `fk_biz_prescription_audit_log_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_medical_record` (`id`);
+ALTER TABLE `biz_prescription_audit_log` ADD CONSTRAINT `fk_biz_prescription_audit_log_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
+ALTER TABLE `biz_prescription_audit_log` ADD CONSTRAINT `fk_biz_prescription_audit_log_auditor_id` FOREIGN KEY (`auditor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_prescription_detail` ADD CONSTRAINT `fk_biz_prescription_detail_prescription_id` FOREIGN KEY (`prescription_id`) REFERENCES `biz_prescription` (`id`);
+ALTER TABLE `biz_prescription_detail` ADD CONSTRAINT `fk_biz_prescription_detail_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
+ALTER TABLE `biz_rx_doctor_talk` ADD CONSTRAINT `fk_biz_rx_doctor_talk_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_rx_flow` ADD CONSTRAINT `fk_biz_rx_flow_prescription_id` FOREIGN KEY (`prescription_id`) REFERENCES `biz_prescription` (`id`);
+ALTER TABLE `biz_rx_flow` ADD CONSTRAINT `fk_biz_rx_flow_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_rx_review_batch` ADD CONSTRAINT `fk_biz_rx_review_batch_reviewer_id` FOREIGN KEY (`reviewer_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_rx_review_item` ADD CONSTRAINT `fk_biz_rx_review_item_batch_id` FOREIGN KEY (`batch_id`) REFERENCES `biz_rx_review_batch` (`id`);
+ALTER TABLE `biz_rx_review_item` ADD CONSTRAINT `fk_biz_rx_review_item_prescription_id` FOREIGN KEY (`prescription_id`) REFERENCES `biz_prescription` (`id`);
+ALTER TABLE `biz_rx_review_item` ADD CONSTRAINT `fk_biz_rx_review_item_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_rx_review_item` ADD CONSTRAINT `fk_biz_rx_review_item_reviewer_id` FOREIGN KEY (`reviewer_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_rx_template` ADD CONSTRAINT `fk_biz_rx_template_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_rx_template_detail` ADD CONSTRAINT `fk_biz_rx_template_detail_template_id` FOREIGN KEY (`template_id`) REFERENCES `biz_rx_template` (`id`);
+ALTER TABLE `biz_rx_template_detail` ADD CONSTRAINT `fk_biz_rx_template_detail_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
+ALTER TABLE `biz_skin_test` ADD CONSTRAINT `fk_biz_skin_test_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_skin_test` ADD CONSTRAINT `fk_biz_skin_test_treatment_record_id` FOREIGN KEY (`treatment_record_id`) REFERENCES `biz_treatment_record` (`record_id`);
+ALTER TABLE `biz_skin_test` ADD CONSTRAINT `fk_biz_skin_test_nurse_id` FOREIGN KEY (`nurse_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_tcm_decoct` ADD CONSTRAINT `fk_biz_tcm_decoct_prescription_id` FOREIGN KEY (`prescription_id`) REFERENCES `biz_prescription` (`id`);
+ALTER TABLE `biz_tcm_decoct` ADD CONSTRAINT `fk_biz_tcm_decoct_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_tcm_decoct` ADD CONSTRAINT `fk_biz_tcm_decoct_pharmacy_id` FOREIGN KEY (`pharmacy_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_tcm_decoct` ADD CONSTRAINT `fk_biz_tcm_decoct_operator_id` FOREIGN KEY (`operator_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_admission` ADD CONSTRAINT `fk_biz_admission_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
 ALTER TABLE `biz_admission` ADD CONSTRAINT `fk_biz_admission_visit_id` FOREIGN KEY (`visit_id`) REFERENCES `biz_visit` (`visit_id`);
 ALTER TABLE `biz_admission` ADD CONSTRAINT `fk_biz_admission_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
@@ -8900,16 +9544,248 @@ ALTER TABLE `biz_admission_order` ADD CONSTRAINT `fk_biz_admission_order_source_
 ALTER TABLE `biz_admission_order` ADD CONSTRAINT `fk_biz_admission_order_apply_dept_id` FOREIGN KEY (`apply_dept_id`) REFERENCES `sys_department` (`id`);
 ALTER TABLE `biz_admission_order` ADD CONSTRAINT `fk_biz_admission_order_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
 ALTER TABLE `biz_admission_order` ADD CONSTRAINT `fk_biz_admission_order_admit_dept_id` FOREIGN KEY (`admit_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_adverse_event` ADD CONSTRAINT `fk_biz_adverse_event_occur_dept_id` FOREIGN KEY (`occur_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_adverse_event` ADD CONSTRAINT `fk_biz_adverse_event_occur_ward_id` FOREIGN KEY (`occur_ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_adverse_event` ADD CONSTRAINT `fk_biz_adverse_event_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_adverse_event` ADD CONSTRAINT `fk_biz_adverse_event_visit_id` FOREIGN KEY (`visit_id`) REFERENCES `biz_visit` (`visit_id`);
-ALTER TABLE `biz_adverse_event` ADD CONSTRAINT `fk_biz_adverse_event_reporter_id` FOREIGN KEY (`reporter_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_adverse_event` ADD CONSTRAINT `fk_biz_adverse_event_handler_id` FOREIGN KEY (`handler_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_adverse_event` ADD CONSTRAINT `fk_biz_adverse_event_rectify_by_id` FOREIGN KEY (`rectify_by_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_adverse_event` ADD CONSTRAINT `fk_biz_adverse_event_close_by_id` FOREIGN KEY (`close_by_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_alert` ADD CONSTRAINT `fk_biz_alert_rule_id` FOREIGN KEY (`rule_id`) REFERENCES `sys_alert_rule` (`rule_id`);
-ALTER TABLE `biz_alert` ADD CONSTRAINT `fk_biz_alert_notify_user_id` FOREIGN KEY (`notify_user_id`) REFERENCES `sys_user` (`id`);
+ALTER TABLE `biz_attending_relation` ADD CONSTRAINT `fk_biz_attending_relation_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_attending_relation` ADD CONSTRAINT `fk_biz_attending_relation_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_attending_relation` ADD CONSTRAINT `fk_biz_attending_relation_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_attending_relation` ADD CONSTRAINT `fk_biz_attending_relation_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_attending_relation` ADD CONSTRAINT `fk_biz_attending_relation_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_attending_relation` ADD CONSTRAINT `fk_biz_attending_relation_bed_id` FOREIGN KEY (`bed_id`) REFERENCES `sys_bed` (`bed_id`);
+ALTER TABLE `biz_bed_allocate` ADD CONSTRAINT `fk_biz_bed_allocate_bed_id` FOREIGN KEY (`bed_id`) REFERENCES `sys_bed` (`bed_id`);
+ALTER TABLE `biz_bed_allocate` ADD CONSTRAINT `fk_biz_bed_allocate_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_bed_allocate` ADD CONSTRAINT `fk_biz_bed_allocate_own_dept_id` FOREIGN KEY (`own_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_bed_allocate` ADD CONSTRAINT `fk_biz_bed_allocate_use_dept_id` FOREIGN KEY (`use_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_bed_allocate` ADD CONSTRAINT `fk_biz_bed_allocate_wait_id` FOREIGN KEY (`wait_id`) REFERENCES `biz_bed_wait` (`id`);
+ALTER TABLE `biz_bed_allocate` ADD CONSTRAINT `fk_biz_bed_allocate_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_bed_allocate` ADD CONSTRAINT `fk_biz_bed_allocate_operator_id` FOREIGN KEY (`operator_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_bed_allocate` ADD CONSTRAINT `fk_biz_bed_allocate_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_bed_wait` ADD CONSTRAINT `fk_biz_bed_wait_admission_order_id` FOREIGN KEY (`admission_order_id`) REFERENCES `biz_admission_order` (`id`);
+ALTER TABLE `biz_bed_wait` ADD CONSTRAINT `fk_biz_bed_wait_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_bed_wait` ADD CONSTRAINT `fk_biz_bed_wait_apply_dept_id` FOREIGN KEY (`apply_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_bed_wait` ADD CONSTRAINT `fk_biz_bed_wait_expect_ward_id` FOREIGN KEY (`expect_ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_bed_wait` ADD CONSTRAINT `fk_biz_bed_wait_assigned_bed_id` FOREIGN KEY (`assigned_bed_id`) REFERENCES `sys_bed` (`bed_id`);
+ALTER TABLE `biz_bed_wait` ADD CONSTRAINT `fk_biz_bed_wait_assigned_ward_id` FOREIGN KEY (`assigned_ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_bed_wait` ADD CONSTRAINT `fk_biz_bed_wait_assigned_dept_id` FOREIGN KEY (`assigned_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_bed_wait` ADD CONSTRAINT `fk_biz_bed_wait_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_consultation` ADD CONSTRAINT `fk_biz_consultation_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_consultation` ADD CONSTRAINT `fk_biz_consultation_visit_id` FOREIGN KEY (`visit_id`) REFERENCES `biz_visit` (`visit_id`);
+ALTER TABLE `biz_consultation` ADD CONSTRAINT `fk_biz_consultation_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_consultation` ADD CONSTRAINT `fk_biz_consultation_from_dept_id` FOREIGN KEY (`from_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_consultation` ADD CONSTRAINT `fk_biz_consultation_apply_doctor_id` FOREIGN KEY (`apply_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_consultation` ADD CONSTRAINT `fk_biz_consultation_to_dept_id` FOREIGN KEY (`to_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_consultation` ADD CONSTRAINT `fk_biz_consultation_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_consultation` ADD CONSTRAINT `fk_biz_consultation_accept_doctor_id` FOREIGN KEY (`accept_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_consultation` ADD CONSTRAINT `fk_biz_consultation_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inpatient_record` (`id`);
+ALTER TABLE `biz_critical_notice` ADD CONSTRAINT `fk_biz_critical_notice_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_critical_notice` ADD CONSTRAINT `fk_biz_critical_notice_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_critical_notice` ADD CONSTRAINT `fk_biz_critical_notice_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_critical_notice` ADD CONSTRAINT `fk_biz_critical_notice_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_critical_notice` ADD CONSTRAINT `fk_biz_critical_notice_witness_doctor_id` FOREIGN KEY (`witness_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_critical_notice` ADD CONSTRAINT `fk_biz_critical_notice_sign_id` FOREIGN KEY (`sign_id`) REFERENCES `biz_emr_signature` (`id`);
+ALTER TABLE `biz_discharge` ADD CONSTRAINT `fk_biz_discharge_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_discharge` ADD CONSTRAINT `fk_biz_discharge_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_discharge` ADD CONSTRAINT `fk_biz_discharge_discharge_doctor_id` FOREIGN KEY (`discharge_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_discharge_drug` ADD CONSTRAINT `fk_biz_discharge_drug_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_discharge_drug` ADD CONSTRAINT `fk_biz_discharge_drug_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_discharge_drug` ADD CONSTRAINT `fk_biz_discharge_drug_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
+ALTER TABLE `biz_discharge_drug` ADD CONSTRAINT `fk_biz_discharge_drug_dispense_by` FOREIGN KEY (`dispense_by`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_inpatient_leave` ADD CONSTRAINT `fk_biz_inpatient_leave_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_inpatient_leave` ADD CONSTRAINT `fk_biz_inpatient_leave_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_inpatient_leave` ADD CONSTRAINT `fk_biz_inpatient_leave_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_inpatient_leave` ADD CONSTRAINT `fk_biz_inpatient_leave_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_inpatient_leave` ADD CONSTRAINT `fk_biz_inpatient_leave_sign_id` FOREIGN KEY (`sign_id`) REFERENCES `biz_emr_signature` (`id`);
+ALTER TABLE `biz_inpatient_order` ADD CONSTRAINT `fk_biz_inpatient_order_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_inpatient_order` ADD CONSTRAINT `fk_biz_inpatient_order_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_inpatient_order` ADD CONSTRAINT `fk_biz_inpatient_order_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_inpatient_order` ADD CONSTRAINT `fk_biz_inpatient_order_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_inpatient_order` ADD CONSTRAINT `fk_biz_inpatient_order_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_inpatient_order` ADD CONSTRAINT `fk_biz_inpatient_order_doctor_sign_id` FOREIGN KEY (`doctor_sign_id`) REFERENCES `biz_emr_signature` (`id`);
+ALTER TABLE `biz_inpatient_order` ADD CONSTRAINT `fk_biz_inpatient_order_verify_nurse_id` FOREIGN KEY (`verify_nurse_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_inpatient_order` ADD CONSTRAINT `fk_biz_inpatient_order_nurse_sign_id` FOREIGN KEY (`nurse_sign_id`) REFERENCES `biz_emr_signature` (`id`);
+ALTER TABLE `biz_inpatient_order` ADD CONSTRAINT `fk_biz_inpatient_order_stop_doctor_id` FOREIGN KEY (`stop_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_inpatient_order_exec` ADD CONSTRAINT `fk_biz_inpatient_order_exec_order_id` FOREIGN KEY (`order_id`) REFERENCES `biz_inpatient_order` (`id`);
+ALTER TABLE `biz_inpatient_order_exec` ADD CONSTRAINT `fk_biz_inpatient_order_exec_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_inpatient_order_exec` ADD CONSTRAINT `fk_biz_inpatient_order_exec_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_inpatient_order_exec` ADD CONSTRAINT `fk_biz_inpatient_order_exec_exec_nurse_id` FOREIGN KEY (`exec_nurse_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_inpatient_order_exec` ADD CONSTRAINT `fk_biz_inpatient_order_exec_fee_record_id` FOREIGN KEY (`fee_record_id`) REFERENCES `biz_fee_record` (`id`);
+ALTER TABLE `biz_inpatient_order_template` ADD CONSTRAINT `fk_biz_inpatient_order_template_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_inpatient_order_template` ADD CONSTRAINT `fk_biz_inpatient_order_template_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_inpatient_order_template_item` ADD CONSTRAINT `fk_biz_inpatient_order_template_item_template_id` FOREIGN KEY (`template_id`) REFERENCES `biz_inpatient_order_template` (`id`);
+ALTER TABLE `biz_inpatient_transfer` ADD CONSTRAINT `fk_biz_inpatient_transfer_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_inpatient_transfer` ADD CONSTRAINT `fk_biz_inpatient_transfer_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_inpatient_transfer` ADD CONSTRAINT `fk_biz_inpatient_transfer_from_dept_id` FOREIGN KEY (`from_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_inpatient_transfer` ADD CONSTRAINT `fk_biz_inpatient_transfer_from_ward_id` FOREIGN KEY (`from_ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_inpatient_transfer` ADD CONSTRAINT `fk_biz_inpatient_transfer_from_bed_id` FOREIGN KEY (`from_bed_id`) REFERENCES `sys_bed` (`bed_id`);
+ALTER TABLE `biz_inpatient_transfer` ADD CONSTRAINT `fk_biz_inpatient_transfer_to_dept_id` FOREIGN KEY (`to_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_inpatient_transfer` ADD CONSTRAINT `fk_biz_inpatient_transfer_to_ward_id` FOREIGN KEY (`to_ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_inpatient_transfer` ADD CONSTRAINT `fk_biz_inpatient_transfer_to_bed_id` FOREIGN KEY (`to_bed_id`) REFERENCES `sys_bed` (`bed_id`);
+ALTER TABLE `biz_inpatient_transfer` ADD CONSTRAINT `fk_biz_inpatient_transfer_apply_doctor_id` FOREIGN KEY (`apply_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_inpatient_transfer` ADD CONSTRAINT `fk_biz_inpatient_transfer_receive_doctor_id` FOREIGN KEY (`receive_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_inpatient_transfer` ADD CONSTRAINT `fk_biz_inpatient_transfer_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inpatient_record` (`id`);
+ALTER TABLE `biz_nurse_schedule` ADD CONSTRAINT `fk_biz_nurse_schedule_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_nurse_schedule` ADD CONSTRAINT `fk_biz_nurse_schedule_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_nurse_schedule` ADD CONSTRAINT `fk_biz_nurse_schedule_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_nurse_schedule` ADD CONSTRAINT `fk_biz_nurse_schedule_shift_id` FOREIGN KEY (`shift_id`) REFERENCES `biz_shift` (`id`);
+ALTER TABLE `biz_nurse_schedule` ADD CONSTRAINT `fk_biz_nurse_schedule_staff_schedule_id` FOREIGN KEY (`staff_schedule_id`) REFERENCES `biz_staff_schedule` (`id`);
+ALTER TABLE `biz_nurse_schedule_rule` ADD CONSTRAINT `fk_biz_nurse_schedule_rule_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_nurse_schedule_rule` ADD CONSTRAINT `fk_biz_nurse_schedule_rule_shift_id` FOREIGN KEY (`shift_id`) REFERENCES `biz_shift` (`id`);
+ALTER TABLE `biz_nursing_assessment` ADD CONSTRAINT `fk_biz_nursing_assessment_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_nursing_assessment` ADD CONSTRAINT `fk_biz_nursing_assessment_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_nursing_assessment` ADD CONSTRAINT `fk_biz_nursing_assessment_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_nursing_assessment` ADD CONSTRAINT `fk_biz_nursing_assessment_assess_nurse_id` FOREIGN KEY (`assess_nurse_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_nursing_qc_check` ADD CONSTRAINT `fk_biz_nursing_qc_check_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_nursing_qc_check` ADD CONSTRAINT `fk_biz_nursing_qc_check_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_nursing_qc_check` ADD CONSTRAINT `fk_biz_nursing_qc_check_inspector_id` FOREIGN KEY (`inspector_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_nursing_qc_check_item` ADD CONSTRAINT `fk_biz_nursing_qc_check_item_check_id` FOREIGN KEY (`check_id`) REFERENCES `biz_nursing_qc_check` (`id`);
+ALTER TABLE `biz_nursing_qc_check_item` ADD CONSTRAINT `fk_biz_nursing_qc_check_item_item_id` FOREIGN KEY (`item_id`) REFERENCES `sys_nursing_qc_item` (`id`);
+ALTER TABLE `biz_nursing_qc_indicator` ADD CONSTRAINT `fk_biz_nursing_qc_indicator_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_nursing_qc_indicator` ADD CONSTRAINT `fk_biz_nursing_qc_indicator_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_nursing_record` ADD CONSTRAINT `fk_biz_nursing_record_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_nursing_record` ADD CONSTRAINT `fk_biz_nursing_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_nursing_record` ADD CONSTRAINT `fk_biz_nursing_record_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_nursing_record` ADD CONSTRAINT `fk_biz_nursing_record_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_nursing_record` ADD CONSTRAINT `fk_biz_nursing_record_nurse_id` FOREIGN KEY (`nurse_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_archive_borrow` ADD CONSTRAINT `fk_biz_archive_borrow_archive_id` FOREIGN KEY (`archive_id`) REFERENCES `biz_medical_record_archive` (`id`);
+ALTER TABLE `biz_archive_borrow` ADD CONSTRAINT `fk_biz_archive_borrow_applicant_id` FOREIGN KEY (`applicant_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_archive_borrow` ADD CONSTRAINT `fk_biz_archive_borrow_audit_by_id` FOREIGN KEY (`audit_by_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_archive_code_task` ADD CONSTRAINT `fk_biz_archive_code_task_archive_id` FOREIGN KEY (`archive_id`) REFERENCES `biz_medical_record_archive` (`id`);
+ALTER TABLE `biz_archive_code_task` ADD CONSTRAINT `fk_biz_archive_code_task_coder_id` FOREIGN KEY (`coder_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_archive_code_task` ADD CONSTRAINT `fk_biz_archive_code_task_audit_by_id` FOREIGN KEY (`audit_by_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_drg_sim_result` ADD CONSTRAINT `fk_biz_drg_sim_result_summary_id` FOREIGN KEY (`summary_id`) REFERENCES `biz_inpatient_summary` (`id`);
+ALTER TABLE `biz_emr_signature` ADD CONSTRAINT `fk_biz_emr_signature_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_emr_signature` ADD CONSTRAINT `fk_biz_emr_signature_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_emr_signature` ADD CONSTRAINT `fk_biz_emr_signature_prev_sign_id` FOREIGN KEY (`prev_sign_id`) REFERENCES `biz_emr_signature` (`id`);
+ALTER TABLE `biz_emr_signature` ADD CONSTRAINT `fk_biz_emr_signature_signer_id` FOREIGN KEY (`signer_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_emr_signature` ADD CONSTRAINT `fk_biz_emr_signature_signer_dept_id` FOREIGN KEY (`signer_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_emr_signature` ADD CONSTRAINT `fk_biz_emr_signature_cert_id` FOREIGN KEY (`cert_id`) REFERENCES `sys_sign_cert` (`id`);
+ALTER TABLE `biz_emr_signature` ADD CONSTRAINT `fk_biz_emr_signature_invalid_by` FOREIGN KEY (`invalid_by`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_inpatient_diagnosis` ADD CONSTRAINT `fk_biz_inpatient_diagnosis_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_inpatient_operation` ADD CONSTRAINT `fk_biz_inpatient_operation_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_inpatient_operation` ADD CONSTRAINT `fk_biz_inpatient_operation_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_operation_apply` (`id`);
+ALTER TABLE `biz_inpatient_operation` ADD CONSTRAINT `fk_biz_inpatient_operation_surgeon_id` FOREIGN KEY (`surgeon_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_inpatient_record` ADD CONSTRAINT `fk_biz_inpatient_record_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_inpatient_record` ADD CONSTRAINT `fk_biz_inpatient_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_inpatient_record` ADD CONSTRAINT `fk_biz_inpatient_record_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_inpatient_record` ADD CONSTRAINT `fk_biz_inpatient_record_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_inpatient_record` ADD CONSTRAINT `fk_biz_inpatient_record_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_inpatient_record` ADD CONSTRAINT `fk_biz_inpatient_record_archive_by` FOREIGN KEY (`archive_by`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_inpatient_record` ADD CONSTRAINT `fk_biz_inpatient_record_sign_id` FOREIGN KEY (`sign_id`) REFERENCES `biz_emr_signature` (`id`);
+ALTER TABLE `biz_inpatient_record_log` ADD CONSTRAINT `fk_biz_inpatient_record_log_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inpatient_record` (`id`);
+ALTER TABLE `biz_inpatient_record_log` ADD CONSTRAINT `fk_biz_inpatient_record_log_user_id` FOREIGN KEY (`user_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_inpatient_summary` ADD CONSTRAINT `fk_biz_inpatient_summary_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_inpatient_summary` ADD CONSTRAINT `fk_biz_inpatient_summary_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_inpatient_summary` ADD CONSTRAINT `fk_biz_inpatient_summary_admit_dept_id` FOREIGN KEY (`admit_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_inpatient_summary` ADD CONSTRAINT `fk_biz_inpatient_summary_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_inpatient_summary` ADD CONSTRAINT `fk_biz_inpatient_summary_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_medical_record_archive` ADD CONSTRAINT `fk_biz_medical_record_archive_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_medical_record` (`id`);
+ALTER TABLE `biz_medical_record_archive` ADD CONSTRAINT `fk_biz_medical_record_archive_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_medical_record_archive` ADD CONSTRAINT `fk_biz_medical_record_archive_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
+ALTER TABLE `biz_medical_record_archive` ADD CONSTRAINT `fk_biz_medical_record_archive_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_medical_record_archive` ADD CONSTRAINT `fk_biz_medical_record_archive_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_quality_control` ADD CONSTRAINT `fk_biz_quality_control_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inpatient_record` (`id`);
+ALTER TABLE `biz_quality_control` ADD CONSTRAINT `fk_biz_quality_control_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_quality_control_issue` ADD CONSTRAINT `fk_biz_quality_control_issue_qc_id` FOREIGN KEY (`qc_id`) REFERENCES `biz_quality_control` (`id`);
+ALTER TABLE `biz_quality_control_issue` ADD CONSTRAINT `fk_biz_quality_control_issue_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inpatient_record` (`id`);
+ALTER TABLE `biz_quality_control_issue` ADD CONSTRAINT `fk_biz_quality_control_issue_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_record_qc_flow` ADD CONSTRAINT `fk_biz_record_qc_flow_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_medical_record` (`id`);
+ALTER TABLE `biz_record_qc_flow` ADD CONSTRAINT `fk_biz_record_qc_flow_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_record_qc_flow` ADD CONSTRAINT `fk_biz_record_qc_flow_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_record_qc_flow_action` ADD CONSTRAINT `fk_biz_record_qc_flow_action_flow_id` FOREIGN KEY (`flow_id`) REFERENCES `biz_record_qc_flow` (`id`);
+ALTER TABLE `biz_record_qc_flow_action` ADD CONSTRAINT `fk_biz_record_qc_flow_action_operator_id` FOREIGN KEY (`operator_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_stat_report` ADD CONSTRAINT `fk_biz_stat_report_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_critical_value` ADD CONSTRAINT `fk_biz_critical_value_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_laboratory_record` (`id`);
+ALTER TABLE `biz_critical_value` ADD CONSTRAINT `fk_biz_critical_value_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_critical_value` ADD CONSTRAINT `fk_biz_critical_value_report_dept_id` FOREIGN KEY (`report_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_lab_result` ADD CONSTRAINT `fk_biz_lab_result_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_laboratory_record` (`id`);
+ALTER TABLE `biz_lab_result` ADD CONSTRAINT `fk_biz_lab_result_laboratory_item_id` FOREIGN KEY (`laboratory_item_id`) REFERENCES `sys_laboratory_item` (`id`);
+ALTER TABLE `biz_laboratory_apply` ADD CONSTRAINT `fk_biz_laboratory_apply_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_laboratory_apply` ADD CONSTRAINT `fk_biz_laboratory_apply_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
+ALTER TABLE `biz_laboratory_apply` ADD CONSTRAINT `fk_biz_laboratory_apply_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_medical_record` (`id`);
+ALTER TABLE `biz_laboratory_apply` ADD CONSTRAINT `fk_biz_laboratory_apply_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_laboratory_apply` ADD CONSTRAINT `fk_biz_laboratory_apply_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_laboratory_apply` ADD CONSTRAINT `fk_biz_laboratory_apply_laboratory_item_id` FOREIGN KEY (`laboratory_item_id`) REFERENCES `sys_laboratory_item` (`id`);
+ALTER TABLE `biz_laboratory_apply` ADD CONSTRAINT `fk_biz_laboratory_apply_laboratory_dept_id` FOREIGN KEY (`laboratory_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_laboratory_apply` ADD CONSTRAINT `fk_biz_laboratory_apply_sign_id` FOREIGN KEY (`sign_id`) REFERENCES `biz_emr_signature` (`id`);
+ALTER TABLE `biz_laboratory_apply` ADD CONSTRAINT `fk_biz_laboratory_apply_report_id` FOREIGN KEY (`report_id`) REFERENCES `biz_report` (`id`);
+ALTER TABLE `biz_laboratory_record` ADD CONSTRAINT `fk_biz_laboratory_record_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_laboratory_apply` (`id`);
+ALTER TABLE `biz_laboratory_record` ADD CONSTRAINT `fk_biz_laboratory_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_laboratory_record` ADD CONSTRAINT `fk_biz_laboratory_record_apply_dept_id` FOREIGN KEY (`apply_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_laboratory_record` ADD CONSTRAINT `fk_biz_laboratory_record_apply_doctor_id` FOREIGN KEY (`apply_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_laboratory_record` ADD CONSTRAINT `fk_biz_laboratory_record_laboratory_item_id` FOREIGN KEY (`laboratory_item_id`) REFERENCES `sys_laboratory_item` (`id`);
+ALTER TABLE `biz_laboratory_record` ADD CONSTRAINT `fk_biz_laboratory_record_laboratory_dept_id` FOREIGN KEY (`laboratory_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_laboratory_record` ADD CONSTRAINT `fk_biz_laboratory_record_report_sign_id` FOREIGN KEY (`report_sign_id`) REFERENCES `biz_emr_signature` (`id`);
+ALTER TABLE `biz_laboratory_record` ADD CONSTRAINT `fk_biz_laboratory_record_audit_sign_id` FOREIGN KEY (`audit_sign_id`) REFERENCES `biz_emr_signature` (`id`);
+ALTER TABLE `biz_laboratory_template` ADD CONSTRAINT `fk_biz_laboratory_template_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_laboratory_template` ADD CONSTRAINT `fk_biz_laboratory_template_laboratory_item_id` FOREIGN KEY (`laboratory_item_id`) REFERENCES `sys_laboratory_item` (`id`);
+ALTER TABLE `biz_lis_eqa_compare` ADD CONSTRAINT `fk_biz_lis_eqa_compare_plan_id` FOREIGN KEY (`plan_id`) REFERENCES `biz_lis_eqa_plan` (`id`);
+ALTER TABLE `biz_lis_eqa_sample` ADD CONSTRAINT `fk_biz_lis_eqa_sample_plan_id` FOREIGN KEY (`plan_id`) REFERENCES `biz_lis_eqa_plan` (`id`);
+ALTER TABLE `biz_lis_eqa_sample` ADD CONSTRAINT `fk_biz_lis_eqa_sample_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_compliance_audit_item` (`id`);
+ALTER TABLE `biz_lis_qc_plan` ADD CONSTRAINT `fk_biz_lis_qc_plan_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_compliance_audit_item` (`id`);
+ALTER TABLE `biz_lis_qc_record` ADD CONSTRAINT `fk_biz_lis_qc_record_plan_id` FOREIGN KEY (`plan_id`) REFERENCES `biz_lis_qc_plan` (`id`);
+ALTER TABLE `biz_ecg_holter` ADD CONSTRAINT `fk_biz_ecg_holter_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inspection_record` (`id`);
+ALTER TABLE `biz_ecg_holter` ADD CONSTRAINT `fk_biz_ecg_holter_waveform_id` FOREIGN KEY (`waveform_id`) REFERENCES `biz_ecg_waveform` (`id`);
+ALTER TABLE `biz_ecg_measure` ADD CONSTRAINT `fk_biz_ecg_measure_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inspection_record` (`id`);
+ALTER TABLE `biz_ecg_measure` ADD CONSTRAINT `fk_biz_ecg_measure_waveform_id` FOREIGN KEY (`waveform_id`) REFERENCES `biz_ecg_waveform` (`id`);
+ALTER TABLE `biz_ecg_waveform` ADD CONSTRAINT `fk_biz_ecg_waveform_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inspection_record` (`id`);
+ALTER TABLE `biz_ecg_waveform` ADD CONSTRAINT `fk_biz_ecg_waveform_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_inspection_apply` (`id`);
+ALTER TABLE `biz_ecg_waveform` ADD CONSTRAINT `fk_biz_ecg_waveform_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_endoscopy_record` ADD CONSTRAINT `fk_biz_endoscopy_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_endoscopy_record` ADD CONSTRAINT `fk_biz_endoscopy_record_apply_dept_id` FOREIGN KEY (`apply_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_endoscopy_record` ADD CONSTRAINT `fk_biz_endoscopy_record_apply_doctor_id` FOREIGN KEY (`apply_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_exam_appointment` ADD CONSTRAINT `fk_biz_exam_appointment_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_inspection_apply` (`id`);
+ALTER TABLE `biz_exam_appointment` ADD CONSTRAINT `fk_biz_exam_appointment_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_exam_appointment` ADD CONSTRAINT `fk_biz_exam_appointment_apply_dept_id` FOREIGN KEY (`apply_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_exam_appointment` ADD CONSTRAINT `fk_biz_exam_appointment_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_exam_appointment` ADD CONSTRAINT `fk_biz_exam_appointment_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_compliance_audit_item` (`id`);
+ALTER TABLE `biz_exam_appointment` ADD CONSTRAINT `fk_biz_exam_appointment_device_id` FOREIGN KEY (`device_id`) REFERENCES `biz_exam_device` (`id`);
+ALTER TABLE `biz_exam_appointment` ADD CONSTRAINT `fk_biz_exam_appointment_exam_dept_id` FOREIGN KEY (`exam_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_exam_device` ADD CONSTRAINT `fk_biz_exam_device_equipment_id` FOREIGN KEY (`equipment_id`) REFERENCES `sys_equipment` (`id`);
+ALTER TABLE `biz_exam_device` ADD CONSTRAINT `fk_biz_exam_device_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_exam_device_item` ADD CONSTRAINT `fk_biz_exam_device_item_device_id` FOREIGN KEY (`device_id`) REFERENCES `biz_exam_device` (`id`);
+ALTER TABLE `biz_exam_device_item` ADD CONSTRAINT `fk_biz_exam_device_item_item_id` FOREIGN KEY (`item_id`) REFERENCES `sys_inspection_item` (`id`);
+ALTER TABLE `biz_exam_film` ADD CONSTRAINT `fk_biz_exam_film_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inspection_record` (`id`);
+ALTER TABLE `biz_exam_film` ADD CONSTRAINT `fk_biz_exam_film_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_inspection_apply` (`id`);
+ALTER TABLE `biz_exam_film` ADD CONSTRAINT `fk_biz_exam_film_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_exam_film` ADD CONSTRAINT `fk_biz_exam_film_spec_id` FOREIGN KEY (`spec_id`) REFERENCES `biz_film_spec` (`id`);
+ALTER TABLE `biz_exam_film` ADD CONSTRAINT `fk_biz_exam_film_fee_id` FOREIGN KEY (`fee_id`) REFERENCES `biz_fee_record` (`id`);
+ALTER TABLE `biz_exam_image` ADD CONSTRAINT `fk_biz_exam_image_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_inspection_apply` (`id`);
+ALTER TABLE `biz_exam_image` ADD CONSTRAINT `fk_biz_exam_image_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inspection_record` (`id`);
+ALTER TABLE `biz_exam_image` ADD CONSTRAINT `fk_biz_exam_image_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_exam_slot` ADD CONSTRAINT `fk_biz_exam_slot_device_id` FOREIGN KEY (`device_id`) REFERENCES `biz_exam_device` (`id`);
+ALTER TABLE `biz_inspection_apply` ADD CONSTRAINT `fk_biz_inspection_apply_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_inspection_apply` ADD CONSTRAINT `fk_biz_inspection_apply_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
+ALTER TABLE `biz_inspection_apply` ADD CONSTRAINT `fk_biz_inspection_apply_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_medical_record` (`id`);
+ALTER TABLE `biz_inspection_apply` ADD CONSTRAINT `fk_biz_inspection_apply_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_inspection_apply` ADD CONSTRAINT `fk_biz_inspection_apply_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_inspection_apply` ADD CONSTRAINT `fk_biz_inspection_apply_inspection_item_id` FOREIGN KEY (`inspection_item_id`) REFERENCES `sys_inspection_item` (`id`);
+ALTER TABLE `biz_inspection_apply` ADD CONSTRAINT `fk_biz_inspection_apply_inspection_dept_id` FOREIGN KEY (`inspection_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_inspection_apply` ADD CONSTRAINT `fk_biz_inspection_apply_sign_id` FOREIGN KEY (`sign_id`) REFERENCES `biz_emr_signature` (`id`);
+ALTER TABLE `biz_inspection_apply` ADD CONSTRAINT `fk_biz_inspection_apply_report_id` FOREIGN KEY (`report_id`) REFERENCES `biz_report` (`id`);
+ALTER TABLE `biz_inspection_record` ADD CONSTRAINT `fk_biz_inspection_record_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_inspection_apply` (`id`);
+ALTER TABLE `biz_inspection_record` ADD CONSTRAINT `fk_biz_inspection_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_inspection_record` ADD CONSTRAINT `fk_biz_inspection_record_apply_dept_id` FOREIGN KEY (`apply_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_inspection_record` ADD CONSTRAINT `fk_biz_inspection_record_apply_doctor_id` FOREIGN KEY (`apply_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_inspection_record` ADD CONSTRAINT `fk_biz_inspection_record_inspection_item_id` FOREIGN KEY (`inspection_item_id`) REFERENCES `sys_inspection_item` (`id`);
+ALTER TABLE `biz_inspection_record` ADD CONSTRAINT `fk_biz_inspection_record_inspection_dept_id` FOREIGN KEY (`inspection_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_inspection_record` ADD CONSTRAINT `fk_biz_inspection_record_report_sign_id` FOREIGN KEY (`report_sign_id`) REFERENCES `biz_emr_signature` (`id`);
+ALTER TABLE `biz_inspection_record` ADD CONSTRAINT `fk_biz_inspection_record_audit_sign_id` FOREIGN KEY (`audit_sign_id`) REFERENCES `biz_emr_signature` (`id`);
+ALTER TABLE `biz_inspection_template` ADD CONSTRAINT `fk_biz_inspection_template_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_inspection_template` ADD CONSTRAINT `fk_biz_inspection_template_inspection_item_id` FOREIGN KEY (`inspection_item_id`) REFERENCES `sys_inspection_item` (`id`);
+ALTER TABLE `biz_medicaltech_execution` ADD CONSTRAINT `fk_biz_medicaltech_execution_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_medicaltech_execution` ADD CONSTRAINT `fk_biz_medicaltech_execution_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_compliance_audit_item` (`id`);
+ALTER TABLE `biz_medicaltech_execution` ADD CONSTRAINT `fk_biz_medicaltech_execution_executor_id` FOREIGN KEY (`executor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_medicaltech_execution` ADD CONSTRAINT `fk_biz_medicaltech_execution_reviewer_id` FOREIGN KEY (`reviewer_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_pathology_block` ADD CONSTRAINT `fk_biz_pathology_block_order_id` FOREIGN KEY (`order_id`) REFERENCES `biz_pathology_order` (`id`);
+ALTER TABLE `biz_pathology_order` ADD CONSTRAINT `fk_biz_pathology_order_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_pathology_order` ADD CONSTRAINT `fk_biz_pathology_order_apply_dept_id` FOREIGN KEY (`apply_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_pathology_order` ADD CONSTRAINT `fk_biz_pathology_order_apply_doctor_id` FOREIGN KEY (`apply_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_radio_report_template` ADD CONSTRAINT `fk_biz_radio_report_template_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_report` ADD CONSTRAINT `fk_biz_report_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_report` ADD CONSTRAINT `fk_biz_report_apply_doctor_id` FOREIGN KEY (`apply_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_report` ADD CONSTRAINT `fk_biz_report_write_by_id` FOREIGN KEY (`write_by_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_ultrasound_measure` ADD CONSTRAINT `fk_biz_ultrasound_measure_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_ultrasound_record` (`id`);
+ALTER TABLE `biz_ultrasound_record` ADD CONSTRAINT `fk_biz_ultrasound_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_ultrasound_record` ADD CONSTRAINT `fk_biz_ultrasound_record_apply_dept_id` FOREIGN KEY (`apply_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_ultrasound_record` ADD CONSTRAINT `fk_biz_ultrasound_record_apply_doctor_id` FOREIGN KEY (`apply_doctor_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_anesthesia_followup` ADD CONSTRAINT `fk_biz_anesthesia_followup_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_anesthesia_record` (`id`);
 ALTER TABLE `biz_anesthesia_followup` ADD CONSTRAINT `fk_biz_anesthesia_followup_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_operation_apply` (`id`);
 ALTER TABLE `biz_anesthesia_followup` ADD CONSTRAINT `fk_biz_anesthesia_followup_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
@@ -8934,94 +9810,6 @@ ALTER TABLE `biz_anesthesia_visit` ADD CONSTRAINT `fk_biz_anesthesia_visit_admis
 ALTER TABLE `biz_anesthesia_visit` ADD CONSTRAINT `fk_biz_anesthesia_visit_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
 ALTER TABLE `biz_anesthesia_visit` ADD CONSTRAINT `fk_biz_anesthesia_visit_visit_doctor_id` FOREIGN KEY (`visit_doctor_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_anesthesia_vital` ADD CONSTRAINT `fk_biz_anesthesia_vital_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_anesthesia_record` (`id`);
-ALTER TABLE `biz_antibiotic_alias` ADD CONSTRAINT `fk_biz_antibiotic_alias_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
-ALTER TABLE `biz_antibiotic_auth` ADD CONSTRAINT `fk_biz_antibiotic_auth_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_antibiotic_auth` ADD CONSTRAINT `fk_biz_antibiotic_auth_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_antibiotic_incision_review` ADD CONSTRAINT `fk_biz_antibiotic_incision_review_operation_apply_id` FOREIGN KEY (`operation_apply_id`) REFERENCES `biz_operation_apply` (`id`);
-ALTER TABLE `biz_antibiotic_incision_review` ADD CONSTRAINT `fk_biz_antibiotic_incision_review_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_antibiotic_incision_review` ADD CONSTRAINT `fk_biz_antibiotic_incision_review_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_antibiotic_incision_review` ADD CONSTRAINT `fk_biz_antibiotic_incision_review_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
-ALTER TABLE `biz_antibiotic_incision_review` ADD CONSTRAINT `fk_biz_antibiotic_incision_review_reviewer_id` FOREIGN KEY (`reviewer_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_antibiotic_stats` ADD CONSTRAINT `fk_biz_antibiotic_stats_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_appoint_info` ADD CONSTRAINT `fk_biz_appoint_info_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_appoint_info` ADD CONSTRAINT `fk_biz_appoint_info_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_appoint_info` ADD CONSTRAINT `fk_biz_appoint_info_room_id` FOREIGN KEY (`room_id`) REFERENCES `sys_clinic_room` (`id`);
-ALTER TABLE `biz_appoint_info` ADD CONSTRAINT `fk_biz_appoint_info_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_appoint_info` ADD CONSTRAINT `fk_biz_appoint_info_schedule_id` FOREIGN KEY (`schedule_id`) REFERENCES `biz_schedule` (`id`);
-ALTER TABLE `biz_appoint_info` ADD CONSTRAINT `fk_biz_appoint_info_slot_id` FOREIGN KEY (`slot_id`) REFERENCES `biz_schedule_slot` (`id`);
-ALTER TABLE `biz_appoint_info` ADD CONSTRAINT `fk_biz_appoint_info_revisit_record_id` FOREIGN KEY (`revisit_record_id`) REFERENCES `biz_medical_record` (`id`);
-ALTER TABLE `biz_appoint_info` ADD CONSTRAINT `fk_biz_appoint_info_bill_id` FOREIGN KEY (`bill_id`) REFERENCES `biz_settlement_bill` (`id`);
-ALTER TABLE `biz_appoint_info` ADD CONSTRAINT `fk_biz_appoint_info_create_by_id` FOREIGN KEY (`create_by_id`) REFERENCES `sys_user` (`id`);
-ALTER TABLE `biz_appoint_info` ADD CONSTRAINT `fk_biz_appoint_info_update_by_id` FOREIGN KEY (`update_by_id`) REFERENCES `sys_user` (`id`);
-ALTER TABLE `biz_archive_borrow` ADD CONSTRAINT `fk_biz_archive_borrow_archive_id` FOREIGN KEY (`archive_id`) REFERENCES `biz_medical_record_archive` (`id`);
-ALTER TABLE `biz_archive_borrow` ADD CONSTRAINT `fk_biz_archive_borrow_applicant_id` FOREIGN KEY (`applicant_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_archive_borrow` ADD CONSTRAINT `fk_biz_archive_borrow_audit_by_id` FOREIGN KEY (`audit_by_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_archive_code_task` ADD CONSTRAINT `fk_biz_archive_code_task_archive_id` FOREIGN KEY (`archive_id`) REFERENCES `biz_medical_record_archive` (`id`);
-ALTER TABLE `biz_archive_code_task` ADD CONSTRAINT `fk_biz_archive_code_task_coder_id` FOREIGN KEY (`coder_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_archive_code_task` ADD CONSTRAINT `fk_biz_archive_code_task_audit_by_id` FOREIGN KEY (`audit_by_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_bed_allocate` ADD CONSTRAINT `fk_biz_bed_allocate_bed_id` FOREIGN KEY (`bed_id`) REFERENCES `sys_bed` (`bed_id`);
-ALTER TABLE `biz_bed_allocate` ADD CONSTRAINT `fk_biz_bed_allocate_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_bed_allocate` ADD CONSTRAINT `fk_biz_bed_allocate_own_dept_id` FOREIGN KEY (`own_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_bed_allocate` ADD CONSTRAINT `fk_biz_bed_allocate_use_dept_id` FOREIGN KEY (`use_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_bed_allocate` ADD CONSTRAINT `fk_biz_bed_allocate_wait_id` FOREIGN KEY (`wait_id`) REFERENCES `biz_bed_wait` (`id`);
-ALTER TABLE `biz_bed_allocate` ADD CONSTRAINT `fk_biz_bed_allocate_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_bed_allocate` ADD CONSTRAINT `fk_biz_bed_allocate_operator_id` FOREIGN KEY (`operator_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_bed_allocate` ADD CONSTRAINT `fk_biz_bed_allocate_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_bed_wait` ADD CONSTRAINT `fk_biz_bed_wait_admission_order_id` FOREIGN KEY (`admission_order_id`) REFERENCES `biz_admission_order` (`id`);
-ALTER TABLE `biz_bed_wait` ADD CONSTRAINT `fk_biz_bed_wait_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_bed_wait` ADD CONSTRAINT `fk_biz_bed_wait_apply_dept_id` FOREIGN KEY (`apply_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_bed_wait` ADD CONSTRAINT `fk_biz_bed_wait_expect_ward_id` FOREIGN KEY (`expect_ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_bed_wait` ADD CONSTRAINT `fk_biz_bed_wait_assigned_bed_id` FOREIGN KEY (`assigned_bed_id`) REFERENCES `sys_bed` (`bed_id`);
-ALTER TABLE `biz_bed_wait` ADD CONSTRAINT `fk_biz_bed_wait_assigned_ward_id` FOREIGN KEY (`assigned_ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_bed_wait` ADD CONSTRAINT `fk_biz_bed_wait_assigned_dept_id` FOREIGN KEY (`assigned_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_bed_wait` ADD CONSTRAINT `fk_biz_bed_wait_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_blood_crossmatch` ADD CONSTRAINT `fk_biz_blood_crossmatch_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_cashier_settlement` ADD CONSTRAINT `fk_biz_cashier_settlement_cashier_id` FOREIGN KEY (`cashier_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_cashier_settlement` ADD CONSTRAINT `fk_biz_cashier_settlement_day_settlement_id` FOREIGN KEY (`day_settlement_id`) REFERENCES `biz_day_settlement` (`id`);
-ALTER TABLE `biz_checkup_record` ADD CONSTRAINT `fk_biz_checkup_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_checkup_record` ADD CONSTRAINT `fk_biz_checkup_record_package_id` FOREIGN KEY (`package_id`) REFERENCES `sys_checkup_package` (`id`);
-ALTER TABLE `biz_checkup_result` ADD CONSTRAINT `fk_biz_checkup_result_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_checkup_record` (`id`);
-ALTER TABLE `biz_chronic_record` ADD CONSTRAINT `fk_biz_chronic_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_chronic_record` ADD CONSTRAINT `fk_biz_chronic_record_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_chronic_record` ADD CONSTRAINT `fk_biz_chronic_record_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_clinical_rule_check` ADD CONSTRAINT `fk_biz_clinical_rule_check_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_medical_record` (`id`);
-ALTER TABLE `biz_clinical_rule_check` ADD CONSTRAINT `fk_biz_clinical_rule_check_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_compliance_audit` ADD CONSTRAINT `fk_biz_compliance_audit_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_insurance_settlement` (`id`);
-ALTER TABLE `biz_compliance_audit` ADD CONSTRAINT `fk_biz_compliance_audit_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
-ALTER TABLE `biz_compliance_audit_item` ADD CONSTRAINT `fk_biz_compliance_audit_item_audit_id` FOREIGN KEY (`audit_id`) REFERENCES `biz_compliance_audit` (`id`);
-ALTER TABLE `biz_consultation` ADD CONSTRAINT `fk_biz_consultation_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_consultation` ADD CONSTRAINT `fk_biz_consultation_visit_id` FOREIGN KEY (`visit_id`) REFERENCES `biz_visit` (`visit_id`);
-ALTER TABLE `biz_consultation` ADD CONSTRAINT `fk_biz_consultation_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_consultation` ADD CONSTRAINT `fk_biz_consultation_from_dept_id` FOREIGN KEY (`from_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_consultation` ADD CONSTRAINT `fk_biz_consultation_apply_doctor_id` FOREIGN KEY (`apply_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_consultation` ADD CONSTRAINT `fk_biz_consultation_to_dept_id` FOREIGN KEY (`to_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_consultation` ADD CONSTRAINT `fk_biz_consultation_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_consultation` ADD CONSTRAINT `fk_biz_consultation_accept_doctor_id` FOREIGN KEY (`accept_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_consultation` ADD CONSTRAINT `fk_biz_consultation_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inpatient_record` (`id`);
-ALTER TABLE `biz_consumable_consume` ADD CONSTRAINT `fk_biz_consumable_consume_consumable_id` FOREIGN KEY (`consumable_id`) REFERENCES `sys_consumable` (`id`);
-ALTER TABLE `biz_consumable_consume` ADD CONSTRAINT `fk_biz_consumable_consume_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_consumable_stock` ADD CONSTRAINT `fk_biz_consumable_stock_consumable_id` FOREIGN KEY (`consumable_id`) REFERENCES `sys_consumable` (`id`);
-ALTER TABLE `biz_consumable_stock_log` ADD CONSTRAINT `fk_biz_consumable_stock_log_stock_id` FOREIGN KEY (`stock_id`) REFERENCES `biz_consumable_stock` (`id`);
-ALTER TABLE `biz_consumable_stock_log` ADD CONSTRAINT `fk_biz_consumable_stock_log_consumable_id` FOREIGN KEY (`consumable_id`) REFERENCES `sys_consumable` (`id`);
-ALTER TABLE `biz_consumable_trace` ADD CONSTRAINT `fk_biz_consumable_trace_consumable_id` FOREIGN KEY (`consumable_id`) REFERENCES `sys_consumable` (`id`);
-ALTER TABLE `biz_consumable_trace` ADD CONSTRAINT `fk_biz_consumable_trace_stock_id` FOREIGN KEY (`stock_id`) REFERENCES `biz_consumable_stock` (`id`);
-ALTER TABLE `biz_consumable_trace` ADD CONSTRAINT `fk_biz_consumable_trace_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_consumable_trace` ADD CONSTRAINT `fk_biz_consumable_trace_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
-ALTER TABLE `biz_consumable_trace` ADD CONSTRAINT `fk_biz_consumable_trace_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_consumable_trace` ADD CONSTRAINT `fk_biz_consumable_trace_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_consumable_trace` ADD CONSTRAINT `fk_biz_consumable_trace_fee_record_id` FOREIGN KEY (`fee_record_id`) REFERENCES `biz_fee_record` (`id`);
-ALTER TABLE `biz_critical_notice` ADD CONSTRAINT `fk_biz_critical_notice_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_critical_notice` ADD CONSTRAINT `fk_biz_critical_notice_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_critical_notice` ADD CONSTRAINT `fk_biz_critical_notice_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_critical_notice` ADD CONSTRAINT `fk_biz_critical_notice_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_critical_notice` ADD CONSTRAINT `fk_biz_critical_notice_witness_doctor_id` FOREIGN KEY (`witness_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_critical_notice` ADD CONSTRAINT `fk_biz_critical_notice_sign_id` FOREIGN KEY (`sign_id`) REFERENCES `biz_emr_signature` (`id`);
-ALTER TABLE `biz_critical_value` ADD CONSTRAINT `fk_biz_critical_value_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_laboratory_record` (`id`);
-ALTER TABLE `biz_critical_value` ADD CONSTRAINT `fk_biz_critical_value_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_critical_value` ADD CONSTRAINT `fk_biz_critical_value_report_dept_id` FOREIGN KEY (`report_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_cssd_pack` ADD CONSTRAINT `fk_biz_cssd_pack_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_cssd_pack_template_item` ADD CONSTRAINT `fk_biz_cssd_pack_template_item_template_id` FOREIGN KEY (`template_id`) REFERENCES `biz_cssd_pack_template` (`id`);
-ALTER TABLE `biz_cssd_trace` ADD CONSTRAINT `fk_biz_cssd_trace_pack_id` FOREIGN KEY (`pack_id`) REFERENCES `biz_cssd_pack` (`id`);
 ALTER TABLE `biz_day_surgery_apply` ADD CONSTRAINT `fk_biz_day_surgery_apply_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_day_surgery_item` (`id`);
 ALTER TABLE `biz_day_surgery_apply` ADD CONSTRAINT `fk_biz_day_surgery_apply_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
 ALTER TABLE `biz_day_surgery_apply` ADD CONSTRAINT `fk_biz_day_surgery_apply_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
@@ -9030,48 +9818,81 @@ ALTER TABLE `biz_day_surgery_apply` ADD CONSTRAINT `fk_biz_day_surgery_apply_tra
 ALTER TABLE `biz_day_surgery_follow` ADD CONSTRAINT `fk_biz_day_surgery_follow_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_day_surgery_apply` (`id`);
 ALTER TABLE `biz_day_surgery_follow` ADD CONSTRAINT `fk_biz_day_surgery_follow_operator_id` FOREIGN KEY (`operator_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_day_surgery_item` ADD CONSTRAINT `fk_biz_day_surgery_item_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_death_certificate` ADD CONSTRAINT `fk_biz_death_certificate_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_death_certificate` ADD CONSTRAINT `fk_biz_death_certificate_discharge_id` FOREIGN KEY (`discharge_id`) REFERENCES `biz_discharge` (`discharge_id`);
-ALTER TABLE `biz_death_certificate` ADD CONSTRAINT `fk_biz_death_certificate_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_death_certificate` ADD CONSTRAINT `fk_biz_death_certificate_death_dept_id` FOREIGN KEY (`death_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_death_certificate` ADD CONSTRAINT `fk_biz_death_certificate_physician_id` FOREIGN KEY (`physician_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_death_certificate` ADD CONSTRAINT `fk_biz_death_certificate_reviewer_id` FOREIGN KEY (`reviewer_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_death_certificate` ADD CONSTRAINT `fk_biz_death_certificate_orig_cert_id` FOREIGN KEY (`orig_cert_id`) REFERENCES `biz_death_certificate` (`id`);
-ALTER TABLE `biz_death_certificate_cause` ADD CONSTRAINT `fk_biz_death_certificate_cause_cert_id` FOREIGN KEY (`cert_id`) REFERENCES `biz_death_certificate` (`id`);
-ALTER TABLE `biz_death_registration` ADD CONSTRAINT `fk_biz_death_registration_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_death_registration` ADD CONSTRAINT `fk_biz_death_registration_cert_id` FOREIGN KEY (`cert_id`) REFERENCES `biz_death_certificate` (`id`);
-ALTER TABLE `biz_death_registration` ADD CONSTRAINT `fk_biz_death_registration_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_death_registration` ADD CONSTRAINT `fk_biz_death_registration_death_dept_id` FOREIGN KEY (`death_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_death_registration` ADD CONSTRAINT `fk_biz_death_registration_registrar_id` FOREIGN KEY (`registrar_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_dept_cost_month` ADD CONSTRAINT `fk_biz_dept_cost_month_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_diag_template` ADD CONSTRAINT `fk_biz_diag_template_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_dialysis_patient` ADD CONSTRAINT `fk_biz_dialysis_patient_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_dialysis_prescription` ADD CONSTRAINT `fk_biz_dialysis_prescription_archive_id` FOREIGN KEY (`archive_id`) REFERENCES `biz_dialysis_patient` (`id`);
-ALTER TABLE `biz_dialysis_prescription` ADD CONSTRAINT `fk_biz_dialysis_prescription_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_dialysis_session` ADD CONSTRAINT `fk_biz_dialysis_session_machine_id` FOREIGN KEY (`machine_id`) REFERENCES `biz_dialysis_machine` (`id`);
-ALTER TABLE `biz_dialysis_session` ADD CONSTRAINT `fk_biz_dialysis_session_archive_id` FOREIGN KEY (`archive_id`) REFERENCES `biz_dialysis_patient` (`id`);
-ALTER TABLE `biz_dialysis_session` ADD CONSTRAINT `fk_biz_dialysis_session_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_dialysis_session` ADD CONSTRAINT `fk_biz_dialysis_session_prescription_id` FOREIGN KEY (`prescription_id`) REFERENCES `biz_dialysis_prescription` (`id`);
-ALTER TABLE `biz_diet_plan` ADD CONSTRAINT `fk_biz_diet_plan_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_diet_plan` ADD CONSTRAINT `fk_biz_diet_plan_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_diet_plan` ADD CONSTRAINT `fk_biz_diet_plan_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_diet_plan` ADD CONSTRAINT `fk_biz_diet_plan_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_diet_plan` ADD CONSTRAINT `fk_biz_diet_plan_order_id` FOREIGN KEY (`order_id`) REFERENCES `biz_inpatient_order` (`id`);
-ALTER TABLE `biz_diet_plan` ADD CONSTRAINT `fk_biz_diet_plan_confirmer_id` FOREIGN KEY (`confirmer_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_discharge` ADD CONSTRAINT `fk_biz_discharge_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_discharge` ADD CONSTRAINT `fk_biz_discharge_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_discharge` ADD CONSTRAINT `fk_biz_discharge_discharge_doctor_id` FOREIGN KEY (`discharge_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_discharge_drug` ADD CONSTRAINT `fk_biz_discharge_drug_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_discharge_drug` ADD CONSTRAINT `fk_biz_discharge_drug_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_discharge_drug` ADD CONSTRAINT `fk_biz_discharge_drug_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
-ALTER TABLE `biz_discharge_drug` ADD CONSTRAINT `fk_biz_discharge_drug_dispense_by` FOREIGN KEY (`dispense_by`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_dispute_case` ADD CONSTRAINT `fk_biz_dispute_case_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_dispute_case` ADD CONSTRAINT `fk_biz_dispute_case_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_dispute_case` ADD CONSTRAINT `fk_biz_dispute_case_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_dispute_case` ADD CONSTRAINT `fk_biz_dispute_case_archive_id` FOREIGN KEY (`archive_id`) REFERENCES `biz_medical_record_archive` (`id`);
-ALTER TABLE `biz_dispute_flow` ADD CONSTRAINT `fk_biz_dispute_flow_case_id` FOREIGN KEY (`case_id`) REFERENCES `biz_dispute_case` (`id`);
-ALTER TABLE `biz_dispute_flow` ADD CONSTRAINT `fk_biz_dispute_flow_operator_id` FOREIGN KEY (`operator_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_drg_sim_result` ADD CONSTRAINT `fk_biz_drg_sim_result_summary_id` FOREIGN KEY (`summary_id`) REFERENCES `biz_inpatient_summary` (`id`);
+ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_apply_dept_id` FOREIGN KEY (`apply_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_apply_doctor_id` FOREIGN KEY (`apply_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_surgeon_id` FOREIGN KEY (`surgeon_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_anesthetist_id` FOREIGN KEY (`anesthetist_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_schedule_doctor_id` FOREIGN KEY (`schedule_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_preop_check_doctor_id` FOREIGN KEY (`preop_check_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_finish_doctor_id` FOREIGN KEY (`finish_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_operation_id` FOREIGN KEY (`operation_id`) REFERENCES `biz_inpatient_operation` (`id`);
+ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inpatient_record` (`id`);
+ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_cancel_doctor_id` FOREIGN KEY (`cancel_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_operation_charge_item` ADD CONSTRAINT `fk_biz_operation_charge_item_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_operation_apply` (`id`);
+ALTER TABLE `biz_operation_charge_item` ADD CONSTRAINT `fk_biz_operation_charge_item_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_operation_charge_item` ADD CONSTRAINT `fk_biz_operation_charge_item_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_operation_charge_item` ADD CONSTRAINT `fk_biz_operation_charge_item_fee_record_id` FOREIGN KEY (`fee_record_id`) REFERENCES `biz_fee_record` (`id`);
+ALTER TABLE `biz_operation_count` ADD CONSTRAINT `fk_biz_operation_count_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_operation_apply` (`id`);
+ALTER TABLE `biz_operation_count` ADD CONSTRAINT `fk_biz_operation_count_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_operation_count` ADD CONSTRAINT `fk_biz_operation_count_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_operation_count` ADD CONSTRAINT `fk_biz_operation_count_instrument_nurse_id` FOREIGN KEY (`instrument_nurse_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_operation_count` ADD CONSTRAINT `fk_biz_operation_count_circulate_nurse_id` FOREIGN KEY (`circulate_nurse_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_operation_count` ADD CONSTRAINT `fk_biz_operation_count_before_nurse_id` FOREIGN KEY (`before_nurse_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_operation_count` ADD CONSTRAINT `fk_biz_operation_count_closure_nurse_id` FOREIGN KEY (`closure_nurse_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_operation_count` ADD CONSTRAINT `fk_biz_operation_count_final_nurse_id` FOREIGN KEY (`final_nurse_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_operation_count_item` ADD CONSTRAINT `fk_biz_operation_count_item_count_id` FOREIGN KEY (`count_id`) REFERENCES `biz_operation_count` (`id`);
+ALTER TABLE `biz_operation_safety_check` ADD CONSTRAINT `fk_biz_operation_safety_check_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_operation_apply` (`id`);
+ALTER TABLE `biz_operation_safety_check` ADD CONSTRAINT `fk_biz_operation_safety_check_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_operation_safety_check` ADD CONSTRAINT `fk_biz_operation_safety_check_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_operation_safety_check` ADD CONSTRAINT `fk_biz_operation_safety_check_surgeon_id` FOREIGN KEY (`surgeon_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_operation_safety_check` ADD CONSTRAINT `fk_biz_operation_safety_check_anesthetist_id` FOREIGN KEY (`anesthetist_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_operation_safety_check` ADD CONSTRAINT `fk_biz_operation_safety_check_nurse_id` FOREIGN KEY (`nurse_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_operation_safety_check` ADD CONSTRAINT `fk_biz_operation_safety_check_recorder_id` FOREIGN KEY (`recorder_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_blood_crossmatch` ADD CONSTRAINT `fk_biz_blood_crossmatch_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_apply_dept_id` FOREIGN KEY (`apply_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_apply_doctor_id` FOREIGN KEY (`apply_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_crossmatch_doctor_id` FOREIGN KEY (`crossmatch_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_issue_doctor_id` FOREIGN KEY (`issue_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_check_nurse_id` FOREIGN KEY (`check_nurse_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_check_nurse2_id` FOREIGN KEY (`check_nurse2_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_infusion_nurse_id` FOREIGN KEY (`infusion_nurse_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_reaction_reporter_id` FOREIGN KEY (`reaction_reporter_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_finish_doctor_id` FOREIGN KEY (`finish_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inpatient_record` (`id`);
+ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_cancel_doctor_id` FOREIGN KEY (`cancel_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_transfusion_approve` ADD CONSTRAINT `fk_biz_transfusion_approve_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_transfusion_apply` (`id`);
+ALTER TABLE `biz_transfusion_approve` ADD CONSTRAINT `fk_biz_transfusion_approve_approver_id` FOREIGN KEY (`approver_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_transfusion_bag` ADD CONSTRAINT `fk_biz_transfusion_bag_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_transfusion_apply` (`id`);
+ALTER TABLE `biz_transfusion_bag` ADD CONSTRAINT `fk_biz_transfusion_bag_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_transfusion_bag` ADD CONSTRAINT `fk_biz_transfusion_bag_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_transfusion_bag` ADD CONSTRAINT `fk_biz_transfusion_bag_crossmatch_doctor_id` FOREIGN KEY (`crossmatch_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_duty_log` ADD CONSTRAINT `fk_biz_duty_log_roster_id` FOREIGN KEY (`roster_id`) REFERENCES `biz_duty_roster` (`id`);
+ALTER TABLE `biz_duty_log` ADD CONSTRAINT `fk_biz_duty_log_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_duty_log` ADD CONSTRAINT `fk_biz_duty_log_handover_emp_id` FOREIGN KEY (`handover_emp_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_duty_roster` ADD CONSTRAINT `fk_biz_duty_roster_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_duty_roster` ADD CONSTRAINT `fk_biz_duty_roster_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_duty_roster` ADD CONSTRAINT `fk_biz_duty_roster_substitute_emp_id` FOREIGN KEY (`substitute_emp_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_duty_roster` ADD CONSTRAINT `fk_biz_duty_roster_shift_id` FOREIGN KEY (`shift_id`) REFERENCES `biz_shift` (`id`);
+ALTER TABLE `biz_duty_roster` ADD CONSTRAINT `fk_biz_duty_roster_post_id` FOREIGN KEY (`post_id`) REFERENCES `biz_duty_post` (`id`);
+ALTER TABLE `biz_duty_roster` ADD CONSTRAINT `fk_biz_duty_roster_staff_schedule_id` FOREIGN KEY (`staff_schedule_id`) REFERENCES `biz_staff_schedule` (`id`);
+ALTER TABLE `biz_emergency` ADD CONSTRAINT `fk_biz_emergency_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_emergency` ADD CONSTRAINT `fk_biz_emergency_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_emergency` ADD CONSTRAINT `fk_biz_emergency_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_emergency` ADD CONSTRAINT `fk_biz_emergency_observation_ward_id` FOREIGN KEY (`observation_ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_emergency` ADD CONSTRAINT `fk_biz_emergency_observation_bed_id` FOREIGN KEY (`observation_bed_id`) REFERENCES `sys_bed` (`bed_id`);
+ALTER TABLE `biz_emergency` ADD CONSTRAINT `fk_biz_emergency_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_emergency_handover` ADD CONSTRAINT `fk_biz_emergency_handover_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_emergency_handover` ADD CONSTRAINT `fk_biz_emergency_handover_from_emp_id` FOREIGN KEY (`from_emp_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_emergency_handover` ADD CONSTRAINT `fk_biz_emergency_handover_take_emp_id` FOREIGN KEY (`take_emp_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_emergency_handover_item` ADD CONSTRAINT `fk_biz_emergency_handover_item_handover_id` FOREIGN KEY (`handover_id`) REFERENCES `biz_emergency_handover` (`id`);
+ALTER TABLE `biz_emergency_handover_item` ADD CONSTRAINT `fk_biz_emergency_handover_item_emergency_id` FOREIGN KEY (`emergency_id`) REFERENCES `biz_emergency` (`id`);
+ALTER TABLE `biz_emergency_handover_item` ADD CONSTRAINT `fk_biz_emergency_handover_item_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_emergency_handover_item` ADD CONSTRAINT `fk_biz_emergency_handover_item_from_doctor_id` FOREIGN KEY (`from_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_emergency_handover_item` ADD CONSTRAINT `fk_biz_emergency_handover_item_take_doctor_id` FOREIGN KEY (`take_doctor_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_drug_dispensing` ADD CONSTRAINT `fk_biz_drug_dispensing_prescription_id` FOREIGN KEY (`prescription_id`) REFERENCES `biz_prescription` (`id`);
 ALTER TABLE `biz_drug_dispensing` ADD CONSTRAINT `fk_biz_drug_dispensing_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
 ALTER TABLE `biz_drug_dispensing` ADD CONSTRAINT `fk_biz_drug_dispensing_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
@@ -9106,76 +9927,62 @@ ALTER TABLE `biz_drug_transfer_item` ADD CONSTRAINT `fk_biz_drug_transfer_item_t
 ALTER TABLE `biz_drug_transfer_item` ADD CONSTRAINT `fk_biz_drug_transfer_item_stock_id` FOREIGN KEY (`stock_id`) REFERENCES `biz_consumable_stock` (`id`);
 ALTER TABLE `biz_drug_transfer_item` ADD CONSTRAINT `fk_biz_drug_transfer_item_in_stock_id` FOREIGN KEY (`in_stock_id`) REFERENCES `biz_consumable_stock` (`id`);
 ALTER TABLE `biz_drug_transfer_item` ADD CONSTRAINT `fk_biz_drug_transfer_item_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
-ALTER TABLE `biz_duty_log` ADD CONSTRAINT `fk_biz_duty_log_roster_id` FOREIGN KEY (`roster_id`) REFERENCES `biz_duty_roster` (`id`);
-ALTER TABLE `biz_duty_log` ADD CONSTRAINT `fk_biz_duty_log_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_duty_log` ADD CONSTRAINT `fk_biz_duty_log_handover_emp_id` FOREIGN KEY (`handover_emp_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_duty_roster` ADD CONSTRAINT `fk_biz_duty_roster_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_duty_roster` ADD CONSTRAINT `fk_biz_duty_roster_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_duty_roster` ADD CONSTRAINT `fk_biz_duty_roster_substitute_emp_id` FOREIGN KEY (`substitute_emp_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_ecg_holter` ADD CONSTRAINT `fk_biz_ecg_holter_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inspection_record` (`id`);
-ALTER TABLE `biz_ecg_holter` ADD CONSTRAINT `fk_biz_ecg_holter_waveform_id` FOREIGN KEY (`waveform_id`) REFERENCES `biz_ecg_waveform` (`id`);
-ALTER TABLE `biz_ecg_measure` ADD CONSTRAINT `fk_biz_ecg_measure_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inspection_record` (`id`);
-ALTER TABLE `biz_ecg_measure` ADD CONSTRAINT `fk_biz_ecg_measure_waveform_id` FOREIGN KEY (`waveform_id`) REFERENCES `biz_ecg_waveform` (`id`);
-ALTER TABLE `biz_ecg_waveform` ADD CONSTRAINT `fk_biz_ecg_waveform_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inspection_record` (`id`);
-ALTER TABLE `biz_ecg_waveform` ADD CONSTRAINT `fk_biz_ecg_waveform_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_inspection_apply` (`id`);
-ALTER TABLE `biz_ecg_waveform` ADD CONSTRAINT `fk_biz_ecg_waveform_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_emergency` ADD CONSTRAINT `fk_biz_emergency_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_emergency` ADD CONSTRAINT `fk_biz_emergency_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_emergency` ADD CONSTRAINT `fk_biz_emergency_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_emergency` ADD CONSTRAINT `fk_biz_emergency_observation_ward_id` FOREIGN KEY (`observation_ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_emergency` ADD CONSTRAINT `fk_biz_emergency_observation_bed_id` FOREIGN KEY (`observation_bed_id`) REFERENCES `sys_bed` (`bed_id`);
-ALTER TABLE `biz_emergency` ADD CONSTRAINT `fk_biz_emergency_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_emergency_handover` ADD CONSTRAINT `fk_biz_emergency_handover_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_emergency_handover` ADD CONSTRAINT `fk_biz_emergency_handover_from_emp_id` FOREIGN KEY (`from_emp_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_emergency_handover` ADD CONSTRAINT `fk_biz_emergency_handover_take_emp_id` FOREIGN KEY (`take_emp_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_emergency_handover_item` ADD CONSTRAINT `fk_biz_emergency_handover_item_handover_id` FOREIGN KEY (`handover_id`) REFERENCES `biz_emergency_handover` (`id`);
-ALTER TABLE `biz_emergency_handover_item` ADD CONSTRAINT `fk_biz_emergency_handover_item_emergency_id` FOREIGN KEY (`emergency_id`) REFERENCES `biz_emergency` (`id`);
-ALTER TABLE `biz_emergency_handover_item` ADD CONSTRAINT `fk_biz_emergency_handover_item_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_emergency_handover_item` ADD CONSTRAINT `fk_biz_emergency_handover_item_from_doctor_id` FOREIGN KEY (`from_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_emergency_handover_item` ADD CONSTRAINT `fk_biz_emergency_handover_item_take_doctor_id` FOREIGN KEY (`take_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_emr_signature` ADD CONSTRAINT `fk_biz_emr_signature_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_emr_signature` ADD CONSTRAINT `fk_biz_emr_signature_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_emr_signature` ADD CONSTRAINT `fk_biz_emr_signature_prev_sign_id` FOREIGN KEY (`prev_sign_id`) REFERENCES `biz_emr_signature` (`id`);
-ALTER TABLE `biz_emr_signature` ADD CONSTRAINT `fk_biz_emr_signature_signer_id` FOREIGN KEY (`signer_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_emr_signature` ADD CONSTRAINT `fk_biz_emr_signature_signer_dept_id` FOREIGN KEY (`signer_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_emr_signature` ADD CONSTRAINT `fk_biz_emr_signature_cert_id` FOREIGN KEY (`cert_id`) REFERENCES `sys_sign_cert` (`id`);
-ALTER TABLE `biz_emr_signature` ADD CONSTRAINT `fk_biz_emr_signature_invalid_by` FOREIGN KEY (`invalid_by`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_endoscopy_record` ADD CONSTRAINT `fk_biz_endoscopy_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_endoscopy_record` ADD CONSTRAINT `fk_biz_endoscopy_record_apply_dept_id` FOREIGN KEY (`apply_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_endoscopy_record` ADD CONSTRAINT `fk_biz_endoscopy_record_apply_doctor_id` FOREIGN KEY (`apply_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_equipment_maintain` ADD CONSTRAINT `fk_biz_equipment_maintain_equipment_id` FOREIGN KEY (`equipment_id`) REFERENCES `sys_equipment` (`id`);
-ALTER TABLE `biz_equipment_metering` ADD CONSTRAINT `fk_biz_equipment_metering_equipment_id` FOREIGN KEY (`equipment_id`) REFERENCES `sys_equipment` (`id`);
-ALTER TABLE `biz_exam_appointment` ADD CONSTRAINT `fk_biz_exam_appointment_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_inspection_apply` (`id`);
-ALTER TABLE `biz_exam_appointment` ADD CONSTRAINT `fk_biz_exam_appointment_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_exam_appointment` ADD CONSTRAINT `fk_biz_exam_appointment_apply_dept_id` FOREIGN KEY (`apply_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_exam_appointment` ADD CONSTRAINT `fk_biz_exam_appointment_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_exam_appointment` ADD CONSTRAINT `fk_biz_exam_appointment_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_compliance_audit_item` (`id`);
-ALTER TABLE `biz_exam_appointment` ADD CONSTRAINT `fk_biz_exam_appointment_device_id` FOREIGN KEY (`device_id`) REFERENCES `biz_exam_device` (`id`);
-ALTER TABLE `biz_exam_appointment` ADD CONSTRAINT `fk_biz_exam_appointment_exam_dept_id` FOREIGN KEY (`exam_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_exam_device` ADD CONSTRAINT `fk_biz_exam_device_equipment_id` FOREIGN KEY (`equipment_id`) REFERENCES `sys_equipment` (`id`);
-ALTER TABLE `biz_exam_device` ADD CONSTRAINT `fk_biz_exam_device_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_exam_device_item` ADD CONSTRAINT `fk_biz_exam_device_item_device_id` FOREIGN KEY (`device_id`) REFERENCES `biz_exam_device` (`id`);
-ALTER TABLE `biz_exam_device_item` ADD CONSTRAINT `fk_biz_exam_device_item_item_id` FOREIGN KEY (`item_id`) REFERENCES `sys_inspection_item` (`id`);
-ALTER TABLE `biz_exam_film` ADD CONSTRAINT `fk_biz_exam_film_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inspection_record` (`id`);
-ALTER TABLE `biz_exam_film` ADD CONSTRAINT `fk_biz_exam_film_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_inspection_apply` (`id`);
-ALTER TABLE `biz_exam_film` ADD CONSTRAINT `fk_biz_exam_film_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_exam_film` ADD CONSTRAINT `fk_biz_exam_film_spec_id` FOREIGN KEY (`spec_id`) REFERENCES `biz_film_spec` (`id`);
-ALTER TABLE `biz_exam_film` ADD CONSTRAINT `fk_biz_exam_film_fee_id` FOREIGN KEY (`fee_id`) REFERENCES `biz_fee_record` (`id`);
-ALTER TABLE `biz_exam_image` ADD CONSTRAINT `fk_biz_exam_image_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_inspection_apply` (`id`);
-ALTER TABLE `biz_exam_image` ADD CONSTRAINT `fk_biz_exam_image_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inspection_record` (`id`);
-ALTER TABLE `biz_exam_image` ADD CONSTRAINT `fk_biz_exam_image_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_exam_slot` ADD CONSTRAINT `fk_biz_exam_slot_device_id` FOREIGN KEY (`device_id`) REFERENCES `biz_exam_device` (`id`);
+ALTER TABLE `biz_pivas_batch` ADD CONSTRAINT `fk_biz_pivas_batch_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_pivas_batch` ADD CONSTRAINT `fk_biz_pivas_batch_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_pivas_batch` ADD CONSTRAINT `fk_biz_pivas_batch_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_pivas_batch` ADD CONSTRAINT `fk_biz_pivas_batch_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_pivas_item` ADD CONSTRAINT `fk_biz_pivas_item_pivas_id` FOREIGN KEY (`pivas_id`) REFERENCES `biz_pivas_batch` (`id`);
+ALTER TABLE `biz_pivas_item` ADD CONSTRAINT `fk_biz_pivas_item_order_id` FOREIGN KEY (`order_id`) REFERENCES `biz_inpatient_order` (`id`);
+ALTER TABLE `biz_pivas_item` ADD CONSTRAINT `fk_biz_pivas_item_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_pivas_item` ADD CONSTRAINT `fk_biz_pivas_item_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_pivas_item` ADD CONSTRAINT `fk_biz_pivas_item_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_pivas_item` ADD CONSTRAINT `fk_biz_pivas_item_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
+ALTER TABLE `biz_pivas_item` ADD CONSTRAINT `fk_biz_pivas_item_auditor_id` FOREIGN KEY (`auditor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_pivas_item` ADD CONSTRAINT `fk_biz_pivas_item_compounder_id` FOREIGN KEY (`compounder_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_pivas_item` ADD CONSTRAINT `fk_biz_pivas_item_verifier_id` FOREIGN KEY (`verifier_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_purchase_order` ADD CONSTRAINT `fk_biz_purchase_order_supplier_id` FOREIGN KEY (`supplier_id`) REFERENCES `sys_supplier` (`supplier_id`);
+ALTER TABLE `biz_purchase_order` ADD CONSTRAINT `fk_biz_purchase_order_approver_id` FOREIGN KEY (`approver_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_purchase_order_detail` ADD CONSTRAINT `fk_biz_purchase_order_detail_order_id` FOREIGN KEY (`order_id`) REFERENCES `biz_purchase_order` (`order_id`);
+ALTER TABLE `biz_purchase_order_detail` ADD CONSTRAINT `fk_biz_purchase_order_detail_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
+ALTER TABLE `biz_stocktake_item` ADD CONSTRAINT `fk_biz_stocktake_item_stocktake_id` FOREIGN KEY (`stocktake_id`) REFERENCES `biz_stocktake` (`id`);
+ALTER TABLE `biz_stocktake_item` ADD CONSTRAINT `fk_biz_stocktake_item_stock_id` FOREIGN KEY (`stock_id`) REFERENCES `biz_drug_stock` (`id`);
+ALTER TABLE `biz_stocktake_item` ADD CONSTRAINT `fk_biz_stocktake_item_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
+ALTER TABLE `biz_ward_dispense` ADD CONSTRAINT `fk_biz_ward_dispense_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_ward_dispense` ADD CONSTRAINT `fk_biz_ward_dispense_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_ward_dispense` ADD CONSTRAINT `fk_biz_ward_dispense_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_ward_dispense` ADD CONSTRAINT `fk_biz_ward_dispense_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_ward_dispense_item` ADD CONSTRAINT `fk_biz_ward_dispense_item_dispense_id` FOREIGN KEY (`dispense_id`) REFERENCES `biz_ward_dispense` (`id`);
+ALTER TABLE `biz_ward_dispense_item` ADD CONSTRAINT `fk_biz_ward_dispense_item_order_id` FOREIGN KEY (`order_id`) REFERENCES `biz_inpatient_order` (`id`);
+ALTER TABLE `biz_ward_dispense_item` ADD CONSTRAINT `fk_biz_ward_dispense_item_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_ward_dispense_item` ADD CONSTRAINT `fk_biz_ward_dispense_item_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_ward_dispense_item` ADD CONSTRAINT `fk_biz_ward_dispense_item_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_ward_dispense_item` ADD CONSTRAINT `fk_biz_ward_dispense_item_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
+ALTER TABLE `biz_ward_dispense_item` ADD CONSTRAINT `fk_biz_ward_dispense_item_fee_record_id` FOREIGN KEY (`fee_record_id`) REFERENCES `biz_fee_record` (`id`);
+ALTER TABLE `biz_ward_dispense_item` ADD CONSTRAINT `fk_biz_ward_dispense_item_dispenser_id` FOREIGN KEY (`dispenser_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_ward_dispense_item` ADD CONSTRAINT `fk_biz_ward_dispense_item_checker_id` FOREIGN KEY (`checker_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_consumable_consume` ADD CONSTRAINT `fk_biz_consumable_consume_consumable_id` FOREIGN KEY (`consumable_id`) REFERENCES `sys_consumable` (`id`);
+ALTER TABLE `biz_consumable_consume` ADD CONSTRAINT `fk_biz_consumable_consume_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_consumable_stock` ADD CONSTRAINT `fk_biz_consumable_stock_consumable_id` FOREIGN KEY (`consumable_id`) REFERENCES `sys_consumable` (`id`);
+ALTER TABLE `biz_consumable_stock_log` ADD CONSTRAINT `fk_biz_consumable_stock_log_stock_id` FOREIGN KEY (`stock_id`) REFERENCES `biz_consumable_stock` (`id`);
+ALTER TABLE `biz_consumable_stock_log` ADD CONSTRAINT `fk_biz_consumable_stock_log_consumable_id` FOREIGN KEY (`consumable_id`) REFERENCES `sys_consumable` (`id`);
+ALTER TABLE `biz_consumable_trace` ADD CONSTRAINT `fk_biz_consumable_trace_consumable_id` FOREIGN KEY (`consumable_id`) REFERENCES `sys_consumable` (`id`);
+ALTER TABLE `biz_consumable_trace` ADD CONSTRAINT `fk_biz_consumable_trace_stock_id` FOREIGN KEY (`stock_id`) REFERENCES `biz_consumable_stock` (`id`);
+ALTER TABLE `biz_consumable_trace` ADD CONSTRAINT `fk_biz_consumable_trace_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_consumable_trace` ADD CONSTRAINT `fk_biz_consumable_trace_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
+ALTER TABLE `biz_consumable_trace` ADD CONSTRAINT `fk_biz_consumable_trace_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_consumable_trace` ADD CONSTRAINT `fk_biz_consumable_trace_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_consumable_trace` ADD CONSTRAINT `fk_biz_consumable_trace_fee_record_id` FOREIGN KEY (`fee_record_id`) REFERENCES `biz_fee_record` (`id`);
+ALTER TABLE `biz_cssd_pack` ADD CONSTRAINT `fk_biz_cssd_pack_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_cssd_pack_template_item` ADD CONSTRAINT `fk_biz_cssd_pack_template_item_template_id` FOREIGN KEY (`template_id`) REFERENCES `biz_cssd_pack_template` (`id`);
+ALTER TABLE `biz_cssd_trace` ADD CONSTRAINT `fk_biz_cssd_trace_pack_id` FOREIGN KEY (`pack_id`) REFERENCES `biz_cssd_pack` (`id`);
+ALTER TABLE `biz_cashier_settlement` ADD CONSTRAINT `fk_biz_cashier_settlement_cashier_id` FOREIGN KEY (`cashier_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_cashier_settlement` ADD CONSTRAINT `fk_biz_cashier_settlement_day_settlement_id` FOREIGN KEY (`day_settlement_id`) REFERENCES `biz_day_settlement` (`id`);
 ALTER TABLE `biz_fee_record` ADD CONSTRAINT `fk_biz_fee_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
 ALTER TABLE `biz_fee_record` ADD CONSTRAINT `fk_biz_fee_record_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
 ALTER TABLE `biz_fee_record` ADD CONSTRAINT `fk_biz_fee_record_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_fee_record` ADD CONSTRAINT `fk_biz_fee_record_orig_fee_id` FOREIGN KEY (`orig_fee_id`) REFERENCES `biz_fee_record` (`id`);
 ALTER TABLE `biz_fee_record` ADD CONSTRAINT `fk_biz_fee_record_book_by_id` FOREIGN KEY (`book_by_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_fee_record` ADD CONSTRAINT `fk_biz_fee_record_bill_id` FOREIGN KEY (`bill_id`) REFERENCES `biz_settlement_bill` (`id`);
-ALTER TABLE `biz_followup_task` ADD CONSTRAINT `fk_biz_followup_task_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_followup_task` ADD CONSTRAINT `fk_biz_followup_task_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_followup_task` ADD CONSTRAINT `fk_biz_followup_task_executor_id` FOREIGN KEY (`executor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_followup_task` ADD CONSTRAINT `fk_biz_followup_task_revisit_record_id` FOREIGN KEY (`revisit_record_id`) REFERENCES `biz_medical_record` (`id`);
-ALTER TABLE `biz_followup_task` ADD CONSTRAINT `fk_biz_followup_task_revisit_appoint_id` FOREIGN KEY (`revisit_appoint_id`) REFERENCES `biz_appoint_info` (`id`);
 ALTER TABLE `biz_fund_account` ADD CONSTRAINT `fk_biz_fund_account_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
 ALTER TABLE `biz_fund_account_txn` ADD CONSTRAINT `fk_biz_fund_account_txn_account_id` FOREIGN KEY (`account_id`) REFERENCES `biz_fund_account` (`id`);
 ALTER TABLE `biz_fund_account_txn` ADD CONSTRAINT `fk_biz_fund_account_txn_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
@@ -9184,15 +9991,66 @@ ALTER TABLE `biz_fund_account_txn` ADD CONSTRAINT `fk_biz_fund_account_txn_bill_
 ALTER TABLE `biz_fund_account_txn` ADD CONSTRAINT `fk_biz_fund_account_txn_payment_txn_id` FOREIGN KEY (`payment_txn_id`) REFERENCES `biz_payment_txn` (`id`);
 ALTER TABLE `biz_fund_account_txn` ADD CONSTRAINT `fk_biz_fund_account_txn_operator_id` FOREIGN KEY (`operator_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_fund_account_txn` ADD CONSTRAINT `fk_biz_fund_account_txn_orig_txn_id` FOREIGN KEY (`orig_txn_id`) REFERENCES `biz_payment_txn` (`id`);
+ALTER TABLE `biz_inpatient_settlement` ADD CONSTRAINT `fk_biz_inpatient_settlement_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_inpatient_settlement` ADD CONSTRAINT `fk_biz_inpatient_settlement_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_inpatient_settlement` ADD CONSTRAINT `fk_biz_inpatient_settlement_settle_by` FOREIGN KEY (`settle_by`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_invoice` ADD CONSTRAINT `fk_biz_invoice_bill_id` FOREIGN KEY (`bill_id`) REFERENCES `biz_settlement_bill` (`id`);
+ALTER TABLE `biz_invoice` ADD CONSTRAINT `fk_biz_invoice_orig_invoice_id` FOREIGN KEY (`orig_invoice_id`) REFERENCES `biz_invoice` (`id`);
+ALTER TABLE `biz_invoice` ADD CONSTRAINT `fk_biz_invoice_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_pay_channel_bill` ADD CONSTRAINT `fk_biz_pay_channel_bill_local_txn_id` FOREIGN KEY (`local_txn_id`) REFERENCES `biz_payment_txn` (`id`);
+ALTER TABLE `biz_pay_channel_bill` ADD CONSTRAINT `fk_biz_pay_channel_bill_matched_by_id` FOREIGN KEY (`matched_by_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_pay_order` ADD CONSTRAINT `fk_biz_pay_order_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_payment_txn` ADD CONSTRAINT `fk_biz_payment_txn_bill_id` FOREIGN KEY (`bill_id`) REFERENCES `biz_settlement_bill` (`id`);
+ALTER TABLE `biz_payment_txn` ADD CONSTRAINT `fk_biz_payment_txn_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_payment_txn` ADD CONSTRAINT `fk_biz_payment_txn_orig_txn_id` FOREIGN KEY (`orig_txn_id`) REFERENCES `biz_payment_txn` (`id`);
+ALTER TABLE `biz_payment_txn` ADD CONSTRAINT `fk_biz_payment_txn_cashier_id` FOREIGN KEY (`cashier_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_payment_txn` ADD CONSTRAINT `fk_biz_payment_txn_cashier_settlement_id` FOREIGN KEY (`cashier_settlement_id`) REFERENCES `biz_cashier_settlement` (`id`);
+ALTER TABLE `biz_payment_txn` ADD CONSTRAINT `fk_biz_payment_txn_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_refund_apply` (`id`);
+ALTER TABLE `biz_prepay` ADD CONSTRAINT `fk_biz_prepay_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_prepay` ADD CONSTRAINT `fk_biz_prepay_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_prepay` ADD CONSTRAINT `fk_biz_prepay_operator_id` FOREIGN KEY (`operator_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_refund_apply` ADD CONSTRAINT `fk_biz_refund_apply_bill_id` FOREIGN KEY (`bill_id`) REFERENCES `biz_settlement_bill` (`id`);
+ALTER TABLE `biz_refund_apply` ADD CONSTRAINT `fk_biz_refund_apply_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_refund_apply` ADD CONSTRAINT `fk_biz_refund_apply_auditor_id` FOREIGN KEY (`auditor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_settlement_bill` ADD CONSTRAINT `fk_biz_settlement_bill_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_settlement_bill` ADD CONSTRAINT `fk_biz_settlement_bill_bill_by_id` FOREIGN KEY (`bill_by_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_settlement_bill` ADD CONSTRAINT `fk_biz_settlement_bill_void_by_id` FOREIGN KEY (`void_by_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_settlement_bill` ADD CONSTRAINT `fk_biz_settlement_bill_orig_bill_id` FOREIGN KEY (`orig_bill_id`) REFERENCES `biz_pay_channel_bill` (`id`);
+ALTER TABLE `biz_settlement_bill_item` ADD CONSTRAINT `fk_biz_settlement_bill_item_bill_id` FOREIGN KEY (`bill_id`) REFERENCES `biz_settlement_bill` (`id`);
+ALTER TABLE `biz_settlement_bill_item` ADD CONSTRAINT `fk_biz_settlement_bill_item_fee_record_id` FOREIGN KEY (`fee_record_id`) REFERENCES `biz_fee_record` (`id`);
+ALTER TABLE `biz_settlement_bill_item` ADD CONSTRAINT `fk_biz_settlement_bill_item_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_settlement_bill_item` ADD CONSTRAINT `fk_biz_settlement_bill_item_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_stat_daily` ADD CONSTRAINT `fk_biz_stat_daily_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `biz_stat_dept` (`stat_id`);
+ALTER TABLE `biz_stat_dept` ADD CONSTRAINT `fk_biz_stat_dept_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_adverse_event` ADD CONSTRAINT `fk_biz_adverse_event_occur_dept_id` FOREIGN KEY (`occur_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_adverse_event` ADD CONSTRAINT `fk_biz_adverse_event_occur_ward_id` FOREIGN KEY (`occur_ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_adverse_event` ADD CONSTRAINT `fk_biz_adverse_event_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_adverse_event` ADD CONSTRAINT `fk_biz_adverse_event_visit_id` FOREIGN KEY (`visit_id`) REFERENCES `biz_visit` (`visit_id`);
+ALTER TABLE `biz_adverse_event` ADD CONSTRAINT `fk_biz_adverse_event_reporter_id` FOREIGN KEY (`reporter_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_adverse_event` ADD CONSTRAINT `fk_biz_adverse_event_handler_id` FOREIGN KEY (`handler_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_adverse_event` ADD CONSTRAINT `fk_biz_adverse_event_rectify_by_id` FOREIGN KEY (`rectify_by_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_adverse_event` ADD CONSTRAINT `fk_biz_adverse_event_close_by_id` FOREIGN KEY (`close_by_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_death_certificate` ADD CONSTRAINT `fk_biz_death_certificate_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_death_certificate` ADD CONSTRAINT `fk_biz_death_certificate_discharge_id` FOREIGN KEY (`discharge_id`) REFERENCES `biz_discharge` (`discharge_id`);
+ALTER TABLE `biz_death_certificate` ADD CONSTRAINT `fk_biz_death_certificate_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_death_certificate` ADD CONSTRAINT `fk_biz_death_certificate_death_dept_id` FOREIGN KEY (`death_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_death_certificate` ADD CONSTRAINT `fk_biz_death_certificate_physician_id` FOREIGN KEY (`physician_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_death_certificate` ADD CONSTRAINT `fk_biz_death_certificate_reviewer_id` FOREIGN KEY (`reviewer_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_death_certificate` ADD CONSTRAINT `fk_biz_death_certificate_orig_cert_id` FOREIGN KEY (`orig_cert_id`) REFERENCES `biz_death_certificate` (`id`);
+ALTER TABLE `biz_death_certificate_cause` ADD CONSTRAINT `fk_biz_death_certificate_cause_cert_id` FOREIGN KEY (`cert_id`) REFERENCES `biz_death_certificate` (`id`);
+ALTER TABLE `biz_death_registration` ADD CONSTRAINT `fk_biz_death_registration_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_death_registration` ADD CONSTRAINT `fk_biz_death_registration_cert_id` FOREIGN KEY (`cert_id`) REFERENCES `biz_death_certificate` (`id`);
+ALTER TABLE `biz_death_registration` ADD CONSTRAINT `fk_biz_death_registration_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_death_registration` ADD CONSTRAINT `fk_biz_death_registration_death_dept_id` FOREIGN KEY (`death_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_death_registration` ADD CONSTRAINT `fk_biz_death_registration_registrar_id` FOREIGN KEY (`registrar_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_dispute_case` ADD CONSTRAINT `fk_biz_dispute_case_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_dispute_case` ADD CONSTRAINT `fk_biz_dispute_case_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_dispute_case` ADD CONSTRAINT `fk_biz_dispute_case_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_dispute_case` ADD CONSTRAINT `fk_biz_dispute_case_archive_id` FOREIGN KEY (`archive_id`) REFERENCES `biz_medical_record_archive` (`id`);
+ALTER TABLE `biz_dispute_flow` ADD CONSTRAINT `fk_biz_dispute_flow_case_id` FOREIGN KEY (`case_id`) REFERENCES `biz_dispute_case` (`id`);
+ALTER TABLE `biz_dispute_flow` ADD CONSTRAINT `fk_biz_dispute_flow_operator_id` FOREIGN KEY (`operator_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_hand_hygiene_obs` ADD CONSTRAINT `fk_biz_hand_hygiene_obs_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
 ALTER TABLE `biz_hand_hygiene_obs` ADD CONSTRAINT `fk_biz_hand_hygiene_obs_observer_id` FOREIGN KEY (`observer_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_icu_monitor` ADD CONSTRAINT `fk_biz_icu_monitor_stay_id` FOREIGN KEY (`stay_id`) REFERENCES `biz_icu_stay` (`id`);
-ALTER TABLE `biz_icu_monitor` ADD CONSTRAINT `fk_biz_icu_monitor_recorder_id` FOREIGN KEY (`recorder_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_icu_stay` ADD CONSTRAINT `fk_biz_icu_stay_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_icu_stay` ADD CONSTRAINT `fk_biz_icu_stay_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_icu_stay` ADD CONSTRAINT `fk_biz_icu_stay_from_dept_id` FOREIGN KEY (`from_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_icu_stay` ADD CONSTRAINT `fk_biz_icu_stay_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_icu_stay` ADD CONSTRAINT `fk_biz_icu_stay_bed_id` FOREIGN KEY (`bed_id`) REFERENCES `sys_bed` (`bed_id`);
 ALTER TABLE `biz_infection_case` ADD CONSTRAINT `fk_biz_infection_case_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
 ALTER TABLE `biz_infection_case` ADD CONSTRAINT `fk_biz_infection_case_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
 ALTER TABLE `biz_infection_case` ADD CONSTRAINT `fk_biz_infection_case_inp_id` FOREIGN KEY (`inp_id`) REFERENCES `biz_admission` (`admission_id`);
@@ -9208,223 +10066,55 @@ ALTER TABLE `biz_infectious_report` ADD CONSTRAINT `fk_biz_infectious_report_inp
 ALTER TABLE `biz_infectious_report` ADD CONSTRAINT `fk_biz_infectious_report_visit_dept_id` FOREIGN KEY (`visit_dept_id`) REFERENCES `sys_department` (`id`);
 ALTER TABLE `biz_infectious_report` ADD CONSTRAINT `fk_biz_infectious_report_disease_id` FOREIGN KEY (`disease_id`) REFERENCES `biz_patient_past_disease` (`id`);
 ALTER TABLE `biz_infectious_report` ADD CONSTRAINT `fk_biz_infectious_report_report_by` FOREIGN KEY (`report_by`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_infusion_round` ADD CONSTRAINT `fk_biz_infusion_round_exec_id` FOREIGN KEY (`exec_id`) REFERENCES `biz_inpatient_order_exec` (`id`);
-ALTER TABLE `biz_infusion_round` ADD CONSTRAINT `fk_biz_infusion_round_order_id` FOREIGN KEY (`order_id`) REFERENCES `biz_inpatient_order` (`id`);
-ALTER TABLE `biz_infusion_round` ADD CONSTRAINT `fk_biz_infusion_round_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_infusion_round` ADD CONSTRAINT `fk_biz_infusion_round_round_nurse_id` FOREIGN KEY (`round_nurse_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_inpatient_diagnosis` ADD CONSTRAINT `fk_biz_inpatient_diagnosis_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_inpatient_leave` ADD CONSTRAINT `fk_biz_inpatient_leave_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_inpatient_leave` ADD CONSTRAINT `fk_biz_inpatient_leave_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_inpatient_leave` ADD CONSTRAINT `fk_biz_inpatient_leave_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_inpatient_leave` ADD CONSTRAINT `fk_biz_inpatient_leave_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_inpatient_leave` ADD CONSTRAINT `fk_biz_inpatient_leave_sign_id` FOREIGN KEY (`sign_id`) REFERENCES `biz_emr_signature` (`id`);
-ALTER TABLE `biz_inpatient_operation` ADD CONSTRAINT `fk_biz_inpatient_operation_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_inpatient_operation` ADD CONSTRAINT `fk_biz_inpatient_operation_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_operation_apply` (`id`);
-ALTER TABLE `biz_inpatient_operation` ADD CONSTRAINT `fk_biz_inpatient_operation_surgeon_id` FOREIGN KEY (`surgeon_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_inpatient_order` ADD CONSTRAINT `fk_biz_inpatient_order_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_inpatient_order` ADD CONSTRAINT `fk_biz_inpatient_order_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_inpatient_order` ADD CONSTRAINT `fk_biz_inpatient_order_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_inpatient_order` ADD CONSTRAINT `fk_biz_inpatient_order_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_inpatient_order` ADD CONSTRAINT `fk_biz_inpatient_order_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_inpatient_order` ADD CONSTRAINT `fk_biz_inpatient_order_doctor_sign_id` FOREIGN KEY (`doctor_sign_id`) REFERENCES `biz_emr_signature` (`id`);
-ALTER TABLE `biz_inpatient_order` ADD CONSTRAINT `fk_biz_inpatient_order_verify_nurse_id` FOREIGN KEY (`verify_nurse_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_inpatient_order` ADD CONSTRAINT `fk_biz_inpatient_order_nurse_sign_id` FOREIGN KEY (`nurse_sign_id`) REFERENCES `biz_emr_signature` (`id`);
-ALTER TABLE `biz_inpatient_order` ADD CONSTRAINT `fk_biz_inpatient_order_stop_doctor_id` FOREIGN KEY (`stop_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_inpatient_order_exec` ADD CONSTRAINT `fk_biz_inpatient_order_exec_order_id` FOREIGN KEY (`order_id`) REFERENCES `biz_inpatient_order` (`id`);
-ALTER TABLE `biz_inpatient_order_exec` ADD CONSTRAINT `fk_biz_inpatient_order_exec_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_inpatient_order_exec` ADD CONSTRAINT `fk_biz_inpatient_order_exec_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_inpatient_order_exec` ADD CONSTRAINT `fk_biz_inpatient_order_exec_exec_nurse_id` FOREIGN KEY (`exec_nurse_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_inpatient_order_exec` ADD CONSTRAINT `fk_biz_inpatient_order_exec_fee_record_id` FOREIGN KEY (`fee_record_id`) REFERENCES `biz_fee_record` (`id`);
-ALTER TABLE `biz_inpatient_order_template` ADD CONSTRAINT `fk_biz_inpatient_order_template_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_inpatient_order_template` ADD CONSTRAINT `fk_biz_inpatient_order_template_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_inpatient_order_template_item` ADD CONSTRAINT `fk_biz_inpatient_order_template_item_template_id` FOREIGN KEY (`template_id`) REFERENCES `biz_inpatient_order_template` (`id`);
-ALTER TABLE `biz_inpatient_record` ADD CONSTRAINT `fk_biz_inpatient_record_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_inpatient_record` ADD CONSTRAINT `fk_biz_inpatient_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_inpatient_record` ADD CONSTRAINT `fk_biz_inpatient_record_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_inpatient_record` ADD CONSTRAINT `fk_biz_inpatient_record_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_inpatient_record` ADD CONSTRAINT `fk_biz_inpatient_record_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_inpatient_record` ADD CONSTRAINT `fk_biz_inpatient_record_archive_by` FOREIGN KEY (`archive_by`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_inpatient_record` ADD CONSTRAINT `fk_biz_inpatient_record_sign_id` FOREIGN KEY (`sign_id`) REFERENCES `biz_emr_signature` (`id`);
-ALTER TABLE `biz_inpatient_record_log` ADD CONSTRAINT `fk_biz_inpatient_record_log_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inpatient_record` (`id`);
-ALTER TABLE `biz_inpatient_record_log` ADD CONSTRAINT `fk_biz_inpatient_record_log_user_id` FOREIGN KEY (`user_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_inpatient_settlement` ADD CONSTRAINT `fk_biz_inpatient_settlement_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_inpatient_settlement` ADD CONSTRAINT `fk_biz_inpatient_settlement_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_inpatient_settlement` ADD CONSTRAINT `fk_biz_inpatient_settlement_settle_by` FOREIGN KEY (`settle_by`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_inpatient_summary` ADD CONSTRAINT `fk_biz_inpatient_summary_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_inpatient_summary` ADD CONSTRAINT `fk_biz_inpatient_summary_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_inpatient_summary` ADD CONSTRAINT `fk_biz_inpatient_summary_admit_dept_id` FOREIGN KEY (`admit_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_inpatient_summary` ADD CONSTRAINT `fk_biz_inpatient_summary_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_inpatient_summary` ADD CONSTRAINT `fk_biz_inpatient_summary_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_inpatient_transfer` ADD CONSTRAINT `fk_biz_inpatient_transfer_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_inpatient_transfer` ADD CONSTRAINT `fk_biz_inpatient_transfer_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_inpatient_transfer` ADD CONSTRAINT `fk_biz_inpatient_transfer_from_dept_id` FOREIGN KEY (`from_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_inpatient_transfer` ADD CONSTRAINT `fk_biz_inpatient_transfer_from_ward_id` FOREIGN KEY (`from_ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_inpatient_transfer` ADD CONSTRAINT `fk_biz_inpatient_transfer_from_bed_id` FOREIGN KEY (`from_bed_id`) REFERENCES `sys_bed` (`bed_id`);
-ALTER TABLE `biz_inpatient_transfer` ADD CONSTRAINT `fk_biz_inpatient_transfer_to_dept_id` FOREIGN KEY (`to_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_inpatient_transfer` ADD CONSTRAINT `fk_biz_inpatient_transfer_to_ward_id` FOREIGN KEY (`to_ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_inpatient_transfer` ADD CONSTRAINT `fk_biz_inpatient_transfer_to_bed_id` FOREIGN KEY (`to_bed_id`) REFERENCES `sys_bed` (`bed_id`);
-ALTER TABLE `biz_inpatient_transfer` ADD CONSTRAINT `fk_biz_inpatient_transfer_apply_doctor_id` FOREIGN KEY (`apply_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_inpatient_transfer` ADD CONSTRAINT `fk_biz_inpatient_transfer_receive_doctor_id` FOREIGN KEY (`receive_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_inpatient_transfer` ADD CONSTRAINT `fk_biz_inpatient_transfer_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inpatient_record` (`id`);
-ALTER TABLE `biz_inspection_apply` ADD CONSTRAINT `fk_biz_inspection_apply_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_inspection_apply` ADD CONSTRAINT `fk_biz_inspection_apply_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
-ALTER TABLE `biz_inspection_apply` ADD CONSTRAINT `fk_biz_inspection_apply_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_medical_record` (`id`);
-ALTER TABLE `biz_inspection_apply` ADD CONSTRAINT `fk_biz_inspection_apply_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_inspection_apply` ADD CONSTRAINT `fk_biz_inspection_apply_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_inspection_apply` ADD CONSTRAINT `fk_biz_inspection_apply_inspection_item_id` FOREIGN KEY (`inspection_item_id`) REFERENCES `sys_inspection_item` (`id`);
-ALTER TABLE `biz_inspection_apply` ADD CONSTRAINT `fk_biz_inspection_apply_inspection_dept_id` FOREIGN KEY (`inspection_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_inspection_apply` ADD CONSTRAINT `fk_biz_inspection_apply_sign_id` FOREIGN KEY (`sign_id`) REFERENCES `biz_emr_signature` (`id`);
-ALTER TABLE `biz_inspection_apply` ADD CONSTRAINT `fk_biz_inspection_apply_report_id` FOREIGN KEY (`report_id`) REFERENCES `biz_report` (`id`);
-ALTER TABLE `biz_inspection_record` ADD CONSTRAINT `fk_biz_inspection_record_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_inspection_apply` (`id`);
-ALTER TABLE `biz_inspection_record` ADD CONSTRAINT `fk_biz_inspection_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_inspection_record` ADD CONSTRAINT `fk_biz_inspection_record_apply_dept_id` FOREIGN KEY (`apply_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_inspection_record` ADD CONSTRAINT `fk_biz_inspection_record_apply_doctor_id` FOREIGN KEY (`apply_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_inspection_record` ADD CONSTRAINT `fk_biz_inspection_record_inspection_item_id` FOREIGN KEY (`inspection_item_id`) REFERENCES `sys_inspection_item` (`id`);
-ALTER TABLE `biz_inspection_record` ADD CONSTRAINT `fk_biz_inspection_record_inspection_dept_id` FOREIGN KEY (`inspection_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_inspection_record` ADD CONSTRAINT `fk_biz_inspection_record_report_sign_id` FOREIGN KEY (`report_sign_id`) REFERENCES `biz_emr_signature` (`id`);
-ALTER TABLE `biz_inspection_record` ADD CONSTRAINT `fk_biz_inspection_record_audit_sign_id` FOREIGN KEY (`audit_sign_id`) REFERENCES `biz_emr_signature` (`id`);
-ALTER TABLE `biz_inspection_template` ADD CONSTRAINT `fk_biz_inspection_template_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_inspection_template` ADD CONSTRAINT `fk_biz_inspection_template_inspection_item_id` FOREIGN KEY (`inspection_item_id`) REFERENCES `sys_inspection_item` (`id`);
-ALTER TABLE `biz_insurance_report` ADD CONSTRAINT `fk_biz_insurance_report_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_insurance_settlement` (`id`);
-ALTER TABLE `biz_insurance_settlement` ADD CONSTRAINT `fk_biz_insurance_settlement_bill_id` FOREIGN KEY (`bill_id`) REFERENCES `biz_settlement_bill` (`id`);
-ALTER TABLE `biz_insurance_settlement` ADD CONSTRAINT `fk_biz_insurance_settlement_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_insurance_settlement` ADD CONSTRAINT `fk_biz_insurance_settlement_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
-ALTER TABLE `biz_insurance_settlement` ADD CONSTRAINT `fk_biz_insurance_settlement_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_insurance_settlement` ADD CONSTRAINT `fk_biz_insurance_settlement_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_invoice` ADD CONSTRAINT `fk_biz_invoice_bill_id` FOREIGN KEY (`bill_id`) REFERENCES `biz_settlement_bill` (`id`);
-ALTER TABLE `biz_invoice` ADD CONSTRAINT `fk_biz_invoice_orig_invoice_id` FOREIGN KEY (`orig_invoice_id`) REFERENCES `biz_invoice` (`id`);
-ALTER TABLE `biz_invoice` ADD CONSTRAINT `fk_biz_invoice_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_lab_result` ADD CONSTRAINT `fk_biz_lab_result_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_laboratory_record` (`id`);
-ALTER TABLE `biz_lab_result` ADD CONSTRAINT `fk_biz_lab_result_laboratory_item_id` FOREIGN KEY (`laboratory_item_id`) REFERENCES `sys_laboratory_item` (`id`);
-ALTER TABLE `biz_laboratory_apply` ADD CONSTRAINT `fk_biz_laboratory_apply_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_laboratory_apply` ADD CONSTRAINT `fk_biz_laboratory_apply_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
-ALTER TABLE `biz_laboratory_apply` ADD CONSTRAINT `fk_biz_laboratory_apply_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_medical_record` (`id`);
-ALTER TABLE `biz_laboratory_apply` ADD CONSTRAINT `fk_biz_laboratory_apply_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_laboratory_apply` ADD CONSTRAINT `fk_biz_laboratory_apply_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_laboratory_apply` ADD CONSTRAINT `fk_biz_laboratory_apply_laboratory_item_id` FOREIGN KEY (`laboratory_item_id`) REFERENCES `sys_laboratory_item` (`id`);
-ALTER TABLE `biz_laboratory_apply` ADD CONSTRAINT `fk_biz_laboratory_apply_laboratory_dept_id` FOREIGN KEY (`laboratory_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_laboratory_apply` ADD CONSTRAINT `fk_biz_laboratory_apply_sign_id` FOREIGN KEY (`sign_id`) REFERENCES `biz_emr_signature` (`id`);
-ALTER TABLE `biz_laboratory_apply` ADD CONSTRAINT `fk_biz_laboratory_apply_report_id` FOREIGN KEY (`report_id`) REFERENCES `biz_report` (`id`);
-ALTER TABLE `biz_laboratory_record` ADD CONSTRAINT `fk_biz_laboratory_record_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_laboratory_apply` (`id`);
-ALTER TABLE `biz_laboratory_record` ADD CONSTRAINT `fk_biz_laboratory_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_laboratory_record` ADD CONSTRAINT `fk_biz_laboratory_record_apply_dept_id` FOREIGN KEY (`apply_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_laboratory_record` ADD CONSTRAINT `fk_biz_laboratory_record_apply_doctor_id` FOREIGN KEY (`apply_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_laboratory_record` ADD CONSTRAINT `fk_biz_laboratory_record_laboratory_item_id` FOREIGN KEY (`laboratory_item_id`) REFERENCES `sys_laboratory_item` (`id`);
-ALTER TABLE `biz_laboratory_record` ADD CONSTRAINT `fk_biz_laboratory_record_laboratory_dept_id` FOREIGN KEY (`laboratory_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_laboratory_record` ADD CONSTRAINT `fk_biz_laboratory_record_report_sign_id` FOREIGN KEY (`report_sign_id`) REFERENCES `biz_emr_signature` (`id`);
-ALTER TABLE `biz_laboratory_record` ADD CONSTRAINT `fk_biz_laboratory_record_audit_sign_id` FOREIGN KEY (`audit_sign_id`) REFERENCES `biz_emr_signature` (`id`);
-ALTER TABLE `biz_laboratory_template` ADD CONSTRAINT `fk_biz_laboratory_template_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_laboratory_template` ADD CONSTRAINT `fk_biz_laboratory_template_laboratory_item_id` FOREIGN KEY (`laboratory_item_id`) REFERENCES `sys_laboratory_item` (`id`);
-ALTER TABLE `biz_lis_eqa_compare` ADD CONSTRAINT `fk_biz_lis_eqa_compare_plan_id` FOREIGN KEY (`plan_id`) REFERENCES `biz_lis_eqa_plan` (`id`);
-ALTER TABLE `biz_lis_eqa_sample` ADD CONSTRAINT `fk_biz_lis_eqa_sample_plan_id` FOREIGN KEY (`plan_id`) REFERENCES `biz_lis_eqa_plan` (`id`);
-ALTER TABLE `biz_lis_eqa_sample` ADD CONSTRAINT `fk_biz_lis_eqa_sample_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_compliance_audit_item` (`id`);
-ALTER TABLE `biz_lis_qc_plan` ADD CONSTRAINT `fk_biz_lis_qc_plan_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_compliance_audit_item` (`id`);
-ALTER TABLE `biz_lis_qc_record` ADD CONSTRAINT `fk_biz_lis_qc_record_plan_id` FOREIGN KEY (`plan_id`) REFERENCES `biz_lis_qc_plan` (`id`);
+ALTER TABLE `biz_medical_waste` ADD CONSTRAINT `fk_biz_medical_waste_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_public_health_report` ADD CONSTRAINT `fk_biz_public_health_report_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_public_health_report` ADD CONSTRAINT `fk_biz_public_health_report_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_medical_record` (`id`);
+ALTER TABLE `biz_antibiotic_alias` ADD CONSTRAINT `fk_biz_antibiotic_alias_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
+ALTER TABLE `biz_antibiotic_auth` ADD CONSTRAINT `fk_biz_antibiotic_auth_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_antibiotic_auth` ADD CONSTRAINT `fk_biz_antibiotic_auth_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_antibiotic_incision_review` ADD CONSTRAINT `fk_biz_antibiotic_incision_review_operation_apply_id` FOREIGN KEY (`operation_apply_id`) REFERENCES `biz_operation_apply` (`id`);
+ALTER TABLE `biz_antibiotic_incision_review` ADD CONSTRAINT `fk_biz_antibiotic_incision_review_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_antibiotic_incision_review` ADD CONSTRAINT `fk_biz_antibiotic_incision_review_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_antibiotic_incision_review` ADD CONSTRAINT `fk_biz_antibiotic_incision_review_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
+ALTER TABLE `biz_antibiotic_incision_review` ADD CONSTRAINT `fk_biz_antibiotic_incision_review_reviewer_id` FOREIGN KEY (`reviewer_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_antibiotic_stats` ADD CONSTRAINT `fk_biz_antibiotic_stats_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_checkup_record` ADD CONSTRAINT `fk_biz_checkup_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_checkup_record` ADD CONSTRAINT `fk_biz_checkup_record_package_id` FOREIGN KEY (`package_id`) REFERENCES `sys_checkup_package` (`id`);
+ALTER TABLE `biz_checkup_result` ADD CONSTRAINT `fk_biz_checkup_result_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_checkup_record` (`id`);
+ALTER TABLE `biz_clinical_rule_check` ADD CONSTRAINT `fk_biz_clinical_rule_check_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_medical_record` (`id`);
+ALTER TABLE `biz_clinical_rule_check` ADD CONSTRAINT `fk_biz_clinical_rule_check_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_dialysis_patient` ADD CONSTRAINT `fk_biz_dialysis_patient_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_dialysis_prescription` ADD CONSTRAINT `fk_biz_dialysis_prescription_archive_id` FOREIGN KEY (`archive_id`) REFERENCES `biz_dialysis_patient` (`id`);
+ALTER TABLE `biz_dialysis_prescription` ADD CONSTRAINT `fk_biz_dialysis_prescription_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_dialysis_session` ADD CONSTRAINT `fk_biz_dialysis_session_machine_id` FOREIGN KEY (`machine_id`) REFERENCES `biz_dialysis_machine` (`id`);
+ALTER TABLE `biz_dialysis_session` ADD CONSTRAINT `fk_biz_dialysis_session_archive_id` FOREIGN KEY (`archive_id`) REFERENCES `biz_dialysis_patient` (`id`);
+ALTER TABLE `biz_dialysis_session` ADD CONSTRAINT `fk_biz_dialysis_session_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_dialysis_session` ADD CONSTRAINT `fk_biz_dialysis_session_prescription_id` FOREIGN KEY (`prescription_id`) REFERENCES `biz_dialysis_prescription` (`id`);
+ALTER TABLE `biz_diet_plan` ADD CONSTRAINT `fk_biz_diet_plan_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_diet_plan` ADD CONSTRAINT `fk_biz_diet_plan_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_diet_plan` ADD CONSTRAINT `fk_biz_diet_plan_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_diet_plan` ADD CONSTRAINT `fk_biz_diet_plan_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_diet_plan` ADD CONSTRAINT `fk_biz_diet_plan_order_id` FOREIGN KEY (`order_id`) REFERENCES `biz_inpatient_order` (`id`);
+ALTER TABLE `biz_diet_plan` ADD CONSTRAINT `fk_biz_diet_plan_confirmer_id` FOREIGN KEY (`confirmer_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_icu_monitor` ADD CONSTRAINT `fk_biz_icu_monitor_stay_id` FOREIGN KEY (`stay_id`) REFERENCES `biz_icu_stay` (`id`);
+ALTER TABLE `biz_icu_monitor` ADD CONSTRAINT `fk_biz_icu_monitor_recorder_id` FOREIGN KEY (`recorder_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_icu_stay` ADD CONSTRAINT `fk_biz_icu_stay_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_icu_stay` ADD CONSTRAINT `fk_biz_icu_stay_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_icu_stay` ADD CONSTRAINT `fk_biz_icu_stay_from_dept_id` FOREIGN KEY (`from_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_icu_stay` ADD CONSTRAINT `fk_biz_icu_stay_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_icu_stay` ADD CONSTRAINT `fk_biz_icu_stay_bed_id` FOREIGN KEY (`bed_id`) REFERENCES `sys_bed` (`bed_id`);
 ALTER TABLE `biz_meal_order` ADD CONSTRAINT `fk_biz_meal_order_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
 ALTER TABLE `biz_meal_order` ADD CONSTRAINT `fk_biz_meal_order_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
 ALTER TABLE `biz_meal_order` ADD CONSTRAINT `fk_biz_meal_order_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
 ALTER TABLE `biz_meal_order` ADD CONSTRAINT `fk_biz_meal_order_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
 ALTER TABLE `biz_meal_order` ADD CONSTRAINT `fk_biz_meal_order_diet_plan_id` FOREIGN KEY (`diet_plan_id`) REFERENCES `biz_diet_plan` (`id`);
 ALTER TABLE `biz_meal_order` ADD CONSTRAINT `fk_biz_meal_order_deliver_by_id` FOREIGN KEY (`deliver_by_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_medical_record` ADD CONSTRAINT `fk_biz_medical_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_medical_record` ADD CONSTRAINT `fk_biz_medical_record_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
-ALTER TABLE `biz_medical_record` ADD CONSTRAINT `fk_biz_medical_record_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_medical_record` ADD CONSTRAINT `fk_biz_medical_record_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_medical_record` ADD CONSTRAINT `fk_biz_medical_record_sign_id` FOREIGN KEY (`sign_id`) REFERENCES `biz_emr_signature` (`id`);
-ALTER TABLE `biz_medical_record_archive` ADD CONSTRAINT `fk_biz_medical_record_archive_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_medical_record` (`id`);
-ALTER TABLE `biz_medical_record_archive` ADD CONSTRAINT `fk_biz_medical_record_archive_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_medical_record_archive` ADD CONSTRAINT `fk_biz_medical_record_archive_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
-ALTER TABLE `biz_medical_record_archive` ADD CONSTRAINT `fk_biz_medical_record_archive_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_medical_record_archive` ADD CONSTRAINT `fk_biz_medical_record_archive_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_medical_record_log` ADD CONSTRAINT `fk_biz_medical_record_log_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_medical_record` (`id`);
-ALTER TABLE `biz_medical_record_log` ADD CONSTRAINT `fk_biz_medical_record_log_user_id` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`);
-ALTER TABLE `biz_medical_waste` ADD CONSTRAINT `fk_biz_medical_waste_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_medicaltech_execution` ADD CONSTRAINT `fk_biz_medicaltech_execution_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_medicaltech_execution` ADD CONSTRAINT `fk_biz_medicaltech_execution_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_compliance_audit_item` (`id`);
-ALTER TABLE `biz_medicaltech_execution` ADD CONSTRAINT `fk_biz_medicaltech_execution_executor_id` FOREIGN KEY (`executor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_medicaltech_execution` ADD CONSTRAINT `fk_biz_medicaltech_execution_reviewer_id` FOREIGN KEY (`reviewer_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_narcotic_register` ADD CONSTRAINT `fk_biz_narcotic_register_prescription_id` FOREIGN KEY (`prescription_id`) REFERENCES `biz_prescription` (`id`);
-ALTER TABLE `biz_narcotic_register` ADD CONSTRAINT `fk_biz_narcotic_register_dispensing_id` FOREIGN KEY (`dispensing_id`) REFERENCES `biz_drug_dispensing` (`id`);
-ALTER TABLE `biz_narcotic_register` ADD CONSTRAINT `fk_biz_narcotic_register_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_narcotic_register` ADD CONSTRAINT `fk_biz_narcotic_register_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_narcotic_register` ADD CONSTRAINT `fk_biz_narcotic_register_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
-ALTER TABLE `biz_narcotic_register` ADD CONSTRAINT `fk_biz_narcotic_register_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_narcotic_register` ADD CONSTRAINT `fk_biz_narcotic_register_dispense_by_id` FOREIGN KEY (`dispense_by_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_narcotic_register` ADD CONSTRAINT `fk_biz_narcotic_register_checker_id` FOREIGN KEY (`checker_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_nurse_schedule` ADD CONSTRAINT `fk_biz_nurse_schedule_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_nurse_schedule` ADD CONSTRAINT `fk_biz_nurse_schedule_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_nurse_schedule` ADD CONSTRAINT `fk_biz_nurse_schedule_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_nurse_schedule` ADD CONSTRAINT `fk_biz_nurse_schedule_shift_id` FOREIGN KEY (`shift_id`) REFERENCES `biz_shift` (`id`);
-ALTER TABLE `biz_nurse_schedule_rule` ADD CONSTRAINT `fk_biz_nurse_schedule_rule_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_nurse_schedule_rule` ADD CONSTRAINT `fk_biz_nurse_schedule_rule_shift_id` FOREIGN KEY (`shift_id`) REFERENCES `biz_shift` (`id`);
-ALTER TABLE `biz_nursing_assessment` ADD CONSTRAINT `fk_biz_nursing_assessment_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_nursing_assessment` ADD CONSTRAINT `fk_biz_nursing_assessment_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_nursing_assessment` ADD CONSTRAINT `fk_biz_nursing_assessment_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_nursing_assessment` ADD CONSTRAINT `fk_biz_nursing_assessment_assess_nurse_id` FOREIGN KEY (`assess_nurse_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_nursing_qc_check` ADD CONSTRAINT `fk_biz_nursing_qc_check_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_nursing_qc_check` ADD CONSTRAINT `fk_biz_nursing_qc_check_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_nursing_qc_check` ADD CONSTRAINT `fk_biz_nursing_qc_check_inspector_id` FOREIGN KEY (`inspector_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_nursing_qc_check_item` ADD CONSTRAINT `fk_biz_nursing_qc_check_item_check_id` FOREIGN KEY (`check_id`) REFERENCES `biz_nursing_qc_check` (`id`);
-ALTER TABLE `biz_nursing_qc_check_item` ADD CONSTRAINT `fk_biz_nursing_qc_check_item_item_id` FOREIGN KEY (`item_id`) REFERENCES `sys_nursing_qc_item` (`id`);
-ALTER TABLE `biz_nursing_qc_indicator` ADD CONSTRAINT `fk_biz_nursing_qc_indicator_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_nursing_qc_indicator` ADD CONSTRAINT `fk_biz_nursing_qc_indicator_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_nursing_record` ADD CONSTRAINT `fk_biz_nursing_record_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_nursing_record` ADD CONSTRAINT `fk_biz_nursing_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_nursing_record` ADD CONSTRAINT `fk_biz_nursing_record_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_nursing_record` ADD CONSTRAINT `fk_biz_nursing_record_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_nursing_record` ADD CONSTRAINT `fk_biz_nursing_record_nurse_id` FOREIGN KEY (`nurse_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_nutrition_screen` ADD CONSTRAINT `fk_biz_nutrition_screen_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
 ALTER TABLE `biz_nutrition_screen` ADD CONSTRAINT `fk_biz_nutrition_screen_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
 ALTER TABLE `biz_nutrition_screen` ADD CONSTRAINT `fk_biz_nutrition_screen_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
 ALTER TABLE `biz_nutrition_screen` ADD CONSTRAINT `fk_biz_nutrition_screen_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
 ALTER TABLE `biz_nutrition_screen` ADD CONSTRAINT `fk_biz_nutrition_screen_screener_id` FOREIGN KEY (`screener_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_nutrition_stats` ADD CONSTRAINT `fk_biz_nutrition_stats_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_online_consult` ADD CONSTRAINT `fk_biz_online_consult_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_online_consult` ADD CONSTRAINT `fk_biz_online_consult_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_online_consult` ADD CONSTRAINT `fk_biz_online_consult_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_apply_dept_id` FOREIGN KEY (`apply_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_apply_doctor_id` FOREIGN KEY (`apply_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_surgeon_id` FOREIGN KEY (`surgeon_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_anesthetist_id` FOREIGN KEY (`anesthetist_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_schedule_doctor_id` FOREIGN KEY (`schedule_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_preop_check_doctor_id` FOREIGN KEY (`preop_check_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_finish_doctor_id` FOREIGN KEY (`finish_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_operation_id` FOREIGN KEY (`operation_id`) REFERENCES `biz_inpatient_operation` (`id`);
-ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inpatient_record` (`id`);
-ALTER TABLE `biz_operation_apply` ADD CONSTRAINT `fk_biz_operation_apply_cancel_doctor_id` FOREIGN KEY (`cancel_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_operation_charge_item` ADD CONSTRAINT `fk_biz_operation_charge_item_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_operation_apply` (`id`);
-ALTER TABLE `biz_operation_charge_item` ADD CONSTRAINT `fk_biz_operation_charge_item_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_operation_charge_item` ADD CONSTRAINT `fk_biz_operation_charge_item_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_operation_charge_item` ADD CONSTRAINT `fk_biz_operation_charge_item_fee_record_id` FOREIGN KEY (`fee_record_id`) REFERENCES `biz_fee_record` (`id`);
-ALTER TABLE `biz_operation_count` ADD CONSTRAINT `fk_biz_operation_count_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_operation_apply` (`id`);
-ALTER TABLE `biz_operation_count` ADD CONSTRAINT `fk_biz_operation_count_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_operation_count` ADD CONSTRAINT `fk_biz_operation_count_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_operation_count` ADD CONSTRAINT `fk_biz_operation_count_instrument_nurse_id` FOREIGN KEY (`instrument_nurse_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_operation_count` ADD CONSTRAINT `fk_biz_operation_count_circulate_nurse_id` FOREIGN KEY (`circulate_nurse_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_operation_count` ADD CONSTRAINT `fk_biz_operation_count_before_nurse_id` FOREIGN KEY (`before_nurse_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_operation_count` ADD CONSTRAINT `fk_biz_operation_count_closure_nurse_id` FOREIGN KEY (`closure_nurse_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_operation_count` ADD CONSTRAINT `fk_biz_operation_count_final_nurse_id` FOREIGN KEY (`final_nurse_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_operation_count_item` ADD CONSTRAINT `fk_biz_operation_count_item_count_id` FOREIGN KEY (`count_id`) REFERENCES `biz_operation_count` (`id`);
-ALTER TABLE `biz_operation_safety_check` ADD CONSTRAINT `fk_biz_operation_safety_check_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_operation_apply` (`id`);
-ALTER TABLE `biz_operation_safety_check` ADD CONSTRAINT `fk_biz_operation_safety_check_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_operation_safety_check` ADD CONSTRAINT `fk_biz_operation_safety_check_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_operation_safety_check` ADD CONSTRAINT `fk_biz_operation_safety_check_surgeon_id` FOREIGN KEY (`surgeon_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_operation_safety_check` ADD CONSTRAINT `fk_biz_operation_safety_check_anesthetist_id` FOREIGN KEY (`anesthetist_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_operation_safety_check` ADD CONSTRAINT `fk_biz_operation_safety_check_nurse_id` FOREIGN KEY (`nurse_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_operation_safety_check` ADD CONSTRAINT `fk_biz_operation_safety_check_recorder_id` FOREIGN KEY (`recorder_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_outp_infusion` ADD CONSTRAINT `fk_biz_outp_infusion_treatment_record_id` FOREIGN KEY (`treatment_record_id`) REFERENCES `biz_treatment_record` (`record_id`);
-ALTER TABLE `biz_outp_infusion` ADD CONSTRAINT `fk_biz_outp_infusion_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_outp_infusion` ADD CONSTRAINT `fk_biz_outp_infusion_seat_id` FOREIGN KEY (`seat_id`) REFERENCES `biz_infusion_seat` (`id`);
-ALTER TABLE `biz_outp_infusion` ADD CONSTRAINT `fk_biz_outp_infusion_skin_test_id` FOREIGN KEY (`skin_test_id`) REFERENCES `biz_skin_test` (`id`);
-ALTER TABLE `biz_outp_infusion` ADD CONSTRAINT `fk_biz_outp_infusion_nurse_id` FOREIGN KEY (`nurse_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_outp_infusion_round` ADD CONSTRAINT `fk_biz_outp_infusion_round_infusion_id` FOREIGN KEY (`infusion_id`) REFERENCES `biz_outp_infusion` (`id`);
-ALTER TABLE `biz_outp_infusion_round` ADD CONSTRAINT `fk_biz_outp_infusion_round_nurse_id` FOREIGN KEY (`nurse_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_pathology_block` ADD CONSTRAINT `fk_biz_pathology_block_order_id` FOREIGN KEY (`order_id`) REFERENCES `biz_pathology_order` (`id`);
-ALTER TABLE `biz_pathology_order` ADD CONSTRAINT `fk_biz_pathology_order_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_pathology_order` ADD CONSTRAINT `fk_biz_pathology_order_apply_dept_id` FOREIGN KEY (`apply_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_pathology_order` ADD CONSTRAINT `fk_biz_pathology_order_apply_doctor_id` FOREIGN KEY (`apply_doctor_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_pathway` ADD CONSTRAINT `fk_biz_pathway_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
 ALTER TABLE `biz_pathway_enroll` ADD CONSTRAINT `fk_biz_pathway_enroll_pathway_id` FOREIGN KEY (`pathway_id`) REFERENCES `biz_pathway` (`id`);
 ALTER TABLE `biz_pathway_enroll` ADD CONSTRAINT `fk_biz_pathway_enroll_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
@@ -9433,142 +10123,52 @@ ALTER TABLE `biz_pathway_enroll` ADD CONSTRAINT `fk_biz_pathway_enroll_dept_id` 
 ALTER TABLE `biz_pathway_step` ADD CONSTRAINT `fk_biz_pathway_step_pathway_id` FOREIGN KEY (`pathway_id`) REFERENCES `biz_pathway` (`id`);
 ALTER TABLE `biz_pathway_variance` ADD CONSTRAINT `fk_biz_pathway_variance_enroll_id` FOREIGN KEY (`enroll_id`) REFERENCES `biz_pathway_enroll` (`id`);
 ALTER TABLE `biz_pathway_variance` ADD CONSTRAINT `fk_biz_pathway_variance_recorder_id` FOREIGN KEY (`recorder_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_patient` ADD CONSTRAINT `fk_biz_patient_master_id` FOREIGN KEY (`master_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_patient` ADD CONSTRAINT `fk_biz_patient_last_visit_dept` FOREIGN KEY (`last_visit_dept`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_patient` ADD CONSTRAINT `fk_biz_patient_last_visit_doctor` FOREIGN KEY (`last_visit_doctor`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_patient` ADD CONSTRAINT `fk_biz_patient_first_visit_dept_id` FOREIGN KEY (`first_visit_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_patient` ADD CONSTRAINT `fk_biz_patient_first_visit_doctor_id` FOREIGN KEY (`first_visit_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_patient_allergy` ADD CONSTRAINT `fk_biz_patient_allergy_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_patient_contact` ADD CONSTRAINT `fk_biz_patient_contact_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_patient_family_history` ADD CONSTRAINT `fk_biz_patient_family_history_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_patient_guardian` ADD CONSTRAINT `fk_biz_patient_guardian_user_id` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`);
-ALTER TABLE `biz_patient_guardian` ADD CONSTRAINT `fk_biz_patient_guardian_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_patient_medication_history` ADD CONSTRAINT `fk_biz_patient_medication_history_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_patient_merge_log` ADD CONSTRAINT `fk_biz_patient_merge_log_master_id` FOREIGN KEY (`master_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_patient_merge_log` ADD CONSTRAINT `fk_biz_patient_merge_log_merged_id` FOREIGN KEY (`merged_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_patient_merge_log` ADD CONSTRAINT `fk_biz_patient_merge_log_operator_id` FOREIGN KEY (`operator_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_patient_past_disease` ADD CONSTRAINT `fk_biz_patient_past_disease_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_patient_surgery_history` ADD CONSTRAINT `fk_biz_patient_surgery_history_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_patient_tag_relation` ADD CONSTRAINT `fk_biz_patient_tag_relation_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_patient_tag_relation` ADD CONSTRAINT `fk_biz_patient_tag_relation_tag_id` FOREIGN KEY (`tag_id`) REFERENCES `sys_patient_tag` (`tag_id`);
-ALTER TABLE `biz_pay_channel_bill` ADD CONSTRAINT `fk_biz_pay_channel_bill_local_txn_id` FOREIGN KEY (`local_txn_id`) REFERENCES `biz_payment_txn` (`id`);
-ALTER TABLE `biz_pay_channel_bill` ADD CONSTRAINT `fk_biz_pay_channel_bill_matched_by_id` FOREIGN KEY (`matched_by_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_pay_order` ADD CONSTRAINT `fk_biz_pay_order_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_payment_txn` ADD CONSTRAINT `fk_biz_payment_txn_bill_id` FOREIGN KEY (`bill_id`) REFERENCES `biz_settlement_bill` (`id`);
-ALTER TABLE `biz_payment_txn` ADD CONSTRAINT `fk_biz_payment_txn_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_payment_txn` ADD CONSTRAINT `fk_biz_payment_txn_orig_txn_id` FOREIGN KEY (`orig_txn_id`) REFERENCES `biz_payment_txn` (`id`);
-ALTER TABLE `biz_payment_txn` ADD CONSTRAINT `fk_biz_payment_txn_cashier_id` FOREIGN KEY (`cashier_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_payment_txn` ADD CONSTRAINT `fk_biz_payment_txn_cashier_settlement_id` FOREIGN KEY (`cashier_settlement_id`) REFERENCES `biz_cashier_settlement` (`id`);
-ALTER TABLE `biz_payment_txn` ADD CONSTRAINT `fk_biz_payment_txn_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_refund_apply` (`id`);
-ALTER TABLE `biz_perf_result` ADD CONSTRAINT `fk_biz_perf_result_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_perf_result` ADD CONSTRAINT `fk_biz_perf_result_cost_id` FOREIGN KEY (`cost_id`) REFERENCES `biz_dept_cost_month` (`id`);
-ALTER TABLE `biz_pivas_batch` ADD CONSTRAINT `fk_biz_pivas_batch_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_pivas_batch` ADD CONSTRAINT `fk_biz_pivas_batch_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_pivas_batch` ADD CONSTRAINT `fk_biz_pivas_batch_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_pivas_batch` ADD CONSTRAINT `fk_biz_pivas_batch_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_pivas_item` ADD CONSTRAINT `fk_biz_pivas_item_pivas_id` FOREIGN KEY (`pivas_id`) REFERENCES `biz_pivas_batch` (`id`);
-ALTER TABLE `biz_pivas_item` ADD CONSTRAINT `fk_biz_pivas_item_order_id` FOREIGN KEY (`order_id`) REFERENCES `biz_inpatient_order` (`id`);
-ALTER TABLE `biz_pivas_item` ADD CONSTRAINT `fk_biz_pivas_item_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_pivas_item` ADD CONSTRAINT `fk_biz_pivas_item_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_pivas_item` ADD CONSTRAINT `fk_biz_pivas_item_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_pivas_item` ADD CONSTRAINT `fk_biz_pivas_item_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
-ALTER TABLE `biz_pivas_item` ADD CONSTRAINT `fk_biz_pivas_item_auditor_id` FOREIGN KEY (`auditor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_pivas_item` ADD CONSTRAINT `fk_biz_pivas_item_compounder_id` FOREIGN KEY (`compounder_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_pivas_item` ADD CONSTRAINT `fk_biz_pivas_item_verifier_id` FOREIGN KEY (`verifier_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_prepay` ADD CONSTRAINT `fk_biz_prepay_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_prepay` ADD CONSTRAINT `fk_biz_prepay_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_prepay` ADD CONSTRAINT `fk_biz_prepay_operator_id` FOREIGN KEY (`operator_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_prescription` ADD CONSTRAINT `fk_biz_prescription_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_prescription` ADD CONSTRAINT `fk_biz_prescription_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
-ALTER TABLE `biz_prescription` ADD CONSTRAINT `fk_biz_prescription_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_medical_record` (`id`);
-ALTER TABLE `biz_prescription` ADD CONSTRAINT `fk_biz_prescription_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_prescription` ADD CONSTRAINT `fk_biz_prescription_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_prescription` ADD CONSTRAINT `fk_biz_prescription_doctor_sign_id` FOREIGN KEY (`doctor_sign_id`) REFERENCES `biz_emr_signature` (`id`);
-ALTER TABLE `biz_prescription` ADD CONSTRAINT `fk_biz_prescription_audit_sign_id` FOREIGN KEY (`audit_sign_id`) REFERENCES `biz_emr_signature` (`id`);
-ALTER TABLE `biz_prescription_audit_log` ADD CONSTRAINT `fk_biz_prescription_audit_log_prescription_id` FOREIGN KEY (`prescription_id`) REFERENCES `biz_prescription` (`id`);
-ALTER TABLE `biz_prescription_audit_log` ADD CONSTRAINT `fk_biz_prescription_audit_log_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_medical_record` (`id`);
-ALTER TABLE `biz_prescription_audit_log` ADD CONSTRAINT `fk_biz_prescription_audit_log_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
-ALTER TABLE `biz_prescription_audit_log` ADD CONSTRAINT `fk_biz_prescription_audit_log_auditor_id` FOREIGN KEY (`auditor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_prescription_detail` ADD CONSTRAINT `fk_biz_prescription_detail_prescription_id` FOREIGN KEY (`prescription_id`) REFERENCES `biz_prescription` (`id`);
-ALTER TABLE `biz_prescription_detail` ADD CONSTRAINT `fk_biz_prescription_detail_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
-ALTER TABLE `biz_public_health_report` ADD CONSTRAINT `fk_biz_public_health_report_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_public_health_report` ADD CONSTRAINT `fk_biz_public_health_report_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_medical_record` (`id`);
-ALTER TABLE `biz_purchase_order` ADD CONSTRAINT `fk_biz_purchase_order_supplier_id` FOREIGN KEY (`supplier_id`) REFERENCES `sys_supplier` (`supplier_id`);
-ALTER TABLE `biz_purchase_order` ADD CONSTRAINT `fk_biz_purchase_order_approver_id` FOREIGN KEY (`approver_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_purchase_order_detail` ADD CONSTRAINT `fk_biz_purchase_order_detail_order_id` FOREIGN KEY (`order_id`) REFERENCES `biz_purchase_order` (`order_id`);
-ALTER TABLE `biz_purchase_order_detail` ADD CONSTRAINT `fk_biz_purchase_order_detail_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
-ALTER TABLE `biz_quality_control` ADD CONSTRAINT `fk_biz_quality_control_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inpatient_record` (`id`);
-ALTER TABLE `biz_quality_control` ADD CONSTRAINT `fk_biz_quality_control_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_quality_control_issue` ADD CONSTRAINT `fk_biz_quality_control_issue_qc_id` FOREIGN KEY (`qc_id`) REFERENCES `biz_quality_control` (`id`);
-ALTER TABLE `biz_quality_control_issue` ADD CONSTRAINT `fk_biz_quality_control_issue_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inpatient_record` (`id`);
-ALTER TABLE `biz_quality_control_issue` ADD CONSTRAINT `fk_biz_quality_control_issue_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_queue` ADD CONSTRAINT `fk_biz_queue_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
-ALTER TABLE `biz_queue` ADD CONSTRAINT `fk_biz_queue_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_queue` ADD CONSTRAINT `fk_biz_queue_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_queue` ADD CONSTRAINT `fk_biz_queue_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_queue` ADD CONSTRAINT `fk_biz_queue_room_id` FOREIGN KEY (`room_id`) REFERENCES `sys_clinic_room` (`id`);
-ALTER TABLE `biz_radio_report_template` ADD CONSTRAINT `fk_biz_radio_report_template_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_record_qc_flow` ADD CONSTRAINT `fk_biz_record_qc_flow_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_medical_record` (`id`);
-ALTER TABLE `biz_record_qc_flow` ADD CONSTRAINT `fk_biz_record_qc_flow_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_record_qc_flow` ADD CONSTRAINT `fk_biz_record_qc_flow_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_record_qc_flow_action` ADD CONSTRAINT `fk_biz_record_qc_flow_action_flow_id` FOREIGN KEY (`flow_id`) REFERENCES `biz_record_qc_flow` (`id`);
-ALTER TABLE `biz_record_qc_flow_action` ADD CONSTRAINT `fk_biz_record_qc_flow_action_operator_id` FOREIGN KEY (`operator_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_single_disease_case` ADD CONSTRAINT `fk_biz_single_disease_case_disease_id` FOREIGN KEY (`disease_id`) REFERENCES `sys_single_disease` (`id`);
+ALTER TABLE `biz_single_disease_case` ADD CONSTRAINT `fk_biz_single_disease_case_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_single_disease_case` ADD CONSTRAINT `fk_biz_single_disease_case_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_treatment_apply` ADD CONSTRAINT `fk_biz_treatment_apply_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_treatment_apply` ADD CONSTRAINT `fk_biz_treatment_apply_visit_id` FOREIGN KEY (`visit_id`) REFERENCES `biz_visit` (`visit_id`);
+ALTER TABLE `biz_treatment_apply` ADD CONSTRAINT `fk_biz_treatment_apply_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
+ALTER TABLE `biz_treatment_apply` ADD CONSTRAINT `fk_biz_treatment_apply_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_treatment_apply` ADD CONSTRAINT `fk_biz_treatment_apply_treatment_item_id` FOREIGN KEY (`treatment_item_id`) REFERENCES `sys_treatment_item` (`id`);
+ALTER TABLE `biz_treatment_apply` ADD CONSTRAINT `fk_biz_treatment_apply_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_treatment_apply` ADD CONSTRAINT `fk_biz_treatment_apply_exec_dept_id` FOREIGN KEY (`exec_dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_treatment_record` ADD CONSTRAINT `fk_biz_treatment_record_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_treatment_apply` (`apply_id`);
+ALTER TABLE `biz_treatment_record` ADD CONSTRAINT `fk_biz_treatment_record_treatment_item_id` FOREIGN KEY (`treatment_item_id`) REFERENCES `sys_treatment_item` (`id`);
+ALTER TABLE `biz_treatment_record` ADD CONSTRAINT `fk_biz_treatment_record_execute_doctor_id` FOREIGN KEY (`execute_doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_treatment_record` ADD CONSTRAINT `fk_biz_treatment_record_nurse_id` FOREIGN KEY (`nurse_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_treatment_record` ADD CONSTRAINT `fk_biz_treatment_record_fee_record_id` FOREIGN KEY (`fee_record_id`) REFERENCES `biz_fee_record` (`id`);
+ALTER TABLE `biz_vte_event` ADD CONSTRAINT `fk_biz_vte_event_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_vte_event` ADD CONSTRAINT `fk_biz_vte_event_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_vte_event` ADD CONSTRAINT `fk_biz_vte_event_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_vte_event` ADD CONSTRAINT `fk_biz_vte_event_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_vte_event` ADD CONSTRAINT `fk_biz_vte_event_reporter_id` FOREIGN KEY (`reporter_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_vte_prevent` ADD CONSTRAINT `fk_biz_vte_prevent_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
+ALTER TABLE `biz_vte_prevent` ADD CONSTRAINT `fk_biz_vte_prevent_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_vte_prevent` ADD CONSTRAINT `fk_biz_vte_prevent_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_vte_prevent` ADD CONSTRAINT `fk_biz_vte_prevent_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
+ALTER TABLE `biz_vte_prevent` ADD CONSTRAINT `fk_biz_vte_prevent_assessment_id` FOREIGN KEY (`assessment_id`) REFERENCES `biz_nursing_assessment` (`id`);
+ALTER TABLE `biz_vte_prevent` ADD CONSTRAINT `fk_biz_vte_prevent_executor_id` FOREIGN KEY (`executor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_vte_stats` ADD CONSTRAINT `fk_biz_vte_stats_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_alert` ADD CONSTRAINT `fk_biz_alert_rule_id` FOREIGN KEY (`rule_id`) REFERENCES `sys_alert_rule` (`rule_id`);
+ALTER TABLE `biz_alert` ADD CONSTRAINT `fk_biz_alert_notify_user_id` FOREIGN KEY (`notify_user_id`) REFERENCES `sys_user` (`id`);
+ALTER TABLE `biz_followup_task` ADD CONSTRAINT `fk_biz_followup_task_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_followup_task` ADD CONSTRAINT `fk_biz_followup_task_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_followup_task` ADD CONSTRAINT `fk_biz_followup_task_executor_id` FOREIGN KEY (`executor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_followup_task` ADD CONSTRAINT `fk_biz_followup_task_revisit_record_id` FOREIGN KEY (`revisit_record_id`) REFERENCES `biz_medical_record` (`id`);
+ALTER TABLE `biz_followup_task` ADD CONSTRAINT `fk_biz_followup_task_revisit_appoint_id` FOREIGN KEY (`revisit_appoint_id`) REFERENCES `biz_appoint_info` (`id`);
+ALTER TABLE `biz_online_consult` ADD CONSTRAINT `fk_biz_online_consult_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_online_consult` ADD CONSTRAINT `fk_biz_online_consult_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_online_consult` ADD CONSTRAINT `fk_biz_online_consult_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_referral` ADD CONSTRAINT `fk_biz_referral_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
 ALTER TABLE `biz_referral` ADD CONSTRAINT `fk_biz_referral_visit_id` FOREIGN KEY (`visit_id`) REFERENCES `biz_visit` (`visit_id`);
 ALTER TABLE `biz_referral` ADD CONSTRAINT `fk_biz_referral_from_dept_id` FOREIGN KEY (`from_dept_id`) REFERENCES `sys_department` (`id`);
 ALTER TABLE `biz_referral` ADD CONSTRAINT `fk_biz_referral_to_dept_id` FOREIGN KEY (`to_dept_id`) REFERENCES `sys_department` (`id`);
 ALTER TABLE `biz_referral` ADD CONSTRAINT `fk_biz_referral_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
 ALTER TABLE `biz_referral` ADD CONSTRAINT `fk_biz_referral_audit_by` FOREIGN KEY (`audit_by`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_refund_apply` ADD CONSTRAINT `fk_biz_refund_apply_bill_id` FOREIGN KEY (`bill_id`) REFERENCES `biz_settlement_bill` (`id`);
-ALTER TABLE `biz_refund_apply` ADD CONSTRAINT `fk_biz_refund_apply_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_refund_apply` ADD CONSTRAINT `fk_biz_refund_apply_auditor_id` FOREIGN KEY (`auditor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_report` ADD CONSTRAINT `fk_biz_report_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_report` ADD CONSTRAINT `fk_biz_report_apply_doctor_id` FOREIGN KEY (`apply_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_report` ADD CONSTRAINT `fk_biz_report_write_by_id` FOREIGN KEY (`write_by_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_rx_doctor_talk` ADD CONSTRAINT `fk_biz_rx_doctor_talk_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_rx_flow` ADD CONSTRAINT `fk_biz_rx_flow_prescription_id` FOREIGN KEY (`prescription_id`) REFERENCES `biz_prescription` (`id`);
-ALTER TABLE `biz_rx_flow` ADD CONSTRAINT `fk_biz_rx_flow_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_rx_review_batch` ADD CONSTRAINT `fk_biz_rx_review_batch_reviewer_id` FOREIGN KEY (`reviewer_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_rx_review_item` ADD CONSTRAINT `fk_biz_rx_review_item_batch_id` FOREIGN KEY (`batch_id`) REFERENCES `biz_rx_review_batch` (`id`);
-ALTER TABLE `biz_rx_review_item` ADD CONSTRAINT `fk_biz_rx_review_item_prescription_id` FOREIGN KEY (`prescription_id`) REFERENCES `biz_prescription` (`id`);
-ALTER TABLE `biz_rx_review_item` ADD CONSTRAINT `fk_biz_rx_review_item_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_rx_review_item` ADD CONSTRAINT `fk_biz_rx_review_item_reviewer_id` FOREIGN KEY (`reviewer_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_rx_template` ADD CONSTRAINT `fk_biz_rx_template_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_rx_template_detail` ADD CONSTRAINT `fk_biz_rx_template_detail_template_id` FOREIGN KEY (`template_id`) REFERENCES `biz_rx_template` (`id`);
-ALTER TABLE `biz_rx_template_detail` ADD CONSTRAINT `fk_biz_rx_template_detail_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
-ALTER TABLE `biz_schedule` ADD CONSTRAINT `fk_biz_schedule_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_schedule` ADD CONSTRAINT `fk_biz_schedule_room_id` FOREIGN KEY (`room_id`) REFERENCES `sys_clinic_room` (`id`);
-ALTER TABLE `biz_schedule` ADD CONSTRAINT `fk_biz_schedule_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_schedule` ADD CONSTRAINT `fk_biz_schedule_shift_id` FOREIGN KEY (`shift_id`) REFERENCES `biz_shift` (`id`);
-ALTER TABLE `biz_schedule_slot` ADD CONSTRAINT `fk_biz_schedule_slot_schedule_id` FOREIGN KEY (`schedule_id`) REFERENCES `biz_schedule` (`id`);
-ALTER TABLE `biz_schedule_slot_template` ADD CONSTRAINT `fk_biz_schedule_slot_template_template_id` FOREIGN KEY (`template_id`) REFERENCES `biz_schedule_template` (`id`);
-ALTER TABLE `biz_schedule_template` ADD CONSTRAINT `fk_biz_schedule_template_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_schedule_template` ADD CONSTRAINT `fk_biz_schedule_template_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_schedule_template` ADD CONSTRAINT `fk_biz_schedule_template_shift_id` FOREIGN KEY (`shift_id`) REFERENCES `biz_shift` (`id`);
-ALTER TABLE `biz_schedule_template` ADD CONSTRAINT `fk_biz_schedule_template_room_id` FOREIGN KEY (`room_id`) REFERENCES `sys_clinic_room` (`id`);
-ALTER TABLE `biz_settlement_bill` ADD CONSTRAINT `fk_biz_settlement_bill_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_settlement_bill` ADD CONSTRAINT `fk_biz_settlement_bill_bill_by_id` FOREIGN KEY (`bill_by_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_settlement_bill` ADD CONSTRAINT `fk_biz_settlement_bill_void_by_id` FOREIGN KEY (`void_by_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_settlement_bill` ADD CONSTRAINT `fk_biz_settlement_bill_orig_bill_id` FOREIGN KEY (`orig_bill_id`) REFERENCES `biz_pay_channel_bill` (`id`);
-ALTER TABLE `biz_settlement_bill_item` ADD CONSTRAINT `fk_biz_settlement_bill_item_bill_id` FOREIGN KEY (`bill_id`) REFERENCES `biz_settlement_bill` (`id`);
-ALTER TABLE `biz_settlement_bill_item` ADD CONSTRAINT `fk_biz_settlement_bill_item_fee_record_id` FOREIGN KEY (`fee_record_id`) REFERENCES `biz_fee_record` (`id`);
-ALTER TABLE `biz_settlement_bill_item` ADD CONSTRAINT `fk_biz_settlement_bill_item_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_settlement_bill_item` ADD CONSTRAINT `fk_biz_settlement_bill_item_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_settlement_diagnosis` ADD CONSTRAINT `fk_biz_settlement_diagnosis_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_insurance_settlement` (`id`);
-ALTER TABLE `biz_settlement_operation` ADD CONSTRAINT `fk_biz_settlement_operation_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_insurance_settlement` (`id`);
-ALTER TABLE `biz_shift` ADD CONSTRAINT `fk_biz_shift_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_single_disease_case` ADD CONSTRAINT `fk_biz_single_disease_case_disease_id` FOREIGN KEY (`disease_id`) REFERENCES `sys_single_disease` (`id`);
-ALTER TABLE `biz_single_disease_case` ADD CONSTRAINT `fk_biz_single_disease_case_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_single_disease_case` ADD CONSTRAINT `fk_biz_single_disease_case_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_skin_test` ADD CONSTRAINT `fk_biz_skin_test_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_skin_test` ADD CONSTRAINT `fk_biz_skin_test_treatment_record_id` FOREIGN KEY (`treatment_record_id`) REFERENCES `biz_treatment_record` (`record_id`);
-ALTER TABLE `biz_skin_test` ADD CONSTRAINT `fk_biz_skin_test_nurse_id` FOREIGN KEY (`nurse_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_stat_daily` ADD CONSTRAINT `fk_biz_stat_daily_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `biz_stat_dept` (`stat_id`);
-ALTER TABLE `biz_stat_dept` ADD CONSTRAINT `fk_biz_stat_dept_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_stat_report` ADD CONSTRAINT `fk_biz_stat_report_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_stocktake_item` ADD CONSTRAINT `fk_biz_stocktake_item_stocktake_id` FOREIGN KEY (`stocktake_id`) REFERENCES `biz_stocktake` (`id`);
-ALTER TABLE `biz_stocktake_item` ADD CONSTRAINT `fk_biz_stocktake_item_stock_id` FOREIGN KEY (`stock_id`) REFERENCES `biz_drug_stock` (`id`);
-ALTER TABLE `biz_stocktake_item` ADD CONSTRAINT `fk_biz_stocktake_item_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
+ALTER TABLE `biz_service_message` ADD CONSTRAINT `fk_biz_service_message_user_id` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`);
+ALTER TABLE `biz_service_message` ADD CONSTRAINT `fk_biz_service_message_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_service_ticket_log` ADD CONSTRAINT `fk_biz_service_ticket_log_message_id` FOREIGN KEY (`message_id`) REFERENCES `biz_service_message` (`id`);
 ALTER TABLE `biz_survey_answer` ADD CONSTRAINT `fk_biz_survey_answer_dispatch_id` FOREIGN KEY (`dispatch_id`) REFERENCES `biz_survey_dispatch` (`id`);
 ALTER TABLE `biz_survey_answer` ADD CONSTRAINT `fk_biz_survey_answer_template_id` FOREIGN KEY (`template_id`) REFERENCES `biz_survey_template` (`id`);
 ALTER TABLE `biz_survey_answer` ADD CONSTRAINT `fk_biz_survey_answer_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
@@ -9583,134 +10183,19 @@ ALTER TABLE `biz_survey_dispatch` ADD CONSTRAINT `fk_biz_survey_dispatch_patient
 ALTER TABLE `biz_survey_dispatch` ADD CONSTRAINT `fk_biz_survey_dispatch_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
 ALTER TABLE `biz_survey_dispatch` ADD CONSTRAINT `fk_biz_survey_dispatch_answer_id` FOREIGN KEY (`answer_id`) REFERENCES `biz_survey_answer` (`id`);
 ALTER TABLE `biz_survey_item` ADD CONSTRAINT `fk_biz_survey_item_template_id` FOREIGN KEY (`template_id`) REFERENCES `biz_survey_template` (`id`);
-ALTER TABLE `biz_tcm_decoct` ADD CONSTRAINT `fk_biz_tcm_decoct_prescription_id` FOREIGN KEY (`prescription_id`) REFERENCES `biz_prescription` (`id`);
-ALTER TABLE `biz_tcm_decoct` ADD CONSTRAINT `fk_biz_tcm_decoct_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_tcm_decoct` ADD CONSTRAINT `fk_biz_tcm_decoct_pharmacy_id` FOREIGN KEY (`pharmacy_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_tcm_decoct` ADD CONSTRAINT `fk_biz_tcm_decoct_operator_id` FOREIGN KEY (`operator_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_tech_auth_override` ADD CONSTRAINT `fk_biz_tech_auth_override_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_tech_auth_override` ADD CONSTRAINT `fk_biz_tech_auth_override_supervisor_id` FOREIGN KEY (`supervisor_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_tele_consult` ADD CONSTRAINT `fk_biz_tele_consult_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
 ALTER TABLE `biz_tele_consult` ADD CONSTRAINT `fk_biz_tele_consult_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
 ALTER TABLE `biz_tele_consult` ADD CONSTRAINT `fk_biz_tele_consult_apply_dept_id` FOREIGN KEY (`apply_dept_id`) REFERENCES `sys_department` (`id`);
 ALTER TABLE `biz_tele_consult` ADD CONSTRAINT `fk_biz_tele_consult_apply_doctor_id` FOREIGN KEY (`apply_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_apply_dept_id` FOREIGN KEY (`apply_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_apply_doctor_id` FOREIGN KEY (`apply_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_crossmatch_doctor_id` FOREIGN KEY (`crossmatch_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_issue_doctor_id` FOREIGN KEY (`issue_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_check_nurse_id` FOREIGN KEY (`check_nurse_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_check_nurse2_id` FOREIGN KEY (`check_nurse2_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_infusion_nurse_id` FOREIGN KEY (`infusion_nurse_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_reaction_reporter_id` FOREIGN KEY (`reaction_reporter_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_finish_doctor_id` FOREIGN KEY (`finish_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inpatient_record` (`id`);
-ALTER TABLE `biz_transfusion_apply` ADD CONSTRAINT `fk_biz_transfusion_apply_cancel_doctor_id` FOREIGN KEY (`cancel_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_transfusion_approve` ADD CONSTRAINT `fk_biz_transfusion_approve_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_transfusion_apply` (`id`);
-ALTER TABLE `biz_transfusion_approve` ADD CONSTRAINT `fk_biz_transfusion_approve_approver_id` FOREIGN KEY (`approver_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_transfusion_bag` ADD CONSTRAINT `fk_biz_transfusion_bag_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_transfusion_apply` (`id`);
-ALTER TABLE `biz_transfusion_bag` ADD CONSTRAINT `fk_biz_transfusion_bag_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_transfusion_bag` ADD CONSTRAINT `fk_biz_transfusion_bag_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_transfusion_bag` ADD CONSTRAINT `fk_biz_transfusion_bag_crossmatch_doctor_id` FOREIGN KEY (`crossmatch_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_treatment_apply` ADD CONSTRAINT `fk_biz_treatment_apply_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_treatment_apply` ADD CONSTRAINT `fk_biz_treatment_apply_visit_id` FOREIGN KEY (`visit_id`) REFERENCES `biz_visit` (`visit_id`);
-ALTER TABLE `biz_treatment_apply` ADD CONSTRAINT `fk_biz_treatment_apply_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
-ALTER TABLE `biz_treatment_apply` ADD CONSTRAINT `fk_biz_treatment_apply_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_treatment_apply` ADD CONSTRAINT `fk_biz_treatment_apply_treatment_item_id` FOREIGN KEY (`treatment_item_id`) REFERENCES `sys_treatment_item` (`id`);
-ALTER TABLE `biz_treatment_apply` ADD CONSTRAINT `fk_biz_treatment_apply_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_treatment_apply` ADD CONSTRAINT `fk_biz_treatment_apply_exec_dept_id` FOREIGN KEY (`exec_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_treatment_record` ADD CONSTRAINT `fk_biz_treatment_record_apply_id` FOREIGN KEY (`apply_id`) REFERENCES `biz_treatment_apply` (`apply_id`);
-ALTER TABLE `biz_treatment_record` ADD CONSTRAINT `fk_biz_treatment_record_treatment_item_id` FOREIGN KEY (`treatment_item_id`) REFERENCES `sys_treatment_item` (`id`);
-ALTER TABLE `biz_treatment_record` ADD CONSTRAINT `fk_biz_treatment_record_execute_doctor_id` FOREIGN KEY (`execute_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_treatment_record` ADD CONSTRAINT `fk_biz_treatment_record_nurse_id` FOREIGN KEY (`nurse_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_treatment_record` ADD CONSTRAINT `fk_biz_treatment_record_fee_record_id` FOREIGN KEY (`fee_record_id`) REFERENCES `biz_fee_record` (`id`);
-ALTER TABLE `biz_triage_record` ADD CONSTRAINT `fk_biz_triage_record_queue_id` FOREIGN KEY (`queue_id`) REFERENCES `biz_queue` (`id`);
-ALTER TABLE `biz_triage_record` ADD CONSTRAINT `fk_biz_triage_record_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
-ALTER TABLE `biz_triage_record` ADD CONSTRAINT `fk_biz_triage_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_triage_record` ADD CONSTRAINT `fk_biz_triage_record_room_id` FOREIGN KEY (`room_id`) REFERENCES `sys_clinic_room` (`id`);
-ALTER TABLE `biz_triage_record` ADD CONSTRAINT `fk_biz_triage_record_triage_nurse_id` FOREIGN KEY (`triage_nurse_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_ultrasound_measure` ADD CONSTRAINT `fk_biz_ultrasound_measure_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_ultrasound_record` (`id`);
-ALTER TABLE `biz_ultrasound_record` ADD CONSTRAINT `fk_biz_ultrasound_record_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_ultrasound_record` ADD CONSTRAINT `fk_biz_ultrasound_record_apply_dept_id` FOREIGN KEY (`apply_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_ultrasound_record` ADD CONSTRAINT `fk_biz_ultrasound_record_apply_doctor_id` FOREIGN KEY (`apply_doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_visit` ADD CONSTRAINT `fk_biz_visit_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_vte_event` ADD CONSTRAINT `fk_biz_vte_event_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_vte_event` ADD CONSTRAINT `fk_biz_vte_event_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_vte_event` ADD CONSTRAINT `fk_biz_vte_event_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_vte_event` ADD CONSTRAINT `fk_biz_vte_event_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_vte_event` ADD CONSTRAINT `fk_biz_vte_event_reporter_id` FOREIGN KEY (`reporter_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_vte_prevent` ADD CONSTRAINT `fk_biz_vte_prevent_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_vte_prevent` ADD CONSTRAINT `fk_biz_vte_prevent_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_vte_prevent` ADD CONSTRAINT `fk_biz_vte_prevent_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_vte_prevent` ADD CONSTRAINT `fk_biz_vte_prevent_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_vte_prevent` ADD CONSTRAINT `fk_biz_vte_prevent_assessment_id` FOREIGN KEY (`assessment_id`) REFERENCES `biz_nursing_assessment` (`id`);
-ALTER TABLE `biz_vte_prevent` ADD CONSTRAINT `fk_biz_vte_prevent_executor_id` FOREIGN KEY (`executor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_vte_stats` ADD CONSTRAINT `fk_biz_vte_stats_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_ward_dispense` ADD CONSTRAINT `fk_biz_ward_dispense_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_ward_dispense` ADD CONSTRAINT `fk_biz_ward_dispense_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_ward_dispense` ADD CONSTRAINT `fk_biz_ward_dispense_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_ward_dispense` ADD CONSTRAINT `fk_biz_ward_dispense_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_ward_dispense_item` ADD CONSTRAINT `fk_biz_ward_dispense_item_dispense_id` FOREIGN KEY (`dispense_id`) REFERENCES `biz_ward_dispense` (`id`);
-ALTER TABLE `biz_ward_dispense_item` ADD CONSTRAINT `fk_biz_ward_dispense_item_order_id` FOREIGN KEY (`order_id`) REFERENCES `biz_inpatient_order` (`id`);
-ALTER TABLE `biz_ward_dispense_item` ADD CONSTRAINT `fk_biz_ward_dispense_item_admission_id` FOREIGN KEY (`admission_id`) REFERENCES `biz_admission` (`admission_id`);
-ALTER TABLE `biz_ward_dispense_item` ADD CONSTRAINT `fk_biz_ward_dispense_item_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_ward_dispense_item` ADD CONSTRAINT `fk_biz_ward_dispense_item_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `biz_ward_dispense_item` ADD CONSTRAINT `fk_biz_ward_dispense_item_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
-ALTER TABLE `biz_ward_dispense_item` ADD CONSTRAINT `fk_biz_ward_dispense_item_fee_record_id` FOREIGN KEY (`fee_record_id`) REFERENCES `biz_fee_record` (`id`);
-ALTER TABLE `biz_ward_dispense_item` ADD CONSTRAINT `fk_biz_ward_dispense_item_dispenser_id` FOREIGN KEY (`dispenser_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_ward_dispense_item` ADD CONSTRAINT `fk_biz_ward_dispense_item_checker_id` FOREIGN KEY (`checker_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_yb_chronic_reg` ADD CONSTRAINT `fk_biz_yb_chronic_reg_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_yb_chronic_reg` ADD CONSTRAINT `fk_biz_yb_chronic_reg_catalog_id` FOREIGN KEY (`catalog_id`) REFERENCES `biz_yb_chronic_catalog` (`id`);
-ALTER TABLE `biz_yb_chronic_reg` ADD CONSTRAINT `fk_biz_yb_chronic_reg_certify_dept_id` FOREIGN KEY (`certify_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_yb_chronic_reg` ADD CONSTRAINT `fk_biz_yb_chronic_reg_register_dept_id` FOREIGN KEY (`register_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_yb_chronic_reg` ADD CONSTRAINT `fk_biz_yb_chronic_reg_register_emp_id` FOREIGN KEY (`register_emp_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_yb_deduct_log` ADD CONSTRAINT `fk_biz_yb_deduct_log_notice_id` FOREIGN KEY (`notice_id`) REFERENCES `biz_yb_deduct_notice` (`id`);
-ALTER TABLE `biz_yb_deduct_notice` ADD CONSTRAINT `fk_biz_yb_deduct_notice_inspection_id` FOREIGN KEY (`inspection_id`) REFERENCES `biz_yb_inspection` (`id`);
-ALTER TABLE `biz_yb_deduct_notice` ADD CONSTRAINT `fk_biz_yb_deduct_notice_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_insurance_settlement` (`id`);
-ALTER TABLE `biz_yb_deduct_notice` ADD CONSTRAINT `fk_biz_yb_deduct_notice_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_yb_deduct_notice` ADD CONSTRAINT `fk_biz_yb_deduct_notice_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_yb_deduct_notice` ADD CONSTRAINT `fk_biz_yb_deduct_notice_liable_dept_id` FOREIGN KEY (`liable_dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_yb_mapping` ADD CONSTRAINT `fk_biz_yb_mapping_catalog_id` FOREIGN KEY (`catalog_id`) REFERENCES `biz_yb_catalog` (`id`);
-ALTER TABLE `sys_attachment` ADD CONSTRAINT `fk_sys_attachment_upload_user_id` FOREIGN KEY (`upload_user_id`) REFERENCES `sys_user` (`id`);
-ALTER TABLE `sys_audit_log` ADD CONSTRAINT `fk_sys_audit_log_user_id` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`);
-ALTER TABLE `sys_bed` ADD CONSTRAINT `fk_sys_bed_ward_id` FOREIGN KEY (`ward_id`) REFERENCES `sys_ward` (`ward_id`);
-ALTER TABLE `sys_bed` ADD CONSTRAINT `fk_sys_bed_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `sys_bed` ADD CONSTRAINT `fk_sys_bed_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `sys_checkup_package_item` ADD CONSTRAINT `fk_sys_checkup_package_item_package_id` FOREIGN KEY (`package_id`) REFERENCES `sys_checkup_package` (`id`);
-ALTER TABLE `sys_clinic_room` ADD CONSTRAINT `fk_sys_clinic_room_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `sys_department` ADD CONSTRAINT `fk_sys_department_parent_id` FOREIGN KEY (`parent_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `sys_diagnosis` ADD CONSTRAINT `fk_sys_diagnosis_parent_id` FOREIGN KEY (`parent_id`) REFERENCES `sys_diagnosis` (`id`);
-ALTER TABLE `sys_drug_price_history` ADD CONSTRAINT `fk_sys_drug_price_history_drug_id` FOREIGN KEY (`drug_id`) REFERENCES `sys_drug` (`id`);
-ALTER TABLE `sys_drug_price_history` ADD CONSTRAINT `fk_sys_drug_price_history_operator_id` FOREIGN KEY (`operator_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `sys_employee` ADD CONSTRAINT `fk_sys_employee_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `sys_employee_post` ADD CONSTRAINT `fk_sys_employee_post_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `sys_employee_post` ADD CONSTRAINT `fk_sys_employee_post_role_id` FOREIGN KEY (`role_id`) REFERENCES `sys_role` (`id`);
-ALTER TABLE `sys_employee_post` ADD CONSTRAINT `fk_sys_employee_post_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `sys_employee_qualification` ADD CONSTRAINT `fk_sys_employee_qualification_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `sys_employee_tech_auth` ADD CONSTRAINT `fk_sys_employee_tech_auth_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `sys_employee_tech_auth` ADD CONSTRAINT `fk_sys_employee_tech_auth_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `sys_employee_tech_auth` ADD CONSTRAINT `fk_sys_employee_tech_auth_approver_id` FOREIGN KEY (`approver_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `sys_equipment` ADD CONSTRAINT `fk_sys_equipment_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `sys_field_change_log` ADD CONSTRAINT `fk_sys_field_change_log_operator_id` FOREIGN KEY (`operator_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `sys_field_change_log` ADD CONSTRAINT `fk_sys_field_change_log_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `sys_inspection_item` ADD CONSTRAINT `fk_sys_inspection_item_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `sys_laboratory_item` ADD CONSTRAINT `fk_sys_laboratory_item_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `sys_laboratory_item_detail` ADD CONSTRAINT `fk_sys_laboratory_item_detail_laboratory_item_id` FOREIGN KEY (`laboratory_item_id`) REFERENCES `sys_laboratory_item` (`id`);
-ALTER TABLE `sys_login_log` ADD CONSTRAINT `fk_sys_login_log_user_id` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`);
-ALTER TABLE `sys_menu` ADD CONSTRAINT `fk_sys_menu_parent_id` FOREIGN KEY (`parent_id`) REFERENCES `sys_menu` (`id`);
+ALTER TABLE `sys_knowledge_chunk` ADD CONSTRAINT `fk_sys_knowledge_chunk_doc_id` FOREIGN KEY (`doc_id`) REFERENCES `sys_knowledge_doc` (`id`);
 ALTER TABLE `sys_message` ADD CONSTRAINT `fk_sys_message_receiver_id` FOREIGN KEY (`receiver_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `sys_oper_log` ADD CONSTRAINT `fk_sys_oper_log_oper_id` FOREIGN KEY (`oper_id`) REFERENCES `sys_user` (`id`);
-ALTER TABLE `sys_oper_log` ADD CONSTRAINT `fk_sys_oper_log_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `sys_price_change_history` ADD CONSTRAINT `fk_sys_price_change_history_operator_id` FOREIGN KEY (`operator_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `sys_role_menu` ADD CONSTRAINT `fk_sys_role_menu_role_id` FOREIGN KEY (`role_id`) REFERENCES `sys_role` (`id`);
-ALTER TABLE `sys_role_menu` ADD CONSTRAINT `fk_sys_role_menu_menu_id` FOREIGN KEY (`menu_id`) REFERENCES `sys_menu` (`id`);
-ALTER TABLE `sys_sign_cert` ADD CONSTRAINT `fk_sys_sign_cert_emp_id` FOREIGN KEY (`emp_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `sys_sign_cert` ADD CONSTRAINT `fk_sys_sign_cert_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `sys_sign_cert` ADD CONSTRAINT `fk_sys_sign_cert_revoke_by` FOREIGN KEY (`revoke_by`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `sys_treatment_item` ADD CONSTRAINT `fk_sys_treatment_item_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `sys_user` ADD CONSTRAINT `fk_sys_user_emp_id` FOREIGN KEY (`emp_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `sys_user` ADD CONSTRAINT `fk_sys_user_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `sys_ward` ADD CONSTRAINT `fk_sys_ward_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `sys_service_trace` ADD CONSTRAINT `fk_sys_service_trace_user_id` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`);
+ALTER TABLE `sys_service_trace` ADD CONSTRAINT `fk_sys_service_trace_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `sys_service_trace` ADD CONSTRAINT `fk_sys_service_trace_faq_id` FOREIGN KEY (`faq_id`) REFERENCES `sys_faq` (`id`);
+ALTER TABLE `sys_service_trace` ADD CONSTRAINT `fk_sys_service_trace_ref_id` FOREIGN KEY (`ref_id`) REFERENCES `biz_service_message` (`id`);
 ALTER TABLE `sys_workbench_layout` ADD CONSTRAINT `fk_sys_workbench_layout_user_id` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`);
 ALTER TABLE `sys_workbench_role` ADD CONSTRAINT `fk_sys_workbench_role_role_id` FOREIGN KEY (`role_id`) REFERENCES `sys_role` (`id`);
 ALTER TABLE `sys_workbench_role` ADD CONSTRAINT `fk_sys_workbench_role_widget_id` FOREIGN KEY (`widget_id`) REFERENCES `sys_workbench_widget` (`id`);
+ALTER TABLE `biz_dept_cost_month` ADD CONSTRAINT `fk_biz_dept_cost_month_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_perf_result` ADD CONSTRAINT `fk_biz_perf_result_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_perf_result` ADD CONSTRAINT `fk_biz_perf_result_cost_id` FOREIGN KEY (`cost_id`) REFERENCES `biz_dept_cost_month` (`id`);
