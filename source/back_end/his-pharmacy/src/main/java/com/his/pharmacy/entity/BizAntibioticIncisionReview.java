@@ -7,6 +7,8 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableField;
 
 /**
  * I 类切口手术围手术期预防用药点评（专项整治必查）。
@@ -14,6 +16,11 @@ import java.time.LocalDateTime;
 @Data
 @TableName("biz_antibiotic_incision_review")
 public class BizAntibioticIncisionReview implements Serializable {
+    /**
+     * 更新人
+     */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private String updateBy;
 
     private static final long serialVersionUID = 1L;
 

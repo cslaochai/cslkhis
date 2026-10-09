@@ -13,6 +13,17 @@ import java.time.LocalDateTime;
 @Data
 @TableName("biz_adverse_event")
 public class BizAdverseEvent {
+    /**
+     * 创建人
+     */
+    @TableField(fill = FieldFill.INSERT)
+    private String createBy;
+
+    /**
+     * 更新人
+     */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private String updateBy;
 
     /**
      * 主键ID

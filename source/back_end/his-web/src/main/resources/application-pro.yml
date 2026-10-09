@@ -36,6 +36,10 @@ his:
   # 随访外呼通道：mock=人工（护士自拨，只登记「待外呼」）。
   followup:
     call-channel: mock
+  # 登录口令传输加密 SM2 私钥
+  security:
+    sm2:
+      private-key: ${HIS_SM2_PRIVATE_KEY:}
 
 knife4j:
   enable: false

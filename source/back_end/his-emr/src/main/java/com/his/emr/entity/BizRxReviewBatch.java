@@ -8,6 +8,8 @@ import lombok.Data;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableField;
 
 /**
  * 处方点评批次（卫医管发〔2010〕28号，事后专项点评；评审必查台账）。
@@ -15,6 +17,11 @@ import java.time.LocalDateTime;
 @Data
 @TableName("biz_rx_review_batch")
 public class BizRxReviewBatch implements Serializable {
+    /**
+     * 更新人
+     */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private String updateBy;
 
     private static final long serialVersionUID = 1L;
 

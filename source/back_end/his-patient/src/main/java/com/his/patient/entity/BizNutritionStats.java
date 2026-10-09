@@ -10,6 +10,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.FieldFill;
 
 /**
  * 营养膳食月度指标（sql/168 §4）。
@@ -17,6 +18,17 @@ import java.time.LocalDateTime;
 @Data
 @TableName("biz_nutrition_stats")
 public class BizNutritionStats {
+    /**
+     * 创建人
+     */
+    @TableField(fill = FieldFill.INSERT)
+    private String createBy;
+
+    /**
+     * 更新人
+     */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private String updateBy;
 
     /**
      * 主键

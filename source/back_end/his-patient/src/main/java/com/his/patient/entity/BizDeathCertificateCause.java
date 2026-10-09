@@ -7,6 +7,7 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 /**
  * 死亡证明死因链明细（死亡证明死因链，sql/157）。
@@ -14,6 +15,18 @@ import java.time.LocalDateTime;
 @Data
 @TableName("biz_death_certificate_cause")
 public class BizDeathCertificateCause implements Serializable {
+    /**
+     * 更新人
+     */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private String updateBy;
+
+    /**
+     * 更新时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updateTime;
 
     /**
      * 主键（雪花ID）

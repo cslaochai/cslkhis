@@ -7,6 +7,8 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableField;
 
 /**
  * 医师约谈记录（对开具不合理处方医师的约谈/警告/限制/取消处方权台账）。
@@ -14,6 +16,11 @@ import java.time.LocalDateTime;
 @Data
 @TableName("biz_rx_doctor_talk")
 public class BizRxDoctorTalk implements Serializable {
+    /**
+     * 更新人
+     */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private String updateBy;
 
     private static final long serialVersionUID = 1L;
 

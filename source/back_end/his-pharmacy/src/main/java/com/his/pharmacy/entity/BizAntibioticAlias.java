@@ -7,6 +7,8 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableField;
 
 /**
  * 抗菌药物品名别名 —— 住院医嘱名 → 药品目录的精确匹配键。
@@ -14,6 +16,11 @@ import java.time.LocalDateTime;
 @Data
 @TableName("biz_antibiotic_alias")
 public class BizAntibioticAlias implements Serializable {
+    /**
+     * 更新人
+     */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private String updateBy;
 
     private static final long serialVersionUID = 1L;
 

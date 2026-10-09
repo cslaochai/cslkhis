@@ -8,6 +8,8 @@ import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableField;
 
 /**
  * 抗菌药物使用监测指标（月度快照：使用率 / 使用强度 AUD / 微生物送检率）。
@@ -15,6 +17,17 @@ import java.time.LocalDateTime;
 @Data
 @TableName("biz_antibiotic_stats")
 public class BizAntibioticStats implements Serializable {
+    /**
+     * 创建人
+     */
+    @TableField(fill = FieldFill.INSERT)
+    private String createBy;
+
+    /**
+     * 更新人
+     */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private String updateBy;
 
     private static final long serialVersionUID = 1L;
 
