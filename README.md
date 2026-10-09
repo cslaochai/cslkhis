@@ -26,7 +26,7 @@ cslk/
 │   │   ├── his-operation/     #   手术申请/排班/安全核查、麻醉、复苏(PACU)、日间手术
 │   │   ├── his-medicaltech/   #   检验检查（LIS/PACS 报告）
 │   │   ├── his-emr/           #   电子病历、门诊医嘱、病历质控
-│   │   ├── his-charge/        #   收费记账、结算、医保
+│   │   ├── his-charge/        #   收费记账、结算、医保（DRG/DIP 分组引擎 + 合规控费）
 │   │   ├── his-ai/            #   AI 能力（18 项能力 + 知识库 RAG；位于业务域之上，业务模块不得依赖它）
 │   │   ├── his-miniapp/       #   患者端小程序 BFF 聚合层
 │   │   ├── his-web/           #   启动层（唯一 Spring Boot 入口，:8080，context-path /api）
@@ -100,6 +100,23 @@ docker compose -f docker/docker-compose.yml up -d --build
 - **AI 纪律铁律**：能力白名单调用（`capabilityKey` 只来自常量）；事实层代码算、模型只解释/产出候选；模型不可用时能力必须降级可用且降级可见；所有模型调用经 `AiExecutionService` 唯一入口落审计。详见 [AI能力施工手册](docs/AI能力施工手册.md)。
 - **凭据分流**：代码/配置入库零密钥，环境凭据只走环境变量（`HIS_*`）或 `docker/.env`；详见 [AGENTS.md](AGENTS.md) 第 8 节。
 - 详细开发规范见 [AGENTS.md](AGENTS.md)，业务规划与施工方案见 [docs/](docs/)。
+
+## 医保支付分组（DRG/DIP）
+
+医保支付遵循国家 DRG/DIP 付费改革（当前 2.0 版，2027-03 底落地 3.0 版）。系统按 **「贯标字典 → 结构化单据 → 分组引擎 → 合规控费 → 医保平台对接」** 五层管线落地，当前进度如下：
+
+- **数据根基（已按标准 HIS 建模）**：结算清单结构化明细（`biz_settlement_diagnosis`/`biz_settlement_operation`）、病案首页结构化（`biz_inpatient_summary`/`biz_inpatient_diagnosis`/`biz_inpatient_operation`）、ICD-10 / ICD-9-CM-3 贯标字典、医保目录对照（`biz_yb_catalog`/`biz_yb_mapping`）。诊断/手术均为结构化编码明细，非字符串堆砌。
+- **分组引擎（`his-medicaltech` 的 `DrgGrouper`）**：已重构为真实入组流程骨架 —— 先期分组 → MDC → ADRG → DRG 细分组；入参覆盖主诊断亚目、主手术/其他手术、其他诊断（→CC/MCC）、年龄、性别、呼吸机时长、新生儿体重等全量维度。新增 `CcMccService` 做 CC/MCC 判定并应用排除表（决定高编高套风险）。
+- **数据底座（已扩）**：分组表 `sys_drg_group` 增加匹配键（`diag_match`/`oper_match`）与性别限定、年龄分层、先期标志、术式属性（单双侧/机器人/联合）、基层病种等维度列；新建 `sys_drg_ccmcc`（CC/MCC 官方目录）、`sys_drg_exclusion`（排除表）。
+- **诚实闸门**：官方分组数据未灌入时，分组器与合规 D 组（`GroupingRatioRule` D01/D02）均返回 QY / 不适用（NA），并明确标注「未接入分组方案」，**绝不谎报分组或静默判「正常」**。
+
+**落地硬前提（需医保局提供，不入库、不在代码内编造）**：
+
+1. 官方 2.0/3.0 分组方案数据包（带匹配键 + 维度 + 权重 + 支付标准）→ 灌入 `sys_drg_group`；
+2. 官方 CC/MCC 目录 + 排除表 → 灌入 `sys_drg_ccmcc` / `sys_drg_exclusion`；
+3. 医保局前置机/分组器对接 → 替换 `his-charge` 中 `InsuranceChannelServiceImpl` 的 M9 Mock 口子。
+
+以上三样到位后，分组引擎与合规 D 组合规闸门**自动生效，无需再改代码**。
 
 ## 文档索引
 
