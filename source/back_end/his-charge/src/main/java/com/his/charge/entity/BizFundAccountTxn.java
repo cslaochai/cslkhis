@@ -10,6 +10,8 @@ import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 资金账户流水（L3）：账户只回答"这里有多少钱"，账单只回答"该收多少"，
@@ -18,6 +20,14 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_fund_account_txn")
 public class BizFundAccountTxn extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 账户流水号

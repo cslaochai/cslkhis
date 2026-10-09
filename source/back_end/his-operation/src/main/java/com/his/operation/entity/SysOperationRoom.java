@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.his.common.base.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 手术间主数据（手术间）—— 排台总表的"台"。
@@ -12,6 +14,14 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("sys_operation_room")
 public class SysOperationRoom extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 手术间编码（OR01、OR02…）

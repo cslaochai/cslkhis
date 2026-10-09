@@ -11,6 +11,8 @@ import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 中药代煎服务单（sql/139）。
@@ -19,6 +21,14 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_tcm_decoct")
 public class BizTcmDecoct extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 代煎单号（TCMD + yyyyMMdd + 4 位序号，服务端现算）

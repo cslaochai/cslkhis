@@ -9,6 +9,8 @@ import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 排班信息
@@ -17,6 +19,14 @@ import java.time.LocalDate;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_schedule")
 public class BizSchedule extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
     /**
      * 出勤事实ID（这条出诊计划是从哪条「谁 · 哪天 · 什么班」的排班事实派生出来的）
      */

@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 人力配置标准（一个排班单元 × 一个班次 × 一个岗位类别，该配多少人）。
@@ -16,6 +18,14 @@ import java.math.BigDecimal;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_staff_plan_rule")
 public class BizStaffPlanRule extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 排班单元类型（1-科室 2-病区 3-全院）

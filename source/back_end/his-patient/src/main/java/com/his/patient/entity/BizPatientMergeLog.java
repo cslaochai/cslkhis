@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 患者主索引合并审计（P5.1 EMPI）
@@ -16,6 +18,14 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_patient_merge_log")
 public class BizPatientMergeLog extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 合并流水号（HB + yyyyMMdd + 4位序号）

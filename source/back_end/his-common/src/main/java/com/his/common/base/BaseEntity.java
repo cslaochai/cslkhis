@@ -10,7 +10,10 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 实体基类
+ * 实体基类：所有业务表通用的 7 个字段
+ * id + 创建人(名称)/创建时间、更新人(名称)/更新时间 + 创建人ID/更新人ID
+ * <p>
+ * 逻辑删除(delFlag)与备注(remark)按表分情况，已下沉到具体实体声明，不再放基类。
  */
 @Data
 public class BaseEntity implements Serializable {
@@ -20,7 +23,7 @@ public class BaseEntity implements Serializable {
     private Long id;
 
     /**
-     * 创建人
+     * 创建人（姓名）
      */
     @TableField(fill = FieldFill.INSERT)
     private String createBy;
@@ -33,7 +36,7 @@ public class BaseEntity implements Serializable {
     private LocalDateTime createTime;
 
     /**
-     * 更新人
+     * 更新人（姓名）
      */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private String updateBy;
@@ -46,13 +49,16 @@ public class BaseEntity implements Serializable {
     private LocalDateTime updateTime;
 
     /**
-     * 删除标志（0-正常 1-删除）
+     * 创建人 ID（sys_user.id，员工即 employee_id；患者/系统上下文可能为空）
      */
-    @TableLogic
-    private Integer delFlag;
+    @TableField(fill = FieldFill.INSERT)
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long createById;
 
     /**
-     * 备注
+     * 更新人 ID（sys_user.id）
      */
-    private String remark;
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long updateById;
 }

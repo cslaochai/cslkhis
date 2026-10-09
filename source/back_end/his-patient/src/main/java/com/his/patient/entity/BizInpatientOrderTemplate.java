@@ -10,6 +10,8 @@ import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 import java.util.List;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 住院医嘱模板主表（sql/103，sql/142 加共享范围）。
@@ -18,6 +20,14 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_inpatient_order_template")
 public class BizInpatientOrderTemplate extends BaseEntity implements Serializable {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 归属医生（员工ID，不是用户的ID）

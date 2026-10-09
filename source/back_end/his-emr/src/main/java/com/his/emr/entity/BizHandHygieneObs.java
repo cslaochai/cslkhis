@@ -7,6 +7,8 @@ import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 手卫生依从性观察记录（只增不改）：一次观察一行，聚合统计走后端。
@@ -15,6 +17,14 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_hand_hygiene_obs")
 public class BizHandHygieneObs extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 观察日期

@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.his.common.base.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 国家医保目录（本地模拟目录库：正式对接时由前置机下载导入，表结构不变）。
@@ -12,6 +14,14 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_yb_catalog")
 public class BizYbCatalog extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 目录类型（1-西药/中成药 2-中药饮片 3-医疗服务项目 4-医用耗材）

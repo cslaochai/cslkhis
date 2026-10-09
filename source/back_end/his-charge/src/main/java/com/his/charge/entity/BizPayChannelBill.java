@@ -11,6 +11,8 @@ import lombok.EqualsAndHashCode;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 支付渠道对账流水台账（M7 渠道侧"对方账"）。
@@ -19,6 +21,14 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_pay_channel_bill")
 public class BizPayChannelBill extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 支付渠道：2-微信 3-支付宝 6-银行卡（对齐支付资金流水的支付方式；4 是医保个人账户，不是渠道）

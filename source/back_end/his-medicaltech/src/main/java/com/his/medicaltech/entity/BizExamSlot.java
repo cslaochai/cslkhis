@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 检查设备号源时段（检查设备号源时段）—— 半小时（或设备自定义粒度）一档的格子。
@@ -14,6 +16,14 @@ import java.time.LocalDate;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_exam_slot")
 public class BizExamSlot extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 设备ID

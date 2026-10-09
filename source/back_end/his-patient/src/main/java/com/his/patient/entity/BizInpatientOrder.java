@@ -11,6 +11,8 @@ import lombok.EqualsAndHashCode;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 住院医嘱（长期 / 临时合一）。
@@ -19,6 +21,14 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_inpatient_order")
 public class BizInpatientOrder extends BaseEntity implements Serializable {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 医嘱号（YZ + yyyyMMdd + 4位序号）

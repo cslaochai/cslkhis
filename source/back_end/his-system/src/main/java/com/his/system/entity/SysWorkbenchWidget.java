@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.his.common.base.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 工作台卡片注册表实体（一行=一张可被挂到工作台上的卡）。
@@ -12,6 +14,14 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("sys_workbench_widget")
 public class SysWorkbenchWidget extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 卡片编码，与 WorkbenchMetricProvider.widgetCode() 一字不差

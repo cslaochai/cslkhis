@@ -3,15 +3,27 @@ package com.his.pay.entity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.his.common.base.BaseEntity;
+import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 支付单（患者端小程序统一支付凭证，微信支付口子的落库形态）。
  */
+@Data
 @TableName("biz_pay_order")
 public class BizPayOrder extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 支付单号（Pay+yyyyMMdd+序号，唯一）

@@ -12,6 +12,8 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 透析单：排班 + 治疗记录一体，一次治疗单元一单。
@@ -20,6 +22,14 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_dialysis_session")
 public class BizDialysisSession extends BaseEntity implements Serializable {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 透析单号（HD + yyyyMMdd + 4 位）

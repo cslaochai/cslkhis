@@ -10,6 +10,8 @@ import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 麻醉记录单—— 一台手术一份（UNIQUE apply_id）。
@@ -18,6 +20,14 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_anesthesia_record")
 public class BizAnesthesiaRecord extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 麻醉记录单号（MZ + yyyyMMdd + 4位序号）

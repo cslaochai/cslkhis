@@ -9,6 +9,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.util.List;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 菜单实体（表菜单）
@@ -17,6 +19,14 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 @TableName("sys_menu")
 public class SysMenu extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 菜单名称，同时作为侧边栏的显示文案（分组标题 / 菜单项文字）

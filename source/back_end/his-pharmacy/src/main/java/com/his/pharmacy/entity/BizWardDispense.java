@@ -11,6 +11,8 @@ import lombok.EqualsAndHashCode;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 住院摆药单主单（G13）。
@@ -19,6 +21,14 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_ward_dispense")
 public class BizWardDispense extends BaseEntity implements Serializable {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 摆药单号（WD + yyyyMMdd + 4位流水号）

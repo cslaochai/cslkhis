@@ -9,6 +9,8 @@ import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 检查预约单—— 分时段占号的凭证。
@@ -17,6 +19,14 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_exam_appointment")
 public class BizExamAppointment extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 有效标记：1-在办（占着号源），NULL-已终结；与 apply_id 组成唯一索引，

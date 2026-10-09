@@ -9,6 +9,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 住院手术操作明细（病案首页手术明细）—— 病案首页的手术侧
@@ -17,6 +19,15 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_inpatient_operation")
 public class BizInpatientOperation extends BaseEntity {
+    /** 备注 */
+    private String remark;
+
+
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+
 
     /**
      * 入院ID

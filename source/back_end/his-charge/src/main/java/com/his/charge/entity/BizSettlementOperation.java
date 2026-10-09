@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 结算清单手术操作明细
@@ -16,6 +18,14 @@ import java.time.LocalDate;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_settlement_operation")
 public class BizSettlementOperation extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 结算清单ID

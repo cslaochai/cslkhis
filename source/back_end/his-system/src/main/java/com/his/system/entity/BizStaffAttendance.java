@@ -10,6 +10,8 @@ import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 实际出勤（某个人 · 某天 · 某个单元 · 某个班次，实际干了多久）。
@@ -18,6 +20,14 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_staff_attendance")
 public class BizStaffAttendance extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 关联的排班事实ID（biz_staff_schedule.id）；空=无计划的出勤（加班/支援/替班）

@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.his.common.base.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 结算清单诊断明细（编码依据链）
@@ -14,6 +16,14 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_settlement_diagnosis")
 public class BizSettlementDiagnosis extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 结算清单ID

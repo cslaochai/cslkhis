@@ -11,6 +11,8 @@ import lombok.EqualsAndHashCode;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 居民死亡医学证明（推断）书（死亡医学证明书，sql/157）。
@@ -19,6 +21,14 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_death_certificate")
 public class BizDeathCertificate extends BaseEntity implements Serializable {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 证明编号（DC + yyyyMMdd + 4 位，院内流水）

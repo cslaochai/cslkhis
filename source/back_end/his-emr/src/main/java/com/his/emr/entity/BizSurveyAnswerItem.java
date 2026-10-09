@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.his.common.base.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 满意度逐题答案（sql/164）。
@@ -14,6 +16,14 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_survey_answer_item")
 public class BizSurveyAnswerItem extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 答卷ID

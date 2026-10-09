@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 耗材字典（耗材字典是耗材域唯一目录，库存只挂 consumable_id）
@@ -14,6 +16,14 @@ import java.math.BigDecimal;
 @EqualsAndHashCode(callSuper = true)
 @TableName("sys_consumable")
 public class SysConsumable extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
     /**
      * 耗材编码（唯一）
      */

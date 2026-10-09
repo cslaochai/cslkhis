@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 耗材出入库流水（耗材出入库流水）
@@ -16,6 +18,14 @@ import java.math.BigDecimal;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_consumable_stock_log")
 public class BizConsumableStockLog extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
     /**
      * 库存批次ID
      */

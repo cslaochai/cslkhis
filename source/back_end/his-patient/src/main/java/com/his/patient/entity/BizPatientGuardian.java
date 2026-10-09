@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.his.common.base.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 就诊人绑定表（就诊人绑定）：一个登录账号（user_type=3）可绑多个就诊人。
@@ -14,6 +16,14 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_patient_guardian")
 public class BizPatientGuardian extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 登录账号ID

@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * DRG 分组与权重表（接入医保局的接口面）
@@ -14,6 +16,14 @@ import java.math.BigDecimal;
 @EqualsAndHashCode(callSuper = true)
 @TableName("sys_drg_group")
 public class SysDrgGroup extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * DRG 组编码（如 FR29）

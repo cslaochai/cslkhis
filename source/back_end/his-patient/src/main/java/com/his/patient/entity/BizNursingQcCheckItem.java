@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 护理质量检查单明细（护理质量检查明细，sql/168）。
@@ -14,6 +16,14 @@ import java.math.BigDecimal;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_nursing_qc_check_item")
 public class BizNursingQcCheckItem extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 检查单ID

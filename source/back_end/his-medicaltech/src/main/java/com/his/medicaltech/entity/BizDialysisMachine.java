@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 透析机位台账。
@@ -14,6 +16,14 @@ import java.io.Serializable;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_dialysis_machine")
 public class BizDialysisMachine extends BaseEntity implements Serializable {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 机位号

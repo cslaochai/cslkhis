@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 患者联系方式表 (患者联系方式)
@@ -16,6 +18,14 @@ import java.io.Serializable;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_patient_contact")
 public class BizPatientContact extends BaseEntity implements Serializable {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     private static final long serialVersionUID = 1L;
 

@@ -10,6 +10,8 @@ import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 排班模板实体（周模板：按星期几配置医生的固定班次，是长期资产；排班是按周生成的产物）
@@ -18,6 +20,14 @@ import java.time.LocalDate;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_schedule_template")
 public class BizScheduleTemplate extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 科室ID

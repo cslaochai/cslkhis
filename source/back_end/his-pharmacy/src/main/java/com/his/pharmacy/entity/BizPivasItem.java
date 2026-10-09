@@ -12,6 +12,8 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 静配中心调配明细（PIVAS）：一行 = 医嘱 × 调配日。
@@ -20,6 +22,14 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_pivas_item")
 public class BizPivasItem extends BaseEntity implements Serializable {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /** 明细状态：0-已拒配（审方退回终态，可重排入单） */
     public static final int STATUS_REJECTED = 0;

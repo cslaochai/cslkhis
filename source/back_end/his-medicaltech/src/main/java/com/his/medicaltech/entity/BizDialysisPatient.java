@@ -10,6 +10,8 @@ import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 import java.time.LocalDate;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 透析患者档案。
@@ -18,6 +20,14 @@ import java.time.LocalDate;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_dialysis_patient")
 public class BizDialysisPatient extends BaseEntity implements Serializable {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 透析号（DP + yyyyMMdd + 4 位）

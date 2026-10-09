@@ -9,6 +9,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.util.List;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 科室
@@ -17,6 +19,15 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 @TableName("sys_department")
 public class SysDepartment extends BaseEntity {
+    /** 备注 */
+    private String remark;
+
+
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+
 
     /**
      * 科室编码（唯一）

@@ -9,6 +9,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 药品库存流水列表VO（联表药品字典带出药品名称）
@@ -16,6 +18,15 @@ import java.math.BigDecimal;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class BizDrugStockLogVO extends BaseEntity {
+    /** 备注 */
+    private String remark;
+
+
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+
     /**
      * 库存批次ID
      */

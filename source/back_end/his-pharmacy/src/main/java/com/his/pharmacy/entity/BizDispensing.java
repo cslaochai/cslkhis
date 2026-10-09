@@ -11,6 +11,8 @@ import lombok.EqualsAndHashCode;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 发药信息实体
@@ -19,6 +21,14 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_dispensing")
 public class BizDispensing extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     private String dispensingNo;
 

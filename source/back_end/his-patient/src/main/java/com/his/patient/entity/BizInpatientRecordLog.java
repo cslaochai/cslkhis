@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 住院文书修改留痕（病历文书 + 护理文书共用）。
@@ -16,6 +18,14 @@ import java.io.Serializable;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_inpatient_record_log")
 public class BizInpatientRecordLog extends BaseEntity implements Serializable {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 单据类型：1-住院病历文书 2-护理文书

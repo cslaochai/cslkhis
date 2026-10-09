@@ -9,6 +9,8 @@ import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 药品调拨明细（一行一个发出方批次）
@@ -17,6 +19,14 @@ import java.time.LocalDate;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_drug_transfer_item")
 public class BizDrugTransferItem extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
     /** 调拨单ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long transferId;

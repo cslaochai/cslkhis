@@ -7,6 +7,8 @@ import com.his.appoint.mapper.BizScheduleSlotMapper;
 import com.his.common.base.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 排班时间片段实体（半小时一档）。
@@ -15,6 +17,14 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_schedule_slot")
 public class BizScheduleSlot extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 所属排班ID（排班信息的ID）

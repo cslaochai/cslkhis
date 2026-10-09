@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 病区护理排班行（病区护理排班，sql/166）。
@@ -14,6 +16,14 @@ import java.time.LocalDate;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_nurse_schedule")
 public class BizNurseSchedule extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 病区ID（兼容列：unit_type=1 时等于 unit_id；=2 门诊场景时冗余写科室ID，供台账/渲染继续用）

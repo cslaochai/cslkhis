@@ -43,8 +43,11 @@ public class MyBatisPlusConfig {
                 CurrentUser u = UserUtils.getCurrentUser();
                 if (u != null) {
                     String name = u.getRealName();
+                    Long uid = u.getEmployeeId();
                     this.strictInsertFill(metaObject, "createBy", String.class, name);
                     this.strictInsertFill(metaObject, "updateBy", String.class, name);
+                    this.strictInsertFill(metaObject, "createById", Long.class, uid);
+                    this.strictInsertFill(metaObject, "updateById", Long.class, uid);
                 }
             }
 
@@ -54,6 +57,7 @@ public class MyBatisPlusConfig {
                 CurrentUser u = UserUtils.getCurrentUser();
                 if (u != null) {
                     this.strictUpdateFill(metaObject, "updateBy", String.class, u.getRealName());
+                    this.strictUpdateFill(metaObject, "updateById", Long.class, u.getEmployeeId());
                 }
             }
         };

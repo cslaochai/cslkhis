@@ -9,6 +9,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
 
 /**
  * 字段级修改日志（字段级修改日志，建表见 sql/159）。
@@ -17,6 +19,14 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 @TableName("sys_field_change_log")
 public class SysFieldChangeLog extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
 
     /**
      * 对象类型：PATIENT-患者 USER-系统用户 EMPLOYEE-员工 MEDICAL_RECORD-病历 INPATIENT_RECORD-住院文书
