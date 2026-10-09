@@ -67,7 +67,7 @@ public class BizLisEqaSample extends BaseEntity {
     private String itemName;
 
     /**
-     * 检测仪器（室间差按此分组；表上 NOT NULL DEFAULT ''，不做 nullable 是为了唯一键能生效）
+     * 检测仪器（室间差按此分组；表上 NOT NULL ，不做 nullable 是为了唯一键能生效）
      */
     private String instrumentName;
 

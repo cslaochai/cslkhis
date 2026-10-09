@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import com.his.common.enums.UserTypeEnum;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import org.apache.ibatis.reflection.MetaObject;
@@ -40,24 +41,30 @@ public class MyBatisPlusConfig {
                 this.strictInsertFill(metaObject, "createTime", LocalDateTime.class, now);
                 this.strictInsertFill(metaObject, "updateTime", LocalDateTime.class, now);
                 this.strictInsertFill(metaObject, "delFlag", Integer.class, 0);
-                CurrentUser u = UserUtils.getCurrentUser();
-                if (u != null) {
-                    String name = u.getRealName();
-                    Long uid = u.getEmployeeId();
-                    this.strictInsertFill(metaObject, "createBy", String.class, name);
-                    this.strictInsertFill(metaObject, "updateBy", String.class, name);
-                    this.strictInsertFill(metaObject, "createById", Long.class, uid);
-                    this.strictInsertFill(metaObject, "updateById", Long.class, uid);
+                CurrentUser currentUser = UserUtils.getCurrentUser();
+                if (currentUser != null && currentUser.getUserType() == UserTypeEnum.INNER.getCode()) {
+                    this.strictInsertFill(metaObject, "createBy", String.class, currentUser.getEmployeeName());
+                    this.strictInsertFill(metaObject, "updateBy", String.class, currentUser.getEmployeeName());
+                    this.strictInsertFill(metaObject, "createById", Long.class, currentUser.getEmployeeId());
+                    this.strictInsertFill(metaObject, "updateById", Long.class, currentUser.getEmployeeId());
+                } else {
+                    this.strictInsertFill(metaObject, "createBy", String.class, currentUser.getRealName());
+                    this.strictInsertFill(metaObject, "updateBy", String.class, currentUser.getRealName());
+                    this.strictInsertFill(metaObject, "createById", Long.class, currentUser.getUserId());
+                    this.strictInsertFill(metaObject, "updateById", Long.class, currentUser.getUserId());
                 }
             }
 
             @Override
             public void updateFill(MetaObject metaObject) {
                 this.strictUpdateFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
-                CurrentUser u = UserUtils.getCurrentUser();
-                if (u != null) {
-                    this.strictUpdateFill(metaObject, "updateBy", String.class, u.getRealName());
-                    this.strictUpdateFill(metaObject, "updateById", Long.class, u.getEmployeeId());
+                CurrentUser currentUser = UserUtils.getCurrentUser();
+                if (currentUser != null && currentUser.getUserType() == UserTypeEnum.INNER.getCode()) {
+                    this.strictUpdateFill(metaObject, "updateBy", String.class, currentUser.getEmployeeName());
+                    this.strictUpdateFill(metaObject, "updateById", Long.class, currentUser.getEmployeeId());
+                } else {
+                    this.strictUpdateFill(metaObject, "updateBy", String.class, currentUser.getRealName());
+                    this.strictUpdateFill(metaObject, "updateById", Long.class, currentUser.getUserId());
                 }
             }
         };

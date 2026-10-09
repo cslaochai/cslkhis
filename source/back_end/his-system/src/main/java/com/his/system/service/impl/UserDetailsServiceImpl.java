@@ -1,6 +1,8 @@
 package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.his.common.enums.EnableStatusEnum;
+import com.his.common.enums.UserTypeEnum;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysEmployee;
 import com.his.system.entity.SysUser;
@@ -12,6 +14,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -20,6 +23,7 @@ import java.util.Objects;
 public class UserDetailsServiceImpl implements UserDetailsService {
 
     private final SysUserMapper sysUserMapper;
+
     private final SysEmployeeMapper sysEmployeeMapper;
 
     @Override
@@ -28,13 +32,10 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         wrapper.eq(SysUser::getUserName, username);
         SysUser user = sysUserMapper.selectOne(wrapper);
 
-        if (user == null) {
-            throw new UsernameNotFoundException("用户不存在: " + username);
+        if (user == null || user.getStatus() != EnableStatusEnum.ENABLED.getCode()) {
+            throw new UsernameNotFoundException("用户不存在或者已被禁用: " + username);
         }
 
-        if (user.getStatus() != 1) {
-            throw new UsernameNotFoundException("用户已禁用: " + username);
-        }
         CurrentUser currentUser = new CurrentUser();
         currentUser.setUserId(user.getId());
         currentUser.setUsername(user.getUserName());
@@ -44,9 +45,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         currentUser.setPatientId(user.getPatientId());
         currentUser.setEmployeeId(user.getEmpId());
         currentUser.setLoginCount(user.getLoginCount());
-        // 根据用户类型处理
-        if (user.getUserType() != null && user.getUserType() == 1 && user.getEmpId() != null) {
-            // 院内用户：通过employee_id关联员工表
+        if (UserTypeEnum.INNER.getCode() == user.getUserType() && user.getEmpId() != null) {
+            // 院内员工
             SysEmployee employee = sysEmployeeMapper.selectById(user.getEmpId());
             if (Objects.isNull(employee)) {
                 throw new UsernameNotFoundException("员工数据不存在: " + username);
@@ -61,12 +61,13 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             currentUser.setDeptName(employee.getDeptName());
             currentUser.setRoles(empRoles);
             currentUser.setPermissions(permissions);
-        } else if (user.getUserType() != null && user.getUserType() == 3 && user.getPatientId() != null) {
+        } else if (UserTypeEnum.PATIENT.getCode() == user.getUserType()) {
             // 患者用户：授予患者角色，绑定患者主档ID（用于患者级数据查询）
             currentUser.setPatientId(user.getPatientId());
-            currentUser.setRoles(java.util.Collections.singletonList("PATIENT"));
+            currentUser.setRoles(Collections.singletonList("PATIENT"));
         } else {
             // 院外用户等：暂无角色，登录后无权限（保持原行为）
+            throw new UsernameNotFoundException("暂只支持能院内用户和患者登录");
         }
         return currentUser;
     }

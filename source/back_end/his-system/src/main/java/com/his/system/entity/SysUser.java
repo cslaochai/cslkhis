@@ -95,7 +95,7 @@ public class SysUser extends BaseEntity {
     private LocalDateTime passwordUpdateTime;
 
     /**
-     * 启用状态（his_enable_status：0-禁用 1-启用；无「锁定」态，原 his_user_status 字典已删除）
+     * 启用状态 0-禁用 1-启用
      */
     private Integer status;
 }

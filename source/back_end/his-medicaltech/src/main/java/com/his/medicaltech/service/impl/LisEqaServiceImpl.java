@@ -727,7 +727,7 @@ public class LisEqaServiceImpl extends ServiceImpl<BizLisEqaSampleMapper, BizLis
     }
 
     /**
-     * 仪器名统一：不填就是空串（列上 NOT NULL DEFAULT ''，让唯一键能生效）
+     * 仪器名统一：不填就是空串（列上 NOT NULL ，让唯一键能生效）
      */
     private String instrumentOf(String raw) {
         return TextUtil.hasText(raw) ? raw.trim() : "";
