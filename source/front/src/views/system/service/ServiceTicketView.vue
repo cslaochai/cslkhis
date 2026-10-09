@@ -160,7 +160,6 @@ const handleCurrentChange = (val) => {
 
 <template>
   <div>
-    <!-- 工作台统计：客服进来第一件事是看有没有新单没人接 -->
     <el-card class="mb-3" shadow="never">
       <div class="flex items-center gap-8">
         <div>

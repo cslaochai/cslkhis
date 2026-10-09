@@ -11,16 +11,8 @@ import {
   messageTagClass,
 } from '@/lib/messageCatalog'
 import { hasAnyPerm } from '@/lib/perm'
-// 处置弹窗全站唯一实现（报告详情 + 危急值确认接收→处置闭环），工作台不得另写一份
 import MessageProcessDialog from '@/components/his/MessageProcessDialog.vue'
 
-/**
- * 待办 / 通知列表卡（mode 区分，两种闭环方式共用一份渲染）。
- *
- * 口径：待办型 = handle_status=0，通知型 = handle_status IS NULL 且未读；
- * 分组的展示名、紧急度、处理权限全部从 lib/messageCatalog.js 取，这里不建第二份映射。
- * 类型分叉的判断在后端 SQL（provider 的 handle_status 条件），前端只按 mode 决定按钮语义。
- */
 const props = defineProps<{
   code: string
   mode: 'todo' | 'notice'

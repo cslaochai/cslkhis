@@ -1,25 +1,4 @@
 <script setup lang="ts">
-/**
- * 住院转科（P4.2：发起 → 转入科室接收 → 停原医嘱 + 换科室换床 + 回写病历）
- *
- * 这个页面替代了原来的硬编码演示壳（写死的 4 行假数据，混着"转科"和"交接班"两件事）——
- * 按项目规范，所有页面数据必须来自后端接口。
- *
- * 六条口径：
- * 1. **转科 ≠ 换床**：同科室挪床位走「入出院管理 → 换床」（`/patient/inpatient/transfer`），
- *    跨科室才走本页；发起同科室转科会被后端直接拒绝。
- * 2. **发起 ≠ 生效**：`save` 只留下一张「待接收」的单，床位不占、科室不改、医嘱不停。
- *    所以列表里"待接收"是正常中间态，不是失败。
- * 3. **按钮可用性由后端给**（canAccept / canCancel），不按 transferStatus 码值 switch，
- *    也不在本地拦截（本地拦截会掩盖后端规则的失效）。
- * 4. **接收会自动回写转科记录病历**（record_type=10），列表的「病历号」列就是证据链。
- * 5. **医嘱处置必须展示**：orderRemark 写清"停了几条、哪几条没停掉"，后端刻意不静默跳过。
- * 6. 所有 ID 都是字符串（雪花ID），不要 Number()。
- *
- * 本页**不做**「医护交接班」（那是另一个闭环：总值班交班本走菜单 806，本页从未实现过，
- * 故 sql/188 把菜单名里的「/ 交接班」去掉，只叫「转科管理」），
- * 也不做转科审批流（系统无审批流引擎，做半套审批比不做更糟）。
- */
 import { ref, computed, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Plus, Search, Warning } from '@element-plus/icons-vue'
@@ -130,8 +109,6 @@ const loadAdmissions = async () => {
   try {
     const res = await getInpatientListPage({ admitStatus: 1, pageNum: 1, pageSize: 200 })
     admissions.value = (res.data?.records || []) as AdmissionOption[]
-    // 刻意**不默认选中第一位患者**：转科管理是"转入科室的工作台"，默认就该看到全部待接收。
-    // admissionId 为空 = 不按住院过滤（后端把 null 当作"不过滤"）。
   } catch (error: any) {
     console.error('加载在院患者失败:', error)
   }
@@ -414,13 +391,6 @@ onMounted(async () => {
   <div>
     <!-- 标题 + 在院患者过滤 -->
     <div class="mb-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h1 class="text-xl font-semibold text-slate-900">转科管理</h1>
-        <p class="mt-1 text-sm text-slate-500">
-          跨科室转科：发起 → 转入科室接收（停原科室长期医嘱 + 换科室换床 + 回写转科记录病历）。
-          同科室挪床位请走「入出院管理 → 换床」。
-        </p>
-      </div>
       <div class="flex items-center gap-3">
         <el-select
           v-model="filters.admissionId"

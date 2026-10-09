@@ -53,4 +53,35 @@ public class DrgSummaryRowVO implements Serializable {
      * 实际住院费用
      */
     private BigDecimal actualAmount;
+
+    /**
+     * 入院ID（关联手术/诊断明细）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long admissionId;
+
+    /**
+     * 性别（1-男 2-女 9-未知）
+     */
+    private Integer gender;
+
+    /**
+     * 年龄数值
+     */
+    private Integer age;
+
+    /**
+     * 年龄单位（1-岁 2-月 3-天）
+     */
+    private Integer ageUnit;
+
+    /**
+     * 呼吸机使用时长（小时）
+     */
+    private Integer ventilatorHours;
+
+    /**
+     * 出生体重（克，新生儿）
+     */
+    private Integer birthWeight;
 }

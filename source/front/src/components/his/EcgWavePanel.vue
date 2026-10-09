@@ -1,27 +1,8 @@
 <script setup lang="ts">
-/**
- * 12 导联心电图波形面板（sql/173 心电工作站）
- *
- * waveData 是设备推送 / 模拟采集落库的 JSON 字符串，契约：
- * {
- *   sampleRate: 250,        // 采样率 Hz
- *   durationSec: 10,        // 采了多少秒
- *   gainMmPerMv: 10,        // 定标：1mV = 10mm（心电图纸标准灵敏度）
- *   paperSpeedMmPerS: 25,   // 走纸速度：25mm/s
- *   leads: [{ name: 'I', samples: [...] }, ×12],
- *   rhythm: { name: 'II', samples: [...] }  // II 导联长节律条
- * }
- *
- * 渲染口径 = 真实心电图纸：SVG viewBox 以 mm 为单位（1 单位 = 1mm），
- * 走纸速度决定每毫秒占多宽、定标电压决定 1mV 占多高 —— 波形天然按设备参数缩放，
- * 改 gain / paperSpeed 时图纸跟着变，而不是写死一版像素。
- */
 import {computed} from 'vue'
 
 const props = defineProps<{
-  /** 波形 JSON 字符串（biz_ecg_waveform.wave_data 原样透传） */
   waveData?: string | null
-  /** 面板标题（如「术前常规心电图」），空则不显示 */
   title?: string
 }>()
 

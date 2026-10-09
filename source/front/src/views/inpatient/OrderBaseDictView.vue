@@ -1,18 +1,4 @@
 <script setup lang="ts">
-/**
- * 医嘱基础字典（给药途径 / 用药频次 / 剂量单位）—— 菜单 2383，sql/142
- *
- * 为什么有这一页：这三类此前是前端硬编码（lib/drugUsage.js），库里查不到字典，
- * 结果就是医生站与护士站各按各的常量渲染 —— 库里真实出现过「静脉泵入」而常量里没有，
- * 两侧看到的值从此对不上。现在统一落 sys_dict_data，医生站下拉从字典取，这里负责维护。
- *
- * 三条刻意收紧的规则（都在服务端，前端照做即可）：
- *  1. **值不可改**：存量医嘱行里存的就是这串值，改了历史医嘱会渲染成「未知(xxx)」。
- *     要换值：停用旧的 + 新增一条。所以编辑弹窗里值是只读的。
- *  2. **只认三种 dictType**：这个口子改不了别的字典（那是 system:dict:* 的领地）。
- *  3. **停用不删除**：停用项不进下拉，但历史医嘱按原值照样渲染出文案。
- *     列表上的「使用量」直接告诉维护人这个值有多少条医嘱在用。
- */
 import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'

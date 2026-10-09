@@ -104,8 +104,6 @@ const loadAdmissions = async () => {
   try {
     const res = await getInpatientListPage({ admitStatus: 1, pageNum: 1, pageSize: 200 })
     admissions.value = (res.data?.records || []) as AdmissionOption[]
-    // 刻意**不默认选中第一位患者**：会诊管理是"会诊科室的工作台"，默认就该看到全院所有会诊。
-    // admissionId 为空 = 不按住院过滤（后端把 null 当作"不过滤"）。
   } catch (error: any) {
     console.error('加载在院患者失败:', error)
   }
@@ -399,12 +397,6 @@ onMounted(async () => {
   <div>
     <!-- 页头 -->
     <div class="mb-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h1 class="text-xl font-semibold text-slate-900">住院会诊</h1>
-        <p class="mt-1 text-sm text-slate-500">
-          申请 → 会诊科室应答 → 会诊记录 → 完成（自动回写住院病历）。未应答不可完成、已应答不可取消。
-        </p>
-      </div>
       <div class="flex items-center gap-3">
         <el-select
           v-model="admissionId"

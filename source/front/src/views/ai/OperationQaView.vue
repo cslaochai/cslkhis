@@ -1,13 +1,4 @@
 <script setup lang="ts">
-/**
- * AI 运营问数（菜单 2940，sql/224，挂报表统计）
- *
- * 模型只把问题翻译成受控 SELECT（白名单表 + 只读闸门），执行与截断全部由后端代码完成。
- * 界面三件事必须做到：
- *  1. degraded=true 时警示条必显 —— 管理者有权知道这次为什么没查出来；
- *  2. 实际执行的 SQL 可展开查看（透明可查）；
- *  3. 数据域说明常驻 —— 提前告诉用户能问什么，减少无效提问。
- */
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { askOperationQa, getOperationSchema } from '@/api/ai'

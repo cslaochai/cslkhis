@@ -140,8 +140,6 @@ const handleLogin = async () => {
       localStorage.setItem('currentRole', res.data.currentRole)
       // 清掉上一个会话残留的「当前患者」（sessionStorage），避免串患者
       currentPatientStore.clearSession()
-      // 菜单/权限/工作台配置是模块级进程内缓存：上一会话若没整页刷新（退出走的是 SPA 路由），
-      // 不清就会把 A 角色的菜单原样画给 B（loadMenuTree 命中旧缓存，连接口都不再请求）
       clearSessionCaches()
 
       ElMessage.success('登录成功')

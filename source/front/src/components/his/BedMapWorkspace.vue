@@ -1,16 +1,4 @@
 <script setup lang="ts">
-/**
- * 病区床位图（护士站总览）
- *
- * 一张床一张卡，空床也画出来 —— 护士要的正是「哪几张床是空的」，
- * 只渲染占床的图等于把这张图最有用的那半边裁掉了。
- *
- * 数据只有一个来源：`/patient/inpatient/bedMap`。科室边界由服务端按登录岗位收口，
- * 前端的科室下拉读的是接口返回的 `deptOptions`（已按授权过滤），不拉全院科室表。
- *
- * 顶偏移实测后定高，卡片在自己的面板里滚（见 lib 里的工作站老规矩）；
- * 卡片左边条 = 护理等级色标，无护理记录时是灰色「未评估」，**不等于「不需要护理」**。
- */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Refresh, WarningFilled } from '@element-plus/icons-vue'

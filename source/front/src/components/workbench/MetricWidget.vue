@@ -2,12 +2,6 @@
 import { computed } from 'vue'
 import { METRIC_SPECS } from '@/lib/workbench-widgets'
 
-/**
- * 通用数字卡：一张卡 = 一组带口径的指标格子。
- *
- * 指标口径（取哪个 key、叫什么名、怎么格式化）登记在 lib/workbench-widgets.js 的
- * METRIC_SPECS，本组件不认卡片编码也不认角色 —— 新增一张数字卡只在注册表里加一段 spec。
- */
 const props = defineProps<{
   code: string
   data: Record<string, any> | null

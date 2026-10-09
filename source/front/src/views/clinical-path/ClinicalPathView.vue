@@ -1,16 +1,4 @@
 <script setup lang="ts">
-/**
- * 临床路径工作台（sql/106，菜单 607）
- *
- * 三个页签：
- *  1) 路径模板：草稿维护（步骤整组替换、项目名称走治疗项目字典软带出、可自由文本）
- *     → 发布（同码仅一张使用中，total_days 服务端回算）→ 停用（存量入径不受影响）。
- *  2) 在径管理：在院患者搜索 → 选使用中模板 → 入径（快照服务端重查）；
- *     详情按路径日展示步骤、变异台账追加登记（原因必填）、完成/退径（退径原因必填）。
- *  3) 变异分析：按模板聚合入径/完成/退径/变异/完成率 + 类型分布 + 原因 TOP。
- * 规则（服务端收口，前端只做显隐）：步骤是文书记录不生成医嘱不计费；
- * 仅草稿可编辑；仅在径可登记变异/完成/退径。状态文案走字典，tag 色与显隐单点 lib/pathway.js。
- */
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Promotion, CircleClose, Delete } from '@element-plus/icons-vue'

@@ -53,66 +53,14 @@ interface MenuNode {
   children?: MenuNode[] | null
 }
 
-/**
- * 伸缩状态不再由父层透传：Header 顶栏的按钮和这里底部的箭头读写同一份
- * lib/sidebarState，两个入口永远不会各说各话。
- */
-
 const route = useRoute()
 const router = useRouter()
 
-/**
- * 菜单数据源 = 后端 sys_menu 表（`/system/menu/tree`）。
- *
- * 这里**不再写死任何菜单结构**：「系统管理 → 菜单管理」里改完立即生效。
- * 表结构与初始化数据见 `source/back_end/sql/52-菜单表重建.sql`。
- *
- * 约定：
- *  1. 一级目录（menu_type=1）→ 一个可折叠分组；二级菜单（menu_type=2）→ 一个真实页面。
- *  2. 只渲染 is_visible=1 且 status=1 的记录；is_visible=0 用于「路由存在但不上菜单」的页面。
- *  3. 排序沿用 sort_order（目录 10/20/… 步长，便于中间插入）。
- *  4. 菜单项的 path 必须在 `router/index.js` 注册过，否则点进去是白屏 —— 由
- *     `workspace/verify-menu-rebuild.mjs` 的「契约层」断言兜住。
- *
- * 【已下线的假壳菜单 —— 原样保留，不删】
- * 以下假壳页已全部真实化或删除，仓库不再保留演示壳组件，
- * 但条目留成注释、字段完整，等页面接了真实接口后，照着在 sys_menu 里补一行即可挂回菜单：
- *   // {href: '/emr',          label: '电子病历 EMR',   icon: DocumentCopy}  // 唯一是假壳
- *   // {href: '/records',      label: '门诊病历查询',   icon: Document}      // 非假壳，但 2026-09-23 已摘除菜单：
- *   //                                                                       // 与 602 同表同接口同检索、信息量更少，改用 /medical-record（见 sql/74）
- *   // {href: '/anesthesia',   label: '麻醉信息系统',   icon: Odometer}      // 住院业务
- *   // {href: '/icu',          label: 'ICU 重症监护',   icon: TrendCharts}   // 住院业务
- *   // {href: '/infusion',     label: '输液 / 治疗室',  icon: Pouring}       // 门诊业务
- *   // {href: '/infection',    label: '院感监控',       icon: DataBoard}     // 病历与质量安全
- *   // {href: '/adverse-event', label: '不良事件',       icon: Flag}          // 病历与质量安全
- *   // {href: '/equipment',    label: '设备管理',       icon: Tools}         // 物资设备
- *   // {href: '/cssd',         label: '消毒供应 CSSD',  icon: RefreshRight}  // 物资设备
- *   // {href: '/audit',        label: '审计日志',       icon: FolderOpened}  // 报表统计（原「报表与审计」，sql/188）
- *   // {href: '/billing',      label: '收费管理',       icon: Money}         // 财务结算（非假壳，见下）
- * 另有 4 个假壳页 /pacs /hr /performance /dictionary 原本就没挂菜单，同样保留。
- * （原本这个列表里还有 /health-record —— 它已重做成真页面并挂上菜单，
- *   见 sys_menu.menu_key='patient.profile' 与 sql/61-健康档案菜单.sql。）
- * （/finance「财务日结」同理：已重做成真实页面 FinanceView.vue（班结/日结/三级对账），
- *   菜单见 sql/76-财务班结日结与科室锚点.sql 的 menu_key='finance.settlement'。）
- *
- * 【/billing「收费管理」是另一种情况】它与上面的假壳不同 —— 页面是真的（BillingView.vue，
- * 调 /charge/listPage + /charge/getById），但作为「收费查询」它是 /cashier 的坏子集：
- *   ① 把 chargeNo 当 chargeId 传给 /charge/getById → 详情必然 400，且 catch 静默降级，
- *      弹窗里只剩 4 个字段、一条明细都没有（用户会以为这单本来就没明细）
- *   ② 统计卡是前端 reduce 且数据源写死 pageSize:100 → 394 条里只有前 100 条参与，数字是错的
- *   ③ filtered 对当前页 list.filter（前端切片）→ 违反「筛选下推后端」，且无分页
- * 所以一并从菜单与路由摘掉。页面文件保留未删，待重做成 /cashier 的查询 tab 后再放开。
- */
-// 组件对象禁止进深层 ref：会被 reactive 代理，触发「Component made a reactive object」警告。
-// navGroups 只有整体赋值（loadMenus），从不原地改，shallowRef 正合适。
 const navGroups = shallowRef<NavGroup[]>([])
 
-/** 加载状态：区分「还在加载」与「真的没有」——加载期间不能显示空态文案 */
 const loading = ref(true)
-/** 加载失败提示（后端不可达 / 非 200），失败时给重试入口，不静默 */
 const loadError = ref('')
 
-/** 图标名 → 组件。sys_menu.icon 存组件名字符串，取不到时用 FallbackIcon 兜底 */
 const ICON_MAP = ElIcons as unknown as Record<string, Component>
 
 function resolveIcon(name?: string): Component {
@@ -226,14 +174,6 @@ loadMenus()
 
 /**
  * 菜单缓存被清空时立即重跑（切换角色 / 切换科室 / 菜单管理改完菜单）
- *
- * 为什么必须有这个 watch：侧边栏是**常驻布局**的一部分，`setup()` 只跑一次。
- * 切角色时 Header 会 `clearMenuTreeCache()`，但那只是清了模块里的缓存变量 ——
- * Sidebar 对此一无所知，`navGroups` 还挂着旧角色那一套。
- * 路由变化（router.replace）也不会让它重建。
- * 结果就是「切了角色菜单没变，得手工刷新页面」。
- *
- * `menuCacheEpoch` 是缓存失效的响应式信号，自增一次这里就重跑一次。
  */
 watch(menuCacheEpoch, () => {
   loadMenus()
@@ -266,16 +206,6 @@ watch(menuCacheEpoch, () => {
       </div>
 
       <div v-for="group in navGroups" v-else :key="group.title" class="mb-3">
-        <!--
-          分组标题（可点击折叠）：比子菜单大一号、更亮，与子项拉开层级。
-          收起态**不换 DOM 分支**（原来是 `pt-2 pb-1` 的单字 <p>，比展开态矮 4px，
-          切换瞬间整列先跳高度、再随宽度重新排 → 就是「先加高后平铺」那个观感）。
-          现在同一行同高度，靠三件事过渡：
-            · 左内边距 12→17（配合 14px 的字宽，把首字推到 64px 图标条的中轴上）；
-            · 标题 max-width 收到 14px —— 注意 overflow 是在 padding box 裁的，
-              光靠行宽会露出两个字（半个字被切很难看），必须自己限宽；
-            · 箭头淡出（opacity，不动布局，所以不会引起回流）。
-        -->
         <div
             class="group-title flex cursor-pointer items-center gap-2 overflow-hidden rounded-lg py-2 pr-3 text-sm font-semibold text-white/95 hover:bg-white/10 hover:text-white"
             :class="{ 'text-white': isGroupActive(group) }"
@@ -301,11 +231,6 @@ watch(menuCacheEpoch, () => {
             }"
         >
           <div class="min-h-0 space-y-0.5 overflow-hidden">
-            <!--
-              菜单项：同理不换 DOM。左内边距 36→15 随宽度同速过渡
-              （图标中心 = 8 + 15 + 9 = 32，正好落在 64px 图标条的中轴上，
-              与顶栏 Logo、底部箭头同一条竖线）；文字用淡出，不用 v-if 摘除。
-            -->
             <div
                 v-for="item in group.items"
                 :key="item.href"
@@ -348,8 +273,6 @@ watch(menuCacheEpoch, () => {
 </template>
 
 <style scoped>
-/* 收起 / 展开动画：padding 与 aside 的宽度同速（300ms）过渡，图标才会「滑」到中轴，
-   而不是先跳过去再等宽度追上来；颜色单独给 150ms，免得 hover 高亮拖泥带水。 */
 .group-title,
 .sidebar-item {
   transition: padding-left 0.3s ease, padding-right 0.3s ease,

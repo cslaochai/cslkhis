@@ -2,19 +2,7 @@
 import {computed} from 'vue'
 import {Plus, Delete} from '@element-plus/icons-vue'
 
-/**
- * 岗位配置表：一行 = 「以某角色在某科室执业」。
- *
- * 取代原先的「执业科室多选 + 所属角色多选」两个互不相干的框 —— 分开配就会出现
- * 角色里有药剂师、科室里有骨科，但没人给他配过「药剂师·骨科」这种岗位的情况，
- * 而旧的前端切换界面恰好能把这两个拼出来。
- *
- * 不分页（用户 2026-09-25 定稿）：一个人实际分配的岗位就几条，
- * 「在全院每个科室都配一遍」不是真实场景，翻页反而碍核对。
- */
 const props = defineProps({
-  // [{roleCode, deptId, isPrimary, effectiveDate, expireDate}]，deptId 统一用字符串
-  // （后端 Long 序列化成 string，混型会让下拉选不中）；日期 '' = 不限，lib/employeePost 提交前归一成 null
   modelValue: {type: Array, default: () => []},
   deptList: {type: Array, default: () => []},
   roleList: {type: Array, default: () => []},

@@ -1,11 +1,6 @@
 <script setup lang="ts">
 import {computed} from 'vue'
 
-/**
- * 七日到诊趋势卡：竖向条形，纯 div 画（不引图表库）。
- * 后端已按天补零（Provider 侧 7 天占位），所以这里不再算缺失日 —— 空白是"那天没人挂号"，
- * 与"数据没到"是两回事，后者整卡显示「—」。
- */
 const props = defineProps<{
     code: string
     data: Record<string, any> | null
@@ -17,7 +12,6 @@ const items = computed<any[]>(() => props.data?.items || [])
 const maxCnt = computed(() => Math.max(1, ...items.value.map(x => Number(x.cnt || 0))))
 const totalCount = computed(() => items.value.reduce((s, x) => s + Number(x.cnt || 0), 0))
 
-/** yyyy-MM-dd → MM-dd；ISO 的 T 分隔在这里不会出现（SQL 用 DATE_FORMAT 别名输出） */
 function dayLabel(date: string) {
     return (date || '').slice(5) || '—'
 }

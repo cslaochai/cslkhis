@@ -6,14 +6,6 @@ import {loadWorkbenchConfig, workbenchConfigEpoch} from '@/lib/workbench-config'
 import {WIDGET_REGISTRY} from '@/lib/workbench-widgets'
 import {hasPerm} from '@/lib/perm'
 
-/**
- * 门户工作台（所有角色共用的唯一首页）
- *
- * 这里没有任何角色分支：卡片清单由 `/workbench/config` 按「角色配置勾选 ∩ 权限码命中」算好，
- * 取数由 `/workbench/data` 一次聚合返回，页面只负责按 widgetCode 查组件注册表渲染。
- * 谁该看到哪几张卡，去「系统管理 → 工作台配置」里改，不改代码。
- */
-
 interface WidgetConf {
     id: string
     widgetCode: string
@@ -35,6 +27,8 @@ const loadError = ref('')
 const widgets = ref<WidgetConf[]>([])
 /** widgetCode -> {data, error}，取数失败也占位，让卡片显式画出失败态而不是整卡消失 */
 const dataMap = ref<Record<string, any>>({})
+/** 本页最近一次取数时刻，用于顶栏的「何时更新」；不做自动轮询，所以必须由人确认 */
+const loadedAt = ref('')
 
 /** 已上线且前端注册过组件的卡（未登记的码在取数那一步点名，不画空白卡） */
 const cards = computed(() =>
@@ -42,6 +36,14 @@ const cards = computed(() =>
         // 后端已按权限筛过，这里是第二道：/auth/info 的权限集合若不含该码，卡片的数据接口必然 403
         hasPerm(w.permission))
 )
+
+/** 顶栏左侧文案：任何状态下都有事实可读，避免动作按钮孤零零挂在页面顶部 */
+const metaText = computed(() => {
+    if (loading.value) return '正在载入…'
+    if (loadError.value) return '配置载入失败'
+    if (!loadedAt.value) return `共 ${cards.value.length} 张卡片`
+    return `共 ${cards.value.length} 张卡片 · ${loadedAt.value} 更新`
+})
 
 function gridColumn(span: number | null) {
     const n = Math.min(Math.max(Number(span) || GRID_COLS, 1), GRID_COLS)
@@ -51,6 +53,7 @@ function gridColumn(span: number | null) {
 async function loadAll(force = false) {
     loading.value = true
     loadError.value = ''
+    loadedAt.value = ''
     try {
         const cfg = await loadWorkbenchConfig(force)
         widgets.value = cfg.widgets as WidgetConf[]
@@ -77,10 +80,12 @@ async function loadData() {
             map[item.code] = {data: item.data, error: item.error}
         }
         dataMap.value = map
+        loadedAt.value = new Date().toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'})
     } catch (e: any) {
         // 取数整体失败不弹错误页：卡片各自显示「—」，配置仍然可用
         console.error('工作台取数失败：', e)
         dataMap.value = {}
+        loadedAt.value = ''
     }
 }
 
@@ -92,15 +97,12 @@ watch(workbenchConfigEpoch, () => loadAll())
 </script>
 
 <template>
-  <div class="space-y-5">
-    <div class="flex items-start justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-bold text-slate-900">工作台</h1>
-        <p class="mt-1 text-sm text-slate-500">按当前角色汇总的待办与今日运行概览</p>
-      </div>
+  <div class="space-y-4">
+    <div class="wb-toolbar">
+      <p class="wb-toolbar-meta">{{ metaText }}</p>
       <button
           type="button"
-          class="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-[15px] text-slate-600 transition-colors hover:border-[#1269B5] hover:text-[#1269B5]"
+          class="wb-toolbar-btn"
           :disabled="loading"
           @click="loadAll(true)"
       >
@@ -109,11 +111,11 @@ watch(workbenchConfigEpoch, () => loadAll())
       </button>
     </div>
 
-    <div v-if="loading" class="rounded-lg border border-slate-200 bg-white p-10 text-center text-[15px] text-slate-400 shadow-sm">
+    <div v-if="loading" class="wb-panel">
       加载中…
     </div>
 
-    <div v-else-if="loadError" class="rounded-lg border border-red-200 bg-red-50 p-10 text-center shadow-sm">
+    <div v-else-if="loadError" class="wb-panel is-error">
       <p class="text-[15px] text-red-600">{{ loadError }}</p>
       <button
           type="button"
@@ -122,7 +124,7 @@ watch(workbenchConfigEpoch, () => loadAll())
       >重试</button>
     </div>
 
-    <div v-else-if="cards.length === 0" class="rounded-lg border border-slate-200 bg-white p-10 text-center text-[15px] text-slate-400 shadow-sm">
+    <div v-else-if="cards.length === 0" class="wb-panel">
       当前角色还没有可展示的卡片，请联系管理员在「系统管理 → 工作台配置」中维护
     </div>
 
@@ -130,7 +132,7 @@ watch(workbenchConfigEpoch, () => loadAll())
       <section
           v-for="w in cards"
           :key="w.widgetCode"
-          class="wb-card rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+          class="wb-card"
           :style="{gridColumn: gridColumn(w.span)}"
       >
         <h3 class="mb-3.5 text-[17px] font-semibold text-slate-800">{{ w.widgetName }}</h3>
@@ -148,6 +150,68 @@ watch(workbenchConfigEpoch, () => loadAll())
 </template>
 
 <style scoped>
+/* 顶栏：左侧一行事实（卡片数 / 更新时刻 / 状态），右侧动作。
+   动作按钮必须有东西与之对齐，否则视觉上像被随手丢在页面最上面。 */
+.wb-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.wb-toolbar-meta {
+    min-width: 0;
+    font-size: 13px;
+    line-height: 20px;
+    color: #64748B;
+}
+
+.wb-toolbar-btn {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 12px;
+    font-size: 13px;
+    color: #475569;
+    background: #fff;
+    border: 1px solid var(--his-card-border);
+    border-radius: 6px;
+    transition: color .2s ease, border-color .2s ease;
+}
+
+.wb-toolbar-btn:hover:not(:disabled) {
+    color: var(--his-primary);
+    border-color: var(--his-primary);
+}
+
+.wb-toolbar-btn:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+/* 空/载/错三态与卡片共用一套皮肤，颜色走令牌而不是 Tailwind 的 slate 灰阶 */
+.wb-panel,
+.wb-card {
+    background: #fff;
+    border: 1px solid var(--his-card-border);
+    border-radius: var(--his-radius);
+    box-shadow: var(--his-shadow-sm);
+}
+
+.wb-panel {
+    padding: 40px 20px;
+    text-align: center;
+    font-size: 15px;
+    color: #94A3B8;
+}
+
+.wb-panel.is-error {
+    background: #FEF2F2;
+    border-color: #FECACA;
+}
+
 /*
  * 24 列栅格：卡片宽度由后端 default_span 决定，页面上不许再写死 col-span。
  * 窄屏放不下 24 列，1280px 以下一律整卡独占一行（横向条形/九宫格自己会缩）。
@@ -160,6 +224,7 @@ watch(workbenchConfigEpoch, () => loadAll())
 
 .wb-card {
     min-width: 0;
+    padding: 1.25rem;
 }
 
 @media (max-width: 1279px) {

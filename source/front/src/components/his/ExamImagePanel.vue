@@ -6,15 +6,6 @@ import {examImageDeleteById, examImageListByApplyId, examImageMockImport, examIm
 import {getDictDataMapList} from '@/api/system'
 import {hasPerm} from '@/lib/perm'
 
-/**
- * 简化 PACS 影像区块（sql/137）
- *
- * 挂在「检查申请单」这个锚点上（bizType 1-检查 2-检验），写入入口目前只有检查工作站的录入弹框：
- * 超声/内镜工作站是自己的记录表（没有 apply_id），要先接就得给它们补申请单链，不在本期范围。
- * 医生站与小程序的报告详情吃同一个 `images` 出参，但它们是 HTML/wxml 静态渲染，不复用本组件。
- * 窗宽窗位用 CSS filter 模拟 —— 学习阶段拿的是 jpg/png 不是真 DICOM，没有 HU 值可映射，
- * 但阅片动作（变亮变暗、增减对比）的观感必须能演示与验证。
- */
 const props = withDefaults(defineProps<{
     bizType: number
     applyId?: string | number | null

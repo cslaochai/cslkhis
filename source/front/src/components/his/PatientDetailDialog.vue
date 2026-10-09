@@ -1,28 +1,4 @@
 <script lang="js" setup>
-/**
- * 患者详情弹框 —— 全站唯一实现
- *
- * 为什么抽成一个组件：改造前同一个弹框在 `Header.vue` 和 `PatientsView.vue` 里各抄了一份
- * （结构、tab 名、字段、class 几乎逐字相同），医生站还有第三条信息条。三份实现里
- * 婚姻状况的渲染方式已经写出了分歧，字段口径也各写一套。
- *
- * 数据源（两条并行，互不阻塞）：
- *   1. `getPatientFullDetail(patientId)` → `PatientDetailVO`：主档全字段（民族/职业/婚姻/证件/账户…）
- *      ⚠ 不要用 `getPatientDetail`：那个 API 名字看着像详情，实际打的是 `/patient/getById`，
- *      返回的是 `PatientVO`（只有主档标量，**不含**过敏/既往/手术/家族的明细列表）。
- *   2. `getPatientCdr({patientId})` → `CdrTimelineVO`：患者全景时间轴，
- *      一次性带回 身份卡 + 概览 + 健康档案（过敏/既往/手术/家族/用药/联系人六组）+ 就诊次与事件。
- *
- * 改造前的问题（这个组件修掉的就是它）：原来的「就诊记录/处方记录/检查记录/检验记录」4 个 tab
- * 读的是 `patientDetailData.medicalRecords` 等字段，而这些字段**根本不在 `PatientVO` 里**，
- * 于是 4 个 tab 恒为空、一律渲染「暂无记录」—— 不是这个患者没有，是压根没查。医生看到「暂无既往史」
- * 会当成「这人没有既往史」，这比页面简陋严重得多。
- *
- * 三条渲染纪律：
- *   - 「加载中」不等于「没有」：加载态与空态必须分开，空态只在请求成功后确认无数据时才显示；
- *   - 请求失败必须显式提示并可重试，不静默吞掉；
- *   - 码值文案由后端或 `lib/` 唯一口径给（CDR 的状态/类型文案后端已翻译），前端不各写一套。
- */
 import {computed, ref, watch} from 'vue'
 import {useRouter} from 'vue-router'
 import {ElMessage} from 'element-plus'

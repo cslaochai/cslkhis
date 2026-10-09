@@ -1,13 +1,4 @@
 <script setup lang="ts">
-/**
- * AI 护理交接班工作区（G-13）
- *
- * 分工铁律：事实（在院/出入院/体征越阈/高风险评估）全部由后端代码聚合，
- * 模型只拟 SBAR 摘要草稿 —— 摘要可编辑、护士终审，产物不写库，
- * 护士确认后自行贴进交班记录。「窗即班次」：时间窗由后端按班次算，前端只传日期。
- *
- * source=2（规则模板）或 degraded=true 时警示条必显 —— 护士有权知道这段文字是谁写的。
- */
 import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { DocumentCopy, MagicStick } from '@element-plus/icons-vue'

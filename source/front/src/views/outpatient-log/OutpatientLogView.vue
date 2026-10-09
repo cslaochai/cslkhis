@@ -180,9 +180,6 @@ onMounted(() => {
           <p class="mt-0.5 text-xs text-slate-500">{{ c.label }}</p>
         </div>
       </div>
-      <p class="mt-2 border-t border-slate-100 pt-2 text-xs text-slate-400">
-        一行 = 一份已提交/已归档的门诊病历；「法定可报」= 诊断 ICD 命中法定传染病目录，「应报未报」= 可报但尚无报告卡（点击可筛出）。报卡请走「传染病报告卡」页面。
-      </p>
     </div>
 
     <!-- 查询卡 -->
@@ -230,10 +227,10 @@ onMounted(() => {
     <!-- 表格卡（只读台账） -->
     <el-card class="table-card" shadow="never">
       <el-table :data="rows" v-loading="loading" :max-height="tableMaxHeight" style="width: 100%" stripe>
-        <el-table-column label="就诊日期" width="104" fixed="left" align="center">
+        <el-table-column label="就诊日期" width="150" fixed="left" align="center">
           <template #default="{ row }"><span class="text-slate-600">{{ row.visitDate || '-' }}</span></template>
         </el-table-column>
-        <el-table-column label="患者" width="150" fixed="left">
+        <el-table-column label="患者" width="200" fixed="left">
           <template #default="{ row }">
             <div class="flex items-center gap-1.5">
               <span class="font-medium text-slate-800">{{ row.patientName }}</span>
@@ -243,8 +240,8 @@ onMounted(() => {
             <div v-if="row.phoneMasked" class="font-mono text-slate-400">{{ row.phoneMasked }}</div>
           </template>
         </el-table-column>
-        <el-table-column prop="deptName" label="科室" width="110" show-overflow-tooltip/>
-        <el-table-column prop="doctorName" label="接诊医生" width="96" show-overflow-tooltip/>
+        <el-table-column prop="deptName" label="科室" width="200" show-overflow-tooltip/>
+        <el-table-column prop="doctorName" label="接诊医生" width="150" show-overflow-tooltip/>
         <el-table-column label="诊断" min-width="200">
           <template #default="{ row }">
             <div class="text-slate-800">{{ row.diagnosisName || '-' }}</div>

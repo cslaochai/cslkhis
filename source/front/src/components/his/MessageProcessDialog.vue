@@ -1,26 +1,15 @@
 <script setup lang="ts">
 import {computed, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
-import {getInspectionDetail, getLaboratoryDetail, getCriticalValueDetail, receiveCriticalValue, handleCriticalValue} from '@/api/medicaltech'
+import {
+  getCriticalValueDetail,
+  getInspectionDetail,
+  getLaboratoryDetail,
+  handleCriticalValue,
+  receiveCriticalValue
+} from '@/api/medicaltech'
 import {messageLabel} from '@/lib/messageCatalog'
 
-/**
- * 站内信「处理」详情弹窗 —— 全站唯一实现。
- *
- * Header 消息抽屉与消息中心页（MessagesView）共用这一份，禁止任何一方再手写
- * 报告渲染或危急值动作（明细只允许一份实现）。
- *
- * 三类已接通的处理链路：
- *   · inspection / report —— 拉医技报告详情结构化渲染（通知型：看完即闭环）；
- *   · critical —— 危急值闭环（待办型）：状态机 1 待接收 → 确认接收 → 2 已接收 →
- *     填处置措施 → 3 已处置。deadline/overdue 直接展示，让医生看见时限压力。
- *     此前消息页对 critical 只弹一段文本、不接确认/处置接口——通知入口与危急值
- *     状态机断开，医生「处理」完消息危急值还挂在待接收，这是临床安全缺陷（已修复）。
- *   · 其他类型 —— 兜底展示消息正文（不假装能处理）。
- *
- * 权限不在弹窗里判：调用方（抽屉/消息页）负责用 messageCatalogOf(bizType).permissions
- * 锁「处理」入口，弹窗只做业务动作；真正的边界在服务端接口。
- */
 const props = defineProps<{
   modelValue: boolean
   message: any | null
@@ -232,12 +221,17 @@ watch(visible, (v) => {
           <div class="flex flex-wrap items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
             <span class="font-semibold text-red-700">{{ criticalDetail.itemName || '-' }}</span>
             <span class="text-slate-600">{{ criticalDetail.patientName || '-' }}
-              {{ criticalDetail.genderText || '' }} {{ criticalDetail.age != null ? criticalDetail.age + '岁' : '' }}</span>
-            <el-tag :type="criticalDetail.status === 1 ? 'danger' : criticalDetail.status === 2 ? 'warning' : criticalDetail.status === 4 ? 'info' : 'success'" size="small">
+              {{ criticalDetail.genderText || '' }} {{
+                criticalDetail.age != null ? criticalDetail.age + '岁' : ''
+              }}</span>
+            <el-tag
+                :type="criticalDetail.status === 1 ? 'danger' : criticalDetail.status === 2 ? 'warning' : criticalDetail.status === 4 ? 'info' : 'success'"
+                size="small">
               {{ criticalDetail.statusText || `未知(${criticalDetail.status})` }}
             </el-tag>
             <el-tag v-if="criticalDetail.overdue && criticalDetail.status !== 3 && criticalDetail.status !== 4"
-                    type="danger" size="small" effect="dark">已超时</el-tag>
+                    type="danger" size="small" effect="dark">已超时
+            </el-tag>
           </div>
 
           <div class="grid grid-cols-2 gap-2">
@@ -250,10 +244,15 @@ watch(visible, (v) => {
             <p><strong>异常类型：</strong>{{ criticalDetail.criticalTypeText || '-' }}</p>
             <p><strong>危急描述：</strong>{{ criticalDetail.criticalDesc || '-' }}</p>
             <p><strong>报告科室：</strong>{{ criticalDetail.reportDeptName || '-' }}</p>
-            <p><strong>报告人：</strong>{{ criticalDetail.reportBy || '-' }}（{{ fmtTime(criticalDetail.reportTime) }}）</p>
+            <p><strong>报告人：</strong>{{ criticalDetail.reportBy || '-' }}（{{ fmtTime(criticalDetail.reportTime) }}）
+            </p>
             <p><strong>处置时限：</strong>{{ fmtTime(criticalDetail.deadlineTime) }}</p>
-            <p v-if="criticalDetail.receiveBy"><strong>接收：</strong>{{ criticalDetail.receiveBy }}（{{ fmtTime(criticalDetail.receiveTime) }}）</p>
-            <p v-if="criticalDetail.handleBy"><strong>处置：</strong>{{ criticalDetail.handleBy }}（{{ fmtTime(criticalDetail.handleTime) }}）</p>
+            <p v-if="criticalDetail.receiveBy"><strong>接收：</strong>{{
+                criticalDetail.receiveBy
+              }}（{{ fmtTime(criticalDetail.receiveTime) }}）</p>
+            <p v-if="criticalDetail.handleBy"><strong>处置：</strong>{{
+                criticalDetail.handleBy
+              }}（{{ fmtTime(criticalDetail.handleTime) }}）</p>
           </div>
 
           <div v-if="criticalDetail.handleMeasure" class="border-t pt-3">
@@ -263,13 +262,17 @@ watch(visible, (v) => {
 
           <!-- 闭环动作：待接收 → 确认接收；已接收 → 填处置措施 -->
           <div v-if="canReceive" class="border-t pt-3">
-            <el-button type="danger" :loading="receiving" v-perm="'portal:messages:edit'" @click="submitReceive">确认接收</el-button>
+            <el-button type="danger" :loading="receiving" v-perm="'portal:messages:edit'" @click="submitReceive">
+              确认接收
+            </el-button>
             <p class="mt-2 text-xs text-slate-400">确认接收后须在处置时限内填写处置措施完成闭环。</p>
           </div>
           <div v-else-if="canHandle" class="space-y-2 border-t pt-3">
             <el-input v-model="handleMeasure" type="textarea" :rows="3" maxlength="500" show-word-limit
                       placeholder="请填写处置措施（用药/复查/通知家属等临床动作，必填）"/>
-            <el-button type="primary" :loading="handling" v-perm="'portal:messages:edit'" @click="submitHandle">提交处置</el-button>
+            <el-button type="primary" :loading="handling" v-perm="'portal:messages:edit'" @click="submitHandle">
+              提交处置
+            </el-button>
           </div>
         </div>
       </template>

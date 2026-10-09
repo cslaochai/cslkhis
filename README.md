@@ -105,7 +105,7 @@ docker compose -f docker/docker-compose.yml up -d --build
 
 - [AI能力施工手册](docs/AI能力施工手册.md) — AI 能力的纪律铁律、18 项能力清单、分期施工与验收
 - [排班域施工蓝图](docs/排班域施工蓝图.md) — 全院排班四层结构与业务闭环
-- [E-R 反向建模](docs/er/README.md) — 302 张表的关系模型；`docs/er/index.html` 可离线查看连线图
+- [E-R 反向建模](docs/10-ER关系图/README.md) — 302 张表的关系模型；`docs/er/index.html` 可离线查看连线图
 - [测试账号与凭据](docs/测试账号与凭据.md)
 - 需求与设计文档（docx）：需求规格说明书、用户需求说明书、业务架构设计说明书、概要设计说明书、详细设计说明书（见 `docs/`）
 

@@ -1,11 +1,4 @@
 <script setup lang="ts">
-/**
- * 医保扣款与飞检处理（菜单 1010，sql/163）
- *
- * 两个 tab 是一条链的两端：飞检批次回答「问题从哪来」，扣款通知回答「这笔扣款处理到哪一步了」。
- * 状态机（待确认→申诉中→申诉成功/待缴→已缴回，待确认可作废）由后端判定，
- * 页面只按当前状态露出对应动作；每张单的处理过程在详情里按留痕时间线展示。
- */
 import {ref, reactive, computed, onMounted} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Search, Refresh, Plus, View, Edit, Delete, Money} from '@element-plus/icons-vue'

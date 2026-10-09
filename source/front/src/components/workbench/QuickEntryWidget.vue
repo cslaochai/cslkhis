@@ -4,13 +4,6 @@ import {useRouter} from 'vue-router'
 import * as ElIcons from '@element-plus/icons-vue'
 import {loadMenuTree, menuCacheEpoch} from '@/lib/menu-cache'
 
-/**
- * 常用入口卡：把当前角色的菜单页摊平成九宫格快捷入口。
- *
- * 数据源就是侧边栏那份 `/system/menu/userMenus`（menu-cache 已做进程内缓存，不额外请求），
- * 所以「角色管理 → 菜单权限」里改完，这里跟着一起变 —— 不再配第二套入口表，
- * 也就不可能出现「菜单里有、卡片里没有」的漂移。
- */
 const router = useRouter()
 
 /** 折叠态下最多展示几个入口，其余点「更多」就地展开（不跳页，弹层展开太容易被误关） */

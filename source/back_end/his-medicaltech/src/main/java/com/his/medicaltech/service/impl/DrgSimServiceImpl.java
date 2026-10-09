@@ -59,28 +59,23 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
         if (!TextUtil.hasText(icd)) {
             throw new BusinessException("该首页主诊断编码为空，请先补录 ICD 编码再模拟");
         }
-        boolean surgery = Integer.valueOf(1).equals(s.getIsSurgery());
-        Integer days = s.getInpatientDays();
-        boolean death = Integer.valueOf(1).equals(s.getDeathFlag());
+        // 真实入组全量入参：主手术/其他诊断从首页明细取，年龄/性别/呼吸机/体重从首页取
+        List<String> mainOpers = s.getAdmissionId() == null ? List.of()
+                : drgSimMapper.selectMainOperCodes(s.getAdmissionId());
+        String mainOper = mainOpers.stream().filter(TextUtil::hasText).findFirst().orElse(null);
+        List<String> otherDiags = s.getAdmissionId() == null ? List.of()
+                : drgSimMapper.selectOtherDiagCodes(s.getAdmissionId());
         BigDecimal actual = money(s.getActualAmount());
 
-        DrgGrouper.GroupResult g = grouper.group(icd, surgery, days, death);
-        boolean grouped = !DrgGrouper.QY_CODE.equals(g.drgCode());
-        DrgGroupRowVO groupRow = null;
-        BigDecimal weight = null;
-        BigDecimal pay = null;
-        String drgName = null;
-        if (grouped) {
-            groupRow = drgSimMapper.groupList().stream()
-                    .filter(x -> g.drgCode().equals(x.getDrgCode()))
-                    .findFirst().orElse(null);
-            if (groupRow == null) {
-                throw new BusinessException("组表缺少 " + g.drgCode() + "，请检查 sys_drg_group 种子数据");
-            }
-            weight = money(groupRow.getWeight());
-            pay = money(groupRow.getPayStandard());
-            drgName = groupRow.getDrgName();
-        }
+        DrgGrouper.GroupInput input = new DrgGrouper.GroupInput(
+                icd, mainOper, otherDiags, s.getGender(), s.getAge(), s.getAgeUnit(),
+                s.getInpatientDays(), s.getDeathFlag(), s.getVentilatorHours(),
+                s.getBirthWeight(), s.getIsSurgery());
+        DrgGrouper.GroupResult g = grouper.group(input);
+        boolean grouped = g.grouped();
+        BigDecimal weight = grouped ? money(g.weight()) : null;
+        BigDecimal pay = grouped ? money(g.payStandard()) : null;
+        String drgName = g.drgName();
         BigDecimal profit = grouped ? pay.subtract(actual) : null;
 
         // upsert：每首页一条，重跑覆盖（含软删行复活）
@@ -96,8 +91,8 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
         r.setPatientName(s.getPatientName());
         r.setMainDiagCode(icd);
         r.setMainDiagName(icdName);
-        r.setIsSurgery(surgery ? 1 : 0);
-        r.setInpatientDays(days);
+        r.setIsSurgery(s.getIsSurgery());
+        r.setInpatientDays(s.getInpatientDays());
         r.setDrgCode(g.drgCode());
         r.setDrgName(drgName);
         r.setMdcCode(g.mdc());

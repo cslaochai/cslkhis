@@ -46,7 +46,6 @@ interface Row {
   createTime?: string
 }
 
-// 工作台分栏：reportStatus 传 null=全部 / 0草稿 / 1待审核 / 3已审核 / 4已发布；onlyUnwritten 单独一栏
 const TABS = [
   {key: 'unwritten', label: '待书写', reportStatus: null, onlyUnwritten: true},
   {key: 'draft', label: '草稿', reportStatus: 0, onlyUnwritten: null},

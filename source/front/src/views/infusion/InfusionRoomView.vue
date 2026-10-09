@@ -1,10 +1,4 @@
 <script setup lang="ts">
-/**
- * 门诊输液室（M10，菜单 2180，挂医技医辅）
- *
- * 链路：入座（建输液单+占座）→【需皮试：打皮试 → ≥15 分钟观察窗 → 判读】→ 开始（滴速）
- * → N 次巡视 → 结束（不良反应）。结束/取消释放座位。座位全院物理资源。
- */
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import PatientSelect from '@/components/his/PatientSelect.vue'

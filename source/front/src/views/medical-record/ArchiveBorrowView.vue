@@ -1,15 +1,4 @@
 <script setup lang="ts">
-/**
- * 病案借阅/复印工作台（G16 收口）
- *
- * 流通闭环：申请（1 待审核）→ 审核通过：借阅 → 2 已借出（有应还日期，超期每日提醒）
- * → 归还 3 已归还；复印 → 5 已复印；拒绝 → 4 已拒绝（必须写意见）。
- * 规则（服务端收口，前端只做显隐）：
- *  - 借阅只能借「已归档」病历原件；封存病历只开放复印；
- *  - 同一病历同类型存在在途单（待审核/未归还）不允许重复申请；
- *  - 删除仅限待审核单且申请人本人。
- * 类型/状态文案走字典（his_archive_borrow_*），tag 色与超期判定单点 lib/archiveBorrow.js。
- */
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Bell } from '@element-plus/icons-vue'

@@ -17,8 +17,6 @@ import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 
 const activeTab = ref('audit')
 
-// ---------------- 调用审计 ----------------
-
 const capabilityOptions = [
   {value: 'icd10', label: 'ICD-10 编码'},
   {value: 'drug_audit', label: '处方审核'},

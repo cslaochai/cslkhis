@@ -76,16 +76,6 @@ onMounted(() => {
 
 <template>
   <div data-testid="consumable-dict-view">
-    <!-- 页头操作 -->
-    <div class="mb-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="text-base font-semibold text-slate-700">耗材字典</h2>
-          <p class="mt-0.5 text-xs text-slate-400">耗材基础档案：编码/类别/规格/单位/零售价/是否高值（高值须维护 UDI-DI 与注册证号才能扫码溯源）</p>
-        </div>
-      </div>
-    </div>
-
     <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
       <div class="flex items-start justify-between gap-4">
         <el-form inline @submit.prevent>

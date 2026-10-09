@@ -1,25 +1,4 @@
 <script setup lang="js">
-/**
- * PatientSelect — 全局患者搜索下拉组件
- *
- * 封装：keyword 四字段 OR 搜索、loading、富信息 option（标签/电话/预约次数等）、
- * 高亮匹配、空态文案。消费方只需 v-model + @select。
- *
- * Props:
- *   modelValue  - 绑定患者 ID（String）
- *   placeholder - 输入提示（默认"搜索患者：姓名、患者号、手机号、身份证号"）
- *   size        - el-select 尺寸 'large' | 'default' | 'small'
- *   disabled    - 是否禁用
- *   clearable   - 是否可清空（默认 true）
- *   pageSize    - 搜索返回条数（默认 10）
- *   width       - 组件宽度（CSS 值，默认 100%）
- *   searchIcon  - 是否在输入框左侧显示放大镜（默认 false；顶部全局搜索打开）
- *
- * Events:
- *   update:modelValue - v-model 双绑
- *   select            - 选中后回调完整患者对象
- *   clear             - 清空时回调
- */
 import {ref, computed, watch} from 'vue'
 import {Search} from '@element-plus/icons-vue'
 import {getPatientDetail, getPatientList} from '@/api/patient'

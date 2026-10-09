@@ -193,14 +193,6 @@ onMounted(async () => {
   <div class="space-y-6">
     <!-- 标题 -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h1 class="text-xl font-semibold text-slate-900">患者主索引（EMPI）</h1>
-        <p class="mt-1 text-sm text-slate-500">
-          把多来源建档产生的重复档案找出来，人工确认后建立主索引关系。
-          <span class="font-medium text-slate-600">系统不会自动合并</span>；合并只建立"这两份是同一个人"的指向，
-          <span class="font-medium text-slate-600">不搬动业务数据</span>，且可撤销。
-        </p>
-      </div>
       <div class="flex items-center gap-3">
         <el-button :icon="Refresh" @click="loadStats(); loadDuplicates(); loadList(); loadLogs()">
           刷新

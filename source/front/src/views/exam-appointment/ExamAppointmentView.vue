@@ -1,17 +1,4 @@
 <script setup lang="ts">
-/**
- * 检查预约中心（G21，菜单 412）
- *
- * 两个 tab：
- *  A 预约工作台 —— 待预约申请（后端派生：已缴费/急诊提交 + 无在办预约）→ 选设备 → 点格子占号；
- *  B 预约台账  —— 全量预约单 + 状态分布 + 到检/完成/改约/取消。
- *
- * ⚠ 设备档位与号源（原第 3 个页签）不属于预约中心业务，2026-09 已拆为独立二级菜单
- *   「检查设备与号源」（400 医技医辅 / 2925，sql/181）。本页只在占号时自行补格子看板。
- *
- * ⚠ 页面不算库存、不判冲突：号源计数与四道冲突检测（设备/患者/时长/流程）全在服务端，
- *   冲突时后端返回的错误信息会点名是哪张单、哪位患者占了哪一格，直接透传给用户。
- */
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
@@ -60,7 +47,6 @@ const loadStats = async () => {
 
 const fmtTime = (t: any) => (t ? String(t).replace('T', ' ').slice(0, 16) : '-')
 
-// ================= A 预约工作台 =================
 const pendLoading = ref(false)
 const pendRows = ref<any[]>([])
 const pendTotal = ref(0)
@@ -338,7 +324,6 @@ onMounted(() => {
 
     <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm">
       <el-tabs v-model="activeTab">
-        <!-- ============ A 预约工作台 ============ -->
         <el-tab-pane label="预约工作台" name="workbench">
           <div class="flex flex-wrap items-center gap-2 mb-3">
             <el-input v-model="pendQuery.keyword" placeholder="申请单号/患者/项目" clearable style="width: 220px"

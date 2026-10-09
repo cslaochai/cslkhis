@@ -1,16 +1,4 @@
 <script setup lang="ts">
-/**
- * 住院病历工作区（P2：结构化率 80% 的载体）
- *
- * 三条必须记住的口径：
- * 1. **结构化要素一条一列**：主诉/现病史/既往史/过敏史 + 体格检查按系统拆列 + 生命体征是数值列。
- *    这不是排版问题 —— 结构化率的分母就来自这份列清单（后端 RecordStructuredFields 是唯一口径），
- *    前端不自己算率、不自己定义"缺了哪项"，一律读后端给的 structuredFilled/Total/Rate/missingLabels。
- * 2. **数值 0 不是"没填"**：大便 0 次、尿量 0ml 都是合法观测值。前端不要做 `value || '—'` 这种
- *    "0 当空"的渲染（那样护士看到的就是一堆空的格子）。
- * 3. **AI 抽取的产出是候选值，不是自动填表**：`/ai/emrText/extract` 不写库，医生必须逐字段点「填入」
- *    才进表单 —— 这样"AI 有没有改过病历"的答案永远是"没有"。
- */
 import {computed, onMounted, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {DataLine, Document, Plus, Refresh, Search, Warning} from '@element-plus/icons-vue'

@@ -113,8 +113,6 @@ onMounted(async () => {
   await loadBoard()
 })
 
-// ==================== 就诊工作台（出账 + 收款） ====================
-
 const workbench = ref(false)
 const workLoading = ref(false)
 const current = ref<any>(null)
@@ -523,7 +521,6 @@ const billStatusTag = (status: any) =>
       </div>
     </el-card>
 
-    <!-- ============ 就诊工作台 ============ -->
     <el-dialog v-model="workbench" title="就诊结算工作台" width="1180px" data-testid="cash-workbench">
       <div v-if="current" v-loading="workLoading" class="space-y-4">
         <div class="rounded-lg bg-slate-50 p-3">

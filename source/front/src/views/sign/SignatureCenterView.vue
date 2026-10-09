@@ -614,7 +614,8 @@ onMounted(async () => {
     </div>
 
     <!-- 信任与来源说明（后端给什么就显示什么，前端不自造文案） -->
-    <div v-if="overview" class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-6 text-amber-900"
+    <div v-if="overview"
+         class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-6 text-amber-900"
          data-testid="p5-sign-trust-note">
       <div class="flex items-start gap-2">
         <el-icon class="mt-0.5">
@@ -676,7 +677,8 @@ onMounted(async () => {
                        style="width: 130px" @change="searchSign">
               <el-option v-for="o in options.verifyStatuses || []" :key="o.id" :label="o.text" :value="Number(o.id)"/>
             </el-select>
-            <el-select v-model="signQuery.timeSource" clearable data-testid="p5-sign-f-timesource" placeholder="时间来源"
+            <el-select v-model="signQuery.timeSource" clearable data-testid="p5-sign-f-timesource"
+                       placeholder="时间来源"
                        style="width: 130px" @change="searchSign">
               <el-option v-for="o in options.timeSources || []" :key="o.id" :label="o.text" :value="Number(o.id)"/>
             </el-select>
@@ -690,7 +692,8 @@ onMounted(async () => {
                 value-format="YYYY-MM-DD HH:mm:ss"
                 @change="searchSign"
             />
-            <el-input v-model="signQuery.keyword" clearable data-testid="p5-sign-f-keyword" placeholder="签名人 / 患者 / 对象单号"
+            <el-input v-model="signQuery.keyword" clearable data-testid="p5-sign-f-keyword"
+                      placeholder="签名人 / 患者 / 对象单号"
                       style="width: 220px" @keyup.enter="searchSign">
               <template #prefix>
                 <el-icon>
@@ -746,7 +749,8 @@ onMounted(async () => {
               </el-table-column>
               <el-table-column label="状态" width="90">
                 <template #default="{ row }">
-                  <el-tag :data-testid="`p5-sign-row-status-${row.signNo}`" :type="row.signStatus === 1 ? 'success' : 'info'"
+                  <el-tag :data-testid="`p5-sign-row-status-${row.signNo}`"
+                          :type="row.signStatus === 1 ? 'success' : 'info'"
                           size="small">
                     {{ row.signStatusText }}
                   </el-tag>
@@ -795,15 +799,18 @@ onMounted(async () => {
       <el-tab-pane label="签名证书" name="cert">
         <div class="rounded-lg border border-slate-200 bg-white shadow-sm">
           <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 px-4 py-3">
-            <el-select v-model="certQuery.certStatus" clearable data-testid="p5-sign-f-certstatus" placeholder="证书状态"
+            <el-select v-model="certQuery.certStatus" clearable data-testid="p5-sign-f-certstatus"
+                       placeholder="证书状态"
                        style="width: 130px" @change="() => { certQuery.pageNum = 1; loadCertList() }">
               <el-option v-for="o in options.certStatuses || []" :key="o.id" :label="o.text" :value="Number(o.id)"/>
             </el-select>
-            <el-select v-model="certQuery.issuedMode" clearable data-testid="p5-sign-f-issuedmode" placeholder="签发方式"
+            <el-select v-model="certQuery.issuedMode" clearable data-testid="p5-sign-f-issuedmode"
+                       placeholder="签发方式"
                        style="width: 130px" @change="() => { certQuery.pageNum = 1; loadCertList() }">
               <el-option v-for="o in options.issuedModes || []" :key="o.id" :label="o.text" :value="Number(o.id)"/>
             </el-select>
-            <el-input v-model="certQuery.keyword" clearable data-testid="p5-sign-f-certkeyword" placeholder="证书号 / 员工姓名 / 指纹"
+            <el-input v-model="certQuery.keyword" clearable data-testid="p5-sign-f-certkeyword"
+                      placeholder="证书号 / 员工姓名 / 指纹"
                       style="width: 230px"
                       @keyup.enter="() => { certQuery.pageNum = 1; loadCertList() }">
               <template #prefix>
@@ -844,7 +851,8 @@ onMounted(async () => {
               </el-table-column>
               <el-table-column label="签发方式" width="100">
                 <template #default="{ row }">
-                  <el-tag :data-testid="`p5-sign-cert-mode-${row.certNo}`" :type="row.issuedMode === 1 ? 'success' : 'warning'"
+                  <el-tag :data-testid="`p5-sign-cert-mode-${row.certNo}`"
+                          :type="row.issuedMode === 1 ? 'success' : 'warning'"
                           size="small">
                     {{ row.issuedModeText }}
                   </el-tag>
@@ -928,7 +936,8 @@ onMounted(async () => {
                 }}
               </p>
             </div>
-            <el-input v-model="tsaTokenQuery.serial" clearable data-testid="g6-tsa-f-serial" placeholder="按序列号精确查"
+            <el-input v-model="tsaTokenQuery.serial" clearable data-testid="g6-tsa-f-serial"
+                      placeholder="按序列号精确查"
                       style="width: 220px" @clear="searchTsaToken" @keyup.enter="searchTsaToken">
               <template #prefix>
                 <el-icon>
@@ -1073,17 +1082,21 @@ onMounted(async () => {
                 <span class="text-slate-500">核查时刻 {{ text(verifyResult.checkedAt) }}</span>
               </div>
               <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <div :class="verifyResult.signatureValid ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'"
-                     class="rounded border px-3 py-2 text-xs">
-                  <p :class="verifyResult.signatureValid ? 'text-emerald-700' : 'text-red-700'" :data-testid="'p5-sign-verify-sigvalid'"
+                <div
+                    :class="verifyResult.signatureValid ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'"
+                    class="rounded border px-3 py-2 text-xs">
+                  <p :class="verifyResult.signatureValid ? 'text-emerald-700' : 'text-red-700'"
+                     :data-testid="'p5-sign-verify-sigvalid'"
                      class="font-medium">
                     ① 签名值校验：{{ verifyResult.signatureValid ? '通过' : '不通过' }}
                   </p>
                   <p class="mt-1 text-slate-600">用证书公钥验签名值。不通过 = 这份<b>证据本身</b>被换过，性质最严重。</p>
                 </div>
-                <div :class="verifyResult.contentMatched ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'"
-                     class="rounded border px-3 py-2 text-xs">
-                  <p :class="verifyResult.contentMatched ? 'text-emerald-700' : 'text-amber-700'" :data-testid="'p5-sign-verify-contentmatched'"
+                <div
+                    :class="verifyResult.contentMatched ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'"
+                    class="rounded border px-3 py-2 text-xs">
+                  <p :class="verifyResult.contentMatched ? 'text-emerald-700' : 'text-amber-700'"
+                     :data-testid="'p5-sign-verify-contentmatched'"
                      class="font-medium">
                     ② 内容比对：{{ verifyResult.contentMatched ? '一致' : '已变更' }}
                   </p>
@@ -1116,8 +1129,9 @@ onMounted(async () => {
           <!-- 被签内容快照 -->
           <div class="mt-4 rounded-lg border border-slate-200 bg-white p-3">
             <p class="text-xs font-medium text-slate-900">被签内容快照（签名当时的原始内容）</p>
-            <pre class="mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-3 text-xs leading-6 text-slate-700"
-                 data-testid="p5-sign-detail-snapshot">{{
+            <pre
+                class="mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-3 text-xs leading-6 text-slate-700"
+                data-testid="p5-sign-detail-snapshot">{{
                 detail.hasSnapshot ? detail.contentSnapshot : '本条签名未留存内容快照'
               }}</pre>
           </div>
@@ -1173,8 +1187,9 @@ onMounted(async () => {
         </div>
         <div class="mt-3 rounded-lg border border-slate-200 bg-white p-3">
           <p class="text-xs font-medium text-slate-900">公钥（PEM）</p>
-          <pre class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-3 font-mono text-xs leading-5 text-slate-700"
-               data-testid="p5-sign-cert-publickey">{{
+          <pre
+              class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-3 font-mono text-xs leading-5 text-slate-700"
+              data-testid="p5-sign-cert-publickey">{{
               text(certDetail.publicKey)
             }}</pre>
           <p class="mt-2 text-xs text-slate-500">私钥以主口令加密后托管，任何接口都不会回显私钥。</p>

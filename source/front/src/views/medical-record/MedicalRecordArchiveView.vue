@@ -1,19 +1,4 @@
 <script setup lang="ts">
-/**
- * 病案归档工作台（G16）
- *
- * 为什么现在才有：后端 `/charge/archive` 三态机（待归档→已归档→已封存）与超期补跑
- * 早就写完了，`api/archive.js` 五个函数也导出了，但**全仓零视图引用** —— 也就是
- * 病案室把病历归档这件事在界面上根本做不到。这个页面就是补那条"最后一公里"。
- *
- * 三条必须守住的口径：
- * 1. **归档是单向的**：1→2→3 只进不退。已归档不能改回待归档，已封存不能解封 ——
- *    封存是法律动作（诉讼/医疗纠纷时法院封存），解封必须有独立流程，不是按钮。
- *    所以前端不给"取消归档/解封"按钮，后端也没提供。
- * 2. **状态文案与颜色单点**：archiveStatus 的文案从字典 `his_archive_status` 取，
- *    取不到渲染「未知(n)」不回落成"待归档"（否则已封存会伪装成待归档）。
- * 3. **打 statusCount 用后端数字**，不在前端拿当前页 list 数出来 —— 那是"只统计了本页"。
- */
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Box, Lock, Document, Bell } from '@element-plus/icons-vue'

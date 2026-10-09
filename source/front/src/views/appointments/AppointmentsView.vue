@@ -823,14 +823,6 @@ const handleConfirmPayment = async () => {
   }
 }
 
-// ========== 过期号的「申请退费」 ==========
-//
-// 为什么退号管不到这件事：退号是「把当天这个号作废 + 号源回池 + 顺手退费」，
-// 昨天的号源属过去日期，回不了池（见后端 DayEndSettleMapper 类注释），所以日期一过就不允许退号。
-// 但患者昨天没来、今天来要钱是真实诉求 —— 走的是另一条链路：
-// 挂号行保持「爽约/未就诊」不动（那是就诊事实，改了医保和报表对不上），
-// 钱走「退费申请 → 收费处审核 → 执行」，全程留痕、允许跨期。
-// 发起入口在挂号记录页（窗口天天在用），审核与执行留在收费处的「退费管理」页。
 const showRefundDialog = ref(false)
 const refundSubmitting = ref(false)
 const refundTypeOptions = ref<any[]>([])
@@ -970,13 +962,6 @@ const handleCurrentChange = (val: number) => {
   loadData()
 }
 
-/**
- * 列表与状态卡**共用**的筛选条件。
- *
- * 两处各拼一遍是这次的真凶之一：原来状态卡只发 `{pageNum:1,pageSize:1}`，
- * 把「当前筛选条件的统计」做成了「全院总数」——筛选到某科室后列表 3 条、卡片还是 4000。
- * 抽成一处后，卡片与列表的口径在结构上不可能分叉。
- */
 const buildQueryParams = (withPaging = true) => {
   const params: any = {}
   if (withPaging) {
@@ -985,9 +970,6 @@ const buildQueryParams = (withPaging = true) => {
   }
   if (searchForm.value.patientId) params.patientId = searchForm.value.patientId
   if (searchForm.value.deptId) params.deptId = searchForm.value.deptId
-  // 这里刻意**不**下发 doctorId：`searchForm.doctorId` 全页没有任何输入控件，
-  // 恒为 null，下发它只是给「查不到数据」留一个没人会想到的开关。
-  // 挂号记录页的医生筛选要不要做是另一件事（要做就得给控件 + 后端真的支持这个条件）。
   if (searchForm.value.registStatus != null) params.registStatus = searchForm.value.registStatus
   if (searchForm.value.visitDate) params.visitDate = searchForm.value.visitDate
   if (searchForm.value.registDateRange?.[0]) params.beginTime = searchForm.value.registDateRange[0] + ' 00:00:00'
@@ -1014,13 +996,6 @@ const loadData = async () => {
 }
 
 const loadStatusCounts = async () => {
-  // 一次请求拿六个数（原来发 6 次 listPage、每次 pageSize=1 只为读 total）。
-  // 口径（1已挂号 2已签到 4已就诊 5已退号 6已过号）收口在后端 AppointStatusEnum，
-  // 前端不再自己映射码值 —— 之前把 cancelled 数成 4（已就诊）就是这么来的。
-  //
-  // 卡片口径 = 「今天的数据」：统计查询**不带挂号时间区间**（searchForm.registDateRange
-  // 默认是本周，是给下方挂号记录列表用的）。带着它会把「提前挂号、今天就诊」之外的人
-  // 也算进来/漏出去，六个数就不再是就诊日当天的口径。其余筛选（科室等）仍然跟随。
   try {
     const statParams = buildQueryParams(false)
     delete statParams.beginTime
@@ -1058,33 +1033,12 @@ const loadDepartments = async () => {
     console.error('加载科室列表失败:', error)
   }
 }
-
-/**
- * 看板/号源面板的默认科室 = 「我的科室」。
- *
- * 真实 HIS 的挂号工作台是**按科室数据权限**给范围的：挂号员被授权若干科室（只能挂这些科的号），
- * 默认选中主科室；门诊部 / 门诊办看全院，用来监控排班容量与号源使用。
- * 也就是说这本来是个"数据权限"问题，不是一个看板菜单的开关。
- *
- * 本项目现状：科室数据权限已收口在后端（`DeptScopeGuard`：号源/挂号/排班查询按
- * `sys_employee_post` 授权 + 主科室兜底过滤，越权传 deptId 直接拒）。所以前端这一层
- * 只负责"默认落在哪个科室"，**不负责隐藏科室** —— 下拉列出的是当前人可授权范围内的科室
- * （`/system/department/selectList` 默认按当前人过滤），能不能查出数据由服务端说了算。
- *   默认落在 `/auth/info` 的 deptId（取不到就退回「全部科室」= 不限科室），
- *   下拉里选「全部科室 / 全部医生」即在授权范围内看全部（门诊部/管理员就是这么用的）。
- */
-// 当前登录人的主科室（`/auth/info.deptId`）：只用于「看板默认落本科室」这一件事。
-// （原左栏「我的科室」快捷按钮已按需求移除，切科室统一走上方「科室」下拉。）
 const myDeptId = ref<any>(null)
 
 const applyDefaultDept = (deptId: any) => {
-  // 必须回到下拉里真实存在的那个 option 值,否则 el-select 会显示成一个匹配不上的裸数字
   const hit = departments.value.find(d => String(d.id) === String(deptId))
   if (!hit) return
   myDeptId.value = hit.id
-  // 默认落「我的科室」：一个科室的号源一屏看不完，全院号源铺出来没有操作性。
-  // 「全部科室」仍然可选（清不掉，是筛选项不是可清空按钮）—— 门诊部监控容量时用。
-  // （原号源面板 tab 已并入周视图，不再有第二份 deskDeptId 的镜像）
   if (deskDeptId.value == null) deskDeptId.value = hit.id
 }
 
@@ -1108,20 +1062,6 @@ const loadMedicalInsuranceTypes = async () => {
     console.error('加载医保类型字典失败:', error)
   }
 }
-
-// ========== 挂号工作台（日 / 周视图） ==========
-// tab 顺序：挂号工作台 → 挂号记录（挂号窗口先看「今天/本周有哪些约」，再查历史单）
-// 原「号源面板」tab 已并入周视图 —— 它是看板的严格子集（同一张表、同 24 字段、同维度，
-// 只差 available_source > 0），现降级为周视图工具栏上一个「隐藏已满/停诊」开关。
-
-/**
- * 「全部科室」在下拉里的显式取值。
- *
- * 为什么不用 null 表达「全部」：null 在 el-select 里等于「没选」，placeholder 会盖上来，
- * 用户没法区分「我选了全部」和「我还没选」；而清空 ✕ 又会被误当成"取消筛选"。
- * 用一个不可能与真实科室 ID 冲突的字符串当哨兵，语义与显示都唯一。
- * 外部零影响：只在视图层存在，取数时才翻译成"不下发 deptId"。
- */
 const ALL_DEPT = '__ALL__'
 const isAllDept = (v: any) => v === ALL_DEPT || v == null || v === ''
 const activeTab = ref('desk')
@@ -1276,13 +1216,6 @@ const mondayOf = (offset: number) => {
   return monday
 }
 
-// ========== 预约看板（日 / 周 两种视图，卡片可改约/退号） ==========
-//
-// 视图口径照真实 HIS 的挂号工作台来：日/周是**同一张工作台的视图切换**，不是三个菜单
-// （行心、东华等挂号工作台都是日/周/月模式切换；排班大屏同理）。
-//   周视图 = 排班容量视角：这周哪天满、哪天没排班、余号还剩多少（门诊部 / 挂号组长看）；
-//   日视图 = 窗口操作视角：今天每位医生还剩几个号、挂了谁、谁要改约退号（挂号窗口看）。
-// 同一份数据的两档放大倍数，所以做成视图切换 + 周视图点日期下钻，而不是新增菜单。
 const deskViewMode = ref<'day' | 'week'>('day')
 const deskDay = ref(fmtDate(new Date()))
 const deskWeekOffset = ref(0)
@@ -1917,21 +1850,9 @@ const deskAvailClass = (schedules: any[]) => {
   return avail < 5 ? 'text-amber-600' : 'text-emerald-600'
 }
 
-/** 某医生当天的全部排班（列头余号用；同一排班只算一次） */
 const dayDoctorSchedules = (doctorId: any) =>
     deskSchedules.value.filter(s => s.scheduleDate === deskDay.value && s.doctorId === doctorId)
 
-/**
- * 这位医生在当前视图范围内**出的是不是专家号**（`biz_schedule.is_expert`）。
- *
- * 为什么挂在医生名后面而不是挂号记录上：挂号窗口找的是"今天哪位是专家"，
- * 视线落在行首/列头的医生名上，号别要跟着名字走才有意义；
- * 卡片上的号别由 `REGIST_TYPE` 单独渲染（那是一笔挂号自己的属性，两回事）。
- *
- * 判据用**任一条排班是专家**而不是"全部都是"：同一位医生上午专家、下午普通是常态，
- * 判成"全部"会让专家门诊那半天被显示成普通号 —— 漏标比多标代价大（专家号挂号费不同、患者冲着专家来的）。
- * 范围跟着当前视图收口（日视图只看当天），否则周视图上周排过专家这周也挂着牌。
- */
 const isExpertDoctor = (doctorId: any) => {
   const scope = deskViewMode.value === 'day'
       ? deskSchedules.value.filter((s: any) => s.scheduleDate === deskDay.value)
@@ -1939,12 +1860,6 @@ const isExpertDoctor = (doctorId: any) => {
   return scope.some((s: any) => String(s.doctorId) === String(doctorId) && Number(s.isExpert) === 1)
 }
 
-/**
- * 看板列 = 日视图的「医生」/ 周视图的「日期」。
- *
- * 两个视图共用同一张表，只有列的定义不同 —— 这样班次行、格子渲染、卡片都只有一份实现，
- * 不会出现「日视图改好了、周视图还是旧样式」这种两套代码的漂移。
- */
 const deskColumns = computed(() => {
   if (deskViewMode.value === 'day') {
     return dayDoctors.value.map(d => ({

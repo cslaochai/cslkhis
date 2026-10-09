@@ -12,18 +12,6 @@ import {
 } from '@/api/workbench'
 import {PAGE_SIZES, DEFAULT_PAGE_SIZE} from '@/lib/pagination'
 
-/**
- * 系统管理 → 工作台配置
- *
- * 两个页签对应两套数据：
- *  · 角色工作台 = sys_workbench_role（谁能看到哪几张卡、什么顺序、登录后落在哪）；
- *  · 卡片注册表 = sys_workbench_widget（有哪些卡可配，permission 用哪个页面码）。
- *
- * 这里**不写角色码分支，也不在前端复制权限判断**：某角色最终能不能取到某张卡的数据，
- * 由后端「配置勾选 ∩ 该角色在 sys_role_menu 里是否真的持有卡片权限码」算，
- * 所以「勾了卡但角色没页面权限」这种配置在预览里看得见、在首页上不会出现（配错也不炸）。
- */
-
 const activeTab = ref('role')
 
 /** 卡片分区，与 sys_workbench_widget.area 一字不差 */
@@ -43,7 +31,6 @@ const LANDING_OPTIONS = [
     {value: 2, label: '一律进患者工作站'},
 ]
 
-/* ==================== 页签一：角色工作台 ==================== */
 const roleOptions = ref<any[]>([])
 const currentRoleId = ref<string>('')
 const landingScope = ref(0)
@@ -229,13 +216,6 @@ onMounted(() => {
 
 <template>
   <div class="space-y-4">
-    <div>
-      <h1 class="text-xl font-bold text-slate-900">工作台配置</h1>
-      <p class="mt-1 text-sm text-slate-500">
-        每个角色看哪几张卡片、登录后落在工作台还是患者工作站，都在这里维护，改完无需改代码
-      </p>
-    </div>
-
     <el-tabs v-model="activeTab" class="bg-white rounded-lg border border-slate-200 px-4 pt-2 shadow-sm">
       <el-tab-pane label="角色工作台" name="role">
         <div class="flex flex-wrap items-center gap-3 pb-3">
@@ -311,11 +291,6 @@ onMounted(() => {
             </template>
           </el-table-column>
         </el-table>
-
-        <p class="mt-3 text-[14px] leading-relaxed text-slate-500">
-          只有「已上线」且该角色在<span class="font-medium text-slate-700">角色管理 → 菜单权限</span>里确实持有对应权限码的卡片才会出现在首页。
-          取消勾选不会删卡片，重新勾上即恢复。
-        </p>
       </el-tab-pane>
 
       <el-tab-pane label="卡片注册表" name="widget">

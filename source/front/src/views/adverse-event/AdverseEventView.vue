@@ -1,11 +1,4 @@
 <script setup lang="ts">
-/**
- * 不良事件上报（G12）
- *
- * PDCA 四态闭环：1 已上报待处理 → 2 处理中 → 3 已整改 → 4 已结案（不可逆）。
- * 每步流转留「操作人 + 意见 + 时间」痕迹；状态 ≥2 后上报内容与删除均被锁定。
- * 类型/等级/状态文案走字典（his_adverse_event_*），tag 色与动作口径单点 lib/adverseEvent.js。
- */
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, WarningFilled } from '@element-plus/icons-vue'

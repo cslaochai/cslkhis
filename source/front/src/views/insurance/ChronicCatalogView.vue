@@ -1,15 +1,4 @@
 <script setup lang="ts">
-/**
- * 门诊慢特病病种目录（菜单 2923 / 路由 /chronic-catalog，sql/179）
- *
- * 为什么从「慢特病医保备案」（菜单 1011，sql/188 由「慢特病人员备案」更名）里拆出来单独挂菜单：
- * 备案台账的一行是**一个患者的一个病种**（每天经办，一行一张新单）；
- * 病种目录的一行是**一个病种**（随国家/省医保慢特病目录调整，一年动不了几回），
- * 而且目录条目决定备案的默认待遇期（defaultValidMonths，选病种自动带出终止日）
- * 与"这个病种还开不开放新备案"（启停）—— 属标准的「待遇目录配置」，不是备案台账的附属页签。
- * 内容与拆之前的「门诊慢特病病种目录」页签同源，接口与权限码（finance:insuranceChronic:add）均未变；
- * 原页签上的「看备案」改为带 catalogId 跳回备案台账（/insurance-chronic?catalogId=xxx）。
- */
 import {ref, reactive, onMounted} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Search, Refresh, Plus, Edit} from '@element-plus/icons-vue'

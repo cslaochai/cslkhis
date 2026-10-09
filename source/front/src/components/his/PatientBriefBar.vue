@@ -1,15 +1,4 @@
 <script setup lang="ts">
-// 门诊患者条（1 行）：门诊每诊必看的只有 姓名/性别年龄/号别/号序/过敏/医保，
-// 其余（电话、身份证、地址、余额、就诊次数、标签…）全部收在「患者详情」弹窗里。
-//
-// 这里原来还有一个「详情」气泡（el-popover，铺 4 行字段 + 标签）。
-// 撤掉的原因不是"窄"，是**信息只有一份**：气泡里那几个字段（电话/身份证/民族/血型/职业/婚姻/
-// 地址/联系人/医保/余额/就诊次数）本来就是患者详情弹窗「基本信息」页签的真子集，
-// 标签这次也进了弹窗 —— 留着就是同一份数据的第二套实现，两处迟早对不上
-// （PatientDetailDialog 的注释记着上一回就是这么错的：同一个弹框在 Header 和患者列表里各抄了一份，
-// 婚姻状况的渲染已经写出了分歧）。要看这些信息走「患者详情」，条上只留动作按钮。
-//
-// 底部 fixed 动作条见 PageActionBar；本组件只管患者条本身。
 import {computed} from 'vue'
 import {Coin, Setting, Tickets} from '@element-plus/icons-vue'
 import {patientGenderText} from '@/lib/patientGender'

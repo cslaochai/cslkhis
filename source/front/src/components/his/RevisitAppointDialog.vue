@@ -1,27 +1,11 @@
 <script setup lang="ts">
-import {ref, computed, watch, onMounted} from 'vue'
+import {computed, onMounted, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
-import {
-  getAvailableSchedule,
-  getScheduleSlots,
-  getRevisitRecordSelectList,
-  previewRevisitFee,
-} from '@/api/appoint'
+import {getAvailableSchedule, getRevisitRecordSelectList, getScheduleSlots, previewRevisitFee,} from '@/api/appoint'
 import {getDepartmentSelectList} from '@/api/system'
 import {DICT_TYPE, loadDictDataList} from '@/lib/dict-cache'
 import {revisitNeedsNoSchedule} from '@/lib/revisitPolicy'
 
-/**
- * 复诊预约弹框（预约未来某一时段的复诊号，占号源、按策略收费）
- *
- * 为什么抽成组件：医生站的「医嘱复诊预约」（来源 2）与随访页的「生成复诊号」（来源 4）
- * 要选的东西一模一样 —— 原病历 + 日期 + 号源 + 时段，并当场看到应收多少。
- * 两处各写一遍必然漂移（尤其是费用预估那条链路）。
- *
- * 本组件**只负责选与算，不负责挂上**：提交动作交给父页面调各自的接口
- * （医生站走 /appoint/appointUpsert，随访走 /charge/followup/createRevisitAppoint），
- * 因为随访那边还要把复诊号回写到任务上。
- */
 const props = defineProps<{
   modelValue: boolean
   /** 患者主键（必填，没有患者就没法查原病历） */

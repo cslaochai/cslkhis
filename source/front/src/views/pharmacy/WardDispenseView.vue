@@ -1,15 +1,4 @@
 <script setup lang="ts">
-/**
- * 住院摆药工作台（G13）
- *
- * 链路：按病区/日期查询可摆医嘱 → 生成摆药单（同入院同日复用主单、明细追加，幂等）
- * → 药房配药（FEFO 扣库存 + 计费进住院费用单/日清单）→ 病区核对 → 退药（回库 + 负冲账，终态）。
- * 规则（服务端收口，前端只做显隐）：
- *  - 生成时未能匹配药品档案的医嘱不进摆药单（数量在生成结果里明示）；
- *  - 仅待配药明细可配药；仅已配药可核对；已配药/已核对可退药（原因必填，终态不可逆）；
- *  - 未来日期不可生成。
- * 状态文案走字典（his_ward_dispense_*），tag 色单点 lib/wardDispense.js。
- */
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Van, CircleCheck, RefreshLeft } from '@element-plus/icons-vue'

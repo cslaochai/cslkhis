@@ -35,11 +35,13 @@
     --el-border-radius-round: 18px;
 
     /* ---------- 页面高度令牌（页面容器高度统一，别再写 magic number）----------
-       Header 64px + DashboardLayout 的 <main class="p-6">（上下各 24px）。
+       Header 64px + DashboardLayout 的 <main class="p-3">（上下各 12px）。
        原来三页各写一套：100vh-8rem（医生站）/ 100vh-120px（分诊台）/
-       100vh-20rem（病历 Tab）/ 100vh-16rem（收费 Tab）—— Header 高度一改就全部错位。 */
+       100vh-20rem（病历 Tab）/ 100vh-16rem（收费 Tab）—— Header 高度一改就全部错位。
+       ⚠ 这两个值必须和 DashboardLayout 实际写法一致：原先按 p-6 记成 24px，
+       而骨架一直是 p-3，于是医生站/分诊台两页底部各空出 24px 不贴边（零报错，只是看着矮一截）。 */
     --his-header-h: 64px;
-    --his-page-pad: 24px;
+    --his-page-pad: 12px;
     --his-page-h: calc(100vh - var(--his-header-h) - var(--his-page-pad) * 2);
 
     /* 门诊工作台固定尺寸 */

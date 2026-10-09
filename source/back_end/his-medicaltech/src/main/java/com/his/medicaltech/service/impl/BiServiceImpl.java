@@ -100,12 +100,10 @@ public class BiServiceImpl implements BiService {
         long grouped = 0;
         BigDecimal weightSum = BigDecimal.ZERO;
         for (BiCodedSummaryRowVO s : samples) {
-            DrgGrouper.GroupResult r = drgGrouper.group(
-                    s.getIcdCode(),
-                    Integer.valueOf(1).equals(s.getIsSurgery()),
-                    s.getInpatientDays(),
-                    Integer.valueOf(1).equals(s.getDeathFlag()));
-            if (!DrgGrouper.QY_CODE.equals(r.drgCode())) {
+            DrgGrouper.GroupResult r = drgGrouper.group(new DrgGrouper.GroupInput(
+                    s.getIcdCode(), null, List.of(), null, null, null,
+                    s.getInpatientDays(), s.getDeathFlag(), null, null, s.getIsSurgery()));
+            if (r.grouped()) {
                 grouped++;
                 weightSum = weightSum.add(weightByCode.getOrDefault(r.drgCode(), BigDecimal.ZERO));
             }

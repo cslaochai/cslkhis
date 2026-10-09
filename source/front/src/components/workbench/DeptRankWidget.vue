@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import {computed} from 'vue'
 
-/**
- * 科室就诊量排行卡：横向条形排行，纯 div 画（不引图表库）。
- * 行数据 {deptName, cnt} 来自后端 SQL 别名，值以大字号深色呈现（表格可读性口径）。
- */
 const props = defineProps<{
     code: string
     data: Record<string, any> | null

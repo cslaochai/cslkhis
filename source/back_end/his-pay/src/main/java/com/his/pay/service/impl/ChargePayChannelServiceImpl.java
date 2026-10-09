@@ -1,8 +1,8 @@
 package com.his.pay.service.impl;
 
-import com.his.common.config.pay.AlipayProperties;
-import com.his.common.config.pay.PayChannelProperties;
-import com.his.common.config.pay.UnionPayProperties;
+import com.his.pay.config.AlipayProperties;
+import com.his.pay.config.PayChannelProperties;
+import com.his.pay.config.UnionPayProperties;
 import com.his.pay.service.ChargePayChannelService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

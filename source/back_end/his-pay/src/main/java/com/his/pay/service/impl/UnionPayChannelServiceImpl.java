@@ -1,15 +1,12 @@
 package com.his.pay.service.impl;
 
-import com.his.common.config.pay.UnionPayProperties;
+import com.his.pay.config.UnionPayProperties;
 import com.his.pay.entity.BizPayOrder;
 import com.his.pay.service.UnionPayChannelService;
 import com.his.pay.service.WxPayChannelService;
-import com.his.pay.service.WxPayChannelService.PayUnifiedResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-
-import java.util.Map;
 
 /**
  * 云闪付支付出口（待接 SDK）

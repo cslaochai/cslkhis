@@ -1,13 +1,4 @@
 <script setup lang="js">
-/**
- * 值班日志 / 交班本（sql/170，菜单 806 的第二个 Tab）。
- *
- * 存在的意义：sql/169 只回答了「今天全院谁负责」，评审还要看后半句 ——
- * 值班期间发生了什么、没处理完的交给谁、接班人收到没有。
- * 所以这个面板的重点不是"记一笔"，而是**交接闭环**：
- *   登记 → 交给下一班总值班（自动带出接班人）→ 接班人签收
- * 只记不交，交班本就是没人看的备忘录；只交不签，等于交出去的东西没人认领。
- */
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search, Edit, Delete, Refresh } from '@element-plus/icons-vue'
@@ -17,8 +8,6 @@ import {
 import { getEmployeeList } from '@/api/system'
 import { PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/lib/pagination'
 
-// 记录类型 / 状态是封闭枚举，与后端 DutyLogService.TYPE_* / ST_* 常量逐字对齐。
-// 不接字典缓存：交班的状态机（0→1、0/1→2→3）就靠这几个值，下拉拿不到会让按钮全灰。
 const LOG_TYPES = [
   { value: 1, label: '值班事件' },
   { value: 2, label: '遗留事项' },

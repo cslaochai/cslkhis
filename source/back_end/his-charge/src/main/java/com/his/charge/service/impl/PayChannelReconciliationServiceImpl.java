@@ -13,7 +13,7 @@ import com.his.charge.entity.BizPaymentTxn;
 import com.his.charge.mapper.BizPayChannelBillMapper;
 import com.his.charge.mapper.BizPaymentTxnMapper;
 import com.his.charge.service.PayChannelReconciliationService;
-import com.his.common.config.pay.AlipayProperties;
+import com.his.pay.config.AlipayProperties;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

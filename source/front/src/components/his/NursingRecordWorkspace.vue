@@ -1,14 +1,4 @@
 <script setup lang="ts">
-/**
- * 护理文书工作站（P2：三测单 + 护理记录单 + 生命体征监测）
- *
- * 三条必须记住的口径：
- * 1. **三测单同一时点只允许一条**（库唯一索引兜底）。重复录入会收到明确报错，不是静默覆盖。
- * 2. **体温曲线由后端给点、前端只画**：点是后端按测量时间升序排好的（前端不排序），
- *    而且曲线不分页（分一次页曲线就断一段）。
- * 3. **数值 0 必须显示成 0**：大便 0 次/日、尿量 0ml 都是合法观测值，
- *    `value || '—'` 这种写法会把"测了 0"渲染成"没测"。
- */
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Refresh, Plus, DataLine, Clock, DocumentChecked, PieChart } from '@element-plus/icons-vue'

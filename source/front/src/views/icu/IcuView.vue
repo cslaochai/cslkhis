@@ -1,19 +1,4 @@
 <script setup lang="ts">
-/**
- * ICU 专科监护工作台（sql/108，菜单 314）
- *
- * 四个页签：
- *  1) 床位看板：ICU 床（复用 sys_bed 的 bed_type='ICU'）逐床一张卡，空格子直接入科，
- *     在科格子显示最近一次监护读数与「上次记录多久前」。
- *  2) 入出科台账：在院患者 → 选 ICU 床入科（患者/科室/床位快照服务端重查）→ 出科（终态，
- *     转院/死亡/自动离院必填转归说明）。
- *  3) 监护记录单：一条 = 一个时刻的床边记录（体征 + GCS 三项 + 呼吸机 + 出入量 + 五类导管），
- *     GCS 总分与液体平衡服务端回算；出科后封账禁写。
- *  4) 科室指标：床位使用率、人均记录、死亡与平均滞留、监护等级/呼吸支持分布、
- *     现带管人数、漏记预警（窗口最长 30 天，超出由服务端收口）。
- * 规则（服务端收口，前端只做显隐）：本域不生成医嘱、不出收费单；普通病区三测仍走护理记录不双轨；
- * 状态文案走字典 his_icu_*，tag 色与显隐单点 lib/icu.js。
- */
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'

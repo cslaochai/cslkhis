@@ -1,12 +1,3 @@
--- =============================================================
--- sql/235 模板与薄表真实数据铺底
--- 库：hn_biz_his  元数据口径：create_by=admin, create_time=2026-05-08 00:00:00
--- ID 段：2350000000000000xxx（19 位，避开雪花段）；DRG 沿用 9015-9028
--- 明细价格/规格均通过 INSERT...SELECT 从 sys_drug / sys_laboratory_item /
--- sys_inspection_item 实时联查快照，保证与字典一致
--- =============================================================
-
--- ---------- A. 处方模板 8 个 + 明细 21 行 ----------
 INSERT INTO biz_rx_template (id, doctor_id, template_name, drug_count, total_amount, create_by, create_time, update_by, update_time, del_flag, remark)
 VALUES
 (2350000000000000001, 897001015, '高血压门诊随访用药（施佳明）', 0, 0.00, 'admin', '2026-05-08 00:00:00', NULL, NULL, 0, '铺底（sql/235）'),
@@ -61,10 +52,6 @@ SELECT 2350000000000000120, 2350000000000000008, d.id, d.drug_code, d.drug_name,
 INSERT INTO biz_rx_template_detail (id, template_id, drug_id, drug_code, drug_name, generic_name, specification, dosage_form, manufacturer, unit, quantity, price, amount, usage_dosage, frequency, route, duration, single_dosage, create_by, create_time, update_by, update_time, del_flag, remark)
 SELECT 2350000000000000121, 2350000000000000008, d.id, d.drug_code, d.drug_name, d.generic_name, d.specification, d.dosage_form, d.manufacturer, d.unit, 1, d.price, d.price, '每次3片，每日3次', '每日三次', '口服', 7, '0.87g', 'admin', '2026-05-08 00:00:00', NULL, NULL, 0, NULL FROM sys_drug d WHERE d.drug_code='BP0341';
 
-UPDATE biz_rx_template t SET
-  t.drug_count = (SELECT COUNT(*) FROM biz_rx_template_detail x WHERE x.template_id=t.id AND x.del_flag=0),
-  t.total_amount = (SELECT COALESCE(SUM(x.amount),0) FROM biz_rx_template_detail x WHERE x.template_id=t.id AND x.del_flag=0)
-WHERE t.id BETWEEN 2350000000000000001 AND 2350000000000000099;
 
 -- ---------- B. 检查申请模板 10 个 ----------
 INSERT INTO biz_inspection_template (id, doctor_id, template_name, inspection_item_id, inspection_item_code, inspection_item_name, body_part, inspection_purpose, is_emergency, sort_order, create_by, create_time, update_by, update_time, del_flag, remark)
