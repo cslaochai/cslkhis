@@ -1,10 +1,10 @@
 package com.his.ai.entity;
 
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.his.common.base.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
@@ -14,14 +14,6 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 @EqualsAndHashCode(callSuper = true)
 @TableName("sys_lab_plain_item")
 public class SysLabPlainItem extends BaseEntity {
-    /** 逻辑删除标志（0 未删除 1 已删除） */
-    @TableLogic
-    private Integer delFlag;
-
-    /** 备注 */
-    private String remark;
-
-
 
     /**
      * 所属分组（血常规 / 肝功能 / 肾功能 / 血糖 / 血脂 / 炎症 / 凝血 / 心肌 / 电解质 / 尿常规 / 大便）
@@ -62,4 +54,15 @@ public class SysLabPlainItem extends BaseEntity {
      * 排序号
      */
     private Integer sortOrder;
+
+    /**
+     * 逻辑删除标志（0 未删除 1 已删除）
+     */
+    @TableLogic
+    private Integer delFlag;
+
+    /**
+     * 备注
+     */
+    private String remark;
 }
