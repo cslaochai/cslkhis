@@ -13,7 +13,7 @@
  */
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { Search, Refresh, WarningFilled, Clock, Document } from '@element-plus/icons-vue'
+import { Search, WarningFilled, Clock, Document } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getPatientCdr, getCdrEventDict, getClinicalSummary } from '@/api/cdr'
 import PatientSelect from '@/components/his/PatientSelect.vue'
@@ -134,18 +134,6 @@ onMounted(async () => {
 
 <template>
   <div class="space-y-6">
-    <!-- 标题 -->
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h1 class="text-xl font-semibold text-slate-900">患者 360 视图（CDR）</h1>
-        <p class="mt-1 text-sm text-slate-500">
-          按<el-text class="mx-1" size="small">就诊次</el-text>把一个患者散在各处的记录串成一条时间轴。
-          已合并的档案会按主索引归并显示；病历该有而缺失的文书会明确标出。
-        </p>
-      </div>
-      <el-button :icon="Refresh" :disabled="!query.patientId" @click="load">刷新</el-button>
-    </div>
-
     <!-- 查询条 -->
     <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div class="flex flex-wrap items-end gap-3">

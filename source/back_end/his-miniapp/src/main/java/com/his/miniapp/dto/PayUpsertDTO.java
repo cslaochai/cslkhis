@@ -29,4 +29,9 @@ public class PayUpsertDTO {
      */
     @Positive(message = "金额必须大于0")
     private BigDecimal amount;
+
+    /**
+     * 支付渠道（1-微信 2-支付宝），默认微信
+     */
+    private Integer channel = 1;
 }

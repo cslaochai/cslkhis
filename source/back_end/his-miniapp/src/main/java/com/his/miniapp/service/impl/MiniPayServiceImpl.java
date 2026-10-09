@@ -18,16 +18,13 @@ import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.miniapp.dto.PayRefundDTO;
 import com.his.miniapp.dto.PayUpsertDTO;
-import com.his.miniapp.dto.WxLoginDTO;
-import com.his.miniapp.entity.BizPayOrder;
-import com.his.miniapp.mapper.BizPayOrderMapper;
-import com.his.miniapp.mapper.MiniappSysUserMapper;
 import com.his.miniapp.service.MiniPayService;
-import com.his.miniapp.service.WxLoginChannelService;
-import com.his.miniapp.service.WxPayChannelService;
+import com.his.pay.entity.BizPayOrder;
+import com.his.pay.mapper.BizPayOrderMapper;
+import com.his.pay.service.AlipayChannelService;
+import com.his.pay.service.WxPayChannelService;
 import com.his.miniapp.vo.*;
 import com.his.system.service.SysMessageService;
-import com.his.system.utils.JwtUtils;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,51 +46,23 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class MiniPayServiceImpl extends ServiceImpl<BizPayOrderMapper, BizPayOrder> implements MiniPayService {
 
-    private final JwtUtils jwtUtils;
-
-    private final WxLoginChannelService wxLoginChannelService;
     private final WxPayChannelService wxPayChannelService;
+
+    private final AlipayChannelService alipayChannelService;
+
     private final BizPayOrderMapper bizPayOrderMapper;
-    private final MiniappSysUserMapper miniappSysUserMapper;
+
     private final RedisSequenceService redisSequenceService;
+
     private final SettlementBillService settlementBillService;
+
     private final PaymentService paymentService;
+
     private final InpatientAccountService inpatientAccountService;
+
     private final SysMessageService sysMessageService;
+
     private final BizAppointService bizAppointService;
-
-    // 微信登录口子
-    @Override
-    public MiniWxLoginVO wxLogin(WxLoginDTO dto) {
-        String openid = wxLoginChannelService.code2Session(dto.getCode());
-        MiniUserRowVO user = miniappSysUserMapper.selectByOpenid(openid);
-        MiniWxLoginVO vo = new MiniWxLoginVO();
-        vo.setBound(false);
-        if (user == null) {
-            // 未绑定：前端引导账密/短信注册登录后调 /miniapp/auth/bindOpenid
-            return vo;
-        }
-        if (!Integer.valueOf(3).equals(user.getUserType())) {
-            throw new BusinessException("该微信已绑定院内员工账号，患者端不支持该方式登录");
-        }
-        if (!Integer.valueOf(1).equals(user.getStatus())) {
-            throw new BusinessException("账号已停用，请联系医院");
-        }
-        Long userId = user.getId();
-        String username = user.getUserName();
-        String realName = user.getRealName() == null ? username : user.getRealName();
-        Long patientId = user.getPatientId();
-
-        String token = jwtUtils.generateToken(userId, username, "PATIENT", null, null);
-        vo.setBound(true);
-        vo.setToken(token);
-        vo.setUserId(userId);
-        vo.setUsername(username);
-        vo.setRealName(realName);
-        vo.setPatientId(patientId);
-        vo.setUserType(3);
-        return vo;
-    }
 
     // 统一支付单
     @Override
@@ -124,9 +93,16 @@ public class MiniPayServiceImpl extends ServiceImpl<BizPayOrderMapper, BizPayOrd
         order.setRemark("患者端小程序支付");
         bizPayOrderMapper.insert(order);
 
-        WxPayChannelService.PayUnifiedResult unified = wxPayChannelService.unifiedOrder(order);
+        WxPayChannelService.PayUnifiedResult unified;
+        if (order.getChannel() == 1) {
+            unified = wxPayChannelService.unifiedOrder(order);
+        } else if (order.getChannel() == 2) {
+            unified = alipayChannelService.unifiedOrder(order);
+        } else {
+            throw new BusinessException("不支持的支付渠道：" + order.getChannel());
+        }
         if (unified.errMsg() != null) {
-            throw new BusinessException("微信下单失败：" + unified.errMsg());
+            throw new BusinessException("支付下单失败：" + unified.errMsg());
         }
         if (unified.mockPaid()) {
             // 模式：后端直接推进支付成功（真收银台模式下这一步由 /miniapp/pay/notify 异步触发）

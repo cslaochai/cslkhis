@@ -42,11 +42,9 @@ public final class PayQrCodeUtils {
     }
 
     /**
-     * 组装支付二维码内容
+     * 组装支付二维码内容（小程序支付入口）
      */
-    public static String buildPayContent(Long chargeId, String chargeNo, String totalAmount) {
-        return "his://charge/pay?chargeId=" + (chargeId == null ? "" : chargeId)
-                + "&chargeNo=" + (chargeNo == null ? "" : chargeNo)
-                + "&amount=" + (totalAmount == null ? "0" : totalAmount);
+    public static String buildMiniappPayUrl(Long billId) {
+        return "http://localhost:5173/miniapp/pay?billId=" + (billId == null ? "" : billId);
     }
 }

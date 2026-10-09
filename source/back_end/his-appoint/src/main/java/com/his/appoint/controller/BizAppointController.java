@@ -36,13 +36,13 @@ public class BizAppointController {
         return Result.success(result);
     }
 
-    @Operation(summary = "挂号状态统计：六格状态卡一次取全（口径与 listPage 一致）")
+    @Operation(summary = "挂号状态统计：六格状态卡")
     @GetMapping("/statusCount")
     public Result<AppointStatusCountVO> statusCount(@Valid AppointQueryDTO queryDTO) {
         return Result.success(bizAppointService.statusCount(queryDTO));
     }
 
-    @Operation(summary = "预约看板：一次取整段区间的全部挂号（不分页）")
+    @Operation(summary = "预约看板：一次取整段区间的全部挂号")
     @PostMapping("/boardList")
     public Result<List<BizAppointInfoListVO>> boardList(@Valid @RequestBody AppointBoardQueryDTO queryDTO) {
         return Result.success(bizAppointService.boardList(queryDTO));
@@ -57,14 +57,6 @@ public class BizAppointController {
 
     /**
      * 医生站建复诊号（只放来源 1-当日回诊、2-医嘱复诊预约）。
-     *
-     * <p>不复用 {@code /appointUpsert}：那个接口要求 {@code opd:appointments:add}，而 sql/120 起
-     * 医生角色（10013）已经拿不到挂号页面的授权 —— 挂在它上面等于医生站的「建复诊」按钮
-     * <b>对医生永远 403</b>（前端按 {@code opd:doctorWorkstation:add} 显示按钮，两边口径不一致，
-     * 现象是点了才报错）。这里按医生站自己的码收口。
-     *
-     * <p>来源 3 由患者小程序发起、来源 4 由随访任务发起，都不该从医生站写，
-     * 否则「谁发起的」这条事实会失真，收费策略也就能被绕过。
      */
     @PreAuthorize("hasAuthority('opd:doctorWorkstation:add')")
     @Operation(summary = "医生站建复诊号（当日回诊 / 医嘱复诊预约）")
@@ -74,11 +66,7 @@ public class BizAppointController {
     }
 
     /**
-     * 复诊费用预估（窗口/医生站/随访共用；患者自助走 {@code /miniapp/revisit/feePreview}）。
-     *
-     * <p>用 {@code isAuthenticated()} 而不是按钮码：这一个判定被挂号收费、医生站、病房随访三处
-     * 页面复用，挂任何一个码都会让另外两个 403（同「通用参照数据不配权限码」的口径）。
-     * 只读、不涉敏，越权由 {@code patientScopeViolated} 收口（员工放行、患者只碰自己绑定的就诊人）。
+     * 复诊费用预估
      */
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "复诊费用预估：提交挂号前问一次这张号收多少钱")
@@ -89,11 +77,6 @@ public class BizAppointController {
 
     /**
      * 复诊「原病历」候选列表（窗口/医生站共用）。
-     *
-     * <p>不开在 {@code /emr/getByPatientId} 上：那个接口挂在 EmrController 的<b>类级</b>
-     * {@code hasAnyAuthority('opd:doctorWorkstation:list', ...)} 底下，收费员和前台导诊碰不到，
-     * 而「挂复诊要不要选原病历」是挂号窗口每天的动作。这里只出下拉要的几个字段，
-     * 权限按「通用参照数据」口径写 {@code isAuthenticated()}，越权仍由 patientScopeViolated 收口。
      */
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "复诊原病历候选列表（按就诊日倒序）")

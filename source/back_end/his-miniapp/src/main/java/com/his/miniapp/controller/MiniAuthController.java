@@ -2,7 +2,8 @@ package com.his.miniapp.controller;
 
 import com.his.common.base.Result;
 import com.his.miniapp.dto.WxLoginDTO;
-import com.his.miniapp.service.MiniPayService;
+import com.his.miniapp.service.MiniAuthService;
+import com.his.miniapp.service.WxLoginChannelService;
 import com.his.miniapp.vo.MiniWxLoginVO;
 import com.his.patient.service.PatientGuardianService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,25 +26,19 @@ import org.springframework.web.bind.annotation.RestController;
 @PreAuthorize("hasAuthority('PATIENT')")
 public class MiniAuthController {
 
-    private final MiniPayService miniPayService;
-    private final com.his.miniapp.service.WxLoginChannelService wxLoginChannelService;
+    private final MiniAuthService miniAuthService;
+
+    private final WxLoginChannelService wxLoginChannelService;
+
     private final PatientGuardianService patientGuardianService;
 
-    /**
-     * wx.login code 换 openid 登录。已绑定患者账号 → 直接发 token；
-     * 未绑定 → bound=false，前端引导账密/短信注册登录后调 bindOpenid。
-     */
     @Operation(summary = "微信一键登录（患者端口子，白名单）")
     @PreAuthorize("permitAll()")
     @PostMapping("/wxLogin")
     public Result<MiniWxLoginVO> wxLogin(@RequestBody @Valid WxLoginDTO dto) {
-        return Result.success(miniPayService.wxLogin(dto));
+        return Result.success(miniAuthService.wxLogin(dto));
     }
 
-    /**
-     * 登录态下绑定微信 openid（wx.login code → 换 openid → 绑定当前患者账号，
-     * 订阅消息发送依赖此绑定）。唯一性冲突直接拒绝，不做抢占。
-     */
     @Operation(summary = "绑定当前账号微信openid")
     @PostMapping("/bindOpenid")
     public Result<Void> bindOpenid(@RequestBody @Valid WxLoginDTO dto) {

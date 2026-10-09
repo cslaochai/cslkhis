@@ -16,7 +16,7 @@
     <version>1.0.0</version>
     <packaging>pom</packaging>
     <name>his-backend</name>
-    <description>医疗HIS系统后端（模块化单体）</description>
+    <description>医疗HIS系统后端</description>
 
     <properties>
         <java.version>21</java.version>
@@ -27,30 +27,23 @@
         <hutool.version>5.8.26</hutool.version>
         <zxing.version>3.5.3</zxing.version>
         <openpdf.version>1.3.30</openpdf.version>
+        <wx-java.version>4.6.0</wx-java.version>
+        <alipay-sdk.version>4.38.0.ALL</alipay-sdk.version>
     </properties>
 
     <modules>
-        <!-- 底座 -->
         <module>his-common</module>
-        <!-- 费用记账事实（L1）：各临床域与结算域都要写它，故排在所有业务域之前 -->
-        <!-- 主数据 -->
         <module>his-system</module>
         <module>his-patient</module>
         <module>his-pharmacy</module>
         <module>his-appoint</module>
-        <!-- 物资耗材与设备后勤 -->
-        <!-- 临床业务 -->
         <module>his-operation</module>
         <module>his-medicaltech</module>
         <module>his-emr</module>
-        <!-- 交易与结算 -->
         <module>his-charge</module>
-        <!-- 统计 -->
-        <!-- 预留 -->
+        <module>his-pay</module>
         <module>his-ai</module>
-        <!-- 患者端小程序聚合层（BFF，须在各业务域之后、启动层之前） -->
         <module>his-miniapp</module>
-        <!-- 启动层（必须在最后） -->
         <module>his-web</module>
     </modules>
 
@@ -132,6 +125,11 @@
                 <artifactId>his-miniapp</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.his</groupId>
+                <artifactId>his-pay</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <!-- ===== 第三方 ===== -->
             <dependency>
@@ -173,6 +171,18 @@
                 <groupId>com.github.librepdf</groupId>
                 <artifactId>openpdf</artifactId>
                 <version>${openpdf.version}</version>
+            </dependency>
+
+            <!-- 支付 SDK -->
+            <dependency>
+                <groupId>com.github.binarywang</groupId>
+                <artifactId>weixin-java-pay</artifactId>
+                <version>${wx-java.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alipay.sdk</groupId>
+                <artifactId>alipay-sdk-java</artifactId>
+                <version>${alipay-sdk.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

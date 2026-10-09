@@ -1,4 +1,4 @@
-package com.his.miniapp.enums;
+package com.his.pay.enums;
 
 import lombok.Getter;
 

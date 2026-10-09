@@ -2,23 +2,16 @@ package com.his.miniapp.service;
 
 import com.his.miniapp.dto.PayRefundDTO;
 import com.his.miniapp.dto.PayUpsertDTO;
-import com.his.miniapp.dto.WxLoginDTO;
 import com.his.miniapp.vo.MiniPayOrderListVO;
 import com.his.miniapp.vo.MiniPayOrderVO;
 import com.his.miniapp.vo.MiniPendingBillListVO;
-import com.his.miniapp.vo.MiniWxLoginVO;
 
 import java.util.List;
 
 /**
- * 患者端聚合服务：微信登录 + 统一支付单。
+ * 患者端支付服务：统一支付单。
  */
 public interface MiniPayService {
-
-    /**
-     * wx.login code 换 openid 登录：已绑定 → 发 token；未绑定 → bound=false
-     */
-    MiniWxLoginVO wxLogin(WxLoginDTO dto);
 
     /**
      * 下单支付。模式直接推进支付成功并触发业务推进（门诊缴费走收费执行器、

@@ -46,5 +46,9 @@
             <groupId>com.his</groupId>
             <artifactId>his-charge</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-pay</artifactId>
+        </dependency>
     </dependencies>
 </project>

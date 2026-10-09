@@ -1,13 +1,8 @@
-# 主入口（L1 常驻）：只放与环境无关、dev/pro 完全一致的基础配置 + 领域片段导入锚点。
-# 环境相关（数据源 / redis / jwt 密钥 / 日志级别 / knife4j 开关）下沉到 application-{profile}.yml。
-    # 领域行为配置（his-ai / his-insurance / his-sign / his-medicaltech / his-sms / his-wechat / his-followup）
-    #   抽到 config/domain/his-*.yml（可入库、零密钥，dev/pro 共用同一份，不再双写）。
 spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   config:
     # 领域片段：常驻、dev/pro 共用；optional: 防片段缺失时启动直接挂。
-    # Spring Boot 的 import 通配符必须按目录（*/）导入，不认 *.yml 文件通配，故逐一列出。
     import:
       - optional:classpath:config/domain/his-ai.yml
       - optional:classpath:config/domain/his-insurance.yml
@@ -16,6 +11,7 @@ spring:
       - optional:classpath:config/domain/his-sms.yml
       - optional:classpath:config/domain/his-wechat.yml
       - optional:classpath:config/domain/his-followup.yml
+      - optional:classpath:config/domain/his-pay.yml
   application:
     name: his-backend
   servlet:

@@ -17,27 +17,41 @@ import java.time.LocalDateTime;
 @TableName("biz_service_message")
 public class BizServiceMessage extends BaseEntity {
 
-    /** 留言单号 */
+    /**
+     * 留言单号
+     */
     private String messageNo;
 
-    /** 留言用户ID */
+    /**
+     * 留言用户ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long userId;
 
-    /** 就诊人ID */
+    /**
+     * 就诊人ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 就诊人姓名 */
+    /**
+     * 就诊人姓名
+     */
     private String patientName;
 
-    /** 联系电话 */
+    /**
+     * 联系电话
+     */
     private String contactPhone;
 
-    /** 留言分类（同 sys_faq.category_code） */
+    /**
+     * 留言分类（同 sys_faq.category_code）
+     */
     private String categoryCode;
 
-    /** 留言内容 */
+    /**
+     * 留言内容
+     */
     private String content;
 
     /**
@@ -47,39 +61,63 @@ public class BizServiceMessage extends BaseEntity {
      */
     private Integer status;
 
-    /** 优先级（0-普通 1-紧急） */
+    /**
+     * 优先级（0-普通 1-紧急）
+     */
     private Integer priority;
 
-    /** 受理人账号（服务端取登录人，不由前端传） */
+    /**
+     * 受理人账号（服务端取登录人，不由前端传）
+     */
     private String acceptBy;
 
-    /** 受理人姓名 */
+    /**
+     * 受理人姓名
+     */
     private String acceptByName;
 
-    /** 受理时间 */
+    /**
+     * 受理时间
+     */
     private LocalDateTime acceptTime;
 
-    /** 关闭人账号 */
+    /**
+     * 关闭人账号
+     */
     private String closeBy;
 
-    /** 关闭时间 */
+    /**
+     * 关闭时间
+     */
     private LocalDateTime closeTime;
 
-    /** 关闭原因（患者撤单 / 客服关闭都要写，不写就是一笔说不清的账） */
+    /**
+     * 关闭原因（患者撤单 / 客服关闭都要写，不写就是一笔说不清的账）
+     */
     private String closeReason;
 
-    /** 最后一次客服回复时间 */
+    /**
+     * 最后一次客服回复时间
+     */
     private LocalDateTime lastReplyTime;
 
-    /** 客服回复次数 */
+    /**
+     * 客服回复次数
+     */
     private Integer replyCount;
 
-    /** 处理人 */
+    /**
+     * 处理人
+     */
     private String handleBy;
 
-    /** 处理时间 */
+    /**
+     * 处理时间
+     */
     private LocalDateTime handleTime;
 
-    /** 处理结果 */
+    /**
+     * 处理结果
+     */
     private String handleResult;
 }

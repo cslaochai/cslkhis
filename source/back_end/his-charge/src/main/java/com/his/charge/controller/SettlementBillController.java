@@ -4,6 +4,7 @@ package com.his.charge.controller;
 import com.his.charge.dto.*;
 import com.his.charge.service.PaymentService;
 import com.his.charge.service.SettlementBillService;
+import com.his.charge.utils.PayQrCodeUtils;
 import com.his.charge.vo.*;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
@@ -77,6 +78,15 @@ public class SettlementBillController {
     @PostMapping("/pendingListPage")
     public Result<PageResult<PendingEncounterVO>> pendingListPage(@Valid @RequestBody PendingEncounterQueryPageDTO query) {
         return Result.success(settlementBillService.pendingEncounterPage(query));
+    }
+
+    @Operation(summary = "生成账单支付二维码")
+    @PreAuthorize("hasAuthority('finance:cashier:list')")
+    @GetMapping("/payQrCode")
+    public Result<String> payQrCode(@RequestParam Long billId) {
+        String content = PayQrCodeUtils.buildMiniappPayUrl(billId);
+        String dataUri = PayQrCodeUtils.generateDataUri(content, 256);
+        return Result.success(dataUri);
     }
 
     @Operation(summary = "分页查询结算账单")

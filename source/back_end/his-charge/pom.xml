@@ -37,5 +37,11 @@
             <groupId>com.google.zxing</groupId>
             <artifactId>core</artifactId>
         </dependency>
+
+        <!-- 支付渠道对接（收费台扫码支付） -->
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-pay</artifactId>
+        </dependency>
     </dependencies>
 </project>

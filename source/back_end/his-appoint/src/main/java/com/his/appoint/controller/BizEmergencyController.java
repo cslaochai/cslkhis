@@ -102,8 +102,6 @@ public class BizEmergencyController {
         return Result.success("留观超时限催办完成", bizEmergencyService.escalateObservation());
     }
 
-    // 交班清零（sql/153）
-
     @Operation(summary = "待交班清单（本科室未闭环中「无人指派」+「挂我名下」的行，交班弹框数据源）")
     @GetMapping("/handoverPendingList")
     @PreAuthorize("hasAuthority('opd:emergency:list')")

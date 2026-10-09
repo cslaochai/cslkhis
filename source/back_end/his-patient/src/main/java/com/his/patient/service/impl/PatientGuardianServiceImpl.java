@@ -42,23 +42,23 @@ import java.util.*;
 @RequiredArgsConstructor
 @Slf4j
 public class PatientGuardianServiceImpl extends ServiceImpl<BizPatientGuardianMapper, BizPatientGuardian> implements PatientGuardianService {
-
-    /**
-     * 1 个账号最多绑定的就诊人数（风控上限）
-     */
     private static final int MAX_BINDINGS_PER_USER = 5;
-    /**
-     * 1 个就诊人最多被多少个账号绑定（防多人窥探同一档案）
-     */
     private static final int MAX_BINDERS_PER_PATIENT = 3;
 
     private final BizPatientGuardianMapper bizPatientGuardianMapper;
+
     private final BizPatientMapper bizPatientMapper;
+
     private final BizPatientService bizPatientService;
+
     private final SysUserMapper sysUserMapper;
+
     private final SysMessageService sysMessageService;
+
     private final SmsCodeService smsCodeService;
+
     private final SysAuditLogService sysAuditLogService;
+
     private final RedisSequenceService redisSequenceService;
 
     private static String normalizeIdCard(String idCard) {

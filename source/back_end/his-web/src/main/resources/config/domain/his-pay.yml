@@ -1,0 +1,29 @@
+wx:
+  pay:
+    mock-enabled: true          # true=模拟, false=真微信SDK
+    app-id: ${WX_PAY_APP_ID:}
+    mch-id: ${WX_PAY_MCH_ID:}
+    api-v3-key: ${WX_PAY_API_V3_KEY:}
+    cert-serial-no: ${WX_PAY_CERT_SERIAL_NO:}
+    private-key-path: ${WX_PAY_PRIVATE_KEY_PATH:}
+    notify-url: ${WX_PAY_NOTIFY_URL:https://your-domain.com/api/miniapp/pay/notify/wx}
+
+alipay:
+  mock-enabled: true            # true=模拟, false=真支付宝SDK
+  app-id: ${ALIPAY_APP_ID:}
+  private-key: ${ALIPAY_PRIVATE_KEY:}
+  alipay-public-key: ${ALIPAY_PUBLIC_KEY:}
+  gateway-url: ${ALIPAY_GATEWAY:https://openapi.alipay.com/gateway.do}
+  notify-url: ${ALIPAY_NOTIFY_URL:https://your-domain.com/api/miniapp/pay/notify/alipay}
+
+unionpay:
+  mock-enabled: true            # true=模拟, false=真云闪付SDK
+  app-id: ${UNIONPAY_APP_ID:}
+  mer-id: ${UNIONPAY_MER_ID:}
+  private-key: ${UNIONPAY_PRIVATE_KEY:}
+  public-key: ${UNIONPAY_PUBLIC_KEY:}
+  gateway-url: ${UNIONPAY_GATEWAY:https://gateway.95516.com}
+
+pay:
+  channel:
+    mock-enabled: true          # 收费台扫码支付开关

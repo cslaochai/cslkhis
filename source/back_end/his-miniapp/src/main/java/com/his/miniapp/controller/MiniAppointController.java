@@ -38,8 +38,6 @@ public class MiniAppointController {
     @Operation(summary = "患者挂号（新增；预约池扣号）")
     @PostMapping("/upsert")
     public Result<BizAppointInfoListVO> upsert(@RequestBody @Valid AppointUpsertDTO upsertDTO) {
-        // 患者端只能给绑定关系内的就诊人挂号；registSource 由前端固定传 4（预约池），
-        // 这里再兜一道：改成其他来源就是"线上渠道抢现场号"
         if (patientGuardianService.patientScopeViolated(upsertDTO.getPatientId())) {
             return Result.error("无权为该就诊人挂号");
         }

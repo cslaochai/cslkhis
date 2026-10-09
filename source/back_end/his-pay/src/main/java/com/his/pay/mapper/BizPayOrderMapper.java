@@ -1,7 +1,7 @@
-package com.his.miniapp.mapper;
+package com.his.pay.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.his.miniapp.entity.BizPayOrder;
+import com.his.pay.entity.BizPayOrder;
 import org.apache.ibatis.annotations.Mapper;
 
 /**

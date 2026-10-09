@@ -21,6 +21,7 @@ import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
+import com.his.pay.service.ChargePayChannelService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -74,6 +75,8 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
 
     private final InsuranceSettlementService insuranceSettlementService;
 
+    private final ChargePayChannelService chargePayChannelService;
+
     private static List<BizPaymentTxnVO> toVOList(List<BizPaymentTxn> txns) {
         List<BizPaymentTxnVO> records = new ArrayList<>(txns.size());
         for (BizPaymentTxn txn : txns) {
@@ -97,6 +100,21 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         }
         if (source.refundKind()) {
             throw new BusinessException("收款流水的来源不能是退费类");
+        }
+
+        // 幂等保护：同一账单 + 同一支付方式 + 相同金额，1分钟内不允许重复提交
+        for (BillPayDTO.PayItem item : dto.getItems()) {
+            PaymentMethodEnum payMethod = PaymentMethodEnum.getByCode(item.getPayMethod());
+            if (payMethod != null && payMethod.channelBacked() && TextUtil.hasText(item.getAuthCode())) {
+                long duplicateCount = this.count(new LambdaQueryWrapper<BizPaymentTxn>()
+                        .eq(BizPaymentTxn::getBillId, dto.getBillId())
+                        .eq(BizPaymentTxn::getPayMethod, item.getPayMethod())
+                        .eq(BizPaymentTxn::getAmount, NumUtil.scale(item.getAmount(), AMOUNT_SCALE))
+                        .ge(BizPaymentTxn::getTxnTime, LocalDateTime.now().minusMinutes(1)));
+                if (duplicateCount > 0) {
+                    throw new BusinessException("该账单在1分钟内已有相同支付方式的收款记录，请勿重复提交");
+                }
+            }
         }
 
         BigDecimal remaining = NumUtil.scale(bill.getPayableAmount()
@@ -495,6 +513,23 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         if (amount.signum() <= 0) {
             throw new BusinessException("收款金额必须大于 0");
         }
+
+        // 扫码支付：调真实渠道
+        String channelTxnNo = item.getChannelTxnNo();
+        if (payMethod.channelBacked() && TextUtil.hasText(item.getAuthCode())) {
+            ChargePayChannelService.PayResult result = chargePayChannelService.microPay(
+                    item.getAuthCode(),
+                    bill.getBillNo(),
+                    amount,
+                    "门诊缴费-" + bill.getBillNo(),
+                    payMethod.getCode() == 2 ? 1 : 2  // 2-微信→channel=1, 3-支付宝→channel=2
+            );
+            if (!result.success()) {
+                throw new BusinessException("支付失败: " + result.errMsg());
+            }
+            channelTxnNo = result.channelTxnNo();
+        }
+
         String txnNo = redisSequenceService.generatePayTxnNo();
         BizFundAccountTxn accountTxn = null;
         if (payMethod == PaymentMethodEnum.BALANCE) {
@@ -515,7 +550,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         txn.setAmount(amount);
         txn.setTxnStatus(PayTxnStatusEnum.SUCCESS.getCode());
         txn.setSourceType(source.getCode());
-        txn.setChannelTxnNo(TextUtil.cut(channelNoOf(payMethod, accountTxn, item.getChannelTxnNo(), txn), W_CHANNEL_TXN_NO));
+        txn.setChannelTxnNo(TextUtil.cut(channelNoOf(payMethod, accountTxn, channelTxnNo, txn), W_CHANNEL_TXN_NO));
         txn.setCashierId(currentCashier());
         txn.setCashierName(UserUtils.getCurrentUser().getRealName());
         txn.setTxnTime(LocalDateTime.now());

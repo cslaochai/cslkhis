@@ -51,9 +51,14 @@ public class BillPayDTO {
         private BigDecimal amount;
 
         /**
-         * 渠道流水号
+         * 渠道流水号（支付成功时由渠道返回，前端可传也可空）
          */
         private String channelTxnNo;
+
+        /**
+         * 付款码（扫码支付时必填：微信/支付宝扫患者手机上的付款码得到的字符串）
+         */
+        private String authCode;
 
         private Long ownerId;
 

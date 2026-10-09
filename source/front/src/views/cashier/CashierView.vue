@@ -450,14 +450,6 @@ const billStatusTag = (status: any) =>
 
 <template>
   <div class="space-y-4">
-    <div>
-      <h1 class="text-xl font-semibold text-slate-900">收费结算窗口</h1>
-      <p class="mt-1 text-sm text-slate-500">
-        按四层走：勾选待结算的<b>记账行</b> → 试算出<b>账单</b>（应收 / 优惠 / 统筹 / 应缴）→ 一笔一行<b>收款</b>（可多渠道组合）→ 需要时<b>出票</b>或<b>退费</b>。
-        统筹不是支付方式，不进现金清点；是否付清由支付流水比出来，页面不翻状态。
-      </p>
-    </div>
-
     <el-card shadow="never">
       <div class="flex flex-wrap items-center gap-3">
         <el-radio-group v-model="encounterType" @change="switchEncounterType">
@@ -473,7 +465,6 @@ const billStatusTag = (status: any) =>
         />
         <el-button type="primary" :icon="Search" data-testid="cash-search" @click="handleSearch">查询</el-button>
         <el-button :icon="Refresh" @click="handleReset">重置</el-button>
-        <span class="text-xs text-slate-400">待出账 = 还没结算的应收；未收账单 = 已出账但钱没收齐</span>
       </div>
     </el-card>
 
@@ -550,9 +541,6 @@ const billStatusTag = (status: any) =>
         <!-- 待结算记账行 -->
         <div>
           <div class="mb-2 flex items-center justify-between">
-            <h4 class="text-sm font-bold text-slate-700">
-              待结算记账行（L1 应收净额，含红冲负行）
-            </h4>
             <span class="text-sm text-slate-500">
               全部 ¥{{ money(feeTotal) }} · 已勾选 <b class="text-slate-900">{{ selectedFees.length }}</b> 行
               ¥{{ money(selectedTotal) }}
@@ -636,7 +624,6 @@ const billStatusTag = (status: any) =>
             >
               确认出账
             </el-button>
-            <span class="text-xs text-slate-400">优惠只放院内抹零，医保统筹走 split，绝不互相借用</span>
           </div>
 
           <div v-if="preview" class="mt-3 space-y-2" data-testid="cash-preview-result">
