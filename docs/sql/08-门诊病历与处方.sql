@@ -1,5 +1,5 @@
 -- 领域：08-门诊病历与处方
--- 库：hn_biz_his    表数：18
+-- 库：hn_biz_his    表数：19
 -- 说明：DDL 快照（由线上库 SHOW CREATE TABLE 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
 
 -- ----------------------------
@@ -300,13 +300,13 @@ CREATE TABLE `biz_prescription_audit_log` (
   KEY `idx_pal_record` (`record_id`),
   KEY `idx_pal_rx` (`prescription_id`),
   KEY `idx_pal_no` (`prescription_no`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='处方审方流水';
+) ENGINE=InnoDB AUTO_INCREMENT=220 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='处方审方流水';
 
 -- ----------------------------
 -- biz_rx_flow  处方流转单
 -- ----------------------------
 CREATE TABLE `biz_rx_flow` (
-  `id` bigint NOT NULL COMMENT '主键',
+  `id` bigint NOT NULL COMMENT '主键（雪花）',
   `flow_no` varchar(32) NOT NULL COMMENT '流转单号',
   `prescription_id` bigint NOT NULL COMMENT '处方ID',
   `prescription_no` varchar(64) NOT NULL COMMENT '处方号',
@@ -318,7 +318,7 @@ CREATE TABLE `biz_rx_flow` (
   `flow_status` tinyint NOT NULL DEFAULT '1' COMMENT '流转状态（1-已流转 2-已取药 3-已取消）',
   `flow_time` datetime DEFAULT NULL COMMENT '流转时间',
   `finish_time` datetime DEFAULT NULL COMMENT '完成/取消时间',
-  `total_amount` decimal(10,2) DEFAULT NULL COMMENT '处方总金额',
+  `total_amount` decimal(10,2) DEFAULT NULL COMMENT '处方总金额（快照）',
   `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) DEFAULT NULL COMMENT '备注',
   `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
@@ -364,15 +364,15 @@ CREATE TABLE `biz_rx_review_item` (
   `batch_id` bigint NOT NULL COMMENT '批次ID',
   `batch_no` varchar(32) NOT NULL COMMENT '批次号',
   `prescription_id` bigint NOT NULL COMMENT '处方ID',
-  `prescription_no` varchar(32) NOT NULL COMMENT '处方号',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
-  `dept_name` varchar(100) NOT NULL COMMENT '开方科室',
-  `doctor_id` bigint NOT NULL COMMENT '开方医生ID',
-  `doctor_name` varchar(50) NOT NULL COMMENT '开方医生姓名',
+  `prescription_no` varchar(32) NOT NULL COMMENT '处方号（快照）',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
+  `dept_name` varchar(100) NOT NULL COMMENT '开方科室（快照）',
+  `doctor_id` bigint NOT NULL COMMENT '开方医生ID（快照）',
+  `doctor_name` varchar(50) NOT NULL COMMENT '开方医生姓名（快照）',
   `visit_date` date NOT NULL COMMENT '就诊日期',
-  `diagnosis` varchar(500) DEFAULT NULL COMMENT '诊断',
-  `drug_count` int DEFAULT '0' COMMENT '药品数量',
-  `total_amount` decimal(10,2) DEFAULT '0.00' COMMENT '处方金额',
+  `diagnosis` varchar(500) DEFAULT NULL COMMENT '诊断（快照）',
+  `drug_count` int DEFAULT '0' COMMENT '药品数量（快照）',
+  `total_amount` decimal(10,2) DEFAULT '0.00' COMMENT '处方金额（快照）',
   `prescription_type` tinyint DEFAULT '1' COMMENT '处方类型（1-西药 2-中成药 3-中药饮片）',
   `prescription_source` tinyint DEFAULT '1' COMMENT '处方来源（1-门诊 2-急诊 3-住院）',
   `review_status` tinyint NOT NULL DEFAULT '0' COMMENT '点评状态（0-待点评 1-已点评）',
@@ -405,7 +405,7 @@ CREATE TABLE `biz_rx_doctor_talk` (
   `talk_no` varchar(32) NOT NULL COMMENT '约谈编号',
   `doctor_id` bigint DEFAULT NULL COMMENT '被约谈医师ID',
   `doctor_name` varchar(50) NOT NULL COMMENT '被约谈医师姓名',
-  `dept_name` varchar(100) DEFAULT NULL COMMENT '医师所在科室',
+  `dept_name` varchar(100) DEFAULT NULL COMMENT '医师所在科室（快照）',
   `talk_type` tinyint NOT NULL DEFAULT '1' COMMENT '约谈类型（1-首次约谈 2-警告约谈 3-限制处方权 4-取消处方权 5-恢复处方权）',
   `talk_time` datetime NOT NULL COMMENT '约谈时间',
   `talker_name` varchar(50) NOT NULL COMMENT '约谈人姓名',
@@ -434,17 +434,17 @@ CREATE TABLE `biz_rx_doctor_talk` (
 -- biz_skin_test  门诊皮试记录
 -- ----------------------------
 CREATE TABLE `biz_skin_test` (
-  `id` bigint NOT NULL COMMENT '主键',
+  `id` bigint NOT NULL COMMENT '主键（雪花）',
   `test_no` varchar(32) NOT NULL COMMENT '皮试单号',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
   `drug_name` varchar(200) NOT NULL COMMENT '皮试药物名称',
   `treatment_record_id` bigint DEFAULT NULL COMMENT '来源治疗记录ID',
   `test_time` datetime NOT NULL COMMENT '皮试时间',
   `result` tinyint NOT NULL DEFAULT '0' COMMENT '判读结果（0-待判读 1-阴性 2-阳性）',
   `result_time` datetime DEFAULT NULL COMMENT '判读时间',
   `nurse_id` bigint DEFAULT NULL COMMENT '执行护士ID',
-  `nurse_name` varchar(50) DEFAULT NULL COMMENT '执行护士姓名',
+  `nurse_name` varchar(50) DEFAULT NULL COMMENT '执行护士姓名（快照）',
   `create_by` varchar(64) DEFAULT NULL,
   `create_time` datetime DEFAULT NULL,
   `update_by` varchar(64) DEFAULT NULL,
@@ -459,24 +459,24 @@ CREATE TABLE `biz_skin_test` (
 -- biz_tcm_decoct  中药代煎单
 -- ----------------------------
 CREATE TABLE `biz_tcm_decoct` (
-  `id` bigint NOT NULL COMMENT '主键ID',
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `decoct_no` varchar(32) NOT NULL COMMENT '代煎单号',
   `prescription_id` bigint NOT NULL COMMENT '处方ID',
   `prescription_no` varchar(32) NOT NULL COMMENT '处方号',
-  `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) DEFAULT NULL COMMENT '患者号',
-  `patient_name` varchar(50) DEFAULT NULL COMMENT '患者姓名',
+  `patient_id` bigint NOT NULL COMMENT '患者ID（快照）',
+  `patient_no` varchar(32) DEFAULT NULL COMMENT '患者号（快照）',
+  `patient_name` varchar(50) DEFAULT NULL COMMENT '患者姓名（快照）',
   `dept_name` varchar(100) DEFAULT NULL COMMENT '开方科室',
-  `doctor_name` varchar(50) DEFAULT NULL COMMENT '开方医师',
+  `doctor_name` varchar(50) DEFAULT NULL COMMENT '开方医师（快照）',
   `dose_count` int NOT NULL DEFAULT '1' COMMENT '剂数',
   `herb_count` int NOT NULL DEFAULT '0' COMMENT '味数',
   `total_grams` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '全方总克数',
   `method_summary` varchar(500) DEFAULT NULL COMMENT '煎法脚注汇总',
   `decoct_status` tinyint NOT NULL DEFAULT '1' COMMENT '状态（1-待煎 2-已煎 3-已取 9-已作废）',
   `pharmacy_id` bigint DEFAULT NULL COMMENT '代煎药房ID',
-  `pharmacy_name` varchar(100) DEFAULT NULL COMMENT '代煎药房名称',
+  `pharmacy_name` varchar(100) DEFAULT NULL COMMENT '代煎药房名称（快照）',
   `operator_id` bigint DEFAULT NULL COMMENT '最近一次状态操作人',
-  `operator_name` varchar(64) DEFAULT NULL COMMENT '最近一次状态操作人姓名',
+  `operator_name` varchar(64) DEFAULT NULL COMMENT '最近一次状态操作人姓名（快照）',
   `decoct_time` datetime DEFAULT NULL COMMENT '煎药完成时间',
   `pickup_time` datetime DEFAULT NULL COMMENT '患者取走时间（终态）',
   `cancel_reason` varchar(200) DEFAULT NULL COMMENT '作废原因',
@@ -559,17 +559,17 @@ CREATE TABLE `biz_narcotic_register` (
 -- biz_outp_infusion  门诊输液单
 -- ----------------------------
 CREATE TABLE `biz_outp_infusion` (
-  `id` bigint NOT NULL COMMENT '主键',
+  `id` bigint NOT NULL COMMENT '主键（雪花）',
   `infusion_no` varchar(32) NOT NULL COMMENT '输液单号',
   `treatment_record_id` bigint DEFAULT NULL COMMENT '来源治疗记录ID',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) DEFAULT NULL COMMENT '患者编号',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
-  `gender` tinyint DEFAULT NULL COMMENT '性别',
-  `age` int DEFAULT NULL COMMENT '年龄',
+  `patient_no` varchar(32) DEFAULT NULL COMMENT '患者编号（快照）',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
+  `gender` tinyint DEFAULT NULL COMMENT '性别（快照）',
+  `age` int DEFAULT NULL COMMENT '年龄（快照）',
   `drug_summary` varchar(500) DEFAULT NULL COMMENT '输注内容摘要',
   `seat_id` bigint DEFAULT NULL COMMENT '座位ID',
-  `seat_no` varchar(32) DEFAULT NULL COMMENT '座位号',
+  `seat_no` varchar(32) DEFAULT NULL COMMENT '座位号（快照）',
   `skin_test_id` bigint DEFAULT NULL COMMENT '皮试记录ID',
   `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态（1-待皮试 2-待输注 3-输液中 4-已完成 5-已取消）',
   `start_time` datetime DEFAULT NULL COMMENT '开始输注时间',
@@ -578,7 +578,7 @@ CREATE TABLE `biz_outp_infusion` (
   `adverse_flag` tinyint NOT NULL DEFAULT '0' COMMENT '不良反应（0-无 1-有）',
   `adverse_desc` varchar(500) DEFAULT NULL COMMENT '不良反应描述',
   `nurse_id` bigint DEFAULT NULL COMMENT '责任护士ID',
-  `nurse_name` varchar(50) DEFAULT NULL COMMENT '责任护士姓名',
+  `nurse_name` varchar(50) DEFAULT NULL COMMENT '责任护士姓名（快照）',
   `cancel_reason` varchar(500) DEFAULT NULL COMMENT '取消原因',
   `create_by` varchar(64) DEFAULT NULL,
   `create_time` datetime DEFAULT NULL,
@@ -594,13 +594,13 @@ CREATE TABLE `biz_outp_infusion` (
 -- biz_outp_infusion_round  门诊输液巡视记录
 -- ----------------------------
 CREATE TABLE `biz_outp_infusion_round` (
-  `id` bigint NOT NULL COMMENT '主键',
+  `id` bigint NOT NULL COMMENT '主键（雪花）',
   `infusion_id` bigint NOT NULL COMMENT '输液单ID',
   `round_time` datetime NOT NULL COMMENT '巡视时间',
   `drip_rate` int DEFAULT NULL COMMENT '滴速（滴/分）',
   `remaining_volume` int DEFAULT NULL COMMENT '余量（ml）',
   `nurse_id` bigint DEFAULT NULL COMMENT '巡视护士ID',
-  `nurse_name` varchar(50) DEFAULT NULL COMMENT '巡视护士姓名',
+  `nurse_name` varchar(50) DEFAULT NULL COMMENT '巡视护士姓名（快照）',
   `create_by` varchar(64) DEFAULT NULL,
   `create_time` datetime DEFAULT NULL,
   `update_by` varchar(64) DEFAULT NULL,
@@ -615,7 +615,7 @@ CREATE TABLE `biz_outp_infusion_round` (
 -- biz_infusion_round  输液巡视记录
 -- ----------------------------
 CREATE TABLE `biz_infusion_round` (
-  `id` bigint NOT NULL COMMENT '主键ID',
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `exec_id` bigint NOT NULL COMMENT '执行行ID',
   `order_id` bigint NOT NULL COMMENT '医嘱ID（冗余）',
   `admission_id` bigint NOT NULL COMMENT '入院ID（冗余）',
@@ -634,3 +634,32 @@ CREATE TABLE `biz_infusion_round` (
   KEY `idx_exec` (`exec_id`),
   KEY `idx_adm` (`admission_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='输液巡视记录';
+
+-- ----------------------------
+-- biz_ai_draft_diff  病历草稿AI留痕（草稿与终稿差异，SFT训练原料）
+-- ----------------------------
+CREATE TABLE `biz_ai_draft_diff` (
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
+  `record_id` bigint NOT NULL COMMENT '病历ID',
+  `regist_id` bigint DEFAULT NULL COMMENT '挂号ID',
+  `patient_id` bigint DEFAULT NULL COMMENT '患者ID',
+  `patient_no` varchar(50) DEFAULT '' COMMENT '患者号',
+  `patient_name` varchar(50) DEFAULT '' COMMENT '患者姓名',
+  `dept_id` bigint DEFAULT NULL COMMENT '接诊科室ID',
+  `dept_name` varchar(50) DEFAULT '' COMMENT '接诊科室名称',
+  `doctor_id` bigint DEFAULT NULL COMMENT '终审医生ID',
+  `doctor_name` varchar(50) DEFAULT '' COMMENT '终审医生姓名',
+  `draft_text` text COMMENT 'AI草稿原文（截断2000字）',
+  `final_text` text COMMENT '医生终稿（截断2000字）',
+  `diff_json` mediumtext COMMENT '差异分段JSON（0-相同 1-删 2-增）',
+  `changed` tinyint DEFAULT '1' COMMENT '是否修改（1-有修改 0-未修改）',
+  `create_by` varchar(64) DEFAULT '' COMMENT '创建人',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT '' COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT '' COMMENT '备注',
+  PRIMARY KEY (`id`),
+  KEY `idx_record` (`record_id`),
+  KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='病历草稿AI留痕（草稿与终稿差异，SFT训练原料）';

@@ -1,5 +1,5 @@
 -- 领域：16-急诊与全院总值班
--- 库：hn_biz_his    表数：5
+-- 库：hn_biz_his    表数：6
 -- 说明：DDL 快照（由线上库 SHOW CREATE TABLE 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
 
 -- ----------------------------
@@ -62,9 +62,9 @@ CREATE TABLE `biz_emergency_handover` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `handover_no` varchar(32) NOT NULL COMMENT '交班单号',
   `dept_id` bigint NOT NULL COMMENT '交班科室ID',
-  `dept_name` varchar(100) NOT NULL COMMENT '交班科室名称',
+  `dept_name` varchar(100) NOT NULL COMMENT '交班科室名称（快照）',
   `from_emp_id` bigint NOT NULL COMMENT '交出人员工ID',
-  `from_emp_name` varchar(50) NOT NULL COMMENT '交出人姓名',
+  `from_emp_name` varchar(50) NOT NULL COMMENT '交出人姓名（快照）',
   `take_emp_id` bigint NOT NULL COMMENT '接班人员工ID',
   `take_emp_name` varchar(50) NOT NULL COMMENT '接班人姓名',
   `shift_name` varchar(32) DEFAULT NULL COMMENT '班次名',
@@ -94,15 +94,15 @@ CREATE TABLE `biz_emergency_handover_item` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `handover_id` bigint NOT NULL COMMENT '交班单ID',
   `emergency_id` bigint NOT NULL COMMENT '急诊记录ID',
-  `emergency_no` varchar(32) NOT NULL COMMENT '急诊号',
+  `emergency_no` varchar(32) NOT NULL COMMENT '急诊号（快照）',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
   `triage_level` tinyint DEFAULT NULL COMMENT '分诊级别',
   `emergency_status` tinyint NOT NULL COMMENT '交班时该患者的急诊状态（1-候诊 2-诊治中 3-留观）',
   `from_doctor_id` bigint DEFAULT NULL COMMENT '交班时的负责医生ID',
-  `from_doctor_name` varchar(50) DEFAULT NULL COMMENT '交班时的负责医生姓名',
+  `from_doctor_name` varchar(50) DEFAULT NULL COMMENT '交班时的负责医生姓名（快照）',
   `take_doctor_id` bigint NOT NULL COMMENT '接续责任人',
-  `take_doctor_name` varchar(50) NOT NULL COMMENT '接续责任人姓名',
+  `take_doctor_name` varchar(50) NOT NULL COMMENT '接续责任人姓名（快照）',
   `disposition` varchar(100) NOT NULL COMMENT '去向/处置交代',
   `handover_note` varchar(300) DEFAULT NULL COMMENT '逐条补充交代（过敏史/管路/家属联系方式等，截到 300）',
   `wait_minutes` bigint DEFAULT NULL COMMENT '候诊已等多久',
@@ -131,13 +131,13 @@ CREATE TABLE `biz_duty_roster` (
   `employee_id` bigint NOT NULL COMMENT '值班人',
   `employee_name` varchar(50) DEFAULT NULL COMMENT '值班人姓名',
   `dept_id` bigint DEFAULT NULL COMMENT '值班人原属科室ID',
-  `dept_name` varchar(100) DEFAULT NULL COMMENT '值班人原属科室名称',
+  `dept_name` varchar(100) DEFAULT NULL COMMENT '值班人原属科室名称（快照）',
   `phone` varchar(32) DEFAULT NULL COMMENT '值班联系电话',
   `start_time` varchar(5) DEFAULT NULL COMMENT '班次开始时间（HH:mm）',
   `end_time` varchar(5) DEFAULT NULL COMMENT '班次结束时间（HH:mm）',
   `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态（1-有效 0-停用）',
   `substitute_emp_id` bigint DEFAULT NULL COMMENT '临时换班后的实际值班人',
-  `substitute_emp_name` varchar(50) DEFAULT NULL COMMENT '换班后实际值班人姓名',
+  `substitute_emp_name` varchar(50) DEFAULT NULL COMMENT '换班后实际值班人姓名（快照）',
   `substitute_time` datetime DEFAULT NULL COMMENT '换班时间',
   `substitute_reason` varchar(200) DEFAULT NULL COMMENT '换班原因',
   `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
@@ -146,8 +146,11 @@ CREATE TABLE `biz_duty_roster` (
   `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  `shift_id` bigint DEFAULT NULL COMMENT '标准班次ID',
+  `post_id` bigint DEFAULT NULL COMMENT '值班点位ID',
+  `staff_schedule_id` bigint DEFAULT NULL COMMENT '员工排班ID',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_duty_date_shift_role` (`duty_date`,`shift_type`,`role_type`),
+  UNIQUE KEY `uk_duty_post_date` (`post_id`,`duty_date`),
   KEY `idx_duty_date` (`duty_date`),
   KEY `idx_duty_emp` (`employee_id`),
   KEY `idx_duty_sub` (`substitute_emp_id`)
@@ -162,7 +165,7 @@ CREATE TABLE `biz_duty_log` (
   `shift_type` tinyint NOT NULL COMMENT '班次 1-白班 2-夜班（1-白班 2-夜班）',
   `roster_id` bigint DEFAULT NULL COMMENT '所属排班行 biz_duty_roster.id',
   `employee_id` bigint NOT NULL COMMENT '值班人',
-  `employee_name` varchar(64) DEFAULT NULL COMMENT '值班人姓名',
+  `employee_name` varchar(64) DEFAULT NULL COMMENT '值班人姓名（快照）',
   `log_type` tinyint NOT NULL DEFAULT '1' COMMENT '记录类型 1-值班事件 2-遗留事项 3-巡查记录（1-值班事件 2-遗留事项 3-巡查记录）',
   `happen_time` datetime DEFAULT NULL COMMENT '事件发生时间',
   `title` varchar(200) NOT NULL COMMENT '标题',
@@ -170,7 +173,7 @@ CREATE TABLE `biz_duty_log` (
   `handle_result` varchar(1000) DEFAULT NULL COMMENT '处理情况',
   `status` tinyint NOT NULL DEFAULT '0' COMMENT '状态 0-待处理 1-已处理 2-已交班（0-待处理 1-已处理 2-已交班）',
   `handover_emp_id` bigint DEFAULT NULL COMMENT '接班人',
-  `handover_emp_name` varchar(64) DEFAULT NULL COMMENT '接班人姓名',
+  `handover_emp_name` varchar(64) DEFAULT NULL COMMENT '接班人姓名（快照）',
   `handover_time` datetime DEFAULT NULL COMMENT '交班时间',
   `ack_time` datetime DEFAULT NULL COMMENT '接班人签收时间',
   `create_by` varchar(64) DEFAULT NULL COMMENT '记录人',
@@ -184,3 +187,32 @@ CREATE TABLE `biz_duty_log` (
   KEY `idx_log_emp` (`employee_id`),
   KEY `idx_log_handover` (`handover_emp_id`,`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='总值班值班日志';
+
+-- ----------------------------
+-- biz_duty_post  值班点位
+-- ----------------------------
+CREATE TABLE `biz_duty_post` (
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
+  `post_code` varchar(32) NOT NULL COMMENT '点位编码',
+  `post_name` varchar(64) NOT NULL COMMENT '点位名称',
+  `duty_scope` tinyint NOT NULL DEFAULT '1' COMMENT '责任范围（1-全院行政 2-急诊 3-感染 4-总务 5-信息）',
+  `org_type` tinyint NOT NULL DEFAULT '3' COMMENT '排班单元类型（1-科室 2-病区 3-全院）',
+  `org_id` bigint NOT NULL DEFAULT '0' COMMENT '排班单元ID（全院级为0）',
+  `role_type` tinyint NOT NULL DEFAULT '1' COMMENT '班内角色（1-主班 2-副班）',
+  `duty_level` tinyint NOT NULL DEFAULT '0' COMMENT '值班层级（0-不适用 1-一线 2-二线 3-三线）',
+  `attend_mode` tinyint NOT NULL DEFAULT '3' COMMENT '响应形态（1-坐班 2-听班 3-留院值班）',
+  `shift_id` bigint NOT NULL COMMENT '标准班次ID',
+  `required_staff_type` tinyint DEFAULT NULL COMMENT '应到岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他，空-不限）',
+  `phone` varchar(32) DEFAULT NULL COMMENT '点位值班电话',
+  `sort_no` int NOT NULL DEFAULT '0' COMMENT '排序号',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态（0-停用 1-启用）',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_duty_post_code` (`post_code`),
+  KEY `idx_duty_post_org` (`org_type`,`org_id`,`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='值班点位';

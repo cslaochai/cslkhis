@@ -1,5 +1,5 @@
 -- 领域：12-检验LIS（申请·结果·质控·室间质评）
--- 库：hn_biz_his    表数：10
+-- 库：hn_biz_his    表数：11
 -- 说明：DDL 快照（由线上库 SHOW CREATE TABLE 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
 
 -- ----------------------------
@@ -418,3 +418,27 @@ CREATE TABLE `biz_lis_eqa_compare` (
   KEY `idx_plan_id` (`plan_id`),
   KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='室间质评仪器间比对';
+
+-- ----------------------------
+-- sys_lab_plain_item  检验项目白话词典（患者端报告解读的规则层地基，人工维护）
+-- ----------------------------
+CREATE TABLE `sys_lab_plain_item` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `group_name` varchar(32) NOT NULL COMMENT '所属分组（血常规/肝功能/肾功能/血糖/血脂/炎症/凝血/心肌/电解质/尿常规/大便）',
+  `item_name` varchar(64) NOT NULL COMMENT '检验项目名称（与 biz_lab_result.laboratory_item_name 精确匹配）',
+  `plain_name` varchar(64) NOT NULL COMMENT '白话名（如：血色素、坏胆固醇、心肌损伤指标）',
+  `what_is_it` varchar(200) NOT NULL COMMENT '这项查什么（给患者看的一句话，不含诊断/用药）',
+  `high_text` varchar(200) NOT NULL COMMENT '结果偏高时的白话说明',
+  `low_text` varchar(200) NOT NULL COMMENT '结果偏低时的白话说明',
+  `status` tinyint DEFAULT '1' COMMENT '状态（0-停用 1-启用）',
+  `sort_order` int DEFAULT '0' COMMENT '排序号',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_item_name` (`item_name`),
+  KEY `idx_group_status` (`group_name`,`status`,`del_flag`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='检验项目白话词典（患者端报告解读的规则层地基，人工维护）';

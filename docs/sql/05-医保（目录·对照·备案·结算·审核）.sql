@@ -6,7 +6,7 @@
 -- biz_yb_catalog  国家医保目录
 -- ----------------------------
 CREATE TABLE `biz_yb_catalog` (
-  `id` bigint NOT NULL COMMENT '主键',
+  `id` bigint NOT NULL COMMENT '主键（雪花）',
   `catalog_type` tinyint NOT NULL COMMENT '目录类型（1-西药 2-中药饮片 3-医疗服务项目 4-医用耗材）',
   `yb_code` varchar(64) NOT NULL COMMENT '国家医保编码',
   `yb_name` varchar(200) NOT NULL COMMENT '目录名称',
@@ -33,7 +33,7 @@ CREATE TABLE `biz_yb_catalog` (
 -- biz_yb_mapping  医保目录对照
 -- ----------------------------
 CREATE TABLE `biz_yb_mapping` (
-  `id` bigint NOT NULL COMMENT '主键',
+  `id` bigint NOT NULL COMMENT '主键（雪花）',
   `item_type` tinyint NOT NULL COMMENT '院内项目类型（1-药品 2-诊疗项目 3-检验项目 4-耗材）',
   `item_id` bigint NOT NULL COMMENT '院内项目ID',
   `item_code` varchar(32) NOT NULL COMMENT '院内项目编码',
@@ -200,7 +200,7 @@ CREATE TABLE `biz_yb_deduct_log` (
   `operate_time` datetime NOT NULL COMMENT '操作时间',
   PRIMARY KEY (`id`),
   KEY `idx_log_notice` (`notice_id`,`operate_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='医保扣款处理留痕';
+) ENGINE=InnoDB AUTO_INCREMENT=89 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='医保扣款处理留痕';
 
 -- ----------------------------
 -- biz_yb_inspection  医保飞检批次
@@ -250,13 +250,13 @@ CREATE TABLE `sys_insurance_policy` (
   PRIMARY KEY (`id`),
   KEY `idx_settlement_type` (`settlement_type`),
   KEY `idx_insurance_type` (`insurance_type`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='医保政策配置';
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='医保政策配置';
 
 -- ----------------------------
 -- biz_insurance_catalog_rule  医保目录报销规则
 -- ----------------------------
 CREATE TABLE `biz_insurance_catalog_rule` (
-  `id` bigint NOT NULL COMMENT '主键',
+  `id` bigint NOT NULL COMMENT '主键（雪花）',
   `rule_no` varchar(32) NOT NULL COMMENT '规则编号',
   `item_code` varchar(32) NOT NULL COMMENT '项目编码',
   `item_name` varchar(200) DEFAULT NULL COMMENT '项目名称',
@@ -402,7 +402,7 @@ CREATE TABLE `biz_settlement_operation` (
 -- biz_insurance_report  医保报盘报文台账
 -- ----------------------------
 CREATE TABLE `biz_insurance_report` (
-  `id` bigint NOT NULL COMMENT '主键',
+  `id` bigint NOT NULL COMMENT '主键（雪花）',
   `settlement_id` bigint NOT NULL COMMENT '医保结算清单ID',
   `settlement_no` varchar(64) DEFAULT NULL COMMENT '结算清单号',
   `report_type` tinyint NOT NULL COMMENT '报文类型（1-上传 2-撤销）',

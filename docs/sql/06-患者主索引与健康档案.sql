@@ -260,14 +260,14 @@ CREATE TABLE `biz_patient_guardian` (
 -- biz_patient_merge_log  患者合并审计
 -- ----------------------------
 CREATE TABLE `biz_patient_merge_log` (
-  `id` bigint NOT NULL COMMENT '主键ID',
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `merge_no` varchar(32) NOT NULL COMMENT '合并流水号',
   `master_id` bigint NOT NULL COMMENT '主档患者ID',
-  `master_no` varchar(32) DEFAULT NULL COMMENT '主档患者号',
-  `master_name` varchar(50) DEFAULT NULL COMMENT '主档姓名',
+  `master_no` varchar(32) DEFAULT NULL COMMENT '主档患者号（快照）',
+  `master_name` varchar(50) DEFAULT NULL COMMENT '主档姓名（快照）',
   `merged_id` bigint NOT NULL COMMENT '被并入的患者ID',
-  `merged_no` varchar(32) DEFAULT NULL COMMENT '被并患者号',
-  `merged_name` varchar(50) DEFAULT NULL COMMENT '被并姓名',
+  `merged_no` varchar(32) DEFAULT NULL COMMENT '被并患者号（快照）',
+  `merged_name` varchar(50) DEFAULT NULL COMMENT '被并姓名（快照）',
   `match_type` tinyint NOT NULL COMMENT '匹配置信级别(强)（1-身份证号相同 2-姓名+性别+出生日期相同 3-姓名+手机号相同 4-人工判定）',
   `match_snapshot` varchar(500) DEFAULT NULL COMMENT '命中依据的字段值快照',
   `master_snapshot` varchar(1000) DEFAULT NULL COMMENT '主档关键字段快照 JSON',
@@ -316,7 +316,7 @@ CREATE TABLE `biz_visit` (
 -- biz_chronic_record  慢病建档
 -- ----------------------------
 CREATE TABLE `biz_chronic_record` (
-  `id` bigint NOT NULL COMMENT '主键',
+  `id` bigint NOT NULL COMMENT '主键（雪花）',
   `record_no` varchar(32) NOT NULL COMMENT '档案编号',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
   `patient_no` varchar(32) NOT NULL COMMENT '患者号',

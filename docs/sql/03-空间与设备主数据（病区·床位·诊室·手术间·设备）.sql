@@ -66,7 +66,7 @@ CREATE TABLE `sys_clinic_room` (
 -- sys_operation_room  手术间
 -- ----------------------------
 CREATE TABLE `sys_operation_room` (
-  `id` bigint NOT NULL COMMENT '主键ID',
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `room_code` varchar(32) NOT NULL COMMENT '手术间编码',
   `room_name` varchar(64) NOT NULL COMMENT '手术间名称',
   `location` varchar(200) DEFAULT NULL COMMENT '位置',
@@ -116,8 +116,8 @@ CREATE TABLE `sys_equipment` (
 CREATE TABLE `biz_equipment_maintain` (
   `id` bigint NOT NULL COMMENT '维保记录ID',
   `equipment_id` bigint NOT NULL COMMENT '设备ID',
-  `equipment_code` varchar(32) DEFAULT NULL COMMENT '设备编码',
-  `equipment_name` varchar(200) DEFAULT NULL COMMENT '设备名称',
+  `equipment_code` varchar(32) DEFAULT NULL COMMENT '设备编码（快照）',
+  `equipment_name` varchar(200) DEFAULT NULL COMMENT '设备名称（快照）',
   `maintain_type` tinyint NOT NULL COMMENT '维保类型（1-保养 2-维修 3-巡检）',
   `maintain_date` date NOT NULL COMMENT '维保日期',
   `next_maintain_date` date DEFAULT NULL COMMENT '下次维保日期',
@@ -142,8 +142,8 @@ CREATE TABLE `biz_equipment_maintain` (
 CREATE TABLE `biz_equipment_metering` (
   `id` bigint NOT NULL COMMENT '计量记录ID',
   `equipment_id` bigint NOT NULL COMMENT '设备ID',
-  `equipment_code` varchar(32) DEFAULT NULL COMMENT '设备编码',
-  `equipment_name` varchar(200) DEFAULT NULL COMMENT '设备名称',
+  `equipment_code` varchar(32) DEFAULT NULL COMMENT '设备编码（快照）',
+  `equipment_name` varchar(200) DEFAULT NULL COMMENT '设备名称（快照）',
   `metering_type` tinyint NOT NULL COMMENT '计量类型（1-强检 2-校准）',
   `metering_date` date NOT NULL COMMENT '计量日期',
   `valid_until` date NOT NULL COMMENT '有效期至',
@@ -164,7 +164,7 @@ CREATE TABLE `biz_equipment_metering` (
 -- biz_infusion_seat  输液室座位
 -- ----------------------------
 CREATE TABLE `biz_infusion_seat` (
-  `id` bigint NOT NULL COMMENT '主键',
+  `id` bigint NOT NULL COMMENT '主键（雪花）',
   `seat_no` varchar(32) NOT NULL COMMENT '座位号',
   `area` varchar(50) NOT NULL DEFAULT '普通区' COMMENT '区域（成人区/儿童区/隔离区等）',
   `seat_status` tinyint NOT NULL DEFAULT '1' COMMENT '状态（1-空闲 2-占用 3-停用）',

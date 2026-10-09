@@ -77,7 +77,7 @@ CREATE TABLE `sys_drug_price_history` (
 -- sys_price_change_history  项目价格变更史
 -- ----------------------------
 CREATE TABLE `sys_price_change_history` (
-  `id` bigint NOT NULL COMMENT '主键ID',
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `item_type` varchar(20) NOT NULL COMMENT '项目类型',
   `item_id` bigint NOT NULL COMMENT '项目ID',
   `item_code` varchar(50) DEFAULT NULL COMMENT '项目编码',
@@ -331,7 +331,7 @@ CREATE TABLE `sys_patient_tag` (
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`tag_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='患者标签';
+) ENGINE=InnoDB AUTO_INCREMENT=10036 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='患者标签';
 
 -- ----------------------------
 -- sys_infectious_disease  法定传染病目录
@@ -358,7 +358,7 @@ CREATE TABLE `sys_infectious_disease` (
 -- sys_single_disease  单病种质控目录
 -- ----------------------------
 CREATE TABLE `sys_single_disease` (
-  `id` bigint NOT NULL COMMENT '主键',
+  `id` bigint NOT NULL COMMENT '主键（雪花）',
   `disease_code` varchar(32) NOT NULL COMMENT '病种编码',
   `disease_name` varchar(100) NOT NULL COMMENT '病种名称',
   `icd10_prefix` varchar(200) NOT NULL COMMENT '纳入 ICD-10 前缀',
@@ -443,24 +443,29 @@ CREATE TABLE `sys_checkup_package_item` (
 -- ----------------------------
 CREATE TABLE `biz_shift` (
   `id` bigint NOT NULL COMMENT '主键ID',
-  `shift_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '班次名称',
-  `start_time` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '开始时间（HH:mm）',
-  `end_time` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '结束时间（HH:mm）',
+  `shift_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '班次名称',
+  `start_time` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '开始时间（HH:mm）',
+  `end_time` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '结束时间（HH:mm）',
+  `cross_day` tinyint NOT NULL DEFAULT '0' COMMENT '是否跨零点（0-不跨 1-次日收）',
+  `is_night` tinyint NOT NULL DEFAULT '0' COMMENT '是否夜班（1-夜班 0-白班）：夜班流入判定与连续夜班上限的唯一依据',
+  `need_rest_hours` decimal(4,1) NOT NULL DEFAULT '0.0' COMMENT '下此班后最短休息小时数（0-不限制；夜班通例取16）',
+  `late_grace_minutes` int NOT NULL DEFAULT '15' COMMENT '迟到宽限（分钟）：签到晚于班次开始超过这个数才算迟到',
   `duration_minutes` int NOT NULL DEFAULT '0' COMMENT '时长（分钟）',
   `dept_id` bigint DEFAULT NULL COMMENT '适用科室ID',
   `schedule_type` tinyint DEFAULT NULL COMMENT '班次类型（1-上午 2-下午 3-全天 4-凌晨）',
   `use_scope` tinyint NOT NULL DEFAULT '1' COMMENT '班次适用域（1-门诊 2-病区护理排班）',
+  `apply_staff_type` tinyint DEFAULT NULL COMMENT '适用岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他，空-全部岗位通用）',
   `status` tinyint DEFAULT '1' COMMENT '状态（0-停用 1-启用）',
-  `create_by` varchar(64) COLLATE utf8mb4_general_ci DEFAULT '' COMMENT '创建人',
+  `create_by` varchar(64) DEFAULT '' COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_by` varchar(64) COLLATE utf8mb4_general_ci DEFAULT '' COMMENT '更新人',
+  `update_by` varchar(64) DEFAULT '' COMMENT '更新人',
   `update_time` datetime DEFAULT NULL COMMENT '更新时间',
   `del_flag` tinyint DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
-  `remark` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '备注',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
   PRIMARY KEY (`id`),
   KEY `idx_shift_dept` (`dept_id`),
   KEY `idx_shift_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='班次字典';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='班次字典';
 
 -- ----------------------------
 -- sys_drug_interaction  药物相互作用知识库

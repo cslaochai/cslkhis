@@ -1,5 +1,5 @@
 -- 领域：13-检查影像与报告（PACS·预约·心电·病理·内镜）
--- 库：hn_biz_his    表数：22
+-- 库：hn_biz_his    表数：23
 -- 说明：DDL 快照（由线上库 SHOW CREATE TABLE 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
 
 -- ----------------------------
@@ -279,8 +279,8 @@ CREATE TABLE `biz_exam_device_item` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `device_id` bigint NOT NULL COMMENT '设备ID',
   `item_id` bigint NOT NULL COMMENT '检查项目ID',
-  `item_code` varchar(32) DEFAULT NULL COMMENT '项目编码',
-  `item_name` varchar(200) DEFAULT NULL COMMENT '项目名称',
+  `item_code` varchar(32) DEFAULT NULL COMMENT '项目编码（快照）',
+  `item_name` varchar(200) DEFAULT NULL COMMENT '项目名称（快照）',
   `exam_minutes` int DEFAULT NULL COMMENT '该设备做该项目的时长（分钟）',
   `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -326,7 +326,7 @@ CREATE TABLE `biz_exam_appointment` (
   `appt_no` varchar(32) NOT NULL COMMENT '预约单号',
   `active_flag` tinyint DEFAULT '1' COMMENT '有效标记',
   `apply_id` bigint NOT NULL COMMENT '检查申请单ID',
-  `apply_no` varchar(32) DEFAULT NULL COMMENT '申请单号',
+  `apply_no` varchar(32) DEFAULT NULL COMMENT '申请单号（快照）',
   `prev_apply_status` tinyint DEFAULT NULL COMMENT '预约前申请状态',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
   `patient_no` varchar(32) DEFAULT NULL COMMENT '患者号',
@@ -338,16 +338,16 @@ CREATE TABLE `biz_exam_appointment` (
   `doctor_id` bigint DEFAULT NULL COMMENT '申请医生ID',
   `doctor_name` varchar(50) DEFAULT NULL COMMENT '申请医生',
   `item_id` bigint DEFAULT NULL COMMENT '检查项目ID',
-  `item_code` varchar(32) DEFAULT NULL COMMENT '项目编码',
-  `item_name` varchar(200) DEFAULT NULL COMMENT '项目名称',
-  `body_part` varchar(200) DEFAULT NULL COMMENT '检查部位',
+  `item_code` varchar(32) DEFAULT NULL COMMENT '项目编码（快照）',
+  `item_name` varchar(200) DEFAULT NULL COMMENT '项目名称（快照）',
+  `body_part` varchar(200) DEFAULT NULL COMMENT '检查部位（快照）',
   `exam_minutes` int DEFAULT NULL COMMENT '本次占用时长',
   `device_id` bigint NOT NULL COMMENT '设备ID',
-  `device_code` varchar(32) DEFAULT NULL COMMENT '设备编码',
+  `device_code` varchar(32) DEFAULT NULL COMMENT '设备编码（快照）',
   `device_name` varchar(100) DEFAULT NULL COMMENT '设备名称',
-  `exam_dept_id` bigint DEFAULT NULL COMMENT '检查科室ID',
-  `exam_dept_name` varchar(100) DEFAULT NULL COMMENT '检查科室名称',
-  `room_name` varchar(100) DEFAULT NULL COMMENT '检查室',
+  `exam_dept_id` bigint DEFAULT NULL COMMENT '检查科室ID（快照）',
+  `exam_dept_name` varchar(100) DEFAULT NULL COMMENT '检查科室名称（快照）',
+  `room_name` varchar(100) DEFAULT NULL COMMENT '检查室（快照）',
   `exam_date` date NOT NULL COMMENT '检查日期',
   `start_time` char(5) NOT NULL COMMENT '开始时间（HH:mm）',
   `end_time` char(5) NOT NULL COMMENT '结束时间（HH:mm）',
@@ -379,15 +379,15 @@ CREATE TABLE `biz_exam_appointment` (
 -- biz_exam_image  检查影像帧
 -- ----------------------------
 CREATE TABLE `biz_exam_image` (
-  `id` bigint NOT NULL COMMENT '主键ID',
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `biz_type` tinyint NOT NULL DEFAULT '1' COMMENT '影像来源单据类型',
   `apply_id` bigint NOT NULL COMMENT '申请单ID',
   `apply_no` varchar(64) DEFAULT NULL COMMENT '申请单号',
   `record_id` bigint DEFAULT NULL COMMENT '执行记录ID',
-  `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_name` varchar(64) DEFAULT NULL COMMENT '患者姓名',
+  `patient_id` bigint NOT NULL COMMENT '患者ID（快照）',
+  `patient_name` varchar(64) DEFAULT NULL COMMENT '患者姓名（快照）',
   `item_name` varchar(200) DEFAULT NULL COMMENT '检查/检验项目名称',
-  `body_part` varchar(100) DEFAULT NULL COMMENT '检查部位',
+  `body_part` varchar(100) DEFAULT NULL COMMENT '检查部位（快照）',
   `modality` tinyint DEFAULT NULL COMMENT '影像模态（1-CT 2-MR 3-DR 4-超声 5-心电 6-内镜 7-其他）',
   `seq` int NOT NULL DEFAULT '1' COMMENT '本申请单内的帧序号',
   `file_name` varchar(255) NOT NULL COMMENT '原始文件名',
@@ -410,31 +410,31 @@ CREATE TABLE `biz_exam_image` (
 -- biz_exam_film  检查胶片用量
 -- ----------------------------
 CREATE TABLE `biz_exam_film` (
-  `id` bigint NOT NULL COMMENT '主键ID',
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `film_no` varchar(32) NOT NULL COMMENT '胶片单号',
   `record_id` bigint NOT NULL COMMENT '检查记录ID',
-  `record_no` varchar(32) DEFAULT NULL COMMENT '检查记录号',
+  `record_no` varchar(32) DEFAULT NULL COMMENT '检查记录号（快照）',
   `apply_id` bigint DEFAULT NULL COMMENT '检查申请单ID',
-  `apply_no` varchar(32) DEFAULT NULL COMMENT '申请单号',
+  `apply_no` varchar(32) DEFAULT NULL COMMENT '申请单号（快照）',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) DEFAULT NULL COMMENT '患者号',
-  `patient_name` varchar(64) DEFAULT NULL COMMENT '患者姓名',
-  `visit_date` date DEFAULT NULL COMMENT '就诊日期',
-  `item_code` varchar(32) DEFAULT NULL COMMENT '检查项目编码',
-  `item_name` varchar(200) DEFAULT NULL COMMENT '检查项目名称',
-  `body_part` varchar(100) DEFAULT NULL COMMENT '检查部位',
+  `patient_no` varchar(32) DEFAULT NULL COMMENT '患者号（快照）',
+  `patient_name` varchar(64) DEFAULT NULL COMMENT '患者姓名（快照）',
+  `visit_date` date DEFAULT NULL COMMENT '就诊日期（快照）',
+  `item_code` varchar(32) DEFAULT NULL COMMENT '检查项目编码（快照）',
+  `item_name` varchar(200) DEFAULT NULL COMMENT '检查项目名称（快照）',
+  `body_part` varchar(100) DEFAULT NULL COMMENT '检查部位（快照）',
   `modality` tinyint DEFAULT NULL COMMENT '影像模态（，快照）',
   `spec_id` bigint NOT NULL COMMENT '胶片规格ID',
-  `spec_code` varchar(32) DEFAULT NULL COMMENT '规格编码',
+  `spec_code` varchar(32) DEFAULT NULL COMMENT '规格编码（快照）',
   `spec_name` varchar(100) NOT NULL COMMENT '规格名称',
   `unit_price` decimal(10,2) NOT NULL COMMENT '单价',
-  `unit` varchar(20) DEFAULT NULL COMMENT '计价单位',
+  `unit` varchar(20) DEFAULT NULL COMMENT '计价单位（快照）',
   `quantity` int NOT NULL COMMENT '胶片张数',
   `amount` decimal(12,2) NOT NULL COMMENT '金额 = 单价 × 张数',
   `film_status` tinyint NOT NULL DEFAULT '1' COMMENT '胶片状态（1-已登记 2-已打印 3-已发放 4-已作废）',
   `charge_flag` tinyint NOT NULL DEFAULT '0' COMMENT '是否已记账（0-未记账 1-已记账）',
   `fee_id` bigint DEFAULT NULL COMMENT '记账流水ID',
-  `fee_no` varchar(32) DEFAULT NULL COMMENT '记账流水号',
+  `fee_no` varchar(32) DEFAULT NULL COMMENT '记账流水号（快照）',
   `print_by` varchar(64) DEFAULT NULL COMMENT '打印人',
   `print_time` datetime DEFAULT NULL COMMENT '打印时间',
   `deliver_by` varchar(64) DEFAULT NULL COMMENT '发放人',
@@ -457,7 +457,7 @@ CREATE TABLE `biz_exam_film` (
 -- biz_film_spec  胶片规格价目
 -- ----------------------------
 CREATE TABLE `biz_film_spec` (
-  `id` bigint NOT NULL COMMENT '主键ID',
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `spec_code` varchar(32) NOT NULL COMMENT '规格编码',
   `spec_name` varchar(100) NOT NULL COMMENT '规格名称',
   `unit_price` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '单价',
@@ -479,12 +479,12 @@ CREATE TABLE `biz_film_spec` (
 -- biz_radio_report_template  放射报告模板
 -- ----------------------------
 CREATE TABLE `biz_radio_report_template` (
-  `id` bigint NOT NULL COMMENT '主键ID',
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `template_code` varchar(32) NOT NULL COMMENT '模板编码',
   `template_name` varchar(100) NOT NULL COMMENT '模板名称',
   `modality` tinyint DEFAULT NULL COMMENT '适用模态',
   `item_code` varchar(32) DEFAULT NULL COMMENT '适用检查项目编码',
-  `item_name` varchar(200) DEFAULT NULL COMMENT '适用检查项目名称',
+  `item_name` varchar(200) DEFAULT NULL COMMENT '适用检查项目名称（快照）',
   `body_part` varchar(100) DEFAULT NULL COMMENT '适用检查部位',
   `exam_method` varchar(200) DEFAULT NULL COMMENT '检查方法模板',
   `finding_tpl` text COMMENT '影像所见模板',
@@ -721,15 +721,15 @@ CREATE TABLE `biz_endoscopy_record` (
 -- biz_ecg_waveform  心电波形采集
 -- ----------------------------
 CREATE TABLE `biz_ecg_waveform` (
-  `id` bigint NOT NULL COMMENT '主键ID',
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `wave_no` varchar(32) NOT NULL COMMENT '波形号',
   `record_id` bigint NOT NULL COMMENT '检查记录ID',
-  `record_no` varchar(32) DEFAULT NULL COMMENT '检查记录号',
+  `record_no` varchar(32) DEFAULT NULL COMMENT '检查记录号（快照）',
   `apply_id` bigint DEFAULT NULL COMMENT '检查申请单ID（冗余）',
-  `apply_no` varchar(32) DEFAULT NULL COMMENT '申请单号',
+  `apply_no` varchar(32) DEFAULT NULL COMMENT '申请单号（快照）',
   `patient_id` bigint NOT NULL COMMENT '患者ID',
-  `patient_no` varchar(32) DEFAULT NULL COMMENT '患者号',
-  `patient_name` varchar(64) DEFAULT NULL COMMENT '患者姓名',
+  `patient_no` varchar(32) DEFAULT NULL COMMENT '患者号（快照）',
+  `patient_name` varchar(64) DEFAULT NULL COMMENT '患者姓名（快照）',
   `ecg_type` tinyint NOT NULL DEFAULT '1' COMMENT '心电类型（1-常规静息心电图 2-24小时动态心电图）',
   `wave_data` longtext COMMENT '波形数据',
   `device_no` varchar(64) DEFAULT NULL COMMENT '采集设备号',
@@ -752,7 +752,7 @@ CREATE TABLE `biz_ecg_waveform` (
 -- biz_ecg_measure  心电测量参数
 -- ----------------------------
 CREATE TABLE `biz_ecg_measure` (
-  `id` bigint NOT NULL COMMENT '主键ID',
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `record_id` bigint NOT NULL COMMENT '检查记录ID',
   `waveform_id` bigint DEFAULT NULL COMMENT '波形ID',
   `hr` int DEFAULT NULL COMMENT '心率（次/分）',
@@ -780,7 +780,7 @@ CREATE TABLE `biz_ecg_measure` (
 -- biz_ecg_holter  Holter 动态心电
 -- ----------------------------
 CREATE TABLE `biz_ecg_holter` (
-  `id` bigint NOT NULL COMMENT '主键ID',
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `record_id` bigint NOT NULL COMMENT '检查记录ID',
   `waveform_id` bigint DEFAULT NULL COMMENT '波形ID',
   `wear_start_time` datetime DEFAULT NULL COMMENT '开始佩戴时间',
@@ -816,7 +816,7 @@ CREATE TABLE `biz_ecg_holter` (
 -- biz_ecg_template  心电报告模板
 -- ----------------------------
 CREATE TABLE `biz_ecg_template` (
-  `id` bigint NOT NULL COMMENT '主键ID',
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
   `template_code` varchar(32) NOT NULL COMMENT '模板编码',
   `template_name` varchar(100) NOT NULL COMMENT '模板名称',
   `ecg_type` tinyint DEFAULT NULL COMMENT '适用心电类型',
@@ -835,3 +835,26 @@ CREATE TABLE `biz_ecg_template` (
   UNIQUE KEY `uk_ecg_tpl_code` (`template_code`),
   KEY `idx_ecg_type` (`ecg_type`,`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='心电报告模板';
+
+-- ----------------------------
+-- sys_imaging_plain_item  影像检查白话词典（患者端影像报告解读的规则层地基，人工维护）
+-- ----------------------------
+CREATE TABLE `sys_imaging_plain_item` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `group_name` varchar(32) NOT NULL COMMENT '所属分组（放射/超声/心电/内镜）',
+  `item_name` varchar(64) NOT NULL COMMENT '匹配关键词（报告项目名包含即命中，取最长命中）',
+  `plain_name` varchar(64) NOT NULL COMMENT '白话名（如：胸部CT、B超、心电图）',
+  `what_it_does` varchar(200) NOT NULL COMMENT '这项检查是查什么的（给患者看的一句话，不含诊断/用药）',
+  `notice_text` varchar(200) DEFAULT NULL COMMENT '检查前后的注意事项（白话，可为空）',
+  `status` tinyint DEFAULT '1' COMMENT '状态（0-停用 1-启用）',
+  `sort_order` int DEFAULT '0' COMMENT '排序号',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_item_name` (`item_name`),
+  KEY `idx_group_status` (`group_name`,`status`,`del_flag`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='影像检查白话词典（患者端影像报告解读的规则层地基，人工维护）';
