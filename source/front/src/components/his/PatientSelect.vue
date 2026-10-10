@@ -1,8 +1,140 @@
-<script setup lang="js">
-import {ref, computed, watch} from 'vue'
+<template>
+  <el-select
+      v-model="selectedId"
+      :clearable="clearable"
+      :disabled="disabled"
+      :fit-input-width="false"
+      :loading="loading"
+      :no-data-text="keyword ? '未找到匹配的患者' : '输入姓名 / 患者号 / 手机号 / 身份证号搜索'"
+      :placeholder="placeholder"
+      :remote-method="handleSearch"
+      :size="size"
+      :style="{width}"
+      class="patient-select"
+      filterable
+      popper-class="patient-search-popper"
+      remote
+      reserve-keyword
+      @change="handleSelect"
+      @clear="handleClear"
+  >
+    <!-- 放大镜放在输入框内部左侧（EP 2.14 的 prefix 插槽；此前只能绝对定位在框外右侧，
+         遮挡 clear 按钮且不随尺寸自适应） -->
+    <template v-if="searchIcon" #prefix>
+      <el-icon class="ps-prefix-icon">
+        <Search/>
+      </el-icon>
+    </template>
+
+    <!-- 分组渲染：今日就诊排最前（后端已按「我的今日 → 今日其他科室 → 其余」排序）。
+         option 内容只写一份，靠 v-for over groups 复用。 -->
+    <el-option-group
+        v-for="g in groupedResults"
+        :key="g.key"
+        :label="g.label"
+    >
+      <el-option
+          v-for="p in g.list"
+          :key="p.id"
+          :label="`${p.patientName} (${p.patientNo})`"
+          :value="p.id"
+          @click="handleOptionClick(p)"
+      >
+        <div class="ps-item">
+          <!-- 头像 -->
+          <div
+              :class="[
+            'ps-avatar',
+            'ps-avatar-' + patientAvatarTone(p.gender),
+            p.status === 0 ? 'ps-avatar-disabled' : '',
+          ]"
+          >
+            {{ p.patientName?.charAt(0) || '患' }}
+          </div>
+
+          <div class="ps-main">
+            <!-- 今日就诊标注：只在今天确实有门诊就诊时出现。
+                 没有今日就诊的患者**不写「无就诊」**——未判定 ≠ 正常，
+                 这类患者直接归到下方「全院档案」组里，不伪造一个看似合法的状态。 -->
+            <div
+                v-if="p.todayVisitStatus != null"
+                :class="['ps-today', p.todayVisitMine ? 'ps-today-mine' : '']"
+            >
+              <span class="ps-today-dot"></span>
+              <span class="ps-today-text">{{ todayVisitLabel(p) }}</span>
+            </div>
+
+            <!-- 第一行：姓名 + 性别 + 年龄 + 患者号 + 医保 -->
+            <div class="ps-line ps-line-title">
+              <span class="ps-name" v-html="highlight(p.patientName)"></span>
+              <span :class="['ps-gender', patientAvatarTone(p.gender)]">
+              {{ patientGenderSymbol(p.gender) }}
+            </span>
+              <span class="ps-age">{{ patientAge(p) }}岁</span>
+              <span class="ps-chip ps-chip-code" v-html="highlight(p.patientNo)"></span>
+              <span v-if="insuranceLabel(p)" class="ps-chip ps-chip-insurance">
+              {{ insuranceLabel(p) }}
+            </span>
+              <span v-if="p.patientType" class="ps-chip ps-chip-plain">
+              {{ patientTypeText(p.patientType) }}
+            </span>
+              <span v-if="p.status === 0" class="ps-chip ps-chip-off">已停用</span>
+            </div>
+
+            <!-- 第二行：标签 + 过敏 -->
+            <div class="ps-line ps-tags">
+            <span
+                v-for="tag in (p.tags || [])"
+                :key="tag.tagId"
+                :style="tagChipStyle(tag)"
+                class="ps-tag"
+            >{{ tagChipText(tag) }}</span>
+              <span v-if="p.allergyHistory && p.allergyHistory !== '无'" class="ps-tag ps-tag-danger">
+              过敏史
+            </span>
+              <span v-if="!(p.tags || []).length" class="ps-empty-tip">无标签</span>
+            </div>
+
+            <!-- 第三行：联系方式 -->
+            <div class="ps-line ps-meta">
+            <span class="ps-meta-item">
+              <span class="ps-meta-key">手机</span>{{ p.phoneMasked || '-' }}
+            </span>
+              <span class="ps-meta-sep">|</span>
+              <span class="ps-meta-item">
+              <span class="ps-meta-key">证件</span>{{ p.idCardMasked || '-' }}
+            </span>
+              <span class="ps-meta-sep">|</span>
+              <span class="ps-meta-item">
+              <span class="ps-meta-key">联系人</span>{{
+                  p.contactName || '-'
+                }}{{ p.contactPhone ? ' ' + p.contactPhone : '' }}
+            </span>
+            </div>
+
+            <!-- 第四行：地址 + 就诊统计 -->
+            <div class="ps-line ps-meta">
+            <span class="ps-meta-item ps-address">
+              <span class="ps-meta-key">住址</span>{{ p.address || '-' }}
+            </span>
+              <span class="ps-stats">
+              <span class="ps-stat"><b>{{ p.appointCount ?? 0 }}</b>次预约</span>
+              <span class="ps-stat"><b>{{ p.visitCount ?? 0 }}</b>次就诊</span>
+              <span v-if="p.lastVisitTime" class="ps-stat">最近 {{ formatDate(p.lastVisitTime) }}</span>
+            </span>
+            </div>
+          </div>
+        </div>
+      </el-option>
+    </el-option-group>
+  </el-select>
+</template>
+
+<script lang="js" setup>
+import {computed, ref, watch} from 'vue'
 import {Search} from '@element-plus/icons-vue'
 import {getPatientDetail, getPatientList} from '@/api/patient'
-import {patientGenderSymbol, patientAvatarTone} from '@/lib/patientGender'
+import {patientAvatarTone, patientGenderSymbol} from '@/lib/patientGender'
 import {patientTypeText} from '@/lib/patientType'
 import {tagChipText} from '@/lib/patientTag'
 
@@ -208,135 +340,3 @@ const highlight = (text) => {
   return `${escapeHtml(raw.slice(0, idx))}<em class="ps-hit">${escapeHtml(hit)}</em>${escapeHtml(raw.slice(idx + hit.length))}`
 }
 </script>
-
-<template>
-  <el-select
-      v-model="selectedId"
-      filterable
-      remote
-      reserve-keyword
-      :fit-input-width="false"
-      :no-data-text="keyword ? '未找到匹配的患者' : '输入姓名 / 患者号 / 手机号 / 身份证号搜索'"
-      :placeholder="placeholder"
-      :remote-method="handleSearch"
-      :loading="loading"
-      :size="size"
-      :disabled="disabled"
-      :clearable="clearable"
-      class="patient-select"
-      popper-class="patient-search-popper"
-      :style="{width}"
-      @change="handleSelect"
-      @clear="handleClear"
-  >
-    <!-- 放大镜放在输入框内部左侧（EP 2.14 的 prefix 插槽；此前只能绝对定位在框外右侧，
-         遮挡 clear 按钮且不随尺寸自适应） -->
-    <template v-if="searchIcon" #prefix>
-      <el-icon class="ps-prefix-icon">
-        <Search/>
-      </el-icon>
-    </template>
-
-    <!-- 分组渲染：今日就诊排最前（后端已按「我的今日 → 今日其他科室 → 其余」排序）。
-         option 内容只写一份，靠 v-for over groups 复用。 -->
-    <el-option-group
-        v-for="g in groupedResults"
-        :key="g.key"
-        :label="g.label"
-    >
-      <el-option
-          v-for="p in g.list"
-          :key="p.id"
-          :label="`${p.patientName} (${p.patientNo})`"
-          :value="p.id"
-          @click="handleOptionClick(p)"
-      >
-        <div class="ps-item">
-          <!-- 头像 -->
-          <div
-              :class="[
-            'ps-avatar',
-            'ps-avatar-' + patientAvatarTone(p.gender),
-            p.status === 0 ? 'ps-avatar-disabled' : '',
-          ]"
-          >
-            {{ p.patientName?.charAt(0) || '患' }}
-          </div>
-
-          <div class="ps-main">
-            <!-- 今日就诊标注：只在今天确实有门诊就诊时出现。
-                 没有今日就诊的患者**不写「无就诊」**——未判定 ≠ 正常，
-                 这类患者直接归到下方「全院档案」组里，不伪造一个看似合法的状态。 -->
-            <div
-                v-if="p.todayVisitStatus != null"
-                :class="['ps-today', p.todayVisitMine ? 'ps-today-mine' : '']"
-            >
-              <span class="ps-today-dot"></span>
-              <span class="ps-today-text">{{ todayVisitLabel(p) }}</span>
-            </div>
-
-            <!-- 第一行：姓名 + 性别 + 年龄 + 患者号 + 医保 -->
-            <div class="ps-line ps-line-title">
-              <span class="ps-name" v-html="highlight(p.patientName)"></span>
-              <span :class="['ps-gender', patientAvatarTone(p.gender)]">
-              {{ patientGenderSymbol(p.gender) }}
-            </span>
-              <span class="ps-age">{{ patientAge(p) }}岁</span>
-              <span class="ps-chip ps-chip-code" v-html="highlight(p.patientNo)"></span>
-              <span v-if="insuranceLabel(p)" class="ps-chip ps-chip-insurance">
-              {{ insuranceLabel(p) }}
-            </span>
-              <span v-if="p.patientType" class="ps-chip ps-chip-plain">
-              {{ patientTypeText(p.patientType) }}
-            </span>
-              <span v-if="p.status === 0" class="ps-chip ps-chip-off">已停用</span>
-            </div>
-
-            <!-- 第二行：标签 + 过敏 -->
-            <div class="ps-line ps-tags">
-            <span
-                v-for="tag in (p.tags || [])"
-                :key="tag.tagId"
-                class="ps-tag"
-                :style="tagChipStyle(tag)"
-            >{{ tagChipText(tag) }}</span>
-              <span v-if="p.allergyHistory && p.allergyHistory !== '无'" class="ps-tag ps-tag-danger">
-              过敏史
-            </span>
-              <span v-if="!(p.tags || []).length" class="ps-empty-tip">无标签</span>
-            </div>
-
-            <!-- 第三行：联系方式 -->
-            <div class="ps-line ps-meta">
-            <span class="ps-meta-item">
-              <span class="ps-meta-key">手机</span>{{ p.phoneMasked || '-' }}
-            </span>
-              <span class="ps-meta-sep">|</span>
-              <span class="ps-meta-item">
-              <span class="ps-meta-key">证件</span>{{ p.idCardMasked || '-' }}
-            </span>
-              <span class="ps-meta-sep">|</span>
-              <span class="ps-meta-item">
-              <span class="ps-meta-key">联系人</span>{{
-                  p.contactName || '-'
-                }}{{ p.contactPhone ? ' ' + p.contactPhone : '' }}
-            </span>
-            </div>
-
-            <!-- 第四行：地址 + 就诊统计 -->
-            <div class="ps-line ps-meta">
-            <span class="ps-meta-item ps-address">
-              <span class="ps-meta-key">住址</span>{{ p.address || '-' }}
-            </span>
-              <span class="ps-stats">
-              <span class="ps-stat"><b>{{ p.appointCount ?? 0 }}</b>次预约</span>
-              <span class="ps-stat"><b>{{ p.visitCount ?? 0 }}</b>次就诊</span>
-              <span class="ps-stat" v-if="p.lastVisitTime">最近 {{ formatDate(p.lastVisitTime) }}</span>
-            </span>
-            </div>
-          </div>
-        </div>
-      </el-option>
-    </el-option-group>
-  </el-select>
-</template>

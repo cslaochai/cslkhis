@@ -1,575 +1,3 @@
-<script setup lang="ts">
-import {computed, onMounted, ref} from 'vue'
-import {ElMessage, ElMessageBox} from 'element-plus'
-import {DataLine, Document, Plus, Refresh, Search, Warning} from '@element-plus/icons-vue'
-import {getInpatientListPage} from '@/api/inpatient'
-import {
-  archiveInpatientRecord,
-  getInpatientRecordDetail,
-  getInpatientRecordListPage,
-  getInpatientRecordLogs,
-  getInpatientRecordStatusOptions,
-  getInpatientRecordTypeOptions,
-  getRecordQualityStat,
-  saveInpatientRecord,
-  submitInpatientRecord,
-} from '@/api/inpatientRecord'
-import {extractEmrText} from '@/api/ai'
-import {searchIcd10} from '@/api/system'
-import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
-
-interface AdmissionOption {
-  admissionId: string
-  patientNo?: string
-  patientName?: string
-  bedNo?: string
-  wardName?: string
-  deptName?: string
-}
-
-interface RecordRow {
-  id: string
-  recordNo: string
-  admissionId: string
-  patientName?: string
-  wardName?: string
-  bedNo?: string
-  recordType?: number
-  recordTypeText?: string
-  recordTitle?: string
-  recordTime?: string
-  recordStatus?: number
-  recordStatusText?: string
-  doctorName?: string
-  chiefComplaint?: string
-  diagnosisName?: string
-  structuredFilled?: number
-  structuredTotal?: number
-  structuredRate?: number
-  structuredRateText?: string
-  missingLabels?: string[]
-  canEdit?: boolean
-  canSubmit?: boolean
-  canArchive?: boolean
-  archiveByName?: string
-}
-
-interface ElementRow {
-  code: string
-  label: string
-  group: string
-  groupLabel: string
-  filled: boolean
-  value?: string
-}
-
-interface LogRow {
-  id: string
-  docType?: number
-  docTypeText?: string
-  recordNo?: string
-  fieldLabel?: string
-  operation?: string
-  userName?: string
-  oldValue?: string
-  newValue?: string
-  createTime?: string
-}
-
-interface QualityStat {
-  recordCount?: number
-  elementTotal?: number
-  elementFilled?: number
-  structuredRate?: number
-  structuredRateText?: string
-}
-
-// ---------------- 基础数据 ----------------
-
-const admissions = ref<AdmissionOption[]>([])
-const admissionId = ref<string>('')
-const typeOptions = ref<{ code: number; label: string }[]>([])
-const statusOptions = ref<{ code: number; label: string }[]>([])
-
-const fmtTime = (v?: string) => (v ? String(v).replace('T', ' ').slice(0, 16) : '—')
-/** 数值 0 必须显示成 0，不能当空 */
-const num = (v?: number | string) => (v === null || v === undefined || v === '' ? '—' : String(v))
-
-const patientLabel = (a: AdmissionOption) =>
-    `${a.bedNo || '—'} ${a.patientName || '—'}（${a.wardName || a.deptName || '—'}）`
-
-const loadAdmissions = async () => {
-  try {
-    const res = await getInpatientListPage({admitStatus: 1, pageNum: 1, pageSize: 200})
-    admissions.value = (res.data?.records || []) as AdmissionOption[]
-    if (!admissionId.value && admissions.value.length > 0) {
-      admissionId.value = String(admissions.value[0].admissionId)
-    }
-  } catch (error: any) {
-    console.error('加载在院患者失败:', error)
-  }
-}
-
-// ---------------- 列表 ----------------
-
-const activeTab = ref('records')
-const loading = ref(false)
-const rows = ref<RecordRow[]>([])
-const total = ref(0)
-const pagination = ref({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE})
-const query = ref({recordType: null as number | null, recordStatus: null as number | null, keyword: ''})
-
-const stat = ref<QualityStat>({})
-
-const loadRecords = async () => {
-  loading.value = true
-  try {
-    const res = await getInpatientRecordListPage({
-      admissionId: admissionId.value || undefined,
-      pageNum: pagination.value.pageNum,
-      pageSize: pagination.value.pageSize,
-      recordType: query.value.recordType ?? undefined,
-      recordStatus: query.value.recordStatus ?? undefined,
-      keyword: query.value.keyword || undefined,
-    })
-    rows.value = (res.data?.records || []) as RecordRow[]
-    total.value = Number(res.data?.total ?? 0)
-  } catch (error: any) {
-    ElMessage.error(error.message || '加载病历列表失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-const loadStat = async () => {
-  try {
-    const res = await getRecordQualityStat(admissionId.value)
-    stat.value = (res.data || {}) as QualityStat
-  } catch (error: any) {
-    stat.value = {}
-  }
-}
-
-// ---------------- 修改留痕 ----------------
-
-const logLoading = ref(false)
-const logs = ref<LogRow[]>([])
-const logTotal = ref(0)
-const logPagination = ref({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE})
-
-const loadLogs = async () => {
-  logLoading.value = true
-  try {
-    const res = await getInpatientRecordLogs({
-      admissionId: admissionId.value || undefined,
-      pageNum: logPagination.value.pageNum,
-      pageSize: logPagination.value.pageSize,
-    })
-    logs.value = (res.data?.records || []) as LogRow[]
-    logTotal.value = Number(res.data?.total ?? 0)
-  } catch (error: any) {
-    ElMessage.error(error.message || '加载修改留痕失败')
-  } finally {
-    logLoading.value = false
-  }
-}
-
-const statCards = computed(() => [
-  {
-    label: '结构化率',
-    value: stat.value.structuredRateText || '—',
-    hint: `${stat.value.elementFilled ?? 0}/${stat.value.elementTotal ?? 0} 个要素`,
-    color: 'text-emerald-600',
-    bg: 'bg-emerald-50',
-    icon: DataLine
-  },
-  {
-    label: '文书份数',
-    value: stat.value.recordCount ?? 0,
-    hint: '含草稿与已归档',
-    color: 'text-blue-600',
-    bg: 'bg-blue-50',
-    icon: Document
-  },
-  {
-    label: '列表条数',
-    value: total.value,
-    hint: '当前筛选条件',
-    color: 'text-slate-600',
-    bg: 'bg-slate-100',
-    icon: Search
-  },
-  {
-    label: '修改留痕',
-    value: logTotal.value,
-    hint: '逐字段 diff，值真变才写',
-    color: 'text-amber-600',
-    bg: 'bg-amber-50',
-    icon: Warning
-  },
-])
-
-// ---------------- 新建 / 编辑 ----------------
-
-const dialog = ref(false)
-const saving = ref(false)
-const editingId = ref<string>('')
-const recordTypeOptions = ref<{ code: number; label: string }[]>([])
-
-interface RecordForm {
-  recordType: number
-  recordTitle: string
-  recordTime: string
-  chiefComplaint: string
-  presentIllness: string
-  pastHistory: string
-  personalHistory: string
-  familyHistory: string
-  allergyHistory: string
-  temperature: number | undefined
-  pulse: number | undefined
-  respiration: number | undefined
-  systolicPressure: number | undefined
-  diastolicPressure: number | undefined
-  height: number | undefined
-  weight: number | undefined
-  generalCondition: string
-  skinMucosa: string
-  headNeck: string
-  chestLung: string
-  heart: string
-  abdomen: string
-  spineLimbs: string
-  nervousSystem: string
-  specialistExam: string
-  auxiliaryExam: string
-  diagnosisName: string
-  diagnosisCode: string
-  treatmentPlan: string
-  courseNote: string
-  remark: string
-}
-
-const emptyForm = (): RecordForm => ({
-  recordType: 1, recordTitle: '', recordTime: '',
-  chiefComplaint: '', presentIllness: '', pastHistory: '', personalHistory: '', familyHistory: '', allergyHistory: '',
-  temperature: undefined, pulse: undefined, respiration: undefined,
-  systolicPressure: undefined, diastolicPressure: undefined, height: undefined, weight: undefined,
-  generalCondition: '', skinMucosa: '', headNeck: '', chestLung: '', heart: '', abdomen: '',
-  spineLimbs: '', nervousSystem: '', specialistExam: '',
-  auxiliaryExam: '', diagnosisName: '', diagnosisCode: '', treatmentPlan: '', courseNote: '', remark: '',
-})
-
-const form = ref<RecordForm>(emptyForm())
-
-const openCreate = () => {
-  if (!admissionId.value) {
-    ElMessage.warning('请先选择在院患者')
-    return
-  }
-  editingId.value = ''
-  form.value = emptyForm()
-  icdCodes.value = []
-  icdOptions.value = []
-  icdNameOf.clear()
-  aiCandidates.value = []
-  aiRaw.value = ''
-  aiNote.value = ''
-  dialog.value = true
-}
-
-const openEdit = async (row: RecordRow) => {
-  try {
-    const res = await getInpatientRecordDetail(row.id)
-    const d = res.data || ({} as any)
-    editingId.value = row.id
-    form.value = {
-      recordType: d.recordType ?? 1,
-      recordTitle: d.recordTitle ?? '',
-      recordTime: (d.recordTime || '').replace(' ', 'T'),
-      chiefComplaint: d.chiefComplaint ?? '',
-      presentIllness: d.presentIllness ?? '',
-      pastHistory: d.pastHistory ?? '',
-      personalHistory: d.personalHistory ?? '',
-      familyHistory: d.familyHistory ?? '',
-      allergyHistory: d.allergyHistory ?? '',
-      temperature: d.temperature ?? undefined,
-      pulse: d.pulse ?? undefined,
-      respiration: d.respiration ?? undefined,
-      systolicPressure: d.systolicPressure ?? undefined,
-      diastolicPressure: d.diastolicPressure ?? undefined,
-      height: d.height ?? undefined,
-      weight: d.weight ?? undefined,
-      generalCondition: d.generalCondition ?? '',
-      skinMucosa: d.skinMucosa ?? '',
-      headNeck: d.headNeck ?? '',
-      chestLung: d.chestLung ?? '',
-      heart: d.heart ?? '',
-      abdomen: d.abdomen ?? '',
-      spineLimbs: d.spineLimbs ?? '',
-      nervousSystem: d.nervousSystem ?? '',
-      specialistExam: d.specialistExam ?? '',
-      auxiliaryExam: d.auxiliaryExam ?? '',
-      diagnosisName: d.diagnosisName ?? '',
-      diagnosisCode: d.diagnosisCode ?? '',
-      treatmentPlan: d.treatmentPlan ?? '',
-      courseNote: d.courseNote ?? '',
-      remark: d.remark ?? '',
-    }
-    seedDiagnosis(d.diagnosisCode, d.diagnosisName)
-    aiCandidates.value = []
-    aiRaw.value = ''
-    aiNote.value = ''
-    dialog.value = true
-  } catch (error: any) {
-    ElMessage.error(error.message || '加载病历详情失败')
-  }
-}
-
-// ---------------- ICD-10 诊断选码（G3） ----------------
-
-/**
- * 诊断为什么要用选码器而不是两个手输框：
- * 手输时医生凭记忆敲编码，敲错/敲简写都不会有人发现，而 `diagnosis_code` 是
- * 病案首页、DRG 分组、医保结算的上游依据 —— 错一个码下游全错，且**零报错**。
- *
- * 两个必须说清的现状（实测 2026-09-23）：
- * 1. 码表已从演示期 35 条扩到 **40477 条**，检索必须按相关性排序，
- *    否则输入「肺炎」首条会返回「A01.005+J17.0* 伤寒并发肺炎」（后端已修）。
- * 2. 存量数据里有**码表里查不到的编码**（`J18.900` / `J45.900` / `O14.900` /
- *    `K29.500` / `J20.900`）。所以选码器**不能**把不在选项里的值当空值丢掉 ——
- *    打开老病历时必须原样把编码显示出来，医生改不改由他决定。
- */
-const icdOptions = ref<{ icdCode: string; icdName: string; icdCategory?: string }[]>([])
-const icdLoading = ref(false)
-/** 本次选中的编码（`diagnosis_code` 是分号分隔的多值列，这里用数组承载） */
-const icdCodes = ref<string[]>([])
-/** 编码 → 名称缓存：含历史数据回填，避免改码后把解析不出的诊断名写空 */
-const icdNameOf = new Map<string, string>()
-/** 请求序号：远程搜索是异步的，慢响应回来晚了不能覆盖新结果 */
-let icdSeq = 0
-
-const searchIcdOptions = async (query: string) => {
-  const kw = (query || '').trim()
-  if (!kw) {
-    icdOptions.value = []
-    return
-  }
-  const seq = ++icdSeq
-  icdLoading.value = true
-  try {
-    const res = await searchIcd10(kw)
-    if (seq !== icdSeq) return
-    const seen = new Set<string>()
-    icdOptions.value = ((res.data || []) as any[])
-        .filter(o => o?.icdCode && !seen.has(o.icdCode) && seen.add(o.icdCode))
-        .map(o => ({icdCode: o.icdCode, icdName: o.icdName, icdCategory: o.icdCategory}))
-    icdOptions.value.forEach(o => icdNameOf.set(o.icdCode, o.icdName))
-  } catch (error) {
-    if (seq !== icdSeq) return
-    icdOptions.value = []
-    console.error('检索 ICD 编码失败:', error)
-  } finally {
-    if (seq === icdSeq) icdLoading.value = false
-  }
-}
-
-/** 打开表单时把「分号分隔的双列」还原成编码数组，并用历史名称回填缓存 */
-const seedDiagnosis = (codeStr?: string, nameStr?: string) => {
-  const codes = String(codeStr || '').split(';').map(s => s.trim()).filter(Boolean)
-  const names = String(nameStr || '').split(';').map(s => s.trim())
-  icdCodes.value = codes
-  if (codes.length > 0 && codes.length === names.length) {
-    codes.forEach((code, i) => {
-      if (names[i]) icdNameOf.set(code, names[i])
-    })
-  }
-}
-
-/**
- * 选码后回写两个文本列。
- * 名称只在**每个编码都能解析出名称**时才整体重写：只要有解析不出的（老码），
- * 就保留原文本不动 —— 宁可名称没跟着更新，也不能把诊断名写空。
- */
-const syncDiagnosisText = () => {
-  const codes = icdCodes.value.filter(Boolean)
-  form.value.diagnosisCode = codes.join(';')
-  const names = codes.map(code => icdNameOf.get(code))
-  if (names.length > 0 && names.every(n => n)) {
-    form.value.diagnosisName = names.join(';')
-  }
-}
-
-// ---------------- AI 抽取（候选值，不自动填表） ----------------
-
-const aiRaw = ref('')
-const aiLoading = ref(false)
-const aiNote = ref('')
-const aiCandidates = ref<{ field: string; fieldLabel: string; value: string; source: string }[]>([])
-
-/** 只认这份白名单：模型给出的其它字段一律不进表单（防"顺手多填"） */
-const AI_FIELD_MAP: Record<string, string> = {
-  chiefComplaint: 'chiefComplaint',
-  presentIllness: 'presentIllness',
-  pastHistory: 'pastHistory',
-  personalHistory: 'personalHistory',
-  familyHistory: 'familyHistory',
-  allergyHistory: 'allergyHistory',
-  generalCondition: 'generalCondition',
-  skinMucosa: 'skinMucosa',
-  headNeck: 'headNeck',
-  chestLung: 'chestLung',
-  heart: 'heart',
-  abdomen: 'abdomen',
-  spineLimbs: 'spineLimbs',
-  nervousSystem: 'nervousSystem',
-  specialistExam: 'specialistExam',
-  auxiliaryExam: 'auxiliaryExam',
-  treatmentPlan: 'treatmentPlan',
-}
-
-const extractByAi = async () => {
-  if (!aiRaw.value.trim()) {
-    ElMessage.warning('请先粘贴待抽取的病历文本')
-    return
-  }
-  aiLoading.value = true
-  aiNote.value = ''
-  try {
-    const res = await extractEmrText({rawText: aiRaw.value})
-    const data = res.data || ({} as any)
-    aiCandidates.value = (data.fields || []).filter((f: any) => AI_FIELD_MAP[f.field])
-    const rejected = Number(data.rejectedCount ?? 0)
-    aiNote.value = rejected > 0
-        ? `抽取完成，${rejected} 条被判为「原文中找不到依据 / 字段不可写」已丢弃`
-        : '抽取完成，请逐条核对后点「填入」'
-  } catch (error: any) {
-    ElMessage.error(error.message || '病历文本抽取失败')
-  } finally {
-    aiLoading.value = false
-  }
-}
-
-const applyCandidate = (c: { field: string; value: string }) => {
-  const key = AI_FIELD_MAP[c.field]
-  if (!key) return
-      ;
-  (form.value as any)[key] = c.value
-  ElMessage.success(`已填入「${c.field}」（仍需医生核对）`)
-}
-
-// ---------------- 保存 / 提交 / 归档 ----------------
-
-const submitRecord = async () => {
-  if (!admissionId.value) {
-    ElMessage.warning('请先选择在院患者')
-    return
-  }
-  saving.value = true
-  try {
-    const payload: any = {...form.value, admissionId: admissionId.value}
-    if (editingId.value) {
-      payload.id = editingId.value
-    }
-    // 「传什么覆盖什么」：空字符串保持空串（置空是有意的动作，服务层会留痕）
-    await saveInpatientRecord(payload)
-    ElMessage.success(editingId.value ? '病历已修改（变更已逐字段留痕）' : '病历文书已创建')
-    dialog.value = false
-    await reloadAll()
-  } catch (error: any) {
-    ElMessage.error(error.message || '保存病历失败')
-  } finally {
-    saving.value = false
-  }
-}
-
-const doSubmit = async (row: RecordRow) => {
-  try {
-    const res = await submitInpatientRecord({ids: [row.id]})
-    ElMessage.success(`已提交 ${res.data} 份病历`)
-    await reloadAll()
-  } catch (error: any) {
-    ElMessage.error(error.message || '提交失败')
-  }
-}
-
-const doArchive = async (row: RecordRow) => {
-  try {
-    const {value} = await ElMessageBox.prompt(
-        `归档 ${row.recordNo}（${row.recordTypeText || ''}）。归档是单向门，归档后禁止修改：`,
-        '归档病历文书',
-        {inputPlaceholder: '如：已送病案室，2026-09 批次', confirmButtonText: '确认归档', cancelButtonText: '取消'},
-    )
-    if (!value) {
-      ElMessage.warning('归档说明必填')
-      return
-    }
-    const res = await archiveInpatientRecord({ids: [row.id], remark: value})
-    ElMessage.success(`已归档 ${res.data} 份病历`)
-    await reloadAll()
-  } catch (error: any) {
-    if (error === 'cancel' || error === 'close') return
-    ElMessage.error(error.message || '归档失败')
-  }
-}
-
-// ---------------- 详情（要素明细） ----------------
-
-const detailDialog = ref(false)
-const detail = ref<any>({})
-const detailElements = ref<ElementRow[]>([])
-
-const openDetail = async (row: RecordRow) => {
-  try {
-    const res = await getInpatientRecordDetail(row.id)
-    detail.value = res.data || {}
-    detailElements.value = (res.data?.elements || []) as ElementRow[]
-    detailDialog.value = true
-  } catch (error: any) {
-    ElMessage.error(error.message || '加载病历详情失败')
-  }
-}
-
-const rateColor = (rate?: number) => {
-  if (rate === undefined || rate === null) return '#94a3b8'
-  if (rate >= 80) return '#16a34a'
-  if (rate >= 60) return '#f59e0b'
-  return '#ef4444'
-}
-
-const statusTagType = (s?: number) => {
-  if (s === 1) return 'info'
-  if (s === 2) return 'warning'
-  if (s === 3) return 'success'
-  return 'info'
-}
-
-// ---------------- 刷新 ----------------
-
-const reloadAll = async () => {
-  await Promise.all([loadRecords(), loadLogs(), loadStat()])
-}
-
-const handleAdmissionChange = async () => {
-  pagination.value.pageNum = 1
-  logPagination.value.pageNum = 1
-  await reloadAll()
-}
-
-onMounted(async () => {
-  try {
-    const [t, s] = await Promise.all([getInpatientRecordTypeOptions(), getInpatientRecordStatusOptions()])
-    typeOptions.value = (t.data || []) as any
-    statusOptions.value = (s.data || []) as any
-    recordTypeOptions.value = typeOptions.value
-  } catch (error: any) {
-    console.error('加载下拉失败:', error)
-  }
-  await loadAdmissions()
-  await reloadAll()
-})
-</script>
-
 <template>
   <div class="space-y-6">
     <!-- 页头 -->
@@ -577,10 +5,10 @@ onMounted(async () => {
       <div class="flex items-center gap-3">
         <el-select
             v-model="admissionId"
-            data-testid="p2-admission-select"
-            placeholder="选择在院患者"
-            filterable
             class="!w-80"
+            data-testid="p2-admission-select"
+            filterable
+            placeholder="选择在院患者"
             @change="handleAdmissionChange"
         >
           <el-option v-for="a in admissions" :key="a.admissionId" :label="patientLabel(a)"
@@ -597,8 +25,8 @@ onMounted(async () => {
           :key="s.label"
           class="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
       >
-        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg" :class="s.bg">
-          <el-icon class="h-5 w-5" :class="s.color">
+        <div :class="s.bg" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg">
+          <el-icon :class="s.color" class="h-5 w-5">
             <component :is="s.icon"/>
           </el-icon>
         </div>
@@ -616,30 +44,30 @@ onMounted(async () => {
         <div class="mb-3 flex flex-wrap items-center gap-3">
           <el-input
               v-model="query.keyword"
-              placeholder="搜索文书号 / 标题 / 主诉 / 诊断"
               :prefix-icon="Search"
               class="!w-64"
               clearable
+              placeholder="搜索文书号 / 标题 / 主诉 / 诊断"
               @keyup.enter="loadRecords"
           />
-          <el-select v-model="query.recordType" placeholder="文书类型" clearable class="!w-36">
+          <el-select v-model="query.recordType" class="!w-36" clearable placeholder="文书类型">
             <el-option v-for="t in typeOptions" :key="t.code" :label="t.label" :value="t.code"/>
           </el-select>
-          <el-select v-model="query.recordStatus" placeholder="文书状态" clearable class="!w-32">
+          <el-select v-model="query.recordStatus" class="!w-32" clearable placeholder="文书状态">
             <el-option v-for="t in statusOptions" :key="t.code" :label="t.label" :value="t.code"/>
           </el-select>
           <el-button type="primary" @click="loadRecords">查询</el-button>
-          <el-button class="!ml-auto" type="primary" :icon="Plus" v-perm="'ipd:record:add'" data-testid="p2-open-record"
+          <el-button v-perm="'ipd:record:add'" :icon="Plus" class="!ml-auto" data-testid="p2-open-record" type="primary"
                      @click="openCreate">
             新建病历文书
           </el-button>
         </div>
 
-        <el-table v-loading="loading" data-testid="p2-record-table" :data="rows" style="width: 100%" border>
-          <el-table-column prop="recordNo" label="文书号" width="150"/>
+        <el-table v-loading="loading" :data="rows" border data-testid="p2-record-table" style="width: 100%">
+          <el-table-column label="文书号" prop="recordNo" width="150"/>
           <el-table-column label="类型" width="110">
             <template #default="{ row }">
-              <el-tag size="small" effect="plain">{{ row.recordTypeText }}</el-tag>
+              <el-tag effect="plain" size="small">{{ row.recordTypeText }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column label="标题 / 主诉" min-width="220">
@@ -655,7 +83,7 @@ onMounted(async () => {
           </el-table-column>
           <el-table-column label="结构化率" width="150">
             <template #default="{ row }">
-              <div class="text-sm font-medium" :style="{ color: rateColor(row.structuredRate) }">
+              <div :style="{ color: rateColor(row.structuredRate) }" class="text-sm font-medium">
                 {{ row.structuredRateText }}
               </div>
               <div class="text-xs text-slate-400">{{ row.structuredFilled ?? 0 }}/{{ row.structuredTotal ?? 0 }} 要素
@@ -681,14 +109,14 @@ onMounted(async () => {
               <!-- 三态分开显示：0-未签名 / 1-已签名 / 2-签名已失效。
                    「2-签名已失效」绝不能回落成「未签名」—— "有人作废过签名"和"从来没签过"
                    是两件完全不同的事实（P5.5 口径）。码值未知时如实显示未知(n)，不猜。 -->
-              <el-tag v-if="row.signStatus === 1" type="success" size="small"
-                      :data-testid="`p5-sign-tag-${row.recordNo}`">已签名
+              <el-tag v-if="row.signStatus === 1" :data-testid="`p5-sign-tag-${row.recordNo}`" size="small"
+                      type="success">已签名
               </el-tag>
-              <el-tag v-else-if="row.signStatus === 2" type="warning" size="small"
-                      :data-testid="`p5-sign-tag-${row.recordNo}`">签名已失效
+              <el-tag v-else-if="row.signStatus === 2" :data-testid="`p5-sign-tag-${row.recordNo}`" size="small"
+                      type="warning">签名已失效
               </el-tag>
-              <el-tag v-else-if="row.signStatus === 0" type="info" size="small" effect="plain"
-                      :data-testid="`p5-sign-tag-${row.recordNo}`">未签名
+              <el-tag v-else-if="row.signStatus === 0" :data-testid="`p5-sign-tag-${row.recordNo}`" effect="plain" size="small"
+                      type="info">未签名
               </el-tag>
               <span v-else class="text-xs text-slate-400">未知({{ row.signStatus }})</span>
               <div v-if="row.signedTime" class="mt-0.5 text-xs text-slate-400">{{ fmtTime(row.signedTime) }}</div>
@@ -703,17 +131,17 @@ onMounted(async () => {
               <div class="text-xs text-slate-400">{{ fmtTime(row.recordTime) }}</div>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="240" fixed="right">
+          <el-table-column fixed="right" label="操作" width="240">
             <template #default="{ row }">
-              <el-button v-if="row.canEdit" v-perm="'ipd:record:edit'" type="primary" link size="small"
+              <el-button v-if="row.canEdit" v-perm="'ipd:record:edit'" link size="small" type="primary"
                          @click="openEdit(row)">编辑
               </el-button>
-              <el-button type="info" link size="small" @click="openDetail(row)">要素明细</el-button>
-              <el-button v-if="row.canSubmit" v-perm="'ipd:record:edit'" type="warning" link size="small"
-                         data-testid="p2-submit-btn" @click="doSubmit(row)">提交
+              <el-button link size="small" type="info" @click="openDetail(row)">要素明细</el-button>
+              <el-button v-if="row.canSubmit" v-perm="'ipd:record:edit'" data-testid="p2-submit-btn" link size="small"
+                         type="warning" @click="doSubmit(row)">提交
               </el-button>
-              <el-button v-if="row.canArchive" v-perm="'ipd:record:edit'" type="success" link size="small"
-                         data-testid="p2-archive-btn" @click="doArchive(row)">归档
+              <el-button v-if="row.canArchive" v-perm="'ipd:record:edit'" data-testid="p2-archive-btn" link size="small"
+                         type="success" @click="doArchive(row)">归档
               </el-button>
               <span v-if="!row.canEdit && !row.canSubmit && !row.canArchive"
                     class="text-xs text-slate-400">已封存</span>
@@ -738,17 +166,17 @@ onMounted(async () => {
 
       <!-- ============== 修改留痕 ============== -->
       <el-tab-pane label="修改留痕" name="logs">
-        <el-table v-loading="logLoading" data-testid="p2-log-table" :data="logs" style="width: 100%" border>
+        <el-table v-loading="logLoading" :data="logs" border data-testid="p2-log-table" style="width: 100%">
           <el-table-column label="时间" width="150">
             <template #default="{ row }">{{ fmtTime(row.createTime) }}</template>
           </el-table-column>
-          <el-table-column prop="recordNo" label="文书号" width="150"/>
-          <el-table-column prop="operation" label="操作" width="100">
+          <el-table-column label="文书号" prop="recordNo" width="150"/>
+          <el-table-column label="操作" prop="operation" width="100">
             <template #default="{ row }">
-              <el-tag size="small" effect="plain">{{ row.operation }}</el-tag>
+              <el-tag effect="plain" size="small">{{ row.operation }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="fieldLabel" label="字段" width="140"/>
+          <el-table-column label="字段" prop="fieldLabel" width="140"/>
           <el-table-column label="变更前" min-width="200">
             <template #default="{ row }">
               <span class="text-xs text-slate-500">{{ row.oldValue || '—' }}</span>
@@ -759,7 +187,7 @@ onMounted(async () => {
               <span class="text-xs text-slate-800">{{ row.newValue || '—' }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="userName" label="操作人" width="120"/>
+          <el-table-column label="操作人" prop="userName" width="120"/>
           <template #empty>
             <div class="py-6 text-sm text-slate-400">还没有修改留痕（逐字段 diff，值真变才写）</div>
           </template>
@@ -782,19 +210,19 @@ onMounted(async () => {
     <el-dialog
         v-model="dialog"
         :title="editingId ? '编辑病历文书（传什么覆盖什么，变更逐字段留痕）' : '新建病历文书（结构化要素）'"
-        width="72%"
         top="4vh"
+        width="72%"
     >
       <el-scrollbar max-height="62vh">
-        <el-form label-width="110px" class="pr-2">
+        <el-form class="pr-2" label-width="110px">
           <el-row :gutter="16">
             <el-col :span="8">
               <el-form-item label="文书类型" required>
                 <el-select
                     v-model="form.recordType"
-                    data-testid="p2-form-type"
                     :disabled="!!editingId"
                     class="!w-full"
+                    data-testid="p2-form-type"
                 >
                   <el-option v-for="t in recordTypeOptions" :key="t.code" :label="t.label" :value="t.code"/>
                 </el-select>
@@ -809,21 +237,21 @@ onMounted(async () => {
               <el-form-item label="记录时间">
                 <el-date-picker
                     v-model="form.recordTime"
+                    class="!w-full"
+                    placeholder="留空取当前时间"
                     type="datetime"
                     value-format="YYYY-MM-DDTHH:mm:ss"
-                    placeholder="留空取当前时间"
-                    class="!w-full"
                 />
               </el-form-item>
             </el-col>
           </el-row>
 
           <!-- AI 抽取：产出是候选值，必须医生点「填入」 -->
-          <el-card shadow="never" class="mb-4">
+          <el-card class="mb-4" shadow="never">
             <template #header>
               <div class="flex items-center justify-between">
                 <span class="text-sm font-medium">AI 结构化抽取（不写库，产出只是候选值）</span>
-                <el-button size="small" type="primary" data-testid="p2-ai-extract" :loading="aiLoading"
+                <el-button :loading="aiLoading" data-testid="p2-ai-extract" size="small" type="primary"
                            @click="extractByAi">
                   抽取
                 </el-button>
@@ -831,10 +259,10 @@ onMounted(async () => {
             </template>
             <el-input
                 v-model="aiRaw"
-                data-testid="p2-ai-text"
-                type="textarea"
                 :rows="3"
+                data-testid="p2-ai-text"
                 placeholder="粘贴外院病历 / 口述转写文本，如：主诉：咳嗽发热3天。现病史：…… 既往史：……"
+                type="textarea"
             />
             <div v-if="aiNote" class="mt-2 text-xs text-emerald-600">{{ aiNote }}</div>
             <div v-if="aiCandidates.length" class="mt-3 space-y-2">
@@ -845,8 +273,8 @@ onMounted(async () => {
               >
                 <span class="w-20 shrink-0 text-xs text-slate-500">{{ c.fieldLabel }}</span>
                 <span class="flex-1 text-xs text-slate-700">{{ c.value }}</span>
-                <el-tag size="small" effect="plain">{{ c.source === 'HARD_RULE' ? '原文切分' : '模型搬运' }}</el-tag>
-                <el-button size="small" type="primary" link @click="applyCandidate(c)">填入</el-button>
+                <el-tag effect="plain" size="small">{{ c.source === 'HARD_RULE' ? '原文切分' : '模型搬运' }}</el-tag>
+                <el-button link size="small" type="primary" @click="applyCandidate(c)">填入</el-button>
               </div>
             </div>
           </el-card>
@@ -866,22 +294,22 @@ onMounted(async () => {
             </el-col>
           </el-row>
           <el-form-item label="现病史">
-            <el-input v-model="form.presentIllness" type="textarea" :rows="2"/>
+            <el-input v-model="form.presentIllness" :rows="2" type="textarea"/>
           </el-form-item>
           <el-row :gutter="16">
             <el-col :span="8">
               <el-form-item label="既往史">
-                <el-input v-model="form.pastHistory" type="textarea" :rows="2"/>
+                <el-input v-model="form.pastHistory" :rows="2" type="textarea"/>
               </el-form-item>
             </el-col>
             <el-col :span="8">
               <el-form-item label="个人史">
-                <el-input v-model="form.personalHistory" type="textarea" :rows="2"/>
+                <el-input v-model="form.personalHistory" :rows="2" type="textarea"/>
               </el-form-item>
             </el-col>
             <el-col :span="8">
               <el-form-item label="家族史">
-                <el-input v-model="form.familyHistory" type="textarea" :rows="2"/>
+                <el-input v-model="form.familyHistory" :rows="2" type="textarea"/>
               </el-form-item>
             </el-col>
           </el-row>
@@ -891,45 +319,45 @@ onMounted(async () => {
           <el-row :gutter="16">
             <el-col :span="4">
               <el-form-item label="体温℃">
-                <el-input-number v-model="form.temperature" :precision="1" :step="0.1" :min="34" :max="43"
-                                 controls-position="right" class="!w-full"/>
+                <el-input-number v-model="form.temperature" :max="43" :min="34" :precision="1" :step="0.1"
+                                 class="!w-full" controls-position="right"/>
               </el-form-item>
             </el-col>
             <el-col :span="4">
               <el-form-item label="脉搏">
-                <el-input-number v-model="form.pulse" :min="20" :max="250" controls-position="right" class="!w-full"/>
+                <el-input-number v-model="form.pulse" :max="250" :min="20" class="!w-full" controls-position="right"/>
               </el-form-item>
             </el-col>
             <el-col :span="4">
               <el-form-item label="呼吸">
-                <el-input-number v-model="form.respiration" :min="5" :max="80" controls-position="right"
-                                 class="!w-full"/>
+                <el-input-number v-model="form.respiration" :max="80" :min="5" class="!w-full"
+                                 controls-position="right"/>
               </el-form-item>
             </el-col>
             <el-col :span="6">
               <el-form-item label="收缩压">
-                <el-input-number v-model="form.systolicPressure" :min="40" :max="300" controls-position="right"
-                                 class="!w-full"/>
+                <el-input-number v-model="form.systolicPressure" :max="300" :min="40" class="!w-full"
+                                 controls-position="right"/>
               </el-form-item>
             </el-col>
             <el-col :span="6">
               <el-form-item label="舒张压">
-                <el-input-number v-model="form.diastolicPressure" :min="20" :max="200" controls-position="right"
-                                 class="!w-full"/>
+                <el-input-number v-model="form.diastolicPressure" :max="200" :min="20" class="!w-full"
+                                 controls-position="right"/>
               </el-form-item>
             </el-col>
           </el-row>
           <el-row :gutter="16">
             <el-col :span="6">
               <el-form-item label="身高cm">
-                <el-input-number v-model="form.height" :precision="1" :min="30" :max="250" controls-position="right"
-                                 class="!w-full"/>
+                <el-input-number v-model="form.height" :max="250" :min="30" :precision="1" class="!w-full"
+                                 controls-position="right"/>
               </el-form-item>
             </el-col>
             <el-col :span="6">
               <el-form-item label="体重kg">
-                <el-input-number v-model="form.weight" :precision="1" :min="1" :max="300" controls-position="right"
-                                 class="!w-full"/>
+                <el-input-number v-model="form.weight" :max="300" :min="1" :precision="1" class="!w-full"
+                                 controls-position="right"/>
               </el-form-item>
             </el-col>
           </el-row>
@@ -979,13 +407,13 @@ onMounted(async () => {
             </el-col>
           </el-row>
           <el-form-item label="专科检查">
-            <el-input v-model="form.specialistExam" type="textarea" :rows="2"/>
+            <el-input v-model="form.specialistExam" :rows="2" type="textarea"/>
           </el-form-item>
 
           <!-- 结论 -->
           <div class="mb-1 text-sm font-semibold text-slate-700">诊疗过程与结论</div>
           <el-form-item label="辅助检查">
-            <el-input v-model="form.auxiliaryExam" type="textarea" :rows="2"/>
+            <el-input v-model="form.auxiliaryExam" :rows="2" type="textarea"/>
           </el-form-item>
           <el-row :gutter="16">
             <el-col :span="14">
@@ -996,16 +424,16 @@ onMounted(async () => {
                      el-select 在无匹配项时会原样显示该值，医生据此决定改不改。 -->
                 <el-select
                     v-model="icdCodes"
-                    data-testid="p2-diagnosis"
-                    class="!w-full"
-                    multiple
-                    filterable
-                    remote
-                    clearable
-                    reserve-keyword
-                    :remote-method="searchIcdOptions"
                     :loading="icdLoading"
+                    :remote-method="searchIcdOptions"
+                    class="!w-full"
+                    clearable
+                    data-testid="p2-diagnosis"
+                    filterable
+                    multiple
                     placeholder="输入疾病名称或 ICD 编码检索，可多选"
+                    remote
+                    reserve-keyword
                     @change="syncDiagnosisText"
                 >
                   <el-option
@@ -1032,10 +460,10 @@ onMounted(async () => {
             </el-col>
           </el-row>
           <el-form-item label="诊疗计划">
-            <el-input v-model="form.treatmentPlan" type="textarea" :rows="2"/>
+            <el-input v-model="form.treatmentPlan" :rows="2" type="textarea"/>
           </el-form-item>
           <el-form-item label="病程正文">
-            <el-input v-model="form.courseNote" type="textarea" :rows="2" placeholder="病程类文书填这里"/>
+            <el-input v-model="form.courseNote" :rows="2" placeholder="病程类文书填这里" type="textarea"/>
           </el-form-item>
           <el-form-item label="备注">
             <el-input v-model="form.remark" data-testid="p2-remark"/>
@@ -1044,8 +472,8 @@ onMounted(async () => {
       </el-scrollbar>
       <template #footer>
         <el-button @click="dialog = false">取消</el-button>
-        <el-button type="primary" :loading="saving" v-perm="['ipd:record:add','ipd:record:edit']"
-                   data-testid="p2-submit-record" @click="submitRecord">
+        <el-button v-perm="['ipd:record:add','ipd:record:edit']" :loading="saving" data-testid="p2-submit-record"
+                   type="primary" @click="submitRecord">
           {{ editingId ? '保存修改' : '创建文书' }}
         </el-button>
       </template>
@@ -1055,30 +483,30 @@ onMounted(async () => {
     <el-dialog v-model="detailDialog" title="结构化要素明细" width="60%">
       <div class="mb-3 text-sm text-slate-600">
         {{ detail.patientName || '—' }} · {{ detail.recordTypeText || '—' }} · {{ detail.recordNo || '—' }}
-        <span class="ml-3 font-semibold" :style="{ color: rateColor(detail.structuredRate) }">
+        <span :style="{ color: rateColor(detail.structuredRate) }" class="ml-3 font-semibold">
           结构化率 {{ detail.structuredRateText || '—' }}（{{
             detail.structuredFilled ?? 0
           }}/{{ detail.structuredTotal ?? 0 }}）
         </span>
         <el-tag
+            :data-testid="`p5-sign-detail-tag-${detail.recordNo}`"
+            :type="detail.signStatus === 1 ? 'success' : detail.signStatus === 2 ? 'warning' : 'info'"
             class="ml-3"
             size="small"
-            :type="detail.signStatus === 1 ? 'success' : detail.signStatus === 2 ? 'warning' : 'info'"
-            :data-testid="`p5-sign-detail-tag-${detail.recordNo}`"
         >{{ detail.signStatusText || ('未知(' + detail.signStatus + ')') }}
         </el-tag>
       </div>
       <!-- 锁提示由后端给：按钮能不能按、为什么不能按，前端不自判状态（同一口径只维护一处） -->
       <div
           v-if="detail.signLockHint"
-          data-testid="p5-sign-lock-hint"
           class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900"
+          data-testid="p5-sign-lock-hint"
       >{{ detail.signLockHint }}
       </div>
-      <el-table data-testid="p2-element-table" :data="detailElements" style="width: 100%" border max-height="50vh">
-        <el-table-column prop="groupLabel" label="分组" width="140"/>
-        <el-table-column prop="label" label="要素" width="140"/>
-        <el-table-column label="是否已填" width="110" align="center">
+      <el-table :data="detailElements" border data-testid="p2-element-table" max-height="50vh" style="width: 100%">
+        <el-table-column label="分组" prop="groupLabel" width="140"/>
+        <el-table-column label="要素" prop="label" width="140"/>
+        <el-table-column align="center" label="是否已填" width="110">
           <template #default="{ row }">
             <el-tag :type="row.filled ? 'success' : 'danger'" size="small">{{ row.filled ? '已填' : '缺失' }}</el-tag>
           </template>
@@ -1095,3 +523,442 @@ onMounted(async () => {
     </el-dialog>
   </div>
 </template>
+
+<script setup>
+import {computed, onMounted, ref} from 'vue';
+import {ElMessage, ElMessageBox} from 'element-plus';
+import {DataLine, Document, Plus, Refresh, Search, Warning} from '@element-plus/icons-vue';
+import {getInpatientListPage} from '@/api/inpatient';
+import {
+  archiveInpatientRecord,
+  getInpatientRecordDetail,
+  getInpatientRecordListPage,
+  getInpatientRecordLogs,
+  getInpatientRecordStatusOptions,
+  getInpatientRecordTypeOptions,
+  getRecordQualityStat,
+  saveInpatientRecord,
+  submitInpatientRecord,
+} from '@/api/inpatientRecord';
+import {extractEmrText} from '@/api/ai';
+import {searchIcd10} from '@/api/system';
+import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+// ---------------- 基础数据 ----------------
+const admissions = ref([]);
+const admissionId = ref('');
+const typeOptions = ref([]);
+const statusOptions = ref([]);
+const fmtTime = (v) => (v ? String(v).replace('T', ' ').slice(0, 16) : '—');
+/** 数值 0 必须显示成 0，不能当空 */
+const num = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
+const patientLabel = (a) => `${a.bedNo || '—'} ${a.patientName || '—'}（${a.wardName || a.deptName || '—'}）`;
+const loadAdmissions = async () => {
+  try {
+    const res = await getInpatientListPage({admitStatus: 1, pageNum: 1, pageSize: 200});
+    admissions.value = (res.data?.records || []);
+    if (!admissionId.value && admissions.value.length > 0) {
+      admissionId.value = String(admissions.value[0].admissionId);
+    }
+  } catch (error) {
+    console.error('加载在院患者失败:', error);
+  }
+};
+// ---------------- 列表 ----------------
+const activeTab = ref('records');
+const loading = ref(false);
+const rows = ref([]);
+const total = ref(0);
+const pagination = ref({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE});
+const query = ref({recordType: null, recordStatus: null, keyword: ''});
+const stat = ref({});
+const loadRecords = async () => {
+  loading.value = true;
+  try {
+    const res = await getInpatientRecordListPage({
+      admissionId: admissionId.value || undefined,
+      pageNum: pagination.value.pageNum,
+      pageSize: pagination.value.pageSize,
+      recordType: query.value.recordType ?? undefined,
+      recordStatus: query.value.recordStatus ?? undefined,
+      keyword: query.value.keyword || undefined,
+    });
+    rows.value = (res.data?.records || []);
+    total.value = Number(res.data?.total ?? 0);
+  } catch (error) {
+    ElMessage.error(error.message || '加载病历列表失败');
+  } finally {
+    loading.value = false;
+  }
+};
+const loadStat = async () => {
+  try {
+    const res = await getRecordQualityStat(admissionId.value);
+    stat.value = (res.data || {});
+  } catch (error) {
+    stat.value = {};
+  }
+};
+// ---------------- 修改留痕 ----------------
+const logLoading = ref(false);
+const logs = ref([]);
+const logTotal = ref(0);
+const logPagination = ref({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE});
+const loadLogs = async () => {
+  logLoading.value = true;
+  try {
+    const res = await getInpatientRecordLogs({
+      admissionId: admissionId.value || undefined,
+      pageNum: logPagination.value.pageNum,
+      pageSize: logPagination.value.pageSize,
+    });
+    logs.value = (res.data?.records || []);
+    logTotal.value = Number(res.data?.total ?? 0);
+  } catch (error) {
+    ElMessage.error(error.message || '加载修改留痕失败');
+  } finally {
+    logLoading.value = false;
+  }
+};
+const statCards = computed(() => [
+  {
+    label: '结构化率',
+    value: stat.value.structuredRateText || '—',
+    hint: `${stat.value.elementFilled ?? 0}/${stat.value.elementTotal ?? 0} 个要素`,
+    color: 'text-emerald-600',
+    bg: 'bg-emerald-50',
+    icon: DataLine
+  },
+  {
+    label: '文书份数',
+    value: stat.value.recordCount ?? 0,
+    hint: '含草稿与已归档',
+    color: 'text-blue-600',
+    bg: 'bg-blue-50',
+    icon: Document
+  },
+  {
+    label: '列表条数',
+    value: total.value,
+    hint: '当前筛选条件',
+    color: 'text-slate-600',
+    bg: 'bg-slate-100',
+    icon: Search
+  },
+  {
+    label: '修改留痕',
+    value: logTotal.value,
+    hint: '逐字段 diff，值真变才写',
+    color: 'text-amber-600',
+    bg: 'bg-amber-50',
+    icon: Warning
+  },
+]);
+// ---------------- 新建 / 编辑 ----------------
+const dialog = ref(false);
+const saving = ref(false);
+const editingId = ref('');
+const recordTypeOptions = ref([]);
+const emptyForm = () => ({
+  recordType: 1, recordTitle: '', recordTime: '',
+  chiefComplaint: '', presentIllness: '', pastHistory: '', personalHistory: '', familyHistory: '', allergyHistory: '',
+  temperature: undefined, pulse: undefined, respiration: undefined,
+  systolicPressure: undefined, diastolicPressure: undefined, height: undefined, weight: undefined,
+  generalCondition: '', skinMucosa: '', headNeck: '', chestLung: '', heart: '', abdomen: '',
+  spineLimbs: '', nervousSystem: '', specialistExam: '',
+  auxiliaryExam: '', diagnosisName: '', diagnosisCode: '', treatmentPlan: '', courseNote: '', remark: '',
+});
+const form = ref(emptyForm());
+const openCreate = () => {
+  if (!admissionId.value) {
+    ElMessage.warning('请先选择在院患者');
+    return;
+  }
+  editingId.value = '';
+  form.value = emptyForm();
+  icdCodes.value = [];
+  icdOptions.value = [];
+  icdNameOf.clear();
+  aiCandidates.value = [];
+  aiRaw.value = '';
+  aiNote.value = '';
+  dialog.value = true;
+};
+const openEdit = async (row) => {
+  try {
+    const res = await getInpatientRecordDetail(row.id);
+    const d = res.data || {};
+    editingId.value = row.id;
+    form.value = {
+      recordType: d.recordType ?? 1,
+      recordTitle: d.recordTitle ?? '',
+      recordTime: (d.recordTime || '').replace(' ', 'T'),
+      chiefComplaint: d.chiefComplaint ?? '',
+      presentIllness: d.presentIllness ?? '',
+      pastHistory: d.pastHistory ?? '',
+      personalHistory: d.personalHistory ?? '',
+      familyHistory: d.familyHistory ?? '',
+      allergyHistory: d.allergyHistory ?? '',
+      temperature: d.temperature ?? undefined,
+      pulse: d.pulse ?? undefined,
+      respiration: d.respiration ?? undefined,
+      systolicPressure: d.systolicPressure ?? undefined,
+      diastolicPressure: d.diastolicPressure ?? undefined,
+      height: d.height ?? undefined,
+      weight: d.weight ?? undefined,
+      generalCondition: d.generalCondition ?? '',
+      skinMucosa: d.skinMucosa ?? '',
+      headNeck: d.headNeck ?? '',
+      chestLung: d.chestLung ?? '',
+      heart: d.heart ?? '',
+      abdomen: d.abdomen ?? '',
+      spineLimbs: d.spineLimbs ?? '',
+      nervousSystem: d.nervousSystem ?? '',
+      specialistExam: d.specialistExam ?? '',
+      auxiliaryExam: d.auxiliaryExam ?? '',
+      diagnosisName: d.diagnosisName ?? '',
+      diagnosisCode: d.diagnosisCode ?? '',
+      treatmentPlan: d.treatmentPlan ?? '',
+      courseNote: d.courseNote ?? '',
+      remark: d.remark ?? '',
+    };
+    seedDiagnosis(d.diagnosisCode, d.diagnosisName);
+    aiCandidates.value = [];
+    aiRaw.value = '';
+    aiNote.value = '';
+    dialog.value = true;
+  } catch (error) {
+    ElMessage.error(error.message || '加载病历详情失败');
+  }
+};
+// ---------------- ICD-10 诊断选码（G3） ----------------
+/**
+ * 诊断为什么要用选码器而不是两个手输框：
+ * 手输时医生凭记忆敲编码，敲错/敲简写都不会有人发现，而 `diagnosis_code` 是
+ * 病案首页、DRG 分组、医保结算的上游依据 —— 错一个码下游全错，且**零报错**。
+ *
+ * 两个必须说清的现状（实测 2026-09-23）：
+ * 1. 码表已从演示期 35 条扩到 **40477 条**，检索必须按相关性排序，
+ *    否则输入「肺炎」首条会返回「A01.005+J17.0* 伤寒并发肺炎」（后端已修）。
+ * 2. 存量数据里有**码表里查不到的编码**（`J18.900` / `J45.900` / `O14.900` /
+ *    `K29.500` / `J20.900`）。所以选码器**不能**把不在选项里的值当空值丢掉 ——
+ *    打开老病历时必须原样把编码显示出来，医生改不改由他决定。
+ */
+const icdOptions = ref([]);
+const icdLoading = ref(false);
+/** 本次选中的编码（`diagnosis_code` 是分号分隔的多值列，这里用数组承载） */
+const icdCodes = ref([]);
+/** 编码 → 名称缓存：含历史数据回填，避免改码后把解析不出的诊断名写空 */
+const icdNameOf = new Map();
+/** 请求序号：远程搜索是异步的，慢响应回来晚了不能覆盖新结果 */
+let icdSeq = 0;
+const searchIcdOptions = async (query) => {
+  const kw = (query || '').trim();
+  if (!kw) {
+    icdOptions.value = [];
+    return;
+  }
+  const seq = ++icdSeq;
+  icdLoading.value = true;
+  try {
+    const res = await searchIcd10(kw);
+    if (seq !== icdSeq)
+      return;
+    const seen = new Set();
+    icdOptions.value = (res.data || [])
+        .filter(o => o?.icdCode && !seen.has(o.icdCode) && seen.add(o.icdCode))
+        .map(o => ({icdCode: o.icdCode, icdName: o.icdName, icdCategory: o.icdCategory}));
+    icdOptions.value.forEach(o => icdNameOf.set(o.icdCode, o.icdName));
+  } catch (error) {
+    if (seq !== icdSeq)
+      return;
+    icdOptions.value = [];
+    console.error('检索 ICD 编码失败:', error);
+  } finally {
+    if (seq === icdSeq)
+      icdLoading.value = false;
+  }
+};
+/** 打开表单时把「分号分隔的双列」还原成编码数组，并用历史名称回填缓存 */
+const seedDiagnosis = (codeStr, nameStr) => {
+  const codes = String(codeStr || '').split(';').map(s => s.trim()).filter(Boolean);
+  const names = String(nameStr || '').split(';').map(s => s.trim());
+  icdCodes.value = codes;
+  if (codes.length > 0 && codes.length === names.length) {
+    codes.forEach((code, i) => {
+      if (names[i])
+        icdNameOf.set(code, names[i]);
+    });
+  }
+};
+/**
+ * 选码后回写两个文本列。
+ * 名称只在**每个编码都能解析出名称**时才整体重写：只要有解析不出的（老码），
+ * 就保留原文本不动 —— 宁可名称没跟着更新，也不能把诊断名写空。
+ */
+const syncDiagnosisText = () => {
+  const codes = icdCodes.value.filter(Boolean);
+  form.value.diagnosisCode = codes.join(';');
+  const names = codes.map(code => icdNameOf.get(code));
+  if (names.length > 0 && names.every(n => n)) {
+    form.value.diagnosisName = names.join(';');
+  }
+};
+// ---------------- AI 抽取（候选值，不自动填表） ----------------
+const aiRaw = ref('');
+const aiLoading = ref(false);
+const aiNote = ref('');
+const aiCandidates = ref([]);
+/** 只认这份白名单：模型给出的其它字段一律不进表单（防"顺手多填"） */
+const AI_FIELD_MAP = {
+  chiefComplaint: 'chiefComplaint',
+  presentIllness: 'presentIllness',
+  pastHistory: 'pastHistory',
+  personalHistory: 'personalHistory',
+  familyHistory: 'familyHistory',
+  allergyHistory: 'allergyHistory',
+  generalCondition: 'generalCondition',
+  skinMucosa: 'skinMucosa',
+  headNeck: 'headNeck',
+  chestLung: 'chestLung',
+  heart: 'heart',
+  abdomen: 'abdomen',
+  spineLimbs: 'spineLimbs',
+  nervousSystem: 'nervousSystem',
+  specialistExam: 'specialistExam',
+  auxiliaryExam: 'auxiliaryExam',
+  treatmentPlan: 'treatmentPlan',
+};
+const extractByAi = async () => {
+  if (!aiRaw.value.trim()) {
+    ElMessage.warning('请先粘贴待抽取的病历文本');
+    return;
+  }
+  aiLoading.value = true;
+  aiNote.value = '';
+  try {
+    const res = await extractEmrText({rawText: aiRaw.value});
+    const data = res.data || {};
+    aiCandidates.value = (data.fields || []).filter((f) => AI_FIELD_MAP[f.field]);
+    const rejected = Number(data.rejectedCount ?? 0);
+    aiNote.value = rejected > 0
+        ? `抽取完成，${rejected} 条被判为「原文中找不到依据 / 字段不可写」已丢弃`
+        : '抽取完成，请逐条核对后点「填入」';
+  } catch (error) {
+    ElMessage.error(error.message || '病历文本抽取失败');
+  } finally {
+    aiLoading.value = false;
+  }
+};
+const applyCandidate = (c) => {
+  const key = AI_FIELD_MAP[c.field];
+  if (!key)
+    return;
+  form.value[key] = c.value;
+  ElMessage.success(`已填入「${c.field}」（仍需医生核对）`);
+};
+// ---------------- 保存 / 提交 / 归档 ----------------
+const submitRecord = async () => {
+  if (!admissionId.value) {
+    ElMessage.warning('请先选择在院患者');
+    return;
+  }
+  saving.value = true;
+  try {
+    const payload = {...form.value, admissionId: admissionId.value};
+    if (editingId.value) {
+      payload.id = editingId.value;
+    }
+    // 「传什么覆盖什么」：空字符串保持空串（置空是有意的动作，服务层会留痕）
+    await saveInpatientRecord(payload);
+    ElMessage.success(editingId.value ? '病历已修改（变更已逐字段留痕）' : '病历文书已创建');
+    dialog.value = false;
+    await reloadAll();
+  } catch (error) {
+    ElMessage.error(error.message || '保存病历失败');
+  } finally {
+    saving.value = false;
+  }
+};
+const doSubmit = async (row) => {
+  try {
+    const res = await submitInpatientRecord({ids: [row.id]});
+    ElMessage.success(`已提交 ${res.data} 份病历`);
+    await reloadAll();
+  } catch (error) {
+    ElMessage.error(error.message || '提交失败');
+  }
+};
+const doArchive = async (row) => {
+  try {
+    const {value} = await ElMessageBox.prompt(`归档 ${row.recordNo}（${row.recordTypeText || ''}）。归档是单向门，归档后禁止修改：`, '归档病历文书', {
+      inputPlaceholder: '如：已送病案室，2026-09 批次',
+      confirmButtonText: '确认归档',
+      cancelButtonText: '取消'
+    });
+    if (!value) {
+      ElMessage.warning('归档说明必填');
+      return;
+    }
+    const res = await archiveInpatientRecord({ids: [row.id], remark: value});
+    ElMessage.success(`已归档 ${res.data} 份病历`);
+    await reloadAll();
+  } catch (error) {
+    if (error === 'cancel' || error === 'close')
+      return;
+    ElMessage.error(error.message || '归档失败');
+  }
+};
+// ---------------- 详情（要素明细） ----------------
+const detailDialog = ref(false);
+const detail = ref({});
+const detailElements = ref([]);
+const openDetail = async (row) => {
+  try {
+    const res = await getInpatientRecordDetail(row.id);
+    detail.value = res.data || {};
+    detailElements.value = (res.data?.elements || []);
+    detailDialog.value = true;
+  } catch (error) {
+    ElMessage.error(error.message || '加载病历详情失败');
+  }
+};
+const rateColor = (rate) => {
+  if (rate === undefined || rate === null)
+    return '#94a3b8';
+  if (rate >= 80)
+    return '#16a34a';
+  if (rate >= 60)
+    return '#f59e0b';
+  return '#ef4444';
+};
+const statusTagType = (s) => {
+  if (s === 1)
+    return 'info';
+  if (s === 2)
+    return 'warning';
+  if (s === 3)
+    return 'success';
+  return 'info';
+};
+// ---------------- 刷新 ----------------
+const reloadAll = async () => {
+  await Promise.all([loadRecords(), loadLogs(), loadStat()]);
+};
+const handleAdmissionChange = async () => {
+  pagination.value.pageNum = 1;
+  logPagination.value.pageNum = 1;
+  await reloadAll();
+};
+onMounted(async () => {
+  try {
+    const [t, s] = await Promise.all([getInpatientRecordTypeOptions(), getInpatientRecordStatusOptions()]);
+    typeOptions.value = (t.data || []);
+    statusOptions.value = (s.data || []);
+    recordTypeOptions.value = typeOptions.value;
+  } catch (error) {
+    console.error('加载下拉失败:', error);
+  }
+  await loadAdmissions();
+  await reloadAll();
+});
+</script>

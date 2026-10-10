@@ -1,3381 +1,3 @@
-<script lang="ts" setup>
-import {computed, onMounted, onUnmounted, reactive, ref, watch} from 'vue'
-import {useRoute} from 'vue-router'
-import {patientAvatarTone, patientGenderText} from '@/lib/patientGender'
-import {
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-  CircleCheck,
-  Clock,
-  Coin,
-  Delete,
-  Document,
-  InfoFilled,
-  Loading,
-  MagicStick,
-  Plus,
-  Printer,
-  Reading,
-  RefreshRight,
-  Search,
-  Tickets,
-  VideoPause,
-  VideoPlay,
-  Warning
-} from '@element-plus/icons-vue'
-import {ElMessage, ElMessageBox} from 'element-plus'
-import PatientBriefBar from '@/components/his/PatientBriefBar.vue'
-import {REVISIT_SOURCE} from '@/lib/revisitPolicy'
-import PatientDetailDialog from '@/components/his/PatientDetailDialog.vue'
-import {useCurrentPatientStore} from '@/stores/currentPatient'
-import PageActionBar from '@/components/his/PageActionBar.vue'
-import OrderPanel from '@/components/his/OrderPanel.vue'
-import {
-  callNextQueue,
-  callPatient,
-  createRevisitRegistration,
-  estimateInsurance,
-  getCurrentDoctorStatus,
-  getQueueStats,
-  getTodayQueueList,
-  recallPatient,
-  setDoctorStatus
-} from '@/api/appoint'
-import {
-  getDepartmentSelectList,
-  getDictDataMapList,
-  getDrugSelectList,
-  getInspectionSelectList,
-  getLaboratorySelectList,
-  getPatientTagListAll,
-  predictIcd10,
-  searchIcd10,
-  searchInspectionItem,
-  searchLaboratoryItem
-} from '@/api/system'
-import {DICT_TYPE} from '@/lib/dict-cache'
-import {getByRegistId, getEmrRecordList} from '@/api/emr'
-import {createAdmissionOrder} from '@/api/admissionOrder'
-import {draftEmrText, extractEmrText, transcribeVoice} from '@/api/ai'
-import {localDateStr, shortQueueNo} from '@/lib/utils'
-import {QUEUE_STATUS, queueVisitBadgeOf} from '@/lib/statusColor'
-import {
-  deleteDiagTemplate,
-  deleteDrugPackage,
-  deleteInspectionApply,
-  deleteInspectionTemplate,
-  deleteLaboratoryApply,
-  deleteLaboratoryTemplate,
-  deleteRxTemplate,
-  getDiagTemplates,
-  getDrugPackageDetail,
-  getDrugPackages,
-  getInspectionApplyList,
-  getInspectionTemplates,
-  getLaboratoryApplyList,
-  getLaboratoryTemplates,
-  getPrescriptionList,
-  getPrevisitByRegist,
-  getRxTemplateDetail,
-  getRxTemplates,
-  saveDiagTemplates,
-  saveDrugPackage,
-  saveInspectionApply,
-  saveInspectionTemplate,
-  saveLaboratoryApply,
-  saveLaboratoryTemplate,
-  saveMedicalRecord,
-  saveRxTemplate,
-  submitMedicalRecord
-} from '@/api/doctor'
-import {getStockList} from '@/api/pharmacy'
-import {addPatientTag, getPatientDetail, getPatientTags, removePatientTag} from '@/api/patient'
-import {getInspectionDetail, getLaboratoryDetail, getLaboratoryRecordList} from '@/api/medicaltech'
-import {listItemsByPatient} from '@/api/settlementBill'
-
-const GENDER_TONE_CLASS = {
-  male: 'bg-blue-50 text-blue-600',
-  female: 'bg-pink-50 text-pink-600',
-  unknown: 'bg-slate-100 text-slate-500'
-}
-
-const queueStatusMap: Record<number, { label: string; color: string }> = QUEUE_STATUS
-
-const loading = ref(false)
-const patientDataPending = ref(0)
-const patientDataLoading = computed(() => patientDataPending.value > 0)
-const trackPatientLoad = (p: Promise<any>) => {
-  patientDataPending.value++
-  // 各 loader 内部都自己吞异常，这里只负责收尾计数
-  return p.finally(() => {
-    patientDataPending.value = Math.max(0, patientDataPending.value - 1)
-  })
-}
-const departments = ref<any[]>([])
-const selectedDeptId = ref<number | null>(null)
-const queueList = ref<any[]>([])
-
-const currentPatientStore = useCurrentPatientStore()
-const route = useRoute()
-const queueLoaded = ref(false)
-let handledSwitchAt = 0
-let pendingSwitch: any = null
-let enteredWithTarget = false
-let urlIntent = false
-const QUEUE_STATUS_ORDER: Record<string, number> = {3: 0, 2: 1, 4: 2, 5: 3, 6: 4}
-
-/** 队列行比较器：先状态优先级，同状态按到达时间，再按序号（保证排序稳定） */
-const compareQueueRow = (a: any, b: any) => {
-  const oa = QUEUE_STATUS_ORDER[a.queueStatus] ?? 5
-  const ob = QUEUE_STATUS_ORDER[b.queueStatus] ?? 5
-  if (oa !== ob) return oa - ob
-  if (a.arriveTime && b.arriveTime) {
-    const ta = new Date(a.arriveTime).getTime()
-    const tb = new Date(b.arriveTime).getTime()
-    if (ta !== tb) return ta - tb
-  }
-  return (a.sequenceNo || 0) - (b.sequenceNo || 0)
-}
-
-const pickQueueRow = (rows: any[]) => {
-  if (!rows || !rows.length) return null
-  return [...rows].sort(compareQueueRow)[0]
-}
-
-const applyPendingSwitch = () => {
-  const p = pendingSwitch
-  if (!p) return
-  pendingSwitch = null
-  const notify = currentPatientStore.consumeSwitchNotice() || urlIntent
-  urlIntent = false
-  // 同一患者今天多条队列时，挑「该接的那一条」而不是数组第一条（见 pickQueueRow）
-  const target = pickQueueRow(queueList.value.filter((q: any) => String(q.patientId) === String(p.id)))
-  if (target) {
-    selectPatient(target)
-    if (notify) {
-      ElMessage.success(`已切换接诊患者：${target.patientName || p.patientName}`)
-    }
-  } else {
-    if (notify) {
-      // 用户主动搜的人不在队列：要说清楚，并把这次搜索交回详情框（不让它落空）
-      ElMessage.warning(`${p.patientName || '该患者'} 不在您的今日候诊队列中，已改为展示患者档案`)
-      currentPatientStore.requestDetail(p.id)
-    }
-    if (currentPatient.value) {
-      currentPatientStore.syncPatient(toStorePatient(currentPatient.value))
-    } else {
-      currentPatientStore.syncClear()
-    }
-  }
-  enteredWithTarget = false
-}
-
-const toStorePatient = (row: any) => ({
-  id: String(row.patientId),
-  patientName: row.patientName,
-  patientNo: row.patientNo,
-  gender: row.gender,
-  age: row.age,
-})
-
-const consumeSwitch = () => {
-  const p = currentPatientStore.patient
-  const ts = currentPatientStore.switchedAt
-  if (!p || !ts || ts === handledSwitchAt) return
-  handledSwitchAt = ts
-  pendingSwitch = p
-  if (queueLoaded.value) applyPendingSwitch()
-}
-
-watch(() => currentPatientStore.switchedAt, consumeSwitch)
-
-const currentPatient = ref<any>(null)
-const activeTab = ref('record')
-const queueSearch = ref('')
-const queueFilter = ref('all')
-const userInfo = ref<any>({})
-
-const stats = ref({waiting: 0, called: 0, inProgress: 0})
-
-// 今日待办
-const todoList = ref<any[]>([])
-const todoStats = ref({pendingReview: 0, pendingReport: 0, pendingFollowUp: 0, pendingConsult: 0})
-const todoSearch = ref('')
-
-const filteredTodoList = computed(() => {
-  if (!todoSearch.value) return todoList.value
-  const kw = todoSearch.value.toLowerCase()
-  return todoList.value.filter((item: any) =>
-      item.title?.toLowerCase().includes(kw) || item.content?.toLowerCase().includes(kw)
-  )
-})
-
-const currentCalledPatient = computed(() => {
-  return pickQueueRow(queueList.value.filter((q: any) => q.queueStatus === 3))
-})
-
-const waitingCount = computed(() => {
-  return queueList.value.filter((q: any) => q.queueStatus === 2).length
-})
-
-const nextWaiting = computed(() => {
-  const waiting = queueList.value.filter((q: any) => q.queueStatus === 2)
-  if (!waiting.length) return null
-  return [...waiting].sort((a: any, b: any) => {
-    const la = a.triageLevel ?? 4
-    const lb = b.triageLevel ?? 4
-    if (la !== lb) return la - lb
-    return (a.sequenceNo || 0) - (b.sequenceNo || 0)
-  })[0]
-})
-
-const formatArriveTime = (time: string) => {
-  if (!time) return ''
-  const d = new Date(time)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
-
-const calcWaitMinutes = (row: any) => {
-  if (row.waitDuration != null) return row.waitDuration
-  if (!row.arriveTime) return 0
-  const arrive = new Date(row.arriveTime)
-  const now = row.queueStatus === 3 && row.startTime ? new Date(row.startTime) : new Date()
-  return Math.max(0, Math.floor((now.getTime() - arrive.getTime()) / 60000))
-}
-
-const waitDurationClass = (minutes: number) => {
-  if (minutes >= 30) return 'text-red-500 font-medium'
-  if (minutes >= 15) return 'text-amber-500'
-  return 'text-slate-400'
-}
-
-// ========== 费用计算 ==========
-const drugTotalAmount = computed(() => {
-  return prescriptionList.value.reduce((sum: number, p: any) => {
-    return sum + (p.details || []).reduce((s: number, d: any) => s + (d.amount || 0), 0)
-  }, 0)
-})
-const inspectionTotalAmount = computed(() => {
-  return inspectionRecords.value.reduce((sum: number, r: any) => sum + (r.price || 0), 0)
-})
-const laboratoryTotalAmount = computed(() => {
-  return laboratoryRecords.value.reduce((sum: number, r: any) => sum + (r.price || 0), 0)
-})
-const totalBillAmount = computed(() => drugTotalAmount.value + inspectionTotalAmount.value + laboratoryTotalAmount.value)
-const maxBillAmount = computed(() => Math.max(totalBillAmount.value, 1))
-const drugPercentage = computed(() => Math.round((drugTotalAmount.value / maxBillAmount.value) * 100))
-const inspectionPercentage = computed(() => Math.round((inspectionTotalAmount.value / maxBillAmount.value) * 100))
-const laboratoryPercentage = computed(() => Math.round((laboratoryTotalAmount.value / maxBillAmount.value) * 100))
-
-// 医保信息
-const insuranceInfo = ref<any>(null)
-const loadInsuranceInfo = async () => {
-  if (!currentPatient.value) {
-    insuranceInfo.value = null
-    return
-  }
-  // 根据所有处方实际金额计算
-  const drugTotal = prescriptionList.value.reduce((sum: number, p: any) => {
-    return sum + (p.details || []).reduce((s: number, d: any) => s + (d.amount || 0), 0)
-  }, 0)
-  // 计算检查申请费用（批次E/E1：开单即落库，这里只算「已提交未缴费(applyStatus=1)」的金额，
-  // 已缴费(2)的不重复计入，已取消(6)的不算）
-  const inspectionTotal = inspectionRecords.value
-      .filter((r: any) => r.applyStatus === 1)
-      .reduce((sum: number, r: any) => sum + (r.price || 0), 0)
-  // 计算检验申请费用（口径同检查）
-  const laboratoryTotal = laboratoryRecords.value
-      .filter((r: any) => r.applyStatus === 1)
-      .reduce((sum: number, r: any) => sum + (r.price || 0), 0)
-  try {
-    const res = await estimateInsurance({
-      settlementType: currentPatient.value.settlementType || 1,
-      medicalInsuranceType: currentPatient.value.medicalInsuranceType || '',
-      drugTotal: drugTotal,
-      inspectionTotal: inspectionTotal,
-      laboratoryTotal: laboratoryTotal,
-    })
-    insuranceInfo.value = res.data || null
-  } catch (error) {
-    console.error('加载医保信息失败:', error)
-    insuranceInfo.value = null
-  }
-}
-
-// 过滤后的队列
-const filteredQueue = computed(() => {
-  let list = queueList.value
-  if (queueSearch.value) {
-    const kw = queueSearch.value.toLowerCase()
-    list = list.filter((q: any) =>
-        q.patientName?.toLowerCase().includes(kw) ||
-        q.registNo?.toLowerCase().includes(kw) ||
-        q.queueNo?.toLowerCase().includes(kw)
-    )
-  }
-  // 队列状态口径以 QueueStatusEnum 为准：2 候诊中 / 3 就诊中（不是挂号的 1 已挂号）
-  if (queueFilter.value === 'waiting') list = list.filter((q: any) => q.queueStatus === 2)
-  else if (queueFilter.value === 'consulting') list = list.filter((q: any) => q.queueStatus === 3)
-  else if (queueFilter.value === 'emergency') list = list.filter((q: any) => q.registType === 3)
-
-  // 排序与「该接哪一条」（pickQueueRow）共用 compareQueueRow，口径只有一处：
-  // 就诊中 > 候诊中 > 已完成 > 已过号 > 已退号。
-  // 两处各写一套的后果是「列表第一行排的是复诊，顶栏搜索却选中了初诊那条」。
-  return [...list].sort(compareQueueRow)
-})
-
-// ========== 病历表单 ==========
-const recordForm = reactive({
-  id: null as number | null,
-  recordNo: '',
-  patientId: null as number | null,
-  patientNo: '',
-  patientName: '',
-  gender: 0,
-  age: 0,
-  registId: null as number | null,
-  registNo: '',
-  visitDate: '',
-  deptId: null as number | null,
-  deptName: '',
-  doctorId: null as number | null,
-  doctorName: '',
-  chiefComplaint: '',
-  presentIllness: '',
-  pastHistory: '',
-  personalHistory: '',
-  familyHistory: '',
-  allergyHistory: '',
-  temperature: '',
-  pulse: '',
-  respiration: '',
-  systolicPressure: '',
-  diastolicPressure: '',
-  generalCondition: '',
-  skinMucosa: '',
-  headNeck: '',
-  chestLung: '',
-  heart: '',
-  abdomen: '',
-  spineLimbs: '',
-  nervousSystem: '',
-  specialistExam: '',
-  auxiliaryExam: '',
-  diagnosis: '',
-  diagnosisCode: '',
-  diagnosisName: '',
-  treatmentPlan: '',
-  guidePdfPath: '',
-  recordStatus: 1,
-  reviewStatus: 0,
-})
-
-// 体格检查分节折叠态：null=自动（任一项目有内容就展开），true/false=用户手动覆盖；切患者回自动
-const EXAM_FIELDS = ['temperature', 'pulse', 'respiration', 'systolicPressure', 'diastolicPressure',
-  'generalCondition', 'skinMucosa', 'headNeck', 'chestLung', 'heart', 'abdomen', 'spineLimbs', 'nervousSystem',
-  'specialistExam'] as const
-const examHasContent = computed(() => EXAM_FIELDS.some((k) => !!recordForm[k]))
-const examToggled = ref<boolean | null>(null)
-const examVisible = computed(() => examToggled.value ?? examHasContent.value)
-
-// 复制上次查体：真实 HIS 复诊高频动作。只搬 EXAM_FIELDS（查体所见），
-// 生命体征是当次实测数据、质控禁止拷贝，所以不在复制范围内。
-const copyExamLoading = ref(false)
-const handleCopyLastExam = async () => {
-  const patientId = currentPatient.value?.patientId
-  if (!patientId) return
-  copyExamLoading.value = true
-  try {
-    const res = await getEmrRecordList({patientId})
-    // 后端按 createTime 倒序；排除本次病历（同一次挂号产生的记录）
-    const last = (res.data || []).find((r: any) =>
-        String(r.registId) !== String(recordForm.registId ?? '')
-        && String(r.id) !== String(recordForm.id ?? ''))
-    if (!last) {
-      ElMessage.info('该患者没有可复制的既往查体')
-      return
-    }
-    const copied = EXAM_FIELDS.filter((k) => !['temperature', 'pulse', 'respiration', 'systolicPressure', 'diastolicPressure'].includes(k) && !!last[k])
-    if (copied.length === 0) {
-      ElMessage.info('上次病历未填写查体所见')
-      return
-    }
-    copied.forEach((k) => {
-      recordForm[k] = last[k]
-    })
-    examToggled.value = true
-    ElMessage.success(`已复制 ${last.visitDate || '上次'} 的查体所见（${copied.length} 项），请核对修改`)
-  } finally {
-    copyExamLoading.value = false
-  }
-}
-
-const inspectionRecords = ref<any[]>([])
-const laboratoryRecords = ref<any[]>([])
-// 四层改造：患者维度账单行快照（扁平列表，一个患者可能跨多张账单）
-const patientChargeItems = ref<any[]>([])
-const chargeCollapseActive = ref<string[]>(['chargeInfo', 'chargeDetails'])
-
-// 按 itemType 聚合（药品类 = 西药/中成药/中药饮片 → [2,3,4]）
-const getChargeDetailsByType = (type: number | number[]) => {
-  if (!patientChargeItems.value?.length) return []
-  const types = Array.isArray(type) ? type : [type]
-  return patientChargeItems.value.filter((item: any) => types.includes(item.itemType))
-}
-const getTypeTotal = (type: number | number[]) => {
-  return getChargeDetailsByType(type).reduce((sum: number, item: any) => sum + (item.amount || 0), 0)
-}
-// 患者收费汇总：总额 + 医保拆分（统筹/账户/自付）现算自用
-const chargeSummary = computed(() => {
-  const items = patientChargeItems.value || []
-  return {
-    total: items.reduce((s: number, i: any) => s + (i.amount || 0), 0),
-    insurance: items.reduce((s: number, i: any) => s + (i.poolAmount || 0), 0),
-    account: items.reduce((s: number, i: any) => s + (i.accountAmount || 0), 0),
-    self: items.reduce((s: number, i: any) => s + (i.selfAmount || 0), 0),
-  }
-})
-
-// ========== 处方表单 ==========
-const prescriptionForm = reactive({
-  patientId: null as number | null,
-  patientNo: '',
-  patientName: '',
-  gender: 0,
-  age: 0,
-  registId: null as number | null,
-  registNo: '',
-  deptId: null as number | null,
-  deptName: '',
-  doctorId: null as number | null,
-  doctorName: '',
-  prescriptionType: 1,
-  diagnosis: '',
-  usageInstruction: '',
-  // 中药饮片方专属，挂在处方头（一张方一个剂数，不是每味药一个）
-  doseCount: 7,
-  decoctFlag: null as number | null,
-  details: [] as any[],
-})
-
-const newDrug = reactive({
-  drugId: null as number | null,
-  drugCode: '',
-  drugName: '',
-  genericName: '',
-  specification: '',
-  dosageForm: '',
-  unit: '盒',
-  quantity: 1,
-  price: 0,
-  usageDosage: '',
-  frequency: '一日三次',
-  route: '口服',
-  duration: 7,
-  singleDosage: '',
-})
-
-// ========== 检查申请表单 ==========
-const inspectionForm = reactive({
-  patientId: null as number | null,
-  patientNo: '',
-  patientName: '',
-  gender: 0,
-  age: 0,
-  registId: null as number | null,
-  registNo: '',
-  deptId: null as number | null,
-  deptName: '',
-  doctorId: null as number | null,
-  doctorName: '',
-  inspectionItemId: null as number | null,
-  inspectionItemName: '',
-  bodyPart: '',
-  inspectionPurpose: '',
-  preparation: '',
-  clinicalDiagnosis: '',
-  isEmergency: 0,
-})
-
-// ========== 检验申请表单 ==========
-const laboratoryForm = reactive({
-  patientId: null as number | null,
-  patientNo: '',
-  patientName: '',
-  gender: 0,
-  age: 0,
-  registId: null as number | null,
-  registNo: '',
-  deptId: null as number | null,
-  deptName: '',
-  doctorId: null as number | null,
-  doctorName: '',
-  laboratoryItemId: null as number | null,
-  laboratoryItemName: '',
-  specimenType: '血液',
-  laboratoryPurpose: '',
-  clinicalDiagnosis: '',
-  isFasting: 0,
-  isEmergency: 0,
-})
-
-// ========== 处方列表管理 ==========
-const prescriptionList = ref<any[]>([])
-const currentPrescriptionIdx = ref(0)
-const currentPrescriptionType = ref(1)
-
-const currentPrescription = computed(() => {
-  return prescriptionList.value.find(p => p.prescriptionType === currentPrescriptionType.value) || null
-})
-
-const prescriptionTypeLabel = (type: number) => {
-  const map: Record<number, string> = {1: '西药', 2: '中成药', 3: '中药饮片'}
-  return map[type] || '未知'
-}
-
-// ========== 中药饮片：剂数在处方头、克数按「每剂克数 × 剂数」算 ==========
-// 煎法与代煎/自煎都走字典（sql/139），字典里加一味「焦三仙」这类特殊脚注不需要改代码。
-const tcmMethodDict = ref<any[]>([])
-const tcmDecoctFlagDict = ref<any[]>([])
-const loadTcmDicts = async () => {
-  try {
-    const res: any = await getDictDataMapList(`${DICT_TYPE.TCM_DECOCT_METHOD},${DICT_TYPE.TCM_DECOCT_FLAG}`)
-    tcmMethodDict.value = res?.data?.[DICT_TYPE.TCM_DECOCT_METHOD] || []
-    tcmDecoctFlagDict.value = res?.data?.[DICT_TYPE.TCM_DECOCT_FLAG] || []
-  } catch (e) {
-    console.error('加载中药煎法字典失败', e)
-  }
-}
-
-/** 每剂克数：单剂剂量列只填数字（后端同样按数字解析，口径一致） */
-const tcmPerDoseGrams = (item: any): number => {
-  const n = Number(String(item?.singleDosage ?? '').trim())
-  return Number.isFinite(n) && n > 0 ? n : 0
-}
-/** 实发总克数 = 每剂克数 × 剂数，也就是提交给后端的 quantity */
-const tcmGramsOf = (item: any): number => {
-  const g = tcmPerDoseGrams(item) * (Number(prescriptionForm.doseCount) || 0)
-  return Math.round(g * 100) / 100
-}
-/** 饮片零售价是「元/档案单位(kg)」，按克开方要先除以换算率换成元/克 */
-const tcmPerGramPrice = (drug: any): number => {
-  const gpu = Number(drug?.gramPerUnit) || 0
-  return gpu > 0 ? Number(drug.retailPrice || 0) / gpu : Number(drug?.retailPrice || 0)
-}
-/** 预估金额 = 行上单价（元/克）× 实发克数；真实金额以后端按 4 位单价重算为准 */
-const tcmAmountOf = (item: any): number => {
-  return Math.round((Number(item?.price) || 0) * tcmGramsOf(item) * 100) / 100
-}
-const applyTcmGrams = (item: any) => {
-  item.unit = 'g'
-  item.quantity = tcmGramsOf(item)
-  item.amount = tcmAmountOf(item)
-}
-/** 把「当前类型那张方」灌进编辑态：明细 + 剂数 + 煎服方式（历史方没填过剂数就沿用 7 剂默认） */
-const bindPrescriptionForm = () => {
-  const p: any = currentPrescription.value
-  prescriptionForm.details = p?.details || []
-  prescriptionForm.doseCount = p?.doseCount > 0 ? p.doseCount : 7
-  prescriptionForm.decoctFlag = p?.decoctFlag ?? null
-}
-// 剂数一改，整张方的克数与金额跟着重算（只是本地预估，真实金额后端按 4 位单价算）
-watch(() => prescriptionForm.doseCount, () => {
-  if (currentPrescriptionType.value !== 3) return
-  prescriptionForm.details.forEach((item: any) => {
-    if (item.drugId) applyTcmGrams(item)
-  })
-  loadInsuranceInfo()
-})
-
-const recordSaved = ref(false)
-const icd10Results = ref<any[]>([])
-const icd10Loading = ref(false)
-// 按类型分组的药品数据
-const drugResultsByType: Record<number, ref<any[]>> = {
-  1: ref([]),  // 西药
-  2: ref([]),  // 中成药
-  3: ref([]),  // 中药饮片
-}
-const drugLoading = ref(false)
-// 当前处方类型的药品列表
-const drugResults = computed(() => {
-  return drugResultsByType[currentPrescriptionType.value]?.value || []
-})
-const inspectionItemResults = ref<any[]>([])
-const inspectionItemLoading = ref(false)
-const laboratoryItemResults = ref<any[]>([])
-const laboratoryItemLoading = ref(false)
-let refreshTimer: ReturnType<typeof setInterval> | null = null
-
-// ========== 结诊状态 ==========
-const isVisitCompleted = computed(() => currentPatient.value?.queueStatus === 4)
-const showGuideSheetDialog = ref(false)
-
-// ========== 患者标签管理 ==========
-const patientTags = ref<any[]>([])
-const allTags = ref<any[]>([])
-const showTagDialog = ref(false)
-const tagSearchKeyword = ref('')
-
-// ========== 个人模板管理 ==========
-const showDiagTemplateDialog = ref(false)
-const showRxTemplateDialog = ref(false)
-const showPackageDialog = ref(false)
-const showInspectionTemplateDialog = ref(false)
-const showAddInspectionTemplateDialog = ref(false)
-const showLaboratoryTemplateDialog = ref(false)
-const showAddLaboratoryTemplateDialog = ref(false)
-const myDiagTemplates = ref<any[]>([])
-const myRxTemplates = ref<any[]>([])
-const myPackages = ref<any[]>([])
-const myInspectionTemplates = ref<any[]>([])
-const myLaboratoryTemplates = ref<any[]>([])
-const newTemplateName = ref('')
-const diagSearchKeyword = ref('')
-const diagSearchResults = ref<any[]>([])
-const diagSearchLoading = ref(false)
-const showAddPackageDialog = ref(false)
-const newPackageName = ref('')
-
-// 检查申请模板相关
-const inspectionTemplateName = ref('')
-const inspectionTemplateForm = ref({
-  inspectionItemId: null as number | null,
-  inspectionItemName: '',
-  bodyPart: '',
-  inspectionPurpose: '',
-  isEmergency: 0
-})
-const inspectionTemplateItemResults = ref<any[]>([])
-const inspectionTemplateItemLoading = ref(false)
-
-// 检验申请模板相关
-const laboratoryTemplateName = ref('')
-const laboratoryTemplateForm = ref({
-  laboratoryItemId: null as number | null,
-  laboratoryItemName: '',
-  sampleType: '',
-  inspectionPurpose: '',
-  isEmergency: 0
-})
-const laboratoryTemplateItemResults = ref<any[]>([])
-const laboratoryTemplateItemLoading = ref(false)
-
-const loadDiagTemplates = async () => {
-  try {
-    const res = await getDiagTemplates()
-    myDiagTemplates.value = res.data || []
-  } catch (e) {
-    console.error('加载常用诊断失败', e)
-  }
-}
-
-const handleDeleteDiagTemplate = async (idx: number) => {
-  const item = myDiagTemplates.value[idx]
-  try {
-    await deleteDiagTemplate(item.id)
-    myDiagTemplates.value.splice(idx, 1)
-    ElMessage.success('常用诊断已删除')
-  } catch (e: any) {
-    ElMessage.error(e.message || '删除失败')
-  }
-}
-
-const handleDiagSearchInDialog = async (query: string) => {
-  if (!query) {
-    diagSearchResults.value = [];
-    return
-  }
-  diagSearchLoading.value = true
-  try {
-    const res = await searchIcd10(query)
-    diagSearchResults.value = (res.data || []).filter((item: any) =>
-        !myDiagTemplates.value.some((t: any) => t.icdCode === item.icdCode)
-    )
-  } catch (e) {
-    console.error('搜索失败', e)
-  } finally {
-    diagSearchLoading.value = false
-  }
-}
-
-const handleAddDiagFromDialog = async (item: any) => {
-  const newList = [...myDiagTemplates.value, {icdCode: item.icdCode, icdName: item.icdName}]
-  try {
-    await saveDiagTemplates(newList)
-    myDiagTemplates.value = newList
-    diagSearchKeyword.value = ''
-    diagSearchResults.value = []
-    ElMessage.success('已添加')
-  } catch (e: any) {
-    ElMessage.error(e.message || '添加失败')
-  }
-}
-
-const handleQuickSelectDiag = (tpl: any) => {
-  recordForm.diagnosis = tpl.icdName
-  recordForm.diagnosisCode = tpl.icdCode
-  recordForm.diagnosisName = tpl.icdName
-}
-
-const handleAddDiagToTemplate = async () => {
-  if (!recordForm.diagnosisCode || !recordForm.diagnosisName) {
-    ElMessage.warning('请先选择诊断')
-    return
-  }
-  const exists = myDiagTemplates.value.some((t: any) => t.icdCode === recordForm.diagnosisCode)
-  if (exists) {
-    ElMessage.info('该诊断已在常用列表中')
-    return
-  }
-  try {
-    const newList = [...myDiagTemplates.value, {icdCode: recordForm.diagnosisCode, icdName: recordForm.diagnosisName}]
-    await saveDiagTemplates(newList)
-    myDiagTemplates.value = newList
-    ElMessage.success('已添加到常用诊断')
-  } catch (e: any) {
-    ElMessage.error(e.message || '添加失败')
-  }
-}
-
-const handleSaveDiagTemplates = async () => {
-  try {
-    await saveDiagTemplates(myDiagTemplates.value)
-    ElMessage.success('保存成功')
-  } catch (e: any) {
-    ElMessage.error(e.message || '保存失败')
-  }
-}
-
-const loadRxTemplates = async () => {
-  try {
-    const res = await getRxTemplates()
-    myRxTemplates.value = res.data || []
-  } catch (e) {
-    console.error('加载处方模板失败', e)
-  }
-}
-
-const handleAddRxTemplate = async () => {
-  if (!newTemplateName.value) {
-    ElMessage.warning('请输入模板名称')
-    return
-  }
-  if (prescriptionForm.details.length === 0) {
-    ElMessage.warning('当前处方为空，请先添加药品')
-    return
-  }
-  try {
-    await saveRxTemplate({
-      templateName: newTemplateName.value,
-      details: [...prescriptionForm.details],
-    })
-    newTemplateName.value = ''
-    ElMessage.success('模板保存成功')
-    loadRxTemplates()
-  } catch (e: any) {
-    ElMessage.error(e.message || '保存失败')
-  }
-}
-
-const handleApplyRxTemplate = async (tpl: any) => {
-  try {
-    const res = await getRxTemplateDetail(tpl.id)
-    prescriptionForm.details = (res.data?.details || []).map((d: any) => ({...d}))
-    loadInsuranceInfo()
-    showRxTemplateDialog.value = false
-    ElMessage.success(`已套用模板「${tpl.templateName}」`)
-  } catch (e: any) {
-    ElMessage.error(e.message || '套用失败')
-  }
-}
-
-const handleApplyRxTemplateToRecord = async (record: any, tpl: any) => {
-  try {
-    const res = await getRxTemplateDetail(tpl.id)
-    const details = res.data?.details || []
-    if (details.length > 0) {
-      const d = details[0]
-      record.drugId = d.drugId
-      record.drugCode = d.drugCode
-      record.drugName = d.drugName
-      record.specification = d.specification || ''
-      record.unit = d.unit || '盒'
-      record.singleDosage = d.singleDosage || ''
-      record.frequency = d.frequency || ''
-      record.route = d.route || ''
-      record.quantity = d.quantity || 1
-      record.duration = d.duration || 7
-      record.price = d.price || 0
-      record.amount = (d.quantity || 1) * (d.price || 0)
-      // 饮片模板里的 quantity 未必对得上本张方的剂数，克数一律按「每剂克数 × 剂数」重算
-      if (currentPrescriptionType.value === 3) applyTcmGrams(record)
-    }
-    ElMessage.success(`已套用模板「${tpl.templateName}」`)
-  } catch (e: any) {
-    ElMessage.error(e.message || '套用失败')
-  }
-}
-
-const handleDeleteRxTemplate = async (idx: number) => {
-  const item = myRxTemplates.value[idx]
-  try {
-    await deleteRxTemplate(item.id)
-    myRxTemplates.value.splice(idx, 1)
-    ElMessage.success('处方模板已删除')
-  } catch (e: any) {
-    ElMessage.error(e.message || '删除失败')
-  }
-}
-
-const loadDrugPackages = async () => {
-  try {
-    const res = await getDrugPackages()
-    myPackages.value = res.data || []
-  } catch (e) {
-    console.error('加载药品套餐失败', e)
-  }
-}
-
-const handleApplyPackage = async (pkg: any) => {
-  try {
-    const res = await getDrugPackageDetail(pkg.id)
-    const details = res.data?.details || []
-    details.forEach((d: any) => {
-      if (d.itemType === 1) {
-        prescriptionForm.details.push({...d, drugId: d.itemId, drugName: d.itemName})
-      } else if (d.itemType === 2) {
-        inspectionForm.items.push({itemId: d.itemId, itemName: d.itemName, price: d.price})
-      } else if (d.itemType === 3) {
-        laboratoryForm.items.push({itemId: d.itemId, itemName: d.itemName, price: d.price})
-      }
-    })
-    showPackageDialog.value = false
-    ElMessage.success(`已套用套餐「${pkg.packageName}」`)
-  } catch (e: any) {
-    ElMessage.error(e.message || '套用失败')
-  }
-}
-
-const handleDeletePackage = async (idx: number) => {
-  const item = myPackages.value[idx]
-  try {
-    await deleteDrugPackage(item.id)
-    myPackages.value.splice(idx, 1)
-    ElMessage.success('套餐已删除')
-  } catch (e: any) {
-    ElMessage.error(e.message || '删除失败')
-  }
-}
-
-const handleSaveNewPackage = async () => {
-  if (!newPackageName.value) {
-    ElMessage.warning('请输入套餐名称')
-    return
-  }
-  const details: any[] = []
-  // 药品
-  prescriptionForm.details.forEach((d: any) => {
-    details.push({
-      itemType: 1, itemId: d.drugId, itemCode: d.drugCode, itemName: d.drugName,
-      specification: d.specification, unit: d.unit, quantity: d.quantity,
-      price: d.price, usageDosage: d.usageDosage, frequency: d.frequency,
-      route: d.route, duration: d.duration
-    })
-  })
-  // 检查
-  inspectionForm.items?.forEach((d: any) => {
-    details.push({
-      itemType: 2, itemId: d.itemId, itemCode: d.itemCode || '', itemName: d.itemName,
-      specification: '', unit: '', quantity: 1, price: d.price || 0
-    })
-  })
-  // 检验
-  laboratoryForm.items?.forEach((d: any) => {
-    details.push({
-      itemType: 3, itemId: d.itemId, itemCode: d.itemCode || '', itemName: d.itemName,
-      specification: '', unit: '', quantity: 1, price: d.price || 0
-    })
-  })
-  if (details.length === 0) {
-    ElMessage.warning('当前没有可保存的项目，请先添加处方/检查/检验')
-    return
-  }
-  try {
-    await saveDrugPackage({packageName: newPackageName.value, details})
-    newPackageName.value = ''
-    showAddPackageDialog.value = false
-    ElMessage.success('套餐保存成功')
-    loadDrugPackages()
-  } catch (e: any) {
-    ElMessage.error(e.message || '保存失败')
-  }
-}
-
-// ========== 检查申请模板 ==========
-const loadInspectionTemplates = async () => {
-  try {
-    const res = await getInspectionTemplates()
-    myInspectionTemplates.value = res.data || []
-  } catch (e) {
-    console.error('加载检查申请模板失败', e)
-  }
-}
-
-const handleDeleteInspectionTemplate = async (idx: number) => {
-  const item = myInspectionTemplates.value[idx]
-  try {
-    await deleteInspectionTemplate(item.id)
-    myInspectionTemplates.value.splice(idx, 1)
-    ElMessage.success('检查模板已删除')
-  } catch (e: any) {
-    ElMessage.error(e.message || '删除失败')
-  }
-}
-
-const handleInspectionTemplateItemSearch = async (query: string) => {
-  if (!query) {
-    inspectionTemplateItemResults.value = []
-    return
-  }
-  inspectionTemplateItemLoading.value = true
-  try {
-    const res = await searchInspectionItem(query)
-    inspectionTemplateItemResults.value = res.data || []
-  } catch (e) {
-    console.error('搜索检查项目失败', e)
-  } finally {
-    inspectionTemplateItemLoading.value = false
-  }
-}
-
-const handleInspectionTemplateItemSelect = (itemId: number) => {
-  const item = inspectionTemplateItemResults.value.find((i: any) => i.id === itemId)
-  if (item) {
-    inspectionTemplateForm.value.inspectionItemId = item.id
-    inspectionTemplateForm.value.inspectionItemName = item.itemName
-  }
-}
-
-const handleSaveInspectionTemplate = async () => {
-  if (!inspectionTemplateName.value) {
-    ElMessage.warning('请输入模板名称')
-    return
-  }
-  if (!inspectionTemplateForm.value.inspectionItemId) {
-    ElMessage.warning('请选择检查项目')
-    return
-  }
-  try {
-    await saveInspectionTemplate({
-      templateName: inspectionTemplateName.value,
-      ...inspectionTemplateForm.value
-    })
-    inspectionTemplateName.value = ''
-    inspectionTemplateForm.value = {
-      inspectionItemId: null,
-      inspectionItemName: '',
-      bodyPart: '',
-      inspectionPurpose: '',
-      isEmergency: 0
-    }
-    ElMessage.success('模板保存成功')
-    loadInspectionTemplates()
-  } catch (e: any) {
-    ElMessage.error(e.message || '保存失败')
-  }
-}
-
-const handleApplyInspectionTemplate = (tpl: any) => {
-  inspectionForm.inspectionItemId = tpl.inspectionItemId
-  inspectionForm.bodyPart = tpl.bodyPart || ''
-  inspectionForm.inspectionPurpose = tpl.inspectionPurpose || ''
-  inspectionForm.isEmergency = tpl.isEmergency || 0
-  showInspectionTemplateDialog.value = false
-  ElMessage.success(`已套用模板「${tpl.templateName}」`)
-}
-
-const handleApplyInspectionTemplateToRecord = (record: any, tpl: any) => {
-  record.inspectionItemId = tpl.inspectionItemId
-  record.inspectionItemName = tpl.inspectionItemName || ''
-  record.bodyPart = tpl.bodyPart || ''
-  record.inspectionPurpose = tpl.inspectionPurpose || ''
-  record.isEmergency = tpl.isEmergency || 0
-  record.price = tpl.price || 0
-  ElMessage.success(`已套用模板「${tpl.templateName}」`)
-}
-
-// ========== 检验申请模板 ==========
-const loadLaboratoryTemplates = async () => {
-  try {
-    const res = await getLaboratoryTemplates()
-    myLaboratoryTemplates.value = res.data || []
-  } catch (e) {
-    console.error('加载检验申请模板失败', e)
-  }
-}
-
-const handleDeleteLaboratoryTemplate = async (idx: number) => {
-  const item = myLaboratoryTemplates.value[idx]
-  try {
-    await deleteLaboratoryTemplate(item.id)
-    myLaboratoryTemplates.value.splice(idx, 1)
-    ElMessage.success('检验模板已删除')
-  } catch (e: any) {
-    ElMessage.error(e.message || '删除失败')
-  }
-}
-
-const handleLaboratoryTemplateItemSearch = async (query: string) => {
-  if (!query) {
-    laboratoryTemplateItemResults.value = []
-    return
-  }
-  laboratoryTemplateItemLoading.value = true
-  try {
-    const res = await searchLaboratoryItem(query)
-    laboratoryTemplateItemResults.value = res.data || []
-  } catch (e) {
-    console.error('搜索检验项目失败', e)
-  } finally {
-    laboratoryTemplateItemLoading.value = false
-  }
-}
-
-const handleLaboratoryTemplateItemSelect = (itemId: number) => {
-  const item = laboratoryTemplateItemResults.value.find((i: any) => i.id === itemId)
-  if (item) {
-    laboratoryTemplateForm.value.laboratoryItemId = item.id
-    laboratoryTemplateForm.value.laboratoryItemName = item.itemName
-  }
-}
-
-const handleSaveLaboratoryTemplate = async () => {
-  if (!laboratoryTemplateName.value) {
-    ElMessage.warning('请输入模板名称')
-    return
-  }
-  if (!laboratoryTemplateForm.value.laboratoryItemId) {
-    ElMessage.warning('请选择检验项目')
-    return
-  }
-  try {
-    await saveLaboratoryTemplate({
-      templateName: laboratoryTemplateName.value,
-      ...laboratoryTemplateForm.value
-    })
-    laboratoryTemplateName.value = ''
-    laboratoryTemplateForm.value = {
-      laboratoryItemId: null,
-      laboratoryItemName: '',
-      sampleType: '',
-      inspectionPurpose: '',
-      isEmergency: 0
-    }
-    ElMessage.success('模板保存成功')
-    loadLaboratoryTemplates()
-  } catch (e: any) {
-    ElMessage.error(e.message || '保存失败')
-  }
-}
-
-const handleApplyLaboratoryTemplate = (tpl: any) => {
-  laboratoryForm.laboratoryItemId = tpl.laboratoryItemId
-  laboratoryForm.sampleType = tpl.sampleType || ''
-  laboratoryForm.inspectionPurpose = tpl.inspectionPurpose || ''
-  laboratoryForm.isEmergency = tpl.isEmergency || 0
-  showLaboratoryTemplateDialog.value = false
-  ElMessage.success(`已套用模板「${tpl.templateName}」`)
-}
-
-const filteredAllTags = computed(() => {
-  if (!tagSearchKeyword.value) return allTags.value
-  const kw = tagSearchKeyword.value.toLowerCase()
-  return allTags.value.filter((tag: any) => tag.tagName?.toLowerCase().includes(kw))
-})
-
-const loadPatientTags = async () => {
-  if (!currentPatient.value?.patientId) return
-  try {
-    const res = await getPatientTags({patientId: currentPatient.value.patientId})
-    patientTags.value = res.data || []
-  } catch (error) {
-    console.error('加载患者标签失败:', error)
-  }
-}
-
-const patientDetail = ref<any>(null)
-const loadPatientDetail = async () => {
-  if (!currentPatient.value?.patientId) return
-  try {
-    const res = await getPatientDetail(currentPatient.value.patientId)
-    patientDetail.value = res.data || null
-  } catch (error) {
-    console.error('加载患者详情失败:', error)
-  }
-}
-
-const loadPatientChargeInfo = async () => {
-  if (!currentPatient.value?.patientId) return
-  try {
-    const res = await listItemsByPatient(currentPatient.value.patientId)
-    patientChargeItems.value = res.data || []
-  } catch (error) {
-    console.error('加载收费信息失败:', error)
-    patientChargeItems.value = []
-  }
-}
-
-const copyToClipboard = async (text: string) => {
-  try {
-    await navigator.clipboard.writeText(text)
-    ElMessage.success('已复制到剪贴板')
-  } catch {
-    ElMessage.error('复制失败')
-  }
-}
-
-const loadAllTags = async () => {
-  try {
-    const res = await getPatientTagListAll({})
-    allTags.value = res.data?.records || res.data || []
-  } catch (error) {
-    console.error('加载标签列表失败:', error)
-  }
-}
-
-const handleOpenTagDialog = async () => {
-  await loadAllTags()
-  await loadPatientTags()
-  showTagDialog.value = true
-}
-
-const handleAddTag = async (tagId: number) => {
-  if (!currentPatient.value?.patientId) return
-  try {
-    await addPatientTag({
-      patientId: currentPatient.value.patientId,
-      tagId: tagId,
-      sourceType: 1
-    })
-    await loadPatientTags()
-    ElMessage.success('标签添加成功')
-  } catch (error: any) {
-    ElMessage.error(error.message || '添加失败')
-  }
-}
-
-const handleRemoveTag = async (tagId: number) => {
-  if (!currentPatient.value?.patientId) return
-  try {
-    await removePatientTag({
-      patientId: currentPatient.value.patientId,
-      tagId: tagId
-    })
-    await loadPatientTags()
-    ElMessage.success('标签已移除')
-  } catch (error: any) {
-    ElMessage.error(error.message || '移除失败')
-  }
-}
-
-const isTagAdded = (tagId: number) => {
-  return patientTags.value.some((t: any) => t.tagId === tagId)
-}
-
-// ========== 数据加载 ==========
-let isFirstLoad = true
-
-const loadData = async () => {
-  loading.value = true
-  /** 本次队列加载是否失败：失败时不能拿空队列去判定「这人不在队列」（会误伤自己的患者） */
-  let queueLoadFailed = false
-  try {
-    const today = localDateStr()
-    const [listRes, statsRes] = await Promise.all([
-      getTodayQueueList({date: today}),
-      getQueueStats(),
-    ])
-
-    queueList.value = listRes.data || []
-    stats.value = statsRes.data || {waiting: 0, called: 0, inProgress: 0}
-
-    // 初次加载时，自动选中当前就诊中的患者。
-    // 两种情况下不自动选：
-    //   ① 已经有选中患者（页面自己已经定了接诊对象）；
-    //   ② 本次进入是「为某个特定患者而来」（顶部搜索跳转 / 刷新恢复 / URL 带 patientId）——
-    //      医生是来找那个人的，先自动选中队列里的另一个人，等于把一次「找人」变成了
-    //      「切换到别人」，而开单、开药、写病历挂的都是当前患者，看错人就是开错单。
-    //      （准入判定见 lib/todayQueue.js，正常路径下这种人根本不会到这里。）
-    // isFirstLoad 必须**无条件**置 false：原来这行写在 if 内部，只要首屏时已有选中患者
-    // 它就永远不复位，之后 30 秒一次的定时刷新会突然把医生正在看的患者换掉。
-    if (isFirstLoad) {
-      if (!currentPatient.value && !enteredWithTarget) {
-        // 用 pickQueueRow 而不是 find：同一位患者可能有多条 queueStatus=3 的队列记录
-        // （数据里就存在），find 取的是后端序号最小的那条，不稳定也不一定是最早到的那次
-        const consultingPatient = pickQueueRow(queueList.value.filter((q: any) => q.queueStatus === 3))
-        if (consultingPatient) {
-          selectPatient(consultingPatient)
-        }
-      }
-      isFirstLoad = false
-    }
-
-    // 如果有当前叫号患者且在新列表中找不到，清空选中
-    if (currentPatient.value) {
-      const stillExists = queueList.value.find((q: any) => q.id === currentPatient.value.id)
-      if (!stillExists) {
-        currentPatient.value = null
-        // 顶部提示条同步清掉：条子说「当前患者是A」而页面已经没选中任何人，
-        // 在防开错人的场景里比不显示更危险
-        currentPatientStore.syncClear()
-      }
-    }
-  } catch (error) {
-    console.error('加载数据失败:', error)
-    queueLoadFailed = true
-  } finally {
-    loading.value = false
-    // 队列第一次加载结束后，把挂起的待切换患者落地（在队列里→选中，不在→提示并转详情框）。
-    // 放在 finally 是为了任何情况下都不会把患者永久挂起。
-    if (!queueLoaded.value) {
-      queueLoaded.value = true
-      if (queueLoadFailed) {
-        // 队列没拉到就说「这人不在您今日队列」是假话——医生搜自己的患者也会被弹档。
-        // 所以这里只清挂起状态、不判定、不提示，并把顶栏那条也清掉：
-        // 顶栏显示「当前患者是 A」而页面谁都没选中，在防开错人的场景里比不显示更危险。
-        pendingSwitch = null
-        enteredWithTarget = false
-        if (currentPatientStore.patient) {
-          currentPatientStore.syncClear()
-        }
-        ElMessage.warning('候诊队列加载失败，未切换接诊患者，请刷新重试')
-      } else {
-        applyPendingSwitch()
-      }
-    }
-  }
-}
-
-const loadDepartments = async () => {
-  try {
-    // 不传 scope → 默认按当前人过滤（医生站只看自己被授权的科室）
-    const res = await getDepartmentSelectList({deptType: 1})
-    departments.value = res.data || []
-  } catch (error) {
-    console.error('加载科室失败:', error)
-  }
-}
-
-const loadUserInfo = () => {
-  userInfo.value = {
-    userId: localStorage.getItem('userId') || '',
-    deptId: localStorage.getItem('deptId') || null,
-    deptName: localStorage.getItem('deptName') || '',
-    currentRole: localStorage.getItem('currentRole') || '',
-  }
-  if (userInfo.value.deptId) {
-    selectedDeptId.value = Number(userInfo.value.deptId)
-  }
-}
-
-// ========== 加载今日待办 ==========
-const loadTodoList = async () => {
-  // 模拟待办数据，实际应从后端获取
-  todoList.value = [
-    {id: 1, type: 'review', title: '待审核病历', content: '张三的病历待审核', time: '10:30', urgent: false},
-    {id: 2, type: 'report', title: '待查看检验报告', content: '李四的血常规报告已出', time: '09:45', urgent: true},
-    {id: 3, type: 'report', title: '待查看检查报告', content: '王五的CT报告已出', time: '09:20', urgent: false},
-    {id: 4, type: 'followUp', title: '待回访患者', content: '赵六术后3天需电话回访', time: '14:00', urgent: false},
-    {id: 5, type: 'consult', title: '会诊申请', content: '内科申请联合会诊', time: '11:00', urgent: true},
-  ]
-  todoStats.value = {
-    pendingReview: 3,
-    pendingReport: 5,
-    pendingFollowUp: 2,
-    pendingConsult: 1,
-  }
-}
-
-// ========== ICD-10搜索 ==========
-const handleIcd10Search = async (query: string) => {
-  if (!query) {
-    icd10Results.value = [];
-    return
-  }
-  icd10Loading.value = true
-  try {
-    const res = await searchIcd10(query)
-    icd10Results.value = res.data || []
-  } catch (error) {
-    console.error('搜索ICD-10失败:', error)
-  } finally {
-    icd10Loading.value = false
-  }
-}
-
-const handleIcd10Select = (val: string) => {
-  const item = icd10Results.value.find((i: any) => i.icdName === val)
-  if (item) {
-    recordForm.diagnosisCode = item.icdCode
-    recordForm.diagnosisName = item.icdName
-  }
-}
-
-// ========== ICD-10智能预测 ==========
-const icdPredictions = ref<any[]>([])
-const icdPredictionLoading = ref(false)
-const showPrediction = ref(false)
-
-const handlePredictIcd = async () => {
-  if (!recordForm.chiefComplaint && !recordForm.presentIllness && !recordForm.specialistExam) {
-    ElMessage.warning('请先填写主诉、现病史或专科检查')
-    return
-  }
-  icdPredictionLoading.value = true
-  showPrediction.value = true
-  try {
-    const res = await predictIcd10({
-      chiefComplaint: recordForm.chiefComplaint || '',
-      presentIllness: recordForm.presentIllness || '',
-      specialistExam: recordForm.specialistExam || '',
-      diagnosis: recordForm.diagnosis || '',
-    })
-    icdPredictions.value = res.data || []
-  } catch (error) {
-    console.error('ICD预测失败:', error)
-    icdPredictions.value = []
-  } finally {
-    icdPredictionLoading.value = false
-  }
-}
-
-const handleSelectPrediction = (item: any) => {
-  recordForm.diagnosisCode = item.icdCode
-  recordForm.diagnosisName = item.icdName
-  showPrediction.value = false
-  ElMessage.success(`已选择: ${item.icdCode} ${item.icdName}`)
-}
-
-// ========== 病历文本智能录入 / 草拟（P1-3）==========
-// 铁律：两个接口都不写库。抽取结果是候选值、草拟结果是草稿，
-// 都必须由医生点「填入」才进表单，保存病历时才由保存流程落库。
-const extractDialogVisible = ref(false)
-const extractRawText = ref('')
-const extractLoading = ref(false)
-const extractResult = ref<any>(null)
-const extractAppliedFields = ref<string[]>([])
-
-const openExtractDialog = () => {
-  extractRawText.value = ''
-  extractResult.value = null
-  extractAppliedFields.value = []
-  extractDialogVisible.value = true
-}
-
-const runExtract = async () => {
-  if (!extractRawText.value.trim()) {
-    ElMessage.warning('请先粘贴或输入要解析的文本')
-    return
-  }
-  extractLoading.value = true
-  extractResult.value = null
-  extractAppliedFields.value = []
-  try {
-    const res = await extractEmrText({
-      rawText: extractRawText.value,
-      recordId: recordForm.id || undefined,
-      gender: recordForm.gender || undefined,
-      age: recordForm.age || undefined,
-    })
-    extractResult.value = res.data || null
-    if (!extractResult.value?.fields?.length) {
-      ElMessage.warning('没有从这段文本中识别出可搬运的内容')
-    }
-  } catch (error) {
-    console.error('病历文本抽取失败:', error)
-    extractResult.value = null
-  } finally {
-    extractLoading.value = false
-  }
-}
-
-// 只有病历表单里真实存在的字段才允许写入，后端白名单挡一道、前端再挡一道
-const canApplyField = (key: string) => !!key && Object.prototype.hasOwnProperty.call(recordForm, key)
-
-const applyExtractField = (row: any) => {
-  if (!canApplyField(row?.field)) {
-    ElMessage.warning(`「${row?.fieldLabel || row?.field}」无法写入病历表单`)
-    return
-  }
-  ;(recordForm as any)[row.field] = row.value
-  if (!extractAppliedFields.value.includes(row.field)) {
-    extractAppliedFields.value.push(row.field)
-  }
-  ElMessage.success(`已填入「${row.fieldLabel}」`)
-}
-
-const applyAllExtractFields = () => {
-  const rows = extractResult.value?.fields || []
-  let count = 0
-  rows.forEach((row: any) => {
-    if (!canApplyField(row?.field)) return
-        ;
-    (recordForm as any)[row.field] = row.value
-    if (!extractAppliedFields.value.includes(row.field)) {
-      extractAppliedFields.value.push(row.field)
-    }
-    count++
-  })
-  if (count === 0) {
-    ElMessage.warning('没有可填入的字段')
-    return
-  }
-  ElMessage.success(`已填入 ${count} 个字段，请逐项核对原文后再保存`)
-}
-
-const draftDialogVisible = ref(false)
-const draftLoading = ref(false)
-const draftResult = ref<any>(null)
-// G-10 diff 留痕：本会话 applyDraft 填入的 AI 草稿原文。保存时若终稿与其不同，
-// 把草稿原文带给后端算 diff（AI 写了什么 vs 医生留了什么）；保存成功即清空，一次草稿会话只留一条。
-const aiDraftAppliedText = ref('')
-
-const runDraft = async () => {
-  if (!recordForm.chiefComplaint) {
-    ElMessage.warning('请先填写主诉，草拟现病史必须以主诉为依据')
-    return
-  }
-  draftLoading.value = true
-  draftResult.value = null
-  draftDialogVisible.value = true
-  try {
-    const res = await draftEmrText({
-      recordId: recordForm.id || undefined,
-      gender: recordForm.gender || undefined,
-      age: recordForm.age || undefined,
-      chiefComplaint: recordForm.chiefComplaint || '',
-      presentIllness: recordForm.presentIllness || '',
-      pastHistory: recordForm.pastHistory || '',
-      allergyHistory: recordForm.allergyHistory || '',
-      temperature: recordForm.temperature || '',
-      pulse: recordForm.pulse || '',
-      respiration: recordForm.respiration || '',
-      systolicPressure: recordForm.systolicPressure || '',
-      diastolicPressure: recordForm.diastolicPressure || '',
-      generalCondition: recordForm.generalCondition || '',
-      skinMucosa: recordForm.skinMucosa || '',
-      headNeck: recordForm.headNeck || '',
-      chestLung: recordForm.chestLung || '',
-      heart: recordForm.heart || '',
-      abdomen: recordForm.abdomen || '',
-      spineLimbs: recordForm.spineLimbs || '',
-      nervousSystem: recordForm.nervousSystem || '',
-      specialistExam: recordForm.specialistExam || '',
-      auxiliaryExam: recordForm.auxiliaryExam || '',
-    })
-    draftResult.value = res.data || null
-  } catch (error) {
-    console.error('病历草拟失败:', error)
-    draftResult.value = null
-  } finally {
-    draftLoading.value = false
-  }
-}
-
-const applyDraft = () => {
-  const text = draftResult.value?.presentIllness
-  if (!text) {
-    ElMessage.warning('本次没有生成草稿')
-    return
-  }
-  recordForm.presentIllness = text
-  aiDraftAppliedText.value = text
-  draftDialogVisible.value = false
-  ElMessage.success('草稿已填入现病史，请逐字核对后修改')
-}
-
-// ========== 语音口述（G-14） ==========
-// MediaRecorder 录音 → ASR 转写 → 文本可编辑 → 喂既有 emr_draft 整理。
-// 转写是确定性转换：失败如实报错、不造文本（语音没有规则兜底文本，造文本即造假病历）。
-const VOICE_MAX_SECONDS = 60
-const voiceDialogVisible = ref(false)
-const voiceRecording = ref(false)
-const voiceSeconds = ref(0)
-const voiceTranscribing = ref(false)
-const voiceText = ref('')
-let voiceRecorder: any = null
-let voiceStream: MediaStream | null = null
-let voiceChunks: Blob[] = []
-let voiceTimer: any = null
-let voiceMime = ''
-
-const voiceSecondsText = computed(() => {
-  const s = voiceSeconds.value
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
-})
-
-const openVoiceDialog = () => {
-  voiceText.value = ''
-  voiceSeconds.value = 0
-  voiceTranscribing.value = false
-  voiceDialogVisible.value = true
-}
-
-// 弹窗关闭/录音丢弃时统一回收：停计时器、断麦克风、弃录音块
-const closeVoiceDialog = () => {
-  if (voiceTimer) {
-    clearInterval(voiceTimer);
-    voiceTimer = null
-  }
-  if (voiceRecorder && voiceRecorder.state !== 'inactive') {
-    voiceRecorder.onstop = null
-    try {
-      voiceRecorder.stop()
-    } catch (e) { /* 媒体流已释放 */
-    }
-  }
-  voiceRecorder = null
-  if (voiceStream) {
-    voiceStream.getTracks().forEach((t: MediaStreamTrack) => t.stop())
-    voiceStream = null
-  }
-  voiceChunks = []
-  voiceRecording.value = false
-}
-
-const startVoiceRecord = async () => {
-  if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-    ElMessage.error('当前浏览器不支持录音，请使用 Edge/Chrome')
-    return
-  }
-  try {
-    voiceStream = await navigator.mediaDevices.getUserMedia({audio: true})
-  } catch (e) {
-    ElMessage.error('无法访问麦克风，请检查浏览器权限设置')
-    return
-  }
-  voiceMime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4']
-      .find(t => MediaRecorder.isTypeSupported(t)) || ''
-  voiceChunks = []
-  voiceRecorder = new MediaRecorder(voiceStream, voiceMime ? {mimeType: voiceMime} : undefined)
-  voiceRecorder.ondataavailable = (e: any) => {
-    if (e.data.size > 0) voiceChunks.push(e.data)
-  }
-  voiceRecorder.start()
-  voiceRecording.value = true
-  voiceSeconds.value = 0
-  voiceTimer = setInterval(() => {
-    voiceSeconds.value++
-    if (voiceSeconds.value >= VOICE_MAX_SECONDS) stopVoiceRecord()
-  }, 1000)
-}
-
-const stopVoiceRecord = () => {
-  if (!voiceRecorder || voiceRecorder.state === 'inactive') return
-  if (voiceTimer) {
-    clearInterval(voiceTimer);
-    voiceTimer = null
-  }
-  // 不在这里复位 voiceRecording：stop() 到 onstop 之间若把按钮恢复成「开始录音」，
-  // 转写还没开始就出现可点按钮（再点一次会造出两段录音），转写中状态也会被吞掉；
-  // 复位交给 onstop 里的 closeVoiceDialog，与 voiceTranscribing 同步块内切换，无中间态
-  const duration = voiceSeconds.value
-  const recorder = voiceRecorder
-  recorder.onstop = async () => {
-    const blob = new Blob(voiceChunks, {type: voiceMime || 'audio/webm'})
-    closeVoiceDialog()
-    if (blob.size > 0) await doTranscribe(blob, duration)
-  }
-  recorder.stop()
-}
-
-const doTranscribe = async (blob: Blob, durationSeconds: number) => {
-  voiceTranscribing.value = true
-  voiceText.value = ''
-  try {
-    const fd = new FormData()
-    const ext = voiceMime.includes('mp4') ? 'mp4' : 'webm'
-    fd.append('file', blob, `voice.${ext}`)
-    if (durationSeconds > 0) fd.append('durationSeconds', String(durationSeconds))
-    const res: any = await transcribeVoice(fd)
-    voiceText.value = res.data?.text || ''
-    if (!voiceText.value) ElMessage.warning('未能从音频中识别出语音内容')
-  } catch (e: any) {
-    // 失败必须可见：ASR 拒识别/上游异常时医生要看到原因（request.js 对 500 只 console 不 toast），
-    // 「点了没反应」会让医生以为录音功能坏了
-    const msg = e?.response?.data?.message || e?.message || '语音转写失败，请重试'
-    ElMessage.error(msg)
-    console.error('语音转写失败:', e)
-  } finally {
-    voiceTranscribing.value = false
-  }
-}
-
-// 转写文本原文直填现病史（追加，不覆盖医生已写内容）
-const fillVoiceText = (): boolean => {
-  const text = voiceText.value.trim()
-  if (!text) {
-    ElMessage.warning('没有可填入的转写文本')
-    return false
-  }
-  recordForm.presentIllness = recordForm.presentIllness
-      ? `${recordForm.presentIllness}\n${text}` : text
-  return true
-}
-
-const applyVoiceToField = () => {
-  if (fillVoiceText()) {
-    voiceDialogVisible.value = false
-    ElMessage.success('转写文本已填入现病史，请逐字核对后修改')
-  }
-}
-
-// 填入现病史后走既有草拟：口述文本作为「医生已写的部分」喂 emr_draft，
-// 模型整理成现病史草稿 → 复用草稿弹窗医生确认（G-10 留痕自动接上）
-const draftFromVoice = () => {
-  if (!fillVoiceText()) return
-  voiceDialogVisible.value = false
-  runDraft()
-}
-
-// ========== 预问诊报告卡（G-05） ==========
-// 患者在小程序提交的问卷 + AI 凝摘要；没做过预问诊时 data=null，卡片不渲染。
-// 只读展示 —— 医生参考后再自己写现病史，AI 不代填。
-const previsitInfo = ref<any>(null)
-const previsitSourceText = (v: any) => (v === 1 ? '模型凝摘要' : '规则摘要')
-const loadPrevisit = async (registId: any) => {
-  previsitInfo.value = null
-  if (!registId) return
-  try {
-    const res: any = await getPrevisitByRegist(registId)
-    if (res.code === 200) previsitInfo.value = res.data || null
-  } catch (e) {
-    console.error('预问诊记录加载失败', e)
-  }
-}
-
-// ========== AI辅助诊疗 ==========
-const aiDiagnosisResults = ref<any[]>([])
-const aiDiagnosisLoading = ref(false)
-// 模型降级标记：degraded=true 表示结果是码表规则匹配出来的，必须如实告知，不得当模型推荐展示
-const aiDiagnosisDegraded = ref(false)
-const aiDiagnosisDegradeReason = ref('')
-const aiGuideDialogVisible = ref(false)
-const aiGuideData = ref<any>(null)
-
-const handleAiDiagnosis = async () => {
-  if (!recordForm.chiefComplaint && !recordForm.presentIllness && !recordForm.specialistExam) {
-    return
-  }
-  aiDiagnosisLoading.value = true
-  try {
-    const res = await predictIcd10({
-      chiefComplaint: recordForm.chiefComplaint || '',
-      presentIllness: recordForm.presentIllness || '',
-      specialistExam: recordForm.specialistExam || '',
-      diagnosis: recordForm.diagnosis || '',
-    })
-    // 后端返回 Result<Icd10PredictVO>：候选在 predictions 里，不是顶层数组
-    const payload: any = res.data || {}
-    // 置信度只认后端返回值（模型或规则给出的分值）。后端没返回就不显示，
-    // 严禁前端按数组下标编造百分比 —— 医生会当真，这是安全问题不是展示问题。
-    aiDiagnosisResults.value = (payload.predictions || []).slice(0, 5).map((item: any) => ({
-      ...item,
-      confidence: typeof item.confidence === 'number' ? item.confidence : null
-    }))
-    aiDiagnosisDegraded.value = payload.degraded === true
-    aiDiagnosisDegradeReason.value = payload.degradeReason || ''
-  } catch (error) {
-    console.error('AI诊断推荐失败:', error)
-    aiDiagnosisResults.value = []
-    aiDiagnosisDegraded.value = false
-    aiDiagnosisDegradeReason.value = ''
-  } finally {
-    aiDiagnosisLoading.value = false
-  }
-}
-
-const handleAdoptAiDiagnosis = (item: any) => {
-  recordForm.diagnosis = item.icdName
-  recordForm.diagnosisCode = item.icdCode
-  recordForm.diagnosisName = item.icdName
-  ElMessage.success(`已采纳诊断: ${item.icdName}`)
-}
-
-const handleViewAiGuide = (item: any) => {
-  aiGuideData.value = item
-  aiGuideDialogVisible.value = true
-}
-
-// 监听主诉/现病史变化，自动触发AI推荐
-let aiDebounceTimer: ReturnType<typeof setTimeout> | null = null
-const triggerAiDiagnosis = () => {
-  if (aiDebounceTimer) clearTimeout(aiDebounceTimer)
-  aiDebounceTimer = setTimeout(() => {
-    if (recordForm.chiefComplaint || recordForm.presentIllness) {
-      handleAiDiagnosis()
-    }
-  }, 1500)
-}
-
-// ========== CDSS用药安全审查 ==========
-const cdssAlerts = ref<any[]>([])
-
-const checkDrugSafety = () => {
-  cdssAlerts.value = []
-  // 上一版在这里写死了三条药物相互作用 + 一条剂量提醒，并在界面上渲染成「用药安全审查 · 警告 N」。
-  // 但处方要到结诊提交（saveMedicalRecord）才落库、才有 prescriptionId，
-  // 而审核接口 POST /ai/drugAudit/execute 必须按 prescriptionId 由服务端回查明细
-  //（这样设计正是为了防止「前端传什么就审什么」），所以开方过程中前端无从审查。
-  // 假结论已删除：这里不再产出任何审查结果，只保留调用点占位。
-}
-
-// ========== 药品搜索 ==========
-const handleDrugSearch = async (query: string) => {
-  if (!query) {
-    drugResults.value = [];
-    return
-  }
-  drugLoading.value = true
-  try {
-    const res = await getStockList({drugName: query, pageNum: 1, pageSize: 20})
-    drugResults.value = res.data?.records || []
-  } catch (error) {
-    console.error('搜索药品失败:', error)
-  } finally {
-    drugLoading.value = false
-  }
-}
-
-const handleDrugSelect = (val: number) => {
-  const drug = drugResults.value.find((d: any) => d.id === val)
-  if (drug) {
-    newDrug.drugName = drug.drugName
-    newDrug.specification = drug.specification || ''
-    newDrug.drugId = drug.id
-    newDrug.drugCode = drug.drugCode
-    newDrug.unit = drug.unit || '盒'
-    newDrug.price = drug.retailPrice || 0
-  }
-}
-
-// ========== 检查项目搜索 ==========
-const handleInspectionItemSearch = async (query: string) => {
-  if (!query) {
-    inspectionItemResults.value = []
-    return
-  }
-  inspectionItemLoading.value = true
-  try {
-    const res = await searchInspectionItem(query)
-    inspectionItemResults.value = res.data || []
-  } catch (error) {
-    console.error('搜索检查项目失败:', error)
-  } finally {
-    inspectionItemLoading.value = false
-  }
-}
-
-/**
- * 检查项目选中 → **立即落库**（批次E/E1）。
- *
- * 原先只是把项目塞进本地数组，等结诊时随病历一起提交：医生开了单让患者去缴费，
- * 只要没点「保存病历」，收费台就查不到这张申请单；而病历每次保存又是"先删后增"申请单，
- * 已缴费的单子会被连根删掉。现在开单即写库，病历只负责回填 recordId。
- */
-const handleInspectionItemSelectForRecord = async (record: any, val: number) => {
-  const item = inspectionItemResults.value.find((i: any) => i.id === val)
-  if (!item) return
-  record.inspectionItemId = item.id
-  record.inspectionItemName = item.itemName
-  record.bodyPart = item.bodyPart || ''
-  record.preparation = item.preparation || ''
-  record.price = item.price || 0
-  await persistInspectionRow(record)
-}
-
-/** 把一条检查申请落库（新增或更新）；成功后用后端返回的 VO 覆盖本地行（含执行状态）。 */
-const persistInspectionRow = async (record: any) => {
-  if (!currentPatient.value || !record.inspectionItemId) return false
-  try {
-    const res = await saveInspectionApply({
-      id: record.id || undefined,
-      registId: currentPatient.value.registId,
-      recordId: recordForm.id || undefined,
-      patientId: currentPatient.value.patientId,
-      inspectionItemId: record.inspectionItemId,
-      bodyPart: record.bodyPart,
-      inspectionPurpose: record.inspectionPurpose,
-      clinicalDiagnosis: record.clinicalDiagnosis || recordForm.diagnosis || '',
-      specialRequirements: record.preparation,
-      isEmergency: record.isEmergency ?? 0,
-    })
-    const pendingIdx = record._pendingIdx
-    Object.assign(record, res.data || {})
-    if (pendingIdx) record._pendingIdx = pendingIdx
-    loadInsuranceInfo()
-    return true
-  } catch (error: any) {
-    ElMessage.error(error.message || '检查开单失败')
-    return false
-  }
-}
-
-/** 编辑过科目/部位/目的之后手动落库（列表行上的「保存修改」）。 */
-const handleSaveInspectionRow = async (record: any) => {
-  const isNew = !record.id
-  const ok = await persistInspectionRow(record)
-  if (ok && isNew) ElMessage.success('检查申请已开单（待缴费）')
-  else if (ok) ElMessage.success('检查申请已更新')
-}
-
-const handleInspectionItemSelect = (val: number) => {
-  const item = inspectionItemResults.value.find((i: any) => i.id === val)
-  if (item) {
-    inspectionForm.inspectionItemId = item.id
-    inspectionForm.inspectionItemName = item.itemName
-    inspectionForm.bodyPart = item.bodyPart || ''
-    inspectionForm.preparation = item.preparation || ''
-  }
-}
-
-// ========== 检验项目搜索 ==========
-const handleLaboratoryItemSearch = async (query: string) => {
-  if (!query) {
-    laboratoryItemResults.value = []
-    return
-  }
-  laboratoryItemLoading.value = true
-  try {
-    const res = await searchLaboratoryItem(query)
-    laboratoryItemResults.value = res.data || []
-  } catch (error) {
-    console.error('搜索检验项目失败:', error)
-  } finally {
-    laboratoryItemLoading.value = false
-  }
-}
-
-const handleLaboratoryItemSelect = (val: number) => {
-  const item = laboratoryItemResults.value.find((i: any) => i.id === val)
-  if (item) {
-    laboratoryForm.laboratoryItemId = item.id
-    laboratoryForm.laboratoryItemName = item.itemName
-    laboratoryForm.specimenType = item.specimenType || '血液'
-  }
-}
-
-/** 检验项目选中 → 立即落库（批次E/E1），语义同检查。 */
-const handleLaboratoryItemSelectForRecord = async (record: any, val: number) => {
-  const item = laboratoryItemResults.value.find((i: any) => i.id === val)
-  if (!item) return
-  record.laboratoryItemId = item.id
-  record.laboratoryItemName = item.itemName
-  record.specimenType = item.specimenType || '血液'
-  record.price = item.price || 0
-  await persistLaboratoryRow(record)
-}
-
-const persistLaboratoryRow = async (record: any) => {
-  if (!currentPatient.value || !record.laboratoryItemId) return false
-  try {
-    const res = await saveLaboratoryApply({
-      id: record.id || undefined,
-      registId: currentPatient.value.registId,
-      recordId: recordForm.id || undefined,
-      patientId: currentPatient.value.patientId,
-      laboratoryItemId: record.laboratoryItemId,
-      specimenType: record.specimenType,
-      laboratoryPurpose: record.laboratoryPurpose,
-      clinicalDiagnosis: record.clinicalDiagnosis || recordForm.diagnosis || '',
-      isFasting: record.isFasting ?? 0,
-      isEmergency: record.isEmergency ?? 0,
-    })
-    const pendingIdx = record._pendingIdx
-    Object.assign(record, res.data || {})
-    if (pendingIdx) record._pendingIdx = pendingIdx
-    loadInsuranceInfo()
-    return true
-  } catch (error: any) {
-    ElMessage.error(error.message || '检验开单失败')
-    return false
-  }
-}
-
-const handleSaveLaboratoryRow = async (record: any) => {
-  const isNew = !record.id
-  const ok = await persistLaboratoryRow(record)
-  if (ok && isNew) ElMessage.success('检验申请已开单（待缴费）')
-  else if (ok) ElMessage.success('检验申请已更新')
-}
-
-const handleApplyLaboratoryTemplateToRecord = (record: any, tpl: any) => {
-  record.laboratoryItemId = tpl.laboratoryItemId
-  record.laboratoryItemName = tpl.laboratoryItemName || ''
-  record.specimenType = tpl.specimenType || ''
-  record.laboratoryPurpose = tpl.laboratoryPurpose || ''
-  record.isEmergency = tpl.isEmergency || 0
-  record.price = tpl.price || 0
-  ElMessage.success(`已套用模板「${tpl.templateName}」`)
-}
-
-// ========== 选中患者 ==========
-const selectPatient = async (row: any) => {
-  currentPatient.value = row
-  // 同步顶部「当前患者」条（映射口径见 toStorePatient：队列行的 id 是队列号，不能当患者 id 用）。
-  // 用 syncPatient 而不是 setPatient，避免改 switchedAt 后与本函数的 watch 形成回环。
-  // 注意：队列行不带过敏史，条子就不会亮「过敏」标（不假装无过敏），完整信息点条子看档案。
-  if (row?.patientId) {
-    currentPatientStore.syncPatient(toStorePatient(row))
-  }
-  activeTab.value = 'record'
-  recordSaved.value = false
-  // 清空历史数据（批次F：收费/详情/标签也要清，否则新患者加载期间看到的是上一位患者的钱和信息）
-  inspectionRecords.value = []
-  laboratoryRecords.value = []
-  prescriptionList.value = []
-  currentPrescriptionIdx.value = 0
-  patientChargeItems.value = []
-  patientDetail.value = null
-  patientTags.value = []
-  insuranceInfo.value = null
-  // G-05/G-10：换患者时清掉上一位的预问诊卡与 AI 草稿会话
-  previsitInfo.value = null
-  aiDraftAppliedText.value = ''
-  loadPrevisit(row.registId)
-
-  // 重置所有表单
-  const baseInfo = {
-    patientId: row.patientId, patientNo: row.patientNo, patientName: row.patientName,
-    registId: row.registId, registNo: row.registNo || '',
-    deptId: row.deptId, deptName: row.deptName, doctorId: row.doctorId, doctorName: row.doctorName,
-    gender: row.gender, age: row.age,
-    visitDate: localDateStr(),
-  }
-  Object.assign(recordForm, baseInfo, {
-    id: null,
-    recordNo: '',
-    recordStatus: 1,
-    reviewStatus: 0,
-    chiefComplaint: '',
-    presentIllness: '',
-    pastHistory: '',
-    personalHistory: '',
-    familyHistory: '',
-    allergyHistory: '',
-    temperature: '',
-    pulse: '',
-    respiration: '',
-    systolicPressure: '',
-    diastolicPressure: '',
-    generalCondition: '',
-    skinMucosa: '',
-    headNeck: '',
-    chestLung: '',
-    heart: '',
-    abdomen: '',
-    spineLimbs: '',
-    nervousSystem: '',
-    specialistExam: '',
-    auxiliaryExam: '',
-    diagnosis: '',
-    diagnosisCode: '',
-    diagnosisName: '',
-    treatmentPlan: ''
-  })
-  Object.assign(prescriptionForm, baseInfo, {prescriptionType: 1, diagnosis: '', usageInstruction: '', details: []})
-  Object.assign(inspectionForm, baseInfo, {
-    inspectionItemId: null,
-    inspectionItemName: '',
-    bodyPart: '',
-    inspectionPurpose: '',
-    clinicalDiagnosis: '',
-    isEmergency: 0
-  })
-  Object.assign(laboratoryForm, baseInfo, {
-    laboratoryItemId: null,
-    laboratoryItemName: '',
-    specimenType: '血液',
-    laboratoryPurpose: '',
-    clinicalDiagnosis: '',
-    isFasting: 0,
-    isEmergency: 0
-  })
-
-  const params = {patientId: row.patientId, registId: row.registId};
-
-  // 尝试加载已有的病历
-  const res = await getByRegistId(params)
-  Object.assign(recordForm, res.data)
-  examToggled.value = null
-
-  // 四个区块并发加载，统一挂「加载中」标记（各 loader 自己吞异常）
-  // （原「既往病历」loader 已随左栏既往页签移除 —— 历史就诊改由患者条上的入口
-  //   打开患者详情弹窗，内嵌 CDR 全景时间轴，取数口径也换成患者级的 getPatientCdr）
-
-  // 加载检查申请记录
-  trackPatientLoad(loadInspectionRecords(params))
-
-  // 加载检验申请记录
-  trackPatientLoad(loadLaboratoryRecords(params))
-
-  // 加载已有处方
-  trackPatientLoad(loadPrescriptionRecords(params))
-
-  // 加载患者标签
-  loadPatientTags()
-
-  // 加载患者详情
-  loadPatientDetail()
-
-  // 加载收费信息
-  trackPatientLoad(loadPatientChargeInfo())
-
-  // 加载医保信息
-  loadInsuranceInfo()
-}
-
-const loadInspectionRecords = async (params: any) => {
-  try {
-    // 获取申请列表用于显示状态
-    const applyRes = await getInspectionApplyList(params)
-    inspectionRecords.value = applyRes.data || []
-  } catch (error) {
-    inspectionRecords.value = []
-  }
-}
-
-const loadLaboratoryRecords = async (params: any) => {
-  try {
-    // 获取申请列表用于显示状态
-    const applyRes = await getLaboratoryApplyList(params)
-    laboratoryRecords.value = applyRes.data || []
-  } catch (error) {
-    laboratoryRecords.value = []
-  }
-}
-
-const loadPrescriptionRecords = async (params: any) => {
-  try {
-    const res = await getPrescriptionList(params)
-    prescriptionList.value = res.data || []
-    // 保持当前选中索引不越界
-    if (currentPrescriptionIdx.value >= prescriptionList.value.length) {
-      currentPrescriptionIdx.value = 0
-    }
-    bindPrescriptionForm()
-    loadInsuranceInfo()
-    // L7 审方退回重开闭环：被退回的处方要在医生选中患者第一时间可见（原因+次数），
-    // 医生改方后重新保存病历即完成重提（后端先删后增继承退回次数并落重提流水）
-    const returnedList = (res.data || []).filter((p: any) => p.prescriptionStatus === 7)
-    if (returnedList.length) {
-      const first = returnedList[0]
-      ElMessage.warning({
-        message: `有 ${returnedList.length} 张处方被审方退回（${first.returnCount > 1 ? `第 ${first.returnCount} 次` : '首次'}）：${first.returnReason || '未填写原因'}。请修改处方后重新保存病历提交。`,
-        duration: 8000,
-        showClose: true,
-      })
-    }
-  } catch (error) {
-    prescriptionList.value = []
-    prescriptionForm.details = []
-  }
-}
-
-const switchPrescription = () => {
-  bindPrescriptionForm()
-  loadInsuranceInfo()
-}
-
-watch(currentPrescriptionType, (_, oldType) => {
-  // 校验旧类型的处方
-  const errors = validatePrescription(oldType)
-  if (errors.length > 0) {
-    ElMessage.warning(`${prescriptionTypeLabel(oldType)}处方：${errors[0]}`)
-  }
-  // 保存旧类型的处方数据（剂数/煎服方式同在处方头，切走前必须回写，否则切回来就丢了）
-  const oldPrescription = prescriptionList.value.find(p => p.prescriptionType === oldType)
-  if (oldPrescription) {
-    oldPrescription.details = [...prescriptionForm.details]
-    oldPrescription.doseCount = prescriptionForm.doseCount
-    oldPrescription.decoctFlag = prescriptionForm.decoctFlag
-  }
-  // 加载新类型的处方数据
-  bindPrescriptionForm()
-})
-
-const hasPrescriptionType = (type: number) => {
-  return prescriptionList.value.some((p: any) => p.prescriptionType === type)
-}
-
-const handleAddPrescription = (type: number) => {
-  if (hasPrescriptionType(type)) {
-    ElMessage.warning(`${prescriptionTypeLabel(type)}处方已存在`)
-    return
-  }
-  const newPrescription = {
-    prescriptionType: type,
-    diagnosis: '',
-    usageInstruction: '',
-    details: [],
-  }
-  prescriptionList.value.push(newPrescription)
-  currentPrescriptionIdx.value = prescriptionList.value.length - 1
-  prescriptionForm.details = newPrescription.details
-  ElMessage.success(`已创建${prescriptionTypeLabel(type)}处方`)
-}
-
-// ========== 叫下一位 ==========
-const handleCallNext = async () => {
-  // 如果有当前就诊患者，先检查是否需要保存
-  if (currentCalledPatient.value) {
-    // 批次E/E1：检查检验已开单即落库，不再随病历提交；
-    // 这里只兜「处方明细」和「还没落库的空行」——后者是本地 UI 状态，一并触发保存不会丢数据。
-    const hasUnsavedData = prescriptionForm.details.length > 0
-        || inspectionRecords.value.some(r => !r.id)
-        || laboratoryRecords.value.some(r => !r.id)
-    // 有未保存的数据且病历未提交/审核通过时，自动保存
-    if (hasUnsavedData && !recordSaved.value) {
-      try {
-        await handleSaveRecord()
-        ElMessage.success('已自动保存当前病历')
-      } catch (e) {
-        // 保存失败不阻断呼叫
-      }
-    }
-  }
-
-  // 呼叫下一位
-  try {
-    await ElMessageBox.confirm('确认接诊下一位候诊患者？', '接诊确认',
-        {confirmButtonText: '确认接诊', cancelButtonText: '取消', type: 'info'}
-    )
-  } catch (error) {
-    return
-  }
-
-  // 呼叫下一位
-  try {
-    // 接诊对象一律以服务端回执为准，前端不猜。
-    // 原先的写法是「叫完号 → 等 500ms → 重拉列表 → 取 queueStatus=3 的第一条」：
-    // 分诊台在这 500ms 里插队/退号/呼叫，猜出来的行与后端实际叫到的就不是同一个人 ——
-    // 屏幕显示 A、病历挂到 B 的诊次上。按钮叫「接诊下一位」，接到谁由队列说了算，
-    // 但「接到的是谁」必须由服务端原样告知。
-    const res: any = await callNextQueue({})
-    const called = res?.data
-    if (!called || !called.id) {
-      ElMessage.warning('已发送叫号，但未取到接诊回执，请刷新队列确认')
-      await loadData()
-      return
-    }
-    if (called.previousPatientName) {
-      // 同一医生同一时刻只允许一条「就诊中」，叫下一位时服务端会收掉上一条。
-      // 如实告知，不静默改状态（医生可能只是想让上一位「挂起」，那就该走暂离/挂起）。
-      ElMessage.info(`已自动结束上一位就诊：${called.previousPatientName}`)
-    }
-    await loadData()
-    await selectPatient(called)
-    ElMessage.success(`已接诊：${called.patientName}（${shortQueueNo(called.queueNo)}）`)
-  } catch (error: any) {
-    const msg = error.message || '叫号失败'
-    // 后端文案直接透出（含「今日有 N 位候诊患者但未能取号」这类诊断信息），
-    // 只有确认是「真没人」时才换成给医生的行动指引 —— 用 includes('候诊患者') 会把
-    // 「有候诊患者但取号失败」也吞成「没有候诊患者」，把系统故障说成正常空队列。
-    if (msg.includes('没有候诊患者')) {
-      ElMessage.warning('当前科室没有候诊患者（患者需先在分诊站签到入队）')
-    } else {
-      ElMessage.error(msg)
-    }
-  }
-}
-
-// ========== 重呼当前患者 ==========
-const handleRecallPatient = async () => {
-  if (!currentCalledPatient.value) {
-    ElMessage.warning('当前没有就诊中的患者')
-    return
-  }
-  try {
-    await recallPatient(currentCalledPatient.value.id)
-    ElMessage.success(`已重呼 ${currentCalledPatient.value.patientName}`)
-  } catch (error: any) {
-    ElMessage.error(error.message || '重呼失败')
-  }
-}
-
-// ========== 呼叫指定患者（插队）/ 回诊 ==========
-const handleCallSpecific = async (row: any) => {
-  // 队列 4-已就诊 的行走的是「回诊」：上一位只是被叫号自动收口、病历并未结诊。
-  const reconsult = row.queueStatus === 4
-  try {
-    const msg = reconsult
-        ? (currentCalledPatient.value
-            ? `当前就诊中：${currentCalledPatient.value.patientName}，确认结束并回诊 ${row.patientName}？`
-            : `确认回诊 ${row.patientName}？回诊后继续书写的将是本次就诊的复诊记录。`)
-        : currentCalledPatient.value
-            ? `当前就诊中：${currentCalledPatient.value.patientName}，确认切换并呼叫 ${row.patientName}？`
-            : `确认呼叫 ${row.patientName}？`
-
-    await ElMessageBox.confirm(msg, reconsult ? '回诊确认' : '呼叫确认', {
-      confirmButtonText: reconsult ? '确认回诊' : '确认呼叫',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-
-    // 呼叫指定患者：接诊对象用服务端回执，前端不再「等 500ms 再猜」。
-    // 后端会自动收掉本医生的上一位「就诊中」（同一位医生同一时刻只能有一条）。
-    const res: any = await callPatient(row.id)
-    const called = res?.data || row
-    if (called?.previousPatientName) {
-      ElMessage.info(`已自动结束上一位就诊：${called.previousPatientName}`)
-    }
-    await loadData()
-    await selectPatient(called)
-    ElMessage.success(`${called.reconsult || reconsult ? '已回诊' : '已呼叫'} ${called.patientName || row.patientName}`)
-  } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.message || '呼叫失败')
-    }
-  }
-}
-
-// ========== 暂离诊室 / 恢复接诊 ==========
-// 语义是医生自己的接诊状态（Redis DoctorStatusCacheService：0 空闲 / 1 接诊中 / 2 暂离），
-// 不是「暂停某个患者」。暂离后叫号与分诊台可据此提示该诊室医生暂离。
-const doctorPaused = ref(false)
-
-const loadDoctorStatus = async () => {
-  try {
-    const res = await getCurrentDoctorStatus()
-    doctorPaused.value = (res.data?.status ?? 0) === 2
-  } catch (error) {
-    console.error('读取接诊状态失败:', error)
-  }
-}
-
-const handlePause = async () => {
-  const next = doctorPaused.value ? 0 : 2
-  try {
-    await setDoctorStatus(next)
-    doctorPaused.value = next === 2
-    ElMessage.success(next === 2 ? '已暂离，叫号将跳过本诊室' : '已恢复接诊')
-  } catch (error: any) {
-    ElMessage.error(error?.message || '接诊状态切换失败')
-  }
-}
-
-// ========== 结诊 ==========
-const handleComplete = async () => {
-  if (!currentPatient.value) return
-
-  // 检查病历必填项
-  const requiredFields = [
-    {field: recordForm.chiefComplaint, label: '主诉', value: 'chiefComplaint'},
-    {field: recordForm.presentIllness, label: '现病史', value: 'presentIllness'},
-    {field: recordForm.allergyHistory, label: '过敏史', value: 'allergyHistory'},
-    {field: recordForm.pastHistory, label: '既往史', value: 'pastHistory'},
-    {field: recordForm.personalHistory, label: '个人史', value: 'personalHistory'},
-    {field: recordForm.familyHistory, label: '家族史', value: 'familyHistory'},
-    {field: recordForm.temperature, label: '体温', value: 'temperature'},
-    {field: recordForm.systolicPressure, label: '收缩压', value: 'systolicPressure'},
-    {field: recordForm.diagnosis, label: '诊断', value: 'diagnosis'},
-  ]
-
-  const missingFields = requiredFields.filter(item => !item.field)
-
-  // 如果有未填写的必填项，提示医生
-  if (missingFields.length > 0) {
-    const missingListHtml = missingFields.map(item =>
-        `<div class="flex items-center justify-between py-1">
-        <span class="text-red-600">✗ ${item.label}</span>
-      </div>`
-    ).join('')
-
-    try {
-      await ElMessageBox.confirm(
-          `<div class="space-y-2">
-          <div class="text-sm text-slate-600">以下必填项尚未填写：</div>
-          <div class="rounded-lg bg-red-50 p-3 text-sm">${missingListHtml}</div>
-          <div class="text-xs text-slate-400 mt-2">请先填写完整后再结诊，无相关内容请在字段旁点击「填写无」</div>
-        </div>`,
-          '病历未完成',
-          {
-            dangerouslyUseHTMLString: true,
-            confirmButtonText: '我知道了',
-            showCancelButton: false,
-            type: 'warning',
-          }
-      )
-    } catch (action) {
-      return
-    }
-    return // 不继续结诊，让医生先填写
-  }
-
-  // 校验处方必填项
-  const rxErrors = validateAllPrescriptions()
-  if (rxErrors.length > 0) {
-    const errorListHtml = rxErrors.map(e => `<div class="py-0.5">• ${e}</div>`).join('')
-    try {
-      await ElMessageBox.confirm(
-          `<div class="space-y-2">
-          <div class="text-sm text-slate-600">处方必填项尚未填写完整：</div>
-          <div class="rounded-lg bg-red-50 p-3 text-sm max-h-40 overflow-y-auto">${errorListHtml}</div>
-          <div class="text-xs text-slate-400 mt-2">请先填写完整后再结诊。</div>
-        </div>`,
-          '处方未完成',
-          {
-            dangerouslyUseHTMLString: true,
-            confirmButtonText: '我知道了',
-            showCancelButton: false,
-            type: 'warning',
-          }
-      )
-    } catch (action) {
-      return
-    }
-    return
-  }
-
-  // 检查各项状态（包括暂存的检查检验）
-  const hasPrescriptions = prescriptionForm.details.length > 0
-  const hasInspections = inspectionRecords.value.length > 0
-  const hasLaboratories = laboratoryRecords.value.length > 0
-  const hasAnyCharge = hasPrescriptions || hasInspections || hasLaboratories
-
-  // 构建检查清单
-  const checkItems = [
-    {label: '已开具处方', checked: hasPrescriptions, critical: false},
-    {label: '已开具检查', checked: hasInspections, critical: false},
-    {label: '已开具检验', checked: hasLaboratories, critical: false},
-  ]
-
-  // 构建确认内容HTML
-  const checkListHtml = checkItems.map(item =>
-      `<div class="flex items-center gap-2 py-1.5">
-      <span class="${item.checked ? 'text-emerald-500' : 'text-amber-500'}">${item.checked ? '✓' : '○'}</span>
-      <span class="${item.checked ? 'text-slate-700' : 'text-slate-500'}">${item.label}</span>
-    </div>`
-  ).join('')
-
-  let warningHtml = ''
-  if (!hasAnyCharge) {
-    warningHtml = `<div class="mt-3 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-700">
-      ⚠ 当前没有开具任何处方/检查/检验，患者无需缴费。
-    </div>`
-  }
-
-  try {
-    await ElMessageBox.confirm(
-        `<div class="space-y-2">
-        <div class="text-sm text-slate-600">确认完成该患者的就诊？</div>
-        <div class="rounded-lg bg-slate-50 p-3 text-sm">${checkListHtml}</div>
-        ${warningHtml}
-        <div class="text-xs text-slate-400 mt-2">系统将自动保存并提交病历，生成收费单。</div>
-      </div>`,
-        '结诊确认',
-        {
-          dangerouslyUseHTMLString: true,
-          confirmButtonText: '确认完成',
-          cancelButtonText: '返回修改',
-          type: 'info',
-        }
-    )
-  } catch (action) {
-    return // 用户取消
-  }
-
-  try {
-    // 获取患者信息
-    const patient = currentPatient.value
-
-    // 构建提交数据
-    const submitData = {
-      // 患者信息
-      patientId: patient.patientId,
-      patientNo: patient.patientNo,
-      patientName: patient.patientName,
-      registId: patient.registId,
-      queueId: patient.id,
-      // 科室医生信息
-      deptId: patient.deptId,
-      deptName: patient.deptName,
-      doctorId: patient.doctorId,
-      doctorName: patient.doctorName,
-      // 病历信息
-      recordId: recordForm.id || null,
-      chiefComplaint: recordForm.chiefComplaint,
-      presentIllness: recordForm.presentIllness,
-      allergyHistory: recordForm.allergyHistory,
-      pastHistory: recordForm.pastHistory,
-      personalHistory: recordForm.personalHistory,
-      familyHistory: recordForm.familyHistory,
-      temperature: recordForm.temperature,
-      pulse: recordForm.pulse,
-      respiration: recordForm.respiration,
-      systolicPressure: recordForm.systolicPressure,
-      diastolicPressure: recordForm.diastolicPressure,
-      generalCondition: recordForm.generalCondition,
-      specialistExam: recordForm.specialistExam,
-      auxiliaryExam: recordForm.auxiliaryExam,
-      diagnosis: recordForm.diagnosis,
-      diagnosisCode: recordForm.diagnosisCode,
-      diagnosisName: recordForm.diagnosisName,
-      treatmentPlan: recordForm.treatmentPlan,
-      // 处方信息（所有处方）
-      prescriptions: buildPrescriptionPayload(),
-      // 检查/检验申请：批次E/E1 起**不再随病历提交** —— 开单那一刻就已经落库了，
-      // 病历保存只负责回填 recordId（后端 backfillApplyRecord）。
-      // 撤单请走列表上的「删除」（后端带缴费/执行/收费引用三重保护），
-      // 而不是"把本地数组里的行去掉"。
-    }
-
-    // 调用结诊提交接口
-    await submitMedicalRecord(submitData)
-
-    // 显示成功提示
-    ElMessage.success('结诊成功')
-
-    // 清空暂存的检查检验数据
-    inspectionRecords.value = []
-    laboratoryRecords.value = []
-
-    // 刷新队列
-    loadData()
-  } catch (error: any) {
-    if (error !== 'cancel') ElMessage.error(error.message || '操作失败')
-  }
-}
-
-// ========== 建复诊（批次E/E6）==========
-// 位置：检查/检验「结果」条目的操作里 —— 报告回来 → 一键建复诊 → 直接接诊。
-// 复诊免挂号费（后端 waived：收费单金额 0 且直接置「已收费」，否则签不了到），
-// 并带上 **原病历ID** 做关联 —— 只建立引用关系，原病历一律不改。
-const canCreateRevisit = (item: any) =>
-    !!item?.execRecordId && !!recordForm.id && !!currentPatient.value
-
-/**
- * 该条既往病历是否就是本次复诊号关联的原病历。
- * 雪花ID 前后端都按字符串走，统一 String() 比较，避免 number/string 不等。
- */
-const isLinkedRevisitRecord = (record: any) => {
-  const linked = currentPatient.value?.revisitRecordId
-  return !!linked && !!record?.id && String(record.id) === String(linked)
-}
-
-const handleCreateRevisit = async (item?: any) => {
-  if (!currentPatient.value) {
-    ElMessage.warning('请先选择患者')
-    return
-  }
-  // 复诊号必须挂在一份真实病历上；没保存病历就没有可关联的原病历
-  if (!recordForm.id) {
-    ElMessage.warning('请先保存病历，再建复诊（复诊号要关联本次病历）')
-    return
-  }
-  const itemName = item?.inspectionItemName || item?.laboratoryItemName || '本次就诊'
-  const originLabel = recordForm.recordNo || String(recordForm.id)
-  try {
-    await ElMessageBox.confirm(
-        `患者 ${currentPatient.value.patientName} 的「${itemName}」结果已回，确定为本次就诊创建复诊号？\n` +
-        `关联原病历：${originLabel}（原病历不改动），收不收费由「复诊收费策略」判定（铺底策略：当日回诊全免）。`,
-        '建复诊',
-        {
-          confirmButtonText: '确定创建',
-          cancelButtonText: '取消',
-          type: 'info'
-        }
-    )
-    // 当日回诊（来源 1）：不占号源、不选排班，它是同一次挂号的延续
-    await createRevisitRegistration({
-      patientId: currentPatient.value.patientId,
-      scheduleId: null, // 复诊不需要号源
-      settlementType: currentPatient.value.settlementType || 1,
-      medicalInsuranceType: currentPatient.value.medicalInsuranceType || '',
-      medicalInsuranceNo: currentPatient.value.medicalInsuranceNo || '',
-      visitType: 2, // 标记为复诊
-      revisitSource: REVISIT_SOURCE.SAME_DAY_RETURN,
-      revisitRecordId: recordForm.id, // 关联原病历（后端校验归属）
-    })
-    ElMessage.success('复诊号已创建（免挂号费），签到后即可接诊')
-    loadData()
-  } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.message || '创建失败')
-    }
-  }
-}
-
-// ========== 医嘱复诊预约（来源 2，sql/121） ==========
-const showRevisitAppoint = ref(false)
-const revisitAppointBusy = ref(false)
-
-/**
- * 与上面「建复诊」的区别：建复诊是**当日回诊**（结果回来了，不占号源、按策略全免）；
- * 这里是医生替患者约**未来某一次**就诊（拆线、化疗下一程、复查后再看），
- * 它占号源、按「复诊收费策略」收钱，所以必须能在提交前看到金额。
- */
-const openRevisitAppoint = () => {
-  if (!recordForm.id) {
-    ElMessage.warning('请先保存病历，再预约复诊（复诊号要关联本次病历）')
-    return
-  }
-  showRevisitAppoint.value = true
-}
-
-const handleRevisitAppoint = async (payload: {
-  revisitRecordId: string | number
-  scheduleId: string | number
-  slotId?: string | number
-  settlementType: number
-  medicalInsuranceType: string
-  medicalInsuranceNo: string
-}) => {
-  if (!currentPatient.value) return
-  revisitAppointBusy.value = true
-  try {
-    const res = await createRevisitRegistration({
-      patientId: currentPatient.value.patientId,
-      // 医生替患者约未来时段 = 预约渠道，扣预约池（不许吃现场余号）
-      registSource: 4,
-      visitType: 2,
-      revisitSource: REVISIT_SOURCE.DOCTOR_ORDERED,
-      ...payload,
-    })
-    showRevisitAppoint.value = false
-    ElMessage.success(`复诊号已预约${res.data?.registNo ? `（${res.data.registNo}）` : ''}，请让患者按预约时段来院`)
-    loadData()
-  } catch (error: any) {
-    ElMessage.error(error?.message || '预约复诊失败')
-  } finally {
-    revisitAppointBusy.value = false
-  }
-}
-
-// ========== 临时保存 ==========
-const handleSaveRecord = async () => {
-  if (!currentPatient.value) return
-  try {
-    // 构建保存数据
-    const saveData = {
-      // 患者信息
-      patientId: currentPatient.value.patientId,
-      patientNo: currentPatient.value.patientNo,
-      patientName: currentPatient.value.patientName,
-      registId: currentPatient.value.registId,
-      queueId: currentPatient.value.id,
-      // 科室医生信息
-      deptId: currentPatient.value.deptId,
-      deptName: currentPatient.value.deptName,
-      doctorId: currentPatient.value.doctorId,
-      doctorName: currentPatient.value.doctorName,
-      // 病历信息
-      recordId: recordForm.id || null,
-      chiefComplaint: recordForm.chiefComplaint,
-      presentIllness: recordForm.presentIllness,
-      // G-10：仅当本会话用过 AI 草稿且终稿已与其不同才带草稿原文（后端据此算 diff 留痕）
-      aiDraftPresentIllness: (aiDraftAppliedText.value && recordForm.presentIllness !== aiDraftAppliedText.value)
-          ? aiDraftAppliedText.value : undefined,
-      allergyHistory: recordForm.allergyHistory,
-      pastHistory: recordForm.pastHistory,
-      personalHistory: recordForm.personalHistory,
-      familyHistory: recordForm.familyHistory,
-      temperature: recordForm.temperature,
-      pulse: recordForm.pulse,
-      respiration: recordForm.respiration,
-      systolicPressure: recordForm.systolicPressure,
-      diastolicPressure: recordForm.diastolicPressure,
-      generalCondition: recordForm.generalCondition,
-      skinMucosa: recordForm.skinMucosa,
-      headNeck: recordForm.headNeck,
-      chestLung: recordForm.chestLung,
-      heart: recordForm.heart,
-      abdomen: recordForm.abdomen,
-      spineLimbs: recordForm.spineLimbs,
-      nervousSystem: recordForm.nervousSystem,
-      specialistExam: recordForm.specialistExam,
-      auxiliaryExam: recordForm.auxiliaryExam,
-      diagnosis: recordForm.diagnosis,
-      diagnosisCode: recordForm.diagnosisCode,
-      diagnosisName: recordForm.diagnosisName,
-      treatmentPlan: recordForm.treatmentPlan,
-      // 处方信息（所有处方）
-      prescriptions: buildPrescriptionPayload(),
-      // 检查/检验申请：批次E/E1 起**不再随病历提交** —— 开单那一刻就已经落库了，
-      // 病历保存只负责回填 recordId（后端 backfillApplyRecord）。
-      // 撤单请走列表上的「删除」（后端带缴费/执行/收费引用三重保护），
-      // 而不是"把本地数组里的行去掉"。
-    }
-
-    // 调用保存接口
-    const res = await saveMedicalRecord(saveData)
-    if (res.data) {
-      recordForm.id = res.data
-    }
-    recordSaved.value = true
-    // 草稿会话结束：本次保存已产生 diff 留痕，下次保存不再重复带
-    aiDraftAppliedText.value = ''
-    ElMessage.success('病历保存成功')
-  } catch (error: any) {
-    ElMessage.error(error.message || '保存失败')
-  }
-}
-
-const handleRemoveDrug = (index: number) => {
-  prescriptionForm.details.splice(index, 1)
-  // 删除药品后重新预估
-  loadInsuranceInfo()
-  checkDrugSafety()
-}
-
-const handleAddEmptyDrug = () => {
-  const type = currentPrescriptionType.value
-  // 如果该类型没有处方，先创建一个
-  if (!hasPrescriptionType(type)) {
-    const newPrescription = {
-      prescriptionType: type,
-      diagnosis: '',
-      usageInstruction: '',
-      details: [],
-    }
-    prescriptionList.value.push(newPrescription)
-    prescriptionForm.details = newPrescription.details
-  }
-  const base = {
-    drugId: null, drugCode: '', drugName: '', genericName: '',
-    specification: '', dosageForm: '', unit: '盒', quantity: 1,
-    price: 0, usageDosage: '', amount: 0,
-  }
-  if (type === 3) {
-    // 中药饮片：总量/金额不手填，选药 + 填每剂克数后按剂数算出来
-    prescriptionForm.details.push({
-      ...base, unit: 'g', quantity: 0, singleDosage: '', frequency: '每日一剂',
-      route: tcmMethodDict.value[0]?.dictValue || '水煎服', duration: 7,
-    })
-  } else if (type === 2) {
-    // 中成药
-    prescriptionForm.details.push({
-      ...base, singleDosage: '', frequency: '一日三次', route: '口服', duration: 7,
-    })
-  } else {
-    // 西药
-    prescriptionForm.details.push({
-      ...base, singleDosage: '', frequency: '一日三次', route: '口服', duration: 7,
-    })
-  }
-}
-
-// ========== 处方必填校验 ==========
-const validatePrescription = (type: number): string[] => {
-  const errors: string[] = []
-  const isCurrent = type === currentPrescriptionType.value
-  const prescription: any = prescriptionList.value.find(p => p.prescriptionType === type) || {}
-  const details = prescription.details || []
-  if (details.length === 0) return errors
-
-  // 饮片方的剂数是「一张方一个」的处方头字段，后端强校验 1~30，且必须选代煎/自煎
-  if (type === 3) {
-    const doseCount = isCurrent ? prescriptionForm.doseCount : prescription.doseCount
-    const decoctFlag = isCurrent ? prescriptionForm.decoctFlag : prescription.decoctFlag
-    if (!doseCount || doseCount < 1 || doseCount > 30) errors.push('中药饮片处方：请填写剂数（1~30 剂）')
-    if (decoctFlag !== 1 && decoctFlag !== 2) errors.push('中药饮片处方：请选择煎服方式（代煎 / 自煎）')
-  }
-
-  details.forEach((item: any, idx: number) => {
-    const prefix = `${prescriptionTypeLabel(type)}处方第${idx + 1}项`
-    if (!item.drugId) errors.push(`${prefix}：请选择药品`)
-    if (!item.singleDosage) errors.push(`${prefix}：请填写用量`)
-    if (!item.frequency) errors.push(`${prefix}：请填写频次/用法`)
-    if (!item.route) errors.push(`${prefix}：请填写给药途径/煎法`)
-    if (type === 3 && item.drugId && tcmPerDoseGrams(item) <= 0) {
-      errors.push(`${prefix}：每剂克数必须是数字（如 15，不要写「15g」「适量」）`)
-    }
-    if (!item.quantity || item.quantity <= 0) errors.push(`${prefix}：请填写正确的总量/剂数`)
-    if (type !== 3 && (!item.duration || item.duration <= 0)) errors.push(`${prefix}：请填写天数`)
-  })
-  return errors
-}
-
-const validateAllPrescriptions = (): string[] => {
-  return [1, 2, 3].flatMap(type => validatePrescription(type))
-}
-
-/**
- * 病历提交用的处方载荷。剂数/煎服方式存在处方头，而当前 tab 的编辑态在 prescriptionForm 上，
- * 所以「正在编的那张」取表单值、其余取各自对象上的值（两处提交站点共用，避免口径漂移）。
- */
-const buildPrescriptionPayload = () => {
-  return prescriptionList.value
-      .filter((p: any) => p.details && p.details.length > 0)
-      .map((p: any) => {
-        const isCurrent = p.prescriptionType === currentPrescriptionType.value
-        return {
-          prescriptionType: p.prescriptionType || 1,
-          doseCount: isCurrent ? prescriptionForm.doseCount : p.doseCount,
-          decoctFlag: isCurrent ? prescriptionForm.decoctFlag : p.decoctFlag,
-          details: p.details.map((d: any) => ({
-            drugId: d.drugId,
-            drugName: d.drugName,
-            specification: d.specification,
-            unit: d.unit,
-            singleDosage: d.singleDosage,
-            frequency: d.frequency,
-            route: d.route,
-            quantity: d.quantity,
-            duration: d.duration,
-            remark: d.remark,
-          })),
-        }
-      })
-}
-
-const handleDrugSelectForRecord = (record: any, val: number) => {
-  const drug = drugResults.value.find((d: any) => d.id === val)
-  if (drug) {
-    record.drugId = drug.id
-    record.drugCode = drug.drugCode
-    record.drugName = drug.drugName
-    record.specification = drug.specification || ''
-    record.unit = drug.unit || '盒'
-    record.price = drug.retailPrice || 0
-    // 饮片按克开方：行上存的单价一律是「元/克」，界面预估和后端落库同一个口径
-    // （元/kg 留在行上迟早被谁乘一次克数，金额直接放大一千倍）
-    if (currentPrescriptionType.value === 3) {
-      record.price = tcmPerGramPrice(drug)
-      applyTcmGrams(record)
-    } else {
-      record.amount = record.quantity * (drug.retailPrice || 0)
-    }
-  }
-}
-
-// ========== 检查/检验申请（含知情同意） ==========
-const pendingInspectionIdx = ref(0)
-const handleAddEmptyInspection = () => {
-  inspectionRecords.value.push({
-    _pendingIdx: ++pendingInspectionIdx.value,
-    inspectionItemId: null,
-    inspectionItemName: '',
-    // 批次E/F：不再写 applyStatus=0 —— E4 收口后申请单只有 1已提交/2已缴费/6已取消，
-    // 未落库的空行没有申请单状态可言（有没有落库看 id）
-    bodyPart: '',
-    inspectionPurpose: '',
-    preparation: '',
-    clinicalDiagnosis: '',
-    isEmergency: 0,
-    price: 0,
-  })
-}
-
-const pendingLaboratoryIdx = ref(0)
-const handleAddEmptyLaboratory = () => {
-  laboratoryRecords.value.push({
-    _pendingIdx: ++pendingLaboratoryIdx.value,
-    laboratoryItemId: null,
-    laboratoryItemName: '',
-    specimenType: '',
-    laboratoryPurpose: '',
-    clinicalDiagnosis: '',
-    isFasting: 0,
-    isEmergency: 0,
-    price: 0,
-  })
-}
-
-// 批次E/F：删掉了 handleSaveInspection / handleSaveLaboratory。
-// 它们是 E1 之前的「暂存本地数组、等结诊再提交」路径，两个函数都已没有任何调用点，
-// 而它们那句「已添加（结诊后生效）」与现状相反 —— 现在选完项目即刻落库、即刻待缴费。
-// 留着只会让下一个人以为还有第二条开单链路。真正的开单在 handleSaveInspectionRow /
-// submitInspectionApply（选项目即落库）。
-
-// ========== 删除申请单（批次E/E2：走后端，带保护） ==========
-/**
- * 删除检查申请。
- *
- * 原实现只从本地数组 splice —— 申请单从「开单即落库」之后就是真实存在的单据，
- * 只删界面等于"界面上没了、库里还在"，刷新一下又回来。
- * 现在走后端删除接口，能不能删由后端说了算（已缴费 / 已生成检查记录 /
- * 已被收费单引用 一律拒绝并给原因），前端不自己判状态。
- */
-const handleDeleteInspectionRecord = async (idx: number) => {
-  const row = inspectionRecords.value[idx]
-  if (!row) return
-  if (!row.id) {
-    // 还没落库的空行（选了项目就会立刻落库，所以这只在极端情况下出现）
-    inspectionRecords.value.splice(idx, 1)
-    loadInsuranceInfo()
-    return
-  }
-  if (row.canDelete === false) {
-    ElMessage.warning(row.deleteBlockReason || '当前状态不允许删除')
-    return
-  }
-  try {
-    await ElMessageBox.confirm(`确定删除检查申请「${row.inspectionItemName}」？`, '删除检查申请', {
-      confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'
-    })
-  } catch {
-    return
-  }
-  try {
-    await deleteInspectionApply(row.id)
-    inspectionRecords.value.splice(idx, 1)
-    ElMessage.success('检查申请已删除')
-    loadInsuranceInfo()
-  } catch (error: any) {
-    ElMessage.error(error.message || '删除失败')
-  }
-}
-
-const handleDeleteLaboratoryRecord = async (idx: number) => {
-  const row = laboratoryRecords.value[idx]
-  if (!row) return
-  if (!row.id) {
-    laboratoryRecords.value.splice(idx, 1)
-    loadInsuranceInfo()
-    return
-  }
-  if (row.canDelete === false) {
-    ElMessage.warning(row.deleteBlockReason || '当前状态不允许删除')
-    return
-  }
-  try {
-    await ElMessageBox.confirm(`确定删除检验申请「${row.laboratoryItemName}」？`, '删除检验申请', {
-      confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'
-    })
-  } catch {
-    return
-  }
-  try {
-    await deleteLaboratoryApply(row.id)
-    laboratoryRecords.value.splice(idx, 1)
-    ElMessage.success('检验申请已删除')
-    loadInsuranceInfo()
-  } catch (error: any) {
-    ElMessage.error(error.message || '删除失败')
-  }
-}
-
-// ========== 查看报告 ==========
-/**
- * 影像随报告一起可见（sql/137 简化 PACS）。
- *
- * 弹框内容是 HTML 字符串，塞不进带缩放/调窗状态的阅片器组件，所以这里只铺缩略图；
- * 放大与窗宽窗位在检查/检验工作站的阅片器里做。地址必须走 /api/ 前缀
- * （后端 context-path=/api，静态资源映射在 /uploads/**），与病历引导单同一口径。
- */
-const htmlEsc = (v: any) => String(v ?? '').replace(/[&<>"]/g, (c: string) => (
-    {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c] as string))
-
-const examImagesHtml = (images: any[], label: string) => {
-  const list = Array.isArray(images) ? images.filter((i: any) => i?.fileUrl) : []
-  if (!list.length) {
-    return `<div class="border-t pt-3 text-xs text-slate-400">本次${label}未挂影像帧</div>`
-  }
-  const cells = list.map((i: any) => `<div>
-      <img src="/api/${htmlEsc(i.fileUrl)}" alt="${htmlEsc(i.fileName || '影像')}"
-           class="max-h-40 w-full rounded border border-slate-200 bg-black object-contain"/>
-      <p class="mt-1 text-[11px] text-slate-500">#${htmlEsc(i.seq)} ${htmlEsc(i.modalityText || '未标模态')}${i.source === 2 ? '（模拟）' : ''}</p>
-    </div>`).join('')
-  return `<div class="border-t pt-3">
-      <p class="font-bold text-slate-700 mb-2">影像（共 ${list.length} 帧，放大请在工作站阅片器打开）</p>
-      <div class="grid grid-cols-4 gap-2 rounded bg-slate-900 p-2">${cells}</div>
-    </div>`
-}
-
-/**
- * 申请单/执行状态 → el-tag 颜色。
- *
- * 颜色只是提示，**文案一律用后端给的 `execStatusText`**：
- * 检查与检验的 record_status 是两套不同码表（检查 2=已签到，检验 2=已采样），
- * 前端按码值自己翻译必然翻错 —— 医生站曾经就把"已挂号"显示成过"未知"。
- */
-const applyTagType = (item: any) => {
-  if (item?.critical) return 'danger'
-  const text = item?.execStatusText || ''
-  if (text === '待缴费') return 'warning'
-  if (text === '已取消') return 'info'
-  if (text === '已出结果' || text === '已审核' || text === '已发布') return 'success'
-  if (['检查中', '检测中', '已到检', '已采样', '已接收', '已缴费待执行'].includes(text)) return 'primary'
-  return 'info'
-}
-
-/**
- * 查看检查报告。
- *
- * 原实现直接读申请单上的 `resultDescription / resultConclusion` —— 这两个字段
- * 从来就不在申请单 VO 里，所以它永远只显示"检查项目/部位/目的"，外加一张写死的
- * `huichuan.png` 假影像。现在按执行记录 ID 真去取报告。
- */
-const handleViewInspectionReport = async (item: any) => {
-  if (!item?.execRecordId) {
-    ElMessage.warning('该检查还没有对应的检查记录，暂无报告可看')
-    return
-  }
-  let data: any = null
-  try {
-    const res = await getInspectionDetail(item.execRecordId)
-    data = res.data || {}
-  } catch (error: any) {
-    ElMessage.error(error.message || '报告加载失败')
-    return
-  }
-  const record = data.record || {}
-  const report = data.report || {}
-  const escapeHtml = (v: any) => String(v ?? '-').replace(/[&<>"]/g, (c: string) => (
-      {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c] as string))
-  const block = (title: string, body: any, cls = 'bg-slate-50') => body
-      ? `<div class="border-t pt-3"><p class="font-bold text-slate-700 mb-2">${title}</p>
-         <p class="text-sm ${cls} p-2 rounded whitespace-pre-wrap">${escapeHtml(body)}</p></div>`
-      : ''
-  ElMessageBox.alert(
-      `<div class="space-y-3 w-full">
-      <div class="grid grid-cols-2 gap-2 text-sm">
-        <p><strong>检查项目：</strong>${escapeHtml(record.inspectionItemName || item.inspectionItemName)}</p>
-        <p><strong>检查部位：</strong>${escapeHtml(record.bodyPart || item.bodyPart)}</p>
-        <p><strong>检查科室：</strong>${escapeHtml(record.inspectionDeptName)}</p>
-        <p><strong>报告医师：</strong>${escapeHtml(report.auditBy || record.executeBy)}</p>
-        <p><strong>记录状态：</strong>${escapeHtml(item.execStatusText)}</p>
-        <p><strong>报告编号：</strong>${escapeHtml(report.reportNo)}</p>
-      </div>
-      ${block('检查所见', report.reportContent || record.resultDescription)}
-      ${block('影像诊断/印象', report.conclusion || record.resultConclusion, 'bg-emerald-50')}
-      ${block('建议', report.suggestions, 'bg-blue-50')}
-      ${examImagesHtml(data.images, '检查')}
-      ${!report.reportNo && !record.resultConclusion
-          ? '<div class="border-t pt-3 text-xs text-slate-400">该检查尚无报告内容（当前状态：'
-          + escapeHtml(item.execStatusText) + '）</div>' : ''}
-    </div>`,
-      '检查报告详情',
-      {
-        dangerouslyUseHTMLString: true, confirmButtonText: '关闭',
-        customStyle: {'max-width': '70%', 'width': '70%'}
-      }
-  )
-}
-
-const handleViewLaboratoryReport = async (item: any) => {
-  // 加载检验结果明细
-  // 优先用后端给的 execRecordId（批次E/E5：申请单 VO 已直接带执行记录 ID），
-  // 拿不到才退回"按 applyId 在记录列表里翻"的老办法（多一次全量查询，且依赖 applyId 能对上）。
-  let recordId = item?.execRecordId
-  try {
-    if (!recordId) {
-      const recordRes = await getLaboratoryRecordList({
-        patientId: currentPatient.value?.patientId
-      })
-      const records = recordRes.data?.records || []
-      const found = records.find((r: any) => r.applyId == item.id)
-      if (!found) {
-        ElMessage.warning('未找到对应的检验记录')
-        return
-      }
-      recordId = found.id
-    }
-
-    const detailRes = await getLaboratoryDetail(recordId)
-    const detailRecord = detailRes.data?.record || {}
-    const results = detailRes.data?.results || []
-
-    // 统计异常项目：只统计已判定为异常的，未判定项不能算进正常也不能算进异常
-    const abnormalCount = results.filter((r: any) => r.abnormalFlag && r.abnormalFlag !== 0).length
-    const unjudgedCount = results.filter((r: any) => String(r.judgeNote || '').startsWith('未判定：')).length
-
-    // 构建结果明细表格
-    let resultsHtml = ''
-    if (results.length > 0) {
-      resultsHtml = `
-        <div class="border-t pt-3">
-          <div class="flex items-center justify-between mb-2">
-            <p class="font-bold text-slate-700">检验结果明细（共 ${results.length} 项，异常 ${abnormalCount} 项${
-          unjudgedCount > 0 ? `，未判定 ${unjudgedCount} 项` : ''
-      }）</p>
-          </div>
-          <table class="w-full text-sm border-collapse">
-            <thead>
-              <tr class="bg-slate-100">
-                <th class="border border-slate-300 px-3 py-2 text-left">项目名称</th>
-                <th class="border border-slate-300 px-3 py-2 text-left">结果</th>
-                <th class="border border-slate-300 px-3 py-2 text-left">单位</th>
-                <th class="border border-slate-300 px-3 py-2 text-left">参考范围</th>
-                <th class="border border-slate-300 px-3 py-2 text-left">状态</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${results.map((r: any) => {
-        // 一律用后端算好的 abnormalFlagText。
-        // 不要用 abnormalFlag 写三目判断：未判定时它也是 0，与「正常」同值，
-        // 非 1/2/3 就显示「正常」会把「不知道」当成「正常」给医生看。
-        const flagText = r.abnormalFlagText || '—'
-        const isAbnormal = flagText === '偏高' || flagText === '偏低' || flagText === '异常'
-        const isUnjudged = flagText === '未判定'
-        const tagClass = isAbnormal
-            ? 'bg-red-100 text-red-600'
-            : isUnjudged
-                ? 'bg-amber-100 text-amber-700'
-                : 'bg-green-100 text-green-600'
-        return `
-                <tr class="${isAbnormal ? 'bg-red-50' : isUnjudged ? 'bg-amber-50' : ''}">
-                  <td class="border border-slate-300 px-3 py-2">${r.laboratoryItemName}</td>
-                  <td class="border border-slate-300 px-3 py-2 ${isAbnormal ? 'text-red-600 font-bold' : ''}">${r.resultValue || '-'}</td>
-                  <td class="border border-slate-300 px-3 py-2">${r.resultUnit || '-'}</td>
-                  <td class="border border-slate-300 px-3 py-2">${r.referenceRange || '-'}</td>
-                  <td class="border border-slate-300 px-3 py-2">
-                    <span class="inline-block px-2 py-0.5 rounded text-xs font-medium ${tagClass}">${flagText}</span>
-                    ${isUnjudged && r.judgeNote ? `<div class="mt-0.5 text-[11px] text-slate-500">${r.judgeNote}</div>` : ''}
-                  </td>
-                </tr>
-              `
-      }).join('')}
-            </tbody>
-          </table>
-        </div>
-      `
-    }
-
-    // 检验结论/诊断
-    const diagnosisHtml = detailRecord.diagnosis ? `
-      <div class="border-t pt-3">
-        <p class="font-bold text-slate-700 mb-2">检验结论：</p>
-        <div class="rounded-lg bg-blue-50 p-3 text-sm text-slate-700">${detailRecord.diagnosis}</div>
-      </div>
-    ` : ''
-
-    // 建议
-    const suggestionsHtml = detailRecord.suggestions ? `
-      <div class="border-t pt-3">
-        <p class="font-bold text-slate-700 mb-2">建议：</p>
-        <div class="rounded-lg bg-amber-50 p-3 text-sm text-slate-700">${detailRecord.suggestions}</div>
-      </div>
-    ` : ''
-
-    ElMessageBox.alert(
-        `<div class="space-y-3">
-        <div class="grid grid-cols-2 gap-2 text-sm">
-          <p><strong>检验项目：</strong>${detailRecord.laboratoryItemName || item.laboratoryItemName}</p>
-          <p><strong>标本类型：</strong>${detailRecord.specimenType || item.specimenType || '-'}</p>
-          <p><strong>检验目的：</strong>${detailRecord.laboratoryPurpose || item.laboratoryPurpose || '-'}</p>
-          <p><strong>临床诊断：</strong>${detailRecord.clinicalDiagnosis || item.clinicalDiagnosis || '-'}</p>
-        </div>
-        ${resultsHtml}
-        ${diagnosisHtml}
-        ${suggestionsHtml}
-        ${examImagesHtml(detailRes.data?.images, '检验')}
-      </div>`,
-        '检验报告详情',
-        {
-          dangerouslyUseHTMLString: true, confirmButtonText: '关闭', customStyle: {
-            'max-width': '40%'
-          }
-        }
-    )
-  } catch (error: any) {
-    ElMessage.error(error.message || '获取报告失败')
-  }
-}
-
-// ========== 打印指引单 ==========
-const guidePdfUrl = ref('')
-const loadingGuide = ref(false)
-
-const loadGuideContent = async () => {
-  if (!recordForm.guidePdfPath) {
-    guidePdfUrl.value = ''
-    return
-  }
-  loadingGuide.value = true
-  try {
-    // 直接使用后端地址访问PDF uploads/guide/20260915/MR202609151809310002.pdf
-    guidePdfUrl.value = `/api/${recordForm.guidePdfPath}`
-  } catch (e) {
-    guidePdfUrl.value = ''
-  } finally {
-    loadingGuide.value = false
-  }
-}
-
-const printGuidePdf = () => {
-  if (!guidePdfUrl.value) return
-  const printWindow = window.open(guidePdfUrl.value, '_blank')
-  if (printWindow) {
-    printWindow.onload = () => {
-      printWindow.print()
-    }
-  }
-}
-
-watch(() => showGuideSheetDialog.value, (val) => {
-  if (val) loadGuideContent()
-})
-
-// ========== 打印处方 ==========
-const printPrescriptions = () => {
-  const patient = currentPatient.value
-  if (!patient) return
-
-  let html = `
-    <html><head><title>处方笺</title>
-    <style>
-      body { font-family: SimSun, serif; padding: 40px; font-size: 14px; }
-      .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
-      .header h1 { font-size: 24px; margin: 0; }
-      .info { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 13px; }
-      .rx-title { font-size: 16px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 5px; margin: 20px 0 10px; }
-      table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-      th, td { border: 1px solid #000; padding: 6px 10px; text-align: left; font-size: 13px; }
-      th { background: #f5f5f5; }
-      .footer { margin-top: 30px; display: flex; justify-content: space-between; font-size: 13px; }
-      @media print { body { padding: 20px; } }
-    </style></head><body>
-    <div class="header"><h1>处 方 笺</h1></div>
-    <div class="info">
-      <span>患者：${patient.patientName}</span>
-      <span>性别：${patientGenderText(patient.gender)}</span>
-      <span>年龄：${patient.age}岁</span>
-      <span>科室：${patient.deptName}</span>
-      <span>医生：${patient.doctorName}</span>
-    </div>
-  `
-
-  const hasAny = prescriptionList.value.some(p => p.details && p.details.length > 0)
-  if (!hasAny) {
-    html += '<div style="text-align:center;color:#999;padding:40px;">无处方</div>'
-  } else {
-    prescriptionList.value.forEach(p => {
-      if (!p.details || p.details.length === 0) return
-      html += `<div class="rx-title">${prescriptionTypeLabel(p.prescriptionType)}处方</div>`
-      html += `<table><thead><tr><th>药品名称</th><th>规格</th><th>数量</th><th>用法</th><th>频次</th><th>天数</th></tr></thead><tbody>`
-      p.details.forEach((d: any) => {
-        html += `<tr>
-          <td>${d.drugName || '-'}</td>
-          <td>${d.specification || '-'}</td>
-          <td>${d.quantity || '-'} ${d.unit || ''}</td>
-          <td>${d.route || '-'}</td>
-          <td>${d.frequency || '-'}</td>
-          <td>${d.duration || '-'}</td>
-        </tr>`
-      })
-      html += '</tbody></table>'
-    })
-  }
-
-  html += `
-    <div class="footer">
-      <span>医师签名：${patient.doctorName || ''}（已电子签名·结诊时自动签署，可验签）</span>
-      <span>日期：${new Date().toLocaleDateString('zh-CN')}</span>
-    </div>
-    </body></html>`
-
-  const printWindow = window.open('', '_blank')
-  if (printWindow) {
-    printWindow.document.write(html)
-    printWindow.document.close()
-    printWindow.onload = () => printWindow.print()
-  }
-}
-
-// 加载全部药品列表
-const loadAllDrugs = async () => {
-  drugLoading.value = true
-  try {
-    const types = [1, 2, 3]
-    await Promise.all(types.map(async (type) => {
-      const res = await getDrugSelectList({drugType: type})
-      drugResultsByType[type].value = res.data || []
-    }))
-  } catch (error) {
-    console.error('加载药品列表失败:', error)
-  } finally {
-    drugLoading.value = false
-  }
-}
-
-// 加载全部检查项目
-const loadAllInspectionItems = async () => {
-  inspectionItemLoading.value = true
-  try {
-    const res = await getInspectionSelectList()
-    inspectionItemResults.value = res.data || []
-  } catch (error) {
-    console.error('加载检查项目失败:', error)
-  } finally {
-    inspectionItemLoading.value = false
-  }
-}
-
-// 加载全部检验项目
-const loadAllLaboratoryItems = async () => {
-  laboratoryItemLoading.value = true
-  try {
-    const res = await getLaboratorySelectList()
-    laboratoryItemResults.value = res.data || []
-  } catch (error) {
-    console.error('加载检验项目失败:', error)
-  } finally {
-    laboratoryItemLoading.value = false
-  }
-}
-
-// ------------------------------------------------------------------
-// 开住院证（门诊 → 住院的入口）
-//
-// 门诊医生判断患者需要住院时，在这里开一张住院证。开完患者拿着证到入院处排床收治，
-// 入院记录会记下：来源挂号号、来源住院证号、开证科室与医生、拟诊 —— 这就是"打通"。
-//
-// 不能替医生猜的事情一律不猜：
-//  · 拟收治科室必须医生选（患者住哪个科是临床决策，不是系统能推的）；
-//  · 拟诊默认带过来自「诊断」输入框的值，医生可以改，改了就以改的为准。
-// ------------------------------------------------------------------
-const orderDialogVisible = ref(false)
-const orderSubmitting = ref(false)
-const orderForm = reactive({
-  // 科室 ID 也用字符串承载：后端是 Long，Jackson 能精确解析数字字符串，
-  // 而前端一旦 Number() 就会在不经意间改掉大 ID 的末几位。
-  applyDeptId: '' as string,
-  diagnosisCode: '',
-  diagnosisName: '',
-  diagnosisNote: '',
-  expectAdmitTime: '',
-  remark: '',
-})
-
-const openOrderDialog = () => {
-  if (!currentPatient.value) return ElMessage.warning('请先呼叫患者')
-  // 拟诊预填：优先取病历里已录入的诊断名称/编码，没有就留空让医生填（不猜）
-  const diagCode = (patientDetail.value?.diagnosisCode || recordForm.diagnosisCode || '').split(',')[0]?.trim() || ''
-  const diagName = (patientDetail.value?.diagnosisName || recordForm.diagnosisName || '').split(',')[0]?.trim() || ''
-  Object.assign(orderForm, {
-    applyDeptId: '',
-    diagnosisCode: diagCode,
-    diagnosisName: diagName,
-    diagnosisNote: '',
-    expectAdmitTime: '',
-    remark: '',
-  })
-  orderDialogVisible.value = true
-}
-
-const submitOrder = async () => {
-  if (!orderForm.applyDeptId) return ElMessage.warning('请选择拟收治科室')
-  if (!orderForm.diagnosisName) return ElMessage.warning('请填写拟诊（住院证的诊断是入院处排床的依据，不能空着）')
-  if (!currentPatient.value) return
-  orderSubmitting.value = true
-  try {
-    const p = currentPatient.value
-    const dept = departments.value.find((d: any) => String(d.id) === String(orderForm.applyDeptId))
-    // 注意：所有 ID 一律**原样以字符串**传给后端，绝不做 Number() 转换。
-    // 雪花ID 是 19 位（约 2.1e18），远超 JS 的安全整数 2^53（9.007e15），
-    // Number() 会静默改掉末几位 —— 实测挂号 ID ...834 被转成 ...800，
-    // 于是住院证上记的是一个**不存在的挂号号**，而且一眼看不出来。
-    const res = await createAdmissionOrder({
-      registId: p.registId || null,
-      registNo: p.registNo || null,
-      patientId: p.patientId,
-      patientNo: p.patientNo || null,
-      patientName: p.patientName,
-      gender: p.gender ?? null,
-      age: p.age ?? null,
-      phone: patientDetail.value?.phone || null,
-      idCard: patientDetail.value?.idCard || null,
-      sourceDeptId: p.deptId || null,
-      sourceDeptName: p.deptName || null,
-      sourceDoctorId: p.doctorId || null,
-      sourceDoctorName: p.doctorName || null,
-      applyDeptId: orderForm.applyDeptId,
-      applyDeptName: dept?.deptName || null,
-      diagnosisCode: orderForm.diagnosisCode || null,
-      diagnosisName: orderForm.diagnosisName,
-      diagnosisNote: orderForm.diagnosisNote || null,
-      insuranceType: patientDetail.value?.medicalInsuranceType || null,
-      medicalInsuranceNo: patientDetail.value?.medicalInsuranceNo || null,
-      expectAdmitTime: orderForm.expectAdmitTime || null,
-      remark: orderForm.remark || null,
-    })
-    ElMessage.success(`住院证已开具（${res.data}），患者持证到入院处排床即可`)
-    orderDialogVisible.value = false
-  } catch (e: any) {
-    ElMessage.error(e?.message || '开住院证失败')
-  } finally {
-    orderSubmitting.value = false
-  }
-}
-
-onMounted(() => {
-  // 统一「带着目标患者进入」的入口。此前分成两条路（store 有患者→consumeSwitch()，
-  // URL 有 patientId→直接挂起），但两者语义完全相同——这次进来是为了接某个人——
-  // 分路的代价是以后每加一个入口都要重新推一遍时序。
-  //   ① 顶部搜索跳转：store 在组件挂载前已 setPatient（watch 的注册晚于这次写入，抓不到）
-  //   ② 刷新 / 直达 URL：store 从 sessionStorage 恢复，或只剩 URL 上的 patientId
-  const restored = currentPatientStore.patient
-  const targetId = restored?.id || route.query.patientId
-  if (targetId) {
-    pendingSwitch = {id: String(targetId), patientName: restored?.patientName || ''}
-    // 标记「为某个特定患者而来」：首屏不得自动选中队列里正在就诊的别人
-    enteredWithTarget = true
-    // 记下这次切换已被本函数消费，避免 watch 之后把同一次再消费一遍
-    handledSwitchAt = currentPatientStore.switchedAt
-    // 会话里没有当前患者、只有 URL 上的 id → 手输 / 外链进入，算一次显式意图（该有反馈）；
-    // 若 store 里有患者，那是切菜单/刷新重建的恢复，不重复提示（见 applyPendingSwitch）
-    if (!restored && route.query.patientId) {
-      urlIntent = true
-    }
-  }
-  loadUserInfo()
-  loadTcmDicts()
-  loadDoctorStatus()
-  loadDepartments()
-  loadData()
-  loadTodoList()
-  loadDiagTemplates()
-  loadRxTemplates()
-  loadDrugPackages()
-  loadInspectionTemplates()
-  loadLaboratoryTemplates()
-  loadAllDrugs()
-  loadAllInspectionItems()
-  loadAllLaboratoryItems()
-  refreshTimer = setInterval(loadData, 30000)
-})
-onUnmounted(() => {
-  if (refreshTimer) clearInterval(refreshTimer)
-})
-
-// ========== 批次B 三栏同屏：右栏医嘱面板折叠 / 费用抽屉 ==========
-const recordCollapsed = ref(false)
-const showChargeDrawer = ref(false)
-
-// 病历栏折叠只在**窄屏**才有意义。布局对调后（2026-09-26，用户：「医嘱面板可以做大一点，
-// 病历占的太多了」）医嘱栏才是 flex-1 主工作区 —— 真实 HIS 的开药检索表要摊十几列，
-// 病历是模板化低频录入，520px 单列文书够用。
-// 断点是算出来的：固定占位 = 侧边栏 256 + 页面左右留白 48 + 队列列 300 + 病历列 520 + 两个 12px 缝 24 = 1148，
-// 医嘱列 = 视口 - 1148；医嘱栏改造前就是 480px 固定宽，视口 ≥1628 时它已经不比当年窄，
-// 不该再有折叠开关。取 1640：此时医嘱列 492px；再窄才给「收起病历」的逃生门（折后病历 36px，医嘱列多出 484px）。
-// （队列列 2026-09-26 由 264 加宽到 300：急诊短号+三字姓名+「就诊中」徽章同排，264 下名字被 truncate 吃掉半个字）
-const COMPACT_BREAKPOINT = 1640
-const compactViewport = ref(false)
-const syncCompactViewport = () => {
-  compactViewport.value = window.innerWidth <= COMPACT_BREAKPOINT
-  // 从窄屏（可能正折着）拖宽到宽屏：病历列本就该常驻，顺手复位。
-  if (!compactViewport.value) recordCollapsed.value = false
-}
-syncCompactViewport()
-window.addEventListener('resize', syncCompactViewport)
-onUnmounted(() => window.removeEventListener('resize', syncCompactViewport))
-
-// 真正的折叠态 = 窄屏 + 用户点了收起；宽屏下恒为展开
-const recordColCollapsed = computed(() => compactViewport.value && recordCollapsed.value)
-// 历史就诊：患者级跨就诊次，用弹窗打开（不打断接诊），内嵌 CDR 全景时间轴
-const showPatientDetail = ref(false)
-// 患者条上的到达时间（队列里有 arriveTime 才有值）
-const arriveText = computed(() => {
-  const t = currentPatient.value?.arriveTime
-  return t ? formatArriveTime(t) + ' 到达' : ''
-})
-
-</script>
-
 <template>
   <div class="flex h-[var(--his-page-h)] gap-3">
     <div class="flex w-[var(--his-queue-col-w)] shrink-0 flex-col gap-3">
@@ -3520,14 +142,16 @@ const arriveText = computed(() => {
                   等待 {{ calcWaitMinutes(row) }}分钟
                 </span>
               </div>
-              <el-button v-if="row.queueStatus === 2" class="opacity-0 group-hover:opacity-100 transition-opacity" link size="small"
+              <el-button v-if="row.queueStatus === 2" class="opacity-0 group-hover:opacity-100 transition-opacity" link
+                         size="small"
                          type="primary"
                          @click.stop="handleCallSpecific(row)">
                 呼叫
               </el-button>
               <!-- 回诊：叫下一位时被自动收口（队列 4）但病历并未结诊提交（挂号单不是 4）的行，
                    允许本人重新叫回就诊中 —— 检查结果回来后看第二眼是门诊高频动作 -->
-              <el-button v-if="row.queueStatus === 4 && row.registStatus !== 4" class="opacity-0 group-hover:opacity-100 transition-opacity" link size="small"
+              <el-button v-if="row.queueStatus === 4 && row.registStatus !== 4"
+                         class="opacity-0 group-hover:opacity-100 transition-opacity" link size="small"
                          type="warning"
                          @click.stop="handleCallSpecific(row)">
                 回诊
@@ -3720,9 +344,10 @@ const arriveText = computed(() => {
 
                 <!-- 第二节：体格检查 —— 门诊多数患者不逐系统查体，默认折叠；任一项有内容自动展开 -->
                 <section>
-                  <button class="flex w-full cursor-pointer items-center justify-between rounded-md px-1 py-1 text-left transition-colors hover:bg-slate-50"
-                          type="button"
-                          @click="examToggled = !examVisible">
+                  <button
+                      class="flex w-full cursor-pointer items-center justify-between rounded-md px-1 py-1 text-left transition-colors hover:bg-slate-50"
+                      type="button"
+                      @click="examToggled = !examVisible">
                     <span class="text-base font-bold text-slate-800">体格检查
                       <span v-if="!examVisible" class="ml-1 text-xs font-normal text-slate-400">未填 · 点击展开</span>
                     </span>
@@ -3775,7 +400,8 @@ const arriveText = computed(() => {
                                    @click="recordForm.skinMucosa = '正常'">填写「正常」
                         </el-button>
                       </div>
-                      <el-input v-model="recordForm.skinMucosa" :autosize="{ minRows: 1, maxRows: 6 }" placeholder="皮肤颜色、湿度等"
+                      <el-input v-model="recordForm.skinMucosa" :autosize="{ minRows: 1, maxRows: 6 }"
+                                placeholder="皮肤颜色、湿度等"
                                 type="textarea"
                       />
                     </div>
@@ -3786,7 +412,8 @@ const arriveText = computed(() => {
                                    @click="recordForm.headNeck = '正常'">填写「正常」
                         </el-button>
                       </div>
-                      <el-input v-model="recordForm.headNeck" :autosize="{ minRows: 1, maxRows: 6 }" placeholder="头颅、眼、耳等"
+                      <el-input v-model="recordForm.headNeck" :autosize="{ minRows: 1, maxRows: 6 }"
+                                placeholder="头颅、眼、耳等"
                                 type="textarea"
                       />
                     </div>
@@ -3797,7 +424,8 @@ const arriveText = computed(() => {
                                    @click="recordForm.chestLung = '正常'">填写「正常」
                         </el-button>
                       </div>
-                      <el-input v-model="recordForm.chestLung" :autosize="{ minRows: 1, maxRows: 6 }" placeholder="胸廓、叩诊、听诊等"
+                      <el-input v-model="recordForm.chestLung" :autosize="{ minRows: 1, maxRows: 6 }"
+                                placeholder="胸廓、叩诊、听诊等"
                                 type="textarea"
                       />
                     </div>
@@ -3808,7 +436,8 @@ const arriveText = computed(() => {
                                    @click="recordForm.heart = '正常'">填写「正常」
                         </el-button>
                       </div>
-                      <el-input v-model="recordForm.heart" :autosize="{ minRows: 1, maxRows: 6 }" placeholder="心率、心律等"
+                      <el-input v-model="recordForm.heart" :autosize="{ minRows: 1, maxRows: 6 }"
+                                placeholder="心率、心律等"
                                 type="textarea"
                       />
                     </div>
@@ -3819,7 +448,8 @@ const arriveText = computed(() => {
                                    @click="recordForm.abdomen = '正常'">填写「正常」
                         </el-button>
                       </div>
-                      <el-input v-model="recordForm.abdomen" :autosize="{ minRows: 1, maxRows: 6 }" placeholder="压痛、肝脾等"
+                      <el-input v-model="recordForm.abdomen" :autosize="{ minRows: 1, maxRows: 6 }"
+                                placeholder="压痛、肝脾等"
                                 type="textarea"
                       />
                     </div>
@@ -3830,7 +460,8 @@ const arriveText = computed(() => {
                                    @click="recordForm.spineLimbs = '正常'">填写「正常」
                         </el-button>
                       </div>
-                      <el-input v-model="recordForm.spineLimbs" :autosize="{ minRows: 1, maxRows: 6 }" placeholder="脊柱、关节等"
+                      <el-input v-model="recordForm.spineLimbs" :autosize="{ minRows: 1, maxRows: 6 }"
+                                placeholder="脊柱、关节等"
                                 type="textarea"
                       />
                     </div>
@@ -3869,7 +500,8 @@ const arriveText = computed(() => {
                   <div class="space-y-3">
                     <div><label class="mb-1 block text-sm font-medium text-slate-600">诊断 <span
                         class="text-red-500">*</span></label>
-                      <el-select v-model="recordForm.diagnosis" :loading="icd10Loading" :remote-method="handleIcd10Search" class="w-full"
+                      <el-select v-model="recordForm.diagnosis" :loading="icd10Loading"
+                                 :remote-method="handleIcd10Search" class="w-full"
                                  filterable placeholder="输入疾病名称或编码搜索"
                                  remote reserve-keyword
                                  @change="handleIcd10Select">
@@ -4405,12 +1037,14 @@ const arriveText = computed(() => {
                             </div>
                             <div class="mt-1.5 flex items-start gap-1.5">
                               <label class="mt-2 text-xs text-slate-600 whitespace-nowrap">注意事项</label>
-                              <el-input v-model="item.preparation" :rows="2" placeholder="注意事项（可选）" style="width: 400px"
+                              <el-input v-model="item.preparation" :rows="2" placeholder="注意事项（可选）"
+                                        style="width: 400px"
                                         type="textarea"/>
                             </div>
                             <div class="mt-1.5 flex items-center gap-1.5">
                               <label class="text-xs text-slate-600 whitespace-nowrap">检查目的</label>
-                              <el-input v-model="item.inspectionPurpose" :rows="2" placeholder="检查目的" style="width: 400px"
+                              <el-input v-model="item.inspectionPurpose" :rows="2" placeholder="检查目的"
+                                        style="width: 400px"
                                         type="textarea"/>
                             </div>
 
@@ -4576,7 +1210,8 @@ const arriveText = computed(() => {
                             </div>
                             <div class="mt-1.5 flex items-start gap-4">
                               <label class="mt-2 text-xs text-slate-600 whitespace-nowrap">检验目的</label>
-                              <el-input v-model="item.laboratoryPurpose" :rows="2" placeholder="检验目的（可选）" style="width: 500px"
+                              <el-input v-model="item.laboratoryPurpose" :rows="2" placeholder="检验目的（可选）"
+                                        style="width: 500px"
                                         type="textarea"/>
                             </div>
 
@@ -5241,7 +1876,8 @@ const arriveText = computed(() => {
       <!-- 搜索添加 -->
       <div>
         <el-input v-model="diagSearchKeyword" :prefix-icon="Search" clearable
-                  placeholder="输入诊断名称或编码搜索并添加" @clear="diagSearchResults = []" @input="handleDiagSearchInDialog"/>
+                  placeholder="输入诊断名称或编码搜索并添加" @clear="diagSearchResults = []"
+                  @input="handleDiagSearchInDialog"/>
         <div v-if="diagSearchResults.length > 0"
              class="mt-2 max-h-40 space-y-1 overflow-y-auto rounded border border-slate-200 p-2">
           <div v-for="item in diagSearchResults" :key="item.icdCode"
@@ -5387,7 +2023,8 @@ const arriveText = computed(() => {
   <el-dialog v-model="showAddInspectionTemplateDialog" destroy-on-close title="保存检查申请模板" width="500px">
     <div class="space-y-3">
       <el-input v-model="inspectionTemplateName" placeholder="模板名称，如：术前胸部检查"/>
-      <el-select v-model="inspectionTemplateForm.inspectionItemId" :loading="inspectionTemplateItemLoading" :remote-method="handleInspectionTemplateItemSearch" class="w-full"
+      <el-select v-model="inspectionTemplateForm.inspectionItemId" :loading="inspectionTemplateItemLoading"
+                 :remote-method="handleInspectionTemplateItemSearch" class="w-full"
                  filterable placeholder="搜索检查项目"
                  remote reserve-keyword
                  @change="handleInspectionTemplateItemSelect">
@@ -5450,7 +2087,8 @@ const arriveText = computed(() => {
   <el-dialog v-model="showAddLaboratoryTemplateDialog" destroy-on-close title="保存检验申请模板" width="500px">
     <div class="space-y-3">
       <el-input v-model="laboratoryTemplateName" placeholder="模板名称，如：术前血常规"/>
-      <el-select v-model="laboratoryTemplateForm.laboratoryItemId" :loading="laboratoryTemplateItemLoading" :remote-method="handleLaboratoryTemplateItemSearch" class="w-full"
+      <el-select v-model="laboratoryTemplateForm.laboratoryItemId" :loading="laboratoryTemplateItemLoading"
+                 :remote-method="handleLaboratoryTemplateItemSearch" class="w-full"
                  filterable placeholder="搜索检验项目"
                  remote reserve-keyword
                  @change="handleLaboratoryTemplateItemSelect">
@@ -5485,7 +2123,8 @@ const arriveText = computed(() => {
         </span>
       </div>
 
-      <el-input v-model="extractRawText" :rows="7" placeholder="例：主诉：反复咳嗽3天&#10;现病史：3天前受凉后出现咳嗽，夜间为甚，咳白色粘痰，无发热&#10;既往史：高血压5年，规律服药&#10;T36.8℃ P82次/分 R18次/分 BP130/85mmHg"
+      <el-input v-model="extractRawText" :rows="7"
+                placeholder="例：主诉：反复咳嗽3天&#10;现病史：3天前受凉后出现咳嗽，夜间为甚，咳白色粘痰，无发热&#10;既往史：高血压5年，规律服药&#10;T36.8℃ P82次/分 R18次/分 BP130/85mmHg"
                 type="textarea"/>
 
       <div class="flex items-center justify-between">
@@ -5637,7 +2276,8 @@ const arriveText = computed(() => {
         <span v-if="voiceRecording" class="text-sm text-red-600">录音中…最长 {{ VOICE_MAX_SECONDS }} 秒</span>
         <span v-else-if="voiceTranscribing" class="text-sm text-slate-500">正在转写，请稍候…</span>
       </div>
-      <el-input v-model="voiceText" :disabled="voiceTranscribing" :rows="6" placeholder="录音停止后转写文本显示在此，也可手动修改"
+      <el-input v-model="voiceText" :disabled="voiceTranscribing" :rows="6"
+                placeholder="录音停止后转写文本显示在此，也可手动修改"
                 type="textarea"/>
     </div>
     <template #footer>
@@ -5711,6 +2351,3195 @@ const arriveText = computed(() => {
     </template>
   </el-dialog>
 </template>
+
+<script setup>
+import {computed, onMounted, onUnmounted, reactive, ref, watch} from 'vue';
+import {useRoute} from 'vue-router';
+import {patientAvatarTone, patientGenderText} from '@/lib/patientGender';
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  CircleCheck,
+  Clock,
+  Coin,
+  Delete,
+  Document,
+  InfoFilled,
+  Loading,
+  MagicStick,
+  Plus,
+  Printer,
+  Reading,
+  RefreshRight,
+  Search,
+  Tickets,
+  VideoPause,
+  VideoPlay,
+  Warning
+} from '@element-plus/icons-vue';
+import {ElMessage, ElMessageBox} from 'element-plus';
+import PatientBriefBar from '@/components/his/PatientBriefBar.vue';
+import {REVISIT_SOURCE} from '@/lib/revisitPolicy';
+import PatientDetailDialog from '@/components/his/PatientDetailDialog.vue';
+import {useCurrentPatientStore} from '@/stores/currentPatient';
+import PageActionBar from '@/components/his/PageActionBar.vue';
+import OrderPanel from '@/components/his/OrderPanel.vue';
+import {
+  callNextQueue,
+  callPatient,
+  createRevisitRegistration,
+  estimateInsurance,
+  getCurrentDoctorStatus,
+  getQueueStats,
+  getTodayQueueList,
+  recallPatient,
+  setDoctorStatus
+} from '@/api/appoint';
+import {
+  getDepartmentSelectList,
+  getDictDataMapList,
+  getDrugSelectList,
+  getInspectionSelectList,
+  getLaboratorySelectList,
+  getPatientTagListAll,
+  predictIcd10,
+  searchIcd10,
+  searchInspectionItem,
+  searchLaboratoryItem
+} from '@/api/system';
+import {DICT_TYPE} from '@/lib/dict-cache';
+import {getByRegistId, getEmrRecordList} from '@/api/emr';
+import {createAdmissionOrder} from '@/api/admissionOrder';
+import {draftEmrText, extractEmrText, transcribeVoice} from '@/api/ai';
+import {localDateStr, shortQueueNo} from '@/lib/utils';
+import {QUEUE_STATUS, queueVisitBadgeOf} from '@/lib/statusColor';
+import {
+  deleteDiagTemplate,
+  deleteDrugPackage,
+  deleteInspectionApply,
+  deleteInspectionTemplate,
+  deleteLaboratoryApply,
+  deleteLaboratoryTemplate,
+  deleteRxTemplate,
+  getDiagTemplates,
+  getDrugPackageDetail,
+  getDrugPackages,
+  getInspectionApplyList,
+  getInspectionTemplates,
+  getLaboratoryApplyList,
+  getLaboratoryTemplates,
+  getPrescriptionList,
+  getPrevisitByRegist,
+  getRxTemplateDetail,
+  getRxTemplates,
+  saveDiagTemplates,
+  saveDrugPackage,
+  saveInspectionApply,
+  saveInspectionTemplate,
+  saveLaboratoryApply,
+  saveLaboratoryTemplate,
+  saveMedicalRecord,
+  saveRxTemplate,
+  submitMedicalRecord
+} from '@/api/doctor';
+import {getStockList} from '@/api/pharmacy';
+import {addPatientTag, getPatientDetail, getPatientTags, removePatientTag} from '@/api/patient';
+import {getInspectionDetail, getLaboratoryDetail, getLaboratoryRecordList} from '@/api/medicaltech';
+import {listItemsByPatient} from '@/api/settlementBill';
+
+const GENDER_TONE_CLASS = {
+  male: 'bg-blue-50 text-blue-600',
+  female: 'bg-pink-50 text-pink-600',
+  unknown: 'bg-slate-100 text-slate-500'
+};
+const queueStatusMap = QUEUE_STATUS;
+const loading = ref(false);
+const patientDataPending = ref(0);
+const patientDataLoading = computed(() => patientDataPending.value > 0);
+const trackPatientLoad = (p) => {
+  patientDataPending.value++;
+  // 各 loader 内部都自己吞异常，这里只负责收尾计数
+  return p.finally(() => {
+    patientDataPending.value = Math.max(0, patientDataPending.value - 1);
+  });
+};
+const departments = ref([]);
+const selectedDeptId = ref(null);
+const queueList = ref([]);
+const currentPatientStore = useCurrentPatientStore();
+const route = useRoute();
+const queueLoaded = ref(false);
+let handledSwitchAt = 0;
+let pendingSwitch = null;
+let enteredWithTarget = false;
+let urlIntent = false;
+const QUEUE_STATUS_ORDER = {3: 0, 2: 1, 4: 2, 5: 3, 6: 4};
+/** 队列行比较器：先状态优先级，同状态按到达时间，再按序号（保证排序稳定） */
+const compareQueueRow = (a, b) => {
+  const oa = QUEUE_STATUS_ORDER[a.queueStatus] ?? 5;
+  const ob = QUEUE_STATUS_ORDER[b.queueStatus] ?? 5;
+  if (oa !== ob)
+    return oa - ob;
+  if (a.arriveTime && b.arriveTime) {
+    const ta = new Date(a.arriveTime).getTime();
+    const tb = new Date(b.arriveTime).getTime();
+    if (ta !== tb)
+      return ta - tb;
+  }
+  return (a.sequenceNo || 0) - (b.sequenceNo || 0);
+};
+const pickQueueRow = (rows) => {
+  if (!rows || !rows.length)
+    return null;
+  return [...rows].sort(compareQueueRow)[0];
+};
+const applyPendingSwitch = () => {
+  const p = pendingSwitch;
+  if (!p)
+    return;
+  pendingSwitch = null;
+  const notify = currentPatientStore.consumeSwitchNotice() || urlIntent;
+  urlIntent = false;
+  // 同一患者今天多条队列时，挑「该接的那一条」而不是数组第一条（见 pickQueueRow）
+  const target = pickQueueRow(queueList.value.filter((q) => String(q.patientId) === String(p.id)));
+  if (target) {
+    selectPatient(target);
+    if (notify) {
+      ElMessage.success(`已切换接诊患者：${target.patientName || p.patientName}`);
+    }
+  } else {
+    if (notify) {
+      // 用户主动搜的人不在队列：要说清楚，并把这次搜索交回详情框（不让它落空）
+      ElMessage.warning(`${p.patientName || '该患者'} 不在您的今日候诊队列中，已改为展示患者档案`);
+      currentPatientStore.requestDetail(p.id);
+    }
+    if (currentPatient.value) {
+      currentPatientStore.syncPatient(toStorePatient(currentPatient.value));
+    } else {
+      currentPatientStore.syncClear();
+    }
+  }
+  enteredWithTarget = false;
+};
+const toStorePatient = (row) => ({
+  id: String(row.patientId),
+  patientName: row.patientName,
+  patientNo: row.patientNo,
+  gender: row.gender,
+  age: row.age,
+});
+const consumeSwitch = () => {
+  const p = currentPatientStore.patient;
+  const ts = currentPatientStore.switchedAt;
+  if (!p || !ts || ts === handledSwitchAt)
+    return;
+  handledSwitchAt = ts;
+  pendingSwitch = p;
+  if (queueLoaded.value)
+    applyPendingSwitch();
+};
+watch(() => currentPatientStore.switchedAt, consumeSwitch);
+const currentPatient = ref(null);
+const activeTab = ref('record');
+const queueSearch = ref('');
+const queueFilter = ref('all');
+const userInfo = ref({});
+const stats = ref({waiting: 0, called: 0, inProgress: 0});
+// 今日待办
+const todoList = ref([]);
+const todoStats = ref({pendingReview: 0, pendingReport: 0, pendingFollowUp: 0, pendingConsult: 0});
+const todoSearch = ref('');
+const filteredTodoList = computed(() => {
+  if (!todoSearch.value)
+    return todoList.value;
+  const kw = todoSearch.value.toLowerCase();
+  return todoList.value.filter((item) => item.title?.toLowerCase().includes(kw) || item.content?.toLowerCase().includes(kw));
+});
+const currentCalledPatient = computed(() => {
+  return pickQueueRow(queueList.value.filter((q) => q.queueStatus === 3));
+});
+const waitingCount = computed(() => {
+  return queueList.value.filter((q) => q.queueStatus === 2).length;
+});
+const nextWaiting = computed(() => {
+  const waiting = queueList.value.filter((q) => q.queueStatus === 2);
+  if (!waiting.length)
+    return null;
+  return [...waiting].sort((a, b) => {
+    const la = a.triageLevel ?? 4;
+    const lb = b.triageLevel ?? 4;
+    if (la !== lb)
+      return la - lb;
+    return (a.sequenceNo || 0) - (b.sequenceNo || 0);
+  })[0];
+});
+const formatArriveTime = (time) => {
+  if (!time)
+    return '';
+  const d = new Date(time);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
+const calcWaitMinutes = (row) => {
+  if (row.waitDuration != null)
+    return row.waitDuration;
+  if (!row.arriveTime)
+    return 0;
+  const arrive = new Date(row.arriveTime);
+  const now = row.queueStatus === 3 && row.startTime ? new Date(row.startTime) : new Date();
+  return Math.max(0, Math.floor((now.getTime() - arrive.getTime()) / 60000));
+};
+const waitDurationClass = (minutes) => {
+  if (minutes >= 30)
+    return 'text-red-500 font-medium';
+  if (minutes >= 15)
+    return 'text-amber-500';
+  return 'text-slate-400';
+};
+// ========== 费用计算 ==========
+const drugTotalAmount = computed(() => {
+  return prescriptionList.value.reduce((sum, p) => {
+    return sum + (p.details || []).reduce((s, d) => s + (d.amount || 0), 0);
+  }, 0);
+});
+const inspectionTotalAmount = computed(() => {
+  return inspectionRecords.value.reduce((sum, r) => sum + (r.price || 0), 0);
+});
+const laboratoryTotalAmount = computed(() => {
+  return laboratoryRecords.value.reduce((sum, r) => sum + (r.price || 0), 0);
+});
+const totalBillAmount = computed(() => drugTotalAmount.value + inspectionTotalAmount.value + laboratoryTotalAmount.value);
+const maxBillAmount = computed(() => Math.max(totalBillAmount.value, 1));
+const drugPercentage = computed(() => Math.round((drugTotalAmount.value / maxBillAmount.value) * 100));
+const inspectionPercentage = computed(() => Math.round((inspectionTotalAmount.value / maxBillAmount.value) * 100));
+const laboratoryPercentage = computed(() => Math.round((laboratoryTotalAmount.value / maxBillAmount.value) * 100));
+// 医保信息
+const insuranceInfo = ref(null);
+const loadInsuranceInfo = async () => {
+  if (!currentPatient.value) {
+    insuranceInfo.value = null;
+    return;
+  }
+  // 根据所有处方实际金额计算
+  const drugTotal = prescriptionList.value.reduce((sum, p) => {
+    return sum + (p.details || []).reduce((s, d) => s + (d.amount || 0), 0);
+  }, 0);
+  // 计算检查申请费用（批次E/E1：开单即落库，这里只算「已提交未缴费(applyStatus=1)」的金额，
+  // 已缴费(2)的不重复计入，已取消(6)的不算）
+  const inspectionTotal = inspectionRecords.value
+      .filter((r) => r.applyStatus === 1)
+      .reduce((sum, r) => sum + (r.price || 0), 0);
+  // 计算检验申请费用（口径同检查）
+  const laboratoryTotal = laboratoryRecords.value
+      .filter((r) => r.applyStatus === 1)
+      .reduce((sum, r) => sum + (r.price || 0), 0);
+  try {
+    const res = await estimateInsurance({
+      settlementType: currentPatient.value.settlementType || 1,
+      medicalInsuranceType: currentPatient.value.medicalInsuranceType || '',
+      drugTotal: drugTotal,
+      inspectionTotal: inspectionTotal,
+      laboratoryTotal: laboratoryTotal,
+    });
+    insuranceInfo.value = res.data || null;
+  } catch (error) {
+    console.error('加载医保信息失败:', error);
+    insuranceInfo.value = null;
+  }
+};
+// 过滤后的队列
+const filteredQueue = computed(() => {
+  let list = queueList.value;
+  if (queueSearch.value) {
+    const kw = queueSearch.value.toLowerCase();
+    list = list.filter((q) => q.patientName?.toLowerCase().includes(kw) ||
+        q.registNo?.toLowerCase().includes(kw) ||
+        q.queueNo?.toLowerCase().includes(kw));
+  }
+  // 队列状态口径以 QueueStatusEnum 为准：2 候诊中 / 3 就诊中（不是挂号的 1 已挂号）
+  if (queueFilter.value === 'waiting')
+    list = list.filter((q) => q.queueStatus === 2);
+  else if (queueFilter.value === 'consulting')
+    list = list.filter((q) => q.queueStatus === 3);
+  else if (queueFilter.value === 'emergency')
+    list = list.filter((q) => q.registType === 3);
+  // 排序与「该接哪一条」（pickQueueRow）共用 compareQueueRow，口径只有一处：
+  // 就诊中 > 候诊中 > 已完成 > 已过号 > 已退号。
+  // 两处各写一套的后果是「列表第一行排的是复诊，顶栏搜索却选中了初诊那条」。
+  return [...list].sort(compareQueueRow);
+});
+// ========== 病历表单 ==========
+const recordForm = reactive({
+  id: null,
+  recordNo: '',
+  patientId: null,
+  patientNo: '',
+  patientName: '',
+  gender: 0,
+  age: 0,
+  registId: null,
+  registNo: '',
+  visitDate: '',
+  deptId: null,
+  deptName: '',
+  doctorId: null,
+  doctorName: '',
+  chiefComplaint: '',
+  presentIllness: '',
+  pastHistory: '',
+  personalHistory: '',
+  familyHistory: '',
+  allergyHistory: '',
+  temperature: '',
+  pulse: '',
+  respiration: '',
+  systolicPressure: '',
+  diastolicPressure: '',
+  generalCondition: '',
+  skinMucosa: '',
+  headNeck: '',
+  chestLung: '',
+  heart: '',
+  abdomen: '',
+  spineLimbs: '',
+  nervousSystem: '',
+  specialistExam: '',
+  auxiliaryExam: '',
+  diagnosis: '',
+  diagnosisCode: '',
+  diagnosisName: '',
+  treatmentPlan: '',
+  guidePdfPath: '',
+  recordStatus: 1,
+  reviewStatus: 0,
+});
+// 体格检查分节折叠态：null=自动（任一项目有内容就展开），true/false=用户手动覆盖；切患者回自动
+const EXAM_FIELDS = ['temperature', 'pulse', 'respiration', 'systolicPressure', 'diastolicPressure',
+  'generalCondition', 'skinMucosa', 'headNeck', 'chestLung', 'heart', 'abdomen', 'spineLimbs', 'nervousSystem',
+  'specialistExam'];
+const examHasContent = computed(() => EXAM_FIELDS.some((k) => !!recordForm[k]));
+const examToggled = ref(null);
+const examVisible = computed(() => examToggled.value ?? examHasContent.value);
+// 复制上次查体：真实 HIS 复诊高频动作。只搬 EXAM_FIELDS（查体所见），
+// 生命体征是当次实测数据、质控禁止拷贝，所以不在复制范围内。
+const copyExamLoading = ref(false);
+const handleCopyLastExam = async () => {
+  const patientId = currentPatient.value?.patientId;
+  if (!patientId)
+    return;
+  copyExamLoading.value = true;
+  try {
+    const res = await getEmrRecordList({patientId});
+    // 后端按 createTime 倒序；排除本次病历（同一次挂号产生的记录）
+    const last = (res.data || []).find((r) => String(r.registId) !== String(recordForm.registId ?? '')
+        && String(r.id) !== String(recordForm.id ?? ''));
+    if (!last) {
+      ElMessage.info('该患者没有可复制的既往查体');
+      return;
+    }
+    const copied = EXAM_FIELDS.filter((k) => !['temperature', 'pulse', 'respiration', 'systolicPressure', 'diastolicPressure'].includes(k) && !!last[k]);
+    if (copied.length === 0) {
+      ElMessage.info('上次病历未填写查体所见');
+      return;
+    }
+    copied.forEach((k) => {
+      recordForm[k] = last[k];
+    });
+    examToggled.value = true;
+    ElMessage.success(`已复制 ${last.visitDate || '上次'} 的查体所见（${copied.length} 项），请核对修改`);
+  } finally {
+    copyExamLoading.value = false;
+  }
+};
+const inspectionRecords = ref([]);
+const laboratoryRecords = ref([]);
+// 四层改造：患者维度账单行快照（扁平列表，一个患者可能跨多张账单）
+const patientChargeItems = ref([]);
+const chargeCollapseActive = ref(['chargeInfo', 'chargeDetails']);
+// 按 itemType 聚合（药品类 = 西药/中成药/中药饮片 → [2,3,4]）
+const getChargeDetailsByType = (type) => {
+  if (!patientChargeItems.value?.length)
+    return [];
+  const types = Array.isArray(type) ? type : [type];
+  return patientChargeItems.value.filter((item) => types.includes(item.itemType));
+};
+const getTypeTotal = (type) => {
+  return getChargeDetailsByType(type).reduce((sum, item) => sum + (item.amount || 0), 0);
+};
+// 患者收费汇总：总额 + 医保拆分（统筹/账户/自付）现算自用
+const chargeSummary = computed(() => {
+  const items = patientChargeItems.value || [];
+  return {
+    total: items.reduce((s, i) => s + (i.amount || 0), 0),
+    insurance: items.reduce((s, i) => s + (i.poolAmount || 0), 0),
+    account: items.reduce((s, i) => s + (i.accountAmount || 0), 0),
+    self: items.reduce((s, i) => s + (i.selfAmount || 0), 0),
+  };
+});
+// ========== 处方表单 ==========
+const prescriptionForm = reactive({
+  patientId: null,
+  patientNo: '',
+  patientName: '',
+  gender: 0,
+  age: 0,
+  registId: null,
+  registNo: '',
+  deptId: null,
+  deptName: '',
+  doctorId: null,
+  doctorName: '',
+  prescriptionType: 1,
+  diagnosis: '',
+  usageInstruction: '',
+  // 中药饮片方专属，挂在处方头（一张方一个剂数，不是每味药一个）
+  doseCount: 7,
+  decoctFlag: null,
+  details: [],
+});
+const newDrug = reactive({
+  drugId: null,
+  drugCode: '',
+  drugName: '',
+  genericName: '',
+  specification: '',
+  dosageForm: '',
+  unit: '盒',
+  quantity: 1,
+  price: 0,
+  usageDosage: '',
+  frequency: '一日三次',
+  route: '口服',
+  duration: 7,
+  singleDosage: '',
+});
+// ========== 检查申请表单 ==========
+const inspectionForm = reactive({
+  patientId: null,
+  patientNo: '',
+  patientName: '',
+  gender: 0,
+  age: 0,
+  registId: null,
+  registNo: '',
+  deptId: null,
+  deptName: '',
+  doctorId: null,
+  doctorName: '',
+  inspectionItemId: null,
+  inspectionItemName: '',
+  bodyPart: '',
+  inspectionPurpose: '',
+  preparation: '',
+  clinicalDiagnosis: '',
+  isEmergency: 0,
+});
+// ========== 检验申请表单 ==========
+const laboratoryForm = reactive({
+  patientId: null,
+  patientNo: '',
+  patientName: '',
+  gender: 0,
+  age: 0,
+  registId: null,
+  registNo: '',
+  deptId: null,
+  deptName: '',
+  doctorId: null,
+  doctorName: '',
+  laboratoryItemId: null,
+  laboratoryItemName: '',
+  specimenType: '血液',
+  laboratoryPurpose: '',
+  clinicalDiagnosis: '',
+  isFasting: 0,
+  isEmergency: 0,
+});
+// ========== 处方列表管理 ==========
+const prescriptionList = ref([]);
+const currentPrescriptionIdx = ref(0);
+const currentPrescriptionType = ref(1);
+const currentPrescription = computed(() => {
+  return prescriptionList.value.find(p => p.prescriptionType === currentPrescriptionType.value) || null;
+});
+const prescriptionTypeLabel = (type) => {
+  const map = {1: '西药', 2: '中成药', 3: '中药饮片'};
+  return map[type] || '未知';
+};
+// ========== 中药饮片：剂数在处方头、克数按「每剂克数 × 剂数」算 ==========
+// 煎法与代煎/自煎都走字典（sql/139），字典里加一味「焦三仙」这类特殊脚注不需要改代码。
+const tcmMethodDict = ref([]);
+const tcmDecoctFlagDict = ref([]);
+const loadTcmDicts = async () => {
+  try {
+    const res = await getDictDataMapList(`${DICT_TYPE.TCM_DECOCT_METHOD},${DICT_TYPE.TCM_DECOCT_FLAG}`);
+    tcmMethodDict.value = res?.data?.[DICT_TYPE.TCM_DECOCT_METHOD] || [];
+    tcmDecoctFlagDict.value = res?.data?.[DICT_TYPE.TCM_DECOCT_FLAG] || [];
+  } catch (e) {
+    console.error('加载中药煎法字典失败', e);
+  }
+};
+/** 每剂克数：单剂剂量列只填数字（后端同样按数字解析，口径一致） */
+const tcmPerDoseGrams = (item) => {
+  const n = Number(String(item?.singleDosage ?? '').trim());
+  return Number.isFinite(n) && n > 0 ? n : 0;
+};
+/** 实发总克数 = 每剂克数 × 剂数，也就是提交给后端的 quantity */
+const tcmGramsOf = (item) => {
+  const g = tcmPerDoseGrams(item) * (Number(prescriptionForm.doseCount) || 0);
+  return Math.round(g * 100) / 100;
+};
+/** 饮片零售价是「元/档案单位(kg)」，按克开方要先除以换算率换成元/克 */
+const tcmPerGramPrice = (drug) => {
+  const gpu = Number(drug?.gramPerUnit) || 0;
+  return gpu > 0 ? Number(drug.retailPrice || 0) / gpu : Number(drug?.retailPrice || 0);
+};
+/** 预估金额 = 行上单价（元/克）× 实发克数；真实金额以后端按 4 位单价重算为准 */
+const tcmAmountOf = (item) => {
+  return Math.round((Number(item?.price) || 0) * tcmGramsOf(item) * 100) / 100;
+};
+const applyTcmGrams = (item) => {
+  item.unit = 'g';
+  item.quantity = tcmGramsOf(item);
+  item.amount = tcmAmountOf(item);
+};
+/** 把「当前类型那张方」灌进编辑态：明细 + 剂数 + 煎服方式（历史方没填过剂数就沿用 7 剂默认） */
+const bindPrescriptionForm = () => {
+  const p = currentPrescription.value;
+  prescriptionForm.details = p?.details || [];
+  prescriptionForm.doseCount = p?.doseCount > 0 ? p.doseCount : 7;
+  prescriptionForm.decoctFlag = p?.decoctFlag ?? null;
+};
+// 剂数一改，整张方的克数与金额跟着重算（只是本地预估，真实金额后端按 4 位单价算）
+watch(() => prescriptionForm.doseCount, () => {
+  if (currentPrescriptionType.value !== 3)
+    return;
+  prescriptionForm.details.forEach((item) => {
+    if (item.drugId)
+      applyTcmGrams(item);
+  });
+  loadInsuranceInfo();
+});
+const recordSaved = ref(false);
+const icd10Results = ref([]);
+const icd10Loading = ref(false);
+// 按类型分组的药品数据
+const drugResultsByType = {
+  1: ref([]), // 西药
+  2: ref([]), // 中成药
+  3: ref([]), // 中药饮片
+};
+const drugLoading = ref(false);
+// 当前处方类型的药品列表
+const drugResults = computed(() => {
+  return drugResultsByType[currentPrescriptionType.value]?.value || [];
+});
+const inspectionItemResults = ref([]);
+const inspectionItemLoading = ref(false);
+const laboratoryItemResults = ref([]);
+const laboratoryItemLoading = ref(false);
+let refreshTimer = null;
+// ========== 结诊状态 ==========
+const isVisitCompleted = computed(() => currentPatient.value?.queueStatus === 4);
+const showGuideSheetDialog = ref(false);
+// ========== 患者标签管理 ==========
+const patientTags = ref([]);
+const allTags = ref([]);
+const showTagDialog = ref(false);
+const tagSearchKeyword = ref('');
+// ========== 个人模板管理 ==========
+const showDiagTemplateDialog = ref(false);
+const showRxTemplateDialog = ref(false);
+const showPackageDialog = ref(false);
+const showInspectionTemplateDialog = ref(false);
+const showAddInspectionTemplateDialog = ref(false);
+const showLaboratoryTemplateDialog = ref(false);
+const showAddLaboratoryTemplateDialog = ref(false);
+const myDiagTemplates = ref([]);
+const myRxTemplates = ref([]);
+const myPackages = ref([]);
+const myInspectionTemplates = ref([]);
+const myLaboratoryTemplates = ref([]);
+const newTemplateName = ref('');
+const diagSearchKeyword = ref('');
+const diagSearchResults = ref([]);
+const diagSearchLoading = ref(false);
+const showAddPackageDialog = ref(false);
+const newPackageName = ref('');
+// 检查申请模板相关
+const inspectionTemplateName = ref('');
+const inspectionTemplateForm = ref({
+  inspectionItemId: null,
+  inspectionItemName: '',
+  bodyPart: '',
+  inspectionPurpose: '',
+  isEmergency: 0
+});
+const inspectionTemplateItemResults = ref([]);
+const inspectionTemplateItemLoading = ref(false);
+// 检验申请模板相关
+const laboratoryTemplateName = ref('');
+const laboratoryTemplateForm = ref({
+  laboratoryItemId: null,
+  laboratoryItemName: '',
+  sampleType: '',
+  inspectionPurpose: '',
+  isEmergency: 0
+});
+const laboratoryTemplateItemResults = ref([]);
+const laboratoryTemplateItemLoading = ref(false);
+const loadDiagTemplates = async () => {
+  try {
+    const res = await getDiagTemplates();
+    myDiagTemplates.value = res.data || [];
+  } catch (e) {
+    console.error('加载常用诊断失败', e);
+  }
+};
+const handleDeleteDiagTemplate = async (idx) => {
+  const item = myDiagTemplates.value[idx];
+  try {
+    await deleteDiagTemplate(item.id);
+    myDiagTemplates.value.splice(idx, 1);
+    ElMessage.success('常用诊断已删除');
+  } catch (e) {
+    ElMessage.error(e.message || '删除失败');
+  }
+};
+const handleDiagSearchInDialog = async (query) => {
+  if (!query) {
+    diagSearchResults.value = [];
+    return;
+  }
+  diagSearchLoading.value = true;
+  try {
+    const res = await searchIcd10(query);
+    diagSearchResults.value = (res.data || []).filter((item) => !myDiagTemplates.value.some((t) => t.icdCode === item.icdCode));
+  } catch (e) {
+    console.error('搜索失败', e);
+  } finally {
+    diagSearchLoading.value = false;
+  }
+};
+const handleAddDiagFromDialog = async (item) => {
+  const newList = [...myDiagTemplates.value, {icdCode: item.icdCode, icdName: item.icdName}];
+  try {
+    await saveDiagTemplates(newList);
+    myDiagTemplates.value = newList;
+    diagSearchKeyword.value = '';
+    diagSearchResults.value = [];
+    ElMessage.success('已添加');
+  } catch (e) {
+    ElMessage.error(e.message || '添加失败');
+  }
+};
+const handleQuickSelectDiag = (tpl) => {
+  recordForm.diagnosis = tpl.icdName;
+  recordForm.diagnosisCode = tpl.icdCode;
+  recordForm.diagnosisName = tpl.icdName;
+};
+const handleAddDiagToTemplate = async () => {
+  if (!recordForm.diagnosisCode || !recordForm.diagnosisName) {
+    ElMessage.warning('请先选择诊断');
+    return;
+  }
+  const exists = myDiagTemplates.value.some((t) => t.icdCode === recordForm.diagnosisCode);
+  if (exists) {
+    ElMessage.info('该诊断已在常用列表中');
+    return;
+  }
+  try {
+    const newList = [...myDiagTemplates.value, {icdCode: recordForm.diagnosisCode, icdName: recordForm.diagnosisName}];
+    await saveDiagTemplates(newList);
+    myDiagTemplates.value = newList;
+    ElMessage.success('已添加到常用诊断');
+  } catch (e) {
+    ElMessage.error(e.message || '添加失败');
+  }
+};
+const handleSaveDiagTemplates = async () => {
+  try {
+    await saveDiagTemplates(myDiagTemplates.value);
+    ElMessage.success('保存成功');
+  } catch (e) {
+    ElMessage.error(e.message || '保存失败');
+  }
+};
+const loadRxTemplates = async () => {
+  try {
+    const res = await getRxTemplates();
+    myRxTemplates.value = res.data || [];
+  } catch (e) {
+    console.error('加载处方模板失败', e);
+  }
+};
+const handleAddRxTemplate = async () => {
+  if (!newTemplateName.value) {
+    ElMessage.warning('请输入模板名称');
+    return;
+  }
+  if (prescriptionForm.details.length === 0) {
+    ElMessage.warning('当前处方为空，请先添加药品');
+    return;
+  }
+  try {
+    await saveRxTemplate({
+      templateName: newTemplateName.value,
+      details: [...prescriptionForm.details],
+    });
+    newTemplateName.value = '';
+    ElMessage.success('模板保存成功');
+    loadRxTemplates();
+  } catch (e) {
+    ElMessage.error(e.message || '保存失败');
+  }
+};
+const handleApplyRxTemplate = async (tpl) => {
+  try {
+    const res = await getRxTemplateDetail(tpl.id);
+    prescriptionForm.details = (res.data?.details || []).map((d) => ({...d}));
+    loadInsuranceInfo();
+    showRxTemplateDialog.value = false;
+    ElMessage.success(`已套用模板「${tpl.templateName}」`);
+  } catch (e) {
+    ElMessage.error(e.message || '套用失败');
+  }
+};
+const handleApplyRxTemplateToRecord = async (record, tpl) => {
+  try {
+    const res = await getRxTemplateDetail(tpl.id);
+    const details = res.data?.details || [];
+    if (details.length > 0) {
+      const d = details[0];
+      record.drugId = d.drugId;
+      record.drugCode = d.drugCode;
+      record.drugName = d.drugName;
+      record.specification = d.specification || '';
+      record.unit = d.unit || '盒';
+      record.singleDosage = d.singleDosage || '';
+      record.frequency = d.frequency || '';
+      record.route = d.route || '';
+      record.quantity = d.quantity || 1;
+      record.duration = d.duration || 7;
+      record.price = d.price || 0;
+      record.amount = (d.quantity || 1) * (d.price || 0);
+      // 饮片模板里的 quantity 未必对得上本张方的剂数，克数一律按「每剂克数 × 剂数」重算
+      if (currentPrescriptionType.value === 3)
+        applyTcmGrams(record);
+    }
+    ElMessage.success(`已套用模板「${tpl.templateName}」`);
+  } catch (e) {
+    ElMessage.error(e.message || '套用失败');
+  }
+};
+const handleDeleteRxTemplate = async (idx) => {
+  const item = myRxTemplates.value[idx];
+  try {
+    await deleteRxTemplate(item.id);
+    myRxTemplates.value.splice(idx, 1);
+    ElMessage.success('处方模板已删除');
+  } catch (e) {
+    ElMessage.error(e.message || '删除失败');
+  }
+};
+const loadDrugPackages = async () => {
+  try {
+    const res = await getDrugPackages();
+    myPackages.value = res.data || [];
+  } catch (e) {
+    console.error('加载药品套餐失败', e);
+  }
+};
+const handleApplyPackage = async (pkg) => {
+  try {
+    const res = await getDrugPackageDetail(pkg.id);
+    const details = res.data?.details || [];
+    details.forEach((d) => {
+      if (d.itemType === 1) {
+        prescriptionForm.details.push({...d, drugId: d.itemId, drugName: d.itemName});
+      } else if (d.itemType === 2) {
+        inspectionForm.items.push({itemId: d.itemId, itemName: d.itemName, price: d.price});
+      } else if (d.itemType === 3) {
+        laboratoryForm.items.push({itemId: d.itemId, itemName: d.itemName, price: d.price});
+      }
+    });
+    showPackageDialog.value = false;
+    ElMessage.success(`已套用套餐「${pkg.packageName}」`);
+  } catch (e) {
+    ElMessage.error(e.message || '套用失败');
+  }
+};
+const handleDeletePackage = async (idx) => {
+  const item = myPackages.value[idx];
+  try {
+    await deleteDrugPackage(item.id);
+    myPackages.value.splice(idx, 1);
+    ElMessage.success('套餐已删除');
+  } catch (e) {
+    ElMessage.error(e.message || '删除失败');
+  }
+};
+const handleSaveNewPackage = async () => {
+  if (!newPackageName.value) {
+    ElMessage.warning('请输入套餐名称');
+    return;
+  }
+  const details = [];
+  // 药品
+  prescriptionForm.details.forEach((d) => {
+    details.push({
+      itemType: 1, itemId: d.drugId, itemCode: d.drugCode, itemName: d.drugName,
+      specification: d.specification, unit: d.unit, quantity: d.quantity,
+      price: d.price, usageDosage: d.usageDosage, frequency: d.frequency,
+      route: d.route, duration: d.duration
+    });
+  });
+  // 检查
+  inspectionForm.items?.forEach((d) => {
+    details.push({
+      itemType: 2, itemId: d.itemId, itemCode: d.itemCode || '', itemName: d.itemName,
+      specification: '', unit: '', quantity: 1, price: d.price || 0
+    });
+  });
+  // 检验
+  laboratoryForm.items?.forEach((d) => {
+    details.push({
+      itemType: 3, itemId: d.itemId, itemCode: d.itemCode || '', itemName: d.itemName,
+      specification: '', unit: '', quantity: 1, price: d.price || 0
+    });
+  });
+  if (details.length === 0) {
+    ElMessage.warning('当前没有可保存的项目，请先添加处方/检查/检验');
+    return;
+  }
+  try {
+    await saveDrugPackage({packageName: newPackageName.value, details});
+    newPackageName.value = '';
+    showAddPackageDialog.value = false;
+    ElMessage.success('套餐保存成功');
+    loadDrugPackages();
+  } catch (e) {
+    ElMessage.error(e.message || '保存失败');
+  }
+};
+// ========== 检查申请模板 ==========
+const loadInspectionTemplates = async () => {
+  try {
+    const res = await getInspectionTemplates();
+    myInspectionTemplates.value = res.data || [];
+  } catch (e) {
+    console.error('加载检查申请模板失败', e);
+  }
+};
+const handleDeleteInspectionTemplate = async (idx) => {
+  const item = myInspectionTemplates.value[idx];
+  try {
+    await deleteInspectionTemplate(item.id);
+    myInspectionTemplates.value.splice(idx, 1);
+    ElMessage.success('检查模板已删除');
+  } catch (e) {
+    ElMessage.error(e.message || '删除失败');
+  }
+};
+const handleInspectionTemplateItemSearch = async (query) => {
+  if (!query) {
+    inspectionTemplateItemResults.value = [];
+    return;
+  }
+  inspectionTemplateItemLoading.value = true;
+  try {
+    const res = await searchInspectionItem(query);
+    inspectionTemplateItemResults.value = res.data || [];
+  } catch (e) {
+    console.error('搜索检查项目失败', e);
+  } finally {
+    inspectionTemplateItemLoading.value = false;
+  }
+};
+const handleInspectionTemplateItemSelect = (itemId) => {
+  const item = inspectionTemplateItemResults.value.find((i) => i.id === itemId);
+  if (item) {
+    inspectionTemplateForm.value.inspectionItemId = item.id;
+    inspectionTemplateForm.value.inspectionItemName = item.itemName;
+  }
+};
+const handleSaveInspectionTemplate = async () => {
+  if (!inspectionTemplateName.value) {
+    ElMessage.warning('请输入模板名称');
+    return;
+  }
+  if (!inspectionTemplateForm.value.inspectionItemId) {
+    ElMessage.warning('请选择检查项目');
+    return;
+  }
+  try {
+    await saveInspectionTemplate({
+      templateName: inspectionTemplateName.value,
+      ...inspectionTemplateForm.value
+    });
+    inspectionTemplateName.value = '';
+    inspectionTemplateForm.value = {
+      inspectionItemId: null,
+      inspectionItemName: '',
+      bodyPart: '',
+      inspectionPurpose: '',
+      isEmergency: 0
+    };
+    ElMessage.success('模板保存成功');
+    loadInspectionTemplates();
+  } catch (e) {
+    ElMessage.error(e.message || '保存失败');
+  }
+};
+const handleApplyInspectionTemplate = (tpl) => {
+  inspectionForm.inspectionItemId = tpl.inspectionItemId;
+  inspectionForm.bodyPart = tpl.bodyPart || '';
+  inspectionForm.inspectionPurpose = tpl.inspectionPurpose || '';
+  inspectionForm.isEmergency = tpl.isEmergency || 0;
+  showInspectionTemplateDialog.value = false;
+  ElMessage.success(`已套用模板「${tpl.templateName}」`);
+};
+const handleApplyInspectionTemplateToRecord = (record, tpl) => {
+  record.inspectionItemId = tpl.inspectionItemId;
+  record.inspectionItemName = tpl.inspectionItemName || '';
+  record.bodyPart = tpl.bodyPart || '';
+  record.inspectionPurpose = tpl.inspectionPurpose || '';
+  record.isEmergency = tpl.isEmergency || 0;
+  record.price = tpl.price || 0;
+  ElMessage.success(`已套用模板「${tpl.templateName}」`);
+};
+// ========== 检验申请模板 ==========
+const loadLaboratoryTemplates = async () => {
+  try {
+    const res = await getLaboratoryTemplates();
+    myLaboratoryTemplates.value = res.data || [];
+  } catch (e) {
+    console.error('加载检验申请模板失败', e);
+  }
+};
+const handleDeleteLaboratoryTemplate = async (idx) => {
+  const item = myLaboratoryTemplates.value[idx];
+  try {
+    await deleteLaboratoryTemplate(item.id);
+    myLaboratoryTemplates.value.splice(idx, 1);
+    ElMessage.success('检验模板已删除');
+  } catch (e) {
+    ElMessage.error(e.message || '删除失败');
+  }
+};
+const handleLaboratoryTemplateItemSearch = async (query) => {
+  if (!query) {
+    laboratoryTemplateItemResults.value = [];
+    return;
+  }
+  laboratoryTemplateItemLoading.value = true;
+  try {
+    const res = await searchLaboratoryItem(query);
+    laboratoryTemplateItemResults.value = res.data || [];
+  } catch (e) {
+    console.error('搜索检验项目失败', e);
+  } finally {
+    laboratoryTemplateItemLoading.value = false;
+  }
+};
+const handleLaboratoryTemplateItemSelect = (itemId) => {
+  const item = laboratoryTemplateItemResults.value.find((i) => i.id === itemId);
+  if (item) {
+    laboratoryTemplateForm.value.laboratoryItemId = item.id;
+    laboratoryTemplateForm.value.laboratoryItemName = item.itemName;
+  }
+};
+const handleSaveLaboratoryTemplate = async () => {
+  if (!laboratoryTemplateName.value) {
+    ElMessage.warning('请输入模板名称');
+    return;
+  }
+  if (!laboratoryTemplateForm.value.laboratoryItemId) {
+    ElMessage.warning('请选择检验项目');
+    return;
+  }
+  try {
+    await saveLaboratoryTemplate({
+      templateName: laboratoryTemplateName.value,
+      ...laboratoryTemplateForm.value
+    });
+    laboratoryTemplateName.value = '';
+    laboratoryTemplateForm.value = {
+      laboratoryItemId: null,
+      laboratoryItemName: '',
+      sampleType: '',
+      inspectionPurpose: '',
+      isEmergency: 0
+    };
+    ElMessage.success('模板保存成功');
+    loadLaboratoryTemplates();
+  } catch (e) {
+    ElMessage.error(e.message || '保存失败');
+  }
+};
+const handleApplyLaboratoryTemplate = (tpl) => {
+  laboratoryForm.laboratoryItemId = tpl.laboratoryItemId;
+  laboratoryForm.sampleType = tpl.sampleType || '';
+  laboratoryForm.inspectionPurpose = tpl.inspectionPurpose || '';
+  laboratoryForm.isEmergency = tpl.isEmergency || 0;
+  showLaboratoryTemplateDialog.value = false;
+  ElMessage.success(`已套用模板「${tpl.templateName}」`);
+};
+const filteredAllTags = computed(() => {
+  if (!tagSearchKeyword.value)
+    return allTags.value;
+  const kw = tagSearchKeyword.value.toLowerCase();
+  return allTags.value.filter((tag) => tag.tagName?.toLowerCase().includes(kw));
+});
+const loadPatientTags = async () => {
+  if (!currentPatient.value?.patientId)
+    return;
+  try {
+    const res = await getPatientTags({patientId: currentPatient.value.patientId});
+    patientTags.value = res.data || [];
+  } catch (error) {
+    console.error('加载患者标签失败:', error);
+  }
+};
+const patientDetail = ref(null);
+const loadPatientDetail = async () => {
+  if (!currentPatient.value?.patientId)
+    return;
+  try {
+    const res = await getPatientDetail(currentPatient.value.patientId);
+    patientDetail.value = res.data || null;
+  } catch (error) {
+    console.error('加载患者详情失败:', error);
+  }
+};
+const loadPatientChargeInfo = async () => {
+  if (!currentPatient.value?.patientId)
+    return;
+  try {
+    const res = await listItemsByPatient(currentPatient.value.patientId);
+    patientChargeItems.value = res.data || [];
+  } catch (error) {
+    console.error('加载收费信息失败:', error);
+    patientChargeItems.value = [];
+  }
+};
+const copyToClipboard = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    ElMessage.success('已复制到剪贴板');
+  } catch {
+    ElMessage.error('复制失败');
+  }
+};
+const loadAllTags = async () => {
+  try {
+    const res = await getPatientTagListAll({});
+    allTags.value = res.data?.records || res.data || [];
+  } catch (error) {
+    console.error('加载标签列表失败:', error);
+  }
+};
+const handleOpenTagDialog = async () => {
+  await loadAllTags();
+  await loadPatientTags();
+  showTagDialog.value = true;
+};
+const handleAddTag = async (tagId) => {
+  if (!currentPatient.value?.patientId)
+    return;
+  try {
+    await addPatientTag({
+      patientId: currentPatient.value.patientId,
+      tagId: tagId,
+      sourceType: 1
+    });
+    await loadPatientTags();
+    ElMessage.success('标签添加成功');
+  } catch (error) {
+    ElMessage.error(error.message || '添加失败');
+  }
+};
+const handleRemoveTag = async (tagId) => {
+  if (!currentPatient.value?.patientId)
+    return;
+  try {
+    await removePatientTag({
+      patientId: currentPatient.value.patientId,
+      tagId: tagId
+    });
+    await loadPatientTags();
+    ElMessage.success('标签已移除');
+  } catch (error) {
+    ElMessage.error(error.message || '移除失败');
+  }
+};
+const isTagAdded = (tagId) => {
+  return patientTags.value.some((t) => t.tagId === tagId);
+};
+// ========== 数据加载 ==========
+let isFirstLoad = true;
+const loadData = async () => {
+  loading.value = true;
+  /** 本次队列加载是否失败：失败时不能拿空队列去判定「这人不在队列」（会误伤自己的患者） */
+  let queueLoadFailed = false;
+  try {
+    const today = localDateStr();
+    const [listRes, statsRes] = await Promise.all([
+      getTodayQueueList({date: today}),
+      getQueueStats(),
+    ]);
+    queueList.value = listRes.data || [];
+    stats.value = statsRes.data || {waiting: 0, called: 0, inProgress: 0};
+    // 初次加载时，自动选中当前就诊中的患者。
+    // 两种情况下不自动选：
+    //   ① 已经有选中患者（页面自己已经定了接诊对象）；
+    //   ② 本次进入是「为某个特定患者而来」（顶部搜索跳转 / 刷新恢复 / URL 带 patientId）——
+    //      医生是来找那个人的，先自动选中队列里的另一个人，等于把一次「找人」变成了
+    //      「切换到别人」，而开单、开药、写病历挂的都是当前患者，看错人就是开错单。
+    //      （准入判定见 lib/todayQueue.js，正常路径下这种人根本不会到这里。）
+    // isFirstLoad 必须**无条件**置 false：原来这行写在 if 内部，只要首屏时已有选中患者
+    // 它就永远不复位，之后 30 秒一次的定时刷新会突然把医生正在看的患者换掉。
+    if (isFirstLoad) {
+      if (!currentPatient.value && !enteredWithTarget) {
+        // 用 pickQueueRow 而不是 find：同一位患者可能有多条 queueStatus=3 的队列记录
+        // （数据里就存在），find 取的是后端序号最小的那条，不稳定也不一定是最早到的那次
+        const consultingPatient = pickQueueRow(queueList.value.filter((q) => q.queueStatus === 3));
+        if (consultingPatient) {
+          selectPatient(consultingPatient);
+        }
+      }
+      isFirstLoad = false;
+    }
+    // 如果有当前叫号患者且在新列表中找不到，清空选中
+    if (currentPatient.value) {
+      const stillExists = queueList.value.find((q) => q.id === currentPatient.value.id);
+      if (!stillExists) {
+        currentPatient.value = null;
+        // 顶部提示条同步清掉：条子说「当前患者是A」而页面已经没选中任何人，
+        // 在防开错人的场景里比不显示更危险
+        currentPatientStore.syncClear();
+      }
+    }
+  } catch (error) {
+    console.error('加载数据失败:', error);
+    queueLoadFailed = true;
+  } finally {
+    loading.value = false;
+    // 队列第一次加载结束后，把挂起的待切换患者落地（在队列里→选中，不在→提示并转详情框）。
+    // 放在 finally 是为了任何情况下都不会把患者永久挂起。
+    if (!queueLoaded.value) {
+      queueLoaded.value = true;
+      if (queueLoadFailed) {
+        // 队列没拉到就说「这人不在您今日队列」是假话——医生搜自己的患者也会被弹档。
+        // 所以这里只清挂起状态、不判定、不提示，并把顶栏那条也清掉：
+        // 顶栏显示「当前患者是 A」而页面谁都没选中，在防开错人的场景里比不显示更危险。
+        pendingSwitch = null;
+        enteredWithTarget = false;
+        if (currentPatientStore.patient) {
+          currentPatientStore.syncClear();
+        }
+        ElMessage.warning('候诊队列加载失败，未切换接诊患者，请刷新重试');
+      } else {
+        applyPendingSwitch();
+      }
+    }
+  }
+};
+const loadDepartments = async () => {
+  try {
+    // 不传 scope → 默认按当前人过滤（医生站只看自己被授权的科室）
+    const res = await getDepartmentSelectList({deptType: 1});
+    departments.value = res.data || [];
+  } catch (error) {
+    console.error('加载科室失败:', error);
+  }
+};
+const loadUserInfo = () => {
+  userInfo.value = {
+    userId: localStorage.getItem('userId') || '',
+    deptId: localStorage.getItem('deptId') || null,
+    deptName: localStorage.getItem('deptName') || '',
+    currentRole: localStorage.getItem('currentRole') || '',
+  };
+  if (userInfo.value.deptId) {
+    selectedDeptId.value = Number(userInfo.value.deptId);
+  }
+};
+// ========== 加载今日待办 ==========
+const loadTodoList = async () => {
+  // 模拟待办数据，实际应从后端获取
+  todoList.value = [
+    {id: 1, type: 'review', title: '待审核病历', content: '张三的病历待审核', time: '10:30', urgent: false},
+    {id: 2, type: 'report', title: '待查看检验报告', content: '李四的血常规报告已出', time: '09:45', urgent: true},
+    {id: 3, type: 'report', title: '待查看检查报告', content: '王五的CT报告已出', time: '09:20', urgent: false},
+    {id: 4, type: 'followUp', title: '待回访患者', content: '赵六术后3天需电话回访', time: '14:00', urgent: false},
+    {id: 5, type: 'consult', title: '会诊申请', content: '内科申请联合会诊', time: '11:00', urgent: true},
+  ];
+  todoStats.value = {
+    pendingReview: 3,
+    pendingReport: 5,
+    pendingFollowUp: 2,
+    pendingConsult: 1,
+  };
+};
+// ========== ICD-10搜索 ==========
+const handleIcd10Search = async (query) => {
+  if (!query) {
+    icd10Results.value = [];
+    return;
+  }
+  icd10Loading.value = true;
+  try {
+    const res = await searchIcd10(query);
+    icd10Results.value = res.data || [];
+  } catch (error) {
+    console.error('搜索ICD-10失败:', error);
+  } finally {
+    icd10Loading.value = false;
+  }
+};
+const handleIcd10Select = (val) => {
+  const item = icd10Results.value.find((i) => i.icdName === val);
+  if (item) {
+    recordForm.diagnosisCode = item.icdCode;
+    recordForm.diagnosisName = item.icdName;
+  }
+};
+// ========== ICD-10智能预测 ==========
+const icdPredictions = ref([]);
+const icdPredictionLoading = ref(false);
+const showPrediction = ref(false);
+const handlePredictIcd = async () => {
+  if (!recordForm.chiefComplaint && !recordForm.presentIllness && !recordForm.specialistExam) {
+    ElMessage.warning('请先填写主诉、现病史或专科检查');
+    return;
+  }
+  icdPredictionLoading.value = true;
+  showPrediction.value = true;
+  try {
+    const res = await predictIcd10({
+      chiefComplaint: recordForm.chiefComplaint || '',
+      presentIllness: recordForm.presentIllness || '',
+      specialistExam: recordForm.specialistExam || '',
+      diagnosis: recordForm.diagnosis || '',
+    });
+    icdPredictions.value = res.data || [];
+  } catch (error) {
+    console.error('ICD预测失败:', error);
+    icdPredictions.value = [];
+  } finally {
+    icdPredictionLoading.value = false;
+  }
+};
+const handleSelectPrediction = (item) => {
+  recordForm.diagnosisCode = item.icdCode;
+  recordForm.diagnosisName = item.icdName;
+  showPrediction.value = false;
+  ElMessage.success(`已选择: ${item.icdCode} ${item.icdName}`);
+};
+// ========== 病历文本智能录入 / 草拟（P1-3）==========
+// 铁律：两个接口都不写库。抽取结果是候选值、草拟结果是草稿，
+// 都必须由医生点「填入」才进表单，保存病历时才由保存流程落库。
+const extractDialogVisible = ref(false);
+const extractRawText = ref('');
+const extractLoading = ref(false);
+const extractResult = ref(null);
+const extractAppliedFields = ref([]);
+const openExtractDialog = () => {
+  extractRawText.value = '';
+  extractResult.value = null;
+  extractAppliedFields.value = [];
+  extractDialogVisible.value = true;
+};
+const runExtract = async () => {
+  if (!extractRawText.value.trim()) {
+    ElMessage.warning('请先粘贴或输入要解析的文本');
+    return;
+  }
+  extractLoading.value = true;
+  extractResult.value = null;
+  extractAppliedFields.value = [];
+  try {
+    const res = await extractEmrText({
+      rawText: extractRawText.value,
+      recordId: recordForm.id || undefined,
+      gender: recordForm.gender || undefined,
+      age: recordForm.age || undefined,
+    });
+    extractResult.value = res.data || null;
+    if (!extractResult.value?.fields?.length) {
+      ElMessage.warning('没有从这段文本中识别出可搬运的内容');
+    }
+  } catch (error) {
+    console.error('病历文本抽取失败:', error);
+    extractResult.value = null;
+  } finally {
+    extractLoading.value = false;
+  }
+};
+// 只有病历表单里真实存在的字段才允许写入，后端白名单挡一道、前端再挡一道
+const canApplyField = (key) => !!key && Object.prototype.hasOwnProperty.call(recordForm, key);
+const applyExtractField = (row) => {
+  if (!canApplyField(row?.field)) {
+    ElMessage.warning(`「${row?.fieldLabel || row?.field}」无法写入病历表单`);
+    return;
+  }
+  ;
+  recordForm[row.field] = row.value;
+  if (!extractAppliedFields.value.includes(row.field)) {
+    extractAppliedFields.value.push(row.field);
+  }
+  ElMessage.success(`已填入「${row.fieldLabel}」`);
+};
+const applyAllExtractFields = () => {
+  const rows = extractResult.value?.fields || [];
+  let count = 0;
+  rows.forEach((row) => {
+    if (!canApplyField(row?.field))
+      return;
+    recordForm[row.field] = row.value;
+    if (!extractAppliedFields.value.includes(row.field)) {
+      extractAppliedFields.value.push(row.field);
+    }
+    count++;
+  });
+  if (count === 0) {
+    ElMessage.warning('没有可填入的字段');
+    return;
+  }
+  ElMessage.success(`已填入 ${count} 个字段，请逐项核对原文后再保存`);
+};
+const draftDialogVisible = ref(false);
+const draftLoading = ref(false);
+const draftResult = ref(null);
+// G-10 diff 留痕：本会话 applyDraft 填入的 AI 草稿原文。保存时若终稿与其不同，
+// 把草稿原文带给后端算 diff（AI 写了什么 vs 医生留了什么）；保存成功即清空，一次草稿会话只留一条。
+const aiDraftAppliedText = ref('');
+const runDraft = async () => {
+  if (!recordForm.chiefComplaint) {
+    ElMessage.warning('请先填写主诉，草拟现病史必须以主诉为依据');
+    return;
+  }
+  draftLoading.value = true;
+  draftResult.value = null;
+  draftDialogVisible.value = true;
+  try {
+    const res = await draftEmrText({
+      recordId: recordForm.id || undefined,
+      gender: recordForm.gender || undefined,
+      age: recordForm.age || undefined,
+      chiefComplaint: recordForm.chiefComplaint || '',
+      presentIllness: recordForm.presentIllness || '',
+      pastHistory: recordForm.pastHistory || '',
+      allergyHistory: recordForm.allergyHistory || '',
+      temperature: recordForm.temperature || '',
+      pulse: recordForm.pulse || '',
+      respiration: recordForm.respiration || '',
+      systolicPressure: recordForm.systolicPressure || '',
+      diastolicPressure: recordForm.diastolicPressure || '',
+      generalCondition: recordForm.generalCondition || '',
+      skinMucosa: recordForm.skinMucosa || '',
+      headNeck: recordForm.headNeck || '',
+      chestLung: recordForm.chestLung || '',
+      heart: recordForm.heart || '',
+      abdomen: recordForm.abdomen || '',
+      spineLimbs: recordForm.spineLimbs || '',
+      nervousSystem: recordForm.nervousSystem || '',
+      specialistExam: recordForm.specialistExam || '',
+      auxiliaryExam: recordForm.auxiliaryExam || '',
+    });
+    draftResult.value = res.data || null;
+  } catch (error) {
+    console.error('病历草拟失败:', error);
+    draftResult.value = null;
+  } finally {
+    draftLoading.value = false;
+  }
+};
+const applyDraft = () => {
+  const text = draftResult.value?.presentIllness;
+  if (!text) {
+    ElMessage.warning('本次没有生成草稿');
+    return;
+  }
+  recordForm.presentIllness = text;
+  aiDraftAppliedText.value = text;
+  draftDialogVisible.value = false;
+  ElMessage.success('草稿已填入现病史，请逐字核对后修改');
+};
+// ========== 语音口述（G-14） ==========
+// MediaRecorder 录音 → ASR 转写 → 文本可编辑 → 喂既有 emr_draft 整理。
+// 转写是确定性转换：失败如实报错、不造文本（语音没有规则兜底文本，造文本即造假病历）。
+const VOICE_MAX_SECONDS = 60;
+const voiceDialogVisible = ref(false);
+const voiceRecording = ref(false);
+const voiceSeconds = ref(0);
+const voiceTranscribing = ref(false);
+const voiceText = ref('');
+let voiceRecorder = null;
+let voiceStream = null;
+let voiceChunks = [];
+let voiceTimer = null;
+let voiceMime = '';
+const voiceSecondsText = computed(() => {
+  const s = voiceSeconds.value;
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+});
+const openVoiceDialog = () => {
+  voiceText.value = '';
+  voiceSeconds.value = 0;
+  voiceTranscribing.value = false;
+  voiceDialogVisible.value = true;
+};
+// 弹窗关闭/录音丢弃时统一回收：停计时器、断麦克风、弃录音块
+const closeVoiceDialog = () => {
+  if (voiceTimer) {
+    clearInterval(voiceTimer);
+    voiceTimer = null;
+  }
+  if (voiceRecorder && voiceRecorder.state !== 'inactive') {
+    voiceRecorder.onstop = null;
+    try {
+      voiceRecorder.stop();
+    } catch (e) { /* 媒体流已释放 */
+    }
+  }
+  voiceRecorder = null;
+  if (voiceStream) {
+    voiceStream.getTracks().forEach((t) => t.stop());
+    voiceStream = null;
+  }
+  voiceChunks = [];
+  voiceRecording.value = false;
+};
+const startVoiceRecord = async () => {
+  if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+    ElMessage.error('当前浏览器不支持录音，请使用 Edge/Chrome');
+    return;
+  }
+  try {
+    voiceStream = await navigator.mediaDevices.getUserMedia({audio: true});
+  } catch (e) {
+    ElMessage.error('无法访问麦克风，请检查浏览器权限设置');
+    return;
+  }
+  voiceMime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4']
+      .find(t => MediaRecorder.isTypeSupported(t)) || '';
+  voiceChunks = [];
+  voiceRecorder = new MediaRecorder(voiceStream, voiceMime ? {mimeType: voiceMime} : undefined);
+  voiceRecorder.ondataavailable = (e) => {
+    if (e.data.size > 0)
+      voiceChunks.push(e.data);
+  };
+  voiceRecorder.start();
+  voiceRecording.value = true;
+  voiceSeconds.value = 0;
+  voiceTimer = setInterval(() => {
+    voiceSeconds.value++;
+    if (voiceSeconds.value >= VOICE_MAX_SECONDS)
+      stopVoiceRecord();
+  }, 1000);
+};
+const stopVoiceRecord = () => {
+  if (!voiceRecorder || voiceRecorder.state === 'inactive')
+    return;
+  if (voiceTimer) {
+    clearInterval(voiceTimer);
+    voiceTimer = null;
+  }
+  // 不在这里复位 voiceRecording：stop() 到 onstop 之间若把按钮恢复成「开始录音」，
+  // 转写还没开始就出现可点按钮（再点一次会造出两段录音），转写中状态也会被吞掉；
+  // 复位交给 onstop 里的 closeVoiceDialog，与 voiceTranscribing 同步块内切换，无中间态
+  const duration = voiceSeconds.value;
+  const recorder = voiceRecorder;
+  recorder.onstop = async () => {
+    const blob = new Blob(voiceChunks, {type: voiceMime || 'audio/webm'});
+    closeVoiceDialog();
+    if (blob.size > 0)
+      await doTranscribe(blob, duration);
+  };
+  recorder.stop();
+};
+const doTranscribe = async (blob, durationSeconds) => {
+  voiceTranscribing.value = true;
+  voiceText.value = '';
+  try {
+    const fd = new FormData();
+    const ext = voiceMime.includes('mp4') ? 'mp4' : 'webm';
+    fd.append('file', blob, `voice.${ext}`);
+    if (durationSeconds > 0)
+      fd.append('durationSeconds', String(durationSeconds));
+    const res = await transcribeVoice(fd);
+    voiceText.value = res.data?.text || '';
+    if (!voiceText.value)
+      ElMessage.warning('未能从音频中识别出语音内容');
+  } catch (e) {
+    // 失败必须可见：ASR 拒识别/上游异常时医生要看到原因（request.js 对 500 只 console 不 toast），
+    // 「点了没反应」会让医生以为录音功能坏了
+    const msg = e?.response?.data?.message || e?.message || '语音转写失败，请重试';
+    ElMessage.error(msg);
+    console.error('语音转写失败:', e);
+  } finally {
+    voiceTranscribing.value = false;
+  }
+};
+// 转写文本原文直填现病史（追加，不覆盖医生已写内容）
+const fillVoiceText = () => {
+  const text = voiceText.value.trim();
+  if (!text) {
+    ElMessage.warning('没有可填入的转写文本');
+    return false;
+  }
+  recordForm.presentIllness = recordForm.presentIllness
+      ? `${recordForm.presentIllness}\n${text}` : text;
+  return true;
+};
+const applyVoiceToField = () => {
+  if (fillVoiceText()) {
+    voiceDialogVisible.value = false;
+    ElMessage.success('转写文本已填入现病史，请逐字核对后修改');
+  }
+};
+// 填入现病史后走既有草拟：口述文本作为「医生已写的部分」喂 emr_draft，
+// 模型整理成现病史草稿 → 复用草稿弹窗医生确认（G-10 留痕自动接上）
+const draftFromVoice = () => {
+  if (!fillVoiceText())
+    return;
+  voiceDialogVisible.value = false;
+  runDraft();
+};
+// ========== 预问诊报告卡（G-05） ==========
+// 患者在小程序提交的问卷 + AI 凝摘要；没做过预问诊时 data=null，卡片不渲染。
+// 只读展示 —— 医生参考后再自己写现病史，AI 不代填。
+const previsitInfo = ref(null);
+const previsitSourceText = (v) => (v === 1 ? '模型凝摘要' : '规则摘要');
+const loadPrevisit = async (registId) => {
+  previsitInfo.value = null;
+  if (!registId)
+    return;
+  try {
+    const res = await getPrevisitByRegist(registId);
+    if (res.code === 200)
+      previsitInfo.value = res.data || null;
+  } catch (e) {
+    console.error('预问诊记录加载失败', e);
+  }
+};
+// ========== AI辅助诊疗 ==========
+const aiDiagnosisResults = ref([]);
+const aiDiagnosisLoading = ref(false);
+// 模型降级标记：degraded=true 表示结果是码表规则匹配出来的，必须如实告知，不得当模型推荐展示
+const aiDiagnosisDegraded = ref(false);
+const aiDiagnosisDegradeReason = ref('');
+const aiGuideDialogVisible = ref(false);
+const aiGuideData = ref(null);
+const handleAiDiagnosis = async () => {
+  if (!recordForm.chiefComplaint && !recordForm.presentIllness && !recordForm.specialistExam) {
+    return;
+  }
+  aiDiagnosisLoading.value = true;
+  try {
+    const res = await predictIcd10({
+      chiefComplaint: recordForm.chiefComplaint || '',
+      presentIllness: recordForm.presentIllness || '',
+      specialistExam: recordForm.specialistExam || '',
+      diagnosis: recordForm.diagnosis || '',
+    });
+    // 后端返回 Result<Icd10PredictVO>：候选在 predictions 里，不是顶层数组
+    const payload = res.data || {};
+    // 置信度只认后端返回值（模型或规则给出的分值）。后端没返回就不显示，
+    // 严禁前端按数组下标编造百分比 —— 医生会当真，这是安全问题不是展示问题。
+    aiDiagnosisResults.value = (payload.predictions || []).slice(0, 5).map((item) => ({
+      ...item,
+      confidence: typeof item.confidence === 'number' ? item.confidence : null
+    }));
+    aiDiagnosisDegraded.value = payload.degraded === true;
+    aiDiagnosisDegradeReason.value = payload.degradeReason || '';
+  } catch (error) {
+    console.error('AI诊断推荐失败:', error);
+    aiDiagnosisResults.value = [];
+    aiDiagnosisDegraded.value = false;
+    aiDiagnosisDegradeReason.value = '';
+  } finally {
+    aiDiagnosisLoading.value = false;
+  }
+};
+const handleAdoptAiDiagnosis = (item) => {
+  recordForm.diagnosis = item.icdName;
+  recordForm.diagnosisCode = item.icdCode;
+  recordForm.diagnosisName = item.icdName;
+  ElMessage.success(`已采纳诊断: ${item.icdName}`);
+};
+const handleViewAiGuide = (item) => {
+  aiGuideData.value = item;
+  aiGuideDialogVisible.value = true;
+};
+// 监听主诉/现病史变化，自动触发AI推荐
+let aiDebounceTimer = null;
+const triggerAiDiagnosis = () => {
+  if (aiDebounceTimer)
+    clearTimeout(aiDebounceTimer);
+  aiDebounceTimer = setTimeout(() => {
+    if (recordForm.chiefComplaint || recordForm.presentIllness) {
+      handleAiDiagnosis();
+    }
+  }, 1500);
+};
+// ========== CDSS用药安全审查 ==========
+const cdssAlerts = ref([]);
+const checkDrugSafety = () => {
+  cdssAlerts.value = [];
+  // 上一版在这里写死了三条药物相互作用 + 一条剂量提醒，并在界面上渲染成「用药安全审查 · 警告 N」。
+  // 但处方要到结诊提交（saveMedicalRecord）才落库、才有 prescriptionId，
+  // 而审核接口 POST /ai/drugAudit/execute 必须按 prescriptionId 由服务端回查明细
+  //（这样设计正是为了防止「前端传什么就审什么」），所以开方过程中前端无从审查。
+  // 假结论已删除：这里不再产出任何审查结果，只保留调用点占位。
+};
+// ========== 药品搜索 ==========
+const handleDrugSearch = async (query) => {
+  if (!query) {
+    drugResults.value = [];
+    return;
+  }
+  drugLoading.value = true;
+  try {
+    const res = await getStockList({drugName: query, pageNum: 1, pageSize: 20});
+    drugResults.value = res.data?.records || [];
+  } catch (error) {
+    console.error('搜索药品失败:', error);
+  } finally {
+    drugLoading.value = false;
+  }
+};
+const handleDrugSelect = (val) => {
+  const drug = drugResults.value.find((d) => d.id === val);
+  if (drug) {
+    newDrug.drugName = drug.drugName;
+    newDrug.specification = drug.specification || '';
+    newDrug.drugId = drug.id;
+    newDrug.drugCode = drug.drugCode;
+    newDrug.unit = drug.unit || '盒';
+    newDrug.price = drug.retailPrice || 0;
+  }
+};
+// ========== 检查项目搜索 ==========
+const handleInspectionItemSearch = async (query) => {
+  if (!query) {
+    inspectionItemResults.value = [];
+    return;
+  }
+  inspectionItemLoading.value = true;
+  try {
+    const res = await searchInspectionItem(query);
+    inspectionItemResults.value = res.data || [];
+  } catch (error) {
+    console.error('搜索检查项目失败:', error);
+  } finally {
+    inspectionItemLoading.value = false;
+  }
+};
+/**
+ * 检查项目选中 → **立即落库**（批次E/E1）。
+ *
+ * 原先只是把项目塞进本地数组，等结诊时随病历一起提交：医生开了单让患者去缴费，
+ * 只要没点「保存病历」，收费台就查不到这张申请单；而病历每次保存又是"先删后增"申请单，
+ * 已缴费的单子会被连根删掉。现在开单即写库，病历只负责回填 recordId。
+ */
+const handleInspectionItemSelectForRecord = async (record, val) => {
+  const item = inspectionItemResults.value.find((i) => i.id === val);
+  if (!item)
+    return;
+  record.inspectionItemId = item.id;
+  record.inspectionItemName = item.itemName;
+  record.bodyPart = item.bodyPart || '';
+  record.preparation = item.preparation || '';
+  record.price = item.price || 0;
+  await persistInspectionRow(record);
+};
+/** 把一条检查申请落库（新增或更新）；成功后用后端返回的 VO 覆盖本地行（含执行状态）。 */
+const persistInspectionRow = async (record) => {
+  if (!currentPatient.value || !record.inspectionItemId)
+    return false;
+  try {
+    const res = await saveInspectionApply({
+      id: record.id || undefined,
+      registId: currentPatient.value.registId,
+      recordId: recordForm.id || undefined,
+      patientId: currentPatient.value.patientId,
+      inspectionItemId: record.inspectionItemId,
+      bodyPart: record.bodyPart,
+      inspectionPurpose: record.inspectionPurpose,
+      clinicalDiagnosis: record.clinicalDiagnosis || recordForm.diagnosis || '',
+      specialRequirements: record.preparation,
+      isEmergency: record.isEmergency ?? 0,
+    });
+    const pendingIdx = record._pendingIdx;
+    Object.assign(record, res.data || {});
+    if (pendingIdx)
+      record._pendingIdx = pendingIdx;
+    loadInsuranceInfo();
+    return true;
+  } catch (error) {
+    ElMessage.error(error.message || '检查开单失败');
+    return false;
+  }
+};
+/** 编辑过科目/部位/目的之后手动落库（列表行上的「保存修改」）。 */
+const handleSaveInspectionRow = async (record) => {
+  const isNew = !record.id;
+  const ok = await persistInspectionRow(record);
+  if (ok && isNew)
+    ElMessage.success('检查申请已开单（待缴费）');
+  else if (ok)
+    ElMessage.success('检查申请已更新');
+};
+const handleInspectionItemSelect = (val) => {
+  const item = inspectionItemResults.value.find((i) => i.id === val);
+  if (item) {
+    inspectionForm.inspectionItemId = item.id;
+    inspectionForm.inspectionItemName = item.itemName;
+    inspectionForm.bodyPart = item.bodyPart || '';
+    inspectionForm.preparation = item.preparation || '';
+  }
+};
+// ========== 检验项目搜索 ==========
+const handleLaboratoryItemSearch = async (query) => {
+  if (!query) {
+    laboratoryItemResults.value = [];
+    return;
+  }
+  laboratoryItemLoading.value = true;
+  try {
+    const res = await searchLaboratoryItem(query);
+    laboratoryItemResults.value = res.data || [];
+  } catch (error) {
+    console.error('搜索检验项目失败:', error);
+  } finally {
+    laboratoryItemLoading.value = false;
+  }
+};
+const handleLaboratoryItemSelect = (val) => {
+  const item = laboratoryItemResults.value.find((i) => i.id === val);
+  if (item) {
+    laboratoryForm.laboratoryItemId = item.id;
+    laboratoryForm.laboratoryItemName = item.itemName;
+    laboratoryForm.specimenType = item.specimenType || '血液';
+  }
+};
+/** 检验项目选中 → 立即落库（批次E/E1），语义同检查。 */
+const handleLaboratoryItemSelectForRecord = async (record, val) => {
+  const item = laboratoryItemResults.value.find((i) => i.id === val);
+  if (!item)
+    return;
+  record.laboratoryItemId = item.id;
+  record.laboratoryItemName = item.itemName;
+  record.specimenType = item.specimenType || '血液';
+  record.price = item.price || 0;
+  await persistLaboratoryRow(record);
+};
+const persistLaboratoryRow = async (record) => {
+  if (!currentPatient.value || !record.laboratoryItemId)
+    return false;
+  try {
+    const res = await saveLaboratoryApply({
+      id: record.id || undefined,
+      registId: currentPatient.value.registId,
+      recordId: recordForm.id || undefined,
+      patientId: currentPatient.value.patientId,
+      laboratoryItemId: record.laboratoryItemId,
+      specimenType: record.specimenType,
+      laboratoryPurpose: record.laboratoryPurpose,
+      clinicalDiagnosis: record.clinicalDiagnosis || recordForm.diagnosis || '',
+      isFasting: record.isFasting ?? 0,
+      isEmergency: record.isEmergency ?? 0,
+    });
+    const pendingIdx = record._pendingIdx;
+    Object.assign(record, res.data || {});
+    if (pendingIdx)
+      record._pendingIdx = pendingIdx;
+    loadInsuranceInfo();
+    return true;
+  } catch (error) {
+    ElMessage.error(error.message || '检验开单失败');
+    return false;
+  }
+};
+const handleSaveLaboratoryRow = async (record) => {
+  const isNew = !record.id;
+  const ok = await persistLaboratoryRow(record);
+  if (ok && isNew)
+    ElMessage.success('检验申请已开单（待缴费）');
+  else if (ok)
+    ElMessage.success('检验申请已更新');
+};
+const handleApplyLaboratoryTemplateToRecord = (record, tpl) => {
+  record.laboratoryItemId = tpl.laboratoryItemId;
+  record.laboratoryItemName = tpl.laboratoryItemName || '';
+  record.specimenType = tpl.specimenType || '';
+  record.laboratoryPurpose = tpl.laboratoryPurpose || '';
+  record.isEmergency = tpl.isEmergency || 0;
+  record.price = tpl.price || 0;
+  ElMessage.success(`已套用模板「${tpl.templateName}」`);
+};
+// ========== 选中患者 ==========
+const selectPatient = async (row) => {
+  currentPatient.value = row;
+  // 同步顶部「当前患者」条（映射口径见 toStorePatient：队列行的 id 是队列号，不能当患者 id 用）。
+  // 用 syncPatient 而不是 setPatient，避免改 switchedAt 后与本函数的 watch 形成回环。
+  // 注意：队列行不带过敏史，条子就不会亮「过敏」标（不假装无过敏），完整信息点条子看档案。
+  if (row?.patientId) {
+    currentPatientStore.syncPatient(toStorePatient(row));
+  }
+  activeTab.value = 'record';
+  recordSaved.value = false;
+  // 清空历史数据（批次F：收费/详情/标签也要清，否则新患者加载期间看到的是上一位患者的钱和信息）
+  inspectionRecords.value = [];
+  laboratoryRecords.value = [];
+  prescriptionList.value = [];
+  currentPrescriptionIdx.value = 0;
+  patientChargeItems.value = [];
+  patientDetail.value = null;
+  patientTags.value = [];
+  insuranceInfo.value = null;
+  // G-05/G-10：换患者时清掉上一位的预问诊卡与 AI 草稿会话
+  previsitInfo.value = null;
+  aiDraftAppliedText.value = '';
+  loadPrevisit(row.registId);
+  // 重置所有表单
+  const baseInfo = {
+    patientId: row.patientId, patientNo: row.patientNo, patientName: row.patientName,
+    registId: row.registId, registNo: row.registNo || '',
+    deptId: row.deptId, deptName: row.deptName, doctorId: row.doctorId, doctorName: row.doctorName,
+    gender: row.gender, age: row.age,
+    visitDate: localDateStr(),
+  };
+  Object.assign(recordForm, baseInfo, {
+    id: null,
+    recordNo: '',
+    recordStatus: 1,
+    reviewStatus: 0,
+    chiefComplaint: '',
+    presentIllness: '',
+    pastHistory: '',
+    personalHistory: '',
+    familyHistory: '',
+    allergyHistory: '',
+    temperature: '',
+    pulse: '',
+    respiration: '',
+    systolicPressure: '',
+    diastolicPressure: '',
+    generalCondition: '',
+    skinMucosa: '',
+    headNeck: '',
+    chestLung: '',
+    heart: '',
+    abdomen: '',
+    spineLimbs: '',
+    nervousSystem: '',
+    specialistExam: '',
+    auxiliaryExam: '',
+    diagnosis: '',
+    diagnosisCode: '',
+    diagnosisName: '',
+    treatmentPlan: ''
+  });
+  Object.assign(prescriptionForm, baseInfo, {prescriptionType: 1, diagnosis: '', usageInstruction: '', details: []});
+  Object.assign(inspectionForm, baseInfo, {
+    inspectionItemId: null,
+    inspectionItemName: '',
+    bodyPart: '',
+    inspectionPurpose: '',
+    clinicalDiagnosis: '',
+    isEmergency: 0
+  });
+  Object.assign(laboratoryForm, baseInfo, {
+    laboratoryItemId: null,
+    laboratoryItemName: '',
+    specimenType: '血液',
+    laboratoryPurpose: '',
+    clinicalDiagnosis: '',
+    isFasting: 0,
+    isEmergency: 0
+  });
+  const params = {patientId: row.patientId, registId: row.registId};
+  // 尝试加载已有的病历
+  const res = await getByRegistId(params);
+  Object.assign(recordForm, res.data);
+  examToggled.value = null;
+  // 四个区块并发加载，统一挂「加载中」标记（各 loader 自己吞异常）
+  // （原「既往病历」loader 已随左栏既往页签移除 —— 历史就诊改由患者条上的入口
+  //   打开患者详情弹窗，内嵌 CDR 全景时间轴，取数口径也换成患者级的 getPatientCdr）
+  // 加载检查申请记录
+  trackPatientLoad(loadInspectionRecords(params));
+  // 加载检验申请记录
+  trackPatientLoad(loadLaboratoryRecords(params));
+  // 加载已有处方
+  trackPatientLoad(loadPrescriptionRecords(params));
+  // 加载患者标签
+  loadPatientTags();
+  // 加载患者详情
+  loadPatientDetail();
+  // 加载收费信息
+  trackPatientLoad(loadPatientChargeInfo());
+  // 加载医保信息
+  loadInsuranceInfo();
+};
+const loadInspectionRecords = async (params) => {
+  try {
+    // 获取申请列表用于显示状态
+    const applyRes = await getInspectionApplyList(params);
+    inspectionRecords.value = applyRes.data || [];
+  } catch (error) {
+    inspectionRecords.value = [];
+  }
+};
+const loadLaboratoryRecords = async (params) => {
+  try {
+    // 获取申请列表用于显示状态
+    const applyRes = await getLaboratoryApplyList(params);
+    laboratoryRecords.value = applyRes.data || [];
+  } catch (error) {
+    laboratoryRecords.value = [];
+  }
+};
+const loadPrescriptionRecords = async (params) => {
+  try {
+    const res = await getPrescriptionList(params);
+    prescriptionList.value = res.data || [];
+    // 保持当前选中索引不越界
+    if (currentPrescriptionIdx.value >= prescriptionList.value.length) {
+      currentPrescriptionIdx.value = 0;
+    }
+    bindPrescriptionForm();
+    loadInsuranceInfo();
+    // L7 审方退回重开闭环：被退回的处方要在医生选中患者第一时间可见（原因+次数），
+    // 医生改方后重新保存病历即完成重提（后端先删后增继承退回次数并落重提流水）
+    const returnedList = (res.data || []).filter((p) => p.prescriptionStatus === 7);
+    if (returnedList.length) {
+      const first = returnedList[0];
+      ElMessage.warning({
+        message: `有 ${returnedList.length} 张处方被审方退回（${first.returnCount > 1 ? `第 ${first.returnCount} 次` : '首次'}）：${first.returnReason || '未填写原因'}。请修改处方后重新保存病历提交。`,
+        duration: 8000,
+        showClose: true,
+      });
+    }
+  } catch (error) {
+    prescriptionList.value = [];
+    prescriptionForm.details = [];
+  }
+};
+const switchPrescription = () => {
+  bindPrescriptionForm();
+  loadInsuranceInfo();
+};
+watch(currentPrescriptionType, (_, oldType) => {
+  // 校验旧类型的处方
+  const errors = validatePrescription(oldType);
+  if (errors.length > 0) {
+    ElMessage.warning(`${prescriptionTypeLabel(oldType)}处方：${errors[0]}`);
+  }
+  // 保存旧类型的处方数据（剂数/煎服方式同在处方头，切走前必须回写，否则切回来就丢了）
+  const oldPrescription = prescriptionList.value.find(p => p.prescriptionType === oldType);
+  if (oldPrescription) {
+    oldPrescription.details = [...prescriptionForm.details];
+    oldPrescription.doseCount = prescriptionForm.doseCount;
+    oldPrescription.decoctFlag = prescriptionForm.decoctFlag;
+  }
+  // 加载新类型的处方数据
+  bindPrescriptionForm();
+});
+const hasPrescriptionType = (type) => {
+  return prescriptionList.value.some((p) => p.prescriptionType === type);
+};
+const handleAddPrescription = (type) => {
+  if (hasPrescriptionType(type)) {
+    ElMessage.warning(`${prescriptionTypeLabel(type)}处方已存在`);
+    return;
+  }
+  const newPrescription = {
+    prescriptionType: type,
+    diagnosis: '',
+    usageInstruction: '',
+    details: [],
+  };
+  prescriptionList.value.push(newPrescription);
+  currentPrescriptionIdx.value = prescriptionList.value.length - 1;
+  prescriptionForm.details = newPrescription.details;
+  ElMessage.success(`已创建${prescriptionTypeLabel(type)}处方`);
+};
+// ========== 叫下一位 ==========
+const handleCallNext = async () => {
+  // 如果有当前就诊患者，先检查是否需要保存
+  if (currentCalledPatient.value) {
+    // 批次E/E1：检查检验已开单即落库，不再随病历提交；
+    // 这里只兜「处方明细」和「还没落库的空行」——后者是本地 UI 状态，一并触发保存不会丢数据。
+    const hasUnsavedData = prescriptionForm.details.length > 0
+        || inspectionRecords.value.some(r => !r.id)
+        || laboratoryRecords.value.some(r => !r.id);
+    // 有未保存的数据且病历未提交/审核通过时，自动保存
+    if (hasUnsavedData && !recordSaved.value) {
+      try {
+        await handleSaveRecord();
+        ElMessage.success('已自动保存当前病历');
+      } catch (e) {
+        // 保存失败不阻断呼叫
+      }
+    }
+  }
+  // 呼叫下一位
+  try {
+    await ElMessageBox.confirm('确认接诊下一位候诊患者？', '接诊确认', {
+      confirmButtonText: '确认接诊',
+      cancelButtonText: '取消',
+      type: 'info'
+    });
+  } catch (error) {
+    return;
+  }
+  // 呼叫下一位
+  try {
+    // 接诊对象一律以服务端回执为准，前端不猜。
+    // 原先的写法是「叫完号 → 等 500ms → 重拉列表 → 取 queueStatus=3 的第一条」：
+    // 分诊台在这 500ms 里插队/退号/呼叫，猜出来的行与后端实际叫到的就不是同一个人 ——
+    // 屏幕显示 A、病历挂到 B 的诊次上。按钮叫「接诊下一位」，接到谁由队列说了算，
+    // 但「接到的是谁」必须由服务端原样告知。
+    const res = await callNextQueue({});
+    const called = res?.data;
+    if (!called || !called.id) {
+      ElMessage.warning('已发送叫号，但未取到接诊回执，请刷新队列确认');
+      await loadData();
+      return;
+    }
+    if (called.previousPatientName) {
+      // 同一医生同一时刻只允许一条「就诊中」，叫下一位时服务端会收掉上一条。
+      // 如实告知，不静默改状态（医生可能只是想让上一位「挂起」，那就该走暂离/挂起）。
+      ElMessage.info(`已自动结束上一位就诊：${called.previousPatientName}`);
+    }
+    await loadData();
+    await selectPatient(called);
+    ElMessage.success(`已接诊：${called.patientName}（${shortQueueNo(called.queueNo)}）`);
+  } catch (error) {
+    const msg = error.message || '叫号失败';
+    // 后端文案直接透出（含「今日有 N 位候诊患者但未能取号」这类诊断信息），
+    // 只有确认是「真没人」时才换成给医生的行动指引 —— 用 includes('候诊患者') 会把
+    // 「有候诊患者但取号失败」也吞成「没有候诊患者」，把系统故障说成正常空队列。
+    if (msg.includes('没有候诊患者')) {
+      ElMessage.warning('当前科室没有候诊患者（患者需先在分诊站签到入队）');
+    } else {
+      ElMessage.error(msg);
+    }
+  }
+};
+// ========== 重呼当前患者 ==========
+const handleRecallPatient = async () => {
+  if (!currentCalledPatient.value) {
+    ElMessage.warning('当前没有就诊中的患者');
+    return;
+  }
+  try {
+    await recallPatient(currentCalledPatient.value.id);
+    ElMessage.success(`已重呼 ${currentCalledPatient.value.patientName}`);
+  } catch (error) {
+    ElMessage.error(error.message || '重呼失败');
+  }
+};
+// ========== 呼叫指定患者（插队）/ 回诊 ==========
+const handleCallSpecific = async (row) => {
+  // 队列 4-已就诊 的行走的是「回诊」：上一位只是被叫号自动收口、病历并未结诊。
+  const reconsult = row.queueStatus === 4;
+  try {
+    const msg = reconsult
+        ? (currentCalledPatient.value
+            ? `当前就诊中：${currentCalledPatient.value.patientName}，确认结束并回诊 ${row.patientName}？`
+            : `确认回诊 ${row.patientName}？回诊后继续书写的将是本次就诊的复诊记录。`)
+        : currentCalledPatient.value
+            ? `当前就诊中：${currentCalledPatient.value.patientName}，确认切换并呼叫 ${row.patientName}？`
+            : `确认呼叫 ${row.patientName}？`;
+    await ElMessageBox.confirm(msg, reconsult ? '回诊确认' : '呼叫确认', {
+      confirmButtonText: reconsult ? '确认回诊' : '确认呼叫',
+      cancelButtonText: '取消',
+      type: 'warning'
+    });
+    // 呼叫指定患者：接诊对象用服务端回执，前端不再「等 500ms 再猜」。
+    // 后端会自动收掉本医生的上一位「就诊中」（同一位医生同一时刻只能有一条）。
+    const res = await callPatient(row.id);
+    const called = res?.data || row;
+    if (called?.previousPatientName) {
+      ElMessage.info(`已自动结束上一位就诊：${called.previousPatientName}`);
+    }
+    await loadData();
+    await selectPatient(called);
+    ElMessage.success(`${called.reconsult || reconsult ? '已回诊' : '已呼叫'} ${called.patientName || row.patientName}`);
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '呼叫失败');
+    }
+  }
+};
+// ========== 暂离诊室 / 恢复接诊 ==========
+// 语义是医生自己的接诊状态（Redis DoctorStatusCacheService：0 空闲 / 1 接诊中 / 2 暂离），
+// 不是「暂停某个患者」。暂离后叫号与分诊台可据此提示该诊室医生暂离。
+const doctorPaused = ref(false);
+const loadDoctorStatus = async () => {
+  try {
+    const res = await getCurrentDoctorStatus();
+    doctorPaused.value = (res.data?.status ?? 0) === 2;
+  } catch (error) {
+    console.error('读取接诊状态失败:', error);
+  }
+};
+const handlePause = async () => {
+  const next = doctorPaused.value ? 0 : 2;
+  try {
+    await setDoctorStatus(next);
+    doctorPaused.value = next === 2;
+    ElMessage.success(next === 2 ? '已暂离，叫号将跳过本诊室' : '已恢复接诊');
+  } catch (error) {
+    ElMessage.error(error?.message || '接诊状态切换失败');
+  }
+};
+// ========== 结诊 ==========
+const handleComplete = async () => {
+  if (!currentPatient.value)
+    return;
+  // 检查病历必填项
+  const requiredFields = [
+    {field: recordForm.chiefComplaint, label: '主诉', value: 'chiefComplaint'},
+    {field: recordForm.presentIllness, label: '现病史', value: 'presentIllness'},
+    {field: recordForm.allergyHistory, label: '过敏史', value: 'allergyHistory'},
+    {field: recordForm.pastHistory, label: '既往史', value: 'pastHistory'},
+    {field: recordForm.personalHistory, label: '个人史', value: 'personalHistory'},
+    {field: recordForm.familyHistory, label: '家族史', value: 'familyHistory'},
+    {field: recordForm.temperature, label: '体温', value: 'temperature'},
+    {field: recordForm.systolicPressure, label: '收缩压', value: 'systolicPressure'},
+    {field: recordForm.diagnosis, label: '诊断', value: 'diagnosis'},
+  ];
+  const missingFields = requiredFields.filter(item => !item.field);
+  // 如果有未填写的必填项，提示医生
+  if (missingFields.length > 0) {
+    const missingListHtml = missingFields.map(item => `<div class="flex items-center justify-between py-1">
+        <span class="text-red-600">✗ ${item.label}</span>
+      </div>`).join('');
+    try {
+      await ElMessageBox.confirm(`<div class="space-y-2">
+          <div class="text-sm text-slate-600">以下必填项尚未填写：</div>
+          <div class="rounded-lg bg-red-50 p-3 text-sm">${missingListHtml}</div>
+          <div class="text-xs text-slate-400 mt-2">请先填写完整后再结诊，无相关内容请在字段旁点击「填写无」</div>
+        </div>`, '病历未完成', {
+        dangerouslyUseHTMLString: true,
+        confirmButtonText: '我知道了',
+        showCancelButton: false,
+        type: 'warning',
+      });
+    } catch (action) {
+      return;
+    }
+    return; // 不继续结诊，让医生先填写
+  }
+  // 校验处方必填项
+  const rxErrors = validateAllPrescriptions();
+  if (rxErrors.length > 0) {
+    const errorListHtml = rxErrors.map(e => `<div class="py-0.5">• ${e}</div>`).join('');
+    try {
+      await ElMessageBox.confirm(`<div class="space-y-2">
+          <div class="text-sm text-slate-600">处方必填项尚未填写完整：</div>
+          <div class="rounded-lg bg-red-50 p-3 text-sm max-h-40 overflow-y-auto">${errorListHtml}</div>
+          <div class="text-xs text-slate-400 mt-2">请先填写完整后再结诊。</div>
+        </div>`, '处方未完成', {
+        dangerouslyUseHTMLString: true,
+        confirmButtonText: '我知道了',
+        showCancelButton: false,
+        type: 'warning',
+      });
+    } catch (action) {
+      return;
+    }
+    return;
+  }
+  // 检查各项状态（包括暂存的检查检验）
+  const hasPrescriptions = prescriptionForm.details.length > 0;
+  const hasInspections = inspectionRecords.value.length > 0;
+  const hasLaboratories = laboratoryRecords.value.length > 0;
+  const hasAnyCharge = hasPrescriptions || hasInspections || hasLaboratories;
+  // 构建检查清单
+  const checkItems = [
+    {label: '已开具处方', checked: hasPrescriptions, critical: false},
+    {label: '已开具检查', checked: hasInspections, critical: false},
+    {label: '已开具检验', checked: hasLaboratories, critical: false},
+  ];
+  // 构建确认内容HTML
+  const checkListHtml = checkItems.map(item => `<div class="flex items-center gap-2 py-1.5">
+      <span class="${item.checked ? 'text-emerald-500' : 'text-amber-500'}">${item.checked ? '✓' : '○'}</span>
+      <span class="${item.checked ? 'text-slate-700' : 'text-slate-500'}">${item.label}</span>
+    </div>`).join('');
+  let warningHtml = '';
+  if (!hasAnyCharge) {
+    warningHtml = `<div class="mt-3 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-700">
+      ⚠ 当前没有开具任何处方/检查/检验，患者无需缴费。
+    </div>`;
+  }
+  try {
+    await ElMessageBox.confirm(`<div class="space-y-2">
+        <div class="text-sm text-slate-600">确认完成该患者的就诊？</div>
+        <div class="rounded-lg bg-slate-50 p-3 text-sm">${checkListHtml}</div>
+        ${warningHtml}
+        <div class="text-xs text-slate-400 mt-2">系统将自动保存并提交病历，生成收费单。</div>
+      </div>`, '结诊确认', {
+      dangerouslyUseHTMLString: true,
+      confirmButtonText: '确认完成',
+      cancelButtonText: '返回修改',
+      type: 'info',
+    });
+  } catch (action) {
+    return; // 用户取消
+  }
+  try {
+    // 获取患者信息
+    const patient = currentPatient.value;
+    // 构建提交数据
+    const submitData = {
+      // 患者信息
+      patientId: patient.patientId,
+      patientNo: patient.patientNo,
+      patientName: patient.patientName,
+      registId: patient.registId,
+      queueId: patient.id,
+      // 科室医生信息
+      deptId: patient.deptId,
+      deptName: patient.deptName,
+      doctorId: patient.doctorId,
+      doctorName: patient.doctorName,
+      // 病历信息
+      recordId: recordForm.id || null,
+      chiefComplaint: recordForm.chiefComplaint,
+      presentIllness: recordForm.presentIllness,
+      allergyHistory: recordForm.allergyHistory,
+      pastHistory: recordForm.pastHistory,
+      personalHistory: recordForm.personalHistory,
+      familyHistory: recordForm.familyHistory,
+      temperature: recordForm.temperature,
+      pulse: recordForm.pulse,
+      respiration: recordForm.respiration,
+      systolicPressure: recordForm.systolicPressure,
+      diastolicPressure: recordForm.diastolicPressure,
+      generalCondition: recordForm.generalCondition,
+      specialistExam: recordForm.specialistExam,
+      auxiliaryExam: recordForm.auxiliaryExam,
+      diagnosis: recordForm.diagnosis,
+      diagnosisCode: recordForm.diagnosisCode,
+      diagnosisName: recordForm.diagnosisName,
+      treatmentPlan: recordForm.treatmentPlan,
+      // 处方信息（所有处方）
+      prescriptions: buildPrescriptionPayload(),
+      // 检查/检验申请：批次E/E1 起**不再随病历提交** —— 开单那一刻就已经落库了，
+      // 病历保存只负责回填 recordId（后端 backfillApplyRecord）。
+      // 撤单请走列表上的「删除」（后端带缴费/执行/收费引用三重保护），
+      // 而不是"把本地数组里的行去掉"。
+    };
+    // 调用结诊提交接口
+    await submitMedicalRecord(submitData);
+    // 显示成功提示
+    ElMessage.success('结诊成功');
+    // 清空暂存的检查检验数据
+    inspectionRecords.value = [];
+    laboratoryRecords.value = [];
+    // 刷新队列
+    loadData();
+  } catch (error) {
+    if (error !== 'cancel')
+      ElMessage.error(error.message || '操作失败');
+  }
+};
+// ========== 建复诊（批次E/E6）==========
+// 位置：检查/检验「结果」条目的操作里 —— 报告回来 → 一键建复诊 → 直接接诊。
+// 复诊免挂号费（后端 waived：收费单金额 0 且直接置「已收费」，否则签不了到），
+// 并带上 **原病历ID** 做关联 —— 只建立引用关系，原病历一律不改。
+const canCreateRevisit = (item) => !!item?.execRecordId && !!recordForm.id && !!currentPatient.value;
+/**
+ * 该条既往病历是否就是本次复诊号关联的原病历。
+ * 雪花ID 前后端都按字符串走，统一 String() 比较，避免 number/string 不等。
+ */
+const isLinkedRevisitRecord = (record) => {
+  const linked = currentPatient.value?.revisitRecordId;
+  return !!linked && !!record?.id && String(record.id) === String(linked);
+};
+const handleCreateRevisit = async (item) => {
+  if (!currentPatient.value) {
+    ElMessage.warning('请先选择患者');
+    return;
+  }
+  // 复诊号必须挂在一份真实病历上；没保存病历就没有可关联的原病历
+  if (!recordForm.id) {
+    ElMessage.warning('请先保存病历，再建复诊（复诊号要关联本次病历）');
+    return;
+  }
+  const itemName = item?.inspectionItemName || item?.laboratoryItemName || '本次就诊';
+  const originLabel = recordForm.recordNo || String(recordForm.id);
+  try {
+    await ElMessageBox.confirm(`患者 ${currentPatient.value.patientName} 的「${itemName}」结果已回，确定为本次就诊创建复诊号？\n` +
+        `关联原病历：${originLabel}（原病历不改动），收不收费由「复诊收费策略」判定（铺底策略：当日回诊全免）。`, '建复诊', {
+      confirmButtonText: '确定创建',
+      cancelButtonText: '取消',
+      type: 'info'
+    });
+    // 当日回诊（来源 1）：不占号源、不选排班，它是同一次挂号的延续
+    await createRevisitRegistration({
+      patientId: currentPatient.value.patientId,
+      scheduleId: null, // 复诊不需要号源
+      settlementType: currentPatient.value.settlementType || 1,
+      medicalInsuranceType: currentPatient.value.medicalInsuranceType || '',
+      medicalInsuranceNo: currentPatient.value.medicalInsuranceNo || '',
+      visitType: 2, // 标记为复诊
+      revisitSource: REVISIT_SOURCE.SAME_DAY_RETURN,
+      revisitRecordId: recordForm.id, // 关联原病历（后端校验归属）
+    });
+    ElMessage.success('复诊号已创建（免挂号费），签到后即可接诊');
+    loadData();
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '创建失败');
+    }
+  }
+};
+// ========== 医嘱复诊预约（来源 2，sql/121） ==========
+const showRevisitAppoint = ref(false);
+const revisitAppointBusy = ref(false);
+/**
+ * 与上面「建复诊」的区别：建复诊是**当日回诊**（结果回来了，不占号源、按策略全免）；
+ * 这里是医生替患者约**未来某一次**就诊（拆线、化疗下一程、复查后再看），
+ * 它占号源、按「复诊收费策略」收钱，所以必须能在提交前看到金额。
+ */
+const openRevisitAppoint = () => {
+  if (!recordForm.id) {
+    ElMessage.warning('请先保存病历，再预约复诊（复诊号要关联本次病历）');
+    return;
+  }
+  showRevisitAppoint.value = true;
+};
+const handleRevisitAppoint = async (payload) => {
+  if (!currentPatient.value)
+    return;
+  revisitAppointBusy.value = true;
+  try {
+    const res = await createRevisitRegistration({
+      patientId: currentPatient.value.patientId,
+      // 医生替患者约未来时段 = 预约渠道，扣预约池（不许吃现场余号）
+      registSource: 4,
+      visitType: 2,
+      revisitSource: REVISIT_SOURCE.DOCTOR_ORDERED,
+      ...payload,
+    });
+    showRevisitAppoint.value = false;
+    ElMessage.success(`复诊号已预约${res.data?.registNo ? `（${res.data.registNo}）` : ''}，请让患者按预约时段来院`);
+    loadData();
+  } catch (error) {
+    ElMessage.error(error?.message || '预约复诊失败');
+  } finally {
+    revisitAppointBusy.value = false;
+  }
+};
+// ========== 临时保存 ==========
+const handleSaveRecord = async () => {
+  if (!currentPatient.value)
+    return;
+  try {
+    // 构建保存数据
+    const saveData = {
+      // 患者信息
+      patientId: currentPatient.value.patientId,
+      patientNo: currentPatient.value.patientNo,
+      patientName: currentPatient.value.patientName,
+      registId: currentPatient.value.registId,
+      queueId: currentPatient.value.id,
+      // 科室医生信息
+      deptId: currentPatient.value.deptId,
+      deptName: currentPatient.value.deptName,
+      doctorId: currentPatient.value.doctorId,
+      doctorName: currentPatient.value.doctorName,
+      // 病历信息
+      recordId: recordForm.id || null,
+      chiefComplaint: recordForm.chiefComplaint,
+      presentIllness: recordForm.presentIllness,
+      // G-10：仅当本会话用过 AI 草稿且终稿已与其不同才带草稿原文（后端据此算 diff 留痕）
+      aiDraftPresentIllness: (aiDraftAppliedText.value && recordForm.presentIllness !== aiDraftAppliedText.value)
+          ? aiDraftAppliedText.value : undefined,
+      allergyHistory: recordForm.allergyHistory,
+      pastHistory: recordForm.pastHistory,
+      personalHistory: recordForm.personalHistory,
+      familyHistory: recordForm.familyHistory,
+      temperature: recordForm.temperature,
+      pulse: recordForm.pulse,
+      respiration: recordForm.respiration,
+      systolicPressure: recordForm.systolicPressure,
+      diastolicPressure: recordForm.diastolicPressure,
+      generalCondition: recordForm.generalCondition,
+      skinMucosa: recordForm.skinMucosa,
+      headNeck: recordForm.headNeck,
+      chestLung: recordForm.chestLung,
+      heart: recordForm.heart,
+      abdomen: recordForm.abdomen,
+      spineLimbs: recordForm.spineLimbs,
+      nervousSystem: recordForm.nervousSystem,
+      specialistExam: recordForm.specialistExam,
+      auxiliaryExam: recordForm.auxiliaryExam,
+      diagnosis: recordForm.diagnosis,
+      diagnosisCode: recordForm.diagnosisCode,
+      diagnosisName: recordForm.diagnosisName,
+      treatmentPlan: recordForm.treatmentPlan,
+      // 处方信息（所有处方）
+      prescriptions: buildPrescriptionPayload(),
+      // 检查/检验申请：批次E/E1 起**不再随病历提交** —— 开单那一刻就已经落库了，
+      // 病历保存只负责回填 recordId（后端 backfillApplyRecord）。
+      // 撤单请走列表上的「删除」（后端带缴费/执行/收费引用三重保护），
+      // 而不是"把本地数组里的行去掉"。
+    };
+    // 调用保存接口
+    const res = await saveMedicalRecord(saveData);
+    if (res.data) {
+      recordForm.id = res.data;
+    }
+    recordSaved.value = true;
+    // 草稿会话结束：本次保存已产生 diff 留痕，下次保存不再重复带
+    aiDraftAppliedText.value = '';
+    ElMessage.success('病历保存成功');
+  } catch (error) {
+    ElMessage.error(error.message || '保存失败');
+  }
+};
+const handleRemoveDrug = (index) => {
+  prescriptionForm.details.splice(index, 1);
+  // 删除药品后重新预估
+  loadInsuranceInfo();
+  checkDrugSafety();
+};
+const handleAddEmptyDrug = () => {
+  const type = currentPrescriptionType.value;
+  // 如果该类型没有处方，先创建一个
+  if (!hasPrescriptionType(type)) {
+    const newPrescription = {
+      prescriptionType: type,
+      diagnosis: '',
+      usageInstruction: '',
+      details: [],
+    };
+    prescriptionList.value.push(newPrescription);
+    prescriptionForm.details = newPrescription.details;
+  }
+  const base = {
+    drugId: null, drugCode: '', drugName: '', genericName: '',
+    specification: '', dosageForm: '', unit: '盒', quantity: 1,
+    price: 0, usageDosage: '', amount: 0,
+  };
+  if (type === 3) {
+    // 中药饮片：总量/金额不手填，选药 + 填每剂克数后按剂数算出来
+    prescriptionForm.details.push({
+      ...base, unit: 'g', quantity: 0, singleDosage: '', frequency: '每日一剂',
+      route: tcmMethodDict.value[0]?.dictValue || '水煎服', duration: 7,
+    });
+  } else if (type === 2) {
+    // 中成药
+    prescriptionForm.details.push({
+      ...base, singleDosage: '', frequency: '一日三次', route: '口服', duration: 7,
+    });
+  } else {
+    // 西药
+    prescriptionForm.details.push({
+      ...base, singleDosage: '', frequency: '一日三次', route: '口服', duration: 7,
+    });
+  }
+};
+// ========== 处方必填校验 ==========
+const validatePrescription = (type) => {
+  const errors = [];
+  const isCurrent = type === currentPrescriptionType.value;
+  const prescription = prescriptionList.value.find(p => p.prescriptionType === type) || {};
+  const details = prescription.details || [];
+  if (details.length === 0)
+    return errors;
+  // 饮片方的剂数是「一张方一个」的处方头字段，后端强校验 1~30，且必须选代煎/自煎
+  if (type === 3) {
+    const doseCount = isCurrent ? prescriptionForm.doseCount : prescription.doseCount;
+    const decoctFlag = isCurrent ? prescriptionForm.decoctFlag : prescription.decoctFlag;
+    if (!doseCount || doseCount < 1 || doseCount > 30)
+      errors.push('中药饮片处方：请填写剂数（1~30 剂）');
+    if (decoctFlag !== 1 && decoctFlag !== 2)
+      errors.push('中药饮片处方：请选择煎服方式（代煎 / 自煎）');
+  }
+  details.forEach((item, idx) => {
+    const prefix = `${prescriptionTypeLabel(type)}处方第${idx + 1}项`;
+    if (!item.drugId)
+      errors.push(`${prefix}：请选择药品`);
+    if (!item.singleDosage)
+      errors.push(`${prefix}：请填写用量`);
+    if (!item.frequency)
+      errors.push(`${prefix}：请填写频次/用法`);
+    if (!item.route)
+      errors.push(`${prefix}：请填写给药途径/煎法`);
+    if (type === 3 && item.drugId && tcmPerDoseGrams(item) <= 0) {
+      errors.push(`${prefix}：每剂克数必须是数字（如 15，不要写「15g」「适量」）`);
+    }
+    if (!item.quantity || item.quantity <= 0)
+      errors.push(`${prefix}：请填写正确的总量/剂数`);
+    if (type !== 3 && (!item.duration || item.duration <= 0))
+      errors.push(`${prefix}：请填写天数`);
+  });
+  return errors;
+};
+const validateAllPrescriptions = () => {
+  return [1, 2, 3].flatMap(type => validatePrescription(type));
+};
+/**
+ * 病历提交用的处方载荷。剂数/煎服方式存在处方头，而当前 tab 的编辑态在 prescriptionForm 上，
+ * 所以「正在编的那张」取表单值、其余取各自对象上的值（两处提交站点共用，避免口径漂移）。
+ */
+const buildPrescriptionPayload = () => {
+  return prescriptionList.value
+      .filter((p) => p.details && p.details.length > 0)
+      .map((p) => {
+        const isCurrent = p.prescriptionType === currentPrescriptionType.value;
+        return {
+          prescriptionType: p.prescriptionType || 1,
+          doseCount: isCurrent ? prescriptionForm.doseCount : p.doseCount,
+          decoctFlag: isCurrent ? prescriptionForm.decoctFlag : p.decoctFlag,
+          details: p.details.map((d) => ({
+            drugId: d.drugId,
+            drugName: d.drugName,
+            specification: d.specification,
+            unit: d.unit,
+            singleDosage: d.singleDosage,
+            frequency: d.frequency,
+            route: d.route,
+            quantity: d.quantity,
+            duration: d.duration,
+            remark: d.remark,
+          })),
+        };
+      });
+};
+const handleDrugSelectForRecord = (record, val) => {
+  const drug = drugResults.value.find((d) => d.id === val);
+  if (drug) {
+    record.drugId = drug.id;
+    record.drugCode = drug.drugCode;
+    record.drugName = drug.drugName;
+    record.specification = drug.specification || '';
+    record.unit = drug.unit || '盒';
+    record.price = drug.retailPrice || 0;
+    // 饮片按克开方：行上存的单价一律是「元/克」，界面预估和后端落库同一个口径
+    // （元/kg 留在行上迟早被谁乘一次克数，金额直接放大一千倍）
+    if (currentPrescriptionType.value === 3) {
+      record.price = tcmPerGramPrice(drug);
+      applyTcmGrams(record);
+    } else {
+      record.amount = record.quantity * (drug.retailPrice || 0);
+    }
+  }
+};
+// ========== 检查/检验申请（含知情同意） ==========
+const pendingInspectionIdx = ref(0);
+const handleAddEmptyInspection = () => {
+  inspectionRecords.value.push({
+    _pendingIdx: ++pendingInspectionIdx.value,
+    inspectionItemId: null,
+    inspectionItemName: '',
+    // 批次E/F：不再写 applyStatus=0 —— E4 收口后申请单只有 1已提交/2已缴费/6已取消，
+    // 未落库的空行没有申请单状态可言（有没有落库看 id）
+    bodyPart: '',
+    inspectionPurpose: '',
+    preparation: '',
+    clinicalDiagnosis: '',
+    isEmergency: 0,
+    price: 0,
+  });
+};
+const pendingLaboratoryIdx = ref(0);
+const handleAddEmptyLaboratory = () => {
+  laboratoryRecords.value.push({
+    _pendingIdx: ++pendingLaboratoryIdx.value,
+    laboratoryItemId: null,
+    laboratoryItemName: '',
+    specimenType: '',
+    laboratoryPurpose: '',
+    clinicalDiagnosis: '',
+    isFasting: 0,
+    isEmergency: 0,
+    price: 0,
+  });
+};
+// 批次E/F：删掉了 handleSaveInspection / handleSaveLaboratory。
+// 它们是 E1 之前的「暂存本地数组、等结诊再提交」路径，两个函数都已没有任何调用点，
+// 而它们那句「已添加（结诊后生效）」与现状相反 —— 现在选完项目即刻落库、即刻待缴费。
+// 留着只会让下一个人以为还有第二条开单链路。真正的开单在 handleSaveInspectionRow /
+// submitInspectionApply（选项目即落库）。
+// ========== 删除申请单（批次E/E2：走后端，带保护） ==========
+/**
+ * 删除检查申请。
+ *
+ * 原实现只从本地数组 splice —— 申请单从「开单即落库」之后就是真实存在的单据，
+ * 只删界面等于"界面上没了、库里还在"，刷新一下又回来。
+ * 现在走后端删除接口，能不能删由后端说了算（已缴费 / 已生成检查记录 /
+ * 已被收费单引用 一律拒绝并给原因），前端不自己判状态。
+ */
+const handleDeleteInspectionRecord = async (idx) => {
+  const row = inspectionRecords.value[idx];
+  if (!row)
+    return;
+  if (!row.id) {
+    // 还没落库的空行（选了项目就会立刻落库，所以这只在极端情况下出现）
+    inspectionRecords.value.splice(idx, 1);
+    loadInsuranceInfo();
+    return;
+  }
+  if (row.canDelete === false) {
+    ElMessage.warning(row.deleteBlockReason || '当前状态不允许删除');
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(`确定删除检查申请「${row.inspectionItemName}」？`, '删除检查申请', {
+      confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'
+    });
+  } catch {
+    return;
+  }
+  try {
+    await deleteInspectionApply(row.id);
+    inspectionRecords.value.splice(idx, 1);
+    ElMessage.success('检查申请已删除');
+    loadInsuranceInfo();
+  } catch (error) {
+    ElMessage.error(error.message || '删除失败');
+  }
+};
+const handleDeleteLaboratoryRecord = async (idx) => {
+  const row = laboratoryRecords.value[idx];
+  if (!row)
+    return;
+  if (!row.id) {
+    laboratoryRecords.value.splice(idx, 1);
+    loadInsuranceInfo();
+    return;
+  }
+  if (row.canDelete === false) {
+    ElMessage.warning(row.deleteBlockReason || '当前状态不允许删除');
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(`确定删除检验申请「${row.laboratoryItemName}」？`, '删除检验申请', {
+      confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'
+    });
+  } catch {
+    return;
+  }
+  try {
+    await deleteLaboratoryApply(row.id);
+    laboratoryRecords.value.splice(idx, 1);
+    ElMessage.success('检验申请已删除');
+    loadInsuranceInfo();
+  } catch (error) {
+    ElMessage.error(error.message || '删除失败');
+  }
+};
+// ========== 查看报告 ==========
+/**
+ * 影像随报告一起可见（sql/137 简化 PACS）。
+ *
+ * 弹框内容是 HTML 字符串，塞不进带缩放/调窗状态的阅片器组件，所以这里只铺缩略图；
+ * 放大与窗宽窗位在检查/检验工作站的阅片器里做。地址必须走 /api/ 前缀
+ * （后端 context-path=/api，静态资源映射在 /uploads/**），与病历引导单同一口径。
+ */
+const htmlEsc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;'
+}[c]));
+const examImagesHtml = (images, label) => {
+  const list = Array.isArray(images) ? images.filter((i) => i?.fileUrl) : [];
+  if (!list.length) {
+    return `<div class="border-t pt-3 text-xs text-slate-400">本次${label}未挂影像帧</div>`;
+  }
+  const cells = list.map((i) => `<div>
+      <img src="/api/${htmlEsc(i.fileUrl)}" alt="${htmlEsc(i.fileName || '影像')}"
+           class="max-h-40 w-full rounded border border-slate-200 bg-black object-contain"/>
+      <p class="mt-1 text-[11px] text-slate-500">#${htmlEsc(i.seq)} ${htmlEsc(i.modalityText || '未标模态')}${i.source === 2 ? '（模拟）' : ''}</p>
+    </div>`).join('');
+  return `<div class="border-t pt-3">
+      <p class="font-bold text-slate-700 mb-2">影像（共 ${list.length} 帧，放大请在工作站阅片器打开）</p>
+      <div class="grid grid-cols-4 gap-2 rounded bg-slate-900 p-2">${cells}</div>
+    </div>`;
+};
+/**
+ * 申请单/执行状态 → el-tag 颜色。
+ *
+ * 颜色只是提示，**文案一律用后端给的 `execStatusText`**：
+ * 检查与检验的 record_status 是两套不同码表（检查 2=已签到，检验 2=已采样），
+ * 前端按码值自己翻译必然翻错 —— 医生站曾经就把"已挂号"显示成过"未知"。
+ */
+const applyTagType = (item) => {
+  if (item?.critical)
+    return 'danger';
+  const text = item?.execStatusText || '';
+  if (text === '待缴费')
+    return 'warning';
+  if (text === '已取消')
+    return 'info';
+  if (text === '已出结果' || text === '已审核' || text === '已发布')
+    return 'success';
+  if (['检查中', '检测中', '已到检', '已采样', '已接收', '已缴费待执行'].includes(text))
+    return 'primary';
+  return 'info';
+};
+/**
+ * 查看检查报告。
+ *
+ * 原实现直接读申请单上的 `resultDescription / resultConclusion` —— 这两个字段
+ * 从来就不在申请单 VO 里，所以它永远只显示"检查项目/部位/目的"，外加一张写死的
+ * `huichuan.png` 假影像。现在按执行记录 ID 真去取报告。
+ */
+const handleViewInspectionReport = async (item) => {
+  if (!item?.execRecordId) {
+    ElMessage.warning('该检查还没有对应的检查记录，暂无报告可看');
+    return;
+  }
+  let data = null;
+  try {
+    const res = await getInspectionDetail(item.execRecordId);
+    data = res.data || {};
+  } catch (error) {
+    ElMessage.error(error.message || '报告加载失败');
+    return;
+  }
+  const record = data.record || {};
+  const report = data.report || {};
+  const escapeHtml = (v) => String(v ?? '-').replace(/[&<>"]/g, (c) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;'
+  }[c]));
+  const block = (title, body, cls = 'bg-slate-50') => body
+      ? `<div class="border-t pt-3"><p class="font-bold text-slate-700 mb-2">${title}</p>
+         <p class="text-sm ${cls} p-2 rounded whitespace-pre-wrap">${escapeHtml(body)}</p></div>`
+      : '';
+  ElMessageBox.alert(`<div class="space-y-3 w-full">
+      <div class="grid grid-cols-2 gap-2 text-sm">
+        <p><strong>检查项目：</strong>${escapeHtml(record.inspectionItemName || item.inspectionItemName)}</p>
+        <p><strong>检查部位：</strong>${escapeHtml(record.bodyPart || item.bodyPart)}</p>
+        <p><strong>检查科室：</strong>${escapeHtml(record.inspectionDeptName)}</p>
+        <p><strong>报告医师：</strong>${escapeHtml(report.auditBy || record.executeBy)}</p>
+        <p><strong>记录状态：</strong>${escapeHtml(item.execStatusText)}</p>
+        <p><strong>报告编号：</strong>${escapeHtml(report.reportNo)}</p>
+      </div>
+      ${block('检查所见', report.reportContent || record.resultDescription)}
+      ${block('影像诊断/印象', report.conclusion || record.resultConclusion, 'bg-emerald-50')}
+      ${block('建议', report.suggestions, 'bg-blue-50')}
+      ${examImagesHtml(data.images, '检查')}
+      ${!report.reportNo && !record.resultConclusion
+      ? '<div class="border-t pt-3 text-xs text-slate-400">该检查尚无报告内容（当前状态：'
+      + escapeHtml(item.execStatusText) + '）</div>' : ''}
+    </div>`, '检查报告详情', {
+    dangerouslyUseHTMLString: true, confirmButtonText: '关闭',
+    customStyle: {'max-width': '70%', 'width': '70%'}
+  });
+};
+const handleViewLaboratoryReport = async (item) => {
+  // 加载检验结果明细
+  // 优先用后端给的 execRecordId（批次E/E5：申请单 VO 已直接带执行记录 ID），
+  // 拿不到才退回"按 applyId 在记录列表里翻"的老办法（多一次全量查询，且依赖 applyId 能对上）。
+  let recordId = item?.execRecordId;
+  try {
+    if (!recordId) {
+      const recordRes = await getLaboratoryRecordList({
+        patientId: currentPatient.value?.patientId
+      });
+      const records = recordRes.data?.records || [];
+      const found = records.find((r) => r.applyId == item.id);
+      if (!found) {
+        ElMessage.warning('未找到对应的检验记录');
+        return;
+      }
+      recordId = found.id;
+    }
+    const detailRes = await getLaboratoryDetail(recordId);
+    const detailRecord = detailRes.data?.record || {};
+    const results = detailRes.data?.results || [];
+    // 统计异常项目：只统计已判定为异常的，未判定项不能算进正常也不能算进异常
+    const abnormalCount = results.filter((r) => r.abnormalFlag && r.abnormalFlag !== 0).length;
+    const unjudgedCount = results.filter((r) => String(r.judgeNote || '').startsWith('未判定：')).length;
+    // 构建结果明细表格
+    let resultsHtml = '';
+    if (results.length > 0) {
+      resultsHtml = `
+        <div class="border-t pt-3">
+          <div class="flex items-center justify-between mb-2">
+            <p class="font-bold text-slate-700">检验结果明细（共 ${results.length} 项，异常 ${abnormalCount} 项${unjudgedCount > 0 ? `，未判定 ${unjudgedCount} 项` : ''}）</p>
+          </div>
+          <table class="w-full text-sm border-collapse">
+            <thead>
+              <tr class="bg-slate-100">
+                <th class="border border-slate-300 px-3 py-2 text-left">项目名称</th>
+                <th class="border border-slate-300 px-3 py-2 text-left">结果</th>
+                <th class="border border-slate-300 px-3 py-2 text-left">单位</th>
+                <th class="border border-slate-300 px-3 py-2 text-left">参考范围</th>
+                <th class="border border-slate-300 px-3 py-2 text-left">状态</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${results.map((r) => {
+        // 一律用后端算好的 abnormalFlagText。
+        // 不要用 abnormalFlag 写三目判断：未判定时它也是 0，与「正常」同值，
+        // 非 1/2/3 就显示「正常」会把「不知道」当成「正常」给医生看。
+        const flagText = r.abnormalFlagText || '—';
+        const isAbnormal = flagText === '偏高' || flagText === '偏低' || flagText === '异常';
+        const isUnjudged = flagText === '未判定';
+        const tagClass = isAbnormal
+            ? 'bg-red-100 text-red-600'
+            : isUnjudged
+                ? 'bg-amber-100 text-amber-700'
+                : 'bg-green-100 text-green-600';
+        return `
+                <tr class="${isAbnormal ? 'bg-red-50' : isUnjudged ? 'bg-amber-50' : ''}">
+                  <td class="border border-slate-300 px-3 py-2">${r.laboratoryItemName}</td>
+                  <td class="border border-slate-300 px-3 py-2 ${isAbnormal ? 'text-red-600 font-bold' : ''}">${r.resultValue || '-'}</td>
+                  <td class="border border-slate-300 px-3 py-2">${r.resultUnit || '-'}</td>
+                  <td class="border border-slate-300 px-3 py-2">${r.referenceRange || '-'}</td>
+                  <td class="border border-slate-300 px-3 py-2">
+                    <span class="inline-block px-2 py-0.5 rounded text-xs font-medium ${tagClass}">${flagText}</span>
+                    ${isUnjudged && r.judgeNote ? `<div class="mt-0.5 text-[11px] text-slate-500">${r.judgeNote}</div>` : ''}
+                  </td>
+                </tr>
+              `;
+      }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+    // 检验结论/诊断
+    const diagnosisHtml = detailRecord.diagnosis ? `
+      <div class="border-t pt-3">
+        <p class="font-bold text-slate-700 mb-2">检验结论：</p>
+        <div class="rounded-lg bg-blue-50 p-3 text-sm text-slate-700">${detailRecord.diagnosis}</div>
+      </div>
+    ` : '';
+    // 建议
+    const suggestionsHtml = detailRecord.suggestions ? `
+      <div class="border-t pt-3">
+        <p class="font-bold text-slate-700 mb-2">建议：</p>
+        <div class="rounded-lg bg-amber-50 p-3 text-sm text-slate-700">${detailRecord.suggestions}</div>
+      </div>
+    ` : '';
+    ElMessageBox.alert(`<div class="space-y-3">
+        <div class="grid grid-cols-2 gap-2 text-sm">
+          <p><strong>检验项目：</strong>${detailRecord.laboratoryItemName || item.laboratoryItemName}</p>
+          <p><strong>标本类型：</strong>${detailRecord.specimenType || item.specimenType || '-'}</p>
+          <p><strong>检验目的：</strong>${detailRecord.laboratoryPurpose || item.laboratoryPurpose || '-'}</p>
+          <p><strong>临床诊断：</strong>${detailRecord.clinicalDiagnosis || item.clinicalDiagnosis || '-'}</p>
+        </div>
+        ${resultsHtml}
+        ${diagnosisHtml}
+        ${suggestionsHtml}
+        ${examImagesHtml(detailRes.data?.images, '检验')}
+      </div>`, '检验报告详情', {
+      dangerouslyUseHTMLString: true, confirmButtonText: '关闭', customStyle: {
+        'max-width': '40%'
+      }
+    });
+  } catch (error) {
+    ElMessage.error(error.message || '获取报告失败');
+  }
+};
+// ========== 打印指引单 ==========
+const guidePdfUrl = ref('');
+const loadingGuide = ref(false);
+const loadGuideContent = async () => {
+  if (!recordForm.guidePdfPath) {
+    guidePdfUrl.value = '';
+    return;
+  }
+  loadingGuide.value = true;
+  try {
+    // 直接使用后端地址访问PDF uploads/guide/20260915/MR202609151809310002.pdf
+    guidePdfUrl.value = `/api/${recordForm.guidePdfPath}`;
+  } catch (e) {
+    guidePdfUrl.value = '';
+  } finally {
+    loadingGuide.value = false;
+  }
+};
+const printGuidePdf = () => {
+  if (!guidePdfUrl.value)
+    return;
+  const printWindow = window.open(guidePdfUrl.value, '_blank');
+  if (printWindow) {
+    printWindow.onload = () => {
+      printWindow.print();
+    };
+  }
+};
+watch(() => showGuideSheetDialog.value, (val) => {
+  if (val)
+    loadGuideContent();
+});
+// ========== 打印处方 ==========
+const printPrescriptions = () => {
+  const patient = currentPatient.value;
+  if (!patient)
+    return;
+  let html = `
+    <html><head><title>处方笺</title>
+    <style>
+      body { font-family: SimSun, serif; padding: 40px; font-size: 14px; }
+      .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+      .header h1 { font-size: 24px; margin: 0; }
+      .info { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 13px; }
+      .rx-title { font-size: 16px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 5px; margin: 20px 0 10px; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+      th, td { border: 1px solid #000; padding: 6px 10px; text-align: left; font-size: 13px; }
+      th { background: #f5f5f5; }
+      .footer { margin-top: 30px; display: flex; justify-content: space-between; font-size: 13px; }
+      @media print { body { padding: 20px; } }
+    </style></head><body>
+    <div class="header"><h1>处 方 笺</h1></div>
+    <div class="info">
+      <span>患者：${patient.patientName}</span>
+      <span>性别：${patientGenderText(patient.gender)}</span>
+      <span>年龄：${patient.age}岁</span>
+      <span>科室：${patient.deptName}</span>
+      <span>医生：${patient.doctorName}</span>
+    </div>
+  `;
+  const hasAny = prescriptionList.value.some(p => p.details && p.details.length > 0);
+  if (!hasAny) {
+    html += '<div style="text-align:center;color:#999;padding:40px;">无处方</div>';
+  } else {
+    prescriptionList.value.forEach(p => {
+      if (!p.details || p.details.length === 0)
+        return;
+      html += `<div class="rx-title">${prescriptionTypeLabel(p.prescriptionType)}处方</div>`;
+      html += `<table><thead><tr><th>药品名称</th><th>规格</th><th>数量</th><th>用法</th><th>频次</th><th>天数</th></tr></thead><tbody>`;
+      p.details.forEach((d) => {
+        html += `<tr>
+          <td>${d.drugName || '-'}</td>
+          <td>${d.specification || '-'}</td>
+          <td>${d.quantity || '-'} ${d.unit || ''}</td>
+          <td>${d.route || '-'}</td>
+          <td>${d.frequency || '-'}</td>
+          <td>${d.duration || '-'}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+    });
+  }
+  html += `
+    <div class="footer">
+      <span>医师签名：${patient.doctorName || ''}（已电子签名·结诊时自动签署，可验签）</span>
+      <span>日期：${new Date().toLocaleDateString('zh-CN')}</span>
+    </div>
+    </body></html>`;
+  const printWindow = window.open('', '_blank');
+  if (printWindow) {
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.onload = () => printWindow.print();
+  }
+};
+// 加载全部药品列表
+const loadAllDrugs = async () => {
+  drugLoading.value = true;
+  try {
+    const types = [1, 2, 3];
+    await Promise.all(types.map(async (type) => {
+      const res = await getDrugSelectList({drugType: type});
+      drugResultsByType[type].value = res.data || [];
+    }));
+  } catch (error) {
+    console.error('加载药品列表失败:', error);
+  } finally {
+    drugLoading.value = false;
+  }
+};
+// 加载全部检查项目
+const loadAllInspectionItems = async () => {
+  inspectionItemLoading.value = true;
+  try {
+    const res = await getInspectionSelectList();
+    inspectionItemResults.value = res.data || [];
+  } catch (error) {
+    console.error('加载检查项目失败:', error);
+  } finally {
+    inspectionItemLoading.value = false;
+  }
+};
+// 加载全部检验项目
+const loadAllLaboratoryItems = async () => {
+  laboratoryItemLoading.value = true;
+  try {
+    const res = await getLaboratorySelectList();
+    laboratoryItemResults.value = res.data || [];
+  } catch (error) {
+    console.error('加载检验项目失败:', error);
+  } finally {
+    laboratoryItemLoading.value = false;
+  }
+};
+// ------------------------------------------------------------------
+// 开住院证（门诊 → 住院的入口）
+//
+// 门诊医生判断患者需要住院时，在这里开一张住院证。开完患者拿着证到入院处排床收治，
+// 入院记录会记下：来源挂号号、来源住院证号、开证科室与医生、拟诊 —— 这就是"打通"。
+//
+// 不能替医生猜的事情一律不猜：
+//  · 拟收治科室必须医生选（患者住哪个科是临床决策，不是系统能推的）；
+//  · 拟诊默认带过来自「诊断」输入框的值，医生可以改，改了就以改的为准。
+// ------------------------------------------------------------------
+const orderDialogVisible = ref(false);
+const orderSubmitting = ref(false);
+const orderForm = reactive({
+  // 科室 ID 也用字符串承载：后端是 Long，Jackson 能精确解析数字字符串，
+  // 而前端一旦 Number() 就会在不经意间改掉大 ID 的末几位。
+  applyDeptId: '',
+  diagnosisCode: '',
+  diagnosisName: '',
+  diagnosisNote: '',
+  expectAdmitTime: '',
+  remark: '',
+});
+const openOrderDialog = () => {
+  if (!currentPatient.value)
+    return ElMessage.warning('请先呼叫患者');
+  // 拟诊预填：优先取病历里已录入的诊断名称/编码，没有就留空让医生填（不猜）
+  const diagCode = (patientDetail.value?.diagnosisCode || recordForm.diagnosisCode || '').split(',')[0]?.trim() || '';
+  const diagName = (patientDetail.value?.diagnosisName || recordForm.diagnosisName || '').split(',')[0]?.trim() || '';
+  Object.assign(orderForm, {
+    applyDeptId: '',
+    diagnosisCode: diagCode,
+    diagnosisName: diagName,
+    diagnosisNote: '',
+    expectAdmitTime: '',
+    remark: '',
+  });
+  orderDialogVisible.value = true;
+};
+const submitOrder = async () => {
+  if (!orderForm.applyDeptId)
+    return ElMessage.warning('请选择拟收治科室');
+  if (!orderForm.diagnosisName)
+    return ElMessage.warning('请填写拟诊（住院证的诊断是入院处排床的依据，不能空着）');
+  if (!currentPatient.value)
+    return;
+  orderSubmitting.value = true;
+  try {
+    const p = currentPatient.value;
+    const dept = departments.value.find((d) => String(d.id) === String(orderForm.applyDeptId));
+    // 注意：所有 ID 一律**原样以字符串**传给后端，绝不做 Number() 转换。
+    // 雪花ID 是 19 位（约 2.1e18），远超 JS 的安全整数 2^53（9.007e15），
+    // Number() 会静默改掉末几位 —— 实测挂号 ID ...834 被转成 ...800，
+    // 于是住院证上记的是一个**不存在的挂号号**，而且一眼看不出来。
+    const res = await createAdmissionOrder({
+      registId: p.registId || null,
+      registNo: p.registNo || null,
+      patientId: p.patientId,
+      patientNo: p.patientNo || null,
+      patientName: p.patientName,
+      gender: p.gender ?? null,
+      age: p.age ?? null,
+      phone: patientDetail.value?.phone || null,
+      idCard: patientDetail.value?.idCard || null,
+      sourceDeptId: p.deptId || null,
+      sourceDeptName: p.deptName || null,
+      sourceDoctorId: p.doctorId || null,
+      sourceDoctorName: p.doctorName || null,
+      applyDeptId: orderForm.applyDeptId,
+      applyDeptName: dept?.deptName || null,
+      diagnosisCode: orderForm.diagnosisCode || null,
+      diagnosisName: orderForm.diagnosisName,
+      diagnosisNote: orderForm.diagnosisNote || null,
+      insuranceType: patientDetail.value?.medicalInsuranceType || null,
+      medicalInsuranceNo: patientDetail.value?.medicalInsuranceNo || null,
+      expectAdmitTime: orderForm.expectAdmitTime || null,
+      remark: orderForm.remark || null,
+    });
+    ElMessage.success(`住院证已开具（${res.data}），患者持证到入院处排床即可`);
+    orderDialogVisible.value = false;
+  } catch (e) {
+    ElMessage.error(e?.message || '开住院证失败');
+  } finally {
+    orderSubmitting.value = false;
+  }
+};
+onMounted(() => {
+  // 统一「带着目标患者进入」的入口。此前分成两条路（store 有患者→consumeSwitch()，
+  // URL 有 patientId→直接挂起），但两者语义完全相同——这次进来是为了接某个人——
+  // 分路的代价是以后每加一个入口都要重新推一遍时序。
+  //   ① 顶部搜索跳转：store 在组件挂载前已 setPatient（watch 的注册晚于这次写入，抓不到）
+  //   ② 刷新 / 直达 URL：store 从 sessionStorage 恢复，或只剩 URL 上的 patientId
+  const restored = currentPatientStore.patient;
+  const targetId = restored?.id || route.query.patientId;
+  if (targetId) {
+    pendingSwitch = {id: String(targetId), patientName: restored?.patientName || ''};
+    // 标记「为某个特定患者而来」：首屏不得自动选中队列里正在就诊的别人
+    enteredWithTarget = true;
+    // 记下这次切换已被本函数消费，避免 watch 之后把同一次再消费一遍
+    handledSwitchAt = currentPatientStore.switchedAt;
+    // 会话里没有当前患者、只有 URL 上的 id → 手输 / 外链进入，算一次显式意图（该有反馈）；
+    // 若 store 里有患者，那是切菜单/刷新重建的恢复，不重复提示（见 applyPendingSwitch）
+    if (!restored && route.query.patientId) {
+      urlIntent = true;
+    }
+  }
+  loadUserInfo();
+  loadTcmDicts();
+  loadDoctorStatus();
+  loadDepartments();
+  loadData();
+  loadTodoList();
+  loadDiagTemplates();
+  loadRxTemplates();
+  loadDrugPackages();
+  loadInspectionTemplates();
+  loadLaboratoryTemplates();
+  loadAllDrugs();
+  loadAllInspectionItems();
+  loadAllLaboratoryItems();
+  refreshTimer = setInterval(loadData, 30000);
+});
+onUnmounted(() => {
+  if (refreshTimer)
+    clearInterval(refreshTimer);
+});
+// ========== 批次B 三栏同屏：右栏医嘱面板折叠 / 费用抽屉 ==========
+const recordCollapsed = ref(false);
+const showChargeDrawer = ref(false);
+// 病历栏折叠只在**窄屏**才有意义。布局对调后（2026-09-26，用户：「医嘱面板可以做大一点，
+// 病历占的太多了」）医嘱栏才是 flex-1 主工作区 —— 真实 HIS 的开药检索表要摊十几列，
+// 病历是模板化低频录入，520px 单列文书够用。
+// 断点是算出来的：固定占位 = 侧边栏 256 + 页面左右留白 48 + 队列列 300 + 病历列 520 + 两个 12px 缝 24 = 1148，
+// 医嘱列 = 视口 - 1148；医嘱栏改造前就是 480px 固定宽，视口 ≥1628 时它已经不比当年窄，
+// 不该再有折叠开关。取 1640：此时医嘱列 492px；再窄才给「收起病历」的逃生门（折后病历 36px，医嘱列多出 484px）。
+// （队列列 2026-09-26 由 264 加宽到 300：急诊短号+三字姓名+「就诊中」徽章同排，264 下名字被 truncate 吃掉半个字）
+const COMPACT_BREAKPOINT = 1640;
+const compactViewport = ref(false);
+const syncCompactViewport = () => {
+  compactViewport.value = window.innerWidth <= COMPACT_BREAKPOINT;
+  // 从窄屏（可能正折着）拖宽到宽屏：病历列本就该常驻，顺手复位。
+  if (!compactViewport.value)
+    recordCollapsed.value = false;
+};
+syncCompactViewport();
+window.addEventListener('resize', syncCompactViewport);
+onUnmounted(() => window.removeEventListener('resize', syncCompactViewport));
+// 真正的折叠态 = 窄屏 + 用户点了收起；宽屏下恒为展开
+const recordColCollapsed = computed(() => compactViewport.value && recordCollapsed.value);
+// 历史就诊：患者级跨就诊次，用弹窗打开（不打断接诊），内嵌 CDR 全景时间轴
+const showPatientDetail = ref(false);
+// 患者条上的到达时间（队列里有 arriveTime 才有值）
+const arriveText = computed(() => {
+  const t = currentPatient.value?.arriveTime;
+  return t ? formatArriveTime(t) + ' 到达' : '';
+});
+</script>
 
 <style scoped>
 /* 诊室叫号面板：白底卡片（与页面其余卡片同底），号码用主色做视觉主体 */

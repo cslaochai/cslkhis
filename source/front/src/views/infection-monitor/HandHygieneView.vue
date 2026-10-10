@@ -1,3 +1,9 @@
+<template>
+  <div class="hand-hygiene-view" data-testid="hand-hygiene-view">
+    <HandHygienePanel/>
+  </div>
+</template>
+
 <script setup>
 /**
  * 手卫生依从性（菜单 617 / 路由 /hand-hygiene，sql/165）
@@ -11,12 +17,8 @@
 import HandHygienePanel from '@/components/his/HandHygienePanel.vue'
 </script>
 
-<template>
-  <div class="hand-hygiene-view" data-testid="hand-hygiene-view">
-    <HandHygienePanel />
-  </div>
-</template>
-
 <style scoped>
-.hand-hygiene-view { padding: 4px; }
+.hand-hygiene-view {
+  padding: 4px;
+}
 </style>

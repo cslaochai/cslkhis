@@ -1,3 +1,32 @@
+<template>
+  <div class="p-6">
+    <el-card v-loading="loading" shadow="never">
+      <template #header>
+        <span class="font-medium text-slate-700">基础配置</span>
+      </template>
+      <el-form ref="formRef" :model="basicConfig" :rules="rules" class="max-w-xl" label-width="120px">
+        <el-form-item label="医院名称" prop="hospitalName">
+          <el-input v-model="basicConfig.hospitalName"/>
+        </el-form-item>
+        <el-form-item label="医院地址" prop="hospitalAddress">
+          <el-input v-model="basicConfig.hospitalAddress"/>
+        </el-form-item>
+        <el-form-item label="联系电话" prop="hospitalPhone">
+          <el-input v-model="basicConfig.hospitalPhone"/>
+        </el-form-item>
+        <el-form-item label="邮箱" prop="hospitalEmail">
+          <el-input v-model="basicConfig.hospitalEmail"/>
+        </el-form-item>
+        <el-form-item>
+          <el-button v-perm="'system:config:add'" :icon="Check" :loading="saving" type="primary"
+                     @click="handleSaveBasic">保存配置
+          </el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+  </div>
+</template>
+
 <script lang="js" setup>
 import {onMounted, ref} from 'vue'
 import {ElMessage} from 'element-plus'
@@ -48,32 +77,3 @@ const handleSaveBasic = async () => {
 
 onMounted(loadConfig)
 </script>
-
-<template>
-  <div class="p-6">
-    <el-card v-loading="loading" shadow="never">
-      <template #header>
-        <span class="font-medium text-slate-700">基础配置</span>
-      </template>
-      <el-form ref="formRef" :model="basicConfig" :rules="rules" class="max-w-xl" label-width="120px">
-        <el-form-item label="医院名称" prop="hospitalName">
-          <el-input v-model="basicConfig.hospitalName"/>
-        </el-form-item>
-        <el-form-item label="医院地址" prop="hospitalAddress">
-          <el-input v-model="basicConfig.hospitalAddress"/>
-        </el-form-item>
-        <el-form-item label="联系电话" prop="hospitalPhone">
-          <el-input v-model="basicConfig.hospitalPhone"/>
-        </el-form-item>
-        <el-form-item label="邮箱" prop="hospitalEmail">
-          <el-input v-model="basicConfig.hospitalEmail"/>
-        </el-form-item>
-        <el-form-item>
-          <el-button v-perm="'system:config:add'" :icon="Check" :loading="saving" type="primary"
-                     @click="handleSaveBasic">保存配置
-          </el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
-  </div>
-</template>

@@ -1,11 +1,236 @@
-<script setup lang="js">
-import { ref, onMounted, reactive } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, View, Switch, Edit } from '@element-plus/icons-vue'
-import { getEmployeeList, getEmployeeDetail, updateEmployee, getDepartmentTree, getDictDataMapList } from '@/api/system'
-import { PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/lib/pagination'
-import { useTableMaxHeight } from '@/lib/useTableMaxHeight'
-import { patientGenderText } from '@/lib/patientGender'
+<template>
+  <div>
+    <!-- 搜索区域（两卡式列表页，口径参照 views/system/user/UserView.vue） -->
+    <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
+      <el-form :model="searchForm" inline>
+        <el-form-item label="医生姓名">
+          <el-input
+              v-model="searchForm.empName"
+              clearable
+              placeholder="请输入医生姓名"
+              @keyup.enter="handleSearch"
+          />
+        </el-form-item>
+        <el-form-item label="所属科室">
+          <el-tree-select
+              v-model="searchForm.deptId"
+              :data="deptList"
+              :props="{ label: 'deptName', value: 'id', children: 'children' }"
+              check-strictly
+              class="!w-48"
+              clearable
+              placeholder="请选择科室"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button :icon="Search" type="primary" @click="handleSearch">搜索</el-button>
+          <el-button :icon="Refresh" @click="handleReset">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <!-- 表格区域：body 置 0 内边距让表格全幅贴边，max-height 限高、超高内部滚动 -->
+    <el-card class="table-card" shadow="never">
+      <el-table v-loading="loading" :data="tableData" :max-height="tableMaxHeight" stripe>
+        <el-table-column label="工号" prop="empCode" width="200"/>
+        <el-table-column label="姓名" prop="empName" width="100"/>
+        <el-table-column label="性别" prop="gender" width="60">
+          <template #default="{ row }">
+            {{ patientGenderText(row.gender) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="科室" min-width="120" prop="deptName"/>
+        <el-table-column label="职称" prop="title" width="120">
+          <template #default="{ row }">
+            {{ getDictLabelByValue(titleOptions, row.title) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="擅长" min-width="180" prop="specialty">
+          <template #default="{ row }">
+            <span class="line-clamp-1">{{ row.specialty }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="联系电话" prop="phone" width="140"/>
+        <el-table-column align="center" label="专家号" prop="isExpert" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.isExpert === 1 ? 'success' : 'info'" size="small">
+              {{ row.isExpert === 1 ? '是' : '否' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column align="center" label="状态" prop="status" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+              {{ row.status === 1 ? '在岗' : '停用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column fixed="right" label="操作" width="250">
+          <template #default="{ row }">
+            <el-button :icon="View" link type="primary" @click="handleViewDetail(row)">详情</el-button>
+            <el-button :icon="Edit" link type="warning" @click="handleEdit(row)">编辑</el-button>
+            <el-button
+                :icon="Switch"
+                :type="row.status === 1 ? 'danger' : 'success'"
+                link
+                @click="handleToggleStatus(row)"
+            >
+              {{ row.status === 1 ? '禁用' : '启用' }}
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页：在流内紧跟表格底 -->
+      <div ref="footerRef" class="list-footer flex items-center justify-end">
+        <el-pagination
+            v-model:current-page="pagination.pageNum"
+            v-model:page-size="pagination.pageSize"
+            :page-sizes="PAGE_SIZES"
+            :total="pagination.total"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+        />
+      </div>
+    </el-card>
+
+    <!-- 详情对话框 -->
+    <el-dialog
+        v-model="detailVisible"
+        destroy-on-close
+        title="医生详情"
+        width="700px"
+    >
+      <div v-loading="detailLoading">
+        <template v-if="detailData">
+          <!-- 基本信息 -->
+          <div class="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <div class="flex items-center gap-4">
+              <div
+                  class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-xl font-bold text-white">
+                {{ detailData.empName?.charAt(0) }}
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-3">
+                  <h3 class="text-lg font-semibold text-slate-900">{{ detailData.empName }}</h3>
+                  <el-tag :type="detailData.status === 1 ? 'success' : 'danger'" size="small">
+                    {{ detailData.status === 1 ? '在岗' : '停用' }}
+                  </el-tag>
+                  <el-tag v-if="detailData.isExpert === 1" size="small" type="warning">专家</el-tag>
+                </div>
+                <p class="mt-1 text-sm text-slate-500">
+                  {{ getDictLabelByValue(titleOptions, detailData.title) }} · {{ detailData.deptName }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 详细信息 -->
+          <div class="grid grid-cols-2 gap-4 py-2 text-sm">
+            <div><span class="text-slate-400">工号：</span><span class="font-medium text-slate-700">{{
+                detailData.empCode
+              }}</span></div>
+            <div><span class="text-slate-400">性别：</span><span
+                class="font-medium text-slate-700">{{ patientGenderText(detailData.gender) }}</span></div>
+            <div><span class="text-slate-400">联系电话：</span><span
+                class="font-medium text-slate-700">{{ detailData.phone }}</span></div>
+            <div><span class="text-slate-400">邮箱：</span><span class="font-medium text-slate-700">{{
+                detailData.email
+              }}</span></div>
+            <div><span class="text-slate-400">学历：</span><span class="font-medium text-slate-700">{{
+                getDictLabelByValue(educationOptions, detailData.education)
+              }}</span></div>
+            <div><span class="text-slate-400">入职日期：</span><span
+                class="font-medium text-slate-700">{{ detailData.hireDate }}</span></div>
+            <div><span class="text-slate-400">职位：</span><span class="font-medium text-slate-700">{{
+                getDictLabelByValue(positionOptions, detailData.position)
+              }}</span></div>
+            <div><span class="text-slate-400">专家号费用：</span><span
+                class="font-medium text-slate-700">¥{{ detailData.expertPrice || 0 }}</span></div>
+            <div class="col-span-2"><span class="text-slate-400">执业科室：</span><span
+                class="font-medium text-slate-700">{{
+                (detailData.deptNames && detailData.deptNames.length > 0) ? detailData.deptNames.join('、') : detailData.deptName
+              }}</span></div>
+            <div class="col-span-2"><span class="text-slate-400">擅长：</span><span
+                class="font-medium text-slate-700">{{ detailData.specialty }}</span></div>
+          </div>
+        </template>
+      </div>
+      <template #footer>
+        <el-button @click="detailVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 编辑对话框 -->
+    <el-dialog
+        v-model="editVisible"
+        destroy-on-close
+        title="编辑医生"
+        width="500px"
+    >
+      <el-form v-loading="editLoading" :model="editForm" label-width="100px">
+        <el-form-item label="医生姓名" required>
+          <el-input v-model="editForm.empName" placeholder="请输入医生姓名"/>
+        </el-form-item>
+        <el-form-item label="性别">
+          <el-radio-group v-model="editForm.gender">
+            <el-radio :value="1">男</el-radio>
+            <el-radio :value="2">女</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="联系电话">
+          <el-input v-model="editForm.phone" placeholder="请输入联系电话"/>
+        </el-form-item>
+        <el-form-item label="主科室">
+          <span class="text-sm font-medium text-slate-700">{{ editForm.deptName || '-' }}</span>
+          <!--
+            原先这里是科室树选（可改），但后端入参里从来没有 deptId 这个字段，
+            选了也悄悄不生效。科室与角色统一在「系统管理 → 员工档案」的岗位表里配，
+            这里只读展示，避免两处配同一份授权。
+          -->
+          <p class="mt-1 text-xs text-slate-400">执业科室与角色请在员工档案的「岗位」中配置</p>
+        </el-form-item>
+        <el-form-item label="职称">
+          <el-select v-model="editForm.title" class="w-full" clearable placeholder="请选择职称">
+            <el-option
+                v-for="item in titleOptions"
+                :key="item.dictValue"
+                :label="item.dictLabel"
+                :value="item.dictValue"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="职位">
+          <el-select v-model="editForm.position" class="w-full" clearable placeholder="请选择职位">
+            <el-option
+                v-for="item in positionOptions"
+                :key="item.dictValue"
+                :label="item.dictLabel"
+                :value="item.dictValue"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="专家号">
+          <el-switch v-model="editForm.isExpert" active-value="1" inactive-value="0"/>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleEditSubmit">确定</el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script lang="js" setup>
+import {onMounted, ref} from 'vue'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {Edit, Refresh, Search, Switch, View} from '@element-plus/icons-vue'
+import {getDepartmentTree, getDictDataMapList, getEmployeeDetail, getEmployeeList, updateEmployee} from '@/api/system'
+import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
+import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
+import {patientGenderText} from '@/lib/patientGender'
 
 const loading = ref(false)
 const searchForm = ref({
@@ -213,211 +438,3 @@ const handleEditSubmit = async () => {
   }
 }
 </script>
-
-<template>
-  <div>
-    <!-- 搜索区域（两卡式列表页，口径参照 views/system/user/UserView.vue） -->
-    <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
-      <el-form :model="searchForm" inline>
-        <el-form-item label="医生姓名">
-          <el-input
-            v-model="searchForm.empName"
-            placeholder="请输入医生姓名"
-            clearable
-            @keyup.enter="handleSearch"
-          />
-        </el-form-item>
-        <el-form-item label="所属科室">
-          <el-tree-select
-            v-model="searchForm.deptId"
-            :data="deptList"
-            :props="{ label: 'deptName', value: 'id', children: 'children' }"
-            placeholder="请选择科室"
-            clearable
-            check-strictly
-            class="!w-48"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
-          <el-button :icon="Refresh" @click="handleReset">重置</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
-
-    <!-- 表格区域：body 置 0 内边距让表格全幅贴边，max-height 限高、超高内部滚动 -->
-    <el-card class="table-card" shadow="never">
-      <el-table :data="tableData" v-loading="loading" stripe :max-height="tableMaxHeight">
-        <el-table-column prop="empCode" label="工号" width="200" />
-        <el-table-column prop="empName" label="姓名" width="100" />
-        <el-table-column prop="gender" label="性别" width="60">
-          <template #default="{ row }">
-            {{ patientGenderText(row.gender) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="deptName" label="科室" min-width="120" />
-        <el-table-column prop="title" label="职称" width="120">
-          <template #default="{ row }">
-            {{ getDictLabelByValue(titleOptions, row.title) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="specialty" label="擅长" min-width="180">
-          <template #default="{ row }">
-            <span class="line-clamp-1">{{ row.specialty  }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="phone" label="联系电话" width="140" />
-        <el-table-column prop="isExpert" label="专家号" width="80" align="center">
-          <template #default="{ row }">
-            <el-tag :type="row.isExpert === 1 ? 'success' : 'info'" size="small">
-              {{ row.isExpert === 1 ? '是' : '否' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="80" align="center">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
-              {{ row.status === 1 ? '在岗' : '停用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="250" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" link :icon="View" @click="handleViewDetail(row)">详情</el-button>
-            <el-button type="warning" link :icon="Edit" @click="handleEdit(row)">编辑</el-button>
-            <el-button
-              :type="row.status === 1 ? 'danger' : 'success'"
-              link
-              :icon="Switch"
-              @click="handleToggleStatus(row)"
-            >
-              {{ row.status === 1 ? '禁用' : '启用' }}
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <!-- 分页：在流内紧跟表格底 -->
-      <div ref="footerRef" class="list-footer flex items-center justify-end">
-        <el-pagination
-          v-model:current-page="pagination.pageNum"
-          v-model:page-size="pagination.pageSize"
-          :page-sizes="PAGE_SIZES"
-          :total="pagination.total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
-      </div>
-    </el-card>
-
-    <!-- 详情对话框 -->
-    <el-dialog
-      v-model="detailVisible"
-      title="医生详情"
-      width="700px"
-      destroy-on-close
-    >
-      <div v-loading="detailLoading">
-        <template v-if="detailData">
-          <!-- 基本信息 -->
-          <div class="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-            <div class="flex items-center gap-4">
-              <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-xl font-bold text-white">
-                {{ detailData.empName?.charAt(0) }}
-              </div>
-              <div class="flex-1">
-                <div class="flex items-center gap-3">
-                  <h3 class="text-lg font-semibold text-slate-900">{{ detailData.empName }}</h3>
-                  <el-tag :type="detailData.status === 1 ? 'success' : 'danger'" size="small">
-                    {{ detailData.status === 1 ? '在岗' : '停用' }}
-                  </el-tag>
-                  <el-tag v-if="detailData.isExpert === 1" type="warning" size="small">专家</el-tag>
-                </div>
-                <p class="mt-1 text-sm text-slate-500">
-                  {{ getDictLabelByValue(titleOptions, detailData.title) }} · {{ detailData.deptName  }}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <!-- 详细信息 -->
-          <div class="grid grid-cols-2 gap-4 py-2 text-sm">
-            <div><span class="text-slate-400">工号：</span><span class="font-medium text-slate-700">{{ detailData.empCode  }}</span></div>
-            <div><span class="text-slate-400">性别：</span><span class="font-medium text-slate-700">{{ patientGenderText(detailData.gender) }}</span></div>
-            <div><span class="text-slate-400">联系电话：</span><span class="font-medium text-slate-700">{{ detailData.phone  }}</span></div>
-            <div><span class="text-slate-400">邮箱：</span><span class="font-medium text-slate-700">{{ detailData.email  }}</span></div>
-            <div><span class="text-slate-400">学历：</span><span class="font-medium text-slate-700">{{ getDictLabelByValue(educationOptions, detailData.education) }}</span></div>
-            <div><span class="text-slate-400">入职日期：</span><span class="font-medium text-slate-700">{{ detailData.hireDate  }}</span></div>
-            <div><span class="text-slate-400">职位：</span><span class="font-medium text-slate-700">{{ getDictLabelByValue(positionOptions, detailData.position) }}</span></div>
-            <div><span class="text-slate-400">专家号费用：</span><span class="font-medium text-slate-700">¥{{ detailData.expertPrice || 0 }}</span></div>
-            <div class="col-span-2"><span class="text-slate-400">执业科室：</span><span class="font-medium text-slate-700">{{ (detailData.deptNames && detailData.deptNames.length > 0) ? detailData.deptNames.join('、') : detailData.deptName }}</span></div>
-            <div class="col-span-2"><span class="text-slate-400">擅长：</span><span class="font-medium text-slate-700">{{ detailData.specialty  }}</span></div>
-          </div>
-        </template>
-      </div>
-      <template #footer>
-        <el-button @click="detailVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 编辑对话框 -->
-    <el-dialog
-      v-model="editVisible"
-      title="编辑医生"
-      width="500px"
-      destroy-on-close
-    >
-      <el-form :model="editForm" label-width="100px" v-loading="editLoading">
-        <el-form-item label="医生姓名" required>
-          <el-input v-model="editForm.empName" placeholder="请输入医生姓名" />
-        </el-form-item>
-        <el-form-item label="性别">
-          <el-radio-group v-model="editForm.gender">
-            <el-radio :value="1">男</el-radio>
-            <el-radio :value="2">女</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="联系电话">
-          <el-input v-model="editForm.phone" placeholder="请输入联系电话" />
-        </el-form-item>
-        <el-form-item label="主科室">
-          <span class="text-sm font-medium text-slate-700">{{ editForm.deptName || '-' }}</span>
-          <!--
-            原先这里是科室树选（可改），但后端入参里从来没有 deptId 这个字段，
-            选了也悄悄不生效。科室与角色统一在「系统管理 → 员工档案」的岗位表里配，
-            这里只读展示，避免两处配同一份授权。
-          -->
-          <p class="mt-1 text-xs text-slate-400">执业科室与角色请在员工档案的「岗位」中配置</p>
-        </el-form-item>
-        <el-form-item label="职称">
-          <el-select v-model="editForm.title" placeholder="请选择职称" clearable class="w-full">
-            <el-option
-              v-for="item in titleOptions"
-              :key="item.dictValue"
-              :label="item.dictLabel"
-              :value="item.dictValue"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="职位">
-          <el-select v-model="editForm.position" placeholder="请选择职位" clearable class="w-full">
-            <el-option
-              v-for="item in positionOptions"
-              :key="item.dictValue"
-              :label="item.dictLabel"
-              :value="item.dictValue"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="专家号">
-          <el-switch v-model="editForm.isExpert" active-value="1" inactive-value="0" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleEditSubmit">确定</el-button>
-      </template>
-    </el-dialog>
-  </div>
-</template>

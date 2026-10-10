@@ -1,7 +1,7 @@
-<script setup lang="ts">
-import InpatientRecordWorkspace from '@/components/his/InpatientRecordWorkspace.vue'
-</script>
-
 <template>
-  <InpatientRecordWorkspace />
+  <InpatientRecordWorkspace/>
 </template>
+
+<script setup>
+import InpatientRecordWorkspace from '@/components/his/InpatientRecordWorkspace.vue';
+</script>

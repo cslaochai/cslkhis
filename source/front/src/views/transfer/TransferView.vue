@@ -1,414 +1,26 @@
-<script setup lang="ts">
-import { ref, computed, reactive, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh, Plus, Search, Warning } from '@element-plus/icons-vue'
-import {
-  getTransferListPage,
-  getTransferDetail,
-  saveTransfer,
-  acceptTransfer,
-  cancelTransfer,
-  getTransferPendingCount,
-} from '@/api/inpatientTransfer'
-import { getInpatientListPage, getInpatientWardList, getInpatientBedList } from '@/api/inpatient'
-import { getDepartmentSelectList } from '@/api/system'
-import { PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/lib/pagination'
-import { useTableMaxHeight } from '@/lib/useTableMaxHeight'
-
-interface AdmissionOption {
-  admissionId: string
-  admissionNo?: string
-  patientId?: string
-  patientName?: string
-  patientNo?: string
-  bedNo?: string
-  wardId?: string
-  wardName?: string
-  deptId?: string
-  deptName?: string
-}
-
-interface DeptOption {
-  id: string
-  deptName?: string
-}
-
-interface WardOption {
-  wardId: string
-  wardName?: string
-  deptId?: string
-  deptName?: string
-  freeBeds?: number
-}
-
-interface BedOption {
-  bedId: string
-  bedNo?: string
-  wardId?: string
-  wardName?: string
-  deptId?: string
-  deptName?: string
-  bedStatus?: number
-  bedStatusText?: string
-}
-
-interface TransferRow {
-  id: string
-  transferNo?: string
-  admissionId?: string
-  admissionNo?: string
-  patientId?: string
-  patientName?: string
-  fromDeptId?: string
-  fromDeptName?: string
-  fromWardId?: string
-  fromWardName?: string
-  fromBedId?: string
-  fromBedNo?: string
-  toDeptId?: string
-  toDeptName?: string
-  toWardId?: string
-  toWardName?: string
-  toBedId?: string
-  toBedNo?: string
-  transferType?: number
-  transferTypeText?: string
-  transferReason?: string
-  hospitalDays?: number
-  stopOrdersCount?: number
-  orderRemark?: string
-  applyDoctorName?: string
-  receiveDoctorName?: string
-  recordId?: string
-  recordNo?: string
-  applyTime?: string
-  receiveTime?: string
-  transferStatus?: number
-  transferStatusText?: string
-  cancelReason?: string
-  remark?: string
-  waitingMinutes?: number
-  waitText?: string
-  canAccept?: boolean
-  canCancel?: boolean
-}
-
-const fmt = (v?: string) => (v ? String(v).replace('T', ' ') : '—')
-const text = (v?: string | number) => (v === null || v === undefined || v === '' ? '—' : String(v))
-
-// ---------------- 基础数据 ----------------
-
-const admissions = ref<AdmissionOption[]>([])
-const depts = ref<DeptOption[]>([])
-const wards = ref<WardOption[]>([])
-
-const admissionLabel = (a: AdmissionOption) =>
-  `${a.bedNo || '—'} ${a.patientName || '—'}（${a.deptName || a.wardName || '—'}）`
-
-const loadAdmissions = async () => {
-  try {
-    const res = await getInpatientListPage({ admitStatus: 1, pageNum: 1, pageSize: 200 })
-    admissions.value = (res.data?.records || []) as AdmissionOption[]
-  } catch (error: any) {
-    console.error('加载在院患者失败:', error)
-  }
-}
-
-const loadDepts = async () => {
-  try {
-    // 转科申请：目标科室 = 转出科室之外的范围，但**不能越过自己的授权范围**。
-    // 不传 scope → 默认按当前人过滤。
-    const res = await getDepartmentSelectList({})
-    depts.value = (res.data || []) as DeptOption[]
-  } catch (error: any) {
-    console.error('加载科室失败:', error)
-  }
-}
-
-const loadWards = async () => {
-  try {
-    const res = await getInpatientWardList()
-    wards.value = (res.data || []) as WardOption[]
-  } catch (error: any) {
-    console.error('加载病区失败:', error)
-  }
-}
-
-/** 目标床位：只取空闲（bedStatus=1）—— "能不能用"以 sys_bed 为准，不看病区的演示计数 */
-const targetBeds = ref<BedOption[]>([])
-const loadTargetBeds = async (wardId: string) => {
-  targetBeds.value = []
-  if (!wardId) return
-  try {
-    const res = await getInpatientBedList({ wardId, bedStatus: 1 })
-    targetBeds.value = (res.data || []) as BedOption[]
-  } catch (error: any) {
-    console.error('加载床位失败:', error)
-  }
-}
-
-// ---------------- 列表 ----------------
-
-const rows = ref<TransferRow[]>([])
-const total = ref(0)
-const pageNum = ref(1)
-const pageSize = ref(DEFAULT_PAGE_SIZE)
-const loading = ref(false)
-const pendingCount = ref(0)
-
-const filters = reactive({
-  admissionId: '',
-  toDeptId: '',
-  transferStatus: '' as number | '',
-  transferType: '' as number | '',
-  keyword: '',
-})
-
-// 两卡式列表页：表格只设最大高度，超高内部滚动（口径参照 views/system/user/UserView.vue）
-const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight()
-
-const loadList = async () => {
-  loading.value = true
-  try {
-    const res = await getTransferListPage({
-      admissionId: filters.admissionId || undefined,
-      toDeptId: filters.toDeptId || undefined,
-      transferStatus: filters.transferStatus === '' ? undefined : filters.transferStatus,
-      transferType: filters.transferType === '' ? undefined : filters.transferType,
-      keyword: filters.keyword || undefined,
-      pageNum: pageNum.value,
-      pageSize: pageSize.value,
-    })
-    rows.value = (res.data?.records || []) as TransferRow[]
-    total.value = Number(res.data?.total || 0)
-  } catch (error: any) {
-    ElMessage.error(error.message || '加载转科记录失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-const loadPendingCount = async () => {
-  try {
-    const res = await getTransferPendingCount({})
-    pendingCount.value = Number(res.data || 0)
-  } catch (error: any) {
-    console.error('加载待接收数失败:', error)
-  }
-}
-
-/** 本页"医嘱没停干净"的行数：只认后端写出的「仍有 … 未停」，前端不自己拼这套规则 */
-const pageUnsettledCount = computed(
-  () => rows.value.filter((r) => (r.orderRemark || '').includes('仍有')).length,
-)
-
-const handleSearch = () => {
-  pageNum.value = 1
-  loadList()
-}
-
-const resetFilters = () => {
-  filters.admissionId = ''
-  filters.toDeptId = ''
-  filters.transferStatus = ''
-  filters.transferType = ''
-  filters.keyword = ''
-  pageNum.value = 1
-  loadList()
-}
-
-// ---------------- 发起转科 ----------------
-
-const applyVisible = ref(false)
-const applySubmitting = ref(false)
-const applyForm = reactive({
-  admissionId: '',
-  toDeptId: '',
-  toWardId: '',
-  toBedId: '',
-  transferType: 1,
-  transferReason: '',
-  remark: '',
-})
-
-const currentAdmission = computed(() =>
-  admissions.value.find((a) => String(a.admissionId) === String(applyForm.admissionId)),
-)
-
-/** 目标病区：按目标科室过滤（后端也会校验"病区属于科室"，前端只是少让人点错） */
-const applyWards = computed(() =>
-  wards.value.filter((w) => String(w.deptId) === String(applyForm.toDeptId)),
-)
-
-/** 目标科室：排除患者当前科室（同科室挪床请走换床） */
-const applyDepts = computed(() =>
-  depts.value.filter((d) => String(d.id) !== String(currentAdmission.value?.deptId || '')),
-)
-
-const openApply = (presetAdmissionId?: string) => {
-  applyForm.admissionId = presetAdmissionId || filters.admissionId || ''
-  applyForm.toDeptId = ''
-  applyForm.toWardId = ''
-  applyForm.toBedId = ''
-  applyForm.transferType = 1
-  applyForm.transferReason = ''
-  applyForm.remark = ''
-  targetBeds.value = []
-  applyVisible.value = true
-}
-
-const handleApplyAdmissionChange = () => {
-  // 换了患者就重选目标：科室 → 病区 → 床位三者联动，留着上一轮的会填到错误科室
-  applyForm.toDeptId = ''
-  applyForm.toWardId = ''
-  applyForm.toBedId = ''
-  targetBeds.value = []
-}
-
-const handleApplyDeptChange = () => {
-  applyForm.toWardId = ''
-  applyForm.toBedId = ''
-  targetBeds.value = []
-}
-
-const handleApplyWardChange = () => {
-  applyForm.toBedId = ''
-  loadTargetBeds(applyForm.toWardId)
-}
-
-const submitApply = async () => {
-  if (!applyForm.admissionId) {
-    ElMessage.warning('请选择要转科的在院患者')
-    return
-  }
-  if (!applyForm.toDeptId || !applyForm.toWardId || !applyForm.toBedId) {
-    ElMessage.warning('请完整选择转入科室、病区与床位')
-    return
-  }
-  if (!applyForm.transferReason.trim()) {
-    ElMessage.warning('请填写转科原因（转科是一个医疗决定，必须写清理由）')
-    return
-  }
-  applySubmitting.value = true
-  try {
-    const res = await saveTransfer({
-      admissionId: applyForm.admissionId,
-      toDeptId: applyForm.toDeptId,
-      toWardId: applyForm.toWardId,
-      toBedId: applyForm.toBedId,
-      transferType: applyForm.transferType,
-      transferReason: applyForm.transferReason.trim(),
-      remark: applyForm.remark.trim() || undefined,
-    })
-    ElMessage.success(`转科申请已提交：${res.data || ''}（等待转入科室接收）`)
-    applyVisible.value = false
-    await Promise.all([loadList(), loadPendingCount()])
-  } catch (error: any) {
-    ElMessage.error(error.message || '转科申请提交失败')
-  } finally {
-    applySubmitting.value = false
-  }
-}
-
-// ---------------- 接收 / 取消 / 详情 ----------------
-
-const acceptVisible = ref(false)
-const acceptSubmitting = ref(false)
-const acceptTarget = ref<TransferRow | null>(null)
-const acceptRemark = ref('')
-
-const openAccept = (row: TransferRow) => {
-  acceptTarget.value = row
-  acceptRemark.value = ''
-  acceptVisible.value = true
-}
-
-const submitAccept = async () => {
-  if (!acceptTarget.value) return
-  acceptSubmitting.value = true
-  try {
-    await acceptTransfer({
-      transferId: acceptTarget.value.id,
-      remark: acceptRemark.value.trim() || undefined,
-    })
-    ElMessage.success('已接收，转科生效（原科室长期医嘱已按规则处置，并回写转科记录病历）')
-    acceptVisible.value = false
-    await Promise.all([loadList(), loadPendingCount(), loadAdmissions()])
-  } catch (error: any) {
-    ElMessage.error(error.message || '接收失败')
-  } finally {
-    acceptSubmitting.value = false
-  }
-}
-
-const handleCancel = async (row: TransferRow) => {
-  try {
-    const { value } = await ElMessageBox.prompt(
-      `确认取消转科申请 ${row.transferNo || ''}（${row.patientName || ''}）？已接收的转科不能取消。`,
-      '取消转科申请',
-      {
-        confirmButtonText: '确认取消',
-        cancelButtonText: '再想想',
-        inputPlaceholder: '取消原因（必填）',
-        inputValidator: (v: string) => (v && v.trim() ? true : '取消原因不能为空'),
-      },
-    )
-    await cancelTransfer({ transferId: row.id, cancelReason: value.trim() })
-    ElMessage.success('转科申请已取消')
-    await Promise.all([loadList(), loadPendingCount()])
-  } catch (error: any) {
-    if (error === 'cancel' || error === 'close') return
-    ElMessage.error(error.message || '取消失败')
-  }
-}
-
-const detailVisible = ref(false)
-const detail = ref<TransferRow | null>(null)
-
-const openDetail = async (row: TransferRow) => {
-  try {
-    const res = await getTransferDetail(row.id)
-    detail.value = (res.data || row) as TransferRow
-    detailVisible.value = true
-  } catch (error: any) {
-    ElMessage.error(error.message || '加载转科详情失败')
-  }
-}
-
-const statusTagType = (status?: number) => {
-  if (status === 0) return 'warning'
-  if (status === 1) return 'success'
-  return 'info'
-}
-
-onMounted(async () => {
-  await Promise.all([loadAdmissions(), loadDepts(), loadWards()])
-  await Promise.all([loadList(), loadPendingCount()])
-})
-</script>
-
 <template>
   <div>
     <!-- 标题 + 在院患者过滤 -->
     <div class="mb-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div class="flex items-center gap-3">
         <el-select
-          v-model="filters.admissionId"
-          data-testid="p4-transfer-admission"
-          placeholder="按在院患者过滤"
-          filterable
-          clearable
-          class="!w-72"
-          @change="handleSearch"
+            v-model="filters.admissionId"
+            class="!w-72"
+            clearable
+            data-testid="p4-transfer-admission"
+            filterable
+            placeholder="按在院患者过滤"
+            @change="handleSearch"
         >
           <el-option
-            v-for="a in admissions"
-            :key="a.admissionId"
-            :label="admissionLabel(a)"
-            :value="String(a.admissionId)"
+              v-for="a in admissions"
+              :key="a.admissionId"
+              :label="admissionLabel(a)"
+              :value="String(a.admissionId)"
           />
         </el-select>
-        <el-button v-perm="'ipd:transfer:add'" type="primary" :icon="Plus" data-testid="p4-transfer-apply" @click="openApply()">
+        <el-button v-perm="'ipd:transfer:add'" :icon="Plus" data-testid="p4-transfer-apply" type="primary"
+                   @click="openApply()">
           发起转科
         </el-button>
         <el-button :icon="Refresh" @click="handleSearch">刷新</el-button>
@@ -430,9 +42,9 @@ onMounted(async () => {
       <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <p class="text-xs text-slate-500">本页医嘱未停清</p>
         <p
-          class="text-lg font-bold"
-          :class="pageUnsettledCount > 0 ? 'text-red-600' : 'text-slate-900'"
-          data-testid="p4-transfer-unsettled"
+            :class="pageUnsettledCount > 0 ? 'text-red-600' : 'text-slate-900'"
+            class="text-lg font-bold"
+            data-testid="p4-transfer-unsettled"
         >
           {{ pageUnsettledCount }}
         </p>
@@ -445,67 +57,68 @@ onMounted(async () => {
       <el-form :model="filters" inline @submit.prevent>
         <el-form-item label="状态">
           <el-select
-            v-model="filters.transferStatus"
-            data-testid="p4-transfer-filter-status"
-            placeholder="状态"
-            clearable
-            class="!w-32"
-            @change="handleSearch"
+              v-model="filters.transferStatus"
+              class="!w-32"
+              clearable
+              data-testid="p4-transfer-filter-status"
+              placeholder="状态"
+              @change="handleSearch"
           >
-            <el-option label="待接收" :value="0" />
-            <el-option label="已完成" :value="1" />
-            <el-option label="已取消" :value="2" />
+            <el-option :value="0" label="待接收"/>
+            <el-option :value="1" label="已完成"/>
+            <el-option :value="2" label="已取消"/>
           </el-select>
         </el-form-item>
         <el-form-item label="转入科室">
           <el-select
-            v-model="filters.toDeptId"
-            data-testid="p4-transfer-filter-dept"
-            placeholder="转入科室"
-            clearable
-            filterable
-            class="!w-44"
-            @change="handleSearch"
+              v-model="filters.toDeptId"
+              class="!w-44"
+              clearable
+              data-testid="p4-transfer-filter-dept"
+              filterable
+              placeholder="转入科室"
+              @change="handleSearch"
           >
-            <el-option v-for="d in depts" :key="d.id" :label="d.deptName || d.id" :value="String(d.id)" />
+            <el-option v-for="d in depts" :key="d.id" :label="d.deptName || d.id" :value="String(d.id)"/>
           </el-select>
         </el-form-item>
         <el-form-item label="转科类型">
           <el-select
-            v-model="filters.transferType"
-            data-testid="p4-transfer-filter-type"
-            placeholder="转科类型"
-            clearable
-            class="!w-32"
-            @change="handleSearch"
+              v-model="filters.transferType"
+              class="!w-32"
+              clearable
+              data-testid="p4-transfer-filter-type"
+              placeholder="转科类型"
+              @change="handleSearch"
           >
-            <el-option label="普通转科" :value="1" />
-            <el-option label="急诊转科" :value="2" />
-            <el-option label="转入ICU" :value="3" />
-            <el-option label="ICU转出" :value="4" />
+            <el-option :value="1" label="普通转科"/>
+            <el-option :value="2" label="急诊转科"/>
+            <el-option :value="3" label="转入ICU"/>
+            <el-option :value="4" label="ICU转出"/>
           </el-select>
         </el-form-item>
         <el-form-item label="关键字">
           <el-input
-            v-model="filters.keyword"
-            placeholder="转科单号 / 入院号 / 患者姓名 / 转科原因"
-            clearable
-            class="!w-72"
-            :prefix-icon="Search"
-            @keyup.enter="handleSearch"
-            @clear="handleSearch"
+              v-model="filters.keyword"
+              :prefix-icon="Search"
+              class="!w-72"
+              clearable
+              placeholder="转科单号 / 入院号 / 患者姓名 / 转科原因"
+              @clear="handleSearch"
+              @keyup.enter="handleSearch"
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
+          <el-button :icon="Search" type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="resetFilters">重置</el-button>
         </el-form-item>
       </el-form>
     </el-card>
 
     <el-card class="table-card" shadow="never">
-      <el-table v-loading="loading" :data="rows" style="width: 100%" stripe :max-height="tableMaxHeight" data-testid="p4-transfer-table">
-        <el-table-column prop="transferNo" label="转科单号" width="150" />
+      <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" data-testid="p4-transfer-table" stripe
+                style="width: 100%">
+        <el-table-column label="转科单号" prop="transferNo" width="150"/>
         <el-table-column label="患者" min-width="140">
           <template #default="{ row }">
             <div class="text-slate-900">{{ text(row.patientName) }}</div>
@@ -523,8 +136,8 @@ onMounted(async () => {
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="transferTypeText" label="类型" width="90" align="center" />
-        <el-table-column label="状态" width="100" align="center">
+        <el-table-column align="center" label="类型" prop="transferTypeText" width="90"/>
+        <el-table-column align="center" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="statusTagType(row.transferStatus)" size="small">
               {{ text(row.transferStatusText) }}
@@ -544,9 +157,9 @@ onMounted(async () => {
           <template #default="{ row }">
             <div v-if="!row.orderRemark" class="text-slate-400">—（待接收，尚未处置）</div>
             <div
-              v-else
-              class="leading-5"
-              :class="(row.orderRemark || '').includes('仍有') ? 'text-red-600' : 'text-slate-600'"
+                v-else
+                :class="(row.orderRemark || '').includes('仍有') ? 'text-red-600' : 'text-slate-600'"
+                class="leading-5"
             >
               {{ row.orderRemark }}
             </div>
@@ -558,29 +171,29 @@ onMounted(async () => {
             <span v-else class="text-slate-400">未回写</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="190" fixed="right" align="center">
+        <el-table-column align="center" fixed="right" label="操作" width="190">
           <template #default="{ row }">
             <el-button
-              v-if="row.canAccept"
-              v-perm="'ipd:transfer:edit'"
-              type="primary"
-              link
-              data-testid="p4-transfer-accept"
-              @click="openAccept(row)"
+                v-if="row.canAccept"
+                v-perm="'ipd:transfer:edit'"
+                data-testid="p4-transfer-accept"
+                link
+                type="primary"
+                @click="openAccept(row)"
             >
               接收
             </el-button>
             <el-button
-              v-if="row.canCancel"
-              v-perm="'ipd:transfer:delete'"
-              type="warning"
-              link
-              data-testid="p4-transfer-cancel"
-              @click="handleCancel(row)"
+                v-if="row.canCancel"
+                v-perm="'ipd:transfer:delete'"
+                data-testid="p4-transfer-cancel"
+                link
+                type="warning"
+                @click="handleCancel(row)"
             >
               取消
             </el-button>
-            <el-button type="info" link data-testid="p4-transfer-detail" @click="openDetail(row)">详情</el-button>
+            <el-button data-testid="p4-transfer-detail" link type="info" @click="openDetail(row)">详情</el-button>
           </template>
         </el-table-column>
         <template #empty>
@@ -592,34 +205,34 @@ onMounted(async () => {
 
       <div ref="footerRef" class="list-footer flex items-center justify-end">
         <el-pagination
-          v-model:current-page="pageNum"
-          v-model:page-size="pageSize"
-          :total="total"
-          :page-sizes="PAGE_SIZES"
-          layout="total, sizes, prev, pager, next"
-          @current-change="loadList"
-          @size-change="handleSearch"
+            v-model:current-page="pageNum"
+            v-model:page-size="pageSize"
+            :page-sizes="PAGE_SIZES"
+            :total="total"
+            layout="total, sizes, prev, pager, next"
+            @current-change="loadList"
+            @size-change="handleSearch"
         />
       </div>
     </el-card>
 
     <!-- 发起转科 -->
-    <el-dialog v-model="applyVisible" title="发起转科" width="640px" data-testid="p4-transfer-apply-dialog">
+    <el-dialog v-model="applyVisible" data-testid="p4-transfer-apply-dialog" title="发起转科" width="640px">
       <el-form label-width="96px">
         <el-form-item label="在院患者" required>
           <el-select
-            v-model="applyForm.admissionId"
-            data-testid="p4-apply-admission"
-            placeholder="选择在院患者"
-            filterable
-            class="!w-full"
-            @change="handleApplyAdmissionChange"
+              v-model="applyForm.admissionId"
+              class="!w-full"
+              data-testid="p4-apply-admission"
+              filterable
+              placeholder="选择在院患者"
+              @change="handleApplyAdmissionChange"
           >
             <el-option
-              v-for="a in admissions"
-              :key="a.admissionId"
-              :label="admissionLabel(a)"
-              :value="String(a.admissionId)"
+                v-for="a in admissions"
+                :key="a.admissionId"
+                :label="admissionLabel(a)"
+                :value="String(a.admissionId)"
             />
           </el-select>
         </el-form-item>
@@ -632,48 +245,48 @@ onMounted(async () => {
         </el-form-item>
         <el-form-item label="转入科室" required>
           <el-select
-            v-model="applyForm.toDeptId"
-            data-testid="p4-apply-dept"
-            placeholder="选择转入科室（已排除原科室）"
-            filterable
-            class="!w-full"
-            @change="handleApplyDeptChange"
+              v-model="applyForm.toDeptId"
+              class="!w-full"
+              data-testid="p4-apply-dept"
+              filterable
+              placeholder="选择转入科室（已排除原科室）"
+              @change="handleApplyDeptChange"
           >
-            <el-option v-for="d in applyDepts" :key="d.id" :label="d.deptName || d.id" :value="String(d.id)" />
+            <el-option v-for="d in applyDepts" :key="d.id" :label="d.deptName || d.id" :value="String(d.id)"/>
           </el-select>
         </el-form-item>
         <el-form-item label="转入病区" required>
           <el-select
-            v-model="applyForm.toWardId"
-            data-testid="p4-apply-ward"
-            placeholder="选择转入病区"
-            filterable
-            class="!w-full"
-            :disabled="!applyForm.toDeptId"
-            @change="handleApplyWardChange"
+              v-model="applyForm.toWardId"
+              :disabled="!applyForm.toDeptId"
+              class="!w-full"
+              data-testid="p4-apply-ward"
+              filterable
+              placeholder="选择转入病区"
+              @change="handleApplyWardChange"
           >
             <el-option
-              v-for="w in applyWards"
-              :key="w.wardId"
-              :label="`${w.wardName || w.wardId}（空闲 ${w.freeBeds ?? 0}）`"
-              :value="String(w.wardId)"
+                v-for="w in applyWards"
+                :key="w.wardId"
+                :label="`${w.wardName || w.wardId}（空闲 ${w.freeBeds ?? 0}）`"
+                :value="String(w.wardId)"
             />
           </el-select>
         </el-form-item>
         <el-form-item label="转入床位" required>
           <el-select
-            v-model="applyForm.toBedId"
-            data-testid="p4-apply-bed"
-            placeholder="选择空闲床位"
-            filterable
-            class="!w-full"
-            :disabled="!applyForm.toWardId"
+              v-model="applyForm.toBedId"
+              :disabled="!applyForm.toWardId"
+              class="!w-full"
+              data-testid="p4-apply-bed"
+              filterable
+              placeholder="选择空闲床位"
           >
             <el-option
-              v-for="b in targetBeds"
-              :key="b.bedId"
-              :label="`${b.bedNo || b.bedId}床`"
-              :value="String(b.bedId)"
+                v-for="b in targetBeds"
+                :key="b.bedId"
+                :label="`${b.bedNo || b.bedId}床`"
+                :value="String(b.bedId)"
             />
           </el-select>
           <div v-if="applyForm.toWardId && targetBeds.length === 0" class="mt-1 text-[11px] text-red-500">
@@ -690,32 +303,35 @@ onMounted(async () => {
         </el-form-item>
         <el-form-item label="转科原因" required>
           <el-input
-            v-model="applyForm.transferReason"
-            type="textarea"
-            :rows="3"
-            data-testid="p4-apply-reason"
-            placeholder="请写明要解决的问题（如：骨折需手术治疗、病情稳定转回普通病房）"
+              v-model="applyForm.transferReason"
+              :rows="3"
+              data-testid="p4-apply-reason"
+              placeholder="请写明要解决的问题（如：骨折需手术治疗、病情稳定转回普通病房）"
+              type="textarea"
           />
         </el-form-item>
         <el-form-item label="备注">
-          <el-input v-model="applyForm.remark" type="textarea" :rows="2" placeholder="可空" />
+          <el-input v-model="applyForm.remark" :rows="2" placeholder="可空" type="textarea"/>
         </el-form-item>
       </el-form>
       <div class="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] leading-5 text-amber-700">
-        <el-icon class="mr-1 align-middle"><Warning /></el-icon>
+        <el-icon class="mr-1 align-middle">
+          <Warning/>
+        </el-icon>
         发起后转科<b>尚未生效</b>：床位不占、科室不改、医嘱不停，需转入科室在列表里点「接收」。
         接收时系统会自动停掉原科室「已校对 / 执行中」的长期医嘱，并回写一份转科记录病历。
       </div>
       <template #footer>
         <el-button @click="applyVisible = false">取消</el-button>
-        <el-button v-perm="'ipd:transfer:add'" type="primary" :loading="applySubmitting" data-testid="p4-apply-submit" @click="submitApply">
+        <el-button v-perm="'ipd:transfer:add'" :loading="applySubmitting" data-testid="p4-apply-submit" type="primary"
+                   @click="submitApply">
           提交转科申请
         </el-button>
       </template>
     </el-dialog>
 
     <!-- 接收转科 -->
-    <el-dialog v-model="acceptVisible" title="接收转科" width="560px" data-testid="p4-transfer-accept-dialog">
+    <el-dialog v-model="acceptVisible" data-testid="p4-transfer-accept-dialog" title="接收转科" width="560px">
       <div v-if="acceptTarget" class="space-y-3">
         <div class="rounded border border-slate-200 bg-slate-50 p-3 text-sm">
           <div class="text-slate-900">
@@ -732,32 +348,33 @@ onMounted(async () => {
           </div>
           <div class="mt-1 text-[12px] text-slate-500">转科原因：{{ text(acceptTarget.transferReason) }}</div>
         </div>
-        <el-alert type="warning" :closable="false" show-icon>
+        <el-alert :closable="false" show-icon type="warning">
           接收即生效：停原科室长期医嘱 → 换科室换床 → 回写转科记录病历。
           若该床位在此期间已被占用，后端会拒绝（不会把两个患者塞进同一张床）。
         </el-alert>
         <el-form label-width="80px">
           <el-form-item label="接收备注">
             <el-input
-              v-model="acceptRemark"
-              type="textarea"
-              :rows="2"
-              data-testid="p4-accept-remark"
-              placeholder="可空"
+                v-model="acceptRemark"
+                :rows="2"
+                data-testid="p4-accept-remark"
+                placeholder="可空"
+                type="textarea"
             />
           </el-form-item>
         </el-form>
       </div>
       <template #footer>
         <el-button @click="acceptVisible = false">取消</el-button>
-        <el-button v-perm="'ipd:transfer:edit'" type="primary" :loading="acceptSubmitting" data-testid="p4-accept-submit" @click="submitAccept">
+        <el-button v-perm="'ipd:transfer:edit'" :loading="acceptSubmitting" data-testid="p4-accept-submit"
+                   type="primary" @click="submitAccept">
           确认接收
         </el-button>
       </template>
     </el-dialog>
 
     <!-- 转科详情 -->
-    <el-dialog v-model="detailVisible" title="转科详情" width="720px" data-testid="p4-transfer-detail-dialog">
+    <el-dialog v-model="detailVisible" data-testid="p4-transfer-detail-dialog" title="转科详情" width="720px">
       <div v-if="detail" class="space-y-4">
         <div class="flex items-center gap-3">
           <span class="text-base font-semibold text-slate-900">{{ text(detail.transferNo) }}</span>
@@ -785,20 +402,20 @@ onMounted(async () => {
           <el-descriptions-item label="发起时间">{{ fmt(detail.applyTime) }}</el-descriptions-item>
           <el-descriptions-item label="接收医生">{{ text(detail.receiveDoctorName) }}</el-descriptions-item>
           <el-descriptions-item label="接收时间">{{ fmt(detail.receiveTime) }}</el-descriptions-item>
-          <el-descriptions-item label="转科原因" :span="2">{{ text(detail.transferReason) }}</el-descriptions-item>
-          <el-descriptions-item label="医嘱处置" :span="2">
+          <el-descriptions-item :span="2" label="转科原因">{{ text(detail.transferReason) }}</el-descriptions-item>
+          <el-descriptions-item :span="2" label="医嘱处置">
             <span :class="(detail.orderRemark || '').includes('仍有') ? 'text-red-600' : 'text-slate-700'">
               {{ text(detail.orderRemark) }}
             </span>
           </el-descriptions-item>
-          <el-descriptions-item label="回写病历号" :span="2">
+          <el-descriptions-item :span="2" label="回写病历号">
             <span v-if="detail.recordNo" class="text-slate-700">{{ detail.recordNo }}</span>
             <span v-else class="text-slate-400">尚未回写（转科未生效）</span>
           </el-descriptions-item>
-          <el-descriptions-item v-if="detail.cancelReason" label="取消原因" :span="2">
+          <el-descriptions-item v-if="detail.cancelReason" :span="2" label="取消原因">
             {{ detail.cancelReason }}
           </el-descriptions-item>
-          <el-descriptions-item v-if="detail.remark" label="备注" :span="2">{{ detail.remark }}</el-descriptions-item>
+          <el-descriptions-item v-if="detail.remark" :span="2" label="备注">{{ detail.remark }}</el-descriptions-item>
         </el-descriptions>
       </div>
       <template #footer>
@@ -807,3 +424,271 @@ onMounted(async () => {
     </el-dialog>
   </div>
 </template>
+
+<script setup>
+import {computed, onMounted, reactive, ref} from 'vue';
+import {ElMessage, ElMessageBox} from 'element-plus';
+import {Plus, Refresh, Search, Warning} from '@element-plus/icons-vue';
+import {
+  acceptTransfer,
+  cancelTransfer,
+  getTransferDetail,
+  getTransferListPage,
+  getTransferPendingCount,
+  saveTransfer,
+} from '@/api/inpatientTransfer';
+import {getInpatientBedList, getInpatientListPage, getInpatientWardList} from '@/api/inpatient';
+import {getDepartmentSelectList} from '@/api/system';
+import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+
+const fmt = (v) => (v ? String(v).replace('T', ' ') : '—');
+const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
+// ---------------- 基础数据 ----------------
+const admissions = ref([]);
+const depts = ref([]);
+const wards = ref([]);
+const admissionLabel = (a) => `${a.bedNo || '—'} ${a.patientName || '—'}（${a.deptName || a.wardName || '—'}）`;
+const loadAdmissions = async () => {
+  try {
+    const res = await getInpatientListPage({admitStatus: 1, pageNum: 1, pageSize: 200});
+    admissions.value = (res.data?.records || []);
+  } catch (error) {
+    console.error('加载在院患者失败:', error);
+  }
+};
+const loadDepts = async () => {
+  try {
+    // 转科申请：目标科室 = 转出科室之外的范围，但**不能越过自己的授权范围**。
+    // 不传 scope → 默认按当前人过滤。
+    const res = await getDepartmentSelectList({});
+    depts.value = (res.data || []);
+  } catch (error) {
+    console.error('加载科室失败:', error);
+  }
+};
+const loadWards = async () => {
+  try {
+    const res = await getInpatientWardList();
+    wards.value = (res.data || []);
+  } catch (error) {
+    console.error('加载病区失败:', error);
+  }
+};
+/** 目标床位：只取空闲（bedStatus=1）—— "能不能用"以 sys_bed 为准，不看病区的演示计数 */
+const targetBeds = ref([]);
+const loadTargetBeds = async (wardId) => {
+  targetBeds.value = [];
+  if (!wardId)
+    return;
+  try {
+    const res = await getInpatientBedList({wardId, bedStatus: 1});
+    targetBeds.value = (res.data || []);
+  } catch (error) {
+    console.error('加载床位失败:', error);
+  }
+};
+// ---------------- 列表 ----------------
+const rows = ref([]);
+const total = ref(0);
+const pageNum = ref(1);
+const pageSize = ref(DEFAULT_PAGE_SIZE);
+const loading = ref(false);
+const pendingCount = ref(0);
+const filters = reactive({
+  admissionId: '',
+  toDeptId: '',
+  transferStatus: '',
+  transferType: '',
+  keyword: '',
+});
+// 两卡式列表页：表格只设最大高度，超高内部滚动（口径参照 views/system/user/UserView.vue）
+const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight();
+const loadList = async () => {
+  loading.value = true;
+  try {
+    const res = await getTransferListPage({
+      admissionId: filters.admissionId || undefined,
+      toDeptId: filters.toDeptId || undefined,
+      transferStatus: filters.transferStatus === '' ? undefined : filters.transferStatus,
+      transferType: filters.transferType === '' ? undefined : filters.transferType,
+      keyword: filters.keyword || undefined,
+      pageNum: pageNum.value,
+      pageSize: pageSize.value,
+    });
+    rows.value = (res.data?.records || []);
+    total.value = Number(res.data?.total || 0);
+  } catch (error) {
+    ElMessage.error(error.message || '加载转科记录失败');
+  } finally {
+    loading.value = false;
+  }
+};
+const loadPendingCount = async () => {
+  try {
+    const res = await getTransferPendingCount({});
+    pendingCount.value = Number(res.data || 0);
+  } catch (error) {
+    console.error('加载待接收数失败:', error);
+  }
+};
+/** 本页"医嘱没停干净"的行数：只认后端写出的「仍有 … 未停」，前端不自己拼这套规则 */
+const pageUnsettledCount = computed(() => rows.value.filter((r) => (r.orderRemark || '').includes('仍有')).length);
+const handleSearch = () => {
+  pageNum.value = 1;
+  loadList();
+};
+const resetFilters = () => {
+  filters.admissionId = '';
+  filters.toDeptId = '';
+  filters.transferStatus = '';
+  filters.transferType = '';
+  filters.keyword = '';
+  pageNum.value = 1;
+  loadList();
+};
+// ---------------- 发起转科 ----------------
+const applyVisible = ref(false);
+const applySubmitting = ref(false);
+const applyForm = reactive({
+  admissionId: '',
+  toDeptId: '',
+  toWardId: '',
+  toBedId: '',
+  transferType: 1,
+  transferReason: '',
+  remark: '',
+});
+const currentAdmission = computed(() => admissions.value.find((a) => String(a.admissionId) === String(applyForm.admissionId)));
+/** 目标病区：按目标科室过滤（后端也会校验"病区属于科室"，前端只是少让人点错） */
+const applyWards = computed(() => wards.value.filter((w) => String(w.deptId) === String(applyForm.toDeptId)));
+/** 目标科室：排除患者当前科室（同科室挪床请走换床） */
+const applyDepts = computed(() => depts.value.filter((d) => String(d.id) !== String(currentAdmission.value?.deptId || '')));
+const openApply = (presetAdmissionId) => {
+  applyForm.admissionId = presetAdmissionId || filters.admissionId || '';
+  applyForm.toDeptId = '';
+  applyForm.toWardId = '';
+  applyForm.toBedId = '';
+  applyForm.transferType = 1;
+  applyForm.transferReason = '';
+  applyForm.remark = '';
+  targetBeds.value = [];
+  applyVisible.value = true;
+};
+const handleApplyAdmissionChange = () => {
+  // 换了患者就重选目标：科室 → 病区 → 床位三者联动，留着上一轮的会填到错误科室
+  applyForm.toDeptId = '';
+  applyForm.toWardId = '';
+  applyForm.toBedId = '';
+  targetBeds.value = [];
+};
+const handleApplyDeptChange = () => {
+  applyForm.toWardId = '';
+  applyForm.toBedId = '';
+  targetBeds.value = [];
+};
+const handleApplyWardChange = () => {
+  applyForm.toBedId = '';
+  loadTargetBeds(applyForm.toWardId);
+};
+const submitApply = async () => {
+  if (!applyForm.admissionId) {
+    ElMessage.warning('请选择要转科的在院患者');
+    return;
+  }
+  if (!applyForm.toDeptId || !applyForm.toWardId || !applyForm.toBedId) {
+    ElMessage.warning('请完整选择转入科室、病区与床位');
+    return;
+  }
+  if (!applyForm.transferReason.trim()) {
+    ElMessage.warning('请填写转科原因（转科是一个医疗决定，必须写清理由）');
+    return;
+  }
+  applySubmitting.value = true;
+  try {
+    const res = await saveTransfer({
+      admissionId: applyForm.admissionId,
+      toDeptId: applyForm.toDeptId,
+      toWardId: applyForm.toWardId,
+      toBedId: applyForm.toBedId,
+      transferType: applyForm.transferType,
+      transferReason: applyForm.transferReason.trim(),
+      remark: applyForm.remark.trim() || undefined,
+    });
+    ElMessage.success(`转科申请已提交：${res.data || ''}（等待转入科室接收）`);
+    applyVisible.value = false;
+    await Promise.all([loadList(), loadPendingCount()]);
+  } catch (error) {
+    ElMessage.error(error.message || '转科申请提交失败');
+  } finally {
+    applySubmitting.value = false;
+  }
+};
+// ---------------- 接收 / 取消 / 详情 ----------------
+const acceptVisible = ref(false);
+const acceptSubmitting = ref(false);
+const acceptTarget = ref(null);
+const acceptRemark = ref('');
+const openAccept = (row) => {
+  acceptTarget.value = row;
+  acceptRemark.value = '';
+  acceptVisible.value = true;
+};
+const submitAccept = async () => {
+  if (!acceptTarget.value)
+    return;
+  acceptSubmitting.value = true;
+  try {
+    await acceptTransfer({
+      transferId: acceptTarget.value.id,
+      remark: acceptRemark.value.trim() || undefined,
+    });
+    ElMessage.success('已接收，转科生效（原科室长期医嘱已按规则处置，并回写转科记录病历）');
+    acceptVisible.value = false;
+    await Promise.all([loadList(), loadPendingCount(), loadAdmissions()]);
+  } catch (error) {
+    ElMessage.error(error.message || '接收失败');
+  } finally {
+    acceptSubmitting.value = false;
+  }
+};
+const handleCancel = async (row) => {
+  try {
+    const {value} = await ElMessageBox.prompt(`确认取消转科申请 ${row.transferNo || ''}（${row.patientName || ''}）？已接收的转科不能取消。`, '取消转科申请', {
+      confirmButtonText: '确认取消',
+      cancelButtonText: '再想想',
+      inputPlaceholder: '取消原因（必填）',
+      inputValidator: (v) => (v && v.trim() ? true : '取消原因不能为空'),
+    });
+    await cancelTransfer({transferId: row.id, cancelReason: value.trim()});
+    ElMessage.success('转科申请已取消');
+    await Promise.all([loadList(), loadPendingCount()]);
+  } catch (error) {
+    if (error === 'cancel' || error === 'close')
+      return;
+    ElMessage.error(error.message || '取消失败');
+  }
+};
+const detailVisible = ref(false);
+const detail = ref(null);
+const openDetail = async (row) => {
+  try {
+    const res = await getTransferDetail(row.id);
+    detail.value = (res.data || row);
+    detailVisible.value = true;
+  } catch (error) {
+    ElMessage.error(error.message || '加载转科详情失败');
+  }
+};
+const statusTagType = (status) => {
+  if (status === 0)
+    return 'warning';
+  if (status === 1)
+    return 'success';
+  return 'info';
+};
+onMounted(async () => {
+  await Promise.all([loadAdmissions(), loadDepts(), loadWards()]);
+  await Promise.all([loadList(), loadPendingCount()]);
+});
+</script>

@@ -1,47 +1,452 @@
-<script setup lang="js">
-import {ref, computed, onMounted, onUnmounted, reactive, watch} from 'vue'
-import {useRouter} from 'vue-router'
+<template>
+  <header
+      class="sticky top-0 z-30 flex h-16 items-center justify-between px-6"
+      style="background: linear-gradient(90deg, #0A4376 0%, #0F5FA0 42%, #1179B8 72%, #0E9488 100%); box-shadow: 0 2px 12px rgba(9, 60, 110, 0.28);"
+  >
+    <!-- 左侧：Logo + 企业名 + 菜单伸缩 + 面包屑 -->
+    <div class="flex items-center gap-4">
+      <!--
+        品牌位 = 「回首页」入口（真实 HIS 惯例：点医院标识回主菜单，不再另配一个图标按钮）。
+        Logo 常驻（收起态它是唯一的医院标识，不能一起藏掉），只把医院名收掉。
+        宽度与侧栏同口径（展开 256 / 收起 64），右边框就是那条分割线 ——
+        于是它始终压在侧栏的右边界上，两种状态都不错位。
+        收起态额外把 header 的 24px 左内边距抵消掉（marginLeft:-24），
+        让盒子从 x=0 起算并居中放 Logo —— 这样 Logo 正好落在 64px 图标条的中轴上，
+        与侧栏收起后的菜单图标、底部箭头同一条竖线。
+      -->
+      <router-link
+          :style="sidebarCollapsed
+            ? {width: '64px', marginLeft: '-24px', justifyContent: 'center'}
+            : {width: '232px'}"
+          class="flex shrink-0 items-center gap-3 border-r border-white/30 no-underline transition-all duration-300"
+          title="返回首页"
+          to="/"
+      >
+        <!-- Logo -->
+        <div class="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-white">
+          <img alt="长沙市麓康医院" class="h-full w-full object-contain" src="@/assets/sidebar_logo.png"/>
+        </div>
+        <div v-if="!sidebarCollapsed" class="flex flex-col w-40">
+          <span class="text-[18px] font-semibold text-white tracking-wide">长沙市麓康医院</span>
+        </div>
+      </router-link>
+      <!--
+        菜单伸缩按钮：与 Sidebar 底部箭头共用一个开关（lib/sidebarState）。
+        展开时侧栏撑到 256px 把主内容整体往右推，收起时退成 64px 图标条。
+      -->
+      <button
+          :title="sidebarCollapsed ? '展开菜单' : '收起菜单'"
+          class="shrink-0 rounded-lg p-1.5 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+          @click="toggleSidebar"
+      >
+        <Expand v-if="sidebarCollapsed" class="h-5 w-5"/>
+        <Fold v-else class="h-5 w-5"/>
+      </button>
+      <!-- 面包屑导航（空间紧张时最先收缩：当前患者条和搜索是开单前的确认入口，优先保住） -->
+      <nav class="breadcrumb-nav flex min-w-0 items-center gap-1.5 overflow-hidden text-sm">
+        <template v-for="(item, index) in breadcrumbs" :key="index">
+          <el-icon v-if="index === 0" class="h-4 w-4 shrink-0 text-white/70">
+            <HomeFilled/>
+          </el-icon>
+          <!-- 目录 / 菜单条目带自己的图标（sys_menu.icon），与侧边栏同一份图标名 -->
+          <el-icon v-if="index > 0 && item.icon" class="h-3.5 w-3.5 shrink-0 text-white/70">
+            <component :is="resolveMenuIcon(item.icon)"/>
+          </el-icon>
+          <router-link
+              v-if="index < breadcrumbs.length - 1 && item.clickable"
+              :to="item.path"
+              class="shrink-0 whitespace-nowrap text-white/70 hover:text-white transition-colors"
+          >
+            {{ item.label }}
+          </router-link>
+          <span v-else-if="index < breadcrumbs.length - 1"
+                class="shrink-0 whitespace-nowrap text-white/70">{{ item.label }}</span>
+          <span v-else class="truncate whitespace-nowrap font-medium text-white">{{ item.label }}</span>
+          <el-icon v-if="index < breadcrumbs.length - 1" class="h-3 w-3 shrink-0 text-white/50">
+            <ArrowRight/>
+          </el-icon>
+        </template>
+      </nav>
+    </div>
+
+    <!-- 中间：当前患者（常驻）+ 全局患者搜索 -->
+    <div class="flex min-w-0 flex-1 items-center justify-center gap-3">
+      <!--
+        当前患者常驻条：真实 HIS 的顶部永远挂着「现在给谁看病」，因为开医嘱、开药、开检查
+        之前必须确认对象，这是防开错人的最后一道提示；此前选中患者的信息只在弹框里出现一次，
+        跳去别的页面（患者管理、危急值…）就再也看不到自己选的是谁。
+        点主体 = 看档案，点 × = 清除当前患者。
+      -->
+      <div
+          v-if="currentPatient"
+          :title="'当前患者：' + currentPatient.patientName + (currentPatient.patientNo ? '（' + currentPatient.patientNo + '）' : '')"
+          class="cp-chip"
+          @click="openCurrentPatientDetail"
+      >
+        <span class="cp-label">当前患者</span>
+        <span class="cp-name">{{ currentPatient.patientName }}</span>
+        <span class="cp-meta">{{ currentPatientMeta }}</span>
+        <span
+            v-if="currentPatientAllergy"
+            :title="'过敏史：' + currentPatient.allergyHistory"
+            class="cp-allergy"
+        >过敏</span>
+        <button class="cp-close" title="清除当前患者" @click.stop="clearCurrentPatient">
+          <Close class="h-3 w-3"/>
+        </button>
+      </div>
+
+      <div class="w-full min-w-[260px] max-w-[400px]">
+        <PatientSelect
+            ref="patientSelectRef"
+            :model-value="currentPatientStore.patientId"
+            :page-size="10"
+            search-icon
+            width="100%"
+            @clear="clearCurrentPatient"
+            @select="handlePatientSelect"
+        />
+      </div>
+    </div>
+
+    <!-- 右侧：消息 + 姓名 + 角色 + 科室 + 时钟 + 设置 -->
+    <div class="flex items-center gap-4">
+      <!-- 消息 -->
+      <el-badge :hidden="unreadCount === 0" :value="unreadCount" class="cursor-pointer">
+        <button class="rounded-lg p-2 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                @click="handleOpenMessages">
+          <Bell class="h-5 w-5"/>
+        </button>
+      </el-badge>
+
+      <div class="h-6 w-px bg-white/30"/>
+
+      <!-- 用户姓名 -->
+      <div class="flex items-center gap-1.5 text-sm font-medium text-white">
+        <User class="h-4 w-4 text-white/70"/>
+        <span>{{ displayName }}</span>
+      </div>
+
+      <!-- 用户角色 -->
+      <div class="rounded bg-white/20 px-2.5 py-1 text-sm font-medium text-white">
+        {{ currentRoleLabel }}
+      </div>
+
+      <!-- 所属科室 -->
+      <div v-if="userDeptName" class="rounded bg-white/20 px-2.5 py-1 text-sm font-medium text-white">
+        {{ userDeptName }}
+      </div>
+
+      <div class="h-6 w-px bg-white/30"/>
+
+      <!-- 实时时钟 -->
+      <div class="flex items-center gap-1.5 text-sm text-white">
+        <Calendar class="h-4 w-4"/>
+        <span class="font-mono font-medium">{{ currentTime }}</span>
+        <span>{{ currentWeekday }}</span>
+      </div>
+
+      <div class="h-6 w-px bg-white/30"/>
+
+      <!-- 设置 -->
+      <el-dropdown trigger="click" @command="handleCommand">
+        <button class="rounded-lg p-2 text-white transition-colors hover:bg-white/20">
+          <Setting class="h-5 w-5"/>
+        </button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item :icon="UserFilled" command="profile">用户信息</el-dropdown-item>
+            <el-dropdown-item :icon="Switch" command="switchPost">切换岗位</el-dropdown-item>
+            <el-dropdown-item :icon="Lock" command="password">修改密码</el-dropdown-item>
+            <el-dropdown-item :icon="SwitchButton" command="logout" divided>退出登录</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+    </div>
+  </header>
+
+  <!-- 用户信息弹窗（个人档案） -->
+  <el-dialog v-model="profileDialogVisible" destroy-on-close title="用户信息" top="5vh" width="920px">
+    <div v-loading="profileLoading" class="min-h-[280px]">
+      <template v-if="profileData">
+        <!-- 身份概要 -->
+        <div class="mb-3 flex items-center gap-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <div class="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-blue-500 ring-2 ring-blue-100">
+            <img v-if="profileData.avatar" :src="profileData.avatar" alt="头像" class="h-full w-full object-cover"/>
+            <span v-else
+                  class="flex h-full w-full items-center justify-center text-2xl font-bold text-white">
+              {{ avatarText }}
+            </span>
+          </div>
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <h3 class="text-lg font-semibold text-slate-900">{{ displayName }}</h3>
+              <span class="rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-600">{{
+                  currentRoleLabel
+                }}</span>
+              <span v-if="userDeptName"
+                    class="rounded bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700">{{ userDeptName }}</span>
+              <span class="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                {{ dictLabel(profileDicts.userType, profileData.userType) }}
+              </span>
+            </div>
+            <div class="mt-1.5 flex flex-wrap items-center gap-4 text-sm text-slate-500">
+              <span>账号：{{ profileData.userName || '-' }}</span>
+              <span>工号：{{ profileData.empNo || '-' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 分组明细：两列排布，把弹框压到一屏内（外层不出滚动条） -->
+        <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+          <section v-for="group in profileGroups" :key="group.title">
+            <h4 class="mb-1.5 flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+              <span class="h-3.5 w-1 rounded bg-blue-500"></span>{{ group.title }}
+            </h4>
+            <div class="grid grid-cols-2 gap-x-3 gap-y-1.5 rounded-lg border border-slate-200 p-2.5 text-sm">
+              <div v-for="item in group.items" :key="item[0]" class="flex min-w-0 items-start gap-1">
+                <span class="shrink-0 text-slate-400">{{ item[0] }}：</span>
+                <span class="break-all font-medium text-slate-700">{{ item[1] || '-' }}</span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="mt-3 space-y-3">
+          <!-- 角色与岗位 -->
+          <section>
+            <h4 class="mb-2 flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+              <span class="h-3.5 w-1 rounded bg-blue-500"></span>角色与岗位
+            </h4>
+            <div class="rounded-lg border border-slate-200 px-3 text-sm">
+              <div class="flex items-start gap-2 border-b border-slate-300 py-2.5">
+                <span class="shrink-0 text-slate-400">角色：</span>
+                <div class="flex max-h-[104px] flex-wrap gap-1.5 overflow-y-auto pr-1">
+                  <span v-for="role in userRoles" :key="role.code"
+                        :class="role.code === userInfo.currentRole
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-slate-100 text-slate-600'"
+                        class="rounded px-2 py-0.5 text-xs font-medium">
+                    {{ role.name }}（{{ role.code }}）
+                  </span>
+                  <span v-if="userRoles.length === 0" class="text-slate-400">未分配角色</span>
+                </div>
+              </div>
+              <!-- 岗位 = 角色 × 科室 的成对授权，顶栏「切换岗位」列出的就是这些 -->
+              <div class="flex items-start gap-2 py-2.5">
+                <span class="shrink-0 text-slate-400">岗位：</span>
+                <div class="flex max-h-[104px] flex-wrap gap-1.5 overflow-y-auto pr-1">
+                  <span v-for="post in renderProfilePosts" :key="post.roleCode + '-' + post.deptId"
+                        :class="isCurrentPost(post)
+                          ? 'bg-teal-500 text-white'
+                          : 'bg-slate-100 text-slate-600'"
+                        class="rounded px-2 py-0.5 text-xs font-medium">
+                    {{ postLabel(post) }}<template v-if="post.isPrimary === 1">（主）</template>
+                  </span>
+                  <span v-if="profilePosts.length > renderProfilePosts.length"
+                        class="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-400">
+                    还有 {{ profilePosts.length - renderProfilePosts.length }} 条…
+                  </span>
+                  <span v-if="profilePosts.length === 0" class="text-slate-400">未分配岗位</span>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </template>
+
+      <div v-else-if="!profileLoading" class="py-16 text-center text-sm text-slate-400">
+        {{ profileLoadFailed ? '用户信息加载失败，请稍后重试' : '暂无用户信息' }}
+      </div>
+    </div>
+    <template #footer>
+      <el-button v-if="profileLoadFailed && !profileLoading" @click="loadProfile">重新加载</el-button>
+      <el-button type="primary" @click="profileDialogVisible = false">关闭</el-button>
+    </template>
+  </el-dialog>
+
+  <!-- 修改密码弹窗 -->
+  <el-dialog
+      v-model="passwordDialogVisible"
+      :close-on-click-modal="false"
+      title="修改密码"
+      width="400px"
+  >
+    <el-form :model="passwordForm" label-width="80px">
+      <el-form-item label="旧密码">
+        <el-input
+            v-model="passwordForm.oldPassword"
+            placeholder="请输入旧密码"
+            show-password
+            type="password"
+        />
+      </el-form-item>
+      <el-form-item label="新密码">
+        <el-input
+            v-model="passwordForm.newPassword"
+            placeholder="请输入新密码（至少6位）"
+            show-password
+            type="password"
+        />
+      </el-form-item>
+      <el-form-item label="确认密码">
+        <el-input
+            v-model="passwordForm.confirmPassword"
+            placeholder="请再次输入新密码"
+            show-password
+            type="password"
+        />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="passwordDialogVisible = false">取消</el-button>
+      <el-button :loading="passwordLoading" type="primary" @click="submitChangePassword">
+        确定修改
+      </el-button>
+    </template>
+  </el-dialog>
+  <el-dialog v-model="showSwitchPostDialog" destroy-on-close title="切换岗位" width="460px">
+    <el-input
+        v-model="postKeyword"
+        class="mb-3"
+        clearable
+        placeholder="搜索岗位（科室 / 角色）"
+    />
+    <div v-loading="postsLoading" class="max-h-[320px] space-y-2 overflow-y-auto pr-1">
+      <div
+          v-for="post in renderPosts"
+          :key="post.roleCode + '-' + post.deptId"
+          :class="isCurrentPost(post) ? 'border-blue-300 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'"
+          class="flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors"
+          @click="handleSwitchPost(post)"
+      >
+        <span class="text-sm font-medium text-slate-700">{{ postLabel(post) }}</span>
+        <span class="flex items-center gap-1.5">
+          <span v-if="post.isPrimary === 1"
+                class="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-600">主岗位</span>
+          <span v-if="isCurrentPost(post)" class="text-xs text-blue-500">当前 ✓</span>
+        </span>
+      </div>
+      <div v-if="visiblePosts.length === 0 && !postsLoading" class="py-8 text-center text-sm text-slate-400">
+        {{ userPosts.length === 0 ? '暂无分配岗位，请联系管理员在员工档案中配置' : '没有匹配的岗位' }}
+      </div>
+      <div v-if="visiblePosts.length > POST_RENDER_LIMIT" class="pt-1 text-center text-xs text-slate-400">
+        共 {{ visiblePosts.length }} 条岗位，只列出前 {{ POST_RENDER_LIMIT }} 条，输入科室名可缩小范围
+      </div>
+    </div>
+  </el-dialog>
+
+  <!-- 患者详情弹框：统一走通用组件（主档详情 + CDR 全景时间轴），与患者管理页共用同一实现 -->
+  <PatientDetailDialog
+      v-model="showPatientDetail"
+      :patient="selectedPatient"
+      :patient-id="selectedPatientId"
+  />
+
+  <!-- 消息抽屉：多场景工作台入口（类型目录/紧急度/处理全部走 lib/messageCatalog 口径） -->
+  <el-drawer
+      v-model="messageDrawerVisible"
+      direction="rtl"
+      size="400px"
+      title="消息通知"
+  >
+    <template #header>
+      <div class="flex items-center justify-between">
+        <span>消息通知</span>
+        <span class="flex items-center gap-2 text-xs">
+          <span v-if="pendingCount > 0" class="rounded bg-amber-100 px-1.5 py-0.5 text-amber-700">{{ pendingCount }} 条待处理</span>
+          <span v-if="unreadCount > 0" class="text-red-500">{{ unreadCount }} 条未读</span>
+        </span>
+      </div>
+    </template>
+    <div v-loading="messageLoading">
+      <div v-if="messageList.length === 0" class="py-10 text-center text-slate-400">
+        暂无消息
+      </div>
+      <div v-else class="space-y-3">
+        <div
+            v-for="msg in messageList"
+            :key="msg.messageId"
+            :class="msg.readStatus === 0
+              ? (messageSeverityRank(msg.bizType) === 0 ? 'border-red-300 bg-red-50' : 'bg-blue-50')
+              : ''"
+            class="cursor-pointer rounded-lg border p-3 transition-colors hover:bg-slate-50"
+            @click="handleOpenMessage(msg)"
+        >
+          <div class="mb-1 flex items-center gap-2">
+            <!-- 类型 chip：目录驱动，未知码值渲染「未知(n)」 -->
+            <span :class="['rounded px-1.5 py-0.5 text-[11px] font-medium', messageTagClass(msg.bizType)]">
+              {{ messageLabel(msg.bizType) }}
+            </span>
+            <span class="min-w-0 flex-1 truncate font-medium text-slate-800">{{ msg.title || '系统通知' }}</span>
+            <!-- 待办型处置回执：看过≠办完（handle_status 口径见 sql/70） -->
+            <span v-if="messageHandleStatusMeta(msg.handleStatus)"
+                  :class="['rounded px-1.5 py-0.5 text-[11px] font-medium', messageHandleStatusMeta(msg.handleStatus).tagClass]">
+              {{ messageHandleStatusMeta(msg.handleStatus).label }}
+            </span>
+            <el-tag v-if="msg.readStatus === 0" size="small" type="danger">未读</el-tag>
+          </div>
+          <p class="text-sm text-slate-600">{{ msg.content }}</p>
+          <div v-if="messagePayloadChips(msg.payload).length" class="mt-1 flex flex-wrap gap-1">
+            <span v-for="chip in messagePayloadChips(msg.payload)" :key="chip.label"
+                  class="rounded bg-white/80 px-1.5 py-0.5 text-[11px] text-slate-600">
+              {{ chip.label }}：{{ chip.text }}
+            </span>
+          </div>
+          <p class="mt-1 text-xs text-slate-400">{{ msg.sendTime }}</p>
+        </div>
+      </div>
+    </div>
+  </el-drawer>
+
+  <!-- 消息处理弹窗：与消息中心页共用（报告详情 / 危急值确认接收→处置闭环） -->
+  <MessageProcessDialog
+      v-model="processVisible"
+      :message="processTarget"
+      @processed="handleMessageProcessed"
+  />
+</template>
+
+<script lang="js" setup>
+import {computed, onMounted, onUnmounted, reactive, ref, watch} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
 import {ElMessage, ElMessageBox, ElNotification} from 'element-plus'
-import {
-  Bell,
-  User,
-  ArrowDown,
-  UserFilled,
-  Lock,
-  SwitchButton,
-  Calendar,
-  Setting,
-  Switch,
-  HomeFilled,
-  ArrowRight,
-  Expand,
-  Fold,
-  Close
-} from '@element-plus/icons-vue'
 // 菜单图标按 sys_menu.icon 的组件名动态解析，必须拿整个命名空间（与 Sidebar 同一口径）
 import * as ElIcons from '@element-plus/icons-vue'
 import {
-  getUserInfo,
+  ArrowRight,
+  Bell,
+  Calendar,
+  Close,
+  Expand,
+  Fold,
+  HomeFilled,
+  Lock,
+  Setting,
+  Switch,
+  SwitchButton,
+  User,
+  UserFilled
+} from '@element-plus/icons-vue'
+import {
   changePassword,
-  getPostList,
-  switchPost,
-  getUnreadCount,
   getMessageList,
+  getPostList,
+  getSelfProfile,
+  getUnreadCount,
+  getUserInfo,
   readMessage,
-  getSelfProfile
+  switchPost
 } from '@/api/system'
 import {openMessageStream} from '@/api/messageStream'
-import { encryptPassword } from '@/lib/password'
+import {encryptPassword} from '@/lib/password'
 import {loadDictDataMap} from '@/lib/dict-cache'
-import {loadMenuTree, findMenuByPath} from '@/lib/menu-cache'
+import {findMenuByPath, loadMenuTree} from '@/lib/menu-cache'
 import {loadWorkbenchConfig} from '@/lib/workbench-config'
-import {
-  sidebarCollapsed,
-  toggleSidebar
-} from '@/lib/sidebarState'
+import {sidebarCollapsed, toggleSidebar} from '@/lib/sidebarState'
 import {setPermList} from '@/lib/perm'
 import {clearSessionCaches} from '@/lib/session-cache'
-import {loadPermissions, hasAnyPermission} from '@/lib/permission'
+import {hasAnyPermission, loadPermissions} from '@/lib/permission'
 // 站内信类型/紧急度/权限口径单点在 messageCatalog（消息工作台）
 import {
   messageActionOwner,
@@ -49,18 +454,17 @@ import {
   messageHandleStatusMeta,
   messageLabel,
   messagePayloadChips,
-  messageTagClass,
   messageSeverityRank,
+  messageTagClass,
 } from '@/lib/messageCatalog'
 // 消息处理弹窗：与消息中心页共用同一份实现（报告详情 + 危急值闭环），不得在此重写
 import MessageProcessDialog from '@/components/his/MessageProcessDialog.vue'
-import {resolveWorkspacePath, resolveLandingPath} from '@/lib/role-workspace'
+import {resolveLandingPath, resolveWorkspacePath} from '@/lib/role-workspace'
 import {isInMyTodayQueue} from '@/lib/todayQueue'
 import {patientGenderSymbol} from '@/lib/patientGender'
 import PatientSelect from './PatientSelect.vue'
 // 患者详情弹框走通用组件（Header / 患者管理页 / 医生站共用同一份实现与字段口径）
 import PatientDetailDialog from './PatientDetailDialog.vue'
-import {useRoute} from 'vue-router'
 import {useCurrentPatientStore} from '@/stores/currentPatient'
 
 const router = useRouter()
@@ -820,415 +1224,6 @@ const handleLogout = async () => {
   }
 }
 </script>
-
-<template>
-  <header
-      class="sticky top-0 z-30 flex h-16 items-center justify-between px-6"
-      style="background: linear-gradient(90deg, #0A4376 0%, #0F5FA0 42%, #1179B8 72%, #0E9488 100%); box-shadow: 0 2px 12px rgba(9, 60, 110, 0.28);"
-  >
-    <!-- 左侧：Logo + 企业名 + 菜单伸缩 + 面包屑 -->
-    <div class="flex items-center gap-4">
-      <!--
-        品牌位 = 「回首页」入口（真实 HIS 惯例：点医院标识回主菜单，不再另配一个图标按钮）。
-        Logo 常驻（收起态它是唯一的医院标识，不能一起藏掉），只把医院名收掉。
-        宽度与侧栏同口径（展开 256 / 收起 64），右边框就是那条分割线 ——
-        于是它始终压在侧栏的右边界上，两种状态都不错位。
-        收起态额外把 header 的 24px 左内边距抵消掉（marginLeft:-24），
-        让盒子从 x=0 起算并居中放 Logo —— 这样 Logo 正好落在 64px 图标条的中轴上，
-        与侧栏收起后的菜单图标、底部箭头同一条竖线。
-      -->
-      <router-link
-          to="/"
-          title="返回首页"
-          class="flex shrink-0 items-center gap-3 border-r border-white/30 no-underline transition-all duration-300"
-          :style="sidebarCollapsed
-            ? {width: '64px', marginLeft: '-24px', justifyContent: 'center'}
-            : {width: '232px'}"
-      >
-        <!-- Logo -->
-        <div class="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-white">
-          <img src="@/assets/sidebar_logo.png" alt="长沙市麓康医院" class="h-full w-full object-contain"/>
-        </div>
-        <div v-if="!sidebarCollapsed" class="flex flex-col w-40">
-          <span class="text-[18px] font-semibold text-white tracking-wide">长沙市麓康医院</span>
-        </div>
-      </router-link>
-      <!--
-        菜单伸缩按钮：与 Sidebar 底部箭头共用一个开关（lib/sidebarState）。
-        展开时侧栏撑到 256px 把主内容整体往右推，收起时退成 64px 图标条。
-      -->
-      <button
-          class="shrink-0 rounded-lg p-1.5 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-          :title="sidebarCollapsed ? '展开菜单' : '收起菜单'"
-          @click="toggleSidebar"
-      >
-        <Expand v-if="sidebarCollapsed" class="h-5 w-5"/>
-        <Fold v-else class="h-5 w-5"/>
-      </button>
-      <!-- 面包屑导航（空间紧张时最先收缩：当前患者条和搜索是开单前的确认入口，优先保住） -->
-      <nav class="breadcrumb-nav flex min-w-0 items-center gap-1.5 overflow-hidden text-sm">
-        <template v-for="(item, index) in breadcrumbs" :key="index">
-          <el-icon v-if="index === 0" class="h-4 w-4 shrink-0 text-white/70">
-            <HomeFilled/>
-          </el-icon>
-          <!-- 目录 / 菜单条目带自己的图标（sys_menu.icon），与侧边栏同一份图标名 -->
-          <el-icon v-if="index > 0 && item.icon" class="h-3.5 w-3.5 shrink-0 text-white/70">
-            <component :is="resolveMenuIcon(item.icon)"/>
-          </el-icon>
-          <router-link
-              v-if="index < breadcrumbs.length - 1 && item.clickable"
-              :to="item.path"
-              class="shrink-0 whitespace-nowrap text-white/70 hover:text-white transition-colors"
-          >
-            {{ item.label }}
-          </router-link>
-          <span v-else-if="index < breadcrumbs.length - 1"
-                class="shrink-0 whitespace-nowrap text-white/70">{{ item.label }}</span>
-          <span v-else class="truncate whitespace-nowrap font-medium text-white">{{ item.label }}</span>
-          <el-icon v-if="index < breadcrumbs.length - 1" class="h-3 w-3 shrink-0 text-white/50">
-            <ArrowRight/>
-          </el-icon>
-        </template>
-      </nav>
-    </div>
-
-    <!-- 中间：当前患者（常驻）+ 全局患者搜索 -->
-    <div class="flex min-w-0 flex-1 items-center justify-center gap-3">
-      <!--
-        当前患者常驻条：真实 HIS 的顶部永远挂着「现在给谁看病」，因为开医嘱、开药、开检查
-        之前必须确认对象，这是防开错人的最后一道提示；此前选中患者的信息只在弹框里出现一次，
-        跳去别的页面（患者管理、危急值…）就再也看不到自己选的是谁。
-        点主体 = 看档案，点 × = 清除当前患者。
-      -->
-      <div
-          v-if="currentPatient"
-          class="cp-chip"
-          :title="'当前患者：' + currentPatient.patientName + (currentPatient.patientNo ? '（' + currentPatient.patientNo + '）' : '')"
-          @click="openCurrentPatientDetail"
-      >
-        <span class="cp-label">当前患者</span>
-        <span class="cp-name">{{ currentPatient.patientName }}</span>
-        <span class="cp-meta">{{ currentPatientMeta }}</span>
-        <span
-            v-if="currentPatientAllergy"
-            class="cp-allergy"
-            :title="'过敏史：' + currentPatient.allergyHistory"
-        >过敏</span>
-        <button class="cp-close" title="清除当前患者" @click.stop="clearCurrentPatient">
-          <Close class="h-3 w-3"/>
-        </button>
-      </div>
-
-      <div class="w-full min-w-[260px] max-w-[400px]">
-        <PatientSelect
-            ref="patientSelectRef"
-            width="100%"
-            :page-size="10"
-            :model-value="currentPatientStore.patientId"
-            search-icon
-            @select="handlePatientSelect"
-            @clear="clearCurrentPatient"
-        />
-      </div>
-    </div>
-
-    <!-- 右侧：消息 + 姓名 + 角色 + 科室 + 时钟 + 设置 -->
-    <div class="flex items-center gap-4">
-      <!-- 消息 -->
-      <el-badge :value="unreadCount" :hidden="unreadCount === 0" class="cursor-pointer">
-        <button class="rounded-lg p-2 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-                @click="handleOpenMessages">
-          <Bell class="h-5 w-5"/>
-        </button>
-      </el-badge>
-
-      <div class="h-6 w-px bg-white/30"/>
-
-      <!-- 用户姓名 -->
-      <div class="flex items-center gap-1.5 text-sm font-medium text-white">
-        <User class="h-4 w-4 text-white/70"/>
-        <span>{{ displayName }}</span>
-      </div>
-
-      <!-- 用户角色 -->
-      <div class="rounded bg-white/20 px-2.5 py-1 text-sm font-medium text-white">
-        {{ currentRoleLabel }}
-      </div>
-
-      <!-- 所属科室 -->
-      <div v-if="userDeptName" class="rounded bg-white/20 px-2.5 py-1 text-sm font-medium text-white">
-        {{ userDeptName }}
-      </div>
-
-      <div class="h-6 w-px bg-white/30"/>
-
-      <!-- 实时时钟 -->
-      <div class="flex items-center gap-1.5 text-sm text-white">
-        <Calendar class="h-4 w-4"/>
-        <span class="font-mono font-medium">{{ currentTime }}</span>
-        <span>{{ currentWeekday }}</span>
-      </div>
-
-      <div class="h-6 w-px bg-white/30"/>
-
-      <!-- 设置 -->
-      <el-dropdown trigger="click" @command="handleCommand">
-        <button class="rounded-lg p-2 text-white transition-colors hover:bg-white/20">
-          <Setting class="h-5 w-5"/>
-        </button>
-        <template #dropdown>
-          <el-dropdown-menu>
-            <el-dropdown-item :icon="UserFilled" command="profile">用户信息</el-dropdown-item>
-            <el-dropdown-item :icon="Switch" command="switchPost">切换岗位</el-dropdown-item>
-            <el-dropdown-item :icon="Lock" command="password">修改密码</el-dropdown-item>
-            <el-dropdown-item divided :icon="SwitchButton" command="logout">退出登录</el-dropdown-item>
-          </el-dropdown-menu>
-        </template>
-      </el-dropdown>
-    </div>
-  </header>
-
-  <!-- 用户信息弹窗（个人档案） -->
-  <el-dialog v-model="profileDialogVisible" title="用户信息" width="920px" top="5vh" destroy-on-close>
-    <div v-loading="profileLoading" class="min-h-[280px]">
-      <template v-if="profileData">
-        <!-- 身份概要 -->
-        <div class="mb-3 flex items-center gap-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
-          <div class="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-blue-500 ring-2 ring-blue-100">
-            <img v-if="profileData.avatar" :src="profileData.avatar" alt="头像" class="h-full w-full object-cover"/>
-            <span v-else
-                  class="flex h-full w-full items-center justify-center text-2xl font-bold text-white">
-              {{ avatarText }}
-            </span>
-          </div>
-          <div class="flex-1">
-            <div class="flex flex-wrap items-center gap-2">
-              <h3 class="text-lg font-semibold text-slate-900">{{ displayName }}</h3>
-              <span class="rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-600">{{
-                  currentRoleLabel
-                }}</span>
-              <span v-if="userDeptName"
-                    class="rounded bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700">{{ userDeptName }}</span>
-              <span class="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
-                {{ dictLabel(profileDicts.userType, profileData.userType) }}
-              </span>
-            </div>
-            <div class="mt-1.5 flex flex-wrap items-center gap-4 text-sm text-slate-500">
-              <span>账号：{{ profileData.userName || '-' }}</span>
-              <span>工号：{{ profileData.empNo || '-' }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 分组明细：两列排布，把弹框压到一屏内（外层不出滚动条） -->
-        <div class="grid grid-cols-2 gap-x-4 gap-y-3">
-          <section v-for="group in profileGroups" :key="group.title">
-            <h4 class="mb-1.5 flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-              <span class="h-3.5 w-1 rounded bg-blue-500"></span>{{ group.title }}
-            </h4>
-            <div class="grid grid-cols-2 gap-x-3 gap-y-1.5 rounded-lg border border-slate-200 p-2.5 text-sm">
-              <div v-for="item in group.items" :key="item[0]" class="flex min-w-0 items-start gap-1">
-                <span class="shrink-0 text-slate-400">{{ item[0] }}：</span>
-                <span class="break-all font-medium text-slate-700">{{ item[1] || '-' }}</span>
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <div class="mt-3 space-y-3">
-          <!-- 角色与岗位 -->
-          <section>
-            <h4 class="mb-2 flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-              <span class="h-3.5 w-1 rounded bg-blue-500"></span>角色与岗位
-            </h4>
-            <div class="rounded-lg border border-slate-200 px-3 text-sm">
-              <div class="flex items-start gap-2 border-b border-slate-300 py-2.5">
-                <span class="shrink-0 text-slate-400">角色：</span>
-                <div class="flex max-h-[104px] flex-wrap gap-1.5 overflow-y-auto pr-1">
-                  <span v-for="role in userRoles" :key="role.code"
-                        :class="role.code === userInfo.currentRole
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-slate-100 text-slate-600'"
-                        class="rounded px-2 py-0.5 text-xs font-medium">
-                    {{ role.name }}（{{ role.code }}）
-                  </span>
-                  <span v-if="userRoles.length === 0" class="text-slate-400">未分配角色</span>
-                </div>
-              </div>
-              <!-- 岗位 = 角色 × 科室 的成对授权，顶栏「切换岗位」列出的就是这些 -->
-              <div class="flex items-start gap-2 py-2.5">
-                <span class="shrink-0 text-slate-400">岗位：</span>
-                <div class="flex max-h-[104px] flex-wrap gap-1.5 overflow-y-auto pr-1">
-                  <span v-for="post in renderProfilePosts" :key="post.roleCode + '-' + post.deptId"
-                        :class="isCurrentPost(post)
-                          ? 'bg-teal-500 text-white'
-                          : 'bg-slate-100 text-slate-600'"
-                        class="rounded px-2 py-0.5 text-xs font-medium">
-                    {{ postLabel(post) }}<template v-if="post.isPrimary === 1">（主）</template>
-                  </span>
-                  <span v-if="profilePosts.length > renderProfilePosts.length"
-                        class="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-400">
-                    还有 {{ profilePosts.length - renderProfilePosts.length }} 条…
-                  </span>
-                  <span v-if="profilePosts.length === 0" class="text-slate-400">未分配岗位</span>
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
-      </template>
-
-      <div v-else-if="!profileLoading" class="py-16 text-center text-sm text-slate-400">
-        {{ profileLoadFailed ? '用户信息加载失败，请稍后重试' : '暂无用户信息' }}
-      </div>
-    </div>
-    <template #footer>
-      <el-button v-if="profileLoadFailed && !profileLoading" @click="loadProfile">重新加载</el-button>
-      <el-button type="primary" @click="profileDialogVisible = false">关闭</el-button>
-    </template>
-  </el-dialog>
-
-  <!-- 修改密码弹窗 -->
-  <el-dialog
-      v-model="passwordDialogVisible"
-      title="修改密码"
-      width="400px"
-      :close-on-click-modal="false"
-  >
-    <el-form :model="passwordForm" label-width="80px">
-      <el-form-item label="旧密码">
-        <el-input
-            v-model="passwordForm.oldPassword"
-            type="password"
-            placeholder="请输入旧密码"
-            show-password
-        />
-      </el-form-item>
-      <el-form-item label="新密码">
-        <el-input
-            v-model="passwordForm.newPassword"
-            type="password"
-            placeholder="请输入新密码（至少6位）"
-            show-password
-        />
-      </el-form-item>
-      <el-form-item label="确认密码">
-        <el-input
-            v-model="passwordForm.confirmPassword"
-            type="password"
-            placeholder="请再次输入新密码"
-            show-password
-        />
-      </el-form-item>
-    </el-form>
-    <template #footer>
-      <el-button @click="passwordDialogVisible = false">取消</el-button>
-      <el-button type="primary" :loading="passwordLoading" @click="submitChangePassword">
-        确定修改
-      </el-button>
-    </template>
-  </el-dialog>
-  <el-dialog v-model="showSwitchPostDialog" title="切换岗位" width="460px" destroy-on-close>
-    <el-input
-        v-model="postKeyword"
-        placeholder="搜索岗位（科室 / 角色）"
-        clearable
-        class="mb-3"
-    />
-    <div v-loading="postsLoading" class="max-h-[320px] space-y-2 overflow-y-auto pr-1">
-      <div
-          v-for="post in renderPosts"
-          :key="post.roleCode + '-' + post.deptId"
-          class="flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors"
-          :class="isCurrentPost(post) ? 'border-blue-300 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'"
-          @click="handleSwitchPost(post)"
-      >
-        <span class="text-sm font-medium text-slate-700">{{ postLabel(post) }}</span>
-        <span class="flex items-center gap-1.5">
-          <span v-if="post.isPrimary === 1"
-                class="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-600">主岗位</span>
-          <span v-if="isCurrentPost(post)" class="text-xs text-blue-500">当前 ✓</span>
-        </span>
-      </div>
-      <div v-if="visiblePosts.length === 0 && !postsLoading" class="py-8 text-center text-sm text-slate-400">
-        {{ userPosts.length === 0 ? '暂无分配岗位，请联系管理员在员工档案中配置' : '没有匹配的岗位' }}
-      </div>
-      <div v-if="visiblePosts.length > POST_RENDER_LIMIT" class="pt-1 text-center text-xs text-slate-400">
-        共 {{ visiblePosts.length }} 条岗位，只列出前 {{ POST_RENDER_LIMIT }} 条，输入科室名可缩小范围
-      </div>
-    </div>
-  </el-dialog>
-
-  <!-- 患者详情弹框：统一走通用组件（主档详情 + CDR 全景时间轴），与患者管理页共用同一实现 -->
-  <PatientDetailDialog
-      v-model="showPatientDetail"
-      :patient-id="selectedPatientId"
-      :patient="selectedPatient"
-  />
-
-  <!-- 消息抽屉：多场景工作台入口（类型目录/紧急度/处理全部走 lib/messageCatalog 口径） -->
-  <el-drawer
-      v-model="messageDrawerVisible"
-      title="消息通知"
-      direction="rtl"
-      size="400px"
-  >
-    <template #header>
-      <div class="flex items-center justify-between">
-        <span>消息通知</span>
-        <span class="flex items-center gap-2 text-xs">
-          <span v-if="pendingCount > 0" class="rounded bg-amber-100 px-1.5 py-0.5 text-amber-700">{{ pendingCount }} 条待处理</span>
-          <span v-if="unreadCount > 0" class="text-red-500">{{ unreadCount }} 条未读</span>
-        </span>
-      </div>
-    </template>
-    <div v-loading="messageLoading">
-      <div v-if="messageList.length === 0" class="py-10 text-center text-slate-400">
-        暂无消息
-      </div>
-      <div v-else class="space-y-3">
-        <div
-            v-for="msg in messageList"
-            :key="msg.messageId"
-            class="cursor-pointer rounded-lg border p-3 transition-colors hover:bg-slate-50"
-            :class="msg.readStatus === 0
-              ? (messageSeverityRank(msg.bizType) === 0 ? 'border-red-300 bg-red-50' : 'bg-blue-50')
-              : ''"
-            @click="handleOpenMessage(msg)"
-        >
-          <div class="mb-1 flex items-center gap-2">
-            <!-- 类型 chip：目录驱动，未知码值渲染「未知(n)」 -->
-            <span :class="['rounded px-1.5 py-0.5 text-[11px] font-medium', messageTagClass(msg.bizType)]">
-              {{ messageLabel(msg.bizType) }}
-            </span>
-            <span class="min-w-0 flex-1 truncate font-medium text-slate-800">{{ msg.title || '系统通知' }}</span>
-            <!-- 待办型处置回执：看过≠办完（handle_status 口径见 sql/70） -->
-            <span v-if="messageHandleStatusMeta(msg.handleStatus)"
-                  :class="['rounded px-1.5 py-0.5 text-[11px] font-medium', messageHandleStatusMeta(msg.handleStatus).tagClass]">
-              {{ messageHandleStatusMeta(msg.handleStatus).label }}
-            </span>
-            <el-tag v-if="msg.readStatus === 0" type="danger" size="small">未读</el-tag>
-          </div>
-          <p class="text-sm text-slate-600">{{ msg.content }}</p>
-          <div v-if="messagePayloadChips(msg.payload).length" class="mt-1 flex flex-wrap gap-1">
-            <span v-for="chip in messagePayloadChips(msg.payload)" :key="chip.label"
-                  class="rounded bg-white/80 px-1.5 py-0.5 text-[11px] text-slate-600">
-              {{ chip.label }}：{{ chip.text }}
-            </span>
-          </div>
-          <p class="mt-1 text-xs text-slate-400">{{ msg.sendTime }}</p>
-        </div>
-      </div>
-    </div>
-  </el-drawer>
-
-  <!-- 消息处理弹窗：与消息中心页共用（报告详情 / 危急值确认接收→处置闭环） -->
-  <MessageProcessDialog
-      v-model="processVisible"
-      :message="processTarget"
-      @processed="handleMessageProcessed"
-  />
-</template>
 
 <style scoped>
 /* ---------- 面包屑图标 ----------

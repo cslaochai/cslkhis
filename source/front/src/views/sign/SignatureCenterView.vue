@@ -1,494 +1,3 @@
-<script lang="ts" setup>
-/**
- * 电子签名与时间戳 · 签名中心（P5.5）
- *
- * 这个页面回答的问题不是"有多少签名"，而是"**这份病历的签名还能不能证明它没被改过**"。
- *
- * 五条必须写在页面上的口径（否则数字与结论会被误读）：
- *   1. **签名是证据，不是状态**。签名一旦落库只增不改不删；作废只是追加作废信息，
- *      历史行、历史签名值、历史被签内容快照全部保留。所以列表默认带出已作废签名，
- *      "已作废 3 条"不是异常，而是"这 3 次签字动作真实发生过"。
- *   2. **验签是两个独立断言**：签名值校验（证据本身有没有被换）与内容比对（签名之后内容有没有被改）。
- *      合成一个"通过/不通过"会丢掉最关键的信息 —— 两者性质与处理方式完全不同。
- *   3. **时间戳来源必须自报**。本期时间取的是**本机时钟**，不具备可信时间效力；
- *      页面上原样展示来源，不得表述为"可信时间戳"。
- *   4. **证书是院内托管的**，不是 CA 签发的。自动签发的证书信任级别低于人工签发。
- *   5. **存量病历的签名补不回来**。库里已归档病历都是签名能力上线之前产生的，
- *      它们没有签名；覆盖率表把"未签名（存量）"单独列出来，显示为 0% 而不是藏起来。
- *      补签等于伪造，本系统不允许对历史归档文书补签。
- */
-import {computed, onMounted, reactive, ref} from 'vue'
-import {Search, WarningFilled} from '@element-plus/icons-vue'
-import {ElMessage, ElMessageBox} from 'element-plus'
-import {
-  getSignatureDetail,
-  getSignatureList,
-  getSignatureQueryOptions,
-  getSignatureSummary,
-  getSignCertDetail,
-  getSignCertList,
-  getTsaStatus,
-  getTsaTokenList,
-  invalidateSignature,
-  issueSignCert,
-  revokeSignCert,
-  updateTsaStatus,
-  updateTsaTimeSource,
-  verifySignature,
-  verifyTsaToken,
-} from '@/api/signature'
-import {getEmployeeList} from '@/api/system'
-import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
-
-// ---------------- 概览 ----------------
-const overviewLoading = ref(false)
-const overview = ref<any>(null)
-
-// ---------------- 下拉选项 ----------------
-const options = ref<any>({})
-
-// ---------------- 签名记录 ----------------
-const signLoading = ref(false)
-const signList = ref<any[]>([])
-const signTotal = ref(0)
-const signQuery = reactive<any>({
-  bizType: undefined,
-  signScene: undefined,
-  signStatus: undefined,
-  verifyStatus: undefined,
-  timeSource: undefined,
-  keyword: '',
-  beginTime: undefined,
-  endTime: undefined,
-  pageNum: 1,
-  pageSize: DEFAULT_PAGE_SIZE,
-})
-const timeRange = ref<any>(null)
-
-// ---------------- 详情抽屉 ----------------
-const drawerVisible = ref(false)
-const detailLoading = ref(false)
-const detail = ref<any>(null)
-const verifyResult = ref<any>(null)
-const verifying = ref(false)
-const invalidReason = ref('')
-const invalidating = ref(false)
-
-// ---------------- 证书 ----------------
-const certLoading = ref(false)
-const certList = ref<any[]>([])
-const certTotal = ref(0)
-const certQuery = reactive<any>({
-  certStatus: undefined,
-  issuedMode: undefined,
-  keyword: '',
-  pageNum: 1,
-  pageSize: DEFAULT_PAGE_SIZE,
-})
-const certDetailVisible = ref(false)
-const certDetail = ref<any>(null)
-
-// 签发证书
-const issueVisible = ref(false)
-const issuing = ref(false)
-const empOptions = ref<any[]>([])
-const empLoading = ref(false)
-const issueForm = reactive<any>({
-  empId: undefined,
-  empName: '',
-  deptId: undefined,
-  deptName: '',
-  validDays: undefined,
-  remark: ''
-})
-
-// 吊销证书
-const revokeVisible = ref(false)
-const revoking = ref(false)
-const revokeForm = reactive<any>({certId: '', certNo: '', reason: ''})
-
-// ---------------- 时间戳（TSA） ----------------
-const tsaStatus = ref<any>(null)
-const tsaLoading = ref(false)
-const tsaTokenLoading = ref(false)
-const tsaTokenList = ref<any[]>([])
-const tsaTokenTotal = ref(0)
-const tsaTokenQuery = reactive<any>({serial: '', pageNum: 1, pageSize: DEFAULT_PAGE_SIZE})
-
-const loadTsaStatus = async () => {
-  tsaLoading.value = true
-  try {
-    const res = await getTsaStatus()
-    tsaStatus.value = res.data
-    syncSourceDraft()
-  } catch (e: any) {
-    ElMessage.error(e?.message || '加载TSA状态失败')
-  } finally {
-    tsaLoading.value = false
-  }
-}
-
-const loadTsaTokenList = async () => {
-  tsaTokenLoading.value = true
-  try {
-    const params: any = {pageNum: tsaTokenQuery.pageNum, pageSize: tsaTokenQuery.pageSize}
-    if (tsaTokenQuery.serial) params.serial = tsaTokenQuery.serial.trim()
-    const res = await getTsaTokenList(params)
-    tsaTokenList.value = res.data?.records || []
-    tsaTokenTotal.value = Number(res.data?.total ?? 0)
-  } catch (e: any) {
-    ElMessage.error(e?.message || '加载时间戳台账失败')
-  } finally {
-    tsaTokenLoading.value = false
-  }
-}
-
-const searchTsaToken = () => {
-  tsaTokenQuery.pageNum = 1
-  loadTsaTokenList()
-}
-
-// ---------------- TSA 运维（G6b）：启停 / 时间来源 / 令牌复验 ----------------
-const tsaOpsLoading = ref(false)
-// 单选框的草稿值：接口成功后以服务端 configTimeSource 为准回填，取消/失败回滚
-const tsaSourceDraft = ref<number>(1)
-
-const syncSourceDraft = () => {
-  tsaSourceDraft.value = tsaStatus.value?.configTimeSource === 3 ? 3 : 1
-}
-
-const onTimeSourceChange = async (val: number) => {
-  const target = val === 3 ? '可信时间戳（TSA 盖章）' : '本机时钟'
-  const warn = val === 3 && !tsaStatus.value?.available
-      ? '注意：TSA 服务当前不在线，配置会保存，但实际生效的仍是「本机时钟」（宁可承认不可信，也不谎报可信）。'
-      : ''
-  try {
-    await ElMessageBox.confirm(`确认把签名时间来源切换为「${target}」？${warn}`, '切换时间来源', {
-      type: 'warning', confirmButtonText: '确认切换', cancelButtonText: '取消',
-    })
-  } catch {
-    syncSourceDraft()
-    return
-  }
-  tsaOpsLoading.value = true
-  try {
-    const res = await updateTsaTimeSource(val)
-    tsaStatus.value = res.data
-    syncSourceDraft()
-    ElMessage.success('时间来源已切换')
-  } catch (e: any) {
-    ElMessage.error(e?.message || '切换失败')
-    syncSourceDraft()
-  } finally {
-    tsaOpsLoading.value = false
-  }
-}
-
-const onToggleTsa = async () => {
-  const stop = !!tsaStatus.value?.available
-  const msg = stop
-      ? '停用后 TSA 不再签发新令牌，新签名时间将降级为「本机时钟」；历史令牌凭已登记公钥仍可验证。确认停用？'
-      : '启用后，时间来源配为「可信时间戳」的新签名将重新由 TSA 盖章。确认启用？'
-  try {
-    await ElMessageBox.confirm(msg, stop ? '停用 TSA 服务' : '启用 TSA 服务', {
-      type: 'warning', confirmButtonText: '确认', cancelButtonText: '取消',
-    })
-  } catch {
-    return
-  }
-  tsaOpsLoading.value = true
-  try {
-    const res = await updateTsaStatus(stop ? 0 : 1)
-    tsaStatus.value = res.data
-    ElMessage.success(stop ? 'TSA 已停用' : 'TSA 已启用')
-  } catch (e: any) {
-    ElMessage.error(e?.message || '操作失败')
-  } finally {
-    tsaOpsLoading.value = false
-  }
-}
-
-const verifyingTokenId = ref<string>('')
-const tsaVerifyResult = reactive<Record<string, any>>({})
-
-const onVerifyTsaToken = async (row: any) => {
-  verifyingTokenId.value = String(row.id)
-  try {
-    const res = await verifyTsaToken(row.id)
-    tsaVerifyResult[row.id] = res.data
-    if (res.data?.valid) {
-      ElMessage.success(`令牌 ${row.serial} 复验通过`)
-    } else {
-      ElMessage.warning(res.data?.failReason || '令牌复验不通过')
-    }
-  } catch (e: any) {
-    ElMessage.error(e?.message || '复验失败')
-  } finally {
-    verifyingTokenId.value = ''
-  }
-}
-
-// 台账 tab 首次点开时拉数据（懒加载；刷新走 tab 内查询按钮）
-const onTabChange = (tab: any) => {
-  if (tab === 'tsa' || tab?.props?.name === 'tsa') {
-    if (!tsaTokenList.value.length) loadTsaTokenList()
-  }
-}
-
-const activeTab = ref('sign')
-
-// ---------------- 加载 ----------------
-const loadOverview = async () => {
-  overviewLoading.value = true
-  try {
-    const res = await getSignatureSummary()
-    overview.value = res.data
-  } catch (e: any) {
-    ElMessage.error(e?.message || '加载签名概览失败')
-  } finally {
-    overviewLoading.value = false
-  }
-}
-
-const loadOptions = async () => {
-  try {
-    const res = await getSignatureQueryOptions()
-    options.value = res.data || {}
-  } catch (e: any) {
-    ElMessage.error(e?.message || '加载下拉选项失败')
-  }
-}
-
-const loadSignList = async () => {
-  signLoading.value = true
-  try {
-    const params: any = {pageNum: signQuery.pageNum, pageSize: signQuery.pageSize}
-    if (signQuery.bizType !== undefined && signQuery.bizType !== null) params.bizType = signQuery.bizType
-    if (signQuery.signScene !== undefined && signQuery.signScene !== null) params.signScene = signQuery.signScene
-    if (signQuery.signStatus !== undefined && signQuery.signStatus !== null) params.signStatus = signQuery.signStatus
-    if (signQuery.verifyStatus !== undefined && signQuery.verifyStatus !== null) params.verifyStatus = signQuery.verifyStatus
-    if (signQuery.timeSource !== undefined && signQuery.timeSource !== null) params.timeSource = signQuery.timeSource
-    if (signQuery.keyword) params.keyword = signQuery.keyword.trim()
-    if (timeRange.value && timeRange.value[0]) params.beginTime = timeRange.value[0]
-    if (timeRange.value && timeRange.value[1]) params.endTime = timeRange.value[1]
-    const res = await getSignatureList(params)
-    signList.value = res.data?.records || []
-    signTotal.value = Number(res.data?.total ?? 0)
-  } catch (e: any) {
-    ElMessage.error(e?.message || '加载签名记录失败')
-  } finally {
-    signLoading.value = false
-  }
-}
-
-const loadCertList = async () => {
-  certLoading.value = true
-  try {
-    const params: any = {pageNum: certQuery.pageNum, pageSize: certQuery.pageSize}
-    if (certQuery.certStatus !== undefined && certQuery.certStatus !== null) params.certStatus = certQuery.certStatus
-    if (certQuery.issuedMode !== undefined && certQuery.issuedMode !== null) params.issuedMode = certQuery.issuedMode
-    if (certQuery.keyword) params.keyword = certQuery.keyword.trim()
-    const res = await getSignCertList(params)
-    certList.value = res.data?.records || []
-    certTotal.value = Number(res.data?.total ?? 0)
-  } catch (e: any) {
-    ElMessage.error(e?.message || '加载证书列表失败')
-  } finally {
-    certLoading.value = false
-  }
-}
-
-const refreshAll = async () => {
-  await Promise.all([loadOverview(), loadSignList(), loadCertList(), loadTsaStatus()])
-}
-
-const searchSign = () => {
-  signQuery.pageNum = 1
-  loadSignList()
-}
-
-const clearSignFilter = () => {
-  signQuery.bizType = undefined
-  signQuery.signScene = undefined
-  signQuery.signStatus = undefined
-  signQuery.verifyStatus = undefined
-  signQuery.timeSource = undefined
-  signQuery.keyword = ''
-  timeRange.value = null
-  signQuery.pageNum = 1
-  loadSignList()
-}
-
-// ---------------- 详情 / 验签 / 作废 ----------------
-const openDetail = async (row: any) => {
-  drawerVisible.value = true
-  detailLoading.value = true
-  detail.value = null
-  verifyResult.value = null
-  invalidReason.value = ''
-  try {
-    const res = await getSignatureDetail(row.id)
-    detail.value = res.data
-  } catch (e: any) {
-    ElMessage.error(e?.message || '加载签名详情失败')
-  } finally {
-    detailLoading.value = false
-  }
-}
-
-const doVerify = async () => {
-  if (!detail.value) return
-  verifying.value = true
-  try {
-    const res = await verifySignature(detail.value.id)
-    verifyResult.value = res.data
-    // 验签会回写核查结果，列表里的"验签"列必须跟着变，否则页面自相矛盾
-    await Promise.all([loadSignList(), loadOverview()])
-  } catch (e: any) {
-    ElMessage.error(e?.message || '验签失败')
-  } finally {
-    verifying.value = false
-  }
-}
-
-const doInvalidate = async () => {
-  if (!detail.value) return
-  if (!invalidReason.value.trim()) {
-    ElMessage.warning('作废必须写理由 —— 事后要能回答「是谁撤了这份签名、为什么」')
-    return
-  }
-  invalidating.value = true
-  try {
-    await invalidateSignature(detail.value.id, invalidReason.value.trim())
-    ElMessage.success('已作废该签名（历史行保留，内容锁定已解除）')
-    drawerVisible.value = false
-    await Promise.all([loadSignList(), loadOverview()])
-  } catch (e: any) {
-    ElMessage.error(e?.message || '作废失败')
-  } finally {
-    invalidating.value = false
-  }
-}
-
-// ---------------- 证书操作 ----------------
-const openCertDetail = async (row: any) => {
-  certDetailVisible.value = true
-  certDetail.value = null
-  try {
-    const res = await getSignCertDetail(row.id)
-    certDetail.value = res.data
-  } catch (e: any) {
-    ElMessage.error(e?.message || '加载证书详情失败')
-  }
-}
-
-const searchEmp = async (keyword: string) => {
-  empLoading.value = true
-  try {
-    const res = await getEmployeeList({keyword: keyword || undefined})
-    empOptions.value = res.data || []
-  } catch (e: any) {
-    ElMessage.error(e?.message || '加载员工列表失败')
-  } finally {
-    empLoading.value = false
-  }
-}
-
-const openIssue = () => {
-  issueForm.empId = undefined
-  issueForm.empName = ''
-  issueForm.deptId = undefined
-  issueForm.deptName = ''
-  issueForm.validDays = undefined
-  issueForm.remark = ''
-  issueVisible.value = true
-  searchEmp('')
-}
-
-const onEmpChange = (empId: any) => {
-  const emp = empOptions.value.find((e: any) => String(e.id) === String(empId))
-  issueForm.empName = emp?.empName || ''
-  issueForm.deptId = emp?.deptId || undefined
-  issueForm.deptName = emp?.deptName || ''
-}
-
-const submitIssue = async () => {
-  if (!issueForm.empId) {
-    ElMessage.warning('请选择员工')
-    return
-  }
-  issuing.value = true
-  try {
-    const res = await issueSignCert({
-      empId: issueForm.empId,
-      empName: issueForm.empName,
-      deptId: issueForm.deptId,
-      deptName: issueForm.deptName,
-      validDays: issueForm.validDays || undefined,
-      remark: issueForm.remark || undefined,
-    })
-    // 私钥永不回显 —— 签发接口只回证书 VO（公钥 + 指纹），前端也没有地方能拿到私钥
-    ElMessage.success(`已签发证书 ${res.data?.certNo || ''}（指纹 ${res.data?.keyFingerprintGroups || ''}）`)
-    issueVisible.value = false
-    await Promise.all([loadCertList(), loadOverview()])
-  } catch (e: any) {
-    ElMessage.error(e?.message || '签发失败')
-  } finally {
-    issuing.value = false
-  }
-}
-
-const openRevoke = (row: any) => {
-  revokeForm.certId = row.id
-  revokeForm.certNo = row.certNo
-  revokeForm.reason = ''
-  revokeVisible.value = true
-}
-
-const submitRevoke = async () => {
-  if (!revokeForm.reason.trim()) {
-    ElMessage.warning('吊销必须写理由')
-    return
-  }
-  revoking.value = true
-  try {
-    await revokeSignCert(revokeForm.certId, revokeForm.reason.trim())
-    ElMessage.success('已吊销该证书（历史签名仍可用其公钥验签）')
-    revokeVisible.value = false
-    await Promise.all([loadCertList(), loadOverview()])
-  } catch (e: any) {
-    ElMessage.error(e?.message || '吊销失败')
-  } finally {
-    revoking.value = false
-  }
-}
-
-// ---------------- 展示辅助 ----------------
-const num = (v: any) => Number(v ?? 0)
-const text = (v: any) => (v === null || v === undefined || v === '' ? '—' : String(v))
-const coverages = computed(() => overview.value?.coverages || [])
-const pendingTotal = computed(() =>
-    coverages.value.reduce((sum: number, c: any) => sum + num(c.pendingSign), 0),
-)
-const invalidatedTotal = computed(() =>
-    coverages.value.reduce((sum: number, c: any) => sum + num(c.invalidated), 0),
-)
-// 覆盖率占位：分母为 0 时后端给的是「—（该类型还没有可统计的对象）」，不是 "0.0%" —— 别把它当比率渲染
-const isRatePlaceholder = (t: any) => !t || String(t).startsWith('—')
-// 时间来源标签：只有 TimeSource.trusted() 那一档才配绿；本机时钟必须显眼
-const timeSourceTag = (src: any) => (src === 3 ? 'success' : src === 2 ? 'warning' : 'info')
-// 验签状态：0-未校验（灰）1-通过（绿）2-失败（红）。0 必须显式给一档，
-// 否则它会落到最后的分支上被渲染成"失败"，而"从没验过"和"验过发现被改"完全是两件事。
-const verifyTag = (s: any) => (s === 1 ? 'success' : s === 2 ? 'danger' : 'info')
-// 结论级别：1-通过 2-警告 3-失败
-const conclusionTag = (l: any) => (l === 1 ? 'success' : l === 2 ? 'warning' : 'danger')
-
-onMounted(async () => {
-  await loadOptions()
-  await refreshAll()
-})
-</script>
-
 <template>
   <div class="space-y-6">
     <!-- 概览 -->
@@ -1252,3 +761,467 @@ onMounted(async () => {
     </el-dialog>
   </div>
 </template>
+
+<script setup>
+/**
+ * 电子签名与时间戳 · 签名中心（P5.5）
+ *
+ * 这个页面回答的问题不是"有多少签名"，而是"**这份病历的签名还能不能证明它没被改过**"。
+ *
+ * 五条必须写在页面上的口径（否则数字与结论会被误读）：
+ *   1. **签名是证据，不是状态**。签名一旦落库只增不改不删；作废只是追加作废信息，
+ *      历史行、历史签名值、历史被签内容快照全部保留。所以列表默认带出已作废签名，
+ *      "已作废 3 条"不是异常，而是"这 3 次签字动作真实发生过"。
+ *   2. **验签是两个独立断言**：签名值校验（证据本身有没有被换）与内容比对（签名之后内容有没有被改）。
+ *      合成一个"通过/不通过"会丢掉最关键的信息 —— 两者性质与处理方式完全不同。
+ *   3. **时间戳来源必须自报**。本期时间取的是**本机时钟**，不具备可信时间效力；
+ *      页面上原样展示来源，不得表述为"可信时间戳"。
+ *   4. **证书是院内托管的**，不是 CA 签发的。自动签发的证书信任级别低于人工签发。
+ *   5. **存量病历的签名补不回来**。库里已归档病历都是签名能力上线之前产生的，
+ *      它们没有签名；覆盖率表把"未签名（存量）"单独列出来，显示为 0% 而不是藏起来。
+ *      补签等于伪造，本系统不允许对历史归档文书补签。
+ */
+import {computed, onMounted, reactive, ref} from 'vue';
+import {Search, WarningFilled} from '@element-plus/icons-vue';
+import {ElMessage, ElMessageBox} from 'element-plus';
+import {
+  getSignatureDetail,
+  getSignatureList,
+  getSignatureQueryOptions,
+  getSignatureSummary,
+  getSignCertDetail,
+  getSignCertList,
+  getTsaStatus,
+  getTsaTokenList,
+  invalidateSignature,
+  issueSignCert,
+  revokeSignCert,
+  updateTsaStatus,
+  updateTsaTimeSource,
+  verifySignature,
+  verifyTsaToken,
+} from '@/api/signature';
+import {getEmployeeList} from '@/api/system';
+import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+// ---------------- 概览 ----------------
+const overviewLoading = ref(false);
+const overview = ref(null);
+// ---------------- 下拉选项 ----------------
+const options = ref({});
+// ---------------- 签名记录 ----------------
+const signLoading = ref(false);
+const signList = ref([]);
+const signTotal = ref(0);
+const signQuery = reactive({
+  bizType: undefined,
+  signScene: undefined,
+  signStatus: undefined,
+  verifyStatus: undefined,
+  timeSource: undefined,
+  keyword: '',
+  beginTime: undefined,
+  endTime: undefined,
+  pageNum: 1,
+  pageSize: DEFAULT_PAGE_SIZE,
+});
+const timeRange = ref(null);
+// ---------------- 详情抽屉 ----------------
+const drawerVisible = ref(false);
+const detailLoading = ref(false);
+const detail = ref(null);
+const verifyResult = ref(null);
+const verifying = ref(false);
+const invalidReason = ref('');
+const invalidating = ref(false);
+// ---------------- 证书 ----------------
+const certLoading = ref(false);
+const certList = ref([]);
+const certTotal = ref(0);
+const certQuery = reactive({
+  certStatus: undefined,
+  issuedMode: undefined,
+  keyword: '',
+  pageNum: 1,
+  pageSize: DEFAULT_PAGE_SIZE,
+});
+const certDetailVisible = ref(false);
+const certDetail = ref(null);
+// 签发证书
+const issueVisible = ref(false);
+const issuing = ref(false);
+const empOptions = ref([]);
+const empLoading = ref(false);
+const issueForm = reactive({
+  empId: undefined,
+  empName: '',
+  deptId: undefined,
+  deptName: '',
+  validDays: undefined,
+  remark: ''
+});
+// 吊销证书
+const revokeVisible = ref(false);
+const revoking = ref(false);
+const revokeForm = reactive({certId: '', certNo: '', reason: ''});
+// ---------------- 时间戳（TSA） ----------------
+const tsaStatus = ref(null);
+const tsaLoading = ref(false);
+const tsaTokenLoading = ref(false);
+const tsaTokenList = ref([]);
+const tsaTokenTotal = ref(0);
+const tsaTokenQuery = reactive({serial: '', pageNum: 1, pageSize: DEFAULT_PAGE_SIZE});
+const loadTsaStatus = async () => {
+  tsaLoading.value = true;
+  try {
+    const res = await getTsaStatus();
+    tsaStatus.value = res.data;
+    syncSourceDraft();
+  } catch (e) {
+    ElMessage.error(e?.message || '加载TSA状态失败');
+  } finally {
+    tsaLoading.value = false;
+  }
+};
+const loadTsaTokenList = async () => {
+  tsaTokenLoading.value = true;
+  try {
+    const params = {pageNum: tsaTokenQuery.pageNum, pageSize: tsaTokenQuery.pageSize};
+    if (tsaTokenQuery.serial)
+      params.serial = tsaTokenQuery.serial.trim();
+    const res = await getTsaTokenList(params);
+    tsaTokenList.value = res.data?.records || [];
+    tsaTokenTotal.value = Number(res.data?.total ?? 0);
+  } catch (e) {
+    ElMessage.error(e?.message || '加载时间戳台账失败');
+  } finally {
+    tsaTokenLoading.value = false;
+  }
+};
+const searchTsaToken = () => {
+  tsaTokenQuery.pageNum = 1;
+  loadTsaTokenList();
+};
+// ---------------- TSA 运维（G6b）：启停 / 时间来源 / 令牌复验 ----------------
+const tsaOpsLoading = ref(false);
+// 单选框的草稿值：接口成功后以服务端 configTimeSource 为准回填，取消/失败回滚
+const tsaSourceDraft = ref(1);
+const syncSourceDraft = () => {
+  tsaSourceDraft.value = tsaStatus.value?.configTimeSource === 3 ? 3 : 1;
+};
+const onTimeSourceChange = async (val) => {
+  const target = val === 3 ? '可信时间戳（TSA 盖章）' : '本机时钟';
+  const warn = val === 3 && !tsaStatus.value?.available
+      ? '注意：TSA 服务当前不在线，配置会保存，但实际生效的仍是「本机时钟」（宁可承认不可信，也不谎报可信）。'
+      : '';
+  try {
+    await ElMessageBox.confirm(`确认把签名时间来源切换为「${target}」？${warn}`, '切换时间来源', {
+      type: 'warning', confirmButtonText: '确认切换', cancelButtonText: '取消',
+    });
+  } catch {
+    syncSourceDraft();
+    return;
+  }
+  tsaOpsLoading.value = true;
+  try {
+    const res = await updateTsaTimeSource(val);
+    tsaStatus.value = res.data;
+    syncSourceDraft();
+    ElMessage.success('时间来源已切换');
+  } catch (e) {
+    ElMessage.error(e?.message || '切换失败');
+    syncSourceDraft();
+  } finally {
+    tsaOpsLoading.value = false;
+  }
+};
+const onToggleTsa = async () => {
+  const stop = !!tsaStatus.value?.available;
+  const msg = stop
+      ? '停用后 TSA 不再签发新令牌，新签名时间将降级为「本机时钟」；历史令牌凭已登记公钥仍可验证。确认停用？'
+      : '启用后，时间来源配为「可信时间戳」的新签名将重新由 TSA 盖章。确认启用？';
+  try {
+    await ElMessageBox.confirm(msg, stop ? '停用 TSA 服务' : '启用 TSA 服务', {
+      type: 'warning', confirmButtonText: '确认', cancelButtonText: '取消',
+    });
+  } catch {
+    return;
+  }
+  tsaOpsLoading.value = true;
+  try {
+    const res = await updateTsaStatus(stop ? 0 : 1);
+    tsaStatus.value = res.data;
+    ElMessage.success(stop ? 'TSA 已停用' : 'TSA 已启用');
+  } catch (e) {
+    ElMessage.error(e?.message || '操作失败');
+  } finally {
+    tsaOpsLoading.value = false;
+  }
+};
+const verifyingTokenId = ref('');
+const tsaVerifyResult = reactive({});
+const onVerifyTsaToken = async (row) => {
+  verifyingTokenId.value = String(row.id);
+  try {
+    const res = await verifyTsaToken(row.id);
+    tsaVerifyResult[row.id] = res.data;
+    if (res.data?.valid) {
+      ElMessage.success(`令牌 ${row.serial} 复验通过`);
+    } else {
+      ElMessage.warning(res.data?.failReason || '令牌复验不通过');
+    }
+  } catch (e) {
+    ElMessage.error(e?.message || '复验失败');
+  } finally {
+    verifyingTokenId.value = '';
+  }
+};
+// 台账 tab 首次点开时拉数据（懒加载；刷新走 tab 内查询按钮）
+const onTabChange = (tab) => {
+  if (tab === 'tsa' || tab?.props?.name === 'tsa') {
+    if (!tsaTokenList.value.length)
+      loadTsaTokenList();
+  }
+};
+const activeTab = ref('sign');
+// ---------------- 加载 ----------------
+const loadOverview = async () => {
+  overviewLoading.value = true;
+  try {
+    const res = await getSignatureSummary();
+    overview.value = res.data;
+  } catch (e) {
+    ElMessage.error(e?.message || '加载签名概览失败');
+  } finally {
+    overviewLoading.value = false;
+  }
+};
+const loadOptions = async () => {
+  try {
+    const res = await getSignatureQueryOptions();
+    options.value = res.data || {};
+  } catch (e) {
+    ElMessage.error(e?.message || '加载下拉选项失败');
+  }
+};
+const loadSignList = async () => {
+  signLoading.value = true;
+  try {
+    const params = {pageNum: signQuery.pageNum, pageSize: signQuery.pageSize};
+    if (signQuery.bizType !== undefined && signQuery.bizType !== null)
+      params.bizType = signQuery.bizType;
+    if (signQuery.signScene !== undefined && signQuery.signScene !== null)
+      params.signScene = signQuery.signScene;
+    if (signQuery.signStatus !== undefined && signQuery.signStatus !== null)
+      params.signStatus = signQuery.signStatus;
+    if (signQuery.verifyStatus !== undefined && signQuery.verifyStatus !== null)
+      params.verifyStatus = signQuery.verifyStatus;
+    if (signQuery.timeSource !== undefined && signQuery.timeSource !== null)
+      params.timeSource = signQuery.timeSource;
+    if (signQuery.keyword)
+      params.keyword = signQuery.keyword.trim();
+    if (timeRange.value && timeRange.value[0])
+      params.beginTime = timeRange.value[0];
+    if (timeRange.value && timeRange.value[1])
+      params.endTime = timeRange.value[1];
+    const res = await getSignatureList(params);
+    signList.value = res.data?.records || [];
+    signTotal.value = Number(res.data?.total ?? 0);
+  } catch (e) {
+    ElMessage.error(e?.message || '加载签名记录失败');
+  } finally {
+    signLoading.value = false;
+  }
+};
+const loadCertList = async () => {
+  certLoading.value = true;
+  try {
+    const params = {pageNum: certQuery.pageNum, pageSize: certQuery.pageSize};
+    if (certQuery.certStatus !== undefined && certQuery.certStatus !== null)
+      params.certStatus = certQuery.certStatus;
+    if (certQuery.issuedMode !== undefined && certQuery.issuedMode !== null)
+      params.issuedMode = certQuery.issuedMode;
+    if (certQuery.keyword)
+      params.keyword = certQuery.keyword.trim();
+    const res = await getSignCertList(params);
+    certList.value = res.data?.records || [];
+    certTotal.value = Number(res.data?.total ?? 0);
+  } catch (e) {
+    ElMessage.error(e?.message || '加载证书列表失败');
+  } finally {
+    certLoading.value = false;
+  }
+};
+const refreshAll = async () => {
+  await Promise.all([loadOverview(), loadSignList(), loadCertList(), loadTsaStatus()]);
+};
+const searchSign = () => {
+  signQuery.pageNum = 1;
+  loadSignList();
+};
+const clearSignFilter = () => {
+  signQuery.bizType = undefined;
+  signQuery.signScene = undefined;
+  signQuery.signStatus = undefined;
+  signQuery.verifyStatus = undefined;
+  signQuery.timeSource = undefined;
+  signQuery.keyword = '';
+  timeRange.value = null;
+  signQuery.pageNum = 1;
+  loadSignList();
+};
+// ---------------- 详情 / 验签 / 作废 ----------------
+const openDetail = async (row) => {
+  drawerVisible.value = true;
+  detailLoading.value = true;
+  detail.value = null;
+  verifyResult.value = null;
+  invalidReason.value = '';
+  try {
+    const res = await getSignatureDetail(row.id);
+    detail.value = res.data;
+  } catch (e) {
+    ElMessage.error(e?.message || '加载签名详情失败');
+  } finally {
+    detailLoading.value = false;
+  }
+};
+const doVerify = async () => {
+  if (!detail.value)
+    return;
+  verifying.value = true;
+  try {
+    const res = await verifySignature(detail.value.id);
+    verifyResult.value = res.data;
+    // 验签会回写核查结果，列表里的"验签"列必须跟着变，否则页面自相矛盾
+    await Promise.all([loadSignList(), loadOverview()]);
+  } catch (e) {
+    ElMessage.error(e?.message || '验签失败');
+  } finally {
+    verifying.value = false;
+  }
+};
+const doInvalidate = async () => {
+  if (!detail.value)
+    return;
+  if (!invalidReason.value.trim()) {
+    ElMessage.warning('作废必须写理由 —— 事后要能回答「是谁撤了这份签名、为什么」');
+    return;
+  }
+  invalidating.value = true;
+  try {
+    await invalidateSignature(detail.value.id, invalidReason.value.trim());
+    ElMessage.success('已作废该签名（历史行保留，内容锁定已解除）');
+    drawerVisible.value = false;
+    await Promise.all([loadSignList(), loadOverview()]);
+  } catch (e) {
+    ElMessage.error(e?.message || '作废失败');
+  } finally {
+    invalidating.value = false;
+  }
+};
+// ---------------- 证书操作 ----------------
+const openCertDetail = async (row) => {
+  certDetailVisible.value = true;
+  certDetail.value = null;
+  try {
+    const res = await getSignCertDetail(row.id);
+    certDetail.value = res.data;
+  } catch (e) {
+    ElMessage.error(e?.message || '加载证书详情失败');
+  }
+};
+const searchEmp = async (keyword) => {
+  empLoading.value = true;
+  try {
+    const res = await getEmployeeList({keyword: keyword || undefined});
+    empOptions.value = res.data || [];
+  } catch (e) {
+    ElMessage.error(e?.message || '加载员工列表失败');
+  } finally {
+    empLoading.value = false;
+  }
+};
+const openIssue = () => {
+  issueForm.empId = undefined;
+  issueForm.empName = '';
+  issueForm.deptId = undefined;
+  issueForm.deptName = '';
+  issueForm.validDays = undefined;
+  issueForm.remark = '';
+  issueVisible.value = true;
+  searchEmp('');
+};
+const onEmpChange = (empId) => {
+  const emp = empOptions.value.find((e) => String(e.id) === String(empId));
+  issueForm.empName = emp?.empName || '';
+  issueForm.deptId = emp?.deptId || undefined;
+  issueForm.deptName = emp?.deptName || '';
+};
+const submitIssue = async () => {
+  if (!issueForm.empId) {
+    ElMessage.warning('请选择员工');
+    return;
+  }
+  issuing.value = true;
+  try {
+    const res = await issueSignCert({
+      empId: issueForm.empId,
+      empName: issueForm.empName,
+      deptId: issueForm.deptId,
+      deptName: issueForm.deptName,
+      validDays: issueForm.validDays || undefined,
+      remark: issueForm.remark || undefined,
+    });
+    // 私钥永不回显 —— 签发接口只回证书 VO（公钥 + 指纹），前端也没有地方能拿到私钥
+    ElMessage.success(`已签发证书 ${res.data?.certNo || ''}（指纹 ${res.data?.keyFingerprintGroups || ''}）`);
+    issueVisible.value = false;
+    await Promise.all([loadCertList(), loadOverview()]);
+  } catch (e) {
+    ElMessage.error(e?.message || '签发失败');
+  } finally {
+    issuing.value = false;
+  }
+};
+const openRevoke = (row) => {
+  revokeForm.certId = row.id;
+  revokeForm.certNo = row.certNo;
+  revokeForm.reason = '';
+  revokeVisible.value = true;
+};
+const submitRevoke = async () => {
+  if (!revokeForm.reason.trim()) {
+    ElMessage.warning('吊销必须写理由');
+    return;
+  }
+  revoking.value = true;
+  try {
+    await revokeSignCert(revokeForm.certId, revokeForm.reason.trim());
+    ElMessage.success('已吊销该证书（历史签名仍可用其公钥验签）');
+    revokeVisible.value = false;
+    await Promise.all([loadCertList(), loadOverview()]);
+  } catch (e) {
+    ElMessage.error(e?.message || '吊销失败');
+  } finally {
+    revoking.value = false;
+  }
+};
+// ---------------- 展示辅助 ----------------
+const num = (v) => Number(v ?? 0);
+const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
+const coverages = computed(() => overview.value?.coverages || []);
+const pendingTotal = computed(() => coverages.value.reduce((sum, c) => sum + num(c.pendingSign), 0));
+const invalidatedTotal = computed(() => coverages.value.reduce((sum, c) => sum + num(c.invalidated), 0));
+// 覆盖率占位：分母为 0 时后端给的是「—（该类型还没有可统计的对象）」，不是 "0.0%" —— 别把它当比率渲染
+const isRatePlaceholder = (t) => !t || String(t).startsWith('—');
+// 时间来源标签：只有 TimeSource.trusted() 那一档才配绿；本机时钟必须显眼
+const timeSourceTag = (src) => (src === 3 ? 'success' : src === 2 ? 'warning' : 'info');
+// 验签状态：0-未校验（灰）1-通过（绿）2-失败（红）。0 必须显式给一档，
+// 否则它会落到最后的分支上被渲染成"失败"，而"从没验过"和"验过发现被改"完全是两件事。
+const verifyTag = (s) => (s === 1 ? 'success' : s === 2 ? 'danger' : 'info');
+// 结论级别：1-通过 2-警告 3-失败
+const conclusionTag = (l) => (l === 1 ? 'success' : l === 2 ? 'warning' : 'danger');
+onMounted(async () => {
+  await loadOptions();
+  await refreshAll();
+});
+</script>

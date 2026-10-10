@@ -1,287 +1,3 @@
-<script lang="ts" setup>
-import {onMounted, ref} from 'vue'
-import {ElMessage} from 'element-plus'
-import {Document, Refresh, Search, View} from '@element-plus/icons-vue'
-import {getOpdLogListPage, getOpdLogStats, runDayEndSettle} from '@/api/appoint'
-import {getByRegistId, getRecordDetail} from '@/api/emr'
-import {listItemsByPatient} from '@/api/settlementBill'
-import {getDepartmentSelectList, getEmployeeList} from '@/api/system'
-import {
-  APPLY_STATUS,
-  OPD_LOG_STATUS,
-  OPD_LOG_STATUS_OPTIONS,
-  REGIST_SOURCE,
-  REGIST_TYPE,
-  REVISIT_TYPE,
-  SETTLEMENT_TYPE,
-  statusOf,
-  unknownOf,
-} from '@/lib/statusColor'
-import {patientGenderText} from '@/lib/patientGender'
-import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
-import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
-import {shortQueueNo} from '@/lib/utils'
-
-// ========== 列表 ==========
-const loading = ref(false)
-const rows = ref<any[]>([])
-const pagination = ref({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0})
-
-// 两卡式列表页：表格只设最大高度，超高内部滚动（口径参照 views/system/user/UserView.vue）
-const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight()
-
-/** 统计条默认值：字段与 OpdLogStatsVO 一一对应，别少写（少写的字段会显示成 0 骗人） */
-const emptyStats = () => ({
-  total: 0, unpaid: 0, waitCheckIn: 0, waiting: 0, consulting: 0,
-  completed: 0, cancelled: 0, overdue: 0, unvisited: 0, noShow: 0, unrecognized: 0,
-  avgWaitMinutes: 0, avgVisitMinutes: 0,
-})
-const stats = ref<any>(emptyStats())
-/** 批次F：第一次拿到统计之前不能显示 0 —— "0 例就诊"和"还没查出来"是两句不同的话 */
-const statsLoaded = ref(false)
-
-// ========== 筛选（默认本月 —— 就诊总览是回溯分析页，不是「看今天」） ==========
-const fmtDate = (d: Date) => {
-  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), dd = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${dd}`
-}
-const thisMonth = (): [string, string] => {
-  const now = new Date()
-  return [fmtDate(new Date(now.getFullYear(), now.getMonth(), 1)), fmtDate(new Date(now.getFullYear(), now.getMonth() + 1, 0))]
-}
-
-const searchForm = ref({
-  dateRange: thisMonth() as [string, string] | null,
-  deptIds: [] as string[],
-  doctorId: null as string | null,
-  statusCodes: [] as number[],
-  registType: null as number | null,
-  settlementType: null as number | null,
-  revisitType: null as number | null,
-  keyword: '',
-})
-
-const dateShortcuts = [
-  {
-    text: '今日', value: () => {
-      const t = new Date();
-      return [fmtDate(t), fmtDate(t)]
-    }
-  },
-  {
-    text: '本周', value: () => {
-      const now = new Date();
-      const day = now.getDay() || 7
-      const mon = new Date(now);
-      mon.setDate(now.getDate() - day + 1)
-      const sun = new Date(mon);
-      sun.setDate(mon.getDate() + 6)
-      return [fmtDate(mon), fmtDate(sun)]
-    }
-  },
-  {text: '本月', value: () => thisMonth()},
-  {
-    text: '近三月', value: () => {
-      const now = new Date()
-      const first = new Date(now.getFullYear(), now.getMonth() - 2, 1)
-      return [fmtDate(first), fmtDate(now)]
-    }
-  },
-]
-
-// ========== 下拉数据源（科室 / 员工数组，全部走真实接口） ==========
-const deptOptions = ref<any[]>([])
-const doctorOptions = ref<any[]>([])
-const loadOptions = async () => {
-  try {
-    // 不传 scope → 默认按当前人过滤（今日就诊列表本就该只看自己能管的科室）
-    const [d, e] = await Promise.all([getDepartmentSelectList({}), getEmployeeList({})])
-    deptOptions.value = d.data || []
-    doctorOptions.value = e.data || []
-  } catch (err) {
-    console.error('加载科室/医生下拉失败:', err)
-  }
-}
-
-const optionOf = (table: Record<number, { label: string }>) =>
-    Object.entries(table).map(([v, s]) => ({value: Number(v), label: s.label}))
-const registTypeOptions = optionOf(REGIST_TYPE)
-const settlementOptions = optionOf(SETTLEMENT_TYPE)
-const revisitOptions = optionOf(REVISIT_TYPE)
-
-// ========== 查询参数：筛选一律下推，前端不做任何 slice/filter ==========
-const buildParams = () => {
-  const p: any = {pageNum: pagination.value.pageNum, pageSize: pagination.value.pageSize}
-  const f = searchForm.value
-  if (f.dateRange?.[0] && f.dateRange?.[1]) {
-    p.startDate = f.dateRange[0];
-    p.endDate = f.dateRange[1]
-  }
-  if (f.deptIds.length) p.deptIds = f.deptIds
-  if (f.doctorId) p.doctorId = f.doctorId
-  if (f.statusCodes.length) p.statusCodes = f.statusCodes
-  if (f.registType != null) p.registType = f.registType
-  if (f.settlementType != null) p.settlementType = f.settlementType
-  if (f.revisitType != null) p.revisitType = f.revisitType
-  if (f.keyword.trim()) p.keyword = f.keyword.trim()
-  return p
-}
-
-const loadData = async () => {
-  loading.value = true
-  try {
-    const params = buildParams()
-    const [listRes, statsRes] = await Promise.all([getOpdLogListPage(params), getOpdLogStats(params)])
-    rows.value = listRes.data?.records || []
-    pagination.value.total = listRes.data?.total || 0
-    stats.value = statsRes.data || emptyStats()
-    statsLoaded.value = true
-  } catch (err) {
-    console.error('加载就诊总览失败:', err)
-  } finally {
-    loading.value = false
-  }
-}
-
-const handleSearch = () => {
-  pagination.value.pageNum = 1;
-  loadData()
-}
-const handleReset = () => {
-  searchForm.value = {
-    dateRange: thisMonth(), deptIds: [], doctorId: null, statusCodes: [],
-    registType: null, settlementType: null, revisitType: null, keyword: '',
-  }
-  pagination.value.pageNum = 1
-  loadData()
-}
-const handleSizeChange = (v: number) => {
-  pagination.value.pageSize = v;
-  pagination.value.pageNum = 1;
-  loadData()
-}
-const handleCurrentChange = (v: number) => {
-  pagination.value.pageNum = v;
-  loadData()
-}
-
-// ========== 视图辅助 ==========
-/** 就诊状态：优先后端推导的 logStatus；推导不出来时用 queueStatus 渲染「未知(n)」，绝不回落 */
-const logStatusStyle = (row: any) =>
-    row.logStatus != null ? statusOf(OPD_LOG_STATUS, row.logStatus) : unknownOf(row.queueStatus)
-
-const fmt = (t?: string) => (t ? String(t).replace('T', ' ').slice(0, 16) : '-')
-const duration = (m?: number | null) => (m == null ? '-' : m + ' 分')
-
-/** 统计条定义（unrecognized 只在 >0 时出现，避免常规视图多一个恒为 0 的格子） */
-const statCards = () => {
-  const list = [
-    {label: '总就诊', value: stats.value.total, color: 'text-slate-800'},
-    {label: '未缴费', value: stats.value.unpaid, color: 'text-amber-600'},
-    {label: '待签到', value: stats.value.waitCheckIn, color: 'text-slate-600'},
-    {label: '候诊中', value: stats.value.waiting, color: 'text-blue-600'},
-    {label: '就诊中', value: stats.value.consulting, color: 'text-purple-600'},
-    {label: '已就诊', value: stats.value.completed, color: 'text-emerald-600'},
-    {label: '已退号', value: stats.value.cancelled, color: 'text-red-500'},
-    {label: '已过号', value: stats.value.overdue, color: 'text-orange-500'},
-    // 未就诊 / 爽约 是日终结转收的两个终态。放在统计条里是**故意**的：
-    // 这两个数字长期为 0 才说明「每天的号都有人收尾」，一旦涨起来就是有人没签字/没结诊。
-    {label: '未就诊', value: stats.value.unvisited, color: 'text-slate-500'},
-    {label: '爽约', value: stats.value.noShow, color: 'text-rose-600'},
-  ]
-  if (stats.value.unrecognized > 0) {
-    list.push({label: `未识别`, value: stats.value.unrecognized, color: 'text-slate-400'})
-  }
-  return list
-}
-
-// ========== 就诊详情抽屉（六段，数据全部来自真实接口） ==========
-const drawer = ref(false)
-const drawerRow = ref<any>(null)
-const detailLoading = ref(false)
-/** ③④⑤ 来自 /emr/getRecordDetailById */
-const emrDetail = ref<any>(null)
-/** ⑥ 收费（按患者取，再按 registId 归属本次就诊） */
-const chargeList = ref<any[]>([])
-
-const openDetail = async (row: any) => {
-  drawerRow.value = row
-  drawer.value = true
-  emrDetail.value = null
-  chargeList.value = []
-  detailLoading.value = true
-  try {
-    // ① ② 段直接用列表行（本来就已经含挂号 + 队列全过程时间戳）
-    // ③ ④ ⑤ 段：先按 registId 取病历，再按 recordId 取「病历 + 处方 + 检查 + 检验」
-    const recRes = await getByRegistId({registId: row.registId})
-    const rec = Array.isArray(recRes.data) ? recRes.data[0] : recRes.data
-    if (rec?.id) {
-      const detailRes = await getRecordDetail(String(rec.id))
-      emrDetail.value = detailRes.data || null
-    }
-    // ⑥ 收费段：四层按患者取账单行快照，门诊一次就诊 = encounterId 即挂号ID，过滤后按账单归组成卡片
-    if (row.patientId) {
-      const chargeRes = await listItemsByPatient(row.patientId)
-      const all = chargeRes.data || []
-      const items = all.filter((c: any) => String(c.encounterId) === String(row.registId))
-      chargeList.value = buildChargeCards(items)
-    }
-  } catch (err) {
-    console.error('加载就诊详情失败:', err)
-  } finally {
-    detailLoading.value = false
-  }
-}
-
-const record = () => emrDetail.value?.record || null
-const prescriptions = () => emrDetail.value?.prescriptions || []
-const inspectionApplies = () => emrDetail.value?.inspectionApplies || []
-const laboratoryApplies = () => emrDetail.value?.laboratoryApplies || []
-
-const money = (v: any) => (v == null ? '0.00' : Number(v).toFixed(2))
-
-// 四层账单行扁平列表 → 按账单归组成卡片（一次就诊通常一张账单，仍兼容多账单）
-const buildChargeCards = (items: any[]) => {
-  const map = new Map<string, any>()
-  for (const it of items || []) {
-    const key = String(it.billId)
-    if (!map.has(key)) {
-      map.set(key, {id: it.billId, billNo: it.billNo, items: [], totalAmount: 0})
-    }
-    const card = map.get(key)
-    card.items.push(it)
-    card.totalAmount = (card.totalAmount || 0) + (it.amount || 0)
-  }
-  return Array.from(map.values())
-}
-
-const settleLoading = ref(false)
-const settleDialog = ref(false)
-const settleDate = ref<string | null>(null)
-
-const runSettle = async (dryRun: boolean) => {
-  settleLoading.value = true
-  try {
-    const res = await runDayEndSettle({settleDate: settleDate.value || undefined, dryRun})
-    const data = res.data || {}
-    ElMessage.success(res.message || '结转完成')
-    if (!dryRun) {
-      settleDialog.value = false
-      loadData()
-    }
-  } catch (err: any) {
-    ElMessage.error(err.message || '日终结转失败')
-  } finally {
-    settleLoading.value = false
-  }
-}
-
-onMounted(() => {
-  loadOptions()
-  loadData()
-})
-</script>
-
 <template>
   <div v-loading="loading">
     <!-- 统计条（跟随筛选，口径与列表同一套 WHERE） -->
@@ -689,3 +405,270 @@ onMounted(() => {
     </el-drawer>
   </div>
 </template>
+
+<script setup>
+import {onMounted, ref} from 'vue';
+import {ElMessage} from 'element-plus';
+import {Document, Refresh, Search, View} from '@element-plus/icons-vue';
+import {getOpdLogListPage, getOpdLogStats, runDayEndSettle} from '@/api/appoint';
+import {getByRegistId, getRecordDetail} from '@/api/emr';
+import {listItemsByPatient} from '@/api/settlementBill';
+import {getDepartmentSelectList, getEmployeeList} from '@/api/system';
+import {
+  APPLY_STATUS,
+  OPD_LOG_STATUS,
+  OPD_LOG_STATUS_OPTIONS,
+  REGIST_SOURCE,
+  REGIST_TYPE,
+  REVISIT_TYPE,
+  SETTLEMENT_TYPE,
+  statusOf,
+  unknownOf,
+} from '@/lib/statusColor';
+import {patientGenderText} from '@/lib/patientGender';
+import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import {shortQueueNo} from '@/lib/utils';
+// ========== 列表 ==========
+const loading = ref(false);
+const rows = ref([]);
+const pagination = ref({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0});
+// 两卡式列表页：表格只设最大高度，超高内部滚动（口径参照 views/system/user/UserView.vue）
+const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight();
+/** 统计条默认值：字段与 OpdLogStatsVO 一一对应，别少写（少写的字段会显示成 0 骗人） */
+const emptyStats = () => ({
+  total: 0, unpaid: 0, waitCheckIn: 0, waiting: 0, consulting: 0,
+  completed: 0, cancelled: 0, overdue: 0, unvisited: 0, noShow: 0, unrecognized: 0,
+  avgWaitMinutes: 0, avgVisitMinutes: 0,
+});
+const stats = ref(emptyStats());
+/** 批次F：第一次拿到统计之前不能显示 0 —— "0 例就诊"和"还没查出来"是两句不同的话 */
+const statsLoaded = ref(false);
+// ========== 筛选（默认本月 —— 就诊总览是回溯分析页，不是「看今天」） ==========
+const fmtDate = (d) => {
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+};
+const thisMonth = () => {
+  const now = new Date();
+  return [fmtDate(new Date(now.getFullYear(), now.getMonth(), 1)), fmtDate(new Date(now.getFullYear(), now.getMonth() + 1, 0))];
+};
+const searchForm = ref({
+  dateRange: thisMonth(),
+  deptIds: [],
+  doctorId: null,
+  statusCodes: [],
+  registType: null,
+  settlementType: null,
+  revisitType: null,
+  keyword: '',
+});
+const dateShortcuts = [
+  {
+    text: '今日', value: () => {
+      const t = new Date();
+      return [fmtDate(t), fmtDate(t)];
+    }
+  },
+  {
+    text: '本周', value: () => {
+      const now = new Date();
+      const day = now.getDay() || 7;
+      const mon = new Date(now);
+      mon.setDate(now.getDate() - day + 1);
+      const sun = new Date(mon);
+      sun.setDate(mon.getDate() + 6);
+      return [fmtDate(mon), fmtDate(sun)];
+    }
+  },
+  {text: '本月', value: () => thisMonth()},
+  {
+    text: '近三月', value: () => {
+      const now = new Date();
+      const first = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+      return [fmtDate(first), fmtDate(now)];
+    }
+  },
+];
+// ========== 下拉数据源（科室 / 员工数组，全部走真实接口） ==========
+const deptOptions = ref([]);
+const doctorOptions = ref([]);
+const loadOptions = async () => {
+  try {
+    // 不传 scope → 默认按当前人过滤（今日就诊列表本就该只看自己能管的科室）
+    const [d, e] = await Promise.all([getDepartmentSelectList({}), getEmployeeList({})]);
+    deptOptions.value = d.data || [];
+    doctorOptions.value = e.data || [];
+  } catch (err) {
+    console.error('加载科室/医生下拉失败:', err);
+  }
+};
+const optionOf = (table) => Object.entries(table).map(([v, s]) => ({value: Number(v), label: s.label}));
+const registTypeOptions = optionOf(REGIST_TYPE);
+const settlementOptions = optionOf(SETTLEMENT_TYPE);
+const revisitOptions = optionOf(REVISIT_TYPE);
+// ========== 查询参数：筛选一律下推，前端不做任何 slice/filter ==========
+const buildParams = () => {
+  const p = {pageNum: pagination.value.pageNum, pageSize: pagination.value.pageSize};
+  const f = searchForm.value;
+  if (f.dateRange?.[0] && f.dateRange?.[1]) {
+    p.startDate = f.dateRange[0];
+    p.endDate = f.dateRange[1];
+  }
+  if (f.deptIds.length)
+    p.deptIds = f.deptIds;
+  if (f.doctorId)
+    p.doctorId = f.doctorId;
+  if (f.statusCodes.length)
+    p.statusCodes = f.statusCodes;
+  if (f.registType != null)
+    p.registType = f.registType;
+  if (f.settlementType != null)
+    p.settlementType = f.settlementType;
+  if (f.revisitType != null)
+    p.revisitType = f.revisitType;
+  if (f.keyword.trim())
+    p.keyword = f.keyword.trim();
+  return p;
+};
+const loadData = async () => {
+  loading.value = true;
+  try {
+    const params = buildParams();
+    const [listRes, statsRes] = await Promise.all([getOpdLogListPage(params), getOpdLogStats(params)]);
+    rows.value = listRes.data?.records || [];
+    pagination.value.total = listRes.data?.total || 0;
+    stats.value = statsRes.data || emptyStats();
+    statsLoaded.value = true;
+  } catch (err) {
+    console.error('加载就诊总览失败:', err);
+  } finally {
+    loading.value = false;
+  }
+};
+const handleSearch = () => {
+  pagination.value.pageNum = 1;
+  loadData();
+};
+const handleReset = () => {
+  searchForm.value = {
+    dateRange: thisMonth(), deptIds: [], doctorId: null, statusCodes: [],
+    registType: null, settlementType: null, revisitType: null, keyword: '',
+  };
+  pagination.value.pageNum = 1;
+  loadData();
+};
+const handleSizeChange = (v) => {
+  pagination.value.pageSize = v;
+  pagination.value.pageNum = 1;
+  loadData();
+};
+const handleCurrentChange = (v) => {
+  pagination.value.pageNum = v;
+  loadData();
+};
+// ========== 视图辅助 ==========
+/** 就诊状态：优先后端推导的 logStatus；推导不出来时用 queueStatus 渲染「未知(n)」，绝不回落 */
+const logStatusStyle = (row) => row.logStatus != null ? statusOf(OPD_LOG_STATUS, row.logStatus) : unknownOf(row.queueStatus);
+const fmt = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '-');
+const duration = (m) => (m == null ? '-' : m + ' 分');
+/** 统计条定义（unrecognized 只在 >0 时出现，避免常规视图多一个恒为 0 的格子） */
+const statCards = () => {
+  const list = [
+    {label: '总就诊', value: stats.value.total, color: 'text-slate-800'},
+    {label: '未缴费', value: stats.value.unpaid, color: 'text-amber-600'},
+    {label: '待签到', value: stats.value.waitCheckIn, color: 'text-slate-600'},
+    {label: '候诊中', value: stats.value.waiting, color: 'text-blue-600'},
+    {label: '就诊中', value: stats.value.consulting, color: 'text-purple-600'},
+    {label: '已就诊', value: stats.value.completed, color: 'text-emerald-600'},
+    {label: '已退号', value: stats.value.cancelled, color: 'text-red-500'},
+    {label: '已过号', value: stats.value.overdue, color: 'text-orange-500'},
+    // 未就诊 / 爽约 是日终结转收的两个终态。放在统计条里是**故意**的：
+    // 这两个数字长期为 0 才说明「每天的号都有人收尾」，一旦涨起来就是有人没签字/没结诊。
+    {label: '未就诊', value: stats.value.unvisited, color: 'text-slate-500'},
+    {label: '爽约', value: stats.value.noShow, color: 'text-rose-600'},
+  ];
+  if (stats.value.unrecognized > 0) {
+    list.push({label: `未识别`, value: stats.value.unrecognized, color: 'text-slate-400'});
+  }
+  return list;
+};
+// ========== 就诊详情抽屉（六段，数据全部来自真实接口） ==========
+const drawer = ref(false);
+const drawerRow = ref(null);
+const detailLoading = ref(false);
+/** ③④⑤ 来自 /emr/getRecordDetailById */
+const emrDetail = ref(null);
+/** ⑥ 收费（按患者取，再按 registId 归属本次就诊） */
+const chargeList = ref([]);
+const openDetail = async (row) => {
+  drawerRow.value = row;
+  drawer.value = true;
+  emrDetail.value = null;
+  chargeList.value = [];
+  detailLoading.value = true;
+  try {
+    // ① ② 段直接用列表行（本来就已经含挂号 + 队列全过程时间戳）
+    // ③ ④ ⑤ 段：先按 registId 取病历，再按 recordId 取「病历 + 处方 + 检查 + 检验」
+    const recRes = await getByRegistId({registId: row.registId});
+    const rec = Array.isArray(recRes.data) ? recRes.data[0] : recRes.data;
+    if (rec?.id) {
+      const detailRes = await getRecordDetail(String(rec.id));
+      emrDetail.value = detailRes.data || null;
+    }
+    // ⑥ 收费段：四层按患者取账单行快照，门诊一次就诊 = encounterId 即挂号ID，过滤后按账单归组成卡片
+    if (row.patientId) {
+      const chargeRes = await listItemsByPatient(row.patientId);
+      const all = chargeRes.data || [];
+      const items = all.filter((c) => String(c.encounterId) === String(row.registId));
+      chargeList.value = buildChargeCards(items);
+    }
+  } catch (err) {
+    console.error('加载就诊详情失败:', err);
+  } finally {
+    detailLoading.value = false;
+  }
+};
+const record = () => emrDetail.value?.record || null;
+const prescriptions = () => emrDetail.value?.prescriptions || [];
+const inspectionApplies = () => emrDetail.value?.inspectionApplies || [];
+const laboratoryApplies = () => emrDetail.value?.laboratoryApplies || [];
+const money = (v) => (v == null ? '0.00' : Number(v).toFixed(2));
+// 四层账单行扁平列表 → 按账单归组成卡片（一次就诊通常一张账单，仍兼容多账单）
+const buildChargeCards = (items) => {
+  const map = new Map();
+  for (const it of items || []) {
+    const key = String(it.billId);
+    if (!map.has(key)) {
+      map.set(key, {id: it.billId, billNo: it.billNo, items: [], totalAmount: 0});
+    }
+    const card = map.get(key);
+    card.items.push(it);
+    card.totalAmount = (card.totalAmount || 0) + (it.amount || 0);
+  }
+  return Array.from(map.values());
+};
+const settleLoading = ref(false);
+const settleDialog = ref(false);
+const settleDate = ref(null);
+const runSettle = async (dryRun) => {
+  settleLoading.value = true;
+  try {
+    const res = await runDayEndSettle({settleDate: settleDate.value || undefined, dryRun});
+    const data = res.data || {};
+    ElMessage.success(res.message || '结转完成');
+    if (!dryRun) {
+      settleDialog.value = false;
+      loadData();
+    }
+  } catch (err) {
+    ElMessage.error(err.message || '日终结转失败');
+  } finally {
+    settleLoading.value = false;
+  }
+};
+onMounted(() => {
+  loadOptions();
+  loadData();
+});
+</script>

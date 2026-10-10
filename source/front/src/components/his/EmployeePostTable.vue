@@ -1,6 +1,108 @@
-<script setup lang="js">
+<template>
+  <div class="w-full">
+    <div class="mb-2 flex flex-wrap items-center gap-3">
+      <el-button v-if="!disabled" :icon="Plus" plain size="small" type="primary" @click="addRow">添加岗位</el-button>
+      <span v-if="rows.length > 0" class="text-sm text-slate-500">共 {{ rows.length }} 个岗位</span>
+      <template v-if="rows.length > 0">
+        <span class="text-sm text-slate-600"><span class="text-red-500">*</span> 主岗位</span>
+        <el-select :model-value="primaryLabel || undefined" class="!w-[420px]" disabled placeholder="请选择主岗位">
+          <el-option v-if="primaryLabel" :label="primaryLabel" :value="primaryLabel"/>
+        </el-select>
+      </template>
+    </div>
+    <el-table :data="indexed" border class="mb-2 post-table" max-height="260" size="small">
+      <el-table-column width="320">
+        <template #header><span class="text-red-500">*</span> 科室</template>
+        <template #default="{ row }">
+          <el-select
+              :disabled="disabled"
+              :model-value="row.deptId"
+              class="w-full"
+              clearable
+              filterable
+              placeholder="请选择科室"
+              @update:model-value="(v) => patch(row.__index, {deptId: v ? String(v) : ''})"
+          >
+            <el-option v-for="dept in deptOptions" :key="dept.id" :label="dept.label" :value="dept.id"/>
+          </el-select>
+        </template>
+      </el-table-column>
+      <el-table-column width="150">
+        <template #header><span class="text-red-500">*</span> 角色</template>
+        <template #default="{ row }">
+          <el-select
+              :disabled="disabled"
+              :model-value="row.roleCode"
+              class="w-full"
+              clearable
+              filterable
+              placeholder="请选择角色"
+              @update:model-value="(v) => patch(row.__index, {roleCode: v || ''})"
+          >
+            <el-option v-for="role in roleList" :key="role.roleCode" :label="role.roleName" :value="role.roleCode"/>
+          </el-select>
+        </template>
+      </el-table-column>
+      <el-table-column width="150">
+        <template #header>生效日期</template>
+        <template #default="{ row }">
+          <el-date-picker
+              :disabled="disabled"
+              :model-value="row.effectiveDate || ''"
+              class="!w-full"
+              placeholder="保存即生效"
+              type="date"
+              value-format="YYYY-MM-DD"
+              @update:model-value="(v) => patch(row.__index, {effectiveDate: v || ''})"
+          />
+        </template>
+      </el-table-column>
+      <el-table-column width="150">
+        <template #header>失效日期</template>
+        <template #default="{ row }">
+          <div class="flex flex-col items-start gap-1">
+            <el-date-picker
+                :disabled="disabled"
+                :model-value="row.expireDate || ''"
+                class="!w-full"
+                placeholder="长期有效"
+                type="date"
+                value-format="YYYY-MM-DD"
+                @update:model-value="(v) => patch(row.__index, {expireDate: v || ''})"
+            />
+            <!-- 状态取自后端派生值（sql/118 起不落列）：改日期只是预览，保存重载后才会翻成已失效 -->
+            <el-tag v-if="row.postStatus === 2" effect="light" size="small" type="danger">已失效</el-tag>
+          </div>
+        </template>
+      </el-table-column>
+      <el-table-column align="center" width="80">
+        <template #header><span class="text-red-500">*</span> 主岗位</template>
+        <template #default="{ row }">
+          <el-radio
+              :disabled="disabled"
+              :model-value="primaryIndex"
+              :value="row.__index"
+              class="!h-auto"
+              @update:model-value="setPrimary(row.__index)"
+          />
+        </template>
+      </el-table-column>
+      <el-table-column align="center" label="操作" min-width="80">
+        <template #default="{ row }">
+          <el-button v-if="!disabled" :icon="Delete" link type="danger" @click="removeRow(row.__index)">删除</el-button>
+          <span v-else class="text-slate-400">-</span>
+        </template>
+      </el-table-column>
+      <template #empty>
+        <span class="text-sm text-slate-400">还没有配置岗位，请点上方「添加岗位」</span>
+      </template>
+    </el-table>
+  </div>
+</template>
+
+<script lang="js" setup>
 import {computed} from 'vue'
-import {Plus, Delete} from '@element-plus/icons-vue'
+import {Delete, Plus} from '@element-plus/icons-vue'
 
 const props = defineProps({
   modelValue: {type: Array, default: () => []},
@@ -65,105 +167,3 @@ const removeRow = (index) => {
   emit('update:modelValue', rest)
 }
 </script>
-
-<template>
-  <div class="w-full">
-    <div class="mb-2 flex flex-wrap items-center gap-3">
-      <el-button v-if="!disabled" :icon="Plus" type="primary" plain size="small" @click="addRow">添加岗位</el-button>
-      <span v-if="rows.length > 0" class="text-sm text-slate-500">共 {{ rows.length }} 个岗位</span>
-      <template v-if="rows.length > 0">
-        <span class="text-sm text-slate-600"><span class="text-red-500">*</span> 主岗位</span>
-        <el-select :model-value="primaryLabel || undefined" placeholder="请选择主岗位" disabled class="!w-[420px]">
-          <el-option v-if="primaryLabel" :label="primaryLabel" :value="primaryLabel"/>
-        </el-select>
-      </template>
-    </div>
-    <el-table :data="indexed" size="small" border max-height="260" class="mb-2 post-table">
-      <el-table-column width="320">
-        <template #header><span class="text-red-500">*</span> 科室</template>
-        <template #default="{ row }">
-          <el-select
-              :model-value="row.deptId"
-              placeholder="请选择科室"
-              filterable
-              clearable
-              :disabled="disabled"
-              class="w-full"
-              @update:model-value="(v) => patch(row.__index, {deptId: v ? String(v) : ''})"
-          >
-            <el-option v-for="dept in deptOptions" :key="dept.id" :label="dept.label" :value="dept.id"/>
-          </el-select>
-        </template>
-      </el-table-column>
-      <el-table-column width="150">
-        <template #header><span class="text-red-500">*</span> 角色</template>
-        <template #default="{ row }">
-          <el-select
-              :model-value="row.roleCode"
-              placeholder="请选择角色"
-              filterable
-              clearable
-              :disabled="disabled"
-              class="w-full"
-              @update:model-value="(v) => patch(row.__index, {roleCode: v || ''})"
-          >
-            <el-option v-for="role in roleList" :key="role.roleCode" :label="role.roleName" :value="role.roleCode"/>
-          </el-select>
-        </template>
-      </el-table-column>
-      <el-table-column width="150">
-        <template #header>生效日期</template>
-        <template #default="{ row }">
-          <el-date-picker
-              :model-value="row.effectiveDate || ''"
-              type="date"
-              placeholder="保存即生效"
-              value-format="YYYY-MM-DD"
-              :disabled="disabled"
-              class="!w-full"
-              @update:model-value="(v) => patch(row.__index, {effectiveDate: v || ''})"
-          />
-        </template>
-      </el-table-column>
-      <el-table-column width="150">
-        <template #header>失效日期</template>
-        <template #default="{ row }">
-          <div class="flex flex-col items-start gap-1">
-            <el-date-picker
-                :model-value="row.expireDate || ''"
-                type="date"
-                placeholder="长期有效"
-                value-format="YYYY-MM-DD"
-                :disabled="disabled"
-                class="!w-full"
-                @update:model-value="(v) => patch(row.__index, {expireDate: v || ''})"
-            />
-            <!-- 状态取自后端派生值（sql/118 起不落列）：改日期只是预览，保存重载后才会翻成已失效 -->
-            <el-tag v-if="row.postStatus === 2" type="danger" size="small" effect="light">已失效</el-tag>
-          </div>
-        </template>
-      </el-table-column>
-      <el-table-column width="80" align="center">
-        <template #header><span class="text-red-500">*</span> 主岗位</template>
-        <template #default="{ row }">
-          <el-radio
-              :model-value="primaryIndex"
-              :value="row.__index"
-              :disabled="disabled"
-              class="!h-auto"
-              @update:model-value="setPrimary(row.__index)"
-          />
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" min-width="80" align="center">
-        <template #default="{ row }">
-          <el-button v-if="!disabled" type="danger" link :icon="Delete" @click="removeRow(row.__index)">删除</el-button>
-          <span v-else class="text-slate-400">-</span>
-        </template>
-      </el-table-column>
-      <template #empty>
-        <span class="text-sm text-slate-400">还没有配置岗位，请点上方「添加岗位」</span>
-      </template>
-    </el-table>
-  </div>
-</template>

@@ -1,32 +1,3 @@
-<script setup lang="ts">
-import { computed } from 'vue'
-import { METRIC_SPECS } from '@/lib/workbench-widgets'
-
-const props = defineProps<{
-  code: string
-  data: Record<string, any> | null
-  error?: string | null
-}>()
-
-const groups = computed(() => METRIC_SPECS[props.code] || [])
-/** 取数失败或还没到：整卡显示「—」而不是 0，0 是"今天确实没有"，— 是"没算出来" */
-const ready = computed(() => !!props.data && !props.error)
-
-function value(item: any) {
-  if (!ready.value) return '—'
-  const v = Number(props.data?.[item.key] ?? 0)
-  const pair = Number(props.data?.[item.pairKey ?? ''] ?? 0)
-  if (item.format === 'money') return '¥' + v.toLocaleString('zh-CN', {maximumFractionDigits: 2})
-  if (item.format === 'pair') return `${v} / ${pair}`
-  if (item.format === 'percent') return pair > 0 ? `${Math.round((v / pair) * 100)}%` : '—'
-  return v.toLocaleString('zh-CN')
-}
-
-function danger(item: any) {
-  return !!item.danger && ready.value && Number(props.data?.[item.key] ?? 0) > 0
-}
-</script>
-
 <template>
   <div class="space-y-4">
     <div v-for="(group, gi) in groups" :key="gi">
@@ -38,7 +9,7 @@ function danger(item: any) {
             class="rounded-lg border border-slate-200 bg-slate-50/70 px-4 py-3"
         >
           <p class="text-[15px] text-slate-600">{{ item.label }}</p>
-          <p class="mt-1 text-[22px] font-bold leading-tight" :class="danger(item) ? 'text-red-600' : 'text-slate-900'">
+          <p :class="danger(item) ? 'text-red-600' : 'text-slate-900'" class="mt-1 text-[22px] font-bold leading-tight">
             {{ value(item) }}
           </p>
         </div>
@@ -49,3 +20,35 @@ function danger(item: any) {
     </p>
   </div>
 </template>
+
+<script setup>
+import {computed} from 'vue';
+import {METRIC_SPECS} from '@/lib/workbench-widgets';
+
+const props = defineProps({
+  code: {type: String, required: true},
+  data: {type: [Object, null], required: true},
+  error: {type: [String, null], required: false}
+});
+const groups = computed(() => METRIC_SPECS[props.code] || []);
+/** 取数失败或还没到：整卡显示「—」而不是 0，0 是"今天确实没有"，— 是"没算出来" */
+const ready = computed(() => !!props.data && !props.error);
+
+function value(item) {
+  if (!ready.value)
+    return '—';
+  const v = Number(props.data?.[item.key] ?? 0);
+  const pair = Number(props.data?.[item.pairKey ?? ''] ?? 0);
+  if (item.format === 'money')
+    return '¥' + v.toLocaleString('zh-CN', {maximumFractionDigits: 2});
+  if (item.format === 'pair')
+    return `${v} / ${pair}`;
+  if (item.format === 'percent')
+    return pair > 0 ? `${Math.round((v / pair) * 100)}%` : '—';
+  return v.toLocaleString('zh-CN');
+}
+
+function danger(item) {
+  return !!item.danger && ready.value && Number(props.data?.[item.key] ?? 0) > 0;
+}
+</script>

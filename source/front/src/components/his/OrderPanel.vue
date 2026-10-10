@@ -1,16 +1,5 @@
-<script setup lang="ts">
-withDefaults(defineProps<{
-  title: string
-  countText?: string
-  defaultOpen?: boolean
-}>(), {
-  countText: '',
-  defaultOpen: true,
-})
-</script>
-
 <template>
-  <el-collapse class="order-panel" :model-value="defaultOpen ? ['1'] : []">
+  <el-collapse :model-value="defaultOpen ? ['1'] : []" class="order-panel">
     <el-collapse-item name="1">
       <template #title>
         <div class="flex w-full items-center justify-between pr-2">
@@ -24,6 +13,14 @@ withDefaults(defineProps<{
     </el-collapse-item>
   </el-collapse>
 </template>
+
+<script setup>
+defineProps({
+  title: {type: String, required: true},
+  countText: {type: String, required: false, default: ''},
+  defaultOpen: {type: Boolean, required: false, default: true}
+});
+</script>
 
 <style scoped>
 .order-panel {

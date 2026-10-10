@@ -1,61 +1,3 @@
-<script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { readMessage } from '@/api/system'
-import {
-  messageActionOwner,
-  messageActionPermissions,
-  messageLabel,
-  messagePayloadChips,
-  messageTagClass,
-} from '@/lib/messageCatalog'
-import { hasAnyPerm } from '@/lib/perm'
-import MessageProcessDialog from '@/components/his/MessageProcessDialog.vue'
-
-const props = defineProps<{
-  code: string
-  mode: 'todo' | 'notice'
-  data: Record<string, any> | null
-  error?: string | null
-}>()
-
-const emit = defineEmits<{ (e: 'refresh'): void }>()
-
-const router = useRouter()
-const processVisible = ref(false)
-const processTarget = ref<any>(null)
-
-const items = computed<any[]>(() => props.data?.items || [])
-const total = computed(() => Number(props.data?.total ?? 0))
-const urgentTotal = computed(() => Number(props.data?.urgentTotal ?? 0))
-const ready = computed(() => !!props.data && !props.error)
-
-const isTodo = computed(() => props.mode === 'todo')
-
-/** 待办的处置入口按当前角色权限锁；无权时只提示归属岗位，不给点了报错的按钮 */
-const canProcess = (item: any) => hasAnyPerm(messageActionPermissions(item.bizType))
-
-const openProcess = (item: any) => {
-  processTarget.value = item
-  processVisible.value = true
-}
-
-const markRead = async (item: any) => {
-  try {
-    await readMessage(item.messageId)
-    emit('refresh')
-  } catch (e: any) {
-    ElMessage.error(e?.message || '标记已读失败')
-  }
-}
-
-const onProcessed = () => {
-  processVisible.value = false
-  emit('refresh')
-}
-</script>
-
 <template>
   <div>
     <div class="mb-3 flex items-center justify-between gap-3">
@@ -83,7 +25,7 @@ const onProcessed = () => {
           {{ messageLabel(item.bizType) }}
         </span>
         <div class="min-w-0 flex-1">
-          <p class="truncate text-[15px] font-medium text-slate-800" :title="item.title">
+          <p :title="item.title" class="truncate text-[15px] font-medium text-slate-800">
             {{ item.title || messageLabel(item.bizType) }}
           </p>
           <p class="mt-0.5 truncate text-[13px] text-slate-500">
@@ -97,7 +39,8 @@ const onProcessed = () => {
             v-if="isTodo && canProcess(item)"
             class="shrink-0 rounded-md border border-[#1269B5] px-3 py-1 text-[14px] text-[#1269B5] transition-colors hover:bg-[#1269B5] hover:text-white"
             @click="openProcess(item)"
-        >处理</button>
+        >处理
+        </button>
         <span v-else-if="isTodo" class="shrink-0 text-[13px] text-slate-400">
           由{{ messageActionOwner(item.bizType) }}处理
         </span>
@@ -105,10 +48,61 @@ const onProcessed = () => {
             v-else
             class="shrink-0 rounded-md border border-slate-300 px-3 py-1 text-[14px] text-slate-600 transition-colors hover:border-slate-400 hover:text-slate-800"
             @click="markRead(item)"
-        >已读</button>
+        >已读
+        </button>
       </li>
     </ul>
 
-    <MessageProcessDialog v-model="processVisible" :message="processTarget" @processed="onProcessed" />
+    <MessageProcessDialog v-model="processVisible" :message="processTarget" @processed="onProcessed"/>
   </div>
 </template>
+
+<script setup>
+import {computed, ref} from 'vue';
+import {useRouter} from 'vue-router';
+import {ElMessage} from 'element-plus';
+import {readMessage} from '@/api/system';
+import {
+  messageActionOwner,
+  messageActionPermissions,
+  messageLabel,
+  messagePayloadChips,
+  messageTagClass,
+} from '@/lib/messageCatalog';
+import {hasAnyPerm} from '@/lib/perm';
+import MessageProcessDialog from '@/components/his/MessageProcessDialog.vue';
+
+const props = defineProps({
+  code: {type: String, required: true},
+  mode: {type: String, required: true},
+  data: {type: [Object, null], required: true},
+  error: {type: [String, null], required: false}
+});
+const emit = defineEmits();
+const router = useRouter();
+const processVisible = ref(false);
+const processTarget = ref(null);
+const items = computed(() => props.data?.items || []);
+const total = computed(() => Number(props.data?.total ?? 0));
+const urgentTotal = computed(() => Number(props.data?.urgentTotal ?? 0));
+const ready = computed(() => !!props.data && !props.error);
+const isTodo = computed(() => props.mode === 'todo');
+/** 待办的处置入口按当前角色权限锁；无权时只提示归属岗位，不给点了报错的按钮 */
+const canProcess = (item) => hasAnyPerm(messageActionPermissions(item.bizType));
+const openProcess = (item) => {
+  processTarget.value = item;
+  processVisible.value = true;
+};
+const markRead = async (item) => {
+  try {
+    await readMessage(item.messageId);
+    emit('refresh');
+  } catch (e) {
+    ElMessage.error(e?.message || '标记已读失败');
+  }
+};
+const onProcessed = () => {
+  processVisible.value = false;
+  emit('refresh');
+};
+</script>

@@ -1,63 +1,3 @@
-<script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { askOperationQa, getOperationSchema } from '@/api/ai'
-
-const question = ref('')
-const withSummary = ref(true)
-const loading = ref(false)
-const result = ref<any>(null)
-const schemaList = ref<any[]>([])
-
-const quickQuestions = [
-  '最近7天每天的发药处方数量和金额',
-  '本月各支付方式的净收款金额',
-  '最近30天各科室的门诊就诊量',
-  '本月检验记录数量按申请科室统计',
-]
-
-const tableRows = computed(() => {
-  const res = result.value
-  if (!res || !res.rows?.length) return []
-  return res.rows.map((row: any) => {
-    const item: Record<string, any> = {}
-    row.cells.forEach((v: any, i: number) => {
-      item[res.columns[i].key] = v
-    })
-    return item
-  })
-})
-
-const ask = async (q?: string) => {
-  const text = (q ?? question.value).trim()
-  if (!text) {
-    ElMessage.warning('请输入要问的问题')
-    return
-  }
-  question.value = text
-  loading.value = true
-  result.value = null
-  try {
-    const res: any = await askOperationQa({ question: text, withSummary: withSummary.value })
-    result.value = res?.data || null
-  } catch (e: any) {
-    // 降级与业务拒绝都走 200 + degraded；走到这里的是网络或权限问题
-    console.error('运营问数请求失败', e)
-  } finally {
-    loading.value = false
-  }
-}
-
-onMounted(async () => {
-  try {
-    const res: any = await getOperationSchema()
-    schemaList.value = res?.data || []
-  } catch (e) {
-    console.error('加载数据域失败', e)
-  }
-})
-</script>
-
 <template>
   <div class="operation-qa">
     <div class="qa-header">
@@ -67,41 +7,42 @@ onMounted(async () => {
       </div>
     </div>
 
-    <el-card shadow="never" class="qa-ask-card">
+    <el-card class="qa-ask-card" shadow="never">
       <div class="qa-input-row">
         <el-input
-          v-model="question"
-          placeholder="例如：最近7天每天的发药处方数量和金额"
-          maxlength="200"
-          clearable
-          @keyup.enter="ask()"
+            v-model="question"
+            clearable
+            maxlength="200"
+            placeholder="例如：最近7天每天的发药处方数量和金额"
+            @keyup.enter="ask()"
         />
         <el-checkbox v-model="withSummary" class="qa-summary-check">生成结论</el-checkbox>
-        <el-button type="primary" :loading="loading" v-perm="'ai:operationQa:ask'" @click="ask()">查询</el-button>
+        <el-button v-perm="'ai:operationQa:ask'" :loading="loading" type="primary" @click="ask()">查询</el-button>
       </div>
       <div class="qa-chips">
         <el-tag
-          v-for="q in quickQuestions"
-          :key="q"
-          class="qa-chip"
-          type="info"
-          effect="plain"
-          @click="ask(q)"
-        >{{ q }}</el-tag>
+            v-for="q in quickQuestions"
+            :key="q"
+            class="qa-chip"
+            effect="plain"
+            type="info"
+            @click="ask(q)"
+        >{{ q }}
+        </el-tag>
       </div>
     </el-card>
 
     <el-alert
-      v-if="result?.degraded"
-      type="warning"
-      :closable="false"
-      show-icon
-      class="qa-degraded"
-      title="本次未生成或未执行查询"
-      :description="result.degradeReason"
+        v-if="result?.degraded"
+        :closable="false"
+        :description="result.degradeReason"
+        class="qa-degraded"
+        show-icon
+        title="本次未生成或未执行查询"
+        type="warning"
     />
 
-    <el-card v-if="result" shadow="never" class="qa-result-card">
+    <el-card v-if="result" class="qa-result-card" shadow="never">
       <template #header>
         <div class="qa-result-head">
           <span class="qa-result-title">{{ result.title || result.question }}</span>
@@ -114,13 +55,14 @@ onMounted(async () => {
 
       <p v-if="result.summary" class="qa-summary">{{ result.summary }}</p>
 
-      <el-table :data="tableRows" v-loading="loading" border stripe class="qa-table" empty-text="没有查到符合条件的数据">
+      <el-table v-loading="loading" :data="tableRows" border class="qa-table" empty-text="没有查到符合条件的数据"
+                stripe>
         <el-table-column
-          v-for="col in result.columns"
-          :key="col.key"
-          :prop="col.key"
-          :label="col.label"
-          :min-width="140"
+            v-for="col in result.columns"
+            :key="col.key"
+            :label="col.label"
+            :min-width="140"
+            :prop="col.key"
         />
       </el-table>
 
@@ -132,7 +74,7 @@ onMounted(async () => {
       </el-collapse>
     </el-card>
 
-    <el-card shadow="never" class="qa-schema-card">
+    <el-card class="qa-schema-card" shadow="never">
       <template #header>可查询的数据域</template>
       <div class="qa-schema-list">
         <div v-for="item in schemaList" :key="item.tableName" class="qa-schema-item">
@@ -145,65 +87,137 @@ onMounted(async () => {
   </div>
 </template>
 
+<script setup>
+import {computed, onMounted, ref} from 'vue';
+import {ElMessage} from 'element-plus';
+import {askOperationQa, getOperationSchema} from '@/api/ai';
+
+const question = ref('');
+const withSummary = ref(true);
+const loading = ref(false);
+const result = ref(null);
+const schemaList = ref([]);
+const quickQuestions = [
+  '最近7天每天的发药处方数量和金额',
+  '本月各支付方式的净收款金额',
+  '最近30天各科室的门诊就诊量',
+  '本月检验记录数量按申请科室统计',
+];
+const tableRows = computed(() => {
+  const res = result.value;
+  if (!res || !res.rows?.length)
+    return [];
+  return res.rows.map((row) => {
+    const item = {};
+    row.cells.forEach((v, i) => {
+      item[res.columns[i].key] = v;
+    });
+    return item;
+  });
+});
+const ask = async (q) => {
+  const text = (q ?? question.value).trim();
+  if (!text) {
+    ElMessage.warning('请输入要问的问题');
+    return;
+  }
+  question.value = text;
+  loading.value = true;
+  result.value = null;
+  try {
+    const res = await askOperationQa({question: text, withSummary: withSummary.value});
+    result.value = res?.data || null;
+  } catch (e) {
+    // 降级与业务拒绝都走 200 + degraded；走到这里的是网络或权限问题
+    console.error('运营问数请求失败', e);
+  } finally {
+    loading.value = false;
+  }
+};
+onMounted(async () => {
+  try {
+    const res = await getOperationSchema();
+    schemaList.value = res?.data || [];
+  } catch (e) {
+    console.error('加载数据域失败', e);
+  }
+});
+</script>
+
 <style scoped>
 .operation-qa {
   padding: 16px;
 }
+
 .qa-header {
   margin-bottom: 12px;
 }
+
 .qa-title {
   margin: 0;
   font-size: 18px;
 }
+
 .qa-sub {
   margin: 4px 0 0;
   color: #6b7280;
   font-size: 13px;
 }
+
 .qa-ask-card {
   margin-bottom: 12px;
 }
+
 .qa-input-row {
   display: flex;
   gap: 12px;
   align-items: center;
 }
+
 .qa-input-row .el-input {
   flex: 1;
 }
+
 .qa-summary-check {
   white-space: nowrap;
 }
+
 .qa-chips {
   margin-top: 10px;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
+
 .qa-chip {
   cursor: pointer;
 }
+
 .qa-degraded {
   margin-bottom: 12px;
 }
+
 .qa-result-card {
   margin-bottom: 12px;
 }
+
 .qa-result-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
 }
+
 .qa-result-title {
   font-weight: 600;
 }
+
 .qa-result-meta {
   color: #6b7280;
   font-size: 12px;
   white-space: nowrap;
 }
+
 .qa-summary {
   margin: 0 0 12px;
   padding: 10px 12px;
@@ -212,13 +226,16 @@ onMounted(async () => {
   border-radius: 4px;
   font-size: 14px;
 }
+
 .qa-table {
   width: 100%;
 }
+
 .qa-sql-collapse {
   margin-top: 12px;
   border-top: none;
 }
+
 .qa-sql {
   margin: 0;
   padding: 10px;
@@ -228,11 +245,13 @@ onMounted(async () => {
   white-space: pre-wrap;
   word-break: break-all;
 }
+
 .qa-schema-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 8px 20px;
 }
+
 .qa-schema-item {
   display: flex;
   justify-content: space-between;
@@ -241,14 +260,17 @@ onMounted(async () => {
   padding: 4px 0;
   border-bottom: 1px dashed #e5e7eb;
 }
+
 .qa-schema-usage {
   color: #374151;
 }
+
 .qa-schema-table {
   color: #9ca3af;
   font-family: monospace;
   font-size: 12px;
 }
+
 .qa-schema-note {
   margin: 10px 0 0;
   color: #9ca3af;

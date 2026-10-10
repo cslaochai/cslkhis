@@ -1,146 +1,3 @@
-<script setup lang="ts">
-/**
- * 门诊电子病历查询（原菜单 601）—— **已下线，仅保留直接访问能力**
- *
- * 【2026-09-23 摘除菜单】本页的正式出口已改为 602「门诊病案首页」。
- * 摘除理由（实测）：它与 602 同表同接口同检索、信息量更少，且没有任何岗位的
- * 工作流会走到它（临床岗看病历都在"已知患者"的上下文里，走 703 PatientDetailDialog；
- * 病案岗走 604/609）。见 `source/back_end/sql/74-摘除门诊电子病历查询菜单.sql`。
- *
- * ⚠ 本页**遗留未修的缺陷，别再照它抄**（已下线故不修）：
- *   1. 抽屉里 4 处面板恒空 —— 读的 `medicalRecords` / `inspections` /
- *      `laboratories` / `surgeryHistories` 都不在 `EmrRecordDetailVO` 返回体里
- *      （后端只返回 record / prescriptions / inspectionApplies / laboratoryApplies）；
- *      而 `prescriptions` 后端给了、本页没渲染。
- *   2. 「入院记录 / 首次病程 / 出院小结 / 手术记录」是**住院**文书，
- *      门诊病历表里没有这些数据 —— 那三个 tab 是同一批字段换标题重复渲染。
- *   3. 体格检查 9 列（该表最完整的部分）一列都没展示，602 全展示了。
- *   正确写法参考 602 `medical-record/MedicalRecordView.vue`。
- *
- * 以下为原职责说明（G4 收口，2026-09-23）：本页曾定位为只读的临床阅读视角 ——
- * 按患者/时间找到一份门诊病历，看它的病程、入院记录、检查报告。
- * 写入口不在这里：门诊病历的写入与审核在 602/603，住院病历在 304。
- *
- * 修掉的三处问题：
- * 1. **筛选曾是前端切片**：只取回当前页（10 条）再 `list.filter(...)`，
- *    于是「翻到第 3 页搜某个人」永远搜不到 —— 而 `total` 还被覆盖成过滤后的
- *    本页条数，分页器跟着一起失真。现在条件全部下推后端。
- * 2. **右栏「临床路径」是硬编码假数据**（入院当天/第1-2天/… 五个时间节点、
- *    「常用药物参考」三项、注意事项都是字面量），页面上看着有、其实接不上任何接口。
- *    真实的临床路径有独立菜单 607，这里直接摘掉。
- * 3. **「会诊记录」tab 写死「暂无会诊记录」**，恒空。没有后端数据源的 tab 就是假功能，摘掉。
- */
-import { ref, onMounted } from 'vue'
-import { Refresh, Search } from '@element-plus/icons-vue'
-import { getRecordDetail, getRecordListPage } from '@/api/emr'
-import { patientGenderText, patientGenderSymbol, patientAvatarTone } from '@/lib/patientGender'
-import { recordStatusText, recordStatusTagType } from '@/lib/recordStatus'
-import { PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/lib/pagination'
-
-const GENDER_DOT = { male: 'bg-blue-500', female: 'bg-pink-500', unknown: 'bg-slate-400' }
-
-const loading = ref(false)
-const records = ref<any[]>([])
-const drawerVisible = ref(false)
-const selectedRecord = ref<any>(null)
-const detailLoading = ref(false)
-const detailData = ref<any>(null)
-const recordTab = ref('progress')
-
-const searchForm = ref({
-  keyword: '',
-  visitDateRange: [] as string[],
-})
-
-const pagination = ref({
-  pageNum: 1,
-  pageSize: DEFAULT_PAGE_SIZE,
-  total: 0,
-})
-
-/** 组装后端 MedicalRecordQueryPageDTO 入参：条件必须下推，前端不再切片 */
-const buildQuery = () => {
-  const query: any = {
-    pageNum: pagination.value.pageNum,
-    pageSize: pagination.value.pageSize,
-  }
-  if (searchForm.value.keyword) query.keyword = searchForm.value.keyword.trim()
-  const [start, end] = searchForm.value.visitDateRange || []
-  if (start) query.visitDateStart = start
-  if (end) query.visitDateEnd = end
-  return query
-}
-
-const loadData = async () => {
-  loading.value = true
-  try {
-    const res = await getRecordListPage(buildQuery())
-    records.value = res.data?.records || []
-    pagination.value.total = res.data?.total || 0
-  } catch (error) {
-    console.error('加载病历失败:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-const handleSearch = () => {
-  pagination.value.pageNum = 1
-  loadData()
-}
-
-const handleReset = () => {
-  searchForm.value = { keyword: '', visitDateRange: [] }
-  handleSearch()
-}
-
-const handleSizeChange = (val: number) => {
-  pagination.value.pageSize = val
-  pagination.value.pageNum = 1
-  loadData()
-}
-
-const handleCurrentChange = (val: number) => {
-  pagination.value.pageNum = val
-  loadData()
-}
-
-const openDrawer = async (row: any) => {
-  selectedRecord.value = row
-  drawerVisible.value = true
-  detailLoading.value = true
-  recordTab.value = 'progress'
-  try {
-    const res = await getRecordDetail(row.id)
-    detailData.value = res.data || {}
-  } catch (error) {
-    console.error('加载详情失败:', error)
-  } finally {
-    detailLoading.value = false
-  }
-}
-
-const calcAge = (birthDate: string | null): string => {
-  if (!birthDate) return '-'
-  const birth = new Date(birthDate)
-  const now = new Date()
-  let age = now.getFullYear() - birth.getFullYear()
-  const m = now.getMonth() - birth.getMonth()
-  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--
-  return age >= 0 ? String(age) : '-'
-}
-
-const getAgeTag = (age: number) => {
-  if (age <= 14) return { label: '儿童', color: 'bg-pink-100 text-pink-700' }
-  if (age >= 65) return { label: '老年', color: 'bg-amber-100 text-amber-700' }
-  return null
-}
-
-onMounted(() => {
-  loadData()
-})
-</script>
-
 <template>
   <div class="space-y-6">
     <!-- 搜索条件 -->
@@ -148,32 +5,32 @@ onMounted(() => {
       <div class="flex flex-wrap items-center gap-3">
         <el-input
             v-model="searchForm.keyword"
+            :prefix-icon="Search"
+            class="!w-72"
+            clearable
             data-testid="rec-search"
             placeholder="患者姓名 / 患者号 / 就诊号 / 病历号"
-            :prefix-icon="Search"
-            clearable
-            class="!w-72"
             @keyup.enter="handleSearch"/>
         <el-date-picker
             v-model="searchForm.visitDateRange"
+            class="!w-72"
+            clearable
             data-testid="rec-date-range"
-            type="daterange"
+            end-placeholder="就诊日期止"
             range-separator="~"
             start-placeholder="就诊日期起"
-            end-placeholder="就诊日期止"
+            type="daterange"
             value-format="YYYY-MM-DD"
-            clearable
-            class="!w-72"
             @change="handleSearch"/>
-        <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
+        <el-button :icon="Search" type="primary" @click="handleSearch">查询</el-button>
         <el-button :icon="Refresh" @click="handleReset">重置</el-button>
       </div>
     </div>
 
     <!-- 患者列表 -->
     <div class="rounded-lg border border-slate-200 bg-white shadow-sm">
-      <el-table :data="records" v-loading="loading" style="width: 100%" @row-click="openDrawer"
-                row-class-name="cursor-pointer">
+      <el-table v-loading="loading" :data="records" row-class-name="cursor-pointer" style="width: 100%"
+                @row-click="openDrawer">
         <el-table-column label="患者" min-width="160">
           <template #default="{ row }">
             <div class="flex items-center gap-2">
@@ -194,9 +51,9 @@ onMounted(() => {
             <span class="text-sm text-slate-700">{{ patientGenderText(row.gender) }} / {{ row.age }}岁</span>
           </template>
         </el-table-column>
-        <el-table-column prop="deptName" label="科室" width="120"/>
-        <el-table-column prop="doctorName" label="医生" width="100"/>
-        <el-table-column prop="registNo" label="就诊号" width="180" class-name="font-mono text-sm"/>
+        <el-table-column label="科室" prop="deptName" width="120"/>
+        <el-table-column label="医生" prop="doctorName" width="100"/>
+        <el-table-column class-name="font-mono text-sm" label="就诊号" prop="registNo" width="180"/>
         <el-table-column label="就诊日期" width="120">
           <template #default="{ row }">
             <span class="text-sm text-slate-700">{{ row.visitDate }}</span>
@@ -207,11 +64,11 @@ onMounted(() => {
             <span class="text-sm text-slate-700">{{ row.diagnosisName || row.diagnosis || '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="90" align="center">
+        <el-table-column align="center" label="状态" width="90">
           <template #default="{ row }">
             <!-- 状态文案走 lib/recordStatus 单点：原先这里是三元链，
                  没有第 4 档 → record_status=4（已作废）被渲染成「草稿」 -->
-            <el-tag effect="plain" size="small" :type="recordStatusTagType(row.recordStatus)">
+            <el-tag :type="recordStatusTagType(row.recordStatus)" effect="plain" size="small">
               {{ recordStatusText(row.recordStatus) }}
             </el-tag>
           </template>
@@ -236,10 +93,10 @@ onMounted(() => {
     <!-- 电子病历抽屉 -->
     <el-drawer
         v-model="drawerVisible"
+        :before-close="() => { drawerVisible = false }"
+        :show-close="true"
         direction="rtl"
         size="95%"
-        :show-close="true"
-        :before-close="() => { drawerVisible = false }"
     >
       <template #header>
         <div class="flex items-center gap-3">
@@ -319,13 +176,13 @@ onMounted(() => {
             <div v-if="detailData?.inspections?.length || detailData?.laboratories?.length" class="space-y-2">
               <div v-for="ins in (detailData.inspections || [])" :key="ins.id"
                    class="flex items-center gap-2 rounded border border-slate-100 p-2 text-xs">
-                <el-tag size="small" type="info" effect="plain">检查</el-tag>
+                <el-tag effect="plain" size="small" type="info">检查</el-tag>
                 <span class="flex-1 font-medium text-slate-700">{{ ins.inspectionItemName }}</span>
                 <span class="text-slate-400">{{ ins.bodyPart || '-' }}</span>
               </div>
               <div v-for="lab in (detailData.laboratories || [])" :key="lab.id"
                    class="flex items-center gap-2 rounded border border-slate-100 p-2 text-xs">
-                <el-tag size="small" type="info" effect="plain">检验</el-tag>
+                <el-tag effect="plain" size="small" type="info">检验</el-tag>
                 <span class="flex-1 font-medium text-slate-700">{{ lab.laboratoryItemName }}</span>
                 <span class="text-slate-400">{{ lab.specimenType || '-' }}</span>
               </div>
@@ -462,3 +319,140 @@ onMounted(() => {
     </el-drawer>
   </div>
 </template>
+
+<script setup>
+/**
+ * 门诊电子病历查询（原菜单 601）—— **已下线，仅保留直接访问能力**
+ *
+ * 【2026-09-23 摘除菜单】本页的正式出口已改为 602「门诊病案首页」。
+ * 摘除理由（实测）：它与 602 同表同接口同检索、信息量更少，且没有任何岗位的
+ * 工作流会走到它（临床岗看病历都在"已知患者"的上下文里，走 703 PatientDetailDialog；
+ * 病案岗走 604/609）。见 `source/back_end/sql/74-摘除门诊电子病历查询菜单.sql`。
+ *
+ * ⚠ 本页**遗留未修的缺陷，别再照它抄**（已下线故不修）：
+ *   1. 抽屉里 4 处面板恒空 —— 读的 `medicalRecords` / `inspections` /
+ *      `laboratories` / `surgeryHistories` 都不在 `EmrRecordDetailVO` 返回体里
+ *      （后端只返回 record / prescriptions / inspectionApplies / laboratoryApplies）；
+ *      而 `prescriptions` 后端给了、本页没渲染。
+ *   2. 「入院记录 / 首次病程 / 出院小结 / 手术记录」是**住院**文书，
+ *      门诊病历表里没有这些数据 —— 那三个 tab 是同一批字段换标题重复渲染。
+ *   3. 体格检查 9 列（该表最完整的部分）一列都没展示，602 全展示了。
+ *   正确写法参考 602 `medical-record/MedicalRecordView.vue`。
+ *
+ * 以下为原职责说明（G4 收口，2026-09-23）：本页曾定位为只读的临床阅读视角 ——
+ * 按患者/时间找到一份门诊病历，看它的病程、入院记录、检查报告。
+ * 写入口不在这里：门诊病历的写入与审核在 602/603，住院病历在 304。
+ *
+ * 修掉的三处问题：
+ * 1. **筛选曾是前端切片**：只取回当前页（10 条）再 `list.filter(...)`，
+ *    于是「翻到第 3 页搜某个人」永远搜不到 —— 而 `total` 还被覆盖成过滤后的
+ *    本页条数，分页器跟着一起失真。现在条件全部下推后端。
+ * 2. **右栏「临床路径」是硬编码假数据**（入院当天/第1-2天/… 五个时间节点、
+ *    「常用药物参考」三项、注意事项都是字面量），页面上看着有、其实接不上任何接口。
+ *    真实的临床路径有独立菜单 607，这里直接摘掉。
+ * 3. **「会诊记录」tab 写死「暂无会诊记录」**，恒空。没有后端数据源的 tab 就是假功能，摘掉。
+ */
+import {onMounted, ref} from 'vue';
+import {Refresh, Search} from '@element-plus/icons-vue';
+import {getRecordDetail, getRecordListPage} from '@/api/emr';
+import {patientAvatarTone, patientGenderSymbol, patientGenderText} from '@/lib/patientGender';
+import {recordStatusTagType, recordStatusText} from '@/lib/recordStatus';
+import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+
+const GENDER_DOT = {male: 'bg-blue-500', female: 'bg-pink-500', unknown: 'bg-slate-400'};
+const loading = ref(false);
+const records = ref([]);
+const drawerVisible = ref(false);
+const selectedRecord = ref(null);
+const detailLoading = ref(false);
+const detailData = ref(null);
+const recordTab = ref('progress');
+const searchForm = ref({
+  keyword: '',
+  visitDateRange: [],
+});
+const pagination = ref({
+  pageNum: 1,
+  pageSize: DEFAULT_PAGE_SIZE,
+  total: 0,
+});
+/** 组装后端 MedicalRecordQueryPageDTO 入参：条件必须下推，前端不再切片 */
+const buildQuery = () => {
+  const query = {
+    pageNum: pagination.value.pageNum,
+    pageSize: pagination.value.pageSize,
+  };
+  if (searchForm.value.keyword)
+    query.keyword = searchForm.value.keyword.trim();
+  const [start, end] = searchForm.value.visitDateRange || [];
+  if (start)
+    query.visitDateStart = start;
+  if (end)
+    query.visitDateEnd = end;
+  return query;
+};
+const loadData = async () => {
+  loading.value = true;
+  try {
+    const res = await getRecordListPage(buildQuery());
+    records.value = res.data?.records || [];
+    pagination.value.total = res.data?.total || 0;
+  } catch (error) {
+    console.error('加载病历失败:', error);
+  } finally {
+    loading.value = false;
+  }
+};
+const handleSearch = () => {
+  pagination.value.pageNum = 1;
+  loadData();
+};
+const handleReset = () => {
+  searchForm.value = {keyword: '', visitDateRange: []};
+  handleSearch();
+};
+const handleSizeChange = (val) => {
+  pagination.value.pageSize = val;
+  pagination.value.pageNum = 1;
+  loadData();
+};
+const handleCurrentChange = (val) => {
+  pagination.value.pageNum = val;
+  loadData();
+};
+const openDrawer = async (row) => {
+  selectedRecord.value = row;
+  drawerVisible.value = true;
+  detailLoading.value = true;
+  recordTab.value = 'progress';
+  try {
+    const res = await getRecordDetail(row.id);
+    detailData.value = res.data || {};
+  } catch (error) {
+    console.error('加载详情失败:', error);
+  } finally {
+    detailLoading.value = false;
+  }
+};
+const calcAge = (birthDate) => {
+  if (!birthDate)
+    return '-';
+  const birth = new Date(birthDate);
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const m = now.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < birth.getDate()))
+    age--;
+  return age >= 0 ? String(age) : '-';
+};
+const getAgeTag = (age) => {
+  if (age <= 14)
+    return {label: '儿童', color: 'bg-pink-100 text-pink-700'};
+  if (age >= 65)
+    return {label: '老年', color: 'bg-amber-100 text-amber-700'};
+  return null;
+};
+onMounted(() => {
+  loadData();
+});
+</script>

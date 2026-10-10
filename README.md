@@ -1,16 +1,18 @@
 # cslk-HIS · 三甲医院信息化系统（Hospital Information System）
 
-一套面向三甲医院业务闭环的全栈 HIS 系统：模块化单体后端 + Vue3 管理端 + 微信患者端小程序，覆盖预约挂号与全院排班（人力出勤）、门诊医嘱与电子病历、手术麻醉与日间手术、检验检查（LIS/PACS）、药房药库、收费结算与医保、急诊分诊等临床域，以及患者端互联网服务（智能导诊、预问诊、报告解读、随访、在线客服）和 AI 辅助（ICD-10 编码、处方审核、病历质控/草拟、检验/报告白话解读、运营问数、知识库 RAG 等 18 项能力）。
+一套面向三甲医院业务闭环的全栈 HIS 系统：模块化单体后端 + Vue3 管理端 +
+微信患者端小程序，覆盖预约挂号与全院排班（人力出勤）、门诊医嘱与电子病历、手术麻醉与日间手术、检验检查（LIS/PACS）、药房药库、收费结算与医保、急诊分诊等临床域，以及患者端互联网服务（智能导诊、预问诊、报告解读、随访、在线客服）和
+AI 辅助（ICD-10 编码、处方审核、病历质控/草拟、检验/报告白话解读、运营问数、知识库 RAG 等 18 项能力）。
 
 ## 技术栈
 
-| 层 | 技术 |
-|---|---|
-| 后端 | Java 21 · Spring Boot 3.2.5 · MyBatis-Plus 3.5.6 · MySQL 8 · Redis · JWT (jjwt) · Knife4j 4.4.0 (OpenAPI) · Hutool · OpenPDF · ZXing · 微信支付 / 支付宝 SDK |
-| 管理端 | Vue 3.5 · Vite 8 · Element Plus · Tailwind CSS 4 · Pinia · Vue Router · Axios |
-| 患者端 | 微信小程序（原生） |
-| 部署 | Docker Compose（后端 + Nginx 管理端） |
-| 数据库 | 全量 DDL 快照（`docs/01-初始化DDL/`，23 个领域、302 张表）+ 铺底数据（`docs/02-铺底基础数据/`，93 张表 + 汇总导入脚本）+ 增量脚本（`docs/03-增量SQL变更/`，200+ 编号） |
+| 层   | 技术                                                                                                                                                    |
+|-----|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 后端  | Java 21 · Spring Boot 3.2.5 · MyBatis-Plus 3.5.6 · MySQL 8 · Redis · JWT (jjwt) · Knife4j 4.4.0 (OpenAPI) · Hutool · OpenPDF · ZXing · 微信支付 / 支付宝 SDK |
+| 管理端 | Vue 3.5 · Vite 8 · Element Plus · Tailwind CSS 4 · Pinia · Vue Router · Axios                                                                         |
+| 患者端 | 微信小程序（原生）                                                                                                                                             |
+| 部署  | Docker Compose（后端 + Nginx 管理端）                                                                                                                        |
+| 数据库 | 全量 DDL 快照（`docs/01-初始化DDL/`，23 个领域、302 张表）+ 铺底数据（`docs/02-铺底基础数据/`，93 张表 + 汇总导入脚本）+ 增量脚本（`docs/03-增量SQL变更/`，200+ 编号）                                  |
 
 ## 目录结构
 
@@ -59,7 +61,9 @@ cslk/
 
 ### 2. 启动后端
 
-配置分三层：`application.yml`（环境无关公共配置）、`config/domain/his-*.yml`（领域行为片段，dev/pro 共用、零密钥）、`application-{dev,pro}.yml`（环境差异）。**密钥一律走 `HIS_*` 环境变量**（数据库、Redis、JWT、签名主密钥、AI 密钥，参照 `docker/.env.example`）；`application-dev.yml` 为本地个人配置，不入库。
+配置分三层：`application.yml`（环境无关公共配置）、`config/domain/his-*.yml`（领域行为片段，dev/pro 共用、零密钥）、
+`application-{dev,pro}.yml`（环境差异）。**密钥一律走 `HIS_*` 环境变量**（数据库、Redis、JWT、签名主密钥、AI 密钥，参照
+`docker/.env.example`）；`application-dev.yml` 为本地个人配置，不入库。
 
 ```bash
 cd source/back_end
@@ -78,7 +82,8 @@ pnpm install
 pnpm dev        # 默认 http://localhost:3000
 ```
 
-dev server 将 `/api` 代理到 `http://localhost:8080`；需要指向其他实例（如另跑一个 jar 做验收）时，用 `VITE_API_TARGET=http://localhost:8082 pnpm dev`，不改配置。
+dev server 将 `/api` 代理到 `http://localhost:8080`；需要指向其他实例（如另跑一个 jar 做验收）时，用
+`VITE_API_TARGET=http://localhost:8082 pnpm dev`，不改配置。
 
 ### 4. 患者端小程序
 
@@ -94,22 +99,34 @@ docker compose -f docker/docker-compose.yml up -d --build
 
 ## 架构要点
 
-- **模块化单体 + 单向分层**：`his-common` 底座 → 业务域（system/patient/pharmacy/appoint/operation/medicaltech/emr/charge）→ `his-ai`（横切 AI 能力，业务模块**禁止**依赖它，由它反向读业务数据）→ `his-miniapp`（患者端 BFF）→ `his-web` 启动层。跨模块只依赖对方 Service，禁止直连 Mapper。
-- **接口契约**：RESTful + 统一响应体 `{code, message, data}`；入参 `xxxDTO`（带校验注解）、出参 `listVO/detailVO/SelectListVO`；主键 ID 序列化为字符串避免前端精度丢失。
+- **模块化单体 + 单向分层**：`his-common` 底座 → 业务域（system/patient/pharmacy/appoint/operation/medicaltech/emr/charge）→
+  `his-ai`（横切 AI 能力，业务模块**禁止**依赖它，由它反向读业务数据）→ `his-miniapp`（患者端 BFF）→ `his-web` 启动层。跨模块只依赖对方
+  Service，禁止直连 Mapper。
+- **接口契约**：RESTful + 统一响应体 `{code, message, data}`；入参 `xxxDTO`（带校验注解）、出参
+  `listVO/detailVO/SelectListVO`；主键 ID 序列化为字符串避免前端精度丢失。
 - **鉴权**：JWT 登录态 + `sys_menu` 驱动的菜单/按钮级权限（前端 `v-perm` 指令 + 后端方法级 `@PreAuthorize`）。
 - **电子签名**：内置 TSA 时间戳网关（`his-common` 的 `TsaService`/`SignCryptoUtil`），支撑病历/处方签名合规。
-- **AI 纪律铁律**：能力白名单调用（`capabilityKey` 只来自常量）；事实层代码算、模型只解释/产出候选；模型不可用时能力必须降级可用且降级可见；所有模型调用经 `AiExecutionService` 唯一入口落审计。详见 [AI能力施工手册](docs/AI能力施工手册.md)。
+- **AI 纪律铁律**：能力白名单调用（`capabilityKey` 只来自常量）；事实层代码算、模型只解释/产出候选；模型不可用时能力必须降级可用且降级可见；所有模型调用经
+  `AiExecutionService` 唯一入口落审计。详见 [AI能力施工手册](docs/AI能力施工手册.md)。
 - **凭据分流**：代码/配置入库零密钥，环境凭据只走环境变量（`HIS_*`）或 `docker/.env`；详见 [AGENTS.md](AGENTS.md) 第 8 节。
 - 详细开发规范见 [AGENTS.md](AGENTS.md)，业务规划与施工方案见 [docs/](docs/)。
 
 ## 医保支付分组（DRG/DIP）
 
-医保支付遵循国家 DRG/DIP 付费改革（当前 2.0 版，2027-03 底落地 3.0 版）。系统按 **「贯标字典 → 结构化单据 → 分组引擎 → 合规控费 → 医保平台对接」** 五层管线落地，当前进度如下：
+医保支付遵循国家 DRG/DIP 付费改革（当前 2.0 版，2027-03 底落地 3.0 版）。系统按 **「贯标字典 → 结构化单据 → 分组引擎 →
+合规控费 → 医保平台对接」** 五层管线落地，当前进度如下：
 
-- **数据根基（已按标准 HIS 建模）**：结算清单结构化明细（`biz_settlement_diagnosis`/`biz_settlement_operation`）、病案首页结构化（`biz_inpatient_summary`/`biz_inpatient_diagnosis`/`biz_inpatient_operation`）、ICD-10 / ICD-9-CM-3 贯标字典、医保目录对照（`biz_yb_catalog`/`biz_yb_mapping`）。诊断/手术均为结构化编码明细，非字符串堆砌。
-- **分组引擎（`his-medicaltech` 的 `DrgGrouper`）**：已重构为真实入组流程骨架 —— 先期分组 → MDC → ADRG → DRG 细分组；入参覆盖主诊断亚目、主手术/其他手术、其他诊断（→CC/MCC）、年龄、性别、呼吸机时长、新生儿体重等全量维度。新增 `CcMccService` 做 CC/MCC 判定并应用排除表（决定高编高套风险）。
-- **数据底座（已扩）**：分组表 `sys_drg_group` 增加匹配键（`diag_match`/`oper_match`）与性别限定、年龄分层、先期标志、术式属性（单双侧/机器人/联合）、基层病种等维度列；新建 `sys_drg_ccmcc`（CC/MCC 官方目录）、`sys_drg_exclusion`（排除表）。
-- **诚实闸门**：官方分组数据未灌入时，分组器与合规 D 组（`GroupingRatioRule` D01/D02）均返回 QY / 不适用（NA），并明确标注「未接入分组方案」，**绝不谎报分组或静默判「正常」**。
+- **数据根基（已按标准 HIS 建模）**：结算清单结构化明细（`biz_settlement_diagnosis`/`biz_settlement_operation`）、病案首页结构化（
+  `biz_inpatient_summary`/`biz_inpatient_diagnosis`/`biz_inpatient_operation`）、ICD-10 / ICD-9-CM-3 贯标字典、医保目录对照（
+  `biz_yb_catalog`/`biz_yb_mapping`）。诊断/手术均为结构化编码明细，非字符串堆砌。
+- **分组引擎（`his-medicaltech` 的 `DrgGrouper`）**：已重构为真实入组流程骨架 —— 先期分组 → MDC → ADRG → DRG
+  细分组；入参覆盖主诊断亚目、主手术/其他手术、其他诊断（→CC/MCC）、年龄、性别、呼吸机时长、新生儿体重等全量维度。新增
+  `CcMccService` 做 CC/MCC 判定并应用排除表（决定高编高套风险）。
+- **数据底座（已扩）**：分组表 `sys_drg_group` 增加匹配键（`diag_match`/`oper_match`
+  ）与性别限定、年龄分层、先期标志、术式属性（单双侧/机器人/联合）、基层病种等维度列；新建 `sys_drg_ccmcc`（CC/MCC 官方目录）、
+  `sys_drg_exclusion`（排除表）。
+- **诚实闸门**：官方分组数据未灌入时，分组器与合规 D 组（`GroupingRatioRule` D01/D02）均返回 QY / 不适用（NA），并明确标注「未接入分组方案」，
+  **绝不谎报分组或静默判「正常」**。
 
 **落地硬前提（需医保局提供，不入库、不在代码内编造）**：
 
@@ -121,7 +138,7 @@ docker compose -f docker/docker-compose.yml up -d --build
 
 ## 文档索引
 
-- [E-R 反向建模](docs/10-ER关系图/README.md) — 302 张表的关系模型；`docs/er/index.html` 可离线查看连线图
+- E-R 反向建模(docs/10-ER关系图) — 302 张表的关系模型；`docs/er/index.html` 可离线查看连线图
 - [测试账号与凭据](docs/测试账号与凭据.md)
 - 需求与设计文档（docx）：需求规格说明书、用户需求说明书、业务架构设计说明书、概要设计说明书、详细设计说明书（见 `docs/`）
 

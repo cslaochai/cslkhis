@@ -1,8 +1,161 @@
-<script setup lang="js">
-import { ref, onMounted, reactive, watch } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Edit, Delete, Refresh, Check, Search, Expand, Fold } from '@element-plus/icons-vue'
-import { getMenuTree, getMenuDetail, createMenu, updateMenu, deleteMenu } from '@/api/system'
+<template>
+  <div class="flex h-[calc(100vh-120px)] gap-4">
+    <!-- 左侧：菜单树 -->
+    <div class="w-96 flex-shrink-0 rounded-lg border border-gray-200 bg-white p-4">
+      <div class="mb-3 flex items-center justify-between">
+        <span class="font-medium">菜单列表</span>
+        <div class="tree-toolbar flex items-center">
+          <el-button :icon="Expand" bg size="small" text @click="handleExpandAll">展开</el-button>
+          <el-button :icon="Fold" bg size="small" text @click="handleCollapseAll">收缩</el-button>
+          <el-button :icon="Refresh" bg size="small" text @click="handleRefresh">刷新</el-button>
+        </div>
+      </div>
+
+      <!-- 搜索框 -->
+      <div class="mb-3">
+        <el-input
+            v-model="searchKeyword"
+            clearable
+            placeholder="搜索菜单名称"
+            size="small"
+            @clear="handleSearch"
+            @keyup.enter="handleSearch"
+        >
+          <template #prefix>
+            <el-icon>
+              <Search/>
+            </el-icon>
+          </template>
+        </el-input>
+      </div>
+
+      <div v-loading="loading" class="h-[calc(100%-100px)] overflow-auto">
+        <el-tree
+            ref="treeRef"
+            :data="menuTree"
+            :default-expanded-keys="expandedKeys"
+            :indent="10"
+            :props="{ label: 'menuName', children: 'children' }"
+            highlight-current
+            node-key="id"
+            @node-click="handleNodeClick"
+        >
+          <template #default="{ node, data }">
+            <div class="flex items-center justify-between w-full pr-2">
+              <span :class="{ 'text-slate-400': data.menuType === 3 }" class="text-sm">
+                <template v-if="highlightKeyword && data.menuName.includes(highlightKeyword)">
+                  {{ data.menuName.substring(0, data.menuName.indexOf(highlightKeyword)) }}<span
+                    class="text-red-500 font-medium">{{
+                    highlightKeyword
+                  }}</span>{{
+                    data.menuName.substring(data.menuName.indexOf(highlightKeyword) + highlightKeyword.length)
+                  }}
+                </template>
+                <template v-else>{{ data.menuName }}</template>
+              </span>
+              <!-- G5：权限码树内直显，绑定关系不再是黑盒 -->
+              <span
+                  v-if="data.permission"
+                  :title="data.permission"
+                  class="ml-auto mr-1 max-w-[160px] truncate rounded bg-slate-100 px-1 text-[10px] text-slate-500"
+                  data-testid="g5-menu-perm-badge"
+              >{{ data.permission }}</span>
+              <div class="flex gap-1">
+                <el-button
+                    v-if="data.menuType !== 3"
+                    v-perm="'system:menu:add'"
+                    :icon="Plus"
+                    link
+                    size="small"
+                    type="primary"
+                    @click.stop="handleAdd(data.id)"
+                />
+                <el-button
+                    v-if="!hasChildren(data)"
+                    v-perm="'system:menu:delete'"
+                    :icon="Delete"
+                    link
+                    size="small"
+                    type="danger"
+                    @click.stop="handleDelete(data)"
+                />
+              </div>
+            </div>
+          </template>
+        </el-tree>
+      </div>
+    </div>
+
+    <!-- 右侧：菜单详情 -->
+    <div class="flex-1 flex flex-col rounded-lg border border-gray-200 bg-white">
+      <div class="flex items-center border-b border-gray-100 px-4 py-3">
+        <span class="font-medium">{{ formData.id ? '编辑' : '新增' }}</span>
+      </div>
+
+      <div v-loading="formLoading" class="flex-1 overflow-auto p-4">
+        <el-form :model="formData" class="max-w-xl" label-width="100px">
+          <el-form-item label="菜单类型">
+            <el-radio-group v-model="formData.menuType">
+              <el-radio
+                  v-for="item in menuTypeOptions"
+                  :key="item.value"
+                  :value="item.value"
+              >
+                {{ item.label }}
+              </el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="菜单名称">
+            <el-input v-model="formData.menuName" placeholder="请输入菜单名称"/>
+          </el-form-item>
+          <el-form-item v-if="formData.menuType !== 3" label="图标">
+            <el-input v-model="formData.icon" placeholder="请输入图标名称"/>
+          </el-form-item>
+          <el-form-item v-if="formData.menuType !== 3" label="路由地址">
+            <el-input v-model="formData.path" placeholder="请输入路由地址"/>
+          </el-form-item>
+          <el-form-item v-if="formData.menuType === 2" label="组件路径">
+            <el-input v-model="formData.component" placeholder="请输入组件路径"/>
+          </el-form-item>
+          <!-- 页面与按钮都可维护权限标识；目录不挂权限码（角色配页面即配权限） -->
+          <el-form-item v-if="formData.menuType !== 1" label="权限标识">
+            <el-input v-model="formData.permission" data-testid="g5-menu-permission"
+                      placeholder="如: opd:appointments:list（模块:页面:动作）"/>
+          </el-form-item>
+          <el-form-item label="排序">
+            <el-input-number v-model="formData.sortOrder" :max="999" :min="0"/>
+          </el-form-item>
+          <el-form-item v-if="formData.menuType !== 3" label="是否可见">
+            <el-radio-group v-model="formData.isVisible">
+              <el-radio :value="1">显示</el-radio>
+              <el-radio :value="0">隐藏</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-radio-group v-model="formData.status">
+              <el-radio :value="1">启用</el-radio>
+              <el-radio :value="0">禁用</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item class="!mb-0">
+            <div class="flex justify-end w-full">
+              <el-button v-perm="'system:menu:add'" :icon="Check" :loading="formLoading" type="primary"
+                         @click="handleSave">
+                保存
+              </el-button>
+            </div>
+          </el-form-item>
+        </el-form>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script lang="js" setup>
+import {onMounted, reactive, ref} from 'vue'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {Check, Delete, Expand, Fold, Plus, Refresh, Search} from '@element-plus/icons-vue'
+import {createMenu, deleteMenu, getMenuDetail, getMenuTree, updateMenu} from '@/api/system'
 
 const loading = ref(false)
 const menuTree = ref([])
@@ -35,9 +188,9 @@ const formLoading = ref(false)
 
 // 菜单类型选项
 const menuTypeOptions = [
-  { value: 1, label: '目录' },
-  { value: 2, label: '菜单' },
-  { value: 3, label: '按钮' },
+  {value: 1, label: '目录'},
+  {value: 2, label: '菜单'},
+  {value: 3, label: '按钮'},
 ]
 
 onMounted(() => {
@@ -231,150 +384,6 @@ const hasChildren = (data) => {
 }
 
 </script>
-
-<template>
-  <div class="flex h-[calc(100vh-120px)] gap-4">
-    <!-- 左侧：菜单树 -->
-    <div class="w-96 flex-shrink-0 rounded-lg border border-gray-200 bg-white p-4">
-      <div class="mb-3 flex items-center justify-between">
-        <span class="font-medium">菜单列表</span>
-        <div class="tree-toolbar flex items-center">
-          <el-button size="small" :icon="Expand" text bg @click="handleExpandAll">展开</el-button>
-          <el-button size="small" :icon="Fold" text bg @click="handleCollapseAll">收缩</el-button>
-          <el-button size="small" :icon="Refresh" text bg @click="handleRefresh">刷新</el-button>
-        </div>
-      </div>
-
-      <!-- 搜索框 -->
-      <div class="mb-3">
-        <el-input
-          v-model="searchKeyword"
-          placeholder="搜索菜单名称"
-          clearable
-          size="small"
-          @keyup.enter="handleSearch"
-          @clear="handleSearch"
-        >
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-        </el-input>
-      </div>
-
-      <div v-loading="loading" class="h-[calc(100%-100px)] overflow-auto">
-        <el-tree
-          ref="treeRef"
-          :data="menuTree"
-          :props="{ label: 'menuName', children: 'children' }"
-          node-key="id"
-          :default-expanded-keys="expandedKeys"
-          highlight-current
-          :indent="10"
-          @node-click="handleNodeClick"
-        >
-          <template #default="{ node, data }">
-            <div class="flex items-center justify-between w-full pr-2">
-              <span class="text-sm" :class="{ 'text-slate-400': data.menuType === 3 }">
-                <template v-if="highlightKeyword && data.menuName.includes(highlightKeyword)">
-                  {{ data.menuName.substring(0, data.menuName.indexOf(highlightKeyword)) }}<span class="text-red-500 font-medium">{{ highlightKeyword }}</span>{{ data.menuName.substring(data.menuName.indexOf(highlightKeyword) + highlightKeyword.length) }}
-                </template>
-                <template v-else>{{ data.menuName }}</template>
-              </span>
-              <!-- G5：权限码树内直显，绑定关系不再是黑盒 -->
-              <span
-                v-if="data.permission"
-                class="ml-auto mr-1 max-w-[160px] truncate rounded bg-slate-100 px-1 text-[10px] text-slate-500"
-                :title="data.permission"
-                data-testid="g5-menu-perm-badge"
-              >{{ data.permission }}</span>
-              <div class="flex gap-1">
-                <el-button
-                  v-if="data.menuType !== 3"
-                  v-perm="'system:menu:add'"
-                  type="primary"
-                  link
-                  :icon="Plus"
-                  size="small"
-                  @click.stop="handleAdd(data.id)"
-                />
-                <el-button
-                  v-if="!hasChildren(data)"
-                  v-perm="'system:menu:delete'"
-                  type="danger"
-                  link
-                  :icon="Delete"
-                  size="small"
-                  @click.stop="handleDelete(data)"
-                />
-              </div>
-            </div>
-          </template>
-        </el-tree>
-      </div>
-    </div>
-
-    <!-- 右侧：菜单详情 -->
-    <div class="flex-1 flex flex-col rounded-lg border border-gray-200 bg-white">
-      <div class="flex items-center border-b border-gray-100 px-4 py-3">
-        <span class="font-medium">{{ formData.id ? '编辑' : '新增' }}</span>
-      </div>
-
-      <div v-loading="formLoading" class="flex-1 overflow-auto p-4">
-        <el-form :model="formData" label-width="100px" class="max-w-xl">
-          <el-form-item label="菜单类型">
-            <el-radio-group v-model="formData.menuType">
-              <el-radio
-                v-for="item in menuTypeOptions"
-                :key="item.value"
-                :value="item.value"
-              >
-                {{ item.label }}
-              </el-radio>
-            </el-radio-group>
-          </el-form-item>
-          <el-form-item label="菜单名称">
-            <el-input v-model="formData.menuName" placeholder="请输入菜单名称" />
-          </el-form-item>
-          <el-form-item v-if="formData.menuType !== 3" label="图标">
-            <el-input v-model="formData.icon" placeholder="请输入图标名称" />
-          </el-form-item>
-          <el-form-item v-if="formData.menuType !== 3" label="路由地址">
-            <el-input v-model="formData.path" placeholder="请输入路由地址" />
-          </el-form-item>
-          <el-form-item v-if="formData.menuType === 2" label="组件路径">
-            <el-input v-model="formData.component" placeholder="请输入组件路径" />
-          </el-form-item>
-          <!-- 页面与按钮都可维护权限标识；目录不挂权限码（角色配页面即配权限） -->
-          <el-form-item v-if="formData.menuType !== 1" label="权限标识">
-            <el-input v-model="formData.permission" placeholder="如: opd:appointments:list（模块:页面:动作）" data-testid="g5-menu-permission" />
-          </el-form-item>
-          <el-form-item label="排序">
-            <el-input-number v-model="formData.sortOrder" :min="0" :max="999" />
-          </el-form-item>
-          <el-form-item v-if="formData.menuType !== 3" label="是否可见">
-            <el-radio-group v-model="formData.isVisible">
-              <el-radio :value="1">显示</el-radio>
-              <el-radio :value="0">隐藏</el-radio>
-            </el-radio-group>
-          </el-form-item>
-          <el-form-item label="状态">
-            <el-radio-group v-model="formData.status">
-              <el-radio :value="1">启用</el-radio>
-              <el-radio :value="0">禁用</el-radio>
-            </el-radio-group>
-          </el-form-item>
-          <el-form-item class="!mb-0">
-            <div class="flex justify-end w-full">
-              <el-button v-perm="'system:menu:add'" type="primary" :icon="Check" :loading="formLoading" @click="handleSave">
-                保存
-              </el-button>
-            </div>
-          </el-form-item>
-        </el-form>
-      </div>
-    </div>
-  </div>
-</template>
 
 <style scoped>
 /* 工具栏三按钮：EP 默认给相邻 el-button 加 12px 左边距，贴右紧凑要归零并收窄内边距 */

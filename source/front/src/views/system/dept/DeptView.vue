@@ -1,8 +1,174 @@
-<script setup lang="js">
-import { ref, onMounted, reactive } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Edit, Delete, Refresh, Check, Search, ArrowDown } from '@element-plus/icons-vue'
-import { getDepartmentTree, getDepartmentDetail, createDepartment, updateDepartment, deleteDepartment, getUserList } from '@/api/system'
+<template>
+  <div class="flex h-[calc(100vh-120px)] gap-4">
+    <!-- 左侧：部门树 -->
+    <div class="w-96 flex-shrink-0 rounded-lg border border-gray-200 bg-white p-4">
+      <div class="mb-3 flex items-center justify-between">
+        <span class="font-medium">部门列表</span>
+        <el-dropdown trigger="click" @command="handleCommand">
+          <el-button size="small">
+            操作
+            <el-icon class="el-icon--right">
+              <ArrowDown/>
+            </el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="expand">展开全部</el-dropdown-item>
+              <el-dropdown-item command="collapse">收缩全部</el-dropdown-item>
+              <el-dropdown-item command="refresh" divided>刷新</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
+
+      <!-- 搜索框 -->
+      <div class="mb-3">
+        <el-input
+            v-model="searchKeyword"
+            clearable
+            placeholder="搜索部门名称/编号"
+            size="small"
+            @clear="handleSearch"
+            @keyup.enter="handleSearch"
+        >
+          <template #prefix>
+            <el-icon>
+              <Search/>
+            </el-icon>
+          </template>
+        </el-input>
+      </div>
+
+      <div v-loading="loading" class="h-[calc(100%-100px)] overflow-auto">
+        <el-tree
+            ref="treeRef"
+            :data="deptTree"
+            :default-expanded-keys="expandedKeys"
+            :indent="10"
+            :props="{ label: 'deptName', children: 'children' }"
+            highlight-current
+            node-key="id"
+            @node-click="handleNodeClick"
+        >
+          <template #default="{ node, data }">
+            <div class="flex items-center justify-between w-full pr-2">
+              <span class="text-sm">
+                <template v-if="highlightKeyword && data.deptName.includes(highlightKeyword)">
+                  {{ data.deptName.substring(0, data.deptName.indexOf(highlightKeyword)) }}<span
+                    class="text-red-500 font-medium">{{
+                    highlightKeyword
+                  }}</span>{{
+                    data.deptName.substring(data.deptName.indexOf(highlightKeyword) + highlightKeyword.length)
+                  }}
+                </template>
+                <template v-else>{{ data.deptName }}</template>
+              </span>
+              <div class="flex gap-1">
+                <el-button
+                    :icon="Plus"
+                    link
+                    size="small"
+                    type="primary"
+                    @click.stop="handleAdd(data.id)"
+                />
+                <el-button
+                    v-if="!hasChildren(data) && data.deptCode !== '1001'"
+                    :icon="Delete"
+                    link
+                    size="small"
+                    type="danger"
+                    @click.stop="handleDelete(data)"
+                />
+              </div>
+            </div>
+          </template>
+        </el-tree>
+      </div>
+    </div>
+
+    <!-- 右侧：部门详情 -->
+    <div class="flex-1 flex flex-col rounded-lg border border-gray-200 bg-white">
+      <div class="flex items-center border-b border-gray-100 px-4 py-3">
+        <span class="font-medium">{{ formData.id ? '编辑' : '新增' }}</span>
+      </div>
+
+      <div v-loading="formLoading" class="flex-1 overflow-auto p-4">
+        <el-form :model="formData" class="max-w-xl" label-width="100px">
+          <el-form-item label="上级部门">
+            <el-tree-select
+                v-model="formData.parentId"
+                :data="deptTree"
+                :disabled="formData.deptCode === '1001'"
+                :props="{ label: 'deptName', value: 'id', children: 'children' }"
+                check-strictly
+                placeholder="请选择上级部门"
+            />
+          </el-form-item>
+          <el-form-item label="部门名称">
+            <el-input v-model="formData.deptName" placeholder="请输入部门名称"/>
+          </el-form-item>
+          <el-form-item label="部门编号">
+            <el-input v-model="formData.deptCode" disabled placeholder="系统自动生成"/>
+          </el-form-item>
+          <el-form-item label="负责人">
+            <el-select
+                v-model="formData.leaderId"
+                :loading="userLoading"
+                :remote-method="handleUserSearch"
+                clearable
+                filterable
+                placeholder="请输入用户姓名搜索"
+                remote
+                @change="handleUserChange"
+            >
+              <el-option
+                  v-for="user in userList"
+                  :key="user.id"
+                  :label="user.realName || user.userName"
+                  :value="user.id"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="联系电话">
+            <el-input v-model="formData.phone" placeholder="请输入联系电话"/>
+          </el-form-item>
+          <el-form-item label="邮箱">
+            <el-input v-model="formData.email" placeholder="请输入邮箱"/>
+          </el-form-item>
+          <el-form-item label="排序">
+            <el-input-number v-model="formData.sortOrder" :max="999" :min="0"/>
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-radio-group v-model="formData.status">
+              <el-radio :value="1">启用</el-radio>
+              <el-radio :value="0">禁用</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item class="!mb-0">
+            <div class="flex justify-end w-full">
+              <el-button :icon="Check" :loading="formLoading" type="primary" @click="handleSave">
+                保存
+              </el-button>
+            </div>
+          </el-form-item>
+        </el-form>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script lang="js" setup>
+import {onMounted, reactive, ref} from 'vue'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {ArrowDown, Check, Delete, Plus, Search} from '@element-plus/icons-vue'
+import {
+  createDepartment,
+  deleteDepartment,
+  getDepartmentDetail,
+  getDepartmentTree,
+  getUserList,
+  updateDepartment
+} from '@/api/system'
 
 const loading = ref(false)
 const deptTree = ref([])
@@ -61,7 +227,7 @@ const loadData = async () => {
 const loadUserList = async (keyword) => {
   userLoading.value = true
   try {
-    const res = await getUserList({ userName: keyword, pageNum: 1, pageSize: 20 })
+    const res = await getUserList({userName: keyword, pageNum: 1, pageSize: 20})
     if (res.code === 200) {
       userList.value = res.data.records || []
     }
@@ -282,155 +448,6 @@ const hasChildren = (data) => {
   return data.children && data.children.length > 0
 }
 </script>
-
-<template>
-  <div class="flex h-[calc(100vh-120px)] gap-4">
-    <!-- 左侧：部门树 -->
-    <div class="w-96 flex-shrink-0 rounded-lg border border-gray-200 bg-white p-4">
-      <div class="mb-3 flex items-center justify-between">
-        <span class="font-medium">部门列表</span>
-        <el-dropdown trigger="click" @command="handleCommand">
-          <el-button size="small">
-            操作 <el-icon class="el-icon--right"><ArrowDown /></el-icon>
-          </el-button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="expand">展开全部</el-dropdown-item>
-              <el-dropdown-item command="collapse">收缩全部</el-dropdown-item>
-              <el-dropdown-item divided command="refresh">刷新</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-      </div>
-
-      <!-- 搜索框 -->
-      <div class="mb-3">
-        <el-input
-          v-model="searchKeyword"
-          placeholder="搜索部门名称/编号"
-          clearable
-          size="small"
-          @keyup.enter="handleSearch"
-          @clear="handleSearch"
-        >
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-        </el-input>
-      </div>
-
-      <div v-loading="loading" class="h-[calc(100%-100px)] overflow-auto">
-        <el-tree
-          ref="treeRef"
-          :data="deptTree"
-          :props="{ label: 'deptName', children: 'children' }"
-          node-key="id"
-          :default-expanded-keys="expandedKeys"
-          highlight-current
-          :indent="10"
-          @node-click="handleNodeClick"
-        >
-          <template #default="{ node, data }">
-            <div class="flex items-center justify-between w-full pr-2">
-              <span class="text-sm">
-                <template v-if="highlightKeyword && data.deptName.includes(highlightKeyword)">
-                  {{ data.deptName.substring(0, data.deptName.indexOf(highlightKeyword)) }}<span class="text-red-500 font-medium">{{ highlightKeyword }}</span>{{ data.deptName.substring(data.deptName.indexOf(highlightKeyword) + highlightKeyword.length) }}
-                </template>
-                <template v-else>{{ data.deptName }}</template>
-              </span>
-              <div class="flex gap-1">
-                <el-button
-                  type="primary"
-                  link
-                  :icon="Plus"
-                  size="small"
-                  @click.stop="handleAdd(data.id)"
-                />
-                <el-button
-                  v-if="!hasChildren(data) && data.deptCode !== '1001'"
-                  type="danger"
-                  link
-                  :icon="Delete"
-                  size="small"
-                  @click.stop="handleDelete(data)"
-                />
-              </div>
-            </div>
-          </template>
-        </el-tree>
-      </div>
-    </div>
-
-    <!-- 右侧：部门详情 -->
-    <div class="flex-1 flex flex-col rounded-lg border border-gray-200 bg-white">
-      <div class="flex items-center border-b border-gray-100 px-4 py-3">
-        <span class="font-medium">{{ formData.id ? '编辑' : '新增' }}</span>
-      </div>
-
-      <div v-loading="formLoading" class="flex-1 overflow-auto p-4">
-        <el-form :model="formData" label-width="100px" class="max-w-xl">
-          <el-form-item label="上级部门">
-            <el-tree-select
-              v-model="formData.parentId"
-              :data="deptTree"
-              :props="{ label: 'deptName', value: 'id', children: 'children' }"
-              placeholder="请选择上级部门"
-              check-strictly
-              :disabled="formData.deptCode === '1001'"
-            />
-          </el-form-item>
-          <el-form-item label="部门名称">
-            <el-input v-model="formData.deptName" placeholder="请输入部门名称" />
-          </el-form-item>
-          <el-form-item label="部门编号">
-            <el-input v-model="formData.deptCode" placeholder="系统自动生成" disabled />
-          </el-form-item>
-          <el-form-item label="负责人">
-            <el-select
-              v-model="formData.leaderId"
-              placeholder="请输入用户姓名搜索"
-              filterable
-              remote
-              :remote-method="handleUserSearch"
-              :loading="userLoading"
-              clearable
-              @change="handleUserChange"
-            >
-              <el-option
-                v-for="user in userList"
-                :key="user.id"
-                :label="user.realName || user.userName"
-                :value="user.id"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="联系电话">
-            <el-input v-model="formData.phone" placeholder="请输入联系电话" />
-          </el-form-item>
-          <el-form-item label="邮箱">
-            <el-input v-model="formData.email" placeholder="请输入邮箱" />
-          </el-form-item>
-          <el-form-item label="排序">
-            <el-input-number v-model="formData.sortOrder" :min="0" :max="999" />
-          </el-form-item>
-          <el-form-item label="状态">
-            <el-radio-group v-model="formData.status">
-              <el-radio :value="1">启用</el-radio>
-              <el-radio :value="0">禁用</el-radio>
-            </el-radio-group>
-          </el-form-item>
-          <el-form-item class="!mb-0">
-            <div class="flex justify-end w-full">
-              <el-button type="primary" :icon="Check" :loading="formLoading" @click="handleSave">
-                保存
-              </el-button>
-            </div>
-          </el-form-item>
-        </el-form>
-      </div>
-    </div>
-  </div>
-</template>
 
 <style scoped>
 :deep(.el-tree) {

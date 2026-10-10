@@ -1,4 +1,194 @@
-<script setup lang="js">
+<template>
+  <div class="space-y-3">
+    <!-- ============ 选患者 ============ -->
+    <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="flex flex-wrap items-center gap-3">
+        <span class="text-sm font-medium text-slate-600">选择患者</span>
+        <PatientSelect v-model="patientId" width="380px"/>
+        <el-button :icon="Refresh" @click="reload">刷新</el-button>
+        <div v-if="profile" class="ml-auto flex items-center gap-3 text-sm text-slate-600">
+          <span class="font-medium text-slate-800">{{ profile.patientName }}</span>
+          <span>{{ patientGenderText(profile.gender) }} / {{ patientAgeText(profile.age) }}</span>
+          <span class="font-mono text-xs text-slate-400">{{ profile.patientNo }}</span>
+          <el-tag effect="plain" size="small" type="info">六组共 {{ totalCount }} 条明细</el-tag>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 未选患者 ============ -->
+    <div v-if="!patientId" class="rounded-lg border border-slate-200 bg-white py-20 text-center shadow-sm">
+      <p class="text-sm text-slate-400">请先在上方选择患者，再维护其健康档案</p>
+      <p class="mt-1 text-xs text-slate-400">
+        过敏史 / 既往病史 / 手术外伤史 / 家族史 / 用药史 / 联系人，六组纵向数据都在这里维护
+      </p>
+    </div>
+
+    <!-- ============ 加载失败 ============ -->
+    <div v-else-if="failed && !loading" class="rounded-lg border border-slate-200 bg-white py-20 text-center shadow-sm">
+      <p class="text-sm text-slate-400">健康档案加载失败</p>
+      <el-button class="mt-2" link type="primary" @click="loadProfile">重新加载</el-button>
+    </div>
+
+    <!-- ============ 六组 ============ -->
+    <div v-else v-loading="loading" class="rounded-lg border border-slate-200 bg-white shadow-sm">
+      <el-tabs v-model="activeGroup" class="px-4 pt-2">
+        <el-tab-pane v-for="g in HEALTH_GROUPS" :key="g.key" :name="g.key">
+          <template #label>
+            <span>{{ g.label }}</span>
+            <span class="ml-1 text-xs text-slate-400">({{ countOf(g.key) }})</span>
+          </template>
+
+          <!-- 主档投影（只读）+ 历史文本分叉提示 -->
+          <div class="mb-3 space-y-2">
+            <div v-if="projectionOf(g.key)"
+                 class="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+              <span class="font-medium text-slate-600">患者主档摘要</span>
+              <span class="ml-2 text-slate-700">{{ projectionOf(g.key) }}</span>
+              <span class="ml-2 text-slate-400">（由下方明细自动同步，无需在此修改）</span>
+            </div>
+
+            <el-alert v-if="textOnlyOf(g.key)" :closable="false" show-icon type="warning">
+              <template #title>
+                这条{{ g.label }}目前只存在于患者主档的自由文本里，没有结构化明细
+              </template>
+              <div class="text-xs">
+                文本内容：<span class="font-medium">{{ legacyTextOf(g.key) }}</span>
+                <el-button v-perm="'patient:profile:add'" class="ml-2" link type="primary"
+                           @click="convertLegacyText(g.key)">
+                  转成明细条目
+                </el-button>
+                <span class="ml-2 text-slate-400">（只存在于文本的记录改不了严重程度、日期等字段）</span>
+              </div>
+            </el-alert>
+          </div>
+
+          <!-- 明细表：六组共用同一套渲染，字段由 GROUP_FIELDS 驱动 -->
+          <div class="mb-2 flex items-center justify-between">
+            <span class="text-xs text-slate-400">
+              {{ rowsOf(g.key).length ? `共 ${rowsOf(g.key).length} 条` : '暂无明细' }}
+            </span>
+            <el-button v-perm="'patient:profile:add'" :icon="Plus" size="small" type="primary" @click="openAdd(g.key)">
+              新增{{ g.label }}
+            </el-button>
+          </div>
+
+          <el-table :data="rowsOf(g.key)" :empty-text="'暂无' + g.label" size="small" style="width: 100%">
+            <el-table-column
+                v-for="f in fieldsOf(g.key)"
+                :key="f.key"
+                :label="f.label"
+                :min-width="f.minWidth"
+                :width="f.width"
+                show-overflow-tooltip
+            >
+              <template #default="{ row }">
+                <!-- 字典码值列：优先用出参里翻译好的文案，兜底查字典，命中不了渲染「未知(n)」 -->
+                <template v-if="f.options === 'PATIENT_RELATION'">
+                  {{ row[f.dictLabel] || dictLabelText(relationOptions, row[f.key]) }}
+                </template>
+                <template v-else-if="f.type === 'switch'">
+                  <!-- 命中不了选项就渲染「未知(n)」，不静默显示成空或当成第一个选项 -->
+                  <el-tag :type="row[f.key] === optValue(f.options[0]) ? 'success' : 'info'" effect="plain"
+                          size="small">
+                    {{ optLabel(f.options.find(o => optValue(o) === row[f.key])) ?? `未知(${row[f.key]})` }}
+                  </el-tag>
+                </template>
+                <template v-else-if="f.tone">
+                  <el-tag v-if="row[f.key]" :type="f.tone(row[f.key])" effect="plain" size="small">{{
+                      row[f.key]
+                    }}
+                  </el-tag>
+                  <span v-else class="text-slate-300">—</span>
+                </template>
+                <template v-else>
+                  {{ row[f.key] === null || row[f.key] === undefined || row[f.key] === '' ? '—' : row[f.key] }}
+                </template>
+              </template>
+            </el-table-column>
+            <el-table-column align="center" fixed="right" label="操作" width="130">
+              <template #default="{ row }">
+                <el-button v-perm="'patient:profile:edit'" :icon="Edit" link size="small" type="primary"
+                           @click="openEdit(g.key, row)">编辑
+                </el-button>
+                <el-button v-perm="'patient:profile:delete'" :icon="Delete" link size="small" type="danger"
+                           @click="removeRow(g.key, row)">删除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+      </el-tabs>
+    </div>
+
+    <!-- ============ 新增/编辑对话框（六组共用） ============ -->
+    <el-dialog
+        v-model="dialog.visible"
+        :title="(isEdit ? '编辑' : '新增') + (HEALTH_GROUPS.find(g => g.key === dialog.group) || {}).label"
+        destroy-on-close
+        width="720px"
+    >
+      <el-form :model="dialog.form" class="pr-2" label-width="110px">
+        <el-form-item
+            v-for="f in fieldsOf(dialog.group)"
+            :key="f.key"
+            :label="f.label"
+            :required="!!f.required"
+        >
+          <el-select
+              v-if="f.type === 'select'"
+              v-model="dialog.form[f.key]"
+              :placeholder="'请选择' + f.label"
+              class="w-full"
+              clearable
+          >
+            <el-option
+                v-for="o in optionsOf(f)"
+                :key="optValue(o)"
+                :label="optLabel(o)"
+                :value="optValue(o)"
+            />
+          </el-select>
+          <el-date-picker
+              v-else-if="f.type === 'date'"
+              v-model="dialog.form[f.key]"
+              :placeholder="'请选择' + f.label"
+              class="w-full"
+              type="date"
+              value-format="YYYY-MM-DD"
+          />
+          <el-input-number
+              v-else-if="f.type === 'number'"
+              v-model="dialog.form[f.key]"
+              :min="0"
+              class="w-full"
+          />
+          <el-switch
+              v-else-if="f.type === 'switch'"
+              v-model="dialog.form[f.key]"
+              :active-text="optLabel(f.options[0])"
+              :active-value="optValue(f.options[0])"
+              :inactive-text="optLabel(f.options[1])"
+              :inactive-value="optValue(f.options[1])"
+          />
+          <el-input
+              v-else
+              v-model="dialog.form[f.key]"
+              :placeholder="f.placeholder || ('请输入' + f.label)"
+              clearable
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialog.visible = false">取消</el-button>
+        <el-button v-perm="['patient:profile:add', 'patient:profile:edit']" :loading="dialog.saving" type="primary"
+                   @click="submitDialog">保存
+        </el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script lang="js" setup>
 /**
  * 健康档案 —— 患者六组纵向数据的唯一维护出口。
  *
@@ -18,29 +208,42 @@
  *     这种情况给一条明确的提示 + 「转成明细条目」按钮（把文本填进新增对话框），
  *     而不是让它悄悄消失。
  */
-import { ref, computed, reactive, watch, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Refresh, Delete, Edit } from '@element-plus/icons-vue'
+import {computed, onMounted, reactive, ref, watch} from 'vue'
+import {useRoute} from 'vue-router'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {Delete, Edit, Plus, Refresh} from '@element-plus/icons-vue'
 import PatientSelect from '@/components/his/PatientSelect.vue'
 import {
+  deleteAllergy,
+  deleteFamilyHistory,
+  deleteMedicationHistory,
+  deletePastDisease,
+  deletePatientContact,
+  deleteSurgeryHistory,
   getPatientHealthProfile,
-  saveAllergy, deleteAllergy,
-  savePastDisease, deletePastDisease,
-  saveSurgeryHistory, deleteSurgeryHistory,
-  saveFamilyHistory, deleteFamilyHistory,
-  saveMedicationHistory, deleteMedicationHistory,
-  savePatientContact, deletePatientContact,
+  saveAllergy,
+  saveFamilyHistory,
+  saveMedicationHistory,
+  savePastDisease,
+  savePatientContact,
+  saveSurgeryHistory,
 } from '@/api/patient'
-import { DICT_TYPE, loadDictDataMap } from '@/lib/dict-cache'
-import { dictLabelText } from '@/lib/utils'
-import { patientGenderText, patientAgeText } from '@/lib/patientGender'
+import {DICT_TYPE, loadDictDataMap} from '@/lib/dict-cache'
+import {dictLabelText} from '@/lib/utils'
+import {patientAgeText, patientGenderText} from '@/lib/patientGender'
 import {
+  ALIVE_OPTIONS,
+  ALLERGY_SEVERITY_OPTIONS,
+  ALLERGY_TYPE_OPTIONS,
+  DISEASE_STATUS_OPTIONS,
+  DRUG_ROUTE_OPTIONS,
+  DRUG_TYPE_OPTIONS,
   HEALTH_GROUPS,
-  ALLERGY_TYPE_OPTIONS, ALLERGY_SEVERITY_OPTIONS,
-  SURGERY_TYPE_OPTIONS, RECOVERY_STATUS_OPTIONS, DISEASE_STATUS_OPTIONS,
-  DRUG_TYPE_OPTIONS, DRUG_ROUTE_OPTIONS, MEDICATION_STATUS_OPTIONS,
-  ALIVE_OPTIONS, severityTone, medicationStatusTone,
+  MEDICATION_STATUS_OPTIONS,
+  medicationStatusTone,
+  RECOVERY_STATUS_OPTIONS,
+  severityTone,
+  SURGERY_TYPE_OPTIONS,
 } from '@/lib/healthProfile'
 
 /* ==================== 六组字段配置（表格列 + 对话框字段共用一个来源） ==================== */
@@ -48,70 +251,105 @@ import {
 // options: 静态数组，或 'PATIENT_RELATION'（用 sys_patient_relation 字典）
 const GROUP_FIELDS = {
   allergy: [
-    { key: 'allergenName', label: '过敏原', type: 'text', required: true, width: 150 },
+    {key: 'allergenName', label: '过敏原', type: 'text', required: true, width: 150},
     // 类型必填：表列 allergy_type 是 NOT NULL 且取值只有药物/食物/其他（没有"未知"档），
     // 不标必填的话用户不选就会拿到后端 500，这里提前拦住并说清缺什么
-    { key: 'allergyType', label: '类型', type: 'select', options: ALLERGY_TYPE_OPTIONS, required: true, width: 100 },
-    { key: 'allergySeverity', label: '严重程度', type: 'select', options: ALLERGY_SEVERITY_OPTIONS, width: 120, tone: severityTone },
-    { key: 'allergySymptoms', label: '反应表现', type: 'text', minWidth: 180, placeholder: '如：全身皮疹、呼吸困难' },
-    { key: 'allergyDate', label: '首次发生', type: 'date', width: 130 },
-    { key: 'occurrenceCount', label: '次数', type: 'number', width: 80 },
-    { key: 'treatmentGiven', label: '处理措施', type: 'text', minWidth: 180 },
-    { key: 'confirmedBy', label: '确认医生', type: 'text', width: 120 },
+    {key: 'allergyType', label: '类型', type: 'select', options: ALLERGY_TYPE_OPTIONS, required: true, width: 100},
+    {
+      key: 'allergySeverity',
+      label: '严重程度',
+      type: 'select',
+      options: ALLERGY_SEVERITY_OPTIONS,
+      width: 120,
+      tone: severityTone
+    },
+    {key: 'allergySymptoms', label: '反应表现', type: 'text', minWidth: 180, placeholder: '如：全身皮疹、呼吸困难'},
+    {key: 'allergyDate', label: '首次发生', type: 'date', width: 130},
+    {key: 'occurrenceCount', label: '次数', type: 'number', width: 80},
+    {key: 'treatmentGiven', label: '处理措施', type: 'text', minWidth: 180},
+    {key: 'confirmedBy', label: '确认医生', type: 'text', width: 120},
   ],
   pastDisease: [
-    { key: 'diseaseName', label: '疾病名称', type: 'text', required: true, minWidth: 200 },
-    { key: 'diseaseCode', label: 'ICD-10', type: 'text', width: 110, placeholder: '如 I10' },
-    { key: 'diagnosisDate', label: '诊断日期', type: 'date', width: 130 },
-    { key: 'diagnosisDept', label: '诊断科室', type: 'text', width: 140 },
-    { key: 'currentStatus', label: '控制情况', type: 'select', options: DISEASE_STATUS_OPTIONS, width: 110 },
-    { key: 'treatmentPlan', label: '治疗方案', type: 'text', minWidth: 200 },
-    { key: 'relapseCount', label: '复发次数', type: 'number', width: 100 },
-    { key: 'lastFollowupDate', label: '最近随访', type: 'date', width: 130 },
+    {key: 'diseaseName', label: '疾病名称', type: 'text', required: true, minWidth: 200},
+    {key: 'diseaseCode', label: 'ICD-10', type: 'text', width: 110, placeholder: '如 I10'},
+    {key: 'diagnosisDate', label: '诊断日期', type: 'date', width: 130},
+    {key: 'diagnosisDept', label: '诊断科室', type: 'text', width: 140},
+    {key: 'currentStatus', label: '控制情况', type: 'select', options: DISEASE_STATUS_OPTIONS, width: 110},
+    {key: 'treatmentPlan', label: '治疗方案', type: 'text', minWidth: 200},
+    {key: 'relapseCount', label: '复发次数', type: 'number', width: 100},
+    {key: 'lastFollowupDate', label: '最近随访', type: 'date', width: 130},
   ],
   surgery: [
-    { key: 'surgeryName', label: '手术名称', type: 'text', required: true, minWidth: 200 },
-    { key: 'surgeryDate', label: '手术日期', type: 'date', required: true, width: 130 },
-    { key: 'surgeryType', label: '手术类型', type: 'select', options: SURGERY_TYPE_OPTIONS, width: 110 },
-    { key: 'surgeon', label: '主刀医生', type: 'text', width: 120 },
-    { key: 'anesthesiaType', label: '麻醉方式', type: 'text', width: 120 },
-    { key: 'hospitalName', label: '手术医院', type: 'text', width: 160 },
-    { key: 'postopDiagnosis', label: '术后诊断', type: 'text', minWidth: 170 },
-    { key: 'recoveryStatus', label: '恢复情况', type: 'select', options: RECOVERY_STATUS_OPTIONS, width: 110 },
-    { key: 'complications', label: '术后并发症', type: 'text', minWidth: 160 },
+    {key: 'surgeryName', label: '手术名称', type: 'text', required: true, minWidth: 200},
+    {key: 'surgeryDate', label: '手术日期', type: 'date', required: true, width: 130},
+    {key: 'surgeryType', label: '手术类型', type: 'select', options: SURGERY_TYPE_OPTIONS, width: 110},
+    {key: 'surgeon', label: '主刀医生', type: 'text', width: 120},
+    {key: 'anesthesiaType', label: '麻醉方式', type: 'text', width: 120},
+    {key: 'hospitalName', label: '手术医院', type: 'text', width: 160},
+    {key: 'postopDiagnosis', label: '术后诊断', type: 'text', minWidth: 170},
+    {key: 'recoveryStatus', label: '恢复情况', type: 'select', options: RECOVERY_STATUS_OPTIONS, width: 110},
+    {key: 'complications', label: '术后并发症', type: 'text', minWidth: 160},
   ],
   family: [
     // relationship 在这一组存**称谓文案**（父亲/母亲/伯父），与联系人那一组的数字码值相反
-    { key: 'relationship', label: '与患者关系', type: 'text', required: true, width: 120, placeholder: '如：父亲、母亲、伯父' },
-    { key: 'name', label: '亲属姓名', type: 'text', width: 120 },
-    { key: 'age', label: '年龄', type: 'number', width: 80 },
-    { key: 'isAlive', label: '在世情况', type: 'switch', options: ALIVE_OPTIONS, width: 110 },
-    { key: 'causeOfDeath', label: '死亡原因', type: 'text', width: 150, placeholder: '已故必填' },
-    { key: 'healthStatus', label: '健康状况', type: 'text', minWidth: 180 },
-    { key: 'hereditaryDisease', label: '遗传性疾病', type: 'text', width: 160 },
-    { key: 'infectiousDisease', label: '传染病史', type: 'text', width: 140 },
+    {
+      key: 'relationship',
+      label: '与患者关系',
+      type: 'text',
+      required: true,
+      width: 120,
+      placeholder: '如：父亲、母亲、伯父'
+    },
+    {key: 'name', label: '亲属姓名', type: 'text', width: 120},
+    {key: 'age', label: '年龄', type: 'number', width: 80},
+    {key: 'isAlive', label: '在世情况', type: 'switch', options: ALIVE_OPTIONS, width: 110},
+    {key: 'causeOfDeath', label: '死亡原因', type: 'text', width: 150, placeholder: '已故必填'},
+    {key: 'healthStatus', label: '健康状况', type: 'text', minWidth: 180},
+    {key: 'hereditaryDisease', label: '遗传性疾病', type: 'text', width: 160},
+    {key: 'infectiousDisease', label: '传染病史', type: 'text', width: 140},
   ],
   medication: [
-    { key: 'drugName', label: '药物名称', type: 'text', required: true, minWidth: 180 },
-    { key: 'drugType', label: '药物类型', type: 'select', options: DRUG_TYPE_OPTIONS, width: 110 },
-    { key: 'dosage', label: '剂量', type: 'text', width: 100, placeholder: '如 0.5g' },
-    { key: 'frequency', label: '频次', type: 'text', width: 90, placeholder: '如 bid' },
-    { key: 'route', label: '给药途径', type: 'select', options: DRUG_ROUTE_OPTIONS, width: 110 },
-    { key: 'startDate', label: '开始用药', type: 'date', required: true, width: 130 },
-    { key: 'endDate', label: '停药日期', type: 'date', width: 130 },
-    { key: 'status', label: '用药状态', type: 'select', options: MEDICATION_STATUS_OPTIONS, width: 110, tone: medicationStatusTone },
-    { key: 'indications', label: '用药指征', type: 'text', minWidth: 160 },
-    { key: 'prescriber', label: '处方医生', type: 'text', width: 120 },
-    { key: 'reasonStop', label: '停药原因', type: 'text', width: 150 },
+    {key: 'drugName', label: '药物名称', type: 'text', required: true, minWidth: 180},
+    {key: 'drugType', label: '药物类型', type: 'select', options: DRUG_TYPE_OPTIONS, width: 110},
+    {key: 'dosage', label: '剂量', type: 'text', width: 100, placeholder: '如 0.5g'},
+    {key: 'frequency', label: '频次', type: 'text', width: 90, placeholder: '如 bid'},
+    {key: 'route', label: '给药途径', type: 'select', options: DRUG_ROUTE_OPTIONS, width: 110},
+    {key: 'startDate', label: '开始用药', type: 'date', required: true, width: 130},
+    {key: 'endDate', label: '停药日期', type: 'date', width: 130},
+    {
+      key: 'status',
+      label: '用药状态',
+      type: 'select',
+      options: MEDICATION_STATUS_OPTIONS,
+      width: 110,
+      tone: medicationStatusTone
+    },
+    {key: 'indications', label: '用药指征', type: 'text', minWidth: 160},
+    {key: 'prescriber', label: '处方医生', type: 'text', width: 120},
+    {key: 'reasonStop', label: '停药原因', type: 'text', width: 150},
   ],
   contact: [
-    { key: 'contactName', label: '联系人', type: 'text', required: true, width: 120 },
+    {key: 'contactName', label: '联系人', type: 'text', required: true, width: 120},
     // relationship 在这一组是 sys_patient_relation 的**码值**（tinyint），不是文案
     // 表列 relationship 是 NOT NULL 的字典码值：标必填，别让用户提交后才被后端退回
-    { key: 'relationship', label: '与患者关系', type: 'select', options: 'PATIENT_RELATION', dictLabel: 'relationshipText', required: true, width: 130 },
-    { key: 'phone', label: '联系电话', type: 'text', width: 140, placeholder: '11 位手机号' },
-    { key: 'isPrimary', label: '主要联系人', type: 'switch', options: [{ label: '是', value: 1 }, { label: '否', value: 0 }], width: 120 },
-    { key: 'address', label: '联系地址', type: 'text', minWidth: 200 },
+    {
+      key: 'relationship',
+      label: '与患者关系',
+      type: 'select',
+      options: 'PATIENT_RELATION',
+      dictLabel: 'relationshipText',
+      required: true,
+      width: 130
+    },
+    {key: 'phone', label: '联系电话', type: 'text', width: 140, placeholder: '11 位手机号'},
+    {
+      key: 'isPrimary',
+      label: '主要联系人',
+      type: 'switch',
+      options: [{label: '是', value: 1}, {label: '否', value: 0}],
+      width: 120
+    },
+    {key: 'address', label: '联系地址', type: 'text', minWidth: 200},
   ],
 }
 
@@ -145,7 +383,7 @@ const activeGroup = ref('allergy')
 
 const relationOptions = ref([])
 
-const dialog = reactive({ visible: false, group: 'allergy', form: {}, saving: false })
+const dialog = reactive({visible: false, group: 'allergy', form: {}, saving: false})
 const isEdit = computed(() => dialog.form && dialog.form.id != null)
 
 const loadProfile = async () => {
@@ -253,25 +491,25 @@ const optLabel = (o) => (o !== null && typeof o === 'object' ? o.label : o)
 
 const openAdd = (group, preset = {}) => {
   dialog.group = group
-  dialog.form = { patientId: patientId.value, ...preset }
+  dialog.form = {patientId: patientId.value, ...preset}
   dialog.visible = true
 }
 
 const openEdit = (group, row) => {
   dialog.group = group
-  dialog.form = { ...row, patientId: patientId.value }
+  dialog.form = {...row, patientId: patientId.value}
   dialog.visible = true
 }
 
 /** 「文本转明细」：把主档那段自由文本填进新增对话框，让用户补齐结构化字段后保存 */
 const convertLegacyText = (group) => {
   if (group === 'allergy') {
-    openAdd(group, { allergenName: legacyTextOf(group) })
+    openAdd(group, {allergenName: legacyTextOf(group)})
   } else if (group === 'pastDisease') {
-    openAdd(group, { diseaseName: legacyTextOf(group) })
+    openAdd(group, {diseaseName: legacyTextOf(group)})
   } else if (group === 'contact') {
     const p = profile.value || {}
-    openAdd(group, { contactName: p.contactNameText || '', phone: p.contactPhoneText || '' })
+    openAdd(group, {contactName: p.contactNameText || '', phone: p.contactPhoneText || ''})
   }
 }
 
@@ -286,7 +524,7 @@ const submitDialog = async () => {
   }
   dialog.saving = true
   try {
-    const res = await SAVE_API[group]({ ...dialog.form })
+    const res = await SAVE_API[group]({...dialog.form})
     if (res?.code !== 200) {
       ElMessage.error(res?.message || '保存失败')
       return
@@ -308,7 +546,7 @@ const removeRow = async (group, row) => {
   try {
     await ElMessageBox.confirm(
         `确认删除「${name}」？该组主档上的摘要文本会随之重算。`,
-        '删除确认', { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' })
+        '删除确认', {type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消'})
   } catch {
     return
   }
@@ -326,179 +564,3 @@ const reload = () => {
   loadProfile()
 }
 </script>
-
-<template>
-  <div class="space-y-3">
-    <!-- ============ 选患者 ============ -->
-    <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <div class="flex flex-wrap items-center gap-3">
-        <span class="text-sm font-medium text-slate-600">选择患者</span>
-        <PatientSelect v-model="patientId" width="380px"/>
-        <el-button :icon="Refresh" @click="reload">刷新</el-button>
-        <div v-if="profile" class="ml-auto flex items-center gap-3 text-sm text-slate-600">
-          <span class="font-medium text-slate-800">{{ profile.patientName }}</span>
-          <span>{{ patientGenderText(profile.gender) }} / {{ patientAgeText(profile.age) }}</span>
-          <span class="font-mono text-xs text-slate-400">{{ profile.patientNo }}</span>
-          <el-tag size="small" effect="plain" type="info">六组共 {{ totalCount }} 条明细</el-tag>
-        </div>
-      </div>
-    </div>
-
-    <!-- ============ 未选患者 ============ -->
-    <div v-if="!patientId" class="rounded-lg border border-slate-200 bg-white py-20 text-center shadow-sm">
-      <p class="text-sm text-slate-400">请先在上方选择患者，再维护其健康档案</p>
-      <p class="mt-1 text-xs text-slate-400">
-        过敏史 / 既往病史 / 手术外伤史 / 家族史 / 用药史 / 联系人，六组纵向数据都在这里维护
-      </p>
-    </div>
-
-    <!-- ============ 加载失败 ============ -->
-    <div v-else-if="failed && !loading" class="rounded-lg border border-slate-200 bg-white py-20 text-center shadow-sm">
-      <p class="text-sm text-slate-400">健康档案加载失败</p>
-      <el-button link type="primary" class="mt-2" @click="loadProfile">重新加载</el-button>
-    </div>
-
-    <!-- ============ 六组 ============ -->
-    <div v-else v-loading="loading" class="rounded-lg border border-slate-200 bg-white shadow-sm">
-      <el-tabs v-model="activeGroup" class="px-4 pt-2">
-        <el-tab-pane v-for="g in HEALTH_GROUPS" :key="g.key" :name="g.key">
-          <template #label>
-            <span>{{ g.label }}</span>
-            <span class="ml-1 text-xs text-slate-400">({{ countOf(g.key) }})</span>
-          </template>
-
-          <!-- 主档投影（只读）+ 历史文本分叉提示 -->
-          <div class="mb-3 space-y-2">
-            <div v-if="projectionOf(g.key)" class="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-              <span class="font-medium text-slate-600">患者主档摘要</span>
-              <span class="ml-2 text-slate-700">{{ projectionOf(g.key) }}</span>
-              <span class="ml-2 text-slate-400">（由下方明细自动同步，无需在此修改）</span>
-            </div>
-
-            <el-alert v-if="textOnlyOf(g.key)" type="warning" :closable="false" show-icon>
-              <template #title>
-                这条{{ g.label }}目前只存在于患者主档的自由文本里，没有结构化明细
-              </template>
-              <div class="text-xs">
-                文本内容：<span class="font-medium">{{ legacyTextOf(g.key) }}</span>
-                <el-button v-perm="'patient:profile:add'" link type="primary" class="ml-2" @click="convertLegacyText(g.key)">
-                  转成明细条目
-                </el-button>
-                <span class="ml-2 text-slate-400">（只存在于文本的记录改不了严重程度、日期等字段）</span>
-              </div>
-            </el-alert>
-          </div>
-
-          <!-- 明细表：六组共用同一套渲染，字段由 GROUP_FIELDS 驱动 -->
-          <div class="mb-2 flex items-center justify-between">
-            <span class="text-xs text-slate-400">
-              {{ rowsOf(g.key).length ? `共 ${rowsOf(g.key).length} 条` : '暂无明细' }}
-            </span>
-            <el-button v-perm="'patient:profile:add'" type="primary" size="small" :icon="Plus" @click="openAdd(g.key)">新增{{ g.label }}</el-button>
-          </div>
-
-          <el-table :data="rowsOf(g.key)" size="small" style="width: 100%" :empty-text="'暂无' + g.label">
-            <el-table-column
-                v-for="f in fieldsOf(g.key)"
-                :key="f.key"
-                :label="f.label"
-                :width="f.width"
-                :min-width="f.minWidth"
-                show-overflow-tooltip
-            >
-              <template #default="{ row }">
-                <!-- 字典码值列：优先用出参里翻译好的文案，兜底查字典，命中不了渲染「未知(n)」 -->
-                <template v-if="f.options === 'PATIENT_RELATION'">
-                  {{ row[f.dictLabel] || dictLabelText(relationOptions, row[f.key]) }}
-                </template>
-                <template v-else-if="f.type === 'switch'">
-                  <!-- 命中不了选项就渲染「未知(n)」，不静默显示成空或当成第一个选项 -->
-                  <el-tag size="small" effect="plain" :type="row[f.key] === optValue(f.options[0]) ? 'success' : 'info'">
-                    {{ optLabel(f.options.find(o => optValue(o) === row[f.key])) ?? `未知(${row[f.key]})` }}
-                  </el-tag>
-                </template>
-                <template v-else-if="f.tone">
-                  <el-tag v-if="row[f.key]" size="small" effect="plain" :type="f.tone(row[f.key])">{{ row[f.key] }}</el-tag>
-                  <span v-else class="text-slate-300">—</span>
-                </template>
-                <template v-else>
-                  {{ row[f.key] === null || row[f.key] === undefined || row[f.key] === '' ? '—' : row[f.key] }}
-                </template>
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="130" fixed="right" align="center">
-              <template #default="{ row }">
-                <el-button v-perm="'patient:profile:edit'" link type="primary" size="small" :icon="Edit" @click="openEdit(g.key, row)">编辑</el-button>
-                <el-button v-perm="'patient:profile:delete'" link type="danger" size="small" :icon="Delete" @click="removeRow(g.key, row)">删除</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-tab-pane>
-      </el-tabs>
-    </div>
-
-    <!-- ============ 新增/编辑对话框（六组共用） ============ -->
-    <el-dialog
-        v-model="dialog.visible"
-        :title="(isEdit ? '编辑' : '新增') + (HEALTH_GROUPS.find(g => g.key === dialog.group) || {}).label"
-        width="720px"
-        destroy-on-close
-    >
-      <el-form :model="dialog.form" label-width="110px" class="pr-2">
-        <el-form-item
-            v-for="f in fieldsOf(dialog.group)"
-            :key="f.key"
-            :label="f.label"
-            :required="!!f.required"
-        >
-          <el-select
-              v-if="f.type === 'select'"
-              v-model="dialog.form[f.key]"
-              :placeholder="'请选择' + f.label"
-              clearable
-              class="w-full"
-          >
-            <el-option
-                v-for="o in optionsOf(f)"
-                :key="optValue(o)"
-                :label="optLabel(o)"
-                :value="optValue(o)"
-            />
-          </el-select>
-          <el-date-picker
-              v-else-if="f.type === 'date'"
-              v-model="dialog.form[f.key]"
-              type="date"
-              value-format="YYYY-MM-DD"
-              :placeholder="'请选择' + f.label"
-              class="w-full"
-          />
-          <el-input-number
-              v-else-if="f.type === 'number'"
-              v-model="dialog.form[f.key]"
-              :min="0"
-              class="w-full"
-          />
-          <el-switch
-              v-else-if="f.type === 'switch'"
-              v-model="dialog.form[f.key]"
-              :active-value="optValue(f.options[0])"
-              :inactive-value="optValue(f.options[1])"
-              :active-text="optLabel(f.options[0])"
-              :inactive-text="optLabel(f.options[1])"
-          />
-          <el-input
-              v-else
-              v-model="dialog.form[f.key]"
-              :placeholder="f.placeholder || ('请输入' + f.label)"
-              clearable
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialog.visible = false">取消</el-button>
-        <el-button v-perm="['patient:profile:add', 'patient:profile:edit']" type="primary" :loading="dialog.saving" @click="submitDialog">保存</el-button>
-      </template>
-    </el-dialog>
-  </div>
-</template>

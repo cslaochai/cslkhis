@@ -1,3 +1,115 @@
+<template>
+  <div class="hand-hygiene-panel">
+    <div class="stat-row" data-testid="hand-stats">
+      <div class="stat-item">
+        <div class="stat-num">{{ stats.recordCount || 0 }}</div>
+        <div class="stat-label">观察记录（近30天）</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">{{ stats.totalOpportunity || 0 }}</div>
+        <div class="stat-label">手卫生时机</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">{{ stats.totalComply || 0 }}</div>
+        <div class="stat-label">实际执行</div>
+      </div>
+      <div :class="Number(stats.complyRate) >= 60 ? 'ok' : 'warn'" class="stat-item">
+        <div class="stat-num" data-testid="hand-comply-rate">{{ pct(stats.complyRate) }}%</div>
+        <div class="stat-label">依从率（达标线 60%）</div>
+      </div>
+    </div>
+
+    <div v-if="(stats.byObject || []).length" class="group-row">
+      <div v-for="g in stats.byObject" :key="g.obsObject" class="stat-item mini">
+        <b>{{ g.obsObjectText }}</b>：{{ g.comply }}/{{ g.opportunity }}（{{ pct(g.complyRate) }}%）
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <el-select v-model="query.obsObject" clearable data-testid="hand-filter-object" placeholder="观察对象"
+                 style="width:130px"
+                 @change="query.pageNum = 1; loadRows()">
+        <el-option v-for="d in obsObjectDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
+      </el-select>
+      <el-select v-model="query.deptId" clearable data-testid="hand-filter-dept" filterable placeholder="被观察科室"
+                 style="width:170px"
+                 @change="query.pageNum = 1; loadRows()">
+        <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
+      </el-select>
+      <el-date-picker v-model="query.obsDateStart" placeholder="观察日期从" style="width:150px" type="date"
+                      value-format="YYYY-MM-DD"/>
+      <el-date-picker v-model="query.obsDateEnd" placeholder="至" style="width:130px" type="date"
+                      value-format="YYYY-MM-DD"/>
+      <el-button :icon="Search" data-testid="hand-search" type="primary" @click="query.pageNum = 1; loadRows()">查询
+      </el-button>
+      <el-button :icon="Refresh" data-testid="hand-reset" @click="resetQuery">重置</el-button>
+      <div class="spacer"/>
+      <el-button v-perm="'emr:infectionMonitor:add'" data-testid="hand-create" type="primary" @click="onCreate">
+        观察登记
+      </el-button>
+    </div>
+
+    <el-table v-loading="loading" :data="rows" border data-testid="hand-table" size="small" stripe>
+      <el-table-column label="观察日期" width="110">
+        <template #default="{ row }">{{ fmtDate(row.obsDate) }}</template>
+      </el-table-column>
+      <el-table-column label="科室" min-width="120" prop="deptName" show-overflow-tooltip/>
+      <el-table-column label="对象" width="90">
+        <template #default="{ row }">{{ row.obsObjectText }}</template>
+      </el-table-column>
+      <el-table-column label="时机数" prop="opportunityCount" width="80"/>
+      <el-table-column label="执行数" prop="complyCount" width="80"/>
+      <el-table-column label="依从率" width="90">
+        <template #default="{ row }">{{ pct(row.complyRate) }}%</template>
+      </el-table-column>
+      <el-table-column label="观察人" prop="observerName" width="90"/>
+      <el-table-column label="登记时间" width="150">
+        <template #default="{ row }">{{ fmtTime(row.obsTime) }}</template>
+      </el-table-column>
+      <el-table-column label="备注" min-width="120" prop="remark" show-overflow-tooltip/>
+      <template #empty><span class="muted">近 30 天还没有观察记录 —— 点右上角「观察登记」下科室记录第一次</span>
+      </template>
+    </el-table>
+    <el-pagination v-model:current-page="query.pageNum" :page-size="query.pageSize" :total="total"
+                   layout="total, prev, pager, next" style="margin-top:8px" @current-change="loadRows"/>
+
+    <el-dialog v-model="openVisible" destroy-on-close title="手卫生观察登记" width="520px">
+      <el-form label-width="90px">
+        <el-form-item label="观察日期">
+          <!-- el-date-picker 不透传原生 attr（data-testid 会丢），必须外包一层 div 承载 testid -->
+          <div data-testid="hand-obs-date">
+            <el-date-picker v-model="form.obsDate" style="width:100%" type="date" value-format="YYYY-MM-DD"/>
+          </div>
+        </el-form-item>
+        <el-form-item label="科室">
+          <el-select v-model="form.deptId" data-testid="hand-dept" filterable style="width:100%" @change="onDeptChange">
+            <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="观察对象">
+          <el-select v-model="form.obsObject" data-testid="hand-object" filterable style="width:100%">
+            <el-option v-for="d in obsObjectDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="时机数">
+          <el-input-number v-model="form.opportunityCount" :min="1" data-testid="hand-opportunity" style="width:160px"/>
+        </el-form-item>
+        <el-form-item label="执行数">
+          <el-input-number v-model="form.complyCount" :min="0" data-testid="hand-comply" style="width:160px"/>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="form.remark" :rows="2" type="textarea"/>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="openVisible = false">取消</el-button>
+        <el-button v-perm="'emr:infectionMonitor:add'" data-testid="hand-save" type="primary" @click="onSave">保存
+        </el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
 <script setup>
 /**
  * 手卫生依从性面板（biz_hand_hygiene_obs，菜单 617 /hand-hygiene）
@@ -151,118 +263,6 @@ onMounted(async () => {
 
 defineExpose({reload: () => Promise.all([loadStats(), loadRows()])})
 </script>
-
-<template>
-  <div class="hand-hygiene-panel">
-    <div class="stat-row" data-testid="hand-stats">
-      <div class="stat-item">
-        <div class="stat-num">{{ stats.recordCount || 0 }}</div>
-        <div class="stat-label">观察记录（近30天）</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-num">{{ stats.totalOpportunity || 0 }}</div>
-        <div class="stat-label">手卫生时机</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-num">{{ stats.totalComply || 0 }}</div>
-        <div class="stat-label">实际执行</div>
-      </div>
-      <div :class="Number(stats.complyRate) >= 60 ? 'ok' : 'warn'" class="stat-item">
-        <div class="stat-num" data-testid="hand-comply-rate">{{ pct(stats.complyRate) }}%</div>
-        <div class="stat-label">依从率（达标线 60%）</div>
-      </div>
-    </div>
-
-    <div v-if="(stats.byObject || []).length" class="group-row">
-      <div v-for="g in stats.byObject" :key="g.obsObject" class="stat-item mini">
-        <b>{{ g.obsObjectText }}</b>：{{ g.comply }}/{{ g.opportunity }}（{{ pct(g.complyRate) }}%）
-      </div>
-    </div>
-
-    <div class="toolbar">
-      <el-select v-model="query.obsObject" clearable data-testid="hand-filter-object" placeholder="观察对象"
-                 style="width:130px"
-                 @change="query.pageNum = 1; loadRows()">
-        <el-option v-for="d in obsObjectDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
-      </el-select>
-      <el-select v-model="query.deptId" clearable data-testid="hand-filter-dept" filterable placeholder="被观察科室"
-                 style="width:170px"
-                 @change="query.pageNum = 1; loadRows()">
-        <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-      </el-select>
-      <el-date-picker v-model="query.obsDateStart" placeholder="观察日期从" style="width:150px" type="date"
-                      value-format="YYYY-MM-DD"/>
-      <el-date-picker v-model="query.obsDateEnd" placeholder="至" style="width:130px" type="date"
-                      value-format="YYYY-MM-DD"/>
-      <el-button :icon="Search" data-testid="hand-search" type="primary" @click="query.pageNum = 1; loadRows()">查询
-      </el-button>
-      <el-button :icon="Refresh" data-testid="hand-reset" @click="resetQuery">重置</el-button>
-      <div class="spacer"/>
-      <el-button v-perm="'emr:infectionMonitor:add'" data-testid="hand-create" type="primary" @click="onCreate">
-        观察登记
-      </el-button>
-    </div>
-
-    <el-table v-loading="loading" :data="rows" border data-testid="hand-table" size="small" stripe>
-      <el-table-column label="观察日期" width="110">
-        <template #default="{ row }">{{ fmtDate(row.obsDate) }}</template>
-      </el-table-column>
-      <el-table-column label="科室" min-width="120" prop="deptName" show-overflow-tooltip/>
-      <el-table-column label="对象" width="90">
-        <template #default="{ row }">{{ row.obsObjectText }}</template>
-      </el-table-column>
-      <el-table-column label="时机数" prop="opportunityCount" width="80"/>
-      <el-table-column label="执行数" prop="complyCount" width="80"/>
-      <el-table-column label="依从率" width="90">
-        <template #default="{ row }">{{ pct(row.complyRate) }}%</template>
-      </el-table-column>
-      <el-table-column label="观察人" prop="observerName" width="90"/>
-      <el-table-column label="登记时间" width="150">
-        <template #default="{ row }">{{ fmtTime(row.obsTime) }}</template>
-      </el-table-column>
-      <el-table-column label="备注" min-width="120" prop="remark" show-overflow-tooltip/>
-      <template #empty><span class="muted">近 30 天还没有观察记录 —— 点右上角「观察登记」下科室记录第一次</span>
-      </template>
-    </el-table>
-    <el-pagination v-model:current-page="query.pageNum" :page-size="query.pageSize" :total="total"
-                   layout="total, prev, pager, next" style="margin-top:8px" @current-change="loadRows"/>
-
-    <el-dialog v-model="openVisible" destroy-on-close title="手卫生观察登记" width="520px">
-      <el-form label-width="90px">
-        <el-form-item label="观察日期">
-          <!-- el-date-picker 不透传原生 attr（data-testid 会丢），必须外包一层 div 承载 testid -->
-          <div data-testid="hand-obs-date">
-            <el-date-picker v-model="form.obsDate" style="width:100%" type="date" value-format="YYYY-MM-DD"/>
-          </div>
-        </el-form-item>
-        <el-form-item label="科室">
-          <el-select v-model="form.deptId" data-testid="hand-dept" filterable style="width:100%" @change="onDeptChange">
-            <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="观察对象">
-          <el-select v-model="form.obsObject" data-testid="hand-object" filterable style="width:100%">
-            <el-option v-for="d in obsObjectDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="时机数">
-          <el-input-number v-model="form.opportunityCount" :min="1" data-testid="hand-opportunity" style="width:160px"/>
-        </el-form-item>
-        <el-form-item label="执行数">
-          <el-input-number v-model="form.complyCount" :min="0" data-testid="hand-comply" style="width:160px"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="form.remark" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="openVisible = false">取消</el-button>
-        <el-button v-perm="'emr:infectionMonitor:add'" data-testid="hand-save" type="primary" @click="onSave">保存
-        </el-button>
-      </template>
-    </el-dialog>
-  </div>
-</template>
 
 <style scoped>
 .stat-row {

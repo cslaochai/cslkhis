@@ -111,6 +111,14 @@
 - **弹层（popper）样式必须写全局 `src/style.css`**：`el-select`/`el-dropdown`/`el-date-picker` 的 popper teleport 到
   body，组件 `<style scoped>` 里的 `:deep(.xxx)` 编译后带 `[data-v-x]` 前缀，body 下没有祖先命中 → 规则被**静默丢弃**
   （现象是"样式没写对"）。下拉加宽还要配 `:fit-input-width="false"`。
+- **`el-option` / `el-radio` / `el-radio-button` 的 `value` 禁止绑 `null`/`undefined`，「不限/全部/自动判定」一律用非 nil
+  哨兵 + 边界映射**：
+  EP 侧 `value: { type: [String, Number, Boolean, Object], required: true }`，绑 `null` 报
+  `Invalid prop: type check failed for prop "value"`，绑 `undefined` 报 missing required prop，而 `el-radio` 更坏 ——
+  它的 `isPropAbsent` 就是 `isNil`，nil 会被当成「没传 value」而退回**已废弃的 `label` 兜底**并告警。
+  做法：选项写哨兵（`value="ALL"` / `const FLAG_AUTO_JUDGE = -1`），**只在发请求前那一行**映射回契约值
+  （`admitStatus: query.admitStatus === 'ALL' ? null : query.admitStatus`），回显时把接口的 `null` 归一成哨兵
+  （`r.abnormalFlag ?? FLAG_AUTO_JUDGE`）。HTTP 出参形状必须逐字不变 —— 用抓包（hook `XHR.send`）核对，别只看界面。
 - **行数不可控的可编辑表格必须分页 + 过滤**：一行配一个 `el-select`（科室下拉还要摊平上百个
   option）时，整表渲染开销随行数线性炸掉 ——
   岗位配置表在演示账号上实测 **1692 行**（94 科室 × 18 角色），点「编辑」后主线程冻几十秒，现象与「后端挂了」完全一样
@@ -793,9 +801,9 @@
   库会自动四舍五入（1068 个列全是 `DATETIME_PRECISION = 0`），且该配实体
   `@TableField(fill = ...)` 让 MP 统一填（`sys_equipment` 89/90 行 `update_time` 是 NULL 就是反例）。
 - 机械判据：
-    -
-    `grep -rn "private \(static \)\?LocalDateTime \(toSeconds\|seconds\|nowSeconds\|nowSec\)" --include=*.java source/back_end`
-    结果必须为 **0**（唯一实现在 `his-common/util/TimeUtil.java`）。
+  -
+  `grep -rn "private \(static \)\?LocalDateTime \(toSeconds\|seconds\|nowSeconds\|nowSec\)" --include=*.java source/back_end`
+  结果必须为 **0**（唯一实现在 `his-common/util/TimeUtil.java`）。
     - `grep -rn "static final Map<Integer, String>" --include=*.java source/back_end` 只剩 §14 允许的注册表类。
 
 ## 18. 零引用枚举必须删掉，不留"备着将来用"

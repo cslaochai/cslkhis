@@ -1,19 +1,184 @@
-<script setup lang="js">
-import { ref, onMounted, reactive, nextTick } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Edit, Delete, Refresh, Setting } from '@element-plus/icons-vue'
+<template>
+  <div>
+    <!-- 两卡式列表页：查询卡与表格卡分隔（口径参照 views/system/user/UserView.vue） -->
+    <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
+      <div class="flex items-start justify-between gap-4">
+        <el-form :model="searchForm" inline>
+          <el-form-item label="角色名称">
+            <el-input
+                v-model="searchForm.roleName"
+                clearable
+                placeholder="请输入角色名称"
+                @keyup.enter="handleSearch"
+            />
+          </el-form-item>
+          <el-form-item>
+            <el-button :icon="Search" type="primary" @click="handleSearch">搜索</el-button>
+            <el-button :icon="Refresh" @click="handleReset">重置</el-button>
+          </el-form-item>
+        </el-form>
+        <!-- 主操作区：新增/批量等动作统一靠右，与查询条件视觉分离 -->
+        <div class="flex shrink-0 items-start gap-3">
+          <el-button v-perm="'system:role:add'" :icon="Plus" type="primary" @click="handleAdd">新增角色</el-button>
+        </div>
+      </div>
+    </el-card>
+
+    <!-- 表格区域 -->
+    <el-card class="table-card" shadow="never">
+      <el-table v-loading="loading" :data="tableData" :max-height="tableMaxHeight" stripe>
+        <el-table-column label="角色编码" prop="roleCode" width="120"/>
+        <el-table-column label="角色名称" prop="roleName" width="150"/>
+        <el-table-column label="角色类型" prop="roleType" width="120">
+          <template #default="{ row }">
+            <el-tag :type="row.roleType === 1 ? 'danger' : 'success'">
+              {{ row.roleType === 1 ? '系统角色' : '自定义角色' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="角色描述" min-width="180" prop="remark"/>
+        <el-table-column label="数据范围" prop="dataScope" width="150">
+          <template #default="{ row }">
+            <el-tag :type="row.dataScope === 1 ? 'warning' : 'info'">{{ dataScopeLabel(row.dataScope) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" prop="status" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
+              {{ row.status === 1 ? '启用' : '禁用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="创建时间" prop="createTime" width="180"/>
+        <el-table-column fixed="right" label="操作" width="240">
+          <template #default="{ row }">
+            <el-button :icon="Setting" link type="primary" @click="handleConfigMenu(row)">菜单权限</el-button>
+            <el-button :icon="Edit" link type="primary" @click="handleEdit(row)">编辑</el-button>
+            <el-button v-if="row.roleType !== 1" v-perm="'system:role:delete'" :icon="Delete" link type="danger"
+                       @click="handleDelete(row)">删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <div ref="footerRef" class="list-footer flex items-center justify-end">
+        <el-pagination
+            :current-page="pagination.pageNum"
+            :page-size="pagination.pageSize"
+            :page-sizes="PAGE_SIZES"
+            :total="pagination.total"
+            background
+            layout="total, sizes, prev, pager, next, jumper"
+            @current-change="handlePageChange"
+            @size-change="handleSizeChange"
+        />
+      </div>
+    </el-card>
+
+    <!-- 新增/编辑对话框 -->
+    <el-dialog
+        v-model="dialogVisible"
+        :close-on-click-modal="false"
+        :title="dialogTitle"
+        width="500px"
+        @close="dialogVisible = false"
+    >
+      <el-form
+          ref="formRef"
+          :model="formData"
+          :rules="rules"
+          label-width="100px"
+      >
+        <el-form-item label="角色编码" prop="roleCode">
+          <el-input
+              v-model="formData.roleCode"
+              disabled
+              placeholder="新增时系统自动生成"
+          />
+        </el-form-item>
+        <el-form-item label="角色名称" prop="roleName">
+          <el-input
+              v-model="formData.roleName"
+              placeholder="请输入角色名称"
+          />
+        </el-form-item>
+        <el-form-item label="角色类型" prop="roleType">
+          <el-input :value="formData.roleType === 1 ? '系统角色' : '自定义角色'" disabled/>
+        </el-form-item>
+        <el-form-item label="角色描述" prop="remark">
+          <el-input
+              v-model="formData.remark"
+              placeholder="请输入角色描述"
+              type="textarea"
+          />
+        </el-form-item>
+        <el-form-item label="数据范围" prop="dataScope">
+          <el-select v-model="formData.dataScope" class="w-full">
+            <el-option :value="1" label="全部数据（该角色看全院，不按科室收口）"/>
+            <el-option :value="2" label="按岗位科室（只能看该角色下被分配的科室）"/>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="排序" prop="sortOrder">
+          <el-input-number v-model="formData.sortOrder" :max="999" :min="0"/>
+        </el-form-item>
+        <el-form-item label="状态" prop="status">
+          <el-radio-group v-model="formData.status">
+            <el-radio :value="1">启用</el-radio>
+            <el-radio :value="0">禁用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button v-perm="'system:role:add'" :loading="submitLoading" type="primary" @click="handleSubmit">
+          确定
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 菜单权限配置抽屉 -->
+    <el-drawer
+        v-model="menuDrawerVisible"
+        :title="`配置菜单权限 - ${menuRole?.roleName || ''}`"
+        destroy-on-close
+        size="440px"
+    >
+      <div v-loading="menuLoading">
+        <el-tree
+            ref="menuTreeRef"
+            :data="menuTree"
+            :props="{ label: 'menuName', children: 'children' }"
+            default-expand-all
+            node-key="id"
+            show-checkbox
+        />
+        <div class="mt-4 flex justify-end gap-2 border-t border-slate-200 pt-4">
+          <el-button @click="menuDrawerVisible = false">取消</el-button>
+          <el-button :loading="menuSubmitting" type="primary" @click="handleSaveRoleMenu">
+            保存
+          </el-button>
+        </div>
+      </div>
+    </el-drawer>
+  </div>
+</template>
+
+<script lang="js" setup>
+import {nextTick, onMounted, reactive, ref} from 'vue'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {Delete, Edit, Plus, Refresh, Search, Setting} from '@element-plus/icons-vue'
 import {
-  getRoleListPage,
-  getRoleDetail,
   createRole,
-  updateRole,
   deleteRole,
+  getMenuTree,
+  getRoleDetail,
+  getRoleListPage,
   getRoleMenuIds,
   saveRoleMenu,
-  getMenuTree,
+  updateRole,
 } from '@/api/system'
-import { PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/lib/pagination'
-import { useTableMaxHeight } from '@/lib/useTableMaxHeight'
+import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
+import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
 
 const loading = ref(false)
 const searchForm = ref({
@@ -54,7 +219,7 @@ const dataScopeLabel = (v) => (v === 1 ? '全部数据（全院）' : '按岗位
 
 const rules = {
   roleName: [
-    { required: true, message: '请输入角色名称', trigger: 'blur' },
+    {required: true, message: '请输入角色名称', trigger: 'blur'},
   ],
 }
 
@@ -274,166 +439,3 @@ const handleSaveRoleMenu = async () => {
   }
 }
 </script>
-
-<template>
-  <div>
-    <!-- 两卡式列表页：查询卡与表格卡分隔（口径参照 views/system/user/UserView.vue） -->
-    <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
-      <div class="flex items-start justify-between gap-4">
-        <el-form :model="searchForm" inline>
-          <el-form-item label="角色名称">
-            <el-input
-              v-model="searchForm.roleName"
-              placeholder="请输入角色名称"
-              clearable
-              @keyup.enter="handleSearch"
-            />
-          </el-form-item>
-          <el-form-item>
-            <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
-            <el-button :icon="Refresh" @click="handleReset">重置</el-button>
-          </el-form-item>
-        </el-form>
-        <!-- 主操作区：新增/批量等动作统一靠右，与查询条件视觉分离 -->
-        <div class="flex shrink-0 items-start gap-3">
-          <el-button v-perm="'system:role:add'" type="primary" :icon="Plus" @click="handleAdd">新增角色</el-button>
-        </div>
-      </div>
-    </el-card>
-
-    <!-- 表格区域 -->
-    <el-card class="table-card" shadow="never">
-      <el-table :data="tableData" v-loading="loading" stripe :max-height="tableMaxHeight">
-        <el-table-column prop="roleCode" label="角色编码" width="120" />
-        <el-table-column prop="roleName" label="角色名称" width="150" />
-        <el-table-column prop="roleType" label="角色类型" width="120">
-          <template #default="{ row }">
-            <el-tag :type="row.roleType === 1 ? 'danger' : 'success'">
-              {{ row.roleType === 1 ? '系统角色' : '自定义角色' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="remark" label="角色描述" min-width="180" />
-        <el-table-column prop="dataScope" label="数据范围" width="150">
-          <template #default="{ row }">
-            <el-tag :type="row.dataScope === 1 ? 'warning' : 'info'">{{ dataScopeLabel(row.dataScope) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-              {{ row.status === 1 ? '启用' : '禁用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" width="180" />
-        <el-table-column label="操作" width="240" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" link :icon="Setting" @click="handleConfigMenu(row)">菜单权限</el-button>
-            <el-button type="primary" link :icon="Edit" @click="handleEdit(row)">编辑</el-button>
-            <el-button v-if="row.roleType !== 1" v-perm="'system:role:delete'" type="danger" link :icon="Delete" @click="handleDelete(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <div ref="footerRef" class="list-footer flex items-center justify-end">
-        <el-pagination
-          :current-page="pagination.pageNum"
-          :page-size="pagination.pageSize"
-          :page-sizes="PAGE_SIZES"
-          :total="pagination.total"
-          layout="total, sizes, prev, pager, next, jumper"
-          background
-          @current-change="handlePageChange"
-          @size-change="handleSizeChange"
-        />
-      </div>
-    </el-card>
-
-    <!-- 新增/编辑对话框 -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="dialogTitle"
-      width="500px"
-      :close-on-click-modal="false"
-      @close="dialogVisible = false"
-    >
-      <el-form
-        ref="formRef"
-        :model="formData"
-        :rules="rules"
-        label-width="100px"
-      >
-        <el-form-item label="角色编码" prop="roleCode">
-          <el-input
-            v-model="formData.roleCode"
-            placeholder="新增时系统自动生成"
-            disabled
-          />
-        </el-form-item>
-        <el-form-item label="角色名称" prop="roleName">
-          <el-input
-            v-model="formData.roleName"
-            placeholder="请输入角色名称"
-          />
-        </el-form-item>
-        <el-form-item label="角色类型" prop="roleType">
-          <el-input :value="formData.roleType === 1 ? '系统角色' : '自定义角色'" disabled />
-        </el-form-item>
-        <el-form-item label="角色描述" prop="remark">
-          <el-input
-            v-model="formData.remark"
-            type="textarea"
-            placeholder="请输入角色描述"
-          />
-        </el-form-item>
-        <el-form-item label="数据范围" prop="dataScope">
-          <el-select v-model="formData.dataScope" class="w-full">
-            <el-option label="全部数据（该角色看全院，不按科室收口）" :value="1"/>
-            <el-option label="按岗位科室（只能看该角色下被分配的科室）" :value="2"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="排序" prop="sortOrder">
-          <el-input-number v-model="formData.sortOrder" :min="0" :max="999" />
-        </el-form-item>
-        <el-form-item label="状态" prop="status">
-          <el-radio-group v-model="formData.status">
-            <el-radio :value="1">启用</el-radio>
-            <el-radio :value="0">禁用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button v-perm="'system:role:add'" type="primary" :loading="submitLoading" @click="handleSubmit">
-          确定
-        </el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 菜单权限配置抽屉 -->
-    <el-drawer
-      v-model="menuDrawerVisible"
-      :title="`配置菜单权限 - ${menuRole?.roleName || ''}`"
-      size="440px"
-      destroy-on-close
-    >
-      <div v-loading="menuLoading">
-        <el-tree
-          ref="menuTreeRef"
-          :data="menuTree"
-          node-key="id"
-          show-checkbox
-          default-expand-all
-          :props="{ label: 'menuName', children: 'children' }"
-        />
-        <div class="mt-4 flex justify-end gap-2 border-t border-slate-200 pt-4">
-          <el-button @click="menuDrawerVisible = false">取消</el-button>
-          <el-button type="primary" :loading="menuSubmitting" @click="handleSaveRoleMenu">
-            保存
-          </el-button>
-        </div>
-      </div>
-    </el-drawer>
-  </div>
-</template>

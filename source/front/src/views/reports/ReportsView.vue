@@ -1,98 +1,19 @@
-<script setup lang="ts">
-import {computed, onMounted, ref} from 'vue'
-import {ElMessage} from 'element-plus'
-import {DataLine, FirstAidKit, Money, Suitcase, Tickets, Timer, TrendCharts, User} from '@element-plus/icons-vue'
-import {getStatsOverview} from '@/api/report'
-
-const loading = ref(false)
-const activeTab = ref('outpatient')
-const data = ref<any>(null)
-
-const fmtDay = (d: Date) => {
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
-}
-const today = new Date()
-const range = ref<[string, string] | null>([fmtDay(new Date(today.getTime() - 29 * 86400000)), fmtDay(today)])
-const shortcuts = [
-  {text: '近7天', value: () => [new Date(Date.now() - 6 * 86400000), new Date()]},
-  {text: '近30天', value: () => [new Date(Date.now() - 29 * 86400000), new Date()]},
-  {text: '近90天', value: () => [new Date(Date.now() - 89 * 86400000), new Date()]},
-]
-
-// ==== 字典口径（与 sys_menu 铺底注释/AppointStatusEnum/字典 his_pay_method 一致） ====
-const REGIST_TYPE: Record<number, string> = {1: '普通号', 2: '专家号', 3: '急诊号', 4: '免费号'}
-const REGIST_SOURCE: Record<number, string> = {1: '窗口', 2: '自助机', 3: '网上', 4: '预约挂号'}
-const SETTLEMENT: Record<number, string> = {1: '自费', 2: '城镇职工医保', 3: '城乡居民医保', 4: '公费', 5: '商业保险'}
-const PRESC_TYPE: Record<number, string> = {1: '西药', 2: '中成药', 3: '中药饮片'}
-const PAY_METHOD: Record<number, string> = {1: '现金', 2: '微信', 3: '支付宝', 4: '医保(卡)', 5: '余额'}
-const AGE_ORDER = ['婴儿(<1)', '儿童(1-14)', '青年(15-40)', '中年(41-65)', '老年(65+)', '未填']
-
-const BAR_COLORS = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-purple-500', 'bg-rose-500', 'bg-cyan-500']
-const colorOf = (i: number) => BAR_COLORS[i % BAR_COLORS.length]
-
-const d = computed(() => data.value || {})
-const trendMax = (rows: any[], keys: string[]) =>
-    Math.max(1, ...rows.flatMap(r => keys.map(k => Number(r[k]) || 0)))
-
-const fmtInt = (v: any) => (Number(v) || 0).toLocaleString()
-const fmtAmt = (n: number) => (Math.abs(n) >= 10000 ? `${(n / 10000).toFixed(1)}万` : n.toLocaleString('zh-CN', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2
-}))
-const fmtWan = (v: any) => `¥${fmtAmt(Number(v) || 0)}`
-const pctOf = (part: any, total: any) => {
-  const t = Number(total) || 0
-  return t > 0 ? ((Number(part) || 0) / t * 100).toFixed(1) : '0.0'
-}
-const insShare = computed(() => {
-  const list = d.value.opSettleDist || []
-  const total = list.reduce((s: number, r: any) => s + (Number(r.cnt) || 0), 0)
-  const ins = list.filter((r: any) => r.code !== 1).reduce((s: number, r: any) => s + (Number(r.cnt) || 0), 0)
-  return pctOf(ins, total)
-})
-const ageDist = computed(() => {
-  const list = d.value.opAgeDist || []
-  return [...list].sort((a: any, b: any) => AGE_ORDER.indexOf(a.name) - AGE_ORDER.indexOf(b.name))
-})
-
-const opTrendSliced = computed(() => (d.value.opTrend || []).slice(-60))
-const revTrendSliced = computed(() => (d.value.revTrend || []).slice(-60))
-const dispTrendSliced = computed(() => (d.value.phDispTrend || []).slice(-60))
-const trendSlicedNote = (rows: any[]) => ((d.value.opTrend || []).length > 60 && rows.length <= 60 ? `（仅显示最近 ${rows.length} 天）` : '')
-
-const loadData = async () => {
-  if (!range.value) return
-  loading.value = true
-  try {
-    const res = await getStatsOverview({startDate: range.value[0], endDate: range.value[1]})
-    data.value = res.data || {}
-  } catch (e: any) {
-    ElMessage.error(e?.message || '加载报表数据失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-onMounted(loadData)
-</script>
-
 <template>
   <div v-loading="loading" class="space-y-6">
     <div class="flex flex-wrap items-end justify-between gap-3">
       <div class="flex items-center gap-2">
         <el-date-picker
             v-model="range"
-            type="daterange"
-            value-format="YYYY-MM-DD"
+            :clearable="false"
+            :shortcuts="shortcuts"
+            end-placeholder="结束日期"
             range-separator="至"
             start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            :shortcuts="shortcuts"
-            :clearable="false"
             style="width: 280px"
+            type="daterange"
+            value-format="YYYY-MM-DD"
         />
-        <el-button type="primary" :loading="loading" @click="loadData">查询</el-button>
+        <el-button :loading="loading" type="primary" @click="loadData">查询</el-button>
       </div>
     </div>
 
@@ -148,15 +69,15 @@ onMounted(loadData)
                 {{ row.d }} 门诊 {{ row.n }} · 退号 {{ row.cancels }}
               </div>
               <div class="flex w-full items-end justify-center gap-px" style="height: 180px">
-                <div class="w-1/2 max-w-[10px] rounded-t-sm bg-blue-500"
-                     :style="{ height: `${(row.n / trendMax(opTrendSliced, ['n'])) * 100}%` }"/>
-                <div class="w-1/2 max-w-[10px] rounded-t-sm bg-rose-400"
-                     :style="{ height: `${(row.cancels / trendMax(opTrendSliced, ['n'])) * 100}%` }"/>
+                <div :style="{ height: `${(row.n / trendMax(opTrendSliced, ['n'])) * 100}%` }"
+                     class="w-1/2 max-w-[10px] rounded-t-sm bg-blue-500"/>
+                <div :style="{ height: `${(row.cancels / trendMax(opTrendSliced, ['n'])) * 100}%` }"
+                     class="w-1/2 max-w-[10px] rounded-t-sm bg-rose-400"/>
               </div>
               <span class="mt-1 text-[10px] text-slate-400">{{ opTrendSliced.length > 20 ? '' : row.d }}</span>
             </div>
           </div>
-          <el-empty v-else description="该区间无门诊数据" :image-size="60"/>
+          <el-empty v-else :image-size="60" description="该区间无门诊数据"/>
         </div>
       </div>
 
@@ -165,17 +86,17 @@ onMounted(loadData)
           <h3 class="mb-4 text-base font-semibold text-slate-800">科室门诊量 TOP10</h3>
           <div v-if="(d.opDeptTop || []).length" class="space-y-3">
             <div v-for="(row, i) in d.opDeptTop" :key="row.name" class="flex items-center gap-3">
-              <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-                    :class="i < 3 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'">{{ i + 1 }}</span>
+              <span :class="i < 3 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'"
+                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">{{ i + 1 }}</span>
               <span class="w-28 shrink-0 truncate text-sm text-slate-700">{{ row.name }}</span>
               <div class="relative h-5 flex-1 overflow-hidden rounded bg-slate-100">
-                <div class="h-full rounded bg-blue-500"
-                     :style="{ width: `${(row.cnt / d.opDeptTop[0].cnt) * 100}%`, opacity: 0.7 + (1 - i / d.opDeptTop.length) * 0.3 }"/>
+                <div :style="{ width: `${(row.cnt / d.opDeptTop[0].cnt) * 100}%`, opacity: 0.7 + (1 - i / d.opDeptTop.length) * 0.3 }"
+                     class="h-full rounded bg-blue-500"/>
               </div>
               <span class="w-12 shrink-0 text-right text-sm font-medium text-slate-700">{{ row.cnt }}</span>
             </div>
           </div>
-          <el-empty v-else description="暂无数据" :image-size="60"/>
+          <el-empty v-else :image-size="60" description="暂无数据"/>
         </div>
 
         <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
@@ -221,11 +142,11 @@ onMounted(loadData)
                   class="pointer-events-none absolute -top-1 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded bg-slate-800 px-2 py-1 text-xs text-white group-hover:block">
                 {{ row.d }} 入 {{ row.admits }} · 出 {{ row.discharges }}
               </div>
-              <div class="w-full max-w-[12px] rounded-t-sm bg-purple-500"
-                   :style="{ height: `${(row.admits / trendMax(d.ipTrend, ['admits'])) * 100}%` }"/>
+              <div :style="{ height: `${(row.admits / trendMax(d.ipTrend, ['admits'])) * 100}%` }"
+                   class="w-full max-w-[12px] rounded-t-sm bg-purple-500"/>
             </div>
           </div>
-          <el-empty v-else description="该区间无入院数据" :image-size="60"/>
+          <el-empty v-else :image-size="60" description="该区间无入院数据"/>
           <p class="mt-2 text-xs text-slate-400">悬停柱子可看当日入/出院人次；入院 {{ fmtInt(d.ipAdmitCount) }} · 出院
             {{ fmtInt(d.ipDischargeCount) }} 人次</p>
         </div>
@@ -243,8 +164,8 @@ onMounted(loadData)
                     d.bedUseRate ?? 0
                   }}%</span>
               </div>
-              <el-progress :percentage="Math.min(100, Number(d.bedUseRate) || 0)" :show-text="false"
-                           :color="(d.bedUseRate ?? 0) > 85 ? '#dc2626' : (d.bedUseRate ?? 0) > 70 ? '#d97706' : '#059669'"/>
+              <el-progress :color="(d.bedUseRate ?? 0) > 85 ? '#dc2626' : (d.bedUseRate ?? 0) > 70 ? '#d97706' : '#059669'" :percentage="Math.min(100, Number(d.bedUseRate) || 0)"
+                           :show-text="false"/>
             </div>
             <div class="grid grid-cols-3 gap-3 text-center">
               <div class="rounded-lg bg-slate-50 p-3">
@@ -272,14 +193,14 @@ onMounted(loadData)
             出院时间落在查询区间内的住院记录；「期间入院」为该出院患者中医嘱入院时间也落在区间内的人数</p>
         </div>
         <div class="px-6 pb-6 pt-2">
-          <el-table v-if="(d.ipDeptDist || []).length" :data="d.ipDeptDist" size="small" border>
-            <el-table-column type="index" label="#" width="48"/>
-            <el-table-column prop="deptName" label="科室" min-width="140" show-overflow-tooltip/>
-            <el-table-column prop="discharges" label="出院人次" width="100" align="right"/>
-            <el-table-column prop="admits" label="同期入院" width="100" align="right"/>
-            <el-table-column prop="avgLos" label="例均住院日(天)" width="130" align="right"/>
+          <el-table v-if="(d.ipDeptDist || []).length" :data="d.ipDeptDist" border size="small">
+            <el-table-column label="#" type="index" width="48"/>
+            <el-table-column label="科室" min-width="140" prop="deptName" show-overflow-tooltip/>
+            <el-table-column align="right" label="出院人次" prop="discharges" width="100"/>
+            <el-table-column align="right" label="同期入院" prop="admits" width="100"/>
+            <el-table-column align="right" label="例均住院日(天)" prop="avgLos" width="130"/>
           </el-table>
-          <el-empty v-else description="该区间无出院数据" :image-size="60"/>
+          <el-empty v-else :image-size="60" description="该区间无出院数据"/>
         </div>
       </div>
 
@@ -299,7 +220,7 @@ onMounted(loadData)
               <p class="text-xs text-slate-500">{{ cell.label }}</p>
             </div>
           </div>
-          <el-empty v-else description="暂无结算数据" :image-size="60"/>
+          <el-empty v-else :image-size="60" description="暂无结算数据"/>
         </div>
 
         <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
@@ -318,7 +239,7 @@ onMounted(loadData)
                 }}%</span>
             </div>
           </div>
-          <el-empty v-else description="暂无数据" :image-size="60"/>
+          <el-empty v-else :image-size="60" description="暂无数据"/>
         </div>
       </div>
     </template>
@@ -341,11 +262,11 @@ onMounted(loadData)
                   class="pointer-events-none absolute -top-1 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded bg-slate-800 px-2 py-1 text-xs text-white group-hover:block">
                 {{ row.d }} {{ fmtWan(row.amt) }}
               </div>
-              <div class="w-full max-w-[12px] rounded-t-sm bg-emerald-500"
-                   :style="{ height: `${(Math.max(0, row.amt) / trendMax(revTrendSliced, ['amt'])) * 100}%` }"/>
+              <div :style="{ height: `${(Math.max(0, row.amt) / trendMax(revTrendSliced, ['amt'])) * 100}%` }"
+                   class="w-full max-w-[12px] rounded-t-sm bg-emerald-500"/>
             </div>
           </div>
-          <el-empty v-else description="该区间无收入数据" :image-size="60"/>
+          <el-empty v-else :image-size="60" description="该区间无收入数据"/>
         </div>
       </div>
 
@@ -366,7 +287,7 @@ onMounted(loadData)
                 }}%</span>
             </div>
           </div>
-          <el-empty v-else description="暂无数据" :image-size="60"/>
+          <el-empty v-else :image-size="60" description="暂无数据"/>
           <div class="mt-4 grid grid-cols-3 gap-3 text-center">
             <div class="rounded-lg bg-slate-50 p-3">
               <p class="text-base font-bold text-emerald-600">{{ fmtWan(d.revOutpatient) }}</p>
@@ -389,13 +310,13 @@ onMounted(loadData)
             <div v-for="(row, i) in d.revDeptTop" :key="row.name" class="flex items-center gap-3">
               <span class="w-28 shrink-0 truncate text-sm text-slate-600">{{ row.name }}</span>
               <div class="relative h-6 flex-1 overflow-hidden rounded bg-slate-100">
-                <div class="h-full rounded bg-emerald-500"
-                     :style="{ width: `${(row.amt / d.revDeptTop[0].amt) * 100}%`, opacity: 0.7 + (1 - i / d.revDeptTop.length) * 0.3 }"/>
+                <div :style="{ width: `${(row.amt / d.revDeptTop[0].amt) * 100}%`, opacity: 0.7 + (1 - i / d.revDeptTop.length) * 0.3 }"
+                     class="h-full rounded bg-emerald-500"/>
               </div>
               <span class="w-20 shrink-0 text-right text-sm font-medium text-slate-700">{{ fmtWan(row.amt) }}</span>
             </div>
           </div>
-          <el-empty v-else description="暂无数据" :image-size="60"/>
+          <el-empty v-else :image-size="60" description="暂无数据"/>
         </div>
       </div>
 
@@ -409,7 +330,7 @@ onMounted(loadData)
               {{ pctOf(row.amt, d.revPayDist.reduce((s: number, r: any) => s + Number(r.amt), 0)) }}%</p>
           </div>
         </div>
-        <el-empty v-else description="暂无数据" :image-size="60"/>
+        <el-empty v-else :image-size="60" description="暂无数据"/>
       </div>
     </template>
 
@@ -458,11 +379,11 @@ onMounted(loadData)
                     class="pointer-events-none absolute -top-1 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded bg-slate-800 px-2 py-1 text-xs text-white group-hover:block">
                   {{ row.d }} {{ fmtWan(row.amt) }}
                 </div>
-                <div class="w-full max-w-[12px] rounded-t-sm bg-teal-500"
-                     :style="{ height: `${(row.amt / trendMax(dispTrendSliced, ['amt'])) * 100}%` }"/>
+                <div :style="{ height: `${(row.amt / trendMax(dispTrendSliced, ['amt'])) * 100}%` }"
+                     class="w-full max-w-[12px] rounded-t-sm bg-teal-500"/>
               </div>
             </div>
-            <el-empty v-else description="该区间无发药记录" :image-size="60"/>
+            <el-empty v-else :image-size="60" description="该区间无发药记录"/>
           </div>
         </div>
       </div>
@@ -472,20 +393,91 @@ onMounted(loadData)
           <h3 class="text-base font-semibold text-slate-800">药品用量金额 TOP10（按处方明细，覆盖门诊与住院）</h3>
         </div>
         <div class="px-6 pb-6 pt-2">
-          <el-table v-if="(d.phDrugTop || []).length" :data="d.phDrugTop" size="small" border>
-            <el-table-column type="index" label="#" width="48"/>
-            <el-table-column prop="drugName" label="药品名称" min-width="160" show-overflow-tooltip/>
-            <el-table-column prop="specification" label="规格" min-width="120" show-overflow-tooltip/>
-            <el-table-column label="数量" width="110" align="right">
+          <el-table v-if="(d.phDrugTop || []).length" :data="d.phDrugTop" border size="small">
+            <el-table-column label="#" type="index" width="48"/>
+            <el-table-column label="药品名称" min-width="160" prop="drugName" show-overflow-tooltip/>
+            <el-table-column label="规格" min-width="120" prop="specification" show-overflow-tooltip/>
+            <el-table-column align="right" label="数量" width="110">
               <template #default="{ row }">{{ fmtInt(row.qty) }}{{ row.unit ? ' ' + row.unit : '' }}</template>
             </el-table-column>
-            <el-table-column label="金额" width="120" align="right">
+            <el-table-column align="right" label="金额" width="120">
               <template #default="{ row }">{{ fmtWan(row.amt) }}</template>
             </el-table-column>
           </el-table>
-          <el-empty v-else description="该区间无处方用药数据" :image-size="60"/>
+          <el-empty v-else :image-size="60" description="该区间无处方用药数据"/>
         </div>
       </div>
     </template>
   </div>
 </template>
+
+<script setup>
+import {computed, onMounted, ref} from 'vue';
+import {ElMessage} from 'element-plus';
+import {DataLine, FirstAidKit, Money, Suitcase, Tickets, Timer, TrendCharts, User} from '@element-plus/icons-vue';
+import {getStatsOverview} from '@/api/report';
+
+const loading = ref(false);
+const activeTab = ref('outpatient');
+const data = ref(null);
+const fmtDay = (d) => {
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+const today = new Date();
+const range = ref([fmtDay(new Date(today.getTime() - 29 * 86400000)), fmtDay(today)]);
+const shortcuts = [
+  {text: '近7天', value: () => [new Date(Date.now() - 6 * 86400000), new Date()]},
+  {text: '近30天', value: () => [new Date(Date.now() - 29 * 86400000), new Date()]},
+  {text: '近90天', value: () => [new Date(Date.now() - 89 * 86400000), new Date()]},
+];
+// ==== 字典口径（与 sys_menu 铺底注释/AppointStatusEnum/字典 his_pay_method 一致） ====
+const REGIST_TYPE = {1: '普通号', 2: '专家号', 3: '急诊号', 4: '免费号'};
+const REGIST_SOURCE = {1: '窗口', 2: '自助机', 3: '网上', 4: '预约挂号'};
+const SETTLEMENT = {1: '自费', 2: '城镇职工医保', 3: '城乡居民医保', 4: '公费', 5: '商业保险'};
+const PRESC_TYPE = {1: '西药', 2: '中成药', 3: '中药饮片'};
+const PAY_METHOD = {1: '现金', 2: '微信', 3: '支付宝', 4: '医保(卡)', 5: '余额'};
+const AGE_ORDER = ['婴儿(<1)', '儿童(1-14)', '青年(15-40)', '中年(41-65)', '老年(65+)', '未填'];
+const BAR_COLORS = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-purple-500', 'bg-rose-500', 'bg-cyan-500'];
+const colorOf = (i) => BAR_COLORS[i % BAR_COLORS.length];
+const d = computed(() => data.value || {});
+const trendMax = (rows, keys) => Math.max(1, ...rows.flatMap(r => keys.map(k => Number(r[k]) || 0)));
+const fmtInt = (v) => (Number(v) || 0).toLocaleString();
+const fmtAmt = (n) => (Math.abs(n) >= 10000 ? `${(n / 10000).toFixed(1)}万` : n.toLocaleString('zh-CN', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
+}));
+const fmtWan = (v) => `¥${fmtAmt(Number(v) || 0)}`;
+const pctOf = (part, total) => {
+  const t = Number(total) || 0;
+  return t > 0 ? ((Number(part) || 0) / t * 100).toFixed(1) : '0.0';
+};
+const insShare = computed(() => {
+  const list = d.value.opSettleDist || [];
+  const total = list.reduce((s, r) => s + (Number(r.cnt) || 0), 0);
+  const ins = list.filter((r) => r.code !== 1).reduce((s, r) => s + (Number(r.cnt) || 0), 0);
+  return pctOf(ins, total);
+});
+const ageDist = computed(() => {
+  const list = d.value.opAgeDist || [];
+  return [...list].sort((a, b) => AGE_ORDER.indexOf(a.name) - AGE_ORDER.indexOf(b.name));
+});
+const opTrendSliced = computed(() => (d.value.opTrend || []).slice(-60));
+const revTrendSliced = computed(() => (d.value.revTrend || []).slice(-60));
+const dispTrendSliced = computed(() => (d.value.phDispTrend || []).slice(-60));
+const trendSlicedNote = (rows) => ((d.value.opTrend || []).length > 60 && rows.length <= 60 ? `（仅显示最近 ${rows.length} 天）` : '');
+const loadData = async () => {
+  if (!range.value)
+    return;
+  loading.value = true;
+  try {
+    const res = await getStatsOverview({startDate: range.value[0], endDate: range.value[1]});
+    data.value = res.data || {};
+  } catch (e) {
+    ElMessage.error(e?.message || '加载报表数据失败');
+  } finally {
+    loading.value = false;
+  }
+};
+onMounted(loadData);
+</script>

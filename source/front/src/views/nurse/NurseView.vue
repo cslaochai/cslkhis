@@ -1,4 +1,39 @@
-<script setup lang="ts">
+<template>
+  <div class="space-y-4">
+    <el-radio-group v-model="view" class="shrink-0">
+      <el-radio-button value="order">
+        <el-icon class="mr-1">
+          <FirstAidKit/>
+        </el-icon>
+        医嘱执行
+      </el-radio-button>
+      <el-radio-button value="nursing">
+        <el-icon class="mr-1">
+          <EditPen/>
+        </el-icon>
+        护理文书
+      </el-radio-button>
+      <el-radio-button value="bedmap">
+        <el-icon class="mr-1">
+          <Grid/>
+        </el-icon>
+        床位图
+      </el-radio-button>
+      <el-radio-button value="handover">
+        <el-icon class="mr-1">
+          <ChatDotRound/>
+        </el-icon>
+        交接班摘要
+      </el-radio-button>
+    </el-radio-group>
+    <InpatientOrderWorkspace v-if="view === 'order'" mode="nurse"/>
+    <NursingRecordWorkspace v-else-if="view === 'nursing'"/>
+    <BedMapWorkspace v-else-if="view === 'bedmap'"/>
+    <NursingHandoverWorkspace v-else/>
+  </div>
+</template>
+
+<script setup>
 /**
  * 护士工作站（住院医嘱执行站 + 护理文书）
  *
@@ -12,35 +47,12 @@
  * 外层再用 el-tabs 就会有两层 tab 项，查询「当前激活的页签」会取到外层的那个，
  * 自动化验证与"默认落在待校对页签"这个口径都会被外层抢走。
  */
-import { ref } from 'vue'
-import { FirstAidKit, EditPen, Grid, ChatDotRound } from '@element-plus/icons-vue'
-import InpatientOrderWorkspace from '@/components/his/InpatientOrderWorkspace.vue'
-import NursingRecordWorkspace from '@/components/his/NursingRecordWorkspace.vue'
-import BedMapWorkspace from '@/components/his/BedMapWorkspace.vue'
-import NursingHandoverWorkspace from '@/components/his/NursingHandoverWorkspace.vue'
+import {ref} from 'vue';
+import {ChatDotRound, EditPen, FirstAidKit, Grid} from '@element-plus/icons-vue';
+import InpatientOrderWorkspace from '@/components/his/InpatientOrderWorkspace.vue';
+import NursingRecordWorkspace from '@/components/his/NursingRecordWorkspace.vue';
+import BedMapWorkspace from '@/components/his/BedMapWorkspace.vue';
+import NursingHandoverWorkspace from '@/components/his/NursingHandoverWorkspace.vue';
 
-const view = ref<'order' | 'nursing' | 'bedmap' | 'handover'>('order')
+const view = ref('order');
 </script>
-
-<template>
-  <div class="space-y-4">
-    <el-radio-group v-model="view" class="shrink-0">
-      <el-radio-button value="order">
-        <el-icon class="mr-1"><FirstAidKit /></el-icon>医嘱执行
-      </el-radio-button>
-      <el-radio-button value="nursing">
-        <el-icon class="mr-1"><EditPen /></el-icon>护理文书
-      </el-radio-button>
-      <el-radio-button value="bedmap">
-        <el-icon class="mr-1"><Grid /></el-icon>床位图
-      </el-radio-button>
-      <el-radio-button value="handover">
-        <el-icon class="mr-1"><ChatDotRound /></el-icon>交接班摘要
-      </el-radio-button>
-    </el-radio-group>
-    <InpatientOrderWorkspace v-if="view === 'order'" mode="nurse" />
-    <NursingRecordWorkspace v-else-if="view === 'nursing'" />
-    <BedMapWorkspace v-else-if="view === 'bedmap'" />
-    <NursingHandoverWorkspace v-else />
-  </div>
-</template>

@@ -1,25 +1,331 @@
-<script setup lang="js">
-import {ref, onMounted, reactive} from 'vue'
+<template>
+  <div>
+    <!-- 两卡式列表页：查询卡与表格卡分隔（口径参照 views/system/user/UserView.vue） -->
+    <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
+      <div class="flex items-start justify-between gap-4">
+        <el-form :model="searchForm" inline>
+          <el-form-item label="员工姓名">
+            <el-input
+                v-model="searchForm.empName"
+                clearable
+                placeholder="请输入员工姓名"
+                @keyup.enter="handleSearch"
+            />
+          </el-form-item>
+          <el-form-item>
+            <el-button :icon="Search" type="primary" @click="handleSearch">搜索</el-button>
+            <el-button :icon="Refresh" @click="handleReset">重置</el-button>
+          </el-form-item>
+        </el-form>
+        <!-- 主操作区：新增/批量等动作统一靠右，与查询条件视觉分离 -->
+        <div class="flex shrink-0 items-start gap-3">
+          <el-button v-perm="'org:employee:add'" :icon="Plus" type="primary" @click="handleAdd">新增员工</el-button>
+        </div>
+      </div>
+    </el-card>
+
+    <!-- 表格区域 -->
+    <el-card class="table-card" shadow="never">
+      <el-table v-loading="loading" :data="tableData" :max-height="tableMaxHeight" stripe>
+        <el-table-column label="工号" prop="empCode" width="100"/>
+        <el-table-column label="员工姓名" prop="empName" width="120"/>
+        <!-- 列表接口已脱敏（前 4 后 4，中间打星），页面直接渲染，不要再自己打码一次 -->
+        <el-table-column label="身份证号" prop="idCard" width="180">
+          <template #default="{ row }">
+            <span :class="row.idCard ? '' : 'text-slate-300'">{{ row.idCard || '—' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="主科室" min-width="120" prop="deptName"/>
+        <el-table-column label="员工类型" prop="empType" width="100">
+          <template #default="{ row }">
+            {{ getDictLabelByValue(empTypeOptions, row.empType) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="执业科室" min-width="500" prop="deptNames">
+          <template #default="{ row }">
+            {{ (row.deptNames && row.deptNames.length > 0) ? row.deptNames.join('、') : row.deptName }}
+          </template>
+        </el-table-column>
+        <el-table-column label="职位" prop="position" width="120">
+          <template #default="{ row }">
+            {{ getDictLabelByValue(positionOptions, row.position) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="职称" prop="title" width="120">
+          <template #default="{ row }">
+            {{ getDictLabelByValue(titleOptions, row.title) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="学历" prop="education" width="80">
+          <template #default="{ row }">
+            {{ getDictLabelByValue(educationOptions, row.education) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="联系电话" prop="phone" width="140"/>
+        <el-table-column label="邮箱" min-width="100" prop="email"/>
+        <el-table-column label="入职日期" prop="hireDate" width="120"/>
+        <el-table-column label="状态" prop="status" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+              {{ row.status === 1 ? '在职' : '离职' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column fixed="right" label="操作" width="150">
+          <template #default="{ row }">
+            <el-button :icon="Edit" link type="primary" @click="handleEdit(row)">编辑</el-button>
+            <el-button v-perm="'org:employee:delete'" :icon="Delete" link type="danger" @click="handleDelete(row)">
+              删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <div ref="footerRef" class="list-footer flex items-center justify-end">
+        <el-pagination
+            v-model:current-page="pagination.pageNum"
+            v-model:page-size="pagination.pageSize"
+            :page-sizes="PAGE_SIZES"
+            :total="pagination.total"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+        />
+      </div>
+    </el-card>
+
+    <!-- 新增/编辑对话框 -->
+    <el-dialog
+        v-model="dialogVisible"
+        :title="dialogTitle"
+        width="980px"
+        @close="dialogVisible = false"
+    >
+      <el-form
+          ref="formRef"
+          :model="formData"
+          :rules="rules"
+          label-width="100px"
+      >
+        <div class="grid grid-cols-2 gap-4">
+          <el-form-item label="工号" prop="empCode">
+            <el-input v-model="formData.empCode" disabled placeholder="工号由系统自动生成"/>
+          </el-form-item>
+          <el-form-item label="员工姓名" prop="empName">
+            <el-input v-model="formData.empName" placeholder="请输入员工姓名"/>
+          </el-form-item>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <el-form-item label="员工类型" prop="empType">
+            <el-select v-model="formData.empType" class="w-full" clearable placeholder="请选择员工类型">
+              <el-option
+                  v-for="item in empTypeOptions"
+                  :key="item.dictValue"
+                  :label="item.dictLabel"
+                  :value="item.dictValue"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="职位" prop="position">
+            <el-select v-model="formData.position" class="w-full" clearable filterable placeholder="请选择职位">
+              <el-option
+                  v-for="item in positionOptions"
+                  :key="item.dictValue"
+                  :label="item.dictLabel"
+                  :value="item.dictValue"
+              />
+            </el-select>
+          </el-form-item>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <el-form-item label="职称" prop="title">
+            <el-select v-model="formData.title" class="w-full" clearable filterable placeholder="请选择职称">
+              <el-option
+                  v-for="item in titleOptions"
+                  :key="item.dictValue"
+                  :label="item.dictLabel"
+                  :value="item.dictValue"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="学历" prop="education">
+            <el-select v-model="formData.education" class="w-full" clearable placeholder="请选择学历">
+              <el-option
+                  v-for="item in educationOptions"
+                  :key="item.dictValue"
+                  :label="item.dictLabel"
+                  :value="item.dictValue"
+              />
+            </el-select>
+          </el-form-item>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <el-form-item label="身份证号" prop="idCard">
+            <el-input v-model="formData.idCard" maxlength="18" placeholder="选填，18 位"/>
+          </el-form-item>
+          <el-form-item label="联系电话" prop="phone">
+            <el-input v-model="formData.phone" placeholder="请输入联系电话"/>
+          </el-form-item>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <el-form-item label="邮箱" prop="email">
+            <el-input v-model="formData.email" placeholder="请输入邮箱"/>
+          </el-form-item>
+          <el-form-item label="入职日期" prop="entryDate">
+            <el-date-picker
+                v-model="formData.hireDate"
+                class="w-full"
+                placeholder="请选择入职日期"
+                type="date"
+                value-format="YYYY-MM-DD"
+            />
+          </el-form-item>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <el-form-item label="状态" prop="status">
+            <el-radio-group v-model="formData.status">
+              <el-radio :value="1">在职</el-radio>
+              <el-radio :value="0">离职</el-radio>
+            </el-radio-group>
+          </el-form-item>
+        </div>
+        <div class="grid">
+          <el-form-item label-width="0">
+            <div class="w-full">
+              <div class="mb-2 flex items-center gap-1.5">
+                <span class="h-3.5 w-1 rounded bg-blue-500"></span>
+                <span class="text-sm font-semibold text-slate-700">岗位</span>
+              </div>
+              <EmployeePostTable v-model="postRows" :dept-list="deptList" :role-list="roleList"/>
+            </div>
+          </el-form-item>
+        </div>
+        <!-- 资格证书：独立内嵌资源，即时增删改，不随本表单提交 -->
+        <el-form-item label-width="0">
+          <div class="w-full">
+            <div class="mb-2 flex items-center gap-1.5">
+              <span class="h-3.5 w-1 rounded bg-blue-500"></span>
+              <span class="text-sm font-semibold text-slate-700">资格证书</span>
+              <span v-if="!formData.id"
+                    class="ml-2 text-xs text-gray-400">新增员工请先保存，保存后即可登记资格证书</span>
+            </div>
+            <div v-if="formData.id" class="mb-2 flex items-center gap-3">
+              <el-button v-perm="'org:employee:add'" :icon="Plus" plain size="small" @click="addCertRow()">
+                新增证书
+              </el-button>
+              <span v-if="certRows.length > 0" class="text-sm text-slate-500">共 {{ certRows.length }} 本证书</span>
+            </div>
+            <el-table v-if="formData.id" :data="certRows" border max-height="260" size="small">
+              <el-table-column width="130">
+                <template #header><span class="text-red-500">*</span> 证书类型</template>
+                <template #default="{ row }">
+                  <el-select v-model="row.certType" class="w-full" filterable placeholder="请选择证书类型">
+                    <el-option
+                        v-for="item in certTypeOptions"
+                        :key="item.dictValue"
+                        :label="item.dictLabel"
+                        :value="item.dictValue"
+                    />
+                  </el-select>
+                </template>
+              </el-table-column>
+              <el-table-column width="220">
+                <template #header><span class="text-red-500">*</span> 证书编号</template>
+                <template #default="{ row }">
+                  <el-input v-model="row.certNo" maxlength="64" placeholder="请输入证书编号"/>
+                </template>
+              </el-table-column>
+              <el-table-column width="150">
+                <template #header>发证日期</template>
+                <template #default="{ row }">
+                  <el-date-picker
+                      v-model="row.issueDate"
+                      class="!w-full"
+                      placeholder="发证日期"
+                      type="date"
+                      value-format="YYYY-MM-DD"
+                  />
+                </template>
+              </el-table-column>
+              <el-table-column width="150">
+                <template #header>有效期至</template>
+                <template #default="{ row }">
+                  <div class="flex flex-col gap-1">
+                    <el-date-picker
+                        v-model="row.validUntil"
+                        class="!w-full"
+                        placeholder="长期有效"
+                        type="date"
+                        value-format="YYYY-MM-DD"
+                    />
+                    <el-tag v-if="!row.__new && certExpiry(row)" :type="certExpiry(row).type" size="small">
+                      {{ certExpiry(row).label }}
+                    </el-tag>
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column width="150">
+                <template #header>发证机关</template>
+                <template #default="{ row }">
+                  <el-select v-model="row.issueOrg" class="w-full" clearable filterable placeholder="请选择发证机关">
+                    <el-option
+                        v-for="item in certOrgOptions"
+                        :key="item.dictValue"
+                        :label="item.dictLabel"
+                        :value="item.dictValue"
+                    />
+                  </el-select>
+                </template>
+              </el-table-column>
+              <el-table-column align="center" label="操作" min-width="70">
+                <template #default="{ row, $index }">
+                  <el-button v-if="row.__new" v-perm="'org:employee:delete'" link type="danger"
+                             @click="certRows.splice($index, 1)">删除
+                  </el-button>
+                  <el-button v-else v-perm="'org:employee:delete'" link type="danger"
+                             @click="handleDeleteCert(row)">删除
+                  </el-button>
+                </template>
+              </el-table-column>
+              <template #empty>
+                <span class="text-sm text-slate-400">还没有登记证书，请点上方「新增证书」</span>
+              </template>
+            </el-table>
+          </div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button v-perm="'org:employee:add'" :loading="submitLoading" type="primary" @click="handleSubmit">
+          确定
+        </el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script lang="js" setup>
+import {onMounted, reactive, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
-import {Plus, Search, Edit, Delete, Refresh, Check} from '@element-plus/icons-vue'
-import {PAGE_SIZES, DEFAULT_PAGE_SIZE} from '@/lib/pagination'
+import {Delete, Edit, Plus, Refresh, Search} from '@element-plus/icons-vue'
+import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
 import EmployeePostTable from '@/components/his/EmployeePostTable.vue'
-import {postsFromApi, postsToPayload, checkPosts} from '@/lib/employeePost'
+import {checkPosts, postsFromApi, postsToPayload} from '@/lib/employeePost'
 import {
-  getEmployeeListPage,
-  getEmployeeDetail,
   createEmployee,
-  updateEmployee,
   deleteEmployee,
-  getEmployeeQualificationList,
-  upsertEmployeeQualification,
   deleteEmployeeQualification,
   getDepartmentTree,
-  getRoleList
+  getEmployeeDetail,
+  getEmployeeListPage,
+  getEmployeeQualificationList,
+  getRoleList,
+  updateEmployee,
+  upsertEmployeeQualification
 } from '@/api/system'
-import {loadDictDataMap, DICT_TYPE} from '@/lib/dict-cache'
-import {isIdCardFormatLegal, isIdCardBirthDateLegal} from '@/lib/patientGender'
+import {DICT_TYPE, loadDictDataMap} from '@/lib/dict-cache'
+import {isIdCardBirthDateLegal, isIdCardFormatLegal} from '@/lib/patientGender'
 
 const loading = ref(false)
 const searchForm = ref({
@@ -427,309 +733,3 @@ const roleNameOf = (roleCode) => {
   return hit ? hit.roleName : roleCode
 }
 </script>
-
-<template>
-  <div>
-    <!-- 两卡式列表页：查询卡与表格卡分隔（口径参照 views/system/user/UserView.vue） -->
-    <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
-      <div class="flex items-start justify-between gap-4">
-        <el-form :model="searchForm" inline>
-          <el-form-item label="员工姓名">
-            <el-input
-                v-model="searchForm.empName"
-                placeholder="请输入员工姓名"
-                clearable
-                @keyup.enter="handleSearch"
-            />
-          </el-form-item>
-          <el-form-item>
-            <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
-            <el-button :icon="Refresh" @click="handleReset">重置</el-button>
-          </el-form-item>
-        </el-form>
-        <!-- 主操作区：新增/批量等动作统一靠右，与查询条件视觉分离 -->
-        <div class="flex shrink-0 items-start gap-3">
-          <el-button v-perm="'org:employee:add'" type="primary" :icon="Plus" @click="handleAdd">新增员工</el-button>
-        </div>
-      </div>
-    </el-card>
-
-    <!-- 表格区域 -->
-    <el-card class="table-card" shadow="never">
-      <el-table :data="tableData" v-loading="loading" stripe :max-height="tableMaxHeight">
-        <el-table-column prop="empCode" label="工号" width="100"/>
-        <el-table-column prop="empName" label="员工姓名" width="120"/>
-        <!-- 列表接口已脱敏（前 4 后 4，中间打星），页面直接渲染，不要再自己打码一次 -->
-        <el-table-column prop="idCard" label="身份证号" width="180">
-          <template #default="{ row }">
-            <span :class="row.idCard ? '' : 'text-slate-300'">{{ row.idCard || '—' }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="deptName" label="主科室" min-width="120"/>
-        <el-table-column prop="empType" label="员工类型" width="100">
-          <template #default="{ row }">
-            {{ getDictLabelByValue(empTypeOptions, row.empType) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="deptNames" label="执业科室" min-width="500">
-          <template #default="{ row }">
-            {{ (row.deptNames && row.deptNames.length > 0) ? row.deptNames.join('、') : row.deptName }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="position" label="职位" width="120">
-          <template #default="{ row }">
-            {{ getDictLabelByValue(positionOptions, row.position) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="title" label="职称" width="120">
-          <template #default="{ row }">
-            {{ getDictLabelByValue(titleOptions, row.title) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="education" label="学历" width="80">
-          <template #default="{ row }">
-            {{ getDictLabelByValue(educationOptions, row.education) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="phone" label="联系电话" width="140"/>
-        <el-table-column prop="email" label="邮箱" min-width="100"/>
-        <el-table-column prop="hireDate" label="入职日期" width="120"/>
-        <el-table-column prop="status" label="状态" width="80">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
-              {{ row.status === 1 ? '在职' : '离职' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" link :icon="Edit" @click="handleEdit(row)">编辑</el-button>
-            <el-button v-perm="'org:employee:delete'" type="danger" link :icon="Delete" @click="handleDelete(row)">
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <div ref="footerRef" class="list-footer flex items-center justify-end">
-        <el-pagination
-            v-model:current-page="pagination.pageNum"
-            v-model:page-size="pagination.pageSize"
-            :page-sizes="PAGE_SIZES"
-            :total="pagination.total"
-            layout="total, sizes, prev, pager, next, jumper"
-            @size-change="handleSizeChange"
-            @current-change="handleCurrentChange"
-        />
-      </div>
-    </el-card>
-
-    <!-- 新增/编辑对话框 -->
-    <el-dialog
-        v-model="dialogVisible"
-        :title="dialogTitle"
-        width="980px"
-        @close="dialogVisible = false"
-    >
-      <el-form
-          ref="formRef"
-          :model="formData"
-          :rules="rules"
-          label-width="100px"
-      >
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="工号" prop="empCode">
-            <el-input v-model="formData.empCode" placeholder="工号由系统自动生成" disabled/>
-          </el-form-item>
-          <el-form-item label="员工姓名" prop="empName">
-            <el-input v-model="formData.empName" placeholder="请输入员工姓名"/>
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="员工类型" prop="empType">
-            <el-select v-model="formData.empType" placeholder="请选择员工类型" clearable class="w-full">
-              <el-option
-                  v-for="item in empTypeOptions"
-                  :key="item.dictValue"
-                  :label="item.dictLabel"
-                  :value="item.dictValue"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="职位" prop="position">
-            <el-select v-model="formData.position" placeholder="请选择职位" clearable filterable class="w-full">
-              <el-option
-                  v-for="item in positionOptions"
-                  :key="item.dictValue"
-                  :label="item.dictLabel"
-                  :value="item.dictValue"
-              />
-            </el-select>
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="职称" prop="title">
-            <el-select v-model="formData.title" placeholder="请选择职称" clearable filterable class="w-full">
-              <el-option
-                  v-for="item in titleOptions"
-                  :key="item.dictValue"
-                  :label="item.dictLabel"
-                  :value="item.dictValue"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="学历" prop="education">
-            <el-select v-model="formData.education" placeholder="请选择学历" clearable class="w-full">
-              <el-option
-                  v-for="item in educationOptions"
-                  :key="item.dictValue"
-                  :label="item.dictLabel"
-                  :value="item.dictValue"
-              />
-            </el-select>
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="身份证号" prop="idCard">
-            <el-input v-model="formData.idCard" maxlength="18" placeholder="选填，18 位"/>
-          </el-form-item>
-          <el-form-item label="联系电话" prop="phone">
-            <el-input v-model="formData.phone" placeholder="请输入联系电话"/>
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="邮箱" prop="email">
-            <el-input v-model="formData.email" placeholder="请输入邮箱"/>
-          </el-form-item>
-          <el-form-item label="入职日期" prop="entryDate">
-            <el-date-picker
-                v-model="formData.hireDate"
-                type="date"
-                placeholder="请选择入职日期"
-                value-format="YYYY-MM-DD"
-                class="w-full"
-            />
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="状态" prop="status">
-            <el-radio-group v-model="formData.status">
-              <el-radio :value="1">在职</el-radio>
-              <el-radio :value="0">离职</el-radio>
-            </el-radio-group>
-          </el-form-item>
-        </div>
-        <div class="grid">
-          <el-form-item label-width="0">
-            <div class="w-full">
-              <div class="mb-2 flex items-center gap-1.5">
-                <span class="h-3.5 w-1 rounded bg-blue-500"></span>
-                <span class="text-sm font-semibold text-slate-700">岗位</span>
-              </div>
-              <EmployeePostTable v-model="postRows" :dept-list="deptList" :role-list="roleList"/>
-            </div>
-          </el-form-item>
-        </div>
-        <!-- 资格证书：独立内嵌资源，即时增删改，不随本表单提交 -->
-        <el-form-item label-width="0">
-          <div class="w-full">
-            <div class="mb-2 flex items-center gap-1.5">
-              <span class="h-3.5 w-1 rounded bg-blue-500"></span>
-              <span class="text-sm font-semibold text-slate-700">资格证书</span>
-              <span v-if="!formData.id"
-                    class="ml-2 text-xs text-gray-400">新增员工请先保存，保存后即可登记资格证书</span>
-            </div>
-            <div v-if="formData.id" class="mb-2 flex items-center gap-3">
-              <el-button v-perm="'org:employee:add'" :icon="Plus" plain size="small" @click="addCertRow()">
-                新增证书
-              </el-button>
-              <span v-if="certRows.length > 0" class="text-sm text-slate-500">共 {{ certRows.length }} 本证书</span>
-            </div>
-            <el-table v-if="formData.id" :data="certRows" size="small" border max-height="260">
-              <el-table-column width="130">
-                <template #header><span class="text-red-500">*</span> 证书类型</template>
-                <template #default="{ row }">
-                  <el-select v-model="row.certType" placeholder="请选择证书类型" filterable class="w-full">
-                    <el-option
-                        v-for="item in certTypeOptions"
-                        :key="item.dictValue"
-                        :label="item.dictLabel"
-                        :value="item.dictValue"
-                    />
-                  </el-select>
-                </template>
-              </el-table-column>
-              <el-table-column width="220">
-                <template #header><span class="text-red-500">*</span> 证书编号</template>
-                <template #default="{ row }">
-                  <el-input v-model="row.certNo" maxlength="64" placeholder="请输入证书编号"/>
-                </template>
-              </el-table-column>
-              <el-table-column width="150">
-                <template #header>发证日期</template>
-                <template #default="{ row }">
-                  <el-date-picker
-                      v-model="row.issueDate"
-                      type="date"
-                      placeholder="发证日期"
-                      value-format="YYYY-MM-DD"
-                      class="!w-full"
-                  />
-                </template>
-              </el-table-column>
-              <el-table-column width="150">
-                <template #header>有效期至</template>
-                <template #default="{ row }">
-                  <div class="flex flex-col gap-1">
-                    <el-date-picker
-                        v-model="row.validUntil"
-                        type="date"
-                        placeholder="长期有效"
-                        value-format="YYYY-MM-DD"
-                        class="!w-full"
-                    />
-                    <el-tag v-if="!row.__new && certExpiry(row)" :type="certExpiry(row).type" size="small">
-                      {{ certExpiry(row).label }}
-                    </el-tag>
-                  </div>
-                </template>
-              </el-table-column>
-              <el-table-column width="150">
-                <template #header>发证机关</template>
-                <template #default="{ row }">
-                  <el-select v-model="row.issueOrg" placeholder="请选择发证机关" filterable clearable class="w-full">
-                    <el-option
-                        v-for="item in certOrgOptions"
-                        :key="item.dictValue"
-                        :label="item.dictLabel"
-                        :value="item.dictValue"
-                    />
-                  </el-select>
-                </template>
-              </el-table-column>
-              <el-table-column label="操作" min-width="70" align="center">
-                <template #default="{ row, $index }">
-                  <el-button v-if="row.__new" v-perm="'org:employee:delete'" type="danger" link
-                             @click="certRows.splice($index, 1)">删除
-                  </el-button>
-                  <el-button v-else v-perm="'org:employee:delete'" type="danger" link
-                             @click="handleDeleteCert(row)">删除
-                  </el-button>
-                </template>
-              </el-table-column>
-              <template #empty>
-                <span class="text-sm text-slate-400">还没有登记证书，请点上方「新增证书」</span>
-              </template>
-            </el-table>
-          </div>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button v-perm="'org:employee:add'" type="primary" :loading="submitLoading" @click="handleSubmit">
-          确定
-        </el-button>
-      </template>
-    </el-dialog>
-  </div>
-</template>

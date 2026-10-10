@@ -1,4 +1,10 @@
-<script setup lang="js">
+<template>
+  <div class="duty-log-view" data-testid="duty-log-view">
+    <DutyLogPanel/>
+  </div>
+</template>
+
+<script lang="js" setup>
 /**
  * 总值班日志 / 交班本（菜单 2920 / 路由 /duty-log，sql/176）
  *
@@ -11,12 +17,8 @@
 import DutyLogPanel from '@/components/his/DutyLogPanel.vue'
 </script>
 
-<template>
-  <div class="duty-log-view" data-testid="duty-log-view">
-    <DutyLogPanel />
-  </div>
-</template>
-
 <style scoped>
-.duty-log-view { padding: 4px; }
+.duty-log-view {
+  padding: 4px;
+}
 </style>

@@ -1,340 +1,3 @@
-<script lang="js" setup>
-import {computed, ref, watch} from 'vue'
-import {useRouter} from 'vue-router'
-import {ElMessage} from 'element-plus'
-import {Clock, CopyDocument, Document, FirstAidKit, Link, WarningFilled} from '@element-plus/icons-vue'
-import {getPatientFullDetail} from '@/api/patient'
-import {getPatientCdr} from '@/api/cdr'
-import {patientAgeText, patientAvatarTone, patientGenderText} from '@/lib/patientGender'
-import {patientTypeText} from '@/lib/patientType'
-import {copyText} from '@/lib/clipboard'
-import {hasPermission, loadPermissions} from '@/lib/permission'
-import {TAG_VISIBLE_LIMIT, tagChipText} from '@/lib/patientTag'
-import {
-  cardTypeText,
-  freeText,
-  maritalStatusText,
-  moneyText,
-  patientStatusText,
-  timeToDate,
-  timeToMinute,
-} from '@/lib/patientField'
-
-const props = defineProps({
-  // v-model 控制显隐
-  modelValue: {type: Boolean, default: false},
-  // 患者ID（雪花ID，务必传字符串，避免精度丢失）
-  patientId: {type: [String, Number], default: ''},
-  // 可选：列表行已有数据，先渲染头部避免弹框刚打开时一片空白
-  patient: {type: Object, default: null},
-  // 是否显示「打开完整时间轴」入口
-  showTimelineEntry: {type: Boolean, default: true},
-})
-
-const emit = defineEmits(['update:modelValue'])
-
-const router = useRouter()
-
-const visible = computed({
-  get: () => props.modelValue,
-  set: (v) => emit('update:modelValue', v),
-})
-
-const activeTab = ref('basic')
-
-/**
- * 能不能看**临床内容**（健康档案 / 就诊脉络）。
- *
- * 权限码与后端 CdrController 上的 @PreAuthorize 同源（`patient:cdr:list`）——
- * 前端隐藏的入口和后端拦的接口必须同一个口径，否则会出现两种错配：
- * 「看得见、点进去 403」或者「藏起来了、接口却敞着」。
- *
- * 收费员/药剂师/检验技师这类岗位的菜单里没有『患者全景』，所以拿不到这个码：
- * 他们看得到患者身份与费用（窗口收款、发药核对要用），看不到诊断与病历原文
- * （最小必要原则 —— 这是真实 HIS 稽核会查的项）。
- */
-const canViewClinical = computed(() => hasPermission('patient:cdr:list'))
-
-/* ---------- 主档详情 ---------- */
-const detail = ref(null)
-const detailLoading = ref(false)
-const detailFailed = ref(false)
-
-/* ---------- CDR 全景时间轴 ---------- */
-const cdr = ref(null)
-const cdrLoading = ref(false)
-const cdrFailed = ref(false)
-
-/* ---------- 就诊脉络里的事件类型筛选 ---------- */
-const eventFilter = ref('')
-
-const reset = () => {
-  activeTab.value = 'basic'
-  eventFilter.value = ''
-  detail.value = null
-  cdr.value = null
-  detailFailed.value = false
-  cdrFailed.value = false
-}
-
-const loadDetail = async (id) => {
-  detailLoading.value = true
-  detailFailed.value = false
-  try {
-    const res = await getPatientFullDetail(id)
-    if (res?.code === 200 && res.data) {
-      detail.value = res.data
-    } else {
-      detailFailed.value = true
-    }
-  } catch (e) {
-    console.error('加载患者主档详情失败', e)
-    detailFailed.value = true
-  } finally {
-    detailLoading.value = false
-  }
-}
-
-const loadCdr = async (id) => {
-  cdrLoading.value = true
-  cdrFailed.value = false
-  try {
-    const res = await getPatientCdr({patientId: String(id)})
-    if (res?.code === 200 && res.data) {
-      cdr.value = res.data
-    } else {
-      cdrFailed.value = true
-    }
-  } catch (e) {
-    console.error('加载患者全景时间轴失败', e)
-    cdrFailed.value = true
-  } finally {
-    cdrLoading.value = false
-  }
-}
-
-const load = async () => {
-  const id = props.patientId
-  if (!id) return
-  reset()
-  // 先判定权限再取数：否则会给没权限的岗位发一个注定 403 的 CDR 请求，
-  // 控制台报错 + tab 里显示「加载失败」，用户以为系统坏了（其实是他这个岗位不该看）。
-  await loadPermissions()
-  loadDetail(id)
-  if (canViewClinical.value) {
-    loadCdr(id)
-  }
-}
-
-watch(
-    () => props.modelValue,
-    (v) => {
-      if (v) load()
-    }
-)
-
-const reloadAll = () => load()
-
-/* ---------- 头部身份卡：优先用主档详情，回落到列表行数据 ---------- */
-const headPatient = computed(() => detail.value || props.patient || {})
-
-const headName = computed(() => headPatient.value.patientName || '—')
-
-// 头像：显示姓名首字（此前放的是性别符号 ♂/♀，那是「身份属性」不是「头像」，
-// 而且旁边一行已经写了「男 · 38岁」，性别重复出现两次还占掉了唯一能放姓名缩写的位置）
-const headAvatarText = computed(() => {
-  const n = String(headPatient.value.patientName || '').trim()
-  return n ? n.slice(0, 1) : '?'
-})
-
-/* ---------- 患者标签 ---------- */
-/**
- * 标签来自主档详情（`PatientDetailVO.tags`），不单独发请求。
- *
- * ⚠️ 只有在 `detail` 加载成功后才渲染这一行：加载中或加载失败时若渲染成「无」，
- * 就成了把「没查到」伪装成「该患者没有标签」—— 标签是 VIP / 欠费这类要认人的标记，
- * 说错比不说代价大。
- *
- * chip 文本与折叠阈值都走 `lib/patientTag`：列表页 / 选患者下拉 / 这里三处必须同一口径
- * （曾经这里渲染 shortName「糖」、那两处渲染「糖尿病」，同一个患者两个说法）。
- */
-const patientTags = computed(() => detail.value?.tags || [])
-const visibleTags = computed(() => patientTags.value.slice(0, TAG_VISIBLE_LIMIT))
-const hiddenTags = computed(() => patientTags.value.slice(TAG_VISIBLE_LIMIT))
-
-/**
- * 复制姓名 / 患者号
- *
- * 为什么值得给这两个字段单独做按钮：它们是**跨系统传递患者身份的唯二短标识**，
- * 而真实科室里的动作几乎都要把这两样东西搬到别处去 ——
- *   ① 报给检验科/影像科核对标本、排队叫号（口头念 + 抄号，抄错一位就是另一个人的报告）；
- *   ② 填纸质单据、传染病卡、转诊单、外院会诊申请；
- *   ③ 微信/站内信里告诉同事「这个人你接手一下」；
- *   ④ 录进体检、PACS、医保等外部系统（那些系统只认患者号/姓名，没有复制就只能手打）。
- * 患者号（如 ZX20260918000123）和雪花 ID 都是十几二十位，手抄必错、错了还不报错 ——
- * 复制不是为了省事，是为了**少一次录错人**。
- */
-const handleCopy = async (text, label) => {
-  const ok = await copyText(text)
-  if (ok) {
-    ElMessage.success(`已复制${label}：${text}`)
-  } else {
-    ElMessage.error(`复制${label}失败，请手动选择文本`)
-  }
-}
-
-// CDR 身份卡能提供 EMPI 归并信息与档案完整度，主档 VO 没有
-const cdrPatient = computed(() => cdr.value?.patient || null)
-
-const allergyAlert = computed(() => {
-  const text = headPatient.value.allergyHistory
-  if (text && String(text).trim() !== '' && String(text).trim() !== '无') return String(text)
-  // 结构化过敏档案也算，避免「文字栏空着但档案里有过敏」时漏旗
-  const group = (cdr.value?.profile || []).find((g) => g.key === 'allergy')
-  if (group && Number(group.count) > 0) {
-    return group.items.map((i) => i.title).filter(Boolean).join('、')
-  }
-  return ''
-})
-
-const isMergedArchive = computed(() => Number(cdrPatient.value?.mergeStatus) === 1)
-
-/* ---------- 概览 ---------- */
-const summary = computed(() => cdr.value?.summary || null)
-
-/* ---------- 健康档案（六组：过敏/既往/手术/家族/用药/联系人） ---------- */
-const profileGroups = computed(() => cdr.value?.profile || [])
-const profileHasAny = computed(() => profileGroups.value.some((g) => Number(g.count) > 0))
-
-/* ---------- 就诊脉络 ---------- */
-const visits = computed(() => cdr.value?.visits || [])
-const unresolvedEvents = computed(() => cdr.value?.unresolvedEvents || [])
-
-// 事件类型筛选选项：从真实数据里聚合，不依赖额外接口，也不会出现「筛了必然为空」的假选项
-const eventTypeOptions = computed(() => {
-  const map = new Map()
-  const walk = (list) => {
-    list.forEach((e) => {
-      if (!e?.eventType) return
-      if (!map.has(e.eventType)) map.set(e.eventType, e.eventTypeText || e.eventType)
-    })
-  }
-  visits.value.forEach((v) => walk(v.events || []))
-  walk(unresolvedEvents.value)
-  return Array.from(map, ([value, label]) => ({value, label}))
-})
-
-const filterEvents = (events) => {
-  const list = events || []
-  if (!eventFilter.value) return list
-  return list.filter((e) => e.eventType === eventFilter.value)
-}
-
-const totalShownEvents = computed(() =>
-    visits.value.reduce((sum, v) => sum + filterEvents(v.events).length, 0) +
-    filterEvents(unresolvedEvents.value).length
-)
-
-/* ---------- 展示辅助（跟 CDR 页面同一套口径） ---------- */
-const nodeColor = (t) =>
-    t === 'INPATIENT' ? '#dc2626' : t === 'EMERGENCY' ? '#d97706' : t === 'OUTPATIENT' ? '#1269B5' : '#64748b'
-
-const nodeTypeTag = (t) =>
-    t === 'INPATIENT' ? 'danger' : t === 'EMERGENCY' ? 'warning' : t === 'OUTPATIENT' ? 'primary' : 'info'
-
-const eventTag = (t) => {
-  if (t === 'criticalValue') return 'danger'
-  if (t === 'qualityControl' || t === 'referral') return 'warning'
-  if (t === 'charge' || t === 'prepay' || t === 'inpatientSettlement' || t === 'insuranceSettlement') return 'success'
-  return 'info'
-}
-
-/* ---------- 基本信息分组（口径统一走 lib/） ----------
- * item 形状：{ label, value, copy? } —— copy 有值时右侧渲染复制按钮
- * （只有「患者号 / 姓名」这两个跨系统传人用的短标识才给复制，其余字段给了也没人用，
- *  反而让每一行都长出图标、真正的字段值被挤得看不见）
- * 手机号 / 证件号 / 身份证 / 医保卡号一律走 lib/patientField 的打码口径，禁止裸渲染 */
-const basicGroups = computed(() => {
-  const d = detail.value
-  if (!d) return []
-  return [
-    {
-      title: '身份识别',
-      items: [
-        {label: '患者号', value: freeText(d.patientNo), copy: d.patientNo ? String(d.patientNo) : ''},
-        {label: '姓名', value: freeText(d.patientName), copy: d.patientName ? String(d.patientName) : ''},
-        {label: '性别', value: patientGenderText(d.gender)},
-        {label: '年龄', value: patientAgeText(d.age)},
-        {label: '出生日期', value: freeText(d.birthDate)},
-        {label: '证件类型', value: cardTypeText(d.cardType)},
-        {label: '证件号码', value: freeText(d.cardNoMasked)},
-        {label: '身份证号', value: freeText(d.idCardMasked)},
-      ],
-    },
-    {
-      title: '联系方式',
-      items: [
-        {label: '联系电话', value: freeText(d.phoneMasked)},
-        {label: '联系人', value: freeText(d.contactName)},
-        {label: '联系人电话', value: freeText(d.contactPhoneMasked)},
-        {label: '与患者关系', value: freeText(d.contactRelation)},
-        {label: '家庭住址', value: freeText(d.address)},
-        {label: '民族', value: freeText(d.nation)},
-        {label: '职业', value: freeText(d.occupation)},
-        {label: '婚姻状况', value: maritalStatusText(d.maritalStatus)},
-      ],
-    },
-    {
-      title: '参保与账户',
-      items: [
-        {label: '患者类型', value: patientTypeText(d.patientType)},
-        {label: '医保类型', value: freeText(d.medicalInsuranceType)},
-        {label: '医保卡号', value: freeText(d.medicalInsuranceNoMasked)},
-        {label: '账户余额', value: moneyText(d.balance)},
-        {label: '累计消费', value: moneyText(d.totalExpense)},
-        {label: '就诊次数', value: d.visitCount === null || d.visitCount === undefined ? '—' : `${d.visitCount} 次`},
-        {label: '最近就诊', value: freeText(d.lastVisitTime)},
-        {label: '档案状态', value: patientStatusText(d.status)},
-      ],
-    },
-    {
-      title: '其他',
-      items: [
-        {label: '血型', value: freeText(d.bloodType)},
-        // 「自述既往史/过敏史」属临床内容：没有 patient:cdr:list 的岗位（收费/药房/前台），
-        // 服务端根本不会返回这两个字段，照常渲染就会显示成「—」——
-        // 那等于把"无权看"伪装成"该患者没有过敏史"，比不显示更危险。所以整行不渲染。
-        ...(canViewClinical.value
-            ? [
-              {label: '既往病史（自述）', value: freeText(d.medicalHistory)},
-              {label: '过敏史（自述）', value: freeText(d.allergyHistory)},
-            ]
-            : []),
-      ],
-    },
-  ]
-})
-
-const openFullTimeline = () => {
-  visible.value = false
-  router.push({path: '/cdr', query: {patientId: String(props.patientId)}})
-}
-
-/**
- * 跳到健康档案页维护这一患者。
- *
- * 这里刻意**不做就地编辑**：六组档案是纵向数据，需要「按条目增删改 + 看主档摘要投影」的完整界面，
- * 塞进这个弹框会变成第二套实现（字段、校验、字典翻译各写一遍），两套必然会漂。
- * 弹框只负责「看」，改去 `/health-record`，并把 patientId 带过去省掉再搜一次。
- */
-const openHealthRecord = () => {
-  visible.value = false
-  router.push({path: '/health-record', query: {patientId: String(props.patientId)}})
-}
-
-defineExpose({reload: reloadAll})
-</script>
-
 <template>
   <el-dialog
       v-model="visible"
@@ -754,6 +417,343 @@ defineExpose({reload: reloadAll})
     </template>
   </el-dialog>
 </template>
+
+<script lang="js" setup>
+import {computed, ref, watch} from 'vue'
+import {useRouter} from 'vue-router'
+import {ElMessage} from 'element-plus'
+import {Clock, CopyDocument, Document, FirstAidKit, Link, WarningFilled} from '@element-plus/icons-vue'
+import {getPatientFullDetail} from '@/api/patient'
+import {getPatientCdr} from '@/api/cdr'
+import {patientAgeText, patientAvatarTone, patientGenderText} from '@/lib/patientGender'
+import {patientTypeText} from '@/lib/patientType'
+import {copyText} from '@/lib/clipboard'
+import {hasPermission, loadPermissions} from '@/lib/permission'
+import {TAG_VISIBLE_LIMIT, tagChipText} from '@/lib/patientTag'
+import {
+  cardTypeText,
+  freeText,
+  maritalStatusText,
+  moneyText,
+  patientStatusText,
+  timeToDate,
+  timeToMinute,
+} from '@/lib/patientField'
+
+const props = defineProps({
+  // v-model 控制显隐
+  modelValue: {type: Boolean, default: false},
+  // 患者ID（雪花ID，务必传字符串，避免精度丢失）
+  patientId: {type: [String, Number], default: ''},
+  // 可选：列表行已有数据，先渲染头部避免弹框刚打开时一片空白
+  patient: {type: Object, default: null},
+  // 是否显示「打开完整时间轴」入口
+  showTimelineEntry: {type: Boolean, default: true},
+})
+
+const emit = defineEmits(['update:modelValue'])
+
+const router = useRouter()
+
+const visible = computed({
+  get: () => props.modelValue,
+  set: (v) => emit('update:modelValue', v),
+})
+
+const activeTab = ref('basic')
+
+/**
+ * 能不能看**临床内容**（健康档案 / 就诊脉络）。
+ *
+ * 权限码与后端 CdrController 上的 @PreAuthorize 同源（`patient:cdr:list`）——
+ * 前端隐藏的入口和后端拦的接口必须同一个口径，否则会出现两种错配：
+ * 「看得见、点进去 403」或者「藏起来了、接口却敞着」。
+ *
+ * 收费员/药剂师/检验技师这类岗位的菜单里没有『患者全景』，所以拿不到这个码：
+ * 他们看得到患者身份与费用（窗口收款、发药核对要用），看不到诊断与病历原文
+ * （最小必要原则 —— 这是真实 HIS 稽核会查的项）。
+ */
+const canViewClinical = computed(() => hasPermission('patient:cdr:list'))
+
+/* ---------- 主档详情 ---------- */
+const detail = ref(null)
+const detailLoading = ref(false)
+const detailFailed = ref(false)
+
+/* ---------- CDR 全景时间轴 ---------- */
+const cdr = ref(null)
+const cdrLoading = ref(false)
+const cdrFailed = ref(false)
+
+/* ---------- 就诊脉络里的事件类型筛选 ---------- */
+const eventFilter = ref('')
+
+const reset = () => {
+  activeTab.value = 'basic'
+  eventFilter.value = ''
+  detail.value = null
+  cdr.value = null
+  detailFailed.value = false
+  cdrFailed.value = false
+}
+
+const loadDetail = async (id) => {
+  detailLoading.value = true
+  detailFailed.value = false
+  try {
+    const res = await getPatientFullDetail(id)
+    if (res?.code === 200 && res.data) {
+      detail.value = res.data
+    } else {
+      detailFailed.value = true
+    }
+  } catch (e) {
+    console.error('加载患者主档详情失败', e)
+    detailFailed.value = true
+  } finally {
+    detailLoading.value = false
+  }
+}
+
+const loadCdr = async (id) => {
+  cdrLoading.value = true
+  cdrFailed.value = false
+  try {
+    const res = await getPatientCdr({patientId: String(id)})
+    if (res?.code === 200 && res.data) {
+      cdr.value = res.data
+    } else {
+      cdrFailed.value = true
+    }
+  } catch (e) {
+    console.error('加载患者全景时间轴失败', e)
+    cdrFailed.value = true
+  } finally {
+    cdrLoading.value = false
+  }
+}
+
+const load = async () => {
+  const id = props.patientId
+  if (!id) return
+  reset()
+  // 先判定权限再取数：否则会给没权限的岗位发一个注定 403 的 CDR 请求，
+  // 控制台报错 + tab 里显示「加载失败」，用户以为系统坏了（其实是他这个岗位不该看）。
+  await loadPermissions()
+  loadDetail(id)
+  if (canViewClinical.value) {
+    loadCdr(id)
+  }
+}
+
+watch(
+    () => props.modelValue,
+    (v) => {
+      if (v) load()
+    }
+)
+
+const reloadAll = () => load()
+
+/* ---------- 头部身份卡：优先用主档详情，回落到列表行数据 ---------- */
+const headPatient = computed(() => detail.value || props.patient || {})
+
+const headName = computed(() => headPatient.value.patientName || '—')
+
+// 头像：显示姓名首字（此前放的是性别符号 ♂/♀，那是「身份属性」不是「头像」，
+// 而且旁边一行已经写了「男 · 38岁」，性别重复出现两次还占掉了唯一能放姓名缩写的位置）
+const headAvatarText = computed(() => {
+  const n = String(headPatient.value.patientName || '').trim()
+  return n ? n.slice(0, 1) : '?'
+})
+
+/* ---------- 患者标签 ---------- */
+/**
+ * 标签来自主档详情（`PatientDetailVO.tags`），不单独发请求。
+ *
+ * ⚠️ 只有在 `detail` 加载成功后才渲染这一行：加载中或加载失败时若渲染成「无」，
+ * 就成了把「没查到」伪装成「该患者没有标签」—— 标签是 VIP / 欠费这类要认人的标记，
+ * 说错比不说代价大。
+ *
+ * chip 文本与折叠阈值都走 `lib/patientTag`：列表页 / 选患者下拉 / 这里三处必须同一口径
+ * （曾经这里渲染 shortName「糖」、那两处渲染「糖尿病」，同一个患者两个说法）。
+ */
+const patientTags = computed(() => detail.value?.tags || [])
+const visibleTags = computed(() => patientTags.value.slice(0, TAG_VISIBLE_LIMIT))
+const hiddenTags = computed(() => patientTags.value.slice(TAG_VISIBLE_LIMIT))
+
+/**
+ * 复制姓名 / 患者号
+ *
+ * 为什么值得给这两个字段单独做按钮：它们是**跨系统传递患者身份的唯二短标识**，
+ * 而真实科室里的动作几乎都要把这两样东西搬到别处去 ——
+ *   ① 报给检验科/影像科核对标本、排队叫号（口头念 + 抄号，抄错一位就是另一个人的报告）；
+ *   ② 填纸质单据、传染病卡、转诊单、外院会诊申请；
+ *   ③ 微信/站内信里告诉同事「这个人你接手一下」；
+ *   ④ 录进体检、PACS、医保等外部系统（那些系统只认患者号/姓名，没有复制就只能手打）。
+ * 患者号（如 ZX20260918000123）和雪花 ID 都是十几二十位，手抄必错、错了还不报错 ——
+ * 复制不是为了省事，是为了**少一次录错人**。
+ */
+const handleCopy = async (text, label) => {
+  const ok = await copyText(text)
+  if (ok) {
+    ElMessage.success(`已复制${label}：${text}`)
+  } else {
+    ElMessage.error(`复制${label}失败，请手动选择文本`)
+  }
+}
+
+// CDR 身份卡能提供 EMPI 归并信息与档案完整度，主档 VO 没有
+const cdrPatient = computed(() => cdr.value?.patient || null)
+
+const allergyAlert = computed(() => {
+  const text = headPatient.value.allergyHistory
+  if (text && String(text).trim() !== '' && String(text).trim() !== '无') return String(text)
+  // 结构化过敏档案也算，避免「文字栏空着但档案里有过敏」时漏旗
+  const group = (cdr.value?.profile || []).find((g) => g.key === 'allergy')
+  if (group && Number(group.count) > 0) {
+    return group.items.map((i) => i.title).filter(Boolean).join('、')
+  }
+  return ''
+})
+
+const isMergedArchive = computed(() => Number(cdrPatient.value?.mergeStatus) === 1)
+
+/* ---------- 概览 ---------- */
+const summary = computed(() => cdr.value?.summary || null)
+
+/* ---------- 健康档案（六组：过敏/既往/手术/家族/用药/联系人） ---------- */
+const profileGroups = computed(() => cdr.value?.profile || [])
+const profileHasAny = computed(() => profileGroups.value.some((g) => Number(g.count) > 0))
+
+/* ---------- 就诊脉络 ---------- */
+const visits = computed(() => cdr.value?.visits || [])
+const unresolvedEvents = computed(() => cdr.value?.unresolvedEvents || [])
+
+// 事件类型筛选选项：从真实数据里聚合，不依赖额外接口，也不会出现「筛了必然为空」的假选项
+const eventTypeOptions = computed(() => {
+  const map = new Map()
+  const walk = (list) => {
+    list.forEach((e) => {
+      if (!e?.eventType) return
+      if (!map.has(e.eventType)) map.set(e.eventType, e.eventTypeText || e.eventType)
+    })
+  }
+  visits.value.forEach((v) => walk(v.events || []))
+  walk(unresolvedEvents.value)
+  return Array.from(map, ([value, label]) => ({value, label}))
+})
+
+const filterEvents = (events) => {
+  const list = events || []
+  if (!eventFilter.value) return list
+  return list.filter((e) => e.eventType === eventFilter.value)
+}
+
+const totalShownEvents = computed(() =>
+    visits.value.reduce((sum, v) => sum + filterEvents(v.events).length, 0) +
+    filterEvents(unresolvedEvents.value).length
+)
+
+/* ---------- 展示辅助（跟 CDR 页面同一套口径） ---------- */
+const nodeColor = (t) =>
+    t === 'INPATIENT' ? '#dc2626' : t === 'EMERGENCY' ? '#d97706' : t === 'OUTPATIENT' ? '#1269B5' : '#64748b'
+
+const nodeTypeTag = (t) =>
+    t === 'INPATIENT' ? 'danger' : t === 'EMERGENCY' ? 'warning' : t === 'OUTPATIENT' ? 'primary' : 'info'
+
+const eventTag = (t) => {
+  if (t === 'criticalValue') return 'danger'
+  if (t === 'qualityControl' || t === 'referral') return 'warning'
+  if (t === 'charge' || t === 'prepay' || t === 'inpatientSettlement' || t === 'insuranceSettlement') return 'success'
+  return 'info'
+}
+
+/* ---------- 基本信息分组（口径统一走 lib/） ----------
+ * item 形状：{ label, value, copy? } —— copy 有值时右侧渲染复制按钮
+ * （只有「患者号 / 姓名」这两个跨系统传人用的短标识才给复制，其余字段给了也没人用，
+ *  反而让每一行都长出图标、真正的字段值被挤得看不见）
+ * 手机号 / 证件号 / 身份证 / 医保卡号一律走 lib/patientField 的打码口径，禁止裸渲染 */
+const basicGroups = computed(() => {
+  const d = detail.value
+  if (!d) return []
+  return [
+    {
+      title: '身份识别',
+      items: [
+        {label: '患者号', value: freeText(d.patientNo), copy: d.patientNo ? String(d.patientNo) : ''},
+        {label: '姓名', value: freeText(d.patientName), copy: d.patientName ? String(d.patientName) : ''},
+        {label: '性别', value: patientGenderText(d.gender)},
+        {label: '年龄', value: patientAgeText(d.age)},
+        {label: '出生日期', value: freeText(d.birthDate)},
+        {label: '证件类型', value: cardTypeText(d.cardType)},
+        {label: '证件号码', value: freeText(d.cardNoMasked)},
+        {label: '身份证号', value: freeText(d.idCardMasked)},
+      ],
+    },
+    {
+      title: '联系方式',
+      items: [
+        {label: '联系电话', value: freeText(d.phoneMasked)},
+        {label: '联系人', value: freeText(d.contactName)},
+        {label: '联系人电话', value: freeText(d.contactPhoneMasked)},
+        {label: '与患者关系', value: freeText(d.contactRelation)},
+        {label: '家庭住址', value: freeText(d.address)},
+        {label: '民族', value: freeText(d.nation)},
+        {label: '职业', value: freeText(d.occupation)},
+        {label: '婚姻状况', value: maritalStatusText(d.maritalStatus)},
+      ],
+    },
+    {
+      title: '参保与账户',
+      items: [
+        {label: '患者类型', value: patientTypeText(d.patientType)},
+        {label: '医保类型', value: freeText(d.medicalInsuranceType)},
+        {label: '医保卡号', value: freeText(d.medicalInsuranceNoMasked)},
+        {label: '账户余额', value: moneyText(d.balance)},
+        {label: '累计消费', value: moneyText(d.totalExpense)},
+        {label: '就诊次数', value: d.visitCount === null || d.visitCount === undefined ? '—' : `${d.visitCount} 次`},
+        {label: '最近就诊', value: freeText(d.lastVisitTime)},
+        {label: '档案状态', value: patientStatusText(d.status)},
+      ],
+    },
+    {
+      title: '其他',
+      items: [
+        {label: '血型', value: freeText(d.bloodType)},
+        // 「自述既往史/过敏史」属临床内容：没有 patient:cdr:list 的岗位（收费/药房/前台），
+        // 服务端根本不会返回这两个字段，照常渲染就会显示成「—」——
+        // 那等于把"无权看"伪装成"该患者没有过敏史"，比不显示更危险。所以整行不渲染。
+        ...(canViewClinical.value
+            ? [
+              {label: '既往病史（自述）', value: freeText(d.medicalHistory)},
+              {label: '过敏史（自述）', value: freeText(d.allergyHistory)},
+            ]
+            : []),
+      ],
+    },
+  ]
+})
+
+const openFullTimeline = () => {
+  visible.value = false
+  router.push({path: '/cdr', query: {patientId: String(props.patientId)}})
+}
+
+/**
+ * 跳到健康档案页维护这一患者。
+ *
+ * 这里刻意**不做就地编辑**：六组档案是纵向数据，需要「按条目增删改 + 看主档摘要投影」的完整界面，
+ * 塞进这个弹框会变成第二套实现（字段、校验、字典翻译各写一遍），两套必然会漂。
+ * 弹框只负责「看」，改去 `/health-record`，并把 patientId 带过去省掉再搜一次。
+ */
+const openHealthRecord = () => {
+  visible.value = false
+  router.push({path: '/health-record', query: {patientId: String(props.patientId)}})
+}
+
+defineExpose({reload: reloadAll})
+</script>
 
 <style scoped>
 /* ---------- 内容区独立滚动 ----------

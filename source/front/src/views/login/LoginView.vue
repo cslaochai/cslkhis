@@ -1,12 +1,100 @@
-<script setup lang="js">
-import { ref, reactive, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { DataLine, User, Lock, FirstAidKit, Tickets, CircleCheck, Service } from '@element-plus/icons-vue'
-import { login } from '@/api/system'
-import { encryptPassword } from '@/lib/password'
-import { useCurrentPatientStore } from '@/stores/currentPatient'
-import { clearSessionCaches } from '@/lib/session-cache'
+<template>
+  <div class="login-container">
+    <div class="login-card">
+      <!-- 院徽 + 院名 -->
+      <div class="login-header">
+        <img alt="长沙市麓康医院" class="hospital-logo" src="../../assets/main_logo.png"/>
+        <h1 class="hospital-name">长沙市麓康医院</h1>
+        <p class="hospital-sub">CHANGSHA LUKANG HOSPITAL</p>
+      </div>
+
+      <div class="login-divider"></div>
+
+      <!-- 角色选择 -->
+      <div class="role-selector">
+        <div
+            v-for="r in roles"
+            :key="r.key"
+            :class="{ active: role === r.key }"
+            class="role-item"
+            @click="role = r.key"
+        >
+          <component :is="r.icon" class="role-icon"/>
+          <span class="role-label">{{ r.label }}</span>
+        </div>
+      </div>
+
+      <!-- 登录表单 -->
+      <el-form :model="loginForm" @keyup.enter="handleLogin">
+        <el-form-item>
+          <el-input
+              v-model="loginForm.username"
+              :prefix-icon="User"
+              class="login-input"
+              placeholder="请输入用户名/工号"
+              size="large"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-input
+              v-model="loginForm.password"
+              :prefix-icon="Lock"
+              class="login-input"
+              placeholder="请输入密码"
+              show-password
+              size="large"
+              type="password"
+          />
+        </el-form-item>
+        <el-form-item>
+          <div class="captcha-row">
+            <el-input
+                v-model="loginForm.captcha"
+                :prefix-icon="CircleCheck"
+                class="captcha-input"
+                maxlength="4"
+                placeholder="请输入验证码"
+                size="large"
+            />
+            <canvas
+                ref="captchaCanvas"
+                class="captcha-image"
+                height="40"
+                title="点击刷新验证码"
+                width="100"
+                @click="refreshCaptcha"
+            ></canvas>
+          </div>
+        </el-form-item>
+        <el-form-item>
+          <el-button
+              :loading="loading"
+              class="login-button"
+              size="large"
+              type="primary"
+              @click="handleLogin"
+          >
+            登 录
+          </el-button>
+        </el-form-item>
+      </el-form>
+
+      <p class="role-desc">{{ roles.find((r) => r.key === role)?.desc }}</p>
+    </div>
+
+    <p class="login-footer">长沙市麓康医院信息管理平台 · 仅限授权人员使用</p>
+  </div>
+</template>
+
+<script lang="js" setup>
+import {onMounted, reactive, ref} from 'vue'
+import {useRouter} from 'vue-router'
+import {ElMessage} from 'element-plus'
+import {CircleCheck, DataLine, FirstAidKit, Lock, Service, Tickets, User} from '@element-plus/icons-vue'
+import {login} from '@/api/system'
+import {encryptPassword} from '@/lib/password'
+import {useCurrentPatientStore} from '@/stores/currentPatient'
+import {clearSessionCaches} from '@/lib/session-cache'
 
 const router = useRouter()
 // 换个账号登录时清掉上一次会话的「当前患者」，否则顶部条会挂着上一个人的名字
@@ -16,13 +104,13 @@ const currentPatientStore = useCurrentPatientStore()
 // 「其他」= 不指定角色，由后端取该账号角色列表中的第一个（sys_role.sort_order 最小者）。
 // 默认选中「其他」——单角色账号不必选卡，多角色账号也能直接进（进系统后右上角可切换角色）。
 const roles = [
-  { key: 'other', label: '其他', icon: User, desc: '登录后进入账号首个角色，可在系统内切换', roleCode: '' },
-  { key: 'doctor', label: '医生', icon: FirstAidKit, desc: '门诊/住院诊疗', roleCode: '10013' },
-  { key: 'nurse', label: '护士', icon: DataLine, desc: '护理执行工作站', roleCode: '10014' },
-  { key: 'pharmacist', label: '药剂师', icon: Tickets, desc: '审方调配发药', roleCode: '10016' },
+  {key: 'other', label: '其他', icon: User, desc: '登录后进入账号首个角色，可在系统内切换', roleCode: ''},
+  {key: 'doctor', label: '医生', icon: FirstAidKit, desc: '门诊/住院诊疗', roleCode: '10013'},
+  {key: 'nurse', label: '护士', icon: DataLine, desc: '护理执行工作站', roleCode: '10014'},
+  {key: 'pharmacist', label: '药剂师', icon: Tickets, desc: '审方调配发药', roleCode: '10016'},
   // 客服岗（sql/223）：接患者转人工工单 + 维护客服台语料，归客户服务中心
-  { key: 'service', label: '客服', icon: Service, desc: '工单受理与患者服务', roleCode: '10034' },
-  { key: 'admin', label: '系统管理员', icon: CircleCheck, desc: '系统配置管理', roleCode: '10012' },
+  {key: 'service', label: '客服', icon: Service, desc: '工单受理与患者服务', roleCode: '10034'},
+  {key: 'admin', label: '系统管理员', icon: CircleCheck, desc: '系统配置管理', roleCode: '10012'},
 ]
 
 const role = ref('other')
@@ -41,7 +129,7 @@ let captchaCode = ''
 const generateCaptcha = () => {
   // 去掉易混淆字符 I O 0 1
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  captchaCode = Array.from({ length: 4 }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join('')
+  captchaCode = Array.from({length: 4}, () => chars.charAt(Math.floor(Math.random() * chars.length))).join('')
   if (AUTO_FILL_CAPTCHA) {
     loginForm.captcha = captchaCode
   }
@@ -156,94 +244,6 @@ const handleLogin = async () => {
   }
 }
 </script>
-
-<template>
-  <div class="login-container">
-    <div class="login-card">
-      <!-- 院徽 + 院名 -->
-      <div class="login-header">
-        <img src="../../assets/main_logo.png" alt="长沙市麓康医院" class="hospital-logo" />
-        <h1 class="hospital-name">长沙市麓康医院</h1>
-        <p class="hospital-sub">CHANGSHA LUKANG HOSPITAL</p>
-      </div>
-
-      <div class="login-divider"></div>
-
-      <!-- 角色选择 -->
-      <div class="role-selector">
-        <div
-          v-for="r in roles"
-          :key="r.key"
-          class="role-item"
-          :class="{ active: role === r.key }"
-          @click="role = r.key"
-        >
-          <component :is="r.icon" class="role-icon" />
-          <span class="role-label">{{ r.label }}</span>
-        </div>
-      </div>
-
-      <!-- 登录表单 -->
-      <el-form :model="loginForm" @keyup.enter="handleLogin">
-        <el-form-item>
-          <el-input
-            v-model="loginForm.username"
-            placeholder="请输入用户名/工号"
-            :prefix-icon="User"
-            size="large"
-            class="login-input"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-input
-            v-model="loginForm.password"
-            type="password"
-            placeholder="请输入密码"
-            :prefix-icon="Lock"
-            size="large"
-            show-password
-            class="login-input"
-          />
-        </el-form-item>
-        <el-form-item>
-          <div class="captcha-row">
-            <el-input
-              v-model="loginForm.captcha"
-              placeholder="请输入验证码"
-              :prefix-icon="CircleCheck"
-              size="large"
-              maxlength="4"
-              class="captcha-input"
-            />
-            <canvas
-              ref="captchaCanvas"
-              width="100"
-              height="40"
-              class="captcha-image"
-              title="点击刷新验证码"
-              @click="refreshCaptcha"
-            ></canvas>
-          </div>
-        </el-form-item>
-        <el-form-item>
-          <el-button
-            type="primary"
-            size="large"
-            class="login-button"
-            :loading="loading"
-            @click="handleLogin"
-          >
-            登 录
-          </el-button>
-        </el-form-item>
-      </el-form>
-
-      <p class="role-desc">{{ roles.find((r) => r.key === role)?.desc }}</p>
-    </div>
-
-    <p class="login-footer">长沙市麓康医院信息管理平台 · 仅限授权人员使用</p>
-  </div>
-</template>
 
 <style scoped>
 .login-container {

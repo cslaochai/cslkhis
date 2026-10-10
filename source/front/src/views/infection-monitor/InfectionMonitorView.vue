@@ -1,3 +1,361 @@
+<template>
+  <div class="infection-monitor" data-testid="infection-monitor-view">
+    <el-tabs v-model="activeTab">
+      <!-- ================= 病例报告卡 ================= -->
+      <el-tab-pane label="院感病例" name="case">
+        <el-row :gutter="8" class="stat-row" data-testid="case-stats">
+          <el-col :span="4">
+            <div class="stat-card">
+              <div class="stat-num">{{ caseStats.pendingAudit || 0 }}</div>
+              <div class="stat-label">待核实</div>
+            </div>
+          </el-col>
+          <el-col :span="4">
+            <div class="stat-card">
+              <div class="stat-num">{{ caseStats.confirmed || 0 }}</div>
+              <div class="stat-label">已确认</div>
+            </div>
+          </el-col>
+          <el-col :span="4">
+            <div class="stat-card">
+              <div class="stat-num">{{ caseStats.excluded || 0 }}</div>
+              <div class="stat-label">已排除</div>
+            </div>
+          </el-col>
+          <el-col :span="4">
+            <div class="stat-card warn">
+              <div class="stat-num">{{ caseStats.leakResubmit || 0 }}</div>
+              <div class="stat-label">漏报补报</div>
+            </div>
+          </el-col>
+          <el-col :span="4">
+            <div class="stat-card warn">
+              <div class="stat-num">{{ caseStats.hospitalInfection || 0 }}</div>
+              <div class="stat-label">院内感染（确认）</div>
+            </div>
+          </el-col>
+          <el-col :span="4">
+            <div class="stat-card">
+              <div class="stat-num">{{ caseStats.todayNew || 0 }}</div>
+              <div class="stat-label">今日新增</div>
+            </div>
+          </el-col>
+        </el-row>
+
+        <div class="toolbar">
+          <el-select v-model="caseQuery.caseStatus" clearable placeholder="状态" style="width:120px"
+                     @change="caseQuery.pageNum = 1; loadCases()">
+            <el-option v-for="d in caseStatusDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
+          </el-select>
+          <el-select v-model="caseQuery.caseSource" clearable placeholder="感染来源" style="width:130px"
+                     @change="caseQuery.pageNum = 1; loadCases()">
+            <el-option v-for="d in caseSourceDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
+          </el-select>
+          <el-select v-model="caseQuery.leakFlag" clearable data-testid="case-leak-filter" placeholder="漏报口径"
+                     style="width:130px" @change="caseQuery.pageNum = 1; loadCases()">
+            <el-option :value="0" label="正常报卡"/>
+            <el-option :value="1" label="漏报补报"/>
+          </el-select>
+          <el-input v-model="caseQuery.keyword" clearable data-testid="case-keyword" placeholder="病例编号/患者/诊断"
+                    style="width:220px" @keyup.enter="caseQuery.pageNum = 1; loadCases()"/>
+          <el-button :icon="Search" data-testid="case-search" type="primary"
+                     @click="caseQuery.pageNum = 1; loadCases()">查询
+          </el-button>
+          <el-button :icon="Refresh" @click="resetCaseQuery">重置</el-button>
+          <div class="spacer"/>
+          <el-button v-perm="'emr:infectionMonitor:add'" data-testid="case-create-leak" plain type="warning"
+                     @click="onCaseCreate(true)">漏报补报建卡
+          </el-button>
+          <el-button v-perm="'emr:infectionMonitor:add'" data-testid="case-create" type="primary"
+                     @click="onCaseCreate(false)">院感报卡
+          </el-button>
+        </div>
+
+        <el-table v-loading="caseLoading" :data="caseRows" border size="small" stripe>
+          <el-table-column label="病例编号" prop="caseNo" width="170"/>
+          <el-table-column label="患者" prop="patientName" width="90"/>
+          <el-table-column label="就诊" width="70">
+            <template #default="{ row }">{{ row.visitTypeText }}</template>
+          </el-table-column>
+          <el-table-column label="发现科室" min-width="110" prop="deptName" show-overflow-tooltip/>
+          <el-table-column label="来源" width="90">
+            <template #default="{ row }">{{ row.caseSourceText }}</template>
+          </el-table-column>
+          <el-table-column label="部位" width="90">
+            <template #default="{ row }">{{ row.infectionSiteText || siteText(row.infectionSite) }}</template>
+          </el-table-column>
+          <el-table-column label="感染诊断" min-width="130" prop="infectionDiag" show-overflow-tooltip/>
+          <el-table-column label="病原菌" prop="pathogen" show-overflow-tooltip width="100"/>
+          <el-table-column label="感染日期" width="100">
+            <template #default="{ row }">{{ fmtDate(row.infectDate) }}</template>
+          </el-table-column>
+          <el-table-column label="状态" width="90">
+            <template #default="{ row }">
+              <el-tag
+                  :type="Number(row.caseStatus) === 2 ? 'success' : Number(row.caseStatus) === 3 ? 'info' : 'warning'"
+                  size="small">{{ row.caseStatusText }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="漏报" width="70">
+            <template #default="{ row }">
+              <el-tag v-if="Number(row.leakFlag) === 1" size="small" type="danger">漏报补</el-tag>
+              <span v-else>—</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="上报人" prop="reportName" width="80"/>
+          <el-table-column fixed="right" label="操作" width="130">
+            <template #default="{ row }">
+              <template v-if="Number(row.caseStatus) === 1">
+                <el-button data-testid="case-confirm" link size="small" type="success" @click="doCaseAudit(row, 2)">
+                  确认
+                </el-button>
+                <el-button data-testid="case-exclude" link size="small" type="danger" @click="doCaseAudit(row, 3)">
+                  排除
+                </el-button>
+              </template>
+              <span v-else class="muted">已核实</span>
+            </template>
+          </el-table-column>
+        </el-table>
+        <el-pagination v-model:current-page="caseQuery.pageNum" :page-size="caseQuery.pageSize" :total="caseTotal"
+                       layout="total, prev, pager, next" style="margin-top:8px" @current-change="loadCases"/>
+      </el-tab-pane>
+
+      <!-- ================= 目标性监测 ================= -->
+      <el-tab-pane label="目标性监测" name="monitor">
+        <el-row :gutter="8" class="stat-row" data-testid="monitor-stats">
+          <el-col :span="4">
+            <div class="stat-card">
+              <div class="stat-num">{{ monitorStats.inCatheter || 0 }}</div>
+              <div class="stat-label">在管</div>
+            </div>
+          </el-col>
+          <el-col :span="4">
+            <div class="stat-card">
+              <div class="stat-num">{{ monitorStats.removed || 0 }}</div>
+              <div class="stat-label">已拔管</div>
+            </div>
+          </el-col>
+          <el-col :span="4">
+            <div class="stat-card warn">
+              <div class="stat-num">{{ monitorStats.infectionConfirmed || 0 }}</div>
+              <div class="stat-label">感染例次</div>
+            </div>
+          </el-col>
+          <el-col :span="4">
+            <div class="stat-card">
+              <div class="stat-num">{{ monitorStats.catheterDays || 0 }}</div>
+              <div class="stat-label">导管日（打卡）</div>
+            </div>
+          </el-col>
+          <el-col :span="8">
+            <div class="stat-card warn">
+              <div class="stat-num">{{ pct(monitorStats.infectionRate) }}‰</div>
+              <div class="stat-label">导管相关感染率</div>
+            </div>
+          </el-col>
+        </el-row>
+
+        <div class="toolbar">
+          <el-select v-model="monitorQuery.monitorType" clearable placeholder="监测类型" style="width:180px"
+                     @change="monitorQuery.pageNum = 1; loadMonitors()">
+            <el-option v-for="d in monitorTypeDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
+          </el-select>
+          <el-select v-model="monitorQuery.status" clearable placeholder="状态" style="width:110px"
+                     @change="monitorQuery.pageNum = 1; loadMonitors()">
+            <el-option v-for="d in monitorStatusDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
+          </el-select>
+          <el-select v-model="monitorQuery.infectionFlag" clearable placeholder="感染" style="width:110px"
+                     @change="monitorQuery.pageNum = 1; loadMonitors()">
+            <el-option :value="0" label="未感染"/>
+            <el-option :value="1" label="已确认感染"/>
+          </el-select>
+          <el-input v-model="monitorQuery.keyword" clearable data-testid="monitor-keyword" placeholder="监测编号/患者"
+                    style="width:180px" @keyup.enter="monitorQuery.pageNum = 1; loadMonitors()"/>
+          <el-button :icon="Search" data-testid="monitor-search" type="primary"
+                     @click="monitorQuery.pageNum = 1; loadMonitors()">查询
+          </el-button>
+          <el-button :icon="Refresh" @click="resetMonitorQuery">重置</el-button>
+          <div class="spacer"/>
+          <el-button v-perm="'emr:infectionMonitor:add'" data-testid="monitor-create" type="primary"
+                     @click="onMonitorCreate">监测登记
+          </el-button>
+        </div>
+
+        <el-table v-loading="monitorLoading" :data="monitorRows" border size="small" stripe>
+          <el-table-column label="监测编号" prop="monitorNo" width="170"/>
+          <el-table-column label="患者" prop="patientName" width="90"/>
+          <el-table-column label="类型" width="150">
+            <template #default="{ row }">{{ row.monitorTypeText }}</template>
+          </el-table-column>
+          <el-table-column label="科室" min-width="100" prop="deptName" show-overflow-tooltip/>
+          <el-table-column label="置入" width="95">
+            <template #default="{ row }">{{ fmtDate(row.insertDate) }}</template>
+          </el-table-column>
+          <el-table-column label="导管日" width="75">
+            <template #default="{ row }"><b>{{ row.catheterDays }}</b></template>
+          </el-table-column>
+          <el-table-column label="状态" width="80">
+            <template #default="{ row }">
+              <el-tag :type="Number(row.status) === 1 ? 'primary' : 'info'" size="small">{{ row.statusText }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="感染" width="80">
+            <template #default="{ row }">
+              <el-tag v-if="Number(row.infectionFlag) === 1" size="small" type="danger">已确认</el-tag>
+              <span v-else>—</span>
+            </template>
+          </el-table-column>
+          <el-table-column fixed="right" label="操作" width="200">
+            <template #default="{ row }">
+              <el-button data-testid="monitor-punch" link size="small" type="primary" @click="onPunch(row)">打卡
+              </el-button>
+              <el-button data-testid="monitor-daily" link size="small" type="warning" @click="onShowDaily(row)">导管日
+              </el-button>
+              <el-button v-if="Number(row.infectionFlag) !== 1" data-testid="monitor-infect" link size="small"
+                         type="danger" @click="onConfirmInfection(row)">感染确认
+              </el-button>
+              <el-button v-if="Number(row.status) === 1" data-testid="monitor-remove" link size="small"
+                         @click="onRemove(row)">拔管
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <el-pagination v-model:current-page="monitorQuery.pageNum" :page-size="monitorQuery.pageSize"
+                       :total="monitorTotal"
+                       layout="total, prev, pager, next" style="margin-top:8px" @current-change="loadMonitors"/>
+      </el-tab-pane>
+
+      <!-- ================= 手卫生依从性（共用组件，与菜单 617 独立页同源） ================= -->
+      <el-tab-pane label="手卫生依从性" name="hand">
+        <HandHygienePanel/>
+      </el-tab-pane>
+    </el-tabs>
+
+    <!-- 病例报卡弹窗 -->
+    <el-dialog v-model="caseOpenVisible" :title="caseOpenTitle" destroy-on-close width="560px">
+      <el-form label-width="90px">
+        <el-form-item v-if="Number(caseForm.leakFlag) === 1" label="漏报口径">
+          <el-tag type="danger">漏报调查发现后补报（统计单列）</el-tag>
+        </el-form-item>
+        <el-form-item label="患者">
+          <PatientSelect v-model="caseForm.patientId" data-testid="case-patient"
+                         @clear="anchor.registOptions = []; anchor.inpOptions = []"
+                         @select="onCasePatientSelect"/>
+        </el-form-item>
+        <el-form-item label="就诊类型">
+          <el-radio-group v-model="caseForm.visitType">
+            <el-radio :value="2">住院</el-radio>
+            <el-radio :value="1">门诊</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item v-if="caseForm.visitType === 1" label="门诊就诊">
+          <el-select v-model="anchor.registId" data-testid="case-regist" filterable placeholder="选择门诊就诊"
+                     style="width:100%">
+            <el-option v-for="r in anchor.registOptions" :key="r.id"
+                       :label="`${String(r.id).slice(-6)} ${r.deptName || ''} ${r.visitDate || ''}`" :value="r.id"/>
+          </el-select>
+        </el-form-item>
+        <el-form-item v-else label="住院记录">
+          <el-select v-model="anchor.inpId" data-testid="case-inp" filterable placeholder="选择住院记录"
+                     style="width:100%">
+            <el-option v-for="a in anchor.inpOptions" :key="a.admissionId"
+                       :label="`${String(a.admissionId).slice(-6)} ${a.deptName || ''}`" :value="a.admissionId"/>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="感染来源">
+          <el-select v-model="caseForm.caseSource" style="width:100%">
+            <el-option v-for="d in caseSourceDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="感染部位">
+          <el-select v-model="caseForm.infectionSite" data-testid="case-site" filterable placeholder="选择部位"
+                     style="width:100%">
+            <el-option v-for="d in siteDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="感染诊断">
+          <el-input v-model="caseForm.infectionDiag" data-testid="case-diag"/>
+        </el-form-item>
+        <el-form-item label="病原菌">
+          <el-input v-model="caseForm.pathogen" placeholder="可选"/>
+        </el-form-item>
+        <el-form-item label="标本来源">
+          <el-input v-model="caseForm.specimen" placeholder="可选"/>
+        </el-form-item>
+        <el-form-item label="感染日期">
+          <el-date-picker v-model="caseForm.infectDate" data-testid="case-infect-date" type="date"
+                          value-format="YYYY-MM-DD"/>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="caseForm.remark" :rows="2" type="textarea"/>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="caseOpenVisible = false">取消</el-button>
+        <el-button v-perm="'emr:infectionMonitor:add'" data-testid="case-save" type="primary" @click="onSaveCase">保存
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 监测登记弹窗 -->
+    <el-dialog v-model="monitorOpenVisible" destroy-on-close title="目标性监测登记" width="520px">
+      <el-form label-width="90px">
+        <el-form-item label="患者">
+          <PatientSelect v-model="monitorForm.patientId" data-testid="monitor-patient"
+                         @clear="monitorAnchor.inpOptions = []"
+                         @select="onMonitorPatientSelect"/>
+        </el-form-item>
+        <el-form-item label="住院记录">
+          <el-select v-model="monitorAnchor.inpId" data-testid="monitor-inp" filterable placeholder="选择住院记录（必选）"
+                     style="width:100%">
+            <el-option v-for="a in monitorAnchor.inpOptions" :key="a.admissionId"
+                       :label="`${String(a.admissionId).slice(-6)} ${a.deptName || ''}`" :value="a.admissionId"/>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="监测类型">
+          <el-select v-model="monitorForm.monitorType" data-testid="monitor-type" filterable style="width:100%">
+            <el-option v-for="d in monitorTypeDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="置入日期">
+          <el-date-picker v-model="monitorForm.insertDate" data-testid="monitor-insert-date" type="date"
+                          value-format="YYYY-MM-DD"/>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="monitorForm.remark" :rows="2" type="textarea"/>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="monitorOpenVisible = false">取消</el-button>
+        <el-button v-perm="'emr:infectionMonitor:add'" data-testid="monitor-save" type="primary" @click="onSaveMonitor">
+          保存
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 手卫生登记弹窗已随共用组件 HandHygienePanel 搬走（含 data-testid：hand-obs-date / hand-dept / hand-object / hand-opportunity / hand-comply / hand-save） -->
+
+    <!-- 导管日明细 -->
+    <el-dialog v-model="dailyVisible"
+               :title="`导管日明细 — ${dailyMonitor?.patientName || ''}（${dailyMonitor?.monitorTypeText || ''}）`"
+               width="480px">
+      <el-table :data="dailyRows" border data-testid="daily-table" max-height="400" size="small">
+        <el-table-column label="监测日期" width="120">
+          <template #default="{ row }">{{ fmtDate(row.monitorDate) }}</template>
+        </el-table-column>
+        <el-table-column label="记录人" prop="recorderName" width="100"/>
+        <el-table-column label="打卡时间" width="160">
+          <template #default="{ row }">{{ fmtTime(row.recordTime) }}</template>
+        </el-table-column>
+        <el-table-column label="备注" prop="remark" show-overflow-tooltip/>
+      </el-table>
+      <div style="margin-top:8px">合计导管日：<b data-testid="daily-total">{{ dailyRows.length }}</b> 天</div>
+    </el-dialog>
+  </div>
+</template>
+
 <script setup>
 /**
  * 院感监测（L10，菜单 614 / 路由 /infection-monitor）
@@ -376,364 +734,6 @@ onMounted(async () => {
   await Promise.all([loadCaseStats(), loadCases(), loadMonitorStats(), loadMonitors()])
 })
 </script>
-
-<template>
-  <div class="infection-monitor" data-testid="infection-monitor-view">
-    <el-tabs v-model="activeTab">
-      <!-- ================= 病例报告卡 ================= -->
-      <el-tab-pane label="院感病例" name="case">
-        <el-row :gutter="8" class="stat-row" data-testid="case-stats">
-          <el-col :span="4">
-            <div class="stat-card">
-              <div class="stat-num">{{ caseStats.pendingAudit || 0 }}</div>
-              <div class="stat-label">待核实</div>
-            </div>
-          </el-col>
-          <el-col :span="4">
-            <div class="stat-card">
-              <div class="stat-num">{{ caseStats.confirmed || 0 }}</div>
-              <div class="stat-label">已确认</div>
-            </div>
-          </el-col>
-          <el-col :span="4">
-            <div class="stat-card">
-              <div class="stat-num">{{ caseStats.excluded || 0 }}</div>
-              <div class="stat-label">已排除</div>
-            </div>
-          </el-col>
-          <el-col :span="4">
-            <div class="stat-card warn">
-              <div class="stat-num">{{ caseStats.leakResubmit || 0 }}</div>
-              <div class="stat-label">漏报补报</div>
-            </div>
-          </el-col>
-          <el-col :span="4">
-            <div class="stat-card warn">
-              <div class="stat-num">{{ caseStats.hospitalInfection || 0 }}</div>
-              <div class="stat-label">院内感染（确认）</div>
-            </div>
-          </el-col>
-          <el-col :span="4">
-            <div class="stat-card">
-              <div class="stat-num">{{ caseStats.todayNew || 0 }}</div>
-              <div class="stat-label">今日新增</div>
-            </div>
-          </el-col>
-        </el-row>
-
-        <div class="toolbar">
-          <el-select v-model="caseQuery.caseStatus" clearable placeholder="状态" style="width:120px"
-                     @change="caseQuery.pageNum = 1; loadCases()">
-            <el-option v-for="d in caseStatusDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
-          </el-select>
-          <el-select v-model="caseQuery.caseSource" clearable placeholder="感染来源" style="width:130px"
-                     @change="caseQuery.pageNum = 1; loadCases()">
-            <el-option v-for="d in caseSourceDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
-          </el-select>
-          <el-select v-model="caseQuery.leakFlag" clearable data-testid="case-leak-filter" placeholder="漏报口径"
-                     style="width:130px" @change="caseQuery.pageNum = 1; loadCases()">
-            <el-option :value="0" label="正常报卡"/>
-            <el-option :value="1" label="漏报补报"/>
-          </el-select>
-          <el-input v-model="caseQuery.keyword" clearable data-testid="case-keyword" placeholder="病例编号/患者/诊断"
-                    style="width:220px" @keyup.enter="caseQuery.pageNum = 1; loadCases()"/>
-          <el-button :icon="Search" data-testid="case-search" type="primary"
-                     @click="caseQuery.pageNum = 1; loadCases()">查询
-          </el-button>
-          <el-button :icon="Refresh" @click="resetCaseQuery">重置</el-button>
-          <div class="spacer"/>
-          <el-button v-perm="'emr:infectionMonitor:add'" data-testid="case-create-leak" plain type="warning"
-                     @click="onCaseCreate(true)">漏报补报建卡
-          </el-button>
-          <el-button v-perm="'emr:infectionMonitor:add'" data-testid="case-create" type="primary"
-                     @click="onCaseCreate(false)">院感报卡
-          </el-button>
-        </div>
-
-        <el-table v-loading="caseLoading" :data="caseRows" border size="small" stripe>
-          <el-table-column label="病例编号" prop="caseNo" width="170"/>
-          <el-table-column label="患者" prop="patientName" width="90"/>
-          <el-table-column label="就诊" width="70">
-            <template #default="{ row }">{{ row.visitTypeText }}</template>
-          </el-table-column>
-          <el-table-column label="发现科室" min-width="110" prop="deptName" show-overflow-tooltip/>
-          <el-table-column label="来源" width="90">
-            <template #default="{ row }">{{ row.caseSourceText }}</template>
-          </el-table-column>
-          <el-table-column label="部位" width="90">
-            <template #default="{ row }">{{ row.infectionSiteText || siteText(row.infectionSite) }}</template>
-          </el-table-column>
-          <el-table-column label="感染诊断" min-width="130" prop="infectionDiag" show-overflow-tooltip/>
-          <el-table-column label="病原菌" prop="pathogen" show-overflow-tooltip width="100"/>
-          <el-table-column label="感染日期" width="100">
-            <template #default="{ row }">{{ fmtDate(row.infectDate) }}</template>
-          </el-table-column>
-          <el-table-column label="状态" width="90">
-            <template #default="{ row }">
-              <el-tag
-                  :type="Number(row.caseStatus) === 2 ? 'success' : Number(row.caseStatus) === 3 ? 'info' : 'warning'"
-                  size="small">{{ row.caseStatusText }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="漏报" width="70">
-            <template #default="{ row }">
-              <el-tag v-if="Number(row.leakFlag) === 1" size="small" type="danger">漏报补</el-tag>
-              <span v-else>—</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="上报人" prop="reportName" width="80"/>
-          <el-table-column fixed="right" label="操作" width="130">
-            <template #default="{ row }">
-              <template v-if="Number(row.caseStatus) === 1">
-                <el-button data-testid="case-confirm" link size="small" type="success" @click="doCaseAudit(row, 2)">
-                  确认
-                </el-button>
-                <el-button data-testid="case-exclude" link size="small" type="danger" @click="doCaseAudit(row, 3)">
-                  排除
-                </el-button>
-              </template>
-              <span v-else class="muted">已核实</span>
-            </template>
-          </el-table-column>
-        </el-table>
-        <el-pagination v-model:current-page="caseQuery.pageNum" :page-size="caseQuery.pageSize" :total="caseTotal"
-                       layout="total, prev, pager, next" style="margin-top:8px" @current-change="loadCases"/>
-      </el-tab-pane>
-
-      <!-- ================= 目标性监测 ================= -->
-      <el-tab-pane label="目标性监测" name="monitor">
-        <el-row :gutter="8" class="stat-row" data-testid="monitor-stats">
-          <el-col :span="4">
-            <div class="stat-card">
-              <div class="stat-num">{{ monitorStats.inCatheter || 0 }}</div>
-              <div class="stat-label">在管</div>
-            </div>
-          </el-col>
-          <el-col :span="4">
-            <div class="stat-card">
-              <div class="stat-num">{{ monitorStats.removed || 0 }}</div>
-              <div class="stat-label">已拔管</div>
-            </div>
-          </el-col>
-          <el-col :span="4">
-            <div class="stat-card warn">
-              <div class="stat-num">{{ monitorStats.infectionConfirmed || 0 }}</div>
-              <div class="stat-label">感染例次</div>
-            </div>
-          </el-col>
-          <el-col :span="4">
-            <div class="stat-card">
-              <div class="stat-num">{{ monitorStats.catheterDays || 0 }}</div>
-              <div class="stat-label">导管日（打卡）</div>
-            </div>
-          </el-col>
-          <el-col :span="8">
-            <div class="stat-card warn">
-              <div class="stat-num">{{ pct(monitorStats.infectionRate) }}‰</div>
-              <div class="stat-label">导管相关感染率</div>
-            </div>
-          </el-col>
-        </el-row>
-
-        <div class="toolbar">
-          <el-select v-model="monitorQuery.monitorType" clearable placeholder="监测类型" style="width:180px"
-                     @change="monitorQuery.pageNum = 1; loadMonitors()">
-            <el-option v-for="d in monitorTypeDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
-          </el-select>
-          <el-select v-model="monitorQuery.status" clearable placeholder="状态" style="width:110px"
-                     @change="monitorQuery.pageNum = 1; loadMonitors()">
-            <el-option v-for="d in monitorStatusDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
-          </el-select>
-          <el-select v-model="monitorQuery.infectionFlag" clearable placeholder="感染" style="width:110px"
-                     @change="monitorQuery.pageNum = 1; loadMonitors()">
-            <el-option :value="0" label="未感染"/>
-            <el-option :value="1" label="已确认感染"/>
-          </el-select>
-          <el-input v-model="monitorQuery.keyword" clearable data-testid="monitor-keyword" placeholder="监测编号/患者"
-                    style="width:180px" @keyup.enter="monitorQuery.pageNum = 1; loadMonitors()"/>
-          <el-button :icon="Search" data-testid="monitor-search" type="primary"
-                     @click="monitorQuery.pageNum = 1; loadMonitors()">查询
-          </el-button>
-          <el-button :icon="Refresh" @click="resetMonitorQuery">重置</el-button>
-          <div class="spacer"/>
-          <el-button v-perm="'emr:infectionMonitor:add'" data-testid="monitor-create" type="primary"
-                     @click="onMonitorCreate">监测登记
-          </el-button>
-        </div>
-
-        <el-table v-loading="monitorLoading" :data="monitorRows" border size="small" stripe>
-          <el-table-column label="监测编号" prop="monitorNo" width="170"/>
-          <el-table-column label="患者" prop="patientName" width="90"/>
-          <el-table-column label="类型" width="150">
-            <template #default="{ row }">{{ row.monitorTypeText }}</template>
-          </el-table-column>
-          <el-table-column label="科室" min-width="100" prop="deptName" show-overflow-tooltip/>
-          <el-table-column label="置入" width="95">
-            <template #default="{ row }">{{ fmtDate(row.insertDate) }}</template>
-          </el-table-column>
-          <el-table-column label="导管日" width="75">
-            <template #default="{ row }"><b>{{ row.catheterDays }}</b></template>
-          </el-table-column>
-          <el-table-column label="状态" width="80">
-            <template #default="{ row }">
-              <el-tag :type="Number(row.status) === 1 ? 'primary' : 'info'" size="small">{{ row.statusText }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="感染" width="80">
-            <template #default="{ row }">
-              <el-tag v-if="Number(row.infectionFlag) === 1" size="small" type="danger">已确认</el-tag>
-              <span v-else>—</span>
-            </template>
-          </el-table-column>
-          <el-table-column fixed="right" label="操作" width="200">
-            <template #default="{ row }">
-              <el-button data-testid="monitor-punch" link size="small" type="primary" @click="onPunch(row)">打卡
-              </el-button>
-              <el-button data-testid="monitor-daily" link size="small" type="warning" @click="onShowDaily(row)">导管日
-              </el-button>
-              <el-button v-if="Number(row.infectionFlag) !== 1" data-testid="monitor-infect" link size="small"
-                         type="danger" @click="onConfirmInfection(row)">感染确认
-              </el-button>
-              <el-button v-if="Number(row.status) === 1" data-testid="monitor-remove" link size="small"
-                         @click="onRemove(row)">拔管
-              </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-        <el-pagination v-model:current-page="monitorQuery.pageNum" :page-size="monitorQuery.pageSize"
-                       :total="monitorTotal"
-                       layout="total, prev, pager, next" style="margin-top:8px" @current-change="loadMonitors"/>
-      </el-tab-pane>
-
-      <!-- ================= 手卫生依从性（共用组件，与菜单 617 独立页同源） ================= -->
-      <el-tab-pane label="手卫生依从性" name="hand">
-        <HandHygienePanel/>
-      </el-tab-pane>
-    </el-tabs>
-
-    <!-- 病例报卡弹窗 -->
-    <el-dialog v-model="caseOpenVisible" :title="caseOpenTitle" destroy-on-close width="560px">
-      <el-form label-width="90px">
-        <el-form-item v-if="Number(caseForm.leakFlag) === 1" label="漏报口径">
-          <el-tag type="danger">漏报调查发现后补报（统计单列）</el-tag>
-        </el-form-item>
-        <el-form-item label="患者">
-          <PatientSelect v-model="caseForm.patientId" data-testid="case-patient"
-                         @clear="anchor.registOptions = []; anchor.inpOptions = []"
-                         @select="onCasePatientSelect"/>
-        </el-form-item>
-        <el-form-item label="就诊类型">
-          <el-radio-group v-model="caseForm.visitType">
-            <el-radio :value="2">住院</el-radio>
-            <el-radio :value="1">门诊</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item v-if="caseForm.visitType === 1" label="门诊就诊">
-          <el-select v-model="anchor.registId" data-testid="case-regist" filterable placeholder="选择门诊就诊"
-                     style="width:100%">
-            <el-option v-for="r in anchor.registOptions" :key="r.id"
-                       :label="`${String(r.id).slice(-6)} ${r.deptName || ''} ${r.visitDate || ''}`" :value="r.id"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item v-else label="住院记录">
-          <el-select v-model="anchor.inpId" data-testid="case-inp" filterable placeholder="选择住院记录"
-                     style="width:100%">
-            <el-option v-for="a in anchor.inpOptions" :key="a.admissionId"
-                       :label="`${String(a.admissionId).slice(-6)} ${a.deptName || ''}`" :value="a.admissionId"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="感染来源">
-          <el-select v-model="caseForm.caseSource" style="width:100%">
-            <el-option v-for="d in caseSourceDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="感染部位">
-          <el-select v-model="caseForm.infectionSite" data-testid="case-site" filterable placeholder="选择部位"
-                     style="width:100%">
-            <el-option v-for="d in siteDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="感染诊断">
-          <el-input v-model="caseForm.infectionDiag" data-testid="case-diag"/>
-        </el-form-item>
-        <el-form-item label="病原菌">
-          <el-input v-model="caseForm.pathogen" placeholder="可选"/>
-        </el-form-item>
-        <el-form-item label="标本来源">
-          <el-input v-model="caseForm.specimen" placeholder="可选"/>
-        </el-form-item>
-        <el-form-item label="感染日期">
-          <el-date-picker v-model="caseForm.infectDate" data-testid="case-infect-date" type="date"
-                          value-format="YYYY-MM-DD"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="caseForm.remark" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="caseOpenVisible = false">取消</el-button>
-        <el-button v-perm="'emr:infectionMonitor:add'" data-testid="case-save" type="primary" @click="onSaveCase">保存
-        </el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 监测登记弹窗 -->
-    <el-dialog v-model="monitorOpenVisible" destroy-on-close title="目标性监测登记" width="520px">
-      <el-form label-width="90px">
-        <el-form-item label="患者">
-          <PatientSelect v-model="monitorForm.patientId" data-testid="monitor-patient"
-                         @clear="monitorAnchor.inpOptions = []"
-                         @select="onMonitorPatientSelect"/>
-        </el-form-item>
-        <el-form-item label="住院记录">
-          <el-select v-model="monitorAnchor.inpId" data-testid="monitor-inp" filterable placeholder="选择住院记录（必选）"
-                     style="width:100%">
-            <el-option v-for="a in monitorAnchor.inpOptions" :key="a.admissionId"
-                       :label="`${String(a.admissionId).slice(-6)} ${a.deptName || ''}`" :value="a.admissionId"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="监测类型">
-          <el-select v-model="monitorForm.monitorType" data-testid="monitor-type" filterable style="width:100%">
-            <el-option v-for="d in monitorTypeDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="置入日期">
-          <el-date-picker v-model="monitorForm.insertDate" data-testid="monitor-insert-date" type="date"
-                          value-format="YYYY-MM-DD"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="monitorForm.remark" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="monitorOpenVisible = false">取消</el-button>
-        <el-button v-perm="'emr:infectionMonitor:add'" data-testid="monitor-save" type="primary" @click="onSaveMonitor">
-          保存
-        </el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 手卫生登记弹窗已随共用组件 HandHygienePanel 搬走（含 data-testid：hand-obs-date / hand-dept / hand-object / hand-opportunity / hand-comply / hand-save） -->
-
-    <!-- 导管日明细 -->
-    <el-dialog v-model="dailyVisible"
-               :title="`导管日明细 — ${dailyMonitor?.patientName || ''}（${dailyMonitor?.monitorTypeText || ''}）`"
-               width="480px">
-      <el-table :data="dailyRows" border data-testid="daily-table" max-height="400" size="small">
-        <el-table-column label="监测日期" width="120">
-          <template #default="{ row }">{{ fmtDate(row.monitorDate) }}</template>
-        </el-table-column>
-        <el-table-column label="记录人" prop="recorderName" width="100"/>
-        <el-table-column label="打卡时间" width="160">
-          <template #default="{ row }">{{ fmtTime(row.recordTime) }}</template>
-        </el-table-column>
-        <el-table-column label="备注" prop="remark" show-overflow-tooltip/>
-      </el-table>
-      <div style="margin-top:8px">合计导管日：<b data-testid="daily-total">{{ dailyRows.length }}</b> 天</div>
-    </el-dialog>
-  </div>
-</template>
 
 <style scoped>
 .stat-row {

@@ -1,22 +1,285 @@
-<script setup lang="js">
-import {ref, onMounted, reactive, computed} from 'vue'
+<template>
+  <div>
+    <!-- 两卡式列表页：查询卡与表格卡分隔开；页面自身不再加内边距（直接用外层布局的 24px），
+         面板高随内容自适应；表格限最大高、超高内部滚动，分页在流内紧跟表格底 -->
+    <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
+      <div class="flex items-start justify-between gap-4">
+        <el-form :model="searchForm" inline>
+          <el-form-item label="用户名">
+            <el-input
+                v-model="searchForm.userName"
+                clearable
+                placeholder="请输入用户名"
+                style="width: 180px"
+                @keyup.enter="handleSearch"
+            />
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-select v-model="searchForm.status" clearable placeholder="全部" style="width: 150px">
+              <el-option :value="1" label="启用"/>
+              <el-option :value="0" label="禁用"/>
+            </el-select>
+          </el-form-item>
+          <el-form-item>
+            <el-button :icon="Search" type="primary" @click="handleSearch">搜索</el-button>
+            <el-button :icon="Refresh" @click="handleReset">重置</el-button>
+          </el-form-item>
+        </el-form>
+        <!-- 主操作区：新增/批量等动作统一靠右，与查询条件视觉分离 -->
+        <div class="flex shrink-0 items-start gap-3">
+          <el-button v-perm="'system:user:add'" :icon="Plus" type="primary" @click="handleAdd">新增用户</el-button>
+        </div>
+      </div>
+    </el-card>
+
+    <!-- 表格卡：数据列 min-width 摊满卡片宽度；body 置 0 内边距让表格全幅贴边 -->
+    <el-card class="table-card" shadow="never">
+      <el-table
+          v-loading="loading"
+          :data="tableData"
+          :max-height="tableMaxHeight"
+          :row-style="{ cursor: 'pointer' }"
+          stripe
+          @row-click="handleRowClick"
+      >
+        <el-table-column label="用户名" min-width="120" prop="userName"/>
+        <el-table-column label="姓名" min-width="100" prop="realName"/>
+        <el-table-column label="用户类型" min-width="110" prop="userType">
+          <template #default="{ row }">
+            <el-tag
+                :type="row.userType === 1 ? 'primary' : row.userType === 2 ? 'success' : row.userType === 3 ? 'warning' : 'info'">
+              {{
+                row.userType === 1 ? '院内用户' : row.userType === 2 ? '院外用户' : row.userType === 3 ? '患者' : '其他'
+              }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="最后登录时间" min-width="180" prop="lastLoginTime">
+          <template #default="{ row }">
+            {{ row.lastLoginTime }}
+          </template>
+        </el-table-column>
+        <el-table-column label="最后登录IP" min-width="130" prop="lastLoginIp">
+          <template #default="{ row }">
+            {{ row.lastLoginIp }}
+          </template>
+        </el-table-column>
+        <el-table-column align="center" label="登录次数" min-width="90" prop="loginCount">
+          <template #default="{ row }">
+            {{ row.loginCount }}
+          </template>
+        </el-table-column>
+        <el-table-column label="密码更新时间" min-width="180" prop="passwordUpdateTime">
+          <template #default="{ row }">
+            {{ row.passwordUpdateTime }}
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" min-width="80" prop="status">
+          <template #default="{ row }">
+            <el-tag :type="row.status == 1 ? 'success' : 'danger'" size="small">
+              {{ getDictLabel(USER_STATUS, row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="创建时间" min-width="180" prop="createTime"/>
+        <el-table-column fixed="right" label="操作" width="300">
+          <template #default="{ row }">
+            <el-button v-if="canEdit(row)" v-perm="'system:user:edit'" :icon="Edit" link type="primary"
+                       @click.stop="handleEdit(row)">编辑
+            </el-button>
+            <el-button v-if="canManage(row)" v-perm="'system:user:edit'" link type="warning"
+                       @click.stop="handleResetPassword(row)">重置密码
+            </el-button>
+            <el-button v-if="row.userName !== 'admin' && canManage(row)" v-perm="'system:user:delete'" :icon="Delete"
+                       link type="danger" @click.stop="handleDelete(row)">
+              删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页：在流内紧跟表格底，表格多高它就贴在哪，不钉面板底 -->
+      <div ref="footerRef" class="list-footer flex items-center justify-end">
+        <el-pagination
+            v-model:current-page="pagination.pageNum"
+            v-model:page-size="pagination.pageSize"
+            :page-sizes="PAGE_SIZES"
+            :total="pagination.total"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+        />
+      </div>
+    </el-card>
+
+    <!-- 新增/编辑对话框：单 form，三段上下排布（用户信息 → 员工信息 → 岗位），段内字段两列 -->
+    <el-dialog
+        v-model="dialogVisible"
+        :title="dialogTitle"
+        top="5vh"
+        width="980px"
+        @close="dialogVisible = false"
+    >
+      <div class="max-h-[calc(85vh-120px)] overflow-y-auto pr-1">
+        <el-form
+            ref="formRef"
+            :disabled="viewOnly"
+            :model="formData"
+            :rules="formRules"
+            label-width="90px"
+        >
+          <h4 class="mb-3 flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+            <span class="h-3.5 w-1 rounded bg-blue-500"></span>用户信息
+          </h4>
+          <div class="grid grid-cols-2 gap-x-4">
+            <el-form-item label="用户类型" prop="userType">
+              <el-radio-group v-model="formData.userType" :disabled="!!formData.id">
+                <el-radio :value="1">院内用户</el-radio>
+                <el-radio :value="2">院外用户</el-radio>
+                <el-radio :value="3">患者</el-radio>
+                <el-radio :value="4">其他</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </div>
+          <div class="grid grid-cols-3 gap-x-4">
+            <el-form-item label="工号" prop="empNo">
+              <el-input v-model="formData.empNo" disabled placeholder="工号由系统自动生成"/>
+            </el-form-item>
+            <el-form-item label="用户名" prop="userName">
+              <el-input
+                  v-model="formData.userName"
+                  :disabled="!!formData.id"
+                  placeholder="请输入用户名"
+              />
+            </el-form-item>
+            <el-form-item label="真实姓名" prop="realName">
+              <el-input v-model="formData.realName" placeholder="请输入真实姓名"/>
+            </el-form-item>
+            <el-form-item label="状态" prop="status">
+              <el-radio-group v-model="formData.status" :disabled="formData.userName === 'admin'">
+                <el-radio
+                    v-for="item in USER_STATUS"
+                    :key="item.value"
+                    :value="item.value"
+                >
+                  {{ item.label }}
+                </el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </div>
+
+          <template v-if="isInternal">
+            <h4 class="mb-3 mt-5 flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+              <span class="h-3.5 w-1 rounded bg-blue-500"></span>员工信息
+            </h4>
+            <div class="grid grid-cols-3 gap-x-4">
+              <el-form-item label="性别" prop="gender" required>
+                <el-radio-group v-model="formData.gender">
+                  <el-radio :value="1">男</el-radio>
+                  <el-radio :value="2">女</el-radio>
+                </el-radio-group>
+              </el-form-item>
+              <el-form-item label="出生日期" prop="birthDate" required>
+                <el-date-picker
+                    v-model="formData.birthDate"
+                    class="w-full"
+                    placeholder="请选择出生日期"
+                    type="date"
+                    value-format="YYYY-MM-DD"
+                />
+              </el-form-item>
+              <el-form-item label="身份证号" prop="idCard" required>
+                <el-input v-model="formData.idCard" placeholder="请输入身份证号"/>
+              </el-form-item>
+            </div>
+            <div class="grid grid-cols-3 gap-x-4">
+              <el-form-item label="联系电话" prop="phone" required>
+                <el-input v-model="formData.phone" placeholder="请输入手机号"/>
+              </el-form-item>
+              <el-form-item label="邮箱" prop="email" required>
+                <el-input v-model="formData.email" placeholder="请输入邮箱"/>
+              </el-form-item>
+              <el-form-item label="职称" prop="title" required>
+                <el-select v-model="formData.title" class="w-full" clearable filterable placeholder="请选择职称">
+                  <el-option
+                      v-for="item in titleOptions"
+                      :key="item.dictValue"
+                      :label="item.dictLabel"
+                      :value="item.dictValue"
+                  />
+                </el-select>
+              </el-form-item>
+            </div>
+            <div class="grid grid-cols-3 gap-x-4">
+              <el-form-item label="学历" prop="education" required>
+                <el-select v-model="formData.education" class="w-full" clearable placeholder="请选择学历">
+                  <el-option
+                      v-for="item in educationOptions"
+                      :key="item.dictValue"
+                      :label="item.dictLabel"
+                      :value="item.dictValue"
+                  />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="职位">
+                <el-select v-model="formData.position" class="w-full" clearable filterable placeholder="请选择职位">
+                  <el-option
+                      v-for="item in positionOptions"
+                      :key="item.dictValue"
+                      :label="item.dictLabel"
+                      :value="item.dictValue"
+                  />
+                </el-select>
+              </el-form-item>
+            </div>
+            <el-form-item label="专业特长">
+              <el-input v-model="formData.specialty" :rows="2" placeholder="请输入专业特长" type="textarea"/>
+            </el-form-item>
+          </template>
+        </el-form>
+
+        <template v-if="isInternal">
+          <h4 class="mb-3 mt-5 flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+            <span class="h-3.5 w-1 rounded bg-blue-500"></span>岗位
+          </h4>
+          <EmployeePostTable
+              v-model="postRows"
+              :dept-list="deptList"
+              :disabled="viewOnly"
+              :role-list="roleList"
+          />
+        </template>
+      </div>
+      <template #footer>
+        <el-button @click="dialogVisible = false">{{ viewOnly ? '关闭' : '取消' }}</el-button>
+        <el-button v-if="!viewOnly" v-perm="['system:user:add','system:user:edit']" :loading="submitLoading"
+                   type="primary" @click="handleSubmit">
+          确定
+        </el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script lang="js" setup>
+import {computed, onMounted, reactive, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
-import {Plus, Search, Edit, Delete, Refresh} from '@element-plus/icons-vue'
+import {Delete, Edit, Plus, Refresh, Search} from '@element-plus/icons-vue'
 import {
-  getUserList,
-  getUserDetail,
   createUser,
-  updateUser,
   deleteUser,
-  resetPassword,
   getDepartmentTree,
+  getDictDataMapList,
   getRoleList,
-  getDictDataMapList
+  getUserDetail,
+  getUserList,
+  resetPassword,
+  updateUser
 } from '@/api/system'
-import {USER_STATUS, getDictLabel} from '@/lib/dict'
-import {PAGE_SIZES, DEFAULT_PAGE_SIZE} from '@/lib/pagination'
+import {getDictLabel, USER_STATUS} from '@/lib/dict'
+import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import EmployeePostTable from '@/components/his/EmployeePostTable.vue'
-import {postsFromApi, postsToPayload, checkPosts} from '@/lib/employeePost'
+import {checkPosts, postsFromApi, postsToPayload} from '@/lib/employeePost'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
 
 const loading = ref(false)
@@ -386,266 +649,3 @@ const handleCurrentChange = (val) => {
   loadData()
 }
 </script>
-
-<template>
-  <div>
-    <!-- 两卡式列表页：查询卡与表格卡分隔开；页面自身不再加内边距（直接用外层布局的 24px），
-         面板高随内容自适应；表格限最大高、超高内部滚动，分页在流内紧跟表格底 -->
-    <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
-      <div class="flex items-start justify-between gap-4">
-        <el-form :model="searchForm" inline>
-          <el-form-item label="用户名">
-            <el-input
-                v-model="searchForm.userName"
-                placeholder="请输入用户名"
-                clearable
-                style="width: 180px"
-                @keyup.enter="handleSearch"
-            />
-          </el-form-item>
-          <el-form-item label="状态">
-            <el-select v-model="searchForm.status" placeholder="全部" clearable style="width: 150px">
-              <el-option label="启用" :value="1"/>
-              <el-option label="禁用" :value="0"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item>
-            <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
-            <el-button :icon="Refresh" @click="handleReset">重置</el-button>
-          </el-form-item>
-        </el-form>
-        <!-- 主操作区：新增/批量等动作统一靠右，与查询条件视觉分离 -->
-        <div class="flex shrink-0 items-start gap-3">
-          <el-button v-perm="'system:user:add'" type="primary" :icon="Plus" @click="handleAdd">新增用户</el-button>
-        </div>
-      </div>
-    </el-card>
-
-    <!-- 表格卡：数据列 min-width 摊满卡片宽度；body 置 0 内边距让表格全幅贴边 -->
-    <el-card class="table-card" shadow="never">
-      <el-table
-          :data="tableData"
-          v-loading="loading"
-          stripe
-          :max-height="tableMaxHeight"
-          :row-style="{ cursor: 'pointer' }"
-          @row-click="handleRowClick"
-      >
-        <el-table-column prop="userName" label="用户名" min-width="120"/>
-        <el-table-column prop="realName" label="姓名" min-width="100"/>
-        <el-table-column prop="userType" label="用户类型" min-width="110">
-          <template #default="{ row }">
-            <el-tag
-                :type="row.userType === 1 ? 'primary' : row.userType === 2 ? 'success' : row.userType === 3 ? 'warning' : 'info'">
-              {{
-                row.userType === 1 ? '院内用户' : row.userType === 2 ? '院外用户' : row.userType === 3 ? '患者' : '其他'
-              }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="lastLoginTime" label="最后登录时间" min-width="180">
-          <template #default="{ row }">
-            {{ row.lastLoginTime }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="lastLoginIp" label="最后登录IP" min-width="130">
-          <template #default="{ row }">
-            {{ row.lastLoginIp }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="loginCount" label="登录次数" min-width="90" align="center">
-          <template #default="{ row }">
-            {{ row.loginCount }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="passwordUpdateTime" label="密码更新时间" min-width="180">
-          <template #default="{ row }">
-            {{ row.passwordUpdateTime }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" min-width="80">
-          <template #default="{ row }">
-            <el-tag :type="row.status == 1 ? 'success' : 'danger'" size="small">
-              {{ getDictLabel(USER_STATUS, row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" min-width="180"/>
-        <el-table-column label="操作" width="300" fixed="right">
-          <template #default="{ row }">
-            <el-button v-if="canEdit(row)" v-perm="'system:user:edit'" type="primary" link :icon="Edit"
-                       @click.stop="handleEdit(row)">编辑
-            </el-button>
-            <el-button v-if="canManage(row)" v-perm="'system:user:edit'" type="warning" link
-                       @click.stop="handleResetPassword(row)">重置密码
-            </el-button>
-            <el-button v-if="row.userName !== 'admin' && canManage(row)" v-perm="'system:user:delete'" type="danger"
-                       link :icon="Delete" @click.stop="handleDelete(row)">
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <!-- 分页：在流内紧跟表格底，表格多高它就贴在哪，不钉面板底 -->
-      <div ref="footerRef" class="list-footer flex items-center justify-end">
-        <el-pagination
-            v-model:current-page="pagination.pageNum"
-            v-model:page-size="pagination.pageSize"
-            :page-sizes="PAGE_SIZES"
-            :total="pagination.total"
-            layout="total, sizes, prev, pager, next, jumper"
-            @size-change="handleSizeChange"
-            @current-change="handleCurrentChange"
-        />
-      </div>
-    </el-card>
-
-    <!-- 新增/编辑对话框：单 form，三段上下排布（用户信息 → 员工信息 → 岗位），段内字段两列 -->
-    <el-dialog
-        v-model="dialogVisible"
-        :title="dialogTitle"
-        width="980px"
-        top="5vh"
-        @close="dialogVisible = false"
-    >
-      <div class="max-h-[calc(85vh-120px)] overflow-y-auto pr-1">
-        <el-form
-            ref="formRef"
-            :model="formData"
-            :rules="formRules"
-            :disabled="viewOnly"
-            label-width="90px"
-        >
-          <h4 class="mb-3 flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-            <span class="h-3.5 w-1 rounded bg-blue-500"></span>用户信息
-          </h4>
-          <div class="grid grid-cols-2 gap-x-4">
-            <el-form-item label="用户类型" prop="userType">
-              <el-radio-group v-model="formData.userType" :disabled="!!formData.id">
-                <el-radio :value="1">院内用户</el-radio>
-                <el-radio :value="2">院外用户</el-radio>
-                <el-radio :value="3">患者</el-radio>
-                <el-radio :value="4">其他</el-radio>
-              </el-radio-group>
-            </el-form-item>
-          </div>
-          <div class="grid grid-cols-3 gap-x-4">
-            <el-form-item label="工号" prop="empNo">
-              <el-input v-model="formData.empNo" placeholder="工号由系统自动生成" disabled/>
-            </el-form-item>
-            <el-form-item label="用户名" prop="userName">
-              <el-input
-                  v-model="formData.userName"
-                  placeholder="请输入用户名"
-                  :disabled="!!formData.id"
-              />
-            </el-form-item>
-            <el-form-item label="真实姓名" prop="realName">
-              <el-input v-model="formData.realName" placeholder="请输入真实姓名"/>
-            </el-form-item>
-            <el-form-item label="状态" prop="status">
-              <el-radio-group v-model="formData.status" :disabled="formData.userName === 'admin'">
-                <el-radio
-                    v-for="item in USER_STATUS"
-                    :key="item.value"
-                    :value="item.value"
-                >
-                  {{ item.label }}
-                </el-radio>
-              </el-radio-group>
-            </el-form-item>
-          </div>
-
-          <template v-if="isInternal">
-            <h4 class="mb-3 mt-5 flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-              <span class="h-3.5 w-1 rounded bg-blue-500"></span>员工信息
-            </h4>
-            <div class="grid grid-cols-3 gap-x-4">
-              <el-form-item label="性别" prop="gender" required>
-                <el-radio-group v-model="formData.gender">
-                  <el-radio :value="1">男</el-radio>
-                  <el-radio :value="2">女</el-radio>
-                </el-radio-group>
-              </el-form-item>
-              <el-form-item label="出生日期" prop="birthDate" required>
-                <el-date-picker
-                    v-model="formData.birthDate"
-                    type="date"
-                    placeholder="请选择出生日期"
-                    value-format="YYYY-MM-DD"
-                    class="w-full"
-                />
-              </el-form-item>
-              <el-form-item label="身份证号" prop="idCard" required>
-                <el-input v-model="formData.idCard" placeholder="请输入身份证号"/>
-              </el-form-item>
-            </div>
-            <div class="grid grid-cols-3 gap-x-4">
-              <el-form-item label="联系电话" prop="phone" required>
-                <el-input v-model="formData.phone" placeholder="请输入手机号"/>
-              </el-form-item>
-              <el-form-item label="邮箱" prop="email" required>
-                <el-input v-model="formData.email" placeholder="请输入邮箱"/>
-              </el-form-item>
-              <el-form-item label="职称" prop="title" required>
-                <el-select v-model="formData.title" placeholder="请选择职称" clearable filterable class="w-full">
-                  <el-option
-                      v-for="item in titleOptions"
-                      :key="item.dictValue"
-                      :label="item.dictLabel"
-                      :value="item.dictValue"
-                  />
-                </el-select>
-              </el-form-item>
-            </div>
-            <div class="grid grid-cols-3 gap-x-4">
-              <el-form-item label="学历" prop="education" required>
-                <el-select v-model="formData.education" placeholder="请选择学历" clearable class="w-full">
-                  <el-option
-                      v-for="item in educationOptions"
-                      :key="item.dictValue"
-                      :label="item.dictLabel"
-                      :value="item.dictValue"
-                  />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="职位">
-                <el-select v-model="formData.position" placeholder="请选择职位" clearable filterable class="w-full">
-                  <el-option
-                      v-for="item in positionOptions"
-                      :key="item.dictValue"
-                      :label="item.dictLabel"
-                      :value="item.dictValue"
-                  />
-                </el-select>
-              </el-form-item>
-            </div>
-            <el-form-item label="专业特长">
-              <el-input type="textarea" v-model="formData.specialty" :rows="2" placeholder="请输入专业特长"/>
-            </el-form-item>
-          </template>
-        </el-form>
-
-        <template v-if="isInternal">
-          <h4 class="mb-3 mt-5 flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-            <span class="h-3.5 w-1 rounded bg-blue-500"></span>岗位
-          </h4>
-          <EmployeePostTable
-              v-model="postRows"
-              :dept-list="deptList"
-              :role-list="roleList"
-              :disabled="viewOnly"
-          />
-        </template>
-      </div>
-      <template #footer>
-        <el-button @click="dialogVisible = false">{{ viewOnly ? '关闭' : '取消' }}</el-button>
-        <el-button v-if="!viewOnly" v-perm="['system:user:add','system:user:edit']" type="primary"
-                   :loading="submitLoading" @click="handleSubmit">
-          确定
-        </el-button>
-      </template>
-    </el-dialog>
-  </div>
-</template>

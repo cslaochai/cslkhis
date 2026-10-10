@@ -1,213 +1,3 @@
-<script setup lang="ts">
-import {ref, computed, onMounted} from 'vue'
-import {Search, Document, Tickets, Warning, CircleCheck, DataLine} from '@element-plus/icons-vue'
-import {ElMessage, ElMessageBox} from 'element-plus'
-import {getSpecimenList, getSpecimenStats, assignBarcode, sampleSpecimen, rejectSpecimen} from '@/api/medicaltech'
-import {patientGenderText} from '@/lib/patientGender'
-import { DEFAULT_PAGE_SIZE } from '@/lib/pagination'
-import { useTableMaxHeight } from '@/lib/useTableMaxHeight'
-
-interface SpecimenItem {
-  id: number
-  recordNo: string
-  specimenNo: string
-  specimenType: string
-  patientName: string
-  patientNo: string
-  gender: number
-  age: number
-  laboratoryItemName: string
-  applyDoctorName: string
-  applyDeptName: string
-  recordStatus: number
-  specimenStatus: number
-  sampleTime: string
-  sampleBy: string
-  receiveTime: string
-  receiveBy: string
-  executeTime: string
-  executeBy: string
-  auditTime: string
-  auditBy: string
-  createTime: string
-  suggestions: string
-}
-
-const loading = ref(false)
-const specimens = ref<SpecimenItem[]>([])
-const searchTerm = ref('')
-const statusFilter = ref('all')
-const selectedSpecimen = ref<SpecimenItem | null>(null)
-const showDetailDialog = ref(false)
-const showBarcodeDialog = ref(false)
-const barcodeInput = ref('')
-const barcodeTarget = ref<SpecimenItem | null>(null)
-const stats = ref({todayCount: 0, pendingSample: 0, sampled: 0, testing: 0, abnormal: 0})
-
-const pagination = ref({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0})
-
-// 两卡式列表页：表格只设最大高度，超高内部滚动（口径参照 views/system/user/UserView.vue）
-const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight()
-
-const specimenStatusMap: Record<number, string> = {
-  0: '待分配',
-  1: '已分配',
-  2: '已采集',
-  3: '已接收',
-  99: '异常退回',
-}
-
-const recordStatusMap: Record<number, string> = {
-  1: '已登记',
-  2: '已采样',
-  3: '已接收',
-  4: '检验中',
-  5: '已出结果',
-  6: '已审核',
-  7: '已发布',
-}
-
-const statusTagType = (status: string) => {
-  if (status.includes('异常') || status.includes('退回')) return 'danger'
-  if (status.includes('已发布') || status.includes('已审核') || status.includes('已出')) return 'success'
-  if (status.includes('检验中') || status.includes('采样中')) return 'warning'
-  return 'info'
-}
-
-const filtered = computed(() => {
-  let list = specimens.value
-  if (searchTerm.value) {
-    const kw = searchTerm.value.toLowerCase()
-    list = list.filter(s =>
-        s.patientName?.toLowerCase().includes(kw) ||
-        s.specimenNo?.toLowerCase().includes(kw) ||
-        s.laboratoryItemName?.toLowerCase().includes(kw) ||
-        s.patientNo?.toLowerCase().includes(kw)
-    )
-  }
-  if (statusFilter.value !== 'all') {
-    const statusNum = Number(statusFilter.value)
-    list = list.filter(s => s.recordStatus === statusNum)
-  }
-  return list
-})
-
-const loadData = async () => {
-  loading.value = true
-  try {
-    const [listRes, statsRes] = await Promise.all([
-      getSpecimenList({
-        pageNum: pagination.value.pageNum,
-        pageSize: pagination.value.pageSize,
-        keyword: searchTerm.value || undefined,
-        recordStatus: statusFilter.value !== 'all' ? Number(statusFilter.value) : undefined,
-      }),
-      getSpecimenStats(),
-    ])
-    specimens.value = (listRes.data?.records || []).map((item: any) => ({
-      ...item,
-      specimenNo: item.specimenNo || '',
-      specimenType: item.specimenType || '血液',
-      specimenStatus: item.specimenStatus ?? 0,
-      sampleTime: item.sampleTime || '',
-      sampleBy: item.sampleBy || '',
-      receiveTime: item.receiveTime || '',
-      receiveBy: item.receiveBy || '',
-      executeTime: item.executeTime || '',
-      executeBy: item.executeBy || '',
-      auditTime: item.auditTime || '',
-      auditBy: item.auditBy || '',
-      suggestions: item.suggestions || '',
-    }))
-    pagination.value.total = listRes.data?.total || 0
-    stats.value = statsRes.data || {}
-  } catch (e: any) {
-    ElMessage.error(e.message || '加载失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-const handlePageChange = (page: number) => {
-  pagination.value.pageNum = page
-  loadData()
-}
-
-const openDetail = (row: SpecimenItem) => {
-  selectedSpecimen.value = row
-  showDetailDialog.value = true
-}
-
-const handleAssignBarcode = (row: SpecimenItem) => {
-  barcodeTarget.value = row
-  barcodeInput.value = row.specimenNo || `SP${Date.now()}`
-  showBarcodeDialog.value = true
-}
-
-const confirmAssignBarcode = async () => {
-  if (!barcodeInput.value.trim()) {
-    ElMessage.warning('请输入条码号')
-    return
-  }
-  try {
-    await assignBarcode(barcodeTarget.value!.id, barcodeInput.value.trim())
-    ElMessage.success('条码分配成功')
-    showBarcodeDialog.value = false
-    loadData()
-  } catch (e: any) {
-    ElMessage.error(e.message || '操作失败')
-  }
-}
-
-const handleSample = async (row: SpecimenItem) => {
-  try {
-    await ElMessageBox.confirm(
-        `确认患者「${row.patientName}」的${row.specimenType}标本已采集？`,
-        '采集确认',
-        {confirmButtonText: '确认采集', cancelButtonText: '取消', type: 'info'}
-    )
-    await sampleSpecimen(row.id, '护士')
-    ElMessage.success('采集确认成功')
-    loadData()
-  } catch (e: any) {
-    if (e !== 'cancel' && e?.message) ElMessage.error(e.message)
-  }
-}
-
-const handleReject = async (row: SpecimenItem) => {
-  try {
-    const {value: reason} = await ElMessageBox.prompt(
-        `请填写退回原因（患者：${row.patientName}，项目：${row.laboratoryItemName}）`,
-        '标本退回',
-        {
-          confirmButtonText: '确认退回',
-          cancelButtonText: '取消',
-          type: 'warning',
-          inputPlaceholder: '退回原因',
-          inputValidator: (v: string) => v?.trim() ? true : '请填写退回原因',
-        }
-    )
-    await rejectSpecimen(row.id, reason)
-    ElMessage.success('退回成功')
-    loadData()
-  } catch (e: any) {
-    if (e !== 'cancel' && e?.message) ElMessage.error(e.message)
-  }
-}
-
-const traceNodes = (row: SpecimenItem) => {
-  const nodes: string[] = []
-  if (row.specimenNo) nodes.push('已分配条码')
-  if (row.sampleTime) nodes.push(`采样 ${row.sampleBy || ''}`)
-  if (row.receiveTime) nodes.push(`接收 ${row.receiveBy || ''}`)
-  if (row.executeTime) nodes.push(`检验 ${row.executeBy || ''}`)
-  if (row.auditTime) nodes.push(`审核 ${row.auditBy || ''}`)
-  return nodes.length > 0 ? nodes.join(' → ') : '医嘱已开'
-}
-
-onMounted(() => loadData())
-</script>
-
 <template>
   <div>
     <!-- 统计卡片 -->
@@ -263,8 +53,8 @@ onMounted(() => loadData())
       <div class="flex items-start justify-between gap-4">
         <el-form inline @submit.prevent>
           <el-form-item label="关键字">
-            <el-input v-model="searchTerm" placeholder="搜索条码/患者/项目..." :prefix-icon="Search" class="!max-w-xs"
-                      clearable @clear="loadData" @keyup.enter="loadData"/>
+            <el-input v-model="searchTerm" :prefix-icon="Search" class="!max-w-xs" clearable
+                      placeholder="搜索条码/患者/项目..." @clear="loadData" @keyup.enter="loadData"/>
           </el-form-item>
           <el-form-item label="状态">
             <div class="flex gap-1">
@@ -299,9 +89,9 @@ onMounted(() => loadData())
 
     <el-card class="table-card" shadow="never">
       <!-- 表格 -->
-      <el-table :data="filtered" v-loading="loading" stripe :max-height="tableMaxHeight" @row-click="openDetail"
-                class="cursor-pointer">
-        <el-table-column prop="specimenNo" label="标本条码" width="150">
+      <el-table v-loading="loading" :data="filtered" :max-height="tableMaxHeight" class="cursor-pointer" stripe
+                @row-click="openDetail">
+        <el-table-column label="标本条码" prop="specimenNo" width="150">
           <template #default="{row}">
             <span v-if="row.specimenNo" class="font-mono text-blue-600">{{ row.specimenNo }}</span>
             <span v-else class="text-slate-400">未分配</span>
@@ -316,33 +106,36 @@ onMounted(() => loadData())
             <div class="text-slate-400">{{ row.patientNo }}</div>
           </template>
         </el-table-column>
-        <el-table-column prop="laboratoryItemName" label="检验项目" min-width="140"/>
-        <el-table-column prop="specimenType" label="标本类型" width="80"/>
-        <el-table-column prop="applyDoctorName" label="开单医生" width="90"/>
+        <el-table-column label="检验项目" min-width="140" prop="laboratoryItemName"/>
+        <el-table-column label="标本类型" prop="specimenType" width="80"/>
+        <el-table-column label="开单医生" prop="applyDoctorName" width="90"/>
         <el-table-column label="流转节点" min-width="180">
           <template #default="{row}">
             <span class="text-slate-500">{{ traceNodes(row) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="100" align="center">
+        <el-table-column align="center" label="状态" width="100">
           <template #default="{row}">
-            <el-tag :type="statusTagType(recordStatusMap[row.recordStatus] || '')" size="small" effect="plain">
+            <el-tag :type="statusTagType(recordStatusMap[row.recordStatus] || '')" effect="plain" size="small">
               {{ recordStatusMap[row.recordStatus] || '未知' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160" align="center" fixed="right">
+        <el-table-column align="center" fixed="right" label="操作" width="160">
           <template #default="{row}">
             <template v-if="row.recordStatus === 1">
-              <el-button v-if="!row.specimenNo" v-perm="'medtech:specimen:edit'" type="primary" link size="small" @click.stop="handleAssignBarcode(row)">
+              <el-button v-if="!row.specimenNo" v-perm="'medtech:specimen:edit'" link size="small" type="primary"
+                         @click.stop="handleAssignBarcode(row)">
                 分配条码
               </el-button>
-              <el-button v-if="row.specimenNo" v-perm="'medtech:specimen:edit'" type="success" link size="small" @click.stop="handleSample(row)">
+              <el-button v-if="row.specimenNo" v-perm="'medtech:specimen:edit'" link size="small" type="success"
+                         @click.stop="handleSample(row)">
                 采集确认
               </el-button>
             </template>
             <template v-if="row.recordStatus === 2">
-              <el-button v-perm="'medtech:specimen:edit'" type="warning" link size="small" @click.stop="handleReject(row)">
+              <el-button v-perm="'medtech:specimen:edit'" link size="small" type="warning"
+                         @click.stop="handleReject(row)">
                 退回
               </el-button>
             </template>
@@ -351,7 +144,8 @@ onMounted(() => loadData())
       </el-table>
 
       <!-- 分页 -->
-      <div v-if="pagination.total > pagination.pageSize" ref="footerRef" class="list-footer flex items-center justify-end">
+      <div v-if="pagination.total > pagination.pageSize" ref="footerRef"
+           class="list-footer flex items-center justify-end">
         <el-pagination
             :current-page="pagination.pageNum"
             :page-size="pagination.pageSize"
@@ -363,7 +157,7 @@ onMounted(() => loadData())
     </el-card>
 
     <!-- 详情弹窗 -->
-    <el-dialog v-model="showDetailDialog" title="标本详情" width="600px" destroy-on-close>
+    <el-dialog v-model="showDetailDialog" destroy-on-close title="标本详情" width="600px">
       <template v-if="selectedSpecimen">
         <div class="space-y-4">
           <!-- 基本信息 -->
@@ -475,7 +269,7 @@ onMounted(() => loadData())
     </el-dialog>
 
     <!-- 条码分配弹窗 -->
-    <el-dialog v-model="showBarcodeDialog" title="分配标本条码" width="400px" destroy-on-close>
+    <el-dialog v-model="showBarcodeDialog" destroy-on-close title="分配标本条码" width="400px">
       <div class="space-y-4">
         <div v-if="barcodeTarget" class="rounded-lg bg-slate-50 p-3 text-sm">
           <p>患者：<span class="font-medium">{{ barcodeTarget.patientName }}</span></p>
@@ -484,7 +278,7 @@ onMounted(() => loadData())
         </div>
         <div>
           <label class="mb-1 block text-sm font-medium text-slate-700">条码号</label>
-          <el-input v-model="barcodeInput" placeholder="请输入或扫描条码号" clearable/>
+          <el-input v-model="barcodeInput" clearable placeholder="请输入或扫描条码号"/>
         </div>
       </div>
       <template #footer>
@@ -494,3 +288,176 @@ onMounted(() => loadData())
     </el-dialog>
   </div>
 </template>
+
+<script setup>
+import {computed, onMounted, ref} from 'vue';
+import {CircleCheck, DataLine, Search, Tickets, Warning} from '@element-plus/icons-vue';
+import {ElMessage, ElMessageBox} from 'element-plus';
+import {assignBarcode, getSpecimenList, getSpecimenStats, rejectSpecimen, sampleSpecimen} from '@/api/medicaltech';
+import {patientGenderText} from '@/lib/patientGender';
+import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
+import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+
+const loading = ref(false);
+const specimens = ref([]);
+const searchTerm = ref('');
+const statusFilter = ref('all');
+const selectedSpecimen = ref(null);
+const showDetailDialog = ref(false);
+const showBarcodeDialog = ref(false);
+const barcodeInput = ref('');
+const barcodeTarget = ref(null);
+const stats = ref({todayCount: 0, pendingSample: 0, sampled: 0, testing: 0, abnormal: 0});
+const pagination = ref({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0});
+// 两卡式列表页：表格只设最大高度，超高内部滚动（口径参照 views/system/user/UserView.vue）
+const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight();
+const specimenStatusMap = {
+  0: '待分配',
+  1: '已分配',
+  2: '已采集',
+  3: '已接收',
+  99: '异常退回',
+};
+const recordStatusMap = {
+  1: '已登记',
+  2: '已采样',
+  3: '已接收',
+  4: '检验中',
+  5: '已出结果',
+  6: '已审核',
+  7: '已发布',
+};
+const statusTagType = (status) => {
+  if (status.includes('异常') || status.includes('退回'))
+    return 'danger';
+  if (status.includes('已发布') || status.includes('已审核') || status.includes('已出'))
+    return 'success';
+  if (status.includes('检验中') || status.includes('采样中'))
+    return 'warning';
+  return 'info';
+};
+const filtered = computed(() => {
+  let list = specimens.value;
+  if (searchTerm.value) {
+    const kw = searchTerm.value.toLowerCase();
+    list = list.filter(s => s.patientName?.toLowerCase().includes(kw) ||
+        s.specimenNo?.toLowerCase().includes(kw) ||
+        s.laboratoryItemName?.toLowerCase().includes(kw) ||
+        s.patientNo?.toLowerCase().includes(kw));
+  }
+  if (statusFilter.value !== 'all') {
+    const statusNum = Number(statusFilter.value);
+    list = list.filter(s => s.recordStatus === statusNum);
+  }
+  return list;
+});
+const loadData = async () => {
+  loading.value = true;
+  try {
+    const [listRes, statsRes] = await Promise.all([
+      getSpecimenList({
+        pageNum: pagination.value.pageNum,
+        pageSize: pagination.value.pageSize,
+        keyword: searchTerm.value || undefined,
+        recordStatus: statusFilter.value !== 'all' ? Number(statusFilter.value) : undefined,
+      }),
+      getSpecimenStats(),
+    ]);
+    specimens.value = (listRes.data?.records || []).map((item) => ({
+      ...item,
+      specimenNo: item.specimenNo || '',
+      specimenType: item.specimenType || '血液',
+      specimenStatus: item.specimenStatus ?? 0,
+      sampleTime: item.sampleTime || '',
+      sampleBy: item.sampleBy || '',
+      receiveTime: item.receiveTime || '',
+      receiveBy: item.receiveBy || '',
+      executeTime: item.executeTime || '',
+      executeBy: item.executeBy || '',
+      auditTime: item.auditTime || '',
+      auditBy: item.auditBy || '',
+      suggestions: item.suggestions || '',
+    }));
+    pagination.value.total = listRes.data?.total || 0;
+    stats.value = statsRes.data || {};
+  } catch (e) {
+    ElMessage.error(e.message || '加载失败');
+  } finally {
+    loading.value = false;
+  }
+};
+const handlePageChange = (page) => {
+  pagination.value.pageNum = page;
+  loadData();
+};
+const openDetail = (row) => {
+  selectedSpecimen.value = row;
+  showDetailDialog.value = true;
+};
+const handleAssignBarcode = (row) => {
+  barcodeTarget.value = row;
+  barcodeInput.value = row.specimenNo || `SP${Date.now()}`;
+  showBarcodeDialog.value = true;
+};
+const confirmAssignBarcode = async () => {
+  if (!barcodeInput.value.trim()) {
+    ElMessage.warning('请输入条码号');
+    return;
+  }
+  try {
+    await assignBarcode(barcodeTarget.value.id, barcodeInput.value.trim());
+    ElMessage.success('条码分配成功');
+    showBarcodeDialog.value = false;
+    loadData();
+  } catch (e) {
+    ElMessage.error(e.message || '操作失败');
+  }
+};
+const handleSample = async (row) => {
+  try {
+    await ElMessageBox.confirm(`确认患者「${row.patientName}」的${row.specimenType}标本已采集？`, '采集确认', {
+      confirmButtonText: '确认采集',
+      cancelButtonText: '取消',
+      type: 'info'
+    });
+    await sampleSpecimen(row.id, '护士');
+    ElMessage.success('采集确认成功');
+    loadData();
+  } catch (e) {
+    if (e !== 'cancel' && e?.message)
+      ElMessage.error(e.message);
+  }
+};
+const handleReject = async (row) => {
+  try {
+    const {value: reason} = await ElMessageBox.prompt(`请填写退回原因（患者：${row.patientName}，项目：${row.laboratoryItemName}）`, '标本退回', {
+      confirmButtonText: '确认退回',
+      cancelButtonText: '取消',
+      type: 'warning',
+      inputPlaceholder: '退回原因',
+      inputValidator: (v) => v?.trim() ? true : '请填写退回原因',
+    });
+    await rejectSpecimen(row.id, reason);
+    ElMessage.success('退回成功');
+    loadData();
+  } catch (e) {
+    if (e !== 'cancel' && e?.message)
+      ElMessage.error(e.message);
+  }
+};
+const traceNodes = (row) => {
+  const nodes = [];
+  if (row.specimenNo)
+    nodes.push('已分配条码');
+  if (row.sampleTime)
+    nodes.push(`采样 ${row.sampleBy || ''}`);
+  if (row.receiveTime)
+    nodes.push(`接收 ${row.receiveBy || ''}`);
+  if (row.executeTime)
+    nodes.push(`检验 ${row.executeBy || ''}`);
+  if (row.auditTime)
+    nodes.push(`审核 ${row.auditBy || ''}`);
+  return nodes.length > 0 ? nodes.join(' → ') : '医嘱已开';
+};
+onMounted(() => loadData());
+</script>

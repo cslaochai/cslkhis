@@ -1,10 +1,153 @@
-<script setup lang="js">
-import { ref, onMounted, reactive } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Edit, Delete, Refresh } from '@element-plus/icons-vue'
-import { getFaqAdminList, getFaqAdminDetail, faqUpsert, faqDelete } from '@/api/patientFaq'
-import { PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/lib/pagination'
-import { useTableMaxHeight } from '@/lib/useTableMaxHeight'
+<template>
+  <div>
+    <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
+      <div class="flex items-start justify-between gap-4">
+        <el-form :model="searchForm" inline>
+          <el-form-item label="问题">
+            <el-input
+                v-model="searchForm.keyword"
+                clearable
+                placeholder="问题或关键词"
+                @keyup.enter="handleSearch"
+            />
+          </el-form-item>
+          <el-form-item label="分类编码">
+            <el-input
+                v-model="searchForm.categoryCode"
+                clearable
+                placeholder="如 REPORT"
+                @keyup.enter="handleSearch"
+            />
+          </el-form-item>
+          <el-form-item>
+            <el-button :icon="Search" type="primary" @click="handleSearch">搜索</el-button>
+            <el-button :icon="Refresh" @click="handleReset">重置</el-button>
+          </el-form-item>
+        </el-form>
+        <div class="flex shrink-0 items-start gap-3">
+          <el-button v-perm="'patient:faq:upsert'" :icon="Plus" type="primary" @click="handleAdd">新增问题</el-button>
+        </div>
+      </div>
+    </el-card>
+
+    <el-card class="table-card" shadow="never">
+      <el-table v-loading="loading" :data="tableData" :max-height="tableMaxHeight" stripe>
+        <el-table-column label="编号" prop="faqNo" width="160"/>
+        <el-table-column label="分类" prop="categoryName" width="110">
+          <template #default="{ row }">
+            {{ row.categoryName }}<span class="text-gray-400 text-xs">（{{ row.categoryCode }}）</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="问题" min-width="200" prop="question" show-overflow-tooltip/>
+        <el-table-column label="答案" min-width="260" prop="answer" show-overflow-tooltip/>
+        <el-table-column label="关键词" min-width="180" prop="keywords" show-overflow-tooltip/>
+        <el-table-column label="反馈" width="150">
+          <template #default="{ row }">
+            <span class="text-xs text-gray-500">
+              查看 {{ row.viewCount }} · 有用 {{ row.helpfulCount }} · 无用 {{ row.uselessCount }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="热门" prop="hotFlag" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.hotFlag === 1 ? 'warning' : 'info'" size="small">
+              {{ row.hotFlag === 1 ? '热门' : '普通' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" prop="status" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+              {{ row.status === 1 ? '启用' : '停用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column fixed="right" label="操作" width="150">
+          <template #default="{ row }">
+            <el-button :icon="Edit" link type="primary" @click="handleEdit(row)">编辑</el-button>
+            <el-button v-perm="'patient:faq:delete'" :icon="Delete" link type="danger" @click="handleDelete(row)">删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <div ref="footerRef" class="list-footer flex items-center justify-end">
+        <el-pagination
+            v-model:current-page="pagination.pageNum"
+            v-model:page-size="pagination.pageSize"
+            :page-sizes="PAGE_SIZES"
+            :total="pagination.total"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+        />
+      </div>
+    </el-card>
+
+    <el-dialog
+        v-model="dialogVisible"
+        :close-on-click-modal="false"
+        :title="dialogTitle"
+        width="720px"
+        @close="dialogVisible = false"
+    >
+      <el-form ref="formRef" :model="formData" :rules="rules" label-width="100px">
+        <el-form-item label="分类编码" prop="categoryCode">
+          <el-input v-model="formData.categoryCode" placeholder="如 REPORT、APPOINT"/>
+        </el-form-item>
+        <el-form-item label="分类名称" prop="categoryName">
+          <el-input v-model="formData.categoryName" placeholder="如 报告查询"/>
+        </el-form-item>
+        <el-form-item label="问题" prop="question">
+          <el-input v-model="formData.question" placeholder="患者会怎么问，就怎么写"/>
+        </el-form-item>
+        <el-form-item label="答案" prop="answer">
+          <el-input
+              v-model="formData.answer"
+              :rows="5"
+              placeholder="涉及时间/价格/报销比例的一律写「以现场公示为准 / 请咨询窗口」，不要写死数字"
+              type="textarea"
+          />
+        </el-form-item>
+        <el-form-item label="关键词" prop="keywords">
+          <el-input
+              v-model="formData.keywords"
+              placeholder="顿号分隔，务必带口语同义词（如 化验单、约号）"
+          />
+        </el-form-item>
+        <el-form-item label="热门">
+          <el-radio-group v-model="formData.hotFlag">
+            <el-radio :value="1">热门</el-radio>
+            <el-radio :value="0">普通</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-radio-group v-model="formData.status">
+            <el-radio :value="1">启用</el-radio>
+            <el-radio :value="0">停用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="排序号">
+          <el-input-number v-model="formData.sortOrder" :max="9999" :min="1"/>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button v-perm="'patient:faq:upsert'" :loading="submitLoading" type="primary" @click="handleSubmit">
+          确定
+        </el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script lang="js" setup>
+import {onMounted, reactive, ref} from 'vue'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {Delete, Edit, Plus, Refresh, Search} from '@element-plus/icons-vue'
+import {faqDelete, faqUpsert, getFaqAdminDetail, getFaqAdminList} from '@/api/patientFaq'
+import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
+import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
 
 const loading = ref(false)
 const searchForm = ref({
@@ -19,7 +162,7 @@ const pagination = ref({
 })
 
 // 两卡式列表页：表格只设最大高度，超高内部滚动（口径参照 views/system/user/UserView.vue）
-const { queryCardRef, footerRef, tableMaxHeight } = useTableMaxHeight()
+const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight()
 
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增常见问题')
@@ -38,10 +181,10 @@ const formData = reactive({
 })
 
 const rules = {
-  categoryCode: [{ required: true, message: '请输入分类编码', trigger: 'blur' }],
-  categoryName: [{ required: true, message: '请输入分类名称', trigger: 'blur' }],
-  question: [{ required: true, message: '请输入问题', trigger: 'blur' }],
-  answer: [{ required: true, message: '请输入答案', trigger: 'blur' }],
+  categoryCode: [{required: true, message: '请输入分类编码', trigger: 'blur'}],
+  categoryName: [{required: true, message: '请输入分类名称', trigger: 'blur'}],
+  question: [{required: true, message: '请输入问题', trigger: 'blur'}],
+  answer: [{required: true, message: '请输入答案', trigger: 'blur'}],
 }
 
 onMounted(() => {
@@ -120,7 +263,7 @@ const handleSubmit = async () => {
   }
   submitLoading.value = true
   try {
-    const res = await faqUpsert({ ...formData })
+    const res = await faqUpsert({...formData})
     if (res.code === 200) {
       ElMessage.success(formData.id ? '修改成功' : '新增成功')
       dialogVisible.value = false
@@ -164,145 +307,3 @@ const handleCurrentChange = (val) => {
   loadData()
 }
 </script>
-
-<template>
-  <div>
-    <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
-      <div class="flex items-start justify-between gap-4">
-        <el-form :model="searchForm" inline>
-          <el-form-item label="问题">
-            <el-input
-              v-model="searchForm.keyword"
-              placeholder="问题或关键词"
-              clearable
-              @keyup.enter="handleSearch"
-            />
-          </el-form-item>
-          <el-form-item label="分类编码">
-            <el-input
-              v-model="searchForm.categoryCode"
-              placeholder="如 REPORT"
-              clearable
-              @keyup.enter="handleSearch"
-            />
-          </el-form-item>
-          <el-form-item>
-            <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
-            <el-button :icon="Refresh" @click="handleReset">重置</el-button>
-          </el-form-item>
-        </el-form>
-        <div class="flex shrink-0 items-start gap-3">
-          <el-button v-perm="'patient:faq:upsert'" type="primary" :icon="Plus" @click="handleAdd">新增问题</el-button>
-        </div>
-      </div>
-    </el-card>
-
-    <el-card class="table-card" shadow="never">
-      <el-table :data="tableData" v-loading="loading" stripe :max-height="tableMaxHeight">
-        <el-table-column prop="faqNo" label="编号" width="160" />
-        <el-table-column prop="categoryName" label="分类" width="110">
-          <template #default="{ row }">
-            {{ row.categoryName }}<span class="text-gray-400 text-xs">（{{ row.categoryCode }}）</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="question" label="问题" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="answer" label="答案" min-width="260" show-overflow-tooltip />
-        <el-table-column prop="keywords" label="关键词" min-width="180" show-overflow-tooltip />
-        <el-table-column label="反馈" width="150">
-          <template #default="{ row }">
-            <span class="text-xs text-gray-500">
-              查看 {{ row.viewCount }} · 有用 {{ row.helpfulCount }} · 无用 {{ row.uselessCount }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="hotFlag" label="热门" width="80">
-          <template #default="{ row }">
-            <el-tag :type="row.hotFlag === 1 ? 'warning' : 'info'" size="small">
-              {{ row.hotFlag === 1 ? '热门' : '普通' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="80">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
-              {{ row.status === 1 ? '启用' : '停用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" link :icon="Edit" @click="handleEdit(row)">编辑</el-button>
-            <el-button v-perm="'patient:faq:delete'" type="danger" link :icon="Delete" @click="handleDelete(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <div ref="footerRef" class="list-footer flex items-center justify-end">
-        <el-pagination
-          v-model:current-page="pagination.pageNum"
-          v-model:page-size="pagination.pageSize"
-          :page-sizes="PAGE_SIZES"
-          :total="pagination.total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
-      </div>
-    </el-card>
-
-    <el-dialog
-      v-model="dialogVisible"
-      :title="dialogTitle"
-      width="720px"
-      :close-on-click-modal="false"
-      @close="dialogVisible = false"
-    >
-      <el-form ref="formRef" :model="formData" :rules="rules" label-width="100px">
-        <el-form-item label="分类编码" prop="categoryCode">
-          <el-input v-model="formData.categoryCode" placeholder="如 REPORT、APPOINT" />
-        </el-form-item>
-        <el-form-item label="分类名称" prop="categoryName">
-          <el-input v-model="formData.categoryName" placeholder="如 报告查询" />
-        </el-form-item>
-        <el-form-item label="问题" prop="question">
-          <el-input v-model="formData.question" placeholder="患者会怎么问，就怎么写" />
-        </el-form-item>
-        <el-form-item label="答案" prop="answer">
-          <el-input
-            v-model="formData.answer"
-            type="textarea"
-            :rows="5"
-            placeholder="涉及时间/价格/报销比例的一律写「以现场公示为准 / 请咨询窗口」，不要写死数字"
-          />
-        </el-form-item>
-        <el-form-item label="关键词" prop="keywords">
-          <el-input
-            v-model="formData.keywords"
-            placeholder="顿号分隔，务必带口语同义词（如 化验单、约号）"
-          />
-        </el-form-item>
-        <el-form-item label="热门">
-          <el-radio-group v-model="formData.hotFlag">
-            <el-radio :value="1">热门</el-radio>
-            <el-radio :value="0">普通</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-radio-group v-model="formData.status">
-            <el-radio :value="1">启用</el-radio>
-            <el-radio :value="0">停用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="排序号">
-          <el-input-number v-model="formData.sortOrder" :min="1" :max="9999" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button v-perm="'patient:faq:upsert'" type="primary" :loading="submitLoading" @click="handleSubmit">
-          确定
-        </el-button>
-      </template>
-    </el-dialog>
-  </div>
-</template>

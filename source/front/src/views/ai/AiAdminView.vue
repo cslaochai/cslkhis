@@ -1,312 +1,3 @@
-<script lang="ts" setup>
-import {onMounted, reactive, ref} from 'vue'
-import {ElMessage, ElMessageBox} from 'element-plus'
-import {
-  askKnowledge,
-  deleteKnowledgeDocById,
-  getAiAuditLogPage,
-  getKnowledgeDocById,
-  getKnowledgeDocPage,
-  ingestKnowledgeDoc,
-  listDraftDiffPage,
-  rebuildKnowledgeIndex,
-  seedKnowledgeCorpus,
-} from '@/api/ai'
-import {hasPerm} from '@/lib/perm'
-import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
-
-const activeTab = ref('audit')
-
-const capabilityOptions = [
-  {value: 'icd10', label: 'ICD-10 编码'},
-  {value: 'drug_audit', label: '处方审核'},
-  {value: 'emr_qc', label: '病历质控'},
-  {value: 'lab_interpret', label: '检验解读'},
-  {value: 'emergency_triage', label: '急诊分诊'},
-  {value: 'emr_extract', label: '病历抽取'},
-  {value: 'emr_draft', label: '病历草拟'},
-  {value: 'patient_report_explain', label: '患者报告解读'},
-  {value: 'patient_triage_normalize', label: '导诊口语归一'},
-  {value: 'knowledge_qa', label: '知识库问答'},
-  {value: 'operation_qa', label: '运营问数'},
-  {value: 'previsit_summary', label: '预问诊摘要'},
-  {value: 'followup_compose', label: '随访话术'},
-  {value: 'insurance_evidence', label: '医保证据判定'},
-  {value: 'health_check', label: '连通性自检'},
-]
-
-const statusOptions = [
-  {value: 1, label: '成功', tag: 'success'},
-  {value: 2, label: '失败', tag: 'danger'},
-  {value: 3, label: '超时', tag: 'warning'},
-  {value: 4, label: '降级', tag: 'warning'},
-  {value: 5, label: '熔断', tag: 'danger'},
-]
-
-const statusTagOf = (status?: number) =>
-    statusOptions.find(s => s.value === status)?.tag || 'info'
-const statusTextOf = (row: any) =>
-    row.statusText || statusOptions.find(s => s.value === row.status)?.label || row.status
-
-const auditQuery = reactive({
-  pageNum: 1,
-  pageSize: DEFAULT_PAGE_SIZE,
-  capabilityKey: '',
-  status: undefined as number | undefined,
-  operator: '',
-  range: [] as string[],
-})
-const auditLoading = ref(false)
-const auditRows = ref<any[]>([])
-const auditTotal = ref(0)
-
-const loadAudit = async () => {
-  auditLoading.value = true
-  try {
-    const res: any = await getAiAuditLogPage({
-      pageNum: auditQuery.pageNum,
-      pageSize: auditQuery.pageSize,
-      capabilityKey: auditQuery.capabilityKey || undefined,
-      status: auditQuery.status,
-      operator: auditQuery.operator || undefined,
-      startDate: auditQuery.range?.[0] || undefined,
-      endDate: auditQuery.range?.[1] || undefined,
-    })
-    auditRows.value = res?.data?.records || []
-    auditTotal.value = res?.data?.total || 0
-  } catch (e) {
-    console.error('加载 AI 调用审计失败', e)
-  } finally {
-    auditLoading.value = false
-  }
-}
-
-const searchAudit = () => {
-  auditQuery.pageNum = 1
-  loadAudit()
-}
-
-const onAuditSizeChange = () => {
-  auditQuery.pageNum = 1
-  loadAudit()
-}
-
-// ---------------- 知识库问答 ----------------
-
-const kQuestion = ref('')
-const kLoading = ref(false)
-const kResult = ref<any>(null)
-
-const askK = async () => {
-  const text = kQuestion.value.trim()
-  if (!text) {
-    ElMessage.warning('请输入问题')
-    return
-  }
-  kLoading.value = true
-  kResult.value = null
-  try {
-    const res: any = await askKnowledge({question: text})
-    kResult.value = res?.data || null
-  } catch (e) {
-    console.error('知识库问答失败', e)
-  } finally {
-    kLoading.value = false
-  }
-}
-
-// ---------------- 知识库维护 ----------------
-
-const canManage = hasPerm('ai:knowledge:manage')
-
-const docQuery = reactive({
-  pageNum: 1,
-  pageSize: DEFAULT_PAGE_SIZE,
-  title: '',
-})
-const docLoading = ref(false)
-const docRows = ref<any[]>([])
-const docTotal = ref(0)
-
-const sourceTypeText = (t?: number) => (t === 1 ? '内置示例' : t === 3 ? '文件导入' : '手工录入')
-
-const loadDocs = async () => {
-  if (!canManage) return
-  docLoading.value = true
-  try {
-    const res: any = await getKnowledgeDocPage({
-      pageNum: docQuery.pageNum,
-      pageSize: docQuery.pageSize,
-      title: docQuery.title || undefined,
-    })
-    docRows.value = res?.data?.records || []
-    docTotal.value = res?.data?.total || 0
-  } catch (e) {
-    console.error('加载知识文档失败', e)
-  } finally {
-    docLoading.value = false
-  }
-}
-
-const searchDocs = () => {
-  docQuery.pageNum = 1
-  loadDocs()
-}
-
-const onDocSizeChange = () => {
-  docQuery.pageNum = 1
-  loadDocs()
-}
-
-const ingestVisible = ref(false)
-const ingestForm = reactive({
-  title: '',
-  category: '',
-  content: '',
-  sourceType: 2,
-})
-const ingestSubmitting = ref(false)
-
-const openIngest = () => {
-  ingestForm.title = ''
-  ingestForm.category = ''
-  ingestForm.content = ''
-  ingestForm.sourceType = 2
-  ingestVisible.value = true
-}
-
-const submitIngest = async () => {
-  if (!ingestForm.title.trim() || !ingestForm.content.trim()) {
-    ElMessage.warning('标题与内容不能为空')
-    return
-  }
-  ingestSubmitting.value = true
-  try {
-    await ingestKnowledgeDoc({...ingestForm})
-    ElMessage.success('已录入并建立索引')
-    ingestVisible.value = false
-    docQuery.pageNum = 1
-    loadDocs()
-  } catch (e) {
-    console.error('录入知识文档失败', e)
-  } finally {
-    ingestSubmitting.value = false
-  }
-}
-
-const detailVisible = ref(false)
-const detail = ref<any>(null)
-
-const showDetail = async (row: any) => {
-  try {
-    const res: any = await getKnowledgeDocById({id: row.id})
-    detail.value = res?.data || null
-    detailVisible.value = true
-  } catch (e) {
-    console.error('加载知识文档详情失败', e)
-  }
-}
-
-const removeDoc = async (row: any) => {
-  await ElMessageBox.confirm(`确认删除知识文档「${row.title}」？其切块与索引将一并删除。`, '删除确认', {
-    type: 'warning',
-  })
-  try {
-    await deleteKnowledgeDocById({id: row.id})
-    ElMessage.success('已删除')
-    loadDocs()
-  } catch (e) {
-    console.error('删除知识文档失败', e)
-  }
-}
-
-const rebuildIndex = async () => {
-  try {
-    await rebuildKnowledgeIndex()
-    ElMessage.success('向量索引已重建')
-  } catch (e) {
-    console.error('重建索引失败', e)
-  }
-}
-
-const seedCorpus = async () => {
-  try {
-    const res: any = await seedKnowledgeCorpus()
-    ElMessage.success(`已灌入 ${res?.data ?? 0} 篇示例语料`)
-    loadDocs()
-  } catch (e) {
-    console.error('灌入语料失败', e)
-  }
-}
-
-// ---------------- 草稿留痕（G-10） ----------------
-
-const diffQuery = reactive({
-  pageNum: 1,
-  pageSize: DEFAULT_PAGE_SIZE,
-  patientName: '',
-  doctorName: '',
-  changed: undefined as number | undefined,
-})
-const diffLoading = ref(false)
-const diffRows = ref<any[]>([])
-const diffTotal = ref(0)
-
-const loadDraftDiffs = async () => {
-  diffLoading.value = true
-  try {
-    const res: any = await listDraftDiffPage({
-      pageNum: diffQuery.pageNum,
-      pageSize: diffQuery.pageSize,
-      patientName: diffQuery.patientName || undefined,
-      doctorName: diffQuery.doctorName || undefined,
-      changed: diffQuery.changed,
-    })
-    diffRows.value = res?.data?.records || []
-    diffTotal.value = res?.data?.total || 0
-  } catch (e) {
-    console.error('加载草稿留痕失败', e)
-  } finally {
-    diffLoading.value = false
-  }
-}
-
-const searchDraftDiffs = () => {
-  diffQuery.pageNum = 1
-  loadDraftDiffs()
-}
-
-const onDiffSizeChange = () => {
-  diffQuery.pageNum = 1
-  loadDraftDiffs()
-}
-
-const diffVisible = ref(false)
-const diffDetail = ref<any>(null)
-const diffSegments = ref<{ type: number; text: string }[]>([])
-
-const showDiff = (row: any) => {
-  diffDetail.value = row
-  diffSegments.value = []
-  try {
-    // diffJson 是留痕快照，坏数据只退化为展示终稿原文，不许整页报错
-    const parsed = JSON.parse(row.diffJson || '[]')
-    if (Array.isArray(parsed)) {
-      diffSegments.value = parsed
-    }
-  } catch {
-    /* 保持空数组 */
-  }
-  diffVisible.value = true
-}
-
-onMounted(() => {
-  loadAudit()
-  loadDocs()
-  loadDraftDiffs()
-})
-</script>
-
 <template>
   <div class="ai-admin">
     <el-tabs v-model="activeTab">
@@ -646,6 +337,281 @@ onMounted(() => {
     </el-dialog>
   </div>
 </template>
+
+<script setup>
+import {onMounted, reactive, ref} from 'vue';
+import {ElMessage, ElMessageBox} from 'element-plus';
+import {
+  askKnowledge,
+  deleteKnowledgeDocById,
+  getAiAuditLogPage,
+  getKnowledgeDocById,
+  getKnowledgeDocPage,
+  ingestKnowledgeDoc,
+  listDraftDiffPage,
+  rebuildKnowledgeIndex,
+  seedKnowledgeCorpus,
+} from '@/api/ai';
+import {hasPerm} from '@/lib/perm';
+import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+
+const activeTab = ref('audit');
+const capabilityOptions = [
+  {value: 'icd10', label: 'ICD-10 编码'},
+  {value: 'drug_audit', label: '处方审核'},
+  {value: 'emr_qc', label: '病历质控'},
+  {value: 'lab_interpret', label: '检验解读'},
+  {value: 'emergency_triage', label: '急诊分诊'},
+  {value: 'emr_extract', label: '病历抽取'},
+  {value: 'emr_draft', label: '病历草拟'},
+  {value: 'patient_report_explain', label: '患者报告解读'},
+  {value: 'patient_triage_normalize', label: '导诊口语归一'},
+  {value: 'knowledge_qa', label: '知识库问答'},
+  {value: 'operation_qa', label: '运营问数'},
+  {value: 'previsit_summary', label: '预问诊摘要'},
+  {value: 'followup_compose', label: '随访话术'},
+  {value: 'insurance_evidence', label: '医保证据判定'},
+  {value: 'health_check', label: '连通性自检'},
+];
+const statusOptions = [
+  {value: 1, label: '成功', tag: 'success'},
+  {value: 2, label: '失败', tag: 'danger'},
+  {value: 3, label: '超时', tag: 'warning'},
+  {value: 4, label: '降级', tag: 'warning'},
+  {value: 5, label: '熔断', tag: 'danger'},
+];
+const statusTagOf = (status) => statusOptions.find(s => s.value === status)?.tag || 'info';
+const statusTextOf = (row) => row.statusText || statusOptions.find(s => s.value === row.status)?.label || row.status;
+const auditQuery = reactive({
+  pageNum: 1,
+  pageSize: DEFAULT_PAGE_SIZE,
+  capabilityKey: '',
+  status: undefined,
+  operator: '',
+  range: [],
+});
+const auditLoading = ref(false);
+const auditRows = ref([]);
+const auditTotal = ref(0);
+const loadAudit = async () => {
+  auditLoading.value = true;
+  try {
+    const res = await getAiAuditLogPage({
+      pageNum: auditQuery.pageNum,
+      pageSize: auditQuery.pageSize,
+      capabilityKey: auditQuery.capabilityKey || undefined,
+      status: auditQuery.status,
+      operator: auditQuery.operator || undefined,
+      startDate: auditQuery.range?.[0] || undefined,
+      endDate: auditQuery.range?.[1] || undefined,
+    });
+    auditRows.value = res?.data?.records || [];
+    auditTotal.value = res?.data?.total || 0;
+  } catch (e) {
+    console.error('加载 AI 调用审计失败', e);
+  } finally {
+    auditLoading.value = false;
+  }
+};
+const searchAudit = () => {
+  auditQuery.pageNum = 1;
+  loadAudit();
+};
+const onAuditSizeChange = () => {
+  auditQuery.pageNum = 1;
+  loadAudit();
+};
+// ---------------- 知识库问答 ----------------
+const kQuestion = ref('');
+const kLoading = ref(false);
+const kResult = ref(null);
+const askK = async () => {
+  const text = kQuestion.value.trim();
+  if (!text) {
+    ElMessage.warning('请输入问题');
+    return;
+  }
+  kLoading.value = true;
+  kResult.value = null;
+  try {
+    const res = await askKnowledge({question: text});
+    kResult.value = res?.data || null;
+  } catch (e) {
+    console.error('知识库问答失败', e);
+  } finally {
+    kLoading.value = false;
+  }
+};
+// ---------------- 知识库维护 ----------------
+const canManage = hasPerm('ai:knowledge:manage');
+const docQuery = reactive({
+  pageNum: 1,
+  pageSize: DEFAULT_PAGE_SIZE,
+  title: '',
+});
+const docLoading = ref(false);
+const docRows = ref([]);
+const docTotal = ref(0);
+const sourceTypeText = (t) => (t === 1 ? '内置示例' : t === 3 ? '文件导入' : '手工录入');
+const loadDocs = async () => {
+  if (!canManage)
+    return;
+  docLoading.value = true;
+  try {
+    const res = await getKnowledgeDocPage({
+      pageNum: docQuery.pageNum,
+      pageSize: docQuery.pageSize,
+      title: docQuery.title || undefined,
+    });
+    docRows.value = res?.data?.records || [];
+    docTotal.value = res?.data?.total || 0;
+  } catch (e) {
+    console.error('加载知识文档失败', e);
+  } finally {
+    docLoading.value = false;
+  }
+};
+const searchDocs = () => {
+  docQuery.pageNum = 1;
+  loadDocs();
+};
+const onDocSizeChange = () => {
+  docQuery.pageNum = 1;
+  loadDocs();
+};
+const ingestVisible = ref(false);
+const ingestForm = reactive({
+  title: '',
+  category: '',
+  content: '',
+  sourceType: 2,
+});
+const ingestSubmitting = ref(false);
+const openIngest = () => {
+  ingestForm.title = '';
+  ingestForm.category = '';
+  ingestForm.content = '';
+  ingestForm.sourceType = 2;
+  ingestVisible.value = true;
+};
+const submitIngest = async () => {
+  if (!ingestForm.title.trim() || !ingestForm.content.trim()) {
+    ElMessage.warning('标题与内容不能为空');
+    return;
+  }
+  ingestSubmitting.value = true;
+  try {
+    await ingestKnowledgeDoc({...ingestForm});
+    ElMessage.success('已录入并建立索引');
+    ingestVisible.value = false;
+    docQuery.pageNum = 1;
+    loadDocs();
+  } catch (e) {
+    console.error('录入知识文档失败', e);
+  } finally {
+    ingestSubmitting.value = false;
+  }
+};
+const detailVisible = ref(false);
+const detail = ref(null);
+const showDetail = async (row) => {
+  try {
+    const res = await getKnowledgeDocById({id: row.id});
+    detail.value = res?.data || null;
+    detailVisible.value = true;
+  } catch (e) {
+    console.error('加载知识文档详情失败', e);
+  }
+};
+const removeDoc = async (row) => {
+  await ElMessageBox.confirm(`确认删除知识文档「${row.title}」？其切块与索引将一并删除。`, '删除确认', {
+    type: 'warning',
+  });
+  try {
+    await deleteKnowledgeDocById({id: row.id});
+    ElMessage.success('已删除');
+    loadDocs();
+  } catch (e) {
+    console.error('删除知识文档失败', e);
+  }
+};
+const rebuildIndex = async () => {
+  try {
+    await rebuildKnowledgeIndex();
+    ElMessage.success('向量索引已重建');
+  } catch (e) {
+    console.error('重建索引失败', e);
+  }
+};
+const seedCorpus = async () => {
+  try {
+    const res = await seedKnowledgeCorpus();
+    ElMessage.success(`已灌入 ${res?.data ?? 0} 篇示例语料`);
+    loadDocs();
+  } catch (e) {
+    console.error('灌入语料失败', e);
+  }
+};
+// ---------------- 草稿留痕（G-10） ----------------
+const diffQuery = reactive({
+  pageNum: 1,
+  pageSize: DEFAULT_PAGE_SIZE,
+  patientName: '',
+  doctorName: '',
+  changed: undefined,
+});
+const diffLoading = ref(false);
+const diffRows = ref([]);
+const diffTotal = ref(0);
+const loadDraftDiffs = async () => {
+  diffLoading.value = true;
+  try {
+    const res = await listDraftDiffPage({
+      pageNum: diffQuery.pageNum,
+      pageSize: diffQuery.pageSize,
+      patientName: diffQuery.patientName || undefined,
+      doctorName: diffQuery.doctorName || undefined,
+      changed: diffQuery.changed,
+    });
+    diffRows.value = res?.data?.records || [];
+    diffTotal.value = res?.data?.total || 0;
+  } catch (e) {
+    console.error('加载草稿留痕失败', e);
+  } finally {
+    diffLoading.value = false;
+  }
+};
+const searchDraftDiffs = () => {
+  diffQuery.pageNum = 1;
+  loadDraftDiffs();
+};
+const onDiffSizeChange = () => {
+  diffQuery.pageNum = 1;
+  loadDraftDiffs();
+};
+const diffVisible = ref(false);
+const diffDetail = ref(null);
+const diffSegments = ref([]);
+const showDiff = (row) => {
+  diffDetail.value = row;
+  diffSegments.value = [];
+  try {
+    // diffJson 是留痕快照，坏数据只退化为展示终稿原文，不许整页报错
+    const parsed = JSON.parse(row.diffJson || '[]');
+    if (Array.isArray(parsed)) {
+      diffSegments.value = parsed;
+    }
+  } catch {
+    /* 保持空数组 */
+  }
+  diffVisible.value = true;
+};
+onMounted(() => {
+  loadAudit();
+  loadDocs();
+  loadDraftDiffs();
+});
+</script>
 
 <style scoped>
 .ai-admin {
