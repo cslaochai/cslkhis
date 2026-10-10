@@ -9,7 +9,6 @@ import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
-import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.InpatientTransferAcceptDTO;
@@ -24,6 +23,7 @@ import com.his.patient.service.InpatientTransferService;
 import com.his.patient.vo.InpatientTransferVO;
 import com.his.patient.vo.WardVO;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +32,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -67,13 +66,16 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
     private final BizInpatientSummaryMapper bizInpatientSummaryMapper;
     private final BizInpatientOrderMapper bizInpatientOrderMapper;
     private final InpatientOrderService inpatientOrderService;
+    private final DeptScopeService deptScopeService;
 
     // 查询
 
     @Override
     public IPage<InpatientTransferVO> listPage(InpatientTransferQueryPageDTO query) {
+        Long reqDeptId = query.getFromDeptId() != null ? query.getFromDeptId() : query.getToDeptId();
+        List<Long> deptIds = deptScopeService.scopedDeptIds(reqDeptId);
         IPage<BizInpatientTransfer> page = bizInpatientTransferMapper.selectTransferPage(
-                new Page<>(query.getPageNum(), query.getPageSize()), query);
+                new Page<>(query.getPageNum(), query.getPageSize()), query, deptIds);
         List<BizInpatientTransfer> records = page.getRecords();
 
         Map<Long, String> recordNos = loadRecordNos(records);
@@ -90,6 +92,7 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
         if (entity == null) {
             throw new BusinessException("转科记录不存在");
         }
+        assertTransferAccessible(entity);
         Map<Long, String> recordNos = loadRecordNos(List.of(entity));
         Map<Long, Integer> admitStatus = loadAdmitStatus(List.of(entity));
         return toVO(entity, recordNos.get(entity.getRecordId()), admitStatus.get(entity.getAdmissionId()));
@@ -97,7 +100,7 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
 
     @Override
     public List<InpatientTransferVO> listByAdmission(Long admissionId) {
-        List<BizInpatientTransfer> list = bizInpatientTransferMapper.selectByAdmission(admissionId);
+        List<BizInpatientTransfer> list = filterTransferScope(bizInpatientTransferMapper.selectByAdmission(admissionId));
         if (list.isEmpty()) {
             return List.of();
         }
@@ -110,7 +113,7 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
 
     @Override
     public long countPending(Long toDeptId, Long admissionId) {
-        return bizInpatientTransferMapper.countPending(toDeptId, admissionId);
+        return bizInpatientTransferMapper.countPending(deptScopeService.scopedDeptIds(toDeptId), admissionId);
     }
 
     // 发起
@@ -131,6 +134,8 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
         if (!Objects.equals(AdmitStatusEnum.IN_HOSPITAL.getCode(), admission.getAdmitStatus())) {
             throw new BusinessException("该患者已出院，不能转科");
         }
+        // 数据权限：只能对自己科室在院的患者发起转科（转入科室是业务目标，不受限）
+        deptScopeService.assertDeptAccessible(admission.getDeptId());
         // 同科室请走换床：两者后果完全不同（换床不动科室、不停医嘱、不改首页），
         // 允许同科室走转科，等于每天制造一批"科室没变但转科次数 +1"的假轨迹。
         if (Objects.equals(admission.getDeptId(), dto.getToDeptId())) {
@@ -217,6 +222,7 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
         if (entity == null) {
             throw new BusinessException("转科记录不存在");
         }
+        assertTransferAccessible(entity);
         if (!Objects.equals(TransferStatusEnum.PENDING.getCode(), entity.getTransferStatus())) {
             throw new BusinessException("该转科申请当前状态为「"
                     + TransferStatusEnum.labelOrUnknown(entity.getTransferStatus())
@@ -305,6 +311,7 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
         if (entity == null) {
             throw new BusinessException("转科记录不存在");
         }
+        assertTransferAccessible(entity);
         if (!Objects.equals(TransferStatusEnum.PENDING.getCode(), entity.getTransferStatus())) {
             throw new BusinessException("该转科申请当前状态为「"
                     + TransferStatusEnum.labelOrUnknown(entity.getTransferStatus())
@@ -612,6 +619,26 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
             return original;
         }
         return TextUtil.hasText(original) ? original + "；" + note : note;
+    }
+
+    // 数据权限
+
+    /** 转科单双方（转出/转入科室）任一在授权范围内即可见/可操作 */
+    private void assertTransferAccessible(BizInpatientTransfer entity) {
+        if (!deptScopeService.canAccessDept(entity.getFromDeptId())
+                && !deptScopeService.canAccessDept(entity.getToDeptId())) {
+            throw new BusinessException("该数据所属科室不在当前岗位的数据范围内");
+        }
+    }
+
+    private List<BizInpatientTransfer> filterTransferScope(List<BizInpatientTransfer> list) {
+        if (deptScopeService.allowedDeptIds() == null) {
+            return list;
+        }
+        return list.stream()
+                .filter(e -> deptScopeService.canAccessDept(e.getFromDeptId())
+                        || deptScopeService.canAccessDept(e.getToDeptId()))
+                .collect(Collectors.toList());
     }
 
 }

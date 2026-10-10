@@ -31,6 +31,7 @@ public interface BizTeleConsultMapper extends BaseMapper<BizTeleConsult> {
                <if test="applyDeptId != null"> AND t.apply_dept_id = #{applyDeptId}</if>
                <if test="urgentOnly != null and urgentOnly == true"> AND t.is_urgent = 1</if>
                <if test="openOnly != null and openOnly == true"> AND t.status IN (1, 2)</if>
+               <if test="deptIds != null"> AND t.apply_dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
              ORDER BY t.status ASC, t.id DESC
             </script>
             """)
@@ -40,7 +41,8 @@ public interface BizTeleConsultMapper extends BaseMapper<BizTeleConsult> {
                                        @Param("status") Integer status,
                                        @Param("applyDeptId") Long applyDeptId,
                                        @Param("urgentOnly") Boolean urgentOnly,
-                                       @Param("openOnly") Boolean openOnly);
+                                       @Param("openOnly") Boolean openOnly,
+                                       @Param("deptIds") List<Long> deptIds);
 
     @Select("SELECT t.* FROM biz_tele_consult t WHERE t.id = #{id} AND t.del_flag = 0")
     TeleConsultVO selectTeleById(@Param("id") Long id);
@@ -48,7 +50,13 @@ public interface BizTeleConsultMapper extends BaseMapper<BizTeleConsult> {
     @Select("SELECT d.dept_name FROM sys_department d WHERE d.id = #{deptId} AND d.del_flag = 0")
     String selectDeptName(@Param("deptId") Long deptId);
 
-    @Select("SELECT t.status AS status, COUNT(*) AS cnt FROM biz_tele_consult t "
-            + "WHERE t.del_flag = 0 GROUP BY t.status")
-    List<TeleConsultStatusCountVO> countByStatus();
+    @Select("""
+            <script>
+            SELECT t.status AS status, COUNT(*) AS cnt FROM biz_tele_consult t
+             WHERE t.del_flag = 0
+              <if test="deptIds != null"> AND t.apply_dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
+             GROUP BY t.status
+            </script>
+            """)
+    List<TeleConsultStatusCountVO> countByStatus(@Param("deptIds") List<Long> deptIds);
 }

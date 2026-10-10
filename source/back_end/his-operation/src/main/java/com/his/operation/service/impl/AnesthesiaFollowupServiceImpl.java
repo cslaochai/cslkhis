@@ -5,21 +5,23 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.operation.dto.AnesthesiaFollowupQueryPageDTO;
 import com.his.operation.dto.AnesthesiaFollowupUpsertDTO;
 import com.his.operation.entity.BizAnesthesiaFollowup;
 import com.his.operation.entity.BizAnesthesiaRecord;
+import com.his.operation.entity.BizOperationApply;
 import com.his.operation.enums.AnesthesiaFollowupStatusEnum;
 import com.his.operation.mapper.BizAnesthesiaFollowupMapper;
 import com.his.operation.mapper.BizAnesthesiaRecordMapper;
+import com.his.operation.mapper.BizOperationApplyMapper;
 import com.his.operation.service.AnesthesiaFollowupService;
 import com.his.operation.support.FollowupAdverseItems;
 import com.his.operation.vo.AnesthesiaFollowupVO;
 import com.his.operation.vo.OperationApplyVO;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import com.his.common.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +29,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,6 +61,8 @@ public class AnesthesiaFollowupServiceImpl extends ServiceImpl<BizAnesthesiaFoll
 
     private final BizAnesthesiaFollowupMapper bizAnesthesiaFollowupMapper;
     private final BizAnesthesiaRecordMapper bizAnesthesiaRecordMapper;
+    private final BizOperationApplyMapper bizOperationApplyMapper;
+    private final DeptScopeService deptScopeService;
 
     // 查询
 
@@ -69,7 +72,7 @@ public class AnesthesiaFollowupServiceImpl extends ServiceImpl<BizAnesthesiaFoll
     @Override
     public IPage<AnesthesiaFollowupVO> listPage(AnesthesiaFollowupQueryPageDTO query) {
         IPage<AnesthesiaFollowupVO> page = bizAnesthesiaFollowupMapper.selectFollowupPage(
-                new Page<>(query.getPageNum(), query.getPageSize()), query);
+                new Page<>(query.getPageNum(), query.getPageSize()), query, deptScopeService.scopedDeptIds(null));
         page.getRecords().forEach(this::decorate);
         return page;
     }
@@ -84,6 +87,7 @@ public class AnesthesiaFollowupServiceImpl extends ServiceImpl<BizAnesthesiaFoll
         if (vo == null) {
             throw new BusinessException("随访单不存在");
         }
+        assertApplyAccessible(vo.getApplyId());
         decorate(vo);
         vo.setAdverseItemOptions(adverseItems());
         return vo;
@@ -97,6 +101,10 @@ public class AnesthesiaFollowupServiceImpl extends ServiceImpl<BizAnesthesiaFoll
         if (recordId == null) {
             throw new BusinessException("麻醉记录ID不能为空");
         }
+        BizAnesthesiaRecord record = bizAnesthesiaRecordMapper.selectById(recordId);
+        if (record != null) {
+            assertApplyAccessible(record.getApplyId());
+        }
         List<AnesthesiaFollowupVO> list = bizAnesthesiaFollowupMapper.selectByRecord(recordId);
         list.forEach(this::decorate);
         return list;
@@ -104,7 +112,7 @@ public class AnesthesiaFollowupServiceImpl extends ServiceImpl<BizAnesthesiaFoll
 
     @Override
     public long countOverduePending() {
-        return bizAnesthesiaFollowupMapper.countOverduePending();
+        return bizAnesthesiaFollowupMapper.countOverduePending(deptScopeService.scopedDeptIds(null));
     }
 
     @Override
@@ -139,6 +147,7 @@ public class AnesthesiaFollowupServiceImpl extends ServiceImpl<BizAnesthesiaFoll
         BizAnesthesiaFollowup entity;
         if (dto.getId() == null) {
             BizAnesthesiaRecord record = followableRecord(dto.getRecordId());
+            assertApplyAccessible(record.getApplyId());
             entity = new BizAnesthesiaFollowup();
             entity.setRecordId(record.getId());
             entity.setRecordNo(record.getRecordNo());
@@ -155,6 +164,7 @@ public class AnesthesiaFollowupServiceImpl extends ServiceImpl<BizAnesthesiaFoll
             entity.setFollowupDoctorName(operatorUser.getRealName());
         } else {
             entity = mustGetDraft(dto.getId());
+            assertApplyAccessible(entity.getApplyId());
             if (!Objects.equals(entity.getRecordId(), dto.getRecordId())) {
                 throw new BusinessException("不允许把随访单改挂到另一条麻醉记录上");
             }
@@ -192,6 +202,7 @@ public class AnesthesiaFollowupServiceImpl extends ServiceImpl<BizAnesthesiaFoll
             throw new BusinessException("当前用户信息不存在");
         }
         BizAnesthesiaFollowup entity = mustGetDraft(id);
+        assertApplyAccessible(entity.getApplyId());
 
         // 完成闸门的分量都在文案里：缺一项都不允许"随访"对外生效
         if (entity.getPainScore() == null) {
@@ -236,6 +247,7 @@ public class AnesthesiaFollowupServiceImpl extends ServiceImpl<BizAnesthesiaFoll
             throw new BusinessException("当前用户信息不存在");
         }
         BizAnesthesiaFollowup entity = mustGetDraft(id);
+        assertApplyAccessible(entity.getApplyId());
         bizAnesthesiaFollowupMapper.deleteById(entity.getId());
         log.info("删除麻醉随访草稿 followupNo={} 操作人={}", entity.getFollowupNo(), operatorUser.getRealName());
     }
@@ -273,6 +285,17 @@ public class AnesthesiaFollowupServiceImpl extends ServiceImpl<BizAnesthesiaFoll
         if (followupTime.isBefore(record.getAnesthesiaEndTime())) {
             throw new BusinessException("随访时间不能早于麻醉结束时间（"
                     + record.getAnesthesiaEndTime() + "）—— 麻醉还没结束就「术后随访」，是伪造");
+        }
+    }
+
+    /** 随访单无科室列，归属科室取关联手术申请单的申请科室 */
+    private void assertApplyAccessible(Long applyId) {
+        if (applyId == null) {
+            return;
+        }
+        BizOperationApply apply = bizOperationApplyMapper.selectById(applyId);
+        if (apply != null) {
+            deptScopeService.assertDeptAccessible(apply.getApplyDeptId());
         }
     }
 

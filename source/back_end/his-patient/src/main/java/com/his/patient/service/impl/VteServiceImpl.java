@@ -18,6 +18,7 @@ import com.his.patient.service.VteService;
 import com.his.patient.support.VteRules;
 import com.his.patient.vo.*;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -68,13 +69,16 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
 
     private final DictCacheService dictCacheService;
 
+    private final DeptScopeService deptScopeService;
+
     @Override
     public VteOverviewVO overview() {
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         VteOverviewVO vo = new VteOverviewVO();
-        long inHospital = vteStatMapper.countInHospital();
-        long assessed = vteStatMapper.countInHospitalAssessed();
-        long highRisk = vteStatMapper.countInHospitalHighRisk();
-        long pending = vteStatMapper.countHighRiskPending();
+        long inHospital = vteStatMapper.countInHospital(deptIds);
+        long assessed = vteStatMapper.countInHospitalAssessed(deptIds);
+        long highRisk = vteStatMapper.countInHospitalHighRisk(deptIds);
+        long pending = vteStatMapper.countHighRiskPending(deptIds);
         LocalDate now = LocalDate.now();
         LocalDate monthBegin = now.withDayOfMonth(1);
         LocalDate monthEnd = now.withDayOfMonth(now.lengthOfMonth());
@@ -84,8 +88,8 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
         vo.setHighRiskPendingCount((int) pending);
         vo.setHighRiskPreventRate(rate(highRisk - pending, highRisk));
         vo.setMissedAssessCount((int) Math.max(0, inHospital - assessed));
-        vo.setMonthVteEventCount((int) vteStatMapper.countVteEventByDiagnoseDate(monthBegin, monthEnd));
-        vo.setMonthBleedCount((int) vteStatMapper.countBleedByDiagnoseDate(monthBegin, monthEnd));
+        vo.setMonthVteEventCount((int) vteStatMapper.countVteEventByDiagnoseDate(monthBegin, monthEnd, deptIds));
+        vo.setMonthBleedCount((int) vteStatMapper.countBleedByDiagnoseDate(monthBegin, monthEnd, deptIds));
         return vo;
     }
 
@@ -99,7 +103,8 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
         String kw = query.getKeyword() == null ? null : query.getKeyword().trim();
         query.setKeyword(kw);
         Page<VteRiskListVO> page = new Page<>(query.getPageNum(), query.getPageSize());
-        Page<VteRiskListVO> result = (Page<VteRiskListVO>) bizVtePreventMapper.selectRiskPage(page, query);
+        List<Long> deptIds = deptScopeService.scopedDeptIds(query.getDeptId());
+        Page<VteRiskListVO> result = (Page<VteRiskListVO>) bizVtePreventMapper.selectRiskPage(page, query, deptIds);
         List<VteRiskListVO> records = result.getRecords();
         if (!CollectionUtils.isEmpty(records)) {
             List<Long> ids = records.stream().map(VteRiskListVO::getAdmissionId).filter(Objects::nonNull).toList();
@@ -148,13 +153,18 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
         String kw = query.getKeyword() == null ? null : query.getKeyword().trim();
         query.setKeyword(kw);
         Page<VtePreventVO> page = new Page<>(query.getPageNum(), query.getPageSize());
-        Page<VtePreventVO> result = (Page<VtePreventVO>) bizVtePreventMapper.selectPreventPage(page, query);
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
+        Page<VtePreventVO> result = (Page<VtePreventVO>) bizVtePreventMapper.selectPreventPage(page, query, deptIds);
         return PageResult.of(result.getTotal(), result.getCurrent(), result.getSize(), result.getPages(),
                 result.getRecords());
     }
 
     @Override
     public List<VtePreventVO> preventListByAdmission(Long admissionId) {
+        BizAdmission admission = bizAdmissionMapper.selectById(admissionId);
+        if (admission != null) {
+            deptScopeService.assertDeptAccessible(admission.getDeptId());
+        }
         return bizVtePreventMapper.selectByAdmission(admissionId);
     }
 
@@ -202,6 +212,7 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
+        deptScopeService.assertDeptAccessible(admission.getDeptId());
         NursingAssessmentVO latest = latestCaprini(dto.getAdmissionId());
         Integer riskLevel = latest == null ? null : latest.getRiskLevel();
         // 闸：低危患者不该上药物预防（出血风险大于血栓获益）—— 真要用，先把评估单改准
@@ -277,6 +288,7 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
         if (row == null || row.getDelFlag() == null || row.getDelFlag() == 1) {
             throw new BusinessException("措施记录不存在或已删除");
         }
+        deptScopeService.assertDeptAccessible(row.getDeptId());
         // 物理删：uk_vte_prevent 不含 del_flag，软删会占住键位（二次删除/重登记必撞唯一键）
         return bizVtePreventMapper.purgeById(id);
     }
@@ -288,13 +300,18 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
         String kw = query.getKeyword() == null ? null : query.getKeyword().trim();
         query.setKeyword(kw);
         Page<VteEventVO> page = new Page<>(query.getPageNum(), query.getPageSize());
-        Page<VteEventVO> result = (Page<VteEventVO>) bizVteEventMapper.selectEventPage(page, query);
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
+        Page<VteEventVO> result = (Page<VteEventVO>) bizVteEventMapper.selectEventPage(page, query, deptIds);
         return PageResult.of(result.getTotal(), result.getCurrent(), result.getSize(), result.getPages(),
                 result.getRecords());
     }
 
     @Override
     public List<VteEventVO> eventListByAdmission(Long admissionId) {
+        BizAdmission admission = bizAdmissionMapper.selectById(admissionId);
+        if (admission != null) {
+            deptScopeService.assertDeptAccessible(admission.getDeptId());
+        }
         return bizVteEventMapper.selectByAdmission(admissionId);
     }
 
@@ -318,6 +335,7 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
+        deptScopeService.assertDeptAccessible(admission.getDeptId());
         BizPatient patient = admission.getPatientId() == null ? null : bizPatientMapper.selectById(admission.getPatientId());
 
         BizVteEvent row;
@@ -372,6 +390,7 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
         if (row == null || row.getDelFlag() == null || row.getDelFlag() == 1) {
             throw new BusinessException("事件记录不存在或已删除");
         }
+        deptScopeService.assertDeptAccessible(row.getDeptId());
         return bizVteEventMapper.deleteById(id);
     }
 

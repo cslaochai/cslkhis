@@ -19,6 +19,7 @@ import com.his.patient.mapper.BizIcuStayMapper;
 import com.his.patient.service.IcuService;
 import com.his.patient.vo.IcuVO;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * ICU 专科监护服务实现。
@@ -47,6 +49,7 @@ public class IcuServiceImpl extends ServiceImpl<BizIcuStayMapper, BizIcuStay> im
     private final BizIcuStayMapper bizIcuStayMapper;
     private final BizIcuMonitorMapper bizIcuMonitorMapper;
     private final RedisSequenceService redisSequenceService;
+    private final DeptScopeService deptScopeService;
 
     private static void assertGcs(Integer gcs) {
         if (gcs != null && (gcs < 3 || gcs > 15)) {
@@ -68,9 +71,10 @@ public class IcuServiceImpl extends ServiceImpl<BizIcuStayMapper, BizIcuStay> im
     @Override
     public PageResult<IcuVO.StayVO> stayListPage(IcuStayQueryPageDTO query) {
         Page<IcuVO.StayVO> page = new Page<>(query.getPageNum(), query.getPageSize());
+        List<Long> wardIds = scopedWardIds(query.getWardId());
         List<IcuVO.StayVO> records = bizIcuStayMapper.selectStayPage(page,
                 TextUtil.trimToNull(query.getStayNo()), TextUtil.trimToNull(query.getPatientName()),
-                query.getStartDate(), query.getEndDate(), query.getWardId(),
+                query.getStartDate(), query.getEndDate(), query.getWardId(), wardIds,
                 query.getCareLevel(), query.getStatus());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -83,13 +87,14 @@ public class IcuServiceImpl extends ServiceImpl<BizIcuStayMapper, BizIcuStay> im
         if (vo == null) {
             throw new BusinessException("入科记录不存在或已删除");
         }
+        assertWardAccessible(vo.getWardId());
         return vo;
     }
 
     @Override
     public List<IcuVO.AdmissionVO> admissionsForIcu(String keyword, Integer limit) {
         int size = limit == null || limit <= 0 || limit > 200 ? 50 : limit;
-        return bizIcuStayMapper.selectAdmissionCandidates(TextUtil.trimToNull(keyword), size);
+        return bizIcuStayMapper.selectAdmissionCandidates(TextUtil.trimToNull(keyword), deptScopeService.scopedDeptIds(null), size);
     }
 
     @Override
@@ -114,6 +119,8 @@ public class IcuServiceImpl extends ServiceImpl<BizIcuStayMapper, BizIcuStay> im
         }
         assertGcs(dto.getInGcs());
         IcuVO.BedVO bed = requireIcuBed(dto.getBedId());
+        // 数据权限：入科目标病区折算科室判（B 类，越权病区直接拒绝）
+        assertWardAccessible(bed.getWardId());
 
         BizIcuStay stay;
         if (dto.getId() == null) {
@@ -169,6 +176,7 @@ public class IcuServiceImpl extends ServiceImpl<BizIcuStayMapper, BizIcuStay> im
             throw new BusinessException("当前用户信息不存在");
         }
         BizIcuStay stay = requireActiveStay(dto.getId());
+        assertWardAccessible(stay.getWardId());
         LocalDateTime outTime = TimeUtil.toSeconds(dto.getOutTime());
         if (outTime.isAfter(TimeUtil.nowSeconds())) {
             throw new BusinessException("出科时间不能晚于当前时间");
@@ -203,20 +211,27 @@ public class IcuServiceImpl extends ServiceImpl<BizIcuStayMapper, BizIcuStay> im
 
     @Override
     public List<IcuVO.BedVO> bedBoard(Long wardId) {
-        return bizIcuStayMapper.selectBedBoard(wardId);
+        if (wardId != null) {
+            assertWardAccessible(wardId);
+        }
+        return bizIcuStayMapper.selectBedBoard(wardId, scopedWardIds(wardId));
     }
 
     @Override
     public PageResult<IcuVO.MonitorVO> monitorListPage(IcuMonitorQueryPageDTO query) {
         Page<IcuVO.MonitorVO> page = new Page<>(query.getPageNum(), query.getPageSize());
+        if (query.getStayId() != null) {
+            assertWardAccessible(requireStay(query.getStayId()).getWardId());
+        }
         List<IcuVO.MonitorVO> records = bizIcuMonitorMapper.selectMonitorPage(page, query.getStayId(),
-                query.getStartDate(), query.getEndDate());
+                query.getStartDate(), query.getEndDate(), scopedWardIds(null));
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 
     @Override
     public List<IcuVO.MonitorVO> monitorTrend(Long stayId, Integer hours) {
-        requireStay(stayId);
+        BizIcuStay stay = requireStay(stayId);
+        assertWardAccessible(stay.getWardId());
         LocalDateTime since = hours == null || hours <= 0 ? null : TimeUtil.nowSeconds().minusHours(hours);
         return bizIcuMonitorMapper.selectMonitorTrend(stayId, since, null);
     }
@@ -225,6 +240,7 @@ public class IcuServiceImpl extends ServiceImpl<BizIcuStayMapper, BizIcuStay> im
     @Transactional(rollbackFor = Exception.class)
     public IcuVO.MonitorVO monitorUpsert(IcuMonitorUpsertDTO dto) {
         BizIcuStay stay = requireStay(dto.getStayId());
+        assertWardAccessible(stay.getWardId());
         if (stay.getStatus() != IcuStayStatusEnum.IN.getCode()) {
             throw new BusinessException("患者已出科，监护记录已封账，不能再登记");
         }
@@ -308,27 +324,29 @@ public class IcuServiceImpl extends ServiceImpl<BizIcuStayMapper, BizIcuStay> im
         LocalDate end = endDate == null ? LocalDate.now() : endDate;
         LocalDate earliest = end.minusDays(29);
         LocalDate start = startDate == null || startDate.isBefore(earliest) ? earliest : startDate;
-        IcuVO.StatsVO stats = bizIcuStayMapper.selectRangeSummary(TimeUtil.dayStart(start), TimeUtil.dayEnd(end));
+        List<Long> wardIds = scopedWardIds(null);
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
+        IcuVO.StatsVO stats = bizIcuStayMapper.selectRangeSummary(TimeUtil.dayStart(start), TimeUtil.dayEnd(end), wardIds);
         if (stats == null) {
             stats = new IcuVO.StatsVO();
         }
         stats.setStartDate(start);
         stats.setEndDate(end);
-        int inCount = bizIcuStayMapper.countInDept();
-        int bedTotal = bizIcuMonitorMapper.countIcuBeds();
+        int inCount = bizIcuStayMapper.countInDept(wardIds);
+        int bedTotal = bizIcuMonitorMapper.countIcuBeds(deptIds);
         stats.setInCount(inCount);
         stats.setBedTotal(bedTotal);
         stats.setBedUseRate(bedTotal == 0 ? null
                 : BigDecimal.valueOf(inCount).multiply(BigDecimal.valueOf(100))
                 .divide(BigDecimal.valueOf(bedTotal), 1, RoundingMode.HALF_UP));
-        stats.setMonitorTotalRange(bizIcuMonitorMapper.countRange(TimeUtil.dayStart(start), TimeUtil.dayEnd(end)));
+        stats.setMonitorTotalRange(bizIcuMonitorMapper.countRange(TimeUtil.dayStart(start), TimeUtil.dayEnd(end), wardIds));
         int stays = NumUtil.orDefault(stats.getInCountRange(), 0) + NumUtil.orDefault(stats.getOutCountRange(), 0);
         stats.setMonitorsPerStay(stays == 0 ? null
                 : BigDecimal.valueOf(NumUtil.orDefault(stats.getMonitorTotalRange(), 0))
                 .divide(BigDecimal.valueOf(stays), 2, RoundingMode.HALF_UP));
-        stats.setCareLevels(bizIcuStayMapper.selectCareLevelBoard());
-        stats.setVentModes(bizIcuMonitorMapper.selectLatestVentModes());
-        IcuVO.StatsVO tubes = bizIcuMonitorMapper.selectTubeSummary();
+        stats.setCareLevels(bizIcuStayMapper.selectCareLevelBoard(wardIds));
+        stats.setVentModes(bizIcuMonitorMapper.selectLatestVentModes(wardIds));
+        IcuVO.StatsVO tubes = bizIcuMonitorMapper.selectTubeSummary(wardIds);
         if (tubes == null) {
             // 在科患者一条监护记录都没有时 SUM() 出全 NULL 行，MyBatis 返回 null 对象；
             // 带管人数是护理质量口径的计数，出参要 0 而不是 null（前端卡片直接渲染）
@@ -339,7 +357,7 @@ public class IcuServiceImpl extends ServiceImpl<BizIcuStayMapper, BizIcuStay> im
         stats.setArterialCount(NumUtil.orDefault(tubes.getArterialCount(), 0));
         stats.setCatheterCount(NumUtil.orDefault(tubes.getCatheterCount(), 0));
         stats.setDrainCount(NumUtil.orDefault(tubes.getDrainCount(), 0));
-        stats.setMonitorLagCount(bizIcuStayMapper.countMonitorLag(lagHours == null || lagHours <= 0 ? 6 : lagHours));
+        stats.setMonitorLagCount(bizIcuStayMapper.countMonitorLag(lagHours == null || lagHours <= 0 ? 6 : lagHours, wardIds));
         return stats;
     }
 
@@ -407,6 +425,38 @@ public class IcuServiceImpl extends ServiceImpl<BizIcuStayMapper, BizIcuStay> im
             throw new BusinessException("GCS 分项超出范围（睁眼1~4、语言1~5、运动1~6）");
         }
         return dto.getGcsEye() + dto.getGcsVerbal() + dto.getGcsMotor();
+    }
+
+    // 数据权限
+
+    /**
+     * 病区数据权限（ward_id 是 sys_ward 主键不是科室ID，须经 sys_ward.dept_id 折算后再判）
+     */
+    private void assertWardAccessible(Long wardId) {
+        if (wardId == null) {
+            return;
+        }
+        deptScopeService.assertDeptAccessible(bizIcuStayMapper.selectWardDeptId(wardId));
+    }
+
+    /** null=不限病区；非空=授权科室折算出的病区集合（空集合一律当配置缺失拒掉，IN () 是语法错误） */
+    private List<Long> scopedWardIds(Long requestedWardId) {
+        if (requestedWardId != null) {
+            assertWardAccessible(requestedWardId);
+            return List.of(requestedWardId);
+        }
+        Set<Long> allowed = deptScopeService.allowedDeptIds();
+        if (allowed == null) {
+            return null;
+        }
+        if (allowed.isEmpty()) {
+            throw new BusinessException("当前岗位未绑定任何科室，无法查看相关数据");
+        }
+        List<Long> wardIds = bizIcuStayMapper.selectWardIdsByDeptIds(List.copyOf(allowed));
+        if (wardIds.isEmpty()) {
+            throw new BusinessException("当前岗位授权科室下没有绑定的病区，无法查看相关数据");
+        }
+        return wardIds;
     }
 
 }

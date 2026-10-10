@@ -7,7 +7,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
-import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.ReferralDTO;
@@ -21,6 +20,7 @@ import com.his.system.entity.SysConfig;
 import com.his.system.entity.SysMessage;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.mapper.SysConfigMapper;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.DutyRosterService;
 import com.his.system.service.SysMessageService;
@@ -62,12 +62,25 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
     private final DutyRosterService dutyRosterService;
     private final SysMessageService sysMessageService;
     private final SysConfigMapper sysConfigMapper;
+    private final DeptScopeService deptScopeService;
+
+    /** 转诊单发起/接收任一科室在授权范围内即可见（跨科转诊本身是合法业务） */
+    private void assertReferralAccessible(Long fromDeptId, Long toDeptId) {
+        if (deptScopeService.canAccessDept(fromDeptId) || deptScopeService.canAccessDept(toDeptId)) {
+            return;
+        }
+        throw new BusinessException("该数据所属科室不在当前岗位的数据范围内");
+    }
 
     @Transactional(rollbackFor = Exception.class)
     public ReferralVO create(ReferralDTO.Create dto) {
         int direction = dto.getDirection() == null ? ReferralDirectionEnum.UP.getCode() : dto.getDirection();
         if (!TextUtil.hasText(dto.getToHospital()) && dto.getToDeptId() == null) {
             throw new BusinessException("院际转诊必须填转入医院，院内转诊必须选转入科室");
+        }
+        // 转入科室是业务目标不受限，只校验发起科室
+        if (dto.getFromDeptId() != null) {
+            deptScopeService.assertDeptAccessible(dto.getFromDeptId());
         }
         BizReferral r = new BizReferral();
         r.setReferralNo(nextReferralNo());
@@ -99,6 +112,10 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
                 .like(TextUtil.hasText(q.getToHospital()), BizReferral::getToHospital, TextUtil.trim(q.getToHospital()))
                 .orderByDesc(BizReferral::getReferralTime)
                 .orderByDesc(BizReferral::getReferralId);
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
+        if (deptIds != null) {
+            w.and(x -> x.in(BizReferral::getFromDeptId, deptIds).or().in(BizReferral::getToDeptId, deptIds));
+        }
         IPage<BizReferral> page = bizReferralMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w);
         Map<Long, String> deptNames = loadDeptNames();
         return page.convert(r -> toVo(r, deptNames));
@@ -106,12 +123,14 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
 
     public ReferralVO getDetailById(Long referralId) {
         BizReferral r = requireReferral(referralId);
+        assertReferralAccessible(r.getFromDeptId(), r.getToDeptId());
         return toVo(r, loadDeptNames());
     }
 
     @Transactional(rollbackFor = Exception.class)
     public ReferralVO audit(ReferralDTO.Audit dto) {
         BizReferral r = requireReferral(dto.getReferralId());
+        assertReferralAccessible(r.getFromDeptId(), r.getToDeptId());
         if (!Objects.equals(r.getReferralStatus(), ReferralStatusEnum.PENDING.getCode())) {
             throw new BusinessException("只有待确认的转诊单可以确认（当前：" + statusText(r) + "）");
         }
@@ -132,6 +151,7 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
     @Transactional(rollbackFor = Exception.class)
     public ReferralVO finish(ReferralDTO.Finish dto) {
         BizReferral r = requireReferral(dto.getReferralId());
+        assertReferralAccessible(r.getFromDeptId(), r.getToDeptId());
         if (!Objects.equals(r.getReferralStatus(), ReferralStatusEnum.CONFIRMED.getCode())) {
             throw new BusinessException("只有已确认的转诊单可以完成（当前：" + statusText(r) + "）");
         }
@@ -147,6 +167,7 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
     @Transactional(rollbackFor = Exception.class)
     public ReferralVO cancel(ReferralDTO.Cancel dto) {
         BizReferral r = requireReferral(dto.getReferralId());
+        assertReferralAccessible(r.getFromDeptId(), r.getToDeptId());
         if (Objects.equals(r.getReferralStatus(), ReferralStatusEnum.FINISHED.getCode())) {
             throw new BusinessException("已完成的转诊单不能取消");
         }

@@ -25,6 +25,7 @@ import com.his.patient.vo.DeathCertReportPayloadVO;
 import com.his.patient.vo.DeathCertificateVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.enums.BizTypeEnum;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -76,6 +77,7 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
     private final BizDeathCertificateCauseMapper bizDeathCertificateCauseMapper;
     private final RedisSequenceService redisSequenceService;
     private final SysMessageService sysMessageService;
+    private final DeptScopeService deptScopeService;
 
     // 查询
 
@@ -195,9 +197,10 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
     @Override
     public PageResult<DeathCertificateVO.Row> listPage(DeathCertificateDTO.QueryPage query) {
         Page<DeathCertificateVO.Row> page = new Page<>(query.getPageNum(), query.getPageSize());
+        List<Long> deptIds = deptScopeService.scopedDeptIds(query.getDeathDeptId());
         List<DeathCertificateVO.Row> records = bizDeathCertificateMapper.selectCertPage(page, TextUtil.trimToNull(query.getKeyword()),
                 query.getCertStatus(), query.getReportStatus(), query.getDeathPlace(), query.getDeathDeptId(),
-                TimeUtil.dayStart(query.getStartDate()), TimeUtil.dayEnd(query.getEndDate()), query.getOverdue());
+                TimeUtil.dayStart(query.getStartDate()), TimeUtil.dayEnd(query.getEndDate()), query.getOverdue(), deptIds);
         records.forEach(DeathCertificateServiceImpl::fillDeadline);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -205,8 +208,9 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
     @Override
     public PageResult<DeathCertificateVO.PendingRow> pendingListPage(DeathCertificateDTO.QueryPage query) {
         Page<DeathCertificateVO.PendingRow> page = new Page<>(query.getPageNum(), query.getPageSize());
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         List<DeathCertificateVO.PendingRow> records = bizDeathCertificateMapper.selectPendingPage(page,
-                TextUtil.trimToNull(query.getKeyword()), TimeUtil.dayStart(query.getStartDate()), TimeUtil.dayEnd(query.getEndDate()));
+                TextUtil.trimToNull(query.getKeyword()), TimeUtil.dayStart(query.getStartDate()), TimeUtil.dayEnd(query.getEndDate()), deptIds);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 
@@ -216,6 +220,7 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
         if (detail == null) {
             throw new BusinessException("死亡证明不存在或已删除");
         }
+        deptScopeService.assertDeptAccessible(detail.getDeathDeptId());
         detail.setCauses(bizDeathCertificateCauseMapper.selectByCertId(id));
         return detail;
     }
@@ -226,12 +231,13 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
         if (snapshot == null) {
             throw new BusinessException("住院记录不存在");
         }
+        deptScopeService.assertDeptAccessible(snapshot.getDeptId());
         return snapshot;
     }
 
     @Override
     public DeathCertificateVO.Stats stats() {
-        DeathCertificateVO.Stats stats = bizDeathCertificateMapper.selectStats();
+        DeathCertificateVO.Stats stats = bizDeathCertificateMapper.selectStats(deptScopeService.scopedDeptIds(null));
         return stats == null ? new DeathCertificateVO.Stats() : stats;
     }
 
@@ -245,6 +251,10 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
         DeathCertificateVO.PatientSnapshot snapshot = bizDeathCertificateMapper.selectPatientSnapshot(dto.getAdmissionId());
         if (snapshot == null) {
             throw new BusinessException("住院记录不存在");
+        }
+        deptScopeService.assertDeptAccessible(snapshot.getDeptId());
+        if (dto.getDeathDeptId() != null) {
+            deptScopeService.assertDeptAccessible(dto.getDeathDeptId());
         }
         if (dto.getDeathTime().isAfter(TimeUtil.nowSeconds())) {
             throw new BusinessException("死亡时间不能晚于当前时间");
@@ -348,6 +358,7 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
             throw new BusinessException("当前用户信息不存在");
         }
         BizDeathCertificate cert = requireCert(dto.getId());
+        deptScopeService.assertDeptAccessible(cert.getDeathDeptId());
         if (!Objects.equals(cert.getCertStatus(), DeathCertStatusEnum.DRAFT.getCode())) {
             throw new BusinessException("只有草稿状态的证明可以提交审核（当前：" + DeathCertStatusEnum.labelOrUnknown(cert.getCertStatus()) + "）");
         }
@@ -366,6 +377,7 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
     @Transactional(rollbackFor = Exception.class)
     public void issue(DeathCertificateDTO.Issue dto) {
         BizDeathCertificate cert = requireCert(dto.getId());
+        deptScopeService.assertDeptAccessible(cert.getDeathDeptId());
         if (!Objects.equals(cert.getCertStatus(), DeathCertStatusEnum.AUDITED.getCode())) {
             throw new BusinessException("只有「已审核」的证明可以签发（当前：" + DeathCertStatusEnum.labelOrUnknown(cert.getCertStatus()) + "）");
         }
@@ -407,6 +419,7 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
             throw new BusinessException("当前用户信息不存在");
         }
         BizDeathCertificate cert = requireCert(dto.getId());
+        deptScopeService.assertDeptAccessible(cert.getDeathDeptId());
         if (Objects.equals(cert.getCertStatus(), DeathCertStatusEnum.VOIDED.getCode())) {
             throw new BusinessException("该证明已作废，无需重复作废");
         }
@@ -429,6 +442,7 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
             throw new BusinessException("当前用户信息不存在");
         }
         BizDeathCertificate orig = requireCert(origCertId);
+        deptScopeService.assertDeptAccessible(orig.getDeathDeptId());
         if (!Objects.equals(orig.getCertStatus(), DeathCertStatusEnum.VOIDED.getCode())) {
             throw new BusinessException("只有已作废的证明才能重开（当前：" + DeathCertStatusEnum.labelOrUnknown(orig.getCertStatus()) + "）");
         }
@@ -496,6 +510,7 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
             throw new BusinessException("当前用户信息不存在");
         }
         BizDeathCertificate cert = requireCert(dto.getId());
+        deptScopeService.assertDeptAccessible(cert.getDeathDeptId());
         if (!Objects.equals(cert.getCertStatus(), DeathCertStatusEnum.ISSUED.getCode())) {
             throw new BusinessException("只有「已开具」的证明才打印（" + DeathCertStatusEnum.labelOrUnknown(cert.getCertStatus()) + "的表样不能作为凭证）");
         }
@@ -513,6 +528,7 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
     @Transactional(rollbackFor = Exception.class)
     public String report(Long id) {
         BizDeathCertificate cert = requireCert(id);
+        deptScopeService.assertDeptAccessible(cert.getDeathDeptId());
         if (!Objects.equals(cert.getCertStatus(), DeathCertStatusEnum.ISSUED.getCode())) {
             throw new BusinessException("未签发的证明不能上报（当前：" + DeathCertStatusEnum.labelOrUnknown(cert.getCertStatus()) + "）");
         }

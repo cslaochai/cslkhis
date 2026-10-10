@@ -1,10 +1,10 @@
 package com.his.medicaltech.service.impl;
 
 import com.his.medicaltech.mapper.WorkbenchMetricMapper;
-import com.his.medicaltech.service.WeekVisitTrendMetricProvider;
+import com.his.medicaltech.service.WeekVisitTrendMetricService;
 import com.his.medicaltech.vo.WorkbenchWeekTrendRowVO;
 import com.his.system.entity.CurrentUser;
-import com.his.system.provider.WorkbenchMetricProvider;
+import com.his.system.provider.WorkbenchMetricService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +21,7 @@ import java.util.Map;
  */
 @Service
 @RequiredArgsConstructor
-public class WeekVisitTrendMetricProviderImpl implements WorkbenchMetricProvider, WeekVisitTrendMetricProvider {
+public class WeekVisitTrendMetricServiceImpl implements WorkbenchMetricService, WeekVisitTrendMetricService {
 
     /**
      * 与旧首页一致：含今天在内 7 天

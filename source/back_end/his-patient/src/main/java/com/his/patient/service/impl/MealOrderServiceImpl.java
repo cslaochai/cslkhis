@@ -25,7 +25,7 @@ import com.his.patient.support.NutritionRules;
 import com.his.patient.vo.MealGenerateVO;
 import com.his.patient.vo.MealOrderVO;
 import com.his.system.entity.CurrentUser;
-import com.his.system.provider.DeptScopeProvider;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,7 +45,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class MealOrderServiceImpl extends ServiceImpl<BizMealOrderMapper, BizMealOrder> implements MealOrderService {
     private final RedisSequenceService redisSequenceService;
-    private final DeptScopeProvider deptScopeProvider;
+    private final DeptScopeService deptScopeService;
     private final BizMealOrderMapper bizMealOrderMapper;
     private final BizDietPlanMapper bizDietPlanMapper;
 
@@ -55,8 +55,11 @@ public class MealOrderServiceImpl extends ServiceImpl<BizMealOrderMapper, BizMea
     public PageResult<MealOrderVO> mealListPage(MealOrderQueryPageDTO query) {
         query.setKeyword(TextUtil.trim(query.getKeyword()));
         query.setDietCode(TextUtil.trim(query.getDietCode()));
-        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
+        Set<Long> allowed = deptScopeService.allowedDeptIds();
         if (allowed != null) {
+            if (allowed.isEmpty()) {
+                throw new BusinessException("当前岗位未绑定任何科室，无法查看相关数据");
+            }
             query.setScopeDeptIds(new ArrayList<>(allowed));
         }
         Page<MealOrderVO> page = new Page<>(query.getPageNum(), query.getPageSize());
@@ -70,6 +73,10 @@ public class MealOrderServiceImpl extends ServiceImpl<BizMealOrderMapper, BizMea
 
     @Override
     public List<MealOrderVO> mealListByPlan(Long dietPlanId) {
+        BizDietPlan plan = bizDietPlanMapper.selectById(dietPlanId);
+        if (plan != null) {
+            deptScopeService.assertDeptAccessible(plan.getDeptId());
+        }
         List<MealOrderVO> rows = bizMealOrderMapper.selectByPlan(dietPlanId);
         rows.forEach(this::decorate);
         return rows;
@@ -103,7 +110,7 @@ public class MealOrderServiceImpl extends ServiceImpl<BizMealOrderMapper, BizMea
             throw new BusinessException("当前用户信息不存在");
         }
 
-        List<BizDietPlan> plans = bizDietPlanMapper.selectList(new LambdaQueryWrapper<BizDietPlan>()
+        LambdaQueryWrapper<BizDietPlan> wrapper = new LambdaQueryWrapper<BizDietPlan>()
                 .eq(BizDietPlan::getPlanStatus, PlanStatusEnum.RUNNING.getCode())
                 .eq(BizDietPlan::getRoute, DietRouteEnum.ORAL.getCode())
                 // 出院/转科不自动停方案（本系统出院流程不停医嘱），但人走了还继续送饭是错的：
@@ -115,7 +122,16 @@ public class MealOrderServiceImpl extends ServiceImpl<BizMealOrderMapper, BizMea
                 .le(BizDietPlan::getStartTime, TimeUtil.dayEnd(mealDate))
                 .and(w -> w.isNull(BizDietPlan::getStopTime).or().ge(BizDietPlan::getStopTime, TimeUtil.dayStart(mealDate)))
                 .orderByAsc(BizDietPlan::getWardId)
-                .orderByAsc(BizDietPlan::getId));
+                .orderByAsc(BizDietPlan::getId);
+        // 科室数据权限收口：受限岗位只给授权科室的方案配餐（空集合按配置缺失拒绝）
+        Set<Long> allowedDepts = deptScopeService.allowedDeptIds();
+        if (allowedDepts != null) {
+            if (allowedDepts.isEmpty()) {
+                throw new BusinessException("当前岗位未绑定任何科室，无法生成餐单");
+            }
+            wrapper.in(BizDietPlan::getDeptId, allowedDepts);
+        }
+        List<BizDietPlan> plans = bizDietPlanMapper.selectList(wrapper);
 
         MealGenerateVO vo = new MealGenerateVO();
         vo.setMealDate(mealDate);
@@ -243,6 +259,7 @@ public class MealOrderServiceImpl extends ServiceImpl<BizMealOrderMapper, BizMea
             if (row == null) {
                 throw new BusinessException("订餐不存在（ID=" + id + "）");
             }
+            deptScopeService.assertDeptAccessible(row.getDeptId());
             Integer current = row.getDeliverStatus();
             if (cancel) {
                 if (Objects.equals(MealDeliverStatusEnum.SIGNED.getCode(), current)) {
@@ -297,6 +314,7 @@ public class MealOrderServiceImpl extends ServiceImpl<BizMealOrderMapper, BizMea
         if (row == null) {
             throw new BusinessException("订餐不存在或已删除");
         }
+        deptScopeService.assertDeptAccessible(row.getDeptId());
         // 删除是「这行从来没生成过」，退订才是「饭送出去了但不算数」。
         // 已配送/已签收的行删掉，食堂的份数与患者的吃饭记录同时对不上。
         if (row.getDeliverStatus() != null && row.getDeliverStatus() >= MealDeliverStatusEnum.DELIVERED.getCode()) {

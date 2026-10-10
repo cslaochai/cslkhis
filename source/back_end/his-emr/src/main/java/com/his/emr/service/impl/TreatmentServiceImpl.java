@@ -30,6 +30,7 @@ import com.his.emr.support.TreatmentChargeInvoker;
 import com.his.emr.vo.RegistSnapshotVO;
 import com.his.emr.vo.TreatmentItemSnapshotVO;
 import com.his.emr.vo.TreatmentVO;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -70,6 +71,8 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
 
     private final TreatmentChargeInvoker chargeInvoker;
 
+    private final DeptScopeService deptScopeService;
+
     private static String str(Object o) {
         return o == null ? null : String.valueOf(o);
     }
@@ -105,6 +108,8 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
     }
 
     public PageResult<TreatmentVO.ApplyVO> listPageApplies(TreatmentDTO.ApplyQuery q) {
+        // 治疗申请按开单科室收口；执行流水（无科室列）在 execPage 里经申请单收口
+        List<Long> scope = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizTreatmentApply> w = new LambdaQueryWrapper<>();
         String kw = TextUtil.trim(q.getKeyword());
         w.and(TextUtil.hasText(kw), x -> x.like(BizTreatmentApply::getPatientName, kw)
@@ -113,6 +118,7 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
                         .or().like(BizTreatmentApply::getItemName, kw))
                 .eq(q.getPatientId() != null, BizTreatmentApply::getPatientId, q.getPatientId())
                 .eq(q.getRegistId() != null, BizTreatmentApply::getRegistId, q.getRegistId())
+                .in(scope != null, BizTreatmentApply::getDeptId, scope)
                 .eq(q.getApplyStatus() != null, BizTreatmentApply::getApplyStatus, q.getApplyStatus())
                 .eq(q.getTreatmentItemId() != null, BizTreatmentApply::getTreatmentItemId, q.getTreatmentItemId())
                 .ge(q.getStartDate() != null, BizTreatmentApply::getStartDate, q.getStartDate())
@@ -244,6 +250,8 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
         if (regist.getRefundTime() != null || Integer.valueOf(5).equals(regist.getRegistStatus())) {
             throw new BusinessException("该挂号已退号/已取消，不能在已作废的就诊上开治疗");
         }
+        // 开单科室取挂号科室：受限岗位只能给本科室就诊开治疗
+        deptScopeService.assertDeptAccessible(regist.getDeptId());
         TreatmentItemSnapshotVO item = sysTreatmentItemMapper.selectApplySnapshot(dto.getTreatmentItemId());
         if (item == null || item.getItemId() == null) {
             throw new BusinessException("治疗项目不存在或已删除：" + dto.getTreatmentItemId());
@@ -638,6 +646,17 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
 
     private Page<BizTreatmentRecord> execPage(TreatmentDTO.ExecQuery q, int pageNum, int pageSize) {
         LambdaQueryWrapper<BizTreatmentRecord> w = new LambdaQueryWrapper<>();
+        // 流水表无科室列：按申请单开单科室收口（分页/状态分布/统计共用本方法，口径天然一致）
+        List<Long> scope = deptScopeService.scopedDeptIds(null);
+        if (scope != null) {
+            List<Long> scopedApplyIds = bizTreatmentApplyMapper.selectList(new LambdaQueryWrapper<BizTreatmentApply>()
+                            .select(BizTreatmentApply::getApplyId).in(BizTreatmentApply::getDeptId, scope))
+                    .stream().map(BizTreatmentApply::getApplyId).toList();
+            if (scopedApplyIds.isEmpty()) {
+                return new Page<>(pageNum, pageSize);
+            }
+            w.in(BizTreatmentRecord::getApplyId, scopedApplyIds);
+        }
         w.eq(q.getApplyId() != null, BizTreatmentRecord::getApplyId, q.getApplyId())
                 .eq(q.getExecStatus() != null, BizTreatmentRecord::getExecStatus, q.getExecStatus())
                 .eq(q.getChargeStatus() != null, BizTreatmentRecord::getChargeStatus, q.getChargeStatus())
@@ -746,6 +765,7 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
         if (a == null) {
             throw new BusinessException("治疗申请单不存在：" + applyId);
         }
+        deptScopeService.assertDeptAccessible(a.getDeptId());
         return a;
     }
 

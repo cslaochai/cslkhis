@@ -49,6 +49,9 @@ public interface EcgMapper {
                 ON r.record_id = rec.id AND r.del_flag = 0 AND r.report_type = ${@com.his.medicaltech.enums.ReportTypeEnum@INSPECTION.getCode()}
              WHERE rec.del_flag = 0
                AND rec.record_status NOT IN (7)
+               <if test="deptIds != null"> AND rec.inspection_dept_id IN
+                 <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+               </if>
                <if test="keyword != null and keyword != ''">
                  AND (rec.patient_name LIKE CONCAT('%', #{keyword}, '%')
                    OR rec.patient_no   LIKE CONCAT('%', #{keyword}, '%')
@@ -68,6 +71,7 @@ public interface EcgMapper {
             </script>
             """)
     List<EcgListVO> selectWorkbenchPage(IPage<EcgListVO> page,
+                                        @Param("deptIds") List<Long> deptIds,
                                         @Param("keyword") String keyword,
                                         @Param("collectPending") Boolean collectPending,
                                         @Param("onlyUnwritten") Boolean onlyUnwritten,

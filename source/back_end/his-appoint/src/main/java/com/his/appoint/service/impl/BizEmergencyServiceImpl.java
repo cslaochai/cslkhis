@@ -35,6 +35,7 @@ import com.his.patient.vo.WardVO;
 import com.his.system.entity.*;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.mapper.*;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DutyRosterService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
@@ -89,10 +90,15 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
     private final BizShiftMapper bizShiftMapper;
     private final BizEmergencyHandoverMapper bizEmergencyHandoverMapper;
     private final BizEmergencyHandoverItemMapper bizEmergencyHandoverItemMapper;
+    private final DeptScopeService deptScopeService;
 
     @Override
     public PageResult<BizEmergencyVO> listPage(EmergencyQueryDTO queryDTO) {
         LambdaQueryWrapper<BizEmergency> wrapper = new LambdaQueryWrapper<>();
+        List<Long> scoped = deptScopeService.scopedDeptIds(null);
+        if (scoped != null) {
+            wrapper.in(BizEmergency::getDeptId, scoped);
+        }
         wrapper.eq(queryDTO.getTriageLevel() != null, BizEmergency::getTriageLevel, queryDTO.getTriageLevel())
                 .eq(queryDTO.getEmergencyStatus() != null, BizEmergency::getEmergencyStatus, queryDTO.getEmergencyStatus())
                 .and(TextUtil.hasText(queryDTO.getKeyword()), w -> w
@@ -234,6 +240,7 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
             }
             emergency.setDeptName(dept.getDeptName());
         }
+        deptScopeService.assertDeptAccessible(emergency.getDeptId());
         applyDispatch(emergency);
         this.save(emergency);
 
@@ -392,6 +399,7 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
         if (emergency == null) {
             throw new BusinessException("急诊记录不存在");
         }
+        deptScopeService.assertDeptAccessible(emergency.getDeptId());
         Integer status = statusDTO.getStatus();
         int current = emergency.getEmergencyStatus() == null ? 1 : emergency.getEmergencyStatus();
         if (current >= 4) {
@@ -468,6 +476,7 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
         if (emergency == null) {
             throw new BusinessException("急诊记录不存在");
         }
+        deptScopeService.assertDeptAccessible(emergency.getDeptId());
         int current = emergency.getEmergencyStatus() == null ? 1 : emergency.getEmergencyStatus();
         if (current >= 4) {
             throw new BusinessException("该急诊记录已结束，不能重复转住院");
@@ -514,6 +523,7 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
 
     @Override
     public List<EmergencyDutyVO> dutySelectList(Long deptId) {
+        deptScopeService.assertDeptAccessible(deptId);
         return onDutySchedules(deptId).stream().map(s -> {
             EmergencyDutyVO vo = new EmergencyDutyVO();
             vo.setDoctorId(s.getDoctorId());
@@ -596,53 +606,62 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
     @Override
     public EmergencyStatsVO getStats() {
         EmergencyStatsVO stats = new EmergencyStatsVO();
+        List<Long> scoped = deptScopeService.scopedDeptIds(null);
         // 总急诊量（今日）
         LambdaQueryWrapper<BizEmergency> todayWrapper = new LambdaQueryWrapper<>();
-        todayWrapper.ge(BizEmergency::getCreateTime, TimeUtil.dayStart(LocalDateTime.now().toLocalDate()));
+        todayWrapper.in(scoped != null, BizEmergency::getDeptId, scoped)
+                .ge(BizEmergency::getCreateTime, TimeUtil.dayStart(LocalDateTime.now().toLocalDate()));
         stats.setTodayTotal(this.count(todayWrapper));
 
         // 候诊中
         LambdaQueryWrapper<BizEmergency> waitingWrapper = new LambdaQueryWrapper<>();
-        waitingWrapper.eq(BizEmergency::getEmergencyStatus, 1);
+        waitingWrapper.in(scoped != null, BizEmergency::getDeptId, scoped)
+                .eq(BizEmergency::getEmergencyStatus, 1);
         stats.setWaiting(this.count(waitingWrapper));
 
         // 诊治中
         LambdaQueryWrapper<BizEmergency> treatingWrapper = new LambdaQueryWrapper<>();
-        treatingWrapper.eq(BizEmergency::getEmergencyStatus, 2);
+        treatingWrapper.in(scoped != null, BizEmergency::getDeptId, scoped)
+                .eq(BizEmergency::getEmergencyStatus, 2);
         stats.setTreating(this.count(treatingWrapper));
 
         // 留观
         LambdaQueryWrapper<BizEmergency> obsWrapper = new LambdaQueryWrapper<>();
-        obsWrapper.eq(BizEmergency::getEmergencyStatus, 3);
+        obsWrapper.in(scoped != null, BizEmergency::getDeptId, scoped)
+                .eq(BizEmergency::getEmergencyStatus, 3);
         stats.setObservation(this.count(obsWrapper));
 
         // 红区（I级+II级）
         LambdaQueryWrapper<BizEmergency> redWrapper = new LambdaQueryWrapper<>();
-        redWrapper.in(BizEmergency::getTriageLevel, 1, 2)
+        redWrapper.in(scoped != null, BizEmergency::getDeptId, scoped)
+                .in(BizEmergency::getTriageLevel, 1, 2)
                 .notIn(BizEmergency::getEmergencyStatus, 4, 5, 6);
         stats.setRedZone(this.count(redWrapper));
 
         // 绿色通道
         LambdaQueryWrapper<BizEmergency> greenWrapper = new LambdaQueryWrapper<>();
-        greenWrapper.isNotNull(BizEmergency::getGreenChannel)
+        greenWrapper.in(scoped != null, BizEmergency::getDeptId, scoped)
+                .isNotNull(BizEmergency::getGreenChannel)
                 .ne(BizEmergency::getGreenChannel, "")
                 .notIn(BizEmergency::getEmergencyStatus, 4, 5, 6);
         stats.setGreenChannel(this.count(greenWrapper));
 
         // 超时未接诊（兜底看板：这个数字不为 0 就说明有人该被追问）
         LambdaQueryWrapper<BizEmergency> overdueWrapper = waitingBase();
-        overdueWrapper.apply(OVERDUE_SQL, waitPolicy.deadlineMinutes(null));
+        overdueWrapper.in(scoped != null, BizEmergency::getDeptId, scoped)
+                .apply(OVERDUE_SQL, waitPolicy.deadlineMinutes(null));
         stats.setOverdueWaiting(this.count(overdueWrapper));
 
         // 待派单池：候诊中且没有接诊医生
         LambdaQueryWrapper<BizEmergency> poolWrapper = waitingBase();
-        poolWrapper.isNull(BizEmergency::getDoctorId);
+        poolWrapper.in(scoped != null, BizEmergency::getDeptId, scoped)
+                .isNull(BizEmergency::getDoctorId);
         stats.setUnassignedWaiting(this.count(poolWrapper));
 
         // 留观两档：48 小时是"该开始张罗去向"，72 小时是"必须定下来"。
         // 分开数是为了让值班的人一眼看出差多少 —— 只有一个"超时限"时，刚过 48 的人以为不着急。
-        stats.setObsOverWarn(countObservationOver(obsPolicy.warnHours()));
-        stats.setObsOverMax(countObservationOver(obsThresholdOfMax()));
+        stats.setObsOverWarn(countObservationOver(obsPolicy.warnHours(), scoped));
+        stats.setObsOverMax(countObservationOver(obsThresholdOfMax(), scoped));
         // 阈值随统计一起出参：看板的「留观超 48 小时」文案由后端带出，前端不写死数字，
         // 否则系统参数一改，卡片标题和实际过滤口径就成了两套。
         stats.setObsWarnHours(obsPolicy.warnHours());
@@ -654,9 +673,10 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
     /**
      * 留观中且已超该小时数（与列表的「留观榜」过滤同一式子，卡片数字点开必须就是这些人）
      */
-    private long countObservationOver(int hours) {
+    private long countObservationOver(int hours, List<Long> scoped) {
         LambdaQueryWrapper<BizEmergency> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(BizEmergency::getEmergencyStatus, EmergencyStatusEnum.OBSERVATION.getCode())
+        wrapper.in(scoped != null, BizEmergency::getDeptId, scoped)
+                .eq(BizEmergency::getEmergencyStatus, EmergencyStatusEnum.OBSERVATION.getCode())
                 .isNotNull(BizEmergency::getObservationStartTime)
                 .apply(OBS_OVER_SQL, hours);
         return this.count(wrapper);
@@ -902,6 +922,7 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
     public List<EmergencyHandoverPendingVO> handoverPendingList(Long deptId) {
         Long fromEmpId = requireCurrentEmployee();
         Long scopeDeptId = resolveHandoverDeptId(deptId);
+        deptScopeService.assertDeptAccessible(scopeDeptId);
         return this.list(handoverScope(scopeDeptId, fromEmpId)).stream()
                 .map(this::toPendingVO)
                 .collect(Collectors.toList());
@@ -947,6 +968,7 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
     public List<EmergencyTakeCandidateVO> handoverTakeList(Long deptId) {
         Long fromEmpId = requireCurrentEmployee();
         Long scopeDeptId = resolveHandoverDeptId(deptId);
+        deptScopeService.assertDeptAccessible(scopeDeptId);
         // 先取本科室在职员工，再把"此刻在岗"的标记出来并排前面
         LinkedHashMap<Long, SysEmployee> employees = new LinkedHashMap<>();
         sysEmployeeMapper.selectList(new LambdaQueryWrapper<SysEmployee>()
@@ -989,6 +1011,7 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
             fromEmpName = me == null ? String.valueOf(fromEmpId) : me.getEmpName();
         }
         Long deptId = resolveHandoverDeptId(submitDTO.getDeptId());
+        deptScopeService.assertDeptAccessible(deptId);
         SysDepartment dept = sysDepartmentMapper.selectById(deptId);
         if (dept == null) {
             throw new BusinessException("交班科室不存在：" + deptId);
@@ -1213,7 +1236,8 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
     @Override
     public PageResult<EmergencyHandoverVO> handoverListPage(EmergencyHandoverQueryPageDTO queryDTO) {
         LambdaQueryWrapper<BizEmergencyHandover> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(queryDTO.getDeptId() != null, BizEmergencyHandover::getDeptId, queryDTO.getDeptId())
+        List<Long> scoped = deptScopeService.scopedDeptIds(queryDTO.getDeptId());
+        wrapper.in(scoped != null, BizEmergencyHandover::getDeptId, scoped)
                 .and(TextUtil.hasText(queryDTO.getKeyword()), w -> w
                         .like(BizEmergencyHandover::getHandoverNo, queryDTO.getKeyword())
                         .or().like(BizEmergencyHandover::getFromEmpName, queryDTO.getKeyword())
@@ -1238,6 +1262,7 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
         if (handover == null) {
             throw new BusinessException("交班单不存在");
         }
+        deptScopeService.assertDeptAccessible(handover.getDeptId());
         EmergencyHandoverDetailVO detail = new EmergencyHandoverDetailVO();
         detail.setHandover(BeanUtil.copyProperties(handover, EmergencyHandoverVO.class));
         detail.setItems(bizEmergencyHandoverItemMapper.selectList(new LambdaQueryWrapper<BizEmergencyHandoverItem>()

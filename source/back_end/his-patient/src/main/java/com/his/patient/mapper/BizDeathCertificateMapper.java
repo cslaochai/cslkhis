@@ -46,6 +46,7 @@ public interface BizDeathCertificateMapper extends BaseMapper<BizDeathCertificat
             <if test="deathDeptId != null"> AND c.death_dept_id = #{deathDeptId}</if>
             <if test="startDateTime != null"> AND c.death_time &gt;= #{startDateTime}</if>
             <if test="endDateTime != null"> AND c.death_time &lt;= #{endDateTime}</if>
+            <if test="deptIds != null"> AND c.death_dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
             """;
 
     /**
@@ -77,7 +78,8 @@ public interface BizDeathCertificateMapper extends BaseMapper<BizDeathCertificat
                                                 @Param("deathDeptId") Long deathDeptId,
                                                 @Param("startDateTime") LocalDateTime startDateTime,
                                                 @Param("endDateTime") LocalDateTime endDateTime,
-                                                @Param("overdue") Integer overdue);
+                                                @Param("overdue") Integer overdue,
+                                                @Param("deptIds") List<Long> deptIds);
 
     /**
      * 详情＝编辑回显：一般项目全明文（含身份证号、近亲属电话），另带死因链以外的关联摘要。
@@ -241,13 +243,15 @@ public interface BizDeathCertificateMapper extends BaseMapper<BizDeathCertificat
               </if>
               <if test="startDateTime != null"> AND d.discharge_time &gt;= #{startDateTime}</if>
               <if test="endDateTime != null"> AND d.discharge_time &lt;= #{endDateTime}</if>
+              <if test="deptIds != null"> AND a.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
              ORDER BY d.discharge_time ASC, d.discharge_id ASC
             </script>
             """)
     List<DeathCertificateVO.PendingRow> selectPendingPage(IPage<DeathCertificateVO.PendingRow> page,
                                                           @Param("keyword") String keyword,
                                                           @Param("startDateTime") LocalDateTime startDateTime,
-                                                          @Param("endDateTime") LocalDateTime endDateTime);
+                                                          @Param("endDateTime") LocalDateTime endDateTime,
+                                                          @Param("deptIds") List<Long> deptIds);
 
     /**
      * 逾期催报候选：已开具、未上报成功、已过时限，且今天还没催过（notify_time 按天幂等）。
@@ -269,30 +273,56 @@ public interface BizDeathCertificateMapper extends BaseMapper<BizDeathCertificat
      * 统计卡一次取齐（全部是聚合，不返回行数据，避免整页扫表）。
      */
     @Select("""
-            SELECT (SELECT COUNT(*) FROM biz_discharge WHERE del_flag = 0 AND death_flag = 1) AS deathDischargeTotal,
+            <script>
+            SELECT (SELECT COUNT(*) FROM biz_discharge WHERE del_flag = 0 AND death_flag = 1
+              <if test="deptIds != null"> AND admission_id IN (SELECT a2.admission_id FROM biz_admission a2 WHERE a2.del_flag = 0 AND a2.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>)</if>
+                   ) AS deathDischargeTotal,
                    (SELECT COUNT(*) FROM biz_discharge d WHERE d.del_flag = 0 AND d.death_flag = 1
                      AND NOT EXISTS (SELECT 1 FROM biz_death_certificate c
-                                      WHERE c.del_flag = 0 AND c.cert_status <> 4
-                                        AND c.admission_id = d.admission_id)) AS noCertCount,
-                   (SELECT COUNT(*) FROM biz_death_certificate WHERE del_flag = 0 AND cert_status = 1) AS draftCount,
-                   (SELECT COUNT(*) FROM biz_death_certificate WHERE del_flag = 0 AND cert_status = 2) AS auditedCount,
-                   (SELECT COUNT(*) FROM biz_death_certificate WHERE del_flag = 0 AND cert_status = 3) AS issuedCount,
-                   (SELECT COUNT(*) FROM biz_death_certificate WHERE del_flag = 0 AND cert_status = 4) AS voidCount,
+                                      WHERE c.del_flag = 0 AND c.cert_status &lt;&gt; 4
+                                        AND c.admission_id = d.admission_id)
+              <if test="deptIds != null"> AND d.admission_id IN (SELECT a2.admission_id FROM biz_admission a2 WHERE a2.del_flag = 0 AND a2.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>)</if>
+                   ) AS noCertCount,
+                   (SELECT COUNT(*) FROM biz_death_certificate WHERE del_flag = 0 AND cert_status = 1
+              <if test="deptIds != null"> AND death_dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
+                   ) AS draftCount,
+                   (SELECT COUNT(*) FROM biz_death_certificate WHERE del_flag = 0 AND cert_status = 2
+              <if test="deptIds != null"> AND death_dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
+                   ) AS auditedCount,
                    (SELECT COUNT(*) FROM biz_death_certificate WHERE del_flag = 0 AND cert_status = 3
-                     AND report_status = 1) AS unreportedCount,
-                   (SELECT COUNT(*) FROM biz_death_certificate WHERE del_flag = 0 AND report_status = 2) AS reportedCount,
-                   (SELECT COUNT(*) FROM biz_death_certificate WHERE del_flag = 0 AND report_status = 3) AS reportFailedCount,
+              <if test="deptIds != null"> AND death_dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
+                   ) AS issuedCount,
+                   (SELECT COUNT(*) FROM biz_death_certificate WHERE del_flag = 0 AND cert_status = 4
+              <if test="deptIds != null"> AND death_dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
+                   ) AS voidCount,
                    (SELECT COUNT(*) FROM biz_death_certificate WHERE del_flag = 0 AND cert_status = 3
-                     AND report_status <> 2 AND report_deadline IS NOT NULL
-                     AND report_deadline < NOW()) AS overdueCount,
+                     AND report_status = 1
+              <if test="deptIds != null"> AND death_dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
+                   ) AS unreportedCount,
+                   (SELECT COUNT(*) FROM biz_death_certificate WHERE del_flag = 0 AND report_status = 2
+              <if test="deptIds != null"> AND death_dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
+                   ) AS reportedCount,
+                   (SELECT COUNT(*) FROM biz_death_certificate WHERE del_flag = 0 AND report_status = 3
+              <if test="deptIds != null"> AND death_dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
+                   ) AS reportFailedCount,
+                   (SELECT COUNT(*) FROM biz_death_certificate WHERE del_flag = 0 AND cert_status = 3
+                     AND report_status &lt;&gt; 2 AND report_deadline IS NOT NULL
+                     AND report_deadline &lt; NOW()
+              <if test="deptIds != null"> AND death_dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
+                   ) AS overdueCount,
                    (SELECT COUNT(*) FROM biz_discharge d WHERE d.del_flag = 0 AND d.death_flag = 1
                      AND NOT EXISTS (SELECT 1 FROM biz_death_registration r
-                                      WHERE r.del_flag = 0 AND r.register_status <> 3
-                                        AND r.admission_id = d.admission_id)) AS noRegisterCount,
+                                      WHERE r.del_flag = 0 AND r.register_status &lt;&gt; 3
+                                        AND r.admission_id = d.admission_id)
+              <if test="deptIds != null"> AND d.admission_id IN (SELECT a2.admission_id FROM biz_admission a2 WHERE a2.del_flag = 0 AND a2.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>)</if>
+                   ) AS noRegisterCount,
                    (SELECT COUNT(*) FROM biz_death_registration WHERE del_flag = 0 AND register_status = 2
-                     AND death_type <> 1 AND police_flag = 0) AS nonDiseaseUnpolicedCount
+                     AND death_type &lt;&gt; 1 AND police_flag = 0
+              <if test="deptIds != null"> AND death_dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
+                   ) AS nonDiseaseUnpolicedCount
+            </script>
             """)
-    DeathCertificateVO.Stats selectStats();
+    DeathCertificateVO.Stats selectStats(@Param("deptIds") List<Long> deptIds);
 
     /**
      * 科室名（死亡科室被改选成非当前住院科室时，名字服务端查，不采信前端传来的字符串）。

@@ -32,7 +32,7 @@ public class ScheduleUpsertDTO {
     private String deptName;
 
     /**
-     * 排班人员ID（sql/195 起可以是医生/护士/技师/药师/收费员等任何岗位，不再是「医生ID」）
+     * 排班人员ID
      */
     @NotNull(message = "请选择排班人员")
     private Long doctorId;

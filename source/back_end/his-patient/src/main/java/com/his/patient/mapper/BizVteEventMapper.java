@@ -38,10 +38,12 @@ public interface BizVteEventMapper extends BaseMapper<BizVteEvent> {
                AND (#{q.endDate} IS NULL OR e.diagnose_date &lt;= #{q.endDate})
                AND (#{q.keyword} IS NULL OR #{q.keyword} = '' OR e.patient_name LIKE CONCAT('%', #{q.keyword}, '%')
                     OR e.patient_no LIKE CONCAT('%', #{q.keyword}, '%'))
+              <if test="deptIds != null"> AND e.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
              ORDER BY e.diagnose_date DESC, e.id DESC
             </script>
             """)
-    IPage<VteEventVO> selectEventPage(Page<VteEventVO> page, @Param("q") VteEventQueryPageDTO query);
+    IPage<VteEventVO> selectEventPage(Page<VteEventVO> page, @Param("q") VteEventQueryPageDTO query,
+                                      @Param("deptIds") List<Long> deptIds);
 
     @Select("""
             SELECT e.*,

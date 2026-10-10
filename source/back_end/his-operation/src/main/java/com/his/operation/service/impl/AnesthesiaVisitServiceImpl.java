@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.operation.dto.AnesthesiaVisitFinishDTO;
@@ -23,6 +22,7 @@ import com.his.operation.service.AnesthesiaVisitService;
 import com.his.operation.support.AnesthesiaCalcs;
 import com.his.operation.vo.AnesthesiaVisitVO;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import com.his.common.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +32,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
 import java.util.Objects;
 
 /**
@@ -49,16 +48,23 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
 
     private final BizOperationApplyMapper bizOperationApplyMapper;
 
+    private final DeptScopeService deptScopeService;
+
     @Override
     public IPage<AnesthesiaVisitVO> listPage(AnesthesiaVisitQueryPageDTO query) {
         IPage<AnesthesiaVisitVO> page = bizAnesthesiaVisitMapper.selectVisitPage(
-                new Page<>(query.getPageNum(), query.getPageSize()), query);
+                new Page<>(query.getPageNum(), query.getPageSize()), query, deptScopeService.scopedDeptIds(null));
         page.getRecords().forEach(this::decorate);
         return page;
     }
 
     @Override
     public AnesthesiaVisitVO getDetailById(Long visitId) {
+        BizAnesthesiaVisit entity = bizAnesthesiaVisitMapper.selectById(visitId);
+        if (entity == null) {
+            throw new BusinessException("麻醉术前访视单不存在");
+        }
+        assertApplyAccessible(entity.getApplyId());
         AnesthesiaVisitVO vo = bizAnesthesiaVisitMapper.selectVOById(visitId);
         if (vo == null) {
             throw new BusinessException("麻醉术前访视单不存在");
@@ -73,6 +79,7 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
         if (applyId == null) {
             throw new BusinessException("手术申请单ID不能为空");
         }
+        assertApplyAccessible(applyId);
         AnesthesiaVisitVO vo = bizAnesthesiaVisitMapper.selectVOByApply(applyId);
         if (vo != null) {
             decorate(vo);
@@ -96,6 +103,7 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
         if (Integer.valueOf(OperationApplyStatusEnum.CANCELLED.getCode()).equals(apply.getOperationStatus())) {
             throw new BusinessException("手术单 " + apply.getApplyNo() + " 已取消，不需要再访视");
         }
+        deptScopeService.assertDeptAccessible(apply.getApplyDeptId());
 
         boolean create = dto.getId() == null;
         BizAnesthesiaVisit entity;
@@ -183,6 +191,7 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
         if (entity == null) {
             throw new BusinessException("麻醉术前访视单不存在");
         }
+        assertApplyAccessible(entity.getApplyId());
         // B-条件必填：结论非「可施行麻醉」时才要求说明，跨字段条件，DTO 注解无法表达，保留
         if (!Objects.equals(1, dto.getConclusion()) && !TextUtil.hasText(dto.getConclusionNote())) {
             throw new BusinessException("结论为「" + VisitConclusionEnum.labelOrUnknown(dto.getConclusion())
@@ -216,7 +225,18 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
 
     @Override
     public long countFinishedWithoutVisit() {
-        return bizAnesthesiaVisitMapper.countFinishedWithoutVisit();
+        return bizAnesthesiaVisitMapper.countFinishedWithoutVisit(deptScopeService.scopedDeptIds(null));
+    }
+
+    /** 访视单无科室列，归属科室取关联手术申请单的申请科室 */
+    private void assertApplyAccessible(Long applyId) {
+        if (applyId == null) {
+            return;
+        }
+        BizOperationApply apply = bizOperationApplyMapper.selectById(applyId);
+        if (apply != null) {
+            deptScopeService.assertDeptAccessible(apply.getApplyDeptId());
+        }
     }
 
     private void decorate(AnesthesiaVisitVO vo) {

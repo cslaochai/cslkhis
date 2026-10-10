@@ -21,6 +21,7 @@ import com.his.pharmacy.vo.PivasCandidateVO;
 import com.his.pharmacy.vo.PivasStatsVO;
 import com.his.pharmacy.vo.PivasVO;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +35,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -49,6 +51,7 @@ public class PivasServiceImpl extends ServiceImpl<BizPivasItemMapper, BizPivasIt
     private final BizPivasBatchMapper bizPivasBatchMapper;
     private final BizPivasItemMapper bizPivasItemMapper;
     private final RedisSequenceService redisSequenceService;
+    private final DeptScopeService deptScopeService;
 
     @Override
     public List<PivasCandidateVO> candidates(Long wardId, Long admissionId, LocalDate admixDate) {
@@ -56,6 +59,8 @@ public class PivasServiceImpl extends ServiceImpl<BizPivasItemMapper, BizPivasIt
         if (wardId == null) {
             throw new BusinessException("病区不能为空");
         }
+        // 病区数据权限：前端选病区（B 类），越权病区直接拒绝
+        assertWardAccessible(wardId);
         LocalDate day = admixDate != null ? admixDate : LocalDate.now();
         return bizPivasItemMapper.selectCandidates(wardId, day, TimeUtil.dayStart(day), TimeUtil.dayEnd(day), admissionId);
     }
@@ -146,7 +151,8 @@ public class PivasServiceImpl extends ServiceImpl<BizPivasItemMapper, BizPivasIt
     public PageResult<PivasVO> listPage(PivasQueryPageDTO dto) {
         Page<PivasVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         // mapper 返回 List 时结果只在返回值里，page.getRecords() 不会被 MP 回填
-        List<PivasVO> records = bizPivasBatchMapper.selectBatchPage(page, dto.getWardId(), dto.getAdmixDate(),
+        List<Long> wardIds = scopedWardIds(dto.getWardId());
+        List<PivasVO> records = bizPivasBatchMapper.selectBatchPage(page, dto.getWardId(), wardIds, dto.getAdmixDate(),
                 dto.getPatientName(), dto.getStatus());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -157,6 +163,7 @@ public class PivasServiceImpl extends ServiceImpl<BizPivasItemMapper, BizPivasIt
         if (vo == null) {
             throw new BusinessException("静配单不存在或已删除");
         }
+        assertWardAccessible(vo.getWardId());
         vo.setItems(bizPivasItemMapper.selectItemsByBatchId(id));
         return vo;
     }
@@ -169,6 +176,7 @@ public class PivasServiceImpl extends ServiceImpl<BizPivasItemMapper, BizPivasIt
             throw new BusinessException("当前用户信息不存在");
         }
         BizPivasItem item = requireItem(dto.getItemId());
+        assertWardAccessible(item.getWardId());
         if (item.getStatus() == null || item.getStatus() != BizPivasItem.STATUS_PENDING_AUDIT) {
             throw new BusinessException("仅待审方明细允许审方（当前状态码 " + item.getStatus() + "）");
         }
@@ -208,6 +216,7 @@ public class PivasServiceImpl extends ServiceImpl<BizPivasItemMapper, BizPivasIt
             throw new BusinessException("当前用户信息不存在");
         }
         BizPivasBatch batch = requireBatch(dto.getBatchId());
+        assertWardAccessible(batch.getWardId());
         List<BizPivasItem> items = bizPivasItemMapper.selectList(new LambdaQueryWrapper<BizPivasItem>()
                 .eq(BizPivasItem::getPivasId, batch.getId())
                 .orderByAsc(BizPivasItem::getId));
@@ -249,6 +258,7 @@ public class PivasServiceImpl extends ServiceImpl<BizPivasItemMapper, BizPivasIt
             throw new BusinessException("当前用户信息不存在");
         }
         BizPivasItem item = requireItem(dto.getItemId());
+        assertWardAccessible(item.getWardId());
         if (item.getStatus() == null || item.getStatus() != BizPivasItem.STATUS_QUEUED) {
             throw new BusinessException("仅已排队明细允许调配（当前状态码 " + item.getStatus() + "）");
         }
@@ -274,6 +284,7 @@ public class PivasServiceImpl extends ServiceImpl<BizPivasItemMapper, BizPivasIt
             throw new BusinessException("当前用户信息不存在");
         }
         BizPivasItem item = requireItem(dto.getItemId());
+        assertWardAccessible(item.getWardId());
         if (item.getStatus() == null || item.getStatus() != BizPivasItem.STATUS_COMPOUNDED) {
             throw new BusinessException("仅已调配明细允许核对发放（当前状态码 " + item.getStatus() + "）");
         }
@@ -294,24 +305,55 @@ public class PivasServiceImpl extends ServiceImpl<BizPivasItemMapper, BizPivasIt
     @Override
     public PivasStatsVO stats(LocalDate admixDate, Long wardId) {
         LocalDate day = admixDate != null ? admixDate : LocalDate.now();
+        List<Long> wardIds = scopedWardIds(wardId);
         PivasStatsVO vo = new PivasStatsVO();
-        vo.setPendingAudit(countItems(day, wardId, BizPivasItem.STATUS_PENDING_AUDIT));
-        vo.setAudited(countItems(day, wardId, BizPivasItem.STATUS_AUDITED));
-        vo.setQueued(countItems(day, wardId, BizPivasItem.STATUS_QUEUED));
-        vo.setCompounded(countItems(day, wardId, BizPivasItem.STATUS_COMPOUNDED));
-        vo.setVerified(countItems(day, wardId, BizPivasItem.STATUS_VERIFIED));
-        vo.setRejected(countItems(day, wardId, BizPivasItem.STATUS_REJECTED));
+        vo.setPendingAudit(countItems(day, wardIds, BizPivasItem.STATUS_PENDING_AUDIT));
+        vo.setAudited(countItems(day, wardIds, BizPivasItem.STATUS_AUDITED));
+        vo.setQueued(countItems(day, wardIds, BizPivasItem.STATUS_QUEUED));
+        vo.setCompounded(countItems(day, wardIds, BizPivasItem.STATUS_COMPOUNDED));
+        vo.setVerified(countItems(day, wardIds, BizPivasItem.STATUS_VERIFIED));
+        vo.setRejected(countItems(day, wardIds, BizPivasItem.STATUS_REJECTED));
         vo.setBatchCount(bizPivasBatchMapper.selectCount(new LambdaQueryWrapper<BizPivasBatch>()
                 .eq(BizPivasBatch::getAdmixDate, day)
-                .eq(wardId != null, BizPivasBatch::getWardId, wardId)));
+                .in(wardIds != null, BizPivasBatch::getWardId, wardIds)));
         return vo;
     }
 
-    private long countItems(LocalDate day, Long wardId, int status) {
+    private long countItems(LocalDate day, List<Long> wardIds, int status) {
         return bizPivasItemMapper.selectCount(new LambdaQueryWrapper<BizPivasItem>()
                 .eq(BizPivasItem::getAdmixDate, day)
-                .eq(wardId != null, BizPivasItem::getWardId, wardId)
+                .in(wardIds != null, BizPivasItem::getWardId, wardIds)
                 .eq(BizPivasItem::getStatus, status));
+    }
+
+    /**
+     * 病区数据权限（ward_id 是 sys_ward 主键不是科室ID，须经 sys_ward.dept_id 折算后再判）
+     */
+    private void assertWardAccessible(Long wardId) {
+        if (wardId == null) {
+            return;
+        }
+        deptScopeService.assertDeptAccessible(bizPivasBatchMapper.selectWardDeptId(wardId));
+    }
+
+    /** null=不限病区；非空=授权科室折算出的病区集合（空集合一律当配置缺失拒掉，IN () 是语法错误） */
+    private List<Long> scopedWardIds(Long requestedWardId) {
+        if (requestedWardId != null) {
+            assertWardAccessible(requestedWardId);
+            return List.of(requestedWardId);
+        }
+        Set<Long> allowed = deptScopeService.allowedDeptIds();
+        if (allowed == null) {
+            return null;
+        }
+        if (allowed.isEmpty()) {
+            throw new BusinessException("当前岗位未绑定任何科室，无法查看相关数据");
+        }
+        List<Long> wardIds = bizPivasBatchMapper.selectWardIdsByDeptIds(List.copyOf(allowed));
+        if (wardIds.isEmpty()) {
+            throw new BusinessException("当前岗位授权科室下没有绑定的病区，无法查看相关数据");
+        }
+        return wardIds;
     }
 
     /**

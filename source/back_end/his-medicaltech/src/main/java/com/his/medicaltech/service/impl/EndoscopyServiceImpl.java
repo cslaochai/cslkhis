@@ -24,6 +24,7 @@ import com.his.medicaltech.service.PathologyService;
 import com.his.medicaltech.vo.EndoscopyVO;
 import com.his.system.dto.TechAuthGateDTO;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.EmployeeTechAuthService;
 import com.his.system.utils.UserUtils;
@@ -44,12 +45,17 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, BizEndoscopyRecord> implements EndoscopyService {
 
-
     private final BizEndoscopyRecordMapper bizEndoscopyRecordMapper;
+
     private final PathologyService pathologyService;
+
     private final DictCacheService dictCacheService;
+
     private final EmployeeTechAuthService employeeTechAuthService;
+
     private final RedisSequenceService redisSequenceService;
+
+    private final DeptScopeService deptScopeService;
 
     /**
      * ERCP=4 级；取活检=2 级；其余诊断性镜检=1 级
@@ -65,6 +71,8 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
     }
 
     public PageResult<EndoscopyVO.ListVO> pageVO(EndoscopyDTO.Query q) {
+        // 科室数据权限收口：查询 DTO 无科室筛选字段，一律按岗位可见科室集合过滤
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizEndoscopyRecord> w = new LambdaQueryWrapper<>();
         w.eq(TextUtil.hasText(q.getRecordNo()), BizEndoscopyRecord::getRecordNo, q.getRecordNo())
                 .eq(q.getPatientId() != null, BizEndoscopyRecord::getPatientId, q.getPatientId())
@@ -73,6 +81,7 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
                 .like(TextUtil.hasText(q.getPatientName()), BizEndoscopyRecord::getPatientName, TextUtil.trim(q.getPatientName()))
                 .ge(q.getStartDate() != null, BizEndoscopyRecord::getVisitDate, q.getStartDate())
                 .le(q.getEndDate() != null, BizEndoscopyRecord::getVisitDate, q.getEndDate())
+                .in(deptIds != null, BizEndoscopyRecord::getApplyDeptId, deptIds)
                 .orderByDesc(BizEndoscopyRecord::getId);
         Page<BizEndoscopyRecord> page = bizEndoscopyRecordMapper.selectPage(
                 new Page<>(q.getPageNum(), q.getPageSize()), w);
@@ -81,20 +90,26 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
     }
 
     public EndoscopyVO.StatsVO stats() {
+        // 科室数据权限收口：统计口径与列表一致，按岗位可见科室集合过滤
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         EndoscopyVO.StatsVO vo = new EndoscopyVO.StatsVO();
         vo.setTotal(bizEndoscopyRecordMapper.selectCount(new LambdaQueryWrapper<BizEndoscopyRecord>()
-                .ne(BizEndoscopyRecord::getStatus, InsRecordStatusEnum.CANCELLED.getCode())));
-        vo.setPending(count(InsRecordStatusEnum.REGISTERED.getCode()) + count(InsRecordStatusEnum.SIGNED_IN.getCode()));
-        vo.setExamining(count(InsRecordStatusEnum.CHECKING.getCode()));
-        vo.setPendingAudit(count(InsRecordStatusEnum.RESULTED.getCode()));
-        vo.setPublished(count(InsRecordStatusEnum.PUBLISHED.getCode()));
+                .ne(BizEndoscopyRecord::getStatus, InsRecordStatusEnum.CANCELLED.getCode())
+                .in(deptIds != null, BizEndoscopyRecord::getApplyDeptId, deptIds)));
+        vo.setPending(count(InsRecordStatusEnum.REGISTERED.getCode(), deptIds) + count(InsRecordStatusEnum.SIGNED_IN.getCode(), deptIds));
+        vo.setExamining(count(InsRecordStatusEnum.CHECKING.getCode(), deptIds));
+        vo.setPendingAudit(count(InsRecordStatusEnum.RESULTED.getCode(), deptIds));
+        vo.setPublished(count(InsRecordStatusEnum.PUBLISHED.getCode(), deptIds));
         vo.setBiopsyCount(bizEndoscopyRecordMapper.selectCount(new LambdaQueryWrapper<BizEndoscopyRecord>()
-                .eq(BizEndoscopyRecord::getBiopsyFlag, 1)));
+                .eq(BizEndoscopyRecord::getBiopsyFlag, 1)
+                .in(deptIds != null, BizEndoscopyRecord::getApplyDeptId, deptIds)));
         return vo;
     }
 
-    private long count(int status) {
-        return bizEndoscopyRecordMapper.selectCount(new LambdaQueryWrapper<BizEndoscopyRecord>().eq(BizEndoscopyRecord::getStatus, status));
+    private long count(int status, List<Long> deptIds) {
+        return bizEndoscopyRecordMapper.selectCount(new LambdaQueryWrapper<BizEndoscopyRecord>()
+                .eq(BizEndoscopyRecord::getStatus, status)
+                .in(deptIds != null, BizEndoscopyRecord::getApplyDeptId, deptIds));
     }
 
     public EndoscopyVO.DetailVO getDetail(Long recordId) {
@@ -252,6 +267,7 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         from.setGender(r.getGender());
         from.setAge(r.getAge());
         from.setVisitDate(r.getVisitDate() == null ? LocalDate.now() : r.getVisitDate());
+        from.setApplyDeptId(r.getApplyDeptId());
         from.setApplyDeptName(r.getApplyDeptName());
         from.setApplyDoctorName(r.getApplyDoctorName());
         from.setClinicalDiagnosis(r.getClinicalDiagnosis());
@@ -360,6 +376,8 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         if (r == null) {
             throw new BusinessException("内镜检查记录不存在：" + id);
         }
+        // 科室数据权限：详情/更新/签到/执行/送检/报告/审核/发布/取消等单据操作统一在取单入口校验
+        deptScopeService.assertDeptAccessible(r.getApplyDeptId());
         return r;
     }
 

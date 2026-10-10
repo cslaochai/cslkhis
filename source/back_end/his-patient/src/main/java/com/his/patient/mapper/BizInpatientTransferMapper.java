@@ -20,6 +20,7 @@ public interface BizInpatientTransferMapper extends BaseMapper<BizInpatientTrans
      * 转科记录分页（返回实体；科室名/床号都是快照列，不需要 JOIN）
      */
     @Select("""
+            <script>
             SELECT t.*
             FROM biz_inpatient_transfer t
             WHERE t.del_flag = 0
@@ -34,10 +35,14 @@ public interface BizInpatientTransferMapper extends BaseMapper<BizInpatientTrans
                    OR t.admission_no LIKE CONCAT('%', #{q.keyword}, '%')
                    OR t.patient_name LIKE CONCAT('%', #{q.keyword}, '%')
                    OR t.transfer_reason LIKE CONCAT('%', #{q.keyword}, '%'))
+              <if test="deptIds != null"> AND (t.from_dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+                   OR t.to_dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>)</if>
             ORDER BY t.apply_time DESC, t.id DESC
+            </script>
             """)
     IPage<BizInpatientTransfer> selectTransferPage(IPage<BizInpatientTransfer> page,
-                                                   @Param("q") InpatientTransferQueryPageDTO query);
+                                                   @Param("q") InpatientTransferQueryPageDTO query,
+                                                   @Param("deptIds") List<Long> deptIds);
 
     /**
      * 某次住院的全部转科轨迹（按发生顺序升序：第一条的 from_dept 就是入院科室）
@@ -53,12 +58,14 @@ public interface BizInpatientTransferMapper extends BaseMapper<BizInpatientTrans
      * 待接收转科数（转入科室工作台角标用）
      */
     @Select("""
+            <script>
             SELECT COUNT(*) FROM biz_inpatient_transfer
             WHERE del_flag = 0 AND transfer_status = 0
-              AND (#{toDeptId} IS NULL OR to_dept_id = #{toDeptId})
               AND (#{admissionId} IS NULL OR admission_id = #{admissionId})
+              <if test="deptIds != null"> AND to_dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
+            </script>
             """)
-    long countPending(@Param("toDeptId") Long toDeptId, @Param("admissionId") Long admissionId);
+    long countPending(@Param("deptIds") List<Long> deptIds, @Param("admissionId") Long admissionId);
 
     /**
      * 科室名（快照写入用；查不到就返回 null，由服务层渲染「未知科室(ID=x)」而不是编一个名字）

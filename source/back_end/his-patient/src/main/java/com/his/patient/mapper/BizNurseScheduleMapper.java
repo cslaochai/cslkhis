@@ -20,19 +20,6 @@ public interface BizNurseScheduleMapper extends BaseMapper<BizNurseSchedule> {
 
     /**
      * 在册护士口径：在岗未删，且<b>岗位角色上的岗位类别是护理</b>。
-     *
-     * <p>原写法是 {@code e.emp_type IN (5, 6)}（5-收费 6-行政其他），实测有两个错：
-     * <ol>
-     *   <li>真护士 {@code emp_type = 2}，<b>151 人被这个判据挡在护理排班门外</b>，一个都排不进去；</li>
-     *   <li>放进来 90 人里只有 24 人是护理岗，混进 66 个非护理的（医技 30、行政 28、医生 6、收费 3），
-     *       医生混进护理班最危险 —— 护理排班页面会给他排护理班，而他在门诊那条线上同时在放号。</li>
-     * </ol>
-     *
-     * <p>改用「岗位角色派生岗位类别」，与全院岗位排班 {@code biz_staff_schedule.staff_type}
-     * 同源（那边也是 {@code sys_role.staff_type}）。同一个人在两条线上必须是同一个岗位类别，
-     * 否则「护理排班算护士、岗位排班算医生」这种左右互搏没法收口。
-     *
-     * <p>存量 1680 行护理排班在新口径下仍然全部合法（那 24 人的角色本来就是护理），改口径不破坏存量。
      */
     String NURSE_WHERE = " e.del_flag = 0 AND e.status = 1 "
             + " AND EXISTS (SELECT 1 FROM sys_employee_post p "

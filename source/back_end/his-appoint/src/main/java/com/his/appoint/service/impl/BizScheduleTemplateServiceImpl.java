@@ -25,6 +25,7 @@ import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.system.entity.BizShift;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.ShiftService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,10 +62,13 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
 
     private final ShiftService shiftService;
 
+    private final DeptScopeService deptScopeService;
+
     @Override
     public List<BizScheduleTemplate> listTemplates(Long deptId, Integer staffType, Integer weekDay, Integer status) {
         LambdaQueryWrapper<BizScheduleTemplate> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(deptId != null, BizScheduleTemplate::getDeptId, deptId)
+        List<Long> scoped = deptScopeService.scopedDeptIds(deptId);
+        wrapper.in(scoped != null, BizScheduleTemplate::getDeptId, scoped)
                 .eq(staffType != null, BizScheduleTemplate::getStaffType, staffType)
                 .eq(weekDay != null, BizScheduleTemplate::getWeekDay, weekDay)
                 .eq(status != null, BizScheduleTemplate::getStatus, status)
@@ -103,7 +107,8 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
     @Override
     public PageResult<ScheduleTemplateVO> pageVO(ScheduleTemplateQueryPageDTO dto) {
         LambdaQueryWrapper<BizScheduleTemplate> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(dto.getDeptId() != null, BizScheduleTemplate::getDeptId, dto.getDeptId())
+        List<Long> scoped = deptScopeService.scopedDeptIds(dto.getDeptId());
+        wrapper.in(scoped != null, BizScheduleTemplate::getDeptId, scoped)
                 .eq(dto.getStaffType() != null, BizScheduleTemplate::getStaffType, dto.getStaffType())
                 .eq(dto.getWeekDay() != null, BizScheduleTemplate::getWeekDay, dto.getWeekDay())
                 .eq(dto.getStatus() != null, BizScheduleTemplate::getStatus, dto.getStatus())
@@ -214,14 +219,12 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
 
     @Override
     public boolean saveTemplate(BizScheduleTemplate template) {
-        // 岗位类别（sql/195）：决定这条模板走哪条规则链——医生岗配号源/诊室/挂号费，其余岗位是纯出勤
+        deptScopeService.assertDeptAccessible(template.getDeptId());
         applyStaffType(template);
-        // 班次是模板唯一的时间段/班别来源：不存在、停用、跨科室、没配班别都在这里拦下
         BizShift shift = shiftService.resolveForScheduling(template.getShiftId(), template.getDeptId());
         template.setShiftId(shift.getId());
         template.setStartTime(shift.getStartTime());
         template.setEndTime(shift.getEndTime());
-        // 划池校验：预约号源数不得超过总号源（appointment_source=0 视为未划池）
         int apptSource = template.getAppointmentSource() == null ? 0 : template.getAppointmentSource();
         if (apptSource > template.getTotalSource()) {
             throw new BusinessException("预约号源数不能大于号源总数");
@@ -248,11 +251,7 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
     }
 
     /**
-     * 岗位类别收口（sql/195）：与排班表同一口径，模板生成排班时原样带给排班信息。
-     *
-     * <p><b>医生岗</b>：号源至少 1（模板上没有号源的医生班，生成出来的排班挂不出号）。
-     * <br><b>其余岗位</b>：纯出勤模板——号源、预约池、专家标志、费用、诊室一律清零，
-     * 它描述的是「每周一上午谁在岗」，不是「放几个号」。
+     * 岗位类别收口
      */
     private void applyStaffType(BizScheduleTemplate template) {
         StaffTypeEnum.assertValid(template.getStaffType());
@@ -407,9 +406,11 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteTemplate(Long id) {
-        if (bizScheduleTemplateMapper.selectById(id) == null) {
+        BizScheduleTemplate tpl = bizScheduleTemplateMapper.selectById(id);
+        if (tpl == null) {
             throw new BusinessException("模板不存在");
         }
+        deptScopeService.assertDeptAccessible(tpl.getDeptId());
         boolean ok = bizScheduleTemplateMapper.deleteById(id) > 0;
         if (ok) {
             // 模板已逻辑删、不会再生成排班，段配置留着只会被误读成有效配置 → 跟着清掉
@@ -420,6 +421,11 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
 
     @Override
     public boolean updateStatus(Long id, Integer status) {
+        BizScheduleTemplate exist = bizScheduleTemplateMapper.selectById(id);
+        if (exist == null) {
+            throw new BusinessException("模板不存在");
+        }
+        deptScopeService.assertDeptAccessible(exist.getDeptId());
         BizScheduleTemplate tpl = new BizScheduleTemplate();
         tpl.setId(id);
         tpl.setStatus(status);
@@ -437,7 +443,7 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
             throw new BusinessException("目标周 " + monday + " ~ " + sunday + " 已全部过去，不能为已结束的周次生成排班");
         }
 
-        List<BizScheduleTemplate> templates = loadEnabledTemplates(deptId, staffType);
+        List<BizScheduleTemplate> templates = loadEnabledTemplates(deptScopeService.scopedDeptIds(deptId), staffType);
         if (templates.isEmpty()) {
             return staffType == null
                     ? "没有启用的排班模板，请先在「排班模板」中配置"
@@ -493,9 +499,6 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
             }
             bizScheduleMapper.insert(s);
             try {
-                // 段生成：模板配置了片段 → 按配置；否则按半小时自动切分均分（与手工排班同一规则）。
-                // 只有医生岗切片（sql/195）：出勤岗号源恒 0，切出来是一堆永远挂不上的空段。
-                // 生成批不走单条事务：失败在这里就地清理残缺排班（不能留一张没有段的排班）
                 if (StaffTypeEnum.hasSource(s.getStaffType())) {
                     generateSlotsForSchedule(s, tpl.getId());
                 }
@@ -564,7 +567,7 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
         vo.setWeekStart(monday.toString());
         vo.setWeekEnd(sunday.toString());
 
-        List<BizScheduleTemplate> templates = loadEnabledTemplates(deptId, staffType);
+        List<BizScheduleTemplate> templates = loadEnabledTemplates(deptScopeService.scopedDeptIds(deptId), staffType);
         if (templates.isEmpty()) {
             return vo;
         }
@@ -601,10 +604,10 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
         return vo;
     }
 
-    private List<BizScheduleTemplate> loadEnabledTemplates(Long deptId, Integer staffType) {
+    private List<BizScheduleTemplate> loadEnabledTemplates(List<Long> scopedDeptIds, Integer staffType) {
         LambdaQueryWrapper<BizScheduleTemplate> tw = new LambdaQueryWrapper<>();
         tw.eq(BizScheduleTemplate::getStatus, 1);
-        tw.eq(deptId != null, BizScheduleTemplate::getDeptId, deptId);
+        tw.in(scopedDeptIds != null, BizScheduleTemplate::getDeptId, scopedDeptIds);
         tw.eq(staffType != null, BizScheduleTemplate::getStaffType, staffType);
         return bizScheduleTemplateMapper.selectList(tw);
     }

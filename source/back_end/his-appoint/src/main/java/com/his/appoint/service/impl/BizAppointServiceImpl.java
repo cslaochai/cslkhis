@@ -41,7 +41,7 @@ import com.his.patient.service.BizPatientService;
 import com.his.patient.service.PatientGuardianService;
 import com.his.system.entity.BizStaffSchedule;
 import com.his.system.entity.CurrentUser;
-import com.his.system.provider.DeptScopeProvider;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.ShiftService;
 import com.his.system.service.StaffScheduleService;
 import com.his.system.utils.UserUtils;
@@ -68,7 +68,7 @@ import java.util.Map;
 @Slf4j
 @RequiredArgsConstructor
 public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizAppointInfo> implements BizAppointService {
-    private final DeptScopeProvider deptScopeProvider;
+    private final DeptScopeService deptScopeService;
 
     private final BizScheduleMapper bizScheduleMapper;
 
@@ -177,11 +177,11 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
      * </ul>
      */
     private void applyDeptScope(LambdaQueryWrapper<BizAppointInfo> wrapper, Long requestedDeptId) {
-        Long scopedDeptId = deptScopeProvider.resolveDeptId(requestedDeptId);
+        Long scopedDeptId = deptScopeService.resolveDeptId(requestedDeptId);
         if (scopedDeptId != null) {
             wrapper.eq(BizAppointInfo::getDeptId, scopedDeptId);
-        } else if (deptScopeProvider.isScoped()) {
-            wrapper.in(BizAppointInfo::getDeptId, deptScopeProvider.allowedDeptIds());
+        } else if (deptScopeService.isScoped()) {
+            wrapper.in(BizAppointInfo::getDeptId, deptScopeService.allowedDeptIds());
         }
     }
 
@@ -425,13 +425,6 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         appointInfo.setVisitType(upsertDTO.getVisitType());
         appointInfo.setRevisitSource(revisit ? upsertDTO.getRevisitSource() : null);
 
-        // 复诊关联原病历
-        // （入参校验已在方法开头做掉，这里只剩「号源校验要在归属校验之后」这个约束）
-        // 复诊号必须指向一张真实存在、且属于同一患者的原病历；
-        // 只落「引用关系」，**原病历一律不改**（不复制、不回写、不改状态）。
-
-        // 查询排班信息：只有「当日回诊」不占号源（同一次就诊的延续），
-        // 医嘱复诊/自助复诊/随访复诊都是新的一次就诊，必须选排班、扣号源。
         boolean noSchedule = revisit && RevisitSourceEnum.needsNoSchedule(upsertDTO.getRevisitSource());
         BizSchedule schedule = null;
         BizScheduleSlot slot = null;
@@ -443,15 +436,10 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
             if (schedule == null) {
                 throw new BusinessException("排班信息不存在");
             }
-            // 只能挂医生出诊号源（sql/195）：护士/技师/收费员这些岗位是出勤排班，号源恒 0、没有诊室，
-            // 挂到他们名下等于开出一张「有医生姓名、没有医生在场」的号。
             if (!StaffTypeEnum.isDoctor(schedule.getStaffType())) {
                 throw new BusinessException("只能挂医生出诊号源：该排班是「"
                         + StaffTypeEnum.getText(schedule.getStaffType()) + "」岗位出勤，不对外放号");
             }
-            // 号源闸：投影行说「这个班放号」，人在不在场由岗位排班事实说了算。
-            // 事实被删或改成请假/停班/听班而投影还活着时，必须停挂——否则开出一张「有医生姓名、医生不在场」的号。
-            // 引用为空 = 写入口收敛之前建的历史排班，没有事实可核，按原口径放行
             if (schedule.getStaffScheduleId() != null) {
                 BizStaffSchedule core = staffScheduleService.getById(schedule.getStaffScheduleId());
                 if (!staffScheduleService.releasesClinicSource(core)) {
@@ -466,8 +454,6 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
                 throw new BusinessException("号源已满");
             }
             appointInfo.setScheduleType(shiftService.scheduleTypeOf(schedule.getShiftId()));
-            // 时间片段：传了 slotId 必须命中该排班下的正常段
-            // （段余量够不够由扣减 SQL 原子兜底，这里只挡「段不存在/不属于该排班/已停用」）
             if (upsertDTO.getSlotId() != null) {
                 slot = bizScheduleSlotMapper.selectById(upsertDTO.getSlotId());
                 if (slot == null || !schedule.getId().equals(slot.getScheduleId())) {

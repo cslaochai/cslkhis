@@ -21,7 +21,7 @@ import com.his.patient.support.NutritionRules;
 import com.his.patient.vo.NutritionScreenVO;
 import com.his.patient.vo.WardVO;
 import com.his.system.entity.CurrentUser;
-import com.his.system.provider.DeptScopeProvider;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +42,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class NutritionScreenServiceImpl extends ServiceImpl<BizNutritionScreenMapper, BizNutritionScreen> implements NutritionScreenService {
     private final RedisSequenceService redisSequenceService;
-    private final DeptScopeProvider deptScopeProvider;
+    private final DeptScopeService deptScopeService;
     private final BizNutritionScreenMapper bizNutritionScreenMapper;
     private final BizAdmissionMapper bizAdmissionMapper;
     private final BizPatientMapper bizPatientMapper;
@@ -63,6 +63,10 @@ public class NutritionScreenServiceImpl extends ServiceImpl<BizNutritionScreenMa
 
     @Override
     public List<NutritionScreenVO> screenListByAdmission(Long admissionId) {
+        BizAdmission admission = bizAdmissionMapper.selectById(admissionId);
+        if (admission != null) {
+            deptScopeService.assertDeptAccessible(admission.getDeptId());
+        }
         return bizNutritionScreenMapper.selectByAdmission(admissionId);
     }
 
@@ -87,6 +91,7 @@ public class NutritionScreenServiceImpl extends ServiceImpl<BizNutritionScreenMa
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
+        deptScopeService.assertDeptAccessible(admission.getDeptId());
         BizPatient patient = admission.getPatientId() == null ? null
                 : bizPatientMapper.selectById(admission.getPatientId());
 
@@ -159,6 +164,7 @@ public class NutritionScreenServiceImpl extends ServiceImpl<BizNutritionScreenMa
         if (row == null) {
             throw new BusinessException("筛查记录不存在或已删除");
         }
+        deptScopeService.assertDeptAccessible(row.getDeptId());
         return bizNutritionScreenMapper.deleteById(id);
     }
 
@@ -181,11 +187,15 @@ public class NutritionScreenServiceImpl extends ServiceImpl<BizNutritionScreenMa
     }
 
     /**
-     * 科室数据权限收口：受限岗位只看得到授权科室的筛查（营养师 data_scope=1 全院，不受限）
+     * 科室数据权限收口：受限岗位只看得到授权科室的筛查（营养师 data_scope=1 全院，不受限）；
+     * 空集合＝岗位未绑定任何科室，按配置缺失拒绝
      */
     private void applyDeptScope(NutritionScreenQueryPageDTO query) {
-        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
+        Set<Long> allowed = deptScopeService.allowedDeptIds();
         if (allowed != null) {
+            if (allowed.isEmpty()) {
+                throw new BusinessException("当前岗位未绑定任何科室，无法查看相关数据");
+            }
             query.setScopeDeptIds(new ArrayList<>(allowed));
         }
     }

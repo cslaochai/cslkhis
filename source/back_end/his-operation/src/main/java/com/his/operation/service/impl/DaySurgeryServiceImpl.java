@@ -25,6 +25,7 @@ import com.his.patient.service.BizPatientService;
 import com.his.system.dto.TechAuthGateDTO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.service.EmployeeTechAuthService;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,6 +60,8 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
 
     private final EmployeeTechAuthService employeeTechAuthService;
 
+    private final DeptScopeService deptScopeService;
+
     private static LocalDate parseDate(String v) {
         String s = TextUtil.trimToNull(v);
         if (s == null) {
@@ -87,13 +90,13 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
     public PageResult<DaySurgeryItemVO> itemListPage(DaySurgeryItemQueryPageDTO dto) {
         Page<DaySurgeryItemVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         List<DaySurgeryItemVO> records = bizDaySurgeryItemMapper.selectItemPage(page, TextUtil.trimToNull(dto.getKeyword()),
-                dto.getDeptId(), dto.getEnabledOnly());
+                deptScopeService.scopedDeptIds(dto.getDeptId()), dto.getEnabledOnly());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 
     @Override
     public List<DaySurgeryItemVO> itemSelectList(Long deptId) {
-        return bizDaySurgeryItemMapper.selectEnabledList(deptId);
+        return bizDaySurgeryItemMapper.selectEnabledList(deptScopeService.scopedDeptIds(deptId));
     }
 
     @Override
@@ -103,6 +106,9 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
         BizDaySurgeryItem entity;
         boolean isNew = dto.getId() == null;
         if (isNew) {
+            if (dto.getDeptId() != null) {
+                deptScopeService.assertDeptAccessible(dto.getDeptId());
+            }
             entity = new BizDaySurgeryItem();
             entity.setItemCode(code);
             entity.setStatus(dto.getStatus() == null ? 1 : dto.getStatus());
@@ -155,7 +161,7 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
     public PageResult<DaySurgeryApplyVO> listPage(DaySurgeryQueryPageDTO dto) {
         Page<DaySurgeryApplyVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         List<DaySurgeryApplyVO> records = bizDaySurgeryApplyMapper.selectApplyPage(page, TextUtil.trimToNull(dto.getKeyword()),
-                dto.getStatus(), dto.getItemId(), dto.getDeptId(), dto.getOpenOnly(), dto.getOverdueOnly(),
+                dto.getStatus(), dto.getItemId(), deptScopeService.scopedDeptIds(dto.getDeptId()), dto.getOpenOnly(), dto.getOverdueOnly(),
                 TextUtil.trimToNull(dto.getDateFrom()), TextUtil.trimToNull(dto.getDateTo()));
         records.forEach(this::decorate);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
@@ -386,9 +392,10 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
 
     @Override
     public DaySurgeryStatVO stat() {
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         DaySurgeryStatVO vo = new DaySurgeryStatVO();
         long w = 0, e = 0, a = 0, o = 0, d = 0, c = 0, t = 0;
-        for (DaySurgeryStatusCountVO row : bizDaySurgeryApplyMapper.countByStatus()) {
+        for (DaySurgeryStatusCountVO row : bizDaySurgeryApplyMapper.countByStatus(deptIds)) {
             long cnt = row.getCnt() == null ? 0L : row.getCnt();
             switch (row.getStatus() == null ? 0 : row.getStatus()) {
                 case 1 -> w = cnt;
@@ -410,14 +417,14 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
         vo.setCanceledCount(c);
         vo.setTransferredCount(t);
         vo.setTotal(w + e + a + o + d + c + t);
-        vo.setOverdueCount(bizDaySurgeryApplyMapper.countOverdue());
-        vo.setFollowOverdueCount(bizDaySurgeryApplyMapper.countFollowOverdue());
-        vo.setReadmitCount(bizDaySurgeryApplyMapper.countReadmit());
-        BigDecimal rate = bizDaySurgeryApplyMapper.onTimeLeaveRate();
+        vo.setOverdueCount(bizDaySurgeryApplyMapper.countOverdue(deptIds));
+        vo.setFollowOverdueCount(bizDaySurgeryApplyMapper.countFollowOverdue(deptIds));
+        vo.setReadmitCount(bizDaySurgeryApplyMapper.countReadmit(deptIds));
+        BigDecimal rate = bizDaySurgeryApplyMapper.onTimeLeaveRate(deptIds);
         vo.setOnTimeLeaveRate(rate == null ? BigDecimal.ZERO : rate);
 
         List<DaySurgeryItemCountVO> top = new ArrayList<>();
-        for (DaySurgeryItemTopRowVO row : bizDaySurgeryApplyMapper.countByItemTop()) {
+        for (DaySurgeryItemTopRowVO row : bizDaySurgeryApplyMapper.countByItemTop(deptIds)) {
             DaySurgeryItemCountVO item = new DaySurgeryItemCountVO();
             item.setItemId(row.getItemId());
             item.setName(row.getItemName());
@@ -497,6 +504,9 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
         if (item == null || !Objects.equals(item.getDelFlag(), 0)) {
             throw new BusinessException("日间手术准入术式不存在或已删除");
         }
+        if (item.getDeptId() != null) {
+            deptScopeService.assertDeptAccessible(item.getDeptId());
+        }
         return item;
     }
 
@@ -504,6 +514,9 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
         DaySurgeryItemVO vo = bizDaySurgeryItemMapper.selectItemById(id);
         if (vo == null) {
             throw new BusinessException("日间手术准入术式不存在或已删除");
+        }
+        if (vo.getDeptId() != null) {
+            deptScopeService.assertDeptAccessible(vo.getDeptId());
         }
         return vo;
     }
@@ -513,6 +526,9 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
         if (vo == null) {
             throw new BusinessException("日间手术登记单不存在或已删除");
         }
+        if (vo.getDeptId() != null) {
+            deptScopeService.assertDeptAccessible(vo.getDeptId());
+        }
         decorate(vo);
         return vo;
     }
@@ -521,6 +537,9 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
         BizDaySurgeryApply entity = bizDaySurgeryApplyMapper.selectById(id);
         if (entity == null || !Objects.equals(entity.getDelFlag(), 0)) {
             throw new BusinessException("日间手术登记单不存在或已删除");
+        }
+        if (entity.getDeptId() != null) {
+            deptScopeService.assertDeptAccessible(entity.getDeptId());
         }
         return entity;
     }

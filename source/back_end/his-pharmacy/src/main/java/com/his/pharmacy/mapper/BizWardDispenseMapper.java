@@ -25,6 +25,7 @@ public interface BizWardDispenseMapper extends BaseMapper<BizWardDispense> {
               FROM biz_ward_dispense d
              WHERE d.del_flag = 0
                <if test="wardId != null"> AND d.ward_id = #{wardId}</if>
+               <if test="wardIds != null"> AND d.ward_id IN <foreach collection="wardIds" item="w" open="(" separator="," close=")">#{w}</foreach></if>
                <if test="dispenseDate != null"> AND d.dispense_date = #{dispenseDate}</if>
                <if test="status != null"> AND d.status = #{status}</if>
                <if test="patientName != null and patientName != ''"> AND d.patient_name LIKE CONCAT('%', #{patientName}, '%')</if>
@@ -33,6 +34,7 @@ public interface BizWardDispenseMapper extends BaseMapper<BizWardDispense> {
             """)
     java.util.List<WardDispenseVO> selectDispensePage(com.baomidou.mybatisplus.core.metadata.IPage<WardDispenseVO> page,
                                                       @Param("wardId") Long wardId,
+                                                      @Param("wardIds") java.util.List<Long> wardIds,
                                                       @Param("dispenseDate") LocalDate dispenseDate,
                                                       @Param("patientName") String patientName,
                                                       @Param("status") Integer status);
@@ -49,4 +51,22 @@ public interface BizWardDispenseMapper extends BaseMapper<BizWardDispense> {
      */
     @Select("SELECT ward_name FROM sys_ward WHERE ward_id = #{wardId}")
     String selectWardName(@Param("wardId") Long wardId);
+
+    /**
+     * 病区所属科室ID（数据权限折算用：ward_id 是 sys_ward 主键不是科室ID，须经 dept_id 判权限；取不到返回 NULL）
+     */
+    @Select("SELECT dept_id FROM sys_ward WHERE ward_id = #{wardId}")
+    Long selectWardDeptId(@Param("wardId") Long wardId);
+
+    /**
+     * 授权科室集合折算成可见病区ID集合（数据权限收口；科室没绑病区时返回空集合）
+     */
+    @Select("""
+            <script>
+            SELECT ward_id FROM sys_ward
+             WHERE dept_id IN
+            <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+            </script>
+            """)
+    java.util.List<Long> selectWardIdsByDeptIds(@Param("deptIds") java.util.List<Long> deptIds);
 }

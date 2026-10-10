@@ -22,7 +22,7 @@ import com.his.patient.mapper.BizCriticalNoticeMapper;
 import com.his.patient.service.CriticalNoticeService;
 import com.his.patient.vo.CriticalNoticeVO;
 import com.his.system.entity.CurrentUser;
-import com.his.system.provider.DeptScopeProvider;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -58,7 +58,7 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
      * 签收人关系合法码（字典 his_notice_relation）
      */
     private static final Set<Integer> RELATIONS = Set.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 99);
-    private final DeptScopeProvider deptScopeProvider;
+    private final DeptScopeService deptScopeService;
     private final BizCriticalNoticeMapper bizCriticalNoticeMapper;
     private final RedisSequenceService redisSequenceService;
     private final EmrSignatureService emrSignatureService;
@@ -358,7 +358,7 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
     }
 
     private void assertDeptAccessible(Long deptId) {
-        if (!deptScopeProvider.canAccessDept(deptId)) {
+        if (!deptScopeService.canAccessDept(deptId)) {
             throw new BusinessException("该通知单所属科室不在当前岗位的数据范围内");
         }
     }
@@ -367,11 +367,11 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
      * 返回 null=不受限；非空=收口科室集合（显式 deptId 由 DeptScopeProvider 校验越权）
      */
     private List<Long> scopedDeptIds(Long requestedDeptId) {
-        Long resolved = deptScopeProvider.resolveDeptId(requestedDeptId);
+        Long resolved = deptScopeService.resolveDeptId(requestedDeptId);
         if (resolved != null) {
             return null;
         }
-        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
+        Set<Long> allowed = deptScopeService.allowedDeptIds();
         return allowed == null ? null : List.copyOf(allowed);
     }
 

@@ -19,6 +19,7 @@ import com.his.emr.mapper.BizAdverseEventMapper;
 import com.his.emr.service.AdverseEventService;
 import com.his.emr.vo.AdverseEventStatsVO;
 import com.his.emr.vo.AdverseEventVO;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,7 @@ public class AdverseEventServiceImpl extends ServiceImpl<BizAdverseEventMapper, 
 
     private final BizAdverseEventMapper bizAdverseEventMapper;
     private final RedisSequenceService redisSequenceService;
+    private final DeptScopeService deptScopeService;
 
     private static Long asLong(Object v) {
         if (v == null) {
@@ -52,7 +54,7 @@ public class AdverseEventServiceImpl extends ServiceImpl<BizAdverseEventMapper, 
         Page<AdverseEventVO> page = bizAdverseEventMapper.selectEventPage(
                 new Page<>(q.getPageNum(), q.getPageSize()),
                 q.getEventNo(), q.getEventType(), q.getEventLevel(), q.getStatus(),
-                q.getOccurDeptId(), q.getKeyword(), q.getDateStart(), q.getDateEnd());
+                deptScopeService.scopedDeptIds(q.getOccurDeptId()), q.getKeyword(), q.getDateStart(), q.getDateEnd());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
     }
 
@@ -62,6 +64,8 @@ public class AdverseEventServiceImpl extends ServiceImpl<BizAdverseEventMapper, 
         if (vo == null) {
             throw new BusinessException("不良事件不存在或已删除");
         }
+        // 详情不能绕过列表收口：护士拿别人的事件 id 直接 GET，看到的就是别的科室的经过/患者信息
+        deptScopeService.assertDeptAccessible(vo.getOccurDeptId());
         return vo;
     }
 
@@ -224,11 +228,6 @@ public class AdverseEventServiceImpl extends ServiceImpl<BizAdverseEventMapper, 
         }
     }
 
-    @Override
-    public AdverseEventStatsVO monthStats() {
-        return bizAdverseEventMapper.selectMonthStats();
-    }
-
     /**
      * 取单 + 加行锁 + 前置态校验（流转的并发闸门：不锁行可能同一步被两人各执行一次）
      */
@@ -241,7 +240,14 @@ public class AdverseEventServiceImpl extends ServiceImpl<BizAdverseEventMapper, 
             throw new BusinessException("当前状态不允许" + action
                     + "（期望状态=" + expectedStatus + "，实际状态=" + e.getStatus() + "）");
         }
+        // 流转写操作与查询同口径收口：否则护士拿到别的科室事件 id 也能推它的处理/整改/结案
+        deptScopeService.assertDeptAccessible(e.getOccurDeptId());
         return e;
+    }
+
+    @Override
+    public AdverseEventStatsVO monthStats() {
+        return bizAdverseEventMapper.selectMonthStats(deptScopeService.scopedDeptIds(null));
     }
 
     private void saveStep(BizAdverseEvent e, String action) {

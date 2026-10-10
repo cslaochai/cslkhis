@@ -23,6 +23,9 @@ public interface BizDisputeCaseMapper extends BaseMapper<BizDisputeCase> {
      * 分页（关键字模糊单号/患者/投诉人；类型/状态/等级/科室/未结案/登记日期区间）
      *
      * <p>日期上界必须补 23:59:59：create_time 是 DATETIME，直接用 'yyyy-MM-dd' 比较会把当天全部时点滤掉。
+     *
+     * <p>deptIds 是 DeptScopeProvider 收口后的科室集合（见 DisputeServiceImpl#scopedDeptIds）：
+     * null = 当前角色不限科室（全院）；非 null = 只能看集合内科室，SQL 不再单收等值参数。
      */
     @Select("""
             <script>
@@ -37,7 +40,8 @@ public interface BizDisputeCaseMapper extends BaseMapper<BizDisputeCase> {
                <if test="caseType != null"> AND c.case_type = #{caseType}</if>
                <if test="status != null"> AND c.status = #{status}</if>
                <if test="level != null"> AND c.level = #{level}</if>
-               <if test="deptId != null"> AND c.dept_id = #{deptId}</if>
+               <if test="deptIds != null"> AND c.dept_id IN
+                 <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
                <if test="openOnly != null and openOnly == true"> AND c.status IN (1, 2, 3)</if>
                <if test="dateFrom != null and dateFrom != ''"> AND c.create_time &gt;= #{dateFrom}</if>
                <if test="dateTo != null and dateTo != ''"> AND c.create_time &lt;= CONCAT(#{dateTo}, ' 23:59:59')</if>
@@ -49,7 +53,7 @@ public interface BizDisputeCaseMapper extends BaseMapper<BizDisputeCase> {
                                        @Param("caseType") Integer caseType,
                                        @Param("status") Integer status,
                                        @Param("level") Integer level,
-                                       @Param("deptId") Long deptId,
+                                       @Param("deptIds") List<Long> deptIds,
                                        @Param("openOnly") Boolean openOnly,
                                        @Param("dateFrom") String dateFrom,
                                        @Param("dateTo") String dateTo);
@@ -82,19 +86,22 @@ public interface BizDisputeCaseMapper extends BaseMapper<BizDisputeCase> {
             " ORDER BY a.id DESC LIMIT 1")
     Long selectSealableArchiveId(@Param("patientId") Long patientId);
 
-    // 统计（服务端 group by，不让前端数当前页）
+    // 统计（服务端 group by，不让前端数当前页）；deptIds 同分页口径收口
 
     @Select("""
             <script>
             SELECT c.status AS k, COUNT(*) AS c
               FROM biz_dispute_case c
              WHERE c.del_flag = 0
+               <if test="deptIds != null"> AND c.dept_id IN
+                 <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
                <if test="dateFrom != null and dateFrom != ''"> AND c.create_time &gt;= #{dateFrom}</if>
                <if test="dateTo != null and dateTo != ''"> AND c.create_time &lt;= CONCAT(#{dateTo}, ' 23:59:59')</if>
              GROUP BY c.status
             </script>
             """)
-    List<DisputeCodeCountVO> countByStatus(@Param("dateFrom") String dateFrom,
+    List<DisputeCodeCountVO> countByStatus(@Param("deptIds") List<Long> deptIds,
+                                           @Param("dateFrom") String dateFrom,
                                            @Param("dateTo") String dateTo);
 
     @Select("""
@@ -102,12 +109,15 @@ public interface BizDisputeCaseMapper extends BaseMapper<BizDisputeCase> {
             SELECT c.case_type AS k, COUNT(*) AS c
               FROM biz_dispute_case c
              WHERE c.del_flag = 0
+               <if test="deptIds != null"> AND c.dept_id IN
+                 <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
                <if test="dateFrom != null and dateFrom != ''"> AND c.create_time &gt;= #{dateFrom}</if>
                <if test="dateTo != null and dateTo != ''"> AND c.create_time &lt;= CONCAT(#{dateTo}, ' 23:59:59')</if>
              GROUP BY c.case_type ORDER BY c DESC
             </script>
             """)
-    List<DisputeCodeCountVO> countByCaseType(@Param("dateFrom") String dateFrom,
+    List<DisputeCodeCountVO> countByCaseType(@Param("deptIds") List<Long> deptIds,
+                                             @Param("dateFrom") String dateFrom,
                                              @Param("dateTo") String dateTo);
 
     @Select("""
@@ -115,13 +125,16 @@ public interface BizDisputeCaseMapper extends BaseMapper<BizDisputeCase> {
             SELECT COALESCE(c.dept_id, 0) AS d, COALESCE(c.dept_name, '未指定科室') AS n, COUNT(*) AS c
               FROM biz_dispute_case c
              WHERE c.del_flag = 0
+               <if test="deptIds != null"> AND c.dept_id IN
+                 <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
                <if test="dateFrom != null and dateFrom != ''"> AND c.create_time &gt;= #{dateFrom}</if>
                <if test="dateTo != null and dateTo != ''"> AND c.create_time &lt;= CONCAT(#{dateTo}, ' 23:59:59')</if>
              GROUP BY COALESCE(c.dept_id, 0), COALESCE(c.dept_name, '未指定科室')
              ORDER BY c DESC, d ASC LIMIT 10
             </script>
             """)
-    List<DisputeDeptCountVO> countByDeptTop(@Param("dateFrom") String dateFrom,
+    List<DisputeDeptCountVO> countByDeptTop(@Param("deptIds") List<Long> deptIds,
+                                            @Param("dateFrom") String dateFrom,
                                             @Param("dateTo") String dateTo);
 
     /**
@@ -133,10 +146,13 @@ public interface BizDisputeCaseMapper extends BaseMapper<BizDisputeCase> {
                    COALESCE(ROUND(AVG(TIMESTAMPDIFF(DAY, c.accept_time, c.close_time)), 1), 0) AS avgDays
               FROM biz_dispute_case c
              WHERE c.del_flag = 0 AND c.status = 4
+               <if test="deptIds != null"> AND c.dept_id IN
+                 <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
                <if test="dateFrom != null and dateFrom != ''"> AND c.create_time &gt;= #{dateFrom}</if>
                <if test="dateTo != null and dateTo != ''"> AND c.create_time &lt;= CONCAT(#{dateTo}, ' 23:59:59')</if>
             </script>
             """)
-    DisputeCloseSumVO sumClosed(@Param("dateFrom") String dateFrom,
-                                 @Param("dateTo") String dateTo);
+    DisputeCloseSumVO sumClosed(@Param("deptIds") List<Long> deptIds,
+                                @Param("dateFrom") String dateFrom,
+                                @Param("dateTo") String dateTo);
 }

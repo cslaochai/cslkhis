@@ -3,7 +3,6 @@ package com.his.operation.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
-import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -27,6 +26,7 @@ import com.his.operation.vo.CountItemVO;
 import com.his.operation.vo.OperationCountVO;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.service.BizPatientService;
+import com.his.system.provider.DeptScopeService;
 import com.his.common.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +34,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -58,6 +57,8 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
     private final BizOperationCountItemMapper bizOperationCountItemMapper;
 
     private final BizOperationApplyMapper bizOperationApplyMapper;
+
+    private final DeptScopeService deptScopeService;
 
     private static String textOr(String value, String fallback) {
         return TextUtil.hasText(value) ? value : fallback;
@@ -96,6 +97,7 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
         if (apply == null) {
             throw new BusinessException("手术申请单不存在");
         }
+        deptScopeService.assertDeptAccessible(apply.getApplyDeptId());
         if (Integer.valueOf(OperationApplyStatusEnum.CANCELLED.getCode()).equals(apply.getOperationStatus())) {
             throw new BusinessException("手术单 " + apply.getApplyNo() + " 已取消，不需要清点");
         }
@@ -148,6 +150,7 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
     @Transactional(rollbackFor = Exception.class)
     public void addItem(Long countId, CountItemInputUpsertDTO dto) {
         BizOperationCount entity = mustGet(countId);
+        assertCountAccessible(entity);
         if (entity.getPhase() > CountPhaseEnum.NONE.getCode()) {
             throw new BusinessException("清点单 " + entity.getCountNo() + " 已进入「"
                     + CountPhaseEnum.labelOrUnknown(entity.getPhase())
@@ -170,6 +173,7 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
     @Transactional(rollbackFor = Exception.class)
     public void countPhase(CountPhaseDTO dto) {
         BizOperationCount entity = mustGet(dto.getCountId());
+        assertCountAccessible(entity);
         Integer phase = dto.getPhase();
         if (!Objects.equals(entity.getPhase() + 1, phase)) {
             throw new BusinessException("清点单 " + entity.getCountNo() + " 当前处于「"
@@ -287,6 +291,17 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
         return bizOperationCountMapper.countDiscrepancy(applyId) > 0;
     }
 
+    /** 清点单无科室列，归属科室取关联手术申请单的申请科室 */
+    private void assertCountAccessible(BizOperationCount entity) {
+        if (entity == null || entity.getApplyId() == null) {
+            return;
+        }
+        BizOperationApply apply = bizOperationApplyMapper.selectById(entity.getApplyId());
+        if (apply != null) {
+            deptScopeService.assertDeptAccessible(apply.getApplyDeptId());
+        }
+    }
+
     private BizOperationCount mustGet(Long countId) {
         // C-非 DTO 入参：私有 helper 校验方法参数，被多入口复用，Bean Validation 不覆盖，保留
         if (countId == null) {
@@ -304,6 +319,7 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
         BeanUtils.copyProperties(entity, vo);
         BizOperationApply apply = bizOperationApplyMapper.selectById(entity.getApplyId());
         if (apply != null) {
+            deptScopeService.assertDeptAccessible(apply.getApplyDeptId());
             vo.setSurgeonName(apply.getSurgeonName());
             vo.setPlannedStartTime(apply.getPlannedStartTime());
             vo.setOperationStatus(apply.getOperationStatus());

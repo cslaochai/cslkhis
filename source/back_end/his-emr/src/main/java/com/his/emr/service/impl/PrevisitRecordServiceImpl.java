@@ -14,6 +14,7 @@ import com.his.emr.service.PrevisitRecordService;
 import com.his.emr.support.PrevisitQuestionnaireSupport;
 import com.his.emr.vo.PrevisitDetailVO;
 import com.his.emr.vo.PrevisitQuestionnaireVO;
+import com.his.system.provider.DeptScopeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -35,6 +36,8 @@ public class PrevisitRecordServiceImpl extends ServiceImpl<BizPrevisitRecordMapp
 
     private final ObjectMapper objectMapper;
 
+    private final DeptScopeService deptScopeService;
+
     @Override
     public PrevisitQuestionnaireVO questionnaire() {
         PrevisitQuestionnaireVO vo = new PrevisitQuestionnaireVO();
@@ -51,6 +54,7 @@ public class PrevisitRecordServiceImpl extends ServiceImpl<BizPrevisitRecordMapp
         if (appointInfo == null) {
             throw new BusinessException("挂号记录不存在");
         }
+        deptScopeService.assertDeptAccessible(appointInfo.getDeptId());
         // 归属再闸一道：入口（小程序端点）已按登录态校验过，这里按挂号记录反查患者落快照
         BizPrevisitRecord record = bizPrevisitRecordMapper.selectOne(
                 new LambdaQueryWrapper<BizPrevisitRecord>()
@@ -84,6 +88,9 @@ public class PrevisitRecordServiceImpl extends ServiceImpl<BizPrevisitRecordMapp
         BizPrevisitRecord record = bizPrevisitRecordMapper.selectOne(
                 new LambdaQueryWrapper<BizPrevisitRecord>()
                         .eq(BizPrevisitRecord::getRegistId, registId));
+        if (record != null) {
+            deptScopeService.assertDeptAccessible(record.getDeptId());
+        }
         return record == null ? null : toVo(record);
     }
 
@@ -95,6 +102,7 @@ public class PrevisitRecordServiceImpl extends ServiceImpl<BizPrevisitRecordMapp
         if (record == null) {
             throw new BusinessException("预问诊记录不存在");
         }
+        deptScopeService.assertDeptAccessible(record.getDeptId());
         record.setSummaryAi(summary);
         record.setSummarySource(source);
         bizPrevisitRecordMapper.updateById(record);

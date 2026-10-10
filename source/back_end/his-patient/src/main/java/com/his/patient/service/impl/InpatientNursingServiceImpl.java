@@ -20,7 +20,7 @@ import com.his.patient.mapper.*;
 import com.his.patient.service.InpatientNursingService;
 import com.his.patient.vo.*;
 import com.his.system.entity.CurrentUser;
-import com.his.system.provider.DeptScopeProvider;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -46,7 +46,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     private static final BigDecimal MIN_TEMP = new BigDecimal("34");
     private static final BigDecimal MAX_TEMP = new BigDecimal("43");
 
-    private final DeptScopeProvider deptScopeProvider;
+    private final DeptScopeService deptScopeService;
 
     private final BizNursingRecordMapper bizNursingRecordMapper;
 
@@ -299,8 +299,8 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     public IPage<NursingRecordVO> listPage(NursingRecordQueryPageDTO query) {
         // 科室数据权限收口（M6）：护理文书归属科室（dept_id），受限角色只看授权科室的文书。
         // scopeDeptIds 是服务端专用字段，先清掉前端可能伪造的值。
-        query.setScopeDeptIds(deptScopeProvider.isScoped()
-                ? List.copyOf(deptScopeProvider.allowedDeptIds()) : null);
+        query.setScopeDeptIds(deptScopeService.isScoped()
+                ? List.copyOf(deptScopeService.allowedDeptIds()) : null);
         IPage<BizNursingRecord> page = bizNursingRecordMapper.selectNursingPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query);
         List<NursingRecordVO> rows = new ArrayList<>(page.getRecords().size());

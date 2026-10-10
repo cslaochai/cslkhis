@@ -2,11 +2,11 @@ package com.his.medicaltech.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.his.medicaltech.mapper.WorkbenchMetricMapper;
-import com.his.medicaltech.service.HospitalTodayMetricProvider;
+import com.his.medicaltech.service.HospitalTodayMetricService;
 import com.his.medicaltech.vo.WorkbenchHospitalAlertRowVO;
 import com.his.medicaltech.vo.WorkbenchHospitalCoreRowVO;
 import com.his.system.entity.CurrentUser;
-import com.his.system.provider.WorkbenchMetricProvider;
+import com.his.system.provider.WorkbenchMetricService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -17,7 +17,7 @@ import java.util.Map;
  */
 @Service
 @RequiredArgsConstructor
-public class HospitalTodayMetricProviderImpl implements WorkbenchMetricProvider, HospitalTodayMetricProvider {
+public class HospitalTodayMetricServiceImpl implements WorkbenchMetricService, HospitalTodayMetricService {
 
     private final WorkbenchMetricMapper workbenchMetricMapper;
 

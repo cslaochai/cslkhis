@@ -127,20 +127,29 @@ public interface VteStatMapper {
     @Select("SELECT dept_name FROM sys_department WHERE id = #{deptId} AND del_flag = 0")
     String selectDeptName(@Param("deptId") Long deptId);
 
-    // 看板（在院视角："今天该干什么"）
-
-    @Select("SELECT COUNT(*) FROM biz_admission a WHERE a.del_flag = 0 AND a.admit_status = 1")
-    long countInHospital();
+    // 看板（在院视角："今天该干什么"；deptIds=科室数据权限收口集合，null 不限）
 
     @Select("""
+            <script>
+            SELECT COUNT(*) FROM biz_admission a WHERE a.del_flag = 0 AND a.admit_status = 1
+              <if test="deptIds != null"> AND a.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
+            </script>
+            """)
+    long countInHospital(@Param("deptIds") List<Long> deptIds);
+
+    @Select("""
+            <script>
             SELECT COUNT(*) FROM biz_admission a
              WHERE a.del_flag = 0 AND a.admit_status = 1
                AND EXISTS (SELECT 1 FROM biz_nursing_assessment x
                             WHERE x.del_flag = 0 AND x.assess_type = 4 AND x.admission_id = a.admission_id)
+              <if test="deptIds != null"> AND a.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
+            </script>
             """)
-    long countInHospitalAssessed();
+    long countInHospitalAssessed(@Param("deptIds") List<Long> deptIds);
 
     @Select("""
+            <script>
             SELECT COUNT(*) FROM biz_admission a
              WHERE a.del_flag = 0 AND a.admit_status = 1
                AND EXISTS (SELECT 1 FROM (
@@ -151,13 +160,16 @@ public interface VteStatMapper {
                            WHERE x.del_flag = 0 AND x.assess_type = 4
                         ) t WHERE t.rn = 1
                      ) la WHERE la.admission_id = a.admission_id AND la.risk_level >= 2)
+              <if test="deptIds != null"> AND a.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
+            </script>
             """)
-    long countInHospitalHighRisk();
+    long countInHospitalHighRisk(@Param("deptIds") List<Long> deptIds);
 
     /**
      * 在院中高危且一条措施都没落实的人数（今天要干的事）
      */
     @Select("""
+            <script>
             SELECT COUNT(*) FROM biz_admission a
              WHERE a.del_flag = 0 AND a.admit_status = 1
                AND EXISTS (SELECT 1 FROM (
@@ -170,22 +182,32 @@ public interface VteStatMapper {
                      ) la WHERE la.admission_id = a.admission_id AND la.risk_level >= 2)
                AND NOT EXISTS (SELECT 1 FROM biz_vte_prevent v
                                 WHERE v.del_flag = 0 AND v.admission_id = a.admission_id AND v.execute_status = 1)
+              <if test="deptIds != null"> AND a.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
+            </script>
             """)
-    long countHighRiskPending();
+    long countHighRiskPending(@Param("deptIds") List<Long> deptIds);
 
     /**
      * 自然月内院内新发 VTE 患者数（按确诊日期归月）
      */
     @Select("""
+            <script>
             SELECT COUNT(DISTINCT e.admission_id) FROM biz_vte_event e
              WHERE e.del_flag = 0 AND e.event_type IN (1, 2) AND e.onset_type = 1
                AND e.diagnose_date BETWEEN #{from} AND #{to}
+              <if test="deptIds != null"> AND e.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
+            </script>
             """)
-    long countVteEventByDiagnoseDate(@Param("from") LocalDate from, @Param("to") LocalDate to);
+    long countVteEventByDiagnoseDate(@Param("from") LocalDate from, @Param("to") LocalDate to,
+                                     @Param("deptIds") List<Long> deptIds);
 
     @Select("""
+            <script>
             SELECT COUNT(DISTINCT e.admission_id) FROM biz_vte_event e
              WHERE e.del_flag = 0 AND e.event_type = 3 AND e.diagnose_date BETWEEN #{from} AND #{to}
+              <if test="deptIds != null"> AND e.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
+            </script>
             """)
-    long countBleedByDiagnoseDate(@Param("from") LocalDate from, @Param("to") LocalDate to);
+    long countBleedByDiagnoseDate(@Param("from") LocalDate from, @Param("to") LocalDate to,
+                                  @Param("deptIds") List<Long> deptIds);
 }

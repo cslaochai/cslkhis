@@ -24,6 +24,7 @@ import com.his.emr.service.InfectionMonitorService;
 import com.his.emr.vo.DeptSnapshotVO;
 import com.his.emr.vo.InfectionMonitorVO;
 import com.his.emr.vo.PatientSnapshotVO;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -52,6 +53,8 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
 
     private final RedisSequenceService redisSequenceService;
 
+    private final DeptScopeService deptScopeService;
+
     private final DictCacheService dictCacheService;
 
     /**
@@ -63,8 +66,11 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
 
     @Override
     public InfectionMonitorVO.CaseStats caseStats() {
+        List<Long> scope = deptScopeService.scopedDeptIds(null);
         List<BizInfectionCase> all = bizInfectionCaseMapper.selectList(
-                new LambdaQueryWrapper<BizInfectionCase>().orderByDesc(BizInfectionCase::getId));
+                new LambdaQueryWrapper<BizInfectionCase>()
+                        .in(scope != null, BizInfectionCase::getDeptId, scope)
+                        .orderByDesc(BizInfectionCase::getId));
         InfectionMonitorVO.CaseStats s = new InfectionMonitorVO.CaseStats();
         LocalDate today = LocalDate.now();
         for (BizInfectionCase c : all) {
@@ -91,7 +97,9 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
 
     @Override
     public PageResult<InfectionMonitorVO.CaseRow> casePage(InfectionMonitorDTO.CaseQueryPage q) {
+        List<Long> scope = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizInfectionCase> w = new LambdaQueryWrapper<BizInfectionCase>()
+                .in(scope != null, BizInfectionCase::getDeptId, scope)
                 .eq(q.getCaseStatus() != null, BizInfectionCase::getCaseStatus, q.getCaseStatus())
                 .eq(q.getCaseSource() != null, BizInfectionCase::getCaseSource, q.getCaseSource())
                 .eq(q.getLeakFlag() != null, BizInfectionCase::getLeakFlag, q.getLeakFlag())
@@ -204,12 +212,15 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         if (c == null) {
             throw new BusinessException("院感病例不存在或已删除");
         }
+        deptScopeService.assertDeptAccessible(c.getDeptId());
         return c;
     }
 
     @Override
     public PageResult<InfectionMonitorVO.MonitorRow> monitorPage(InfectionMonitorDTO.MonitorQueryPage q) {
+        List<Long> scope = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizInfectionMonitor> w = new LambdaQueryWrapper<BizInfectionMonitor>()
+                .in(scope != null, BizInfectionMonitor::getDeptId, scope)
                 .eq(q.getMonitorType() != null, BizInfectionMonitor::getMonitorType, q.getMonitorType())
                 .eq(q.getStatus() != null, BizInfectionMonitor::getStatus, q.getStatus())
                 .eq(q.getInfectionFlag() != null, BizInfectionMonitor::getInfectionFlag, q.getInfectionFlag())
@@ -329,8 +340,11 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
 
     @Override
     public InfectionMonitorVO.MonitorStats monitorStats() {
+        List<Long> scope = deptScopeService.scopedDeptIds(null);
         List<BizInfectionMonitor> all = bizInfectionMonitorMapper.selectList(
-                new LambdaQueryWrapper<BizInfectionMonitor>().orderByDesc(BizInfectionMonitor::getId));
+                new LambdaQueryWrapper<BizInfectionMonitor>()
+                        .in(scope != null, BizInfectionMonitor::getDeptId, scope)
+                        .orderByDesc(BizInfectionMonitor::getId));
         InfectionMonitorVO.MonitorStats s = new InfectionMonitorVO.MonitorStats();
         Map<Integer, long[]> byType = new HashMap<>();
         for (BizInfectionMonitor m : all) {
@@ -373,6 +387,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         if (m == null) {
             throw new BusinessException("监测登记不存在或已删除");
         }
+        deptScopeService.assertDeptAccessible(m.getDeptId());
         return m;
     }
 
@@ -422,8 +437,9 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
 
     @Override
     public PageResult<InfectionMonitorVO.HandObsRow> handObsPage(InfectionMonitorDTO.HandObsQueryPage q) {
+        List<Long> scope = deptScopeService.scopedDeptIds(q.getDeptId());
         LambdaQueryWrapper<BizHandHygieneObs> w = new LambdaQueryWrapper<BizHandHygieneObs>()
-                .eq(q.getDeptId() != null, BizHandHygieneObs::getDeptId, q.getDeptId())
+                .in(scope != null, BizHandHygieneObs::getDeptId, scope)
                 .eq(q.getObsObject() != null, BizHandHygieneObs::getObsObject, q.getObsObject())
                 .ge(q.getObsDateStart() != null, BizHandHygieneObs::getObsDate, q.getObsDateStart())
                 .le(q.getObsDateEnd() != null, BizHandHygieneObs::getObsDate, q.getObsDateEnd())
@@ -444,6 +460,8 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         if (dto.getObsDate().isAfter(LocalDate.now())) {
             throw new BusinessException("观察日期不能是未来");
         }
+        // 前端指定的观察科室先过数据权限：越权科室直接报错
+        deptScopeService.scopedDeptIds(dto.getDeptId());
         DeptSnapshotVO dept = selectDeptName(dto.getDeptId());
         if (dept == null) {
             throw new BusinessException("科室不存在：" + dto.getDeptId());
@@ -469,6 +487,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         if (o == null) {
             throw new BusinessException("观察记录不存在或已删除");
         }
+        deptScopeService.assertDeptAccessible(o.getDeptId());
         return toHandObsRow(o);
     }
 
@@ -476,8 +495,10 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
     public InfectionMonitorVO.HandObsStats handObsStats(InfectionMonitorDTO.HandObsStatsQuery q) {
         LocalDate end = q.getObsDateEnd() == null ? LocalDate.now() : q.getObsDateEnd();
         LocalDate start = q.getObsDateStart() == null ? end.minusDays(30) : q.getObsDateStart();
+        List<Long> scope = deptScopeService.scopedDeptIds(null);
         List<BizHandHygieneObs> list = bizHandHygieneObsMapper.selectList(
                 new LambdaQueryWrapper<BizHandHygieneObs>()
+                        .in(scope != null, BizHandHygieneObs::getDeptId, scope)
                         .ge(BizHandHygieneObs::getObsDate, start)
                         .le(BizHandHygieneObs::getObsDate, end)
                         .orderByDesc(BizHandHygieneObs::getObsDate)

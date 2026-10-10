@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.SensitiveMaskUtil;
 import com.his.common.util.TextUtil;
@@ -11,6 +12,7 @@ import com.his.system.dto.EmployeeQueryDTO;
 import com.his.system.dto.EmployeeUpsertDTO;
 import com.his.system.entity.SysEmployee;
 import com.his.system.mapper.SysEmployeeMapper;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.EmployeePostService;
 import com.his.system.service.SysEmployeeService;
 import com.his.system.vo.EmployeePostVO;
@@ -21,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,12 +33,14 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
     private final SysEmployeeMapper sysEmployeeMapper;
     private final RedisSequenceService redisSequenceService;
     private final EmployeePostService employeePostService;
+    private final DeptScopeService deptScopeService;
 
     @Override
     public PageResult<EmployeeVO> listPage(EmployeeQueryDTO queryDTO) {
         LambdaQueryWrapper<SysEmployee> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(queryDTO.getEmpName()), SysEmployee::getEmpName, queryDTO.getEmpName())
                 .eq(queryDTO.getEmpType() != null, SysEmployee::getEmpType, queryDTO.getEmpType());
+        applyDeptScope(wrapper, queryDTO);
         applyStaffTypeFilter(wrapper, queryDTO);
         wrapper.orderByAsc(SysEmployee::getEmpCode);
 
@@ -54,6 +60,7 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
         LambdaQueryWrapper<SysEmployee> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(queryDTO.getEmpName()), SysEmployee::getEmpName, queryDTO.getEmpName())
                 .eq(queryDTO.getEmpType() != null, SysEmployee::getEmpType, queryDTO.getEmpType());
+        applyDeptScope(wrapper, queryDTO);
         applyStaffTypeFilter(wrapper, queryDTO);
 
         // 2026-09-22：下拉/名册一律按 **主键升序**（原来是工号序）。
@@ -123,6 +130,37 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
         sysEmployeeMapper.deleteById(id);
         // 岗位一并清掉（显式空集合 = 清空，见 replacePosts 的 null/空语义）
         employeePostService.replacePosts(id, List.of());
+    }
+
+    /**
+     * 员工数据权限收口（listPage / selectList 下拉共用）。
+     *
+     * <p>全院角色（data_scope=1）不收口；受限岗位：
+     * <ul>
+     *   <li>传了 deptId → 先过 {@link DeptScopeService#resolveDeptId}，越权科室直接报错
+     *       （不静默改写），科室过滤本身仍由 {@link #applyStaffTypeFilter} 负责；</li>
+     *   <li>没传 deptId → 收口到授权科室：员工主科室在授权集合内 <b>或</b> 任一岗位科室在
+     *       授权集合内（OR 口径）——按岗位收是排班挑人的实际口径，主科室在 A、本科室兼职的
+     *       人也要能被本科室的场次挑到，只按主科室过滤会把兼职人员漏掉。</li>
+     * </ul>
+     */
+    private void applyDeptScope(LambdaQueryWrapper<SysEmployee> wrapper, EmployeeQueryDTO queryDTO) {
+        Set<Long> allowed = deptScopeService.allowedDeptIds();
+        if (allowed == null) {
+            return;
+        }
+        if (allowed.isEmpty()) {
+            throw new BusinessException("当前岗位未绑定任何科室，无法查看员工数据（请在系统管理为岗位分配科室）");
+        }
+        if (queryDTO.getDeptId() != null) {
+            deptScopeService.resolveDeptId(queryDTO.getDeptId());
+            return;
+        }
+        // exists 子查询里拼的是 Long 集合（无注入面），写法同 applyStaffTypeFilter 的岗位子查询
+        String deptIds = allowed.stream().map(String::valueOf).collect(Collectors.joining(","));
+        wrapper.and(w -> w.in(SysEmployee::getDeptId, allowed)
+                .or().exists("SELECT 1 FROM sys_employee_post p WHERE p.employee_id = sys_employee.id "
+                        + "AND p.dept_id IN (" + deptIds + ")"));
     }
 
     /**

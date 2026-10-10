@@ -24,6 +24,7 @@ import com.his.medicaltech.vo.ExamDeviceItemCountRowVO;
 import com.his.medicaltech.vo.ExamEquipmentOptionRowVO;
 import com.his.system.entity.SysInspectionItem;
 import com.his.system.mapper.SysInspectionItemMapper;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -53,6 +54,7 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
     private final BizExamAppointmentMapper bizExamAppointmentMapper;
     private final SysInspectionItemMapper sysInspectionItemMapper;
     private final DictCacheService dictCacheService;
+    private final DeptScopeService deptScopeService;
 
     // 查询
 
@@ -68,6 +70,8 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
     // 写入
 
     public PageResult<ExamApptVO.DeviceVO> listPage(ExamApptDTO.DeviceQuery q) {
+        // 科室数据权限收口：按前端所选科室做越权校验，未选则按岗位可见科室集合过滤
+        List<Long> deptIds = deptScopeService.scopedDeptIds(q.getDeptId());
         LambdaQueryWrapper<BizExamDevice> w = new LambdaQueryWrapper<>();
         String kw = TextUtil.trim(q.getKeyword());
         w.and(TextUtil.hasText(kw), x -> x.like(BizExamDevice::getDeviceName, kw)
@@ -75,6 +79,7 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
                         .or().like(BizExamDevice::getRoomName, kw))
                 .eq(q.getDeviceType() != null, BizExamDevice::getDeviceType, q.getDeviceType())
                 .eq(q.getDeptId() != null, BizExamDevice::getDeptId, q.getDeptId())
+                .in(deptIds != null, BizExamDevice::getDeptId, deptIds)
                 .eq(q.getStatus() != null, BizExamDevice::getStatus, q.getStatus())
                 .orderByAsc(BizExamDevice::getDeviceCode);
         Page<BizExamDevice> page = bizExamDeviceMapper.selectPage(
@@ -117,6 +122,7 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
 
     public ExamApptVO.DeviceVO getDetail(Long deviceId) {
         BizExamDevice d = require(deviceId);
+        assertDeptAccessible(d.getDeptId());
         ExamApptVO.DeviceVO vo = toDeviceVo(d, itemCountByDevice(), equipmentNameMap());
         vo.setItemList(itemList(deviceId));
         return vo;
@@ -178,6 +184,10 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
     public ExamApptVO.DeviceVO upsert(ExamApptDTO.DeviceUpsert dto) {
         BizExamDevice device = new BizExamDevice();
         BeanUtils.copyProperties(dto, device);
+        // 科室数据权限：设备绑定了科室时校验越权（B类：前端选科室，全院角色不受限）
+        if (device.getDeptId() != null) {
+            deptScopeService.resolveDeptId(device.getDeptId());
+        }
         device.setDeviceCode(upper(dto.getDeviceCode()));
         applyDefaults(device);
         validateGrid(device);
@@ -216,6 +226,7 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(Long deviceId) {
         BizExamDevice d = require(deviceId);
+        assertDeptAccessible(d.getDeptId());
         long active = bizExamAppointmentMapper.selectCount(new LambdaQueryWrapper<BizExamAppointment>()
                 .eq(BizExamAppointment::getDeviceId, deviceId)
                 .eq(BizExamAppointment::getExamDate, LocalDate.now())
@@ -239,6 +250,7 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
     @Transactional(rollbackFor = Exception.class)
     public int saveItems(ExamApptDTO.DeviceItemSave dto) {
         BizExamDevice device = require(dto.getDeviceId());
+        assertDeptAccessible(device.getDeptId());
         List<ExamApptDTO.ItemRef> refs = dto.getItems() == null ? new ArrayList<>() : dto.getItems();
         List<Long> itemIds = new ArrayList<>();
         for (ExamApptDTO.ItemRef r : refs) {
@@ -387,4 +399,12 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
         }
         return map;
     }
+
+    /** 科室数据权限：设备科室可空（未绑科室=全院共享，放行） */
+    private void assertDeptAccessible(Long deptId) {
+        if (deptId != null && !deptScopeService.canAccessDept(deptId)) {
+            throw new BusinessException("该设备所属科室不在当前岗位的数据范围内");
+        }
+    }
+
 }

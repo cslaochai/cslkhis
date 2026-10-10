@@ -19,6 +19,7 @@ import com.his.emr.service.DisputeService;
 import com.his.emr.service.MedicalRecordArchiveService;
 import com.his.emr.vo.*;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +46,7 @@ public class DisputeServiceImpl extends ServiceImpl<BizDisputeCaseMapper, BizDis
     private final BizDisputeFlowMapper bizDisputeFlowMapper;
     private final RedisSequenceService redisSequenceService;
     private final MedicalRecordArchiveService medicalRecordArchiveService;
+    private final DeptScopeService deptScopeService;
 
     // 查询
 
@@ -72,7 +74,7 @@ public class DisputeServiceImpl extends ServiceImpl<BizDisputeCaseMapper, BizDis
     public PageResult<DisputeCaseVO> listPage(DisputeQueryPageDTO dto) {
         Page<DisputeCaseVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         List<DisputeCaseVO> records = bizDisputeCaseMapper.selectCasePage(page, TextUtil.trimToNull(dto.getKeyword()),
-                dto.getCaseType(), dto.getStatus(), dto.getLevel(), dto.getDeptId(),
+                dto.getCaseType(), dto.getStatus(), dto.getLevel(), deptScopeService.scopedDeptIds(dto.getDeptId()),
                 dto.getOpenOnly(), TextUtil.trimToNull(dto.getDateFrom()), TextUtil.trimToNull(dto.getDateTo()));
         records.forEach(this::decorate);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
@@ -112,7 +114,8 @@ public class DisputeServiceImpl extends ServiceImpl<BizDisputeCaseMapper, BizDis
         entity.setLevel(dto.getLevel() == null ? 1 : dto.getLevel());
         entity.setPatientId(dto.getPatientId());
         entity.setAdmissionId(dto.getAdmissionId());
-        entity.setDeptId(dto.getDeptId());
+        // 前端指定的归属科室先过数据权限：越权科室直接报错（null=不限，原值透传）
+        entity.setDeptId(deptScopeService.resolveDeptId(dto.getDeptId()));
         entity.setDeptName(dto.getDeptId() == null ? null : bizDisputeCaseMapper.selectDeptName(dto.getDeptId()));
         entity.setInvolvedStaff(TextUtil.cut(dto.getInvolvedStaff(), 255));
         entity.setComplainant(TextUtil.cut(dto.getComplainant(), 64));
@@ -305,9 +308,10 @@ public class DisputeServiceImpl extends ServiceImpl<BizDisputeCaseMapper, BizDis
     public DisputeStatVO stat(String dateFrom, String dateTo) {
         String from = TextUtil.trimToNull(dateFrom);
         String to = TextUtil.trimToNull(dateTo);
+        List<Long> scope = deptScopeService.scopedDeptIds(null);
         DisputeStatVO vo = new DisputeStatVO();
         long pending = 0, investigating = 0, handling = 0, closed = 0, revoked = 0;
-        for (DisputeCodeCountVO row : bizDisputeCaseMapper.countByStatus(from, to)) {
+        for (DisputeCodeCountVO row : bizDisputeCaseMapper.countByStatus(scope, from, to)) {
             long c = NumUtil.orZero(row.getC());
             int k = NumUtil.orZero(row.getK());
             if (k == DisputeStatusEnum.PENDING.getCode()) {
@@ -331,7 +335,7 @@ public class DisputeServiceImpl extends ServiceImpl<BizDisputeCaseMapper, BizDis
         vo.setTotal(pending + investigating + handling + closed + revoked);
 
         List<DisputeStatItemVO> byType = new ArrayList<>();
-        for (DisputeCodeCountVO row : bizDisputeCaseMapper.countByCaseType(from, to)) {
+        for (DisputeCodeCountVO row : bizDisputeCaseMapper.countByCaseType(scope, from, to)) {
             DisputeStatItemVO item = new DisputeStatItemVO();
             item.setKey(String.valueOf(row.getK()));
             item.setCount(NumUtil.orZero(row.getC()));
@@ -340,7 +344,7 @@ public class DisputeServiceImpl extends ServiceImpl<BizDisputeCaseMapper, BizDis
         vo.setByCaseType(byType);
 
         List<DisputeStatItemVO> byDept = new ArrayList<>();
-        for (DisputeDeptCountVO row : bizDisputeCaseMapper.countByDeptTop(from, to)) {
+        for (DisputeDeptCountVO row : bizDisputeCaseMapper.countByDeptTop(scope, from, to)) {
             DisputeStatItemVO item = new DisputeStatItemVO();
             item.setDeptId(row.getD());
             item.setName(row.getN());
@@ -349,7 +353,7 @@ public class DisputeServiceImpl extends ServiceImpl<BizDisputeCaseMapper, BizDis
         }
         vo.setByDeptTop(byDept);
 
-        DisputeCloseSumVO sum = bizDisputeCaseMapper.sumClosed(from, to);
+        DisputeCloseSumVO sum = bizDisputeCaseMapper.sumClosed(scope, from, to);
         vo.setCompensationTotal(sum == null || sum.getTotal() == null ? BigDecimal.ZERO : sum.getTotal());
         vo.setAvgCloseDays(sum == null || sum.getAvgDays() == null ? BigDecimal.ZERO : sum.getAvgDays());
         return vo;
@@ -422,6 +426,8 @@ public class DisputeServiceImpl extends ServiceImpl<BizDisputeCaseMapper, BizDis
         if (vo == null) {
             throw new BusinessException("纠纷/投诉单据不存在或已删除");
         }
+        // 详情与流转写操作与列表同口径：别的科室单据拿 id 也看不见/推不动
+        deptScopeService.assertDeptAccessible(vo.getDeptId());
         decorate(vo);
         return vo;
     }
@@ -431,6 +437,7 @@ public class DisputeServiceImpl extends ServiceImpl<BizDisputeCaseMapper, BizDis
         if (entity == null || !Objects.equals(entity.getDelFlag(), 0)) {
             throw new BusinessException("纠纷/投诉单据不存在或已删除");
         }
+        deptScopeService.assertDeptAccessible(entity.getDeptId());
         return entity;
     }
 

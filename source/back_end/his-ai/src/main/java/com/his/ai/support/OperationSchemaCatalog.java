@@ -9,7 +9,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * 运营问数的可查询表目录 —— 白名单的唯一事实源。
+ * 运营问数的可查询表目录
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class OperationSchemaCatalog {

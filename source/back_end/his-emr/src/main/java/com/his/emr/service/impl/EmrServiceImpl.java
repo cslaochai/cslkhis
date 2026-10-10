@@ -51,7 +51,7 @@ import com.his.system.entity.SysLaboratoryItem;
 import com.his.system.mapper.SysDrugMapper;
 import com.his.system.mapper.SysInspectionItemMapper;
 import com.his.system.mapper.SysLaboratoryItemMapper;
-import com.his.system.provider.DeptScopeProvider;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -76,7 +76,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedicalRecord> implements EmrService {
     static final String[] HUIFANG_TYPE = {"糖尿病", "高血压", "冠心病"};
-    private final DeptScopeProvider deptScopeProvider;
+    private final DeptScopeService deptScopeService;
     private final BizPrescriptionMapper bizPrescriptionMapper;
     private final BizPrescriptionDetailMapper bizPrescriptionDetailMapper;
     private final BizPrescriptionAuditLogMapper bizPrescriptionAuditLogMapper;
@@ -194,15 +194,15 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     public PageResult<BizMedicalRecordVO> listPage(MedicalRecordQueryPageDTO queryDTO) {
         LambdaQueryWrapper<BizMedicalRecord> wrapper = new LambdaQueryWrapper<>();
         // 科室数据权限收口（M6）：先越权校验显式 deptId，再按授权科室集合收敛（不传时不再等于看全院）。
-        Long scopedDeptId = deptScopeProvider.resolveDeptId(queryDTO.getDeptId());
+        Long scopedDeptId = deptScopeService.resolveDeptId(queryDTO.getDeptId());
         if (scopedDeptId != null) {
             queryDTO.setDeptId(scopedDeptId);
         }
         wrapper.eq(queryDTO.getPatientId() != null, BizMedicalRecord::getPatientId, queryDTO.getPatientId())
                 .eq(queryDTO.getDoctorId() != null, BizMedicalRecord::getDoctorId, queryDTO.getDoctorId())
                 .eq(queryDTO.getDeptId() != null, BizMedicalRecord::getDeptId, queryDTO.getDeptId())
-                .in(deptScopeProvider.isScoped() && scopedDeptId == null,
-                        BizMedicalRecord::getDeptId, deptScopeProvider.allowedDeptIds())
+                .in(deptScopeService.isScoped() && scopedDeptId == null,
+                        BizMedicalRecord::getDeptId, deptScopeService.allowedDeptIds())
                 .eq(queryDTO.getVisitDate() != null, BizMedicalRecord::getVisitDate, queryDTO.getVisitDate())
                 .ge(queryDTO.getVisitDateStart() != null, BizMedicalRecord::getVisitDate, queryDTO.getVisitDateStart())
                 .le(queryDTO.getVisitDateEnd() != null, BizMedicalRecord::getVisitDate, queryDTO.getVisitDateEnd())

@@ -66,11 +66,7 @@ public class BizSchedule extends BaseEntity {
     private String roomName;
 
     /**
-     * 排班人员ID（sql/195 起语义泛化：原来是「医生ID」，现在可以是护士/技师/药师/收费员等任何岗位）
-     *
-     * <p><b>列名不改</b>：下游挂号信息 / 候诊队列 / 门诊日志 / 报表都用这一列，
-     * 改名要动跨模块裸 SQL 与前端全量引用。语义靠 {@code staff_type} 区分——
-     * 只有 staff_type=1（医生）的排班才进号源池，所以挂号单上的「医生」永远指向医生排班。
+     * 排班人员ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long doctorId;
@@ -81,11 +77,7 @@ public class BizSchedule extends BaseEntity {
     private String doctorName;
 
     /**
-     * 岗位类别（1医生 2护理 3医技 4药学 5收费 6行政其他，见 {@code StaffTypeEnum}）
-     *
-     * <p>排班表只存<b>类别</b>不存具体角色：排班关心「这个班要几个护士」，不是「要护士长还是分诊护士」。
-     * <b>号源分水岭</b>：只有 1-医生有号源/诊室/挂号费，其余岗位是纯出勤排班
-     * （见 {@code StaffTypeEnum#hasSource}）。
+     * 岗位类别（1医生 2护理 3医技 4药学 5收费 6行政其他
      */
     private Integer staffType;
 
@@ -100,10 +92,7 @@ public class BizSchedule extends BaseEntity {
     private String endTime;
 
     /**
-     * 班次ID（班次字典的ID）——**这条排班属于哪个班次的唯一事实**。
-     * 时间段由它带出、班别（上午/下午/全天/凌晨/夜班）是它的属性：
-     * 排班表上不再有并列的 schedule_type 字段，两个并列字段可以互相矛盾（历史缺陷）。
-     * 展示侧的班别/班次名由 {@code ScheduleService#fillShiftDisplay} 从字典批量补齐。
+     * 班次ID（班次字典的ID）
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long shiftId;

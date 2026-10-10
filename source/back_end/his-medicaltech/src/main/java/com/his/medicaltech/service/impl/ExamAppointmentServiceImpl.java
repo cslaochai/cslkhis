@@ -28,6 +28,7 @@ import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysInspectionItem;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.mapper.SysInspectionItemMapper;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
@@ -91,6 +92,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
     private final RedisSequenceService redisSequenceService;
     private final SysMessageService sysMessageService;
     private final DictCacheService dictCacheService;
+    private final DeptScopeService deptScopeService;
 
     // 待预约申请
 
@@ -187,10 +189,13 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
         vo.setActiveTotal(bizExamAppointmentMapper.selectCount(new LambdaQueryWrapper<BizExamAppointment>()
                 .eq(BizExamAppointment::getActiveFlag, 1)
                 .in(BizExamAppointment::getStatus, APPT_BOOKED, APPT_ARRIVED)));
+        List<Long> deviceDeptIds = deptScopeService.scopedDeptIds(null);
         vo.setDeviceOpen(bizExamDeviceMapper.selectCount(new LambdaQueryWrapper<BizExamDevice>()
-                .eq(BizExamDevice::getStatus, DEVICE_OPEN)));
+                .eq(BizExamDevice::getStatus, DEVICE_OPEN)
+                .in(deviceDeptIds != null, BizExamDevice::getDeptId, deviceDeptIds)));
         vo.setDevicePaused(bizExamDeviceMapper.selectCount(new LambdaQueryWrapper<BizExamDevice>()
-                .ne(BizExamDevice::getStatus, DEVICE_OPEN)));
+                .ne(BizExamDevice::getStatus, DEVICE_OPEN)
+                .in(deviceDeptIds != null, BizExamDevice::getDeptId, deviceDeptIds)));
         return vo;
     }
 
@@ -356,6 +361,10 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
                     || (dto.getDeviceId() != null && !dto.getDeviceId().equals(device.getId()))) {
                 continue;
             }
+            // 时段推荐只给本岗位授权科室的设备（设备未绑科室的不拦）
+            if (device.getDeptId() != null && !deptScopeService.canAccessDept(device.getDeptId())) {
+                continue;
+            }
             // 时长必须按「这台设备做这个项目」算：1.5T 比 3.0T 慢，覆盖列不同
             int minutes = resolveMinutes(map);
             if (minutes > device.getMaxSlotMinutes()) {
@@ -412,6 +421,10 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
         BizExamDevice device = bizExamDeviceMapper.selectForUpdate(deviceId);
         if (device == null) {
             throw new BusinessException("预约设备不存在：" + deviceId);
+        }
+        // B类收口：前端选设备/科室是合法业务，但只能选本岗位授权科室的设备（全院角色不受限）
+        if (device.getDeptId() != null) {
+            deptScopeService.resolveDeptId(device.getDeptId());
         }
         if (device.getStatus() != DEVICE_OPEN) {
             throw new BusinessException("设备「" + device.getDeviceName() + "」"
@@ -696,6 +709,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
 
     private LambdaQueryWrapper<BizExamAppointment> apptFilter(ExamApptDTO.ApptQuery q) {
         String kw = TextUtil.trim(q.getKeyword());
+        List<Long> deptIds = deptScopeService.scopedDeptIds(q.getExamDeptId());
         LambdaQueryWrapper<BizExamAppointment> w = new LambdaQueryWrapper<>();
         if (TextUtil.hasText(q.getApptNo())) {
             w.eq(BizExamAppointment::getApptNo, q.getApptNo().trim());
@@ -707,6 +721,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
                 .eq(q.getPatientId() != null, BizExamAppointment::getPatientId, q.getPatientId())
                 .eq(q.getDeviceId() != null, BizExamAppointment::getDeviceId, q.getDeviceId())
                 .eq(q.getExamDeptId() != null, BizExamAppointment::getExamDeptId, q.getExamDeptId())
+                .in(deptIds != null, BizExamAppointment::getExamDeptId, deptIds)
                 .eq(q.getStatus() != null, BizExamAppointment::getStatus, q.getStatus())
                 .ge(q.getStartDate() != null, BizExamAppointment::getExamDate, q.getStartDate())
                 .le(q.getEndDate() != null, BizExamAppointment::getExamDate, q.getEndDate())
@@ -818,7 +833,16 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
         if (appt == null) {
             throw new BusinessException("检查预约单不存在：" + apptId);
         }
+        // 详情/改约/取消/到检与列表同口径收口：跨科室拿 apptId 直读也会被这里挡住
+        assertDeptAccessible(appt.getExamDeptId());
         return appt;
+    }
+
+    /** 与接口 default 的差异：deptId 为空（历史单据未落科室）时放行，不误伤 */
+    private void assertDeptAccessible(Long deptId) {
+        if (deptId != null) {
+            deptScopeService.assertDeptAccessible(deptId);
+        }
     }
 
     private boolean isEmergency(BizInspectionApply apply) {

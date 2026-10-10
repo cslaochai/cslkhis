@@ -24,7 +24,7 @@ import com.his.emr.service.FollowupTaskService;
 import com.his.emr.service.SurveyService;
 import com.his.emr.support.FollowupTaskSnapshot;
 import com.his.emr.vo.*;
-import com.his.system.provider.DeptScopeProvider;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -64,7 +64,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
             AppointStatusEnum.CANCELLED.getCode(),
             AppointStatusEnum.OVERDUE.getCode(),
             AppointStatusEnum.NO_SHOW.getCode());
-    private final DeptScopeProvider deptScopeProvider;
+    private final DeptScopeService deptScopeService;
     private final BizAppointService bizAppointService;
 
     private final BizFollowupTaskMapper bizFollowupTaskMapper;
@@ -99,7 +99,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
             wrapper.in(BizFollowupTask::getFollowupStatus, FollowupTaskStatusEnum.PENDING.getCode(), FollowupTaskStatusEnum.DOING.getCode())
                     .lt(BizFollowupTask::getFollowupTime, LocalDateTime.now());
         }
-        List<Long> scope = scopedDeptIds(dto.getDeptId());
+        List<Long> scope = deptScopeService.scopedDeptIds(dto.getDeptId());
         if (scope != null) {
             wrapper.in(BizFollowupTask::getDeptId, scope);
         }
@@ -115,7 +115,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
 
     @Override
     public FollowupStatVO stat() {
-        List<Long> scope = scopedDeptIds(null);
+        List<Long> scope = deptScopeService.scopedDeptIds(null);
         FollowupStatVO vo = new FollowupStatVO();
         FollowupStatCountVO row = bizFollowupTaskMapper.statOverview(scope);
         long pending = NumUtil.orZero(row.getPending());
@@ -182,7 +182,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
             if (task == null) {
                 throw new BusinessException("随访任务不存在");
             }
-            assertDeptAccessible(task.getDeptId());
+            deptScopeService.assertDeptAccessible(task.getDeptId());
             if (task.getFollowupStatus() != null && task.getFollowupStatus() != FollowupTaskStatusEnum.PENDING.getCode()) {
                 throw new BusinessException("只有待随访的任务可以修改");
             }
@@ -303,7 +303,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         if (task == null) {
             throw new BusinessException("随访任务不存在");
         }
-        assertDeptAccessible(task.getDeptId());
+        deptScopeService.assertDeptAccessible(task.getDeptId());
         return task;
     }
 
@@ -561,30 +561,6 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
             case 4 -> "术后随访：伤口愈合与功能恢复情况随访（" + d + "）";
             default -> "复诊提醒：出院后请按医嘱复查（" + d + "）";
         };
-    }
-
-    private void assertDeptAccessible(Long deptId) {
-        if (!deptScopeProvider.canAccessDept(deptId)) {
-            throw new BusinessException("该随访任务所属科室不在当前岗位的数据范围内");
-        }
-    }
-
-    /**
-     * null=不限科室；非空=收口集合（保证非空，IN () 是语法错误，空集合一律当配置缺失拒掉）
-     */
-    private List<Long> scopedDeptIds(Long requestedDeptId) {
-        Long resolved = deptScopeProvider.resolveDeptId(requestedDeptId);
-        if (resolved != null) {
-            return List.of(resolved);
-        }
-        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
-        if (allowed == null) {
-            return null;
-        }
-        if (allowed.isEmpty()) {
-            throw new BusinessException("当前岗位未绑定任何科室，无法查看随访数据（请在系统管理为岗位分配科室）");
-        }
-        return List.copyOf(allowed);
     }
 
     private String statusName(Integer status) {

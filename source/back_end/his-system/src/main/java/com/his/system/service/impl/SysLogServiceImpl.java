@@ -1,6 +1,7 @@
 package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
@@ -348,11 +349,6 @@ public class SysLogServiceImpl implements SysLogService {
         return vo;
     }
 
-    // 工具
-
-    /**
-     * 近24小时登录失败次数达到阈值的账号（口令爆破嫌疑）。
-     */
     private List<LogStatVO.RiskAccount> riskyAccounts(LocalDateTime since) {
         try {
             List<LoginFailAccountVO> rows = sysLoginLogMapper.selectFailAccounts(since, BRUTE_FORCE_THRESHOLD);
@@ -366,13 +362,12 @@ public class SysLogServiceImpl implements SysLogService {
             }
             return list;
         } catch (Exception e) {
-            // 统计卡里的"嫌疑账号"算不出来不该让整页统计 500
             log.error("登录失败账号统计失败", e);
             return List.of();
         }
     }
 
-    private <T> long count(LambdaQueryWrapper<T> wrapper, com.baomidou.mybatisplus.core.mapper.BaseMapper<T> mapper) {
+    private <T> long count(LambdaQueryWrapper<T> wrapper, BaseMapper<T> mapper) {
         Long n = mapper.selectCount(wrapper);
         return n == null ? 0L : n;
     }
@@ -382,7 +377,6 @@ public class SysLogServiceImpl implements SysLogService {
         int type = query.getLogType() == null ? 1 : query.getLogType();
         query.forExport(EXPORT_MAX);
         StringBuilder sb = new StringBuilder();
-        // BOM：Excel 打开 UTF-8 CSV 不加 BOM 会全屏乱码
         sb.append('\uFEFF');
         switch (type) {
             case 2 -> {

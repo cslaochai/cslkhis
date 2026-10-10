@@ -14,6 +14,7 @@ import com.his.emr.service.OutpatientLogService;
 import com.his.emr.vo.OutpatientLogListVO;
 import com.his.emr.vo.OutpatientLogStatsVO;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,13 +40,14 @@ public class OutpatientLogServiceImpl extends ServiceImpl<SysInfectiousDiseaseMa
 
     private final OutpatientLogMapper outpatientLogMapper;
     private final SysInfectiousDiseaseMapper sysInfectiousDiseaseMapper;
+    private final DeptScopeService deptScopeService;
 
     @Override
     public PageResult<OutpatientLogListVO> listPage(OutpatientLogQueryDTO query) {
         Map<String, String> prefixes = loadReportablePrefixes();
         Page<OutpatientLogListVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         IPage<OutpatientLogListVO> result =
-                outpatientLogMapper.selectLogPage(page, query, toRegex(prefixes));
+                outpatientLogMapper.selectLogPage(page, query, toRegex(prefixes), deptScopeService.scopedDeptIds(query.getDeptId()));
         List<OutpatientLogListVO> records = result.getRecords();
         for (OutpatientLogListVO vo : records) {
             vo.setPhoneMasked(SensitiveMaskUtil.maskPhone(vo.getPhone()));
@@ -60,7 +62,8 @@ public class OutpatientLogServiceImpl extends ServiceImpl<SysInfectiousDiseaseMa
     @Override
     public OutpatientLogStatsVO stats(OutpatientLogQueryDTO query) {
         OutpatientLogStatsVO stats =
-                outpatientLogMapper.selectLogStats(query, toRegex(loadReportablePrefixes()));
+                outpatientLogMapper.selectLogStats(query, toRegex(loadReportablePrefixes()),
+                        deptScopeService.scopedDeptIds(query.getDeptId()));
         return stats == null ? new OutpatientLogStatsVO() : stats;
     }
 

@@ -9,7 +9,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * VTE 防控的口径常量（措施项 / 推荐矩阵 / 枚举文案）—— 前后端唯一事实源，
+ * VTE 防控的口径常量（措施项 / 推荐矩阵 / 枚举文案
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class VteRules {

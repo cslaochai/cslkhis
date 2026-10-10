@@ -21,6 +21,7 @@ import com.his.pharmacy.mapper.BizAntibioticIncisionReviewMapper;
 import com.his.pharmacy.mapper.BizAntibioticStatsMapper;
 import com.his.pharmacy.service.AntibioticMonitorService;
 import com.his.pharmacy.vo.*;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -65,11 +66,16 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
 
     private final RedisSequenceService redisSequenceService;
 
+    private final DeptScopeService deptScopeService;
+
     @Override
     public PageResult<AntibioticStatsVO> listPage(AntibioticStatsQueryPageDTO query) {
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizAntibioticStats> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(TextUtil.hasText(query.getStatMonth()), BizAntibioticStats::getStatMonth, query.getStatMonth())
                 .eq(query.getScopeType() != null, BizAntibioticStats::getScopeType, query.getScopeType())
+                // 科室快照归属科室（dept_id 引用 sys_dept）：按岗位科室数据权限收敛，全院汇总行（dept_id 为空）对受限岗位不可见（A 类）
+                .in(deptIds != null, BizAntibioticStats::getDeptId, deptIds)
                 .orderByDesc(BizAntibioticStats::getStatMonth)
                 .orderByAsc(BizAntibioticStats::getScopeType)
                 .orderByAsc(BizAntibioticStats::getId);
@@ -84,6 +90,10 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
 
     @Override
     public AntibioticStatsVO previewStats(String statMonth) {
+        // 全院试算聚合了所有科室的数据：受限岗位直接拒绝（全院口径不走科室收口）
+        if (deptScopeService.scopedDeptIds(null) != null) {
+            throw new BusinessException("当前岗位数据范围不含全院，无法试算全院统计");
+        }
         YearMonth ym = requireMonth(statMonth);
         BizAntibioticStats row = compute(statMonth, ym.atDay(1), ym.atEndOfMonth(),
                 BizAntibioticStats.SCOPE_HOSPITAL, null, null);
@@ -106,12 +116,24 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
             if (CollectionUtils.isEmpty(depts)) {
                 throw new BusinessException(ym + " 没有出院患者，无法按科室生成监测指标");
             }
+            // 按科室生成只落在授权科室范围内（A 类）：范围外的科室直接跳过
+            List<Long> deptIds = deptScopeService.scopedDeptIds(null);
+            if (deptIds != null) {
+                depts = depts.stream().filter(d -> deptIds.contains(d.getDeptId())).toList();
+                if (depts.isEmpty()) {
+                    throw new BusinessException("当前岗位数据范围内没有可统计的科室");
+                }
+            }
             for (MonitorDeptRowVO dept : depts) {
                 BizAntibioticStats row = compute(dto.getStatMonth(), from, to,
                         BizAntibioticStats.SCOPE_DEPT, dept.getDeptId(), dept.getDeptName());
                 result.add(toStatsVO(upsertRow(row, operator, dto.getRemark())));
             }
         } else {
+            // 全院统计聚合了所有科室的数据：受限岗位直接拒绝（全院口径不走科室收口）
+            if (deptScopeService.scopedDeptIds(null) != null) {
+                throw new BusinessException("当前岗位数据范围不含全院，无法生成全院统计");
+            }
             BizAntibioticStats row = compute(dto.getStatMonth(), from, to,
                     BizAntibioticStats.SCOPE_HOSPITAL, null, "全院");
             result.add(toStatsVO(upsertRow(row, operator, dto.getRemark())));
@@ -121,9 +143,12 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
 
     @Override
     public String statsExportCsv(AntibioticStatsQueryPageDTO query) {
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizAntibioticStats> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(TextUtil.hasText(query.getStatMonth()), BizAntibioticStats::getStatMonth, query.getStatMonth())
                 .eq(query.getScopeType() != null, BizAntibioticStats::getScopeType, query.getScopeType())
+                // 与列表同口径：按岗位科室数据权限收敛，全院汇总行对受限岗位不可见（A 类）
+                .in(deptIds != null, BizAntibioticStats::getDeptId, deptIds)
                 .orderByDesc(BizAntibioticStats::getStatMonth)
                 .orderByAsc(BizAntibioticStats::getId);
         long total = bizAntibioticStatsMapper.selectCount(wrapper);

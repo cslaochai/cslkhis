@@ -2,7 +2,7 @@ package com.his.system.provider;
 
 import java.util.List;
 
-public interface RolePermissionProvider {
+public interface RolePermissionService {
 
     /**
      * 取该角色的权限码集合。

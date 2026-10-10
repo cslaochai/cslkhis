@@ -17,6 +17,7 @@ import com.his.emr.vo.MedicalRecordArchiveCountVO;
 import com.his.emr.vo.MessagePayloadVO;
 import com.his.system.entity.SysMessage;
 import com.his.system.enums.BizTypeEnum;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.SysMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,12 +47,15 @@ public class MedicalRecordArchiveServiceImpl extends ServiceImpl<BizMedicalRecor
     private static final int OVERDUE_DAYS = 3;
 
     private final SysMessageService sysMessageService;
+    private final DeptScopeService deptScopeService;
 
     @Override
     public PageResult<BizMedicalRecordArchiveVO> selectArchivePage(Long patientId, Integer archiveStatus, String keyword,
                                                                    int pageNum, int pageSize) {
+        List<Long> scope = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizMedicalRecordArchive> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(patientId != null, BizMedicalRecordArchive::getPatientId, patientId)
+        wrapper.in(scope != null, BizMedicalRecordArchive::getDeptId, scope)
+                .eq(patientId != null, BizMedicalRecordArchive::getPatientId, patientId)
                 .eq(archiveStatus != null, BizMedicalRecordArchive::getArchiveStatus, archiveStatus)
                 .and(TextUtil.hasText(keyword), w -> w
                         .like(BizMedicalRecordArchive::getRecordNo, keyword)
@@ -67,7 +71,12 @@ public class MedicalRecordArchiveServiceImpl extends ServiceImpl<BizMedicalRecor
 
     @Override
     public BizMedicalRecordArchiveVO getArchiveDetail(Long archiveId) {
-        return toVo(this.getById(archiveId));
+        BizMedicalRecordArchive entity = this.getById(archiveId);
+        if (entity == null) {
+            return null;
+        }
+        deptScopeService.assertDeptAccessible(entity.getDeptId());
+        return toVo(entity);
     }
 
     private BizMedicalRecordArchiveVO toVo(BizMedicalRecordArchive entity) {
@@ -83,6 +92,7 @@ public class MedicalRecordArchiveServiceImpl extends ServiceImpl<BizMedicalRecor
         if (archive == null) {
             throw new BusinessException("归档记录不存在");
         }
+        deptScopeService.assertDeptAccessible(archive.getDeptId());
         if (archive.getArchiveStatus() != 1) {
             throw new BusinessException("当前状态不允许归档");
         }
@@ -99,6 +109,7 @@ public class MedicalRecordArchiveServiceImpl extends ServiceImpl<BizMedicalRecor
         if (archive == null) {
             throw new BusinessException("归档记录不存在");
         }
+        deptScopeService.assertDeptAccessible(archive.getDeptId());
         if (archive.getArchiveStatus() != 2) {
             throw new BusinessException("当前状态不允许封存");
         }
@@ -114,9 +125,11 @@ public class MedicalRecordArchiveServiceImpl extends ServiceImpl<BizMedicalRecor
     public MedicalRecordArchiveCountVO statusCount() {
         // 只查状态列，在内存里归并：本表量级（病案）远达不到需要 SQL 聚合调优的程度，
         // 且列少、单表，避免为 3 个数字写 3 条 count(*)。
+        List<Long> scope = deptScopeService.scopedDeptIds(null);
         List<BizMedicalRecordArchive> all = this.list(new LambdaQueryWrapper<BizMedicalRecordArchive>()
                 .select(BizMedicalRecordArchive::getArchiveStatus)
-                .eq(BizMedicalRecordArchive::getDelFlag, 0));
+                .eq(BizMedicalRecordArchive::getDelFlag, 0)
+                .in(scope != null, BizMedicalRecordArchive::getDeptId, scope));
         int pending = 0, archived = 0, sealed = 0;
         for (BizMedicalRecordArchive a : all) {
             Integer st = a.getArchiveStatus();

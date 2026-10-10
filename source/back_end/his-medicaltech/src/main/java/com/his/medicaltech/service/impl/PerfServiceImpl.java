@@ -16,6 +16,7 @@ import com.his.medicaltech.mapper.PerfMapper;
 import com.his.medicaltech.service.PerfService;
 import com.his.medicaltech.vo.PerfDeptRevenueRowVO;
 import com.his.medicaltech.vo.PerfVO;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 
 /**
  * 绩效成本核算服务。
@@ -36,6 +38,7 @@ public class PerfServiceImpl extends ServiceImpl<BizPerfResultMapper, BizPerfRes
     private final BizDeptCostMonthMapper bizDeptCostMonthMapper;
     private final BizPerfResultMapper bizPerfResultMapper;
     private final PerfMapper perfMapper;
+    private final DeptScopeService deptScopeService;
 
     // 成本
 
@@ -55,6 +58,8 @@ public class PerfServiceImpl extends ServiceImpl<BizPerfResultMapper, BizPerfRes
     @Transactional(rollbackFor = Exception.class)
     public PerfVO.CostRow saveCost(PerfDTO.CostSave dto) {
         String month = normalizeMonth(dto.getCostMonth());
+        // 科室数据权限：向指定科室写入成本前校验越权
+        deptScopeService.resolveDeptId(dto.getDeptId());
         BizDeptCostMonth exists = bizDeptCostMonthMapper.selectOne(new LambdaQueryWrapper<BizDeptCostMonth>()
                 .eq(BizDeptCostMonth::getDeptId, dto.getDeptId())
                 .eq(BizDeptCostMonth::getCostMonth, month)
@@ -83,8 +88,11 @@ public class PerfServiceImpl extends ServiceImpl<BizPerfResultMapper, BizPerfRes
     // 转换
 
     public IPage<PerfVO.CostRow> costPage(PerfDTO.CostQuery dto) {
+        // 科室数据权限收口：列表按岗位可见科室集合过滤
+        List<Long> deptIds = deptScopeService.scopedDeptIds(dto.getDeptId());
         LambdaQueryWrapper<BizDeptCostMonth> qw = new LambdaQueryWrapper<BizDeptCostMonth>()
                 .eq(dto.getDeptId() != null, BizDeptCostMonth::getDeptId, dto.getDeptId())
+                .in(deptIds != null, BizDeptCostMonth::getDeptId, deptIds)
                 .eq(TextUtil.hasText(dto.getCostMonth()), BizDeptCostMonth::getCostMonth,
                         normalizeMonth(dto.getCostMonth()))
                 .orderByDesc(BizDeptCostMonth::getCostMonth)
@@ -97,6 +105,8 @@ public class PerfServiceImpl extends ServiceImpl<BizPerfResultMapper, BizPerfRes
      * 核算前预览：收入聚合 + 成本快照
      */
     public PerfVO.RevenueInfo revenueInfo(Long deptId, String month) {
+        // 科室数据权限：核算/预览都按指定科室取数，先校验越权（calc 经此复用）
+        deptScopeService.resolveDeptId(deptId);
         String m = normalizeMonth(month);
         PerfDeptRevenueRowVO r = perfMapper.sumDeptRevenue(deptId, m);
         BizDeptCostMonth cost = bizDeptCostMonthMapper.selectOne(new LambdaQueryWrapper<BizDeptCostMonth>()
@@ -166,8 +176,11 @@ public class PerfServiceImpl extends ServiceImpl<BizPerfResultMapper, BizPerfRes
     }
 
     public IPage<PerfVO.PerfRow> perfPage(PerfDTO.PerfQuery dto) {
+        // 科室数据权限收口：列表按岗位可见科室集合过滤
+        List<Long> deptIds = deptScopeService.scopedDeptIds(dto.getDeptId());
         LambdaQueryWrapper<BizPerfResult> qw = new LambdaQueryWrapper<BizPerfResult>()
                 .eq(dto.getDeptId() != null, BizPerfResult::getDeptId, dto.getDeptId())
+                .in(deptIds != null, BizPerfResult::getDeptId, deptIds)
                 .eq(TextUtil.hasText(dto.getCostMonth()), BizPerfResult::getCostMonth,
                         normalizeMonth(dto.getCostMonth()))
                 .orderByDesc(BizPerfResult::getCostMonth)
@@ -213,4 +226,5 @@ public class PerfServiceImpl extends ServiceImpl<BizPerfResultMapper, BizPerfRes
         vo.setUpdateTime(p.getUpdateTime());
         return vo;
     }
+
 }

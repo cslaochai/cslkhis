@@ -20,6 +20,7 @@ import com.his.system.entity.SysDepartment;
 import com.his.system.entity.SysEmployee;
 import com.his.system.mapper.SysDepartmentMapper;
 import com.his.system.mapper.SysEmployeeMapper;
+import com.his.system.provider.DeptScopeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -49,12 +50,17 @@ public class AttendingRelationServiceImpl
     private final BizPatientMapper bizPatientMapper;
     private final SysEmployeeMapper sysEmployeeMapper;
     private final SysDepartmentMapper sysDepartmentMapper;
+    private final DeptScopeService deptScopeService;
 
     @Override
     public List<AttendingRelationVO> listByAdmission(Long admissionId, Integer status) {
         // C-非 web 入参：全仓暂无 Controller 注入本服务（无 web 入口可核），Bean Validation 覆盖不到，保留
         if (admissionId == null) {
             throw new BusinessException("住院登记ID不能为空");
+        }
+        BizAdmission admission = bizAdmissionMapper.selectById(admissionId);
+        if (admission != null) {
+            deptScopeService.assertDeptAccessible(admission.getDeptId());
         }
         List<BizAttendingRelation> rows = list(new LambdaQueryWrapper<BizAttendingRelation>()
                 .eq(BizAttendingRelation::getAdmissionId, admissionId)
@@ -88,6 +94,7 @@ public class AttendingRelationServiceImpl
         if (admission.getAdmitStatus() == null || admission.getAdmitStatus() != 1) {
             throw new BusinessException("该住院已结束，不能再建立或转交管床关系");
         }
+        deptScopeService.assertDeptAccessible(admission.getDeptId());
         SysEmployee doctor = sysEmployeeMapper.selectById(dto.getEmployeeId());
         if (doctor == null) {
             throw new BusinessException("所选医生不存在或已删除");
@@ -162,6 +169,7 @@ public class AttendingRelationServiceImpl
         if (rel == null) {
             throw new BusinessException("管床关系不存在或已删除");
         }
+        deptScopeService.assertDeptAccessible(rel.getDeptId());
         if (rel.getStatus() != null && rel.getStatus() == STATUS_ENDED) {
             return;
         }
@@ -172,9 +180,11 @@ public class AttendingRelationServiceImpl
 
     @Override
     public void deleteById(Long id) {
-        if (getById(id) == null) {
+        BizAttendingRelation rel = getById(id);
+        if (rel == null) {
             throw new BusinessException("管床关系不存在或已删除");
         }
+        deptScopeService.assertDeptAccessible(rel.getDeptId());
         // 唯一键不含删除标志 → 物理删（软删的行会继续占着「同一次住院 + 同类型 + 同一医生」的键位）
         baseMapper.purgeById(id);
     }

@@ -19,6 +19,7 @@ import com.his.medicaltech.mapper.BizPathologyOrderMapper;
 import com.his.medicaltech.service.PathologyService;
 import com.his.medicaltech.vo.PathologyVO;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -50,10 +51,13 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
     private final BizPathologyBlockMapper bizPathologyBlockMapper;
     private final DictCacheService dictCacheService;
     private final RedisSequenceService redisSequenceService;
+    private final DeptScopeService deptScopeService;
 
     // 查询
 
     public PageResult<PathologyVO.ListVO> pageVO(PathologyDTO.Query q) {
+        // 科室数据权限收口：查询 DTO 无科室筛选字段，一律按岗位可见科室集合过滤
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizPathologyOrder> w = new LambdaQueryWrapper<>();
         w.eq(TextUtil.hasText(q.getOrderNo()), BizPathologyOrder::getOrderNo, q.getOrderNo())
                 .eq(q.getPatientId() != null, BizPathologyOrder::getPatientId, q.getPatientId())
@@ -63,6 +67,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
                 .ge(q.getStartDate() != null, BizPathologyOrder::getVisitDate, q.getStartDate())
                 .le(q.getEndDate() != null, BizPathologyOrder::getVisitDate, q.getEndDate())
                 // 二级键：同 visit_date 的行顺序不稳 → 翻页会重复/丢行且不报错
+                .in(deptIds != null, BizPathologyOrder::getApplyDeptId, deptIds)
                 .orderByDesc(BizPathologyOrder::getId);
         Page<BizPathologyOrder> page = bizPathologyOrderMapper.selectPage(
                 new Page<>(q.getPageNum(), q.getPageSize()), w);
@@ -71,19 +76,23 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
     }
 
     public PathologyVO.StatsVO stats() {
+        // 科室数据权限收口：统计口径与列表一致，按岗位可见科室集合过滤
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizPathologyOrder> all = new LambdaQueryWrapper<>();
-        all.ne(BizPathologyOrder::getStatus, PathologyStatusEnum.CANCELLED.getCode());
+        all.ne(BizPathologyOrder::getStatus, PathologyStatusEnum.CANCELLED.getCode())
+                .in(deptIds != null, BizPathologyOrder::getApplyDeptId, deptIds);
         long total = bizPathologyOrderMapper.selectCount(all);
-        long pendingReceive = countByStatus(PathologyStatusEnum.REGISTERED.getCode());
-        long processing = countByStatus(PathologyStatusEnum.RECEIVED.getCode())
-                + countByStatus(PathologyStatusEnum.SAMPLED.getCode()) + countByStatus(PathologyStatusEnum.SLICED.getCode());
-        long pendingAudit = countByStatus(PathologyStatusEnum.REPORTED.getCode());
-        long published = countByStatus(PathologyStatusEnum.PUBLISHED.getCode());
+        long pendingReceive = countByStatus(PathologyStatusEnum.REGISTERED.getCode(), deptIds);
+        long processing = countByStatus(PathologyStatusEnum.RECEIVED.getCode(), deptIds)
+                + countByStatus(PathologyStatusEnum.SAMPLED.getCode(), deptIds) + countByStatus(PathologyStatusEnum.SLICED.getCode(), deptIds);
+        long pendingAudit = countByStatus(PathologyStatusEnum.REPORTED.getCode(), deptIds);
+        long published = countByStatus(PathologyStatusEnum.PUBLISHED.getCode(), deptIds);
 
         LocalDate today = LocalDate.now();
         long frozenToday = bizPathologyOrderMapper.selectCount(new LambdaQueryWrapper<BizPathologyOrder>()
                 .eq(BizPathologyOrder::getIsFrozen, 1)
-                .ge(BizPathologyOrder::getCreateTime, TimeUtil.dayStart(today)));
+                .ge(BizPathologyOrder::getCreateTime, TimeUtil.dayStart(today))
+                .in(deptIds != null, BizPathologyOrder::getApplyDeptId, deptIds));
 
         PathologyVO.StatsVO vo = new PathologyVO.StatsVO();
         vo.setTotal(total);
@@ -95,8 +104,10 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         return vo;
     }
 
-    private long countByStatus(int status) {
-        return bizPathologyOrderMapper.selectCount(new LambdaQueryWrapper<BizPathologyOrder>().eq(BizPathologyOrder::getStatus, status));
+    private long countByStatus(int status, List<Long> deptIds) {
+        return bizPathologyOrderMapper.selectCount(new LambdaQueryWrapper<BizPathologyOrder>()
+                .eq(BizPathologyOrder::getStatus, status)
+                .in(deptIds != null, BizPathologyOrder::getApplyDeptId, deptIds));
     }
 
     public PathologyVO.DetailVO getDetail(Long orderId) {
@@ -462,6 +473,8 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         if (o == null) {
             throw new BusinessException("病理单不存在：" + id);
         }
+        // 科室数据权限：详情/接收/取材制片/蜡块流转/初诊/审核/发布/取消等单据操作统一在取单入口校验
+        deptScopeService.assertDeptAccessible(o.getApplyDeptId());
         return o;
     }
 
@@ -523,4 +536,5 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
     private boolean samePerson(String a, String b) {
         return Objects.equals(a, b);
     }
+
 }

@@ -22,7 +22,7 @@ import com.his.patient.vo.DietPlanVO;
 import com.his.patient.vo.DietTypeOptionVO;
 import com.his.patient.vo.WardVO;
 import com.his.system.entity.CurrentUser;
-import com.his.system.provider.DeptScopeProvider;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,7 +45,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class DietPlanServiceImpl extends ServiceImpl<BizDietPlanMapper, BizDietPlan> implements DietPlanService {
     private final RedisSequenceService redisSequenceService;
-    private final DeptScopeProvider deptScopeProvider;
+    private final DeptScopeService deptScopeService;
     private final BizDietPlanMapper bizDietPlanMapper;
     private final BizMealOrderMapper bizMealOrderMapper;
     private final BizAdmissionMapper bizAdmissionMapper;
@@ -439,7 +439,7 @@ public class DietPlanServiceImpl extends ServiceImpl<BizDietPlanMapper, BizDietP
     }
 
     private void applyDeptScope(DietPlanQueryPageDTO query) {
-        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
+        Set<Long> allowed = deptScopeService.allowedDeptIds();
         if (allowed != null) {
             query.setScopeDeptIds(new ArrayList<>(allowed));
         }

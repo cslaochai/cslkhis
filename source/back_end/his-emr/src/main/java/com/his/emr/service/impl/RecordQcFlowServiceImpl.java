@@ -22,6 +22,7 @@ import com.his.emr.mapper.BizRecordQcFlowMapper;
 import com.his.emr.service.RecordQcFlowService;
 import com.his.emr.vo.RecordQcFlowActionVO;
 import com.his.emr.vo.RecordQcFlowVO;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +46,7 @@ public class RecordQcFlowServiceImpl extends ServiceImpl<BizRecordQcFlowMapper, 
 
     private final RedisSequenceService redisSequenceService;
 
+    private final DeptScopeService deptScopeService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -59,6 +61,8 @@ public class RecordQcFlowServiceImpl extends ServiceImpl<BizRecordQcFlowMapper, 
         if (bizRecordQcFlowMapper.countActiveByRecordId(dto.getRecordId()) > 0) {
             throw new BusinessException("该病历已有在途质控流转（未终审通过），不能重复发起");
         }
+        // 发起也是写操作：受限岗位只能给本科室病历发起质控流转
+        deptScopeService.assertDeptAccessible(record.getDeptId());
 
         BizRecordQcFlow flow = new BizRecordQcFlow();
         flow.setFlowNo(nextFlowNo());
@@ -166,7 +170,8 @@ public class RecordQcFlowServiceImpl extends ServiceImpl<BizRecordQcFlowMapper, 
     public PageResult<RecordQcFlowVO> page(RecordQcFlowQueryPageDTO q) {
         Page<RecordQcFlowVO> page = bizRecordQcFlowMapper.selectFlowPage(
                 new Page<>(q.getPageNum(), q.getPageSize()),
-                q.getFlowNo(), q.getFlowStatus(), q.getCurrentLevel(), q.getRecordSource(), q.getKeyword());
+                q.getFlowNo(), q.getFlowStatus(), q.getCurrentLevel(), q.getRecordSource(),
+                deptScopeService.scopedDeptIds(null), q.getKeyword());
         page.getRecords().forEach(this::decorate);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
     }
@@ -177,11 +182,16 @@ public class RecordQcFlowServiceImpl extends ServiceImpl<BizRecordQcFlowMapper, 
         if (vo == null) {
             throw new BusinessException("流转单不存在或已删除");
         }
+        deptScopeService.assertDeptAccessible(vo.getDeptId());
         return decorate(vo);
     }
 
     @Override
     public List<RecordQcFlowActionVO> listActions(Long flowId) {
+        BizRecordQcFlow flow = bizRecordQcFlowMapper.selectById(flowId);
+        if (flow != null) {
+            deptScopeService.assertDeptAccessible(flow.getDeptId());
+        }
         List<BizRecordQcFlowAction> list = bizRecordQcFlowActionMapper.selectList(
                 new LambdaQueryWrapper<BizRecordQcFlowAction>()
                         .eq(BizRecordQcFlowAction::getFlowId, flowId)
@@ -220,6 +230,8 @@ public class RecordQcFlowServiceImpl extends ServiceImpl<BizRecordQcFlowMapper, 
         if (flow == null) {
             throw new BusinessException("流转单不存在或已删除");
         }
+        // 流转写操作与查询同口径收口：别的科室流转单拿 id 也推不动
+        deptScopeService.assertDeptAccessible(flow.getDeptId());
         if (flow.getFlowStatus() == RecordQcFlowStatusEnum.FINAL_APPROVED.getCode()) {
             throw new BusinessException("流转已终审通过（终态），不能再操作");
         }

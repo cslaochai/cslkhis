@@ -26,7 +26,6 @@ public class BizStaffPlanRule extends BaseEntity {
     private String remark;
 
 
-
     /**
      * 排班单元类型（1-科室 2-病区 3-全院）
      */

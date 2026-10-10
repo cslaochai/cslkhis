@@ -10,7 +10,6 @@ import com.his.common.enums.RecordStatusEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
-import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
@@ -26,6 +25,7 @@ import com.his.system.entity.SysEmployee;
 import com.his.system.entity.SysMessage;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.mapper.SysEmployeeMapper;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +34,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -72,6 +71,8 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
     private final SysBedMapper sysBedMapper;
 
     private final SysEmployeeMapper sysEmployeeMapper;
+
+    private final DeptScopeService deptScopeService;
 
     // 申请 / 修改
 
@@ -115,6 +116,8 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
         if (fromDeptId == null) {
             throw new BusinessException("入院记录缺少科室信息，无法确定申请科室");
         }
+        // 数据权限：只能为自己科室在院的患者申请会诊（会诊科室是业务目标，不受限）
+        deptScopeService.assertDeptAccessible(fromDeptId);
 
         // 范围与科室的一致性：科内必须同科室；科间/全院必须跨科室。
         boolean sameDept = Objects.equals(fromDeptId, dto.getToDeptId());
@@ -233,13 +236,9 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
         }
     }
 
-    // 完成（回写病历）
 
     /**
      * 修改「待应答」的申请。
-     *
-     * <p>只允许改"请哪个科、什么范围、急不急、为什么"这四项 + 备注：
-     * 患者、入院、申请科室、申请医生、申请时间都是**已经发生的事实**，改它们等于改病史。
      */
     private String updateOne(ConsultationUpsertDTO dto, BizAdmission admission, int isUrgent) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
@@ -293,6 +292,7 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
             throw new BusinessException("当前用户信息不存在");
         }
         BizConsultation entity = mustGet(dto.getConsultationId());
+        assertConsultAccessible(entity.getFromDeptId(), entity.getToDeptId());
         if (!Objects.equals(ConsultationStatusEnum.PENDING.getCode(), entity.getConsultStatus())) {
             throw new BusinessException("会诊 " + entity.getConsultationNo() + " 当前状态为「"
                     + ConsultationStatusEnum.labelOrUnknown(entity.getConsultStatus()) + "」，不能应答");
@@ -317,7 +317,6 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
         bizConsultationMapper.updateById(entity);
 
         // 消息侧待办联动：会诊已接诊 → 该会诊的站内信 handle_status 0→1。
-        // 缺了这一步，会诊科室接诊了，收件箱里还挂着「待处理」（与危急值闭环同一手法）。
         closeConsultTodo(entity.getConsultationId(), 1);
 
         // 急会诊超时只提醒、不阻断：临床已经接诊了，再拒绝反而是把病人放下
@@ -336,6 +335,7 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
     @Transactional(rollbackFor = Exception.class)
     public String finish(ConsultationFinishDTO dto) {
         BizConsultation entity = mustGet(dto.getConsultationId());
+        assertConsultAccessible(entity.getFromDeptId(), entity.getToDeptId());
 
         // ★ 铁律：未应答不可完成（= 医嘱未校对不可执行）
         if (Objects.equals(ConsultationStatusEnum.PENDING.getCode(), entity.getConsultStatus())) {
@@ -373,13 +373,8 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
         return recordId == null ? null : String.valueOf(recordId);
     }
 
-    // 查询
-
     /**
      * 把会诊结论回写成一份住院病历文书（record_type=9 会诊记录，状态直接「已提交」）。
-     *
-     * <p>为什么不回写就"顺手 mark 一下"：四核对里"病历有医嘱没记"这一类缺陷，
-     * 追的就是"做了却没写"。会诊做了、病历没有，等于把这次会诊变成飞检时的举证失败。
      */
     private BizInpatientRecord writeBackRecord(BizConsultation entity, String conclusion,
                                                LocalDateTime consultTime, LocalDateTime now) {
@@ -448,6 +443,7 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
             throw new BusinessException("当前用户信息不存在");
         }
         BizConsultation entity = mustGet(dto.getConsultationId());
+        assertConsultAccessible(entity.getFromDeptId(), entity.getToDeptId());
         if (Objects.equals(ConsultationStatusEnum.CANCELLED.getCode(), entity.getConsultStatus())) {
             throw new BusinessException("会诊 " + entity.getConsultationNo() + " 已取消，不能重复取消");
         }
@@ -483,17 +479,15 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
         }
     }
 
-    // 展示态
-
     @Override
     public IPage<ConsultationVO> listPage(ConsultationQueryPageDTO query) {
         Page<ConsultationVO> page = new Page<>(query.getPageNum(), query.getPageSize());
-        IPage<ConsultationVO> result = bizConsultationMapper.selectConsultationPage(page, query);
+        Long reqDeptId = query.getFromDeptId() != null ? query.getFromDeptId() : query.getToDeptId();
+        List<Long> deptIds = deptScopeService.scopedDeptIds(reqDeptId);
+        IPage<ConsultationVO> result = bizConsultationMapper.selectConsultationPage(page, query, deptIds);
         result.getRecords().forEach(this::decorate);
         return result;
     }
-
-    // 工具
 
     @Override
     public ConsultationVO getDetailById(Long consultationId) {
@@ -501,13 +495,14 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
         if (vo == null) {
             throw new BusinessException("会诊记录不存在");
         }
+        assertConsultAccessible(vo.getFromDeptId(), vo.getToDeptId());
         decorate(vo);
         return vo;
     }
 
     @Override
     public long countUnfinished(Long toDeptId, Long admissionId) {
-        return bizConsultationMapper.countUnfinished(toDeptId, admissionId);
+        return bizConsultationMapper.countUnfinished(deptScopeService.scopedDeptIds(toDeptId), admissionId);
     }
 
     private void decorate(ConsultationVO vo) {
@@ -587,6 +582,12 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
     }
 
     /**
-     * 留痕一律用**员工ID**（不是用户的ID），与医嘱/站内信同一口径
+     * 会诊单双方（申请/会诊科室）任一在授权范围内即可见/可操作
      */
+    private void assertConsultAccessible(Long fromDeptId, Long toDeptId) {
+        if (!deptScopeService.canAccessDept(fromDeptId)
+                && !deptScopeService.canAccessDept(toDeptId)) {
+            throw new BusinessException("该数据所属科室不在当前岗位的数据范围内");
+        }
+    }
 }

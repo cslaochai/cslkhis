@@ -18,6 +18,7 @@ import com.his.emr.mapper.BizInfectiousReportMapper;
 import com.his.emr.mapper.SysInfectiousDiseaseMapper;
 import com.his.emr.service.InfectiousReportService;
 import com.his.emr.vo.*;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,12 +43,15 @@ public class InfectiousReportServiceImpl extends ServiceImpl<BizInfectiousReport
     private final SysInfectiousDiseaseMapper sysInfectiousDiseaseMapper;
     private final RedisSequenceService redisSequenceService;
     private final com.his.system.service.SysMessageService sysMessageService;
+    private final DeptScopeService deptScopeService;
 
     // 查询
 
     @Override
     public PageResult<InfectiousReportVO.Row> page(InfectiousReportQueryPageDTO q) {
+        List<Long> scope = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizInfectiousReport> w = new LambdaQueryWrapper<BizInfectiousReport>()
+                .in(scope != null, BizInfectiousReport::getVisitDeptId, scope)
                 .eq(q.getReportStatus() != null, BizInfectiousReport::getReportStatus, q.getReportStatus())
                 .eq(q.getInfectiousClass() != null, BizInfectiousReport::getInfectiousClass, q.getInfectiousClass())
                 .and(TextUtil.hasText(q.getKeyword()), x -> x
@@ -78,6 +82,7 @@ public class InfectiousReportServiceImpl extends ServiceImpl<BizInfectiousReport
         if (r == null || r.getDelFlag() != 0) {
             throw new BusinessException("报卡不存在或已删除");
         }
+        deptScopeService.assertDeptAccessible(r.getVisitDeptId());
         InfectiousReportVO.Detail d = new InfectiousReportVO.Detail();
         d.setCard(toRow(r));
         d.setDirectPayloadPreview(r.getDirectPayload());
@@ -110,8 +115,11 @@ public class InfectiousReportServiceImpl extends ServiceImpl<BizInfectiousReport
 
     @Override
     public InfectiousReportVO.Stats stats() {
+        List<Long> scope = deptScopeService.scopedDeptIds(null);
         List<BizInfectiousReport> all = bizInfectiousReportMapper.selectList(
-                new LambdaQueryWrapper<BizInfectiousReport>().eq(BizInfectiousReport::getDelFlag, 0));
+                new LambdaQueryWrapper<BizInfectiousReport>()
+                        .eq(BizInfectiousReport::getDelFlag, 0)
+                        .in(scope != null, BizInfectiousReport::getVisitDeptId, scope));
         InfectiousReportVO.Stats s = new InfectiousReportVO.Stats();
         LocalDateTime todayStart = TimeUtil.dayStart(LocalDate.now());
         for (BizInfectiousReport r : all) {
@@ -173,6 +181,7 @@ public class InfectiousReportServiceImpl extends ServiceImpl<BizInfectiousReport
         if (exists == null || exists.getDelFlag() != 0) {
             throw new BusinessException("报卡不存在或已删除");
         }
+        deptScopeService.assertDeptAccessible(exists.getVisitDeptId());
         if (exists.getReportStatus() == InfectiousReportStatusEnum.DIRECT.getCode()) {
             throw new BusinessException("已直报的卡是法定留痕凭证，不能修改");
         }
@@ -370,6 +379,7 @@ public class InfectiousReportServiceImpl extends ServiceImpl<BizInfectiousReport
         if (r == null || r.getDelFlag() != 0) {
             throw new BusinessException("报卡不存在或已删除");
         }
+        deptScopeService.assertDeptAccessible(r.getVisitDeptId());
         return r;
     }
 

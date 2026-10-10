@@ -32,6 +32,7 @@ import com.his.system.enums.BizTypeEnum;
 import com.his.system.mapper.SysConfigMapper;
 import com.his.system.mapper.SysEmployeeMapper;
 import com.his.system.mapper.SysUserMapper;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -86,6 +87,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
     private final SysEmployeeMapper sysEmployeeMapper;
 
     private final com.his.medicaltech.mapper.BizLaboratoryRecordMapper recordMapper;
+    private final DeptScopeService deptScopeService;
     private final AtomicLong configLoadedAt = new AtomicLong(0L);
     private volatile Integer cachedDeadlineMinutes;
 
@@ -323,10 +325,12 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
 
     @Override
     public PageResult<BizCriticalValueVO> listPage(CriticalValueQueryPageDTO dto) {
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizCriticalValue> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(dto.getPatientId() != null, BizCriticalValue::getPatientId, dto.getPatientId())
                 .eq(dto.getStatus() != null, BizCriticalValue::getStatus, dto.getStatus())
-                .eq(dto.getCriticalType() != null, BizCriticalValue::getCriticalType, dto.getCriticalType());
+                .eq(dto.getCriticalType() != null, BizCriticalValue::getCriticalType, dto.getCriticalType())
+                .in(deptIds != null, BizCriticalValue::getReportDeptId, deptIds);
 
         if (TextUtil.hasText(dto.getKeyword())) {
             String keyword = dto.getKeyword().trim();
@@ -365,6 +369,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         if (entity == null) {
             throw new BusinessException("危急值记录不存在：" + criticalValueId);
         }
+        assertDeptAccessible(entity.getReportDeptId());
         return toVO(entity);
     }
 
@@ -372,20 +377,26 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
     public CriticalValueStatsVO stats() {
         LocalDateTime monthStart = TimeUtil.dayStart(YearMonth.now().atDay(1));
         LocalDateTime now = LocalDateTime.now();
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
 
         CriticalValueStatsVO vo = new CriticalValueStatsVO();
         vo.setMonthTotal(count(new LambdaQueryWrapper<BizCriticalValue>()
-                .ge(BizCriticalValue::getReportTime, monthStart)));
+                .ge(BizCriticalValue::getReportTime, monthStart)
+                .in(deptIds != null, BizCriticalValue::getReportDeptId, deptIds)));
         vo.setPending(count(new LambdaQueryWrapper<BizCriticalValue>()
-                .eq(BizCriticalValue::getStatus, CriticalValueStatusEnum.PENDING.getCode())));
+                .eq(BizCriticalValue::getStatus, CriticalValueStatusEnum.PENDING.getCode())
+                .in(deptIds != null, BizCriticalValue::getReportDeptId, deptIds)));
         vo.setReceived(count(new LambdaQueryWrapper<BizCriticalValue>()
-                .eq(BizCriticalValue::getStatus, CriticalValueStatusEnum.RECEIVED.getCode())));
+                .eq(BizCriticalValue::getStatus, CriticalValueStatusEnum.RECEIVED.getCode())
+                .in(deptIds != null, BizCriticalValue::getReportDeptId, deptIds)));
         vo.setHandled(count(new LambdaQueryWrapper<BizCriticalValue>()
-                .eq(BizCriticalValue::getStatus, CriticalValueStatusEnum.HANDLED.getCode())));
+                .eq(BizCriticalValue::getStatus, CriticalValueStatusEnum.HANDLED.getCode())
+                .in(deptIds != null, BizCriticalValue::getReportDeptId, deptIds)));
         vo.setOverdue(count(new LambdaQueryWrapper<BizCriticalValue>()
                 .in(BizCriticalValue::getStatus, CriticalValueStatusEnum.PENDING.getCode(), CriticalValueStatusEnum.RECEIVED.getCode())
                 .isNotNull(BizCriticalValue::getDeadlineTime)
-                .lt(BizCriticalValue::getDeadlineTime, now)));
+                .lt(BizCriticalValue::getDeadlineTime, now)
+                .in(deptIds != null, BizCriticalValue::getReportDeptId, deptIds)));
 
         long handled = vo.getHandled() == null ? 0L : vo.getHandled();
         if (handled > 0) {
@@ -393,6 +404,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
                     .eq(BizCriticalValue::getStatus, CriticalValueStatusEnum.HANDLED.getCode())
                     .isNotNull(BizCriticalValue::getHandleTime)
                     .isNotNull(BizCriticalValue::getDeadlineTime)
+                    .in(deptIds != null, BizCriticalValue::getReportDeptId, deptIds)
                     .apply("handle_time <= deadline_time"));
             vo.setTimelyRate(BigDecimal.valueOf(inTime)
                     .multiply(BigDecimal.valueOf(100))
@@ -642,6 +654,8 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
 
     @Override
     public boolean deleteById(Long criticalValueId) {
+        BizCriticalValue entity = require(criticalValueId);
+        assertDeptAccessible(entity.getReportDeptId());
         return removeById(criticalValueId);
     }
 
@@ -654,6 +668,8 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         if (entity == null) {
             throw new BusinessException("危急值记录不存在：" + criticalValueId);
         }
+        // 接收/处置与查询同口径收口：不能拿别的科室的危急值 id 越权推进闭环
+        assertDeptAccessible(entity.getReportDeptId());
         return entity;
     }
 
@@ -670,6 +686,12 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         vo.setResultText(buildResultText(entity));
         vo.setOverdue(isOverdue(entity));
         return vo;
+    }
+
+    private void assertDeptAccessible(Long deptId) {
+        if (!deptScopeService.canAccessDept(deptId)) {
+            throw new BusinessException("该危急值所属科室不在当前岗位的数据范围内");
+        }
     }
 
     /**

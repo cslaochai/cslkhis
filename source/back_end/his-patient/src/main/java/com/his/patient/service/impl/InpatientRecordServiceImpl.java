@@ -7,7 +7,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
-import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
@@ -18,7 +17,7 @@ import com.his.patient.service.InpatientRecordService;
 import com.his.patient.support.RecordStructuredFields;
 import com.his.patient.vo.*;
 import com.his.system.entity.CurrentUser;
-import com.his.system.provider.DeptScopeProvider;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,7 +40,7 @@ import java.util.*;
 public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMapper, BizInpatientRecord> implements InpatientRecordService {
 
     private final RedisSequenceService redisSequenceService;
-    private final DeptScopeProvider deptScopeProvider;
+    private final DeptScopeService deptScopeService;
     private final BizInpatientRecordMapper bizInpatientRecordMapper;
     private final BizInpatientRecordLogMapper bizInpatientRecordLogMapper;
     private final BizNursingRecordMapper bizNursingRecordMapper;
@@ -371,8 +370,8 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
     public IPage<InpatientRecordVO> listPage(InpatientRecordQueryPageDTO query) {
         // 科室数据权限收口（M6）：文书归属科室（dept_id），受限角色只看授权科室的文书。
         // scopeDeptIds 是服务端专用字段，先清掉前端可能伪造的值。
-        query.setScopeDeptIds(deptScopeProvider.isScoped()
-                ? List.copyOf(deptScopeProvider.allowedDeptIds()) : null);
+        query.setScopeDeptIds(deptScopeService.isScoped()
+                ? List.copyOf(deptScopeService.allowedDeptIds()) : null);
         IPage<BizInpatientRecord> page = bizInpatientRecordMapper.selectRecordPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query);
         List<InpatientRecordVO> rows = new ArrayList<>(page.getRecords().size());

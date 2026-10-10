@@ -38,6 +38,9 @@ public interface RadioReportMapper {
                 ON r.record_id = rec.id AND r.del_flag = 0 AND r.report_type = ${@com.his.medicaltech.enums.ReportTypeEnum@INSPECTION.getCode()}
              WHERE rec.del_flag = 0
                AND rec.record_status IN (4, 5, 6)
+               <if test="deptIds != null"> AND rec.inspection_dept_id IN
+                 <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+               </if>
                <if test="keyword != null and keyword != ''">
                  AND (rec.patient_name LIKE CONCAT('%', #{keyword}, '%')
                    OR rec.patient_no   LIKE CONCAT('%', #{keyword}, '%')
@@ -53,6 +56,7 @@ public interface RadioReportMapper {
             </script>
             """)
     java.util.List<RadioReportListVO> selectWorkbenchPage(IPage<RadioReportListVO> page,
+                                                          @Param("deptIds") java.util.List<Long> deptIds,
                                                           @Param("keyword") String keyword,
                                                           @Param("reportStatus") Integer reportStatus,
                                                           @Param("positiveFlag") Integer positiveFlag,

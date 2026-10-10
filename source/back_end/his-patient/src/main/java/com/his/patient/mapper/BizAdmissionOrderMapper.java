@@ -9,6 +9,8 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
+import java.util.List;
+
 /**
  * 住院证 Mapper
  */
@@ -21,6 +23,7 @@ public interface BizAdmissionOrderMapper extends BaseMapper<BizAdmissionOrder> {
      * 不做实时 JOIN——证面是"当时写下的"，不能被后来的患者信息变更改写。
      */
     @Select("""
+            <script>
             SELECT o.id                  AS id,
                    o.order_no            AS orderNo,
                    o.patient_id          AS patientId,
@@ -75,10 +78,13 @@ public interface BizAdmissionOrderMapper extends BaseMapper<BizAdmissionOrder> {
                    OR o.regist_no LIKE CONCAT('%', #{q.keyword}, '%'))
               AND (#{q.onlyPending} IS NULL OR #{q.onlyPending} = 0
                    OR (o.order_status = 1 AND (o.valid_until IS NULL OR o.valid_until > NOW())))
+              <if test="deptIds != null"> AND o.apply_dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
             ORDER BY o.order_status ASC, o.order_time DESC
+            </script>
             """)
     IPage<AdmissionOrderVO> selectOrderPage(IPage<AdmissionOrderVO> page,
-                                            @Param("q") AdmissionOrderQueryPageDTO query);
+                                            @Param("q") AdmissionOrderQueryPageDTO query,
+                                            @Param("deptIds") List<Long> deptIds);
 
     /**
      * 单证详情（同分页的字段集）
@@ -146,8 +152,11 @@ public interface BizAdmissionOrderMapper extends BaseMapper<BizAdmissionOrder> {
      * 待收治且未过期的证数量（住院处首页卡片）
      */
     @Select("""
+            <script>
             SELECT COUNT(*) FROM biz_admission_order
             WHERE del_flag = 0 AND order_status = 1 AND (valid_until IS NULL OR valid_until > NOW())
+              <if test="deptIds != null"> AND apply_dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
+            </script>
             """)
-    long countPending();
+    long countPending(@Param("deptIds") List<Long> deptIds);
 }

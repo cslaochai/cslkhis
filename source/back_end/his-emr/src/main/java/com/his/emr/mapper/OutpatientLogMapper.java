@@ -15,8 +15,10 @@ public interface OutpatientLogMapper {
 
     IPage<OutpatientLogListVO> selectLogPage(IPage<OutpatientLogListVO> page,
                                              @Param("q") OutpatientLogQueryDTO q,
-                                             @Param("regex") String reportableRegex);
+                                             @Param("regex") String reportableRegex,
+                                             @Param("deptIds") java.util.List<Long> deptIds);
 
     OutpatientLogStatsVO selectLogStats(@Param("q") OutpatientLogQueryDTO q,
-                                        @Param("regex") String reportableRegex);
+                                        @Param("regex") String reportableRegex,
+                                        @Param("deptIds") java.util.List<Long> deptIds);
 }

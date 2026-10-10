@@ -112,15 +112,7 @@ public class BizNurseSchedule extends BaseEntity {
     private Integer scheduleSource;
 
     /**
-     * 这条护理格子对应的出勤事实 {@code biz_staff_schedule.id}（sql/205）。
-     *
-     * <p>护理格子与全院出勤底座是<b>同一件事的两张皮</b>：格子回答"这个护士这天在这个病区上什么班"，
-     * 底座回答"这个人这天在什么单元处于什么在岗状态"。底座是互斥判定的唯一场所，
-     * 所以必须由格子这边回指过去，改动才能双向追溯。
-     *
-     * <p><b>只是指路牌，不是外键</b>：底座行可以被「全院岗位排班」直接物理删掉，
-     * 加外键会让那边删不动、这边留下指向空白的悬空引用。悬空由
-     * {@code StaffScheduleSourceEnum} 相关的自检项（sql/205 V3）盯着，不由数据库约束盯着。
+     * 这条护理格子对应的出勤事实
      */
     private Long staffScheduleId;
 }

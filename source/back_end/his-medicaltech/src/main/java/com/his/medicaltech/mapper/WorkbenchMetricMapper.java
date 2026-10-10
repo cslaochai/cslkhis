@@ -92,14 +92,12 @@ public interface WorkbenchMetricMapper {
     List<WorkbenchDeptVisitRankRowVO> deptVisitRank();
 
     /**
-     * 医生今日诊疗（排班/候诊/住院/待办），按 employeeId 收敛
+     * 医生今日诊疗（排班/候诊/住院/待办
      */
     @Select("""
             SELECT
               (SELECT COUNT(*) FROM biz_schedule s
                 WHERE s.del_flag = 0 AND s.doctor_id = #{doctorId}
-                  -- 医生工作台的「今日排班」只算出诊班：sql/195 起排班表承载全院岗位
-                  -- （护士/技师/收费员的出勤排班也在这一张表），不加这道条件会把出勤班算成出诊班
                   AND s.staff_type = 1
                   AND s.schedule_date = CURDATE() AND s.status IN (1, 2)) AS todayScheduleCount,
               (SELECT COUNT(*) FROM biz_queue q
@@ -126,8 +124,6 @@ public interface WorkbenchMetricMapper {
 
     /**
      * 病区今日概况（在院/床位/今日入出/待执行），病区=当前 deptId 推导。
-     *
-     * <p>子查询为空时 IN (空集) 匹配 0 行，计数自然为 0，无需先取病区列表。
      */
     @Select("""
             SELECT

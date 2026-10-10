@@ -19,6 +19,7 @@ import com.his.pharmacy.mapper.BizCssdTraceMapper;
 import com.his.pharmacy.service.CssdService;
 import com.his.pharmacy.vo.CssdPackVO;
 import com.his.pharmacy.vo.CssdTraceVO;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +42,8 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
 
     private final BizCssdTraceMapper bizCssdTraceMapper;
 
+    private final DeptScopeService deptScopeService;
+
     @Transactional(rollbackFor = Exception.class)
     public CssdPackVO receive(CssdDTO.Receive dto) {
         int method = dto.getSterilizeMethod() == null ? 1 : dto.getSterilizeMethod();
@@ -48,6 +51,9 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
         p.setPackNo(TextUtil.hasText(dto.getPackNo()) ? dto.getPackNo().trim() : nextPackNo());
         if (bizCssdPackMapper.selectIdByNoAny(p.getPackNo()) != null) {
             throw new BusinessException("器械包条码已存在：" + p.getPackNo());
+        }
+        if (dto.getDeptId() != null) {
+            deptScopeService.assertDeptAccessible(dto.getDeptId());
         }
         p.setPackName(dto.getPackName().trim());
         p.setDeptId(dto.getDeptId());
@@ -86,6 +92,7 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
         }
         if (CssdNodeStatusEnum.ISSUED.is(target)) {
             if (dto.getDeptId() != null) {
+                deptScopeService.assertDeptAccessible(dto.getDeptId());
                 p.setDeptId(dto.getDeptId());
             }
             if (TextUtil.hasText(dto.getDeptName())) {

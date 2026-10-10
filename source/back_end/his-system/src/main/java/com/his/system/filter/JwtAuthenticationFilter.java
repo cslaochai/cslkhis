@@ -2,7 +2,7 @@ package com.his.system.filter;
 
 import com.his.common.util.TextUtil;
 import com.his.system.entity.CurrentUser;
-import com.his.system.provider.RolePermissionProvider;
+import com.his.system.provider.RolePermissionService;
 import com.his.system.utils.JwtUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -40,7 +40,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * 按「当前角色」重算权限的来源。用 ObjectProvider 可选注入：
      * 本过滤器与 RolePermissionProvider 实现同处 his-system；实现不在时过滤器也必须能用。
      */
-    private final ObjectProvider<RolePermissionProvider> rolePermissionProvider;
+    private final ObjectProvider<RolePermissionService> rolePermissionProvider;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -112,7 +112,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * </ul>
      */
     private void applyRolePermissions(CurrentUser currentUser, String currentRole) {
-        RolePermissionProvider provider = rolePermissionProvider.getIfAvailable();
+        RolePermissionService provider = rolePermissionProvider.getIfAvailable();
         if (provider == null) {
             return;
         }

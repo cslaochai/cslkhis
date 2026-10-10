@@ -14,6 +14,7 @@ import com.his.medicaltech.mapper.BizExamSlotMapper;
 import com.his.medicaltech.service.ExamSlotService;
 import com.his.medicaltech.support.ExamGrid;
 import com.his.medicaltech.vo.ExamApptVO;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ public class ExamSlotServiceImpl extends ServiceImpl<BizExamSlotMapper, BizExamS
     private final BizExamSlotMapper bizExamSlotMapper;
     private final BizExamAppointmentMapper bizExamAppointmentMapper;
     private final DictCacheService dictCacheService;
+    private final DeptScopeService deptScopeService;
 
     // 生成 / 看板
 
@@ -71,6 +73,10 @@ public class ExamSlotServiceImpl extends ServiceImpl<BizExamSlotMapper, BizExamS
         BizExamDevice device = bizExamDeviceMapper.selectForUpdate(dto.getDeviceId());
         if (device == null) {
             throw new BusinessException("预约设备不存在：" + dto.getDeviceId());
+        }
+        // B类收口：只能为本岗位授权科室的设备生成号源（全院角色不受限）
+        if (device.getDeptId() != null) {
+            deptScopeService.resolveDeptId(device.getDeptId());
         }
         int days = dto.getDays() == null ? 1 : dto.getDays();
         if (days < 1 || days > 31) {
@@ -110,6 +116,9 @@ public class ExamSlotServiceImpl extends ServiceImpl<BizExamSlotMapper, BizExamS
         BizExamDevice device = bizExamDeviceMapper.selectById(dto.getDeviceId());
         if (device == null) {
             throw new BusinessException("预约设备不存在：" + dto.getDeviceId());
+        }
+        if (device.getDeptId() != null) {
+            deptScopeService.resolveDeptId(device.getDeptId());
         }
         List<BizExamSlot> cells = currentGridCells(device, dto.getSlotDate());
         List<BizExamAppointment> occupants = bizExamAppointmentMapper.selectOccupants(device.getId(), dto.getSlotDate());
@@ -187,6 +196,9 @@ public class ExamSlotServiceImpl extends ServiceImpl<BizExamSlotMapper, BizExamS
         if (device == null) {
             throw new BusinessException("预约设备不存在：" + cell.getDeviceId());
         }
+        if (device.getDeptId() != null) {
+            deptScopeService.resolveDeptId(device.getDeptId());
+        }
         ensureDayLocked(device, cell.getSlotDate());
         List<BizExamSlot> cells = bizExamSlotMapper.selectDayForUpdate(device.getId(), cell.getSlotDate());
         BizExamSlot target = cells.stream().filter(x -> x.getId().equals(dto.getSlotId())).findFirst()
@@ -214,9 +226,20 @@ public class ExamSlotServiceImpl extends ServiceImpl<BizExamSlotMapper, BizExamS
         if (dto.getDateFrom().plusDays(92).isBefore(dto.getDateTo())) {
             throw new BusinessException("一次对账的日期跨度不得超过 92 天");
         }
-        List<BizExamDevice> devices = dto.getDeviceId() == null
-                ? bizExamDeviceMapper.selectList(new LambdaQueryWrapper<BizExamDevice>().orderByAsc(BizExamDevice::getDeviceCode))
-                : List.of(requireDevice(dto.getDeviceId()));
+        List<BizExamDevice> devices;
+        if (dto.getDeviceId() == null) {
+            // 只对账本岗位授权科室的设备（设备未绑科室的不拦）
+            devices = bizExamDeviceMapper.selectList(new LambdaQueryWrapper<BizExamDevice>()
+                            .orderByAsc(BizExamDevice::getDeviceCode)).stream()
+                    .filter(d -> d.getDeptId() == null || deptScopeService.canAccessDept(d.getDeptId()))
+                    .toList();
+        } else {
+            BizExamDevice one = requireDevice(dto.getDeviceId());
+            if (one.getDeptId() != null) {
+                deptScopeService.resolveDeptId(one.getDeptId());
+            }
+            devices = List.of(one);
+        }
 
         int checked = 0;
         List<ExamApptVO.SlotDriftVO> drifts = new ArrayList<>();

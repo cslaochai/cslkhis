@@ -11,6 +11,7 @@ import com.his.emr.mapper.BizAiDraftDiffMapper;
 import com.his.emr.service.AiDraftDiffService;
 import com.his.emr.support.DraftDiffSupport;
 import com.his.emr.vo.AiDraftDiffListVO;
+import com.his.system.provider.DeptScopeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,8 @@ public class AiDraftDiffServiceImpl extends ServiceImpl<BizAiDraftDiffMapper, Bi
     private final BizAiDraftDiffMapper bizAiDraftDiffMapper;
 
     private final DraftDiffSupport draftDiffSupport;
+
+    private final DeptScopeService deptScopeService;
 
     @Override
     public boolean record(Long recordId, Long registId, Long patientId, String patientNo, String patientName,
@@ -56,8 +59,10 @@ public class AiDraftDiffServiceImpl extends ServiceImpl<BizAiDraftDiffMapper, Bi
 
     @Override
     public PageResult<AiDraftDiffListVO> listPage(AiDraftDiffQueryPageDTO dto) {
+        List<Long> scope = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizAiDraftDiff> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(TextUtil.hasText(dto.getPatientName()), BizAiDraftDiff::getPatientName,
+        wrapper.in(scope != null, BizAiDraftDiff::getDeptId, scope)
+                .like(TextUtil.hasText(dto.getPatientName()), BizAiDraftDiff::getPatientName,
                         dto.getPatientName() == null ? null : dto.getPatientName().trim())
                 .like(TextUtil.hasText(dto.getDoctorName()), BizAiDraftDiff::getDoctorName,
                         dto.getDoctorName() == null ? null : dto.getDoctorName().trim())

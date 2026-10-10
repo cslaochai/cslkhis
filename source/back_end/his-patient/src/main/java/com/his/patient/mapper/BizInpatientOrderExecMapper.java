@@ -129,4 +129,10 @@ public interface BizInpatientOrderExecMapper extends BaseMapper<BizInpatientOrde
             """)
     long countPendingByAdmission(@Param("admissionId") Long admissionId,
                                  @Param("scopeDeptIds") java.util.List<Long> scopeDeptIds);
+
+    /**
+     * 执行行所属住院的归属科室（数据权限收口用）
+     */
+    @Select("SELECT a.dept_id FROM biz_admission a WHERE a.admission_id = #{admissionId} AND a.del_flag = 0")
+    Long selectAdmissionDeptId(@Param("admissionId") Long admissionId);
 }

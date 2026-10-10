@@ -29,6 +29,7 @@ import com.his.patient.enums.InpatientRecordTypeEnum;
 import com.his.patient.mapper.BizInpatientRecordMapper;
 import com.his.system.entity.CurrentUser;
 import com.his.system.enums.BizTypeEnum;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
@@ -69,6 +70,8 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
 
     private final DictCacheService dictCacheService;
 
+    private final DeptScopeService deptScopeService;
+
     /**
      * 质控类型归一。
      *
@@ -104,10 +107,21 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         return score >= 75 ? "乙" : "丙";
     }
 
+    /** 质控单/问题明细本身无科室列：按 record_source + record_id 反查病历归属科室后校验 */
+    private void assertRecordDeptAccessible(String recordSource, Long recordId) {
+        if (QcRecordSourceEnum.parse(recordSource) == QcRecordSourceEnum.OUTPATIENT) {
+            BizMedicalRecord record = bizMedicalRecordMapper.selectById(recordId);
+            deptScopeService.assertDeptAccessible(record == null ? null : record.getDeptId());
+            return;
+        }
+        BizInpatientRecord record = bizInpatientRecordMapper.selectById(recordId);
+        deptScopeService.assertDeptAccessible(record == null ? null : record.getDeptId());
+    }
+
     @Override
     public PageResult<BizQualityControlVO> selectQcPage(QcQueryPageDTO query) {
         Page<BizQualityControlVO> page = new Page<>(query.getPageNum(), query.getPageSize());
-        var result = baseMapper.selectQcPage(page, query);
+        var result = baseMapper.selectQcPage(page, query, deptScopeService.scopedDeptIds(null));
         result.getRecords().forEach(this::enrich);
         return PageResult.of(result.getTotal(), result.getCurrent(), result.getSize(), result.getPages(),
                 result.getRecords());
@@ -119,6 +133,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         if (vo == null) {
             throw new BusinessException("质控单不存在：" + qcId);
         }
+        assertRecordDeptAccessible(vo.getRecordSource(), vo.getRecordId());
         enrich(vo);
         vo.setIssues(enrich(baseMapper.listIssueByQc(qcId)));
         return vo;
@@ -126,13 +141,19 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
 
     @Override
     public List<QcIssueVO> listIssueByQc(Long qcId) {
+        BizQualityControl qc = this.getById(qcId);
+        if (qc == null) {
+            throw new BusinessException("质控单不存在：" + qcId);
+        }
+        assertRecordDeptAccessible(qc.getRecordSource(), qc.getRecordId());
         return enrich(baseMapper.listIssueByQc(qcId));
     }
 
     @Override
     public QcOverviewVO getOverview() {
-        QcOverviewVO overview = baseMapper.selectOverview();
-        QcOverviewVO issueTotals = baseMapper.selectIssueTotals();
+        List<Long> scope = deptScopeService.scopedDeptIds(null);
+        QcOverviewVO overview = baseMapper.selectOverview(scope);
+        QcOverviewVO issueTotals = baseMapper.selectIssueTotals(scope);
         overview.setIssueCount(issueTotals.getIssueCount());
         overview.setIssueRecordCount(issueTotals.getIssueRecordCount());
         // 分母为 0 时给 null 而不是 0：0 看起来像"甲级率 0%"，而事实是"还没有质控数据"
@@ -141,7 +162,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
                 : Math.round(overview.getGradeACount() * 1000.0 / scored) / 10.0);
 
         Map<Integer, QcRuleMetricVO> statByDimension = new HashMap<>();
-        baseMapper.selectDimensionStat().forEach(stat -> statByDimension.put(stat.getDimension(), stat));
+        baseMapper.selectDimensionStat(scope).forEach(stat -> statByDimension.put(stat.getDimension(), stat));
         List<QcOverviewVO.DimensionStat> dimensions = new ArrayList<>();
         for (QcDimensionEnum dimension : QcDimensionEnum.values()) {
             QcOverviewVO.DimensionStat stat = new QcOverviewVO.DimensionStat();
@@ -203,9 +224,10 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
     public PageResult<QcCandidateVO> listCandidatePage(QcCandidateQueryPageDTO query) {
         QcRecordSourceEnum source = QcRecordSourceEnum.parse(query.getRecordSource());
         Page<QcCandidateVO> page = new Page<>(query.getPageNum(), query.getPageSize());
+        List<Long> scope = deptScopeService.scopedDeptIds(null);
         var result = source == QcRecordSourceEnum.OUTPATIENT
-                ? baseMapper.selectOutpatientCandidatePage(page, query)
-                : baseMapper.selectInpatientCandidatePage(page, query);
+                ? baseMapper.selectOutpatientCandidatePage(page, query, scope)
+                : baseMapper.selectInpatientCandidatePage(page, query, scope);
         result.getRecords().forEach(this::enrich);
         return PageResult.of(result.getTotal(), result.getCurrent(), result.getSize(), result.getPages(),
                 result.getRecords());
@@ -333,6 +355,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         if (qc == null) {
             throw new BusinessException("质控单不存在：" + qcId);
         }
+        assertRecordDeptAccessible(qc.getRecordSource(), qc.getRecordId());
         if (qc.getQcStatus() == null || qc.getQcStatus() != 1) {
             throw new BusinessException("只有「待处理」的质控单可以处理，当前状态："
                     + dictCacheService.getDicDataLabel(DictType.QC_STATUS, qc.getQcStatus()));
@@ -351,12 +374,16 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
             if (record == null) {
                 throw new BusinessException("门诊病历不存在或已删除：" + recordId);
             }
+            // 执行质控是写操作：受限岗位只能质控本科室病历（病历保存链路的自动质控同样生效，
+            // 该链路外层有兜底日志，不会中断归档流程）
+            deptScopeService.assertDeptAccessible(record.getDeptId());
             return QcSnapshot.ofOutpatient(record);
         }
         BizInpatientRecord record = bizInpatientRecordMapper.selectById(recordId);
         if (record == null) {
             throw new BusinessException("住院文书不存在或已删除：" + recordId);
         }
+        deptScopeService.assertDeptAccessible(record.getDeptId());
         return QcSnapshot.ofInpatient(record);
     }
 

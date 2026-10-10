@@ -18,6 +18,7 @@ import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
+import com.his.system.provider.DeptScopeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +36,8 @@ public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMappe
     private final BizScheduleSlotMapper bizScheduleSlotMapper;
 
     private final BizScheduleMapper bizScheduleMapper;
+
+    private final DeptScopeService deptScopeService;
 
     @Override
     public List<BizScheduleSlot> generateSlots(Long scheduleId, String startTime, String endTime,
@@ -195,13 +198,14 @@ public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMappe
         if (schedule == null) {
             throw new BusinessException("排班记录不存在");
         }
+        deptScopeService.assertDeptAccessible(schedule.getDeptId());
         if (schedule.getScheduleDate().isBefore(LocalDate.now())) {
             throw new BusinessException("已过期的班次不允许调整号源");
         }
         if (ScheduleStatusEnum.stopped(schedule.getStatus())) {
             throw new BusinessException("停诊中的班次不允许调整号源，请先启用");
         }
-        // 段号源只对医生出诊班有意义：出勤岗没有号源池（sql/195），与加号同一道闸
+        // 段号源只对医生出诊班有意义：出勤岗没有号源池，与加号同一道闸
         if (!StaffTypeEnum.hasSource(schedule.getStaffType())) {
             throw new BusinessException("只有医生出诊排班能调整号源："
                     + StaffTypeEnum.getText(schedule.getStaffType()) + "岗位是出勤排班，不对外放号");

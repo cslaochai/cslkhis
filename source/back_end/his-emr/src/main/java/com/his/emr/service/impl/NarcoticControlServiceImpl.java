@@ -21,6 +21,7 @@ import com.his.emr.mapper.BizPrescriptionMapper;
 import com.his.emr.mapper.NarcoticRegisterMapper;
 import com.his.emr.service.NarcoticControlService;
 import com.his.emr.vo.*;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -88,6 +89,8 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
     private final BizPrescriptionMapper bizPrescriptionMapper;
     private final BizPrescriptionDetailMapper bizPrescriptionDetailMapper;
     private final RedisSequenceService redisSequenceService;
+
+    private final DeptScopeService deptScopeService;
 
     // 规则口径
 
@@ -605,6 +608,8 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
 
     @Override
     public PageResult<BizNarcoticRegisterVO> listPage(NarcoticRegisterQueryPageDTO query) {
+        // 专册按开单科室收口（登记行的 dept_id 即处方开单科室）；发药/回收写链路属药房跨科室操作，不在此收口
+        List<Long> scope = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizNarcoticRegister> wrapper = new LambdaQueryWrapper<>();
         if (TextUtil.hasText(query.getKeyword())) {
             String kw = query.getKeyword().trim();
@@ -618,6 +623,7 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
         wrapper.eq(query.getSpecialFlag() != null, BizNarcoticRegister::getSpecialFlag, query.getSpecialFlag())
                 .eq(query.getAmpouleStatus() != null, BizNarcoticRegister::getAmpouleStatus, query.getAmpouleStatus())
                 .eq(query.getPatientId() != null, BizNarcoticRegister::getPatientId, query.getPatientId())
+                .in(scope != null, BizNarcoticRegister::getDeptId, scope)
                 .ge(query.getDispenseDateStart() != null, BizNarcoticRegister::getDispenseTime,
                         TimeUtil.dayStart(query.getDispenseDateStart()))
                 .le(query.getDispenseDateEnd() != null, BizNarcoticRegister::getDispenseTime,
@@ -634,12 +640,16 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
 
     @Override
     public NarcoticRegisterCountVO statusCount() {
+        List<Long> scope = deptScopeService.scopedDeptIds(null);
         NarcoticRegisterCountVO counts = new NarcoticRegisterCountVO();
-        counts.setTotal(narcoticRegisterMapper.selectCount(null));
+        counts.setTotal(narcoticRegisterMapper.selectCount(
+                new LambdaQueryWrapper<BizNarcoticRegister>().in(scope != null, BizNarcoticRegister::getDeptId, scope)));
         counts.setPendingAmpoule(narcoticRegisterMapper.selectCount(
-                new LambdaQueryWrapper<BizNarcoticRegister>().eq(BizNarcoticRegister::getAmpouleStatus, AmpouleStatusEnum.PENDING.getCode())));
+                new LambdaQueryWrapper<BizNarcoticRegister>().in(scope != null, BizNarcoticRegister::getDeptId, scope)
+                        .eq(BizNarcoticRegister::getAmpouleStatus, AmpouleStatusEnum.PENDING.getCode())));
         counts.setReturnedAmpoule(narcoticRegisterMapper.selectCount(
-                new LambdaQueryWrapper<BizNarcoticRegister>().eq(BizNarcoticRegister::getAmpouleStatus, AmpouleStatusEnum.RETURNED.getCode())));
+                new LambdaQueryWrapper<BizNarcoticRegister>().in(scope != null, BizNarcoticRegister::getDeptId, scope)
+                        .eq(BizNarcoticRegister::getAmpouleStatus, AmpouleStatusEnum.RETURNED.getCode())));
         return counts;
     }
 

@@ -31,6 +31,7 @@ import com.his.patient.service.BizPatientService;
 import com.his.patient.service.PatientGuardianService;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysClinicRoom;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.InsurancePolicyService;
 import com.his.system.service.SysClinicRoomService;
 import com.his.system.service.SysMessageService;
@@ -83,6 +84,8 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
 
     @Lazy
     private final BizScheduleService bizScheduleService;
+
+    private final DeptScopeService deptScopeService;
 
     @Override
     public List<BizQueueListVO> getTodayQueueList(QueueTodayQueryDTO queueQueryDTO) {
@@ -149,16 +152,11 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
 
     @Override
     public PageResult<BizQueueListVO> listPage(QueueQueryDTO queueQueryDTO) {
-        CurrentUser currentUser = UserUtils.getCurrentUser();
-        Long deptId = queueQueryDTO.getDeptId() != null
-                ? queueQueryDTO.getDeptId()
-                : (currentUser != null ? currentUser.getDeptId() : null);
-        if (deptId == null) {
-            return new PageResult<>();
-        }
-
         LambdaQueryWrapper<BizQueue> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(BizQueue::getDeptId, deptId);
+        List<Long> scoped = deptScopeService.scopedDeptIds(queueQueryDTO.getDeptId());
+        if (scoped != null) {
+            wrapper.in(BizQueue::getDeptId, scoped);
+        }
 
         // 状态：多选优先于单选
         if (queueQueryDTO.getQueueStatuses() != null && !queueQueryDTO.getQueueStatuses().isEmpty()) {
@@ -263,6 +261,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         if (appointInfo == null) {
             throw new BusinessException("挂号记录不存在");
         }
+        deptScopeService.assertDeptAccessible(appointInfo.getDeptId());
         // 缴费门禁读的是账单状态（L2），不是支付状态列：账单是否付清由收款流水现算，
         // 所以「免收 = 压根没有账单」这条路径不需要任何假单据就能过。
         AppointChargeGateway gateway = appointChargeGateway.getIfAvailable();
@@ -394,6 +393,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
     @Override
     @Transactional(rollbackFor = Exception.class)
     public QueueCallNextVO callNext(Long deptId, Long doctorId) {
+        deptScopeService.assertDeptAccessible(deptId);
         LambdaQueryWrapper<BizQueue> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BizQueue::getDeptId, deptId)
                 .eq(BizQueue::getDoctorId, doctorId)
@@ -459,6 +459,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         if (queue == null) {
             throw new BusinessException("排队记录不存在");
         }
+        deptScopeService.assertDeptAccessible(queue.getDeptId());
         if (queue.getQueueStatus() != QueueStatusEnum.WAITING.getCode()) {
             throw new BusinessException("只能呼叫候诊中的患者");
         }
@@ -573,6 +574,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         if (queue == null) {
             throw new BusinessException("排队记录不存在");
         }
+        deptScopeService.assertDeptAccessible(queue.getDeptId());
         if (queue.getQueueStatus() != QueueStatusEnum.CONSULTING.getCode()) {
             throw new BusinessException("当前状态不允许完成");
         }
@@ -614,6 +616,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         if (queue == null) {
             throw new BusinessException("排队记录不存在");
         }
+        deptScopeService.assertDeptAccessible(queue.getDeptId());
         if (queue.getQueueStatus() != QueueStatusEnum.WAITING.getCode() && queue.getQueueStatus() != QueueStatusEnum.CONSULTING.getCode()) {
             throw new BusinessException("当前状态不允许过号处理");
         }
@@ -695,6 +698,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         if (queue == null) {
             throw new BusinessException("排队记录不存在");
         }
+        deptScopeService.assertDeptAccessible(queue.getDeptId());
         // 呼叫的两个入口态：候诊中(2)=常规叫号；已就诊(4)=**回诊**。
         // 回诊是真实门诊的高频场景（A 抽血/影像没出，医生叫 B，结果回来后把 A 叫回来看第二眼）：
         // closeConsultingOf 在叫下一位时把上一位置 4，但病历只是草稿并未结诊提交，
@@ -768,6 +772,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         if (queue == null) {
             throw new BusinessException("排队记录不存在");
         }
+        deptScopeService.assertDeptAccessible(queue.getDeptId());
         if (queue.getQueueStatus() != QueueStatusEnum.CONSULTING.getCode()) {
             throw new BusinessException("只能重呼就诊中的患者");
         }
@@ -785,6 +790,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         if (queue == null) {
             throw new BusinessException("排队记录不存在");
         }
+        deptScopeService.assertDeptAccessible(queue.getDeptId());
         // 两类人走这个入口：
         // ① 候诊中的复诊患者 —— 护士把他提上来优先看；
         // ② **已过号**的患者 —— 叫了没来、人又回来了。原先只收候诊中，
@@ -866,7 +872,8 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         // 查询今日排班，获取科室下的医生
         BizScheduleMapper scheduleMapper = bizScheduleMapper;
         LambdaQueryWrapper<BizSchedule> scheduleWrapper = new LambdaQueryWrapper<>();
-        scheduleWrapper.eq(BizSchedule::getDeptId, deptId)
+        List<Long> scoped = deptScopeService.scopedDeptIds(deptId);
+        scheduleWrapper.in(scoped != null, BizSchedule::getDeptId, scoped)
                 .eq(BizSchedule::getScheduleDate, LocalDate.now());
         List<BizSchedule> schedules = scheduleMapper.selectList(scheduleWrapper);
 
@@ -901,19 +908,20 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
     @Override
     public QueueStatsVO getStatsCard(Long deptId) {
         QueueStatsVO stats = new QueueStatsVO();
+        List<Long> scoped = deptScopeService.scopedDeptIds(deptId);
 
         // 查询各状态的队列数量
         long waiting = this.count(new LambdaQueryWrapper<BizQueue>()
-                .eq(BizQueue::getDeptId, deptId)
+                .in(scoped != null, BizQueue::getDeptId, scoped)
                 .eq(BizQueue::getQueueStatus, QueueStatusEnum.WAITING.getCode()));
         long consulting = this.count(new LambdaQueryWrapper<BizQueue>()
-                .eq(BizQueue::getDeptId, deptId)
+                .in(scoped != null, BizQueue::getDeptId, scoped)
                 .eq(BizQueue::getQueueStatus, QueueStatusEnum.CONSULTING.getCode()));
         long completed = this.count(new LambdaQueryWrapper<BizQueue>()
-                .eq(BizQueue::getDeptId, deptId)
+                .in(scoped != null, BizQueue::getDeptId, scoped)
                 .eq(BizQueue::getQueueStatus, QueueStatusEnum.COMPLETED.getCode()));
         long overdue = this.count(new LambdaQueryWrapper<BizQueue>()
-                .eq(BizQueue::getDeptId, deptId)
+                .in(scoped != null, BizQueue::getDeptId, scoped)
                 .eq(BizQueue::getQueueStatus, QueueStatusEnum.OVERDUE.getCode()));
 
         // 待签到数量
@@ -927,12 +935,12 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
 
         //挂号总数
         stats.setTotal(bizAppointInfoMapper.selectCount(new LambdaQueryWrapper<BizAppointInfo>()
-                .eq(BizAppointInfo::getDeptId, deptId)));
+                .in(scoped != null, BizAppointInfo::getDeptId, scoped)));
 
         // 从Redis获取坐诊医生数量
         BizScheduleMapper scheduleMapper = bizScheduleMapper;
         LambdaQueryWrapper<BizSchedule> scheduleWrapper = new LambdaQueryWrapper<>();
-        scheduleWrapper.eq(BizSchedule::getDeptId, deptId)
+        scheduleWrapper.in(scoped != null, BizSchedule::getDeptId, scoped)
                 .eq(BizSchedule::getScheduleDate, LocalDate.now());
         List<BizSchedule> schedules = scheduleMapper.selectList(scheduleWrapper);
 
@@ -951,8 +959,9 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
     @Override
     public List<DoctorConsultingVO> getConsultingPatients(Long deptId) {
         // 查询当前就诊中的患者（按医生分组）
+        List<Long> scoped = deptScopeService.scopedDeptIds(deptId);
         LambdaQueryWrapper<BizQueue> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(BizQueue::getDeptId, deptId)
+        wrapper.in(scoped != null, BizQueue::getDeptId, scoped)
                 .eq(BizQueue::getQueueStatus, QueueStatusEnum.CONSULTING.getCode())
                 .orderByAsc(BizQueue::getDoctorId);
 
@@ -990,10 +999,11 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
     public List<BizQueueListVO> getRevisitTimeoutPatients(Long deptId) {
         // 查询复诊患者（is_revisit=1）且等待超过1小时的
         // 签到时间 = arrive_time，当前时间 - arrive_time > 1小时
+        List<Long> scoped = deptScopeService.scopedDeptIds(deptId);
         LambdaQueryWrapper<BizQueue> wrapper = new LambdaQueryWrapper<>();
         // 「今天」= visit_date（与列表/叫号同口径）。漏了它，昨天入队后一直没人收摊的
         // 「候诊中」会永久挂在这个面板上 —— 护士看到的是昨天的患者，还标着「等候 20时13分」。
-        wrapper.eq(BizQueue::getDeptId, deptId)
+        wrapper.in(scoped != null, BizQueue::getDeptId, scoped)
                 .eq(BizQueue::getVisitDate, LocalDate.now())
                 .eq(BizQueue::getQueueStatus, QueueStatusEnum.WAITING.getCode())
                 .isNotNull(BizQueue::getArriveTime)
@@ -1033,8 +1043,9 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
     @Override
     public List<DoctorStatsVO> getDoctorStats(Long deptId) {
         // 直接查询当前科室下的queue表数据，按医生分组统计
+        List<Long> scoped = deptScopeService.scopedDeptIds(deptId);
         LambdaQueryWrapper<BizQueue> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(BizQueue::getDeptId, deptId);
+        wrapper.in(scoped != null, BizQueue::getDeptId, scoped);
         List<BizQueue> queues = baseMapper.selectList(wrapper);
 
         // 按医生ID分组统计
@@ -1109,6 +1120,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         if (queue == null) {
             throw new BusinessException("排队记录不存在");
         }
+        deptScopeService.assertDeptAccessible(queue.getDeptId());
         if (!TriageLevelEnum.isValid(dto.getTriageLevel())) {
             throw new BusinessException("分诊等级只能是 1~4");
         }
@@ -1204,6 +1216,11 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         if (queueId == null) {
             return detail;
         }
+        BizQueue queue = baseMapper.selectById(queueId);
+        if (queue == null) {
+            return detail;
+        }
+        deptScopeService.assertDeptAccessible(queue.getDeptId());
         List<BizTriageRecord> list = bizTriageRecordMapper.selectList(
                 new LambdaQueryWrapper<BizTriageRecord>()
                         .eq(BizTriageRecord::getQueueId, queueId)
@@ -1229,14 +1246,12 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
 
     @Override
     public List<BizQueueListVO> listPaidUnchecked(Long deptId, LocalDate visitDate) {
-        if (deptId == null) {
-            return Collections.emptyList();
-        }
-        List<BizAppointInfo> appoints = bizAppointInfoMapper.selectList(
-                new LambdaQueryWrapper<BizAppointInfo>()
-                        .eq(BizAppointInfo::getDeptId, deptId)
-                        .eq(BizAppointInfo::getRegistStatus, AppointStatusEnum.REGISTERED.getCode())
-                        .eq(visitDate != null, BizAppointInfo::getVisitDate, visitDate));
+        List<Long> scoped = deptScopeService.scopedDeptIds(deptId);
+        LambdaQueryWrapper<BizAppointInfo> appointWrapper = new LambdaQueryWrapper<>();
+        appointWrapper.in(scoped != null, BizAppointInfo::getDeptId, scoped)
+                .eq(BizAppointInfo::getRegistStatus, AppointStatusEnum.REGISTERED.getCode())
+                .eq(visitDate != null, BizAppointInfo::getVisitDate, visitDate);
+        List<BizAppointInfo> appoints = bizAppointInfoMapper.selectList(appointWrapper);
         AppointChargeGateway gateway = appointChargeGateway.getIfAvailable();
         List<BizQueueListVO> result = new ArrayList<>();
         for (BizAppointInfo appoint : appoints) {
@@ -1433,13 +1448,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
     @Override
     public QueueStatsVO stats(QueueQueryDTO queueQueryDTO) {
         QueueStatsVO queueStatsVO = new QueueStatsVO();
-        Long loginDeptId = currentLoginDeptIdOrNull();
-        if (loginDeptId == null) {
-            return queueStatsVO;
-        }
-        // 诊区：显式传了就跟诊区走（分诊台切诊区时统计条必须跟着变），
-        // 否则收窄到当前登录用户科室 —— 保持原有调用方的语义
-        Long deptId = queueQueryDTO.getDeptId() != null ? queueQueryDTO.getDeptId() : loginDeptId;
+        List<Long> scoped = deptScopeService.scopedDeptIds(queueQueryDTO.getDeptId());
         String dateStart, dateEnd;
         if (queueQueryDTO.getStartTime() != null && !queueQueryDTO.getStartTime().isEmpty()
                 && queueQueryDTO.getEndTime() != null && !queueQueryDTO.getEndTime().isEmpty()) {
@@ -1453,26 +1462,26 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         // 统计口径必须走枚举：WAITING(2)/CALLED(3)/COMPLETED(4)/OVERDUE(6)
         // 之前 completed 数的是 5(已退号)、overdue 数的是 4(已就诊)，完全反了
         queueStatsVO.setWaiting(this.count(new LambdaQueryWrapper<BizQueue>()
-                .eq(BizQueue::getDeptId, deptId)
+                .in(scoped != null, BizQueue::getDeptId, scoped)
                 .eq(BizQueue::getQueueStatus, QueueStatusEnum.WAITING.getCode())
                 .ge(BizQueue::getArriveTime, dateStart)
                 .le(BizQueue::getArriveTime, dateEnd)));
         queueStatsVO.setConsulting(this.count(new LambdaQueryWrapper<BizQueue>()
-                .eq(BizQueue::getDeptId, deptId)
+                .in(scoped != null, BizQueue::getDeptId, scoped)
                 .eq(BizQueue::getQueueStatus, QueueStatusEnum.CONSULTING.getCode())
                 .ge(BizQueue::getArriveTime, dateStart)
                 .le(BizQueue::getArriveTime, dateEnd)));
         queueStatsVO.setCompleted(this.count(new LambdaQueryWrapper<BizQueue>()
-                .eq(BizQueue::getDeptId, deptId)
+                .in(scoped != null, BizQueue::getDeptId, scoped)
                 .eq(BizQueue::getQueueStatus, QueueStatusEnum.COMPLETED.getCode())
                 .ge(BizQueue::getArriveTime, dateStart)
                 .le(BizQueue::getArriveTime, dateEnd)));
         queueStatsVO.setOverdue(this.count(new LambdaQueryWrapper<BizQueue>()
-                .eq(BizQueue::getDeptId, deptId)
+                .in(scoped != null, BizQueue::getDeptId, scoped)
                 .eq(BizQueue::getQueueStatus, QueueStatusEnum.OVERDUE.getCode())
                 .ge(BizQueue::getArriveTime, dateStart)
                 .le(BizQueue::getArriveTime, dateEnd)));
-        queueStatsVO.setUnchecked(countPaidUncheckedAppoints(deptId));
+        queueStatsVO.setUnchecked(countPaidUncheckedAppoints(queueQueryDTO.getDeptId()));
         queueStatsVO.setTotal(queueStatsVO.getWaiting() + queueStatsVO.getConsulting()
                 + queueStatsVO.getCompleted() + queueStatsVO.getOverdue());
 
@@ -1480,7 +1489,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         // 这**不再**是「叫不出号」的原因 —— 签到即给 4 级默认等级，未核验的照样能接诊。
         // 它的价值是提醒护士「这几位还没量体征/没定级」，页面文案不能说成「未分诊不能接诊」。
         queueStatsVO.setUnTriage(this.count(new LambdaQueryWrapper<BizQueue>()
-                .eq(BizQueue::getDeptId, deptId)
+                .in(scoped != null, BizQueue::getDeptId, scoped)
                 .eq(BizQueue::getQueueStatus, QueueStatusEnum.WAITING.getCode())
                 .eq(BizQueue::getVisitDate, LocalDate.now())
                 .eq(BizQueue::getTriageStatus, 0)));
@@ -1488,14 +1497,14 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         // 危重待接诊：今日候诊中 1/2 级的人数。这是唯一还有硬约束的场景
         // （callSpecific 会拒绝越过他们去叫普通患者），所以必须在统计条上醒目给出。
         queueStatsVO.setCriticalWaiting(this.count(new LambdaQueryWrapper<BizQueue>()
-                .eq(BizQueue::getDeptId, deptId)
+                .in(scoped != null, BizQueue::getDeptId, scoped)
                 .eq(BizQueue::getQueueStatus, QueueStatusEnum.WAITING.getCode())
                 .eq(BizQueue::getVisitDate, LocalDate.now())
                 .le(BizQueue::getTriageLevel, TriageLevelEnum.EMERGENCY.getCode())));
 
         // 候诊超时：现算，不落状态列
         queueStatsVO.setTimeout(this.count(new LambdaQueryWrapper<BizQueue>()
-                .eq(BizQueue::getDeptId, deptId)
+                .in(scoped != null, BizQueue::getDeptId, scoped)
                 .eq(BizQueue::getQueueStatus, QueueStatusEnum.WAITING.getCode())
                 .eq(BizQueue::getVisitDate, LocalDate.now())
                 .le(BizQueue::getArriveTime, LocalDateTime.now().minusMinutes(30))));

@@ -59,6 +59,10 @@ public interface BizQualityControlMapper extends BaseMapper<BizQualityControl> {
 
     /**
      * 质控单分页
+     *
+     * <p>deptIds 是 DeptScopeProvider 收口后的科室集合（见 QualityControlServiceImpl#scopedDeptIds）：
+     * null = 当前角色不限科室（全院）；非 null = 只能看集合内科室（按病历归属科室收口，
+     * 质控单本身无科室列，取门诊/住院文书两表的 COALESCE）。
      */
     @Select("SELECT " + QC_VO_COLUMNS + QC_VO_JOINS + """
             WHERE q.del_flag = 0
@@ -73,9 +77,12 @@ public interface BizQualityControlMapper extends BaseMapper<BizQualityControl> {
                    OR r.record_no LIKE CONCAT('%', #{q.keyword}, '%')
                    OR m.patient_name LIKE CONCAT('%', #{q.keyword}, '%')
                    OR r.patient_name LIKE CONCAT('%', #{q.keyword}, '%'))
+              <if test="deptIds != null"> AND COALESCE(m.dept_id, r.dept_id) IN
+                <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
             ORDER BY q.qc_time DESC, q.id DESC
             """)
-    IPage<BizQualityControlVO> selectQcPage(IPage<BizQualityControlVO> page, @Param("q") QcQueryPageDTO query);
+    IPage<BizQualityControlVO> selectQcPage(IPage<BizQualityControlVO> page, @Param("q") QcQueryPageDTO query,
+                                            @Param("deptIds") List<Long> deptIds);
 
     /**
      * 按 ID 读单张质控单（与分页查询同形）。执行质控与查看详情都必须走它，
@@ -87,9 +94,10 @@ public interface BizQualityControlMapper extends BaseMapper<BizQualityControl> {
     BizQualityControlVO selectQcById(@Param("qcId") Long qcId);
 
     /**
-     * 门诊病历候选（待质控工作台）
+     * 门诊病历候选（待质控工作台）；deptIds 为科室数据权限收口集合（null = 全院）
      */
     @Select("""
+            <script>
             SELECT 'OUTPATIENT' AS record_source, m.id AS record_id, m.record_no, m.patient_id, m.patient_no,
                    m.patient_name, m.gender, m.age, m.dept_name, m.doctor_name,
                    CAST(NULL AS SIGNED) AS record_type, m.record_status,
@@ -107,15 +115,20 @@ public interface BizQualityControlMapper extends BaseMapper<BizQualityControl> {
               AND (#{q.keyword} IS NULL OR #{q.keyword} = ''
                    OR m.record_no LIKE CONCAT('%', #{q.keyword}, '%')
                    OR m.patient_name LIKE CONCAT('%', #{q.keyword}, '%'))
+              <if test="deptIds != null"> AND m.dept_id IN
+                <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
             ORDER BY m.visit_date DESC, m.id DESC
+            </script>
             """)
     IPage<QcCandidateVO> selectOutpatientCandidatePage(IPage<QcCandidateVO> page,
-                                                       @Param("q") QcCandidateQueryPageDTO query);
+                                                       @Param("q") QcCandidateQueryPageDTO query,
+                                                       @Param("deptIds") List<Long> deptIds);
 
     /**
-     * 住院文书候选（待质控工作台）
+     * 住院文书候选（待质控工作台）；deptIds 为科室数据权限收口集合（null = 全院）
      */
     @Select("""
+            <script>
             SELECT 'INPATIENT' AS record_source, r.id AS record_id, r.record_no, r.patient_id, r.patient_no,
                    r.patient_name, r.gender, r.age, r.dept_name, r.doctor_name,
                    r.record_type, r.record_status, r.record_time,
@@ -133,10 +146,14 @@ public interface BizQualityControlMapper extends BaseMapper<BizQualityControl> {
               AND (#{q.keyword} IS NULL OR #{q.keyword} = ''
                    OR r.record_no LIKE CONCAT('%', #{q.keyword}, '%')
                    OR r.patient_name LIKE CONCAT('%', #{q.keyword}, '%'))
+              <if test="deptIds != null"> AND r.dept_id IN
+                <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
             ORDER BY r.record_time DESC, r.id DESC
+            </script>
             """)
     IPage<QcCandidateVO> selectInpatientCandidatePage(IPage<QcCandidateVO> page,
-                                                      @Param("q") QcCandidateQueryPageDTO query);
+                                                      @Param("q") QcCandidateQueryPageDTO query,
+                                                      @Param("deptIds") List<Long> deptIds);
 
     /**
      * 质控单概览。全部在一次查询里取，避免"总数"与"分项"来自两个时刻的两次查询。
@@ -150,8 +167,13 @@ public interface BizQualityControlMapper extends BaseMapper<BizQualityControl> {
      *
      * <p>{@code unscored_count} 反过来统计**全部**没得分的单：它要回答的是
      * "为什么有些行显示 —"，答案包括旧版质控与 AI 内涵质控，不限于综合质控。
+     *
+     * <p>deptIds 为科室数据权限收口集合（null = 全院）：概览与质控单列表同口径，
+     * 按病历归属科室 EXISTS 过滤（质控单本身无科室列）。注意 script 块内 XML 转义，
+     * 比较符写成 {@code 3 > severity_max} 而不是 {@code severity_max < 3}。
      */
     @Select("""
+            <script>
             SELECT COUNT(*)                                                  AS total,
                    COALESCE(SUM(qc_status = 1), 0)                           AS pending_count,
                    COALESCE(SUM(qc_result = 0), 0)                           AS failed_count,
@@ -160,37 +182,69 @@ public interface BizQualityControlMapper extends BaseMapper<BizQualityControl> {
                    COALESCE(SUM(qc_type = 0 AND score IS NOT NULL), 0)       AS scored_count,
                    COALESCE(SUM(score IS NULL), 0)                           AS unscored_count,
                    ROUND(AVG(CASE WHEN qc_type = 0 THEN score END), 1)       AS avg_score,
-                   COALESCE(SUM(qc_type = 0 AND score IS NOT NULL AND severity_max < 3 AND score >= 90), 0)                AS grade_a_count,
-                   COALESCE(SUM(qc_type = 0 AND score IS NOT NULL AND severity_max < 3 AND score >= 75 AND score < 90), 0) AS grade_b_count,
-                   COALESCE(SUM(qc_type = 0 AND score IS NOT NULL AND (severity_max = 3 OR score < 75)), 0)                AS grade_c_count,
+                   COALESCE(SUM(qc_type = 0 AND score IS NOT NULL AND 3 > severity_max AND score >= 90), 0)                AS grade_a_count,
+                   COALESCE(SUM(qc_type = 0 AND score IS NOT NULL AND 3 > severity_max AND score >= 75 AND 90 > score), 0) AS grade_b_count,
+                   COALESCE(SUM(qc_type = 0 AND score IS NOT NULL AND (severity_max = 3 OR 75 > score)), 0)                AS grade_c_count,
                    MAX(qc_time)                                              AS last_qc_time
             FROM biz_quality_control
             WHERE del_flag = 0
+            <if test="deptIds != null"> AND (
+                 EXISTS (SELECT 1 FROM biz_medical_record m WHERE m.del_flag = 0
+                         AND biz_quality_control.record_source = 'OUTPATIENT' AND m.id = biz_quality_control.record_id
+                         AND m.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>)
+              OR EXISTS (SELECT 1 FROM biz_inpatient_record r WHERE r.del_flag = 0
+                         AND biz_quality_control.record_source = 'INPATIENT' AND r.id = biz_quality_control.record_id
+                         AND r.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>)
+            )</if>
+            </script>
             """)
-    QcOverviewVO selectOverview();
+    QcOverviewVO selectOverview(@Param("deptIds") List<Long> deptIds);
 
     /**
-     * 问题明细总条数与涉及病历数
+     * 问题明细总条数与涉及病历数；deptIds 为科室数据权限收口集合（null = 全院），
+     * 与质控单概览同口径（问题明细经 record_source + record_id 关联病历归属科室）
      */
     @Select("""
+            <script>
             SELECT COUNT(*)                  AS issue_count,
                    COUNT(DISTINCT record_id) AS issue_record_count
             FROM biz_quality_control_issue
+            WHERE 1 = 1
+            <if test="deptIds != null"> AND (
+                 EXISTS (SELECT 1 FROM biz_medical_record m WHERE m.del_flag = 0
+                         AND biz_quality_control_issue.record_source = 'OUTPATIENT' AND m.id = biz_quality_control_issue.record_id
+                         AND m.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>)
+              OR EXISTS (SELECT 1 FROM biz_inpatient_record r WHERE r.del_flag = 0
+                         AND biz_quality_control_issue.record_source = 'INPATIENT' AND r.id = biz_quality_control_issue.record_id
+                         AND r.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>)
+            )</if>
+            </script>
             """)
-    QcOverviewVO selectIssueTotals();
+    QcOverviewVO selectIssueTotals(@Param("deptIds") List<Long> deptIds);
 
     /**
      * 维度分布（问题条数 / 累计扣分）。维度中文由服务层用枚举补，不在这里 CASE WHEN ——
-     * 中文只允许有一处定义。
+     * 中文只允许有一处定义。deptIds 为科室数据权限收口集合（null = 全院），与概览同口径
      */
     @Select("""
+            <script>
             SELECT dimension                AS dimension,
                    COUNT(*)                 AS hit_count,
                    COALESCE(SUM(deduct), 0) AS deduct_total
             FROM biz_quality_control_issue
+            WHERE 1 = 1
+            <if test="deptIds != null"> AND (
+                 EXISTS (SELECT 1 FROM biz_medical_record m WHERE m.del_flag = 0
+                         AND biz_quality_control_issue.record_source = 'OUTPATIENT' AND m.id = biz_quality_control_issue.record_id
+                         AND m.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>)
+              OR EXISTS (SELECT 1 FROM biz_inpatient_record r WHERE r.del_flag = 0
+                         AND biz_quality_control_issue.record_source = 'INPATIENT' AND r.id = biz_quality_control_issue.record_id
+                         AND r.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>)
+            )</if>
             GROUP BY dimension
+            </script>
             """)
-    List<QcRuleMetricVO> selectDimensionStat();
+    List<QcRuleMetricVO> selectDimensionStat(@Param("deptIds") List<Long> deptIds);
 
     /**
      * 规则命中统计。只有命中过的规则会出现在这里，未命中的由服务层用规则枚举补全 ——

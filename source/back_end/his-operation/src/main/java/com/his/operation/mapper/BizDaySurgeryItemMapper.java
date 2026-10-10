@@ -24,14 +24,17 @@ public interface BizDaySurgeryItemMapper extends BaseMapper<BizDaySurgeryItem> {
                  AND (i.item_code LIKE CONCAT('%', #{keyword}, '%')
                    OR i.item_name LIKE CONCAT('%', #{keyword}, '%'))
                </if>
-               <if test="deptId != null"> AND i.dept_id = #{deptId}</if>
+               <if test="deptIds != null">
+                 AND i.dept_id IN
+                 <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+               </if>
                <if test="enabledOnly != null and enabledOnly == true"> AND i.status = 1</if>
              ORDER BY i.status DESC, i.item_code ASC
             </script>
             """)
     List<DaySurgeryItemVO> selectItemPage(IPage<DaySurgeryItemVO> page,
                                           @Param("keyword") String keyword,
-                                          @Param("deptId") Long deptId,
+                                          @Param("deptIds") List<Long> deptIds,
                                           @Param("enabledOnly") Boolean enabledOnly);
 
     @Select("SELECT i.* FROM biz_day_surgery_item i WHERE i.id = #{id} AND i.del_flag = 0")
@@ -44,11 +47,14 @@ public interface BizDaySurgeryItemMapper extends BaseMapper<BizDaySurgeryItem> {
             <script>
             SELECT i.* FROM biz_day_surgery_item i
              WHERE i.del_flag = 0 AND i.status = 1
-               <if test="deptId != null"> AND i.dept_id = #{deptId}</if>
+               <if test="deptIds != null">
+                 AND i.dept_id IN
+                 <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+               </if>
              ORDER BY i.item_code ASC
             </script>
             """)
-    List<DaySurgeryItemVO> selectEnabledList(@Param("deptId") Long deptId);
+    List<DaySurgeryItemVO> selectEnabledList(@Param("deptIds") List<Long> deptIds);
 
     @Select("SELECT d.dept_name FROM sys_department d WHERE d.id = #{deptId} AND d.del_flag = 0")
     String selectDeptName(@Param("deptId") Long deptId);

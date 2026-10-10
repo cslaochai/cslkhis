@@ -21,6 +21,7 @@ import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +48,8 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
     private static final int AMOUNT_SCALE = 2;
 
     private final RedisSequenceService redisSequenceService;
+
+    private final DeptScopeService deptScopeService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -251,7 +254,8 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
 
     @Override
     public PageResult<BizFeeRecordVO> selectPage(FeeRecordQueryPageDTO query) {
-        Page<BizFeeRecord> page = this.page(new Page<>(query.getPageNum(), query.getPageSize()), buildWrapper(query));
+        List<Long> deptIds = deptScopeService.scopedDeptIds(query.getDeptId());
+        Page<BizFeeRecord> page = this.page(new Page<>(query.getPageNum(), query.getPageSize()), buildWrapper(query, deptIds));
         List<BizFeeRecordVO> records = new ArrayList<>();
         for (BizFeeRecord row : page.getRecords()) {
             records.add(toVO(row));
@@ -264,6 +268,10 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
         BizFeeRecord row = this.getById(id);
         if (row == null) {
             throw new BusinessException("记账行不存在");
+        }
+        // 无科室归属的行（手工补记账未传科室）不卡科室门禁
+        if (row.getDeptId() != null) {
+            deptScopeService.assertDeptAccessible(row.getDeptId());
         }
         BizFeeRecordDetailVO vo = new BizFeeRecordDetailVO();
         BeanUtils.copyProperties(row, vo);
@@ -457,7 +465,7 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
         return ids;
     }
 
-    private LambdaQueryWrapper<BizFeeRecord> buildWrapper(FeeRecordQueryPageDTO query) {
+    private LambdaQueryWrapper<BizFeeRecord> buildWrapper(FeeRecordQueryPageDTO query, List<Long> deptIds) {
         String keyword = query.getKeyword();
         return new LambdaQueryWrapper<BizFeeRecord>()
                 .eq(query.getEncounterType() != null, BizFeeRecord::getEncounterType, query.getEncounterType())
@@ -467,6 +475,7 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
                 .eq(query.getItemType() != null, BizFeeRecord::getItemType, query.getItemType())
                 .eq(query.getSourceType() != null, BizFeeRecord::getSourceType, query.getSourceType())
                 .eq(query.getDeptId() != null, BizFeeRecord::getDeptId, query.getDeptId())
+                .in(deptIds != null, BizFeeRecord::getDeptId, deptIds)
                 .eq(query.getBillId() != null, BizFeeRecord::getBillId, query.getBillId())
                 .and(TextUtil.hasText(keyword), w -> w.like(BizFeeRecord::getFeeNo, keyword)
                         .or().like(BizFeeRecord::getItemName, keyword)

@@ -39,7 +39,7 @@ public interface BizOperationApplyMapper extends BaseMapper<BizOperationApply> {
     /**
      * 手术申请分页（手术室排台工作台 / 病区申请方工作台共用）
      */
-    @Select(PROJECTION + """
+    @Select("<script>\n" + PROJECTION + """
             WHERE c.del_flag = 0
               AND (#{q.admissionId} IS NULL OR c.admission_id = #{q.admissionId})
               AND (#{q.patientId} IS NULL OR c.patient_id = #{q.patientId})
@@ -51,7 +51,7 @@ public interface BizOperationApplyMapper extends BaseMapper<BizOperationApply> {
               AND (#{q.operationRoom} IS NULL OR #{q.operationRoom} = ''
                    OR c.operation_room = #{q.operationRoom})
               AND (#{q.plannedDateFrom} IS NULL OR c.planned_start_time >= #{q.plannedDateFrom})
-              AND (#{q.plannedDateTo} IS NULL OR c.planned_start_time < #{q.plannedDateTo})
+              AND (#{q.plannedDateTo} IS NULL OR c.planned_start_time &lt; #{q.plannedDateTo})
               AND (#{q.keyword} IS NULL OR #{q.keyword} = ''
                    OR c.apply_no LIKE CONCAT('%', #{q.keyword}, '%')
                    OR c.admission_no LIKE CONCAT('%', #{q.keyword}, '%')
@@ -60,11 +60,17 @@ public interface BizOperationApplyMapper extends BaseMapper<BizOperationApply> {
                    OR c.planned_operation_name LIKE CONCAT('%', #{q.keyword}, '%')
                    OR c.actual_operation_name LIKE CONCAT('%', #{q.keyword}, '%')
                    OR c.surgeon_name LIKE CONCAT('%', #{q.keyword}, '%'))
+              <if test="deptIds != null">
+                AND c.apply_dept_id IN
+                <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+              </if>
             ORDER BY FIELD(c.operation_status, 0, 1, 2, 3, 4),
                      c.planned_start_time IS NULL, c.planned_start_time ASC, c.id DESC
+            </script>
             """)
     IPage<OperationApplyVO> selectApplyPage(IPage<OperationApplyVO> page,
-                                            @Param("q") OperationApplyQueryPageDTO query);
+                                            @Param("q") OperationApplyQueryPageDTO query,
+                                            @Param("deptIds") List<Long> deptIds);
 
     /**
      * 手术申请详情
@@ -86,11 +92,18 @@ public interface BizOperationApplyMapper extends BaseMapper<BizOperationApply> {
      * 未完成手术数（待排期 + 已排期 + 术前核对完成）：工作台角标用
      */
     @Select("""
+            <script>
             SELECT COUNT(*) FROM biz_operation_apply
             WHERE del_flag = 0 AND operation_status IN (0, 1, 2)
               AND (#{admissionId} IS NULL OR admission_id = #{admissionId})
+              <if test="deptIds != null">
+                AND apply_dept_id IN
+                <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+              </if>
+            </script>
             """)
-    long countUnfinished(@Param("admissionId") Long admissionId);
+    long countUnfinished(@Param("admissionId") Long admissionId,
+                         @Param("deptIds") List<Long> deptIds);
 
     /**
      * 同一次住院是否已有"在途"的同一术式申请（防重复发起）。
@@ -178,22 +191,33 @@ public interface BizOperationApplyMapper extends BaseMapper<BizOperationApply> {
      *
      * <p>按计划开始时间升序 —— 总表就是手术室一天的日程，顺序即时间轴。
      */
-    @Select(PROJECTION + """
+    @Select("<script>\n" + PROJECTION + """
              WHERE c.del_flag = 0 AND c.operation_status IN (1, 2, 3)
-               AND c.planned_start_time >= #{from} AND c.planned_start_time < #{to}
+               AND c.planned_start_time >= #{from} AND c.planned_start_time &lt; #{to}
+               <if test="deptIds != null">
+                 AND c.apply_dept_id IN
+                 <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+               </if>
              ORDER BY c.planned_start_time ASC, c.id ASC
+            </script>
             """)
     List<OperationApplyVO> selectScheduledBetween(@Param("from") LocalDateTime from,
-                                                  @Param("to") LocalDateTime to);
+                                                  @Param("to") LocalDateTime to,
+                                                  @Param("deptIds") List<Long> deptIds);
 
     /**
      * 排台总表：待排期申请（矩阵底部「待排期」暂存区，拖进手术间列才算排台）
      */
-    @Select(PROJECTION + """
+    @Select("<script>\n" + PROJECTION + """
              WHERE c.del_flag = 0 AND c.operation_status = 0
+               <if test="deptIds != null">
+                 AND c.apply_dept_id IN
+                 <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+               </if>
              ORDER BY c.is_emergency DESC, c.apply_time ASC, c.id ASC
+            </script>
             """)
-    List<OperationApplyVO> selectUnscheduled();
+    List<OperationApplyVO> selectUnscheduled(@Param("deptIds") List<Long> deptIds);
 
     /**
      * 已用过的手术间（下拉候选；取不到就返回空列表，由前端允许自由输入）

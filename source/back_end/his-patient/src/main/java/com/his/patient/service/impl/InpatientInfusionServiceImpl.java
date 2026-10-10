@@ -16,6 +16,7 @@ import com.his.patient.service.InpatientInfusionService;
 import com.his.patient.vo.InfusionRoundVO;
 import com.his.patient.vo.InpatientOrderExecVO;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,8 +41,22 @@ public class InpatientInfusionServiceImpl extends ServiceImpl<BizInpatientOrderE
     private static final String[] INFUSION_KEYWORDS = {"静滴", "静注", "静推", "静脉", "泵入"};
 
     private final BizInpatientOrderExecMapper bizInpatientOrderExecMapper;
+
     private final BizInpatientOrderMapper bizInpatientOrderMapper;
+
     private final BizInfusionRoundMapper bizInfusionRoundMapper;
+
+    private final DeptScopeService deptScopeService;
+
+    /**
+     * 输液闭环无科室字段，经入院记录的归属科室收口
+     */
+    private void assertAdmissionAccessible(Long admissionId) {
+        Long deptId = bizInpatientOrderExecMapper.selectAdmissionDeptId(admissionId);
+        if (!deptScopeService.canAccessDept(deptId)) {
+            throw new BusinessException("该数据所属科室不在当前岗位的数据范围内");
+        }
+    }
 
     /**
      * 给药途径是否静脉类（唯一口径，InpatientOrderServiceImpl.decorateExec 也走这里）
@@ -66,6 +81,7 @@ public class InpatientInfusionServiceImpl extends ServiceImpl<BizInpatientOrderE
             throw new BusinessException("当前用户信息不存在");
         }
         BizInpatientOrderExec exec = requireExec(dto.getExecId());
+        assertAdmissionAccessible(exec.getAdmissionId());
         requireInfusion(exec);
         requireDone(exec);
         if (exec.getInfusionStartTime() != null) {
@@ -87,6 +103,7 @@ public class InpatientInfusionServiceImpl extends ServiceImpl<BizInpatientOrderE
             throw new BusinessException("当前用户信息不存在");
         }
         BizInpatientOrderExec exec = requireExec(dto.getExecId());
+        assertAdmissionAccessible(exec.getAdmissionId());
         requireStarted(exec);
         if (exec.getInfusionEndTime() != null) {
             throw new BusinessException("该袋已于 " + exec.getInfusionEndTime() + " 结束输注，不能补录巡视（结束后补的观察是假记录）");
@@ -127,6 +144,7 @@ public class InpatientInfusionServiceImpl extends ServiceImpl<BizInpatientOrderE
             throw new BusinessException("当前用户信息不存在");
         }
         BizInpatientOrderExec exec = requireExec(dto.getExecId());
+        assertAdmissionAccessible(exec.getAdmissionId());
         requireStarted(exec);
         if (exec.getInfusionEndTime() != null) {
             throw new BusinessException("该执行行已在 "
@@ -153,6 +171,8 @@ public class InpatientInfusionServiceImpl extends ServiceImpl<BizInpatientOrderE
 
     @Override
     public List<InfusionRoundVO> rounds(Long execId) {
+        BizInpatientOrderExec exec = requireExec(execId);
+        assertAdmissionAccessible(exec.getAdmissionId());
         return bizInfusionRoundMapper.selectRoundsByExecId(execId);
     }
 

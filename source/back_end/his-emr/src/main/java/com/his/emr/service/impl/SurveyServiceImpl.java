@@ -19,7 +19,7 @@ import com.his.emr.service.SurveyTemplateService;
 import com.his.emr.support.FollowupTaskSnapshot;
 import com.his.emr.vo.*;
 import com.his.system.entity.CurrentUser;
-import com.his.system.provider.DeptScopeProvider;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +40,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSurveyAnswer> implements SurveyService {
     private static final BigDecimal HUNDRED = new BigDecimal("100");
-    private final DeptScopeProvider deptScopeProvider;
+    private final DeptScopeService deptScopeService;
     private final BizSurveyDispatchMapper bizSurveyDispatchMapper;
     private final BizSurveyAnswerMapper bizSurveyAnswerMapper;
     private final BizSurveyAnswerItemMapper bizSurveyAnswerItemMapper;
@@ -73,7 +73,7 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
                 TextUtil.trimToNull(dto.getKeyword()), dto.getPatientId(), dto.getSourceType(),
                 dto.getDispatchStatus(), dto.getChannel(), dto.getOverdueOnly(),
                 TextUtil.trimToNull(dto.getDateFrom()), TextUtil.trimToNull(dto.getDateTo()),
-                scopedDeptIds(dto.getDeptId()));
+                deptScopeService.scopedDeptIds(dto.getDeptId()));
         // 列表一律脱敏并清空明文：抓包拿到全量手机号等于没做脱敏
         records.forEach(vo -> decorateDispatch(vo, false));
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
@@ -84,7 +84,7 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
     @Override
     public SurveyDispatchVO dispatchGetById(Long id) {
         BizSurveyDispatch entity = requireDispatch(id);
-        assertDeptAccessible(entity.getDeptId());
+        deptScopeService.assertDeptAccessible(entity.getDeptId());
         SurveyDispatchVO vo = new SurveyDispatchVO();
         BeanUtils.copyProperties(entity, vo);
         vo.setOverdue(isOverdue(entity));
@@ -104,7 +104,7 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
         if (Objects.equals(task.getFollowupStatus(), FollowupTaskStatusEnum.CANCELLED.getCode())) {
             throw new BusinessException("已取消的随访任务不再发放评价（人都没联系上，问谁去）");
         }
-        assertDeptAccessible(task.getDeptId());
+        deptScopeService.assertDeptAccessible(task.getDeptId());
         SurveyDispatchVO issued = issueForFollowup(FollowupTaskSnapshot.of(task),
                 SurveySourceEnum.MANUAL.getCode(), dto.getChannel(), dto.getExpireDays());
         if (issued == null) {
@@ -166,7 +166,7 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
     @Transactional(rollbackFor = Exception.class)
     public SurveyDispatchVO markDispatch(SurveyDispatchActionDTO dto) {
         BizSurveyDispatch entity = requireDispatch(dto.getId());
-        assertDeptAccessible(entity.getDeptId());
+        deptScopeService.assertDeptAccessible(entity.getDeptId());
         String remark = TextUtil.cut(dto.getRemark(), 512);
         if (Objects.equals(dto.getAction(), 1)) {
             if (!Objects.equals(entity.getDispatchStatus(), SurveyDispatchStatusEnum.PENDING_PUSH.getCode())) {
@@ -199,7 +199,7 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
         List<SurveyAnswerVO> records = bizSurveyAnswerMapper.selectAnswerPage(page,
                 TextUtil.trimToNull(dto.getKeyword()), dto.getPatientId(), dto.getTemplateId(), dto.getScene(),
                 dto.getAnswerStatus(), dto.getFillSource(), dto.getLowScoreOnly(),
-                TextUtil.trimToNull(dto.getDateFrom()), TextUtil.trimToNull(dto.getDateTo()), scopedDeptIds(dto.getDeptId()));
+                TextUtil.trimToNull(dto.getDateFrom()), TextUtil.trimToNull(dto.getDateTo()), deptScopeService.scopedDeptIds(dto.getDeptId()));
         records.forEach(this::decorateAnswer);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -210,7 +210,7 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
         if (vo == null) {
             throw new BusinessException("答卷不存在或已删除");
         }
-        assertDeptAccessible(vo.getDeptId());
+        deptScopeService.assertDeptAccessible(vo.getDeptId());
         decorateAnswer(vo);
         vo.setItems(bizSurveyAnswerItemMapper.selectByAnswer(id));
         return vo;
@@ -224,7 +224,7 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
             throw new BusinessException("当前用户信息不存在");
         }
         BizSurveyDispatch dispatch = requireDispatch(dto.getDispatchId());
-        assertDeptAccessible(dispatch.getDeptId());
+        deptScopeService.assertDeptAccessible(dispatch.getDeptId());
         if (Objects.equals(dispatch.getDispatchStatus(), SurveyDispatchStatusEnum.EXPIRED.getCode())) {
             throw new BusinessException("该发放单已过期");
         }
@@ -302,7 +302,7 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
         if (answer == null) {
             throw new BusinessException("答卷不存在或已删除");
         }
-        assertDeptAccessible(answer.getDeptId());
+        deptScopeService.assertDeptAccessible(answer.getDeptId());
         if (!Objects.equals(answer.getAnswerStatus(), AnswerStatusEnum.VALID.getCode())) {
             throw new BusinessException("答卷已是作废状态");
         }
@@ -335,7 +335,7 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
     public SurveyStatVO stat(Long templateId, Integer scene, String dateFrom, String dateTo) {
         String from = TextUtil.trimToNull(dateFrom);
         String to = TextUtil.trimToNull(dateTo);
-        List<Long> scope = scopedDeptIds(null);
+        List<Long> scope = deptScopeService.scopedDeptIds(null);
         SurveyStatVO vo = new SurveyStatVO();
 
         long pendingPush = 0, pushed = 0, recycled = 0, expired = 0, refused = 0;
@@ -690,30 +690,6 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
             throw new BusinessException("发放单不存在或已删除");
         }
         return entity;
-    }
-
-    private void assertDeptAccessible(Long deptId) {
-        if (!deptScopeProvider.canAccessDept(deptId)) {
-            throw new BusinessException("该数据所属科室不在当前岗位的数据范围内");
-        }
-    }
-
-    /**
-     * null=不限科室；非空=收口集合（显式 deptId 越权时由 DeptScopeProvider 抛错；空集合按配置缺失拒掉，绝不放行成全院）
-     */
-    private List<Long> scopedDeptIds(Long requestedDeptId) {
-        Long resolved = deptScopeProvider.resolveDeptId(requestedDeptId);
-        if (resolved != null) {
-            return List.of(resolved);
-        }
-        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
-        if (allowed == null) {
-            return null;
-        }
-        if (allowed.isEmpty()) {
-            throw new BusinessException("当前岗位未绑定任何科室，无法查看评价数据（请在系统管理为岗位分配科室）");
-        }
-        return List.copyOf(allowed);
     }
 
     private String nextNo(String prefix, String module) {

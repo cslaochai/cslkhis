@@ -10,7 +10,6 @@ import com.his.common.enums.EncounterTypeEnum;
 import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.PaymentItemTypeEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.service.RedisSequenceService;
@@ -32,6 +31,7 @@ import com.his.pharmacy.vo.BizConsumableTraceVO;
 import com.his.pharmacy.vo.ConsumableTraceDetailVO;
 import com.his.pharmacy.vo.TracePatientSnapshotVO;
 import com.his.pharmacy.vo.UdiScanVO;
+import com.his.system.provider.DeptScopeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,7 +39,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 /**
  * 高值耗材 UDI 扫码溯源实现。
@@ -63,6 +62,7 @@ public class HighValueTraceServiceImpl extends ServiceImpl<BizConsumableTraceMap
     private final BizConsumableStockMapper bizConsumableStockMapper;
     private final BizConsumableStockLogMapper bizConsumableStockLogMapper;
     private final TraceChargeInvoker chargeInvoker;
+    private final DeptScopeService deptScopeService;
 
     private static String blankToNull(String v) {
         return TextUtil.hasText(v) ? v.trim() : null;
@@ -132,6 +132,10 @@ public class HighValueTraceServiceImpl extends ServiceImpl<BizConsumableTraceMap
         }
         if (dict.getIsHighValue() == null || dict.getIsHighValue() != 1) {
             throw new BusinessException("仅高值耗材走扫码溯源登记，普通耗材请走科室领用");
+        }
+        // 使用科室由前端选择（B 类）：指定了越权科室直接拒绝
+        if (dto.getDeptId() != null) {
+            deptScopeService.assertDeptAccessible(dto.getDeptId());
         }
         if (bizConsumableTraceMapper.countActiveByUdi(udiCode) > 0) {
             throw new BusinessException("该 UDI 已存在使用中的登记记录，同一件耗材不允许重复登记");
@@ -208,7 +212,7 @@ public class HighValueTraceServiceImpl extends ServiceImpl<BizConsumableTraceMap
         Page<BizConsumableTraceVO> page = bizConsumableTraceMapper.selectTracePage(
                 new Page<>(q.getPageNum(), q.getPageSize()),
                 blankToNull(q.getKeyword()), q.getConsumableId(), q.getPatientId(),
-                q.getChargeStatus(), q.getStatus());
+                q.getChargeStatus(), q.getStatus(), deptScopeService.scopedDeptIds(null));
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
     }
 
@@ -217,6 +221,9 @@ public class HighValueTraceServiceImpl extends ServiceImpl<BizConsumableTraceMap
         ConsumableTraceDetailVO vo = bizConsumableTraceMapper.selectTraceDetail(traceId);
         if (vo == null) {
             throw new BusinessException("溯源记录不存在");
+        }
+        if (vo.getDeptId() != null) {
+            deptScopeService.assertDeptAccessible(vo.getDeptId());
         }
         return vo;
     }
@@ -227,6 +234,9 @@ public class HighValueTraceServiceImpl extends ServiceImpl<BizConsumableTraceMap
         BizConsumableTrace trace = bizConsumableTraceMapper.selectById(traceId);
         if (trace == null) {
             throw new BusinessException("溯源记录不存在");
+        }
+        if (trace.getDeptId() != null) {
+            deptScopeService.assertDeptAccessible(trace.getDeptId());
         }
         if (trace.getStatus() != null && trace.getStatus() == 2) {
             throw new BusinessException("该记录已作废，请勿重复操作");
@@ -274,6 +284,9 @@ public class HighValueTraceServiceImpl extends ServiceImpl<BizConsumableTraceMap
         BizConsumableTrace trace = bizConsumableTraceMapper.selectById(traceId);
         if (trace == null) {
             throw new BusinessException("溯源记录不存在");
+        }
+        if (trace.getDeptId() != null) {
+            deptScopeService.assertDeptAccessible(trace.getDeptId());
         }
         if (trace.getStatus() != null && trace.getStatus() == 2) {
             throw new BusinessException("已作废的记录不能补记计费");

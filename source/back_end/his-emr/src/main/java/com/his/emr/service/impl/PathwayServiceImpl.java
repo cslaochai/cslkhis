@@ -21,7 +21,7 @@ import com.his.emr.mapper.BizPathwayVarianceMapper;
 import com.his.emr.service.PathwayService;
 import com.his.emr.vo.*;
 import com.his.system.entity.CurrentUser;
-import com.his.system.provider.DeptScopeProvider;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,7 +48,7 @@ public class PathwayServiceImpl implements PathwayService {
      * 原因类文本统一截 200（列宽 255，留余量，超长会把业务失败升级成 Data too long 500）
      */
     private static final int REASON_MAX = 200;
-    private final DeptScopeProvider deptScopeProvider;
+    private final DeptScopeService deptScopeService;
     private final BizPathwayMapper bizPathwayMapper;
     private final BizPathwayStepMapper bizPathwayStepMapper;
     private final BizPathwayEnrollMapper bizPathwayEnrollMapper;
@@ -486,7 +486,7 @@ public class PathwayServiceImpl implements PathwayService {
      * 受限账号（如病区医生）只能碰授权科室患者的路径数据
      */
     private void checkDeptAccess(Long deptId) {
-        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
+        Set<Long> allowed = deptScopeService.allowedDeptIds();
         if (allowed != null && (deptId == null || !allowed.contains(deptId))) {
             throw new BusinessException("无权访问该科室患者的路径数据");
         }

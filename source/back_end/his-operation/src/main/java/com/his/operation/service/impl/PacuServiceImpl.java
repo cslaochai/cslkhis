@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
-import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -23,12 +22,12 @@ import com.his.operation.support.OperationChargeBiller;
 import com.his.operation.vo.OperationChargeSummaryVO;
 import com.his.operation.vo.PacuRecordVO;
 import com.his.common.service.RedisSequenceService;
+import com.his.system.provider.DeptScopeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -50,10 +49,12 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
 
     private final OperationChargeBiller operationChargeBiller;
 
+    private final DeptScopeService deptScopeService;
+
     @Override
     public IPage<PacuRecordVO> listPage(PacuQueryPageDTO query) {
         IPage<PacuRecordVO> page = bizAnesthesiaPacuMapper.selectPacuPage(
-                new Page<>(query.getPageNum(), query.getPageSize()), query);
+                new Page<>(query.getPageNum(), query.getPageSize()), query, deptScopeService.scopedDeptIds(null));
         page.getRecords().forEach(this::decorate);
         return page;
     }
@@ -64,6 +65,7 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
         if (pacuId == null) {
             throw new BusinessException("PACU 记录ID不能为空");
         }
+        assertPacuAccessible(mustGet(pacuId));
         PacuRecordVO vo = bizAnesthesiaPacuMapper.selectVOById(pacuId);
         if (vo == null) {
             throw new BusinessException("PACU 复苏记录不存在");
@@ -77,6 +79,10 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
         // C-非 DTO 入参：校验对象是 @RequestParam 标量参数，Bean Validation 不覆盖，保留
         if (recordId == null) {
             throw new BusinessException("麻醉记录单ID不能为空");
+        }
+        BizAnesthesiaRecord record = bizAnesthesiaRecordMapper.selectById(recordId);
+        if (record != null) {
+            assertApplyAccessible(record.getApplyId());
         }
         PacuRecordVO vo = bizAnesthesiaPacuMapper.selectVOByRecord(recordId);
         if (vo != null) {
@@ -105,6 +111,7 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
         if (apply == null) {
             throw new BusinessException("关联的手术申请单不存在，无法登记入 PACU");
         }
+        deptScopeService.assertDeptAccessible(apply.getApplyDeptId());
 
         BizAnesthesiaPacu entity = new BizAnesthesiaPacu();
         entity.setPacuNo(nextPacuNo());
@@ -139,6 +146,7 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
     @Transactional(rollbackFor = Exception.class)
     public void score(PacuScoreDTO dto) {
         BizAnesthesiaPacu entity = mustInRoom(dto.getPacuId());
+        assertPacuAccessible(entity);
         // B-条件必填：标记发生并发症时才要求经过与处理，跨字段条件，DTO 注解无法表达，保留
         if (Integer.valueOf(1).equals(dto.getComplicationFlag()) && !TextUtil.hasText(dto.getComplicationNote())) {
             throw new BusinessException("已标记发生并发症，必须填写经过与处理");
@@ -175,6 +183,7 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
     @Transactional(rollbackFor = Exception.class)
     public OperationChargeSummaryVO leave(PacuLeaveDTO dto) {
         BizAnesthesiaPacu entity = mustInRoom(dto.getPacuId());
+        assertPacuAccessible(entity);
         if (entity.getAldreteTotal() == null) {
             throw new BusinessException("尚未完成 Aldrete 评分，不能出室");
         }
@@ -229,6 +238,7 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
     @Transactional(rollbackFor = Exception.class)
     public OperationChargeSummaryVO charge(AnesthesiaActionDTO dto) {
         BizAnesthesiaPacu entity = mustGet(dto.getId());
+        assertPacuAccessible(entity);
         OperationChargeSummaryVO summary;
         try {
             summary = operationChargeBiller.billPacu(entity);
@@ -245,8 +255,7 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
 
     @Override
     public long countInRoom() {
-        return bizAnesthesiaPacuMapper.selectCount(new LambdaQueryWrapper<BizAnesthesiaPacu>()
-                .eq(BizAnesthesiaPacu::getStatus, PacuStatusEnum.IN.getCode()));
+        return bizAnesthesiaPacuMapper.countInRoom(PacuStatusEnum.IN.getCode(), deptScopeService.scopedDeptIds(null));
     }
 
     private void applyChargeResult(BizAnesthesiaPacu entity, OperationChargeSummaryVO summary) {
@@ -267,6 +276,23 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
     }
 
     // 展示态
+
+    /** PACU 复苏单无科室列，归属科室取关联手术申请单的申请科室 */
+    private void assertPacuAccessible(BizAnesthesiaPacu entity) {
+        if (entity != null) {
+            assertApplyAccessible(entity.getApplyId());
+        }
+    }
+
+    private void assertApplyAccessible(Long applyId) {
+        if (applyId == null) {
+            return;
+        }
+        BizOperationApply apply = bizOperationApplyMapper.selectById(applyId);
+        if (apply != null) {
+            deptScopeService.assertDeptAccessible(apply.getApplyDeptId());
+        }
+    }
 
     private BizAnesthesiaPacu mustGet(Long pacuId) {
         // C-非 DTO 入参：私有 helper 校验方法参数，被多入口复用，Bean Validation 不覆盖，保留

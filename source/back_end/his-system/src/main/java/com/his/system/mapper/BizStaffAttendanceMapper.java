@@ -36,9 +36,6 @@ public interface BizStaffAttendanceMapper extends BaseMapper<BizStaffAttendance>
 
     /**
      * 物理删单行。
-     * <br>与 {@code biz_staff_schedule} 同一个坑：本表唯一键「人 × 日 × 单元 × 班次」
-     * 不含删除标志，软删留下的行继续占键，于是「撤掉这条登记、再重新签一次」必然撞重复键。
-     * 出勤登记本身不是留档对象（留档的是它喂出来的工时与归因），错了就该让它彻底消失。
      */
     @Delete("DELETE FROM biz_staff_attendance WHERE id = #{id}")
     int purgeById(@Param("id") Long id);
@@ -53,8 +50,6 @@ public interface BizStaffAttendanceMapper extends BaseMapper<BizStaffAttendance>
 
     /**
      * 这个人当天"应上班"的计划行（只读对照用）。
-     * <br>为什么限定 {@code duty_status = 1}：休息/请假/培训本来就不用来，
-     * 拿它们跟"有没有出勤"对照会凭空制造出一堆伪差异。
      */
     @Select("SELECT * FROM biz_staff_schedule WHERE del_flag = 0 "
             + "AND employee_id = #{employeeId} AND schedule_date = #{date} AND duty_status = 1")
@@ -80,10 +75,6 @@ public interface BizStaffAttendanceMapper extends BaseMapper<BizStaffAttendance>
             + "FROM biz_shift WHERE id = #{shiftId} AND del_flag = 0")
     BizShift selectShift(@Param("shiftId") Long shiftId);
 
-    // -------------------------------------------------------------------------
-    // 以下三条读的是 sql/214 建的视图。NOTE：视图的判定口径（尤其是 diff_type）
-    // 必须与这里保持一致 —— 判定逻辑只存在一处（视图），前端/报表/脚本读出来都一样。
-    // -------------------------------------------------------------------------
 
     @Select("""
             <script>

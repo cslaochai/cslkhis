@@ -39,6 +39,7 @@ public interface BizIcuStayMapper extends BaseMapper<BizIcuStay> {
                <if test="startDate != null"> AND s.in_time &gt;= #{startDate}</if>
                <if test="endDate != null"> AND s.in_time &lt;= CONCAT(#{endDate}, ' 23:59:59')</if>
                <if test="wardId != null"> AND s.ward_id = #{wardId}</if>
+               <if test="wardIds != null"> AND s.ward_id IN <foreach collection="wardIds" item="w" open="(" separator="," close=")">#{w}</foreach></if>
                <if test="careLevel != null"> AND s.care_level = #{careLevel}</if>
                <if test="status != null"> AND s.status = #{status}</if>
              ORDER BY s.status ASC, s.in_time DESC, s.id DESC
@@ -50,6 +51,7 @@ public interface BizIcuStayMapper extends BaseMapper<BizIcuStay> {
                                       @Param("startDate") LocalDate startDate,
                                       @Param("endDate") LocalDate endDate,
                                       @Param("wardId") Long wardId,
+                                      @Param("wardIds") List<Long> wardIds,
                                       @Param("careLevel") Integer careLevel,
                                       @Param("status") Integer status);
 
@@ -105,11 +107,13 @@ public interface BizIcuStayMapper extends BaseMapper<BizIcuStay> {
                    OR p.patient_no LIKE CONCAT('%', #{keyword}, '%')
                    OR a.admission_no LIKE CONCAT('%', #{keyword}, '%'))
                </if>
+               <if test="deptIds != null"> AND a.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
              ORDER BY a.admit_time DESC
              LIMIT #{limit}
             </script>
             """)
     List<IcuVO.AdmissionVO> selectAdmissionCandidates(@Param("keyword") String keyword,
+                                                      @Param("deptIds") List<Long> deptIds,
                                                       @Param("limit") int limit);
 
     /**
@@ -164,13 +168,21 @@ public interface BizIcuStayMapper extends BaseMapper<BizIcuStay> {
                                   ORDER BY m2.record_time DESC, m2.id DESC LIMIT 1)
              WHERE b.del_flag = 0 AND b.bed_type = 'ICU'
                <if test="wardId != null"> AND b.ward_id = #{wardId}</if>
+               <if test="wardIds != null"> AND b.ward_id IN <foreach collection="wardIds" item="w" open="(" separator="," close=")">#{w}</foreach></if>
              ORDER BY b.ward_id ASC, b.bed_no ASC
             </script>
             """)
-    List<IcuVO.BedVO> selectBedBoard(@Param("wardId") Long wardId);
+    List<IcuVO.BedVO> selectBedBoard(@Param("wardId") Long wardId,
+                                     @Param("wardIds") List<Long> wardIds);
 
-    @Select("SELECT COUNT(*) FROM biz_icu_stay WHERE del_flag = 0 AND status = 1")
-    int countInDept();
+    @Select("""
+            <script>
+            SELECT COUNT(*) FROM biz_icu_stay s
+             WHERE s.del_flag = 0 AND s.status = 1
+               <if test="wardIds != null"> AND s.ward_id IN <foreach collection="wardIds" item="w" open="(" separator="," close=")">#{w}</foreach></if>
+            </script>
+            """)
+    int countInDept(@Param("wardIds") List<Long> wardIds);
 
     /**
      * 床位快照（入科写库前校验是 ICU 床并取病区名，不信前端传的床位信息）
@@ -188,41 +200,66 @@ public interface BizIcuStayMapper extends BaseMapper<BizIcuStay> {
             """)
     IcuVO.BedVO selectBedSnapshot(@Param("bedId") Long bedId);
 
-    /**
-     * 漏记预警：入科已超过 lagHours、但最近 lagHours 内一条监护记录都没有的在科患者数
-     */
     @Select("""
+            <script>
             SELECT COUNT(*) FROM biz_icu_stay s
              WHERE s.del_flag = 0 AND s.status = 1
-               AND s.in_time <= DATE_SUB(NOW(), INTERVAL #{lagHours} HOUR)
+               AND s.in_time &lt;= DATE_SUB(NOW(), INTERVAL #{lagHours} HOUR)
                AND NOT EXISTS (SELECT 1 FROM biz_icu_monitor m
                                 WHERE m.del_flag = 0 AND m.stay_id = s.id
-                                  AND m.record_time >= DATE_SUB(NOW(), INTERVAL #{lagHours} HOUR))
+                                  AND m.record_time &gt;= DATE_SUB(NOW(), INTERVAL #{lagHours} HOUR))
+               <if test="wardIds != null"> AND s.ward_id IN <foreach collection="wardIds" item="w" open="(" separator="," close=")">#{w}</foreach></if>
+            </script>
             """)
-    int countMonitorLag(@Param("lagHours") int lagHours);
+    int countMonitorLag(@Param("lagHours") int lagHours, @Param("wardIds") List<Long> wardIds);
 
     /**
      * 区间入出科汇总（含平均滞留小时与死亡数）
      */
     @Select("""
-            SELECT SUM(CASE WHEN in_time BETWEEN #{startDateTime} AND #{endDateTime} THEN 1 ELSE 0 END) AS in_count_range,
-                   SUM(CASE WHEN status = 2 AND out_time BETWEEN #{startDateTime} AND #{endDateTime} THEN 1 ELSE 0 END) AS out_count_range,
-                   ROUND(AVG(CASE WHEN status = 2 AND out_time BETWEEN #{startDateTime} AND #{endDateTime}
-                                  THEN TIMESTAMPDIFF(MINUTE, in_time, out_time) / 60 END), 1) AS avg_stay_hours,
-                   SUM(CASE WHEN status = 2 AND out_dest = 5 AND out_time BETWEEN #{startDateTime} AND #{endDateTime}
+            <script>
+            SELECT SUM(CASE WHEN s.in_time BETWEEN #{startDateTime} AND #{endDateTime} THEN 1 ELSE 0 END) AS in_count_range,
+                   SUM(CASE WHEN s.status = 2 AND s.out_time BETWEEN #{startDateTime} AND #{endDateTime} THEN 1 ELSE 0 END) AS out_count_range,
+                   ROUND(AVG(CASE WHEN s.status = 2 AND s.out_time BETWEEN #{startDateTime} AND #{endDateTime}
+                                  THEN TIMESTAMPDIFF(MINUTE, s.in_time, s.out_time) / 60 END), 1) AS avg_stay_hours,
+                   SUM(CASE WHEN s.status = 2 AND s.out_dest = 5 AND s.out_time BETWEEN #{startDateTime} AND #{endDateTime}
                             THEN 1 ELSE 0 END) AS death_count
-              FROM biz_icu_stay
-             WHERE del_flag = 0
+              FROM biz_icu_stay s
+             WHERE s.del_flag = 0
+               <if test="wardIds != null"> AND s.ward_id IN <foreach collection="wardIds" item="w" open="(" separator="," close=")">#{w}</foreach></if>
+            </script>
             """)
     IcuVO.StatsVO selectRangeSummary(@Param("startDateTime") LocalDateTime startDateTime,
-                                     @Param("endDateTime") LocalDateTime endDateTime);
+                                     @Param("endDateTime") LocalDateTime endDateTime,
+                                     @Param("wardIds") List<Long> wardIds);
 
     @Select("""
-            SELECT care_level AS type, COUNT(*) AS count
-              FROM biz_icu_stay
-             WHERE del_flag = 0 AND status = 1
-             GROUP BY care_level
-             ORDER BY care_level ASC
+            <script>
+            SELECT s.care_level AS type, COUNT(*) AS count
+              FROM biz_icu_stay s
+             WHERE s.del_flag = 0 AND s.status = 1
+               <if test="wardIds != null"> AND s.ward_id IN <foreach collection="wardIds" item="w" open="(" separator="," close=")">#{w}</foreach></if>
+             GROUP BY s.care_level
+             ORDER BY s.care_level ASC
+            </script>
             """)
-    List<IcuVO.TypeCount> selectCareLevelBoard();
+    List<IcuVO.TypeCount> selectCareLevelBoard(@Param("wardIds") List<Long> wardIds);
+
+    /**
+     * 病区所属科室ID（数据权限折算用：ward_id 是 sys_ward 主键不是科室ID；取不到返回 NULL）
+     */
+    @Select("SELECT dept_id FROM sys_ward WHERE ward_id = #{wardId}")
+    Long selectWardDeptId(@Param("wardId") Long wardId);
+
+    /**
+     * 授权科室集合折算成可见病区ID集合（数据权限收口；科室没绑病区时返回空集合）
+     */
+    @Select("""
+            <script>
+            SELECT ward_id FROM sys_ward
+             WHERE dept_id IN
+            <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+            </script>
+            """)
+    List<Long> selectWardIdsByDeptIds(@Param("deptIds") List<Long> deptIds);
 }

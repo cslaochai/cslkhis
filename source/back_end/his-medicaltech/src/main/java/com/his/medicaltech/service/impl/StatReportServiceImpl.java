@@ -18,6 +18,7 @@ import com.his.medicaltech.mapper.StatReportAggMapper;
 import com.his.medicaltech.service.StatReportService;
 import com.his.medicaltech.vo.*;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +48,8 @@ public class StatReportServiceImpl extends ServiceImpl<BizStatReportMapper, BizS
     private final RedisSequenceService redisSequenceService;
 
     private final DictCacheService dictCacheService;
+
+    private final DeptScopeService deptScopeService;
 
     /**
      * selectPage 排除列后聚合结果可能为 null
@@ -109,6 +112,10 @@ public class StatReportServiceImpl extends ServiceImpl<BizStatReportMapper, BizS
         String endStr = TimeUtil.dayEnd(end).format(DateFormats.DATETIME);
 
         Long deptId = dto.getDeptId();
+        // 科室数据权限：按前端所选科室做越权校验（B类：未选=全院口径，全院角色不受限）
+        if (deptId != null) {
+            deptScopeService.resolveDeptId(deptId);
+        }
         BizStatReport dup = bizStatReportMapper.selectOne(new LambdaQueryWrapper<BizStatReport>()
                 .eq(BizStatReport::getReportType, dto.getReportType())
                 .eq(BizStatReport::getPeriodValue, period)
@@ -292,6 +299,8 @@ public class StatReportServiceImpl extends ServiceImpl<BizStatReportMapper, BizS
     }
 
     public IPage<StatReportVO.Row> listPage(StatReportDTO.QueryPage dto) {
+        // 科室数据权限收口：列表按岗位可见科室集合过滤
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizStatReport> qw = new LambdaQueryWrapper<BizStatReport>()
                 .select(BizStatReport.class, fi -> !"payload".equals(fi.getProperty()))
                 .and(TextUtil.hasText(dto.getKeyword()), w -> w
@@ -299,6 +308,7 @@ public class StatReportServiceImpl extends ServiceImpl<BizStatReportMapper, BizS
                         .or().like(BizStatReport::getTitle, dto.getKeyword().trim()))
                 .eq(dto.getReportType() != null, BizStatReport::getReportType, dto.getReportType())
                 .eq(dto.getStatus() != null, BizStatReport::getStatus, dto.getStatus())
+                .in(deptIds != null, BizStatReport::getDeptId, deptIds)
                 .eq(TextUtil.hasText(dto.getPeriodValue()), BizStatReport::getPeriodValue,
                         dto.getPeriodValue() == null ? null : dto.getPeriodValue().trim())
                 .ge(dto.getStartDate() != null, BizStatReport::getGenerateTime, dto.getStartDate())
@@ -318,6 +328,8 @@ public class StatReportServiceImpl extends ServiceImpl<BizStatReportMapper, BizS
         if (r == null) {
             throw new BusinessException("上报台账不存在");
         }
+        // 科室数据权限：详情/报出/作废等单据操作统一在取单入口校验（全院台账 dept_id 为空，受限岗位不可见）
+        deptScopeService.assertDeptAccessible(r.getDeptId());
         return r;
     }
 
@@ -358,4 +370,5 @@ public class StatReportServiceImpl extends ServiceImpl<BizStatReportMapper, BizS
         v.setVoidReason(r.getVoidReason());
         v.setRemark(r.getRemark());
     }
+
 }

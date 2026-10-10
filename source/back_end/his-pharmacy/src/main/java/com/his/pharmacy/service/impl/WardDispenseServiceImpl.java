@@ -24,6 +24,7 @@ import com.his.pharmacy.vo.WardDispenseCandidateVO;
 import com.his.pharmacy.vo.WardDispenseStatsVO;
 import com.his.pharmacy.vo.WardDispenseVO;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -52,6 +54,7 @@ public class WardDispenseServiceImpl extends ServiceImpl<BizWardDispenseItemMapp
     private final PharmacyService pharmacyService;
     private final WardDispenseChargeInvoker chargeInvoker;
     private final RedisSequenceService redisSequenceService;
+    private final DeptScopeService deptScopeService;
 
     @Override
     public List<WardDispenseCandidateVO> candidates(Long wardId, Long admissionId, LocalDate dispenseDate) {
@@ -59,6 +62,8 @@ public class WardDispenseServiceImpl extends ServiceImpl<BizWardDispenseItemMapp
         if (wardId == null) {
             throw new BusinessException("病区不能为空");
         }
+        // 病区数据权限：前端选病区（B 类），越权病区直接拒绝
+        assertWardAccessible(wardId);
         LocalDate day = dispenseDate != null ? dispenseDate : LocalDate.now();
         return bizWardDispenseItemMapper.selectCandidates(wardId, day, TimeUtil.dayStart(day), TimeUtil.dayEnd(day), admissionId);
     }
@@ -147,8 +152,9 @@ public class WardDispenseServiceImpl extends ServiceImpl<BizWardDispenseItemMapp
     @Override
     public PageResult<WardDispenseVO> listPage(WardDispenseQueryPageDTO dto) {
         Page<WardDispenseVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
+        List<Long> wardIds = scopedWardIds(dto.getWardId());
         List<WardDispenseVO> records = bizWardDispenseMapper.selectDispensePage(
-                page, dto.getWardId(), dto.getDispenseDate(), dto.getPatientName(), dto.getStatus());
+                page, dto.getWardId(), wardIds, dto.getDispenseDate(), dto.getPatientName(), dto.getStatus());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 
@@ -158,6 +164,7 @@ public class WardDispenseServiceImpl extends ServiceImpl<BizWardDispenseItemMapp
         if (vo == null) {
             throw new BusinessException("摆药单不存在或已删除");
         }
+        assertWardAccessible(vo.getWardId());
         vo.setItems(bizWardDispenseItemMapper.selectItemsByDispenseId(id));
         return vo;
     }
@@ -170,6 +177,7 @@ public class WardDispenseServiceImpl extends ServiceImpl<BizWardDispenseItemMapp
             throw new BusinessException("当前用户信息不存在");
         }
         BizWardDispenseItem item = requireItem(dto.getItemId());
+        assertWardAccessible(item.getWardId());
         if (item.getStatus() == null || item.getStatus() != BizWardDispenseItem.STATUS_PENDING) {
             throw new BusinessException("仅待配药明细允许配药（当前状态码 " + item.getStatus() + "）");
         }
@@ -213,6 +221,7 @@ public class WardDispenseServiceImpl extends ServiceImpl<BizWardDispenseItemMapp
             throw new BusinessException("当前用户信息不存在");
         }
         BizWardDispenseItem item = requireItem(dto.getItemId());
+        assertWardAccessible(item.getWardId());
         if (item.getStatus() == null || item.getStatus() != BizWardDispenseItem.STATUS_DISPENSED) {
             throw new BusinessException("仅已配药明细允许核对（当前状态码 " + item.getStatus() + "）");
         }
@@ -242,6 +251,7 @@ public class WardDispenseServiceImpl extends ServiceImpl<BizWardDispenseItemMapp
             throw new BusinessException("当前用户信息不存在");
         }
         BizWardDispenseItem item = requireItem(dto.getItemId());
+        assertWardAccessible(item.getWardId());
         if (item.getStatus() == null
                 || (item.getStatus() != BizWardDispenseItem.STATUS_DISPENSED
                 && item.getStatus() != BizWardDispenseItem.STATUS_CHECKED)) {
@@ -274,22 +284,53 @@ public class WardDispenseServiceImpl extends ServiceImpl<BizWardDispenseItemMapp
     @Override
     public WardDispenseStatsVO stats(LocalDate dispenseDate, Long wardId) {
         LocalDate day = dispenseDate != null ? dispenseDate : LocalDate.now();
+        List<Long> wardIds = scopedWardIds(wardId);
         WardDispenseStatsVO vo = new WardDispenseStatsVO();
-        vo.setPending(countItems(day, wardId, BizWardDispenseItem.STATUS_PENDING));
-        vo.setDispensed(countItems(day, wardId, BizWardDispenseItem.STATUS_DISPENSED));
-        vo.setChecked(countItems(day, wardId, BizWardDispenseItem.STATUS_CHECKED));
-        vo.setReturned(countItems(day, wardId, BizWardDispenseItem.STATUS_RETURNED));
+        vo.setPending(countItems(day, wardIds, BizWardDispenseItem.STATUS_PENDING));
+        vo.setDispensed(countItems(day, wardIds, BizWardDispenseItem.STATUS_DISPENSED));
+        vo.setChecked(countItems(day, wardIds, BizWardDispenseItem.STATUS_CHECKED));
+        vo.setReturned(countItems(day, wardIds, BizWardDispenseItem.STATUS_RETURNED));
         vo.setDispenseCount(bizWardDispenseMapper.selectCount(new LambdaQueryWrapper<BizWardDispense>()
                 .eq(BizWardDispense::getDispenseDate, day)
-                .eq(wardId != null, BizWardDispense::getWardId, wardId)));
+                .in(wardIds != null, BizWardDispense::getWardId, wardIds)));
         return vo;
     }
 
-    private long countItems(LocalDate day, Long wardId, int status) {
+    private long countItems(LocalDate day, List<Long> wardIds, int status) {
         return bizWardDispenseItemMapper.selectCount(new LambdaQueryWrapper<BizWardDispenseItem>()
                 .eq(BizWardDispenseItem::getDispenseDate, day)
-                .eq(wardId != null, BizWardDispenseItem::getWardId, wardId)
+                .in(wardIds != null, BizWardDispenseItem::getWardId, wardIds)
                 .eq(BizWardDispenseItem::getStatus, status));
+    }
+
+    /**
+     * 病区数据权限（ward_id 是 sys_ward 主键不是科室ID，须经 sys_ward.dept_id 折算后再判）
+     */
+    private void assertWardAccessible(Long wardId) {
+        if (wardId == null) {
+            return;
+        }
+        deptScopeService.assertDeptAccessible(bizWardDispenseMapper.selectWardDeptId(wardId));
+    }
+
+    /** null=不限病区；非空=授权科室折算出的病区集合（空集合一律当配置缺失拒掉，IN () 是语法错误） */
+    private List<Long> scopedWardIds(Long requestedWardId) {
+        if (requestedWardId != null) {
+            assertWardAccessible(requestedWardId);
+            return List.of(requestedWardId);
+        }
+        Set<Long> allowed = deptScopeService.allowedDeptIds();
+        if (allowed == null) {
+            return null;
+        }
+        if (allowed.isEmpty()) {
+            throw new BusinessException("当前岗位未绑定任何科室，无法查看相关数据");
+        }
+        List<Long> wardIds = bizWardDispenseMapper.selectWardIdsByDeptIds(List.copyOf(allowed));
+        if (wardIds.isEmpty()) {
+            throw new BusinessException("当前岗位授权科室下没有绑定的病区，无法查看相关数据");
+        }
+        return wardIds;
     }
 
     /**

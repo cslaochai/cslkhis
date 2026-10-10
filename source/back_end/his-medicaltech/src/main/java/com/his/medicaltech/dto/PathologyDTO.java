@@ -331,6 +331,11 @@ public class PathologyDTO {
         private LocalDate visitDate;
 
         /**
+         * 申请科室ID（科室数据权限收口用）
+         */
+        private Long applyDeptId;
+
+        /**
          * 申请科室
          */
         private String applyDeptName;

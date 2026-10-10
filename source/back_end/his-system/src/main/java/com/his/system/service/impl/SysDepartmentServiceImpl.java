@@ -13,7 +13,7 @@ import com.his.system.entity.SysDepartment;
 import com.his.system.entity.SysEmployee;
 import com.his.system.mapper.SysDepartmentMapper;
 import com.his.system.mapper.SysEmployeeMapper;
-import com.his.system.provider.DeptScopeProvider;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.SysDepartmentService;
 import com.his.system.vo.DepartmentSelectListVO;
 import com.his.system.vo.DepartmentVO;
@@ -35,7 +35,7 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
      * 顶级部门的固定编码：它既是树根也是「不许删、不许改父节点」的判据。
      */
     private static final String ROOT_DEPT_CODE = "1001";
-    private final DeptScopeProvider deptScopeProvider;
+    private final DeptScopeService deptScopeService;
     private final SysDepartmentMapper sysDepartmentMapper;
     private final SysEmployeeMapper sysEmployeeMapper;
 
@@ -71,7 +71,7 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
                 .orderByAsc(SysDepartment::getId);
 
         if (!isAllScope(selectDTO.getScope())) {
-            Set<Long> allowed = deptScopeProvider.allowedDeptIds();
+            Set<Long> allowed = deptScopeService.allowedDeptIds();
             if (allowed != null) {
                 if (allowed.isEmpty()) {
                     return new ArrayList<>();

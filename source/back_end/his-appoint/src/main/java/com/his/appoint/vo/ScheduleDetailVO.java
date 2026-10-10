@@ -32,7 +32,7 @@ public class ScheduleDetailVO {
     private String deptName;
 
     /**
-     * 排班人员ID（sql/195 起语义泛化：医生/护士/技师/药师/收费员同列）
+     * 排班人员ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long doctorId;

@@ -15,7 +15,7 @@ import com.his.system.mapper.SysMenuMapper;
 import com.his.system.mapper.SysRoleMapper;
 import com.his.system.mapper.SysWorkbenchRoleMapper;
 import com.his.system.mapper.SysWorkbenchWidgetMapper;
-import com.his.system.provider.WorkbenchMetricProvider;
+import com.his.system.provider.WorkbenchMetricService;
 import com.his.system.service.WorkbenchService;
 import com.his.system.utils.UserUtils;
 import com.his.system.vo.WorkbenchConfigVO;
@@ -54,9 +54,9 @@ public class WorkbenchServiceImpl extends ServiceImpl<SysWorkbenchWidgetMapper, 
      * 一是本模块编译期不认识任何业务域，二是首次取数才解析，避免启动期把各域
      * Service 连带拉起（注册表里 status=0 的占位卡本来就没有 bean）。
      */
-    private final ObjectProvider<WorkbenchMetricProvider> metricProviders;
+    private final ObjectProvider<WorkbenchMetricService> metricProviders;
 
-    private volatile Map<String, WorkbenchMetricProvider> providerMap;
+    private volatile Map<String, WorkbenchMetricService> providerMap;
 
     @Override
     public WorkbenchConfigVO getConfig() {
@@ -88,11 +88,11 @@ public class WorkbenchServiceImpl extends ServiceImpl<SysWorkbenchWidgetMapper, 
         if (user == null) {
             return Collections.emptyList();
         }
-        Map<String, WorkbenchMetricProvider> providers = providers();
+        Map<String, WorkbenchMetricService> providers = providers();
         return getConfig().getWidgets().stream().map(widget -> {
             WorkbenchDataVO item = new WorkbenchDataVO();
             item.setCode(widget.getWidgetCode());
-            WorkbenchMetricProvider provider = providers.get(widget.getWidgetCode());
+            WorkbenchMetricService provider = providers.get(widget.getWidgetCode());
             if (provider == null) {
                 return item;
             }
@@ -215,12 +215,12 @@ public class WorkbenchServiceImpl extends ServiceImpl<SysWorkbenchWidgetMapper, 
         });
     }
 
-    private Map<String, WorkbenchMetricProvider> providers() {
-        Map<String, WorkbenchMetricProvider> current = providerMap;
+    private Map<String, WorkbenchMetricService> providers() {
+        Map<String, WorkbenchMetricService> current = providerMap;
         if (current == null) {
             current = new LinkedHashMap<>();
-            for (WorkbenchMetricProvider provider : metricProviders) {
-                WorkbenchMetricProvider previous = current.putIfAbsent(provider.widgetCode(), provider);
+            for (WorkbenchMetricService provider : metricProviders) {
+                WorkbenchMetricService previous = current.putIfAbsent(provider.widgetCode(), provider);
                 if (previous != null) {
                     throw new IllegalStateException("工作台卡片取数 bean 编码重复：" + provider.widgetCode());
                 }

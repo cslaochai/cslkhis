@@ -21,6 +21,10 @@ public interface BizAdverseEventMapper extends BaseMapper<BizAdverseEvent> {
      * ⚠ ORDER BY 必须补唯一二级键 id（同秒上报顺序不稳定 → 翻页重复+丢行，且不报错）
      * ⚠ 日期过滤用 DATE(report_time)：`report_time <= '2026-09-23'` 会漏掉当天全部事件
      * ⚠ 普通 @Select（非 script）里比较符写真字符 `<>`，写 `&lt;&gt;` 会被原样发给 MySQL（G9 踩过）
+     * <p>
+     * deptIds 是 DeptScopeProvider 收口后的科室集合（见 AdverseEventServiceImpl#scopedDeptIds）：
+     * null = 当前角色不限科室（全院）；非 null = 只能看集合内科室。前端传的 occurDeptId
+     * 必须先过 resolveDeptId（越权科室直接报错），归一化结果已融合进 deptIds，SQL 不再单收等值参数。
      */
     @Select("<script>" +
             "SELECT e.* FROM biz_adverse_event e " +
@@ -29,7 +33,8 @@ public interface BizAdverseEventMapper extends BaseMapper<BizAdverseEvent> {
             "<if test='eventType != null'> AND e.event_type = #{eventType} </if> " +
             "<if test='eventLevel != null'> AND e.event_level = #{eventLevel} </if> " +
             "<if test='status != null'> AND e.status = #{status} </if> " +
-            "<if test='occurDeptId != null'> AND e.occur_dept_id = #{occurDeptId} </if> " +
+            "<if test='deptIds != null'> AND e.occur_dept_id IN " +
+            "<foreach collection='deptIds' item='d' open='(' separator=',' close=')'>#{d}</foreach> </if> " +
             "<if test='keyword != null and keyword != \"\"'> AND (e.title LIKE CONCAT('%', #{keyword}, '%') " +
             "   OR e.description LIKE CONCAT('%', #{keyword}, '%') OR e.patient_name LIKE CONCAT('%', #{keyword}, '%')) </if> " +
             "<if test='dateStart != null and dateStart != \"\"'> AND DATE(e.report_time) &gt;= #{dateStart} </if> " +
@@ -41,7 +46,7 @@ public interface BizAdverseEventMapper extends BaseMapper<BizAdverseEvent> {
                                          @Param("eventType") Integer eventType,
                                          @Param("eventLevel") Integer eventLevel,
                                          @Param("status") Integer status,
-                                         @Param("occurDeptId") Long occurDeptId,
+                                         @Param("deptIds") java.util.List<Long> deptIds,
                                          @Param("keyword") String keyword,
                                          @Param("dateStart") String dateStart,
                                          @Param("dateEnd") String dateEnd);
@@ -97,14 +102,27 @@ public interface BizAdverseEventMapper extends BaseMapper<BizAdverseEvent> {
     /**
      * 工作台统计（本月口径）：
      * monthReported = 本自然月上报数；pending = 状态 1；sentinel = 本月 I 级警讯；closed = 状态 4（本月上报口径）
+     * <p>
+     * deptIds 为科室数据权限收口集合（null = 全院）：统计与列表同口径，否则护士工作台
+     * 看到的"待处理/警讯"是全院数字，与列表页对不上。
      */
-    @Select("SELECT " +
+    @Select("<script>" +
+            "SELECT " +
             "  (SELECT COUNT(*) FROM biz_adverse_event WHERE del_flag = 0 " +
-            "     AND report_time >= DATE_FORMAT(NOW(), '%Y-%m-01')) AS monthReported, " +
-            "  (SELECT COUNT(*) FROM biz_adverse_event WHERE del_flag = 0 AND status = 1) AS pending, " +
+            "     AND report_time >= DATE_FORMAT(NOW(), '%Y-%m-01') " +
+            "     <if test='deptIds != null'> AND occur_dept_id IN " +
+            "       <foreach collection='deptIds' item='d' open='(' separator=',' close=')'>#{d}</foreach></if>) AS monthReported, " +
+            "  (SELECT COUNT(*) FROM biz_adverse_event WHERE del_flag = 0 AND status = 1 " +
+            "     <if test='deptIds != null'> AND occur_dept_id IN " +
+            "       <foreach collection='deptIds' item='d' open='(' separator=',' close=')'>#{d}</foreach></if>) AS pending, " +
             "  (SELECT COUNT(*) FROM biz_adverse_event WHERE del_flag = 0 AND event_level = 1 " +
-            "     AND report_time >= DATE_FORMAT(NOW(), '%Y-%m-01')) AS sentinel, " +
+            "     AND report_time >= DATE_FORMAT(NOW(), '%Y-%m-01') " +
+            "     <if test='deptIds != null'> AND occur_dept_id IN " +
+            "       <foreach collection='deptIds' item='d' open='(' separator=',' close=')'>#{d}</foreach></if>) AS sentinel, " +
             "  (SELECT COUNT(*) FROM biz_adverse_event WHERE del_flag = 0 AND status = 4 " +
-            "     AND report_time >= DATE_FORMAT(NOW(), '%Y-%m-01')) AS closed")
-    AdverseEventStatsVO selectMonthStats();
+            "     AND report_time >= DATE_FORMAT(NOW(), '%Y-%m-01') " +
+            "     <if test='deptIds != null'> AND occur_dept_id IN " +
+            "       <foreach collection='deptIds' item='d' open='(' separator=',' close=')'>#{d}</foreach></if>) AS closed" +
+            "</script>")
+    AdverseEventStatsVO selectMonthStats(@Param("deptIds") java.util.List<Long> deptIds);
 }

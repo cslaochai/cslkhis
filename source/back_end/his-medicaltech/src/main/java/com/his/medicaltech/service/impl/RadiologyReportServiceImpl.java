@@ -35,6 +35,7 @@ import com.his.medicaltech.vo.RadioReportDetailVO;
 import com.his.medicaltech.vo.RadioReportListVO;
 import com.his.medicaltech.vo.RadioReportTemplateVO;
 import com.his.system.enums.BizTypeEnum;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.SysAuditLogService;
 import com.his.system.service.SysMessageService;
@@ -67,6 +68,7 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
     private final SysAuditLogService sysAuditLogService;
     private final SysMessageService sysMessageService;
     private final RedisSequenceService redisSequenceService;
+    private final DeptScopeService deptScopeService;
 
     // 查询
 
@@ -74,6 +76,7 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
     public PageResult<RadioReportListVO> listPage(RadioReportQueryPageDTO query) {
         IPage<RadioReportListVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<RadioReportListVO> list = radioReportMapper.selectWorkbenchPage(page,
+                deptScopeService.scopedDeptIds(null),
                 TextUtil.trim(query.getKeyword()), query.getReportStatus(), query.getPositiveFlag(),
                 query.getOnlyUnwritten(), TextUtil.trim(query.getStartDate()), TextUtil.trim(query.getEndDate()));
         fillText(list);
@@ -326,6 +329,8 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
         if (Objects.equals(InsRecordStatusEnum.CANCELLED.getCode(), record.getRecordStatus())) {
             throw new BusinessException("该检查已取消，不能再写报告");
         }
+        // 详情与写报告同口径收口：跨科室拿 recordId 直读也会被这里挡住
+        deptScopeService.assertDeptAccessible(record.getInspectionDeptId());
         return record;
     }
 

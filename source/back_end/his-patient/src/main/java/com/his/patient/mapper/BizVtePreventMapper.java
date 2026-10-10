@@ -46,11 +46,13 @@ public interface BizVtePreventMapper extends BaseMapper<BizVtePrevent> {
                AND (#{q.measureCode} IS NULL OR v.measure_code = #{q.measureCode})
                AND (#{q.keyword} IS NULL OR #{q.keyword} = '' OR v.patient_name LIKE CONCAT('%', #{q.keyword}, '%')
                     OR v.patient_no LIKE CONCAT('%', #{q.keyword}, '%'))
+              <if test="deptIds != null"> AND v.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
              ORDER BY v.plan_date DESC, v.id DESC
             </script>
             """)
     IPage<VtePreventVO> selectPreventPage(Page<VtePreventVO> page,
-                                          @Param("q") VtePreventQueryPageDTO query);
+                                          @Param("q") VtePreventQueryPageDTO query,
+                                          @Param("deptIds") List<Long> deptIds);
 
     /**
      * 某次住院名下全部措施记录（按措施码顺序：基础→物理→药物）
@@ -110,6 +112,7 @@ public interface BizVtePreventMapper extends BaseMapper<BizVtePrevent> {
                AND (#{q.riskLevel} IS NULL OR la.risk_level = #{q.riskLevel})
                AND (#{q.keyword} IS NULL OR #{q.keyword} = '' OR p.patient_name LIKE CONCAT('%', #{q.keyword}, '%')
                     OR p.patient_no LIKE CONCAT('%', #{q.keyword}, '%') OR a.admission_no LIKE CONCAT('%', #{q.keyword}, '%'))
+              <if test="deptIds != null"> AND a.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
                <choose>
                  <when test="q.preventStatus != null and q.preventStatus == 0">
                    AND COALESCE(pv.done_count, 0) = 0
@@ -128,7 +131,8 @@ public interface BizVtePreventMapper extends BaseMapper<BizVtePrevent> {
             </script>
             """)
     IPage<VteRiskListVO> selectRiskPage(Page<VteRiskListVO> page,
-                                        @Param("q") com.his.patient.dto.VteRiskQueryPageDTO query);
+                                        @Param("q") com.his.patient.dto.VteRiskQueryPageDTO query,
+                                        @Param("deptIds") List<Long> deptIds);
 
     /**
      * 名单行的措施状态明细（一次查回多行，服务端拼到对应 admission 上）

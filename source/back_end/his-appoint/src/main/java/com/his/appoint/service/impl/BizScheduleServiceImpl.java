@@ -26,7 +26,7 @@ import com.his.system.dto.StaffScheduleUpsertDTO;
 import com.his.system.entity.BizShift;
 import com.his.system.entity.BizStaffSchedule;
 import com.his.system.entity.CurrentUser;
-import com.his.system.provider.DeptScopeProvider;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.ShiftService;
 import com.his.system.service.StaffScheduleService;
 import com.his.system.service.SysClinicRoomService;
@@ -52,7 +52,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSchedule> implements BizScheduleService {
 
-    private final DeptScopeProvider deptScopeProvider;
+    private final DeptScopeService deptScopeService;
 
     private final BizScheduleMapper bizScheduleMapper;
 
@@ -73,11 +73,11 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
     @Override
     public List<BizSchedule> listPage(ScheduleQueryDTO queryDTO) {
         LambdaQueryWrapper<BizSchedule> wrapper = new LambdaQueryWrapper<>();
-        Long scopedDeptId = deptScopeProvider.resolveDeptId(queryDTO.getDeptId());
+        Long scopedDeptId = deptScopeService.resolveDeptId(queryDTO.getDeptId());
         if (scopedDeptId != null) {
             wrapper.eq(BizSchedule::getDeptId, scopedDeptId);
-        } else if (deptScopeProvider.isScoped()) {
-            wrapper.in(BizSchedule::getDeptId, deptScopeProvider.allowedDeptIds());
+        } else if (deptScopeService.isScoped()) {
+            wrapper.in(BizSchedule::getDeptId, deptScopeService.allowedDeptIds());
         }
         wrapper.eq(queryDTO.getStaffType() != null, BizSchedule::getStaffType, queryDTO.getStaffType())
                 .eq(queryDTO.getDoctorId() != null, BizSchedule::getDoctorId, queryDTO.getDoctorId())
@@ -90,11 +90,11 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
     @Override
     public List<BizSchedule> scheduleSelectList(ScheduleSelectQueryDTO scheduleQueryDTO) {
         LambdaQueryWrapper<BizSchedule> wrapper = new LambdaQueryWrapper<>();
-        Long scopedDeptId = deptScopeProvider.resolveDeptId(scheduleQueryDTO.getDeptId());
+        Long scopedDeptId = deptScopeService.resolveDeptId(scheduleQueryDTO.getDeptId());
         if (scopedDeptId != null) {
             wrapper.eq(BizSchedule::getDeptId, scopedDeptId);
-        } else if (deptScopeProvider.isScoped()) {
-            wrapper.in(BizSchedule::getDeptId, deptScopeProvider.allowedDeptIds());
+        } else if (deptScopeService.isScoped()) {
+            wrapper.in(BizSchedule::getDeptId, deptScopeService.allowedDeptIds());
         }
         wrapper.eq(BizSchedule::getStaffType, StaffTypeEnum.DOCTOR.getCode())
                 .eq(scheduleQueryDTO.getVisitDate() != null,
@@ -274,7 +274,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
     }
 
     /**
-     * 岗位类别收口（sql/195）：写库前按岗位裁剪字段，前端传什么都不算。
+     * 岗位类别收口
      */
     private void applyStaffType(BizSchedule schedule) {
         StaffTypeEnum.assertValid(schedule.getStaffType());
@@ -675,7 +675,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         if (ScheduleStatusEnum.stopped(schedule.getStatus())) {
             throw new BusinessException("停诊中的班次不允许加号，请先启用");
         }
-        // 加号是给医生出诊班加号源：出勤岗压根没有号源池，加了也挂不出去（sql/195）
+        // 加号是给医生出诊班加号源：出勤岗压根没有号源池，加了也挂不出去
         if (!StaffTypeEnum.hasSource(schedule.getStaffType())) {
             throw new BusinessException("只有医生出诊排班能加号："
                     + StaffTypeEnum.getText(schedule.getStaffType()) + "岗位是出勤排班，不对外放号");

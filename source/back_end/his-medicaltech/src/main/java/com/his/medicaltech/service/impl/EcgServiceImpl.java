@@ -27,6 +27,7 @@ import com.his.medicaltech.vo.EcgDetailVO;
 import com.his.medicaltech.vo.EcgListVO;
 import com.his.medicaltech.vo.EcgTemplateVO;
 import com.his.system.enums.BizTypeEnum;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.SysAuditLogService;
 import com.his.system.service.SysMessageService;
@@ -75,6 +76,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
 
     private final RadioReportMapper radioReportMapper;
     private final RedisSequenceService redisSequenceService;
+    private final DeptScopeService deptScopeService;
 
     // 查询
 
@@ -82,6 +84,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
     public PageResult<EcgListVO> listPage(EcgQueryPageDTO query) {
         IPage<EcgListVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<EcgListVO> list = ecgMapper.selectWorkbenchPage(page,
+                deptScopeService.scopedDeptIds(null),
                 TextUtil.trim(query.getKeyword()), query.getCollectPending(), query.getOnlyUnwritten(),
                 query.getReportStatus(), TextUtil.trim(query.getStartDate()), TextUtil.trim(query.getEndDate()));
         fillText(list);
@@ -473,6 +476,11 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         EcgListVO row = ecgMapper.selectWorkbenchByRecordId(recordId);
         if (row == null) {
             throw new BusinessException("检查记录不存在、已删除，或不是心电项目（不在心电工作站受理范围）");
+        }
+        // 详情与写报告同口径收口：跨科室拿 recordId 直读也会被这里挡住
+        BizInspectionRecord rec = bizInspectionRecordMapper.selectById(recordId);
+        if (rec != null) {
+            deptScopeService.assertDeptAccessible(rec.getInspectionDeptId());
         }
         return row;
     }

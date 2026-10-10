@@ -34,6 +34,7 @@ import com.his.patient.service.InpatientService;
 import com.his.patient.vo.CodeOptionVO;
 import com.his.patient.vo.WardVO;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -72,6 +73,8 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
     private final InpatientRecordService inpatientRecordService;
 
     private final RedisSequenceService redisSequenceService;
+
+    private final DeptScopeService deptScopeService;
 
     /**
      * 追加备注（不覆盖已有内容；超 500 截断，避免超长直接 SQL 报错）
@@ -131,7 +134,8 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         query.setApplyDateTo(normalizeTo(query.getApplyDateTo()));
         query.setPatientAbo(BloodTypeEnum.normalizeAbo(query.getPatientAbo()));
         IPage<TransfusionApplyVO> page = bizTransfusionApplyMapper.selectApplyPage(
-                new Page<>(query.getPageNum(), query.getPageSize()), query);
+                new Page<>(query.getPageNum(), query.getPageSize()), query,
+                deptScopeService.scopedDeptIds(query.getApplyDeptId()));
         // 列表不逐行查血袋（N+1），只算进度；血袋明细在详情接口给
         page.getRecords().forEach(vo -> decorate(vo, false));
         return page;
@@ -143,6 +147,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         if (vo == null) {
             throw new BusinessException("输血申请单不存在");
         }
+        deptScopeService.assertDeptAccessible(vo.getApplyDeptId());
         decorate(vo, true);
         vo.setApproveRecords(approveListByApply(applyId));
         return vo;
@@ -452,19 +457,25 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
 
     @Override
     public TransfusionApplyVO.ApproveStats approveStats() {
+        // 科室数据权限收口：统计口径与列表一致，按岗位可见科室集合过滤
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         TransfusionApplyVO.ApproveStats stats = new TransfusionApplyVO.ApproveStats();
         stats.setPending(bizTransfusionApplyMapper.selectCount(
                 new LambdaQueryWrapper<BizTransfusionApply>()
-                        .eq(BizTransfusionApply::getApproveStatus, TransfusionApproveStatusEnum.PENDING.getCode())));
+                        .eq(BizTransfusionApply::getApproveStatus, TransfusionApproveStatusEnum.PENDING.getCode())
+                        .in(deptIds != null, BizTransfusionApply::getApplyDeptId, deptIds)));
         stats.setApproved(bizTransfusionApplyMapper.selectCount(
                 new LambdaQueryWrapper<BizTransfusionApply>()
-                        .eq(BizTransfusionApply::getApproveStatus, TransfusionApproveStatusEnum.APPROVED.getCode())));
+                        .eq(BizTransfusionApply::getApproveStatus, TransfusionApproveStatusEnum.APPROVED.getCode())
+                        .in(deptIds != null, BizTransfusionApply::getApplyDeptId, deptIds)));
         stats.setRejected(bizTransfusionApplyMapper.selectCount(
                 new LambdaQueryWrapper<BizTransfusionApply>()
-                        .eq(BizTransfusionApply::getApproveStatus, TransfusionApproveStatusEnum.REJECTED.getCode())));
+                        .eq(BizTransfusionApply::getApproveStatus, TransfusionApproveStatusEnum.REJECTED.getCode())
+                        .in(deptIds != null, BizTransfusionApply::getApplyDeptId, deptIds)));
         stats.setMakeupPending(bizTransfusionApplyMapper.selectCount(
                 new LambdaQueryWrapper<BizTransfusionApply>()
-                        .eq(BizTransfusionApply::getApproveStatus, TransfusionApproveStatusEnum.MAKEUP_PENDING.getCode())));
+                        .eq(BizTransfusionApply::getApproveStatus, TransfusionApproveStatusEnum.MAKEUP_PENDING.getCode())
+                        .in(deptIds != null, BizTransfusionApply::getApplyDeptId, deptIds)));
         List<TransfusionApplyVO.LevelCount> byLevel = new ArrayList<>();
         for (int level = 1; level <= 3; level++) {
             TransfusionApplyVO.LevelCount lc = new TransfusionApplyVO.LevelCount();
@@ -473,7 +484,8 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
             lc.setCount(bizTransfusionApplyMapper.selectCount(
                     new LambdaQueryWrapper<BizTransfusionApply>()
                             .eq(BizTransfusionApply::getApproveStatus, TransfusionApproveStatusEnum.APPROVED.getCode())
-                            .eq(BizTransfusionApply::getApproveLevel, level)));
+                            .eq(BizTransfusionApply::getApproveLevel, level)
+                            .in(deptIds != null, BizTransfusionApply::getApplyDeptId, deptIds)));
             byLevel.add(lc);
         }
         stats.setByLevel(byLevel);
@@ -1170,6 +1182,8 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         if (entity == null) {
             throw new BusinessException("输血申请单不存在");
         }
+        // 科室数据权限：审核/配血/发血/输注/完成/不良反应/取消/修改等单据操作统一在取单入口校验
+        deptScopeService.assertDeptAccessible(entity.getApplyDeptId());
         return entity;
     }
 
@@ -1219,4 +1233,5 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
      */
     private record Parsed(String from, String to) {
     }
+
 }

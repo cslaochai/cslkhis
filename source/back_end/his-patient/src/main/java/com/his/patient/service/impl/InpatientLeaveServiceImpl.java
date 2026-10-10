@@ -26,7 +26,7 @@ import com.his.patient.vo.InpatientLeaveVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysConfig;
 import com.his.system.mapper.SysConfigMapper;
-import com.his.system.provider.DeptScopeProvider;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -72,7 +72,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
      * 配置缺失时的兜底上限（小时）。宁可保守，也不回落成「无上限」。
      */
     private static final int MAX_HOURS_FALLBACK = 72;
-    private final DeptScopeProvider deptScopeProvider;
+    private final DeptScopeService deptScopeService;
     private final BizInpatientLeaveMapper bizInpatientLeaveMapper;
     private final RedisSequenceService redisSequenceService;
     private final EmrSignatureService emrSignatureService;
@@ -548,7 +548,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
     }
 
     private void assertDeptAccessible(Long deptId) {
-        if (!deptScopeProvider.canAccessDept(deptId)) {
+        if (!deptScopeService.canAccessDept(deptId)) {
             throw new BusinessException("该请假单所属科室不在当前岗位的数据范围内");
         }
     }
@@ -560,11 +560,11 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
      * {@code dept_id IN ()}，MySQL 报语法错误被兜成 500 —— 看上去像后端挂了，其实是「什么都看不到」。
      */
     private List<Long> scopedDeptIds(Long requestedDeptId) {
-        Long resolved = deptScopeProvider.resolveDeptId(requestedDeptId);
+        Long resolved = deptScopeService.resolveDeptId(requestedDeptId);
         if (resolved != null) {
             return null;
         }
-        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
+        Set<Long> allowed = deptScopeService.allowedDeptIds();
         if (allowed == null) {
             return null;
         }

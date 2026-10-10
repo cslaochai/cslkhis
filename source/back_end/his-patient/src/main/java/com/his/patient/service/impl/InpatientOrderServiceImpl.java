@@ -15,7 +15,6 @@ import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
 import com.his.common.service.RedisSequenceService;
-import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.common.vo.SignatureVO;
@@ -36,7 +35,7 @@ import com.his.patient.vo.WardVO;
 import com.his.system.dto.TechAuthGateDTO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.enums.BizTypeEnum;
-import com.his.system.provider.DeptScopeProvider;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.EmployeeTechAuthService;
 import com.his.system.service.SysMessageService;
@@ -104,7 +103,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
      * 科室数据权限（M6）：受限岗位（data_scope=本科室）读医嘱/执行队列时按患者当前科室收口，
      * 与 InpatientServiceImpl.listPage 同口径。
      */
-    private final DeptScopeProvider deptScopeProvider;
+    private final DeptScopeService deptScopeService;
 
     // 开立 / 修改
 
@@ -758,7 +757,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
      * 读侧科室数据权限集合：受限岗位返回授权科室集合（按患者当前科室过滤）；全院角色返回 null=不收口。
      */
     private List<Long> readScopeDeptIds() {
-        return deptScopeProvider.isScoped() ? List.copyOf(deptScopeProvider.allowedDeptIds()) : null;
+        return deptScopeService.isScoped() ? List.copyOf(deptScopeService.allowedDeptIds()) : null;
     }
 
     // 计划行（按天生成 / 查询补当天）

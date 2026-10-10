@@ -9,6 +9,8 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
+import java.util.List;
+
 /**
  * 住院会诊 Mapper。
  */
@@ -39,7 +41,7 @@ public interface BizConsultationMapper extends BaseMapper<BizConsultation> {
     /**
      * 会诊分页（申请方工作台 / 会诊科室工作台共用）
      */
-    @Select(PROJECTION + """
+    @Select("<script>" + PROJECTION + """
             WHERE c.del_flag = 0
               AND (#{q.admissionId} IS NULL OR c.admission_id = #{q.admissionId})
               AND (#{q.patientId} IS NULL OR c.patient_id = #{q.patientId})
@@ -55,10 +57,14 @@ public interface BizConsultationMapper extends BaseMapper<BizConsultation> {
                    OR c.reason LIKE CONCAT('%', #{q.keyword}, '%')
                    OR p.patient_name LIKE CONCAT('%', #{q.keyword}, '%')
                    OR p.patient_no LIKE CONCAT('%', #{q.keyword}, '%'))
+              <if test="deptIds != null"> AND (c.from_dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+                   OR c.to_dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>)</if>
             ORDER BY FIELD(c.consult_status, 0, 3, 1, 2), c.is_urgent DESC, c.apply_time DESC, c.consultation_id DESC
+            </script>
             """)
     IPage<ConsultationVO> selectConsultationPage(IPage<ConsultationVO> page,
-                                                 @Param("q") ConsultationQueryPageDTO query);
+                                                 @Param("q") ConsultationQueryPageDTO query,
+                                                 @Param("deptIds") List<Long> deptIds);
 
     /**
      * 会诊详情（含患者/床位/科室/回写病历号）
@@ -70,13 +76,15 @@ public interface BizConsultationMapper extends BaseMapper<BizConsultation> {
      * 未完成会诊数（待应答 + 已应答）：工作台角标用
      */
     @Select("""
+            <script>
             SELECT COUNT(*) FROM biz_consultation
             WHERE del_flag = 0
               AND consult_status IN (0, 3)
-              AND (#{toDeptId} IS NULL OR to_dept_id = #{toDeptId})
               AND (#{admissionId} IS NULL OR admission_id = #{admissionId})
+              <if test="deptIds != null"> AND to_dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
+            </script>
             """)
-    long countUnfinished(@Param("toDeptId") Long toDeptId, @Param("admissionId") Long admissionId);
+    long countUnfinished(@Param("deptIds") List<Long> deptIds, @Param("admissionId") Long admissionId);
 
     /**
      * 科室名（取不到返回 null，由调用方决定怎么显示 —— 绝不编一个科室名）

@@ -20,7 +20,7 @@ import com.his.patient.vo.NurseScheduleVO;
 import com.his.system.dto.StaffPlanRuleUpsertDTO;
 import com.his.system.dto.StaffScheduleUpsertDTO;
 import com.his.system.entity.BizStaffPlanRule;
-import com.his.system.provider.DeptScopeProvider;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.StaffPlanRuleService;
 import com.his.system.service.StaffScheduleService;
 import lombok.RequiredArgsConstructor;
@@ -62,7 +62,7 @@ public class NurseScheduleServiceImpl extends ServiceImpl<BizNurseScheduleMapper
      * 排班单元类型：2-门诊科室（sql/209）
      */
     private static final int UNIT_CLINIC = 2;
-    private final DeptScopeProvider deptScopeProvider;
+    private final DeptScopeService deptScopeService;
     private final BizNurseScheduleMapper bizNurseScheduleMapper;
     private final StaffScheduleService staffScheduleService;
     /**
@@ -209,7 +209,7 @@ public class NurseScheduleServiceImpl extends ServiceImpl<BizNurseScheduleMapper
     @Override
     public PageResult<NurseScheduleVO.Row> listPage(NurseScheduleDTO.QueryPage query) {
         IPage<NurseScheduleVO.Row> page = new Page<>(query.getPageNum(), query.getPageSize());
-        Long deptId = deptScopeProvider.resolveDeptId(query.getDeptId());
+        Long deptId = deptScopeService.resolveDeptId(query.getDeptId());
         List<Long> deptIds = scopedDeptIds(query.getDeptId());
         List<NurseScheduleVO.Row> records = bizNurseScheduleMapper.selectSchedulePage(page, TextUtil.trimToNull(query.getKeyword()),
                 query.getWardId(), deptId, query.getScheduleStatus(), query.getStartDate(), query.getEndDate(), deptIds);
@@ -326,7 +326,7 @@ public class NurseScheduleServiceImpl extends ServiceImpl<BizNurseScheduleMapper
         if (row == null) {
             throw new BusinessException("排班行不存在或已删除");
         }
-        if (!deptScopeProvider.canAccessDept(row.getDeptId())) {
+        if (!deptScopeService.canAccessDept(row.getDeptId())) {
             throw new BusinessException("无权删除该病区的排班（不在当前岗位的数据范围内）");
         }
         bizNurseScheduleMapper.purgeById(id);
@@ -691,7 +691,7 @@ public class NurseScheduleServiceImpl extends ServiceImpl<BizNurseScheduleMapper
         }
         // 标准只存单元 id，科室归属从病区现取（不在标准行上冗余 dept 列，避免调科后两处不一致）
         NurseScheduleVO.Ward ward = bizNurseScheduleMapper.selectWard(rule.getOrgId());
-        if (ward == null || !deptScopeProvider.canAccessDept(ward.getDeptId())) {
+        if (ward == null || !deptScopeService.canAccessDept(ward.getDeptId())) {
             throw new BusinessException("无权维护该病区的人力标准（不在当前岗位的数据范围内）");
         }
         staffPlanRuleService.deleteById(id);
@@ -986,7 +986,7 @@ public class NurseScheduleServiceImpl extends ServiceImpl<BizNurseScheduleMapper
         if (unit == null) {
             throw new BusinessException(type == UNIT_WARD ? "病区不存在或已停用" : "门诊科室不存在或已停用");
         }
-        if (!deptScopeProvider.canAccessDept(unit.getDeptId())) {
+        if (!deptScopeService.canAccessDept(unit.getDeptId())) {
             throw new BusinessException("无权操作「" + unit.getWardName() + "」的排班（不在当前岗位的数据范围内）");
         }
         return unit;
@@ -1008,7 +1008,7 @@ public class NurseScheduleServiceImpl extends ServiceImpl<BizNurseScheduleMapper
         if (ward == null) {
             throw new BusinessException("病区不存在或已停用");
         }
-        if (!deptScopeProvider.canAccessDept(ward.getDeptId())) {
+        if (!deptScopeService.canAccessDept(ward.getDeptId())) {
             throw new BusinessException("无权操作「" + ward.getWardName() + "」的排班（不在当前岗位的数据范围内）");
         }
         return ward;
@@ -1044,11 +1044,11 @@ public class NurseScheduleServiceImpl extends ServiceImpl<BizNurseScheduleMapper
      * 当前岗位可见科室；null=不收口（全院），空集合用 -1 兜住，避免 IN () 语法错
      */
     private List<Long> scopedDeptIds(Long requestedDeptId) {
-        Long resolved = deptScopeProvider.resolveDeptId(requestedDeptId);
+        Long resolved = deptScopeService.resolveDeptId(requestedDeptId);
         if (resolved != null) {
             return null;
         }
-        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
+        Set<Long> allowed = deptScopeService.allowedDeptIds();
         if (allowed == null) {
             return null;
         }

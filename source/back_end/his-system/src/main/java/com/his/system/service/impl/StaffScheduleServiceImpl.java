@@ -14,7 +14,7 @@ import com.his.system.dto.StaffScheduleSwapDTO;
 import com.his.system.dto.StaffScheduleUpsertDTO;
 import com.his.system.entity.*;
 import com.his.system.mapper.*;
-import com.his.system.provider.DeptScopeProvider;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.ScheduleChangeLogService;
 import com.his.system.service.ShiftService;
 import com.his.system.service.StaffPlanRuleService;
@@ -48,7 +48,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
      */
     private static final int DAYS_OF_WEEK = 7;
     private static final String[] WEEK_DAY_TEXTS = {"周一", "周二", "周三", "周四", "周五", "周六", "周日"};
-    private final DeptScopeProvider deptScopeProvider;
+    private final DeptScopeService deptScopeService;
     private final SysEmployeeMapper sysEmployeeMapper;
     private final SysEmployeePostMapper sysEmployeePostMapper;
     private final SysRoleMapper sysRoleMapper;
@@ -928,7 +928,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
             // 全院级不属于任何科室，人人可见（见 #scoped）
             return;
         }
-        if (!deptScopeProvider.canAccessDept(deptId)) {
+        if (!deptScopeService.canAccessDept(deptId)) {
             throw new BusinessException("没有该科室的排班权限（不在当前岗位的数据范围内）");
         }
     }
@@ -938,10 +938,10 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
      * 「今天全院谁负责」不是敏感信息，收掉等于让人半夜找不到打电话的对象。
      */
     private LambdaQueryWrapper<BizStaffSchedule> scoped(LambdaQueryWrapper<BizStaffSchedule> wrapper) {
-        if (!deptScopeProvider.isScoped()) {
+        if (!deptScopeService.isScoped()) {
             return wrapper;
         }
-        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
+        Set<Long> allowed = deptScopeService.allowedDeptIds();
         if (allowed == null || allowed.isEmpty()) {
             wrapper.eq(BizStaffSchedule::getOrgType, OrgUnitTypeEnum.HOSPITAL.getCode());
             return wrapper;

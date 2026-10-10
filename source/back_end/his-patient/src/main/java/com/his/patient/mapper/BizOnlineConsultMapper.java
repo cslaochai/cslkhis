@@ -30,6 +30,7 @@ public interface BizOnlineConsultMapper extends BaseMapper<BizOnlineConsult> {
                <if test="deptId != null"> AND o.dept_id = #{deptId}</if>
                <if test="doctorId != null"> AND o.doctor_id = #{doctorId}</if>
                <if test="waitingOnly != null and waitingOnly == true"> AND o.status = 1</if>
+               <if test="deptIds != null"> AND o.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
              ORDER BY o.status ASC, o.id DESC
             </script>
             """)
@@ -39,7 +40,8 @@ public interface BizOnlineConsultMapper extends BaseMapper<BizOnlineConsult> {
                                            @Param("status") Integer status,
                                            @Param("deptId") Long deptId,
                                            @Param("doctorId") Long doctorId,
-                                           @Param("waitingOnly") Boolean waitingOnly);
+                                           @Param("waitingOnly") Boolean waitingOnly,
+                                           @Param("deptIds") List<Long> deptIds);
 
     @Select("SELECT o.* FROM biz_online_consult o WHERE o.id = #{id} AND o.del_flag = 0")
     OnlineConsultVO selectOnlineById(@Param("id") Long id);
@@ -47,7 +49,13 @@ public interface BizOnlineConsultMapper extends BaseMapper<BizOnlineConsult> {
     @Select("SELECT d.dept_name FROM sys_department d WHERE d.id = #{deptId} AND d.del_flag = 0")
     String selectDeptName(@Param("deptId") Long deptId);
 
-    @Select("SELECT o.status AS status, COUNT(*) AS cnt FROM biz_online_consult o "
-            + "WHERE o.del_flag = 0 GROUP BY o.status")
-    List<OnlineConsultStatusCountVO> countByStatus();
+    @Select("""
+            <script>
+            SELECT o.status AS status, COUNT(*) AS cnt FROM biz_online_consult o
+             WHERE o.del_flag = 0
+              <if test="deptIds != null"> AND o.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
+             GROUP BY o.status
+            </script>
+            """)
+    List<OnlineConsultStatusCountVO> countByStatus(@Param("deptIds") List<Long> deptIds);
 }

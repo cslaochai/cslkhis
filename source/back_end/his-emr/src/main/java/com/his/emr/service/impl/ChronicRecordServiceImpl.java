@@ -16,6 +16,7 @@ import com.his.emr.mapper.BizChronicRecordMapper;
 import com.his.emr.service.ChronicRecordService;
 import com.his.emr.vo.ChronicMyRecordsVO;
 import com.his.emr.vo.ChronicRecordListVO;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -34,6 +35,7 @@ public class ChronicRecordServiceImpl extends ServiceImpl<BizChronicRecordMapper
 
     private final BizChronicRecordMapper bizChronicRecordMapper;
     private final RedisSequenceService redisSequenceService;
+    private final DeptScopeService deptScopeService;
 
     @Override
     public ChronicRecordListVO upsert(ChronicUpsertDTO dto) {
@@ -70,6 +72,7 @@ public class ChronicRecordServiceImpl extends ServiceImpl<BizChronicRecordMapper
         if (record == null) {
             throw new BusinessException("慢病档案不存在");
         }
+        deptScopeService.assertDeptAccessible(record.getDeptId());
         if (record.getConfirmStatus() != 1) {
             throw new BusinessException("仅「已认定」的慢病档案可作废");
         }
@@ -80,7 +83,9 @@ public class ChronicRecordServiceImpl extends ServiceImpl<BizChronicRecordMapper
 
     @Override
     public PageResult<ChronicRecordListVO> listPage(ChronicQueryPageDTO dto) {
+        List<Long> scope = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizChronicRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(scope != null, BizChronicRecord::getDeptId, scope);
         if (dto.getPatientId() != null) {
             wrapper.eq(BizChronicRecord::getPatientId, dto.getPatientId());
         }

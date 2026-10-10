@@ -32,7 +32,6 @@
         <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div class="mb-2 flex flex-wrap items-center gap-3 text-sm">
             <span class="font-medium text-slate-700">在岗人力对照</span>
-            <span class="text-slate-400">点格子即可排班/改格（一人一天一条）</span>
             <el-tag v-perm="PERM_ADD" effect="plain" size="small" type="info">有排班权限</el-tag>
             <el-tag v-if="!hasPerm(PERM_ADD)" effect="plain" size="small" type="warning">只读（无排班权限）</el-tag>
           </div>
@@ -56,8 +55,6 @@
             </span>
             <el-button v-perm="PERM_EDIT" :loading="gapLoading" size="small" @click="doRecalcDemand">重算需求
             </el-button>
-            <!-- 需求按「当前在院快照」派生，只覆盖今天起 14 天：翻到更早的周本来就没有需求行，
-                 与其让护士长猜「—」是什么意思，不如把话说清楚，并告诉他点一下就有 -->
             <span v-if="!gaps.length" class="w-full text-xs text-amber-600">
               本周（{{ weekStart }} ~ {{ weekEnd }}）没有需求数据：需求按当前在院患者与出诊计划派生，默认覆盖今天起 14 天。点「重算需求」可就本周补算。
             </span>
@@ -66,7 +63,6 @@
             </span>
           </div>
 
-          <!-- 本周出勤执行：闭环第③步。点某一天看逐人对照并可补登/确认缺勤 -->
           <div
               v-loading="attendLoading"
               class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
@@ -405,11 +401,9 @@
                        :value="String(s.shiftId)"/>
           </el-select>
         </el-form-item>
-        <p v-if="cellForm.scheduleStatus !== 1" class="-mt-2 mb-3 text-xs text-slate-400">
-          非「上班」状态不需要班次，保存时服务端会清空该格的班次与工时。</p>
         <el-form-item label="备注">
           <el-input v-model="cellForm.remark" :rows="2" maxlength="500"
-                    placeholder="如：替张三休年假 / 培训原因（原因要写清楚，告警只提示不阻断）" show-word-limit
+                    placeholder="如：外出培训" show-word-limit
                     type="textarea"/>
         </el-form-item>
       </el-form>
@@ -529,26 +523,6 @@
 </template>
 
 <script setup>
-/**
- * 病区护理排班（sql/166，菜单 330 护理管理 / 331 病区护理排班）
- *
- * 为什么不能复用 org.schedule：门诊排班是「科室 × 时段 → 放号源」，护理排班是
- * 「人 × 自然日 → 定班次」，两册班次靠 biz_shift.use_scope 分流（1 门诊 / 2 护理），
- * 后端互相拒绝对方的班次。本页只吃 /nursing/schedule，班次下拉来自矩阵回传的 shifts。
- *
- * 五条口径，改页面前先读完：
- * 1. **一格=一人一天**（uk_nurse_date）。点格保存是 upsert，不是插一条新行；
- *    删除走物理删（唯一键不含 del_flag，软删会让「重排同一人同一天」撞键）。
- * 2. **规则校验只告警不阻断**。人力缺口/周工时超限/连班超限由后端算，前端不判阈值、
- *    也不许「顺手」把告警变成保存前的拦截 —— 病区临时调班是常态，拦死了护士长只能去改库。
- * 3. **矩阵里只显示护理班次册**（后端 use_scope=2 且启用的那 5 条）。班次停用/删除时
- *    回显不出来就连带清空 shiftId，留一个看不见的班次 ID 提交必然被后端拦。
- * 4. **数据范围由后端按当前岗位收口**：病区下拉就只有本人可见科室的病区，跨病区直接报错。
- *    前端不给「全部病区」开关，也不按病区名自己过滤。
- * 5. 数字（在岗人数、工时、告警条数）一律读后端字段，禁止数当前页或前端自算。
- *
- * 日期入参一律 `YYYY-MM-DD`，不传 ISO T 分隔（AGENTS §3）。
- */
 import {computed, onMounted, onUnmounted, reactive, ref, watch} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {ArrowLeft, CopyDocument, Delete, Plus, Refresh, Search} from '@element-plus/icons-vue';
@@ -666,8 +640,6 @@ const loadMatrix = async () => {
   }
 };
 // ---------------- 本周护理需求缺口（sql/212，排班的分母） ----------------
-// 护理页的单元类型与需求层的排班单元类型是两套编号，必须映射：
-// 护理 unitType 1-病区 → 需求 orgType=2（病区）；护理 2-门诊科室 → 需求 orgType=1（科室）
 const demandOrgType = computed(() => (unitType.value === 1 ? 2 : 1));
 const gaps = ref([]);
 const gapLoading = ref(false);
@@ -711,9 +683,6 @@ const doRecalcDemand = async () => {
   }
 };
 // ---------------- 本周出勤执行（sql/214，闭环第3步：计划 vs 实际） ----------------
-// 单看「今天排了 5 个人」判断不出执行得好不好：
-// 缺 2 人可能是编制不够，也可能是派来的人没来。这两件事的处理天差地别，
-// 所以把「实际到了几个 / 实际干了多少工时」摆到需求旁边，让缺口往下追问一层。
 const attends = ref([]);
 const attendLoading = ref(false);
 const advice = ref(null);
@@ -738,8 +707,6 @@ const loadAttend = async () => {
   }
 };
 const attendOf = (d) => attends.value.find((a) => a.workDate === d) || null;
-// 未来的日子不该显示出勤数：人还没上班，"实到 0/6" 读起来像今天缺了 6 个人。
-// 后端已经把它们单独归到「9-待出勤」，这里配合着不显示数字。
 const pad2 = (n) => String(n).padStart(2, '0');
 const now0 = new Date();
 const todayStr = `${now0.getFullYear()}-${pad2(now0.getMonth() + 1)}-${pad2(now0.getDate())}`;

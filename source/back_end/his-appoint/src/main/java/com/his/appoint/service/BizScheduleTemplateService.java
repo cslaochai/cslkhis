@@ -23,7 +23,7 @@ public interface BizScheduleTemplateService extends IService<BizScheduleTemplate
     /**
      * 模板列表（可按科室/岗位类别/星期几/状态过滤）
      *
-     * @param staffType 岗位类别（sql/195，空=全部岗位）
+     * @param staffType 岗位类别（空=全部岗位）
      */
     List<BizScheduleTemplate> listTemplates(Long deptId, Integer staffType, Integer weekDay, Integer status);
 
@@ -63,7 +63,7 @@ public interface BizScheduleTemplateService extends IService<BizScheduleTemplate
      * 按模板生成目标周的排班。weekOffset：0=本周 1=下周（默认）-1=上周。
      * 返回结论文案（新增/跳过明细）。
      *
-     * @param staffType 岗位类别（sql/195，空=全部岗位）：排班员通常按岗位分批生成，
+     * @param staffType 岗位类别（空=全部岗位）：排班员通常按岗位分批生成，
      *                  医生出诊模板与出勤岗模板的规则不同（号源/诊室只对医生有意义）
      */
     String generateForWeek(Integer weekOffset, Long deptId, Integer staffType);
@@ -71,7 +71,7 @@ public interface BizScheduleTemplateService extends IService<BizScheduleTemplate
     /**
      * 生成预览（dryRun 不落库）：将新增/各类跳过明细 + 涉及人员名单（人工核对出诊人）
      *
-     * @param staffType 岗位类别（sql/195，空=全部岗位）
+     * @param staffType 岗位类别（空=全部岗位）
      */
     ScheduleTemplatePreviewVO previewForWeek(Integer weekOffset, Long deptId, Integer staffType);
 }

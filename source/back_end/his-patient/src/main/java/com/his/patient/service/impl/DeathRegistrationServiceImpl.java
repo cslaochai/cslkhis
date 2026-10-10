@@ -17,6 +17,7 @@ import com.his.patient.mapper.BizDeathRegistrationMapper;
 import com.his.patient.service.DeathRegistrationService;
 import com.his.patient.vo.DeathRegisterVO;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,6 +40,7 @@ public class DeathRegistrationServiceImpl extends ServiceImpl<BizDeathRegistrati
 
     private final BizDeathRegistrationMapper bizDeathRegistrationMapper;
     private final RedisSequenceService redisSequenceService;
+    private final DeptScopeService deptScopeService;
 
     /**
      * 前端没选证明时自动挂该住院当前有效证明；选了别张证明必须属于本次住院
@@ -84,9 +86,10 @@ public class DeathRegistrationServiceImpl extends ServiceImpl<BizDeathRegistrati
     @Override
     public PageResult<DeathRegisterVO.Row> listPage(DeathRegistrationDTO.QueryPage query) {
         Page<DeathRegisterVO.Row> page = new Page<>(query.getPageNum(), query.getPageSize());
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         List<DeathRegisterVO.Row> records = bizDeathRegistrationMapper.selectRegisterPage(page, TextUtil.trimToNull(query.getKeyword()),
                 query.getRegisterStatus(), query.getDeathType(), query.getPoliceFlag(), query.getDisputeFlag(),
-                TimeUtil.dayStart(query.getStartDate()), TimeUtil.dayEnd(query.getEndDate()));
+                TimeUtil.dayStart(query.getStartDate()), TimeUtil.dayEnd(query.getEndDate()), deptIds);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 
@@ -96,6 +99,7 @@ public class DeathRegistrationServiceImpl extends ServiceImpl<BizDeathRegistrati
         if (detail == null) {
             throw new BusinessException("死亡登记不存在或已删除");
         }
+        deptScopeService.assertDeptAccessible(detail.getDeathDeptId());
         return detail;
     }
 
@@ -108,13 +112,14 @@ public class DeathRegistrationServiceImpl extends ServiceImpl<BizDeathRegistrati
         if (base == null) {
             throw new BusinessException("住院记录不存在");
         }
+        deptScopeService.assertDeptAccessible(base.getDeathDeptId());
         return base;
     }
 
     @Override
     public List<DeathRegisterVO.Base> admissionCandidates(String keyword, Integer limit) {
         int size = limit == null || limit <= 0 || limit > 200 ? 50 : limit;
-        return bizDeathRegistrationMapper.selectDeathAdmissions(TextUtil.trimToNull(keyword), size);
+        return bizDeathRegistrationMapper.selectDeathAdmissions(TextUtil.trimToNull(keyword), size, deptScopeService.scopedDeptIds(null));
     }
 
     @Override
@@ -124,6 +129,7 @@ public class DeathRegistrationServiceImpl extends ServiceImpl<BizDeathRegistrati
         if (base == null) {
             throw new BusinessException("住院记录不存在");
         }
+        deptScopeService.assertDeptAccessible(base.getDeathDeptId());
         if (!Boolean.TRUE.equals(base.getDeathDischarged())) {
             throw new BusinessException("该住院尚未办理「死亡」离院，死亡事实未确认，不能登记");
         }
@@ -191,6 +197,7 @@ public class DeathRegistrationServiceImpl extends ServiceImpl<BizDeathRegistrati
             throw new BusinessException("当前用户信息不存在");
         }
         BizDeathRegistration register = requireRegister(dto.getId());
+        deptScopeService.assertDeptAccessible(register.getDeathDeptId());
         if (!Objects.equals(register.getRegisterStatus(), DeathRegisterStatusEnum.DRAFT.getCode())) {
             throw new BusinessException("只有草稿登记可确认（当前：" + DeathRegisterStatusEnum.labelOrUnknown(register.getRegisterStatus()) + "）");
         }
@@ -214,6 +221,7 @@ public class DeathRegistrationServiceImpl extends ServiceImpl<BizDeathRegistrati
     @Transactional(rollbackFor = Exception.class)
     public void voidRegister(DeathRegistrationDTO.VoidRegister dto) {
         BizDeathRegistration register = requireRegister(dto.getId());
+        deptScopeService.assertDeptAccessible(register.getDeathDeptId());
         if (Objects.equals(register.getRegisterStatus(), DeathRegisterStatusEnum.VOIDED.getCode())) {
             throw new BusinessException("该登记已作废，无需重复作废");
         }

@@ -1,7 +1,7 @@
 package com.his.system.service.impl;
 
 import com.his.common.util.TextUtil;
-import com.his.system.provider.RolePermissionProvider;
+import com.his.system.provider.RolePermissionService;
 import com.his.system.service.RolePermissionCache;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -11,7 +11,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class RolePermissionProviderImpl implements RolePermissionProvider {
+public class RolePermissionServiceImpl implements RolePermissionService {
 
     private final RolePermissionCache rolePermissionCache;
 

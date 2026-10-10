@@ -21,6 +21,7 @@ import com.his.patient.mapper.BizTeleConsultMapper;
 import com.his.patient.service.TeleConsultService;
 import com.his.patient.vo.*;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +45,7 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
     private final BizOnlineConsultMapper bizOnlineConsultMapper;
     private final BizPatientMapper bizPatientMapper;
     private final RedisSequenceService redisSequenceService;
+    private final DeptScopeService deptScopeService;
 
     // 远程会诊
 
@@ -62,9 +64,10 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
     @Override
     public PageResult<TeleConsultVO> teleListPage(TeleConsultQueryPageDTO dto) {
         Page<TeleConsultVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
+        List<Long> deptIds = deptScopeService.scopedDeptIds(dto.getApplyDeptId());
         List<TeleConsultVO> records = bizTeleConsultMapper.selectTelePage(page, TextUtil.trimToNull(dto.getKeyword()),
                 dto.getConsultType(), dto.getStatus(), dto.getApplyDeptId(),
-                dto.getUrgentOnly(), dto.getOpenOnly());
+                dto.getUrgentOnly(), dto.getOpenOnly(), deptIds);
         records.forEach(this::decorateTele);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -73,7 +76,9 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
 
     @Override
     public TeleConsultVO teleGetDetailById(Long id) {
-        return requireTeleVo(id);
+        TeleConsultVO vo = requireTeleVo(id);
+        deptScopeService.assertDeptAccessible(vo.getApplyDeptId());
+        return vo;
     }
 
     @Override
@@ -95,6 +100,12 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
             if (!Objects.equals(entity.getStatus(), TeleConsultStatusEnum.PENDING.getCode())) {
                 throw new BusinessException("仅「待安排」的会诊单允许修改（当前：" + teleStatusName(entity.getStatus()) + "）");
             }
+        }
+        // 申请科室走前端选择（B类）：新单校验提交值；改单未传时沿用旧值同样要校验
+        Long applyDeptId = dto.getApplyDeptId() != null ? dto.getApplyDeptId()
+                : (isNew ? null : entity.getApplyDeptId());
+        if (applyDeptId != null) {
+            deptScopeService.assertDeptAccessible(applyDeptId);
         }
         BizPatient patient = requirePatient(dto.getPatientId());
         entity.setPatientId(patient.getId());
@@ -130,6 +141,7 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
             throw new BusinessException("当前用户信息不存在");
         }
         BizTeleConsult entity = requireTeleEntity(dto.getId());
+        deptScopeService.assertDeptAccessible(entity.getApplyDeptId());
         if (!Objects.equals(entity.getStatus(), TeleConsultStatusEnum.PENDING.getCode())) {
             throw new BusinessException("仅「待安排」的会诊单可安排（当前：" + teleStatusName(entity.getStatus()) + "）");
         }
@@ -164,6 +176,7 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
             throw new BusinessException("当前用户信息不存在");
         }
         BizTeleConsult entity = requireTeleEntity(dto.getId());
+        deptScopeService.assertDeptAccessible(entity.getApplyDeptId());
         if (!Objects.equals(entity.getStatus(), TeleConsultStatusEnum.ARRANGED.getCode())) {
             throw new BusinessException("仅「已安排」的会诊单可出意见完成（当前：" + teleStatusName(entity.getStatus()) + "）");
         }
@@ -180,6 +193,7 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
     @Transactional(rollbackFor = Exception.class)
     public TeleConsultVO teleCancel(TeleActionDTO dto) {
         BizTeleConsult entity = requireTeleEntity(dto.getId());
+        deptScopeService.assertDeptAccessible(entity.getApplyDeptId());
         Integer st = entity.getStatus();
         if (Objects.equals(st, TeleConsultStatusEnum.DONE.getCode()) || Objects.equals(st, TeleConsultStatusEnum.CANCELED.getCode())) {
             throw new BusinessException("已完成/已取消的会诊单不可再取消");
@@ -194,6 +208,7 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
     @Override
     public boolean teleDeleteById(Long id) {
         BizTeleConsult entity = requireTeleEntity(id);
+        deptScopeService.assertDeptAccessible(entity.getApplyDeptId());
         if (!Objects.equals(entity.getStatus(), TeleConsultStatusEnum.PENDING.getCode())) {
             throw new BusinessException("仅「待安排」的会诊单可删除");
         }
@@ -203,15 +218,18 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
     @Override
     public PageResult<OnlineConsultVO> onlineListPage(OnlineQueryPageDTO dto) {
         Page<OnlineConsultVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
+        List<Long> deptIds = deptScopeService.scopedDeptIds(dto.getDeptId());
         List<OnlineConsultVO> records = bizOnlineConsultMapper.selectOnlinePage(page, TextUtil.trimToNull(dto.getKeyword()),
-                dto.getConsultType(), dto.getStatus(), dto.getDeptId(), dto.getDoctorId(), dto.getWaitingOnly());
+                dto.getConsultType(), dto.getStatus(), dto.getDeptId(), dto.getDoctorId(), dto.getWaitingOnly(), deptIds);
         records.forEach(this::decorateOnline);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 
     @Override
     public OnlineConsultVO onlineGetDetailById(Long id) {
-        return requireOnlineVo(id);
+        OnlineConsultVO vo = requireOnlineVo(id);
+        deptScopeService.assertDeptAccessible(vo.getDeptId());
+        return vo;
     }
 
     // 内部
@@ -224,6 +242,9 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
             throw new BusinessException("当前用户信息不存在");
         }
         BizPatient patient = requirePatient(dto.getPatientId());
+        if (dto.getDeptId() != null) {
+            deptScopeService.assertDeptAccessible(dto.getDeptId());
+        }
         BizOnlineConsult entity = new BizOnlineConsult();
         entity.setConsultNo(nextNo(BizCodeConstants.ONLINE_CONSULT_NO_PREFIX, "ONLINE_CONSULT"));
         entity.setPatientId(patient.getId());
@@ -252,6 +273,7 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
             throw new BusinessException("当前用户信息不存在");
         }
         BizOnlineConsult entity = requireOnlineEntity(id);
+        deptScopeService.assertDeptAccessible(entity.getDeptId());
         if (!Objects.equals(entity.getStatus(), OnlineConsultStatusEnum.WAITING.getCode())) {
             throw new BusinessException("仅「待接诊」的问诊单可接诊（当前：" + onlineStatusName(entity.getStatus()) + "）");
         }
@@ -276,6 +298,7 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
             throw new BusinessException("当前用户信息不存在");
         }
         BizOnlineConsult entity = requireOnlineEntity(dto.getId());
+        deptScopeService.assertDeptAccessible(entity.getDeptId());
         if (!Objects.equals(entity.getStatus(), OnlineConsultStatusEnum.ACCEPTED.getCode())) {
             throw new BusinessException("仅「接诊中」的问诊单可回复（当前：" + onlineStatusName(entity.getStatus()) + "）");
         }
@@ -293,6 +316,7 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
     @Transactional(rollbackFor = Exception.class)
     public OnlineConsultVO onlineReject(TeleActionDTO dto) {
         BizOnlineConsult entity = requireOnlineEntity(dto.getId());
+        deptScopeService.assertDeptAccessible(entity.getDeptId());
         Integer st = entity.getStatus();
         if (Objects.equals(st, OnlineConsultStatusEnum.DONE.getCode()) || Objects.equals(st, OnlineConsultStatusEnum.REJECTED.getCode())) {
             throw new BusinessException("已完成/已退诊的问诊单不可再退诊");
@@ -307,6 +331,7 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
     @Override
     public boolean onlineDeleteById(Long id) {
         BizOnlineConsult entity = requireOnlineEntity(id);
+        deptScopeService.assertDeptAccessible(entity.getDeptId());
         if (!Objects.equals(entity.getStatus(), OnlineConsultStatusEnum.WAITING.getCode())) {
             throw new BusinessException("仅「待接诊」的问诊单可删除");
         }
@@ -315,9 +340,10 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
 
     @Override
     public TeleConsultStatVO stat() {
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         TeleConsultStatVO vo = new TeleConsultStatVO();
         long tp = 0, ta = 0, td = 0, tc = 0;
-        for (TeleConsultStatusCountVO row : bizTeleConsultMapper.countByStatus()) {
+        for (TeleConsultStatusCountVO row : bizTeleConsultMapper.countByStatus(deptIds)) {
             long c = row.getCnt() == null ? 0L : row.getCnt();
             if (row.getStatus() == null) {
                 continue;
@@ -338,7 +364,7 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
         vo.setTeleTotal(tp + ta + td + tc);
 
         long ow = 0, oa = 0, od = 0, orj = 0;
-        for (OnlineConsultStatusCountVO row : bizOnlineConsultMapper.countByStatus()) {
+        for (OnlineConsultStatusCountVO row : bizOnlineConsultMapper.countByStatus(deptIds)) {
             long c = row.getCnt() == null ? 0L : row.getCnt();
             if (row.getStatus() == null) {
                 continue;

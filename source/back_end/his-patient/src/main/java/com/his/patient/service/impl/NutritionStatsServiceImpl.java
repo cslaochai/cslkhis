@@ -19,6 +19,7 @@ import com.his.patient.vo.DeptCountRowVO;
 import com.his.patient.vo.NutritionOverviewVO;
 import com.his.patient.vo.NutritionStatsVO;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,29 +46,31 @@ public class NutritionStatsServiceImpl extends ServiceImpl<BizNutritionStatsMapp
 
     private final BizNutritionStatsMapper bizNutritionStatsMapper;
     private final NutritionStatMapper nutritionStatMapper;
+    private final DeptScopeService deptScopeService;
 
     @Override
     public NutritionOverviewVO overview() {
         LocalDate today = LocalDate.now();
         NutritionOverviewVO vo = new NutritionOverviewVO();
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
 
-        int inHospital = (int) nutritionStatMapper.countInHospital();
-        int screened = (int) nutritionStatMapper.countInHospitalScreened();
+        int inHospital = (int) nutritionStatMapper.countInHospital(deptIds);
+        int screened = (int) nutritionStatMapper.countInHospitalScreened(deptIds);
         vo.setInHospitalCount(inHospital);
         vo.setInHospitalScreenedCount(screened);
         vo.setMissedScreenCount(Math.max(inHospital - screened, 0));
-        vo.setInHospitalRiskCount((int) nutritionStatMapper.countInHospitalRisk());
-        vo.setReScreenDueCount((int) nutritionStatMapper.countReScreenDue());
-        vo.setPendingConfirmPlanCount((int) nutritionStatMapper.countPendingConfirmPlan());
+        vo.setInHospitalRiskCount((int) nutritionStatMapper.countInHospitalRisk(deptIds));
+        vo.setReScreenDueCount((int) nutritionStatMapper.countReScreenDue(deptIds));
+        vo.setPendingConfirmPlanCount((int) nutritionStatMapper.countPendingConfirmPlan(deptIds));
 
-        int meals = (int) nutritionStatMapper.countMealOfDay(today);
+        int meals = (int) nutritionStatMapper.countMealOfDay(today, deptIds);
         vo.setTodayMealCount(meals);
-        vo.setTodayMealSignedCount((int) nutritionStatMapper.countMealSignedOfDay(today));
-        vo.setTodayMealPendingCount((int) nutritionStatMapper.countMealPendingOfDay(today));
+        vo.setTodayMealSignedCount((int) nutritionStatMapper.countMealSignedOfDay(today, deptIds));
+        vo.setTodayMealPendingCount((int) nutritionStatMapper.countMealPendingOfDay(today, deptIds));
         vo.setTodayMealSignRate(rate(vo.getTodayMealSignedCount(), meals));
 
-        vo.setConsultUnfinishedCount((int) nutritionStatMapper.countConsultUnfinished());
-        vo.setConsultOverdueCount((int) nutritionStatMapper.countConsultOverdue());
+        vo.setConsultUnfinishedCount((int) nutritionStatMapper.countConsultUnfinished(deptIds));
+        vo.setConsultOverdueCount((int) nutritionStatMapper.countConsultOverdue(deptIds));
         return vo;
     }
 

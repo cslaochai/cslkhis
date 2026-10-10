@@ -26,7 +26,7 @@ public interface BizAnesthesiaFollowupMapper extends BaseMapper<BizAnesthesiaFol
     /**
      * 随访分页（麻醉随访工作台）
      */
-    @Select(PROJECTION + """
+    @Select("<script>\n" + PROJECTION + """
              WHERE f.del_flag = 0
                AND (#{q.recordId} IS NULL OR f.record_id = #{q.recordId})
                AND (#{q.admissionId} IS NULL OR f.admission_id = #{q.admissionId})
@@ -36,10 +36,17 @@ public interface BizAnesthesiaFollowupMapper extends BaseMapper<BizAnesthesiaFol
                     OR f.followup_no LIKE CONCAT('%', #{q.keyword}, '%')
                     OR f.record_no LIKE CONCAT('%', #{q.keyword}, '%')
                     OR f.patient_name LIKE CONCAT('%', #{q.keyword}, '%'))
+               <if test="deptIds != null">
+                 AND f.apply_id IN (SELECT o.id FROM biz_operation_apply o
+                                     WHERE o.del_flag = 0 AND o.apply_dept_id IN
+                                     <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>)
+               </if>
              ORDER BY f.followup_time DESC, f.id DESC
+            </script>
             """)
     IPage<AnesthesiaFollowupVO> selectFollowupPage(IPage<AnesthesiaFollowupVO> page,
-                                                   @Param("q") AnesthesiaFollowupQueryPageDTO query);
+                                                   @Param("q") AnesthesiaFollowupQueryPageDTO query,
+                                                   @Param("deptIds") List<Long> deptIds);
 
     /**
      * 随访详情
@@ -69,13 +76,18 @@ public interface BizAnesthesiaFollowupMapper extends BaseMapper<BizAnesthesiaFol
      * <p>草稿不算还账 —— 随访的凭证是签了名的那份，不是"新建了一条没写完"。
      */
     @Select("""
+            <script>
             SELECT COUNT(*) FROM biz_anesthesia_record r
             WHERE r.del_flag = 0
               AND r.record_status IN (1, 2)
               AND r.anesthesia_end_time IS NOT NULL
-              AND r.anesthesia_end_time <= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+              AND r.anesthesia_end_time &lt;= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+              AND r.apply_id IN (SELECT o.id FROM biz_operation_apply o
+                                  WHERE o.del_flag = 0 AND o.apply_dept_id IN
+                                  <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>)
               AND NOT EXISTS (SELECT 1 FROM biz_anesthesia_followup f
                               WHERE f.del_flag = 0 AND f.record_id = r.id AND f.followup_status = 1)
+            </script>
             """)
-    long countOverduePending();
+    long countOverduePending(@Param("deptIds") List<Long> deptIds);
 }

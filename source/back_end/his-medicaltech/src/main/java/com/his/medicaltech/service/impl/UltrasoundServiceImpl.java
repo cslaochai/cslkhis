@@ -20,6 +20,7 @@ import com.his.medicaltech.mapper.BizUltrasoundRecordMapper;
 import com.his.medicaltech.service.UltrasoundService;
 import com.his.medicaltech.vo.UltrasoundVO;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -45,10 +46,13 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
     private final BizUltrasoundMeasureMapper bizUltrasoundMeasureMapper;
     private final DictCacheService dictCacheService;
     private final RedisSequenceService redisSequenceService;
+    private final DeptScopeService deptScopeService;
 
     // 查询
 
     public PageResult<UltrasoundVO.ListVO> pageVO(UltrasoundDTO.Query q) {
+        // 科室数据权限收口：查询 DTO 无科室筛选字段，一律按岗位可见科室集合过滤
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizUltrasoundRecord> w = new LambdaQueryWrapper<>();
         w.eq(TextUtil.hasText(q.getRecordNo()), BizUltrasoundRecord::getRecordNo, q.getRecordNo())
                 .eq(q.getPatientId() != null, BizUltrasoundRecord::getPatientId, q.getPatientId())
@@ -57,6 +61,7 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
                 .like(TextUtil.hasText(q.getPatientName()), BizUltrasoundRecord::getPatientName, TextUtil.trim(q.getPatientName()))
                 .ge(q.getStartDate() != null, BizUltrasoundRecord::getVisitDate, q.getStartDate())
                 .le(q.getEndDate() != null, BizUltrasoundRecord::getVisitDate, q.getEndDate())
+                .in(deptIds != null, BizUltrasoundRecord::getApplyDeptId, deptIds)
                 .orderByDesc(BizUltrasoundRecord::getId);
         Page<BizUltrasoundRecord> page = bizUltrasoundRecordMapper.selectPage(
                 new Page<>(q.getPageNum(), q.getPageSize()), w);
@@ -65,20 +70,26 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
     }
 
     public UltrasoundVO.StatsVO stats() {
+        // 科室数据权限收口：统计口径与列表一致，按岗位可见科室集合过滤
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         UltrasoundVO.StatsVO vo = new UltrasoundVO.StatsVO();
         vo.setTotal(bizUltrasoundRecordMapper.selectCount(new LambdaQueryWrapper<BizUltrasoundRecord>()
-                .ne(BizUltrasoundRecord::getStatus, InsRecordStatusEnum.CANCELLED.getCode())));
-        vo.setPending(count(InsRecordStatusEnum.REGISTERED.getCode()) + count(InsRecordStatusEnum.SIGNED_IN.getCode()));
-        vo.setExamining(count(InsRecordStatusEnum.CHECKING.getCode()));
-        vo.setPendingAudit(count(InsRecordStatusEnum.RESULTED.getCode()));
-        vo.setPublished(count(InsRecordStatusEnum.PUBLISHED.getCode()));
+                .ne(BizUltrasoundRecord::getStatus, InsRecordStatusEnum.CANCELLED.getCode())
+                .in(deptIds != null, BizUltrasoundRecord::getApplyDeptId, deptIds)));
+        vo.setPending(count(InsRecordStatusEnum.REGISTERED.getCode(), deptIds) + count(InsRecordStatusEnum.SIGNED_IN.getCode(), deptIds));
+        vo.setExamining(count(InsRecordStatusEnum.CHECKING.getCode(), deptIds));
+        vo.setPendingAudit(count(InsRecordStatusEnum.RESULTED.getCode(), deptIds));
+        vo.setPublished(count(InsRecordStatusEnum.PUBLISHED.getCode(), deptIds));
         vo.setTodayCount(bizUltrasoundRecordMapper.selectCount(new LambdaQueryWrapper<BizUltrasoundRecord>()
-                .ge(BizUltrasoundRecord::getCreateTime, TimeUtil.dayStart(LocalDate.now()))));
+                .ge(BizUltrasoundRecord::getCreateTime, TimeUtil.dayStart(LocalDate.now()))
+                .in(deptIds != null, BizUltrasoundRecord::getApplyDeptId, deptIds)));
         return vo;
     }
 
-    private long count(int status) {
-        return bizUltrasoundRecordMapper.selectCount(new LambdaQueryWrapper<BizUltrasoundRecord>().eq(BizUltrasoundRecord::getStatus, status));
+    private long count(int status, List<Long> deptIds) {
+        return bizUltrasoundRecordMapper.selectCount(new LambdaQueryWrapper<BizUltrasoundRecord>()
+                .eq(BizUltrasoundRecord::getStatus, status)
+                .in(deptIds != null, BizUltrasoundRecord::getApplyDeptId, deptIds));
     }
 
     public UltrasoundVO.DetailVO getDetail(Long recordId) {
@@ -329,6 +340,8 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         if (r == null) {
             throw new BusinessException("超声检查记录不存在：" + id);
         }
+        // 科室数据权限：详情/更新/签到/执行/报告/审核/发布/取消等单据操作统一在取单入口校验
+        deptScopeService.assertDeptAccessible(r.getApplyDeptId());
         return r;
     }
 

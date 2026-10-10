@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -22,6 +21,7 @@ import com.his.operation.vo.*;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.service.BizPatientService;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import com.his.common.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +30,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,6 +59,8 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
 
     private final OperationChargeBiller operationChargeBiller;
 
+    private final DeptScopeService deptScopeService;
+
     private static <T> T pick(T existing, T incoming) {
         return incoming != null ? incoming : existing;
     }
@@ -67,7 +68,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
     @Override
     public IPage<AnesthesiaRecordVO> listPage(AnesthesiaRecordQueryPageDTO query) {
         IPage<AnesthesiaRecordVO> page = bizAnesthesiaRecordMapper.selectRecordPage(
-                new Page<>(query.getPageNum(), query.getPageSize()), query);
+                new Page<>(query.getPageNum(), query.getPageSize()), query, deptScopeService.scopedDeptIds(null));
         page.getRecords().forEach(this::decorate);
         return page;
     }
@@ -78,6 +79,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         if (recordId == null) {
             throw new BusinessException("麻醉记录单ID不能为空");
         }
+        assertRecordAccessible(mustGet(recordId));
         AnesthesiaRecordVO vo = bizAnesthesiaRecordMapper.selectVOById(recordId);
         if (vo == null) {
             throw new BusinessException("麻醉记录单不存在");
@@ -91,6 +93,10 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         // C-非 DTO 入参：校验对象是 @RequestParam 标量参数，Bean Validation 不覆盖，保留
         if (applyId == null) {
             throw new BusinessException("手术申请单ID不能为空");
+        }
+        BizOperationApply apply = bizOperationApplyMapper.selectById(applyId);
+        if (apply != null) {
+            deptScopeService.assertDeptAccessible(apply.getApplyDeptId());
         }
         AnesthesiaRecordVO vo = bizAnesthesiaRecordMapper.selectVOByApply(applyId);
         if (vo != null) {
@@ -110,6 +116,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         if (apply == null) {
             throw new BusinessException("手术申请单不存在");
         }
+        deptScopeService.assertDeptAccessible(apply.getApplyDeptId());
         if (Integer.valueOf(OperationApplyStatusEnum.CANCELLED.getCode()).equals(apply.getOperationStatus())) {
             throw new BusinessException("手术单 " + apply.getApplyNo() + " 已取消，不能开立麻醉记录");
         }
@@ -188,6 +195,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
     @Transactional(rollbackFor = Exception.class)
     public void update(AnesthesiaRecordUpdateUpsertDTO dto) {
         BizAnesthesiaRecord entity = mustEditable(dto.getRecordId());
+        assertRecordAccessible(entity);
         // B-条件必填：标记发生麻醉不良事件时才要求经过与处理，跨字段条件，DTO 注解无法表达，保留
         if (Integer.valueOf(1).equals(dto.getAdverseEventFlag()) && !TextUtil.hasText(dto.getAdverseEventNote())) {
             throw new BusinessException("已标记发生麻醉不良事件，必须填写经过与处理");
@@ -200,6 +208,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
     @Transactional(rollbackFor = Exception.class)
     public void addVital(AnesthesiaVitalUpsertDTO dto) {
         BizAnesthesiaRecord record = mustEditable(dto.getRecordId());
+        assertRecordAccessible(record);
         LocalDateTime sampleTime = TimeUtil.toSeconds(dto.getSampleTime());
         if (bizAnesthesiaVitalMapper.countSameTime(record.getId(), sampleTime) > 0) {
             throw new BusinessException("采样时刻 " + dto.getSampleTime()
@@ -225,6 +234,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         if (recordId == null) {
             throw new BusinessException("麻醉记录单ID不能为空");
         }
+        assertRecordAccessible(bizAnesthesiaRecordMapper.selectById(recordId));
         List<BizAnesthesiaVital> list = bizAnesthesiaVitalMapper.selectList(
                 new LambdaQueryWrapper<BizAnesthesiaVital>()
                         .eq(BizAnesthesiaVital::getRecordId, recordId)
@@ -244,6 +254,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
     @Transactional(rollbackFor = Exception.class)
     public void addMed(AnesthesiaMedUpsertDTO dto) {
         BizAnesthesiaRecord record = mustEditable(dto.getRecordId());
+        assertRecordAccessible(record);
         BizAnesthesiaMed med = new BizAnesthesiaMed();
         med.setRecordId(record.getId());
         med.setMedTime(TimeUtil.toSeconds(dto.getMedTime()));
@@ -263,6 +274,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         if (recordId == null) {
             throw new BusinessException("麻醉记录单ID不能为空");
         }
+        assertRecordAccessible(bizAnesthesiaRecordMapper.selectById(recordId));
         List<BizAnesthesiaMed> list = bizAnesthesiaMedMapper.selectList(
                 new LambdaQueryWrapper<BizAnesthesiaMed>()
                         .eq(BizAnesthesiaMed::getRecordId, recordId)
@@ -292,6 +304,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
             throw new BusinessException("当前用户信息不存在");
         }
         BizAnesthesiaRecord entity = mustGet(dto.getId());
+        assertRecordAccessible(entity);
         if (!Integer.valueOf(AnesthesiaRecordStatusEnum.DRAFT.getCode()).equals(entity.getRecordStatus())) {
             throw new BusinessException("麻醉记录单 " + entity.getRecordNo() + " 当前状态为「"
                     + AnesthesiaRecordStatusEnum.labelOrUnknown(entity.getRecordStatus()) + "」，只有「记录中」可以提交");
@@ -346,6 +359,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
             throw new BusinessException("当前用户信息不存在");
         }
         BizAnesthesiaRecord entity = mustGet(dto.getId());
+        assertRecordAccessible(entity);
         if (!Integer.valueOf(AnesthesiaRecordStatusEnum.SUBMITTED.getCode()).equals(entity.getRecordStatus())) {
             throw new BusinessException("麻醉记录单 " + entity.getRecordNo() + " 当前状态为「"
                     + AnesthesiaRecordStatusEnum.labelOrUnknown(entity.getRecordStatus()) + "」，只有「已提交」可以审核");
@@ -365,6 +379,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
     @Transactional(rollbackFor = Exception.class)
     public OperationChargeSummaryVO charge(AnesthesiaActionDTO dto) {
         BizAnesthesiaRecord entity = mustGet(dto.getId());
+        assertRecordAccessible(entity);
         if (Integer.valueOf(AnesthesiaRecordStatusEnum.DRAFT.getCode()).equals(entity.getRecordStatus())) {
             throw new BusinessException("麻醉记录单 " + entity.getRecordNo()
                     + " 还在「记录中」，先在提交时统一计费（或改完内容再提交）");
@@ -385,8 +400,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
 
     @Override
     public long countUncharged() {
-        return bizAnesthesiaRecordMapper.selectCount(new LambdaQueryWrapper<BizAnesthesiaRecord>()
-                .ne(BizAnesthesiaRecord::getChargeStatus, AnesthesiaChargeStatusEnum.DONE.getCode()));
+        return bizAnesthesiaRecordMapper.countUncharged(deptScopeService.scopedDeptIds(null));
     }
 
     @Override
@@ -394,6 +408,10 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         // C-非 DTO 入参：校验对象是 @RequestParam 标量参数，Bean Validation 不覆盖，保留
         if (applyId == null) {
             throw new BusinessException("手术申请单ID不能为空");
+        }
+        BizOperationApply apply = bizOperationApplyMapper.selectById(applyId);
+        if (apply != null) {
+            deptScopeService.assertDeptAccessible(apply.getApplyDeptId());
         }
         List<OperationChargeItemVO> vos = new ArrayList<>();
         for (BizOperationChargeItem row : bizOperationChargeItemMapper.selectByApply(applyId)) {
@@ -429,6 +447,17 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         }
         BizPatient patient = bizPatientService.getById(patientId);
         return patient == null ? null : patient.getPatientNo();
+    }
+
+    /** 麻醉记录无科室列，归属科室取关联手术申请单的申请科室 */
+    private void assertRecordAccessible(BizAnesthesiaRecord record) {
+        if (record == null || record.getApplyId() == null) {
+            return;
+        }
+        BizOperationApply apply = bizOperationApplyMapper.selectById(record.getApplyId());
+        if (apply != null) {
+            deptScopeService.assertDeptAccessible(apply.getApplyDeptId());
+        }
     }
 
     private BizAnesthesiaRecord mustGet(Long recordId) {

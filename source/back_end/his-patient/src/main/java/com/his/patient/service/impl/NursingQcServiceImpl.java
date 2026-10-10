@@ -21,7 +21,7 @@ import com.his.patient.mapper.SysNursingQcItemMapper;
 import com.his.patient.service.NursingQcService;
 import com.his.patient.vo.NurseQcVO;
 import com.his.system.entity.CurrentUser;
-import com.his.system.provider.DeptScopeProvider;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,7 +49,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
     private static final String REMARK_AUTO = "合格率与得分由检查明细求和生成（sql/168 口径 d）";
 
-    private final DeptScopeProvider deptScopeProvider;
+    private final DeptScopeService deptScopeService;
 
     private final BizNursingQcCheckMapper bizNursingQcCheckMapper;
 
@@ -164,7 +164,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
     public PageResult<NurseQcVO.CheckRow> checkListPage(NursingQcDTO.CheckQueryPageDTO query) {
         IPage<NurseQcVO.CheckRow> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<NurseQcVO.CheckRow> records = bizNursingQcCheckMapper.selectCheckPage(page, TextUtil.trimToNull(query.getKeyword()),
-                query.getWardId(), deptScopeProvider.resolveDeptId(query.getDeptId()), query.getCategory(), query.getStatus(),
+                query.getWardId(), deptScopeService.resolveDeptId(query.getDeptId()), query.getCategory(), query.getStatus(),
                 TextUtil.trimToNull(query.getStartMonth()), TextUtil.trimToNull(query.getEndMonth()), scopedDeptIds(query.getDeptId()));
         records.forEach(this::fillCheckText);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
@@ -358,7 +358,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
     public PageResult<NurseQcVO.LedgerRow> ledgerListPage(NursingQcDTO.LedgerQueryPageDTO query) {
         IPage<NurseQcVO.LedgerRow> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<NurseQcVO.LedgerRow> records = bizNursingQcIndicatorMapper.selectLedgerPage(page, TextUtil.trimToNull(query.getKeyword()),
-                query.getWardId(), deptScopeProvider.resolveDeptId(query.getDeptId()), TextUtil.trimToNull(query.getIndicatorCode()),
+                query.getWardId(), deptScopeService.resolveDeptId(query.getDeptId()), TextUtil.trimToNull(query.getIndicatorCode()),
                 query.getReportStatus(), TextUtil.trimToNull(query.getStatMonth()), TextUtil.trimToNull(query.getStartMonth()),
                 TextUtil.trimToNull(query.getEndMonth()), scopedDeptIds(query.getDeptId()));
         records.forEach(this::fillLedgerText);
@@ -528,7 +528,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
         if (row == null) {
             throw new BusinessException("台账行不存在");
         }
-        if (!deptScopeProvider.canAccessDept(row.getDeptId())) {
+        if (!deptScopeService.canAccessDept(row.getDeptId())) {
             throw new BusinessException("无权删除「" + row.getWardName() + "」的台账（不在当前岗位的数据范围内）");
         }
         bizNursingQcIndicatorMapper.purgeById(id);
@@ -605,7 +605,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
         if (row == null) {
             throw new BusinessException("检查单不存在");
         }
-        if (!deptScopeProvider.canAccessDept(row.getDeptId())) {
+        if (!deptScopeService.canAccessDept(row.getDeptId())) {
             throw new BusinessException("无权操作「" + row.getWardName() + "」的检查单（不在当前岗位的数据范围内）");
         }
         fillCheckText(row);
@@ -630,7 +630,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
      */
     private NurseQcVO.Ward requireVisibleWard(Long wardId) {
         NurseQcVO.Ward ward = requireWard(wardId);
-        if (!deptScopeProvider.canAccessDept(ward.getDeptId())) {
+        if (!deptScopeService.canAccessDept(ward.getDeptId())) {
             throw new BusinessException("无权操作「" + ward.getWardName() + "」的护理质控数据（不在当前岗位的数据范围内）");
         }
         return ward;
@@ -710,11 +710,11 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
      * 当前岗位可见科室；null=不收口（全院），空集合用 -1 兜住，避免 IN () 语法错
      */
     private List<Long> scopedDeptIds(Long requestedDeptId) {
-        Long resolved = deptScopeProvider.resolveDeptId(requestedDeptId);
+        Long resolved = deptScopeService.resolveDeptId(requestedDeptId);
         if (resolved != null) {
             return null;
         }
-        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
+        Set<Long> allowed = deptScopeService.allowedDeptIds();
         if (allowed == null) {
             return null;
         }

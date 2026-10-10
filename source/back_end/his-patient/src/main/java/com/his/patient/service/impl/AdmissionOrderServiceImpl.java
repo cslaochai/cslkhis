@@ -7,7 +7,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
-import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.AdmissionOrderCancelDTO;
@@ -24,14 +23,15 @@ import com.his.patient.service.BedCenterService;
 import com.his.patient.vo.AdmissionOrderVO;
 import com.his.system.entity.SysConfig;
 import com.his.system.mapper.SysConfigMapper;
+import com.his.system.provider.DeptScopeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -57,6 +57,8 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
     private final SysConfigMapper sysConfigMapper;
 
     private final ObjectProvider<BedCenterService> bedCenterProvider;
+
+    private final DeptScopeService deptScopeService;
 
     // 查询
     @Override
@@ -89,6 +91,10 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
 
         if (bizAdmissionMapper.countInHospitalByPatient(dto.getPatientId()) > 0) {
             throw new BusinessException("该患者当前在院，无需再开住院证");
+        }
+        // 前端选拟收治科室（B 类）：越权科室直接拒绝
+        if (dto.getApplyDeptId() != null) {
+            deptScopeService.assertDeptAccessible(dto.getApplyDeptId());
         }
 
         LocalDateTime now = TimeUtil.nowSeconds();
@@ -162,7 +168,8 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
     @Override
     public IPage<AdmissionOrderVO> listPage(AdmissionOrderQueryPageDTO query) {
         Page<AdmissionOrderVO> page = new Page<>(query.getPageNum(), query.getPageSize());
-        IPage<AdmissionOrderVO> result = bizAdmissionOrderMapper.selectOrderPage(page, query);
+        List<Long> deptIds = deptScopeService.scopedDeptIds(query.getApplyDeptId());
+        IPage<AdmissionOrderVO> result = bizAdmissionOrderMapper.selectOrderPage(page, query, deptIds);
         result.getRecords().forEach(this::decorate);
         return result;
     }
@@ -173,13 +180,14 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
         if (vo == null) {
             throw new BusinessException("住院证不存在");
         }
+        deptScopeService.assertDeptAccessible(vo.getApplyDeptId());
         decorate(vo);
         return vo;
     }
 
     @Override
     public long countPending() {
-        return bizAdmissionOrderMapper.countPending();
+        return bizAdmissionOrderMapper.countPending(deptScopeService.scopedDeptIds(null));
     }
 
     @Override
@@ -189,6 +197,7 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
         if (order == null) {
             throw new BusinessException("住院证不存在");
         }
+        deptScopeService.assertDeptAccessible(order.getApplyDeptId());
         if (Objects.equals(AdmissionOrderStatusEnum.ADMITTED.getCode(), order.getOrderStatus())) {
             throw new BusinessException("该住院证已用于办理入院，不能作废；如需处理请走退院/出院流程");
         }

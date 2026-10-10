@@ -41,6 +41,11 @@
         <if test="q.deptId != null">
             AND r.dept_id = #{q.deptId}
         </if>
+        <!-- deptIds：DeptScopeProvider 收口后的科室集合（null = 全院不限科室） -->
+        <if test="deptIds != null">
+            AND r.dept_id IN
+            <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+        </if>
         <if test="q.doctorId != null">
             AND r.doctor_id = #{q.doctorId}
         </if>

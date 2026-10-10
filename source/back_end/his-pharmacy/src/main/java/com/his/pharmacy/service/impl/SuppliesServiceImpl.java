@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.TimeUtil;
@@ -19,7 +18,7 @@ import com.his.pharmacy.mapper.BizConsumableStockMapper;
 import com.his.pharmacy.mapper.SysConsumableMapper;
 import com.his.pharmacy.service.SuppliesService;
 import com.his.pharmacy.vo.*;
-import com.his.system.provider.DeptScopeProvider;
+import com.his.system.provider.DeptScopeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -27,7 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -37,7 +35,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SuppliesServiceImpl extends ServiceImpl<BizConsumableStockMapper, BizConsumableStock>         implements SuppliesService {
     private final RedisSequenceService redisSequenceService;
-    private final DeptScopeProvider deptScopeProvider;
+    private final DeptScopeService deptScopeService;
 
     private final SysConsumableMapper sysConsumableMapper;
     private final BizConsumableStockLogMapper bizConsumableStockLogMapper;
@@ -246,12 +244,12 @@ public class SuppliesServiceImpl extends ServiceImpl<BizConsumableStockMapper, B
                                                                 int pageNum, int pageSize) {
         // 科室数据权限收口（M6）：领用台账归属领用科室；传了 deptId 先越权校验，
         // 没传且受限则收敛到授权科室集合（不再等于看全院台账）。
-        Long scopedDeptId = deptScopeProvider.resolveDeptId(deptId);
+        Long scopedDeptId = deptScopeService.resolveDeptId(deptId);
         if (scopedDeptId != null) {
             deptId = scopedDeptId;
         }
-        List<Long> scopeDeptIds = (deptScopeProvider.isScoped() && scopedDeptId == null)
-                ? List.copyOf(deptScopeProvider.allowedDeptIds()) : null;
+        List<Long> scopeDeptIds = (deptScopeService.isScoped() && scopedDeptId == null)
+                ? List.copyOf(deptScopeService.allowedDeptIds()) : null;
         Page<BizConsumableConsumeVO> page = bizConsumableConsumeMapper.selectConsumePage(
                 new Page<>(pageNum, pageSize), keyword, deptId, scopeDeptIds);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());

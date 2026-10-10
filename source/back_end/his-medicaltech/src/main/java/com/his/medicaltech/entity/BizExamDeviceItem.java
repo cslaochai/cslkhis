@@ -8,7 +8,7 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
- * 设备可开展项目（设备可开展项目）—— 预约路由的唯一事实源。
+ * 设备可开展项目
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

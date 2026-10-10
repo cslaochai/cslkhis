@@ -17,6 +17,7 @@ import com.his.pharmacy.mapper.BizAntibioticAliasMapper;
 import com.his.pharmacy.mapper.BizAntibioticAuthMapper;
 import com.his.pharmacy.service.AntibioticService;
 import com.his.pharmacy.vo.*;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -48,6 +49,8 @@ public class AntibioticServiceImpl extends ServiceImpl<BizAntibioticAliasMapper,
     private final BizAntibioticAliasMapper bizAntibioticAliasMapper;
 
     private final RedisSequenceService redisSequenceService;
+
+    private final DeptScopeService deptScopeService;
 
     @Override
     public PageResult<AntibioticCatalogVO> catalogListPage(AntibioticCatalogQueryPageDTO query) {
@@ -164,6 +167,7 @@ public class AntibioticServiceImpl extends ServiceImpl<BizAntibioticAliasMapper,
     @Override
     public PageResult<AntibioticAuthVO> authListPage(AntibioticAuthQueryPageDTO query) {
         String keyword = query.getKeyword() == null ? null : query.getKeyword().trim();
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizAntibioticAuth> wrapper = new LambdaQueryWrapper<>();
         // ⚠ like(cond, col, v) 是普通方法调用：实参先 trim() 存局部变量，否则未传参时 NPE（AGENTS §4 坑）
         wrapper.and(TextUtil.hasText(keyword), w -> w
@@ -171,6 +175,8 @@ public class AntibioticServiceImpl extends ServiceImpl<BizAntibioticAliasMapper,
                         .or().like(BizAntibioticAuth::getDeptName, keyword))
                 .eq(query.getAuthLevel() != null, BizAntibioticAuth::getAuthLevel, query.getAuthLevel())
                 .eq(query.getStatus() != null, BizAntibioticAuth::getStatus, query.getStatus())
+                // 授权记录归属医师科室（dept_id 引用 sys_dept）：按岗位科室数据权限收敛（A 类）
+                .in(deptIds != null, BizAntibioticAuth::getDeptId, deptIds)
                 .orderByDesc(BizAntibioticAuth::getId);
         if (Boolean.TRUE.equals(query.getOnlyEffective())) {
             wrapper.eq(BizAntibioticAuth::getStatus, BizAntibioticAuth.STATUS_VALID)
@@ -207,6 +213,8 @@ public class AntibioticServiceImpl extends ServiceImpl<BizAntibioticAliasMapper,
             if (auth == null) {
                 throw new BusinessException("授权记录不存在");
             }
+            // 修改既有授权 = 单据更新操作：先按归属科室做数据权限校验
+            deptScopeService.assertDeptAccessible(auth.getDeptId());
             // 换医师/换级别不允许：那是一条新的授权证据，覆盖掉就查不到中间那次取消
             if (!auth.getDoctorId().equals(dto.getDoctorId()) || !auth.getAuthLevel().equals(dto.getAuthLevel())) {
                 throw new BusinessException("不允许改换医师或授权级别：请另立一条授权记录");

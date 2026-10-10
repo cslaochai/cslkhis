@@ -50,6 +50,7 @@ public interface BizDeathRegistrationMapper extends BaseMapper<BizDeathRegistrat
             <if test="disputeFlag != null"> AND r.dispute_flag = #{disputeFlag}</if>
             <if test="startDateTime != null"> AND r.death_time &gt;= #{startDateTime}</if>
             <if test="endDateTime != null"> AND r.death_time &lt;= #{endDateTime}</if>
+            <if test="deptIds != null"> AND r.death_dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
              ORDER BY r.death_time DESC, r.id DESC
             </script>
             """)
@@ -60,7 +61,8 @@ public interface BizDeathRegistrationMapper extends BaseMapper<BizDeathRegistrat
                                                  @Param("policeFlag") Integer policeFlag,
                                                  @Param("disputeFlag") Integer disputeFlag,
                                                  @Param("startDateTime") LocalDateTime startDateTime,
-                                                 @Param("endDateTime") LocalDateTime endDateTime);
+                                                 @Param("endDateTime") LocalDateTime endDateTime,
+                                                 @Param("deptIds") List<Long> deptIds);
 
     /**
      * 详情＝编辑回显：办理人电话出明文（整对象回写 upsert，出掩码会洗掉真号）。
@@ -162,9 +164,11 @@ public interface BizDeathRegistrationMapper extends BaseMapper<BizDeathRegistrat
                 AND (p.patient_name LIKE CONCAT('%', #{keyword}, '%')
                   OR a.admission_no LIKE CONCAT('%', #{keyword}, '%'))
               </if>
+              <if test="deptIds != null"> AND COALESCE(s.dept_id, a.dept_id) IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
              ORDER BY d.discharge_time DESC
              LIMIT #{limit}
             </script>
             """)
-    List<DeathRegisterVO.Base> selectDeathAdmissions(@Param("keyword") String keyword, @Param("limit") int limit);
+    List<DeathRegisterVO.Base> selectDeathAdmissions(@Param("keyword") String keyword, @Param("limit") int limit,
+                                                     @Param("deptIds") List<Long> deptIds);
 }

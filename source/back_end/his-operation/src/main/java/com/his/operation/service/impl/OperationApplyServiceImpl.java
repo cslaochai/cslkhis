@@ -42,6 +42,7 @@ import com.his.system.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.EmployeeTechAuthService;
 import com.his.system.utils.UserUtils;
+import com.his.system.provider.DeptScopeService;
 import com.his.common.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -86,6 +87,8 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
     private final BizOperationSafetyCheckMapper bizOperationSafetyCheckMapper;
 
     private final DictCacheService dictCacheService;
+
+    private final DeptScopeService deptScopeService;
 
     // 查询
     private static String textOr(String value, String fallback) {
@@ -136,7 +139,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         query.setPlannedDateFrom(normalizeFrom(query.getPlannedDateFrom()));
         query.setPlannedDateTo(normalizeTo(query.getPlannedDateTo()));
         IPage<OperationApplyVO> page = bizOperationApplyMapper.selectApplyPage(
-                new Page<>(query.getPageNum(), query.getPageSize()), query);
+                new Page<>(query.getPageNum(), query.getPageSize()), query, deptScopeService.scopedDeptIds(query.getApplyDeptId()));
         page.getRecords().forEach(this::decorate);
         return page;
     }
@@ -151,6 +154,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         if (vo == null) {
             throw new BusinessException("手术申请单不存在");
         }
+        deptScopeService.assertDeptAccessible(vo.getApplyDeptId());
         decorate(vo);
         return vo;
     }
@@ -163,6 +167,10 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }
+        BizAdmission admission = inpatientService.getAdmissionById(admissionId);
+        if (admission != null) {
+            deptScopeService.assertDeptAccessible(admission.getDeptId());
+        }
         List<OperationApplyVO> list = bizOperationApplyMapper.selectByAdmission(admissionId);
         list.forEach(this::decorate);
         return list;
@@ -172,7 +180,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
 
     @Override
     public long countUnfinished(Long admissionId) {
-        return bizOperationApplyMapper.countUnfinished(admissionId);
+        return bizOperationApplyMapper.countUnfinished(admissionId, deptScopeService.scopedDeptIds(null));
     }
 
     // 三、术前核对（已排期 → 术前核对完成）
@@ -218,8 +226,9 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
 
         LocalDateTime from = TimeUtil.dayStart(day);
         LocalDateTime to = TimeUtil.dayStart(day.plusDays(1));
-        List<OperationApplyVO> scheduled = bizOperationApplyMapper.selectScheduledBetween(from, to);
-        List<OperationApplyVO> pending = bizOperationApplyMapper.selectUnscheduled();
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
+        List<OperationApplyVO> scheduled = bizOperationApplyMapper.selectScheduledBetween(from, to, deptIds);
+        List<OperationApplyVO> pending = bizOperationApplyMapper.selectUnscheduled(deptIds);
         scheduled.forEach(this::decorate);
         pending.forEach(this::decorate);
 
@@ -331,6 +340,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
 
         BizOperationApply entity;
         if (create) {
+            deptScopeService.assertDeptAccessible(admission.getDeptId());
             entity = new BizOperationApply();
             entity.setAdmissionId(dto.getAdmissionId());
             entity.setAdmissionNo(admission.getAdmissionNo());
@@ -349,6 +359,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
             entity.setOperationStatus(OperationApplyStatusEnum.PENDING_SCHEDULE.getCode());
         } else {
             entity = mustGet(dto.getId());
+            deptScopeService.assertDeptAccessible(entity.getApplyDeptId());
             if (!Objects.equals(OperationApplyStatusEnum.PENDING_SCHEDULE.getCode(), entity.getOperationStatus())) {
                 throw new BusinessException("手术单 " + entity.getApplyNo() + " 当前状态为「"
                         + OperationApplyStatusEnum.labelOrUnknown(entity.getOperationStatus())
@@ -414,6 +425,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         }
 
         BizOperationApply entity = mustGet(dto.getApplyId());
+        deptScopeService.assertDeptAccessible(entity.getApplyDeptId());
         if (Objects.equals(OperationApplyStatusEnum.FINISHED.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo() + " 已完成，不能改排台信息");
         }
@@ -472,6 +484,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
             throw new BusinessException("当前用户信息不存在");
         }
         BizOperationApply entity = mustGet(dto.getApplyId());
+        deptScopeService.assertDeptAccessible(entity.getApplyDeptId());
         if (Objects.equals(OperationApplyStatusEnum.PENDING_SCHEDULE.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo()
                     + " 尚未排台，不能做术前核对（手术间/时段/主刀都还没定，核对的是一个不存在的手术）");
@@ -519,6 +532,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
             throw new BusinessException("当前用户信息不存在");
         }
         BizOperationApply entity = mustGet(dto.getApplyId());
+        deptScopeService.assertDeptAccessible(entity.getApplyDeptId());
         if (Objects.equals(OperationApplyStatusEnum.CANCELLED.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo() + " 已取消，不能完成");
         }
@@ -623,6 +637,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
             throw new BusinessException("当前用户信息不存在");
         }
         BizOperationApply entity = mustGet(dto.getApplyId());
+        deptScopeService.assertDeptAccessible(entity.getApplyDeptId());
         if (Objects.equals(OperationApplyStatusEnum.CANCELLED.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo() + " 已取消，不能重复取消");
         }

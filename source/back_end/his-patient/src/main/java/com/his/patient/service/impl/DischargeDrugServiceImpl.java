@@ -7,7 +7,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
-import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.DischargeDrugDTO;
@@ -17,6 +16,7 @@ import com.his.patient.mapper.BizDischargeDrugMapper;
 import com.his.patient.service.DischargeDrugService;
 import com.his.patient.vo.DischargeDrugSelectListVO;
 import com.his.patient.vo.DischargeDrugVO;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +39,7 @@ public class DischargeDrugServiceImpl extends ServiceImpl<BizDischargeDrugMapper
 
     private final BizDischargeDrugMapper bizDischargeDrugMapper;
     private final DictCacheService dictCacheService;
+    private final DeptScopeService deptScopeService;
 
     @Transactional(rollbackFor = Exception.class)
     public DischargeDrugVO upsert(DischargeDrugDTO.Upsert dto) {
@@ -58,6 +59,7 @@ public class DischargeDrugServiceImpl extends ServiceImpl<BizDischargeDrugMapper
             if (!java.util.Objects.equals(d.getDispenseStatus(), DischargeDrugStatusEnum.PENDING.getCode())) {
                 throw new BusinessException("已发药的带药单不能修改（发错请备注纠错留痕）");
             }
+            assertAdmissionAccessible(d.getAdmissionId());
         }
         d.setDrugId(dto.getDrugId());
         d.setDrugName(dto.getDrugName().trim());
@@ -82,13 +84,11 @@ public class DischargeDrugServiceImpl extends ServiceImpl<BizDischargeDrugMapper
     }
 
     public IPage<DischargeDrugVO> listPage(DischargeDrugDTO.QueryPage q) {
-        LambdaQueryWrapper<BizDischargeDrug> w = new LambdaQueryWrapper<BizDischargeDrug>()
-                .eq(q.getAdmissionId() != null, BizDischargeDrug::getAdmissionId, q.getAdmissionId())
-                .eq(q.getPatientId() != null, BizDischargeDrug::getPatientId, q.getPatientId())
-                .like(TextUtil.hasText(q.getDrugName()), BizDischargeDrug::getDrugName, TextUtil.trim(q.getDrugName()))
-                .eq(q.getDispenseStatus() != null, BizDischargeDrug::getDispenseStatus, q.getDispenseStatus())
-                .orderByDesc(BizDischargeDrug::getId);
-        IPage<BizDischargeDrug> page = bizDischargeDrugMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w);
+        IPage<BizDischargeDrug> page = bizDischargeDrugMapper.selectScopedPage(
+                new Page<>(q.getPageNum(), q.getPageSize()),
+                q.getAdmissionId(), q.getPatientId(),
+                TextUtil.hasText(q.getDrugName()) ? TextUtil.trim(q.getDrugName()) : null,
+                q.getDispenseStatus(), deptScopeService.scopedDeptIds(null));
         return page.convert(this::toVo);
     }
 
@@ -96,6 +96,7 @@ public class DischargeDrugServiceImpl extends ServiceImpl<BizDischargeDrugMapper
      * 按入院次列全部带药单（出院带药页选药下拉用）
      */
     public List<DischargeDrugSelectListVO> listByAdmission(Long admissionId) {
+        assertAdmissionAccessible(admissionId);
         return bizDischargeDrugMapper.selectList(new LambdaQueryWrapper<BizDischargeDrug>()
                         .eq(BizDischargeDrug::getAdmissionId, admissionId)
                         .orderByDesc(BizDischargeDrug::getId))
@@ -107,6 +108,7 @@ public class DischargeDrugServiceImpl extends ServiceImpl<BizDischargeDrugMapper
         if (d == null || (d.getDelFlag() != null && d.getDelFlag() == 1)) {
             throw new BusinessException("带药单不存在");
         }
+        assertAdmissionAccessible(d.getAdmissionId());
         return toVo(d);
     }
 
@@ -125,6 +127,7 @@ public class DischargeDrugServiceImpl extends ServiceImpl<BizDischargeDrugMapper
             if (!java.util.Objects.equals(d.getDispenseStatus(), DischargeDrugStatusEnum.PENDING.getCode())) {
                 throw new BusinessException("带药单 " + d.getOrderNo() + " 已发药，不能重复发药");
             }
+            assertAdmissionAccessible(d.getAdmissionId());
         }
         LocalDateTime now = TimeUtil.nowSeconds();
         String who = UserUtils.getCurrentUser().getRealName();
@@ -153,7 +156,15 @@ public class DischargeDrugServiceImpl extends ServiceImpl<BizDischargeDrugMapper
         if (!java.util.Objects.equals(d.getDispenseStatus(), DischargeDrugStatusEnum.PENDING.getCode())) {
             throw new BusinessException("已发药的带药单不能删除");
         }
+        assertAdmissionAccessible(d.getAdmissionId());
         bizDischargeDrugMapper.deleteById(id);
+    }
+
+    // 数据权限
+
+    /** 带药单挂在住院上：经 biz_admission.dept_id 判数据权限 */
+    private void assertAdmissionAccessible(Long admissionId) {
+        deptScopeService.assertDeptAccessible(bizDischargeDrugMapper.selectAdmissionDeptId(admissionId));
     }
 
     private Long requirePatientId(Long admissionId) {

@@ -15,6 +15,7 @@ import com.his.operation.service.OperationSafetyCheckService;
 import com.his.operation.support.SafetyCheckItems;
 import com.his.operation.vo.SafetyCheckVO;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import com.his.common.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -38,6 +38,7 @@ public class OperationSafetyCheckServiceImpl extends ServiceImpl<BizOperationSaf
 
     private final BizOperationSafetyCheckMapper bizOperationSafetyCheckMapper;
     private final BizOperationApplyMapper bizOperationApplyMapper;
+    private final DeptScopeService deptScopeService;
 
     @Override
     public List<SafetyCheckVO.PhaseCard> cardsByApply(Long applyId) {
@@ -49,6 +50,7 @@ public class OperationSafetyCheckServiceImpl extends ServiceImpl<BizOperationSaf
         if (apply == null) {
             throw new BusinessException("手术申请单不存在");
         }
+        deptScopeService.assertDeptAccessible(apply.getApplyDeptId());
         Map<Integer, SafetyCheckVO> signedByPhase = new HashMap<>();
         bizOperationSafetyCheckMapper.selectByApply(applyId).forEach(row -> signedByPhase.put(row.getPhase(), toVO(row)));
 
@@ -92,6 +94,7 @@ public class OperationSafetyCheckServiceImpl extends ServiceImpl<BizOperationSaf
         if (apply == null) {
             throw new BusinessException("手术申请单不存在");
         }
+        deptScopeService.assertDeptAccessible(apply.getApplyDeptId());
         Integer status = apply.getOperationStatus();
         if (Objects.equals(OperationApplyStatusEnum.PENDING_SCHEDULE.getCode(), status)) {
             throw new BusinessException("手术单 " + apply.getApplyNo()

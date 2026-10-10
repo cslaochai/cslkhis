@@ -39,6 +39,7 @@ public interface BizConsumableTraceMapper extends BaseMapper<BizConsumableTrace>
             "<if test='patientId != null'> AND t.patient_id = #{patientId} </if> " +
             "<if test='chargeStatus != null'> AND t.charge_status = #{chargeStatus} </if> " +
             "<if test='status != null'> AND t.status = #{status} </if> " +
+            "<if test='deptIds != null'> AND t.dept_id IN <foreach collection='deptIds' item='d' open='(' separator=',' close=')'>#{d}</foreach></if> " +
             "ORDER BY t.id DESC" +
             "</script>")
     Page<BizConsumableTraceVO> selectTracePage(Page<BizConsumableTraceVO> page,
@@ -46,7 +47,8 @@ public interface BizConsumableTraceMapper extends BaseMapper<BizConsumableTrace>
                                                @Param("consumableId") Long consumableId,
                                                @Param("patientId") Long patientId,
                                                @Param("chargeStatus") Integer chargeStatus,
-                                               @Param("status") Integer status);
+                                               @Param("status") Integer status,
+                                               @Param("deptIds") java.util.List<Long> deptIds);
 
     /**
      * 溯源详情（JOIN 字典补厂家/类别，JOIN 批次补剩余量/位置/入库经办）

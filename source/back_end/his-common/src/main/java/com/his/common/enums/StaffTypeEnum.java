@@ -4,7 +4,7 @@ import com.his.common.exception.BusinessException;
 import lombok.Getter;
 
 /**
- * 岗位类别枚举（sql/195）
+ * 岗位类别枚举
  */
 @Getter
 public enum StaffTypeEnum {
@@ -94,10 +94,6 @@ public enum StaffTypeEnum {
 
     /**
      * 排班写入口的合法性：岗位类别必填且在枚举内。
-     * 历史数据（sql/195 之前）全部是 1-医生，由 DDL 默认值补齐，所以这里只拦新增/修改。
-     *
-     * <p>抛 {@code BusinessException} 而不是 IllegalArgumentException：前者是「用户选错了」，
-     * 后者会被全局异常处理兜成 500，用户看到的是系统错误而不是一句人话。
      */
     public static void assertValid(Integer code) {
         if (fromCode(code) == null) {

@@ -27,10 +27,8 @@ public class BizStaffAttendance extends BaseEntity {
     /** 备注 */
     private String remark;
 
-
-
     /**
-     * 关联的排班事实ID（biz_staff_schedule.id）；空=无计划的出勤（加班/支援/替班）
+     * 关联的排班事实ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long staffScheduleId;
@@ -102,7 +100,7 @@ public class BizStaffAttendance extends BaseEntity {
     private Integer actualMinutes;
 
     /**
-     * 计划工时（分钟）：biz_staff_schedule.work_minutes 的快照
+     * 计划工时（分钟）
      */
     private Integer plannedMinutes;
 

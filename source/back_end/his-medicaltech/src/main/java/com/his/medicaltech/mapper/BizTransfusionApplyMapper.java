@@ -34,8 +34,11 @@ public interface BizTransfusionApplyMapper extends BaseMapper<BizTransfusionAppl
     /**
      * 输血申请分页（输血科配血工作台 / 病区申请方工作台共用）
      */
-    @Select(PROJECTION + """
+    @Select("<script>" + PROJECTION + """
             WHERE c.del_flag = 0
+              <if test="deptIds != null"> AND c.apply_dept_id IN
+                <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+              </if>
               AND (#{q.admissionId} IS NULL OR c.admission_id = #{q.admissionId})
               AND (#{q.patientId} IS NULL OR c.patient_id = #{q.patientId})
               AND (#{q.applyDeptId} IS NULL OR c.apply_dept_id = #{q.applyDeptId})
@@ -47,8 +50,8 @@ public interface BizTransfusionApplyMapper extends BaseMapper<BizTransfusionAppl
               AND (#{q.hasReaction} IS NULL OR c.has_reaction = #{q.hasReaction})
               AND (#{q.unfinishedOnly} IS NULL OR #{q.unfinishedOnly} = 0
                    OR c.transfusion_status IN (0, 1, 2, 3))
-              AND (#{q.applyDateFrom} IS NULL OR c.apply_time >= #{q.applyDateFrom})
-              AND (#{q.applyDateTo} IS NULL OR c.apply_time < #{q.applyDateTo})
+              AND (#{q.applyDateFrom} IS NULL OR c.apply_time &gt;= #{q.applyDateFrom})
+              AND (#{q.applyDateTo} IS NULL OR c.apply_time &lt; #{q.applyDateTo})
               AND (#{q.keyword} IS NULL OR #{q.keyword} = ''
                    OR c.apply_no LIKE CONCAT('%', #{q.keyword}, '%')
                    OR c.admission_no LIKE CONCAT('%', #{q.keyword}, '%')
@@ -57,9 +60,11 @@ public interface BizTransfusionApplyMapper extends BaseMapper<BizTransfusionAppl
                    OR c.transfusion_purpose LIKE CONCAT('%', #{q.keyword}, '%')
                    OR c.indication LIKE CONCAT('%', #{q.keyword}, '%'))
             ORDER BY FIELD(c.transfusion_status, 0, 1, 2, 3, 4, 5), c.apply_time DESC, c.id DESC
+            </script>
             """)
     IPage<TransfusionApplyVO> selectApplyPage(IPage<TransfusionApplyVO> page,
-                                              @Param("q") TransfusionApplyQueryPageDTO query);
+                                              @Param("q") TransfusionApplyQueryPageDTO query,
+                                              @Param("deptIds") List<Long> deptIds);
 
     /**
      * 输血申请详情

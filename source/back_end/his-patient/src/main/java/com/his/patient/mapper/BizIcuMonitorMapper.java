@@ -31,13 +31,15 @@ public interface BizIcuMonitorMapper extends BaseMapper<BizIcuMonitor> {
                <if test="stayId != null"> AND m.stay_id = #{stayId}</if>
                <if test="startDate != null"> AND m.record_date &gt;= #{startDate}</if>
                <if test="endDate != null"> AND m.record_date &lt;= #{endDate}</if>
+               <if test="wardIds != null"> AND s.ward_id IN <foreach collection="wardIds" item="w" open="(" separator="," close=")">#{w}</foreach></if>
              ORDER BY m.record_time DESC, m.id DESC
             </script>
             """)
     List<IcuVO.MonitorVO> selectMonitorPage(IPage<IcuVO.MonitorVO> page,
                                             @Param("stayId") Long stayId,
                                             @Param("startDate") LocalDate startDate,
-                                            @Param("endDate") LocalDate endDate);
+                                            @Param("endDate") LocalDate endDate,
+                                            @Param("wardIds") List<Long> wardIds);
 
     /**
      * 单条入科记录的监护趋势（按时间正序，曲线与表格共用）
@@ -83,16 +85,22 @@ public interface BizIcuMonitorMapper extends BaseMapper<BizIcuMonitor> {
                     @Param("excludeId") Long excludeId);
 
     @Select("""
-            SELECT COUNT(*) FROM biz_icu_monitor
-             WHERE del_flag = 0 AND record_time BETWEEN #{startDateTime} AND #{endDateTime}
+            <script>
+            SELECT COUNT(*) FROM biz_icu_monitor m
+                  JOIN biz_icu_stay s ON s.id = m.stay_id
+             WHERE m.del_flag = 0 AND m.record_time BETWEEN #{startDateTime} AND #{endDateTime}
+               <if test="wardIds != null"> AND s.ward_id IN <foreach collection="wardIds" item="w" open="(" separator="," close=")">#{w}</foreach></if>
+            </script>
             """)
     int countRange(@Param("startDateTime") LocalDateTime startDateTime,
-                   @Param("endDateTime") LocalDateTime endDateTime);
+                   @Param("endDateTime") LocalDateTime endDateTime,
+                   @Param("wardIds") List<Long> wardIds);
 
     /**
      * 在科患者「最近一条记录」的呼吸支持方式分布
      */
     @Select("""
+            <script>
             SELECT m.vent_mode AS type, COUNT(*) AS count
               FROM biz_icu_monitor m
               JOIN biz_icu_stay s ON s.id = m.stay_id AND s.del_flag = 0 AND s.status = 1
@@ -100,15 +108,18 @@ public interface BizIcuMonitorMapper extends BaseMapper<BizIcuMonitor> {
                AND m.id = (SELECT m2.id FROM biz_icu_monitor m2
                             WHERE m2.del_flag = 0 AND m2.stay_id = s.id
                             ORDER BY m2.record_time DESC, m2.id DESC LIMIT 1)
+               <if test="wardIds != null"> AND s.ward_id IN <foreach collection="wardIds" item="w" open="(" separator="," close=")">#{w}</foreach></if>
              GROUP BY m.vent_mode
              ORDER BY m.vent_mode ASC
+            </script>
             """)
-    List<IcuVO.TypeCount> selectLatestVentModes();
+    List<IcuVO.TypeCount> selectLatestVentModes(@Param("wardIds") List<Long> wardIds);
 
     /**
      * 现带管人数（按在科患者最近一条记录判定）
      */
     @Select("""
+            <script>
             SELECT SUM(CASE WHEN m.has_airway = 1 THEN 1 ELSE 0 END)   AS airway_count,
                    SUM(CASE WHEN m.has_cvc = 1 THEN 1 ELSE 0 END)      AS cvc_count,
                    SUM(CASE WHEN m.has_arterial = 1 THEN 1 ELSE 0 END) AS arterial_count,
@@ -120,12 +131,20 @@ public interface BizIcuMonitorMapper extends BaseMapper<BizIcuMonitor> {
                AND m.id = (SELECT m2.id FROM biz_icu_monitor m2
                             WHERE m2.del_flag = 0 AND m2.stay_id = s.id
                             ORDER BY m2.record_time DESC, m2.id DESC LIMIT 1)
+               <if test="wardIds != null"> AND s.ward_id IN <foreach collection="wardIds" item="w" open="(" separator="," close=")">#{w}</foreach></if>
+            </script>
             """)
-    IcuVO.StatsVO selectTubeSummary();
+    IcuVO.StatsVO selectTubeSummary(@Param("wardIds") List<Long> wardIds);
 
     /**
      * ICU 开放床位数（bed_type='ICU' 且未停用）
      */
-    @Select("SELECT COUNT(*) FROM sys_bed WHERE del_flag = 0 AND bed_type = 'ICU' AND bed_status <> 0")
-    int countIcuBeds();
+    @Select("""
+            <script>
+            SELECT COUNT(*) FROM sys_bed
+             WHERE del_flag = 0 AND bed_type = 'ICU' AND bed_status &lt;&gt; 0
+               <if test="deptIds != null"> AND dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
+            </script>
+            """)
+    int countIcuBeds(@Param("deptIds") List<Long> deptIds);
 }
