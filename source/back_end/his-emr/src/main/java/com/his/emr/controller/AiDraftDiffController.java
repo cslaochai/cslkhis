@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 病历草稿 AI 留痕查询（AI 管理台「草稿留痕」签页）。
+ * 病历草稿 AI 留痕查询
  */
 @Tag(name = "AI草稿留痕")
 @RestController

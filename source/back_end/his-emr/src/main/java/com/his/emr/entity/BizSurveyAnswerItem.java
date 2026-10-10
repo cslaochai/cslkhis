@@ -10,7 +10,7 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
- * 满意度逐题答案（sql/164）。
+ * 满意度逐题答案
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

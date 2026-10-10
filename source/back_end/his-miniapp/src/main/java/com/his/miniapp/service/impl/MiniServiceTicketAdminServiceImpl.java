@@ -81,7 +81,6 @@ public class MiniServiceTicketAdminServiceImpl extends ServiceImpl<MiniServiceMe
         // 待受理优先：客服进来是找新单，不是翻历史
         w.orderByAsc(BizServiceMessage::getStatus)
                 .orderByDesc(BizServiceMessage::getCreateTime)
-                // 分页补唯一二级键
                 .orderByDesc(BizServiceMessage::getId);
 
         long total = miniServiceMessageMapper.selectCount(w);

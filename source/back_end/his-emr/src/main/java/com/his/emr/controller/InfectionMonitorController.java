@@ -122,9 +122,8 @@ public class InfectionMonitorController {
         return Result.success(infectionMonitorService.monitorDailyList(monitorId));
     }
 
-    // 手卫生依从性（菜单 617 /hand-hygiene 与「院感监测」页第三个页签共用同一组件）
+    // 手卫生依从性
 
-    // 读接口一律挂 list：挂 edit 会让「只能看不能改」的角色整页 403（AGENTS 第 4 节）
     @PreAuthorize("hasAuthority('emr:infectionMonitor:list')")
     @Operation(summary = "观察记录分页")
     @PostMapping("/handObs/listPage")

@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 代煎台账列表行（sql/139）
+ * 代煎台账列表行
  */
 @Data
 public class TcmDecoctVO {

@@ -15,7 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 满意度评价发放/回收与看板（sql/164）。
+ * 满意度评价发放/回收与看板
  */
 @Tag(name = "满意度评价发放与回收")
 @RestController

@@ -6,6 +6,7 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.PrescriptionStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.support.TcmGramUnits;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.emr.entity.BizDrugDispensing;
 import com.his.emr.entity.BizPrescription;
@@ -20,6 +21,7 @@ import com.his.emr.vo.DrugDispensingCountVO;
 import com.his.emr.vo.NarcoticViolationVO;
 import com.his.pharmacy.dto.StockDeductResultDTO;
 import com.his.pharmacy.service.PharmacyService;
+import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysDrug;
 import com.his.system.mapper.SysDrugMapper;
 import com.his.system.utils.UserUtils;
@@ -81,12 +83,14 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean dispense(Long dispensingId, Long pharmacistId, String pharmacistName,
-                            Long checkerId, String overLimitReason) {
+    public boolean dispense(Long dispensingId, Long checkerId, String overLimitReason) {
+        CurrentUser pharmacist = requireCurrentPharmacist();
+        Long pharmacistId = pharmacist.getEmployeeId();
+        String pharmacistName = pharmacist.getRealName();
         BizDrugDispensing dispensing = requirePending(dispensingId);
         // ① 麻精限量闸门（按处方整体判一次）
         assertPrescriptionQuota(dispensing.getPrescriptionId(), overLimitReason);
-        // ② 双人复核闸门（复核人姓名服务端反查）
+        // ② 双人复核闸门（复核人姓名服务端反查，且不得与发药人同人）
         String checkerName = narcoticControlService.resolveAndAssertChecker(
                 dispensing.getDrugId(), pharmacistId, checkerId);
         doDispenseOne(dispensing, pharmacistId, pharmacistName);
@@ -98,13 +102,15 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean dispenseByPrescription(Long prescriptionId, Long pharmacistId, String pharmacistName,
-                                          Long checkerId, String overLimitReason) {
+    public boolean dispenseByPrescription(Long prescriptionId, Long checkerId, String overLimitReason) {
         // B-条件必填：DrugDispenseDTO 被单行发药（只传 id）与本接口（只传 prescriptionId）共用，
         // 给 prescriptionId 加 @NotNull 会把合法的单行发药挡成 400，DTO 注解无法表达，保留
         if (prescriptionId == null) {
             throw new BusinessException("处方ID不能为空");
         }
+        CurrentUser pharmacist = requireCurrentPharmacist();
+        Long pharmacistId = pharmacist.getEmployeeId();
+        String pharmacistName = pharmacist.getRealName();
         // ① 麻精限量闸门：整单一次判定，任一管制明细超限整单不发
         assertPrescriptionQuota(prescriptionId, overLimitReason);
         List<BizDrugDispensing> pendingList = this.lambdaQuery()
@@ -239,7 +245,7 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
         BigDecimal stockQuantity = stockUnitsOf(dispensing);
         StockDeductResultDTO deduct = pharmacyService.deductStockFefo(dispensing.getDrugId(), stockQuantity,
                 "dispensing", dispensing.getId(), dispensing.getDispensingNo(),
-                pharmacistName != null ? pharmacistName : UserUtils.getCurrentUser().getRealName());
+                pharmacistName);
         dispensing.setStockBefore(deduct.getQuantityBefore());
         dispensing.setStockAfter(deduct.getQuantityAfter());
 
@@ -278,6 +284,17 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
         // sql/139：药已经全部调剂出去，才谈得上代煎 —— 在这里（而不是医生开方时）建单，
         // 才不会出现在途单据「单子在、药被退了」。建单幂等，非代煎方返回 null。
         tcmDecoctService.createOnDispensed(prescriptionId);
+    }
+
+    /**
+     * 发药人 = 当前登录员工。身份只能来自登录态，前端不可伪造；取不到即报错，不降级、不兜底。
+     */
+    private CurrentUser requireCurrentPharmacist() {
+        CurrentUser user = UserUtils.getCurrentUser();
+        if (user == null || user.getEmployeeId() == null || !TextUtil.hasText(user.getRealName())) {
+            throw new BusinessException("未获取到当前登录药师信息，无法发药");
+        }
+        return user;
     }
 
     /**

@@ -2,14 +2,12 @@ package com.his.emr.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.common.util.TextUtil;
 import com.his.emr.dto.DrugDispenseDTO;
 import com.his.emr.dto.DrugReturnDTO;
 import com.his.emr.service.DrugDispensingService;
 import com.his.emr.vo.BizDrugDispensingVO;
 import com.his.emr.vo.DrugDispensingCountVO;
 import com.his.pharmacy.dto.DispensingQueryPageDTO;
-import com.his.system.utils.UserUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -55,8 +53,6 @@ public class DrugDispensingController {
     @PostMapping("/dispense")
     public Result<Void> dispense(@Valid @RequestBody DrugDispenseDTO actionDTO) {
         boolean success = drugDispensingService.dispense(actionDTO.getId(),
-                resolvePharmacistId(actionDTO.getPharmacistId()),
-                resolvePharmacistName(actionDTO.getPharmacistName()),
                 actionDTO.getCheckerId(),
                 actionDTO.getOverLimitReason());
         return success ? Result.success("发药成功", null) : Result.error("发药失败");
@@ -67,8 +63,6 @@ public class DrugDispensingController {
     @PostMapping("/dispenseByPrescription")
     public Result<Void> dispenseByPrescription(@Valid @RequestBody DrugDispenseDTO actionDTO) {
         boolean success = drugDispensingService.dispenseByPrescription(actionDTO.getPrescriptionId(),
-                resolvePharmacistId(actionDTO.getPharmacistId()),
-                resolvePharmacistName(actionDTO.getPharmacistName()),
                 actionDTO.getCheckerId(),
                 actionDTO.getOverLimitReason());
         return success ? Result.success("整单发药成功", null) : Result.error("整单发药失败");
@@ -80,18 +74,5 @@ public class DrugDispensingController {
     public Result<Void> returnDrug(@Valid @RequestBody DrugReturnDTO actionDTO) {
         boolean success = drugDispensingService.returnDrug(actionDTO.getId(), actionDTO.getReason());
         return success ? Result.success("退药成功", null) : Result.error("退药失败");
-    }
-
-    /**
-     * 药师身份以后端登录态为准（员工ID/姓名），DTO 传值仅作无登录态兜底
-     */
-    private Long resolvePharmacistId(Long fallback) {
-        Long employeeId = UserUtils.getCurrentUser().getEmployeeId();
-        return employeeId != null ? employeeId : fallback;
-    }
-
-    private String resolvePharmacistName(String fallback) {
-        String name = UserUtils.getCurrentUser().getRealName();
-        return (TextUtil.hasText(name)) ? name : fallback;
     }
 }

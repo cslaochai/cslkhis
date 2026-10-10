@@ -8,7 +8,6 @@
         <el-button data-testid="btn-next-week" @click="shiftWeek(7)">下一周</el-button>
       </el-button-group>
       <span class="text-sm font-medium text-slate-600" data-testid="week-label">{{ weekLabel }}</span>
-      <span class="text-xs text-slate-400">只读总览：编辑请到门诊排班 / 全院岗位排班 / 总值班排班等各自工作台</span>
     </div>
 
     <!-- 岗位卡片行：本周出勤人次（事实层 biz_staff_schedule 聚合） -->
@@ -109,7 +108,6 @@
       <!-- 总值班解析 -->
       <div class="rounded-md border border-slate-200 bg-white p-3" data-testid="duty-panel">
         <div class="mb-2 flex items-center justify-between">
-          <h3 class="text-sm font-semibold text-slate-700">本周总值班（主班优先 · 副班顶上）</h3>
           <span class="text-xs text-slate-400">只解析全院行政位；科室医师值班见总值班排班页</span>
         </div>
         <el-table :data="dutyRows" max-height="360" size="small">

@@ -33,10 +33,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SignatureCenterServiceImpl implements SignatureCenterService {
 
-    private final EmrSignatureService emrSignatureService;
-    private final SignCertService signCertService;
     private final SignProperties signProperties;
+
     private final ExternalCaChannelService externalCaChannelService;
+
+    private final EmrSignatureService emrSignatureService;
+
+    private final SignCertService signCertService;
 
     private static SignOptionVO opt(Integer code, String text) {
         return new SignOptionVO(code == null ? null : code.longValue(), text);

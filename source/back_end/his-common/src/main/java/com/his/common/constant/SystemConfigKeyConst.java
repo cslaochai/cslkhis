@@ -1,7 +1,7 @@
 package com.his.common.constant;
 
 /**
- * 系统参数（sys_config.config_key）的集中常量。
+ * 系统参数配置 key 的集中常量（覆盖 sys_config、sign_config 等业务参数表的 config_key）。
  * <p>
  * 原先各业务模块把 config_key 写成各自的 {@code private static final String}，散落各处且容易拼错，
  * 拼错时 {@code sysConfigMapper} 按 key 查不到配置会静默走兜底逻辑，不报错也看不出原因。
@@ -71,4 +71,44 @@ public interface SystemConfigKeyConst {
      * 住院证有效期（天）。
      */
     public static final String ADMISSION_ORDER_VALID_DAYS = "admission_order.valid_days";
+
+    // ===== 电子签名 / 可信时间戳（sign_config 表） =====
+
+    /**
+     * 签名时间来源：1=本机时钟 2=院内授时 3=第三方 TSA。
+     * <p>注意：这是 sign_config 表的 key（非 sys_config），但同样收口到本类统一管理。
+     */
+    public static final String SIGN_TIME_SOURCE = "sign.time_source";
+
+    /**
+     * 签名证书有效期（天）。
+     */
+    public static final String SIGN_CERT_VALID_DAYS = "sign.cert.valid_days";
+
+    /**
+     * 证书自动签发开关（true/false 或 1/0）。
+     */
+    public static final String SIGN_CERT_AUTO_ISSUE = "sign.cert.auto_issue";
+
+    // ===== 医院基础信息（sys_config 表） =====
+
+    /**
+     * 医院名称。
+     */
+    public static final String HOSPITAL_NAME = "hospital.name";
+
+    /**
+     * 医院地址。
+     */
+    public static final String HOSPITAL_ADDRESS = "hospital.address";
+
+    /**
+     * 医院联系电话。
+     */
+    public static final String HOSPITAL_PHONE = "hospital.phone";
+
+    /**
+     * 医院邮箱。
+     */
+    public static final String HOSPITAL_EMAIL = "hospital.email";
 }

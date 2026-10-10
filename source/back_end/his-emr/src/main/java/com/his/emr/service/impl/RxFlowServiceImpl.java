@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 处方流转单（M2，院外取药口子·打印形态）。
+ * 处方流转单
  */
 @Slf4j
 @Service

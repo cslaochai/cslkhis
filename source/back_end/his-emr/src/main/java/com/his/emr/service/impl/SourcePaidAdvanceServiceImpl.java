@@ -223,7 +223,7 @@ public class SourcePaidAdvanceServiceImpl implements SourcePaidAdvanceService {
         dispensing.setDrugName(detail.getDrugName());
         dispensing.setSpecification(detail.getSpecification());
         dispensing.setUnit(detail.getUnit());
-        // 饮片行的 quantity 已是「每剂克数 × 剂数」（sql/139），原样抄，发药侧再按库存档案单位换算
+        // 饮片行的 quantity 已是「每剂克数 × 剂数」，原样抄，发药侧再按库存档案单位换算
         dispensing.setQuantity(detail.getQuantity());
         dispensing.setPrice(detail.getPrice());
         dispensing.setAmount(detail.getAmount());

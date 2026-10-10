@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 单病种质控（M4）：病种目录（ICD 前缀纳入）→ 病例纳入（首页快照）→ 质控判级 → 上报打标 → 病种指标。
+ * 单病种质控
  */
 @Tag(name = "单病种质控")
 @RestController

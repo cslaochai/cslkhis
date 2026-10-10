@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 门诊治疗站（G19）：治疗申请（疗程）→ 排期 → 按次打卡 → 按次计费。
+ * 门诊治疗站
  */
 @Tag(name = "门诊治疗站")
 @RestController

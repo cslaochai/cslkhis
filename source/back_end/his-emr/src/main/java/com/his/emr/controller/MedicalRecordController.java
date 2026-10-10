@@ -25,9 +25,6 @@ public class MedicalRecordController {
 
     private final EmrService emrService;
 
-    // 雪花ID 必须序列化成字符串：前端 res.data 会存下来当作下次保存的 recordId 回传，
-    // 走 JSON number 会被 JS double 舍入（2101516032853229570 → ...229600），
-    // 下次 getById(舍入后的 id) 必然查不到 → 抛「病历不存在」，病历越存越断。
     @PreAuthorize("hasAuthority('opd:doctorWorkstation:add')")
     @Operation(summary = "保存病历（临时保存）")
     @PostMapping("/recordSave")

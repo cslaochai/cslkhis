@@ -3,7 +3,7 @@ package com.his.common.enums;
 import lombok.Getter;
 
 /**
- * 技术授权状态枚举（sql/155）。
+ * 技术授权状态枚举
  */
 @Getter
 public enum TechAuthStatusEnum {

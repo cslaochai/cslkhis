@@ -17,6 +17,7 @@ import com.his.system.mapper.SysSignCertMapper;
 import com.his.common.util.DateFormats;
 import com.his.system.utils.SignCryptoUtil;
 import com.his.common.util.TextUtil;
+import com.his.common.constant.SystemConfigKeyConst;
 import com.his.common.util.TimeUtil;
 import com.his.system.vo.ObjectSignatureVO;
 import com.his.system.vo.SignVerifyVO;
@@ -46,25 +47,29 @@ import java.util.Objects;
 public class EmrSignatureServiceImpl implements EmrSignatureService {
 
     private static final String SIGN_NO_PREFIX = "SIG";
-    private static final String CFG_TIME_SOURCE = "sign.time_source";
-    /**
-     * 单号冲突重试次数（与质控单同口径）
-     */
     private static final int MAX_RETRY = 3;
 
     private final BizEmrSignatureMapper bizEmrSignatureMapper;
-    private final SysSignCertMapper sysSignCertMapper;
-    private final SignCertService signCertService;
-    private final SignatureStoreService signatureStoreService;
-    private final SignProperties signProperties;
-    private final SignConfigMapper signConfigMapper;
-    private final RedisSequenceService redisSequenceService;
-    private final TsaChannelService tsaChannelService;
-    private final BizTsaTokenMapper tsaTokenMapper;
-    private final ObjectProvider<SignableContentProvider> providers;
-    private final ObjectProvider<SignCoverageProvider> coverageProviders;
 
-    // 验签
+    private final SysSignCertMapper sysSignCertMapper;
+
+    private final SignCertService signCertService;
+
+    private final SignatureStoreService signatureStoreService;
+
+    private final SignProperties signProperties;
+
+    private final SignConfigMapper signConfigMapper;
+
+    private final RedisSequenceService redisSequenceService;
+
+    private final TsaChannelService tsaChannelService;
+
+    private final BizTsaTokenMapper tsaTokenMapper;
+
+    private final ObjectProvider<SignableContentProvider> providers;
+
+    private final ObjectProvider<SignCoverageProvider> coverageProviders;
 
     private static Integer intValue(String s) {
         if (!TextUtil.hasText(s)) {
@@ -103,8 +108,6 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
     private static String shortDigest(String digest) {
         return digest == null ? null : digest.substring(0, Math.min(16, digest.length()));
     }
-
-    // 作废
 
     @Override
     public SignatureVO sign(SignCommandDTO cmd) {
@@ -611,7 +614,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
 
     @Override
     public int effectiveTimeSource() {
-        Integer cfg = intValue(signConfigMapper.selectValue(CFG_TIME_SOURCE));
+        Integer cfg = intValue(signConfigMapper.selectValue(SystemConfigKeyConst.SIGN_TIME_SOURCE));
         TimeSourceEnum ts = TimeSourceEnum.parse(cfg != null ? cfg : signProperties.getTimeSource());
         if (ts == null) {
             ts = TimeSourceEnum.LOCAL;

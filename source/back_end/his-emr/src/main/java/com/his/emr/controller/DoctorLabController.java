@@ -26,11 +26,6 @@ public class DoctorLabController {
 
     private final EmrService emrService;
 
-    /**
-     * 查询本次就诊的检验申请列表（不分页）。
-     *
-     * <p>路径沿用 {@code /getByPatientId}，过滤口径为「挂号」（原因见检查申请控制器）。
-     */
     @Operation(summary = "查询检验申请列表（按挂号，含执行进度）")
     @GetMapping("/getByPatientId")
     public Result<List<BizLaboratoryApplyVO>> getByPatientId(@Valid LaboratoryApplyQueryDTO queryDTO) {

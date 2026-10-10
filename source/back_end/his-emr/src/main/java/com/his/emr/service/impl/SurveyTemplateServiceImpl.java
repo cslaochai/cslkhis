@@ -149,14 +149,11 @@ public class SurveyTemplateServiceImpl extends ServiceImpl<BizSurveyTemplateMapp
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteById(Long id) {
         requireTemplate(id);
-        // 已被发放引用就不许删：历史答卷要能回答「当时问的是哪张卷」，
-        // 删了模板，报表上的模板名与题目快照就成了无源之水。改用停用。
         Long used = bizSurveyDispatchMapper.selectCount(new LambdaQueryWrapper<BizSurveyDispatch>()
                 .eq(BizSurveyDispatch::getTemplateId, id));
         if (used != null && used > 0) {
             throw new BusinessException("该问卷已发放 " + used + " 次，不能删除，请改为「停用」");
         }
-        // 题目物理删（模板没了，题目留着只会被 uk 继续占位），模板本身走 MP 软删
         bizSurveyItemMapper.purgeByTemplate(id);
         return bizSurveyTemplateMapper.deleteById(id) > 0;
     }

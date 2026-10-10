@@ -15,7 +15,7 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
- * 中药代煎服务单（sql/139）。
+ * 中药代煎服务单
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

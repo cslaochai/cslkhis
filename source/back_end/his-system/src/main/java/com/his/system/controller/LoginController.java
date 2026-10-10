@@ -28,7 +28,7 @@ public class LoginController {
 
     private final AuthService authService;
 
-    @Operation(summary = "获取登录口令加密公钥（SM2，匿名可取）")
+    @Operation(summary = "获取登录口令加密公钥（S匿名可取）")
     @GetMapping("/publicKey")
     public Result<PublicKeyVO> publicKey() {
         return Result.success("获取成功", authService.publicKey());

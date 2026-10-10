@@ -11,7 +11,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 医疗技术临床应用授权服务（sql/155）。
+ * 医疗技术临床应用授权服务
  */
 public interface EmployeeTechAuthService {
 

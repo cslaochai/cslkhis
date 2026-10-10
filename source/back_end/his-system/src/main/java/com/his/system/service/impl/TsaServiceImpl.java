@@ -19,6 +19,7 @@ import com.his.system.service.TsaChannelService;
 import com.his.system.service.TsaService;
 import com.his.system.utils.SignCryptoUtil;
 import com.his.common.util.TextUtil;
+import com.his.common.constant.SystemConfigKeyConst;
 import com.his.common.util.TimeUtil;
 import com.his.system.vo.TsaStatusVO;
 import com.his.system.vo.TsaTokenVO;
@@ -38,8 +39,6 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class TsaServiceImpl extends ServiceImpl<SysTsaServerMapper, SysTsaServer> implements TsaService {
-
-    private static final String CFG_TIME_SOURCE = "sign.time_source";
 
     private final TsaChannelService tsaChannelService;
     private final SysTsaServerMapper sysTsaServerMapper;
@@ -78,7 +77,7 @@ public class TsaServiceImpl extends ServiceImpl<SysTsaServerMapper, SysTsaServer
             }
         }
 
-        Integer cfg = parseCfg(signConfigMapper.selectValue(CFG_TIME_SOURCE));
+        Integer cfg = parseCfg(signConfigMapper.selectValue(SystemConfigKeyConst.SIGN_TIME_SOURCE));
         vo.setConfigTimeSource(cfg);
         int effective = emrSignatureService.effectiveTimeSource();
         vo.setEffectiveTimeSource(effective);
@@ -165,12 +164,12 @@ public class TsaServiceImpl extends ServiceImpl<SysTsaServerMapper, SysTsaServer
         String text = timeSource == TimeSourceEnum.TSA.getCode()
                 ? "3（第三方可信时间戳，经本地内置TSA适配）"
                 : "1（本机时钟）";
-        if (signConfigMapper.updateValue(CFG_TIME_SOURCE, String.valueOf(timeSource)) == 0) {
+        if (signConfigMapper.updateValue(SystemConfigKeyConst.SIGN_TIME_SOURCE, String.valueOf(timeSource)) == 0) {
             try {
-                signConfigMapper.insertValue(redisSequenceService.next("SYS_CONFIG"), CFG_TIME_SOURCE,
+                signConfigMapper.insertValue(redisSequenceService.next("SYS_CONFIG"), SystemConfigKeyConst.SIGN_TIME_SOURCE,
                         String.valueOf(timeSource), "签名时间来源", "运维接口写入：" + text);
             } catch (DuplicateKeyException e) {
-                signConfigMapper.updateValue(CFG_TIME_SOURCE, String.valueOf(timeSource));
+                signConfigMapper.updateValue(SystemConfigKeyConst.SIGN_TIME_SOURCE, String.valueOf(timeSource));
             }
         }
         log.info("签名时间来源切换为 {}（G6b 运维操作）", text);

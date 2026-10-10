@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 门诊日志（法规台账）——《门诊日志管理规定》口径：以病历为基表的接诊事实台账，
+ * 门诊日志
  */
 @RestController
 @RequestMapping("/emr/outpatientLog")

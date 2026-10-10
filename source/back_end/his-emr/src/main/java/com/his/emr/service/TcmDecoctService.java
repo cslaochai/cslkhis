@@ -11,7 +11,7 @@ import com.his.emr.vo.TcmDecoctDetailVO;
 import com.his.emr.vo.TcmDecoctVO;
 
 /**
- * 中药代煎台账（sql/139）。
+ * 中药代煎台账
  */
 public interface TcmDecoctService extends IService<BizTcmDecoct> {
 

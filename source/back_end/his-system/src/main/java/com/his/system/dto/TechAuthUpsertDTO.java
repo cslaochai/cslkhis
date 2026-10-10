@@ -9,7 +9,7 @@ import lombok.Data;
 import java.time.LocalDate;
 
 /**
- * 技术授权新增/修改入参（只作用于「待审批」状态的记录，见 sql/155）。
+ * 技术授权新增/修改入参
  */
 @Data
 public class TechAuthUpsertDTO {

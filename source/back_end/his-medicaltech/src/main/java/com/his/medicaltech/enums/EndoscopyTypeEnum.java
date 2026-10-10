@@ -3,16 +3,13 @@ package com.his.medicaltech.enums;
 import lombok.Getter;
 
 /**
- * 内镜检查类型枚举（码值口径 = 字典 his_endoscopy_type 中**代码里需要判定**的三个值）。
+ * 内镜检查类型枚举
  */
 @Getter
 public enum EndoscopyTypeEnum {
 
     GASTRO(1, "胃镜"),
     COLON(2, "肠镜"),
-    /**
-     * ERCP 是内镜下的介入操作，按四级技术管理（sql/155 起参与授权闸门）
-     */
     ERCP(7, "ERCP");
 
     private final int code;

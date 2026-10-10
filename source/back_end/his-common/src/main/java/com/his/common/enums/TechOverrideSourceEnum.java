@@ -3,7 +3,7 @@ package com.his.common.enums;
 import lombok.Getter;
 
 /**
- * 技术越权登记的来源单据类型（sql/155，落在越权授权事后登记单的来源类型列）。
+ * 技术越权登记的来源单据类型
  */
 @Getter
 public enum TechOverrideSourceEnum {

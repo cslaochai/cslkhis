@@ -8,7 +8,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 处方点评（事后专项点评 + 超常处方公示 + 医师约谈）。
+ * 处方点评
  */
 public interface RxReviewService {
 

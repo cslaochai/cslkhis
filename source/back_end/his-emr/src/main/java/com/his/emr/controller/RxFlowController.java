@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 处方流转单（M2，院外取药口子·打印形态）。
+ * 处方流转单
  */
 @Slf4j
 @Tag(name = "处方流转")

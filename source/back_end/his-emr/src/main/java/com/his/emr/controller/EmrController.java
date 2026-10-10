@@ -52,8 +52,6 @@ public class EmrController {
         return Result.success(emrService.getRecordDetail(recordId));
     }
 
-    // 患者端「我的病历列表 / 病历详情」已迁至 his-miniapp 的 /miniapp/emr/*（患者端点集中收口）
-
     @PreAuthorize("hasAuthority('emr:medicalRecord:edit')")
     @Operation(summary = "审核病历")
     @PostMapping("/recordReview")

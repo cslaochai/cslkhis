@@ -16,7 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 不良事件控制器（全院上报 + PDCA 四态闭环）
+ * 不良事件控制器
  */
 @Tag(name = "不良事件上报")
 @RestController

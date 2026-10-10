@@ -21,16 +21,6 @@ public class DrugDispenseDTO {
     private Long prescriptionId;
 
     /**
-     * 药师ID（可选，缺省取当前登录员工ID）
-     */
-    private Long pharmacistId;
-
-    /**
-     * 药师姓名（可选，缺省取当前登录员工姓名）
-     */
-    private String pharmacistName;
-
-    /**
      * 复核药师ID（麻醉药品、第一类精神药品**必填**）。
      * <p>
      * 只传 ID 不传姓名 —— 姓名由服务端按 ID 从员工表反查。

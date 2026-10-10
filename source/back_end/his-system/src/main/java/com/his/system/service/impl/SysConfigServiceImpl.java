@@ -3,6 +3,7 @@ package com.his.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
+import com.his.common.constant.SystemConfigKeyConst;
 import com.his.common.util.TextUtil;
 import com.his.system.dto.HospitalInfoUpsertDTO;
 import com.his.system.entity.SysConfig;
@@ -20,35 +21,30 @@ import java.util.stream.Collectors;
 @Service
 public class SysConfigServiceImpl extends ServiceImpl<SysConfigMapper, SysConfig> implements SysConfigService {
 
-    private static final String KEY_NAME = "hospital.name";
-    private static final String KEY_ADDRESS = "hospital.address";
-    private static final String KEY_PHONE = "hospital.phone";
-    private static final String KEY_EMAIL = "hospital.email";
-
     @Override
     public HospitalInfoVO getHospitalInfo() {
-        List<String> keys = List.of(KEY_NAME, KEY_ADDRESS, KEY_PHONE, KEY_EMAIL);
+        List<String> keys = List.of(SystemConfigKeyConst.HOSPITAL_NAME, SystemConfigKeyConst.HOSPITAL_ADDRESS, SystemConfigKeyConst.HOSPITAL_PHONE, SystemConfigKeyConst.HOSPITAL_EMAIL);
         LambdaQueryWrapper<SysConfig> wrapper = new LambdaQueryWrapper<>();
         wrapper.in(SysConfig::getConfigKey, keys);
         Map<String, String> valueByKey = list(wrapper).stream()
                 .collect(Collectors.toMap(SysConfig::getConfigKey, c -> c.getConfigValue() == null ? "" : c.getConfigValue(), (a, b) -> a));
 
         HospitalInfoVO vo = new HospitalInfoVO();
-        vo.setHospitalName(valueByKey.get(KEY_NAME));
-        vo.setHospitalAddress(valueByKey.get(KEY_ADDRESS));
-        vo.setHospitalPhone(valueByKey.get(KEY_PHONE));
-        vo.setHospitalEmail(valueByKey.get(KEY_EMAIL));
+        vo.setHospitalName(valueByKey.get(SystemConfigKeyConst.HOSPITAL_NAME));
+        vo.setHospitalAddress(valueByKey.get(SystemConfigKeyConst.HOSPITAL_ADDRESS));
+        vo.setHospitalPhone(valueByKey.get(SystemConfigKeyConst.HOSPITAL_PHONE));
+        vo.setHospitalEmail(valueByKey.get(SystemConfigKeyConst.HOSPITAL_EMAIL));
         return vo;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void upsertHospitalInfo(HospitalInfoUpsertDTO upsertDTO) {
-        setValue(KEY_NAME, "医院名称", upsertDTO.getHospitalName());
-        setValue(KEY_ADDRESS, "医院地址", upsertDTO.getHospitalAddress());
-        setValue(KEY_PHONE, "联系电话", upsertDTO.getHospitalPhone());
+        setValue(SystemConfigKeyConst.HOSPITAL_NAME, "医院名称", upsertDTO.getHospitalName());
+        setValue(SystemConfigKeyConst.HOSPITAL_ADDRESS, "医院地址", upsertDTO.getHospitalAddress());
+        setValue(SystemConfigKeyConst.HOSPITAL_PHONE, "联系电话", upsertDTO.getHospitalPhone());
         if (TextUtil.hasText(upsertDTO.getHospitalEmail())) {
-            setValue(KEY_EMAIL, "医院邮箱", upsertDTO.getHospitalEmail());
+            setValue(SystemConfigKeyConst.HOSPITAL_EMAIL, "医院邮箱", upsertDTO.getHospitalEmail());
         }
     }
 

@@ -278,7 +278,7 @@ public class MedicalRecordSaveDTO {
         private Integer longPrescriptionDays;
 
         /**
-         * 中药饮片剂数（1~30），处方类型=3 必填（sql/139）
+         * 中药饮片剂数（1~30），处方类型=3 必填
          */
         private Integer doseCount;
 

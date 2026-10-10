@@ -40,7 +40,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 中药代煎台账实现（sql/139）。
+ * 中药代煎台账实现
  */
 @Slf4j
 @Service

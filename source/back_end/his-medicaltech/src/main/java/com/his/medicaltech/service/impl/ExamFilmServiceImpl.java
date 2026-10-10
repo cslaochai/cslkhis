@@ -315,8 +315,6 @@ public class ExamFilmServiceImpl extends ServiceImpl<BizExamFilmMapper, BizExamF
         if (id == null) {
             throw new BusinessException("缺少规格ID");
         }
-        // 已经用过的规格不允许删：删掉之后历史胶片行的 spec_name 还在，
-        // 但「这个规格当年多少钱」这条链就断了，对账时会查不到价。
         long used = bizExamFilmMapper.selectCount(new LambdaQueryWrapper<BizExamFilm>()
                 .eq(BizExamFilm::getSpecId, id));
         if (used > 0) {

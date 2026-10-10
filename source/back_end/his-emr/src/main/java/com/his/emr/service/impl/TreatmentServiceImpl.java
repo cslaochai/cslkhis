@@ -46,7 +46,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 /**
- * 门诊治疗站（G19）：治疗申请（疗程）→ 排期 → 按次打卡 → 按次计费。
+ * 门诊治疗站
  */
 @Slf4j
 @Service

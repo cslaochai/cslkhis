@@ -18,7 +18,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 中药代煎台账（sql/139）。
+ * 中药代煎台账
  */
 @Tag(name = "中药代煎台账")
 @RestController

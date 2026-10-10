@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 医生工作站 - 检查申请模板控制器
+ * 医生工作站
  */
 @Tag(name = "医生工作站-检查申请模板")
 @RestController

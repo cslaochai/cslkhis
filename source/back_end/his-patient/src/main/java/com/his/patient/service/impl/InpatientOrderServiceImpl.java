@@ -61,9 +61,9 @@ import java.util.*;
 @RequiredArgsConstructor
 public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapper, BizInpatientOrder> implements InpatientOrderService {
 
-    private final RedisSequenceService redisSequenceService;
-
     private static final int BACKFILL_LIMIT = 500;
+
+    private final RedisSequenceService redisSequenceService;
 
     private final BizInpatientOrderMapper bizInpatientOrderMapper;
 
@@ -76,36 +76,20 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
     private final SysBedMapper sysBedMapper;
 
     private final OrderChargeInvoker orderChargeInvoker;
-    /**
-     * 膳食方案（sql/168）：临床营养医嘱校对即派生、停/作废即同步停/废
-     */
+
     private final DietPlanService dietPlanService;
-    /**
-     * 电子签名（P5.5）：开立签名 + 校对签名双签
-     */
+
     private final EmrSignatureService emrSignatureService;
-    /**
-     * 站内信（inpat-order 发送方）：医嘱校对完成 → 通知开嘱医生
-     */
+
     private final SysMessageService sysMessageService;
-    /**
-     * 欠费管控（G20）：SPI 由 his-charge 提供；缺席 fail-open 放行，只拦新增的择期类医嘱
-     */
+
     private final ObjectProvider<ArrearsControlGate> arrearsControlGate;
-    /**
-     * 技术授权准入闸（sql/155）：无手术资质的人不能开手术医嘱
-     */
+
     private final EmployeeTechAuthService employeeTechAuthService;
 
     private final DictCacheService dictCacheService;
 
-    /**
-     * 科室数据权限（M6）：受限岗位（data_scope=本科室）读医嘱/执行队列时按患者当前科室收口，
-     * 与 InpatientServiceImpl.listPage 同口径。
-     */
     private final DeptScopeService deptScopeService;
-
-    // 开立 / 修改
 
     private static String orderClassDesc(Integer orderClass) {
         String text = OrderClassEnum.getText(orderClass);
@@ -161,9 +145,6 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
 
         LocalDateTime now = TimeUtil.nowSeconds();
 
-        // 准入闸（sql/155）：手术医嘱（order_class=6）要求开单人本人有「手术类」技术授权。
-        // 级别不在这里判 —— 医嘱只写"要做手术"，几级由手术申请单定，级别闸落在排台（见 OperationApplyServiceImpl）。
-        // 与欠费闸相反，这里 fail-closed：判不出授权就拒单，宁可让医生去补授权。
         if (dto.getId() == null
                 && items.stream().anyMatch(i -> Objects.equals(OrderClassEnum.OPERATION.getCode(), i.getOrderClass()))) {
             TechAuthGateDTO authGate = new TechAuthGateDTO();
@@ -921,19 +902,6 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
 
     /**
      * 补当天计划行 —— 本项目刻意<b>不引入定时任务</b>。
-     *
-     * <p>长期医嘱是"按天执行"的：三天前校对通过的长期医嘱，如果没人管，今天的执行队列里
-     * 就不会有它 —— 那是**医嘱漏执行**，是护理质量的红线。两种解法：
-     * <ol>
-     *   <li>定时任务每天 0 点扫全表生成；</li>
-     *   <li>查询待执行队列时，为"该有今天这次"的医嘱补一行（幂等）。</li>
-     * </ol>
-     * 这里选 2，与「危急值超时是查询时算的」同一个口径：<b>状态由事实推导，不靠后台任务
-     * 把状态"跑"出来</b>。定时任务会带来"服务停机那天全院的长期医嘱计划集体缺失"这种
-     * 静默故障，而补计划是幂等的（唯一索引 {@code uk_ioe_order_plan_date} 兜底），漏不了也重不了。
-     *
-     * <p>补计划的<b>边界</b>：只补「已校对 / 执行中」的<b>长期</b>医嘱。未校对的医嘱永远补不出来
-     * —— 否则"未校对不可执行"这条铁律会被补计划悄悄绕过。
      */
     private void backfillTodayPlans(Long admissionId, Long patientId) {
         LocalDateTime now = TimeUtil.nowSeconds();

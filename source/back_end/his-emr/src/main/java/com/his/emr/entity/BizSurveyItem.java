@@ -12,7 +12,7 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
- * 满意度问卷题目（sql/164）。
+ * 满意度问卷题目
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

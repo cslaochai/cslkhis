@@ -3,7 +3,7 @@ package com.his.common.enums;
 import lombok.Getter;
 
 /**
- * 医疗技术授权类别枚举（sql/155）。
+ * 医疗技术授权类别枚举
  */
 @Getter
 public enum TechAuthCategoryEnum {

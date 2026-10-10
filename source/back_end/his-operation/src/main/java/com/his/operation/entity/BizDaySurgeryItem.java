@@ -49,7 +49,7 @@ public class BizDaySurgeryItem {
     private Integer maxStayHours;
 
     /**
-     * 手术级别（1~4，字典 his_operation_level；sql/155 起，日间手术按目录级别要求术者授权）
+     * 手术级别（1~4）
      */
     private Integer operationLevel;
 

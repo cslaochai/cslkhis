@@ -13,7 +13,7 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
- * 处方流转单实体（M2，院外取药口子）。
+ * 处方流转单实体（院外取药口子）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

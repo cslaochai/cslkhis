@@ -29,8 +29,6 @@ public class DoctorTemplateController {
 
     private final OtherTemplateService otherTemplateService;
 
-    // 常用诊断
-
     @Operation(summary = "查询常用诊断模板列表")
     @GetMapping("/diagList")
     public Result<List<BizDiagTemplateVO>> listDiagTemplates() {

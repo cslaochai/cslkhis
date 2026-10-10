@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 医疗技术临床应用授权控制器（台账见 sql/155，页面 805 技术授权）。
+ * 医疗技术临床应用授权控制器
  */
 @Tag(name = "医疗技术授权")
 @RestController

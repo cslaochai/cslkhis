@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
- * 越权登记上级确认入参（事后追认，见 sql/155 的越权授权事后登记）
+ * 越权登记上级确认入参
  */
 @Data
 public class TechAuthOverrideConfirmDTO {

@@ -8,7 +8,7 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
- * 满意度问卷模板（sql/164）。
+ * 满意度问卷模板
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

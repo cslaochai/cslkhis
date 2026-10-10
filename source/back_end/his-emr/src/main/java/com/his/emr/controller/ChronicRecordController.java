@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 慢病建档/认定（M1，医生工作站）。
+ * 慢病建档/认定
  */
 @Tag(name = "慢病建档/认定")
 @RestController

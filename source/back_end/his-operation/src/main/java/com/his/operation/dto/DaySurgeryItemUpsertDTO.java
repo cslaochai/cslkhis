@@ -58,9 +58,7 @@ public class DaySurgeryItemUpsertDTO implements Serializable {
     private Integer status;
 
     /**
-     * 手术分级 1~4（sql/155，dict his_operation_level）。
-     * <p>必填且不设默认：分级是临床分类而不是可缺省的配置，静默兜成 2 级
-     * 会让一个四级术式以二级授权通过准入闸门（{@code maxStayHours} 兜 48 是业务常量，此处无对应常量可兜）。
+     * 手术分级 1~4
      */
     @NotNull(message = "手术分级不能为空")
     @Min(value = 1, message = "手术分级只能为 1~4")

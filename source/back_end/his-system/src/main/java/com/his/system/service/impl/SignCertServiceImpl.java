@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.CertIssuedModeEnum;
 import com.his.common.enums.CertStatusEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.constant.SystemConfigKeyConst;
 import com.his.common.util.*;
 import com.his.system.config.SignProperties;
 import com.his.system.dto.SignCertIssueDTO;
@@ -43,8 +44,6 @@ import java.util.Objects;
 public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignCert> implements SignCertService {
 
     private static final String CERT_NO_PREFIX = "CERT";
-    private static final String CFG_VALID_DAYS = "sign.cert.valid_days";
-    private static final String CFG_AUTO_ISSUE = "sign.cert.auto_issue";
 
     private final SysSignCertMapper sysSignCertMapper;
 
@@ -325,7 +324,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         if (fromDto != null && fromDto > 0) {
             return fromDto;
         }
-        Integer cfg = intValue(signConfigMapper.selectValue(CFG_VALID_DAYS));
+        Integer cfg = intValue(signConfigMapper.selectValue(SystemConfigKeyConst.SIGN_CERT_VALID_DAYS));
         if (cfg != null && cfg > 0) {
             return cfg;
         }
@@ -333,7 +332,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
     }
 
     private boolean autoIssueEnabled() {
-        String v = signConfigMapper.selectValue(CFG_AUTO_ISSUE);
+        String v = signConfigMapper.selectValue(SystemConfigKeyConst.SIGN_CERT_AUTO_ISSUE);
         if (TextUtil.hasText(v)) {
             return !"0".equals(v.trim());
         }

@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 满意度问卷模板（定义「问什么」，sql/164）。
+ * 满意度问卷模板
  */
 @Tag(name = "满意度问卷模板")
 @RestController

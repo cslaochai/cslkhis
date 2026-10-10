@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
- * 技术授权审批入参（通过/驳回同一个接口，见 sql/155 状态机）
+ * 技术授权审批入参
  */
 @Data
 public class TechAuthApproveDTO {

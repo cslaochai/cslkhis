@@ -5,7 +5,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 代煎台账分页查询入参（sql/139）
+ * 代煎台账分页查询入参
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

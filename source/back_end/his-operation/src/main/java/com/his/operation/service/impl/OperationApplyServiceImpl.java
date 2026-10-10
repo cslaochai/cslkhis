@@ -400,8 +400,6 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         } else {
             bizOperationApplyMapper.updateById(entity);
         }
-        // 准入闸（sql/155）：申请人可以替团队开单，但本人必须是「有手术资质」的人 ——
-        // 药师、管理员、纯门诊医师拿着账号不该能发起手术申请。级别闸在排台定术者时判。
         gateTechAuth(entity.getApplyDoctorId(), TechAuthCategoryEnum.SURGERY.getCode(), 1,
                 entity, "手术申请人", null);
         log.info("{}手术申请 applyNo={} admissionId={} 术式={} 急诊={} 主要={} 申请人={}",
@@ -463,8 +461,6 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         entity.setScheduleRemark(dto.getScheduleRemark());
         entity.setOperationStatus(OperationApplyStatusEnum.SCHEDULED.getCode());
         bizOperationApplyMapper.updateById(entity);
-        // 分级授权闸（sql/155）：排台是"这台手术由谁来做"的唯一事实来源，所以级别闸落在这里。
-        // 主刀按手术级别要求「手术类」授权，麻醉医师按同级要求「麻醉类」授权。
         gateTechAuth(dto.getSurgeonId(), TechAuthCategoryEnum.SURGERY.getCode(),
                 entity.getOperationLevel(), entity, "主刀医师", surgeonName);
         if (dto.getAnesthetistId() != null) {
@@ -548,7 +544,6 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
 
         LocalDateTime start = TimeUtil.toSeconds(dto.getOperationStartTime());
         LocalDateTime end = TimeUtil.toSeconds(dto.getOperationEndTime());
-        // D-业务规则：时间先后关系，DTO 注解无法表达，保留
         if (!end.isAfter(start)) {
             throw new BusinessException("实际结束时间必须晚于开始时间");
         }
@@ -568,12 +563,9 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         }
 
         // 器械清点闸门：只要这台手术建过清点单，就必须三轮走完且对得上，
-        // 否则不允许登记手术完成。清点单本身是可选登记的 —— 没建单不拦，
-        // 建了单却对不上是最危险的状态（清点对数正是"异物遗留"唯一能在关闭体腔前发现的机制）。
         guardCount(entity);
 
         // 三方安全核查闸门（P134.2）：同清点的口径 —— 签过就必须签满三轮，
-        // 一轮都没签不拦（核查单目前允许不建，学习阶段先把"建了却没签完"这种最危险状态拦住）。
         guardSafetyCheck(entity);
 
         LocalDateTime now = TimeUtil.nowSeconds();
@@ -659,17 +651,9 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
                 entity.getApplyNo(), dto.getCancelReason(), operatorUser.getRealName());
     }
 
-    // 工具
 
     /**
      * 把这次手术回写成一份住院病历（record_type=5 手术记录，状态直接「已提交」）。
-     *
-     * <p>签名的医生是<b>主刀医师</b>，不是录入人 —— 手术记录的责任人是术者，
-     * 用"谁点的按钮"当签名，会让病案首页的医师签名与手术记录打架。
-     *
-     * <p>结构化要素按 {@code RecordStructuredFields.OPERATION_ELEMENTS} 那三项写：
-     * 术前诊断（diagnosis_name）、手术经过（course_note）、来源申请单与术者（remark）。
-     * 这三项必然同时写下，所以系统回写的手术记录结构化率是 100% —— 这是事实，不是凑分。
      */
     private BizInpatientRecord writeBackRecord(BizOperationApply entity, BizAdmission admission,
                                                OperationFinishDTO dto,
@@ -723,7 +707,6 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         record.setRecordType(InpatientRecordTypeEnum.OPERATION_RECORD.getCode());
         record.setRecordTitle("手术记录");
         record.setRecordTime(end);
-        // 术前诊断 → diagnosisName 列（手术记录的结构化"术前诊断"要素取这一列）
         record.setDiagnosisName(entity.getPreopDiagnosis());
         record.setCourseNote(course.toString());
         record.setRemark("系统回写：手术申请单号 " + entity.getApplyNo()
@@ -732,21 +715,15 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
                 + "，手术级别 " + dictCacheService.getDicDataLabel(DictTypeConst.OPERATION_LEVEL, entity.getOperationLevel())
                 + "，切口等级 " + dictCacheService.getDicDataLabel(DictTypeConst.INCISION_LEVEL, entity.getIncisionLevel()));
         record.setRecordStatus(RecordStatusEnum.SUBMITTED.getCode());
-        // 签名 = 主刀医师；主刀缺失才回落到录入人（宁可记"谁录的"，也不留空签名）
         record.setDoctorId(entity.getSurgeonId() != null ? entity.getSurgeonId() : operatorUser.getEmployeeId());
         record.setDoctorName(TextUtil.hasText(entity.getSurgeonName())
                 ? entity.getSurgeonName() : operatorUser.getRealName());
         record.setSubmitTime(now);
-        // 病历号取号与落库归病历文书的写入方（手术侧只负责把这台手术写成文书内容）
         return inpatientRecordService.appendClosedLoopRecord(record);
     }
 
     /**
      * 器械清点闸门。
-     *
-     * <p>为什么放在 finish() 里而不是只在清点单上标个状态：
-     * "手术做完了"是这台手术对外生效的那一刻，物没对数就让它生效，
-     * 等于把唯一能在关腔前拦住的机会让给事后追溯。
      */
     private void guardCount(BizOperationApply entity) {
         long sheets = bizOperationCountMapper.selectCount(
