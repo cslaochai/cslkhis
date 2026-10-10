@@ -4,28 +4,21 @@ import com.his.common.util.TextUtil;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.enums.PatientProfileCoverageEnum;
 import com.his.patient.enums.PatientProfileFieldEnum;
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
 
 import java.util.*;
 
 /**
  * 患者档案关键字段清单与完整度评分（P5.1 EMPI / P5.3 数据质量共用）
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class PatientProfileFields {
 
     /**
      * 字段名（前端字段名）→ 中文名。顺序即展示顺序
      */
     public static final Map<String, String> FIELDS = build();
+
     /**
      * 档案分组键 → 关键字段中文名。
-     *
-     * <p>只列**同时有两份存储**的字段：`过敏史`、`既往病史` 在患者基本信息里是文本字段，
-     * 同时又有结构化表（药物过敏史 / 既往疾病史）；
-     * `联系人` 也一样（患者基本信息.contact_name vs 患者联系方式）。
-     * 手术史/家族史/用药史没有对应的患者基本信息文本字段，不在此表。
      */
     private static final Map<String, String> PROFILE_KEY_TO_LABEL = PatientProfileCoverageEnum.all();
 
@@ -34,9 +27,7 @@ public final class PatientProfileFields {
         for (PatientProfileFieldEnum e : PatientProfileFieldEnum.values()) {
             m.put(e.getCode(), e.getLabel());
         }
-        // 必须用 unmodifiableMap 而不是 Map.copyOf：copyOf 会丢掉 LinkedHashMap 的插入顺序，
-        // 页面上的"关键字段清单"就是按这个顺序渲染的。
-        return java.util.Collections.unmodifiableMap(m);
+        return Collections.unmodifiableMap(m);
     }
 
     /**

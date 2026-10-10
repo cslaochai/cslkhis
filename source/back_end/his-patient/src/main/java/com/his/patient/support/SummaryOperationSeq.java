@@ -1,7 +1,5 @@
 package com.his.patient.support;
 
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.patient.entity.BizInpatientOperation;
 import com.his.patient.mapper.BizInpatientOperationMapper;
@@ -14,7 +12,6 @@ import java.util.Objects;
 /**
  * 病案首页手术明细的序号重排。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class SummaryOperationSeq {
 
     /**

@@ -3,7 +3,7 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.enums.ObjectSignStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
-import com.his.common.service.SignCoverageProvider;
+import com.his.system.service.SignCoverageProvider;
 import com.his.patient.entity.BizInpatientRecord;
 import com.his.patient.mapper.BizInpatientRecordMapper;
 import com.his.patient.service.InpatientRecordSignCoverageProvider;

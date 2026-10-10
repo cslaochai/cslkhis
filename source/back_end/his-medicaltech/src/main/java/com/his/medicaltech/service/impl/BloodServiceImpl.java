@@ -4,10 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -108,24 +108,24 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
     private BloodVO.CrossmatchVO toCmVo(BizBloodCrossmatch c) {
         BloodVO.CrossmatchVO vo = new BloodVO.CrossmatchVO();
         BeanUtils.copyProperties(c, vo);
-        vo.setPatientBloodTypeText(dictCacheService.getDicDataLabel(DictType.BLOOD_TYPE, c.getPatientBloodType()));
-        vo.setPatientRhTypeText(dictCacheService.getDicDataLabel(DictType.BLOOD_RH, c.getPatientRhType()));
-        vo.setBagBloodTypeText(dictCacheService.getDicDataLabel(DictType.BLOOD_TYPE, c.getBagBloodType()));
-        vo.setComponentTypeText(dictCacheService.getDicDataLabel(DictType.BLOOD_COMPONENT, c.getComponentType()));
-        vo.setMethodText(dictCacheService.getDicDataLabel(DictType.CROSSMATCH_METHOD, c.getMethod()));
-        vo.setResultText(dictCacheService.getDicDataLabel(DictType.CROSSMATCH_RESULT, c.getResult()));
-        vo.setStatusText(dictCacheService.getDicDataLabel(DictType.CROSSMATCH_STATUS, c.getStatus()));
+        vo.setPatientBloodTypeText(dictCacheService.getDicDataLabel(DictTypeConst.BLOOD_TYPE, c.getPatientBloodType()));
+        vo.setPatientRhTypeText(dictCacheService.getDicDataLabel(DictTypeConst.BLOOD_RH, c.getPatientRhType()));
+        vo.setBagBloodTypeText(dictCacheService.getDicDataLabel(DictTypeConst.BLOOD_TYPE, c.getBagBloodType()));
+        vo.setComponentTypeText(dictCacheService.getDicDataLabel(DictTypeConst.BLOOD_COMPONENT, c.getComponentType()));
+        vo.setMethodText(dictCacheService.getDicDataLabel(DictTypeConst.CROSSMATCH_METHOD, c.getMethod()));
+        vo.setResultText(dictCacheService.getDicDataLabel(DictTypeConst.CROSSMATCH_RESULT, c.getResult()));
+        vo.setStatusText(dictCacheService.getDicDataLabel(DictTypeConst.CROSSMATCH_STATUS, c.getStatus()));
         return vo;
     }
 
     public BloodVO.InventoryVO toInvVo(BizBloodInventory b) {
         BloodVO.InventoryVO vo = new BloodVO.InventoryVO();
         BeanUtils.copyProperties(b, vo);
-        vo.setBloodTypeText(dictCacheService.getDicDataLabel(DictType.BLOOD_TYPE, b.getBloodType()));
-        vo.setRhTypeText(dictCacheService.getDicDataLabel(DictType.BLOOD_RH, b.getRhType()));
-        vo.setComponentTypeText(dictCacheService.getDicDataLabel(DictType.BLOOD_COMPONENT, b.getComponentType()));
-        vo.setStatusText(dictCacheService.getDicDataLabel(DictType.BLOOD_INVENTORY_STATUS, b.getStatus()));
-        vo.setSourceTypeText(dictCacheService.getDicDataLabel(DictType.BLOOD_SOURCE_TYPE, b.getSourceType()));
+        vo.setBloodTypeText(dictCacheService.getDicDataLabel(DictTypeConst.BLOOD_TYPE, b.getBloodType()));
+        vo.setRhTypeText(dictCacheService.getDicDataLabel(DictTypeConst.BLOOD_RH, b.getRhType()));
+        vo.setComponentTypeText(dictCacheService.getDicDataLabel(DictTypeConst.BLOOD_COMPONENT, b.getComponentType()));
+        vo.setStatusText(dictCacheService.getDicDataLabel(DictTypeConst.BLOOD_INVENTORY_STATUS, b.getStatus()));
+        vo.setSourceTypeText(dictCacheService.getDicDataLabel(DictTypeConst.BLOOD_SOURCE_TYPE, b.getSourceType()));
         vo.setAboVerifyText(b.getAboVerify() != null && b.getAboVerify() == YesOrNoEnum.YES.getCode() ? "已复核" : "未复核");
         if (b.getExpireDate() != null) {
             vo.setExpireDays((int) ChronoUnit.DAYS.between(LocalDate.now(), b.getExpireDate()));
@@ -157,7 +157,7 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
         for (BloodTypeEnum type : BloodTypeEnum.values()) {
             BloodVO.TypeCount c = new BloodVO.TypeCount();
             c.setBloodType(type.getCode());
-            c.setBloodTypeText(dictCacheService.getDicDataLabel(DictType.BLOOD_TYPE, type.getCode()));
+            c.setBloodTypeText(dictCacheService.getDicDataLabel(DictTypeConst.BLOOD_TYPE, type.getCode()));
             List<BizBloodInventory> bags = bizBloodInventoryMapper.selectList(new LambdaQueryWrapper<BizBloodInventory>()
                     .eq(BizBloodInventory::getStatus, BloodInventoryStatusEnum.IN_STOCK.getCode())
                     .eq(BizBloodInventory::getBloodType, type.getCode())
@@ -174,7 +174,7 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
     public void reserve(BloodDTO.BagAction dto) {
         BizBloodInventory b = requireBag(dto.getBagId());
         if (b.getStatus() != BloodInventoryStatusEnum.IN_STOCK.getCode()) {
-            throw new BusinessException("仅「在库」血袋可预留（当前：" + dictCacheService.getDicDataLabel(DictType.BLOOD_INVENTORY_STATUS, b.getStatus()) + "）");
+            throw new BusinessException("仅「在库」血袋可预留（当前：" + dictCacheService.getDicDataLabel(DictTypeConst.BLOOD_INVENTORY_STATUS, b.getStatus()) + "）");
         }
         b.setStatus(BloodInventoryStatusEnum.RESERVED.getCode());
         bizBloodInventoryMapper.updateById(b);
@@ -185,7 +185,7 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
     public void cancelReserve(BloodDTO.BagAction dto) {
         BizBloodInventory b = requireBag(dto.getBagId());
         if (b.getStatus() != BloodInventoryStatusEnum.RESERVED.getCode()) {
-            throw new BusinessException("仅「已预留」血袋可取消预留（当前：" + dictCacheService.getDicDataLabel(DictType.BLOOD_INVENTORY_STATUS, b.getStatus()) + "）");
+            throw new BusinessException("仅「已预留」血袋可取消预留（当前：" + dictCacheService.getDicDataLabel(DictTypeConst.BLOOD_INVENTORY_STATUS, b.getStatus()) + "）");
         }
         b.setStatus(BloodInventoryStatusEnum.IN_STOCK.getCode());
         bizBloodInventoryMapper.updateById(b);
@@ -204,7 +204,7 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
         BizBloodInventory b = requireBag(dto.getBagId());
         if (b.getStatus() != BloodInventoryStatusEnum.RESERVED.getCode()) {
             throw new BusinessException("发血前血袋必须「已预留」（预留由配血复核相合产生）——当前："
-                    + dictCacheService.getDicDataLabel(DictType.BLOOD_INVENTORY_STATUS, b.getStatus()));
+                    + dictCacheService.getDicDataLabel(DictTypeConst.BLOOD_INVENTORY_STATUS, b.getStatus()));
         }
         b.setStatus(BloodInventoryStatusEnum.ISSUED.getCode());
         b.setApplyNo(dto.getApplyNo().trim());
@@ -226,7 +226,7 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
         BizBloodInventory b = requireBag(dto.getBagId());
         if (b.getStatus() != BloodInventoryStatusEnum.IN_STOCK.getCode() && b.getStatus() != BloodInventoryStatusEnum.RESERVED.getCode()) {
             throw new BusinessException("仅「在库 / 已预留」血袋可报废（当前："
-                    + dictCacheService.getDicDataLabel(DictType.BLOOD_INVENTORY_STATUS, b.getStatus()) + "）");
+                    + dictCacheService.getDicDataLabel(DictTypeConst.BLOOD_INVENTORY_STATUS, b.getStatus()) + "）");
         }
         int from = b.getStatus();
         b.setStatus(BloodInventoryStatusEnum.SCRAPPED.getCode());
@@ -248,7 +248,7 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
         BizBloodInventory b = requireBag(dto.getBagId());
         if (b.getStatus() != BloodInventoryStatusEnum.IN_STOCK.getCode() && b.getStatus() != BloodInventoryStatusEnum.RESERVED.getCode()) {
             throw new BusinessException("仅「在库 / 已预留」血袋可退回（当前："
-                    + dictCacheService.getDicDataLabel(DictType.BLOOD_INVENTORY_STATUS, b.getStatus()) + "）");
+                    + dictCacheService.getDicDataLabel(DictTypeConst.BLOOD_INVENTORY_STATUS, b.getStatus()) + "）");
         }
         int from = b.getStatus();
         b.setStatus(BloodInventoryStatusEnum.RETURNED.getCode());
@@ -283,7 +283,7 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
             throw new BusinessException("血袋不存在：" + dto.getBagNo());
         }
         if (bag.getStatus() != BloodInventoryStatusEnum.IN_STOCK.getCode() && bag.getStatus() != BloodInventoryStatusEnum.RESERVED.getCode()) {
-            throw new BusinessException("血袋当前状态不可配血（" + dictCacheService.getDicDataLabel(DictType.BLOOD_INVENTORY_STATUS, bag.getStatus()) + "）");
+            throw new BusinessException("血袋当前状态不可配血（" + dictCacheService.getDicDataLabel(DictTypeConst.BLOOD_INVENTORY_STATUS, bag.getStatus()) + "）");
         }
         long active = bizBloodCrossmatchMapper.selectCount(new LambdaQueryWrapper<BizBloodCrossmatch>()
                 .eq(BizBloodCrossmatch::getBagNo, bag.getBagNo())
@@ -315,7 +315,7 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
         }
         BizBloodCrossmatch c = requireCm(dto.getMatchId());
         if (c.getStatus() != CrossmatchOrderStatusEnum.PENDING.getCode()) {
-            throw new BusinessException("仅「待配血」可执行配血（当前：" + dictCacheService.getDicDataLabel(DictType.CROSSMATCH_STATUS, c.getStatus()) + "）");
+            throw new BusinessException("仅「待配血」可执行配血（当前：" + dictCacheService.getDicDataLabel(DictTypeConst.CROSSMATCH_STATUS, c.getStatus()) + "）");
         }
         c.setMethod(dto.getMethod() == null ? CrossmatchMethodEnum.POLYBRENE.getCode() : dto.getMethod());
         c.setResult(dto.getResult());
@@ -334,7 +334,7 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
         }
         BizBloodCrossmatch c = requireCm(dto.getMatchId());
         if (c.getStatus() != CrossmatchOrderStatusEnum.MATCHED.getCode()) {
-            throw new BusinessException("仅「已配血」可复核（当前：" + dictCacheService.getDicDataLabel(DictType.CROSSMATCH_STATUS, c.getStatus()) + "）");
+            throw new BusinessException("仅「已配血」可复核（当前：" + dictCacheService.getDicDataLabel(DictTypeConst.CROSSMATCH_STATUS, c.getStatus()) + "）");
         }
         String who = operatorUser.getRealName();
         if (who != null && who.equals(c.getOperator())) {
@@ -412,10 +412,10 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
      * 配血结论：服务端生成 ABO/Rh 核对说明，操作人补充内容拼在后面
      */
     private String buildConclusion(BizBloodCrossmatch c, String extra) {
-        String patientT = dictCacheService.getDicDataLabel(DictType.BLOOD_TYPE, c.getPatientBloodType());
-        String bagT = dictCacheService.getDicDataLabel(DictType.BLOOD_TYPE, c.getBagBloodType());
-        String patientRh = dictCacheService.getDicDataLabel(DictType.BLOOD_RH, c.getPatientRhType());
-        String bagRh = dictCacheService.getDicDataLabel(DictType.BLOOD_RH, c.getBagRhType());
+        String patientT = dictCacheService.getDicDataLabel(DictTypeConst.BLOOD_TYPE, c.getPatientBloodType());
+        String bagT = dictCacheService.getDicDataLabel(DictTypeConst.BLOOD_TYPE, c.getBagBloodType());
+        String patientRh = dictCacheService.getDicDataLabel(DictTypeConst.BLOOD_RH, c.getPatientRhType());
+        String bagRh = dictCacheService.getDicDataLabel(DictTypeConst.BLOOD_RH, c.getBagRhType());
         boolean sameAbo = c.getPatientBloodType() != null && c.getPatientBloodType().equals(c.getBagBloodType());
         boolean sameRh = c.getPatientRhType() == null || c.getBagRhType() == null || c.getPatientRhType().equals(c.getBagRhType());
         StringBuilder sb = new StringBuilder();

@@ -46,15 +46,19 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
     private static final int DEFAULT_BACK_DAYS = 1;
     private static final int DEFAULT_FORWARD_DAYS = 30;
 
-    private final BizDutyRosterMapper bizDutyRosterMapper;
-    private final BizDutyPostMapper bizDutyPostMapper;
-    private final BizShiftMapper bizShiftMapper;
-    private final SysEmployeeMapper sysEmployeeMapper;
-    private final SysDepartmentMapper sysDepartmentMapper;
     private final ShiftService shiftService;
+
     private final StaffScheduleService staffScheduleService;
 
-    // 「今天谁负责」—— 三条链路共同依赖的唯一入口
+    private final BizDutyRosterMapper bizDutyRosterMapper;
+
+    private final BizDutyPostMapper bizDutyPostMapper;
+
+    private final BizShiftMapper bizShiftMapper;
+
+    private final SysEmployeeMapper sysEmployeeMapper;
+
+    private final SysDepartmentMapper sysDepartmentMapper;
 
     /**
      * 当前时刻的总值班（跨自然日的夜班按开始日解析）
@@ -137,7 +141,6 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
     }
 
     // 排班维护
-
     public PageResult<DutyRosterVO> listPage(DutyRosterQueryPageDTO q) {
         LocalDate begin = q.getBeginDate() != null ? q.getBeginDate() : LocalDate.now().minusDays(DEFAULT_BACK_DAYS);
         LocalDate end = q.getEndDate() != null ? q.getEndDate() : LocalDate.now().plusDays(DEFAULT_FORWARD_DAYS);
@@ -210,8 +213,6 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
         DutyShiftTypeEnum shiftType = DutyShiftTypeEnum.fromCode(dto.getShiftType());
         DutyRoleTypeEnum roleType = DutyRoleTypeEnum.fromCode(dto.getRoleType());
         SysEmployee emp = requireOnDutyEmployee(dto.getEmployeeId());
-        // 点位优先：传了 postId 就以点位为权威（班次/角色/层级/响应形态/所属单元全部由它带出），
-        // 没传才走老语义——按班次+角色反查「全院行政」点位
         BizDutyPost post = resolvePost(dto, roleType);
         if (post != null) {
             assertPostStaffType(post, emp);
@@ -243,7 +244,6 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
                 : (post != null && TextUtil.hasText(post.getPhone()) ? post.getPhone() : emp.getPhone()));
         row.setShiftId(shift == null ? null : shift.getId());
         row.setPostId(post == null ? null : post.getId());
-        // 时刻一律以班次为准，手填只在值守册还没配班次时兜底（历史行就是这个形状）
         row.setStartTime(shift != null ? shift.getStartTime() : TextUtil.trimToNull(dto.getStartTime()));
         row.setEndTime(shift != null ? shift.getEndTime() : TextUtil.trimToNull(dto.getEndTime()));
         row.setStatus(enabled ? EnableStatusEnum.ENABLED.getCode() : EnableStatusEnum.DISABLED.getCode());
@@ -253,8 +253,6 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
                 : null);
 
         saveRow(row, insert);
-        // 换了人 / 改成停用：旧的那条在岗事实不再被任何位引用就一并收掉，
-        // 否则「今日在岗」还会把已经不在位上的人算进值守人数
         if (boundFactId != null && !Objects.equals(boundFactId, row.getStaffScheduleId())) {
             releaseFactIfUnused(boundFactId);
         }
@@ -266,7 +264,6 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
 
     /**
      * 临时换班：写 substitute_*，不动原值班人。
-     * 原因必填 —— 换主班是敏感动作，"谁临时顶的、为什么"是事后复盘的唯一依据。
      */
     @Transactional(rollbackFor = Exception.class)
     public void substitute(DutySubstituteDTO dto) {
@@ -297,10 +294,6 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
             throw new BusinessException("该排班未换班，无需撤回");
         }
         transferAttendance(row, row.getEmployeeId(), "取消换班，交回原值班人");
-        // ⚠ 必须用 UpdateWrapper 显式 set null：updateById 走 NOT_NULL 策略会**跳过 null 字段**，
-        // 结果是"撤回"静默无效 —— 界面显示已撤回，解析出来还是换班后的人（本项目最典型的静默错误）。
-        // 电话必须一并还原：换班时 phone 被改成了换班人的号码，不清回去，
-        // 「撤回」之后打通的还是已经不值班那个人的手机 —— 应急链路上这是致命的。
         SysEmployee origin = sysEmployeeMapper.selectById(row.getEmployeeId());
         bizDutyRosterMapper.update(null, new LambdaUpdateWrapper<BizDutyRoster>()
                 .eq(BizDutyRoster::getId, row.getId())
@@ -339,8 +332,6 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
 
     /**
      * 排班行的落库。更新必须逐列显式 set：换人/停用时 shift_id、post_id、staff_schedule_id
-     * 都要能写回 NULL，而 updateById 的 NOT_NULL 策略会静默跳过 null 字段
-     * （留着旧点位绑定 = 这个位明明停了还挂在岗名单上）。
      */
     private void saveRow(BizDutyRoster row, boolean insert) {
         if (insert) {
@@ -365,13 +356,6 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
 
     /**
      * 登记这条值班的在岗事实 —— 值班不是"写在册子上"，它就是这个人的一段真实出勤。
-     *
-     * <p><b>挂哪个排班单元</b>：总值班（行政点位或无点位）挂全院；
-     * 科室医师值班挂<b>点位所属科室</b> —— 挂在全院下等于这个医生值了一夜班，
-     * 科室的今日在岗名单里查无此人（查房、管床、值班三件事对不上账）。
-     *
-     * <p><b>响应形态跟着点位走</b>：一线是留院值班（人在院里），二线三线是听班（随叫随到），
-     * 这也是「值班」和「听班」在工时与在岗统计上的分水岭。
      */
     private BizStaffSchedule dutyAttendance(LocalDate date, SysEmployee emp, BizShift shift,
                                             BizDutyPost post, String remark) {
@@ -401,8 +385,6 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
      */
     private void transferAttendance(BizDutyRoster row, Long toEmployeeId, String reason) {
         if (row.getStaffScheduleId() == null || toEmployeeId == null) {
-            // 绑不上事实的两种情形：收敛之前建的历史行、这条位已停用。位上的记录照写，
-            // 事实层没有这条班可改，等下一次登记时自然补上
             log.warn("总值班排班 {} 没有绑定在岗事实，换班只记在排班行上", row.getId());
             return;
         }
@@ -430,8 +412,6 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
 
     /**
      * 值守册里按「跨不跨零点」认白/夜：夜段就是 18:00~次日 08:00 那条，白段是同日起止的那条。
-     * <br>不写死班次ID：班次ID是铺底数据，点位与排班都按班次自身的属性取，
-     * 换一家医院重铺班次时这段代码不用改。
      */
     private BizShift dutyShiftOf(DutyShiftTypeEnum shiftType) {
         boolean night = shiftType == DutyShiftTypeEnum.NIGHT;
@@ -448,12 +428,6 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
 
     /**
      * 点位解析：传了 {@code postId} 就以它为准（科室医师值班走这条）；
-     * 没传就是老语义＝全院总值班，按「班次+角色」反查<b>全院行政</b>点位。
-     *
-     * <p>⚠ 反查<b>必须限定 duty_scope=1</b>：sql/202 之后临床医师值班点位和总值班点位
-     * 同居 {@code biz_duty_post}（24 个临床位 vs 4 个行政位，班次册还不同），
-     * 不收口的话「排总值班」会 LIMIT 1 抓到某个内科的一线白班位 ——
-     * 全院应急协调就变成半夜打给一个只管自己病房的医生。
      */
     private BizDutyPost resolvePost(DutyRosterUpsertDTO dto, DutyRoleTypeEnum roleType) {
         if (dto.getPostId() != null) {
@@ -483,8 +457,6 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
 
     /**
      * 点位要求的岗位类别校验：临床医师值班点位 required_staff_type=1，
-     * 把护士排上去＝半夜打电话叫一个不管床的人去处理病情变化。
-     * 点位没配（0 或空）= 不限岗位，放行。
      */
     private void assertPostStaffType(BizDutyPost post, SysEmployee emp) {
         Integer required = post.getRequiredStaffType();
@@ -516,10 +488,6 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
 
     /**
      * 取一行有效总值班（status=1）；同一键理论上只有一行，仍按 id 升序取第一条，绝不 selectOne 撞多行。
-     *
-     * <p>⚠ <b>只认总值班行</b>（点位为空的老数据，或挂在行政点位上的行）：
-     * sql/202 之后临床医师值班也写进这张表，「此刻全院谁负责」若不加限定，
-     * 会解析成某个科室的一线医生 —— 他要管自己的病房，接不了全院协调的活。
      */
     private BizDutyRoster pick(LocalDate date, int shift, int role) {
         List<Long> adminIds = adminPostIds();
@@ -542,9 +510,6 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
 
     /**
      * 忽略 status 查重（upsert 用：停用的行也要能被重新启用，而不是插第二行撞唯一键）。
-     *
-     * <p>⚠ 有点位时按「日期 + 点位」查：{@code uk_duty_post_date} 的口径就是一个位一天一个人。
-     * 继续用「日期+班次+角色」会 LIMIT 1 抓到<b>别的科室</b>的行 —— 排内科一线，改掉的却是外科那行。
      */
     private BizDutyRoster pickAny(LocalDate date, BizDutyPost post, int shift, int role) {
         LambdaQueryWrapper<BizDutyRoster> w = new LambdaQueryWrapper<>();
@@ -654,8 +619,6 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
             throw new BusinessException("值班人不存在");
         }
         if (!Objects.equals(1, emp.getStatus())) {
-            // 离职/停职的人排总值班 = 半夜打不通电话。这条必须在写入侧拦住，
-            // 不能等应急事件发生时才发现联系不上人。
             throw new BusinessException("值班人「" + emp.getEmpName() + "」不在职（离职/停职员工不能排总值班）");
         }
         return emp;

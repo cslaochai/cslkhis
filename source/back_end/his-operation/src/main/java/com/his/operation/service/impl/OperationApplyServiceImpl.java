@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.*;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
@@ -43,7 +43,7 @@ import com.his.system.service.DictCacheService;
 import com.his.system.service.EmployeeTechAuthService;
 import com.his.system.utils.UserUtils;
 import com.his.system.provider.DeptScopeService;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -729,8 +729,8 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         record.setRemark("系统回写：手术申请单号 " + entity.getApplyNo()
                 + "，主刀 " + textOr(entity.getSurgeonName(), "未指定")
                 + "，麻醉方式 " + OperationAnesthesiaMethodEnum.getText(entity.getAnesthesiaType())
-                + "，手术级别 " + dictCacheService.getDicDataLabel(DictType.OPERATION_LEVEL, entity.getOperationLevel())
-                + "，切口等级 " + dictCacheService.getDicDataLabel(DictType.INCISION_LEVEL, entity.getIncisionLevel()));
+                + "，手术级别 " + dictCacheService.getDicDataLabel(DictTypeConst.OPERATION_LEVEL, entity.getOperationLevel())
+                + "，切口等级 " + dictCacheService.getDicDataLabel(DictTypeConst.INCISION_LEVEL, entity.getIncisionLevel()));
         record.setRecordStatus(RecordStatusEnum.SUBMITTED.getCode());
         // 签名 = 主刀医师；主刀缺失才回落到录入人（宁可记"谁录的"，也不留空签名）
         record.setDoctorId(entity.getSurgeonId() != null ? entity.getSurgeonId() : operatorUser.getEmployeeId());
@@ -793,8 +793,8 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
 
     private void decorate(OperationApplyVO vo) {
         vo.setOperationStatusText(OperationApplyStatusEnum.getText(vo.getOperationStatus()));
-        vo.setOperationLevelText(dictCacheService.getDicDataLabel(DictType.OPERATION_LEVEL, vo.getOperationLevel()));
-        vo.setIncisionLevelText(dictCacheService.getDicDataLabel(DictType.INCISION_LEVEL, vo.getIncisionLevel()));
+        vo.setOperationLevelText(dictCacheService.getDicDataLabel(DictTypeConst.OPERATION_LEVEL, vo.getOperationLevel()));
+        vo.setIncisionLevelText(dictCacheService.getDicDataLabel(DictTypeConst.INCISION_LEVEL, vo.getIncisionLevel()));
         vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getAnesthesiaType()));
         vo.setIsEmergencyText(YesOrNoEnum.getText(vo.getIsEmergency()));
         vo.setIsMainText(vo.getIsMain() == null ? "—" : (vo.getIsMain() == 1 ? "主要手术" : "次要手术"));

@@ -1,9 +1,7 @@
 package com.his.pharmacy.support;
 
 import com.his.common.util.TextUtil;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.regex.Matcher;
@@ -12,7 +10,6 @@ import java.util.regex.Pattern;
 /**
  * 药品追溯码解析器（扫码串 → 码制 / 产品标识 / 序列号 / 批号 / 有效期）。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DrugTraceParser {
 
     /**

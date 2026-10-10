@@ -5,8 +5,7 @@ import lombok.NoArgsConstructor;
 /**
  * AI 能力标识。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
-public final class AiCapabilityKeys {
+public interface AiCapabilityKeys {
 
     /**
      * ICD-10 智能编码

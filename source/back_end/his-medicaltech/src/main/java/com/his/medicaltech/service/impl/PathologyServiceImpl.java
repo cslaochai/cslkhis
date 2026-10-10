@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -114,8 +114,8 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         BizPathologyOrder order = requireOrder(orderId);
         PathologyVO.DetailVO vo = new PathologyVO.DetailVO();
         BeanUtils.copyProperties(order, vo);
-        vo.setStatusText(dictCacheService.getDicDataLabel(DictType.PATHOLOGY_STATUS, order.getStatus()));
-        vo.setExamTypeText(dictCacheService.getDicDataLabel(DictType.PATHOLOGY_EXAM_TYPE, order.getExamType()));
+        vo.setStatusText(dictCacheService.getDicDataLabel(DictTypeConst.PATHOLOGY_STATUS, order.getStatus()));
+        vo.setExamTypeText(dictCacheService.getDicDataLabel(DictTypeConst.PATHOLOGY_EXAM_TYPE, order.getExamType()));
         vo.setBlocks(listBlocks(orderId));
         return vo;
     }
@@ -128,7 +128,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         for (BizPathologyBlock b : list) {
             PathologyVO.BlockVO v = new PathologyVO.BlockVO();
             BeanUtils.copyProperties(b, v);
-            v.setStatusText(dictCacheService.getDicDataLabel(DictType.PATHOLOGY_BLOCK_STATUS, b.getStatus()));
+            v.setStatusText(dictCacheService.getDicDataLabel(DictTypeConst.PATHOLOGY_BLOCK_STATUS, b.getStatus()));
             out.add(v);
         }
         return out;
@@ -139,7 +139,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         for (BizPathologyOrder o : records) {
             PathologyVO.ListVO v = new PathologyVO.ListVO();
             BeanUtils.copyProperties(o, v);
-            v.setStatusText(dictCacheService.getDicDataLabel(DictType.PATHOLOGY_STATUS, o.getStatus()));
+            v.setStatusText(dictCacheService.getDicDataLabel(DictTypeConst.PATHOLOGY_STATUS, o.getStatus()));
             v.setBlockCount(bizPathologyBlockMapper.selectCount(new LambdaQueryWrapper<BizPathologyBlock>()
                     .eq(BizPathologyBlock::getOrderId, o.getId())).intValue());
             out.add(v);
@@ -179,7 +179,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         BizPathologyOrder o = requireOrder(dto.getId());
         assertMutable(o);
         if (!PathologyStatusEnum.REGISTERED.is(o.getStatus())) {
-            throw new BusinessException("仅「已登记」的病理单可修改基本信息（当前状态：" + dictCacheService.getDicDataLabel(DictType.PATHOLOGY_STATUS, o.getStatus()) + "）");
+            throw new BusinessException("仅「已登记」的病理单可修改基本信息（当前状态：" + dictCacheService.getDicDataLabel(DictTypeConst.PATHOLOGY_STATUS, o.getStatus()) + "）");
         }
         BeanUtils.copyProperties(dto, o);
         o.setId(dto.getId());
@@ -220,7 +220,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         BizPathologyOrder o = requireOrder(dto.getOrderId());
         assertMutable(o);
         if (!PathologyStatusEnum.REGISTERED.is(o.getStatus())) {
-            throw new BusinessException("仅「已登记」的病理单可接收标本（当前：" + dictCacheService.getDicDataLabel(DictType.PATHOLOGY_STATUS, o.getStatus()) + "）");
+            throw new BusinessException("仅「已登记」的病理单可接收标本（当前：" + dictCacheService.getDicDataLabel(DictTypeConst.PATHOLOGY_STATUS, o.getStatus()) + "）");
         }
         if (TextUtil.hasText(dto.getSpecimenType())) {
             o.setSpecimenType(dto.getSpecimenType());
@@ -249,7 +249,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         boolean skipBlock = isFrozenOrCytology(o);
         if (PathologyStatusEnum.SAMPLED.is(target)) {
             if (!PathologyStatusEnum.RECEIVED.is(o.getStatus())) {
-                throw new BusinessException("取材前必须先接收标本（当前：" + dictCacheService.getDicDataLabel(DictType.PATHOLOGY_STATUS, o.getStatus()) + "）");
+                throw new BusinessException("取材前必须先接收标本（当前：" + dictCacheService.getDicDataLabel(DictTypeConst.PATHOLOGY_STATUS, o.getStatus()) + "）");
             }
             if (!skipBlock && countBlocks(o.getId(), 2, 4) == 0) {
                 throw new BusinessException("尚无任何已取材的蜡块，不能把主单推进到「已取材」——请先登记蜡块并完成取材");
@@ -258,7 +258,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
             o.setSamplingTime(LocalDateTime.now().withNano(0));
         } else if (PathologyStatusEnum.SLICED.is(target)) {
             if (!PathologyStatusEnum.SAMPLED.is(o.getStatus())) {
-                throw new BusinessException("制片前必须先完成取材（当前：" + dictCacheService.getDicDataLabel(DictType.PATHOLOGY_STATUS, o.getStatus()) + "）");
+                throw new BusinessException("制片前必须先完成取材（当前：" + dictCacheService.getDicDataLabel(DictTypeConst.PATHOLOGY_STATUS, o.getStatus()) + "）");
             }
             if (!skipBlock && countBlocks(o.getId(), 4, 4) == 0) {
                 throw new BusinessException("尚无任何已切片的蜡块，不能把主单推进到「已制片」");
@@ -378,7 +378,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         assertMutable(o);
         boolean frozen = isFrozenOrCytology(o);
         if (!frozen && !PathologyStatusEnum.SLICED.is(o.getStatus())) {
-            throw new BusinessException("非冰冻/细胞学单必须先完成制片才能初诊（当前：" + dictCacheService.getDicDataLabel(DictType.PATHOLOGY_STATUS, o.getStatus()) + "）");
+            throw new BusinessException("非冰冻/细胞学单必须先完成制片才能初诊（当前：" + dictCacheService.getDicDataLabel(DictTypeConst.PATHOLOGY_STATUS, o.getStatus()) + "）");
         }
         if (frozen && o.getStatus() < PathologyStatusEnum.RECEIVED.getCode()) {
             throw new BusinessException("标本尚未接收，不能出具冰冻诊断");
@@ -410,7 +410,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         BizPathologyOrder o = requireOrder(dto.getOrderId());
         assertMutable(o);
         if (!PathologyStatusEnum.REPORTED.is(o.getStatus())) {
-            throw new BusinessException("仅「已初诊」的病理单可审核（当前：" + dictCacheService.getDicDataLabel(DictType.PATHOLOGY_STATUS, o.getStatus()) + "）");
+            throw new BusinessException("仅「已初诊」的病理单可审核（当前：" + dictCacheService.getDicDataLabel(DictTypeConst.PATHOLOGY_STATUS, o.getStatus()) + "）");
         }
         String who = operatorUser.getRealName();
         if (who != null && who.equals(o.getReportBy())) {
@@ -439,7 +439,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
             throw new BusinessException("该病理报告已发布");
         }
         if (!PathologyStatusEnum.AUDITED.is(o.getStatus())) {
-            throw new BusinessException("报告发布前必须完成审核（当前：" + dictCacheService.getDicDataLabel(DictType.PATHOLOGY_STATUS, o.getStatus()) + "）");
+            throw new BusinessException("报告发布前必须完成审核（当前：" + dictCacheService.getDicDataLabel(DictTypeConst.PATHOLOGY_STATUS, o.getStatus()) + "）");
         }
         o.setStatus(PathologyStatusEnum.PUBLISHED.getCode());
         o.setPublishBy(operatorUser.getRealName());

@@ -54,21 +54,23 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
 
     private final DeptScopeService deptScopeService;
 
-    private final BizScheduleMapper bizScheduleMapper;
-
-    private final BizAppointInfoMapper bizAppointInfoMapper;
-
     private final BizAppointService bizAppointService;
 
     private final BizScheduleSlotService bizScheduleSlotService;
-
-    private final BizQueueMapper bizQueueMapper;
 
     private final SysClinicRoomService sysClinicRoomService;
 
     private final ShiftService shiftService;
 
     private final StaffScheduleService staffScheduleService;
+
+    private final BizScheduleMapper bizScheduleMapper;
+
+    private final BizAppointInfoMapper bizAppointInfoMapper;
+
+    private final BizQueueMapper bizQueueMapper;
+
+
 
     @Override
     public List<BizSchedule> listPage(ScheduleQueryDTO queryDTO) {

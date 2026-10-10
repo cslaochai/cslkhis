@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.StockDeductResultDTO;

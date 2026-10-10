@@ -1,19 +1,19 @@
 package com.his.patient.support;
 
 import com.his.common.util.TextUtil;
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
 import com.his.patient.entity.BizInpatientRecord;
 import com.his.patient.enums.InpatientRecordTypeEnum;
 import com.his.patient.enums.RecordStructuredGroupEnum;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 
 /**
  * 住院病历的结构化要素清单——「结构化率」的唯一口径。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RecordStructuredFields {
 
     /**

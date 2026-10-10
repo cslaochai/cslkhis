@@ -8,7 +8,6 @@ import java.time.LocalTime;
 /**
  * 班次时段判定 —— 「此刻谁在岗」的唯一实现。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ShiftCoverUtil {
 
     /**

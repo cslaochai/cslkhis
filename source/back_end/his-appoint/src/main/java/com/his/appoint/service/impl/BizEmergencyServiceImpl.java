@@ -20,7 +20,7 @@ import com.his.common.enums.EmergencyStatusEnum;
 import com.his.common.enums.EmergencyTriageLevelEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.support.EmpTitleCode;
 import com.his.common.util.ShiftCoverUtil;
 import com.his.common.util.TextUtil;
@@ -36,6 +36,7 @@ import com.his.system.entity.*;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.mapper.*;
 import com.his.system.provider.DeptScopeService;
+import com.his.common.constant.SystemConfigKeyConst;
 import com.his.system.service.DutyRosterService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
@@ -65,31 +66,42 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
      */
     private static final String OBS_OVER_SQL = "TIMESTAMPDIFF(HOUR, observation_start_time, NOW()) >= {0}";
 
-    /**
-     * 无人可发待办时的兜底接收人（用户名或员工ID），口径同 lab.critical_value_fallback_receiver
-     */
-    private static final String FALLBACK_RECEIVER_CONFIG_KEY = "emergency.wait_fallback_receiver";
+    // 无人可发待办时的兜底接收人（用户名或员工ID）的 key 收口在 SystemConfigConstKey.EMERGENCY_WAIT_FALLBACK_RECEIVER
 
     private final BizQueueMapper bizQueueMapper;
+
     private final BizAppointInfoMapper bizAppointInfoMapper;
+
     private final BizPatientMapper bizPatientMapper;
-    private final RedisSequenceService redisSequenceService;
-    private final InpatientService inpatientService;
-    private final BizScheduleService bizScheduleService;
+
     private final EmergencyWaitPolicy waitPolicy;
+
     private final EmergencyObservationPolicy obsPolicy;
-    private final SysMessageService sysMessageService;
+
     private final SysEmployeeMapper sysEmployeeMapper;
+
     private final SysUserMapper sysUserMapper;
+
     private final SysConfigMapper sysConfigMapper;
+
     private final SysDepartmentMapper sysDepartmentMapper;
-    /**
-     * 全院当天谁负责（总值班）：科室阶梯走完后的兜底收口人，见 sql/169
-     */
+
     private final DutyRosterService dutyRosterService;
+
     private final BizShiftMapper bizShiftMapper;
+
     private final BizEmergencyHandoverMapper bizEmergencyHandoverMapper;
+
     private final BizEmergencyHandoverItemMapper bizEmergencyHandoverItemMapper;
+
+    private final RedisSequenceService redisSequenceService;
+
+    private final InpatientService inpatientService;
+
+    private final BizScheduleService bizScheduleService;
+
+    private final SysMessageService sysMessageService;
+
     private final DeptScopeService deptScopeService;
 
     @Override
@@ -114,8 +126,6 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
         boolean overdueOnly = Boolean.TRUE.equals(queryDTO.getOverdueOnly());
         boolean observationBoard = queryDTO.getObservationMinHours() != null;
         if (overdueOnly && observationBoard) {
-            // 两个开关各自收口一种状态，同时开等于查"既在候诊又在留观"的人：必空。
-            // 与其返回一张空表让人怀疑后端挂了，不如直接说清是筛选态打架。
             throw new BusinessException("「只看超时候诊」与「留观榜」不能同时开启，请只保留一个");
         }
         if (overdueOnly) {
@@ -123,8 +133,6 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
                     .apply(OVERDUE_SQL, waitPolicy.deadlineMinutes(null));
         }
         if (observationBoard) {
-            // 留观榜：0 = 全部在观；48/72 由统计卡带入。只数"还在观"的人 ——
-            // 已经离院/转住院的人挂在榜上，值班的人会以为床位还占着，白跑一趟。
             wrapper.eq(BizEmergency::getEmergencyStatus, EmergencyStatusEnum.OBSERVATION.getCode())
                     .apply(OBS_OVER_SQL, queryDTO.getObservationMinHours());
         }
@@ -155,8 +163,6 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
         LocalDateTime endAt = waitingNow(entity)
                 ? LocalDateTime.now()
                 : (entity.getDiagnosisTime() == null ? null : entity.getDiagnosisTime());
-        // 停表口径：候诊中算到当下；已经接诊的算到「开始诊治」那一刻。
-        // 既没在候诊、又查不到开始诊治时间（sql/145 之前的存量行），就不编造一个时长。
         if (endAt != null && entity.getAdmissionTime() != null) {
             long minutes = Math.max(0, Duration.between(entity.getAdmissionTime(), endAt).toMinutes());
             vo.setWaitMinutes(minutes);
@@ -863,7 +869,7 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
     private Receiver fallbackReceiver() {
         try {
             SysConfig config = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
-                    .eq(SysConfig::getConfigKey, FALLBACK_RECEIVER_CONFIG_KEY)
+                    .eq(SysConfig::getConfigKey, SystemConfigKeyConst.EMERGENCY_WAIT_FALLBACK_RECEIVER)
                     .last("LIMIT 1"));
             if (config == null || !TextUtil.hasText(config.getConfigValue())) {
                 return null;
@@ -881,7 +887,7 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
             }
             return new Receiver(Long.parseLong(raw), "兜底接收人");
         } catch (Exception ex) {
-            log.warn("[急诊候诊] 读取兜底接收人配置 {} 失败：{}", FALLBACK_RECEIVER_CONFIG_KEY, ex.getMessage());
+            log.warn("[急诊候诊] 读取兜底接收人配置 {} 失败：{}", SystemConfigKeyConst.EMERGENCY_WAIT_FALLBACK_RECEIVER, ex.getMessage());
             return null;
         }
     }

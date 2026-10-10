@@ -13,7 +13,7 @@ import com.his.charge.service.SettlementBillService;
 import com.his.common.enums.PaymentMethodEnum;
 import com.his.common.enums.TxnSourceEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.miniapp.dto.PayRefundDTO;

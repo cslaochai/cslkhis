@@ -1,6 +1,7 @@
 package com.his.appoint.support;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.his.common.constant.SystemConfigKeyConst;
 import com.his.common.util.TextUtil;
 import com.his.system.entity.SysConfig;
 import com.his.system.mapper.SysConfigMapper;
@@ -23,9 +24,6 @@ public class EmergencyObservationPolicy {
      * 留观上限档（小时），系统参数读不到时用
      */
     public static final int DEFAULT_MAX_HOURS = 72;
-
-    public static final String WARN_CONFIG_KEY = "emergency.observation_warn_hours";
-    public static final String MAX_CONFIG_KEY = "emergency.observation_max_hours";
 
     private static final long CONFIG_CACHE_TTL_MS = 60_000L;
 
@@ -68,8 +66,8 @@ public class EmergencyObservationPolicy {
             return;
         }
         try {
-            readInto(WARN_CONFIG_KEY, v -> warnHours = v);
-            readInto(MAX_CONFIG_KEY, v -> maxHours = v);
+            readInto(SystemConfigKeyConst.EMERGENCY_OBSERVATION_WARN_HOURS, v -> warnHours = v);
+            readInto(SystemConfigKeyConst.EMERGENCY_OBSERVATION_MAX_HOURS, v -> maxHours = v);
         } catch (Exception ignored) {
             // 参数表读不通时用兜底值继续判定：预警不能因为配置模块出问题而失效
         }

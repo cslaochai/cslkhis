@@ -1,16 +1,15 @@
 package com.his.patient.service.impl;
 
-import com.his.common.entity.SignSubject;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
-import com.his.common.service.SignableContentProvider;
-import com.his.common.support.CanonicalText;
 import com.his.common.util.TimeUtil;
 import com.his.patient.entity.BizInpatientRecord;
 import com.his.patient.enums.SummaryStatusEnum;
 import com.his.patient.mapper.BizInpatientRecordMapper;
 import com.his.patient.service.InpatientRecordSignProvider;
+import com.his.system.entity.SignSubject;
+import com.his.system.service.SignableContentProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

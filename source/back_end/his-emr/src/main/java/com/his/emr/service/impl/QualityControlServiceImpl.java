@@ -3,7 +3,7 @@ package com.his.emr.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.RecordQcTypeEnum;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.enums.SysGenderEnum;
@@ -358,7 +358,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         assertRecordDeptAccessible(qc.getRecordSource(), qc.getRecordId());
         if (qc.getQcStatus() == null || qc.getQcStatus() != 1) {
             throw new BusinessException("只有「待处理」的质控单可以处理，当前状态："
-                    + dictCacheService.getDicDataLabel(DictType.QC_STATUS, qc.getQcStatus()));
+                    + dictCacheService.getDicDataLabel(DictTypeConst.QC_STATUS, qc.getQcStatus()));
         }
         qc.setQcStatus(ignore ? RuleCheckStatusEnum.IGNORED.getCode() : RuleCheckStatusEnum.HANDLED.getCode());
         qc.setRemark(remark);
@@ -393,8 +393,8 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
     private void enrich(BizQualityControlVO vo) {
         vo.setRecordSourceText(QcRecordSourceEnum.getText(vo.getRecordSource()));
         vo.setQcTypeText(RecordQcTypeEnum.getText(vo.getQcType()));
-        vo.setQcStatusText(dictCacheService.getDicDataLabel(DictType.QC_STATUS, vo.getQcStatus()));
-        vo.setQcResultText(dictCacheService.getDicDataLabel(DictType.QC_RESULT, vo.getQcResult()));
+        vo.setQcStatusText(dictCacheService.getDicDataLabel(DictTypeConst.QC_STATUS, vo.getQcStatus()));
+        vo.setQcResultText(dictCacheService.getDicDataLabel(DictTypeConst.QC_RESULT, vo.getQcResult()));
         vo.setRecordStatusText(RecordStatusEnum.getText(vo.getRecordStatus()));
         vo.setRecordTypeText(vo.getRecordType() == null ? null : InpatientRecordTypeEnum.getText(vo.getRecordType()));
         vo.setSeverityMaxText(vo.getSeverityMax() == null ? null : QcSeverityEnum.textOf(vo.getSeverityMax()));

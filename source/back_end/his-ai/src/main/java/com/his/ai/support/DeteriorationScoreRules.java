@@ -4,9 +4,7 @@ import com.his.ai.enums.DeteriorationAlertLevelEnum;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.patient.vo.NursingVitalFactVO;
-import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
@@ -16,7 +14,6 @@ import java.util.List;
 /**
  * 病情恶化评分规则（MEWS 主体 + NEWS 的 SpO2 分档，G-12）。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DeteriorationScoreRules {
 
     /**

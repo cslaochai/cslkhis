@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.CheckResultEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.emr.dto.RuleCheckQueryPageDTO;
 import com.his.emr.entity.BizClinicalRuleCheck;
 import com.his.emr.enums.RuleCheckStatusEnum;

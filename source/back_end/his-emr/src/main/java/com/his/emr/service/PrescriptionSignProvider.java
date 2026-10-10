@@ -1,10 +1,10 @@
 package com.his.emr.service;
 
-import com.his.common.entity.SignSubject;
+import com.his.system.entity.SignSubject;
 import com.his.common.enums.PrescriptionStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
-import com.his.common.service.SignableContentProvider;
+import com.his.system.service.SignableContentProvider;
 import com.his.emr.entity.BizPrescription;
 
 import java.time.LocalDateTime;

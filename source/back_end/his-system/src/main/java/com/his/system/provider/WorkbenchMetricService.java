@@ -14,10 +14,6 @@ public interface WorkbenchMetricService {
 
     /**
      * 取该卡当前登录人所见的数字。
-     *
-     * @param user 当前登录人（含 currentRole/deptId/employeeId），调用方保证非 null
-     * @return 出参 Map；其中 Long 类型的 id 一律先转字符串再放（AGENTS.md §1 精度铁律），
-     *         返回 null 与返回空 Map 等价（前端渲染「—」）
      */
     Map<String, Object> summary(CurrentUser user);
 }

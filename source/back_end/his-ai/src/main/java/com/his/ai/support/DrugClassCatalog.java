@@ -9,7 +9,6 @@ import java.util.*;
 /**
  * 药品分类与条件同义词词典 —— 硬规则匹配的「领域知识」。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DrugClassCatalog {
 
     private static final List<DrugClass> CLASSES = List.of(

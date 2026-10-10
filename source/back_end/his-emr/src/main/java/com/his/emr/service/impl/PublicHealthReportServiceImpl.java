@@ -7,7 +7,7 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.DelFlagEnum;
 import com.his.common.enums.ReviewStatusEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.emr.dto.PublicHealthSubmitDTO;
 import com.his.emr.entity.BizPublicHealthReport;

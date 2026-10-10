@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.DutyShiftTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
@@ -292,7 +292,7 @@ public class DutyLogServiceImpl extends ServiceImpl<BizDutyLogMapper, BizDutyLog
         if (t == null) {
             return "-";
         }
-        return dictCacheService.getDicDataLabel(DictType.DUTY_LOG_TYPE, t);
+        return dictCacheService.getDicDataLabel(DictTypeConst.DUTY_LOG_TYPE, t);
     }
 
     private String statusText(Integer s) {

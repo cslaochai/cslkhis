@@ -5,11 +5,11 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -341,7 +341,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             p.setMeasureTime(r.getMeasureTime());
             p.setMeasureDate(r.getMeasureTime() == null ? null : r.getMeasureTime().toLocalDate().format(DateFormats.DATE));
             p.setMeasureClock(r.getMeasureTime() == null ? null : r.getMeasureTime().format(DateFormats.TIME_MINUTE));
-            p.setShiftText(dictCacheService.getDicDataLabel(DictType.NURSING_SHIFT, r.getShift()));
+            p.setShiftText(dictCacheService.getDicDataLabel(DictTypeConst.NURSING_SHIFT, r.getShift()));
             p.setTemperature(r.getTemperature());
             p.setPulse(r.getPulse());
             p.setRespiration(r.getRespiration());
@@ -601,7 +601,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         vo.setAssessTypeText(NursingAssessTypeEnum.getText(row.getAssessType()));
         vo.setTotalScore(row.getTotalScore());
         vo.setRiskLevel(row.getRiskLevel());
-        vo.setRiskLevelText(dictCacheService.getDicDataLabel(DictType.ASSESS_RISK_LEVEL, row.getRiskLevel()));
+        vo.setRiskLevelText(dictCacheService.getDicDataLabel(DictTypeConst.ASSESS_RISK_LEVEL, row.getRiskLevel()));
         vo.setItemsJson(row.getItemsJson());
         vo.setAssessTime(row.getAssessTime());
         vo.setAssessNurseId(row.getAssessNurseId());
@@ -756,7 +756,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         WardVO ward = sysBedMapper.selectWardById(wardId);
         vo.setWardName(ward == null ? null : ward.getWardName());
         vo.setShift(shift);
-        vo.setShiftText(dictCacheService.getDicDataLabel(DictType.NURSING_SHIFT, shift));
+        vo.setShiftText(dictCacheService.getDicDataLabel(DictTypeConst.NURSING_SHIFT, shift));
         vo.setWindowBegin(begin);
         vo.setWindowEnd(end);
 
@@ -839,7 +839,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         vo.setMeasureDate(r.getMeasureTime() == null ? null : r.getMeasureTime().toLocalDate().format(DateFormats.DATE));
         vo.setMeasureClock(r.getMeasureTime() == null ? null : r.getMeasureTime().format(DateFormats.TIME_MINUTE));
         vo.setShift(r.getShift());
-        vo.setShiftText(dictCacheService.getDicDataLabel(DictType.NURSING_SHIFT, r.getShift()));
+        vo.setShiftText(dictCacheService.getDicDataLabel(DictTypeConst.NURSING_SHIFT, r.getShift()));
         vo.setTemperature(r.getTemperature());
         vo.setPulse(r.getPulse());
         vo.setRespiration(r.getRespiration());
@@ -853,7 +853,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         vo.setIntakeVolume(r.getIntakeVolume());
         vo.setOutputVolume(r.getOutputVolume());
         vo.setNursingLevel(r.getNursingLevel());
-        vo.setNursingLevelText(dictCacheService.getDicDataLabel(DictType.NURSING_LEVEL, r.getNursingLevel()));
+        vo.setNursingLevelText(dictCacheService.getDicDataLabel(DictTypeConst.NURSING_LEVEL, r.getNursingLevel()));
         vo.setNursingContent(r.getNursingContent());
         vo.setNurseId(r.getNurseId());
         vo.setNurseName(r.getNurseName());

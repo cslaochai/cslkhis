@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
+import com.his.common.constant.SystemConfigKeyConst;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.ReferralDTO;
@@ -23,6 +23,7 @@ import com.his.system.mapper.SysConfigMapper;
 import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.DutyRosterService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
 import com.his.system.vo.DutyOfficerVO;
@@ -50,7 +51,6 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
     /**
      * 待确认多久就找总值班（系统参数：duty.coord.referral_pending_hours，缺失/非法回落 2 小时）
      */
-    private static final String DUTY_REFERRAL_HOURS_KEY = "duty.coord.referral_pending_hours";
     private static final int DUTY_REFERRAL_HOURS_FALLBACK = 2;
 
     private final BizReferralMapper bizReferralMapper;
@@ -64,7 +64,9 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
     private final SysConfigMapper sysConfigMapper;
     private final DeptScopeService deptScopeService;
 
-    /** 转诊单发起/接收任一科室在授权范围内即可见（跨科转诊本身是合法业务） */
+    /**
+     * 转诊单发起/接收任一科室在授权范围内即可见（跨科转诊本身是合法业务）
+     */
     private void assertReferralAccessible(Long fromDeptId, Long toDeptId) {
         if (deptScopeService.canAccessDept(fromDeptId) || deptScopeService.canAccessDept(toDeptId)) {
             return;
@@ -299,7 +301,7 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
     private int dutyReferralHours() {
         try {
             SysConfig cfg = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
-                    .eq(SysConfig::getConfigKey, DUTY_REFERRAL_HOURS_KEY).last("LIMIT 1"));
+                    .eq(SysConfig::getConfigKey, SystemConfigKeyConst.DUTY_COORD_REFERRAL_PENDING_HOURS).last("LIMIT 1"));
             if (cfg == null || !TextUtil.hasText(cfg.getConfigValue())) {
                 return DUTY_REFERRAL_HOURS_FALLBACK;
             }
@@ -319,7 +321,7 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
     }
 
     private String statusText(BizReferral r) {
-        return dictCacheService.getDicDataLabel(DictType.REFERRAL_STATUS, r.getReferralStatus());
+        return dictCacheService.getDicDataLabel(DictTypeConst.REFERRAL_STATUS, r.getReferralStatus());
     }
 
     /**
@@ -340,8 +342,8 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
     private ReferralVO toVo(BizReferral r, Map<Long, String> deptNames) {
         ReferralVO vo = new ReferralVO();
         org.springframework.beans.BeanUtils.copyProperties(r, vo);
-        vo.setDirectionText(dictCacheService.getDicDataLabel(DictType.REFERRAL_DIRECTION, r.getDirection()));
-        vo.setReferralStatusText(dictCacheService.getDicDataLabel(DictType.REFERRAL_STATUS, r.getReferralStatus()));
+        vo.setDirectionText(dictCacheService.getDicDataLabel(DictTypeConst.REFERRAL_DIRECTION, r.getDirection()));
+        vo.setReferralStatusText(dictCacheService.getDicDataLabel(DictTypeConst.REFERRAL_STATUS, r.getReferralStatus()));
         vo.setFromDeptName(r.getFromDeptId() == null ? null : deptNames.get(r.getFromDeptId()));
         vo.setToDeptName(r.getToDeptId() == null ? null : deptNames.get(r.getToDeptId()));
         // 患者快照现查（患者基本信息 / 入院记录属本域，量级单条）

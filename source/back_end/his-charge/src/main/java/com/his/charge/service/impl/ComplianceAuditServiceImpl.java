@@ -17,10 +17,10 @@ import com.his.charge.support.RuleFinding;
 import com.his.charge.support.SettlementEvidence;
 import com.his.charge.vo.*;
 import com.his.common.base.PageResult;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.system.entity.CurrentUser;
@@ -548,7 +548,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
 
     private void fillAuditText(ComplianceAuditVO vo) {
         vo.setRiskLevelText(RuleCatalogEnum.riskLabel(vo.getRiskLevel()));
-        vo.setAuditTypeText(dictCacheService.getDicDataLabel(DictType.COMPLIANCE_AUDIT_TYPE, vo.getAuditType()));
+        vo.setAuditTypeText(dictCacheService.getDicDataLabel(DictTypeConst.COMPLIANCE_AUDIT_TYPE, vo.getAuditType()));
     }
 
     private Set<String> loadEnabledIcdCodes() {
@@ -637,7 +637,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         BeanUtils.copyProperties(entity, vo);
         vo.setDiagTypeText(entity.getDiagType() == null ? ""
                 : (entity.getDiagType() == 1 ? "主要诊断" : "其他诊断"));
-        vo.setAdmitConditionText(dictCacheService.getDicDataLabel(DictType.ADMIT_CONDITION, entity.getAdmitCondition()));
+        vo.setAdmitConditionText(dictCacheService.getDicDataLabel(DictTypeConst.ADMIT_CONDITION, entity.getAdmitCondition()));
         // 三态中文一律走 getText，禁止在这里拼「通过」
         vo.setEvidenceStatusText(AuditResultStateEnum.getText(entity.getEvidenceStatus()));
         return vo;

@@ -2,11 +2,11 @@ package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.common.base.BizCodeConstants;
+import com.his.common.constant.BizCodeConst;
 import com.his.common.base.PageResult;
 import com.his.common.enums.DelFlagEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.*;
 import com.his.emr.dto.*;
 import com.his.emr.entity.BizDisputeCase;
@@ -458,7 +458,7 @@ public class DisputeServiceImpl extends ServiceImpl<BizDisputeCaseMapper, BizDis
     }
 
     private String nextCaseNo() {
-        return BizCodeConstants.DISPUTE_NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE)
+        return BizCodeConst.DISPUTE_NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE)
                 + String.format("%04d", redisSequenceService.next("DISPUTE"));
     }
 }

@@ -14,10 +14,10 @@ import com.his.charge.mapper.BizAlertMapper;
 import com.his.charge.mapper.BizPaymentTxnMapper;
 import com.his.charge.service.*;
 import com.his.charge.vo.*;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
@@ -115,7 +115,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
         IPage<PrepayVO> raw = bizPaymentTxnMapper.selectPrepayPage(page, query);
         // 文案由后端给：前端判码值就会有第二套口径（支付方式码值前端就抄错过一次，把 4 当银行卡）
         for (PrepayVO vo : raw.getRecords()) {
-            vo.setPrepayTypeText(dictCacheService.getDicDataLabel(DictType.PREPAY_TYPE, vo.getPrepayType()));
+            vo.setPrepayTypeText(dictCacheService.getDicDataLabel(DictTypeConst.PREPAY_TYPE, vo.getPrepayType()));
             vo.setPayMethodText(PaymentMethodEnum.getText(vo.getPayMethod()));
         }
         return raw;
@@ -549,7 +549,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
         vo.setPatientNo(t.getPatientNo());
         vo.setPatientName(t.getPatientName());
         vo.setPrepayType(prepayType);
-        vo.setPrepayTypeText(dictCacheService.getDicDataLabel(DictType.PREPAY_TYPE, prepayType));
+        vo.setPrepayTypeText(dictCacheService.getDicDataLabel(DictTypeConst.PREPAY_TYPE, prepayType));
         vo.setAmount(t.getAmount());
         vo.setBalanceAfter(balanceAfter);
         vo.setPayMethod(t.getPayMethod());

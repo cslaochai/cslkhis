@@ -28,9 +28,13 @@ import java.util.concurrent.TimeUnit;
 public class DictCacheServiceImpl extends ServiceImpl<SysDictDataMapper, SysDictData> implements CommandLineRunner, DictCacheService {
 
     private static final String DICT_CACHE_PREFIX = "sys:dict:";
+
     private static final long CACHE_EXPIRE_HOURS = 24; // 缓存24小时
+
     private final StringRedisTemplate stringRedisTemplate;
+
     private final SysDictDataMapper sysDictDataMapper;
+
     private final ObjectMapper objectMapper;
 
     /**

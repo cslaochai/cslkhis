@@ -8,11 +8,11 @@ import com.his.charge.dto.FeeBookDTO;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.service.FeeRecordService;
 import com.his.common.base.PageResult;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.PaymentItemTypeEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizInspectionApply;
@@ -377,9 +377,9 @@ public class ExamFilmServiceImpl extends ServiceImpl<BizExamFilmMapper, BizExamF
         if (vo == null) {
             return null;
         }
-        vo.setFilmStatusText(dictCacheService.getDicDataLabel(DictType.FILM_STATUS, vo.getFilmStatus()));
+        vo.setFilmStatusText(dictCacheService.getDicDataLabel(DictTypeConst.FILM_STATUS, vo.getFilmStatus()));
         vo.setModalityText(vo.getModality() == null ? null
-                : dictCacheService.getDicDataLabel(DictType.EXAM_DEVICE_TYPE, vo.getModality()));
+                : dictCacheService.getDicDataLabel(DictTypeConst.EXAM_DEVICE_TYPE, vo.getModality()));
         return vo;
     }
 

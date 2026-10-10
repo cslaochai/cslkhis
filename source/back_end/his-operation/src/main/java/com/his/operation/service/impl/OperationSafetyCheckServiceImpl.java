@@ -17,7 +17,7 @@ import com.his.operation.vo.SafetyCheckVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

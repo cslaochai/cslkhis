@@ -1,6 +1,7 @@
 package com.his.common.support;
 
 import com.his.common.util.DateFormats;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -34,14 +35,6 @@ public final class CanonicalText {
 
     /**
      * 单个值的规范化。public 是为了让"签名链"把上一环摘要拼进来时用同一套规则。
-     *
-     * <p><b>时间与数值必须显式格式化，不能靠 {@code toString()}</b>：
-     * {@code LocalDateTime.of(2026,9,19,10,30,0).toString()} 得到的是
-     * {@code 2026-09-19T10:30}（**秒为 0 时会省略秒**），而
-     * {@code ...10,30,15} 得到 {@code 2026-09-19T10:30:15} —— 同一份内容可能算出两种摘要，
-     * 而且只在"整分钟"这种最常见的输入上暴露。{@code BigDecimal("10.00").toString()} 是
-     * {@code 10.00} 而 {@code stripTrailingZeros()} 后是 {@code 10}，同理。
-     * 这里统一按固定格式渲染，是"只有内容真变、摘要才变"的前提。
      */
     public static String normalize(Object value) {
         if (value == null) {

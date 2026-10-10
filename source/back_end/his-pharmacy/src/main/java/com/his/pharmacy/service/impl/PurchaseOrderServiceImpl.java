@@ -3,9 +3,9 @@ package com.his.pharmacy.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.*;
@@ -150,7 +150,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
             throw new BusinessException("采购订单不存在或已删除");
         }
         if (order.getApprovalStatus() == null || order.getApprovalStatus() != 0) {
-            throw new BusinessException("只有待审批的订单可以审批（当前：" + dictCacheService.getDicDataLabel(DictType.PURCHASE_APPROVAL_STATUS, order.getApprovalStatus()) + "）");
+            throw new BusinessException("只有待审批的订单可以审批（当前：" + dictCacheService.getDicDataLabel(DictTypeConst.PURCHASE_APPROVAL_STATUS, order.getApprovalStatus()) + "）");
         }
         // B 类：驳回原因只在 approvalStatus=2 时必填，条件必填不能下沉成 @NotBlank
         if (dto.getApprovalStatus() == 2 && !TextUtil.hasText(dto.getRemark())) {
@@ -178,7 +178,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
             throw new BusinessException("采购订单不存在或已删除");
         }
         if (order.getApprovalStatus() == null || order.getApprovalStatus() != 1) {
-            throw new BusinessException("只有审批通过的采购订单才能生成入库单（当前审批：" + dictCacheService.getDicDataLabel(DictType.PURCHASE_APPROVAL_STATUS, order.getApprovalStatus()) + "）");
+            throw new BusinessException("只有审批通过的采购订单才能生成入库单（当前审批：" + dictCacheService.getDicDataLabel(DictTypeConst.PURCHASE_APPROVAL_STATUS, order.getApprovalStatus()) + "）");
         }
 
         List<PurchaseOrderDetailVO> details = bizPurchaseOrderDetailMapper.selectDetailWithDrug(orderId);

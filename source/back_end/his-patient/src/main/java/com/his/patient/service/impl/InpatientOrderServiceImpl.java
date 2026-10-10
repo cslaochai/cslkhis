@@ -8,16 +8,16 @@ import com.his.charge.dto.FeeBookDTO;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.service.ArrearsControlGate;
 import com.his.charge.support.FeeCatalogResolver;
-import com.his.common.constant.DictType;
-import com.his.common.dto.SignCommandDTO;
+import com.his.common.constant.DictTypeConst;
+import com.his.system.dto.SignCommandDTO;
 import com.his.common.enums.*;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.EmrSignatureService;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.EmrSignatureService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
-import com.his.common.vo.SignatureVO;
+import com.his.system.vo.SignatureVO;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
 import com.his.patient.enums.InpatientOrderStatusEnum;
@@ -793,7 +793,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
             }
             if (!Objects.equals(ExecStatusEnum.PENDING.getCode(), exec.getExecStatus())) {
                 throw new BusinessException("该执行记录已是「"
-                        + dictCacheService.getDicDataLabel(DictType.ORDER_EXEC_STATUS, exec.getExecStatus()) + "」，不能重复处理");
+                        + dictCacheService.getDicDataLabel(DictTypeConst.ORDER_EXEC_STATUS, exec.getExecStatus()) + "」，不能重复处理");
             }
             BizInpatientOrder order = bizInpatientOrderMapper.selectById(exec.getOrderId());
             if (order == null) {
@@ -859,7 +859,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
             processed++;
         }
         log.info("医嘱执行处理完成 条数={} 结果={} 护士={}", processed,
-                dictCacheService.getDicDataLabel(DictType.ORDER_EXEC_STATUS, status), nurseName);
+                dictCacheService.getDicDataLabel(DictTypeConst.ORDER_EXEC_STATUS, status), nurseName);
         return processed;
     }
 
@@ -1021,7 +1021,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
         vo.setOrderTypeText(OrderTypeEnum.getText(vo.getOrderType()));
         vo.setOrderClassText(OrderClassEnum.getText(vo.getOrderClass()));
         vo.setOrderStatusText(InpatientOrderStatusEnum.getText(vo.getOrderStatus()));
-        vo.setSourceText(dictCacheService.getDicDataLabel(DictType.INPATIENT_ORDER_SOURCE, vo.getSource()));
+        vo.setSourceText(dictCacheService.getDicDataLabel(DictTypeConst.INPATIENT_ORDER_SOURCE, vo.getSource()));
         vo.setIsUrgentText(YesOrNoEnum.getText(vo.getIsUrgent()));
 
         boolean pendingVerify = Objects.equals(InpatientOrderStatusEnum.PENDING_VERIFY.getCode(), vo.getOrderStatus());
@@ -1056,7 +1056,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
         vo.setOrderTypeText(OrderTypeEnum.getText(vo.getOrderType()));
         vo.setOrderClassText(OrderClassEnum.getText(vo.getOrderClass()));
         vo.setOrderStatusText(InpatientOrderStatusEnum.getText(vo.getOrderStatus()));
-        vo.setExecStatusText(dictCacheService.getDicDataLabel(DictType.ORDER_EXEC_STATUS, vo.getExecStatus()));
+        vo.setExecStatusText(dictCacheService.getDicDataLabel(DictTypeConst.ORDER_EXEC_STATUS, vo.getExecStatus()));
         vo.setCharged(vo.getFeeRecordId() != null);
         vo.setInfusion(InpatientInfusionServiceImpl.isInfusionRoute(vo.getRoute()));
     }

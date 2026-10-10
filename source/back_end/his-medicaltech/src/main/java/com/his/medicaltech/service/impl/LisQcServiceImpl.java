@@ -3,7 +3,7 @@ package com.his.medicaltech.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.medicaltech.dto.LisQcDTO;
@@ -61,7 +61,7 @@ public class LisQcServiceImpl implements LisQcService {
     private LisQcVO.PlanVO toPlanVo(BizLisQcPlan p) {
         LisQcVO.PlanVO vo = new LisQcVO.PlanVO();
         BeanUtils.copyProperties(p, vo);
-        vo.setQcLevelText(dictCacheService.getDicDataLabel(DictType.LIS_QC_LEVEL, p.getQcLevel()));
+        vo.setQcLevelText(dictCacheService.getDicDataLabel(DictTypeConst.LIS_QC_LEVEL, p.getQcLevel()));
         vo.setStatusText(p.getStatus() != null && p.getStatus() == 1 ? "启用" : "停用");
         if (p.getMeanValue() != null && p.getSdValue() != null && p.getMeanValue().compareTo(BigDecimal.ZERO) != 0) {
             vo.setCvActual(p.getSdValue().divide(p.getMeanValue().abs(), 4, RoundingMode.HALF_UP)
@@ -229,10 +229,10 @@ public class LisQcServiceImpl implements LisQcService {
     private LisQcVO.RecordVO toRecordVo(BizLisQcRecord r) {
         LisQcVO.RecordVO vo = new LisQcVO.RecordVO();
         BeanUtils.copyProperties(r, vo);
-        vo.setQcLevelText(dictCacheService.getDicDataLabel(DictType.LIS_QC_LEVEL, r.getQcLevel()));
+        vo.setQcLevelText(dictCacheService.getDicDataLabel(DictTypeConst.LIS_QC_LEVEL, r.getQcLevel()));
         vo.setStatusText(r.getStatus() == null || r.getStatus() == 0 ? "未判定"
-                : dictCacheService.getDicDataLabel(DictType.LIS_QC_STATUS, r.getStatus()));
-        vo.setHandleStatusText(dictCacheService.getDicDataLabel(DictType.LIS_QC_HANDLE_STATUS, r.getHandleStatus()));
+                : dictCacheService.getDicDataLabel(DictTypeConst.LIS_QC_STATUS, r.getStatus()));
+        vo.setHandleStatusText(dictCacheService.getDicDataLabel(DictTypeConst.LIS_QC_HANDLE_STATUS, r.getHandleStatus()));
         return vo;
     }
 
@@ -268,7 +268,7 @@ public class LisQcServiceImpl implements LisQcService {
             throw new BusinessException("仅「失控」记录需要复核");
         }
         if (r.getHandleStatus() == null || r.getHandleStatus() != 2) {
-            throw new BusinessException("复核前必须先完成处理（当前：" + dictCacheService.getDicDataLabel(DictType.LIS_QC_HANDLE_STATUS, r.getHandleStatus()) + "）");
+            throw new BusinessException("复核前必须先完成处理（当前：" + dictCacheService.getDicDataLabel(DictTypeConst.LIS_QC_HANDLE_STATUS, r.getHandleStatus()) + "）");
         }
         String who = operatorUser.getRealName();
         if (who != null && who.equals(r.getHandleBy())) {
@@ -332,7 +332,7 @@ public class LisQcServiceImpl implements LisQcService {
     }
 
     private String voStatusText(Integer status) {
-        return status == null || status == 0 ? "未判定" : dictCacheService.getDicDataLabel(DictType.LIS_QC_STATUS, status);
+        return status == null || status == 0 ? "未判定" : dictCacheService.getDicDataLabel(DictTypeConst.LIS_QC_STATUS, status);
     }
 
     private String nextPlanNo(String itemCode, Integer qcLevel) {

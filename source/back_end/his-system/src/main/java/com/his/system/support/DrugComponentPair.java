@@ -2,15 +2,12 @@ package com.his.system.support;
 
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
 
 import java.util.List;
 
 /**
  * 成分对的归一化键
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DrugComponentPair {
 
     private static final String SEP = "&";

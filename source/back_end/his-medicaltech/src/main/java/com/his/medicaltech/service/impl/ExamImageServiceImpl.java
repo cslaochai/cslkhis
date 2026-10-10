@@ -2,7 +2,7 @@ package com.his.medicaltech.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
@@ -118,7 +118,7 @@ public class ExamImageServiceImpl extends ServiceImpl<BizExamImageMapper, BizExa
                 : Math.min(importDTO.getFrameCount(), examImageProperties.getMaxFrameCount());
         int startSeq = nextSeq(importDTO.getBizType(), importDTO.getApplyId());
         String modalityText = importDTO.getModality() == null ? null
-                : dictCacheService.getDicDataLabel(DictType.EXAM_DEVICE_TYPE, importDTO.getModality());
+                : dictCacheService.getDicDataLabel(DictTypeConst.EXAM_DEVICE_TYPE, importDTO.getModality());
 
         List<ExamImageVO> created = new ArrayList<>();
         try {
@@ -320,7 +320,7 @@ public class ExamImageServiceImpl extends ServiceImpl<BizExamImageMapper, BizExa
         ExamImageVO vo = new ExamImageVO();
         BeanUtils.copyProperties(row, vo);
         vo.setModalityText(row.getModality() == null ? null
-                : dictCacheService.getDicDataLabel(DictType.EXAM_DEVICE_TYPE, row.getModality()));
+                : dictCacheService.getDicDataLabel(DictTypeConst.EXAM_DEVICE_TYPE, row.getModality()));
         vo.setSourceText(ExamImageSourceEnum.getText(row.getSource()));
         return vo;
     }

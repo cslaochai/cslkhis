@@ -250,7 +250,6 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
 
     /**
      * 数据范围收口：受限岗位只看得见自己科室的科属点位；全院级点位对所有人开放
-     * （「今天全院谁负责」不是敏感信息，收口等于让人半夜找不到打电话的对象）。
      */
     private LambdaQueryWrapper<BizDutyPost> scoped(LambdaQueryWrapper<BizDutyPost> wrapper) {
         if (!deptScopeService.isScoped()) {

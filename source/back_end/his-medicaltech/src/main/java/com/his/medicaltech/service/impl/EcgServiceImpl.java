@@ -6,15 +6,15 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.constant.DictType;
-import com.his.common.dto.SignCommandDTO;
+import com.his.common.constant.DictTypeConst;
+import com.his.system.dto.SignCommandDTO;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.EmrSignatureService;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.EmrSignatureService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
-import com.his.common.vo.SignatureVO;
+import com.his.system.vo.SignatureVO;
 import com.his.medicaltech.dto.*;
 import com.his.medicaltech.entity.*;
 import com.his.medicaltech.enums.InsRecordStatusEnum;
@@ -107,7 +107,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         BizInspectionRecord record = loadEcgRecord(recordId);
         if (!Objects.equals(InsRecordStatusEnum.REGISTERED.getCode(), record.getRecordStatus())) {
             throw new BusinessException("只有「已登记」的检查能签到（当前："
-                    + dictCacheService.getDicDataLabel(DictType.INSPECTION_RECORD_STATUS, record.getRecordStatus()) + "）");
+                    + dictCacheService.getDicDataLabel(DictTypeConst.INSPECTION_RECORD_STATUS, record.getRecordStatus()) + "）");
         }
         record.setRecordStatus(InsRecordStatusEnum.SIGNED_IN.getCode());
         record.setCheckInTime(LocalDateTime.now());
@@ -322,7 +322,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         if (record.getRecordStatus() == null
                 || record.getRecordStatus() < InsRecordStatusEnum.RESULTED.getCode()) {
             throw new BusinessException("该检查还没完成波形采集（当前状态："
-                    + dictCacheService.getDicDataLabel(DictType.INSPECTION_RECORD_STATUS, record.getRecordStatus()) + "）");
+                    + dictCacheService.getDicDataLabel(DictTypeConst.INSPECTION_RECORD_STATUS, record.getRecordStatus()) + "）");
         }
 
         if (record.getReportSignId() != null) {
@@ -359,7 +359,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         BizInspectionRecord record = loadEcgRecord(report.getRecordId());
         if (!Objects.equals(ReportStatusEnum.PENDING_REVIEW.getCode(), report.getReportStatus())) {
             throw new BusinessException("只有「待审核」的报告能审核（当前："
-                    + dictCacheService.getDicDataLabel(DictType.REPORT_STATUS, report.getReportStatus()) + "）");
+                    + dictCacheService.getDicDataLabel(DictTypeConst.REPORT_STATUS, report.getReportStatus()) + "）");
         }
         Long current = UserUtils.getCurrentUser().getEmployeeId();
         if (Objects.equals(report.getWriteById(), current)) {
@@ -402,7 +402,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         BizInspectionRecord record = loadEcgRecord(report.getRecordId());
         if (!Objects.equals(ReportStatusEnum.PENDING_REVIEW.getCode(), report.getReportStatus())) {
             throw new BusinessException("只有「待审核」的报告能退回（当前："
-                    + dictCacheService.getDicDataLabel(DictType.REPORT_STATUS, report.getReportStatus()) + "）");
+                    + dictCacheService.getDicDataLabel(DictTypeConst.REPORT_STATUS, report.getReportStatus()) + "）");
         }
         if (!TextUtil.hasText(dto.getReason())) {
             throw new BusinessException("退回必须写明原因：医师要照着这个原因改报告");
@@ -440,7 +440,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         BizInspectionRecord record = loadEcgRecord(report.getRecordId());
         if (!Objects.equals(ReportStatusEnum.REVIEWED.getCode(), report.getReportStatus())) {
             throw new BusinessException("只有「已审核」的报告能发布（当前："
-                    + dictCacheService.getDicDataLabel(DictType.REPORT_STATUS, report.getReportStatus()) + "）：请先完成审核");
+                    + dictCacheService.getDicDataLabel(DictTypeConst.REPORT_STATUS, report.getReportStatus()) + "）：请先完成审核");
         }
         LocalDateTime now = LocalDateTime.now();
         report.setReportStatus(ReportStatusEnum.PUBLISHED.getCode());
@@ -525,7 +525,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         if (Objects.equals(ReportStatusEnum.PUBLISHED.getCode(), st)
                 || Objects.equals(ReportStatusEnum.INVALID.getCode(), st)) {
             throw new BusinessException("报告已"
-                    + dictCacheService.getDicDataLabel(DictType.REPORT_STATUS, st) + "，不能再修改");
+                    + dictCacheService.getDicDataLabel(DictTypeConst.REPORT_STATUS, st) + "，不能再修改");
         }
     }
 
@@ -603,13 +603,13 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
             return;
         }
         for (EcgListVO v : list) {
-            v.setRecordStatusText(dictCacheService.getDicDataLabel(DictType.INSPECTION_RECORD_STATUS, v.getRecordStatus()));
+            v.setRecordStatusText(dictCacheService.getDicDataLabel(DictTypeConst.INSPECTION_RECORD_STATUS, v.getRecordStatus()));
             v.setReportStatusText(v.getReportStatus() == null ? "未写报告"
-                    : dictCacheService.getDicDataLabel(DictType.REPORT_STATUS, v.getReportStatus()));
+                    : dictCacheService.getDicDataLabel(DictTypeConst.REPORT_STATUS, v.getReportStatus()));
             v.setPositiveFlagText(v.getPositiveFlag() == null ? null
-                    : dictCacheService.getDicDataLabel(DictType.POSITIVE_FLAG, v.getPositiveFlag()));
+                    : dictCacheService.getDicDataLabel(DictTypeConst.POSITIVE_FLAG, v.getPositiveFlag()));
             v.setEcgTypeText(v.getEcgType() == null ? null
-                    : dictCacheService.getDicDataLabel(DictType.ECG_TYPE, v.getEcgType()));
+                    : dictCacheService.getDicDataLabel(DictTypeConst.ECG_TYPE, v.getEcgType()));
         }
     }
 
@@ -624,7 +624,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         vo.setPatientNo(row.getPatientNo());
         vo.setPatientName(row.getPatientName());
         vo.setGender(row.getGender());
-        vo.setGenderText(row.getGender() == null ? null : dictCacheService.getDicDataLabel(DictType.GENDER, row.getGender()));
+        vo.setGenderText(row.getGender() == null ? null : dictCacheService.getDicDataLabel(DictTypeConst.GENDER, row.getGender()));
         vo.setAge(row.getAge());
         vo.setVisitDate(row.getVisitDate());
         vo.setItemCode(row.getItemCode());
@@ -634,7 +634,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         vo.setApplyDoctorName(row.getApplyDoctorName());
         vo.setClinicalDiagnosis(row.getClinicalDiagnosis());
         vo.setRecordStatus(row.getRecordStatus());
-        vo.setRecordStatusText(dictCacheService.getDicDataLabel(DictType.INSPECTION_RECORD_STATUS, row.getRecordStatus()));
+        vo.setRecordStatusText(dictCacheService.getDicDataLabel(DictTypeConst.INSPECTION_RECORD_STATUS, row.getRecordStatus()));
         BizInspectionRecord rec = bizInspectionRecordMapper.selectById(row.getRecordId());
         if (rec != null) {
             vo.setCheckInTime(rec.getCheckInTime());
@@ -646,7 +646,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
             vo.setWaveId(wave.getId());
             vo.setWaveNo(wave.getWaveNo());
             vo.setEcgType(wave.getEcgType());
-            vo.setEcgTypeText(dictCacheService.getDicDataLabel(DictType.ECG_TYPE, wave.getEcgType()));
+            vo.setEcgTypeText(dictCacheService.getDicDataLabel(DictTypeConst.ECG_TYPE, wave.getEcgType()));
             vo.setDeviceNo(wave.getDeviceNo());
             vo.setCollectBy(wave.getCollectBy());
             vo.setCollectTime(wave.getCollectTime());
@@ -692,14 +692,14 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
             vo.setReportId(report.getId());
             vo.setReportNo(report.getReportNo());
             vo.setReportStatus(report.getReportStatus());
-            vo.setReportStatusText(dictCacheService.getDicDataLabel(DictType.REPORT_STATUS, report.getReportStatus()));
+            vo.setReportStatusText(dictCacheService.getDicDataLabel(DictTypeConst.REPORT_STATUS, report.getReportStatus()));
             vo.setTemplateId(report.getTemplateId());
             vo.setReportContent(report.getReportContent());
             vo.setConclusion(report.getConclusion());
             vo.setSuggestions(report.getSuggestions());
             vo.setPositiveFlag(report.getPositiveFlag());
             vo.setPositiveFlagText(report.getPositiveFlag() == null ? null
-                    : dictCacheService.getDicDataLabel(DictType.POSITIVE_FLAG, report.getPositiveFlag()));
+                    : dictCacheService.getDicDataLabel(DictTypeConst.POSITIVE_FLAG, report.getPositiveFlag()));
             vo.setIsCritical(report.getIsCritical());
             vo.setWriteBy(report.getWriteBy());
             vo.setWriteTime(report.getWriteTime());
@@ -777,7 +777,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         EcgTemplateVO vo = new EcgTemplateVO();
         BeanUtils.copyProperties(e, vo);
         vo.setEcgTypeText(e.getEcgType() == null ? null
-                : dictCacheService.getDicDataLabel(DictType.ECG_TYPE, e.getEcgType()));
+                : dictCacheService.getDicDataLabel(DictTypeConst.ECG_TYPE, e.getEcgType()));
         if (vo.getTemplateName() == null || vo.getTemplateName().isEmpty()) {
             vo.setTemplateName(e.getTemplateCode());
         }

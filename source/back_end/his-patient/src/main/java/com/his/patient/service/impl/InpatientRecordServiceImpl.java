@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
@@ -16,9 +16,12 @@ import com.his.patient.mapper.*;
 import com.his.patient.service.InpatientRecordService;
 import com.his.patient.support.RecordStructuredFields;
 import com.his.patient.vo.*;
+import com.his.system.dto.SignCommandDTO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeService;
+import com.his.system.service.EmrSignatureService;
 import com.his.system.utils.UserUtils;
+import com.his.system.vo.SignatureVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -50,7 +53,7 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
     /**
      * 电子签名（P5.5）：提交即签名、归档补签、签名即锁定
      */
-    private final com.his.common.service.EmrSignatureService signatureService;
+    private final EmrSignatureService signatureService;
 
     // 保存（新增 / 修改）
 
@@ -549,7 +552,7 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
             r.setSubmitTime(now);
             bizInpatientRecordMapper.updateById(r);
 
-            com.his.common.vo.SignatureVO sig = signOrFail(r, SignSceneEnum.SUBMIT,
+            SignatureVO sig = signOrFail(r, SignSceneEnum.SUBMIT,
                     "病历提交");
             if (sig != null) {
                 // 签名服务已经 UPDATE 过锚点。把新值同步回内存实体后再写一次，
@@ -596,7 +599,7 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
             // 归档补签：正常情况下提交时已经签过，这里只兜住"提交时签名失败/历史数据"两种缺口。
             // 已签名的直接跳过（blockReason 会拒绝重复签，不能把整个归档批次拖挂）。
             if (!Objects.equals(1, r.getSignStatus())) {
-                com.his.common.vo.SignatureVO sig = signOrFail(r,
+                SignatureVO sig = signOrFail(r,
                         SignSceneEnum.ARCHIVE, "病历归档");
                 if (sig != null) {
                     r.setSignStatus(1);
@@ -628,14 +631,14 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
      * 事后无法分辨是漏签还是被篡改。失败时医生/病案室能立刻看到原因并重试，
      * 代价远小于留下无法追溯的缺口。
      */
-    private com.his.common.vo.SignatureVO signOrFail(BizInpatientRecord r,
-                                                     SignSceneEnum scene,
-                                                     String actionLabel) {
+    private SignatureVO signOrFail(BizInpatientRecord r,
+                                   SignSceneEnum scene,
+                                   String actionLabel) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        com.his.common.dto.SignCommandDTO cmd = new com.his.common.dto.SignCommandDTO();
+        SignCommandDTO cmd = new SignCommandDTO();
         cmd.setBizType(SignBizTypeEnum.INPATIENT_RECORD.getCode());
         cmd.setBizId(r.getId());
         cmd.setSignScene(scene.getCode());

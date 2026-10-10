@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -96,8 +96,8 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         BizUltrasoundRecord r = require(recordId);
         UltrasoundVO.DetailVO vo = new UltrasoundVO.DetailVO();
         BeanUtils.copyProperties(r, vo);
-        vo.setStatusText(dictCacheService.getDicDataLabel(DictType.ENDOUS_STATUS, r.getStatus()));
-        vo.setUsTypeText(dictCacheService.getDicDataLabel(DictType.ULTRASOUND_TYPE, r.getUsType()));
+        vo.setStatusText(dictCacheService.getDicDataLabel(DictTypeConst.ENDOUS_STATUS, r.getStatus()));
+        vo.setUsTypeText(dictCacheService.getDicDataLabel(DictTypeConst.ULTRASOUND_TYPE, r.getUsType()));
         vo.setMeasures(listMeasures(recordId));
         return vo;
     }
@@ -122,8 +122,8 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         for (BizUltrasoundRecord r : records) {
             UltrasoundVO.ListVO v = new UltrasoundVO.ListVO();
             BeanUtils.copyProperties(r, v);
-            v.setStatusText(dictCacheService.getDicDataLabel(DictType.ENDOUS_STATUS, r.getStatus()));
-            v.setUsTypeText(dictCacheService.getDicDataLabel(DictType.ULTRASOUND_TYPE, r.getUsType()));
+            v.setStatusText(dictCacheService.getDicDataLabel(DictTypeConst.ENDOUS_STATUS, r.getStatus()));
+            v.setUsTypeText(dictCacheService.getDicDataLabel(DictTypeConst.ULTRASOUND_TYPE, r.getUsType()));
             out.add(v);
         }
         return out;
@@ -156,7 +156,7 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         BizUltrasoundRecord r = require(dto.getId());
         assertMutable(r);
         if (!InsRecordStatusEnum.REGISTERED.is(r.getStatus()) && !InsRecordStatusEnum.SIGNED_IN.is(r.getStatus())) {
-            throw new BusinessException("已开始检查的记录不可修改登记信息（当前：" + dictCacheService.getDicDataLabel(DictType.ENDOUS_STATUS, r.getStatus()) + "）");
+            throw new BusinessException("已开始检查的记录不可修改登记信息（当前：" + dictCacheService.getDicDataLabel(DictTypeConst.ENDOUS_STATUS, r.getStatus()) + "）");
         }
         BeanUtils.copyProperties(dto, r);
         r.setId(dto.getId());
@@ -169,7 +169,7 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         BizUltrasoundRecord r = require(recordId);
         assertMutable(r);
         if (!InsRecordStatusEnum.REGISTERED.is(r.getStatus())) {
-            throw new BusinessException("仅「已登记」可签到（当前：" + dictCacheService.getDicDataLabel(DictType.ENDOUS_STATUS, r.getStatus()) + "）");
+            throw new BusinessException("仅「已登记」可签到（当前：" + dictCacheService.getDicDataLabel(DictTypeConst.ENDOUS_STATUS, r.getStatus()) + "）");
         }
         r.setStatus(InsRecordStatusEnum.SIGNED_IN.getCode());
         bizUltrasoundRecordMapper.updateById(r);
@@ -184,7 +184,7 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         BizUltrasoundRecord r = require(dto.getRecordId());
         assertMutable(r);
         if (!InsRecordStatusEnum.SIGNED_IN.is(r.getStatus()) && !InsRecordStatusEnum.CHECKING.is(r.getStatus())) {
-            throw new BusinessException("请先签到再执行检查（当前：" + dictCacheService.getDicDataLabel(DictType.ENDOUS_STATUS, r.getStatus()) + "）");
+            throw new BusinessException("请先签到再执行检查（当前：" + dictCacheService.getDicDataLabel(DictTypeConst.ENDOUS_STATUS, r.getStatus()) + "）");
         }
         r.setSonographer(TextUtil.hasText(dto.getSonographer()) ? dto.getSonographer() : operatorUser.getRealName());
         if (TextUtil.hasText(dto.getBodyPart())) {
@@ -260,7 +260,7 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         BizUltrasoundRecord r = require(dto.getRecordId());
         assertMutable(r);
         if (!InsRecordStatusEnum.CHECKING.is(r.getStatus())) {
-            throw new BusinessException("仅「检查中」的记录可出具报告（当前：" + dictCacheService.getDicDataLabel(DictType.ENDOUS_STATUS, r.getStatus()) + "）");
+            throw new BusinessException("仅「检查中」的记录可出具报告（当前：" + dictCacheService.getDicDataLabel(DictTypeConst.ENDOUS_STATUS, r.getStatus()) + "）");
         }
         r.setFindings(dto.getFindings());
         r.setConclusion(dto.getConclusion());
@@ -280,7 +280,7 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         BizUltrasoundRecord r = require(dto.getRecordId());
         assertMutable(r);
         if (!InsRecordStatusEnum.RESULTED.is(r.getStatus())) {
-            throw new BusinessException("仅「已出报告」可审核（当前：" + dictCacheService.getDicDataLabel(DictType.ENDOUS_STATUS, r.getStatus()) + "）");
+            throw new BusinessException("仅「已出报告」可审核（当前：" + dictCacheService.getDicDataLabel(DictTypeConst.ENDOUS_STATUS, r.getStatus()) + "）");
         }
         String who = operatorUser.getRealName();
         if (who != null && who.equals(r.getReportBy())) {
@@ -306,7 +306,7 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
             throw new BusinessException("该报告已发布");
         }
         if (!InsRecordStatusEnum.REVIEWED.is(r.getStatus())) {
-            throw new BusinessException("发布前必须完成审核（当前：" + dictCacheService.getDicDataLabel(DictType.ENDOUS_STATUS, r.getStatus()) + "）");
+            throw new BusinessException("发布前必须完成审核（当前：" + dictCacheService.getDicDataLabel(DictTypeConst.ENDOUS_STATUS, r.getStatus()) + "）");
         }
         r.setStatus(InsRecordStatusEnum.PUBLISHED.getCode());
         r.setPublishBy(operatorUser.getRealName());

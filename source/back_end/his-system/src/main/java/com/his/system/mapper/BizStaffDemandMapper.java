@@ -15,15 +15,14 @@ import java.util.List;
 public interface BizStaffDemandMapper extends BaseMapper<BizStaffDemand> {
 
     /**
-     * 派生号段的起点（避免 19 位雪花 id 撞车；号段内自增）
+     * 派生号段的起点
      */
     @Select("SELECT COALESCE(MAX(id), 896800000000000000) FROM biz_staff_demand "
             + "WHERE id < 896800000000900000")
     Long maxDerivedId();
 
     /**
-     * 缺口清单（读视图 {@code v_staff_demand_gap}）。
-     * 视图里「在岗」只数出勤状态=上班的人：休息/请假/停班不算在岗，这是缺口的定义。
+     * 缺口清单
      */
     @Select("""
             <script>
@@ -55,12 +54,6 @@ public interface BizStaffDemandMapper extends BaseMapper<BizStaffDemand> {
     /**
      * 派生①：住院护理需求 = MAX(Σ(在院患者 × 护理等级工时) ÷ 8h, 病区核定下限, 1)。
      *
-     * <p>等级工时（小时/患者日）：特级 6.0 / 一级 3.5 / 二级 1.7 / 三级 0.6。
-     * 这里不再乘科室级 NHPPD 系数 —— 定额直接挂在等级上，等级一改需求立刻变，
-     * 代价是没有科室差异，等护理部核定后换成系数表。
-     *
-     * <p>只算 ward_id 在册（sys_ward 存在且启用）的病区：挂在不存在的病区上的在院记录
-     * 是历史脏数据，连归哪个科室、下限多少都不知道，派生的需求没有归属。
      */
     @Insert("""
             INSERT INTO biz_staff_demand (id, demand_date, org_type, org_id, org_name, period_code,
@@ -82,10 +75,6 @@ public interface BizStaffDemandMapper extends BaseMapper<BizStaffDemand> {
                           GREATEST(x.derived, x.floor_cnt, 1), ' 人'),
                    1, #{operator}, NOW(), 0, #{remark}
               FROM (
-                -- 主表是 sys_ward（全部启用病区）：0 患者的病区也要出需求行，
-                -- 否则护士长切过去看到一片空白，还以为系统坏了。0 患者时患者派生为 0，
-                -- 需求就等于核定下限（三班还得有人顶）。
-                -- 注意 SUM 在 0 患者时为 NULL，而 GREATEST 遇 NULL 直接返回 NULL，必须兜住
                 SELECT c.dt AS dt, w.ward_id AS ward_id, MAX(w.ward_name) AS ward_name,
                        COUNT(a.admission_id) AS patients,
                        IFNULL(ROUND(SUM(CASE a.nursing_level WHEN 1 THEN 6.0 WHEN 2 THEN 3.5
@@ -109,7 +98,6 @@ public interface BizStaffDemandMapper extends BaseMapper<BizStaffDemand> {
 
     /**
      * 派生②：门诊护理需求 = MAX(分诊 1 人 + 跟诊 CEIL(出诊医生数/2), 科室核定下限, 1)。
-     * 治疗室按处置量的那部分暂不铺 —— 库里没有处置量数据，凭空给系数等于编需求。
      */
     @Insert("""
             INSERT INTO biz_staff_demand (id, demand_date, org_type, org_id, org_name, period_code,
@@ -134,8 +122,6 @@ public interface BizStaffDemandMapper extends BaseMapper<BizStaffDemand> {
                         AND r.org_id = s.dept_id AND r.staff_type = 2 AND r.shift_id = 0
                  WHERE s.del_flag = 0 AND s.status = 1
                    AND s.schedule_date BETWEEN #{startDate} AND #{endDate}
-                   -- 只派生有护理编制的科室。有病区的科室不排除：它们的门诊区域（分诊/治疗）
-                   -- 同样要护理人力，算出来是当前排不进去的缺口（G-29），藏着只会没人看见
                    AND EXISTS (SELECT 1 FROM sys_employee e
                                  JOIN sys_employee_post p ON p.employee_id = e.id
                                  JOIN sys_role r2 ON r2.id = p.role_id
@@ -150,7 +136,6 @@ public interface BizStaffDemandMapper extends BaseMapper<BizStaffDemand> {
 
     /**
      * 派生③：门诊医生需求 = 当日出诊医生数。
-     * 出诊计划本身就是医生需求的来源，铺这一行是为了让「门诊 × 医生」也有分母可比对。
      */
     @Insert("""
             INSERT INTO biz_staff_demand (id, demand_date, org_type, org_id, org_name, period_code,
@@ -177,9 +162,6 @@ public interface BizStaffDemandMapper extends BaseMapper<BizStaffDemand> {
 
     /**
      * 手工调整（护士长拍板）：写 demand_source=3，并保留系统算出来的原值在依据里。
-     *
-     * <p>为什么来源必须是 3：下次点「重算」时，派生只覆盖 source IN (1,2) 的行，
-     * 人拍板的数不会被系统盖掉 —— 这是需求层能不能被人信任的关键。
      */
     @Insert("""
             INSERT INTO biz_staff_demand (id, demand_date, org_type, org_id, org_name, period_code,

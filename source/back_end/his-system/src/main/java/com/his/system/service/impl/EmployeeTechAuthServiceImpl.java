@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.TechAuthCategoryEnum;
 import com.his.common.enums.TechAuthStatusEnum;
 import com.his.common.enums.TechLevelEnum;
@@ -513,6 +513,6 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
         if (type == null) {
             return "—";
         }
-        return dictCacheService.getDicDataLabel(DictType.TECH_AUTH_TYPE, type);
+        return dictCacheService.getDicDataLabel(DictTypeConst.TECH_AUTH_TYPE, type);
     }
 }

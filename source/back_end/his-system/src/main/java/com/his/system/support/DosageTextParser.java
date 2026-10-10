@@ -2,8 +2,6 @@ package com.his.system.support;
 
 import com.his.common.util.TextUtil;
 import com.his.system.enums.MassUnitEnum;
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -15,7 +13,6 @@ import java.util.regex.Pattern;
 /**
  * 剂量文本解析（单次给药量 / 规格单件含量 / 频次每日次数），统一折算成 mg
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DosageTextParser {
 
     /**

@@ -1,15 +1,12 @@
 package com.his.ai.support;
 
 import com.his.common.util.TextUtil;
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
 
 import java.util.regex.Pattern;
 
 /**
  * 脱敏兜底工具。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class AiMaskUtils {
 
     private static final String MASK_ID_CARD = "[身份证号]";

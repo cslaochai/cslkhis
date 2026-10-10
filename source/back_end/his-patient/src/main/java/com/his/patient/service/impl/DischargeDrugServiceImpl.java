@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.DischargeDrugDTO;
@@ -193,7 +193,7 @@ public class DischargeDrugServiceImpl extends ServiceImpl<BizDischargeDrugMapper
     private DischargeDrugVO toVo(BizDischargeDrug d) {
         DischargeDrugVO vo = new DischargeDrugVO();
         org.springframework.beans.BeanUtils.copyProperties(d, vo);
-        vo.setDispenseStatusText(dictCacheService.getDicDataLabel(DictType.DISCHARGE_DRUG_STATUS, d.getDispenseStatus()));
+        vo.setDispenseStatusText(dictCacheService.getDicDataLabel(DictTypeConst.DISCHARGE_DRUG_STATUS, d.getDispenseStatus()));
         return vo;
     }
 

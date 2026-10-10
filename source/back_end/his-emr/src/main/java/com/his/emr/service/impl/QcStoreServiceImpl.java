@@ -2,7 +2,7 @@ package com.his.emr.service.impl;
 
 import com.his.common.enums.CheckResultEnum;
 import com.his.common.enums.RecordQcTypeEnum;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.emr.entity.BizQualityControl;

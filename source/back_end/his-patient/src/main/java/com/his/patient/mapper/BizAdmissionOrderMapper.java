@@ -19,8 +19,6 @@ public interface BizAdmissionOrderMapper extends BaseMapper<BizAdmissionOrder> {
 
     /**
      * 住院证分页
-     * <p>LEFT JOIN 入院表只为取入院编号（收治后回显），证面信息一律用本表快照，
-     * 不做实时 JOIN——证面是"当时写下的"，不能被后来的患者信息变更改写。
      */
     @Select("""
             <script>
@@ -71,7 +69,7 @@ public interface BizAdmissionOrderMapper extends BaseMapper<BizAdmissionOrder> {
               AND (#{q.beginDate} IS NULL OR #{q.beginDate} = ''
                    OR o.order_time >= CONCAT(#{q.beginDate}, ' 00:00:00'))
               AND (#{q.endDate} IS NULL OR #{q.endDate} = ''
-                   OR o.order_time <= CONCAT(#{q.endDate}, ' 23:59:59'))
+                   OR o.order_time &lt;= CONCAT(#{q.endDate}, ' 23:59:59'))
               AND (#{q.keyword} IS NULL OR #{q.keyword} = ''
                    OR o.patient_name LIKE CONCAT('%', #{q.keyword}, '%')
                    OR o.order_no LIKE CONCAT('%', #{q.keyword}, '%')

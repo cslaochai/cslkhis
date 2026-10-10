@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -170,7 +170,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setId(row.getId());
         vo.setTitle(row.getTitle());
         vo.setBusinessType(row.getBusinessType());
-        vo.setBusinessTypeText(dictCacheService.getDicDataLabel(DictType.OPER_BUSINESS_TYPE, row.getBusinessType()));
+        vo.setBusinessTypeText(dictCacheService.getDicDataLabel(DictTypeConst.OPER_BUSINESS_TYPE, row.getBusinessType()));
         vo.setMethod(row.getMethod());
         vo.setRequestMethod(row.getRequestMethod());
         vo.setOperName(row.getOperName());
@@ -183,7 +183,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setOperParam(row.getOperParam());
         vo.setJsonResult(row.getJsonResult());
         vo.setStatus(row.getStatus());
-        vo.setStatusText(dictCacheService.getDicDataLabel(DictType.OPER_STATUS, row.getStatus()));
+        vo.setStatusText(dictCacheService.getDicDataLabel(DictTypeConst.OPER_STATUS, row.getStatus()));
         vo.setErrorMsg(row.getErrorMsg());
         vo.setOperTime(row.getOperTime());
         vo.setCostTime(row.getCostTime());
@@ -463,7 +463,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setId(row.getId());
         vo.setTitle(row.getTitle());
         vo.setBusinessType(row.getBusinessType());
-        vo.setBusinessTypeText(dictCacheService.getDicDataLabel(DictType.OPER_BUSINESS_TYPE, row.getBusinessType()));
+        vo.setBusinessTypeText(dictCacheService.getDicDataLabel(DictTypeConst.OPER_BUSINESS_TYPE, row.getBusinessType()));
         vo.setMethod(row.getMethod());
         vo.setRequestMethod(row.getRequestMethod());
         vo.setOperName(row.getOperName());
@@ -473,7 +473,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setOperIp(row.getOperIp());
         vo.setOperLocation(row.getOperLocation());
         vo.setStatus(row.getStatus());
-        vo.setStatusText(dictCacheService.getDicDataLabel(DictType.OPER_STATUS, row.getStatus()));
+        vo.setStatusText(dictCacheService.getDicDataLabel(DictTypeConst.OPER_STATUS, row.getStatus()));
         vo.setOperTime(row.getOperTime());
         vo.setCostTime(row.getCostTime());
         vo.setErrorMsg(row.getErrorMsg() == null ? null : TextUtil.cut(row.getErrorMsg(), 200));
@@ -491,7 +491,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setBrowser(row.getBrowser());
         vo.setOs(row.getOs());
         vo.setLoginStatus(row.getLoginStatus());
-        vo.setLoginStatusText(dictCacheService.getDicDataLabel(DictType.LOGIN_STATUS, row.getLoginStatus()));
+        vo.setLoginStatusText(dictCacheService.getDicDataLabel(DictTypeConst.LOGIN_STATUS, row.getLoginStatus()));
         vo.setMsg(row.getMsg());
         vo.setLoginTime(row.getLoginTime());
         vo.setUserAgent(row.getUserAgent());
@@ -510,7 +510,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setContent(row.getContent());
         vo.setIp(row.getIp());
         vo.setStatus(row.getStatus());
-        vo.setStatusText(dictCacheService.getDicDataLabel(DictType.AUDIT_LOG_STATUS, row.getStatus()));
+        vo.setStatusText(dictCacheService.getDicDataLabel(DictTypeConst.AUDIT_LOG_STATUS, row.getStatus()));
         vo.setErrorMsg(row.getErrorMsg());
         vo.setCreateTime(row.getCreateTime());
         return vo;

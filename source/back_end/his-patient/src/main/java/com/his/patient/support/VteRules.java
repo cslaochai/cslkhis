@@ -1,8 +1,6 @@
 package com.his.patient.support;
 
 import com.his.common.util.TextUtil;
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
 import com.his.patient.enums.VteMeasureTypeEnum;
 
 import java.util.Arrays;
@@ -11,7 +9,6 @@ import java.util.List;
 /**
  * VTE 防控的口径常量（措施项 / 推荐矩阵 / 枚举文案
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class VteRules {
 
     /**

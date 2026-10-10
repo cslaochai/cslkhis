@@ -2,10 +2,10 @@ package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.common.base.BizCodeConstants;
+import com.his.common.constant.BizCodeConst;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -92,7 +92,7 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
         boolean isNew = dto.getId() == null;
         if (isNew) {
             entity = new BizTeleConsult();
-            entity.setConsultNo(nextNo(BizCodeConstants.TELE_CONSULT_NO_PREFIX, "TELE_CONSULT"));
+            entity.setConsultNo(nextNo(BizCodeConst.TELE_CONSULT_NO_PREFIX, "TELE_CONSULT"));
             entity.setStatus(TeleConsultStatusEnum.PENDING.getCode());
             entity.setIsUrgent(dto.getIsUrgent() == null ? 0 : dto.getIsUrgent());
         } else {
@@ -246,7 +246,7 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
             deptScopeService.assertDeptAccessible(dto.getDeptId());
         }
         BizOnlineConsult entity = new BizOnlineConsult();
-        entity.setConsultNo(nextNo(BizCodeConstants.ONLINE_CONSULT_NO_PREFIX, "ONLINE_CONSULT"));
+        entity.setConsultNo(nextNo(BizCodeConst.ONLINE_CONSULT_NO_PREFIX, "ONLINE_CONSULT"));
         entity.setPatientId(patient.getId());
         entity.setPatientNo(patient.getPatientNo());
         entity.setPatientName(patient.getPatientName());

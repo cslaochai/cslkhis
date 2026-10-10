@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizInspectionApply;
 import com.his.emr.mapper.BizInspectionApplyMapper;
@@ -145,7 +145,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
             total += n;
             ExamApptVO.StatusCountVO v = new ExamApptVO.StatusCountVO();
             v.setStatus(status);
-            v.setStatusText(dictCacheService.getDicDataLabel(DictType.EXAM_APPOINT_STATUS, status));
+            v.setStatusText(dictCacheService.getDicDataLabel(DictTypeConst.EXAM_APPOINT_STATUS, status));
             v.setCount(n);
             out.add(v);
         }
@@ -161,7 +161,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
         BizExamAppointment a = requireAppt(apptId);
         ExamApptVO.ApptDetailVO vo = new ExamApptVO.ApptDetailVO();
         BeanUtils.copyProperties(toApptVo(a), vo);
-        vo.setPrevApplyStatusText(dictCacheService.getDicDataLabel(DictType.INSPECTION_APPLY_STATUS, a.getPrevApplyStatus()));
+        vo.setPrevApplyStatusText(dictCacheService.getDicDataLabel(DictTypeConst.INSPECTION_APPLY_STATUS, a.getPrevApplyStatus()));
         vo.setApplyNoSnapshot(a.getApplyNo());
         return vo;
     }
@@ -231,7 +231,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
         }
         if (old.getStatus() != APPT_BOOKED) {
             throw new BusinessException("仅「已预约」可改约（当前："
-                    + dictCacheService.getDicDataLabel(DictType.EXAM_APPOINT_STATUS, old.getStatus()) + "）");
+                    + dictCacheService.getDicDataLabel(DictTypeConst.EXAM_APPOINT_STATUS, old.getStatus()) + "）");
         }
         BizInspectionApply apply = requireApply(old.getApplyId());
         int prevStatus = old.getPrevApplyStatus() == null ? APPLY_PAID : old.getPrevApplyStatus();
@@ -260,7 +260,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
         }
         if (appt.getStatus() != APPT_BOOKED) {
             throw new BusinessException("仅「已预约」可取消（当前："
-                    + dictCacheService.getDicDataLabel(DictType.EXAM_APPOINT_STATUS, appt.getStatus()) + "）；已到检请在检查工作站取消登记");
+                    + dictCacheService.getDicDataLabel(DictTypeConst.EXAM_APPOINT_STATUS, appt.getStatus()) + "）；已到检请在检查工作站取消登记");
         }
         releaseOld(appt, dto.getCancelReason(), APPT_CANCELLED, operatorUser.getRealName());
     }
@@ -279,7 +279,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
         BizExamAppointment appt = requireAppt(dto.getApptId());
         if (appt.getStatus() != APPT_BOOKED) {
             throw new BusinessException("仅「已预约」可签到（当前："
-                    + dictCacheService.getDicDataLabel(DictType.EXAM_APPOINT_STATUS, appt.getStatus()) + "）");
+                    + dictCacheService.getDicDataLabel(DictTypeConst.EXAM_APPOINT_STATUS, appt.getStatus()) + "）");
         }
         BizExamAppointment update = new BizExamAppointment();
         update.setId(appt.getId());
@@ -300,7 +300,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
         BizExamAppointment appt = requireAppt(dto.getApptId());
         if (appt.getStatus() != APPT_ARRIVED) {
             throw new BusinessException("请先签到再完成检查（当前："
-                    + dictCacheService.getDicDataLabel(DictType.EXAM_APPOINT_STATUS, appt.getStatus()) + "）");
+                    + dictCacheService.getDicDataLabel(DictTypeConst.EXAM_APPOINT_STATUS, appt.getStatus()) + "）");
         }
         BizExamAppointment update = new BizExamAppointment();
         update.setId(appt.getId());
@@ -386,7 +386,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
                     o.setDeviceId(device.getId());
                     o.setDeviceCode(device.getDeviceCode());
                     o.setDeviceName(device.getDeviceName());
-                    o.setDeviceTypeText(dictCacheService.getDicDataLabel(DictType.EXAM_DEVICE_TYPE, device.getDeviceType()));
+                    o.setDeviceTypeText(dictCacheService.getDicDataLabel(DictTypeConst.EXAM_DEVICE_TYPE, device.getDeviceType()));
                     o.setRoomName(device.getRoomName());
                     o.setExamDate(date);
                     o.setStartTime(cell.getStartTime());
@@ -428,7 +428,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
         }
         if (device.getStatus() != DEVICE_OPEN) {
             throw new BusinessException("设备「" + device.getDeviceName() + "」"
-                    + dictCacheService.getDicDataLabel(DictType.EXAM_DEVICE_STATUS, device.getStatus()) + "，暂不受理预约");
+                    + dictCacheService.getDicDataLabel(DictTypeConst.EXAM_DEVICE_STATUS, device.getStatus()) + "，暂不受理预约");
         }
         BizExamDeviceItem map = bizExamDeviceItemMapper.selectOne(new LambdaQueryWrapper<BizExamDeviceItem>()
                 .eq(BizExamDeviceItem::getDeviceId, device.getId())
@@ -614,7 +614,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
             return APPLY_SUBMITTED;
         }
         throw new BusinessException("申请单 " + apply.getApplyNo() + " 当前状态「"
-                + dictCacheService.getDicDataLabel(DictType.INSPECTION_APPLY_STATUS, status) + "」不可预约："
+                + dictCacheService.getDicDataLabel(DictTypeConst.INSPECTION_APPLY_STATUS, status) + "」不可预约："
                 + (status == APPLY_SUBMITTED ? "检查须先缴费再预约（急诊可走绿色通道）" : "只有已缴费或急诊已提交的申请单可预约"));
     }
 
@@ -778,7 +778,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
             v.setPrice(a.getPrice());
             v.setIsEmergency(a.getIsEmergency());
             v.setApplyStatus(a.getApplyStatus());
-            v.setApplyStatusText(dictCacheService.getDicDataLabel(DictType.INSPECTION_APPLY_STATUS, a.getApplyStatus()));
+            v.setApplyStatusText(dictCacheService.getDicDataLabel(DictTypeConst.INSPECTION_APPLY_STATUS, a.getApplyStatus()));
             v.setDeviceCount(deviceCounts.getOrDefault(a.getInspectionItemId(), 0));
             v.setExamMinutes(dictMinutes(a.getInspectionItemId()));
             BizExamAppointment active = activeByApply.get(a.getId());
@@ -809,7 +809,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
     private ExamApptVO.ApptVO toApptVo(BizExamAppointment a) {
         ExamApptVO.ApptVO v = new ExamApptVO.ApptVO();
         BeanUtils.copyProperties(a, v);
-        v.setStatusText(dictCacheService.getDicDataLabel(DictType.EXAM_APPOINT_STATUS, a.getStatus()));
+        v.setStatusText(dictCacheService.getDicDataLabel(DictTypeConst.EXAM_APPOINT_STATUS, a.getStatus()));
         v.setTimeRange(a.getStartTime() + "-" + a.getEndTime());
         return v;
     }

@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
@@ -195,7 +195,7 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
         vo.setDeptId(p.getDeptId());
         vo.setDeptName(p.getDeptName());
         vo.setSterilizeMethod(p.getSterilizeMethod());
-        vo.setSterilizeMethodText(dictCacheService.getDicDataLabel(DictType.CSSD_STERIL_METHOD, p.getSterilizeMethod()));
+        vo.setSterilizeMethodText(dictCacheService.getDicDataLabel(DictTypeConst.CSSD_STERIL_METHOD, p.getSterilizeMethod()));
         vo.setStatus(p.getStatus());
         vo.setStatusText(CssdNodeStatusEnum.getText(p.getStatus()));
         vo.setSterilizerNo(p.getSterilizerNo());

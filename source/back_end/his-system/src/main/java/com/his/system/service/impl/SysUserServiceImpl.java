@@ -10,7 +10,7 @@ import com.his.common.enums.EnableStatusEnum;
 import com.his.common.enums.UserTypeEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.SensitiveMaskUtil;
 import com.his.common.util.TextUtil;
 import com.his.system.dto.SysUserPasswordUpsertDTO;

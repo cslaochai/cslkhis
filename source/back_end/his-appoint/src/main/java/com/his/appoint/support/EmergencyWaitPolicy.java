@@ -1,6 +1,7 @@
 package com.his.appoint.support;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.his.common.constant.SystemConfigKeyConst;
 import com.his.common.enums.EmergencyTriageLevelEnum;
 import com.his.common.util.TextUtil;
 import com.his.system.entity.SysConfig;
@@ -32,8 +33,6 @@ public class EmergencyWaitPolicy {
      * 未定级按 Ⅲ级（30 分钟）收口：宁可早报警，不要因为漏填级别而永远不超时
      */
     private static final int DEFAULT_WHEN_NO_LEVEL = 30;
-
-    private static final String CONFIG_KEY_PREFIX = "emergency.wait_deadline_level";
 
     private static final long CONFIG_CACHE_TTL_MS = 60_000L;
 
@@ -89,7 +88,7 @@ public class EmergencyWaitPolicy {
         }
         try {
             java.util.List<SysConfig> rows = sysConfigMapper.selectList(
-                    new LambdaQueryWrapper<SysConfig>().likeRight(SysConfig::getConfigKey, CONFIG_KEY_PREFIX));
+                    new LambdaQueryWrapper<SysConfig>().likeRight(SysConfig::getConfigKey, SystemConfigKeyConst.EMERGENCY_WAIT_DEADLINE_LEVEL_PREFIX));
             for (SysConfig row : rows) {
                 Integer level = levelOfKey(row.getConfigKey());
                 if (level != null && TextUtil.hasText(row.getConfigValue())) {
@@ -103,11 +102,11 @@ public class EmergencyWaitPolicy {
     }
 
     private Integer levelOfKey(String key) {
-        if (key == null || !key.startsWith(CONFIG_KEY_PREFIX)) {
+        if (key == null || !key.startsWith(SystemConfigKeyConst.EMERGENCY_WAIT_DEADLINE_LEVEL_PREFIX)) {
             return null;
         }
         try {
-            return Integer.parseInt(key.substring(CONFIG_KEY_PREFIX.length()));
+            return Integer.parseInt(key.substring(SystemConfigKeyConst.EMERGENCY_WAIT_DEADLINE_LEVEL_PREFIX.length()));
         } catch (NumberFormatException ex) {
             return null;
         }

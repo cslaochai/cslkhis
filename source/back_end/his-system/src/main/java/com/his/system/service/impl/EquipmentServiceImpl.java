@@ -3,7 +3,7 @@ package com.his.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.system.dto.*;
@@ -226,7 +226,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         vo.setEquipmentCode(e.getEquipmentCode());
         vo.setEquipmentName(e.getEquipmentName());
         vo.setCategory(e.getCategory());
-        vo.setCategoryText(dictCacheService.getDicDataLabel(DictType.EQUIPMENT_CATEGORY, e.getCategory()));
+        vo.setCategoryText(dictCacheService.getDicDataLabel(DictTypeConst.EQUIPMENT_CATEGORY, e.getCategory()));
         vo.setDeptId(e.getDeptId());
         vo.setDeptName(e.getDeptName());
         vo.setBrand(e.getBrand());
@@ -234,7 +234,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         vo.setPurchaseDate(e.getPurchaseDate());
         vo.setPurchasePrice(e.getPurchasePrice());
         vo.setStatus(e.getStatus());
-        vo.setStatusText(dictCacheService.getDicDataLabel(DictType.EQUIPMENT_STATUS, e.getStatus()));
+        vo.setStatusText(dictCacheService.getDicDataLabel(DictTypeConst.EQUIPMENT_STATUS, e.getStatus()));
         vo.setMaintainCycleDays(e.getMaintainCycleDays());
         vo.setLastMaintainDate(e.getLastMaintainDate());
         if (e.getLastMaintainDate() != null && e.getMaintainCycleDays() != null && e.getMaintainCycleDays() > 0) {

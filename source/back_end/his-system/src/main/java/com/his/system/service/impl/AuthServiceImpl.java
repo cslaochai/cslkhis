@@ -34,13 +34,19 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class AuthServiceImpl extends ServiceImpl<SysUserMapper, SysUser> implements AuthService {
 
-    private final AuthenticationManager authenticationManager;
-    private final JwtUtils jwtUtils;
     private final SysUserService sysUserService;
+
     private final EmployeePostService employeePostService;
-    private final SysUserMapper sysUserMapper;
+
     private final SysLoginLogService sysLoginLogService;
+
     private final PasswordCipherService passwordCipherService;
+
+    private final JwtUtils jwtUtils;
+
+    private final AuthenticationManager authenticationManager;
+
+    private final SysUserMapper sysUserMapper;
 
     @Override
     public LoginVO login(LoginRequestDTO loginRequestDTO, HttpServletRequest request) {

@@ -1,8 +1,6 @@
 package com.his.pharmacy.support;
 
 import com.his.common.util.TextUtil;
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -12,7 +10,6 @@ import java.util.regex.Pattern;
 /**
  * GS1 UDI 解析器（高值耗材扫码串 → DI/序列号/批号/有效期）。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class UdiParser {
 
     private static final Pattern BRACKETED = Pattern.compile("\\((0[17]|1[07]|21)\\)([^(]*)");

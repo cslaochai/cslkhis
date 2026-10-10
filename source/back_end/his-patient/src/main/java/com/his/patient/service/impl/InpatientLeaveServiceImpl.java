@@ -4,30 +4,31 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.dto.SignCommandDTO;
+import com.his.common.constant.SystemConfigKeyConst;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.ObjectSignStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.EmrSignatureService;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
-import com.his.common.vo.SignatureVO;
 import com.his.patient.dto.InpatientLeaveDTO;
 import com.his.patient.entity.BizInpatientLeave;
 import com.his.patient.enums.LeaveStatusEnum;
 import com.his.patient.mapper.BizInpatientLeaveMapper;
 import com.his.patient.service.InpatientLeaveService;
 import com.his.patient.vo.InpatientLeaveVO;
+import com.his.system.dto.SignCommandDTO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysConfig;
 import com.his.system.mapper.SysConfigMapper;
 import com.his.system.provider.DeptScopeService;
+import com.his.system.service.EmrSignatureService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
+import com.his.system.vo.SignatureVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -67,7 +68,6 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
      * 上报对象合法码（字典 his_leave_report）
      */
     private static final Set<Integer> REPORT_TOS = Set.of(1, 2, 3);
-    private static final String MAX_HOURS_CONFIG_KEY = "inpatient.leave.max_hours";
     /**
      * 配置缺失时的兜底上限（小时）。宁可保守，也不回落成「无上限」。
      */
@@ -480,20 +480,20 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
      */
     private long resolveMaxHours() {
         SysConfig config = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
-                .eq(SysConfig::getConfigKey, MAX_HOURS_CONFIG_KEY));
+                .eq(SysConfig::getConfigKey, SystemConfigKeyConst.INPATIENT_LEAVE_MAX_HOURS));
         if (config == null || !TextUtil.hasText(config.getConfigValue())) {
-            log.warn("未配置 {}，请假时长上限按兜底值 {} 小时", MAX_HOURS_CONFIG_KEY, MAX_HOURS_FALLBACK);
+            log.warn("未配置 {}，请假时长上限按兜底值 {} 小时", SystemConfigKeyConst.INPATIENT_LEAVE_MAX_HOURS, MAX_HOURS_FALLBACK);
             return MAX_HOURS_FALLBACK;
         }
         try {
             int hours = Integer.parseInt(config.getConfigValue().trim());
             if (hours <= 0) {
-                log.warn("配置 {} = {} 非法（必须为正数），按兜底值 {} 小时", MAX_HOURS_CONFIG_KEY, config.getConfigValue(), MAX_HOURS_FALLBACK);
+                log.warn("配置 {} = {} 非法（必须为正数），按兜底值 {} 小时", SystemConfigKeyConst.INPATIENT_LEAVE_MAX_HOURS, config.getConfigValue(), MAX_HOURS_FALLBACK);
                 return MAX_HOURS_FALLBACK;
             }
             return hours;
         } catch (NumberFormatException e) {
-            log.warn("配置 {} = {} 不是数字，按兜底值 {} 小时", MAX_HOURS_CONFIG_KEY, config.getConfigValue(), MAX_HOURS_FALLBACK);
+            log.warn("配置 {} = {} 不是数字，按兜底值 {} 小时", SystemConfigKeyConst.INPATIENT_LEAVE_MAX_HOURS, config.getConfigValue(), MAX_HOURS_FALLBACK);
             return MAX_HOURS_FALLBACK;
         }
     }

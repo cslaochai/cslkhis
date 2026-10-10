@@ -14,7 +14,7 @@ import com.his.ai.vo.DrugAuditPromptVariablesVO;
 import com.his.ai.vo.DrugAuditResultVO;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.support.ClinicalTextMatcher;
 import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizClinicalRuleCheck;

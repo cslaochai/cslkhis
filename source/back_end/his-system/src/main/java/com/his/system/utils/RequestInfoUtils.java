@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 /**
  * 从 HTTP 请求里解析 IP / 浏览器 / 操作系统等环境信息。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RequestInfoUtils {
 
     /**

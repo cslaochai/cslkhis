@@ -12,7 +12,7 @@ import com.his.appoint.enums.VisitTypeEnum;
 import com.his.appoint.service.BizAppointService;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.*;
 import com.his.common.util.TextUtil;
 import com.his.emr.dto.FollowupQueryDTO;

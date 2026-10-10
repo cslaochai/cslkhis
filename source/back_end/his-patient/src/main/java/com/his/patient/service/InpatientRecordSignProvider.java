@@ -1,13 +1,13 @@
 package com.his.patient.service;
 
-import com.his.common.entity.SignSubject;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
-import com.his.common.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
 import com.his.common.util.NumUtil;
-import com.his.common.util.SignCryptoUtil;
 import com.his.patient.entity.BizInpatientRecord;
+import com.his.system.entity.SignSubject;
+import com.his.system.service.SignableContentProvider;
+import com.his.system.utils.SignCryptoUtil;
 
 import java.time.LocalDateTime;
 

@@ -5,9 +5,9 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -154,7 +154,7 @@ public class StatReportServiceImpl extends ServiceImpl<BizStatReportMapper, BizS
         List<StatTopDiagnosisRowVO> topDx = statReportAggMapper.topDiagnoses(startStr, endStr, deptFilter);
         List<StatCohortCaseRowVO> cases = statReportAggMapper.cohortCases(startStr, endStr, deptFilter);
 
-        String typeName = dictCacheService.getDicDataLabel(DictType.STAT_REPORT_TYPE, dto.getReportType());
+        String typeName = dictCacheService.getDicDataLabel(DictTypeConst.STAT_REPORT_TYPE, dto.getReportType());
         String title = (deptName == null ? "" : deptName) + typeName + "（" + period + "）";
         String operator = operatorUser.getRealName();
         LocalDateTime now = LocalDateTime.now();
@@ -276,7 +276,7 @@ public class StatReportServiceImpl extends ServiceImpl<BizStatReportMapper, BizS
         }
         BizStatReport r = mustGet(id);
         if (r.getStatus() != 0) {
-            throw new BusinessException("只有草稿可报出（当前状态：" + dictCacheService.getDicDataLabel(DictType.STAT_REPORT_STATUS, r.getStatus()) + "）");
+            throw new BusinessException("只有草稿可报出（当前状态：" + dictCacheService.getDicDataLabel(DictTypeConst.STAT_REPORT_STATUS, r.getStatus()) + "）");
         }
         r.setStatus(1);
         r.setSubmitTime(LocalDateTime.now());

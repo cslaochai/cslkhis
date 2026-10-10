@@ -37,9 +37,6 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class DrugKnowledgeServiceImpl implements DrugKnowledgeService {
 
-    /**
-     * 列宽（sql/130）：写库前一律截断，超长会把「保存」升级成 500，用户连原因都看不到（AGENTS §3）
-     */
     private static final int WIDTH_COMPONENT = 50;
     private static final int WIDTH_TEXT = 500;
     private static final int WIDTH_NOTE = 200;
@@ -48,7 +45,9 @@ public class DrugKnowledgeServiceImpl implements DrugKnowledgeService {
     private static final Set<String> DOSE_UNITS = Set.of("g", "mg", "ug");
 
     private final SysDrugInteractionMapper sysDrugInteractionMapper;
+
     private final SysDrugDoseLimitMapper sysDrugDoseLimitMapper;
+
     private final SysDrugMapper sysDrugMapper;
 
     @Override

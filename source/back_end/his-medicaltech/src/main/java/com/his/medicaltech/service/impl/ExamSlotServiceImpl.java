@@ -2,7 +2,7 @@ package com.his.medicaltech.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
 import com.his.medicaltech.dto.ExamApptDTO;
 import com.his.medicaltech.entity.BizExamAppointment;
@@ -131,7 +131,7 @@ public class ExamSlotServiceImpl extends ServiceImpl<BizExamSlotMapper, BizExamS
         vo.setDeptName(device.getDeptName());
         vo.setRoomName(device.getRoomName());
         vo.setDeviceStatus(device.getStatus());
-        vo.setDeviceStatusText(dictCacheService.getDicDataLabel(DictType.EXAM_DEVICE_STATUS, device.getStatus()));
+        vo.setDeviceStatusText(dictCacheService.getDicDataLabel(DictTypeConst.EXAM_DEVICE_STATUS, device.getStatus()));
         vo.setSlotDate(dto.getSlotDate());
         vo.setSlotMinutes(device.getSlotMinutes());
         vo.setParallelCount(device.getParallelCount());
@@ -154,7 +154,7 @@ public class ExamSlotServiceImpl extends ServiceImpl<BizExamSlotMapper, BizExamS
             List<String> names = new ArrayList<>();
             for (BizExamAppointment a : occupants) {
                 if (overlaps(cell, a)) {
-                    nos.add(a.getApptNo() + "(" + dictCacheService.getDicDataLabel(DictType.EXAM_APPOINT_STATUS, a.getStatus()) + ")");
+                    nos.add(a.getApptNo() + "(" + dictCacheService.getDicDataLabel(DictTypeConst.EXAM_APPOINT_STATUS, a.getStatus()) + ")");
                     names.add(a.getPatientName());
                 }
             }

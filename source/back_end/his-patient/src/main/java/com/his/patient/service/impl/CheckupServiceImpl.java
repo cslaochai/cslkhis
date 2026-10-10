@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.CheckupDTO;
@@ -151,7 +151,7 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
         }
         if (p.getGenderLimit() != null && p.getGenderLimit() > 0
                 && patient.getGender() != null && !patient.getGender().equals(p.getGenderLimit())) {
-            throw new BusinessException("套餐性别限制：该套餐仅适用于" + dictCacheService.getDicDataLabel(DictType.GENDER, p.getGenderLimit()));
+            throw new BusinessException("套餐性别限制：该套餐仅适用于" + dictCacheService.getDicDataLabel(DictTypeConst.GENDER, p.getGenderLimit()));
         }
         BizCheckupRecord r = new BizCheckupRecord();
         r.setRecordNo(redisSequenceService.generateCheckupRecordNo());

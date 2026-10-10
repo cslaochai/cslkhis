@@ -3,10 +3,10 @@ package com.his.emr.service.impl;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.common.base.BizCodeConstants;
+import com.his.common.constant.BizCodeConst;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.*;
 import com.his.common.util.TextUtil;
 import com.his.emr.dto.*;
@@ -141,7 +141,7 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
         int days = expireDays == null || expireDays <= 0 ? BizSurveyDispatch.DEFAULT_EXPIRE_DAYS : expireDays;
 
         BizSurveyDispatch entity = new BizSurveyDispatch();
-        entity.setDispatchNo(nextNo(BizCodeConstants.SURVEY_DISPATCH_NO_PREFIX, BizCodeConstants.SURVEY_DISPATCH_NO_KEY_PREFIX));
+        entity.setDispatchNo(nextNo(BizCodeConst.SURVEY_DISPATCH_NO_PREFIX, BizCodeConst.SURVEY_DISPATCH_NO_KEY_PREFIX));
         entity.setTemplateId(template.getId());
         entity.setTemplateName(TextUtil.cut(template.getTemplateName(), 128));
         entity.setScene(template.getScene());
@@ -240,7 +240,7 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
         boolean isNew = answer == null;
         if (isNew) {
             answer = new BizSurveyAnswer();
-            answer.setAnswerNo(nextNo(BizCodeConstants.SURVEY_ANSWER_NO_PREFIX, BizCodeConstants.SURVEY_ANSWER_NO_KEY_PREFIX));
+            answer.setAnswerNo(nextNo(BizCodeConst.SURVEY_ANSWER_NO_PREFIX, BizCodeConst.SURVEY_ANSWER_NO_KEY_PREFIX));
             answer.setDispatchId(dispatch.getId());
             answer.setTemplateId(dispatch.getTemplateId());
             answer.setScene(dispatch.getScene());

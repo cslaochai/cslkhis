@@ -3,9 +3,9 @@ package com.his.pharmacy.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.pharmacy.dto.AntibioticStatsGenerateDTO;
@@ -255,7 +255,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
                 List<IncisionDrugCandidateVO> drugs = antibioticStatMapper.selectPeriopAntibioticOrders(
                         vo.getAdmissionId(), vo.getOperationTime());
                 for (IncisionDrugCandidateVO d : drugs) {
-                    d.setAntibioticLevelText(dictCacheService.getDicDataLabel(DictType.ANTIBIOTIC_LEVEL, d.getAntibioticLevel()));
+                    d.setAntibioticLevelText(dictCacheService.getDicDataLabel(DictTypeConst.ANTIBIOTIC_LEVEL, d.getAntibioticLevel()));
                     d.setMinutesFromIncision(d.getStartTime() == null ? null
                             : java.time.Duration.between(vo.getOperationTime(), d.getStartTime()).toMinutes());
                 }
@@ -476,10 +476,10 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
         vo.setDrugId(e.getDrugId());
         vo.setDrugName(e.getDrugName());
         vo.setAntibioticLevel(e.getAntibioticLevel());
-        vo.setAntibioticLevelText(dictCacheService.getDicDataLabel(DictType.ANTIBIOTIC_LEVEL, e.getAntibioticLevel()));
+        vo.setAntibioticLevelText(dictCacheService.getDicDataLabel(DictTypeConst.ANTIBIOTIC_LEVEL, e.getAntibioticLevel()));
         vo.setIndicationFlag(e.getIndicationFlag());
         vo.setTimingType(e.getTimingType());
-        vo.setTimingTypeText(dictCacheService.getDicDataLabel(DictType.ANTIBIOTIC_TIMING, e.getTimingType()));
+        vo.setTimingTypeText(dictCacheService.getDicDataLabel(DictTypeConst.ANTIBIOTIC_TIMING, e.getTimingType()));
         vo.setCourseHours(e.getCourseHours());
         vo.setComboFlag(e.getComboFlag());
         vo.setComboReason(e.getComboReason());

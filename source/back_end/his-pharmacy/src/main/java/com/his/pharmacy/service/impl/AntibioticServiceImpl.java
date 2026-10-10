@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.pharmacy.dto.*;
 import com.his.pharmacy.entity.BizAntibioticAlias;
@@ -151,7 +151,7 @@ public class AntibioticServiceImpl extends ServiceImpl<BizAntibioticAliasMapper,
     public List<AntibioticDrugSelectListVO> antibioticDrugSelectList() {
         List<AntibioticDrugSelectListVO> list = antibioticCatalogMapper.selectAntibioticDrugs();
         for (AntibioticDrugSelectListVO vo : list) {
-            vo.setAntibioticLevelText(dictCacheService.getDicDataLabel(DictType.ANTIBIOTIC_LEVEL, vo.getAntibioticLevel()));
+            vo.setAntibioticLevelText(dictCacheService.getDicDataLabel(DictTypeConst.ANTIBIOTIC_LEVEL, vo.getAntibioticLevel()));
         }
         return list;
     }
@@ -224,7 +224,7 @@ public class AntibioticServiceImpl extends ServiceImpl<BizAntibioticAliasMapper,
                     .eq(BizAntibioticAuth::getDoctorId, dto.getDoctorId())
                     .eq(BizAntibioticAuth::getAuthLevel, dto.getAuthLevel()));
             if (exist != null) {
-                throw new BusinessException("该医师已有" + dictCacheService.getDicDataLabel(DictType.ANTIBIOTIC_LEVEL, dto.getAuthLevel())
+                throw new BusinessException("该医师已有" + dictCacheService.getDicDataLabel(DictTypeConst.ANTIBIOTIC_LEVEL, dto.getAuthLevel())
                         + "的授权记录（" + exist.getAuthNo() + "），请直接修改那条而不是重复新增");
             }
             auth = new BizAntibioticAuth();
@@ -267,7 +267,7 @@ public class AntibioticServiceImpl extends ServiceImpl<BizAntibioticAliasMapper,
         }
         Integer authLevel = maxValidLevel(doctorId);
         vo.setAuthLevel(authLevel);
-        vo.setAuthLevelText(authLevel == null ? "无有效授权" : dictCacheService.getDicDataLabel(DictType.ANTIBIOTIC_LEVEL, authLevel));
+        vo.setAuthLevelText(authLevel == null ? "无有效授权" : dictCacheService.getDicDataLabel(DictTypeConst.ANTIBIOTIC_LEVEL, authLevel));
 
         List<AntibioticDrugSelectListVO> drugs = antibioticCatalogMapper.selectAntibioticByIds(drugIds);
         for (AntibioticDrugSelectListVO drug : drugs) {
@@ -275,9 +275,9 @@ public class AntibioticServiceImpl extends ServiceImpl<BizAntibioticAliasMapper,
                 AntibioticAuthCheckVO.BlockedDrug b = new AntibioticAuthCheckVO.BlockedDrug();
                 b.setDrugName(drug.getDrugName());
                 b.setAntibioticLevel(drug.getAntibioticLevel());
-                b.setAntibioticLevelText(dictCacheService.getDicDataLabel(DictType.ANTIBIOTIC_LEVEL, drug.getAntibioticLevel()));
+                b.setAntibioticLevelText(dictCacheService.getDicDataLabel(DictTypeConst.ANTIBIOTIC_LEVEL, drug.getAntibioticLevel()));
                 b.setRequiredLevel(drug.getAntibioticLevel());
-                b.setRequiredLevelText(dictCacheService.getDicDataLabel(DictType.ANTIBIOTIC_LEVEL, drug.getAntibioticLevel()));
+                b.setRequiredLevelText(dictCacheService.getDicDataLabel(DictTypeConst.ANTIBIOTIC_LEVEL, drug.getAntibioticLevel()));
                 vo.getBlockedDrugs().add(b);
             }
         }
@@ -292,7 +292,7 @@ public class AntibioticServiceImpl extends ServiceImpl<BizAntibioticAliasMapper,
                     .reduce((a, b) -> a + "、" + b).orElse("");
             vo.setTip(authLevel == null
                     ? "您没有有效的抗菌药物处方权授权，不能开具：" + names
-                    : "您当前的抗菌药物处方权为" + dictCacheService.getDicDataLabel(DictType.ANTIBIOTIC_LEVEL, authLevel) + "，不能开具：" + names
+                    : "您当前的抗菌药物处方权为" + dictCacheService.getDicDataLabel(DictTypeConst.ANTIBIOTIC_LEVEL, authLevel) + "，不能开具：" + names
                     + "。请改用同级可开品种，或由具有相应处方权的医师开具。");
         }
         return vo;
@@ -320,7 +320,7 @@ public class AntibioticServiceImpl extends ServiceImpl<BizAntibioticAliasMapper,
     // 内部
 
     private void fillLevelText(AntibioticCatalogVO vo) {
-        vo.setAntibioticLevelText(dictCacheService.getDicDataLabel(DictType.ANTIBIOTIC_LEVEL, vo.getAntibioticLevel()));
+        vo.setAntibioticLevelText(dictCacheService.getDicDataLabel(DictTypeConst.ANTIBIOTIC_LEVEL, vo.getAntibioticLevel()));
         vo.setInCatalog(vo.getAntibioticLevel() != null && vo.getAntibioticLevel() > 0);
     }
 
@@ -334,12 +334,12 @@ public class AntibioticServiceImpl extends ServiceImpl<BizAntibioticAliasMapper,
         vo.setDeptName(e.getDeptName());
         vo.setTitle(e.getTitle());
         vo.setAuthLevel(e.getAuthLevel());
-        vo.setAuthLevelText(dictCacheService.getDicDataLabel(DictType.ANTIBIOTIC_LEVEL, e.getAuthLevel()));
+        vo.setAuthLevelText(dictCacheService.getDicDataLabel(DictTypeConst.ANTIBIOTIC_LEVEL, e.getAuthLevel()));
         vo.setAuthBasis(e.getAuthBasis());
         vo.setAuthDate(e.getAuthDate());
         vo.setExpireDate(e.getExpireDate());
         vo.setStatus(e.getStatus());
-        vo.setStatusText(dictCacheService.getDicDataLabel(DictType.ANTIBIOTIC_AUTH_STATUS, e.getStatus()));
+        vo.setStatusText(dictCacheService.getDicDataLabel(DictTypeConst.ANTIBIOTIC_AUTH_STATUS, e.getStatus()));
         vo.setEffective(e.getStatus() != null
                 && e.getStatus() == BizAntibioticAuth.STATUS_VALID
                 && e.getExpireDate() != null

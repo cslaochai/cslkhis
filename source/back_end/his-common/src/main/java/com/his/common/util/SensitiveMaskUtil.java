@@ -1,12 +1,8 @@
 package com.his.common.util;
 
-import lombok.NoArgsConstructor;
-
 /**
  * 敏感字段脱敏 —— 手机号 / 证件号 / 邮箱。
  */
-
-@NoArgsConstructor
 public final class SensitiveMaskUtil {
 
     /**

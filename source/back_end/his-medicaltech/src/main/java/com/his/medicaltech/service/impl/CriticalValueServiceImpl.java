@@ -5,12 +5,13 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.constant.SystemConfigKeyConst;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.support.EmpTitleCode;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TimeUtil;
 import com.his.medicaltech.dto.CriticalValueHandleDTO;
 import com.his.medicaltech.dto.CriticalValueQueryPageDTO;
@@ -64,17 +65,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
 
     private static final String SOURCE_RULE = "RULE";
 
-    private static final String DEADLINE_CONFIG_KEY = "lab.critical_value_deadline_minutes";
-
     private static final int DEADLINE_FALLBACK_MINUTES = 30;
-
-    /**
-     * 无开单医生时的兜底接收人配置键。
-     * <p>
-     * 取值可以是<b>用户名</b>（推荐，可读）或<b>员工ID</b>（数字）。
-     * 为空表示不配置兜底 —— 此时通知不发送，但会把原因写进危急值记录的备注。
-     */
-    private static final String FALLBACK_RECEIVER_CONFIG_KEY = "lab.critical_value_fallback_receiver";
 
     private static final long CONFIG_CACHE_TTL_MS = 300_000L;
 
@@ -230,7 +221,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
             Receiver fallback = fallbackReceiver();
             if (fallback == null) {
                 markRemark(entity, "未发送站内信：检验单无开单医生，且未配置兜底接收人（"
-                        + FALLBACK_RECEIVER_CONFIG_KEY + "）");
+                        + SystemConfigKeyConst.LAB_CRITICAL_VALUE_FALLBACK_RECEIVER + "）");
                 return;
             }
             receiverId = fallback.employeeId();
@@ -283,7 +274,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         try {
             SysConfig config = sysConfigMapper.selectOne(
                     new LambdaQueryWrapper<SysConfig>()
-                            .eq(SysConfig::getConfigKey, FALLBACK_RECEIVER_CONFIG_KEY)
+                            .eq(SysConfig::getConfigKey, SystemConfigKeyConst.LAB_CRITICAL_VALUE_FALLBACK_RECEIVER)
                             .last("LIMIT 1"));
             if (config == null || !TextUtil.hasText(config.getConfigValue())) {
                 return null;
@@ -303,7 +294,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
             // 兼容直接填员工ID
             return new Receiver(Long.parseLong(raw), "兜底接收人");
         } catch (Exception ex) {
-            log.warn("[危急值] 读取兜底接收人配置 {} 失败：{}", FALLBACK_RECEIVER_CONFIG_KEY, ex.getMessage());
+            log.warn("[危急值] 读取兜底接收人配置 {} 失败：{}", SystemConfigKeyConst.LAB_CRITICAL_VALUE_FALLBACK_RECEIVER, ex.getMessage());
             return null;
         }
     }
@@ -706,7 +697,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         int minutes = DEADLINE_FALLBACK_MINUTES;
         try {
             SysConfig config = sysConfigMapper.selectOne(
-                    new LambdaQueryWrapper<SysConfig>().eq(SysConfig::getConfigKey, DEADLINE_CONFIG_KEY).last("LIMIT 1"));
+                    new LambdaQueryWrapper<SysConfig>().eq(SysConfig::getConfigKey, SystemConfigKeyConst.LAB_CRITICAL_VALUE_DEADLINE_MINUTES).last("LIMIT 1"));
             if (config != null && TextUtil.hasText(config.getConfigValue())) {
                 minutes = Integer.parseInt(config.getConfigValue().trim());
             }

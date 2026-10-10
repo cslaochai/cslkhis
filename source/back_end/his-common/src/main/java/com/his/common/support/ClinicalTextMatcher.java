@@ -33,9 +33,6 @@ public final class ClinicalTextMatcher {
 
     /**
      * 剥离空白与占位符号。
-     * <p>
-     * 演示库里的病历字段带「⚠」「✱」这类模板标记（如「⚠ 过敏史 *」），
-     * 不剥掉就没法识别出「这只是把字段名抄了一遍」。
      */
     private static final String STRIP_PATTERN = "[\\s　*＊#\\-—_、,，.。;；:：()（）\\[\\]【】/\\\\|⚠✱※★☆○●]";
 
@@ -86,14 +83,6 @@ public final class ClinicalTextMatcher {
 
     /**
      * 字段是否根本没填（空白 / 全占位符号）。
-     * <p>
-     * <b>与 {@link #isPlaceholderOnly} 的区别，是医疗语义上真实存在的区别</b>：
-     * isPlaceholderOnly("无") 为 true，但「既往史：无」「过敏史：无」
-     * 在《病历书写基本规范》下是**合法的显式记录**，不是缺陷。
-     * 只有「无」出现在主诉、现病史、诊断这类必须有实质内容的字段上才是缺陷。
-     * <p>
-     * 所以「史」类字段（既往史/过敏史）要用本方法，而不是 isPlaceholderOnly ——
-     * 否则会把正常写「无过敏史」的病历整片误判为不合格。
      */
     public static boolean isBlank(String text) {
         if (!TextUtil.hasText(text)) {
@@ -114,10 +103,6 @@ public final class ClinicalTextMatcher {
 
     /**
      * 字段是否只是把字段名重复了一遍（或重复多次）。
-     * <p>
-     * 演示库里的病历大量存在「主诉 *」「主诉」「现病史 *」这类填充 ——
-     * 这不是笔误，是模板套用后没有替换内容。带字段名的重载就是为了精确抓住它：
-     * 精确、可解释，评审时能指着病历原文说「这里确实是空的」。
      */
     public static boolean isPlaceholderOnly(String text, String fieldLabel) {
         return isPlaceholderOnly(text) || isLabelRepeatOnly(text, fieldLabel);
@@ -125,9 +110,6 @@ public final class ClinicalTextMatcher {
 
     /**
      * 字段是否只是把字段名重复了一遍（或重复多次），即模板套用后没有替换内容。
-     * <p>
-     * 不含「没填」与「占位词」判断，便于「史」类字段单独使用
-     * （它们允许写「无」，但不允许留着「过敏史 *」这种模板残渣）。
      */
     public static boolean isLabelRepeatOnly(String text, String fieldLabel) {
         if (!TextUtil.hasText(text) || !TextUtil.hasText(fieldLabel)) {

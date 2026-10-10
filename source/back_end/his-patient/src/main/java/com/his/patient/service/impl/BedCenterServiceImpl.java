@@ -5,10 +5,10 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.constant.SystemConfigKeyConst;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
-import com.his.common.util.DateFormats;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
@@ -54,7 +54,6 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
     /**
      * 等待超时的最长天数；缺失或非法一律回落 7 天（不回落成"永不超时"）
      */
-    private static final String MAX_WAIT_DAYS_KEY = "bed.wait.max_days";
     private static final int MAX_WAIT_DAYS_FALLBACK = 7;
     /**
      * 匹配候选的数量上限：全院上千张床全列出来等于没列
@@ -63,7 +62,6 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
     /**
      * 等床多久没安排就找总值班（系统参数：duty.coord.bed_wait_hours，缺失/非法回落 24）
      */
-    private static final String DUTY_BED_WAIT_HOURS_KEY = "duty.coord.bed_wait_hours";
     private static final int DUTY_BED_WAIT_HOURS_FALLBACK = 24;
 
     private final BizBedWaitMapper bizBedWaitMapper;
@@ -507,7 +505,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
     private int dutyBedWaitHours() {
         try {
             SysConfig cfg = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
-                    .eq(SysConfig::getConfigKey, DUTY_BED_WAIT_HOURS_KEY).last("LIMIT 1"));
+                    .eq(SysConfig::getConfigKey, SystemConfigKeyConst.DUTY_COORD_BED_WAIT_HOURS).last("LIMIT 1"));
             if (cfg == null || !TextUtil.hasText(cfg.getConfigValue())) {
                 return DUTY_BED_WAIT_HOURS_FALLBACK;
             }
@@ -1196,14 +1194,14 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
     private int maxWaitDays() {
         try {
             SysConfig config = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
-                    .eq(SysConfig::getConfigKey, MAX_WAIT_DAYS_KEY));
+                    .eq(SysConfig::getConfigKey, SystemConfigKeyConst.BED_WAIT_MAX_DAYS));
             if (config == null || !TextUtil.hasText(config.getConfigValue())) {
                 return MAX_WAIT_DAYS_FALLBACK;
             }
             int days = Integer.parseInt(config.getConfigValue().trim());
             return days > 0 ? days : MAX_WAIT_DAYS_FALLBACK;
         } catch (Exception e) {
-            log.warn("配置 {} 读取失败，按兜底值 {} 天", MAX_WAIT_DAYS_KEY, MAX_WAIT_DAYS_FALLBACK);
+            log.warn("配置 {} 读取失败，按兜底值 {} 天", SystemConfigKeyConst.BED_WAIT_MAX_DAYS, MAX_WAIT_DAYS_FALLBACK);
             return MAX_WAIT_DAYS_FALLBACK;
         }
     }

@@ -9,7 +9,7 @@ import com.his.common.enums.DrugTransferStatusEnum;
 import com.his.common.enums.DrugTransferTypeEnum;
 import com.his.common.enums.StockRoomEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;

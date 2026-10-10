@@ -1,7 +1,7 @@
 package com.his.system.service.impl;
 
 import com.his.common.util.DateFormats;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysFieldChangeLog;

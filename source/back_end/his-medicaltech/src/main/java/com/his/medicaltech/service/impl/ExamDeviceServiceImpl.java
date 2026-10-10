@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
@@ -112,7 +112,7 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
         for (BizExamDevice d : bizExamDeviceMapper.selectList(w)) {
             ExamApptVO.DeviceSelectListVO v = new ExamApptVO.DeviceSelectListVO();
             BeanUtils.copyProperties(d, v);
-            v.setDeviceTypeText(dictCacheService.getDicDataLabel(DictType.EXAM_DEVICE_TYPE, d.getDeviceType()));
+            v.setDeviceTypeText(dictCacheService.getDicDataLabel(DictTypeConst.EXAM_DEVICE_TYPE, d.getDeviceType()));
             out.add(v);
         }
         return out;
@@ -367,8 +367,8 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
                                            Map<Long, String> equipmentNames) {
         ExamApptVO.DeviceVO v = new ExamApptVO.DeviceVO();
         BeanUtils.copyProperties(d, v);
-        v.setDeviceTypeText(dictCacheService.getDicDataLabel(DictType.EXAM_DEVICE_TYPE, d.getDeviceType()));
-        v.setStatusText(dictCacheService.getDicDataLabel(DictType.EXAM_DEVICE_STATUS, d.getStatus()));
+        v.setDeviceTypeText(dictCacheService.getDicDataLabel(DictTypeConst.EXAM_DEVICE_TYPE, d.getDeviceType()));
+        v.setStatusText(dictCacheService.getDicDataLabel(DictTypeConst.EXAM_DEVICE_STATUS, d.getStatus()));
         v.setItemCount(itemCounts.getOrDefault(d.getId(), 0));
         v.setEquipmentName(d.getEquipmentId() == null ? null : equipmentNames.get(d.getEquipmentId()));
         v.setOpenRangeText(openRangeText(d));

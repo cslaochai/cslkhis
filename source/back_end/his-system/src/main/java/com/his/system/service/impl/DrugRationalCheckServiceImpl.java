@@ -32,15 +32,13 @@ public class DrugRationalCheckServiceImpl implements DrugRationalCheckService {
     private static final String TYPE_DOSE_SINGLE = "DOSE_SINGLE";
     private static final String TYPE_DOSE_DAILY = "DOSE_DAILY";
 
-    /**
-     * 只有禁忌级能拦（sql/130 文件头第三条）
-     */
     private static final int SEVERITY_FORBIDDEN = 1;
     private static final int SEVERITY_CAUTION = 2;
 
     private static final BigDecimal THOUSAND = new BigDecimal("1000");
 
     private final SysDrugInteractionMapper sysDrugInteractionMapper;
+
     private final SysDrugDoseLimitMapper sysDrugDoseLimitMapper;
 
     @Override

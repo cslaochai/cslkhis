@@ -7,10 +7,10 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.api.InpatientSettlementGateway;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
@@ -744,7 +744,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
         for (BedMapVO.BedCard bed : beds) {
             bed.setBedStatusText(BedStatusEnum.getText(bed.getBedStatus()));
             bed.setNursingLevelText(bed.getNursingLevel() == null
-                    ? "未评估" : dictCacheService.getDicDataLabel(DictType.NURSING_LEVEL, bed.getNursingLevel()));
+                    ? "未评估" : dictCacheService.getDicDataLabel(DictTypeConst.NURSING_LEVEL, bed.getNursingLevel()));
         }
         result.setBeds(beds);
         if (!beds.isEmpty()) {

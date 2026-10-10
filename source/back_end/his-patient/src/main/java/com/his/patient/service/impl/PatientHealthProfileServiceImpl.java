@@ -3,7 +3,7 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.common.constant.DictType;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.patient.dto.*;
@@ -37,7 +37,7 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
     /**
      * 与患者关系字典（患者联系方式.relationship 的码值来源）
      */
-    public static final String RELATION_DICT = DictType.PATIENT_RELATION;
+    public static final String RELATION_DICT = DictTypeConst.PATIENT_RELATION;
 
     /**
      * 拼摘要时的分隔符：与 CDR 健康档案卡片、页面上的多值展示同一口径

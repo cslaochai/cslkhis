@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.constant.SystemConfigKeyConst;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.AdmissionOrderCancelDTO;
@@ -24,6 +24,7 @@ import com.his.patient.vo.AdmissionOrderVO;
 import com.his.system.entity.SysConfig;
 import com.his.system.mapper.SysConfigMapper;
 import com.his.system.provider.DeptScopeService;
+import com.his.system.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -44,8 +45,6 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
 
     private final RedisSequenceService redisSequenceService;
 
-    private static final String VALID_DAYS_CONFIG_KEY = "admission_order.valid_days";
-
     private static final int VALID_DAYS_FALLBACK = 7;
 
     private final BizAdmissionOrderMapper bizAdmissionOrderMapper;
@@ -60,7 +59,6 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
 
     private final DeptScopeService deptScopeService;
 
-    // 查询
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long create(AdmissionOrderUpsertDTO dto) {
@@ -145,16 +143,12 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
 
         bizAdmissionOrderMapper.insert(order);
 
-        // 开证 = 进等床队列（同一事务）：「有人要住院」和「有人在床位队伍里排队」在系统里
-        // 必须是同一次动作。分成两步写，就一定会出现"有证无队"或"有队无证"。
         try {
             BedCenterService bedCenter = bedCenterProvider.getIfAvailable();
             if (bedCenter != null) {
                 bedCenter.syncFromOrder(order);
             }
         } catch (Exception e) {
-            // 入队失败不能把已经开出去的证吞掉：证是给患者拿在手上的凭据，
-            // 它一旦开出就是既成事实，队列漏了去床位中心补登记即可。
             log.warn("[住院证] 开证后自动进床位队列失败 orderNo={} —— 请到床位服务中心手工登记",
                     order.getOrderNo(), e);
         }
@@ -209,8 +203,6 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
         order.setCancelReason(dto.getCancelReason());
         bizAdmissionOrderMapper.updateById(order);
 
-        // 证作废 = 退出等床队列（同一事务）：留着一条"还在等床"的记录，
-        // 这张床会一直被锁着等一个永远不会来的人。
         try {
             BedCenterService bedCenter = bedCenterProvider.getIfAvailable();
             if (bedCenter != null) {
@@ -225,7 +217,6 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
 
     @Override
     public BizAdmissionOrder requireAdmittable(Long orderId) {
-        // C-非 web 入参：InpatientServiceImpl#admit 服务间直调（admissionOrderId 来自内部构造的 DTO，不过绑定层），Bean Validation 不覆盖，保留
         if (orderId == null) {
             throw new BusinessException("住院证ID不能为空");
         }
@@ -268,8 +259,6 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
 
     /**
      * 补充展示态：文案、是否过期、是否调过科。
-     * <p>过期是**算出来的**，不是库里存的——库里那条记录仍然是「待收治」，
-     * 前端要同时看到"待收治"和"已过期"两件事，才不会把过期证当成能用的证。
      */
     private void decorate(AdmissionOrderVO vo) {
         vo.setGenderText(SysGenderEnum.getText(vo.getGender()));
@@ -293,22 +282,22 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
      */
     private int validDays() {
         SysConfig config = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
-                .eq(SysConfig::getConfigKey, VALID_DAYS_CONFIG_KEY));
+                .eq(SysConfig::getConfigKey, SystemConfigKeyConst.ADMISSION_ORDER_VALID_DAYS));
         if (config == null || !TextUtil.hasText(config.getConfigValue())) {
-            log.warn("未配置 {}，住院证有效期按兜底值 {} 天", VALID_DAYS_CONFIG_KEY, VALID_DAYS_FALLBACK);
+            log.warn("未配置 {}，住院证有效期按兜底值 {} 天", SystemConfigKeyConst.ADMISSION_ORDER_VALID_DAYS, VALID_DAYS_FALLBACK);
             return VALID_DAYS_FALLBACK;
         }
         try {
             int days = Integer.parseInt(config.getConfigValue().trim());
             if (days <= 0) {
                 log.warn("配置 {} = {} 非法（必须为正数），按兜底值 {} 天",
-                        VALID_DAYS_CONFIG_KEY, config.getConfigValue(), VALID_DAYS_FALLBACK);
+                        SystemConfigKeyConst.ADMISSION_ORDER_VALID_DAYS, config.getConfigValue(), VALID_DAYS_FALLBACK);
                 return VALID_DAYS_FALLBACK;
             }
             return days;
         } catch (NumberFormatException e) {
             log.warn("配置 {} = {} 不是数字，按兜底值 {} 天",
-                    VALID_DAYS_CONFIG_KEY, config.getConfigValue(), VALID_DAYS_FALLBACK);
+                    SystemConfigKeyConst.ADMISSION_ORDER_VALID_DAYS, config.getConfigValue(), VALID_DAYS_FALLBACK);
             return VALID_DAYS_FALLBACK;
         }
     }
