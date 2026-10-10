@@ -125,7 +125,6 @@ public class BizPrescriptionDetail extends BaseEntity {
 
     /**
      * 总剂量（中药饮片=本味实发总克数 = 每剂克数 × 剂数，与 quantity 同值，
-     * 让煎药/发药界面不必再乘一次剂数；sql/139 第二条口径）
      */
     private BigDecimal totalDosage;
 

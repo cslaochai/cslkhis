@@ -142,9 +142,7 @@ public class BizPrescription extends BaseEntity {
     private String usageInstruction;
 
     /**
-     * 中药饮片剂数（sql/139：处方类型=3 必填，1~30；其余类型为 NULL）。
-     * <p>剂数只在处方头存一份 —— 一张方是「一剂药 × N 剂」，每味药的克数是<b>每剂</b>的量，
-     * 摊到明细上会出现同一方 12 味 12 个剂数、互相不一致。
+     * 中药饮片剂数
      */
     private Integer doseCount;
 

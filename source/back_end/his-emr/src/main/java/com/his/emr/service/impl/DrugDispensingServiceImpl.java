@@ -48,13 +48,7 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
     private final TcmDecoctService tcmDecoctService;
 
     /**
-     * 本行该扣/退多少<b>库存档案单位</b>（sql/139 第三条口径）。
-     *
-     * <p>饮片方发药记录上的 quantity 是<b>克</b>（每剂克数 × 剂数，由收费侧从处方明细原样抄来），
-     * 而批次库存按档案单位记（散装 kg、包装袋）。差着 1000 倍，直接拿 quantity 去扣 =
-     * 发 105g 黄芪抹掉 105kg 账。换算一律走 {@link TcmGramUnits}，且扣减<b>向上</b>取整。
-     *
-     * <p>西药/中成药（换算率为空）原样返回，行为与改造前完全一致。
+     * 本行该扣/退多少<b>库存档案单位</b>
      */
     private BigDecimal stockUnitsOf(BizDrugDispensing dispensing) {
         BigDecimal quantity = dispensing.getQuantity();
@@ -103,8 +97,6 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean dispenseByPrescription(Long prescriptionId, Long checkerId, String overLimitReason) {
-        // B-条件必填：DrugDispenseDTO 被单行发药（只传 id）与本接口（只传 prescriptionId）共用，
-        // 给 prescriptionId 加 @NotNull 会把合法的单行发药挡成 400，DTO 注解无法表达，保留
         if (prescriptionId == null) {
             throw new BusinessException("处方ID不能为空");
         }
@@ -136,9 +128,6 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
 
     /**
      * 麻精限量闸门：有 BLOCK 级违规即拒，并把每一条结论原样抛给调用方。
-     * <p>
-     * 只报"处方校验失败"会让医生反复试；把「哪个药、哪档限量、超了几日」直接说出来，
-     * 他才知道改哪里。WARN 级（二类精神超 7 日且已注明理由）放行，理由由专册留存。
      */
     private void assertPrescriptionQuota(Long prescriptionId, String overLimitReason) {
         if (prescriptionId == null) {
@@ -169,9 +158,6 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
             throw new BusinessException("当前状态不允许退药");
         }
         String operatorName = UserUtils.getCurrentUser().getRealName();
-
-        // 退药回库（落流水 type=3）：回库量必须与当初的扣库量同一个口径（档案单位），
-        // 否则饮片退一次药，账上就多出一堆不存在的克
         pharmacyService.restoreStock(dispensing.getDrugId(), stockUnitsOf(dispensing),
                 "dispenseReturn", dispensing.getId(), dispensing.getDispensingNo(), operatorName);
 
@@ -192,8 +178,6 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
             rx.setRefundReason(reason);
             bizPrescriptionMapper.updateById(rx);
         }
-        // sql/139：药退回了架上，还没开煎的代煎单必须跟着停掉 ——
-        // 否则煎药室照着台账煎出一袋没人取的汤液（建单时机选在发药后，退药就是它的逆动作）
         tcmDecoctService.cancelOnReturn(dispensing.getPrescriptionId());
         return true;
     }
@@ -281,8 +265,6 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
         rx.setDispenseTime(TimeUtil.nowSeconds());
         rx.setDispenseBy(pharmacistName);
         bizPrescriptionMapper.updateById(rx);
-        // sql/139：药已经全部调剂出去，才谈得上代煎 —— 在这里（而不是医生开方时）建单，
-        // 才不会出现在途单据「单子在、药被退了」。建单幂等，非代煎方返回 null。
         tcmDecoctService.createOnDispensed(prescriptionId);
     }
 

@@ -82,17 +82,17 @@ public interface RedisSequenceService {
     String generateStocktakeNo();
 
     /**
-     * 生成药品调拨单号：TB + 年月日 + 4位流水号（Redis 递增，24小时过期，sql/154）
+     * 生成药品调拨单号：TB + 年月日 + 4位流水号（Redis 递增，24小时过期）
      */
     String generateDrugTransferNo();
 
     /**
-     * 生成药品供应商退货单号：TG + 年月日 + 4位流水号（Redis 递增，24小时过期，sql/154）
+     * 生成药品供应商退货单号：TG + 年月日 + 4位流水号（Redis 递增，24小时过期）
      */
     String generateSupplierReturnNo();
 
     /**
-     * 生成中药代煎单号：TCMD + 年月日 + 4位流水号（Redis 递增，24小时过期，sql/139）
+     * 生成中药代煎单号：TCMD + 年月日 + 4位流水号（Redis 递增，24小时过期）
      */
     String generateTcmDecoctNo();
 
@@ -127,22 +127,22 @@ public interface RedisSequenceService {
     String generateInfectionCaseNo();
 
     /**
-     * 死亡证明编号：DC + yyyyMMdd + 4 位序号（sql/157）
+     * 死亡证明编号：DC + yyyyMMdd + 4 位序号
      */
     String generateDeathCertNo();
 
     /**
-     * 死亡登记号：RG + yyyyMMdd + 4 位序号（sql/157）
+     * 死亡登记号：RG + yyyyMMdd + 4 位序号
      */
     String generateDeathRegisterNo();
 
     /**
-     * 病危重通知单号：BT + yyyyMMdd + 4 位序号（sql/161）
+     * 病危重通知单号：BT + yyyyMMdd + 4 位序号
      */
     String generateCriticalNoticeNo();
 
     /**
-     * 住院请假单号：LV + yyyyMMdd + 4 位序号（sql/162）
+     * 住院请假单号：LV + yyyyMMdd + 4 位序号
      */
     String generateInpatientLeaveNo();
 
@@ -412,7 +412,7 @@ public interface RedisSequenceService {
     String generateConsultationNo();
 
     /**
-     * 生成住院病历记录号：BL + yyyyMMdd + 4 位序号（住院病历/会诊记录/转诊记录共用一个 BL 号段）
+     * 生成住院病历记录号：BL + yyyyMMdd + 4 位序号
      */
     String generateInpatientRecordNo();
 

@@ -56,8 +56,7 @@ public class SysDrugUpsertDTO {
     private String unit;
 
     /**
-     * 每最小库存单位含多少克（中药饮片换算率，sql/139）。
-     * 不传 = 本次不改（MP updateById 跳过 null），所以老的药品档案表单不填也不会把铺底值洗成空。
+     * 每最小库存单位含多少克
      */
     private BigDecimal gramPerUnit;
 

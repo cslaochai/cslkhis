@@ -6,7 +6,7 @@ import com.his.emr.entity.BizTcmDecoct;
 import java.util.List;
 
 /**
- * 代煎回执打印出口（sql/139 学习阶段口子）。
+ * 代煎回执打印出口
  */
 public interface DecoctReceiptPrinter {
 

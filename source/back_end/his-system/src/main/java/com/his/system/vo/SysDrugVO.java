@@ -93,7 +93,7 @@ public class SysDrugVO {
     private String unit;
 
     /**
-     * 每最小库存单位含多少克（中药饮片换算率，sql/139；为空=不按克开方）
+     * 每最小库存单位含多少克（中药饮片换算率）
      */
     private BigDecimal gramPerUnit;
 

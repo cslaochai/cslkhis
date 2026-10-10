@@ -67,9 +67,7 @@ public class SysDrug extends BaseEntity {
     private String unit;
 
     /**
-     * 每最小库存单位含多少克（sql/139 中药饮片换算率：散装 kg=1000、10g/袋包装=10）。
-     * <p>为空 = 该药不按克开方（西药/中成药），处方数量即库存数量。
-     * 换算一律走 {@code TcmGramUnits}，不许去 parse 规格文本。
+     * 每最小库存单位含多少克
      */
     private BigDecimal gramPerUnit;
 

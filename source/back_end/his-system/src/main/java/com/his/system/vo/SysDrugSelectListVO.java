@@ -54,8 +54,7 @@ public class SysDrugSelectListVO {
     private BigDecimal retailPrice;
 
     /**
-     * 每最小库存单位含多少克（中药饮片换算率，sql/139；为空=不按克开方）。
-     * 开方页要按它把「元/kg」折成「元/g」显示预估金额，缺了就得上后端才被拒。
+     * 每最小库存单位含多少克（中药饮片换算率）。
      */
     private BigDecimal gramPerUnit;
 

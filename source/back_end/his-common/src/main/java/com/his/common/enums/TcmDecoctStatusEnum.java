@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
- * 中药代煎单状态（sql/139，落在中药代煎单的代煎状态列）。
+ * 中药代煎单状态
  */
 @Getter
 @AllArgsConstructor

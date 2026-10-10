@@ -155,7 +155,7 @@ public class BizPrescriptionVO {
     private String usageInstruction;
 
     /**
-     * 中药饮片剂数（1~30，仅处方类型=3 有值；sql/139）
+     * 中药饮片剂数（1~30，仅处方类型=3 有值）
      */
     private Integer doseCount;
 

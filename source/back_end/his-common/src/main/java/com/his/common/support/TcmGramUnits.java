@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 /**
- * 中药饮片「克 ↔ 档案单位」换算（sql/139 第三条口径的唯一实现处）。
+ * 中药饮片「克 ↔ 档案单位」换算
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class TcmGramUnits {

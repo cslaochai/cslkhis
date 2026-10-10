@@ -1412,12 +1412,8 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 prescription.setDeptName(appointInfo.getDeptName());
                 prescription.setVisitDate(LocalDate.now());
                 prescription.setPrescriptionType(prescriptionDTO.getPrescriptionType());
-                // sql/139 中药饮片口径：剂数挂处方头，明细的克数是「每剂」量。
-                // 不在服务端挡一把的话，前端漏传剂数 = 后面按 quantity 记账时少乘一次，
-                // 而 quantity 此刻已经被界面当成剂数填进来了（历史上正是这么错的）。
                 boolean tcmDecoctionRx = Integer.valueOf(3).equals(prescriptionDTO.getPrescriptionType());
                 if (tcmDecoctionRx) {
-                    // B 类保留：条件必填——仅中药饮片处方要求剂数/煎服方式（且 1~30 属取值范围），普通处方不传
                     Integer doseCount = prescriptionDTO.getDoseCount();
                     if (doseCount == null || doseCount < 1 || doseCount > 30) {
                         throw new BusinessException("中药饮片处方必须填剂数（1~30 剂）");
@@ -1429,8 +1425,6 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                     prescription.setDoseCount(doseCount);
                     prescription.setDecoctFlag(decoctFlag);
                 }
-                // M1 慢病长处方：标记长处方前必须确认患者存在「已认定」的慢病档案，
-                // 且用药天数 ≤ 90 —— 不认定的患者线上改参数就能把一次处方撑到 90 天。
                 boolean longRx = Boolean.TRUE.equals(prescriptionDTO.getIsLongPrescription());
                 if (longRx) {
                     Integer days = prescriptionDTO.getLongPrescriptionDays();
@@ -1489,11 +1483,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                         detail.setRoute(detailDTO.getRoute());
                         detail.setDuration(detailDTO.getDuration());
                         detail.setDetailStatus(PrescriptionDetailStatusEnum.NORMAL.getCode());
-
-                        // 从药品信息表获取编码、价格并计算金额
                         SysDrug drug = sysDrugMapper.selectById(detail.getDrugId());
-                        // sql/139：饮片方的 quantity 一律是「每剂克数 × 剂数」的总克数，
-                        // 界面传进来的 quantity（历史上是剂数）一律作废，不看它。
                         boolean gramDosed = false;
                         BigDecimal grams = null;
                         if (tcmDecoctionRx) {
@@ -1699,11 +1689,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     }
 
     /**
-     * 中药饮片：本味实发总克数 = 每剂克数 × 剂数（sql/139 第二条口径）。
-     *
-     * <p>{@code single_dosage} 是 varchar，界面上「15」「15g」「15克」都算合法，
-     * 因此只取其中的数字、单位一律按克；取不到数字就拒 —— 让它按 0 克走会把一整味药开丢，
-     * 事后账单上只表现为「这味没收钱」，没人会发现。
+     * 中药饮片：本味实发总克数 = 每剂克数 × 剂数
      */
     private BigDecimal tcmTotalGrams(String singleDosage, Integer doseCount, String drugName) {
         java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("\\d+(\\.\\d+)?")
@@ -1720,11 +1706,6 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
 
     /**
      * 病历提交：把本次开立的检查/检验/药品逐条写成 L1 记账行（不再"生成一条综合收费单"）。
-     *
-     * <p>医保分摊不在这里算：应收只表达"这个项目多少钱"，统筹/自付属于结算层（L2），
-     * 旧写法把报销部分塞进明细的"优惠金额"列，等于借了一个不属于它的字段。
-     * 目录类别由 {@code FeeCatalogResolver} 按项目类型推定并快照到行上 —— 结算层按它算统筹，
-     * 目录调类不改写历史应收。
      */
     private void generateChargeRecords(BizMedicalRecord record, MedicalRecordSaveDTO recordSaveDTO) {
         // 查询挂号记录获取 registNo
