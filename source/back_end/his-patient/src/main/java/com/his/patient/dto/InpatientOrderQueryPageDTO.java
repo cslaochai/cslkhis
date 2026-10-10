@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * 住院医嘱分页查询入参（命名遵循 AGENTS.md：分页查询用 `xxxQueryPageDTO`）。
@@ -52,4 +53,10 @@ public class InpatientOrderQueryPageDTO extends PageParam implements Serializabl
      * 只看待校对：1-是（护士待校对列表用）
      */
     private Integer pendingVerifyOnly;
+
+    /**
+     * 科室数据权限收敛集合（M6）—— <b>只由服务端</b>按 {@code DeptScopeProvider} 填充，
+     * 前端传什么都必须忽略（listPage 入口先置 null 再收口）。受限且未传 deptId 时非空。
+     */
+    private List<Long> scopeDeptIds;
 }

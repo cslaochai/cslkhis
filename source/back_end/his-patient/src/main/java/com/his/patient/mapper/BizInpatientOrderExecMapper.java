@@ -20,6 +20,7 @@ public interface BizInpatientOrderExecMapper extends BaseMapper<BizInpatientOrde
      * <p>刻意用 `o.order_status IN (2,3)` 而不是"未被停止"：未校对(1)的医嘱绝不能出现在执行队列里。
      */
     @Select("""
+            <script>
             SELECT e.id, e.order_id, e.admission_id, e.patient_id, e.exec_seq, e.plan_date, e.plan_time,
                    e.exec_time, e.exec_nurse_id, e.exec_nurse_name, e.exec_status, e.exec_note,
                    e.infusion_start_time, e.drip_rate, e.infusion_end_time, e.adverse_flag, e.adverse_note,
@@ -29,6 +30,7 @@ public interface BizInpatientOrderExecMapper extends BaseMapper<BizInpatientOrde
                    o.is_urgent, o.order_status, o.patient_name, o.bed_no, o.ward_name, o.doctor_name
             FROM biz_inpatient_order_exec e
                      JOIN biz_inpatient_order o ON o.id = e.order_id AND o.del_flag = 0
+                     LEFT JOIN biz_admission a ON a.admission_id = o.admission_id AND a.del_flag = 0
             WHERE e.del_flag = 0
               AND e.exec_status = 1
               AND o.order_status IN (2, 3)
@@ -37,7 +39,12 @@ public interface BizInpatientOrderExecMapper extends BaseMapper<BizInpatientOrde
               AND (#{q.orderType} IS NULL OR o.order_type = #{q.orderType})
               AND (#{q.orderClass} IS NULL OR o.order_class = #{q.orderClass})
               AND (#{q.isUrgent} IS NULL OR o.is_urgent = #{q.isUrgent})
+              <if test="q.scopeDeptIds != null and q.scopeDeptIds.size() > 0">
+                AND a.dept_id IN
+                <foreach collection="q.scopeDeptIds" item="sd" open="(" separator="," close=")">#{sd}</foreach>
+              </if>
             ORDER BY o.is_urgent DESC, e.plan_time ASC, e.id ASC
+            </script>
             """)
     IPage<InpatientOrderExecVO> selectPendingPage(IPage<InpatientOrderExecVO> page, @Param("q") OrderExecQueryPageDTO query);
 
@@ -45,6 +52,7 @@ public interface BizInpatientOrderExecMapper extends BaseMapper<BizInpatientOrde
      * 执行记录查询（含已执行 / 已跳过 / 已退回）
      */
     @Select("""
+            <script>
             SELECT e.id, e.order_id, e.admission_id, e.patient_id, e.exec_seq, e.plan_date, e.plan_time,
                    e.exec_time, e.exec_nurse_id, e.exec_nurse_name, e.exec_status, e.exec_note,
                    e.infusion_start_time, e.drip_rate, e.infusion_end_time, e.adverse_flag, e.adverse_note,
@@ -54,13 +62,19 @@ public interface BizInpatientOrderExecMapper extends BaseMapper<BizInpatientOrde
                    o.is_urgent, o.order_status, o.patient_name, o.bed_no, o.ward_name, o.doctor_name
             FROM biz_inpatient_order_exec e
                      JOIN biz_inpatient_order o ON o.id = e.order_id AND o.del_flag = 0
+                     LEFT JOIN biz_admission a ON a.admission_id = o.admission_id AND a.del_flag = 0
             WHERE e.del_flag = 0
               AND (#{q.admissionId} IS NULL OR e.admission_id = #{q.admissionId})
               AND (#{q.orderId} IS NULL OR e.order_id = #{q.orderId})
               AND (#{q.patientId} IS NULL OR e.patient_id = #{q.patientId})
               AND (#{q.execStatus} IS NULL OR e.exec_status = #{q.execStatus})
               AND (#{q.planDate} IS NULL OR e.plan_date = #{q.planDate})
+              <if test="q.scopeDeptIds != null and q.scopeDeptIds.size() > 0">
+                AND a.dept_id IN
+                <foreach collection="q.scopeDeptIds" item="sd" open="(" separator="," close=")">#{sd}</foreach>
+              </if>
             ORDER BY e.plan_time DESC, e.id DESC
+            </script>
             """)
     IPage<InpatientOrderExecVO> selectExecPage(IPage<InpatientOrderExecVO> page, @Param("q") OrderExecQueryPageDTO query);
 
@@ -97,14 +111,22 @@ public interface BizInpatientOrderExecMapper extends BaseMapper<BizInpatientOrde
     long countAllPending();
 
     /**
-     * 全院在院患者的待执行条数（按入院过滤）
+     * 在院患者的待执行条数：admissionId 为空时按科室数据权限集合收敛（M6），否则按单个入院过滤
      */
     @Select("""
+            <script>
             SELECT COUNT(*)
             FROM biz_inpatient_order_exec e
                      JOIN biz_inpatient_order o ON o.id = e.order_id AND o.del_flag = 0
+                     LEFT JOIN biz_admission a ON a.admission_id = o.admission_id AND a.del_flag = 0
             WHERE e.del_flag = 0 AND e.exec_status = 1 AND o.order_status IN (2, 3)
               AND (#{admissionId} IS NULL OR e.admission_id = #{admissionId})
+              <if test="scopeDeptIds != null and scopeDeptIds.size() > 0">
+                AND a.dept_id IN
+                <foreach collection="scopeDeptIds" item="sd" open="(" separator="," close=")">#{sd}</foreach>
+              </if>
+            </script>
             """)
-    long countPendingByAdmission(@Param("admissionId") Long admissionId);
+    long countPendingByAdmission(@Param("admissionId") Long admissionId,
+                                 @Param("scopeDeptIds") java.util.List<Long> scopeDeptIds);
 }

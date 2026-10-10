@@ -36,6 +36,7 @@ import com.his.patient.vo.WardVO;
 import com.his.system.dto.TechAuthGateDTO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.enums.BizTypeEnum;
+import com.his.system.provider.DeptScopeProvider;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.EmployeeTechAuthService;
 import com.his.system.service.SysMessageService;
@@ -98,6 +99,12 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
     private final EmployeeTechAuthService employeeTechAuthService;
 
     private final DictCacheService dictCacheService;
+
+    /**
+     * 科室数据权限（M6）：受限岗位（data_scope=本科室）读医嘱/执行队列时按患者当前科室收口，
+     * 与 InpatientServiceImpl.listPage 同口径。
+     */
+    private final DeptScopeProvider deptScopeProvider;
 
     // 开立 / 修改
 
@@ -559,7 +566,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
     @Transactional(rollbackFor = Exception.class)
     public int stop(InpatientOrderStopDTO dto) {
         // C-非 web 入参：除 Controller 外还被本类 stopLongOrders 内部 new DTO 直接调用，注解校验只在 web 绑定跑，内部路径必须留闸，保留
-        if (dto == null || dto.getOrderId() == null) {
+        if (dto.getOrderId() == null) {
             throw new BusinessException("医嘱ID不能为空");
         }
         // C-非 web 入参：同上，stopLongOrders 传入的内部 reason 不经 Bean Validation，保留
@@ -707,6 +714,8 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
 
     @Override
     public IPage<InpatientOrderVO> listPage(InpatientOrderQueryPageDTO query) {
+        // 科室收口：无条件覆盖前端可能伪造的 scopeDeptIds（不传=看全院，是越权）
+        query.setScopeDeptIds(readScopeDeptIds());
         Page<InpatientOrderVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         IPage<InpatientOrderVO> result = bizInpatientOrderMapper.selectOrderPage(page, query);
         result.getRecords().forEach(this::decorateOrder);
@@ -716,6 +725,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
     @Override
     @Transactional(rollbackFor = Exception.class)
     public IPage<InpatientOrderExecVO> execPendingList(OrderExecQueryPageDTO query) {
+        query.setScopeDeptIds(readScopeDeptIds());
         backfillTodayPlans(query.getAdmissionId(), query.getPatientId());
         Page<InpatientOrderExecVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         IPage<InpatientOrderExecVO> result = bizInpatientOrderExecMapper.selectPendingPage(page, query);
@@ -727,6 +737,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
 
     @Override
     public IPage<InpatientOrderExecVO> execList(OrderExecQueryPageDTO query) {
+        query.setScopeDeptIds(readScopeDeptIds());
         Page<InpatientOrderExecVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         IPage<InpatientOrderExecVO> result = bizInpatientOrderExecMapper.selectExecPage(page, query);
         result.getRecords().forEach(this::decorateExec);
@@ -735,14 +746,19 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
 
     @Override
     public long countPendingVerify(Long admissionId) {
-        return bizInpatientOrderMapper.selectCount(new LambdaQueryWrapper<BizInpatientOrder>()
-                .eq(BizInpatientOrder::getOrderStatus, InpatientOrderStatusEnum.PENDING_VERIFY.getCode())
-                .eq(admissionId != null, BizInpatientOrder::getAdmissionId, admissionId));
+        return bizInpatientOrderMapper.countPendingVerify(admissionId, readScopeDeptIds());
     }
 
     @Override
     public long countPendingExec(Long admissionId) {
-        return bizInpatientOrderExecMapper.countPendingByAdmission(admissionId);
+        return bizInpatientOrderExecMapper.countPendingByAdmission(admissionId, readScopeDeptIds());
+    }
+
+    /**
+     * 读侧科室数据权限集合：受限岗位返回授权科室集合（按患者当前科室过滤）；全院角色返回 null=不收口。
+     */
+    private List<Long> readScopeDeptIds() {
+        return deptScopeProvider.isScoped() ? List.copyOf(deptScopeProvider.allowedDeptIds()) : null;
     }
 
     // 计划行（按天生成 / 查询补当天）
