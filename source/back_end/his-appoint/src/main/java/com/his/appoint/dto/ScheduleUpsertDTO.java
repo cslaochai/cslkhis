@@ -1,6 +1,7 @@
 package com.his.appoint.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -27,7 +28,7 @@ public class ScheduleUpsertDTO {
     /**
      * 科室名称
      */
-    @NotNull(message = "科室不能为空")
+    @NotBlank(message = "科室不能为空")
     private String deptName;
 
     /**
@@ -39,7 +40,7 @@ public class ScheduleUpsertDTO {
     /**
      * 排班人员姓名
      */
-    @NotNull(message = "排班人员姓名不能为空")
+    @NotBlank(message = "排班人员姓名不能为空")
     private String doctorName;
 
     /**
@@ -58,13 +59,13 @@ public class ScheduleUpsertDTO {
     /**
      * 开始时间（HH:mm:ss）：以班次字典为准，后端按 shiftId 覆盖，前端传什么不算
      */
-    @NotNull(message = "开始时间不能为空")
+    @NotBlank(message = "开始时间不能为空")
     private String startTime;
 
     /**
      * 结束时间（HH:mm:ss）
      */
-    @NotNull(message = "结束时间不能为空")
+    @NotBlank(message = "结束时间不能为空")
     private String endTime;
 
     /**

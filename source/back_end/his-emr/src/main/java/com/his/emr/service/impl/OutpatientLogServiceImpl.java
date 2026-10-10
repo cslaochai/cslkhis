@@ -13,6 +13,8 @@ import com.his.emr.mapper.SysInfectiousDiseaseMapper;
 import com.his.emr.service.OutpatientLogService;
 import com.his.emr.vo.OutpatientLogListVO;
 import com.his.emr.vo.OutpatientLogStatsVO;
+import com.his.system.entity.CurrentUser;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -60,6 +62,26 @@ public class OutpatientLogServiceImpl extends ServiceImpl<SysInfectiousDiseaseMa
         OutpatientLogStatsVO stats =
                 outpatientLogMapper.selectLogStats(query, toRegex(loadReportablePrefixes()));
         return stats == null ? new OutpatientLogStatsVO() : stats;
+    }
+
+    @Override
+    public PageResult<OutpatientLogListVO> myPendingPage(OutpatientLogQueryDTO query) {
+        applySelfScope(query);
+        return listPage(query);
+    }
+
+    @Override
+    public OutpatientLogStatsVO myPendingStats(OutpatientLogQueryDTO query) {
+        applySelfScope(query);
+        return stats(query);
+    }
+
+    private void applySelfScope(OutpatientLogQueryDTO query) {
+        CurrentUser user = UserUtils.getCurrentUser();
+        query.setDoctorId(user == null || user.getEmployeeId() == null ? -1L : user.getEmployeeId());
+        query.setDeptId(null);
+        query.setReportableOnly(true);
+        query.setReportedFilter(1);
     }
 
     /**

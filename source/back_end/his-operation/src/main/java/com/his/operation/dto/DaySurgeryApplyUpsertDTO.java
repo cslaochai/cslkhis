@@ -1,5 +1,6 @@
 package com.his.operation.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -41,7 +42,7 @@ public class DaySurgeryApplyUpsertDTO implements Serializable {
     /**
      * 计划手术日期 yyyy-MM-dd
      */
-    @NotNull(message = "计划手术日期不能为空")
+    @NotBlank(message = "计划手术日期不能为空")
     private String planSurgeryDate;
 
     /**

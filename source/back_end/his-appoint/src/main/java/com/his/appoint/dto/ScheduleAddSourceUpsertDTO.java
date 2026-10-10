@@ -2,6 +2,7 @@ package com.his.appoint.dto;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -22,6 +23,6 @@ public class ScheduleAddSourceUpsertDTO {
     /**
      * 加号原因（必填，写入排班 remark 留痕）
      */
-    @NotNull(message = "加号原因不能为空")
+    @NotBlank(message = "加号原因不能为空")
     private String reason;
 }

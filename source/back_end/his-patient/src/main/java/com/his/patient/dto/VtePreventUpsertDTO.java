@@ -3,6 +3,7 @@ package com.his.patient.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.his.common.validation.InEnum;
 import com.his.patient.enums.VtePreventStatusEnum;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -30,7 +31,7 @@ public class VtePreventUpsertDTO {
     /**
      * 措施码
      */
-    @NotNull(message = "措施码不能为空")
+    @NotBlank(message = "措施码不能为空")
     private String measureCode;
 
     /**

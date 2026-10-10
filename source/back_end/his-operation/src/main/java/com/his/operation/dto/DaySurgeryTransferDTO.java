@@ -1,5 +1,6 @@
 package com.his.operation.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -23,6 +24,6 @@ public class DaySurgeryTransferDTO implements Serializable {
     /**
      * 转住院原因
      */
-    @NotNull(message = "转住院原因不能为空")
+    @NotBlank(message = "转住院原因不能为空")
     private String transferRemark;
 }

@@ -400,10 +400,6 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
 
     @Override
     public List<NurseQcVO.Kpi> trend(NursingQcDTO.TrendQueryDTO query) {
-        // 入参对象判空已删：@RequestBody（required=true）保证非空。
-        // 待确认：TrendQuery.indicatorCode 上挂着错位的 yyyy-MM @Pattern（把指标码当月份校），
-        // 而 NursingQcController.trend 现已带 @Valid —— 任何合法指标码都会被拦成 400；
-        // 修 @Pattern 或摘 @Valid 均超出本轮范围，service 侧 requireIndicator 兜底保留
         NursingIndicatorEnum indicator = requireIndicator(query.getIndicatorCode());
         NurseQcVO.Ward ward = query.getWardId() == null ? null : requireVisibleWard(query.getWardId());
         String start = TextUtil.trimToNull(query.getStartMonth());

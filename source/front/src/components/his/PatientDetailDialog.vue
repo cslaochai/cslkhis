@@ -186,20 +186,6 @@
                 </div>
               </section>
             </template>
-            <!-- 无临床权限的岗位（收费/药房/前台/医技）：把「为什么少两个 tab」说清楚，
-                 否则用户只会觉得页面坏了 —— 收敛权限而不解释，等于制造一次误报障 -->
-            <el-alert
-                v-if="detail && !canViewClinical"
-                :closable="false"
-                class="mt-1"
-                show-icon
-                type="info"
-            >
-              <template #title>当前岗位只能查看患者身份与费用信息</template>
-              <div class="text-xs text-slate-500">
-                诊断、病历、检验检查结果属于临床内容，需要医生 / 护士 / 病案等岗位权限；如需查看请切换到相应岗位。
-              </div>
-            </el-alert>
             <div v-else-if="detailFailed && !detailLoading" class="py-14 text-center text-sm text-slate-400">
               基本信息加载失败
               <el-button class="ml-2" link type="primary" @click="reloadAll">重新加载</el-button>

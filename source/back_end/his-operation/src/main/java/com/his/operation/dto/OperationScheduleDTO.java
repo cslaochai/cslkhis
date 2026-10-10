@@ -28,12 +28,6 @@ public class OperationScheduleDTO implements Serializable {
 
     /**
      * 计划开始时间（必填）。
-     *
-     * <p><b>{@code @JsonFormat} 不能省</b>：Jackson 对 {@code LocalDateTime} 的默认反序列化
-     * 只认 ISO-8601（{@code 2026-09-20T09:00:00}），而前端日期选择器给的是
-     * {@code 2026-09-20 09:00:00}（中间是空格）—— 少了这个注解，请求体直接反序列化失败，
-     * 表现是"请求体格式不正确，无法解析"，而**不是**任何一条业务校验失败，
-     * 排查时极容易被误读成"参数没传"。
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @NotNull(message = "计划开始/结束时间不能为空（没有时段的排台等于没排）")

@@ -1,6 +1,7 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -26,7 +27,7 @@ public class DietPlanUpsertDTO {
     /**
      * 饮食类型码
      */
-    @NotNull(message = "饮食类型不能为空")
+    @NotBlank(message = "饮食类型不能为空")
     private String dietCode;
 
     /**

@@ -62,7 +62,7 @@ public class InfectionMonitorDTO {
         /**
          * 感染部位（his_infection_site 码值）
          */
-        @NotNull(message = "感染部位不能为空")
+        @NotBlank(message = "感染部位不能为空")
         private String infectionSite;
 
         /**
@@ -233,7 +233,7 @@ public class InfectionMonitorDTO {
         /**
          * 感染部位（his_infection_site 码值）
          */
-        @NotNull(message = "感染部位不能为空")
+        @NotBlank(message = "感染部位不能为空")
         private String infectionSite;
 
         /**

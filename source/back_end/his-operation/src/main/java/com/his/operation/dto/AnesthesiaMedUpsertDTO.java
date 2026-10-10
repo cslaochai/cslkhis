@@ -45,7 +45,7 @@ public class AnesthesiaMedUpsertDTO implements Serializable {
     /**
      * 药品名称
      */
-    @NotBlank(message = "药品名称不能为空（不知道给的什么药是不能接受的）")
+    @NotBlank(message = "药品名称不能为空")
     private String drugName;
 
     private BigDecimal dose;

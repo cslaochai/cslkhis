@@ -1,5 +1,6 @@
 package com.his.patient.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -17,7 +18,7 @@ public class TeleArrangeDTO implements Serializable {
     /**
      * 计划会诊时间
      */
-    @NotNull(message = "计划会诊时间不能为空")
+    @NotBlank(message = "计划会诊时间不能为空")
     private String planTime;
 
     /**

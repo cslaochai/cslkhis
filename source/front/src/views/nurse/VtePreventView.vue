@@ -160,7 +160,6 @@
             <el-table-column label="执行人" prop="executorName" width="90"/>
             <el-table-column label="落实时间" prop="executeTime" width="165"/>
           </el-table>
-          <div class="muted tip-block">未登记的措施不出现在这里；禁忌未用 / 患者拒绝的原因见下方「原因」列。</div>
           <el-table v-if="detailRows.some(r => r.reason)" :data="detailRows.filter(r => r.reason)" border class="reason-table"
                     size="small">
             <el-table-column label="措施" width="110">

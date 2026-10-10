@@ -45,12 +45,6 @@ public class OperationApplyQueryPageDTO extends PageParam implements Serializabl
 
     /**
      * 计划开始时间下界（含）。
-     *
-     * <p><b>刻意收 String 而不是 LocalDateTime</b>：GET 查询参数上的
-     * {@code @DateTimeFormat} 一旦格式不匹配就抛绑定异常，而全局异常处理会把
-     * 绑定失败渲染成 500 —— 用户看到的是"系统内部错误"，实际只是日期少写了时分秒。
-     * 这里改为服务端宽松解析（接受 {@code yyyy-MM-dd} 与 {@code yyyy-MM-dd HH:mm:ss} 两种），
-     * 解析不了就**明确报"时间格式不正确"**，而不是 500。
      */
     private String plannedDateFrom;
 

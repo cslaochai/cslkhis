@@ -28,6 +28,14 @@ export function getOutpatientLogStats(params) {
     return request.get('/emr/outpatientLog/stats', {params})
 }
 
+export function getMyPendingPage(params) {
+    return request.get('/emr/outpatientLog/myPending', {params})
+}
+
+export function getMyPendingStats(params) {
+    return request.get('/emr/outpatientLog/myPendingStats', {params})
+}
+
 // 审核病历
 export function reviewRecord(recordId, approved, remark, reviewerName) {
     return request.post('/emr/recordReview', null, {

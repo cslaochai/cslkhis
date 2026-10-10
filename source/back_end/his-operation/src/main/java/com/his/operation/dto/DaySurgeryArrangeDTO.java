@@ -18,7 +18,7 @@ public class DaySurgeryArrangeDTO implements Serializable {
     /**
      * 手术开始时间 yyyy-MM-dd HH:mm:ss
      */
-    @NotNull(message = "手术时间不能为空")
+    @NotBlank(message = "手术时间不能为空")
     private String surgeryTime;
 
     /**

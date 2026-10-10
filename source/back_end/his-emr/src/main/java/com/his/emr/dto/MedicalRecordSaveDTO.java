@@ -329,7 +329,7 @@ public class MedicalRecordSaveDTO {
         /**
          * 单次用量（如 1片、10ml）
          */
-        @NotNull(message = "单次用量不能为空")
+        @NotBlank(message = "单次用量不能为空")
         private String singleDosage;
 
         /**

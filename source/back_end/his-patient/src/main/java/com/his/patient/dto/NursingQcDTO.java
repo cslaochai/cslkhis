@@ -3,10 +3,7 @@ package com.his.patient.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.his.common.base.PageParam;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -30,7 +27,7 @@ public class NursingQcDTO {
         private Long wardId;
 
         @Pattern(regexp = "^\\d{4}-\\d{2}$", message = "检查月份格式必须为 yyyy-MM")
-        @NotNull(message = "请选择检查月份")
+        @NotBlank(message = "请选择检查月份")
         private String checkMonth;
 
         @JsonFormat(pattern = "yyyy-MM-dd")
@@ -179,7 +176,7 @@ public class NursingQcDTO {
          * 统计月份（yyyy-MM）
          */
         @Pattern(regexp = "^\\d{4}-\\d{2}$", message = "统计月份格式必须为 yyyy-MM")
-        @NotNull(message = "请选择统计月份")
+        @NotBlank(message = "请选择统计月份")
         private String statMonth;
     }
 
@@ -193,8 +190,7 @@ public class NursingQcDTO {
          */
         private Long wardId;
 
-        @Pattern(regexp = "^\\d{4}-\\d{2}$", message = "统计月份格式必须为 yyyy-MM")
-        @NotNull(message = "请选择统计指标")
+        @NotBlank(message = "请选择统计指标")
         private String indicatorCode;
 
         @Pattern(regexp = "^$|^\\d{4}-\\d{2}$", message = "起始月份格式必须为 yyyy-MM")
@@ -213,10 +209,10 @@ public class NursingQcDTO {
          * 统计月份（yyyy-MM）
          */
         @Pattern(regexp = "^\\d{4}-\\d{2}$", message = "统计月份格式必须为 yyyy-MM")
-        @NotNull(message = "请选择统计月份")
+        @NotBlank(message = "请选择统计月份")
         private String statMonth;
 
-        @NotNull(message = "请选择统计指标")
+        @NotBlank(message = "请选择统计指标")
         private String indicatorCode;
     }
 
@@ -233,7 +229,7 @@ public class NursingQcDTO {
          * 统计月份（yyyy-MM）
          */
         @Pattern(regexp = "^\\d{4}-\\d{2}$", message = "统计月份格式必须为 yyyy-MM")
-        @NotNull(message = "请选择要重算的月份")
+        @NotBlank(message = "请选择要重算的月份")
         private String statMonth;
     }
 
@@ -246,7 +242,7 @@ public class NursingQcDTO {
          * 统计月份（yyyy-MM）
          */
         @Pattern(regexp = "^\\d{4}-\\d{2}$", message = "统计月份格式必须为 yyyy-MM")
-        @NotNull(message = "请选择统计月份")
+        @NotBlank(message = "请选择统计月份")
         private String statMonth;
 
         /**

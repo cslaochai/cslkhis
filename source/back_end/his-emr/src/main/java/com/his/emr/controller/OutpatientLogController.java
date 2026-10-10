@@ -39,4 +39,18 @@ public class OutpatientLogController {
     public Result<OutpatientLogStatsVO> stats(@Valid OutpatientLogQueryDTO query) {
         return Result.success(outpatientLogService.stats(query));
     }
+
+    @Operation(summary = "我的应报未报分页（医生自查入口，服务端强制本人——菜单 2950，sql/238）")
+    @GetMapping("/myPending")
+    @PreAuthorize("hasAuthority('opd:outpatientLog:mine')")
+    public Result<PageResult<OutpatientLogListVO>> myPending(@Valid OutpatientLogQueryDTO query) {
+        return Result.success(outpatientLogService.myPendingPage(query));
+    }
+
+    @Operation(summary = "我的应报未报统计条（与 myPending 同口径）")
+    @GetMapping("/myPendingStats")
+    @PreAuthorize("hasAuthority('opd:outpatientLog:mine')")
+    public Result<OutpatientLogStatsVO> myPendingStats(@Valid OutpatientLogQueryDTO query) {
+        return Result.success(outpatientLogService.myPendingStats(query));
+    }
 }

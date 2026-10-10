@@ -32,7 +32,7 @@ public class OperationFinishDTO implements Serializable {
     private String actualOperationName;
 
     /**
-     * 实际开始时间（必填）。{@code @JsonFormat} 不能省，理由同排台 DTO：默认只认 ISO 格式
+     * 实际开始时间（必填）
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @NotNull(message = "实际开始/结束时间不能为空（没有起止时间算不出手术时长）")
