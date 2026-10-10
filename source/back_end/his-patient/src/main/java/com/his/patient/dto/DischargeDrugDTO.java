@@ -23,41 +23,63 @@ public class DischargeDrugDTO {
     @Data
     public static class Upsert implements Serializable {
 
-        /** 主键（修改时必填） */
+        /**
+         * 主键（修改时必填）
+         */
         private Long id;
 
-        /** 入院ID */
+        /**
+         * 入院ID
+         */
         @NotNull(message = "入院ID不能为空")
         private Long admissionId;
 
-        /** 药品ID（临时药品手填时可空） */
+        /**
+         * 药品ID（临时药品手填时可空）
+         */
         private Long drugId;
 
-        /** 药品名称 */
+        /**
+         * 药品名称
+         */
         @NotBlank(message = "药品名称不能为空")
         private String drugName;
 
-        /** 规格 */
+        /**
+         * 规格
+         */
         private String spec;
 
-        /** 每次剂量/用法用量描述 */
+        /**
+         * 每次剂量/用法用量描述
+         */
         private String dosage;
 
-        /** 单位 */
+        /**
+         * 单位
+         */
         private String unit;
 
-        /** 带药数量 */
+        /**
+         * 带药数量
+         */
         @NotNull(message = "带药数量不能为空")
         @DecimalMin(value = "0.01", message = "带药数量必须大于 0")
         private BigDecimal quantity;
 
-        /** 用药医嘱（如每日三次饭后） */
+        /**
+         * 用药医嘱（如每日三次饭后）
+         */
         private String usageText;
 
-        /** 用药天数 */
+        /**
+         * 用药天数
+         */
         private Integer days;
 
-        /** 备注 */
+        /**
+         * 备注
+         */
         private String remark;
     }
 
@@ -68,16 +90,24 @@ public class DischargeDrugDTO {
     @EqualsAndHashCode(callSuper = true)
     public static class QueryPage extends PageParam implements Serializable {
 
-        /** 入院ID */
+        /**
+         * 入院ID
+         */
         private Long admissionId;
 
-        /** 患者ID */
+        /**
+         * 患者ID
+         */
         private Long patientId;
 
-        /** 药品名称模糊 */
+        /**
+         * 药品名称模糊
+         */
         private String drugName;
 
-        /** 发药状态（1-待发药 2-已发药） */
+        /**
+         * 发药状态（1-待发药 2-已发药）
+         */
         private Integer dispenseStatus;
     }
 
@@ -87,11 +117,15 @@ public class DischargeDrugDTO {
     @Data
     public static class Dispense implements Serializable {
 
-        /** 主键ID集合 */
+        /**
+         * 主键ID集合
+         */
         @NotEmpty(message = "请选择要发药的带药单")
         private List<Long> ids;
 
-        /** 备注 */
+        /**
+         * 备注
+         */
         private String remark;
     }
 
@@ -101,7 +135,9 @@ public class DischargeDrugDTO {
     @Data
     public static class Delete implements Serializable {
 
-        /** 带药单ID */
+        /**
+         * 带药单ID
+         */
         @NotNull(message = "带药单ID不能为空")
         private Long id;
     }

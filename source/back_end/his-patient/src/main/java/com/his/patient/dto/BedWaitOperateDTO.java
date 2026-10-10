@@ -12,6 +12,8 @@ public class BedWaitOperateDTO {
     @NotNull(message = "排队记录不能为空")
     private Long waitId;
 
-    /** 原因 */
+    /**
+     * 原因
+     */
     private String reason;
 }

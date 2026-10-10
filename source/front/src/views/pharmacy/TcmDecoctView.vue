@@ -60,7 +60,7 @@
         </el-table-column>
         <el-table-column align="center" label="状态" width="90">
           <template #default="{ row }">
-            <el-tag :type="statusMeta(row).tag as any" data-testid="tcm-decoct-status-tag" size="small">
+            <el-tag :type="statusMeta(row).tag" data-testid="tcm-decoct-status-tag" size="small">
               {{ row.decoctStatusLabel || statusMeta(row).label }}
             </el-tag>
           </template>

@@ -519,7 +519,7 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
     // -------------------------------------------------------------------------
 
     private Long requireEmployee(AttendanceDTO dto) {
-        if (dto == null || dto.getEmployeeId() == null) {
+        if (dto.getEmployeeId() == null) {
             throw new BusinessException("请先选择要登记出勤的员工");
         }
         return dto.getEmployeeId();

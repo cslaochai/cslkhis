@@ -34,7 +34,7 @@
         <el-table-column label="体检编号" prop="recordNo" width="210"/>
         <el-table-column label="体检人" prop="patientName" width="100"/>
         <el-table-column label="性别" prop="gender" width="60">
-          <template #default="{ row }">{{ ({1: '男', 2: '女', 9: '未知'} as any)[row.gender] || '—' }}</template>
+          <template #default="{ row }">{{ ({1: '男', 2: '女', 9: '未知'})[row.gender] || '—' }}</template>
         </el-table-column>
         <el-table-column label="年龄" prop="age" width="60"/>
         <el-table-column label="对象" prop="personType" width="70">
@@ -74,7 +74,7 @@
     <el-dialog v-model="createVisible" title="体检登记" width="480px">
       <el-form label-width="90px">
         <el-form-item label="体检人" required>
-          <PatientSelect v-model="createForm.patientId as any"/>
+          <PatientSelect v-model="createForm.patientId"/>
         </el-form-item>
         <el-form-item label="对象类型">
           <el-radio-group v-model="createForm.personType">

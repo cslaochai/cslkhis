@@ -1,8 +1,8 @@
 package com.his.miniapp.service;
 
 import com.his.common.base.PageResult;
-import com.his.miniapp.dto.TicketHandleDTO;
-import com.his.miniapp.dto.TicketSearchDTO;
+import com.his.miniapp.dto.TicketHandleUpsertDTO;
+import com.his.miniapp.dto.TicketPageQueryDTO;
 import com.his.miniapp.vo.MiniServiceDetailVO;
 import com.his.miniapp.vo.MiniServiceMessageListVO;
 import com.his.miniapp.vo.MiniTicketStatsVO;
@@ -15,7 +15,7 @@ public interface MiniServiceTicketAdminService {
     /**
      * 工单列表（含全部状态）
      */
-    PageResult<MiniServiceMessageListVO> adminPage(TicketSearchDTO dto);
+    PageResult<MiniServiceMessageListVO> listPage(TicketPageQueryDTO query);
 
     /**
      * 工作台统计
@@ -30,5 +30,5 @@ public interface MiniServiceTicketAdminService {
     /**
      * 受理 / 回复 / 办结 / 关闭 / 内部备注
      */
-    void handle(TicketHandleDTO dto);
+    void handle(TicketHandleUpsertDTO upsertDTO);
 }

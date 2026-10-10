@@ -34,14 +34,22 @@ public class PatientFamilyHistoryUpsertDTO {
      * 亲属年龄
      */
     private Integer age;
-    /** 是否在世（0-已故 1-在世） */
+    /**
+     * 是否在世（0-已故 1-在世）
+     */
     @InEnum(value = IsAliveEnum.class, message = "是否在世取值不合法（0-已故 1-在世）")
     private Integer isAlive;
-    /** 死亡原因 */
+    /**
+     * 死亡原因
+     */
     private String causeOfDeath;
-    /** 健康状况描述 */
+    /**
+     * 健康状况描述
+     */
     private String healthStatus;
-    /** 遗传性疾病（如：高血压、糖尿病、肿瘤等） */
+    /**
+     * 遗传性疾病（如：高血压、糖尿病、肿瘤等）
+     */
     private String hereditaryDisease;
     /**
      * 传染性疾病

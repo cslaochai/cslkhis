@@ -72,9 +72,6 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
 
     @Override
     public IPage<InpatientTransferVO> listPage(InpatientTransferQueryPageDTO query) {
-        if (query == null) {
-            query = new InpatientTransferQueryPageDTO();
-        }
         IPage<BizInpatientTransfer> page = bizInpatientTransferMapper.selectTransferPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query);
         List<BizInpatientTransfer> records = page.getRecords();

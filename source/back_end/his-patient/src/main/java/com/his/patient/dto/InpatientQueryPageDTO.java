@@ -13,16 +13,24 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 public class InpatientQueryPageDTO extends PageParam {
 
-    /** 患者姓名 / 住院号模糊查询 */
+    /**
+     * 患者姓名 / 住院号模糊查询
+     */
     private String patientName;
 
-    /** 开立科室ID */
+    /**
+     * 开立科室ID
+     */
     private Long deptId;
 
-    /** 病区ID */
+    /**
+     * 病区ID
+     */
     private Long wardId;
 
-    /** 状态：1-在院 0-已出院，null-全部 */
+    /**
+     * 状态：1-在院 0-已出院，null-全部
+     */
     private Integer admitStatus;
 
     /**

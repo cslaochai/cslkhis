@@ -113,28 +113,26 @@ docker compose -f docker/docker-compose.yml up -d --build
 
 ## 医保支付分组（DRG/DIP）
 
-医保支付遵循国家 DRG/DIP 付费改革（当前 2.0 版，2027-03 底落地 3.0 版）。系统按 **「贯标字典 → 结构化单据 → 分组引擎 →
-合规控费 → 医保平台对接」** 五层管线落地，当前进度如下：
+医保支付按国家 DRG/DIP 付费改革落地，系统走 **「贯标字典 → 结构化单据 → 分组引擎 → 合规控费 → 医保平台对接」** 五层管线（图见
+[面试架构图](docs/面试架构图.md) 图 3）。
 
-- **数据根基（已按标准 HIS 建模）**：结算清单结构化明细（`biz_settlement_diagnosis`/`biz_settlement_operation`）、病案首页结构化（
-  `biz_inpatient_summary`/`biz_inpatient_diagnosis`/`biz_inpatient_operation`）、ICD-10 / ICD-9-CM-3 贯标字典、医保目录对照（
-  `biz_yb_catalog`/`biz_yb_mapping`）。诊断/手术均为结构化编码明细，非字符串堆砌。
-- **分组引擎（`his-medicaltech` 的 `DrgGrouper`）**：已重构为真实入组流程骨架 —— 先期分组 → MDC → ADRG → DRG
-  细分组；入参覆盖主诊断亚目、主手术/其他手术、其他诊断（→CC/MCC）、年龄、性别、呼吸机时长、新生儿体重等全量维度。新增
-  `CcMccService` 做 CC/MCC 判定并应用排除表（决定高编高套风险）。
-- **数据底座（已扩）**：分组表 `sys_drg_group` 增加匹配键（`diag_match`/`oper_match`
-  ）与性别限定、年龄分层、先期标志、术式属性（单双侧/机器人/联合）、基层病种等维度列；新建 `sys_drg_ccmcc`（CC/MCC 官方目录）、
-  `sys_drg_exclusion`（排除表）。
-- **诚实闸门**：官方分组数据未灌入时，分组器与合规 D 组（`GroupingRatioRule` D01/D02）均返回 QY / 不适用（NA），并明确标注「未接入分组方案」，
-  **绝不谎报分组或静默判「正常」**。
+- **分组方案（已接入国家 3.0 官方包）**：照官方的「两跳」模型建表 —— `sys_drg_mdc` / `sys_drg_adrg` / `sys_drg_group`
+  三级目录逐行带**入组规则原文**，规则里的集合编号再由 `sys_drg_set` 展开成精确 ICD 码；CC/MCC 目录 `sys_drg_ccmcc`
+  逐条挂排除组编号（排除关系由集合表达，不再按主诊断逐对展开）。建表与灌入见 `docs/03-增量SQL变更/233~235`。
+- **分组引擎**（`his-medicaltech` 的 `DrgGrouper`）：逐层求值 MDC → ADRG → DRG 细分组，规则原文由 `DrgRuleParser` 编译成表达式，
+  **精确码比较、不做前缀近似**；方案快照由 `DrgSchemeCache` 惰性装载。入参维度取自病案首页结构化明细（主诊断/主手术/其他诊断与其他手术、
+  性别、年龄含单位、入院体重）。
+- **贯标口径**：`sys_icd10` / `sys_icd9cm3` 用 `code_std` 标出医保版贯标码，官方集合引用的码已按贯标口径补齐字典。
+- **诚实闸门**：主诊断落不进任何 MDC 时返回 QY 并写明卡在哪一层；合规 D 组（`GroupingRatioRule` D01/D02）在方案为空时判 NA
+  并给出获取方案的建议，**绝不谎报分组、绝不静默判「正常」**。
 
-**落地硬前提（需医保局提供，不入库、不在代码内编造）**：
+**仍缺的部分（由统筹区医保局下发，不入库、不在代码内编造）**：
 
-1. 官方 2.0/3.0 分组方案数据包（带匹配键 + 维度 + 权重 + 支付标准）→ 灌入 `sys_drg_group`；
-2. 官方 CC/MCC 目录 + 排除表 → 灌入 `sys_drg_ccmcc` / `sys_drg_exclusion`；
-3. 医保局前置机/分组器对接 → 替换 `his-charge` 中 `InsuranceChannelServiceImpl` 的 M9 Mock 口子。
+1. 病组**权重**与**支付标准**（国家方案包的六表只有编码/名称/规则/所属/排序，不含这两列）→ 下发后更新
+   `sys_drg_group.weight` / `pay_standard`；未落地时 D01 费用倍率一律 NA，并写明「目录已接入、标准未下发」，不把「没标准」落成 0 元。
+2. 医保局前置机/分组器对接 → 替换 `his-charge` 中 `InsuranceChannelServiceImpl` 的 M9 Mock 口子。
 
-以上三样到位后，分组引擎与合规 D 组合规闸门**自动生效，无需再改代码**。
+以上到位后，分组引擎与合规 D 组闸门**自动生效，无需再改代码**。
 
 ## 文档索引
 

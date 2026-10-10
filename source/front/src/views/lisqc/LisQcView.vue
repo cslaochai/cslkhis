@@ -124,7 +124,7 @@
                 <el-table-column align="right" label="Z 值" prop="zScore" width="90"/>
                 <el-table-column label="判定" width="90">
                   <template #default="{ row }">
-                    <el-tag :type="qcStatusTag(row.status) as any" size="small">{{ row.statusText }}</el-tag>
+                    <el-tag :type="qcStatusTag(row.status)" size="small">{{ row.statusText }}</el-tag>
                   </template>
                 </el-table-column>
                 <el-table-column label="命中规则" prop="violatedRules" width="110"/>

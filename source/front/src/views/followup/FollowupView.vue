@@ -248,7 +248,7 @@
     <el-dialog v-model="editVisible" :title="editForm.id ? '编辑随访任务' : '新建随访任务'" width="560px">
       <el-form label-width="90px">
         <el-form-item label="患者" required>
-          <PatientSelect v-model="editForm.patientId as any" :disabled="!!editForm.id" @select="onPatientSelect"/>
+          <PatientSelect v-model="editForm.patientId" :disabled="!!editForm.id" @select="onPatientSelect"/>
         </el-form-item>
         <el-form-item label="随访类型" required>
           <el-select v-model="editForm.followupType" :fit-input-width="false" style="width: 220px">

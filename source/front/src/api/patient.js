@@ -1,7 +1,5 @@
 import request from './request'
 
-// ==================== 患者主档 ====================
-
 // 查询患者列表
 export function getPatientList(params) {
     return request.post('/patient/listPage', params)

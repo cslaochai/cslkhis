@@ -144,7 +144,7 @@
             </el-table-column>
             <el-table-column label="状态" width="90">
               <template #default="{ row }">
-                <el-tag :type="apptStatusTag(row.status) as any" data-testid="appt-status" size="small">
+                <el-tag :type="apptStatusTag(row.status)" data-testid="appt-status" size="small">
                   {{ row.statusText }}
                 </el-tag>
               </template>
@@ -257,7 +257,7 @@
         <el-descriptions v-if="detail.data" :column="2" border size="small">
           <el-descriptions-item label="预约单号">{{ detail.data.apptNo }}</el-descriptions-item>
           <el-descriptions-item label="状态">
-            <el-tag :type="apptStatusTag(detail.data.status) as any" size="small">{{ detail.data.statusText }}</el-tag>
+            <el-tag :type="apptStatusTag(detail.data.status)" size="small">{{ detail.data.statusText }}</el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="患者">{{ detail.data.patientName }} / {{
               detail.data.patientNo

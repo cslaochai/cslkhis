@@ -56,16 +56,15 @@ public class AiDraftDiffServiceImpl extends ServiceImpl<BizAiDraftDiffMapper, Bi
 
     @Override
     public PageResult<AiDraftDiffListVO> listPage(AiDraftDiffQueryPageDTO dto) {
-        AiDraftDiffQueryPageDTO q = dto == null ? new AiDraftDiffQueryPageDTO() : dto;
         LambdaQueryWrapper<BizAiDraftDiff> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(TextUtil.hasText(q.getPatientName()), BizAiDraftDiff::getPatientName,
-                        q.getPatientName() == null ? null : q.getPatientName().trim())
-                .like(TextUtil.hasText(q.getDoctorName()), BizAiDraftDiff::getDoctorName,
-                        q.getDoctorName() == null ? null : q.getDoctorName().trim())
-                .eq(q.getChanged() != null, BizAiDraftDiff::getChanged, q.getChanged())
+        wrapper.like(TextUtil.hasText(dto.getPatientName()), BizAiDraftDiff::getPatientName,
+                        dto.getPatientName() == null ? null : dto.getPatientName().trim())
+                .like(TextUtil.hasText(dto.getDoctorName()), BizAiDraftDiff::getDoctorName,
+                        dto.getDoctorName() == null ? null : dto.getDoctorName().trim())
+                .eq(dto.getChanged() != null, BizAiDraftDiff::getChanged, dto.getChanged())
                 .orderByDesc(BizAiDraftDiff::getCreateTime)
                 .orderByDesc(BizAiDraftDiff::getId);
-        Page<BizAiDraftDiff> page = bizAiDraftDiffMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), wrapper);
+        Page<BizAiDraftDiff> page = bizAiDraftDiffMapper.selectPage(new Page<>(dto.getPageNum(), dto.getPageSize()), wrapper);
         List<AiDraftDiffListVO> voList = page.getRecords().stream()
                 .map(entity -> {
                     AiDraftDiffListVO vo = new AiDraftDiffListVO();

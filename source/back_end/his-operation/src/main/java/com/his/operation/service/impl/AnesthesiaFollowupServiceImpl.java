@@ -68,9 +68,6 @@ public class AnesthesiaFollowupServiceImpl extends ServiceImpl<BizAnesthesiaFoll
      */
     @Override
     public IPage<AnesthesiaFollowupVO> listPage(AnesthesiaFollowupQueryPageDTO query) {
-        if (query == null) {
-            query = new AnesthesiaFollowupQueryPageDTO();
-        }
         IPage<AnesthesiaFollowupVO> page = bizAnesthesiaFollowupMapper.selectFollowupPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query);
         page.getRecords().forEach(this::decorate);

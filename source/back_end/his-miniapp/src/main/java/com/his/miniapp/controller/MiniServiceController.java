@@ -37,8 +37,7 @@ public class MiniServiceController {
     @PostMapping("/myMessages")
     @PreAuthorize("hasAuthority('PATIENT')")
     public Result<PageResult<MiniServiceMessageListVO>> myMessages(@Valid @RequestBody MessagePageDTO dto) {
-        MessagePageDTO query = dto == null ? new MessagePageDTO() : dto;
-        return Result.success(miniServiceMessageService.myPage(query));
+        return Result.success(miniServiceMessageService.myPage(dto));
     }
 
     @Operation(summary = "工单详情（含流转时间轴，只能看自己的）")

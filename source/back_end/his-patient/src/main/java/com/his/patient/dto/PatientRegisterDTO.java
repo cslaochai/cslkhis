@@ -11,7 +11,9 @@ import java.io.Serializable;
 @Data
 public class PatientRegisterDTO implements Serializable {
 
-    /** 患者姓名 */
+    /**
+     * 患者姓名
+     */
     @NotBlank(message = "请输入姓名")
     private String patientName;
 

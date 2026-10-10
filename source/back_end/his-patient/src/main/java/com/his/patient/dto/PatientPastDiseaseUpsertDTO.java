@@ -39,7 +39,9 @@ public class PatientPastDiseaseUpsertDTO {
      * 治疗方案
      */
     private String treatmentPlan;
-    /** 当前控制情况（已治愈/控制良好/未控制/随访中） */
+    /**
+     * 当前控制情况（已治愈/控制良好/未控制/随访中）
+     */
     private String currentStatus;
     /**
      * 复发次数

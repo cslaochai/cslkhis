@@ -195,7 +195,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
      * 出账时又算一遍，两边一漂移就是小票和结算单对不上。
      */
     private Draft draft(BillSettleUpsertDTO dto) {
-        if (dto == null || EncounterTypeEnum.fromCode(dto.getEncounterType()) == null || dto.getEncounterId() == null) {
+        if (EncounterTypeEnum.fromCode(dto.getEncounterType()) == null || dto.getEncounterId() == null) {
             throw new BusinessException("缺少就诊标识，无法结算");
         }
         List<BizFeeRecord> rows = pickRows(dto);
@@ -234,7 +234,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void voidBill(BillVoidDTO dto) {
-        if (dto == null || dto.getBillId() == null) {
+        if (dto.getBillId() == null) {
             throw new BusinessException("缺少账单");
         }
         if (!TextUtil.hasText(dto.getReason())) {

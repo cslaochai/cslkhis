@@ -208,12 +208,11 @@ public class NurseScheduleServiceImpl extends ServiceImpl<BizNurseScheduleMapper
 
     @Override
     public PageResult<NurseScheduleVO.Row> listPage(NurseScheduleDTO.QueryPage query) {
-        NurseScheduleDTO.QueryPage q = query == null ? new NurseScheduleDTO.QueryPage() : query;
-        IPage<NurseScheduleVO.Row> page = new Page<>(q.getPageNum(), q.getPageSize());
-        Long deptId = deptScopeProvider.resolveDeptId(q.getDeptId());
-        List<Long> deptIds = scopedDeptIds(q.getDeptId());
-        List<NurseScheduleVO.Row> records = bizNurseScheduleMapper.selectSchedulePage(page, TextUtil.trimToNull(q.getKeyword()),
-                q.getWardId(), deptId, q.getScheduleStatus(), q.getStartDate(), q.getEndDate(), deptIds);
+        IPage<NurseScheduleVO.Row> page = new Page<>(query.getPageNum(), query.getPageSize());
+        Long deptId = deptScopeProvider.resolveDeptId(query.getDeptId());
+        List<Long> deptIds = scopedDeptIds(query.getDeptId());
+        List<NurseScheduleVO.Row> records = bizNurseScheduleMapper.selectSchedulePage(page, TextUtil.trimToNull(query.getKeyword()),
+                query.getWardId(), deptId, query.getScheduleStatus(), query.getStartDate(), query.getEndDate(), deptIds);
         for (NurseScheduleVO.Row row : records) {
             row.setScheduleStatusText(StaffDutyStatusEnum.getText(row.getScheduleStatus()));
         }
@@ -500,8 +499,8 @@ public class NurseScheduleServiceImpl extends ServiceImpl<BizNurseScheduleMapper
 
     @Override
     public NurseScheduleVO.MonthWorkload monthWorkload(NurseScheduleDTO.WorkloadQuery query) {
-        NurseScheduleVO.Ward ward = requireUnit(query == null ? null : query.getUnitType(),
-                query == null ? null : query.getWardId());
+        NurseScheduleVO.Ward ward = requireUnit(query.getUnitType(),
+                query.getWardId());
         YearMonth ym = parseMonth(query.getMonth());
         LocalDate start = ym.atDay(1);
         LocalDate end = ym.atEndOfMonth();

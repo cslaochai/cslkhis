@@ -74,7 +74,7 @@
         <el-table-column label="临床诊断" min-width="140" prop="clinicalDiagnosis" show-overflow-tooltip/>
         <el-table-column label="状态" width="110">
           <template #default="{ row }">
-            <el-tag :type="statusTag(row.status) as any">{{ statusText(row.status) }}</el-tag>
+            <el-tag :type="statusTag(row.status)">{{ statusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column align="center" label="蜡块数" prop="blockCount" width="80"/>

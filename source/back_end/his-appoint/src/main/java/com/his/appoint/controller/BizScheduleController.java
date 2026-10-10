@@ -98,7 +98,7 @@ public class BizScheduleController {
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "今日在岗（跨岗位；可按指定时刻判定，支持跨零点夜班）")
     @PostMapping("/onDuty")
-    public Result<List<OnDutyStaffVO>> onDuty(@Valid @RequestBody(required = false) OnDutyQueryDTO queryDTO) {
+    public Result<List<OnDutyStaffVO>> onDuty(@Valid @RequestBody OnDutyQueryDTO queryDTO) {
         return Result.success(bizScheduleService.onDuty(queryDTO));
     }
 
@@ -111,7 +111,7 @@ public class BizScheduleController {
     @Operation(summary = "批量查询排班时间片段（日视图看板「医生 × 半小时段」一次拉全）")
     @PostMapping("/slotListBatch")
     public Result<List<ScheduleSlotVO>> slotListBatch(@Valid @RequestBody ScheduleSlotBatchQueryDTO dto) {
-        return Result.success(bizScheduleSlotService.listVOByScheduleIds(dto == null ? null : dto.getScheduleIds()));
+        return Result.success(bizScheduleSlotService.listVOByScheduleIds(dto.getScheduleIds()));
     }
 
     @PreAuthorize("hasAuthority('org:schedule:add')")

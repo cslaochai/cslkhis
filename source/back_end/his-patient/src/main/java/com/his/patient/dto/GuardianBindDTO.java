@@ -12,7 +12,9 @@ import java.io.Serializable;
 @Data
 public class GuardianBindDTO implements Serializable {
 
-    /** 患者姓名 */
+    /**
+     * 患者姓名
+     */
     @NotBlank(message = "请输入就诊人姓名")
     private String patientName;
 
@@ -22,7 +24,9 @@ public class GuardianBindDTO implements Serializable {
     @NotBlank(message = "请输入短信验证码")
     private String smsCode;
 
-    /** 关系码值（字典患者关系字典），必填 */
+    /**
+     * 关系码值（字典患者关系字典），必填
+     */
     @NotNull(message = "请选择与就诊人的关系")
     private Integer relation;
 }

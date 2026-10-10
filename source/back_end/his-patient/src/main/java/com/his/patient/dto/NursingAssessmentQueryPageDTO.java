@@ -11,15 +11,23 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class NursingAssessmentQueryPageDTO extends PageParam {
 
-    /** 入院ID */
+    /**
+     * 入院ID
+     */
     private Long admissionId;
 
-    /** 评估类型（1-压疮Braden 2-跌倒Morse 3-疼痛NRS） */
+    /**
+     * 评估类型（1-压疮Braden 2-跌倒Morse 3-疼痛NRS）
+     */
     private Integer assessType;
 
-    /** 病区ID */
+    /**
+     * 病区ID
+     */
     private Long wardId;
 
-    /** 患者姓名 */
+    /**
+     * 患者姓名
+     */
     private String patientName;
 }

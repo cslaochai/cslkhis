@@ -11,7 +11,7 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Schema(description = "院内工单检索条件")
-public class TicketSearchDTO extends PageParam {
+public class TicketPageQueryDTO extends PageParam {
 
     @Schema(description = "工单状态：0-待受理 1-处理中 2-已办结 3-已关闭，为空查全部")
     private Integer status;

@@ -15,12 +15,16 @@ import java.util.List;
 @Data
 public class NursingRecordBatchUpsertDTO {
 
-    /** 本批测量的统一时点（三测单按时点唯一） */
+    /**
+     * 本批测量的统一时点（三测单按时点唯一）
+     */
     @NotNull(message = "测量时间不能为空（同批 = 同一时点）")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime measureTime;
 
-    /** 班次：1-白班 2-小夜班 3-大夜班（可空） */
+    /**
+     * 班次：1-白班 2-小夜班 3-大夜班（可空）
+     */
     private Integer shift;
 
     @NotEmpty(message = "至少要有一行测量数据")
@@ -30,33 +34,57 @@ public class NursingRecordBatchUpsertDTO {
     @Data
     public static class BatchRow {
 
-        /** 入院ID */
+        /**
+         * 入院ID
+         */
         @NotNull(message = "入院ID不能为空")
         private Long admissionId;
 
-        /** 体温（℃） */
+        /**
+         * 体温（℃）
+         */
         private java.math.BigDecimal temperature;
-        /** 脉搏（次/分） */
+        /**
+         * 脉搏（次/分）
+         */
         private Integer pulse;
-        /** 呼吸（次/分） */
+        /**
+         * 呼吸（次/分）
+         */
         private Integer respiration;
-        /** 收缩压（mmHg） */
+        /**
+         * 收缩压（mmHg）
+         */
         private Integer systolicPressure;
-        /** 舒张压（mmHg） */
+        /**
+         * 舒张压（mmHg）
+         */
         private Integer diastolicPressure;
-        /** 血氧饱和度（%） */
+        /**
+         * 血氧饱和度（%）
+         */
         private Integer spo2;
 
-        /** 大便次数（次/日） */
+        /**
+         * 大便次数（次/日）
+         */
         private Integer stoolCount;
-        /** 尿量（ml） */
+        /**
+         * 尿量（ml）
+         */
         private Integer urineVolume;
-        /** 入量（ml） */
+        /**
+         * 入量（ml）
+         */
         private Integer intakeVolume;
-        /** 出量（ml） */
+        /**
+         * 出量（ml）
+         */
         private Integer outputVolume;
 
-        /** 备注 */
+        /**
+         * 备注
+         */
         private String remark;
     }
 }

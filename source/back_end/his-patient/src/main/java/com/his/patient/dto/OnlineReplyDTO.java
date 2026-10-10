@@ -15,13 +15,19 @@ public class OnlineReplyDTO implements Serializable {
     @NotNull(message = "问诊单ID不能为空")
     private Long id;
 
-    /** 医生回复 */
+    /**
+     * 医生回复
+     */
     @NotBlank(message = "回复内容不能为空")
     private String reply;
 
-    /** 处置建议 */
+    /**
+     * 处置建议
+     */
     private String advice;
 
-    /** 是否建议线下就诊（0-否 1-是） */
+    /**
+     * 是否建议线下就诊（0-否 1-是）
+     */
     private Integer needVisit;
 }

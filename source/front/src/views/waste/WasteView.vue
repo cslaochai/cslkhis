@@ -101,7 +101,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="重量(kg)">
-          <el-input-number v-model="createForm.weightKg as any" :min="0" :precision="2" style="width: 180px"/>
+          <el-input-number v-model="createForm.weightKg" :min="0" :precision="2" style="width: 180px"/>
         </el-form-item>
         <el-form-item label="产生科室" required>
           <el-select v-model="createForm.deptId" :fit-input-width="false" filterable

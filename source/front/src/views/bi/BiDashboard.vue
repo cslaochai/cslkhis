@@ -5,7 +5,7 @@
       <div v-for="k in kpis" :key="k.label" :data-testid="`bi-kpi-${k.color}`"
            class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm">
         <p class="text-xs text-gray-500">{{ k.label }}</p>
-        <p :class="{ blue: 'text-blue-600', green: 'text-green-600', amber: 'text-amber-600', purple: 'text-purple-600', red: 'text-red-600', teal: 'text-teal-600' }[k.color as any]"
+        <p :class="{ blue: 'text-blue-600', green: 'text-green-600', amber: 'text-amber-600', purple: 'text-purple-600', red: 'text-red-600', teal: 'text-teal-600' }[k.color]"
            class="text-2xl font-semibold mt-1">
           {{ k.value }}</p>
       </div>
@@ -19,7 +19,7 @@
           <p class="text-xs text-gray-500">{{ k.label }}</p>
           <p class="text-[10px] text-gray-400">近 30 日</p>
         </div>
-        <p :class="{ blue: 'text-blue-600', amber: 'text-amber-600', purple: 'text-purple-600', teal: 'text-teal-600' }[k.color as any]"
+        <p :class="{ blue: 'text-blue-600', amber: 'text-amber-600', purple: 'text-purple-600', teal: 'text-teal-600' }[k.color]"
            class="text-2xl font-semibold mt-1">
           {{ k.value }}</p>
         <p :title="k.sub" class="text-[11px] text-gray-400 mt-1 truncate">{{ k.sub }}</p>

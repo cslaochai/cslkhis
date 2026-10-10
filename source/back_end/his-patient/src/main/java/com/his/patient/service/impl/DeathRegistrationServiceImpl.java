@@ -83,11 +83,10 @@ public class DeathRegistrationServiceImpl extends ServiceImpl<BizDeathRegistrati
 
     @Override
     public PageResult<DeathRegisterVO.Row> listPage(DeathRegistrationDTO.QueryPage query) {
-        DeathRegistrationDTO.QueryPage q = query == null ? new DeathRegistrationDTO.QueryPage() : query;
-        Page<DeathRegisterVO.Row> page = new Page<>(q.getPageNum(), q.getPageSize());
-        List<DeathRegisterVO.Row> records = bizDeathRegistrationMapper.selectRegisterPage(page, TextUtil.trimToNull(q.getKeyword()),
-                q.getRegisterStatus(), q.getDeathType(), q.getPoliceFlag(), q.getDisputeFlag(),
-                TimeUtil.dayStart(q.getStartDate()), TimeUtil.dayEnd(q.getEndDate()));
+        Page<DeathRegisterVO.Row> page = new Page<>(query.getPageNum(), query.getPageSize());
+        List<DeathRegisterVO.Row> records = bizDeathRegistrationMapper.selectRegisterPage(page, TextUtil.trimToNull(query.getKeyword()),
+                query.getRegisterStatus(), query.getDeathType(), query.getPoliceFlag(), query.getDisputeFlag(),
+                TimeUtil.dayStart(query.getStartDate()), TimeUtil.dayEnd(query.getEndDate()));
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 

@@ -44,8 +44,8 @@ public class AuthServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impleme
 
     @Override
     public LoginVO login(LoginRequestDTO loginRequestDTO, HttpServletRequest request) {
-        String username = loginRequestDTO == null ? null : loginRequestDTO.getUsername();
-        String cipherPassword = loginRequestDTO == null ? null : loginRequestDTO.getPassword();
+        String username = loginRequestDTO.getUsername();
+        String cipherPassword = loginRequestDTO.getPassword();
         String password;
         try {
             password = passwordCipherService.decrypt(cipherPassword);
@@ -165,8 +165,8 @@ public class AuthServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impleme
 
         // 改密码是「新口令第一次上网」的场合，与登录同一对 SM2 公钥加密，明文一律拒收；
         // 不收口的话，登录加密就只拦了半条链路 —— 新口令照样在网络上裸奔。
-        String oldPassword = passwordCipherService.decrypt(changePasswordDTO == null ? null : changePasswordDTO.getOldPassword());
-        String newPassword = passwordCipherService.decrypt(changePasswordDTO == null ? null : changePasswordDTO.getNewPassword());
+        String oldPassword = passwordCipherService.decrypt(changePasswordDTO.getOldPassword());
+        String newPassword = passwordCipherService.decrypt(changePasswordDTO.getNewPassword());
 
         boolean success = sysUserService.changePassword(userId, oldPassword, newPassword);
 

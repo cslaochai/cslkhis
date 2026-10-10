@@ -83,7 +83,7 @@
         </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="statusTag(row.status) as any">{{ statusText(row.status) }}</el-tag>
+            <el-tag :type="statusTag(row.status)">{{ statusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="内镜医师" prop="endoscopist" width="100"/>

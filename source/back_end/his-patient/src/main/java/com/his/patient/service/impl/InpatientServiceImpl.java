@@ -212,7 +212,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
     @Transactional(rollbackFor = Exception.class)
     public Long admit(InpatientAdmitDTO dto) {
         // C-非 web 入参：除 InpatientController 外还被 BedCenterServiceImpl:592、his-appoint BizEmergencyServiceImpl:495 以内部构造的 InpatientAdmitDTO 直调，Bean Validation 不覆盖，保留
-        if (dto == null || dto.getPatientId() == null) {
+        if (dto.getPatientId() == null) {
             throw new BusinessException("患者不能为空");
         }
         // C-非 web 入参：同上（病区）——非 web 直调路径无 @Valid，保留
@@ -716,7 +716,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
         BedMapVO result = new BedMapVO();
 
         // 1) 科室收口：显式传的 deptId 先过授权校验（越权直接拒，不静默改写）
-        Long deptId = deptScopeProvider.resolveDeptId(query == null ? null : query.getDeptId());
+        Long deptId = deptScopeProvider.resolveDeptId(query.getDeptId());
         if (deptId == null) {
             // 不受限（data_scope=1）也没指定科室 → 落主岗位科室。
             // 不退化成"全院 1000+ 张卡"：那样既画不开，也不是任何人关心的视图。
@@ -729,7 +729,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
         result.setDeptId(deptId);
 
         // 2) 病区收口：病区必须属于已定科室，否则视为越界（跨科窥探）
-        Long wardId = query == null ? null : query.getWardId();
+        Long wardId = query.getWardId();
         if (wardId != null) {
             BedMapVO.WardOption owner = bedMapMapper.selectWardOwner(wardId);
             if (owner == null) {

@@ -11,12 +11,18 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class NutritionStatsQueryPageDTO extends PageParam {
 
-    /** 统计月份 yyyy-MM */
+    /**
+     * 统计月份 yyyy-MM
+     */
     private String statMonth;
 
-    /** 统计范围（1-全院 2-科室） */
+    /**
+     * 统计范围（1-全院 2-科室）
+     */
     private Integer scopeType;
 
-    /** 科室ID */
+    /**
+     * 科室ID
+     */
     private Long deptId;
 }

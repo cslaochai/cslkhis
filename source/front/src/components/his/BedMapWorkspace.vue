@@ -34,7 +34,7 @@
       <div class="ml-auto flex flex-wrap items-center gap-3 text-xs text-slate-600">
         <span v-for="lv in [[1, '特级'], [2, '一级'], [3, '二级'], [4, '三级']]" :key="lv[0]"
               class="flex items-center gap-1">
-          <i :style="{ background: NURSING_COLORS[lv[0] as number] }"
+          <i :style="{ background: NURSING_COLORS[lv[0]] }"
              class="inline-block w-2.5 h-4 rounded-sm"></i>{{ lv[1] }}护理
         </span>
         <span class="flex items-center gap-1">

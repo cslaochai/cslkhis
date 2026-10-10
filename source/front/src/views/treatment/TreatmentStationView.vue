@@ -86,7 +86,7 @@
             </el-table-column>
             <el-table-column label="执行" width="90">
               <template #default="{ row }">
-                <el-tag :type="execTag(row.execStatus) as any" data-testid="board-exec-status" size="small">
+                <el-tag :type="execTag(row.execStatus)" data-testid="board-exec-status" size="small">
                   {{ row.execStatusText }}
                 </el-tag>
               </template>
@@ -94,11 +94,11 @@
             <el-table-column label="计费" width="100">
               <template #default="{ row }">
                 <el-tooltip v-if="row.chargeFailReason" :content="row.chargeFailReason" placement="top">
-                  <el-tag :type="chargeTag(row.chargeStatus) as any" data-testid="board-charge-status" size="small">
+                  <el-tag :type="chargeTag(row.chargeStatus)" data-testid="board-charge-status" size="small">
                     {{ row.chargeStatusText }}
                   </el-tag>
                 </el-tooltip>
-                <el-tag v-else :type="chargeTag(row.chargeStatus) as any" data-testid="board-charge-status"
+                <el-tag v-else :type="chargeTag(row.chargeStatus)" data-testid="board-charge-status"
                         size="small">{{ row.chargeStatusText }}
                 </el-tag>
               </template>
@@ -316,13 +316,13 @@
             <el-table-column label="排期" prop="planDate" width="105"/>
             <el-table-column label="执行" width="90">
               <template #default="{ row }">
-                <el-tag :type="execTag(row.execStatus) as any" size="small">{{ row.execStatusText }}</el-tag>
+                <el-tag :type="execTag(row.execStatus)" size="small">{{ row.execStatusText }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column label="计费" width="100">
               <template #default="{ row }">
                 <el-tooltip :content="row.chargeFailReason" :disabled="!row.chargeFailReason" placement="top">
-                  <el-tag :type="chargeTag(row.chargeStatus) as any" data-testid="led-charge-status" size="small">
+                  <el-tag :type="chargeTag(row.chargeStatus)" data-testid="led-charge-status" size="small">
                     {{ row.chargeStatusText }}
                   </el-tag>
                 </el-tooltip>
@@ -458,12 +458,12 @@
             <el-table-column label="排期" prop="planDate" width="105"/>
             <el-table-column label="执行" width="90">
               <template #default="{ row }">
-                <el-tag :type="execTag(row.execStatus) as any" size="small">{{ row.execStatusText }}</el-tag>
+                <el-tag :type="execTag(row.execStatus)" size="small">{{ row.execStatusText }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column label="计费" width="100">
               <template #default="{ row }">
-                <el-tag :type="chargeTag(row.chargeStatus) as any" size="small">{{ row.chargeStatusText }}</el-tag>
+                <el-tag :type="chargeTag(row.chargeStatus)" size="small">{{ row.chargeStatusText }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column align="right" label="金额" width="80">

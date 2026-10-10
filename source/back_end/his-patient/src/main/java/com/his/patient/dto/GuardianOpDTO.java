@@ -11,7 +11,9 @@ import java.io.Serializable;
 @Data
 public class GuardianOpDTO implements Serializable {
 
-    /** 体检人ID */
+    /**
+     * 体检人ID
+     */
     @NotNull(message = "就诊人ID不能为空")
     private Long patientId;
 }

@@ -9,15 +9,21 @@ import lombok.Data;
 @Data
 public class PatientMergeDTO {
 
-    /** 主档患者ID（保留的这个） */
+    /**
+     * 主档患者ID（保留的这个）
+     */
     @NotNull(message = "主档与被并档案都必须指定")
     private Long masterId;
 
-    /** 被并入的患者ID（合并后在册状态失效） */
+    /**
+     * 被并入的患者ID（合并后在册状态失效）
+     */
     @NotNull(message = "主档与被并档案都必须指定")
     private Long mergedId;
 
-    /** 合并理由（必填；级别不同要求的长度不同，见 PatientMatchLevelEnum.minReasonLength） */
+    /**
+     * 合并理由（必填；级别不同要求的长度不同，见 PatientMatchLevelEnum.minReasonLength）
+     */
     private String reason;
 
     /**

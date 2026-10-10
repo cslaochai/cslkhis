@@ -88,7 +88,7 @@
             <el-table-column label="失效日期" prop="expireDate" width="105"/>
             <el-table-column label="效期" width="90">
               <template #default="{ row }">
-                <el-tag v-if="row.expireDays != null" :type="expireTag(row) as any" size="small">
+                <el-tag v-if="row.expireDays != null" :type="expireTag(row)" size="small">
                   {{ Number(row.expireDays) < 0 ? '已过期' : `${row.expireDays}天` }}
                 </el-tag>
                 <span v-else class="text-gray-300">-</span>

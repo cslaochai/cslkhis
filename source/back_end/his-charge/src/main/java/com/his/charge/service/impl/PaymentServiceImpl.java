@@ -90,7 +90,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
     @Override
     @Transactional(rollbackFor = Exception.class)
     public List<BizPaymentTxnVO> pay(BillPayDTO dto) {
-        if (dto == null || dto.getBillId() == null || CollectionUtils.isEmpty(dto.getItems())) {
+        if (dto.getBillId() == null || CollectionUtils.isEmpty(dto.getItems())) {
             throw new BusinessException("缺少账单或收款明细");
         }
         BizSettlementBill bill = requirePayableBill(dto.getBillId());
@@ -141,7 +141,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
     @Override
     @Transactional(rollbackFor = Exception.class)
     public List<BizPaymentTxnVO> refund(BillRefundDTO dto) {
-        if (dto == null || dto.getBillId() == null) {
+        if (dto.getBillId() == null) {
             throw new BusinessException("缺少账单");
         }
         if (!TextUtil.hasText(dto.getReason())) {

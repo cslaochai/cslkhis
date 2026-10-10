@@ -429,6 +429,28 @@
   临床取值范围与单位提示。这些与"字段填没填"无关，DTO 注解无处安放。
   机械判据：`grep -A1 "if (dto.get.*== null\|if (!TextUtil.hasText(dto.get" service/impl/*.java`
   里抛「不能为空/必填」的行，除上述三类（带注释标注类别）之外为 0。
+- **入参 DTO 对象本身一律不许判空兜底**（2026-10-10 全仓清理，`@RequestBody(required = false)` 18 处清零）：
+  `TicketPageQueryDTO q = pageQueryDTO == null ? new TicketPageQueryDTO() : pageQueryDTO;`
+  这类写法（含 `if (q == null) q = new Q();`、`Q q = query != null ? query : new Q();` 三种拼写）
+  **在 web 链路上是死代码**：`@RequestBody` 默认 `required=true`，缺请求体由 Spring 抛
+  `HttpMessageNotReadableException`（已兜成 400），GET/表单的 `@Valid XxxQueryPageDTO` 走
+  `@ModelAttribute` 必然被实例化 —— 参数永远不可能为 null。而 `@RequestBody(required = false)`
+  是它唯一的活口，等于「让空请求体静默变成一次默认分页查询」，把调用方漏传 body 的 bug 洗成
+  「接口看起来能用」。口径：**`required = false` 一律删掉**（本仓 18 处已清零），空请求体 = 400；
+  默认值由 `PageParam` 的 getter 夹取提供，不需要在 service 里 `new` 一个空 DTO 去兜。
+  危害不是冗余，是**同一接口两种语义**：漏 body 的调用方拿到第 1 页数据而不是错误，
+  于是「前端没传筛选条件」在联调时看不出来，而 service 里那份判空还会诱导后来人以为
+  这个方法有非 web 调用方，往 true 方向继续加兜底。
+  **只有第②类（非 web 入口）才留**，且必须带注释写明：本仓仅剩 `FeeBookDTO`（跨模块记账 SPI）、
+  `SignCommandDTO`/`QcExecuteDTO`（内部指令）、`StockBatchMoveDTO`（调拨/退货 service 现造）、
+  `TechAuthGateDTO`（技术授权闸门内部入参）、`PatientSearchScopeDTO`（重载显式传 null 的契约）。
+  合并式写法 `if (dto == null || dto.getBillId() == null) throw` 只删前半截，字段级校验原样保留。
+  机械判据（三条都必须为空）：
+  ```bash
+  grep -rnE "\w+\s+\w+\s*=\s*\w+\s*(==|!=)\s*null\s*\?" --include=*.java source/back_end        # 三元兜底
+  grep -rn -A2 "if (\w+ == null) {" --include=*.java source/back_end | grep "new [A-Za-z]*DTO"  # 块内重建
+  grep -rn "RequestBody(required" --include=*.java source/back_end                              # 活口本身
+  ```
 - **查询接口的 GET/`@RequestParam` 不做"必填装饰"**：`@RequestParam` 默认 `required=true` 已经是必填
   （缺参由 Spring 抛 `MissingServletRequestParameterException`），不要再补 `if (x == null) throw`；
   要收口分页参数就放在 `PageDTO` 基类的 `@Min/@Max` 上。
@@ -844,9 +866,11 @@
   环境凭据只按文件名精确匹配（`环境凭据.md` / `*环境凭据*`）。
 - **提交前必扫**（口令曾明文躺在已入库的 `application.yml` 里，2026-10-03 才清掉）：
   ```bash
-  git grep -n -I -E "Feng123456!|his-system-jwt-secret|laochai:" --cached -- .
+  git grep --cached -n -I -E "Feng123456!|his-system-jwt-secret|laochai:" -- .
   ```
   无输出才算干净。`docs/er/vendor/mermaid.min.js` 里的 `"0123456789"` 是误报，人工看上下文。
+  ⚠ `--cached` 必须排在模式串**之前**：写成 `… -E "pattern" --cached -- .` 时 git 把 `--cached`
+  当 revision 解析，直接 `fatal: unable to resolve revision: --cached`，等于这道闸没跑（原命令就是错的）。
 - **改了 `application.yml` 的凭据配置必须重启实测**：`mvn -o -DskipTests install` → 停旧 JVM →
   `java -jar his-web/target/his-backend.jar` → 探 `/api/auth/info`（期望 401）→ 跑登录脚本。
   端点 401 只说明进程活着，**还要跑一次 `POST /auth/login` + `POST /system/dict/refreshCache`**

@@ -92,12 +92,11 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
 
     @Override
     public PageResult<InpatientLeaveVO.Row> listPage(InpatientLeaveDTO.QueryPage query) {
-        InpatientLeaveDTO.QueryPage q = query == null ? new InpatientLeaveDTO.QueryPage() : query;
-        Page<InpatientLeaveVO.Row> page = new Page<>(q.getPageNum(), q.getPageSize());
-        List<Long> deptIds = scopedDeptIds(q.getDeptId());
+        Page<InpatientLeaveVO.Row> page = new Page<>(query.getPageNum(), query.getPageSize());
+        List<Long> deptIds = scopedDeptIds(query.getDeptId());
         List<InpatientLeaveVO.Row> records = bizInpatientLeaveMapper.selectLeavePage(page,
-                TextUtil.trimToNull(q.getKeyword()), q.getLeaveType(), q.getLeaveStatus(), q.getOverdueOnly(),
-                TimeUtil.dayStart(q.getStartDate()), TimeUtil.dayEnd(q.getEndDate()), q.getDeptId(), deptIds);
+                TextUtil.trimToNull(query.getKeyword()), query.getLeaveType(), query.getLeaveStatus(), query.getOverdueOnly(),
+                TimeUtil.dayStart(query.getStartDate()), TimeUtil.dayEnd(query.getEndDate()), query.getDeptId(), deptIds);
         for (InpatientLeaveVO.Row row : records) {
             applyOverdue(row);
         }

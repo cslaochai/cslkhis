@@ -556,18 +556,17 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
 
     @Override
     public List<OnDutyStaffVO> onDuty(OnDutyQueryDTO queryDTO) {
-        OnDutyQueryDTO cond = queryDTO == null ? new OnDutyQueryDTO() : queryDTO;
-        Long deptId = cond.getDeptId() != null ? cond.getDeptId() : currentDeptId();
+        Long deptId = queryDTO.getDeptId() != null ? queryDTO.getDeptId() : currentDeptId();
         if (deptId == null) {
             return List.of();
         }
-        LocalDate date = cond.getDate() != null ? cond.getDate() : LocalDate.now();
-        LocalTime moment = cond.getMoment() == null
+        LocalDate date = queryDTO.getDate() != null ? queryDTO.getDate() : LocalDate.now();
+        LocalTime moment = queryDTO.getMoment() == null
                 ? LocalTime.now()
-                : ShiftCoverUtil.parseShiftTime(cond.getMoment());
-        boolean onlyOnDuty = !Boolean.FALSE.equals(cond.getOnDutyOnly());
+                : ShiftCoverUtil.parseShiftTime(queryDTO.getMoment());
+        boolean onlyOnDuty = !Boolean.FALSE.equals(queryDTO.getOnDutyOnly());
 
-        List<BizSchedule> rows = loadDaySchedule(deptId, date, cond.getStaffType());
+        List<BizSchedule> rows = loadDaySchedule(deptId, date, queryDTO.getStaffType());
         List<OnDutyStaffVO> all = rows.stream().map(s -> toOnDutyVO(s, moment)).toList();
         if (!onlyOnDuty) {
             return all;

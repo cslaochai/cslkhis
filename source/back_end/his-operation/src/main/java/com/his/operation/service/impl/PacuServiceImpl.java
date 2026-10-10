@@ -52,9 +52,6 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
 
     @Override
     public IPage<PacuRecordVO> listPage(PacuQueryPageDTO query) {
-        if (query == null) {
-            query = new PacuQueryPageDTO();
-        }
         IPage<PacuRecordVO> page = bizAnesthesiaPacuMapper.selectPacuPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query);
         page.getRecords().forEach(this::decorate);
@@ -141,7 +138,7 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void score(PacuScoreDTO dto) {
-        BizAnesthesiaPacu entity = mustInRoom(dto == null ? null : dto.getPacuId());
+        BizAnesthesiaPacu entity = mustInRoom(dto.getPacuId());
         // B-条件必填：标记发生并发症时才要求经过与处理，跨字段条件，DTO 注解无法表达，保留
         if (Integer.valueOf(1).equals(dto.getComplicationFlag()) && !TextUtil.hasText(dto.getComplicationNote())) {
             throw new BusinessException("已标记发生并发症，必须填写经过与处理");
@@ -177,7 +174,7 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OperationChargeSummaryVO leave(PacuLeaveDTO dto) {
-        BizAnesthesiaPacu entity = mustInRoom(dto == null ? null : dto.getPacuId());
+        BizAnesthesiaPacu entity = mustInRoom(dto.getPacuId());
         if (entity.getAldreteTotal() == null) {
             throw new BusinessException("尚未完成 Aldrete 评分，不能出室");
         }
@@ -231,7 +228,7 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OperationChargeSummaryVO charge(AnesthesiaActionDTO dto) {
-        BizAnesthesiaPacu entity = mustGet(dto == null ? null : dto.getId());
+        BizAnesthesiaPacu entity = mustGet(dto.getId());
         OperationChargeSummaryVO summary;
         try {
             summary = operationChargeBiller.billPacu(entity);

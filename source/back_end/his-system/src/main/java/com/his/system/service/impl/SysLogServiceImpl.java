@@ -59,10 +59,6 @@ public class SysLogServiceImpl implements SysLogService {
 
     // 操作日志
 
-    private static LogQueryPageDTO orEmpty(LogQueryPageDTO query) {
-        return query == null ? new LogQueryPageDTO() : query;
-    }
-
     // 登录日志
 
     /**
@@ -141,25 +137,24 @@ public class SysLogServiceImpl implements SysLogService {
 
     @Override
     public PageResult<OperLogListVO> operLogListPage(LogQueryPageDTO query) {
-        LogQueryPageDTO q = orEmpty(query);
-        String operator = TextUtil.trimToNull(q.getOperator());
-        String module = TextUtil.trimToNull(q.getModule());
-        String keyword = TextUtil.trimToNull(q.getKeyword());
+        String operator = TextUtil.trimToNull(query.getOperator());
+        String module = TextUtil.trimToNull(query.getModule());
+        String keyword = TextUtil.trimToNull(query.getKeyword());
         LambdaQueryWrapper<SysOperLog> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysOperLog::getDelFlag, 0)
                 .like(operator != null, SysOperLog::getOperName, operator)
                 .like(module != null, SysOperLog::getTitle, module)
-                .eq(q.getBusinessType() != null, SysOperLog::getBusinessType, q.getBusinessType())
-                .eq(q.getStatus() != null, SysOperLog::getStatus, q.getStatus());
+                .eq(query.getBusinessType() != null, SysOperLog::getBusinessType, query.getBusinessType())
+                .eq(query.getStatus() != null, SysOperLog::getStatus, query.getStatus());
         if (keyword != null) {
             wrapper.and(w -> w.like(SysOperLog::getOperUrl, keyword)
                     .or().like(SysOperLog::getMethod, keyword)
                     .or().like(SysOperLog::getOperIp, keyword));
         }
-        applyRange(wrapper, q, SysOperLog::getOperTime);
+        applyRange(wrapper, query, SysOperLog::getOperTime);
         wrapper.orderByDesc(SysOperLog::getOperTime).orderByDesc(SysOperLog::getId);
 
-        IPage<SysOperLog> page = sysOperLogMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), wrapper);
+        IPage<SysOperLog> page = sysOperLogMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         List<OperLogListVO> records = page.getRecords().stream().map(this::toOperVO).toList();
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -198,35 +193,33 @@ public class SysLogServiceImpl implements SysLogService {
 
     @Override
     public PageResult<LoginLogVO> loginLogListPage(LogQueryPageDTO query) {
-        LogQueryPageDTO q = orEmpty(query);
-        String operator = TextUtil.trimToNull(q.getOperator());
-        String keyword = TextUtil.trimToNull(q.getKeyword());
+        String operator = TextUtil.trimToNull(query.getOperator());
+        String keyword = TextUtil.trimToNull(query.getKeyword());
         LambdaQueryWrapper<SysLoginLog> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysLoginLog::getDelFlag, 0)
-                .eq(q.getStatus() != null, SysLoginLog::getLoginStatus, q.getStatus());
+                .eq(query.getStatus() != null, SysLoginLog::getLoginStatus, query.getStatus());
         if (operator != null) {
             wrapper.and(w -> w.like(SysLoginLog::getUserName, operator).or().like(SysLoginLog::getRealName, operator));
         }
         if (keyword != null) {
             wrapper.and(w -> w.like(SysLoginLog::getLoginIp, keyword).or().like(SysLoginLog::getMsg, keyword));
         }
-        applyRange(wrapper, q, SysLoginLog::getLoginTime);
+        applyRange(wrapper, query, SysLoginLog::getLoginTime);
         wrapper.orderByDesc(SysLoginLog::getLoginTime).orderByDesc(SysLoginLog::getId);
 
-        IPage<SysLoginLog> page = sysLoginLogMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), wrapper);
+        IPage<SysLoginLog> page = sysLoginLogMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         List<LoginLogVO> records = page.getRecords().stream().map(this::toLoginVO).toList();
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 
     @Override
     public PageResult<AuditLogVO> auditLogListPage(LogQueryPageDTO query) {
-        LogQueryPageDTO q = orEmpty(query);
-        String operator = TextUtil.trimToNull(q.getOperator());
-        String module = TextUtil.trimToNull(q.getModule());
-        String operation = TextUtil.trimToNull(q.getOperation());
-        String targetType = TextUtil.trimToNull(q.getTargetType());
-        String targetId = TextUtil.trimToNull(q.getTargetId());
-        String keyword = TextUtil.trimToNull(q.getKeyword());
+        String operator = TextUtil.trimToNull(query.getOperator());
+        String module = TextUtil.trimToNull(query.getModule());
+        String operation = TextUtil.trimToNull(query.getOperation());
+        String targetType = TextUtil.trimToNull(query.getTargetType());
+        String targetId = TextUtil.trimToNull(query.getTargetId());
+        String keyword = TextUtil.trimToNull(query.getKeyword());
         LambdaQueryWrapper<SysAuditLog> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysAuditLog::getDelFlag, 0)
                 .like(module != null, SysAuditLog::getModule, module)
@@ -234,19 +227,19 @@ public class SysLogServiceImpl implements SysLogService {
                 .like(targetType != null, SysAuditLog::getTargetType, targetType)
                 .like(targetId != null, SysAuditLog::getTargetId, targetId)
                 .like(operator != null, SysAuditLog::getUserName, operator);
-        if (q.getStatus() != null) {
+        if (query.getStatus() != null) {
             // 审计日志 status 口径：1-成功 0-失败（与操作日志相反，入参仍按"看结果"给）
-            wrapper.eq(SysAuditLog::getStatus, q.getStatus());
+            wrapper.eq(SysAuditLog::getStatus, query.getStatus());
         }
         if (keyword != null) {
             wrapper.and(w -> w.like(SysAuditLog::getContent, keyword)
                     .or().like(SysAuditLog::getTargetId, keyword)
                     .or().like(SysAuditLog::getIp, keyword));
         }
-        applyRange(wrapper, q, SysAuditLog::getCreateTime);
+        applyRange(wrapper, query, SysAuditLog::getCreateTime);
         wrapper.orderByDesc(SysAuditLog::getCreateTime).orderByDesc(SysAuditLog::getId);
 
-        IPage<SysAuditLog> page = sysAuditLogMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), wrapper);
+        IPage<SysAuditLog> page = sysAuditLogMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         List<AuditLogVO> records = page.getRecords().stream().map(this::toAuditVO).toList();
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -264,12 +257,11 @@ public class SysLogServiceImpl implements SysLogService {
 
     @Override
     public PageResult<FieldChangeVO> fieldChangeListPage(LogQueryPageDTO query) {
-        LogQueryPageDTO q = orEmpty(query);
-        String bizType = TextUtil.trimToNull(q.getTargetType());
-        String bizId = TextUtil.trimToNull(q.getTargetId());
-        String field = TextUtil.trimToNull(q.getFieldName());
-        String operator = TextUtil.trimToNull(q.getOperator());
-        String keyword = TextUtil.trimToNull(q.getKeyword());
+        String bizType = TextUtil.trimToNull(query.getTargetType());
+        String bizId = TextUtil.trimToNull(query.getTargetId());
+        String field = TextUtil.trimToNull(query.getFieldName());
+        String operator = TextUtil.trimToNull(query.getOperator());
+        String keyword = TextUtil.trimToNull(query.getKeyword());
         LambdaQueryWrapper<SysFieldChangeLog> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysFieldChangeLog::getDelFlag, 0)
                 .eq(bizType != null, SysFieldChangeLog::getBizType, bizType)
@@ -288,12 +280,12 @@ public class SysLogServiceImpl implements SysLogService {
                     .or().like(SysFieldChangeLog::getOldValue, keyword)
                     .or().like(SysFieldChangeLog::getNewValue, keyword));
         }
-        applyRange(wrapper, q, SysFieldChangeLog::getChangeTime);
+        applyRange(wrapper, query, SysFieldChangeLog::getChangeTime);
         // 分页必须补唯一二级键：同一毫秒落的多行靠 id 兜底，否则翻页会出现重复行/丢行
         wrapper.orderByDesc(SysFieldChangeLog::getChangeTime).orderByDesc(SysFieldChangeLog::getId);
 
         IPage<SysFieldChangeLog> page =
-                sysFieldChangeLogMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), wrapper);
+                sysFieldChangeLogMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         List<FieldChangeVO> records = page.getRecords().stream().map(this::toFieldChangeVO).toList();
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -387,16 +379,15 @@ public class SysLogServiceImpl implements SysLogService {
 
     @Override
     public String exportCsv(LogQueryPageDTO query) {
-        LogQueryPageDTO q = orEmpty(query);
-        int type = q.getLogType() == null ? 1 : q.getLogType();
-        q.forExport(EXPORT_MAX);
+        int type = query.getLogType() == null ? 1 : query.getLogType();
+        query.forExport(EXPORT_MAX);
         StringBuilder sb = new StringBuilder();
         // BOM：Excel 打开 UTF-8 CSV 不加 BOM 会全屏乱码
         sb.append('\uFEFF');
         switch (type) {
             case 2 -> {
                 sb.append("用户名,姓名,登录IP,地点,浏览器,操作系统,状态,提示,登录时间\n");
-                for (LoginLogVO r : loginLogListPage(q).getRecords()) {
+                for (LoginLogVO r : loginLogListPage(query).getRecords()) {
                     sb.append(csv(r.getUserName())).append(',')
                             .append(csv(r.getRealName())).append(',')
                             .append(csv(r.getLoginIp())).append(',')
@@ -410,7 +401,7 @@ public class SysLogServiceImpl implements SysLogService {
             }
             case 3 -> {
                 sb.append("时间,操作人,模块,操作,对象类型,对象ID,内容,IP,结果\n");
-                for (AuditLogVO r : auditLogListPage(q).getRecords()) {
+                for (AuditLogVO r : auditLogListPage(query).getRecords()) {
                     sb.append(r.getCreateTime() == null ? "" : r.getCreateTime()).append(',')
                             .append(csv(r.getUserName())).append(',')
                             .append(csv(r.getModule())).append(',')
@@ -424,7 +415,7 @@ public class SysLogServiceImpl implements SysLogService {
             }
             case 4 -> {
                 sb.append("时间,对象类型,对象编号,对象名称,字段,变更前,变更后,变更类型,操作人,科室,批次号\n");
-                for (FieldChangeVO r : fieldChangeListPage(q).getRecords()) {
+                for (FieldChangeVO r : fieldChangeListPage(query).getRecords()) {
                     sb.append(r.getChangeTime() == null ? "" : r.getChangeTime()).append(',')
                             .append(csv(r.getBizTypeText())).append(',')
                             .append(csv(r.getBizNo())).append(',')
@@ -440,7 +431,7 @@ public class SysLogServiceImpl implements SysLogService {
             }
             default -> {
                 sb.append("时间,模块,业务类型,方法,请求方式,操作人,科室,URL,IP,地点,状态,耗时(ms),失败原因\n");
-                for (OperLogListVO r : operLogListPage(q).getRecords()) {
+                for (OperLogListVO r : operLogListPage(query).getRecords()) {
                     sb.append(r.getOperTime() == null ? "" : r.getOperTime()).append(',')
                             .append(csv(r.getTitle())).append(',')
                             .append(csv(r.getBusinessTypeText())).append(',')

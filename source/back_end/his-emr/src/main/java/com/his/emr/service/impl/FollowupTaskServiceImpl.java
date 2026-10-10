@@ -88,19 +88,18 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
 
     @Override
     public PageResult<BizFollowupTaskVO> listPage(FollowupQueryDTO dto) {
-        FollowupQueryDTO q = dto == null ? new FollowupQueryDTO() : dto;
         LambdaQueryWrapper<BizFollowupTask> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(q.getPatientId() != null, BizFollowupTask::getPatientId, q.getPatientId())
-                .like(TextUtil.hasText(q.getPatientName()), BizFollowupTask::getPatientName,
-                        q.getPatientName() == null ? null : q.getPatientName().trim())
-                .eq(q.getFollowupType() != null, BizFollowupTask::getFollowupType, q.getFollowupType())
-                .eq(q.getFollowupStatus() != null, BizFollowupTask::getFollowupStatus, q.getFollowupStatus());
-        if (Boolean.TRUE.equals(q.getOverdueOnly())) {
+        wrapper.eq(dto.getPatientId() != null, BizFollowupTask::getPatientId, dto.getPatientId())
+                .like(TextUtil.hasText(dto.getPatientName()), BizFollowupTask::getPatientName,
+                        dto.getPatientName() == null ? null : dto.getPatientName().trim())
+                .eq(dto.getFollowupType() != null, BizFollowupTask::getFollowupType, dto.getFollowupType())
+                .eq(dto.getFollowupStatus() != null, BizFollowupTask::getFollowupStatus, dto.getFollowupStatus());
+        if (Boolean.TRUE.equals(dto.getOverdueOnly())) {
             // 逾期是派生条件（状态 1/2 且计划时间已过），库里没有 also 不存在的「已逾期」状态
             wrapper.in(BizFollowupTask::getFollowupStatus, FollowupTaskStatusEnum.PENDING.getCode(), FollowupTaskStatusEnum.DOING.getCode())
                     .lt(BizFollowupTask::getFollowupTime, LocalDateTime.now());
         }
-        List<Long> scope = scopedDeptIds(q.getDeptId());
+        List<Long> scope = scopedDeptIds(dto.getDeptId());
         if (scope != null) {
             wrapper.in(BizFollowupTask::getDeptId, scope);
         }
@@ -108,7 +107,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
                 // 同秒计划任务排序不稳定 → 补 id 二级键，否则翻页可能重复/丢行
                 .orderByAsc(BizFollowupTask::getId);
 
-        Page<BizFollowupTask> page = this.page(new Page<>(q.getPageNum(), q.getPageSize()), wrapper);
+        Page<BizFollowupTask> page = this.page(new Page<>(dto.getPageNum(), dto.getPageSize()), wrapper);
         List<BizFollowupTaskVO> voList = page.getRecords().stream()
                 .map(t -> toVo(t, false)).collect(Collectors.toList());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), voList);

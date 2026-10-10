@@ -6,8 +6,8 @@ import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
-import com.his.miniapp.dto.TicketHandleDTO;
-import com.his.miniapp.dto.TicketSearchDTO;
+import com.his.miniapp.dto.TicketHandleUpsertDTO;
+import com.his.miniapp.dto.TicketPageQueryDTO;
 import com.his.miniapp.entity.BizServiceMessage;
 import com.his.miniapp.entity.BizServiceTicketLog;
 import com.his.miniapp.mapper.MiniServiceMessageMapper;
@@ -52,13 +52,16 @@ public class MiniServiceTicketAdminServiceImpl extends ServiceImpl<MiniServiceMe
     }
 
     @Override
-    public PageResult<MiniServiceMessageListVO> adminPage(TicketSearchDTO dto) {
-        TicketSearchDTO query = dto == null ? new TicketSearchDTO() : dto;
+    public PageResult<MiniServiceMessageListVO> listPage(TicketPageQueryDTO query) {
         int pageNum = query.getPageNum();
         int pageSize = query.getPageSize();
 
         String keyword = TextUtil.hasText(query.getKeyword()) ? query.getKeyword().trim() : null;
-        String mine = Boolean.TRUE.equals(query.getOnlyMine()) ? currentUsername() : null;
+        String current = currentUsername();
+        if (current == null) {
+            throw new BusinessException("未获取到登录用户");
+        }
+        boolean onlyMine = Boolean.TRUE.equals(query.getOnlyMine());
 
         LambdaQueryWrapper<BizServiceMessage> w = new LambdaQueryWrapper<>();
         w.and(TextUtil.hasText(keyword), q -> q.like(BizServiceMessage::getMessageNo, keyword)
@@ -66,10 +69,17 @@ public class MiniServiceTicketAdminServiceImpl extends ServiceImpl<MiniServiceMe
                         .or().like(BizServiceMessage::getPatientName, keyword)
                         .or().like(BizServiceMessage::getContactPhone, keyword))
                 .eq(query.getStatus() != null, BizServiceMessage::getStatus, query.getStatus())
-                .eq(TextUtil.hasText(query.getCategoryCode()), BizServiceMessage::getCategoryCode, query.getCategoryCode())
-                .eq(mine != null, BizServiceMessage::getAcceptBy, mine)
-                // 待受理优先：客服进来是找新单，不是翻历史
-                .orderByAsc(BizServiceMessage::getStatus)
+                .eq(TextUtil.hasText(query.getCategoryCode()), BizServiceMessage::getCategoryCode, query.getCategoryCode());
+        if (onlyMine) {
+            // 只看自己接的单（不含未分配的抢单池）
+            w.eq(BizServiceMessage::getAcceptBy, current);
+        } else {
+            // 默认：未分配的抢单池（任意客服可见）+ 我接的工单；已分配给他人的不可见
+            w.and(q -> q.isNull(BizServiceMessage::getAcceptBy)
+                    .or().eq(BizServiceMessage::getAcceptBy, current));
+        }
+        // 待受理优先：客服进来是找新单，不是翻历史
+        w.orderByAsc(BizServiceMessage::getStatus)
                 .orderByDesc(BizServiceMessage::getCreateTime)
                 // 分页补唯一二级键
                 .orderByDesc(BizServiceMessage::getId);
@@ -137,13 +147,13 @@ public class MiniServiceTicketAdminServiceImpl extends ServiceImpl<MiniServiceMe
     // 私有
 
     @Override
-    public void handle(TicketHandleDTO dto) {
-        BizServiceMessage ticket = requireTicket(dto.getId());
-        String action = dto.getAction() == null ? "" : dto.getAction().trim();
+    public void handle(TicketHandleUpsertDTO upsertDTO) {
+        BizServiceMessage ticket = requireTicket(upsertDTO.getId());
+        String action = upsertDTO.getAction() == null ? "" : upsertDTO.getAction().trim();
         CurrentUser user = UserUtils.getCurrentUser();
         String operator = user == null ? null : user.getUsername();
         String operatorName = user == null ? null : user.getRealName();
-        String content = TextUtil.cut(dto.getContent(), LOG_CONTENT_MAX);
+        String content = TextUtil.cut(upsertDTO.getContent(), LOG_CONTENT_MAX);
 
         switch (action) {
             case "accept" -> {
@@ -178,7 +188,7 @@ public class MiniServiceTicketAdminServiceImpl extends ServiceImpl<MiniServiceMe
                 ticket.setLastReplyTime(LocalDateTime.now());
                 ticket.setHandleBy(operator);
                 miniServiceMessageMapper.updateById(ticket);
-                int visible = dto.getVisibleToPatient() == null ? 1 : dto.getVisibleToPatient();
+                int visible = upsertDTO.getVisibleToPatient() == null ? 1 : upsertDTO.getVisibleToPatient();
                 writeLog(ticket, ServiceTicketStatus.ACT_REPLY, content, visible, operator, operatorName);
             }
             case "finish" -> {
@@ -217,7 +227,7 @@ public class MiniServiceTicketAdminServiceImpl extends ServiceImpl<MiniServiceMe
                 if (!TextUtil.hasText(content)) {
                     throw new BusinessException("备注内容不能为空");
                 }
-                int visible = dto.getVisibleToPatient() == null ? 0 : dto.getVisibleToPatient();
+                int visible = upsertDTO.getVisibleToPatient() == null ? 0 : upsertDTO.getVisibleToPatient();
                 writeLog(ticket, ServiceTicketStatus.ACT_REPLY, content, visible, operator, operatorName);
             }
             default -> throw new BusinessException("不支持的动作：" + action);
@@ -232,6 +242,11 @@ public class MiniServiceTicketAdminServiceImpl extends ServiceImpl<MiniServiceMe
         BizServiceMessage ticket = miniServiceMessageMapper.selectById(id);
         if (ticket == null) {
             throw new BusinessException("工单不存在");
+        }
+        // 数据归属：未分配的工单属抢单池，任意客服可看可操作；已分配的只有受理人本人才可见
+        String cur = currentUsername();
+        if (ticket.getAcceptBy() != null && cur != null && !ticket.getAcceptBy().equals(cur)) {
+            throw new BusinessException("工单不存在或无权查看");
         }
         return ticket;
     }

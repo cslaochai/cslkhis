@@ -16,11 +16,15 @@ public class DietPlanStopDTO {
     @NotNull(message = "膳食方案ID不能为空")
     private Long id;
 
-    /** 停止时间，为空取当前时间 */
+    /**
+     * 停止时间，为空取当前时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime stopTime;
 
-    /** 停止原因（必填，落 remark） */
+    /**
+     * 停止原因（必填，落 remark）
+     */
     @NotBlank(message = "停餐必须填写原因（拒食/检查禁食/转出病区等，无原因的停餐在病历上说不通）")
     private String reason;
 }

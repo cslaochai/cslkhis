@@ -57,7 +57,7 @@ public class TransfusionApplyController {
     @PostMapping("/approve")
     public Result<String> approve(@RequestBody @Valid TransfusionApproveDTO dto) {
         transfusionApplyService.approve(dto);
-        return Result.success(dto != null && Integer.valueOf(2).equals(dto.getApproveResult())
+        return Result.success(Integer.valueOf(2).equals(dto.getApproveResult())
                 ? "已驳回，申请人修改后可重新提交" : "审批通过，可进入配血", null);
     }
 

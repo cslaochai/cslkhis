@@ -116,14 +116,18 @@
 
     <!-- 组表 -->
     <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm">
-      <p class="text-sm font-medium mb-3">组表 sys_drg_group（CHS-DRG 1.1 模拟种子，正式方案接入后重导）</p>
+      <p class="text-sm font-medium mb-3">DRG 细分组目录（CHS-DRG 3.0 官方方案；权重与支付标准由统筹区医保局下发，未下发处显示 —）</p>
       <el-table :data="groups" border data-testid="drg-group-table" max-height="280" stripe>
         <el-table-column label="组编码" prop="drgCode" width="90"/>
         <el-table-column label="组名称" min-width="240" prop="drgName" show-overflow-tooltip/>
         <el-table-column align="center" label="MDC" prop="mdcCode" width="70"/>
         <el-table-column align="center" label="ADRG" prop="adrgCode" width="80"/>
-        <el-table-column align="right" label="权重" prop="weight" width="80"/>
-        <el-table-column align="right" label="支付标准(元)" prop="payStandard" width="110"/>
+        <el-table-column align="right" label="权重" prop="weight" width="80">
+          <template #default="{ row }">{{ row.weight ?? '—' }}</template>
+        </el-table-column>
+        <el-table-column align="right" label="支付标准(元)" prop="payStandard" width="110">
+          <template #default="{ row }">{{ row.payStandard ?? '—' }}</template>
+        </el-table-column>
         <el-table-column label="来源" min-width="160" prop="source" show-overflow-tooltip/>
       </el-table>
     </div>
@@ -148,9 +152,12 @@
             </el-tag>
           </p>
           <p v-if="simResult.simStatus === 1" class="mt-1">
-            权重 {{ simResult.weight }}｜支付标准 ¥{{ simResult.payStandard }}｜实际费用 ¥{{ simResult.actualAmount }}
-            ｜<span :class="profitColor(simResult.profitAmount)">
-              {{ Number(simResult.profitAmount) >= 0 ? '结余 +' : '超支 ' }}{{ simResult.profitAmount }}</span></p>
+            权重 {{ simResult.weight ?? '—' }}｜
+            支付标准 {{ simResult.payStandard == null ? '未下发' : '¥' + simResult.payStandard }}｜实际费用
+            ¥{{ simResult.actualAmount }}
+            ｜<span v-if="simResult.profitAmount != null" :class="profitColor(simResult.profitAmount)">
+              {{ Number(simResult.profitAmount) >= 0 ? '结余 +' : '超支 ' }}{{ simResult.profitAmount }}</span>
+            <span v-else class="text-gray-400">盈亏待统筹区下发支付标准</span></p>
           <p class="mt-1 text-gray-500">{{ simResult.ruleNote }}</p>
         </div>
       </el-form>

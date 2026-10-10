@@ -2,8 +2,8 @@ package com.his.miniapp.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.miniapp.dto.TicketHandleDTO;
-import com.his.miniapp.dto.TicketSearchDTO;
+import com.his.miniapp.dto.TicketHandleUpsertDTO;
+import com.his.miniapp.dto.TicketPageQueryDTO;
 import com.his.miniapp.service.MiniServiceTicketAdminService;
 import com.his.miniapp.vo.MiniServiceMessageListVO;
 import com.his.miniapp.vo.MiniServiceDetailVO;
@@ -29,8 +29,8 @@ public class MiniServiceAdminController {
     @Operation(summary = "工单列表（待受理优先排序）")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('service:ticket:list')")
-    public Result<PageResult<MiniServiceMessageListVO>> listPage(@Valid @RequestBody TicketSearchDTO dto) {
-        return Result.success(miniServiceTicketAdminService.adminPage(dto));
+    public Result<PageResult<MiniServiceMessageListVO>> listPage(@Valid @RequestBody TicketPageQueryDTO pageQueryDTO) {
+        return Result.success(miniServiceTicketAdminService.listPage(pageQueryDTO));
     }
 
     @Operation(summary = "工作台统计（待受理 / 处理中 / 已办结 / 超时未受理）")
@@ -50,8 +50,8 @@ public class MiniServiceAdminController {
     @Operation(summary = "受理 / 回复 / 办结 / 关闭 / 内部备注（操作人取登录人）")
     @PostMapping("/handle")
     @PreAuthorize("hasAuthority('service:ticket:handle')")
-    public Result<Integer> handle(@RequestBody @Valid TicketHandleDTO dto) {
-        miniServiceTicketAdminService.handle(dto);
+    public Result<Integer> handle(@RequestBody @Valid TicketHandleUpsertDTO upsertDTO) {
+        miniServiceTicketAdminService.handle(upsertDTO);
         return Result.success(1);
     }
 }

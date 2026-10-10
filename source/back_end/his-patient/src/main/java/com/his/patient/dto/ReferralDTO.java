@@ -21,41 +21,63 @@ public class ReferralDTO {
     @Data
     public static class Create implements Serializable {
 
-        /** 患者ID */
+        /**
+         * 患者ID
+         */
         @NotNull(message = "患者ID不能为空")
         private Long patientId;
 
-        /** 就诊次ID（门诊转诊时填） */
+        /**
+         * 就诊次ID（门诊转诊时填）
+         */
         private Long visitId;
 
-        /** 入院ID（住院患者转诊时填） */
+        /**
+         * 入院ID（住院患者转诊时填）
+         */
         private Long admissionId;
 
-        /** 转出科室ID */
+        /**
+         * 转出科室ID
+         */
         @NotNull(message = "转出科室不能为空")
         private Long fromDeptId;
 
-        /** 转入本院科室（院内转诊时填） */
+        /**
+         * 转入本院科室（院内转诊时填）
+         */
         private Long toDeptId;
 
-        /** 转入医院名称（院际转诊必填） */
+        /**
+         * 转入医院名称（院际转诊必填）
+         */
         private String toHospital;
 
-/** 转诊方向:1-上转 2-下转（默认 1 上转） */
+        /**
+         * 转诊方向:1-上转 2-下转（默认 1 上转）
+         */
         @InEnum(value = ReferralDirectionEnum.class, message = "转诊方向取值不合法（1-上转 2-下转）")
-    private Integer direction;
+        private Integer direction;
 
-        /** 转诊原因 */
+        /**
+         * 转诊原因
+         */
         @NotBlank(message = "转诊原因不能为空")
         private String reason;
 
-        /** 诊断摘要 */
+        /**
+         * 诊断摘要
+         */
         private String diagnosis;
 
-        /** 联系电话 */
+        /**
+         * 联系电话
+         */
         private String contactPhone;
 
-        /** 备注 */
+        /**
+         * 备注
+         */
         private String remark;
     }
 
@@ -66,16 +88,24 @@ public class ReferralDTO {
     @EqualsAndHashCode(callSuper = true)
     public static class QueryPage extends PageParam implements Serializable {
 
-        /** 患者ID */
+        /**
+         * 患者ID
+         */
         private Long patientId;
 
-        /** 转诊方向（1-上转 2-下转） */
+        /**
+         * 转诊方向（1-上转 2-下转）
+         */
         private Integer direction;
 
-        /** 状态（0-待确认 1-已确认 2-已完成 3-已取消） */
+        /**
+         * 状态（0-待确认 1-已确认 2-已完成 3-已取消）
+         */
         private Integer referralStatus;
 
-        /** 转入医院模糊 */
+        /**
+         * 转入医院模糊
+         */
         private String toHospital;
     }
 
@@ -85,14 +115,20 @@ public class ReferralDTO {
     @Data
     public static class Audit implements Serializable {
 
-        /** 转诊ID */
+        /**
+         * 转诊ID
+         */
         @NotNull(message = "转诊ID不能为空")
         private Long referralId;
 
-        /** 转入本院科室（确认时可补填） */
+        /**
+         * 转入本院科室（确认时可补填）
+         */
         private Long toDeptId;
 
-        /** 确认意见 */
+        /**
+         * 确认意见
+         */
         private String auditRemark;
     }
 
@@ -102,11 +138,15 @@ public class ReferralDTO {
     @Data
     public static class Finish implements Serializable {
 
-        /** 转诊ID */
+        /**
+         * 转诊ID
+         */
         @NotNull(message = "转诊ID不能为空")
         private Long referralId;
 
-        /** 完成备注（转诊结局/接收医院反馈） */
+        /**
+         * 完成备注（转诊结局/接收医院反馈）
+         */
         private String finishRemark;
     }
 
@@ -116,7 +156,9 @@ public class ReferralDTO {
     @Data
     public static class Cancel implements Serializable {
 
-        /** 转诊ID */
+        /**
+         * 转诊ID
+         */
         @NotNull(message = "转诊ID不能为空")
         private Long referralId;
 

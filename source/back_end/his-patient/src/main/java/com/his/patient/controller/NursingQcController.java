@@ -51,7 +51,7 @@ public class NursingQcController {
     @Operation(summary = "检查单分页（病区 × 月 × 类别）")
     @PostMapping("/checkListPage")
     public Result<PageResult<NurseQcVO.CheckRow>> checkListPage(
-            @Valid @RequestBody(required = false) NursingQcDTO.CheckQueryPage dto) {
+            @Valid @RequestBody NursingQcDTO.CheckQueryPageDTO dto) {
         return Result.success(nursingQcService.checkListPage(dto));
     }
 
@@ -65,7 +65,7 @@ public class NursingQcController {
     @PreAuthorize("hasAuthority('nursing:qc:edit')")
     @Operation(summary = "保存检查单（主表六个汇总数字由明细求和，不接受前端传；已确认的单调拒绝）")
     @PostMapping("/checkUpsert")
-    public Result<NurseQcVO.SaveResult> checkUpsert(@Valid @RequestBody NursingQcDTO.CheckUpsert dto) {
+    public Result<NurseQcVO.SaveResult> checkUpsert(@Valid @RequestBody NursingQcDTO.CheckUpsertDTO dto) {
         return Result.success(nursingQcService.checkUpsert(dto));
     }
 
@@ -87,21 +87,21 @@ public class NursingQcController {
     @PreAuthorize("hasAuthority('nursing:qc:list')")
     @Operation(summary = "月度 KPI 看板（四条指标永远都在，没有台账的显示未重算）")
     @PostMapping("/monthMetrics")
-    public Result<List<NurseQcVO.Kpi>> monthMetrics(@Valid @RequestBody NursingQcDTO.MonthQuery dto) {
+    public Result<List<NurseQcVO.Kpi>> monthMetrics(@Valid @RequestBody NursingQcDTO.MonthQueryDTO dto) {
         return Result.success(nursingQcService.monthMetrics(dto));
     }
 
     @PreAuthorize("hasAuthority('nursing:qc:list')")
     @Operation(summary = "指标趋势（一条指标按月一个点，wardId 空=可见范围全院合并）")
     @PostMapping("/trend")
-    public Result<List<NurseQcVO.Kpi>> trend(@Valid @RequestBody NursingQcDTO.TrendQuery dto) {
+    public Result<List<NurseQcVO.Kpi>> trend(@Valid @RequestBody NursingQcDTO.TrendQueryDTO dto) {
         return Result.success(nursingQcService.trend(dto));
     }
 
     @PreAuthorize("hasAuthority('nursing:qc:list')")
     @Operation(summary = "病区对比（某月某指标各病区落点，按指标值倒序）")
     @PostMapping("/wardCompare")
-    public Result<List<NurseQcVO.LedgerRow>> wardCompare(@Valid @RequestBody NursingQcDTO.CompareQuery dto) {
+    public Result<List<NurseQcVO.LedgerRow>> wardCompare(@Valid @RequestBody NursingQcDTO.CompareQueryDTO dto) {
         return Result.success(nursingQcService.wardCompare(dto));
     }
 
@@ -109,14 +109,14 @@ public class NursingQcController {
     @Operation(summary = "指标台账分页（每行都带分子分母与来源备注）")
     @PostMapping("/ledgerListPage")
     public Result<PageResult<NurseQcVO.LedgerRow>> ledgerListPage(
-            @Valid @RequestBody(required = false) NursingQcDTO.LedgerQueryPage dto) {
+            @Valid @RequestBody NursingQcDTO.LedgerQueryPageDTO dto) {
         return Result.success(nursingQcService.ledgerListPage(dto));
     }
 
     @PreAuthorize("hasAuthority('nursing:qc:calc')")
     @Operation(summary = "重算台账（已上报的行由 SQL 侧闸门跳过，不静默改历史数字）")
     @PostMapping("/recalc")
-    public Result<NurseQcVO.RecalcResult> recalc(@Valid @RequestBody NursingQcDTO.RecalcCommand dto) {
+    public Result<NurseQcVO.RecalcResult> recalc(@Valid @RequestBody NursingQcDTO.RecalcCommandDTO dto) {
         NurseQcVO.RecalcResult result = nursingQcService.recalc(dto);
         return Result.success(result.getMessage(), result);
     }
@@ -124,7 +124,7 @@ public class NursingQcController {
     @PreAuthorize("hasAuthority('nursing:qc:calc')")
     @Operation(summary = "上报 / 退回（2-锁定该月台账，1-退回后重算才会覆盖）")
     @PostMapping("/report")
-    public Result<NurseQcVO.ReportResult> report(@Valid @RequestBody NursingQcDTO.ReportCommand dto) {
+    public Result<NurseQcVO.ReportResult> report(@Valid @RequestBody NursingQcDTO.ReportCommandDTO dto) {
         NurseQcVO.ReportResult result = nursingQcService.report(dto);
         return Result.success(result.getMessage(), result);
     }

@@ -37,7 +37,7 @@ public class DischargeDrugController {
     @Operation(summary = "分页查询带药单")
     @PostMapping("/listPage")
     public Result<PageResult<DischargeDrugVO>> listPage(@Valid @RequestBody DischargeDrugDTO.QueryPage dto) {
-        var page = dischargeDrugService.listPage(dto == null ? new DischargeDrugDTO.QueryPage() : dto);
+        var page = dischargeDrugService.listPage(dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));
     }

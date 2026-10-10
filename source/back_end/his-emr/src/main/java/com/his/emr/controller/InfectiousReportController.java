@@ -29,8 +29,8 @@ public class InfectiousReportController {
 
     @Operation(summary = "报卡分页")
     @PostMapping("/listPage")
-    public Result<PageResult<InfectiousReportVO.Row>> listPage(@Valid @RequestBody(required = false) InfectiousReportQueryPageDTO dto) {
-        return Result.success(infectiousReportService.page(dto == null ? new InfectiousReportQueryPageDTO() : dto));
+    public Result<PageResult<InfectiousReportVO.Row>> listPage(@Valid @RequestBody InfectiousReportQueryPageDTO dto) {
+        return Result.success(infectiousReportService.page(dto));
     }
 
     @Operation(summary = "报卡详情（含直报报文）")

@@ -49,8 +49,12 @@ public class PatientSurgeryHistoryUpsertDTO {
      * 术后诊断
      */
     private String postopDiagnosis;
-    /** 恢复情况（良好/一般/差/死亡） */
+    /**
+     * 恢复情况（良好/一般/差/死亡）
+     */
     private String recoveryStatus;
-    /** 术后并发症 */
+    /**
+     * 术后并发症
+     */
     private String complications;
 }

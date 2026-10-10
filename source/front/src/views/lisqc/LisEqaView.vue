@@ -232,7 +232,7 @@
             </el-table-column>
             <el-table-column label="判定" width="90">
               <template #default="{ row }">
-                <el-tag :type="resultTag(row.resultStatus) as any" size="small">{{ row.resultStatusText }}</el-tag>
+                <el-tag :type="resultTag(row.resultStatus)" size="small">{{ row.resultStatusText }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column label="口径" prop="judgeModeText" show-overflow-tooltip width="120"/>

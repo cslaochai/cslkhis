@@ -91,7 +91,7 @@
     <el-dialog v-model="createVisible" :close-on-click-modal="false" title="转诊登记" width="580px">
       <el-form label-width="90px">
         <el-form-item label="患者" required>
-          <PatientSelect v-model="createForm.patientId as any"/>
+          <PatientSelect v-model="createForm.patientId"/>
         </el-form-item>
         <el-form-item label="方向" required>
           <el-radio-group v-model="createForm.direction">

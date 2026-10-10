@@ -9,14 +9,20 @@ import lombok.Data;
 @Data
 public class BedAssignUpsertDTO {
 
-    /** 来源等床记录ID */
+    /**
+     * 来源等床记录ID
+     */
     @NotNull(message = "排队记录不能为空")
     private Long waitId;
 
-    /** 床位ID */
+    /**
+     * 床位ID
+     */
     @NotNull(message = "床位不能为空")
     private Long bedId;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

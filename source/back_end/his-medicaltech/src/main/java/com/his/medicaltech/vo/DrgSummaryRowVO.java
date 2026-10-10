@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
- * DRG 分组模拟的输入行：病案首页 + 实际费用（DrgSimMapper#selectSummary /
+ * DRG 分组模拟的输入行：病案首页的分组维度 + 实际费用。
  */
 @Data
 public class DrgSummaryRowVO implements Serializable {
@@ -35,19 +35,14 @@ public class DrgSummaryRowVO implements Serializable {
     private String mainDiagnosisName;
 
     /**
-     * 是否手术（0-否 1-是）：分组器据此选手术组/非手术组候选
+     * 是否手术（0-否 1-是）：结果行快照，入组判定看手术编码本身
      */
     private Integer isSurgery;
 
     /**
-     * 住院天数：非手术组内>=10 天进伴并发症档
+     * 住院天数：结果行快照
      */
     private Integer inpatientDays;
-
-    /**
-     * 死亡标志（0-否 1-是）：死亡直接进伴并发症档
-     */
-    private Integer deathFlag;
 
     /**
      * 实际住院费用
@@ -66,22 +61,17 @@ public class DrgSummaryRowVO implements Serializable {
     private Integer gender;
 
     /**
-     * 年龄数值
+     * 年龄数值，配合 ageUnit
      */
     private Integer age;
 
     /**
-     * 年龄单位（1-岁 2-月 3-天）
+     * 年龄单位（1-岁 2-月 3-天）：决定能不能换算出周岁与出生日龄
      */
     private Integer ageUnit;
 
     /**
-     * 呼吸机使用时长（小时）
-     */
-    private Integer ventilatorHours;
-
-    /**
-     * 出生体重（克，新生儿）
+     * 出生体重（克）：规则里的入院体重维度用它代入（新生儿首页只记出生体重）
      */
     private Integer birthWeight;
 }

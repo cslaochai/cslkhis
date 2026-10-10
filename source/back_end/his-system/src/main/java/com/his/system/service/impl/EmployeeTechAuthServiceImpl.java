@@ -61,22 +61,21 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
 
     @Override
     public PageResult<EmployeeTechAuthVO> listPage(TechAuthQueryPageDTO query) {
-        TechAuthQueryPageDTO q = query == null ? new TechAuthQueryPageDTO() : query;
         LambdaQueryWrapper<SysEmployeeTechAuth> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(TextUtil.hasText(q.getEmployeeName()), SysEmployeeTechAuth::getEmployeeName, TextUtil.trimToNull(q.getEmployeeName()))
-                .eq(q.getEmployeeId() != null, SysEmployeeTechAuth::getEmployeeId, q.getEmployeeId())
-                .eq(q.getAuthCategory() != null, SysEmployeeTechAuth::getAuthCategory, q.getAuthCategory())
-                .eq(q.getTechLevel() != null, SysEmployeeTechAuth::getTechLevel, q.getTechLevel())
-                .eq(q.getAuthStatus() != null, SysEmployeeTechAuth::getAuthStatus, q.getAuthStatus())
-                .eq(q.getAuthType() != null, SysEmployeeTechAuth::getAuthType, q.getAuthType());
-        if (Objects.equals(1, q.getOnlyEffective())) {
+        wrapper.like(TextUtil.hasText(query.getEmployeeName()), SysEmployeeTechAuth::getEmployeeName, TextUtil.trimToNull(query.getEmployeeName()))
+                .eq(query.getEmployeeId() != null, SysEmployeeTechAuth::getEmployeeId, query.getEmployeeId())
+                .eq(query.getAuthCategory() != null, SysEmployeeTechAuth::getAuthCategory, query.getAuthCategory())
+                .eq(query.getTechLevel() != null, SysEmployeeTechAuth::getTechLevel, query.getTechLevel())
+                .eq(query.getAuthStatus() != null, SysEmployeeTechAuth::getAuthStatus, query.getAuthStatus())
+                .eq(query.getAuthType() != null, SysEmployeeTechAuth::getAuthType, query.getAuthType());
+        if (Objects.equals(1, query.getOnlyEffective())) {
             applyEffective(wrapper, LocalDate.now());
         }
         wrapper.orderByDesc(SysEmployeeTechAuth::getEmployeeId)
                 .orderByAsc(SysEmployeeTechAuth::getAuthCategory)
                 .orderByDesc(SysEmployeeTechAuth::getId);
 
-        Page<SysEmployeeTechAuth> page = sysEmployeeTechAuthMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), wrapper);
+        Page<SysEmployeeTechAuth> page = sysEmployeeTechAuthMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         List<EmployeeTechAuthVO> records = page.getRecords().stream().map(this::toVO).toList();
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -346,14 +345,13 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
 
     @Override
     public PageResult<TechAuthOverrideVO> overrideListPage(TechAuthOverrideQueryPageDTO query) {
-        TechAuthOverrideQueryPageDTO q = query == null ? new TechAuthOverrideQueryPageDTO() : query;
         LambdaQueryWrapper<BizTechAuthOverride> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(TextUtil.hasText(q.getEmployeeName()), BizTechAuthOverride::getEmployeeName, TextUtil.trimToNull(q.getEmployeeName()))
-                .eq(q.getAuthCategory() != null, BizTechAuthOverride::getAuthCategory, q.getAuthCategory())
-                .eq(q.getSourceType() != null, BizTechAuthOverride::getSourceType, q.getSourceType())
-                .eq(q.getOverrideStatus() != null, BizTechAuthOverride::getOverrideStatus, q.getOverrideStatus())
+        wrapper.like(TextUtil.hasText(query.getEmployeeName()), BizTechAuthOverride::getEmployeeName, TextUtil.trimToNull(query.getEmployeeName()))
+                .eq(query.getAuthCategory() != null, BizTechAuthOverride::getAuthCategory, query.getAuthCategory())
+                .eq(query.getSourceType() != null, BizTechAuthOverride::getSourceType, query.getSourceType())
+                .eq(query.getOverrideStatus() != null, BizTechAuthOverride::getOverrideStatus, query.getOverrideStatus())
                 .orderByDesc(BizTechAuthOverride::getId);
-        Page<BizTechAuthOverride> page = bizTechAuthOverrideMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), wrapper);
+        Page<BizTechAuthOverride> page = bizTechAuthOverrideMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         List<TechAuthOverrideVO> records = page.getRecords().stream().map(this::toOverrideVO).toList();
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }

@@ -12,11 +12,15 @@ import lombok.Data;
 @Data
 public class NutritionStatsGenerateDTO {
 
-    /** 统计月份 yyyy-MM */
+    /**
+     * 统计月份 yyyy-MM
+     */
     @NotBlank(message = "统计月份不能为空")
     private String statMonth;
 
-    /** 1-全院一条 2-按有出院/有方案的科室各生成一条 */
+    /**
+     * 1-全院一条 2-按有出院/有方案的科室各生成一条
+     */
     @NotNull(message = "统计范围不能为空")
     @InEnum(value = StatsScopeEnum.class, message = "统计范围取值不合法（1-全院 2-科室）")
     private Integer scopeType;

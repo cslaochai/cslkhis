@@ -194,21 +194,19 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
 
     @Override
     public PageResult<DeathCertificateVO.Row> listPage(DeathCertificateDTO.QueryPage query) {
-        DeathCertificateDTO.QueryPage q = query == null ? new DeathCertificateDTO.QueryPage() : query;
-        Page<DeathCertificateVO.Row> page = new Page<>(q.getPageNum(), q.getPageSize());
-        List<DeathCertificateVO.Row> records = bizDeathCertificateMapper.selectCertPage(page, TextUtil.trimToNull(q.getKeyword()),
-                q.getCertStatus(), q.getReportStatus(), q.getDeathPlace(), q.getDeathDeptId(),
-                TimeUtil.dayStart(q.getStartDate()), TimeUtil.dayEnd(q.getEndDate()), q.getOverdue());
+        Page<DeathCertificateVO.Row> page = new Page<>(query.getPageNum(), query.getPageSize());
+        List<DeathCertificateVO.Row> records = bizDeathCertificateMapper.selectCertPage(page, TextUtil.trimToNull(query.getKeyword()),
+                query.getCertStatus(), query.getReportStatus(), query.getDeathPlace(), query.getDeathDeptId(),
+                TimeUtil.dayStart(query.getStartDate()), TimeUtil.dayEnd(query.getEndDate()), query.getOverdue());
         records.forEach(DeathCertificateServiceImpl::fillDeadline);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 
     @Override
     public PageResult<DeathCertificateVO.PendingRow> pendingListPage(DeathCertificateDTO.QueryPage query) {
-        DeathCertificateDTO.QueryPage q = query == null ? new DeathCertificateDTO.QueryPage() : query;
-        Page<DeathCertificateVO.PendingRow> page = new Page<>(q.getPageNum(), q.getPageSize());
+        Page<DeathCertificateVO.PendingRow> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<DeathCertificateVO.PendingRow> records = bizDeathCertificateMapper.selectPendingPage(page,
-                TextUtil.trimToNull(q.getKeyword()), TimeUtil.dayStart(q.getStartDate()), TimeUtil.dayEnd(q.getEndDate()));
+                TextUtil.trimToNull(query.getKeyword()), TimeUtil.dayStart(query.getStartDate()), TimeUtil.dayEnd(query.getEndDate()));
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 

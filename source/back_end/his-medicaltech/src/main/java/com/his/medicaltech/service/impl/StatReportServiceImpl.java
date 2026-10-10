@@ -292,21 +292,20 @@ public class StatReportServiceImpl extends ServiceImpl<BizStatReportMapper, BizS
     }
 
     public IPage<StatReportVO.Row> listPage(StatReportDTO.QueryPage dto) {
-        StatReportDTO.QueryPage q = dto == null ? new StatReportDTO.QueryPage() : dto;
         LambdaQueryWrapper<BizStatReport> qw = new LambdaQueryWrapper<BizStatReport>()
                 .select(BizStatReport.class, fi -> !"payload".equals(fi.getProperty()))
-                .and(TextUtil.hasText(q.getKeyword()), w -> w
-                        .like(BizStatReport::getReportNo, q.getKeyword().trim())
-                        .or().like(BizStatReport::getTitle, q.getKeyword().trim()))
-                .eq(q.getReportType() != null, BizStatReport::getReportType, q.getReportType())
-                .eq(q.getStatus() != null, BizStatReport::getStatus, q.getStatus())
-                .eq(TextUtil.hasText(q.getPeriodValue()), BizStatReport::getPeriodValue,
-                        q.getPeriodValue() == null ? null : q.getPeriodValue().trim())
-                .ge(q.getStartDate() != null, BizStatReport::getGenerateTime, q.getStartDate())
-                .le(q.getEndDate() != null, BizStatReport::getGenerateTime, q.getEndDate())
+                .and(TextUtil.hasText(dto.getKeyword()), w -> w
+                        .like(BizStatReport::getReportNo, dto.getKeyword().trim())
+                        .or().like(BizStatReport::getTitle, dto.getKeyword().trim()))
+                .eq(dto.getReportType() != null, BizStatReport::getReportType, dto.getReportType())
+                .eq(dto.getStatus() != null, BizStatReport::getStatus, dto.getStatus())
+                .eq(TextUtil.hasText(dto.getPeriodValue()), BizStatReport::getPeriodValue,
+                        dto.getPeriodValue() == null ? null : dto.getPeriodValue().trim())
+                .ge(dto.getStartDate() != null, BizStatReport::getGenerateTime, dto.getStartDate())
+                .le(dto.getEndDate() != null, BizStatReport::getGenerateTime, dto.getEndDate())
                 .orderByDesc(BizStatReport::getGenerateTime)
                 .orderByDesc(BizStatReport::getId);
-        return bizStatReportMapper.selectPage(Page.of(q.getPageNum(), q.getPageSize()), qw)
+        return bizStatReportMapper.selectPage(Page.of(dto.getPageNum(), dto.getPageSize()), qw)
                 .convert(this::toRow);
     }
 

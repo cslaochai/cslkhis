@@ -105,11 +105,10 @@ public class StocktakeServiceImpl extends ServiceImpl<BizStocktakeMapper, BizSto
 
     @Override
     public PageResult<StocktakeVO> listPage(StocktakeQueryPageDTO query) {
-        StocktakeQueryPageDTO q = query == null ? new StocktakeQueryPageDTO() : query;
         Page<StocktakeVO> page = bizStocktakeMapper.selectStocktakePage(
-                new Page<>(q.getPageNum(), q.getPageSize()),
-                TextUtil.trimToNull(q.getStocktakeNo()), TextUtil.trimToNull(q.getStocktakeTitle()),
-                q.getStatus(), TextUtil.trimToNull(q.getDateStart()), TextUtil.trimToNull(q.getDateEnd()));
+                new Page<>(query.getPageNum(), query.getPageSize()),
+                TextUtil.trimToNull(query.getStocktakeNo()), TextUtil.trimToNull(query.getStocktakeTitle()),
+                query.getStatus(), TextUtil.trimToNull(query.getDateStart()), TextUtil.trimToNull(query.getDateEnd()));
         page.getRecords().forEach(v -> v.setStatusText(StocktakeStatusEnum.getText(v.getStatus())));
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
     }

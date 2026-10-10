@@ -10,7 +10,10 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
- * DRG 分组与权重表（接入医保局的接口面）
+ * DRG 细分组（三级目录的最末一层，接入医保局分组方案的接口面）。
+ *
+ * <p>一行 = 一个可入组的组号，判定依据在 {@link #drgRule} 原文里，规则引用的码集合另表存。
+ * 权重与支付标准不由国家方案包下发，属统筹区医保局另行制定的部分，未落地时为 null。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -46,12 +49,22 @@ public class SysDrgGroup extends BaseEntity {
     private String adrgCode;
 
     /**
-     * 权重（相对权重 RW）
+     * DRG 细分组规则原文
+     */
+    private String drgRule;
+
+    /**
+     * ADRG 内排序
+     */
+    private Integer sortNo;
+
+    /**
+     * 权重（相对权重 RW，统筹区下发前为 null）
      */
     private BigDecimal weight;
 
     /**
-     * 病组支付标准（元）
+     * 病组支付标准（元，统筹区下发前为 null）
      */
     private BigDecimal payStandard;
 
@@ -69,49 +82,4 @@ public class SysDrgGroup extends BaseEntity {
      * 状态（0-停用 1-启用）
      */
     private Integer status;
-
-    /**
-     * 分组类型（1-外科 2-操作 3-内科）
-     */
-    private Integer groupType;
-
-    /**
-     * 并发症合并症标志（0-无 1-伴CC 2-伴MCC）
-     */
-    private Integer ccMccFlag;
-
-    /**
-     * 性别限定（0-不限 1-男 2-女）
-     */
-    private Integer genderLimit;
-
-    /**
-     * 年龄分层（0-不限 1-≤6岁 2-≥70岁 3-新生儿）
-     */
-    private Integer ageTier;
-
-    /**
-     * 先期分组标志（0-否 1-是）
-     */
-    private Integer preGroupFlag;
-
-    /**
-     * 手术属性（0-普通 1-单双侧 2-机器人 3-联合）
-     */
-    private Integer surgeryAttr;
-
-    /**
-     * 基层病种标志（0-否 1-是）
-     */
-    private Integer baseDiseaseFlag;
-
-    /**
-     * 主诊断匹配键（ICD-10 亚目前缀，逗号分隔）
-     */
-    private String diagMatch;
-
-    /**
-     * 主手术匹配键（ICD-9-CM-3 前缀，逗号分隔）
-     */
-    private String operMatch;
 }

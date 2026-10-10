@@ -56,7 +56,7 @@
 
     <el-card class="table-card" shadow="never">
       <el-table v-loading="loading" :data="tableData" :max-height="tableMaxHeight" stripe>
-        <el-table-column label="工单号" prop="messageNo" width="150"/>
+        <el-table-column label="工单号" prop="messageNo" width="200"/>
         <el-table-column label="内容" min-width="260" prop="content" show-overflow-tooltip/>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
@@ -70,7 +70,7 @@
           </template>
         </el-table-column>
         <el-table-column label="回复" prop="replyCount" width="70"/>
-        <el-table-column label="提交时间" prop="createTime" width="160"/>
+        <el-table-column label="提交时间" prop="createTime" width="200"/>
         <el-table-column fixed="right" label="操作" width="170">
           <template #default="{ row }">
             <el-button

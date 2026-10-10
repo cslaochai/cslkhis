@@ -36,7 +36,7 @@ public class GroupingRatioRule implements ComplianceRule {
     private void evaluateD01(RuleContext ctx, List<RuleFinding> findings) {
         if (!ctx.isDrgTableReady()) {
             findings.add(RuleFinding.na(RuleCatalogEnum.D01,
-                    "本地未接入医保 DRG/DIP 分组方案（sys_drg_group 为空），无病组支付标准，无法计算费用倍率"));
+                    "本地未接入医保 DRG/DIP 分组方案，无病组支付标准，无法计算费用倍率"));
             return;
         }
         SysDrgGroup group = ctx.getDrgGroup();
@@ -47,7 +47,8 @@ public class GroupingRatioRule implements ComplianceRule {
         BigDecimal payStandard = group.getPayStandard();
         if (payStandard == null || payStandard.compareTo(BigDecimal.ZERO) <= 0) {
             findings.add(RuleFinding.na(RuleCatalogEnum.D01,
-                    "分组 " + group.getDrgCode() + " 未配置支付标准，无法计算费用倍率"));
+                    "分组方案已接入，但病组 " + group.getDrgCode()
+                            + " 的支付标准由统筹区医保局另行下发，当前未接入，无法计算费用倍率"));
             return;
         }
         BigDecimal actual = ctx.getEvidence().actualCost();
@@ -89,7 +90,8 @@ public class GroupingRatioRule implements ComplianceRule {
         if (!ctx.isDrgTableReady()) {
             findings.add(RuleFinding.na(RuleCatalogEnum.D02,
                             "本地未接入医保 DRG/DIP 分组方案，无法评估入组结果")
-                    .withSuggestion("从医保局获取当地 CHS-DRG/DIP 分组方案，导入 sys_drg_group 后即可启用 D 组规则"));
+                    .withSuggestion("从医保局获取当地 CHS-DRG/DIP 分组方案（MDC/ADRG/DRG 三级目录 + 规则引用的码集合），"
+                            + "导入后即可启用 D 组规则"));
             return;
         }
         String drgCode = ctx.getSettlement() == null ? null : ctx.getSettlement().getDrgCode();

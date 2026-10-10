@@ -17,12 +17,18 @@ public class MealGenerateDTO {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate mealDate;
 
-    /** 按病区批量生成（食堂按病区送饭）；为空 = 全部病区 */
+    /**
+     * 按病区批量生成（食堂按病区送饭）；为空 = 全部病区
+     */
     private List<Long> wardIds;
 
-    /** 只给这几个住院患者生成（膳食方案页单人补生成）；与 wardIds 二选一 */
+    /**
+     * 只给这几个住院患者生成（膳食方案页单人补生成）；与 wardIds 二选一
+     */
     private List<Long> admissionIds;
 
-    /** 是否覆盖重生成（true 时先物理清该日未配送行） */
+    /**
+     * 是否覆盖重生成（true 时先物理清该日未配送行）
+     */
     private Boolean overwrite;
 }

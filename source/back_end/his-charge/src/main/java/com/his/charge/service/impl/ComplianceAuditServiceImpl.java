@@ -224,20 +224,22 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         audit.setActualCost(evidence.actualCost());
         audit.setConclusion(buildConclusion(hitCount, naCount, riskScore, maxHitRisk));
 
-        // DRG 字段：只有分组表真的接了才写，否则留空并说明
+        // DRG 字段：分组目录接了才写，缺哪一层就在备注里说清哪一层，别让空值看着像「没跑分组」
         SysDrgGroup group = ctx.getDrgGroup();
-        if (ctx.isDrgTableReady() && group != null) {
+        if (!ctx.isDrgTableReady()) {
+            audit.setRemark("未接入医保 DRG/DIP 分组方案，未计算入组与费用倍率");
+        } else if (group == null) {
+            audit.setRemark("清单未匹配到 DRG 分组，未计算费用倍率");
+        } else {
             audit.setDrgCode(group.getDrgCode());
             audit.setDrgWeight(group.getWeight());
             audit.setPayStandard(group.getPayStandard());
             if (group.getPayStandard() != null && group.getPayStandard().signum() > 0) {
                 audit.setCostRatio(evidence.actualCost()
                         .divide(group.getPayStandard(), 4, java.math.RoundingMode.HALF_UP));
+            } else {
+                audit.setRemark("分组目录已接入，病组支付标准由统筹区医保局另行下发，当前未接入，未计算费用倍率");
             }
-        } else {
-            audit.setRemark(ctx.isDrgTableReady()
-                    ? "清单未匹配到DRG分组，未计算费用倍率"
-                    : "未接入DRG分组方案（sys_drg_group为空），未计算入组与费用倍率");
         }
 
         audit.setAuditBy(operatorUser.getRealName());

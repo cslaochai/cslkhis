@@ -34,7 +34,7 @@ public class ReferralController {
     @Operation(summary = "分页查询转诊单")
     @PostMapping("/listPage")
     public Result<PageResult<ReferralVO>> listPage(@Valid @RequestBody ReferralDTO.QueryPage dto) {
-        var page = referralService.listPage(dto == null ? new ReferralDTO.QueryPage() : dto);
+        var page = referralService.listPage(dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));
     }

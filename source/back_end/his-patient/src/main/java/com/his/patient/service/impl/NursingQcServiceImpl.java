@@ -161,12 +161,11 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
     // 台账行构建（口径 a/b/c/d 的 Java 侧唯一实现）
 
     @Override
-    public PageResult<NurseQcVO.CheckRow> checkListPage(NursingQcDTO.CheckQueryPage query) {
-        NursingQcDTO.CheckQueryPage q = query == null ? new NursingQcDTO.CheckQueryPage() : query;
-        IPage<NurseQcVO.CheckRow> page = new Page<>(q.getPageNum(), q.getPageSize());
-        List<NurseQcVO.CheckRow> records = bizNursingQcCheckMapper.selectCheckPage(page, TextUtil.trimToNull(q.getKeyword()),
-                q.getWardId(), deptScopeProvider.resolveDeptId(q.getDeptId()), q.getCategory(), q.getStatus(),
-                TextUtil.trimToNull(q.getStartMonth()), TextUtil.trimToNull(q.getEndMonth()), scopedDeptIds(q.getDeptId()));
+    public PageResult<NurseQcVO.CheckRow> checkListPage(NursingQcDTO.CheckQueryPageDTO query) {
+        IPage<NurseQcVO.CheckRow> page = new Page<>(query.getPageNum(), query.getPageSize());
+        List<NurseQcVO.CheckRow> records = bizNursingQcCheckMapper.selectCheckPage(page, TextUtil.trimToNull(query.getKeyword()),
+                query.getWardId(), deptScopeProvider.resolveDeptId(query.getDeptId()), query.getCategory(), query.getStatus(),
+                TextUtil.trimToNull(query.getStartMonth()), TextUtil.trimToNull(query.getEndMonth()), scopedDeptIds(query.getDeptId()));
         records.forEach(this::fillCheckText);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -192,11 +191,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public NurseQcVO.SaveResult checkUpsert(NursingQcDTO.CheckUpsert dto) {
-        // ②非web入口：整个入参对象的判空，DTO 字段注解表达不了
-        if (dto == null) {
-            throw new BusinessException("缺少检查单内容");
-        }
+    public NurseQcVO.SaveResult checkUpsert(NursingQcDTO.CheckUpsertDTO dto) {
         int category = requireCategory(dto.getCategory());
         NurseQcVO.Ward ward = requireWard(dto.getWardId());
         String checkMonth = requireMonth(dto.getCheckMonth(), "检查月份");
@@ -215,7 +210,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
         BigDecimal totalScore = BigDecimal.ZERO;
         List<BizNursingQcCheckItem> rows = new ArrayList<>(dto.getItems().size());
         Set<Long> used = new HashSet<>();
-        for (NursingQcDTO.CheckItemInput input : dto.getItems()) {
+        for (NursingQcDTO.CheckItemUpsertDTO input : dto.getItems()) {
             NurseQcVO.ItemDef def = catalog.get(input.getItemId());
             if (def == null) {
                 throw new BusinessException("检查项目不存在、已停用或不属于「"
@@ -323,10 +318,6 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
     @Override
     @Transactional(rollbackFor = Exception.class)
     public NurseQcVO.SaveResult checkStatus(NursingQcDTO.CheckStatus dto) {
-        // ②非web入口：整个入参对象的判空，DTO 字段注解表达不了（id 必填已收口到 DTO @NotNull + @Valid）
-        if (dto == null) {
-            throw new BusinessException("缺少检查单ID");
-        }
         NursingQcStatusEnum target = NursingQcStatusEnum.fromCode(dto.getStatus());
         // ③业务规则：状态码值合法性（"不能为空"已由 DTO @NotNull 收口，fromCode 只判非法值）
         if (target == null) {
@@ -364,19 +355,18 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
     }
 
     @Override
-    public PageResult<NurseQcVO.LedgerRow> ledgerListPage(NursingQcDTO.LedgerQueryPage query) {
-        NursingQcDTO.LedgerQueryPage q = query == null ? new NursingQcDTO.LedgerQueryPage() : query;
-        IPage<NurseQcVO.LedgerRow> page = new Page<>(q.getPageNum(), q.getPageSize());
-        List<NurseQcVO.LedgerRow> records = bizNursingQcIndicatorMapper.selectLedgerPage(page, TextUtil.trimToNull(q.getKeyword()),
-                q.getWardId(), deptScopeProvider.resolveDeptId(q.getDeptId()), TextUtil.trimToNull(q.getIndicatorCode()),
-                q.getReportStatus(), TextUtil.trimToNull(q.getStatMonth()), TextUtil.trimToNull(q.getStartMonth()),
-                TextUtil.trimToNull(q.getEndMonth()), scopedDeptIds(q.getDeptId()));
+    public PageResult<NurseQcVO.LedgerRow> ledgerListPage(NursingQcDTO.LedgerQueryPageDTO query) {
+        IPage<NurseQcVO.LedgerRow> page = new Page<>(query.getPageNum(), query.getPageSize());
+        List<NurseQcVO.LedgerRow> records = bizNursingQcIndicatorMapper.selectLedgerPage(page, TextUtil.trimToNull(query.getKeyword()),
+                query.getWardId(), deptScopeProvider.resolveDeptId(query.getDeptId()), TextUtil.trimToNull(query.getIndicatorCode()),
+                query.getReportStatus(), TextUtil.trimToNull(query.getStatMonth()), TextUtil.trimToNull(query.getStartMonth()),
+                TextUtil.trimToNull(query.getEndMonth()), scopedDeptIds(query.getDeptId()));
         records.forEach(this::fillLedgerText);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 
     @Override
-    public List<NurseQcVO.Kpi> monthMetrics(NursingQcDTO.MonthQuery query) {
+    public List<NurseQcVO.Kpi> monthMetrics(NursingQcDTO.MonthQueryDTO query) {
         String statMonth = requireMonth(query.getStatMonth(), "统计月份");
         NurseQcVO.Ward ward = query.getWardId() == null ? null : requireVisibleWard(query.getWardId());
         Map<String, NurseQcVO.Kpi> byCode = new LinkedHashMap<>();
@@ -409,7 +399,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
     }
 
     @Override
-    public List<NurseQcVO.Kpi> trend(NursingQcDTO.TrendQuery query) {
+    public List<NurseQcVO.Kpi> trend(NursingQcDTO.TrendQueryDTO query) {
         // 入参对象判空已删：@RequestBody（required=true）保证非空。
         // 待确认：TrendQuery.indicatorCode 上挂着错位的 yyyy-MM @Pattern（把指标码当月份校），
         // 而 NursingQcController.trend 现已带 @Valid —— 任何合法指标码都会被拦成 400；
@@ -434,7 +424,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
     }
 
     @Override
-    public List<NurseQcVO.LedgerRow> wardCompare(NursingQcDTO.CompareQuery query) {
+    public List<NurseQcVO.LedgerRow> wardCompare(NursingQcDTO.CompareQueryDTO query) {
         String statMonth = requireMonth(query.getStatMonth(), "统计月份");
         NursingIndicatorEnum indicator = requireIndicator(query.getIndicatorCode());
         List<NurseQcVO.LedgerRow> rows = bizNursingQcIndicatorMapper.selectWardCompare(statMonth, indicator.getCode(),
@@ -445,7 +435,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public NurseQcVO.RecalcResult recalc(NursingQcDTO.RecalcCommand command) {
+    public NurseQcVO.RecalcResult recalc(NursingQcDTO.RecalcCommandDTO command) {
         String statMonth = requireMonth(command.getStatMonth(), "统计月份");
         YearMonth month = parseMonth(statMonth);
         LocalDate monthStart = month.atDay(1);
@@ -505,7 +495,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public NurseQcVO.ReportResult report(NursingQcDTO.ReportCommand command) {
+    public NurseQcVO.ReportResult report(NursingQcDTO.ReportCommandDTO command) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");

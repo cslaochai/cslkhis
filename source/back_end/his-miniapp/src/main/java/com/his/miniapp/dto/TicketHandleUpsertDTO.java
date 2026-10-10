@@ -9,7 +9,7 @@ import lombok.Data;
  */
 @Data
 @Schema(description = "院内处理工单入参")
-public class TicketHandleDTO {
+public class TicketHandleUpsertDTO {
 
     @NotNull(message = "工单ID不能为空")
     @Schema(description = "工单ID")

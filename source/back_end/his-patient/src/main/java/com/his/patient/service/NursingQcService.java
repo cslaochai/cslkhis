@@ -17,27 +17,27 @@ public interface NursingQcService {
 
     List<NurseQcVO.ItemDef> itemSelectList(Integer category);
 
-    PageResult<NurseQcVO.CheckRow> checkListPage(NursingQcDTO.CheckQueryPage query);
+    PageResult<NurseQcVO.CheckRow> checkListPage(NursingQcDTO.CheckQueryPageDTO query);
 
     NurseQcVO.CheckDetail getDetailById(Long id);
 
-    NurseQcVO.SaveResult checkUpsert(NursingQcDTO.CheckUpsert dto);
+    NurseQcVO.SaveResult checkUpsert(NursingQcDTO.CheckUpsertDTO dto);
 
     NurseQcVO.SaveResult checkStatus(NursingQcDTO.CheckStatus dto);
 
     void checkDeleteById(Long id);
 
-    PageResult<NurseQcVO.LedgerRow> ledgerListPage(NursingQcDTO.LedgerQueryPage query);
+    PageResult<NurseQcVO.LedgerRow> ledgerListPage(NursingQcDTO.LedgerQueryPageDTO query);
 
-    List<NurseQcVO.Kpi> monthMetrics(NursingQcDTO.MonthQuery query);
+    List<NurseQcVO.Kpi> monthMetrics(NursingQcDTO.MonthQueryDTO query);
 
-    List<NurseQcVO.Kpi> trend(NursingQcDTO.TrendQuery query);
+    List<NurseQcVO.Kpi> trend(NursingQcDTO.TrendQueryDTO query);
 
-    List<NurseQcVO.LedgerRow> wardCompare(NursingQcDTO.CompareQuery query);
+    List<NurseQcVO.LedgerRow> wardCompare(NursingQcDTO.CompareQueryDTO query);
 
-    NurseQcVO.RecalcResult recalc(NursingQcDTO.RecalcCommand command);
+    NurseQcVO.RecalcResult recalc(NursingQcDTO.RecalcCommandDTO command);
 
-    NurseQcVO.ReportResult report(NursingQcDTO.ReportCommand command);
+    NurseQcVO.ReportResult report(NursingQcDTO.ReportCommandDTO command);
 
     void ledgerDeleteById(Long id);
 }

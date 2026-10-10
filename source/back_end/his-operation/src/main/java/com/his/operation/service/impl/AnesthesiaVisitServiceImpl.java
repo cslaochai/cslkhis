@@ -51,9 +51,6 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
 
     @Override
     public IPage<AnesthesiaVisitVO> listPage(AnesthesiaVisitQueryPageDTO query) {
-        if (query == null) {
-            query = new AnesthesiaVisitQueryPageDTO();
-        }
         IPage<AnesthesiaVisitVO> page = bizAnesthesiaVisitMapper.selectVisitPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query);
         page.getRecords().forEach(this::decorate);

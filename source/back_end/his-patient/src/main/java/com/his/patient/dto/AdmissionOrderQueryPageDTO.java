@@ -11,31 +11,49 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class AdmissionOrderQueryPageDTO extends PageParam {
 
-    /** 状态：1-待收治 2-已收治 3-已作废 4-已过期；null-全部 */
+    /**
+     * 状态：1-待收治 2-已收治 3-已作废 4-已过期；null-全部
+     */
     private Integer orderStatus;
 
-    /** 拟收治科室ID */
+    /**
+     * 拟收治科室ID
+     */
     private Long applyDeptId;
 
-    /** 开证科室ID */
+    /**
+     * 开证科室ID
+     */
     private Long sourceDeptId;
 
-    /** 患者姓名 / 住院证号模糊查询 */
+    /**
+     * 患者姓名 / 住院证号模糊查询
+     */
     private String keyword;
 
-    /** 来源挂号ID（按门诊线索反查） */
+    /**
+     * 来源挂号ID（按门诊线索反查）
+     */
     private Long registId;
 
-    /** 来源挂号号 */
+    /**
+     * 来源挂号号
+     */
     private String registNo;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     private Long patientId;
 
-    /** 开证时间起（含），yyyy-MM-dd */
+    /**
+     * 开证时间起（含），yyyy-MM-dd
+     */
     private String beginDate;
 
-    /** 开证时间止（含当日），yyyy-MM-dd */
+    /**
+     * 开证时间止（含当日），yyyy-MM-dd
+     */
     private String endDate;
 
     /**

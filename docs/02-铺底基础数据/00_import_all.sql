@@ -67,12 +67,6 @@ sys_checkup_package.sql;
 SOURCE
 sys_checkup_package_item.sql;
 SOURCE
-sys_drg_ccmcc.sql;
-SOURCE
-sys_drg_exclusion.sql;
-SOURCE
-sys_drg_group.sql;
-SOURCE
 sys_drug_dose_limit.sql;
 SOURCE
 sys_drug_interaction.sql;

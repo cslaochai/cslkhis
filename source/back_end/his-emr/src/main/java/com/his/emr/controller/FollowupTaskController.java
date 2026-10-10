@@ -27,7 +27,7 @@ public class FollowupTaskController {
     @PreAuthorize("hasAuthority('inpatient:followup:list')")
     @Operation(summary = "分页查询随访任务（科室按登录岗位收口）")
     @PostMapping("/listPage")
-    public Result<PageResult<BizFollowupTaskVO>> listPage(@Valid @RequestBody(required = false) FollowupQueryDTO queryDTO) {
+    public Result<PageResult<BizFollowupTaskVO>> listPage(@Valid @RequestBody FollowupQueryDTO queryDTO) {
         return Result.success(followupTaskService.listPage(queryDTO));
     }
 

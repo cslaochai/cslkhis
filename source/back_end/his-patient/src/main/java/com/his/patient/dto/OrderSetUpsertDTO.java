@@ -24,7 +24,9 @@ public class OrderSetUpsertDTO implements Serializable {
      */
     private Long id;
 
-    /** 模板名称 */
+    /**
+     * 模板名称
+     */
     @NotBlank(message = "组套名称不能为空")
     @Size(max = 100, message = "组套名称不能超过 100 字")
     private String templateName;
@@ -42,11 +44,15 @@ public class OrderSetUpsertDTO implements Serializable {
     @InEnum(value = OrderTypeEnum.class, message = "医嘱类型取值不合法（应为 1-长期 2-临时）")
     private Integer orderType;
 
-    /** 备注/适用场景说明 */
+    /**
+     * 备注/适用场景说明
+     */
     @Size(max = 500, message = "备注不能超过 500 字")
     private String remark;
 
-    /** 明细项集合 */
+    /**
+     * 明细项集合
+     */
     @NotEmpty(message = "组套至少包含一条医嘱明细")
     @Valid
     private List<InpatientOrderItemDTO> items;

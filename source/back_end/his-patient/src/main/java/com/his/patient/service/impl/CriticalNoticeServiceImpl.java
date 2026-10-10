@@ -69,12 +69,11 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
 
     @Override
     public PageResult<CriticalNoticeVO.Row> listPage(CriticalNoticeDTO.QueryPage query) {
-        CriticalNoticeDTO.QueryPage q = query == null ? new CriticalNoticeDTO.QueryPage() : query;
-        Page<CriticalNoticeVO.Row> page = new Page<>(q.getPageNum(), q.getPageSize());
-        List<Long> deptIds = scopedDeptIds(q.getDeptId());
+        Page<CriticalNoticeVO.Row> page = new Page<>(query.getPageNum(), query.getPageSize());
+        List<Long> deptIds = scopedDeptIds(query.getDeptId());
         List<CriticalNoticeVO.Row> records = bizCriticalNoticeMapper.selectNoticePage(page,
-                TextUtil.trimToNull(q.getKeyword()), q.getNoticeType(), q.getNoticeStatus(),
-                TimeUtil.dayStart(q.getStartDate()), TimeUtil.dayEnd(q.getEndDate()), q.getDeptId(), deptIds);
+                TextUtil.trimToNull(query.getKeyword()), query.getNoticeType(), query.getNoticeStatus(),
+                TimeUtil.dayStart(query.getStartDate()), TimeUtil.dayEnd(query.getEndDate()), query.getDeptId(), deptIds);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 

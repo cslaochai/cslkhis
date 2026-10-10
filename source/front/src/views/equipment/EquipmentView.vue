@@ -100,7 +100,7 @@
                           value-format="YYYY-MM-DD"/>
         </el-form-item>
         <el-form-item label="费用(元)">
-          <el-input-number v-model="maintainForm.cost as any" :min="0" :precision="2" style="width: 200px"/>
+          <el-input-number v-model="maintainForm.cost" :min="0" :precision="2" style="width: 200px"/>
         </el-form-item>
         <el-form-item label="故障描述">
           <el-input v-model="maintainForm.faultDesc" :rows="2" type="textarea"/>

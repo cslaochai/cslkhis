@@ -27,7 +27,7 @@ public class EquipmentArchiveController {
     @Operation(summary = "设备台账分页")
     @PostMapping("/listPage")
     public Result<PageResult<EquipmentVO>> listPage(@Valid @RequestBody EquipmentQueryPageDTO dto) {
-        var page = equipmentService.listPage(dto == null ? new EquipmentQueryPageDTO() : dto);
+        var page = equipmentService.listPage(dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));
     }

@@ -714,9 +714,6 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
 
     @Override
     public BedPoolVO bedPool(BedPoolQueryPageDTO query) {
-        if (query == null) {
-            query = new BedPoolQueryPageDTO();
-        }
         Long deptId = query.getDeptId();
         Long wardId = query.getWardId();
         // 三元表达式两边必须是同一个包装类型：写成 `? BedStatusEnum.FREE.getCode() : query.getBedStatus()` 时
@@ -748,7 +745,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
         // 1) 科室：本域刻意不调 DeptScopeProvider —— 它的存在意义就是跨科找床，按岗位收口等于瞎。
         //    但不传 deptId 时也不能把全院 1000+ 张床一次画出来（画得下也没人看），
         //    所以优先落当前账号的主岗位科室，主科室没床才退到第一个有床科室。
-        Long deptId = query == null ? null : query.getDeptId();
+        Long deptId = query.getDeptId();
         if (deptId == null) {
             CurrentUser user = UserUtils.getCurrentUser();
             Long ownDept = user == null ? null : user.getDeptId();
@@ -769,7 +766,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
         }
 
         // 2) 病区必须落在已确定的科室内（防跨科窥探，与护士站同口径）
-        Long wardId = query == null ? null : query.getWardId();
+        Long wardId = query.getWardId();
         if (wardId != null) {
             BedMapVO.WardOption owner = bedMapMapper.selectWardOwner(wardId);
             if (owner == null) {

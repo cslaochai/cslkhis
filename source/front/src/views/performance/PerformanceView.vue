@@ -56,7 +56,7 @@
               <template #default="{ row }">
                 <el-tag :type="row.perfStatus === 3 ? 'success' : row.perfStatus === 2 ? 'primary' : 'info'"
                         size="small">
-                  {{ ({1: '草稿', 2: '已核算', 3: '已发布'} as any)[row.perfStatus] || '—' }}
+                  {{ ({1: '草稿', 2: '已核算', 3: '已发布'})[row.perfStatus] || '—' }}
                 </el-tag>
               </template>
             </el-table-column>

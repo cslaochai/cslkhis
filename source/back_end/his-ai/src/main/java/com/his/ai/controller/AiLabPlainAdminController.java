@@ -32,7 +32,7 @@ public class AiLabPlainAdminController {
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('lab:plain:list')")
     public Result<PageResult<LabPlainItemAdminVO>> listPage(@Valid @RequestBody LabPlainItemSearchDTO dto) {
-        return Result.success(labPlainItemAdminService.adminPage(dto == null ? new LabPlainItemSearchDTO() : dto));
+        return Result.success(labPlainItemAdminService.adminPage(dto));
     }
 
     @Operation(summary = "现有分组清单（筛选下拉）")

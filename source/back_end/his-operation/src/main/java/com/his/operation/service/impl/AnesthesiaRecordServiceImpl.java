@@ -66,9 +66,6 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
 
     @Override
     public IPage<AnesthesiaRecordVO> listPage(AnesthesiaRecordQueryPageDTO query) {
-        if (query == null) {
-            query = new AnesthesiaRecordQueryPageDTO();
-        }
         IPage<AnesthesiaRecordVO> page = bizAnesthesiaRecordMapper.selectRecordPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query);
         page.getRecords().forEach(this::decorate);
@@ -190,7 +187,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(AnesthesiaRecordUpdateUpsertDTO dto) {
-        BizAnesthesiaRecord entity = mustEditable(dto == null ? null : dto.getRecordId());
+        BizAnesthesiaRecord entity = mustEditable(dto.getRecordId());
         // B-条件必填：标记发生麻醉不良事件时才要求经过与处理，跨字段条件，DTO 注解无法表达，保留
         if (Integer.valueOf(1).equals(dto.getAdverseEventFlag()) && !TextUtil.hasText(dto.getAdverseEventNote())) {
             throw new BusinessException("已标记发生麻醉不良事件，必须填写经过与处理");
@@ -202,7 +199,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void addVital(AnesthesiaVitalUpsertDTO dto) {
-        BizAnesthesiaRecord record = mustEditable(dto == null ? null : dto.getRecordId());
+        BizAnesthesiaRecord record = mustEditable(dto.getRecordId());
         LocalDateTime sampleTime = TimeUtil.toSeconds(dto.getSampleTime());
         if (bizAnesthesiaVitalMapper.countSameTime(record.getId(), sampleTime) > 0) {
             throw new BusinessException("采样时刻 " + dto.getSampleTime()
@@ -246,7 +243,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void addMed(AnesthesiaMedUpsertDTO dto) {
-        BizAnesthesiaRecord record = mustEditable(dto == null ? null : dto.getRecordId());
+        BizAnesthesiaRecord record = mustEditable(dto.getRecordId());
         BizAnesthesiaMed med = new BizAnesthesiaMed();
         med.setRecordId(record.getId());
         med.setMedTime(TimeUtil.toSeconds(dto.getMedTime()));
@@ -294,7 +291,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        BizAnesthesiaRecord entity = mustGet(dto == null ? null : dto.getId());
+        BizAnesthesiaRecord entity = mustGet(dto.getId());
         if (!Integer.valueOf(AnesthesiaRecordStatusEnum.DRAFT.getCode()).equals(entity.getRecordStatus())) {
             throw new BusinessException("麻醉记录单 " + entity.getRecordNo() + " 当前状态为「"
                     + AnesthesiaRecordStatusEnum.labelOrUnknown(entity.getRecordStatus()) + "」，只有「记录中」可以提交");
@@ -348,7 +345,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        BizAnesthesiaRecord entity = mustGet(dto == null ? null : dto.getId());
+        BizAnesthesiaRecord entity = mustGet(dto.getId());
         if (!Integer.valueOf(AnesthesiaRecordStatusEnum.SUBMITTED.getCode()).equals(entity.getRecordStatus())) {
             throw new BusinessException("麻醉记录单 " + entity.getRecordNo() + " 当前状态为「"
                     + AnesthesiaRecordStatusEnum.labelOrUnknown(entity.getRecordStatus()) + "」，只有「已提交」可以审核");
@@ -357,7 +354,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         entity.setAuditDoctorId(operatorUser.getEmployeeId());
         entity.setAuditDoctorName(operatorUser.getRealName());
         entity.setAuditTime(TimeUtil.nowSeconds());
-        if (dto != null && TextUtil.hasText(dto.getRemark())) {
+        if (TextUtil.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
         bizAnesthesiaRecordMapper.updateById(entity);
@@ -367,7 +364,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OperationChargeSummaryVO charge(AnesthesiaActionDTO dto) {
-        BizAnesthesiaRecord entity = mustGet(dto == null ? null : dto.getId());
+        BizAnesthesiaRecord entity = mustGet(dto.getId());
         if (Integer.valueOf(AnesthesiaRecordStatusEnum.DRAFT.getCode()).equals(entity.getRecordStatus())) {
             throw new BusinessException("麻醉记录单 " + entity.getRecordNo()
                     + " 还在「记录中」，先在提交时统一计费（或改完内容再提交）");

@@ -90,11 +90,20 @@ public interface BiMapper {
     BigDecimal sumWindow30dMaterialRevenue();
 
     /**
-     * 近 30 日出院且主诊断已编码的病案首页（CMI 分母样本）：
-     * 主诊断编码为空的不进样本（无法分组），death_flag/is_surgery 供分组器判定。
+     * 近 30 日出院且主诊断已编码的病案首页（CMI 分母样本），连分组维度一次带回。
+     *
+     * <p>手术与其他诊断用聚合子查询拼成逗号串带回，不给每条首页再单查一次明细。
+     * 手术编码不能省：内科组的规则形如「主诊断在某集合 且 主手术不在手术集合」，
+     * 手术清单为空时这条天然成立，手术病例会被错分到同诊断的内科低权重组，且零报错。
      */
-    @Select("SELECT s.main_diagnosis_code icdCode, s.is_surgery isSurgery, "
-            + "s.inpatient_days inpatientDays, s.death_flag deathFlag "
+    @Select("SELECT s.main_diagnosis_code icdCode, s.gender, s.age, s.age_unit ageUnit, "
+            + "s.birth_weight admissionWeightG, "
+            + "(SELECT GROUP_CONCAT(o.operation_code) FROM biz_inpatient_operation o "
+            + "  WHERE o.del_flag = 0 AND o.is_main = 1 AND o.admission_id = s.admission_id) mainOperCodes, "
+            + "(SELECT GROUP_CONCAT(o.operation_code) FROM biz_inpatient_operation o "
+            + "  WHERE o.del_flag = 0 AND o.is_main = 0 AND o.admission_id = s.admission_id) otherOperCodes, "
+            + "(SELECT GROUP_CONCAT(d.icd_code) FROM biz_inpatient_diagnosis d "
+            + "  WHERE d.del_flag = 0 AND d.diag_type = 2 AND d.admission_id = s.admission_id) otherDiagCodes "
             + "FROM biz_inpatient_summary s "
             + "JOIN biz_admission a ON a.admission_id = s.admission_id AND a.del_flag = 0 "
             + "WHERE s.del_flag = 0 AND s.main_diagnosis_code IS NOT NULL AND s.main_diagnosis_code != '' "
@@ -102,7 +111,7 @@ public interface BiMapper {
     List<BiCodedSummaryRowVO> codedSummaries30d();
 
     /**
-     * DRG 组权重（简化模拟组表，与 DrgSimService 同源）
+     * DRG 细分组权重（官方方案包不含权重，由统筹区医保局下发；为空的组不参与 CMI 计算）
      */
     @Select("SELECT drg_code AS drgCode, weight FROM sys_drg_group WHERE del_flag = 0")
     List<BiDrgWeightRowVO> drgWeights();

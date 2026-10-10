@@ -11,13 +11,21 @@
                 @keyup.enter="handleSearch"
             />
           </el-form-item>
-          <el-form-item label="分类编码">
-            <el-input
+          <el-form-item label="分类">
+            <el-select
                 v-model="searchForm.categoryCode"
                 clearable
-                placeholder="如 REPORT"
-                @keyup.enter="handleSearch"
-            />
+                filterable
+                placeholder="请选择分类"
+                style="width: 200px"
+            >
+              <el-option
+                  v-for="d in faqCategoryOptions"
+                  :key="d.dictValue"
+                  :label="`${d.dictLabel}（${d.dictValue}）`"
+                  :value="d.dictValue"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item>
             <el-button :icon="Search" type="primary" @click="handleSearch">搜索</el-button>
@@ -33,7 +41,7 @@
     <el-card class="table-card" shadow="never">
       <el-table v-loading="loading" :data="tableData" :max-height="tableMaxHeight" stripe>
         <el-table-column label="编号" prop="faqNo" width="160"/>
-        <el-table-column label="分类" prop="categoryName" width="110">
+        <el-table-column label="分类" prop="categoryName" width="120">
           <template #default="{ row }">
             {{ row.categoryName }}<span class="text-gray-400 text-xs">（{{ row.categoryCode }}）</span>
           </template>
@@ -93,10 +101,25 @@
     >
       <el-form ref="formRef" :model="formData" :rules="rules" label-width="100px">
         <el-form-item label="分类编码" prop="categoryCode">
-          <el-input v-model="formData.categoryCode" placeholder="如 REPORT、APPOINT"/>
+          <el-select
+              v-model="formData.categoryCode"
+              clearable
+              filterable
+              placeholder="请选择分类"
+              style="width: 100%"
+              @change="onCategoryChange"
+          >
+            <el-option
+                v-for="d in faqCategoryOptions"
+                :key="d.dictValue"
+                :label="`${d.dictLabel}（${d.dictValue}）`"
+                :value="d.dictValue"
+            />
+          </el-select>
         </el-form-item>
+        <!-- 分类名称随编码从字典自动带出，禁用防止手填导致与字典不一致 -->
         <el-form-item label="分类名称" prop="categoryName">
-          <el-input v-model="formData.categoryName" placeholder="如 报告查询"/>
+          <el-input v-model="formData.categoryName" disabled placeholder="随分类自动带出"/>
         </el-form-item>
         <el-form-item label="问题" prop="question">
           <el-input v-model="formData.question" placeholder="患者会怎么问，就怎么写"/>
@@ -148,12 +171,15 @@ import {Delete, Edit, Plus, Refresh, Search} from '@element-plus/icons-vue'
 import {faqDelete, faqUpsert, getFaqAdminDetail, getFaqAdminList} from '@/api/patientFaq'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
+import {DICT_TYPE, loadDictDataList} from '@/lib/dict-cache'
 
 const loading = ref(false)
 const searchForm = ref({
   keyword: '',
   categoryCode: '',
 })
+// FAQ 分类字典下拉选项（his_faq_category），新增/编辑/搜索共用
+const faqCategoryOptions = ref([])
 const tableData = ref([])
 const pagination = ref({
   pageNum: 1,
@@ -189,7 +215,19 @@ const rules = {
 
 onMounted(() => {
   loadData()
+  loadFaqCategories()
 })
+
+// 加载 FAQ 分类字典（his_faq_category）
+const loadFaqCategories = async () => {
+  faqCategoryOptions.value = await loadDictDataList(DICT_TYPE.FAQ_CATEGORY)
+}
+
+// 选中分类后自动带出分类名称（保持与字典一致，避免手填分裂）
+const onCategoryChange = (val) => {
+  const item = faqCategoryOptions.value.find(d => d.dictValue === val)
+  formData.categoryName = item ? item.dictLabel : ''
+}
 
 const loadData = async () => {
   loading.value = true

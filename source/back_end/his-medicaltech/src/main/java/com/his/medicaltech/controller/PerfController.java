@@ -34,7 +34,7 @@ public class PerfController {
     @Operation(summary = "成本分页")
     @PostMapping("/cost/listPage")
     public Result<PageResult<PerfVO.CostRow>> costPage(@Valid @RequestBody PerfDTO.CostQuery dto) {
-        var page = perfService.costPage(dto == null ? new PerfDTO.CostQuery() : dto);
+        var page = perfService.costPage(dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));
     }
@@ -54,7 +54,7 @@ public class PerfController {
     @Operation(summary = "绩效结果分页")
     @PostMapping("/result/listPage")
     public Result<PageResult<PerfVO.PerfRow>> perfPage(@Valid @RequestBody PerfDTO.PerfQuery dto) {
-        var page = perfService.perfPage(dto == null ? new PerfDTO.PerfQuery() : dto);
+        var page = perfService.perfPage(dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));
     }

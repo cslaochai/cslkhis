@@ -12,15 +12,21 @@ import lombok.Data;
 @Schema(description = "患者联系人新增/修改入参")
 public class PatientContactUpsertDTO {
 
-    /** 主键ID */
+    /**
+     * 主键ID
+     */
     @Schema(description = "联系人ID，新增时为空，修改时必填")
     private Long id;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @Schema(description = "患者ID，修改时可空（以库中记录为准）")
     private Long patientId;
 
-    /** 联系人姓名 */
+    /**
+     * 联系人姓名
+     */
     @NotBlank(message = "联系人姓名不能为空")
     @Schema(description = "联系人姓名")
     private String contactName;
@@ -37,23 +43,33 @@ public class PatientContactUpsertDTO {
     @Schema(description = "与患者关系码值（字典 sys_patient_relation：2-配偶 3-父亲 … 99-其他）")
     private Integer relationship;
 
-    /** 联系电话 */
+    /**
+     * 联系电话
+     */
     @Schema(description = "联系电话")
     private String phone;
 
-    /** 是否主要联系人（0-否 1-是） */
+    /**
+     * 是否主要联系人（0-否 1-是）
+     */
     @Schema(description = "是否主要联系人：0-否 1-是")
     private Integer isPrimary;
 
-    /** 联系地址 */
+    /**
+     * 联系地址
+     */
     @Schema(description = "联系地址")
     private String address;
 
-    /** 状态（0-停用 1-启用） */
+    /**
+     * 状态（0-停用 1-启用）
+     */
     @Schema(description = "状态：0-停用 1-启用")
     private Integer status;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     @Schema(description = "备注")
     private String remark;
 }

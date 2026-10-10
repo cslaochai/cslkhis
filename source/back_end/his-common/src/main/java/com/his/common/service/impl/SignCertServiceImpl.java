@@ -99,7 +99,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
     public SignCertVO issue(SignCertIssueDTO dto, Long operatorId, String operatorName) {
         // C-非 web 入参：SignCertService.issue 是能力层 API，由 his-emr 的 SignatureCenterServiceImpl 转调（操作人在层外补），
         // 注解只能挂他模块 Controller，本层拿不到绑定校验，Bean Validation 不覆盖，保留
-        if (dto == null || dto.getEmpId() == null) {
+        if (dto.getEmpId() == null) {
             throw new BusinessException("员工ID不能为空");
         }
         if (!TextUtil.hasText(dto.getEmpName())) {
@@ -203,7 +203,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
     public SignCertVO revoke(SignCertRevokeDTO dto, Long operatorId, String operatorName) {
         // C-非 web 入参：同 issue —— his-emr 的 SignatureCenterServiceImpl 直接调用，注解与 @Valid 挂那侧接口，本层拿不到绑定校验；
         // 吊销理由是废止签名能力的留痕依据，任何调用路径都必须带上，Bean Validation 不覆盖，保留
-        if (dto == null || dto.getCertId() == null) {
+        if (dto.getCertId() == null) {
             throw new BusinessException("证书ID不能为空");
         }
         if (!TextUtil.hasText(dto.getReason())) {

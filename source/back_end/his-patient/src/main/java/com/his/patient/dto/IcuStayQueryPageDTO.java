@@ -14,26 +14,40 @@ import java.time.LocalDate;
 @EqualsAndHashCode(callSuper = true)
 public class IcuStayQueryPageDTO extends PageParam {
 
-    /** 入科单号 */
+    /**
+     * 入科单号
+     */
     private String stayNo;
 
-    /** 患者姓名 */
+    /**
+     * 患者姓名
+     */
     private String patientName;
 
-    /** 开始日期 */
+    /**
+     * 开始日期
+     */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate startDate;
 
-    /** 结束日期 */
+    /**
+     * 结束日期
+     */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate endDate;
 
-    /** ICU 病区ID */
+    /**
+     * ICU 病区ID
+     */
     private Long wardId;
 
-    /** 监护等级（1-特级 2-I级 3-II级） */
+    /**
+     * 监护等级（1-特级 2-I级 3-II级）
+     */
     private Integer careLevel;
 
-    /** 状态（1-在科 2-已出科） */
+    /**
+     * 状态（1-在科 2-已出科）
+     */
     private Integer status;
 }

@@ -11,7 +11,9 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class PatientIndexQueryDTO extends PageParam {
 
-    /** 综合关键字：姓名 / 患者号 / 手机号 / 身份证号四者 OR */
+    /**
+     * 综合关键字：姓名 / 患者号 / 手机号 / 身份证号四者 OR
+     */
     private String keyword;
 
     /**
@@ -26,6 +28,8 @@ public class PatientIndexQueryDTO extends PageParam {
      */
     private Integer matchLevel;
 
-    /** 是否只返回"存在疑似重复"的档案（重复检测用） */
+    /**
+     * 是否只返回"存在疑似重复"的档案（重复检测用）
+     */
     private Boolean duplicateOnly;
 }

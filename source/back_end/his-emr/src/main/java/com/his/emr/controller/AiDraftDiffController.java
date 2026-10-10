@@ -29,7 +29,7 @@ public class AiDraftDiffController {
     @Operation(summary = "草稿留痕分页（AI 管理台）")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('ai:admin:list')")
-    public Result<PageResult<AiDraftDiffListVO>> listPage(@Valid @RequestBody(required = false) AiDraftDiffQueryPageDTO queryDTO) {
+    public Result<PageResult<AiDraftDiffListVO>> listPage(@Valid @RequestBody AiDraftDiffQueryPageDTO queryDTO) {
         return Result.success(aiDraftDiffService.listPage(queryDTO));
     }
 }

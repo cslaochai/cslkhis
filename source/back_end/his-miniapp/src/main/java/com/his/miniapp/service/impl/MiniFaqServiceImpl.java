@@ -94,10 +94,10 @@ public class MiniFaqServiceImpl extends ServiceImpl<MiniFaqMapper, SysFaq> imple
     @Override
     public PageResult<MiniFaqListVO> search(FaqPageQueryDTO dto) {
         List<SysFaq> all = enabledFaqs();
-        if (dto != null && TextUtil.hasText(dto.getCategoryCode())) {
+        if (TextUtil.hasText(dto.getCategoryCode())) {
             all = all.stream().filter(f -> dto.getCategoryCode().equals(f.getCategoryCode())).toList();
         }
-        String keyword = dto == null ? null : dto.getKeyword();
+        String keyword = dto.getKeyword();
         List<String> terms = FaqSearchSupport.splitTerms(keyword);
         List<SysFaq> matched;
         if (terms.isEmpty()) {
@@ -173,10 +173,10 @@ public class MiniFaqServiceImpl extends ServiceImpl<MiniFaqMapper, SysFaq> imple
         List<SysFaq> all = miniFaqMapper.selectList(new LambdaQueryWrapper<SysFaq>()
                 .orderByAsc(SysFaq::getSortOrder)
                 .orderByAsc(SysFaq::getId));
-        if (dto != null && TextUtil.hasText(dto.getCategoryCode())) {
+        if (TextUtil.hasText(dto.getCategoryCode())) {
             all = all.stream().filter(f -> dto.getCategoryCode().equals(f.getCategoryCode())).toList();
         }
-        String keyword = dto == null ? null : dto.getKeyword();
+        String keyword = dto.getKeyword();
         if (TextUtil.hasText(keyword)) {
             all = all.stream()
                     .filter(f -> (f.getQuestion() != null && f.getQuestion().contains(keyword.trim()))

@@ -13,27 +13,41 @@ import java.math.BigDecimal;
 @Data
 public class OnlineApplyDTO implements Serializable {
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @NotNull(message = "患者不能为空")
     private Long patientId;
 
-    /** 接诊科室ID */
+    /**
+     * 接诊科室ID
+     */
     private Long deptId;
 
-    /** 接诊医生ID（员工ID） */
+    /**
+     * 接诊医生ID（员工ID）
+     */
     private Long doctorId;
 
-    /** 问诊方式（1-图文问诊 2-电话问诊 3-视频问诊） */
+    /**
+     * 问诊方式（1-图文问诊 2-电话问诊 3-视频问诊）
+     */
     @NotNull(message = "问诊方式不能为空")
     private Integer consultType;
 
-    /** 主诉/问题描述 */
+    /**
+     * 主诉/问题描述
+     */
     @NotBlank(message = "主诉/问题描述不能为空")
     private String chiefComplaint;
 
-    /** 问诊费用 */
+    /**
+     * 问诊费用
+     */
     private BigDecimal fee;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

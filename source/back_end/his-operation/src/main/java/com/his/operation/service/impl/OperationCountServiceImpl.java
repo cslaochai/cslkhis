@@ -169,7 +169,7 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void countPhase(CountPhaseDTO dto) {
-        BizOperationCount entity = mustGet(dto == null ? null : dto.getCountId());
+        BizOperationCount entity = mustGet(dto.getCountId());
         Integer phase = dto.getPhase();
         if (!Objects.equals(entity.getPhase() + 1, phase)) {
             throw new BusinessException("清点单 " + entity.getCountNo() + " 当前处于「"

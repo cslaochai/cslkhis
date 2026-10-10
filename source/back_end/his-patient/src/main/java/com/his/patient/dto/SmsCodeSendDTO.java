@@ -12,7 +12,9 @@ import java.io.Serializable;
 @Data
 public class SmsCodeSendDTO implements Serializable {
 
-    /** 联系电话 */
+    /**
+     * 联系电话
+     */
     @NotBlank(message = "请输入手机号")
     @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
     private String phone;

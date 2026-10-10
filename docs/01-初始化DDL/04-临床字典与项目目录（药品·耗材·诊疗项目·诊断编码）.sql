@@ -299,6 +299,7 @@ CREATE TABLE `sys_icd10`
     `icd_code`     varchar(20)  NOT NULL COMMENT 'ICD编码',
     `icd_name`     varchar(200) NOT NULL COMMENT '疾病名称',
     `icd_category` varchar(100)          DEFAULT NULL COMMENT '分类',
+    `code_std`     tinyint      NOT NULL DEFAULT '0' COMMENT '编码口径（1-医保版贯标码 0-历史缩写码）',
     `sort_order`   int                   DEFAULT '0' COMMENT '排序',
     `status`       tinyint               DEFAULT '1' COMMENT '状态（0-停用 1-正常）',
     `create_by`    varchar(64)  NOT NULL,
@@ -323,6 +324,7 @@ CREATE TABLE `sys_icd9cm3`
     `op_code`      varchar(32)  NOT NULL COMMENT '手术操作编码',
     `op_name`      varchar(300) NOT NULL COMMENT '手术操作名称',
     `op_category`  tinyint               DEFAULT NULL COMMENT '章节',
+    `code_std`     tinyint      NOT NULL DEFAULT '0' COMMENT '编码口径（1-医保版贯标码 0-历史缩写码）',
     `sort_order`   int          NOT NULL DEFAULT '0' COMMENT '排序',
     `status`       tinyint      NOT NULL DEFAULT '1' COMMENT '状态（0-停用 1-正常）',
     `create_by`    varchar(64)  NOT NULL COMMENT '创建人',
@@ -428,7 +430,93 @@ CREATE TABLE `sys_single_disease`
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='单病种质控目录';
 
 -- ----------------------------
--- sys_drg_group  DRG 分组与权重
+-- sys_drg_mdc  DRG 主要诊断大类（MDC）目录与入组规则
+-- ----------------------------
+CREATE TABLE `sys_drg_mdc` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `mdc_code` varchar(8) NOT NULL COMMENT 'MDC 编码',
+  `mdc_name` varchar(100) DEFAULT NULL COMMENT 'MDC 名称',
+  `mdc_rule` varchar(2000) DEFAULT NULL COMMENT 'MDC 入组规则原文',
+  `sort_no` int DEFAULT NULL COMMENT '排序',
+  `version` varchar(32) DEFAULT NULL COMMENT '分组方案版本',
+  `source` varchar(64) DEFAULT NULL COMMENT '来源',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态（1-启用 0-停用）',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_mdc_code` (`mdc_code`,`del_flag`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='DRG 主要诊断大类目录';
+
+-- ----------------------------
+-- sys_drg_adrg  DRG 核心疾病诊断相关组（ADRG）目录与入组规则
+-- ----------------------------
+CREATE TABLE `sys_drg_adrg` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `adrg_code` varchar(16) NOT NULL COMMENT 'ADRG 编码',
+  `adrg_name` varchar(200) DEFAULT NULL COMMENT 'ADRG 名称',
+  `adrg_rule` varchar(2000) DEFAULT NULL COMMENT 'ADRG 入组规则原文',
+  `mdc_code` varchar(8) DEFAULT NULL COMMENT '所属 MDC 编码',
+  `sort_no` int DEFAULT NULL COMMENT 'MDC 内排序',
+  `version` varchar(32) DEFAULT NULL COMMENT '分组方案版本',
+  `source` varchar(64) DEFAULT NULL COMMENT '来源',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态（1-启用 0-停用）',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_adrg_code` (`adrg_code`,`del_flag`),
+  KEY `idx_adrg_mdc` (`mdc_code`,`del_flag`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='DRG 核心组目录';
+
+-- ----------------------------
+-- sys_drg_set  分组规则引用的 ICD 码集合（集合编号 → 精确码）
+-- ----------------------------
+CREATE TABLE `sys_drg_set` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `set_code` varchar(24) NOT NULL COMMENT '集合编号',
+  `icd_code` varchar(32) NOT NULL COMMENT 'ICD 编码',
+  `icd_name` varchar(200) DEFAULT NULL COMMENT 'ICD 名称',
+  `set_type` varchar(4) NOT NULL COMMENT '类型（OP-手术操作 DI-诊断 EX-CC/MCC 排除组）',
+  `version` varchar(32) DEFAULT NULL COMMENT '分组方案版本',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态（1-启用 0-停用）',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_set_icd` (`set_code`,`icd_code`,`del_flag`),
+  KEY `idx_set_icd_code` (`icd_code`,`del_flag`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='DRG 分组码集合';
+    `set_code`    varchar(24) NOT NULL COMMENT '集合编号',
+    `icd_code`    varchar(32) NOT NULL COMMENT 'ICD 编码',
+    `icd_name`    varchar(200)         DEFAULT NULL COMMENT 'ICD 名称',
+    `set_type`    varchar(4)  NOT NULL COMMENT '类型（OP-手术操作 DI-诊断 EX-CC/MCC 排除组）',
+    `version`     varchar(32)          DEFAULT NULL COMMENT '分组方案版本',
+    `status`      tinyint     NOT NULL DEFAULT '1' COMMENT '状态（1-启用 0-停用）',
+    `create_by`   varchar(64) NOT NULL COMMENT '创建人',
+    `create_by_id` bigint               DEFAULT NULL COMMENT '创建人ID',
+    `create_time` datetime    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_by`   varchar(64) NOT NULL COMMENT '更新人',
+    `update_by_id` bigint               DEFAULT NULL COMMENT '更新人ID',
+    `update_time` datetime    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+    `del_flag`    tinyint     NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+    `remark`      varchar(500)         DEFAULT NULL COMMENT '备注',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_set_icd` (`set_code`,`icd_code`,`del_flag`),
+    KEY `idx_set_icd_code` (`icd_code`,`del_flag`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='DRG 分组码集合';
+
+-- ----------------------------
+-- sys_drg_group  DRG 细分组与权重
 -- ----------------------------
 CREATE TABLE `sys_drg_group`
 (
@@ -437,6 +525,8 @@ CREATE TABLE `sys_drg_group`
     `drg_name`     varchar(200)         DEFAULT NULL COMMENT 'DRG 组名称',
     `mdc_code`     varchar(8)           DEFAULT NULL COMMENT 'MDC 主要诊断大类',
     `adrg_code`    varchar(16)          DEFAULT NULL COMMENT 'ADRG 编码',
+    `drg_rule`     varchar(2000)        DEFAULT NULL COMMENT 'DRG 细分组规则原文',
+    `sort_no`      int                  DEFAULT NULL COMMENT 'ADRG 内排序',
     `weight`       decimal(10, 4)       DEFAULT NULL COMMENT '权重',
     `pay_standard` decimal(10, 2)       DEFAULT NULL COMMENT '病组支付标准（元）',
     `source`       varchar(64)          DEFAULT NULL COMMENT '来源',
@@ -461,18 +551,10 @@ CREATE TABLE `sys_drg_ccmcc` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `icd_code` varchar(32) NOT NULL COMMENT '诊断编码（ICD-10）',
   `cc_level` varchar(8) NOT NULL COMMENT '级别（MCC-严重并发症合并症 CC-并发症合并症 NONE-无）',
+  `excl_group` varchar(24) DEFAULT NULL COMMENT 'CC/MCC 排除组编号',
   `version` varchar(32) DEFAULT NULL COMMENT '分组方案版本（2.0/3.0）',
   `source` varchar(64) DEFAULT NULL COMMENT '来源',
   `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态（0-停用 1-启用）',
-  `group_type` tinyint DEFAULT NULL COMMENT '分组类型（1-外科 2-操作 3-内科）',
-  `cc_mcc_flag` tinyint DEFAULT NULL COMMENT '并发症合并症标志（0-无 1-伴CC 2-伴MCC）',
-  `gender_limit` tinyint DEFAULT '0' COMMENT '性别限定（0-不限 1-男 2-女）',
-  `age_tier` tinyint DEFAULT '0' COMMENT '年龄分层（0-不限 1-≤6岁 2-≥70岁 3-新生儿）',
-  `pre_group_flag` tinyint DEFAULT '0' COMMENT '先期分组标志（0-否 1-是）',
-  `surgery_attr` tinyint DEFAULT '0' COMMENT '手术属性（0-普通 1-单双侧 2-机器人 3-联合）',
-  `base_disease_flag` tinyint DEFAULT '0' COMMENT '基层病种标志（0-否 1-是）',
-  `diag_match` varchar(512) DEFAULT NULL COMMENT '主诊断匹配键（ICD-10 亚目前缀，逗号分隔）',
-  `oper_match` varchar(512) DEFAULT NULL COMMENT '主手术匹配键（ICD-9-CM-3 前缀，逗号分隔）',
   `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
   `create_time` datetime DEFAULT NULL COMMENT '创建时间',
   `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
@@ -482,24 +564,6 @@ CREATE TABLE `sys_drg_ccmcc` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_ccmcc_code_ver` (`icd_code`,`version`,`del_flag`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='DRG 并发症合并症目录';
-
--- ----------------------------
--- sys_drg_exclusion  DRG 排除表（主诊断下某诊断丧失 CC/MCC 资格）
--- ----------------------------
-CREATE TABLE `sys_drg_exclusion` (
-  `id` bigint NOT NULL COMMENT '主键ID',
-  `main_diag_code` varchar(32) NOT NULL COMMENT '主诊断编码（ICD-10）',
-  `excluded_code` varchar(32) NOT NULL COMMENT '被排除的 CC/MCC 诊断编码',
-  `version` varchar(32) DEFAULT NULL COMMENT '分组方案版本（2.0/3.0）',
-  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
-  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
-  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
-  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
-  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
-  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
-  PRIMARY KEY (`id`),
-  KEY `idx_excl_main` (`main_diag_code`,`del_flag`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='DRG 排除表';
 
 -- ----------------------------
 -- sys_checkup_package  体检套餐

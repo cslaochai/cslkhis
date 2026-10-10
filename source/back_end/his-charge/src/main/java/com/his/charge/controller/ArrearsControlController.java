@@ -42,9 +42,8 @@ public class ArrearsControlController {
 
     @Operation(summary = "在院欠费患者榜（按欠费额倒序）")
     @PostMapping("/board")
-    public Result<PageResult<ArrearsPatientVO>> board(@Valid @RequestBody(required = false) ArrearsBoardQueryDTO q) {
-        ArrearsBoardQueryDTO query = q == null ? new ArrearsBoardQueryDTO() : q;
-        var page = arrearsControlService.arrearsBoard(query);
+    public Result<PageResult<ArrearsPatientVO>> board(@Valid @RequestBody ArrearsBoardQueryDTO q) {
+        var page = arrearsControlService.arrearsBoard(q);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));
     }

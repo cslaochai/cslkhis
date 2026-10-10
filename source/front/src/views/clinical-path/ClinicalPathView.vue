@@ -355,7 +355,7 @@
         </div>
         <div v-if="detail.diagnosis" class="text-xs text-slate-500">入院诊断：{{ detail.diagnosis }}（入径依据）</div>
 
-        <el-table :data="detail.steps || []" :row-class-name="({ row }: any) => (detail.status === ENROLL_STATUS.ENROLLED && row.dayNo === detail.currentDay ? 'bg-amber-50' : '')" border data-testid="cp-detail-steps" max-height="320"
+        <el-table :data="detail.steps || []" :row-class-name="({ row }) => (detail.status === ENROLL_STATUS.ENROLLED && row.dayNo === detail.currentDay ? 'bg-amber-50' : '')" border data-testid="cp-detail-steps" max-height="320"
                   size="small">
           <el-table-column align="center" label="路径日" prop="dayNo" width="80"/>
           <el-table-column label="类型" width="110">

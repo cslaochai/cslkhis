@@ -111,9 +111,8 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
      */
     @Override
     public IPage<PrepayVO> prepayListPage(PrepayQueryPageDTO query) {
-        PrepayQueryPageDTO q = query != null ? query : new PrepayQueryPageDTO();
-        Page<PrepayVO> page = new Page<>(q.getPageNum(), q.getPageSize());
-        IPage<PrepayVO> raw = bizPaymentTxnMapper.selectPrepayPage(page, q);
+        Page<PrepayVO> page = new Page<>(query.getPageNum(), query.getPageSize());
+        IPage<PrepayVO> raw = bizPaymentTxnMapper.selectPrepayPage(page, query);
         // 文案由后端给：前端判码值就会有第二套口径（支付方式码值前端就抄错过一次，把 4 当银行卡）
         for (PrepayVO vo : raw.getRecords()) {
             vo.setPrepayTypeText(dictCacheService.getDicDataLabel(DictType.PREPAY_TYPE, vo.getPrepayType()));
@@ -143,7 +142,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
     @Override
     @Transactional(rollbackFor = Exception.class)
     public List<PrepayVO> savePrepay(PrepayUpsertDTO dto) {
-        if (dto == null || dto.getPrepayType() == null
+        if (dto.getPrepayType() == null
                 || (dto.getPrepayType() != PREPAY_IN && dto.getPrepayType() != PREPAY_OUT)) {
             throw new BusinessException("流水类型不合法（应为 1-充值 或 2-退款）");
         }

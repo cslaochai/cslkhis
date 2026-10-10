@@ -74,7 +74,7 @@ public class InvoiceServiceImpl extends ServiceImpl<BizInvoiceMapper, BizInvoice
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BizInvoiceVO issueByBill(InvoiceIssueDTO dto) {
-        if (dto == null || dto.getBillId() == null) {
+        if (dto.getBillId() == null) {
             throw new BusinessException("缺少结算账单");
         }
         BizSettlementBill bill = settlementBillService.getById(dto.getBillId());

@@ -34,7 +34,7 @@ public class CheckupController {
     @Operation(summary = "套餐分页")
     @PostMapping("/package/listPage")
     public Result<PageResult<CheckupVO.PackageVO>> packagePage(@Valid @RequestBody CheckupDTO.PackageQuery dto) {
-        var page = checkupService.packagePage(dto == null ? new CheckupDTO.PackageQuery() : dto);
+        var page = checkupService.packagePage(dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));
     }
@@ -63,7 +63,7 @@ public class CheckupController {
     @Operation(summary = "体检登记分页")
     @PostMapping("/record/listPage")
     public Result<PageResult<CheckupVO.RecordVO>> recordPage(@Valid @RequestBody CheckupDTO.RecordQuery dto) {
-        var page = checkupService.recordPage(dto == null ? new CheckupDTO.RecordQuery() : dto);
+        var page = checkupService.recordPage(dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));
     }

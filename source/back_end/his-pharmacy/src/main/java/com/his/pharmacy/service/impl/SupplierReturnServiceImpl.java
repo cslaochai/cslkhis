@@ -66,11 +66,10 @@ public class SupplierReturnServiceImpl extends ServiceImpl<BizDrugSupplierReturn
 
     @Override
     public PageResult<SupplierReturnVO> listPage(SupplierReturnQueryPageDTO query) {
-        SupplierReturnQueryPageDTO q = query == null ? new SupplierReturnQueryPageDTO() : query;
         Page<SupplierReturnVO> page = bizDrugSupplierReturnMapper.selectReturnPage(
-                new Page<>(q.getPageNum(), q.getPageSize()),
-                TextUtil.trimToNull(q.getReturnNo()), q.getSupplierId(), q.getStatus(),
-                TextUtil.trimToNull(q.getKeyword()), TextUtil.trimToNull(q.getDateStart()), TextUtil.trimToNull(q.getDateEnd()));
+                new Page<>(query.getPageNum(), query.getPageSize()),
+                TextUtil.trimToNull(query.getReturnNo()), query.getSupplierId(), query.getStatus(),
+                TextUtil.trimToNull(query.getKeyword()), TextUtil.trimToNull(query.getDateStart()), TextUtil.trimToNull(query.getDateEnd()));
         page.getRecords().forEach(this::fillText);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
     }

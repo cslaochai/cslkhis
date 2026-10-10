@@ -14,14 +14,20 @@ import java.time.LocalDate;
 @EqualsAndHashCode(callSuper = true)
 public class IcuMonitorQueryPageDTO extends PageParam {
 
-    /** 入科记录ID */
+    /**
+     * 入科记录ID
+     */
     private Long stayId;
 
-    /** 开始日期 */
+    /**
+     * 开始日期
+     */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate startDate;
 
-    /** 结束日期 */
+    /**
+     * 结束日期
+     */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate endDate;
 }

@@ -3,6 +3,8 @@ package com.his.medicaltech.service.impl;
 import com.his.common.util.NumUtil;
 import com.his.medicaltech.mapper.BiMapper;
 import com.his.medicaltech.service.BiService;
+import com.his.medicaltech.support.DrgCodes;
+import com.his.medicaltech.support.DrgFacts;
 import com.his.medicaltech.support.DrgGrouper;
 import com.his.medicaltech.vo.*;
 import lombok.RequiredArgsConstructor;
@@ -62,8 +64,8 @@ public class BiServiceImpl implements BiService {
     }
 
     /**
-     * 国考四指标（M5，近 30 日窗口）。分组逐条跑 {@link DrgGrouper}（与 DRG 模拟页同一分组器，单一口径），
-     * 组权重一次查全后内存映射，样本量 = 近 30 日出院且已编码首页数，院内数据量下无性能问题。
+     * 国考四指标（M5，近 30 日窗口）。分组逐条跑 {@link DrgGrouper}（与 DRG 模拟页同一分组器、同一份方案快照），
+     * 样本一次查全（含手术/其他诊断明细拼接串），院内数据量下无性能问题。
      */
     public BiNationalVO nationalMetrics() {
         BiNationalVO vo = new BiNationalVO();
@@ -94,25 +96,34 @@ public class BiServiceImpl implements BiService {
         // CMI：QY（未入组）权重按 0 计入分母，与国考口径一致
         Map<String, BigDecimal> weightByCode = new HashMap<>();
         for (BiDrgWeightRowVO g : biMapper.drgWeights()) {
-            weightByCode.put(g.getDrgCode(), NumUtil.orZero(g.getWeight()));
+            weightByCode.put(g.getDrgCode(), g.getWeight());
         }
         List<BiCodedSummaryRowVO> samples = biMapper.codedSummaries30d();
         long grouped = 0;
+        long weightMissing = 0;
         BigDecimal weightSum = BigDecimal.ZERO;
         for (BiCodedSummaryRowVO s : samples) {
-            DrgGrouper.GroupResult r = drgGrouper.group(new DrgGrouper.GroupInput(
-                    s.getIcdCode(), null, List.of(), null, null, null,
-                    s.getInpatientDays(), s.getDeathFlag(), null, null, s.getIsSurgery()));
-            if (r.grouped()) {
-                grouped++;
-                weightSum = weightSum.add(weightByCode.getOrDefault(r.drgCode(), BigDecimal.ZERO));
+            DrgGrouper.GroupResult r = drgGrouper.group(new DrgFacts(s.getIcdCode(),
+                    DrgCodes.split(s.getMainOperCodes()), DrgCodes.split(s.getOtherDiagCodes()),
+                    DrgCodes.split(s.getOtherOperCodes()), s.getGender(), s.getAge(), s.getAgeUnit(),
+                    s.getAdmissionWeightG()));
+            if (!r.grouped()) {
+                continue;
+            }
+            grouped++;
+            BigDecimal weight = weightByCode.get(r.drgCode());
+            if (weight == null) {
+                weightMissing++;
+            } else {
+                weightSum = weightSum.add(weight);
             }
         }
         vo.setCmiSampleCount((long) samples.size());
         vo.setCmiGroupedCount(grouped);
-        vo.setCmi(!samples.isEmpty()
-                ? weightSum.divide(BigDecimal.valueOf(samples.size()), 4, RoundingMode.HALF_UP)
-                : BigDecimal.ZERO);
+        // 只要有一份权重复不上就整指标返回 null：官方包只下发目录，权重由统筹区医保局另行制定，
+        // 把缺的按 0 加进分子会得到一个「看着正常但偏低」的 CMI，比空着更坏（同 §7 不把统筹塞进优惠列）
+        vo.setCmi(samples.isEmpty() || weightMissing > 0 ? null
+                : weightSum.divide(BigDecimal.valueOf(samples.size()), 4, RoundingMode.HALF_UP));
         return vo;
     }
 

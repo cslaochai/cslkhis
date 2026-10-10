@@ -37,8 +37,8 @@ public class InfectionMonitorController {
     @Operation(summary = "病例分页")
     @PostMapping("/case/listPage")
     public Result<PageResult<InfectionMonitorVO.CaseRow>> caseListPage(
-            @Valid @RequestBody(required = false) InfectionMonitorDTO.CaseQueryPage dto) {
-        return Result.success(infectionMonitorService.casePage(dto == null ? new InfectionMonitorDTO.CaseQueryPage() : dto));
+            @Valid @RequestBody InfectionMonitorDTO.CaseQueryPage dto) {
+        return Result.success(infectionMonitorService.casePage(dto));
     }
 
     @Operation(summary = "病例详情")
@@ -68,8 +68,8 @@ public class InfectionMonitorController {
     @Operation(summary = "监测分页")
     @PostMapping("/monitor/listPage")
     public Result<PageResult<InfectionMonitorVO.MonitorRow>> monitorListPage(
-            @Valid @RequestBody(required = false) InfectionMonitorDTO.MonitorQueryPage dto) {
-        return Result.success(infectionMonitorService.monitorPage(dto == null ? new InfectionMonitorDTO.MonitorQueryPage() : dto));
+            @Valid @RequestBody InfectionMonitorDTO.MonitorQueryPage dto) {
+        return Result.success(infectionMonitorService.monitorPage(dto));
     }
 
     @Operation(summary = "监测详情（含导管日）")
@@ -129,8 +129,8 @@ public class InfectionMonitorController {
     @Operation(summary = "观察记录分页")
     @PostMapping("/handObs/listPage")
     public Result<PageResult<InfectionMonitorVO.HandObsRow>> handObsListPage(
-            @Valid @RequestBody(required = false) InfectionMonitorDTO.HandObsQueryPage dto) {
-        return Result.success(infectionMonitorService.handObsPage(dto == null ? new InfectionMonitorDTO.HandObsQueryPage() : dto));
+            @Valid @RequestBody InfectionMonitorDTO.HandObsQueryPage dto) {
+        return Result.success(infectionMonitorService.handObsPage(dto));
     }
 
     @PreAuthorize("hasAuthority('emr:infectionMonitor:add')")
@@ -145,7 +145,7 @@ public class InfectionMonitorController {
     @Operation(summary = "依从率统计（先聚合再算比率，默认近 30 天）")
     @PostMapping("/handObs/stats")
     public Result<InfectionMonitorVO.HandObsStats> handObsStats(
-            @Valid @RequestBody(required = false) InfectionMonitorDTO.HandObsStatsQuery dto) {
-        return Result.success(infectionMonitorService.handObsStats(dto == null ? new InfectionMonitorDTO.HandObsStatsQuery() : dto));
+            @Valid @RequestBody InfectionMonitorDTO.HandObsStatsQuery dto) {
+        return Result.success(infectionMonitorService.handObsStats(dto));
     }
 }

@@ -58,8 +58,8 @@ public class NurseScheduleController {
     @PreAuthorize("hasAuthority('nursing:schedule:list')")
     @Operation(summary = "排班台账分页（跨病区回看）")
     @PostMapping("/listPage")
-    public Result<PageResult<NurseScheduleVO.Row>> listPage(@Valid @RequestBody(required = false) NurseScheduleDTO.QueryPage dto) {
-        return Result.success(nurseScheduleService.listPage(dto == null ? new NurseScheduleDTO.QueryPage() : dto));
+    public Result<PageResult<NurseScheduleVO.Row>> listPage(@Valid @RequestBody NurseScheduleDTO.QueryPage dto) {
+        return Result.success(nurseScheduleService.listPage(dto));
     }
 
     @PreAuthorize("hasAuthority('nursing:schedule:list')")

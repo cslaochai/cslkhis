@@ -60,7 +60,9 @@ public class InpatientRecordUpsertDTO implements Serializable {
      */
     private String pastHistory;
 
-    /** 个人史（含婚育、烟酒、职业） */
+    /**
+     * 个人史（含婚育、烟酒、职业）
+     */
     private String personalHistory;
 
     /**
@@ -112,7 +114,9 @@ public class InpatientRecordUpsertDTO implements Serializable {
 
     // 体格检查
 
-    /** 一般情况（神志/发育/营养/体位/面容） */
+    /**
+     * 一般情况（神志/发育/营养/体位/面容）
+     */
     private String generalCondition;
 
     /**
@@ -172,7 +176,9 @@ public class InpatientRecordUpsertDTO implements Serializable {
      */
     private String diagnosisCode;
 
-    /** 诊疗计划 / 处理意见 */
+    /**
+     * 诊疗计划 / 处理意见
+     */
     private String treatmentPlan;
 
     /**

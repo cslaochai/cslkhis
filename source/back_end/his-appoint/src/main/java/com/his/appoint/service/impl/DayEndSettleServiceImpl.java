@@ -62,8 +62,8 @@ public class DayEndSettleServiceImpl implements DayEndSettleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DayEndSettleResultVO settle(DayEndSettleDTO settleDTO) {
-        boolean dryRun = settleDTO != null && Boolean.TRUE.equals(settleDTO.getDryRun());
-        if (settleDTO != null && settleDTO.getSettleDate() != null) {
+        boolean dryRun = Boolean.TRUE.equals(settleDTO.getDryRun());
+        if (settleDTO.getSettleDate() != null) {
             LocalDate target = settleDTO.getSettleDate();
             return doSettle(target, target, dryRun);
         }

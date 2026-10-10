@@ -67,7 +67,7 @@
         </el-table-column>
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
-            <el-tag :type="deviceStatusTag(row.status) as any" size="small">{{ row.statusText }}</el-tag>
+            <el-tag :type="deviceStatusTag(row.status)" size="small">{{ row.statusText }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="200">

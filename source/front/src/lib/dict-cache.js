@@ -2,56 +2,21 @@
  * 数据字典前端缓存
  * 只缓存字典类型列表（dictType, dictName），字典数据每次都从后端获取
  */
-import {ref} from 'vue'
 import {getDictDataList, getDictDataMapList} from '@/api/system'
 
-// ========== 字典类型常量 ==========
-//
-// ★ 2026-09-22 全量核对（逐条比对 sys_dict_type，185 张字典）：
-//   此前本文件有 13 个常量指向**库里根本不存在的 dict_type**（如 'regist_type'、
-//   'settlement_type'），全是死常量、零外部引用 —— 所以没有造成线上
-//   渲染错误，但它们是**陷阱**：谁照着常量名去接字典，拿到的是空下拉且不报错。
-//   现已全部修正为库里真实类型名（前缀规律：本库业务字典几乎都带 `his_` 前缀）。
-//   （2026-09-23 新增了 sys_gender：员工/患者统一性别字典，见 sql/75 —— 这是少数
-//   不带 his_ 前缀的例外，别按前缀规律把它当错值改掉。）
-//
-//   核对方法：`SELECT dict_type FROM sys_dict_type WHERE del_flag=0`，逐个对照。
-//   接新字典前先跑这条 SQL —— 「看着像对的错值」比报错更难查。
-//
-// ⚠ 库里不存在的字典**不要**在这里加常量占位：无字典枚举请走 `lib/*.js` 单点定义。
 export const DICT_TYPE = {
-    // 系统通用
-    // 性别已于 2026-09-23 合并为一张字典（sql/75）：员工与患者同一套码值 1-男 2-女 9-未知。
-    // 原 his_gender_sys（员工 0女1男）/ his_patient_gender 已物理删除 —— 别再接回来。
     SYS_GENDER: 'sys_gender',                    // 性别（1男/2女/9未知，员工与患者同口径）
-    // 启用/禁用（0-禁用 1-启用）。sys_user.status 同口径；原账号状态字典 his_user_status
-    // （0停用/1启用/2锁定）已删除 —— 代码里从没有过「锁定」态。
-    ENABLE_STATUS: 'his_enable_status',
+    ENABLE_STATUS: 'his_enable_status',          // （0停用/1启用/2锁定）已删除 —— 代码里从没有过「锁定」态。
     SYS_USER_TYPE: 'his_user_type',              // 用户类型（1院内/2院外/3患者/4其他）
-
-    // 医保相关
     MEDICAL_INSURANCE_TYPE: 'medical_insurance_type', // 医保类型
-
-    // 药品相关
     DRUG_TYPE: 'his_drug_type',                  // 药品类型（1西药 2中成药 3中药饮片）
-    // 药品特殊管理分类（麻精毒放，G10）：0普通 1麻醉药品 2第一类精神药品 3第二类精神药品 4毒性药品。
-    // ⚠ 这一档**必须是字典而不是前端常量** —— 管制目录会调整
-    //   （2024-07-01 咪达唑仑原料药与注射剂由第二类升为第一类），
-    //   文案写死在前端就意味着每次目录调整都要重新发版前端。
-    //   语义判定（哪些档位需双人复核 / 需空安瓿回收）在 `lib/drugSpecialFlag.js`。
     DRUG_SPECIAL_FLAG: 'his_drug_special_flag',
-    // ⚠ DRUG_SPEC / DRUG_ROUTE / DRUG_FREQUENCY 在库里**没有对应字典**，不要在此新增。
-    //   规格是 `sys_drug.specification` 字段（随药品带出，不是字典）；
-    //   给药途径、用药频次、剂量单位属「无字典枚举」，口径单点在 `lib/drugUsage.js`
-    //   （住院医嘱开立用；门诊医生站另有 lib/drugFrequency，两者值域一致，勿各写一份）。
-
     // 收费相关
     CHARGE_TYPE: 'his_charge_type',              // 收费类型
     CHARGE_ITEM_TYPE: 'his_charge_item_type',    // 收费项目类型
     PAY_METHOD: 'his_pay_method',                // 支付方式
     PAYMENT_STATUS: 'his_payment_status',        // 缴费状态
     CHARGE_STATUS: 'his_charge_status',          // 收费状态（旧模型遗留，四层页面不再使用）
-    // ===== 四层收费模型（sql/125）：L1 记账 / L2 结算 / L3 支付，码值权威在 his-common/enums =====
     ENCOUNTER_TYPE: 'his_encounter_type',        // 就诊类型（1门诊 2住院）≠ 初复诊 visit_type
     FEE_STATUS: 'his_fee_status',                // 记账行状态（1待结算 2已锁定 3已结算 4已红冲）
     FEE_SOURCE_TYPE: 'his_fee_source_type',      // 费用来源单据类型（1挂号 2处方 … 12其他）
@@ -62,7 +27,6 @@ export const DICT_TYPE = {
     TXN_SOURCE: 'his_txn_source',                // 流水来源（1收费台 … 9手工补账）
     ACCOUNT_OWNER_TYPE: 'his_account_owner_type',// 资金账户主体（1患者门诊余额 2住院就诊次预交金）
     ACCOUNT_TXN_TYPE: 'his_account_txn_type',    // 资金账户流水类型（1预交金充值 … 6手工调整）
-    // account_status 无字典（1正常 2冻结），枚举单点 lib/fundAccount.js
 
     // 挂号相关
     REGIST_TYPE: 'his_regist_type',              // 挂号类型
@@ -75,14 +39,8 @@ export const DICT_TYPE = {
     // 就诊相关
     VISIT_TYPE: 'his_visit_type_enum',           // 就诊类型
     IS_REVISIT: 'his_is_revisit',                // 初复诊标志
-    // 注意：排队状态的字典类型是 his_queue_status（与后端 QueueStatusEnum 同源），
-    // 原值 'queue_status' 在库里根本不存在 —— 后端 getDictDataMapData 查不到只会返回空，
-    // 页面拿到空下拉，不报错。这类「看着像对的错值」比报错更难查。
     QUEUE_STATUS: 'his_queue_status',            // 排队状态
     REGIST_STATUS: 'his_regist_status',          // 挂号状态
-    // 复诊来源 / 复诊收费方式（sql/121）：来源决定占不占号源与匹配哪条收费策略，
-    // 收费方式落在 biz_revisit_fee_policy.charge_mode 上，两者都是「复诊」这条链路的口径源头，
-    // 别在前端另写一份中文映射 —— 策略改了文案不改，前台和收费处看到的就对不上。
     REVISIT_SOURCE: 'his_revisit_source',
     REVISIT_CHARGE_MODE: 'his_revisit_charge_mode',
 
@@ -100,24 +58,12 @@ export const DICT_TYPE = {
     // 患者相关
     PATIENT_TYPE: 'his_patient_type',            // 患者类型（1自费 2城镇职工医保 3城乡居民医保 4公费 5其他）
     SYS_NATIONALITY: 'sys_nationality',          // 民族
-    // 与患者关系（biz_patient_contact.relationship 的 tinyint 码值来源）。
-    // 注意主档 biz_patient.contact_relation 那一列存的是**文案**，不用这张字典查。
     SYS_PATIENT_RELATION: 'sys_patient_relation',
-    // ⚠ BLOOD_TYPE / MARITAL_STATUS 曾指向 `blood_type` / `marital_status` 两张不存在的字典。
-    // 婚姻状况的码值口径在 `lib/patientField.js` 的 MARITAL_STATUS_OPTIONS，
-    // 血型目前是 biz_patient.blood_type 的自由文本（PatientsView 里手写选项），
-    // 两者都不从 sys_dict_data 读 —— 别再往这里加同名的空壳常量。
 
     // 医院相关
     SYS_HOSPITAL_TITLE: 'sys_hospital_title',    // 医院职称（101 医士 … 401 主任医师；501+ 非卫技系列）
-    // 医院职位（1 临床科室主任 … 15 护士 … 31 临床医师 … 45 病案与编码岗）。
-    // 与职称是两张字典：职称=专业技术资格层级（卫技四系 + 非卫技），职位=院内岗位职务。
-    // ⚠ 两者都只存 dictValue，**绝不存中文**（sql/174 已把存量中文全量迁成码值）。
-    //   后端按职称码判「副高及以上」的集合单点在 EmpTitleCode.SENIOR ——
-    //   谁要按「主任/副主任」筛人，走码值集合，不要 like 中文。
     HOSPITAL_POSITION: 'hospital_position',      // 医院职位
 
-    // 药品采购链（G9，2026-09-23 核对 sys_dict_type 四张均在库）：语义判定在 lib/purchase.js
     PURCHASE_APPROVAL_STATUS: 'his_purchase_approval_status', // 采购审批状态（0待审批/1已通过/2已驳回）
     INBOUND_STATUS: 'his_inbound_status',        // 药品入库状态（1待审核/2已审核/3已入库/4已取消）
     DRUG_INBOUND_TYPE: 'his_drug_inbound_type',  // 药品入库类型（1采购/2退货/3盘盈/4其他）
@@ -212,9 +158,6 @@ export const DICT_TYPE = {
     FOLLOWUP_STATUS: 'his_followup_status',            // 随访状态（1待随访/2随访中/3已完成/4已取消）
 
     // ===== sql/164：满意度评价（问卷模板 → 发放回收 → 答卷 → 看板）=====
-    //   ⚠ 一次 getDictDataMapList 最多 5 个 type，超了会整批返回空且不报错 → 分两批取。
-    //   量表文案（1非常不满意…5非常满意）在 lib/surveyScale.js 单点定义，不是字典：
-    //   它是打分口径，一旦被人在字典里改成「5-不满意」，历史分数就再也解释不通了。
     SURVEY_SCENE: 'his_survey_scene',                  // 调查场景（1出院随访/2门诊/3住院在院/4体检）
     SURVEY_TPL_STATUS: 'his_survey_tpl_status',        // 问卷状态（1启用/2停用，停用不再自动发放）
     SURVEY_DIMENSION: 'his_survey_dimension',          // 评价维度（1挂号便捷…7总体印象）
@@ -226,7 +169,6 @@ export const DICT_TYPE = {
     SURVEY_FILL_SOURCE: 'his_survey_fill_source',      // 填报方式（1患者自填/2随访员代填/3现场扫码）
 
     // ===== G21：检查预约中心（2026-09-23 核对四张均在库，随 sql/85 铺底）=====
-    //   语义判定（哪一档可改约、哪种格子不可点）在 lib/examAppointment.js，这里只管取文案。
     EXAM_DEVICE_TYPE: 'his_exam_device_type',          // 检查设备类别（1CT/2MR·磁共振/3DR·CR/4超声/5心电/6内镜/7其他）
     EXAM_APPT_STATUS: 'his_exam_appoint_status',       // 检查预约状态（1已预约/2已到检/3已完成/4已取消/5爽约）
     EXAM_DEVICE_STATUS: 'his_exam_device_status',      // 设备开放状态（1开放预约/2暂停预约）
@@ -250,8 +192,6 @@ export const DICT_TYPE = {
     PERF_STATUS: 'his_perf_status',                       // 绩效核算状态（1草稿/2已核算/3已发布）
 
     // ===== G19：门诊治疗站（his_treatment_item_type / apply_status / record_status 随早期铺底在库，
-    //   exec_status / charge_status 随 sql/88 新增）=====
-    //   列表文案直接取后端 VO 的 *Text（单点在 TreatmentDictText），这里只给筛选下拉用。
     TREATMENT_ITEM_TYPE: 'his_treatment_item_type',       // 治疗项目类别（1注射/2输液/3换药/4拆线/5其他）
     TREATMENT_APPLY_STATUS: 'his_treatment_apply_status', // 疗程状态（0待执行/1已执行/2已取消）
     TREATMENT_EXEC_STATUS: 'his_treatment_exec_status',   // 按次执行状态（0待执行/1已执行/2已取消）
@@ -260,7 +200,6 @@ export const DICT_TYPE = {
     INFECTIOUS_REPORT_STATUS: 'his_infectious_report_status', // 报卡状态（1待审核/2已审核/3已直报/4已退报）
 
     // ===== L10：院感监测（sql/92）=====
-    //   列表文案取后端 VO 的 *Text，这里只给筛选/表单下拉用。
     INFECTION_CASE_STATUS: 'his_infection_case_status',     // 院感病例状态（1待核实/2已确认/3已排除）
     INFECTION_SOURCE: 'his_infection_source',               // 感染来源（1社区感染/2医院感染）
     INFECTION_SITE: 'his_infection_site',                   // 感染部位（1下呼吸道/2泌尿道/.../9其他）
@@ -269,8 +208,6 @@ export const DICT_TYPE = {
     HAND_OBS_OBJECT: 'his_hand_obs_object',                 // 手卫生观察对象（1医生/2护士/3工勤其他）
 
     // ===== L14：医疗纠纷 / 投诉登记（sql/109，八张字典）=====
-    //   ⚠ 八张字典超过 getDictDataMapList 单次 5 个 type 的上限，页面必须分两批取
-    //     （第一批 5 个、第二批 3 个），一次塞 8 个会**整个返回空**且零报错。
     DISPUTE_CASE_TYPE: 'his_dispute_case_type',       // 类型（1服务投诉/2医疗纠纷/3医疗损害争议/4其他）
     DISPUTE_SOURCE: 'his_dispute_source',             // 来源（1来电~7其他）
     DISPUTE_STATUS: 'his_dispute_status',             // 状态（1待受理→4已结案，5已撤销）
@@ -295,7 +232,6 @@ export const DICT_TYPE = {
     DAY_SURGERY_EVAL_RESULT: 'his_day_surgery_eval_result',     // 术前评估结论（1通过/2不通过）
 
     // ===== 死亡证明与死亡登记（sql/157，八张字典）=====
-    //   ⚠ 同样受 getDictDataMapList 单次 5 个 type 上限约束，页面必须分两批取。
     DEATH_PLACE: 'his_death_place',                 // 死亡地点（1医院/2来院途中/3家中/4民政管理机构/5其他机构/9未指明）
     DEATH_CERT_STATUS: 'his_death_cert_status',     // 证明状态（1草稿→2已审核→3已开具，4已作废）
     DEATH_REPORT_STATUS: 'his_death_report_status', // 死因监测上报状态（1未上报/2已上报/3上报失败）
@@ -344,13 +280,15 @@ export const DICT_TYPE = {
     CHRONIC_DISEASE: 'his_chronic_disease',               // 常用慢病（dict_value 即 ICD-10 编码，选中可回填 diseaseCode+diseaseName）
 
     // ===== 组织与资源：全院岗位排班（sql/200 核心表）=====
-    // 字典只是下拉数据源，Java 枚举才是权威；两处文案不一致以枚举为准。
     ORG_UNIT_TYPE: 'his_org_unit_type',                   // 排班单元类型（1科室/2病区/3全院）
     DUTY_STATUS: 'his_duty_status',                       // 出勤状态（1上班/2休息/3请假/4培训/5停班）
     ATTEND_MODE: 'his_attend_mode',                       // 值班响应形态（1坐班/2听班/3留院值班）
     STAFF_SCHEDULE_SOURCE: 'his_staff_schedule_source',   // 排班生成来源（1手工/2模板/3复制周期/4换班）
     SCHEDULE_CHANGE_TYPE: 'his_schedule_change_type',     // 排班变更类型（1换班/2代班/3停班/4加号/5减号/6出诊变更）
     DUTY_SCOPE: 'his_duty_scope',                         // 值守责任范围（1全院行政/2急诊/3感染/4总务/5信息）
+
+    // ===== 患者端常见问题分类（sql/sys_faq_category_dict）=====
+    FAQ_CATEGORY: 'his_faq_category',
 }
 
 /**

@@ -160,7 +160,7 @@
               <div class="flex items-baseline gap-2">
                 <span :data-testid="`n-card-score-${t.type}`"
                       class="text-2xl font-bold text-slate-900">{{ latestByType[t.type].totalScore }}</span>
-                <el-tag :data-testid="`n-card-risk-${t.type}`" :type="(RISK_LEVEL_TAG[latestByType[t.type].riskLevel] || 'info') as any"
+                <el-tag :data-testid="`n-card-risk-${t.type}`" :type="(RISK_LEVEL_TAG[latestByType[t.type].riskLevel] || 'info')"
                         size="small">
                   {{ RISK_LEVEL_TEXT[latestByType[t.type].riskLevel] || '未知(0)' }}
                 </el-tag>
@@ -200,7 +200,7 @@
           </el-table-column>
           <el-table-column label="风险等级" width="110">
             <template #default="{ row }">
-              <el-tag :type="(RISK_LEVEL_TAG[row.riskLevel] || 'info') as any" data-testid="g14-risk-tag" size="small">
+              <el-tag :type="(RISK_LEVEL_TAG[row.riskLevel] || 'info')" data-testid="g14-risk-tag" size="small">
                 {{ row.riskLevelText || RISK_LEVEL_TEXT[row.riskLevel] || '未知(0)' }}
               </el-tag>
             </template>
@@ -593,7 +593,7 @@
               <span class="text-lg font-bold text-slate-800" data-testid="n-assess-total">{{
                   specialTotal ?? '—'
                 }}</span>
-              <el-tag v-if="specialRiskPreview" :type="(RISK_LEVEL_TAG[specialRiskPreview] || 'info') as any"
+              <el-tag v-if="specialRiskPreview" :type="(RISK_LEVEL_TAG[specialRiskPreview] || 'info')"
                       class="ml-2" data-testid="n-assess-risk">
                 {{ RISK_LEVEL_TEXT[specialRiskPreview] }}
               </el-tag>
@@ -629,7 +629,7 @@
             <el-col :span="8">
               <el-form-item label="疼痛性质">
                 <el-select v-model="nrsNature" class="!w-full" clearable data-testid="n-nrs-nature" placeholder="选填">
-                  <el-option v-for="n in (specialScale as any).natures" :key="n" :label="n" :value="n"/>
+                  <el-option v-for="n in (specialScale).natures" :key="n" :label="n" :value="n"/>
                 </el-select>
               </el-form-item>
             </el-col>
@@ -643,7 +643,7 @@
 
         <!-- Caprini：危险因素分组勾选累加 -->
         <template v-else-if="specialType === 4">
-          <div v-for="g in (specialScale as any).groups" :key="g.label"
+          <div v-for="g in (specialScale).groups" :key="g.label"
                class="mb-3 rounded border border-slate-200 p-3">
             <p class="mb-2 text-sm font-medium text-slate-700">{{ g.label }}</p>
             <el-checkbox-group v-model="checkedFactors">
@@ -663,14 +663,14 @@
             <p class="mb-2 text-sm font-medium text-slate-700">当前留置管路（勾选做管路透视，不计分）</p>
             <el-checkbox-group v-model="checkedTubes">
               <el-checkbox
-                  v-for="t in (specialScale as any).tubes" :key="t.key"
+                  v-for="t in (specialScale).tubes" :key="t.key"
                   :data-testid="`n-tube-${t.key}`"
                   :value="t.key"
               >{{ t.label }}
               </el-checkbox>
             </el-checkbox-group>
           </div>
-          <div v-for="it in (specialScale as any).items" :key="it.key" class="mb-3 rounded border border-slate-200 p-3">
+          <div v-for="it in (specialScale).items" :key="it.key" class="mb-3 rounded border border-slate-200 p-3">
             <p class="mb-2 text-sm font-medium text-slate-700">{{ it.label }}</p>
             <el-radio-group v-model="radioPicks[it.key]">
               <el-radio v-for="opt in it.options" :key="opt.score" :value="opt.score">{{ opt.label }}（{{ opt.score }}
@@ -682,7 +682,7 @@
 
         <!-- 压疮 Braden / 跌倒 Morse：通用 radio 量表 -->
         <template v-else>
-          <div v-for="it in (specialScale as any).items" :key="it.key" class="mb-3 rounded border border-slate-200 p-3">
+          <div v-for="it in (specialScale).items" :key="it.key" class="mb-3 rounded border border-slate-200 p-3">
             <p class="mb-2 text-sm font-medium text-slate-700">{{ it.label }}</p>
             <el-radio-group v-model="radioPicks[it.key]">
               <el-radio v-for="opt in it.options" :key="opt.score" :value="opt.score">{{ opt.label }}（{{ opt.score }}
