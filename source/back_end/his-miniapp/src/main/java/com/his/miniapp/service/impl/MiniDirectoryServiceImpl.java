@@ -1,8 +1,8 @@
 package com.his.miniapp.service.impl;
 
-import com.his.appoint.dto.ScheduleSelectQueryDTO;
-import com.his.appoint.entity.BizClinicSource;
-import com.his.appoint.service.BizClinicSourceService;
+import com.his.system.dto.ScheduleSelectQueryDTO;
+import com.his.system.entity.BizClinicSource;
+import com.his.system.service.BizClinicSourceService;
 import com.his.common.exception.BusinessException;
 import com.his.miniapp.mapper.MiniDirectoryMapper;
 import com.his.miniapp.service.MiniDirectoryService;

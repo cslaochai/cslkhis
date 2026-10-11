@@ -10,17 +10,19 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.appoint.dto.*;
 import com.his.appoint.entity.BizAppointInfo;
 import com.his.appoint.entity.BizQueue;
-import com.his.appoint.entity.BizClinicSource;
+import com.his.system.entity.BizClinicSource;
+import com.his.system.mapper.BizClinicSourceMapper;
+import com.his.system.vo.OnDutyStaffVO;
 import com.his.appoint.entity.BizTriageRecord;
 import com.his.appoint.enums.*;
 import com.his.appoint.enums.OpdLogStatusEnum;
 import com.his.appoint.mapper.*;
 import com.his.appoint.service.DoctorStatusCacheService;
 import com.his.appoint.service.BizQueueService;
-import com.his.appoint.service.BizClinicSourceService;
+import com.his.system.service.BizClinicSourceService;
 import com.his.appoint.trigger.DayEndSettleTrigger;
 import com.his.appoint.vo.*;
-import com.his.system.api.service.AppointChargeApi;
+import com.his.system.api.service.ChargeApi;
 import com.his.common.base.PageResult;
 import com.his.common.enums.BillStatusEnum;
 import com.his.common.enums.StaffTypeEnum;
@@ -65,7 +67,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
 
     private final BizAppointInfoMapper bizAppointInfoMapper;
 
-    private final ObjectProvider<AppointChargeApi> appointChargeGateway;
+    private final ObjectProvider<ChargeApi> appointChargeGateway;
 
     private final InsurancePolicyService insurancePolicyService;
 
@@ -244,7 +246,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         return appointInfo == null ? null : appointInfo.getPatientId();
     }
 
-    private boolean isRegistFeeSettled(AppointChargeApi gateway, BizAppointInfo appoint) {
+    private boolean isRegistFeeSettled(ChargeApi gateway, BizAppointInfo appoint) {
         if (appoint.getBillId() == null) {
             return true;
         }
@@ -263,7 +265,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
             throw new BusinessException("挂号记录不存在");
         }
         deptScopeService.assertDeptAccessible(appointInfo.getDeptId());
-        AppointChargeApi gateway = appointChargeGateway.getIfAvailable();
+        ChargeApi gateway = appointChargeGateway.getIfAvailable();
         if (appointInfo.getBillId() != null && gateway == null) {
             throw new BusinessException("收费服务不可用，无法完成签到");
         }
@@ -1234,7 +1236,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
                 .eq(BizAppointInfo::getRegistStatus, AppointStatusEnum.REGISTERED.getCode())
                 .eq(visitDate != null, BizAppointInfo::getVisitDate, visitDate);
         List<BizAppointInfo> appoints = bizAppointInfoMapper.selectList(appointWrapper);
-        AppointChargeApi gateway = appointChargeGateway.getIfAvailable();
+        ChargeApi gateway = appointChargeGateway.getIfAvailable();
         List<BizQueueListVO> result = new ArrayList<>();
         for (BizAppointInfo appoint : appoints) {
             // 挂号状态「已挂号」只说明还没签到，还得确认钱真的收了 ——

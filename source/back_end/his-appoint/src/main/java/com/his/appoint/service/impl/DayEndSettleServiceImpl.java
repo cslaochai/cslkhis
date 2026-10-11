@@ -106,8 +106,6 @@ public class DayEndSettleServiceImpl implements DayEndSettleService {
             queueAligned += dayEndSettleMapper.countQueueRegistMismatch(d);
             stuck += dayEndSettleMapper.countStuckConsulting(d);
             if (!dryRun) {
-                // 顺序不能换：③ 判「名下有队列行」要用到还在 2/3 的队列行，所以 ④ 必须最后；
-                // ① 先做是为了让「退号了队列还挂着候诊」的行不再被 ③ 当成「到过院没走完」。
                 dayEndSettleMapper.alignQueueToRegistTerminal(d, operator);
                 dayEndSettleMapper.markNoShow(d, marker(d), operator);
                 dayEndSettleMapper.markUnvisited(d, marker(d), operator);

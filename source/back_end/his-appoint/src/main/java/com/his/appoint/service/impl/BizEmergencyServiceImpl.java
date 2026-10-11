@@ -10,7 +10,7 @@ import com.his.appoint.entity.*;
 import com.his.appoint.enums.*;
 import com.his.appoint.mapper.*;
 import com.his.appoint.service.BizEmergencyService;
-import com.his.appoint.service.BizClinicSourceService;
+import com.his.system.service.BizClinicSourceService;
 import com.his.appoint.support.EmergencyObservationPolicy;
 import com.his.appoint.support.EmergencyWaitPolicy;
 import com.his.appoint.vo.*;

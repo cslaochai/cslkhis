@@ -10,14 +10,17 @@ import com.his.system.api.vo.DeptRefVO;
 import com.his.system.api.vo.MedicalRecordBriefVO;
 import com.his.system.api.vo.PrescriptionBriefVO;
 import com.his.system.api.vo.PrescriptionDetailBriefVO;
+import com.his.system.api.vo.RecordBriefVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
- * EmrGateway 在 his-emr 侧的实现。
+ * EmrApi 在 his-emr 侧的实现。
  */
 @Service
 @RequiredArgsConstructor
@@ -34,6 +37,45 @@ public class EmrApiImpl implements EmrApi {
     private final BizLaboratoryApplyMapper bizLaboratoryApplyMapper;
 
     private final SourcePaidAdvanceService sourcePaidAdvanceService;
+
+    @Override
+    public RecordBriefVO getRecord(Long recordId) {
+        if (recordId == null) {
+            return null;
+        }
+        BizMedicalRecord record = bizMedicalRecordMapper.selectById(recordId);
+        return record == null ? null : toRecordBrief(record);
+    }
+
+    @Override
+    public List<RecordBriefVO> listRecentByPatient(Long patientId, int limit) {
+        if (patientId == null) {
+            return Collections.emptyList();
+        }
+        LambdaQueryWrapper<BizMedicalRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(BizMedicalRecord::getPatientId, patientId)
+                .isNotNull(BizMedicalRecord::getRegistId)
+                .orderByDesc(BizMedicalRecord::getVisitDate)
+                .orderByDesc(BizMedicalRecord::getId)
+                .last("LIMIT " + (limit <= 0 ? 20 : limit));
+        return bizMedicalRecordMapper.selectList(wrapper).stream().map(this::toRecordBrief).collect(Collectors.toList());
+    }
+
+    private RecordBriefVO toRecordBrief(BizMedicalRecord record) {
+        RecordBriefVO brief = new RecordBriefVO();
+        brief.setId(record.getId());
+        brief.setRecordNo(record.getRecordNo());
+        brief.setPatientId(record.getPatientId());
+        brief.setPatientName(record.getPatientName());
+        brief.setVisitDate(record.getVisitDate());
+        brief.setVisitType(record.getVisitType());
+        brief.setDeptId(record.getDeptId());
+        brief.setDoctorId(record.getDoctorId());
+        brief.setDeptName(record.getDeptName());
+        brief.setDoctorName(record.getDoctorName());
+        brief.setDiagnosisName(record.getDiagnosisName());
+        return brief;
+    }
 
     @Override
     public MedicalRecordBriefVO findLatestMedicalRecordByRegist(Long registId) {

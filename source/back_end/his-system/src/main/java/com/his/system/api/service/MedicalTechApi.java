@@ -1,5 +1,6 @@
 package com.his.system.api.service;
 
+import com.his.system.api.vo.ExecStatusVO;
 import com.his.system.api.vo.InspectionRecordBriefVO;
 import com.his.system.api.vo.LabResultBriefVO;
 import com.his.system.api.vo.LaboratoryRecordBriefVO;
@@ -8,7 +9,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 医技域对收费域提供的端口（依赖倒置）。
+ * 医技域对外提供的端口（依赖倒置，实现落在 his-medicaltech）：
+ * 检查/检验记录与结果查询、缴费推进、执行进度查询。
  */
 public interface MedicalTechApi {
 
@@ -65,4 +67,22 @@ public interface MedicalTechApi {
      * @param reason  撤销原因（落审计）
      */
     void cancelLaboratoryByApplyId(Long applyId, String reason);
+
+    // 申请单执行进度（结果回显到医生站）
+
+    /**
+     * 批量查询检查申请单的执行进度。
+     *
+     * @param applyIds 检查申请单 ID 集合（可为空）
+     * @return 与入参对应的执行进度；没有执行记录的申请单不会有返回项
+     */
+    List<ExecStatusVO> listInspectionExecStatus(List<Long> applyIds);
+
+    /**
+     * 批量查询检验申请单的执行进度，语义同 {@link #listInspectionExecStatus(List)}。
+     *
+     * @param applyIds 检验申请单 ID 集合（可为空）
+     * @return 执行进度列表
+     */
+    List<ExecStatusVO> listLaboratoryExecStatus(List<Long> applyIds);
 }

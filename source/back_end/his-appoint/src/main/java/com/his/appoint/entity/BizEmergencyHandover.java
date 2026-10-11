@@ -1,5 +1,6 @@
 package com.his.appoint.entity;
 
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
@@ -9,7 +10,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
@@ -19,16 +19,6 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_emergency_handover")
 public class BizEmergencyHandover extends BaseEntity {
-    /** 逻辑删除标志（0 未删除 1 已删除） */
-    @TableLogic
-    private Integer delFlag;
-
-
-
-    /**
-     * 交班单号（EJ + yyyyMMdd + 4 位序号，服务端生成，唯一键）
-     */
-    private String handoverNo;
 
     /**
      * 交班科室ID
@@ -109,4 +99,15 @@ public class BizEmergencyHandover extends BaseEntity {
      * 整单交代备注
      */
     private String remark;
+
+    /**
+     * 逻辑删除标志（0 未删除 1 已删除）
+     */
+    @TableLogic
+    private Integer delFlag;
+
+    /**
+     * 交班单号（EJ + yyyyMMdd + 4 位序号，服务端生成，唯一键）
+     */
+    private String handoverNo;
 }

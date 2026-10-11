@@ -1,6 +1,6 @@
 package com.his.miniapp.service;
 
-import com.his.appoint.dto.ScheduleSelectQueryDTO;
+import com.his.system.dto.ScheduleSelectQueryDTO;
 import com.his.miniapp.vo.MiniDeptSelectListVO;
 import com.his.miniapp.vo.MiniDoctorSelectListVO;
 import com.his.miniapp.vo.MiniPatientDetailVO;

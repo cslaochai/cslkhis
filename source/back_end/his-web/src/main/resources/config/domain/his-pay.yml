@@ -1,29 +1,29 @@
 wx:
   pay:
-    mock-enabled: true          # true=模拟, false=真微信SDK
-    app-id: ${WX_PAY_APP_ID:}
-    mch-id: ${WX_PAY_MCH_ID:}
-    api-v3-key: ${WX_PAY_API_V3_KEY:}
-    cert-serial-no: ${WX_PAY_CERT_SERIAL_NO:}
-    private-key-path: ${WX_PAY_PRIVATE_KEY_PATH:}
-    notify-url: ${WX_PAY_NOTIFY_URL:https://your-domain.com/api/miniapp/pay/notify/wx}
+    mock-enabled: true          # 微信支付是否模拟（true=模拟，false=真微信SDK）
+    app-id: ${WX_PAY_APP_ID:}   # 微信公众号/小程序 AppID
+    mch-id: ${WX_PAY_MCH_ID:}   # 微信支付商户号
+    api-v3-key: ${WX_PAY_API_V3_KEY:}            # APIv3 密钥（敏感，回调解密用）
+    cert-serial-no: ${WX_PAY_CERT_SERIAL_NO:}    # 商户证书序列号
+    private-key-path: ${WX_PAY_PRIVATE_KEY_PATH:}  # 商户私钥证书本地路径（敏感）
+    notify-url: ${WX_PAY_NOTIFY_URL:https://your-domain.com/api/pay/notify/wx}  # 微信异步回调地址
 
 alipay:
-  mock-enabled: true            # true=模拟, false=真支付宝SDK
-  app-id: ${ALIPAY_APP_ID:}
-  private-key: ${ALIPAY_PRIVATE_KEY:}
-  alipay-public-key: ${ALIPAY_PUBLIC_KEY:}
-  gateway-url: ${ALIPAY_GATEWAY:https://openapi.alipay.com/gateway.do}
-  notify-url: ${ALIPAY_NOTIFY_URL:https://your-domain.com/api/miniapp/pay/notify/alipay}
+  mock-enabled: true            # 支付宝是否模拟（true=模拟，false=真支付宝SDK）
+  app-id: ${ALIPAY_APP_ID:}     # 支付宝开放平台应用 AppID
+  private-key: ${ALIPAY_PRIVATE_KEY:}            # 应用私钥（敏感，请求签名用）
+  alipay-public-key: ${ALIPAY_PUBLIC_KEY:}       # 支付宝公钥（回调/响应验签用）
+  gateway-url: ${ALIPAY_GATEWAY:https://openapi.alipay.com/gateway.do}  # 支付宝网关地址
+  notify-url: ${ALIPAY_NOTIFY_URL:https://your-domain.com/api/pay/notify/alipay}  # 支付宝异步回调地址
 
 unionpay:
-  mock-enabled: true            # true=模拟, false=真云闪付SDK
-  app-id: ${UNIONPAY_APP_ID:}
-  mer-id: ${UNIONPAY_MER_ID:}
-  private-key: ${UNIONPAY_PRIVATE_KEY:}
-  public-key: ${UNIONPAY_PUBLIC_KEY:}
-  gateway-url: ${UNIONPAY_GATEWAY:https://gateway.95516.com}
+  mock-enabled: true            # 云闪付是否模拟（true=模拟，false=真银联SDK）
+  app-id: ${UNIONPAY_APP_ID:}   # 银联开放平台应用标识
+  mer-id: ${UNIONPAY_MER_ID:}   # 银联商户号
+  private-key: ${UNIONPAY_PRIVATE_KEY:}   # 商户私钥（敏感）
+  public-key: ${UNIONPAY_PUBLIC_KEY:}     # 银联平台公钥（验签用）
+  gateway-url: ${UNIONPAY_GATEWAY:https://gateway.95516.com}  # 银联网关地址
 
 pay:
   channel:
-    mock-enabled: true          # 收费台扫码支付开关
+    enabled: true               # 收费台扫码支付总开关（与上面各渠道 mock-enabled 相互独立）

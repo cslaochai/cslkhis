@@ -50,8 +50,6 @@ public class OperLogInterceptor implements HandlerInterceptor {
     public static final String ATTR_EXCEPTION = "his.operLog.exception";
 
     /**
-     * 读动作死表：URL 末段命中这些前缀/后缀的一律不记。
-     * 命名来自 AGENTS.md 的接口约定（listPage / selectList / getById / getDetailById）。
      */
     private static final Set<String> READ_TAIL_EXACT = Set.of(
             "listPage", "selectList", "selectListPage", "getById", "getDetailById",

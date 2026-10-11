@@ -31,7 +31,7 @@ import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.system.vo.SignatureVO;
-import com.his.system.api.service.ApplyExecStatusApi;
+import com.his.system.api.service.MedicalTechApi;
 import com.his.emr.dto.*;
 import com.his.emr.entity.*;
 import com.his.emr.enums.*;
@@ -116,7 +116,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      * 取不到（例如只跑 his-emr 相关单测、没有医技模块）时降级为「不显示执行进度」，
      * 而不是让整个医生站起不来。
      */
-    private final ObjectProvider<ApplyExecStatusApi> applyExecStatusGatewayProvider;
+    private final ObjectProvider<MedicalTechApi> applyExecStatusGatewayProvider;
     /**
      * AI 草稿留痕（G-10）：医生点「填入草稿」后保存病历，把 AI 原稿与终稿的 diff 落一行。
      */
@@ -1131,7 +1131,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     }
 
     private Map<Long, ExecStatusVO> inspectionExecMap(List<Long> applyIds) {
-        ApplyExecStatusApi gw = applyExecStatusGatewayProvider.getIfAvailable();
+        MedicalTechApi gw = applyExecStatusGatewayProvider.getIfAvailable();
         if (gw == null || CollectionUtils.isEmpty(applyIds)) {
             return Collections.emptyMap();
         }
@@ -1145,7 +1145,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     }
 
     private Map<Long, ExecStatusVO> laboratoryExecMap(List<Long> applyIds) {
-        ApplyExecStatusApi gw = applyExecStatusGatewayProvider.getIfAvailable();
+        MedicalTechApi gw = applyExecStatusGatewayProvider.getIfAvailable();
         if (gw == null || CollectionUtils.isEmpty(applyIds)) {
             return Collections.emptyMap();
         }

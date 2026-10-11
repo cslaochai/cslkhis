@@ -2,22 +2,38 @@ package com.his.appoint.support;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.appoint.entity.BizAppointInfo;
+import com.his.appoint.entity.BizQueue;
+import com.his.appoint.enums.QueueStatusEnum;
 import com.his.appoint.mapper.BizAppointInfoMapper;
+import com.his.appoint.mapper.BizQueueMapper;
+import com.his.appoint.service.BizAppointService;
 import com.his.common.util.TextUtil;
 import com.his.system.api.service.AppointApi;
 import com.his.system.api.vo.DeptRefVO;
 import com.his.system.api.vo.RegistBriefVO;
+import com.his.system.api.vo.TodayVisitVO;
+import com.his.system.entity.CurrentUser;
+import com.his.system.utils.UserUtils;
+import com.his.system.vo.StopImpactItemVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 /**
- * AppointGateway 在 his-appoint 侧的实现。
+ * AppointApi 在 his-appoint 侧的实现（挂号域跨域动作的承接方）。
  */
 @Service
 @RequiredArgsConstructor
 public class AppointApiImpl implements AppointApi {
 
     private final BizAppointInfoMapper bizAppointInfoMapper;
+    private final BizQueueMapper bizQueueMapper;
+    private final BizAppointService bizAppointService;
 
     @Override
     public RegistBriefVO findRegist(Long registId) {
@@ -37,6 +53,98 @@ public class AppointApiImpl implements AppointApi {
                 .last("LIMIT 1"));
         return row == null ? null
                 : new DeptRefVO(row.getDeptId(), row.getDeptName());
+    }
+
+    @Override
+    public Map<Long, TodayVisitVO> todayVisits() {
+        LambdaQueryWrapper<BizQueue> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(BizQueue::getVisitDate, LocalDate.now())
+                .in(BizQueue::getQueueStatus,
+                        QueueStatusEnum.WAITING.getCode(),
+                        QueueStatusEnum.CONSULTING.getCode(),
+                        QueueStatusEnum.COMPLETED.getCode())
+                .orderByDesc(BizQueue::getArriveTime);
+        List<BizQueue> list = bizQueueMapper.selectList(wrapper);
+        if (list == null || list.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        CurrentUser currentUser = UserUtils.getCurrentUser();
+        Long myEmpId = currentUser != null ? currentUser.getEmployeeId() : null;
+        Long myDeptId = currentUser != null ? currentUser.getDeptId() : null;
+
+        Map<Long, TodayVisitVO> result = new HashMap<>();
+        for (BizQueue q : list) {
+            if (q.getPatientId() == null) {
+                continue;
+            }
+            TodayVisitVO visit = toVisit(q, myEmpId, myDeptId);
+            TodayVisitVO exist = result.get(q.getPatientId());
+            if (exist == null) {
+                result.put(q.getPatientId(), visit);
+                continue;
+            }
+            if (Boolean.TRUE.equals(visit.getMine()) && !Boolean.TRUE.equals(exist.getMine())) {
+                result.put(q.getPatientId(), visit);
+            }
+        }
+        return result;
+    }
+
+    private TodayVisitVO toVisit(BizQueue q, Long myEmpId, Long myDeptId) {
+        TodayVisitVO visit = new TodayVisitVO();
+        visit.setPatientId(q.getPatientId());
+        visit.setStatus(q.getQueueStatus());
+        QueueStatusEnum status = q.getQueueStatus() == null
+                ? null : QueueStatusEnum.fromCode(q.getQueueStatus());
+        // 状态文案由提供方给：前端不再自造码值映射（未知码值宁可显示原始码，也不回落成看似合法的值）
+        visit.setStatusText(status != null ? status.getLabel() : "状态(" + q.getQueueStatus() + ")");
+        visit.setDeptName(q.getDeptName());
+        visit.setDoctorName(q.getDoctorName());
+        visit.setQueueNo(q.getSequenceNo() != null ? q.getSequenceNo() + " 号" : null);
+        visit.setMine((myEmpId != null && myEmpId.equals(q.getDoctorId()))
+                || (myDeptId != null && myDeptId.equals(q.getDeptId())));
+        return visit;
+    }
+
+    @Override
+    public List<StopImpactItemVO> listRegsBySchedule(Long scheduleId) {
+        if (scheduleId == null) {
+            return List.of();
+        }
+        List<BizAppointInfo> regs = bizAppointInfoMapper.selectList(
+                new LambdaQueryWrapper<BizAppointInfo>()
+                        .eq(BizAppointInfo::getScheduleId, scheduleId)
+                        .notIn(BizAppointInfo::getRegistStatus, 5, 6) // 5-已退号 6-已爽约
+                        .orderByAsc(BizAppointInfo::getRegistStatus)
+                        .orderByAsc(BizAppointInfo::getSlotTime));
+        return regs.stream().map(r -> {
+            StopImpactItemVO vo = new StopImpactItemVO();
+            vo.setRegistId(r.getId());
+            vo.setPatientId(r.getPatientId());
+            vo.setPatientName(r.getPatientName());
+            vo.setPatientNo(r.getPatientNo());
+            vo.setPhone(r.getPhone());
+            vo.setRegistSource(r.getRegistSource());
+            vo.setRegistStatus(r.getRegistStatus());
+            vo.setSlotTime(r.getSlotTime());
+            return vo;
+        }).toList();
+    }
+
+    @Override
+    public boolean cancelRegist(Long id, String reason) {
+        return bizAppointService.cancelRegist(id, reason);
+    }
+
+    @Override
+    public void updateQueueRoomBySchedule(Long scheduleId, LocalDate visitDate, Long roomId, String roomName) {
+        bizQueueMapper.updateRoomBySchedule(scheduleId, visitDate, roomId, roomName);
+    }
+
+    @Override
+    public void updateAppointRoomBySchedule(Long scheduleId, LocalDate visitDate, Long roomId, String roomName) {
+        bizAppointInfoMapper.updateRoomBySchedule(scheduleId, visitDate, roomId, roomName);
     }
 
     private RegistBriefVO toBrief(BizAppointInfo e) {

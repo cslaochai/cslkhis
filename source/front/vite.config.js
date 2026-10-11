@@ -12,9 +12,11 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    host: true,
+    // 内网穿透联调（花生壳）：壳域名走隧道访问 dev server（页面 + /api 回调透传）。
+    // Vite 5.4.12+ 默认只放行 localhost，公网域名 Host 会被拦（Blocked request），这里放行贝锐壳域名子域。
+    allowedHosts: ['.oray.net', '.vicp.fun', '.vicp.cc', '.oicp.net'],
     proxy: {
-      // 默认打开发起的 IDE 后端；需要指向另一端口（例如另跑一个 jar 实例做验收）时
-      // 用 VITE_API_TARGET=http://localhost:8082 启动 dev server，不改这份配置。
       '/api': {
         target: process.env.VITE_API_TARGET || 'http://localhost:8080',
         changeOrigin: true,

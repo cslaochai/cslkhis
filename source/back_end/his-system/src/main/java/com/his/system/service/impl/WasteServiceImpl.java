@@ -37,7 +37,6 @@ public class WasteServiceImpl extends ServiceImpl<BizMedicalWasteMapper, BizMedi
 
     @Transactional(rollbackFor = Exception.class)
     public WasteVO create(WasteDTO.Create dto) {
-        // B-条件必填：科室ID与科室名称二选一即可（前端可只传名称），单字段加 @NotNull 会把合法请求挡成 400，DTO 注解无法表达，保留
         if (dto.getDeptId() == null && !TextUtil.hasText(dto.getDeptName())) {
             throw new BusinessException("产生科室不能为空");
         }

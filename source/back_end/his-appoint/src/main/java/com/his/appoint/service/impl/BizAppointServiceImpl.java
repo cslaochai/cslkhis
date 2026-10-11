@@ -4,20 +4,20 @@ package com.his.appoint.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.system.api.service.MedicalRecordApi;
+import com.his.system.api.service.EmrApi;
 import com.his.appoint.dto.*;
 import com.his.appoint.entity.BizAppointInfo;
 import com.his.appoint.entity.BizQueue;
-import com.his.appoint.entity.BizClinicSource;
-import com.his.appoint.entity.BizClinicSourceSlot;
+import com.his.system.entity.BizClinicSource;
+import com.his.system.entity.BizClinicSourceSlot;
 import com.his.appoint.enums.AppointStatusEnum;
 import com.his.appoint.enums.QueueStatusEnum;
 import com.his.appoint.enums.RevisitSourceEnum;
 import com.his.appoint.enums.VisitTypeEnum;
 import com.his.appoint.mapper.BizAppointInfoMapper;
 import com.his.appoint.mapper.BizQueueMapper;
-import com.his.appoint.mapper.BizClinicSourceMapper;
-import com.his.appoint.mapper.BizClinicSourceSlotMapper;
+import com.his.system.mapper.BizClinicSourceMapper;
+import com.his.system.mapper.BizClinicSourceSlotMapper;
 import com.his.appoint.service.BizAppointService;
 import com.his.appoint.service.BizRevisitFeePolicyService;
 import com.his.appoint.trigger.DayEndSettleTrigger;
@@ -25,7 +25,7 @@ import com.his.appoint.vo.AppointStatusCountVO;
 import com.his.appoint.vo.BizAppointInfoListVO;
 import com.his.appoint.vo.RevisitFeePreviewVO;
 import com.his.appoint.vo.RevisitRecordSelectVO;
-import com.his.system.api.service.AppointChargeApi;
+import com.his.system.api.service.ChargeApi;
 import com.his.system.api.vo.BillBriefVO;
 import com.his.system.api.vo.CancelCommandVO;
 import com.his.system.api.vo.RecordBriefVO;
@@ -93,9 +93,9 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
 
     private final StaffScheduleService staffScheduleService;
 
-    private final ObjectProvider<AppointChargeApi> appointChargeGateway;
+    private final ObjectProvider<ChargeApi> appointChargeGateway;
 
-    private final ObjectProvider<MedicalRecordApi> medicalRecordRefGateway;
+    private final ObjectProvider<EmrApi> medicalRecordRefGateway;
 
     private final BizRevisitFeePolicyService bizRevisitFeePolicyService;
 
@@ -306,7 +306,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
 
         // 批量查询账单信息（经 SPI 委派至 his-charge）
         Map<Long, BillBriefVO> billMap = new HashMap<>();
-        AppointChargeApi gateway = appointChargeGateway.getIfAvailable();
+        ChargeApi gateway = appointChargeGateway.getIfAvailable();
         if (gateway != null && !billIds.isEmpty()) {
             billMap = gateway.mapBillsByIds(billIds);
         }
@@ -576,7 +576,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
                 buildRevisitFeeContext(revisit, upsertDTO.getRevisitSource(), origin, schedule,
                         appointInfo.getDeptId(), appointInfo.getDoctorId(), appointInfo.getVisitDate()));
 
-        AppointChargeApi gateway = appointChargeGateway.getIfAvailable();
+        ChargeApi gateway = appointChargeGateway.getIfAvailable();
         if (gateway != null && !feeDecision.isWaived() && feeDecision.totalFee().compareTo(BigDecimal.ZERO) > 0) {
             RegistChargeCommandVO command = new RegistChargeCommandVO();
             command.setRegistId(appointInfo.getId());
@@ -620,7 +620,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
     @Override
     public RevisitFeePreviewVO revisitFeePreview(RevisitFeePreviewDTO previewDTO) {
         boolean noSchedule = RevisitSourceEnum.needsNoSchedule(previewDTO.getRevisitSource());
-        MedicalRecordApi refGateway = medicalRecordRefGateway.getIfAvailable();
+        EmrApi refGateway = medicalRecordRefGateway.getIfAvailable();
         if (refGateway == null) {
             throw new BusinessException("病历服务不可用，无法关联原病历");
         }
@@ -682,7 +682,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
      */
     @Override
     public List<RevisitRecordSelectVO> revisitRecordSelectList(Long patientId, int limit) {
-        MedicalRecordApi refGateway = medicalRecordRefGateway.getIfAvailable();
+        EmrApi refGateway = medicalRecordRefGateway.getIfAvailable();
         if (refGateway == null || patientId == null) {
             return new ArrayList<>();
         }
@@ -781,7 +781,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         if (upsertDTO.getRevisitRecordId() == null) {
             throw new BusinessException("复诊挂号必须关联原病历（收费策略与间隔天数都按原就诊记录判定）");
         }
-        MedicalRecordApi refGateway = medicalRecordRefGateway.getIfAvailable();
+        EmrApi refGateway = medicalRecordRefGateway.getIfAvailable();
         if (refGateway == null) {
             throw new BusinessException("病历服务不可用，无法关联原病历");
         }
@@ -924,7 +924,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         if (existing.getBillId() == null) {
             return;
         }
-        AppointChargeApi gateway = appointChargeGateway.getIfAvailable();
+        ChargeApi gateway = appointChargeGateway.getIfAvailable();
         if (gateway == null) {
             // 收费能力缺失（未引入 his-charge）时不阻断挂号业务，但要留下痕迹便于排查
             log.warn("收费能力不可用，跳过改约的收费校验：registId={}", existing.getId());
@@ -952,7 +952,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         if (registInfo.getBillId() == null) {
             return;
         }
-        AppointChargeApi gateway = appointChargeGateway.getIfAvailable();
+        ChargeApi gateway = appointChargeGateway.getIfAvailable();
         if (gateway == null) {
             log.warn("收费能力不可用，退号未联动账单：registId={}，billId={}",
                     registInfo.getId(), registInfo.getBillId());

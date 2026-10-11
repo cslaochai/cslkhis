@@ -21,8 +21,8 @@ import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.mapper.BizPatientTagRelationMapper;
 import com.his.patient.service.*;
 import com.his.patient.support.PatientProfileValidator;
-import com.his.system.api.service.PatientTodayVisitApi;
-import com.his.system.api.vo.PatientTodayVisit;
+import com.his.system.api.service.AppointApi;
+import com.his.system.api.vo.TodayVisitVO;
 import com.his.patient.enums.PatientSearchScopeModeEnum;
 import com.his.patient.support.PatientSearchScopeResolver;
 import com.his.patient.vo.*;
@@ -128,7 +128,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
      * <p>用 ObjectProvider 而非直接注入：接口定义在本模块、实现放在依赖本模块的就诊域，
      * 直接注入会形成编译期反向依赖；同时就诊域缺席时这里拿到 null，搜索照常可用（降级不阻断）。
      */
-    private final ObjectProvider<PatientTodayVisitApi> todayVisitProvider;
+    private final ObjectProvider<AppointApi> todayVisitProvider;
     /**
      * 「要不要看今日就诊」的判定（按当前登录角色的岗位性质）。
      *
@@ -403,7 +403,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
         // 既不置顶、也不标注，顺带省掉每次敲键都全表扫一遍排队表。
         // 注意两者必须一起关：只关分组不关置顶 = 顶上几个患者没头没尾地排在前面，像随机排序。
         PatientSearchScopeModeEnum scopeMode = patientSearchScopeResolver.resolve();
-        Map<Long, PatientTodayVisit> todayVisits = scopeMode == PatientSearchScopeModeEnum.TODAY_FIRST
+        Map<Long, TodayVisitVO> todayVisits = scopeMode == PatientSearchScopeModeEnum.TODAY_FIRST
                 ? loadTodayVisits()
                 : Collections.emptyMap();
         PatientSearchScopeDTO scope = buildSearchScope(todayVisits);
@@ -553,12 +553,12 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
     /**
      * 把今日就诊映射折算成排序权重：我的今日（本人/本科室）排最前，其余今日次之。
      */
-    private PatientSearchScopeDTO buildSearchScope(Map<Long, PatientTodayVisit> todayVisits) {
+    private PatientSearchScopeDTO buildSearchScope(Map<Long, TodayVisitVO> todayVisits) {
         PatientSearchScopeDTO scope = new PatientSearchScopeDTO();
         scope.setTodayIds(new ArrayList<>(todayVisits.keySet()));
         scope.setMyTodayIds(todayVisits.values().stream()
                 .filter(v -> Boolean.TRUE.equals(v.getMine()))
-                .map(PatientTodayVisit::getPatientId)
+                .map(TodayVisitVO::getPatientId)
                 .collect(Collectors.toList()));
         return scope;
     }
@@ -569,13 +569,13 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
      * <p>失败一律降级成空映射：拿不到今日就诊只是「不置顶、不标注」，
      * 患者搜索本身必须照常可用 —— 不能因为就诊域出问题就让全院搜不到人。
      */
-    private Map<Long, PatientTodayVisit> loadTodayVisits() {
-        PatientTodayVisitApi provider = todayVisitProvider.getIfAvailable();
+    private Map<Long, TodayVisitVO> loadTodayVisits() {
+        AppointApi provider = todayVisitProvider.getIfAvailable();
         if (provider == null) {
             return Collections.emptyMap();
         }
         try {
-            Map<Long, PatientTodayVisit> visits = provider.todayVisits();
+            Map<Long, TodayVisitVO> visits = provider.todayVisits();
             return visits != null ? visits : Collections.emptyMap();
         } catch (Exception e) {
             log.warn("今日就诊信息获取失败，本次患者搜索按普通模式返回（不置顶/不标注）：{}", e.getMessage());
@@ -587,7 +587,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
      * 回填今日就诊字段。今日无门诊就诊的患者**不写任何占位文案** ——
      * 「未判定 ≠ 正常」，留空由前端归入「全院档案」组，而不是显示「无就诊」。
      */
-    private void fillTodayVisit(List<PatientVO> voList, Map<Long, PatientTodayVisit> todayVisits) {
+    private void fillTodayVisit(List<PatientVO> voList, Map<Long, TodayVisitVO> todayVisits) {
         if (voList.isEmpty() || todayVisits.isEmpty()) {
             return;
         }
@@ -595,7 +595,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
             if (vo.getId() == null) {
                 continue;
             }
-            PatientTodayVisit visit = todayVisits.get(vo.getId());
+            TodayVisitVO visit = todayVisits.get(vo.getId());
             if (visit == null) {
                 continue;
             }

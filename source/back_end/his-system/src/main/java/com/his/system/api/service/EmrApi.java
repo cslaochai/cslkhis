@@ -4,14 +4,38 @@ import com.his.system.api.vo.DeptRefVO;
 import com.his.system.api.vo.MedicalRecordBriefVO;
 import com.his.system.api.vo.PrescriptionBriefVO;
 import com.his.system.api.vo.PrescriptionDetailBriefVO;
+import com.his.system.api.vo.RecordBriefVO;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * 病历域对收费域提供的端口（依赖倒置）。
+ * 病历域对外提供的端口（依赖倒置，实现落在 his-emr）：
+ * 病历/处方查询、开单科室反查、缴费推进与退费撤销。
  */
 public interface EmrApi {
+
+    // 病历查询
+
+    /**
+     * 按病历ID取简要信息（复诊关联「原病历」下拉用）。
+     *
+     * @param recordId 病历ID
+     * @return 简要信息；不存在返回 null
+     */
+    RecordBriefVO getRecord(Long recordId);
+
+    /**
+     * 按患者取最近的就诊病历，供「原病历」下拉选择（窗口挂号/医生站/小程序共用）。
+     *
+     * <p>只要真正发生过的一次就诊（{@code registId} 非空）——草稿病历没有对应的号，
+     * 选它当基准会让收费策略拿不到就诊日而判错。按就诊日倒序，同一天取最新一份。
+     *
+     * @param patientId 患者ID
+     * @param limit     最多返回条数（&lt;=0 时由实现侧取默认值）
+     * @return 候选列表；无病历返回空集合
+     */
+    List<RecordBriefVO> listRecentByPatient(Long patientId, int limit);
 
     /**
      * 按挂号ID取该次就诊最近一条病历。

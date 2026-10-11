@@ -214,7 +214,7 @@ public class PatientVO {
     private Integer appointCount;
 
     // 今日就诊（全局患者搜索排序用）
-    // 由就诊域通过 PatientTodayVisitProvider 回填。为空 = 患者今天没有门诊就诊，
+    // 由就诊域通过 AppointApi 回填。为空 = 患者今天没有门诊就诊，
     // 前端据此把它归到「全院档案」而不是伪造一个「无就诊」文案（未判定 ≠ 正常）。
 
     /**
