@@ -48,13 +48,14 @@ public class DrgSimController {
 
     @Operation(summary = "可模拟首页列表 + 入组/盈亏统计")
     @GetMapping("/summary/list")
-    public Result<DrgSimVO.SummaryListVO> summaryList(@RequestParam(required = false) Integer limit) {
-        return Result.success(drgSimService.summaryList(limit, null));
+    public Result<DrgSimVO.SummaryListVO> summaryList(@RequestParam(required = false) Integer limit,
+                                                     @RequestParam(required = false) String version) {
+        return Result.success(drgSimService.summaryList(limit, version, null));
     }
 
     @Operation(summary = "组表（sys_drg_group）")
     @GetMapping("/group/list")
-    public Result<List<DrgSimVO.GroupRow>> groupList() {
-        return Result.success(drgSimService.groupList());
+    public Result<List<DrgSimVO.GroupRow>> groupList(@RequestParam(required = false) String version) {
+        return Result.success(drgSimService.groupList(version));
     }
 }

@@ -36,6 +36,8 @@ public class DrgSimVO {
         private String drgName;
         /** MDC 大类 */
         private String mdcCode;
+        /** 分组方案版本 */
+        private String version;
         private BigDecimal weight;
         /** 病组支付标准（元） */
         private BigDecimal payStandard;
@@ -73,6 +75,8 @@ public class DrgSimVO {
         private String drgCode;
         /** 组名称 */
         private String drgName;
+        /** 分组方案版本 */
+        private String version;
         private BigDecimal weight;
         /** 病组支付标准（元） */
         private BigDecimal payStandard;

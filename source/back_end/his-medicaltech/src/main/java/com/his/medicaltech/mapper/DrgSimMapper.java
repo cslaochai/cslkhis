@@ -50,7 +50,7 @@ public interface DrgSimMapper extends BaseMapper<DrgSimResult> {
     List<DrgSummaryRowVO> selectSummaries(@Param("limit") int limit);
 
     /**
-     * 可模拟首页列表（带已有模拟结果标记）
+     * 可模拟首页列表（带已有模拟结果标记，结果按版本隔离）
      */
     @Select("""
             SELECT s.id AS summaryId, s.patient_name AS patientName, s.dept_name AS deptName,
@@ -58,12 +58,12 @@ public interface DrgSimMapper extends BaseMapper<DrgSimResult> {
                    s.main_diagnosis_code AS mainDiagnosisCode, s.main_diagnosis_name AS mainDiagnosisName,
                    s.is_surgery AS isSurgery, r.drg_code AS drgCode, r.profit_amount AS profitAmount
               FROM biz_inpatient_summary s
-              LEFT JOIN biz_drg_sim_result r ON r.summary_id = s.id AND r.del_flag = 0
+              LEFT JOIN biz_drg_sim_result r ON r.summary_id = s.id AND r.version = #{version} AND r.del_flag = 0
              WHERE s.del_flag = 0
              ORDER BY s.id DESC
              LIMIT #{limit}
             """)
-    List<DrgSummaryListRowVO> summaryList(@Param("limit") int limit);
+    List<DrgSummaryListRowVO> summaryList(@Param("limit") int limit, @Param("version") String version);
 
     /**
      * DRG 细分组目录（含规则原文与 ADRG 内排序；组表页与分组方案快照共用这一条查询）
@@ -72,18 +72,18 @@ public interface DrgSimMapper extends BaseMapper<DrgSimResult> {
             SELECT id, drg_code AS drgCode, drg_name AS drgName, mdc_code AS mdcCode, adrg_code AS adrgCode,
                    drg_rule AS drgRule, sort_no AS sortNo, weight, pay_standard AS payStandard,
                    source, version, status
-              FROM sys_drg_group WHERE del_flag = 0 AND status = 1 ORDER BY sort_no, drg_code
+              FROM sys_drg_group WHERE del_flag = 0 AND status = 1 AND version = #{version} ORDER BY sort_no, drg_code
             """)
-    List<DrgGroupRowVO> groupList();
+    List<DrgGroupRowVO> groupList(@Param("version") String version);
 
     /**
      * MDC 目录（按官方判定顺序，先期分组在最前）
      */
     @Select("""
             SELECT mdc_code AS mdcCode, mdc_name AS mdcName, mdc_rule AS mdcRule, sort_no AS sortNo
-              FROM sys_drg_mdc WHERE del_flag = 0 AND status = 1 ORDER BY sort_no
+              FROM sys_drg_mdc WHERE del_flag = 0 AND status = 1 AND version = #{version} ORDER BY sort_no
             """)
-    List<DrgMdcRowVO> mdcList();
+    List<DrgMdcRowVO> mdcList(@Param("version") String version);
 
     /**
      * ADRG 目录（按 MDC 内判定顺序）
@@ -91,18 +91,18 @@ public interface DrgSimMapper extends BaseMapper<DrgSimResult> {
     @Select("""
             SELECT adrg_code AS adrgCode, adrg_name AS adrgName, adrg_rule AS adrgRule,
                    mdc_code AS mdcCode, sort_no AS sortNo
-              FROM sys_drg_adrg WHERE del_flag = 0 AND status = 1 ORDER BY sort_no
+              FROM sys_drg_adrg WHERE del_flag = 0 AND status = 1 AND version = #{version} ORDER BY sort_no
             """)
-    List<DrgAdrgRowVO> adrgList();
+    List<DrgAdrgRowVO> adrgList(@Param("version") String version);
 
     /**
      * 规则引用的码集合（集合编号 → 精确码，含 CC/MCC 排除组）
      */
     @Select("""
             SELECT set_code AS setCode, icd_code AS icdCode
-              FROM sys_drg_set WHERE del_flag = 0 AND status = 1
+              FROM sys_drg_set WHERE del_flag = 0 AND status = 1 AND version = #{version}
             """)
-    List<DrgSetRowVO> setList();
+    List<DrgSetRowVO> setList(@Param("version") String version);
 
     /**
      * 主手术编码列表（is_main=1，首页可标多条）
@@ -136,7 +136,7 @@ public interface DrgSimMapper extends BaseMapper<DrgSimResult> {
      */
     @Select("""
             SELECT icd_code AS icdCode, cc_level AS ccLevel, excl_group AS exclGroup
-              FROM sys_drg_ccmcc WHERE del_flag = 0 AND status = 1
+              FROM sys_drg_ccmcc WHERE del_flag = 0 AND status = 1 AND version = #{version}
             """)
-    List<CcMccRowVO> ccmccList();
+    List<CcMccRowVO> ccmccList(@Param("version") String version);
 }

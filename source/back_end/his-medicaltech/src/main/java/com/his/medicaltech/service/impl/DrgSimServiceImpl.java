@@ -13,6 +13,7 @@ import com.his.medicaltech.mapper.DrgSimMapper;
 import com.his.medicaltech.service.DrgSimService;
 import com.his.medicaltech.support.DrgFacts;
 import com.his.medicaltech.support.DrgGrouper;
+import com.his.medicaltech.support.DrgSchemeCache;
 import com.his.medicaltech.vo.DrgGroupRowVO;
 import com.his.medicaltech.vo.DrgSimVO;
 import com.his.medicaltech.vo.DrgSummaryListRowVO;
@@ -71,16 +72,18 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
         }
         BigDecimal actual = money(s.getActualAmount());
 
+        String version = TextUtil.hasText(dto.getVersion()) ? dto.getVersion().trim() : DrgSchemeCache.DEFAULT_VERSION;
         DrgGrouper.GroupResult g = grouper.group(new DrgFacts(icd, mainOpers, otherDiags, otherOpers,
-                s.getGender(), s.getAge(), s.getAgeUnit(), s.getBirthWeight()));
+                s.getGender(), s.getAge(), s.getAgeUnit(), s.getBirthWeight()), version);
         boolean grouped = g.grouped();
         BigDecimal pay = g.payStandard();
         // 支付标准未下发时盈亏算不出来，留 null，不拿 0 减实际费用冒充超支
         BigDecimal profit = grouped && pay != null ? money(pay.subtract(actual)) : null;
 
-        // upsert：每首页一条，重跑覆盖（含软删行复活）
+        // upsert：每首页每版本一条，重跑覆盖（含软删行复活）
         DrgSimResult r = drgSimMapper.selectOne(new LambdaQueryWrapper<DrgSimResult>()
                 .eq(DrgSimResult::getSummaryId, dto.getSummaryId())
+                .eq(DrgSimResult::getVersion, version)
                 .last("LIMIT 1"));
         boolean create = r == null;
         if (create) {
@@ -96,6 +99,7 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
         r.setDrgCode(g.drgCode());
         r.setDrgName(g.drgName());
         r.setMdcCode(g.mdcCode());
+        r.setVersion(version);
         r.setWeight(g.weight());
         r.setPayStandard(pay);
         r.setActualAmount(actual);
@@ -138,14 +142,16 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
             }
             DrgSimDTO.Simulate one = new DrgSimDTO.Simulate();
             one.setSummaryId(s.getSummaryId());
+            one.setVersion(dto.getVersion());
             simulate(one);
         }
-        return summaryList(null, skipped);
+        return summaryList(null, dto.getVersion(), skipped);
     }
 
     public IPage<DrgSimVO.ResultRow> resultPage(DrgSimDTO.ResultQuery dto) {
         LambdaQueryWrapper<DrgSimResult> qw = new LambdaQueryWrapper<DrgSimResult>()
                 .eq(dto.getSimStatus() != null, DrgSimResult::getSimStatus, dto.getSimStatus())
+                .eq(TextUtil.hasText(dto.getVersion()), DrgSimResult::getVersion, dto.getVersion())
                 .and(TextUtil.hasText(dto.getKeyword()), w -> w
                         .like(DrgSimResult::getPatientName, TextUtil.trimToEmpty(dto.getKeyword()))
                         .or().like(DrgSimResult::getDrgCode, TextUtil.trimToEmpty(dto.getKeyword())))
@@ -158,8 +164,9 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
     /**
      * 可模拟首页列表 + 汇总统计
      */
-    public DrgSimVO.SummaryListVO summaryList(Integer limit, Integer extraSkipped) {
-        List<DrgSummaryListRowVO> rows = drgSimMapper.summaryList(limit == null ? 50 : limit);
+    public DrgSimVO.SummaryListVO summaryList(Integer limit, String version, Integer extraSkipped) {
+        String v = TextUtil.hasText(version) ? version.trim() : DrgSchemeCache.DEFAULT_VERSION;
+        List<DrgSummaryListRowVO> rows = drgSimMapper.summaryList(limit == null ? 50 : limit, v);
         List<DrgSimVO.SummaryRow> list = rows.stream().map(m -> {
             DrgSimVO.SummaryRow r = new DrgSimVO.SummaryRow();
             r.setSummaryId(m.getSummaryId());
@@ -174,8 +181,10 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
             return r;
         }).collect(Collectors.toList());
 
+        // 统计只算当前版本（结果按版本隔离），否则切到 2.0 时汇总卡会把 3.0 的计数也并进来
         List<DrgSimResult> all = drgSimMapper.selectList(new LambdaQueryWrapper<DrgSimResult>()
-                .eq(DrgSimResult::getDelFlag, 0));
+                .eq(DrgSimResult::getDelFlag, 0)
+                .eq(DrgSimResult::getVersion, v));
         DrgSimVO.SimStat stat = new DrgSimVO.SimStat();
         stat.setTotal((long) all.size());
         stat.setGrouped(all.stream().filter(x -> DrgSimStatusEnum.GROUPED.is(x.getSimStatus())).count());
@@ -201,8 +210,9 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
      *
      * <p>权重与支付标准原样透出（官方包未含，值为 null），页面渲染成 —。
      */
-    public List<DrgSimVO.GroupRow> groupList() {
-        return drgSimMapper.groupList().stream()
+    public List<DrgSimVO.GroupRow> groupList(String version) {
+        String v = TextUtil.hasText(version) ? version.trim() : DrgSchemeCache.DEFAULT_VERSION;
+        return drgSimMapper.groupList(v).stream()
                 .map(m -> {
                     DrgSimVO.GroupRow r = new DrgSimVO.GroupRow();
                     r.setId(m.getId());
@@ -230,6 +240,7 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
         vo.setDrgCode(r.getDrgCode());
         vo.setDrgName(r.getDrgName());
         vo.setMdcCode(r.getMdcCode());
+        vo.setVersion(r.getVersion());
         vo.setWeight(r.getWeight());
         vo.setPayStandard(r.getPayStandard());
         vo.setActualAmount(r.getActualAmount());
@@ -250,6 +261,7 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
         vo.setInpatientDays(r.getInpatientDays());
         vo.setDrgCode(r.getDrgCode());
         vo.setDrgName(r.getDrgName());
+        vo.setVersion(r.getVersion());
         vo.setWeight(r.getWeight());
         vo.setPayStandard(r.getPayStandard());
         vo.setActualAmount(r.getActualAmount());

@@ -1,5 +1,15 @@
 <template>
   <div>
+    <!-- 版本切换：2.0 数据未接入时，切到 2.0 模拟会判为未入组 -->
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-sm text-gray-500">分组方案版本</span>
+      <el-select v-model="version" clearable placeholder="版本" style="width: 130px" @change="onVersionChange">
+        <el-option label="CHS-DRG 3.0" value="3.0"/>
+        <el-option label="CHS-DRG 2.0" value="2.0"/>
+      </el-select>
+      <el-tag v-if="version === '2.0'" type="warning" size="small">2.0 官方数据尚未接入，模拟将判为未入组（QY）</el-tag>
+    </div>
+
     <!-- 汇总卡 -->
     <div class="grid grid-cols-4 gap-3 mb-3">
       <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm" data-testid="drg-stat-total">
@@ -87,6 +97,7 @@
           <template #default="{ row }">{{ row.isSurgery === 1 ? '是' : '否' }}</template>
         </el-table-column>
         <el-table-column align="center" label="天数" prop="inpatientDays" width="60"/>
+        <el-table-column align="center" label="版本" prop="version" width="60"/>
         <el-table-column label="DRG 组" prop="drgCode" width="90">
           <template #default="{ row }">
             <el-tag :type="simTag(row.simStatus)" size="small">{{ row.drgCode }}</el-tag>
@@ -116,7 +127,7 @@
 
     <!-- 组表 -->
     <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm">
-      <p class="text-sm font-medium mb-3">DRG 细分组目录（CHS-DRG 3.0 官方方案；权重与支付标准由统筹区医保局下发，未下发处显示 —）</p>
+      <p class="text-sm font-medium mb-3">DRG 细分组目录（CHS-DRG {{ version || '3.0' }} 官方方案；权重与支付标准由统筹区医保局下发，未下发处显示 —）</p>
       <el-table :data="groups" border data-testid="drg-group-table" max-height="280" stripe>
         <el-table-column label="组编码" prop="drgCode" width="90"/>
         <el-table-column label="组名称" min-width="240" prop="drgName" show-overflow-tooltip/>
@@ -197,12 +208,19 @@ const loadDicts = async () => {
     console.error('加载字典失败', e);
   }
 };
+// ---------------- 版本切换 ----------------
+const version = ref('3.0');
+const onVersionChange = () => {
+  loadSummary();
+  loadList();
+  loadGroups();
+};
 // ---------------- 汇总 + 可模拟首页 ----------------
 const summaries = ref([]);
 const stat = ref(null);
 const loadSummary = async () => {
   try {
-    const res = await drgSummaryList(50);
+    const res = await drgSummaryList(50, version.value);
     summaries.value = res?.data?.rows || [];
     stat.value = res?.data?.stat || null;
   } catch (e) {
@@ -237,6 +255,7 @@ const runSim = async () => {
       summaryId: simForm.summaryId,
       icdCode: code,
       icdName: (simForm.mainDiagName || simForm.icdName || '').trim() || undefined,
+      version: version.value,
     });
     const d = res?.data;
     simResult.value = d;
@@ -252,7 +271,7 @@ const batchLoading = ref(false);
 const runBatch = async () => {
   batchLoading.value = true;
   try {
-    await drgSimulateBatch({});
+    await drgSimulateBatch({version: version.value});
     ElMessage.success('批量模拟完成（主诊断编码为空的行已跳过）');
     loadSummary();
   } catch (e) {
@@ -274,6 +293,7 @@ const loadList = async () => {
     const res = await drgResultListPage({
       keyword: query.keyword.trim() || undefined,
       simStatus: query.simStatus ?? undefined,
+      version: version.value,
       pageNum: query.pageNum, pageSize: query.pageSize,
     });
     rows.value = res?.data?.records || [];
@@ -294,7 +314,7 @@ const reset = () => {
 const groups = ref([]);
 const loadGroups = async () => {
   try {
-    const res = await drgGroupList();
+    const res = await drgGroupList(version.value);
     groups.value = res?.data || [];
   } catch (e) {
     console.error('加载组表失败', e);

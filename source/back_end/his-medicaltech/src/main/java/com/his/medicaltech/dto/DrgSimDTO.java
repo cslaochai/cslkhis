@@ -24,6 +24,10 @@ public class DrgSimDTO {
          */
         private String icdCode;
         private String icdName;
+        /**
+         * 分组方案版本（3.0/2.0），不传默认 3.0
+         */
+        private String version;
     }
 
     /**
@@ -35,6 +39,10 @@ public class DrgSimDTO {
          * 不传则模拟最近 50 条
          */
         private List<Long> summaryIds;
+        /**
+         * 分组方案版本（3.0/2.0），不传默认 3.0
+         */
+        private String version;
     }
 
     /**
@@ -51,5 +59,9 @@ public class DrgSimDTO {
          * 关键字
          */
         private String keyword;
+        /**
+         * 分组方案版本（3.0/2.0），不传则查全部版本
+         */
+        private String version;
     }
 }

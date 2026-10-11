@@ -14,7 +14,7 @@ public interface DrgSimService {
 
     IPage<DrgSimVO.ResultRow> resultPage(DrgSimDTO.ResultQuery dto);
 
-    DrgSimVO.SummaryListVO summaryList(Integer limit, Integer extraSkipped);
+    DrgSimVO.SummaryListVO summaryList(Integer limit, String version, Integer extraSkipped);
 
-    List<DrgSimVO.GroupRow> groupList();
+    List<DrgSimVO.GroupRow> groupList(String version);
 }

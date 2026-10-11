@@ -18,11 +18,11 @@ export function drgResultListPage(data) {
 }
 
 // 可模拟首页列表 + 入组/盈亏统计
-export function drgSummaryList(limit) {
-  return request.get('/report/drg/summary/list', { params: { limit } })
+export function drgSummaryList(limit, version) {
+  return request.get('/report/drg/summary/list', { params: { limit, version } })
 }
 
 // 组表（sys_drg_group）
-export function drgGroupList() {
-  return request.get('/report/drg/group/list')
+export function drgGroupList(version) {
+  return request.get('/report/drg/group/list', { params: { version } })
 }

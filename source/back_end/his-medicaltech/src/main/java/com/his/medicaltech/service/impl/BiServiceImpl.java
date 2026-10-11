@@ -6,6 +6,7 @@ import com.his.medicaltech.service.BiService;
 import com.his.medicaltech.support.DrgCodes;
 import com.his.medicaltech.support.DrgFacts;
 import com.his.medicaltech.support.DrgGrouper;
+import com.his.medicaltech.support.DrgSchemeCache;
 import com.his.medicaltech.vo.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -106,7 +107,7 @@ public class BiServiceImpl implements BiService {
             DrgGrouper.GroupResult r = drgGrouper.group(new DrgFacts(s.getIcdCode(),
                     DrgCodes.split(s.getMainOperCodes()), DrgCodes.split(s.getOtherDiagCodes()),
                     DrgCodes.split(s.getOtherOperCodes()), s.getGender(), s.getAge(), s.getAgeUnit(),
-                    s.getAdmissionWeightG()));
+                    s.getAdmissionWeightG()), DrgSchemeCache.DEFAULT_VERSION);
             if (!r.grouped()) {
                 continue;
             }

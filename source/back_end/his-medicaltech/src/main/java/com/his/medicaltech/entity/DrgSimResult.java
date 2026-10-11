@@ -68,6 +68,11 @@ public class DrgSimResult {
     private String drgName;
 
     /**
+     * 分组方案版本（3.0/2.0）
+     */
+    private String version;
+
+    /**
      * MDC 大类
      */
     private String mdcCode;

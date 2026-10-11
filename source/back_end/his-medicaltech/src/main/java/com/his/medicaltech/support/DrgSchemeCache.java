@@ -19,9 +19,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 分组方案快照缓存：一次装载三级目录 + 码集合 + 并发症合并症目录，供入组反复判定。
+ * 分组方案快照缓存：按版本各装载一份三级目录 + 码集合 + 并发症合并症目录，供入组反复判定。
+ *
+ * <p>为什么按版本分桶：2.0/3.0 共用同一套 CHS-DRG 编码（3.0 在 2.0 上增组），码值同名，
+ * 必须按 version 隔离装载，否则两版规则会混装互相污染模拟结果。{@link #DEFAULT_VERSION} 是当前启用的版本。
  *
  * <p>为什么必须缓存：一份官方方案是 27 条 MDC、537 条 ADRG、870 条 DRG、12.8 万条集合码、
  * 7900 余条并发症目录。批量模拟原本每条首页都要把这几张表整个捞一遍并逐条比前缀。
@@ -34,29 +38,32 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class DrgSchemeCache {
 
+    /**
+     * 当前默认启用的分组方案版本（存量数据全是 3.0，改这个值不会改变任何现有行为）
+     */
+    public static final String DEFAULT_VERSION = "3.0";
+
     private final DrgSimMapper drgSimMapper;
 
-    private volatile DrgScheme scheme;
+    private final Map<String, DrgScheme> schemes = new ConcurrentHashMap<>();
 
     public DrgScheme get() {
-        DrgScheme current = scheme;
-        if (current == null) {
-            synchronized (this) {
-                current = scheme;
-                if (current == null) {
-                    current = load();
-                    scheme = current;
-                }
-            }
-        }
-        return current;
+        return get(DEFAULT_VERSION);
     }
 
-    private DrgScheme load() {
-        Map<String, Set<String>> sets = loadSets();
-        Map<String, DrgScheme.CcEntry> ccmcc = loadCcMcc();
+    /**
+     * 取指定版本的方案快照，首次访问该版本时惰性装载并缓存。
+     */
+    public DrgScheme get(String version) {
+        String v = version == null || version.isBlank() ? DEFAULT_VERSION : version;
+        return schemes.computeIfAbsent(v, this::load);
+    }
+
+    private DrgScheme load(String version) {
+        Map<String, Set<String>> sets = loadSets(version);
+        Map<String, DrgScheme.CcEntry> ccmcc = loadCcMcc(version);
         Map<String, List<DrgScheme.DrgNode>> drgByAdrg = new LinkedHashMap<>();
-        for (DrgGroupRowVO row : drgSimMapper.groupList()) {
+        for (DrgGroupRowVO row : drgSimMapper.groupList(version)) {
             DrgRule rule = parseOrDrop(row.getDrgRule(), "DRG", row.getDrgCode());
             drgByAdrg.computeIfAbsent(row.getAdrgCode(), k -> new ArrayList<>())
                     .add(new DrgScheme.DrgNode(row.getDrgCode(), row.getDrgName(), row.getAdrgCode(), rule,
@@ -64,7 +71,7 @@ public class DrgSchemeCache {
         }
 
         Map<String, List<DrgScheme.AdrgNode>> adrgByMdc = new LinkedHashMap<>();
-        for (DrgAdrgRowVO row : drgSimMapper.adrgList()) {
+        for (DrgAdrgRowVO row : drgSimMapper.adrgList(version)) {
             DrgRule rule = parseOrDrop(row.getAdrgRule(), "ADRG", row.getAdrgCode());
             adrgByMdc.computeIfAbsent(row.getMdcCode(), k -> new ArrayList<>())
                     .add(new DrgScheme.AdrgNode(row.getAdrgCode(), row.getAdrgName(), row.getMdcCode(), rule,
@@ -72,7 +79,7 @@ public class DrgSchemeCache {
         }
 
         List<DrgScheme.MdcNode> mdcs = new ArrayList<>();
-        for (DrgMdcRowVO row : drgSimMapper.mdcList()) {
+        for (DrgMdcRowVO row : drgSimMapper.mdcList(version)) {
             // 名字为空的 MDC 行是目录里的分隔行，它又不带规则，收下就等于「任何病例都先进这个 MDC」
             if (!DrgScheme.named(row.getMdcName())) {
                 continue;
@@ -81,15 +88,15 @@ public class DrgSchemeCache {
             mdcs.add(new DrgScheme.MdcNode(row.getMdcCode(), row.getMdcName(), rule, row.getSortNo()));
         }
 
-        log.info("DRG 分组方案装载完成：MDC {}，ADRG {}，DRG 分档 {}，码集合 {} 组，并发症目录 {} 条",
-                mdcs.size(), adrgByMdc.values().stream().mapToLong(List::size).sum(),
+        log.info("DRG 分组方案[{}]装载完成：MDC {}，ADRG {}，DRG 分档 {}，码集合 {} 组，并发症目录 {} 条",
+                version, mdcs.size(), adrgByMdc.values().stream().mapToLong(List::size).sum(),
                 drgByAdrg.values().stream().mapToLong(List::size).sum(), sets.size(), ccmcc.size());
         return new DrgScheme(mdcs, adrgByMdc, drgByAdrg, sets, ccmcc);
     }
 
-    private Map<String, Set<String>> loadSets() {
+    private Map<String, Set<String>> loadSets(String version) {
         Map<String, Set<String>> sets = new HashMap<>();
-        for (DrgSetRowVO row : drgSimMapper.setList()) {
+        for (DrgSetRowVO row : drgSimMapper.setList(version)) {
             String setCode = TextUtil.trimToNull(row.getSetCode());
             String code = DrgCodes.norm(row.getIcdCode());
             if (setCode == null || code.isEmpty()) {
@@ -100,9 +107,9 @@ public class DrgSchemeCache {
         return sets;
     }
 
-    private Map<String, DrgScheme.CcEntry> loadCcMcc() {
+    private Map<String, DrgScheme.CcEntry> loadCcMcc(String version) {
         Map<String, DrgScheme.CcEntry> ccmcc = new HashMap<>();
-        for (CcMccRowVO row : drgSimMapper.ccmccList()) {
+        for (CcMccRowVO row : drgSimMapper.ccmccList(version)) {
             String code = DrgCodes.norm(row.getIcdCode());
             DrgCcLevelEnum level = DrgCcLevelEnum.fromCode(row.getCcLevel());
             if (code.isEmpty() || level == null || level == DrgCcLevelEnum.NONE) {

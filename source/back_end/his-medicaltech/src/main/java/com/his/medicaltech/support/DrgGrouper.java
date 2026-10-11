@@ -47,13 +47,13 @@ public class DrgGrouper {
                               BigDecimal weight, BigDecimal payStandard, String ruleNote, boolean grouped) {
     }
 
-    public GroupResult group(DrgFacts facts) {
+    public GroupResult group(DrgFacts facts, String version) {
         if (facts.mainDiag().isEmpty()) {
             return qy("主诊断编码为空，无法入组");
         }
-        DrgScheme scheme = drgSchemeCache.get();
+        DrgScheme scheme = drgSchemeCache.get(version);
         if (scheme.empty()) {
-            return qy("未接入官方分组方案（分组目录为空），无法入组");
+            return qy("未接入官方分组方案（版本 " + (version == null ? "" : version) + " 的分组目录为空），无法入组");
         }
 
         String enteredMdc = null;
