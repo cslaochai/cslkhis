@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
- * 病危重通知的签名内容提供者（业务类型=9）—— 告知医师签发即签。
+ * 病危重通知的签名内容提供者
  */
 @Slf4j
 @Component

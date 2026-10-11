@@ -1,6 +1,6 @@
 package com.his.system.api.service;
 
-import com.his.system.api.vo.DeptRef;
+import com.his.system.api.vo.DeptRefVO;
 import com.his.system.api.vo.MedicalRecordBriefVO;
 import com.his.system.api.vo.PrescriptionBriefVO;
 import com.his.system.api.vo.PrescriptionDetailBriefVO;
@@ -63,21 +63,21 @@ public interface EmrApi {
      *
      * @return 查不到返回 {@code null}，<b>不得兜底成默认科室</b>
      */
-    DeptRef findDeptByPrescriptionNo(String prescriptionNo);
+    DeptRefVO findDeptByPrescriptionNo(String prescriptionNo);
 
     /**
      * 按检查申请单号反查开单科室。
      *
      * @return 查不到返回 {@code null}，<b>不得兜底成默认科室</b>
      */
-    DeptRef findDeptByInspectionApplyNo(String applyNo);
+    DeptRefVO findDeptByInspectionApplyNo(String applyNo);
 
     /**
      * 按检验申请单号反查开单科室。
      *
      * @return 查不到返回 {@code null}，<b>不得兜底成默认科室</b>
      */
-    DeptRef findDeptByLaboratoryApplyNo(String applyNo);
+    DeptRefVO findDeptByLaboratoryApplyNo(String applyNo);
 
     // 缴费推进 / 退费撤销：动作发出去，能不能做由病历域判断
 

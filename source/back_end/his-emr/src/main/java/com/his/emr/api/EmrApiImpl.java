@@ -2,14 +2,14 @@ package com.his.emr.api;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.util.TextUtil;
-import com.his.system.api.service.EmrApi;
-import com.his.system.api.vo.DeptRef;
-import com.his.system.api.vo.MedicalRecordBriefVO;
-import com.his.system.api.vo.PrescriptionBriefVO;
-import com.his.system.api.vo.PrescriptionDetailBriefVO;
 import com.his.emr.entity.*;
 import com.his.emr.mapper.*;
 import com.his.emr.service.SourcePaidAdvanceService;
+import com.his.system.api.service.EmrApi;
+import com.his.system.api.vo.DeptRefVO;
+import com.his.system.api.vo.MedicalRecordBriefVO;
+import com.his.system.api.vo.PrescriptionBriefVO;
+import com.his.system.api.vo.PrescriptionDetailBriefVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -24,10 +24,15 @@ import java.util.List;
 public class EmrApiImpl implements EmrApi {
 
     private final BizMedicalRecordMapper bizMedicalRecordMapper;
+
     private final BizPrescriptionMapper bizPrescriptionMapper;
+
     private final BizPrescriptionDetailMapper bizPrescriptionDetailMapper;
+
     private final BizInspectionApplyMapper bizInspectionApplyMapper;
+
     private final BizLaboratoryApplyMapper bizLaboratoryApplyMapper;
+
     private final SourcePaidAdvanceService sourcePaidAdvanceService;
 
     @Override
@@ -100,36 +105,36 @@ public class EmrApiImpl implements EmrApi {
     }
 
     @Override
-    public DeptRef findDeptByPrescriptionNo(String prescriptionNo) {
+    public DeptRefVO findDeptByPrescriptionNo(String prescriptionNo) {
         if (!TextUtil.hasText(prescriptionNo)) {
             return null;
         }
         BizPrescription row = bizPrescriptionMapper.selectOne(new LambdaQueryWrapper<BizPrescription>()
                 .eq(BizPrescription::getPrescriptionNo, prescriptionNo)
                 .last("LIMIT 1"));
-        return row == null ? null : new DeptRef(row.getDeptId(), row.getDeptName());
+        return row == null ? null : new DeptRefVO(row.getDeptId(), row.getDeptName());
     }
 
     @Override
-    public DeptRef findDeptByInspectionApplyNo(String applyNo) {
+    public DeptRefVO findDeptByInspectionApplyNo(String applyNo) {
         if (!TextUtil.hasText(applyNo)) {
             return null;
         }
         BizInspectionApply row = bizInspectionApplyMapper.selectOne(new LambdaQueryWrapper<BizInspectionApply>()
                 .eq(BizInspectionApply::getApplyNo, applyNo)
                 .last("LIMIT 1"));
-        return row == null ? null : new DeptRef(row.getDeptId(), row.getDeptName());
+        return row == null ? null : new DeptRefVO(row.getDeptId(), row.getDeptName());
     }
 
     @Override
-    public DeptRef findDeptByLaboratoryApplyNo(String applyNo) {
+    public DeptRefVO findDeptByLaboratoryApplyNo(String applyNo) {
         if (!TextUtil.hasText(applyNo)) {
             return null;
         }
         BizLaboratoryApply row = bizLaboratoryApplyMapper.selectOne(new LambdaQueryWrapper<BizLaboratoryApply>()
                 .eq(BizLaboratoryApply::getApplyNo, applyNo)
                 .last("LIMIT 1"));
-        return row == null ? null : new DeptRef(row.getDeptId(), row.getDeptName());
+        return row == null ? null : new DeptRefVO(row.getDeptId(), row.getDeptName());
     }
 
     @Override

@@ -14,9 +14,6 @@ public class PasswordCryptoProperties {
 
     /**
      * 16 进制 SM2 私钥（64 个 hex 字符）。留空则启动时临时生成一对。
-     *
-     * <p><b>生产必须显式配置</b>：留空时每次启动都是新密钥，多实例部署会因为实例间密钥不同
-     * 而随机解密失败（LB 打到哪个实例全看运气），症状是"登录时好时坏"。
      */
     private String privateKey = "";
 

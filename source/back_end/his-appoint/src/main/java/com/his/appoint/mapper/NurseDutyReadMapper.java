@@ -9,11 +9,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 跨模块只读护理排班（biz_schedule 护理序列行）。
- *
- * <p>护理排班已并入排班底座（2026-10-11）：在岗护士 = {@code biz_schedule} 里
- * {@code staff_type IN (2,7)}（护理/护工护理辅助）的行，护理不再有独立副本表。
- * 此处以裸 SQL 直接读 his-system 的表，不引入模块编译依赖。
+ * 跨模块只读护理排班
  */
 @Mapper
 public interface NurseDutyReadMapper {

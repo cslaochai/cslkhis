@@ -1,7 +1,6 @@
 package com.his.charge.api;
 
 
-import com.his.system.api.service.AppointChargeApi;
 import com.his.charge.dto.BillSettleUpsertDTO;
 import com.his.charge.dto.FeeBookDTO;
 import com.his.charge.entity.BizFeeRecord;
@@ -13,6 +12,10 @@ import com.his.charge.service.SettlementBillService;
 import com.his.common.enums.*;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
+import com.his.system.api.service.AppointChargeApi;
+import com.his.system.api.vo.BillBriefVO;
+import com.his.system.api.vo.CancelCommandVO;
+import com.his.system.api.vo.RegistChargeCommandVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -47,8 +50,8 @@ public class AppointChargeApiImpl implements AppointChargeApi {
     private final PaymentService paymentService;
 
     @Override
-    public Map<Long, BillBrief> mapBillsByIds(Collection<Long> billIds) {
-        Map<Long, BillBrief> result = new HashMap<>();
+    public Map<Long, BillBriefVO> mapBillsByIds(Collection<Long> billIds) {
+        Map<Long, BillBriefVO> result = new HashMap<>();
         if (billIds == null || billIds.isEmpty()) {
             return result;
         }
@@ -59,7 +62,7 @@ public class AppointChargeApiImpl implements AppointChargeApi {
     }
 
     @Override
-    public BillBrief getBill(Long billId) {
+    public BillBriefVO getBill(Long billId) {
         if (billId == null) {
             return null;
         }
@@ -69,13 +72,10 @@ public class AppointChargeApiImpl implements AppointChargeApi {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public BillBrief createRegistCharge(RegistChargeCommand command) {
+    public BillBriefVO createRegistCharge(RegistChargeCommandVO command) {
         if (command == null || command.getRegistId() == null) {
             return null;
         }
-        // 免收 = 一分钱都不应收：不记账、不出账单，返回 null。
-        // 旧模型在这里造一张 0 元收费单并直接置「已收费」，只为骗过签到的收费单门禁 ——
-        // 现在门禁认的是「有没有未结清的挂号账单」，没有账单本身就是答案。
         if (command.isWaived()) {
             log.info("[挂号费] 免收，不记账不出账：registNo={} 依据={}",
                     command.getRegistNo(), command.getWaiveReason());
@@ -115,7 +115,7 @@ public class AppointChargeApiImpl implements AppointChargeApi {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean cancelRegistCharge(CancelCommand command) {
+    public boolean cancelRegistCharge(CancelCommandVO command) {
         if (command == null || command.getBillId() == null) {
             return false;
         }
@@ -129,7 +129,7 @@ public class AppointChargeApiImpl implements AppointChargeApi {
         return closed;
     }
 
-    private FeeBookDTO buildBook(RegistChargeCommand command, String itemName, String itemCode,
+    private FeeBookDTO buildBook(RegistChargeCommandVO command, String itemName, String itemCode,
                                  BigDecimal amount, int catalogType) {
         FeeBookDTO dto = new FeeBookDTO();
         dto.setPatientId(command.getPatientId());
@@ -155,8 +155,8 @@ public class AppointChargeApiImpl implements AppointChargeApi {
         return dto;
     }
 
-    private BillBrief toBrief(BizSettlementBill bill) {
-        BillBrief brief = new BillBrief();
+    private BillBriefVO toBrief(BizSettlementBill bill) {
+        BillBriefVO brief = new BillBriefVO();
         brief.setBillId(bill.getId());
         brief.setBillNo(bill.getBillNo());
         brief.setBillStatus(bill.getBillStatus());

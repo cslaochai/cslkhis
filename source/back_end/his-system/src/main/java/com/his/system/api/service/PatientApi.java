@@ -1,7 +1,7 @@
 package com.his.system.api.service;
 
 import com.his.system.api.vo.AdmissionBriefVO;
-import com.his.system.api.vo.DeptRef;
+import com.his.system.api.vo.DeptRefVO;
 import com.his.system.api.vo.PatientBriefVO;
 
 /**
@@ -35,5 +35,5 @@ public interface PatientApi {
      * @return 查不到返回 {@code null}（调用方保持科室为空，<b>不得兜底成默认科室</b>，
      * 兜底会让科室收入表凭空多出一块来路不明的钱）
      */
-    DeptRef findDeptByOrderNo(String orderNo);
+    DeptRefVO findDeptByOrderNo(String orderNo);
 }

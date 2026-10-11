@@ -1,4 +1,4 @@
-package com.his.patient.vo;
+package com.his.appoint.vo;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;

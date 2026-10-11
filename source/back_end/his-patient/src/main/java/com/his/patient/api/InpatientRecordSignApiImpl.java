@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
- * 住院病历文书的签名内容提供者（业务类型=1）。
+ * 住院病历文书的签名内容提供者
  */
 @Slf4j
 @Component

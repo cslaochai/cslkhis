@@ -49,8 +49,6 @@ public class BizRevisitFeePolicyServiceImpl extends ServiceImpl<BizRevisitFeePol
         RevisitFeeDecision decision = new RevisitFeeDecision();
         BigDecimal registFee = NumUtil.orZero(context == null ? null : context.getRegistFee());
         BigDecimal diagnosisFee = NumUtil.orZero(context == null ? null : context.getDiagnosisFee());
-        // 默认全额收费：没有策略、来源未知、判不出比对结果，都走这里。
-        // 方向性很关键 —— 兜底若是「免」，等于任何异常路径都在替医院漏收挂号费。
         decision.setRegistFee(registFee);
         decision.setDiagnosisFee(diagnosisFee);
         decision.setChargeMode(RevisitChargeModeEnum.FULL.getCode());

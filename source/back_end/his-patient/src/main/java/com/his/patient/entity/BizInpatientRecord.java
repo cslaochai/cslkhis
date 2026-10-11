@@ -1,5 +1,6 @@
 package com.his.patient.entity;
 
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
@@ -11,24 +12,15 @@ import lombok.EqualsAndHashCode;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
- * 住院病历文书（P2：结构化要素的载体）。
+ * 住院病历文书
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_inpatient_record")
 public class BizInpatientRecord extends BaseEntity implements Serializable {
-    /** 逻辑删除标志（0 未删除 1 已删除） */
-    @TableLogic
-    private Integer delFlag;
-
-    /** 备注 */
-    private String remark;
-
-
 
     /**
      * 病历文书号（BL + yyyyMMdd + 4位序号）
@@ -301,9 +293,6 @@ public class BizInpatientRecord extends BaseEntity implements Serializable {
 
     /**
      * 签名状态（0-未签名 1-已签名 2-签名已失效）
-     *
-     * <p>P5.5 起：`1` 表示这份文书已被书写医生签名，**签名即锁定**（update 会被拒绝）；
-     * `2` 表示签名被作废过（不等于"从来没签过"，不允许回落成 0）。
      */
     private Integer signStatus;
 
@@ -318,4 +307,15 @@ public class BizInpatientRecord extends BaseEntity implements Serializable {
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime signedTime;
+
+    /**
+     * 逻辑删除标志（0 未删除 1 已删除）
+     */
+    @TableLogic
+    private Integer delFlag;
+
+    /**
+     * 备注
+     */
+    private String remark;
 }

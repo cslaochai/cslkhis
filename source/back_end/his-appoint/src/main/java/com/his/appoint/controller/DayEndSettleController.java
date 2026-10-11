@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 日终结转控制器（手工补跑）。
+ * 日终结转控制器
  */
 @Tag(name = "日终结转")
 @RestController

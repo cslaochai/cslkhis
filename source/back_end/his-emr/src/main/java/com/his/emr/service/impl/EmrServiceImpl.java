@@ -20,6 +20,7 @@ import com.his.charge.service.FeeRecordService;
 import com.his.charge.support.FeeCatalogResolver;
 import com.his.charge.vo.FeeTypeSumVO;
 import com.his.common.base.PageResult;
+import com.his.system.api.vo.ExecStatusVO;
 import com.his.system.dto.SignCommandDTO;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
@@ -777,7 +778,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         if (CollectionUtils.isEmpty(list)) {
             return new ArrayList<>();
         }
-        Map<Long, ApplyExecStatusApi.ExecStatus> execMap = inspectionExecMap(
+        Map<Long, ExecStatusVO> execMap = inspectionExecMap(
                 list.stream().map(BizInspectionApply::getId).collect(Collectors.toList()));
         List<BizInspectionApplyVO> vos = new ArrayList<>(list.size());
         for (BizInspectionApply apply : list) {
@@ -798,7 +799,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         if (CollectionUtils.isEmpty(list)) {
             return new ArrayList<>();
         }
-        Map<Long, ApplyExecStatusApi.ExecStatus> execMap = laboratoryExecMap(
+        Map<Long, ExecStatusVO> execMap = laboratoryExecMap(
                 list.stream().map(BizLaboratoryApply::getId).collect(Collectors.toList()));
         List<BizLaboratoryApplyVO> vos = new ArrayList<>(list.size());
         for (BizLaboratoryApply apply : list) {
@@ -991,7 +992,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     }
 
     private BizInspectionApplyVO toInspectionApplyVO(BizInspectionApply apply,
-                                                     ApplyExecStatusApi.ExecStatus exec) {
+                                                     ExecStatusVO exec) {
         BizInspectionApplyVO vo = new BizInspectionApplyVO();
         BeanUtils.copyProperties(apply, vo);
         String text;
@@ -1019,7 +1020,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     }
 
     private BizLaboratoryApplyVO toLaboratoryApplyVO(BizLaboratoryApply apply,
-                                                     ApplyExecStatusApi.ExecStatus exec) {
+                                                     ExecStatusVO exec) {
         BizLaboratoryApplyVO vo = new BizLaboratoryApplyVO();
         BeanUtils.copyProperties(apply, vo);
         String text;
@@ -1058,7 +1059,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      * 墓碑不占用，检查科那边本来也不该再处理它。
      */
     private String inspectionDeleteBlock(Long applyId, Integer applyStatus,
-                                         ApplyExecStatusApi.ExecStatus exec, Integer signStatus) {
+                                         ExecStatusVO exec, Integer signStatus) {
         if (Objects.equals(ObjectSignStatusEnum.SIGNED.getCode(), signStatus)) {
             return "该申请单已电子签名（签名即锁定），请先在「签名中心」作废签名";
         }
@@ -1077,7 +1078,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     }
 
     private String laboratoryDeleteBlock(Long applyId, Integer applyStatus,
-                                         ApplyExecStatusApi.ExecStatus exec, Integer signStatus) {
+                                         ExecStatusVO exec, Integer signStatus) {
         if (Objects.equals(ObjectSignStatusEnum.SIGNED.getCode(), signStatus)) {
             return "该申请单已电子签名（签名即锁定），请先在「签名中心」作废签名";
         }
@@ -1129,13 +1130,13 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         return (typeEnum == null ? "其他" : typeEnum.getDesc()) + "费";
     }
 
-    private Map<Long, ApplyExecStatusApi.ExecStatus> inspectionExecMap(List<Long> applyIds) {
+    private Map<Long, ExecStatusVO> inspectionExecMap(List<Long> applyIds) {
         ApplyExecStatusApi gw = applyExecStatusGatewayProvider.getIfAvailable();
         if (gw == null || CollectionUtils.isEmpty(applyIds)) {
             return Collections.emptyMap();
         }
         try {
-            List<ApplyExecStatusApi.ExecStatus> list = gw.listInspectionExecStatus(applyIds);
+            List<ExecStatusVO> list = gw.listInspectionExecStatus(applyIds);
             return indexExecStatus(list);
         } catch (Exception e) {
             log.warn("[申请单] 查询检查执行进度失败，降级为不显示进度", e);
@@ -1143,13 +1144,13 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         }
     }
 
-    private Map<Long, ApplyExecStatusApi.ExecStatus> laboratoryExecMap(List<Long> applyIds) {
+    private Map<Long, ExecStatusVO> laboratoryExecMap(List<Long> applyIds) {
         ApplyExecStatusApi gw = applyExecStatusGatewayProvider.getIfAvailable();
         if (gw == null || CollectionUtils.isEmpty(applyIds)) {
             return Collections.emptyMap();
         }
         try {
-            List<ApplyExecStatusApi.ExecStatus> list = gw.listLaboratoryExecStatus(applyIds);
+            List<ExecStatusVO> list = gw.listLaboratoryExecStatus(applyIds);
             return indexExecStatus(list);
         } catch (Exception e) {
             log.warn("[申请单] 查询检验执行进度失败，降级为不显示进度", e);
@@ -1157,13 +1158,13 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         }
     }
 
-    private Map<Long, ApplyExecStatusApi.ExecStatus> indexExecStatus(
-            List<ApplyExecStatusApi.ExecStatus> list) {
+    private Map<Long, ExecStatusVO> indexExecStatus(
+            List<ExecStatusVO> list) {
         if (CollectionUtils.isEmpty(list)) {
             return Collections.emptyMap();
         }
-        Map<Long, ApplyExecStatusApi.ExecStatus> map = new HashMap<>();
-        for (ApplyExecStatusApi.ExecStatus s : list) {
+        Map<Long, ExecStatusVO> map = new HashMap<>();
+        for (ExecStatusVO s : list) {
             if (s != null && s.getApplyId() != null) {
                 map.put(s.getApplyId(), s);
             }

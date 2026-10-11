@@ -7,6 +7,7 @@ import com.his.charge.service.FundAccountService;
 import com.his.charge.service.SettlementBillService;
 import com.his.common.enums.BillStatusEnum;
 import com.his.common.util.NumUtil;
+import com.his.system.api.vo.SettlementStateVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,8 +26,8 @@ public class InpatientSettlementApiImpl implements InpatientSettlementApi {
     private final FundAccountService fundAccountService;
 
     @Override
-    public SettlementState state(Long admissionId) {
-        SettlementState state = new SettlementState();
+    public SettlementStateVO state(Long admissionId) {
+        SettlementStateVO state = new SettlementStateVO();
         if (admissionId == null) {
             state.setText("入院ID为空，无法校验结算状态");
             return state;

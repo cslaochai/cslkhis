@@ -1,6 +1,7 @@
 package com.his.patient.support;
 
 import com.his.system.api.service.InpatientSettlementApi;
+import com.his.system.api.vo.SettlementStateVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -26,7 +27,7 @@ public class SettlementGate {
     /**
      * 查询结算状态（收费模块缺席返回 {@code null}）
      */
-    public InpatientSettlementApi.SettlementState state(Long admissionId) {
+    public SettlementStateVO state(Long admissionId) {
         InpatientSettlementApi gateway = settlementGateway.getIfAvailable();
         if (gateway == null) {
             return null;

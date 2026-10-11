@@ -46,14 +46,15 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
     private static final long SHIFT_ANY = 0L;
     /**
      * 人的约束往前看几天、往后看几天。
-     *
-     * <p>取 14 天而不是 7 天：连续上班上限最大可能配到 7 天以上，
-     * 而「是不是连续」要从这天向两侧数到断口为止，窗口必须比上限大。
      */
     private static final int PERSON_WINDOW_DAYS = 14;
+
     private final BizScheduleMapper bizStaffScheduleMapper;
+
     private final ShiftService shiftService;
+
     private final SysWardMapper sysWardMapper;
+
     private final SysDepartmentMapper sysDepartmentMapper;
 
     private static boolean isNight(BizShift shift) {

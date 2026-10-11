@@ -15,7 +15,7 @@ import com.his.common.enums.StaffScheduleSourceEnum;
 import java.util.List;
 
 /**
- * 挂号服务接口
+ * 门诊号源排班
  */
 public interface BizClinicSourceService extends IService<BizClinicSource> {
 
@@ -62,15 +62,6 @@ public interface BizClinicSourceService extends IService<BizClinicSource> {
 
     /**
      * 出诊计划与出勤事实对齐（手工排班、模板批量生成共用同一条口径）。
-     *
-     * <p>按「人 × 日 × 班」取到对应的那条全院排班事实（没有就落一条），并把投影行上的
-     * 星期、岗位类别、姓名、科室名、起止时间一律换成事实层的值 —— 这五样在出诊计划上都是<b>派生列</b>，
-     * 谁自己写一份就会出现「门诊表说他是医生、岗位表说他是收费员」。
-     *
-     * <p>方法会<b>就地改写</b>入参实体，调用方拿到的 {@code schedule} 已是可直接落库的完整投影。
-     * 必须在 {@code applyShift} 之后调用（班次定了时间，事实才认这个班）。
-     *
-     * @param source 生成来源：手工排班落 1-手工，周模板生成落 2-模板
      */
     void bindCoreSchedule(BizClinicSource schedule, StaffScheduleSourceEnum source);
 
@@ -116,25 +107,11 @@ public interface BizClinicSourceService extends IService<BizClinicSource> {
 
     /**
      * <b>今日在岗</b> —— 排班的下游出口。
-     *
-     * <p>排班表是「计划」，业务流程真正要问的是「此刻/今天谁在岗」。
-     * 医生出诊、护理出勤、收费窗口、药师值班都从这里出，按 staffType 分流。
-     * 判定走 {@link com.his.common.util.ShiftCoverUtil}（跨零点夜班唯一实现）。
      */
     List<OnDutyStaffVO> onDuty(OnDutyQueryDTO queryDTO);
 
     /**
      * 挑一个「当班责任人」——给需要落执行人的单据用（如分诊记录上的当班护士）。
-     *
-     * <p>取值顺序：
-     * <ol>
-     *   <li>{@code preferEmpId} 本人恰在当班名单里 → 取本人（护士本人操作就该记她）；</li>
-     *   <li>此刻在岗名单里第一个（班次开始时间最晚的那一班，交接班时段取接班人）；</li>
-     *   <li>此刻无人（交接班空档）→ 取当日班次里最早的那一班（当天在岗过的人）；</li>
-     *   <li>都没有 → 返回 null。<b>绝不拿非当班人员顶替</b>：写不出真实值就留空，
-     *       比记一个「谁登的浏览器就是谁」的假数据强（历史教训：分诊护士恒等于登录人）。</li>
-     * </ol>
-     *
      * @param deptId      科室ID
      * @param staffType   岗位类别
      * @param preferEmpId 优先取此人（当前操作人的员工ID），可为 null

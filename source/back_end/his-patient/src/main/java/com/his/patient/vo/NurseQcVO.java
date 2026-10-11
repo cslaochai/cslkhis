@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * 护理质控出参（外层空壳 + 内层静态类，同 NurseScheduleVO）。
+ * 护理质控出参（外层空壳 + 内层静态类，同 his-appoint 的 NurseScheduleVO）。
  */
 public class NurseQcVO {
 

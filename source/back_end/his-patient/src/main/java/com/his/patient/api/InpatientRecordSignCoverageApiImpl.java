@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
- * 住院病历文书的签名覆盖率（数的是业务表，所以实现在这里而不是 his-common）。
+ * 住院病历文书的签名覆盖率
  */
 @Component
 @RequiredArgsConstructor

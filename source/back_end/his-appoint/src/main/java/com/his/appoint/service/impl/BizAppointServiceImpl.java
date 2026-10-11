@@ -26,11 +26,15 @@ import com.his.appoint.vo.BizAppointInfoListVO;
 import com.his.appoint.vo.RevisitFeePreviewVO;
 import com.his.appoint.vo.RevisitRecordSelectVO;
 import com.his.system.api.service.AppointChargeApi;
+import com.his.system.api.vo.BillBriefVO;
+import com.his.system.api.vo.CancelCommandVO;
+import com.his.system.api.vo.RecordBriefVO;
 import com.his.common.base.PageResult;
 import com.his.common.enums.AttendModeEnum;
 import com.his.common.enums.StaffDutyStatusEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
+import com.his.system.api.vo.RegistChargeCommandVO;
 import com.his.system.service.RedisSequenceService;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
@@ -68,6 +72,7 @@ import java.util.Map;
 @Slf4j
 @RequiredArgsConstructor
 public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizAppointInfo> implements BizAppointService {
+
     private final DeptScopeService deptScopeService;
 
     private final BizClinicSourceMapper bizScheduleMapper;
@@ -300,7 +305,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         }
 
         // 批量查询账单信息（经 SPI 委派至 his-charge）
-        Map<Long, AppointChargeApi.BillBrief> billMap = new HashMap<>();
+        Map<Long, BillBriefVO> billMap = new HashMap<>();
         AppointChargeApi gateway = appointChargeGateway.getIfAvailable();
         if (gateway != null && !billIds.isEmpty()) {
             billMap = gateway.mapBillsByIds(billIds);
@@ -333,7 +338,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
      * @param queue 该挂号当前的队列记录，可能为空（未签到）
      */
     private BizAppointInfoListVO convertToVO(BizAppointInfo appoint,
-                                             Map<Long, AppointChargeApi.BillBrief> billMap,
+                                             Map<Long, BillBriefVO> billMap,
                                              BizQueue queue) {
         BizAppointInfoListVO vo = new BizAppointInfoListVO();
         vo.setId(appoint.getId());
@@ -371,7 +376,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
 
         // 从缓存的账单信息中取缴费状态
         if (appoint.getBillId() != null && billMap.containsKey(appoint.getBillId())) {
-            AppointChargeApi.BillBrief bill = billMap.get(appoint.getBillId());
+            BillBriefVO bill = billMap.get(appoint.getBillId());
             vo.setBillStatus(bill.getBillStatus());
             vo.setTotalFee(bill.getPayableAmount());
         }
@@ -395,7 +400,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         // 那样调用方会对着一个不是原因的错去改。
         boolean revisit = upsertDTO.getVisitType() != null
                 && upsertDTO.getVisitType() == VisitTypeEnum.REVISIT.getCode();
-        MedicalRecordApi.RecordBrief origin = validateRevisit(upsertDTO, revisit);
+        RecordBriefVO origin = validateRevisit(upsertDTO, revisit);
         Long revisitRecordId = origin == null ? null : origin.getId();
 
         // 幂等性校验：检查是否已存在相同挂号记录
@@ -573,7 +578,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
 
         AppointChargeApi gateway = appointChargeGateway.getIfAvailable();
         if (gateway != null && !feeDecision.isWaived() && feeDecision.totalFee().compareTo(BigDecimal.ZERO) > 0) {
-            AppointChargeApi.RegistChargeCommand command = new AppointChargeApi.RegistChargeCommand();
+            RegistChargeCommandVO command = new RegistChargeCommandVO();
             command.setRegistId(appointInfo.getId());
             command.setRegistNo(appointInfo.getRegistNo());
             command.setPatientId(appointInfo.getPatientId());
@@ -588,7 +593,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
             command.setWaived(feeDecision.isWaived());
             command.setWaiveReason(feeDecision.getReason());
 
-            AppointChargeApi.BillBrief bill = gateway.createRegistCharge(command);
+            BillBriefVO bill = gateway.createRegistCharge(command);
             if (bill != null) {
                 appointInfo.setBillId(bill.getBillId());
                 appointInfo.setBillNo(bill.getBillNo());
@@ -619,7 +624,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         if (refGateway == null) {
             throw new BusinessException("病历服务不可用，无法关联原病历");
         }
-        MedicalRecordApi.RecordBrief origin = refGateway.getRecord(previewDTO.getRevisitRecordId());
+        RecordBriefVO origin = refGateway.getRecord(previewDTO.getRevisitRecordId());
         if (origin == null) {
             throw new BusinessException("原病历不存在，无法预估复诊费用");
         }
@@ -682,7 +687,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
             return new ArrayList<>();
         }
         List<RevisitRecordSelectVO> options = new ArrayList<>();
-        for (MedicalRecordApi.RecordBrief brief : refGateway.listRecentByPatient(patientId, limit)) {
+        for (RecordBriefVO brief : refGateway.listRecentByPatient(patientId, limit)) {
             RevisitRecordSelectVO option = new RevisitRecordSelectVO();
             option.setId(brief.getId());
             option.setRecordNo(brief.getRecordNo());
@@ -705,7 +710,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
      * 目的是让「原价 0 的号也建单并置已收费」这条口径只有一处实现。
      */
     private BizRevisitFeePolicyService.RevisitFeeContext buildRevisitFeeContext(
-            boolean revisit, Integer revisitSource, MedicalRecordApi.RecordBrief origin,
+            boolean revisit, Integer revisitSource, RecordBriefVO origin,
             BizClinicSource schedule, Long targetDeptId, Long targetDoctorId, LocalDate targetVisitDate) {
         BizRevisitFeePolicyService.RevisitFeeContext context = new BizRevisitFeePolicyService.RevisitFeeContext();
         context.setRevisitSource(revisit ? revisitSource : null);
@@ -761,7 +766,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
      *
      * @return 复诊时返回通过校验的原病历；初诊返回 null
      */
-    private MedicalRecordApi.RecordBrief validateRevisit(AppointUpsertDTO upsertDTO, boolean revisit) {
+    private RecordBriefVO validateRevisit(AppointUpsertDTO upsertDTO, boolean revisit) {
         if (!revisit) {
             if (upsertDTO.getRevisitSource() != null || upsertDTO.getRevisitRecordId() != null) {
                 throw new BusinessException("只有复诊挂号才能指定复诊来源/关联原病历");
@@ -780,7 +785,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         if (refGateway == null) {
             throw new BusinessException("病历服务不可用，无法关联原病历");
         }
-        MedicalRecordApi.RecordBrief origin = refGateway.getRecord(upsertDTO.getRevisitRecordId());
+        RecordBriefVO origin = refGateway.getRecord(upsertDTO.getRevisitRecordId());
         if (origin == null) {
             throw new BusinessException("原病历不存在，无法创建复诊挂号");
         }
@@ -925,7 +930,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
             log.warn("收费能力不可用，跳过改约的收费校验：registId={}", existing.getId());
             return;
         }
-        AppointChargeApi.BillBrief bill = gateway.getBill(existing.getBillId());
+        BillBriefVO bill = gateway.getBill(existing.getBillId());
         if (bill == null) {
             return;
         }
@@ -953,7 +958,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
                     registInfo.getId(), registInfo.getBillId());
             return;
         }
-        AppointChargeApi.CancelCommand command = new AppointChargeApi.CancelCommand();
+        CancelCommandVO command = new CancelCommandVO();
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");

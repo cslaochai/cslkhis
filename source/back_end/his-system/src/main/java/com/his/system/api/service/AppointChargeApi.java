@@ -1,8 +1,9 @@
 package com.his.system.api.service;
 
-import lombok.Data;
+import com.his.system.api.vo.BillBriefVO;
+import com.his.system.api.vo.CancelCommandVO;
+import com.his.system.api.vo.RegistChargeCommandVO;
 
-import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.Map;
 
@@ -17,21 +18,21 @@ public interface AppointChargeApi {
      * @param billIds 账单ID集合
      * @return billId -> 简要信息
      */
-    Map<Long, BillBrief> mapBillsByIds(Collection<Long> billIds);
+    Map<Long, BillBriefVO> mapBillsByIds(Collection<Long> billIds);
 
     /**
      * 查询单张账单简要信息
      *
      * @return 不存在时返回 null
      */
-    BillBrief getBill(Long billId);
+    BillBriefVO getBill(Long billId);
 
     /**
      * 挂号费结算：记账（挂号费 + 诊查费）并立即出账。
      *
      * @return 已落库的账单简要信息；<b>免收时返回 null</b>（没有应收，也就没有账单）
      */
-    BillBrief createRegistCharge(RegistChargeCommand command);
+    BillBriefVO createRegistCharge(RegistChargeCommandVO command);
 
     /**
      * 挂号作废时联动处理账单 —— <b>退号不退钱是本系统里最容易漏掉的一环</b>。
@@ -42,75 +43,5 @@ public interface AppointChargeApi {
      *
      * @return true=本次确实撤销；false=没有账单或账单早已关闭（幂等跳过）
      */
-    boolean cancelRegistCharge(CancelCommand command);
-
-/**
- * 账单撤销命令
- */
-    @Data
-    class CancelCommand {
-        /**
-         * 账单ID
-         */
-        private Long billId;
-        /**
-         * 退号原因（同时写进退款原因）
-         */
-        private String reason;
-        /**
-         * 操作人，服务端从当前登录用户取，不用前端传
-         */
-        private String operator;
-    }
-
-/**
- * 账单简要信息。
- */
-    @Data
-    class BillBrief {
-        private Long billId;
-        private String billNo;
-        /**
-         * 账单状态，字典 {@code his_bill_status}：1-待支付 2-部分支付 3-已支付 4-已作废 5-已退费
-         */
-        private Integer billStatus;
-        /**
-         * 个人应缴（统筹与个账已扣掉）
-         */
-        private BigDecimal payableAmount;
-        /**
-         * 净已收（收款合计 - 退款合计）
-         */
-        private BigDecimal paidAmount;
-    }
-
-/**
- * 挂号费记账出账命令
- */
-    @Data
-    class RegistChargeCommand {
-        private Long registId;
-        private String registNo;
-        private Long patientId;
-        private String patientNo;
-        private String patientName;
-        private Long deptId;
-        private String deptName;
-        private Long doctorId;
-        private String doctorName;
-        private BigDecimal registFee;
-        private BigDecimal diagnosisFee;
-        /**
-         * 免收挂号费（复诊号）：<b>不记账也不出账单</b>，本方法返回 null。
-         *
-         * <p>签到门禁的口径是「这张号没有未结清的挂号账单」，所以免收不需要任何假单据兜底；
-         * 旧模型里"0 元收费单直接置已收费"那套已经随收费单一起退役。
-         */
-        private boolean waived;
-        /**
-         * 为什么免（命中的复诊收费策略名 + 免了哪几项）。部分免收时写进账单备注，
-         * 医保/审计追问「这张号为什么少收」时必须答得出来。
-         */
-        private String waiveReason;
-    }
+    boolean cancelRegistCharge(CancelCommandVO command);
 }

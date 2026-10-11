@@ -679,7 +679,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
             return null;
         }
         for (SignableContentApi p : providers) {
-            if (p.bizType() == t) {
+            if (p.bizType() == SignBizTypeEnum.INPATIENT_RECORD) {
                 return p;
             }
         }

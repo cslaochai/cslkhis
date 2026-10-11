@@ -1,7 +1,9 @@
-package com.his.patient.mapper;
+package com.his.appoint.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.patient.vo.NurseScheduleVO;
+import com.his.appoint.vo.NurseScheduleVO;
+import com.his.system.entity.BizSchedule;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -10,25 +12,13 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 护理排班 Mapper（sql/166 起；2026-10-11 合并进排班底座后无独立护理表）。
- *
- * <p>护理格 = {@code biz_schedule} 里 {@code staff_type IN (2,7)} 且落在护理单元上的行：
- * 读写全部走底座，本接口只负责「单元/在册护士/护理班次」三类参照数据
- * 与护理视图的取数（矩阵格子、台账、月度工时）。
+ * 员工排班
  */
 @Mapper
-public interface NurseScheduleMapper {
+public interface BizScheduleMapper extends BaseMapper<BizSchedule> {
 
     /**
      * 在册护理口径：在岗未删，且<b>岗位角色上的岗位类别属于护理序列</b>。
-     *
-     * <p>含 {@code StaffTypeEnum.NURSE(2) 护理} 与 {@code StaffTypeEnum.NURSING_ASSISTANT(7) 护工/护理辅助}：
-     * 护工没有执业资格、不占护理人力配编，但和护士同在病区干活、同样要被排班，
-     * 所以「护理排班能排到谁」这一处口径对两类人共用。
-     *
-     * <p>走 {@code sys_role.staff_type}（人 → 岗位类别），不是员工档案上那个可能不同步的 emp_type。
-     * 这里必须是<b>编译期字符串常量</b>——它要被拼进 {@code @Select} 注解，换成枚举方法调用会直接编译不过，
-     * 所以码值写成字面量，跟着 StaffTypeEnum 的注释走。
      */
     String NURSE_WHERE = " e.del_flag = 0 AND e.status = 1 "
             + " AND EXISTS (SELECT 1 FROM sys_employee_post p "
@@ -74,10 +64,7 @@ public interface NurseScheduleMapper {
     NurseScheduleVO.Ward selectWard(@Param("wardId") Long wardId);
 
     /**
-     * 排班单元快照：unit_type=1 查病区，=2 查门诊科室（sql/209）。
-     *
-     * <p>两种单元的 id 不在同一个空间，所以必须带着类型一起查 —— 只给 id 会出现
-     * 「门诊科室的 id 正好等于某个病区的 id」这种张冠李戴。
+     * 排班单元快照：unit_type=1 查病区，=2 查门诊科室
      */
     @Select("""
             SELECT #{unitType} AS unitType, x.wardId, x.wardCode, x.wardName, x.deptId, x.deptName, 0 AS nurseCount
@@ -96,10 +83,7 @@ public interface NurseScheduleMapper {
     NurseScheduleVO.Ward selectUnit(@Param("unitType") Integer unitType, @Param("unitId") Long unitId);
 
     /**
-     * 门诊科室候选：只列「有护理编制」的启用科室（sql/209）。
-     *
-     * <p>没有护士的门诊科室放进来只会让排班员点进去发现排不了人，这一点跟病区侧同口径。
-     * <b>排除有病区的科室</b> —— 那些科室的护理走病区排班，重复入口只会让同一批人在两处被排。
+     * 门诊科室候选：只列「有护理编制」的启用科室
      */
     @Select("""
             <script>
@@ -146,7 +130,6 @@ public interface NurseScheduleMapper {
 
     /**
      * 单个在册护士快照；不是护理岗/已停用直接查不出来（返回 null 由服务层报错）。
-     * 故意把合法性写在 SQL 里：判据只有一处口径，不会出现「Service 用 A 条件选出来、写入时 B 条件不认」。
      */
     @Select("""
             SELECT e.id AS employeeId, e.emp_code AS empCode, e.emp_name AS nurseName,
@@ -182,11 +165,6 @@ public interface NurseScheduleMapper {
 
     /**
      * 矩阵格子：区间内本单元全部行（休息/请假也渲染，否则看不出「这人这天的走向」）。
-     *
-     * <p>护理格就是底座 {@code biz_schedule} 里 {@code staff_type IN (2,7)} 的行（护理排班已并入底座），
-     * 班次名不冗余存储，从班次字典现 JOIN——字典改名不该让历史格子带着旧名。
-     * {@code shift_id} 用 {@code NULLIF(_, 0)} 洗成 NULL：底座用 0 表示「无班次」（休息行），
-     * 护理页的口径是 NULL，混着会让「非上班却挂班次」的告警误报。
      */
     @Select("""
             SELECT s.id, s.employee_id AS employeeId,
@@ -208,7 +186,6 @@ public interface NurseScheduleMapper {
 
     /**
      * 某护士在一段日期内的合计工时（分钟）：单周工时上限判定的取数口径。
-     * 只算护理序列（2/7）的行——这个人若另有医生等身份的排班，不该混进护理工时。
      */
     @Select("""
             SELECT COALESCE(SUM(work_minutes), 0)
@@ -224,11 +201,6 @@ public interface NurseScheduleMapper {
 
     /**
      * 月度工时：一人一行。
-     *
-     * <p>底座允许同人同日多条（多班次），所以先按「人 × 日」归并成天粒度再汇总：
-     * 一天只要有一条上班行就计 1 个上班天（不因早晚双班计 2 天），夜班天/工时同理按天归并。
-     * 夜班口径按班次<b>开始时刻</b>判（&lt;08:00 或 &ge;16:00），与「连续夜班」同一条口径，
-     * 不依赖班次名里有没有「夜」字。职称从员工表现取——底座不冗余职称列。
      */
     @Select("""
             SELECT t.employee_id AS employeeId, MAX(t.emp_code) AS empCode, MAX(t.employee_name) AS nurseName,

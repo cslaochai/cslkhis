@@ -14,7 +14,6 @@ import java.time.LocalDateTime;
 @Data
 public class OpdLogListVO {
 
-
     /**
      * 挂号ID
      */
@@ -40,12 +39,11 @@ public class OpdLogListVO {
 
     /**
      * 挂号状态（1 已挂号 2 已签到 3 已接诊 4 已就诊 5 已退号 6 已过号）
-     * —— 挂号域自己的口径，不要和 queueStatus 混用。
      */
     private Integer registStatus;
 
     /**
-     * 是否已生成挂号收费单（<b>不等于已缴费</b>：收费状态在 his-charge，本模块不跨依赖）
+     * 是否已生成挂号收费单
      */
     private Boolean charged;
 
@@ -227,13 +225,6 @@ public class OpdLogListVO {
 
     /**
      * 就诊状态码：0 未缴费 / 1 待签到 / 2 候诊中 / 3 就诊中 / 4 已就诊 / 5 已退号 / 6 已过号。
-     *
-     * <p>由「挂号状态 + 队列状态」共同推导（规则见 {@code OpdLogStatusEnum}）：
-     * 已入队时队列状态优先；未入队时回落到挂号状态（这就是为什么
-     * {@code queueStatus} 为 null 的行也能是「已退号」，不是数据缺失）。
-     *
-     * <p>为 null 表示两种口径都认不出（如队列状态为历史脏数据 1），
-     * 前端必须渲染成「未知(queueStatus)」。
      */
     private Integer logStatus;
 

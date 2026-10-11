@@ -8,7 +8,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * 门诊日志 Mapper（SQL 在 resources/mapper/OpdLogMapper.xml）。
+ * 门诊日志
  */
 @Mapper
 public interface OpdLogMapper {

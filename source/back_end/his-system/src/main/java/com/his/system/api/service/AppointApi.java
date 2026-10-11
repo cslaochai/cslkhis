@@ -1,6 +1,6 @@
 package com.his.system.api.service;
 
-import com.his.system.api.vo.DeptRef;
+import com.his.system.api.vo.DeptRefVO;
 import com.his.system.api.vo.RegistBriefVO;
 
 /**
@@ -22,5 +22,5 @@ public interface AppointApi {
      * @param registNo 挂号单号
      * @return 查不到返回 {@code null}（调用方保持科室为空，<b>不得兜底成默认科室</b>）
      */
-    DeptRef findDeptByRegistNo(String registNo);
+    DeptRefVO findDeptByRegistNo(String registNo);
 }

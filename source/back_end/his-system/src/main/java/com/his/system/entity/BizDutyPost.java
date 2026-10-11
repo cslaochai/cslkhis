@@ -23,8 +23,6 @@ public class BizDutyPost extends BaseEntity {
     /** 备注 */
     private String remark;
 
-
-
     /**
      * 点位编码
      */

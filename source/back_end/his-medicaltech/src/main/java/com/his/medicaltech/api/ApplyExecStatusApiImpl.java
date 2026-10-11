@@ -10,6 +10,7 @@ import com.his.medicaltech.enums.LabRecordStatusEnum;
 import com.his.medicaltech.mapper.BizCriticalValueMapper;
 import com.his.medicaltech.mapper.BizInspectionRecordMapper;
 import com.his.medicaltech.mapper.BizLaboratoryRecordMapper;
+import com.his.system.api.vo.ExecStatusVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -39,7 +40,7 @@ public class ApplyExecStatusApiImpl implements ApplyExecStatusApi {
     private final BizCriticalValueMapper bizCriticalValueMapper;
 
     @Override
-    public List<ExecStatus> listInspectionExecStatus(List<Long> applyIds) {
+    public List<ExecStatusVO> listInspectionExecStatus(List<Long> applyIds) {
         if (CollectionUtils.isEmpty(applyIds)) {
             return Collections.emptyList();
         }
@@ -53,7 +54,7 @@ public class ApplyExecStatusApiImpl implements ApplyExecStatusApi {
         Set<Long> criticalRecordIds = criticalRecordIds(
                 records.stream().map(BizInspectionRecord::getId).collect(Collectors.toList()));
 
-        List<ExecStatus> result = new ArrayList<>(records.size());
+        List<ExecStatusVO> result = new ArrayList<>(records.size());
         Set<Long> seenApply = new HashSet<>();
         for (BizInspectionRecord r : records) {
             // 存量数据里同一申请单可能有多条执行记录（幂等缺失留下的），
@@ -62,7 +63,7 @@ public class ApplyExecStatusApiImpl implements ApplyExecStatusApi {
             if (!seenApply.add(r.getApplyId())) {
                 continue;
             }
-            ExecStatus s = new ExecStatus();
+            ExecStatusVO s = new ExecStatusVO();
             s.setApplyId(r.getApplyId());
             s.setExecRecordId(r.getId());
             s.setExecStatus(r.getRecordStatus());
@@ -75,7 +76,7 @@ public class ApplyExecStatusApiImpl implements ApplyExecStatusApi {
     }
 
     @Override
-    public List<ExecStatus> listLaboratoryExecStatus(List<Long> applyIds) {
+    public List<ExecStatusVO> listLaboratoryExecStatus(List<Long> applyIds) {
         if (CollectionUtils.isEmpty(applyIds)) {
             return Collections.emptyList();
         }
@@ -89,13 +90,13 @@ public class ApplyExecStatusApiImpl implements ApplyExecStatusApi {
         Set<Long> criticalRecordIds = criticalRecordIds(
                 records.stream().map(BizLaboratoryRecord::getId).collect(Collectors.toList()));
 
-        List<ExecStatus> result = new ArrayList<>(records.size());
+        List<ExecStatusVO> result = new ArrayList<>(records.size());
         Set<Long> seenApply = new HashSet<>();
         for (BizLaboratoryRecord r : records) {
             if (!seenApply.add(r.getApplyId())) {
                 continue;
             }
-            ExecStatus s = new ExecStatus();
+            ExecStatusVO s = new ExecStatusVO();
             s.setApplyId(r.getApplyId());
             s.setExecRecordId(r.getId());
             s.setExecStatus(r.getRecordStatus());

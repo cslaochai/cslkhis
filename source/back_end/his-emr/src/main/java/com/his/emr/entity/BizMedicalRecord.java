@@ -1,6 +1,7 @@
 package com.his.emr.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
@@ -10,7 +11,6 @@ import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
@@ -20,13 +20,16 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_medical_record")
 public class BizMedicalRecord extends BaseEntity {
-    /** 逻辑删除标志（0 未删除 1 已删除） */
+    /**
+     * 逻辑删除标志（0 未删除 1 已删除）
+     */
     @TableLogic
     private Integer delFlag;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
-
 
 
     /**
@@ -276,9 +279,6 @@ public class BizMedicalRecord extends BaseEntity {
 
     /**
      * 签名状态（0-未签名 1-已签名 2-签名已失效）
-     *
-     * <p>P5.5 起：`1` = 已由接诊医生签名，**签名即锁定**（再次保存会被拒绝）；
-     * `2` = 签名被作废过（不是"从来没签过"，不允许回落成 0）。
      */
     private Integer signStatus;
 

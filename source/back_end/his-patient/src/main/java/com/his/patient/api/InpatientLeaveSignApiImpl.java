@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
- * 住院请假单的签名内容提供者（业务类型=10）—— 医师批准即签。
+ * 住院请假单的签名内容提供者
  */
 @Slf4j
 @Component

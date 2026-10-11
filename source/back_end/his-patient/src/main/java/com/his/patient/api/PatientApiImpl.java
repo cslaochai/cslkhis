@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.util.TextUtil;
 import com.his.system.api.service.PatientApi;
 import com.his.system.api.vo.AdmissionBriefVO;
-import com.his.system.api.vo.DeptRef;
+import com.his.system.api.vo.DeptRefVO;
 import com.his.system.api.vo.PatientBriefVO;
 import com.his.patient.entity.BizAdmission;
 import com.his.patient.entity.BizInpatientOrder;
@@ -15,9 +15,6 @@ import com.his.patient.mapper.BizPatientMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-/**
- * PatientGateway 在 his-patient 侧的实现。
- */
 @Service
 @RequiredArgsConstructor
 public class PatientApiImpl implements PatientApi {
@@ -45,7 +42,7 @@ public class PatientApiImpl implements PatientApi {
     }
 
     @Override
-    public DeptRef findDeptByOrderNo(String orderNo) {
+    public DeptRefVO findDeptByOrderNo(String orderNo) {
         if (!TextUtil.hasText(orderNo)) {
             return null;
         }
@@ -53,7 +50,7 @@ public class PatientApiImpl implements PatientApi {
                 .eq(BizInpatientOrder::getOrderNo, orderNo)
                 .last("LIMIT 1"));
         return order == null ? null
-                : new DeptRef(order.getDeptId(), order.getDeptName());
+                : new DeptRefVO(order.getDeptId(), order.getDeptName());
     }
 
     private PatientBriefVO toBrief(BizPatient e) {

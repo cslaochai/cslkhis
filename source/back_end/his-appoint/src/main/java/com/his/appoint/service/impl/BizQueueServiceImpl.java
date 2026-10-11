@@ -25,6 +25,7 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.BillStatusEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
+import com.his.system.api.vo.BillBriefVO;
 import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.patient.service.BizPatientService;
@@ -250,7 +251,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         if (gateway == null) {
             return false;
         }
-        AppointChargeApi.BillBrief bill = gateway.getBill(appoint.getBillId());
+        BillBriefVO bill = gateway.getBill(appoint.getBillId());
         return bill != null && BillStatusEnum.PAID.getCode().equals(bill.getBillStatus());
     }
 
@@ -262,8 +263,6 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
             throw new BusinessException("挂号记录不存在");
         }
         deptScopeService.assertDeptAccessible(appointInfo.getDeptId());
-        // 缴费门禁读的是账单状态（L2），不是支付状态列：账单是否付清由收款流水现算，
-        // 所以「免收 = 压根没有账单」这条路径不需要任何假单据就能过。
         AppointChargeApi gateway = appointChargeGateway.getIfAvailable();
         if (appointInfo.getBillId() != null && gateway == null) {
             throw new BusinessException("收费服务不可用，无法完成签到");
@@ -271,9 +270,6 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         if (!isRegistFeeSettled(gateway, appointInfo)) {
             throw new BusinessException("该患者尚未支付，请先完成缴费");
         }
-        // 检查是否已签到。按 (registId + 就诊日期) 判重：
-        // 只按 registId 时，历史脚本造的脏数据（同一 registId 挂多行队列）会把
-        // 「今天重新签到」误判成「已签到」；带上 visit_date 口径才与签到语义一致。
         LocalDate visitDate = appointInfo.getVisitDate() != null
                 ? appointInfo.getVisitDate()
                 : LocalDate.now();
@@ -1077,12 +1073,6 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
 
     @Override
     public PageResult<OpdLogListVO> listPage(OpdLogQueryPageDTO queryDTO) {
-        // 注意：这里**不**按当前登录用户的科室收窄。门诊日志是跨科室的查询分析页，
-        // 而分诊台那套「只看本科室」的口径在 listPage 里（两者故意分开，见 OpdLogQueryDTO 注释）。
-        // 之前 /queue/listPage 与 /queue/stats 都硬编码 currentUser.deptId，导致管理员（无科室）
-        // 打开日志页拿到 0 条、统计条全 0 —— 看起来像"今天没人看病"。
-        // 顺手把遗留结转掉：门诊日志是「昨天的号在不在」最直观的地方，
-        // 打开时若还看到 9 天前的行挂着「已签到」，那就是没人给数据收尾。
         dayEndSettleTrigger.ensureSettledUpToYesterday();
         Page<OpdLogListVO> page = new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize());
         IPage<OpdLogListVO> result = opdLogMapper.selectOpdLogPage(page, queryDTO);
@@ -1104,10 +1094,6 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
 
     /**
      * 就诊状态文案由后端给，避免前端各写一份映射。
-     *
-     * <p>{@code logStatus} 为 null 表示队列状态不在枚举内（库里存在列默认值 1 的历史脏数据）。
-     * 这种情况**不回落**成「待签到」——前端据 {@code queueStatus} 渲染「未知(1)」，
-     * 静默贴一个合法文案比显示未知更危险。
      */
     private void fillLogStatus(OpdLogListVO vo) {
         vo.setLogStatusLabel(OpdLogStatusEnum.getText(vo.getLogStatus()));
@@ -1133,10 +1119,6 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
             throw new BusinessException("该患者本次就诊已结束，不能再分诊");
         }
 
-        // 诊室**不由分诊台决定**：唯一来源是排班（医生-诊室绑定在排班上，号源也是按排班放出的）。
-        // 原先这里是「入参覆盖队列」，护士在分诊卡选一个诊室就能把挂号时定下的诊室改走 ——
-        // 患者按排队号前缀（诊室编号）走，却被告知去另一个房间，直接引发客诉。
-        // 现在只读：队列行上的快照（签到入队时写入）优先，老数据按挂号回查排班补齐。
         Long roomId = queue.getRoomId();
         String roomName = queue.getRoomName();
         if (roomId == null && queue.getRegistId() != null) {

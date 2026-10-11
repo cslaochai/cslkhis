@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "排班管理")
+@Tag(name = "门诊号源排班")
 @RestController
 @RequestMapping("/schedule")
 @RequiredArgsConstructor
@@ -23,6 +23,7 @@ import java.util.List;
 public class BizClinicSourceController {
 
     private final BizClinicSourceService bizScheduleService;
+
     private final BizClinicSourceSlotService bizScheduleSlotService;
 
     @PreAuthorize("hasAuthority('outpatient:schedule:add')")

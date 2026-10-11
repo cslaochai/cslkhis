@@ -1,7 +1,7 @@
 import request from './request'
 
 // 病区护理排班（sql/166，菜单 330 护理管理 / 331 病区护理排班）
-// 后端控制器：/nursing/schedule（his-patient）
+// 后端控制器：/nursing/schedule（his-appoint，2026-10-11 自 his-patient 迁入）
 //
 // 与门诊医生排班（/schedule + /shift，权限码 org.schedule.*）是两套班次册：
 // biz_shift.use_scope 1-门诊/急诊 2-病区护理。本页所有班次都来自矩阵接口回传的 shifts

@@ -5,7 +5,7 @@ import com.his.appoint.entity.BizAppointInfo;
 import com.his.appoint.mapper.BizAppointInfoMapper;
 import com.his.common.util.TextUtil;
 import com.his.system.api.service.AppointApi;
-import com.his.system.api.vo.DeptRef;
+import com.his.system.api.vo.DeptRefVO;
 import com.his.system.api.vo.RegistBriefVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,7 +28,7 @@ public class AppointApiImpl implements AppointApi {
     }
 
     @Override
-    public DeptRef findDeptByRegistNo(String registNo) {
+    public DeptRefVO findDeptByRegistNo(String registNo) {
         if (!TextUtil.hasText(registNo)) {
             return null;
         }
@@ -36,7 +36,7 @@ public class AppointApiImpl implements AppointApi {
                 .eq(BizAppointInfo::getRegistNo, registNo)
                 .last("LIMIT 1"));
         return row == null ? null
-                : new DeptRef(row.getDeptId(), row.getDeptName());
+                : new DeptRefVO(row.getDeptId(), row.getDeptName());
     }
 
     private RegistBriefVO toBrief(BizAppointInfo e) {
