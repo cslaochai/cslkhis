@@ -2,8 +2,8 @@ package com.his.appoint.controller;
 
 
 import com.his.appoint.dto.*;
-import com.his.appoint.service.BizScheduleService;
-import com.his.appoint.service.BizScheduleSlotService;
+import com.his.appoint.service.BizClinicSourceService;
+import com.his.appoint.service.BizClinicSourceSlotService;
 import com.his.appoint.vo.*;
 import com.his.common.base.Result;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,10 +20,10 @@ import java.util.List;
 @RequestMapping("/schedule")
 @RequiredArgsConstructor
 @PreAuthorize("hasAnyAuthority('opd:appointments:list', 'opd:emergency:list', 'org:schedule:list')")
-public class BizScheduleController {
+public class BizClinicSourceController {
 
-    private final BizScheduleService bizScheduleService;
-    private final BizScheduleSlotService bizScheduleSlotService;
+    private final BizClinicSourceService bizScheduleService;
+    private final BizClinicSourceSlotService bizScheduleSlotService;
 
     @PreAuthorize("hasAuthority('org:schedule:add')")
     @Operation(summary = "新增或修改排班（新增/修改合一）")

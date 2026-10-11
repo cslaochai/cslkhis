@@ -357,7 +357,7 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
     /**
      * 登记这条值班的在岗事实 —— 值班不是"写在册子上"，它就是这个人的一段真实出勤。
      */
-    private BizStaffSchedule dutyAttendance(LocalDate date, SysEmployee emp, BizShift shift,
+    private BizSchedule dutyAttendance(LocalDate date, SysEmployee emp, BizShift shift,
                                             BizDutyPost post, String remark) {
         StaffScheduleUpsertDTO core = new StaffScheduleUpsertDTO();
         core.setScheduleDate(date);
@@ -388,7 +388,7 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
             log.warn("总值班排班 {} 没有绑定在岗事实，换班只记在排班行上", row.getId());
             return;
         }
-        BizStaffSchedule bound = staffScheduleService.getById(row.getStaffScheduleId());
+        BizSchedule bound = staffScheduleService.getById(row.getStaffScheduleId());
         if (bound != null && Objects.equals(bound.getEmployeeId(), toEmployeeId)) {
             return;
         }

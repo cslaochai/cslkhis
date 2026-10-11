@@ -6,7 +6,7 @@ import com.his.common.util.TextUtil;
 import com.his.system.dto.AttendanceDTO;
 import com.his.system.entity.BizShift;
 import com.his.system.entity.BizStaffAttendance;
-import com.his.system.entity.BizStaffSchedule;
+import com.his.system.entity.BizSchedule;
 import com.his.system.entity.CurrentUser;
 import com.his.system.enums.StaffAttendanceStatusEnum;
 import com.his.system.mapper.BizStaffAttendanceMapper;
@@ -47,10 +47,10 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
         LocalDate date = dto.getWorkDate() == null ? LocalDate.now() : dto.getWorkDate();
         LocalDateTime at = dto.getCheckIn() == null ? LocalDateTime.now() : dto.getCheckIn();
 
-        List<BizStaffSchedule> plans = baseMapper.selectDayPlanOfEmployee(employeeId, date);
+        List<BizSchedule> plans = baseMapper.selectDayPlanOfEmployee(employeeId, date);
         // 签到时有打卡时刻，一天多班可以按离哪个班最近来认；缺勤确认/工时修正没有时刻，
         // 那些场合必须把班次说清楚
-        BizStaffSchedule plan = matchPlan(plans, dto, date, true);
+        BizSchedule plan = matchPlan(plans, dto, date, true);
 
         Long planId;
         Integer orgType;
@@ -155,7 +155,7 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
         row.setCheckOut(out);
         row.setActualMinutes(actual);
         row.setOvertimeMinutes(Math.max(0, actual - nvlZero(row.getPlannedMinutes())));
-        BizStaffSchedule plan = row.getStaffScheduleId() == null ? null
+        BizSchedule plan = row.getStaffScheduleId() == null ? null
                 : baseMapper.selectPlanById(row.getStaffScheduleId());
         row.setAttendanceStatus(judgeStatus(row, plan, row.getScheduleDate()));
         if (TextUtil.hasText(dto.getRemark())) {
@@ -173,11 +173,11 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
         }
         Long employeeId = requireEmployee(dto);
         LocalDate date = dto.getWorkDate() == null ? LocalDate.now() : dto.getWorkDate();
-        List<BizStaffSchedule> plans = baseMapper.selectDayPlanOfEmployee(employeeId, date);
+        List<BizSchedule> plans = baseMapper.selectDayPlanOfEmployee(employeeId, date);
         if (plans.isEmpty()) {
             throw new BusinessException("该员工当天没有「上班」排班，不存在缺勤");
         }
-        BizStaffSchedule plan = matchPlan(plans, dto, date, false);
+        BizSchedule plan = matchPlan(plans, dto, date, false);
         Integer orgType = dto.getOrgType() == null ? plan.getOrgType() : dto.getOrgType();
         Long orgId = dto.getOrgId() == null ? plan.getOrgId() : dto.getOrgId();
         Long shiftId = dto.getShiftId() == null ? plan.getShiftId() : dto.getShiftId();
@@ -233,8 +233,8 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
         if (dto.getActualMinutes() == null || dto.getActualMinutes() < 0) {
             throw new BusinessException("请填写实际工时（分钟，不小于 0）");
         }
-        List<BizStaffSchedule> plans = baseMapper.selectDayPlanOfEmployee(employeeId, date);
-        BizStaffSchedule plan = matchPlan(plans, dto, date, false);
+        List<BizSchedule> plans = baseMapper.selectDayPlanOfEmployee(employeeId, date);
+        BizSchedule plan = matchPlan(plans, dto, date, false);
 
         Integer orgType = plan != null ? plan.getOrgType()
                 : requireValue(dto.getOrgType(), "无排班的补登必须指定单元类型");
@@ -368,7 +368,7 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
      *
      * @param plan 这次出勤对应的计划事实（加班/支援这类无计划的传 null，此时不做时间判定）
      */
-    private Integer judgeStatus(BizStaffAttendance row, BizStaffSchedule plan, LocalDate date) {
+    private Integer judgeStatus(BizStaffAttendance row, BizSchedule plan, LocalDate date) {
         Integer cur = row.getAttendanceStatus();
         // 替班/加班/支援是按业务性质定性的（替别人、没排班、跨单元），打卡时间改写不了它
         if (cur != null && (StaffAttendanceStatusEnum.SUBSTITUTE.is(cur) || StaffAttendanceStatusEnum.OVERTIME.is(cur) || StaffAttendanceStatusEnum.SUPPORT.is(cur))) {
@@ -452,13 +452,13 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
      *       <b>直接报错要求指定班次</b> —— 歧义面前不接受猜测。</li>
      * </ol>
      */
-    private BizStaffSchedule matchPlan(List<BizStaffSchedule> plans, AttendanceDTO dto,
+    private BizSchedule matchPlan(List<BizSchedule> plans, AttendanceDTO dto,
                                        LocalDate date, boolean allowNearest) {
         if (plans == null || plans.isEmpty()) {
             return null;
         }
         if (dto.getShiftId() != null) {
-            BizStaffSchedule hit = plans.stream()
+            BizSchedule hit = plans.stream()
                     .filter(p -> Objects.equals(dto.getShiftId(), p.getShiftId())).findFirst().orElse(null);
             if (hit == null) {
                 throw new BusinessException("该员工当天没有排这个班次的上班计划");
@@ -466,7 +466,7 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
             return hit;
         }
         if (dto.getOrgType() != null && dto.getOrgId() != null) {
-            BizStaffSchedule hit = plans.stream()
+            BizSchedule hit = plans.stream()
                     .filter(p -> Objects.equals(dto.getOrgType(), p.getOrgType())
                             && Objects.equals(dto.getOrgId(), p.getOrgId()))
                     .findFirst().orElse(null);
@@ -484,9 +484,9 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
             throw new BusinessException("这个人当天排了 " + plans.size() + " 个班，请指定是哪个班次");
         }
         LocalDateTime at = dto.getCheckIn() == null ? LocalDateTime.now() : dto.getCheckIn();
-        BizStaffSchedule best = null;
+        BizSchedule best = null;
         long bestDiff = Long.MAX_VALUE;
-        for (BizStaffSchedule candidate : plans) {
+        for (BizSchedule candidate : plans) {
             LocalDateTime start = shiftStartOf(candidate.getShiftId(), date);
             if (start == null) {
                 continue;

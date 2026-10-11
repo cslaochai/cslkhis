@@ -116,7 +116,7 @@ public interface BizStaffDemandMapper extends BaseMapper<BizStaffDemand> {
                        COUNT(DISTINCT s.doctor_id) AS doctors,
                        1 + CEIL(COUNT(DISTINCT s.doctor_id) / 2) AS derived,
                        IFNULL(MAX(r.min_staff), 0) AS floor_cnt
-                  FROM biz_schedule s
+                  FROM biz_clinic_source s
                   LEFT JOIN biz_staff_plan_rule r
                          ON r.del_flag = 0 AND r.status = 1 AND r.org_type = 1
                         AND r.org_id = s.dept_id AND r.staff_type = 2 AND r.shift_id = 0
@@ -150,7 +150,7 @@ public interface BizStaffDemandMapper extends BaseMapper<BizStaffDemand> {
               FROM (
                 SELECT s.schedule_date AS dt, s.dept_id AS dept_id, MAX(s.dept_name) AS dept_name,
                        COUNT(*) AS plans, COUNT(DISTINCT s.doctor_id) AS doctors
-                  FROM biz_schedule s
+                  FROM biz_clinic_source s
                  WHERE s.del_flag = 0 AND s.status = 1
                    AND s.schedule_date BETWEEN #{startDate} AND #{endDate}
                  GROUP BY s.schedule_date, s.dept_id

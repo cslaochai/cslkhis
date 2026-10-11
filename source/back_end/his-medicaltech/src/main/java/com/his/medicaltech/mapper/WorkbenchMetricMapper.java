@@ -96,7 +96,7 @@ public interface WorkbenchMetricMapper {
      */
     @Select("""
             SELECT
-              (SELECT COUNT(*) FROM biz_schedule s
+              (SELECT COUNT(*) FROM biz_clinic_source s
                 WHERE s.del_flag = 0 AND s.doctor_id = #{doctorId}
                   AND s.staff_type = 1
                   AND s.schedule_date = CURDATE() AND s.status IN (1, 2)) AS todayScheduleCount,

@@ -5,7 +5,7 @@ import com.his.appoint.dto.OnDutyQueryDTO;
 import com.his.appoint.dto.ScheduleQueryDTO;
 import com.his.appoint.dto.ScheduleSelectQueryDTO;
 import com.his.appoint.dto.ScheduleUpsertDTO;
-import com.his.appoint.entity.BizSchedule;
+import com.his.appoint.entity.BizClinicSource;
 import com.his.appoint.vo.OnDutyStaffVO;
 import com.his.appoint.vo.ScheduleDetailVO;
 import com.his.appoint.vo.ScheduleSelectListVO;
@@ -17,7 +17,7 @@ import java.util.List;
 /**
  * 挂号服务接口
  */
-public interface BizScheduleService extends IService<BizSchedule> {
+public interface BizClinicSourceService extends IService<BizClinicSource> {
 
     /**
      * 给排班 VO 批量补班次展示字段（班别 + 班次名）。
@@ -48,17 +48,17 @@ public interface BizScheduleService extends IService<BizSchedule> {
     /**
      * 查询排班列表
      */
-    List<BizSchedule> listPage(ScheduleQueryDTO queryDTO);
+    List<BizClinicSource> listPage(ScheduleQueryDTO queryDTO);
 
     /**
      * 查询号源列表
      */
-    List<BizSchedule> scheduleSelectList(ScheduleSelectQueryDTO scheduleQueryDTO);
+    List<BizClinicSource> scheduleSelectList(ScheduleSelectQueryDTO scheduleQueryDTO);
 
     /**
      * 新增排班
      */
-    boolean addSchedule(BizSchedule schedule);
+    boolean addSchedule(BizClinicSource schedule);
 
     /**
      * 出诊计划与出勤事实对齐（手工排班、模板批量生成共用同一条口径）。
@@ -72,12 +72,12 @@ public interface BizScheduleService extends IService<BizSchedule> {
      *
      * @param source 生成来源：手工排班落 1-手工，周模板生成落 2-模板
      */
-    void bindCoreSchedule(BizSchedule schedule, StaffScheduleSourceEnum source);
+    void bindCoreSchedule(BizClinicSource schedule, StaffScheduleSourceEnum source);
 
     /**
      * 修改排班
      */
-    boolean updateSchedule(BizSchedule schedule);
+    boolean updateSchedule(BizClinicSource schedule);
 
     /**
      * 删除排班
@@ -87,7 +87,7 @@ public interface BizScheduleService extends IService<BizSchedule> {
     /**
      * 查询今日本科室排班（诊室+医生+就诊状态）
      */
-    List<BizSchedule> getTodaySchedule(Long deptId);
+    List<BizClinicSource> getTodaySchedule(Long deptId);
 
     /**
      * 更新就诊状态（0-待开始 1-接诊中 2-暂停）

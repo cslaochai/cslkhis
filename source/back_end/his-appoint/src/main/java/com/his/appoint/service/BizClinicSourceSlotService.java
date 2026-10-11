@@ -2,9 +2,9 @@ package com.his.appoint.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.appoint.dto.ScheduleSlotUpsertDTO;
-import com.his.appoint.entity.BizSchedule;
-import com.his.appoint.entity.BizScheduleSlot;
-import com.his.appoint.entity.BizScheduleSlotTemplate;
+import com.his.appoint.entity.BizClinicSource;
+import com.his.appoint.entity.BizClinicSourceSlot;
+import com.his.appoint.entity.BizClinicSourceSlotTemplate;
 import com.his.appoint.vo.ScheduleSlotVO;
 
 import java.util.Collection;
@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * 排班时间片段服务。
  */
-public interface BizScheduleSlotService extends IService<BizScheduleSlot> {
+public interface BizClinicSourceSlotService extends IService<BizClinicSourceSlot> {
 
     /**
      * 把班次时间窗切成半小时段并均分号源落库（余数给前面的段），Σ段写回主表。
@@ -22,13 +22,13 @@ public interface BizScheduleSlotService extends IService<BizScheduleSlot> {
      *
      * @return 生成的段列表（seq 升序）
      */
-    List<BizScheduleSlot> generateSlots(Long scheduleId, String startTime, String endTime,
+    List<BizClinicSourceSlot> generateSlots(Long scheduleId, String startTime, String endTime,
                                         Integer totalSource, Integer appointmentSource);
 
     /**
      * 按模板片段配置生成段（Σ必须与主表号源一致，由模板保存侧校验保证），Σ段写回主表。
      */
-    List<BizScheduleSlot> generateFromTemplate(Long scheduleId, List<BizScheduleSlotTemplate> tplSlots);
+    List<BizClinicSourceSlot> generateFromTemplate(Long scheduleId, List<BizClinicSourceSlotTemplate> tplSlots);
 
     /**
      * 时间窗或号源变化后的段重算：
@@ -39,7 +39,7 @@ public interface BizScheduleSlotService extends IService<BizScheduleSlot> {
      * </ul>
      * 重算后 Σ段写回主表（主表 total = Σ段，可能与入参略有出入——used 保底挤压所致，注释见实现）。
      */
-    void regenerateForSchedule(BizSchedule schedule, Integer newTotal, Integer newAppointment);
+    void regenerateForSchedule(BizClinicSource schedule, Integer newTotal, Integer newAppointment);
 
     /**
      * 加号均摊到段（余数给前面的段）：段 total/available/added 同加，不动预约池；Σ段写回主表。
@@ -72,7 +72,7 @@ public interface BizScheduleSlotService extends IService<BizScheduleSlot> {
     /**
      * 查某排班的段列表（seq 升序）。
      */
-    List<BizScheduleSlot> listByScheduleId(Long scheduleId);
+    List<BizClinicSourceSlot> listByScheduleId(Long scheduleId);
 
     /**
      * 批量查多条排班的段列表（按 scheduleId 升序、段 seq 升序）。
@@ -83,7 +83,7 @@ public interface BizScheduleSlotService extends IService<BizScheduleSlot> {
      *
      * @param scheduleIds 排班ID；为空或空集合返回空列表（不查全表）
      */
-    List<BizScheduleSlot> listByScheduleIds(Collection<Long> scheduleIds);
+    List<BizClinicSourceSlot> listByScheduleIds(Collection<Long> scheduleIds);
 
     /**
      * 单条排班的段列表出参（挂号选段用）。

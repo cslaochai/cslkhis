@@ -581,19 +581,19 @@ erDiagram
     bigint create_by_id "创建人"
     bigint update_by_id "更新人"
   }
-  biz_schedule_template["排班周模板 · biz_schedule_template"] {
+  biz_clinic_source_template["排班周模板 · biz_clinic_source_template"] {
     bigint id "主键ID"
     bigint dept_id "科室ID"
     bigint doctor_id "医生ID"
     bigint shift_id "标准班次ID"
     bigint room_id "诊室ID"
   }
-  biz_schedule_slot_template["排班模板时段 · biz_schedule_slot_template"] {
+  biz_clinic_source_slot_template["排班模板时段 · biz_clinic_source_slot_template"] {
     bigint id "主键ID"
     bigint template_id "排班模板ID"
     char start_time "段开始时间（HH:mm）"
   }
-  biz_schedule["排班信息 · biz_schedule"] {
+  biz_clinic_source["排班信息 · biz_clinic_source"] {
     bigint id "主键ID"
     bigint staff_schedule_id "员工排班ID"
     date schedule_date "排班日期"
@@ -604,7 +604,7 @@ erDiagram
     varchar end_time "结束时间"
     bigint shift_id "标准班次ID"
   }
-  biz_schedule_slot["排班时段号源 · biz_schedule_slot"] {
+  biz_clinic_source_slot["排班时段号源 · biz_clinic_source_slot"] {
     bigint id "主键ID"
     bigint schedule_id "排班ID"
     char start_time "段开始时间（HH:mm）"
@@ -636,7 +636,7 @@ erDiagram
     bigint dept_id "就诊科室ID"
     tinyint del_flag "删除标志（0-正常 1-删除）"
   }
-  biz_schedule_change_log["排班变更记录 · biz_schedule_change_log"] {
+  biz_clinic_source_change_log["排班变更记录 · biz_clinic_source_change_log"] {
     bigint id "主键ID（雪花）"
     bigint staff_schedule_id "员工排班ID"
     bigint from_employee_id "原值班人"
@@ -646,7 +646,7 @@ erDiagram
   }
   biz_staff_attendance["实际出勤（闭环第3步：计划 vs · biz_staff_attendance"] {
     bigint id "主键（雪花）"
-    bigint staff_schedule_id "关联的排班事实ID（biz_staff_schedule.id）；空=无计划的出勤（加班/支援/替班）"
+    bigint staff_schedule_id "关联的排班事实ID（biz_schedule.id）；空=无计划的出勤（加班/支援/替班）"
     bigint employee_id "员工ID"
     varchar emp_code "工号（快照）"
     date schedule_date "出勤日期（归属哪一天；夜班签退跨到次日也算这天）"
@@ -672,7 +672,7 @@ erDiagram
     bigint shift_id "标准班次ID（0-该单元全部班次）"
     tinyint staff_type "岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他）"
   }
-  biz_staff_schedule["员工排班 · biz_staff_schedule"] {
+  biz_schedule["员工排班 · biz_schedule"] {
     bigint id "主键ID（雪花）"
     date schedule_date "排班日期"
     bigint org_id "排班单元ID（全院级为0）"
@@ -719,8 +719,8 @@ erDiagram
   sys_department ||--|{ biz_appoint_info : "dept_id"
   sys_clinic_room ||--o{ biz_appoint_info : "room_id"
   sys_employee ||--o{ biz_appoint_info : "doctor_id"
-  biz_schedule ||--o{ biz_appoint_info : "schedule_id"
-  biz_schedule_slot ||--o{ biz_appoint_info : "slot_id"
+  biz_clinic_source ||--o{ biz_appoint_info : "schedule_id"
+  biz_clinic_source_slot ||--o{ biz_appoint_info : "slot_id"
   biz_medical_record ||--o{ biz_appoint_info : "revisit_record_id"
   biz_settlement_bill ||--o{ biz_appoint_info : "bill_id"
   sys_user ||--o{ biz_appoint_info : "create_by_id"
@@ -733,33 +733,33 @@ erDiagram
   sys_department ||--|{ biz_queue : "dept_id"
   sys_employee ||--o{ biz_queue : "doctor_id"
   sys_clinic_room ||--o{ biz_queue : "room_id"
-  biz_staff_schedule ||--o{ biz_schedule : "staff_schedule_id"
-  sys_department ||--|{ biz_schedule : "dept_id"
-  sys_clinic_room ||--o{ biz_schedule : "room_id"
-  sys_employee ||--|{ biz_schedule : "doctor_id"
-  biz_shift ||--o{ biz_schedule : "shift_id"
-  biz_staff_schedule ||--|{ biz_schedule_change_log : "staff_schedule_id"
-  sys_employee ||--o{ biz_schedule_change_log : "from_employee_id"
-  sys_employee ||--o{ biz_schedule_change_log : "to_employee_id"
-  biz_shift ||--o{ biz_schedule_change_log : "from_shift_id"
-  biz_shift ||--o{ biz_schedule_change_log : "to_shift_id"
-  biz_schedule ||--|{ biz_schedule_slot : "schedule_id"
-  biz_schedule_template ||--|{ biz_schedule_slot_template : "template_id"
-  sys_department ||--|{ biz_schedule_template : "dept_id"
-  sys_employee ||--|{ biz_schedule_template : "doctor_id"
-  biz_shift ||--o{ biz_schedule_template : "shift_id"
-  sys_clinic_room ||--o{ biz_schedule_template : "room_id"
-  biz_staff_schedule ||--o{ biz_staff_attendance : "staff_schedule_id"
+  biz_schedule ||--o{ biz_clinic_source : "staff_schedule_id"
+  sys_department ||--|{ biz_clinic_source : "dept_id"
+  sys_clinic_room ||--o{ biz_clinic_source : "room_id"
+  sys_employee ||--|{ biz_clinic_source : "doctor_id"
+  biz_shift ||--o{ biz_clinic_source : "shift_id"
+  biz_schedule ||--|{ biz_clinic_source_change_log : "staff_schedule_id"
+  sys_employee ||--o{ biz_clinic_source_change_log : "from_employee_id"
+  sys_employee ||--o{ biz_clinic_source_change_log : "to_employee_id"
+  biz_shift ||--o{ biz_clinic_source_change_log : "from_shift_id"
+  biz_shift ||--o{ biz_clinic_source_change_log : "to_shift_id"
+  biz_clinic_source ||--|{ biz_clinic_source_slot : "schedule_id"
+  biz_clinic_source_template ||--|{ biz_clinic_source_slot_template : "template_id"
+  sys_department ||--|{ biz_clinic_source_template : "dept_id"
+  sys_employee ||--|{ biz_clinic_source_template : "doctor_id"
+  biz_shift ||--o{ biz_clinic_source_template : "shift_id"
+  sys_clinic_room ||--o{ biz_clinic_source_template : "room_id"
+  biz_schedule ||--o{ biz_staff_attendance : "staff_schedule_id"
   sys_employee ||--|{ biz_staff_attendance : "employee_id"
   biz_shift ||--|{ biz_staff_attendance : "shift_id"
   sys_employee ||--o{ biz_staff_attendance : "substitute_for"
   biz_shift ||--|{ biz_staff_demand : "shift_id"
   biz_shift ||--|{ biz_staff_plan_rule : "shift_id"
-  sys_department ||--|{ biz_staff_schedule : "dept_id"
-  sys_employee ||--|{ biz_staff_schedule : "employee_id"
-  sys_employee_post ||--o{ biz_staff_schedule : "employee_post_id"
-  biz_shift ||--|{ biz_staff_schedule : "shift_id"
-  biz_schedule_template ||--o{ biz_staff_schedule : "template_id"
+  sys_department ||--|{ biz_schedule : "dept_id"
+  sys_employee ||--|{ biz_schedule : "employee_id"
+  sys_employee_post ||--o{ biz_schedule : "employee_post_id"
+  biz_shift ||--|{ biz_schedule : "shift_id"
+  biz_clinic_source_template ||--o{ biz_schedule : "template_id"
   biz_queue ||--|{ biz_triage_record : "queue_id"
   biz_appoint_info ||--o{ biz_triage_record : "regist_id"
   biz_patient ||--o{ biz_triage_record : "patient_id"
@@ -1310,11 +1310,6 @@ erDiagram
     bigint ward_id "病区ID（快照）"
     bigint assess_nurse_id "评估护士ID（员工ID）"
   }
-  biz_nurse_schedule_rule["护理人力配置标准 · biz_nurse_schedule_rule"] {
-    bigint id "主键ID（雪花）"
-    bigint ward_id "病区ID"
-    bigint shift_id "班次ID"
-  }
   biz_nurse_schedule["病区护理排班 · biz_nurse_schedule"] {
     bigint id "主键ID（雪花）"
     bigint ward_id "病区ID"
@@ -1323,7 +1318,7 @@ erDiagram
     date schedule_date "排班日期"
     bigint employee_id "护士ID"
     bigint shift_id "班次ID"
-    bigint staff_schedule_id "关联的出勤事实 biz_staff_schedule.id（护理格子→底座的指路牌）"
+    bigint staff_schedule_id "关联的出勤事实 biz_schedule.id（护理格子→底座的指路牌）"
   }
   sys_nursing_qc_item["护理质控检查项目录 · sys_nursing_qc_item"] {
     bigint id "主键ID（雪花）"
@@ -1358,7 +1353,7 @@ erDiagram
   biz_shift["班次字典 · biz_shift"] {
     bigint id "主键ID"
   }
-  biz_staff_schedule["员工排班 · biz_staff_schedule"] {
+  biz_schedule["员工排班 · biz_schedule"] {
     bigint id "主键ID（雪花）"
   }
   sys_department["科室 · sys_department"] {
@@ -1374,9 +1369,7 @@ erDiagram
   sys_department ||--|{ biz_nurse_schedule : "dept_id"
   sys_employee ||--|{ biz_nurse_schedule : "employee_id"
   biz_shift ||--o{ biz_nurse_schedule : "shift_id"
-  biz_staff_schedule ||--o{ biz_nurse_schedule : "staff_schedule_id"
-  sys_ward ||--|{ biz_nurse_schedule_rule : "ward_id"
-  biz_shift ||--|{ biz_nurse_schedule_rule : "shift_id"
+  biz_schedule ||--o{ biz_nurse_schedule : "staff_schedule_id"
   biz_admission ||--|{ biz_nursing_assessment : "admission_id"
   biz_patient ||--|{ biz_nursing_assessment : "patient_id"
   sys_ward ||--o{ biz_nursing_assessment : "ward_id"
@@ -2321,7 +2314,7 @@ erDiagram
   biz_shift["班次字典 · biz_shift"] {
     bigint id "主键ID"
   }
-  biz_staff_schedule["员工排班 · biz_staff_schedule"] {
+  biz_schedule["员工排班 · biz_schedule"] {
     bigint id "主键ID（雪花）"
   }
   sys_bed["床位 · sys_bed"] {
@@ -2344,7 +2337,7 @@ erDiagram
   sys_employee ||--o{ biz_duty_roster : "substitute_emp_id"
   biz_shift ||--o{ biz_duty_roster : "shift_id"
   biz_duty_post ||--o{ biz_duty_roster : "post_id"
-  biz_staff_schedule ||--o{ biz_duty_roster : "staff_schedule_id"
+  biz_schedule ||--o{ biz_duty_roster : "staff_schedule_id"
   biz_patient ||--|{ biz_emergency : "patient_id"
   sys_department ||--o{ biz_emergency : "dept_id"
   sys_employee ||--o{ biz_emergency : "doctor_id"

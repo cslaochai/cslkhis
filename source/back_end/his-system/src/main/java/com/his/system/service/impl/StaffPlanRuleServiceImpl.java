@@ -14,7 +14,7 @@ import com.his.system.dto.StaffPlanRuleQueryPageDTO;
 import com.his.system.dto.StaffPlanRuleUpsertDTO;
 import com.his.system.entity.*;
 import com.his.system.mapper.BizStaffPlanRuleMapper;
-import com.his.system.mapper.BizStaffScheduleMapper;
+import com.his.system.mapper.BizScheduleMapper;
 import com.his.system.mapper.SysDepartmentMapper;
 import com.his.system.mapper.SysWardMapper;
 import com.his.system.service.ShiftService;
@@ -51,7 +51,7 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
      * 而「是不是连续」要从这天向两侧数到断口为止，窗口必须比上限大。
      */
     private static final int PERSON_WINDOW_DAYS = 14;
-    private final BizStaffScheduleMapper bizStaffScheduleMapper;
+    private final BizScheduleMapper bizStaffScheduleMapper;
     private final ShiftService shiftService;
     private final SysWardMapper sysWardMapper;
     private final SysDepartmentMapper sysDepartmentMapper;
@@ -216,15 +216,15 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
         }
         LocalDate from = date.minusDays(PERSON_WINDOW_DAYS);
         LocalDate to = date.plusDays(PERSON_WINDOW_DAYS);
-        List<BizStaffSchedule> rows = bizStaffScheduleMapper.selectList(new LambdaQueryWrapper<BizStaffSchedule>()
-                .eq(BizStaffSchedule::getEmployeeId, employeeId)
-                .ge(BizStaffSchedule::getScheduleDate, from)
-                .le(BizStaffSchedule::getScheduleDate, to)
-                .orderByAsc(BizStaffSchedule::getScheduleDate));
+        List<BizSchedule> rows = bizStaffScheduleMapper.selectList(new LambdaQueryWrapper<BizSchedule>()
+                .eq(BizSchedule::getEmployeeId, employeeId)
+                .ge(BizSchedule::getScheduleDate, from)
+                .le(BizSchedule::getScheduleDate, to)
+                .orderByAsc(BizSchedule::getScheduleDate));
         Map<Long, BizShift> shifts = shiftService.mapByIds(rows.stream()
-                .map(BizStaffSchedule::getShiftId).filter(Objects::nonNull).toList());
+                .map(BizSchedule::getShiftId).filter(Objects::nonNull).toList());
         String nurse = rows.stream().filter(r -> Objects.equals(r.getId(), currentScheduleId))
-                .map(BizStaffSchedule::getEmployeeName).findFirst().orElse("该员工");
+                .map(BizSchedule::getEmployeeName).findFirst().orElse("该员工");
 
         assertRestAfterNight(currentScheduleId, rows, shifts, nurse);
         assertNightStreak(currentScheduleId, rule, rows, shifts, nurse, date);
@@ -247,9 +247,9 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
      * <p>只判「本次这条事实参与的那两个组合」—— 存量里躺着的历史违规不在这件事的账上，
      * 一并判会让排班员被前人的排班卡死，什么都改不动。
      */
-    private void assertRestAfterNight(Long currentId, List<BizStaffSchedule> rows,
+    private void assertRestAfterNight(Long currentId, List<BizSchedule> rows,
                                       Map<Long, BizShift> shifts, String nurse) {
-        for (BizStaffSchedule night : rows) {
+        for (BizSchedule night : rows) {
             if (!StaffDutyStatusEnum.isWorking(night.getDutyStatus())) {
                 continue;
             }
@@ -259,7 +259,7 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
             }
             LocalDateTime freeFrom = endAt(night.getScheduleDate(), nightShift)
                     .plusMinutes((long) (restHoursOf(nightShift) * 60));
-            for (BizStaffSchedule next : rows) {
+            for (BizSchedule next : rows) {
                 if (!StaffDutyStatusEnum.isWorking(next.getDutyStatus())) {
                     continue;
                 }
@@ -289,7 +289,7 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
     /**
      * 连续夜班天数上限（劳动安全，拦）
      */
-    private void assertNightStreak(Long currentId, BizStaffPlanRule rule, List<BizStaffSchedule> rows,
+    private void assertNightStreak(Long currentId, BizStaffPlanRule rule, List<BizSchedule> rows,
                                    Map<Long, BizShift> shifts, String nurse, LocalDate date) {
         int limit = rule.getMaxConsecutiveNightDays() == null ? 0 : rule.getMaxConsecutiveNightDays();
         if (limit <= 0) {
@@ -308,7 +308,7 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
     /**
      * 连续上班天数上限（总量控制，提示）
      */
-    private String workStreakTip(Long currentId, BizStaffPlanRule rule, List<BizStaffSchedule> rows,
+    private String workStreakTip(Long currentId, BizStaffPlanRule rule, List<BizSchedule> rows,
                                  String nurse, LocalDate date) {
         int limit = rule.getMaxConsecutiveWorkDays() == null ? 0 : rule.getMaxConsecutiveWorkDays();
         if (limit <= 0) {
@@ -329,7 +329,7 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
     /**
      * 单周工时上限（总量控制，提示）
      */
-    private String weekHoursTip(BizStaffPlanRule rule, List<BizStaffSchedule> rows,
+    private String weekHoursTip(BizStaffPlanRule rule, List<BizSchedule> rows,
                                 Map<Long, BizShift> shifts, String nurse, LocalDate date) {
         BigDecimal limit = rule.getMaxWeekHours();
         if (limit == null || limit.signum() <= 0) {
@@ -338,7 +338,7 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
         LocalDate monday = date.minusDays(date.getDayOfWeek().getValue() - 1L);
         LocalDate sunday = monday.plusDays(6);
         long minutes = 0;
-        for (BizStaffSchedule row : rows) {
+        for (BizSchedule row : rows) {
             if (!StaffDutyStatusEnum.isWorking(row.getDutyStatus())
                     || row.getScheduleDate().isBefore(monday) || row.getScheduleDate().isAfter(sunday)) {
                 continue;
@@ -361,10 +361,10 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
      *
      * @param nightOnly true=只数夜班，false=数所有上班日
      */
-    private int streakOf(List<BizStaffSchedule> rows, Map<Long, BizShift> shifts, LocalDate date,
+    private int streakOf(List<BizSchedule> rows, Map<Long, BizShift> shifts, LocalDate date,
                          boolean nightOnly) {
         Set<LocalDate> hit = new HashSet<>();
-        for (BizStaffSchedule row : rows) {
+        for (BizSchedule row : rows) {
             if (!StaffDutyStatusEnum.isWorking(row.getDutyStatus())) {
                 continue;
             }
@@ -390,7 +390,7 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
         return streak;
     }
 
-    private boolean workingNight(BizStaffSchedule row, Map<Long, BizShift> shifts) {
+    private boolean workingNight(BizSchedule row, Map<Long, BizShift> shifts) {
         if (!StaffDutyStatusEnum.isWorking(row.getDutyStatus())) {
             return false;
         }
@@ -415,14 +415,14 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
     }
 
     private long countOnDuty(Integer orgType, Long orgId, Integer staffType, LocalDate date, BizStaffPlanRule rule) {
-        LambdaQueryWrapper<BizStaffSchedule> wrapper = new LambdaQueryWrapper<BizStaffSchedule>()
-                .eq(BizStaffSchedule::getOrgType, orgType)
-                .eq(BizStaffSchedule::getOrgId, orgId == null ? 0L : orgId)
-                .eq(BizStaffSchedule::getStaffType, staffType)
-                .eq(BizStaffSchedule::getScheduleDate, date)
-                .eq(BizStaffSchedule::getDutyStatus, StaffDutyStatusEnum.WORK.getCode());
+        LambdaQueryWrapper<BizSchedule> wrapper = new LambdaQueryWrapper<BizSchedule>()
+                .eq(BizSchedule::getOrgType, orgType)
+                .eq(BizSchedule::getOrgId, orgId == null ? 0L : orgId)
+                .eq(BizSchedule::getStaffType, staffType)
+                .eq(BizSchedule::getScheduleDate, date)
+                .eq(BizSchedule::getDutyStatus, StaffDutyStatusEnum.WORK.getCode());
         if (rule.getShiftId() != null && rule.getShiftId() != SHIFT_ANY) {
-            wrapper.eq(BizStaffSchedule::getShiftId, rule.getShiftId());
+            wrapper.eq(BizSchedule::getShiftId, rule.getShiftId());
         }
         return bizStaffScheduleMapper.selectCount(wrapper);
     }

@@ -3,7 +3,7 @@ package com.his.appoint.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.appoint.dto.ScheduleTemplateQueryPageDTO;
 import com.his.appoint.dto.ScheduleTemplateUpsertDTO;
-import com.his.appoint.entity.BizScheduleTemplate;
+import com.his.appoint.entity.BizClinicSourceTemplate;
 import com.his.appoint.vo.ScheduleTemplatePreviewVO;
 import com.his.appoint.vo.ScheduleTemplateVO;
 import com.his.common.base.PageResult;
@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * 排班模板服务
  */
-public interface BizScheduleTemplateService extends IService<BizScheduleTemplate> {
+public interface BizClinicSourceTemplateService extends IService<BizClinicSourceTemplate> {
 
     /**
      * 给模板 VO 批量补「班次名 + 班别」：这两项不落模板表，一律按 shift_id 从班次字典带出
@@ -25,7 +25,7 @@ public interface BizScheduleTemplateService extends IService<BizScheduleTemplate
      *
      * @param staffType 岗位类别（空=全部岗位）
      */
-    List<BizScheduleTemplate> listTemplates(Long deptId, Integer staffType, Integer weekDay, Integer status);
+    List<BizClinicSourceTemplate> listTemplates(Long deptId, Integer staffType, Integer weekDay, Integer status);
 
     /**
      * 模板列表出参：口径同 {@link #listTemplates}，并按班次字典补齐班别/班次名。
@@ -47,7 +47,7 @@ public interface BizScheduleTemplateService extends IService<BizScheduleTemplate
     /**
      * 新增/修改模板（同医生同星期几同班次拒重；划池数不得超过总号源）
      */
-    boolean saveTemplate(BizScheduleTemplate template);
+    boolean saveTemplate(BizClinicSourceTemplate template);
 
     /**
      * 删除模板（逻辑删）

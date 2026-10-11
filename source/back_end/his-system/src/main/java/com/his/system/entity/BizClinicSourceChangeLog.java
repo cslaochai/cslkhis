@@ -17,8 +17,8 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("biz_schedule_change_log")
-public class BizScheduleChangeLog extends BaseEntity {
+@TableName("biz_clinic_source_change_log")
+public class BizClinicSourceChangeLog extends BaseEntity {
     /** 逻辑删除标志（0 未删除 1 已删除） */
     @TableLogic
     private Integer delFlag;

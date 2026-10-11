@@ -3,7 +3,7 @@ package com.his.appoint.controller;
 import com.his.appoint.dto.ScheduleTemplateGenerateDTO;
 import com.his.appoint.dto.ScheduleTemplateQueryPageDTO;
 import com.his.appoint.dto.ScheduleTemplateUpsertDTO;
-import com.his.appoint.service.BizScheduleTemplateService;
+import com.his.appoint.service.BizClinicSourceTemplateService;
 import com.his.appoint.vo.ScheduleTemplatePreviewVO;
 import com.his.appoint.vo.ScheduleTemplateVO;
 import com.his.common.base.PageResult;
@@ -22,9 +22,9 @@ import java.util.List;
 @RequestMapping("/scheduleTemplate")
 @RequiredArgsConstructor
 @PreAuthorize("hasAuthority('org:schedule:list')")
-public class BizScheduleTemplateController {
+public class BizClinicSourceTemplateController {
 
-    private final BizScheduleTemplateService bizScheduleTemplateService;
+    private final BizClinicSourceTemplateService bizScheduleTemplateService;
 
     @Operation(summary = "模板列表（GET，可按科室/岗位类别/星期几/状态过滤）")
     @GetMapping("/list")

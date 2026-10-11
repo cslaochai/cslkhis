@@ -7,7 +7,7 @@ import com.his.system.dto.StaffScheduleCopyDTO;
 import com.his.system.dto.StaffScheduleQueryPageDTO;
 import com.his.system.dto.StaffScheduleSwapDTO;
 import com.his.system.dto.StaffScheduleUpsertDTO;
-import com.his.system.entity.BizStaffSchedule;
+import com.his.system.entity.BizSchedule;
 import com.his.system.vo.StaffScheduleVO;
 import com.his.system.vo.StaffTypeDayWorkingVO;
 import com.his.system.vo.UnitDayWorkingVO;
@@ -19,7 +19,7 @@ import java.util.List;
 /**
  * 全院岗位排班服务 —— 排班事实的唯一写入口。
  */
-public interface StaffScheduleService extends IService<BizStaffSchedule> {
+public interface StaffScheduleService extends IService<BizSchedule> {
 
     PageResult<StaffScheduleVO> pageVO(StaffScheduleQueryPageDTO dto);
 
@@ -38,7 +38,7 @@ public interface StaffScheduleService extends IService<BizStaffSchedule> {
      *
      * @param source 生成来源（门诊排班落 1-手工，周模板生成落 2-模板）
      */
-    BizStaffSchedule ensureForClinic(StaffScheduleUpsertDTO dto, StaffScheduleSourceEnum source);
+    BizSchedule ensureForClinic(StaffScheduleUpsertDTO dto, StaffScheduleSourceEnum source);
 
     /**
      * 各排班线共用的落事实入口：按「人 × 日 × 班」取到那条事实（没有就落一条），<b>不看号源</b>。
@@ -46,7 +46,7 @@ public interface StaffScheduleService extends IService<BizStaffSchedule> {
      * <p>出诊、病区护理、全院值守三条线的差别只在「这条班要不要放号」，
      * 「这个人哪天几点在哪个单元上不上班」是同一件事，所以事实的写法只留这一份。
      */
-    BizStaffSchedule ensureAttendance(StaffScheduleUpsertDTO dto, StaffScheduleSourceEnum source);
+    BizSchedule ensureAttendance(StaffScheduleUpsertDTO dto, StaffScheduleSourceEnum source);
 
     /**
      * 某一个<b>排班单元内</b>的落事实入口：查重键比 {@link #ensureAttendance} 多带排班单元。
@@ -64,7 +64,7 @@ public interface StaffScheduleService extends IService<BizStaffSchedule> {
      * @param source 生成来源
      * @return 那条事实（新增或被复用的那条），调用方要拿它的 id 回写自己的回指列
      */
-    BizStaffSchedule ensureForUnit(StaffScheduleUpsertDTO dto, StaffScheduleSourceEnum source);
+    BizSchedule ensureForUnit(StaffScheduleUpsertDTO dto, StaffScheduleSourceEnum source);
 
     /**
      * 按「人 × 日」覆盖一条事实：先清掉该单元当天这个人的旧行，再落新行。
@@ -73,7 +73,7 @@ public interface StaffScheduleService extends IService<BizStaffSchedule> {
      * 把白班改成夜班在格子上是「改」，在事实层却是一个新键 —— 不先让位就会留下两条同日事实，
      * 而事实层的键谁也覆盖不了谁。
      */
-    BizStaffSchedule replaceDayAttendance(StaffScheduleUpsertDTO dto, StaffScheduleSourceEnum source);
+    BizSchedule replaceDayAttendance(StaffScheduleUpsertDTO dto, StaffScheduleSourceEnum source);
 
     /**
      * 清掉某个单元里这个人当天的事实行（物理删）。格子删掉 = 这个人这天在这个单元没班了。
@@ -110,12 +110,12 @@ public interface StaffScheduleService extends IService<BizStaffSchedule> {
     /**
      * 某天的排班行（下游按实体取号源派生所需的字段，不重复查一次班次）。
      */
-    List<BizStaffSchedule> listDay(LocalDate date, Integer orgType, Long orgId, Integer staffType);
+    List<BizSchedule> listDay(LocalDate date, Integer orgType, Long orgId, Integer staffType);
 
     /**
      * 这条排班是否该产出出诊计划与号源（岗位有号源属性 + 出勤 + 非听班 + 标记出诊）。
      */
-    boolean releasesClinicSource(BizStaffSchedule schedule);
+    boolean releasesClinicSource(BizSchedule schedule);
 
     /**
      * 排班单元 × 日期的在岗人次（总览矩阵格子）。

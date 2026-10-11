@@ -3,10 +3,10 @@ package com.his.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.ScheduleChangeTypeEnum;
-import com.his.system.entity.BizScheduleChangeLog;
+import com.his.system.entity.BizClinicSourceChangeLog;
 import com.his.system.entity.BizShift;
 import com.his.system.entity.SysEmployee;
-import com.his.system.mapper.BizScheduleChangeLogMapper;
+import com.his.system.mapper.BizClinicSourceChangeLogMapper;
 import com.his.system.mapper.SysEmployeeMapper;
 import com.his.system.service.ScheduleChangeLogService;
 import com.his.system.service.ShiftService;
@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-public class ScheduleChangeLogServiceImpl extends ServiceImpl<BizScheduleChangeLogMapper, BizScheduleChangeLog>
+public class ScheduleChangeLogServiceImpl extends ServiceImpl<BizClinicSourceChangeLogMapper, BizClinicSourceChangeLog>
         implements ScheduleChangeLogService {
 
     /**
@@ -38,7 +38,7 @@ public class ScheduleChangeLogServiceImpl extends ServiceImpl<BizScheduleChangeL
     public Long record(Long staffScheduleId, ScheduleChangeTypeEnum actionType,
                        Long fromEmployeeId, Long toEmployeeId,
                        Long fromShiftId, Long toShiftId, Integer amount, String reason) {
-        BizScheduleChangeLog log = new BizScheduleChangeLog();
+        BizClinicSourceChangeLog log = new BizClinicSourceChangeLog();
         log.setStaffScheduleId(staffScheduleId);
         log.setActionType(actionType.getCode());
         log.setFromEmployeeId(fromEmployeeId);
@@ -56,23 +56,23 @@ public class ScheduleChangeLogServiceImpl extends ServiceImpl<BizScheduleChangeL
 
     @Override
     public List<ScheduleChangeLogVO> listBySchedule(Long staffScheduleId) {
-        List<BizScheduleChangeLog> rows = list(new LambdaQueryWrapper<BizScheduleChangeLog>()
-                .eq(BizScheduleChangeLog::getStaffScheduleId, staffScheduleId)
+        List<BizClinicSourceChangeLog> rows = list(new LambdaQueryWrapper<BizClinicSourceChangeLog>()
+                .eq(BizClinicSourceChangeLog::getStaffScheduleId, staffScheduleId)
                 // 二级键 id：同一秒内连续两条变更的排序不稳定（翻页/追溯都会乱行）
-                .orderByDesc(BizScheduleChangeLog::getOccurTime).orderByDesc(BizScheduleChangeLog::getId));
+                .orderByDesc(BizClinicSourceChangeLog::getOccurTime).orderByDesc(BizClinicSourceChangeLog::getId));
         if (rows.isEmpty()) {
             return List.of();
         }
         Set<Long> empIds = new HashSet<>();
         Set<Long> shiftIds = new HashSet<>();
-        for (BizScheduleChangeLog row : rows) {
+        for (BizClinicSourceChangeLog row : rows) {
             collect(empIds, row.getFromEmployeeId(), row.getToEmployeeId());
             collect(shiftIds, row.getFromShiftId(), row.getToShiftId());
         }
         Map<Long, SysEmployee> employees = employeesOf(empIds);
         Map<Long, BizShift> shifts = shiftService.mapByIds(shiftIds);
         List<ScheduleChangeLogVO> vos = new ArrayList<>(rows.size());
-        for (BizScheduleChangeLog row : rows) {
+        for (BizClinicSourceChangeLog row : rows) {
             ScheduleChangeLogVO vo = new ScheduleChangeLogVO();
             vo.setId(row.getId());
             vo.setStaffScheduleId(row.getStaffScheduleId());

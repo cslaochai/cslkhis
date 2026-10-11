@@ -7,13 +7,13 @@ import com.his.appoint.dto.ScheduleQueryDTO;
 import com.his.appoint.dto.ScheduleSelectQueryDTO;
 import com.his.appoint.dto.ScheduleUpsertDTO;
 import com.his.appoint.entity.BizAppointInfo;
-import com.his.appoint.entity.BizSchedule;
+import com.his.appoint.entity.BizClinicSource;
 import com.his.appoint.mapper.BizAppointInfoMapper;
 import com.his.appoint.mapper.BizQueueMapper;
-import com.his.appoint.mapper.BizScheduleMapper;
+import com.his.appoint.mapper.BizClinicSourceMapper;
 import com.his.appoint.service.BizAppointService;
-import com.his.appoint.service.BizScheduleService;
-import com.his.appoint.service.BizScheduleSlotService;
+import com.his.appoint.service.BizClinicSourceService;
+import com.his.appoint.service.BizClinicSourceSlotService;
 import com.his.appoint.vo.OnDutyStaffVO;
 import com.his.appoint.vo.ScheduleDetailVO;
 import com.his.appoint.vo.ScheduleSelectListVO;
@@ -24,7 +24,7 @@ import com.his.common.util.ShiftCoverUtil;
 import com.his.common.util.TextUtil;
 import com.his.system.dto.StaffScheduleUpsertDTO;
 import com.his.system.entity.BizShift;
-import com.his.system.entity.BizStaffSchedule;
+import com.his.system.entity.BizSchedule;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeService;
 import com.his.system.service.ShiftService;
@@ -50,13 +50,13 @@ import java.util.Objects;
  */
 @Service
 @RequiredArgsConstructor
-public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSchedule> implements BizScheduleService {
+public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMapper, BizClinicSource> implements BizClinicSourceService {
 
     private final DeptScopeService deptScopeService;
 
     private final BizAppointService bizAppointService;
 
-    private final BizScheduleSlotService bizScheduleSlotService;
+    private final BizClinicSourceSlotService bizScheduleSlotService;
 
     private final SysClinicRoomService sysClinicRoomService;
 
@@ -64,7 +64,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
 
     private final StaffScheduleService staffScheduleService;
 
-    private final BizScheduleMapper bizScheduleMapper;
+    private final BizClinicSourceMapper bizScheduleMapper;
 
     private final BizAppointInfoMapper bizAppointInfoMapper;
 
@@ -73,45 +73,45 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
 
 
     @Override
-    public List<BizSchedule> listPage(ScheduleQueryDTO queryDTO) {
-        LambdaQueryWrapper<BizSchedule> wrapper = new LambdaQueryWrapper<>();
+    public List<BizClinicSource> listPage(ScheduleQueryDTO queryDTO) {
+        LambdaQueryWrapper<BizClinicSource> wrapper = new LambdaQueryWrapper<>();
         Long scopedDeptId = deptScopeService.resolveDeptId(queryDTO.getDeptId());
         if (scopedDeptId != null) {
-            wrapper.eq(BizSchedule::getDeptId, scopedDeptId);
+            wrapper.eq(BizClinicSource::getDeptId, scopedDeptId);
         } else if (deptScopeService.isScoped()) {
-            wrapper.in(BizSchedule::getDeptId, deptScopeService.allowedDeptIds());
+            wrapper.in(BizClinicSource::getDeptId, deptScopeService.allowedDeptIds());
         }
-        wrapper.eq(queryDTO.getStaffType() != null, BizSchedule::getStaffType, queryDTO.getStaffType())
-                .eq(queryDTO.getDoctorId() != null, BizSchedule::getDoctorId, queryDTO.getDoctorId())
-                .ge(queryDTO.getStartDate() != null, BizSchedule::getScheduleDate, queryDTO.getStartDate())
-                .le(queryDTO.getEndDate() != null, BizSchedule::getScheduleDate, queryDTO.getEndDate());
+        wrapper.eq(queryDTO.getStaffType() != null, BizClinicSource::getStaffType, queryDTO.getStaffType())
+                .eq(queryDTO.getDoctorId() != null, BizClinicSource::getDoctorId, queryDTO.getDoctorId())
+                .ge(queryDTO.getStartDate() != null, BizClinicSource::getScheduleDate, queryDTO.getStartDate())
+                .le(queryDTO.getEndDate() != null, BizClinicSource::getScheduleDate, queryDTO.getEndDate());
         wrapper.last("ORDER BY schedule_date ASC, start_time ASC, doctor_id ASC, id ASC");
         return bizScheduleMapper.selectList(wrapper);
     }
 
     @Override
-    public List<BizSchedule> scheduleSelectList(ScheduleSelectQueryDTO scheduleQueryDTO) {
-        LambdaQueryWrapper<BizSchedule> wrapper = new LambdaQueryWrapper<>();
+    public List<BizClinicSource> scheduleSelectList(ScheduleSelectQueryDTO scheduleQueryDTO) {
+        LambdaQueryWrapper<BizClinicSource> wrapper = new LambdaQueryWrapper<>();
         Long scopedDeptId = deptScopeService.resolveDeptId(scheduleQueryDTO.getDeptId());
         if (scopedDeptId != null) {
-            wrapper.eq(BizSchedule::getDeptId, scopedDeptId);
+            wrapper.eq(BizClinicSource::getDeptId, scopedDeptId);
         } else if (deptScopeService.isScoped()) {
-            wrapper.in(BizSchedule::getDeptId, deptScopeService.allowedDeptIds());
+            wrapper.in(BizClinicSource::getDeptId, deptScopeService.allowedDeptIds());
         }
-        wrapper.eq(BizSchedule::getStaffType, StaffTypeEnum.DOCTOR.getCode())
+        wrapper.eq(BizClinicSource::getStaffType, StaffTypeEnum.DOCTOR.getCode())
                 .eq(scheduleQueryDTO.getVisitDate() != null,
-                        BizSchedule::getScheduleDate, scheduleQueryDTO.getVisitDate())
+                        BizClinicSource::getScheduleDate, scheduleQueryDTO.getVisitDate())
                 .eq(scheduleQueryDTO.getDoctorId() != null,
-                        BizSchedule::getDoctorId, scheduleQueryDTO.getDoctorId())
-                .gt(BizSchedule::getAvailableSource, 0)
-                .eq(BizSchedule::getStatus, ScheduleStatusEnum.NORMAL.getCode())
-                .orderByAsc(BizSchedule::getStartTime);
+                        BizClinicSource::getDoctorId, scheduleQueryDTO.getDoctorId())
+                .gt(BizClinicSource::getAvailableSource, 0)
+                .eq(BizClinicSource::getStatus, ScheduleStatusEnum.NORMAL.getCode())
+                .orderByAsc(BizClinicSource::getStartTime);
         return bizScheduleMapper.selectList(wrapper);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean addSchedule(BizSchedule schedule) {
+    public boolean addSchedule(BizClinicSource schedule) {
         applyShift(schedule);
         assertNotPast(schedule.getScheduleDate(), "新增排班");
         bindCoreSchedule(schedule, StaffScheduleSourceEnum.MANUAL);
@@ -133,7 +133,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
     }
 
     @Override
-    public void bindCoreSchedule(BizSchedule schedule, StaffScheduleSourceEnum source) {
+    public void bindCoreSchedule(BizClinicSource schedule, StaffScheduleSourceEnum source) {
         Integer submittedStaffType = schedule.getStaffType();
         StaffScheduleUpsertDTO dto = new StaffScheduleUpsertDTO();
         dto.setId(schedule.getStaffScheduleId());
@@ -147,7 +147,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         dto.setAttendMode(AttendModeEnum.ON_SITE.getCode());
         dto.setClinicFlag(YesOrNoEnum.YES.getCode());
         dto.setRemark(schedule.getRemark());
-        BizStaffSchedule core = staffScheduleService.ensureForClinic(dto, source);
+        BizSchedule core = staffScheduleService.ensureForClinic(dto, source);
         if (submittedStaffType != null && !Objects.equals(submittedStaffType, core.getStaffType())) {
             throw new BusinessException("「" + core.getEmployeeName() + "」在"
                     + OrgUnitTypeEnum.getText(core.getOrgType()) + "「" + core.getDeptName()
@@ -170,8 +170,8 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         if (staffScheduleId == null) {
             return;
         }
-        Long holding = bizScheduleMapper.selectCount(new LambdaQueryWrapper<BizSchedule>()
-                .eq(BizSchedule::getStaffScheduleId, staffScheduleId));
+        Long holding = bizScheduleMapper.selectCount(new LambdaQueryWrapper<BizClinicSource>()
+                .eq(BizClinicSource::getStaffScheduleId, staffScheduleId));
         if (holding == null || holding == 0) {
             staffScheduleService.deleteById(staffScheduleId);
         }
@@ -179,8 +179,8 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean updateSchedule(BizSchedule schedule) {
-        BizSchedule existing = bizScheduleMapper.selectById(schedule.getId());
+    public boolean updateSchedule(BizClinicSource schedule) {
+        BizClinicSource existing = bizScheduleMapper.selectById(schedule.getId());
         if (existing == null) {
             throw new BusinessException("排班记录不存在");
         }
@@ -225,7 +225,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
     /**
      * 排班的诊室变了
      */
-    private void syncRoomToTodayWorklist(BizSchedule schedule) {
+    private void syncRoomToTodayWorklist(BizClinicSource schedule) {
         LocalDate today = LocalDate.now();
         if (schedule.getScheduleDate() != null && !schedule.getScheduleDate().equals(today)) {
             return;
@@ -247,7 +247,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteSchedule(Long id) {
-        BizSchedule existing = bizScheduleMapper.selectById(id);
+        BizClinicSource existing = bizScheduleMapper.selectById(id);
         if (existing == null) {
             throw new BusinessException("排班记录不存在");
         }
@@ -266,7 +266,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
     /**
      * 校验：启用态的排班必须排诊室。
      */
-    private void checkRoomRequired(BizSchedule schedule) {
+    private void checkRoomRequired(BizClinicSource schedule) {
         boolean enabled = !ScheduleStatusEnum.stopped(schedule.getStatus());
         // B类（条件必填）：必填性取决于同一请求里的状态与岗位类别，声明式注解做不到一刀切
         if (enabled && StaffTypeEnum.hasSource(schedule.getStaffType())
@@ -278,7 +278,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
     /**
      * 岗位类别收口
      */
-    private void applyStaffType(BizSchedule schedule) {
+    private void applyStaffType(BizClinicSource schedule) {
         StaffTypeEnum.assertValid(schedule.getStaffType());
         if (StaffTypeEnum.hasSource(schedule.getStaffType())) {
             int total = schedule.getTotalSource() == null ? 0 : schedule.getTotalSource();
@@ -308,7 +308,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
      * 班次是时间段与班别的<b>唯一</b>来源：前端传什么都不认，一律按班次字典覆盖
      * （原来「标准班次」和「班次类型」两个并列字段可以互相矛盾，就是这么来的）。
      */
-    private void applyShift(BizSchedule schedule) {
+    private void applyShift(BizClinicSource schedule) {
         BizShift shift = shiftService.resolveForScheduling(schedule.getShiftId(), schedule.getDeptId());
         schedule.setStartTime(shift.getStartTime());
         schedule.setEndTime(shift.getEndTime());
@@ -357,7 +357,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void scheduleUpsert(ScheduleUpsertDTO upsertDTO) {
-        BizSchedule schedule = convertToScheduleEntity(upsertDTO);
+        BizClinicSource schedule = convertToScheduleEntity(upsertDTO);
         try {
             boolean success = upsertDTO.getId() == null
                     ? addSchedule(schedule)
@@ -370,14 +370,14 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         }
     }
 
-    private List<ScheduleDetailVO> toVOList(List<BizSchedule> list) {
+    private List<ScheduleDetailVO> toVOList(List<BizClinicSource> list) {
         List<ScheduleDetailVO> voList = list.stream().map(this::convertToScheduleVO).toList();
         fillShiftDisplay(voList);
         return voList;
     }
 
-    private BizSchedule convertToScheduleEntity(ScheduleUpsertDTO upsertDTO) {
-        BizSchedule entity = new BizSchedule();
+    private BizClinicSource convertToScheduleEntity(ScheduleUpsertDTO upsertDTO) {
+        BizClinicSource entity = new BizClinicSource();
         entity.setId(upsertDTO.getId());
         entity.setDeptId(upsertDTO.getDeptId());
         entity.setDeptName(upsertDTO.getDeptName());
@@ -401,7 +401,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         return entity;
     }
 
-    private ScheduleDetailVO convertToScheduleVO(BizSchedule entity) {
+    private ScheduleDetailVO convertToScheduleVO(BizClinicSource entity) {
         if (entity == null) {
             return null;
         }
@@ -448,17 +448,17 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
      * 校验同一医生同一天的时间段是否冲突
      * 时间重叠条件：startTime1 < endTime2 且 startTime2 < endTime1
      */
-    private void checkScheduleOverlap(BizSchedule schedule, Long excludeId) {
+    private void checkScheduleOverlap(BizClinicSource schedule, Long excludeId) {
         if (schedule.getDoctorId() == null || schedule.getScheduleDate() == null
                 || !TextUtil.hasText(schedule.getStartTime()) || !TextUtil.hasText(schedule.getEndTime())) {
             return;
         }
-        LambdaQueryWrapper<BizSchedule> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(BizSchedule::getDoctorId, schedule.getDoctorId())
-                .eq(BizSchedule::getScheduleDate, schedule.getScheduleDate())
-                .ne(excludeId != null, BizSchedule::getId, excludeId);
-        List<BizSchedule> existing = bizScheduleMapper.selectList(wrapper);
-        for (BizSchedule s : existing) {
+        LambdaQueryWrapper<BizClinicSource> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(BizClinicSource::getDoctorId, schedule.getDoctorId())
+                .eq(BizClinicSource::getScheduleDate, schedule.getScheduleDate())
+                .ne(excludeId != null, BizClinicSource::getId, excludeId);
+        List<BizClinicSource> existing = bizScheduleMapper.selectList(wrapper);
+        for (BizClinicSource s : existing) {
             if (s.getStartTime().compareTo(schedule.getEndTime()) < 0
                     && schedule.getStartTime().compareTo(s.getEndTime()) < 0) {
                 throw new BusinessException("该医生在此时间段已有排班，时间冲突");
@@ -467,13 +467,13 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
     }
 
     @Override
-    public List<BizSchedule> getTodaySchedule(Long deptId) {
-        LambdaQueryWrapper<BizSchedule> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(BizSchedule::getDeptId, deptId)
-                .eq(BizSchedule::getScheduleDate, LocalDate.now())
-                .eq(BizSchedule::getStaffType, StaffTypeEnum.DOCTOR.getCode())
-                .eq(BizSchedule::getStatus, ScheduleStatusEnum.NORMAL.getCode())
-                .orderByAsc(BizSchedule::getStartTime);
+    public List<BizClinicSource> getTodaySchedule(Long deptId) {
+        LambdaQueryWrapper<BizClinicSource> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(BizClinicSource::getDeptId, deptId)
+                .eq(BizClinicSource::getScheduleDate, LocalDate.now())
+                .eq(BizClinicSource::getStaffType, StaffTypeEnum.DOCTOR.getCode())
+                .eq(BizClinicSource::getStatus, ScheduleStatusEnum.NORMAL.getCode())
+                .orderByAsc(BizClinicSource::getStartTime);
         return bizScheduleMapper.selectList(wrapper);
     }
 
@@ -483,7 +483,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         if (ConsultStatusEnum.fromCode(consultStatus) == null) {
             throw new BusinessException("就诊状态只允许 " + ConsultStatusEnum.whitelistText());
         }
-        BizSchedule schedule = bizScheduleMapper.selectById(scheduleId);
+        BizClinicSource schedule = bizScheduleMapper.selectById(scheduleId);
         if (schedule == null) {
             throw new BusinessException("排班记录不存在");
         }
@@ -494,12 +494,12 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateStatus(Long scheduleId, Integer status) {
-        BizSchedule old = bizScheduleMapper.selectById(scheduleId);
+        BizClinicSource old = bizScheduleMapper.selectById(scheduleId);
         if (old == null) {
             throw new BusinessException("排班记录不存在");
         }
         assertNotPast(old.getScheduleDate(), ScheduleStatusEnum.stopped(status) ? "停诊" : "启用");
-        BizSchedule schedule = new BizSchedule();
+        BizClinicSource schedule = new BizClinicSource();
         schedule.setId(scheduleId);
         schedule.setStatus(status);
         boolean ok = bizScheduleMapper.updateById(schedule) > 0;
@@ -568,7 +568,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
                 : ShiftCoverUtil.parseShiftTime(queryDTO.getMoment());
         boolean onlyOnDuty = !Boolean.FALSE.equals(queryDTO.getOnDutyOnly());
 
-        List<BizSchedule> rows = loadDaySchedule(deptId, date, queryDTO.getStaffType());
+        List<BizClinicSource> rows = loadDaySchedule(deptId, date, queryDTO.getStaffType());
         List<OnDutyStaffVO> all = rows.stream().map(s -> toOnDutyVO(s, moment)).toList();
         if (!onlyOnDuty) {
             return all;
@@ -583,23 +583,23 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         }
         LocalDate today = LocalDate.now();
         LocalTime now = LocalTime.now();
-        List<BizSchedule> rows = loadDaySchedule(deptId, today, staffType);
+        List<BizClinicSource> rows = loadDaySchedule(deptId, today, staffType);
         if (rows.isEmpty()) {
             return null;
         }
-        List<BizSchedule> onDuty = rows.stream()
+        List<BizClinicSource> onDuty = rows.stream()
                 .filter(s -> ShiftCoverUtil.covers(now, s.getStartTime(), s.getEndTime()))
                 .toList();
         if (!onDuty.isEmpty()) {
             // 同科室多人同时在职：优先本人（当班护士自己操作，理应记她），不是随便抓一个
-            for (BizSchedule s : onDuty) {
+            for (BizClinicSource s : onDuty) {
                 if (preferEmpId != null && Objects.equals(s.getDoctorId(), preferEmpId)) {
                     return toOnDutyVO(s, now);
                 }
             }
             // 交接班时段两班重叠 → 取最近开班的那一班（接班人），
             // 否则凌晨分诊会被记到已经下班的上一班头上
-            BizSchedule latest = onDuty.stream()
+            BizClinicSource latest = onDuty.stream()
                     .max(Comparator.comparing(s -> ShiftCoverUtil.parseShiftTime(s.getStartTime()),
                             Comparator.nullsFirst(Comparator.naturalOrder())))
                     .orElse(null);
@@ -607,7 +607,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         }
         // 交接班空档：此刻谁都不在班里，退而取当日最早一班（当天在岗过的人）。
         // 仍然不是「登录人兜底」——身份凭证 ≠ 当班责任
-        BizSchedule earliest = rows.stream()
+        BizClinicSource earliest = rows.stream()
                 .min(Comparator.comparing(s -> ShiftCoverUtil.parseShiftTime(s.getStartTime()),
                         Comparator.nullsLast(Comparator.naturalOrder())))
                 .orElse(null);
@@ -617,20 +617,20 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
     /**
      * 当日该科室全部有效排班（默认全岗位）。
      */
-    private List<BizSchedule> loadDaySchedule(Long deptId, LocalDate date, Integer staffType) {
-        LambdaQueryWrapper<BizSchedule> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(BizSchedule::getDeptId, deptId)
-                .eq(BizSchedule::getScheduleDate, date)
-                .eq(BizSchedule::getStatus, ScheduleStatusEnum.NORMAL.getCode())
-                .isNotNull(BizSchedule::getDoctorId);
+    private List<BizClinicSource> loadDaySchedule(Long deptId, LocalDate date, Integer staffType) {
+        LambdaQueryWrapper<BizClinicSource> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(BizClinicSource::getDeptId, deptId)
+                .eq(BizClinicSource::getScheduleDate, date)
+                .eq(BizClinicSource::getStatus, ScheduleStatusEnum.NORMAL.getCode())
+                .isNotNull(BizClinicSource::getDoctorId);
         if (staffType != null) {
-            wrapper.eq(BizSchedule::getStaffType, staffType);
+            wrapper.eq(BizClinicSource::getStaffType, staffType);
         }
-        wrapper.orderByAsc(BizSchedule::getStartTime);
+        wrapper.orderByAsc(BizClinicSource::getStartTime);
         return bizScheduleMapper.selectList(wrapper);
     }
 
-    private OnDutyStaffVO toOnDutyVO(BizSchedule s, LocalTime moment) {
+    private OnDutyStaffVO toOnDutyVO(BizClinicSource s, LocalTime moment) {
         OnDutyStaffVO vo = new OnDutyStaffVO();
         vo.setScheduleId(s.getId());
         vo.setStaffId(s.getDoctorId());
@@ -667,7 +667,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean addSource(Long scheduleId, Integer addNum, String reason) {
-        BizSchedule schedule = bizScheduleMapper.selectById(scheduleId);
+        BizClinicSource schedule = bizScheduleMapper.selectById(scheduleId);
         if (schedule == null) {
             throw new BusinessException("排班记录不存在");
         }
@@ -685,7 +685,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         int added = schedule.getAddedSource() == null ? 0 : schedule.getAddedSource();
         String stamp = LocalDate.now() + " 加号" + addNum + "（" + reason + "）";
         String newRemark = TextUtil.hasText(schedule.getRemark()) ? schedule.getRemark() + "；" + stamp : stamp;
-        BizSchedule update = new BizSchedule();
+        BizClinicSource update = new BizClinicSource();
         update.setId(scheduleId);
         update.setTotalSource((schedule.getTotalSource() == null ? 0 : schedule.getTotalSource()) + addNum);
         update.setAvailableSource((schedule.getAvailableSource() == null ? 0 : schedule.getAvailableSource()) + addNum);

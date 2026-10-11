@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
- * 在岗人次聚合行（BizStaffScheduleMapper#groupWorkingByUnitShift 的返回行）。
+ * 在岗人次聚合行（BizScheduleMapper#groupWorkingByUnitShift 的返回行）。
  */
 @Data
 public class StaffWorkingGroupVO implements Serializable {

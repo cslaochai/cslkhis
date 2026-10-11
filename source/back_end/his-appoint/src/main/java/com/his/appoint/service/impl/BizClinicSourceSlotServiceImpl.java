@@ -5,12 +5,12 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.appoint.dto.ScheduleSlotItemUpsertDTO;
 import com.his.appoint.dto.ScheduleSlotUpsertDTO;
-import com.his.appoint.entity.BizSchedule;
-import com.his.appoint.entity.BizScheduleSlot;
-import com.his.appoint.entity.BizScheduleSlotTemplate;
-import com.his.appoint.mapper.BizScheduleMapper;
-import com.his.appoint.mapper.BizScheduleSlotMapper;
-import com.his.appoint.service.BizScheduleSlotService;
+import com.his.appoint.entity.BizClinicSource;
+import com.his.appoint.entity.BizClinicSourceSlot;
+import com.his.appoint.entity.BizClinicSourceSlotTemplate;
+import com.his.appoint.mapper.BizClinicSourceMapper;
+import com.his.appoint.mapper.BizClinicSourceSlotMapper;
+import com.his.appoint.service.BizClinicSourceSlotService;
 import com.his.appoint.vo.ScheduleSlotVO;
 import com.his.common.enums.EnableStatusEnum;
 import com.his.common.enums.ScheduleStatusEnum;
@@ -31,16 +31,16 @@ import java.util.*;
  */
 @Service
 @RequiredArgsConstructor
-public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, BizScheduleSlot> implements BizScheduleSlotService {
+public class BizClinicSourceSlotServiceImpl extends ServiceImpl<BizClinicSourceSlotMapper, BizClinicSourceSlot> implements BizClinicSourceSlotService {
 
-    private final BizScheduleSlotMapper bizScheduleSlotMapper;
+    private final BizClinicSourceSlotMapper bizScheduleSlotMapper;
 
-    private final BizScheduleMapper bizScheduleMapper;
+    private final BizClinicSourceMapper bizScheduleMapper;
 
     private final DeptScopeService deptScopeService;
 
     @Override
-    public List<BizScheduleSlot> generateSlots(Long scheduleId, String startTime, String endTime,
+    public List<BizClinicSourceSlot> generateSlots(Long scheduleId, String startTime, String endTime,
                                                Integer totalSource, Integer appointmentSource) {
         List<String[]> segs = splitHalfHour(startTime, endTime);
         int n = segs.size();
@@ -52,9 +52,9 @@ public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMappe
         int[] totals = splitEven(total, n);
         int[] appts = clampSpread(splitEven(appt, n), totals);
 
-        List<BizScheduleSlot> slots = new ArrayList<>(n);
+        List<BizClinicSourceSlot> slots = new ArrayList<>(n);
         for (int i = 0; i < n; i++) {
-            BizScheduleSlot slot = new BizScheduleSlot();
+            BizClinicSourceSlot slot = new BizClinicSourceSlot();
             slot.setScheduleId(scheduleId);
             slot.setSeq(i + 1);
             slot.setStartTime(segs.get(i)[0]);
@@ -74,11 +74,11 @@ public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMappe
     }
 
     @Override
-    public List<BizScheduleSlot> generateFromTemplate(Long scheduleId, List<BizScheduleSlotTemplate> tplSlots) {
-        List<BizScheduleSlot> slots = new ArrayList<>(tplSlots.size());
+    public List<BizClinicSourceSlot> generateFromTemplate(Long scheduleId, List<BizClinicSourceSlotTemplate> tplSlots) {
+        List<BizClinicSourceSlot> slots = new ArrayList<>(tplSlots.size());
         int seq = 1;
-        for (BizScheduleSlotTemplate tpl : tplSlots) {
-            BizScheduleSlot slot = new BizScheduleSlot();
+        for (BizClinicSourceSlotTemplate tpl : tplSlots) {
+            BizClinicSourceSlot slot = new BizClinicSourceSlot();
             slot.setScheduleId(scheduleId);
             slot.setSeq(seq++);
             slot.setStartTime(tpl.getStartTime());
@@ -98,9 +98,9 @@ public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMappe
     }
 
     @Override
-    public void regenerateForSchedule(BizSchedule schedule, Integer newTotal, Integer newAppointment) {
+    public void regenerateForSchedule(BizClinicSource schedule, Integer newTotal, Integer newAppointment) {
         Long scheduleId = schedule.getId();
-        List<BizScheduleSlot> old = listByScheduleId(scheduleId);
+        List<BizClinicSourceSlot> old = listByScheduleId(scheduleId);
         int usedSum = old.stream().mapToInt(s -> NumUtil.orZero(s.getUsedSource())).sum();
 
         List<String[]> newSegs = splitHalfHour(schedule.getStartTime(), schedule.getEndTime());
@@ -154,7 +154,7 @@ public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMappe
         int[] appts = clampSpread(splitEven(appt, n), totals);
 
         for (int i = 0; i < n; i++) {
-            BizScheduleSlot up = new BizScheduleSlot();
+            BizClinicSourceSlot up = new BizClinicSourceSlot();
             up.setId(old.get(i).getId());
             up.setTotalSource(totals[i]);
             up.setAvailableSource(totals[i] - usedArr[i]);
@@ -169,7 +169,7 @@ public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMappe
         if (addNum <= 0) {
             return;
         }
-        List<BizScheduleSlot> slots = listByScheduleId(scheduleId);
+        List<BizClinicSourceSlot> slots = listByScheduleId(scheduleId);
         if (slots.isEmpty()) {
             // 无段的旧排班（历史数据）：加号只走主表，调用方已更新主表，此处无事可做
             return;
@@ -180,8 +180,8 @@ public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMappe
             if (add[i] == 0) {
                 continue;
             }
-            BizScheduleSlot s = slots.get(i);
-            BizScheduleSlot up = new BizScheduleSlot();
+            BizClinicSourceSlot s = slots.get(i);
+            BizClinicSourceSlot up = new BizClinicSourceSlot();
             up.setId(s.getId());
             up.setTotalSource(NumUtil.orZero(s.getTotalSource()) + add[i]);
             up.setAvailableSource(NumUtil.orZero(s.getAvailableSource()) + add[i]);
@@ -194,7 +194,7 @@ public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMappe
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateSlotSources(ScheduleSlotUpsertDTO dto) {
-        BizSchedule schedule = bizScheduleMapper.selectById(dto.getScheduleId());
+        BizClinicSource schedule = bizScheduleMapper.selectById(dto.getScheduleId());
         if (schedule == null) {
             throw new BusinessException("排班记录不存在");
         }
@@ -211,13 +211,13 @@ public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMappe
                     + StaffTypeEnum.getText(schedule.getStaffType()) + "岗位是出勤排班，不对外放号");
         }
 
-        Map<Long, BizScheduleSlot> byId = new HashMap<>();
-        for (BizScheduleSlot s : listByScheduleId(dto.getScheduleId())) {
+        Map<Long, BizClinicSourceSlot> byId = new HashMap<>();
+        for (BizClinicSourceSlot s : listByScheduleId(dto.getScheduleId())) {
             byId.put(s.getId(), s);
         }
         // 整批校验整批生效：部分成功会打破「Σ段=主表」的总量约束，中途状态比全拒绝更糟
         for (ScheduleSlotItemUpsertDTO item : dto.getSlots()) {
-            BizScheduleSlot slot = byId.get(item.getId());
+            BizClinicSourceSlot slot = byId.get(item.getId());
             if (slot == null) {
                 throw new BusinessException("时间段不存在或不属于该排班");
             }
@@ -239,8 +239,8 @@ public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMappe
         }
         // 逐段落库：available 同步重算（used 是已发生的事实，不动）
         for (ScheduleSlotItemUpsertDTO item : dto.getSlots()) {
-            BizScheduleSlot slot = byId.get(item.getId());
-            BizScheduleSlot up = new BizScheduleSlot();
+            BizClinicSourceSlot slot = byId.get(item.getId());
+            BizClinicSourceSlot up = new BizClinicSourceSlot();
             up.setId(slot.getId());
             up.setTotalSource(item.getTotalSource());
             up.setAvailableSource(item.getTotalSource() - NumUtil.orZero(slot.getUsedSource()));
@@ -253,7 +253,7 @@ public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMappe
         // 留痕与加号同口径：往排班备注追加摘要。只记有变化的段，摘要截断防备注列撑爆
         List<String> changes = new ArrayList<>();
         for (ScheduleSlotItemUpsertDTO item : dto.getSlots()) {
-            BizScheduleSlot slot = byId.get(item.getId());
+            BizClinicSourceSlot slot = byId.get(item.getId());
             if (!Objects.equals(NumUtil.orZero(slot.getTotalSource()), item.getTotalSource())) {
                 changes.add(slot.getStartTime() + " 号源" + slot.getTotalSource() + "→" + item.getTotalSource());
             }
@@ -274,7 +274,7 @@ public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMappe
             String stamp = LocalDate.now() + " 段级号源调整（" + summary + "）";
             String newRemark = TextUtil.hasText(schedule.getRemark())
                     ? schedule.getRemark() + "；" + stamp : stamp;
-            BizSchedule up = new BizSchedule();
+            BizClinicSource up = new BizClinicSource();
             up.setId(schedule.getId());
             up.setRemark(newRemark);
             bizScheduleMapper.updateById(up);
@@ -283,20 +283,20 @@ public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMappe
 
     @Override
     public void syncSumToSchedule(Long scheduleId) {
-        List<BizScheduleSlot> slots = listByScheduleId(scheduleId);
+        List<BizClinicSourceSlot> slots = listByScheduleId(scheduleId);
         int total = 0;
         int used = 0;
         int added = 0;
         int appt = 0;
         int usedAppt = 0;
-        for (BizScheduleSlot s : slots) {
+        for (BizClinicSourceSlot s : slots) {
             total += NumUtil.orZero(s.getTotalSource());
             used += NumUtil.orZero(s.getUsedSource());
             added += NumUtil.orZero(s.getAddedSource());
             appt += NumUtil.orZero(s.getAppointmentSource());
             usedAppt += NumUtil.orZero(s.getUsedAppointmentSource());
         }
-        BizSchedule up = new BizSchedule();
+        BizClinicSource up = new BizClinicSource();
         up.setId(scheduleId);
         up.setTotalSource(total);
         up.setUsedSource(used);
@@ -312,9 +312,9 @@ public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMappe
         if (status == null) {
             return;
         }
-        this.update(new LambdaUpdateWrapper<BizScheduleSlot>()
-                .eq(BizScheduleSlot::getScheduleId, scheduleId)
-                .set(BizScheduleSlot::getStatus, status));
+        this.update(new LambdaUpdateWrapper<BizClinicSourceSlot>()
+                .eq(BizClinicSourceSlot::getScheduleId, scheduleId)
+                .set(BizClinicSourceSlot::getStatus, status));
     }
 
     @Override
@@ -323,15 +323,15 @@ public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMappe
     }
 
     @Override
-    public List<BizScheduleSlot> listByScheduleId(Long scheduleId) {
-        return bizScheduleSlotMapper.selectList(new LambdaQueryWrapper<BizScheduleSlot>()
-                .eq(BizScheduleSlot::getScheduleId, scheduleId)
-                .orderByAsc(BizScheduleSlot::getSeq)
-                .orderByAsc(BizScheduleSlot::getId));
+    public List<BizClinicSourceSlot> listByScheduleId(Long scheduleId) {
+        return bizScheduleSlotMapper.selectList(new LambdaQueryWrapper<BizClinicSourceSlot>()
+                .eq(BizClinicSourceSlot::getScheduleId, scheduleId)
+                .orderByAsc(BizClinicSourceSlot::getSeq)
+                .orderByAsc(BizClinicSourceSlot::getId));
     }
 
     @Override
-    public List<BizScheduleSlot> listByScheduleIds(Collection<Long> scheduleIds) {
+    public List<BizClinicSourceSlot> listByScheduleIds(Collection<Long> scheduleIds) {
         if (scheduleIds == null || scheduleIds.isEmpty()) {
             return new ArrayList<>();
         }
@@ -340,11 +340,11 @@ public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMappe
         if (ids.isEmpty()) {
             return new ArrayList<>();
         }
-        return bizScheduleSlotMapper.selectList(new LambdaQueryWrapper<BizScheduleSlot>()
-                .in(BizScheduleSlot::getScheduleId, ids)
-                .orderByAsc(BizScheduleSlot::getScheduleId)
-                .orderByAsc(BizScheduleSlot::getSeq)
-                .orderByAsc(BizScheduleSlot::getId));
+        return bizScheduleSlotMapper.selectList(new LambdaQueryWrapper<BizClinicSourceSlot>()
+                .in(BizClinicSourceSlot::getScheduleId, ids)
+                .orderByAsc(BizClinicSourceSlot::getScheduleId)
+                .orderByAsc(BizClinicSourceSlot::getSeq)
+                .orderByAsc(BizClinicSourceSlot::getId));
     }
 
     @Override
@@ -357,7 +357,7 @@ public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMappe
         return listByScheduleIds(scheduleIds).stream().map(this::convertToSlotVO).toList();
     }
 
-    private ScheduleSlotVO convertToSlotVO(BizScheduleSlot slot) {
+    private ScheduleSlotVO convertToSlotVO(BizClinicSourceSlot slot) {
         if (slot == null) {
             return null;
         }

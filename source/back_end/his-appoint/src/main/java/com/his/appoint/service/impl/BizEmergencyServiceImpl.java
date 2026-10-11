@@ -10,7 +10,7 @@ import com.his.appoint.entity.*;
 import com.his.appoint.enums.*;
 import com.his.appoint.mapper.*;
 import com.his.appoint.service.BizEmergencyService;
-import com.his.appoint.service.BizScheduleService;
+import com.his.appoint.service.BizClinicSourceService;
 import com.his.appoint.support.EmergencyObservationPolicy;
 import com.his.appoint.support.EmergencyWaitPolicy;
 import com.his.appoint.vo.*;
@@ -98,7 +98,7 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
 
     private final InpatientService inpatientService;
 
-    private final BizScheduleService bizScheduleService;
+    private final BizClinicSourceService bizScheduleService;
 
     private final SysMessageService sysMessageService;
 
@@ -341,7 +341,7 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
             emergency.setAssignType(EmergencyAssignTypeEnum.MANUAL.getCode());
             return;
         }
-        BizSchedule onDuty = pickOnDutySchedule(emergency.getDeptId());
+        BizClinicSource onDuty = pickOnDutySchedule(emergency.getDeptId());
         if (onDuty != null) {
             emergency.setAssignType(EmergencyAssignTypeEnum.AUTO_BY_SCHEDULE.getCode());
             emergency.setDoctorId(onDuty.getDoctorId());
@@ -360,8 +360,8 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
      * 当前时刻在岗的排班。交接班时段两班重叠，取「最近开班的那一班」= 接班医生，
      * 否则凌晨入院的急诊会被派给已经下班的白班医生。
      */
-    private BizSchedule pickOnDutySchedule(Long deptId) {
-        List<BizSchedule> onDuty = onDutySchedules(deptId);
+    private BizClinicSource pickOnDutySchedule(Long deptId) {
+        List<BizClinicSource> onDuty = onDutySchedules(deptId);
         return onDuty.stream()
                 .max(Comparator.comparing(s -> ShiftCoverUtil.parseShiftTime(s.getStartTime())))
                 .orElse(null);
@@ -370,13 +370,13 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
     /**
      * 该科室此刻在岗（有医生）的当日排班；deptId 为空或时间不可解析一律排除
      */
-    private List<BizSchedule> onDutySchedules(Long deptId) {
+    private List<BizClinicSource> onDutySchedules(Long deptId) {
         if (deptId == null) {
             return List.of();
         }
         LocalTime now = LocalTime.now();
-        List<BizSchedule> onDuty = new ArrayList<>();
-        for (BizSchedule s : bizScheduleService.getTodaySchedule(deptId)) {
+        List<BizClinicSource> onDuty = new ArrayList<>();
+        for (BizClinicSource s : bizScheduleService.getTodaySchedule(deptId)) {
             if (s.getDoctorId() == null) {
                 continue;
             }
@@ -982,7 +982,7 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
                         .eq(SysEmployee::getStatus, 1))
                 .forEach(emp -> employees.putIfAbsent(emp.getId(), emp));
         Set<Long> onDutyIds = new LinkedHashSet<>();
-        for (BizSchedule schedule : onDutySchedules(scopeDeptId)) {
+        for (BizClinicSource schedule : onDutySchedules(scopeDeptId)) {
             Long doctorId = schedule.getDoctorId();
             // 排班医生未必挂本科室（跨科支援），下拉里要有他，否则"在岗"是假信息
             employees.computeIfAbsent(doctorId, id -> sysEmployeeMapper.selectById(id));
@@ -1467,7 +1467,7 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
      */
     private String currentShiftName(Long deptId, Long empId) {
         LocalTime now = LocalTime.now();
-        for (BizSchedule schedule : bizScheduleService.getTodaySchedule(deptId)) {
+        for (BizClinicSource schedule : bizScheduleService.getTodaySchedule(deptId)) {
             if (!Objects.equals(schedule.getDoctorId(), empId) || schedule.getShiftId() == null) {
                 continue;
             }

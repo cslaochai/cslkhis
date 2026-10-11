@@ -7,7 +7,7 @@ import java.time.LocalDate;
 /**
  * 排班周总览（只读驾驶舱）。
  */
-public interface BizScheduleOverviewService {
+public interface BizClinicSourceOverviewService {
 
     /**
      * 按周聚合排班全域事实：门诊号源、在岗人次、人力缺口、每日总值班。

@@ -19,7 +19,7 @@ public class ScheduleQueryDTO extends PageParam {
      */
     private Long deptId;
     /**
-     * 排班人员ID（医生/护士/技师…同一列，见 {@code BizSchedule#doctorId}）
+     * 排班人员ID（医生/护士/技师…同一列，见 {@code BizClinicSource#doctorId}）
      */
     private Long doctorId;
 

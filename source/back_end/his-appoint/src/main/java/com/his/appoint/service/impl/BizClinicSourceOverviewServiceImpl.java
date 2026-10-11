@@ -1,9 +1,9 @@
 package com.his.appoint.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.appoint.entity.BizSchedule;
-import com.his.appoint.mapper.BizScheduleMapper;
-import com.his.appoint.service.BizScheduleOverviewService;
+import com.his.appoint.entity.BizClinicSource;
+import com.his.appoint.mapper.BizClinicSourceMapper;
+import com.his.appoint.service.BizClinicSourceOverviewService;
 import com.his.appoint.vo.*;
 import com.his.common.enums.DutyShiftTypeEnum;
 import com.his.system.service.DutyRosterService;
@@ -25,7 +25,7 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
-public class BizScheduleOverviewServiceImpl extends ServiceImpl<BizScheduleMapper, BizSchedule> implements BizScheduleOverviewService {
+public class BizClinicSourceOverviewServiceImpl extends ServiceImpl<BizClinicSourceMapper, BizClinicSource> implements BizClinicSourceOverviewService {
 
     private static final int WEEK_DAYS = 7;
 
@@ -35,7 +35,7 @@ public class BizScheduleOverviewServiceImpl extends ServiceImpl<BizScheduleMappe
 
     private final DutyRosterService dutyRosterService;
 
-    private final BizScheduleMapper bizScheduleMapper;
+    private final BizClinicSourceMapper bizScheduleMapper;
 
     @Override
     public ScheduleOverviewVO overviewWeek(LocalDate beginDate) {

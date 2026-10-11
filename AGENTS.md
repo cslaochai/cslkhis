@@ -1155,6 +1155,42 @@
   grep -rn "static final String DICT_" --include=*.java source/back_end  # 只允许 DICT_CACHE_PREFIX（Redis key 前缀，不是字典类型）
   grep -rnE '"(biz|sys)_[a-z]+_[A-Za-z]+Enum"' --include=*.java source/back_end  # 必须 0
   ```
-  改造脚本：`workspace/_apply_dict_type_const.mjs`（字面量/私有常量 → `DictType`）、
-  `workspace/_apply_enum_retarget.mjs` + `workspace/_enum_retarget.json`（假键 → 枚举/真实字典，含新建枚举模板）、
-  `workspace/_sweep_dead_dict_dep.mjs`（删死依赖）。
+改造脚本：`workspace/_apply_dict_type_const.mjs`（字面量/私有常量 → `DictType`）、
+`workspace/_apply_enum_retarget.mjs` + `workspace/_enum_retarget.json`（假键 → 枚举/真实字典，含新建枚举模板）、
+`workspace/_sweep_dead_dict_dep.mjs`（删死依赖）。
+
+## 25. NOT NULL 列一律禁止 DEFAULT 默认值（del_flag 除外，业务层强控）
+
+- **铁律**：所有表字段，只要声明 `NOT NULL`，**一律不准写 `DEFAULT` 默认值**。唯一例外是 `del_flag`
+  （逻辑删除标志，保留 `NOT NULL DEFAULT '0'`，由 MP `@TableLogic` + `MetaObjectHandler` 兜底）。
+- **为什么禁止**：`DEFAULT` 只在「列被整个省略」时触发，**不会**因显式传 null 触发（严格模式下显式 null 直接报 1048）。
+  但 ORM（MyBatis-Plus 默认 `NOT NULL` 字段策略）在实体字段为 null 时**直接把列从 SQL 省掉** → `DEFAULT` 静默生效。
+  而多数默认值是**合法业务值**（如 `org_type DEFAULT '1'` 科室、`duty_status DEFAULT '1'` 上班、`status DEFAULT '1'` 启用），
+  漏传后行被悄悄填成默认业务值，按该列过滤的查询会漏收/错收，比直接报错更糟。
+- **业务层强控**：去掉默认后，插入若漏传该列 → MySQL 报 `1364 Field 'xxx' doesn't have a default value`（fail loud）。
+  配套在 DTO 用 `@NotNull` + `@InEnum`（见 §16）把校验前移，400 就拦住，根本到不了库。
+  注意 upsert 场景：仅「新增必填、且更新时前端也必带」的字段才标 `@NotNull`；更新可省略的字段靠实体/MP 策略保证不被清空（见 §3 的
+  `updateStrategy` 约定），不要为堵 DB 默认而误伤正常更新。
+- **create_time / update_time**：原 `DEFAULT CURRENT_TIMESTAMP` 一并去掉——它们由 `BaseEntity` 的
+  `@TableField(fill=INSERT/INSERT_UPDATE)` + `MyBatisPlusConfig.metaObjectHandler` 自动填充，不能指望 DB 兜底
+  （与 §17「305 个 create_time 里只有 162 个带默认」同源）。
+- **`del_flag` 为什么豁免**：它是逻辑删除标志，全套表统一 `NOT NULL DEFAULT '0'` + `@TableLogic`，
+  删除由 MP 统一置 1，业务代码不应关心它的值，留默认省心且安全。
+- **`DEFAULT NULL` 也一律删掉**：① `NOT NULL DEFAULT NULL` 自相矛盾——NOT NULL 列不可能默认 NULL，
+  MySQL 会忽略该 DEFAULT 或建表直接报错，毫无保留价值；② 可空列上的 `DEFAULT NULL` 是冗余噪音，可空列被省略本就默认 NULL，
+  写不写行为完全一致。两种情况都直接删。
+- **机械判据**：以下命令必须 0 命中：
+  ```bash
+  grep -rn "NOT NULL DEFAULT" docs/01-初始化DDL docs/03-增量SQL变更   # 非 del_flag 必须 0
+  grep -rn "DEFAULT NULL"      docs/01-初始化DDL docs/03-增量SQL变更   # 必须 0（含可空列冗余）
+  ```
+- **已执行（DDL 源文件）**：全量 DDL 已扒掉非 `del_flag` 的 `NOT NULL DEFAULT`（含时间戳）与全部 `DEFAULT NULL`（含可空列冗余），
+  仅保留 `del_flag` 默认（共 194 处保留）。机械判据已落地为 0 命中。
+- **已执行（活库 hn_biz_his @ 192.168.88.132:3306）**：增量 SQL 文件
+  `docs/03-增量SQL变更/239-去除非del_flag列DEFAULT.sql` 生成并**已 applied**。脚本直读 `information_schema.COLUMNS`
+  （`COLUMN_NAME<>'del_flag' AND COLUMN_DEFAULT IS NOT NULL`）产出 1649 条 `ALTER TABLE ... ALTER COLUMN ... DROP DEFAULT`，
+  逐条执行 OK=1649 / FAIL=0，回查剩余带默认列 = 0。DROP DEFAULT 仅改元数据、不触数据、可逆（回滚按列 `ALTER ... SET DEFAULT 原值`）。
+- **活库落地后的硬性后续（fail-loud 的代价）**：去掉默认后，任何「insert/全字段 save 时省略该列」会在活库报
+  `1364 Field 'xxx' doesn't have a default value`。后端 insert 路径必须真给这些列赋值（或 DTO `@NotNull` 拦在 400）。
+  biz_schedule 已验证 service 层全赋值；其余 1649 列所跨表需 rebuild + 冒烟（见 §17 的整 reactor 构建验收口径）。
+  机械判据加一条：`python workspace/_gen_drop_default_sql.py` 回查活库应持续 = 0（防 `_gen_ddl_by_domain.mjs` 重新从库导出又把默认带回来）。

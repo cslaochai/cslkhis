@@ -6,15 +6,15 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.appoint.dto.ScheduleTemplateQueryPageDTO;
 import com.his.appoint.dto.ScheduleTemplateSlotItemDTO;
 import com.his.appoint.dto.ScheduleTemplateUpsertDTO;
-import com.his.appoint.entity.BizSchedule;
-import com.his.appoint.entity.BizScheduleSlotTemplate;
-import com.his.appoint.entity.BizScheduleTemplate;
-import com.his.appoint.mapper.BizScheduleMapper;
-import com.his.appoint.mapper.BizScheduleSlotTemplateMapper;
-import com.his.appoint.mapper.BizScheduleTemplateMapper;
-import com.his.appoint.service.BizScheduleService;
-import com.his.appoint.service.BizScheduleSlotService;
-import com.his.appoint.service.BizScheduleTemplateService;
+import com.his.appoint.entity.BizClinicSource;
+import com.his.appoint.entity.BizClinicSourceSlotTemplate;
+import com.his.appoint.entity.BizClinicSourceTemplate;
+import com.his.appoint.mapper.BizClinicSourceMapper;
+import com.his.appoint.mapper.BizClinicSourceSlotTemplateMapper;
+import com.his.appoint.mapper.BizClinicSourceTemplateMapper;
+import com.his.appoint.service.BizClinicSourceService;
+import com.his.appoint.service.BizClinicSourceSlotService;
+import com.his.appoint.service.BizClinicSourceTemplateService;
 import com.his.appoint.vo.ScheduleTemplatePreviewVO;
 import com.his.appoint.vo.ScheduleTemplateSlotVO;
 import com.his.appoint.vo.ScheduleTemplateVO;
@@ -47,35 +47,35 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplateMapper, BizScheduleTemplate>
-        implements BizScheduleTemplateService {
+public class BizClinicSourceTemplateServiceImpl extends ServiceImpl<BizClinicSourceTemplateMapper, BizClinicSourceTemplate>
+        implements BizClinicSourceTemplateService {
 
-    private final BizScheduleTemplateMapper bizScheduleTemplateMapper;
+    private final BizClinicSourceTemplateMapper bizScheduleTemplateMapper;
 
-    private final BizScheduleMapper bizScheduleMapper;
+    private final BizClinicSourceMapper bizScheduleMapper;
 
-    private final BizScheduleSlotTemplateMapper bizScheduleSlotTemplateMapper;
+    private final BizClinicSourceSlotTemplateMapper bizScheduleSlotTemplateMapper;
 
-    private final BizScheduleSlotService bizScheduleSlotService;
+    private final BizClinicSourceSlotService bizScheduleSlotService;
 
-    private final BizScheduleService bizScheduleService;
+    private final BizClinicSourceService bizScheduleService;
 
     private final ShiftService shiftService;
 
     private final DeptScopeService deptScopeService;
 
     @Override
-    public List<BizScheduleTemplate> listTemplates(Long deptId, Integer staffType, Integer weekDay, Integer status) {
-        LambdaQueryWrapper<BizScheduleTemplate> wrapper = new LambdaQueryWrapper<>();
+    public List<BizClinicSourceTemplate> listTemplates(Long deptId, Integer staffType, Integer weekDay, Integer status) {
+        LambdaQueryWrapper<BizClinicSourceTemplate> wrapper = new LambdaQueryWrapper<>();
         List<Long> scoped = deptScopeService.scopedDeptIds(deptId);
-        wrapper.in(scoped != null, BizScheduleTemplate::getDeptId, scoped)
-                .eq(staffType != null, BizScheduleTemplate::getStaffType, staffType)
-                .eq(weekDay != null, BizScheduleTemplate::getWeekDay, weekDay)
-                .eq(status != null, BizScheduleTemplate::getStatus, status)
-                .orderByAsc(BizScheduleTemplate::getDeptId)
-                .orderByAsc(BizScheduleTemplate::getDoctorId)
-                .orderByAsc(BizScheduleTemplate::getWeekDay)
-                .orderByAsc(BizScheduleTemplate::getStartTime);
+        wrapper.in(scoped != null, BizClinicSourceTemplate::getDeptId, scoped)
+                .eq(staffType != null, BizClinicSourceTemplate::getStaffType, staffType)
+                .eq(weekDay != null, BizClinicSourceTemplate::getWeekDay, weekDay)
+                .eq(status != null, BizClinicSourceTemplate::getStatus, status)
+                .orderByAsc(BizClinicSourceTemplate::getDeptId)
+                .orderByAsc(BizClinicSourceTemplate::getDoctorId)
+                .orderByAsc(BizClinicSourceTemplate::getWeekDay)
+                .orderByAsc(BizClinicSourceTemplate::getStartTime);
         return bizScheduleTemplateMapper.selectList(wrapper);
     }
 
@@ -106,22 +106,22 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
 
     @Override
     public PageResult<ScheduleTemplateVO> pageVO(ScheduleTemplateQueryPageDTO dto) {
-        LambdaQueryWrapper<BizScheduleTemplate> wrapper = new LambdaQueryWrapper<>();
+        LambdaQueryWrapper<BizClinicSourceTemplate> wrapper = new LambdaQueryWrapper<>();
         List<Long> scoped = deptScopeService.scopedDeptIds(dto.getDeptId());
-        wrapper.in(scoped != null, BizScheduleTemplate::getDeptId, scoped)
-                .eq(dto.getStaffType() != null, BizScheduleTemplate::getStaffType, dto.getStaffType())
-                .eq(dto.getWeekDay() != null, BizScheduleTemplate::getWeekDay, dto.getWeekDay())
-                .eq(dto.getStatus() != null, BizScheduleTemplate::getStatus, dto.getStatus())
+        wrapper.in(scoped != null, BizClinicSourceTemplate::getDeptId, scoped)
+                .eq(dto.getStaffType() != null, BizClinicSourceTemplate::getStaffType, dto.getStaffType())
+                .eq(dto.getWeekDay() != null, BizClinicSourceTemplate::getWeekDay, dto.getWeekDay())
+                .eq(dto.getStatus() != null, BizClinicSourceTemplate::getStatus, dto.getStatus())
                 .and(TextUtil.hasText(dto.getKeyword()), w -> w
-                        .like(BizScheduleTemplate::getDeptName, dto.getKeyword())
-                        .or().like(BizScheduleTemplate::getDoctorName, dto.getKeyword())
-                        .or().like(BizScheduleTemplate::getRoomName, dto.getKeyword())
-                        .or().like(BizScheduleTemplate::getRemark, dto.getKeyword()))
+                        .like(BizClinicSourceTemplate::getDeptName, dto.getKeyword())
+                        .or().like(BizClinicSourceTemplate::getDoctorName, dto.getKeyword())
+                        .or().like(BizClinicSourceTemplate::getRoomName, dto.getKeyword())
+                        .or().like(BizClinicSourceTemplate::getRemark, dto.getKeyword()))
                 // 二级键 id：同星期同班次的行顺序不稳定（分页铁律，防翻页重复+丢行）
-                .orderByAsc(BizScheduleTemplate::getWeekDay)
-                .orderByAsc(BizScheduleTemplate::getStartTime)
-                .orderByAsc(BizScheduleTemplate::getId);
-        Page<BizScheduleTemplate> page = this.page(
+                .orderByAsc(BizClinicSourceTemplate::getWeekDay)
+                .orderByAsc(BizClinicSourceTemplate::getStartTime)
+                .orderByAsc(BizClinicSourceTemplate::getId);
+        Page<BizClinicSourceTemplate> page = this.page(
                 new Page<>(dto.getPageNum(), dto.getPageSize()), wrapper);
         List<ScheduleTemplateVO> voList = page.getRecords().stream().map(this::convertToVO).toList();
         fillShiftDisplay(voList);
@@ -136,7 +136,7 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void upsertTemplate(ScheduleTemplateUpsertDTO dto) {
-        BizScheduleTemplate template = convertToEntity(dto);
+        BizClinicSourceTemplate template = convertToEntity(dto);
         boolean success = saveTemplate(template);
         if (!success) {
             throw new BusinessException(dto.getId() == null ? "新增失败" : "修改失败");
@@ -147,8 +147,8 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
         }
     }
 
-    private BizScheduleTemplate convertToEntity(ScheduleTemplateUpsertDTO dto) {
-        BizScheduleTemplate t = new BizScheduleTemplate();
+    private BizClinicSourceTemplate convertToEntity(ScheduleTemplateUpsertDTO dto) {
+        BizClinicSourceTemplate t = new BizClinicSourceTemplate();
         t.setId(dto.getId());
         t.setDeptId(dto.getDeptId());
         t.setDeptName(dto.getDeptName());
@@ -176,7 +176,7 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
         return t;
     }
 
-    private ScheduleTemplateVO convertToVO(BizScheduleTemplate t) {
+    private ScheduleTemplateVO convertToVO(BizClinicSourceTemplate t) {
         if (t == null) {
             return null;
         }
@@ -218,7 +218,7 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
     }
 
     @Override
-    public boolean saveTemplate(BizScheduleTemplate template) {
+    public boolean saveTemplate(BizClinicSourceTemplate template) {
         deptScopeService.assertDeptAccessible(template.getDeptId());
         applyStaffType(template);
         BizShift shift = shiftService.resolveForScheduling(template.getShiftId(), template.getDeptId());
@@ -253,7 +253,7 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
     /**
      * 岗位类别收口
      */
-    private void applyStaffType(BizScheduleTemplate template) {
+    private void applyStaffType(BizClinicSourceTemplate template) {
         StaffTypeEnum.assertValid(template.getStaffType());
         if (StaffTypeEnum.hasSource(template.getStaffType())) {
             // D-业务规则：非空与值域（至少 1）混写，且只在「有号源岗位」分支下成立，不是字段填没填，DTO 注解无法表达，保留
@@ -281,7 +281,7 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
      * 段无缝铺满班次时间窗 + 半小时网格；每段预约池 ≤ 段号源；
      * Σ段号源=模板号源总数、Σ段预约池=模板预约号源数。
      */
-    private void persistSlotConfig(BizScheduleTemplate template, List<ScheduleTemplateSlotItemDTO> slots) {
+    private void persistSlotConfig(BizClinicSourceTemplate template, List<ScheduleTemplateSlotItemDTO> slots) {
         if (!StaffTypeEnum.hasSource(template.getStaffType())) {
             throw new BusinessException("出勤模板不放号源，不需要按段细化");
         }
@@ -300,7 +300,7 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
         int sumTotal = 0;
         int sumAppt = 0;
         int prevEnd = -1;
-        List<BizScheduleSlotTemplate> rows = new ArrayList<>(slots.size());
+        List<BizClinicSourceSlotTemplate> rows = new ArrayList<>(slots.size());
         for (int i = 0; i < slots.size(); i++) {
             ScheduleTemplateSlotItemDTO item = slots.get(i);
             String what = "第" + (i + 1) + "段";
@@ -321,7 +321,7 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
             if (segAppt > segTotal) {
                 throw new BusinessException(what + "预约池不能大于该段号源数");
             }
-            BizScheduleSlotTemplate row = new BizScheduleSlotTemplate();
+            BizClinicSourceSlotTemplate row = new BizClinicSourceSlotTemplate();
             row.setTemplateId(template.getId());
             row.setSeq(i + 1);
             row.setStartTime(toHHmm(start));
@@ -348,7 +348,7 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
 
         // 校验全过才替换：物理删（uk_tpl_slot 不含 del_flag，软删行会撞唯一键）再按新段插入
         bizScheduleSlotTemplateMapper.purgeByTemplateId(template.getId());
-        for (BizScheduleSlotTemplate row : rows) {
+        for (BizClinicSourceSlotTemplate row : rows) {
             bizScheduleSlotTemplateMapper.insert(row);
         }
     }
@@ -375,24 +375,24 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
         if (voList == null || voList.isEmpty()) {
             return;
         }
-        List<BizScheduleSlotTemplate> rows = bizScheduleSlotTemplateMapper.selectList(
-                new LambdaQueryWrapper<BizScheduleSlotTemplate>()
-                        .in(BizScheduleSlotTemplate::getTemplateId,
+        List<BizClinicSourceSlotTemplate> rows = bizScheduleSlotTemplateMapper.selectList(
+                new LambdaQueryWrapper<BizClinicSourceSlotTemplate>()
+                        .in(BizClinicSourceSlotTemplate::getTemplateId,
                                 voList.stream().map(ScheduleTemplateVO::getId).toList())
-                        .orderByAsc(BizScheduleSlotTemplate::getTemplateId)
-                        .orderByAsc(BizScheduleSlotTemplate::getSeq));
+                        .orderByAsc(BizClinicSourceSlotTemplate::getTemplateId)
+                        .orderByAsc(BizClinicSourceSlotTemplate::getSeq));
         if (rows.isEmpty()) {
             return;
         }
         Map<Long, List<ScheduleTemplateSlotVO>> byTemplate = rows.stream()
-                .collect(Collectors.groupingBy(BizScheduleSlotTemplate::getTemplateId,
+                .collect(Collectors.groupingBy(BizClinicSourceSlotTemplate::getTemplateId,
                         Collectors.mapping(this::convertSlotVO, Collectors.toList())));
         for (ScheduleTemplateVO vo : voList) {
             vo.setSlots(byTemplate.get(vo.getId()));
         }
     }
 
-    private ScheduleTemplateSlotVO convertSlotVO(BizScheduleSlotTemplate r) {
+    private ScheduleTemplateSlotVO convertSlotVO(BizClinicSourceSlotTemplate r) {
         ScheduleTemplateSlotVO v = new ScheduleTemplateSlotVO();
         v.setId(r.getId());
         v.setSeq(r.getSeq());
@@ -406,7 +406,7 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteTemplate(Long id) {
-        BizScheduleTemplate tpl = bizScheduleTemplateMapper.selectById(id);
+        BizClinicSourceTemplate tpl = bizScheduleTemplateMapper.selectById(id);
         if (tpl == null) {
             throw new BusinessException("模板不存在");
         }
@@ -421,12 +421,12 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
 
     @Override
     public boolean updateStatus(Long id, Integer status) {
-        BizScheduleTemplate exist = bizScheduleTemplateMapper.selectById(id);
+        BizClinicSourceTemplate exist = bizScheduleTemplateMapper.selectById(id);
         if (exist == null) {
             throw new BusinessException("模板不存在");
         }
         deptScopeService.assertDeptAccessible(exist.getDeptId());
-        BizScheduleTemplate tpl = new BizScheduleTemplate();
+        BizClinicSourceTemplate tpl = new BizClinicSourceTemplate();
         tpl.setId(id);
         tpl.setStatus(status);
         return bizScheduleTemplateMapper.updateById(tpl) > 0;
@@ -443,13 +443,13 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
             throw new BusinessException("目标周 " + monday + " ~ " + sunday + " 已全部过去，不能为已结束的周次生成排班");
         }
 
-        List<BizScheduleTemplate> templates = loadEnabledTemplates(deptScopeService.scopedDeptIds(deptId), staffType);
+        List<BizClinicSourceTemplate> templates = loadEnabledTemplates(deptScopeService.scopedDeptIds(deptId), staffType);
         if (templates.isEmpty()) {
             return staffType == null
                     ? "没有启用的排班模板，请先在「排班模板」中配置"
                     : "没有启用的「" + StaffTypeEnum.getText(staffType) + "」岗位排班模板";
         }
-        List<BizSchedule> existing = loadWeekSchedules(monday, sunday);
+        List<BizClinicSource> existing = loadWeekSchedules(monday, sunday);
         Map<Long, BizShift> shiftMap = loadShifts(templates);
 
         int created = 0;
@@ -459,7 +459,7 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
         int skippedExpired = 0;
         int skippedPast = 0;
         int skippedInvalid = 0;
-        for (BizScheduleTemplate tpl : templates) {
+        for (BizClinicSourceTemplate tpl : templates) {
             LocalDate date = monday.plusDays(tpl.getWeekDay() - 1);
             // 本周部分日期已过（周三生成本周）：逐条跳过，周四五六日照常生成
             if (date.isBefore(today)) {
@@ -488,7 +488,7 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
                 skippedOverlap++;
                 continue;
             }
-            BizSchedule s = buildSchedule(tpl, shift, date);
+            BizClinicSource s = buildSchedule(tpl, shift, date);
             try {
                 // 出勤事实与手工排班走同一条派生口径；本方法不带事务，一条模板配错只跳过这一条
                 bizScheduleService.bindCoreSchedule(s, StaffScheduleSourceEnum.TEMPLATE);
@@ -543,11 +543,11 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
      * 给一条新排班生成时间片段：模板配置了片段（排班模板时段）→ 按配置；
      * 否则按半小时自动切分均分（余数给前面的段）。Σ段写回主表由 scheduleSlotService 收口。
      */
-    private void generateSlotsForSchedule(BizSchedule schedule, Long templateId) {
-        List<BizScheduleSlotTemplate> tplSlots = bizScheduleSlotTemplateMapper.selectList(
-                new LambdaQueryWrapper<BizScheduleSlotTemplate>()
-                        .eq(BizScheduleSlotTemplate::getTemplateId, templateId)
-                        .orderByAsc(BizScheduleSlotTemplate::getSeq));
+    private void generateSlotsForSchedule(BizClinicSource schedule, Long templateId) {
+        List<BizClinicSourceSlotTemplate> tplSlots = bizScheduleSlotTemplateMapper.selectList(
+                new LambdaQueryWrapper<BizClinicSourceSlotTemplate>()
+                        .eq(BizClinicSourceSlotTemplate::getTemplateId, templateId)
+                        .orderByAsc(BizClinicSourceSlotTemplate::getSeq));
         if (tplSlots.isEmpty()) {
             bizScheduleSlotService.generateSlots(schedule.getId(), schedule.getStartTime(), schedule.getEndTime(),
                     schedule.getTotalSource(), schedule.getAppointmentSource());
@@ -567,14 +567,14 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
         vo.setWeekStart(monday.toString());
         vo.setWeekEnd(sunday.toString());
 
-        List<BizScheduleTemplate> templates = loadEnabledTemplates(deptScopeService.scopedDeptIds(deptId), staffType);
+        List<BizClinicSourceTemplate> templates = loadEnabledTemplates(deptScopeService.scopedDeptIds(deptId), staffType);
         if (templates.isEmpty()) {
             return vo;
         }
-        List<BizSchedule> existing = loadWeekSchedules(monday, sunday);
+        List<BizClinicSource> existing = loadWeekSchedules(monday, sunday);
         Map<Long, BizShift> shiftMap = loadShifts(templates);
 
-        for (BizScheduleTemplate tpl : templates) {
+        for (BizClinicSourceTemplate tpl : templates) {
             LocalDate date = monday.plusDays(tpl.getWeekDay() - 1);
             BizShift shift = shiftOf(shiftMap, tpl);
             String desc = weekDayName(tpl.getWeekDay()) + " " + (shift == null ? "未配班次" : shift.getShiftName()) + " "
@@ -604,24 +604,24 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
         return vo;
     }
 
-    private List<BizScheduleTemplate> loadEnabledTemplates(List<Long> scopedDeptIds, Integer staffType) {
-        LambdaQueryWrapper<BizScheduleTemplate> tw = new LambdaQueryWrapper<>();
-        tw.eq(BizScheduleTemplate::getStatus, 1);
-        tw.in(scopedDeptIds != null, BizScheduleTemplate::getDeptId, scopedDeptIds);
-        tw.eq(staffType != null, BizScheduleTemplate::getStaffType, staffType);
+    private List<BizClinicSourceTemplate> loadEnabledTemplates(List<Long> scopedDeptIds, Integer staffType) {
+        LambdaQueryWrapper<BizClinicSourceTemplate> tw = new LambdaQueryWrapper<>();
+        tw.eq(BizClinicSourceTemplate::getStatus, 1);
+        tw.in(scopedDeptIds != null, BizClinicSourceTemplate::getDeptId, scopedDeptIds);
+        tw.eq(staffType != null, BizClinicSourceTemplate::getStaffType, staffType);
         return bizScheduleTemplateMapper.selectList(tw);
     }
 
-    private List<BizSchedule> loadWeekSchedules(LocalDate monday, LocalDate sunday) {
-        return bizScheduleMapper.selectList(new LambdaQueryWrapper<BizSchedule>()
-                .ge(BizSchedule::getScheduleDate, monday)
-                .le(BizSchedule::getScheduleDate, sunday));
+    private List<BizClinicSource> loadWeekSchedules(LocalDate monday, LocalDate sunday) {
+        return bizScheduleMapper.selectList(new LambdaQueryWrapper<BizClinicSource>()
+                .ge(BizClinicSource::getScheduleDate, monday)
+                .le(BizClinicSource::getScheduleDate, sunday));
     }
 
     /**
      * 单双周匹配：0/null=每周；1=单周（ISO 周号奇数）2=双周（偶数）
      */
-    private boolean inParity(BizScheduleTemplate tpl, LocalDate date) {
+    private boolean inParity(BizClinicSourceTemplate tpl, LocalDate date) {
         Integer parity = tpl.getWeekParity();
         if (parity == null || parity == 0) {
             return true;
@@ -633,7 +633,7 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
     /**
      * 生效日期范围：valid_from/valid_until 任一为空视为不限
      */
-    private boolean inValidRange(BizScheduleTemplate tpl, LocalDate date) {
+    private boolean inValidRange(BizClinicSourceTemplate tpl, LocalDate date) {
         if (tpl.getValidFrom() != null && date.isBefore(tpl.getValidFrom())) {
             return false;
         }
@@ -648,15 +648,15 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
     /**
      * 一批模板对应的班次，一次查库（生成/预览都在循环里要用，不能逐条查）
      */
-    private Map<Long, BizShift> loadShifts(List<BizScheduleTemplate> templates) {
+    private Map<Long, BizShift> loadShifts(List<BizClinicSourceTemplate> templates) {
         return shiftService.mapByIds(templates.stream()
-                .map(BizScheduleTemplate::getShiftId).filter(Objects::nonNull).toList());
+                .map(BizClinicSourceTemplate::getShiftId).filter(Objects::nonNull).toList());
     }
 
     /**
      * 模板的班次：没选、或班次已被删 → 返回 null，调用方按「配置非法」跳过而不是猜时间
      */
-    private BizShift shiftOf(Map<Long, BizShift> shiftMap, BizScheduleTemplate tpl) {
+    private BizShift shiftOf(Map<Long, BizShift> shiftMap, BizClinicSourceTemplate tpl) {
         return tpl.getShiftId() == null ? null : shiftMap.get(tpl.getShiftId());
     }
 
@@ -664,8 +664,8 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
      * 模板 → 排班：时间段与班次以字典为准（模板改过、字典也改过时，字典赢）；
      * 星期与岗位类别不在这里定，由 {@code ScheduleService#bindCoreSchedule} 从出勤事实带出。
      */
-    private BizSchedule buildSchedule(BizScheduleTemplate tpl, BizShift shift, LocalDate date) {
-        BizSchedule s = new BizSchedule();
+    private BizClinicSource buildSchedule(BizClinicSourceTemplate tpl, BizShift shift, LocalDate date) {
+        BizClinicSource s = new BizClinicSource();
         s.setDeptId(tpl.getDeptId());
         s.setDeptName(tpl.getDeptName());
         s.setDoctorId(tpl.getDoctorId());
@@ -693,7 +693,7 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
     /**
      * 同医生同日同班次算「已存在」：口径与模板/排班一致，都看 shift_id
      */
-    private boolean existsSame(List<BizSchedule> list, Long doctorId, LocalDate date, Long shiftId) {
+    private boolean existsSame(List<BizClinicSource> list, Long doctorId, LocalDate date, Long shiftId) {
         return list.stream().anyMatch(s ->
                 Objects.equals(s.getDoctorId(), doctorId)
                         && date.equals(s.getScheduleDate())
@@ -703,7 +703,7 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
     /**
      * 时间重叠条件：startTime1 < endTime2 且 startTime2 < endTime1
      */
-    private boolean hasTimeOverlap(List<BizSchedule> list, Long doctorId, LocalDate date, String start, String end) {
+    private boolean hasTimeOverlap(List<BizClinicSource> list, Long doctorId, LocalDate date, String start, String end) {
         if (!TextUtil.hasText(start) || !TextUtil.hasText(end)) {
             return false;
         }
@@ -715,12 +715,12 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
                         && start.compareTo(s.getEndTime()) < 0);
     }
 
-    private void checkDuplicate(BizScheduleTemplate template) {
-        LambdaQueryWrapper<BizScheduleTemplate> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(BizScheduleTemplate::getDoctorId, template.getDoctorId())
-                .eq(BizScheduleTemplate::getWeekDay, template.getWeekDay())
-                .eq(BizScheduleTemplate::getShiftId, template.getShiftId())
-                .ne(template.getId() != null, BizScheduleTemplate::getId, template.getId());
+    private void checkDuplicate(BizClinicSourceTemplate template) {
+        LambdaQueryWrapper<BizClinicSourceTemplate> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(BizClinicSourceTemplate::getDoctorId, template.getDoctorId())
+                .eq(BizClinicSourceTemplate::getWeekDay, template.getWeekDay())
+                .eq(BizClinicSourceTemplate::getShiftId, template.getShiftId())
+                .ne(template.getId() != null, BizClinicSourceTemplate::getId, template.getId());
         if (bizScheduleTemplateMapper.selectCount(wrapper) > 0) {
             throw new BusinessException("该" + StaffTypeEnum.getText(template.getStaffType())
                     + "在此星期已排过同一班次");

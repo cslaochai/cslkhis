@@ -1,12 +1,12 @@
 package com.his.appoint.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.his.appoint.entity.BizScheduleTemplate;
+import com.his.appoint.entity.BizClinicSourceTemplate;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
  * 排班模板Mapper
  */
 @Mapper
-public interface BizScheduleTemplateMapper extends BaseMapper<BizScheduleTemplate> {
+public interface BizClinicSourceTemplateMapper extends BaseMapper<BizClinicSourceTemplate> {
 }

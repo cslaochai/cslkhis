@@ -3,7 +3,7 @@ package com.his.system.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.system.entity.BizShift;
 import com.his.system.entity.BizStaffAttendance;
-import com.his.system.entity.BizStaffSchedule;
+import com.his.system.entity.BizSchedule;
 import com.his.system.vo.CalibrationAdviceVO;
 import com.his.system.vo.StaffWorktimeVO;
 import com.his.system.vo.WorktimeSummaryVO;
@@ -51,16 +51,16 @@ public interface BizStaffAttendanceMapper extends BaseMapper<BizStaffAttendance>
     /**
      * 这个人当天"应上班"的计划行（只读对照用）。
      */
-    @Select("SELECT * FROM biz_staff_schedule WHERE del_flag = 0 "
+    @Select("SELECT * FROM biz_schedule WHERE del_flag = 0 "
             + "AND employee_id = #{employeeId} AND schedule_date = #{date} AND duty_status = 1")
-    List<BizStaffSchedule> selectDayPlanOfEmployee(@Param("employeeId") Long employeeId,
+    List<BizSchedule> selectDayPlanOfEmployee(@Param("employeeId") Long employeeId,
                                                    @Param("date") LocalDate date);
 
     /**
      * 按 id 取一条计划事实（签退时要把这条记录放回它自己的班，才知道几点该下班）
      */
-    @Select("SELECT * FROM biz_staff_schedule WHERE del_flag = 0 AND id = #{id}")
-    BizStaffSchedule selectPlanById(@Param("id") Long id);
+    @Select("SELECT * FROM biz_schedule WHERE del_flag = 0 AND id = #{id}")
+    BizSchedule selectPlanById(@Param("id") Long id);
 
     /**
      * 迟到宽限（分钟）—— 判定参数存在班次字典里，不写死在代码里

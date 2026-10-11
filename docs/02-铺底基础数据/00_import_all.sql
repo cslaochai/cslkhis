@@ -129,7 +129,7 @@ biz_rx_template.sql;
 SOURCE
 biz_rx_template_detail.sql;
 SOURCE
-biz_schedule_template.sql;
+biz_clinic_source_template.sql;
 SOURCE
 biz_shift.sql;
 SOURCE
@@ -144,8 +144,6 @@ SOURCE
 biz_insurance_catalog_rule.sql;
 SOURCE
 biz_lis_qc_plan.sql;
-SOURCE
-biz_nurse_schedule_rule.sql;
 SOURCE
 biz_revisit_fee_policy.sql;
 SOURCE
@@ -173,13 +171,13 @@ biz_infusion_seat.sql;
 SOURCE
 biz_nurse_schedule.sql;
 SOURCE
+biz_clinic_source.sql;
+SOURCE
+biz_clinic_source_slot.sql;
+SOURCE
+biz_clinic_source_slot_template.sql;
+SOURCE
 biz_schedule.sql;
-SOURCE
-biz_schedule_slot.sql;
-SOURCE
-biz_schedule_slot_template.sql;
-SOURCE
-biz_staff_schedule.sql;
 SOURCE
 biz_yb_catalog.sql;
 SOURCE

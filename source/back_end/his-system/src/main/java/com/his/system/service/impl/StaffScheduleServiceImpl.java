@@ -37,7 +37,7 @@ import java.util.*;
  */
 @Service
 @RequiredArgsConstructor
-public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper, BizStaffSchedule>
+public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSchedule>
         implements StaffScheduleService {
     /**
      * 无班次（休息/请假/培训/停班）与全院级的单元ID都用 0 表达，NULL 会让唯一键失效
@@ -84,27 +84,27 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
 
     @Override
     public PageResult<StaffScheduleVO> pageVO(StaffScheduleQueryPageDTO dto) {
-        LambdaQueryWrapper<BizStaffSchedule> wrapper = scoped(new LambdaQueryWrapper<BizStaffSchedule>()
-                .ge(dto.getStartDate() != null, BizStaffSchedule::getScheduleDate, dto.getStartDate())
-                .le(dto.getEndDate() != null, BizStaffSchedule::getScheduleDate, dto.getEndDate())
-                .eq(dto.getOrgType() != null, BizStaffSchedule::getOrgType, dto.getOrgType())
-                .eq(dto.getOrgId() != null, BizStaffSchedule::getOrgId, dto.getOrgId())
-                .eq(dto.getDeptId() != null, BizStaffSchedule::getDeptId, dto.getDeptId())
-                .eq(dto.getStaffType() != null, BizStaffSchedule::getStaffType, dto.getStaffType())
-                .eq(dto.getDutyStatus() != null, BizStaffSchedule::getDutyStatus, dto.getDutyStatus())
-                .eq(dto.getClinicFlag() != null, BizStaffSchedule::getClinicFlag, dto.getClinicFlag()));
+        LambdaQueryWrapper<BizSchedule> wrapper = scoped(new LambdaQueryWrapper<BizSchedule>()
+                .ge(dto.getStartDate() != null, BizSchedule::getScheduleDate, dto.getStartDate())
+                .le(dto.getEndDate() != null, BizSchedule::getScheduleDate, dto.getEndDate())
+                .eq(dto.getOrgType() != null, BizSchedule::getOrgType, dto.getOrgType())
+                .eq(dto.getOrgId() != null, BizSchedule::getOrgId, dto.getOrgId())
+                .eq(dto.getDeptId() != null, BizSchedule::getDeptId, dto.getDeptId())
+                .eq(dto.getStaffType() != null, BizSchedule::getStaffType, dto.getStaffType())
+                .eq(dto.getDutyStatus() != null, BizSchedule::getDutyStatus, dto.getDutyStatus())
+                .eq(dto.getClinicFlag() != null, BizSchedule::getClinicFlag, dto.getClinicFlag()));
         if (TextUtil.hasText(dto.getKeyword())) {
             String keyword = dto.getKeyword().trim();
-            wrapper.and(w -> w.like(BizStaffSchedule::getEmployeeName, keyword)
-                    .or().like(BizStaffSchedule::getEmpCode, keyword));
+            wrapper.and(w -> w.like(BizSchedule::getEmployeeName, keyword)
+                    .or().like(BizSchedule::getEmpCode, keyword));
         }
         // 二级键 id：同人同日多班时翻页顺序才稳定（否则翻页会重复同一行、漏掉另一行）
-        wrapper.orderByAsc(BizStaffSchedule::getScheduleDate).orderByAsc(BizStaffSchedule::getStartTime)
-                .orderByAsc(BizStaffSchedule::getId);
-        Page<BizStaffSchedule> page = this.page(new Page<>(dto.getPageNum(), dto.getPageSize()), wrapper);
+        wrapper.orderByAsc(BizSchedule::getScheduleDate).orderByAsc(BizSchedule::getStartTime)
+                .orderByAsc(BizSchedule::getId);
+        Page<BizSchedule> page = this.page(new Page<>(dto.getPageNum(), dto.getPageSize()), wrapper);
         Map<Long, BizShift> shifts = shiftService.mapByIds(shiftIdsOf(page.getRecords()));
         List<StaffScheduleVO> vos = new ArrayList<>(page.getRecords().size());
-        for (BizStaffSchedule row : page.getRecords()) {
+        for (BizSchedule row : page.getRecords()) {
             vos.add(toVO(row, shifts.get(row.getShiftId())));
         }
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), vos);
@@ -113,7 +113,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String upsert(StaffScheduleUpsertDTO dto) {
-        BizStaffSchedule schedule = compose(dto, StaffScheduleSourceEnum.MANUAL);
+        BizSchedule schedule = compose(dto, StaffScheduleSourceEnum.MANUAL);
         if (isDuplicated(schedule)) {
             throw new BusinessException("「" + schedule.getEmployeeName() + "」在 "
                     + schedule.getScheduleDate() + " 已经排过「" + shiftLabelOf(schedule) + "」，不要重复排同一个班");
@@ -121,7 +121,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
         assertTimeFree(schedule);
         // 改之前长什么样要先记住：人力标准的下限只在「这次操作让某个班少了一个人」时才拦，
         // 新增和「改成上班」是往里加人，越加越多，拿下限去卡等于让排班员排不出第一版。
-        BizStaffSchedule before = dto.getId() == null ? null : getById(dto.getId());
+        BizSchedule before = dto.getId() == null ? null : getById(dto.getId());
         saveOrUpdate(schedule);
         String unitTip = staffPlanRuleService.reviewAfterChange(schedule.getOrgType(), schedule.getOrgId(),
                 schedule.getShiftId(), schedule.getStaffType(), schedule.getScheduleDate(),
@@ -132,7 +132,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
     /**
      * 人力闸门的两半：单元够不够人 + 这个人被排得狠不狠，两句话合成一段提示给页面
      */
-    private String reviewEmployee(BizStaffSchedule schedule) {
+    private String reviewEmployee(BizSchedule schedule) {
         return staffPlanRuleService.reviewEmployee(schedule.getId(), schedule.getEmployeeId(),
                 schedule.getOrgType(), schedule.getOrgId(), schedule.getStaffType(), schedule.getScheduleDate());
     }
@@ -143,7 +143,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
      * <p>三种减员：上班 → 休息/请假/停班；换了个班次（原班少一人）；换了个排班单元（原单元少一人）。
      * 新增一行（before 为空）一律不算减员 —— 空表上排第一个人被下限拦住是最典型的一种卡死。
      */
-    private boolean headcountDrops(BizStaffSchedule before, BizStaffSchedule now) {
+    private boolean headcountDrops(BizSchedule before, BizSchedule now) {
         if (before == null || !StaffDutyStatusEnum.isWorking(before.getDutyStatus())) {
             return false;
         }
@@ -157,22 +157,22 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public BizStaffSchedule ensureForClinic(StaffScheduleUpsertDTO dto, StaffScheduleSourceEnum source) {
+    public BizSchedule ensureForClinic(StaffScheduleUpsertDTO dto, StaffScheduleSourceEnum source) {
         return ensureAttendance(dto, source);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public BizStaffSchedule ensureAttendance(StaffScheduleUpsertDTO dto, StaffScheduleSourceEnum source) {
-        BizStaffSchedule schedule = compose(dto, source);
+    public BizSchedule ensureAttendance(StaffScheduleUpsertDTO dto, StaffScheduleSourceEnum source) {
+        BizSchedule schedule = compose(dto, source);
         return reuseOrSave(dto, schedule, sameShiftRow(schedule));
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public BizStaffSchedule ensureForUnit(StaffScheduleUpsertDTO dto, StaffScheduleSourceEnum source) {
+    public BizSchedule ensureForUnit(StaffScheduleUpsertDTO dto, StaffScheduleSourceEnum source) {
         requireOwnedRow(dto);
-        BizStaffSchedule schedule = compose(dto, source);
+        BizSchedule schedule = compose(dto, source);
         return reuseOrSave(dto, schedule, sameUnitShiftRow(schedule));
     }
 
@@ -186,7 +186,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
         if (dto.getId() == null) {
             return;
         }
-        BizStaffSchedule owned = getById(dto.getId());
+        BizSchedule owned = getById(dto.getId());
         if (owned == null) {
             throw new BusinessException("这条排班事实已不存在（可能已被删除），请刷新后重试");
         }
@@ -204,8 +204,8 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
      * <p>「撞已存在的行不报错而是复用」的原因写在 {@link #ensureForClinic} 上：
      * 号源层不允许自己决定「这个人今天上不上班」，它只能借用已有事实。
      */
-    private BizStaffSchedule reuseOrSave(StaffScheduleUpsertDTO dto, BizStaffSchedule schedule,
-                                         BizStaffSchedule exist) {
+    private BizSchedule reuseOrSave(StaffScheduleUpsertDTO dto, BizSchedule schedule,
+                                         BizSchedule exist) {
         if (exist == null || Objects.equals(exist.getId(), dto.getId())) {
             // 目标键上要么没人、要么就是自己（出诊计划换了人/换班 = 键本身在动）：直接落这条事实
             assertTimeFree(schedule);
@@ -240,7 +240,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public BizStaffSchedule replaceDayAttendance(StaffScheduleUpsertDTO dto, StaffScheduleSourceEnum source) {
+    public BizSchedule replaceDayAttendance(StaffScheduleUpsertDTO dto, StaffScheduleSourceEnum source) {
         // 入参带 id 时留下那条行：改的是同一条出勤事实（改班次/改状态 = 改属性），
         // 不是换一条新的。id 漂了，护理格子回写的 staff_schedule_id、将来要挂的实际出勤
         // 全部会指向一条被物理删掉的行。
@@ -275,8 +275,8 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
     /**
      * 提交值 → 排班行：单元、人、班次三段全部服务端重查，前端传的快照一律不认。
      */
-    private BizStaffSchedule compose(StaffScheduleUpsertDTO dto, StaffScheduleSourceEnum source) {
-        BizStaffSchedule schedule = new BizStaffSchedule();
+    private BizSchedule compose(StaffScheduleUpsertDTO dto, StaffScheduleSourceEnum source) {
+        BizSchedule schedule = new BizSchedule();
         schedule.setId(dto.getId());
         schedule.setScheduleDate(dto.getScheduleDate());
         schedule.setWeekDay(dto.getScheduleDate().getDayOfWeek().getValue());
@@ -299,11 +299,11 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
         return schedule;
     }
 
-    private BizStaffSchedule sameShiftRow(BizStaffSchedule schedule) {
-        return getOne(new LambdaQueryWrapper<BizStaffSchedule>()
-                .eq(BizStaffSchedule::getEmployeeId, schedule.getEmployeeId())
-                .eq(BizStaffSchedule::getScheduleDate, schedule.getScheduleDate())
-                .eq(BizStaffSchedule::getShiftId, schedule.getShiftId()), false);
+    private BizSchedule sameShiftRow(BizSchedule schedule) {
+        return getOne(new LambdaQueryWrapper<BizSchedule>()
+                .eq(BizSchedule::getEmployeeId, schedule.getEmployeeId())
+                .eq(BizSchedule::getScheduleDate, schedule.getScheduleDate())
+                .eq(BizSchedule::getShiftId, schedule.getShiftId()), false);
     }
 
     /**
@@ -312,16 +312,16 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
      * <p>班次为空（休息/请假行没有班次）必须走 {@code IS NULL}：
      * {@code eq(shiftId, null)} 拼出来是 {@code shift_id = NULL}，在 SQL 里恒不成立。
      */
-    private BizStaffSchedule sameUnitShiftRow(BizStaffSchedule schedule) {
-        LambdaQueryWrapper<BizStaffSchedule> wrapper = new LambdaQueryWrapper<BizStaffSchedule>()
-                .eq(BizStaffSchedule::getEmployeeId, schedule.getEmployeeId())
-                .eq(BizStaffSchedule::getScheduleDate, schedule.getScheduleDate())
-                .eq(BizStaffSchedule::getOrgType, schedule.getOrgType())
-                .eq(BizStaffSchedule::getOrgId, schedule.getOrgId());
+    private BizSchedule sameUnitShiftRow(BizSchedule schedule) {
+        LambdaQueryWrapper<BizSchedule> wrapper = new LambdaQueryWrapper<BizSchedule>()
+                .eq(BizSchedule::getEmployeeId, schedule.getEmployeeId())
+                .eq(BizSchedule::getScheduleDate, schedule.getScheduleDate())
+                .eq(BizSchedule::getOrgType, schedule.getOrgType())
+                .eq(BizSchedule::getOrgId, schedule.getOrgId());
         if (schedule.getShiftId() == null) {
-            wrapper.isNull(BizStaffSchedule::getShiftId);
+            wrapper.isNull(BizSchedule::getShiftId);
         } else {
-            wrapper.eq(BizStaffSchedule::getShiftId, schedule.getShiftId());
+            wrapper.eq(BizSchedule::getShiftId, schedule.getShiftId());
         }
         return getOne(wrapper, false);
     }
@@ -329,7 +329,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
     /**
      * 这条排班落库前，这个人这一天/这一时段是否还是空的。
      */
-    private void assertTimeFree(BizStaffSchedule schedule) {
+    private void assertTimeFree(BizSchedule schedule) {
         assertDayExclusive(schedule);
         if (StaffDutyStatusEnum.isWorking(schedule.getDutyStatus())) {
             assertNoOverlap(schedule);
@@ -339,7 +339,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(Long id) {
-        BizStaffSchedule row = requireById(id);
+        BizSchedule row = requireById(id);
         assertDeptAccessible(row.getDeptId());
         // 唯一键不含删除标志 → 物理删（软删行继续占键，「删了再重排同一天同一班」必撞重复键）
         baseMapper.purgeById(id);
@@ -351,12 +351,12 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void swap(StaffScheduleSwapDTO dto) {
-        BizStaffSchedule from = requireById(dto.getFromScheduleId());
+        BizSchedule from = requireById(dto.getFromScheduleId());
         assertDeptAccessible(from.getDeptId());
         String reason = dto.getReason().trim();
 
         if (dto.getToScheduleId() != null) {
-            BizStaffSchedule to = requireById(dto.getToScheduleId());
+            BizSchedule to = requireById(dto.getToScheduleId());
             if (Objects.equals(from.getEmployeeId(), to.getEmployeeId())) {
                 throw new BusinessException("换班双方不能是同一个人");
             }
@@ -435,28 +435,28 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
         if (unitType != OrgUnitTypeEnum.HOSPITAL && (orgId == null || orgId == ID_NONE)) {
             throw new BusinessException("请选择" + unitType.getLabel());
         }
-        List<BizStaffSchedule> sources = list(new LambdaQueryWrapper<BizStaffSchedule>()
-                .eq(BizStaffSchedule::getOrgType, dto.getOrgType())
-                .eq(BizStaffSchedule::getOrgId, orgId)
-                .ge(BizStaffSchedule::getScheduleDate, dto.getFromStartDate())
-                .le(BizStaffSchedule::getScheduleDate, dto.getFromEndDate())
-                .orderByAsc(BizStaffSchedule::getScheduleDate).orderByAsc(BizStaffSchedule::getId));
+        List<BizSchedule> sources = list(new LambdaQueryWrapper<BizSchedule>()
+                .eq(BizSchedule::getOrgType, dto.getOrgType())
+                .eq(BizSchedule::getOrgId, orgId)
+                .ge(BizSchedule::getScheduleDate, dto.getFromStartDate())
+                .le(BizSchedule::getScheduleDate, dto.getFromEndDate())
+                .orderByAsc(BizSchedule::getScheduleDate).orderByAsc(BizSchedule::getId));
         if (sources.isEmpty()) {
             throw new BusinessException("来源区间内没有排班可复制");
         }
         int copied = 0;
-        for (BizStaffSchedule source : sources) {
+        for (BizSchedule source : sources) {
             LocalDate targetDate = dto.getToStartDate().plusDays(
                     source.getScheduleDate().toEpochDay() - dto.getFromStartDate().toEpochDay());
-            BizStaffSchedule exist = getOne(new LambdaQueryWrapper<BizStaffSchedule>()
-                    .eq(BizStaffSchedule::getEmployeeId, source.getEmployeeId())
-                    .eq(BizStaffSchedule::getScheduleDate, targetDate)
-                    .eq(BizStaffSchedule::getShiftId, source.getShiftId()), false);
+            BizSchedule exist = getOne(new LambdaQueryWrapper<BizSchedule>()
+                    .eq(BizSchedule::getEmployeeId, source.getEmployeeId())
+                    .eq(BizSchedule::getScheduleDate, targetDate)
+                    .eq(BizSchedule::getShiftId, source.getShiftId()), false);
             if (exist != null) {
                 // 已经排过就跳过：整周复制是「补齐空缺」，不是把人家的班覆盖掉
                 continue;
             }
-            BizStaffSchedule copy = new BizStaffSchedule();
+            BizSchedule copy = new BizSchedule();
             copy.setScheduleDate(targetDate);
             copy.setWeekDay(targetDate.getDayOfWeek().getValue());
             copy.setOrgType(source.getOrgType());
@@ -497,16 +497,16 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
         LocalDate today = at.toLocalDate();
         LocalTime now = at.toLocalTime();
         // 跨零点班归开始日：凌晨两点在岗的人是「昨天夜班」的那一行，只查今天会查不到责任人
-        List<BizStaffSchedule> rows = list(new LambdaQueryWrapper<BizStaffSchedule>()
-                .in(BizStaffSchedule::getScheduleDate, Arrays.asList(today.minusDays(1), today))
-                .eq(BizStaffSchedule::getDutyStatus, StaffDutyStatusEnum.WORK.getCode())
-                .eq(orgType != null, BizStaffSchedule::getOrgType, orgType)
-                .eq(orgId != null, BizStaffSchedule::getOrgId, orgId)
-                .eq(staffType != null, BizStaffSchedule::getStaffType, staffType)
-                .orderByAsc(BizStaffSchedule::getStartTime).orderByAsc(BizStaffSchedule::getId));
+        List<BizSchedule> rows = list(new LambdaQueryWrapper<BizSchedule>()
+                .in(BizSchedule::getScheduleDate, Arrays.asList(today.minusDays(1), today))
+                .eq(BizSchedule::getDutyStatus, StaffDutyStatusEnum.WORK.getCode())
+                .eq(orgType != null, BizSchedule::getOrgType, orgType)
+                .eq(orgId != null, BizSchedule::getOrgId, orgId)
+                .eq(staffType != null, BizSchedule::getStaffType, staffType)
+                .orderByAsc(BizSchedule::getStartTime).orderByAsc(BizSchedule::getId));
         Map<Long, BizShift> shifts = shiftService.mapByIds(shiftIdsOf(rows));
         List<StaffScheduleVO> vos = new ArrayList<>();
-        for (BizStaffSchedule row : rows) {
+        for (BizSchedule row : rows) {
             if (!ShiftCoverUtil.covers(now, row.getStartTime(), row.getEndTime())) {
                 continue;
             }
@@ -520,7 +520,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
      * 共用出参类不等于共用出参宽度，把 32 列一股脑塞给一个只显示 10 列的标签列表，
      * 等于让分诊台每次刷新都多载两倍正文。
      */
-    private StaffScheduleVO toOnDutyVO(BizStaffSchedule row, BizShift shift) {
+    private StaffScheduleVO toOnDutyVO(BizSchedule row, BizShift shift) {
         StaffScheduleVO vo = new StaffScheduleVO();
         vo.setEmployeeId(row.getEmployeeId());
         vo.setEmployeeName(row.getEmployeeName());
@@ -540,17 +540,17 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
     }
 
     @Override
-    public List<BizStaffSchedule> listDay(LocalDate date, Integer orgType, Long orgId, Integer staffType) {
-        return list(scoped(new LambdaQueryWrapper<BizStaffSchedule>()
-                .eq(BizStaffSchedule::getScheduleDate, date)
-                .eq(orgType != null, BizStaffSchedule::getOrgType, orgType)
-                .eq(orgId != null, BizStaffSchedule::getOrgId, orgId)
-                .eq(staffType != null, BizStaffSchedule::getStaffType, staffType)
-                .orderByAsc(BizStaffSchedule::getStartTime).orderByAsc(BizStaffSchedule::getId)));
+    public List<BizSchedule> listDay(LocalDate date, Integer orgType, Long orgId, Integer staffType) {
+        return list(scoped(new LambdaQueryWrapper<BizSchedule>()
+                .eq(BizSchedule::getScheduleDate, date)
+                .eq(orgType != null, BizSchedule::getOrgType, orgType)
+                .eq(orgId != null, BizSchedule::getOrgId, orgId)
+                .eq(staffType != null, BizSchedule::getStaffType, staffType)
+                .orderByAsc(BizSchedule::getStartTime).orderByAsc(BizSchedule::getId)));
     }
 
     @Override
-    public boolean releasesClinicSource(BizStaffSchedule schedule) {
+    public boolean releasesClinicSource(BizSchedule schedule) {
         if (schedule == null) {
             return false;
         }
@@ -606,8 +606,8 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
         return new ArrayList<>(merged.values());
     }
 
-    private BizStaffSchedule requireById(Long id) {
-        BizStaffSchedule row = id == null ? null : getById(id);
+    private BizSchedule requireById(Long id) {
+        BizSchedule row = id == null ? null : getById(id);
         if (row == null) {
             throw new BusinessException("排班记录不存在或已删除，请刷新后重试");
         }
@@ -619,7 +619,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
      * <br>全院级一定要写成 0 而不是留空 —— 数据范围收口靠「科室在授权集合内或单元类型为全院」，
      * 科室为空时这个或式子永远不成立，受限角色会静默看不到全院班。
      */
-    private void applyUnit(BizStaffSchedule schedule, Integer orgType, Long orgId) {
+    private void applyUnit(BizSchedule schedule, Integer orgType, Long orgId) {
         OrgUnitTypeEnum unitType = OrgUnitTypeEnum.fromCode(orgType);
         if (unitType == null) {
             throw new BusinessException("排班单元类型只允许 " + OrgUnitTypeEnum.whitelistText());
@@ -664,7 +664,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
     /**
      * 排班对象与岗位类别：姓名/工号取员工快照，岗位类别由「人 × 科室 × 角色」上的角色派生。
      */
-    private void applyEmployee(BizStaffSchedule schedule, Long employeeId, Long employeePostId) {
+    private void applyEmployee(BizSchedule schedule, Long employeeId, Long employeePostId) {
         SysEmployee employee = employeeId == null ? null : sysEmployeeMapper.selectById(employeeId);
         if (employee == null) {
             throw new BusinessException("所选排班对象不存在或已删除，请重新选择");
@@ -729,7 +729,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
     /**
      * 班次带出时间与班别：上班必须有班次，非上班一律清空班次与时间。
      */
-    private void applyShift(BizStaffSchedule schedule, Long shiftId, StaffDutyStatusEnum status) {
+    private void applyShift(BizSchedule schedule, Long shiftId, StaffDutyStatusEnum status) {
         if (status != StaffDutyStatusEnum.WORK) {
             schedule.setShiftId(ID_NONE);
             schedule.setStartTime(null);
@@ -752,7 +752,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
     /**
      * 换班/代班时班次不变，只需按新人的岗位类别复核这条班次还能不能给他用。
      */
-    private void applyShiftForSwap(BizStaffSchedule schedule, Long shiftId) {
+    private void applyShiftForSwap(BizSchedule schedule, Long shiftId) {
         if (shiftId == null || shiftId == ID_NONE) {
             return;
         }
@@ -783,7 +783,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
      * 出诊标记只在「岗位有号源属性 + 非听班」时才可能为是。
      * <br>听班不放号：挂号系统给一个在家待命的人放号，患者到了没人看，那是投诉不是数据问题。
      */
-    private void applyClinicFlag(BizStaffSchedule schedule) {
+    private void applyClinicFlag(BizSchedule schedule) {
         boolean mayRelease = StaffTypeEnum.hasSource(schedule.getStaffType())
                 && AttendModeEnum.releasesSource(schedule.getAttendMode());
         if (!mayRelease) {
@@ -791,7 +791,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
         }
     }
 
-    private boolean isDuplicated(BizStaffSchedule schedule, Long... exceptIds) {
+    private boolean isDuplicated(BizSchedule schedule, Long... exceptIds) {
         List<Long> skip = new ArrayList<>();
         if (schedule.getId() != null) {
             skip.add(schedule.getId());
@@ -802,17 +802,17 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
             }
         }
         // 换班要连对方那条一起排除：它此刻还占着「对方 + 这天 + 这个班」这个键，写完才让开
-        return count(new LambdaQueryWrapper<BizStaffSchedule>()
-                .eq(BizStaffSchedule::getEmployeeId, schedule.getEmployeeId())
-                .eq(BizStaffSchedule::getScheduleDate, schedule.getScheduleDate())
-                .eq(BizStaffSchedule::getShiftId, schedule.getShiftId())
-                .notIn(!skip.isEmpty(), BizStaffSchedule::getId, skip)) > 0;
+        return count(new LambdaQueryWrapper<BizSchedule>()
+                .eq(BizSchedule::getEmployeeId, schedule.getEmployeeId())
+                .eq(BizSchedule::getScheduleDate, schedule.getScheduleDate())
+                .eq(BizSchedule::getShiftId, schedule.getShiftId())
+                .notIn(!skip.isEmpty(), BizSchedule::getId, skip)) > 0;
     }
 
     /**
      * 换班/代班落库前：承接的人不能已经排过这个班，那天也不能已经请了假
      */
-    private void assertSwappable(BizStaffSchedule schedule, Long... exceptIds) {
+    private void assertSwappable(BizSchedule schedule, Long... exceptIds) {
         if (isDuplicated(schedule, exceptIds)) {
             throw new BusinessException("「" + schedule.getEmployeeName() + "」在 " + schedule.getScheduleDate()
                     + " 已经排过「" + shiftLabelOf(schedule) + "」，不能再接这个班");
@@ -824,7 +824,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
      * 休息/请假/培训/停班按<b>整天</b>占位，与「上班」互斥：同一天既请假又出诊，
      * 号源照放、人却不在，这是投诉不是数据问题。
      */
-    private void assertDayExclusive(BizStaffSchedule schedule) {
+    private void assertDayExclusive(BizSchedule schedule) {
         if (countDayConflict(schedule) == 0) {
             return;
         }
@@ -845,17 +845,17 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
      * 同时又在门诊科室上一班 —— 这两件事不矛盾，时间冲突由 {@link #assertNoOverlap} 按班次时段兜。
      * 按「人 × 日」判互斥会让任何一个跨单元支援都写不进去。
      */
-    private long countDayConflict(BizStaffSchedule schedule) {
-        LambdaQueryWrapper<BizStaffSchedule> wrapper = new LambdaQueryWrapper<BizStaffSchedule>()
-                .eq(BizStaffSchedule::getEmployeeId, schedule.getEmployeeId())
-                .eq(BizStaffSchedule::getScheduleDate, schedule.getScheduleDate())
-                .eq(BizStaffSchedule::getOrgType, schedule.getOrgType())
-                .eq(BizStaffSchedule::getOrgId, schedule.getOrgId())
-                .ne(schedule.getId() != null, BizStaffSchedule::getId, schedule.getId());
+    private long countDayConflict(BizSchedule schedule) {
+        LambdaQueryWrapper<BizSchedule> wrapper = new LambdaQueryWrapper<BizSchedule>()
+                .eq(BizSchedule::getEmployeeId, schedule.getEmployeeId())
+                .eq(BizSchedule::getScheduleDate, schedule.getScheduleDate())
+                .eq(BizSchedule::getOrgType, schedule.getOrgType())
+                .eq(BizSchedule::getOrgId, schedule.getOrgId())
+                .ne(schedule.getId() != null, BizSchedule::getId, schedule.getId());
         if (StaffDutyStatusEnum.isWorking(schedule.getDutyStatus())) {
-            wrapper.ne(BizStaffSchedule::getDutyStatus, StaffDutyStatusEnum.WORK.getCode());
+            wrapper.ne(BizSchedule::getDutyStatus, StaffDutyStatusEnum.WORK.getCode());
         } else {
-            wrapper.eq(BizStaffSchedule::getDutyStatus, StaffDutyStatusEnum.WORK.getCode());
+            wrapper.eq(BizSchedule::getDutyStatus, StaffDutyStatusEnum.WORK.getCode());
         }
         return count(wrapper);
     }
@@ -864,7 +864,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
      * 同一个人时间重叠校验：把每条排班摊成「日期 + 起止时刻」的时间段（跨零点班的结束算到次日），
      * 再与相邻自然日的行比对。命中重叠直接拦，报错带上两边的人可读信息。
      */
-    private void assertNoOverlap(BizStaffSchedule schedule, Long... exceptIds) {
+    private void assertNoOverlap(BizSchedule schedule, Long... exceptIds) {
         List<Long> skip = new ArrayList<>(Arrays.asList(exceptIds));
         if (schedule.getId() != null) {
             skip.add(schedule.getId());
@@ -873,17 +873,17 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
             return;
         }
         LocalDate date = schedule.getScheduleDate();
-        List<BizStaffSchedule> neighbours = list(new LambdaQueryWrapper<BizStaffSchedule>()
-                .eq(BizStaffSchedule::getEmployeeId, schedule.getEmployeeId())
-                .eq(BizStaffSchedule::getDutyStatus, StaffDutyStatusEnum.WORK.getCode())
-                .ge(BizStaffSchedule::getScheduleDate, date.minusDays(1))
-                .le(BizStaffSchedule::getScheduleDate, date.plusDays(1))
-                .notIn(!skip.isEmpty(), BizStaffSchedule::getId, skip));
+        List<BizSchedule> neighbours = list(new LambdaQueryWrapper<BizSchedule>()
+                .eq(BizSchedule::getEmployeeId, schedule.getEmployeeId())
+                .eq(BizSchedule::getDutyStatus, StaffDutyStatusEnum.WORK.getCode())
+                .ge(BizSchedule::getScheduleDate, date.minusDays(1))
+                .le(BizSchedule::getScheduleDate, date.plusDays(1))
+                .notIn(!skip.isEmpty(), BizSchedule::getId, skip));
         TimeRange mine = intervalOf(schedule, date);
         if (mine == null) {
             return;
         }
-        for (BizStaffSchedule other : neighbours) {
+        for (BizSchedule other : neighbours) {
             if (Objects.equals(other.getShiftId(), schedule.getShiftId())
                     && Objects.equals(other.getScheduleDate(), date)) {
                 continue;
@@ -903,7 +903,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
     /**
      * 排班行摊成时间段：跨零点（结束不晚于开始）的结束点算到次日；时间脏了返回 null（不猜）
      */
-    private TimeRange intervalOf(BizStaffSchedule row, LocalDate date) {
+    private TimeRange intervalOf(BizSchedule row, LocalDate date) {
         LocalTime start = ShiftCoverUtil.parseShiftTime(row.getStartTime());
         LocalTime end = ShiftCoverUtil.parseShiftTime(row.getEndTime());
         if (start == null || end == null || date == null) {
@@ -914,7 +914,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
         return new TimeRange(from, to);
     }
 
-    private String timeText(BizStaffSchedule row) {
+    private String timeText(BizSchedule row) {
         return shiftLabelOf(row) + " " + row.getStartTime() + "~" + row.getEndTime();
     }
 
@@ -937,21 +937,21 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
      * 数据范围收口：受限岗位只能看自己科室的行；全院级行对所有人开放 ——
      * 「今天全院谁负责」不是敏感信息，收掉等于让人半夜找不到打电话的对象。
      */
-    private LambdaQueryWrapper<BizStaffSchedule> scoped(LambdaQueryWrapper<BizStaffSchedule> wrapper) {
+    private LambdaQueryWrapper<BizSchedule> scoped(LambdaQueryWrapper<BizSchedule> wrapper) {
         if (!deptScopeService.isScoped()) {
             return wrapper;
         }
         Set<Long> allowed = deptScopeService.allowedDeptIds();
         if (allowed == null || allowed.isEmpty()) {
-            wrapper.eq(BizStaffSchedule::getOrgType, OrgUnitTypeEnum.HOSPITAL.getCode());
+            wrapper.eq(BizSchedule::getOrgType, OrgUnitTypeEnum.HOSPITAL.getCode());
             return wrapper;
         }
-        wrapper.and(w -> w.in(BizStaffSchedule::getDeptId, allowed)
-                .or().eq(BizStaffSchedule::getOrgType, OrgUnitTypeEnum.HOSPITAL.getCode()));
+        wrapper.and(w -> w.in(BizSchedule::getDeptId, allowed)
+                .or().eq(BizSchedule::getOrgType, OrgUnitTypeEnum.HOSPITAL.getCode()));
         return wrapper;
     }
 
-    private StaffScheduleVO toVO(BizStaffSchedule row, BizShift shift) {
+    private StaffScheduleVO toVO(BizSchedule row, BizShift shift) {
         StaffScheduleVO vo = new StaffScheduleVO();
         vo.setId(row.getId());
         vo.setScheduleDate(row.getScheduleDate());
@@ -993,7 +993,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
         return weekDay == null || weekDay < 1 || weekDay > DAYS_OF_WEEK ? null : WEEK_DAY_TEXTS[weekDay - 1];
     }
 
-    private String shiftLabelOf(BizStaffSchedule schedule) {
+    private String shiftLabelOf(BizSchedule schedule) {
         if (schedule.getShiftId() == null || schedule.getShiftId() == ID_NONE) {
             return StaffDutyStatusEnum.getText(schedule.getDutyStatus());
         }
@@ -1001,9 +1001,9 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
         return name == null ? "未命名班次" : name;
     }
 
-    private Set<Long> shiftIdsOf(List<BizStaffSchedule> rows) {
+    private Set<Long> shiftIdsOf(List<BizSchedule> rows) {
         Set<Long> ids = new HashSet<>();
-        for (BizStaffSchedule row : rows) {
+        for (BizSchedule row : rows) {
             if (row.getShiftId() != null && row.getShiftId() != ID_NONE) {
                 ids.add(row.getShiftId());
             }

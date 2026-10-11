@@ -10,14 +10,14 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.appoint.dto.*;
 import com.his.appoint.entity.BizAppointInfo;
 import com.his.appoint.entity.BizQueue;
-import com.his.appoint.entity.BizSchedule;
+import com.his.appoint.entity.BizClinicSource;
 import com.his.appoint.entity.BizTriageRecord;
 import com.his.appoint.enums.*;
 import com.his.appoint.enums.OpdLogStatusEnum;
 import com.his.appoint.mapper.*;
 import com.his.appoint.service.DoctorStatusCacheService;
 import com.his.appoint.service.BizQueueService;
-import com.his.appoint.service.BizScheduleService;
+import com.his.appoint.service.BizClinicSourceService;
 import com.his.appoint.trigger.DayEndSettleTrigger;
 import com.his.appoint.vo.*;
 import com.his.charge.api.AppointChargeGateway;
@@ -58,7 +58,7 @@ import java.util.stream.Collectors;
 public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> implements BizQueueService {
     private final BizPatientService bizPatientService;
 
-    private final BizScheduleMapper bizScheduleMapper;
+    private final BizClinicSourceMapper bizScheduleMapper;
 
     private final RedisSequenceService redisSequenceService;
 
@@ -83,7 +83,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
     private final SysMessageService sysMessageService;
 
     @Lazy
-    private final BizScheduleService bizScheduleService;
+    private final BizClinicSourceService bizScheduleService;
 
     private final DeptScopeService deptScopeService;
 
@@ -142,7 +142,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         if (vo.getRoomId() != null || registInfo == null || registInfo.getScheduleId() == null) {
             return;
         }
-        BizSchedule schedule = bizScheduleMapper
+        BizClinicSource schedule = bizScheduleMapper
                 .selectById(registInfo.getScheduleId());
         if (schedule != null) {
             vo.setRoomId(schedule.getRoomId());
@@ -312,7 +312,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         queue.setArriveTime(LocalDateTime.now());
         queue.setTriageLevel(TriageLevelEnum.NON_URGENT.getCode());
         queue.setTriageStatus(0);
-        BizSchedule schedule = appointInfo.getScheduleId() != null
+        BizClinicSource schedule = appointInfo.getScheduleId() != null
                 ? bizScheduleMapper.selectById(appointInfo.getScheduleId())
                 : null;
         if (schedule != null) {
@@ -337,8 +337,8 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
 
         // 根据排班ID获取诊室信息，取呼叨代号
         if (scheduleId != null) {
-            BizScheduleMapper scheduleMapper = bizScheduleMapper;
-            BizSchedule schedule = scheduleMapper.selectById(scheduleId);
+            BizClinicSourceMapper scheduleMapper = bizScheduleMapper;
+            BizClinicSource schedule = scheduleMapper.selectById(scheduleId);
             if (schedule != null && schedule.getRoomId() != null) {
                 SysClinicRoom room = sysClinicRoomService.getById(schedule.getRoomId());
                 if (room != null && TextUtil.hasText(room.getQueuePrefix())) {
@@ -870,15 +870,15 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
     @Override
     public List<DoctorConsultingVO> getDoctorConsultingInfo(Long deptId) {
         // 查询今日排班，获取科室下的医生
-        BizScheduleMapper scheduleMapper = bizScheduleMapper;
-        LambdaQueryWrapper<BizSchedule> scheduleWrapper = new LambdaQueryWrapper<>();
+        BizClinicSourceMapper scheduleMapper = bizScheduleMapper;
+        LambdaQueryWrapper<BizClinicSource> scheduleWrapper = new LambdaQueryWrapper<>();
         List<Long> scoped = deptScopeService.scopedDeptIds(deptId);
-        scheduleWrapper.in(scoped != null, BizSchedule::getDeptId, scoped)
-                .eq(BizSchedule::getScheduleDate, LocalDate.now());
-        List<BizSchedule> schedules = scheduleMapper.selectList(scheduleWrapper);
+        scheduleWrapper.in(scoped != null, BizClinicSource::getDeptId, scoped)
+                .eq(BizClinicSource::getScheduleDate, LocalDate.now());
+        List<BizClinicSource> schedules = scheduleMapper.selectList(scheduleWrapper);
 
         List<DoctorConsultingVO> result = new ArrayList<>();
-        for (BizSchedule schedule : schedules) {
+        for (BizClinicSource schedule : schedules) {
             // 从Redis获取医生状态
             int status = doctorStatusCacheService.getStatus(schedule.getDoctorId());
 
@@ -938,14 +938,14 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
                 .in(scoped != null, BizAppointInfo::getDeptId, scoped)));
 
         // 从Redis获取坐诊医生数量
-        BizScheduleMapper scheduleMapper = bizScheduleMapper;
-        LambdaQueryWrapper<BizSchedule> scheduleWrapper = new LambdaQueryWrapper<>();
-        scheduleWrapper.in(scoped != null, BizSchedule::getDeptId, scoped)
-                .eq(BizSchedule::getScheduleDate, LocalDate.now());
-        List<BizSchedule> schedules = scheduleMapper.selectList(scheduleWrapper);
+        BizClinicSourceMapper scheduleMapper = bizScheduleMapper;
+        LambdaQueryWrapper<BizClinicSource> scheduleWrapper = new LambdaQueryWrapper<>();
+        scheduleWrapper.in(scoped != null, BizClinicSource::getDeptId, scoped)
+                .eq(BizClinicSource::getScheduleDate, LocalDate.now());
+        List<BizClinicSource> schedules = scheduleMapper.selectList(scheduleWrapper);
 
         int doctorCount = 0;
-        for (BizSchedule schedule : schedules) {
+        for (BizClinicSource schedule : schedules) {
             int status = doctorStatusCacheService.getStatus(schedule.getDoctorId());
             if (status > 0) {
                 doctorCount++;
@@ -1141,7 +1141,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         String roomName = queue.getRoomName();
         if (roomId == null && queue.getRegistId() != null) {
             BizAppointInfo regist = bizAppointInfoMapper.selectById(queue.getRegistId());
-            BizSchedule schedule = regist != null && regist.getScheduleId() != null
+            BizClinicSource schedule = regist != null && regist.getScheduleId() != null
                     ? bizScheduleMapper.selectById(regist.getScheduleId())
                     : null;
             if (schedule != null) {
@@ -1349,7 +1349,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
     /**
      * 本次分诊的当班护士 —— 取当天护理排班上此刻在岗的人。
      *
-     * <p>取值顺序见 {@link BizScheduleService#pickDutyStaff}：优先本人（若本人就在当班名单里），
+     * <p>取值顺序见 {@link BizClinicSourceService#pickDutyStaff}：优先本人（若本人就在当班名单里），
      * 否则取此刻在岗/当日最近一班。<b>排班查不到就返回 null，不用登录人兜底</b> ——
      * 分诊是临床动作，责任人必须是真的当班护士；没有当班记录就留空，
      * 页面上显示「未记录护士」比显示一个没上班的人诚实。

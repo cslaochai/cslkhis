@@ -8,16 +8,16 @@ import com.his.appoint.api.MedicalRecordRefGateway;
 import com.his.appoint.dto.*;
 import com.his.appoint.entity.BizAppointInfo;
 import com.his.appoint.entity.BizQueue;
-import com.his.appoint.entity.BizSchedule;
-import com.his.appoint.entity.BizScheduleSlot;
+import com.his.appoint.entity.BizClinicSource;
+import com.his.appoint.entity.BizClinicSourceSlot;
 import com.his.appoint.enums.AppointStatusEnum;
 import com.his.appoint.enums.QueueStatusEnum;
 import com.his.appoint.enums.RevisitSourceEnum;
 import com.his.appoint.enums.VisitTypeEnum;
 import com.his.appoint.mapper.BizAppointInfoMapper;
 import com.his.appoint.mapper.BizQueueMapper;
-import com.his.appoint.mapper.BizScheduleMapper;
-import com.his.appoint.mapper.BizScheduleSlotMapper;
+import com.his.appoint.mapper.BizClinicSourceMapper;
+import com.his.appoint.mapper.BizClinicSourceSlotMapper;
 import com.his.appoint.service.BizAppointService;
 import com.his.appoint.service.BizRevisitFeePolicyService;
 import com.his.appoint.trigger.DayEndSettleTrigger;
@@ -39,7 +39,7 @@ import com.his.patient.entity.BizPatient;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.service.BizPatientService;
 import com.his.patient.service.PatientGuardianService;
-import com.his.system.entity.BizStaffSchedule;
+import com.his.system.entity.BizSchedule;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeService;
 import com.his.system.service.ShiftService;
@@ -70,9 +70,9 @@ import java.util.Map;
 public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizAppointInfo> implements BizAppointService {
     private final DeptScopeService deptScopeService;
 
-    private final BizScheduleMapper bizScheduleMapper;
+    private final BizClinicSourceMapper bizScheduleMapper;
 
-    private final BizScheduleSlotMapper bizScheduleSlotMapper;
+    private final BizClinicSourceSlotMapper bizScheduleSlotMapper;
 
     private final BizQueueMapper bizQueueMapper;
 
@@ -426,8 +426,8 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         appointInfo.setRevisitSource(revisit ? upsertDTO.getRevisitSource() : null);
 
         boolean noSchedule = revisit && RevisitSourceEnum.needsNoSchedule(upsertDTO.getRevisitSource());
-        BizSchedule schedule = null;
-        BizScheduleSlot slot = null;
+        BizClinicSource schedule = null;
+        BizClinicSourceSlot slot = null;
         if (appointInfo.getScheduleId() != null) {
             if (noSchedule) {
                 throw new BusinessException("当日回诊不占号源，请勿选择排班");
@@ -441,7 +441,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
                         + StaffTypeEnum.getText(schedule.getStaffType()) + "」岗位出勤，不对外放号");
             }
             if (schedule.getStaffScheduleId() != null) {
-                BizStaffSchedule core = staffScheduleService.getById(schedule.getStaffScheduleId());
+                BizSchedule core = staffScheduleService.getById(schedule.getStaffScheduleId());
                 if (!staffScheduleService.releasesClinicSource(core)) {
                     throw new BusinessException(core == null
                             ? "该号源对应的岗位排班已不存在，请到「全院排班」重新排班后再挂号"
@@ -628,7 +628,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         }
 
         RevisitFeePreviewVO vo = new RevisitFeePreviewVO();
-        BizSchedule schedule = null;
+        BizClinicSource schedule = null;
         if (noSchedule) {
             // 与 addAppoint 里「scheduleId 为空」那条分支同口径：不占号源，科室/医生取当前登录人
             CurrentUser currentUser = UserUtils.getCurrentUser();
@@ -706,7 +706,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
      */
     private BizRevisitFeePolicyService.RevisitFeeContext buildRevisitFeeContext(
             boolean revisit, Integer revisitSource, MedicalRecordRefGateway.RecordBrief origin,
-            BizSchedule schedule, Long targetDeptId, Long targetDoctorId, LocalDate targetVisitDate) {
+            BizClinicSource schedule, Long targetDeptId, Long targetDoctorId, LocalDate targetVisitDate) {
         BizRevisitFeePolicyService.RevisitFeeContext context = new BizRevisitFeePolicyService.RevisitFeeContext();
         context.setRevisitSource(revisit ? revisitSource : null);
         context.setRegistFee(schedule == null || schedule.getRegistFee() == null
@@ -737,7 +737,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
     /**
      * 就诊时段校验：HH:mm 格式、30 分钟粒度、必须落在所选班次时段内
      */
-    private void validateSlotTime(String slotTime, BizSchedule schedule) {
+    private void validateSlotTime(String slotTime, BizClinicSource schedule) {
         if (slotTime == null || !slotTime.matches("^([01]\\d|2[0-3]):[0-5]\\d$")) {
             throw new BusinessException("就诊时段格式不合法（HH:mm）");
         }
@@ -1002,7 +1002,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
                 && registInfo.getSlotId() != null
                 && !registInfo.getSlotId().equals(oldSlotId);
         if (slotChanging) {
-            BizScheduleSlot newSlot = bizScheduleSlotMapper.selectById(registInfo.getSlotId());
+            BizClinicSourceSlot newSlot = bizScheduleSlotMapper.selectById(registInfo.getSlotId());
             if (newSlot == null || !existing.getScheduleId().equals(newSlot.getScheduleId())) {
                 throw new BusinessException("新时间段不存在或已调整，请重新选择");
             }
@@ -1049,11 +1049,11 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
                 }
             }
 
-            BizSchedule newSchedule = bizScheduleMapper.selectById(registInfo.getScheduleId());
+            BizClinicSource newSchedule = bizScheduleMapper.selectById(registInfo.getScheduleId());
             if (newSchedule == null) {
                 throw new BusinessException("新排班信息不存在");
             }
-            BizScheduleSlot newSlot = null;
+            BizClinicSourceSlot newSlot = null;
             if (registInfo.getSlotId() != null) {
                 newSlot = bizScheduleSlotMapper.selectById(registInfo.getSlotId());
                 if (newSlot == null || !newSchedule.getId().equals(newSlot.getScheduleId())) {
