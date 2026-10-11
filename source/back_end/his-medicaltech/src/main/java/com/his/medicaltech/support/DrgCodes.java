@@ -13,10 +13,6 @@ import java.util.Set;
 
 /**
  * 分组规则用的 ICD 码归一（集合表与病案首页两侧比码前的唯一口径）。
- *
- * <p>官方 3.0 集合给的是医保版贯标码（带点，如 {@code A00.000x001}），首页里的写法却可能缺点、
- * 带尾随空格或大小写不一；命中判据是「整码精确相等」而不是亚目前缀，所以两侧必须先归一再比，
- * 否则同一个码会因为一个点而判成未入组，且零报错。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DrgCodes {

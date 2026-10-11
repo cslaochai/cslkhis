@@ -5,16 +5,20 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.his.charge.api.AppointGateway;
-import com.his.charge.api.EmrGateway;
-import com.his.charge.api.PatientGateway;
 import com.his.charge.entity.*;
+import com.his.system.api.service.AppointApi;
+import com.his.system.api.service.EmrApi;
+import com.his.system.api.service.PatientApi;
 import com.his.charge.enums.InsuranceReportStatusEnum;
 import com.his.charge.enums.InsuranceReportTypeEnum;
 import com.his.charge.mapper.*;
 import com.his.charge.service.InsuranceChannelService;
 import com.his.charge.service.InsuranceSettlementService;
 import com.his.charge.vo.*;
+import com.his.system.api.vo.AdmissionBriefVO;
+import com.his.system.api.vo.MedicalRecordBriefVO;
+import com.his.system.api.vo.PatientBriefVO;
+import com.his.system.api.vo.RegistBriefVO;
 import com.his.common.base.PageResult;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
@@ -50,8 +54,8 @@ public class InsuranceSettlementServiceImpl
     private static final int AMOUNT_SCALE = 2;
     private static final BigDecimal HUNDRED = new BigDecimal("100");
 
-    private final PatientGateway patientGateway;
-    private final AppointGateway appointGateway;
+    private final PatientApi patientApi;
+    private final AppointApi appointApi;
     private final BizSettlementBillMapper bizSettlementBillMapper;
     private final BizSettlementBillItemMapper bizSettlementBillItemMapper;
     private final BizPaymentTxnMapper bizPaymentTxnMapper;
@@ -60,7 +64,7 @@ public class InsuranceSettlementServiceImpl
     private final InsuranceChannelService insuranceChannelService;
     private final RedisSequenceService redisSequenceService;
     private final ObjectMapper objectMapper;
-    private final EmrGateway emrGateway;
+    private final EmrApi emrApi;
 
     // 查询
 
@@ -102,7 +106,7 @@ public class InsuranceSettlementServiceImpl
 
         // 1. 患者档案补齐性别/年龄/证号/医保号（清单只是快照，允许有空）
         PatientBriefVO patient = settlement.getPatientId() == null ? null
-                : patientGateway.findPatient(settlement.getPatientId());
+                : patientApi.findPatient(settlement.getPatientId());
         if (patient != null) {
             if (!TextUtil.hasText(vo.getPatientName())) {
                 vo.setPatientName(patient.getPatientName());
@@ -128,7 +132,7 @@ public class InsuranceSettlementServiceImpl
 
         // 2. 挂号（门诊）/入院（住院）：科室、医生、就诊日期
         RegistBriefVO regist = settlement.getRegistId() == null ? null
-                : appointGateway.findRegist(settlement.getRegistId());
+                : appointApi.findRegist(settlement.getRegistId());
         if (regist != null) {
             vo.setRegistNo(regist.getRegistNo());
             if (vo.getVisitDate() == null) {
@@ -151,7 +155,7 @@ public class InsuranceSettlementServiceImpl
             }
         } else if (EncounterTypeEnum.INPATIENT.getCode().equals(settlement.getEncounterType())
                 && settlement.getEncounterId() != null) {
-            AdmissionBriefVO admission = patientGateway.findAdmission(settlement.getEncounterId());
+            AdmissionBriefVO admission = patientApi.findAdmission(settlement.getEncounterId());
             if (admission != null) {
                 vo.setAdmissionNo(admission.getAdmissionNo());
                 vo.setVisitDate(admission.getAdmitTime() == null ? null : admission.getAdmitTime().toLocalDate());
@@ -248,7 +252,7 @@ public class InsuranceSettlementServiceImpl
         Long registId = EncounterTypeEnum.OUTPATIENT.getCode().equals(bill.getEncounterType())
                 ? bill.getEncounterId() : null;
         settlement.setRegistId(registId);
-        RegistBriefVO regist = registId == null ? null : appointGateway.findRegist(registId);
+        RegistBriefVO regist = registId == null ? null : appointApi.findRegist(registId);
         settlement.setDeptId(regist != null ? regist.getDeptId() : firstDeptId(items));
         settlement.setDeptName(regist != null ? regist.getDeptName() : firstDeptName(items));
         settlement.setDoctorId(regist == null ? null : regist.getDoctorId());
@@ -257,7 +261,7 @@ public class InsuranceSettlementServiceImpl
         settlement.setSettlementType(bill.getSettlementMode());
         settlement.setInsuranceType(bill.getInsuranceType());
         settlement.setCoverageRatio(coverageRatio);
-        fillPatientIdentity(settlement, bill.getPatientId() == null ? null : patientGateway.findPatient(bill.getPatientId()));
+        fillPatientIdentity(settlement, bill.getPatientId() == null ? null : patientApi.findPatient(bill.getPatientId()));
         fillDiagnosis(settlement);
 
         BigDecimal net = NumUtil.scale(NumUtil.orZero(bill.getTotalAmount()).subtract(NumUtil.orZero(bill.getDiscountAmount())), AMOUNT_SCALE);
@@ -708,7 +712,7 @@ public class InsuranceSettlementServiceImpl
         if (settlement.getRegistId() == null) {
             return;
         }
-        MedicalRecordBriefVO record = emrGateway.findLatestMedicalRecordByRegist(settlement.getRegistId());
+        MedicalRecordBriefVO record = emrApi.findLatestMedicalRecordByRegist(settlement.getRegistId());
         if (record == null) {
             return;
         }
@@ -852,7 +856,7 @@ public class InsuranceSettlementServiceImpl
     }
 
     private MedicalRecordBriefVO latestMedicalRecord(Long patientId) {
-        return emrGateway.findLatestMedicalRecordByPatient(patientId);
+        return emrApi.findLatestMedicalRecordByPatient(patientId);
     }
 
     private Long firstDeptId(List<BizSettlementBillItem> items) {

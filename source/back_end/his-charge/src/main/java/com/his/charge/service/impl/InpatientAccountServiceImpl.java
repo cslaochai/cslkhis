@@ -3,7 +3,7 @@ package com.his.charge.service.impl;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.charge.api.PatientGateway;
+import com.his.system.api.service.PatientApi;
 import com.his.charge.dto.*;
 import com.his.charge.entity.BizAlert;
 import com.his.charge.entity.BizFeeRecord;
@@ -14,6 +14,8 @@ import com.his.charge.mapper.BizAlertMapper;
 import com.his.charge.mapper.BizPaymentTxnMapper;
 import com.his.charge.service.*;
 import com.his.charge.vo.*;
+import com.his.system.api.vo.AdmissionBriefVO;
+import com.his.system.api.vo.PatientBriefVO;
 import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
@@ -64,7 +66,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
     private final BizPaymentTxnMapper bizPaymentTxnMapper;
     private final BizAlertMapper bizAlertMapper;
     private final RedisSequenceService redisSequenceService;
-    private final PatientGateway patientGateway;
+    private final PatientApi patientApi;
     private final PaymentService paymentService;
     private final FundAccountService fundAccountService;
     private final FeeRecordService feeRecordService;
@@ -126,7 +128,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
     @Override
     public PrepayBalanceVO balance(Long admissionId) {
         AdmissionBriefVO admission = requireAdmission(admissionId);
-        PatientBriefVO patient = patientGateway.findPatient(admission.getPatientId());
+        PatientBriefVO patient = patientApi.findPatient(admission.getPatientId());
         PrepayBalanceVO vo = new PrepayBalanceVO();
         vo.setAdmissionId(admission.getAdmissionId());
         vo.setPatientName(patient != null ? patient.getPatientName() : null);
@@ -150,7 +152,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
             throw new BusinessException("金额必须大于 0（退款金额传正数即可，方向由流水类型决定）");
         }
         AdmissionBriefVO admission = requireAdmission(dto.getAdmissionId());
-        PatientBriefVO patient = patientGateway.findPatient(admission.getPatientId());
+        PatientBriefVO patient = patientApi.findPatient(admission.getPatientId());
         PaymentService.PrepaySpec spec = prepaySpec(admission, patient, dto.getAmount(),
                 dto.getPayMethod() == null ? PaymentMethodEnum.CASH.getCode() : dto.getPayMethod(),
                 dto.getReceiptNo(), dto.getPrepayType() == PREPAY_IN ? dto.getChannelTxnNo() : null,
@@ -176,7 +178,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
     @Override
     public DailyBillVO dailyBill(Long admissionId, String beginDate, String endDate) {
         AdmissionBriefVO admission = requireAdmission(admissionId);
-        PatientBriefVO patient = patientGateway.findPatient(admission.getPatientId());
+        PatientBriefVO patient = patientApi.findPatient(admission.getPatientId());
         List<BizFeeRecord> rows = feeRecordService.listNetByEncounter(
                 EncounterTypeEnum.INPATIENT.getCode(), admission.getAdmissionId());
 
@@ -223,7 +225,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
     @Override
     public InpatientSettlementPreviewVO preview(Long admissionId, Integer settleMode) {
         AdmissionBriefVO admission = requireAdmission(admissionId);
-        PatientBriefVO patient = patientGateway.findPatient(admission.getPatientId());
+        PatientBriefVO patient = patientApi.findPatient(admission.getPatientId());
         assertNotSettled(admission.getAdmissionId());
 
         BillPreviewVO draft = settlementBillService.previewSettlement(settleDraft(admission, settleMode));
@@ -264,7 +266,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
         // 试算里已经做了"已结算不能再结"与"没有待结算费用"的校验，这里复用，不复制一份规则
         InpatientSettlementPreviewVO preview = preview(dto.getAdmissionId(), dto.getSettleMode());
         AdmissionBriefVO admission = requireAdmission(dto.getAdmissionId());
-        PatientBriefVO patient = patientGateway.findPatient(admission.getPatientId());
+        PatientBriefVO patient = patientApi.findPatient(admission.getPatientId());
 
         BizSettlementBill bill = settlementBillService.settle(settleDraft(admission, dto.getSettleMode()));
         BigDecimal payable = NumUtil.scale(NumUtil.orZero(bill.getPayableAmount()), SCALE);
@@ -324,7 +326,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
     @Override
     public InpatientAccountSummaryVO summary(Long admissionId) {
         AdmissionBriefVO admission = requireAdmission(admissionId);
-        PatientBriefVO patient = patientGateway.findPatient(admission.getPatientId());
+        PatientBriefVO patient = patientApi.findPatient(admission.getPatientId());
 
         ArrearsView state = arrearsView(admission.getAdmissionId());
         BigDecimal total = state.chargedNet();
@@ -428,7 +430,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }
-        AdmissionBriefVO admission = patientGateway.findAdmission(admissionId);
+        AdmissionBriefVO admission = patientApi.findAdmission(admissionId);
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }

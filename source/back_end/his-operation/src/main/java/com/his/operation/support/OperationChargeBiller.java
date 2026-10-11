@@ -36,22 +36,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OperationChargeBiller {
 
-    /**
-     * 金额统一两位小数（元）
-     */
     private static final int AMOUNT_SCALE = 2;
 
-    /**
-     * 麻醉监护费项目编码（按小时收，与麻醉方式无关）
-     */
     private static final String ITEM_MONITOR = "AN006";
     private static final String ITEM_INTUBATION = "AN007";
     private static final String ITEM_PACU = "AN008";
 
     private final BizOperationChargeItemMapper bizOperationChargeItemMapper;
-    private final OperationChargeInvoker invoker;
 
-    // 内部：单项计费（幂等 + 落痕）
+    private final OperationChargeInvoker operationChargeInvoker;
 
     /**
      * 按麻醉记录单计费（麻醉费 + 麻醉监护 + 气管插管）。
@@ -203,7 +196,7 @@ public class OperationChargeBiller {
 
         BizFeeRecord booked;
         try {
-            booked = invoker.book(fee);
+            booked = operationChargeInvoker.book(fee);
         } catch (Exception e) {
             markFail(summary, row, "记账异常：" + e.getMessage(), itemCode);
             return;

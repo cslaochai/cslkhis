@@ -4,7 +4,7 @@ package com.his.charge.support;
 import com.his.charge.entity.BizInsuranceSettlement;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.entity.BizSettlementBillItem;
-import com.his.charge.vo.*;
+import com.his.system.api.vo.*;
 import lombok.Data;
 
 import java.math.BigDecimal;

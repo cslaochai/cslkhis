@@ -1,18 +1,22 @@
 package com.his.charge.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.his.charge.api.AppointGateway;
-import com.his.charge.api.EmrGateway;
-import com.his.charge.api.MedicalTechGateway;
-import com.his.charge.api.PatientGateway;
 import com.his.charge.entity.BizInsuranceSettlement;
+import com.his.system.api.service.AppointApi;
+import com.his.system.api.service.EmrApi;
+import com.his.system.api.service.MedicalTechApi;
+import com.his.system.api.service.PatientApi;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.mapper.BizInsuranceSettlementMapper;
 import com.his.charge.mapper.BizSettlementBillItemMapper;
 import com.his.charge.mapper.BizSettlementBillMapper;
 import com.his.charge.service.SettlementEvidenceService;
 import com.his.charge.support.SettlementEvidence;
-import com.his.charge.vo.*;
+import com.his.system.api.vo.LaboratoryRecordBriefVO;
+import com.his.system.api.vo.MedicalRecordBriefVO;
+import com.his.system.api.vo.PatientBriefVO;
+import com.his.system.api.vo.PrescriptionBriefVO;
+import com.his.system.api.vo.RegistBriefVO;
 import com.his.common.enums.BillStatusEnum;
 import com.his.common.enums.EncounterTypeEnum;
 import lombok.RequiredArgsConstructor;
@@ -32,13 +36,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SettlementEvidenceServiceImpl implements SettlementEvidenceService {
 
-    private final AppointGateway appointGateway;
+    private final AppointApi appointApi;
 
-    private final PatientGateway patientGateway;
+    private final PatientApi patientApi;
 
-    private final MedicalTechGateway medicalTechGateway;
+    private final MedicalTechApi medicalTechApi;
 
-    private final EmrGateway emrGateway;
+    private final EmrApi emrApi;
 
     private final BizSettlementBillMapper bizSettlementBillMapper;
 
@@ -64,7 +68,7 @@ public class SettlementEvidenceServiceImpl implements SettlementEvidenceService 
 
         // 1. 挂号（锚点）
         Long registId = settlement.getRegistId();
-        RegistBriefVO regist = registId == null ? null : appointGateway.findRegist(registId);
+        RegistBriefVO regist = registId == null ? null : appointApi.findRegist(registId);
         ev.setRegist(regist);
         if (registId == null) {
             ev.markMissing("清单未关联挂号ID，无法定位就诊依据");
@@ -75,16 +79,16 @@ public class SettlementEvidenceServiceImpl implements SettlementEvidenceService 
         // 2. 患者
         Long patientId = settlement.getPatientId() != null ? settlement.getPatientId()
                 : (regist != null ? regist.getPatientId() : null);
-        PatientBriefVO patient = patientId == null ? null : patientGateway.findPatient(patientId);
+        PatientBriefVO patient = patientId == null ? null : patientApi.findPatient(patientId);
         ev.setPatient(patient);
         if (patient == null) {
             ev.markMissing("患者档案缺失，性别/年龄类规则无法判定");
         }
 
         // 3. 病历：优先按 registId；历史数据 registId 为空时落 patientId 最近一条
-        MedicalRecordBriefVO record = registId == null ? null : emrGateway.findLatestMedicalRecordByRegist(registId);
+        MedicalRecordBriefVO record = registId == null ? null : emrApi.findLatestMedicalRecordByRegist(registId);
         if (record == null && patientId != null) {
-            record = emrGateway.findLatestMedicalRecordByPatient(patientId);
+            record = emrApi.findLatestMedicalRecordByPatient(patientId);
             if (record != null) {
                 ev.markMissing("本次就诊无病历，已回落到患者最近一次病历，诊断一致性规则结论需人工复核");
             }
@@ -105,27 +109,27 @@ public class SettlementEvidenceServiceImpl implements SettlementEvidenceService 
 
         // 5. 处方（按 registId，回落 patientId）
         List<PrescriptionBriefVO> prescriptions = registId == null
-                ? List.of() : emrGateway.listPrescriptionsByRegist(registId);
+                ? List.of() : emrApi.listPrescriptionsByRegist(registId);
         if (prescriptions.isEmpty()) {
-            prescriptions = emrGateway.listPrescriptionsByPatient(patientId);
+            prescriptions = emrApi.listPrescriptionsByPatient(patientId);
         }
         ev.setPrescriptions(prescriptions);
         if (!prescriptions.isEmpty()) {
-            ev.setPrescriptionDetails(emrGateway.listPrescriptionDetails(
+            ev.setPrescriptionDetails(emrApi.listPrescriptionDetails(
                     prescriptions.stream().map(PrescriptionBriefVO::getId).toList()));
         }
 
         // 6. 检验：表里没有 regist_id，只能按 patientId + 就诊日期定位
         LocalDate visitDate = regist != null ? regist.getVisitDate() : null;
-        List<LaboratoryRecordBriefVO> labs = medicalTechGateway.listLaboratoryRecords(patientId, visitDate);
+        List<LaboratoryRecordBriefVO> labs = medicalTechApi.listLaboratoryRecords(patientId, visitDate);
         ev.setLabRecords(labs);
-        ev.setLabResults(medicalTechGateway.listLabResults(patientId, visitDate));
+        ev.setLabResults(medicalTechApi.listLabResults(patientId, visitDate));
         if (!labs.isEmpty() && visitDate == null) {
             ev.markMissing("检验记录只能按患者聚合（无就诊日期），可能含其他次就诊数据");
         }
 
         // 7. 检查：同样按 patientId + 就诊日期
-        ev.setInspections(medicalTechGateway.listInspections(patientId, visitDate));
+        ev.setInspections(medicalTechApi.listInspections(patientId, visitDate));
 
         return ev;
     }

@@ -153,13 +153,6 @@
 </template>
 
 <script lang="js" setup>
-/**
- * 人力配置标准（sql/200，菜单 2937）。
- *
- * 一个单元 × 一个班次 × 一个岗位类别该配多少人。它是排班保存时的闸门，不是报表：
- * 低于最低在岗会拦住保存（一个班没人值班要当场发现，别等出事），高于上限只提示。
- * 这张表由病区护理那套 biz_nurse_schedule_rule 泛化而来，所以起订的一份数据是从护理规则迁过来的。
- */
 import {computed, onMounted, reactive, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Delete, Edit, Plus, Refresh, Search} from '@element-plus/icons-vue'

@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.charge.api.PatientGateway;
+import com.his.system.api.service.PatientApi;
 import com.his.charge.dto.BillQueryPageDTO;
 import com.his.charge.dto.BillSettleUpsertDTO;
 import com.his.charge.dto.BillVoidDTO;
@@ -26,6 +26,7 @@ import com.his.system.service.RedisSequenceService;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.system.service.InsurancePolicyService;
+import com.his.system.api.vo.PatientBriefVO;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -81,7 +82,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
     private final SourceAdvanceService sourceAdvanceService;
     private final BizSettlementBillItemMapper bizSettlementBillItemMapper;
     private final BizPaymentTxnMapper bizPaymentTxnMapper;
-    private final PatientGateway patientGateway;
+    private final PatientApi patientApi;
     private final InsurancePolicyService insurancePolicyService;
     private final RedisSequenceService redisSequenceService;
     private final BizInsuranceCatalogRuleMapper bizInsuranceCatalogRuleMapper;
@@ -769,7 +770,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
      * 结算方式与医保口径：调用方没指定时按患者有没有医保号推。
      */
     private PatientInsurance resolveInsurance(Long patientId, Integer settlementMode) {
-        PatientBriefVO patient = patientId == null ? null : patientGateway.findPatient(patientId);
+        PatientBriefVO patient = patientId == null ? null : patientApi.findPatient(patientId);
         boolean hasInsurance = patient != null && TextUtil.hasText(patient.getMedicalInsuranceNo());
         SettlementModeEnum mode = SettlementModeEnum.getByCode(settlementMode);
         if (mode == null) {

@@ -20,7 +20,7 @@ import com.his.appoint.service.BizQueueService;
 import com.his.appoint.service.BizClinicSourceService;
 import com.his.appoint.trigger.DayEndSettleTrigger;
 import com.his.appoint.vo.*;
-import com.his.charge.api.AppointChargeGateway;
+import com.his.system.api.service.AppointChargeApi;
 import com.his.common.base.PageResult;
 import com.his.common.enums.BillStatusEnum;
 import com.his.common.enums.StaffTypeEnum;
@@ -64,7 +64,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
 
     private final BizAppointInfoMapper bizAppointInfoMapper;
 
-    private final ObjectProvider<AppointChargeGateway> appointChargeGateway;
+    private final ObjectProvider<AppointChargeApi> appointChargeGateway;
 
     private final InsurancePolicyService insurancePolicyService;
 
@@ -243,14 +243,14 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         return appointInfo == null ? null : appointInfo.getPatientId();
     }
 
-    private boolean isRegistFeeSettled(AppointChargeGateway gateway, BizAppointInfo appoint) {
+    private boolean isRegistFeeSettled(AppointChargeApi gateway, BizAppointInfo appoint) {
         if (appoint.getBillId() == null) {
             return true;
         }
         if (gateway == null) {
             return false;
         }
-        AppointChargeGateway.BillBrief bill = gateway.getBill(appoint.getBillId());
+        AppointChargeApi.BillBrief bill = gateway.getBill(appoint.getBillId());
         return bill != null && BillStatusEnum.PAID.getCode().equals(bill.getBillStatus());
     }
 
@@ -264,7 +264,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         deptScopeService.assertDeptAccessible(appointInfo.getDeptId());
         // 缴费门禁读的是账单状态（L2），不是支付状态列：账单是否付清由收款流水现算，
         // 所以「免收 = 压根没有账单」这条路径不需要任何假单据就能过。
-        AppointChargeGateway gateway = appointChargeGateway.getIfAvailable();
+        AppointChargeApi gateway = appointChargeGateway.getIfAvailable();
         if (appointInfo.getBillId() != null && gateway == null) {
             throw new BusinessException("收费服务不可用，无法完成签到");
         }
@@ -1252,7 +1252,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
                 .eq(BizAppointInfo::getRegistStatus, AppointStatusEnum.REGISTERED.getCode())
                 .eq(visitDate != null, BizAppointInfo::getVisitDate, visitDate);
         List<BizAppointInfo> appoints = bizAppointInfoMapper.selectList(appointWrapper);
-        AppointChargeGateway gateway = appointChargeGateway.getIfAvailable();
+        AppointChargeApi gateway = appointChargeGateway.getIfAvailable();
         List<BizQueueListVO> result = new ArrayList<>();
         for (BizAppointInfo appoint : appoints) {
             // 挂号状态「已挂号」只说明还没签到，还得确认钱真的收了 ——

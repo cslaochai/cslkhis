@@ -2375,24 +2375,6 @@ ALTER TABLE `biz_narcotic_register` ALTER COLUMN `create_time` DROP DEFAULT;
 -- biz_narcotic_register.update_time  (datetime, NO)  原 DEFAULT = 'CURRENT_TIMESTAMP'
 ALTER TABLE `biz_narcotic_register` ALTER COLUMN `update_time` DROP DEFAULT;
 
--- biz_nurse_schedule.unit_type  (tinyint, NO)  原 DEFAULT = '1'
-ALTER TABLE `biz_nurse_schedule` ALTER COLUMN `unit_type` DROP DEFAULT;
-
--- biz_nurse_schedule.work_minutes  (int, NO)  原 DEFAULT = '0'
-ALTER TABLE `biz_nurse_schedule` ALTER COLUMN `work_minutes` DROP DEFAULT;
-
--- biz_nurse_schedule.schedule_status  (tinyint, NO)  原 DEFAULT = '1'
-ALTER TABLE `biz_nurse_schedule` ALTER COLUMN `schedule_status` DROP DEFAULT;
-
--- biz_nurse_schedule.schedule_source  (tinyint, NO)  原 DEFAULT = '1'
-ALTER TABLE `biz_nurse_schedule` ALTER COLUMN `schedule_source` DROP DEFAULT;
-
--- biz_nurse_schedule.create_time  (datetime, NO)  原 DEFAULT = 'CURRENT_TIMESTAMP'
-ALTER TABLE `biz_nurse_schedule` ALTER COLUMN `create_time` DROP DEFAULT;
-
--- biz_nurse_schedule.update_time  (datetime, NO)  原 DEFAULT = 'CURRENT_TIMESTAMP'
-ALTER TABLE `biz_nurse_schedule` ALTER COLUMN `update_time` DROP DEFAULT;
-
 -- biz_nursing_assessment.create_time  (datetime, NO)  原 DEFAULT = 'CURRENT_TIMESTAMP'
 ALTER TABLE `biz_nursing_assessment` ALTER COLUMN `create_time` DROP DEFAULT;
 

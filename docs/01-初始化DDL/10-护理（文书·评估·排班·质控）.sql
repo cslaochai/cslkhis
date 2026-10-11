@@ -86,18 +86,6 @@ CREATE TABLE `biz_nursing_assessment`
     KEY                 `idx_ward` (`ward_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='护理评估单';
 
--- biz_nurse_schedule_rule：已于 2026-10-11 删除。该表 sql/206 起废弃并合并入统一的 biz_staff_plan_rule
--- （护理人力标准用 staff_type=2 表达）；全后端确认无任何 service 读写，为纯死代码。
--- 删除配套：his-patient/entity/BizNurseScheduleRule.java、mapper/BizNurseScheduleRuleMapper.java、
--- docs/02-铺底基础数据/biz_nurse_schedule_rule.sql、00_import_all.sql 对应导入行、ER 图残留引用。
-
--- biz_nurse_schedule：已于 2026-10-11 删除（P5 合并）。该表是排班底座 biz_schedule 的冗余降维副本——
--- 实库 1680 行 100% 有 staff_schedule_id 指向活底座行且内容逐字段一致；唯一差异化的 unit_type=2（门诊）零数据；
--- 唯一键 (employee_id, schedule_date) 一天一格，表达不了多班次。护理排班读写全部切到 biz_schedule
--- （staff_type IN (2,7) + 排班单元 org_type/org_id 定位），实体/Mapper/副本写路径已删除。
--- 删除配套：his-patient/entity/BizNurseSchedule.java、mapper/BizNurseScheduleMapper.java（改名 NurseScheduleMapper）、
--- docs/02-铺底基础数据/biz_nurse_schedule.sql、00_import_all.sql 对应导入行、ER 图残留引用、增量 SQL 见 20261011_合并biz_nurse_schedule进biz_schedule.sql。
-
 -- ----------------------------
 -- sys_nursing_qc_item  护理质控检查项目录
 -- ----------------------------

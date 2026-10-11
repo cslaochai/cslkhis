@@ -18,7 +18,9 @@ public class ChargePayChannelServiceImpl implements ChargePayChannelService {
     private static final Logger log = LoggerFactory.getLogger(ChargePayChannelServiceImpl.class);
 
     private final AlipayProperties alipayProperties;
+
     private final UnionPayProperties unionPayProperties;
+
     private final PayChannelProperties payChannelProperties;
 
     public ChargePayChannelServiceImpl(AlipayProperties alipayProperties,

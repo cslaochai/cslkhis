@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.charge.api.InpatientSettlementGateway;
+import com.his.system.api.service.InpatientSettlementApi;
 import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.exception.BusinessException;
@@ -462,7 +462,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
         // 欠费结算也算已结算 —— 拦的是"完全没结算"，不是"没交钱"。
         String settleNote = null;
         if (settlementGate.available()) {
-            InpatientSettlementGateway.SettlementState state = settlementGate.state(dto.getAdmissionId());
+            InpatientSettlementApi.SettlementState state = settlementGate.state(dto.getAdmissionId());
             if (state == null) {
                 throw new BusinessException("未能确认该住院的结算状态，暂不允许出院（请稍后重试或联系收费处）");
             }

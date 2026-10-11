@@ -28,6 +28,7 @@ import java.math.BigDecimal;
 public class WardDispenseChargeInvoker {
 
     private final FeeRecordService feeRecordService;
+
     private final BizWardDispenseItemMapper bizWardDispenseItemMapper;
 
     /**

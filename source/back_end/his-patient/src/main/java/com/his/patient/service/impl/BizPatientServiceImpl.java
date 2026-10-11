@@ -21,7 +21,9 @@ import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.mapper.BizPatientTagRelationMapper;
 import com.his.patient.service.*;
 import com.his.patient.support.PatientProfileValidator;
-import com.his.patient.support.PatientSearchScopeMode;
+import com.his.system.api.service.PatientTodayVisitApi;
+import com.his.system.api.vo.PatientTodayVisit;
+import com.his.patient.enums.PatientSearchScopeModeEnum;
 import com.his.patient.support.PatientSearchScopeResolver;
 import com.his.patient.vo.*;
 import com.his.system.entity.CurrentUser;
@@ -126,7 +128,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
      * <p>用 ObjectProvider 而非直接注入：接口定义在本模块、实现放在依赖本模块的就诊域，
      * 直接注入会形成编译期反向依赖；同时就诊域缺席时这里拿到 null，搜索照常可用（降级不阻断）。
      */
-    private final ObjectProvider<PatientTodayVisitProvider> todayVisitProvider;
+    private final ObjectProvider<PatientTodayVisitApi> todayVisitProvider;
     /**
      * 「要不要看今日就诊」的判定（按当前登录角色的岗位性质）。
      *
@@ -400,8 +402,8 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
         // 非门诊岗位（病案/质控/医保/审计/管理员…）搜人就是查档案：
         // 既不置顶、也不标注，顺带省掉每次敲键都全表扫一遍排队表。
         // 注意两者必须一起关：只关分组不关置顶 = 顶上几个患者没头没尾地排在前面，像随机排序。
-        PatientSearchScopeMode scopeMode = patientSearchScopeResolver.resolve();
-        Map<Long, PatientTodayVisit> todayVisits = scopeMode == PatientSearchScopeMode.TODAY_FIRST
+        PatientSearchScopeModeEnum scopeMode = patientSearchScopeResolver.resolve();
+        Map<Long, PatientTodayVisit> todayVisits = scopeMode == PatientSearchScopeModeEnum.TODAY_FIRST
                 ? loadTodayVisits()
                 : Collections.emptyMap();
         PatientSearchScopeDTO scope = buildSearchScope(todayVisits);
@@ -568,7 +570,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
      * 患者搜索本身必须照常可用 —— 不能因为就诊域出问题就让全院搜不到人。
      */
     private Map<Long, PatientTodayVisit> loadTodayVisits() {
-        PatientTodayVisitProvider provider = todayVisitProvider.getIfAvailable();
+        PatientTodayVisitApi provider = todayVisitProvider.getIfAvailable();
         if (provider == null) {
             return Collections.emptyMap();
         }

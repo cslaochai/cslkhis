@@ -2,7 +2,7 @@ package com.his.charge.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.charge.api.AppointGateway;
+import com.his.system.api.service.AppointApi;
 import com.his.charge.config.ComplianceProperties;
 import com.his.charge.dto.*;
 import com.his.charge.entity.*;
@@ -11,11 +11,13 @@ import com.his.charge.enums.RuleCatalogEnum;
 import com.his.charge.mapper.*;
 import com.his.charge.service.ComplianceAuditService;
 import com.his.charge.service.SettlementEvidenceService;
-import com.his.charge.support.ComplianceRule;
-import com.his.charge.support.RuleContext;
-import com.his.charge.support.RuleFinding;
+import com.his.charge.support.rule.ComplianceRule;
+import com.his.charge.support.rule.RuleContext;
+import com.his.charge.support.rule.RuleFinding;
 import com.his.charge.support.SettlementEvidence;
 import com.his.charge.vo.*;
+import com.his.system.api.vo.LabResultBriefVO;
+import com.his.system.api.vo.RegistBriefVO;
 import com.his.common.base.PageResult;
 import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.SysGenderEnum;
@@ -53,7 +55,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
 
     private final BizInsuranceSettlementMapper bizInsuranceSettlementMapper;
 
-    private final AppointGateway appointGateway;
+    private final AppointApi appointApi;
 
     private final SysIcd10Mapper sysIcd10Mapper;
 
@@ -580,7 +582,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         int window = complianceProperties.getReadmitWindowDays();
         LocalDateTime baseline = null;
         if (settlement.getRegistId() != null) {
-            RegistBriefVO regist = appointGateway.findRegist(settlement.getRegistId());
+            RegistBriefVO regist = appointApi.findRegist(settlement.getRegistId());
             if (regist != null && regist.getVisitDate() != null) {
                 baseline = TimeUtil.dayStart(regist.getVisitDate());
             }

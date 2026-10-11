@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysMessage;
 import com.his.system.provider.WorkbenchMetricService;
-import com.his.system.service.MessageMetricSupport;
+import com.his.system.vo.MessageMetricSupportVO;
 import com.his.system.service.MyNoticeMetricService;
 import com.his.system.service.SysMessageService;
 import com.his.system.vo.WorkbenchMyNoticeVO;
@@ -44,12 +44,12 @@ public class MyNoticeMetricServiceImpl implements WorkbenchMetricService, MyNoti
         vo.setTotal(0L);
         vo.setItems(Collections.emptyList());
 
-        Long receiverId = MessageMetricSupport.receiverId(user);
+        Long receiverId = MessageMetricSupportVO.receiverId(user);
         if (receiverId != null) {
             vo.setTotal(sysMessageService.count(unreadNotice(receiverId)));
             List<SysMessage> rows = sysMessageService.list(unreadNotice(receiverId)
                     .last("ORDER BY FIELD(severity, 'urgent', 'warning', 'info'), send_time DESC, message_id DESC LIMIT " + TOP_N));
-            vo.setItems(rows.stream().map(MessageMetricSupport::of).collect(Collectors.toList()));
+            vo.setItems(rows.stream().map(MessageMetricSupportVO::of).collect(Collectors.toList()));
         }
         return BeanUtil.beanToMap(vo);
     }

@@ -1,0 +1,63 @@
+package com.his.emr.api;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.his.system.api.service.MedicalRecordApi;
+import com.his.emr.entity.BizMedicalRecord;
+import com.his.emr.mapper.BizMedicalRecordMapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * MedicalRecordRefGateway 的 his-emr 侧实现（批次E/E6）。
+ */
+@Component
+@RequiredArgsConstructor
+public class MedicalRecordApiImpl implements MedicalRecordApi {
+
+    private final BizMedicalRecordMapper bizMedicalRecordMapper;
+
+    @Override
+    public RecordBrief getRecord(Long recordId) {
+        if (recordId == null) {
+            return null;
+        }
+        BizMedicalRecord record = bizMedicalRecordMapper.selectById(recordId);
+        return record == null ? null : toBrief(record);
+    }
+
+    @Override
+    public List<RecordBrief> listRecentByPatient(Long patientId, int limit) {
+        if (patientId == null) {
+            return Collections.emptyList();
+        }
+        LambdaQueryWrapper<BizMedicalRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(BizMedicalRecord::getPatientId, patientId)
+                // 没有挂号ID的病历是「还没看过病」的草稿，拿它当复诊基准判不出间隔天数
+                .isNotNull(BizMedicalRecord::getRegistId)
+                .orderByDesc(BizMedicalRecord::getVisitDate)
+                .orderByDesc(BizMedicalRecord::getId)
+                // limit 是 int 常量拼接，不走用户输入，无注入面
+                .last("LIMIT " + (limit <= 0 ? 20 : limit));
+        return bizMedicalRecordMapper.selectList(wrapper).stream().map(this::toBrief).collect(Collectors.toList());
+    }
+
+    private RecordBrief toBrief(BizMedicalRecord record) {
+        RecordBrief brief = new RecordBrief();
+        brief.setId(record.getId());
+        brief.setRecordNo(record.getRecordNo());
+        brief.setPatientId(record.getPatientId());
+        brief.setPatientName(record.getPatientName());
+        brief.setVisitDate(record.getVisitDate());
+        brief.setVisitType(record.getVisitType());
+        brief.setDeptId(record.getDeptId());
+        brief.setDoctorId(record.getDoctorId());
+        brief.setDeptName(record.getDeptName());
+        brief.setDoctorName(record.getDoctorName());
+        brief.setDiagnosisName(record.getDiagnosisName());
+        return brief;
+    }
+}

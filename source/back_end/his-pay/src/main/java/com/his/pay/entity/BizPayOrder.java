@@ -1,5 +1,6 @@
 package com.his.pay.entity;
 
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.his.common.base.BaseEntity;
@@ -7,7 +8,6 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
@@ -16,14 +16,6 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 @Data
 @TableName("biz_pay_order")
 public class BizPayOrder extends BaseEntity {
-    /** 逻辑删除标志（0 未删除 1 已删除） */
-    @TableLogic
-    private Integer delFlag;
-
-    /** 备注 */
-    private String remark;
-
-
 
     /**
      * 支付单号（Pay+yyyyMMdd+序号，唯一）
@@ -82,26 +74,14 @@ public class BizPayOrder extends BaseEntity {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime refundTime;
 
-    public String getPayNo() { return payNo; }
-    public void setPayNo(String payNo) { this.payNo = payNo; }
-    public Integer getBizType() { return bizType; }
-    public void setBizType(Integer bizType) { this.bizType = bizType; }
-    public Long getBizId() { return bizId; }
-    public void setBizId(Long bizId) { this.bizId = bizId; }
-    public Long getPatientId() { return patientId; }
-    public void setPatientId(Long patientId) { this.patientId = patientId; }
-    public String getPatientName() { return patientName; }
-    public void setPatientName(String patientName) { this.patientName = patientName; }
-    public BigDecimal getAmount() { return amount; }
-    public void setAmount(BigDecimal amount) { this.amount = amount; }
-    public Integer getChannel() { return channel; }
-    public void setChannel(Integer channel) { this.channel = channel; }
-    public Integer getPayStatus() { return payStatus; }
-    public void setPayStatus(Integer payStatus) { this.payStatus = payStatus; }
-    public String getOutTradeNo() { return outTradeNo; }
-    public void setOutTradeNo(String outTradeNo) { this.outTradeNo = outTradeNo; }
-    public LocalDateTime getPayTime() { return payTime; }
-    public void setPayTime(LocalDateTime payTime) { this.payTime = payTime; }
-    public LocalDateTime getRefundTime() { return refundTime; }
-    public void setRefundTime(LocalDateTime refundTime) { this.refundTime = refundTime; }
+    /**
+     * 逻辑删除标志（0 未删除 1 已删除）
+     */
+    @TableLogic
+    private Integer delFlag;
+
+    /**
+     * 备注
+     */
+    private String remark;
 }

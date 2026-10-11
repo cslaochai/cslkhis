@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.charge.api.PatientGateway;
+import com.his.system.api.service.PatientApi;
 import com.his.charge.dto.*;
 import com.his.charge.entity.BizYbChronicCatalog;
 import com.his.charge.entity.BizYbChronicReg;
@@ -14,7 +14,7 @@ import com.his.charge.service.YbChronicService;
 import com.his.charge.vo.ChronicCatalogVO;
 import com.his.charge.vo.ChronicRegListVO;
 import com.his.charge.vo.ChronicRegSummaryVO;
-import com.his.charge.vo.PatientBriefVO;
+import com.his.system.api.vo.PatientBriefVO;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.system.service.RedisSequenceService;
@@ -55,7 +55,7 @@ public class YbChronicServiceImpl extends ServiceImpl<BizYbChronicRegMapper, Biz
 
     private final BizYbChronicRegMapper bizYbChronicRegMapper;
 
-    private final PatientGateway patientGateway;
+    private final PatientApi patientApi;
 
     private final RedisSequenceService redisSequenceService;
 
@@ -187,7 +187,7 @@ public class YbChronicServiceImpl extends ServiceImpl<BizYbChronicRegMapper, Biz
         if (!Integer.valueOf(1).equals(catalog.getStatus())) {
             throw new BusinessException("病种「" + catalog.getDiseaseName() + "」已停用，请先启用目录或换病种");
         }
-        PatientBriefVO patient = patientGateway.findPatient(dto.getPatientId());
+        PatientBriefVO patient = patientApi.findPatient(dto.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在或已删除");
         }

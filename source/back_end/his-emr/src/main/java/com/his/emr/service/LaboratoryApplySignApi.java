@@ -1,0 +1,61 @@
+package com.his.emr.service;
+
+import com.his.system.entity.SignSubject;
+import com.his.common.enums.ApplyStatusEnum;
+import com.his.common.enums.SignBizTypeEnum;
+import com.his.common.enums.SignSceneEnum;
+import com.his.system.api.service.SignableContentApi;
+import com.his.common.support.CanonicalText;
+import com.his.common.util.NumUtil;
+import com.his.emr.entity.BizLaboratoryApply;
+
+import java.time.LocalDateTime;
+
+public interface LaboratoryApplySignApi extends SignableContentApi {
+
+    static String statusText(Integer status) {
+        return status == null ? "—" : ApplyStatusEnum.labelOrUnknown(status);
+    }
+
+    /**
+     * 规范化文本：只含开单内容，按固定顺序
+     */
+    static String canonical(BizLaboratoryApply a) {
+        return CanonicalText.create("LABORATORY_APPLY")
+                .put("applyNo", a.getApplyNo())
+                .put("patientId", a.getPatientId())
+                .put("patientNo", a.getPatientNo())
+                .put("patientName", a.getPatientName())
+                .put("gender", a.getGender())
+                .put("age", a.getAge())
+                .put("registId", a.getRegistId())
+                .put("visitDate", a.getVisitDate())
+                .put("deptId", a.getDeptId())
+                .put("deptName", a.getDeptName())
+                .put("doctorId", a.getDoctorId())
+                .put("doctorName", a.getDoctorName())
+                .put("laboratoryItemId", a.getLaboratoryItemId())
+                .put("laboratoryItemCode", a.getLaboratoryItemCode())
+                .put("laboratoryItemName", a.getLaboratoryItemName())
+                .put("laboratoryDeptId", a.getLaboratoryDeptId())
+                .put("laboratoryDeptName", a.getLaboratoryDeptName())
+                .put("specimenType", a.getSpecimenType())
+                .put("laboratoryPurpose", a.getLaboratoryPurpose())
+                .put("clinicalDiagnosis", a.getClinicalDiagnosis())
+                .put("diseaseSummary", a.getDiseaseSummary())
+                .put("isFasting", a.getIsFasting())
+                .put("isEmergency", a.getIsEmergency())
+                .put("price", NumUtil.plain(a.getPrice()))
+                .build();
+    }
+
+    SignBizTypeEnum bizType();
+
+    SignSubject load(Long bizId);
+
+    String blockReason(SignSubject subject, SignSceneEnum scene);
+
+    void applySignAnchor(Long bizId, SignSceneEnum scene, Long signId, LocalDateTime signedTime);
+
+    void revokeSignAnchor(Long bizId, Long signId);
+}
