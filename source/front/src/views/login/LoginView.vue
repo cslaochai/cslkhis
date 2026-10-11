@@ -66,6 +66,16 @@
             ></canvas>
           </div>
         </el-form-item>
+        <!-- 登录失败常驻提示：toast 几秒就消失不够醒目，改为表单内联红条，直到下次尝试才清除 -->
+        <el-form-item v-if="loginError">
+          <el-alert
+              :closable="false"
+              :title="loginError"
+              class="login-error-alert"
+              show-icon
+              type="error"
+          />
+        </el-form-item>
         <el-form-item>
           <el-button
               :loading="loading"
@@ -97,12 +107,8 @@ import {useCurrentPatientStore} from '@/stores/currentPatient'
 import {clearSessionCaches} from '@/lib/session-cache'
 
 const router = useRouter()
-// 换个账号登录时清掉上一次会话的「当前患者」，否则顶部条会挂着上一个人的名字
 const currentPatientStore = useCurrentPatientStore()
 
-// 角色卡只是「快捷入口」：选中即按该角色登录（多角色账号要求卡片角色已授权）。
-// 「其他」= 不指定角色，由后端取该账号角色列表中的第一个（sys_role.sort_order 最小者）。
-// 默认选中「其他」——单角色账号不必选卡，多角色账号也能直接进（进系统后右上角可切换角色）。
 const roles = [
   {key: 'other', label: '其他', icon: User, desc: '登录后进入账号首个角色，可在系统内切换', roleCode: ''},
   {key: 'doctor', label: '医生', icon: FirstAidKit, desc: '门诊/住院诊疗', roleCode: '10013'},
@@ -115,6 +121,7 @@ const roles = [
 
 const role = ref('other')
 const loading = ref(false)
+const loginError = ref('')
 
 const loginForm = reactive({
   username: '',
@@ -209,6 +216,7 @@ const handleLogin = async () => {
   const roleCode = selectedRole ? selectedRole.roleCode : ''
 
   loading.value = true
+  loginError.value = ''
   try {
     // 口令在提交前先 SM2 加密：HTTP 链路上只能看到密文。
     // 加密失败（多半是后端换了密钥）直接抛出去，不要退化成明文重试 —— 那等于白做。
@@ -233,11 +241,11 @@ const handleLogin = async () => {
       ElMessage.success('登录成功')
       router.push('/')
     } else {
-      ElMessage.error(res.message || '登录失败')
+      loginError.value = res.message || '登录失败'
       refreshCaptcha()
     }
   } catch (error) {
-    ElMessage.error(error.message || '登录失败，请检查用户名和密码')
+    loginError.value = error.message || '登录失败，请检查用户名和密码'
     refreshCaptcha()
   } finally {
     loading.value = false
@@ -350,6 +358,11 @@ const handleLogin = async () => {
   gap: 10px;
   width: 100%;
   align-items: center;
+}
+
+.login-error-alert {
+  width: 100%;
+  font-weight: 600;
 }
 
 .captcha-input {
