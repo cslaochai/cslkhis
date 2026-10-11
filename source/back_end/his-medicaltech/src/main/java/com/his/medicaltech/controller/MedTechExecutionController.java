@@ -53,7 +53,7 @@ public class MedTechExecutionController {
     @Operation(summary = "审核执行")
     @PostMapping("/reviewExecution")
     public Result<Void> reviewExecution(@Valid @RequestBody ExecutionReviewDTO actionDTO) {
-        boolean success = medTechExecutionService.reviewExecution(actionDTO.getId(), actionDTO.getReviewerId(), actionDTO.getReviewerName());
+        boolean success = medTechExecutionService.reviewExecution(actionDTO.getId());
         return success ? Result.success("审核通过", null) : Result.error("审核失败");
     }
 }

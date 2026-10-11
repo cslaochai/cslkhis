@@ -274,7 +274,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         QcSnapshot snapshot = loadSnapshot(QcRecordSourceEnum.parse(dto.getRecordSource()), dto.getRecordId());
         QcResultVO result = qcRuleEngine.inspect(snapshot, qcType);
 
-        String operator = TextUtil.hasText(dto.getQcBy()) ? dto.getQcBy().trim() : operatorUser.getRealName();
+        String operator = operatorUser.getRealName();
         BizQualityControl saved = null;
         for (int attempt = 1; attempt <= MAX_NO_RETRY && saved == null; attempt++) {
             try {

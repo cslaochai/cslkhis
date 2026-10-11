@@ -10,18 +10,6 @@
         WHERE r.del_flag = 0
     </sql>
 
-    <!--
-      就诊状态推导（码值见 OpdLogStatusEnum）：
-        已入队 → 队列状态说了算；队列 7「已失效」在就诊状态里读作 7「未就诊」（签到过没看上）
-                 队列状态不在枚举内（历史脏数据 1）→ NULL，前端显示「未知(n)」
-        未入队 → 回落到挂号状态：5 已退号 / 6 已过号 / 4 已就诊 / 3 就诊中 / 2 待签到
-                          1 已挂号 → 已开收费单则待签到，否则未缴费
-                          7 爽约 / 8 未就诊（日终结转落的两个终态）
-      返回 NULL 表示「两种口径都认不出」，绝不回落到某个合法文案。
-
-      注意 7 的读法：队列域 7=已失效、就诊状态域 7=未就诊，是**刻意对齐的同一个数**
-      （同一个事实：签到了没看上）。别在这行写成 8，也别把 8 爽约塞进队列分支。
-    -->
     <sql id="logStatusExpr">
         CASE
         WHEN q.id IS NOT NULL AND q.queue_status IN (2, 3, 4, 5, 6) THEN q.queue_status
@@ -63,13 +51,6 @@
         <if test="q.settlementType != null">
             AND r.settlement_type = #{q.settlementType}
         </if>
-        <!--
-          就诊类型（1 初诊 / 2 复诊）取自 r.visit_type。
-          踩过的坑：本表另有 revisit_type 列，口径注释一模一样，但**全表 444 行都是 NULL**
-          （写侧 AppointServiceImpl 一直只写 visit_type）。原来这里筛 r.revisit_type，
-          结果是「选了初诊/复诊一律筛空」，而列表号别列也永远显「未标注」——
-          筛选和展示同时静默失效，不报错。同语义两列只认 visit_type。
-        -->
         <if test="q.revisitType != null">
             AND r.visit_type = #{q.revisitType}
         </if>
@@ -82,11 +63,6 @@
         </if>
     </sql>
 
-    <!--
-      就诊状态筛选：筛的是**推导出来的**状态（外层 t.log_status），不是原始 queue_status。
-      这样「筛已退号」才会把 164 条没有队列行的退号也带出来 —— 筛选结果必须和状态列显示的一致。
-      不认识的码走 IN (99) 自然查空，不需要额外兜底：宁可 0 条，也不能静默地「当没传」。
-    -->
     <sql id="logStatusWhere">
         <if test="q.statusCodes != null and q.statusCodes.size() &gt; 0">
             WHERE t.log_status IN (

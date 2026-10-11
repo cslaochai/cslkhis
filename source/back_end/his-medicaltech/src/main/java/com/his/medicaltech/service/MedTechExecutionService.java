@@ -32,5 +32,5 @@ public interface MedTechExecutionService extends IService<BizMedTechExecution> {
     /**
      * 审核执行
      */
-    boolean reviewExecution(Long executionId, Long reviewerId, String reviewerName);
+    boolean reviewExecution(Long executionId);
 }

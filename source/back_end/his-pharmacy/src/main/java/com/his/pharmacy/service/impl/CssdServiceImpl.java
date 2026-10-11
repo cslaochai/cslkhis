@@ -65,8 +65,7 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
         bizCssdPackMapper.insert(p);
 
         insertTrace(p, CssdNodeStatusEnum.RECEIVED.getCode(), dto.getRemark(), null, null, CssdCheckResultEnum.OK.getCode(),
-                TextUtil.hasText(dto.getOperatorName()) ? dto.getOperatorName().trim()
-                        : UserUtils.getCurrentUser().getRealName());
+                UserUtils.getCurrentUser().getRealName());
         return toVo(p, loadTraces(p.getId()));
     }
 
@@ -79,8 +78,7 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
         }
         int target = from + 1;
         int result = dto.getResult() == null ? CssdCheckResultEnum.OK.getCode() : dto.getResult();
-        String operator = TextUtil.hasText(dto.getOperatorName()) ? dto.getOperatorName().trim()
-                : UserUtils.getCurrentUser().getRealName();
+        String operator = UserUtils.getCurrentUser().getRealName();
 
         if (CssdNodeStatusEnum.STERILIZING.is(target)) {
             // ① 条件必填：锅次/批次只在推进到灭菌节点时必填（同一接口服务全部节点），DTO 注解一刀切会挡掉其他节点的合法请求

@@ -13,14 +13,4 @@ public class ExecutionReviewDTO {
      */
     private Long id;
 
-    /**
-     * 审核人ID
-     */
-    private Long reviewerId;
-
-    /**
-     * 审核人姓名
-     */
-    private String reviewerName;
-
 }

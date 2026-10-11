@@ -24,9 +24,4 @@ public class QcExecuteDTO {
      */
     private Integer qcType;
 
-    /**
-     * 质控人；为空时取当前登录用户
-     */
-    private String qcBy;
-
 }

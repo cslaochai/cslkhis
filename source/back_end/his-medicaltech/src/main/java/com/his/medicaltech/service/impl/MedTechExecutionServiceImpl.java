@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.medicaltech.entity.BizMedTechExecution;
+import com.his.system.entity.CurrentUser;
+import com.his.system.utils.UserUtils;
 import com.his.medicaltech.mapper.BizMedTechExecutionMapper;
 import com.his.medicaltech.service.MedTechExecutionService;
 import com.his.medicaltech.vo.BizMedTechExecutionVO;
@@ -86,7 +88,7 @@ public class MedTechExecutionServiceImpl extends ServiceImpl<BizMedTechExecution
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean reviewExecution(Long executionId, Long reviewerId, String reviewerName) {
+    public boolean reviewExecution(Long executionId) {
         BizMedTechExecution execution = this.getById(executionId);
         if (execution == null) {
             throw new BusinessException("执行记录不存在");
@@ -94,10 +96,14 @@ public class MedTechExecutionServiceImpl extends ServiceImpl<BizMedTechExecution
         if (execution.getExecutionStatus() != 3) {
             throw new BusinessException("当前状态不允许审核");
         }
+        CurrentUser reviewer = UserUtils.getCurrentUser();
+        if (reviewer == null) {
+            throw new BusinessException("未获取到当前登录用户信息，无法审核");
+        }
 
         execution.setExecutionStatus(4); // 已审核
-        execution.setReviewerId(reviewerId);
-        execution.setReviewerName(reviewerName);
+        execution.setReviewerId(reviewer.getEmployeeId());
+        execution.setReviewerName(reviewer.getRealName());
         execution.setReviewTime(LocalDateTime.now());
         return this.updateById(execution);
     }

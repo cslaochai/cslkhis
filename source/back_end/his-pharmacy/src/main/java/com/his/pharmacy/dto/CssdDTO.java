@@ -50,11 +50,6 @@ public class CssdDTO {
         private Integer sterilizeMethod;
 
         /**
-         * 回收操作人（不填取当前登录人）
-         */
-        private String operatorName;
-
-        /**
          * 备注
          */
         private String remark;
@@ -68,11 +63,6 @@ public class CssdDTO {
 
         @NotNull(message = "器械包ID不能为空")
         private Long packId;
-
-        /**
-         * 操作人（不填取当前登录人）
-         */
-        private String operatorName;
 
         /**
          * 灭菌锅次（推进到灭菌节点必填）
