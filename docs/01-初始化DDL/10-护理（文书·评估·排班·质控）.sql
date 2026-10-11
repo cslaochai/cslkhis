@@ -1,5 +1,5 @@
 -- 领域：10-护理（文书·评估·排班·质控）
--- 库：hn_biz_his    表数：8
+-- 库：hn_biz_his    表数：6
 -- 说明：DDL 快照（由线上库 SHOW CREATE TABLE 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
 
 -- ----------------------------
@@ -91,47 +91,12 @@ CREATE TABLE `biz_nursing_assessment`
 -- 删除配套：his-patient/entity/BizNurseScheduleRule.java、mapper/BizNurseScheduleRuleMapper.java、
 -- docs/02-铺底基础数据/biz_nurse_schedule_rule.sql、00_import_all.sql 对应导入行、ER 图残留引用。
 
--- ----------------------------
--- biz_nurse_schedule  病区护理排班
--- ----------------------------
-CREATE TABLE `biz_nurse_schedule`
-(
-    `id`                bigint      NOT NULL COMMENT '主键ID（雪花）',
-    `ward_id`           bigint      NOT NULL COMMENT '病区ID',
-    `ward_name`         varchar(128) COMMENT '病区名称（快照）',
-    `dept_id`           bigint      NOT NULL COMMENT '科室ID',
-    `dept_name`         varchar(128) COMMENT '科室名称（快照）',
-    `unit_type`         tinyint     NOT NULL COMMENT '排班单元类型（1-病区 2-门诊科室）',
-    `unit_id`           bigint COMMENT '排班单元ID（unit_type=1 取 sys_ward.ward_id，=2 取 sys_department.id）',
-    `schedule_date`     date        NOT NULL COMMENT '排班日期',
-    `week_day`          tinyint     NOT NULL COMMENT '星期（1-周一 7-周日）',
-    `employee_id`       bigint      NOT NULL COMMENT '护士ID',
-    `emp_code`          varchar(32) COMMENT '工号（快照）',
-    `nurse_name`        varchar(50) COMMENT '护士姓名（快照）',
-    `nurse_title`       varchar(50) COMMENT '职称',
-    `shift_id`          bigint COMMENT '班次ID',
-    `shift_name`        varchar(50) COMMENT '班次名称（快照）',
-    `start_time`        varchar(10) COMMENT '开始时间 HH（快照）',
-    `end_time`          varchar(10) COMMENT '结束时间 HH（快照）',
-    `work_minutes`      int         NOT NULL COMMENT '工时',
-    `schedule_status`   tinyint     NOT NULL COMMENT '状态（1-上班 2-休息 3-请假 4-培训 5-停班）',
-    `schedule_source`   tinyint     NOT NULL COMMENT '生成来源（1-手工 2-模板 3-复制周期 4-换班）',
-    `create_by`         varchar(64) NOT NULL COMMENT '创建人',
-    `create_by_id`      bigint COMMENT '创建人ID',
-    `create_time`       datetime    NOT NULL COMMENT '创建时间',
-    `update_by`         varchar(64) NOT NULL COMMENT '更新人',
-    `update_by_id`      bigint COMMENT '更新人ID',
-    `update_time`       datetime    NOT NULL COMMENT '更新时间',
-    `del_flag`          tinyint     NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
-    `staff_schedule_id` bigint COMMENT '关联的出勤事实 biz_schedule.id（护理格子→底座的指路牌）',
-    `remark`            varchar(500) COMMENT '备注',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_nurse_date` (`employee_id`,`schedule_date`),
-    KEY                 `idx_ward_date` (`ward_id`,`schedule_date`),
-    KEY                 `idx_date_status` (`schedule_date`,`schedule_status`),
-    KEY                 `idx_staff_schedule` (`staff_schedule_id`),
-    KEY                 `idx_unit_date` (`unit_type`,`unit_id`,`schedule_date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='病区护理排班';
+-- biz_nurse_schedule：已于 2026-10-11 删除（P5 合并）。该表是排班底座 biz_schedule 的冗余降维副本——
+-- 实库 1680 行 100% 有 staff_schedule_id 指向活底座行且内容逐字段一致；唯一差异化的 unit_type=2（门诊）零数据；
+-- 唯一键 (employee_id, schedule_date) 一天一格，表达不了多班次。护理排班读写全部切到 biz_schedule
+-- （staff_type IN (2,7) + 排班单元 org_type/org_id 定位），实体/Mapper/副本写路径已删除。
+-- 删除配套：his-patient/entity/BizNurseSchedule.java、mapper/BizNurseScheduleMapper.java（改名 NurseScheduleMapper）、
+-- docs/02-铺底基础数据/biz_nurse_schedule.sql、00_import_all.sql 对应导入行、ER 图残留引用、增量 SQL 见 20261011_合并biz_nurse_schedule进biz_schedule.sql。
 
 -- ----------------------------
 -- sys_nursing_qc_item  护理质控检查项目录

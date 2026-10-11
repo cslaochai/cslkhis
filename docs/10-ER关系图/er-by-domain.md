@@ -1310,16 +1310,6 @@ erDiagram
     bigint ward_id "病区ID（快照）"
     bigint assess_nurse_id "评估护士ID（员工ID）"
   }
-  biz_nurse_schedule["病区护理排班 · biz_nurse_schedule"] {
-    bigint id "主键ID（雪花）"
-    bigint ward_id "病区ID"
-    bigint dept_id "科室ID"
-    bigint unit_id "排班单元ID（unit_type=1 取 sys_ward.ward_id，=2 取 sys_department.id）"
-    date schedule_date "排班日期"
-    bigint employee_id "护士ID"
-    bigint shift_id "班次ID"
-    bigint staff_schedule_id "关联的出勤事实 biz_schedule.id（护理格子→底座的指路牌）"
-  }
   sys_nursing_qc_item["护理质控检查项目录 · sys_nursing_qc_item"] {
     bigint id "主键ID（雪花）"
     varchar item_code "项目编码（BN/SC/SF/DC/IP + 两位序号）"
@@ -1365,11 +1355,6 @@ erDiagram
   sys_ward["病区 · sys_ward"] {
     bigint ward_id "病区ID"
   }
-  sys_ward ||--|{ biz_nurse_schedule : "ward_id"
-  sys_department ||--|{ biz_nurse_schedule : "dept_id"
-  sys_employee ||--|{ biz_nurse_schedule : "employee_id"
-  biz_shift ||--o{ biz_nurse_schedule : "shift_id"
-  biz_schedule ||--o{ biz_nurse_schedule : "staff_schedule_id"
   biz_admission ||--|{ biz_nursing_assessment : "admission_id"
   biz_patient ||--|{ biz_nursing_assessment : "patient_id"
   sys_ward ||--o{ biz_nursing_assessment : "ward_id"

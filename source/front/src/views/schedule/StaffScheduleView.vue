@@ -63,9 +63,9 @@
           </el-form-item>
         </el-form>
         <div class="flex shrink-0 items-start gap-3">
-          <el-button v-perm="'org:schedule:add'" :icon="CopyDocument" @click="copyDialogVisible = true">整周复制
+          <el-button v-perm="'staff:schedule:add'" :icon="CopyDocument" @click="copyDialogVisible = true">整周复制
           </el-button>
-          <el-button v-perm="'org:schedule:add'" :icon="Plus" data-testid="staff-schedule-add" type="primary"
+          <el-button v-perm="'staff:schedule:add'" :icon="Plus" data-testid="staff-schedule-add" type="primary"
                      @click="handleAdd">
             登记排班
           </el-button>
@@ -122,11 +122,11 @@
           <el-table-column label="备注" min-width="140" prop="remark" show-overflow-tooltip/>
           <el-table-column fixed="right" label="操作" width="300">
             <template #default="{ row }">
-              <el-button v-perm="'org:schedule:edit'" :icon="Edit" link type="primary" @click="handleEdit(row)">修改
+              <el-button v-perm="'staff:schedule:edit'" :icon="Edit" link type="primary" @click="handleEdit(row)">修改
               </el-button>
               <el-button
                   v-if="Number(row.dutyStatus) === 1"
-                  v-perm="'org:schedule:edit'"
+                  v-perm="'staff:schedule:edit'"
                   :icon="Switch"
                   data-testid="staff-schedule-swap"
                   link
@@ -135,8 +135,8 @@
               >
                 换班
               </el-button>
-              <el-button v-perm="'org:schedule:list'" :icon="Clock" link @click="openChangeLog(row)">留痕</el-button>
-              <el-button v-perm="'org:schedule:delete'" :icon="Delete" link type="danger" @click="handleDelete(row)">
+              <el-button v-perm="'staff:schedule:list'" :icon="Clock" link @click="openChangeLog(row)">留痕</el-button>
+              <el-button v-perm="'staff:schedule:delete'" :icon="Delete" link type="danger" @click="handleDelete(row)">
                 删除
               </el-button>
             </template>

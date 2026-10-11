@@ -32,7 +32,15 @@ public enum StaffTypeEnum {
     /**
      * 行政/其他（管理员、导诊、病案、审计、院领导、患者）
      */
-    ADMIN(6, "行政其他", false);
+    ADMIN(6, "行政其他", false),
+    /**
+     * 护工/护理辅助（护理员、陪护）：无护士执业资格，不占护理人力配编，
+     * 但和护士同在一个病区里干活、同样要排班，所以护理排班模块必须收得进这类人。
+     *
+     * <p>判别走 {@code sys_role.staff_type}（人 → 岗位类别），跟 {@link #NURSE} 同一套口径；
+     * 号源为 false —— 护工不出诊、不挂号。
+     */
+    NURSING_ASSISTANT(7, "护工护理辅助", false);
 
     private final int code;
     private final String label;

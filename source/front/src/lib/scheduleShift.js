@@ -29,7 +29,7 @@ export const scheduleTypeText = (code) => {
 
 /**
  * 班次适用域（biz_shift.use_scope）唯一口径
- *   1-门诊/急诊排班（biz_schedule / 排班模板）2-病区护理排班（biz_nurse_schedule）
+ *   1-门诊/急诊排班（biz_clinic_source / 排班模板）2-病区护理排班（biz_schedule 护理序列行）
  *   3-全院值守（biz_duty_roster）4-全院通用（sql/200 起：医技/窗口/行政的出勤班次）
  * 各册班次互不通用：门诊排班选到护理班次会被后端直接拒绝，
  * 所以下拉数据源必须带这个过滤，不能靠人眼从名称里挑。
@@ -65,7 +65,9 @@ export const shiftScopeText = (code) => {
  * 判定一律走 staffTypeHasSource()，别在页面里写 === 1 这种裸比较。
  */
 export const STAFF_TYPE_DOCTOR = 1
-export const STAFF_TYPE_TEXT = { 1: '医生', 2: '护理', 3: '医技', 4: '药学', 5: '收费', 6: '行政其他' }
+export const STAFF_TYPE_TEXT = {
+  1: '医生', 2: '护理', 3: '医技', 4: '药学', 5: '收费', 6: '行政其他', 7: '护工护理辅助',
+}
 export const STAFF_TYPE_OPTIONS = [
   { label: '医生', value: 1 },
   { label: '护理', value: 2 },
@@ -73,7 +75,19 @@ export const STAFF_TYPE_OPTIONS = [
   { label: '药学', value: 4 },
   { label: '收费', value: 5 },
   { label: '行政其他', value: 6 },
+  { label: '护工护理辅助', value: 7 },
 ]
+
+/**
+ * 门诊排班（号源管理）专用：只有医生。
+ *
+ * 为什么必须跟 STAFF_TYPE_OPTIONS 分开：biz_clinic_source 是<b>门诊号源表</b>，
+ * 落的是医生的出诊计划（号源/诊室/挂号费都挂在上面），非医生的出勤事实属于「岗位出勤」
+ * （biz_schedule 底座）。以前这里允许选护士/收费/医技，等于把出勤排班塞进号源表，
+ * 于是号源被清零、诊室被清空 —— 号源表和出勤实为两种东西。
+ * 后端写入口已硬拒非医生，这里同步收口，别让用户选了又被拒。
+ */
+export const STAFF_TYPE_DOCTOR_OPTIONS = [{ label: '医生', value: 1 }]
 
 /** 该岗位的排班是否承载号源（决定号源/诊室/挂号费/预约池/加号这些表单块显不显示） */
 export const staffTypeHasSource = (code) => Number(code) === STAFF_TYPE_DOCTOR

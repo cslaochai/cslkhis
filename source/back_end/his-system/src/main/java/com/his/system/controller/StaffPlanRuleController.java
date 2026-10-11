@@ -25,14 +25,14 @@ public class StaffPlanRuleController {
     private final StaffPlanRuleService staffPlanRuleService;
 
     @Operation(summary = "分页查询人力标准")
-    @PreAuthorize("hasAuthority('org:schedule:list')")
+    @PreAuthorize("hasAuthority('staff:schedule:list')")
     @PostMapping("/listPage")
     public Result<PageResult<StaffPlanRuleVO>> listPage(@Valid @RequestBody StaffPlanRuleQueryPageDTO queryDTO) {
         return Result.success(staffPlanRuleService.pageVO(queryDTO));
     }
 
     @Operation(summary = "新增/修改人力标准（同单元同班次同岗位只允许一条）")
-    @PreAuthorize("hasAuthority('org:schedule:add')")
+    @PreAuthorize("hasAuthority('staff:schedule:add')")
     @PostMapping("/staffPlanRuleUpsert")
     public Result<Long> staffPlanRuleUpsert(@Valid @RequestBody StaffPlanRuleUpsertDTO upsertDTO) {
         Long id = staffPlanRuleService.upsert(upsertDTO);
@@ -40,7 +40,7 @@ public class StaffPlanRuleController {
     }
 
     @Operation(summary = "删除人力标准（物理删）")
-    @PreAuthorize("hasAuthority('org:schedule:delete')")
+    @PreAuthorize("hasAuthority('staff:schedule:delete')")
     @DeleteMapping("/deleteById")
     public Result<Void> deleteById(@RequestParam Long id) {
         staffPlanRuleService.deleteById(id);

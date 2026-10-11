@@ -1,5 +1,6 @@
 package com.his.appoint.entity;
 
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
@@ -9,26 +10,28 @@ import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
- * 排班信息
+ * 门诊号源表
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_clinic_source")
 public class BizClinicSource extends BaseEntity {
-    /** 逻辑删除标志（0 未删除 1 已删除） */
+    /**
+     * 逻辑删除标志（0 未删除 1 已删除）
+     */
     @TableLogic
     private Integer delFlag;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 
-
     /**
-     * 出勤事实ID（这条出诊计划是从哪条「谁 · 哪天 · 什么班」的排班事实派生出来的）
+     * 排班id
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long staffScheduleId;

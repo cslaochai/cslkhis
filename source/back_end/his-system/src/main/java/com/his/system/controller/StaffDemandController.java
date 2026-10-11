@@ -41,7 +41,7 @@ public class StaffDemandController {
     }
 
     @Operation(summary = "重算某段日期的人力需求（只覆盖派生行，护士长手工调过的不动）")
-    @PreAuthorize("hasAuthority('org:schedule:edit')")
+    @PreAuthorize("hasAuthority('staff:schedule:edit')")
     @PostMapping("/recalc")
     public Result<StaffDemandService.DemandRecalcResult> recalc(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -52,7 +52,7 @@ public class StaffDemandController {
     }
 
     @Operation(summary = "护士长手工调整需求人数（写为手工来源，后续重算不再覆盖）")
-    @PreAuthorize("hasAuthority('org:schedule:edit')")
+    @PreAuthorize("hasAuthority('staff:schedule:edit')")
     @PostMapping("/adjust")
     public Result<Void> adjust(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate demandDate,

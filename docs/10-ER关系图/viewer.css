@@ -8,6 +8,11 @@
   --panel: #ffffff;
 }
 * { box-sizing: border-box; }
+/* 仅在拖拽平移期间（#stage.drag）禁止文本选中，避免一拖就把图上文字整片选中；
+   平时保留双击选词 / 复制能力（点到文字才能选，符合浏览器默认行为） */
+#stage.drag, #stage.drag * {
+  -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
+}
 html, body { height: 100%; margin: 0; }
 body {
   display: flex; flex-direction: column;

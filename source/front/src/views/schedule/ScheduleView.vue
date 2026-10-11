@@ -119,14 +119,14 @@
               </el-button>
             </div>
             <span class="ml-auto flex items-center gap-2">
-              <el-button v-perm="'org:schedule:add'" :loading="generateLoading" :title="`目标周固定为下周（${nextWeekRangeLabel}），与上面「上一周/下一周」的浏览筛选无关；已过去的日期会自动跳过`"
+              <el-button v-perm="'outpatient:schedule:add'" :loading="generateLoading" :title="`目标周固定为下周（${nextWeekRangeLabel}），与上面「上一周/下一周」的浏览筛选无关；已过去的日期会自动跳过`"
                          data-testid="generate-by-template"
                          @click="handleGenerateFromTemplate">按模板生成下周排班</el-button>
-              <el-button v-perm="'org:schedule:add'" :loading="replicateLoading" type="success"
+              <el-button v-perm="'outpatient:schedule:add'" :loading="replicateLoading" type="success"
                          @click="handleReplicateNextWeek">
                 复刻到 {{ replicateTargetLabel }}
               </el-button>
-              <el-button v-perm="'org:schedule:add'" :icon="Plus" type="primary" @click="handleAdd">新增排班</el-button>
+              <el-button v-perm="'outpatient:schedule:add'" :icon="Plus" type="primary" @click="handleAdd">新增排班</el-button>
             </span>
           </div>
           <div ref="panelTableWrap" v-loading="panelLoading" class="mt-3 min-h-0 flex-1 overflow-x-auto">
@@ -159,7 +159,7 @@
                 <template #default="{ row }">
                   <div class="group/cell relative min-h-[60px] py-1">
                     <!-- 「加排班」悬停才浮现（opacity 切换 + 绝对定位，格子尺寸零变化）；已过日期整格只读，按钮直接不渲染 -->
-                    <button v-if="d >= todayStr" v-perm="'org:schedule:add'"
+                    <button v-if="d >= todayStr" v-perm="'outpatient:schedule:add'"
                             :data-testid="`panel-add-${row.doctorId}-${d}`"
                             class="absolute right-1 top-0.5 z-20 rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium leading-4 text-blue-600 opacity-0 transition-opacity duration-150 group-hover/cell:opacity-100 hover:bg-blue-100"
                             title="为该医生该日补班"
@@ -202,19 +202,19 @@
                         <!-- 操作行：修改/停/加 独占一行。高度常驻预留（opacity 切换），悬停不会撑动卡片。日期已过 → 整条不渲染（服务端同口径拒绝） -->
                         <div v-if="s.status === 1 && d >= todayStr"
                              class="mt-1 flex h-5 items-center justify-end gap-1.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                          <button v-perm="'org:schedule:edit'" :data-testid="`panel-edit-${row.doctorId}-${d}`" class="text-xs leading-4 text-blue-600"
+                          <button v-perm="'outpatient:schedule:edit'" :data-testid="`panel-edit-${row.doctorId}-${d}`" class="text-xs leading-4 text-blue-600"
                                   title="修改排班"
                                   @click.stop="handlePanelCellEdit(s)">修改
                           </button>
                           <span class="text-slate-200">|</span>
-                          <button v-perm="'org:schedule:delete'" :title="staffTypeHasSource(s.staffType) ? '快捷停诊' : '停用该班次'"
+                          <button v-perm="'outpatient:schedule:delete'" :title="staffTypeHasSource(s.staffType) ? '快捷停诊' : '停用该班次'"
                                   class="text-xs leading-4 text-red-500"
                                   @click.stop="handleToggleStatus(s)">停
                           </button>
                           <!-- 加号只给医生出诊班：出勤岗没有号源池（后端同样拒绝），按钮直接不渲染 -->
                           <template v-if="staffTypeHasSource(s.staffType)">
                             <span class="text-slate-200">|</span>
-                            <button v-perm="'org:schedule:edit'" class="text-xs leading-4 text-blue-600"
+                            <button v-perm="'outpatient:schedule:edit'" class="text-xs leading-4 text-blue-600"
                                     title="专家加号"
                                     @click.stop="handleAddSource(s)">加
                             </button>
@@ -293,7 +293,7 @@
             <el-button :icon="Refresh" @click="handleTplReset">重置</el-button>
             <div class="ml-auto flex items-center gap-3">
               <el-button :icon="Refresh" @click="loadTemplates">刷新</el-button>
-              <el-button v-perm="'org:schedule:add'" :icon="Plus" type="primary" @click="handleTplAdd">新增模板
+              <el-button v-perm="'outpatient:schedule:add'" :icon="Plus" type="primary" @click="handleTplAdd">新增模板
               </el-button>
             </div>
           </div>
@@ -375,16 +375,16 @@
               </el-table-column>
               <el-table-column class-name="tpl-op-col" fixed="right" label="操作" width="180">
                 <template #default="{ row }">
-                  <el-button v-if="row.status === 1" v-perm="'org:schedule:edit'" link size="small" type="warning"
+                  <el-button v-if="row.status === 1" v-perm="'outpatient:schedule:edit'" link size="small" type="warning"
                              @click="handleTplToggle(row)">停用
                   </el-button>
-                  <el-button v-else v-perm="'org:schedule:edit'" link size="small" type="success"
+                  <el-button v-else v-perm="'outpatient:schedule:edit'" link size="small" type="success"
                              @click="handleTplToggle(row)">启用
                   </el-button>
-                  <el-button v-perm="'org:schedule:edit'" :icon="Edit" link type="primary" @click="handleTplEdit(row)">
+                  <el-button v-perm="'outpatient:schedule:edit'" :icon="Edit" link type="primary" @click="handleTplEdit(row)">
                     编辑
                   </el-button>
-                  <el-button v-perm="'org:schedule:delete'" :icon="Delete" link type="danger"
+                  <el-button v-perm="'outpatient:schedule:delete'" :icon="Delete" link type="danger"
                              @click="handleTplDelete(row)">删除
                   </el-button>
                 </template>
@@ -424,7 +424,7 @@
             </el-select>
             <el-button :icon="Search" data-testid="shift-search-btn" type="primary" @click="handleShiftSearch">查询
             </el-button>
-            <el-button v-perm="'org:schedule:add'" :icon="Plus" data-testid="shift-add-btn" type="success"
+            <el-button v-perm="'outpatient:schedule:add'" :icon="Plus" data-testid="shift-add-btn" type="success"
                        @click="handleShiftAdd">新增字典
             </el-button>
           </div>
@@ -464,7 +464,7 @@
             </el-table-column>
             <el-table-column align="center" fixed="right" label="操作" width="80">
               <template #default="{ row }">
-                <el-button v-perm="'org:schedule:edit'" data-testid="shift-edit-btn" link type="primary"
+                <el-button v-perm="'outpatient:schedule:edit'" data-testid="shift-edit-btn" link type="primary"
                            @click="handleShiftEdit(row)">编辑
                 </el-button>
               </template>
@@ -518,7 +518,7 @@
       </el-form>
       <template #footer>
         <el-button @click="shiftEditVisible = false">取消</el-button>
-        <el-button v-perm="'org:schedule:edit'" :loading="shiftEditSaving" type="primary"
+        <el-button v-perm="'outpatient:schedule:edit'" :loading="shiftEditSaving" type="primary"
                    @click="handleShiftEditSubmit">确定
         </el-button>
       </template>
@@ -573,7 +573,7 @@
       </el-form>
       <template #footer>
         <el-button @click="shiftAddVisible = false">取消</el-button>
-        <el-button v-perm="'org:schedule:add'" :loading="shiftAddSaving" type="primary" @click="handleShiftAddSubmit">
+        <el-button v-perm="'outpatient:schedule:add'" :loading="shiftAddSaving" type="primary" @click="handleShiftAddSubmit">
           确定
         </el-button>
       </template>
@@ -595,7 +595,7 @@
           <el-form-item label="岗位类别" required>
             <el-select v-model="formData.staffType" class="w-full" data-testid="form-staff-type"
                        @change="handleStaffTypeChange">
-              <el-option v-for="o in STAFF_TYPE_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
+              <el-option v-for="o in STAFF_TYPE_DOCTOR_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
             </el-select>
           </el-form-item>
           <el-form-item :label="`${staffTypeText(formData.staffType)}人员`" required>
@@ -758,7 +758,7 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button v-perm="'org:schedule:add'" :loading="submitLoading" data-testid="add-submit" type="primary"
+        <el-button v-perm="'outpatient:schedule:add'" :loading="submitLoading" data-testid="add-submit" type="primary"
                    @click="handleSubmit">确定
         </el-button>
       </template>
@@ -774,7 +774,7 @@
           <el-form-item label="岗位类别" required>
             <el-select v-model="formData.staffType" class="w-full" data-testid="edit-staff-type"
                        @change="handleStaffTypeChange">
-              <el-option v-for="o in STAFF_TYPE_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
+              <el-option v-for="o in STAFF_TYPE_DOCTOR_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
             </el-select>
           </el-form-item>
           <el-form-item :label="`${staffTypeText(formData.staffType)}人员`" required>
@@ -940,7 +940,7 @@
 
       <template #footer>
         <el-button @click="editVisible = false">取消</el-button>
-        <el-button v-perm="'org:schedule:edit'" :loading="submitLoading" data-testid="edit-submit" type="primary"
+        <el-button v-perm="'outpatient:schedule:edit'" :loading="submitLoading" data-testid="edit-submit" type="primary"
                    @click="handleSubmit">保存
         </el-button>
       </template>
@@ -959,7 +959,7 @@
           <el-form-item label="岗位类别" required>
             <el-select v-model="tplFormData.staffType" class="w-full" data-testid="tpl-form-staff-type"
                        @change="handleTplStaffTypeChange">
-              <el-option v-for="o in STAFF_TYPE_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
+              <el-option v-for="o in STAFF_TYPE_DOCTOR_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
             </el-select>
           </el-form-item>
           <el-form-item :label="`${staffTypeText(tplFormData.staffType)}人员`" required>
@@ -1101,7 +1101,7 @@
       </el-form>
       <template #footer>
         <el-button @click="tplDialogVisible = false">取消</el-button>
-        <el-button v-perm="['org:schedule:add','org:schedule:edit']" :loading="tplSubmitLoading" type="primary"
+        <el-button v-perm="['outpatient:schedule:add','outpatient:schedule:edit']" :loading="tplSubmitLoading" type="primary"
                    @click="handleTplSubmit">确定
         </el-button>
       </template>
@@ -1143,11 +1143,11 @@
       </div>
       <template #footer>
         <el-button @click="stopImpactVisible = false">取消</el-button>
-        <el-button v-if="stopImpactList.length" v-perm="'org:schedule:delete'" :loading="batchCancelLoading"
+        <el-button v-if="stopImpactList.length" v-perm="'outpatient:schedule:delete'" :loading="batchCancelLoading"
                    type="warning" @click="handleBatchCancel">
           停诊并批量退号（{{ stopImpactList.length }}）
         </el-button>
-        <el-button v-perm="'org:schedule:delete'" type="danger" @click="handleStopOnly">仅停诊（名单留存自行通知）
+        <el-button v-perm="'outpatient:schedule:delete'" type="danger" @click="handleStopOnly">仅停诊（名单留存自行通知）
         </el-button>
       </template>
     </el-dialog>
@@ -1203,7 +1203,7 @@
       </div>
       <template #footer>
         <el-button @click="previewVisible = false">取消</el-button>
-        <el-button v-perm="'org:schedule:add'" :disabled="!previewData || !(previewData.willCreate || []).length" :loading="generateLoading"
+        <el-button v-perm="'outpatient:schedule:add'" :disabled="!previewData || !(previewData.willCreate || []).length" :loading="generateLoading"
                    type="primary"
                    @click="handleConfirmGenerate">确认生成
         </el-button>
@@ -1249,6 +1249,7 @@ import {
   SHIFT_SCOPE_OUTPATIENT,
   SHIFT_SCOPE_TEXT,
   STAFF_TYPE_DOCTOR,
+  STAFF_TYPE_DOCTOR_OPTIONS,
   STAFF_TYPE_OPTIONS,
   staffTypeHasSource,
   staffTypeText

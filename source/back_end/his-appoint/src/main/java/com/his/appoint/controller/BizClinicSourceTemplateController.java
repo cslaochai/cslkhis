@@ -21,7 +21,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/scheduleTemplate")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('org:schedule:list')")
+@PreAuthorize("hasAuthority('outpatient:schedule:list')")
 public class BizClinicSourceTemplateController {
 
     private final BizClinicSourceTemplateService bizScheduleTemplateService;
@@ -41,7 +41,7 @@ public class BizClinicSourceTemplateController {
         return Result.success(bizScheduleTemplateService.pageVO(dto));
     }
 
-    @PreAuthorize("hasAuthority('org:schedule:add')")
+    @PreAuthorize("hasAuthority('outpatient:schedule:add')")
     @Operation(summary = "新增/修改模板（合一）")
     @PostMapping("/save")
     public Result<Void> save(@Valid @RequestBody ScheduleTemplateUpsertDTO dto) {
@@ -49,7 +49,7 @@ public class BizClinicSourceTemplateController {
         return Result.success();
     }
 
-    @PreAuthorize("hasAuthority('org:schedule:delete')")
+    @PreAuthorize("hasAuthority('outpatient:schedule:delete')")
     @Operation(summary = "删除模板")
     @DeleteMapping("/delete")
     public Result<Void> delete(@RequestParam Long id) {
@@ -57,7 +57,7 @@ public class BizClinicSourceTemplateController {
         return success ? Result.success() : Result.error("删除失败");
     }
 
-    @PreAuthorize("hasAuthority('org:schedule:edit')")
+    @PreAuthorize("hasAuthority('outpatient:schedule:edit')")
     @Operation(summary = "模板启停")
     @PostMapping("/updateStatus")
     public Result<Void> updateStatus(@RequestParam Long id, @RequestParam Integer status) {
@@ -73,7 +73,7 @@ public class BizClinicSourceTemplateController {
         return Result.success(bizScheduleTemplateService.previewForWeek(weekOffset, deptId, staffType));
     }
 
-    @PreAuthorize("hasAuthority('org:schedule:add')")
+    @PreAuthorize("hasAuthority('outpatient:schedule:add')")
     @Operation(summary = "按模板生成目标周排班（返回结论文案）")
     @PostMapping("/generate")
     public Result<Void> generate(@Valid @RequestBody ScheduleTemplateGenerateDTO dto) {

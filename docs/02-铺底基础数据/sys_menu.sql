@@ -565,8 +565,8 @@ VALUES ('803', '员工管理', '800', 4, 2, '/system/employee', 'system/employee
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
                       update_by_id)
-VALUES ('804', '排班管理', '2945', 2, 2, '/schedule', 'schedule/ScheduleView', 'org.schedule', 'Calendar',
-        'org:schedule:list', 0, 0, 1, 1, 'admin', 'sql230', 0, NULL, '1', '1');
+VALUES ('804', '门诊排班', '2945', 2, 2, '/schedule', 'schedule/ScheduleView', 'org.schedule', 'Calendar',
+        'outpatient:schedule:list', 0, 0, 1, 1, 'admin', 'sql230', 0, NULL, '1', '1');
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
                       update_by_id)
@@ -1396,17 +1396,17 @@ VALUES ('2119', '员工管理-删除', '803', 3, 3, NULL, NULL, 'org.employee:de
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
                       update_by_id)
-VALUES ('2120', '排班管理-新增', '804', 1, 3, NULL, NULL, 'org.schedule:add', NULL, 'org:schedule:add', 0, 1, 0, 1,
+VALUES ('2120', '门诊排班-新增', '804', 1, 3, NULL, NULL, 'org.schedule:add', NULL, 'outpatient:schedule:add', 0, 1, 0, 1,
         'admin', 'admin', 0, NULL, '1', '1');
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
                       update_by_id)
-VALUES ('2121', '排班管理-修改', '804', 2, 3, NULL, NULL, 'org.schedule:edit', NULL, 'org:schedule:edit', 0, 1, 0, 1,
+VALUES ('2121', '门诊排班-修改', '804', 2, 3, NULL, NULL, 'org.schedule:edit', NULL, 'outpatient:schedule:edit', 0, 1, 0, 1,
         'admin', 'admin', 0, NULL, '1', '1');
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
                       update_by_id)
-VALUES ('2122', '排班管理-删除', '804', 3, 3, NULL, NULL, 'org.schedule:delete', NULL, 'org:schedule:delete', 0, 1, 0,
+VALUES ('2122', '门诊排班-删除', '804', 3, 3, NULL, NULL, 'org.schedule:delete', NULL, 'outpatient:schedule:delete', 0, 1, 0,
         1, 'admin', 'admin', 0, NULL, '1', '1');
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
@@ -2454,8 +2454,8 @@ VALUES ('2934', '部门管理-删除', '1109', 2, 3, NULL, NULL, 'system.dept:de
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
                       update_by_id)
-VALUES ('2935', '全院岗位排班', '2945', 3, 2, '/staff-schedule', 'views/schedule/StaffScheduleView.vue',
-        'org:staffSchedule', 'Grid', 'org:schedule:list', 0, 0, 1, 1, 'admin', 'sql230', 0, NULL, '1', '1');
+VALUES ('2935', '岗位出勤', '2945', 3, 2, '/staff-schedule', 'views/schedule/StaffScheduleView.vue',
+        'org:staffSchedule', 'Grid', 'staff:schedule:list', 0, 0, 1, 1, 'admin', 'sql230', 0, NULL, '1', '1');
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
                       update_by_id)
@@ -2464,13 +2464,13 @@ VALUES ('2936', '值守点位', '2945', 7, 2, '/duty-post', 'views/duty/DutyPost
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
                       update_by_id)
-VALUES ('2937', '人力配置标准', '2945', 5, 2, '/staff-plan-rule', 'views/schedule/StaffPlanRuleView.vue',
-        'org:staffPlanRule', 'Tools', 'org:schedule:list', 0, 0, 1, 1, 'admin', 'sql230', 0, NULL, '1', '1');
+VALUES ('2937', '岗位人力标准', '2945', 5, 2, '/staff-plan-rule', 'views/schedule/StaffPlanRuleView.vue',
+        'org:staffPlanRule', 'Tools', 'staff:schedule:list', 0, 0, 1, 1, 'admin', 'sql230', 0, NULL, '1', '1');
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
                       update_by_id)
 VALUES ('2938', '排班总览', '2945', 1, 2, '/schedule-overview', 'views/schedule/ScheduleOverview.vue',
-        'org:scheduleOverview', 'TrendCharts', 'org:schedule:list', 0, 0, 1, 1, 'admin', 'sql230', 0, NULL, '1', '1');
+        'org:scheduleOverview', 'TrendCharts', 'schedule:overview:list', 0, 0, 1, 1, 'admin', 'sql230', 0, NULL, '1', '1');
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
                       update_by_id)

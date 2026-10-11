@@ -19,13 +19,13 @@ import java.util.List;
 @RestController
 @RequestMapping("/schedule")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyAuthority('opd:appointments:list', 'opd:emergency:list', 'org:schedule:list')")
+@PreAuthorize("hasAnyAuthority('opd:appointments:list', 'opd:emergency:list', 'outpatient:schedule:list')")
 public class BizClinicSourceController {
 
     private final BizClinicSourceService bizScheduleService;
     private final BizClinicSourceSlotService bizScheduleSlotService;
 
-    @PreAuthorize("hasAuthority('org:schedule:add')")
+    @PreAuthorize("hasAuthority('outpatient:schedule:add')")
     @Operation(summary = "新增或修改排班（新增/修改合一）")
     @PostMapping("/scheduleUpsert")
     public Result<Void> scheduleUpsert(@Valid @RequestBody ScheduleUpsertDTO upsertDTO) {
@@ -33,7 +33,7 @@ public class BizClinicSourceController {
         return Result.success();
     }
 
-    @PreAuthorize("hasAuthority('org:schedule:delete')")
+    @PreAuthorize("hasAuthority('outpatient:schedule:delete')")
     @Operation(summary = "删除排班")
     @DeleteMapping("/deleteById")
     public Result<Void> removeSchedule(@RequestParam Long scheduleId) {
@@ -60,7 +60,7 @@ public class BizClinicSourceController {
         return Result.success(bizScheduleService.todayScheduleOfCurrentDept());
     }
 
-    @PreAuthorize("hasAuthority('org:schedule:edit')")
+    @PreAuthorize("hasAuthority('outpatient:schedule:edit')")
     @Operation(summary = "更新就诊状态")
     @PostMapping("/updateConsultStatus")
     public Result<Void> updateConsultStatus(@Valid @RequestBody ScheduleConsultStatusUpsertDTO dto) {
@@ -68,7 +68,7 @@ public class BizClinicSourceController {
         return success ? Result.success() : Result.error("更新失败");
     }
 
-    @PreAuthorize("hasAuthority('org:schedule:edit')")
+    @PreAuthorize("hasAuthority('outpatient:schedule:edit')")
     @Operation(summary = "停诊/启用（只更新状态列）")
     @PostMapping("/updateStatus")
     public Result<Void> updateStatus(@Valid @RequestBody ScheduleStatusUpsertDTO dto) {
@@ -82,7 +82,7 @@ public class BizClinicSourceController {
         return Result.success(bizScheduleService.stopImpact(scheduleId));
     }
 
-    @PreAuthorize("hasAuthority('org:schedule:delete')")
+    @PreAuthorize("hasAuthority('outpatient:schedule:delete')")
     @Operation(summary = "停诊批量退号")
     @PostMapping("/batchCancel")
     public Result<String> batchCancel(@Valid @RequestBody ScheduleBatchCancelDTO dto) {
@@ -93,7 +93,7 @@ public class BizClinicSourceController {
      * 今日在岗 —— 排班的下游出口。
      *
      * <p>只要求登录：这是院内公共信息（「今天这个科室谁在」谁都需要知道），
-     * 跟总值班 {@code /system/dutyRoster/current} 一个口径，排班维护才要 org:schedule:list。
+     * 跟总值班 {@code /system/dutyRoster/current} 一个口径，排班维护才要 outpatient:schedule:list。
      */
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "今日在岗（跨岗位；可按指定时刻判定，支持跨零点夜班）")
@@ -114,7 +114,7 @@ public class BizClinicSourceController {
         return Result.success(bizScheduleSlotService.listVOByScheduleIds(dto.getScheduleIds()));
     }
 
-    @PreAuthorize("hasAuthority('org:schedule:add')")
+    @PreAuthorize("hasAuthority('outpatient:schedule:add')")
     @Operation(summary = "加号（号源总数/剩余同步增加并留痕）")
     @PostMapping("/addSource")
     public Result<Void> addSource(@Valid @RequestBody ScheduleAddSourceUpsertDTO dto) {
@@ -122,7 +122,7 @@ public class BizClinicSourceController {
         return success ? Result.success() : Result.error("加号失败");
     }
 
-    @PreAuthorize("hasAuthority('org:schedule:add')")
+    @PreAuthorize("hasAuthority('outpatient:schedule:add')")
     @Operation(summary = "段级号源编辑（每段号源/预约池/停用状态，Σ段写回主表并留痕）")
     @PostMapping("/slotUpsert")
     public Result<Void> slotUpsert(@Valid @RequestBody ScheduleSlotUpsertDTO dto) {

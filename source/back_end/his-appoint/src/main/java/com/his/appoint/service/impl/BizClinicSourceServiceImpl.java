@@ -2,6 +2,7 @@ package com.his.appoint.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.appoint.dto.NurseDutyRow;
 import com.his.appoint.dto.OnDutyQueryDTO;
 import com.his.appoint.dto.ScheduleQueryDTO;
 import com.his.appoint.dto.ScheduleSelectQueryDTO;
@@ -11,6 +12,7 @@ import com.his.appoint.entity.BizClinicSource;
 import com.his.appoint.mapper.BizAppointInfoMapper;
 import com.his.appoint.mapper.BizQueueMapper;
 import com.his.appoint.mapper.BizClinicSourceMapper;
+import com.his.appoint.mapper.NurseDutyReadMapper;
 import com.his.appoint.service.BizAppointService;
 import com.his.appoint.service.BizClinicSourceService;
 import com.his.appoint.service.BizClinicSourceSlotService;
@@ -40,7 +42,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -66,11 +70,11 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
 
     private final BizClinicSourceMapper bizScheduleMapper;
 
+    private final NurseDutyReadMapper nurseDutyReadMapper;
+
     private final BizAppointInfoMapper bizAppointInfoMapper;
 
     private final BizQueueMapper bizQueueMapper;
-
-
 
     @Override
     public List<BizClinicSource> listPage(ScheduleQueryDTO queryDTO) {
@@ -184,12 +188,8 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         if (existing == null) {
             throw new BusinessException("排班记录不存在");
         }
-        // 已过去的排班一律只读：历史班次的真实就诊结果以门诊日志/挂号记录为准，改排班表等于改历史。
-        // 既禁"改一条过去的"，也禁"把未来的改到过去"。
         assertNotPast(existing.getScheduleDate(), "修改");
         assertNotPast(schedule.getScheduleDate(), "修改");
-        // 已挂过号的排班不允许换岗位：医生岗改出勤岗会把「能挂号的号源池」直接抹掉，
-        // 出勤岗改医生岗则让一条没有号源/诊室配置的排班突然出现在挂号下拉里。
         if (!Objects.equals(existing.getStaffType(), schedule.getStaffType())
                 && existing.getUsedSource() != null && existing.getUsedSource() > 0) {
             throw new BusinessException("该排班已有 " + existing.getUsedSource() + " 条挂号记录，不能变更岗位类别");
@@ -280,6 +280,12 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
      */
     private void applyStaffType(BizClinicSource schedule) {
         StaffTypeEnum.assertValid(schedule.getStaffType());
+        if (!StaffTypeEnum.isDoctor(schedule.getStaffType())) {
+            throw new BusinessException("门诊号源只排医生：「" + schedule.getDoctorName() + "」的岗位类别是「"
+                    + StaffTypeEnum.getText(schedule.getStaffType())
+                    + "」，他的出勤请到「岗位出勤」登记（这里承接医生出诊与号源，"
+                    + "排进来不会挂号源和诊室；若他确实是出诊医生，请先到员工档案修正岗位）");
+        }
         if (StaffTypeEnum.hasSource(schedule.getStaffType())) {
             int total = schedule.getTotalSource() == null ? 0 : schedule.getTotalSource();
             if (total < 1) {
@@ -306,7 +312,6 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
 
     /**
      * 班次是时间段与班别的<b>唯一</b>来源：前端传什么都不认，一律按班次字典覆盖
-     * （原来「标准班次」和「班次类型」两个并列字段可以互相矛盾，就是这么来的）。
      */
     private void applyShift(BizClinicSource schedule) {
         BizShift shift = shiftService.resolveForScheduling(schedule.getShiftId(), schedule.getDeptId());
@@ -446,7 +451,6 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
 
     /**
      * 校验同一医生同一天的时间段是否冲突
-     * 时间重叠条件：startTime1 < endTime2 且 startTime2 < endTime1
      */
     private void checkScheduleOverlap(BizClinicSource schedule, Long excludeId) {
         if (schedule.getDoctorId() == null || schedule.getScheduleDate() == null
@@ -568,7 +572,8 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
                 : ShiftCoverUtil.parseShiftTime(queryDTO.getMoment());
         boolean onlyOnDuty = !Boolean.FALSE.equals(queryDTO.getOnDutyOnly());
 
-        List<BizClinicSource> rows = loadDaySchedule(deptId, date, queryDTO.getStaffType());
+        // 护士权威来源是护理排班表，必须并入（否则护士在分诊/在岗列表里看不到）
+        List<DutyRow> rows = collectDutyRows(deptId, date, queryDTO.getStaffType());
         List<OnDutyStaffVO> all = rows.stream().map(s -> toOnDutyVO(s, moment)).toList();
         if (!onlyOnDuty) {
             return all;
@@ -583,41 +588,36 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         }
         LocalDate today = LocalDate.now();
         LocalTime now = LocalTime.now();
-        List<BizClinicSource> rows = loadDaySchedule(deptId, today, staffType);
+        List<DutyRow> rows = collectDutyRows(deptId, today, staffType);
         if (rows.isEmpty()) {
             return null;
         }
-        List<BizClinicSource> onDuty = rows.stream()
-                .filter(s -> ShiftCoverUtil.covers(now, s.getStartTime(), s.getEndTime()))
+        List<DutyRow> onDuty = rows.stream()
+                .filter(r -> ShiftCoverUtil.covers(now, r.startTime, r.endTime))
                 .toList();
         if (!onDuty.isEmpty()) {
-            // 同科室多人同时在职：优先本人（当班护士自己操作，理应记她），不是随便抓一个
-            for (BizClinicSource s : onDuty) {
-                if (preferEmpId != null && Objects.equals(s.getDoctorId(), preferEmpId)) {
-                    return toOnDutyVO(s, now);
+            for (DutyRow r : onDuty) {
+                if (preferEmpId != null && Objects.equals(r.staffId, preferEmpId)) {
+                    return toOnDutyVO(r, now);
                 }
             }
-            // 交接班时段两班重叠 → 取最近开班的那一班（接班人），
-            // 否则凌晨分诊会被记到已经下班的上一班头上
-            BizClinicSource latest = onDuty.stream()
-                    .max(Comparator.comparing(s -> ShiftCoverUtil.parseShiftTime(s.getStartTime()),
+            DutyRow latest = onDuty.stream()
+                    .max(Comparator.comparing(r -> ShiftCoverUtil.parseShiftTime(r.startTime),
                             Comparator.nullsFirst(Comparator.naturalOrder())))
                     .orElse(null);
             return latest == null ? null : toOnDutyVO(latest, now);
         }
-        // 交接班空档：此刻谁都不在班里，退而取当日最早一班（当天在岗过的人）。
-        // 仍然不是「登录人兜底」——身份凭证 ≠ 当班责任
-        BizClinicSource earliest = rows.stream()
-                .min(Comparator.comparing(s -> ShiftCoverUtil.parseShiftTime(s.getStartTime()),
+        DutyRow earliest = rows.stream()
+                .min(Comparator.comparing(r -> ShiftCoverUtil.parseShiftTime(r.startTime),
                         Comparator.nullsLast(Comparator.naturalOrder())))
                 .orElse(null);
         return earliest == null ? null : toOnDutyVO(earliest, now);
     }
 
     /**
-     * 当日该科室全部有效排班（默认全岗位）。
+     * 当日该科室门诊号源表里的有效出勤行（默认全岗位），转成统一的 DutyRow。
      */
-    private List<BizClinicSource> loadDaySchedule(Long deptId, LocalDate date, Integer staffType) {
+    private List<DutyRow> loadDaySchedule(Long deptId, LocalDate date, Integer staffType) {
         LambdaQueryWrapper<BizClinicSource> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BizClinicSource::getDeptId, deptId)
                 .eq(BizClinicSource::getScheduleDate, date)
@@ -627,30 +627,119 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
             wrapper.eq(BizClinicSource::getStaffType, staffType);
         }
         wrapper.orderByAsc(BizClinicSource::getStartTime);
-        return bizScheduleMapper.selectList(wrapper);
+        List<BizClinicSource> src = bizScheduleMapper.selectList(wrapper);
+        List<DutyRow> out = new ArrayList<>(src.size());
+        for (BizClinicSource s : src) {
+            out.add(toDutyRow(s));
+        }
+        return out;
     }
 
-    private OnDutyStaffVO toOnDutyVO(BizClinicSource s, LocalTime moment) {
+    private DutyRow toDutyRow(BizClinicSource s) {
+        DutyRow r = new DutyRow();
+        r.scheduleId = s.getId();
+        r.staffId = s.getDoctorId();
+        r.staffName = s.getDoctorName();
+        r.staffType = s.getStaffType();
+        r.deptId = s.getDeptId();
+        r.deptName = s.getDeptName();
+        r.shiftId = s.getShiftId();
+        r.startTime = s.getStartTime();
+        r.endTime = s.getEndTime();
+        r.status = s.getStatus();
+        r.roomId = s.getRoomId();
+        r.roomName = s.getRoomName();
+        return r;
+    }
+
+    /**
+     * 当日该科室护理排班表里的在岗护士（权威来源），转成统一的 DutyRow。
+     */
+    private List<DutyRow> loadNurseDaySchedule(Long deptId, LocalDate date) {
+        List<NurseDutyRow> ns = nurseDutyReadMapper.listOnDuty(deptId, date);
+        if (ns == null || ns.isEmpty()) {
+            return List.of();
+        }
+        List<DutyRow> out = new ArrayList<>(ns.size());
+        for (NurseDutyRow n : ns) {
+            DutyRow r = new DutyRow();
+            r.scheduleId = n.getId();
+            r.staffId = n.getEmployeeId();
+            r.staffName = n.getNurseName();
+            r.staffType = StaffTypeEnum.NURSE.getCode();
+            r.deptId = n.getDeptId();
+            r.deptName = n.getDeptName();
+            r.shiftId = n.getShiftId();
+            r.startTime = n.getStartTime();
+            r.endTime = n.getEndTime();
+            r.status = n.getScheduleStatus();
+            out.add(r);
+        }
+        return out;
+    }
+
+    /**
+     * 合并门诊号源表与护理排班表，得到某科室当日全部候选用人在岗记录。
+     */
+    private List<DutyRow> collectDutyRows(Long deptId, LocalDate date, Integer staffType) {
+        List<DutyRow> rows = loadDaySchedule(deptId, date, staffType);
+        boolean includeNurse = staffType == null || staffType == StaffTypeEnum.NURSE.getCode();
+        if (!includeNurse) {
+            return rows;
+        }
+        LinkedHashMap<Long, DutyRow> byEmp = new LinkedHashMap<>();
+        for (DutyRow r : rows) {
+            if (r.staffId != null) {
+                byEmp.putIfAbsent(r.staffId, r);
+            }
+        }
+        for (DutyRow n : loadNurseDaySchedule(deptId, date)) {
+            if (n.staffId != null) {
+                byEmp.put(n.staffId, n); // 护理排班表权威：冲突时覆盖
+            }
+        }
+        return new ArrayList<>(byEmp.values());
+    }
+
+    private OnDutyStaffVO toOnDutyVO(DutyRow r, LocalTime moment) {
         OnDutyStaffVO vo = new OnDutyStaffVO();
-        vo.setScheduleId(s.getId());
-        vo.setStaffId(s.getDoctorId());
-        vo.setStaffName(s.getDoctorName());
-        vo.setStaffType(s.getStaffType());
-        vo.setStaffTypeName(StaffTypeEnum.getText(s.getStaffType()));
-        vo.setDeptId(s.getDeptId());
-        vo.setDeptName(s.getDeptName());
-        vo.setShiftId(s.getShiftId());
-        vo.setStartTime(s.getStartTime());
-        vo.setEndTime(s.getEndTime());
-        vo.setRoomId(s.getRoomId());
-        vo.setRoomName(s.getRoomName());
-        vo.setStatus(s.getStatus());
-        vo.setOnDutyNow(ShiftCoverUtil.covers(moment, s.getStartTime(), s.getEndTime()));
-        if (s.getShiftId() != null && shiftService != null) {
-            BizShift shift = shiftService.getById(s.getShiftId());
+        vo.setScheduleId(r.scheduleId);
+        vo.setStaffId(r.staffId);
+        vo.setStaffName(r.staffName);
+        vo.setStaffType(r.staffType);
+        vo.setStaffTypeName(StaffTypeEnum.getText(r.staffType));
+        vo.setDeptId(r.deptId);
+        vo.setDeptName(r.deptName);
+        vo.setShiftId(r.shiftId);
+        vo.setStartTime(r.startTime);
+        vo.setEndTime(r.endTime);
+        vo.setRoomId(r.roomId);
+        vo.setRoomName(r.roomName);
+        vo.setStatus(r.status);
+        vo.setOnDutyNow(ShiftCoverUtil.covers(moment, r.startTime, r.endTime));
+        if (r.shiftId != null && shiftService != null) {
+            BizShift shift = shiftService.getById(r.shiftId);
             vo.setShiftName(shift == null ? null : shift.getShiftName());
         }
         return vo;
+    }
+
+    /**
+     * 统一的候选用人在岗行（抹平门诊号源表 / 护理排班表两张源的差异）。
+     */
+    private static class DutyRow {
+        Long scheduleId;
+        Long staffId;
+        String staffName;
+        Integer staffType;
+        Long deptId;
+        String deptName;
+        Long shiftId;
+        String startTime;
+        String endTime;
+        Integer status;
+        Long roomId;
+        String roomName;
     }
 
     /**

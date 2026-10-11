@@ -46,7 +46,7 @@ public class StaffAttendanceController {
     }
 
     @Operation(summary = "确认缺勤（全系统唯一能产生「缺勤」的入口，须科室确认）")
-    @PreAuthorize("hasAuthority('org:schedule:edit')")
+    @PreAuthorize("hasAuthority('staff:schedule:edit')")
     @PostMapping("/markAbsent")
     public Result<StaffAttendanceVO> markAbsent(@Valid @RequestBody AttendanceDTO dto) {
         StaffAttendanceVO vo = staffAttendanceService.markAbsent(dto);
@@ -54,7 +54,7 @@ public class StaffAttendanceController {
     }
 
     @Operation(summary = "手工登记/修正工时（没有打卡数据的日子由护士长补登）")
-    @PreAuthorize("hasAuthority('org:schedule:edit')")
+    @PreAuthorize("hasAuthority('staff:schedule:edit')")
     @PostMapping("/adjust")
     public Result<StaffAttendanceVO> adjust(@Valid @RequestBody AttendanceDTO dto) {
         StaffAttendanceVO vo = staffAttendanceService.adjust(dto);
@@ -62,7 +62,7 @@ public class StaffAttendanceController {
     }
 
     @Operation(summary = "科室确认（0-待确认 1-已确认 2-有异议）")
-    @PreAuthorize("hasAuthority('org:schedule:edit')")
+    @PreAuthorize("hasAuthority('staff:schedule:edit')")
     @PostMapping("/confirm")
     public Result<Void> confirm(@RequestParam Long id, @RequestParam Integer confirmStatus) {
         staffAttendanceService.confirm(id, confirmStatus);
@@ -70,7 +70,7 @@ public class StaffAttendanceController {
     }
 
     @Operation(summary = "撤销一条出勤登记（物理删，好可以把那天重新签一次）")
-    @PreAuthorize("hasAuthority('org:schedule:edit')")
+    @PreAuthorize("hasAuthority('staff:schedule:edit')")
     @PostMapping("/remove")
     public Result<Void> remove(@RequestParam Long id) {
         staffAttendanceService.remove(id);

@@ -169,8 +169,6 @@ biz_fund_account.sql;
 SOURCE
 biz_infusion_seat.sql;
 SOURCE
-biz_nurse_schedule.sql;
-SOURCE
 biz_clinic_source.sql;
 SOURCE
 biz_clinic_source_slot.sql;

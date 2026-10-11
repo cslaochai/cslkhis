@@ -66,7 +66,7 @@ CREATE TABLE `biz_appoint_info`
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='挂号信息';
 
 -- ----------------------------
--- biz_clinic_source_template  排班周模板
+-- biz_clinic_source_template  门诊排班号源周模板
 -- ----------------------------
 CREATE TABLE `biz_clinic_source_template`
 (
@@ -109,7 +109,7 @@ CREATE TABLE `biz_clinic_source_template`
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='排班周模板';
 
 -- ----------------------------
--- biz_clinic_source_slot_template  排班模板时段
+-- biz_clinic_source_slot_template  门诊排班号源模板时段
 -- ----------------------------
 CREATE TABLE `biz_clinic_source_slot_template`
 (
@@ -134,7 +134,7 @@ CREATE TABLE `biz_clinic_source_slot_template`
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='排班模板时段';
 
 -- ----------------------------
--- biz_clinic_source  排班信息
+-- biz_clinic_source  门诊号源表
 -- ----------------------------
 CREATE TABLE `biz_clinic_source`
 (
@@ -187,7 +187,7 @@ CREATE TABLE `biz_clinic_source`
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='排班信息';
 
 -- ----------------------------
--- biz_clinic_source_slot  排班时段号源
+-- biz_clinic_source_slot  门诊排班时段号源
 -- ----------------------------
 CREATE TABLE `biz_clinic_source_slot`
 (
@@ -365,7 +365,7 @@ CREATE TABLE `biz_previsit_record`
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='患者端预问诊记录（挂号后病史采集）';
 
 -- ----------------------------
--- biz_clinic_source_change_log  排班变更记录
+-- biz_clinic_source_change_log  门诊排班号变更记录
 -- ----------------------------
 CREATE TABLE `biz_clinic_source_change_log`
 (

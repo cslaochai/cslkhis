@@ -33,14 +33,14 @@ public class StaffScheduleController {
     private final ScheduleChangeLogService scheduleChangeLogService;
 
     @Operation(summary = "分页查询排班（日期区间 + 单元 + 岗位类别 + 出勤状态 + 姓名/工号关键词）")
-    @PreAuthorize("hasAuthority('org:schedule:list')")
+    @PreAuthorize("hasAuthority('staff:schedule:list')")
     @PostMapping("/listPage")
     public Result<PageResult<StaffScheduleVO>> listPage(@Valid @RequestBody StaffScheduleQueryPageDTO queryDTO) {
         return Result.success(staffScheduleService.pageVO(queryDTO));
     }
 
     @Operation(summary = "新增/修改排班（时间与工时由班次带出；超出人力上限只提示不拦）")
-    @PreAuthorize("hasAuthority('org:schedule:add')")
+    @PreAuthorize("hasAuthority('staff:schedule:add')")
     @PostMapping("/staffScheduleUpsert")
     public Result<Void> staffScheduleUpsert(@Valid @RequestBody StaffScheduleUpsertDTO upsertDTO) {
         String warning = staffScheduleService.upsert(upsertDTO);
@@ -48,7 +48,7 @@ public class StaffScheduleController {
     }
 
     @Operation(summary = "删除排班（物理删；删后低于最低在岗会当场拦下并回滚）")
-    @PreAuthorize("hasAuthority('org:schedule:delete')")
+    @PreAuthorize("hasAuthority('staff:schedule:delete')")
     @DeleteMapping("/deleteById")
     public Result<Void> deleteById(@RequestParam Long id) {
         staffScheduleService.deleteById(id);
@@ -56,7 +56,7 @@ public class StaffScheduleController {
     }
 
     @Operation(summary = "换班（两条同天排班互换）/ 代班（单向换人承接），双方都要重过时间与岗位校验")
-    @PreAuthorize("hasAuthority('org:schedule:edit')")
+    @PreAuthorize("hasAuthority('staff:schedule:edit')")
     @PostMapping("/swap")
     public Result<Void> swap(@Valid @RequestBody StaffScheduleSwapDTO dto) {
         staffScheduleService.swap(dto);
@@ -64,7 +64,7 @@ public class StaffScheduleController {
     }
 
     @Operation(summary = "按星期整周复制排班（返回补上的行数，已排过的人自动跳过）")
-    @PreAuthorize("hasAuthority('org:schedule:add')")
+    @PreAuthorize("hasAuthority('staff:schedule:add')")
     @PostMapping("/copyRange")
     public Result<Integer> copyRange(@Valid @RequestBody StaffScheduleCopyDTO dto) {
         int copied = staffScheduleService.copyRange(dto);
@@ -81,7 +81,7 @@ public class StaffScheduleController {
     }
 
     @Operation(summary = "某条排班的变更留痕（换班/代班/停班/加减号，最新在前）")
-    @PreAuthorize("hasAuthority('org:schedule:list')")
+    @PreAuthorize("hasAuthority('staff:schedule:list')")
     @GetMapping("/changeLogList")
     public Result<List<ScheduleChangeLogVO>> changeLogList(@RequestParam Long staffScheduleId) {
         return Result.success(scheduleChangeLogService.listBySchedule(staffScheduleId));

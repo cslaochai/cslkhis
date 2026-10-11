@@ -36,14 +36,14 @@ public class ShiftController {
         return Result.success(shiftService.selectListVO(deptId, status, useScope));
     }
 
-    @PreAuthorize("hasAuthority('org:schedule:list')")
+    @PreAuthorize("hasAuthority('staff:schedule:list')")
     @Operation(summary = "班次分页查询（关键词=名称模糊；排序 start_time + id 二级键）")
     @PostMapping("/listPage")
     public Result<PageResult<ShiftVO>> listPage(@Valid @RequestBody ShiftQueryPageDTO dto) {
         return Result.success(shiftService.pageVO(dto));
     }
 
-    @PreAuthorize("hasAuthority('org:schedule:add')")
+    @PreAuthorize("hasAuthority('staff:schedule:add')")
     @Operation(summary = "新增/修改班次（时长按起止时间重算，同名同科室防重）")
     @PostMapping("/shiftUpsert")
     public Result<Void> shiftUpsert(@Valid @RequestBody ShiftUpsertDTO dto) {
@@ -51,14 +51,14 @@ public class ShiftController {
         return Result.success(dto.getId() == null ? "新增成功" : "修改成功", null);
     }
 
-    @PreAuthorize("hasAuthority('org:schedule:delete')")
+    @PreAuthorize("hasAuthority('staff:schedule:delete')")
     @Operation(summary = "删除班次（逻辑删）")
     @DeleteMapping("/deleteById")
     public Result<Void> deleteById(@RequestParam Long id) {
         return shiftService.deleteShift(id) ? Result.success("删除成功", null) : Result.error("删除失败");
     }
 
-    @PreAuthorize("hasAuthority('org:schedule:edit')")
+    @PreAuthorize("hasAuthority('staff:schedule:edit')")
     @Operation(summary = "班次改名（维护界面：只改名称，时间/科室/类型不可改）")
     @PostMapping("/rename")
     public Result<Void> rename(@RequestParam Long id, @RequestParam String shiftName) {
@@ -66,7 +66,7 @@ public class ShiftController {
         return error == null ? Result.success("改名成功", null) : Result.error(error);
     }
 
-    @PreAuthorize("hasAuthority('org:schedule:edit')")
+    @PreAuthorize("hasAuthority('staff:schedule:edit')")
     @Operation(summary = "班次启用/停用（维护界面：只改状态，名称/时间/科室/类型不可改）")
     @PostMapping("/updateStatus")
     public Result<Void> updateStatus(@RequestParam Long id, @RequestParam Integer status) {

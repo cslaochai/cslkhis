@@ -297,11 +297,6 @@
 296,9,"biz_inpatient_transfer","住院转科轨迹","apply_doctor_id","转出方发起医生ID","sys_employee","id","1:N","Y","A-数据全命中",11,11,1,"命名+覆盖率",
 297,9,"biz_inpatient_transfer","住院转科轨迹","receive_doctor_id","转入方接收医生ID（员工ID）","sys_employee","id","1:N","Y","A-数据全命中",5,5,1,"命名+覆盖率",
 298,9,"biz_inpatient_transfer","住院转科轨迹","record_id","回写的住院病历ID","biz_inpatient_record","id","1:N","Y","A-数据全命中",5,5,1,"命名+覆盖率",
-299,10,"biz_nurse_schedule","病区护理排班","ward_id","病区ID","sys_ward","ward_id","1:N","N","A-数据全命中",1680,1680,1,"命名+覆盖率",
-300,10,"biz_nurse_schedule","病区护理排班","dept_id","科室ID","sys_department","id","1:N","N","A-数据全命中",1680,1680,1,"命名+覆盖率",
-301,10,"biz_nurse_schedule","病区护理排班","employee_id","护士ID","sys_employee","id","1:N","N","A-数据全命中",1680,1680,1,"命名+覆盖率",
-302,10,"biz_nurse_schedule","病区护理排班","shift_id","班次ID","biz_shift","id","1:N","Y","A-数据全命中",1256,1256,1,"命名+覆盖率",
-303,10,"biz_nurse_schedule","病区护理排班","staff_schedule_id","关联的出勤事实 biz_schedule.id（护理格子→底座的指路牌）","biz_schedule","id","1:N","Y","A-数据全命中",1680,1680,1,"命名+覆盖率",
 306,10,"biz_nursing_assessment","护理评估单","admission_id","入院ID","biz_admission","admission_id","1:N","N","A-数据全命中",18,18,1,"命名+覆盖率",
 307,10,"biz_nursing_assessment","护理评估单","patient_id","患者ID","biz_patient","id","1:N","N","B-数据部分命中",18,15,0.8333,"命名+覆盖率",
 308,10,"biz_nursing_assessment","护理评估单","ward_id","病区ID（快照）","sys_ward","ward_id","1:N","Y","B-数据部分命中",18,10,0.5556,"命名+覆盖率",
@@ -888,7 +883,6 @@
 ,7,"biz_staff_demand","人力需求（需求层：排班的驱动源与分母）","source_biz_id","来源业务ID（出诊计划ID/病区ID）","未落定",,"P-多态外键","Y","P-多态外键",,,,"按类型列分流，不画单线",
 ,7,"biz_staff_plan_rule","人力配置标准","org_id","排班单元ID（全院级为0）","未落定",,"P-多态外键","N","P-多态外键",,,,"按类型列分流，不画单线",
 ,7,"biz_schedule","员工排班","org_id","排班单元ID（全院级为0）","未落定",,"P-多态外键","N","P-多态外键",,,,"按类型列分流，不画单线",
-,10,"biz_nurse_schedule","病区护理排班","unit_id","排班单元ID（unit_type=1 取 sys_ward.ward_id，=2 取 sys_department.id）","未落定",,"P-多态外键","Y","P-多态外键",,,,"按类型列分流，不画单线",
 ,11,"biz_emr_signature","电子签名证据","biz_id","签名对象ID","未落定",,"P-多态外键","N","P-多态外键",,,,"按类型列分流，不画单线",
 ,13,"biz_medicaltech_execution","医技执行记录","apply_id","申请单ID","未落定",,"P-多态外键","N","P-多态外键",,,,"按类型列分流，不画单线","biz_day_surgery_apply / biz_inspection_apply / biz_laboratory_apply / biz_operation_apply / biz_refund_apply / biz_transfusion_apply / biz_treatment_apply"
 ,13,"biz_report","报告单","record_id","检查/检验记录ID","未落定",,"P-多态外键","N","P-多态外键",,,,"按类型列分流，不画单线","biz_anesthesia_record / biz_checkup_record / biz_chronic_record / biz_endoscopy_record / biz_fee_record / biz_inpatient_record / biz_inspection_record / biz_laboratory_record / biz_lis_qc_record / biz_medical_record / biz_nursing_record / biz_treatment_record / biz_triage_record / biz_ultrasound_record"
@@ -950,7 +944,6 @@
 ,9,"biz_inpatient_leave","住院请假登记","admission_no","住院号","biz_admission","admission_no","S-编号冗余","N","S-编号冗余",7,7,1,"无法判定",
 ,9,"biz_inpatient_order","住院医嘱主表","patient_no","患者编号","biz_patient","patient_no","S-编号冗余","N","S-编号冗余",113,113,1,"无法判定",
 ,9,"biz_inpatient_transfer","住院转科轨迹","admission_no","入院号","biz_admission","admission_no","S-编号冗余","N","S-编号冗余",11,11,1,"无法判定",
-,10,"biz_nurse_schedule","病区护理排班","emp_code","工号","sys_employee","emp_code","S-编号冗余","N","S-编号冗余",1680,1680,1,"无法判定",
 ,10,"biz_nursing_assessment","护理评估单","patient_no","患者编号","biz_patient","patient_no","S-编号冗余","N","S-编号冗余",15,15,1,"无法判定",
 ,10,"biz_nursing_qc_check_item","护理质量检查明细","item_code","项目编码","sys_nursing_qc_item","item_code","S-编号冗余","N","S-编号冗余",559,559,1,"无法判定",
 ,10,"biz_nursing_record","护理文书","patient_no","患者编号","biz_patient","patient_no","S-编号冗余","N","S-编号冗余",15,15,1,"无法判定",

@@ -23,7 +23,7 @@ public class ScheduleOverviewController {
 
     private final BizClinicSourceOverviewService bizScheduleOverviewService;
 
-    @PreAuthorize("hasAuthority('org:schedule:list')")
+    @PreAuthorize("hasAuthority('schedule:overview:list')")
     @Operation(summary = "排班周总览（门诊号源/在岗/缺口/总值班一屏聚合，只读）")
     @GetMapping("/overviewWeek")
     public Result<ScheduleOverviewVO> overviewWeek(

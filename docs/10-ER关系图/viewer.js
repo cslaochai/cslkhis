@@ -70,7 +70,7 @@
   }
 
   function renderSideDomain() {
-    side.innerHTML = '<div class="side-h">23 个领域（表数 / 关系数）</div>';
+    side.innerHTML = '<div class="side-h">' + DATA.domains.length + ' 个领域（表数 / 关系数）</div>';
     DATA.domains.forEach(function (d) {
       var b = document.createElement('button');
       b.className = 'item' + (d.n === state.domain ? ' on' : '');
@@ -89,7 +89,7 @@
   }
 
   function renderSideFocus() {
-    side.innerHTML = '<div class="side-h">全部 320 张表（↑父 ↓子）</div>';
+    side.innerHTML = '<div class="side-h">全部 ' + DATA.tables.length + ' 张表（↑父 ↓子）</div>';
     DATA.tables.forEach(function (t) {
       var g = neigh(t[0]);
       var b = document.createElement('button');
@@ -244,7 +244,7 @@
   stage.addEventListener('wheel', function (e) { e.preventDefault(); zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.12 : 0.89); }, { passive: false });
   stage.addEventListener('dblclick', function (e) { e.preventDefault(); zoomAt(e.clientX, e.clientY, e.shiftKey ? 0.62 : 1.7); });
   var drag = null;
-  stage.addEventListener('pointerdown', function (e) { drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y }; stage.classList.add('drag'); stage.setPointerCapture(e.pointerId); });
+  stage.addEventListener('pointerdown', function (e) { drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y }; stage.classList.add('drag'); stage.setPointerCapture(e.pointerId); if (window.getSelection) window.getSelection().removeAllRanges(); });
   stage.addEventListener('pointermove', function (e) { if (!drag) return; view.x = drag.vx + e.clientX - drag.x; view.y = drag.vy + e.clientY - drag.y; apply(); });
   stage.addEventListener('pointerup', function () { drag = null; stage.classList.remove('drag'); });
   window.addEventListener('resize', function () { if (canvas.querySelector('svg')) fit(); });
