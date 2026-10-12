@@ -10,6 +10,7 @@ import com.his.system.entity.SysMenu;
 import com.his.system.mapper.SysMenuMapper;
 import com.his.system.service.RolePermissionCache;
 import com.his.system.service.SysMenuService;
+import com.his.system.service.UserIdentityCache;
 import com.his.system.utils.UserUtils;
 import com.his.system.vo.MenuVO;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
 
     private final SysMenuMapper sysMenuMapper;
     private final RolePermissionCache rolePermissionCache;
+    private final UserIdentityCache userIdentityCache;
 
     @Override
     public List<MenuVO> tree() {
@@ -65,11 +67,13 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
             sysMenuMapper.insert(menu);
             // 菜单新增会改变各角色可见的按钮集合，全量失效
             rolePermissionCache.invalidateAll();
+            userIdentityCache.invalidateAll();
             return "新增成功";
         }
         sysMenuMapper.updateById(menu);
         // 菜单的权限码可能被改了:所有角色的权限集合都可能变化,全量失效(角色数级,量小)
         rolePermissionCache.invalidateAll();
+        userIdentityCache.invalidateAll();
         return "修改成功";
     }
 
@@ -84,6 +88,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         sysMenuMapper.deleteById(menuId);
         // 菜单没了,持有它的角色权限集合变小,全量失效
         rolePermissionCache.invalidateAll();
+        userIdentityCache.invalidateAll();
     }
 
     private MenuVO toVO(SysMenu menu) {

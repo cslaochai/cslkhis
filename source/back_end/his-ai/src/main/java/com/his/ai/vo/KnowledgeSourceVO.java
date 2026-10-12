@@ -24,6 +24,16 @@ public class KnowledgeSourceVO {
     private String category;
 
     /**
+     * 文档版本号
+     */
+    private String docVersion;
+
+    /**
+     * 文档来源名称（诊疗指南/论坛等）
+     */
+    private String docSourceName;
+
+    /**
      * 片段摘要（原文截断）
      */
     private String snippet;

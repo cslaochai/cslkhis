@@ -22,6 +22,7 @@ import com.his.pay.config.AlipayProperties;
 import com.his.pay.vo.PayOrderVO;
 import com.his.pay.enums.PayOrderBizTypeEnum;
 import com.his.pay.service.AlipayChannelService;
+import com.his.pay.service.PayOrderService;
 import com.his.pay.service.WxPayChannelService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -134,6 +135,7 @@ public class AlipayChannelServiceImpl implements AlipayChannelService {
             bizContent.put("out_trade_no", order.getPayNo());
             bizContent.put("total_amount", NumUtil.plain(order.getAmount()));
             bizContent.put("subject", PayOrderBizTypeEnum.getText(order.getBizType()));
+            bizContent.put("timeout_express", PayOrderService.PAY_ORDER_EXPIRE_MINUTES + "m");
             request.setBizContent(bizContent.toString());
             // 主扫是收费台出的码，钱到账后要记在账单上，所以推给收费侧的回调地址，不是患者端那个
             if (TextUtil.hasText(alipayProperties.getNotifyUrlCashier())) {

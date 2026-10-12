@@ -1,8 +1,7 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.his.common.validation.InEnum;
-import com.his.patient.enums.VtePreventStatusEnum;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -50,7 +49,7 @@ public class VtePreventUpsertDTO {
      * 落实状态（0-待落实 1-已落实 2-禁忌未用 3-患者拒绝）
      */
     @NotNull(message = "落实状态不能为空")
-    @InEnum(value = VtePreventStatusEnum.class, message = "落实状态取值不合法（0-待落实 1-已落实 2-禁忌未用 3-患者拒绝）")
+    @AllowedValues(values = {"0", "1", "2", "3"}, message = "落实状态取值不合法（0-待落实 1-已落实 2-禁忌未用 3-患者拒绝）")
     private Integer executeStatus;
 
     /**

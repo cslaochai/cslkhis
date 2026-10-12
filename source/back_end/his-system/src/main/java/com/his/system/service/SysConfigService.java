@@ -1,9 +1,17 @@
 package com.his.system.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.his.system.dto.EmergencyConfigUpsertDTO;
 import com.his.system.dto.HospitalInfoUpsertDTO;
+import com.his.system.dto.InpatientConfigUpsertDTO;
+import com.his.system.dto.LabCriticalConfigUpsertDTO;
+import com.his.system.dto.SignConfigUpsertDTO;
 import com.his.system.entity.SysConfig;
+import com.his.system.vo.EmergencyConfigVO;
 import com.his.system.vo.HospitalInfoVO;
+import com.his.system.vo.InpatientConfigVO;
+import com.his.system.vo.LabCriticalConfigVO;
+import com.his.system.vo.SignConfigVO;
 
 /**
  * 系统参数配置服务
@@ -19,6 +27,46 @@ public interface SysConfigService extends IService<SysConfig> {
      * 保存医院基础信息，按键存在则更新、不存在则插入
      */
     void upsertHospitalInfo(HospitalInfoUpsertDTO upsertDTO);
+
+    /**
+     * 读取急诊参数（emergency.* 键）
+     */
+    EmergencyConfigVO getEmergencyConfig();
+
+    /**
+     * 保存急诊参数（emergency.* 键）
+     */
+    void upsertEmergencyConfig(EmergencyConfigUpsertDTO upsertDTO);
+
+    /**
+     * 读取检验危急值参数（lab.* 键）
+     */
+    LabCriticalConfigVO getLabCriticalConfig();
+
+    /**
+     * 保存检验危急值参数（lab.* 键）
+     */
+    void upsertLabCriticalConfig(LabCriticalConfigUpsertDTO upsertDTO);
+
+    /**
+     * 读取住院 / 床位 / 转诊 / 住院证参数（inpatient.* / duty.coord.* / bed.* / admission_order.* 键）
+     */
+    InpatientConfigVO getInpatientConfig();
+
+    /**
+     * 保存住院 / 床位 / 转诊 / 住院证参数（inpatient.* / duty.coord.* / bed.* / admission_order.* 键）
+     */
+    void upsertInpatientConfig(InpatientConfigUpsertDTO upsertDTO);
+
+    /**
+     * 读取电子签名 / 可信时间戳参数（sign.* 键）
+     */
+    SignConfigVO getSignConfig();
+
+    /**
+     * 保存电子签名 / 可信时间戳参数（sign.* 键）
+     */
+    void upsertSignConfig(SignConfigUpsertDTO upsertDTO);
 
     /**
      * 读取系统参数值；key 不存在或值为空时返回 defaultValue。

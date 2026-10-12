@@ -29,14 +29,14 @@ public class AppointUpsertDTO {
      * 就诊类型（号别）（1-初诊 2-复诊）
      */
     @NotNull(message = "就诊类型不能为空")
-    @AllowedValues(values = {1, 2}, message = "就诊类型只能是1-初诊或2-复诊")
+    @AllowedValues(values = {"1", "2"}, message = "就诊类型只能是1-初诊或2-复诊")
     private Integer visitType;
 
     /**
      * 结算方式（1-自费 2-城镇职工医保 3-城乡居民医保 4-公费 5-商业保险）
      */
     @NotNull(message = "结算方式不能为空")
-    @AllowedValues(values = {1, 2, 3, 4, 5}, message = "结算方式只能是1-自费/2-城镇职工医保/3-城乡居民医保/4-公费/5-商业保险")
+    @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "结算方式只能是1-自费/2-城镇职工医保/3-城乡居民医保/4-公费/5-商业保险")
     private Integer settlementType;
 
     /**

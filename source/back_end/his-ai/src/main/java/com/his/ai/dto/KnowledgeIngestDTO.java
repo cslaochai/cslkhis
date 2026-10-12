@@ -16,8 +16,9 @@ public class KnowledgeIngestDTO {
     private String title;
 
     /**
-     * 分类（就诊须知/科室介绍/检查注意事项/药品说明书）
+     * 分类（必填；就诊须知/科室介绍/检查注意事项/药品说明书等）
      */
+    @NotBlank(message = "分类不能为空")
     private String category;
 
     /**
@@ -30,4 +31,16 @@ public class KnowledgeIngestDTO {
      * 来源类型（2-手工录入 3-文件导入），默认 2
      */
     private Integer sourceType;
+
+    /**
+     * 版本号（必填；如 v1.0 / 2026.09）
+     */
+    @NotBlank(message = "版本不能为空")
+    private String version;
+
+    /**
+     * 来源名称（必填；诊疗指南/论坛/院内制度/药品说明书等）
+     */
+    @NotBlank(message = "内容来源不能为空")
+    private String sourceName;
 }

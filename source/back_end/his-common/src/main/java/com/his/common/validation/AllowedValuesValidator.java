@@ -7,20 +7,19 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class AllowedValuesValidator implements ConstraintValidator<AllowedValues, Integer> {
+public class AllowedValuesValidator implements ConstraintValidator<AllowedValues, Object> {
 
-    private Set<Integer> allowed;
+    private Set<String> allowed;
 
     @Override
     public void initialize(AllowedValues annotation) {
         allowed = Arrays.stream(annotation.values())
-                        .boxed()
-                        .collect(Collectors.toSet());
+                .collect(Collectors.toSet());
     }
 
     @Override
-    public boolean isValid(Integer value, ConstraintValidatorContext context) {
-        if (value == null) return true;   // 空值交给 @NotNull 管
-        return allowed.contains(value);
+    public boolean isValid(Object value, ConstraintValidatorContext context) {
+        if (value == null) return true;
+        return allowed.contains(String.valueOf(value));
     }
 }

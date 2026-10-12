@@ -25,6 +25,15 @@ public interface BizClinicSourceSlotMapper extends BaseMapper<BizClinicSourceSlo
     int deductSlotSourceForWalkin(@Param("slotId") Long slotId);
 
     /**
+     * 就诊当日现场渠道扣段：不放池限制，只认段余号。
+     * 预约池是给「提前日」留的预约额度；到了就诊当天，（段）池剩余不再被远程预约占用，
+     * 现场可以直接挂走（挂不上就等于把号浪费掉）。仅当班日期 &lt;= 今天才允许走本方法。
+     */
+    @Update("UPDATE biz_clinic_source_slot SET used_source = used_source + 1, available_source = available_source - 1 "
+            + "WHERE id = #{slotId} AND status = 1 AND available_source > 0")
+    int deductSlotSourceForWalkinSameDay(@Param("slotId") Long slotId);
+
+    /**
      * 预约渠道原子扣段（regist_source=4）：必须从段内预约池扣，
      * 同时扣段总池（available_source）与段池（used_appointment_source）。
      * 返回 0 表示该段预约池剩余已空。

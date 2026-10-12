@@ -1,8 +1,7 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.his.common.validation.InEnum;
-import com.his.patient.enums.OrderTypeEnum;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -32,7 +31,7 @@ public class InpatientOrderUpsertDTO implements Serializable {
      * 医嘱类型：1-长期 2-临时（必填）
      */
     @NotNull(message = "医嘱类型不能为空（1-长期 2-临时）")
-    @InEnum(value = OrderTypeEnum.class, message = "医嘱类型取值不合法（应为 1-长期 2-临时）")
+    @AllowedValues(values = {"1", "2"}, message = "医嘱类型取值不合法（应为 1-长期 2-临时）")
     private Integer orderType;
 
     /**

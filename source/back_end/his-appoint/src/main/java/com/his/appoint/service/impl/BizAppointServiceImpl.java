@@ -538,30 +538,27 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         // 保存挂号记录（排队号在签到时生成，以诊室编号为前缀）
         this.save(appointInfo);
 
-        // 原子扣减号源（按渠道分池：现场渠道不许占用预约池剩余，预约渠道必须从池内扣；
-        // WHERE 条件兜住并发抢号，返回 0 表示对应池已空）
+        // 原子扣减号源（按渠道分池：预约渠道必须从池内扣；现场渠道提前日不许占用预约池剩余，
+        // 就诊当日放宽见 isSameDayWalkin；WHERE 条件兜住并发抢号，返回 0 表示对应池已空）
         // 号源事实在段上：选了段 → 先扣段再扣主表（同事务双写，读路径仍走主表）；
         // 未选段（历史入口）→ 只扣主表。
         if (schedule != null) {
             boolean appt = registSource == 4;
+            // 就诊当日现场可挂走预约池剩余（提前日不许）：池是给远程预约留的额度，
+            // 到了就诊日再锁着池，就会出现「显示有余号却挂不上」。
+            boolean sameDayWalkin = isSameDayWalkin(appt, schedule.getScheduleDate());
             if (slot != null) {
-                int deductedSlot = appt
-                        ? bizScheduleSlotMapper.deductSlotSourceForAppointment(slot.getId())
-                        : bizScheduleSlotMapper.deductSlotSourceForWalkin(slot.getId());
+                int deductedSlot = deductSlotSource(slot, appt, sameDayWalkin);
                 if (deductedSlot == 0) {
                     throw new BusinessException(appt ? "该时间段的预约号源已满" : "该时间段号源已满");
                 }
-                int deductedMain = appt
-                        ? bizScheduleMapper.deductScheduleSourceForAppointment(schedule.getId())
-                        : bizScheduleMapper.deductScheduleSourceForWalkin(schedule.getId());
+                int deductedMain = deductScheduleSource(schedule.getId(), appt, sameDayWalkin);
                 if (deductedMain == 0) {
                     // 段有余但主表 Σ 扣不动（数据不一致）：抛异常回滚整个事务，不做静默半扣
                     throw new BusinessException("号源状态异常（排班汇总与时间段不一致），请稍后重试");
                 }
             } else {
-                int deducted = appt
-                        ? bizScheduleMapper.deductScheduleSourceForAppointment(schedule.getId())
-                        : bizScheduleMapper.deductScheduleSourceForWalkin(schedule.getId());
+                int deducted = deductScheduleSource(schedule.getId(), appt, sameDayWalkin);
                 if (deducted == 0) {
                     throw new BusinessException(appt ? "预约号源已满" : "号源已满");
                 }
@@ -1031,9 +1028,8 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
                     bizScheduleSlotMapper.releaseSlotSourceForWalkin(oldSlotId);
                 }
             }
-            int deductedSlot = apptChannel
-                    ? bizScheduleSlotMapper.deductSlotSourceForAppointment(newSlot.getId())
-                    : bizScheduleSlotMapper.deductSlotSourceForWalkin(newSlot.getId());
+            int deductedSlot = deductSlotSource(newSlot, apptChannel,
+                    isSameDayWalkin(apptChannel, existing.getVisitDate()));
             if (deductedSlot == 0) {
                 throw new BusinessException(apptChannel ? "新时间段的预约号已满" : "新时间段号源已满");
             }
@@ -1066,6 +1062,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
             if (newSchedule == null) {
                 throw new BusinessException("新排班信息不存在");
             }
+            boolean sameDayWalkin = isSameDayWalkin(apptChannel, newSchedule.getScheduleDate());
             BizClinicSourceSlot newSlot = null;
             if (registInfo.getSlotId() != null) {
                 newSlot = bizScheduleSlotMapper.selectById(registInfo.getSlotId());
@@ -1075,16 +1072,12 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
                 if (newSlot.getStatus() == null || newSlot.getStatus() != 1) {
                     throw new BusinessException("新时间段已停用，请重新选择");
                 }
-                int deductedSlot = apptChannel
-                        ? bizScheduleSlotMapper.deductSlotSourceForAppointment(newSlot.getId())
-                        : bizScheduleSlotMapper.deductSlotSourceForWalkin(newSlot.getId());
+                int deductedSlot = deductSlotSource(newSlot, apptChannel, sameDayWalkin);
                 if (deductedSlot == 0) {
                     throw new BusinessException(apptChannel ? "新时间段的预约号已满" : "新时间段号源已满");
                 }
             }
-            int deducted = apptChannel
-                    ? bizScheduleMapper.deductScheduleSourceForAppointment(newSchedule.getId())
-                    : bizScheduleMapper.deductScheduleSourceForWalkin(newSchedule.getId());
+            int deducted = deductScheduleSource(newSchedule.getId(), apptChannel, sameDayWalkin);
             if (deducted == 0) {
                 throw new BusinessException(apptChannel ? "新号源的预约号已满" : "新号源已满");
             }
@@ -1120,6 +1113,37 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
                     .set(BizAppointInfo::getSlotEnd, null));
         }
         return saved;
+    }
+
+    /**
+     * 现场扣号是否放宽预约池限制：预约渠道自己就是从池里扣，不涉及放宽；
+     * 现场渠道仅在「就诊日不晚于今天」时放宽——池是给提前日远程预约留的额度，
+     * 到了就诊日还锁着池，现场就会出现「界面显示有余号却挂不上」。
+     */
+    private static boolean isSameDayWalkin(boolean apptChannel, LocalDate visitDate) {
+        return !apptChannel && visitDate != null && !visitDate.isAfter(LocalDate.now());
+    }
+
+    /** 挂号扣段：预约渠道从段池扣，现场渠道提前日不许吃池剩余、就诊当日放宽（口径见 isSameDayWalkin） */
+    private int deductSlotSource(BizClinicSourceSlot slot, boolean apptChannel, boolean sameDayWalkin) {
+        if (apptChannel) {
+            return bizScheduleSlotMapper.deductSlotSourceForAppointment(slot.getId());
+        }
+        if (sameDayWalkin) {
+            return bizScheduleSlotMapper.deductSlotSourceForWalkinSameDay(slot.getId());
+        }
+        return bizScheduleSlotMapper.deductSlotSourceForWalkin(slot.getId());
+    }
+
+    /** 挂号扣主表号源：择池口径必须与 deductSlotSource 一致，否则段与主表汇总对不上 */
+    private int deductScheduleSource(Long scheduleId, boolean apptChannel, boolean sameDayWalkin) {
+        if (apptChannel) {
+            return bizScheduleMapper.deductScheduleSourceForAppointment(scheduleId);
+        }
+        if (sameDayWalkin) {
+            return bizScheduleMapper.deductScheduleSourceForWalkinSameDay(scheduleId);
+        }
+        return bizScheduleMapper.deductScheduleSourceForWalkin(scheduleId);
     }
 
     @Override

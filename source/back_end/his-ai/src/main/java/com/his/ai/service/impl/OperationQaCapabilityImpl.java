@@ -7,6 +7,9 @@ import com.his.ai.dto.OperationQaLlmOutputDTO;
 import com.his.ai.dto.OperationQaSummaryLlmOutputDTO;
 import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.OperationQaCapability;
+import com.his.ai.service.OperationQaConfigService;
+import com.his.ai.service.OperationTableSelection;
+import com.his.ai.service.OperationTableSelector;
 import com.his.ai.support.OperationSchemaCatalog;
 import com.his.ai.support.OperationSqlGuard;
 import com.his.ai.vo.OperationColumnVO;
@@ -16,6 +19,7 @@ import com.his.ai.vo.OperationQaSummaryPromptVariablesVO;
 import com.his.ai.vo.OperationRowVO;
 import com.his.ai.vo.OperationSchemaVO;
 import com.his.common.util.DateFormats;
+import com.his.common.util.SensitiveMaskUtil;
 import com.his.common.util.TextUtil;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -65,6 +69,10 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
 
     private final AiExecutionService aiExecutionService;
 
+    private final OperationTableSelector tableSelector;
+
+    private final OperationQaConfigService operationQaConfigService;
+
     private final DataSource dataSource;
 
     /**
@@ -112,8 +120,24 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
         OperationQaResultVO vo = new OperationQaResultVO();
         vo.setQuestion(question);
 
-        // 第一段：生成 SQL
-        Optional<OperationQaLlmOutputDTO> generated = callGenerate(question);
+        // 白名单按需查库；配置未维护（无启用表）时直接降级：白名单为空 = 什么都不让查，fail-closed
+        Set<String> allowedTables = operationQaConfigService.enabledTableNames();
+        if (allowedTables.isEmpty()) {
+            return degrade(vo, "运营问数数据表配置为空：请先在「AI 管理台 → 问数配置」中维护可查询数据表", start);
+        }
+
+        // 第一段：按需加载 —— 先选问题相关的表，只把相关表 schema 与命中语义注入生成段
+        OperationTableSelection selection = tableSelector.select(question);
+        java.util.Set<String> selectedTables = selection.tables().isEmpty()
+                ? allTableNames(allowedTables)
+                : selection.tables();
+
+        // 第二段：生成 SQL（只查选中表的结构 + 命中语义 + 敏感字段约束）
+        List<OperationSchemaCatalog.SensitiveDef> sensitiveDefs = operationQaConfigService.sensitiveDefs();
+        Optional<OperationQaLlmOutputDTO> generated = callGenerate(question,
+                OperationSchemaCatalog.schemaText(operationQaConfigService.tableDefs(selectedTables), selectedTables),
+                OperationSchemaCatalog.semanticText(selection.semantics()),
+                OperationSchemaCatalog.sensitiveRulesText(sensitiveDefs));
         if (generated.isEmpty()) {
             return degrade(vo, aiExecutionService.degradeReasonOf(AiCapabilityKeys.OPERATION_QA)
                     + "；本次未能生成查询，请稍后重试", start);
@@ -126,17 +150,31 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
                     : "未生成查询：本功能只回答经营统计类问题", start);
         }
 
-        // 第二段：安全闸门
+        // 第三段：安全闸门（白名单集合由上面查库结果传入）
         String executableSql;
         try {
-            executableSql = OperationSqlGuard.enforce(output.getSql());
+            executableSql = OperationSqlGuard.enforce(output.getSql(), allowedTables);
         } catch (IllegalArgumentException ex) {
             return degrade(vo, "生成的查询未通过安全检查：" + ex.getMessage()
                     + "。本功能只允许对指定经营数据表的只读查询", start);
         }
+
+        // 敏感字段硬约束：禁止出库列不得出现在 SELECT 中（提示词约束之外的第二道防线）
+        List<String> forbiddenColumns = sensitiveDefs.stream()
+                .filter(s -> s.sensitiveType() != null && s.sensitiveType() == 2)
+                .map(OperationSchemaCatalog.SensitiveDef::columnName)
+                .distinct()
+                .toList();
+        if (!forbiddenColumns.isEmpty()) {
+            String hit = findForbiddenColumnInSql(executableSql, forbiddenColumns);
+            if (hit != null) {
+                return degrade(vo, "生成的查询涉及不允许出库的字段：" + hit
+                        + "（该字段已在「问数配置」中标记为禁止出库）", start);
+            }
+        }
         vo.setSql(executableSql);
 
-        // 第三段：执行
+        // 第四段：执行
         // 这里保留 List<Map<String, Object>> 是刻意的：SELECT 的列由模型按问题现场决定
         // （SELECT 出院人数、SELECT 月度收入……），编译期根本不存在对应的实体或 VO 可建，
         // 建 VO 等于把任意问数能力砍死。行数据在此处立即转成 OperationColumnVO/OperationRowVO，
@@ -153,7 +191,8 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
             return degrade(vo, "查询执行失败：" + cause, start);
         }
 
-        buildTable(vo, resultRows);
+        // 敏感字段出参脱敏：按「结果列名 → 源列」映射统一打码（后端做，前端零遮码实现）
+        buildTable(vo, resultRows, resolveMaskedColumns(executableSql, sensitiveDefs));
 
         if (Boolean.TRUE.equals(dto.getWithSummary()) && !vo.getRows().isEmpty()) {
             // 结论段失败静默置空，表格照常返回
@@ -167,7 +206,7 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
     @Override
     public List<OperationSchemaVO> schema() {
         List<OperationSchemaVO> list = new ArrayList<>();
-        for (OperationSchemaCatalog.TableDef def : OperationSchemaCatalog.tables()) {
+        for (OperationSchemaCatalog.TableDef def : operationQaConfigService.tableDefs(null)) {
             OperationSchemaVO vo = new OperationSchemaVO();
             vo.setTableName(def.tableName());
             vo.setDescription(def.usage());
@@ -176,9 +215,12 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
         return list;
     }
 
-    private Optional<OperationQaLlmOutputDTO> callGenerate(String question) {
+    private Optional<OperationQaLlmOutputDTO> callGenerate(String question, String schemaText, String semanticText,
+                                                           String sensitiveRulesText) {
         OperationQaPromptVariablesVO variables = new OperationQaPromptVariablesVO();
-        variables.setSchema(OperationSchemaCatalog.schemaText());
+        variables.setSchema(schemaText);
+        variables.setSemantics(semanticText);
+        variables.setSensitiveRules(sensitiveRulesText);
         variables.setQuestion(question);
         variables.setToday(LocalDate.now().format(DateFormats.DATE));
 
@@ -192,6 +234,13 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
                 .temperature(0.1D)
                 .build();
         return aiExecutionService.call(call, OperationQaLlmOutputDTO.class);
+    }
+
+    /**
+     * 全部启用表名（选表未选出任何表时的兜底，等价于旧的全量注入行为）。
+     */
+    private java.util.Set<String> allTableNames(java.util.Set<String> allowedTables) {
+        return allowedTables;
     }
 
     private String callSummary(String question, List<OperationColumnVO> columns, List<OperationRowVO> rows) {
@@ -220,8 +269,11 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
      *
      * <p>入参保留 {@code Map} 的原因见 {@code ask()} 里的说明：列集合由模型现场生成的 SQL 决定，
      * 只能按「第 i 列叫什么、第 i 格是什么值」的动态形态承载，转完即丢。
+     *
+     * @param maskedColumns 结果列名（小写）→ 脱敏方式；命中列出参统一打码
      */
-    private void buildTable(OperationQaResultVO vo, List<Map<String, Object>> resultRows) {
+    private void buildTable(OperationQaResultVO vo, List<Map<String, Object>> resultRows,
+                            Map<String, String> maskedColumns) {
         if (resultRows.isEmpty()) {
             vo.setRowCount(0);
             return;
@@ -238,12 +290,114 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
         for (int r = 0; r < displayRows; r++) {
             OperationRowVO row = new OperationRowVO();
             for (String label : labels) {
-                row.getCells().add(formatValue(resultRows.get(r).get(label)));
+                Object value = resultRows.get(r).get(label);
+                String maskType = maskedColumns.get(label.toLowerCase(Locale.ROOT));
+                row.getCells().add(maskType == null ? formatValue(value) : maskValue(maskType, value));
             }
             vo.getRows().add(row);
         }
         vo.setRowCount(displayRows);
         vo.setTruncated(resultRows.size() > displayRows);
+    }
+
+    /**
+     * 按脱敏方式对出参值打码（统一走 his-common 的 SensitiveMaskUtil，禁止各页面抄副本）。
+     */
+    private Object maskValue(String maskType, Object value) {
+        if (value == null) {
+            return null;
+        }
+        String v = String.valueOf(value);
+        return switch (maskType) {
+            case "phone" -> SensitiveMaskUtil.maskPhone(v);
+            case "idcard" -> SensitiveMaskUtil.maskIdCard(v);
+            case "email" -> SensitiveMaskUtil.maskEmail(v);
+            case "cardno" -> SensitiveMaskUtil.maskCardNo(v);
+            case "middle" -> SensitiveMaskUtil.maskMiddle(v, 1, 1);
+            default -> value;
+        };
+    }
+
+    /**
+     * 解析生成 SQL 的 SELECT 列清单，建立「结果列名 → 源列名」映射后，把命中「脱敏」配置的
+     * 结果列映射成脱敏方式。支持裸列名与「表前缀.列名 + AS 别名」；函数/表达式包裹的列
+     * （COUNT(patient_name)、CASE WHEN…等）不映射——聚合结果不是原始敏感值，不打码。
+     *
+     * @return 结果列名（小写）→ 脱敏方式
+     */
+    private Map<String, String> resolveMaskedColumns(String sql,
+                                                     List<OperationSchemaCatalog.SensitiveDef> sensitiveDefs) {
+        Map<String, String> maskByColumn = new HashMap<>();
+        for (OperationSchemaCatalog.SensitiveDef def : sensitiveDefs) {
+            if (def.sensitiveType() != null && def.sensitiveType() == 1 && def.maskType() != null) {
+                maskByColumn.put(def.columnName().toLowerCase(Locale.ROOT), def.maskType());
+            }
+        }
+        if (maskByColumn.isEmpty()) {
+            return Map.of();
+        }
+        // 结果列名 → 源列名
+        Map<String, String> colByResultLabel = new HashMap<>();
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("(?is)\\bselect\\b(.*?)\\bfrom\\b")
+                .matcher(sql);
+        if (m.find()) {
+            for (String rawExpr : m.group(1).split(",")) {
+                String expr = rawExpr.trim();
+                if (expr.isEmpty()) {
+                    continue;
+                }
+                String[] withAlias = expr.split("\\s+as\\s+", 2);
+                String src = withAlias[0].trim();
+                String label = withAlias.length > 1 ? withAlias[1].trim() : src;
+                String column = null;
+                if (src.matches("[a-zA-Z_][a-zA-Z0-9_]*")) {
+                    column = src;
+                } else {
+                    java.util.regex.Matcher qualified = java.util.regex.Pattern
+                            .compile("^[a-zA-Z_][a-zA-Z0-9_]*\\.([a-zA-Z_][a-zA-Z0-9_]*)$")
+                            .matcher(src);
+                    if (qualified.matches()) {
+                        column = qualified.group(1);
+                    }
+                }
+                if (column != null) {
+                    colByResultLabel.put(label.toLowerCase(Locale.ROOT), column.toLowerCase(Locale.ROOT));
+                }
+            }
+        }
+        Map<String, String> result = new HashMap<>();
+        for (Map.Entry<String, String> entry : colByResultLabel.entrySet()) {
+            String mask = maskByColumn.get(entry.getValue());
+            if (mask != null) {
+                result.put(entry.getKey(), mask);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 禁止出库列检查：SELECT 与 FROM 之间的列清单里出现禁止列名（任意形态：裸列名 / 表前缀 / 函数包裹）即拦截。
+     *
+     * @return 命中的禁止列名；无命中返回 null
+     */
+    private String findForbiddenColumnInSql(String sql, List<String> forbiddenColumns) {
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("(?is)\\bselect\\b(.*?)\\bfrom\\b")
+                .matcher(sql);
+        if (!m.find()) {
+            return null;
+        }
+        String selectList = m.group(1);
+        for (String col : forbiddenColumns) {
+            java.util.regex.Pattern p = java.util.regex.Pattern
+                    .compile("\\b" + java.util.regex.Pattern.quote(col) + "\\b",
+                            java.util.regex.Pattern.CASE_INSENSITIVE);
+            if (p.matcher(selectList).find()) {
+                return col;
+            }
+        }
+        return null;
     }
 
     private String renderSummaryTable(List<OperationColumnVO> columns, List<OperationRowVO> rows) {

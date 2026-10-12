@@ -1,8 +1,7 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.his.common.validation.InEnum;
-import com.his.patient.enums.DischargeWayEnum;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -35,7 +34,7 @@ public class InpatientDischargeDTO {
      * 离院方式：1-医嘱离院 2-医嘱转院 3-医嘱转社区 4-非医嘱离院 5-死亡 9-其他（必填）
      */
     @NotNull(message = "离院方式不能为空（病案首页必填项）")
-    @InEnum(value = DischargeWayEnum.class, message = "离院方式取值不合法（1-医嘱离院 2-医嘱转院 3-医嘱转社区 4-非医嘱离院 5-死亡 9-其他）")
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "9"}, message = "离院方式取值不合法（1-医嘱离院 2-医嘱转院 3-医嘱转社区 4-非医嘱离院 5-死亡 9-其他）")
     private Integer dischargeWay;
 
     /**

@@ -3,6 +3,7 @@ package com.his.system.filter;
 import com.his.common.util.TextUtil;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.RolePermissionService;
+import com.his.system.service.impl.UserDetailsServiceImpl;
 import com.his.system.utils.JwtUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -15,7 +16,6 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -34,7 +34,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     private final JwtUtils jwtUtils;
-    private final UserDetailsService userDetailsService;
+
+    /**
+     * 用具体实现而非 Spring 的 UserDetailsService 接口：请求身份装配走
+     * {@link UserDetailsServiceImpl#loadCachedUserByUsername}（Redis 身份缓存），
+     * 登录的 {@code loadUserByUsername} 保持直查库不动。
+     */
+    private final UserDetailsServiceImpl userDetailsService;
 
     /**
      * 按「当前角色」重算权限的来源。用 ObjectProvider 可选注入：
@@ -50,7 +56,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (TextUtil.hasText(token) && jwtUtils.validateToken(token)) {
             String username = jwtUtils.getUsernameFromToken(token);
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            UserDetails userDetails = userDetailsService.loadCachedUserByUsername(username);
 
             // 设置当前角色 + 把权限收敛到当前角色
             if (userDetails instanceof CurrentUser) {

@@ -6,10 +6,11 @@ import com.his.ai.dto.AiCallDTO;
 import com.his.ai.dto.KnowledgeAskDTO;
 import com.his.ai.dto.KnowledgeQaLlmOutputDTO;
 import com.his.ai.rag.embedding.EmbeddingProviderSelector;
-import com.his.ai.rag.store.InMemoryVectorStore;
 import com.his.ai.rag.store.RetrievedChunk;
+import com.his.ai.rag.store.VectorStore;
 import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.KnowledgeQaCapability;
+import com.his.ai.service.KnowledgeStoreService;
 import com.his.ai.vo.KnowledgeAskVO;
 import com.his.ai.vo.KnowledgeQaPromptVariablesVO;
 import com.his.ai.vo.KnowledgeSourceVO;
@@ -36,19 +37,22 @@ public class KnowledgeQaCapabilityImpl implements KnowledgeQaCapability {
     private static final int OUTPUT_TOKEN_LIMIT = 1024;
 
     private final EmbeddingProviderSelector embeddingSelector;
-    private final InMemoryVectorStore inMemoryVectorStore;
+    private final VectorStore vectorStore;
     private final AiExecutionService aiExecutionService;
     private final AiProperties aiProperties;
+    private final KnowledgeStoreService knowledgeStoreService;
 
     @Override
     public KnowledgeAskVO ask(KnowledgeAskDTO dto) {
         long start = System.currentTimeMillis();
+        // 懒加载：索引未构建时先全量载入一次，保证首次问答可检索
+        knowledgeStoreService.ensureIndexLoaded();
         KnowledgeAskVO vo = new KnowledgeAskVO();
         vo.setQuestion(dto.getQuestion());
 
         float[] queryVector = embeddingSelector.select()
                 .embed(dto.getQuestion());
-        List<RetrievedChunk> hits = inMemoryVectorStore.search(queryVector, aiProperties.getRag().getTopK());
+        List<RetrievedChunk> hits = vectorStore.search(queryVector, aiProperties.getRag().getTopK());
 
         if (hits.isEmpty()) {
             vo.setDegraded(true);
@@ -63,12 +67,19 @@ public class KnowledgeQaCapabilityImpl implements KnowledgeQaCapability {
         List<KnowledgeSourceVO> sources = new ArrayList<>();
         int i = 1;
         for (RetrievedChunk h : hits) {
+            String sourceLabel = TextUtil.hasText(h.docSourceName()) ? h.docSourceName() : h.category();
             context.append("【材料").append(i).append("】来源：").append(h.docTitle())
-                    .append("（").append(h.category()).append("）\n").append(h.content()).append("\n\n");
+                    .append("（").append(sourceLabel);
+            if (TextUtil.hasText(h.docVersion())) {
+                context.append("，版本 ").append(h.docVersion());
+            }
+            context.append("）\n").append(h.content()).append("\n\n");
             KnowledgeSourceVO s = new KnowledgeSourceVO();
             s.setDocId(h.docId());
             s.setDocTitle(h.docTitle());
             s.setCategory(h.category());
+            s.setDocVersion(h.docVersion());
+            s.setDocSourceName(h.docSourceName());
             s.setSnippet(TextUtil.ellipsis(h.content(), SNIPPET_MAX));
             sources.add(s);
             i++;
@@ -100,7 +111,19 @@ public class KnowledgeQaCapabilityImpl implements KnowledgeQaCapability {
             vo.setDegradeReason(aiExecutionService.degradeReasonOf(AiCapabilityKeys.KNOWLEDGE_QA));
             StringBuilder fallback = new StringBuilder("（以下为知识库检索到的相关原文，模型未参与）\n\n");
             for (RetrievedChunk h : hits) {
-                fallback.append("· ").append(h.docTitle()).append("：").append(h.content()).append("\n\n");
+                String sourceLabel = TextUtil.hasText(h.docSourceName()) ? h.docSourceName() : h.category();
+                fallback.append("· ").append(h.docTitle());
+                if (TextUtil.hasText(sourceLabel) || TextUtil.hasText(h.docVersion())) {
+                    fallback.append("（");
+                    if (TextUtil.hasText(sourceLabel)) {
+                        fallback.append(sourceLabel);
+                    }
+                    if (TextUtil.hasText(h.docVersion())) {
+                        fallback.append("，版本 ").append(h.docVersion());
+                    }
+                    fallback.append("）");
+                }
+                fallback.append("：").append(h.content()).append("\n\n");
             }
             vo.setAnswer(fallback.toString().trim());
         }

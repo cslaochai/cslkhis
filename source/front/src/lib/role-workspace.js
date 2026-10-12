@@ -72,7 +72,7 @@ export function resolveWorkspacePath(router, menuTree, currentRole) {
  *
  * `landingScope` 是**角色级配置**（sys_workbench_role.landing_scope，来自
  * `/workbench/config` → lib/workbench-config.js），让「登录后先看到工作台还是直接进工作站」
- * 由「系统管理 → 工作台配置」决定，而不是在这里写角色码 —— 这是决策 2026-09-25 定的，
+ * 由「系统管理 → 角色管理 → 工作台配置」决定，而不是在这里写角色码 —— 这是决策 2026-09-25 定的，
  * 同文件头口径：角色会增删，硬编码映射必然过期。
  *
  * 导出在这里而不是 `router/guard.js`，是为了让**守卫与切换动作共用同一套推导** ——

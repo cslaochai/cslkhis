@@ -1,8 +1,6 @@
 package com.his.emr.dto;
 
-import com.his.common.validation.InEnum;
-import com.his.emr.enums.SurveyDimensionEnum;
-import com.his.emr.enums.SurveyQuestionTypeEnum;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -71,7 +69,7 @@ public class SurveyTemplateUpsertDTO implements Serializable {
          * 维度（1-挂号便捷 2-医生服务 3-护士服务 4-环境与流程 5-费用透明 6-疗效与安全感 7-总体印象）
          */
         @NotNull(message = "评价维度不能为空")
-        @InEnum(value = SurveyDimensionEnum.class,
+        @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7"},
                 message = "评价维度取值不合法（1-挂号便捷 2-医生服务 3-护士服务 4-环境与流程 5-费用透明 6-疗效与安全感 7-总体印象）")
         private Integer dimension;
 
@@ -79,7 +77,7 @@ public class SurveyTemplateUpsertDTO implements Serializable {
          * 题型（1-量表 2-单选 3-多选 4-NPS推荐度 5-开放文本）
          */
         @NotNull(message = "题型不能为空")
-        @InEnum(value = SurveyQuestionTypeEnum.class,
+        @AllowedValues(values = {"1", "2", "3", "4", "5"},
                 message = "题型取值不合法（1-量表 2-单选 3-多选 4-NPS推荐度 5-开放文本）")
         private Integer questionType;
 

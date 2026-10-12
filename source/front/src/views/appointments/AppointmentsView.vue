@@ -364,9 +364,15 @@
                               已收费
                             </span>
                             </div>
-                            <!-- 只有「已挂号/已签到」才出现退号入口；按钮常驻，且是手型（能点就得像能点） -->
-                            <div v-if="canCancelRegist(r)" class="mt-1 flex justify-end">
-                              <button
+                            <!-- 收款入口只认账单欠款事实（1-待支付 2-部分支付）：免收/已收齐/账单作废都不是「没收款」。
+                                 放退号前面：先办钱再谈退号，收银动线如此 -->
+                            <div v-if="canCollectFee(r) || canCancelRegist(r)" class="mt-1 flex justify-end gap-1">
+                              <button v-if="canCollectFee(r)"
+                                      class="cursor-pointer rounded border border-emerald-200 bg-white px-2 py-0.5 text-xs font-medium text-emerald-600 hover:bg-emerald-50"
+                                      data-testid="desk-collect"
+                                      @click.stop="handleShowPayment(r)">收款
+                              </button>
+                              <button v-if="canCancelRegist(r)"
                                   class="cursor-pointer rounded border border-red-200 bg-white px-2 py-0.5 text-xs font-medium text-red-500 hover:bg-red-50"
                                   data-testid="desk-cancel"
                                   @click.stop="handleDeskCancel(r)">退号
@@ -536,12 +542,12 @@
                   <el-button v-if="row.registStatus === 1" link size="small" type="success" @click="handleCheckIn(row)">
                     签到
                   </el-button>
-                  <el-button v-if="row.registStatus === 1 && row.paymentStatus === 1" v-perm="'opd:appointments:edit'"
+                  <el-button v-if="canReschedule(row)" v-perm="'opd:appointments:edit'"
                              :icon="Edit" link size="small"
                              type="primary" @click="handleEdit(row)">
                     编辑
                   </el-button>
-                  <el-button v-if="row.paymentStatus === 1" link size="small" type="success"
+                  <el-button v-if="canCollectFee(row)" link size="small" type="success"
                              @click="handleShowPayment(row)">
                     支付
                   </el-button>
@@ -858,6 +864,8 @@ const handleShowPayment = async (row) => {
 const onQrPaid = () => {
   ElMessage.success('挂号费已入账');
   reloadListAndStats();
+  // 看板卡片的「已收费」角标与「收款」入口都由账单状态现算，收款成功必须连看板一起刷（同看板退号路径）
+  loadDesk();
 };
 /** 新增挂号成功且需缴费：账单事实由子组件回抛，扫码收款弹窗（共享组件）留在本页 */
 const onAddPay = (info) => {
@@ -1933,13 +1941,16 @@ const drillToDay = (date) => {
   selectedCell.value = null;
   loadDesk();
 };
-const isRegistPaid = (r) => [2, 4].includes(Number(r?.paymentStatus));
+/** 账单上已经有收到的钱（2-部分支付 3-已支付）：改约会被后端拦（钱已进账，要先退费再重挂） */
+const isRegistPaid = (r) => [2, 3].includes(Number(r?.billStatus));
 const canReschedule = (r) => Number(r?.registStatus) === 1 && !isRegistPaid(r) && !isVisitDatePast(r);
 const isVisitDatePast = (r) => {
   const d = String(r?.visitDate || '').slice(0, 10);
   return !!d && d < fmtDate(new Date());
 };
 const canCancelRegist = (r) => [1, 2].includes(Number(r?.registStatus)) && !isVisitDatePast(r);
+/** 能打开收款码：有账单且还欠钱（1-待支付 2-部分支付）；免收/已收齐/已作废/已退费都没有可收的钱 */
+const canCollectFee = (r) => !!r?.billId && [1, 2].includes(Number(r?.billStatus));
 const canApplyRefund = (r) => !!r?.billId
     && isVisitDatePast(r)
     && isRegistPaid(r)

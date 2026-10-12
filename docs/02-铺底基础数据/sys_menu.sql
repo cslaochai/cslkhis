@@ -720,7 +720,7 @@ VALUES ('1105', '参数设置', '1100', 41, 2, '/system/config', 'system/config/
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
                       update_by_id)
-VALUES ('1106', '工作台配置', '1100', 42, 2, '/system/workbench', 'system/workbench/WorkbenchConfigView',
+VALUES ('1106', '工作台卡片管理', '1100', 42, 2, '/system/workbench', 'system/workbench/WorkbenchConfigView',
         'system.workbench', 'Operation', 'system:workbench:config', 0, 1, 1, 1, 'admin', 'admin', 0, NULL, '1', '1');
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,

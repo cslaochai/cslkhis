@@ -35,6 +35,15 @@ public interface BizClinicSourceMapper extends BaseMapper<BizClinicSource> {
     int deductScheduleSourceForWalkin(@Param("scheduleId") Long scheduleId);
 
     /**
+     * 就诊当日现场渠道扣减号源：不放池限制，只认总余号。
+     * 预约池是给「提前日」留的预约额度；到了就诊当天，池剩余不再被远程预约占用，
+     * 现场可以直接挂走。仅当班日期 &lt;= 今天才允许走本方法。
+     */
+    @Update("UPDATE biz_clinic_source SET used_source = used_source + 1, available_source = available_source - 1 "
+            + "WHERE id = #{scheduleId} AND available_source > 0")
+    int deductScheduleSourceForWalkinSameDay(@Param("scheduleId") Long scheduleId);
+
+    /**
      * 预约渠道原子扣减号源（regist_source=4）：必须从预约池内扣，
      * 同时扣总池（available_source）与预约池（used_appointment_source）。
      * 返回 0 表示预约池剩余已空。

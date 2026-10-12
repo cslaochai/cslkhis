@@ -212,6 +212,12 @@
           <el-table-column label="分类" prop="category" show-overflow-tooltip width="140">
             <template #default="{ row }">{{ row.category || '—' }}</template>
           </el-table-column>
+          <el-table-column label="内容来源" prop="sourceName" show-overflow-tooltip width="130">
+            <template #default="{ row }">{{ row.sourceName || '—' }}</template>
+          </el-table-column>
+          <el-table-column align="center" label="版本" prop="version" width="90">
+            <template #default="{ row }">{{ row.version || '—' }}</template>
+          </el-table-column>
           <el-table-column align="center" label="来源" width="100">
             <template #default="{ row }">{{ sourceTypeText(row.sourceType) }}</template>
           </el-table-column>
@@ -245,6 +251,133 @@
             @current-change="loadDocs"
         />
       </el-tab-pane>
+
+      <!-- ============ 问数配置 ============ -->
+      <el-tab-pane v-if="canConfig" label="问数配置" name="qaConfig">
+        <el-alert
+            :closable="false"
+            class="qa-config-hint"
+            show-icon
+            title="运营问数按需加载：先按语义配置命中相关表，命中不足时模型兜底选表，生成时只把相关表结构与命中口径喂给模型。此页维护表/列/语义映射，保存后即时生效。"
+            type="info"
+        />
+
+        <!-- 数据表配置（白名单） -->
+        <el-card class="filter-card" shadow="never">
+          <div class="filter-row">
+            <el-input
+                v-model="schemaQuery.tableName"
+                clearable
+                placeholder="表名模糊搜索"
+                style="width: 220px"
+                @keyup.enter="searchSchemas"
+            />
+            <el-select v-model="schemaQuery.isEnabled" clearable placeholder="是否启用" style="width: 130px">
+              <el-option :value="1" label="启用"/>
+              <el-option :value="0" label="停用"/>
+            </el-select>
+            <el-button type="primary" @click="searchSchemas">查询</el-button>
+            <div class="flex-1"></div>
+            <el-button plain type="primary" @click="openSchemaEdit()">新增数据表</el-button>
+            <el-button plain type="warning" @click="rewriteSchema">重写刷新</el-button>
+          </div>
+        </el-card>
+
+        <el-table v-loading="schemaLoading" :data="schemaRows" border stripe>
+          <el-table-column label="表名" prop="tableName" width="190"/>
+          <el-table-column label="用途说明" prop="tableDesc" min-width="240" show-overflow-tooltip/>
+          <el-table-column align="center" label="启用列" prop="enabledColumnCount" width="80"/>
+          <el-table-column align="center" label="状态" width="80">
+            <template #default="{ row }">
+              <el-tag :type="row.isEnabled ? 'success' : 'info'" effect="plain" size="small">
+                {{ row.isEnabled ? '启用' : '停用' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column align="center" label="排序" prop="sortOrder" width="70"/>
+          <el-table-column label="创建时间" width="170">
+            <template #default="{ row }">{{ (row.createTime || '').replace('T', ' ').slice(0, 19) }}</template>
+          </el-table-column>
+          <el-table-column align="center" label="操作" width="200">
+            <template #default="{ row }">
+              <el-button link size="small" type="primary" @click.stop="openColumnManage(row)">管理列</el-button>
+              <el-button link size="small" type="primary" @click.stop="openSchemaEdit(row)">编辑</el-button>
+              <el-button link size="small" type="danger" @click.stop="removeSchema(row)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <el-pagination
+            v-model:current-page="schemaQuery.pageNum"
+            v-model:page-size="schemaQuery.pageSize"
+            :page-sizes="PAGE_SIZES"
+            :total="schemaTotal"
+            class="pager"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="onSchemaSizeChange"
+            @current-change="loadSchemas"
+        />
+
+        <!-- 语义映射配置（业务口径） -->
+        <el-card class="filter-card qa-semantic-card" shadow="never">
+          <div class="filter-row">
+            <el-input
+                v-model="semanticQuery.term"
+                clearable
+                placeholder="语义词模糊搜索"
+                style="width: 200px"
+                @keyup.enter="searchSemantics"
+            />
+            <el-button type="primary" @click="searchSemantics">查询</el-button>
+            <div class="flex-1"></div>
+            <el-button plain type="primary" @click="openSemanticEdit()">新增语义映射</el-button>
+          </div>
+        </el-card>
+
+        <el-table v-loading="semanticLoading" :data="semanticRows" border stripe>
+          <el-table-column type="expand">
+            <template #default="{ row }">
+              <div class="semantic-expand">
+                <p><span class="expand-label">口径说明</span>{{ row.scopeDesc }}</p>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="语义词" prop="term" width="140"/>
+          <el-table-column label="命中表" prop="tableName" width="200"/>
+          <el-table-column label="目标列" width="120">
+            <template #default="{ row }">{{ row.columnName || '（表级）' }}</template>
+          </el-table-column>
+          <el-table-column align="center" label="匹配方式" width="100">
+            <template #default="{ row }">{{ row.matchMode === 2 ? '精确' : '包含' }}</template>
+          </el-table-column>
+          <el-table-column align="center" label="优先级" prop="priority" width="80"/>
+          <el-table-column label="口径说明" min-width="220" prop="scopeDesc" show-overflow-tooltip/>
+          <el-table-column align="center" label="启用" width="80">
+            <template #default="{ row }">
+              <el-tag :type="row.isEnabled ? 'success' : 'warning'" effect="plain" size="small">
+                {{ row.isEnabled ? '启用' : '停用' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column align="center" label="操作" width="130">
+            <template #default="{ row }">
+              <el-button link size="small" type="primary" @click.stop="openSemanticEdit(row)">编辑</el-button>
+              <el-button link size="small" type="danger" @click.stop="removeSemantic(row)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <el-pagination
+            v-model:current-page="semanticQuery.pageNum"
+            v-model:page-size="semanticQuery.pageSize"
+            :page-sizes="PAGE_SIZES"
+            :total="semanticTotal"
+            class="pager"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="onSemanticSizeChange"
+            @current-change="loadSemantics"
+        />
+      </el-tab-pane>
     </el-tabs>
 
     <!-- 录入文档 -->
@@ -255,6 +388,11 @@
 
     <!-- 草稿留痕详情（只读，红删绿增渲染用模板插值，禁止 v-html） -->
     <AiAdminDiffDetail v-model="diffVisible" :row="diffRow"/>
+
+    <!-- 问数配置弹框（schema/列/语义，新增与修改均走独立组件） -->
+    <AiAdminQaSchemaEdit v-model="schemaEditVisible" :row="schemaEditRow" @saved="onSchemaSaved"/>
+    <AiAdminQaColumnManage v-model="columnManageVisible" :table-name="columnManageTable"/>
+    <AiAdminQaSemanticEdit v-model="semanticEditVisible" :row="semanticEditRow" @saved="onSemanticSaved"/>
   </div>
 </template>
 
@@ -264,10 +402,15 @@ import {ElMessage, ElMessageBox} from 'element-plus';
 import {
   askKnowledge,
   deleteKnowledgeDocById,
+  deleteOperationQaSchema,
+  deleteOperationQaSemantic,
   getAiAuditLogPage,
   getKnowledgeDocPage,
+  getOperationQaSchemaPage,
+  getOperationQaSemanticPage,
   listDraftDiffPage,
   rebuildKnowledgeIndex,
+  rewriteOperationQaSchema,
   seedKnowledgeCorpus,
 } from '@/api/ai';
 import {sourceTypeText} from '@/lib/ai';
@@ -276,6 +419,9 @@ import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import AiAdminIngestAdd from './AiAdminIngestAdd.vue';
 import AiAdminDocDetail from './AiAdminDocDetail.vue';
 import AiAdminDiffDetail from './AiAdminDiffDetail.vue';
+import AiAdminQaSchemaEdit from './AiAdminQaSchemaEdit.vue';
+import AiAdminQaColumnManage from './AiAdminQaColumnManage.vue';
+import AiAdminQaSemanticEdit from './AiAdminQaSemanticEdit.vue';
 
 const activeTab = ref('audit');
 const capabilityOptions = [
@@ -489,10 +635,150 @@ const showDiff = (row) => {
   diffRow.value = row;
   diffVisible.value = true;
 };
+// ---------------- 运营问数配置（ai:operationQa:config） ----------------
+const canConfig = hasPerm('ai:operationQa:config');
+// 数据表配置
+const schemaQuery = reactive({
+  pageNum: 1,
+  pageSize: DEFAULT_PAGE_SIZE,
+  tableName: '',
+  isEnabled: undefined,
+});
+const schemaLoading = ref(false);
+const schemaRows = ref([]);
+const schemaTotal = ref(0);
+const loadSchemas = async () => {
+  if (!canConfig)
+    return;
+  schemaLoading.value = true;
+  try {
+    const res = await getOperationQaSchemaPage({
+      pageNum: schemaQuery.pageNum,
+      pageSize: schemaQuery.pageSize,
+      tableName: schemaQuery.tableName || undefined,
+      isEnabled: schemaQuery.isEnabled,
+    });
+    schemaRows.value = res?.data?.records || [];
+    schemaTotal.value = res?.data?.total || 0;
+  } catch (e) {
+    console.error('加载问数数据表配置失败', e);
+  } finally {
+    schemaLoading.value = false;
+  }
+};
+const searchSchemas = () => {
+  schemaQuery.pageNum = 1;
+  loadSchemas();
+};
+const onSchemaSizeChange = () => {
+  schemaQuery.pageNum = 1;
+  loadSchemas();
+};
+// 数据表新增/编辑弹框（逻辑在 AiAdminQaSchemaEdit.vue）
+const schemaEditVisible = ref(false);
+const schemaEditRow = ref(null);
+const openSchemaEdit = (row) => {
+  schemaEditRow.value = row || null;
+  schemaEditVisible.value = true;
+};
+const onSchemaSaved = () => {
+  schemaQuery.pageNum = 1;
+  loadSchemas();
+};
+// 列管理弹框（AiAdminQaColumnManage.vue 容器，内嵌列列表 + 列编辑）
+const columnManageVisible = ref(false);
+const columnManageTable = ref('');
+const openColumnManage = (row) => {
+  columnManageTable.value = row.tableName;
+  columnManageVisible.value = true;
+};
+const removeSchema = async (row) => {
+  await ElMessageBox.confirm(`确认删除数据表「${row.tableName}」？其列配置将一并删除，模型将不再允许查询该表。`, '删除确认', {
+    type: 'warning',
+  });
+  try {
+    await deleteOperationQaSchema(row.id);
+    ElMessage.success('已删除');
+    loadSchemas();
+  } catch (e) {
+    console.error('删除数据表配置失败', e);
+  }
+};
+// 重写刷新：扫描当前库全表结构，一次性覆盖表/列配置（表结构同步唯一入口）
+const rewriteSchema = async () => {
+  await ElMessageBox.confirm(
+    '重写刷新将扫描当前库全部表结构并覆盖现有表/列配置：新表默认停用（不进白名单）、新列默认启用、注释与类型对齐真实 DDL、库中已删除的表/列会从配置移除。保留既有启用状态与用途说明。确定执行？',
+    '重写刷新确认', { type: 'warning' });
+  try {
+    const res = await rewriteOperationQaSchema();
+    ElMessage.success(res?.data || '重写刷新完成');
+    loadSchemas();
+  } catch (e) {
+    console.error('重写刷新失败', e);
+  }
+};
+// 语义映射配置
+const semanticQuery = reactive({
+  pageNum: 1,
+  pageSize: DEFAULT_PAGE_SIZE,
+  term: '',
+});
+const semanticLoading = ref(false);
+const semanticRows = ref([]);
+const semanticTotal = ref(0);
+const loadSemantics = async () => {
+  if (!canConfig)
+    return;
+  semanticLoading.value = true;
+  try {
+    const res = await getOperationQaSemanticPage({
+      pageNum: semanticQuery.pageNum,
+      pageSize: semanticQuery.pageSize,
+      term: semanticQuery.term || undefined,
+    });
+    semanticRows.value = res?.data?.records || [];
+    semanticTotal.value = res?.data?.total || 0;
+  } catch (e) {
+    console.error('加载问数语义映射失败', e);
+  } finally {
+    semanticLoading.value = false;
+  }
+};
+const searchSemantics = () => {
+  semanticQuery.pageNum = 1;
+  loadSemantics();
+};
+const onSemanticSizeChange = () => {
+  semanticQuery.pageNum = 1;
+  loadSemantics();
+};
+// 语义新增/编辑弹框（逻辑在 AiAdminQaSemanticEdit.vue）
+const semanticEditVisible = ref(false);
+const semanticEditRow = ref(null);
+const openSemanticEdit = (row) => {
+  semanticEditRow.value = row || null;
+  semanticEditVisible.value = true;
+};
+const onSemanticSaved = () => {
+  semanticQuery.pageNum = 1;
+  loadSemantics();
+};
+const removeSemantic = async (row) => {
+  await ElMessageBox.confirm(`确认删除语义映射「${row.term}」？`, '删除确认', {type: 'warning'});
+  try {
+    await deleteOperationQaSemantic(row.id);
+    ElMessage.success('已删除');
+    loadSemantics();
+  } catch (e) {
+    console.error('删除语义映射失败', e);
+  }
+};
 onMounted(() => {
   loadAudit();
   loadDocs();
   loadDraftDiffs();
+  loadSchemas();
+  loadSemantics();
 });
 </script>
 
@@ -614,5 +900,23 @@ onMounted(() => {
   margin: 10px 0 0;
   font-size: 12px;
   color: #9ca3af;
+}
+
+.qa-config-hint {
+  margin-bottom: 12px;
+}
+
+.qa-semantic-card {
+  margin-top: 24px;
+}
+
+.semantic-expand {
+  padding: 4px 12px;
+  font-size: 13px;
+  color: #374151;
+}
+
+.semantic-expand p {
+  margin: 4px 0;
 }
 </style>

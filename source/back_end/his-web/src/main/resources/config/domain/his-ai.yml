@@ -73,8 +73,10 @@ his:
       patient_triage_normalize: 5000
       # 知识库问答（同步路径，模型基于检索材料作答，超时回落原文片段）
       knowledge_qa: 8000
-      # 运营问数：管理者在等（SQL 生成 + 结果摘要两次模型调用共用该预算）
-      operation_qa: 10000
+      # 运营问数：管理者在等（SQL 生成 + 结果摘要两次模型调用共用该预算）。
+      # 多语义命中（如「门诊就诊量」+「科室」）会注入两表 schema 并生成 JOIN SQL，
+      # 10s 实测必超时（同 lab_interpret 因：复杂 SQL 生成慢于预算被误杀降级）
+      operation_qa: 15000
       # 预问诊摘要：患者提交问卷后当场等结果，超时回落规则模板不卡提交流程
       previsit_summary: 8000
       # 随访话术：医生点「AI 拟话术」当场等，超时回落类型模板
@@ -107,6 +109,13 @@ his:
       top-k: 4
       auto-seed: true
       corpus-paths: rag-corpus
+      # 向量库：milvus-持久化（重启不丢）/ memory-进程内存（重启靠 doc 全文重建）
+      vector-store: milvus
+      milvus:
+        uri: grpc://192.168.88.132:19530
+        token: ""
+        collection-name: his_knowledge_chunk
+        vector-dim: 1024
       embed-base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
       embed-api-key: ${ai.api-key:}
       embed-model: text-embedding-v3

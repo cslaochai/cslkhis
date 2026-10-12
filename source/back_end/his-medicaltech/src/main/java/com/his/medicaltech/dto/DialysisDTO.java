@@ -2,9 +2,7 @@ package com.his.medicaltech.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.his.common.base.PageParam;
-import com.his.common.validation.InEnum;
-import com.his.medicaltech.enums.DialysisPatientStatusEnum;
-import com.his.medicaltech.enums.DialysisTimeSlotEnum;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -78,7 +76,7 @@ public class DialysisDTO {
         private Long id;
 
         @NotNull(message = "目标状态不能为空")
-        @InEnum(value = DialysisPatientStatusEnum.class, message = "目标状态取值不合法（1-在透 2-暂停 3-退出）")
+        @AllowedValues(values = {"1", "2", "3"}, message = "目标状态取值不合法（1-在透 2-暂停 3-退出）")
         private Integer status;
 
         /**
@@ -265,7 +263,7 @@ public class DialysisDTO {
          * 时段（1-上午 2-下午 3-夜间）
          */
         @NotNull(message = "时段不能为空")
-        @InEnum(value = DialysisTimeSlotEnum.class, message = "时段取值不合法（1-上午 2-下午 3-夜间）")
+        @AllowedValues(values = {"1", "2", "3"}, message = "时段取值不合法（1-上午 2-下午 3-夜间）")
         private Integer timeSlot;
 
         /**
@@ -299,7 +297,7 @@ public class DialysisDTO {
          * 时段（1-上午 2-下午 3-夜间）
          */
         @NotNull(message = "时段不能为空")
-        @InEnum(value = DialysisTimeSlotEnum.class, message = "时段取值不合法（1-上午 2-下午 3-夜间）")
+        @AllowedValues(values = {"1", "2", "3"}, message = "时段取值不合法（1-上午 2-下午 3-夜间）")
         private Integer timeSlot;
 
         /**

@@ -84,7 +84,7 @@ public class QualityServiceImpl implements QualityService {
                     + " 条，实现 " + m.size() + " 条，缺少 " + missing);
         }
         this.registry = Collections.unmodifiableMap(m);
-        log.info("数据质量规则注册完成，共 {} 条", m.size());
+        log.info("======数据质量规则注册完成，共 {} 条======", m.size());
     }
 
     @Override

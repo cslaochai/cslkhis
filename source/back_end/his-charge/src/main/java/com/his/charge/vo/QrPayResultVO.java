@@ -26,6 +26,18 @@ public class QrPayResultVO {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime payTime;
 
+    /**
+     * 支付码过期时刻；倒计时走完后为已过期（服务端会顺带把过期未付的单关掉，payStatus 变 2-已关闭）
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime expireTime;
+
+    /**
+     * 服务端当前时间：与 expireTime 一起给前端锚定倒计时（每次轮询都刷新，纠客户端时钟漂移）
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime serverTime;
+
     @JsonSerialize(using = ToStringSerializer.class)
     private Long billId;
 

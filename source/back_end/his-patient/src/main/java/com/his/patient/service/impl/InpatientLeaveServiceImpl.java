@@ -209,7 +209,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
         leave.setDestination(TextUtil.cut(TextUtil.trimToNull(dto.getDestination()), DEST_MAX));
         leave.setCompanionName(TextUtil.cut(TextUtil.trimToNull(dto.getCompanionName()), NAME_MAX));
         if (dto.getCompanionRelation() != null && !RELATIONS.contains(dto.getCompanionRelation())) {
-            throw new BusinessException("随行人与患者的关系取值不合法（见字典 his_notice_relation）");
+            throw new BusinessException("随行人与患者的关系取值不合法（1-配偶 2-父母 3-子女 4-兄弟姐妹 5-配偶父母 6-子女配偶 7-祖父母/外祖父母 8-孙子女/外孙子女 9-法定代理人 10-单位/组织负责人 99-其他）");
         }
         leave.setCompanionRelation(dto.getCompanionRelation());
         // 随行人电话：列表 VO 不出联系方式（AGENTS §5）、详情只出脱敏值，前端**无法原样回显明文**，
@@ -336,7 +336,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
         // 患方承诺三要素缺一不可 —— 「回去出事责任界定」靠的就是这张签字
         // D-业务规则：码值合法性（非空已由 DTO @NotNull 收口，这里挡的是选了非法码值的请求）
         if (!RELATIONS.contains(dto.getConfirmRelation())) {
-            throw new BusinessException("确认人与患者的关系取值不合法（见字典 his_notice_relation，责任界定必填）");
+            throw new BusinessException("确认人与患者的关系取值不合法（1-配偶 2-父母 3-子女 4-兄弟姐妹 5-配偶父母 6-子女配偶 7-祖父母/外祖父母 8-孙子女/外孙子女 9-法定代理人 10-单位/组织负责人 99-其他；责任界定必填）");
         }
         String signature = TextUtil.trimToNull(dto.getConfirmSignature());
         if (!signature.startsWith("data:image/png;base64,")) {
@@ -427,10 +427,10 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
             throw new BusinessException("该单尚未超期（预计返回时间未到），无需超期处置");
         }
         if (dto.getContactResult() == null || !CONTACT_RESULTS.contains(dto.getContactResult())) {
-            throw new BusinessException("联系结果取值不合法（见字典 his_leave_contact）");
+            throw new BusinessException("联系结果取值不合法（1-联系上并约定返回 2-联系不上 3-家属/随行人已知晓）");
         }
         if (dto.getReportTo() == null || !REPORT_TOS.contains(dto.getReportTo())) {
-            throw new BusinessException("上报对象取值不合法（见字典 his_leave_report；联系不上必须升级上报）");
+            throw new BusinessException("上报对象取值不合法（1-主管医师 2-病区护士长 3-医务科/总值班；联系不上必须升级上报）");
         }
         leave.setOverdueContactResult(dto.getContactResult());
         leave.setOverdueContactNote(TextUtil.cutToNull(dto.getContactNote(), NOTE_MAX));

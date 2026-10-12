@@ -158,9 +158,41 @@ export function askKnowledge(params) {
 // ========== 知识库维护（ai:knowledge:manage，AI 管理台维护签页） ==========
 
 // 录入/更新知识文档（自动切块建索引）
-// params: { title, category?, content, sourceType? }  sourceType: 2-手工录入 3-文件导入
+// params: { title, category?, content, sourceType?, version?, sourceName? }
+//   sourceType: 2-手工录入 3-文件导入；version: 版本号（如 v1.0）；sourceName: 内容来源（诊疗指南/论坛等）
 export function ingestKnowledgeDoc(params) {
   return request.post('/ai/knowledge/ingest', params)
+}
+
+// 上传知识文件（自动解析 + 切块 + 建索引；支持 pdf/docx/txt/md，≤20MB）
+// formData: { file, title?, category?, version?, sourceName? }  data 为 KnowledgeDocListVO（含 id / chunkCount，不含原文）
+export function uploadKnowledgeFile(formData) {
+  // 与 transcribeVoice 同口径：请求级显式声明 multipart，axios 才会让浏览器自己带 boundary 发原始表单
+  return request.post('/ai/knowledge/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+}
+
+// 批量上传知识文件（异步解析，返回导入任务列表；支持多文件，≤20MB/个）
+// formData: { files: File[] }  data 为 KnowledgeImportTaskVO[]（初始状态均为解析中）
+export function submitKnowledgeImport(formData) {
+  return request.post('/ai/knowledge/import/submit', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+}
+
+// 查询导入任务状态（轮询解析/入库进度）
+// params: { ids: string[] }  data 为 KnowledgeImportTaskVO[]
+export function getKnowledgeImportList(params) {
+  return request.post('/ai/knowledge/import/list', params)
+}
+
+// 确认导入任务入库（预览解析文本后补充元数据，异步切块 + embedding + 灌 Milvus）
+// params: { id, title, category?, version?, sourceName? }  id 全程字符串
+export function commitKnowledgeImport(params) {
+  return request.post('/ai/knowledge/import/commit', params)
+}
+
+// 取消导入任务（仅解析中 / 待确认可取消）
+// params: { id }  id 全程字符串
+export function cancelKnowledgeImport(params) {
+  return request.post('/ai/knowledge/import/cancel', params)
 }
 
 // 知识文档分页列表
@@ -181,7 +213,7 @@ export function deleteKnowledgeDocById(params) {
   return request.post('/ai/knowledge/deleteById', params)
 }
 
-// 重建向量索引（从 chunk 表全量重载；向量库为进程内存，重启后丢失，靠它恢复）
+// 重建向量索引（从 doc 全文重新切分灌入 Milvus；Milvus 空库或数据异常时用于恢复）
 export function rebuildKnowledgeIndex() {
   return request.post('/ai/knowledge/rebuild')
 }
@@ -245,4 +277,63 @@ export function explainDeterioration(params) {
 // 产物不写库 —— 护士确认后的正文由护士自己贴进交接班记录。
 export function composeNursingHandover(params) {
   return request.post('/ai/nursingHandover/compose', params)
+}
+
+// ========== 运营问数配置（ai:operationQa:config，AI 管理台「问数配置」签页） ==========
+// 数据表（schema）配置：白名单表 + 用途说明 + 启用状态；运行时快照从这些表加载
+// params: { pageNum, pageSize, tableName?, isEnabled? }  data 为 PageResult<OperationQaSchemaListVO>
+export function getOperationQaSchemaPage(params) {
+  return request.post('/ai/operationQa/config/schemaListPage', params)
+}
+
+// 新增/修改数据表配置（id 空=新增 有值=修改）
+export function upsertOperationQaSchema(params) {
+  return request.post('/ai/operationQa/config/schemaUpsert', params)
+}
+
+// 删除数据表配置（级联删该表列配置）
+export function deleteOperationQaSchema(id) {
+  return request.delete('/ai/operationQa/config/schemaDeleteById', { params: { id } })
+}
+
+// 数据列配置分页（按表查）
+// params: { pageNum, pageSize, tableName, isEnabled? }
+export function getOperationQaColumnPage(params) {
+  return request.post('/ai/operationQa/config/columnListPage', params)
+}
+
+// 新增/修改数据列配置
+export function upsertOperationQaColumn(params) {
+  return request.post('/ai/operationQa/config/columnUpsert', params)
+}
+
+// 删除数据列配置
+export function deleteOperationQaColumn(id) {
+  return request.delete('/ai/operationQa/config/columnDeleteById', { params: { id } })
+}
+
+// 语义映射分页（业务口径：语义词 → 表/列 + 权威口径，注入模型 prompt）
+// params: { pageNum, pageSize, term?, tableName?, isEnabled? }
+export function getOperationQaSemanticPage(params) {
+  return request.post('/ai/operationQa/config/semanticListPage', params)
+}
+
+// 新增/修改语义映射
+export function upsertOperationQaSemantic(params) {
+  return request.post('/ai/operationQa/config/semanticUpsert', params)
+}
+
+// 删除语义映射
+export function deleteOperationQaSemantic(id) {
+  return request.delete('/ai/operationQa/config/semanticDeleteById', { params: { id } })
+}
+
+// 启用表下拉选项（配置弹框选表用）
+export function getOperationQaSchemaSelectList() {
+  return request.get('/ai/operationQa/config/schemaSelectList')
+}
+
+// 重写刷新：扫描当前库全表结构，一次性覆盖表/列配置（表结构同步唯一入口）
+export function rewriteOperationQaSchema() {
+  return request.post('/ai/operationQa/config/rewriteSchema')
 }

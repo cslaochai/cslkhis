@@ -12,6 +12,13 @@ import java.util.List;
 public interface PayOrderService {
 
     /**
+     * 支付码有效期（分钟）：待支付单自创建起超过该时长即视为过期。
+     * 出码倒计时（expireTime）、查单侧到期关单、建单复用判断共用这一个口径；
+     * 渠道侧的 timeout_express 也取同一值，两侧同刻失效。
+     */
+    int PAY_ORDER_EXPIRE_MINUTES = 5;
+
+    /**
      * 建单入参（内部指令，不是 HTTP 入参，所以字段校验由调用方负责）。
      *
      * @param bizType     业务类型（1-门诊缴费 2-挂号费 3-住院押金）
@@ -25,8 +32,8 @@ public interface PayOrderService {
 
     /**
      * 建待支付单。同一个业务单不会同时挂两张能付的码：
-     * 已有同渠道待支付单且金额未变 → 复用原单号（渠道按商户订单号幂等返回同一张码）；
-     * 金额变了或换了渠道 → 先关掉旧单再建新单，否则旧码还能被扫出来付款，而本地已不认它。
+     * 已有同渠道、金额未变、且未过期的待支付单 → 复用原单号（渠道按商户订单号幂等返回同一张码）；
+     * 金额变了、换了渠道或原码已过期 → 先关掉旧单再建新单，否则旧码还能被扫出来付款，而本地已不认它。
      */
     PayOrderVO createPending(CreateSpec spec);
 
@@ -51,6 +58,13 @@ public interface PayOrderService {
      * 已支付的单拒绝关闭 —— 钱收过了，要走退费而不是把凭证改成已关闭。
      */
     void closePending(String payNo);
+
+    /**
+     * 已到期的待支付单做收尾关单（含渠道关单）：到期未付的码不该继续可扫。
+     * 与 closePending 的差别是「尽力而为」——并发里患者刚付掉就什么都不做，
+     * 不把「钱已进来」报成关单失败；供查单轮询路径定时调用（未到期时是空操作）。
+     */
+    void closeExpiredIfPending(String payNo);
 
     /**
      * 某患者最近的支付单（患者端「我的缴费记录」）。

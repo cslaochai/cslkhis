@@ -94,7 +94,7 @@ public class NutritionStatsServiceImpl extends ServiceImpl<BizNutritionStatsMapp
         String operator = operatorUser.getRealName();
         List<NutritionStatsVO> result = new ArrayList<>();
 
-        // scopeType 合法性由 DTO 的 @InEnum 把关（1-全院 2-科室），这里只分派
+        // scopeType 合法性由 DTO 的 @AllowedValues 把关（1-全院 2-科室），这里只分派
         if (Objects.equals(StatsScopeEnum.DEPT.getCode(), dto.getScopeType())) {
             List<DeptCountRowVO> depts = nutritionStatMapper.selectDischargeDepts(from(ym), to(ym));
             if (CollectionUtils.isEmpty(depts)) {

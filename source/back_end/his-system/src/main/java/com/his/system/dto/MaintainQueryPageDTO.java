@@ -1,8 +1,7 @@
 package com.his.system.dto;
 
 import com.his.common.base.PageParam;
-import com.his.common.validation.InEnum;
-import com.his.system.enums.MaintainTypeEnum;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -22,6 +21,6 @@ public class MaintainQueryPageDTO extends PageParam implements Serializable {
     /**
      * 维保类型（1-保养 2-维修 3-巡检）；不筛则不传
      */
-    @InEnum(value = MaintainTypeEnum.class, message = "维保类型取值不合法（1-保养 2-维修 3-巡检）")
+    @AllowedValues(values = {"1", "2", "3"}, message = "维保类型取值不合法（1-保养 2-维修 3-巡检）")
     private Integer maintainType;
 }

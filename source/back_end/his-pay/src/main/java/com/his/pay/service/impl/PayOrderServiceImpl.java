@@ -68,11 +68,14 @@ public class PayOrderServiceImpl implements PayOrderService {
             if (Objects.equals(valid.getPayStatus(), PayOrderStatusEnum.PAID.getCode())) {
                 throw new BusinessException("该业务单已收款（支付单 " + valid.getPayNo() + "），请勿重复收取");
             }
-            // 同渠道同金额：复用原单号，渠道会幂等返回同一张码，不再产生第二张可付的码
-            if (Objects.equals(valid.getChannel(), spec.channel()) && valid.getAmount().compareTo(amount) == 0) {
+            // 同渠道同金额且码未过期：复用原单号，渠道会幂等返回同一张码，不再产生第二张可付的码。
+            // 过期不复用：旧码的倒计时已走完，复用等于让新码一出生就显示过期，必须关掉重出。
+            if (!isExpired(valid)
+                    && Objects.equals(valid.getChannel(), spec.channel())
+                    && valid.getAmount().compareTo(amount) == 0) {
                 return toVO(valid);
             }
-            // 换了渠道或金额变了（窗口期间账被收过一部分）：旧码必须作废再出新码，
+            // 换了渠道、金额变了（窗口期间账被收过一部分）或原码已过期：旧码必须作废再出新码，
             // 否则两张码同时有效，患者扫哪张都可能付，而本地只认最后一张
             doClose(valid);
         }
@@ -150,6 +153,25 @@ public class PayOrderServiceImpl implements PayOrderService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void closeExpiredIfPending(String payNo) {
+        BizPayOrder order = bizPayOrderMapper.selectByPayNo(payNo);
+        if (order == null || !Objects.equals(order.getPayStatus(), PayOrderStatusEnum.PENDING.getCode())
+                || !isExpired(order)) {
+            return;
+        }
+        // 到期关单尽力而为：并发里患者刚付掉、别人刚关掉，条件更新都改不动行 → 一律按最新状态收场，
+        // 不把「钱刚收进来」报成关单失败（本方法走轮询路径，调用方不该收到这个异常）
+        if (bizPayOrderMapper.markClosedIfPending(payNo, LocalDateTime.now()) == 0) {
+            return;
+        }
+        log.info("[支付单] 过期关单 payNo={}", payNo);
+        if (Objects.equals(order.getChannel(), PayChannelEnum.ALIPAY.getCode())) {
+            alipayChannelService.closeTrade(order.getPayNo());
+        }
+    }
+
+    @Override
     public List<PayOrderVO> listRecentByPatient(Long patientId, int limit) {
         if (patientId == null) {
             throw new BusinessException("缺少患者");
@@ -188,6 +210,15 @@ public class PayOrderServiceImpl implements PayOrderService {
         log.info("[支付单] 登记退款 payNo={} 原因={}", payNo, reason);
     }
 
+    /**
+     * 待支付单是否已过期。过期时刻由服务端现算（创建时间 + 有效期），不落列：
+     * 库里存一份派生时间只会多出「时间到了列还没刷」的漂移窗口，创建时间才是唯一事实。
+     */
+    private static boolean isExpired(BizPayOrder order) {
+        return order.getCreateTime() != null
+                && !order.getCreateTime().plusMinutes(PayOrderService.PAY_ORDER_EXPIRE_MINUTES).isAfter(LocalDateTime.now());
+    }
+
     private void doClose(BizPayOrder order) {
         if (Objects.equals(order.getPayStatus(), PayOrderStatusEnum.CLOSED.getCode())) {
             return;
@@ -222,6 +253,8 @@ public class PayOrderServiceImpl implements PayOrderService {
         vo.setPayStatus(order.getPayStatus());
         vo.setOutTradeNo(order.getOutTradeNo());
         vo.setPayTime(order.getPayTime());
+        vo.setExpireTime(order.getCreateTime() == null ? null
+                : order.getCreateTime().plusMinutes(PayOrderService.PAY_ORDER_EXPIRE_MINUTES));
         vo.setCashierId(order.getCreateById());
         vo.setCashierName(order.getCreateBy());
         return vo;

@@ -4,15 +4,17 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.ai.dto.KnowledgeAskDTO;
 import com.his.ai.dto.KnowledgeDocQueryPageDTO;
 import com.his.ai.dto.KnowledgeIdDTO;
+import com.his.ai.dto.KnowledgeImportCommitDTO;
+import com.his.ai.dto.KnowledgeImportQueryDTO;
 import com.his.ai.dto.KnowledgeIngestDTO;
-import com.his.ai.entity.SysKnowledgeDoc;
+import com.his.ai.service.KnowledgeImportService;
 import com.his.ai.service.KnowledgeQaCapability;
 import com.his.ai.service.KnowledgeStoreService;
 import com.his.ai.vo.KnowledgeAskVO;
 import com.his.ai.vo.KnowledgeDocListVO;
 import com.his.ai.vo.KnowledgeDocVO;
+import com.his.ai.vo.KnowledgeImportTaskVO;
 import com.his.common.base.Result;
-import com.his.common.util.TextUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -21,7 +23,12 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * 知识库问答（RAG）接口。
@@ -35,6 +42,7 @@ public class AiKnowledgeController {
 
     private final KnowledgeQaCapability knowledgeQaCapability;
     private final KnowledgeStoreService knowledgeStoreService;
+    private final KnowledgeImportService knowledgeImportService;
 
     @PostMapping("/ask")
     @Operation(summary = "知识库问答（RAG 检索增强生成；模型不可用降级返回检索原文）")
@@ -46,12 +54,50 @@ public class AiKnowledgeController {
     @PostMapping("/ingest")
     @Operation(summary = "录入/更新知识文档（手工或文件导入；自动切块建索引）")
     public Result<Long> ingest(@Valid @RequestBody KnowledgeIngestDTO ingestDTO) {
-        SysKnowledgeDoc doc = new SysKnowledgeDoc();
-        doc.setTitle(ingestDTO.getTitle());
-        doc.setCategory(TextUtil.hasText(ingestDTO.getCategory()) ? ingestDTO.getCategory() : ingestDTO.getTitle());
-        doc.setContent(ingestDTO.getContent());
-        doc.setSourceType(ingestDTO.getSourceType() == null ? 2 : ingestDTO.getSourceType());
-        return Result.success(knowledgeStoreService.ingest(doc));
+        return Result.success(knowledgeStoreService.ingestFromDto(ingestDTO));
+    }
+
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
+    @PostMapping("/upload")
+    @Operation(summary = "上传知识文件（自动解析 + 切块 + 建索引；元数据全部必填；支持 pdf / docx / txt / md，≤20MB）")
+    public Result<KnowledgeDocListVO> upload(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("title") String title,
+            @RequestParam("category") String category,
+            @RequestParam("version") String version,
+            @RequestParam("sourceName") String sourceName) {
+        return Result.success(knowledgeStoreService.upload(file, title, category, version, sourceName));
+    }
+
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
+    @PostMapping("/import/submit")
+    @Operation(summary = "批量上传知识文件（异步解析，返回导入任务列表；解析完成后预览确认再入库）")
+    public Result<List<KnowledgeImportTaskVO>> submitImport(@RequestParam("files") MultipartFile[] files) {
+        List<MultipartFile> fileList = files == null ? List.of() : Arrays.asList(files);
+        return Result.success(knowledgeImportService.submitBatch(fileList));
+    }
+
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
+    @PostMapping("/import/list")
+    @Operation(summary = "查询导入任务状态（轮询进度；解析中/入库中/待确认/完成/失败）")
+    public Result<List<KnowledgeImportTaskVO>> listImports(@Valid @RequestBody KnowledgeImportQueryDTO dto) {
+        return Result.success(knowledgeImportService.listByIds(dto.getIds()));
+    }
+
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
+    @PostMapping("/import/commit")
+    @Operation(summary = "确认入库（预览解析文本后补充元数据，异步切块 + embedding + 灌入 Milvus）")
+    public Result<KnowledgeImportTaskVO> commitImport(@Valid @RequestBody KnowledgeImportCommitDTO dto) {
+        return Result.success(knowledgeImportService.commit(
+                dto.getId(), dto.getTitle(), dto.getCategory(), dto.getVersion(), dto.getSourceName()));
+    }
+
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
+    @PostMapping("/import/cancel")
+    @Operation(summary = "取消导入任务（仅解析中 / 待确认可取消）")
+    public Result<Void> cancelImport(@Valid @RequestBody KnowledgeIdDTO dto) {
+        knowledgeImportService.cancel(dto.getId());
+        return Result.success("已取消", null);
     }
 
     @PreAuthorize("hasAuthority('ai:knowledge:manage')")
@@ -78,7 +124,7 @@ public class AiKnowledgeController {
 
     @PreAuthorize("hasAuthority('ai:knowledge:manage')")
     @PostMapping("/rebuild")
-    @Operation(summary = "重建向量索引（从 chunk 表全量重载）")
+    @Operation(summary = "重建向量索引（从 doc 全文重新切分灌入 Milvus）")
     public Result<Void> rebuild() {
         knowledgeStoreService.rebuild();
         return Result.success("索引已重建", null);

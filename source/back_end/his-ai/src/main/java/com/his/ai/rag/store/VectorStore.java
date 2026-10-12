@@ -11,7 +11,7 @@ public interface VectorStore {
      * 写入 / 更新一条切块向量。
      */
     void upsert(long chunkId, long docId, String content, String docTitle,
-                String category, float[] vector);
+                String category, String docVersion, String docSourceName, float[] vector);
 
     /**
      * 删除某文档下的全部切块（文档重新切块或删除时调用）。
@@ -27,4 +27,17 @@ public interface VectorStore {
      * 按余弦相似度召回 top-k。
      */
     List<RetrievedChunk> search(float[] queryVector, int topK);
+
+    /**
+     * 确保索引就绪（幂等）：内存实现为空操作；Milvus 实现确保集合存在（不存在则创建）。
+     */
+    default void ensureReady() {
+    }
+
+    /**
+     * 索引中是否已有数据（懒加载决策用）：Milvus 持久化场景返回 true 则无需从 doc 全文重建。
+     */
+    default boolean hasData() {
+        return false;
+    }
 }

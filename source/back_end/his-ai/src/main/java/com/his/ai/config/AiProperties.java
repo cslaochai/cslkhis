@@ -127,6 +127,14 @@ public class AiProperties {
          */
         private String corpusPaths = "rag-corpus";
         /**
+         * 向量库实现：memory-进程内存（重启丢失，靠 doc 全文重建）/ milvus-持久化向量库
+         */
+        private String vectorStore = "memory";
+        /**
+         * Milvus 配置（vector-store=milvus 时生效）
+         */
+        private Milvus milvus = new Milvus();
+        /**
          * 远程 embedding 服务地址（OpenAI 兼容 /v1/embeddings），未配则回落 ai.base-url
          */
         private String embedBaseUrl = "";
@@ -138,6 +146,26 @@ public class AiProperties {
          * 远程 embedding 模型名，未配则回落 ai.model
          */
         private String embedModel = "";
+    }
+
+    @Data
+    public static class Milvus {
+        /**
+         * 连接地址，如 grpc://192.168.88.132:19530 或 http://host:9091
+         */
+        private String uri = "";
+        /**
+         * 认证 token（如 root:Milvus），无认证留空
+         */
+        private String token = "";
+        /**
+         * 集合名
+         */
+        private String collectionName = "his_knowledge_chunk";
+        /**
+         * 向量维度（须与 embedding 输出一致；local-tf 为 1024）
+         */
+        private int vectorDim = 1024;
     }
 
     @Data

@@ -2,8 +2,7 @@ package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.his.common.base.PageParam;
-import com.his.common.validation.InEnum;
-import com.his.patient.enums.DeathTypeEnum;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -86,7 +85,7 @@ public class DeathRegistrationDTO {
          * 死亡类型（1-疾病死亡 2-非疾病死亡）
          */
         @NotNull(message = "死亡类型不能为空")
-        @InEnum(value = DeathTypeEnum.class, message = "死亡类型取值不合法（见字典 his_death_type）")
+        @AllowedValues(values = {"1", "2", "3"}, message = "死亡类型取值不合法（1-疾病死亡 2-非疾病死亡 3-死因不明/待核实）")
         private Integer deathType;
 
         /**

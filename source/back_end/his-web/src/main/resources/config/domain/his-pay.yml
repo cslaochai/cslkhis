@@ -1,20 +1,17 @@
-wx:
-  pay:
-    mock-enabled: true
-    app-id: ${WX_PAY_APP_ID:}
-    mch-id: ${WX_PAY_MCH_ID:}
-    api-v3-key: ${WX_PAY_API_V3_KEY:}
-    cert-serial-no: ${WX_PAY_CERT_SERIAL_NO:}
-    private-key-path: ${WX_PAY_PRIVATE_KEY_PATH:}
-    notify-url: ${WX_PAY_NOTIFY_URL:https://your-domain.com/api/pay/notify/wx}
+wxpay:
+  mock-enabled: true
+  app-id: ${WX_PAY_APP_ID:}
+  mch-id: ${WX_PAY_MCH_ID:}
+  api-v3-key: ${WX_PAY_API_V3_KEY:}
+  cert-serial-no: ${WX_PAY_CERT_SERIAL_NO:}
+  private-key-path: ${WX_PAY_PRIVATE_KEY_PATH:}
+  notify-url: ${WX_PAY_NOTIFY_URL:https://your-domain.com/api/pay/notify/wx}
 
 alipay:
   mock-enabled: true
   app-id: ${ALIPAY_APP_ID:}
   private-key: ${ALIPAY_PRIVATE_KEY:}
   alipay-public-key: ${ALIPAY_PUBLIC_KEY:}
-  # 沙箱网关只有 http 通道：https 路径 TLS 证书会校验失败（部分节点证书过期）、
-  # 握手侥幸通过也一律 404。生产环境必须用 ALIPAY_GATEWAY 指向正式 https 网关。
   gateway-url: ${ALIPAY_GATEWAY:http://openapi-sandbox.dl.alipaydev.com/gateway.do}
   notify-url: ${ALIPAY_NOTIFY_URL:}
   notify-url-cashier: ${ALIPAY_NOTIFY_URL_CASHIER:}

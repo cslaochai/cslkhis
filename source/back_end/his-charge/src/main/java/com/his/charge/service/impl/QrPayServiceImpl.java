@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -96,6 +97,8 @@ public class QrPayServiceImpl implements QrPayService {
         vo.setAmount(order.getAmount());
         vo.setPayStatus(order.getPayStatus());
         vo.setQrImage(qrImage);
+        vo.setExpireTime(order.getExpireTime());
+        vo.setServerTime(LocalDateTime.now());
         return vo;
     }
 
@@ -108,6 +111,12 @@ public class QrPayServiceImpl implements QrPayService {
         }
         if (Objects.equals(order.getPayStatus(), PayOrderStatusEnum.PENDING.getCode())) {
             settleFromChannel(order);
+            order = payOrderService.getByPayNo(payNo);
+        }
+        if (Objects.equals(order.getPayStatus(), PayOrderStatusEnum.PENDING.getCode())) {
+            // 过期未付由服务端关单（含渠道关单），前端据此渲染「已过期 + 刷新」；
+            // 并发付款的钱优先，关不动就按最新状态返回
+            payOrderService.closeExpiredIfPending(payNo);
             order = payOrderService.getByPayNo(payNo);
         }
         return toResultVO(order);
@@ -277,6 +286,8 @@ public class QrPayServiceImpl implements QrPayService {
         vo.setPayStatus(order.getPayStatus());
         vo.setAmount(order.getAmount());
         vo.setPayTime(order.getPayTime());
+        vo.setExpireTime(order.getExpireTime());
+        vo.setServerTime(LocalDateTime.now());
         vo.setBillId(order.getBizId());
         BizSettlementBill bill = settlementBillService.getById(order.getBizId());
         vo.setUnpaidAmount(bill == null ? null : unpaidOf(bill));

@@ -10,9 +10,19 @@ import lombok.Data;
 public class OperationQaPromptVariablesVO implements PromptVariables {
 
     /**
-     * 白名单表结构说明文本
+     * 按需渲染的表结构说明文本（只含问题相关的表）
      */
     private String schema;
+
+    /**
+     * 命中的业务口径文本（语义配置注入；无命中时为占位说明）
+     */
+    private String semantics;
+
+    /**
+     * 敏感字段约束文本（脱敏/禁止出库，列级配置注入）
+     */
+    private String sensitiveRules;
 
     /**
      * 管理者的原始问题

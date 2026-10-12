@@ -1,12 +1,12 @@
 <template>
-  <!-- 菜单权限配置抽屉：菜单树只有这里用，随本组件懒加载 -->
-  <el-drawer
+  <!-- 菜单权限配置弹框：菜单树只有这里用，随本组件懒加载 -->
+  <el-dialog
       v-model="visible"
       :title="`配置菜单权限 - ${props.role?.roleName || ''}`"
+      width="640px"
       destroy-on-close
-      size="440px"
   >
-    <div v-loading="menuLoading">
+    <div v-loading="menuLoading" class="menu-tree-wrap">
       <el-tree
           ref="menuTreeRef"
           :data="menuTree"
@@ -15,14 +15,14 @@
           node-key="id"
           show-checkbox
       />
-      <div class="mt-4 flex justify-end gap-2 border-t border-slate-200 pt-4">
-        <el-button @click="visible = false">取消</el-button>
-        <el-button :loading="menuSubmitting" type="primary" @click="handleSaveRoleMenu">
-          保存
-        </el-button>
-      </div>
     </div>
-  </el-drawer>
+    <template #footer>
+      <el-button @click="visible = false">取消</el-button>
+      <el-button :loading="menuSubmitting" type="primary" @click="handleSaveRoleMenu">
+        保存
+      </el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script lang="js" setup>
@@ -106,3 +106,11 @@ const handleSaveRoleMenu = async () => {
   }
 }
 </script>
+
+<style scoped>
+/* 菜单树节点很多（100+），弹框内限高内部滚动，避免把弹框撑出视口 */
+.menu-tree-wrap {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+</style>

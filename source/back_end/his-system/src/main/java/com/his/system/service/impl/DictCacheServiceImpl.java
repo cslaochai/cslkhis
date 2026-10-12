@@ -44,7 +44,6 @@ public class DictCacheServiceImpl extends ServiceImpl<SysDictDataMapper, SysDict
     public void run(String... args) {
         log.info("开始加载数据字典到Redis缓存...");
         refreshAllDictCache();
-        log.info("数据字典缓存加载完成");
     }
 
     /**
@@ -70,7 +69,7 @@ public class DictCacheServiceImpl extends ServiceImpl<SysDictDataMapper, SysDict
                         }
                     });
 
-            log.info("已缓存 {} 种字典类型，共 {} 条数据",
+            log.info("数据字典缓存加载完成，已缓存 {} 种字典类型，共 {} 条数据",
                     allDictData.stream().map(SysDictData::getDictType).distinct().count(),
                     allDictData.size());
         } catch (Exception e) {

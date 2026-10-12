@@ -1,7 +1,5 @@
 package com.his.ai.rag.store;
 
-import org.springframework.stereotype.Component;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -9,9 +7,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 内存向量库（开发环境方案）。
+ * 内存向量库（开发环境方案；vector-store=memory 时装配，重启丢失，靠 doc 全文重建）。
  */
-@Component
 public class InMemoryVectorStore implements VectorStore {
 
     private final Map<Long, Entry> store = new ConcurrentHashMap<>();
@@ -33,8 +30,9 @@ public class InMemoryVectorStore implements VectorStore {
 
     @Override
     public void upsert(long chunkId, long docId, String content, String docTitle,
-                       String category, float[] vector) {
-        store.put(chunkId, new Entry(chunkId, docId, content, docTitle, category, vector));
+                       String category, String docVersion, String docSourceName, float[] vector) {
+        store.put(chunkId, new Entry(chunkId, docId, content, docTitle, category,
+                docVersion, docSourceName, vector));
         docIndex.computeIfAbsent(docId, k -> ConcurrentHashMap.newKeySet()).add(chunkId);
     }
 
@@ -53,6 +51,11 @@ public class InMemoryVectorStore implements VectorStore {
     }
 
     @Override
+    public boolean hasData() {
+        return !store.isEmpty();
+    }
+
+    @Override
     public List<RetrievedChunk> search(float[] queryVector, int topK) {
         if (queryVector == null || queryVector.length == 0) {
             return List.of();
@@ -62,7 +65,7 @@ public class InMemoryVectorStore implements VectorStore {
             double score = cosine(queryVector, e.vector());
             if (score > 0) {
                 scored.add(new RetrievedChunk(e.chunkId(), e.docId(), e.content(),
-                        e.docTitle(), e.category(), score));
+                        e.docTitle(), e.category(), e.docVersion(), e.docSourceName(), score));
             }
         }
         scored.sort((a, b) -> Double.compare(b.score(), a.score()));
@@ -70,6 +73,7 @@ public class InMemoryVectorStore implements VectorStore {
     }
 
     private record Entry(long chunkId, long docId, String content, String docTitle,
-                         String category, float[] vector) {
+                         String category, String docVersion, String docSourceName,
+                         float[] vector) {
     }
 }

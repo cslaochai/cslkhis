@@ -4,11 +4,14 @@ import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
+import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * 运营问数的安全闸门：模型生成的 SQL 必须逐条通过这里的检查才能执行。
+ * 白名单集合由调用方按需查库后传入（本类不持有任何内存数据）。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class OperationSqlGuard {
@@ -42,10 +45,12 @@ public final class OperationSqlGuard {
     /**
      * 校验并规范化模型生成的 SQL。
      *
+     * @param rawSql        模型生成的原始 SQL
+     * @param allowedTables 白名单表集合（调用方按需查库获取，大小写不敏感）
      * @return 补齐 LIMIT 后可执行的语句
      * @throws IllegalArgumentException 未通过闸门，message 为面向用户的原因
      */
-    public static String enforce(String rawSql) {
+    public static String enforce(String rawSql, Set<String> allowedTables) {
         if (!TextUtil.hasText(rawSql)) {
             throw new IllegalArgumentException("没有生成查询语句");
         }
@@ -69,16 +74,25 @@ public final class OperationSqlGuard {
         if (SCHEMA_QUALIFIED.matcher(sql).find()) {
             throw new IllegalArgumentException("不允许跨库查询");
         }
+        Set<String> allowed = allowedTables == null ? Set.of() : allowedTables;
         Matcher tables = TABLE_REFERENCE.matcher(sql);
         while (tables.find()) {
             for (String name : tables.group(1).split(",")) {
                 String table = name.trim();
-                if (!table.isEmpty() && !OperationSchemaCatalog.isAllowed(table)) {
+                if (!table.isEmpty() && !isAllowed(table, allowed)) {
                     throw new IllegalArgumentException("数据表 " + table + " 不在可查询范围内");
                 }
             }
         }
         return enforceLimit(sql);
+    }
+
+    private static boolean isAllowed(String tableName, Set<String> allowedTables) {
+        if (tableName == null) {
+            return false;
+        }
+        String lower = tableName.toLowerCase(Locale.ROOT);
+        return allowedTables.stream().anyMatch(t -> t.equalsIgnoreCase(lower));
     }
 
     /**

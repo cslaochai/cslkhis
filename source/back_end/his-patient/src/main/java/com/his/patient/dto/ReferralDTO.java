@@ -1,8 +1,7 @@
 package com.his.patient.dto;
 
 import com.his.common.base.PageParam;
-import com.his.common.validation.InEnum;
-import com.his.patient.enums.ReferralDirectionEnum;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -56,7 +55,7 @@ public class ReferralDTO {
         /**
          * 转诊方向:1-上转 2-下转（默认 1 上转）
          */
-        @InEnum(value = ReferralDirectionEnum.class, message = "转诊方向取值不合法（1-上转 2-下转）")
+        @AllowedValues(values = {"1", "2"}, message = "转诊方向取值不合法（1-上转 2-下转）")
         private Integer direction;
 
         /**

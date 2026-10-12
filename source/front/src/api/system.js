@@ -391,6 +391,56 @@ export function saveHospitalConfig(data) {
     return request.post('/system/config/hospitalUpsert', data)
 }
 
+// 获取急诊参数（sys_config: emergency.* 键）
+export function getEmergencyConfig() {
+    return request.get('/system/config/emergencyInfo')
+}
+
+// 保存急诊参数
+export function saveEmergencyConfig(data) {
+    return request.post('/system/config/emergencyUpsert', data)
+}
+
+// 获取检验危急值参数（sys_config: lab.* 键）
+export function getLabCriticalConfig() {
+    return request.get('/system/config/labCriticalInfo')
+}
+
+// 保存检验危急值参数
+export function saveLabCriticalConfig(data) {
+    return request.post('/system/config/labCriticalUpsert', data)
+}
+
+// 获取住院/床位/转诊/住院证参数（sys_config: inpatient.* / duty.coord.* / bed.* / admission_order.* 键）
+export function getInpatientConfig() {
+    return request.get('/system/config/inpatientInfo')
+}
+
+// 保存住院/床位/转诊/住院证参数
+export function saveInpatientConfig(data) {
+    return request.post('/system/config/inpatientUpsert', data)
+}
+
+// 获取电子签名/可信时间戳参数（sys_config: sign.* 键）
+export function getSignConfig() {
+    return request.get('/system/config/signInfo')
+}
+
+// 保存电子签名/可信时间戳参数
+export function saveSignConfig(data) {
+    return request.post('/system/config/signUpsert', data)
+}
+
+// 获取 DRG 结算默认版本（走 /report/drg/version，读取 sys_config + Redis 生效值）
+export function getDrgDefaultVersion() {
+    return request.get('/report/drg/version')
+}
+
+// 设置 DRG 结算默认版本（写 sys_config + Redis，下次默认即生效）
+export function saveDrgDefaultVersion(version) {
+    return request.post('/report/drg/version', null, {params: {version}})
+}
+
 // ========== 消息通知 ==========
 
 // 查询未读消息数量

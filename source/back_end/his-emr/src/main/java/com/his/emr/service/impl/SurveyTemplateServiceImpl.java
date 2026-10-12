@@ -180,7 +180,7 @@ public class SurveyTemplateServiceImpl extends ServiceImpl<BizSurveyTemplateMapp
      * <p>题号重复不在这里靠数据库报错 —— 撞 uk_survey_item 的 500 对配置页用户毫无意义，
      * 前置校验才能把「第 3 题和第 5 题题号都是 4」说清楚。
      *
-     * <p>维度/题型的码值合法性由 DTO 上的 {@code @InEnum} 把关，这里不再手写范围判断
+     * <p>维度/题型的码值合法性由 DTO 上的 {@code @AllowedValues} 把关，这里不再手写范围判断
      * （AGENTS.md §16）。
      */
     private void validateItems(List<SurveyTemplateUpsertDTO.Item> items) {

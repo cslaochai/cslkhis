@@ -1,8 +1,7 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.his.common.validation.InEnum;
-import com.his.patient.enums.AdmitWayEnum;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -26,7 +25,7 @@ public class BedWaitAdmitDTO {
     /**
      * 入院途径：1-门诊 2-急诊 3-转院 4-其他（无证登记时必填）
      */
-    @InEnum(value = AdmitWayEnum.class, message = "入院途径取值不合法（应为 1-门诊 2-急诊 3-转院 4-其他）")
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "入院途径取值不合法（应为 1-门诊 2-急诊 3-转院 4-其他）")
     private Integer admitWay;
 
     /**

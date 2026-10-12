@@ -8,6 +8,8 @@ import com.his.system.entity.SysEmployee;
 import com.his.system.entity.SysUser;
 import com.his.system.mapper.SysEmployeeMapper;
 import com.his.system.mapper.SysUserMapper;
+import com.his.system.service.UserIdentityCache;
+import com.his.system.support.UserIdentityCacheData;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -25,6 +27,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     private final SysUserMapper sysUserMapper;
 
     private final SysEmployeeMapper sysEmployeeMapper;
+
+    private final UserIdentityCache userIdentityCache;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -69,6 +73,63 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             // 院外用户等：暂无角色，登录后无权限（保持原行为）
             throw new UsernameNotFoundException("暂只支持能院内用户和患者登录");
         }
+        return currentUser;
+    }
+
+    /**
+     * 请求身份装配（JwtAuthenticationFilter 专用）：优先命中 Redis 身份缓存，
+     * miss 才查库并回填 —— 一次 Redis 读替代每次请求的「查用户/查员工/查角色/查权限并集」4 条 SQL。
+     *
+     * <p><b>登录（DaoAuthenticationProvider）仍走 {@link #loadUserByUsername} 直查库</b>：
+     * 口令校验必须拿最新口令与状态，而本缓存刻意不含 password（见 {@link UserIdentityCacheData}），
+     * 缓存只服务 token 已验证的请求路径。
+     *
+     * <p>降级语义与原来完全一致：缓存 miss / Redis 不可用 → 走 {@link #loadUserByUsername}，
+     * 用户不存在或已禁用时抛 {@link UsernameNotFoundException}，过滤器照旧放行/拒绝。
+     */
+    public UserDetails loadCachedUserByUsername(String username) {
+        UserIdentityCacheData cached = userIdentityCache.get(username);
+        if (cached != null) {
+            return toCurrentUser(cached);
+        }
+        UserDetails loaded = loadUserByUsername(username);
+        if (loaded instanceof CurrentUser currentUser) {
+            userIdentityCache.put(username, toCacheData(currentUser));
+        }
+        return loaded;
+    }
+
+    private UserIdentityCacheData toCacheData(CurrentUser currentUser) {
+        UserIdentityCacheData data = new UserIdentityCacheData();
+        data.setUserId(currentUser.getUserId());
+        data.setUsername(currentUser.getUsername());
+        data.setRealName(currentUser.getRealName());
+        data.setUserType(currentUser.getUserType());
+        data.setPatientId(currentUser.getPatientId());
+        data.setEmployeeId(currentUser.getEmployeeId());
+        data.setEmployeeName(currentUser.getEmployeeName());
+        data.setDeptId(currentUser.getDeptId());
+        data.setDeptName(currentUser.getDeptName());
+        data.setRoles(currentUser.getRoles());
+        data.setPermissions(currentUser.getPermissions());
+        return data;
+    }
+
+    private CurrentUser toCurrentUser(UserIdentityCacheData data) {
+        CurrentUser currentUser = new CurrentUser();
+        currentUser.setUserId(data.getUserId());
+        currentUser.setUsername(data.getUsername());
+        currentUser.setRealName(data.getRealName());
+        currentUser.setUserType(data.getUserType());
+        currentUser.setPatientId(data.getPatientId());
+        currentUser.setEmployeeId(data.getEmployeeId());
+        currentUser.setEmployeeName(data.getEmployeeName());
+        currentUser.setDeptId(data.getDeptId());
+        currentUser.setDeptName(data.getDeptName());
+        currentUser.setRoles(data.getRoles());
+        currentUser.setPermissions(data.getPermissions());
+        // password / loginCount 不在缓存负载中：过滤器路径不校验口令，
+        // currentRole / deptId 随后由过滤器按 token 覆盖，与查库路径行为一致。
         return currentUser;
     }
 }

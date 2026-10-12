@@ -55,7 +55,7 @@ public class PromptTemplate {
         // 兜底自检：模板里写了占位符但VO 没这个字段，说明改提示词时忘了加变量，
         // 不打这条日志就会把 {{xxx}} 原文发给模型，输出静默变差且极难定位。
         // 只记未填的占位符名、不记渲染后的正文 —— 正文含患者姓名与诊断等敏感信息，不能进日志。
-        String unfilled = unfilledPlaceholders(result);
+        Set<String> unfilled = unfilledPlaceholders(result);
         if (!unfilled.isEmpty()) {
             log.warn("[AI-提示词] 模板 {} 存在未被变量覆盖的占位符 {}，请检查是否漏了 PromptVariables 字段",
                     name, unfilled);
@@ -68,13 +68,13 @@ public class PromptTemplate {
      * <p>用正则而不是 {@code contains("{{")}：患者自述里出现「{{」不该误报，
      * 但「{{xxx}}」这种形态在正文里出现就是漏填。
      */
-    private static String unfilledPlaceholders(String rendered) {
+    private static Set<String> unfilledPlaceholders(String rendered) {
         Set<String> names = new LinkedHashSet<>();
         Matcher matcher = UNFILLED_PATTERN.matcher(rendered);
         while (matcher.find()) {
             names.add(matcher.group(1));
         }
-        return names.toString();
+        return names;
     }
 
     /**

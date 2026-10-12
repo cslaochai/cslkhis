@@ -112,11 +112,8 @@ public interface SystemConfigKeyConst {
      */
     public static final String HOSPITAL_EMAIL = "hospital.email";
 
-    // ===== DRG 分组方案 =====
-
     /**
-     * DRG 结算默认启用的分组方案版本（短码 2.0 / 3.0；2.0 对应库内 version 字符串 chs-drg-2.0）。
-     * 存储于 sys_config，运行时缓存于 Redis（his:drg:default-version），启动时打印实际启用版本。
+     * DRG 结算默认启用的分组方案版本
      */
     public static final String DRG_DEFAULT_VERSION = "drg.default_version";
 }

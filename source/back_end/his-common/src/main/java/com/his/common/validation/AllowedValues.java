@@ -18,5 +18,5 @@ public @interface AllowedValues {
 
     Class<? extends Payload>[] payload() default {};
 
-    int[] values() default {};          // 允许的数值
+    String[] values() default {};
 }

@@ -26,6 +26,7 @@ import com.his.system.mapper.SysUserMapper;
 import com.his.system.service.EmployeePostService;
 import com.his.system.service.FieldChangeRecorder;
 import com.his.system.service.SysUserService;
+import com.his.system.service.UserIdentityCache;
 import com.his.system.support.FieldSpec;
 import com.his.system.utils.UserUtils;
 import com.his.system.vo.EmployeePostVO;
@@ -83,6 +84,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     private final RedisSequenceService redisSequenceService;
     private final EmployeePostService employeePostService;
     private final FieldChangeRecorder fieldChangeRecorder;
+    private final UserIdentityCache userIdentityCache;
 
     /**
      * 患者(3)/其他(4) 类型账号不归用户管理维护
@@ -167,6 +169,8 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         if (!deleteUser(userId)) {
             throw new BusinessException("删除失败");
         }
+        // 账号删了,身份缓存必须清,否则旧 token 还能用缓存身份再撑 TTL 的 10 分钟
+        userIdentityCache.invalidate(user.getUserName());
         // 删完对象就没了，只能靠这条留痕回答"这个账号是谁删的、什么时候删的"
         fieldChangeRecorder.recordAction(USER, userId, user.getUserName(), user.getRealName(), "删除账号");
     }
@@ -271,6 +275,9 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         if (!success) {
             return false;
         }
+
+        // 用户姓名/状态/员工资料都进了身份缓存，改完必须清，否则旧身份最多残留 10 分钟（TTL 兜底）
+        userIdentityCache.invalidate(sysUser.getUserName());
 
         // 院内用户：更新员工信息
         if (sysUser.getUserType() != null && sysUser.getUserType() == 1 && sysUser.getEmpId() != null) {

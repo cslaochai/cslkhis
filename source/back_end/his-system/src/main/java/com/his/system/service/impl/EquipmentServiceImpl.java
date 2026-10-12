@@ -97,7 +97,7 @@ public class EquipmentServiceImpl implements EquipmentService {
 
     @Transactional(rollbackFor = Exception.class)
     public MaintainVO maintainCreate(MaintainCreateDTO dto) {
-        // 码值合法性已由 DTO 的 @InEnum 把关，这里只管跨字段业务规则
+        // 码值合法性已由 DTO 的 @AllowedValues 把关，这里只管跨字段业务规则
         if (dto.getNextMaintainDate() != null && dto.getNextMaintainDate().isBefore(dto.getMaintainDate())) {
             throw new BusinessException("下次维保日期不能早于本次维保日期");
         }

@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * 收费台支付渠道总开关（全局唯一，对应 his-pay.yml 的 pay.channel.*）。
+ * 收费台支付渠道总开关
  */
 @Data
 @Component

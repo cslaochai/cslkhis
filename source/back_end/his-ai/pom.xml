@@ -54,5 +54,24 @@
             <groupId>com.his</groupId>
             <artifactId>his-charge</artifactId>
         </dependency>
+
+        <!-- 知识库文件导入解析：PDF（pdfbox）+ Word docx（poi-ooxml） -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>2.0.31</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.2.5</version>
+        </dependency>
+
+        <!-- 知识库向量持久化：Milvus（匹配服务端 2.5.x） -->
+        <dependency>
+            <groupId>io.milvus</groupId>
+            <artifactId>milvus-sdk-java</artifactId>
+            <version>2.5.17</version>
+        </dependency>
     </dependencies>
 </project>

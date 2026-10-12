@@ -2,8 +2,7 @@ package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.his.common.base.PageParam;
-import com.his.common.validation.InEnum;
-import com.his.patient.enums.DeathPlaceEnum;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -116,7 +115,7 @@ public class DeathCertificateDTO {
          * 死亡地点（1-医院 2-来院途中 3-家中 4-民政管理机构 5-其他机构 9-未指明）
          */
         @NotNull(message = "死亡地点不能为空")
-        @InEnum(value = DeathPlaceEnum.class, message = "死亡地点取值不合法（见字典 his_death_place）")
+        @AllowedValues(values = {"1", "2", "3", "4", "5", "9"}, message = "死亡地点取值不合法（1-医院 2-来院途中 3-家中 4-民政管理机构 5-其他机构 9-未指明）")
         private Integer deathPlace;
 
         /**

@@ -13,6 +13,7 @@ import com.his.system.mapper.SysEmployeePostMapper;
 import com.his.system.mapper.SysRoleMapper;
 import com.his.system.service.EmployeePostService;
 import com.his.system.service.SysAuditLogService;
+import com.his.system.service.UserIdentityCache;
 import com.his.system.utils.JwtUtils;
 import com.his.system.vo.EmployeePostVO;
 import com.his.system.vo.SwitchPostVO;
@@ -43,6 +44,7 @@ public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, 
     private final SysDepartmentMapper sysDepartmentMapper;
     private final JwtUtils jwtUtils;
     private final SysAuditLogService sysAuditLogService;
+    private final UserIdentityCache userIdentityCache;
 
     /**
      * 岗位当前是否生效（sql/113）：两侧 NULL = 不限，存量数据行为中性。
@@ -203,6 +205,8 @@ public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, 
 
         EmployeePostVO primary = toVO(pickPrimary(saved), roleByCode, deptById);
         syncPrimaryDept(employeeId, primary);
+        // 岗位 = 角色 × 科室是鉴权直接 join 的事实来源，角色集合变了，名下账号的身份缓存必须清
+        userIdentityCache.invalidateByEmployeeId(employeeId);
         return primary;
     }
 

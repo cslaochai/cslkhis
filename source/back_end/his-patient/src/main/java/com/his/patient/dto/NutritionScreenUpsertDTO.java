@@ -1,8 +1,7 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.his.common.validation.InEnum;
-import com.his.patient.enums.NutritionScreenTypeEnum;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -33,7 +32,7 @@ public class NutritionScreenUpsertDTO {
      * 量表（1-NRS2002 2-PG-SGA 3-MNA）
      */
     @NotNull(message = "筛查量表不能为空")
-    @InEnum(value = NutritionScreenTypeEnum.class, message = "筛查量表取值不合法（1-NRS2002 2-PG-SGA 3-MNA）")
+    @AllowedValues(values = {"1", "2", "3"}, message = "筛查量表取值不合法（1-NRS2002 2-PG-SGA 3-MNA）")
     private Integer screenType;
 
     /**

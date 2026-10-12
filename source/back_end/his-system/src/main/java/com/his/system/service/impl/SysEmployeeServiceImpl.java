@@ -15,6 +15,7 @@ import com.his.system.mapper.SysEmployeeMapper;
 import com.his.system.provider.DeptScopeService;
 import com.his.system.service.EmployeePostService;
 import com.his.system.service.SysEmployeeService;
+import com.his.system.service.UserIdentityCache;
 import com.his.system.vo.EmployeePostVO;
 import com.his.system.vo.EmployeeVO;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
     private final RedisSequenceService redisSequenceService;
     private final EmployeePostService employeePostService;
     private final DeptScopeService deptScopeService;
+    private final UserIdentityCache userIdentityCache;
 
     @Override
     public PageResult<EmployeeVO> listPage(EmployeeQueryDTO queryDTO) {
@@ -120,6 +122,10 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
         // 岗位（角色 × 科室）整体替换：鉴权直接 join 岗位表，主科室由主岗位回填。
         // posts=null 表示本次不带岗位字段，原样保留。
         employeePostService.replacePosts(empId, upsertDTO.getPosts());
+
+        // 员工资料（姓名/科室等）也在身份缓存里；posts=null 的部分更新（如名册切启用状态）
+        // 不会走 replacePosts 的失效分支，这里无条件清一次，确保改完立即生效。
+        userIdentityCache.invalidateByEmployeeId(empId);
 
         return isNew ? "新增成功" : "修改成功";
     }

@@ -26,6 +26,16 @@ public class KnowledgeDocListVO {
     private Integer sourceType;
 
     /**
+     * 版本号
+     */
+    private String version;
+
+    /**
+     * 来源名称（诊疗指南/论坛/院内制度等）
+     */
+    private String sourceName;
+
+    /**
      * 切块数量
      */
     private Integer chunkCount;

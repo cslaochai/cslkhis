@@ -81,7 +81,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             case 4 -> score >= 7 ? 4 : score >= 5 ? 3 : score >= 3 ? 2 : 1;
             // 管路滑脱 0~24：0~3 低 / 4~7 中 / 8~11 高 / ≥12 极高（sql/159）
             case 5 -> score >= 12 ? 4 : score >= 8 ? 3 : score >= 4 ? 2 : 1;
-            // 码值合法性由 DTO 的 @InEnum(NursingAssessTypeEnum) 兜住，走到这里必是 1~5 之一；
+            // 码值合法性由 DTO 的 @AllowedValues 兜住，走到这里必是 1~5 之一；
             // 兜底不返回 0（risk_level 合法值是 1~4，返回 0 等于静默写脏数据）
             default -> throw new IllegalStateException("评估类型无分档口径：" + assessType);
         };
@@ -568,7 +568,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             case 3 -> "NRS 总分应在 0~10";
             case 4 -> "Caprini 总分应在 0~58";
             case 5 -> "管路滑脱总分应在 0~24";
-            // 码值合法性由 DTO 的 @InEnum(NursingAssessTypeEnum) 兜住，走到这里必是 1~5 之一
+            // 码值合法性由 DTO 的 @AllowedValues 兜住，走到这里必是 1~5 之一
             default -> throw new IllegalStateException("评估类型无分档口径：" + assessType);
         };
         boolean outOfRange = switch (assessType) {

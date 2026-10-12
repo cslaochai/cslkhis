@@ -31,6 +31,16 @@ public class SysKnowledgeDoc extends BaseEntity {
     private Integer sourceType;
 
     /**
+     * 版本号（如 v1.0 / 2026.09）
+     */
+    private String version;
+
+    /**
+     * 来源名称（诊疗指南/论坛/院内制度/药品说明书等）
+     */
+    private String sourceName;
+
+    /**
      * 原始全文
      */
     private String content;

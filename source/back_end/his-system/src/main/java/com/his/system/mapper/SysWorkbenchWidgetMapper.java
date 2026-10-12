@@ -77,7 +77,9 @@ public interface SysWorkbenchWidgetMapper extends BaseMapper<SysWorkbenchWidget>
     List<WorkbenchWidgetVO> selectFallbackWidgets(@Param("roleCode") String roleCode);
 
     /**
-     * 配置页回显：注册表全量左连该角色配置行（未勾选也返回，visible=0）
+     * 配置页回显：已上线注册表左连该角色配置行（未勾选也返回，visible=0）。
+     * 未上线（status=0）的卡片不参与角色配置：勾了首页也不会渲染，因此这里强过滤掉，
+     * 整体替换保存时前端不再回传未上线卡片，历史脏配置随之自然清除。
      */
     @Select("""
             SELECT w.id,
@@ -93,6 +95,7 @@ public interface SysWorkbenchWidgetMapper extends BaseMapper<SysWorkbenchWidget>
               FROM sys_workbench_widget w
               LEFT JOIN sys_workbench_role x ON x.widget_id = w.id AND x.role_id = #{roleId} AND x.del_flag = 0
              WHERE w.del_flag = 0
+               AND w.status = 1
              ORDER BY FIELD(w.area, 'todo', 'notice', 'entry', 'kpi', 'domain'),
                       IFNULL(x.sort_order, w.sort_order), w.id
             """)

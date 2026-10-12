@@ -2,8 +2,7 @@ package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.his.common.base.PageParam;
-import com.his.common.validation.InEnum;
-import com.his.patient.enums.NoticeTypeEnum;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -68,7 +67,7 @@ public class CriticalNoticeDTO {
          * 通知类别（1-病危 2-病重）
          */
         @NotNull(message = "通知类别不能为空")
-        @InEnum(value = NoticeTypeEnum.class, message = "通知类别取值不合法（见字典 his_notice_type）")
+        @AllowedValues(values = {"1", "2"}, message = "通知类别取值不合法（1-病危 2-病重）")
         private Integer noticeType;
         /**
          * 患者神志（1-清醒 2-嗜睡 3-意识模糊 4-昏迷 9-其他）

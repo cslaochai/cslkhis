@@ -45,6 +45,12 @@ public class PayOrderVO {
     private LocalDateTime payTime;
 
     /**
+     * 支付码过期时刻（服务端按创建时间 + 有效期现算，库里不存这份派生值）
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime expireTime;
+
+    /**
      * 出码人（渠道回调是无登录态的系统入口，收款流水的收银员归属只能取自这里，不能取自当时的登录人）
      */
     private Long cashierId;

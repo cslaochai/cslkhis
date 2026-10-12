@@ -18,6 +18,7 @@ import com.his.system.mapper.SysRoleMapper;
 import com.his.system.mapper.SysRoleMenuMapper;
 import com.his.system.service.RolePermissionCache;
 import com.his.system.service.SysRoleService;
+import com.his.system.service.UserIdentityCache;
 import com.his.system.vo.RoleSelectListVO;
 import com.his.system.vo.RoleVO;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +42,7 @@ public class SysRoleServiceImpl implements SysRoleService {
     private final SysMenuMapper sysMenuMapper;
     private final RedisSequenceService redisSequenceService;
     private final RolePermissionCache rolePermissionCache;
+    private final UserIdentityCache userIdentityCache;
 
     @Override
     public PageResult<RoleVO> listPage(SysRoleQueryPageDTO queryDTO) {
@@ -102,6 +104,8 @@ public class SysRoleServiceImpl implements SysRoleService {
         }
 
         sysRoleMapper.updateById(role);
+        // 角色编码/名称/状态可能变了，持有该角色的账号身份缓存一并清
+        userIdentityCache.invalidateAll();
         return "修改成功";
     }
 
@@ -121,6 +125,8 @@ public class SysRoleServiceImpl implements SysRoleService {
                 .eq(SysRoleMenu::getRoleId, roleId));
         // 角色删了,它的权限缓存必须失效(下个同码角色不能继承旧权限)
         rolePermissionCache.invalidate(role.getRoleCode());
+        // 角色没了，持有它的账号身份缓存也一并失效
+        userIdentityCache.invalidateAll();
     }
 
     @Override
@@ -158,6 +164,8 @@ public class SysRoleServiceImpl implements SysRoleService {
         }
         // 授权变更即时生效:失效该角色的权限缓存(下一个请求重查)
         rolePermissionCache.invalidate(role.getRoleCode());
+        // 授权变了，持有该角色的账号身份缓存一并失效
+        userIdentityCache.invalidateAll();
     }
 
     /**

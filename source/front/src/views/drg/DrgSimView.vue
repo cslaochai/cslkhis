@@ -1,13 +1,13 @@
 <template>
   <div>
-    <!-- 版本切换：2.0 数据未接入时，切到 2.0 模拟会判为未入组 -->
+    <!-- 版本切换：2.0 数据未接入时，切到 chs-drg-2.0 模拟会判为未入组 -->
     <div class="flex items-center gap-2 mb-3">
       <span class="text-sm text-gray-500">分组方案版本</span>
-      <el-select v-model="version" clearable placeholder="版本" style="width: 130px" @change="onVersionChange">
-        <el-option label="CHS-DRG 3.0" value="3.0"/>
-        <el-option label="CHS-DRG 2.0" value="2.0"/>
+      <el-select v-model="version" clearable placeholder="版本" style="width: 150px" @change="onVersionChange">
+        <el-option label="chs-drg-2.0" value="chs-drg-2.0"/>
+        <el-option label="3.0" value="3.0"/>
       </el-select>
-      <el-tag v-if="version === '2.0'" type="warning" size="small">2.0 官方数据尚未接入，模拟将判为未入组（QY）</el-tag>
+      <el-tag v-if="version === 'chs-drg-2.0'" type="warning" size="small">2.0 官方数据尚未接入，模拟将判为未入组（QY）</el-tag>
     </div>
 
     <!-- 汇总卡 -->
@@ -127,7 +127,7 @@
 
     <!-- 组表 -->
     <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm">
-      <p class="text-sm font-medium mb-3">DRG 细分组目录（CHS-DRG {{ version || '3.0' }} 官方方案；权重与支付标准由统筹区医保局下发，未下发处显示 —）</p>
+      <p class="text-sm font-medium mb-3">DRG 细分组目录（{{ version || '3.0' }} 官方方案；权重与支付标准由统筹区医保局下发，未下发处显示 —）</p>
       <el-table :data="groups" border data-testid="drg-group-table" max-height="280" stripe>
         <el-table-column label="组编码" prop="drgCode" width="90"/>
         <el-table-column label="组名称" min-width="240" prop="drgName" show-overflow-tooltip/>
@@ -159,7 +159,7 @@ import {onMounted, reactive, ref} from 'vue';
 import {ElMessage} from 'element-plus';
 import {Refresh, Search, VideoPlay} from '@element-plus/icons-vue';
 import {drgGroupList, drgResultListPage, drgSimulateBatch, drgSummaryList} from '@/api/drg';
-import {getDictDataMapList} from '@/api/system';
+import {getDictDataMapList, getDrgDefaultVersion} from '@/api/system';
 import DrgSimEdit from './DrgSimEdit.vue';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
@@ -255,7 +255,16 @@ const loadGroups = async () => {
     console.error('加载组表失败', e);
   }
 };
-onMounted(() => {
+onMounted(async () => {
+  // 初始版本跟随系统参数配置（参数配置 → DRG 分组方案），下拉仍可按需临时切换查询版本
+  try {
+    const res = await getDrgDefaultVersion();
+    if (res.code === 200 && res.data?.dbVersion) {
+      version.value = res.data.dbVersion;
+    }
+  } catch (e) {
+    console.error('加载 DRG 默认版本失败', e);
+  }
   loadDicts();
   loadSummary();
   loadList();

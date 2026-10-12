@@ -50,9 +50,12 @@
           </template>
         </el-table-column>
         <el-table-column label="创建时间" prop="createTime" width="180"/>
-        <el-table-column fixed="right" label="操作" width="240">
+        <el-table-column fixed="right" label="操作" width="320">
           <template #default="{ row }">
             <el-button :icon="Setting" link type="primary" @click="handleConfigMenu(row)">菜单权限</el-button>
+            <el-button v-perm="'system:workbench:config'" :icon="Grid" link type="primary"
+                       @click="handleConfigWorkbench(row)">工作台配置
+            </el-button>
             <el-button :icon="Edit" link type="primary" @click="handleEdit(row)">编辑</el-button>
             <el-button v-if="row.roleType !== 1" v-perm="'system:role:delete'" :icon="Delete" link type="danger"
                        @click="handleDelete(row)">删除
@@ -78,20 +81,24 @@
     <!-- 新增/编辑对话框 -->
     <RoleEdit v-model="dialogVisible" :row="dialogRow" @saved="loadData"/>
 
-    <!-- 菜单权限配置抽屉 -->
-    <RoleMenuEdit v-model="menuDrawerVisible" :role="menuRole" @saved="loadData"/>
+    <!-- 菜单权限配置弹框 -->
+    <RoleMenuEdit v-model="menuDialogVisible" :role="menuRole" @saved="loadData"/>
+
+    <!-- 工作台配置弹框（卡片勾选 + 登录落点） -->
+    <RoleWorkbenchEdit v-model="workbenchDialogVisible" :role="workbenchRole" @saved="loadData"/>
   </div>
 </template>
 
 <script lang="js" setup>
 import {onMounted, reactive, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
-import {Delete, Edit, Plus, Refresh, Search, Setting} from '@element-plus/icons-vue'
+import {Delete, Edit, Grid, Plus, Refresh, Search, Setting} from '@element-plus/icons-vue'
 import {deleteRole, getRoleListPage} from '@/api/system'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
 import RoleEdit from '@/views/system/role/RoleEdit.vue'
 import RoleMenuEdit from '@/views/system/role/RoleMenuEdit.vue'
+import RoleWorkbenchEdit from '@/views/system/role/RoleWorkbenchEdit.vue'
 
 const loading = ref(false)
 const searchForm = ref({
@@ -112,9 +119,13 @@ const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight()
 const dialogVisible = ref(false)
 const dialogRow = ref(null)
 
-// 菜单权限抽屉：只把当前行交给 RoleMenuEdit
-const menuDrawerVisible = ref(false)
+// 菜单权限弹框：只把当前行交给 RoleMenuEdit
+const menuDialogVisible = ref(false)
 const menuRole = ref(null)
+
+// 工作台配置弹框：只把当前行交给 RoleWorkbenchEdit（卡片勾选 + 登录落点）
+const workbenchDialogVisible = ref(false)
+const workbenchRole = ref(null)
 
 // 表格展示口径：只有 1 是全院
 const dataScopeLabel = (v) => (v === 1 ? '全部数据（全院）' : '按岗位科室')
@@ -182,7 +193,12 @@ const handleEdit = (row) => {
 
 const handleConfigMenu = (row) => {
   menuRole.value = row
-  menuDrawerVisible.value = true
+  menuDialogVisible.value = true
+}
+
+const handleConfigWorkbench = (row) => {
+  workbenchRole.value = row
+  workbenchDialogVisible.value = true
 }
 
 const handleDelete = async (row) => {

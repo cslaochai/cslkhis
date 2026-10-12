@@ -57,7 +57,7 @@ public class DeathRegistrationServiceImpl extends ServiceImpl<BizDeathRegistrati
 
     /**
      * 领取联次：只留合法码值、去重、按升序，前端多选传法不一也不用担心。
-     * 复数字段（"1,2,3"）@InEnum 校验不了（注解只管单值），逐个 split 调枚举判定
+     * 复数字段（"1,2,3"）@AllowedValues 校验不了（注解只管单值），逐个 split 调枚举判定
      */
     private static String normalizeCopies(String copies) {
         if (!TextUtil.hasText(copies)) {

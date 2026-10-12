@@ -5,7 +5,9 @@ import request from './request'
  *
  * 命名与视图层解耦：外壳只认卡片 code，这里也不按角色开接口。
  * `/workbench/config`、`/workbench/data` 只要登录（所有角色画首页的入口）；
- * 其余是「系统管理 → 工作台配置」的管理接口，后端守 system:workbench:config。
+ * 卡片注册表接口（widget 系列）属「系统管理 → 工作台卡片管理」，
+ * 角色配置接口（roleConfig 系列）由「系统管理 → 角色管理 → 工作台配置」抽屉调用，
+ * 后端统一守 system:workbench:config。
  */
 
 export function getWorkbenchConfig() {

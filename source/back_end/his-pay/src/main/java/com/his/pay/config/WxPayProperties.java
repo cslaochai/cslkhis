@@ -5,11 +5,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * 微信支付配置属性（全局唯一，对应 his-pay.yml 的 wx.pay.*）。
+ * 微信支付配置属性
  */
 @Data
 @Component
-@ConfigurationProperties(prefix = "wx.pay")
+@ConfigurationProperties(prefix = "wxpay")
 public class WxPayProperties {
 
     /**
@@ -39,9 +39,6 @@ public class WxPayProperties {
 
     /**
      * 支付结果异步回调地址（notifyUrl）。微信支付平台在用户支付完成后会把结果推送到该地址，
-     * 由 {@code PayNotifyController#wxNotify} 接收处理。必须是对公网可访问的 HTTPS 地址，
-     * 且需与部署后实际路由前缀一致（当前控制器映射 /pay/notify/wx）。
-     * 对应 yml: wx.pay.notify-url。
      */
     private String notifyUrl;
 

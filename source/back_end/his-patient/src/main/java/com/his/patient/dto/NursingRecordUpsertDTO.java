@@ -1,7 +1,6 @@
 package com.his.patient.dto;
 
-import com.his.common.validation.InEnum;
-import com.his.patient.enums.NursingDocTypeEnum;
+import com.his.common.validation.AllowedValues;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -27,7 +26,7 @@ public class NursingRecordUpsertDTO implements Serializable {
     /**
      * 文书类型：1-三测单 2-护理记录单 3-生命体征监测
      */
-    @InEnum(value = NursingDocTypeEnum.class, message = "护理文书类型取值不合法（1-三测单 2-护理记录单 3-生命体征监测）")
+    @AllowedValues(values = {"1", "2", "3"}, message = "护理文书类型取值不合法（1-三测单 2-护理记录单 3-生命体征监测）")
     private Integer nursingType;
 
     /**

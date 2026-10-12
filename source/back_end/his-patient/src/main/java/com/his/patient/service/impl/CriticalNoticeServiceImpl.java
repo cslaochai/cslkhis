@@ -137,7 +137,7 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
         }
         // 保留（类别③）：神志码值必须命中字典取值
         if (dto.getConsciousnessStatus() == null || !CONSCIOUSNESS.contains(dto.getConsciousnessStatus())) {
-            throw new BusinessException("患者神志取值不合法（见字典 his_notice_consciousness）");
+            throw new BusinessException("患者神志取值不合法（1-清醒 2-嗜睡 3-意识模糊 4-昏迷 9-其他）");
         }
 
         BizCriticalNotice notice;
@@ -262,7 +262,7 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
         assertDeptAccessible(notice.getDeptId());
         // D-业务规则：关系码值合法性（null 只是「没选」的一种，非空与合法性混写一条，整条保留不拆）
         if (dto.getSignerRelation() == null || !RELATIONS.contains(dto.getSignerRelation())) {
-            throw new BusinessException("签收人与患者的关系取值不合法（见字典 his_notice_relation，法定必填）");
+            throw new BusinessException("签收人与患者的关系取值不合法（1-配偶 2-父母 3-子女 4-兄弟姐妹 5-配偶父母 6-子女配偶 7-祖父母/外祖父母 8-孙子女/外孙子女 9-法定代理人 10-单位/组织负责人 99-其他；法定必填）");
         }
         String signature = TextUtil.trimToNull(dto.getSignerSignature());
         if (!signature.startsWith("data:image/png;base64,")) {

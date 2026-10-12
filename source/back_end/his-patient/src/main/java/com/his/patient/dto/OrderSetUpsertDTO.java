@@ -1,8 +1,6 @@
 package com.his.patient.dto;
 
-import com.his.common.validation.InEnum;
-import com.his.patient.enums.OrderTypeEnum;
-import com.his.patient.enums.TemplateScopeEnum;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -35,13 +33,13 @@ public class OrderSetUpsertDTO implements Serializable {
      * 共享范围：1-个人 2-科室 3-全院（必填，服务端按它决定归属与可见范围）
      */
     @NotNull(message = "共享范围不能为空")
-    @InEnum(value = TemplateScopeEnum.class, message = "共享范围取值不合法（应为 1-个人 2-科室 3-全院）")
+    @AllowedValues(values = {"1", "2", "3"}, message = "共享范围取值不合法（应为 1-个人 2-科室 3-全院）")
     private Integer scope;
 
     /**
      * 默认医嘱类型：1-长期 2-临时（缺省按临时）
      */
-    @InEnum(value = OrderTypeEnum.class, message = "医嘱类型取值不合法（应为 1-长期 2-临时）")
+    @AllowedValues(values = {"1", "2"}, message = "医嘱类型取值不合法（应为 1-长期 2-临时）")
     private Integer orderType;
 
     /**

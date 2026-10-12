@@ -28,7 +28,7 @@
     </div>
 
     <div v-else-if="cards.length === 0" class="wb-panel">
-      当前角色还没有可展示的卡片，请联系管理员在「系统管理 → 工作台配置」中维护
+      当前角色还没有可展示的卡片，请联系管理员在「系统管理 → 角色管理 → 工作台配置」中勾选
     </div>
 
     <div v-else class="wb-grid">

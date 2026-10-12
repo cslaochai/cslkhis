@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * 银联云闪付配置属性（全局唯一，对应 his-pay.yml 的 unionpay.*）。
+ * 银联云闪付配置属性
  */
 @Data
 @Component

@@ -419,7 +419,7 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
         String operator = operatorUser.getRealName();
 
         List<VteStatsVO> result = new ArrayList<>();
-        // scopeType 合法性由 DTO 的 @InEnum 把关（1-全院 2-科室），这里只分派
+        // scopeType 合法性由 DTO 的 @AllowedValues 把关（1-全院 2-科室），这里只分派
         if (Objects.equals(StatsScopeEnum.DEPT.getCode(), dto.getScopeType())) {
             List<DeptCountRowVO> depts = vteStatMapper.selectDischargeDepts(from, to);
             if (CollectionUtils.isEmpty(depts)) {
