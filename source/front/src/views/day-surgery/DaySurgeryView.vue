@@ -144,228 +144,32 @@
     </el-card>
 
     <!-- 预约登记 -->
-    <el-dialog v-model="applyVisible" :title="applyForm.id ? '修改预约登记' : '日间手术预约登记'" width="640px">
-      <el-form label-width="120px" size="small">
-        <el-form-item label="准入术式" required>
-          <el-select v-model="applyForm.itemId" filterable placeholder="仅启用中的术式" style="width: 100%">
-            <el-option v-for="d in itemOptions" :key="d.id" :label="`${d.itemCode} ${d.itemName}`" :value="d.id"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="患者" required>
-          <PatientSelect :model-value="applyForm.patientId" placeholder="搜索患者（姓名/编号）" style="width: 100%"
-                         @select="onPatientSelect"/>
-        </el-form-item>
-        <el-form-item label="手术科室">
-          <el-select v-model="applyForm.deptId" clearable filterable placeholder="请选择" style="width: 100%">
-            <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName || d.name" :value="d.id"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="计划手术日期" required>
-          <el-date-picker v-model="applyForm.planSurgeryDate" placeholder="请选择" style="width: 100%"
-                          type="date" value-format="YYYY-MM-DD"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="applyForm.remark"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="applyVisible = false">取消</el-button>
-        <el-button :loading="applySaving" type="primary" @click="saveApply">保存</el-button>
-      </template>
-    </el-dialog>
+    <DaySurgeryApplyEdit v-model="applyVisible" :row="applyRow" :item-options="itemOptions"
+                         :dept-options="deptOptions" @saved="handleSaved"/>
 
     <!-- 术前评估 -->
-    <el-dialog v-model="evalVisible" title="术前评估" width="600px">
-      <el-form label-width="110px" size="small">
-        <el-form-item label="评估结论" required>
-          <el-radio-group v-model="evalForm.evalResult">
-            <el-radio v-for="d in evalDict" :key="d.dictValue" :value="Number(d.dictValue)">{{ d.dictLabel }}</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="评估意见" required>
-          <el-input v-model="evalForm.evalRemark" :rows="4" placeholder="禁忌筛查结论 / 适应证与麻醉评估（不通过不得安排手术）"
-                    type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="evalVisible = false">取消</el-button>
-        <el-button :loading="evalLoading" type="primary" @click="submitEval">提交评估</el-button>
-      </template>
-    </el-dialog>
+    <DaySurgeryAssess v-model="evalVisible" :row="evalRow" :eval-dict="evalDict" @saved="handleSaved"/>
 
     <!-- 安排 -->
-    <el-dialog v-model="arrangeVisible" title="安排手术" width="600px">
-      <el-form label-width="110px" size="small">
-        <el-form-item label="手术时间" required>
-          <el-date-picker v-model="arrangeForm.surgeryTime" placeholder="请选择" style="width: 100%"
-                          type="datetime" value-format="YYYY-MM-DD HH:mm"/>
-        </el-form-item>
-        <el-form-item label="手术间" required>
-          <el-input v-model="arrangeForm.operatingRoom" placeholder="如：日间手术室 1 间"/>
-        </el-form-item>
-        <el-form-item label="台次">
-          <el-input-number v-model="arrangeForm.seqNo" :max="99" :min="1"/>
-        </el-form-item>
-        <el-form-item label="麻醉方式" required>
-          <el-select v-model="arrangeForm.anesthesiaType" placeholder="请选择" style="width: 100%">
-            <el-option v-for="d in anesDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="主刀医生" required>
-          <el-input v-model="arrangeForm.surgeon"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="arrangeVisible = false">取消</el-button>
-        <el-button :icon="Scissor" :loading="arrangeLoading" type="primary" @click="submitArrange">安排</el-button>
-      </template>
-    </el-dialog>
+    <DaySurgeryArrange v-model="arrangeVisible" :row="arrangeRow" :anes-dict="anesDict" @saved="handleSaved"/>
 
     <!-- 离院 -->
-    <el-dialog v-model="disVisible" title="离院登记" width="600px">
-      <el-form label-width="110px" size="small">
-        <el-form-item label="离院方式" required>
-          <el-radio-group v-model="disForm.leaveType">
-            <el-radio :value="1">按时离院</el-radio>
-            <el-radio :value="3">非计划再入院</el-radio>
-          </el-radio-group>
-          <div class="hint-line">转普通住院请走「转住院」动作（必须回填住院号）</div>
-        </el-form-item>
-        <el-form-item label="离院时间">
-          <el-date-picker v-model="disForm.dischargeTime" placeholder="不填取当前时间" style="width: 100%"
-                          type="datetime" value-format="YYYY-MM-DD HH:mm"/>
-        </el-form-item>
-        <el-form-item label="出院评估">
-          <el-input v-model="disForm.dischargeRemark" :rows="3" placeholder="出院评估结论 / 医嘱交代" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="disVisible = false">取消</el-button>
-        <el-button :loading="disLoading" type="primary" @click="submitDischarge">登记离院</el-button>
-      </template>
-    </el-dialog>
+    <DaySurgeryDischarge v-model="disVisible" :row="disRow" @saved="handleSaved"/>
 
     <!-- 转住院 -->
-    <el-dialog v-model="trVisible" title="转普通住院" width="600px">
-      <el-form label-width="120px" size="small">
-        <el-form-item label="住院记录ID" required>
-          <el-input v-model="trForm.transferAdmissionId" placeholder="biz_admission.admission_id（必填）"/>
-        </el-form-item>
-        <el-form-item label="转住院原因" required>
-          <el-input v-model="trForm.transferRemark" :rows="3" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="trVisible = false">取消</el-button>
-        <el-button :loading="trLoading" type="primary" @click="submitTransfer">确认转住院</el-button>
-      </template>
-    </el-dialog>
+    <DaySurgeryTransfer v-model="trVisible" :row="trRow" @saved="handleSaved"/>
 
     <!-- 随访 -->
-    <el-dialog v-model="foVisible" title="登记随访（出院后 24h 内必访）" width="600px">
-      <el-form label-width="110px" size="small">
-        <el-form-item label="随访方式" required>
-          <el-radio-group v-model="foForm.followType">
-            <el-radio v-for="d in followTypeDict" :key="d.dictValue" :value="Number(d.dictValue)">{{
-                d.dictLabel
-              }}
-            </el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="随访结果" required>
-          <el-select v-model="foForm.result" style="width: 100%">
-            <el-option v-for="d in followResultDict" :key="d.dictValue" :label="d.dictLabel"
-                       :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="随访内容">
-          <el-input v-model="foForm.content" :rows="3" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="foVisible = false">取消</el-button>
-        <el-button :loading="foLoading" type="primary" @click="submitFollow">登记</el-button>
-      </template>
-    </el-dialog>
+    <DaySurgeryFollow v-model="foVisible" :row="foRow" :follow-type-dict="followTypeDict"
+                      :follow-result-dict="followResultDict" @saved="handleSaved"/>
 
     <!-- 取消 -->
-    <el-dialog v-model="cancelVisible" title="取消登记单" width="560px">
-      <el-form label-width="100px" size="small">
-        <el-form-item label="取消原因" required>
-          <el-input v-model="cancelReason" :rows="4" placeholder="原因必填，将留痕" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="cancelVisible = false">取消</el-button>
-        <el-button :loading="cancelLoading" type="primary" @click="submitCancel">确认取消</el-button>
-      </template>
-    </el-dialog>
+    <DaySurgeryCancel v-model="cancelVisible" :row="cancelRow" @saved="handleSaved"/>
 
     <!-- 详情 -->
-    <el-dialog v-model="detailVisible" title="日间手术登记详情" width="820px">
-      <div v-if="detail">
-        <el-descriptions :column="3" border size="small">
-          <el-descriptions-item label="登记单号">{{ detail.applyNo }}</el-descriptions-item>
-          <el-descriptions-item label="术式">{{ detail.itemName }}（{{ detail.itemCode }}）</el-descriptions-item>
-          <el-descriptions-item label="最长滞留(h)">{{ detail.maxStayHours }}</el-descriptions-item>
-          <el-descriptions-item label="患者">{{ detail.patientName }}（{{
-              detail.patientNo || '—'
-            }}）
-          </el-descriptions-item>
-          <el-descriptions-item label="手术科室">{{ detail.deptName || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="计划手术日">{{ detail.planSurgeryDate }}</el-descriptions-item>
-          <el-descriptions-item label="状态">
-            <el-tag :type="statusTag(detail.status)" size="small">{{ statusText(detail.status) }}</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="术前评估">
-            <el-tag v-if="detail.evalResult === 1" size="small" type="success">通过</el-tag>
-            <el-tag v-else-if="detail.evalResult === 2" size="small" type="danger">不通过</el-tag>
-            <span v-else>—</span>
-          </el-descriptions-item>
-          <el-descriptions-item label="麻醉方式">{{ anesText(detail.anesthesiaType) }}</el-descriptions-item>
-          <el-descriptions-item :span="3" label="评估意见">{{ detail.evalRemark || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="手术时间">{{ detail.surgeryTime || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="手术间">{{ detail.operatingRoom || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="主刀">{{ detail.surgeon || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="手术结束">{{ detail.surgeryEndTime || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="离院方式">{{
-              detail.leaveType ? leaveText(detail.leaveType) : '—'
-            }}
-          </el-descriptions-item>
-          <el-descriptions-item label="离院时间">{{ detail.dischargeTime || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="随访时限">{{ detail.followDue || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="随访次数">{{ detail.followCount ?? 0 }}</el-descriptions-item>
-          <el-descriptions-item label="超期">
-            <el-tag v-if="detail.overdue" size="small" type="danger">滞留超期</el-tag>
-            <span v-else>否</span>
-          </el-descriptions-item>
-          <el-descriptions-item v-if="detail.transferAdmissionId" :span="2" label="转住院ID">
-            {{ detail.transferAdmissionId }}
-          </el-descriptions-item>
-          <el-descriptions-item v-if="detail.cancelReason" :span="3" label="取消原因">{{
-              detail.cancelReason
-            }}
-          </el-descriptions-item>
-          <el-descriptions-item :span="3" label="出院评估">{{ detail.dischargeRemark || '—' }}</el-descriptions-item>
-        </el-descriptions>
-
-        <div class="flow-title">随访台账</div>
-        <el-timeline v-if="detail.follows && detail.follows.length">
-          <el-timeline-item v-for="f in detail.follows" :key="f.id" :timestamp="f.followTime" placement="top">
-            <div class="flow-item">
-              <strong>{{ followTypeText(f.followType) }}</strong>
-              <el-tag :type="Number(f.result) === 1 ? 'success' : 'warning'" size="small">{{
-                  followResultText(f.result)
-                }}
-              </el-tag>
-              <span class="flow-op">{{ f.operator }}</span>
-            </div>
-            <div class="flow-content">{{ f.content || '—' }}</div>
-          </el-timeline-item>
-        </el-timeline>
-        <el-empty v-else :image-size="60" description="暂无随访记录"/>
-      </div>
-    </el-dialog>
+    <DaySurgeryDetail v-model="detailVisible" :id="detailId" :status-dict="statusDict" :anes-dict="anesDict"
+                      :leave-dict="leaveDict" :follow-type-dict="followTypeDict"
+                      :follow-result-dict="followResultDict" :status-tag="statusTag"/>
   </div>
 </template>
 
@@ -390,28 +194,27 @@
  */
 import {onMounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
-import {Plus, Refresh, Scissor, Search} from '@element-plus/icons-vue';
+import {Plus, Refresh, Search} from '@element-plus/icons-vue';
 import {
-  arrangeDaySurgery,
-  cancelDaySurgery,
-  daySurgeryApplyUpsert,
   deleteDaySurgery,
-  dischargeDaySurgery,
-  evaluateDaySurgery,
   finishDaySurgery,
-  followDaySurgery,
-  getDaySurgeryDetail,
   getDaySurgeryItemList,
   getDaySurgeryStat,
   listDaySurgeryPage,
-  transferDaySurgeryToIpd,
 } from '@/api/daySurgery';
 import {getDepartmentSelectList, getDictDataMapList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
-import PatientSelect from '@/components/his/PatientSelect.vue';
+import DaySurgeryApplyEdit from './DaySurgeryApplyEdit.vue';
+import DaySurgeryAssess from './DaySurgeryAssess.vue';
+import DaySurgeryArrange from './DaySurgeryArrange.vue';
+import DaySurgeryDischarge from './DaySurgeryDischarge.vue';
+import DaySurgeryTransfer from './DaySurgeryTransfer.vue';
+import DaySurgeryFollow from './DaySurgeryFollow.vue';
+import DaySurgeryCancel from './DaySurgeryCancel.vue';
+import DaySurgeryDetail from './DaySurgeryDetail.vue';
 
 const stats = reactive({
   total: 0, observingCount: 0, dischargedCount: 0, canceledCount: 0, transferredCount: 0,
@@ -426,11 +229,6 @@ const evalDict = ref([]);
 const deptOptions = ref([]);
 const itemOptions = ref([]);
 const statusText = (v) => dictLabelText(statusDict.value, v);
-const anesText = (v) => dictLabelText(anesDict.value, v);
-const leaveText = (v) => dictLabelText(leaveDict.value, v);
-const followResultText = (v) => dictLabelText(followResultDict.value, v);
-const followTypeText = (v) => dictLabelText(followTypeDict.value, v);
-const evalText = (v) => dictLabelText(evalDict.value, v);
 const statusTag = (v) => {
   switch (Number(v)) {
     case 1:
@@ -502,168 +300,28 @@ const resetQuery = () => {
 };
 // 预约
 const applyVisible = ref(false);
-const applySaving = ref(false);
-const applyForm = reactive({
-  id: null,
-  itemId: null,
-  patientId: null,
-  patientName: '',
-  deptId: null,
-  planSurgeryDate: '',
-  remark: '',
-});
+const applyRow = ref(null);
 const openApplyCreate = () => {
-  Object.assign(applyForm, {
-    id: null, itemId: null, patientId: null, patientName: '', deptId: null,
-    planSurgeryDate: '', remark: '',
-  });
+  applyRow.value = null;
   applyVisible.value = true;
 };
-const openApplyEdit = async (row) => {
-  const res = await getDaySurgeryDetail(row.id);
-  const d = res?.data || row;
-  Object.assign(applyForm, {
-    id: d.id, itemId: d.itemId ?? null, patientId: d.patientId ?? null, patientName: d.patientName || '',
-    deptId: d.deptId ?? null, planSurgeryDate: (d.planSurgeryDate || '').slice(0, 10), remark: d.remark || '',
-  });
+const openApplyEdit = (row) => {
+  applyRow.value = row;
   applyVisible.value = true;
-};
-const onPatientSelect = (p) => {
-  applyForm.patientId = p?.id ?? null;
-  applyForm.patientName = p?.name || p?.patientName || '';
-};
-const saveApply = async () => {
-  if (!applyForm.itemId) {
-    ElMessage.warning('请选择准入术式');
-    return;
-  }
-  if (!applyForm.patientId) {
-    ElMessage.warning('请选择患者');
-    return;
-  }
-  if (!applyForm.planSurgeryDate) {
-    ElMessage.warning('请选择计划手术日期');
-    return;
-  }
-  applySaving.value = true;
-  try {
-    const res = await daySurgeryApplyUpsert({
-      id: applyForm.id || undefined,
-      itemId: applyForm.itemId,
-      patientId: applyForm.patientId,
-      deptId: applyForm.deptId || undefined,
-      planSurgeryDate: applyForm.planSurgeryDate,
-      remark: applyForm.remark.trim() || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success(applyForm.id ? '修改成功' : `预约登记成功，单号 ${res.data?.applyNo || ''}`);
-      applyVisible.value = false;
-      loadList();
-      loadStats();
-    } else {
-      ElMessage.error(res.message || '保存失败');
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('保存失败');
-  } finally {
-    applySaving.value = false;
-  }
 };
 // 术前评估
 const evalVisible = ref(false);
 const evalRow = ref(null);
-const evalForm = reactive({evalResult: 1, evalRemark: ''});
-const evalLoading = ref(false);
 const openEval = (row) => {
   evalRow.value = row;
-  evalForm.evalResult = 1;
-  evalForm.evalRemark = row.evalRemark || '';
   evalVisible.value = true;
-};
-const submitEval = async () => {
-  if (!evalForm.evalRemark.trim()) {
-    ElMessage.warning('请填写评估意见（禁忌筛查结论要留痕）');
-    return;
-  }
-  evalLoading.value = true;
-  try {
-    const res = await evaluateDaySurgery({
-      id: evalRow.value.id, evalResult: evalForm.evalResult, evalRemark: evalForm.evalRemark.trim(),
-    });
-    if (res.code === 200) {
-      ElMessage.success(evalForm.evalResult === 1 ? '评估通过，可安排手术' : '评估不通过，不得安排日间手术');
-      evalVisible.value = false;
-      loadList();
-      loadStats();
-    } else {
-      ElMessage.error(res.message || '评估失败');
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('评估失败');
-  } finally {
-    evalLoading.value = false;
-  }
 };
 // 安排
 const arrangeVisible = ref(false);
 const arrangeRow = ref(null);
-const arrangeForm = reactive({
-  surgeryTime: '', operatingRoom: '', seqNo: null,
-  anesthesiaType: null, surgeon: '',
-});
-const arrangeLoading = ref(false);
 const openArrange = (row) => {
   arrangeRow.value = row;
-  arrangeForm.surgeryTime = '';
-  arrangeForm.operatingRoom = '';
-  arrangeForm.seqNo = null;
-  arrangeForm.anesthesiaType = null;
-  arrangeForm.surgeon = row.doctorName || '';
   arrangeVisible.value = true;
-};
-const submitArrange = async () => {
-  if (!arrangeForm.surgeryTime) {
-    ElMessage.warning('请选择手术时间');
-    return;
-  }
-  if (!arrangeForm.operatingRoom.trim()) {
-    ElMessage.warning('请填写手术间');
-    return;
-  }
-  if (!arrangeForm.anesthesiaType) {
-    ElMessage.warning('请选择麻醉方式');
-    return;
-  }
-  if (!arrangeForm.surgeon.trim()) {
-    ElMessage.warning('请填写主刀医生');
-    return;
-  }
-  arrangeLoading.value = true;
-  try {
-    const res = await arrangeDaySurgery({
-      id: arrangeRow.value.id,
-      surgeryTime: arrangeForm.surgeryTime.length === 16 ? `${arrangeForm.surgeryTime}:00` : arrangeForm.surgeryTime,
-      operatingRoom: arrangeForm.operatingRoom.trim(),
-      seqNo: arrangeForm.seqNo ?? undefined,
-      anesthesiaType: arrangeForm.anesthesiaType,
-      surgeon: arrangeForm.surgeon.trim(),
-    });
-    if (res.code === 200) {
-      ElMessage.success('已安排');
-      arrangeVisible.value = false;
-      loadList();
-      loadStats();
-    } else {
-      ElMessage.error(res.message || '安排失败');
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('安排失败');
-  } finally {
-    arrangeLoading.value = false;
-  }
 };
 // 完成手术
 const doFinish = async (row) => {
@@ -683,149 +341,34 @@ const doFinish = async (row) => {
 // 出院
 const disVisible = ref(false);
 const disRow = ref(null);
-const disForm = reactive({leaveType: 1, dischargeTime: '', dischargeRemark: ''});
-const disLoading = ref(false);
 const openDischarge = (row) => {
   disRow.value = row;
-  disForm.leaveType = 1;
-  disForm.dischargeTime = '';
-  disForm.dischargeRemark = '';
   disVisible.value = true;
-};
-const submitDischarge = async () => {
-  disLoading.value = true;
-  try {
-    const res = await dischargeDaySurgery({
-      id: disRow.value.id,
-      leaveType: disForm.leaveType,
-      dischargeTime: disForm.dischargeTime
-          ? (disForm.dischargeTime.length === 16 ? `${disForm.dischargeTime}:00` : disForm.dischargeTime)
-          : undefined,
-      dischargeRemark: disForm.dischargeRemark.trim() || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success('离院已登记，请在 24 小时内完成随访');
-      disVisible.value = false;
-      loadList();
-      loadStats();
-    } else {
-      ElMessage.error(res.message || '登记失败');
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('登记失败');
-  } finally {
-    disLoading.value = false;
-  }
 };
 // 转住院
 const trVisible = ref(false);
 const trRow = ref(null);
-const trForm = reactive({transferAdmissionId: '', transferRemark: ''});
-const trLoading = ref(false);
 const openTransfer = (row) => {
   trRow.value = row;
-  trForm.transferAdmissionId = '';
-  trForm.transferRemark = '';
   trVisible.value = true;
-};
-const submitTransfer = async () => {
-  if (!trForm.transferAdmissionId) {
-    ElMessage.warning('请填写转住院的住院号ID');
-    return;
-  }
-  if (!trForm.transferRemark.trim()) {
-    ElMessage.warning('请填写转住院原因');
-    return;
-  }
-  trLoading.value = true;
-  try {
-    const res = await transferDaySurgeryToIpd({
-      id: trRow.value.id,
-      transferAdmissionId: trForm.transferAdmissionId,
-      transferRemark: trForm.transferRemark.trim(),
-    });
-    if (res.code === 200) {
-      ElMessage.success('已转住院');
-      trVisible.value = false;
-      loadList();
-      loadStats();
-    } else {
-      ElMessage.error(res.message || '转住院失败');
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('转住院失败');
-  } finally {
-    trLoading.value = false;
-  }
 };
 // 随访
 const foVisible = ref(false);
 const foRow = ref(null);
-const foForm = reactive({followType: 1, result: 1, content: ''});
-const foLoading = ref(false);
 const openFollow = (row) => {
   foRow.value = row;
-  foForm.followType = 1;
-  foForm.result = 1;
-  foForm.content = '';
   foVisible.value = true;
-};
-const submitFollow = async () => {
-  foLoading.value = true;
-  try {
-    const res = await followDaySurgery({
-      id: foRow.value.id, followType: foForm.followType, result: foForm.result,
-      content: foForm.content.trim() || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success('随访已登记');
-      foVisible.value = false;
-      loadList();
-      loadStats();
-    } else {
-      ElMessage.error(res.message || '随访登记失败');
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('随访登记失败');
-  } finally {
-    foLoading.value = false;
-  }
 };
 // 取消
 const cancelVisible = ref(false);
 const cancelRow = ref(null);
-const cancelReason = ref('');
-const cancelLoading = ref(false);
 const openCancel = (row) => {
   cancelRow.value = row;
-  cancelReason.value = '';
   cancelVisible.value = true;
 };
-const submitCancel = async () => {
-  if (!cancelReason.value.trim()) {
-    ElMessage.warning('请填写取消原因');
-    return;
-  }
-  cancelLoading.value = true;
-  try {
-    const res = await cancelDaySurgery({id: cancelRow.value.id, content: cancelReason.value.trim()});
-    if (res.code === 200) {
-      ElMessage.success('已取消');
-      cancelVisible.value = false;
-      loadList();
-      loadStats();
-    } else {
-      ElMessage.error(res.message || '取消失败');
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('取消失败');
-  } finally {
-    cancelLoading.value = false;
-  }
+const handleSaved = () => {
+  loadList();
+  loadStats();
 };
 const remove = async (row) => {
   try {
@@ -848,14 +391,10 @@ const remove = async (row) => {
 };
 // 详情
 const detailVisible = ref(false);
-const detail = ref(null);
-const openDetail = async (row) => {
-  const res = await getDaySurgeryDetail(row.id);
-  if (res.code === 200) {
-    detail.value = res.data;
-    detailVisible.value = true;
-  } else
-    ElMessage.error(res.message || '加载详情失败');
+const detailId = ref(null);
+const openDetail = (row) => {
+  detailId.value = row.id;
+  detailVisible.value = true;
 };
 // ---------------- 公共 ----------------
 const loadStats = async () => {
@@ -953,38 +492,9 @@ onMounted(async () => {
   color: #67c23a;
 }
 
-.flow-title {
-  margin: 16px 0 10px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.flow-item {
-  display: flex;
-  gap: 10px;
-  align-items: baseline;
-}
-
-.flow-op {
-  font-size: 12px;
-  color: #409eff;
-}
-
-.flow-content {
-  margin-top: 4px;
-  color: #606266;
-  white-space: pre-wrap;
-}
-
 .hint {
   margin-left: 8px;
   font-size: 12px;
   color: #909399;
-}
-
-.hint-line {
-  font-size: 12px;
-  color: #909399;
-  margin-top: 4px;
 }
 </style>

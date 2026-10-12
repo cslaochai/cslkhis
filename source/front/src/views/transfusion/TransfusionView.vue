@@ -350,750 +350,67 @@
     </div>
 
     <!-- 发起 / 修改用血申请 -->
-    <el-dialog
+    <TransfusionApplyEdit
         v-model="applyVisible"
-        :title="applyForm.id ? '修改用血申请' : '发起用血申请'"
-        data-testid="p4-tf-apply-dialog"
-        width="760px"
-    >
-      <el-form label-width="120px">
-        <el-form-item label="在院患者" required>
-          <el-select
-              v-model="applyForm.admissionId"
-              :disabled="!!applyForm.id"
-              class="!w-full"
-              data-testid="p4-tf-apply-admission"
-              filterable
-              placeholder="选择在院患者"
-          >
-            <el-option
-                v-for="a in admissions"
-                :key="a.admissionId"
-                :label="admissionLabel(a)"
-                :value="String(a.admissionId)"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item v-if="currentAdmission" label="申请科室">
-          <span class="text-slate-700">
-            {{ text(currentAdmission.deptName) }} / {{ text(currentAdmission.wardName) }} /
-            {{ text(currentAdmission.bedNo) }}床
-          </span>
-          <span class="ml-2 text-[11px] text-slate-400">申请科室取患者当前科室，服务端写入，不需要填</span>
-        </el-form-item>
-        <el-form-item label="受血者血型" required>
-          <div class="flex items-center gap-3">
-            <el-select
-                v-model="applyForm.patientAbo"
-                class="!w-32"
-                data-testid="p4-tf-apply-abo"
-                placeholder="ABO"
-            >
-              <el-option v-for="t in ABO_TYPES" :key="t" :label="`${t} 型`" :value="t"/>
-            </el-select>
-            <el-select
-                v-model="applyForm.patientRh"
-                class="!w-32"
-                data-testid="p4-tf-apply-rh"
-                placeholder="Rh"
-            >
-              <el-option v-for="t in RH_TYPES" :key="t" :label="`Rh ${t}性`" :value="t"/>
-            </el-select>
-          </div>
-        </el-form-item>
-        <el-form-item label="血液品种" required>
-          <el-select
-              v-model="applyForm.bloodComponent"
-              class="!w-full"
-              data-testid="p4-tf-apply-component"
-              placeholder="选择血液品种"
-          >
-            <el-option v-for="c in components" :key="c.code" :label="c.label" :value="c.code"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="规格">
-          <el-input
-              v-model="applyForm.componentSpec"
-              maxlength="64"
-              placeholder="如 1.5U / 200ml / 1治疗量（可空）"
-          />
-        </el-form-item>
-        <el-form-item label="申请袋数" required>
-          <el-input
-              v-model.number="applyForm.bagCount"
-              class="!w-40"
-              data-testid="p4-tf-apply-bagcount"
-              placeholder="配血累计不得超过此数"
-              type="number"
-          />
-          <span class="ml-3 text-[11px] text-slate-400">本次申请最多 20 袋</span>
-        </el-form-item>
-        <el-form-item label="申请总量 / 单位">
-          <div class="flex items-center gap-3">
-            <el-input
-                v-model.number="applyForm.plannedAmount"
-                class="!w-40"
-                placeholder="总量"
-            />
-            <el-select v-model="applyForm.amountUnit" class="!w-32" clearable placeholder="单位">
-              <el-option v-for="u in AMOUNT_UNITS" :key="u" :label="u" :value="u"/>
-            </el-select>
-          </div>
-        </el-form-item>
-        <el-form-item label="输血目的">
-          <el-input
-              v-model="applyForm.transfusionPurpose"
-              maxlength="200"
-              placeholder="如：纠正贫血 / 补充凝血因子 / 提升血小板（可空）"
-          />
-        </el-form-item>
-        <el-form-item label="输血指征" required>
-          <el-input
-              v-model="applyForm.indication"
-              :rows="3"
-              data-testid="p4-tf-apply-indication"
-              placeholder="指标 + 症状（如：Hb 62 g/L，活动后心悸气促）——无指征用血是飞行检查的重点"
-              type="textarea"
-          />
-        </el-form-item>
-        <el-form-item label="输血前 Hb">
-          <div class="flex items-center gap-3">
-            <el-input v-model.number="applyForm.preHb" class="!w-40" placeholder="Hb g/L"/>
-            <el-input v-model.number="applyForm.preHct" class="!w-40" placeholder="HCT %"/>
-            <el-input v-model.number="applyForm.prePlt" class="!w-48" placeholder="PLT ×10⁹/L"/>
-          </div>
-        </el-form-item>
-        <el-form-item label="既往输血史">
-          <el-input v-model="applyForm.transfusionHistory" maxlength="500" placeholder="可空"/>
-        </el-form-item>
-        <el-form-item label="既往反应史">
-          <el-input v-model="applyForm.reactionHistory" maxlength="500" placeholder="有输血反应史会影响选血与备血方案"/>
-        </el-form-item>
-        <el-form-item label="妊娠史">
-          <el-input v-model="applyForm.pregnancyHistory" maxlength="200"
-                    placeholder="育龄女性填写（与不规则抗体产生相关）"/>
-        </el-form-item>
-        <el-form-item label="紧急用血">
-          <el-radio-group v-model="applyForm.isEmergency">
-            <el-radio :value="0">常规</el-radio>
-            <el-radio :value="1">紧急</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="applyForm.remark" :rows="2" placeholder="可空" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <div class="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] leading-5 text-amber-700">
-        <el-icon class="mr-1 align-middle">
-          <Warning/>
-        </el-icon>
-        提交后血<b>尚未配</b>：血袋号与交叉配血结果由输血科在「配血」里逐袋录入。
-        血型以本次输血前鉴定为准 —— 与患者档案不一致时系统会在备注里提示，但不阻断（档案常是旧的）。
-      </div>
-      <template #footer>
-        <el-button @click="applyVisible = false">取消</el-button>
-        <el-button v-perm="['medtech:transfusion:add','medtech:transfusion:edit']" :loading="applySubmitting"
-                   data-testid="p4-tf-apply-submit" type="primary" @click="submitApply">
-          {{ applyForm.id ? '保存修改' : '提交用血申请' }}
-        </el-button>
-      </template>
-    </el-dialog>
+        :abo-types="ABO_TYPES"
+        :admission-label="admissionLabel"
+        :admissions="admissions"
+        :components="components"
+        :default-admission-id="filters.admissionId"
+        :rh-types="RH_TYPES"
+        :row="applyRow"
+        @saved="reloadAfterSave"
+    />
 
     <!-- 用血分级审批 -->
-    <el-dialog v-model="approveVisible" data-testid="p4-tf-approve-dialog" title="用血分级审批" width="520px">
-      <div v-if="approveTarget" class="mb-3 text-xs text-slate-600 space-y-1">
-        <div>
-          单号 <b>{{ approveTarget.applyNo }}</b> ·
-          {{ text(approveTarget.patientName) }} ·
-          {{ text(approveTarget.bloodComponentText) }} {{ text(approveTarget.bagCount) }} 袋
-        </div>
-        <div>
-          折算量 <b>{{ approveTarget.amountMl != null ? approveTarget.amountMl + 'ml' : '待折算（按最高级审批）' }}</b>
-          · 属「{{ text(approveTarget.approveLevelText) }}」审核签发
-          <el-tag v-if="approveTarget.approveStatus === 3" class="ml-1" effect="plain" size="small" type="warning">
-            急诊补审
-          </el-tag>
-        </div>
-        <div v-if="approveTarget.approveRejectReason" class="text-red-600">
-          上次驳回原因：{{ approveTarget.approveRejectReason }}
-        </div>
-      </div>
-      <el-form label-width="72px">
-        <el-form-item label="审批结论" required>
-          <el-radio-group v-model="approveForm.approveResult" data-testid="p4-tf-approve-result">
-            <el-radio :value="1" data-testid="p4-tf-approve-result-1">通过（可进入配血）</el-radio>
-            <el-radio :value="2" data-testid="p4-tf-approve-result-2">驳回</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="审批意见">
-          <el-input
-              v-model="approveForm.opinion"
-              :placeholder="approveForm.approveResult === 2 ? '驳回原因（必填）：写明申请人要改什么' : '可空；同意意见或备注'"
-              :rows="3"
-              data-testid="p4-tf-approve-opinion"
-              maxlength="200"
-              show-word-limit
-              type="textarea"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="approveVisible = false">取消</el-button>
-        <el-button v-perm="'medtech:transfusion:edit'" :loading="approveSubmitting" data-testid="p4-tf-approve-submit"
-                   type="primary" @click="submitApprove">
-          提交审批结论
-        </el-button>
-      </template>
-    </el-dialog>
+    <TransfusionApprove
+        v-model="approveVisible"
+        :row="approveTarget"
+        @saved="reloadAfterSave"
+    />
 
     <!-- 配血 -->
-    <el-dialog v-model="crossVisible" data-testid="p4-tf-cross-dialog" title="配血（血型鉴定 + 交叉配血）" width="1080px">
-      <div v-if="crossTarget" class="space-y-3">
-        <div class="rounded border border-slate-200 bg-slate-50 p-3 text-sm">
-          <div class="text-slate-900">
-            {{ text(crossTarget.patientName) }}（{{ text(crossTarget.admissionNo) }}）
-            <el-tag v-if="crossTarget.isEmergency === 1" class="ml-2" size="small" type="danger">紧急</el-tag>
-          </div>
-          <div class="mt-1 text-slate-700">
-            受血者 {{ text(crossTarget.bloodTypeText) }} ·
-            {{ text(crossTarget.bloodComponentText) }}（{{ text(crossTarget.componentSpec) }}）·
-            申请 {{ text(crossTarget.bagCount) }} 袋
-          </div>
-          <div class="text-[12px] text-slate-500">输血指征：{{ text(crossTarget.indication) }}</div>
-        </div>
-        <el-alert :closable="false" show-icon type="warning">
-          红细胞类按红细胞规则判 ABO 相容（A←A/O、B←B/O、AB←AB/A/B/O、O←O），
-          血浆类方向相反（A←A/AB、B←B/AB、AB←AB、O←全）；受血者 Rh 阴性时血袋必须 Rh 阴性。
-          不相容会被后端<b>直接拒绝</b>（ABO 不相容输注是致死性差错）。
-          血袋号全局唯一：一袋血只能给一个人。
-        </el-alert>
-        <div class="flex items-center justify-between">
-          <span class="text-[12px] text-slate-500">
-            本次录入 {{ bagRows.length }} 袋；已配 {{ crossTarget.matchedBagCount || 0 }}/{{ crossTarget.bagCount }} 袋。
-            可分多批提交（血站分批到货是常态），累计不得超过申请袋数。
-          </span>
-          <el-button v-perm="'medtech:transfusion:add'" :icon="Plus" size="small" @click="addBagRow">增加一袋
-          </el-button>
-        </div>
-        <div v-for="(b, idx) in bagRows" :key="idx" class="rounded border border-slate-200 p-3">
-          <div class="mb-2 flex items-center justify-between">
-            <span class="text-[13px] font-medium text-slate-700">第 {{ idx + 1 }} 袋</span>
-            <el-button v-perm="'medtech:transfusion:delete'" :icon="Delete" link type="danger"
-                       @click="removeBagRow(idx)">删除
-            </el-button>
-          </div>
-          <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <el-input v-model="b.bagNo" :data-testid="`p4-tf-bag-no-${idx}`" placeholder="血袋号 *"/>
-            <el-input v-model="b.donorNo" placeholder="献血编号"/>
-            <el-select v-model="b.bagAbo" :data-testid="`p4-tf-bag-abo-${idx}`" placeholder="血袋 ABO *">
-              <el-option v-for="t in ABO_TYPES" :key="t" :label="`${t} 型`" :value="t"/>
-            </el-select>
-            <el-select v-model="b.bagRh" :data-testid="`p4-tf-bag-rh-${idx}`" placeholder="血袋 Rh *">
-              <el-option v-for="t in RH_TYPES" :key="t" :label="`Rh ${t}性`" :value="t"/>
-            </el-select>
-            <el-input v-model="b.spec" placeholder="规格"/>
-            <el-input v-model.number="b.amount" placeholder="血量"/>
-            <el-input v-model="b.amountUnit" placeholder="单位（U/ml/治疗量）"/>
-            <el-input v-model="b.sourceBank" placeholder="来源血站"/>
-            <el-date-picker
-                v-model="b.collectDate"
-                class="!w-full"
-                placeholder="采集日期"
-                type="date"
-                value-format="YYYY-MM-DD"
-            />
-            <el-date-picker
-                v-model="b.expireDate"
-                :data-testid="`p4-tf-bag-expire-${idx}`"
-                class="!w-full"
-                placeholder="有效期至 *"
-                type="date"
-                value-format="YYYY-MM-DD"
-            />
-            <el-select v-model="b.crossmatchMain" placeholder="主侧">
-              <el-option label="阴性（相合）" value="阴性"/>
-              <el-option label="阳性（不合）" value="阳性"/>
-            </el-select>
-            <el-select v-model="b.crossmatchSide" placeholder="次侧">
-              <el-option label="阴性（相合）" value="阴性"/>
-              <el-option label="阳性（不合）" value="阳性"/>
-            </el-select>
-            <el-select v-model="b.crossmatchResult" :data-testid="`p4-tf-bag-result-${idx}`" placeholder="配血结论 *">
-              <el-option :value="1" label="相合"/>
-              <el-option :value="2" label="不合"/>
-            </el-select>
-            <el-input v-model="b.remark" placeholder="备注"/>
-          </div>
-        </div>
-        <el-form label-width="90px">
-          <el-form-item label="配血备注">
-            <el-input
-                v-model="crossNote"
-                :rows="2"
-                data-testid="p4-tf-cross-note"
-                placeholder="可空；有配血不合时必须写明原因与后续处理"
-                type="textarea"
-            />
-          </el-form-item>
-        </el-form>
-      </div>
-      <template #footer>
-        <el-button @click="crossVisible = false">取消</el-button>
-        <el-button
-            v-perm="'medtech:transfusion:edit'"
-            :loading="crossSubmitting"
-            data-testid="p4-tf-cross-submit"
-            type="primary"
-            @click="submitCrossmatch"
-        >
-          提交配血结果
-        </el-button>
-      </template>
-    </el-dialog>
+    <TransfusionCrossMatch
+        v-model="crossVisible"
+        :abo-types="ABO_TYPES"
+        :rh-types="RH_TYPES"
+        :row="crossTarget"
+        @saved="reloadAfterSave"
+    />
 
     <!-- 发血 -->
-    <el-dialog v-model="issueVisible" data-testid="p4-tf-issue-dialog" title="发血" width="560px">
-      <div v-if="issueTarget" class="space-y-3">
-        <div class="rounded border border-slate-200 bg-slate-50 p-3 text-sm">
-          <div class="text-slate-900">{{ text(issueTarget.patientName) }}（{{ text(issueTarget.admissionNo) }}）</div>
-          <div class="mt-1 text-slate-700">
-            受血者 {{ text(issueTarget.bloodTypeText) }} ·
-            {{ text(issueTarget.bloodComponentText) }} · {{ text(issueTarget.bagProgressText) }}
-          </div>
-          <div class="text-[12px] text-slate-500">
-            配血状态：{{ text(issueTarget.crossmatchStatusText) }} ·
-            {{ text(issueTarget.crossmatchDoctorName) }} {{ fmt(issueTarget.crossmatchTime) }}
-          </div>
-        </div>
-        <el-form label-width="90px">
-          <el-form-item label="发血备注">
-            <el-input v-model="issueForm.issueRemark" :rows="2" placeholder="如：已核对血袋外观完好（可空）"
-                      type="textarea"/>
-          </el-form-item>
-        </el-form>
-        <el-alert :closable="false" show-icon type="info">
-          发血后状态变为「已发血」，血袋状态全部置为已发血；下一步由病区护士双人核对后开始输注。
-        </el-alert>
-      </div>
-      <template #footer>
-        <el-button @click="issueVisible = false">取消</el-button>
-        <el-button v-perm="'medtech:transfusion:edit'" :loading="issueSubmitting" data-testid="p4-tf-issue-submit"
-                   type="primary" @click="submitIssue">
-          确认发血
-        </el-button>
-      </template>
-    </el-dialog>
+    <TransfusionIssue
+        v-model="issueVisible"
+        :row="issueTarget"
+        @saved="reloadAfterSave"
+    />
 
     <!-- 开始输注（双人核对） -->
-    <el-dialog
+    <TransfusionStart
         v-model="startVisible"
-        data-testid="p4-tf-start-dialog"
-        title="开始输注（输血前双人核对）"
-        width="700px"
-    >
-      <div v-if="startTarget" class="space-y-3">
-        <div class="rounded border border-slate-200 bg-slate-50 p-3 text-sm">
-          <div class="text-slate-900">{{ text(startTarget.patientName) }}</div>
-          <div class="text-slate-700">
-            {{ text(startTarget.bloodTypeText) }} · {{ text(startTarget.bloodComponentText) }} ·
-            {{ text(startTarget.bagProgressText) }}
-          </div>
-          <div class="text-[12px] text-slate-500">
-            发血人 {{ text(startTarget.issueDoctorName) }} · {{ fmt(startTarget.issueTime) }}
-          </div>
-        </div>
-        <div class="text-[12px] text-slate-500">
-          标 <span class="text-red-500">*</span> 的是必核项，缺任何一项都无法提交 ——
-          输血是唯一要求双人核对的护理操作，"已核对无误"这句话在飞检时回答不了"到底核了哪几项"。
-        </div>
-        <el-checkbox-group v-model="startForm.items" class="flex flex-col gap-2">
-          <el-checkbox
-              v-for="i in checkItemOptions"
-              :key="i.code"
-              :data-testid="`p4-tf-check-item-${i.code}`"
-              :value="i.code"
-          >
-            <span class="text-slate-700">{{ i.label }}</span>
-            <span v-if="i.required" class="ml-1 text-red-500">*</span>
-          </el-checkbox>
-        </el-checkbox-group>
-        <el-form label-width="110px">
-          <el-form-item label="核对护士 1" required>
-            <el-select
-                v-model="startForm.checkNurseId"
-                class="!w-full"
-                data-testid="p4-tf-check-nurse1"
-                filterable
-                placeholder="选择核对护士1"
-            >
-              <el-option
-                  v-for="e in employees"
-                  :key="e.id"
-                  :label="`${e.empName || e.id}${e.deptName ? '（' + e.deptName + '）' : ''}`"
-                  :value="String(e.id)"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="核对护士 2" required>
-            <el-select
-                v-model="startForm.checkNurse2Id"
-                class="!w-full"
-                data-testid="p4-tf-check-nurse2"
-                filterable
-                placeholder="必须与护士1 不同人"
-            >
-              <el-option
-                  v-for="e in employees"
-                  :key="e.id"
-                  :label="`${e.empName || e.id}${e.deptName ? '（' + e.deptName + '）' : ''}`"
-                  :value="String(e.id)"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="核对异常说明">
-            <el-input
-                v-model="startForm.checkNote"
-                :rows="2"
-                data-testid="p4-tf-check-note"
-                placeholder="正常可空；有异常必须写（如：血袋外观有轻微气泡，已请血库复核）"
-                type="textarea"
-            />
-          </el-form-item>
-          <el-form-item label="输注开始时间" required>
-            <el-date-picker
-                v-model="startForm.infusionStartTime"
-                class="!w-full"
-                data-testid="p4-tf-start-time"
-                placeholder="选择开始时间"
-                type="datetime"
-                value-format="YYYY-MM-DD HH:mm:ss"
-            />
-          </el-form-item>
-          <el-form-item label="执行护士">
-            <el-select
-                v-model="startForm.infusionNurseId"
-                class="!w-full"
-                clearable
-                filterable
-                placeholder="为空 = 由核对护士1 执行"
-            >
-              <el-option v-for="e in employees" :key="e.id" :label="e.empName || e.id" :value="String(e.id)"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="滴速">
-            <el-input v-model="startForm.infusionSpeed" maxlength="32" placeholder="如 60滴/分（前 15 分钟须慢速）"/>
-          </el-form-item>
-          <el-form-item label="输注观察">
-            <el-input
-                v-model="startForm.observation"
-                :rows="2"
-                placeholder="开始输注时的生命体征（也可在「登记完成」时补填）"
-                type="textarea"
-            />
-          </el-form-item>
-        </el-form>
-      </div>
-      <template #footer>
-        <el-button @click="startVisible = false">取消</el-button>
-        <el-button
-            v-perm="'medtech:transfusion:edit'"
-            :loading="startSubmitting"
-            data-testid="p4-tf-start-submit"
-            type="primary"
-            @click="submitStart"
-        >
-          确认已核对并开始输注
-        </el-button>
-      </template>
-    </el-dialog>
+        :row="startTarget"
+        @saved="reloadAfterSave"
+    />
 
     <!-- 登记完成 -->
-    <el-dialog
+    <TransfusionFinish
         v-model="finishVisible"
-        data-testid="p4-tf-finish-dialog"
-        title="登记输血完成（回写输血记录病历 + 病案首页是否输血）"
-        width="700px"
-    >
-      <div v-if="finishTarget" class="space-y-3">
-        <div class="rounded border border-slate-200 bg-slate-50 p-3 text-sm">
-          <div class="text-slate-900">{{ text(finishTarget.patientName) }}</div>
-          <div class="text-slate-700">
-            {{ text(finishTarget.bloodTypeText) }} · {{ text(finishTarget.bloodComponentText) }} ·
-            {{ text(finishTarget.bagProgressText) }}
-          </div>
-          <div class="text-[12px] text-slate-500">
-            双人核对：{{ text(finishTarget.checkNurseName) }} / {{ text(finishTarget.checkNurse2Name) }} ·
-            开始 {{ fmt(finishTarget.infusionStartTime) }}
-          </div>
-        </div>
-        <el-form label-width="120px">
-          <el-form-item label="输注结束时间" required>
-            <el-date-picker
-                v-model="finishForm.infusionEndTime"
-                class="!w-full"
-                data-testid="p4-tf-finish-time"
-                placeholder="选择结束时间"
-                type="datetime"
-                value-format="YYYY-MM-DD HH:mm:ss"
-            />
-          </el-form-item>
-          <el-form-item label="实际输注量" required>
-            <el-input
-                v-model.number="finishForm.actualAmount"
-                class="!w-40"
-                data-testid="p4-tf-finish-amount"
-                placeholder="必须大于 0"
-            />
-            <span class="ml-2 text-[12px] text-slate-500">{{ text(finishTarget.amountUnit) }}</span>
-          </el-form-item>
-          <el-form-item label="输注观察" required>
-            <el-input
-                v-model="finishForm.observation"
-                :rows="3"
-                data-testid="p4-tf-finish-observation"
-                placeholder="输注过程与输注后观察：生命体征、有无寒战发热皮疹等（开始后 15 分钟是反应高发期）"
-                type="textarea"
-            />
-          </el-form-item>
-          <el-form-item label="疗效评估">
-            <el-input
-                v-model="finishForm.efficacyEval"
-                :rows="2"
-                placeholder="如：输注后心悸气促改善，复查 Hb 升至 85 g/L"
-                type="textarea"
-            />
-          </el-form-item>
-          <el-form-item label="输血后复查">
-            <div class="flex items-center gap-3">
-              <el-input v-model.number="finishForm.postHb" class="!w-40" placeholder="Hb g/L"/>
-              <el-input v-model.number="finishForm.postHct" class="!w-40" placeholder="HCT %"/>
-              <el-input v-model.number="finishForm.postPlt" class="!w-48" placeholder="PLT ×10⁹/L"/>
-            </div>
-          </el-form-item>
-        </el-form>
-        <el-alert :closable="false" show-icon type="info">
-          完成后系统会回写一份<b>输血记录</b>病历（record_type=11），并把病案首页「是否输血」置为是。
-          如输注后出现不良反应，请用列表里的「上报反应」补登记（不改回本单状态）。
-        </el-alert>
-      </div>
-      <template #footer>
-        <el-button @click="finishVisible = false">取消</el-button>
-        <el-button
-            v-perm="'medtech:transfusion:edit'"
-            :loading="finishSubmitting"
-            data-testid="p4-tf-finish-submit"
-            type="primary"
-            @click="submitFinish"
-        >
-          确认完成并回写
-        </el-button>
-      </template>
-    </el-dialog>
+        :row="finishTarget"
+        @saved="reloadAfterSave"
+    />
 
     <!-- 输血反应上报 -->
-    <el-dialog
+    <TransfusionReaction
         v-model="reactionVisible"
-        data-testid="p4-tf-reaction-dialog"
-        title="输血反应上报"
-        width="620px"
-    >
-      <div v-if="reactionTarget" class="space-y-3">
-        <div class="rounded border border-slate-200 bg-slate-50 p-3 text-sm">
-          <div class="text-slate-900">{{ text(reactionTarget.patientName) }}（{{ text(reactionTarget.applyNo) }}）</div>
-          <div class="mt-1 text-slate-700">
-            {{ text(reactionTarget.bloodTypeText) }} · {{ text(reactionTarget.bloodComponentText) }} ·
-            输注 {{ fmt(reactionTarget.infusionStartTime) }} ~ {{ fmt(reactionTarget.infusionEndTime) }}
-          </div>
-        </div>
-        <el-form label-width="100px">
-          <el-form-item label="反应类型" required>
-            <el-select
-                v-model="reactionForm.reactionType"
-                class="!w-full"
-                data-testid="p4-tf-reaction-type"
-                placeholder="从字典选择（不接受自由填写）"
-            >
-              <el-option v-for="t in reactionTypes" :key="t" :label="t" :value="t"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="反应描述" required>
-            <el-input
-                v-model="reactionForm.reactionDesc"
-                :rows="3"
-                data-testid="p4-tf-reaction-desc"
-                placeholder="什么时候出现什么症状、生命体征怎么变的"
-                type="textarea"
-            />
-          </el-form-item>
-          <el-form-item label="处理措施" required>
-            <el-input
-                v-model="reactionForm.reactionHandle"
-                :rows="3"
-                data-testid="p4-tf-reaction-handle"
-                placeholder="停药 / 给氧 / 用药 / 是否上报血库与医务科"
-                type="textarea"
-            />
-          </el-form-item>
-        </el-form>
-        <el-alert :closable="false" show-icon type="warning">
-          上报只置「有输血反应」标记并登记详情，<b>不回改历史状态</b> ——
-          把已完成的输血单改回输注中就是在改历史，还会破坏"完成=已回写病历"的一致性。
-        </el-alert>
-      </div>
-      <template #footer>
-        <el-button @click="reactionVisible = false">取消</el-button>
-        <el-button
-            v-perm="'medtech:transfusion:add'"
-            :loading="reactionSubmitting"
-            data-testid="p4-tf-reaction-submit"
-            type="primary"
-            @click="submitReaction"
-        >
-          确认上报
-        </el-button>
-      </template>
-    </el-dialog>
+        :row="reactionTarget"
+        @saved="loadList"
+    />
 
     <!-- 详情 -->
-    <el-dialog v-model="detailVisible" data-testid="p4-tf-detail-dialog" title="用血单详情" width="920px">
-      <div v-if="detail" class="space-y-4">
-        <el-descriptions :column="2" border size="small">
-          <el-descriptions-item label="用血单号">{{ text(detail.applyNo) }}</el-descriptions-item>
-          <el-descriptions-item label="状态">
-            {{ text(detail.transfusionStatusText) }} / 配血：{{ text(detail.crossmatchStatusText) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="患者">
-            {{ text(detail.patientName) }}（{{ text(detail.admissionNo) }}）
-          </el-descriptions-item>
-          <el-descriptions-item label="床号 / 科室">
-            {{ text(detail.applyBedNo) }}床 / {{ text(detail.applyDeptName) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="受血者血型">
-            {{ text(detail.bloodTypeText) }}
-            <span v-if="detail.aboMatchesArchive === false" class="ml-2 text-[11px] text-amber-600">
-              （与档案不一致，以本次为准）
-            </span>
-          </el-descriptions-item>
-          <el-descriptions-item label="血液品种">
-            {{ text(detail.bloodComponentText) }}
-            <span v-if="detail.componentSpec" class="text-slate-400">（{{ detail.componentSpec }}）</span>
-          </el-descriptions-item>
-          <el-descriptions-item label="申请袋数 / 总量">
-            {{ text(detail.bagCount) }} 袋 /
-            {{ detail.plannedAmount ? detail.plannedAmount + (detail.amountUnit || '') : '—' }}
-            <span class="ml-2 text-slate-400">{{ text(detail.bagProgressText) }}</span>
-          </el-descriptions-item>
-          <el-descriptions-item label="紧急用血">{{ text(detail.isEmergencyText) }}</el-descriptions-item>
-          <el-descriptions-item label="申请医生 / 时间">
-            {{ text(detail.applyDoctorName) }} / {{ fmt(detail.applyTime) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="输血目的">{{ text(detail.transfusionPurpose) }}</el-descriptions-item>
-          <el-descriptions-item :span="2" label="输血指征">{{ text(detail.indication) }}</el-descriptions-item>
-          <el-descriptions-item :span="2" label="输血前指标">
-            Hb {{ text(detail.preHb) }} g/L · HCT {{ text(detail.preHct) }}% · PLT {{ text(detail.prePlt) }}×10⁹/L
-          </el-descriptions-item>
-          <el-descriptions-item label="既往输血史">{{ text(detail.transfusionHistory) }}</el-descriptions-item>
-          <el-descriptions-item label="既往反应史">{{ text(detail.reactionHistory) }}</el-descriptions-item>
-          <el-descriptions-item label="妊娠史">{{ text(detail.pregnancyHistory) }}</el-descriptions-item>
-          <el-descriptions-item label="配血人 / 时间">
-            {{ text(detail.crossmatchDoctorName) }} / {{ fmt(detail.crossmatchTime) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="发血人 / 时间">
-            {{ text(detail.issueDoctorName) }} / {{ fmt(detail.issueTime) }}
-          </el-descriptions-item>
-          <el-descriptions-item :span="2" label="双人核对">
-            <span v-if="!detail.checkNurseName" class="text-slate-400">尚未核对</span>
-            <span v-else>
-              {{ detail.checkNurseName }} / {{ text(detail.checkNurse2Name) }}
-              <span class="text-slate-400">于 {{ fmt(detail.checkTime) }}</span>
-              <div class="text-[11px] text-slate-500">{{ text(detail.checkItemsText) }}</div>
-            </span>
-          </el-descriptions-item>
-          <el-descriptions-item v-if="detail.checkNote" :span="2" label="核对异常说明">
-            {{ detail.checkNote }}
-          </el-descriptions-item>
-          <el-descriptions-item label="输注时间 / 时长">
-            {{ fmt(detail.infusionStartTime) }} ~ {{ fmt(detail.infusionEndTime) }}
-            <span v-if="detail.durationText" class="text-slate-400">（{{ detail.durationText }}）</span>
-          </el-descriptions-item>
-          <el-descriptions-item label="实际输注量">
-            {{ text(detail.actualAmount) }}{{ detail.amountUnit || '' }}
-            <span v-if="detail.infusionSpeed" class="text-slate-400">· {{ detail.infusionSpeed }}</span>
-          </el-descriptions-item>
-          <el-descriptions-item v-if="detail.observation" :span="2" label="输注观察">
-            {{ detail.observation }}
-          </el-descriptions-item>
-          <el-descriptions-item v-if="detail.efficacyEval" :span="2" label="疗效评估">
-            {{ detail.efficacyEval }}
-          </el-descriptions-item>
-          <el-descriptions-item :span="2" label="输血后复查">
-            Hb {{ text(detail.postHb) }} g/L · HCT {{ text(detail.postHct) }}% · PLT {{ text(detail.postPlt) }}×10⁹/L
-          </el-descriptions-item>
-          <el-descriptions-item :span="2" label="输血反应">
-            <span v-if="detail.hasReaction === 1" class="font-medium text-red-600">
-              {{ text(detail.reactionType) }}：{{ text(detail.reactionDesc) }}；处理：{{ text(detail.reactionHandle) }}
-              <div class="text-[11px] text-slate-500">
-                由 {{ text(detail.reactionReporterName) }} 于 {{ fmt(detail.reactionTime) }} 上报
-              </div>
-            </span>
-            <span v-else class="text-slate-400">{{ text(detail.hasReactionText) }}</span>
-          </el-descriptions-item>
-          <el-descriptions-item :span="2" label="回写病历号">
-            <span v-if="detail.recordNo" class="text-slate-700">{{ detail.recordNo }}（输血记录）</span>
-            <span v-else class="text-slate-400">尚未回写（输血未完成）</span>
-          </el-descriptions-item>
-          <el-descriptions-item v-if="detail.cancelReason" :span="2" label="取消原因">
-            {{ detail.cancelReason }}（{{ text(detail.cancelDoctorName) }} {{ fmt(detail.cancelTime) }}）
-          </el-descriptions-item>
-          <el-descriptions-item v-if="detail.remark" :span="2" label="备注">{{ detail.remark }}</el-descriptions-item>
-        </el-descriptions>
-
-        <div>
-          <div class="mb-2 text-[13px] font-medium text-slate-700">
-            血袋明细（{{ (detail.bags || []).length }} 袋）
-          </div>
-          <el-table :data="detail.bags || []" border size="small" style="width: 100%">
-            <el-table-column label="血袋号" min-width="140" prop="bagNo"/>
-            <el-table-column label="献血编号" min-width="120" prop="donorNo"/>
-            <el-table-column label="血型" width="110">
-              <template #default="{ row }">{{ text(row.bloodTypeText) }}</template>
-            </el-table-column>
-            <el-table-column label="规格 / 血量" min-width="130">
-              <template #default="{ row }">
-                {{ text(row.spec) }}
-                <span v-if="row.amount" class="text-slate-400">{{ row.amount }}{{ row.amountUnit || '' }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="来源血站" min-width="120">
-              <template #default="{ row }">{{ text(row.sourceBank) }}</template>
-            </el-table-column>
-            <el-table-column label="有效期" width="140">
-              <template #default="{ row }">
-                <span :class="row.expired ? 'text-red-600' : 'text-slate-700'">
-                  {{ text(row.expireDate) }}{{ row.expired ? '（已过期）' : '' }}
-                </span>
-              </template>
-            </el-table-column>
-            <el-table-column label="配血结果" min-width="130">
-              <template #default="{ row }">
-                <el-tag :type="row.crossmatchResult === 1 ? 'success' : 'danger'" effect="plain" size="small">
-                  {{ text(row.crossmatchResultText) }}
-                </el-tag>
-                <div class="text-[11px] text-slate-400">
-                  主 {{ text(row.crossmatchMain) }} / 次 {{ text(row.crossmatchSide) }}
-                </div>
-              </template>
-            </el-table-column>
-            <el-table-column label="状态" width="100">
-              <template #default="{ row }">{{ text(row.bagStatusText) }}</template>
-            </el-table-column>
-          </el-table>
-        </div>
-      </div>
-      <template #footer>
-        <el-button @click="detailVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    <TransfusionDetail
+        v-model="detailVisible"
+        :id="detailId"
+    />
   </div>
 </template>
 
@@ -1122,40 +439,33 @@
  * 8. 有反应不改历史：完成之后用「上报反应」补登记，不要在输注中/未完成状态报。
  * 9. 所有 ID 都是字符串（雪花ID），不要 Number()。
  */
-import {computed, onMounted, reactive, ref} from 'vue';
+import {onMounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
-import {Delete, Plus, Refresh, Search, Warning} from '@element-plus/icons-vue';
+import {Plus, Refresh, Search, Warning} from '@element-plus/icons-vue';
 import {
-  approveTransfusion,
   cancelTransfusion,
-  crossmatchTransfusion,
-  finishTransfusion,
   getBloodComponentList,
-  getTransfusionApplyDetail,
   getTransfusionApplyListPage,
-  getTransfusionCheckItems,
-  getTransfusionReactionTypes,
   getTransfusionUnfinishedCount,
-  issueTransfusion,
-  reportTransfusionReaction,
-  saveTransfusionApply,
-  startTransfusion,
 } from '@/api/inpatientTransfusion';
 import {getInpatientListPage} from '@/api/inpatient';
-import {getEmployeeList} from '@/api/system';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+import TransfusionApplyEdit from './TransfusionApplyEdit.vue';
+import TransfusionApprove from './TransfusionApprove.vue';
+import TransfusionCrossMatch from './TransfusionCrossMatch.vue';
+import TransfusionDetail from './TransfusionDetail.vue';
+import TransfusionFinish from './TransfusionFinish.vue';
+import TransfusionIssue from './TransfusionIssue.vue';
+import TransfusionReaction from './TransfusionReaction.vue';
+import TransfusionStart from './TransfusionStart.vue';
 
 const fmt = (v) => (v ? String(v).replace('T', ' ') : '—');
 const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
 const ABO_TYPES = ['A', 'B', 'O', 'AB'];
 const RH_TYPES = ['阳', '阴'];
-const AMOUNT_UNITS = ['U', 'ml', '治疗量'];
 // ---------------- 基础数据 ----------------
 const admissions = ref([]);
-const employees = ref([]);
 const components = ref([]);
-const checkItemOptions = ref([]);
-const reactionTypes = ref([]);
 const admissionLabel = (a) => `${a.bedNo || '—'} ${a.patientName || '—'}（${a.deptName || a.wardName || '—'}）`;
 const loadBaseData = async () => {
   try {
@@ -1165,28 +475,10 @@ const loadBaseData = async () => {
     console.error('加载在院患者失败:', error);
   }
   try {
-    const res = await getEmployeeList({});
-    employees.value = (res.data || []);
-  } catch (error) {
-    console.error('加载员工失败:', error);
-  }
-  try {
     const res = await getBloodComponentList();
     components.value = (res.data || []);
   } catch (error) {
     console.error('加载血液品种字典失败:', error);
-  }
-  try {
-    const res = await getTransfusionCheckItems();
-    checkItemOptions.value = (res.data || []);
-  } catch (error) {
-    console.error('加载输血核对项失败:', error);
-  }
-  try {
-    const res = await getTransfusionReactionTypes();
-    reactionTypes.value = (res.data || []);
-  } catch (error) {
-    console.error('加载输血反应类型失败:', error);
   }
 };
 // ---------------- 列表 ----------------
@@ -1301,485 +593,55 @@ const resetFilters = () => {
   pageNum.value = 1;
   loadList();
 };
+const reloadAfterSave = () => Promise.all([loadList(), loadUnfinishedCount()]);
 // ---------------- 一、发起 / 修改用血申请 ----------------
 const applyVisible = ref(false);
-const applySubmitting = ref(false);
-const applyForm = reactive({
-  id: '',
-  admissionId: '',
-  patientAbo: '',
-  patientRh: '',
-  bloodComponent: undefined,
-  componentSpec: '',
-  bagCount: 2,
-  plannedAmount: undefined,
-  amountUnit: '',
-  transfusionPurpose: '',
-  indication: '',
-  preHb: undefined,
-  preHct: undefined,
-  prePlt: undefined,
-  transfusionHistory: '',
-  reactionHistory: '',
-  pregnancyHistory: '',
-  isEmergency: 0,
-  remark: '',
-});
-const currentAdmission = computed(() => admissions.value.find((a) => String(a.admissionId) === String(applyForm.admissionId)));
-const currentComponentLabel = computed(() => components.value.find((c) => c.code === applyForm.bloodComponent)?.label || '—');
+const applyRow = ref(null);
 const openApply = (row) => {
-  if (row) {
-    applyForm.id = row.id;
-    applyForm.admissionId = row.admissionId || '';
-    applyForm.patientAbo = row.patientAbo || '';
-    applyForm.patientRh = row.patientRh || '';
-    applyForm.bloodComponent = row.bloodComponent;
-    applyForm.componentSpec = row.componentSpec || '';
-    applyForm.bagCount = row.bagCount || 1;
-    applyForm.plannedAmount = row.plannedAmount;
-    applyForm.amountUnit = row.amountUnit || '';
-    applyForm.transfusionPurpose = row.transfusionPurpose || '';
-    applyForm.indication = row.indication || '';
-    applyForm.preHb = row.preHb;
-    applyForm.preHct = row.preHct;
-    applyForm.prePlt = row.prePlt;
-    applyForm.transfusionHistory = row.transfusionHistory || '';
-    applyForm.reactionHistory = row.reactionHistory || '';
-    applyForm.pregnancyHistory = row.pregnancyHistory || '';
-    applyForm.isEmergency = row.isEmergency ?? 0;
-    applyForm.remark = row.remark || '';
-  } else {
-    applyForm.id = '';
-    applyForm.admissionId = filters.admissionId || '';
-    applyForm.patientAbo = '';
-    applyForm.patientRh = '阳';
-    applyForm.bloodComponent = undefined;
-    applyForm.componentSpec = '';
-    applyForm.bagCount = 2;
-    applyForm.plannedAmount = undefined;
-    applyForm.amountUnit = '';
-    applyForm.transfusionPurpose = '';
-    applyForm.indication = '';
-    applyForm.preHb = undefined;
-    applyForm.preHct = undefined;
-    applyForm.prePlt = undefined;
-    applyForm.transfusionHistory = '';
-    applyForm.reactionHistory = '';
-    applyForm.pregnancyHistory = '';
-    applyForm.isEmergency = 0;
-    applyForm.remark = '';
-  }
+  applyRow.value = row || null;
   applyVisible.value = true;
-};
-const submitApply = async () => {
-  if (!applyForm.admissionId) {
-    ElMessage.warning('请选择在院患者');
-    return;
-  }
-  if (!applyForm.patientAbo) {
-    ElMessage.warning('请选择受血者 ABO 血型（以本次输血前鉴定为准）');
-    return;
-  }
-  if (!applyForm.patientRh) {
-    ElMessage.warning('请选择受血者 Rh 血型（Rh 阴性属稀有血型，直接决定备血方案）');
-    return;
-  }
-  if (applyForm.bloodComponent === undefined) {
-    ElMessage.warning('请选择血液品种');
-    return;
-  }
-  if (!applyForm.bagCount || applyForm.bagCount < 1) {
-    ElMessage.warning('申请袋数必须大于 0');
-    return;
-  }
-  if (!applyForm.indication.trim()) {
-    ElMessage.warning('请填写输血指征（无指征用血是飞行检查的重点）');
-    return;
-  }
-  applySubmitting.value = true;
-  try {
-    const res = await saveTransfusionApply({
-      id: applyForm.id || undefined,
-      admissionId: applyForm.admissionId,
-      patientAbo: applyForm.patientAbo,
-      patientRh: applyForm.patientRh,
-      bloodComponent: applyForm.bloodComponent,
-      componentSpec: applyForm.componentSpec.trim() || undefined,
-      bagCount: applyForm.bagCount,
-      plannedAmount: applyForm.plannedAmount,
-      amountUnit: applyForm.amountUnit.trim() || undefined,
-      transfusionPurpose: applyForm.transfusionPurpose.trim() || undefined,
-      indication: applyForm.indication.trim(),
-      preHb: applyForm.preHb,
-      preHct: applyForm.preHct,
-      prePlt: applyForm.prePlt,
-      transfusionHistory: applyForm.transfusionHistory.trim() || undefined,
-      reactionHistory: applyForm.reactionHistory.trim() || undefined,
-      pregnancyHistory: applyForm.pregnancyHistory.trim() || undefined,
-      isEmergency: applyForm.isEmergency,
-      remark: applyForm.remark.trim() || undefined,
-    });
-    ElMessage.success(`${applyForm.id ? '用血申请已修改' : '用血申请已提交'}：${res.data || ''}（等待输血科配血）`);
-    applyVisible.value = false;
-    await Promise.all([loadList(), loadUnfinishedCount()]);
-  } catch (error) {
-    ElMessage.error(error.message || '用血申请提交失败');
-  } finally {
-    applySubmitting.value = false;
-  }
 };
 // ---------------- 一·五、用血分级审批（sql/93） ----------------
 const approveVisible = ref(false);
-const approveSubmitting = ref(false);
 const approveTarget = ref(null);
-const approveForm = reactive({
-  approveResult: null,
-  opinion: '',
-});
 const openApprove = (row) => {
   approveTarget.value = row;
-  approveForm.approveResult = null;
-  approveForm.opinion = '';
   approveVisible.value = true;
-};
-const submitApprove = async () => {
-  if (!approveTarget.value)
-    return;
-  if (!approveForm.approveResult) {
-    ElMessage.warning('请选择审批结论（通过 / 驳回）');
-    return;
-  }
-  if (approveForm.approveResult === 2 && !approveForm.opinion.trim()) {
-    ElMessage.warning('驳回必须写明原因（申请人要知道改什么才能重新提交）');
-    return;
-  }
-  approveSubmitting.value = true;
-  try {
-    const res = await approveTransfusion({
-      applyId: approveTarget.value.id,
-      approveResult: approveForm.approveResult,
-      opinion: approveForm.opinion.trim() || undefined,
-    });
-    ElMessage.success(res.message || '审批结论已提交');
-    approveVisible.value = false;
-    await Promise.all([loadList(), loadUnfinishedCount()]);
-  } catch (error) {
-    ElMessage.error(error.message || '审批提交失败');
-  } finally {
-    approveSubmitting.value = false;
-  }
 };
 // ---------------- 二、配血（逐袋） ----------------
 const crossVisible = ref(false);
-const crossSubmitting = ref(false);
 const crossTarget = ref(null);
-const crossNote = ref('');
-const bagRows = ref([]);
-const blankBag = () => ({
-  bagNo: '',
-  donorNo: '',
-  bagAbo: '',
-  bagRh: '',
-  spec: crossTarget.value?.componentSpec || '',
-  amount: undefined,
-  amountUnit: crossTarget.value?.amountUnit || '',
-  sourceBank: '',
-  collectDate: '',
-  expireDate: '',
-  crossmatchMain: '阴性',
-  crossmatchSide: '阴性',
-  crossmatchResult: 1,
-  remark: '',
-});
 const openCrossmatch = (row) => {
   crossTarget.value = row;
-  crossNote.value = '';
-  // 按申请袋数预生成行：少配一袋后端会拒（"未配齐不可发血"），
-  // 但重复配同一袋后端会 update，所以预生成行不影响重配场景
-  const need = Math.max(1, row.bagCount || 1);
-  bagRows.value = Array.from({length: need}, () => blankBag());
   crossVisible.value = true;
-};
-const addBagRow = () => {
-  bagRows.value.push(blankBag());
-};
-const removeBagRow = (idx) => {
-  if (bagRows.value.length <= 1) {
-    ElMessage.warning('至少保留一袋');
-    return;
-  }
-  bagRows.value.splice(idx, 1);
-};
-const submitCrossmatch = async () => {
-  if (!crossTarget.value)
-    return;
-  for (let i = 0; i < bagRows.value.length; i++) {
-    const b = bagRows.value[i];
-    if (!b.bagNo || !String(b.bagNo).trim()) {
-      ElMessage.warning(`第 ${i + 1} 袋：血袋号不能为空`);
-      return;
-    }
-    if (!b.bagAbo) {
-      ElMessage.warning(`第 ${i + 1} 袋：请选择血袋 ABO 血型`);
-      return;
-    }
-    if (!b.bagRh) {
-      ElMessage.warning(`第 ${i + 1} 袋：请选择血袋 Rh 血型`);
-      return;
-    }
-    if (!b.expireDate) {
-      ElMessage.warning(`第 ${i + 1} 袋：请填写有效期（超期血袋不得输注）`);
-      return;
-    }
-    if (!b.crossmatchResult) {
-      ElMessage.warning(`第 ${i + 1} 袋：请选择配血结论`);
-      return;
-    }
-  }
-  crossSubmitting.value = true;
-  try {
-    const res = await crossmatchTransfusion({
-      applyId: crossTarget.value.id,
-      crossmatchNote: crossNote.value.trim() || undefined,
-      bags: bagRows.value.map((b) => ({
-        bagNo: String(b.bagNo).trim(),
-        donorNo: b.donorNo?.trim() || undefined,
-        bagAbo: b.bagAbo,
-        bagRh: b.bagRh,
-        spec: b.spec?.trim() || undefined,
-        amount: b.amount,
-        amountUnit: b.amountUnit?.trim() || undefined,
-        sourceBank: b.sourceBank?.trim() || undefined,
-        collectDate: b.collectDate || undefined,
-        expireDate: b.expireDate || undefined,
-        crossmatchMain: b.crossmatchMain || undefined,
-        crossmatchSide: b.crossmatchSide || undefined,
-        crossmatchResult: b.crossmatchResult,
-        remark: b.remark?.trim() || undefined,
-      })),
-    });
-    // 配血结论在**响应 message**里（不是 data）：后端 crossmatch 返回的是"结果说明"
-    // —— 全部相合 / N 袋不合（仍是 200）/ 只配了 x/n 袋。读 res.data 会拿到 null，
-    // 于是所有配血结果都显示成兜底文案，护士看不出到底配成没有。
-    const msg = String(res.message || '配血结果已录入');
-    if (msg.includes('不合')) {
-      ElMessage.warning(msg);
-    } else {
-      ElMessage.success(msg);
-    }
-    crossVisible.value = false;
-    await Promise.all([loadList(), loadUnfinishedCount()]);
-  } catch (error) {
-    ElMessage.error(error.message || '配血失败');
-  } finally {
-    crossSubmitting.value = false;
-  }
 };
 // ---------------- 三、发血 ----------------
 const issueVisible = ref(false);
-const issueSubmitting = ref(false);
 const issueTarget = ref(null);
-const issueForm = reactive({issueRemark: ''});
 const openIssue = (row) => {
   issueTarget.value = row;
-  issueForm.issueRemark = '';
   issueVisible.value = true;
-};
-const submitIssue = async () => {
-  if (!issueTarget.value)
-    return;
-  issueSubmitting.value = true;
-  try {
-    await issueTransfusion({
-      applyId: issueTarget.value.id,
-      issueRemark: issueForm.issueRemark.trim() || undefined,
-    });
-    ElMessage.success('已发血，请病区双人核对后输注');
-    issueVisible.value = false;
-    await Promise.all([loadList(), loadUnfinishedCount()]);
-  } catch (error) {
-    ElMessage.error(error.message || '发血失败');
-  } finally {
-    issueSubmitting.value = false;
-  }
 };
 // ---------------- 四、开始输注（双人核对） ----------------
 const startVisible = ref(false);
-const startSubmitting = ref(false);
 const startTarget = ref(null);
-const startForm = reactive({
-  items: [],
-  checkNote: '',
-  checkNurseId: '',
-  checkNurse2Id: '',
-  infusionNurseId: '',
-  infusionStartTime: '',
-  infusionSpeed: '',
-  observation: '',
-});
 const openStart = (row) => {
   startTarget.value = row;
-  startForm.items = [];
-  startForm.checkNote = '';
-  startForm.checkNurseId = '';
-  startForm.checkNurse2Id = '';
-  startForm.infusionNurseId = '';
-  startForm.infusionStartTime = '';
-  startForm.infusionSpeed = '';
-  startForm.observation = '';
   startVisible.value = true;
-};
-const submitStart = async () => {
-  if (!startTarget.value)
-    return;
-  const missing = checkItemOptions.value
-      .filter((i) => i.required && !startForm.items.includes(i.code))
-      .map((i) => i.label);
-  if (missing.length > 0) {
-    ElMessage.warning(`输血前核对必核项未完成：${missing.join('；')}`);
-    return;
-  }
-  if (!startForm.checkNurseId || !startForm.checkNurse2Id) {
-    ElMessage.warning('请选择两名核对护士（输血必须双人核对）');
-    return;
-  }
-  if (startForm.checkNurseId === startForm.checkNurse2Id) {
-    ElMessage.warning('两名核对护士不能是同一个人（写同一个人等于没有双人核对）');
-    return;
-  }
-  if (!startForm.infusionStartTime) {
-    ElMessage.warning('请选择输注开始时间');
-    return;
-  }
-  startSubmitting.value = true;
-  try {
-    await startTransfusion({
-      applyId: startTarget.value.id,
-      checkItems: startForm.items.join(','),
-      checkNote: startForm.checkNote.trim() || undefined,
-      checkNurseId: startForm.checkNurseId,
-      checkNurse2Id: startForm.checkNurse2Id,
-      infusionNurseId: startForm.infusionNurseId || undefined,
-      infusionStartTime: startForm.infusionStartTime,
-      infusionSpeed: startForm.infusionSpeed.trim() || undefined,
-      observation: startForm.observation.trim() || undefined,
-    });
-    ElMessage.success('已开始输注（双人核对完成）');
-    startVisible.value = false;
-    await Promise.all([loadList(), loadUnfinishedCount()]);
-  } catch (error) {
-    ElMessage.error(error.message || '开始输注失败');
-  } finally {
-    startSubmitting.value = false;
-  }
 };
 // ---------------- 五、完成（回写病历） ----------------
 const finishVisible = ref(false);
-const finishSubmitting = ref(false);
 const finishTarget = ref(null);
-const finishForm = reactive({
-  infusionEndTime: '',
-  actualAmount: undefined,
-  observation: '',
-  efficacyEval: '',
-  postHb: undefined,
-  postHct: undefined,
-  postPlt: undefined,
-});
 const openFinish = (row) => {
   finishTarget.value = row;
-  finishForm.infusionEndTime = '';
-  finishForm.actualAmount = row.plannedAmount;
-  finishForm.observation = row.observation || '';
-  finishForm.efficacyEval = '';
-  finishForm.postHb = undefined;
-  finishForm.postHct = undefined;
-  finishForm.postPlt = undefined;
   finishVisible.value = true;
-};
-const submitFinish = async () => {
-  if (!finishTarget.value)
-    return;
-  if (!finishForm.infusionEndTime) {
-    ElMessage.warning('请选择输注结束时间');
-    return;
-  }
-  if (!finishForm.actualAmount || finishForm.actualAmount <= 0) {
-    ElMessage.warning('实际输注量必须大于 0');
-    return;
-  }
-  if (!finishForm.observation.trim()) {
-    ElMessage.warning('请填写输注过程观察（开始后 15 分钟是反应高发期）');
-    return;
-  }
-  finishSubmitting.value = true;
-  try {
-    await finishTransfusion({
-      applyId: finishTarget.value.id,
-      infusionEndTime: finishForm.infusionEndTime,
-      actualAmount: finishForm.actualAmount,
-      observation: finishForm.observation.trim(),
-      efficacyEval: finishForm.efficacyEval.trim() || undefined,
-      postHb: finishForm.postHb,
-      postHct: finishForm.postHct,
-      postPlt: finishForm.postPlt,
-    });
-    ElMessage.success('输血已完成（已回写输血记录病历与病案首页是否输血标志）');
-    finishVisible.value = false;
-    await Promise.all([loadList(), loadUnfinishedCount()]);
-  } catch (error) {
-    ElMessage.error(error.message || '登记完成失败');
-  } finally {
-    finishSubmitting.value = false;
-  }
 };
 // ---------------- 六、输血反应上报 ----------------
 const reactionVisible = ref(false);
-const reactionSubmitting = ref(false);
 const reactionTarget = ref(null);
-const reactionForm = reactive({
-  reactionType: '',
-  reactionDesc: '',
-  reactionHandle: '',
-});
 const openReaction = (row) => {
   reactionTarget.value = row;
-  reactionForm.reactionType = '';
-  reactionForm.reactionDesc = '';
-  reactionForm.reactionHandle = '';
   reactionVisible.value = true;
-};
-const submitReaction = async () => {
-  if (!reactionTarget.value)
-    return;
-  if (!reactionForm.reactionType) {
-    ElMessage.warning('请选择输血反应类型');
-    return;
-  }
-  if (!reactionForm.reactionDesc.trim()) {
-    ElMessage.warning('请填写反应描述');
-    return;
-  }
-  if (!reactionForm.reactionHandle.trim()) {
-    ElMessage.warning('请填写处理措施');
-    return;
-  }
-  reactionSubmitting.value = true;
-  try {
-    await reportTransfusionReaction({
-      applyId: reactionTarget.value.id,
-      reactionType: reactionForm.reactionType,
-      reactionDesc: reactionForm.reactionDesc.trim(),
-      reactionHandle: reactionForm.reactionHandle.trim(),
-    });
-    ElMessage.success('输血反应已上报');
-    reactionVisible.value = false;
-    await loadList();
-  } catch (error) {
-    ElMessage.error(error.message || '输血反应上报失败');
-  } finally {
-    reactionSubmitting.value = false;
-  }
 };
 // ---------------- 取消 ----------------
 const handleCancel = async (row) => {
@@ -1801,15 +663,10 @@ const handleCancel = async (row) => {
 };
 // ---------------- 详情 ----------------
 const detailVisible = ref(false);
-const detail = ref(null);
-const openDetail = async (row) => {
-  try {
-    const res = await getTransfusionApplyDetail(row.id);
-    detail.value = res.data;
-    detailVisible.value = true;
-  } catch (error) {
-    ElMessage.error(error.message || '加载详情失败');
-  }
+const detailId = ref('');
+const openDetail = (row) => {
+  detailId.value = row.id;
+  detailVisible.value = true;
 };
 onMounted(() => {
   loadBaseData();

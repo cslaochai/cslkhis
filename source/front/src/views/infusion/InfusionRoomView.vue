@@ -88,74 +88,13 @@
     </el-card>
 
     <!-- 座位维护 -->
-    <el-dialog v-model="seatDlg" title="座位维护" width="420px">
-      <el-form label-width="80px">
-        <el-form-item label="座位号">
-          <el-input v-model="seatForm.seatNo" data-testid="ir-seat-no"/>
-        </el-form-item>
-        <el-form-item label="区域">
-          <el-input v-model="seatForm.area" data-testid="ir-seat-area"/>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="seatForm.seatStatus" data-testid="ir-seat-status">
-            <el-option :value="1" label="空闲"/>
-            <el-option :value="3" label="停用"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="seatForm.remark"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button data-testid="ir-seat-cancel" @click="seatDlg = false">取消</el-button>
-        <el-button v-perm="'medtech:infusion:add'" data-testid="ir-seat-save" type="primary" @click="saveSeat">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <InfusionSeatEdit v-model="seatDlg" :seat="seatRow" @saved="loadBoard"/>
 
     <!-- 入座 -->
-    <el-dialog v-model="admitDlg" :title="`入座 ${admitForm?.seatNo || ''}`" width="480px">
-      <el-form label-width="100px">
-        <el-form-item label="患者">
-          <PatientSelect v-model="admitForm.patientId" data-testid="ir-admit-patient" @select="onPatientSelect"/>
-        </el-form-item>
-        <el-form-item label="输注内容">
-          <el-input v-model="admitForm.drugSummary" :rows="2" data-testid="ir-admit-drug" placeholder="药名/组数摘要"
-                    type="textarea"/>
-        </el-form-item>
-        <el-form-item label="需要皮试">
-          <el-switch v-model="admitForm.needSkinTest" :active-value="1" :inactive-value="0"
-                     data-testid="ir-admit-needtest"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="admitForm.remark"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button data-testid="ir-admit-cancel" @click="admitDlg = false">取消</el-button>
-        <el-button v-perm="'medtech:infusion:edit'" data-testid="ir-admit-save" type="primary" @click="saveAdmit">
-          确认入座
-        </el-button>
-      </template>
-    </el-dialog>
+    <InfusionAdmitEdit v-model="admitDlg" :seat="admitSeat" @saved="reload"/>
 
     <!-- 打皮试 -->
-    <el-dialog v-model="opDlg" title="打皮试" width="420px">
-      <el-form label-width="90px">
-        <el-form-item label="皮试药物">
-          <el-input v-model="opForm.drugName" data-testid="ir-skin-drug"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="opForm.remark"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button data-testid="ir-skin-cancel" @click="opDlg = false">取消</el-button>
-        <el-button v-perm="'medtech:infusion:edit'" data-testid="ir-skin-save" type="primary" @click="saveSkinTest">
-          确认打皮试
-        </el-button>
-      </template>
-    </el-dialog>
+    <InfusionSkinTestEdit v-model="opDlg" :row="opRow" @saved="reload"/>
 
     <!-- 巡视单 -->
     <el-dialog v-model="roundsDlg" title="巡视记录" width="640px">
@@ -173,13 +112,13 @@
 <script setup>
 import {onMounted, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
-import PatientSelect from '@/components/his/PatientSelect.vue';
+import InfusionAdmitEdit from './InfusionAdmitEdit.vue';
+import InfusionSeatEdit from './InfusionSeatEdit.vue';
+import InfusionSkinTestEdit from './InfusionSkinTestEdit.vue';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
 import {
-  admitInfusion,
   cancelInfusion,
-  createSkinTest,
   finishInfusion,
   getInfusionBoard,
   judgeSkinTest,
@@ -187,7 +126,6 @@ import {
   listInfusionRounds,
   roundInfusion,
   startInfusion,
-  upsertInfusionSeat,
 } from '@/api/infusionRoom';
 
 const STATUS_TEXT = {
@@ -224,70 +162,28 @@ const reload = async () => {
 onMounted(reload);
 // ---------------- 座位维护 ----------------
 const seatDlg = ref(false);
-const seatForm = ref({});
+const seatRow = ref(null);
 const openSeatDlg = (seat) => {
-  seatForm.value = seat
-      ? {id: seat.id, seatNo: seat.seatNo, area: seat.area, seatStatus: seat.seatStatus, remark: seat.remark}
-      : {id: null, seatNo: '', area: '普通区', seatStatus: 1, remark: ''};
+  seatRow.value = seat || null;
   seatDlg.value = true;
-};
-const saveSeat = async () => {
-  const res = await upsertInfusionSeat(seatForm.value);
-  if (res?.code === 200) {
-    ElMessage.success('座位已保存');
-    seatDlg.value = false;
-    loadBoard();
-  }
 };
 // ---------------- 入座 ----------------
 const admitDlg = ref(false);
-const admitForm = ref(null);
+const admitSeat = ref(null);
 const openAdmit = (seat) => {
   if (seat.seatStatus !== 1) {
     ElMessage.warning('座位不是空闲状态');
     return;
   }
-  admitForm.value = {
-    seatId: seat.id, seatNo: seat.seatNo, patientId: null, patientName: '',
-    treatmentRecordId: null, drugSummary: '', needSkinTest: 0, remark: ''
-  };
+  admitSeat.value = seat;
   admitDlg.value = true;
-};
-const onPatientSelect = (p) => {
-  if (admitForm.value)
-    admitForm.value.patientName = p?.patientName || '';
-};
-const saveAdmit = async () => {
-  const f = admitForm.value;
-  if (!f.patientId) {
-    ElMessage.warning('请先选患者');
-    return;
-  }
-  if (!f.drugSummary.trim()) {
-    ElMessage.warning('请填写输注内容摘要');
-    return;
-  }
-  const res = await admitInfusion(f);
-  if (res?.code === 200) {
-    ElMessage.success(`已入座 ${f.seatNo}（单号 ${res.data?.infusionNo}）`);
-    admitDlg.value = false;
-    reload();
-  }
 };
 // ---------------- 操作 ----------------
 const opDlg = ref(false);
-const opForm = ref({});
+const opRow = ref(null);
 const openSkinTest = (row) => {
-  opForm.value = {infusionId: row.id, drugName: '', remark: ''};
+  opRow.value = row;
   opDlg.value = true;
-};
-const saveSkinTest = async () => {
-  const res = await createSkinTest(opForm.value);
-  if (res?.code === 200) {
-    ElMessage.success('皮试已打，观察 15 分钟后判读');
-    opDlg.value = false;
-    reload();
-  }
 };
 const openJudge = (row) => {
   ElMessageBox.prompt('皮试判读：1=阴性 2=阳性（阳性将自动取消输液单）', '皮试判读', {

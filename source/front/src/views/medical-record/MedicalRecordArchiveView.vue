@@ -138,28 +138,7 @@
     </el-card>
 
     <!-- 详情 -->
-    <el-dialog v-model="detailVisible" destroy-on-close title="归档详情" width="720px">
-      <el-descriptions v-if="detail" :column="2" border>
-        <el-descriptions-item label="归档单号">{{ detail.archiveNo || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="病历号">{{ detail.recordNo || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="患者">{{ detail.patientName || '—' }}（{{
-            detail.patientNo || '—'
-          }}）
-        </el-descriptions-item>
-        <el-descriptions-item label="就诊日期">{{ detail.visitDate || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="科室">{{ detail.deptName || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="医生">{{ detail.doctorName || '—' }}</el-descriptions-item>
-        <el-descriptions-item :span="2" label="诊断">{{ detail.diagnosis || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="状态">
-          <el-tag :type="statusTagType(detail.archiveStatus)" effect="plain" size="small">
-            {{ statusText(detail.archiveStatus) }}
-          </el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="归档时间">{{ detail.archiveTime || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="封存时间">{{ detail.sealTime || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="备注">{{ detail.remark || '—' }}</el-descriptions-item>
-      </el-descriptions>
-    </el-dialog>
+    <MedicalRecordArchiveDetail v-model="detailVisible" :id="detailId" :status-options="statusOptions"/>
   </div>
 </template>
 
@@ -169,7 +148,6 @@ import {ElMessage, ElMessageBox} from 'element-plus';
 import {Bell, Box, Document, Lock, Refresh, Search} from '@element-plus/icons-vue';
 import {
   archiveRecord,
-  getArchiveDetail,
   getArchiveList,
   getArchiveStatusCount,
   notifyArchiveOverdue,
@@ -178,6 +156,7 @@ import {
 import {getDictDataMapList} from '@/api/system';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import MedicalRecordArchiveDetail from './MedicalRecordArchiveDetail.vue';
 
 const loading = ref(false);
 const rows = ref([]);
@@ -275,22 +254,12 @@ const onReset = () => {
   query.pageNum = 1;
   loadList();
 };
-// ---------------- 详情 ----------------
+// ---------------- 详情（取数与渲染在 MedicalRecordArchiveDetail.vue） ----------------
 const detailVisible = ref(false);
-const detail = ref(null);
-const openDetail = async (row) => {
-  try {
-    const res = await getArchiveDetail(row.id);
-    if (res.code === 200 && res.data) {
-      detail.value = res.data;
-      detailVisible.value = true;
-    } else {
-      ElMessage.error(res.message || '获取归档详情失败');
-    }
-  } catch (e) {
-    ElMessage.error('获取归档详情失败');
-    console.error(e);
-  }
+const detailId = ref('');
+const openDetail = (row) => {
+  detailId.value = row.id;
+  detailVisible.value = true;
 };
 // ---------------- 归档 / 封存 ----------------
 const actionLoading = ref(false);

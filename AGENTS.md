@@ -89,6 +89,27 @@
   前端自造统计数字。
 - **`el-dialog` 默认允许点遮罩关闭**：禁止写 `:close-on-click-modal="false"`
   （详情/查看类弹框点弹窗外必须能自动关闭，关不掉很反直觉）。只有表单填写类弹框在用户明确要求防误关时才可豁免，且需在代码注释里写明原因。
+- **主页面只留「查询卡 + 表格卡 + 打开弹框」，新增/修改/详情一律拆到模块目录同级的独立组件**（2026-10-12 起全仓改造，`views/patients/` 除外）：
+  - **命名 = 主视图基名去掉 `View` + 角色**：`DepartmentsView.vue` → `DepartmentsEdit.vue` / `DepartmentsDetail.vue` / `DepartmentsAdd.vue`，与主视图同目录同级。
+    禁止 `Dialog` 后缀，禁止再开 `views/<module>/components/`。一页有多个同类弹框时加业务对象限定：`RxReviewBatchEdit.vue`、`RxReviewTalkEdit.vue`。
+  - **`xxxEdit.vue` 同时承载新增与修改**（后端是同一个 `xxxUpsert`/create+update 时）：`row` 为空走新增、有值走修改，标题与提示跟着变。
+    只有新增表单与修改表单的字段/布局确实不同才另开 `xxxAdd.vue`。
+  - **逻辑跟着弹框走**：表单 state、`rules`、校验、提交调用、成功提示全在子组件内；父页面只 `v-model` 控显隐 + `@saved="loadData"` 刷新。
+    组件契约统一用 `modelValue` prop + `update:modelValue` emit（照 `PatientDetailDialog.vue`，全仓不引入 `defineModel`）。
+  - **详情组件自己按 id 取数**（`props: {modelValue, id}`）；父页面最多再传当前行，用于「打开瞬间不闪白」。
+  - **参照数据的归属**：列表列也要用的字典/树（科室类型、科室树等）由页面加载一次、以 prop 传下去，禁止两个子组件各拉一遍同一份树；
+    只有表单用的下拉候选（如科室负责人）随表单进子组件自加载。
+  - **不拆的例外**：`ElMessageBox.confirm` 式的无表单二次确认，以及 <40 行的纯动作弹框（作废 / 扫码 / 补录）留在页面里 —— 拆出去只多一层 props 传递。
+  - **搬动就是搬动，不是重写**：Tailwind 类、`@click.stop`、`v-perm` 码、原有注释逐字跟着走；只允许顺手删掉本条上面禁的 `:close-on-click-modal="false"`（除非原代码带了豁免原因注释）。
+    拆的过程中禁止改接口入参、禁止改字段名、禁止"顺便补个字段"。
+  - **机械判据 + 浏览器验收**：
+    `node workspace/_check_view_split_gate.mjs` 必须 `GATE PASS`（它只看 `*View/*Dashboard/*Overview.vue` 这些页面文件，
+    抽 `el-dialog`/`el-drawer` 块，含 `el-form-item` 或标题带「详情/查看」的内联弹框即违规；确需留在页面的写进
+    `workspace/_view_split_exemptions.json` 并在页面里给出对应理由）。
+    拆完一个模块跑 `UI_OUT=workspace/_verify_<模块>.json node workspace/_verify_view_split_ui.mjs <模块目录>`
+    （真浏览器逐页点开「新增/编辑/详情/查看」按钮 + 补点一次表格首行，**只点开不提交**）：要求弹框都出现、
+    编辑与详情弹框字段有真实值、控制台 0 报错。判「弹框可见」必须用 `getBoundingClientRect().height > 0`，
+    **不能用 `display!==none`** —— 关闭的弹框节点仍留在 DOM 里，用 display 会选中第一个已关闭的弹框、读到一片空值还判通过。
 - **表格行点击开详情时，操作列按钮必须 `@click.stop`**：否则点「编辑/删除」会同时触发行点击弹框（`el-table` 的 row-click
   冒泡自单元格内按钮）。行详情弹框一律只读（`el-form :disabled` + 页脚无确定键），编辑走独立按钮入口。
 - 复用优先级：① `src/components/his/` 下已有骨架与业务组件（`Header` / `Sidebar` / `DashboardLayout` / `PatientSelect` /

@@ -137,52 +137,7 @@
     </el-card>
 
     <!-- 详情对话框 -->
-    <el-dialog v-model="showDetailDialog" :title="`检查详情 - ${selectedOrder?.itemName}`" destroy-on-close
-               width="700px">
-      <template v-if="selectedOrder">
-        <div class="space-y-4 py-2">
-          <div class="grid grid-cols-2 gap-4 rounded-lg border border-slate-200 p-4">
-            <div><p class="text-xs text-slate-400">患者</p>
-              <p class="text-sm font-medium">{{ selectedOrder.patientName }}</p></div>
-            <div><p class="text-xs text-slate-400">记录号</p>
-              <p class="text-sm font-medium">{{ selectedOrder.recordNo }}</p></div>
-            <div><p class="text-xs text-slate-400">申请医生</p>
-              <p class="text-sm font-medium">{{ selectedOrder.doctorName }}</p></div>
-            <div><p class="text-xs text-slate-400">申请科室</p>
-              <p class="text-sm font-medium">{{ selectedOrder.deptName }}</p></div>
-            <div><p class="text-xs text-slate-400">检查项目</p>
-              <p class="text-sm font-medium">{{ selectedOrder.itemName }}</p></div>
-            <div><p class="text-xs text-slate-400">检查部位</p>
-              <p class="text-sm font-medium">{{ selectedOrder.bodyPart }}</p></div>
-            <div><p class="text-xs text-slate-400">费用</p>
-              <p class="text-sm font-medium">¥{{ selectedOrder.price }}</p></div>
-            <div><p class="text-xs text-slate-400">临床诊断</p>
-              <p class="text-sm font-medium">{{ selectedOrder.clinicalDiagnosis }}</p></div>
-          </div>
-
-          <!-- 检查所见 -->
-          <div v-if="selectedOrder.resultDescription" class="rounded-lg border border-slate-200 p-4">
-            <p class="mb-2 text-sm font-medium text-slate-700">检查所见</p>
-            <p class="text-sm text-slate-600 whitespace-pre-wrap">{{ selectedOrder.resultDescription }}</p>
-          </div>
-
-          <!-- 影像诊断 -->
-          <div v-if="selectedOrder.resultConclusion" class="rounded-lg border border-slate-200 p-4">
-            <p class="mb-2 text-sm font-medium text-slate-700">影像诊断/印象</p>
-            <p class="text-sm text-slate-600 whitespace-pre-wrap">{{ selectedOrder.resultConclusion }}</p>
-          </div>
-
-          <!-- 建议 -->
-          <div v-if="selectedOrder.suggestions" class="rounded-lg border border-slate-200 p-4">
-            <p class="mb-2 text-sm font-medium text-slate-700">建议</p>
-            <p class="text-sm text-slate-600 whitespace-pre-wrap">{{ selectedOrder.suggestions }}</p>
-          </div>
-
-          <!-- 影像展示（sql/137：真影像帧，挂在申请单上；详情弹框只读） -->
-          <ExamImagePanel :apply-id="selectedOrder.applyId" :biz-type="1" readonly/>
-        </div>
-      </template>
-    </el-dialog>
+    <InspectionDetail v-model="showDetailDialog" :order="selectedOrder"/>
 
     <!-- 结果录入对话框 -->
     <el-dialog v-model="showResultDialog" destroy-on-close title="检查结果录入" width="900px">
@@ -316,6 +271,7 @@ import {
 } from '@/api/medicaltech';
 import {patientGenderText} from '@/lib/patientGender';
 import ExamImagePanel from '@/components/his/ExamImagePanel.vue';
+import InspectionDetail from './InspectionDetail.vue';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
 

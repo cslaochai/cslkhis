@@ -351,77 +351,10 @@
     </el-tabs>
 
     <!-- 建批入库弹窗 -->
-    <el-dialog v-model="addDialogVisible" destroy-on-close title="建批入库" width="560px">
-      <el-form label-width="90px">
-        <el-form-item label="选择耗材" required>
-          <el-select v-model="addForm.consumableId" :fit-input-width="false" filterable placeholder="从耗材字典选择"
-                     style="width: 100%">
-            <el-option v-for="c in consumableOptions" :key="c.id" :label="`${c.consumableName}（${c.specification || '-'}）`"
-                       :value="c.id"/>
-          </el-select>
-          <p v-if="selectedConsumable()" class="mt-1 text-xs text-slate-400">
-            单位：{{ selectedConsumable()?.unit || '-' }}　字典零售价：¥{{ selectedConsumable()?.retailPrice ?? 0 }}
-          </p>
-        </el-form-item>
-        <el-form-item label="批号" required>
-          <el-input v-model="addForm.batchNo" placeholder="如 GZ20260401"/>
-        </el-form-item>
-        <el-form-item label="生产日期">
-          <el-date-picker v-model="addForm.productionDate" placeholder="选择生产日期" style="width: 100%"
-                          type="date" value-format="YYYY-MM-DD"/>
-        </el-form-item>
-        <el-form-item label="有效期至" required>
-          <el-date-picker v-model="addForm.expiryDate" placeholder="选择有效期" style="width: 100%" type="date"
-                          value-format="YYYY-MM-DD"/>
-        </el-form-item>
-        <el-form-item label="入库数量" required>
-          <el-input-number v-model="addForm.quantity" :min="0.01" :precision="2" style="width: 100%"/>
-        </el-form-item>
-        <el-form-item label="成本价" required>
-          <el-input-number v-model="addForm.costPrice" :min="0" :precision="2" style="width: 100%"/>
-        </el-form-item>
-        <el-form-item label="存放位置">
-          <el-input v-model="addForm.location" placeholder="如 耗材库房A-01"/>
-        </el-form-item>
-        <el-form-item label="供应商">
-          <el-input v-model="addForm.supplier"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="addDialogVisible = false">取消</el-button>
-        <el-button v-perm="'asset:supplies:add'" type="primary" @click="handleAddSubmit">确认入库</el-button>
-      </template>
-    </el-dialog>
+    <SuppliesStockAdd v-model="addDialogVisible" @saved="loadStock"/>
 
     <!-- 科室领用弹窗 -->
-    <el-dialog v-model="consumeDialogVisible" destroy-on-close title="科室领用" width="520px">
-      <el-form label-width="90px">
-        <el-form-item label="选择耗材" required>
-          <el-select v-model="consumeForm.consumableId" :fit-input-width="false" filterable placeholder="从耗材字典选择"
-                     style="width: 100%">
-            <el-option v-for="c in consumableOptions" :key="c.id" :label="`${c.consumableName}（${c.specification || '-'}）`"
-                       :value="c.id"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="领用数量" required>
-          <el-input-number v-model="consumeForm.quantity" :min="0.01" :precision="2" style="width: 100%"/>
-        </el-form-item>
-        <el-form-item label="领用科室" required>
-          <el-select v-model="consumeForm.deptId" :fit-input-width="false" filterable placeholder="选择科室"
-                     style="width: 100%">
-            <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="用途">
-          <el-input v-model="consumeForm.purpose" :rows="2" placeholder="如 病房日常换药使用" type="textarea"/>
-        </el-form-item>
-        <p class="pl-2 text-xs text-slate-400">领用将按先过期先出（FEFO）扣减批次库存，并落出入库流水。</p>
-      </el-form>
-      <template #footer>
-        <el-button @click="consumeDialogVisible = false">取消</el-button>
-        <el-button v-perm="'asset:supplies:add'" type="primary" @click="handleConsumeSubmit">确认领用</el-button>
-      </template>
-    </el-dialog>
+    <SuppliesConsumeAdd v-model="consumeDialogVisible" :dept-options="deptOptions" @saved="onConsumeSaved"/>
 
     <!-- 溯源详情弹窗（字典→入库批次→使用患者→计费 全链） -->
     <el-dialog v-model="traceDetailVisible" destroy-on-close title="溯源全链" width="640px">
@@ -516,9 +449,6 @@ import {onMounted, ref} from 'vue';
 import {Plus, Refresh, Search, TakeawayBox} from '@element-plus/icons-vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {
-  consume,
-  createStock,
-  getConsumableSelectList,
   getConsumeList,
   getStockList,
   getStockLogList,
@@ -534,15 +464,14 @@ import {
 import {getRegistrationList} from '@/api/appoint';
 import {getInpatientListPage} from '@/api/inpatient';
 import PatientSelect from '@/components/his/PatientSelect.vue';
+import SuppliesStockAdd from './SuppliesStockAdd.vue';
+import SuppliesConsumeAdd from './SuppliesConsumeAdd.vue';
 import {getDepartmentSelectList} from '@/api/system';
+import {categoryLabel} from '@/lib/supplies';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 
 const activeTab = ref('stock');
 const loading = ref(false);
-// 类别口径：1-卫生材料 2-注射穿刺 3-医用敷料 4-防护用品 5-其他 6-植入介入（未知(n) 不回落）
-const categoryMap = {
-  1: '卫生材料', 2: '注射穿刺', 3: '医用敷料', 4: '防护用品', 5: '其他', 6: '植入介入',
-};
 const stockStatusMap = {
   1: {label: '正常', color: 'bg-emerald-100 text-emerald-700'},
   2: {label: '预警', color: 'bg-amber-100 text-amber-700'},
@@ -552,7 +481,6 @@ const stockStatusMap = {
 const changeTypeMap = {
   1: '入库', 2: '领用出库', 3: '退回入库', 4: '其他出库', 5: '盘盈', 6: '盘亏', 7: '使用出库',
 };
-const categoryLabel = (c) => (c == null ? '未知' : categoryMap[c] || `未知(${c})`);
 const stockStatusInfo = (s) => (s != null && stockStatusMap[s]) || {
   label: `未知(${s})`,
   color: 'bg-slate-100 text-slate-500'
@@ -582,61 +510,8 @@ const loadStock = async () => {
 };
 // 建批入库弹窗
 const addDialogVisible = ref(false);
-const consumableOptions = ref([]);
-const addForm = ref({
-  consumableId: null,
-  batchNo: '',
-  productionDate: '',
-  expiryDate: '',
-  quantity: null,
-  costPrice: null,
-  location: '',
-  supplier: ''
-});
-const openAddDialog = async () => {
-  addForm.value = {
-    consumableId: null,
-    batchNo: '',
-    productionDate: '',
-    expiryDate: '',
-    quantity: null,
-    costPrice: null,
-    location: '',
-    supplier: ''
-  };
-  try {
-    const res = await getConsumableSelectList();
-    consumableOptions.value = res.data || [];
-  } catch (e) {
-    console.error('加载耗材字典失败:', e);
-  }
+const openAddDialog = () => {
   addDialogVisible.value = true;
-};
-const selectedConsumable = () => consumableOptions.value.find((c) => c.id === addForm.value.consumableId);
-const handleAddSubmit = async () => {
-  const f = addForm.value;
-  if (!f.consumableId)
-    return ElMessage.warning('请从耗材字典选择耗材');
-  if (!f.batchNo.trim())
-    return ElMessage.warning('批号不能为空');
-  if (!f.expiryDate)
-    return ElMessage.warning('有效期不能为空');
-  if (!f.quantity || f.quantity <= 0)
-    return ElMessage.warning('库存数量必须大于0');
-  if (f.costPrice == null || f.costPrice < 0)
-    return ElMessage.warning('成本价不能为负数');
-  try {
-    await createStock({
-      consumableId: f.consumableId, batchNo: f.batchNo.trim(),
-      productionDate: f.productionDate || null, expiryDate: f.expiryDate,
-      quantity: f.quantity, costPrice: f.costPrice, location: f.location, supplier: f.supplier,
-    });
-    ElMessage.success('建批入库成功');
-    addDialogVisible.value = false;
-    loadStock();
-  } catch (e) {
-    ElMessage.error(e?.message || '建批入库失败');
-  }
 };
 // 补货入库
 const handleInbound = async (row) => {
@@ -673,41 +548,16 @@ const handleOutbound = async (row) => {
 // ========== 科室领用 ==========
 const consumeDialogVisible = ref(false);
 const deptOptions = ref([]);
-const consumeForm = ref({consumableId: null, quantity: null, deptId: null, purpose: ''});
-const openConsumeDialog = async () => {
-  consumeForm.value = {consumableId: null, quantity: null, deptId: null, purpose: ''};
-  try {
-    // 科室下拉改用统一入口：原先走 /supplies/deptSelectList，返回的是下划线 dept_name，
-    // 与全仓 20 多处 deptName 不一致（本页靠模板里写 d.dept_name 硬顶）。
-    // 统一后不传 scope → 默认按当前人过滤，字段名也是 deptName。
-    const [cRes, dRes] = await Promise.all([getConsumableSelectList(), getDepartmentSelectList()]);
-    consumableOptions.value = cRes.data || [];
-    deptOptions.value = dRes.data || [];
-  } catch (e) {
-    console.error('加载下拉数据失败:', e);
-  }
+const openConsumeDialog = () => {
+  loadDeptOptions();
   consumeDialogVisible.value = true;
 };
-const handleConsumeSubmit = async () => {
-  const f = consumeForm.value;
-  if (!f.consumableId)
-    return ElMessage.warning('请选择耗材');
-  if (!f.quantity || f.quantity <= 0)
-    return ElMessage.warning('领用数量必须大于0');
-  if (!f.deptId)
-    return ElMessage.warning('请选择领用科室');
-  try {
-    await consume({consumableId: f.consumableId, quantity: f.quantity, deptId: f.deptId, purpose: f.purpose.trim()});
-    ElMessage.success('领用成功，库存已按先过期先出扣减');
-    consumeDialogVisible.value = false;
-    loadStock();
-    if (activeTab.value === 'consume')
-      loadConsume();
-    if (activeTab.value === 'log')
-      loadLog();
-  } catch (e) {
-    ElMessage.error(e?.message || '领用失败');
-  }
+const onConsumeSaved = () => {
+  loadStock();
+  if (activeTab.value === 'consume')
+    loadConsume();
+  if (activeTab.value === 'log')
+    loadLog();
 };
 const consumeList = ref([]);
 const consumeKeyword = ref('');
@@ -782,6 +632,10 @@ const handleUdiScan = async () => {
     traceScanning.value = false;
   }
 };
+// 科室下拉改用统一入口：原先走 /supplies/deptSelectList，返回的是下划线 dept_name，
+// 与全仓 20 多处 deptName 不一致（本页靠模板里写 d.dept_name 硬顶）。
+// 统一后不传 scope → 默认按当前人过滤，字段名也是 deptName。
+// 领用弹窗（科室下拉）与高值使用登记共用这一份，只拉一次。
 const loadDeptOptions = async () => {
   if (deptOptions.value.length)
     return;

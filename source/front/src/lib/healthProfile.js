@@ -96,3 +96,111 @@ export function medicationStatusTone(status) {
             return 'info'
     }
 }
+
+/* ==================== 六组字段配置（表格列 + 编辑对话框共用一个来源） ==================== */
+// type: text | select | date | number | switch
+// options: 静态数组，或 'PATIENT_RELATION'（用 sys_patient_relation 字典）
+// 页面（表格列渲染）与 HealthRecordEdit.vue（表单字段）必须共用这份配置，禁写第二套副本
+export const GROUP_FIELDS = {
+  allergy: [
+    {key: 'allergenName', label: '过敏原', type: 'text', required: true, width: 150},
+    // 类型必填：表列 allergy_type 是 NOT NULL 且取值只有药物/食物/其他（没有"未知"档），
+    // 不标必填的话用户不选就会拿到后端 500，这里提前拦住并说清缺什么
+    {key: 'allergyType', label: '类型', type: 'select', options: ALLERGY_TYPE_OPTIONS, required: true, width: 100},
+    {
+      key: 'allergySeverity',
+      label: '严重程度',
+      type: 'select',
+      options: ALLERGY_SEVERITY_OPTIONS,
+      width: 120,
+      tone: severityTone
+    },
+    {key: 'allergySymptoms', label: '反应表现', type: 'text', minWidth: 180, placeholder: '如：全身皮疹、呼吸困难'},
+    {key: 'allergyDate', label: '首次发生', type: 'date', width: 130},
+    {key: 'occurrenceCount', label: '次数', type: 'number', width: 80},
+    {key: 'treatmentGiven', label: '处理措施', type: 'text', minWidth: 180},
+    {key: 'confirmedBy', label: '确认医生', type: 'text', width: 120},
+  ],
+  pastDisease: [
+    {key: 'diseaseName', label: '疾病名称', type: 'text', required: true, minWidth: 200},
+    {key: 'diseaseCode', label: 'ICD-10', type: 'text', width: 110, placeholder: '如 I10'},
+    {key: 'diagnosisDate', label: '诊断日期', type: 'date', width: 130},
+    {key: 'diagnosisDept', label: '诊断科室', type: 'text', width: 140},
+    {key: 'currentStatus', label: '控制情况', type: 'select', options: DISEASE_STATUS_OPTIONS, width: 110},
+    {key: 'treatmentPlan', label: '治疗方案', type: 'text', minWidth: 200},
+    {key: 'relapseCount', label: '复发次数', type: 'number', width: 100},
+    {key: 'lastFollowupDate', label: '最近随访', type: 'date', width: 130},
+  ],
+  surgery: [
+    {key: 'surgeryName', label: '手术名称', type: 'text', required: true, minWidth: 200},
+    {key: 'surgeryDate', label: '手术日期', type: 'date', required: true, width: 130},
+    {key: 'surgeryType', label: '手术类型', type: 'select', options: SURGERY_TYPE_OPTIONS, width: 110},
+    {key: 'surgeon', label: '主刀医生', type: 'text', width: 120},
+    {key: 'anesthesiaType', label: '麻醉方式', type: 'text', width: 120},
+    {key: 'hospitalName', label: '手术医院', type: 'text', width: 160},
+    {key: 'postopDiagnosis', label: '术后诊断', type: 'text', minWidth: 170},
+    {key: 'recoveryStatus', label: '恢复情况', type: 'select', options: RECOVERY_STATUS_OPTIONS, width: 110},
+    {key: 'complications', label: '术后并发症', type: 'text', minWidth: 160},
+  ],
+  family: [
+    // relationship 在这一组存**称谓文案**（父亲/母亲/伯父），与联系人那一组的数字码值相反
+    {
+      key: 'relationship',
+      label: '与患者关系',
+      type: 'text',
+      required: true,
+      width: 120,
+      placeholder: '如：父亲、母亲、伯父'
+    },
+    {key: 'name', label: '亲属姓名', type: 'text', width: 120},
+    {key: 'age', label: '年龄', type: 'number', width: 80},
+    {key: 'isAlive', label: '在世情况', type: 'switch', options: ALIVE_OPTIONS, width: 110},
+    {key: 'causeOfDeath', label: '死亡原因', type: 'text', width: 150, placeholder: '已故必填'},
+    {key: 'healthStatus', label: '健康状况', type: 'text', minWidth: 180},
+    {key: 'hereditaryDisease', label: '遗传性疾病', type: 'text', width: 160},
+    {key: 'infectiousDisease', label: '传染病史', type: 'text', width: 140},
+  ],
+  medication: [
+    {key: 'drugName', label: '药物名称', type: 'text', required: true, minWidth: 180},
+    {key: 'drugType', label: '药物类型', type: 'select', options: DRUG_TYPE_OPTIONS, width: 110},
+    {key: 'dosage', label: '剂量', type: 'text', width: 100, placeholder: '如 0.5g'},
+    {key: 'frequency', label: '频次', type: 'text', width: 90, placeholder: '如 bid'},
+    {key: 'route', label: '给药途径', type: 'select', options: DRUG_ROUTE_OPTIONS, width: 110},
+    {key: 'startDate', label: '开始用药', type: 'date', required: true, width: 130},
+    {key: 'endDate', label: '停药日期', type: 'date', width: 130},
+    {
+      key: 'status',
+      label: '用药状态',
+      type: 'select',
+      options: MEDICATION_STATUS_OPTIONS,
+      width: 110,
+      tone: medicationStatusTone
+    },
+    {key: 'indications', label: '用药指征', type: 'text', minWidth: 160},
+    {key: 'prescriber', label: '处方医生', type: 'text', width: 120},
+    {key: 'reasonStop', label: '停药原因', type: 'text', width: 150},
+  ],
+  contact: [
+    {key: 'contactName', label: '联系人', type: 'text', required: true, width: 120},
+    // relationship 在这一组是 sys_patient_relation 的**码值**（tinyint），不是文案
+    // 表列 relationship 是 NOT NULL 的字典码值：标必填，别让用户提交后才被后端退回
+    {
+      key: 'relationship',
+      label: '与患者关系',
+      type: 'select',
+      options: 'PATIENT_RELATION',
+      dictLabel: 'relationshipText',
+      required: true,
+      width: 130
+    },
+    {key: 'phone', label: '联系电话', type: 'text', width: 140, placeholder: '11 位手机号'},
+    {
+      key: 'isPrimary',
+      label: '主要联系人',
+      type: 'switch',
+      options: [{label: '是', value: 1}, {label: '否', value: 0}],
+      width: 120
+    },
+    {key: 'address', label: '联系地址', type: 'text', minWidth: 200},
+  ],
+}

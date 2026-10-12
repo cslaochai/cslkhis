@@ -90,48 +90,8 @@
       </div>
     </el-card>
 
-    <el-dialog v-model="dialog" :title="editing ? '编辑字典项' : `新增${currentTab().label}`" width="520px">
-      <el-form label-width="90px">
-        <el-form-item label="字典类型">
-          <el-input :model-value="currentTab().label" disabled/>
-        </el-form-item>
-        <el-form-item label="值" required>
-          <el-input
-              v-model="form.dictValue"
-              :disabled="!!editing"
-              :placeholder="editing ? '值不可修改（存量医嘱在用它）' : '如 静滴 / qd / mg'"
-              data-testid="orderdict-form-value"
-          />
-        </el-form-item>
-        <el-form-item label="显示名" required>
-          <el-input v-model="form.dictLabel" data-testid="orderdict-form-label" placeholder="下拉里显示的文字"/>
-        </el-form-item>
-        <el-form-item label="排序">
-          <el-input-number v-model="form.dictSort" :min="1" class="!w-full" controls-position="right"/>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-radio-group v-model="form.status">
-            <el-radio :value="1">启用</el-radio>
-            <el-radio :value="0">停用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="form.remark" :rows="2" maxlength="500" placeholder="选填" show-word-limit type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <el-alert
-          v-if="editing"
-          :closable="false"
-          class="mt-2"
-          show-icon
-          title="值不允许修改：存量医嘱行里存的就是它，改了历史医嘱会显示成「未知」。要换值请停用这一条、再新增一条。"
-          type="info"
-      />
-      <template #footer>
-        <el-button @click="dialog = false">取消</el-button>
-        <el-button :loading="saving" data-testid="orderdict-submit" type="primary" @click="submit">保存</el-button>
-      </template>
-    </el-dialog>
+    <!-- 新增 / 编辑字典项（子组件 OrderBaseDictEdit，row 为空走新增） -->
+    <OrderBaseDictEdit v-model="editVisible" :row="editRow" :tab="currentTab()" @saved="onSaved"/>
   </div>
 </template>
 
@@ -139,9 +99,10 @@
 import {onMounted, reactive, ref, watch} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {Plus, Refresh, Search} from '@element-plus/icons-vue';
-import {deleteOrderDictById, getOrderDictListPage, upsertOrderDict,} from '@/api/inpatientOrder';
+import {deleteOrderDictById, getOrderDictListPage,} from '@/api/inpatientOrder';
 import {loadOrderUsageOptions, ORDER_DICT_TYPE} from '@/lib/drugUsage';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+import OrderBaseDictEdit from './OrderBaseDictEdit.vue';
 
 const TABS = [
   {type: ORDER_DICT_TYPE.ROUTE, label: '给药途径', hint: '值存中文（历史医嘱 route 列就是中文）'},
@@ -191,71 +152,21 @@ watch(activeType, () => {
   query.pageNum = 1;
   loadList();
 });
-// ---------------- 新增 / 编辑 ----------------
-const dialog = ref(false);
-const saving = ref(false);
-const editing = ref(null);
-const form = reactive({
-  id: null,
-  dictType: ORDER_DICT_TYPE.ROUTE,
-  dictValue: '',
-  dictLabel: '',
-  dictSort: null,
-  status: 1,
-  remark: '',
-});
+// ---------------- 新增 / 编辑（子组件 OrderBaseDictEdit，row 为空走新增） ----------------
+const editVisible = ref(false);
+const editRow = ref(null);
 const openCreate = () => {
-  editing.value = null;
-  form.id = null;
-  form.dictType = activeType.value;
-  form.dictValue = '';
-  form.dictLabel = '';
-  form.dictSort = null;
-  form.status = 1;
-  form.remark = '';
-  dialog.value = true;
+  editRow.value = null;
+  editVisible.value = true;
 };
 const openEdit = (row) => {
-  editing.value = row;
-  form.id = row.id;
-  form.dictType = row.dictType;
-  form.dictValue = row.dictValue;
-  form.dictLabel = row.dictLabel;
-  form.dictSort = row.dictSort;
-  form.status = row.status ?? 1;
-  form.remark = row.remark || '';
-  dialog.value = true;
+  editRow.value = row;
+  editVisible.value = true;
 };
-const submit = async () => {
-  if (!form.dictLabel) {
-    ElMessage.warning('请填写显示名');
-    return;
-  }
-  if (!editing.value && !form.dictValue) {
-    ElMessage.warning('请填写字典值');
-    return;
-  }
-  saving.value = true;
-  try {
-    await upsertOrderDict({
-      id: form.id || undefined,
-      dictType: form.dictType,
-      dictValue: editing.value ? undefined : form.dictValue,
-      dictLabel: form.dictLabel,
-      dictSort: form.dictSort ?? undefined,
-      status: form.status,
-      remark: form.remark || undefined,
-    });
-    ElMessage.success('已保存');
-    dialog.value = false;
-    // 字典页改完要顺手把前端缓存的选项刷一遍，否则当前会话的下拉还是旧值
-    await loadOrderUsageOptions();
-    loadList();
-  } catch (e) {
-    ElMessage.error(e?.message || '保存失败');
-  } finally {
-    saving.value = false;
-  }
+// 字典页改完要顺手把前端缓存的选项刷一遍，否则当前会话的下拉还是旧值
+const onSaved = async () => {
+  await loadOrderUsageOptions();
+  loadList();
 };
 const remove = async (row) => {
   try {

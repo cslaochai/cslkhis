@@ -27,7 +27,7 @@ public class BizClinicSourceController {
     private final BizClinicSourceSlotService bizScheduleSlotService;
 
     @PreAuthorize("hasAuthority('outpatient:schedule:add')")
-    @Operation(summary = "新增或修改排班（新增/修改合一）")
+    @Operation(summary = "新增或修改排班")
     @PostMapping("/scheduleUpsert")
     public Result<Void> scheduleUpsert(@Valid @RequestBody ScheduleUpsertDTO upsertDTO) {
         bizScheduleService.scheduleUpsert(upsertDTO);

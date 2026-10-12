@@ -74,69 +74,8 @@
     </el-card>
 
     <!-- 准入术式 -->
-    <el-dialog v-model="editVisible" :title="form.id ? '修改准入术式' : '新增准入术式'" width="620px">
-      <el-form label-width="120px" size="small">
-        <el-row :gutter="12">
-          <el-col :span="12">
-            <el-form-item label="术式编码" required>
-              <el-input v-model="form.itemCode"/>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="最长滞留(h)" required>
-              <el-input-number v-model="form.maxStayHours" :max="168" :min="1"/>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-form-item label="手术分级" required>
-          <el-select v-model="form.operationLevel" :fit-input-width="false" style="width: 160px">
-            <el-option v-for="(label, code) in operationLevelMap" :key="code" :label="label" :value="Number(code)"/>
-          </el-select>
-          <span class="ml-2 text-xs text-slate-400">决定预约时校验的术者授权级别（日间手术要求术者持有不低于此级）</span>
-        </el-form-item>
-        <el-form-item label="术式名称" required>
-          <el-input v-model="form.itemName"/>
-        </el-form-item>
-        <el-row :gutter="12">
-          <el-col :span="12">
-            <el-form-item label="适用科室">
-              <el-select v-model="form.deptId" clearable filterable placeholder="请选择" style="width: 100%">
-                <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName || d.name" :value="d.id"/>
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="麻醉方式">
-              <el-select v-model="form.anesthesiaType" clearable placeholder="请选择" style="width: 100%">
-                <el-option v-for="d in anesDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="12">
-          <el-col :span="12">
-            <el-form-item label="标准费用(元)">
-              <el-input-number v-model="form.standardFee" :min="0" :precision="2"/>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="状态">
-              <el-radio-group v-model="form.status">
-                <el-radio :value="1">启用</el-radio>
-                <el-radio :value="0">停用</el-radio>
-              </el-radio-group>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-form-item label="备注">
-          <el-input v-model="form.remark"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button :loading="saving" type="primary" @click="save">保存</el-button>
-      </template>
-    </el-dialog>
+    <DaySurgeryItemEdit v-model="editVisible" :row="editingRow" :dept-options="deptOptions" :anes-dict="anesDict"
+                        :operation-level-map="operationLevelMap" @saved="loadList"/>
   </div>
 </template>
 
@@ -159,12 +98,13 @@
 import {onMounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {Plus, Refresh, Search} from '@element-plus/icons-vue';
-import {daySurgeryItemUpsert, listDaySurgeryItemPage, updateDaySurgeryItemStatus} from '@/api/daySurgery';
+import {listDaySurgeryItemPage, updateDaySurgeryItemStatus} from '@/api/daySurgery';
 import {getDepartmentSelectList, getDictDataMapList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import DaySurgeryItemEdit from './DaySurgeryItemEdit.vue';
 // 手术分级（字典 his_operation_level）：日间手术按目录上登记的分级要求术者授权（sql/155）
 const operationLevelMap = {1: '一级', 2: '二级', 3: '三级', 4: '四级'};
 const anesDict = ref([]);
@@ -208,60 +148,14 @@ const resetQuery = () => {
 };
 // ---------------- 新增 / 编辑 ----------------
 const editVisible = ref(false);
-const saving = ref(false);
-const form = reactive({
-  id: null, itemCode: '', itemName: '', deptId: null,
-  maxStayHours: 48, operationLevel: 2, anesthesiaType: null,
-  standardFee: null, status: 1, remark: '',
-});
+const editingRow = ref(null);
 const openCreate = () => {
-  Object.assign(form, {
-    id: null, itemCode: '', itemName: '', deptId: null, maxStayHours: 48, operationLevel: 2,
-    anesthesiaType: null, standardFee: null, status: 1, remark: '',
-  });
+  editingRow.value = null;
   editVisible.value = true;
 };
 const openEdit = (row) => {
-  Object.assign(form, {
-    id: row.id, itemCode: row.itemCode, itemName: row.itemName, deptId: row.deptId ?? null,
-    maxStayHours: Number(row.maxStayHours ?? 48), operationLevel: Number(row.operationLevel ?? 2),
-    anesthesiaType: row.anesthesiaType ?? null,
-    standardFee: row.standardFee ?? null, status: Number(row.status ?? 1), remark: row.remark || '',
-  });
+  editingRow.value = row;
   editVisible.value = true;
-};
-const save = async () => {
-  if (!form.itemCode.trim() || !form.itemName.trim()) {
-    ElMessage.warning('请填写术式编码与名称');
-    return;
-  }
-  saving.value = true;
-  try {
-    const res = await daySurgeryItemUpsert({
-      id: form.id || undefined,
-      itemCode: form.itemCode.trim(),
-      itemName: form.itemName.trim(),
-      deptId: form.deptId || undefined,
-      maxStayHours: form.maxStayHours,
-      operationLevel: form.operationLevel,
-      anesthesiaType: form.anesthesiaType ?? undefined,
-      standardFee: form.standardFee ?? undefined,
-      status: form.status,
-      remark: form.remark.trim() || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success(form.id ? '修改成功' : '术式已录入');
-      editVisible.value = false;
-      loadList();
-    } else {
-      ElMessage.error(res.message || '保存失败');
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('保存失败');
-  } finally {
-    saving.value = false;
-  }
 };
 const toggle = async (row) => {
   const next = Number(row.status) === 1 ? 0 : 1;

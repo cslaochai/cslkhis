@@ -81,142 +81,16 @@
     </el-card>
 
     <!-- 维保登记 -->
-    <el-dialog v-model="maintainVisible" :close-on-click-modal="false" :title="`维保登记 — ${maintainForm.equipmentName}`"
-               width="540px">
-      <el-form label-width="100px">
-        <el-form-item label="维保类型" required>
-          <el-radio-group v-model="maintainForm.maintainType">
-            <el-radio v-for="d in maintainTypeDict" :key="d.dictValue" :value="Number(d.dictValue)">
-              {{ d.dictLabel }}
-            </el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="维保日期" required>
-          <el-date-picker v-model="maintainForm.maintainDate" style="width: 200px" type="date"
-                          value-format="YYYY-MM-DD"/>
-        </el-form-item>
-        <el-form-item label="下次维保日期">
-          <el-date-picker v-model="maintainForm.nextMaintainDate" style="width: 200px" type="date"
-                          value-format="YYYY-MM-DD"/>
-        </el-form-item>
-        <el-form-item label="费用(元)">
-          <el-input-number v-model="maintainForm.cost" :min="0" :precision="2" style="width: 200px"/>
-        </el-form-item>
-        <el-form-item label="故障描述">
-          <el-input v-model="maintainForm.faultDesc" :rows="2" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="处理结果">
-          <el-input v-model="maintainForm.handleResult" :rows="2" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="维保结果" required>
-          <el-radio-group v-model="maintainForm.maintainResult">
-            <el-radio :value="1">正常</el-radio>
-            <el-radio :value="2">异常</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="维保人">
-          <el-input v-model="maintainForm.handlerName" placeholder="不填默认当前登录人" style="width: 200px"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="maintainVisible = false">取消</el-button>
-        <el-button v-perm="'asset:equipment:add'" type="primary" @click="submitMaintain">登记</el-button>
-      </template>
-    </el-dialog>
+    <EquipmentMaintainAdd v-model="maintainVisible" :maintain-type-dict="maintainTypeDict" :row="maintainRow"
+                          @saved="loadList"/>
 
     <!-- 计量登记 -->
-    <el-dialog v-model="meteringVisible" :close-on-click-modal="false" :title="`计量登记 — ${meteringForm.equipmentName}`"
-               width="520px">
-      <el-form label-width="100px">
-        <el-form-item label="计量类型" required>
-          <el-radio-group v-model="meteringForm.meteringType">
-            <el-radio v-for="d in meteringTypeDict" :key="d.dictValue" :value="Number(d.dictValue)">
-              {{ d.dictLabel }}
-            </el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="计量日期" required>
-          <el-date-picker v-model="meteringForm.meteringDate" style="width: 200px" type="date"
-                          value-format="YYYY-MM-DD"/>
-        </el-form-item>
-        <el-form-item label="有效期至" required>
-          <el-date-picker v-model="meteringForm.validUntil" style="width: 200px" type="date"
-                          value-format="YYYY-MM-DD"/>
-        </el-form-item>
-        <el-form-item label="计量结果" required>
-          <el-radio-group v-model="meteringForm.meteringResult">
-            <el-radio :value="1">合格</el-radio>
-            <el-radio :value="2">不合格</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="证书编号">
-          <el-input v-model="meteringForm.certNo" style="width: 220px"/>
-        </el-form-item>
-        <el-form-item label="检定机构">
-          <el-input v-model="meteringForm.agency" style="width: 220px"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="meteringVisible = false">取消</el-button>
-        <el-button v-perm="'asset:equipment:add'" type="primary" @click="submitMetering">登记</el-button>
-      </template>
-    </el-dialog>
+    <EquipmentMeteringAdd v-model="meteringVisible" :metering-type-dict="meteringTypeDict" :row="meteringRow"
+                          @saved="loadList"/>
 
     <!-- 记录详情 -->
-    <el-dialog v-model="detailVisible" :title="`设备记录 — ${detail?.equipmentName || ''}`" width="820px">
-      <template v-if="detail">
-        <div class="text-sm text-gray-500 mb-2">最近维保记录（{{ detail.recentMaintains?.length || 0 }} 条）</div>
-        <el-table :data="detail.recentMaintains || []" border data-testid="maintain-records" size="small">
-          <el-table-column label="类型" width="70">
-            <template #default="{ row }">{{ maintainTypeText(row) }}</template>
-          </el-table-column>
-          <el-table-column label="维保日期" width="110">
-            <template #default="{ row }">{{ fmtDate(row.maintainDate) }}</template>
-          </el-table-column>
-          <el-table-column label="故障描述" min-width="140" prop="faultDesc" show-overflow-tooltip>
-            <template #default="{ row }">{{ row.faultDesc || '—' }}</template>
-          </el-table-column>
-          <el-table-column label="处理结果" min-width="140" prop="handleResult" show-overflow-tooltip>
-            <template #default="{ row }">{{ row.handleResult || '—' }}</template>
-          </el-table-column>
-          <el-table-column label="结果" prop="maintainResultText" width="70"/>
-          <el-table-column label="维保人" prop="handlerName" width="90"/>
-          <el-table-column label="操作" width="70">
-            <template #default="{ row }">
-              <el-button v-perm="'asset:equipment:delete'" link size="small" type="danger"
-                         @click="delMaintain(row)">删除
-              </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-        <div class="text-sm text-gray-500 mt-4 mb-2">最近计量记录（{{ detail.recentMeterings?.length || 0 }} 条）</div>
-        <el-table :data="detail.recentMeterings || []" border data-testid="metering-records" size="small">
-          <el-table-column label="类型" width="70">
-            <template #default="{ row }">{{ meteringTypeText(row) }}</template>
-          </el-table-column>
-          <el-table-column label="计量日期" width="110">
-            <template #default="{ row }">{{ fmtDate(row.meteringDate) }}</template>
-          </el-table-column>
-          <el-table-column label="有效期至" width="110">
-            <template #default="{ row }">{{ fmtDate(row.validUntil) }}</template>
-          </el-table-column>
-          <el-table-column label="结果" prop="meteringResultText" width="70"/>
-          <el-table-column label="证书编号" prop="certNo" width="130">
-            <template #default="{ row }">{{ row.certNo || '—' }}</template>
-          </el-table-column>
-          <el-table-column label="检定机构" min-width="130" prop="agency" show-overflow-tooltip>
-            <template #default="{ row }">{{ row.agency || '—' }}</template>
-          </el-table-column>
-          <el-table-column label="操作" width="70">
-            <template #default="{ row }">
-              <el-button v-perm="'asset:equipment:delete'" link size="small" type="danger"
-                         @click="delMetering(row)">删除
-              </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </template>
-    </el-dialog>
+    <EquipmentRecordsDetail v-model="detailVisible" :id="detailId" :maintain-type-dict="maintainTypeDict"
+                            :metering-type-dict="meteringTypeDict" @saved="loadList"/>
   </div>
 </template>
 
@@ -230,19 +104,16 @@
  * - 维保/计量记录录错可删（后端会按剩余记录重算最近维保日期）
  */
 import {onMounted, reactive, ref} from 'vue';
-import {ElMessage, ElMessageBox} from 'element-plus';
+import {ElMessage} from 'element-plus';
 import {Refresh, Search} from '@element-plus/icons-vue';
-import {
-  equipmentListPage,
-  getEquipmentDetail,
-  maintainCreate,
-  maintainDelete,
-  meteringCreate,
-  meteringDelete,
-} from '@/api/equipment';
+import {equipmentListPage} from '@/api/equipment';
+import EquipmentMaintainAdd from './EquipmentMaintainAdd.vue';
+import EquipmentMeteringAdd from './EquipmentMeteringAdd.vue';
+import EquipmentRecordsDetail from './EquipmentRecordsDetail.vue';
 import {getDictDataMapList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
+import {fmtDate} from '@/lib/equipment';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
 // ---------------- 字典 ----------------
@@ -303,153 +174,30 @@ const reset = () => {
 const statusTag = (v) => ({1: 'success', 2: 'info', 3: 'warning', 4: 'danger'}[v] || 'info');
 // ---------------- 维保 / 计量登记 ----------------
 const maintainVisible = ref(false);
-const maintainForm = reactive({
-  equipmentId: null, equipmentName: '', maintainType: 1,
-  maintainDate: '', nextMaintainDate: '', cost: '', faultDesc: '', handleResult: '',
-  maintainResult: 1, handlerName: '',
-});
+const maintainRow = ref(null);
 const openMaintain = (row) => {
-  Object.assign(maintainForm, {
-    equipmentId: Number(row.id), equipmentName: row.equipmentName, maintainType: 1,
-    maintainDate: '', nextMaintainDate: '', cost: '', faultDesc: '', handleResult: '',
-    maintainResult: 1, handlerName: '',
-  });
+  maintainRow.value = row;
   maintainVisible.value = true;
 };
-const submitMaintain = async () => {
-  if (!maintainForm.maintainDate) {
-    ElMessage.warning('请选择维保日期');
-    return;
-  }
-  try {
-    const res = await maintainCreate({
-      equipmentId: maintainForm.equipmentId,
-      maintainType: maintainForm.maintainType,
-      maintainDate: maintainForm.maintainDate,
-      nextMaintainDate: maintainForm.nextMaintainDate || undefined,
-      cost: maintainForm.cost || undefined,
-      faultDesc: maintainForm.faultDesc || undefined,
-      handleResult: maintainForm.handleResult || undefined,
-      maintainResult: maintainForm.maintainResult,
-      handlerName: maintainForm.handlerName || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success('维保登记成功');
-      maintainVisible.value = false;
-      loadList();
-    } else
-      ElMessage.error(res.message || '登记失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('登记失败');
-  }
-};
 const meteringVisible = ref(false);
-const meteringForm = reactive({
-  equipmentId: null, equipmentName: '', meteringType: 1,
-  meteringDate: '', validUntil: '', meteringResult: 1, certNo: '', agency: '',
-});
+const meteringRow = ref(null);
 const openMetering = (row) => {
-  Object.assign(meteringForm, {
-    equipmentId: Number(row.id), equipmentName: row.equipmentName, meteringType: 1,
-    meteringDate: '', validUntil: '', meteringResult: 1, certNo: '', agency: '',
-  });
+  meteringRow.value = row;
   meteringVisible.value = true;
-};
-const submitMetering = async () => {
-  if (!meteringForm.meteringDate || !meteringForm.validUntil) {
-    ElMessage.warning('请选择计量日期与有效期至');
-    return;
-  }
-  try {
-    const res = await meteringCreate({
-      equipmentId: meteringForm.equipmentId,
-      meteringType: meteringForm.meteringType,
-      meteringDate: meteringForm.meteringDate,
-      validUntil: meteringForm.validUntil,
-      meteringResult: meteringForm.meteringResult,
-      certNo: meteringForm.certNo || undefined,
-      agency: meteringForm.agency || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success('计量登记成功');
-      meteringVisible.value = false;
-      loadList();
-    } else
-      ElMessage.error(res.message || '登记失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('登记失败');
-  }
 };
 // ---------------- 详情（最近维保/计量） ----------------
 const detailVisible = ref(false);
-const detail = ref(null);
-const openDetail = async (row) => {
-  try {
-    const res = await getEquipmentDetail(row.id);
-    if (res.code === 200) {
-      detail.value = res.data;
-      detailVisible.value = true;
-    } else
-      ElMessage.error(res.message || '查询失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('查询失败');
-  }
+const detailId = ref(null);
+const openDetail = (row) => {
+  detailId.value = row.id;
+  detailVisible.value = true;
 };
-const fmtDate = (v) => (v ? String(v).slice(0, 10) : '—');
 const meteringExpired = (row) => row.meteringExpired;
 // 本地时区当日（勿用 toISOString —— UTC+8 零点前会取到昨天）
 const today = (() => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 })();
-const dictVal = (dict, v) => dictLabelText(dict, v);
-const maintainTypeText = (row) => dictVal(maintainTypeDict.value, row.maintainType);
-const meteringTypeText = (row) => dictVal(meteringTypeDict.value, row.meteringType);
-const delMaintain = async (row) => {
-  try {
-    await ElMessageBox.confirm('确认删除该维保记录？删除后档案最近维保日期按剩余记录重算。', '删除确认', {type: 'warning'});
-  } catch {
-    return;
-  }
-  try {
-    const res = await maintainDelete(row.id);
-    if (res.code === 200) {
-      ElMessage.success('已删除');
-      const detailRes = await getEquipmentDetail(detail.value.id);
-      if (detailRes.code === 200)
-        detail.value = detailRes.data;
-      loadList();
-    } else
-      ElMessage.error(res.message || '删除失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('删除失败');
-  }
-};
-const delMetering = async (row) => {
-  try {
-    await ElMessageBox.confirm('确认删除该计量记录？', '删除确认', {type: 'warning'});
-  } catch {
-    return;
-  }
-  try {
-    const res = await meteringDelete(row.id);
-    if (res.code === 200) {
-      ElMessage.success('已删除');
-      const detailRes = await getEquipmentDetail(detail.value.id);
-      if (detailRes.code === 200)
-        detail.value = detailRes.data;
-      loadList();
-    } else
-      ElMessage.error(res.message || '删除失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('删除失败');
-  }
-};
 onMounted(() => {
   loadDicts();
   loadList();

@@ -310,313 +310,18 @@
     </el-tabs>
 
     <!-- ============ 入科弹框 ============ -->
-    <el-dialog v-model="admitDialog" :title="admitTitle" data-testid="icu-admit-dialog" width="620px">
-      <el-form :model="admitForm" label-width="100px">
-        <el-form-item label="住院患者" required>
-          <el-select v-model="admitForm.admissionId" :disabled="!!admitForm.id" :fit-input-width="false" :loading="admissionLoading"
-                     :remote-method="searchAdmission" class="w-full" data-testid="icu-admit-patient"
-                     filterable
-                     placeholder="输入姓名/住院号搜索在院患者" remote>
-            <el-option v-for="a in admissionOptions" :key="a.admissionId"
-                       :label="`${a.patientName}（${a.patientNo}）${a.deptName || ''} ${a.bedNo || ''}`"
-                       :value="a.admissionId"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="ICU 床位" required>
-          <el-select v-model="admitForm.bedId" :disabled="!!admitForm.id" :fit-input-width="false" class="w-52"
-                     data-testid="icu-admit-bed" placeholder="选择空闲 ICU 床">
-            <el-option v-for="b in freeBeds" :key="b.bedId" :label="b.bedNo" :value="b.bedId"/>
-            <el-option v-if="admitForm.id && admitForm.bedId" :key="`cur-${admitForm.bedId}`"
-                       :label="`${admitForm.bedNo}（在科中不可换床，需换床请先出科）`" :value="admitForm.bedId"/>
-          </el-select>
-          <span class="text-xs text-slate-500 ml-2">一次住院同时仅一条在科记录，一床同时只允许一名患者</span>
-        </el-form-item>
-        <el-form-item label="监护等级" required>
-          <el-select v-model="admitForm.careLevel" :fit-input-width="false" class="w-40" data-testid="icu-admit-care">
-            <el-option v-for="d in dicts.careLevel" :key="d.dictValue" :label="d.dictLabel"
-                       :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="入科时间" required>
-          <el-date-picker v-model="admitForm.inTime" :clearable="false" class="w-52"
-                          data-testid="icu-admit-time" placeholder="不得晚于当前、不早于入院" type="datetime"
-                          value-format="YYYY-MM-DD HH:mm:ss"/>
-        </el-form-item>
-        <el-form-item label="入科 GCS">
-          <el-input v-model="admitForm.inGcs" class="w-32" data-testid="icu-admit-gcs" placeholder="3~15，可空"/>
-        </el-form-item>
-        <el-form-item label="入科诊断">
-          <el-input v-model="admitForm.inDiag" data-testid="icu-admit-diag" placeholder="如 重症肺炎、感染性休克"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="admitForm.remark" data-testid="icu-admit-remark"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="admitDialog = false">取消</el-button>
-        <el-button :loading="admitSaving" data-testid="icu-admit-ok" type="primary" @click="saveAdmit">保存</el-button>
-      </template>
-    </el-dialog>
+    <IcuAdmitEdit v-model="admitDialog" :bed="admitBed" :dicts="dicts" :free-beds="freeBeds" :row="admitRow"
+                  @saved="refreshStayRelated"/>
 
     <!-- ============ 出科弹框 ============ -->
-    <el-dialog v-model="outDialog" :title="`出科登记 · ${outForm.patientName}`" data-testid="icu-out-dialog"
-               width="560px">
-      <el-form :model="outForm" label-width="100px">
-        <el-form-item label="入科单号">
-          <span class="text-sm text-slate-600">{{ outForm.stayNo }}</span>
-        </el-form-item>
-        <el-form-item label="出科时间" required>
-          <el-date-picker v-model="outForm.outTime" :clearable="false" class="w-52" data-testid="icu-out-time"
-                          type="datetime" value-format="YYYY-MM-DD HH:mm:ss"/>
-        </el-form-item>
-        <el-form-item label="转出去向" required>
-          <el-select v-model="outForm.outDest" :fit-input-width="false" class="w-44" data-testid="icu-out-dest"
-                     placeholder="选择去向">
-            <el-option v-for="d in dicts.outDest" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item :required="outNeedsReason(outForm.outDest)" label="转归说明">
-          <el-input v-model="outForm.outReason" :placeholder="outNeedsReason(outForm.outDest) ? '转院/死亡/自动离院必填' : '可空'" :rows="2"
-                    data-testid="icu-out-reason"
-                    type="textarea"/>
-        </el-form-item>
-        <el-form-item label="出科 GCS">
-          <el-input v-model="outForm.outGcs" class="w-32" data-testid="icu-out-gcs" placeholder="3~15，可空"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="outDialog = false">取消</el-button>
-        <el-button :loading="outSaving" data-testid="icu-out-ok" type="primary" @click="saveOut">确认出科</el-button>
-      </template>
-    </el-dialog>
+    <IcuOutEdit v-model="outDialog" :dicts="dicts" :row="outRow" @saved="refreshStayRelated"/>
 
     <!-- ============ 入科详情（只读） ============ -->
-    <el-dialog v-model="stayDialog" data-testid="icu-stay-dialog" title="入科记录详情" width="720px">
-      <el-form v-if="stayDetail" :model="stayDetail" disabled label-width="100px">
-        <div class="grid grid-cols-2 gap-x-4">
-          <el-form-item label="入科单号">
-            <el-input :model-value="stayDetail.stayNo"/>
-          </el-form-item>
-          <el-form-item label="状态">
-            <el-tag :type="stayStatusTag(stayDetail.status)" size="small">{{
-                dictText('stayStatus', stayDetail.status)
-              }}
-            </el-tag>
-          </el-form-item>
-          <el-form-item label="患者">
-            <el-input :model-value="`${stayDetail.patientName}（${stayDetail.patientNo}）`"/>
-          </el-form-item>
-          <el-form-item label="来源科室">
-            <el-input :model-value="stayDetail.fromDeptName || '—'"/>
-          </el-form-item>
-          <el-form-item label="ICU 床位">
-            <el-input :model-value="`${stayDetail.wardName || ''} ${stayDetail.bedNo}`"/>
-          </el-form-item>
-          <el-form-item label="监护等级">
-            <el-input :model-value="dictText('careLevel', stayDetail.careLevel)"/>
-          </el-form-item>
-          <el-form-item label="入科时间">
-            <el-input :model-value="stayDetail.inTime"/>
-          </el-form-item>
-          <el-form-item label="入科登记人">
-            <el-input :model-value="stayDetail.inBy || '—'"/>
-          </el-form-item>
-          <el-form-item label="入科 GCS">
-            <el-input :model-value="String(stayDetail.inGcs ?? '—')"/>
-          </el-form-item>
-          <el-form-item label="滞留时长">
-            <el-input :model-value="`${stayDetail.stayHours ?? 0} 小时`"/>
-          </el-form-item>
-          <el-form-item class="col-span-2" label="入科诊断">
-            <el-input :model-value="stayDetail.inDiag || '—'"/>
-          </el-form-item>
-          <el-form-item label="出科时间">
-            <el-input :model-value="stayDetail.outTime || '—'"/>
-          </el-form-item>
-          <el-form-item label="转出去向">
-            <el-input :model-value="stayDetail.outDest ? dictText('outDest', stayDetail.outDest) : '—'"/>
-          </el-form-item>
-          <el-form-item label="出科 GCS">
-            <el-input :model-value="String(stayDetail.outGcs ?? '—')"/>
-          </el-form-item>
-          <el-form-item label="出科登记人">
-            <el-input :model-value="stayDetail.outBy || '—'"/>
-          </el-form-item>
-          <el-form-item class="col-span-2" label="转归说明">
-            <el-input :model-value="stayDetail.outReason || '—'"/>
-          </el-form-item>
-          <el-form-item label="监护记录">
-            <el-input :model-value="`${stayDetail.monitorCount ?? 0} 条 · 最近 ${stayDetail.lastMonitorTime || '无'}`"/>
-          </el-form-item>
-          <el-form-item label="备注">
-            <el-input :model-value="stayDetail.remark || '—'"/>
-          </el-form-item>
-        </div>
-      </el-form>
-      <div v-if="stayDetail" class="mb-1 text-sm font-medium text-slate-700" data-testid="icu-stay-monitors">
-        监护记录（{{ stayMonitors.length }} 条）
-      </div>
-      <el-table v-if="stayDetail" :data="stayMonitors" border max-height="240" size="small">
-        <el-table-column label="时刻" prop="recordTime" width="160"/>
-        <el-table-column label="T" prop="temperature" width="70"/>
-        <el-table-column label="P" prop="pulse" width="60"/>
-        <el-table-column label="BP" width="95">
-          <template #default="{ row }">{{ bpText(row) }}</template>
-        </el-table-column>
-        <el-table-column label="SpO2" prop="spo2" width="70"/>
-        <el-table-column label="GCS" prop="gcsTotal" width="70"/>
-        <el-table-column label="平衡" prop="fluidBalance" width="90"/>
-        <el-table-column label="处置" min-width="160" prop="handling" show-overflow-tooltip/>
-        <el-table-column label="记录人" prop="recorderName" width="100"/>
-      </el-table>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <el-button type="primary" @click="stayDialog = false">关闭</el-button>
-        </div>
-      </template>
-    </el-dialog>
+    <IcuStayDetail v-model="stayDialog" :dicts="dicts" :id="stayViewId"/>
 
     <!-- ============ 监护记录弹框 ============ -->
-    <el-dialog v-model="monDialog" :title="monForm.id ? '修改监护记录' : '登记监护记录'" data-testid="icu-monitor-dialog"
-               width="920px">
-      <el-form :model="monForm" label-width="92px">
-        <div class="grid grid-cols-2 gap-x-4">
-          <el-form-item label="入科记录" required>
-            <el-select v-model="monForm.stayId" :disabled="!!monForm.id" :fit-input-width="false" class="w-full"
-                       data-testid="icu-mon-stay"
-                       filterable placeholder="选择在科患者"
-                       @change="(v: any) => { monForm.patientName = inStays.find((s: any) => String(s.id) === String(v))?.patientName || '' }">
-              <el-option v-for="s in inStays" :key="s.id" :label="`${s.patientName}（${s.bedNo}）${s.stayNo}`"
-                         :value="s.id"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="记录时刻" required>
-            <el-date-picker v-model="monForm.recordTime" :clearable="false" class="w-full"
-                            data-testid="icu-mon-time"
-                            type="datetime" value-format="YYYY-MM-DD HH:mm:ss"/>
-          </el-form-item>
-        </div>
-
-        <div class="text-sm font-medium text-slate-600 mb-1 mt-2">生命体征</div>
-        <div class="grid grid-cols-3 md:grid-cols-6 gap-x-3">
-          <el-form-item label="体温">
-            <el-input v-model="monForm.temperature" data-testid="icu-mon-temp" placeholder="℃"/>
-          </el-form-item>
-          <el-form-item label="脉搏">
-            <el-input v-model="monForm.pulse" data-testid="icu-mon-pulse" placeholder="次/分"/>
-          </el-form-item>
-          <el-form-item label="呼吸">
-            <el-input v-model="monForm.respiratory" data-testid="icu-mon-rr" placeholder="次/分"/>
-          </el-form-item>
-          <el-form-item label="收缩压">
-            <el-input v-model="monForm.sbp" data-testid="icu-mon-sbp" placeholder="mmHg"/>
-          </el-form-item>
-          <el-form-item label="舒张压">
-            <el-input v-model="monForm.dbp" data-testid="icu-mon-dbp" placeholder="mmHg"/>
-          </el-form-item>
-          <el-form-item label="SpO2">
-            <el-input v-model="monForm.spo2" data-testid="icu-mon-spo2" placeholder="%，0~100"/>
-          </el-form-item>
-        </div>
-
-        <div class="grid grid-cols-2 gap-x-4">
-          <el-form-item label="GCS">
-            <div class="flex items-center gap-2">
-              <el-select v-model="monForm.gcsEye" :fit-input-width="false" class="w-24" data-testid="icu-mon-gcs-eye"
-                         placeholder="睁眼">
-                <el-option v-for="v in [4,3,2,1]" :key="v" :label="String(v)" :value="v"/>
-              </el-select>
-              <el-select v-model="monForm.gcsVerbal" :fit-input-width="false" class="w-24" data-testid="icu-mon-gcs-verbal"
-                         placeholder="语言">
-                <el-option v-for="v in [5,4,3,2,1]" :key="v" :label="String(v)" :value="v"/>
-              </el-select>
-              <el-select v-model="monForm.gcsMotor" :fit-input-width="false" class="w-24" data-testid="icu-mon-gcs-motor"
-                         placeholder="运动">
-                <el-option v-for="v in [6,5,4,3,2,1]" :key="v" :label="String(v)" :value="v"/>
-              </el-select>
-              <span class="text-sm text-slate-600" data-testid="icu-mon-gcs-total">总分 {{ monGcsTotal ?? '—' }}</span>
-            </div>
-          </el-form-item>
-          <el-form-item label="瞳孔">
-            <el-input v-model="monForm.pupil" data-testid="icu-mon-pupil" placeholder="如 双侧3mm对光灵敏"/>
-          </el-form-item>
-        </div>
-
-        <div class="text-sm font-medium text-slate-600 mb-1 mt-2">呼吸支持与内环境</div>
-        <div class="grid grid-cols-3 md:grid-cols-6 gap-x-3">
-          <el-form-item label="支持方式">
-            <el-select v-model="monForm.ventMode" :fit-input-width="false" class="w-full" clearable data-testid="icu-mon-vent"
-                       placeholder="可空">
-              <el-option v-for="d in dicts.ventMode" :key="d.dictValue" :label="d.dictLabel"
-                         :value="Number(d.dictValue)"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="FiO2">
-            <el-input v-model="monForm.fio2" data-testid="icu-mon-fio2" placeholder="%，21~100"/>
-          </el-form-item>
-          <el-form-item label="PEEP">
-            <el-input v-model="monForm.peep" data-testid="icu-mon-peep" placeholder="cmH2O"/>
-          </el-form-item>
-          <el-form-item label="CVP">
-            <el-input v-model="monForm.cvp" data-testid="icu-mon-cvp" placeholder="cmH2O"/>
-          </el-form-item>
-        </div>
-
-        <div class="text-sm font-medium text-slate-600 mb-1 mt-2">出入量（液体平衡服务端回算）</div>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-x-3">
-          <el-form-item label="入量">
-            <el-input v-model="monForm.intakeMl" data-testid="icu-mon-intake" placeholder="ml"/>
-          </el-form-item>
-          <el-form-item label="出量">
-            <el-input v-model="monForm.outputMl" data-testid="icu-mon-output" placeholder="ml"/>
-          </el-form-item>
-          <el-form-item label="尿量">
-            <el-input v-model="monForm.urineMl" data-testid="icu-mon-urine" placeholder="ml"/>
-          </el-form-item>
-          <el-form-item label="平衡">
-            <span :class="Number(monBalance) > 0 ? 'text-red-600' : 'text-slate-700'" class="text-sm"
-                  data-testid="icu-mon-balance">
-              {{ monBalance ?? '—' }} ml
-            </span>
-          </el-form-item>
-        </div>
-
-        <div class="text-sm font-medium text-slate-600 mb-1 mt-2">导管（0-无 1-有）</div>
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-x-3">
-          <el-form-item label="人工气道">
-            <el-switch v-model="monForm.hasAirway" :active-value="1" :inactive-value="0" data-testid="icu-mon-airway"/>
-          </el-form-item>
-          <el-form-item label="中心静脉">
-            <el-switch v-model="monForm.hasCvc" :active-value="1" :inactive-value="0" data-testid="icu-mon-cvc"/>
-          </el-form-item>
-          <el-form-item label="动脉置管">
-            <el-switch v-model="monForm.hasArterial" :active-value="1" :inactive-value="0"
-                       data-testid="icu-mon-arterial"/>
-          </el-form-item>
-          <el-form-item label="导尿管">
-            <el-switch v-model="monForm.hasCatheter" :active-value="1" :inactive-value="0"
-                       data-testid="icu-mon-catheter"/>
-          </el-form-item>
-          <el-form-item label="引流管">
-            <el-switch v-model="monForm.hasDrain" :active-value="1" :inactive-value="0" data-testid="icu-mon-drain"/>
-          </el-form-item>
-        </div>
-
-        <el-form-item label="病情观察">
-          <el-input v-model="monForm.conditionDesc" :rows="2" data-testid="icu-mon-condition" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="处置">
-          <el-input v-model="monForm.handling" :rows="2" data-testid="icu-mon-handling" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="monForm.remark" data-testid="icu-mon-remark"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="monDialog = false">取消</el-button>
-        <el-button :loading="monSaving" data-testid="icu-mon-ok" type="primary" @click="saveMonitor">保存</el-button>
-      </template>
-    </el-dialog>
+    <IcuMonitorEdit v-model="monDialog" :dicts="dicts" :in-stays="inStays" :row="monRow" :stay-id="monStayTarget"
+                    @saved="refreshMonitorRelated"/>
 
     <!-- ============ 监护趋势弹框（只读） ============ -->
     <el-dialog v-model="trendDialog" :title="trendTitle" data-testid="icu-trend-dialog" width="1000px">
@@ -663,47 +368,28 @@ import {
   getIcuBedBoard,
   getIcuMonitorTrend,
   getIcuStats,
-  getIcuStay,
-  listIcuAdmissions,
   listIcuMonitorPage,
   listIcuStayPage,
-  outIcuStay,
-  upsertIcuMonitor,
-  upsertIcuStay,
 } from '@/api/icu';
 import {getDictDataMapList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
-import {dictLabelText, localDateStr} from '@/lib/utils';
+import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {
-  balanceOf,
   bpText,
   canEditStay,
   canOutStay,
   canWriteMonitor,
   careLevelTag,
-  gcsIncomplete,
-  gcsTotalOf,
-  outNeedsReason,
   STAY_STATUS,
   stayStatusTag,
 } from '@/lib/icu';
+import IcuAdmitEdit from './IcuAdmitEdit.vue';
+import IcuOutEdit from './IcuOutEdit.vue';
+import IcuStayDetail from './IcuStayDetail.vue';
+import IcuMonitorEdit from './IcuMonitorEdit.vue';
 
 const activeTab = ref('board');
-const nowText = () => {
-  const d = new Date();
-  const p = (v) => String(v).padStart(2, '0');
-  return `${localDateStr(d)} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
-};
-/** 空串统一转 null：未测项不落 0，避免「体温 36」与「没测」混成一列 */
-const blankToNull = (obj) => {
-  const out = {};
-  Object.keys(obj).forEach((k) => {
-    const v = obj[k];
-    out[k] = v === '' || v === undefined ? null : v;
-  });
-  return out;
-};
 // ---------------- 字典 ----------------
 const dicts = reactive({stayStatus: [], careLevel: [], outDest: [], ventMode: []});
 const dictText = (key, value) => dictLabelText(dicts[key], value);
@@ -820,159 +506,30 @@ const loadInStays = async () => {
 };
 // ---------------- 入科 / 修改弹框 ----------------
 const admitDialog = ref(false);
-const admitSaving = ref(false);
-const admitForm = reactive({
-  id: null,
-  admissionId: null,
-  bedId: null,
-  bedNo: '',
-  careLevel: 1,
-  inTime: '',
-  inGcs: null,
-  inDiag: '',
-  remark: '',
-});
-const admitTitle = computed(() => (admitForm.id ? '修改入科信息' : 'ICU 入科登记'));
-const admissionOptions = ref([]);
-const admissionLoading = ref(false);
-const searchAdmission = async (keyword) => {
-  admissionLoading.value = true;
-  try {
-    const res = await listIcuAdmissions({keyword: keyword?.trim() || undefined, limit: 50});
-    admissionOptions.value = res?.data || [];
-  } catch (e) {
-    console.error(e);
-  } finally {
-    admissionLoading.value = false;
-  }
-};
-const openAdmit = async (bed, row) => {
-  admitForm.id = row?.id ?? null;
-  admitForm.inTime = row?.inTime || nowText();
-  admitForm.careLevel = row?.careLevel ?? 1;
-  admitForm.inGcs = row?.inGcs ?? null;
-  admitForm.inDiag = row?.inDiag ?? '';
-  admitForm.remark = row?.remark ?? '';
-  admitForm.bedId = row?.bedId ?? bed?.bedId ?? null;
-  admitForm.bedNo = row?.bedNo ?? bed?.bedNo ?? '';
-  admitForm.admissionId = row?.admissionId ?? null;
-  // 修改时患者不可换：候选下拉里放上这条记录的患者，否则 el-select 只显示 ID
-  admissionOptions.value = row
-      ? [{
-        admissionId: row.admissionId,
-        patientName: row.patientName,
-        patientNo: row.patientNo,
-        deptName: row.fromDeptName,
-        bedNo: row.bedNo,
-        diagnosis: row.inDiag
-      }]
-      : [];
-  if (!row)
-    await searchAdmission('');
+const admitRow = ref(null);
+const admitBed = ref(null);
+const openAdmit = (bed, row) => {
+  admitBed.value = bed ?? null;
+  admitRow.value = row ?? null;
   admitDialog.value = true;
 };
-const saveAdmit = async () => {
-  if (!admitForm.admissionId)
-    return ElMessage.warning('请选择住院患者');
-  if (!admitForm.bedId)
-    return ElMessage.warning('请选择 ICU 床位');
-  if (!admitForm.inTime)
-    return ElMessage.warning('请选择入科时间');
-  admitSaving.value = true;
-  try {
-    const res = await upsertIcuStay({
-      id: admitForm.id || undefined,
-      admissionId: admitForm.admissionId,
-      bedId: admitForm.bedId,
-      careLevel: admitForm.careLevel,
-      inTime: admitForm.inTime,
-      inGcs: admitForm.inGcs === '' ? null : admitForm.inGcs,
-      inDiag: admitForm.inDiag || undefined,
-      remark: admitForm.remark || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success(res.message || '入科已登记');
-      admitDialog.value = false;
-      await Promise.all([loadBoard(), loadStay(), loadInStays()]);
-    } else {
-      ElMessage.error(res.message || '入科登记失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '入科登记失败');
-  } finally {
-    admitSaving.value = false;
-  }
+/** 入科/出科保存后刷新看板、台账与在科名单（沿用原页面的刷新集合） */
+const refreshStayRelated = async () => {
+  await Promise.all([loadBoard(), loadStay(), loadInStays()]);
 };
 // ---------------- 出科弹框 ----------------
 const outDialog = ref(false);
-const outSaving = ref(false);
-const outForm = reactive({
-  id: null,
-  stayNo: '',
-  patientName: '',
-  outTime: '',
-  outDest: null,
-  outReason: '',
-  outGcs: null
-});
+const outRow = ref(null);
 const openOut = (row) => {
-  outForm.id = row.id;
-  outForm.stayNo = row.stayNo;
-  outForm.patientName = row.patientName;
-  outForm.outTime = nowText();
-  outForm.outDest = null;
-  outForm.outReason = '';
-  outForm.outGcs = null;
+  outRow.value = row;
   outDialog.value = true;
-};
-const saveOut = async () => {
-  if (!outForm.outTime)
-    return ElMessage.warning('请选择出科时间');
-  if (!outForm.outDest)
-    return ElMessage.warning('请选择转出去向');
-  if (outNeedsReason(outForm.outDest) && !outForm.outReason.trim()) {
-    return ElMessage.warning('转院/死亡/自动离院必须填写转归说明');
-  }
-  outSaving.value = true;
-  try {
-    const res = await outIcuStay({
-      id: outForm.id,
-      outTime: outForm.outTime,
-      outDest: outForm.outDest,
-      outReason: outForm.outReason || undefined,
-      outGcs: outForm.outGcs === '' || outForm.outGcs == null ? null : outForm.outGcs,
-    });
-    if (res.code === 200) {
-      ElMessage.success(res.message || '已出科');
-      outDialog.value = false;
-      await Promise.all([loadBoard(), loadStay(), loadInStays()]);
-    } else {
-      ElMessage.error(res.message || '出科登记失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '出科登记失败');
-  } finally {
-    outSaving.value = false;
-  }
 };
 // ---------------- 入科详情（只读） ----------------
 const stayDialog = ref(false);
-const stayDetail = ref(null);
-const stayMonitors = ref([]);
-const openStayView = async (id) => {
-  try {
-    const res = await getIcuStay(id);
-    if (res.code === 200 && res.data) {
-      stayDetail.value = res.data;
-      stayDialog.value = true;
-      const trend = await getIcuMonitorTrend(id, undefined);
-      stayMonitors.value = trend?.code === 200 ? (trend.data || []) : [];
-    } else {
-      ElMessage.error(res.message || '查询入科记录失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '查询入科记录失败');
-  }
+const stayViewId = ref(null);
+const openStayView = (id) => {
+  stayViewId.value = id;
+  stayDialog.value = true;
 };
 // ---------------- 页签三：监护记录单 ----------------
 const monLoading = ref(false);
@@ -1009,149 +566,21 @@ const resetMonitorQuery = () => {
   loadMonitor();
 };
 const monDialog = ref(false);
-const monSaving = ref(false);
-const monForm = reactive({
-  id: null,
-  stayId: null,
-  patientName: '',
-  recordTime: '',
-  temperature: '',
-  pulse: '',
-  respiratory: '',
-  sbp: '',
-  dbp: '',
-  spo2: '',
-  gcsEye: null,
-  gcsVerbal: null,
-  gcsMotor: null,
-  pupil: '',
-  cvp: '',
-  ventMode: null,
-  fio2: '',
-  peep: '',
-  intakeMl: '',
-  outputMl: '',
-  urineMl: '',
-  hasAirway: 0,
-  hasCvc: 0,
-  hasArterial: 0,
-  hasCatheter: 0,
-  hasDrain: 0,
-  conditionDesc: '',
-  handling: '',
-  remark: '',
-});
-const monGcsTotal = computed(() => gcsTotalOf(monForm));
-const monBalance = computed(() => balanceOf(monForm.intakeMl, monForm.outputMl));
-const emptyMonitor = () => {
-  Object.assign(monForm, {
-    id: null, stayId: null, patientName: '', recordTime: nowText(),
-    temperature: '', pulse: '', respiratory: '', sbp: '', dbp: '', spo2: '',
-    gcsEye: null, gcsVerbal: null, gcsMotor: null, pupil: '', cvp: '',
-    ventMode: null, fio2: '', peep: '', intakeMl: '', outputMl: '', urineMl: '',
-    hasAirway: 0, hasCvc: 0, hasArterial: 0, hasCatheter: 0, hasDrain: 0,
-    conditionDesc: '', handling: '', remark: '',
-  });
-};
+const monRow = ref(null);
+const monStayTarget = ref(null);
 const openMonitorCreate = async (stayId) => {
   await loadInStays();
-  emptyMonitor();
-  const target = stayId ?? monQuery.stayId ?? inStays.value[0]?.id ?? null;
-  if (target) {
-    monForm.stayId = target;
-    monForm.patientName = inStays.value.find((s) => String(s.id) === String(target))?.patientName || '';
-  }
+  monRow.value = null;
+  monStayTarget.value = stayId ?? monQuery.stayId ?? inStays.value[0]?.id ?? null;
   monDialog.value = true;
 };
 const openMonitorEdit = (row) => {
-  emptyMonitor();
-  Object.assign(monForm, {
-    id: row.id,
-    stayId: row.stayId,
-    patientName: row.patientName,
-    recordTime: row.recordTime,
-    temperature: row.temperature ?? '',
-    pulse: row.pulse ?? '',
-    respiratory: row.respiratory ?? '',
-    sbp: row.sbp ?? '',
-    dbp: row.dbp ?? '',
-    spo2: row.spo2 ?? '',
-    gcsEye: row.gcsEye ?? null,
-    gcsVerbal: row.gcsVerbal ?? null,
-    gcsMotor: row.gcsMotor ?? null,
-    pupil: row.pupil ?? '',
-    cvp: row.cvp ?? '',
-    ventMode: row.ventMode ?? null,
-    fio2: row.fio2 ?? '',
-    peep: row.peep ?? '',
-    intakeMl: row.intakeMl ?? '',
-    outputMl: row.outputMl ?? '',
-    urineMl: row.urineMl ?? '',
-    hasAirway: Number(row.hasAirway || 0),
-    hasCvc: Number(row.hasCvc || 0),
-    hasArterial: Number(row.hasArterial || 0),
-    hasCatheter: Number(row.hasCatheter || 0),
-    hasDrain: Number(row.hasDrain || 0),
-    conditionDesc: row.conditionDesc ?? '',
-    handling: row.handling ?? '',
-    remark: row.remark ?? '',
-  });
+  monRow.value = row;
   monDialog.value = true;
 };
-const saveMonitor = async () => {
-  if (!monForm.stayId)
-    return ElMessage.warning('请选择入科记录');
-  if (!monForm.recordTime)
-    return ElMessage.warning('请选择记录时刻');
-  if (gcsIncomplete(monForm))
-    return ElMessage.warning('GCS 睁眼/语言/运动需同时填写，或全部留空');
-  monSaving.value = true;
-  try {
-    const payload = blankToNull({
-      id: monForm.id,
-      stayId: monForm.stayId,
-      recordTime: monForm.recordTime,
-      temperature: monForm.temperature,
-      pulse: monForm.pulse,
-      respiratory: monForm.respiratory,
-      sbp: monForm.sbp,
-      dbp: monForm.dbp,
-      spo2: monForm.spo2,
-      gcsEye: monForm.gcsEye,
-      gcsVerbal: monForm.gcsVerbal,
-      gcsMotor: monForm.gcsMotor,
-      pupil: monForm.pupil,
-      cvp: monForm.cvp,
-      ventMode: monForm.ventMode,
-      fio2: monForm.fio2,
-      peep: monForm.peep,
-      intakeMl: monForm.intakeMl,
-      outputMl: monForm.outputMl,
-      urineMl: monForm.urineMl,
-      hasAirway: monForm.hasAirway,
-      hasCvc: monForm.hasCvc,
-      hasArterial: monForm.hasArterial,
-      hasCatheter: monForm.hasCatheter,
-      hasDrain: monForm.hasDrain,
-      conditionDesc: monForm.conditionDesc,
-      handling: monForm.handling,
-      remark: monForm.remark,
-    });
-    if (payload.id == null)
-      delete payload.id;
-    const res = await upsertIcuMonitor(payload);
-    if (res.code === 200) {
-      ElMessage.success(res.message || '监护记录已保存');
-      monDialog.value = false;
-      await Promise.all([loadMonitor(), loadBoard(), loadStay()]);
-    } else {
-      ElMessage.error(res.message || '保存监护记录失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '保存监护记录失败');
-  } finally {
-    monSaving.value = false;
-  }
+/** 监护记录保存后刷新记录单、看板与台账（沿用原页面的刷新集合） */
+const refreshMonitorRelated = async () => {
+  await Promise.all([loadMonitor(), loadBoard(), loadStay()]);
 };
 const tubeText = (row) => {
   const items = [

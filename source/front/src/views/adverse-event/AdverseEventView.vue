@@ -156,77 +156,9 @@
       </div>
     </el-card>
 
-    <!-- 上报/修改弹窗 -->
-    <el-dialog
-        v-model="dialogVisible"
-        :title="form.id ? '修改不良事件' : '上报不良事件'"
-        data-testid="ae-dialog"
-        width="640px"
-    >
-      <el-form label-width="90px">
-        <el-form-item label="事件类型" required>
-          <el-select v-model="form.eventType" :fit-input-width="false" data-testid="ae-form-type" placeholder="请选择"
-                     style="width: 100%">
-            <el-option v-for="d in typeDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="事件等级" required>
-          <el-select v-model="form.eventLevel" :fit-input-width="false" data-testid="ae-form-level" placeholder="请选择"
-                     style="width: 100%">
-            <el-option v-for="d in levelDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item v-if="form.eventType === EVENT_TYPE_PRESSURE_INJURY" label="压疮来源" required>
-          <el-select v-model="form.acquiredFlag" :fit-input-width="false" data-testid="ae-form-acquired"
-                     placeholder="院内获得 / 入院带入" style="width: 100%">
-            <el-option v-for="d in acquiredDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="发生科室" required>
-          <el-select v-model="form.occurDeptId" :fit-input-width="false" data-testid="ae-form-dept" filterable
-                     placeholder="请选择" style="width: 100%">
-            <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="发生时间" required>
-          <el-date-picker
-              v-model="form.occurTime"
-              :fit-input-width="false"
-              format="YYYY-MM-DD HH:mm"
-              placeholder="选择发生时间"
-              style="width: 100%"
-              type="datetime"
-              value-format="YYYY-MM-DD HH:mm"
-          />
-        </el-form-item>
-        <el-form-item label="关联患者">
-          <PatientSelect
-              v-model="form.patientId"
-              placeholder="搜索患者（可空：非患者事件）"
-              width="100%"
-              @clear="form.patientId = null; form.patientName = ''"
-              @select="onPatientSelect"
-          />
-        </el-form-item>
-        <el-form-item label="事件摘要" required>
-          <el-input v-model="form.title" data-testid="ae-form-title" maxlength="100" placeholder="一句话概括事件"
-                    show-word-limit/>
-        </el-form-item>
-        <el-form-item label="事件经过" required>
-          <el-input v-model="form.description" :rows="4" data-testid="ae-form-desc"
-                    placeholder="详细经过（时间、地点、人员、过程、后果）" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="即时处置">
-          <el-input v-model="form.immediateAction" :rows="2" placeholder="已采取的即时处置措施（可空）" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button v-perm="['emr:adverseEvent:add','emr:adverseEvent:edit']" :loading="saving" data-testid="ae-save-btn"
-                   type="primary" @click="save">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 上报/修改弹窗（表单与提交已拆至 AdverseEventEdit.vue） -->
+    <AdverseEventEdit v-model="dialogVisible" :acquired-dict="acquiredDict" :dept-options="deptOptions"
+                      :level-dict="levelDict" :row="editRow" :type-dict="typeDict" @saved="onEditSaved"/>
 
     <!-- PDCA 流转弹窗 -->
     <el-dialog v-model="actionVisible" :title="`${actionLabel()} - ${actionRow?.eventNo || ''}`" data-testid="ae-action-dialog"
@@ -249,56 +181,9 @@
       </template>
     </el-dialog>
 
-    <!-- 详情弹窗 -->
-    <el-dialog v-model="detailVisible" :title="`不良事件 ${detail?.eventNo || ''}`" data-testid="ae-detail-dialog"
-               width="680px">
-      <template v-if="detail">
-        <el-descriptions :column="2" border size="small">
-          <el-descriptions-item label="事件类型">{{ typeText(detail.eventType) }}</el-descriptions-item>
-          <el-descriptions-item label="事件等级">
-            <el-tag :type="levelTagType(detail.eventLevel)">{{ levelText(detail.eventLevel) }}</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="发生科室">{{ detail.occurDeptName || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="发生病区">{{ detail.occurWardName || '—' }}</el-descriptions-item>
-          <el-descriptions-item v-if="Number(detail.eventType) === EVENT_TYPE_PRESSURE_INJURY" label="压疮来源">
-            {{ acquiredText(detail.acquiredFlag) || '—' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="发生时间">{{ (detail.occurTime || '').replace('T', ' ') }}</el-descriptions-item>
-          <el-descriptions-item label="关联患者">{{ detail.patientName || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="状态">
-            <el-tag :type="statusTagType(detail.status)">{{ statusText(detail.status) }}</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="上报人">{{ detail.reporterName || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="上报时间">{{
-              (detail.reportTime || '').replace('T', ' ')
-            }}
-          </el-descriptions-item>
-          <el-descriptions-item :span="2" label="事件摘要">{{ detail.title }}</el-descriptions-item>
-          <el-descriptions-item :span="2" label="详细经过">{{ detail.description }}</el-descriptions-item>
-          <el-descriptions-item :span="2" label="即时处置">{{ detail.immediateAction || '—' }}</el-descriptions-item>
-          <el-descriptions-item :span="2" label="处理（D）">
-            <template v-if="detail.handleTime">
-              {{ detail.handlerName }} · {{ (detail.handleTime || '').replace('T', ' ') }}<br/>{{ detail.handleRemark }}
-            </template>
-            <template v-else>—</template>
-          </el-descriptions-item>
-          <el-descriptions-item :span="2" label="整改（C）">
-            <template v-if="detail.rectifyTime">
-              {{ detail.rectifyByName }} · {{
-                (detail.rectifyTime || '').replace('T', ' ')
-              }}<br/>{{ detail.rectifyMeasures }}
-            </template>
-            <template v-else>—</template>
-          </el-descriptions-item>
-          <el-descriptions-item :span="2" label="结案（A）">
-            <template v-if="detail.closeTime">
-              {{ detail.closeByName }} · {{ (detail.closeTime || '').replace('T', ' ') }}<br/>{{ detail.verifyRemark }}
-            </template>
-            <template v-else>—</template>
-          </el-descriptions-item>
-        </el-descriptions>
-      </template>
-    </el-dialog>
+    <!-- 详情弹窗（已拆至 AdverseEventDetail.vue，按 id 自取详情） -->
+    <AdverseEventDetail v-model="detailVisible" :acquired-dict="acquiredDict" :id="detailId" :level-dict="levelDict"
+                        :status-dict="statusDict" :type-dict="typeDict"/>
   </div>
 </template>
 
@@ -309,20 +194,19 @@ import {Refresh, Search, WarningFilled} from '@element-plus/icons-vue';
 import {
   closeAdverseEvent,
   deleteAdverseEvent,
-  getAdverseEventDetail,
   getAdverseEventList,
   getAdverseEventStats,
   handleAdverseEvent,
   rectifyAdverseEvent,
-  upsertAdverseEvent,
 } from '@/api/adverseEvent';
 import {getDepartmentSelectList, getDictDataMapList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {ADVERSE_EVENT_NEXT_ACTION, levelTagType, statusTagType} from '@/lib/adverseEvent';
-import PatientSelect from '@/components/his/PatientSelect.vue';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import AdverseEventEdit from './AdverseEventEdit.vue';
+import AdverseEventDetail from './AdverseEventDetail.vue';
 
 const loading = ref(true);
 const rows = ref([]);
@@ -349,9 +233,6 @@ const deptOptions = ref([]);
 const typeText = (v) => dictLabelText(typeDict.value, v);
 const levelText = (v) => dictLabelText(levelDict.value, v);
 const statusText = (v) => dictLabelText(statusDict.value, v);
-const acquiredText = (v) => dictLabelText(acquiredDict.value, v);
-/** 压力性损伤（字典 his_adverse_event_type=3）：唯一要区分院内获得/入院带入的类型 */
-const EVENT_TYPE_PRESSURE_INJURY = 3;
 // 当前登录人（编辑/删除仅上报人本人；流转动作任何人可点，收口在服务端状态机）
 const me = reactive({employeeId: null});
 try {
@@ -435,102 +316,21 @@ const resetQuery = () => {
   loadList();
 };
 // ------------------------------------------------------------------
-// 上报 / 修改弹窗
+// 上报 / 修改弹窗（表单与提交已拆至 AdverseEventEdit.vue，这里只管开关与行快照）
 // ------------------------------------------------------------------
 const dialogVisible = ref(false);
-const saving = ref(false);
-const form = reactive({
-  id: null,
-  eventType: null,
-  eventLevel: null,
-  occurDeptId: null,
-  acquiredFlag: null,
-  occurTime: '',
-  patientId: null,
-  patientName: '',
-  title: '',
-  description: '',
-  immediateAction: '',
-});
+const editRow = ref(null);
+const onEditSaved = () => {
+  loadList();
+  loadStats();
+};
 const openCreate = () => {
-  form.id = null;
-  form.eventType = null;
-  form.eventLevel = null;
-  form.occurDeptId = null;
-  form.acquiredFlag = null;
-  form.occurTime = '';
-  form.patientId = null;
-  form.patientName = '';
-  form.title = '';
-  form.description = '';
-  form.immediateAction = '';
+  editRow.value = null;
   dialogVisible.value = true;
 };
 const openEdit = (row) => {
-  form.id = row.id;
-  form.eventType = Number(row.eventType);
-  form.eventLevel = Number(row.eventLevel);
-  form.occurDeptId = row.occurDeptId;
-  form.acquiredFlag = row.acquiredFlag == null ? null : Number(row.acquiredFlag);
-  form.occurTime = (row.occurTime || '').slice(0, 16);
-  form.patientId = row.patientId;
-  form.patientName = row.patientName || '';
-  form.title = row.title || '';
-  form.description = row.description || '';
-  form.immediateAction = row.immediateAction || '';
+  editRow.value = row;
   dialogVisible.value = true;
-};
-const onPatientSelect = (p) => {
-  form.patientId = p?.id ?? null;
-  form.patientName = p?.name || p?.patientName || '';
-};
-const save = async () => {
-  if (!form.eventType || !form.eventLevel || !form.occurDeptId) {
-    ElMessage.warning('请选择事件类型、等级与发生科室');
-    return;
-  }
-  if (!form.occurTime) {
-    ElMessage.warning('请选择发生时间');
-    return;
-  }
-  if (!form.title.trim() || !form.description.trim()) {
-    ElMessage.warning('请填写事件摘要与详细经过');
-    return;
-  }
-  // 压疮必须显式选来源：入院带入的皮肤问题不算本院的发生率（护理质控千床日率口径），
-  // 让服务端兜默认值等于把「没区分」洗成「院内获得」，评审一查就对不上
-  if (form.eventType === EVENT_TYPE_PRESSURE_INJURY && !form.acquiredFlag) {
-    ElMessage.warning('压力性损伤请选择来源：院内获得还是入院带入');
-    return;
-  }
-  saving.value = true;
-  try {
-    const res = await upsertAdverseEvent({
-      id: form.id || undefined,
-      eventType: form.eventType,
-      eventLevel: form.eventLevel,
-      occurDeptId: form.occurDeptId,
-      acquiredFlag: form.eventType === EVENT_TYPE_PRESSURE_INJURY ? form.acquiredFlag : undefined,
-      occurTime: form.occurTime.length === 16 ? `${form.occurTime}:00` : form.occurTime,
-      patientId: form.patientId || undefined,
-      title: form.title.trim(),
-      description: form.description.trim(),
-      immediateAction: form.immediateAction.trim() || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success(form.id ? '修改成功' : '上报成功');
-      dialogVisible.value = false;
-      loadList();
-      loadStats();
-    } else {
-      ElMessage.error(res.message || '保存失败');
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('保存失败');
-  } finally {
-    saving.value = false;
-  }
 };
 const remove = async (row) => {
   try {
@@ -594,23 +394,13 @@ const submitAction = async () => {
   }
 };
 // ------------------------------------------------------------------
-// 详情弹窗
+// 详情弹窗（已拆至 AdverseEventDetail.vue，组件按 id 自取详情）
 // ------------------------------------------------------------------
 const detailVisible = ref(false);
-const detail = ref(null);
-const openDetail = async (row) => {
-  try {
-    const res = await getAdverseEventDetail(row.id);
-    if (res.code === 200) {
-      detail.value = res.data;
-      detailVisible.value = true;
-    } else {
-      ElMessage.error(res.message || '查询详情失败');
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('查询详情失败');
-  }
+const detailId = ref(null);
+const openDetail = (row) => {
+  detailId.value = row.id;
+  detailVisible.value = true;
 };
 onMounted(() => {
   loadDicts();

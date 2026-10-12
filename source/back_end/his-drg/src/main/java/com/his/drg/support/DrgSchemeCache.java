@@ -1,6 +1,8 @@
 package com.his.drg.support;
 
 import com.his.common.util.TextUtil;
+import com.his.drg.config.DrgProperties;
+import com.his.drg.config.DrgSchemeConfig;
 import com.his.drg.enums.DrgCcLevelEnum;
 import com.his.drg.mapper.DrgSimMapper;
 import com.his.drg.vo.CcMccRowVO;
@@ -8,7 +10,6 @@ import com.his.drg.vo.DrgAdrgRowVO;
 import com.his.drg.vo.DrgGroupRowVO;
 import com.his.drg.vo.DrgMdcRowVO;
 import com.his.drg.vo.DrgSetRowVO;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -25,7 +26,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * 分组方案快照缓存：按版本各装载一份三级目录 + 码集合 + 并发症合并症目录，供入组反复判定。
  *
  * <p>为什么按版本分桶：2.0/3.0 共用同一套 CHS-DRG 编码（3.0 在 2.0 上增组），码值同名，
- * 必须按 version 隔离装载，否则两版规则会混装互相污染模拟结果。{@link #DEFAULT_VERSION} 是当前启用的版本。
+ * 必须按 version 隔离装载，否则两版规则会混装互相污染模拟结果。默认启用版本由
+ * {@link DrgSchemeConfig} 决定（解析自 sys_config / Redis / yml，见 config/domain/his-drg.yml），
+ * 启动日志会打印实际取值。
  *
  * <p>为什么必须缓存：一份官方方案是 27 条 MDC、537 条 ADRG、870 条 DRG、12.8 万条集合码、
  * 7900 余条并发症目录。批量模拟原本每条首页都要把这几张表整个捞一遍并逐条比前缀。
@@ -35,28 +38,35 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class DrgSchemeCache {
 
-    /**
-     * 当前默认启用的分组方案版本（存量数据全是 3.0，改这个值不会改变任何现有行为）
-     */
-    public static final String DEFAULT_VERSION = "3.0";
-
     private final DrgSimMapper drgSimMapper;
+    private final DrgSchemeConfig drgSchemeConfig;
+
+    public DrgSchemeCache(DrgSimMapper drgSimMapper, DrgSchemeConfig drgSchemeConfig) {
+        this.drgSimMapper = drgSimMapper;
+        this.drgSchemeConfig = drgSchemeConfig;
+    }
 
     private final Map<String, DrgScheme> schemes = new ConcurrentHashMap<>();
 
     public DrgScheme get() {
-        return get(DEFAULT_VERSION);
+        return get(drgSchemeConfig.getDefaultVersion());
     }
 
     /**
      * 取指定版本的方案快照，首次访问该版本时惰性装载并缓存。
      */
     public DrgScheme get(String version) {
-        String v = version == null || version.isBlank() ? DEFAULT_VERSION : version;
+        String v = version == null || version.isBlank() ? drgSchemeConfig.getDefaultVersion() : version;
         return schemes.computeIfAbsent(v, this::load);
+    }
+
+    /**
+     * 当前默认启用的库内 version 字符串（如 chs-drg-2.0 / 3.0）。
+     */
+    public String getDefaultVersion() {
+        return drgSchemeConfig.getDefaultVersion();
     }
 
     private DrgScheme load(String version) {

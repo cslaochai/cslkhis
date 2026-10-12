@@ -8,13 +8,7 @@
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS=0;
 
--- 1) 四张目录表唯一键纳入 version（ccmcc 唯一键本就含 version，跳过）
-ALTER TABLE sys_drg_mdc   DROP INDEX uk_mdc_code,   ADD UNIQUE KEY uk_mdc_code   (mdc_code, version, del_flag);
-ALTER TABLE sys_drg_adrg  DROP INDEX uk_adrg_code,  ADD UNIQUE KEY uk_adrg_code  (adrg_code, version, del_flag);
-ALTER TABLE sys_drg_set   DROP INDEX uk_set_icd,    ADD UNIQUE KEY uk_set_icd    (set_code, icd_code, version, del_flag);
-ALTER TABLE sys_drg_group DROP INDEX uk_drg_code,  ADD UNIQUE KEY uk_drg_code  (drg_code, version, del_flag);
-
 -- 2) 模拟结果表增加 version 列（默认 3.0，覆盖存量行），唯一键改为 (summary_id, version)
 ALTER TABLE biz_drg_sim_result
-  ADD COLUMN version varchar(32) NOT NULL DEFAULT '3.0' COMMENT '分组方案版本（3.0/2.0）' AFTER drg_name;
+  ADD COLUMN version varchar(32) NOT NULL COMMENT '分组方案版本（3.0/2.0）' AFTER drg_name;
 ALTER TABLE biz_drg_sim_result DROP INDEX uk_summary, ADD UNIQUE KEY uk_summary (summary_id, version);

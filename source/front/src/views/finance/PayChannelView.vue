@@ -107,134 +107,29 @@
       </div>
     </el-card>
 
-    <!-- 拉取渠道账单 -->
-    <el-dialog v-model="importVisible" title="拉取渠道账单" width="420px">
-      <el-form label-width="90px">
-        <el-form-item label="渠道">
-          <el-select v-model="importForm.channel" style="width: 100%" data-testid="payc-import-channel">
-            <el-option v-for="c in CHANNELS" :key="c.value" :label="c.label" :value="c.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="账单日期">
-          <el-date-picker v-model="importForm.billDate" type="date" value-format="YYYY-MM-DD"
-                          style="width: 100%" data-testid="payc-import-date" />
-        </el-form-item>
-        <el-alert type="info" :closable="false"
-                  title="当前未接真实渠道：后端打印会在服务端控制台打印拉取动作，并按本地当日支付流水生成模拟账单（幂等，可重复拉取）" />
-      </el-form>
-      <template #footer>
-        <el-button @click="importVisible = false">取消</el-button>
-        <el-button type="primary" data-testid="payc-import-ok" @click="doImport">拉取</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 手工登记 -->
-    <el-dialog v-model="manualVisible" title="手工登记渠道流水" width="460px">
-      <el-form label-width="100px">
-        <el-form-item label="渠道" required>
-          <el-select v-model="manualForm.channel" style="width: 100%" data-testid="payc-manual-channel">
-            <el-option v-for="c in CHANNELS" :key="c.value" :label="c.label" :value="c.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="账单日期" required>
-          <el-date-picker v-model="manualForm.billDate" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="渠道流水号" required>
-          <el-input v-model="manualForm.channelTradeNo" data-testid="payc-manual-trade-no" />
-        </el-form-item>
-        <el-form-item label="金额" required>
-          <!-- 退款账单行是负数，min 不能卡 0.01，否则渠道退的那笔钱根本登记不进去 -->
-          <el-input-number v-model="manualForm.amount" :min="-999999" :precision="2" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="交易时间">
-          <el-date-picker v-model="manualForm.tradeTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="manualForm.remark" type="textarea" :rows="2" maxlength="490" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="manualVisible = false">取消</el-button>
-        <el-button type="primary" data-testid="payc-manual-ok" @click="doManual">登记</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 勾对 -->
-    <el-dialog v-model="matchVisible" title="人工勾对" width="560px">
-      <el-form label-width="100px">
-        <el-form-item label="渠道流水">
-          <span>{{ matchRow ? matchRow.channelTradeNo : '' }}</span>
-        </el-form-item>
-        <el-form-item label="渠道金额">
-          <span class="strong">¥{{ matchRow ? money(matchRow.amount) : '' }}</span>
-        </el-form-item>
-        <el-form-item label="本地支付流水" required>
-          <el-select v-model="matchForm.localTxnNo" filterable placeholder="选择当日该渠道的成功支付流水"
-                     style="width: 100%" data-testid="payc-match-txn" :fit-input-width="false">
-            <el-option v-for="c in candidates" :key="c.txnNo" :value="c.txnNo"
-                       :label="`${c.txnNo}  ${c.patientName}  ¥${money(c.amount)}  ${c.directionText}  ${c.txnTime}`" />
-          </el-select>
-        </el-form-item>
-        <el-alert type="warning" :closable="false"
-                  title="两侧金额（收正退负）不一致会被拒绝；差额需要定性的请改用「差额处理」登记长款/短款" />
-      </el-form>
-      <template #footer>
-        <el-button @click="matchVisible = false">取消</el-button>
-        <el-button type="primary" data-testid="payc-match-ok" @click="doMatch">确认勾对</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 长短款处理 -->
-    <el-dialog v-model="diffVisible" title="长款 / 短款处理" width="480px">
-      <el-form label-width="100px">
-        <el-form-item label="渠道流水">
-          <span>{{ diffRow ? diffRow.channelTradeNo : '' }}（¥{{ diffRow ? money(diffRow.amount) : '' }}）</span>
-        </el-form-item>
-        <el-form-item label="处理结论" required>
-          <el-radio-group v-model="diffForm.handleType" data-testid="payc-diff-type">
-            <el-radio :value="2">长款（渠道有、本地无）</el-radio>
-            <el-radio :value="3">短款（金额不符待核）</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="处理说明" required>
-          <el-input v-model="diffForm.handleRemark" type="textarea" :rows="3" maxlength="490"
-                    placeholder="定性依据必填（如：重复推送的渠道流水，已联系渠道冲正）" data-testid="payc-diff-remark" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="diffVisible = false">取消</el-button>
-        <el-button type="primary" data-testid="payc-diff-ok" @click="doDiff">确认处理</el-button>
-      </template>
-    </el-dialog>
+    <PayChannelImportAdd v-model="importVisible" :bill-date="query.billDate" @saved="reload" />
+    <PayChannelManualAdd v-model="manualVisible" :bill-date="query.billDate" @saved="reload" />
+    <PayChannelMatchEdit v-model="matchVisible" :row="matchRow" @saved="reload" />
+    <PayChannelDiffEdit v-model="diffVisible" :row="diffRow" @saved="reload" />
   </div>
 </template>
 
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
 import { PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/lib/pagination'
 import { useTableMaxHeight } from '@/lib/useTableMaxHeight'
+import { CHANNELS, MATCH_STATUS, money } from '@/lib/payChannel'
+import PayChannelImportAdd from './PayChannelImportAdd.vue'
+import PayChannelManualAdd from './PayChannelManualAdd.vue'
+import PayChannelMatchEdit from './PayChannelMatchEdit.vue'
+import PayChannelDiffEdit from './PayChannelDiffEdit.vue'
 import * as api from '@/api/payChannel'
 
-// 渠道/状态枚举单点定义在本文件（无字典码值，命中不了渲染 未知(n) 不回落）
-// 渠道只列走商户平台的在线渠道（对齐后端 PaymentMethodEnum.channelBacked）：
-// 4 是医保个人账户，刷参保人卡扣的钱不由商户平台出账单，混进来会让"渠道短款"和"医保欠付"看起来是同一件事。
-const CHANNELS = [
-  { value: 2, label: '微信' },
-  { value: 3, label: '支付宝' },
-  { value: 6, label: '银行卡' },
-]
-const MATCH_STATUS = [
-  { value: 0, label: '待勾对' },
-  { value: 1, label: '已勾对' },
-  { value: 2, label: '长款' },
-  { value: 3, label: '短款' },
-]
+// 渠道/状态枚举单点定义在 @/lib/payChannel（页面与拆出的弹框组件共用，命中不了渲染 未知(n) 不回落）
 const chText = (v) => CHANNELS.find(c => c.value === v)?.label ?? `未知(${v})`
 const statusText = (v) => MATCH_STATUS.find(s => s.value === v)?.label ?? `未知(${v})`
 const statusTag = (v) => ({ 0: 'info', 1: 'success', 2: 'danger', 3: 'warning' }[v] ?? 'info')
 
-const money = (v) => Number(v ?? 0).toFixed(2)
 const sumFlow = (row) => Number(row.matchedAmount ?? 0) + Number(row.unmatchedAmount ?? 0)
 const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 19) : '—')
 const unknown = (v) => `未知(${v})`
@@ -271,78 +166,27 @@ function reload() {
 
 onMounted(reload)
 
-// ---- 拉取 ----
+// ---- 弹框拆到同目录兄弟组件，页面只管开关与把行/查询日期递进去 ----
 const importVisible = ref(false)
-const importForm = reactive({ channel: 2, billDate: null })
-function openImport() {
-  importForm.billDate = query.billDate || today()
-  importVisible.value = true
-}
-async function doImport() {
-  const { data } = await api.importBill({ ...importForm })
-  ElMessage.success(`拉取完成，新落台账 ${data ?? 0} 笔（服务端控制台可见 [M7支付渠道口子] 打印）`)
-  importVisible.value = false
-  reload()
-}
-
-// ---- 手工登记 ----
 const manualVisible = ref(false)
-const manualForm = reactive({ channel: 2, billDate: null, channelTradeNo: '', amount: null, tradeTime: null, remark: '' })
-function openManual() {
-  manualForm.billDate = query.billDate || today()
-  manualVisible.value = true
-}
-async function doManual() {
-  await api.manualRegister({ ...manualForm })
-  ElMessage.success('已登记渠道流水')
-  manualVisible.value = false
-  reload()
-}
-
-// ---- 勾对 ----
 const matchVisible = ref(false)
 const matchRow = ref(null)
-const candidates = ref([])
-const matchForm = reactive({ localTxnNo: '' })
-async function openMatch(row) {
-  matchRow.value = row
-  matchForm.localTxnNo = ''
-  const { data } = await api.matchCandidates(row.id)
-  candidates.value = data || []
-  matchVisible.value = true
-}
-async function doMatch() {
-  await api.match({ id: matchRow.value.id, localTxnNo: matchForm.localTxnNo })
-  ElMessage.success('勾对成功')
-  matchVisible.value = false
-  reload()
-}
-
-// ---- 长短款 ----
 const diffVisible = ref(false)
 const diffRow = ref(null)
-const diffForm = reactive({ handleType: 2, handleRemark: '' })
+
+function openImport() {
+  importVisible.value = true
+}
+function openManual() {
+  manualVisible.value = true
+}
+function openMatch(row) {
+  matchRow.value = row
+  matchVisible.value = true
+}
 function openDiff(row) {
   diffRow.value = row
-  diffForm.handleType = 2
-  diffForm.handleRemark = ''
   diffVisible.value = true
-}
-async function doDiff() {
-  if (!diffForm.handleRemark.trim()) {
-    ElMessage.warning('长款/短款定性必须写明处理说明')
-    return
-  }
-  await api.handleDiff({ id: diffRow.value.id, handleType: diffForm.handleType, handleRemark: diffForm.handleRemark })
-  ElMessage.success('已登记处理结论')
-  diffVisible.value = false
-  reload()
-}
-
-function today() {
-  // 本地日期（UTC+8 早 8 点前 toISOString 会取到昨天）
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 </script>
 
@@ -353,8 +197,5 @@ function today() {
 }
 .muted {
   color: #909399;
-}
-.strong {
-  font-weight: 600;
 }
 </style>

@@ -152,3 +152,16 @@ export function nrsLocalTotal(impair, severity, ageScore) {
 export function nrsLocalRisk(total) {
   return total >= NRS_RISK_CUTOFF
 }
+
+/** 应答耗时展示：<60 分钟按分钟，否则按小时（会诊列表列与详情弹框共用） */
+export function responseText(row) {
+  if (row.responseMinutes == null) return '—'
+  const m = Number(row.responseMinutes)
+  return m < 60 ? `${m} 分钟` : `${(m / 60).toFixed(1)} 小时`
+}
+
+/** 当前月份 YYYY-MM（月度快照的默认统计月，页面预览与生成弹框共用） */
+export function currentMonthStr() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}

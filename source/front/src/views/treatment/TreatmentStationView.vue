@@ -359,127 +359,16 @@
     </div>
 
     <!-- 打卡确认 -->
-    <el-dialog v-model="execDlg.visible"
-               :title="`打卡：${execDlg.target?.patientName || ''} · ${execDlg.target?.itemName || ''} 第 ${execDlg.target?.execSeq || ''} 次`"
-               width="560px">
-      <div class="text-sm text-gray-600 mb-3">
-        排期 {{ execDlg.target?.planDate }} · 单价 {{ money(execDlg.target?.price) }}，确认后按次计入本次就诊的治疗费单。
-      </div>
-      <el-form label-width="88px">
-        <el-form-item label="患者反应">
-          <el-radio-group v-model="execDlg.form.recordStatus" data-testid="exec-record-status">
-            <el-radio :value="1">正常</el-radio>
-            <el-radio :value="0">异常</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="治疗记录">
-          <el-input v-model="execDlg.form.result" :rows="2" data-testid="exec-result" maxlength="500"
-                    placeholder="留空则记「第 N 次治疗完成，过程顺利」" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="execDlg.form.remark" maxlength="200" placeholder="选填"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="execDlg.visible = false">取消</el-button>
-        <el-button v-perm="'opd:treatmentStation:edit'" :loading="execDlg.saving" data-testid="exec-submit"
-                   type="primary" @click="doExecute">确认打卡
-        </el-button>
-      </template>
-    </el-dialog>
+    <TreatmentStationExecEdit v-model="execVisible" :target="execTarget" @saved="refreshAll"/>
 
     <!-- 单条改期 -->
-    <el-dialog v-model="reschDlg.visible"
-               :title="`改期：第 ${reschDlg.target?.execSeq || ''} 次（${reschDlg.target?.itemName || ''}）`"
-               width="480px">
-      <el-form label-width="88px">
-        <el-form-item label="改到">
-          <span data-testid="resch-date" style="display: contents">
-            <el-date-picker v-model="reschDlg.form.planDate" style="width: 100%" type="date" value-format="YYYY-MM-DD"/>
-          </span>
-        </el-form-item>
-        <el-form-item label="原因">
-          <el-input v-model="reschDlg.form.reason" :rows="2" data-testid="resch-reason" maxlength="200"
-                    placeholder="如：患者外出，顺延一天" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="reschDlg.visible = false">取消</el-button>
-        <el-button v-perm="'opd:treatmentStation:edit'" :loading="reschDlg.saving" data-testid="resch-submit"
-                   type="primary" @click="doReschedule">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <TreatmentStationRescheduleEdit v-model="reschVisible" :target="reschTarget" @saved="refreshAll"/>
 
     <!-- 疗程重排（未打任何一次卡时） -->
-    <el-dialog v-model="reschApplyDlg.visible" :title="`重排疗程：${reschApplyDlg.target?.applyNo || ''}`" width="480px">
-      <div class="text-xs text-gray-500 mb-3">
-        还没有打过任何一次卡，因此可以整体改次数/间隔/开始日；旧排期会被重建。已开始或已产生计费痕迹的疗程只能逐次改期。
-      </div>
-      <el-form label-width="88px">
-        <el-form-item label="总次数">
-          <el-input-number v-model="reschApplyDlg.form.totalTimes" :max="60" :min="1" controls-position="right"/>
-        </el-form-item>
-        <el-form-item label="间隔天数">
-          <el-input-number v-model="reschApplyDlg.form.intervalDays" :max="30" :min="1" controls-position="right"/>
-        </el-form-item>
-        <el-form-item label="开始日期">
-          <el-date-picker v-model="reschApplyDlg.form.startDate" style="width: 100%" type="date"
-                          value-format="YYYY-MM-DD"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="reschApplyDlg.form.remark" maxlength="200"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="reschApplyDlg.visible = false">取消</el-button>
-        <el-button v-perm="'opd:treatmentStation:edit'" :loading="reschApplyDlg.saving" type="primary"
-                   @click="doApplyReschedule">保存并重排
-        </el-button>
-      </template>
-    </el-dialog>
+    <TreatmentStationApplyRescheduleEdit v-model="applyReschVisible" :target="applyReschTarget" @saved="refreshAll"/>
 
     <!-- 疗程详情 -->
-    <el-dialog v-model="detailDlg.visible" title="疗程详情" width="900px">
-      <div v-loading="detailDlg.loading">
-        <template v-if="detailDlg.data?.apply">
-          <div class="grid grid-cols-4 gap-2 text-sm mb-3">
-            <div>疗程单号：<b>{{ detailDlg.data.apply.applyNo }}</b></div>
-            <div>患者：{{ detailDlg.data.apply.patientName }} / {{ detailDlg.data.apply.patientNo }}</div>
-            <div>就诊：{{ detailDlg.data.apply.registNo }}</div>
-            <div>状态：{{ detailDlg.data.apply.applyStatusText }}（{{ detailDlg.data.apply.progressText }}）</div>
-            <div>项目：{{ detailDlg.data.apply.itemName }}（{{ detailDlg.data.apply.itemTypeText }}）</div>
-            <div>开单：{{ detailDlg.data.apply.deptName || '未指定' }} {{ detailDlg.data.apply.doctorName }}</div>
-            <div>执行科室：{{ detailDlg.data.apply.execDeptName || '未指定' }}</div>
-            <div>单价/计划：{{ money(detailDlg.data.apply.price) }} / {{ money(detailDlg.data.apply.planAmount) }}</div>
-          </div>
-          <el-table :data="detailDlg.data.execList" data-testid="detail-exec-table" max-height="420" size="small">
-            <el-table-column label="流水号" prop="recordNo" width="190"/>
-            <el-table-column label="排期" prop="planDate" width="105"/>
-            <el-table-column label="执行" width="90">
-              <template #default="{ row }">
-                <el-tag :type="execTag(row.execStatus)" size="small">{{ row.execStatusText }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="计费" width="100">
-              <template #default="{ row }">
-                <el-tag :type="chargeTag(row.chargeStatus)" size="small">{{ row.chargeStatusText }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column align="right" label="金额" width="80">
-              <template #default="{ row }">{{ money(row.chargeAmount) }}</template>
-            </el-table-column>
-            <el-table-column label="执行人/时间" width="170">
-              <template #default="{ row }">{{ row.executorName || '—' }} {{ fmtTime(row.executeTime) }}</template>
-            </el-table-column>
-            <el-table-column label="治疗记录" min-width="200" prop="result" show-overflow-tooltip/>
-          </el-table>
-        </template>
-      </div>
-      <template #footer>
-        <el-button @click="detailDlg.visible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    <TreatmentStationDetail v-model="detailVisible" :id="detailId"/>
   </div>
 </template>
 
@@ -500,13 +389,17 @@ import {computed, onMounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {Refresh, Search} from '@element-plus/icons-vue';
 import PatientSelect from '@/components/his/PatientSelect.vue';
+import TreatmentStationExecEdit from './TreatmentStationExecEdit.vue';
+import TreatmentStationRescheduleEdit from './TreatmentStationRescheduleEdit.vue';
+import TreatmentStationApplyRescheduleEdit from './TreatmentStationApplyRescheduleEdit.vue';
+import TreatmentStationDetail from './TreatmentStationDetail.vue';
 import request from '@/api/request';
 import {getDictDataMapList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
+import {EXEC, chargeTag, execTag, fmtTime, money, today} from '@/lib/treatment';
 import {
   deleteTreatmentApply,
-  getTreatmentApplyDetail,
   getTreatmentApplyListPage,
   getTreatmentExecListPage,
   getTreatmentExecStatusCount,
@@ -514,24 +407,11 @@ import {
   getTreatmentStats,
   treatmentApplyCancel,
   treatmentApplyUpsert,
-  treatmentExecExecute,
-  treatmentExecReschedule,
   treatmentExecRetryCharge,
 } from '@/api/treatment';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
 
 const activeTab = ref('board');
-const today = (() => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-})();
-const EXEC = {PENDING: 0, DONE: 1, CANCELLED: 2};
-const CHARGE = {NONE: 0, DONE: 1, FAIL: 2, NA: 3};
-const execTag = (s) => (Number(s) === EXEC.DONE ? 'success' : Number(s) === EXEC.CANCELLED ? 'info' : 'warning');
-const chargeTag = (s) => (Number(s) === CHARGE.DONE ? 'success'
-    : Number(s) === CHARGE.FAIL ? 'danger' : Number(s) === CHARGE.NA ? 'info' : '');
-const money = (v) => (v === null || v === undefined ? '—' : `¥${Number(v).toFixed(2)}`);
-const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '—');
 // ---------------- 字典（只给筛选下拉；列表文案取后端 *Text） ----------------
 const execDict = ref([]);
 const chargeDict = ref([]);
@@ -615,74 +495,22 @@ const execCounts = computed(() => [0, 1, 2].map((s) => ({
   status: s, label: dictLabelText(execDict.value, s), count: countOf(`exec-${s}`),
 })));
 // ---------------- 打卡 ----------------
-const execDlg = reactive({
-  visible: false, target: null, saving: false,
-  form: {recordStatus: 1, result: '', remark: ''},
-});
+const execVisible = ref(false);
+const execTarget = ref(null);
 const openExecute = (row) => {
   if (!row.canExecute) {
     ElMessage.warning(row.cannotExecuteReason || '这一行现在不能打卡');
     return;
   }
-  execDlg.target = row;
-  execDlg.form = {recordStatus: 1, result: '', remark: ''};
-  execDlg.visible = true;
-};
-const doExecute = async () => {
-  execDlg.saving = true;
-  try {
-    const res = await treatmentExecExecute({
-      recordId: execDlg.target.recordId,
-      recordStatus: execDlg.form.recordStatus,
-      result: execDlg.form.result.trim() || undefined,
-      remark: execDlg.form.remark.trim() || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success(res.message || '已打卡');
-      execDlg.visible = false;
-      await refreshAll();
-    } else
-      ElMessage.error(res.message || '打卡失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('打卡失败');
-  } finally {
-    execDlg.saving = false;
-  }
+  execTarget.value = row;
+  execVisible.value = true;
 };
 // ---------------- 改期（单条待执行次） ----------------
-const reschDlg = reactive({visible: false, target: null, saving: false, form: {planDate: '', reason: ''}});
+const reschVisible = ref(false);
+const reschTarget = ref(null);
 const openReschedule = (row) => {
-  reschDlg.target = row;
-  reschDlg.form = {planDate: row.planDate || today, reason: ''};
-  reschDlg.visible = true;
-};
-const doReschedule = async () => {
-  if (!reschDlg.form.planDate) {
-    ElMessage.warning('请选择改到哪天');
-    return;
-  }
-  if (!reschDlg.form.reason.trim()) {
-    ElMessage.warning('改期原因必填');
-    return;
-  }
-  reschDlg.saving = true;
-  try {
-    const res = await treatmentExecReschedule({
-      recordId: reschDlg.target.recordId, planDate: reschDlg.form.planDate, reason: reschDlg.form.reason.trim(),
-    });
-    if (res.code === 200) {
-      ElMessage.success(res.message || '已改期');
-      reschDlg.visible = false;
-      await refreshAll();
-    } else
-      ElMessage.error(res.message || '改期失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('改期失败');
-  } finally {
-    reschDlg.saving = false;
-  }
+  reschTarget.value = row;
+  reschVisible.value = true;
 };
 const doRetryCharge = async (row) => {
   try {
@@ -808,44 +636,11 @@ const loadApplies = async () => {
   }
 };
 // 重排疗程（一次卡都没打过时才允许整体改次数/间隔/开始日）
-const reschApplyDlg = reactive({
-  visible: false,
-  target: null,
-  saving: false,
-  form: {totalTimes: 1, intervalDays: 1, startDate: '', remark: ''}
-});
+const applyReschVisible = ref(false);
+const applyReschTarget = ref(null);
 const openApplyReschedule = (row) => {
-  reschApplyDlg.target = row;
-  reschApplyDlg.form = {
-    totalTimes: Number(row.totalTimes || 1), intervalDays: Number(row.intervalDays || 1),
-    startDate: row.startDate || today, remark: row.remark || '',
-  };
-  reschApplyDlg.visible = true;
-};
-const doApplyReschedule = async () => {
-  reschApplyDlg.saving = true;
-  try {
-    const res = await treatmentApplyUpsert({
-      applyId: reschApplyDlg.target.applyId,
-      registId: reschApplyDlg.target.registId,
-      treatmentItemId: reschApplyDlg.target.treatmentItemId,
-      totalTimes: Number(reschApplyDlg.form.totalTimes),
-      intervalDays: Number(reschApplyDlg.form.intervalDays),
-      startDate: reschApplyDlg.form.startDate,
-      remark: reschApplyDlg.form.remark.trim() || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success(res.message || '疗程已重排');
-      reschApplyDlg.visible = false;
-      await refreshAll();
-    } else
-      ElMessage.error(res.message || '重排失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('重排失败');
-  } finally {
-    reschApplyDlg.saving = false;
-  }
+  applyReschTarget.value = row;
+  applyReschVisible.value = true;
 };
 const doApplyCancel = async (row) => {
   let reason = '';
@@ -879,23 +674,11 @@ const doApplyDelete = async (row) => {
     ElMessage.error(res.message || '删除失败');
 };
 // ---------------- 疗程详情 ----------------
-const detailDlg = reactive({visible: false, loading: false, data: null});
-const openDetail = async (row) => {
-  detailDlg.visible = true;
-  detailDlg.loading = true;
-  detailDlg.data = null;
-  try {
-    const res = await getTreatmentApplyDetail(row.applyId);
-    if (res.code === 200)
-      detailDlg.data = res.data;
-    else
-      ElMessage.error(res.message || '加载详情失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('加载详情失败');
-  } finally {
-    detailDlg.loading = false;
-  }
+const detailVisible = ref(false);
+const detailId = ref('');
+const openDetail = (row) => {
+  detailId.value = row.applyId;
+  detailVisible.value = true;
 };
 // ================= C 执行与计费台账 =================
 const ledQuery = reactive({

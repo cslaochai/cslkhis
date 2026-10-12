@@ -200,112 +200,14 @@
     </el-card>
 
     <!-- 详情（行点击，只读） -->
-    <el-dialog v-model="detailVisible" title="随访任务详情" width="640px">
-      <el-form v-if="detail" disabled label-width="90px">
-        <el-form-item label="任务编号">
-          <el-input :model-value="detail.taskNo"/>
-        </el-form-item>
-        <el-form-item label="患者">
-          <el-input :model-value="`${detail.patientName || ''} ${detail.patientNo || ''}`"/>
-        </el-form-item>
-        <el-form-item label="联系电话">
-          <el-input :model-value="detail.phoneMasked || '—'"/>
-        </el-form-item>
-        <el-form-item label="出院科室">
-          <el-input :model-value="detail.deptName || '—'"/>
-        </el-form-item>
-        <el-form-item label="随访类型">
-          <el-input :model-value="typeText(detail.followupType)"/>
-        </el-form-item>
-        <el-form-item label="计划时间">
-          <el-input :model-value="fmtTime(detail.followupTime)"/>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-input :model-value="statusText(detail.followupStatus)"/>
-        </el-form-item>
-        <el-form-item label="诊断">
-          <el-input :model-value="detail.diagnosis || '—'"/>
-        </el-form-item>
-        <el-form-item label="随访内容">
-          <el-input :model-value="detail.followupContent" :rows="3" type="textarea"/>
-        </el-form-item>
-        <el-form-item v-if="detail.executeResult" label="随访结果">
-          <el-input :model-value="detail.executeResult" :rows="3" type="textarea"/>
-        </el-form-item>
-        <el-form-item v-if="detail.executorName" label="执行人">
-          <el-input :model-value="`${detail.executorName} ${fmtTime(detail.executeTime)}`"/>
-        </el-form-item>
-        <el-form-item v-if="detail.revisitAppointId" label="复诊号">
-          <el-input :model-value="String(detail.revisitAppointId)"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="detailVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    <FollowupDetail v-model="detailVisible" :id="detailId" :row="detailRow"
+                    :status-dict="statusDict" :type-dict="typeDict"/>
 
     <!-- 新建/编辑 -->
-    <el-dialog v-model="editVisible" :title="editForm.id ? '编辑随访任务' : '新建随访任务'" width="560px">
-      <el-form label-width="90px">
-        <el-form-item label="患者" required>
-          <PatientSelect v-model="editForm.patientId" :disabled="!!editForm.id" @select="onPatientSelect"/>
-        </el-form-item>
-        <el-form-item label="随访类型" required>
-          <el-select v-model="editForm.followupType" :fit-input-width="false" style="width: 220px">
-            <el-option v-for="d in typeDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="计划时间" required>
-          <el-date-picker v-model="editForm.followupTime" placeholder="计划随访时间" type="datetime"
-                          value-format="YYYY-MM-DD HH:mm:ss"/>
-        </el-form-item>
-        <el-form-item label="随访内容" required>
-          <el-input v-model="editForm.followupContent" :rows="3" type="textarea"/>
-          <el-button :loading="composing" class="mt-1 self-start" link type="primary"
-                     @click="composeAiContent">AI 拟话术
-          </el-button>
-        </el-form-item>
-        <el-form-item label="联系电话">
-          <el-input v-model="editForm.phone" placeholder="不填自动取患者档案电话" style="width: 220px"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button v-perm="['inpatient:followup:add','inpatient:followup:edit']" :loading="editLoading" type="primary"
-                   @click="submitEdit">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <FollowupEdit v-model="editVisible" :row="editRow" :type-dict="typeDict" @saved="reloadAll"/>
 
     <!-- 按出院记录生成 -->
-    <el-dialog v-model="genVisible" title="按出院记录生成随访计划" width="520px">
-      <el-form label-width="90px">
-        <el-form-item label="出院记录ID" required>
-          <el-input v-model="genForm.dischargeId" placeholder="出院记录ID（biz_discharge）"/>
-        </el-form-item>
-        <el-form-item label="随访类型">
-          <el-select v-model="genForm.followupType" :fit-input-width="false" style="width: 220px">
-            <el-option v-for="d in typeDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="随访天数">
-          <el-input-number v-model="genForm.daysOffset" :min="1" :precision="0"/>
-          <span class="hint">计划时间 = 出院时间 + N 天（默认 7）</span>
-        </el-form-item>
-        <el-form-item label="内容覆盖">
-          <el-input v-model="genForm.followupContent" :rows="2" placeholder="留空则按出院诊断自动生成" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <div class="text-xs text-gray-400">
-        日常不需要手工点这个：出院办理会自动建一条（有手术记录 → 术后随访，否则复诊提醒；死亡病例不建）。
-        这里服务的是自动建单失败后的补录，以及慢病/用药指导这类额外计划。
-      </div>
-      <template #footer>
-        <el-button @click="genVisible = false">取消</el-button>
-        <el-button v-perm="'inpatient:followup:add'" :loading="genLoading" type="primary" @click="submitGenerate">生成
-        </el-button>
-      </template>
-    </el-dialog>
+    <FollowupGenerate v-model="genVisible" :type-dict="typeDict" @saved="reloadAll"/>
 
     <!-- 完成随访 -->
     <el-dialog v-model="completeVisible" title="完成随访" width="480px">
@@ -321,59 +223,10 @@
     </el-dialog>
 
     <!-- 补发满意度问卷 -->
-    <el-dialog v-model="issueVisible" title="补发满意度问卷" width="480px">
-      <el-form label-width="90px">
-        <el-form-item label="随访任务">
-          <el-input :model-value="issueForm.taskNo" disabled/>
-        </el-form-item>
-        <el-form-item label="回收渠道">
-          <el-select v-model="issueForm.channel" :fit-input-width="false" style="width: 200px">
-            <el-option :value="1" label="电话代填（唯一实测可回收）"/>
-            <el-option :value="2" label="短信（无网关，只落状态）"/>
-            <el-option :value="3" label="微信（无网关，只落状态）"/>
-            <el-option :value="4" label="现场扫码"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="有效期">
-          <el-input-number v-model="issueForm.expireDays" :min="1" :precision="0"/>
-          <span class="hint">天后过期（默认 14）</span>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="issueVisible = false">取消</el-button>
-        <el-button :loading="issueLoading" type="primary" @click="submitIssue">发放</el-button>
-      </template>
-    </el-dialog>
+    <FollowupSurveyIssue v-model="issueVisible" :row="issueRow"/>
 
-    <!-- 电话外呼（G-15）：mock 通道=登记待呼，护士按明文电话拨打后回填结果 -->
-    <el-dialog v-model="callVisible" title="电话外呼" width="560px">
-      <div v-if="callTask" class="space-y-3">
-        <div class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
-          已登记待外呼（第 {{ callTask.callAttempts || 1 }} 次，人工通道）。请拨打以下电话，通话结束后回填结果。
-        </div>
-        <el-form label-width="90px">
-          <el-form-item label="患者">
-            <el-input :model-value="`${callTask.patientName || ''}（${callTask.patientNo || '—'}）`" disabled/>
-          </el-form-item>
-          <el-form-item label="联系电话">
-            <el-input :model-value="callTask.phone || '—'" disabled/>
-          </el-form-item>
-          <el-form-item label="话术稿">
-            <el-input v-model="callScript" :rows="5" placeholder="按随访内容通话，可修改" type="textarea"/>
-          </el-form-item>
-          <el-form-item label="外呼备注">
-            <el-input v-model="callRemark" :rows="2" placeholder="未接通原因、患者反馈摘要等（选填）"
-                      type="textarea"/>
-          </el-form-item>
-        </el-form>
-      </div>
-      <template #footer>
-        <el-button :disabled="!callTask?.patientId" @click="composeCallScript">AI 拟话术</el-button>
-        <el-button @click="callVisible = false">关闭</el-button>
-        <el-button :loading="callResultLoading" type="warning" @click="submitCallResult(false)">未接通</el-button>
-        <el-button :loading="callResultLoading" type="primary" @click="submitCallResult(true)">已接通</el-button>
-      </template>
-    </el-dialog>
+    <!-- 电话外呼 -->
+    <FollowupCallEdit v-model="callVisible" :resume="callResume" :task-id="callTaskId" @saved="reloadAll"/>
 
     <!-- 生成复诊号（来源 4）：与医生站「预约复诊」共用同一个弹框（选原病历 + 号源 + 当场看金额） -->
     <RevisitAppointDialog
@@ -411,23 +264,21 @@ import {Refresh, Search} from '@element-plus/icons-vue';
 import {
   cancelFollowup,
   completeFollowup,
-  followupCallRegister,
-  followupCallResult,
-  followupCreateFromDischarge,
   followupCreateRevisitAppoint,
-  followupUpsert,
-  getFollowupDetail,
   getFollowupList,
   getFollowupStat,
   startFollowup,
 } from '@/api/followup';
-import {issueDispatch} from '@/api/survey';
-import {composeFollowup} from '@/api/ai';
 import {getDictDataMapList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
-import PatientSelect from '@/components/his/PatientSelect.vue';
+import {fmtTime} from '@/lib/followup';
+import FollowupCallEdit from './FollowupCallEdit.vue';
+import FollowupDetail from './FollowupDetail.vue';
+import FollowupEdit from './FollowupEdit.vue';
+import FollowupGenerate from './FollowupGenerate.vue';
+import FollowupSurveyIssue from './FollowupSurveyIssue.vue';
 import RevisitAppointDialog from '@/components/his/RevisitAppointDialog.vue';
 import {REVISIT_SOURCE} from '@/lib/revisitPolicy';
 
@@ -506,126 +357,31 @@ const gotoOverdue = () => {
   activeTab.value = 'list';
   loadList();
 };
-const fmtTime = (v) => (v ? String(v).slice(0, 16).replace('T', ' ') : '—');
+/** 弹框保存成功后统一刷新列表与看板（原实现每处都是这两行） */
+const reloadAll = () => {
+  loadList();
+  loadStat();
+};
 // ---------------- 只读详情（行点击） ----------------
 const detailVisible = ref(false);
-const detail = ref(null);
-const openDetail = async (row) => {
-  const res = await getFollowupDetail(row.id).catch((e) => {
-    console.error(e);
-    return null;
-  });
-  if (res && res.code === 200) {
-    detail.value = res.data;
-    detailVisible.value = true;
-  } else if (res)
-    ElMessage.error(res.message || '加载详情失败');
+const detailId = ref(null);
+// 列表行只为「打开瞬间不闪白」，详情数据由子组件按 id 自取
+const detailRow = ref(null);
+const openDetail = (row) => {
+  detailId.value = row.id;
+  detailRow.value = row;
+  detailVisible.value = true;
 };
 // ---------------- 新建 / 编辑 ----------------
 const editVisible = ref(false);
-const editLoading = ref(false);
-const editForm = reactive({
-  id: null, patientId: null, patientName: '',
-  followupType: 1, followupTime: '', followupContent: '', phone: '', remark: '',
-  diagnosis: '',
-});
+const editRow = ref(null);
 const openCreate = () => {
-  Object.assign(editForm, {
-    id: null, patientId: null, patientName: '', followupType: 1,
-    followupTime: '', followupContent: '', phone: '', remark: '', diagnosis: '',
-  });
+  editRow.value = null;
   editVisible.value = true;
 };
-/**
- * 编辑必须走 getById 取明文：列表行里的 phone 是 null、只有 phoneMasked。
- * 用 `editForm.phone = row.phone` 会把电话栏清空，保存后随访员打电话没号可拨。
- */
-const openEdit = async (row) => {
-  try {
-    const res = await getFollowupDetail(row.id);
-    if (res.code !== 200) {
-      ElMessage.error(res.message || '加载任务失败');
-      return;
-    }
-    const t = res.data || {};
-    Object.assign(editForm, {
-      id: t.id, patientId: t.patientId, patientName: t.patientName, followupType: t.followupType,
-      followupTime: fmtTime(t.followupTime),
-      followupContent: t.followupContent || '', phone: t.phone || '', remark: t.remark || '',
-      diagnosis: t.diagnosis || '',
-    });
-    editVisible.value = true;
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('加载任务失败');
-  }
-};
-const onPatientSelect = (p) => {
-  editForm.patientName = p?.patientName || p?.name || '';
-  if (p?.phone && !editForm.phone)
-    editForm.phone = p.phone;
-};
-/**
- * G-06 AI 拟话术：按随访类型 + 患者慢病档案让模型草拟话术，医生核对改完再保存。
- * degraded=true 表示落到了类型模板（模型不可用或文案越界被闸），必须说人话告知，不许当模型产出展示。
- */
-const composing = ref(false);
-const composeAiContent = async () => {
-  if (!editForm.patientId) {
-    ElMessage.warning('请先选择患者');
-    return;
-  }
-  composing.value = true;
-  try {
-    const res = await composeFollowup({
-      patientId: editForm.patientId,
-      followupType: editForm.followupType,
-      diagnosis: editForm.diagnosis || undefined,
-    });
-    if (res.code === 200 && res.data?.content) {
-      editForm.followupContent = res.data.content;
-      if (res.data.degraded)
-        ElMessage.warning(`AI 暂不可用（${res.data.degradeReason || '原因未知'}），已按随访类型模板生成`);
-      else
-        ElMessage.success('AI 话术已填入，请核对修改后保存');
-    } else
-      ElMessage.error(res.message || 'AI 未生成话术');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('AI 拟话术失败');
-  } finally {
-    composing.value = false;
-  }
-};
-const submitEdit = async () => {
-  if (!editForm.patientId || !editForm.followupTime || !editForm.followupContent.trim()) {
-    ElMessage.warning('患者、计划时间、随访内容为必填');
-    return;
-  }
-  editLoading.value = true;
-  try {
-    const res = await followupUpsert({
-      id: editForm.id ?? undefined,
-      patientId: editForm.patientId,
-      followupType: editForm.followupType,
-      followupTime: editForm.followupTime,
-      followupContent: editForm.followupContent.trim(),
-      phone: editForm.phone || undefined,
-      remark: editForm.remark || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success('随访任务已保存');
-      editVisible.value = false;
-      loadList();
-      loadStat();
-    } else
-      ElMessage.error(res.message || '保存失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('保存失败');
-  } finally {
-    editLoading.value = false;
-  }
+const openEdit = (row) => {
+  editRow.value = row;
+  editVisible.value = true;
 };
 // ---------------- 执行 ----------------
 const completeVisible = ref(false);
@@ -685,89 +441,19 @@ const cancel = async (row) => {
 };
 // ---------------- 电话外呼（G-15，mock 通道=人工登记待呼） ----------------
 const callVisible = ref(false);
-const callTask = ref(null);
-const callScript = ref('');
-const callRemark = ref('');
-const callResultLoading = ref(false);
+const callTaskId = ref(null);
+const callResume = ref(false);
 // 首次外呼：登记待外呼，返回明文电话供护士拨打
-const openCall = async (row) => {
-  try {
-    const res = await followupCallRegister(row.id);
-    if (res.code === 200 && res.data) {
-      callTask.value = res.data;
-      callScript.value = res.data.followupContent || '';
-      callRemark.value = '';
-      callVisible.value = true;
-    } else
-      ElMessage.error(res.message || '外呼登记失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('外呼登记失败');
-  }
+const openCall = (row) => {
+  callTaskId.value = row.id;
+  callResume.value = false;
+  callVisible.value = true;
 };
 // 已登记待外呼的行：不再重复登记，直接取详情（明文电话）回弹窗回填结果
-const openCallResume = async (row) => {
-  try {
-    const res = await getFollowupDetail(row.id);
-    if (res.code === 200 && res.data) {
-      callTask.value = res.data;
-      callScript.value = res.data.followupContent || '';
-      callRemark.value = '';
-      callVisible.value = true;
-    } else
-      ElMessage.error(res.message || '加载任务失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('加载任务失败');
-  }
-};
-// AI 拟话术：与编辑弹窗同一能力（followup_compose），产物仍是护士终审的初稿
-const composeCallScript = async () => {
-  const t = callTask.value;
-  if (!t?.patientId) {
-    ElMessage.warning('缺少患者信息，无法拟话术');
-    return;
-  }
-  try {
-    const res = await composeFollowup({
-      patientId: t.patientId,
-      followupType: t.followupType,
-      diagnosis: t.diagnosis || undefined,
-    });
-    if (res.code === 200 && res.data?.content) {
-      callScript.value = res.data.content;
-      if (res.data.degraded)
-        ElMessage.warning(`AI 暂不可用（${res.data.degradeReason || '原因未知'}），已按随访类型模板生成`);
-      else
-        ElMessage.success('AI 话术已填入，请核对后拨打');
-    } else
-      ElMessage.error(res.message || 'AI 未生成话术');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('AI 拟话术失败');
-  }
-};
-const submitCallResult = async (connected) => {
-  callResultLoading.value = true;
-  try {
-    const res = await followupCallResult({
-      id: callTask.value.id,
-      connected,
-      remark: callRemark.value.trim() || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success(connected ? '已接通，任务已转随访中' : '已登记未接通，可稍后再次外呼');
-      callVisible.value = false;
-      loadList();
-      loadStat();
-    } else
-      ElMessage.error(res.message || '操作失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('操作失败');
-  } finally {
-    callResultLoading.value = false;
-  }
+const openCallResume = (row) => {
+  callTaskId.value = row.id;
+  callResume.value = true;
+  callVisible.value = true;
 };
 /**
  * 手工补发满意度问卷：正常路径是「完成随访」自动发，这里只服务两种缺口 ——
@@ -775,66 +461,15 @@ const submitCallResult = async (connected) => {
  * 同一任务 + 同一模板幂等，重复点不会多出第二张发放单。
  */
 const issueVisible = ref(false);
-const issueLoading = ref(false);
-const issueForm = reactive({taskNo: '', followupTaskId: '', channel: 1, expireDays: 14});
+const issueRow = ref(null);
 const openIssue = (row) => {
-  Object.assign(issueForm, {taskNo: row.taskNo, followupTaskId: row.id, channel: 1, expireDays: 14});
+  issueRow.value = row;
   issueVisible.value = true;
-};
-const submitIssue = async () => {
-  issueLoading.value = true;
-  try {
-    const res = await issueDispatch({
-      followupTaskId: issueForm.followupTaskId,
-      channel: issueForm.channel,
-      expireDays: issueForm.expireDays,
-    });
-    if (res.code === 200) {
-      ElMessage.success(`已发放：${res.data?.dispatchNo || ''}（到「满意度评价 → 发放回收」录入答卷）`);
-      issueVisible.value = false;
-    } else
-      ElMessage.error(res.message || '发放失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('发放失败');
-  } finally {
-    issueLoading.value = false;
-  }
 };
 // ---------------- 按出院记录生成 ----------------
 const genVisible = ref(false);
-const genLoading = ref(false);
-const genForm = reactive({dischargeId: '', followupType: 1, daysOffset: 7, followupContent: ''});
 const openGenerate = () => {
-  Object.assign(genForm, {dischargeId: '', followupType: 1, daysOffset: 7, followupContent: ''});
   genVisible.value = true;
-};
-const submitGenerate = async () => {
-  if (!genForm.dischargeId) {
-    ElMessage.warning('请填写出院记录ID');
-    return;
-  }
-  genLoading.value = true;
-  try {
-    const res = await followupCreateFromDischarge({
-      dischargeId: genForm.dischargeId,
-      followupType: genForm.followupType,
-      daysOffset: genForm.daysOffset,
-      followupContent: genForm.followupContent || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success('随访计划已生成（同一出院记录重复生成会返回已生成任务）');
-      genVisible.value = false;
-      loadList();
-      loadStat();
-    } else
-      ElMessage.error(res.message || '生成失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('生成失败');
-  } finally {
-    genLoading.value = false;
-  }
 };
 // ---------------- 生成复诊号（复诊来源 4，sql/121） ----------------
 const revisitVisible = ref(false);
@@ -960,11 +595,5 @@ onMounted(() => {
   font-weight: 600;
   color: #303133;
   margin-bottom: 8px;
-}
-
-.hint {
-  margin-left: 8px;
-  font-size: 12px;
-  color: #909399;
 }
 </style>

@@ -182,96 +182,11 @@
           @size-change="onEventSizeChange"/>
     </el-card>
 
-    <!-- 生成快照 -->
-    <el-dialog v-model="genDialogVisible" title="生成月度防控指标快照" width="460px">
-      <el-form label-width="110px">
-        <el-form-item label="统计月份" required>
-          <div data-testid="gen-month" style="width: 100%">
-            <el-date-picker v-model="genMonth" placeholder="选择月份" style="width: 100%" type="month"
-                            value-format="YYYY-MM"/>
-          </div>
-        </el-form-item>
-        <el-form-item label="统计范围" required>
-          <el-radio-group v-model="genScope">
-            <el-radio :value="1">全院一条</el-radio>
-            <el-radio :value="2">按科室生成</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <div class="form-tip">同月同范围重复生成会覆盖上一次结果 —— 指标是对外报数，只留最新一次复算。</div>
-      </el-form>
-      <template #footer>
-        <el-button @click="genDialogVisible = false">取消</el-button>
-        <el-button :loading="saving" data-testid="btn-do-generate" type="primary" @click="doGenerate">生成</el-button>
-      </template>
-    </el-dialog>
+    <!-- 生成快照：表单在 VteMonitorGenerate -->
+    <VteMonitorGenerate v-model="genDialogVisible" @saved="onGenerated"/>
 
-    <!-- 事件登记 -->
-    <el-dialog v-model="eventVisible" data-testid="event-dialog" title="登记 VTE 事件" width="520px">
-      <el-form label-width="110px">
-        <el-form-item label="住院患者" required>
-          <div data-testid="sel-admission" style="width: 100%">
-            <el-select v-model="eventForm.admissionId" filterable placeholder="选择住院患者" style="width: 100%">
-              <el-option
-                  v-for="p in inpatients"
-                  :key="p.admissionId"
-                  :label="`${p.patientName || '未命名'} · ${p.admissionNo || ''}`"
-                  :value="p.admissionId"/>
-            </el-select>
-          </div>
-        </el-form-item>
-        <el-form-item label="事件类型" required>
-          <div data-testid="sel-event-type" style="width: 100%">
-            <el-select v-model="eventForm.eventType" placeholder="选择事件类型" style="width: 100%">
-              <el-option :value="1" label="深静脉血栓（DVT）"/>
-              <el-option :value="2" label="肺栓塞（PE）"/>
-              <el-option :value="3" label="预防相关出血"/>
-            </el-select>
-          </div>
-        </el-form-item>
-        <el-form-item label="发生时机" required>
-          <div data-testid="sel-onset-type" style="width: 100%">
-            <el-radio-group v-model="eventForm.onsetType">
-              <el-radio :value="1">院内发生（计入发生率）</el-radio>
-              <el-radio :value="2">入院时已存在（不计入）</el-radio>
-            </el-radio-group>
-          </div>
-        </el-form-item>
-        <el-form-item label="确诊日期" required>
-          <div data-testid="sel-diagnose-date" style="width: 100%">
-            <el-date-picker v-model="eventForm.diagnoseDate" placeholder="确诊日期" style="width: 100%"
-                            type="date" value-format="YYYY-MM-DD"/>
-          </div>
-        </el-form-item>
-        <el-form-item label="诊断依据">
-          <el-select v-model="eventForm.diagnosisBasis" clearable placeholder="选择诊断依据" style="width: 100%">
-            <el-option :value="1" label="超声"/>
-            <el-option :value="2" label="CT 肺动脉造影"/>
-            <el-option :value="3" label="静脉造影"/>
-            <el-option :value="4" label="临床诊断"/>
-            <el-option :value="5" label="其他"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="血栓部位">
-          <el-input v-model="eventForm.thrombusSite" maxlength="100" placeholder="如：左下肢股静脉"/>
-        </el-form-item>
-        <el-form-item label="转归">
-          <el-select v-model="eventForm.outcome" clearable placeholder="选择转归" style="width: 100%">
-            <el-option :value="1" label="好转"/>
-            <el-option :value="2" label="未愈"/>
-            <el-option :value="3" label="死亡"/>
-            <el-option :value="4" label="未知"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="eventForm.remark" :rows="2" maxlength="500" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="eventVisible = false">取消</el-button>
-        <el-button :loading="savingEvent" data-testid="btn-save-event" type="primary" @click="submitEvent">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 事件登记：表单在 VteMonitorEventAdd（只有新增） -->
+    <VteMonitorEventAdd v-model="eventVisible" @saved="loadEvents"/>
   </div>
 </template>
 
@@ -280,23 +195,18 @@ import {onMounted, reactive, ref} from 'vue'
 import {ElMessage} from 'element-plus'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
-import {getInpatientListPage} from '@/api/inpatient'
+import {currentMonth} from '@/lib/vte'
 import {
   exportVteStatsCsv,
-  generateVteStats,
   listVteEventPage,
   listVteStatsPage,
-  previewVteStats,
-  upsertVteEvent
+  previewVteStats
 } from '@/api/vte'
+// 拆分出的弹框组件
+import VteMonitorGenerate from './VteMonitorGenerate.vue'
+import VteMonitorEventAdd from './VteMonitorEventAdd.vue'
 
-const today = () => {
-  const d = new Date()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  return `${d.getFullYear()}-${m}`
-}
-
-const previewMonth = ref(today())
+const previewMonth = ref(currentMonth())
 const preview = ref({})
 
 async function loadPreview() {
@@ -333,32 +243,16 @@ function onStatsSizeChange() {
 }
 
 const genDialogVisible = ref(false)
-const genMonth = ref(today())
-const genScope = ref(1)
-const saving = ref(false)
 
 function openGenerateDialog() {
   genDialogVisible.value = true
 }
 
-async function doGenerate() {
-  if (!genMonth.value) {
-    ElMessage.warning('请选择统计月份');
-    return
-  }
-  saving.value = true
-  try {
-    const res = await generateVteStats({statMonth: genMonth.value, scopeType: genScope.value})
-    ElMessage.success(`已生成 ${(res?.data || []).length} 条快照`)
-    genDialogVisible.value = false
-    statsQuery.statMonth = genMonth.value
-    loadStats()
-    loadPreview()
-  } catch (e) {
-    ElMessage.error(e?.message || '生成失败')
-  } finally {
-    saving.value = false
-  }
+/** 生成成功后：台账筛选月份跟着走，立刻能查到刚生成的行（试算也一起刷） */
+function onGenerated(m) {
+  statsQuery.statMonth = m
+  loadStats()
+  loadPreview()
 }
 
 async function doExport() {
@@ -386,7 +280,6 @@ const eventQuery = reactive({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE})
 const eventRows = ref([])
 const eventTotal = ref(0)
 const eventLoading = ref(false)
-const inpatients = ref([])
 
 async function loadEvents() {
   eventLoading.value = true
@@ -404,59 +297,11 @@ function onEventSizeChange() {
   loadEvents()
 }
 
+// 登记表单在 VteMonitorEventAdd（打开时的重置与在院患者懒加载都在那边）
 const eventVisible = ref(false)
-const savingEvent = ref(false)
-const eventForm = reactive({
-  admissionId: null,
-  eventType: 1,
-  onsetType: 1,
-  diagnoseDate: null,
-  diagnosisBasis: null,
-  thrombusSite: '',
-  outcome: null,
-  remark: '',
-})
 
-async function openEventForm() {
-  eventForm.admissionId = null
-  eventForm.eventType = 1
-  eventForm.onsetType = 1
-  eventForm.diagnoseDate = new Date().toISOString().slice(0, 10)
-  eventForm.diagnosisBasis = null
-  eventForm.thrombusSite = ''
-  eventForm.outcome = null
-  eventForm.remark = ''
-  if (!inpatients.value.length) {
-    try {
-      const res = await getInpatientListPage({admitStatus: null, pageNum: 1, pageSize: 100})
-      inpatients.value = res?.data?.records || res?.data?.list || []
-    } catch (e) {
-      inpatients.value = []
-    }
-  }
+function openEventForm() {
   eventVisible.value = true
-}
-
-async function submitEvent() {
-  if (!eventForm.admissionId) {
-    ElMessage.warning('请选择住院患者');
-    return
-  }
-  if (!eventForm.diagnoseDate) {
-    ElMessage.warning('请选择确诊日期');
-    return
-  }
-  savingEvent.value = true
-  try {
-    await upsertVteEvent({...eventForm})
-    ElMessage.success('事件已登记')
-    eventVisible.value = false
-    loadEvents()
-  } catch (e) {
-    ElMessage.error(e?.message || '保存失败')
-  } finally {
-    savingEvent.value = false
-  }
 }
 
 onMounted(() => {
@@ -538,11 +383,5 @@ onMounted(() => {
 .under-target {
   color: #e6a23c;
   font-weight: 600;
-}
-
-.form-tip {
-  color: #909399;
-  font-size: 12px;
-  line-height: 1.6;
 }
 </style>

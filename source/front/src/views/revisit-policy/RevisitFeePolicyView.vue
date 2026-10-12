@@ -117,58 +117,9 @@
       </div>
     </el-card>
 
-    <el-dialog v-model="formVisible" :title="form.id ? '编辑复诊收费策略' : '新增复诊收费策略'" destroy-on-close
-               width="560px">
-      <el-form label-width="120px">
-        <el-form-item label="策略名称" required>
-          <el-input v-model="form.policyName" placeholder="如：同医生 7 日内复诊免挂号费"/>
-        </el-form-item>
-        <el-form-item label="适用来源" required>
-          <el-select v-model="form.revisitSource" class="w-full" placeholder="请选择">
-            <el-option v-for="o in listSourceOptions" :key="o.dictValue" :label="o.dictLabel"
-                       :value="Number(o.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="与原就诊医生">
-          <el-radio-group v-model="form.sameDoctor">
-            <el-radio v-for="o in REVISIT_MATCH_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="与原就诊科室">
-          <el-radio-group v-model="form.sameDept">
-            <el-radio v-for="o in REVISIT_MATCH_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="间隔天数">
-          <el-input-number v-model="form.withinDays" :max="3650" :min="0" class="!w-40"/>
-          <span class="ml-2 text-xs text-slate-400">留空=不限；与原病历就诊日相差超过该天数则本条不命中</span>
-        </el-form-item>
-        <el-form-item label="收费方式" required>
-          <el-select v-model="form.chargeMode" class="w-full" placeholder="请选择">
-            <el-option v-for="o in chargeModeOptions" :key="o.dictValue" :label="o.dictLabel"
-                       :value="Number(o.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="优先级">
-          <el-input-number v-model="form.priority" :max="9999" :min="1" class="!w-40"/>
-          <span class="ml-2 text-xs text-slate-400">数值小者优先命中；铺底策略占用 10 的间隔便于插队</span>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-radio-group v-model="form.status">
-            <el-radio v-for="o in STATUS_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="form.remark" :rows="2" placeholder="免钱的依据，会写进收费单备注供医保/审计追溯"
-                    type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="formVisible = false">取消</el-button>
-        <el-button v-perm="'opd:revisitPolicy:add'" :loading="formSubmitting" type="primary" @click="submitForm">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 新增/编辑：表单与提交逻辑拆到 RevisitFeePolicyEdit，页面只管开关与递参 -->
+    <RevisitFeePolicyEdit v-model="formVisible" :row="editRow" :source-options="listSourceOptions"
+                          :charge-mode-options="chargeModeOptions" :status-options="STATUS_OPTIONS" @saved="loadList"/>
   </div>
 </template>
 
@@ -176,13 +127,14 @@
 import {computed, onMounted, reactive, ref} from 'vue';
 import {Delete, Edit, Plus, Refresh, Search} from '@element-plus/icons-vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
-import {deleteRevisitFeePolicy, getRevisitFeePolicyList, revisitFeePolicyUpsert,} from '@/api/revisitPolicy';
+import {deleteRevisitFeePolicy, getRevisitFeePolicyList,} from '@/api/revisitPolicy';
 import {getDictDataMapList} from '@/api/system';
+import RevisitFeePolicyEdit from './RevisitFeePolicyEdit.vue';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
-import {REVISIT_MATCH_ANY, REVISIT_MATCH_OPTIONS, revisitMatchLabel} from '@/lib/revisitPolicy';
+import {revisitMatchLabel} from '@/lib/revisitPolicy';
 
 const loading = ref(true);
 const rows = ref([]);
@@ -206,20 +158,9 @@ const STATUS_OPTIONS = [
   {label: '启用', value: 1},
   {label: '停用', value: 0},
 ];
+// 新增/编辑：表单与提交逻辑已拆至 RevisitFeePolicyEdit.vue，页面只管开关与递参
 const formVisible = ref(false);
-const formSubmitting = ref(false);
-const form = reactive({
-  id: null,
-  policyName: '',
-  revisitSource: null,
-  sameDoctor: REVISIT_MATCH_ANY,
-  sameDept: REVISIT_MATCH_ANY,
-  withinDays: null,
-  chargeMode: null,
-  priority: 100,
-  status: 1,
-  remark: '',
-});
+const editRow = ref(null);
 
 async function loadDicts() {
   try {
@@ -281,69 +222,13 @@ function handleCurrentChange(page) {
 }
 
 function openCreate() {
-  form.id = null;
-  form.policyName = '';
-  form.revisitSource = null;
-  form.sameDoctor = REVISIT_MATCH_ANY;
-  form.sameDept = REVISIT_MATCH_ANY;
-  form.withinDays = null;
-  form.chargeMode = null;
-  form.priority = 100;
-  form.status = 1;
-  form.remark = '';
+  editRow.value = null;
   formVisible.value = true;
 }
 
 function openEdit(row) {
-  form.id = row.id;
-  form.policyName = row.policyName;
-  form.revisitSource = row.revisitSource;
-  form.sameDoctor = Number(row.sameDoctor ?? 0);
-  form.sameDept = Number(row.sameDept ?? 0);
-  form.withinDays = row.withinDays === null || row.withinDays === undefined ? null : Number(row.withinDays);
-  form.chargeMode = row.chargeMode;
-  form.priority = Number(row.priority ?? 100);
-  form.status = row.status;
-  form.remark = row.remark || '';
+  editRow.value = row;
   formVisible.value = true;
-}
-
-async function submitForm() {
-  if (!form.policyName.trim()) {
-    ElMessage.warning('请填写策略名称');
-    return;
-  }
-  if (form.revisitSource === null) {
-    ElMessage.warning('请选择适用的复诊来源');
-    return;
-  }
-  if (form.chargeMode === null) {
-    ElMessage.warning('请选择收费方式');
-    return;
-  }
-  formSubmitting.value = true;
-  try {
-    await revisitFeePolicyUpsert({
-      id: form.id,
-      policyName: form.policyName.trim(),
-      revisitSource: form.revisitSource,
-      sameDoctor: form.sameDoctor,
-      sameDept: form.sameDept,
-      // 留空 = 不限间隔；不能兜 0 —— 0 是「只允许同一天」，两者差得很远
-      withinDays: form.withinDays,
-      chargeMode: form.chargeMode,
-      priority: form.priority,
-      status: form.status,
-      remark: form.remark,
-    });
-    ElMessage.success(form.id ? '修改成功' : '新增成功');
-    formVisible.value = false;
-    loadList();
-  } catch (e) {
-    ElMessage.error(e?.message || '保存失败');
-  } finally {
-    formSubmitting.value = false;
-  }
 }
 
 async function handleDelete(row) {

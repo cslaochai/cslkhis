@@ -12,6 +12,7 @@ spring:
       - optional:classpath:config/domain/his-wechat.yml
       - optional:classpath:config/domain/his-followup.yml
       - optional:classpath:config/domain/his-pay.yml
+      - optional:classpath:config/domain/his-drg.yml
   application:
     name: his-backend
   servlet:

@@ -157,116 +157,7 @@
     </el-card>
 
     <!-- 详情弹窗 -->
-    <el-dialog v-model="showDetailDialog" destroy-on-close title="标本详情" width="600px">
-      <template v-if="selectedSpecimen">
-        <div class="space-y-4">
-          <!-- 基本信息 -->
-          <div class="rounded-lg bg-slate-50 p-4">
-            <div class="grid grid-cols-2 gap-3 text-sm">
-              <div><span class="text-slate-500">标本条码：</span>
-                <span class="font-mono font-medium">{{ selectedSpecimen.specimenNo || '未分配' }}</span>
-              </div>
-              <div><span class="text-slate-500">标本类型：</span><span class="font-medium">{{
-                  selectedSpecimen.specimenType
-                }}</span></div>
-              <div><span class="text-slate-500">患者：</span><span class="font-medium">{{
-                  selectedSpecimen.patientName
-                }} {{ patientGenderText(selectedSpecimen.gender) }} {{ selectedSpecimen.age }}岁</span></div>
-              <div><span class="text-slate-500">患者号：</span><span class="font-medium">{{
-                  selectedSpecimen.patientNo
-                }}</span></div>
-              <div><span class="text-slate-500">检验项目：</span><span class="font-medium">{{
-                  selectedSpecimen.laboratoryItemName
-                }}</span></div>
-              <div><span class="text-slate-500">开单医生：</span><span class="font-medium">{{
-                  selectedSpecimen.applyDoctorName
-                }}</span></div>
-              <div><span class="text-slate-500">申请科室：</span><span class="font-medium">{{
-                  selectedSpecimen.applyDeptName || '-'
-                }}</span></div>
-              <div><span class="text-slate-500">记录号：</span>
-                <span class="font-mono text-xs">{{ selectedSpecimen.recordNo }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- 流转时间线 -->
-          <div>
-            <h4 class="mb-3 text-sm font-semibold text-slate-700">流转记录</h4>
-            <div class="space-y-3 pl-2">
-              <div v-if="selectedSpecimen.createTime" class="flex gap-3">
-                <div class="flex flex-col items-center">
-                  <div class="h-2.5 w-2.5 rounded-full bg-blue-500"></div>
-                  <div class="w-px flex-1 bg-slate-200"></div>
-                </div>
-                <div class="pb-3">
-                  <p class="text-sm font-medium text-slate-700">医嘱开出</p>
-                  <p class="text-xs text-slate-400">{{ selectedSpecimen.createTime?.replace('T', ' ') }}</p>
-                </div>
-              </div>
-              <div v-if="selectedSpecimen.sampleTime" class="flex gap-3">
-                <div class="flex flex-col items-center">
-                  <div class="h-2.5 w-2.5 rounded-full bg-amber-500"></div>
-                  <div class="w-px flex-1 bg-slate-200"></div>
-                </div>
-                <div class="pb-3">
-                  <p class="text-sm font-medium text-slate-700">标本采集</p>
-                  <p class="text-xs text-slate-400">{{ selectedSpecimen.sampleTime?.replace('T', ' ') }} · {{
-                      selectedSpecimen.sampleBy
-                    }}</p>
-                </div>
-              </div>
-              <div v-if="selectedSpecimen.receiveTime" class="flex gap-3">
-                <div class="flex flex-col items-center">
-                  <div class="h-2.5 w-2.5 rounded-full bg-purple-500"></div>
-                  <div class="w-px flex-1 bg-slate-200"></div>
-                </div>
-                <div class="pb-3">
-                  <p class="text-sm font-medium text-slate-700">标本接收</p>
-                  <p class="text-xs text-slate-400">{{ selectedSpecimen.receiveTime?.replace('T', ' ') }} · {{
-                      selectedSpecimen.receiveBy
-                    }}</p>
-                </div>
-              </div>
-              <div v-if="selectedSpecimen.executeTime" class="flex gap-3">
-                <div class="flex flex-col items-center">
-                  <div class="h-2.5 w-2.5 rounded-full bg-emerald-500"></div>
-                  <div class="w-px flex-1 bg-slate-200"></div>
-                </div>
-                <div class="pb-3">
-                  <p class="text-sm font-medium text-slate-700">检验执行</p>
-                  <p class="text-xs text-slate-400">{{ selectedSpecimen.executeTime?.replace('T', ' ') }} · {{
-                      selectedSpecimen.executeBy
-                    }}</p>
-                </div>
-              </div>
-              <div v-if="selectedSpecimen.auditTime" class="flex gap-3">
-                <div class="flex flex-col items-center">
-                  <div class="h-2.5 w-2.5 rounded-full bg-emerald-600"></div>
-                </div>
-                <div>
-                  <p class="text-sm font-medium text-slate-700">报告审核</p>
-                  <p class="text-xs text-slate-400">{{ selectedSpecimen.auditTime?.replace('T', ' ') }} · {{
-                      selectedSpecimen.auditBy
-                    }}</p>
-                </div>
-              </div>
-              <div v-if="selectedSpecimen.specimenStatus === 99" class="flex gap-3">
-                <div class="flex flex-col items-center">
-                  <div class="h-2.5 w-2.5 rounded-full bg-red-500"></div>
-                </div>
-                <div>
-                  <p class="text-sm font-medium text-red-600">异常退回</p>
-                  <p v-if="selectedSpecimen.suggestions" class="text-xs text-slate-400">原因：{{
-                      selectedSpecimen.suggestions
-                    }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </template>
-    </el-dialog>
+    <SpecimenDetail v-model="showDetailDialog" :specimen="selectedSpecimen"/>
 
     <!-- 条码分配弹窗 -->
     <el-dialog v-model="showBarcodeDialog" destroy-on-close title="分配标本条码" width="400px">
@@ -297,6 +188,7 @@ import {assignBarcode, getSpecimenList, getSpecimenStats, rejectSpecimen, sample
 import {patientGenderText} from '@/lib/patientGender';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import SpecimenDetail from './SpecimenDetail.vue';
 
 const loading = ref(false);
 const specimens = ref([]);

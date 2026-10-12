@@ -58,79 +58,7 @@
       </div>
     </el-card>
 
-    <!-- 模板编辑 -->
-    <el-dialog v-model="editVisible" :close-on-click-modal="false"
-               :title="form.id ? `编辑模板 — ${form.templateCode}` : '新增模板'" width="880px">
-      <el-form label-width="110px">
-        <div class="flex flex-wrap gap-x-6">
-          <el-form-item label="包编码" required>
-            <el-input v-model="form.templateCode" placeholder="如 CSSDP008" style="width: 200px"/>
-          </el-form-item>
-          <el-form-item label="器械包名称" required>
-            <el-input v-model="form.packName" style="width: 200px"/>
-          </el-form-item>
-          <el-form-item label="默认灭菌方式" required>
-            <el-select v-model="form.sterilizeMethod" :fit-input-width="false" style="width: 160px">
-              <el-option v-for="d in methodDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="状态">
-            <el-radio-group v-model="form.status">
-              <el-radio :value="1">启用</el-radio>
-              <el-radio :value="0">停用</el-radio>
-            </el-radio-group>
-          </el-form-item>
-        </div>
-        <el-form-item label="组成明细" required>
-          <div class="w-full">
-            <el-table :data="form.items" border max-height="320" size="small">
-              <el-table-column label="器械/耗材名称" min-width="260">
-                <template #default="{ row }">
-                  <el-select v-model="row.itemName" :fit-input-width="false" allow-create class="w-full"
-                             default-first-option filterable placeholder="从耗材字典选择或手输"
-                             @change="(v: string) => onTplItemNameChange(row, v)">
-                    <el-option v-for="(c, i) in tplItemOptions" :key="i" :label="c.name" :value="c.name"/>
-                  </el-select>
-                </template>
-              </el-table-column>
-              <el-table-column label="规格" width="170">
-                <template #default="{ row }">
-                  <el-input v-model="row.spec"/>
-                </template>
-              </el-table-column>
-              <el-table-column label="单位" width="100">
-                <template #default="{ row }">
-                  <el-input v-model="row.unit"/>
-                </template>
-              </el-table-column>
-              <el-table-column label="基数" width="120">
-                <template #default="{ row }">
-                  <el-input-number v-model="row.quantity" :min="1" controls-position="right" size="small"
-                                   style="width: 90px"/>
-                </template>
-              </el-table-column>
-              <el-table-column align="center" label="" width="60">
-                <template #default="{ $index }">
-                  <el-button :disabled="form.items.length <= 1" :icon="Delete" link size="small" type="danger"
-                             @click="removeItem($index)"/>
-                </template>
-              </el-table-column>
-            </el-table>
-            <div class="flex items-center gap-3 mt-1">
-              <el-button :icon="Plus" link type="primary" @click="addItem">添加明细行</el-button>
-              <span class="text-xs text-gray-500">共 {{ form.items.length }} 条明细</span>
-            </div>
-          </div>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="form.remark" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button v-perm="'asset:cssd:edit'" :loading="saving" type="primary" @click="save">保存</el-button>
-      </template>
-    </el-dialog>
+    <CssdTemplateEdit v-model="editVisible" :method-dict="methodDict" :row="editRow" @saved="loadList"/>
   </div>
 </template>
 
@@ -145,19 +73,13 @@
  */
 import {onMounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
-import {Delete, Plus, Refresh, Search} from '@element-plus/icons-vue';
-import {
-  cssdTemplateDelete,
-  cssdTemplateItemSelectList,
-  cssdTemplateListPage,
-  cssdTemplateUpsert,
-  getCssdTemplateDetail,
-} from '@/api/cssd';
+import {Refresh, Search} from '@element-plus/icons-vue';
+import {cssdTemplateDelete, cssdTemplateListPage} from '@/api/cssd';
 import {getDictDataMapList} from '@/api/system';
-import {getConsumableSelectList} from '@/api/supplies';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import CssdTemplateEdit from './CssdTemplateEdit.vue';
 // ---------------- 字典 ----------------
 const methodDict = ref([]);
 const methodText = (v) => dictLabelText(methodDict.value, v);
@@ -168,28 +90,6 @@ const loadDicts = async () => {
   } catch (e) {
     console.error('加载字典失败', e);
   }
-};
-// ---------------- 组成明细名称下拉数据源：启用模板明细去重汇总 + 耗材字典 ----------------
-const tplItemOptions = ref([]);
-const loadTplItemOptions = async () => {
-  try {
-    const [tplRes, conRes] = await Promise.all([cssdTemplateItemSelectList(), getConsumableSelectList()]);
-    const fromTpl = (tplRes.code === 200 ? tplRes.data || [] : [])
-        .map((x) => ({name: x.itemName, spec: x.spec || undefined, unit: x.unit || undefined}));
-    const fromConsumable = (conRes.code === 200 ? conRes.data || [] : [])
-        .map((x) => ({name: x.consumableName, spec: x.specification || undefined, unit: x.unit || undefined}));
-    const seen = new Set();
-    tplItemOptions.value = [...fromTpl, ...fromConsumable].filter((x) => x.name && !seen.has(x.name) && !!seen.add(x.name));
-  } catch (e) {
-    console.error('加载器械/耗材下拉失败', e);
-  }
-};
-const onTplItemNameChange = (row, name) => {
-  const c = tplItemOptions.value.find((x) => x.name === name);
-  if (!c)
-    return;
-  row.spec = c.spec || row.spec;
-  row.unit = c.unit || row.unit;
 };
 // ---------------- 列表 ----------------
 const loading = ref(false);
@@ -224,82 +124,14 @@ const reset = () => {
 };
 // ---------------- 新增/编辑 ----------------
 const editVisible = ref(false);
-const saving = ref(false);
-const form = reactive({
-  id: null, templateCode: '', packName: '', sterilizeMethod: 1, status: 1, remark: '',
-  items: [],
-});
-const blankItem = () => ({itemName: '', spec: '', unit: '件', quantity: 1});
+const editRow = ref(null);
 const openCreate = () => {
-  Object.assign(form, {
-    id: null, templateCode: '', packName: '', sterilizeMethod: 1, status: 1, remark: '',
-    items: [blankItem()],
-  });
+  editRow.value = null;
   editVisible.value = true;
 };
-const openEdit = async (row) => {
-  try {
-    const res = await getCssdTemplateDetail(row.id);
-    if (res.code !== 200) {
-      ElMessage.error(res.message || '查询失败');
-      return;
-    }
-    const d = res.data;
-    Object.assign(form, {
-      id: d.id, templateCode: d.templateCode, packName: d.packName,
-      sterilizeMethod: Number(d.sterilizeMethod), status: Number(d.status), remark: d.remark || '',
-      items: (d.items || []).map((i) => ({
-        itemName: i.itemName, spec: i.spec || '', unit: i.unit || '件', quantity: Number(i.quantity),
-      })),
-    });
-    editVisible.value = true;
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('查询失败');
-  }
-};
-const addItem = () => form.items.push(blankItem());
-const removeItem = (idx) => form.items.splice(idx, 1);
-const save = async () => {
-  if (!form.templateCode.trim()) {
-    ElMessage.warning('请填写包编码');
-    return;
-  }
-  if (!form.packName.trim()) {
-    ElMessage.warning('请填写器械包名称');
-    return;
-  }
-  const items = form.items.filter((i) => i.itemName.trim());
-  if (!items.length) {
-    ElMessage.warning('组成明细至少一条');
-    return;
-  }
-  saving.value = true;
-  try {
-    const res = await cssdTemplateUpsert({
-      id: form.id ?? undefined,
-      templateCode: form.templateCode.trim(),
-      packName: form.packName.trim(),
-      sterilizeMethod: form.sterilizeMethod,
-      status: form.status,
-      remark: form.remark || undefined,
-      items: items.map((i) => ({
-        itemName: i.itemName.trim(), spec: i.spec?.trim() || undefined,
-        unit: i.unit?.trim() || '件', quantity: Number(i.quantity) || 1,
-      })),
-    });
-    if (res.code === 200) {
-      ElMessage.success('模板已保存');
-      editVisible.value = false;
-      loadList();
-    } else
-      ElMessage.error(res.message || '保存失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('保存失败');
-  } finally {
-    saving.value = false;
-  }
+const openEdit = (row) => {
+  editRow.value = row;
+  editVisible.value = true;
 };
 const del = async (row) => {
   try {
@@ -322,6 +154,5 @@ const del = async (row) => {
 onMounted(() => {
   loadDicts();
   loadList();
-  loadTplItemOptions();
 });
 </script>

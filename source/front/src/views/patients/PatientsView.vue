@@ -38,7 +38,7 @@
           </el-form-item>
         </el-form>
         <div class="flex shrink-0 items-start gap-3">
-          <el-button v-perm="'patient:add'" :icon="Plus" type="primary" @click="showAddDialog = true">新增患者
+          <el-button v-perm="'patient:add'" :icon="Plus" type="primary" @click="openAdd">新增患者
           </el-button>
         </div>
       </div>
@@ -115,7 +115,7 @@
         <el-table-column label="过敏史" prop="allergyHistory" show-overflow-tooltip width="200"/>
         <el-table-column align="right" label="操作" width="120">
           <template #default="{ row }">
-            <el-button v-perm="'patient:edit'" link size="small" type="primary" @click.stop="handleEdit(row)">编辑
+            <el-button v-perm="'patient:edit'" link size="small" type="primary" @click.stop="openEdit(row)">编辑
             </el-button>
             <el-button link size="small" type="danger" @click.stop="handleDelete(row)">删除</el-button>
           </template>
@@ -143,230 +143,8 @@
         :patient-id="selectedPatientId"
     />
 
-    <el-dialog v-model="showAddDialog" destroy-on-close title="新增患者" width="800px">
-      <el-form :model="newPatient" label-position="top">
-        <!-- 基本信息 -->
-        <h4 class="mb-2 text-sm font-medium text-slate-700">基本信息</h4>
-        <div class="grid grid-cols-3 gap-4">
-          <el-form-item label="姓名" required>
-            <el-input v-model="newPatient.patientName" placeholder="请输入患者姓名"/>
-          </el-form-item>
-          <el-form-item label="性别" required>
-            <el-select v-model="newPatient.gender" class="w-full" placeholder="请选择（不确定选未知）">
-              <el-option v-for="g in PATIENT_GENDER_OPTIONS" :key="g.value" :label="g.label" :value="g.value"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="出生日期">
-            <el-date-picker v-model="newPatient.birthDate" class="w-full" placeholder="选择日期" type="date"
-                            value-format="YYYY-MM-DD"/>
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-3 gap-4">
-          <el-form-item label="身份证号" required>
-            <el-input v-model="newPatient.idCard" placeholder="请输入身份证号" @blur="syncBirthDateFromIdCard"/>
-          </el-form-item>
-          <el-form-item label="联系电话">
-            <el-input v-model="newPatient.phone" placeholder="选填（填了须为 11 位手机号）"/>
-          </el-form-item>
-          <el-form-item label="民族">
-            <el-select v-model="newPatient.nation" allow-create class="w-full" default-first-option filterable
-                       placeholder="请选择民族">
-              <el-option v-for="item in nationalityList" :key="item.dictValue" :label="item.dictLabel"
-                         :value="item.dictValue"/>
-            </el-select>
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-3 gap-4">
-          <el-form-item label="职业">
-            <el-input v-model="newPatient.occupation" placeholder="请输入职业"/>
-          </el-form-item>
-          <el-form-item label="婚姻状况">
-            <el-select v-model="newPatient.maritalStatus" class="w-full" clearable placeholder="请选择">
-              <el-option :value="0" label="未婚"/>
-              <el-option :value="1" label="已婚"/>
-              <el-option :value="2" label="离异"/>
-              <el-option :value="3" label="丧偶"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="患者类型">
-            <el-select v-model="newPatient.patientType" class="w-full">
-              <el-option v-for="o in PATIENT_TYPE_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
-            </el-select>
-          </el-form-item>
-        </div>
-
-        <!-- 联系人信息 -->
-        <div class="grid grid-cols-3 gap-4">
-          <el-form-item label="联系人姓名">
-            <el-input v-model="newPatient.contactName" placeholder="请输入联系人姓名"/>
-          </el-form-item>
-          <el-form-item label="联系人电话">
-            <el-input v-model="newPatient.contactPhone" placeholder="请输入联系人电话"/>
-          </el-form-item>
-          <el-form-item label="与患者关系">
-            <el-select v-model="newPatient.contactRelation" class="w-full" default-first-option
-                       filterable placeholder="请选择关系">
-              <el-option v-for="item in patientRelationList" :key="item.dictValue" :label="item.dictLabel"
-                         :value="item.dictLabel"/>
-            </el-select>
-          </el-form-item>
-        </div>
-
-        <!-- 其他信息 -->
-        <h4 class="mb-2 mt-4 text-sm font-medium text-slate-700">其他信息</h4>
-        <div class="grid grid-cols-3 gap-4">
-          <el-form-item label="血型">
-            <el-select v-model="newPatient.bloodType" class="w-full" clearable placeholder="选择血型">
-              <el-option label="A型" value="A"/>
-              <el-option label="B型" value="B"/>
-              <el-option label="AB型" value="AB"/>
-              <el-option label="O型" value="O"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="民族">
-            <el-select v-model="newPatient.nation" allow-create class="w-full" default-first-option filterable
-                       placeholder="请选择民族">
-              <el-option v-for="item in nationalityList" :key="item.dictValue" :label="item.dictLabel"
-                         :value="item.dictValue"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="职业">
-            <el-input v-model="newPatient.occupation" placeholder="请输入职业"/>
-          </el-form-item>
-        </div>
-        <el-form-item label="家庭住址">
-          <el-input v-model="newPatient.address" placeholder="请输入家庭住址"/>
-        </el-form-item>
-
-        <!-- 医保信息 -->
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="医保类型">
-            <el-select v-model="newPatient.medicalInsuranceType" class="w-full" clearable filterable
-                       placeholder="请选择医保类型">
-              <el-option v-for="item in medicalInsuranceTypes" :key="item.dictValue" :label="item.dictLabel"
-                         :value="item.dictValue"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="医保卡号">
-            <el-input v-model="newPatient.medicalInsuranceNo" placeholder="请输入医保卡号"/>
-          </el-form-item>
-        </div>
-
-        <el-form-item label="过敏史">
-          <el-input v-model="newPatient.allergyHistory" :rows="3"
-                    type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showAddDialog = false">取消</el-button>
-        <el-button v-perm="'patient:add'" type="primary" @click="handleSubmit">确认添加</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 编辑患者弹窗 -->
-    <el-dialog v-model="showEditDialog" destroy-on-close title="编辑患者" width="800px">
-      <el-form :model="editingPatient" label-position="top">
-        <!-- 基本信息 -->
-        <h4 class="mb-2 text-sm font-medium text-slate-700">基本信息</h4>
-        <div class="grid grid-cols-3 gap-4">
-          <el-form-item label="姓名" required>
-            <el-input v-model="editingPatient.patientName" placeholder="请输入患者姓名"/>
-          </el-form-item>
-          <el-form-item label="性别" required>
-            <el-select v-model="editingPatient.gender" class="w-full" placeholder="请选择（不确定选未知）">
-              <el-option v-for="g in PATIENT_GENDER_OPTIONS" :key="g.value" :label="g.label" :value="g.value"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="出生日期">
-            <el-date-picker v-model="editingPatient.birthDate" class="w-full" placeholder="选择日期"
-                            type="date" value-format="YYYY-MM-DD"/>
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-3 gap-4">
-          <el-form-item label="联系电话">
-            <el-input v-model="editingPatient.phone" placeholder="选填（填了须为 11 位手机号）"/>
-          </el-form-item>
-          <el-form-item label="身份证号" required>
-            <el-input v-model="editingPatient.idCard" placeholder="请输入身份证号"/>
-          </el-form-item>
-          <el-form-item label="患者类型">
-            <el-select v-model="editingPatient.patientType" class="w-full">
-              <el-option v-for="o in PATIENT_TYPE_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
-            </el-select>
-          </el-form-item>
-        </div>
-
-        <!-- 其他信息 -->
-        <h4 class="mb-2 mt-4 text-sm font-medium text-slate-700">其他信息</h4>
-        <div class="grid grid-cols-3 gap-4">
-          <el-form-item label="血型">
-            <el-select v-model="editingPatient.bloodType" class="w-full" clearable placeholder="选择血型">
-              <el-option label="A型" value="A"/>
-              <el-option label="B型" value="B"/>
-              <el-option label="AB型" value="AB"/>
-              <el-option label="O型" value="O"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="民族">
-            <el-select v-model="editingPatient.nation" allow-create class="w-full" default-first-option
-                       filterable placeholder="请选择民族">
-              <el-option v-for="item in nationalityList" :key="item.dictValue" :label="item.dictLabel"
-                         :value="item.dictValue"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="职业">
-            <el-input v-model="editingPatient.occupation" placeholder="请输入职业"/>
-          </el-form-item>
-        </div>
-        <el-form-item label="家庭住址">
-          <el-input v-model="editingPatient.address" placeholder="请输入家庭住址"/>
-        </el-form-item>
-
-        <!-- 联系人信息 -->
-        <h4 class="mb-2 mt-4 text-sm font-medium text-slate-700">联系人信息</h4>
-        <div class="grid grid-cols-3 gap-4">
-          <el-form-item label="联系人姓名">
-            <el-input v-model="editingPatient.contactName" placeholder="请输入联系人姓名"/>
-          </el-form-item>
-          <el-form-item label="联系人电话">
-            <el-input v-model="editingPatient.contactPhone" placeholder="请输入联系人电话"/>
-          </el-form-item>
-          <el-form-item label="与患者关系">
-            <!-- 同新增对话框：绑 dictLabel，且不给 allow-create（理由见新增处注释） -->
-            <el-select v-model="editingPatient.contactRelation" class="w-full" default-first-option
-                       filterable placeholder="请选择关系">
-              <el-option v-for="item in patientRelationList" :key="item.dictValue" :label="item.dictLabel"
-                         :value="item.dictLabel"/>
-            </el-select>
-          </el-form-item>
-        </div>
-
-        <!-- 医保信息 -->
-        <h4 class="mb-2 mt-4 text-sm font-medium text-slate-700">医保信息</h4>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="医保类型">
-            <el-select v-model="editingPatient.medicalInsuranceType" class="w-full" clearable filterable
-                       placeholder="请选择医保类型">
-              <el-option v-for="item in medicalInsuranceTypes" :key="item.dictValue" :label="item.dictLabel"
-                         :value="item.dictValue"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="医保卡号">
-            <el-input v-model="editingPatient.medicalInsuranceNo" placeholder="请输入医保卡号"/>
-          </el-form-item>
-        </div>
-
-        <el-form-item label="过敏史">
-          <el-input v-model="editingPatient.allergyHistory" :rows="3"
-                    placeholder="该患者已有结构化过敏记录时，此处显示的是明细摘要、保存后会被明细覆盖；按条目维护请到「患者中心 → 健康档案」"
-                    type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showEditDialog = false">取消</el-button>
-        <el-button v-perm="'patient:edit'" type="primary" @click="handleEditSubmit">确认修改</el-button>
-      </template>
-    </el-dialog>
+    <!-- 新增/修改共用一个弹框组件：row 为空走新增、有值走修改 -->
+    <PatientsEdit v-model="showEditDialog" :row="editRow" @saved="loadData"/>
   </div>
 </template>
 
@@ -374,32 +152,15 @@
 import {onMounted, ref} from 'vue';
 import {Plus, Refresh, Search} from '@element-plus/icons-vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
-import {
-  createPatient,
-  deletePatient,
-  getPatientDetail,
-  getPatientList,
-  getPatientTags,
-  updatePatient
-} from '@/api/patient';
-import {getDictDataList, getPatientTagList} from '@/api/system';
-import {DICT_TYPE} from '@/lib/dict-cache';
-import {
-  birthDateFromIdCard,
-  isIdCardBirthDateLegal,
-  isIdCardChecksumLegal,
-  isIdCardFormatLegal,
-  isPatientGenderCollected,
-  isPhoneLegal,
-  PATIENT_GENDER_OPTIONS,
-  patientAgeText,
-  patientGenderText
-} from '@/lib/patientGender';
+import {deletePatient, getPatientList, getPatientTags} from '@/api/patient';
+import {getPatientTagList} from '@/api/system';
+import {patientAgeText, patientGenderText} from '@/lib/patientGender';
 import {PATIENT_TYPE_OPTIONS} from '@/lib/patientType';
 import {TAG_LIST_VISIBLE_LIMIT, tagChipText, tagChipTitle} from '@/lib/patientTag';
 // 患者详情弹框统一走通用组件（原页面内联实现已删除：它读的 medicalRecords / prescriptions /
 // inspections / laboratories 字段并不在返回体里，4 个 tab 恒为空）
 import PatientDetailDialog from '@/components/his/PatientDetailDialog.vue';
+import PatientsEdit from './PatientsEdit.vue';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
 
@@ -416,9 +177,9 @@ const searchForm = ref({
 const selectedPatient = ref(null);
 const selectedPatientId = ref('');
 const showDetailDialog = ref(false);
-const showAddDialog = ref(false);
 const showEditDialog = ref(false);
-const editingPatient = ref(null);
+// 传给弹框的当前行：null = 新增
+const editRow = ref(null);
 const loading = ref(false);
 const patients = ref([]);
 const pagination = ref({
@@ -441,26 +202,6 @@ const statusMap = {
 // 原地的 maritalStatusMap 从未被引用，已删除 —— 口径只留 lib 一份。
 // 患者类型文案走 @/lib/patientType（曾在这里写 {1:'普通患者',2:'医保患者',3:'公费患者'}，
 // 2/3 实际是「城镇职工医保 / 城乡居民医保」，不是"医保患者 / 公费患者"）
-const newPatient = ref({
-  patientName: '',
-  // 不预设性别：默认成"男"等于静默编造性别，改为必须显式选择（含「未知」）
-  gender: null,
-  birthDate: '',
-  phone: '',
-  idCard: '',
-  bloodType: '',
-  allergyHistory: '',
-  address: '',
-  nation: '',
-  occupation: '',
-  maritalStatus: null,
-  patientType: 1,
-  medicalInsuranceType: '',
-  medicalInsuranceNo: '',
-  contactName: '',
-  contactPhone: '',
-  contactRelation: '',
-});
 const handleSearch = () => {
   pagination.value.pageNum = 1;
   loadData();
@@ -525,77 +266,9 @@ const handleViewDetail = (row) => {
   selectedPatientId.value = String(row.id);
   showDetailDialog.value = true;
 };
-/**
- * 身份证填完 → 把出生日期带出来。录入时少填一格，也避免 birth_date 空着：
- * age 是后端拿 birth_date 算的，空着列表就显示「—」；EMPI 的「同名+同性别+同出生日期」
- * 那一档匹配也依赖它。已经手动填过出生日期就不覆盖。
- */
-const syncBirthDateFromIdCard = () => {
-  if (newPatient.value.birthDate)
-    return;
-  const d = birthDateFromIdCard(newPatient.value.idCard);
-  if (d)
-    newPatient.value.birthDate = d;
-};
-const handleSubmit = async () => {
-  if (!newPatient.value.patientName) {
-    ElMessage.warning('请输入患者姓名');
-    return;
-  }
-  // 性别必须显式选：以前下拉默认选中"男"，不碰它就是男 —— 那不是必填，是静默编造性别
-  if (!isPatientGenderCollected(newPatient.value.gender)) {
-    ElMessage.warning('请选择性别（确实没问到请选「未知」）');
-    return;
-  }
-  if (!newPatient.value.idCard) {
-    ElMessage.warning('请输入身份证号');
-    return;
-  }
-  if (!isIdCardFormatLegal(newPatient.value.idCard)) {
-    ElMessage.warning('身份证号格式不正确：应为 18 位（末位可为 X）');
-    return;
-  }
-  // 出生日期单独判：校验位对了不代表日期存在（19990230 这种），提示要指到点子上
-  if (!isIdCardBirthDateLegal(newPatient.value.idCard)) {
-    ElMessage.warning('身份证号中的出生日期不存在，请核对');
-    return;
-  }
-  if (!isIdCardChecksumLegal(newPatient.value.idCard)) {
-    ElMessage.warning('身份证号校验位不正确，请核对');
-    return;
-  }
-  // 手机号放宽为可空（老年患者、三无患者常见）：但填了就必须是合法号码
-  if (newPatient.value.phone && !isPhoneLegal(newPatient.value.phone)) {
-    ElMessage.warning('手机号格式不正确：应为 11 位手机号');
-    return;
-  }
-  try {
-    await createPatient(newPatient.value);
-    ElMessage.success('新增成功');
-    showAddDialog.value = false;
-    loadData();
-    newPatient.value = {
-      patientName: '',
-      gender: null,
-      birthDate: '',
-      phone: '',
-      idCard: '',
-      bloodType: '',
-      allergyHistory: '',
-      address: '',
-      nation: '',
-      occupation: '',
-      maritalStatus: null,
-      patientType: 1,
-      medicalInsuranceType: '',
-      medicalInsuranceNo: '',
-      contactName: '',
-      contactPhone: '',
-      contactRelation: '',
-    };
-  } catch (error) {
-    ElMessage.error(error.message || '新增失败');
-  }
+const openAdd = () => {
+  editRow.value = null;
+  showEditDialog.value = true;
 };
 const handleDelete = async (row) => {
   try {
@@ -613,52 +286,9 @@ const handleDelete = async (row) => {
     }
   }
 };
-const handleEdit = async (row) => {
-  editingPatient.value = {...row};
+const openEdit = (row) => {
+  editRow.value = row;
   showEditDialog.value = true;
-  // 列表接口不回传医保卡号明文（服务端已脱敏、明文置 null）：
-  // 编辑弹窗单独取主档全量补齐，否则用户看到空的「医保卡号」会误以为患者没填，
-  // 且直接回传 null 虽然不会洗掉库里数据（MP 跳过 null 字段），但体验是错的
-  try {
-    const res = await getPatientDetail(row.id);
-    if (res.data) {
-      editingPatient.value = {...res.data};
-    }
-  } catch (error) {
-    console.error('加载患者全量信息失败（编辑表单按列表行数据展示）:', error);
-  }
-};
-const handleEditSubmit = async () => {
-  if (!editingPatient.value.patientName) {
-    ElMessage.warning('请输入患者姓名');
-    return;
-  }
-  if (!isPatientGenderCollected(editingPatient.value.gender)) {
-    ElMessage.warning('请选择性别（确实没问到请选「未知」；历史脏码值 0 请顺手修正）');
-    return;
-  }
-  if (!editingPatient.value.idCard) {
-    ElMessage.warning('请输入身份证号');
-    return;
-  }
-  // 修改时只验 18 位格式、不验校验位：存量库里有 32 条造数编的身份证，
-  // 卡校验位会让这些老档连改电话都保存不了（与后端 PatientProfileValidator 同口径）
-  if (!isIdCardFormatLegal(editingPatient.value.idCard)) {
-    ElMessage.warning('身份证号格式不正确：应为 18 位（末位可为 X）');
-    return;
-  }
-  if (editingPatient.value.phone && !isPhoneLegal(editingPatient.value.phone)) {
-    ElMessage.warning('手机号格式不正确：应为 11 位手机号');
-    return;
-  }
-  try {
-    await updatePatient(editingPatient.value);
-    ElMessage.success('修改成功');
-    showEditDialog.value = false;
-    loadData();
-  } catch (error) {
-    ElMessage.error(error.message || '修改失败');
-  }
 };
 const handleCopyName = (name) => {
   if (navigator.clipboard) {
@@ -676,36 +306,6 @@ const handleCopyName = (name) => {
     document.execCommand('copy');
     document.body.removeChild(textarea);
     ElMessage.success('已复制');
-  }
-};
-// 医保类型字典
-const medicalInsuranceTypes = ref([]);
-const loadMedicalInsuranceTypes = async () => {
-  try {
-    const res = await getDictDataList(DICT_TYPE.MEDICAL_INSURANCE_TYPE);
-    medicalInsuranceTypes.value = res.data || [];
-  } catch (error) {
-    console.error('加载医保类型字典失败:', error);
-  }
-};
-// 民族字典
-const nationalityList = ref([]);
-const loadNationalityList = async () => {
-  try {
-    const res = await getDictDataList(DICT_TYPE.SYS_NATIONALITY);
-    nationalityList.value = res.data || [];
-  } catch (error) {
-    console.error('加载民族字典失败:', error);
-  }
-};
-// 与患者关系字典
-const patientRelationList = ref([]);
-const loadPatientRelationList = async () => {
-  try {
-    const res = await getDictDataList(DICT_TYPE.SYS_PATIENT_RELATION);
-    patientRelationList.value = res.data || [];
-  } catch (error) {
-    console.error('加载与患者关系字典失败:', error);
   }
 };
 const fmtDateTime = (v) => (v ? v.slice(0, 10) : '');
@@ -749,9 +349,6 @@ const loadPatientTagsBatch = async (patientIds) => {
 };
 onMounted(() => {
   loadData();
-  loadMedicalInsuranceTypes();
-  loadNationalityList();
-  loadPatientRelationList();
   loadTagList();
 });
 </script>

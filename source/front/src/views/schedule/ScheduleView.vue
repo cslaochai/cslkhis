@@ -140,9 +140,9 @@
                   <div :data-testid="`panel-row-${row.doctorName}`">
                     <p class="text-base font-semibold text-slate-800">
                       {{ row.doctorName }}<span v-if="row.title"
-                                                :class="getTitleTagClass(row.title)"
+                                                :class="getTitleTagClass(titleMap, row.title)"
                                                 class="ml-1 inline-block rounded px-1 py-px align-middle text-[10px] font-normal leading-4 ring-1 ring-inset">{{
-                        getTitleLabel(row.title)
+                        getTitleLabel(titleMap, row.title)
                       }}</span>
                     </p>
                     <p class="text-sm text-slate-500">{{ row.deptName }}</p>
@@ -484,641 +484,46 @@
     </el-tabs>
 
     <!-- 班次编辑弹窗：展示完整详情，仅名称可改（时间/科室/类型/状态只读） -->
-    <el-dialog v-model="shiftEditVisible" destroy-on-close title="编辑班次" width="480px">
-      <el-form label-position="top" @submit.prevent>
-        <el-form-item label="班次名称" required>
-          <el-input v-model="shiftEditName" data-testid="shift-edit-name" maxlength="50"
-                    placeholder="班次名称（同科室范围内不可重复）"
-                    show-word-limit/>
-        </el-form-item>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="起止时间">
-            <el-input :model-value="shiftEditRow ? `${shiftEditRow.startTime} ~ ${shiftEditRow.endTime}` : ''"
-                      disabled/>
-          </el-form-item>
-          <el-form-item label="时长">
-            <el-input :model-value="shiftEditRow ? `${shiftEditRow.durationMinutes} 分钟` : ''" disabled/>
-          </el-form-item>
-          <el-form-item label="适用科室">
-            <el-input :model-value="shiftEditRow ? shiftDeptName(shiftEditRow.deptId) : ''" disabled/>
-          </el-form-item>
-          <el-form-item label="班次类型">
-            <el-input :model-value="shiftEditRow?.scheduleType ? (shiftLabel[shiftEditRow.scheduleType] || '—') : '—'"
-                      disabled/>
-          </el-form-item>
-        </div>
-        <el-form-item label="适用域">
-          <el-radio-group v-model="shiftEditUseScope" data-testid="shift-edit-scope">
-            <el-radio :value="1">门诊/急诊排班</el-radio>
-            <el-radio :value="2">病区护理排班</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-radio-group v-model="shiftEditStatus" data-testid="shift-edit-status">
-            <el-radio :value="1">启用</el-radio>
-            <el-radio :value="0">停用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <p class="text-xs text-slate-400">可修改名称、适用域与启用状态；起止时间/适用科室/班次类型等口径调整需走 SQL 变更。
-          改成「病区护理排班」后，这条班次就只会出现在护理排班页，门诊排班下拉里再也选不到它。</p>
-      </el-form>
-      <template #footer>
-        <el-button @click="shiftEditVisible = false">取消</el-button>
-        <el-button v-perm="'outpatient:schedule:edit'" :loading="shiftEditSaving" type="primary"
-                   @click="handleShiftEditSubmit">确定
-        </el-button>
-      </template>
-    </el-dialog>
+    <ScheduleShiftEdit
+        v-model="shiftEditVisible"
+        :departments="departments"
+        :row="shiftEditRow"
+        @saved="loadShifts"
+    />
 
     <!-- 新增班次弹窗：完整建条（防重/时间校验在后端 shiftUpsert） -->
-    <el-dialog v-model="shiftAddVisible" destroy-on-close title="新增字典" width="480px">
-      <el-form label-position="top" @submit.prevent>
-        <el-form-item label="班次名称" required>
-          <el-input v-model="shiftAddForm.shiftName" maxlength="50" placeholder="如：康复科上午班"
-                    show-word-limit/>
-        </el-form-item>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="开始时间" required>
-            <el-select v-model="shiftAddForm.startTime" class="w-full" data-testid="shift-add-start" filterable>
-              <el-option v-for="t in timeOptions" :key="t" :label="t" :value="t"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="结束时间" required>
-            <el-select v-model="shiftAddForm.endTime" class="w-full" data-testid="shift-add-end" filterable>
-              <el-option v-for="t in timeOptions" :key="t" :label="t" :value="t"/>
-            </el-select>
-          </el-form-item>
-        </div>
-        <p class="-mt-2 mb-3 text-xs text-slate-400">
-          时长自动计算：{{ shiftAddDuration ? `${shiftAddDuration} 分钟` : '结束时间需晚于开始时间' }}</p>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="适用科室">
-            <el-select v-model="shiftAddForm.deptId" class="w-full" filterable placeholder="请选择适用科室">
-              <el-option label="全部科室" value=""/>
-              <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="班次类型">
-            <el-select v-model="shiftAddForm.scheduleType" class="w-full" clearable placeholder="班次类型">
-              <el-option v-for="s in shiftOptions" :key="s.value" :label="s.label" :value="s.value"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="适用域" required>
-            <el-select v-model="shiftAddForm.useScope" :fit-input-width="false" class="w-full"
-                       data-testid="shift-add-scope">
-              <el-option v-for="o in SHIFT_SCOPE_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
-            </el-select>
-          </el-form-item>
-        </div>
-        <el-form-item label="状态">
-          <el-radio-group v-model="shiftAddForm.status">
-            <el-radio :value="1">启用</el-radio>
-            <el-radio :value="0">停用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="shiftAddVisible = false">取消</el-button>
-        <el-button v-perm="'outpatient:schedule:add'" :loading="shiftAddSaving" type="primary"
-                   @click="handleShiftAddSubmit">
-          确定
-        </el-button>
-      </template>
-    </el-dialog>
+    <ScheduleDictAdd
+        v-model="shiftAddVisible"
+        :departments="departments"
+        @saved="handleShiftSearch"
+    />
 
-    <!-- 新增排班（批量：医生多选 × 日期区间）与修改排班（单条）是两个弹窗。
+    <!-- 新增排班（批量：人员多选 × 日期区间）与修改排班（单条）拆成两个组件：
          以前一个弹窗靠 v-if="isEdit" 分叉，两套排版挤在一起，改一边就碰坏另一边。 -->
-    <el-dialog v-model="dialogVisible" destroy-on-close title="新增排班" width="980px">
-      <el-form :model="formData" label-position="top">
-        <div class="grid grid-cols-3 gap-4">
-          <el-form-item label="科室" required>
-            <el-select v-model="formData.deptId" class="w-full" filterable placeholder="输入科室名称搜索"
-                       @change="handleDeptChange">
-              <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id"/>
-            </el-select>
-          </el-form-item>
-          <!-- 岗位类别：排班对象不再只有医生（sql/195）。
-               只有「医生」才配号源/诊室/挂号费，换岗位要把人一起重选（不同岗位是不同的人）。 -->
-          <el-form-item label="岗位类别" required>
-            <el-select v-model="formData.staffType" class="w-full" data-testid="form-staff-type"
-                       @change="handleStaffTypeChange">
-              <el-option v-for="o in STAFF_TYPE_DOCTOR_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item :label="`${staffTypeText(formData.staffType)}人员`" required>
-            <el-select v-model="formData.doctorIds" :disabled="!formData.deptId" :max-collapse-tags="1"
-                       :placeholder="`选择${staffTypeText(formData.staffType)}人员（可多选，一次排完）`" class="w-full"
-                       collapse-tags collapse-tags-tooltip
-                       data-testid="form-doctor" multiple @change="ensureDoctorRows">
-              <el-option v-for="e in employees" :key="e.id" :label="`${e.empName} - ${getTitleLabel(e.title)}`"
-                         :value="e.id"/>
-            </el-select>
-          </el-form-item>
-        </div>
-        <p v-if="!staffTypeHasSource(formData.staffType)" class="-mt-2 mb-3 text-xs text-slate-500">
-          {{ staffTypeText(formData.staffType) }}岗位是<b>出勤排班</b>：只排「谁哪天哪个班次在岗」，不放号、不需要诊室、不计挂号费。
-        </p>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item data-testid="form-date-range" label="排班日期" required>
-            <el-date-picker
-                v-model="formData.scheduleDateRange"
-                :disabled-date="(time: Date) => time.getTime() < Date.now() - 86400000"
-                :shortcuts="dateRangeShortcuts"
-                class="!w-full"
-                end-placeholder="结束日期"
-                range-separator="至"
-                start-placeholder="开始日期"
-                type="daterange"
-                value-format="YYYY-MM-DD"
-            />
-          </el-form-item>
-          <el-form-item label="班次" required>
-            <el-select v-model="shiftDictId" class="w-full" data-testid="form-shift-dict"
-                       filterable placeholder="选择班次（时间段由班次带出）"
-                       @change="(v: any) => applyShiftDict('schedule', v)">
-              <el-option v-for="s in shiftDictOptions" :key="s.id" :label="shiftDictLabel(s)" :value="s.id"/>
-            </el-select>
-          </el-form-item>
-        </div>
-        <div class="mb-3 -mt-1 text-xs text-slate-500">
-          {{ batchPlanDesc }} · 时间段 {{ formTimeRange || '待选班次' }}（不可手填：统计按班次口径出，需要的时段先到「班次字典」建一条）
-        </div>
-
-        <!-- 默认值：只用来给「新加进来的人」补一行，以及一键覆盖已有行。
-             号源/费用/预约是「人员 × 班次」级的值，不该整批共用一个数 —— 见下方逐人表格。
-             只对医生岗有意义：出勤岗没有号源与费用，整块不显示（免得填了被后端清零还以为存上了）。 -->
-        <div v-if="staffTypeHasSource(formData.staffType)"
-             class="mb-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-          <div class="mb-2 flex items-center justify-between">
-            <span class="text-sm font-medium text-slate-700">默认值（新加入的人员按此补一行）</span>
-            <el-button :disabled="!(formData.doctorIds || []).length" data-testid="apply-defaults" size="small"
-                       @click="applyDefaultsToAllRows">应用到全部人员
-            </el-button>
-          </div>
-          <div class="grid grid-cols-6 gap-3">
-            <el-form-item label="号源数量">
-              <el-input-number v-model="formData.totalSource" :max="999" :min="1" class="!w-full"
-                               controls-position="right"/>
-            </el-form-item>
-            <el-form-item label="挂号费(元)">
-              <el-input-number v-model="formData.registFee" :min="0" :precision="2" class="!w-full"
-                               controls-position="right"/>
-            </el-form-item>
-            <el-form-item label="诊疗费(元)">
-              <el-input-number v-model="formData.diagnosisFee" :min="0" :precision="2" class="!w-full"
-                               controls-position="right"/>
-            </el-form-item>
-            <el-form-item label="专家号">
-              <el-switch v-model="formData.isExpert" :active-value="1" :inactive-value="0"/>
-            </el-form-item>
-            <el-form-item v-if="formData.isExpert === 1" label="专家费(元)">
-              <el-input-number v-model="formData.expertFee" :min="0" :precision="2" class="!w-full"
-                               controls-position="right"/>
-            </el-form-item>
-            <el-form-item label="开放预约">
-              <el-switch v-model="formData.isAppointment" :active-value="1" :inactive-value="0"/>
-            </el-form-item>
-            <el-form-item v-if="formData.isAppointment === 1" label="预约号源">
-              <el-input-number v-model="formData.appointmentSource" :max="formData.totalSource" :min="0"
-                               class="!w-full" controls-position="right"/>
-            </el-form-item>
-          </div>
-          <p class="text-xs text-slate-400">预约号源 = 划给网上预约的专用号，现场窗口不可占用；0 = 不划池</p>
-        </div>
-
-        <!-- 医生 × 排班参数：一人一行。诊室必须一人一间（排队号前缀按诊室生成、大屏按诊室导诊，
-             两位医生同一时段挤一间 = 患者跑错房间）；号源与费用按人可不同。 -->
-        <div v-if="(formData.doctorIds || []).length" class="mb-3 rounded-lg border border-slate-200 p-3"
-             data-testid="doctor-room-map">
-          <div class="mb-1 text-sm font-medium text-slate-700">
-            {{
-              staffTypeHasSource(formData.staffType)
-                  ? '人员 × 排班参数（一人一行，诊室不够就留空，提交前会拦）'
-                  : `本次将为以下 ${(formData.doctorIds || []).length} 位${staffTypeText(formData.staffType)}人员建立出勤排班`
-            }}
-          </div>
-          <el-table
-              :data="(formData.doctorIds || []).map((id: any) => ({ id, room: formData.doctorRows[String(id)] || doctorRowDefaults() }))"
-              max-height="240"
-              size="small">
-            <el-table-column label="人员" width="110">
-              <template #default="{ row }">
-                <span class="truncate text-sm text-slate-700">{{ doctorNameOf(row.id) }}</span>
-              </template>
-            </el-table-column>
-            <!-- 号源/诊室/费用只对医生岗有意义：出勤岗整块不显示 -->
-            <el-table-column v-if="staffTypeHasSource(formData.staffType)" label="诊室" width="140">
-              <template #default="{ row }">
-                <el-select v-model="row.room.roomId" class="!w-full" clearable placeholder="选择诊室" size="small">
-                  <el-option v-for="r in clinicRooms" :key="r.id" :label="r.name" :value="r.id"/>
-                </el-select>
-              </template>
-            </el-table-column>
-            <el-table-column v-if="staffTypeHasSource(formData.staffType)" label="号源" width="100">
-              <template #default="{ row }">
-                <el-input-number v-model="row.room.totalSource" :controls="false" :max="999" :min="1" class="!w-full"
-                                 size="small"/>
-              </template>
-            </el-table-column>
-            <el-table-column v-if="staffTypeHasSource(formData.staffType)" label="挂号费" width="100">
-              <template #default="{ row }">
-                <el-input-number v-model="row.room.registFee" :controls="false" :min="0" :precision="2" class="!w-full"
-                                 size="small"/>
-              </template>
-            </el-table-column>
-            <el-table-column v-if="staffTypeHasSource(formData.staffType)" label="诊疗费" width="100">
-              <template #default="{ row }">
-                <el-input-number v-model="row.room.diagnosisFee" :controls="false" :min="0" :precision="2"
-                                 class="!w-full"
-                                 size="small"/>
-              </template>
-            </el-table-column>
-            <el-table-column v-if="staffTypeHasSource(formData.staffType)" align="center" label="专家号" width="80">
-              <template #default="{ row }">
-                <el-switch v-model="row.room.isExpert" :active-value="1" :inactive-value="0" size="small"/>
-              </template>
-            </el-table-column>
-            <el-table-column v-if="staffTypeHasSource(formData.staffType)" label="专家费" width="100">
-              <template #default="{ row }">
-                <el-input-number v-model="row.room.expertFee" :controls="false" :disabled="row.room.isExpert !== 1"
-                                 :min="0" :precision="2"
-                                 class="!w-full" size="small"/>
-              </template>
-            </el-table-column>
-            <el-table-column v-if="staffTypeHasSource(formData.staffType)" align="center" label="开放预约" width="90">
-              <template #default="{ row }">
-                <el-switch v-model="row.room.isAppointment" :active-value="1" :inactive-value="0" size="small"/>
-              </template>
-            </el-table-column>
-            <el-table-column v-if="staffTypeHasSource(formData.staffType)" label="预约号源" min-width="100">
-              <template #default="{ row }">
-                <el-input-number v-model="row.room.appointmentSource" :controls="false"
-                                 :disabled="row.room.isAppointment !== 1"
-                                 :max="row.room.totalSource"
-                                 :min="0" class="!w-full" size="small"/>
-              </template>
-            </el-table-column>
-          </el-table>
-        </div>
-
-        <el-form-item label="状态">
-          <el-radio-group v-model="formData.status">
-            <el-radio :value="1">正常</el-radio>
-            <el-radio :value="0">停用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button v-perm="'outpatient:schedule:add'" :loading="submitLoading" data-testid="add-submit" type="primary"
-                   @click="handleSubmit">确定
-        </el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 修改排班：单条。医生不可换人（换人=别人的班次），日期只有一天 -->
-    <el-dialog v-model="editVisible" destroy-on-close title="修改排班" width="780px">
-      <el-form :model="formData" label-position="top">
-        <div class="grid grid-cols-3 gap-4">
-          <el-form-item label="科室">
-            <el-input :model-value="formData.deptName" disabled/>
-          </el-form-item>
-          <el-form-item label="岗位类别" required>
-            <el-select v-model="formData.staffType" class="w-full" data-testid="edit-staff-type"
-                       @change="handleStaffTypeChange">
-              <el-option v-for="o in STAFF_TYPE_DOCTOR_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item :label="`${staffTypeText(formData.staffType)}人员`" required>
-            <!-- 修改弹窗的人员是「单选下拉」：排错了人要能在这条上改回来（新增是多选，两个弹窗各自排版）。
-                 科室保持只读：换科室等于换一整批人，那是"删了重排"，不是在单条上改。 -->
-            <el-select v-model="formData.doctorId" :disabled="!formData.deptId"
-                       :placeholder="`选择${staffTypeText(formData.staffType)}人员`" class="w-full"
-                       data-testid="edit-doctor" filterable @change="handleEditDoctorChange">
-              <el-option v-for="e in employees" :key="e.id" :label="`${e.empName} - ${getTitleLabel(e.title)}`"
-                         :value="e.id"/>
-            </el-select>
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item data-testid="form-schedule-date" label="排班日期" required>
-            <el-date-picker
-                v-model="formData.scheduleDate"
-                :disabled-date="(time: Date) => time.getTime() < Date.now() - 86400000"
-                class="!w-full"
-                placeholder="选择日期"
-                type="date"
-                value-format="YYYY-MM-DD"
-            />
-          </el-form-item>
-          <el-form-item v-if="staffTypeHasSource(formData.staffType)" label="诊室" required>
-            <el-select v-model="formData.roomId" :disabled="!formData.deptId" class="w-full" placeholder="选择诊室">
-              <el-option v-for="r in clinicRooms" :key="r.id" :label="r.name" :value="r.id"/>
-            </el-select>
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="班次" required>
-            <el-select v-model="shiftDictId" class="w-full" data-testid="edit-shift-dict"
-                       filterable placeholder="选择班次（时间段由班次带出）"
-                       @change="(v: any) => applyShiftDict('schedule', v)">
-              <el-option v-for="s in shiftDictOptions" :key="s.id" :label="shiftDictLabel(s)" :value="s.id"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="时间段">
-            <el-input :model-value="formTimeRange" data-testid="edit-time-range" disabled
-                      placeholder="选班次后自动带出"/>
-          </el-form-item>
-        </div>
-        <!-- 号源/费用/预约只对医生岗有意义（出勤岗这些值后端一律清零，界面不给填） -->
-        <template v-if="staffTypeHasSource(formData.staffType)">
-          <div class="grid grid-cols-3 gap-4">
-            <el-form-item label="号源数量" required>
-              <el-input-number v-model="formData.totalSource" :max="999" :min="formData.usedSource || 1"
-                               class="w-full"/>
-              <p v-if="formData.usedSource" class="mt-1 text-xs text-slate-400">已挂 {{ formData.usedSource }}
-                个，总数不能小于它</p>
-            </el-form-item>
-            <el-form-item label="挂号费(元)">
-              <el-input-number v-model="formData.registFee" :min="0" :precision="2" class="w-full"/>
-            </el-form-item>
-            <el-form-item label="诊疗费(元)">
-              <el-input-number v-model="formData.diagnosisFee" :min="0" :precision="2" class="w-full"/>
-            </el-form-item>
-          </div>
-          <div class="grid grid-cols-3 gap-4">
-            <el-form-item label="专家号">
-              <el-switch v-model="formData.isExpert" :active-value="1" :inactive-value="0"/>
-            </el-form-item>
-            <el-form-item v-if="formData.isExpert === 1" label="专家费(元)">
-              <el-input-number v-model="formData.expertFee" :min="0" :precision="2" class="w-full"/>
-            </el-form-item>
-            <el-form-item label="开放预约">
-              <el-switch v-model="formData.isAppointment" :active-value="1" :inactive-value="0"/>
-            </el-form-item>
-          </div>
-        </template>
-        <div v-if="staffTypeHasSource(formData.staffType) && formData.isAppointment === 1"
-             class="grid grid-cols-3 gap-4">
-          <el-form-item label="预约号源数">
-            <div class="w-full">
-              <el-input-number v-model="formData.appointmentSource" :max="formData.totalSource" :min="0"
-                               class="w-full"/>
-              <p class="mt-1 text-xs text-slate-400">划给网上预约的专用号，现场窗口不可占用；0 = 不划池</p>
-            </div>
-          </el-form-item>
-        </div>
-        <el-form-item label="状态">
-          <el-radio-group v-model="formData.status">
-            <el-radio :value="1">正常</el-radio>
-            <el-radio :value="0">停用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-
-      <!-- 时间片段明细：号源与占用的事实落在段上，主表只是 Σ段 汇总；可编辑时逐段调号源/预约池/停用 -->
-      <div class="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-3" data-testid="slot-detail">
-        <div class="mb-2 flex items-center justify-between">
-          <span class="text-sm font-medium text-slate-700">时间片段（半小时一档）</span>
-          <div class="flex items-center gap-2">
-            <span v-if="slotDetailRows.length" class="text-xs text-slate-400">
-              共 {{
-                slotDetailRows.length
-              }} 段 · 余 {{
-                slotDetailRows.reduce((a: number, s: any) => a + (s.availableSource || 0), 0)
-              }} / {{ slotDetailRows.reduce((a: number, s: any) => a + (s.totalSource || 0), 0) }}
-            </span>
-            <el-button v-if="slotEditEnabled" :disabled="!slotDirty" :loading="slotSaving" data-testid="slot-save"
-                       plain size="small"
-                       type="primary" @click="handleSaveSlots">保存号源调整
-            </el-button>
-          </div>
-        </div>
-        <p v-if="slotDetailLoading" class="py-2 text-center text-xs text-slate-400">加载中…</p>
-        <p v-else-if="!slotDetailRows.length" class="py-2 text-center text-xs text-slate-400">
-          {{
-            staffTypeHasSource(formData.staffType) ? '该排班暂无片段明细（保存后自动按半小时切分生成）' : '出勤排班不放号，不切分时间段'
-          }}
-        </p>
-        <div v-else class="max-h-56 overflow-y-auto">
-          <table class="w-full text-xs">
-            <thead>
-            <tr class="text-left text-slate-500">
-              <th class="py-1.5 pr-2 font-medium">时段</th>
-              <th class="py-1.5 pr-2 font-medium">总号</th>
-              <th class="py-1.5 pr-2 font-medium">已挂</th>
-              <th class="py-1.5 pr-2 font-medium">剩余</th>
-              <th class="py-1.5 pr-2 font-medium">预约池</th>
-              <th class="py-1.5 pr-2 font-medium">约余</th>
-              <th class="py-1.5 font-medium">{{ slotEditEnabled ? '停用' : '状态' }}</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr v-for="s in slotDetailRows" :key="s.id" class="border-t border-slate-200 text-slate-700">
-              <td class="py-1.5 pr-2 font-mono">{{ s.startTime }} ~ {{ s.endTime }}</td>
-              <td class="py-1.5 pr-2">
-                <el-input-number v-if="slotEditEnabled" v-model="s.totalSource" :max="999"
-                                 :min="s.usedSource || 0" class="!w-20" controls-position="right" size="small"/>
-                <template v-else>{{ s.totalSource }}</template>
-              </td>
-              <td class="py-1.5 pr-2">{{ s.usedSource }}</td>
-              <td :class="s.availableSource <= 0 ? 'text-red-500 font-medium' : 'text-emerald-600'" class="py-1.5 pr-2">
-                {{ s.availableSource }}
-              </td>
-              <td class="py-1.5 pr-2">
-                <el-input-number v-if="slotEditEnabled" v-model="s.appointmentSource" :max="s.totalSource"
-                                 :min="s.usedAppointmentSource || 0" class="!w-20" controls-position="right"
-                                 size="small"/>
-                <template v-else>{{ (s.appointmentSource || 0) > 0 ? s.appointmentSource : '—' }}</template>
-              </td>
-              <td class="py-1.5 pr-2">{{
-                  (s.appointmentSource || 0) > 0 ? Math.max((s.appointmentSource || 0) - (s.usedAppointmentSource || 0), 0) : '—'
-                }}
-              </td>
-              <td class="py-1.5">
-                <el-switch v-if="slotEditEnabled" v-model="s.status" :active-value="1" :inactive-value="0"
-                           active-text="用" inactive-text="停" inline-prompt/>
-                <span v-else :class="s.status === 1 ? 'text-emerald-600' : 'text-red-500'">{{
-                    s.status === 1 ? '正常' : '停用'
-                  }}</span>
-              </td>
-            </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button v-perm="'outpatient:schedule:edit'" :loading="submitLoading" data-testid="edit-submit" type="primary"
-                   @click="handleSubmit">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <ScheduleAdd
+        v-model="dialogVisible"
+        :departments="departments"
+        :seed="addSeed"
+        :title-map="titleMap"
+        @saved="loadPanel"
+    />
+    <ScheduleEdit
+        v-model="editVisible"
+        :departments="departments"
+        :row="editingSchedule"
+        :title-map="titleMap"
+        @saved="loadPanel"
+    />
 
     <!-- 新增/编辑排班模板弹窗 -->
-    <el-dialog v-model="tplDialogVisible" :title="tplDialogTitle" destroy-on-close width="680px">
-      <el-form :model="tplFormData" label-position="top">
-        <div class="grid grid-cols-4 gap-4">
-          <el-form-item label="科室" required>
-            <el-select v-model="tplFormData.deptId" class="w-full" filterable placeholder="输入科室名称搜索"
-                       @change="handleTplDeptChange">
-              <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="岗位类别" required>
-            <el-select v-model="tplFormData.staffType" class="w-full" data-testid="tpl-form-staff-type"
-                       @change="handleTplStaffTypeChange">
-              <el-option v-for="o in STAFF_TYPE_DOCTOR_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item :label="`${staffTypeText(tplFormData.staffType)}人员`" required>
-            <el-select v-model="tplFormData.doctorId" :disabled="!tplFormData.deptId"
-                       :placeholder="`选择${staffTypeText(tplFormData.staffType)}人员`" class="w-full"
-                       @change="handleTplDoctorChange">
-              <el-option v-for="e in employees" :key="e.id" :label="`${e.empName} - ${getTitleLabel(e.title)}`"
-                         :value="e.id"/>
-            </el-select>
-          </el-form-item>
-          <!-- 诊室只对医生岗有意义：出勤模板排的是「人在不在」，不是「在哪个房间接诊」 -->
-          <el-form-item v-if="staffTypeHasSource(tplFormData.staffType)" label="诊室">
-            <el-select v-model="tplFormData.roomId" :disabled="!tplFormData.deptId" class="w-full"
-                       placeholder="选择诊室">
-              <el-option v-for="r in clinicRooms" :key="r.id" :label="r.name" :value="r.id"/>
-            </el-select>
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="星期几" required>
-            <el-select v-model="tplFormData.weekDay" class="w-full">
-              <el-option v-for="(label, day) in weekDayMap" :key="day" :label="label" :value="Number(day)"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="单双周">
-            <el-select v-model="tplFormData.weekParity" class="w-full">
-              <el-option :value="0" label="每周"/>
-              <el-option :value="1" label="单周"/>
-              <el-option :value="2" label="双周"/>
-            </el-select>
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="班次" required>
-            <el-select v-model="tplShiftDictId" class="w-full" data-testid="tpl-shift-dict"
-                       filterable placeholder="选择班次（时间段由班次带出）"
-                       @change="(v: any) => applyShiftDict('template', v)">
-              <el-option v-for="s in shiftDictOptions" :key="s.id" :label="shiftDictLabel(s)" :value="s.id"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="时间段">
-            <el-input :model-value="tplTimeRange" disabled placeholder="选班次后自动带出"/>
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="生效起始">
-            <el-date-picker v-model="tplFormData.validFrom" class="!w-full" placeholder="长期有效" type="date"
-                            value-format="YYYY-MM-DD"/>
-          </el-form-item>
-          <el-form-item label="生效截止">
-            <el-date-picker v-model="tplFormData.validUntil" class="!w-full" placeholder="长期有效"
-                            type="date" value-format="YYYY-MM-DD"/>
-          </el-form-item>
-        </div>
-        <!-- 号源/费用/预约只对医生岗有意义：出勤模板（护士/技师/收费…）只描述「谁每周哪天哪个班在岗」 -->
-        <template v-if="staffTypeHasSource(tplFormData.staffType)">
-          <div class="grid grid-cols-3 gap-4">
-            <el-form-item label="号源数量" required>
-              <el-input-number v-model="tplFormData.totalSource" :max="999" :min="1" class="w-full"/>
-            </el-form-item>
-            <el-form-item label="挂号费(元)">
-              <el-input-number v-model="tplFormData.registFee" :min="0" :precision="2" class="w-full"/>
-            </el-form-item>
-            <el-form-item label="诊疗费(元)">
-              <el-input-number v-model="tplFormData.diagnosisFee" :min="0" :precision="2" class="w-full"/>
-            </el-form-item>
-          </div>
-          <div class="grid grid-cols-3 gap-4">
-            <el-form-item label="专家号">
-              <el-switch v-model="tplFormData.isExpert" :active-value="1" :inactive-value="0"/>
-            </el-form-item>
-            <el-form-item v-if="tplFormData.isExpert === 1" label="专家费(元)">
-              <el-input-number v-model="tplFormData.expertFee" :min="0" :precision="2" class="w-full"/>
-            </el-form-item>
-          </div>
-          <div class="grid grid-cols-3 gap-4">
-            <el-form-item label="开放预约">
-              <el-switch v-model="tplFormData.isAppointment" :active-value="1" :inactive-value="0"/>
-            </el-form-item>
-            <el-form-item v-if="tplFormData.isAppointment === 1" label="预约号源数">
-              <el-input-number v-model="tplFormData.appointmentSource" :max="tplFormData.totalSource" :min="0"
-                               class="w-full"/>
-            </el-form-item>
-          </div>
-          <!-- 段级号源细化（可选）：改的是「生成的排班各半小时段各放几个号」，不改模板自身时间窗 -->
-          <div class="rounded border border-slate-200 p-3 mb-4">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium text-slate-700">按段细化号源（可选）</span>
-              <div class="flex gap-2">
-                <el-button :disabled="!tplFormData.startTime" data-testid="tpl-slot-generate" size="small"
-                           @click="generateTplSlots">按半小时均分生成段
-                </el-button>
-                <el-button v-if="Array.isArray(tplFormData.slots)" data-testid="tpl-slot-clear" size="small"
-                           @click="tplFormData.slots = []">清空细分
-                </el-button>
-              </div>
-            </div>
-            <p class="text-xs text-slate-500 mb-2">
-              未细化时生成的排班按半小时均分号源；细化后按每段配置放号。
-              段必须铺满班次时间窗{{ tplTimeRange ? `（${tplTimeRange}）` : '' }}，各段合计须等于号源总数与预约号源数；清空并保存后回退均分。
-            </p>
-            <template v-if="Array.isArray(tplFormData.slots) && tplFormData.slots.length > 0">
-              <el-table :data="tplFormData.slots" max-height="260" size="small">
-                <el-table-column label="#" type="index" width="48"/>
-                <el-table-column label="时间段" width="130">
-                  <template #default="{ row }">{{ row.startTime }} ~ {{ row.endTime }}</template>
-                </el-table-column>
-                <el-table-column label="段号源" min-width="130">
-                  <template #default="{ row }">
-                    <el-input-number v-model="row.totalSource" :max="999" :min="0" class="!w-full"
-                                     data-testid="tpl-slot-total" size="small"/>
-                  </template>
-                </el-table-column>
-                <el-table-column label="段预约池" min-width="130">
-                  <template #default="{ row }">
-                    <el-input-number v-model="row.appointmentSource" :disabled="tplFormData.isAppointment !== 1"
-                                     :max="999" :min="0"
-                                     class="!w-full" size="small"/>
-                  </template>
-                </el-table-column>
-              </el-table>
-              <p :class="tplSlotMismatch ? 'text-red-500' : 'text-emerald-600'" class="mt-2 text-xs"
-                 data-testid="tpl-slot-sum">
-                合计：号源 {{ tplSlotSum.total }} / 期望 {{ tplSlotExpected.total }}，
-                预约池 {{ tplSlotSum.appt }} / 期望 {{ tplSlotExpected.appt }}
-                <span v-if="tplSlotMismatch">（不一致，无法保存）</span>
-              </p>
-            </template>
-          </div>
-        </template>
-        <p v-else class="mb-3 text-xs text-slate-500">
-          「{{ staffTypeText(tplFormData.staffType) }}」是<b>出勤模板</b>：生成出来的是出勤排班，
-          不放号、不需要诊室、不计挂号费——这几项由后端一律置空。
-        </p>
-        <el-form-item label="状态">
-          <el-radio-group v-model="tplFormData.status">
-            <el-radio :value="1">启用</el-radio>
-            <el-radio :value="0">停用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="tplDialogVisible = false">取消</el-button>
-        <el-button v-perm="['outpatient:schedule:add','outpatient:schedule:edit']" :loading="tplSubmitLoading"
-                   type="primary"
-                   @click="handleTplSubmit">确定
-        </el-button>
-      </template>
-    </el-dialog>
+    <ScheduleTplEdit
+        v-model="tplDialogVisible"
+        :departments="departments"
+        :row="editingTpl"
+        :title-map="titleMap"
+        :week-day-map="weekDayMap"
+        @saved="loadTemplates"
+    />
 
     <!-- 停诊影响名单 + 批量退号 -->
     <el-dialog v-model="stopImpactVisible" destroy-on-close title="停诊确认——该班次在挂患者" width="640px">
@@ -1233,85 +638,49 @@ import {ElMessage, ElMessageBox} from 'element-plus';
 import {
   addScheduleSource,
   batchCancelRegist,
-  createScheduleBatch,
-  createShift,
   deleteSchedule,
   deleteScheduleTemplate,
   generateScheduleFromTemplate,
   getOnDutyStaff,
   getScheduleList,
-  getScheduleSlots,
   getScheduleTemplateListPage,
   getShiftListPage,
-  getShiftSelectList,
   getStopImpact,
   previewScheduleTemplate,
-  renameShift,
   replicateSchedule,
-  saveScheduleSlots,
-  saveScheduleTemplate,
-  updateSchedule,
   updateScheduleStatus,
-  updateScheduleTemplateStatus,
-  updateShiftStatus
+  updateScheduleTemplateStatus
 } from '@/api/appoint';
-import {getClinicRoomListAll, getDepartmentSelectList, getEmployeeList, getUserInfo} from '@/api/system';
+import {getDepartmentSelectList, getEmployeeList, getUserInfo} from '@/api/system';
 import {DICT_TYPE, loadDictDataList} from '@/lib/dict-cache';
 import {
-  SCHEDULE_TYPE_OPTIONS,
   SCHEDULE_TYPE_TEXT,
   SHIFT_SCOPE_OPTIONS,
-  SHIFT_SCOPE_OUTPATIENT,
   SHIFT_SCOPE_TEXT,
   STAFF_TYPE_DOCTOR,
-  STAFF_TYPE_DOCTOR_OPTIONS,
   STAFF_TYPE_OPTIONS,
   staffTypeHasSource,
   staffTypeText
 } from '@/lib/scheduleShift';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+import {fmtISO} from '@/lib/scheduleDate';
+import {getTitleLabel, getTitleTagClass} from '@/lib/scheduleTitle';
+import ScheduleAdd from './ScheduleAdd.vue';
+import ScheduleDictAdd from './ScheduleDictAdd.vue';
+import ScheduleEdit from './ScheduleEdit.vue';
+import ScheduleShiftEdit from './ScheduleShiftEdit.vue';
+import ScheduleTplEdit from './ScheduleTplEdit.vue';
 
 const departments = ref([]);
-const employees = ref([]);
-const clinicRooms = ref([]);
 const titleMap = ref({});
 // ========== 排班模板（周模板驱动） ==========
 const templates = ref([]);
 const tplLoading = ref(false);
 const tplDialogVisible = ref(false);
-const tplDialogTitle = ref('新增模板');
-const tplSubmitLoading = ref(false);
+/** 模板新增/编辑共用一个组件（ScheduleTplEdit）：row 为空 = 新增，有值 = 编辑，标题跟着分叉 */
+const editingTpl = ref(null);
 const generateLoading = ref(false);
 const weekDayMap = {1: '周一', 2: '周二', 3: '周三', 4: '周四', 5: '周五', 6: '周六', 7: '周日'};
-const tplFormData = ref({
-  id: null,
-  deptId: null,
-  deptName: '',
-  doctorId: null,
-  doctorName: '',
-  /** 岗位类别（sql/195）：模板生成排班时原样带过去；只有医生岗配号源/诊室/挂号费 */
-  staffType: STAFF_TYPE_DOCTOR,
-  weekDay: 1,
-  weekParity: 0,
-  validFrom: '',
-  validUntil: '',
-  shiftId: null,
-  startTime: '',
-  endTime: '',
-  totalSource: 20,
-  roomId: null,
-  roomName: '',
-  registFee: 0,
-  diagnosisFee: 0,
-  isExpert: 0,
-  expertFee: 0,
-  isAppointment: 1,
-  appointmentSource: 0,
-  status: 1,
-  remark: '',
-  // 段级号源配置：null=未启用细化（提交后端原样保留）；[]=清空待提交；[...]=整批替换
-  slots: null,
-});
 const weekParityMap = {0: '每周', 1: '单周', 2: '双周'};
 // 模板页是「长期资产」：量会一直涨，全量拉下来既慢也没法翻查 → 走分页 + 关键词
 const tplSearchForm = ref({
@@ -1360,214 +729,13 @@ const handleTplSizeChange = (val) => {
   tplPagination.value.pageNum = 1;
   loadTemplates();
 };
-const resetTplForm = () => {
-  tplFormData.value = {
-    id: null, deptId: null, deptName: '', doctorId: null, doctorName: '', staffType: STAFF_TYPE_DOCTOR,
-    weekDay: 1, weekParity: 0, validFrom: '', validUntil: '',
-    shiftId: null, startTime: '', endTime: '', totalSource: 20,
-    roomId: null, roomName: '', registFee: 0, diagnosisFee: 0, isExpert: 0, expertFee: 0,
-    isAppointment: 1, appointmentSource: 0, status: 1, remark: '', slots: null,
-  };
-};
 const handleTplAdd = () => {
-  resetTplForm();
-  tplShiftDictId.value = null;
-  loadShiftDict(null);
-  tplDialogTitle.value = '新增模板';
+  editingTpl.value = null;
   tplDialogVisible.value = true;
 };
-/** 模板换医生 = 换人重新定默认：专家开关/专家费按新医生档案重新带出（仍可手工改） */
-const handleTplDoctorChange = (id) => {
-  const dft = expertDefaultOf(employees.value.find((e) => String(e.id) === String(id)));
-  if (dft) {
-    tplFormData.value.isExpert = dft.isExpert;
-    tplFormData.value.expertFee = dft.expertFee;
-  }
-};
-/**
- * 模板换岗位类别：换的是「规则链」——医生岗配号源/诊室/挂号费，其余岗位是纯出勤。
- * 所以换岗位要把人一起清掉重新选：原来选的医生在「收费」岗位视图里根本不该出现。
- */
-const handleTplStaffTypeChange = () => {
-  tplFormData.value.doctorId = null;
-  tplFormData.value.doctorName = '';
-  tplFormData.value.slots = null;
-  if (tplFormData.value.deptId)
-    loadEmployees(Number(tplFormData.value.deptId), tplFormData.value.staffType);
-};
-// ========== 模板段级号源（按段细化号源，可选） ==========
-// 与后端生成侧同口径：半小时切窗；均分「base 给所有段，余数补给前面的段」；
-// 预约池先同口径均分，超出段号源的部分顺延到后面有空余的段。
-const tplToMinute = (t) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
-const tplToHHmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
-const generateTplSlots = () => {
-  const f = tplFormData.value;
-  if (!f.startTime || !f.endTime) {
-    ElMessage.warning('请先选择班次');
-    return;
-  }
-  const s0 = tplToMinute(f.startTime);
-  const e0 = tplToMinute(f.endTime);
-  if (s0 % 30 !== 0 || e0 % 30 !== 0 || e0 <= s0) {
-    ElMessage.warning('该班次时间窗不是半小时整点，无法按段细化');
-    return;
-  }
-  const segs = [];
-  let cursor = s0;
-  while (cursor < e0) {
-    const next = Math.min(cursor + 30, e0);
-    segs.push([cursor, next]);
-    cursor = next;
-  }
-  const n = segs.length;
-  const total = Number(f.totalSource) || 0;
-  const appt = f.isAppointment === 1 ? (Number(f.appointmentSource) || 0) : 0;
-  if (appt > total) {
-    ElMessage.warning('预约号源数不能大于号源总数');
-    return;
-  }
-  const spread = (amount) => {
-    const base = Math.floor(amount / n);
-    let rem = amount % n;
-    return segs.map(() => base + (rem-- > 0 ? 1 : 0));
-  };
-  const totals = spread(total);
-  const appts = spread(appt);
-  for (let i = 0; i < n; i++) {
-    if (appts[i] > totals[i]) {
-      let overflow = appts[i] - totals[i];
-      appts[i] = totals[i];
-      for (let j = n - 1; j >= 0 && overflow > 0; j--) {
-        const move = Math.min(totals[j] - appts[j], overflow);
-        appts[j] += move;
-        overflow -= move;
-      }
-    }
-  }
-  f.slots = segs.map((seg, i) => ({
-    startTime: tplToHHmm(seg[0]), endTime: tplToHHmm(seg[1]),
-    totalSource: totals[i], appointmentSource: appts[i],
-  }));
-};
-/** Σ段实时对账：后端硬校验「Σ段=主表」，前端提前显示差在哪、拦下必失败的提交 */
-const tplSlotSum = computed(() => {
-  const rows = tplFormData.value.slots;
-  if (!Array.isArray(rows) || rows.length === 0)
-    return {total: 0, appt: 0};
-  return {
-    total: rows.reduce((s, r) => s + (Number(r.totalSource) || 0), 0),
-    appt: rows.reduce((s, r) => s + (Number(r.appointmentSource) || 0), 0),
-  };
-});
-const tplSlotExpected = computed(() => ({
-  total: Number(tplFormData.value.totalSource) || 0,
-  appt: tplFormData.value.isAppointment === 1 ? (Number(tplFormData.value.appointmentSource) || 0) : 0,
-}));
-const tplSlotMismatch = computed(() => tplSlotSum.value.total !== tplSlotExpected.value.total
-    || tplSlotSum.value.appt !== tplSlotExpected.value.appt);
 const handleTplEdit = (row) => {
-  tplFormData.value = {
-    id: row.id,
-    deptId: row.deptId,
-    deptName: row.deptName || '',
-    doctorId: row.doctorId,
-    doctorName: row.doctorName || '',
-    // 历史模板（sql/195 之前）没有岗位类别 → 后端返回 1（DDL 默认值），这里同样兜底成医生
-    staffType: row.staffType ?? STAFF_TYPE_DOCTOR,
-    weekDay: row.weekDay,
-    weekParity: row.weekParity || 0,
-    validFrom: row.validFrom || '',
-    validUntil: row.validUntil || '',
-    shiftId: row.shiftId ? String(row.shiftId) : null,
-    startTime: row.startTime || '',
-    endTime: row.endTime || '',
-    totalSource: row.totalSource,
-    roomId: row.roomId,
-    roomName: row.roomName || '',
-    registFee: row.registFee || 0,
-    diagnosisFee: row.diagnosisFee || 0,
-    isExpert: row.isExpert || 0,
-    expertFee: row.expertFee || 0,
-    isAppointment: row.isAppointment || 0,
-    appointmentSource: row.appointmentSource || 0,
-    status: row.status,
-    remark: row.remark || '',
-    // 已细化的模板把段配置带进表单（整批替换口径）；未细化保持 null，提交时不动后端现状
-    slots: Array.isArray(row.slots) && row.slots.length > 0
-        ? row.slots.map((s) => ({
-          startTime: s.startTime, endTime: s.endTime,
-          totalSource: s.totalSource, appointmentSource: s.appointmentSource,
-        }))
-        : (Array.isArray(row.slots) ? [] : null),
-  };
-  tplDialogTitle.value = '修改模板';
-  if (row.deptId) {
-    loadEmployees(Number(row.deptId), tplFormData.value.staffType);
-    loadClinicRooms(Number(row.deptId));
-  }
-  // 标准班次按落库的 shift_id 回显；选项按科室过滤（该科室适用 + 全院通用）
-  restoreShiftDict('template', row, row.deptId);
+  editingTpl.value = row;
   tplDialogVisible.value = true;
-};
-const handleTplDeptChange = (deptId) => {
-  tplFormData.value.doctorId = null;
-  tplFormData.value.doctorName = '';
-  tplFormData.value.roomId = null;
-  tplFormData.value.roomName = '';
-  // 换科室：班次选项换成「新科室适用 + 通用」，原选中项可能不在新列表里
-  tplShiftDictId.value = null;
-  loadShiftDict(deptId);
-  loadEmployees(deptId, tplFormData.value.staffType);
-  loadClinicRooms(deptId);
-};
-/**
- * 模板是「整个班次窗口」的定义（生成排班的母版）：时间段一律由班次带出，界面不给手改。
- * 需要非常规时段就到「班次字典」建一条，模板只负责选它。
- */
-const handleTplSubmit = async () => {
-  if (!tplFormData.value.deptId) {
-    ElMessage.warning('请选择科室');
-    return;
-  }
-  if (!tplFormData.value.doctorId) {
-    ElMessage.warning('请选择排班人员');
-    return;
-  }
-  if (!tplFormData.value.shiftId) {
-    ElMessage.warning('请选择班次');
-    return;
-  }
-  if (staffTypeHasSource(tplFormData.value.staffType)
-      && tplFormData.value.isAppointment === 1 && tplFormData.value.appointmentSource > tplFormData.value.totalSource) {
-    ElMessage.warning('预约号源数不能大于号源总数');
-    return;
-  }
-  // 段级号源提交前对账：Σ段=主表是后端硬校验，不一致时提交必失败，前端先拦一次省一次往返
-  if (staffTypeHasSource(tplFormData.value.staffType)
-      && Array.isArray(tplFormData.value.slots) && tplFormData.value.slots.length > 0 && tplSlotMismatch.value) {
-    ElMessage.warning('各段号源/预约池合计与总数不一致，请调整后再保存');
-    return;
-  }
-  const dept = departments.value.find((d) => d.id === tplFormData.value.deptId);
-  const room = clinicRooms.value.find((r) => r.id === tplFormData.value.roomId);
-  const emp = employees.value.find((e) => e.id === tplFormData.value.doctorId);
-  if (dept)
-    tplFormData.value.deptName = dept.deptName;
-  if (room)
-    tplFormData.value.roomName = room.name;
-  if (emp)
-    tplFormData.value.doctorName = emp.empName;
-  tplSubmitLoading.value = true;
-  try {
-    await saveScheduleTemplate(tplFormData.value);
-    ElMessage.success(tplFormData.value.id ? '模板已更新' : '模板已创建');
-    tplDialogVisible.value = false;
-    loadTemplates();
-  } catch (error) {
-    ElMessage.error(error.message || '保存失败');
-  } finally {
-    tplSubmitLoading.value = false;
-  }
 };
 const handleTplDelete = async (row) => {
   try {
@@ -1643,117 +811,13 @@ const handleConfirmGenerate = async () => {
 };
 // 新增与修改是两个弹窗：新增的医生是「多选」（一批排完一个科室），
 // 修改的医生是「单条只读」（换人等于改成别人的班次），两者本来就不是同一个控件。
+// 表单状态、班次字典候选与提交校验都在 ScheduleAdd / ScheduleEdit 组件里，页面只控显隐 + 传打开时的数据。
 const dialogVisible = ref(false);
 const editVisible = ref(false);
-const submitLoading = ref(false);
-const isEdit = ref(false);
-const formData = ref({
-  id: null,
-  deptId: null,
-  deptName: '',
-  roomId: null,
-  roomName: '',
-  doctorId: null,
-  doctorName: '',
-  /**
-   * 岗位类别（sql/195）：排班对象不再只有医生。
-   * 只有 1-医生 才配号源/诊室/挂号费/预约池；其余岗位是纯出勤排班
-   * （提交时这些字段由后端一律清零，界面同样不显示，免得填了被静默丢弃还以为存上了）。
-   */
-  staffType: STAFF_TYPE_DOCTOR,
-  /** 批量排班：新增时可多选医生（同科室多位医生一次排完）；编辑时长度恒为 1 */
-  doctorIds: [],
-  /**
-   * 医生 → 该医生的排班参数（诊室/号源/费用/预约）。
-   * 这些是「医生 × 班次」级的值：整批共用一个值，挂号台按条读出来就是同质数据
-   * （五位医生号源都是 20、挂号费都是 0，看着像数据坏了）。所以每人一行可覆盖，
-   * 表单顶上的同名字段在新增弹窗里只当「默认值」，改默认值不回刷已生成的行（要点「应用到全部」）。
-   */
-  doctorRows: {},
-  scheduleDate: '',
-  /** 批量日期范围（仅新增弹窗）：新增只认这个区间，排一天就起止填同一天 */
-  scheduleDateRange: [],
-  /** 班次ID（biz_shift.id）：排班唯一的时间段/班别来源，「班次」下拉选中才有值 */
-  shiftId: null,
-  startTime: '',
-  endTime: '',
-  totalSource: 20,
-  // 已挂数：只给修改弹窗当号源下限用（总数不能小于已挂），提交时后端不认它
-  usedSource: 0,
-  registFee: 0,
-  diagnosisFee: 0,
-  isExpert: 0,
-  expertFee: 0,
-  isAppointment: 0,
-  appointmentSource: 0,
-  status: 1,
-});
-const shiftOptions = SCHEDULE_TYPE_OPTIONS;
-// ========== 班次字典（biz_shift）：排班/模板的唯一时间段与班别来源 ==========
-// 字典 id 是字符串（后端 BIGINT ToStringSerializer），v-model 用 string
-const shiftDictOptions = ref([]);
-const shiftDictId = ref(null);
-const tplShiftDictId = ref(null);
-/** 拉班次：选了科室只显示「该科室适用 + 全院通用」的启用班次；本页面只用门诊/急诊那半册 */
-const loadShiftDict = async (deptId) => {
-  try {
-    const params = {status: 1, useScope: SHIFT_SCOPE_OUTPATIENT};
-    if (deptId)
-      params.deptId = deptId;
-    const res = await getShiftSelectList(params);
-    shiftDictOptions.value = res.data || [];
-    return shiftDictOptions.value;
-  } catch (error) {
-    console.error('加载班次失败:', error);
-    return [];
-  }
-};
-/**
- * 班次回显：编辑时按落库的 shift_id 还原下拉。
- * 班次已停用 / 不适用于本科室 → 不在选项里，就不回显（宁空不猜：反查时间会撞「上午门诊 vs 专家门诊（上午）」）。
- */
-const restoreShiftDict = (target, row, deptId) => {
-  const shiftId = row?.shiftId ? String(row.shiftId) : null;
-  loadShiftDict(deptId).then((opts) => {
-    const hit = shiftId && opts.some((s) => String(s.id) === shiftId);
-    const form = target === 'schedule' ? formData.value : tplFormData.value;
-    if (target === 'schedule') {
-      shiftDictId.value = hit ? shiftId : null;
-    } else {
-      tplShiftDictId.value = hit ? shiftId : null;
-    }
-    // 回显不出来（班次停用/删除/跨科室）就连带清掉表单里的 shiftId：
-    // 留着一个界面上看不见的班次ID，提交必然被后端拦
-    form.shiftId = hit ? shiftId : null;
-  });
-};
-const shiftDictLabel = (s) => `${s.shiftName} ${s.startTime}~${s.endTime}`;
-/**
- * 选中班次：时间段由班次带出，表单里不再给改。
- * 排班/模板两个表单共用，target 区分落哪个表单。
- */
-const applyShiftDict = (target, shiftId) => {
-  const form = target === 'schedule' ? formData.value : tplFormData.value;
-  const dictId = target === 'schedule' ? shiftDictId : tplShiftDictId;
-  const hit = shiftDictOptions.value.find((s) => String(s.id) === String(shiftId));
-  if (!hit) {
-    // 选项被清空只可能是班次停用/删除后从列表里消失了：把选中值一起清掉，别留一个提交必失败的假选中
-    dictId.value = null;
-    form.shiftId = null;
-    form.startTime = '';
-    form.endTime = '';
-    return;
-  }
-  form.shiftId = String(hit.id);
-  const winChanged = form.startTime !== hit.startTime || form.endTime !== hit.endTime;
-  form.startTime = hit.startTime;
-  form.endTime = hit.endTime;
-  // 模板换班次=换时间窗：已细化的段配置不再铺满新窗，留着保存必失败 → 就地清空（生成时回退半小时均分）
-  if (target === 'template' && winChanged && Array.isArray(tplFormData.value.slots) && tplFormData.value.slots.length > 0) {
-    tplFormData.value.slots = [];
-    ElMessage.info('班次已变更，原按段细化号源配置已清空');
-  }
-};
+/** 新增弹窗的预填：工具栏「新增」只带岗位类别，点面板空格子时多带科室/医生/日期 */
+const addSeed = ref(null);
+/** 修改弹窗的行数据 */
+const editingSchedule = ref(null);
 // ========== 班次字典维护（查询/分页/新增/编辑） ==========
 // 已有班次的编辑只开放改名（时间/科室/类型是铺底口径，界面不可改）；
 // 新增是完整建条（名称/起止时间/科室/类型），复用后端 shiftUpsert 的校验。
@@ -1799,179 +863,18 @@ const shiftDeptName = (deptId) => {
   const hit = departments.value.find((d) => String(d.id) === String(deptId));
   return hit?.deptName || `科室${deptId}`;
 };
-// ---------- 编辑弹窗：展示完整详情，名称 + 启用状态可改 ----------
+// ---------- 班次「编辑已有」与「新增建条」：表单与提交在 ScheduleShiftEdit / ScheduleDictAdd 组件里 ----------
 const shiftEditVisible = ref(false);
 const shiftEditRow = ref(null);
-const shiftEditName = ref('');
-const shiftEditStatus = ref(1);
-const shiftEditUseScope = ref(1);
-const shiftEditSaving = ref(false);
 const handleShiftEdit = (row) => {
   shiftEditRow.value = row;
-  shiftEditName.value = row.shiftName;
-  shiftEditStatus.value = row.status ?? 1;
-  shiftEditUseScope.value = Number(row.useScope ?? 1);
   shiftEditVisible.value = true;
 };
-const handleShiftEditSubmit = async () => {
-  const name = shiftEditName.value.trim();
-  if (!name) {
-    ElMessage.warning('班次名称不能为空');
-    return;
-  }
-  shiftEditSaving.value = true;
-  try {
-    const row = shiftEditRow.value;
-    const nameChanged = name !== row.shiftName;
-    const statusChanged = shiftEditStatus.value !== row.status;
-    const scopeChanged = Number(shiftEditUseScope.value) !== Number(row.useScope ?? 1);
-    if (scopeChanged) {
-      // 改适用域必须整条 upsert（后端只有 rename/updateStatus 两个单列接口，都不碰 use_scope）
-      await createShift({
-        id: row.id,
-        shiftName: name,
-        startTime: row.startTime,
-        endTime: row.endTime,
-        deptId: row.deptId,
-        scheduleType: row.scheduleType,
-        useScope: shiftEditUseScope.value,
-        status: shiftEditStatus.value,
-      });
-    } else {
-      if (nameChanged)
-        await renameShift(row.id, name);
-      if (statusChanged)
-        await updateShiftStatus(row.id, shiftEditStatus.value);
-    }
-    if (!nameChanged && !statusChanged && !scopeChanged) {
-      ElMessage.info('名称、状态与适用域均未修改');
-    } else {
-      ElMessage.success('保存成功');
-    }
-    shiftEditVisible.value = false;
-    loadShifts();
-    // 排班/模板弹窗「标准班次」选项的 label 带名字，同步刷新
-    loadShiftDict(panelDeptId.value);
-  } catch (error) {
-    ElMessage.error(error.message || '保存失败');
-  } finally {
-    shiftEditSaving.value = false;
-  }
-};
-// ---------- 新增弹窗：完整建条（名称/起止时间/科室/类型） ----------
 const shiftAddVisible = ref(false);
-const shiftAddSaving = ref(false);
-const shiftAddForm = ref({
-  shiftName: '',
-  startTime: '08:00',
-  endTime: '12:00',
-  deptId: '',
-  scheduleType: null,
-  useScope: SHIFT_SCOPE_OUTPATIENT,
-  status: 1,
-});
-const shiftAddDuration = computed(() => {
-  const toMin = (t) => (t ? Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5)) : NaN);
-  const diff = toMin(shiftAddForm.value.endTime) - toMin(shiftAddForm.value.startTime);
-  return Number.isFinite(diff) && diff > 0 ? diff : 0;
-});
 const handleShiftAdd = () => {
-  shiftAddForm.value = {
-    shiftName: '',
-    startTime: '08:00',
-    endTime: '12:00',
-    deptId: null,
-    scheduleType: null,
-    useScope: SHIFT_SCOPE_OUTPATIENT,
-    status: 1
-  };
   shiftAddVisible.value = true;
 };
-const handleShiftAddSubmit = async () => {
-  const f = shiftAddForm.value;
-  if (!f.shiftName.trim()) {
-    ElMessage.warning('请填写班次名称');
-    return;
-  }
-  if (!f.startTime || !f.endTime) {
-    ElMessage.warning('请选择起止时间');
-    return;
-  }
-  if (f.endTime <= f.startTime) {
-    ElMessage.warning('结束时间必须晚于开始时间（不支持跨零点）');
-    return;
-  }
-  shiftAddSaving.value = true;
-  try {
-    await createShift({
-      shiftName: f.shiftName.trim(),
-      startTime: f.startTime,
-      endTime: f.endTime,
-      deptId: f.deptId,
-      scheduleType: f.scheduleType,
-      useScope: f.useScope,
-      status: f.status,
-    });
-    ElMessage.success('班次已创建');
-    shiftAddVisible.value = false;
-    handleShiftSearch();
-    loadShiftDict(panelDeptId.value);
-  } catch (error) {
-    ElMessage.error(error.message || '新增失败');
-  } finally {
-    shiftAddSaving.value = false;
-  }
-};
-// 本地日期格式化。别用 toISOString()：那是 UTC，北京时间每天 0~8 点会拿到「昨天」
-const fmtISO = (d) => {
-  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), dd = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${dd}`;
-};
-const dateRangeShortcuts = [
-  {
-    text: '今日',
-    value: () => {
-      const today = new Date();
-      const dateStr = fmtISO(today);
-      return [dateStr, dateStr];
-    }
-  },
-  {
-    text: '本周',
-    value: () => {
-      const today = new Date();
-      const day = today.getDay();
-      const diff = day === 0 ? 6 : day - 1;
-      const start = new Date(today);
-      start.setDate(today.getDate() - diff);
-      const end = new Date(start);
-      end.setDate(start.getDate() + 6);
-      return [fmtISO(start), fmtISO(end)];
-    }
-  },
-  {
-    text: '下周',
-    value: () => {
-      const today = new Date();
-      const day = today.getDay();
-      const diff = day === 0 ? 6 : day - 1;
-      const start = new Date(today);
-      start.setDate(today.getDate() - diff + 7);
-      const end = new Date(start);
-      end.setDate(start.getDate() + 6);
-      return [fmtISO(start), fmtISO(end)];
-    }
-  },
-  {
-    text: '本月',
-    value: () => {
-      const today = new Date();
-      const first = new Date(today.getFullYear(), today.getMonth(), 1);
-      const last = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      return [fmtISO(first), fmtISO(last)];
-    }
-  }
-];
+// 本地日期格式化在 lib/scheduleDate.js（新增/修改排班组件同一份，不在此重复定义）
 const statusMap = {0: '停用', 1: '正常'};
 const statusColors = {0: 'danger', 1: 'success'};
 const dayMap = {0: '周日', 1: '周一', 2: '周二', 3: '周三', 4: '周四', 5: '周五', 6: '周六'};
@@ -2373,24 +1276,16 @@ const hasShift = (row) => panelSchedules.value.some(s => String(s.doctorId) === 
     && (row.deptId == null || s.deptId == null || String(s.deptId) === String(row.deptId)));
 /** 点空格子：预填科室/医生/日期，直接进新增弹窗 */
 const handlePanelCellAdd = (row, date) => {
-  resetForm();
-  isEdit.value = false;
-  shiftDictId.value = null;
-  formData.value.deptId = row.deptId;
-  formData.value.deptName = row.deptName;
-  formData.value.doctorId = row.doctorId;
-  formData.value.doctorName = row.doctorName;
-  // 面板空格子进来：医生预填一位（要批量加人再自己在弹窗里多选）
-  formData.value.doctorIds = [row.doctorId];
-  formData.value.scheduleDate = '';
-  formData.value.scheduleDateRange = [date, date];
-  if (row.deptId) {
-    loadEmployees(row.deptId, formData.value.staffType);
-    loadClinicRooms(row.deptId);
-    loadShiftDict(row.deptId);
-  } else {
-    loadShiftDict(null);
-  }
+  addSeed.value = {
+    staffType: panelStaffType.value,
+    deptId: row.deptId,
+    deptName: row.deptName,
+    doctorId: row.doctorId,
+    doctorName: row.doctorName,
+    // 面板空格子进来：医生预填一位（要批量加人再自己在弹窗里多选）
+    doctorIds: [row.doctorId],
+    scheduleDateRange: [date, date],
+  };
   dialogVisible.value = true;
 };
 /** 点已有格子：进编辑弹窗（可改号源/停诊/删除） */
@@ -2459,430 +1354,15 @@ const loadDepartments = async () => {
     console.error('加载科室列表失败:', error);
   }
 };
-/**
- * 拉「可排班人员」候选（sql/195 起不限医生：护士/技师/药师/收费员都能排）。
- *
- * <b>按岗位类别取人，不按 emp_type</b>：emp_type 是员工档案上的冗余分类，与岗位表
- * sys_employee_post 不一致（档案说护士、岗位表说收费员），传它会在名册里出现
- * 「选得到、排上去才发现岗位不对」的人。后端按 staffType 走「岗位表 → 角色 → 类别」，
- * 传了 staffType 时 deptId 也按岗位所在科室过滤（而不是员工档案的主科室快照）。
- */
-const loadEmployees = async (deptId, staffType) => {
-  try {
-    const params = {staffType: staffType ?? STAFF_TYPE_DOCTOR};
-    if (deptId)
-      params.deptId = deptId;
-    const res = await getEmployeeList(params);
-    employees.value = res.data?.records || res.data || [];
-  } catch (error) {
-    console.error('加载排班人员列表失败:', error);
-  }
-};
-const loadClinicRooms = async (deptId) => {
-  try {
-    const params = {status: 1};
-    if (deptId)
-      params.deptId = deptId;
-    const res = await getClinicRoomListAll(params);
-    clinicRooms.value = res.data?.records || res.data || [];
-  } catch (error) {
-    console.error('加载诊室列表失败:', error);
-  }
-};
-const doctorRowDefaults = () => ({
-  roomId: null,
-  totalSource: formData.value.totalSource,
-  registFee: formData.value.registFee,
-  diagnosisFee: formData.value.diagnosisFee,
-  isExpert: formData.value.isExpert,
-  expertFee: formData.value.expertFee,
-  isAppointment: formData.value.isAppointment,
-  appointmentSource: formData.value.appointmentSource,
-});
-/**
- * 批量排班（多医生）：每位医生一行排班参数，其中诊室必须一人一间。
- * 为什么不共用一间：排队号前缀按诊室编号生成、大屏按诊室导诊，两位医生同一时段挤一间 = 患者跑错房间。
- * 规则：已有的行原样保留（人手工改过的不被冲掉）；新进来的医生按当前「默认值」补一行，
- *       诊室按科室诊室列表顺序取空闲，不够就留空，提交前由校验拦（启用态必须有诊室）。
- */
-const ensureDoctorRows = () => {
-  const ids = formData.value.doctorIds || [];
-  const rooms = clinicRooms.value || [];
-  const prev = formData.value.doctorRows || {};
-  const used = new Set(ids.map((id) => prev[String(id)]?.roomId).filter(Boolean));
-  const map = {};
-  for (const id of ids) {
-    const key = String(id);
-    const kept = prev[key];
-    if (kept) {
-      const roomStillValid = kept.roomId != null && rooms.some((r) => r.id === kept.roomId);
-      map[key] = roomStillValid ? kept : {...kept, roomId: null};
-      if (roomStillValid)
-        used.add(kept.roomId);
-      continue;
-    }
-    const row = doctorRowDefaults();
-    // 新医生行的专家开关/专家费按该医生档案带出，而不是沿用顶部默认值
-    const dft = expertDefaultOf(employees.value.find((e) => String(e.id) === String(id)));
-    if (dft) {
-      row.isExpert = dft.isExpert;
-      row.expertFee = dft.expertFee;
-    }
-    const free = rooms.find((r) => !used.has(r.id));
-    if (free) {
-      row.roomId = free.id;
-      used.add(free.id);
-    }
-    map[key] = row;
-  }
-  formData.value.doctorRows = map;
-};
-/** 把顶部的「默认值」刷进每一行（诊室不动：一间房已经分好了，重刷会把人挪房） */
-const applyDefaultsToAllRows = () => {
-  const map = formData.value.doctorRows || {};
-  for (const key of Object.keys(map)) {
-    const {roomId, ...rest} = doctorRowDefaults();
-    map[key] = {...map[key], ...rest};
-  }
-  formData.value.doctorRows = {...map};
-  ElMessage.success(`已把默认值应用到 ${Object.keys(map).length} 位人员`);
-};
-/** 选医生（或科室诊室列表到位）都要重算分配 */
-watch(() => formData.value.doctorIds, ensureDoctorRows, {deep: true});
-watch(clinicRooms, ensureDoctorRows);
-const doctorNameOf = (id) => (employees.value.find((e) => e.id === id)?.empName) || '';
-/** 修改弹窗换了医生：doctorIds/doctorName 要跟着走（提交时按 doctorIds[0] 出医生） */
-const handleEditDoctorChange = (id) => {
-  formData.value.doctorIds = [id];
-  formData.value.doctorName = doctorNameOf(id);
-};
-const roomNameOf = (id) => (clinicRooms.value.find((r) => r.id === id)?.name) || '';
-/** 新增批量实际会生成的条数：医生数 × 天数（天数只来自日期区间，排一天就是起止同一天） */
-const batchPlanCount = computed(() => {
-  const doctors = (formData.value.doctorIds || []).length || 0;
-  const days = formData.value.scheduleDateRange?.length === 2 ? batchDays(formData.value.scheduleDateRange).length : 0;
-  return doctors * days;
-});
-const batchPlanDesc = computed(() => {
-  const days = formData.value.scheduleDateRange?.length === 2 ? batchDays(formData.value.scheduleDateRange).length : 0;
-  const doctors = (formData.value.doctorIds || []).length || 0;
-  return days && doctors
-      ? `${doctors} 位${staffTypeText(formData.value.staffType)}人员 × ${days} 天 = ${batchPlanCount.value} 条` : '';
-});
-/** 日期范围 → 逐天（本地时区拼串，别用 toISOString：UTC 在北京时间 0~8 点会取到昨天） */
-const batchDays = (range) => {
-  const days = [];
-  if (!range || range.length !== 2 || !range[0] || !range[1])
-    return days;
-  const start = new Date(range[0]);
-  const end = new Date(range[1]);
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1))
-    days.push(fmtISO(d));
-  return days;
-};
-const handleDeptChange = (deptId) => {
-  formData.value.doctorId = null;
-  formData.value.doctorName = '';
-  formData.value.doctorIds = [];
-  formData.value.doctorRows = {};
-  formData.value.roomId = null;
-  formData.value.roomName = '';
-  // 换科室：班次选项换成「新科室适用 + 通用」，原选中项可能不在新列表里 → 一律清掉重选
-  shiftDictId.value = null;
-  formData.value.shiftId = null;
-  formData.value.startTime = '';
-  formData.value.endTime = '';
-  loadShiftDict(deptId);
-  loadEmployees(deptId, formData.value.staffType);
-  loadClinicRooms(deptId);
-};
-/**
- * 换岗位类别：换的是「规则链」，所以人必须重选（原来选的医生在收费岗视图里根本不该出现），
- * 诊室/号源/费用这些只对医生有意义的值也一起回到默认。
- */
-const handleStaffTypeChange = () => {
-  formData.value.doctorId = null;
-  formData.value.doctorName = '';
-  formData.value.doctorIds = [];
-  formData.value.doctorRows = {};
-  formData.value.roomId = null;
-  formData.value.roomName = '';
-  if (formData.value.deptId)
-    loadEmployees(Number(formData.value.deptId), formData.value.staffType);
-};
-/** 挂号按时段：半小时一档的时刻（00:00 ~ 23:30 共 48 档），班次字典建条时选起止用 */
-const timeOptions = [];
-for (let h = 0; h < 24; h++) {
-  const hh = String(h).padStart(2, '0');
-  timeOptions.push(`${hh}:00`, `${hh}:30`);
-}
-/** 表单里的时间段：只读展示，值由班次带出（手填时段等于绕开班次字典，统计口径就散了） */
-const formTimeRange = computed(() => formData.value.startTime && formData.value.endTime
-    ? `${formData.value.startTime}~${formData.value.endTime}` : '');
-const tplTimeRange = computed(() => tplFormData.value.startTime && tplFormData.value.endTime
-    ? `${tplFormData.value.startTime}~${tplFormData.value.endTime}` : '');
-const resetForm = () => {
-  formData.value = {
-    id: null,
-    deptId: null,
-    deptName: '',
-    roomId: null,
-    roomName: '',
-    doctorId: null,
-    doctorName: '',
-    // 默认落在面板当前看的岗位：排班员切到「护理」再点新增，想排的就是护理班
-    staffType: panelStaffType.value,
-    doctorIds: [],
-    doctorRows: {},
-    scheduleDate: '',
-    scheduleDateRange: [],
-    shiftId: null,
-    startTime: '',
-    endTime: '',
-    totalSource: 20,
-    // 已挂数：只给修改弹窗当号源下限用（总数不能小于已挂），提交时后端不认它
-    usedSource: 0,
-    registFee: 0,
-    diagnosisFee: 0,
-    isExpert: 0,
-    expertFee: 0,
-    isAppointment: 0,
-    appointmentSource: 0,
-    status: 1,
-  };
-};
+// ========== 新增/修改排班弹窗的打开入口（表单逻辑在 ScheduleAdd / ScheduleEdit 组件里） ==========
 const handleAdd = () => {
-  resetForm();
-  isEdit.value = false;
-  slotDetailRows.value = [];
-  shiftDictId.value = null;
-  // 人员候选按当前岗位类别拉：切到「护理」再点新增，下拉里就该是护士，不是上一次留下的医生
-  loadEmployees(undefined, formData.value.staffType);
-  loadShiftDict(null);
+  // 默认落在面板当前看的岗位：排班员切到「护理」再点新增，想排的就是护理班
+  addSeed.value = {staffType: panelStaffType.value};
   dialogVisible.value = true;
 };
-// ========== 时间片段明细（编辑弹窗：号源与占用的事实都在段上，可逐段调号源/预约池/停用） ==========
-const slotDetailRows = ref([]);
-const slotDetailLoading = ref(false);
-const slotSaving = ref(false);
-// 载入时的段快照：与当前值逐段比对出「有没有改过」，没改就禁用保存
-const slotSnapshot = ref('');
-const slotEditableFields = (rows) => JSON.stringify(rows.map((s) => [s.id, s.totalSource, s.appointmentSource || 0, s.status]));
-const slotEditEnabled = computed(() => isEdit.value && formData.value.id && staffTypeHasSource(formData.value.staffType)
-    && formData.value.status === 1
-    // 过期与停诊后端拒收（历史班次以门诊日志为准），前端直接只读
-    && !!formData.value.scheduleDate && formData.value.scheduleDate >= fmtISO(new Date()));
-const slotDirty = computed(() => !!slotDetailRows.value.length && slotEditableFields(slotDetailRows.value) !== slotSnapshot.value);
-const loadSlotDetail = async (scheduleId) => {
-  slotDetailRows.value = [];
-  slotSnapshot.value = '';
-  if (!scheduleId)
-    return;
-  slotDetailLoading.value = true;
-  try {
-    const res = await getScheduleSlots(scheduleId);
-    slotDetailRows.value = res.data || [];
-    slotSnapshot.value = slotEditableFields(slotDetailRows.value);
-  } catch (error) {
-    console.error('加载时间片段失败:', error);
-  } finally {
-    slotDetailLoading.value = false;
-  }
-};
-// 段级号源编辑：整批校验整批提交，Σ段由后端写回主表；used 系是事实，前端同样不许改
-const handleSaveSlots = async () => {
-  for (const s of slotDetailRows.value) {
-    if (s.totalSource < (s.usedSource || 0)) {
-      ElMessage.warning(`${s.startTime} 段号源不能小于已挂号数（${s.usedSource || 0}）`);
-      return;
-    }
-    if ((s.appointmentSource || 0) > s.totalSource) {
-      ElMessage.warning(`${s.startTime} 段预约号源不能大于号源总数`);
-      return;
-    }
-    if ((s.appointmentSource || 0) < (s.usedAppointmentSource || 0)) {
-      ElMessage.warning(`${s.startTime} 段预约号源不能小于已约数（${s.usedAppointmentSource || 0}）`);
-      return;
-    }
-  }
-  slotSaving.value = true;
-  try {
-    await saveScheduleSlots(formData.value.id, slotDetailRows.value.map((s) => ({
-      id: s.id, totalSource: s.totalSource, appointmentSource: s.appointmentSource || 0, status: s.status,
-    })));
-    ElMessage.success('号源调整已保存');
-    // Σ段变了：重拉段明细 + 面板（主表的号源总数/剩余是汇总冗余），表单里的汇总值同步对齐
-    await loadSlotDetail(formData.value.id);
-    formData.value.totalSource = slotDetailRows.value.reduce((a, s) => a + (s.totalSource || 0), 0);
-    formData.value.appointmentSource = slotDetailRows.value.reduce((a, s) => a + (s.appointmentSource || 0), 0);
-    await loadPanel();
-  } catch (error) {
-    ElMessage.error(error.message || '号源调整失败');
-  } finally {
-    slotSaving.value = false;
-  }
-};
 const handleEdit = (row) => {
-  isEdit.value = true;
-  formData.value = {
-    id: row.id,
-    deptId: row.deptId,
-    deptName: row.deptName,
-    roomId: row.roomId,
-    roomName: row.roomName,
-    doctorId: row.doctorId,
-    doctorName: row.doctorName,
-    // 历史排班（sql/195 之前）没有岗位类别 → 后端返回 1（DDL 默认值），这里同样兜底
-    staffType: row.staffType ?? STAFF_TYPE_DOCTOR,
-    // 修改是单条：人员是单选下拉（排错人要在这一条上改回来），日期只有一天
-    doctorIds: [row.doctorId],
-    doctorRows: {},
-    scheduleDate: row.scheduleDate,
-    scheduleDateRange: [],
-    shiftId: row.shiftId ? String(row.shiftId) : null,
-    startTime: row.startTime || '',
-    endTime: row.endTime || '',
-    totalSource: row.totalSource,
-    usedSource: row.usedSource || 0,
-    registFee: row.registFee || 0,
-    diagnosisFee: row.diagnosisFee || 0,
-    isExpert: row.isExpert || 0,
-    expertFee: row.expertFee || 0,
-    isAppointment: row.isAppointment || 0,
-    appointmentSource: row.appointmentSource || 0,
-    status: row.status,
-  };
-  if (row.deptId) {
-    loadEmployees(row.deptId, row.staffType ?? STAFF_TYPE_DOCTOR);
-    loadClinicRooms(row.deptId);
-  }
-  // 标准班次按落库的 shift_id 回显；选项按科室过滤（该科室适用 + 全院通用）
-  restoreShiftDict('schedule', row, row.deptId);
-  loadSlotDetail(row.id);
+  editingSchedule.value = row;
   editVisible.value = true;
-};
-const handleSubmit = async () => {
-  if (!formData.value.deptId) {
-    ElMessage.warning('请选择科室');
-    return;
-  }
-  const doctorIds = (formData.value.doctorIds || []).filter(Boolean);
-  if (!doctorIds.length) {
-    ElMessage.warning(`请选择${staffTypeText(formData.value.staffType)}人员（同科室多位可多选，一次排完）`);
-    return;
-  }
-  // 日期口径：编辑 = 单日（改日期=把这条搬到别天）；新增 = 只认日期区间，排一天就起止填同一天。
-  // 以前两个控件并列、区间静默覆盖单日，等于两个入口抢一件事——现在各自只剩一个入口。
-  let days = [];
-  if (isEdit.value) {
-    if (!formData.value.scheduleDate) {
-      ElMessage.warning('请选择排班日期');
-      return;
-    }
-    days = [formData.value.scheduleDate];
-  } else {
-    if (formData.value.scheduleDateRange?.length !== 2) {
-      ElMessage.warning('请选择排班日期');
-      return;
-    }
-    days = batchDays(formData.value.scheduleDateRange);
-    // 与后端 batchUpsert 的 @Size(max=31) 同一口径，这里只是把提示提前到提交前
-    if (days.length > 31) {
-      ElMessage.warning(`日期区间最多 31 天（当前 ${days.length} 天），跨月请分批排`);
-      return;
-    }
-  }
-  if (!days.length) {
-    ElMessage.warning('请选择排班日期');
-    return;
-  }
-  // 过去的日期一律不可写（新增/修改同口径，日期选择器已禁选，这里兜住手输与批量范围；服务端同样拦）
-  const today = todayStr.value;
-  const pastDays = days.filter(d => d < today);
-  if (pastDays.length) {
-    ElMessage.warning(`排班日期不能早于今天：${pastDays.join('、')} 已过去，历史排班只读（以门诊日志为准）`);
-    return;
-  }
-  // 班次是时间段的唯一入口：没选班次就没有时间窗（服务端 resolveForScheduling 同样拦）
-  if (!formData.value.shiftId) {
-    ElMessage.warning('请选择班次：时间段由班次带出，需要的时段在「班次字典」里先建一条');
-    return;
-  }
-  const dept = departments.value.find((d) => d.id === formData.value.deptId);
-  if (dept)
-    formData.value.deptName = dept.deptName;
-  // 医生 × 排班参数：编辑是单条（诊室取表单里的），新增是「每位医生一行、各填各的」
-  // （见 doctorRows：号源/费用/预约按人不同，整批共用一个值会让挂号台读出来全是同质数据）
-  const pairs = isEdit.value
-      ? doctorIds.map((id) => ({
-        doctorId: id,
-        doctorName: formData.value.doctorName || doctorNameOf(id),
-        roomId: formData.value.roomId,
-        roomName: formData.value.roomName || roomNameOf(formData.value.roomId),
-      }))
-      : doctorIds.map((id) => {
-        const row = formData.value.doctorRows[String(id)] || doctorRowDefaults();
-        const rid = row.roomId ?? null;
-        return {
-          doctorId: id,
-          doctorName: doctorNameOf(id),
-          roomId: rid,
-          roomName: roomNameOf(rid),
-          totalSource: row.totalSource,
-          registFee: row.registFee,
-          diagnosisFee: row.diagnosisFee,
-          isExpert: row.isExpert,
-          expertFee: row.isExpert === 1 ? row.expertFee : 0,
-          isAppointment: row.isAppointment,
-          appointmentSource: row.isAppointment === 1 ? Math.min(row.appointmentSource, row.totalSource) : 0,
-        };
-      });
-  if (formData.value.status !== 0 && staffTypeHasSource(formData.value.staffType)) {
-    const noRoom = pairs.filter((p) => !p.roomId && !p.roomName);
-    if (noRoom.length) {
-      ElMessage.warning(`启用状态的医生排班必须选诊室：${noRoom.map((p) => p.doctorName).join('、')} 还没分到诊室（分诊台按诊室编号发号，缺诊室患者找不到房间）`);
-      return;
-    }
-  }
-  submitLoading.value = true;
-  try {
-    if (isEdit.value) {
-      // 编辑模式只修改单条记录
-      const p = pairs[0];
-      await updateSchedule({...formData.value, ...p, scheduleDate: days[0]});
-      ElMessage.success('修改成功');
-    } else {
-      const res = await createScheduleBatch({
-        deptId: formData.value.deptId,
-        deptName: formData.value.deptName,
-        staffType: formData.value.staffType,
-        shiftId: formData.value.shiftId,
-        status: formData.value.status,
-        scheduleDates: days,
-        items: pairs.map((p) => ({
-          doctorId: p.doctorId,
-          doctorName: p.doctorName,
-          roomId: p.roomId,
-          roomName: p.roomName,
-          totalSource: p.totalSource,
-          registFee: p.registFee,
-          diagnosisFee: p.diagnosisFee,
-          isExpert: p.isExpert,
-          expertFee: p.expertFee,
-          isAppointment: p.isAppointment,
-          appointmentSource: p.appointmentSource,
-        })),
-      });
-      ElMessage.success(res.data?.message || `成功创建 ${res.data?.created ?? days.length * pairs.length} 条排班`);
-    }
-    dialogVisible.value = false;
-    editVisible.value = false;
-    loadPanel();
-  } catch (error) {
-    ElMessage.error(error.message || (isEdit.value ? '修改失败' : '新增失败'));
-  } finally {
-    submitLoading.value = false;
-  }
 };
 const handleDelete = async (row) => {
   try {
@@ -3004,29 +1484,6 @@ const loadTitleDict = async () => {
     titleMap.value = map;
   } catch {
   }
-};
-const getTitleLabel = (value) => {
-  return titleMap.value[value] || value || '';
-};
-const getTitleTagClass = (value) => {
-  const label = getTitleLabel(value);
-  if (!label)
-    return '';
-  if (label.includes('副主任'))
-    return 'bg-orange-50 text-orange-600 ring-orange-200';
-  if (label.startsWith('主任'))
-    return 'bg-red-50 text-red-600 ring-red-200';
-  if (label.includes('主治') || label.includes('主管'))
-    return 'bg-blue-50 text-blue-600 ring-blue-200';
-  return 'bg-slate-50 text-slate-500 ring-slate-200';
-};
-/** 专家号软联动：员工档案 isExpert 优先，职称≥副主任医师兜底；专家费带出档案 expertPrice。只给默认值，开关仍可手工改 */
-const expertDefaultOf = (emp) => {
-  if (!emp)
-    return null;
-  const label = getTitleLabel(emp.title || '');
-  const on = emp.isExpert === 1 || label.includes('副主任') || label.startsWith('主任') ? 1 : 0;
-  return {isExpert: on, expertFee: on === 1 ? Number(emp.expertPrice) || 0 : 0};
 };
 const tplTableHeight = ref(420);
 const calcTplTableHeight = () => {

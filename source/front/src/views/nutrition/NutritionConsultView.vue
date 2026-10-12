@@ -184,121 +184,13 @@
     </el-card>
 
     <!-- 发起 / 修改申请 -->
-    <el-dialog v-model="formVisible" :title="form.id ? '修改营养会诊申请' : '发起营养会诊'" width="560px"
-               data-testid="consult-form-dialog">
-      <el-form label-width="120px">
-        <el-form-item label="住院患者" required>
-          <div data-testid="sel-admission" style="width: 100%">
-            <el-select v-model="form.admissionId" filterable :disabled="!!form.id" placeholder="选择在院患者"
-                       style="width: 100%">
-              <el-option v-for="a in admissions" :key="a.admissionId" :label="admissionLabel(a)"
-                         :value="a.admissionId"/>
-            </el-select>
-          </div>
-        </el-form-item>
-        <el-form-item label="会诊科室" required>
-          <div data-testid="sel-to-dept" style="width: 100%">
-            <el-select v-model="form.toDeptId" filterable placeholder="选择营养科" style="width: 100%">
-              <el-option v-for="d in depts" :key="d.id" :label="d.deptName" :value="d.id"/>
-            </el-select>
-          </div>
-        </el-form-item>
-        <el-form-item label="会诊范围" required>
-          <el-radio-group v-model="form.consultType" data-testid="sel-consult-type">
-            <el-radio :value="2">科间会诊</el-radio>
-            <el-radio :value="3">全院会诊</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="紧急度">
-          <el-radio-group v-model="form.isUrgent" data-testid="sel-urgent">
-            <el-radio :value="0">普通（24 小时内应答）</el-radio>
-            <el-radio :value="1">急会诊（10 分钟内应答）</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="会诊理由" required>
-          <el-input v-model="form.reason" type="textarea" :rows="3" maxlength="500" data-testid="input-reason"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="form.remark" type="textarea" :rows="2" maxlength="500"/>
-        </el-form-item>
-        <div class="form-tip">
-          申请科室、申请医生、患者身份一律由服务端从入院记录与登录态推导，页面传了也不认。会诊类别固定为「营养会诊」。
-        </div>
-      </el-form>
-      <template #footer>
-        <el-button @click="formVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" data-testid="btn-save-consult" @click="submitForm">保存</el-button>
-      </template>
-    </el-dialog>
+    <NutritionConsultEdit v-model="formVisible" :row="formRow" :depts="depts" @saved="onSaved" />
 
     <!-- 出结论 -->
-    <el-dialog v-model="finishVisible" title="填写营养会诊结论" width="560px" data-testid="finish-dialog">
-      <el-form label-width="110px">
-        <el-form-item label="患者">
-          <el-input :value="`${finishRow.patientName || ''}（${finishRow.admissionNo || ''}）`" disabled/>
-        </el-form-item>
-        <el-form-item label="会诊时间">
-          <div data-testid="sel-consult-time" style="width: 100%">
-            <el-date-picker v-model="finishForm.consultTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss"
-                            placeholder="留空取当前时间" style="width: 100%"/>
-          </div>
-        </el-form-item>
-        <el-form-item label="会诊结论" required>
-          <el-input v-model="finishForm.conclusion" type="textarea" :rows="4" maxlength="2000"
-                    placeholder="营养评定结论 + 膳食/管饲/肠外方案 + 目标热量蛋白 + 复评时间"
-                    data-testid="input-conclusion"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="finishForm.remark" type="textarea" :rows="2" maxlength="500"/>
-        </el-form-item>
-        <div class="form-tip">结论会回写进住院病历，没有结论的「已完成」在病历上等于什么都没发生。</div>
-      </el-form>
-      <template #footer>
-        <el-button @click="finishVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" data-testid="btn-do-finish" @click="doFinish">完成并回写病历
-        </el-button>
-      </template>
-    </el-dialog>
+    <NutritionConsultFinish v-model="finishVisible" :row="finishRow" @saved="onSaved" />
 
     <!-- 详情（只读） -->
-    <el-dialog v-model="detailVisible" title="营养会诊明细" width="660px" data-testid="consult-detail-dialog">
-      <el-form :disabled="true" label-width="110px">
-        <el-form-item label="会诊号 / 类别">
-          <el-input :value="`${detail.consultationNo || '—'} · ${detail.consultCategoryText || '—'}`"/>
-        </el-form-item>
-        <el-form-item label="患者">
-          <el-input
-              :value="`${detail.patientName || ''} · ${detail.admissionNo || ''}（${detail.fromDeptName || ''}${detail.bedNo ? ' ' + detail.bedNo + '床' : ''}）`"/>
-        </el-form-item>
-        <el-form-item label="申请 / 接诊">
-          <el-input
-              :value="`${detail.applyDoctorName || '—'} ${detail.applyTime || ''} → ${detail.acceptDoctorName || '未接诊'} ${detail.acceptTime || ''}`"/>
-        </el-form-item>
-        <el-form-item label="范围 / 紧急度">
-          <el-input
-              :value="`${detail.consultTypeText || '—'} · ${detail.isUrgentText || '—'} · 应答耗时 ${responseText(detail)}`"/>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-input
-              :value="`${detail.consultStatusText || '—'}${detail.overdueText ? ' · ' + detail.overdueText : ''}`"/>
-        </el-form-item>
-        <el-form-item label="会诊理由">
-          <el-input :value="detail.reason || '—'" type="textarea" :rows="3"/>
-        </el-form-item>
-        <el-form-item label="会诊结论">
-          <el-input :value="detail.conclusion || '—'" type="textarea" :rows="4"/>
-        </el-form-item>
-        <el-form-item label="回写病历">
-          <el-input :value="detail.recordNo ? `病历号 ${detail.recordNo} · ${detail.finishTime || ''}` : '尚未回写'"/>
-        </el-form-item>
-        <el-form-item label="取消原因">
-          <el-input :value="detail.cancelReason || '—'"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="detailVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    <NutritionConsultDetail v-model="detailVisible" :row="detailRow" />
   </div>
 </template>
 
@@ -307,17 +199,17 @@ import {onMounted, reactive, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
-import {getInpatientListPage} from '@/api/inpatient'
 import {getDepartmentSelectList} from '@/api/system'
 import {
   acceptNutritionConsult,
-  applyNutritionConsult,
   cancelNutritionConsult,
-  finishNutritionConsult,
-  getNutritionConsultDetail,
   getNutritionOverview,
   listNutritionConsultPage,
 } from '@/api/nutrition'
+import {responseText} from '@/lib/nutrition'
+import NutritionConsultEdit from './NutritionConsultEdit.vue'
+import NutritionConsultFinish from './NutritionConsultFinish.vue'
+import NutritionConsultDetail from './NutritionConsultDetail.vue'
 
 const STATUS_TAG = {0: 'warning', 3: 'primary', 1: 'success', 2: 'info'}
 
@@ -325,6 +217,7 @@ const overview = ref({})
 const rows = ref([])
 const total = ref(0)
 const loading = ref(false)
+const saving = ref(false)
 
 const query = reactive({
   toDeptId: null,
@@ -339,12 +232,6 @@ const query = reactive({
 
 // 两卡式列表页：表格只设最大高度，超高内部滚动（口径参照 views/system/user/UserView.vue）
 const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight()
-
-function responseText(row) {
-  if (row.responseMinutes == null) return '—'
-  const m = Number(row.responseMinutes)
-  return m < 60 ? `${m} 分钟` : `${(m / 60).toFixed(1)} 小时`
-}
 
 async function loadOverview() {
   try {
@@ -392,18 +279,10 @@ function onSizeChange() {
 }
 
 // ---------------- 基础数据 ----------------
-const admissions = ref([])
+// 会诊科室下拉：查询卡与发起/修改弹框共用，留在页面按 prop 下发
 const depts = ref([])
 
-const admissionLabel = (a) => `${a.bedNo || '—'} ${a.patientName || '—'}（${a.wardName || a.deptName || '—'}）`
-
 async function loadBaseData() {
-  try {
-    const res = await getInpatientListPage({admitStatus: 1, pageNum: 1, pageSize: 200})
-    admissions.value = res?.data?.records || []
-  } catch (e) {
-    admissions.value = []
-  }
   try {
     const res = await getDepartmentSelectList({})
     depts.value = res?.data || []
@@ -412,64 +291,16 @@ async function loadBaseData() {
   }
 }
 
-// ---------------- 发起 / 修改 ----------------
+// ---------------- 发起 / 修改（子组件 NutritionConsultEdit） ----------------
 const formVisible = ref(false)
-const saving = ref(false)
-const emptyForm = () => ({
-  id: null,
-  admissionId: null,
-  toDeptId: null,
-  consultType: 2,
-  isUrgent: 0,
-  reason: '',
-  remark: ''
-})
-const form = reactive(emptyForm())
+const formRow = ref(null)
 
 function openForm(row) {
-  Object.assign(form, emptyForm())
-  if (row) {
-    Object.assign(form, {
-      id: row.consultationId,
-      admissionId: row.admissionId,
-      toDeptId: row.toDeptId,
-      consultType: row.consultType,
-      isUrgent: row.isUrgent,
-      reason: row.reason || '',
-      remark: row.remark || '',
-    })
-  }
+  formRow.value = row || null
   formVisible.value = true
 }
 
-async function submitForm() {
-  if (!form.admissionId) {
-    ElMessage.warning('请选择住院患者');
-    return
-  }
-  if (!form.toDeptId) {
-    ElMessage.warning('请选择会诊科室');
-    return
-  }
-  if (!form.reason.trim()) {
-    ElMessage.warning('会诊理由不能为空');
-    return
-  }
-  saving.value = true
-  try {
-    await applyNutritionConsult({...form})
-    ElMessage.success(form.id ? '会诊申请已修改' : '营养会诊已申请')
-    formVisible.value = false
-    loadList()
-    loadOverview()
-  } catch (e) {
-    ElMessage.error(e?.message || '保存失败')
-  } finally {
-    saving.value = false
-  }
-}
-
-// ---------------- 应答 / 完成 / 取消 ----------------
+// ---------------- 应答 ----------------
 async function doAccept(row) {
   saving.value = true
   try {
@@ -484,40 +315,13 @@ async function doAccept(row) {
   }
 }
 
+// ---------------- 出结论（子组件 NutritionConsultFinish） ----------------
 const finishVisible = ref(false)
 const finishRow = ref({})
-const finishForm = reactive({consultTime: null, conclusion: '', remark: ''})
 
 function openFinish(row) {
   finishRow.value = row
-  finishForm.consultTime = null
-  finishForm.conclusion = ''
-  finishForm.remark = ''
   finishVisible.value = true
-}
-
-async function doFinish() {
-  if (!finishForm.conclusion.trim()) {
-    ElMessage.warning('会诊结论不能为空');
-    return
-  }
-  saving.value = true
-  try {
-    const res = await finishNutritionConsult({
-      consultationId: finishRow.value.consultationId,
-      consultTime: finishForm.consultTime,
-      conclusion: finishForm.conclusion.trim(),
-      remark: finishForm.remark,
-    })
-    ElMessage.success(res?.data ? `已完成，病历号 ${res.data}` : '已完成并回写病历')
-    finishVisible.value = false
-    loadList()
-    loadOverview()
-  } catch (e) {
-    ElMessage.error(e?.message || '完成失败')
-  } finally {
-    saving.value = false
-  }
 }
 
 async function doCancel(row) {
@@ -540,19 +344,19 @@ async function doCancel(row) {
   }
 }
 
-// ---------------- 详情 ----------------
+// ---------------- 详情（子组件 NutritionConsultDetail） ----------------
 const detailVisible = ref(false)
-const detail = ref({})
+const detailRow = ref({})
 
-async function openDetail(row) {
-  detail.value = row
+function openDetail(row) {
+  detailRow.value = row
   detailVisible.value = true
-  try {
-    const res = await getNutritionConsultDetail(row.consultationId)
-    if (res?.data) detail.value = res.data
-  } catch (e) {
-    // 列表行已有主字段，详情接口失败时保留行数据，不打断查看
-  }
+}
+
+// ---------------- 子组件保存后的刷新 ----------------
+function onSaved() {
+  loadList()
+  loadOverview()
 }
 
 onMounted(() => {
@@ -614,11 +418,5 @@ onMounted(() => {
 .overdue {
   color: #f56c6c;
   font-size: 12px;
-}
-
-.form-tip {
-  color: #909399;
-  font-size: 12px;
-  line-height: 1.6;
 }
 </style>

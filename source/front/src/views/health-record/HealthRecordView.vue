@@ -120,71 +120,9 @@
       </el-tabs>
     </div>
 
-    <!-- ============ 新增/编辑对话框（六组共用） ============ -->
-    <el-dialog
-        v-model="dialog.visible"
-        :title="(isEdit ? '编辑' : '新增') + (HEALTH_GROUPS.find(g => g.key === dialog.group) || {}).label"
-        destroy-on-close
-        width="720px"
-    >
-      <el-form :model="dialog.form" class="pr-2" label-width="110px">
-        <el-form-item
-            v-for="f in fieldsOf(dialog.group)"
-            :key="f.key"
-            :label="f.label"
-            :required="!!f.required"
-        >
-          <el-select
-              v-if="f.type === 'select'"
-              v-model="dialog.form[f.key]"
-              :placeholder="'请选择' + f.label"
-              class="w-full"
-              clearable
-          >
-            <el-option
-                v-for="o in optionsOf(f)"
-                :key="optValue(o)"
-                :label="optLabel(o)"
-                :value="optValue(o)"
-            />
-          </el-select>
-          <el-date-picker
-              v-else-if="f.type === 'date'"
-              v-model="dialog.form[f.key]"
-              :placeholder="'请选择' + f.label"
-              class="w-full"
-              type="date"
-              value-format="YYYY-MM-DD"
-          />
-          <el-input-number
-              v-else-if="f.type === 'number'"
-              v-model="dialog.form[f.key]"
-              :min="0"
-              class="w-full"
-          />
-          <el-switch
-              v-else-if="f.type === 'switch'"
-              v-model="dialog.form[f.key]"
-              :active-text="optLabel(f.options[0])"
-              :active-value="optValue(f.options[0])"
-              :inactive-text="optLabel(f.options[1])"
-              :inactive-value="optValue(f.options[1])"
-          />
-          <el-input
-              v-else
-              v-model="dialog.form[f.key]"
-              :placeholder="f.placeholder || ('请输入' + f.label)"
-              clearable
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialog.visible = false">取消</el-button>
-        <el-button v-perm="['patient:profile:add', 'patient:profile:edit']" :loading="dialog.saving" type="primary"
-                   @click="submitDialog">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- ============ 新增/编辑对话框（六组共用，已拆至 HealthRecordEdit.vue） ============ -->
+    <HealthRecordEdit v-model="dialogVisible" :group="dialogGroup" :patient-id="patientId" :preset="dialogPreset"
+                      :relation-options="relationOptions" :row="dialogRow" @saved="loadProfile"/>
   </div>
 </template>
 
@@ -208,7 +146,7 @@
  *     这种情况给一条明确的提示 + 「转成明细条目」按钮（把文本填进新增对话框），
  *     而不是让它悄悄消失。
  */
-import {computed, onMounted, reactive, ref, watch} from 'vue'
+import {computed, onMounted, ref, watch} from 'vue'
 import {useRoute} from 'vue-router'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Delete, Edit, Plus, Refresh} from '@element-plus/icons-vue'
@@ -221,12 +159,6 @@ import {
   deletePatientContact,
   deleteSurgeryHistory,
   getPatientHealthProfile,
-  saveAllergy,
-  saveFamilyHistory,
-  saveMedicationHistory,
-  savePastDisease,
-  savePatientContact,
-  saveSurgeryHistory,
 } from '@/api/patient'
 import {DICT_TYPE, loadDictDataMap} from '@/lib/dict-cache'
 import {dictLabelText} from '@/lib/utils'
@@ -238,6 +170,7 @@ import {
   DISEASE_STATUS_OPTIONS,
   DRUG_ROUTE_OPTIONS,
   DRUG_TYPE_OPTIONS,
+  GROUP_FIELDS,
   HEALTH_GROUPS,
   MEDICATION_STATUS_OPTIONS,
   medicationStatusTone,
@@ -245,113 +178,7 @@ import {
   severityTone,
   SURGERY_TYPE_OPTIONS,
 } from '@/lib/healthProfile'
-
-/* ==================== 六组字段配置（表格列 + 对话框字段共用一个来源） ==================== */
-// type: text | select | date | number | switch
-// options: 静态数组，或 'PATIENT_RELATION'（用 sys_patient_relation 字典）
-const GROUP_FIELDS = {
-  allergy: [
-    {key: 'allergenName', label: '过敏原', type: 'text', required: true, width: 150},
-    // 类型必填：表列 allergy_type 是 NOT NULL 且取值只有药物/食物/其他（没有"未知"档），
-    // 不标必填的话用户不选就会拿到后端 500，这里提前拦住并说清缺什么
-    {key: 'allergyType', label: '类型', type: 'select', options: ALLERGY_TYPE_OPTIONS, required: true, width: 100},
-    {
-      key: 'allergySeverity',
-      label: '严重程度',
-      type: 'select',
-      options: ALLERGY_SEVERITY_OPTIONS,
-      width: 120,
-      tone: severityTone
-    },
-    {key: 'allergySymptoms', label: '反应表现', type: 'text', minWidth: 180, placeholder: '如：全身皮疹、呼吸困难'},
-    {key: 'allergyDate', label: '首次发生', type: 'date', width: 130},
-    {key: 'occurrenceCount', label: '次数', type: 'number', width: 80},
-    {key: 'treatmentGiven', label: '处理措施', type: 'text', minWidth: 180},
-    {key: 'confirmedBy', label: '确认医生', type: 'text', width: 120},
-  ],
-  pastDisease: [
-    {key: 'diseaseName', label: '疾病名称', type: 'text', required: true, minWidth: 200},
-    {key: 'diseaseCode', label: 'ICD-10', type: 'text', width: 110, placeholder: '如 I10'},
-    {key: 'diagnosisDate', label: '诊断日期', type: 'date', width: 130},
-    {key: 'diagnosisDept', label: '诊断科室', type: 'text', width: 140},
-    {key: 'currentStatus', label: '控制情况', type: 'select', options: DISEASE_STATUS_OPTIONS, width: 110},
-    {key: 'treatmentPlan', label: '治疗方案', type: 'text', minWidth: 200},
-    {key: 'relapseCount', label: '复发次数', type: 'number', width: 100},
-    {key: 'lastFollowupDate', label: '最近随访', type: 'date', width: 130},
-  ],
-  surgery: [
-    {key: 'surgeryName', label: '手术名称', type: 'text', required: true, minWidth: 200},
-    {key: 'surgeryDate', label: '手术日期', type: 'date', required: true, width: 130},
-    {key: 'surgeryType', label: '手术类型', type: 'select', options: SURGERY_TYPE_OPTIONS, width: 110},
-    {key: 'surgeon', label: '主刀医生', type: 'text', width: 120},
-    {key: 'anesthesiaType', label: '麻醉方式', type: 'text', width: 120},
-    {key: 'hospitalName', label: '手术医院', type: 'text', width: 160},
-    {key: 'postopDiagnosis', label: '术后诊断', type: 'text', minWidth: 170},
-    {key: 'recoveryStatus', label: '恢复情况', type: 'select', options: RECOVERY_STATUS_OPTIONS, width: 110},
-    {key: 'complications', label: '术后并发症', type: 'text', minWidth: 160},
-  ],
-  family: [
-    // relationship 在这一组存**称谓文案**（父亲/母亲/伯父），与联系人那一组的数字码值相反
-    {
-      key: 'relationship',
-      label: '与患者关系',
-      type: 'text',
-      required: true,
-      width: 120,
-      placeholder: '如：父亲、母亲、伯父'
-    },
-    {key: 'name', label: '亲属姓名', type: 'text', width: 120},
-    {key: 'age', label: '年龄', type: 'number', width: 80},
-    {key: 'isAlive', label: '在世情况', type: 'switch', options: ALIVE_OPTIONS, width: 110},
-    {key: 'causeOfDeath', label: '死亡原因', type: 'text', width: 150, placeholder: '已故必填'},
-    {key: 'healthStatus', label: '健康状况', type: 'text', minWidth: 180},
-    {key: 'hereditaryDisease', label: '遗传性疾病', type: 'text', width: 160},
-    {key: 'infectiousDisease', label: '传染病史', type: 'text', width: 140},
-  ],
-  medication: [
-    {key: 'drugName', label: '药物名称', type: 'text', required: true, minWidth: 180},
-    {key: 'drugType', label: '药物类型', type: 'select', options: DRUG_TYPE_OPTIONS, width: 110},
-    {key: 'dosage', label: '剂量', type: 'text', width: 100, placeholder: '如 0.5g'},
-    {key: 'frequency', label: '频次', type: 'text', width: 90, placeholder: '如 bid'},
-    {key: 'route', label: '给药途径', type: 'select', options: DRUG_ROUTE_OPTIONS, width: 110},
-    {key: 'startDate', label: '开始用药', type: 'date', required: true, width: 130},
-    {key: 'endDate', label: '停药日期', type: 'date', width: 130},
-    {
-      key: 'status',
-      label: '用药状态',
-      type: 'select',
-      options: MEDICATION_STATUS_OPTIONS,
-      width: 110,
-      tone: medicationStatusTone
-    },
-    {key: 'indications', label: '用药指征', type: 'text', minWidth: 160},
-    {key: 'prescriber', label: '处方医生', type: 'text', width: 120},
-    {key: 'reasonStop', label: '停药原因', type: 'text', width: 150},
-  ],
-  contact: [
-    {key: 'contactName', label: '联系人', type: 'text', required: true, width: 120},
-    // relationship 在这一组是 sys_patient_relation 的**码值**（tinyint），不是文案
-    // 表列 relationship 是 NOT NULL 的字典码值：标必填，别让用户提交后才被后端退回
-    {
-      key: 'relationship',
-      label: '与患者关系',
-      type: 'select',
-      options: 'PATIENT_RELATION',
-      dictLabel: 'relationshipText',
-      required: true,
-      width: 130
-    },
-    {key: 'phone', label: '联系电话', type: 'text', width: 140, placeholder: '11 位手机号'},
-    {
-      key: 'isPrimary',
-      label: '主要联系人',
-      type: 'switch',
-      options: [{label: '是', value: 1}, {label: '否', value: 0}],
-      width: 120
-    },
-    {key: 'address', label: '联系地址', type: 'text', minWidth: 200},
-  ],
-}
+import HealthRecordEdit from './HealthRecordEdit.vue'
 
 /** 组的 key（后端 PatientHealthProfileVO 的字段名） */
 const PROFILE_FIELD = {
@@ -363,10 +190,6 @@ const PROFILE_FIELD = {
   contact: 'contacts',
 }
 
-const SAVE_API = {
-  allergy: saveAllergy, pastDisease: savePastDisease, surgery: saveSurgeryHistory,
-  family: saveFamilyHistory, medication: saveMedicationHistory, contact: savePatientContact,
-}
 const DELETE_API = {
   allergy: deleteAllergy, pastDisease: deletePastDisease, surgery: deleteSurgeryHistory,
   family: deleteFamilyHistory, medication: deleteMedicationHistory, contact: deletePatientContact,
@@ -383,8 +206,11 @@ const activeGroup = ref('allergy')
 
 const relationOptions = ref([])
 
-const dialog = reactive({visible: false, group: 'allergy', form: {}, saving: false})
-const isEdit = computed(() => dialog.form && dialog.form.id != null)
+// 对话框开关与入参（表单、保存逻辑已拆至 HealthRecordEdit.vue）
+const dialogVisible = ref(false)
+const dialogGroup = ref('allergy')
+const dialogRow = ref(null)
+const dialogPreset = ref({})
 
 const loadProfile = async () => {
   if (!patientId.value) {
@@ -434,7 +260,7 @@ watch(() => route.query.patientId, (v) => {
 })
 
 watch(patientId, () => {
-  dialog.visible = false
+  dialogVisible.value = false
   activeGroup.value = 'allergy'
   loadProfile()
 })
@@ -477,28 +303,25 @@ const legacyTextOf = (group) => {
 const totalCount = computed(() =>
     profile.value ? HEALTH_GROUPS.reduce((s, g) => s + countOf(g.key), 0) : 0)
 
-/* ==================== 对话框 ==================== */
+/* ==================== 对话框（表单与保存已拆至 HealthRecordEdit.vue，这里只管开关与入参） ==================== */
 const fieldsOf = (group) => GROUP_FIELDS[group] || []
-
-const optionsOf = (f) => {
-  if (f.options === 'PATIENT_RELATION') return relationOptions.value
-  return f.options || []
-}
 
 /** 下拉/开关的选项值：字符串数组直接当 label=value，对象数组取 value */
 const optValue = (o) => (o !== null && typeof o === 'object' ? o.value : o)
 const optLabel = (o) => (o !== null && typeof o === 'object' ? o.label : o)
 
 const openAdd = (group, preset = {}) => {
-  dialog.group = group
-  dialog.form = {patientId: patientId.value, ...preset}
-  dialog.visible = true
+  dialogGroup.value = group
+  dialogRow.value = null
+  dialogPreset.value = preset
+  dialogVisible.value = true
 }
 
 const openEdit = (group, row) => {
-  dialog.group = group
-  dialog.form = {...row, patientId: patientId.value}
-  dialog.visible = true
+  dialogGroup.value = group
+  dialogRow.value = {...row}
+  dialogPreset.value = {}
+  dialogVisible.value = true
 }
 
 /** 「文本转明细」：把主档那段自由文本填进新增对话框，让用户补齐结构化字段后保存 */
@@ -510,33 +333,6 @@ const convertLegacyText = (group) => {
   } else if (group === 'contact') {
     const p = profile.value || {}
     openAdd(group, {contactName: p.contactNameText || '', phone: p.contactPhoneText || ''})
-  }
-}
-
-const submitDialog = async () => {
-  const group = dialog.group
-  // 必填校验放在提交前（后端也有校验，但等一个网络往返再报错体验差）
-  for (const f of fieldsOf(group)) {
-    if (f.required && (dialog.form[f.key] === undefined || dialog.form[f.key] === null || dialog.form[f.key] === '')) {
-      ElMessage.warning(`请填写「${f.label}」`)
-      return
-    }
-  }
-  dialog.saving = true
-  try {
-    const res = await SAVE_API[group]({...dialog.form})
-    if (res?.code !== 200) {
-      ElMessage.error(res?.message || '保存失败')
-      return
-    }
-    ElMessage.success(isEdit.value ? '已保存' : '已新增')
-    dialog.visible = false
-    await loadProfile()
-  } catch (e) {
-    // request.js 已统一弹错，这里只需阻止把「已保存」也弹出来
-    console.error('保存健康档案失败', e)
-  } finally {
-    dialog.saving = false
   }
 }
 

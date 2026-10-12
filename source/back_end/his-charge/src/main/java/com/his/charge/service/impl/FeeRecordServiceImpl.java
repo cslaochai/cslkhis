@@ -83,7 +83,6 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
         BizFeeRecord row = new BizFeeRecord();
         row.setFeeNo(redisSequenceService.generateFeeNo());
         applySnapshot(row, dto);
-        // 金额由服务端现算：信调用方传来的金额等于把应收交给调用方定义
         row.setAmount(price.multiply(quantity).setScale(AMOUNT_SCALE, RoundingMode.HALF_UP));
         row.setFeeStatus(FeeStatusEnum.PENDING.getCode());
         row.setBookTime(LocalDateTime.now());
@@ -379,6 +378,8 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
         neg.setQuantity(quantity.negate());
         neg.setAmount(amount.negate());
         neg.setFeeStatus(FeeStatusEnum.PENDING.getCode());
+        // 红冲负行自身累计已冲金额为 0：refunded_amount 无库默认值，必须显式赋值
+        neg.setRefundedAmount(BigDecimal.ZERO);
         // 来源照抄原行：sumNetBySource 才能把这张临床单据的净额算对，负行也不会被幂等判重新记一遍
         neg.setSourceType(orig.getSourceType());
         neg.setSourceId(orig.getSourceId());

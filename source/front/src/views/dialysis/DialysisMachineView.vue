@@ -59,29 +59,7 @@
       </div>
     </el-card>
 
-    <el-dialog v-model="editVisible" :title="form.id ? '编辑机位' : '新增机位'" data-testid="hd-machine-dialog"
-               width="520px">
-      <el-form label-width="90px">
-        <el-form-item label="机位号" required>
-          <el-input v-model="form.machineNo" data-testid="hd-mc-form-no" placeholder="如 HD-09"/>
-        </el-form-item>
-        <el-form-item label="分区">
-          <el-input v-model="form.roomName" data-testid="hd-mc-form-room" placeholder="如 第二透析室"/>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="form.status" :fit-input-width="false" class="w-40" data-testid="hd-mc-form-status">
-            <el-option v-for="d in statusDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="form.remark" data-testid="hd-mc-form-remark"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button :loading="saving" data-testid="hd-mc-ok" type="primary" @click="save">保存</el-button>
-      </template>
-    </el-dialog>
+    <DialysisMachineEdit v-model="editVisible" :row="editRow" :status-dict="statusDict" @saved="loadList"/>
   </div>
 </template>
 
@@ -96,13 +74,14 @@
 import {onMounted, reactive, ref} from 'vue';
 import {ElMessage} from 'element-plus';
 import {Plus, Refresh, Search} from '@element-plus/icons-vue';
-import {listDialysisMachinePage, upsertDialysisMachine} from '@/api/dialysis';
+import {listDialysisMachinePage} from '@/api/dialysis';
 import {getDictDataMapList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {machineStatusTag} from '@/lib/dialysis';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import DialysisMachineEdit from './DialysisMachineEdit.vue';
 // ---------------- 字典 ----------------
 const statusDict = ref([]);
 const statusText = (v) => dictLabelText(statusDict.value, v);
@@ -149,41 +128,10 @@ const reset = () => {
 };
 // ---------------- 新增/编辑 ----------------
 const editVisible = ref(false);
-const saving = ref(false);
-const form = reactive({id: null, machineNo: '', roomName: '', status: 1, remark: ''});
+const editRow = ref(null);
 const openEdit = (row) => {
-  Object.assign(form, {
-    id: row?.id ?? null, machineNo: row?.machineNo ?? '', roomName: row?.roomName ?? '',
-    status: row?.status ?? 1, remark: row?.remark ?? '',
-  });
+  editRow.value = row ?? null;
   editVisible.value = true;
-};
-const save = async () => {
-  if (!form.machineNo.trim()) {
-    ElMessage.warning('机位号不能为空');
-    return;
-  }
-  saving.value = true;
-  try {
-    const res = await upsertDialysisMachine({
-      id: form.id ?? undefined,
-      machineNo: form.machineNo.trim(),
-      roomName: form.roomName || undefined,
-      status: form.status,
-      remark: form.remark || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success(res.message || '保存成功');
-      editVisible.value = false;
-      loadList();
-    } else {
-      ElMessage.error(res.message || '保存失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '保存失败');
-  } finally {
-    saving.value = false;
-  }
 };
 onMounted(() => {
   loadDicts();

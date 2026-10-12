@@ -122,115 +122,18 @@
       </div>
     </el-card>
 
-    <!-- 登记弹窗 -->
-    <el-dialog v-model="editVisible" :title="editForm.id ? '修改检查' : '登记内镜检查'" width="640px">
-      <el-form label-width="100px">
-        <el-form-item label="患者" required>
-          <patient-select v-model="editForm.patientId" @select="onPatientSelect"/>
-        </el-form-item>
-        <div class="grid grid-cols-2 gap-x-4">
-          <el-form-item label="内镜类型">
-            <el-select v-model="editForm.endoType" style="width: 100%">
-              <el-option v-for="d in endoTypeDict" :key="d.dictValue" :label="d.dictLabel"
-                         :value="Number(d.dictValue)"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="麻醉方式">
-            <el-select v-model="editForm.anesthesiaMethod" style="width: 100%">
-              <el-option v-for="d in anesthesiaDict" :key="d.dictValue" :label="d.dictLabel"
-                         :value="Number(d.dictValue)"/>
-            </el-select>
-          </el-form-item>
-        </div>
-        <el-form-item label="部位/范围">
-          <el-input v-model="editForm.bodyPart"/>
-        </el-form-item>
-        <el-form-item label="检查目的">
-          <el-input v-model="editForm.examPurpose"/>
-        </el-form-item>
-        <el-form-item label="临床诊断">
-          <el-input v-model="editForm.clinicalDiagnosis" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button v-perm="['medtech:endoscopy:add', 'medtech:endoscopy:edit']" :loading="editLoading" type="primary"
-                   @click="saveRecord">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 登记（表单状态与保存都在子组件里） -->
+    <EndoscopyEdit v-model="editVisible" :anesthesia-dict="anesthesiaDict" :endo-type-dict="endoTypeDict"
+                   @saved="loadList(); loadStats()"/>
 
-    <!-- 执行弹窗 -->
-    <el-dialog v-model="execVisible" :title="`执行检查：${execRow?.recordNo || ''}`" width="520px">
-      <el-form label-width="130px">
-        <el-form-item label="内镜医师">
-          <el-input v-model="execForm.endoscopist" placeholder="留空默认当前登录人"/>
-        </el-form-item>
-        <el-form-item label="部位/到达范围">
-          <el-input v-model="execForm.bodyPart"/>
-        </el-form-item>
-        <el-form-item v-if="Number(execRow?.endoType) === 2" label="Boston 评分(0~9)">
-          <el-input-number v-model="execForm.bowelPrepScore" :max="9" :min="0"/>
-        </el-form-item>
-        <el-form-item v-if="Number(execRow?.endoType) === 1" label="幽门螺杆菌">
-          <el-radio-group v-model="execForm.hpResult">
-            <el-radio :value="0">未查</el-radio>
-            <el-radio :value="1">阴性</el-radio>
-            <el-radio :value="2">阳性</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="execVisible = false">取消</el-button>
-        <el-button v-perm="'medtech:endoscopy:edit'" :loading="actLoading" type="primary" @click="saveExecute">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 执行 -->
+    <EndoscopyExecEdit v-model="execVisible" :row="execRow" @saved="loadList"/>
 
-    <!-- 报告弹窗 -->
-    <el-dialog v-model="reportVisible" :title="`内镜报告：${reportRow?.recordNo || ''}`" width="680px">
-      <el-form label-width="90px">
-        <el-form-item label="内镜所见" required>
-          <el-input v-model="reportForm.findings" :rows="4" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="内镜诊断" required>
-          <el-input v-model="reportForm.diagnosis" :rows="3" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="建议">
-          <el-input v-model="reportForm.suggestion" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="reportVisible = false">取消</el-button>
-        <el-button v-perm="'medtech:endoscopy:edit'" :loading="actLoading" type="primary" @click="saveReport">提交报告
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 报告 -->
+    <EndoscopyReportEdit v-model="reportVisible" :row="reportRow" @saved="loadList(); loadStats()"/>
 
-    <!-- 详情 -->
-    <el-dialog v-model="detailVisible" title="内镜检查详情" width="680px">
-      <el-descriptions v-if="detail" :column="2" border size="small">
-        <el-descriptions-item label="检查号">{{ detail.recordNo }}</el-descriptions-item>
-        <el-descriptions-item label="患者">{{ detail.patientName }}</el-descriptions-item>
-        <el-descriptions-item label="类型">{{ detail.endoTypeText }}</el-descriptions-item>
-        <el-descriptions-item label="麻醉">{{ detail.anesthesiaMethodText }}</el-descriptions-item>
-        <el-descriptions-item label="状态">{{ detail.statusText }}</el-descriptions-item>
-        <el-descriptions-item label="Hp">{{ detail.hpResultText }}</el-descriptions-item>
-        <el-descriptions-item label="Boston 评分">{{ detail.bowelPrepScore ?? '-' }}</el-descriptions-item>
-        <el-descriptions-item label="活检">
-          {{ Number(detail.biopsyFlag) === 1 ? `${detail.biopsyPart}（${detail.biopsyCount} 块）` : '无' }}
-        </el-descriptions-item>
-        <el-descriptions-item v-if="detail.pathologyOrderNo" :span="2" label="关联病理号">{{
-            detail.pathologyOrderNo
-          }}
-        </el-descriptions-item>
-        <el-descriptions-item :span="2" label="内镜所见">{{ detail.findings || '-' }}</el-descriptions-item>
-        <el-descriptions-item :span="2" label="内镜诊断">{{ detail.diagnosis || '未出' }}</el-descriptions-item>
-        <el-descriptions-item :span="2" label="建议">{{ detail.suggestion || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="报告医师">{{ detail.reportBy || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="审核医师">{{ detail.auditBy || '-' }}</el-descriptions-item>
-      </el-descriptions>
-    </el-dialog>
+    <!-- 详情（组件按 id 自取） -->
+    <EndoscopyDetail v-model="detailVisible" :id="detailId"/>
   </div>
 </template>
 
@@ -248,21 +151,20 @@ import {
   endoscopyAudit,
   endoscopyCancel,
   endoscopyCheckIn,
-  endoscopyExecute,
   endoscopyPublish,
-  endoscopyReport,
   endoscopySendBiopsy,
-  endoscopyUpsert,
-  getEndoscopyDetail,
   getEndoscopyListPage,
   getEndoscopyStats,
 } from '@/api/medicaltech';
 import {getDictDataMapList} from '@/api/system';
-import PatientSelect from '@/components/his/PatientSelect.vue';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import EndoscopyDetail from './EndoscopyDetail.vue';
+import EndoscopyEdit from './EndoscopyEdit.vue';
+import EndoscopyExecEdit from './EndoscopyExecEdit.vue';
+import EndoscopyReportEdit from './EndoscopyReportEdit.vue';
 
 const loading = ref(true);
 const rows = ref([]);
@@ -339,49 +241,10 @@ const resetQuery = () => {
   query.pageNum = 1;
   loadList();
 };
-// ---------------- 登记 ----------------
+// ---------------- 登记（弹框已拆到 EndoscopyEdit，这里只管打开） ----------------
 const editVisible = ref(false);
-const editForm = reactive({
-  id: null, patientId: null, patientNo: '', patientName: '', gender: null,
-  age: null, visitDate: '', clinicalDiagnosis: '', endoType: 1, anesthesiaMethod: 1,
-  bodyPart: '', examPurpose: '',
-});
-const editLoading = ref(false);
 const openCreate = () => {
-  Object.assign(editForm, {
-    id: null, patientId: null, patientNo: '', patientName: '', gender: null, age: null, visitDate: '',
-    clinicalDiagnosis: '', endoType: 1, anesthesiaMethod: 1, bodyPart: '', examPurpose: '',
-  });
   editVisible.value = true;
-};
-const onPatientSelect = (p) => {
-  editForm.patientId = p?.id;
-  editForm.patientName = p?.name || p?.patientName || '';
-  editForm.patientNo = p?.patientNo || '';
-  editForm.gender = p?.gender ?? null;
-  editForm.age = p?.age ?? null;
-};
-const saveRecord = async () => {
-  if (!editForm.patientId || !editForm.patientName.trim()) {
-    ElMessage.warning('请选择患者');
-    return;
-  }
-  editLoading.value = true;
-  try {
-    const res = await endoscopyUpsert({...editForm, visitDate: editForm.visitDate || undefined});
-    if (res.code === 200) {
-      ElMessage.success(res.message || '已保存');
-      editVisible.value = false;
-      loadList();
-      loadStats();
-    } else
-      ElMessage.error(res.message || '保存失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('保存失败');
-  } finally {
-    editLoading.value = false;
-  }
 };
 // ---------------- 动作 ----------------
 const actLoading = ref(false);
@@ -405,25 +268,13 @@ const checkIn = (row) => doAction(() => endoscopyCheckIn(row.id), () => {
   loadList();
   loadStats();
 });
-// 执行
+// 执行（弹框已拆到 EndoscopyExecEdit）
 const execVisible = ref(false);
 const execRow = ref(null);
-const execForm = reactive({endoscopist: '', bodyPart: '', bowelPrepScore: null, hpResult: null});
 const openExecute = (row) => {
   execRow.value = row;
-  Object.assign(execForm, {endoscopist: '', bodyPart: row.bodyPart || '', bowelPrepScore: null, hpResult: null});
   execVisible.value = true;
 };
-const saveExecute = () => doAction(() => endoscopyExecute({
-  recordId: execRow.value.id,
-  endoscopist: execForm.endoscopist.trim() || undefined,
-  bodyPart: execForm.bodyPart.trim() || undefined,
-  bowelPrepScore: Number(execRow.value.endoType) === 2 ? execForm.bowelPrepScore : undefined,
-  hpResult: Number(execRow.value.endoType) === 1 ? execForm.hpResult : undefined,
-}), () => {
-  execVisible.value = false;
-  loadList();
-});
 // 送病理
 const sendBiopsy = (row) => {
   ElMessageBox.prompt('活检部位（必填）与块数（默认 1），格式：部位|块数', '活检送病理', {
@@ -441,24 +292,13 @@ const sendBiopsy = (row) => {
   }).catch(() => {
   });
 };
-// 报告
+// 报告（弹框已拆到 EndoscopyReportEdit）
 const reportVisible = ref(false);
 const reportRow = ref(null);
-const reportForm = reactive({findings: '', diagnosis: '', suggestion: ''});
 const openReport = (row) => {
   reportRow.value = row;
-  Object.assign(reportForm, {
-    findings: row.findings || '',
-    diagnosis: row.diagnosis || '',
-    suggestion: row.suggestion || ''
-  });
   reportVisible.value = true;
 };
-const saveReport = () => doAction(() => endoscopyReport({recordId: reportRow.value.id, ...reportForm}), () => {
-  reportVisible.value = false;
-  loadList();
-  loadStats();
-});
 const doAudit = (row) => doAction(() => endoscopyAudit({recordId: row.id}), () => {
   loadList();
   loadStats();
@@ -476,21 +316,12 @@ const cancel = (row) => {
   })).catch(() => {
   });
 };
-// ---------------- 详情 ----------------
+// ---------------- 详情（弹框已拆到 EndoscopyDetail，组件按 id 自取） ----------------
 const detailVisible = ref(false);
-const detail = ref(null);
-const openDetail = async (row) => {
-  try {
-    const res = await getEndoscopyDetail(row.id);
-    if (res.code === 200) {
-      detail.value = res.data;
-      detailVisible.value = true;
-    } else
-      ElMessage.error(res.message || '查询详情失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('查询详情失败');
-  }
+const detailId = ref('');
+const openDetail = (row) => {
+  detailId.value = String(row.id);
+  detailVisible.value = true;
 };
 onMounted(() => {
   loadDicts();

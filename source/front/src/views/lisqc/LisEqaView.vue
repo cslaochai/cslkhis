@@ -324,160 +324,19 @@
     </div>
 
     <!-- 批次弹窗 -->
-    <el-dialog v-model="planVisible" :title="planForm.id ? '编辑质评批次' : '新建质评批次'" width="640px">
-      <el-form label-width="120px">
-        <div class="grid grid-cols-2 gap-x-4">
-          <el-form-item label="质评年度" required>
-            <el-input-number v-model="planForm.planYear" :precision="0" style="width: 100%"/>
-          </el-form-item>
-          <el-form-item label="批次序号" required>
-            <el-input-number v-model="planForm.batchNo" :min="1" :precision="0" style="width: 100%"/>
-          </el-form-item>
-          <el-form-item label="组织方" required>
-            <el-input v-model="planForm.orgName" data-testid="eqa-plan-org" placeholder="如：湖南省临床检验中心"/>
-          </el-form-item>
-          <el-form-item label="计划名称">
-            <el-input v-model="planForm.planName"/>
-          </el-form-item>
-          <el-form-item label="盲样接收日">
-            <el-date-picker v-model="planForm.receiveDate" style="width: 100%" type="date" value-format="YYYY-MM-DD"/>
-          </el-form-item>
-          <el-form-item label="上报截止日">
-            <el-date-picker v-model="planForm.reportDeadline" style="width: 100%" type="date"
-                            value-format="YYYY-MM-DD"/>
-          </el-form-item>
-          <el-form-item label="接收人">
-            <el-input v-model="planForm.receiveBy"/>
-          </el-form-item>
-        </div>
-        <el-form-item label="备注">
-          <el-input v-model="planForm.remark" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="planVisible = false">取消</el-button>
-        <el-button v-perm="['medtech:lisEqa:add','medtech:lisEqa:edit']" :loading="planSaving" type="primary"
-                   @click="savePlan">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <LisEqaPlanEdit v-model="planVisible" :row="planEditRow" @saved="onPlanSaved"/>
 
     <!-- 批量生成盲样 -->
-    <el-dialog v-model="genVisible" title="批量生成盲样台账" width="680px">
-      <el-form label-width="120px">
-        <el-form-item label="盲样编号前缀" required>
-          <el-input v-model="genForm.sampleNoPrefix" placeholder="实际编号 = 前缀 + 序号，如 2026-A 生成 2026-A-1"/>
-        </el-form-item>
-        <el-form-item label="样品序号" required>
-          <el-select v-model="genForm.sampleSeqs" multiple placeholder="一般一次下发 5 个浓度" style="width: 100%">
-            <el-option v-for="s in seqOptions" :key="s" :label="'第 ' + s + ' 号'" :value="s"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="检验项目" required>
-          <el-select v-model="genForm.items" allow-create default-first-option filterable multiple
-                     placeholder="输入 项目编码|项目名称 后回车，如 GLU|葡萄糖" style="width: 100%">
-          </el-select>
-        </el-form-item>
-        <el-form-item label="检测仪器">
-          <el-select v-model="genForm.instruments" allow-create default-first-option filterable multiple
-                     placeholder="填两台以上才会产生「室间差」比对" style="width: 100%">
-          </el-select>
-        </el-form-item>
-        <el-form-item label="方法学">
-          <el-input v-model="genForm.methodName" placeholder="如 己糖激酶法"/>
-        </el-form-item>
-        <el-form-item label="接收日期">
-          <el-date-picker v-model="genForm.receiveDate" style="width: 100%" type="date" value-format="YYYY-MM-DD"/>
-        </el-form-item>
-      </el-form>
-      <div class="text-xs text-gray-400 px-6">已存在的（序号 + 项目 + 仪器）组合会跳过，不会覆盖已录的检测值。</div>
-      <template #footer>
-        <el-button @click="genVisible = false">取消</el-button>
-        <el-button v-perm="'medtech:lisEqa:add'" :loading="genSaving" type="primary" @click="saveGenerate">生成
-        </el-button>
-      </template>
-    </el-dialog>
+    <LisEqaSampleGenerate v-model="genVisible" :plan-id="curPlanId" @saved="onGenerateSaved"/>
 
     <!-- 单条登记 -->
-    <el-dialog v-model="oneVisible" :title="oneForm.id ? '编辑盲样登记' : '登记盲样'" width="640px">
-      <el-form label-width="110px">
-        <div class="grid grid-cols-2 gap-x-4">
-          <el-form-item label="盲样编号" required>
-            <el-input v-model="oneForm.sampleNo"/>
-          </el-form-item>
-          <el-form-item label="样品序号" required>
-            <el-input-number v-model="oneForm.sampleSeq" :min="1" :precision="0" style="width: 100%"/>
-          </el-form-item>
-          <el-form-item label="项目编码" required>
-            <el-input v-model="oneForm.itemCode"/>
-          </el-form-item>
-          <el-form-item label="项目名称" required>
-            <el-input v-model="oneForm.itemName"/>
-          </el-form-item>
-          <el-form-item label="检测仪器">
-            <el-input v-model="oneForm.instrumentName"/>
-          </el-form-item>
-          <el-form-item label="方法学">
-            <el-input v-model="oneForm.methodName"/>
-          </el-form-item>
-          <el-form-item label="接收日期">
-            <el-date-picker v-model="oneForm.receiveDate" style="width: 100%" type="date" value-format="YYYY-MM-DD"/>
-          </el-form-item>
-          <el-form-item label="接收人">
-            <el-input v-model="oneForm.receiveBy"/>
-          </el-form-item>
-        </div>
-      </el-form>
-      <template #footer>
-        <el-button @click="oneVisible = false">取消</el-button>
-        <el-button v-perm="['medtech:lisEqa:add','medtech:lisEqa:edit']" :loading="oneSaving" type="primary"
-                   @click="saveOne">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <LisEqaSampleEdit v-model="oneVisible" :row="oneEditRow" :plan-id="curPlanId" @saved="onOneSaved"/>
 
     <!-- 录检测结果 -->
-    <el-dialog v-model="testVisible" :title="`录入本室检测结果：${testRow?.sampleNo || ''}（${testRow?.itemName || ''}）`"
-               width="480px">
-      <el-form label-width="100px">
-        <el-form-item label="本室测定值" required>
-          <el-input-number v-model="testForm.testValue" :precision="4" style="width: 100%"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="testForm.remark" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <div class="text-xs text-gray-400 px-6">盲样须按常规标本流程上机检测，靶值由组织方回报，录入时不可知。</div>
-      <template #footer>
-        <el-button @click="testVisible = false">取消</el-button>
-        <el-button v-perm="'medtech:lisEqa:edit'" :loading="testSaving" type="primary" @click="saveTest">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <LisEqaTestEdit v-model="testVisible" :row="testEditRow" @saved="onTestSaved"/>
 
     <!-- 不合格整改 -->
-    <el-dialog v-model="fixVisible" :title="`不合格整改：${fixRow?.sampleNo || ''} · ${fixRow?.itemName || ''}`"
-               width="560px">
-      <div class="mb-2 text-sm">
-        <el-tag size="small" type="danger">{{ fixRow?.resultStatusText }}</el-tag>
-        <span class="ml-2 text-gray-500">本室值 {{ fixRow?.testValue }}，靶值 {{
-            fixRow?.targetValue
-          }}，偏倚 {{ fixRow?.biasRate }}%</span>
-      </div>
-      <el-form label-width="100px">
-        <el-form-item label="原因分析" required>
-          <el-input v-model="fixForm.handleCause" :rows="3" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="纠正措施" required>
-          <el-input v-model="fixForm.handleMeasure" :rows="3" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="fixVisible = false">取消</el-button>
-        <el-button v-perm="'medtech:lisEqa:edit'" :loading="fixSaving" type="primary" @click="saveFix">提交整改
-        </el-button>
-      </template>
-    </el-dialog>
+    <LisEqaRectifyEdit v-model="fixVisible" :row="fixEditRow" @saved="onFixSaved"/>
   </div>
 </template>
 
@@ -494,15 +353,10 @@ import {ElMessage, ElMessageBox} from 'element-plus';
 import {Refresh, Search} from '@element-plus/icons-vue';
 import {
   eqaPlanArchive,
-  eqaPlanUpsert,
-  eqaRectify,
   eqaRectifyReview,
   eqaReturnScore,
   eqaSampleDeleteById,
-  eqaSampleGenerate,
   eqaSampleReport,
-  eqaSampleTest,
-  eqaSampleUpsert,
   getEqaCompareListPage,
   getEqaPlanListPage,
   getEqaSampleListPage,
@@ -512,6 +366,11 @@ import {getDictDataMapList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+import LisEqaPlanEdit from './LisEqaPlanEdit.vue';
+import LisEqaSampleGenerate from './LisEqaSampleGenerate.vue';
+import LisEqaSampleEdit from './LisEqaSampleEdit.vue';
+import LisEqaTestEdit from './LisEqaTestEdit.vue';
+import LisEqaRectifyEdit from './LisEqaRectifyEdit.vue';
 
 const activeTab = ref('plan');
 // ---------------- 字典 ----------------
@@ -599,49 +458,15 @@ const loadPlans = async () => {
 };
 // 批次新增 / 编辑
 const planVisible = ref(false);
-const planForm = reactive({
-  id: null, planYear: new Date().getFullYear(), batchNo: 1, orgName: '', planName: '',
-  receiveDate: '', receiveBy: '', reportDeadline: '', remark: '',
-});
-const planSaving = ref(false);
+const planEditRow = ref(null);
 const openPlan = (row) => {
-  Object.assign(planForm, {
-    id: row?.id || null,
-    planYear: row?.planYear || new Date().getFullYear(),
-    batchNo: row?.batchNo || 1,
-    orgName: row?.orgName || '', planName: row?.planName || '',
-    receiveDate: row?.receiveDate || '', receiveBy: row?.receiveBy || '',
-    reportDeadline: row?.reportDeadline || '', remark: row?.remark || '',
-  });
+  planEditRow.value = row || null;
   planVisible.value = true;
 };
-const savePlan = async () => {
-  if (!planForm.orgName.trim()) {
-    ElMessage.warning('组织方不能为空');
-    return;
-  }
-  planSaving.value = true;
-  try {
-    const res = await eqaPlanUpsert({
-      ...planForm,
-      orgName: planForm.orgName.trim(),
-      receiveDate: planForm.receiveDate || undefined,
-      reportDeadline: planForm.reportDeadline || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success(res.message || '已保存');
-      planVisible.value = false;
-      loadPlans();
-      loadPlanOptions();
-      loadStats();
-    } else
-      ElMessage.error(res.message || '保存失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('保存失败');
-  } finally {
-    planSaving.value = false;
-  }
+const onPlanSaved = () => {
+  loadPlans();
+  loadPlanOptions();
+  loadStats();
 };
 const doArchive = (row) => {
   ElMessageBox.confirm(`归档后该批次的台账不再允许变更。确认归档批次 ${row.planNo}？`, '归档确认', {type: 'warning'})
@@ -708,149 +533,40 @@ const onSmpSelection = (rows) => {
 };
 // 批量生成骨架
 const genVisible = ref(false);
-const genForm = reactive({
-  planId: null, sampleNoPrefix: '', sampleSeqs: [], items: [],
-  instruments: [], receiveDate: '', methodName: '',
-});
-const genSaving = ref(false);
-const seqOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 const openGenerate = () => {
   if (!curPlanId.value) {
     ElMessage.warning('请先选择质评批次');
     return;
   }
-  Object.assign(genForm, {
-    planId: curPlanId.value, sampleNoPrefix: '', sampleSeqs: [1, 2, 3, 4, 5], items: [],
-    instruments: [], receiveDate: '', methodName: '',
-  });
   genVisible.value = true;
 };
-const saveGenerate = async () => {
-  if (!genForm.sampleNoPrefix.trim()) {
-    ElMessage.warning('盲样编号前缀不能为空');
-    return;
-  }
-  if (genForm.sampleSeqs.length === 0) {
-    ElMessage.warning('请勾选样品序号');
-    return;
-  }
-  if (genForm.items.length === 0) {
-    ElMessage.warning('请填写检验项目');
-    return;
-  }
-  const items = genForm.items.map((raw) => {
-    const p = String(raw).split('|');
-    const code = (p[0] || '').trim();
-    const name = (p[1] || p[0] || '').trim();
-    return {itemCode: code, itemName: name};
-  });
-  if (items.some((i) => !i.itemCode || !i.itemName)) {
-    ElMessage.warning('项目格式为「编码|名称」，缺项时会用编码兜底名称');
-  }
-  genSaving.value = true;
-  try {
-    const res = await eqaSampleGenerate({
-      planId: genForm.planId,
-      sampleNoPrefix: genForm.sampleNoPrefix.trim(),
-      sampleSeqs: genForm.sampleSeqs,
-      items,
-      instruments: genForm.instruments.length ? genForm.instruments : undefined,
-      receiveDate: genForm.receiveDate || undefined,
-      methodName: genForm.methodName || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success(res.message || '已生成');
-      genVisible.value = false;
-      loadSamples();
-      loadPlans();
-      loadStats();
-    } else
-      ElMessage.error(res.message || '生成失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('生成失败');
-  } finally {
-    genSaving.value = false;
-  }
+const onGenerateSaved = () => {
+  loadSamples();
+  loadPlans();
+  loadStats();
 };
 // 单条登记
 const oneVisible = ref(false);
-const oneForm = reactive({
-  id: null, planId: null, sampleNo: '', sampleSeq: 1, itemCode: '', itemName: '',
-  instrumentName: '', methodName: '', receiveDate: '', receiveBy: '',
-});
-const oneSaving = ref(false);
+const oneEditRow = ref(null);
 const openOne = (row) => {
-  Object.assign(oneForm, {
-    id: row?.id || null,
-    planId: curPlanId.value || null,
-    sampleNo: row?.sampleNo || '', sampleSeq: row?.sampleSeq || 1,
-    itemCode: row?.itemCode || '', itemName: row?.itemName || '',
-    instrumentName: row?.instrumentName || '', methodName: row?.methodName || '',
-    receiveDate: row?.receiveDate || '', receiveBy: row?.receiveBy || '',
-  });
+  oneEditRow.value = row || null;
   oneVisible.value = true;
 };
-const saveOne = async () => {
-  if (!oneForm.planId) {
-    ElMessage.warning('请先选择质评批次');
-    return;
-  }
-  if (!oneForm.sampleNo.trim() || !oneForm.itemCode.trim() || !oneForm.itemName.trim()) {
-    ElMessage.warning('盲样编号、项目编码与名称必填');
-    return;
-  }
-  oneSaving.value = true;
-  try {
-    const res = await eqaSampleUpsert({...oneForm});
-    if (res.code === 200) {
-      ElMessage.success(res.message || '已登记');
-      oneVisible.value = false;
-      loadSamples();
-      loadPlans();
-      loadStats();
-    } else
-      ElMessage.error(res.message || '登记失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('登记失败');
-  } finally {
-    oneSaving.value = false;
-  }
+const onOneSaved = () => {
+  loadSamples();
+  loadPlans();
+  loadStats();
 };
 // 录检测结果
 const testVisible = ref(false);
-const testRow = ref(null);
-const testForm = reactive({testValue: null, remark: ''});
-const testSaving = ref(false);
+const testEditRow = ref(null);
 const openTest = (row) => {
-  testRow.value = row;
-  Object.assign(testForm, {testValue: row.testValue ?? null, remark: row.remark || ''});
+  testEditRow.value = row;
   testVisible.value = true;
 };
-const saveTest = async () => {
-  if (testForm.testValue == null) {
-    ElMessage.warning('请填写本室测定值');
-    return;
-  }
-  testSaving.value = true;
-  try {
-    const res = await eqaSampleTest({
-      sampleId: testRow.value.id, testValue: testForm.testValue, remark: testForm.remark || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success(res.message || '已录入');
-      testVisible.value = false;
-      loadSamples();
-      loadPlans();
-    } else
-      ElMessage.error(res.message || '录入失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('录入失败');
-  } finally {
-    testSaving.value = false;
-  }
+const onTestSaved = () => {
+  loadSamples();
+  loadPlans();
 };
 // 批量上报
 const doReport = async () => {
@@ -968,38 +684,14 @@ const submitScore = async () => {
 };
 // 不合格整改
 const fixVisible = ref(false);
-const fixRow = ref(null);
-const fixForm = reactive({handleCause: '', handleMeasure: ''});
-const fixSaving = ref(false);
+const fixEditRow = ref(null);
 const openFix = (row) => {
-  fixRow.value = row;
-  Object.assign(fixForm, {handleCause: row.handleCause || '', handleMeasure: row.handleMeasure || ''});
+  fixEditRow.value = row;
   fixVisible.value = true;
 };
-const saveFix = async () => {
-  if (!fixForm.handleCause.trim() || !fixForm.handleMeasure.trim()) {
-    ElMessage.warning('原因与纠正措施必填');
-    return;
-  }
-  fixSaving.value = true;
-  try {
-    const res = await eqaRectify({
-      sampleId: fixRow.value.id,
-      handleCause: fixForm.handleCause.trim(), handleMeasure: fixForm.handleMeasure.trim(),
-    });
-    if (res.code === 200) {
-      ElMessage.success(res.message || '已整改');
-      fixVisible.value = false;
-      loadReturns();
-      loadStats();
-    } else
-      ElMessage.error(res.message || '整改失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('整改失败');
-  } finally {
-    fixSaving.value = false;
-  }
+const onFixSaved = () => {
+  loadReturns();
+  loadStats();
 };
 const doFixReview = (row) => {
   eqaRectifyReview(row.id).then((res) => {

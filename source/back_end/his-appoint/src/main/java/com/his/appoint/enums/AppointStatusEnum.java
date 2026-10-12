@@ -119,13 +119,6 @@ public enum AppointStatusEnum {
 
     /**
      * 还能不能被退号 —— 已挂号(1)、已签到(2)。
-     *
-     * <p>已签到也算：签到后才发现不想看了，当天应当能退（钱在收费处退，号在窗口/看板退）。
-     * 但 <b>已接诊(3)/已就诊(4) 之后一律锁死</b>：诊疗已经发生，退号等于篡改诊疗事实。
-     *
-     * <p>⚠ 这只是<b>状态</b>闸门，不含<b>日期</b>闸门：昨天的号若因日终结转没跑还停在 1/2，
-     * 光靠本方法会判成「可退」。退号/改约另有「就诊日已过一律拒绝」，见
-     * {@code AppointServiceImpl#visitDatePastReason}（前端同口径在 {@code AppointmentsView#isVisitDatePast}）。
      */
     public static boolean isCancelable(Integer code) {
         return code != null && (code == REGISTERED.code || code == CHECKED_IN.code);
@@ -133,10 +126,6 @@ public enum AppointStatusEnum {
 
     /**
      * 号源还能不能改（改约 / 换号 / 变更医生诊室）—— <b>只允许「已挂号」</b>。
-     *
-     * <p>已签到(2) 的号源已经被消耗、患者已经在队列里排着，换号源得连带把队列行搬走，
-     * 那不是「改约」而是「先退再挂」，不提供一键操作（否则队列号前缀、诊室快照全要跟着重算）。
-     * 已接诊(3)/已就诊(4) 是诊疗事实，直接禁止。
      */
     public static boolean isSourceChangeAllowed(Integer code) {
         return code != null && code == REGISTERED.code;

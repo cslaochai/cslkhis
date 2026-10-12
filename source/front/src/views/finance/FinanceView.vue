@@ -304,499 +304,11 @@
       </el-tab-pane>
     </el-tabs>
 
-    <!-- ==================== 交班 ==================== -->
-    <el-dialog v-model="handoverVisible" destroy-on-close title="办理交班（班结）" width="560px">
-      <div class="space-y-4" data-testid="fin-handover-dialog">
-        <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-          交班单是定格凭证：金额按「上次交班时刻 → 现在」这个区间汇总，
-          生成后不随后续补录变动。班次只是展示标签，不影响统计区间。
-        </div>
-        <el-form label-width="96px">
-          <el-form-item label="班次" required>
-            <el-select v-model="handoverForm.shiftType" class="w-full" data-testid="fin-handover-shift">
-              <el-option v-for="o in SHIFT_TYPE_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="实交现金" required>
-            <el-input-number
-                v-model="handoverForm.handinCash"
-                :min="0"
-                :precision="2"
-                :step="10"
-                class="!w-full"
-                data-testid="fin-handover-cash"
-            />
-          </el-form-item>
-          <el-form-item label="差异说明">
-            <el-input
-                v-model="handoverForm.diffReason"
-                :rows="2"
-                data-testid="fin-handover-reason"
-                placeholder="实交现金与系统现金不一致时必填（后端强校验）"
-                type="textarea"
-            />
-          </el-form-item>
-          <el-form-item label="备注">
-            <el-input v-model="handoverForm.remark" :rows="2" placeholder="选填" type="textarea"/>
-          </el-form-item>
-        </el-form>
-      </div>
-      <template #footer>
-        <el-button @click="handoverVisible = false">取消</el-button>
-        <el-button
-            v-perm="'finance:settlement:edit'"
-            :loading="handoverSubmitting"
-            data-testid="fin-handover-submit"
-            type="primary"
-            @click="submitHandover"
-        >
-          确认交班
-        </el-button>
-      </template>
-    </el-dialog>
-
-    <!-- ==================== 执行日结 ==================== -->
-    <el-dialog v-model="runVisible" destroy-on-close title="执行日结（含三级对账预览）" width="760px">
-      <div class="space-y-4" data-testid="fin-run-dialog">
-        <el-form label-width="96px">
-          <el-form-item label="日结日期" required>
-            <el-date-picker
-                v-model="runForm.settleDate"
-                class="!w-48"
-                data-testid="fin-run-date"
-                placeholder="选择日期"
-                type="date"
-                value-format="YYYY-MM-DD"
-                @change="loadRunPreview"
-            />
-            <span class="ml-3 text-xs text-slate-400">已审核的日结单不可重算</span>
-          </el-form-item>
-        </el-form>
-
-        <div v-loading="runPreviewLoading" class="space-y-3">
-          <template v-if="runReconcile">
-            <div
-                :class="runPassed ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                  : 'border-rose-200 bg-rose-50 text-rose-800'"
-                class="rounded-lg border p-3 text-sm"
-                data-testid="fin-run-summary"
-            >
-              <span class="font-semibold">{{ runPassed ? '三级对账已平' : '三级对账未平' }}</span>
-              <span class="ml-2">{{ runReconcile.summary }}</span>
-            </div>
-
-            <table class="w-full border-collapse text-sm" data-testid="fin-run-recon">
-              <thead>
-              <tr class="bg-slate-50 text-left text-slate-500">
-                <th class="border border-slate-200 px-3 py-2">级次</th>
-                <th class="border border-slate-200 px-3 py-2">左口径</th>
-                <th class="border border-slate-200 px-3 py-2 text-right">左金额</th>
-                <th class="border border-slate-200 px-3 py-2">右口径</th>
-                <th class="border border-slate-200 px-3 py-2 text-right">右金额</th>
-                <th class="border border-slate-200 px-3 py-2 text-right">差额</th>
-                <th class="border border-slate-200 px-3 py-2">结论</th>
-              </tr>
-              </thead>
-              <tbody>
-              <tr
-                  v-for="it in runReconcile.items || []"
-                  :key="it.level"
-                  :data-testid="`fin-run-recon-${it.level}`"
-              >
-                <td class="border border-slate-200 px-3 py-2">{{ it.levelName }}</td>
-                <td class="border border-slate-200 px-3 py-2 text-slate-500">{{ it.leftLabel }}</td>
-                <td class="border border-slate-200 px-3 py-2 text-right font-mono">
-                  ¥{{ formatMoney(it.leftAmount) }}
-                </td>
-                <td class="border border-slate-200 px-3 py-2 text-slate-500">{{ it.rightLabel }}</td>
-                <td class="border border-slate-200 px-3 py-2 text-right font-mono">
-                  ¥{{ formatMoney(it.rightAmount) }}
-                </td>
-                <td
-                    :class="it.passed ? 'text-emerald-600' : 'text-rose-600'"
-                    class="border border-slate-200 px-3 py-2 text-right font-mono"
-                >
-                  {{ formatMoney(it.diffAmount) }}
-                </td>
-                <td class="border border-slate-200 px-3 py-2">
-                  <el-tag :class="reconcileTagClass(it.passed ? 1 : 2)" class="border" effect="plain" size="small">
-                    {{ it.passed ? '平' : '差异' }}
-                  </el-tag>
-                </td>
-              </tr>
-              </tbody>
-            </table>
-
-            <div
-                v-for="it in runReconcile.items || []"
-                v-show="!it.passed"
-                :key="`msg-${it.level}`"
-                class="rounded border border-rose-200 bg-rose-50 p-2 text-xs text-rose-700"
-            >
-              {{ it.levelName }}：{{ it.message }}
-            </div>
-          </template>
-          <div v-else-if="!runPreviewLoading" class="py-8 text-center text-sm text-slate-400">
-            选择日期后自动试算当日对账结果
-          </div>
-        </div>
-
-        <div
-            v-if="runReconcile && !runPassed"
-            class="space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-3"
-        >
-          <el-checkbox v-model="runForm.allowDiff" data-testid="fin-run-allowdiff">
-            差异确认无误，放行出单（放行后差异写进日结单留痕）
-          </el-checkbox>
-          <el-input
-              v-model="runForm.remark"
-              :rows="2"
-              data-testid="fin-run-remark"
-              placeholder="放行理由（必填）：如跨日退费、渠道延迟到账"
-              type="textarea"
-          />
-        </div>
-      </div>
-      <template #footer>
-        <el-button @click="runVisible = false">取消</el-button>
-        <el-button
-            v-perm="'finance:settlement:edit'"
-            :disabled="!!runReconcile && !runPassed && !runForm.allowDiff"
-            :loading="runSubmitting"
-            data-testid="fin-run-submit"
-            type="primary"
-            @click="submitRun"
-        >
-          确认日结
-        </el-button>
-      </template>
-    </el-dialog>
-
-    <!-- ==================== 日结单详情 ==================== -->
-    <el-drawer v-model="dayDetailVisible" :title="`日结单详情 ${detailSettlement?.settlementNo || ''}`" size="72%">
-      <div v-loading="dayDetailLoading" class="space-y-5 text-sm" data-testid="fin-detail-drawer">
-        <div
-            v-if="isTrial"
-            class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-800"
-            data-testid="fin-detail-trial"
-        >
-          该日尚未日结，以下为「试算结果」（不落库）；确认无误请点右上「执行日结」。
-        </div>
-
-        <!-- 单头 -->
-        <div v-if="detailSettlement" class="rounded-lg border border-slate-200 p-4">
-          <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <div><span class="text-slate-400">日结单号：</span>
-              <span class="font-mono text-slate-700">{{ detailSettlement.settlementNo || '—' }}</span>
-            </div>
-            <div><span class="text-slate-400">日期：</span>
-              <span class="text-slate-700">{{ detailSettlement.settleDate || '—' }}</span>
-            </div>
-            <div><span class="text-slate-400">状态：</span>
-              <el-tag :class="dayStatusTagClass(detailSettlement.settleStatus)" class="border" effect="plain"
-                      size="small">
-                {{ dayStatusText(detailSettlement.settleStatus) }}
-              </el-tag>
-            </div>
-            <div><span class="text-slate-400">对账结论：</span>
-              <el-tag
-                  :class="reconcileTagClass(detailSettlement.reconcileStatus)"
-                  class="border"
-                  effect="plain"
-                  size="small"
-              >
-                {{ reconcileText(detailSettlement.reconcileStatus) }}
-              </el-tag>
-            </div>
-            <div><span class="text-slate-400">纳入班结单：</span>
-              <span class="text-slate-700">{{ detailSettlement.shiftCount ?? 0 }} 张</span>
-            </div>
-            <div><span class="text-slate-400">当日实收：</span>
-              <span class="text-slate-700">
-                ¥{{ formatMoney(detailSettlement.chargeAmount) }}（{{ detailSettlement.chargeCount ?? 0 }} 笔流水
-                / {{ detailSettlement.billCount ?? 0 }} 张账单）
-              </span>
-            </div>
-            <div><span class="text-slate-400">Σ交班单：</span>
-              <span class="text-slate-700">¥{{ formatMoney(detailSettlement.detailAmount) }}</span>
-            </div>
-            <div><span class="text-slate-400">统筹记账：</span>
-              <span class="text-slate-700">¥{{ formatMoney(detailSettlement.poolAmount) }}</span>
-            </div>
-            <div><span class="text-slate-400">退费：</span>
-              <span class="text-slate-700">
-                ¥{{ formatMoney(detailSettlement.refundAmount) }}（{{ detailSettlement.refundCount ?? 0 }} 笔）
-              </span>
-            </div>
-            <div><span class="text-slate-400">净额：</span>
-              <span class="font-semibold text-slate-800">¥{{ formatMoney(detailSettlement.netAmount) }}</span>
-            </div>
-            <div><span class="text-slate-400">日结人：</span>
-              <span class="text-slate-700">{{ detailSettlement.settleBy || '—' }}</span>
-            </div>
-            <div><span class="text-slate-400">日结时间：</span>
-              <span class="text-slate-700">{{ detailSettlement.settleTime || '—' }}</span>
-            </div>
-            <div><span class="text-slate-400">审核人：</span>
-              <span class="text-slate-700">{{ detailSettlement.auditBy || '—' }}</span>
-            </div>
-            <div><span class="text-slate-400">审核时间：</span>
-              <span class="text-slate-700">{{ detailSettlement.auditTime || '—' }}</span>
-            </div>
-          </div>
-          <div class="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-5">
-            <div><span class="text-slate-400">现金：</span>¥{{ formatMoney(detailSettlement.cashAmount) }}</div>
-            <div><span class="text-slate-400">微信：</span>¥{{ formatMoney(detailSettlement.wechatAmount) }}</div>
-            <div><span class="text-slate-400">支付宝：</span>¥{{ formatMoney(detailSettlement.alipayAmount) }}</div>
-            <div><span class="text-slate-400">医保个账：</span>¥{{ formatMoney(detailSettlement.insuranceAmount) }}</div>
-            <div><span class="text-slate-400">余额：</span>¥{{ formatMoney(detailSettlement.balanceAmount) }}</div>
-          </div>
-          <div
-              v-if="Number(detailSettlement.unknownPayAmount || 0) !== 0"
-              class="mt-2 text-xs text-rose-600"
-          >
-            支付方式未记录金额 ¥{{ formatMoney(detailSettlement.unknownPayAmount) }}
-            —— 未并入任何渠道，避免点钞/渠道对账出现假数
-          </div>
-          <div v-if="detailSettlement.diffDetail"
-               class="mt-3 rounded border border-slate-200 p-2 text-xs text-slate-600">
-            差异说明：{{ detailSettlement.diffDetail }}
-          </div>
-        </div>
-
-        <!-- 三级对账 -->
-        <div v-if="detailReconcile">
-          <div class="mb-2 flex items-center justify-between">
-            <h3 class="font-semibold text-slate-800">三级对账</h3>
-            <span
-                :class="detailReconcile.passed ? 'text-emerald-600' : 'text-rose-600'"
-                class="text-xs"
-            >{{ detailReconcile.summary }}</span>
-          </div>
-          <table class="w-full border-collapse text-sm" data-testid="fin-recon-table">
-            <thead>
-            <tr class="bg-slate-50 text-left text-slate-500">
-              <th class="border border-slate-200 px-3 py-2">级次</th>
-              <th class="border border-slate-200 px-3 py-2">左口径</th>
-              <th class="border border-slate-200 px-3 py-2 text-right">左金额</th>
-              <th class="border border-slate-200 px-3 py-2">右口径</th>
-              <th class="border border-slate-200 px-3 py-2 text-right">右金额</th>
-              <th class="border border-slate-200 px-3 py-2 text-right">差额</th>
-              <th class="border border-slate-200 px-3 py-2">结论</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr
-                v-for="it in detailReconcile.items || []"
-                :key="it.level"
-                :data-testid="`fin-recon-${it.level}`"
-            >
-              <td class="border border-slate-200 px-3 py-2">{{ it.levelName }}</td>
-              <td class="border border-slate-200 px-3 py-2 text-slate-500">{{ it.leftLabel }}</td>
-              <td class="border border-slate-200 px-3 py-2 text-right font-mono">¥{{ formatMoney(it.leftAmount) }}</td>
-              <td class="border border-slate-200 px-3 py-2 text-slate-500">{{ it.rightLabel }}</td>
-              <td class="border border-slate-200 px-3 py-2 text-right font-mono">¥{{ formatMoney(it.rightAmount) }}</td>
-              <td
-                  :class="it.passed ? 'text-emerald-600' : 'text-rose-600'"
-                  class="border border-slate-200 px-3 py-2 text-right font-mono"
-              >
-                {{ formatMoney(it.diffAmount) }}
-              </td>
-              <td class="border border-slate-200 px-3 py-2">
-                <el-tag :class="reconcileTagClass(it.passed ? 1 : 2)" class="border" effect="plain" size="small">
-                  {{ it.passed ? '平' : '差异' }}
-                </el-tag>
-              </td>
-            </tr>
-            </tbody>
-          </table>
-          <div
-              v-for="it in detailReconcile.items || []"
-              v-show="!it.passed"
-              :key="`dmsg-${it.level}`"
-              class="mt-2 rounded border border-rose-200 bg-rose-50 p-2 text-xs text-rose-700"
-          >
-            {{ it.levelName }}：{{ it.message }}
-          </div>
-        </div>
-
-        <!-- 当日交班单 -->
-        <div>
-          <h3 class="mb-2 font-semibold text-slate-800">
-            当日交班单（{{ detailShifts.length }} 张）
-          </h3>
-          <el-table :data="detailShifts" data-testid="fin-detail-shift-table" size="small" style="width: 100%">
-            <el-table-column class-name="font-mono text-xs" label="交班单号" min-width="150" prop="settlementNo"/>
-            <el-table-column label="收费员" width="90">
-              <template #default="{ row }">{{ row.cashierName || '—' }}</template>
-            </el-table-column>
-            <el-table-column label="班次" width="76">
-              <template #default="{ row }">{{ shiftTypeText(row.shiftType) }}</template>
-            </el-table-column>
-            <el-table-column label="统计区间" min-width="280">
-              <template #default="{ row }">
-                <span class="font-mono text-xs">{{ row.periodBegin }} ~ {{ row.periodEnd }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column align="right" label="收费金额" width="120">
-              <template #default="{ row }">¥{{ formatMoney(row.chargeAmount) }}</template>
-            </el-table-column>
-            <el-table-column align="right" label="退费金额" width="120">
-              <template #default="{ row }">¥{{ formatMoney(row.refundAmount) }}</template>
-            </el-table-column>
-            <el-table-column align="right" label="现金差异" width="110">
-              <template #default="{ row }">
-                <span :class="Number(row.cashDiff || 0) === 0 ? 'text-emerald-600' : 'text-rose-600'">
-                  {{ formatMoney(row.cashDiff) }}
-                </span>
-              </template>
-            </el-table-column>
-            <el-table-column label="状态" width="86">
-              <template #default="{ row }">
-                <el-tag :class="cashierStatusTagClass(row.settleStatus)" class="border" effect="plain" size="small">
-                  {{ cashierStatusText(row.settleStatus) }}
-                </el-tag>
-              </template>
-            </el-table-column>
-          </el-table>
-          <div v-if="detailShifts.length === 0" class="py-6 text-center text-xs text-slate-400">
-            该日没有交班单 —— 二级对账会把当日全部收费都算成「未纳班结」
-          </div>
-        </div>
-
-        <!-- 科室收入 -->
-        <div>
-          <h3 class="mb-2 font-semibold text-slate-800">科室收入</h3>
-          <el-table :data="detailDepts" data-testid="fin-dept-table" size="small" style="width: 100%">
-            <el-table-column label="科室" min-width="180">
-              <template #default="{ row }">
-                <span :class="row.unattributed ? 'text-rose-600' : 'text-slate-700'">
-                  {{ row.deptName || '—' }}
-                </span>
-              </template>
-            </el-table-column>
-            <el-table-column align="right" label="明细笔数" width="110">
-              <template #default="{ row }">{{ row.itemCount ?? 0 }}</template>
-            </el-table-column>
-            <el-table-column align="right" label="金额" width="140">
-              <template #default="{ row }">
-                <span :class="row.unattributed ? 'text-rose-600' : 'text-slate-800'" class="font-semibold">
-                  ¥{{ formatMoney(row.amount) }}
-                </span>
-              </template>
-            </el-table-column>
-            <el-table-column align="right" label="占比" width="100">
-              <template #default="{ row }">{{ formatMoney(row.ratio) }}%</template>
-            </el-table-column>
-          </el-table>
-          <div class="mt-2 text-xs text-slate-400">
-            占比分母为全部明细金额（含无归属），故各行合计不超过 100%。
-            无科室归属行单列、不并入科室统计。
-          </div>
-        </div>
-      </div>
-
-      <template #footer>
-        <el-button @click="dayDetailVisible = false">关闭</el-button>
-        <el-button
-            v-if="detailSettlement && !audited"
-            v-perm="'finance:settlement:edit'"
-            :icon="Select"
-            data-testid="fin-detail-audit-btn"
-            type="primary"
-            @click="handleAudit"
-        >
-          审核日结单
-        </el-button>
-      </template>
-    </el-drawer>
-
-    <!-- ==================== 交班单详情 ==================== -->
-    <el-dialog v-model="cashierDetailVisible" destroy-on-close title="交班单详情" width="680px">
-      <div v-loading="cashierDetailLoading" class="space-y-4 text-sm">
-        <div class="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 p-4">
-          <div><span class="text-slate-400">交班单号：</span>
-            <span class="font-mono text-slate-700">{{ cashierDetail?.settlementNo || '—' }}</span>
-          </div>
-          <div><span class="text-slate-400">收费员：</span>
-            <span class="text-slate-700">{{ cashierDetail?.cashierName || '—' }}</span>
-          </div>
-          <div><span class="text-slate-400">班次：</span>
-            <span class="text-slate-700">{{ shiftTypeText(cashierDetail?.shiftType) }}</span>
-          </div>
-          <div><span class="text-slate-400">状态：</span>
-            <span class="text-slate-700">{{ cashierStatusText(cashierDetail?.settleStatus) }}</span>
-          </div>
-          <div class="col-span-2"><span class="text-slate-400">统计区间：</span>
-            <span class="font-mono text-slate-700">
-              {{ cashierDetail?.periodBegin || '—' }} ~ {{ cashierDetail?.periodEnd || '—' }}
-            </span>
-          </div>
-          <div><span class="text-slate-400">收费：</span>
-            <span class="text-slate-700">
-              ¥{{ formatMoney(cashierDetail?.chargeAmount) }}（{{ cashierDetail?.chargeCount ?? 0 }} 笔）
-            </span>
-          </div>
-          <div><span class="text-slate-400">退费：</span>
-            <span class="text-slate-700">
-              ¥{{ formatMoney(cashierDetail?.refundAmount) }}（{{ cashierDetail?.refundCount ?? 0 }} 笔）
-            </span>
-          </div>
-          <div><span class="text-slate-400">净额：</span>
-            <span class="font-semibold text-slate-800">¥{{ formatMoney(cashierDetail?.netAmount) }}</span>
-          </div>
-          <div><span class="text-slate-400">票据(开/废)：</span>
-            <span class="text-slate-700">
-              {{ cashierDetail?.invoiceCount ?? 0 }} / {{ cashierDetail?.invoiceVoidCount ?? 0 }}
-            </span>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-3 gap-3 rounded-lg border border-slate-200 p-4">
-          <div><span class="text-slate-400">现金：</span>¥{{ formatMoney(cashierDetail?.cashAmount) }}</div>
-          <div><span class="text-slate-400">微信：</span>¥{{ formatMoney(cashierDetail?.wechatAmount) }}</div>
-          <div><span class="text-slate-400">支付宝：</span>¥{{ formatMoney(cashierDetail?.alipayAmount) }}</div>
-          <div><span class="text-slate-400">医保：</span>¥{{ formatMoney(cashierDetail?.insuranceAmount) }}</div>
-          <div><span class="text-slate-400">余额：</span>¥{{ formatMoney(cashierDetail?.balanceAmount) }}</div>
-          <div>
-            <span class="text-slate-400">支付方式未知：</span>
-            <span :class="Number(cashierDetail?.unknownPayAmount || 0) === 0 ? 'text-slate-700' : 'text-rose-600'">
-              ¥{{ formatMoney(cashierDetail?.unknownPayAmount) }}
-            </span>
-          </div>
-        </div>
-
-        <div class="rounded-lg border border-slate-200 p-4">
-          <div class="flex items-center gap-6">
-            <div><span class="text-slate-400">实交现金：</span>
-              <span class="font-semibold text-slate-800">¥{{ formatMoney(cashierDetail?.handinCash) }}</span>
-            </div>
-            <div>
-              <span class="text-slate-400">现金差异：</span>
-              <span
-                  :class="Number(cashierDetail?.cashDiff || 0) === 0 ? 'text-emerald-600' : 'text-rose-600'"
-                  class="font-semibold"
-              >
-                {{ Number(cashierDetail?.cashDiff || 0) > 0 ? '+' : '' }}{{ formatMoney(cashierDetail?.cashDiff) }}
-              </span>
-            </div>
-          </div>
-          <div v-if="cashierDetail?.diffReason" class="mt-2 text-xs text-slate-600">
-            差异说明：{{ cashierDetail.diffReason }}
-          </div>
-        </div>
-
-        <div v-if="cashierDetail?.remark" class="rounded-lg border border-slate-200 p-3">
-          <span class="text-slate-400">备注：</span><span class="text-slate-700">{{ cashierDetail.remark }}</span>
-        </div>
-        <div class="text-xs text-slate-400">
-          制单：{{ cashierDetail?.createBy || '—' }} / {{ cashierDetail?.createTime || '—' }}
-          <span v-if="cashierDetail?.auditBy" class="ml-3">审核：{{ cashierDetail.auditBy }} / {{
-              cashierDetail.auditTime
-            }}</span>
-        </div>
-      </div>
-    </el-dialog>
+    <!-- 交班 / 执行日结 / 交班单详情 / 日结单详情已拆到同目录兄弟组件，页面只管开关与递参 -->
+    <FinanceHandoverAdd v-model="handoverVisible" @saved="onHandoverSaved"/>
+    <FinanceDayRunAdd v-model="runVisible" @saved="onRunSaved"/>
+    <FinanceCashierDetail v-model="cashierDetailVisible" :id="cashierDetailRow?.id" :row="cashierDetailRow"/>
+    <FinanceDayDetail v-model="dayDetailVisible" :row="dayDetailRow" @saved="onDayAudited"/>
   </div>
 </template>
 
@@ -808,20 +320,10 @@
 //      要看实时的去查收费单，别拿交班单当实时数。
 //   2) 统计区间是**滚动的**：上次交班时刻 → 本次交班时刻，不是固定 08:00-16:00。
 //   3) 页面上的筛选一律下推后端，禁止对当前页 list.filter（翻页后结果不全）。
-import {computed, onMounted, reactive, ref} from 'vue';
+import {onMounted, reactive, ref} from 'vue';
 import {Refresh, Search, Select, Tickets, View, Wallet} from '@element-plus/icons-vue';
-import {ElMessage, ElMessageBox} from 'element-plus';
-import {
-  cashierListPage,
-  dayAudit,
-  dayListPage,
-  getCashierById,
-  getDayDetailByDate,
-  getDayDetailById,
-  handover,
-  runDaySettlement,
-  settlementStatusCount,
-} from '@/api/financeSettlement';
+import {ElMessage} from 'element-plus';
+import {cashierListPage, dayListPage, settlementStatusCount} from '@/api/financeSettlement';
 import {
   CASHIER_SETTLE_STATUS_OPTIONS,
   cashierStatusTagClass,
@@ -832,18 +334,14 @@ import {
   RECONCILE_STATUS_OPTIONS,
   reconcileTagClass,
   reconcileText,
-  SHIFT_TYPE_OPTIONS,
   shiftTypeText,
 } from '@/lib/financeSettlement';
 import {formatMoney} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
-
-/** 本地日期 yyyy-MM-dd。不能用 toISOString()：UTC+8 早上 8 点前会取到昨天。 */
-function localDateStr(d = new Date()) {
-  const m = `${d.getMonth() + 1}`.padStart(2, '0');
-  const day = `${d.getDate()}`.padStart(2, '0');
-  return `${d.getFullYear()}-${m}-${day}`;
-}
+import FinanceHandoverAdd from './FinanceHandoverAdd.vue';
+import FinanceDayRunAdd from './FinanceDayRunAdd.vue';
+import FinanceCashierDetail from './FinanceCashierDetail.vue';
+import FinanceDayDetail from './FinanceDayDetail.vue';
 
 const activeTab = ref('cashier');
 // ---------------------------------------------------------------------------
@@ -954,212 +452,58 @@ function resetDay() {
 }
 
 // ---------------------------------------------------------------------------
-// 交班（班结）
+// 交班（班结）：表单与提交逻辑在 FinanceHandoverAdd，页面只管开关和保存后刷新台账
 // ---------------------------------------------------------------------------
 const handoverVisible = ref(false);
-const handoverSubmitting = ref(false);
-const handoverForm = reactive({
-  shiftType: 1,
-  handinCash: null,
-  diffReason: '',
-  remark: '',
-});
 
 function openHandover() {
-  handoverForm.shiftType = 1;
-  handoverForm.handinCash = null;
-  handoverForm.diffReason = '';
-  handoverForm.remark = '';
   handoverVisible.value = true;
 }
 
-async function submitHandover() {
-  if (handoverForm.shiftType === null) {
-    ElMessage.warning('请选择班次');
-    return;
-  }
-  if (handoverForm.handinCash === null || Number(handoverForm.handinCash) < 0) {
-    ElMessage.warning('请填写实际清点并上交的现金金额');
-    return;
-  }
-  handoverSubmitting.value = true;
-  try {
-    const res = await handover({
-      shiftType: handoverForm.shiftType,
-      handinCash: handoverForm.handinCash,
-      diffReason: handoverForm.diffReason.trim() || undefined,
-      remark: handoverForm.remark.trim() || undefined,
-      // cashierId 不传：服务端取登录态，前端传「我是谁」等于让交班单能挂到别人名下
-    });
-    const vo = res.data || {};
-    const diff = Number(vo.cashDiff ?? 0);
-    if (diff === 0) {
-      ElMessage.success(`交班成功（${vo.settlementNo || ''}）现金账实相符`);
-    } else {
-      ElMessage.warning(`交班成功（${vo.settlementNo || ''}）现金差异 ${diff > 0 ? '+' : ''}${formatMoney(diff)} 元，已留痕`);
-    }
-    handoverVisible.value = false;
-    cashierPage.pageNum = 1;
-    await Promise.all([loadCashierList(), loadCounts()]);
-  } catch (e) {
-    ElMessage.error(e?.message || '交班失败');
-  } finally {
-    handoverSubmitting.value = false;
-  }
+async function onHandoverSaved() {
+  cashierPage.pageNum = 1;
+  await Promise.all([loadCashierList(), loadCounts()]);
 }
 
-// 交班单详情
+// 交班单详情：FinanceCashierDetail 自取数据，页面只递打开来源行
 const cashierDetailVisible = ref(false);
-const cashierDetailLoading = ref(false);
-const cashierDetail = ref(null);
+const cashierDetailRow = ref(null);
 
-async function openCashierDetail(row) {
+function openCashierDetail(row) {
+  cashierDetailRow.value = row;
   cashierDetailVisible.value = true;
-  cashierDetailLoading.value = true;
-  cashierDetail.value = row;
-  try {
-    const res = await getCashierById(row.id);
-    if (res.data)
-      cashierDetail.value = res.data;
-  } catch (e) {
-    ElMessage.warning(e?.message || '获取交班单详情失败，已展示列表数据');
-  } finally {
-    cashierDetailLoading.value = false;
-  }
 }
 
 // ---------------------------------------------------------------------------
-// 执行日结（含三级对账预览）
+// 执行日结（含三级对账预览）：逻辑在 FinanceDayRunAdd
 // ---------------------------------------------------------------------------
 const runVisible = ref(false);
-const runSubmitting = ref(false);
-const runPreviewLoading = ref(false);
-const runDetail = ref(null);
-const runForm = reactive({
-  settleDate: localDateStr(),
-  allowDiff: false,
-  remark: '',
-});
-const runReconcile = computed(() => runDetail.value?.reconcile || null);
-const runPassed = computed(() => runReconcile.value?.passed === true);
-
-async function loadRunPreview() {
-  if (!runForm.settleDate)
-    return;
-  runPreviewLoading.value = true;
-  runDetail.value = null;
-  try {
-    const res = await getDayDetailByDate(runForm.settleDate);
-    runDetail.value = res.data || null;
-    // 有差异时默认不勾放行 —— 逼人先看清楚差在哪，而不是顺手点过去
-    if (res.data?.reconcile?.passed !== true) {
-      runForm.allowDiff = false;
-    }
-  } catch (e) {
-    runDetail.value = null;
-    ElMessage.error(e?.message || '加载对账预览失败');
-  } finally {
-    runPreviewLoading.value = false;
-  }
-}
 
 function openRun() {
-  runForm.settleDate = localDateStr();
-  runForm.allowDiff = false;
-  runForm.remark = '';
   runVisible.value = true;
-  loadRunPreview();
 }
 
-async function submitRun() {
-  if (!runForm.settleDate) {
-    ElMessage.warning('请选择日结日期');
-    return;
-  }
-  if (!runPassed.value && !runForm.allowDiff) {
-    ElMessage.warning('对账未平。确认差异无误请勾选「放行差异」并填写理由');
-    return;
-  }
-  if (!runPassed.value && !runForm.remark.trim()) {
-    ElMessage.warning('放行差异必须填写理由');
-    return;
-  }
-  runSubmitting.value = true;
-  try {
-    const res = await runDaySettlement({...runForm});
-    const vo = res.data || {};
-    if (vo.reconcileStatus === 2) {
-      ElMessage.warning(`日结完成（${vo.settlementNo}）对账有差异，已记录差异说明`);
-    } else {
-      ElMessage.success(`日结完成（${vo.settlementNo}）三级对账全部通过`);
-    }
-    runVisible.value = false;
-    activeTab.value = 'day';
-    dayPage.pageNum = 1;
-    await Promise.all([loadDayList(), loadCounts()]);
-    if (vo.id)
-      openDayDetail({id: vo.id});
-  } catch (e) {
-    ElMessage.error(e?.message || '日结失败');
-  } finally {
-    runSubmitting.value = false;
-  }
+async function onRunSaved(vo) {
+  activeTab.value = 'day';
+  dayPage.pageNum = 1;
+  await Promise.all([loadDayList(), loadCounts()]);
+  if (vo?.id)
+    openDayDetail({id: vo.id});
 }
 
 // ---------------------------------------------------------------------------
-// 日结单详情（日结单 + 三级对账 + 当日交班单 + 科室收入）
+// 日结单详情：逻辑在 FinanceDayDetail（含审核），页面递打开来源行、审核后刷新
 // ---------------------------------------------------------------------------
 const dayDetailVisible = ref(false);
-const dayDetailLoading = ref(false);
-const dayDetail = ref(null);
-const detailReconcile = computed(() => dayDetail.value?.reconcile || null);
-const detailShifts = computed(() => dayDetail.value?.shifts || []);
-const detailDepts = computed(() => dayDetail.value?.deptIncomes || []);
-const detailSettlement = computed(() => dayDetail.value?.settlement || null);
-/** 尚未日结时 settlement 为 null，此时下面几块是试算结果，必须在界面上说清楚 */
-const isTrial = computed(() => !!dayDetail.value && !dayDetail.value.settlement);
+const dayDetailRow = ref(null);
 
-async function openDayDetail(row) {
+function openDayDetail(row) {
+  dayDetailRow.value = row;
   dayDetailVisible.value = true;
-  dayDetailLoading.value = true;
-  dayDetail.value = null;
-  try {
-    const res = row?.id ? await getDayDetailById(row.id) : await getDayDetailByDate(row.settleDate);
-    dayDetail.value = res.data || null;
-  } catch (e) {
-    ElMessage.error(e?.message || '加载日结详情失败');
-  } finally {
-    dayDetailLoading.value = false;
-  }
 }
 
-const audited = computed(() => detailSettlement.value?.settleStatus === 2);
-
-async function handleAudit() {
-  const s = detailSettlement.value;
-  if (!s)
-    return;
-  let remark = '';
-  try {
-    const r = await ElMessageBox.prompt(`确认审核日结单 ${s.settlementNo}（当日实收 ¥${formatMoney(s.chargeAmount)}）？审核后不可重算。`, '审核日结单', {
-      type: 'warning',
-      confirmButtonText: '确认审核',
-      cancelButtonText: '取消',
-      inputPlaceholder: '审核意见（选填）',
-      inputValue: '',
-    });
-    remark = r.value || '';
-  } catch {
-    return;
-  }
-  try {
-    await dayAudit({id: s.id, auditRemark: remark || undefined});
-    ElMessage.success('日结单已审核');
-    await openDayDetail({id: s.id});
-    await Promise.all([loadDayList(), loadCounts(), loadCashierList()]);
-  } catch (e) {
-    ElMessage.error(e?.message || '审核失败');
-  }
+async function onDayAudited() {
+  await Promise.all([loadDayList(), loadCounts(), loadCashierList()]);
 }
 
 onMounted(async () => {

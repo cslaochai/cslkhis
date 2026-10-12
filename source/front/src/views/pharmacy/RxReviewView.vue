@@ -305,213 +305,19 @@
         </el-tabs>
 
         <!-- ============ 新建/编辑批次 ============ -->
-        <el-dialog v-model="batchDialogVisible" :title="batchForm.id ? '编辑批次' : '新建点评批次'" width="520px">
-          <el-form :model="batchForm" label-width="110px">
-            <el-form-item label="批次名称" required>
-              <el-input v-model="batchForm.batchName" placeholder="如：2026年9月门诊处方专项点评" data-testid="batch-name" />
-            </el-form-item>
-            <el-form-item label="点评类型" required>
-              <el-radio-group v-model="batchForm.reviewType" :disabled="!!batchForm.id">
-                <el-radio :value="1">常规点评</el-radio>
-                <el-radio :value="2">专项点评</el-radio>
-              </el-radio-group>
-            </el-form-item>
-            <el-form-item v-if="batchForm.reviewType === 2" label="专项主题" required>
-              <el-input v-model="batchForm.specialty" placeholder="如：抗菌药物 / 中药注射剂 / 辅助用药" />
-            </el-form-item>
-            <el-form-item label="处方日期范围" required>
-              <div data-testid="batch-date-range" style="width: 100%">
-                <el-date-picker
-                  v-model="batchDateRange"
-                  type="daterange"
-                  value-format="YYYY-MM-DD"
-                  start-placeholder="起"
-                  end-placeholder="止"
-                  :disabled="!!batchForm.id"
-                  style="width: 100%" />
-              </div>
-            </el-form-item>
-            <el-form-item v-if="!batchForm.id" label="抽样张数" required>
-              <el-input-number v-model="batchForm.sampleCount" :min="1" :max="2000" data-testid="batch-sample-count" />
-              <div class="form-tip">规范要求：每月抽查门急诊处方不少于 100 张（或总处方量 1‰）</div>
-            </el-form-item>
-            <el-form-item label="备注">
-              <el-input v-model="batchForm.remark" type="textarea" :rows="2" />
-            </el-form-item>
-          </el-form>
-          <template #footer>
-            <el-button @click="batchDialogVisible = false">取消</el-button>
-            <el-button type="primary" :loading="saving" @click="saveBatch">保存</el-button>
-          </template>
-        </el-dialog>
+        <RxReviewBatchEdit v-model="batchDialogVisible" :row="batchEditRow" @saved="onBatchSaved" />
 
         <!-- ============ 提交点评 ============ -->
-        <el-dialog v-model="reviewDialogVisible" title="处方点评" width="680px">
-          <template v-if="reviewRow">
-            <el-descriptions :column="2" border size="small" class="review-desc">
-              <el-descriptions-item label="处方号">{{ reviewRow.prescriptionNo }}</el-descriptions-item>
-              <el-descriptions-item label="患者">{{ reviewRow.patientName }}</el-descriptions-item>
-              <el-descriptions-item label="医生 / 科室">{{ reviewRow.doctorName }} / {{ reviewRow.deptName }}</el-descriptions-item>
-              <el-descriptions-item label="就诊日期">{{ reviewRow.visitDate }}</el-descriptions-item>
-              <el-descriptions-item label="诊断" :span="2">{{ reviewRow.diagnosis || '—' }}</el-descriptions-item>
-            </el-descriptions>
-            <div class="drug-list">
-              <div class="drug-list-title">处方药品（{{ (reviewRow.drugDetails || []).length }} 种）</div>
-              <div v-for="(line, i) in reviewRow.drugDetails || []" :key="i" class="drug-line">{{ line }}</div>
-            </div>
-            <el-form label-width="90px" class="review-form">
-              <el-form-item label="点评结论" required>
-                <el-radio-group v-model="reviewForm.reviewResult">
-                  <el-radio :value="1">合理处方</el-radio>
-                  <el-radio :value="2">不规范处方</el-radio>
-                  <el-radio :value="3">用药不适宜</el-radio>
-                  <el-radio :value="4">超常处方</el-radio>
-                </el-radio-group>
-              </el-form-item>
-              <el-form-item v-if="reviewForm.reviewResult && reviewForm.reviewResult !== 1" label="问题项" required>
-                <el-checkbox-group v-model="reviewForm.problemCodes">
-                  <el-checkbox v-for="p in (PROBLEM_GROUPS[reviewForm.reviewResult] || [])" :key="p.code" :value="p.code">
-                    {{ p.label }}
-                  </el-checkbox>
-                </el-checkbox-group>
-              </el-form-item>
-              <el-form-item
-                v-if="reviewForm.reviewResult && reviewForm.reviewResult !== 1"
-                label="点评意见"
-                required>
-                <el-input
-                  v-model="reviewForm.reviewOpinion"
-                  type="textarea"
-                  :rows="3"
-                  maxlength="500"
-                  show-word-limit
-                  placeholder="说明具体问题与依据" />
-              </el-form-item>
-            </el-form>
-          </template>
-          <template #footer>
-            <el-button @click="reviewDialogVisible = false">取消</el-button>
-            <el-button type="primary" :loading="saving" @click="saveReview">提交点评</el-button>
-          </template>
-        </el-dialog>
+        <RxReviewItemEdit v-model="reviewDialogVisible" :row="reviewRow" @saved="onReviewSaved" />
 
         <!-- ============ 按处方号补录 ============ -->
-        <el-dialog v-model="addPromptVisible" title="按处方号补录" width="420px">
-          <el-form label-width="90px">
-            <el-form-item label="处方号" required>
-              <el-input v-model="addByNo" placeholder="输入处方号" data-testid="add-by-no-input" @keyup.enter="doAddByNo" />
-            </el-form-item>
-          </el-form>
-          <div class="form-tip">处方须为已审核/已发药状态，且未被任何批次收录（一处方只点评一次）</div>
-          <template #footer>
-            <el-button @click="addPromptVisible = false">取消</el-button>
-            <el-button type="primary" :loading="saving" @click="doAddByNo">补录</el-button>
-          </template>
-        </el-dialog>
+        <RxReviewItemAdd v-model="addPromptVisible" :batch-id="itemQuery.batchId" @saved="onAddByNoSaved" />
 
         <!-- ============ 登记约谈 ============ -->
-        <el-dialog v-model="talkDialogVisible" :title="talkForm.id ? '编辑约谈记录' : '登记医师约谈'" width="640px">
-          <el-form :model="talkForm" label-width="110px">
-            <el-form-item label="被约谈医师" required>
-              <el-input v-model="talkForm.doctorName" placeholder="医师姓名" data-testid="talk-doctor" @blur="loadRelatedItems" />
-            </el-form-item>
-            <el-form-item label="约谈类型" required>
-              <el-select v-model="talkForm.talkType" style="width: 100%">
-                <el-option v-for="(text, code) in TALK_TYPE" :key="code" :label="text" :value="Number(code)" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="约谈时间" required>
-              <div data-testid="talk-time" style="width: 100%">
-                <el-date-picker
-                  v-model="talkForm.talkTime"
-                  type="datetime"
-                  value-format="YYYY-MM-DD HH:mm:ss"
-                  placeholder="约谈时间"
-                  style="width: 100%" />
-              </div>
-            </el-form-item>
-            <el-form-item label="约谈人 / 部门">
-              <div class="inline-pair">
-                <el-input v-model="talkForm.talkerName" placeholder="约谈人（缺省当前用户）" />
-                <el-input v-model="talkForm.talkerOrg" placeholder="约谈部门（医务科/药学部）" />
-              </div>
-            </el-form-item>
-            <el-form-item label="关联不合理处方">
-              <el-select
-                v-model="talkForm.relatedReviewIds"
-                multiple
-                filterable
-                clearable
-                placeholder="输入医师姓名后加载其不合理处方（可空=独立约谈）"
-                style="width: 100%"
-                :loading="relatedLoading">
-                <el-option
-                  v-for="it in relatedItems"
-                  :key="it.id"
-                  :label="`${it.prescriptionNo}（${resultText(it.reviewResult)}，${it.visitDate}）`"
-                  :value="it.id" />
-              </el-select>
-              <div class="form-tip">约谈依据：仅可关联不合理处方，且必须同属被约谈医师</div>
-            </el-form-item>
-            <el-form-item label="问题摘要">
-              <el-input v-model="talkForm.problemSummary" type="textarea" :rows="2" maxlength="500" placeholder="约谈事由" />
-            </el-form-item>
-            <el-form-item label="约谈内容">
-              <el-input v-model="talkForm.talkContent" type="textarea" :rows="3" maxlength="1000" />
-            </el-form-item>
-            <el-form-item label="整改要求">
-              <el-input v-model="talkForm.rectifyRequire" type="textarea" :rows="2" maxlength="500" />
-            </el-form-item>
-            <el-form-item label="整改状态">
-              <el-radio-group v-model="talkForm.rectifyStatus">
-                <el-radio :value="1">待整改</el-radio>
-                <el-radio :value="2">已整改</el-radio>
-              </el-radio-group>
-            </el-form-item>
-            <el-form-item v-if="talkForm.rectifyStatus === 2" label="整改说明">
-              <el-input v-model="talkForm.rectifyRemark" type="textarea" :rows="2" maxlength="500" />
-            </el-form-item>
-          </el-form>
-          <template #footer>
-            <el-button @click="talkDialogVisible = false">取消</el-button>
-            <el-button type="primary" :loading="saving" @click="saveTalk">保存</el-button>
-          </template>
-        </el-dialog>
+        <RxReviewTalkEdit v-model="talkDialogVisible" :row="talkEditRow" @saved="onTalkSaved" />
 
         <!-- ============ 约谈详情（只读） ============ -->
-        <el-dialog v-model="talkDetailVisible" title="约谈记录详情" width="640px">
-          <template v-if="talkDetailRow">
-            <el-descriptions :column="2" border size="small">
-              <el-descriptions-item label="约谈编号">{{ talkDetailRow.talkNo }}</el-descriptions-item>
-              <el-descriptions-item label="约谈类型">{{ TALK_TYPE[talkDetailRow.talkType] }}</el-descriptions-item>
-              <el-descriptions-item label="被约谈医师">{{ talkDetailRow.doctorName }}</el-descriptions-item>
-              <el-descriptions-item label="科室">{{ talkDetailRow.deptName || '—' }}</el-descriptions-item>
-              <el-descriptions-item label="约谈时间">{{ talkDetailRow.talkTime }}</el-descriptions-item>
-              <el-descriptions-item label="约谈人">{{ talkDetailRow.talkerName }}（{{ talkDetailRow.talkerOrg || '—' }}）</el-descriptions-item>
-              <el-descriptions-item label="问题摘要" :span="2">{{ talkDetailRow.problemSummary || '—' }}</el-descriptions-item>
-              <el-descriptions-item label="约谈内容" :span="2">{{ talkDetailRow.talkContent || '—' }}</el-descriptions-item>
-              <el-descriptions-item label="整改要求" :span="2">{{ talkDetailRow.rectifyRequire || '—' }}</el-descriptions-item>
-              <el-descriptions-item label="整改状态" :span="2">
-                {{ RECTIFY_STATUS[talkDetailRow.rectifyStatus] }}
-                <span v-if="talkDetailRow.rectifyRemark">：{{ talkDetailRow.rectifyRemark }}</span>
-              </el-descriptions-item>
-              <el-descriptions-item label="关联处方" :span="2">
-                <template v-if="(talkDetailRow.relatedItems || []).length">
-                  <div v-for="it in talkDetailRow.relatedItems" :key="it.id" class="drug-line">
-                    {{ it.prescriptionNo }}（{{ resultText(it.reviewResult) }}，{{ it.visitDate }}）
-                  </div>
-                </template>
-                <span v-else>无（独立约谈）</span>
-              </el-descriptions-item>
-              <el-descriptions-item label="医师确认" :span="2">
-                <template v-if="talkDetailRow.doctorConfirm === 1">
-                  {{ talkDetailRow.doctorConfirmBy }} 于 {{ talkDetailRow.doctorConfirmTime }} 签字确认
-                </template>
-                <span v-else>未确认</span>
-              </el-descriptions-item>
-            </el-descriptions>
-          </template>
-        </el-dialog>
+        <RxReviewTalkDetail v-model="talkDetailVisible" :row="talkDetailRow" />
       </el-tab-pane>
       <el-tab-pane label="超常处方公示" name="publicity" lazy>
         <RxPublicityView />
@@ -524,9 +330,13 @@
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import RxPublicityView from './RxPublicityView.vue'
+import RxReviewBatchEdit from './RxReviewBatchEdit.vue'
+import RxReviewItemEdit from './RxReviewItemEdit.vue'
+import RxReviewItemAdd from './RxReviewItemAdd.vue'
+import RxReviewTalkEdit from './RxReviewTalkEdit.vue'
+import RxReviewTalkDetail from './RxReviewTalkDetail.vue'
 import {
   BATCH_STATUS,
-  PROBLEM_GROUPS,
   PUBLICITY_STATUS,
   RECTIFY_STATUS,
   RESULT_TAG_TYPE,
@@ -540,7 +350,6 @@ import {
 } from '@/lib/rxReview'
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES } from '@/lib/pagination'
 import {
-  addRxItemByNo,
   completeRxBatch,
   confirmRxTalk,
   deleteRxBatchById,
@@ -550,14 +359,10 @@ import {
   listRxBatchPage,
   listRxItemPage,
   listRxTalkPage,
-  publicityRxItems,
-  upsertRxBatch,
-  upsertRxItem,
-  upsertRxTalk
+  publicityRxItems
 } from '@/api/pharmacy'
 
 const activeTab = ref('batch')
-const saving = ref(false)
 
 // ---------- 统计 ----------
 const statsMonth = ref(new Date().toISOString().slice(0, 7))
@@ -602,53 +407,16 @@ function enterBatch(row) {
 }
 
 const batchDialogVisible = ref(false)
-const batchDateRange = ref([])
-const batchForm = reactive({ id: null, batchName: '', reviewType: 1, specialty: '', sampleCount: 100, remark: '' })
+const batchEditRow = ref(null)
 
 function openBatchDialog(row) {
-  if (row) {
-    Object.assign(batchForm, { id: row.id, batchName: row.batchName, reviewType: row.reviewType, specialty: row.specialty || '', sampleCount: row.sampleCount, remark: row.remark || '' })
-    batchDateRange.value = [row.dateStart, row.dateEnd]
-  } else {
-    Object.assign(batchForm, { id: null, batchName: '', reviewType: 1, specialty: '', sampleCount: 100, remark: '' })
-    batchDateRange.value = []
-  }
+  batchEditRow.value = row || null
   batchDialogVisible.value = true
 }
 
-async function saveBatch() {
-  if (!batchForm.batchName.trim()) {
-    ElMessage.warning('请填写批次名称')
-    return
-  }
-  const payload = {
-    id: batchForm.id,
-    batchName: batchForm.batchName,
-    reviewType: batchForm.reviewType,
-    specialty: batchForm.specialty,
-    remark: batchForm.remark
-  }
-  if (!batchForm.id) {
-    if (!batchDateRange.value || batchDateRange.value.length !== 2) {
-      ElMessage.warning('请选择处方日期范围')
-      return
-    }
-    payload.dateStart = batchDateRange.value[0]
-    payload.dateEnd = batchDateRange.value[1]
-    payload.sampleCount = batchForm.sampleCount
-  }
-  saving.value = true
-  try {
-    const res = await upsertRxBatch(payload)
-    ElMessage.success(res?.data?.id && !batchForm.id
-      ? `批次已建立，抽样 ${res.data.sampleCount} 张处方待点评`
-      : '保存成功')
-    batchDialogVisible.value = false
-    await loadBatches()
-    await loadBatchOptions()
-  } finally {
-    saving.value = false
-  }
+async function onBatchSaved() {
+  await loadBatches()
+  await loadBatchOptions()
 }
 
 async function doCompleteBatch(row) {
@@ -733,74 +501,25 @@ async function doPublicitySelected() {
 }
 
 const addPromptVisible = ref(false)
-const addByNo = ref('')
 
-async function doAddByNo() {
-  if (!itemQuery.batchId) {
-    ElMessage.warning('请先选择点评批次')
-    return
-  }
-  if (!addByNo.value.trim()) {
-    ElMessage.warning('请输入处方号')
-    return
-  }
-  saving.value = true
-  try {
-    await addRxItemByNo({ batchId: itemQuery.batchId, prescriptionNo: addByNo.value.trim() })
-    ElMessage.success('补录成功')
-    addPromptVisible.value = false
-    addByNo.value = ''
-    await loadItems()
-    await loadStats()
-  } finally {
-    saving.value = false
-  }
+async function onAddByNoSaved() {
+  await loadItems()
+  await loadStats()
 }
 
 // ---------- 点评 ----------
 const reviewDialogVisible = ref(false)
 const reviewRow = ref(null)
-const reviewForm = reactive({ id: null, reviewResult: null, problemCodes: [], reviewOpinion: '' })
 
 function openReviewDialog(row) {
   reviewRow.value = row
-  reviewForm.id = row.id
-  reviewForm.reviewResult = row.reviewResult || null
-  reviewForm.problemCodes = row.problemTypes ? row.problemTypes.split(',') : []
-  reviewForm.reviewOpinion = row.reviewOpinion || ''
   reviewDialogVisible.value = true
 }
 
-async function saveReview() {
-  if (!reviewForm.reviewResult) {
-    ElMessage.warning('请选择点评结论')
-    return
-  }
-  const unreasonable = reviewForm.reviewResult !== 1
-  if (unreasonable && !reviewForm.problemCodes.length) {
-    ElMessage.warning('不合理处方必须勾选问题项')
-    return
-  }
-  if (unreasonable && !reviewForm.reviewOpinion.trim()) {
-    ElMessage.warning('不合理处方必须填写点评意见')
-    return
-  }
-  saving.value = true
-  try {
-    await upsertRxItem({
-      id: reviewForm.id,
-      reviewResult: reviewForm.reviewResult,
-      problemTypes: unreasonable ? reviewForm.problemCodes : [],
-      reviewOpinion: unreasonable ? reviewForm.reviewOpinion : ''
-    })
-    ElMessage.success('点评已提交')
-    reviewDialogVisible.value = false
-    await loadItems()
-    await loadStats()
-    await loadBatches()
-  } finally {
-    saving.value = false
-  }
+async function onReviewSaved() {
+  await loadItems()
+  await loadStats()
+  await loadBatches()
 }
 
 // ---------- 约谈 ----------
@@ -811,22 +530,7 @@ const talkLoading = ref(false)
 const talkDialogVisible = ref(false)
 const talkDetailVisible = ref(false)
 const talkDetailRow = ref(null)
-const relatedItems = ref([])
-const relatedLoading = ref(false)
-const talkForm = reactive({
-  id: null,
-  doctorName: '',
-  talkType: 1,
-  talkTime: '',
-  talkerName: '',
-  talkerOrg: '',
-  relatedReviewIds: [],
-  problemSummary: '',
-  talkContent: '',
-  rectifyRequire: '',
-  rectifyStatus: 1,
-  rectifyRemark: ''
-})
+const talkEditRow = ref(null)
 
 async function loadTalks() {
   talkLoading.value = true
@@ -839,79 +543,13 @@ async function loadTalks() {
   }
 }
 
-/** 加载该医师已点评的不合理处方（约谈依据候选） */
-async function loadRelatedItems() {
-  const name = (talkForm.doctorName || '').trim()
-  if (!name) {
-    relatedItems.value = []
-    return
-  }
-  relatedLoading.value = true
-  try {
-    const res = await listRxItemPage({ doctorName: name, reviewStatus: 1, pageNum: 1, pageSize: 100 })
-    relatedItems.value = (res?.data?.records || []).filter(r => UNREASONABLE_RESULTS.includes(r.reviewResult))
-  } finally {
-    relatedLoading.value = false
-  }
-}
-
 function openTalkDialog(row) {
-  if (row) {
-    Object.assign(talkForm, {
-      id: row.id,
-      doctorName: row.doctorName,
-      talkType: row.talkType,
-      talkTime: row.talkTime,
-      talkerName: row.talkerName || '',
-      talkerOrg: row.talkerOrg || '',
-      relatedReviewIds: row.relatedReviewIds ? row.relatedReviewIds.split(',').map(Number) : [],
-      problemSummary: row.problemSummary || '',
-      talkContent: row.talkContent || '',
-      rectifyRequire: row.rectifyRequire || '',
-      rectifyStatus: row.rectifyStatus,
-      rectifyRemark: row.rectifyRemark || ''
-    })
-  } else {
-    Object.assign(talkForm, {
-      id: null,
-      doctorName: '',
-      talkType: 1,
-      talkTime: '',
-      talkerName: '',
-      talkerOrg: '',
-      relatedReviewIds: [],
-      problemSummary: '',
-      talkContent: '',
-      rectifyRequire: '',
-      rectifyStatus: 1,
-      rectifyRemark: ''
-    })
-  }
-  relatedItems.value = []
+  talkEditRow.value = row || null
   talkDialogVisible.value = true
-  if (talkForm.doctorName) {
-    loadRelatedItems()
-  }
 }
 
-async function saveTalk() {
-  if (!talkForm.doctorName.trim()) {
-    ElMessage.warning('请填写被约谈医师姓名')
-    return
-  }
-  if (!talkForm.talkTime) {
-    ElMessage.warning('请选择约谈时间')
-    return
-  }
-  saving.value = true
-  try {
-    await upsertRxTalk({ ...talkForm, relatedReviewIds: talkForm.relatedReviewIds })
-    ElMessage.success(talkForm.id ? '约谈记录已更新' : '约谈记录已登记')
-    talkDialogVisible.value = false
-    await loadTalks()
-  } finally {
-    saving.value = false
-  }
+async function onTalkSaved() {
+  await loadTalks()
 }
 
 async function doConfirmTalk(row) {
@@ -1036,45 +674,6 @@ onMounted(async () => {
 
 .muted {
   color: var(--el-text-color-placeholder);
-}
-
-.form-tip {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-  line-height: 1.4;
-}
-
-.review-desc {
-  margin-bottom: 12px;
-}
-
-.drug-list {
-  background: var(--el-fill-color-lighter);
-  border-radius: 6px;
-  padding: 10px 14px;
-  margin-bottom: 12px;
-  max-height: 200px;
-  overflow: auto;
-}
-
-.drug-list-title {
-  font-weight: 600;
-  margin-bottom: 6px;
-}
-
-.drug-line {
-  font-size: 13px;
-  line-height: 1.8;
-}
-
-.review-form {
-  margin-top: 4px;
-}
-
-.inline-pair {
-  display: flex;
-  gap: 8px;
-  width: 100%;
 }
 
 /* 被并页面自带页级留白，嵌进页签后统一由宿主提供，避免双层 padding */

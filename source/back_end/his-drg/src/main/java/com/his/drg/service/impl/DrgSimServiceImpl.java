@@ -38,6 +38,7 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
 
     private final DrgSimMapper drgSimMapper;
     private final DrgGrouper grouper;
+    private final DrgSchemeCache drgSchemeCache;
 
     /**
      * 金额归一到两位小数；没有值就是 null，不兜 0。
@@ -72,7 +73,7 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
         }
         BigDecimal actual = money(s.getActualAmount());
 
-        String version = TextUtil.hasText(dto.getVersion()) ? dto.getVersion().trim() : DrgSchemeCache.DEFAULT_VERSION;
+        String version = TextUtil.hasText(dto.getVersion()) ? dto.getVersion().trim() : drgSchemeCache.getDefaultVersion();
         DrgGrouper.GroupResult g = grouper.group(new DrgFacts(icd, mainOpers, otherDiags, otherOpers,
                 s.getGender(), s.getAge(), s.getAgeUnit(), s.getBirthWeight()), version);
         boolean grouped = g.grouped();
@@ -165,7 +166,7 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
      * 可模拟首页列表 + 汇总统计
      */
     public DrgSimVO.SummaryListVO summaryList(Integer limit, String version, Integer extraSkipped) {
-        String v = TextUtil.hasText(version) ? version.trim() : DrgSchemeCache.DEFAULT_VERSION;
+        String v = TextUtil.hasText(version) ? version.trim() : drgSchemeCache.getDefaultVersion();
         List<DrgSummaryListRowVO> rows = drgSimMapper.summaryList(limit == null ? 50 : limit, v);
         List<DrgSimVO.SummaryRow> list = rows.stream().map(m -> {
             DrgSimVO.SummaryRow r = new DrgSimVO.SummaryRow();
@@ -211,7 +212,7 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
      * <p>权重与支付标准原样透出（官方包未含，值为 null），页面渲染成 —。
      */
     public List<DrgSimVO.GroupRow> groupList(String version) {
-        String v = TextUtil.hasText(version) ? version.trim() : DrgSchemeCache.DEFAULT_VERSION;
+        String v = TextUtil.hasText(version) ? version.trim() : drgSchemeCache.getDefaultVersion();
         return drgSimMapper.groupList(v).stream()
                 .map(m -> {
                     DrgSimVO.GroupRow r = new DrgSimVO.GroupRow();

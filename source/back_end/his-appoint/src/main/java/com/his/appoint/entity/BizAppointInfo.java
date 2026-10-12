@@ -86,13 +86,13 @@ public class BizAppointInfo extends BaseEntity {
     private Long scheduleId;
 
     /**
-     * 排班时间片段ID（排班时段号源的ID；历史挂号无段，为 NULL）
+     * 排班时间片段ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long slotId;
 
     /**
-     * 就诊时段开始快照 HH:mm（挂号单自证当时挂的哪段，不靠 join）
+     * 就诊时段开始快照 HH:mm
      */
     private String slotStart;
 

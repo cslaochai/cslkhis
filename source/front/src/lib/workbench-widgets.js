@@ -1,12 +1,5 @@
 /**
  * 工作台卡片注册表（前端唯一的一份「卡片编码 → 组件」映射）
- *
- * 编码必须与 `sys_workbench_widget.widget_code` 和 Java 侧
- * `WorkbenchMetricProvider.widgetCode()` 一字不差；后端返回一张这里没登记的卡，
- * 外壳会跳过并在控制台提示 —— 静默画一张空白卡比报错更难查。
- *
- * 这里**不许出现任何角色码分支**：谁能看到哪张卡由后端算完（配置勾选 ∩ 权限码），
- * 前端只负责「给什么画什么」。
  */
 import MetricWidget from '@/components/workbench/MetricWidget.vue'
 import MessageListWidget from '@/components/workbench/MessageListWidget.vue'
@@ -21,7 +14,6 @@ import WeekTrendWidget from '@/components/workbench/WeekTrendWidget.vue'
 export const WIDGET_REGISTRY = {
     myTodo: {component: MessageListWidget, props: {mode: 'todo'}},
     myNotice: {component: MessageListWidget, props: {mode: 'notice'}},
-    // 不取数：前端从当前角色菜单树派生（/workbench/data 里没有它的 provider）
     quickEntry: {component: QuickEntryWidget},
     hospitalToday: {component: MetricWidget},
     myClinicalToday: {component: MetricWidget},
@@ -32,10 +24,6 @@ export const WIDGET_REGISTRY = {
 
 /**
  * 数字卡的指标口径：key 取后端 SQL 别名，label 是展示名，format 决定怎么读。
- *
- * 新增一张数字卡只在这里加一段，MetricWidget 本身不需要改。
- * format：money 带千分位与 ¥；pair 显示「v / pairKey」；percent 由 v/pairKey 算；缺省整数。
- * danger：值 > 0 时标红（待处理类积压）。
  */
 export const METRIC_SPECS = {
     hospitalToday: [

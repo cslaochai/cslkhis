@@ -416,671 +416,52 @@
       </el-tab-pane>
     </el-tabs>
 
-    <!-- 发起 / 修改手术申请 -->
-    <el-dialog
+    <SurgeryApplyEdit
         v-model="applyVisible"
-        :title="applyForm.id ? '修改手术申请' : '发起手术申请'"
-        data-testid="p4-op-apply-dialog"
-        width="680px"
-    >
-      <el-form label-width="110px">
-        <el-form-item label="在院患者" required>
-          <el-select
-              v-model="applyForm.admissionId"
-              :disabled="!!applyForm.id"
-              class="!w-full"
-              data-testid="p4-op-apply-admission"
-              filterable
-              placeholder="选择在院患者"
-          >
-            <el-option
-                v-for="a in admissions"
-                :key="a.admissionId"
-                :label="admissionLabel(a)"
-                :value="String(a.admissionId)"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item v-if="currentAdmission" label="申请科室">
-          <span class="text-slate-700">
-            {{ text(currentAdmission.deptName) }} / {{ text(currentAdmission.wardName) }} /
-            {{ text(currentAdmission.bedNo) }}床
-          </span>
-          <span class="ml-2 text-[11px] text-slate-400">申请科室取患者当前科室，服务端写入，不需要填</span>
-        </el-form-item>
-        <el-form-item label="拟施手术" required>
-          <el-input
-              v-model="applyForm.plannedOperationName"
-              data-testid="p4-op-apply-name"
-              maxlength="200"
-              placeholder="如：腹腔镜胆囊切除术"
-          />
-        </el-form-item>
-        <el-form-item label="手术编码">
-          <el-input v-model="applyForm.plannedOperationCode" placeholder="ICD-9-CM-3（可空，但不建议）"/>
-        </el-form-item>
-        <el-form-item label="手术级别">
-          <el-select v-model="applyForm.operationLevel" class="!w-full" clearable placeholder="选择级别">
-            <el-option :value="1" label="一级"/>
-            <el-option :value="2" label="二级"/>
-            <el-option :value="3" label="三级"/>
-            <el-option :value="4" label="四级"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="切口等级">
-          <el-select v-model="applyForm.incisionLevel" class="!w-full" clearable placeholder="选择切口等级">
-            <el-option :value="0" label="0类"/>
-            <el-option :value="1" label="Ⅰ类"/>
-            <el-option :value="2" label="Ⅱ类"/>
-            <el-option :value="3" label="Ⅲ类"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="麻醉方式">
-          <el-select v-model="applyForm.anesthesiaType" class="!w-full" clearable placeholder="选择麻醉方式">
-            <el-option :value="1" label="全身麻醉"/>
-            <el-option :value="2" label="椎管内麻醉"/>
-            <el-option :value="3" label="神经阻滞麻醉"/>
-            <el-option :value="4" label="局部麻醉"/>
-            <el-option :value="5" label="其他"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="术前诊断" required>
-          <el-input
-              v-model="applyForm.preopDiagnosis"
-              :rows="2"
-              data-testid="p4-op-apply-diagnosis"
-              placeholder="回写病历的「术前诊断」要素取自这里"
-              type="textarea"
-          />
-        </el-form-item>
-        <el-form-item label="手术指征" required>
-          <el-input
-              v-model="applyForm.operationReason"
-              :rows="3"
-              data-testid="p4-op-apply-reason"
-              placeholder="为什么必须开这一刀（如：胆囊结石反复发作伴胆囊壁增厚）"
-              type="textarea"
-          />
-        </el-form-item>
-        <el-form-item label="急诊 / 主要">
-          <el-radio-group v-model="applyForm.isEmergency" class="mr-4">
-            <el-radio :value="0">择期</el-radio>
-            <el-radio :value="1">急诊</el-radio>
-          </el-radio-group>
-          <el-radio-group v-model="applyForm.isMain">
-            <el-radio :value="1">主要手术</el-radio>
-            <el-radio :value="0">次要手术</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="applyForm.remark" :rows="2" placeholder="可空" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <div class="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] leading-5 text-amber-700">
-        <el-icon class="mr-1 align-middle">
-          <Warning/>
-        </el-icon>
-        提交后手术<b>尚未排台</b>：手术间、时段、主刀由手术室在「排台」里指定。
-        同一次住院只允许一条「主要手术」申请（首页主要手术只能有 1 条）。
-      </div>
-      <template #footer>
-        <el-button @click="applyVisible = false">取消</el-button>
-        <el-button v-perm="['ipd:surgery:add','ipd:surgery:edit']" :loading="applySubmitting" data-testid="p4-op-apply-submit"
-                   type="primary" @click="submitApply">
-          {{ applyForm.id ? '保存修改' : '提交手术申请' }}
-        </el-button>
-      </template>
-    </el-dialog>
+        :admissions="admissions"
+        :preset-admission-id="filters.admissionId"
+        :row="applyRow"
+        @saved="refreshAfterChange"
+    />
 
-    <!-- 排台 -->
-    <el-dialog v-model="scheduleVisible" data-testid="p4-op-schedule-dialog" title="手术室排台" width="620px">
-      <div v-if="scheduleTarget" class="space-y-3">
-        <div class="rounded border border-slate-200 bg-slate-50 p-3 text-sm">
-          <div class="text-slate-900">
-            {{ text(scheduleTarget.patientName) }}（{{ text(scheduleTarget.admissionNo) }}）
-            <el-tag v-if="scheduleTarget.isEmergency === 1" class="ml-2" size="small" type="danger">急诊</el-tag>
-          </div>
-          <div class="mt-1 text-slate-700">
-            {{ text(scheduleTarget.plannedOperationName) }} ·
-            {{ text(scheduleTarget.operationLevelText) }}手术 ·
-            {{ text(scheduleTarget.anesthesiaTypeText) }}
-          </div>
-          <div class="text-[12px] text-slate-500">术前诊断：{{ text(scheduleTarget.preopDiagnosis) }}</div>
-        </div>
-        <el-form label-width="100px">
-          <el-form-item label="手术间" required>
-            <el-select
-                v-model="scheduleForm.operationRoom"
-                allow-create
-                class="!w-full"
-                data-testid="p4-op-schedule-room"
-                default-first-option
-                filterable
-                placeholder="选择或输入手术间"
-            >
-              <el-option v-for="r in rooms" :key="r" :label="r" :value="r"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="计划开始" required>
-            <el-date-picker
-                v-model="scheduleForm.plannedStartTime"
-                class="!w-full"
-                data-testid="p4-op-schedule-start"
-                placeholder="选择开始时间"
-                type="datetime"
-                value-format="YYYY-MM-DD HH:mm:ss"
-            />
-          </el-form-item>
-          <el-form-item label="计划结束" required>
-            <el-date-picker
-                v-model="scheduleForm.plannedEndTime"
-                class="!w-full"
-                data-testid="p4-op-schedule-end"
-                placeholder="选择结束时间"
-                type="datetime"
-                value-format="YYYY-MM-DD HH:mm:ss"
-            />
-          </el-form-item>
-          <el-form-item label="主刀医师" required>
-            <el-select
-                v-model="scheduleForm.surgeonId"
-                class="!w-full"
-                data-testid="p4-op-schedule-surgeon"
-                filterable
-                placeholder="选择主刀医师"
-            >
-              <el-option
-                  v-for="e in employees"
-                  :key="e.id"
-                  :label="`${e.empName || e.id}${e.deptName ? '（' + e.deptName + '）' : ''}`"
-                  :value="String(e.id)"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="助手">
-            <el-input v-model="scheduleForm.assistantName" placeholder="多人用逗号分隔，可空"/>
-          </el-form-item>
-          <el-form-item label="麻醉医师">
-            <el-select
-                v-model="scheduleForm.anesthetistId"
-                class="!w-full"
-                clearable
-                filterable
-                placeholder="可空（未指定）"
-            >
-              <el-option v-for="e in employees" :key="e.id" :label="e.empName || e.id" :value="String(e.id)"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="排台备注">
-            <el-input v-model="scheduleForm.scheduleRemark" :rows="2" placeholder="可空" type="textarea"/>
-          </el-form-item>
-        </el-form>
-        <el-alert :closable="false" show-icon type="info">
-          同一手术间、时间区间重叠的在途手术会被后端拒绝（并发手术台会给不出资源）。
-          端点相接不算冲突：上一台 10:00 结束、下一台 10:00 开始是允许的。
-        </el-alert>
-      </div>
-      <template #footer>
-        <el-button @click="scheduleVisible = false">取消</el-button>
-        <el-button v-perm="'ipd:surgery:edit'" :loading="scheduleSubmitting" data-testid="p4-op-schedule-submit"
-                   type="primary" @click="submitSchedule">
-          确认排台
-        </el-button>
-      </template>
-    </el-dialog>
+    <SurgeryRoomAssign
+        v-model="scheduleVisible"
+        :employees="employees"
+        :rooms="rooms"
+        :row="scheduleRow"
+        @saved="refreshAfterChange"
+    />
 
-    <!-- 术前核对 -->
-    <el-dialog v-model="checkVisible" data-testid="p4-op-check-dialog" title="术前核对（手术安全核查）" width="620px">
-      <div v-if="checkTarget" class="space-y-3">
-        <div class="rounded border border-slate-200 bg-slate-50 p-3 text-sm">
-          <div class="text-slate-900">{{ text(checkTarget.patientName) }}</div>
-          <div class="text-slate-700">{{ text(checkTarget.plannedOperationName) }}</div>
-          <div class="text-[12px] text-slate-500">
-            {{ text(checkTarget.operationRoom) }} · {{ text(checkTarget.plannedTimeText) }} ·
-            主刀 {{ text(checkTarget.surgeonName) }}
-          </div>
-        </div>
-        <div class="text-[12px] text-slate-500">
-          标 <span class="text-red-500">*</span> 的是必核项，缺任何一项都无法提交 ——
-          术前核对的价值就在于"在切皮之前逐项确认过"。
-        </div>
-        <el-checkbox-group v-model="checkForm.items" class="flex flex-col gap-2">
-          <el-checkbox
-              v-for="i in checkItemOptions"
-              :key="i.code"
-              :data-testid="`p4-op-check-item-${i.code}`"
-              :value="i.code"
-          >
-            <span class="text-slate-700">{{ i.label }}</span>
-            <span v-if="i.required" class="ml-1 text-red-500">*</span>
-          </el-checkbox>
-        </el-checkbox-group>
-        <el-form label-width="100px">
-          <el-form-item label="异常说明">
-            <el-input
-                v-model="checkForm.preopNote"
-                :rows="2"
-                data-testid="p4-op-check-note"
-                placeholder="正常可空；有异常必须写（如：术中需备血 4U、青霉素过敏需换用头孢）"
-                type="textarea"
-            />
-          </el-form-item>
-        </el-form>
-      </div>
-      <template #footer>
-        <el-button @click="checkVisible = false">取消</el-button>
-        <el-button
-            v-perm="'ipd:surgery:edit'"
-            :loading="checkSubmitting"
-            data-testid="p4-op-check-submit"
-            type="primary"
-            @click="submitPreopCheck"
-        >
-          确认已完成核对
-        </el-button>
-      </template>
-    </el-dialog>
+    <SurgeryPreopCheck
+        v-model="checkVisible"
+        :row="checkRow"
+        @saved="refreshAfterChange"
+    />
 
-    <!-- 登记手术完成 -->
-    <el-dialog
+    <SurgeryFinish
         v-model="finishVisible"
-        data-testid="p4-op-finish-dialog"
-        title="登记手术完成（回写首页明细 + 手术记录病历）"
-        width="760px"
-    >
-      <div v-if="finishTarget" class="space-y-3">
-        <div class="rounded border border-slate-200 bg-slate-50 p-3 text-sm">
-          <div class="text-slate-900">{{ text(finishTarget.patientName) }}</div>
-          <div class="text-slate-700">
-            拟施：{{ text(finishTarget.plannedOperationName) }} ·
-            {{ text(finishTarget.operationRoom) }} ·
-            主刀 {{ text(finishTarget.surgeonName) }}
-          </div>
-          <div class="text-[12px] text-slate-500">
-            术前核对：{{ text(finishTarget.preopCheckItemsText) }}
-          </div>
-        </div>
-        <el-form label-width="110px">
-          <el-form-item label="实际手术" required>
-            <el-input
-                v-model="finishForm.actualOperationName"
-                data-testid="p4-op-finish-name"
-                maxlength="200"
-                placeholder="实际做的是什么（与拟施不一致时以这里为准，首页记的是它）"
-            />
-          </el-form-item>
-          <el-form-item label="实际编码">
-            <el-input v-model="finishForm.actualOperationCode" placeholder="ICD-9-CM-3（可空）"/>
-          </el-form-item>
-          <el-form-item label="开始时间" required>
-            <el-date-picker
-                v-model="finishForm.operationStartTime"
-                class="!w-full"
-                data-testid="p4-op-finish-start"
-                placeholder="切皮时间"
-                type="datetime"
-                value-format="YYYY-MM-DD HH:mm:ss"
-            />
-          </el-form-item>
-          <el-form-item label="结束时间" required>
-            <el-date-picker
-                v-model="finishForm.operationEndTime"
-                class="!w-full"
-                data-testid="p4-op-finish-end"
-                placeholder="关腹/关胸时间"
-                type="datetime"
-                value-format="YYYY-MM-DD HH:mm:ss"
-            />
-          </el-form-item>
-          <el-form-item label="术中出血量">
-            <el-input v-model.number="finishForm.bloodLoss" placeholder="ml（0 也是有效观测值）"/>
-          </el-form-item>
-          <el-form-item label="术中所见" required>
-            <el-input
-                v-model="finishForm.intraopFindings"
-                :rows="3"
-                data-testid="p4-op-finish-findings"
-                placeholder="四核对里「编码有没有病历支持」追的就是这一段"
-                type="textarea"
-            />
-          </el-form-item>
-          <el-form-item label="手术经过" required>
-            <el-input
-                v-model="finishForm.intraopProcedure"
-                :rows="3"
-                data-testid="p4-op-finish-procedure"
-                placeholder="操作步骤"
-                type="textarea"
-            />
-          </el-form-item>
-          <el-form-item label="术后处理" required>
-            <el-input
-                v-model="finishForm.postopNote"
-                :rows="3"
-                data-testid="p4-op-finish-postop"
-                placeholder="术后处理与注意事项（缺了等于「做完就不管了」）"
-                type="textarea"
-            />
-          </el-form-item>
-          <el-form-item label="标本送检">
-            <el-input v-model="finishForm.specimenSent" placeholder="无标本请写「无」，不要留空"/>
-          </el-form-item>
-        </el-form>
-        <el-alert :closable="false" show-icon type="warning">
-          提交即回写两份正式文书：病案首页手术明细 + record_type=5 手术记录病历（签名为主刀医师）。
-          回写失败整笔回滚，不会出现"状态已完成、首页和病历里查不到"。
-        </el-alert>
-      </div>
-      <template #footer>
-        <el-button @click="finishVisible = false">取消</el-button>
-        <el-button
-            v-perm="'ipd:surgery:edit'"
-            :loading="finishSubmitting"
-            data-testid="p4-op-finish-submit"
-            type="primary"
-            @click="submitFinish"
-        >
-          确认完成并回写
-        </el-button>
-      </template>
-    </el-dialog>
+        :row="finishRow"
+        @saved="refreshAfterChange"
+    />
 
-    <!-- 详情 -->
-    <el-dialog v-model="detailVisible" data-testid="p4-op-detail-dialog" title="手术详情" width="820px">
-      <div v-if="detail" class="space-y-4">
-        <div class="flex items-center gap-3">
-          <el-icon class="text-slate-400">
-            <Scissor/>
-          </el-icon>
-          <span class="text-base font-semibold text-slate-900">{{ text(detail.applyNo) }}</span>
-          <el-tag :type="statusTagType(detail.operationStatus)" size="small">
-            {{ text(detail.operationStatusText) }}
-          </el-tag>
-          <span class="text-[12px] text-slate-400">{{ stageText(detail) }}</span>
-        </div>
-        <el-descriptions :column="2" border size="small">
-          <el-descriptions-item label="患者">{{ text(detail.patientName) }}</el-descriptions-item>
-          <el-descriptions-item label="入院号">{{ text(detail.admissionNo) }}</el-descriptions-item>
-          <el-descriptions-item label="申请科室">{{ text(detail.applyDeptName) }}</el-descriptions-item>
-          <el-descriptions-item label="申请时床位">
-            {{ text(detail.applyWardName) }} {{ text(detail.applyBedNo) }}床
-          </el-descriptions-item>
-          <el-descriptions-item label="申请医生">{{ text(detail.applyDoctorName) }}</el-descriptions-item>
-          <el-descriptions-item label="申请时间">{{ fmt(detail.applyTime) }}</el-descriptions-item>
-          <el-descriptions-item label="拟施手术">{{ text(detail.plannedOperationName) }}</el-descriptions-item>
-          <el-descriptions-item label="手术编码">{{ text(detail.plannedOperationCode) }}</el-descriptions-item>
-          <el-descriptions-item label="手术级别">{{ text(detail.operationLevelText) }}</el-descriptions-item>
-          <el-descriptions-item label="切口等级">{{ text(detail.incisionLevelText) }}</el-descriptions-item>
-          <el-descriptions-item label="麻醉方式">{{ text(detail.anesthesiaTypeText) }}</el-descriptions-item>
-          <el-descriptions-item label="急诊 / 主次">
-            {{ text(detail.isEmergencyText) }} / {{ text(detail.isMainText) }}
-          </el-descriptions-item>
-          <el-descriptions-item :span="2" label="术前诊断">{{ text(detail.preopDiagnosis) }}</el-descriptions-item>
-          <el-descriptions-item :span="2" label="手术指征">{{ text(detail.operationReason) }}</el-descriptions-item>
-          <el-descriptions-item label="手术间">{{ text(detail.operationRoom) }}</el-descriptions-item>
-          <el-descriptions-item label="计划时段">{{ text(detail.plannedTimeText) }}</el-descriptions-item>
-          <el-descriptions-item label="主刀医师">{{ text(detail.surgeonName) }}</el-descriptions-item>
-          <el-descriptions-item label="助手">{{ text(detail.assistantName) }}</el-descriptions-item>
-          <el-descriptions-item label="麻醉医师">{{ text(detail.anesthetistName) }}</el-descriptions-item>
-          <el-descriptions-item label="排台人 / 时间">
-            {{ text(detail.scheduleDoctorName) }} / {{ fmt(detail.scheduleTime) }}
-          </el-descriptions-item>
-          <el-descriptions-item :span="2" label="术前核对">
-            <span :class="detail.preopCheckItems ? 'text-slate-700' : 'text-slate-400'">
-              {{ detail.preopCheckItems ? detail.preopCheckItemsText : '尚未核对' }}
-            </span>
-            <div v-if="detail.preopCheckDoctorName" class="text-[11px] text-slate-400">
-              由 {{ detail.preopCheckDoctorName }} 于 {{ fmt(detail.preopCheckTime) }} 核对
-            </div>
-          </el-descriptions-item>
-          <el-descriptions-item v-if="detail.preopNote" :span="2" label="核对异常说明">
-            {{ detail.preopNote }}
-          </el-descriptions-item>
-          <el-descriptions-item v-if="detail.actualOperationName" :span="2" label="实际手术">
-            {{ detail.actualOperationName }}
-            <span class="ml-2 text-[11px] text-slate-400">
-              {{ fmt(detail.operationStartTime) }} ~ {{ fmt(detail.operationEndTime) }}
-              （{{ text(detail.durationText) }}）
-            </span>
-          </el-descriptions-item>
-          <el-descriptions-item v-if="detail.bloodLoss !== undefined && detail.bloodLoss !== null" label="术中出血量">
-            {{ detail.bloodLoss }} ml
-          </el-descriptions-item>
-          <el-descriptions-item v-if="detail.specimenSent" label="标本送检">{{
-              detail.specimenSent
-            }}
-          </el-descriptions-item>
-          <el-descriptions-item v-if="detail.intraopFindings" :span="2" label="术中所见">
-            {{ detail.intraopFindings }}
-          </el-descriptions-item>
-          <el-descriptions-item v-if="detail.intraopProcedure" :span="2" label="手术经过">
-            {{ detail.intraopProcedure }}
-          </el-descriptions-item>
-          <el-descriptions-item v-if="detail.postopNote" :span="2" label="术后处理">
-            {{ detail.postopNote }}
-          </el-descriptions-item>
-          <el-descriptions-item :span="2" label="回写病历号">
-            <span v-if="detail.recordNo" class="text-slate-700">{{ detail.recordNo }}</span>
-            <span v-else class="text-slate-400">尚未回写（手术未完成）</span>
-            <span v-if="detail.operationId" class="ml-2 text-[11px] text-slate-400">首页手术明细已写入</span>
-          </el-descriptions-item>
-          <el-descriptions-item v-if="detail.cancelReason" :span="2" label="取消原因">
-            {{ detail.cancelReason }}（{{ text(detail.cancelDoctorName) }} {{ fmt(detail.cancelTime) }}）
-          </el-descriptions-item>
-          <el-descriptions-item v-if="detail.remark" :span="2" label="备注">{{ detail.remark }}</el-descriptions-item>
-        </el-descriptions>
-      </div>
-      <template #footer>
-        <el-button @click="detailVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    <SurgeryDetail
+        v-model="detailVisible"
+        :id="detailId"
+        :row="detailRow"
+    />
 
-    <!-- 三方安全核查（P134.2） -->
-    <el-dialog v-model="safetyVisible" data-testid="p134-safety-dialog" title="手术安全核查（三方 · 三时段）"
-               width="820px">
-      <div v-if="safetyTarget" v-loading="safetyLoading" class="space-y-3">
-        <div class="rounded border border-slate-200 bg-slate-50 p-3 text-sm">
-          <div class="text-slate-900">
-            {{ text(safetyTarget.patientName) }}
-            <el-tag v-if="safetyTarget.isEmergency === 1" class="ml-1" size="small" type="danger">急诊</el-tag>
-          </div>
-          <div class="text-[12px] text-slate-600">
-            {{ text(safetyTarget.plannedOperationName) }} · {{ text(safetyTarget.operationRoom) }} ·
-            {{ text(safetyTarget.plannedTimeText) }} · 主刀 {{ text(safetyTarget.surgeonName) }}
-          </div>
-        </div>
-        <div class="text-[12px] leading-5 text-slate-500">
-          法定三个时段<b>按顺序</b>签（麻醉实施前 → 手术开始前 → 患者离开手术室前），每轮都要
-          <b>手术医师、麻醉医师、手术室护士三方不同人</b>签名；签过的时段<b>不可改不可删</b>。
-          签过一轮的手术，三轮不签满不能登记手术完成。
-        </div>
-        <div class="grid grid-cols-3 gap-3">
-          <div
-              v-for="card in safetyCards"
-              :key="card.phase"
-              :class="card.signed
-              ? 'border-emerald-200 bg-emerald-50'
-              : (safetyForm.phase === card.phase ? 'border-blue-400 bg-white' : 'border-slate-200 bg-white')"
-              :data-testid="`p134-safety-card-${card.phase}`"
-              class="rounded-lg border p-3"
-          >
-            <div class="flex items-center justify-between">
-              <span class="text-[13px] font-semibold text-slate-900">第{{ card.phase }}轮 · {{ card.phaseText }}</span>
-              <el-tag v-if="card.signed" size="small" type="success">已签</el-tag>
-            </div>
-            <template v-if="card.signed">
-              <div class="mt-1 text-[11px] leading-5 text-slate-600">{{ text(card.signed.itemsText) }}</div>
-              <div class="mt-1 text-[11px] text-slate-600">
-                手术 {{ card.signed.surgeonName || '—' }} · 麻醉 {{ card.signed.anesthetistName || '—' }} ·
-                护士 {{ card.signed.nurseName || '—' }}
-              </div>
-              <div class="text-[11px] text-slate-400">{{ card.signed.checkNo }} · {{ fmt(card.signed.checkTime) }}</div>
-              <div v-if="card.signed.note" class="mt-1 text-[11px] text-amber-700">异常：{{ card.signed.note }}</div>
-            </template>
-            <template v-else>
-              <div v-if="!card.canSign" :data-testid="`p134-safety-reason-${card.phase}`"
-                   class="mt-2 text-[11px] leading-5 text-slate-400">
-                {{ card.cannotSignReason || '当前不可签' }}
-              </div>
-              <el-button
-                  v-else
-                  :data-testid="`p134-safety-pick-${card.phase}`"
-                  :type="safetyForm.phase === card.phase ? 'primary' : 'default'"
-                  class="mt-2"
-                  size="small"
-                  @click="pickSafetyPhase(card)"
-              >
-                {{ safetyForm.phase === card.phase ? '正在填写本轮' : '签这一轮' }}
-              </el-button>
-            </template>
-          </div>
-        </div>
+    <SurgerySafetyCheck
+        v-model="safetyVisible"
+        :employees="employees"
+        :row="safetyRow"
+        @saved="refreshAfterSafety"
+    />
 
-        <div v-if="currentSafetyCard" class="rounded-lg border border-slate-200 p-3" data-testid="p134-safety-form">
-          <div class="mb-2 text-[12px] text-slate-500">
-            {{ currentSafetyCard.phaseText }} 核查要点，标 <span class="text-red-500">*</span> 为必核项
-          </div>
-          <el-checkbox-group v-model="safetyForm.items" class="flex flex-col gap-1">
-            <el-checkbox
-                v-for="i in currentSafetyCard.items"
-                :key="i.code"
-                :data-testid="`p134-safety-item-${i.code}`"
-                :value="i.code"
-            >
-              <span class="text-[12px] text-slate-700">{{ i.label }}</span>
-              <span v-if="i.required" class="ml-1 text-red-500">*</span>
-            </el-checkbox>
-          </el-checkbox-group>
-          <el-form class="mt-3" label-width="110px">
-            <el-form-item label="手术医师签名" required>
-              <el-select v-model="safetyForm.surgeonId" class="!w-full" data-testid="p134-safety-surgeon" filterable
-                         placeholder="本场手术医师">
-                <el-option v-for="e in employees" :key="e.id"
-                           :label="`${e.empName || e.id}${e.deptName ? '（' + e.deptName + '）' : ''}`"
-                           :value="String(e.id)"/>
-              </el-select>
-            </el-form-item>
-            <el-form-item label="麻醉医师签名" required>
-              <el-select v-model="safetyForm.anesthetistId" class="!w-full" data-testid="p134-safety-anesthetist" filterable
-                         placeholder="在场麻醉医师">
-                <el-option v-for="e in employees" :key="e.id"
-                           :label="`${e.empName || e.id}${e.deptName ? '（' + e.deptName + '）' : ''}`"
-                           :value="String(e.id)"/>
-              </el-select>
-            </el-form-item>
-            <el-form-item label="手术室护士签名" required>
-              <el-select v-model="safetyForm.nurseId" class="!w-full" data-testid="p134-safety-nurse" filterable
-                         placeholder="巡回/器械护士">
-                <el-option v-for="e in employees" :key="e.id"
-                           :label="`${e.empName || e.id}${e.deptName ? '（' + e.deptName + '）' : ''}`"
-                           :value="String(e.id)"/>
-              </el-select>
-            </el-form-item>
-            <el-form-item label="异常说明">
-              <el-input v-model="safetyForm.note" :rows="2" data-testid="p134-safety-note"
-                        placeholder="发现风险/偏差必须写（如：电刀自检异常，已更换）" type="textarea"/>
-            </el-form-item>
-          </el-form>
-        </div>
-      </div>
-      <template #footer>
-        <el-button @click="safetyVisible = false">关闭</el-button>
-        <el-button
-            v-if="safetyForm.phase"
-            v-perm="['ipd:surgery:edit', 'ipd:anesthesia:edit']"
-            :loading="safetySubmitting"
-            data-testid="p134-safety-submit"
-            type="primary"
-            @click="submitSafety"
-        >
-          确认三方已在场并签核
-        </el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 手术间主数据管理（P134.1） -->
-    <el-dialog v-model="roomVisible" data-testid="p134-room-dialog" title="手术间管理（排台总表的台）" width="760px">
-      <div class="mb-3 flex items-center justify-between">
-        <div class="text-[12px] leading-5 text-slate-500">
-          总表列 = 启用中的手术间，按排序号排列序。<b>删除是物理删</b>（编码会释放）；只是暂用不到请「停用」。
-        </div>
-        <el-button v-perm="'ipd:surgery:add'" :icon="Plus" data-testid="p134-room-new" size="small" type="primary"
-                   @click="newRoom">
-          新增手术间
-        </el-button>
-      </div>
-      <el-table v-loading="roomLoading" :data="roomRows" data-testid="p134-room-table" size="small">
-        <el-table-column label="编码" prop="roomCode" width="100"/>
-        <el-table-column label="名称" min-width="140" prop="roomName"/>
-        <el-table-column label="位置" min-width="140" prop="location">
-          <template #default="{ row }">{{ text(row.location) }}</template>
-        </el-table-column>
-        <el-table-column align="center" label="排序" prop="sortOrder" width="70"/>
-        <el-table-column align="center" label="状态" width="90">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">{{
-                row.status === 1 ? '启用' : '停用'
-              }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column align="center" label="操作" width="200">
-          <template #default="{ row }">
-            <el-button v-perm="'ipd:surgery:add'" :data-testid="`p134-room-edit-${row.id}`" link size="small"
-                       type="primary" @click="editRoom(row)">编辑
-            </el-button>
-            <el-button
-                v-perm="'ipd:surgery:add'"
-                :data-testid="`p134-room-toggle-${row.id}`"
-                :type="row.status === 1 ? 'warning' : 'success'"
-                link
-                size="small"
-                @click="toggleRoomStatus(row, row.status === 1 ? 0 : 1)"
-            >
-              {{ row.status === 1 ? '停用' : '启用' }}
-            </el-button>
-            <el-button v-perm="'ipd:surgery:delete'" :data-testid="`p134-room-del-${row.id}`" link size="small"
-                       type="danger" @click="removeRoom(row)">删除
-            </el-button>
-          </template>
-        </el-table-column>
-        <template #empty>
-          <div class="py-4 text-[12px] text-slate-400">暂无手术间主数据（点「新增手术间」建第一间）</div>
-        </template>
-      </el-table>
-
-      <div v-if="roomFormVisible" class="mt-4 rounded-lg border border-slate-200 p-4" data-testid="p134-room-form">
-        <div class="mb-2 text-sm font-semibold text-slate-900">{{ roomForm.id ? '修改手术间' : '新增手术间' }}</div>
-        <el-form label-width="90px">
-          <el-form-item label="编码" required>
-            <el-input v-model="roomForm.roomCode" data-testid="p134-room-form-code" maxlength="32"
-                      placeholder="如 OR07（唯一）"/>
-          </el-form-item>
-          <el-form-item label="名称" required>
-            <el-input v-model="roomForm.roomName" data-testid="p134-room-form-name" maxlength="64"
-                      placeholder="如 7号手术间（排台快照按名称对齐）"/>
-          </el-form-item>
-          <el-form-item label="位置">
-            <el-input v-model="roomForm.location" maxlength="100" placeholder="楼层/区域，如 外科楼3层东区"/>
-          </el-form-item>
-          <el-form-item label="排序">
-            <el-input v-model.number="roomForm.sortOrder" placeholder="总表列序，小的排前" type="number"/>
-          </el-form-item>
-          <el-form-item label="状态">
-            <el-radio-group v-model="roomForm.status">
-              <el-radio :value="1">启用</el-radio>
-              <el-radio :value="0">停用</el-radio>
-            </el-radio-group>
-          </el-form-item>
-        </el-form>
-        <div class="flex justify-end gap-2">
-          <el-button @click="roomFormVisible = false">取消</el-button>
-          <el-button v-perm="'ipd:surgery:add'" :loading="roomSubmitting" data-testid="p134-room-submit" type="primary"
-                     @click="submitRoom">保存
-          </el-button>
-        </div>
-      </div>
-    </el-dialog>
+    <SurgeryRoomManage
+        v-model="roomVisible"
+        @changed="loadMatrixIfOpen"
+        @saved="onRoomSaved"
+    />
   </div>
 </template>
 
@@ -1107,27 +488,24 @@
  */
 import {computed, onMounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
-import {Plus, Refresh, Scissor, Search, Setting, Warning} from '@element-plus/icons-vue';
+import {Plus, Refresh, Search, Setting, Warning} from '@element-plus/icons-vue';
 import {
   cancelOperation,
-  deleteOperationRoom,
-  finishOperation,
-  getOperationApplyDetail,
   getOperationApplyListPage,
-  getOperationCheckItems,
-  getOperationRoomAll,
   getOperationRoomList,
   getOperationScheduleMatrix,
   getOperationUnfinishedCount,
-  preopCheckOperation,
-  saveOperationApply,
-  saveOperationRoom,
-  scheduleOperation,
 } from '@/api/inpatientOperation';
-import {getSafetyCheckCards, signSafetyCheck} from '@/api/inpatientSafetyCheck';
 import {getInpatientListPage} from '@/api/inpatient';
 import {getEmployeeList} from '@/api/system';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+import SurgeryApplyEdit from './SurgeryApplyEdit.vue';
+import SurgeryDetail from './SurgeryDetail.vue';
+import SurgeryFinish from './SurgeryFinish.vue';
+import SurgeryPreopCheck from './SurgeryPreopCheck.vue';
+import SurgeryRoomAssign from './SurgeryRoomAssign.vue';
+import SurgeryRoomManage from './SurgeryRoomManage.vue';
+import SurgerySafetyCheck from './SurgerySafetyCheck.vue';
 
 const fmt = (v) => (v ? String(v).replace('T', ' ') : '—');
 const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
@@ -1135,7 +513,6 @@ const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(
 const admissions = ref([]);
 const employees = ref([]);
 const rooms = ref([]);
-const checkItemOptions = ref([]);
 const admissionLabel = (a) => `${a.bedNo || '—'} ${a.patientName || '—'}（${a.deptName || a.wardName || '—'}）`;
 const loadBaseData = async () => {
   try {
@@ -1157,12 +534,6 @@ const loadBaseData = async () => {
   } catch (error) {
     console.error('加载手术间候选失败:', error);
     rooms.value = [];
-  }
-  try {
-    const res = await getOperationCheckItems();
-    checkItemOptions.value = (res.data || []);
-  } catch (error) {
-    console.error('加载术前核对项失败:', error);
   }
 };
 // ---------------- 列表 ----------------
@@ -1234,261 +605,39 @@ const resetFilters = () => {
 };
 // ---------------- 一、发起 / 修改手术申请 ----------------
 const applyVisible = ref(false);
-const applySubmitting = ref(false);
-const applyForm = reactive({
-  id: '',
-  admissionId: '',
-  plannedOperationCode: '',
-  plannedOperationName: '',
-  operationLevel: undefined,
-  incisionLevel: undefined,
-  anesthesiaType: undefined,
-  preopDiagnosis: '',
-  operationReason: '',
-  isEmergency: 0,
-  isMain: 1,
-  remark: '',
-});
-const currentAdmission = computed(() => admissions.value.find((a) => String(a.admissionId) === String(applyForm.admissionId)));
+const applyRow = ref(null);
 const openApply = (row) => {
-  if (row) {
-    // 修改：只允许「待排期」（后端也会拒，前端少让人白填一遍）
-    applyForm.id = row.id;
-    applyForm.admissionId = row.admissionId || '';
-    applyForm.plannedOperationCode = row.plannedOperationCode || '';
-    applyForm.plannedOperationName = row.plannedOperationName || '';
-    applyForm.operationLevel = row.operationLevel;
-    applyForm.incisionLevel = row.incisionLevel;
-    applyForm.anesthesiaType = row.anesthesiaType;
-    applyForm.preopDiagnosis = row.preopDiagnosis || '';
-    applyForm.operationReason = row.operationReason || '';
-    applyForm.isEmergency = row.isEmergency ?? 0;
-    applyForm.isMain = row.isMain ?? 1;
-    applyForm.remark = row.remark || '';
-  } else {
-    applyForm.id = '';
-    applyForm.admissionId = filters.admissionId || '';
-    applyForm.plannedOperationCode = '';
-    applyForm.plannedOperationName = '';
-    applyForm.operationLevel = undefined;
-    applyForm.incisionLevel = undefined;
-    applyForm.anesthesiaType = undefined;
-    applyForm.preopDiagnosis = '';
-    applyForm.operationReason = '';
-    applyForm.isEmergency = 0;
-    applyForm.isMain = 1;
-    applyForm.remark = '';
-  }
+  applyRow.value = row || null;
   applyVisible.value = true;
-};
-const submitApply = async () => {
-  if (!applyForm.admissionId) {
-    ElMessage.warning('请选择在院患者');
-    return;
-  }
-  if (!applyForm.plannedOperationName.trim()) {
-    ElMessage.warning('请填写拟施手术名称');
-    return;
-  }
-  if (!applyForm.preopDiagnosis.trim()) {
-    ElMessage.warning('请填写术前诊断（回写病历的术前诊断要素取自这里）');
-    return;
-  }
-  if (!applyForm.operationReason.trim()) {
-    ElMessage.warning('请填写手术指征（开一刀是一个医疗决定，必须写清为什么）');
-    return;
-  }
-  applySubmitting.value = true;
-  try {
-    const res = await saveOperationApply({
-      id: applyForm.id || undefined,
-      admissionId: applyForm.admissionId,
-      plannedOperationCode: applyForm.plannedOperationCode.trim() || undefined,
-      plannedOperationName: applyForm.plannedOperationName.trim(),
-      operationLevel: applyForm.operationLevel,
-      incisionLevel: applyForm.incisionLevel,
-      anesthesiaType: applyForm.anesthesiaType,
-      preopDiagnosis: applyForm.preopDiagnosis.trim(),
-      operationReason: applyForm.operationReason.trim(),
-      isEmergency: applyForm.isEmergency,
-      isMain: applyForm.isMain,
-      remark: applyForm.remark.trim() || undefined,
-    });
-    ElMessage.success(`${applyForm.id ? '手术申请已修改' : '手术申请已提交'}：${res.data || ''}（等待手术室排台）`);
-    applyVisible.value = false;
-    await Promise.all([loadList(), loadUnfinishedCount(), loadMatrixIfOpen()]);
-  } catch (error) {
-    ElMessage.error(error.message || '手术申请提交失败');
-  } finally {
-    applySubmitting.value = false;
-  }
 };
 // ---------------- 二、排台 ----------------
 const scheduleVisible = ref(false);
-const scheduleSubmitting = ref(false);
-const scheduleTarget = ref(null);
-const scheduleForm = reactive({
-  operationRoom: '',
-  plannedStartTime: '',
-  plannedEndTime: '',
-  surgeonId: '',
-  assistantName: '',
-  anesthetistId: '',
-  scheduleRemark: '',
-});
+const scheduleRow = ref(null);
 const openSchedule = (row) => {
-  scheduleTarget.value = row;
-  scheduleForm.operationRoom = row.operationRoom || '';
-  scheduleForm.plannedStartTime = row.plannedStartTime || '';
-  scheduleForm.plannedEndTime = row.plannedEndTime || '';
-  scheduleForm.surgeonId = row.surgeonId || '';
-  scheduleForm.assistantName = row.assistantName || '';
-  scheduleForm.anesthetistId = '';
-  scheduleForm.scheduleRemark = '';
+  scheduleRow.value = row;
   scheduleVisible.value = true;
-};
-const submitSchedule = async () => {
-  if (!scheduleTarget.value)
-    return;
-  if (!scheduleForm.operationRoom) {
-    ElMessage.warning('请选择或输入手术间');
-    return;
-  }
-  if (!scheduleForm.plannedStartTime || !scheduleForm.plannedEndTime) {
-    ElMessage.warning('请选择计划开始与结束时间');
-    return;
-  }
-  if (!scheduleForm.surgeonId) {
-    ElMessage.warning('请选择主刀医师');
-    return;
-  }
-  scheduleSubmitting.value = true;
-  try {
-    await scheduleOperation({
-      applyId: scheduleTarget.value.id,
-      operationRoom: scheduleForm.operationRoom,
-      plannedStartTime: scheduleForm.plannedStartTime,
-      plannedEndTime: scheduleForm.plannedEndTime,
-      surgeonId: scheduleForm.surgeonId,
-      assistantName: scheduleForm.assistantName.trim() || undefined,
-      anesthetistId: scheduleForm.anesthetistId || undefined,
-      scheduleRemark: scheduleForm.scheduleRemark.trim() || undefined,
-    });
-    ElMessage.success('已排台');
-    scheduleVisible.value = false;
-    await Promise.all([loadList(), loadUnfinishedCount(), loadMatrixIfOpen()]);
-  } catch (error) {
-    ElMessage.error(error.message || '排台失败');
-  } finally {
-    scheduleSubmitting.value = false;
-  }
 };
 // ---------------- 三、术前核对 ----------------
 const checkVisible = ref(false);
-const checkSubmitting = ref(false);
-const checkTarget = ref(null);
-const checkForm = reactive({
-  items: [],
-  preopNote: '',
-});
+const checkRow = ref(null);
 const openPreopCheck = (row) => {
-  checkTarget.value = row;
-  checkForm.items = [];
-  checkForm.preopNote = '';
+  checkRow.value = row;
   checkVisible.value = true;
-};
-const submitPreopCheck = async () => {
-  if (!checkTarget.value)
-    return;
-  const missing = checkItemOptions.value
-      .filter((i) => i.required && !checkForm.items.includes(i.code))
-      .map((i) => i.label);
-  if (missing.length > 0) {
-    ElMessage.warning(`术前核对必核项未完成：${missing.join('；')}`);
-    return;
-  }
-  checkSubmitting.value = true;
-  try {
-    await preopCheckOperation({
-      applyId: checkTarget.value.id,
-      checkItems: checkForm.items.join(','),
-      preopNote: checkForm.preopNote.trim() || undefined,
-    });
-    ElMessage.success('术前核对已完成，可以上台并登记手术完成');
-    checkVisible.value = false;
-    await Promise.all([loadList(), loadUnfinishedCount(), loadMatrixIfOpen()]);
-  } catch (error) {
-    ElMessage.error(error.message || '术前核对失败');
-  } finally {
-    checkSubmitting.value = false;
-  }
 };
 // ---------------- 四、完成（回写首页明细 + 手术记录病历） ----------------
 const finishVisible = ref(false);
-const finishSubmitting = ref(false);
-const finishTarget = ref(null);
-const finishForm = reactive({
-  actualOperationCode: '',
-  actualOperationName: '',
-  operationStartTime: '',
-  operationEndTime: '',
-  bloodLoss: undefined,
-  intraopFindings: '',
-  intraopProcedure: '',
-  postopNote: '',
-  specimenSent: '',
-});
+const finishRow = ref(null);
 const openFinish = (row) => {
-  finishTarget.value = row;
-  finishForm.actualOperationCode = row.plannedOperationCode || '';
-  // 默认带出拟施术式 —— 大多数情况一致，不一致时医生会改，改了就按实际回写首页
-  finishForm.actualOperationName = row.plannedOperationName || '';
-  finishForm.operationStartTime = row.plannedStartTime || '';
-  finishForm.operationEndTime = row.plannedEndTime || '';
-  finishForm.bloodLoss = undefined;
-  finishForm.intraopFindings = '';
-  finishForm.intraopProcedure = '';
-  finishForm.postopNote = '';
-  finishForm.specimenSent = '';
+  finishRow.value = row;
   finishVisible.value = true;
 };
-const submitFinish = async () => {
-  if (!finishTarget.value)
-    return;
-  if (!finishForm.actualOperationName.trim()) {
-    ElMessage.warning('请填写实际手术名称');
-    return;
-  }
-  if (!finishForm.operationStartTime || !finishForm.operationEndTime) {
-    ElMessage.warning('请填写实际开始与结束时间');
-    return;
-  }
-  if (!finishForm.intraopFindings.trim() || !finishForm.intraopProcedure.trim() || !finishForm.postopNote.trim()) {
-    ElMessage.warning('术中所见、手术经过、术后处理都不能为空');
-    return;
-  }
-  finishSubmitting.value = true;
-  try {
-    await finishOperation({
-      applyId: finishTarget.value.id,
-      actualOperationCode: finishForm.actualOperationCode.trim() || undefined,
-      actualOperationName: finishForm.actualOperationName.trim(),
-      operationStartTime: finishForm.operationStartTime,
-      operationEndTime: finishForm.operationEndTime,
-      bloodLoss: finishForm.bloodLoss,
-      intraopFindings: finishForm.intraopFindings.trim(),
-      intraopProcedure: finishForm.intraopProcedure.trim(),
-      postopNote: finishForm.postopNote.trim(),
-      specimenSent: finishForm.specimenSent.trim() || undefined,
-    });
-    ElMessage.success('手术已完成（已回写病案首页手术明细与手术记录病历）');
-    finishVisible.value = false;
-    await Promise.all([loadList(), loadUnfinishedCount(), loadMatrixIfOpen()]);
-  } catch (error) {
-    ElMessage.error(error.message || '登记手术完成失败');
-  } finally {
-    finishSubmitting.value = false;
-  }
+/** 弹框里任何一次写库之后，列表 + 未完成数 + 打开着的总表都要跟着刷 */
+const refreshAfterChange = async () => {
+  await Promise.all([loadList(), loadUnfinishedCount(), loadMatrixIfOpen()]);
+};
+/** 核查签核不改变状态机（未完成数、申请列表的进度都不动），所以只刷列表和总表 */
+const refreshAfterSafety = async () => {
+  await Promise.all([loadList(), loadMatrixIfOpen()]);
 };
 // ---------------- 取消 / 详情 ----------------
 const handleCancel = async (row) => {
@@ -1510,15 +659,12 @@ const handleCancel = async (row) => {
   }
 };
 const detailVisible = ref(false);
-const detail = ref(null);
-const openDetail = async (row) => {
-  try {
-    const res = await getOperationApplyDetail(row.id);
-    detail.value = (res.data || row);
-    detailVisible.value = true;
-  } catch (error) {
-    ElMessage.error(error.message || '加载手术详情失败');
-  }
+const detailId = ref('');
+const detailRow = ref(null);
+const openDetail = (row) => {
+  detailId.value = row.id;
+  detailRow.value = row;
+  detailVisible.value = true;
 };
 /** 已完成但缺首页明细/病历锚点 = 链断了。后端已标 stalled，这里显式渲染出来，不静默。 */
 const chainBroken = (row) => row.operationStatus === 3 && (!row.operationId || !row.recordId);
@@ -1570,197 +716,21 @@ const matrixColumns = computed(() => {
   return [...rooms, ...others];
 });
 const roomVisible = ref(false);
-const roomRows = ref([]);
-const roomLoading = ref(false);
-const roomFormVisible = ref(false);
-const roomSubmitting = ref(false);
-const roomForm = reactive({
-  id: '',
-  roomCode: '',
-  roomName: '',
-  location: '',
-  sortOrder: 1,
-  status: 1,
-});
-const loadRooms = async () => {
-  roomLoading.value = true;
-  try {
-    const res = await getOperationRoomAll();
-    roomRows.value = (res.data || []);
-  } catch (error) {
-    ElMessage.error(error.message || '加载手术间失败');
-  } finally {
-    roomLoading.value = false;
-  }
-};
 const openRooms = () => {
-  roomFormVisible.value = false;
   roomVisible.value = true;
-  loadRooms();
 };
-const editRoom = (row) => {
-  roomForm.id = row.id;
-  roomForm.roomCode = row.roomCode;
-  roomForm.roomName = row.roomName;
-  roomForm.location = row.location || '';
-  roomForm.sortOrder = row.sortOrder ?? 1;
-  roomForm.status = row.status ?? 1;
-  roomFormVisible.value = true;
-};
-const newRoom = () => {
-  roomForm.id = '';
-  roomForm.roomCode = '';
-  roomForm.roomName = '';
-  roomForm.location = '';
-  roomForm.sortOrder = (roomRows.value.length + 1) || 1;
-  roomForm.status = 1;
-  roomFormVisible.value = true;
-};
-const submitRoom = async () => {
-  if (!roomForm.roomCode.trim() || !roomForm.roomName.trim()) {
-    ElMessage.warning('手术间编码与名称都不能为空');
-    return;
-  }
-  roomSubmitting.value = true;
-  try {
-    await saveOperationRoom({
-      id: roomForm.id || undefined,
-      roomCode: roomForm.roomCode.trim(),
-      roomName: roomForm.roomName.trim(),
-      location: roomForm.location.trim() || undefined,
-      sortOrder: roomForm.sortOrder,
-      status: roomForm.status,
-    });
-    ElMessage.success('手术间已保存');
-    roomFormVisible.value = false;
-    await Promise.all([loadRooms(), loadList(), loadMatrixIfOpen()]);
-  } catch (error) {
-    ElMessage.error(error.message || '保存手术间失败');
-  } finally {
-    roomSubmitting.value = false;
-  }
+const onRoomSaved = async () => {
+  await Promise.all([loadList(), loadMatrixIfOpen()]);
 };
 const loadMatrixIfOpen = async () => {
   if (activeTab.value === 'matrix')
     await loadMatrix();
 };
-const removeRoom = async (row) => {
-  try {
-    await ElMessageBox.confirm(`手术间「${row.roomName}」将被物理删除（编码 ${row.roomCode} 会释放，可重建同码）。`
-        + '只是暂时不用请改「停用」，不要删。历史手术单不受影响。', '删除手术间', {
-      confirmButtonText: '确认删除',
-      cancelButtonText: '改用停用',
-      type: 'warning'
-    });
-  } catch {
-    return;
-  }
-  try {
-    await deleteOperationRoom(row.id);
-    ElMessage.success('手术间已删除');
-    await Promise.all([loadRooms(), loadMatrixIfOpen()]);
-  } catch (error) {
-    ElMessage.error(error.message || '删除手术间失败');
-  }
-};
-const toggleRoomStatus = async (row, status) => {
-  try {
-    await saveOperationRoom({
-      id: row.id,
-      roomCode: row.roomCode,
-      roomName: row.roomName,
-      location: row.location,
-      sortOrder: row.sortOrder,
-      status,
-    });
-    ElMessage.success(status === 1 ? '手术间已启用' : '手术间已停用（总表不再出列，历史手术不受影响）');
-    await Promise.all([loadRooms(), loadMatrixIfOpen()]);
-  } catch (error) {
-    ElMessage.error(error.message || '状态更新失败');
-  }
-};
 const safetyVisible = ref(false);
-const safetyLoading = ref(false);
-const safetySubmitting = ref(false);
-const safetyTarget = ref(null);
-const safetyCards = ref([]);
-const safetyForm = reactive({
-  phase: 0,
-  items: [],
-  surgeonId: '',
-  anesthetistId: '',
-  nurseId: '',
-  note: '',
-});
-const loadSafetyCards = async (applyId) => {
-  safetyLoading.value = true;
-  try {
-    const res = await getSafetyCheckCards(applyId);
-    safetyCards.value = (res.data || []);
-  } catch (error) {
-    ElMessage.error(error.message || '加载安全核查单失败');
-  } finally {
-    safetyLoading.value = false;
-  }
-};
-const openSafety = async (row) => {
-  safetyTarget.value = row;
-  safetyForm.phase = 0;
-  safetyForm.items = [];
-  safetyForm.surgeonId = row.surgeonId || '';
-  safetyForm.anesthetistId = '';
-  safetyForm.nurseId = '';
-  safetyForm.note = '';
+const safetyRow = ref(null);
+const openSafety = (row) => {
+  safetyRow.value = row;
   safetyVisible.value = true;
-  await loadSafetyCards(row.id);
-};
-const pickSafetyPhase = (card) => {
-  safetyForm.phase = card.phase;
-  safetyForm.items = [];
-};
-const currentSafetyCard = computed(() => safetyCards.value.find((c) => c.phase === safetyForm.phase));
-const submitSafety = async () => {
-  if (!safetyTarget.value || !safetyForm.phase) {
-    ElMessage.warning('请先选择要签核的时段');
-    return;
-  }
-  const card = currentSafetyCard.value;
-  if (card) {
-    const missing = card.items.filter((i) => i.required && !safetyForm.items.includes(i.code)).map((i) => i.label);
-    if (missing.length > 0) {
-      ElMessage.warning(`该时段必核项未完成：${missing.join('；')}`);
-      return;
-    }
-  }
-  if (!safetyForm.surgeonId || !safetyForm.anesthetistId || !safetyForm.nurseId) {
-    ElMessage.warning('手术医师、麻醉医师、手术室护士三方都必须签名（核查的意义就是三方在场）');
-    return;
-  }
-  const ids = [safetyForm.surgeonId, safetyForm.anesthetistId, safetyForm.nurseId];
-  if (new Set(ids).size < 3) {
-    ElMessage.warning('三方必须是三个不同的人（同一个人签三方是走形式，后端也会拒）');
-    return;
-  }
-  safetySubmitting.value = true;
-  try {
-    await signSafetyCheck({
-      applyId: safetyTarget.value.id,
-      phase: safetyForm.phase,
-      items: safetyForm.items.join(','),
-      surgeonId: safetyForm.surgeonId,
-      anesthetistId: safetyForm.anesthetistId,
-      nurseId: safetyForm.nurseId,
-      note: safetyForm.note.trim() || undefined,
-    });
-    ElMessage.success('该时段核查已签核（签过即不可改）');
-    safetyForm.phase = 0;
-    safetyForm.items = [];
-    await Promise.all([loadSafetyCards(safetyTarget.value.id), loadList(), loadMatrixIfOpen()]);
-  } catch (error) {
-    ElMessage.error(error.message || '核查签核失败');
-  } finally {
-    safetySubmitting.value = false;
-  }
 };
 onMounted(async () => {
   await loadBaseData();

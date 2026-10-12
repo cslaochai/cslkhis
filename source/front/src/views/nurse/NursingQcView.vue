@@ -327,59 +327,9 @@
       </el-tab-pane>
     </el-tabs>
 
-    <!-- ============ 检查单详情（只读：行点击进来，改单走列表上的编辑按钮） ============ -->
-    <el-dialog v-model="detailVisible" data-testid="qc-detail-dialog" title="检查单详情" width="1080px">
-      <el-descriptions v-if="detail" :column="4" border size="small">
-        <el-descriptions-item label="单号">{{ detail.check.checkNo }}</el-descriptions-item>
-        <el-descriptions-item label="病区">{{ detail.check.wardName }}</el-descriptions-item>
-        <el-descriptions-item label="月份 / 日期">{{ detail.check.checkMonth }} · {{
-            detail.check.checkDate
-          }}
-        </el-descriptions-item>
-        <el-descriptions-item label="类别">{{
-            detail.check.categoryName || categoryText(detail.check.category)
-          }}
-        </el-descriptions-item>
-        <el-descriptions-item label="检查人">{{ detail.check.inspectorName || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="抽查/合格">{{ detail.check.qualifiedCount }} / {{
-            detail.check.sampleCount
-          }}
-        </el-descriptions-item>
-        <el-descriptions-item label="合格率">{{ fmt(detail.check.qualifiedRate) }}%</el-descriptions-item>
-        <el-descriptions-item label="得分">{{ fmt(detail.check.totalScore, 1) }} / {{
-            fmt(detail.check.fullScore, 1)
-          }}
-        </el-descriptions-item>
-        <el-descriptions-item label="状态">{{
-            detail.check.statusText || statusText(detail.check.status)
-          }}
-        </el-descriptions-item>
-        <el-descriptions-item label="录入时间">{{ detail.check.createTime }}</el-descriptions-item>
-        <el-descriptions-item :span="2" label="小结">{{ detail.check.summary || '—' }}</el-descriptions-item>
-      </el-descriptions>
-      <p v-if="detail && Number(detail.missingItemCount) > 0" class="mt-2 text-sm text-amber-700"
-         data-testid="qc-missing">
-        本类别共 {{ detail.catalog?.length }} 项，本轮还有 {{ detail.missingItemCount }} 项未录入，合格率只按已查项统计
-      </p>
-      <el-table v-if="detail" :data="detail.items" border class="mt-2" data-testid="qc-detail-items" max-height="360"
-                size="small">
-        <el-table-column label="检查项目" prop="itemName" show-overflow-tooltip width="200"/>
-        <el-table-column align="center" label="抽查" prop="checkedNum" width="70"/>
-        <el-table-column align="center" label="合格" prop="qualifiedNum" width="70"/>
-        <el-table-column align="right" label="单项合格率" width="110">
-          <template #default="{ row }">{{ fmt(row.qualifiedRate) }}%</template>
-        </el-table-column>
-        <el-table-column align="right" label="得分" width="100">
-          <template #default="{ row }">{{ fmt(row.score, 1) }} / {{ fmt(row.fullScore, 1) }}</template>
-        </el-table-column>
-        <el-table-column label="存在问题" min-width="160" prop="problem" show-overflow-tooltip/>
-        <el-table-column label="原因分析" min-width="160" prop="causeAnalysis" show-overflow-tooltip/>
-        <el-table-column label="整改措施" min-width="160" prop="rectifyMeasure" show-overflow-tooltip/>
-      </el-table>
-      <template #footer>
-        <el-button type="primary" @click="detailVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    <!-- 检查单详情（只读）：详情组件按 id 自拉数据 -->
+    <NursingQcDetail v-model="detailVisible" :category-dict="categoryDict" :id="detailId"
+                     :status-dict="statusDict"/>
 
     <!-- ============ 检查单录入 ============ -->
     <el-dialog v-model="editVisible" :title="form.id ? '修改检查单' : '新增检查单'" data-testid="qc-edit-dialog"
@@ -515,6 +465,9 @@ import {
   updateQcCheckStatus,
   upsertQcCheck,
 } from '@/api/nursingQc';
+/** 展示用格式化（fmt/intFmt）与详情弹框共用，见 @/lib/nursingQc */
+import {fmt, intFmt} from '@/lib/nursingQc';
+import NursingQcDetail from './NursingQcDetail.vue';
 import {DICT_TYPE, loadDictDataList} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
@@ -535,9 +488,6 @@ const categoryOptions = computed(() => toOptions(categoryDict.value));
 const statusOptions = computed(() => toOptions(statusDict.value));
 const reportOptions = computed(() => toOptions(reportDict.value));
 const indicatorOptions = computed(() => indicatorDict.value.map((d) => ({label: d.dictLabel, value: d.dictValue})));
-/** 展示用：后端已给 indicatorName/reachedText，这里只兜「没数」的空态 */
-const fmt = (v, digits = 2) => (v == null || v === '' ? '—' : Number(v).toFixed(digits));
-const intFmt = (v) => (v == null || v === '' ? '—' : String(Number(v)));
 // ---------------- 本地日期（toISOString 是 UTC，北京时间 0~8 点会拿到「昨天」） ----------------
 const dstr = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const today = dstr(new Date());
@@ -697,21 +647,12 @@ const onTabChange = (name) => {
   else
     loadBoard();
 };
-/** 详情弹框（只读）：明细 + 漏查项提示 */
+/** 详情弹框（只读）：明细 + 漏查项提示，数据由 NursingQcDetail 按 id 自拉 */
 const detailVisible = ref(false);
-const detail = ref(null);
-const openDetail = async (row) => {
-  try {
-    const res = await getQcCheckDetailById(row.id);
-    if (res.code !== 200) {
-      ElMessage.error(res.message || '加载详情失败');
-      return;
-    }
-    detail.value = res.data;
-    detailVisible.value = true;
-  } catch (e) {
-    ElMessage.error(e.message || '加载详情失败');
-  }
+const detailId = ref(null);
+const openDetail = (row) => {
+  detailId.value = row.id;
+  detailVisible.value = true;
 };
 /** 录入弹框：行来源是本类别的标准目录，用户只填「抽查/合格」两个数 */
 const editVisible = ref(false);

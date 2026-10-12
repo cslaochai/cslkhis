@@ -233,126 +233,18 @@
       </el-tab-pane>
     </el-tabs>
 
-    <!-- 病例报卡弹窗 -->
-    <el-dialog v-model="caseOpenVisible" :title="caseOpenTitle" destroy-on-close width="560px">
-      <el-form label-width="90px">
-        <el-form-item v-if="Number(caseForm.leakFlag) === 1" label="漏报口径">
-          <el-tag type="danger">漏报调查发现后补报（统计单列）</el-tag>
-        </el-form-item>
-        <el-form-item label="患者">
-          <PatientSelect v-model="caseForm.patientId" data-testid="case-patient"
-                         @clear="anchor.registOptions = []; anchor.inpOptions = []"
-                         @select="onCasePatientSelect"/>
-        </el-form-item>
-        <el-form-item label="就诊类型">
-          <el-radio-group v-model="caseForm.visitType">
-            <el-radio :value="2">住院</el-radio>
-            <el-radio :value="1">门诊</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item v-if="caseForm.visitType === 1" label="门诊就诊">
-          <el-select v-model="anchor.registId" data-testid="case-regist" filterable placeholder="选择门诊就诊"
-                     style="width:100%">
-            <el-option v-for="r in anchor.registOptions" :key="r.id"
-                       :label="`${String(r.id).slice(-6)} ${r.deptName || ''} ${r.visitDate || ''}`" :value="r.id"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item v-else label="住院记录">
-          <el-select v-model="anchor.inpId" data-testid="case-inp" filterable placeholder="选择住院记录"
-                     style="width:100%">
-            <el-option v-for="a in anchor.inpOptions" :key="a.admissionId"
-                       :label="`${String(a.admissionId).slice(-6)} ${a.deptName || ''}`" :value="a.admissionId"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="感染来源">
-          <el-select v-model="caseForm.caseSource" style="width:100%">
-            <el-option v-for="d in caseSourceDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="感染部位">
-          <el-select v-model="caseForm.infectionSite" data-testid="case-site" filterable placeholder="选择部位"
-                     style="width:100%">
-            <el-option v-for="d in siteDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="感染诊断">
-          <el-input v-model="caseForm.infectionDiag" data-testid="case-diag"/>
-        </el-form-item>
-        <el-form-item label="病原菌">
-          <el-input v-model="caseForm.pathogen" placeholder="可选"/>
-        </el-form-item>
-        <el-form-item label="标本来源">
-          <el-input v-model="caseForm.specimen" placeholder="可选"/>
-        </el-form-item>
-        <el-form-item label="感染日期">
-          <el-date-picker v-model="caseForm.infectDate" data-testid="case-infect-date" type="date"
-                          value-format="YYYY-MM-DD"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="caseForm.remark" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="caseOpenVisible = false">取消</el-button>
-        <el-button v-perm="'emr:infectionMonitor:add'" data-testid="case-save" type="primary" @click="onSaveCase">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 病例报卡弹窗（表单与提交已拆至 InfectionMonitorCaseAdd.vue） -->
+    <InfectionMonitorCaseAdd v-model="caseOpenVisible" :case-source-dict="caseSourceDict" :leak="caseLeak"
+                             :site-dict="siteDict" @saved="onCaseSaved"/>
 
-    <!-- 监测登记弹窗 -->
-    <el-dialog v-model="monitorOpenVisible" destroy-on-close title="目标性监测登记" width="520px">
-      <el-form label-width="90px">
-        <el-form-item label="患者">
-          <PatientSelect v-model="monitorForm.patientId" data-testid="monitor-patient"
-                         @clear="monitorAnchor.inpOptions = []"
-                         @select="onMonitorPatientSelect"/>
-        </el-form-item>
-        <el-form-item label="住院记录">
-          <el-select v-model="monitorAnchor.inpId" data-testid="monitor-inp" filterable placeholder="选择住院记录（必选）"
-                     style="width:100%">
-            <el-option v-for="a in monitorAnchor.inpOptions" :key="a.admissionId"
-                       :label="`${String(a.admissionId).slice(-6)} ${a.deptName || ''}`" :value="a.admissionId"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="监测类型">
-          <el-select v-model="monitorForm.monitorType" data-testid="monitor-type" filterable style="width:100%">
-            <el-option v-for="d in monitorTypeDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="置入日期">
-          <el-date-picker v-model="monitorForm.insertDate" data-testid="monitor-insert-date" type="date"
-                          value-format="YYYY-MM-DD"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="monitorForm.remark" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="monitorOpenVisible = false">取消</el-button>
-        <el-button v-perm="'emr:infectionMonitor:add'" data-testid="monitor-save" type="primary" @click="onSaveMonitor">
-          保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 监测登记弹窗（表单与提交已拆至 InfectionMonitorRegisterAdd.vue） -->
+    <InfectionMonitorRegisterAdd v-model="monitorOpenVisible" :monitor-type-dict="monitorTypeDict"
+                                 @saved="onMonitorSaved"/>
 
     <!-- 手卫生登记弹窗已随共用组件 HandHygienePanel 搬走（含 data-testid：hand-obs-date / hand-dept / hand-object / hand-opportunity / hand-comply / hand-save） -->
 
-    <!-- 导管日明细 -->
-    <el-dialog v-model="dailyVisible"
-               :title="`导管日明细 — ${dailyMonitor?.patientName || ''}（${dailyMonitor?.monitorTypeText || ''}）`"
-               width="480px">
-      <el-table :data="dailyRows" border data-testid="daily-table" max-height="400" size="small">
-        <el-table-column label="监测日期" width="120">
-          <template #default="{ row }">{{ fmtDate(row.monitorDate) }}</template>
-        </el-table-column>
-        <el-table-column label="记录人" prop="recorderName" width="100"/>
-        <el-table-column label="打卡时间" width="160">
-          <template #default="{ row }">{{ fmtTime(row.recordTime) }}</template>
-        </el-table-column>
-        <el-table-column label="备注" prop="remark" show-overflow-tooltip/>
-      </el-table>
-      <div style="margin-top:8px">合计导管日：<b data-testid="daily-total">{{ dailyRows.length }}</b> 天</div>
-    </el-dialog>
+    <!-- 导管日明细（已拆至 InfectionMonitorDailyDetail.vue，按监测行 id 自取明细） -->
+    <InfectionMonitorDailyDetail v-model="dailyVisible" :monitor="dailyMonitor"/>
   </div>
 </template>
 
@@ -368,21 +260,19 @@
 import {onMounted, reactive, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Refresh, Search} from '@element-plus/icons-vue'
-import PatientSelect from '@/components/his/PatientSelect.vue'
 import HandHygienePanel from '@/components/his/HandHygienePanel.vue'
-import request from '@/api/request'
+import InfectionMonitorCaseAdd from './InfectionMonitorCaseAdd.vue'
+import InfectionMonitorRegisterAdd from './InfectionMonitorRegisterAdd.vue'
+import InfectionMonitorDailyDetail from './InfectionMonitorDailyDetail.vue'
 import {getDictDataMapList} from '@/api/system'
 import {DICT_TYPE} from '@/lib/dict-cache'
 import {dictLabelText} from '@/lib/utils'
 import {
   caseAudit,
-  caseUpsert,
   getCaseListPage,
   getCaseStats,
-  getMonitorDailyList,
   getMonitorListPage,
   getMonitorStats,
-  monitorAdd,
   monitorConfirmInfection,
   monitorPunchDaily,
   monitorRemove,
@@ -390,7 +280,6 @@ import {
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination'
 
 const activeTab = ref('case')
-const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '—')
 const fmtDate = (d) => (d ? String(d).slice(0, 10) : '—')
 const pct = (v) => (v === null || v === undefined ? '—' : Number(v).toFixed(1))
 
@@ -458,93 +347,15 @@ const resetCaseQuery = () => {
   loadCases()
 }
 
-// 就诊锚点选项（门诊挂号单 / 住院记录）
-const loadRegists = async (patientId) => {
-  anchor.registOptions = [];
-  anchor.inpOptions = []
-  anchor.registId = null;
-  anchor.inpId = null
-  if (!patientId) return
-  try {
-    const [r1, r2] = await Promise.all([
-      request.get('/appoint/listPage', {params: {patientId, pageNum: 1, pageSize: 20}}),
-      request.get('/patient/inpatient/listPage', {params: {patientId, pageNum: 1, pageSize: 20}}),
-    ])
-    if (r1.code === 200) anchor.registOptions = r1.data?.records || []
-    if (r2.code === 200) anchor.inpOptions = r2.data?.records || []
-  } catch (e) {
-    console.error(e)
-  }
-}
-
+// 病例报卡（表单、就诊锚点与提交已拆至 InfectionMonitorCaseAdd.vue，这里只管开关与漏报口径）
 const caseOpenVisible = ref(false)
-const caseOpenTitle = ref('院感报卡')
-const anchor = reactive({registOptions: [], inpOptions: [], registId: null, inpId: null})
-const caseForm = reactive({
-  id: null,
-  patientId: null,
-  patientName: '',
-  visitType: 2,
-  caseSource: 2,
-  infectionSite: null,
-  infectionDiag: '',
-  pathogen: '',
-  specimen: '',
-  infectDate: '',
-  leakFlag: 0,
-  remark: ''
-})
-const onCasePatientSelect = async (p) => {
-  caseForm.patientName = p?.patientName || '';
-  await loadRegists(p?.id)
+const caseLeak = ref(false)
+const onCaseSaved = async () => {
+  await Promise.all([loadCases(), loadCaseStats()])
 }
 const onCaseCreate = (leak) => {
-  caseOpenTitle.value = leak ? '漏报补报建卡' : '院感报卡'
-  Object.assign(caseForm, {
-    id: null,
-    patientId: null,
-    patientName: '',
-    visitType: 2,
-    caseSource: 2,
-    infectionSite: null,
-    infectionDiag: '',
-    pathogen: '',
-    specimen: '',
-    infectDate: '',
-    leakFlag: leak ? 1 : 0,
-    remark: ''
-  })
-  anchor.registOptions = [];
-  anchor.inpOptions = [];
-  anchor.registId = null;
-  anchor.inpId = null
+  caseLeak.value = !!leak
   caseOpenVisible.value = true
-}
-const onSaveCase = async () => {
-  if (!caseForm.patientId) return ElMessage.warning('请选择患者')
-  if (caseForm.visitType === 1 && !anchor.registId) return ElMessage.warning('门诊病例必须选门诊就诊')
-  if (caseForm.visitType === 2 && !anchor.inpId) return ElMessage.warning('住院病例必须选住院记录')
-  if (!caseForm.infectionSite) return ElMessage.warning('请选择感染部位')
-  if (!caseForm.infectionDiag?.trim()) return ElMessage.warning('请填写感染诊断')
-  if (!caseForm.infectDate) return ElMessage.warning('请选择感染日期')
-  try {
-    const res = await caseUpsert({
-      id: caseForm.id, patientId: caseForm.patientId, visitType: caseForm.visitType,
-      registId: caseForm.visitType === 1 ? anchor.registId : null,
-      inpId: caseForm.visitType === 2 ? anchor.inpId : null,
-      caseSource: caseForm.caseSource, infectionSite: caseForm.infectionSite,
-      infectionDiag: caseForm.infectionDiag, pathogen: caseForm.pathogen || undefined,
-      specimen: caseForm.specimen || undefined, infectDate: caseForm.infectDate,
-      leakFlag: caseForm.leakFlag || undefined, remark: caseForm.remark || undefined,
-    })
-    if (res.code === 200) {
-      ElMessage.success(res.message || '报卡已保存')
-      caseOpenVisible.value = false
-      await Promise.all([loadCases(), loadCaseStats()])
-    } else ElMessage.error(res.message || '保存失败')
-  } catch (e) {
-    console.error(e)
-  }
 }
 /** 核实：确认/排除 一次性结论，订正建新卡（后端留痕不覆盖） */
 const doCaseAudit = async (row, result) => {
@@ -609,45 +420,13 @@ const resetMonitorQuery = () => {
   loadMonitors()
 }
 
+// 监测登记（表单与提交已拆至 InfectionMonitorRegisterAdd.vue，这里只管开关与刷新）
 const monitorOpenVisible = ref(false)
-const monitorAnchor = reactive({inpOptions: [], inpId: null})
-const monitorForm = reactive({patientId: null, patientName: '', monitorType: null, insertDate: '', remark: ''})
-const onMonitorPatientSelect = async (p) => {
-  monitorForm.patientName = p?.patientName || ''
-  monitorAnchor.inpOptions = [];
-  monitorAnchor.inpId = null
-  if (!p?.id) return
-  try {
-    const res = await request.get('/patient/inpatient/listPage', {params: {patientId: p.id, pageNum: 1, pageSize: 20}})
-    if (res.code === 200) monitorAnchor.inpOptions = res.data?.records || []
-  } catch (e) {
-    console.error(e)
-  }
+const onMonitorSaved = async () => {
+  await Promise.all([loadMonitors(), loadMonitorStats()])
 }
 const onMonitorCreate = () => {
-  Object.assign(monitorForm, {patientId: null, patientName: '', monitorType: null, insertDate: '', remark: ''})
-  monitorAnchor.inpOptions = [];
-  monitorAnchor.inpId = null
   monitorOpenVisible.value = true
-}
-const onSaveMonitor = async () => {
-  if (!monitorForm.patientId) return ElMessage.warning('请选择患者')
-  if (!monitorAnchor.inpId) return ElMessage.warning('导管相关监测必须关联住院记录')
-  if (!monitorForm.monitorType) return ElMessage.warning('请选择监测类型')
-  if (!monitorForm.insertDate) return ElMessage.warning('请选择置入日期')
-  try {
-    const res = await monitorAdd({
-      patientId: monitorForm.patientId, monitorType: monitorForm.monitorType,
-      inpId: monitorAnchor.inpId, insertDate: monitorForm.insertDate, remark: monitorForm.remark || undefined,
-    })
-    if (res.code === 200) {
-      ElMessage.success(res.message || '监测登记已保存')
-      monitorOpenVisible.value = false
-      await Promise.all([loadMonitors(), loadMonitorStats()])
-    } else ElMessage.error(res.message || '保存失败')
-  } catch (e) {
-    console.error(e)
-  }
 }
 
 const onPunch = async (row) => {
@@ -711,18 +490,12 @@ const onConfirmInfection = async (row) => {
   } catch (e) { /* 取消 */
   }
 }
+// 导管日明细（已拆至 InfectionMonitorDailyDetail.vue，组件按 monitor.id 自取明细）
 const dailyVisible = ref(false)
-const dailyRows = ref([])
 const dailyMonitor = ref(null)
-const onShowDaily = async (row) => {
+const onShowDaily = (row) => {
   dailyMonitor.value = row
-  try {
-    const res = await getMonitorDailyList(row.id)
-    if (res.code === 200) dailyRows.value = res.data || []
-    dailyVisible.value = true
-  } catch (e) {
-    console.error(e)
-  }
+  dailyVisible.value = true
 }
 
 // ================= 手卫生依从性 =================

@@ -83,72 +83,18 @@
     </el-card>
 
     <!-- 新增/编辑对话框 -->
-    <el-dialog
-        v-model="dialogVisible"
-        :close-on-click-modal="false"
-        :title="dialogTitle"
-        width="600px"
-        @close="dialogVisible = false"
-    >
-      <el-form
-          ref="formRef"
-          :model="formData"
-          :rules="rules"
-          label-width="100px"
-      >
-        <el-form-item label="诊室编号" prop="code">
-          <el-input v-model="formData.code" placeholder="请输入诊室编号"/>
-        </el-form-item>
-        <el-form-item label="诊室名称" prop="name">
-          <el-input v-model="formData.name" placeholder="请输入诊室名称"/>
-        </el-form-item>
-        <el-form-item label="地理位置" prop="location">
-          <el-input v-model="formData.location" placeholder="如：门诊楼A座3层"/>
-        </el-form-item>
-        <el-form-item label="所属科室" prop="deptId">
-          <el-tree-select
-              v-model="formData.deptId"
-              :data="deptList"
-              :props="{ label: 'deptName', value: 'id', children: 'children' }"
-              check-strictly
-              clearable
-              placeholder="请选择科室"
-          />
-        </el-form-item>
-        <el-form-item label="状态" prop="status">
-          <el-radio-group v-model="formData.status">
-            <el-radio :value="1">启用</el-radio>
-            <el-radio :value="0">停用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="备注" prop="remark">
-          <el-input v-model="formData.remark" :rows="3" placeholder="如：靠窗、配备B超机等" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button v-perm="'org:clinicRoom:add'" :loading="submitLoading" type="primary" @click="handleSubmit">
-          确定
-        </el-button>
-      </template>
-    </el-dialog>
+    <ClinicRoomEdit v-model="dialogVisible" :dept-list="deptList" :row="dialogRow" @saved="loadData"/>
   </div>
 </template>
 
 <script lang="js" setup>
-import {onMounted, reactive, ref} from 'vue'
+import {onMounted, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Delete, Edit, Plus, Refresh, Search} from '@element-plus/icons-vue'
-import {
-  createClinicRoom,
-  deleteClinicRoom,
-  getClinicRoomDetail,
-  getClinicRoomList,
-  getDepartmentTree,
-  updateClinicRoom
-} from '@/api/system'
+import {deleteClinicRoom, getClinicRoomList, getDepartmentTree} from '@/api/system'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
+import ClinicRoomEdit from '@/views/system/clinicRoom/ClinicRoomEdit.vue'
 
 const loading = ref(false)
 const searchForm = ref({
@@ -169,35 +115,9 @@ const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight()
 // 部门列表
 const deptList = ref([])
 
-// 新增/编辑对话框
+// 新增/编辑：row 为空走新增，有值走修改（表单逻辑全在 ClinicRoomEdit 内）
 const dialogVisible = ref(false)
-const dialogTitle = ref('新增诊室')
-const submitLoading = ref(false)
-const formRef = ref(null)
-const formData = reactive({
-  id: null,
-  name: '',
-  code: '',
-  location: '',
-  deptId: null,
-  status: 1,
-  remark: '',
-})
-
-const rules = {
-  name: [
-    {required: true, message: '请输入诊室名称', trigger: 'blur'},
-  ],
-  code: [
-    {required: true, message: '请输入诊室编号', trigger: 'blur'},
-  ],
-  location: [
-    {required: true, message: '请输入地理位置', trigger: 'blur'},
-  ],
-  deptId: [
-    {required: true, message: '请选择所属科室', trigger: 'change'},
-  ],
-}
+const dialogRow = ref(null)
 
 onMounted(() => {
   loadData()
@@ -246,66 +166,14 @@ const handleReset = () => {
   loadData()
 }
 
-const resetForm = () => {
-  formData.id = null
-  formData.name = ''
-  formData.code = ''
-  formData.location = ''
-  formData.deptId = null
-  formData.status = 1
-  formData.remark = ''
-}
-
 const handleAdd = () => {
-  resetForm()
-  dialogTitle.value = '新增诊室'
+  dialogRow.value = null
   dialogVisible.value = true
 }
 
-const handleEdit = async (row) => {
-  resetForm()
-  dialogTitle.value = '编辑诊室'
-  try {
-    const res = await getClinicRoomDetail(row.id)
-    if (res.code === 200) {
-      Object.assign(formData, res.data)
-    }
-  } catch (error) {
-    ElMessage.error(error.message || '获取诊室信息失败')
-  }
+const handleEdit = (row) => {
+  dialogRow.value = row
   dialogVisible.value = true
-}
-
-const handleSubmit = async () => {
-  if (!formRef.value) return
-
-  try {
-    await formRef.value.validate()
-  } catch {
-    return
-  }
-
-  submitLoading.value = true
-  try {
-    let res
-    if (formData.id) {
-      res = await updateClinicRoom(formData)
-    } else {
-      res = await createClinicRoom(formData)
-    }
-
-    if (res.code === 200) {
-      ElMessage.success(formData.id ? '修改成功' : '新增成功')
-      dialogVisible.value = false
-      loadData()
-    } else {
-      ElMessage.error(res.message || '操作失败')
-    }
-  } catch (error) {
-    ElMessage.error(error.message || '操作失败')
-  } finally {
-    submitLoading.value = false
-  }
 }
 
 const handleDelete = async (row) => {

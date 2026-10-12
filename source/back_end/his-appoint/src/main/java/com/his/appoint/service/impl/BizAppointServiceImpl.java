@@ -12,6 +12,7 @@ import com.his.system.entity.BizClinicSource;
 import com.his.system.entity.BizClinicSourceSlot;
 import com.his.appoint.enums.AppointStatusEnum;
 import com.his.appoint.enums.QueueStatusEnum;
+import com.his.appoint.enums.RegistTypeEnum;
 import com.his.appoint.enums.RevisitSourceEnum;
 import com.his.appoint.enums.VisitTypeEnum;
 import com.his.appoint.mapper.BizAppointInfoMapper;
@@ -131,12 +132,6 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
     public PageResult<BizAppointInfoListVO> listPage(AppointQueryDTO queryDTO) {
         dayEndSettleTrigger.ensureSettledUpToYesterday();
         LambdaQueryWrapper<BizAppointInfo> wrapper = buildFilter(queryDTO);
-        // create_time 是 DATETIME(0)：只到秒。批量/同秒落库的行 create_time 完全并列，
-        // 而「并列行之间」的返回顺序 SQL 不保证稳定 → 翻页不是集合的划分：
-        // 实测（2026-09-21）单日 432 条、其中 92 条同一秒，3 页翻下来只取到 430 个唯一 id
-        // —— 2 个挂号出现两次、另 2 个永远取不到，**接口不报错**。
-        // 看板/收件箱这类「翻页取全」的调用都会因此凭空多一个人、少一个人。
-        // 必须补唯一二级键（id），否则 ORDER BY 只定义了"大致顺序"。
         wrapper.orderByDesc(BizAppointInfo::getCreateTime)
                 .orderByDesc(BizAppointInfo::getId);
 
@@ -520,6 +515,9 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
             appointInfo.setDoctorId(schedule.getDoctorId());
             appointInfo.setDoctorName(schedule.getDoctorName());
             appointInfo.setVisitDate(schedule.getScheduleDate());
+            // 号别由号源推导：标了「专家号」→ 专家号(2)，否则普通号(1)。
+            // regist_type 是 NOT NULL 且无默认值，必须后端填充，前端不传此字段。
+            appointInfo.setRegistType(registTypeFromSchedule(schedule));
         } else {
             // 当日回诊：不占号源，医生/科室取当前登录人（医生站「建复诊」就是医生本人点的）
             CurrentUser currentUser = UserUtils.getCurrentUser();
@@ -531,6 +529,8 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
             appointInfo.setDoctorId(currentUser.getEmployeeId());
             appointInfo.setDoctorName(currentUser.getRealName());
             appointInfo.setVisitDate(LocalDate.now());
+            // 当日回诊不占号源、无号别可推导：归为普通号(1)
+            appointInfo.setRegistType(RegistTypeEnum.NORMAL.getCode());
         }
         appointInfo.setRegistTime(LocalDateTime.now());
         appointInfo.setRegistStatus(AppointStatusEnum.REGISTERED.getCode()); // 待支付
@@ -758,6 +758,19 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
     }
 
     /**
+     * 从号源推导挂号类型（号别）：号源标了「专家号」→ 专家号(2)，否则普通号(1)。
+     *
+     * <p>{@code regist_type} 是 NOT NULL 且无默认值，必须由后端根据号源填充，
+     * 不能依赖前端传（DTO 里也没有这个字段）。新增挂号、换号源两处共用，避免各写一遍再漂移。
+     */
+    private Integer registTypeFromSchedule(BizClinicSource schedule) {
+        if (schedule != null && schedule.getIsExpert() != null && schedule.getIsExpert() == 1) {
+            return RegistTypeEnum.EXPERT.getCode();
+        }
+        return RegistTypeEnum.NORMAL.getCode();
+    }
+
+    /**
      * 复诊入参的**校验**（只校验，不写库）：来源、原病历归属、当日回诊的时效。
      *
      * <p>为什么把「来源」和「原病历」都做成必填：收费策略要按来源匹配，间隔天数要从原病历的
@@ -979,8 +992,6 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
             throw new BusinessException("挂号记录不存在");
         }
         if (!AppointStatusEnum.isSourceChangeAllowed(existing.getRegistStatus())) {
-            // 换号源只允许「已挂号」：已签到号源已消耗且患者已在队列里（换号得连队列一起搬），
-            // 已接诊/已就诊是诊疗事实 —— 改了会让病历、队列号前缀、诊室快照全对不上。
             throw new BusinessException(notAllowedReason(existing.getRegistStatus(), "调整/变更号源"));
         }
         String past = visitDatePastReason(existing, "变更号源/改约");
@@ -1000,8 +1011,6 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
             assertSourceChangeUnpaid(existing);
         }
 
-        // 同排班内换时间段（排班不变、只挪段）：主表 Σ 还了又扣、净零不动，
-        // 只做段级释放/占用与快照更新。不校验已收费——钱挂在挂号上，同排班挪段无财务错位。
         Long oldSlotId = existing.getSlotId();
         boolean slotChanging = !sourceChanging
                 && registInfo.getSlotId() != null
@@ -1035,7 +1044,6 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         }
 
         // 换号源：按原渠道原子释放旧号源、原子占用新号源
-        // 号源事实在段上：旧挂号有段 → 段与主表双还；新号选了段 → 段与主表双扣并更新段快照
         if (sourceChanging) {
             if (existing.getScheduleId() != null) {
                 if (oldSlotId != null) {
@@ -1088,6 +1096,8 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
             existing.setVisitDate(newSchedule.getScheduleDate());
             existing.setScheduleId(newSchedule.getId());
             existing.setScheduleType(shiftService.scheduleTypeOf(newSchedule.getShiftId()));
+            // 换号源后号别必须跟随新号源重算：普通号源 ↔ 专家号源互换时不能残留旧号别
+            existing.setRegistType(registTypeFromSchedule(newSchedule));
             // 段快照跟随新号：新号有段写新值；新号没段（异常场景）时 updateById 跳过 null 字段清不掉，
             // 走 LambdaUpdateWrapper 显式置空，避免残留旧段的快照误导前端
             existing.setSlotId(newSlot != null ? newSlot.getId() : null);
@@ -1156,7 +1166,6 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         }
         BizAppointInfo registInfo = new BizAppointInfo();
         registInfo.setId(upsertDTO.getId());
-        registInfo.setPatientId(upsertDTO.getPatientId());
         registInfo.setScheduleId(upsertDTO.getScheduleId());
         registInfo.setVisitType(upsertDTO.getVisitType());
         registInfo.setSlotId(upsertDTO.getSlotId());

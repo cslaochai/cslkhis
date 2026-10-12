@@ -108,75 +108,21 @@
     </div>
 
     <!-- 字典类型对话框 -->
-    <el-dialog v-model="typeDialogVisible" :close-on-click-modal="false" :title="typeDialogTitle" width="500px">
-      <el-form ref="typeFormRef" :model="typeFormData" :rules="typeRules" label-width="100px">
-        <el-form-item label="字典名称" prop="dictName">
-          <el-input v-model="typeFormData.dictName" placeholder="请输入字典名称"/>
-        </el-form-item>
-        <el-form-item label="字典类型" prop="dictType">
-          <el-input v-model="typeFormData.dictType" :disabled="!!typeFormData.id" placeholder="如：sys_user_sex"/>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-radio-group v-model="typeFormData.status">
-            <el-radio :value="1">启用</el-radio>
-            <el-radio :value="0">禁用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="typeFormData.remark" placeholder="请输入备注" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="typeDialogVisible = false">取消</el-button>
-        <el-button v-perm="['system:dict:add','system:dict:edit']" :loading="typeFormLoading" type="primary"
-                   @click="handleTypeSubmit">确定
-        </el-button>
-      </template>
-    </el-dialog>
+    <DictTypeEdit v-model="typeDialogVisible" :row="typeEditRow" @saved="loadData"/>
 
     <!-- 字典数据对话框 -->
-    <el-dialog v-model="dataDialogVisible" :close-on-click-modal="false" :title="dataDialogTitle" width="500px">
-      <el-form ref="dataFormRef" :model="dataFormData" :rules="dataRules" label-width="80px">
-        <el-form-item label="字典标签" prop="dictLabel">
-          <el-input v-model="dataFormData.dictLabel" placeholder="如：男"/>
-        </el-form-item>
-        <el-form-item label="字典值" prop="dictValue">
-          <el-input v-model="dataFormData.dictValue" placeholder="如：1"/>
-        </el-form-item>
-        <el-form-item label="排序">
-          <el-input-number v-model="dataFormData.dictSort" :max="999" :min="0"/>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-radio-group v-model="dataFormData.status">
-            <el-radio :value="1">启用</el-radio>
-            <el-radio :value="0">禁用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dataDialogVisible = false">取消</el-button>
-        <el-button v-perm="['system:dict:add','system:dict:edit']" :loading="dataFormLoading" type="primary"
-                   @click="handleDataSubmit">确定
-        </el-button>
-      </template>
-    </el-dialog>
+    <DictDataEdit v-model="dataDialogVisible" :dict-type="selectedDictType?.dictType" :row="dataEditRow"
+                  @saved="handleDataSaved"/>
   </div>
 </template>
 
 <script lang="js" setup>
-import {onMounted, reactive, ref} from 'vue'
+import {onMounted, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Delete, Edit, Plus, Refresh, Search} from '@element-plus/icons-vue'
-import {
-  createDictData,
-  createDictType,
-  deleteDictData,
-  deleteDictType,
-  getDictDataList,
-  getDictTypeList,
-  updateDictData,
-  updateDictType
-} from '@/api/system'
+import {deleteDictData, deleteDictType, getDictDataList, getDictTypeList} from '@/api/system'
+import DictDataEdit from '@/views/system/dict/DictDataEdit.vue'
+import DictTypeEdit from '@/views/system/dict/DictTypeEdit.vue'
 
 const loading = ref(false)
 const dictTypeList = ref([])
@@ -187,47 +133,17 @@ const searchKeyword = ref('')
 // 选中的字典类型
 const selectedDictType = ref(null)
 
-// 字典类型表单
+// 字典类型表单（增改共用 DictTypeEdit，row 为空走新增）
 const typeDialogVisible = ref(false)
-const typeDialogTitle = ref('新增字典类型')
-const typeFormLoading = ref(false)
-const typeFormRef = ref(null)
-const typeFormData = reactive({
-  id: null,
-  dictName: '',
-  dictType: '',
-  dictSource: 2,  // 1-系统级 2-自定义
-  status: 1,
-  remark: '',
-})
-const typeRules = {
-  dictName: [{required: true, message: '请输入字典名称', trigger: 'blur'}],
-  dictType: [{required: true, message: '请输入字典类型', trigger: 'blur'}],
-}
+const typeEditRow = ref(null)
 
 // 字典数据列表
 const dictDataList = ref([])
 const dataLoading = ref(false)
 
-// 字典数据表单
+// 字典数据表单（增改共用 DictDataEdit，row 为空走新增）
 const dataDialogVisible = ref(false)
-const dataDialogTitle = ref('新增字典数据')
-const dataFormData = reactive({
-  id: null,
-  dictType: '',
-  dictLabel: '',
-  dictValue: '',
-  dictSort: 0,
-  dictSource: 2,  // 1-系统级 2-自定义
-  status: 1,
-})
-const dataFormRef = ref(null)
-const dataFormLoading = ref(false)
-
-const dataRules = {
-  dictLabel: [{required: true, message: '请输入字典标签', trigger: 'blur'}],
-  dictValue: [{required: true, message: '请输入字典值', trigger: 'blur'}],
-}
+const dataEditRow = ref(null)
 
 onMounted(() => {
   loadData()
@@ -268,67 +184,15 @@ const loadDictData = async (dictType) => {
 }
 
 // 字典类型操作
-const resetTypeForm = () => {
-  typeFormData.id = null
-  typeFormData.dictName = ''
-  typeFormData.dictType = ''
-  typeFormData.dictSource = 2
-  typeFormData.status = 1
-  typeFormData.remark = ''
-}
-
 const handleAddType = () => {
-  resetTypeForm()
-  typeDialogTitle.value = '新增字典类型'
-  typeDialogVisible.value = true
-}
-
-const handleEditType = () => {
-  if (!selectedDictType.value) {
-    ElMessage.warning('请先选择字典类型')
-    return
-  }
-  typeDialogTitle.value = '编辑字典类型'
-  Object.assign(typeFormData, selectedDictType.value)
+  typeEditRow.value = null
   typeDialogVisible.value = true
 }
 
 const handleEditDictType = (type) => {
   selectedDictType.value = type
-  typeDialogTitle.value = '编辑字典类型'
-  Object.assign(typeFormData, type)
+  typeEditRow.value = type
   typeDialogVisible.value = true
-}
-
-const handleTypeSubmit = async () => {
-  if (!typeFormRef.value) return
-  try {
-    await typeFormRef.value.validate()
-  } catch {
-    return
-  }
-
-  typeFormLoading.value = true
-  try {
-    let res
-    if (typeFormData.id) {
-      res = await updateDictType(typeFormData)
-    } else {
-      res = await createDictType(typeFormData)
-    }
-
-    if (res.code === 200) {
-      ElMessage.success(typeFormData.id ? '修改成功' : '新增成功')
-      typeDialogVisible.value = false
-      loadData()
-    } else {
-      ElMessage.error(res.message || '操作失败')
-    }
-  } catch (error) {
-    ElMessage.error(error.message || '操作失败')
-  } finally {
-    typeFormLoading.value = false
-  }
 }
 
 const handleDeleteType = async (type) => {
@@ -360,67 +224,22 @@ const handleDeleteType = async (type) => {
 }
 
 // 字典数据操作
-const resetDataForm = () => {
-  dataFormData.id = null
-  dataFormData.dictType = selectedDictType.value?.dictType || ''
-  dataFormData.dictLabel = ''
-  dataFormData.dictValue = ''
-  dataFormData.dictSort = 0
-  dataFormData.dictSource = 2
-  dataFormData.status = 1
-}
-
 const handleAddData = () => {
   if (!selectedDictType.value) {
     ElMessage.warning('请先选择字典类型')
     return
   }
-  resetDataForm()
-  dataDialogTitle.value = '新增字典数据'
+  dataEditRow.value = null
   dataDialogVisible.value = true
 }
 
 const handleEditData = (row) => {
-  dataDialogTitle.value = '编辑字典数据'
-  Object.assign(dataFormData, row)
+  dataEditRow.value = row
   dataDialogVisible.value = true
 }
 
-const handleDataSubmit = async () => {
-  if (!selectedDictType.value) {
-    ElMessage.warning('请先选择字典类型')
-    return
-  }
-  if (!dataFormRef.value) return
-  try {
-    await dataFormRef.value.validate()
-  } catch {
-    return
-  }
-
-  dataFormLoading.value = true
-  try {
-    let res
-    if (dataFormData.id) {
-      res = await updateDictData(dataFormData)
-    } else {
-      dataFormData.dictType = selectedDictType.value.dictType
-      res = await createDictData(dataFormData)
-    }
-
-    if (res.code === 200) {
-      ElMessage.success(dataFormData.id ? '修改成功' : '新增成功')
-      dataDialogVisible.value = false
-      resetDataForm()
-      await loadDictData(selectedDictType.value.dictType)
-    } else {
-      ElMessage.error(res.message || '操作失败')
-    }
-  } catch (error) {
-    ElMessage.error(error.message || '操作失败')
-  } finally {
-    dataFormLoading.value = false
-  }
+const handleDataSaved = () => {
+  if (selectedDictType.value) loadDictData(selectedDictType.value.dictType)
 }
 
 const handleDeleteData = async (row) => {

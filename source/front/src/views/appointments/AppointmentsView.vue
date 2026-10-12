@@ -61,14 +61,16 @@
                    class="flex w-[220px] shrink-0 flex-col overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/50 p-2.5"
                    data-testid="desk-cal">
               <div class="mb-1.5 flex items-center justify-between">
-                <button class="rounded border border-slate-200 bg-white px-1.5 text-base leading-6 text-slate-600 hover:bg-slate-100"
-                        data-testid="cal-prev"
-                        title="上一个月" @click="handleCalShift(-1)">&lsaquo;
+                <button
+                    class="rounded border border-slate-200 bg-white px-1.5 text-base leading-6 text-slate-600 hover:bg-slate-100"
+                    data-testid="cal-prev"
+                    title="上一个月" @click="handleCalShift(-1)">&lsaquo;
                 </button>
                 <span class="text-sm font-semibold text-slate-700" data-testid="cal-month">{{ calMonthLabel }}</span>
-                <button class="rounded border border-slate-200 bg-white px-1.5 text-base leading-6 text-slate-600 hover:bg-slate-100"
-                        data-testid="cal-next"
-                        title="下一个月" @click="handleCalShift(1)">&rsaquo;
+                <button
+                    class="rounded border border-slate-200 bg-white px-1.5 text-base leading-6 text-slate-600 hover:bg-slate-100"
+                    data-testid="cal-next"
+                    title="下一个月" @click="handleCalShift(1)">&rsaquo;
                 </button>
               </div>
               <p class="mb-1.5 rounded bg-blue-50 px-2 py-1 text-center text-xs font-medium text-blue-700"
@@ -138,7 +140,8 @@
                 </div>
                 <div class="flex items-baseline justify-between rounded bg-white px-2 py-1">
                   <span class="text-[11px] text-slate-500">剩余</span>
-                  <span :class="deskDayStat.avail > 0 ? 'text-emerald-600' : 'text-slate-400'" class="text-sm font-semibold"
+                  <span :class="deskDayStat.avail > 0 ? 'text-emerald-600' : 'text-slate-400'"
+                        class="text-sm font-semibold"
                         data-testid="cal-stat-avail">
                     {{ deskDayStat.avail }}<span class="text-xs font-normal text-slate-400"> 个</span>
                   </span>
@@ -146,9 +149,10 @@
               </div>
               <!-- 剩余号源的占比条：一句话说不清的"快满了"用视觉表达 -->
               <div class="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
-                <div :class="deskDayStat.usedPct >= 90 ? 'bg-rose-400' : (deskDayStat.usedPct >= 70 ? 'bg-amber-400' : 'bg-emerald-500')"
-                     :style="{width: deskDayStat.usedPct + '%'}"
-                     class="h-full rounded-full transition-all"></div>
+                <div
+                    :class="deskDayStat.usedPct >= 90 ? 'bg-rose-400' : (deskDayStat.usedPct >= 70 ? 'bg-amber-400' : 'bg-emerald-500')"
+                    :style="{width: deskDayStat.usedPct + '%'}"
+                    class="h-full rounded-full transition-all"></div>
               </div>
               <p class="text-center text-[11px] text-slate-400">已用 {{ deskDayStat.usedPct }}%</p>
               <div class="mt-2 border-t border-slate-200 pt-2">
@@ -174,7 +178,8 @@
                    class="overflow-auto rounded border border-slate-200"
                    data-testid="desk-scroll">
                 <!-- 空态要说清「是没排班还是筛掉了」：默认落在我的科室，门诊部/管理员选「全部科室」即可看全院 -->
-                <div v-if="!deskLoading && !deskColumns.length" class="flex flex-col items-center justify-center gap-1 py-12 text-center"
+                <div v-if="!deskLoading && !deskColumns.length"
+                     class="flex flex-col items-center justify-center gap-1 py-12 text-center"
                      data-testid="desk-empty">
                   <p class="text-base text-slate-500">
                     {{
@@ -198,7 +203,8 @@
                         class="border-r border-b bg-slate-50 p-2 text-center align-top">
                       <!-- 周视图：日期列头可点，下钻到当天日视图。可点性必须在静态态可见，不能只靠 hover tooltip -->
                       <template v-if="deskViewMode === 'week'">
-                        <p :class="col.date === fmtDate(new Date()) ? 'text-blue-600' : 'text-slate-700 hover:text-blue-600'" :data-date="col.date"
+                        <p :class="col.date === fmtDate(new Date()) ? 'text-blue-600' : 'text-slate-700 hover:text-blue-600'"
+                           :data-date="col.date"
                            class="group inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-sm font-semibold
                                 transition-colors hover:bg-blue-50"
                            data-testid="desk-date-head"
@@ -209,19 +215,23 @@
                             }}</span>
                           <svg
                               aria-hidden="true"
-                              class="h-3 w-3 shrink-0 text-blue-500 opacity-60 transition-opacity group-hover:opacity-100" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M512 64a448 448 0 1 1 0 896 448 448 0 0 1 0-896m0 64a384 384 0 1 0 0 768 384 384 0 0 0 0-768m32 128v224h192v64H480V256z"
-                                  fill="currentColor"/>
+                              class="h-3 w-3 shrink-0 text-blue-500 opacity-60 transition-opacity group-hover:opacity-100"
+                              viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M512 64a448 448 0 1 1 0 896 448 448 0 0 1 0-896m0 64a384 384 0 1 0 0 768 384 384 0 0 0 0-768m32 128v224h192v64H480V256z"
+                                fill="currentColor"/>
                           </svg>
                         </p>
                         <p class="text-xs text-slate-400">{{ col.sub }}</p>
                       </template>
                       <!-- 日视图：医生列头 + 当天余号（0=约满 / <5=少量余号） -->
                       <template v-else>
-                        <p :data-doctor-id="col.doctorId" class="flex items-center justify-center gap-1 text-sm font-semibold text-slate-700"
+                        <p :data-doctor-id="col.doctorId"
+                           class="flex items-center justify-center gap-1 text-sm font-semibold text-slate-700"
                            data-testid="desk-doctor-head">
                           <span>{{ col.title }}</span>
-                          <span v-if="isExpertDoctor(col.doctorId)" class="shrink-0 rounded bg-amber-50 px-1 text-[10px] font-medium leading-4 text-amber-600 ring-1 ring-amber-200"
+                          <span v-if="isExpertDoctor(col.doctorId)"
+                                class="shrink-0 rounded bg-amber-50 px-1 text-[10px] font-medium leading-4 text-amber-600 ring-1 ring-amber-200"
                                 data-testid="desk-expert-badge"
                                 title="专家号">专家</span>
                         </p>
@@ -239,10 +249,12 @@
                   <tr v-for="(row, ri) in deskRows" :key="'row-' + row.key" :data-row-key="row.key" class="desk-row">
                     <template v-if="deskViewMode === 'week'">
                       <td class="desk-row-head sticky left-0 z-10 border-r border-b border-slate-100 bg-slate-50 p-2 align-top">
-                        <p :data-doctor-id="row.doctorId" class="flex items-center gap-1 text-sm font-semibold text-slate-700"
+                        <p :data-doctor-id="row.doctorId"
+                           class="flex items-center gap-1 text-sm font-semibold text-slate-700"
                            data-testid="desk-row-doctor">
                           <span>{{ row.label }}</span>
-                          <span v-if="isExpertDoctor(row.doctorId)" class="shrink-0 rounded bg-amber-50 px-1 text-[10px] font-medium leading-4 text-amber-600 ring-1 ring-amber-200"
+                          <span v-if="isExpertDoctor(row.doctorId)"
+                                class="shrink-0 rounded bg-amber-50 px-1 text-[10px] font-medium leading-4 text-amber-600 ring-1 ring-amber-200"
                                 data-testid="desk-expert-badge"
                                 title="专家号">专家</span>
                         </p>
@@ -268,7 +280,8 @@
                         :class="['align-top border-r border-b',
                                deskViewMode === 'day' ? 'w-[300px] p-1 border-slate-300' : 'min-w-[168px] p-1.5 border-slate-100',
                                ri > 0 && deskRows[ri - 1].sep ? 'border-b-2 !border-b-slate-500' : '',
-                               isCellUnavailable(col, row.key) ? 'desk-cell-na' : '']" :data-col="col.key" :data-date="col.date"
+                               isCellUnavailable(col, row.key) ? 'desk-cell-na' : '']" :data-col="col.key"
+                        :data-date="col.date"
                         :data-na="isCellUnavailable(col, row.key) ? '1' : '0'" :data-row="row.key"
                         :data-shift="row.key"
                         data-testid="desk-cell">
@@ -280,7 +293,8 @@
                           {{ cellAllFor(col, row.key).length }} 个班次已满/停诊（已隐藏）
                         </p>
                       </template>
-                      <p v-else-if="isCellUnavailable(col, row.key)" :class="['flex items-center justify-center text-xs text-slate-400', deskViewMode === 'day' ? 'h-8' : 'h-11']"
+                      <p v-else-if="isCellUnavailable(col, row.key)"
+                         :class="['flex items-center justify-center text-xs text-slate-400', deskViewMode === 'day' ? 'h-8' : 'h-11']"
                          data-testid="desk-cell-na">
                         -</p>
                       <template v-else>
@@ -294,14 +308,16 @@
                           <span :class="deskAvailClass(deskCell(col.key, row.key).schedules)" class="font-medium">
                             {{ deskAvailText(deskCell(col.key, row.key).schedules) }}
                           </span>
-                          <button v-if="deskViewMode === 'week'" class="shrink-0 cursor-pointer rounded border border-slate-200 bg-white px-1 text-xs leading-4 text-slate-600 hover:bg-slate-50"
+                          <button v-if="deskViewMode === 'week'"
+                                  class="shrink-0 cursor-pointer rounded border border-slate-200 bg-white px-1 text-xs leading-4 text-slate-600 hover:bg-slate-50"
                                   data-testid="desk-cell-avail"
                                   title="查看这位医生当天的每个班次：时段 / 余号 / 挂号费"
                                   @click.stop="openCellDialog(col.date, row.key)">余号</button>
-                          <button class="shrink-0 cursor-pointer rounded border border-blue-200 bg-white px-1 text-xs font-bold leading-4 text-blue-600 hover:bg-blue-50"
-                                  data-testid="desk-cell-add"
-                                  title="新增预约：带入该时段的排班、医生、诊室、科室"
-                                  @click.stop="addFromCell(col, row.key)">预约</button>
+                          <button
+                              class="shrink-0 cursor-pointer rounded border border-blue-200 bg-white px-1 text-xs font-bold leading-4 text-blue-600 hover:bg-blue-50"
+                              data-testid="desk-cell-add"
+                              title="新增预约：带入该时段的排班、医生、诊室、科室"
+                              @click.stop="addFromCell(col, row.key)">预约</button>
                         </span>
                         </div>
                         <!-- 日视图：当天该医生该班次的患者全铺（单班次最多一个号源数，铺得下） -->
@@ -350,9 +366,10 @@
                             </div>
                             <!-- 只有「已挂号/已签到」才出现退号入口；按钮常驻，且是手型（能点就得像能点） -->
                             <div v-if="canCancelRegist(r)" class="mt-1 flex justify-end">
-                              <button class="cursor-pointer rounded border border-red-200 bg-white px-2 py-0.5 text-xs font-medium text-red-500 hover:bg-red-50"
-                                      data-testid="desk-cancel"
-                                      @click.stop="handleDeskCancel(r)">退号
+                              <button
+                                  class="cursor-pointer rounded border border-red-200 bg-white px-2 py-0.5 text-xs font-medium text-red-500 hover:bg-red-50"
+                                  data-testid="desk-cancel"
+                                  @click.stop="handleDeskCancel(r)">退号
                               </button>
                             </div>
                           </div>
@@ -362,7 +379,8 @@
                           <div
                               v-for="r in deskCell(col.key, row.key).regs.filter(deskRegVisible).slice(0, DESK_WEEK_CELL_MAX)"
                               :key="r.id"
-                              :data-regist-id="r.id" :title="`${r.patientName}｜${deskCardDoctorLine(r)}${sourceLockReason(r) ? '｜' + sourceLockReason(r) : ''}`"
+                              :data-regist-id="r.id"
+                              :title="`${r.patientName}｜${deskCardDoctorLine(r)}${sourceLockReason(r) ? '｜' + sourceLockReason(r) : ''}`"
                               class="flex items-center gap-1 leading-6"
                               data-testid="desk-week-card">
                           <span :class="['h-1.5 w-1.5 shrink-0 rounded-full',
@@ -454,7 +472,7 @@
                 <el-button :icon="Search" type="primary" @click="handleSearch">搜索</el-button>
                 <el-button :icon="Refresh" @click="handleReset">重置</el-button>
                 <el-button v-perm="'opd:appointments:add'" :icon="Plus" class="ml-2" type="primary"
-                           @click="showAddDialog = true">新增挂号
+                           @click="addFromPanel()">新增挂号
                 </el-button>
               </el-form-item>
             </el-form>
@@ -506,7 +524,8 @@
               </el-table-column>
               <el-table-column label="状态" width="100">
                 <template #default="{ row }">
-                  <el-tag :class="statusConfig[statusMap[row.registStatus]]?.color || null" class="border gap-1" effect="plain"
+                  <el-tag :class="statusConfig[statusMap[row.registStatus]]?.color || null" class="border gap-1"
+                          effect="plain"
                           size="small">
                     {{ statusMap[row.registStatus] }}
                   </el-tag>
@@ -536,7 +555,8 @@
                   </el-button>
                   <!-- 就诊日一过，退号入口消失，但「人昨天没来、今天要退钱」的诉求还在。
                        这条出口走退费申请（挂号状态不动，钱由收费处审核执行），见脚本区同名注释。 -->
-                  <el-button v-if="canApplyRefund(row)" v-perm="'finance:refund:add'" data-testid="apply-refund" link size="small"
+                  <el-button v-if="canApplyRefund(row)" v-perm="'finance:refund:add'" data-testid="apply-refund" link
+                             size="small"
                              type="warning" @click="handleApplyRefund(row)">
                     申请退费
                   </el-button>
@@ -562,426 +582,26 @@
       </el-tab-pane>
     </el-tabs>
 
-    <!-- 看板改约：换号源（后端原子释放旧号/扣新号，同步就诊日期与医生） -->
-    <el-dialog v-model="showRescheduleDialog" destroy-on-close title="改约号源" width="480px">
-      <div class="space-y-3">
-        <div class="rounded bg-slate-50 px-3 py-2 text-sm text-slate-600">
-          为 <span class="font-semibold text-slate-800">{{ rescheduleForm.patientName }}</span> 改约
-          （当前就诊日期：{{ rescheduleForm.visitDate || '-' }}）
-          <p v-if="rescheduleForm.currentSourceText" class="mt-1 text-xs text-slate-500">
-            当前号源：{{ rescheduleForm.currentSourceText }}
-            <template v-if="rescheduleForm.currentSlotText"> · 时间段 {{ rescheduleForm.currentSlotText }}</template>
-          </p>
-        </div>
-        <el-form label-width="76px">
-          <el-form-item label="就诊日期">
-            <el-date-picker
-                v-model="rescheduleForm.visitDate"
-                :disabled-date="(d) => d.getTime() < Date.now() - 86400000"
-                class="!w-full"
-                placeholder="选择改约日期"
-                type="date"
-                value-format="YYYY-MM-DD"
-                @change="() => { rescheduleForm.scheduleId = null; rescheduleForm.slotId = null; rescheduleSlots.value = []; loadRescheduleSchedules() }"
-            />
-          </el-form-item>
-          <el-form-item label="新号源">
-            <el-select v-model="rescheduleForm.scheduleId" :fit-input-width="false"
-                       :loading="rescheduleLoading" class="!w-full" placeholder="选择新号源"
-                       @change="handleRescheduleScheduleChange">
-              <el-option v-for="s in rescheduleSchedules" :key="s.id" :label="`${s.scheduleDate} ${deskShiftLabel(s.scheduleType)} ${s.startTime}-${s.endTime} ${s.doctorName} 余${s.availableSource}`"
-                         :value="s.id"/>
-            </el-select>
-            <p v-if="rescheduleForm.visitDate && !rescheduleSchedules.length && !rescheduleLoading"
-               class="mt-1 text-xs text-amber-600">该日此科室暂有余号班次，换一天试试</p>
-          </el-form-item>
-          <el-form-item label="时间段">
-            <!-- 选了段：后端按段迁移（还旧段/扣新段）；不选：只迁移主表号源 -->
-            <el-select v-model="rescheduleForm.slotId" :disabled="!rescheduleSlots.length" :fit-input-width="false"
-                       :loading="rescheduleSlotLoading" class="!w-full" clearable
-                       placeholder="选择时间段（可选）">
-              <el-option v-for="s in rescheduleSlots" :key="s.id" :disabled="s.status !== 1 || s.availableSource <= 0"
-                         :label="slotLabel(s)" :value="s.id"/>
-            </el-select>
-          </el-form-item>
-        </el-form>
-      </div>
-      <template #footer>
-        <el-button @click="showRescheduleDialog = false">取消</el-button>
-        <el-button v-perm="'opd:appointments:edit'" :loading="rescheduleLoading" type="primary"
-                   @click="handleConfirmReschedule">确认改约
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 看板改约：换号源弹窗（已拆到同目录组件；原子换号由后端做，成功后只刷看板） -->
+    <AppointmentsRescheduleEdit v-model="showRescheduleDialog" :row="rescheduleRow" :schedule="rescheduleSchedule"
+                                @saved="loadDesk"/>
 
-    <el-dialog v-model="showRefundDialog" destroy-on-close title="申请退费" width="520px">
-      <el-form class="space-y-2" label-width="96px">
-        <el-form-item label="患者">
-          <span class="text-sm text-slate-800">{{ refundForm.patientName || '-' }}</span>
-          <span class="ml-3 font-mono text-xs text-slate-500">{{ refundForm.registNo }}</span>
-        </el-form-item>
-        <el-form-item label="原收费单">
-          <span class="font-mono text-xs text-slate-600">{{ refundForm.billNo || '-' }}</span>
-        </el-form-item>
-        <el-form-item label="退费类型" required>
-          <el-select v-model="refundForm.refundType" :fit-input-width="false" class="!w-full" placeholder="请选择">
-            <el-option v-for="o in refundTypeOptions" :key="o.dictValue" :label="o.dictLabel"
-                       :value="Number(o.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="退费金额" required>
-          <el-input-number v-model="refundForm.refundAmount" :max="refundForm.refundableAmount" :min="0" :precision="2"
-                           :step="1" class="!w-full"/>
-          <p class="mt-1 text-xs text-slate-400">可退金额 ¥{{
-              refundForm.refundableAmount
-            }}（实付扣掉已退部分），可改小做部分退费</p>
-        </el-form-item>
-        <el-form-item label="退费原因" required>
-          <el-input v-model="refundForm.refundReason" :rows="3" placeholder="如：患者当日未到诊，申请退还挂号费"
-                    type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showRefundDialog = false">取消</el-button>
-        <el-button v-perm="'finance:refund:add'" :loading="refundSubmitting" type="primary" @click="handleSubmitRefund">
-          提交申请
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 申请退费弹窗：可退金额已由 handleApplyRefund 从账单里算好，组件只管表单与提交 -->
+    <AppointmentsRefundEdit v-model="showRefundDialog" :initial="refundInitial"/>
 
-    <el-dialog v-model="showCellDialog" :title="selectedCell
-                 ? `${selectedCell.date} · ${selectedCell.doctorName} 号源明细`
-                 : '医生号源明细'" destroy-on-close
-               width="900px">
-      <div v-if="selectedCell" data-testid="desk-cell-detail">
-        <el-table :data="cellSchedules(selectedCell.date, selectedCell.doctorId)" border max-height="520" size="small">
-          <el-table-column label="班次" width="110">
-            <template #default="{ row }">
-              <span class="text-xs text-slate-600">{{ deskShiftLabel(Number(row.scheduleType)) || '—' }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="时段" width="180">
-            <template #default="{ row }">
-              <span class="font-mono text-xs text-slate-600">{{ row.startTime }}-{{ row.endTime }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="诊室" width="140">
-            <template #default="{ row }">
-              <span class="text-xs text-slate-600">{{ row.roomName || '—' }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="余号 / 总数" width="140">
-            <template #default="{ row }">
-              <span :class="['text-sm font-medium', row.availableSource > 0 ? 'text-emerald-600' : 'text-slate-400']">
-                {{ row.availableSource }}
-              </span>
-              <span class="text-xs text-slate-400"> / {{ row.totalSource }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column align="right" label="挂号费" width="120">
-            <template #default="{ row }">
-              <span class="text-sm text-slate-700">¥{{ row.registFee || 0 }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="专家" width="100">
-            <template #default="{ row }">
-              <el-tag v-if="row.isExpert === 1" effect="plain" size="small" type="warning">专家</el-tag>
-              <span v-else class="text-xs text-slate-400">普通</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="120">
-            <template #default="{ row }">
-              <el-button v-perm="'opd:appointments:add'" :disabled="row.availableSource <= 0" link size="small"
-                         type="primary"
-                         @click="goRegister(row)">
-                去挂号
-              </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-        <!-- 开关藏掉的班次要给总账：弹框里"只有 3 位医生"和"实际排了 5 位"必须说清 -->
-        <p v-if="cellHiddenCount(selectedCell.date, selectedCell.doctorId) > 0"
-           class="mt-2 text-xs text-amber-600">
-          另有 {{ cellHiddenCount(selectedCell.date, selectedCell.doctorId) }} 个班次已满/停诊，
-          当前被「隐藏已满/停诊」开关隐藏
-        </p>
-      </div>
-      <template #footer>
-        <el-button @click="showCellDialog = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    <!-- 周视图格子的「医生号源明细」弹框：格子数据是看板事实，算好传入；「去挂号」回抛给本页开单 -->
+    <AppointmentsCellDetail v-model="showCellDialog" :cell="selectedCell"
+                            :schedules="selectedCell ? cellSchedules(selectedCell.date, selectedCell.doctorId) : []"
+                            :hidden-count="selectedCell ? cellHiddenCount(selectedCell.date, selectedCell.doctorId) : 0"
+                            @register="goRegister"/>
 
-    <el-dialog v-model="showAddDialog" destroy-on-close title="新增挂号" width="760px" @closed="resetForm">
-      <!-- 患者来源切换（与急诊登记同一交互）：tab 只切换**患者输入区**，
-           下面的科室 / 日期 / 号源 / 时段 / 就诊类型 / 结算方式 是共享字段 -->
-      <div class="mb-4 flex rounded-lg border border-slate-200 bg-slate-50 p-1">
-        <button
-            :class="addMode === 'existing' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
-            class="flex-1 rounded-md py-2 text-sm font-medium transition-colors"
-            type="button"
-            @click="switchPatientMode('existing')"
-        >选择已有患者
-        </button>
-        <button
-            :class="addMode === 'new' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
-            class="flex-1 rounded-md py-2 text-sm font-medium transition-colors"
-            type="button"
-            @click="switchPatientMode('new')"
-        >录入新患者
-        </button>
-      </div>
-
-      <el-form :model="newAppointment" label-position="top">
-        <!-- tab1：选择已有患者 -->
-        <template v-if="addMode === 'existing'">
-          <el-form-item label="选择患者" required>
-            <PatientSelect
-                v-model="newAppointment.patientId"
-                @select="handlePatientSelect"
-            />
-          </el-form-item>
-          <!-- 已选患者回显：挂号窗口最容易犯的错是挂错人，选完必须让人一眼确认 -->
-          <div v-if="newAppointment.patientId" class="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
-            <div class="flex items-center gap-3 text-sm">
-              <span :class="['inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold text-white',
-                newAppointment.patientGender === 1 ? 'bg-blue-500'
-                  : newAppointment.patientGender === 2 ? 'bg-pink-500' : 'bg-slate-400']">
-                {{ patientGenderSymbol(newAppointment.patientGender) }}
-              </span>
-              <div>
-                <span class="font-medium text-slate-900">{{ newAppointment.patientName }}</span>
-                <span class="ml-2 text-xs text-slate-500">{{ newAppointment.patientNo }}</span>
-              </div>
-            </div>
-          </div>
-        </template>
-
-        <!-- tab2：录入新患者 -->
-        <template v-else>
-          <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            将在患者主档新建档案，确认挂号时一并提交；其余信息可到「患者管理」补全
-          </div>
-          <div class="grid grid-cols-2 gap-4">
-            <el-form-item label="患者姓名" required>
-              <el-input v-model="newPatientForm.patientName" placeholder="请输入患者姓名"/>
-            </el-form-item>
-            <el-form-item label="性别" required>
-              <el-radio-group v-model="newPatientForm.gender">
-                <el-radio v-for="g in PATIENT_GENDER_OPTIONS" :key="g.value" :value="g.value">{{ g.label }}</el-radio>
-              </el-radio-group>
-            </el-form-item>
-          </div>
-          <div class="grid grid-cols-2 gap-4">
-            <el-form-item label="出生日期">
-              <el-date-picker
-                  v-model="newPatientForm.birthDate"
-                  class="w-full"
-                  placeholder="选择出生日期"
-                  type="date"
-                  value-format="YYYY-MM-DD"
-              />
-            </el-form-item>
-            <el-form-item label="联系电话">
-              <el-input v-model="newPatientForm.phone" placeholder="选填（填了须为 11 位手机号）"/>
-            </el-form-item>
-          </div>
-          <div class="grid grid-cols-2 gap-4">
-            <el-form-item label="身份证号" required>
-              <el-input v-model="newPatientForm.idCard" placeholder="请输入身份证号" @blur="syncPatientBirthDate"/>
-            </el-form-item>
-            <el-form-item label="患者类型">
-              <el-select v-model="newPatientForm.patientType" class="w-full" placeholder="选择患者类型">
-                <el-option v-for="o in PATIENT_TYPE_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
-              </el-select>
-            </el-form-item>
-          </div>
-          <el-form-item label="家庭住址">
-            <el-input v-model="newPatientForm.address" placeholder="请输入家庭住址"/>
-          </el-form-item>
-        </template>
-
-        <!-- 就诊类型提到科室之前：选「复诊 + 当日回诊」时下面的科室/日期/号源整块都不填，
-             放在最后等于让人先填完再看着它们消失 -->
-        <el-form-item label="就诊类型">
-          <el-select v-model="newAppointment.visitType" class="w-full" placeholder="选择类型"
-                     @change="handleVisitTypeChange">
-            <el-option v-for="item in VISIT_TYPE" :key="item.value" :label="item.label" :value="item.value"/>
-          </el-select>
-        </el-form-item>
-        <template v-if="isRevisit">
-          <div class="grid grid-cols-2 gap-4">
-            <el-form-item label="复诊来源" required>
-              <el-select v-model="newAppointment.revisitSource" class="w-full" placeholder="选择复诊来源">
-                <el-option v-for="o in windowRevisitSourceOptions" :key="o.dictValue" :label="o.dictLabel"
-                           :value="Number(o.dictValue)"/>
-              </el-select>
-            </el-form-item>
-            <el-form-item label="原病历（哪一次就诊）" required>
-              <el-select v-model="newAppointment.revisitRecordId" :disabled="!newAppointment.patientId"
-                         :loading="revisitRecordLoading"
-                         :placeholder="newAppointment.patientId ? '选择原病历' : '请先选择患者'"
-                         class="w-full">
-                <el-option v-for="r in revisitRecords" :key="r.id" :label="revisitRecordLabel(r)" :value="r.id"/>
-              </el-select>
-            </el-form-item>
-          </div>
-          <!-- 「查过了但没病历」要说清是没病历，不是没选（否则人会回去反复点患者） -->
-          <p v-if="newAppointment.patientId && !revisitRecordLoading && !revisitRecords.length"
-             class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            该患者还没有可关联的就诊病历 —— 请改为初诊，或由医生在诊室里开「当日回诊」
-          </p>
-        </template>
-
-        <!-- 当日回诊是同一次挂号的延续：不占号源，也就不需要科室 / 日期 / 号源 / 时段 -->
-        <template v-if="!isSameDayReturn">
-          <div class="grid grid-cols-2 gap-4">
-            <el-form-item label="选择科室" required>
-              <el-select v-model="newAppointment.deptId" class="w-full" filterable placeholder="选择科室"
-                         @change="handleDeptChange">
-                <el-option v-for="d in departments" :key="d.id"
-                           :label="d.parentDeptName ? `${d.parentDeptName} / ${d.deptName}` : d.deptName"
-                           :value="d.id ?? d.deptName"/>
-              </el-select>
-            </el-form-item>
-            <el-form-item label="预约日期" required>
-              <el-date-picker
-                  v-model="newAppointment.visitDate"
-                  :disabled-date="(time: Date) => time.getTime() < Date.now() - 86400000"
-                  class="w-full"
-                  placeholder="选择日期"
-                  type="date"
-                  value-format="YYYY-MM-DD"
-                  @change="handleDateChange"
-              />
-            </el-form-item>
-          </div>
-          <el-form-item label="选择号源" required>
-            <el-select v-model="newAppointment.scheduleId" :disabled="!availableSchedules.length" :placeholder="schedulePlaceholder"
-                       class="w-full" @change="handleScheduleChange">
-              <el-option
-                  v-for="s in availableSchedules"
-                  :key="s.id"
-                  :label="`${s.doctorName} | ${s.roomName || '诊室待定'} | ${s.startTime}-${s.endTime} | 余号:${s.availableSource} | 挂号费:¥${s.registFee}`"
-                  :value="s.id ?? s.doctorName"
-              />
-            </el-select>
-            <!-- 「查过了但没号」由 placeholder 说（schedulePlaceholder），这里不再重复第二遍 -->
-          </el-form-item>
-          <el-form-item label="时间段（半小时一档）">
-            <!-- 号源事实在段上：选段 = 定下这半小时的号；余 0 的段禁用，段已满提示换相邻段 -->
-            <el-select v-model="newAppointment.slotId" :disabled="!slotRows.length" :loading="slotLoading" class="w-full"
-                       clearable placeholder="请选择时间段">
-              <el-option v-for="s in slotRows" :key="s.id" :disabled="s.status !== 1 || s.availableSource <= 0" :label="slotLabel(s)"
-                         :value="s.id"/>
-            </el-select>
-            <p v-if="newAppointment.scheduleId && !slotRows.length && !slotLoading"
-               class="w-full text-xs text-slate-400 mt-1">该号源暂无时间段明细，将按整班次号源挂号</p>
-          </el-form-item>
-        </template>
-        <div v-if="isRevisit && (revisitPreview || revisitPreviewLoading)"
-             class="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-          <div class="flex items-center justify-between text-sm">
-            <span class="text-slate-500">复诊应收</span>
-            <span :class="Number(revisitPreview?.totalFee) > 0 ? 'text-red-500' : 'text-emerald-600'"
-                  class="font-mono text-lg font-bold">
-              {{ revisitPreviewLoading ? '计算中…' : `¥${Number(revisitPreview?.totalFee || 0).toFixed(2)}` }}
-            </span>
-          </div>
-          <div v-if="revisitPreview && !revisitPreviewLoading" class="mt-1 text-xs text-slate-500">
-            挂号费 ¥{{ Number(revisitPreview.registFee || 0).toFixed(2) }} ·
-            诊查费 ¥{{ Number(revisitPreview.diagnosisFee || 0).toFixed(2) }} ·
-            {{ revisitPreview.policyName ? `命中策略「${revisitPreview.policyName}」` : '未命中策略，按全额收费' }}
-          </div>
-          <p v-if="revisitPreview?.reason && !revisitPreviewLoading" class="mt-1 text-xs text-slate-400">
-            {{ revisitPreview.reason }}
-          </p>
-        </div>
-        <el-form-item label="结算方式" required>
-          <el-select v-model="newAppointment.settlementType" class="w-full" placeholder="选择结算方式">
-            <el-option v-for="item in settlementTypes" :key="item.value" :label="item.label" :value="item.value"/>
-          </el-select>
-        </el-form-item>
-        <div v-if="newAppointment.settlementType !== 1" class="rounded-lg border border-blue-200 bg-blue-50 p-3">
-          <div class="grid grid-cols-2 gap-4">
-            <el-form-item class="!mb-0" label="医保类型">
-              <el-select v-model="newAppointment.medicalInsuranceType" class="w-full" filterable
-                         placeholder="请选择医保类型">
-                <el-option v-for="item in medicalInsuranceTypes" :key="item.dictValue" :label="item.dictLabel"
-                           :value="item.dictValue ?? item.dictLabel"/>
-              </el-select>
-            </el-form-item>
-            <el-form-item class="!mb-0" label="医保卡号">
-              <el-input v-model="newAppointment.medicalInsuranceNo" placeholder="请输入医保卡号"/>
-            </el-form-item>
-          </div>
-        </div>
-      </el-form>
-      <template #footer>
-        <el-button @click="showAddDialog = false">取消</el-button>
-        <el-button v-perm="'opd:appointments:add'" :loading="addSubmitLoading" type="primary" @click="handleSubmit">
-          确认挂号
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 新增挂号弹窗：seed 为看板开单的预填（工具栏入口为空）；需要缴费时账单事实回抛给扫码收款窗 -->
+    <AppointmentsAdd v-model="showAddDialog" :departments="departments" :revisit-source-dict="revisitSourceDict"
+                     :seed="addSeed" @saved="reloadListAndStats" @pay="onAddPay"/>
 
     <!-- 编辑挂号弹窗 -->
-    <el-dialog v-model="showEditDialog" destroy-on-close title="修改挂号" width="600px">
-      <el-form :model="editForm" label-position="top">
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="选择科室" required>
-            <el-select v-model="editForm.deptId" class="w-full" placeholder="选择科室" @change="handleEditDeptChange">
-              <el-option v-for="d in departments" :key="d.id"
-                         :label="d.parentDeptName ? `${d.parentDeptName} / ${d.deptName}` : d.deptName"
-                         :value="d.id ?? d.deptName"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="选择医生">
-            <el-select v-model="editForm.doctorId" class="w-full" placeholder="选择医生">
-              <el-option v-for="e in employeeList" :key="e.id" :label="`${e.empName} - ${e.title || ''}`"
-                         :value="e.id ?? e.empName"/>
-            </el-select>
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="预约日期" required>
-            <el-date-picker
-                v-model="editForm.visitDate"
-                :disabled-date="(time: Date) => time.getTime() < Date.now() - 86400000"
-                class="w-full"
-                placeholder="选择日期"
-                type="date"
-                value-format="YYYY-MM-DD"
-                @change="handleEditDateChange"
-            />
-          </el-form-item>
-          <el-form-item label="就诊类型">
-            <el-select v-model="editForm.visitType" class="w-full">
-              <el-option v-for="item in VISIT_TYPE" :key="item.value" :label="item.label" :value="item.value"/>
-            </el-select>
-          </el-form-item>
-        </div>
-        <el-form-item label="选择号源" required>
-          <el-select v-model="editForm.scheduleId" :disabled="!editSchedules.length" class="w-full"
-                     placeholder="请先选择科室和日期">
-            <el-option
-                v-for="s in editSchedules"
-                :key="s.id"
-                :label="`${s.doctorName} | ${s.startTime}-${s.endTime} | 余号:${s.availableSource} | 挂号费:¥${s.registFee}`"
-                :value="s.id ?? s.doctorName"
-            />
-          </el-select>
-          <p v-if="editForm.deptId && editForm.visitDate && !editSchedules.length" class="mt-1 text-xs text-slate-400">
-            该日期无可挂号源
-          </p>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showEditDialog = false">取消</el-button>
-        <el-button v-perm="'opd:appointments:edit'" :loading="submitLoading" type="primary" @click="handleEditSubmit">
-          确认修改
-        </el-button>
-      </template>
-    </el-dialog>
+    <AppointmentsEdit v-model="showEditDialog" :row="editRow" :departments="departments"
+                      @saved="reloadListAndStats"/>
 
     <!-- 挂号费扫码收款：出码给患者扫，入账由渠道回调/查单确认（页面不点「已支付」） -->
     <QrPayDialog v-model="showPaymentDialog" :amount="paymentInfo.amount" :bill-id="paymentInfo.billId"
@@ -1007,43 +627,27 @@ import {ElMessage, ElMessageBox} from 'element-plus';
 import {
   cancelRegistration,
   checkInByRegist,
-  createRegistration,
   getAppointStatusCount,
-  getAvailableSchedule,
   getBoardRegistList,
   getRegistrationList,
-  getRevisitRecordSelectList,
   getScheduleList,
-  getScheduleSlots,
-  getScheduleSlotsBatch,
-  previewRevisitFee,
-  updateRegistration
+  getScheduleSlotsBatch
 } from '@/api/appoint';
 import {getBillDetailById} from '@/api/settlementBill';
-import {submitRefundApply} from '@/api/refund';
-import {createPatient} from '@/api/patient';
-import {
-  birthDateFromIdCard,
-  isIdCardBirthDateLegal,
-  isIdCardChecksumLegal,
-  isIdCardFormatLegal,
-  isPatientGenderCollected,
-  isPhoneLegal,
-  PATIENT_GENDER_OPTIONS,
-  patientAgeText,
-  patientGenderSymbol,
-  patientGenderText
-} from '@/lib/patientGender';
-import {PATIENT_TYPE_OPTIONS, patientTypeToSettlementType} from '@/lib/patientType';
+import {patientAgeText, patientGenderText} from '@/lib/patientGender';
 import PatientSelect from '@/components/his/PatientSelect.vue';
 import QrPayDialog from '@/components/his/QrPayDialog.vue';
-import {getDepartmentSelectList, getDictDataList, getDictDataMapList, getEmployeeList, getUserInfo} from '@/api/system';
+import {getDepartmentSelectList, getDictDataList, getEmployeeList, getUserInfo} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {VISIT_TYPE} from '@/lib/dict';
 import {REGIST_TYPE, revisitTypeOf, statusOf} from '@/lib/statusColor';
-import {SCHEDULE_TYPE_OPTIONS} from '@/lib/scheduleShift';
-import {REVISIT_SOURCE, revisitNeedsNoSchedule} from '@/lib/revisitPolicy';
+import {isAllDept, settlementLabel, settlementTypes} from '@/lib/appointments';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+import AppointmentsAdd from './AppointmentsAdd.vue';
+import AppointmentsEdit from './AppointmentsEdit.vue';
+import AppointmentsRescheduleEdit from './AppointmentsRescheduleEdit.vue';
+import AppointmentsRefundEdit from './AppointmentsRefundEdit.vue';
+import AppointmentsCellDetail from './AppointmentsCellDetail.vue';
 
 const getThisWeekRange = () => {
   const now = new Date();
@@ -1099,6 +703,9 @@ const searchForm = ref({
 });
 const showAddDialog = ref(false);
 const showEditDialog = ref(false);
+// 拆出的弹框子组件的一次性入参：打开前由本页写好，组件在打开时消费
+const addSeed = ref(null);
+const editRow = ref(null);
 const showPaymentDialog = ref(false);
 const paymentInfo = ref({
   registNo: '',
@@ -1109,33 +716,8 @@ const paymentInfo = ref({
   billNo: '',
 });
 const loading = ref(false);
-const submitLoading = ref(false);
 const appointments = ref([]);
 const departments = ref([]);
-const employeeList = ref([]);
-const availableSchedules = ref([]);
-const addMode = ref('existing');
-const addSubmitLoading = ref(false);
-// 录入新患者表单（tab2 内联，不再是独立弹窗）
-const newPatientForm = ref({
-  patientName: '',
-  // 不预设性别：默认成"男"等于静默编造性别
-  gender: null,
-  birthDate: '',
-  phone: '',
-  idCard: '',
-  address: '',
-  patientType: 1, // 1-自费 2-城镇职工医保 3-城乡居民医保 4-公费 5-其他（口径见 @/lib/patientType）
-});
-const editForm = ref({
-  id: null,
-  deptId: null,
-  doctorId: null,
-  scheduleId: null,
-  visitDate: '',
-  visitType: '',
-});
-const editSchedules = ref([]);
 const pagination = ref({
   pageNum: 1,
   pageSize: DEFAULT_PAGE_SIZE,
@@ -1185,86 +767,6 @@ const statusMap = {
   '7': '爽约',
   '8': '未就诊',
 };
-const newAppointment = ref({
-  patientId: null,
-  patientName: '',
-  patientNo: '',
-  // 仅用于「已选患者」回显头像，不参与提交
-  patientGender: null,
-  deptId: null,
-  visitDate: '',
-  scheduleId: null,
-  // 仅用于「号源下拉自动带出」：预填医生后不必先猜对是哪个号源，见 openAddFromPanel
-  doctorId: null,
-  // 时间片段（biz_schedule_slot.id）：号源事实在段上，挂号必须选段扣段
-  slotId: null,
-  visitType: 1,
-  // 复诊上下文（仅 visitType=2 有值）：来源决定占不占号源、按哪条策略收钱；
-  // 原病历是策略判定（间隔天数、同医生/同科室）的基准，缺它判不出价。
-  revisitSource: null,
-  revisitRecordId: null,
-  settlementType: 1,
-  medicalInsuranceType: '',
-  medicalInsuranceNo: '',
-});
-/**
- * 号源下拉的 placeholder —— 跟着真实状态走，不是一句写死的话。
- *
- * 三种态必须是三句话：还没填科室/日期 → 告诉人先填什么；查过了但没号 → 说清是"没号"不是"没填"；
- * 有号 → 提示直接选，不再提科室日期（否则用户会回去反复点科室找"是不是漏填了"）。
- */
-const schedulePlaceholder = computed(() => {
-  if (!newAppointment.value.deptId || !newAppointment.value.visitDate)
-    return '请先选择科室和日期';
-  if (availableSchedules.value.length)
-    return '请选择号源';
-  return '该日期无可挂号源';
-});
-/**
- * 时间片段选项：所选号源下的半小时段（biz_schedule_slot），号源与占用的事实都在段上。
- * 选号源后加载一次；段不存在（历史排班数据）时列表为空 → 段下拉禁用，走无段旧路径。
- */
-const slotRows = ref([]);
-const slotLoading = ref(false);
-const slotLabel = (s) => `${s.startTime} ~ ${s.endTime}（余 ${s.availableSource}/${s.totalSource}）`;
-const loadSlotRows = async (scheduleId) => {
-  slotRows.value = [];
-  slotLoading.value = false;
-  const id = availableSchedules.value.find((x) => (x.id ?? x.doctorName) === scheduleId)?.id;
-  if (!id)
-    return;
-  slotLoading.value = true;
-  try {
-    const res = await getScheduleSlots(id);
-    slotRows.value = res.data || [];
-  } catch (error) {
-    console.error('加载时间段失败:', error);
-  } finally {
-    slotLoading.value = false;
-  }
-};
-/** 选号源 → 换段列表并清掉已选段（旧段属于上一个号源） */
-const handleScheduleChange = (scheduleId) => {
-  newAppointment.value.slotId = null;
-  loadSlotRows(scheduleId);
-};
-// 结算方式选项（口径 = 字典 his_settlement_type_regist，与 biz_appoint_info.settlement_type 列注释一致）
-const settlementTypes = [
-  {value: 1, label: '自费', color: 'text-slate-600'},
-  {value: 2, label: '城镇职工医保', color: 'text-blue-600'},
-  {value: 3, label: '城乡居民医保', color: 'text-emerald-600'},
-  {value: 4, label: '公费', color: 'text-purple-600'},
-  {value: 5, label: '商业保险', color: 'text-amber-600'},
-];
-/**
- * 结算方式文案。命中不到就出「未知(n)」——**不要回落成「自费」**：
- * 结算方式决定这单走不走医保结算，把它显示成自费会让人以为患者没医保。
- */
-const settlementLabel = (code) => {
-  if (code === null || code === undefined || code === '')
-    return '未知';
-  return settlementTypes.find(t => t.value === Number(code))?.label || `未知(${code})`;
-};
 const statusCounts = ref({
   total: 0,
   waiting: 0, // 已挂号(1)，未签到
@@ -1273,42 +775,7 @@ const statusCounts = ref({
   cancelled: 0, // 已退号(5)
   overdue: 0, // 已过号(6)
 });
-// 患者搜索已抽成 PatientSelect 组件
-const handlePatientSelect = (patient) => {
-  if (!patient)
-    return;
-  newAppointment.value.patientId = patient.id;
-  newAppointment.value.patientName = patient.patientName;
-  newAppointment.value.patientNo = patient.patientNo;
-  newAppointment.value.patientGender = patient.gender ?? null;
-  // 自动带出结算方式：患者类型(patient_type) 与结算方式(settlement_type) 同构，
-  // 「其他」在结算侧没有对应档位 → 回落自费（口径见 @/lib/patientType）
-  if (patient.patientType) {
-    newAppointment.value.settlementType = patientTypeToSettlementType(patient.patientType);
-  }
-  // 带出医保卡号和医保类型
-  newAppointment.value.medicalInsuranceType = patient.medicalInsuranceType || '';
-  newAppointment.value.medicalInsuranceNo = patient.medicalInsuranceNo || '';
-  // 换人 = 换病历：原来选中的原病历属于上一个人，留着就会拿别人的就诊日判策略
-  newAppointment.value.revisitRecordId = null;
-  if (isRevisit.value) {
-    revisitRecords.value = [];
-    loadRevisitRecords();
-  }
-};
-const WINDOW_REVISIT_SOURCES = [REVISIT_SOURCE.SAME_DAY_RETURN, REVISIT_SOURCE.DOCTOR_ORDERED];
 const revisitSourceDict = ref([]);
-const windowRevisitSourceOptions = computed(() => revisitSourceDict.value.filter((o) => WINDOW_REVISIT_SOURCES.includes(Number(o.dictValue))));
-const revisitRecords = ref([]);
-const revisitRecordLoading = ref(false);
-const revisitPreview = ref(null);
-const revisitPreviewLoading = ref(false);
-const isRevisit = computed(() => Number(newAppointment.value.visitType) === 2);
-/**
- * 当日回诊 = 同一次挂号的延续（拿检查结果回来复看）：不占号源，
- * 所以科室 / 日期 / 号源 / 时段整块都不填 —— 强行让人选号源，等于把一次就诊拆成两个号重复收费。
- */
-const isSameDayReturn = computed(() => isRevisit.value && revisitNeedsNoSchedule(newAppointment.value.revisitSource));
 const loadRevisitSourceDict = async () => {
   try {
     const res = await getDictDataList(DICT_TYPE.REVISIT_SOURCE);
@@ -1325,309 +792,6 @@ const loadRevisitSourceDict = async () => {
 const revisitSourceText = (code) => {
   const hit = revisitSourceDict.value.find((o) => Number(o.dictValue) === Number(code));
   return hit ? hit.dictLabel : `来源${code}`;
-};
-const revisitRecordLabel = (r) => `${r.visitDate || '日期未知'} ${r.deptName || '-'} / ${r.doctorName || '-'}${r.diagnosisName ? ` | ${r.diagnosisName}` : ''}`;
-const loadRevisitRecords = async () => {
-  const patientId = newAppointment.value.patientId;
-  if (!patientId)
-    return;
-  revisitRecordLoading.value = true;
-  try {
-    const res = await getRevisitRecordSelectList(patientId);
-    revisitRecords.value = res.data || [];
-  } catch (error) {
-    console.error('加载复诊原病历失败:', error);
-  } finally {
-    revisitRecordLoading.value = false;
-  }
-};
-let previewToken = 0;
-watch(() => [newAppointment.value.visitType, newAppointment.value.revisitSource,
-  newAppointment.value.revisitRecordId, newAppointment.value.scheduleId, newAppointment.value.patientId], async () => {
-  const a = newAppointment.value;
-  const token = ++previewToken;
-  const ready = isRevisit.value && a.patientId && a.revisitSource && a.revisitRecordId
-      && (isSameDayReturn.value || a.scheduleId);
-  if (!ready) {
-    revisitPreview.value = null;
-    revisitPreviewLoading.value = false;
-    return;
-  }
-  revisitPreviewLoading.value = true;
-  try {
-    const res = await previewRevisitFee({
-      patientId: a.patientId,
-      revisitSource: a.revisitSource,
-      revisitRecordId: a.revisitRecordId,
-      scheduleId: isSameDayReturn.value ? undefined : a.scheduleId,
-    });
-    if (token !== previewToken)
-      return;
-    revisitPreview.value = res.data || null;
-  } catch (error) {
-    if (token !== previewToken)
-      return;
-    revisitPreview.value = null;
-    ElMessage.error(error?.message || '复诊费用预估失败');
-  } finally {
-    if (token === previewToken)
-      revisitPreviewLoading.value = false;
-  }
-});
-/** 切就诊类型：离开复诊就把复诊上下文清空，否则上一单选过的原病历会带着判定进下一张单 */
-const handleVisitTypeChange = () => {
-  if (!isRevisit.value) {
-    newAppointment.value.revisitSource = null;
-    newAppointment.value.revisitRecordId = null;
-    return;
-  }
-  if (!newAppointment.value.revisitSource)
-    newAppointment.value.revisitSource = REVISIT_SOURCE.SAME_DAY_RETURN;
-  loadRevisitRecords();
-};
-// ========== 新建患者 ==========
-/** 切换患者来源 tab；切到「录入新患者」时清空表单（避免上一单填的残留带过来） */
-const switchPatientMode = (mode) => {
-  addMode.value = mode;
-  if (mode === 'new') {
-    resetNewPatientForm();
-    // 刚建档的人没有任何就诊记录，复诊无从关联（后端也会以「原病历不属于该患者」拒掉）
-    if (isRevisit.value) {
-      newAppointment.value.visitType = 1;
-      newAppointment.value.revisitSource = null;
-      newAppointment.value.revisitRecordId = null;
-    }
-  }
-};
-const resetNewPatientForm = () => {
-  newPatientForm.value = {
-    patientName: '',
-    gender: null,
-    birthDate: '',
-    phone: '',
-    idCard: '',
-    address: '',
-    patientType: 1,
-  };
-};
-/** 身份证填完 → 把出生日期带出来（已手填过就不覆盖），与患者管理页同一口径 */
-const syncPatientBirthDate = () => {
-  if (newPatientForm.value.birthDate)
-    return;
-  const d = birthDateFromIdCard(newPatientForm.value.idCard);
-  if (d)
-    newPatientForm.value.birthDate = d;
-};
-/**
- * 校验「录入新患者」表单，不通过则提示并返回 false。
- *
- * 建档口径与患者管理页一致：姓名 / 性别 / 身份证必填，手机号"填了必须合法、空着放行"。
- * 这里比急诊登记严 —— 急诊面向三无患者（身份证可能根本要不到），门诊挂号窗口患者清醒、
- * 能出示证件，是补全主档成本最低的时机（身份证也是 EMPI 去重的匹配键）。
- */
-const validateNewPatientForm = () => {
-  if (!newPatientForm.value.patientName) {
-    ElMessage.warning('请输入患者姓名');
-    return false;
-  }
-  if (!isPatientGenderCollected(newPatientForm.value.gender)) {
-    ElMessage.warning('请选择性别（确实没问到请选「未知」）');
-    return false;
-  }
-  if (!newPatientForm.value.idCard) {
-    ElMessage.warning('请输入身份证号');
-    return false;
-  }
-  if (!isIdCardFormatLegal(newPatientForm.value.idCard)) {
-    ElMessage.warning('身份证号格式不正确：应为 18 位（末位可为 X）');
-    return false;
-  }
-  // 出生日期单独判：校验位对了不代表日期存在（19990230 这种），提示要指到点子上
-  if (!isIdCardBirthDateLegal(newPatientForm.value.idCard)) {
-    ElMessage.warning('身份证号中的出生日期不存在，请核对');
-    return false;
-  }
-  if (!isIdCardChecksumLegal(newPatientForm.value.idCard)) {
-    ElMessage.warning('身份证号校验位不正确，请核对');
-    return false;
-  }
-  if (newPatientForm.value.phone && !isPhoneLegal(newPatientForm.value.phone)) {
-    ElMessage.warning('手机号格式不正确：应为 11 位手机号');
-    return false;
-  }
-  return true;
-};
-const handleDeptChange = () => {
-  newAppointment.value.scheduleId = null;
-  newAppointment.value.slotId = null;
-  slotRows.value = [];
-  availableSchedules.value = [];
-  loadAvailableSchedules();
-};
-const handleDateChange = () => {
-  newAppointment.value.scheduleId = null;
-  newAppointment.value.slotId = null;
-  slotRows.value = [];
-  availableSchedules.value = [];
-  loadAvailableSchedules();
-};
-const loadAvailableSchedules = async () => {
-  if (!newAppointment.value.deptId || !newAppointment.value.visitDate)
-    return;
-  try {
-    const res = await getAvailableSchedule(newAppointment.value.deptId, newAppointment.value.visitDate);
-    availableSchedules.value = res.data || [];
-  } catch (error) {
-    console.error('加载号源失败:', error);
-  }
-};
-const handleSubmit = async () => {
-  // ① 患者：按 tab 分支校验
-  if (addMode.value === 'existing') {
-    if (!newAppointment.value.patientId) {
-      ElMessage.warning('请选择患者');
-      return;
-    }
-  } else if (!validateNewPatientForm()) {
-    return;
-  }
-  // ② 复诊：来源与原病历必填（当日回诊免掉科室/日期/号源，但这两项是策略判定的基准，不能省）
-  if (isRevisit.value) {
-    if (!newAppointment.value.revisitSource) {
-      ElMessage.warning('请选择复诊来源');
-      return;
-    }
-    if (!newAppointment.value.revisitRecordId) {
-      ElMessage.warning('请选择原病历（复诊要关联的那一次就诊）');
-      return;
-    }
-  }
-  // ③ 共享字段（两个 tab 共用同一张表单，都要校验）；当日回诊不占号源，整块跳过
-  if (!isSameDayReturn.value) {
-    if (!newAppointment.value.deptId) {
-      ElMessage.warning('请选择科室');
-      return;
-    }
-    if (!newAppointment.value.visitDate) {
-      ElMessage.warning('请选择预约日期');
-      return;
-    }
-    if (!newAppointment.value.scheduleId) {
-      ElMessage.warning('请选择号源');
-      return;
-    }
-    // 号源事实在段上：有段可选时必须选段（后端按段扣号源），不选段会退化为只扣主表的旧路径
-    if (slotRows.value.length && !newAppointment.value.slotId) {
-      ElMessage.warning('请选择时间段');
-      return;
-    }
-  }
-  addSubmitLoading.value = true;
-  try {
-    let patientId = newAppointment.value.patientId;
-    let patientName = newAppointment.value.patientName;
-    // ④ 录入新患者：先建档拿 ID，再挂号 —— 一次点击完成两步。
-    // 顺序不能反：挂号接口的 patientId 是 @NotNull，必须先有患者主键。
-    // 这不等于数据库事务级原子（页面层两次调用）：若建档成功而挂号失败（如号源被抢空），
-    // 患者档案会留下 —— 这里刻意**不**回滚，改个号源再点一次即可，不用重填身份证；
-    // 患者主档本身也是独立有效的资产（患者管理页单独建档同样是常态）。
-    if (addMode.value === 'new') {
-      const created = await createPatient(newPatientForm.value);
-      const np = created.data;
-      if (!np?.id) {
-        throw new Error('患者已创建但未返回患者ID，请到「患者管理」确认后重新挂号');
-      }
-      patientId = np.id;
-      patientName = np.patientName || newPatientForm.value.patientName;
-    }
-    const res = await createRegistration({
-      patientId: patientId,
-      patientName: patientName,
-      // 当日回诊即使是从看板某一格开单（那里会预填号源），也必须清空：
-      // 它不占号源，后端拿到 scheduleId 会以「请勿为当日回诊选择号源」拒掉
-      scheduleId: isSameDayReturn.value ? null : newAppointment.value.scheduleId,
-      slotId: isSameDayReturn.value ? null : (newAppointment.value.slotId || undefined),
-      visitType: newAppointment.value.visitType,
-      revisitSource: isRevisit.value ? newAppointment.value.revisitSource : undefined,
-      revisitRecordId: isRevisit.value ? newAppointment.value.revisitRecordId : undefined,
-      settlementType: newAppointment.value.settlementType,
-      medicalInsuranceType: newAppointment.value.medicalInsuranceType,
-      medicalInsuranceNo: newAppointment.value.medicalInsuranceNo,
-    });
-    ElMessage.success(addMode.value === 'new' ? '患者建档并挂号成功' : '挂号成功');
-    showAddDialog.value = false;
-    const data = res.data || {};
-    // 查询账单：金额用来弹缴费窗，状态用来决定**要不要**弹
-    let amount = 0;
-    let billStatus = null;
-    // 免收：后端不记账不出账（billId 为 null），直接提示不弹窗
-    if (!data.billId) {
-      ElMessage.success(isSameDayReturn.value
-          ? '当日回诊免收挂号费，患者可直接签到就诊'
-          : '该号按收费策略免收，无需缴费，患者可直接签到');
-      reloadListAndStats();
-      resetForm();
-      return;
-    }
-    try {
-      const billRes = await getBillDetailById(data.billId);
-      const bill = billRes.data || {};
-      amount = bill.unpaidAmount ?? bill.payableAmount ?? 0;
-      billStatus = bill.billStatus ?? null;
-    } catch (e) {
-      console.error('获取账单详情失败:', e);
-    }
-    // 账单已付清：再弹一次缴费窗等于让人对一笔已平的账重复支付
-    if (Number(billStatus) === 3) {
-      ElMessage.success('该号已缴费，无需重复支付');
-      reloadListAndStats();
-      resetForm();
-      return;
-    }
-    paymentInfo.value = {
-      registNo: data.registNo || '',
-      patientName: patientName,
-      amount: amount,
-      registId: data.id || null,
-      billId: data.billId || null,
-      billNo: data.billNo || '',
-    };
-    showPaymentDialog.value = true;
-    reloadListAndStats();
-    resetForm();
-  } catch (error) {
-    ElMessage.error(error.message || '挂号失败');
-  } finally {
-    addSubmitLoading.value = false;
-  }
-};
-const resetForm = () => {
-  newAppointment.value = {
-    patientId: null,
-    patientName: '',
-    patientNo: '',
-    patientGender: null,
-    deptId: null,
-    visitDate: '',
-    scheduleId: null,
-    doctorId: null,
-    slotId: null,
-    visitType: 1,
-    revisitSource: null,
-    revisitRecordId: null,
-    settlementType: 1,
-    medicalInsuranceType: '',
-    medicalInsuranceNo: '',
-  };
-  availableSchedules.value = [];
-  slotRows.value = [];
-  revisitRecords.value = [];
-  // 上一单的预估金额留在屏上，会被当成这一单要收的钱
-  revisitPreview.value = null;
-  revisitPreviewLoading.value = false;
-  // 关掉弹窗后回到「选择已有患者」，并把新患者表单清空（否则下次打开带出上一单的姓名/身份证）
-  addMode.value = 'existing';
-  resetNewPatientForm();
 };
 const handleCheckIn = async (row) => {
   try {
@@ -1662,69 +826,9 @@ const handleCancel = async (row) => {
     }
   }
 };
-const handleEdit = async (row) => {
-  editForm.value = {
-    id: row.id,
-    deptId: row.deptId,
-    doctorId: row.doctorId,
-    scheduleId: null,
-    visitDate: row.visitDate || '',
-    visitType: row.visitType || 1,
-  };
-  // 加载当前科室的医生列表
-  if (row.deptId) {
-    try {
-      const res = await getEmployeeList({empType: 1, deptId: row.deptId});
-      employeeList.value = res.data?.records || res.data || [];
-    } catch (e) {
-      employeeList.value = [];
-    }
-  }
+const handleEdit = (row) => {
+  editRow.value = row;
   showEditDialog.value = true;
-};
-const handleEditDeptChange = async (deptId) => {
-  editForm.value.doctorId = null;
-  editForm.value.scheduleId = null;
-  editSchedules.value = [];
-  try {
-    const res = await getEmployeeList({empType: 1, deptId});
-    employeeList.value = res.data?.records || res.data || [];
-  } catch (e) {
-    employeeList.value = [];
-  }
-};
-const handleEditDateChange = async () => {
-  editForm.value.scheduleId = null;
-  editSchedules.value = [];
-  if (!editForm.value.deptId || !editForm.value.visitDate)
-    return;
-  try {
-    const res = await getAvailableSchedule(editForm.value.deptId, editForm.value.visitDate);
-    editSchedules.value = res.data || [];
-  } catch (e) {
-    editSchedules.value = [];
-  }
-};
-const handleEditSubmit = async () => {
-  if (!editForm.value.deptId || !editForm.value.visitDate || !editForm.value.scheduleId) {
-    ElMessage.warning('请完善修改信息');
-    return;
-  }
-  submitLoading.value = true;
-  try {
-    await updateRegistration({
-      id: editForm.value.id,
-      scheduleId: editForm.value.scheduleId,
-      visitType: editForm.value.visitType,
-    });
-    ElMessage.success('修改成功');
-    showEditDialog.value = false;
-    reloadListAndStats();
-  } catch (error) {
-    ElMessage.error(error.message || '修改失败');
-  } finally {
-    submitLoading.value = false;
-  }
 };
 // ========== 显示支付弹框 ==========
 const handleShowPayment = async (row) => {
@@ -1755,33 +859,15 @@ const onQrPaid = () => {
   ElMessage.success('挂号费已入账');
   reloadListAndStats();
 };
-const showRefundDialog = ref(false);
-const refundSubmitting = ref(false);
-const refundTypeOptions = ref([]);
-const refundForm = ref({
-  patientName: '',
-  registNo: '',
-  patientId: null,
-  patientNo: '',
-  billId: null,
-  billNo: '',
-  refundableAmount: 0,
-  refundType: null,
-  refundAmount: null,
-  refundReason: '',
-});
-/** 退费类型字典只在第一次打开弹框时拉，之后复用（与「退费管理」页同一份 his_refund_apply_type） */
-const loadRefundTypeOptions = async () => {
-  if (refundTypeOptions.value.length)
-    return;
-  try {
-    const res = await getDictDataMapList('his_refund_apply_type');
-    refundTypeOptions.value = res.data?.['his_refund_apply_type'] || [];
-  } catch (error) {
-    // 字典拿不到不拦提交：类型是必填项，下拉空了用户自然会问，比静默给个假选项好
-    console.error('加载退费类型字典失败:', error);
-  }
+/** 新增挂号成功且需缴费：账单事实由子组件回抛，扫码收款弹窗（共享组件）留在本页 */
+const onAddPay = (info) => {
+  paymentInfo.value = info;
+  showPaymentDialog.value = true;
 };
+
+const showRefundDialog = ref(false);
+// 打开退费弹窗前由本页查好的账单事实（可退金额等），组件在打开时消费
+const refundInitial = ref({});
 const handleApplyRefund = async (row) => {
   if (!canApplyRefund(row)) {
     ElMessage.warning('该挂号不满足申请退费条件（需就诊日已过、已收费且人未到诊）');
@@ -1804,7 +890,7 @@ const handleApplyRefund = async (row) => {
     ElMessage.error('未能取到该挂号的可退金额（可能已经退过），请稍后重试或直接到医院收费处办理');
     return;
   }
-  refundForm.value = {
+  refundInitial.value = {
     patientName: row.patientName || '',
     registNo: row.registNo || '',
     patientId: row.patientId,
@@ -1812,52 +898,8 @@ const handleApplyRefund = async (row) => {
     billId: row.billId,
     billNo: row.billNo || '',
     refundableAmount: amount,
-    // 挂号单是整单退费，默认带出「全部退费」(5)，允许改
-    refundType: 5,
-    refundAmount: amount,
-    refundReason: '',
   };
   showRefundDialog.value = true;
-  loadRefundTypeOptions();
-};
-const handleSubmitRefund = async () => {
-  if (refundForm.value.refundType === null) {
-    ElMessage.warning('请选择退费类型');
-    return;
-  }
-  const amount = Number(refundForm.value.refundAmount);
-  if (refundForm.value.refundAmount === null || Number.isNaN(amount) || amount <= 0) {
-    ElMessage.warning('请填写正确的退费金额');
-    return;
-  }
-  if (amount > refundForm.value.refundableAmount) {
-    ElMessage.warning(`退费金额不能超过本单可退金额 ¥${refundForm.value.refundableAmount}`);
-    return;
-  }
-  if (!refundForm.value.refundReason.trim()) {
-    ElMessage.warning('请填写退费原因');
-    return;
-  }
-  refundSubmitting.value = true;
-  try {
-    await submitRefundApply({
-      billId: refundForm.value.billId,
-      billNo: refundForm.value.billNo,
-      patientId: refundForm.value.patientId,
-      patientNo: refundForm.value.patientNo,
-      patientName: refundForm.value.patientName,
-      refundType: refundForm.value.refundType,
-      refundReason: refundForm.value.refundReason.trim(),
-      refundAmount: amount,
-      // applyBy 不从前端编造，后端按当前登录人回填
-    });
-    ElMessage.success('退费申请已提交，请到收费处「退费管理」审核并执行');
-    showRefundDialog.value = false;
-  } catch (error) {
-    ElMessage.error(error.message || '提交退费申请失败');
-  } finally {
-    refundSubmitting.value = false;
-  }
 };
 const handleSearch = () => {
   pagination.value.pageNum = 1;
@@ -1978,18 +1020,6 @@ const loadDefaultDept = async () => {
     console.error('加载当前用户科室失败，看板默认「全部科室」:', error);
   }
 };
-// 医保类型字典
-const medicalInsuranceTypes = ref([]);
-const loadMedicalInsuranceTypes = async () => {
-  try {
-    const res = await getDictDataList(DICT_TYPE.MEDICAL_INSURANCE_TYPE);
-    medicalInsuranceTypes.value = res.data || [];
-  } catch (error) {
-    console.error('加载医保类型字典失败:', error);
-  }
-};
-const ALL_DEPT = '__ALL__';
-const isAllDept = (v) => v === ALL_DEPT || v == null || v === '';
 const activeTab = ref('desk');
 /** 弹框里的「格子」：周视图下 = 某医生 × 某天（2026-09-22 起周视图的行就是医生，不再是班次） */
 const selectedCell = ref(null);
@@ -2121,7 +1151,6 @@ const handleCalPick = (date) => {
 };
 // 2026-09-22：左栏「我的科室」快捷块按需求移除，切科室统一走上方「科室」下拉。
 const weekdayMap = {0: '周日', 1: '周一', 2: '周二', 3: '周三', 4: '周四', 5: '周五', 6: '周六'};
-const boardShifts = SCHEDULE_TYPE_OPTIONS.map(o => ({type: o.value, label: o.label}));
 const mondayOf = (offset) => {
   const now = new Date();
   const day = now.getDay() || 7;
@@ -2792,39 +1821,9 @@ const deskCell = (colKey, rowKey) => deskCellMap.value[`${colKey}|${rowKey}`] ||
  */
 const isCellUnavailable = (col, rowKey) => !deskCell(col.key, rowKey).srcSchedules.length;
 const showRescheduleDialog = ref(false);
-const rescheduleLoading = ref(false);
-const rescheduleForm = ref({
-  registId: null,
-  patientName: '',
-  deptId: null,
-  visitDate: '',
-  scheduleId: null,
-  // 新号源下的时间段（可选）：传了按段迁移（还旧段扣新段），不传只迁移主表号源
-  slotId: null,
-  // ↓ 仅展示用（不提交）：打开弹窗时把这条预约**现在**挂的号源/时间段带出来，
-  //   否则改约的人对着一个空表单根本不知道自己正在从哪改到哪
-  currentSourceText: '',
-  currentSlotText: '',
-});
-const rescheduleSchedules = ref([]);
-const rescheduleSlots = ref([]);
-const rescheduleSlotLoading = ref(false);
-/** 改约选新号源 → 加载其时间段并清掉已选段（旧段属于上一个号源） */
-const handleRescheduleScheduleChange = (scheduleId) => {
-  rescheduleForm.value.slotId = null;
-  rescheduleSlots.value = [];
-  const s = rescheduleSchedules.value.find((x) => x.id === scheduleId);
-  if (!s?.id)
-    return;
-  rescheduleSlotLoading.value = true;
-  getScheduleSlots(s.id).then((res) => {
-    rescheduleSlots.value = res.data || [];
-  }).catch((error) => {
-    console.error('加载改约时间段失败:', error);
-  }).finally(() => {
-    rescheduleSlotLoading.value = false;
-  });
-};
+// 打开改约弹窗前由本页写好：被改约的卡片 + 它当前挂的排班（组件用它回显「当前号源」）
+const rescheduleRow = ref(null);
+const rescheduleSchedule = ref(null);
 /** 挂号状态点颜色（1挂号 2签到 3接诊 4就诊 5退号 6过号 7爽约 8未就诊） */
 const regStatusDot = {
   1: 'bg-blue-500',
@@ -2869,7 +1868,6 @@ const DESK_STATUS_OPTIONS = [
 ];
 const deskStatusFilter = ref(DESK_STATUS_OPTIONS.map(s => s.value));
 const deskRegVisible = (r) => deskStatusFilter.value.includes(Number(r.registStatus));
-const deskShiftLabel = (type) => boardShifts.find(s => s.type === type)?.label || '';
 const handleDeskDeptChange = () => {
   // 换科室后原来选中的医生可能压根不在这个科室，必须清掉，否则看板会空得莫名其妙
   deskDoctorId.value = null;
@@ -2884,7 +1882,7 @@ const handleDeskDoctorChange = () => {
 /**
  * 看板工具栏的「新增预约」：不带具体号源（看板是全局视角，格子才是具体某一档），
  * 但必须带科室 + 日期 —— 这两项在工具栏上是可见的事实，让用户重选一遍等于白给。
- * 「全部科室」没有具体科室可带，`openAddFromPanel` 会置空不猜（见那里的第 ③ 条）。
+ * 「全部科室」没有具体科室可带，`AppointmentsAdd` 里的 `openAddFromPanel` 会置空不猜（见那里的第 ③ 条）。
  */
 const handleDeskAdd = () => {
   addFromPanel({
@@ -3028,73 +2026,17 @@ const handleDeskCardClick = (r) => {
   }
   ElMessage.warning(sourceLockReason(r) || '当前状态不允许变更号源');
 };
-/** 点患者卡：改约（换号源，后端原子释放旧号/扣新号并同步就诊日期与医生） */
+/** 点患者卡：改约（换号源弹窗拆到同目录组件，后端原子释放旧号/扣新号并同步就诊日期与医生） */
 const handleReschedule = (r) => {
   // 双保险：即使某处漏改了模板的 @click，也不让已就诊/就诊中的卡进到改约弹窗
   if (!canReschedule(r)) {
     ElMessage.warning(sourceLockReason(r) || '当前状态不允许变更号源');
     return;
   }
-  rescheduleForm.value = {
-    registId: r.id,
-    patientName: r.patientName,
-    deptId: r.deptId,
-    visitDate: r.visitDate,
-    scheduleId: r.scheduleId || null,
-    slotId: r.slotId || null,
-    // 当前号源 = 挂号挂的那条排班（deskScheduleMap 里是排班本体）；时间段优先用挂号
-    // 自带的段快照（精确到半小时档），没有段快照（历史挂号）就只展示排班窗口
-    currentSourceText: (() => {
-      const sched = deskScheduleMap.value[r.scheduleId];
-      if (!sched)
-        return '';
-      return `${sched.scheduleDate || r.visitDate || ''} ${deskShiftLabel(Number(sched.scheduleType))} ${sched.startTime}-${sched.endTime}`.trim();
-    })(),
-    currentSlotText: r.slotStart
-        ? `${String(r.slotStart).slice(0, 5)}-${String(r.slotEnd).slice(0, 5)}`
-        : '',
-  };
-  rescheduleSchedules.value = [];
-  rescheduleSlots.value = [];
+  rescheduleRow.value = r;
+  // 当前号源 = 挂号挂的那条排班（deskScheduleMap 里是排班本体），传给改约组件回显
+  rescheduleSchedule.value = deskScheduleMap.value[r.scheduleId] || null;
   showRescheduleDialog.value = true;
-  loadRescheduleSchedules();
-};
-const loadRescheduleSchedules = async () => {
-  if (!rescheduleForm.value.deptId || !rescheduleForm.value.visitDate) {
-    rescheduleSchedules.value = [];
-    return;
-  }
-  rescheduleLoading.value = true;
-  try {
-    const res = await getAvailableSchedule(rescheduleForm.value.deptId, rescheduleForm.value.visitDate);
-    // 改约只列还有余号的班次
-    rescheduleSchedules.value = (res.data || []).filter((s) => s.availableSource > 0);
-  } catch (error) {
-    console.error('加载改约号源失败:', error);
-  } finally {
-    rescheduleLoading.value = false;
-  }
-};
-const handleConfirmReschedule = async () => {
-  if (!rescheduleForm.value.scheduleId) {
-    ElMessage.warning('请选择新号源');
-    return;
-  }
-  rescheduleLoading.value = true;
-  try {
-    await updateRegistration({
-      id: rescheduleForm.value.registId,
-      scheduleId: rescheduleForm.value.scheduleId,
-      slotId: rescheduleForm.value.slotId || undefined,
-    });
-    showRescheduleDialog.value = false;
-    ElMessage.success('改约成功');
-    loadDesk();
-  } catch (error) {
-    ElMessage.error(error.message || '改约失败');
-  } finally {
-    rescheduleLoading.value = false;
-  }
 };
 const handleDeskCancel = async (r) => {
   // 双保险：即使某处漏改了模板的 v-if，也不让不可退的卡走到接口
@@ -3218,67 +2160,15 @@ const deskDayStat = computed(() => {
   const usedPct = total > 0 ? Math.min(100, Math.round((regs / total) * 100)) : 0;
   return {doctors, total, avail, regs, usedPct};
 });
-/** 号源被抢空 / 停诊后的兜底文案；返回 true 表示「该把号源下拉重置掉」 */
-const warnSeedScheduleStale = (seedScheduleId) => {
-  const exist = availableSchedules.value.find((x) => x.id === seedScheduleId);
-  if (exist)
-    return false;
-  newAppointment.value.scheduleId = null;
-  ElMessage.warning('该号源已变更或约满，请重新选择号源');
-  return true;
-};
-const fetchSchedulesForSeed = async (seed) => {
-  const visitDate = seed.visitDate;
-  const deptId = isAllDept(seed.deptId) ? null : seed.deptId;
-  if (!deptId || !visitDate)
-    return;
-  const snapshot = seed.snapshot;
-  const scheduleId = seed.scheduleId;
-  if (snapshot?.scheduleDate === visitDate) {
-    // 面板缓存里这一天的号源：「选中一条」靠它定位，下拉本身还是走接口要最新的
-    const cached = snapshot.list || [];
-    if (!cached.length) {
-      ElMessage.warning('该科室该日期无可挂号源');
-      return;
-    }
-    // ⚠️ 必须 await：段列表要跟着号源走（先定号源再选段），不 await 的话
-    //    调用方拿到的还是空号源列表，段也就选不上（表现为"点 9 点那格，弹窗里时间段是空的"）
-    await loadAvailableSchedules();
-    warnSeedScheduleStale(scheduleId);
-    return;
-  }
-  await loadAvailableSchedules();
-};
-const openAddFromPanel = async (seed = {}) => {
-  resetForm();
-  newAppointment.value.deptId = isAllDept(seed.deptId) ? null : (seed.deptId ?? null);
-  newAppointment.value.visitDate = seed.visitDate || '';
-  newAppointment.value.doctorId = seed.doctorId ?? null;
-  showAddDialog.value = true;
-  await fetchSchedulesForSeed(seed);
-  // 医生列点了「新增」但没指定具体号源：把这位医生的号预先选上（当天多条排班则留给用户挑）
-  if (!newAppointment.value.scheduleId && newAppointment.value.doctorId) {
-    const hit = availableSchedules.value.filter((s) => s.doctorId === newAppointment.value.doctorId);
-    if (hit.length === 1)
-      newAppointment.value.scheduleId = hit[0].id;
-  }
-  // 面板点的是某一格（日视图 = 某半小时档）：段列表跟着号源走，必须先定号源再选段，顺序不能反。
-  // 段可能已被排班重建删掉 → 校验它还在新列表里，不在就不预选（让人自己挑，不静默挂到别的档）。
-  if (seed.slotId && newAppointment.value.scheduleId) {
-    await loadSlotRows(newAppointment.value.scheduleId);
-    if (slotRows.value.some((s) => String(s.id) === String(seed.slotId))) {
-      newAppointment.value.slotId = seed.slotId;
-    }
-  }
-};
 /**
- * 给模板用的薄包装：把 async 函数变成"返回 undefined"。
+ * 打开新增挂号弹窗。
  *
- * 直接 `@click="openAddFromPanel(...)"` 会把 Promise 当返回值交给 Vue —— 事件返回值只用于
- * 阻止默认行为，Promise 恒为真值，语义上是错的（虽然目前不炸）。包装一层，行为明确。
+ * seed = 看板带进来的预填（科室/日期/号源/段/医生），由子组件在打开时消费；
+ * 工具栏「新增挂号」不带 seed，开一张干净的空表。
  */
-const addFromPanel = (seed = {}) => {
-  void openAddFromPanel(seed);
+const addFromPanel = (seed = null) => {
+  addSeed.value = seed;
+  showAddDialog.value = true;
 };
 const goRegister = (s) => {
   addFromPanel({
@@ -3325,7 +2215,6 @@ const addFromCell = (col, rowKey) => {
 onMounted(async () => {
   // 列表 + 统计：2 次请求（原来是 listPage 7 次：1 次列表 + 6 次「读 total」）
   reloadListAndStats();
-  loadMedicalInsuranceTypes();
   loadRevisitSourceDict();
   // 顺序有讲究：科室列表先到（默认科室要命中下拉里真实存在的 option），再取当前用户科室，最后才拉看板
   await loadDepartments();

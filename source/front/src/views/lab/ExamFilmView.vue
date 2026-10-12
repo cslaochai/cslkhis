@@ -237,32 +237,7 @@
     </el-dialog>
 
     <!-- 规格编辑 -->
-    <el-dialog v-model="showSpecEdit" :title="specForm.id ? '修改规格' : '新增规格'" destroy-on-close width="460px">
-      <el-form label-width="90px">
-        <el-form-item label="规格编码">
-          <el-input v-model="specForm.specCode" :disabled="!!specForm.id" placeholder="如 F-14X17"/>
-        </el-form-item>
-        <el-form-item label="规格名称">
-          <el-input v-model="specForm.specName" placeholder="如 14×17英寸激光胶片"/>
-        </el-form-item>
-        <el-form-item label="单价">
-          <el-input-number v-model="specForm.unitPrice" :min="0" :precision="2" :step="1"/>
-        </el-form-item>
-        <el-form-item label="单位">
-          <el-input v-model="specForm.unit" class="!w-24"/>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="specForm.status" class="!w-32">
-            <el-option :value="1" label="启用"/>
-            <el-option :value="0" label="停用"/>
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showSpecEdit = false">取消</el-button>
-        <el-button type="primary" @click="doSaveSpec">保存</el-button>
-      </template>
-    </el-dialog>
+    <ExamFilmSpecEdit v-model="showSpecEdit" :row="specEditRow" @saved="handleSpecSaved"/>
   </div>
 </template>
 
@@ -284,7 +259,6 @@ import {
   examFilmMarkPrinted,
   examFilmUpsert,
   filmSpecDelete,
-  filmSpecUpsert,
   getExamFilmListPage,
   getExamFilmStats,
   getFilmSpecSelectList,
@@ -293,6 +267,7 @@ import {
 import {hasPerm} from '@/lib/perm';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import ExamFilmSpecEdit from './ExamFilmSpecEdit.vue';
 
 const FILM_STATUS_OPTIONS = [
   {value: 1, label: '已登记'},
@@ -489,32 +464,20 @@ const doDelete = async (row) => {
 const showSpec = ref(false);
 const specRows = ref([]);
 const showSpecEdit = ref(false);
-const specForm = ref({id: undefined, specCode: '', specName: '', unitPrice: 0, unit: '张', sortOrder: 0, status: 1});
+const specEditRow = ref(null);
 const openSpec = async () => {
   const r = await getFilmSpecSelectList();
   specRows.value = r.data || [];
   showSpec.value = true;
 };
 const openSpecEdit = (row) => {
-  specForm.value = row
-      ? {...row}
-      : {id: undefined, specCode: '', specName: '', unitPrice: 0, unit: '张', sortOrder: 0, status: 1};
+  specEditRow.value = row ? {...row} : null;
   showSpecEdit.value = true;
 };
-const doSaveSpec = async () => {
-  if (!specForm.value.specCode?.trim() || !specForm.value.specName?.trim()) {
-    return ElMessage.warning('规格编码与名称必填');
-  }
-  try {
-    await filmSpecUpsert(specForm.value);
-    ElMessage.success('规格已保存');
-    showSpecEdit.value = false;
-    const r = await getFilmSpecSelectList();
-    specRows.value = r.data || [];
-    specOptions.value = r.data || [];
-  } catch (e) {
-    ElMessage.error(e?.message || '保存失败');
-  }
+const handleSpecSaved = async () => {
+  const r = await getFilmSpecSelectList();
+  specRows.value = r.data || [];
+  specOptions.value = r.data || [];
 };
 const doDeleteSpec = async (row) => {
   try {

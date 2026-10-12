@@ -96,3 +96,10 @@ export function riskLevelText(level) {
 export function riskLevelTag(level) {
   return { 1: 'info', 2: 'warning', 3: 'danger', 4: 'danger' }[level] || 'info'
 }
+
+/** 当前月份 YYYY-MM（不要用 toISOString：那是 UTC，月初/凌晨会拿到上个月） */
+export function currentMonth() {
+  const d = new Date()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  return `${d.getFullYear()}-${m}`
+}

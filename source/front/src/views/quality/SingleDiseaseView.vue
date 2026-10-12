@@ -128,68 +128,13 @@
     </el-tabs>
 
     <!-- 病种维护 -->
-    <el-dialog v-model="diseaseDlg" title="病种维护" width="460px">
-      <el-form label-width="110px">
-        <el-form-item label="病种编码">
-          <el-input v-model="diseaseForm.diseaseCode" data-testid="sd-code"/>
-        </el-form-item>
-        <el-form-item label="病种名称">
-          <el-input v-model="diseaseForm.diseaseName" data-testid="sd-name"/>
-        </el-form-item>
-        <el-form-item label="纳入 ICD 前缀">
-          <el-input v-model="diseaseForm.icd10Prefix" data-testid="sd-prefix" placeholder="如 I21,I22"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="diseaseForm.remark"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button data-testid="sd-disease-cancel" @click="diseaseDlg = false">取消</el-button>
-        <el-button v-perm="'qc:singleDisease:add'" data-testid="sd-disease-save" type="primary" @click="saveDisease">
-          保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <SingleDiseaseEdit v-model="diseaseDlg" :row="diseaseRow" @saved="loadAll"/>
 
     <!-- 手工纳入 -->
-    <el-dialog v-model="enrollDlg" title="手工纳入病例" width="460px">
-      <el-form label-width="110px">
-        <el-form-item label="病种">
-          <el-select v-model="enrollForm.diseaseId" data-testid="sd-enroll-disease" style="width:100%">
-            <el-option v-for="d in diseases" :key="d.id" :label="d.diseaseName" :value="d.id"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="住院ID">
-          <el-input v-model.number="enrollForm.admissionId" data-testid="sd-enroll-admission"
-                    placeholder="biz_admission.admission_id"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button data-testid="sd-enroll-cancel" @click="enrollDlg = false">取消</el-button>
-        <el-button v-perm="'qc:singleDisease:edit'" data-testid="sd-enroll-save" type="primary" @click="saveEnroll">
-          纳入
-        </el-button>
-      </template>
-    </el-dialog>
+    <SingleDiseaseEnrollAdd v-model="enrollDlg" :diseases="diseases" @saved="refreshCaseAndMetrics"/>
 
     <!-- 质控 -->
-    <el-dialog v-model="qcDlg" title="质控判级" width="460px">
-      <el-form label-width="110px">
-        <el-form-item label="疗效判定">
-          <el-select v-model="qcForm.curativeEffect" data-testid="sd-qc-curative" style="width:100%">
-            <el-option v-for="(t, k) in CURATIVE" :key="k" :label="t" :value="Number(k)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="质控意见">
-          <el-input v-model="qcForm.remark" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button data-testid="sd-qc-cancel" @click="qcDlg = false">取消</el-button>
-        <el-button v-perm="'qc:singleDisease:edit'" data-testid="sd-qc-save" type="primary" @click="saveQc">提交质控
-        </el-button>
-      </template>
-    </el-dialog>
+    <SingleDiseaseQcEdit v-model="qcDlg" :row="qcRow" :curative="CURATIVE" @saved="refreshCaseAndMetrics"/>
   </div>
 </template>
 
@@ -203,16 +148,16 @@
 import {onMounted, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+import SingleDiseaseEdit from './SingleDiseaseEdit.vue';
+import SingleDiseaseEnrollAdd from './SingleDiseaseEnrollAdd.vue';
+import SingleDiseaseQcEdit from './SingleDiseaseQcEdit.vue';
 import {
   autoEnroll,
   deleteDisease,
-  enrollCase,
   getMetrics,
   listCasePage,
   listDiseases,
-  qcCase,
   reportCase,
-  upsertDisease,
 } from '@/api/singleDisease';
 
 const CURATIVE = {1: '治愈', 2: '好转', 3: '未愈', 4: '死亡', 5: '其他'};
@@ -248,18 +193,10 @@ onMounted(async () => {
 });
 // ---------------- 目录维护 ----------------
 const diseaseDlg = ref(false);
-const diseaseForm = ref({});
+const diseaseRow = ref(null);
 const openDiseaseDlg = (d) => {
-  diseaseForm.value = d ? {...d} : {id: null, diseaseCode: '', diseaseName: '', icd10Prefix: '', remark: ''};
+  diseaseRow.value = d || null;
   diseaseDlg.value = true;
-};
-const saveDisease = async () => {
-  const res = await upsertDisease(diseaseForm.value);
-  if (res?.code === 200) {
-    ElMessage.success('病种已保存');
-    diseaseDlg.value = false;
-    loadAll();
-  }
 };
 const doDeleteDisease = (d) => {
   ElMessageBox.confirm(`删除病种「${d.diseaseName}」？（已纳入病例的病种会被拒绝）`, '删除', {type: 'warning'})
@@ -274,24 +211,13 @@ const doDeleteDisease = (d) => {
 };
 // ---------------- 纳入 ----------------
 const enrollDlg = ref(false);
-const enrollForm = ref({});
 const openEnroll = () => {
-  enrollForm.value = {diseaseId: null, admissionId: null};
   enrollDlg.value = true;
 };
-const saveEnroll = async () => {
-  const f = enrollForm.value;
-  if (!f.diseaseId || !f.admissionId) {
-    ElMessage.warning('病种与住院ID必填');
-    return;
-  }
-  const res = await enrollCase(f);
-  if (res?.code === 200) {
-    ElMessage.success(`已纳入（病例 ${res.data?.caseNo}）`);
-    enrollDlg.value = false;
-    loadAll();
-    loadCases();
-  }
+// 纳入/质控保存后：病例列表与病种指标都要刷新
+const refreshCaseAndMetrics = () => {
+  loadAll();
+  loadCases();
 };
 const doAutoEnroll = (d) => {
   ElMessageBox.confirm(`按 ICD 前缀「${d.icd10Prefix}」扫描全部出院首页并自动纳入「${d.diseaseName}」？`, '自动扫描', {type: 'info'})
@@ -308,27 +234,10 @@ const doAutoEnroll = (d) => {
 };
 // ---------------- 质控 / 上报 ----------------
 const qcDlg = ref(false);
-const qcForm = ref({});
+const qcRow = ref(null);
 const openQc = (row) => {
-  qcForm.value = {id: row.id, curativeEffect: row.deathFlag === 1 ? 4 : null, remark: '', row};
+  qcRow.value = row;
   qcDlg.value = true;
-};
-const saveQc = async () => {
-  if (!qcForm.value.curativeEffect) {
-    ElMessage.warning('疗效判定必选');
-    return;
-  }
-  const res = await qcCase(qcForm.value);
-  if (res?.code === 200) {
-    const issues = res.data?.qcIssues;
-    if (res.data?.qcStatus === 1)
-      ElMessage.success('质控通过');
-    else
-      ElMessage.warning('质控异常：' + (issues || ''));
-    qcDlg.value = false;
-    loadCases();
-    loadAll();
-  }
 };
 const doReport = (row) => {
   ElMessageBox.confirm(`上报病例「${row.caseNo}」？（质控通过才可上报）`, '上报', {type: 'info'})

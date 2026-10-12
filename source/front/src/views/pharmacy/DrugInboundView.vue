@@ -118,47 +118,11 @@
     </el-card>
 
     <!-- 详情抽屉 -->
-    <el-drawer v-model="drawerVisible" data-testid="inbound-detail-drawer" size="820px" title="入库单详情">
-      <template v-if="detail">
-        <el-descriptions :column="2" border class="mb-4" size="small">
-          <el-descriptions-item label="入库单号">{{ detail.inboundNo }}</el-descriptions-item>
-          <el-descriptions-item label="类型">{{ typeText(detail.inboundType) }}</el-descriptions-item>
-          <el-descriptions-item label="供应商">{{ detail.supplier || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="采购订单号">{{ detail.purchaseOrderNo || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="状态">
-            <el-tag :type="inboundStatusTagType(detail.inboundStatus)">{{ statusText(detail.inboundStatus) }}</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="金额合计">{{ formatMoney(detail.totalAmount) }}</el-descriptions-item>
-          <el-descriptions-item label="审核人">{{ detail.auditBy || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="入库人">{{ detail.inboundBy || '—' }}</el-descriptions-item>
-          <el-descriptions-item :span="2" label="取消原因">{{ detail.cancelReason || '—' }}</el-descriptions-item>
-          <el-descriptions-item :span="2" label="备注">{{ detail.remark || '—' }}</el-descriptions-item>
-        </el-descriptions>
-
-        <el-table :data="detail.items || []" border data-testid="inbound-detail-table" size="small">
-          <el-table-column label="编码" prop="drugCode" width="100"/>
-          <el-table-column label="药品" min-width="130" prop="drugName" show-overflow-tooltip/>
-          <el-table-column label="规格" prop="specification" width="100"/>
-          <el-table-column label="批号" prop="batchNo" width="90"/>
-          <el-table-column label="效期至" prop="expiryDate" width="100"/>
-          <el-table-column align="right" label="数量" prop="quantity" width="70"/>
-          <el-table-column align="right" label="成本价" width="90">
-            <template #default="{ row }">{{ formatMoney(row.costPrice) }}</template>
-          </el-table-column>
-          <el-table-column align="right" label="金额" width="95">
-            <template #default="{ row }">{{ formatMoney(row.amount) }}</template>
-          </el-table-column>
-          <el-table-column align="center" label="明细状态" width="90">
-            <template #default="{ row }">
-              <el-tag :type="detailStatusTagType(row.detailStatus)" size="small">
-                {{ detailStatusText(row.detailStatus) }}
-              </el-tag>
-            </template>
-          </el-table-column>
-        </el-table>
-        <div class="mt-2 text-sm text-slate-500 text-right">有效明细金额合计：¥{{ activeAmount }}</div>
-      </template>
-    </el-drawer>
+    <DrugInboundDetail
+        v-model="drawerVisible"
+        :id="detailId"
+        :type-dict="typeDict"
+        :status-dict="statusDict" />
   </div>
 </template>
 
@@ -173,14 +137,13 @@
  * 入库类型/状态文案走字典（his_drug_inbound_type / his_inbound_status）；
  * 明细状态无字典，单点 lib/purchase.js detailStatusText —— 未知码值一律「未知(n)」。
  */
-import {computed, onMounted, reactive, ref} from 'vue';
+import {onMounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {Refresh, Search, View} from '@element-plus/icons-vue';
 import {
   auditInbound,
   cancelInbound,
   deleteInbound,
-  getInboundDetail,
   getInboundList,
   stockInInbound,
 } from '@/api/purchase';
@@ -192,12 +155,11 @@ import {
   canCancelInbound,
   canDeleteInbound,
   canStockIn,
-  detailStatusTagType,
-  detailStatusText,
   inboundStatusTagType,
 } from '@/lib/purchase';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import DrugInboundDetail from './DrugInboundDetail.vue';
 
 const loading = ref(false);
 const rows = ref([]);
@@ -346,23 +308,10 @@ const doDelete = async (row) => {
 };
 // ==================== 详情抽屉 ====================
 const drawerVisible = ref(false);
-const detail = ref(null);
-const activeAmount = computed(() => (detail.value?.items || [])
-    .filter((d) => Number(d.detailStatus) !== 3)
-    .reduce((s, d) => s + Number(d.amount || 0), 0)
-    .toFixed(2));
-const openDetail = async (row) => {
-  try {
-    const res = await getInboundDetail(row.id);
-    if (res.code === 200) {
-      detail.value = res.data;
-      drawerVisible.value = true;
-    } else {
-      ElMessage.error(res.message || '加载详情失败');
-    }
-  } catch (e) {
-    console.error(e);
-  }
+const detailId = ref(null);
+const openDetail = (row) => {
+  detailId.value = row.id;
+  drawerVisible.value = true;
 };
 onMounted(() => {
   loadDicts();

@@ -69,4 +69,32 @@ public class SysConfigServiceImpl extends ServiceImpl<SysConfigMapper, SysConfig
         entity.setIsSystem(1);
         save(entity);
     }
+
+    @Override
+    public String getConfigValue(String configKey, String defaultValue) {
+        LambdaQueryWrapper<SysConfig> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SysConfig::getConfigKey, configKey).last("LIMIT 1");
+        SysConfig config = getOne(wrapper);
+        return (config != null && TextUtil.hasText(config.getConfigValue())) ? config.getConfigValue() : defaultValue;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void setConfigValue(String configKey, String configName, String configValue) {
+        LambdaQueryWrapper<SysConfig> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SysConfig::getConfigKey, configKey).last("LIMIT 1");
+        SysConfig existing = getOne(wrapper);
+        if (existing != null) {
+            existing.setConfigValue(configValue);
+            updateById(existing);
+            return;
+        }
+        SysConfig entity = new SysConfig();
+        entity.setConfigName(configName);
+        entity.setConfigKey(configKey);
+        entity.setConfigValue(configValue);
+        entity.setConfigType(0);
+        entity.setIsSystem(1);
+        save(entity);
+    }
 }

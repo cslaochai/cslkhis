@@ -108,49 +108,9 @@
       </div>
     </el-card>
 
-    <el-dialog v-model="formVisible" :title="form.id ? '编辑医保政策' : '新增医保政策'" destroy-on-close width="520px">
-      <el-form label-width="100px">
-        <el-form-item label="政策名称" required>
-          <el-input v-model="form.policyName" placeholder="如：城镇职工医保-在职"/>
-        </el-form-item>
-        <el-form-item label="医保类型" required>
-          <el-input v-model="form.insuranceType" placeholder="如：在职职工 / 退休职工 / 老年居民"/>
-        </el-form-item>
-        <el-form-item label="结算方式" required>
-          <el-select v-model="form.settlementType" class="w-full" placeholder="请选择">
-            <el-option
-                v-for="o in settlementTypeOptions"
-                :key="o.dictValue"
-                :label="o.dictLabel"
-                :value="Number(o.dictValue)"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="统筹比例" required>
-          <el-input-number v-model="form.coverageRatio" :max="100" :min="0" :precision="2" :step="1" class="!w-full"/>
-          <span class="ml-2 text-xs text-slate-400">%，如 85 表示报销 85%</span>
-        </el-form-item>
-        <el-form-item label="乙类自付">
-          <el-input-number v-model="form.selfPayRatio" :max="100" :min="0" :precision="2" :step="1" class="!w-full"/>
-          <span class="ml-2 text-xs text-slate-400">%，乙类药品个人先自付比例</span>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-radio-group v-model="form.status">
-            <el-radio :value="1">启用</el-radio>
-            <el-radio :value="0">停用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="form.remark" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="formVisible = false">取消</el-button>
-        <el-button v-perm="'finance:insurancePolicy:add'" :loading="formSubmitting" type="primary" @click="submitForm">
-          保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 新增/编辑医保政策（拆到 InsurancePolicyEdit） -->
+    <InsurancePolicyEdit v-model="formVisible" :row="editRow" :settlement-type-options="settlementTypeOptions"
+                         @saved="loadList"/>
   </div>
 </template>
 
@@ -158,11 +118,12 @@
 import {onMounted, reactive, ref} from 'vue';
 import {Delete, Edit, Plus, Refresh, Search} from '@element-plus/icons-vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
-import {deleteInsurancePolicy, getInsurancePolicyList, insurancePolicyUpsert,} from '@/api/insurancePolicy';
+import {deleteInsurancePolicy, getInsurancePolicyList,} from '@/api/insurancePolicy';
 import {getDictDataMapList} from '@/api/system';
 import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import InsurancePolicyEdit from './InsurancePolicyEdit.vue';
 // 「加载中 ≠ 没有」：初值 true
 const loading = ref(true);
 const rows = ref([]);
@@ -184,17 +145,8 @@ const STATUS_OPTIONS = [
   {label: '停用', value: 0},
 ];
 const formVisible = ref(false);
-const formSubmitting = ref(false);
-const form = reactive({
-  id: null,
-  policyName: '',
-  insuranceType: '',
-  settlementType: null,
-  coverageRatio: 0,
-  selfPayRatio: 0,
-  status: 1,
-  remark: '',
-});
+// 传给编辑弹窗的行：null＝新增，有值＝编辑；表单复位与提交逻辑在 InsurancePolicyEdit 内
+const editRow = ref(null);
 
 async function loadDicts() {
   try {
@@ -255,68 +207,15 @@ function handleCurrentChange(page) {
   loadList();
 }
 
+// 新增/编辑弹窗（InsurancePolicyEdit）：row 为空＝新增，有值＝编辑，复位与提交都在弹窗内
 function openCreate() {
-  form.id = null;
-  form.policyName = '';
-  form.insuranceType = '';
-  form.settlementType = null;
-  form.coverageRatio = 0;
-  form.selfPayRatio = 0;
-  form.status = 1;
-  form.remark = '';
+  editRow.value = null;
   formVisible.value = true;
 }
 
 function openEdit(row) {
-  form.id = row.id;
-  form.policyName = row.policyName;
-  form.insuranceType = row.insuranceType;
-  form.settlementType = row.settlementType;
-  form.coverageRatio = Number(row.coverageRatio ?? 0);
-  form.selfPayRatio = Number(row.selfPayRatio ?? 0);
-  form.status = row.status;
-  form.remark = row.remark || '';
+  editRow.value = row;
   formVisible.value = true;
-}
-
-async function submitForm() {
-  if (!form.policyName.trim()) {
-    ElMessage.warning('请填写政策名称');
-    return;
-  }
-  if (!form.insuranceType.trim()) {
-    ElMessage.warning('请填写医保类型');
-    return;
-  }
-  if (form.settlementType === null) {
-    ElMessage.warning('请选择结算方式');
-    return;
-  }
-  const coverage = Number(form.coverageRatio);
-  if (Number.isNaN(coverage) || coverage < 0 || coverage > 100) {
-    ElMessage.warning('统筹比例需在 0 ~ 100 之间');
-    return;
-  }
-  formSubmitting.value = true;
-  try {
-    await insurancePolicyUpsert({
-      id: form.id,
-      policyName: form.policyName.trim(),
-      insuranceType: form.insuranceType.trim(),
-      settlementType: form.settlementType,
-      coverageRatio: coverage,
-      selfPayRatio: Number(form.selfPayRatio),
-      status: form.status,
-      remark: form.remark,
-    });
-    ElMessage.success(form.id ? '修改成功' : '新增成功');
-    formVisible.value = false;
-    loadList();
-  } catch (e) {
-    ElMessage.error(e?.message || '保存失败');
-  } finally {
-    formSubmitting.value = false;
-  }
 }
 
 async function handleDelete(row) {

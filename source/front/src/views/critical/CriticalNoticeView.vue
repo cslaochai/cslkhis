@@ -125,105 +125,12 @@
       </div>
     </el-card>
 
-    <!-- 表单弹框（草稿） -->
-    <el-dialog v-model="fVisible" :title="form.id ? '修改通知单（草稿）' : '填写通知单（草稿）'" data-testid="cn-form-dialog"
-               width="720px">
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
-        <el-form-item label="在院患者" prop="admissionId">
-          <el-select v-model="form.admissionId" :disabled="!!form.id" :fit-input-width="false" class="!w-full"
-                     clearable
-                     data-testid="cn-form-admission" filterable placeholder="搜索姓名/住院号选择在院患者"
-                     @change="onAdmissionPick">
-            <el-option v-for="p in inpatients" :key="p.admissionId"
-                       :label="`${p.bedNo || '—'}床 ${p.patientName}（${p.deptName || '—'}）`" :value="p.admissionId"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="患者快照">
-          <span class="text-sm text-slate-600" data-testid="cn-form-snapshot">
-            {{ form.patientName || '—' }} / {{ form.admissionNo || '—' }} / {{
-              form.wardName || '—'
-            }} {{ form.bedNo ? form.bedNo + '床' : '' }}
-          </span>
-        </el-form-item>
-        <el-form-item label="通知类别" prop="noticeType">
-          <el-radio-group v-model="form.noticeType" data-testid="cn-form-type">
-            <el-radio v-for="d in dict.type" :key="d.dictValue" :value="Number(d.dictValue)">{{
-                d.dictLabel
-              }}
-            </el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="患者神志" prop="consciousnessStatus">
-          <el-select v-model="form.consciousnessStatus" data-testid="cn-form-cons" style="width:180px">
-            <el-option v-for="d in dict.consciousness" :key="d.dictValue" :label="d.dictLabel"
-                       :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="目前诊断" prop="clinicalDiagnosis">
-          <el-input v-model="form.clinicalDiagnosis" data-testid="cn-form-diagnosis" maxlength="500"/>
-        </el-form-item>
-        <el-form-item label="病情及危险因素" prop="conditionDesc">
-          <el-input v-model="form.conditionDesc" :rows="3" data-testid="cn-form-condition" maxlength="1000" show-word-limit
-                    type="textarea"/>
-        </el-form-item>
-        <el-form-item label="预警事项" prop="warningMatters">
-          <el-input v-model="form.warningMatters" :rows="3" data-testid="cn-form-warning" maxlength="1000" show-word-limit
-                    type="textarea"/>
-        </el-form-item>
-        <el-form-item label="医方措施">
-          <el-input v-model="form.doctorMeasures" :rows="2" data-testid="cn-form-measures" maxlength="1000" show-word-limit
-                    type="textarea"/>
-        </el-form-item>
-        <el-form-item label="告知时间" prop="notifyTime">
-          <el-date-picker v-model="form.notifyTime" data-testid="cn-form-notify-time" placeholder="精确到分"
-                          style="width:220px" type="datetime" value-format="YYYY-MM-DD HH:mm:ss"/>
-        </el-form-item>
-        <el-form-item label="见证医师">
-          <el-select v-model="form.witnessDoctorId" :fit-input-width="false" class="!w-full"
-                     clearable data-testid="cn-form-witness"
-                     filterable placeholder="抢救场景第二医师（可空，不得与告知医师同人）">
-            <el-option v-for="d in doctors" :key="d.employeeId" :label="`${d.empName}（${d.deptName || '—'}）`"
-                       :value="d.employeeId"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="form.remark" data-testid="cn-form-remark" maxlength="500"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button data-testid="cn-form-cancel" @click="fVisible = false">取消</el-button>
-        <el-button :loading="fSaving" data-testid="cn-form-save" type="primary" @click="saveForm">保存草稿</el-button>
-      </template>
-    </el-dialog>
+    <!-- 表单弹框（草稿）：填写/修改合并，表单在 CriticalNoticeEdit -->
+    <CriticalNoticeEdit v-model="fVisible" :base="fBase" :dict="dict" :inpatients="inpatients" :row="fRow"
+                        @saved="reloadAll"/>
 
-    <!-- 签收弹框（家属手写签名板） -->
-    <el-dialog v-model="ackVisible" data-testid="cn-ack-dialog" title="家属签收（手写签名 + 法定关系）" width="560px">
-      <el-form label-width="110px">
-        <el-form-item label="通知单">{{ ack.noticeNo }} / {{ ack.patientName }}</el-form-item>
-        <el-form-item label="签收人姓名" required>
-          <el-input v-model="ack.signerName" data-testid="cn-ack-name" maxlength="50"/>
-        </el-form-item>
-        <el-form-item label="与患者关系" required>
-          <el-select v-model="ack.signerRelation" :fit-input-width="false" data-testid="cn-ack-relation"
-                     placeholder="法定必填" style="width:220px">
-            <el-option v-for="d in dict.relation" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="证件号">
-          <el-input v-model="ack.signerIdCard" data-testid="cn-ack-idcard" maxlength="20"/>
-        </el-form-item>
-        <el-form-item label="联系电话">
-          <el-input v-model="ack.signerPhone" data-testid="cn-ack-phone" maxlength="20"/>
-        </el-form-item>
-        <el-form-item label="手写签名" required>
-          <SignaturePad ref="signPad"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button data-testid="cn-ack-cancel" @click="ackVisible = false">取消</el-button>
-        <el-button :loading="ackSaving" data-testid="cn-ack-submit" type="primary" @click="doAck">确认签收</el-button>
-      </template>
-    </el-dialog>
+    <!-- 签收弹框（家属手写签名板）：表单在 CriticalNoticeAck -->
+    <CriticalNoticeAck v-model="ackVisible" :dict="dict" :row="ackRow" @saved="reloadAll"/>
 
     <!-- 作废弹框 -->
     <el-dialog v-model="vVisible" data-testid="cn-void-dialog" title="作废通知单" width="480px">
@@ -238,61 +145,8 @@
       </template>
     </el-dialog>
 
-    <!-- 详情（只读，行点击打开） -->
-    <el-dialog v-model="dvVisible" data-testid="cn-detail-dialog" title="通知单详情（只读）" width="720px">
-      <el-form :disabled="true" label-width="110px">
-        <el-form-item label="单号"><span data-testid="cn-detail-no">{{ dv.noticeNo }}</span></el-form-item>
-        <el-form-item label="患者">{{ dv.patientName }} / {{ dv.admissionNo }} / {{ dv.deptName }} {{ dv.wardName }}
-          {{ dv.bedNo }}
-        </el-form-item>
-        <el-form-item label="类别/神志">{{ typeText(dv.noticeType) }} / {{
-            consText(dv.consciousnessStatus)
-          }}
-        </el-form-item>
-        <el-form-item label="目前诊断"><span data-testid="cn-detail-diagnosis">{{ dv.clinicalDiagnosis }}</span>
-        </el-form-item>
-        <el-form-item label="病情及危险因素">
-          <el-input :model-value="dv.conditionDesc" :rows="3" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="预警事项">
-          <el-input :model-value="dv.warningMatters" :rows="3" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="医方措施">
-          <el-input :model-value="dv.doctorMeasures" :rows="2" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="告知时间">{{ fmt(dv.notifyTime) }}</el-form-item>
-        <el-form-item label="告知/见证医师">{{ dv.doctorName }} / {{ dv.witnessDoctorName || '—' }}</el-form-item>
-        <el-form-item label="状态">
-          <el-tag :type="statusTag(Number(dv.noticeStatus))" size="small">{{ statusText(dv.noticeStatus) }}</el-tag>
-          <el-tag class="ml-2" size="small" type="info">{{ signTagText(dv.signStatus) }}</el-tag>
-        </el-form-item>
-        <el-form-item v-if="Number(dv.noticeStatus) === NS.ACKED" label="签收信息">
-          <div data-testid="cn-detail-ack">
-            <img v-if="dv.signerSignature" :src="dv.signerSignature" alt="家属手写签名"
-                 class="h-11 border border-slate-200"/>
-            <div class="text-xs text-slate-500">{{ dv.signerName }}（{{
-                relationText(dv.signerRelation)
-              }}）　{{ dv.signerIdCardMasked || '' }}　{{ dv.signerPhoneMasked || '' }}　{{ fmt(dv.acknowledgeTime) }}
-            </div>
-          </div>
-        </el-form-item>
-        <el-form-item v-if="dv.signNo" label="电子签名">
-          <span class="text-xs text-slate-500" data-testid="cn-detail-sign">签名流水 {{
-              dv.signNo
-            }}；摘要 {{
-              String(dv.contentDigest || '').slice(0, 16)
-            }}…；验签 {{
-              Number(dv.verifyStatus) === 1 ? '通过' : Number(dv.verifyStatus) === 2 ? '失败' : '未校验'
-            }}</span>
-        </el-form-item>
-        <el-form-item v-if="dv.noticeStatus === NS.VOID" label="作废">{{ dv.voidBy }} · {{ fmt(dv.voidTime) }} ·
-          {{ dv.voidReason }}
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button data-testid="cn-detail-close" @click="dvVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    <!-- 详情（只读，行点击打开）：按 id 自拉数据，见 CriticalNoticeDetail -->
+    <CriticalNoticeDetail v-model="dvVisible" :dict="dict" :id="dvId"/>
   </div>
 </template>
 
@@ -313,22 +167,21 @@ import {dictLabelText} from '@/lib/utils'
 import {patientGenderText} from '@/lib/patientGender'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
-import SignaturePad from '@/components/his/SignaturePad.vue'
+import {NS, fmt, statusTag, signTagText, gate} from '@/lib/criticalNotice'
+import CriticalNoticeEdit from './CriticalNoticeEdit.vue'
+import CriticalNoticeAck from './CriticalNoticeAck.vue'
+import CriticalNoticeDetail from './CriticalNoticeDetail.vue'
 import {
   getNoticeBase,
   getNoticeById,
-  getNoticeDoctorOptions,
   getNoticeInpatients,
   getNoticeListPage,
   getNoticeStats,
-  noticeAcknowledge,
   noticeIssue,
   noticePrint,
-  noticeUpsert,
   noticeVoid,
 } from '@/api/criticalNotice'
 
-const NS = {DRAFT: 1, ISSUED: 2, ACKED: 3, VOID: 4}
 const COPIES = ['病历联（随病历存档）', '患方联（交家属留存）']
 
 const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({
@@ -337,7 +190,6 @@ const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({
   '>': '&gt;',
   '"': '&quot;'
 }[c]))
-const fmt = (t) => (t ? String(t).slice(0, 19) : '—')
 
 // ---------------- 字典 ----------------
 const dict = reactive({type: [], status: [], consciousness: [], relation: []})
@@ -358,20 +210,6 @@ const typeText = (v) => dictLabelText(dict.type, v)
 const statusText = (v) => dictLabelText(dict.status, v)
 const consText = (v) => dictLabelText(dict.consciousness, v)
 const relationText = (v) => dictLabelText(dict.relation, v)
-const statusTag = (s) => (s === NS.DRAFT ? 'warning' : s === NS.ISSUED ? 'primary' : s === NS.ACKED ? 'success' : 'info')
-const signTagText = (s) => (Number(s) === 1 ? '已签名' : Number(s) === 2 ? '签名已作废' : '未签名')
-
-const gate = async (p, msg) => {
-  try {
-    const res = await p
-    if (res.code === 200) return res
-    ElMessage.error(res.message || msg)
-    return null
-  } catch (e) {
-    ElMessage.error(String((e && e.message) || msg))
-    return null
-  }
-}
 
 // ---------------- 统计卡 ----------------
 const stats = ref({})
@@ -430,89 +268,14 @@ const resetQuery = () => {
 }
 const reloadAll = () => Promise.all([loadStats(), loadList(), loadInpatients()])
 
-// ---------------- 医师下拉 ----------------
-const doctors = ref([])
-const loadDoctors = async () => {
-  const res = await gate(getNoticeDoctorOptions(), '加载医师候选失败')
-  if (res) doctors.value = res.data || []
-}
-
 // ---------------- 表单（草稿） ----------------
 const fVisible = ref(false)
-const fSaving = ref(false)
-const formRef = ref(null)
-const form = reactive({
-  id: null, admissionId: null, patientName: '', wardName: '', bedNo: '', admissionNo: '',
-  noticeType: 1, consciousnessStatus: 1, clinicalDiagnosis: '', conditionDesc: '',
-  warningMatters: '', doctorMeasures: '', notifyTime: '', witnessDoctorId: null, remark: '',
-})
-const rules = {
-  admissionId: [{required: true, message: '必须挂在一次住院上', trigger: 'change'}],
-  noticeType: [{required: true, message: '请选择通知类别', trigger: 'change'}],
-  consciousnessStatus: [{required: true, message: '请选择患者神志', trigger: 'change'}],
-  clinicalDiagnosis: [{required: true, message: '目前诊断不能为空', trigger: 'blur'}],
-  conditionDesc: [{required: true, message: '病情及危险因素不能为空', trigger: 'blur'}],
-  warningMatters: [{required: true, message: '预警事项不能为空', trigger: 'blur'}],
-  notifyTime: [{required: true, message: '告知时间不能为空', trigger: 'change'}],
-}
-const nowText = () => {
-  const d = new Date()
-  const p = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:00`
-}
+const fRow = ref(null)
+const fBase = ref(null)
 const openForm = (row, base) => {
-  Object.assign(form, {
-    id: row?.id || null,
-    admissionId: row?.admissionId || base?.admissionId || null,
-    patientName: base?.patientName || row?.patientName || '',
-    wardName: base?.wardName || '', bedNo: base?.bedNo || '', admissionNo: base?.admissionNo || row?.admissionNo || '',
-    noticeType: row?.noticeType || 1, consciousnessStatus: row?.consciousnessStatus || 1,
-    clinicalDiagnosis: row?.clinicalDiagnosis || base?.diagnosis || '',
-    conditionDesc: '', warningMatters: '', doctorMeasures: '',
-    notifyTime: row?.notifyTime ? String(row.notifyTime).slice(0, 19) : nowText(),
-    witnessDoctorId: row?.witnessDoctorId || null, remark: row?.remark || '',
-  })
-  if (row?.id) fillEditableContent(row.id)
+  fRow.value = row || null
+  fBase.value = base || null
   fVisible.value = true
-}
-/** 编辑草稿：正文大字段不在台账行里，走详情接口补全（后端未脱敏正文，回显零损失） */
-const fillEditableContent = async (id) => {
-  const res = await gate(getNoticeById(id), '加载通知单失败')
-  if (!res) return
-  const d = res.data || {}
-  Object.assign(form, {
-    conditionDesc: d.conditionDesc || '', warningMatters: d.warningMatters || '',
-    doctorMeasures: d.doctorMeasures || '', remark: d.remark || '',
-    witnessDoctorId: d.witnessDoctorId || form.witnessDoctorId,
-    patientName: d.patientName, wardName: d.wardName, bedNo: d.bedNo, admissionNo: d.admissionNo,
-  })
-}
-const onAdmissionPick = async (admissionId) => {
-  if (!admissionId || form.id) return
-  const res = await gate(getNoticeBase(admissionId), '带出患者信息失败')
-  if (!res) return
-  const b = res.data || {}
-  Object.assign(form, {
-    patientName: b.patientName, wardName: b.wardName, bedNo: b.bedNo,
-    admissionNo: b.admissionNo, clinicalDiagnosis: form.clinicalDiagnosis || b.diagnosis || '',
-  })
-}
-const saveForm = async () => {
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
-  fSaving.value = true
-  const res = await gate(noticeUpsert({
-    id: form.id, admissionId: form.admissionId, noticeType: form.noticeType,
-    consciousnessStatus: form.consciousnessStatus, clinicalDiagnosis: form.clinicalDiagnosis,
-    conditionDesc: form.conditionDesc, warningMatters: form.warningMatters,
-    doctorMeasures: form.doctorMeasures, notifyTime: form.notifyTime,
-    witnessDoctorId: form.witnessDoctorId, remark: form.remark,
-  }), '保存失败')
-  fSaving.value = false
-  if (!res) return
-  ElMessage.success(res.message || '通知单已保存')
-  fVisible.value = false
-  reloadAll()
 }
 
 // ---------------- 签发 ----------------

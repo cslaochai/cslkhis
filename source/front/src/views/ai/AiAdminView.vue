@@ -248,93 +248,13 @@
     </el-tabs>
 
     <!-- 录入文档 -->
-    <el-dialog v-model="ingestVisible" title="录入知识文档" width="640px">
-      <el-form label-width="80px">
-        <el-form-item label="标题" required>
-          <el-input v-model="ingestForm.title" maxlength="100" placeholder="文档标题"/>
-        </el-form-item>
-        <el-form-item label="分类">
-          <el-select
-              v-model="ingestForm.category"
-              :fit-input-width="false"
-              allow-create
-              clearable
-              default-first-option
-              filterable
-              placeholder="选择或输入分类"
-              style="width: 100%"
-          >
-            <el-option label="就诊须知" value="就诊须知"/>
-            <el-option label="科室介绍" value="科室介绍"/>
-            <el-option label="检查注意事项" value="检查注意事项"/>
-            <el-option label="药品说明书" value="药品说明书"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="来源">
-          <el-radio-group v-model="ingestForm.sourceType">
-            <el-radio :value="2">手工录入</el-radio>
-            <el-radio :value="3">文件导入</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="内容" required>
-          <el-input
-              v-model="ingestForm.content"
-              :rows="12"
-              maxlength="20000"
-              placeholder="文档全文；保存后自动切块并建立向量索引"
-              show-word-limit
-              type="textarea"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="ingestVisible = false">取消</el-button>
-        <el-button :loading="ingestSubmitting" type="primary" @click="submitIngest">保存</el-button>
-      </template>
-    </el-dialog>
+    <AiAdminIngestAdd v-model="ingestVisible" @saved="onIngestSaved"/>
 
     <!-- 文档详情（只读） -->
-    <el-dialog v-model="detailVisible" :title="detail?.title || '文档详情'" width="640px">
-      <el-form disabled label-width="80px">
-        <el-form-item label="分类">{{ detail?.category || '—' }}</el-form-item>
-        <el-form-item label="来源">{{ sourceTypeText(detail?.sourceType) }} · 切块 {{
-            detail?.chunkCount ?? 0
-          }}
-        </el-form-item>
-        <el-form-item label="原文">
-          <div class="doc-content">{{ detail?.content }}</div>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="detailVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    <AiAdminDocDetail v-model="detailVisible" :id="detailId"/>
 
     <!-- 草稿留痕详情（只读，红删绿增渲染用模板插值，禁止 v-html） -->
-    <el-dialog
-        v-model="diffVisible"
-        :title="`草稿留痕 · ${diffDetail?.patientName || ''}（${diffDetail?.deptName || ''}）`"
-        width="720px"
-    >
-      <p class="diff-meta">
-        医生 {{ diffDetail?.doctorName || '—' }} · {{ (diffDetail?.createTime || '').replace('T', ' ').slice(0, 19) }}
-      </p>
-      <div class="diff-view">
-        <template v-for="(seg, i) in diffSegments" :key="i">
-          <span v-if="seg.type === 1" class="diff-del">{{ seg.text }}</span>
-          <span v-else-if="seg.type === 2" class="diff-add">{{ seg.text }}</span>
-          <span v-else>{{ seg.text }}</span>
-        </template>
-        <span v-if="!diffSegments.length">{{ diffDetail?.finalText }}</span>
-      </div>
-      <p class="diff-legend">
-        <span class="diff-del">删除</span> / <span class="diff-add">新增</span> ——
-        医生对 AI 草稿的改动；文本过长时尾部可能被截断
-      </p>
-      <template #footer>
-        <el-button @click="diffVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    <AiAdminDiffDetail v-model="diffVisible" :row="diffRow"/>
   </div>
 </template>
 
@@ -345,15 +265,17 @@ import {
   askKnowledge,
   deleteKnowledgeDocById,
   getAiAuditLogPage,
-  getKnowledgeDocById,
   getKnowledgeDocPage,
-  ingestKnowledgeDoc,
   listDraftDiffPage,
   rebuildKnowledgeIndex,
   seedKnowledgeCorpus,
 } from '@/api/ai';
+import {sourceTypeText} from '@/lib/ai';
 import {hasPerm} from '@/lib/perm';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+import AiAdminIngestAdd from './AiAdminIngestAdd.vue';
+import AiAdminDocDetail from './AiAdminDocDetail.vue';
+import AiAdminDiffDetail from './AiAdminDiffDetail.vue';
 
 const activeTab = ref('audit');
 const capabilityOptions = [
@@ -452,7 +374,6 @@ const docQuery = reactive({
 const docLoading = ref(false);
 const docRows = ref([]);
 const docTotal = ref(0);
-const sourceTypeText = (t) => (t === 1 ? '内置示例' : t === 3 ? '文件导入' : '手工录入');
 const loadDocs = async () => {
   if (!canManage)
     return;
@@ -479,49 +400,21 @@ const onDocSizeChange = () => {
   docQuery.pageNum = 1;
   loadDocs();
 };
+// 录入弹框（表单与提交已拆至 AiAdminIngestAdd.vue，这里只管开关与刷新）
 const ingestVisible = ref(false);
-const ingestForm = reactive({
-  title: '',
-  category: '',
-  content: '',
-  sourceType: 2,
-});
-const ingestSubmitting = ref(false);
 const openIngest = () => {
-  ingestForm.title = '';
-  ingestForm.category = '';
-  ingestForm.content = '';
-  ingestForm.sourceType = 2;
   ingestVisible.value = true;
 };
-const submitIngest = async () => {
-  if (!ingestForm.title.trim() || !ingestForm.content.trim()) {
-    ElMessage.warning('标题与内容不能为空');
-    return;
-  }
-  ingestSubmitting.value = true;
-  try {
-    await ingestKnowledgeDoc({...ingestForm});
-    ElMessage.success('已录入并建立索引');
-    ingestVisible.value = false;
-    docQuery.pageNum = 1;
-    loadDocs();
-  } catch (e) {
-    console.error('录入知识文档失败', e);
-  } finally {
-    ingestSubmitting.value = false;
-  }
+const onIngestSaved = () => {
+  docQuery.pageNum = 1;
+  loadDocs();
 };
+// 文档详情弹框（已拆至 AiAdminDocDetail.vue，组件按 id 自取详情）
 const detailVisible = ref(false);
-const detail = ref(null);
-const showDetail = async (row) => {
-  try {
-    const res = await getKnowledgeDocById({id: row.id});
-    detail.value = res?.data || null;
-    detailVisible.value = true;
-  } catch (e) {
-    console.error('加载知识文档详情失败', e);
-  }
+const detailId = ref(null);
+const showDetail = (row) => {
+  detailId.value = row.id;
+  detailVisible.value = true;
 };
 const removeDoc = async (row) => {
   await ElMessageBox.confirm(`确认删除知识文档「${row.title}」？其切块与索引将一并删除。`, '删除确认', {
@@ -589,21 +482,11 @@ const onDiffSizeChange = () => {
   diffQuery.pageNum = 1;
   loadDraftDiffs();
 };
+// 草稿留痕弹框（已拆至 AiAdminDiffDetail.vue，组件按行快照解析 diffJson）
 const diffVisible = ref(false);
-const diffDetail = ref(null);
-const diffSegments = ref([]);
+const diffRow = ref(null);
 const showDiff = (row) => {
-  diffDetail.value = row;
-  diffSegments.value = [];
-  try {
-    // diffJson 是留痕快照，坏数据只退化为展示终稿原文，不许整页报错
-    const parsed = JSON.parse(row.diffJson || '[]');
-    if (Array.isArray(parsed)) {
-      diffSegments.value = parsed;
-    }
-  } catch {
-    /* 保持空数组 */
-  }
+  diffRow.value = row;
   diffVisible.value = true;
 };
 onMounted(() => {
@@ -729,47 +612,6 @@ onMounted(() => {
 
 .qa-meta {
   margin: 10px 0 0;
-  font-size: 12px;
-  color: #9ca3af;
-}
-
-.doc-content {
-  white-space: pre-wrap;
-  font-size: 13px;
-  max-height: 320px;
-  overflow-y: auto;
-}
-
-.diff-meta {
-  margin: 0 0 8px;
-  font-size: 12px;
-  color: #9ca3af;
-}
-
-.diff-view {
-  padding: 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
-  font-size: 14px;
-  line-height: 1.8;
-  white-space: pre-wrap;
-  max-height: 360px;
-  overflow-y: auto;
-}
-
-.diff-del {
-  color: #b91c1c;
-  background: #fee2e2;
-  text-decoration: line-through;
-}
-
-.diff-add {
-  color: #047857;
-  background: #d1fae5;
-}
-
-.diff-legend {
-  margin: 8px 0 0;
   font-size: 12px;
   color: #9ca3af;
 }

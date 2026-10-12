@@ -92,72 +92,7 @@
       </div>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="620px">
-      <el-form ref="formRef" :model="formData" :rules="rules" label-width="120px">
-        <el-form-item label="点位编码" prop="postCode">
-          <div data-testid="dp-code">
-            <el-input v-model="formData.postCode" placeholder="如 DUTY-NIGHT-MAIN（全局唯一）"/>
-          </div>
-        </el-form-item>
-        <el-form-item label="点位名称" prop="postName">
-          <div data-testid="dp-name">
-            <el-input v-model="formData.postName" placeholder="如 夜间总值班（主班）"/>
-          </div>
-        </el-form-item>
-        <el-form-item label="责任范围" prop="dutyScope">
-          <el-select v-model="formData.dutyScope" style="width: 100%">
-            <el-option v-for="o in DUTY_SCOPE_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="所属单元类型">
-          <el-radio-group v-model="formData.orgType" @change="formData.orgId = null">
-            <el-radio v-for="o in ORG_UNIT_TYPE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item v-if="orgIdRequired" label="所属科室">
-          <el-select v-model="formData.orgId" filterable placeholder="选择科室" style="width: 100%">
-            <el-option v-for="o in deptOptions" :key="o.id" :label="o.name" :value="o.id"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="班次" prop="shiftId">
-          <div data-testid="dp-shift">
-            <el-select v-model="formData.shiftId" placeholder="这一位几点到几点由班次带出" style="width: 100%">
-              <el-option v-for="s in shiftOptions" :key="s.id" :label="s.shiftName" :value="s.id"/>
-            </el-select>
-          </div>
-        </el-form-item>
-        <el-form-item label="班内角色" prop="roleType">
-          <el-radio-group v-model="formData.roleType">
-            <el-radio v-for="o in DUTY_ROLE_TYPE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="应到岗位类别">
-          <el-select v-model="formData.requiredStaffType" clearable placeholder="不限" style="width: 100%">
-            <el-option v-for="o in STAFF_TYPE_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="值班电话">
-          <el-input v-model="formData.phone" placeholder="半夜打得通的那一部"/>
-        </el-form-item>
-        <el-form-item label="排序号">
-          <el-input-number v-model="formData.sortNo" :max="999" :min="0"/>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-radio-group v-model="formData.status">
-            <el-radio :value="1">启用</el-radio>
-            <el-radio :value="0">停用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="formData.remark" :rows="2" placeholder="如：急诊床位调配的最终兜底人" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button :loading="submitLoading" data-testid="dp-submit" type="primary" @click="handleSubmit">确定
-        </el-button>
-      </template>
-    </el-dialog>
+    <DutyPostEdit v-model="dialogVisible" :row="editRow" @saved="loadData"/>
   </div>
 </template>
 
@@ -169,52 +104,24 @@
  * 以前 biz_duty_roster 的唯一键是 (日期, 班次, 角色)，既表达「一个位一天一位」又当「一个人的班」用，
  * 结果是换人看不出是换了人还是换了时间。现在位是位、人是人，位可以空着等排。
  */
-import {computed, onMounted, reactive, ref} from 'vue'
+import {onMounted, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Delete, Edit, Plus, Refresh, Search} from '@element-plus/icons-vue'
-import {deleteDutyPost, dutyPostUpsert, getDutyPostListPage,} from '@/api/dutyPost'
-import {getDepartmentSelectList} from '@/api/system'
-import {getShiftSelectList} from '@/api/appoint'
+import {deleteDutyPost, getDutyPostListPage,} from '@/api/dutyPost'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
-import {
-  DUTY_ROLE_TYPE_OPTIONS,
-  DUTY_SCOPE_OPTIONS,
-  ORG_UNIT_TYPE_HOSPITAL,
-  ORG_UNIT_TYPE_OPTIONS,
-} from '@/lib/staffSchedule'
-import {STAFF_TYPE_OPTIONS} from '@/lib/scheduleShift'
-
-const SHIFT_USE_SCOPE_DUTY = 3
+import {DUTY_SCOPE_OPTIONS, ORG_UNIT_TYPE_OPTIONS} from '@/lib/staffSchedule'
+import DutyPostEdit from './DutyPostEdit.vue'
 
 const loading = ref(false)
-const submitLoading = ref(false)
 const tableData = ref([])
 const pagination = ref({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0})
 const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight()
 
 const searchForm = ref({dutyScope: null, orgType: null, status: null, keyword: ''})
 
-const deptOptions = ref([])
-// 值班班次册（use_scope=3）：班次决定这一位几点到几点，点位不能再自己填一遍时间
-const shiftOptions = ref([])
-
 const dialogVisible = ref(false)
-const dialogTitle = ref('新增点位')
-const formRef = ref(null)
-const formData = reactive({
-  id: null, postCode: '', postName: '', dutyScope: 1, orgType: ORG_UNIT_TYPE_HOSPITAL, orgId: null,
-  roleType: 1, shiftId: null, requiredStaffType: null, phone: '', sortNo: 0, status: 1, remark: '',
-})
-const rules = {
-  postCode: [{required: true, message: '请填写点位编码', trigger: 'blur'}],
-  postName: [{required: true, message: '请填写点位名称', trigger: 'blur'}],
-  dutyScope: [{required: true, message: '请选择责任范围', trigger: 'change'}],
-  roleType: [{required: true, message: '请选择班内角色', trigger: 'change'}],
-  shiftId: [{required: true, message: '请选择班次', trigger: 'change'}],
-}
-
-const orgIdRequired = computed(() => Number(formData.orgType) !== ORG_UNIT_TYPE_HOSPITAL)
+const editRow = ref(null)
 
 const loadData = async () => {
   loading.value = true
@@ -252,76 +159,14 @@ const handleCurrentChange = (v) => {
   loadData()
 }
 
-const resetForm = () => {
-  formData.id = null
-  formData.postCode = ''
-  formData.postName = ''
-  formData.dutyScope = 1
-  formData.orgType = ORG_UNIT_TYPE_HOSPITAL
-  formData.orgId = null
-  formData.roleType = 1
-  formData.shiftId = null
-  formData.requiredStaffType = null
-  formData.phone = ''
-  formData.sortNo = 0
-  formData.status = 1
-  formData.remark = ''
-}
-
 const handleAdd = () => {
-  resetForm()
-  dialogTitle.value = '新增点位'
+  editRow.value = null
   dialogVisible.value = true
 }
 
 const handleEdit = (row) => {
-  resetForm()
-  dialogTitle.value = '修改点位'
-  Object.assign(formData, {
-    id: row.id,
-    postCode: row.postCode,
-    postName: row.postName,
-    dutyScope: row.dutyScope,
-    orgType: row.orgType,
-    orgId: row.orgId || null,
-    roleType: row.roleType,
-    shiftId: row.shiftId,
-    requiredStaffType: row.requiredStaffType || null,
-    phone: row.phone || '',
-    sortNo: row.sortNo ?? 0,
-    status: row.status ?? 1,
-    remark: row.remark || '',
-  })
-  // 挂的班次已被停用时会不在下拉里，补进去保证回显不是空的
-  if (row.shiftId && !shiftOptions.value.some((s) => String(s.id) === String(row.shiftId))) {
-    shiftOptions.value = [{id: row.shiftId, shiftName: row.shiftName || '已停用班次'}, ...shiftOptions.value]
-  }
+  editRow.value = row
   dialogVisible.value = true
-}
-
-const handleSubmit = async () => {
-  if (!formRef.value) return
-  try {
-    await formRef.value.validate()
-  } catch {
-    return
-  }
-  submitLoading.value = true
-  try {
-    const payload = {...formData, orgId: orgIdRequired.value ? formData.orgId : null}
-    const res = await dutyPostUpsert(payload)
-    if (res.code === 200) {
-      ElMessage.success(formData.id ? '修改成功' : '新增成功')
-      dialogVisible.value = false
-      loadData()
-    } else {
-      ElMessage.error(res.message || '操作失败')
-    }
-  } catch (e) {
-    ElMessage.error(e.message || '操作失败')
-  } finally {
-    submitLoading.value = false
-  }
 }
 
 const handleDelete = async (row) => {
@@ -340,17 +185,7 @@ const handleDelete = async (row) => {
   }
 }
 
-onMounted(async () => {
+onMounted(() => {
   loadData()
-  try {
-    const [dRes, sRes] = await Promise.all([
-      getDepartmentSelectList({}),
-      getShiftSelectList({status: 1, useScope: SHIFT_USE_SCOPE_DUTY}),
-    ])
-    deptOptions.value = (dRes?.data || []).map((d) => ({id: d.id ?? d.deptId, name: d.deptName ?? d.name}))
-    shiftOptions.value = (sRes?.data || []).map((s) => ({id: s.id, shiftName: s.shiftName}))
-  } catch (e) {
-    ElMessage.error(e.message || '加载下拉数据失败')
-  }
 })
 </script>

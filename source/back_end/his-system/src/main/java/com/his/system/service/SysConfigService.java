@@ -19,4 +19,14 @@ public interface SysConfigService extends IService<SysConfig> {
      * 保存医院基础信息，按键存在则更新、不存在则插入
      */
     void upsertHospitalInfo(HospitalInfoUpsertDTO upsertDTO);
+
+    /**
+     * 读取系统参数值；key 不存在或值为空时返回 defaultValue。
+     */
+    String getConfigValue(String configKey, String defaultValue);
+
+    /**
+     * 设置系统参数值（存在则更新，不存在则插入），用于运行时修改系统参数。
+     */
+    void setConfigValue(String configKey, String configName, String configValue);
 }

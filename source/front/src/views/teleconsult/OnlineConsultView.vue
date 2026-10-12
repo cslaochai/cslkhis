@@ -110,103 +110,18 @@
     </el-card>
 
     <!-- 发起问诊 -->
-    <el-dialog v-model="formVisible" title="发起线上问诊" width="620px">
-      <el-form label-width="100px" size="small">
-        <el-form-item label="患者" required>
-          <PatientSelect :model-value="form.patientId" placeholder="搜索患者（姓名/编号）" style="width: 100%"
-                         @select="onPatientSelect"/>
-        </el-form-item>
-        <el-form-item label="接诊科室">
-          <el-select v-model="form.deptId" clearable filterable placeholder="请选择" style="width: 100%">
-            <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName || d.name" :value="d.id"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="问诊方式" required>
-          <el-radio-group v-model="form.consultType">
-            <el-radio v-for="d in onlineTypeDict" :key="d.dictValue" :value="Number(d.dictValue)">{{
-                d.dictLabel
-              }}
-            </el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="主诉/问题" required>
-          <el-input v-model="form.chiefComplaint" :rows="4" placeholder="患者描述的主要问题" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="问诊费用">
-          <el-input-number v-model="form.fee" :min="0" :precision="2"/>
-          <span class="hint">价目快照，此处不计费</span>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="formVisible = false">取消</el-button>
-        <el-button :loading="saving" type="primary" @click="save">发起</el-button>
-      </template>
-    </el-dialog>
+    <OnlineConsultAdd v-model="formVisible" :dept-options="deptOptions" :online-type-dict="onlineTypeDict"
+                      @saved="reloadAfterChange"/>
 
     <!-- 回复 -->
-    <el-dialog v-model="replyVisible" title="回复并结束问诊" width="620px">
-      <el-form label-width="110px" size="small">
-        <el-form-item label="回复内容" required>
-          <el-input v-model="replyForm.reply" :rows="4" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="处置建议">
-          <el-input v-model="replyForm.advice" :rows="3" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="建议线下就诊">
-          <el-radio-group v-model="replyForm.needVisit">
-            <el-radio :value="0">否</el-radio>
-            <el-radio :value="1">是</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="replyVisible = false">取消</el-button>
-        <el-button :loading="replyLoading" type="primary" @click="submitReply">提交并结束</el-button>
-      </template>
-    </el-dialog>
+    <OnlineConsultReplyEdit v-model="replyVisible" :row="replyRow" @saved="reloadAfterChange"/>
 
     <!-- 退诊 -->
-    <el-dialog v-model="rejectVisible" title="退诊" width="560px">
-      <el-form label-width="100px" size="small">
-        <el-form-item label="退诊原因" required>
-          <el-input v-model="rejectReason" :rows="4" placeholder="原因必填（如：非本科室诊疗范围）" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="rejectVisible = false">取消</el-button>
-        <el-button :loading="rejectLoading" type="primary" @click="submitReject">确定退诊</el-button>
-      </template>
-    </el-dialog>
+    <OnlineConsultRejectEdit v-model="rejectVisible" :row="rejectRow" @saved="reloadAfterChange"/>
 
     <!-- 问诊详情 -->
-    <el-dialog v-model="detailVisible" title="线上问诊详情" width="700px">
-      <el-descriptions v-if="detail" :column="2" border size="small">
-        <el-descriptions-item label="问诊单号">{{ detail.consultNo }}</el-descriptions-item>
-        <el-descriptions-item label="状态">
-          <el-tag :type="onlineStatusTag(detail.status)" size="small">{{ onlineStatusText(detail.status) }}</el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="患者">{{ detail.patientName }}（{{
-            detail.patientNo || '—'
-          }}）
-        </el-descriptions-item>
-        <el-descriptions-item label="问诊方式">{{ onlineTypeText(detail.consultType) }}</el-descriptions-item>
-        <el-descriptions-item label="接诊科室">{{ detail.deptName || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="接诊医生">{{ detail.doctorName || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="发起时间">{{ detail.applyTime || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="完成时间">{{ detail.finishTime || '—' }}</el-descriptions-item>
-        <el-descriptions-item :span="2" label="主诉/问题">{{ detail.chiefComplaint }}</el-descriptions-item>
-        <el-descriptions-item :span="2" label="医生回复">{{ detail.reply || '—' }}</el-descriptions-item>
-        <el-descriptions-item :span="2" label="处置建议">{{ detail.advice || '—' }}</el-descriptions-item>
-        <el-descriptions-item :span="2" label="建议线下就诊">
-          <el-tag v-if="Number(detail.needVisit) === 1" size="small" type="warning">是</el-tag>
-          <span v-else>否</span>
-        </el-descriptions-item>
-        <el-descriptions-item v-if="detail.rejectReason" :span="2" label="退诊原因">{{
-            detail.rejectReason
-          }}
-        </el-descriptions-item>
-      </el-descriptions>
-    </el-dialog>
+    <OnlineConsultDetail v-model="detailVisible" :id="detailId" :online-type-dict="onlineTypeDict"
+                         :online-status-dict="onlineStatusDict" :status-tag="onlineStatusTag"/>
   </div>
 </template>
 
@@ -233,20 +148,19 @@ import {ElMessage, ElMessageBox} from 'element-plus';
 import {Plus, Refresh, Search} from '@element-plus/icons-vue';
 import {
   acceptOnlineConsult,
-  applyOnlineConsult,
   deleteOnlineConsult,
-  getOnlineConsultDetail,
   getTeleConsultStat,
   listOnlineConsultPage,
-  rejectOnlineConsult,
-  replyOnlineConsult,
 } from '@/api/teleconsult';
 import {getDepartmentSelectList, getDictDataMapList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
-import PatientSelect from '@/components/his/PatientSelect.vue';
+import OnlineConsultAdd from './OnlineConsultAdd.vue';
+import OnlineConsultReplyEdit from './OnlineConsultReplyEdit.vue';
+import OnlineConsultRejectEdit from './OnlineConsultRejectEdit.vue';
+import OnlineConsultDetail from './OnlineConsultDetail.vue';
 
 const stats = reactive({
   onlineTotal: 0, onlineWaiting: 0, onlineAccepted: 0, onlineDone: 0, onlineRejected: 0,
@@ -313,59 +227,10 @@ const resetQuery = () => {
   query.pageNum = 1;
   loadList();
 };
-// ---------------- 发起问诊 ----------------
+// ---------------- 发起问诊（表单与提交在 OnlineConsultAdd） ----------------
 const formVisible = ref(false);
-const saving = ref(false);
-const form = reactive({
-  patientId: null,
-  patientName: '',
-  deptId: null,
-  consultType: 1,
-  chiefComplaint: '',
-  fee: null,
-});
 const openCreate = () => {
-  Object.assign(form, {
-    patientId: null, patientName: '', deptId: null, consultType: 1, chiefComplaint: '', fee: null,
-  });
   formVisible.value = true;
-};
-const onPatientSelect = (p) => {
-  form.patientId = p?.id ?? null;
-  form.patientName = p?.name || p?.patientName || '';
-};
-const save = async () => {
-  if (!form.patientId) {
-    ElMessage.warning('请选择患者');
-    return;
-  }
-  if (!form.chiefComplaint.trim()) {
-    ElMessage.warning('请填写主诉/问题描述');
-    return;
-  }
-  saving.value = true;
-  try {
-    const res = await applyOnlineConsult({
-      patientId: form.patientId,
-      deptId: form.deptId || undefined,
-      consultType: form.consultType,
-      chiefComplaint: form.chiefComplaint.trim(),
-      fee: form.fee ?? undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success(`问诊已发起，单号 ${res.data?.consultNo || ''}`);
-      formVisible.value = false;
-      loadList();
-      loadStats();
-    } else {
-      ElMessage.error(res.message || '发起失败');
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('发起失败');
-  } finally {
-    saving.value = false;
-  }
 };
 const doAccept = async (row) => {
   try {
@@ -381,78 +246,19 @@ const doAccept = async (row) => {
     ElMessage.error('接诊失败');
   }
 };
-// ---------------- 回复并结束 ----------------
+// ---------------- 回复并结束（表单与提交在 OnlineConsultReplyEdit） ----------------
 const replyVisible = ref(false);
 const replyRow = ref(null);
-const replyForm = reactive({reply: '', advice: '', needVisit: 0});
-const replyLoading = ref(false);
 const openReply = (row) => {
   replyRow.value = row;
-  replyForm.reply = '';
-  replyForm.advice = '';
-  replyForm.needVisit = 0;
   replyVisible.value = true;
 };
-const submitReply = async () => {
-  if (!replyForm.reply.trim()) {
-    ElMessage.warning('请填写回复内容');
-    return;
-  }
-  replyLoading.value = true;
-  try {
-    const res = await replyOnlineConsult({
-      id: replyRow.value.id,
-      reply: replyForm.reply.trim(),
-      advice: replyForm.advice.trim() || undefined,
-      needVisit: replyForm.needVisit ?? 0,
-    });
-    if (res.code === 200) {
-      ElMessage.success('已回复并结束');
-      replyVisible.value = false;
-      loadList();
-      loadStats();
-    } else {
-      ElMessage.error(res.message || '回复失败');
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('回复失败');
-  } finally {
-    replyLoading.value = false;
-  }
-};
-// ---------------- 退诊 ----------------
+// ---------------- 退诊（原因与提交在 OnlineConsultRejectEdit） ----------------
 const rejectVisible = ref(false);
 const rejectRow = ref(null);
-const rejectReason = ref('');
-const rejectLoading = ref(false);
 const openReject = (row) => {
   rejectRow.value = row;
-  rejectReason.value = '';
   rejectVisible.value = true;
-};
-const submitReject = async () => {
-  if (!rejectReason.value.trim()) {
-    ElMessage.warning('请填写退诊原因');
-    return;
-  }
-  rejectLoading.value = true;
-  try {
-    const res = await rejectOnlineConsult({id: rejectRow.value.id, content: rejectReason.value.trim()});
-    if (res.code === 200) {
-      ElMessage.success('已退诊');
-      rejectVisible.value = false;
-      loadList();
-      loadStats();
-    } else {
-      ElMessage.error(res.message || '退诊失败');
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('退诊失败');
-  } finally {
-    rejectLoading.value = false;
-  }
 };
 const remove = async (row) => {
   try {
@@ -473,18 +279,19 @@ const remove = async (row) => {
     ElMessage.error('删除失败');
   }
 };
-// ---------------- 详情 ----------------
+// ---------------- 详情（按 id 取数在 OnlineConsultDetail） ----------------
 const detailVisible = ref(false);
-const detail = ref(null);
-const openDetail = async (row) => {
-  const res = await getOnlineConsultDetail(row.id);
-  if (res.code === 200) {
-    detail.value = res.data;
-    detailVisible.value = true;
-  } else
-    ElMessage.error(res.message || '加载详情失败');
+const detailId = ref(null);
+const openDetail = (row) => {
+  detailId.value = row.id;
+  detailVisible.value = true;
 };
 // ---------------- 公共 ----------------
+// 任一弹框保存成功后：刷新列表与统计（原各提交分支里的 loadList() + loadStats() 收口成一处）
+const reloadAfterChange = () => {
+  loadList();
+  loadStats();
+};
 const loadStats = async () => {
   try {
     const res = await getTeleConsultStat();
@@ -561,11 +368,5 @@ onMounted(async () => {
 
 .stat-value.ok {
   color: #67c23a;
-}
-
-.hint {
-  margin-left: 8px;
-  font-size: 12px;
-  color: #909399;
 }
 </style>

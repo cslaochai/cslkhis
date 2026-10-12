@@ -5,8 +5,6 @@
 -- 影响表数：97（执行前已实测 del_flag IS NULL 的行数 = 0，不触数据）
 -- ============================================================
 
-USE `hn_biz_his`;
-
 -- biz_ai_draft_diff.del_flag  原 tinyint NULL DEFAULT '0'
 ALTER TABLE `biz_ai_draft_diff` MODIFY COLUMN `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）';
 

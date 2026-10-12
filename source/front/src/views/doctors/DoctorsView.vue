@@ -95,131 +95,12 @@
       </div>
     </el-card>
 
-    <!-- 详情对话框 -->
-    <el-dialog
-        v-model="detailVisible"
-        destroy-on-close
-        title="医生详情"
-        width="700px"
-    >
-      <div v-loading="detailLoading">
-        <template v-if="detailData">
-          <!-- 基本信息 -->
-          <div class="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-            <div class="flex items-center gap-4">
-              <div
-                  class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-xl font-bold text-white">
-                {{ detailData.empName?.charAt(0) }}
-              </div>
-              <div class="flex-1">
-                <div class="flex items-center gap-3">
-                  <h3 class="text-lg font-semibold text-slate-900">{{ detailData.empName }}</h3>
-                  <el-tag :type="detailData.status === 1 ? 'success' : 'danger'" size="small">
-                    {{ detailData.status === 1 ? '在岗' : '停用' }}
-                  </el-tag>
-                  <el-tag v-if="detailData.isExpert === 1" size="small" type="warning">专家</el-tag>
-                </div>
-                <p class="mt-1 text-sm text-slate-500">
-                  {{ getDictLabelByValue(titleOptions, detailData.title) }} · {{ detailData.deptName }}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <!-- 详细信息 -->
-          <div class="grid grid-cols-2 gap-4 py-2 text-sm">
-            <div><span class="text-slate-400">工号：</span><span class="font-medium text-slate-700">{{
-                detailData.empCode
-              }}</span></div>
-            <div><span class="text-slate-400">性别：</span><span
-                class="font-medium text-slate-700">{{ patientGenderText(detailData.gender) }}</span></div>
-            <div><span class="text-slate-400">联系电话：</span><span
-                class="font-medium text-slate-700">{{ detailData.phone }}</span></div>
-            <div><span class="text-slate-400">邮箱：</span><span class="font-medium text-slate-700">{{
-                detailData.email
-              }}</span></div>
-            <div><span class="text-slate-400">学历：</span><span class="font-medium text-slate-700">{{
-                getDictLabelByValue(educationOptions, detailData.education)
-              }}</span></div>
-            <div><span class="text-slate-400">入职日期：</span><span
-                class="font-medium text-slate-700">{{ detailData.hireDate }}</span></div>
-            <div><span class="text-slate-400">职位：</span><span class="font-medium text-slate-700">{{
-                getDictLabelByValue(positionOptions, detailData.position)
-              }}</span></div>
-            <div><span class="text-slate-400">专家号费用：</span><span
-                class="font-medium text-slate-700">¥{{ detailData.expertPrice || 0 }}</span></div>
-            <div class="col-span-2"><span class="text-slate-400">执业科室：</span><span
-                class="font-medium text-slate-700">{{
-                (detailData.deptNames && detailData.deptNames.length > 0) ? detailData.deptNames.join('、') : detailData.deptName
-              }}</span></div>
-            <div class="col-span-2"><span class="text-slate-400">擅长：</span><span
-                class="font-medium text-slate-700">{{ detailData.specialty }}</span></div>
-          </div>
-        </template>
-      </div>
-      <template #footer>
-        <el-button @click="detailVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 编辑对话框 -->
-    <el-dialog
-        v-model="editVisible"
-        destroy-on-close
-        title="编辑医生"
-        width="500px"
-    >
-      <el-form v-loading="editLoading" :model="editForm" label-width="100px">
-        <el-form-item label="医生姓名" required>
-          <el-input v-model="editForm.empName" placeholder="请输入医生姓名"/>
-        </el-form-item>
-        <el-form-item label="性别">
-          <el-radio-group v-model="editForm.gender">
-            <el-radio :value="1">男</el-radio>
-            <el-radio :value="2">女</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="联系电话">
-          <el-input v-model="editForm.phone" placeholder="请输入联系电话"/>
-        </el-form-item>
-        <el-form-item label="主科室">
-          <span class="text-sm font-medium text-slate-700">{{ editForm.deptName || '-' }}</span>
-          <!--
-            原先这里是科室树选（可改），但后端入参里从来没有 deptId 这个字段，
-            选了也悄悄不生效。科室与角色统一在「系统管理 → 员工档案」的岗位表里配，
-            这里只读展示，避免两处配同一份授权。
-          -->
-          <p class="mt-1 text-xs text-slate-400">执业科室与角色请在员工档案的「岗位」中配置</p>
-        </el-form-item>
-        <el-form-item label="职称">
-          <el-select v-model="editForm.title" class="w-full" clearable placeholder="请选择职称">
-            <el-option
-                v-for="item in titleOptions"
-                :key="item.dictValue"
-                :label="item.dictLabel"
-                :value="item.dictValue"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="职位">
-          <el-select v-model="editForm.position" class="w-full" clearable placeholder="请选择职位">
-            <el-option
-                v-for="item in positionOptions"
-                :key="item.dictValue"
-                :label="item.dictLabel"
-                :value="item.dictValue"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="专家号">
-          <el-switch v-model="editForm.isExpert" active-value="1" inactive-value="0"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleEditSubmit">确定</el-button>
-      </template>
-    </el-dialog>
+    <!-- 详情 / 编辑：拆到同目录兄弟组件，页面只管开关与递参 -->
+    <DoctorsDetail v-model="detailVisible" :id="detailId"
+                   :title-options="titleOptions" :education-options="educationOptions"
+                   :position-options="positionOptions"/>
+    <DoctorsEdit v-model="editVisible" :row="editRow" :title-options="titleOptions"
+                 :position-options="positionOptions" @saved="loadData"/>
   </div>
 </template>
 
@@ -227,9 +108,12 @@
 import {onMounted, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Edit, Refresh, Search, Switch, View} from '@element-plus/icons-vue'
-import {getDepartmentTree, getDictDataMapList, getEmployeeDetail, getEmployeeList, updateEmployee} from '@/api/system'
+import {getDepartmentTree, getDictDataMapList, getEmployeeList, updateEmployee} from '@/api/system'
+import DoctorsDetail from './DoctorsDetail.vue'
+import DoctorsEdit from './DoctorsEdit.vue'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
+import {getDictLabelByValue} from '@/lib/doctors'
 import {patientGenderText} from '@/lib/patientGender'
 
 const loading = ref(false)
@@ -255,10 +139,9 @@ const titleOptions = ref([])
 const positionOptions = ref([])
 const educationOptions = ref([])
 
-// 详情对话框
+// 详情对话框（内容已拆至 DoctorsDetail.vue，页面只管开关与递参）
 const detailVisible = ref(false)
-const detailLoading = ref(false)
-const detailData = ref(null)
+const detailId = ref('')
 
 onMounted(() => {
   loadData()
@@ -288,12 +171,6 @@ const loadDictData = async () => {
   } catch (error) {
     console.error('加载字典数据失败', error)
   }
-}
-
-const getDictLabelByValue = (options, value) => {
-  if (!value) return '-'
-  const item = options.find(item => item.dictValue === value)
-  return item ? item.dictLabel : value
 }
 
 const loadData = async () => {
@@ -338,20 +215,9 @@ const handleCurrentChange = (val) => {
 }
 
 // 查看详情
-const handleViewDetail = async (row) => {
+const handleViewDetail = (row) => {
+  detailId.value = row.id
   detailVisible.value = true
-  detailLoading.value = true
-  detailData.value = null
-  try {
-    const res = await getEmployeeDetail(row.id)
-    if (res.code === 200 && res.data) {
-      detailData.value = res.data
-    }
-  } catch (error) {
-    ElMessage.error(error.message || '获取详情失败')
-  } finally {
-    detailLoading.value = false
-  }
 }
 
 // 启用/禁用
@@ -378,63 +244,13 @@ const handleToggleStatus = async (row) => {
   }
 }
 
-// 编辑对话框
+// 编辑对话框（表单已拆至 DoctorsEdit.vue，页面只管开关与递参）
 const editVisible = ref(false)
-const editLoading = ref(false)
-const editForm = ref({
-  id: null,
-  empName: '',
-  gender: 1,
-  phone: '',
-  deptName: '',
-  title: '',
-  position: '',
-  isExpert: '0',
-})
+const editRow = ref(null)
 
 // 编辑
-const handleEdit = async (row) => {
+const handleEdit = (row) => {
+  editRow.value = row
   editVisible.value = true
-  editLoading.value = true
-  try {
-    const res = await getEmployeeDetail(row.id)
-    if (res.code === 200 && res.data) {
-      const data = res.data
-      editForm.value = {
-        id: data.id,
-        empName: data.empName || '',
-        gender: data.gender || 1,
-        phone: data.phone || '',
-        deptName: data.deptName || '',
-        title: data.title || '',
-        position: data.position || '',
-        isExpert: data.isExpert || '0',
-      }
-    }
-  } catch (error) {
-    ElMessage.error(error.message || '获取详情失败')
-  } finally {
-    editLoading.value = false
-  }
-}
-
-// 提交编辑
-const handleEditSubmit = async () => {
-  if (!editForm.value.empName) {
-    ElMessage.warning('请输入医生姓名')
-    return
-  }
-  try {
-    const res = await updateEmployee(editForm.value)
-    if (res.code === 200) {
-      ElMessage.success('编辑成功')
-      editVisible.value = false
-      loadData()
-    } else {
-      ElMessage.error(res.message || '编辑失败')
-    }
-  } catch (error) {
-    ElMessage.error(error.message || '编辑失败')
-  }
 }
 </script>

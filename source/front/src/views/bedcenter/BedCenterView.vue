@@ -368,72 +368,9 @@
       </el-tabs>
     </div>
 
-    <!-- ==================== 登记 / 改需求 ==================== -->
-    <el-dialog v-model="formVisible" :title="form.id ? '修改排队需求' : '登记床位排队'" width="620px">
-      <el-form label-width="110px" size="small">
-        <el-form-item v-if="!form.admissionOrderId" label="患者" required>
-          <PatientSelect v-model="form.patientId" :disabled="!!form.id" data-testid="bc-form-patient"
-                         @select="onPatientSelect"/>
-        </el-form-item>
-        <el-form-item v-else label="患者">
-          <span class="text-sm text-slate-700">
-            {{ form.patientName }}（来源住院证 {{ form.admissionOrderId }}）
-          </span>
-        </el-form-item>
-        <el-form-item label="拟收治科室">
-          <el-select v-model="form.applyDeptId" :fit-input-width="false" class="!w-full" clearable data-testid="bc-form-dept"
-                     filterable placeholder="选择科室">
-            <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="期望病区">
-          <el-select v-model="form.expectWardId" :fit-input-width="false" class="!w-full" clearable
-                     data-testid="bc-form-ward" placeholder="不指定=服从调配">
-            <el-option v-for="w in wardOptions" :key="w.wardId" :label="w.wardName" :value="w.wardId"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="床型 / 优先级">
-          <div class="flex gap-2">
-            <el-select v-model="form.bedType" class="!w-32" data-testid="bc-form-bedtype">
-              <el-option label="普通" value="normal"/>
-              <el-option label="重症 ICU" value="ICU"/>
-              <el-option label="特需 VIP" value="VIP"/>
-            </el-select>
-            <el-select v-model="form.priority" class="!w-32" data-testid="bc-form-priority">
-              <el-option :value="1" label="普通"/>
-              <el-option :value="2" label="急"/>
-              <el-option :value="3" label="危重"/>
-            </el-select>
-            <el-select v-model="form.genderLimit" class="!w-32" data-testid="bc-form-gender">
-              <el-option :value="0" label="不限性别"/>
-              <el-option :value="1" label="限男床"/>
-              <el-option :value="2" label="限女床"/>
-            </el-select>
-          </div>
-        </el-form-item>
-        <el-form-item label="隔离需求">
-          <el-checkbox v-model="isolation" data-testid="bc-form-isolation">需要隔离床（不得混住）</el-checkbox>
-        </el-form-item>
-        <el-form-item label="预计入院日期">
-          <el-date-picker v-model="form.expectAdmitDate" data-testid="bc-form-expect" placeholder="选择预计入院日期"
-                          type="date" value-format="YYYY-MM-DD"/>
-        </el-form-item>
-        <el-form-item v-if="form.id" label="联系电话">
-          <el-input v-model="form.phone" class="!w-40" data-testid="bc-form-phone"/>
-        </el-form-item>
-        <el-form-item label="拟诊名称">
-          <el-input v-model="form.diagnosisName" data-testid="bc-form-diag" placeholder="拟诊（快照到排队单上）"/>
-        </el-form-item>
-      </el-form>
-      <p class="mb-2 text-xs text-slate-400">
-        保存后进入队列并按「优先级 → 登记时间」排序；门急诊所开的住院证会由系统自动入队，不需要在这里重复登记。
-      </p>
-      <template #footer>
-        <el-button @click="formVisible = false">取消</el-button>
-        <el-button :loading="submitting" data-testid="bc-form-submit" type="primary" @click="submitForm">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 登记 / 改需求：表单在 BedCenterQueueEdit（新增+编辑合并） -->
+    <BedCenterQueueEdit v-model="formVisible" :dept-options="deptOptions" :row="formRow" :ward-options="wardOptions"
+                        @saved="reloadAll"/>
 
     <!-- ==================== 安排床位 ==================== -->
     <el-dialog v-model="assignVisible" title="安排床位（含跨科调配）" width="820px">
@@ -492,90 +429,12 @@
       </template>
     </el-dialog>
 
-    <!-- ==================== 办理入院 ==================== -->
-    <el-dialog v-model="admitVisible" title="按已安排床位办理入院" width="560px">
-      <el-form label-width="110px" size="small">
-        <el-form-item label="床位">
-          <span class="text-sm text-slate-700" data-testid="bc-admit-bed">
-            {{ current?.assignedDeptName }} · {{ current?.assignedWardName }} · {{ current?.assignedBedNo }}床
-            <el-tag v-if="current?.crossDept" class="ml-1" size="small" type="warning">跨科调配</el-tag>
-          </span>
-        </el-form-item>
-        <el-form-item label="入院医生" required>
-          <el-select v-model="admitForm.admitDoctorId" :fit-input-width="false" class="!w-full" data-testid="bc-admit-doctor"
-                     filterable placeholder="选择医生">
-            <el-option v-for="e in employees" :key="e.id" :label="e.empName" :value="e.id"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item v-if="!current?.admissionOrderId" label="入院途径" required>
-          <el-select v-model="admitForm.admitWay" class="!w-full" data-testid="bc-admit-way" placeholder="病案首页必填">
-            <el-option :value="2" label="急诊"/>
-            <el-option :value="3" label="转院"/>
-            <el-option :value="4" label="其他"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item v-else label="入院途径">
-          <span class="text-sm text-slate-500">门诊（按来源住院证自动确定）</span>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="admitForm.remark" data-testid="bc-admit-remark"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="admitVisible = false">取消</el-button>
-        <el-button :loading="submitting" data-testid="bc-admit-submit" type="primary" @click="submitAdmit">确认入院
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 办理入院：表单在 BedCenterAdmit -->
+    <BedCenterAdmit v-model="admitVisible" :row="current" @saved="reloadAll"/>
 
-    <!-- ==================== 床位卡详情（图上点床） ==================== -->
-    <el-dialog v-model="bedVisible" :title="`床位 ${bedDetail.bedNo || ''} · ${bedDetail.bedStatusText || ''}`"
-               width="520px">
-      <el-descriptions :column="2" border size="small">
-        <el-descriptions-item label="所属">{{ bedDetail.deptName || '—' }} · {{
-            bedDetail.wardName || '—'
-          }}
-        </el-descriptions-item>
-        <el-descriptions-item label="床型">{{
-            bedDetail.bedTypeText || bedDetail.bedType || '—'
-          }}
-        </el-descriptions-item>
-        <el-descriptions-item label="状态">
-          <el-tag :type="bedStatusTag(bedDetail.bedStatus)" size="small">{{ bedDetail.bedStatusText }}</el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="占用患者">
-          {{ bedDetail.patientName || '—' }}
-          <span v-if="bedDetail.admitTime" class="text-xs text-slate-400">（{{ bedDetail.admitTime }} 入院）</span>
-        </el-descriptions-item>
-        <el-descriptions-item label="预留去向">
-          <span v-if="bedDetail.reservedPatientName">
-            {{ bedDetail.reservedPatientName }}
-            <span class="text-xs text-slate-400">
-              · {{ bedDetail.reservedWaitNo || '无等待号' }} · {{ bedDetail.reservedPriorityText || '' }}
-            </span>
-          </span>
-          <span v-else class="text-xs text-slate-400">—</span>
-        </el-descriptions-item>
-        <el-descriptions-item label="调配方式">
-          {{ bedDetail.allocTypeText || '—' }}
-          <el-tag v-if="bedDetail.crossDept" class="ml-1" size="small" type="warning">跨科</el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="预留时间">{{ bedDetail.reserveTime || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="备注">{{ bedDetail.remark || '—' }}</el-descriptions-item>
-      </el-descriptions>
-      <template #footer>
-        <el-button @click="bedVisible = false">关闭</el-button>
-        <el-button v-if="bedDetail.canReserve" v-perm="'ipd:bedCenter:assign'" data-testid="bc-bed-reserve"
-                   type="primary" @click="openReserve(bedDetail)">预留给等床患者
-        </el-button>
-        <el-button v-if="bedDetail.canRelease" v-perm="'ipd:bedCenter:release'" data-testid="bc-bed-release"
-                   type="warning" @click="releaseFromMap">释放该床
-        </el-button>
-        <el-button v-if="bedDetail.canAdmit" v-perm="'ipd:bedCenter:admit'" data-testid="bc-bed-admit"
-                   type="primary" @click="admitFromMap">办理入院
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 床位卡详情（图上点床）：只读展示在 BedCenterBedDetail，三个后续动作仍由本页处理 -->
+    <BedCenterBedDetail v-model="bedVisible" :bed="bedDetail" @admit="admitFromMap" @release="releaseFromMap"
+                        @reserve="openReserve"/>
 
     <!-- ==================== 图上预留：选一位在等的患者 ==================== -->
     <el-dialog v-model="reserveVisible" title="把这张床预留给谁" width="560px">
@@ -617,14 +476,17 @@
  */
 import {computed, onMounted, reactive, ref} from 'vue';
 import {ElMessage} from 'element-plus';
-import PatientSelect from '@/components/his/PatientSelect.vue';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
-import {getDepartmentSelectList, getEmployeeList} from '@/api/system';
+import {bedStatusTag} from '@/lib/bedCenter';
+import {getDepartmentSelectList} from '@/api/system';
 import {getInpatientWardList} from '@/api/inpatient';
 // 今日总值班：跨科调配与等床超时的兜底协调人（sql/169）
 import DutyOfficerBar from '@/components/his/DutyOfficerBar.vue';
+// 拆分出的弹框组件
+import BedCenterQueueEdit from './BedCenterQueueEdit.vue';
+import BedCenterAdmit from './BedCenterAdmit.vue';
+import BedCenterBedDetail from './BedCenterBedDetail.vue';
 import {
-  admitBedWait,
   assignBed,
   cancelBedWait,
   countBedWaiting,
@@ -636,7 +498,6 @@ import {
   getBedWaitStats,
   matchBeds,
   releaseBed,
-  upsertBedWait,
 } from '@/api/bedCenter';
 
 const tab = ref('queue');
@@ -652,7 +513,6 @@ const overview = ref({summary: {}, deptRows: []});
 const waitingCount = ref(0);
 const deptOptions = ref([]);
 const wardOptions = ref([]);
-const employees = ref([]);
 const query = reactive({
   pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, waitStatus: null, applyDeptId: null,
   priority: null, bedType: null, keyword: '', overdueOnly: false,
@@ -660,15 +520,6 @@ const query = reactive({
 const poolQuery = reactive({
   pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, deptId: null, wardId: null, bedStatus: null, keyword: '',
 });
-/** 病区候选：有选中科室时按科室收窄，没选时给全院病区（条件都下推后端，前端只做下拉收窄） */
-const wardRows = ref([]);
-const filteredWards = computed(() => {
-  const deptId = form.applyDeptId || poolQuery.deptId || query.applyDeptId;
-  if (!deptId)
-    return wardRows.value;
-  return wardRows.value.filter((w) => String(w.deptId) === String(deptId));
-});
-const wardOptionsForPicker = computed(() => filteredWards.value.length ? filteredWards.value : wardRows.value);
 // ---------------- 加载 ----------------
 const loadQueue = async () => {
   loading.value = true;
@@ -733,17 +584,9 @@ const loadOptions = async () => {
   try {
     const res = await getInpatientWardList();
     if (res.code === 200)
-      wardRows.value = res.data || [];
-    wardOptions.value = wardRows.value;
+      wardOptions.value = res.data || [];
   } catch {
-    wardRows.value = [];
-  }
-  try {
-    const res = await getEmployeeList({empType: 1});
-    if (res.code === 200)
-      employees.value = res.data?.records || res.data || [];
-  } catch {
-    employees.value = [];
+    wardOptions.value = [];
   }
 };
 onMounted(async () => {
@@ -753,71 +596,16 @@ onMounted(async () => {
 const reloadAll = async () => {
   await Promise.all([loadTop(), loadQueue(), loadPool(), loadMap()]);
 };
-// ---------------- 登记 / 改需求 ----------------
+// ---------------- 登记 / 改需求（表单在 BedCenterQueueEdit） ----------------
 const formVisible = ref(false);
-const isolation = ref(false);
-const form = reactive({
-  id: null, patientId: null, patientName: '', patientNo: '', gender: null, age: null, phone: '',
-  admissionOrderId: null, applyDeptId: null, applyDeptName: '', expectWardId: null, bedType: 'normal',
-  priority: 1, genderLimit: 0, isolationFlag: 0, expectAdmitDate: null, diagnosisName: '', remark: '',
-});
-const resetForm = () => {
-  Object.assign(form, {
-    id: null, patientId: null, patientName: '', patientNo: '', gender: null, age: null, phone: '',
-    admissionOrderId: null, applyDeptId: null, applyDeptName: '', expectWardId: null, bedType: 'normal',
-    priority: 1, genderLimit: 0, isolationFlag: 0, expectAdmitDate: null, diagnosisName: '', remark: '',
-  });
-  isolation.value = false;
-};
+const formRow = ref(null);
 const openCreate = () => {
-  resetForm();
+  formRow.value = null;
   formVisible.value = true;
 };
 const openEdit = (row) => {
-  resetForm();
-  Object.assign(form, {
-    id: row.id, patientId: row.patientId, patientName: row.patientName, gender: row.gender, age: row.age,
-    phone: row.phone, admissionOrderId: row.admissionOrderId, applyDeptId: row.applyDeptId,
-    expectWardId: row.expectWardId, bedType: row.bedType, priority: row.priority,
-    genderLimit: row.genderLimit ?? 0, diagnosisName: row.diagnosisName,
-  });
-  isolation.value = Number(row.isolationFlag) === 1;
+  formRow.value = row;
   formVisible.value = true;
-};
-const onPatientSelect = (p) => {
-  if (!p)
-    return;
-  form.patientName = p.patientName || '';
-  form.patientNo = p.patientNo || '';
-  form.gender = p.gender ?? null;
-  form.age = p.age ?? null;
-  form.phone = p.phone || '';
-};
-const submitForm = async () => {
-  if (!form.id && !form.patientId)
-    return ElMessage.warning('请选择患者');
-  if (!form.id && !form.patientName)
-    return ElMessage.warning('未取到患者姓名，请重新选择患者');
-  submitting.value = true;
-  try {
-    const payload = {
-      ...form,
-      patientId: form.patientId ? String(form.patientId) : null,
-      isolationFlag: isolation.value ? 1 : 0,
-    };
-    const res = await upsertBedWait(payload);
-    if (res.code === 200) {
-      ElMessage.success(res.message || '排队登记成功');
-      formVisible.value = false;
-      await reloadAll();
-    } else {
-      ElMessage.error(res.message || '保存失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '保存失败');
-  } finally {
-    submitting.value = false;
-  }
 };
 // ---------------- 安排床位 ----------------
 const assignVisible = ref(false);
@@ -927,41 +715,11 @@ const submitReason = async () => {
     submitting.value = false;
   }
 };
-// ---------------- 办理入院 ----------------
+// ---------------- 办理入院（表单在 BedCenterAdmit） ----------------
 const admitVisible = ref(false);
-const admitForm = reactive({admitDoctorId: null, admitWay: null, remark: ''});
 const openAdmit = (row) => {
   current.value = row;
-  admitForm.admitDoctorId = null;
-  admitForm.admitWay = row?.admissionOrderId ? 1 : null;
-  admitForm.remark = '';
   admitVisible.value = true;
-};
-const submitAdmit = async () => {
-  if (!admitForm.admitDoctorId)
-    return ElMessage.warning('请选择入院医生');
-  if (!current.value?.admissionOrderId && !admitForm.admitWay)
-    return ElMessage.warning('请选择入院途径');
-  submitting.value = true;
-  try {
-    const res = await admitBedWait({
-      waitId: String(current.value.id),
-      admitDoctorId: admitForm.admitDoctorId,
-      admitWay: admitForm.admitWay,
-      remark: admitForm.remark || null,
-    });
-    if (res.code === 200) {
-      ElMessage.success(res.message || '入院登记成功');
-      admitVisible.value = false;
-      await reloadAll();
-    } else {
-      ElMessage.error(res.message || '入院失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '入院失败');
-  } finally {
-    submitting.value = false;
-  }
 };
 // ---------------- 床位一张图（调配视角） ----------------
 const mapLoading = ref(false);
@@ -1116,7 +874,6 @@ const admitFromMap = async () => {
 // ---------------- 展示 ----------------
 const priorityTag = (p) => (p === 3 ? 'danger' : p === 2 ? 'warning' : 'info');
 const waitStatusTag = (s) => (s === 0 ? 'warning' : s === 1 ? 'primary' : s === 2 ? 'success' : 'info');
-const bedStatusTag = (s) => (s === 1 ? 'success' : s === 2 ? 'info' : s === 3 ? 'warning' : 'danger');
 </script>
 
 <style scoped>

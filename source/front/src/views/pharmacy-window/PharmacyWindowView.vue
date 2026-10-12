@@ -134,201 +134,12 @@
     </el-card>
 
     <!-- 发药复核弹窗（单行 / 整单共用；麻精限量 + 双人复核 + 超量理由） -->
-    <el-dialog
-        v-model="reviewVisible"
-        :title="pendingAction?.type === 'whole' ? '整单发药复核' : '发药复核'"
-        data-testid="pharm-review-dialog"
-        destroy-on-close
-        width="720px"
-    >
-      <div v-loading="reviewLoading" class="min-h-[120px] space-y-4 text-sm">
-        <template v-if="pc">
-          <!-- 待发信息 -->
-          <div class="rounded-lg bg-slate-50 p-3">
-            <div>患者：<span class="font-medium">{{ pendingAction?.row?.patientName }}</span></div>
-            <div>处方号：<span class="font-mono">{{ pc.prescriptionNo || pendingAction?.row?.prescriptionNo }}</span>
-            </div>
-            <div v-if="pendingAction?.type === 'one'">
-              本次发出：{{ pendingAction?.row?.drugName }} × {{
-                pendingAction?.row?.quantity
-              }}{{ pendingAction?.row?.unit || '' }}
-            </div>
-            <div v-else>整单发出该处方全部待发药品（任一药品库存不足则整单不执行）</div>
-          </div>
-
-          <!-- 违规结论：BLOCK 红、WARN 黄。文案来自后端，不在这里重写措辞 -->
-          <div v-if="blocks.length" class="rounded-lg border border-rose-200 bg-rose-50 p-3"
-               data-testid="pharm-block-list">
-            <div class="mb-1 font-medium text-rose-700">禁止发药（{{ blocks.length }} 条）</div>
-            <ul class="space-y-1">
-              <li v-for="(v, i) in blocks" :key="'b' + i" class="flex gap-2 text-rose-700">
-                <el-tag effect="dark" size="small" type="danger">禁止</el-tag>
-                <span>{{ v.message }}</span>
-              </li>
-            </ul>
-          </div>
-          <div v-if="warns.length" class="rounded-lg border border-amber-200 bg-amber-50 p-3"
-               data-testid="pharm-warn-list">
-            <div class="mb-1 font-medium text-amber-700">提示（{{ warns.length }} 条）</div>
-            <ul class="space-y-1">
-              <li v-for="(v, i) in warns" :key="'w' + i" class="flex gap-2 text-amber-700">
-                <el-tag size="small" type="warning">提示</el-tag>
-                <span>{{ v.message }}</span>
-              </li>
-            </ul>
-          </div>
-          <div
-              v-if="!pc.violations || pc.violations.length === 0"
-              class="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-700"
-              data-testid="pharm-pass"
-          >麻精限量校验通过
-          </div>
-
-          <!-- 管制明细清单：合规的也列出来，药师才知道这单里的管制品种 -->
-          <div v-if="pc.controlledDrugs?.length" class="rounded-lg border border-slate-200 p-3"
-               data-testid="pharm-controlled-list">
-            <div class="mb-2 font-medium text-slate-700">本处方管制品种（{{ pc.controlledDrugs.length }}）</div>
-            <el-table :data="pc.controlledDrugs" border size="small">
-              <el-table-column label="药品" min-width="150" prop="drugName" show-overflow-tooltip/>
-              <el-table-column label="剂型" prop="dosageForm" width="100"/>
-              <el-table-column label="分类" width="120">
-                <template #default="{ row }">
-                  <el-tag :type="rowFlagTag(row.specialFlag)" effect="dark" size="small">{{
-                      rowFlagText(row.specialFlag)
-                    }}
-                  </el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column align="center" label="限量/实际" width="110">
-                <template #default="{ row }">
-                  <span
-                      :class="row.actualDays != null && row.limitDays != null && row.actualDays > row.limitDays ? 'font-medium text-rose-600' : ''">
-                    {{ row.limitDays ?? '—' }} / {{ row.actualDays ?? '核不出' }} 日
-                  </span>
-                </template>
-              </el-table-column>
-              <el-table-column label="发药手续" min-width="170">
-                <template #default="{ row }">
-                  <el-tag v-if="row.requiresDualCheck" class="mr-1" size="small" type="danger">双人复核</el-tag>
-                  <el-tag v-if="row.requiresAmpouleTracking" size="small" type="warning">空安瓿回收</el-tag>
-                  <span v-if="!row.requiresDualCheck && !row.requiresAmpouleTracking"
-                        class="text-xs text-slate-400">常规</span>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
-
-          <el-form label-width="120px">
-            <!-- 双人复核：麻醉药品 / 第一类精神药品 -->
-            <el-form-item v-if="pc.requiresDualCheck" label="复核药师" required>
-              <el-select
-                  v-model="reviewForm.checkerId"
-                  :fit-input-width="false"
-                  class="!w-72"
-                  clearable
-                  data-testid="pharm-checker-select"
-                  filterable
-                  placeholder="请选择在场复核药师"
-              >
-                <el-option v-for="e in checkerOptions" :key="e.id" :label="e.empName" :value="e.id"/>
-              </el-select>
-              <div class="mt-1 text-xs text-rose-600" data-testid="pharm-dual-hint">
-                本处方含麻醉药品 / 第一类精神药品 / 毒性药品，调配须双人复核
-                （《医疗机构麻醉药品、第一类精神药品管理规定》第 17 条、《医疗用毒性药品管理办法》第 9 条）。
-                复核人须为在职、具有药师以上技术职称者，且不得与发药人同一人；
-                名单已下推后端按药剂师岗位过滤并排除当前登录人，后端会再按员工 ID 校验一次。
-              </div>
-            </el-form-item>
-
-            <!-- 二类精神药品超 7 日：须医师注明理由 -->
-            <el-form-item v-if="pc.overLimitReasonRequired" label="超量理由" required>
-              <el-input
-                  v-model="reviewForm.overLimitReason"
-                  :rows="2"
-                  data-testid="pharm-reason-input"
-                  placeholder="第二类精神药品超 7 日常用量，须由医师注明理由（《处方管理办法》第 24 条）"
-                  type="textarea"
-              />
-            </el-form-item>
-
-            <el-form-item v-if="pc.requiresAmpouleTracking" label="空安瓿">
-              <span class="text-xs text-slate-500">
-                本处方含麻醉/第一类精神药品注射剂 —— 发药后会自动进麻精专册并置为「待回收」，
-                请在专册页登记空安瓿回收与剩余液销毁。
-              </span>
-            </el-form-item>
-          </el-form>
-        </template>
-      </div>
-      <template #footer>
-        <span v-if="reviewMissingHint" class="mr-auto align-middle text-xs text-rose-600"
-              data-testid="pharm-review-hint">{{ reviewMissingHint }}</span>
-        <el-button @click="reviewVisible = false">取消</el-button>
-        <el-button
-            v-perm="'pharmacy:dispensing:edit'"
-            :disabled="!canSubmitReview || reviewLoading"
-            :loading="reviewSubmitting"
-            data-testid="pharm-review-submit"
-            type="primary"
-            @click="submitDispense"
-        >{{ pendingAction?.type === 'whole' ? '确认整单发药' : '确认发药' }}
-        </el-button>
-      </template>
-    </el-dialog>
+    <PharmacyWindowReview v-model="reviewVisible" :pending-action="pendingAction" :row-flag-tag="rowFlagTag"
+                          :row-flag-text="rowFlagText" @saved="refreshAll"/>
 
     <!-- 发药详情弹窗 -->
-    <el-dialog v-model="selectedRecord" destroy-on-close title="发药明细详情" width="620px">
-      <template v-if="detailData">
-        <div v-loading="detailLoading" class="space-y-4 py-2">
-          <div class="grid grid-cols-2 gap-4 rounded-lg border border-slate-200 p-4">
-            <div><p class="text-xs text-slate-400">患者</p>
-              <p class="text-sm font-medium text-slate-700">{{ detailData.patientName }}（{{ detailData.patientNo }}）</p>
-            </div>
-            <div><p class="text-xs text-slate-400">处方号</p>
-              <p class="font-mono text-sm font-medium text-slate-700">{{ detailData.prescriptionNo }}</p></div>
-            <div><p class="text-xs text-slate-400">药品</p>
-              <p class="text-sm font-medium text-slate-700">{{ detailData.drugName }}</p></div>
-            <div><p class="text-xs text-slate-400">管制分类</p>
-              <p class="text-sm font-medium">
-                <el-tag
-                    v-if="isControlledFlag(detailData.specialFlag)"
-                    :type="rowFlagTag(detailData.specialFlag)"
-                    effect="dark"
-                    size="small"
-                >{{ rowFlagText(detailData.specialFlag) }}
-                </el-tag>
-                <span v-else class="text-slate-500">普通药品</span>
-              </p>
-            </div>
-            <div><p class="text-xs text-slate-400">规格</p>
-              <p class="text-sm font-medium text-slate-700">{{ detailData.specification || '—' }}</p></div>
-            <div><p class="text-xs text-slate-400">数量</p>
-              <p class="text-sm font-medium text-slate-700">{{ detailData.quantity }}{{ detailData.unit || '' }}</p>
-            </div>
-            <div><p class="text-xs text-slate-400">金额</p>
-              <p class="text-sm font-bold text-red-600">¥{{ detailData.amount ?? 0 }}</p></div>
-            <div><p class="text-xs text-slate-400">状态</p>
-              <span
-                  :class="['inline-block rounded px-2 py-0.5 text-xs font-medium', statusColor(detailData.dispensingStatus)]">
-                {{ statusLabel(detailData.dispensingStatus) }}
-              </span>
-            </div>
-            <div><p class="text-xs text-slate-400">发药单号</p>
-              <p class="font-mono text-sm font-medium text-slate-700">{{ detailData.dispensingNo }}</p></div>
-            <div><p class="text-xs text-slate-400">发药药师</p>
-              <p class="text-sm font-medium text-slate-700">{{ detailData.pharmacistName || '—' }}</p></div>
-            <div><p class="text-xs text-slate-400">发药时间</p>
-              <p class="text-sm font-medium text-slate-700">{{ detailData.dispensingTime || '—' }}</p></div>
-            <div><p class="text-xs text-slate-400">发药前库存（该药合计）</p>
-              <p class="text-sm font-medium text-slate-700">{{ detailData.stockBefore ?? '—' }}</p></div>
-            <div><p class="text-xs text-slate-400">发药后库存（该药合计）</p>
-              <p class="text-sm font-medium text-slate-700">{{ detailData.stockAfter ?? '—' }}</p></div>
-            <div v-if="detailData.remark" class="col-span-2"><p class="text-xs text-slate-400">备注/退药原因</p>
-              <p class="text-sm text-slate-700">{{ detailData.remark }}</p></div>
-          </div>
-        </div>
-      </template>
-    </el-dialog>
+    <PharmacyWindowDetail v-model="detailVisible" :id="detailRow?.id" :row-flag-tag="rowFlagTag"
+                          :row-flag-text="rowFlagText"/>
   </div>
 </template>
 
@@ -350,43 +161,34 @@
  * 前端算错只是提示不准，后端漏判才是合规事故。所以这里不"筛掉"任何超限行，
  * 一律把后端的结论原样摆出来。
  */
-import {computed, onMounted, reactive, ref} from 'vue';
+import {onMounted, ref} from 'vue';
 import {Check, Clock, Refresh, RefreshLeft, Search} from '@element-plus/icons-vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import request from '@/api/request';
-import {dispense, dispenseByPrescription, getDispensingDetail, getDispensingList, returnDrug} from '@/api/dispensing';
-import {precheckNarcotic} from '@/api/narcotic';
-import {getDictDataMapList, getEmployeeList} from '@/api/system';
+import {getDispensingList, returnDrug} from '@/api/dispensing';
+import {getDictDataMapList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {isControlledFlag, specialFlagTagType, specialFlagText} from '@/lib/drugSpecialFlag';
+import {dispensingStatusColor as statusColor, dispensingStatusLabel as statusLabel} from '@/lib/pharmacyWindow';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import PharmacyWindowReview from './PharmacyWindowReview.vue';
+import PharmacyWindowDetail from './PharmacyWindowDetail.vue';
 
 const loading = ref(false);
 const dispensingList = ref([]);
-const selectedRecord = ref(null);
-const detailLoading = ref(false);
-const detailData = ref(null);
+const detailVisible = ref(false);
+const detailRow = ref(null);
 const patientName = ref('');
 const prescriptionNo = ref('');
 const statusFilter = ref(null);
 const pagination = ref({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0});
 // 两卡式列表页：表格只设最大高度，超高内部滚动（口径参照 views/system/user/UserView.vue）
 const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight();
-// 三态口径：1-待发药 2-已发药 3-已退药（表注释为准；未知值渲染 未知(n) 不回落）
-const statusMap = {
-  1: {label: '待发药', color: 'bg-amber-100 text-amber-700'},
-  2: {label: '已发药', color: 'bg-blue-100 text-blue-700'},
-  3: {label: '已退药', color: 'bg-red-100 text-red-600'},
-};
 const statusCounts = ref({pending: 0, dispensed: 0, returned: 0});
 // ---------------- 麻精相关 ----------------
 /** 管制分类文案唯一来源：字典 his_drug_special_flag */
 const specialDict = ref([]);
-/** 复核药师候选。当前登录人的姓名在 localStorage（登录/切换时写入），
- *  用它做前端软过滤；**硬判定在后端**（按员工ID 比，见 resolveAndAssertChecker）。 */
-const checkerOptions = ref([]);
-const currentUserName = ref(localStorage.getItem('realName') || '');
 const loadNarcoticSupport = async () => {
   try {
     // ⚠ 取值必须是 `res.data[dictType]`：request 拦截器已把响应剥成 `{code,message,data}`，
@@ -398,18 +200,6 @@ const loadNarcoticSupport = async () => {
   } catch (e) {
     // 拿不到字典 → 分类渲染「未知(n)」，不回落成"普通药品"（普通药品不受管制，回落会洗掉告警）
     console.error('加载药品特殊管理分类字典失败', e);
-  }
-  try {
-    // empType=4（药剂师）**下推后端**，不在前端对全量员工切片 ——
-    // 法条要求复核人"具有药师以上技术职称"，护士/收费员不能当麻精复核人。
-    // 前端这层只是省得药师选错人；后端 resolveAndAssertChecker 仍按员工ID 再判一次。
-    const res = await getEmployeeList({empType: 4});
-    const list = res.data?.records || res.data || [];
-    // 同一人不能给自己复核：登录时把 realName 写进了 localStorage，用它做前端软过滤
-    // （/auth/info 不带 employeeId，前端拿不到自己的员工ID，所以只能按姓名滤）
-    checkerOptions.value = list.filter((e) => e.status === 1 && e.empName !== currentUserName.value);
-  } catch (e) {
-    console.error('加载复核药师候选失败', e);
   }
 };
 /** 管制分类标签（空值/未维护 → 不显示标签，而不是显示「普通」） */
@@ -426,15 +216,8 @@ const loadStatusCount = async () => {
 };
 // ---------------- 发药复核弹窗（单行 / 整单共用） ----------------
 const reviewVisible = ref(false);
-const reviewLoading = ref(false);
-const reviewSubmitting = ref(false);
 /** 待执行的发药动作：整单会带 row.prescriptionId，单行会用 row.id */
 const pendingAction = ref(null);
-const reviewForm = reactive({
-  checkerId: null,
-  overLimitReason: '',
-  precheck: null,
-});
 const loadData = async () => {
   loading.value = true;
   try {
@@ -481,111 +264,25 @@ const handleCurrentChange = (val) => {
   pagination.value.pageNum = val;
   loadData();
 };
-const viewDetail = async (row) => {
-  selectedRecord.value = row;
-  detailLoading.value = true;
-  try {
-    const res = await getDispensingDetail(row.id);
-    detailData.value = res.data;
-  } catch (error) {
-    console.error('加载详情失败:', error);
-  } finally {
-    detailLoading.value = false;
-  }
+const viewDetail = (row) => {
+  detailRow.value = row;
+  detailVisible.value = true;
 };
 /**
- * 发药统一入口（单行 / 整单）：
- *   预检 → 摆结论 → （麻精）选复核药师 /（二类精神超限）填超量理由 → 提交。
+ * 发药统一入口（单行 / 整单）：只把「要做什么」交给复核弹框，
+ *   预检 → 摆结论 → （麻精）选复核药师 /（二类精神超限）填超量理由 → 提交
+ *   全在 PharmacyWindowReview 里走。
  *
  * 单行与整单共用一套弹窗，因为两者的判定完全一致（都按处方整体判限量），
  * 差别只在最后调哪个接口。分成两套弹窗只会让口径跑偏。
  */
-const startDispense = async (row, whole) => {
+const startDispense = (row, whole) => {
   if (!row.prescriptionId) {
     ElMessage.warning('该发药记录未关联处方，无法校验');
     return;
   }
   pendingAction.value = {type: whole ? 'whole' : 'one', row};
-  reviewForm.precheck = null;
-  reviewForm.checkerId = null;
-  reviewForm.overLimitReason = '';
   reviewVisible.value = true;
-  reviewLoading.value = true;
-  try {
-    const res = await precheckNarcotic(row.prescriptionId);
-    reviewForm.precheck = res.data;
-  } catch (e) {
-    // 预检接口本身失败（网络/权限）不能当成"可以发"——直接关掉弹窗，让药师重试
-    ElMessage.error(e?.message || '麻精预检失败，请稍后重试');
-    reviewVisible.value = false;
-  } finally {
-    reviewLoading.value = false;
-  }
-};
-/** 弹窗内结论 */
-const pc = computed(() => reviewForm.precheck || null);
-const blocks = computed(() => (pc.value?.violations || []).filter((v) => v.level === 'BLOCK'));
-const warns = computed(() => (pc.value?.violations || []).filter((v) => v.level !== 'BLOCK'));
-/** 提交条件：无阻断、需复核则必须选人、只差超量理由则必须填理由 */
-const canSubmitReview = computed(() => {
-  const p = pc.value;
-  if (!p)
-    return false;
-  if (!p.canDispense && !p.overLimitReasonRequired)
-    return false;
-  if (p.requiresDualCheck && !reviewForm.checkerId)
-    return false;
-  if (p.overLimitReasonRequired && !reviewForm.overLimitReason.trim())
-    return false;
-  return true;
-});
-const reviewMissingHint = computed(() => {
-  const p = pc.value;
-  if (!p)
-    return '';
-  if (!p.canDispense && !p.overLimitReasonRequired)
-    return '存在禁止发药的问题，请先修正处方';
-  if (p.requiresDualCheck && !reviewForm.checkerId)
-    return '本处方含麻醉药品 / 第一类精神药品，必须选择复核药师';
-  if (p.overLimitReasonRequired && !reviewForm.overLimitReason.trim())
-    return '第二类精神药品超 7 日，须填写医师注明理由';
-  return '';
-});
-const submitDispense = async () => {
-  const p = pc.value;
-  const action = pendingAction.value;
-  if (!p || !action)
-    return;
-  const reason = reviewForm.overLimitReason.trim();
-  reviewSubmitting.value = true;
-  try {
-    // 填了理由就带理由重检一次：由后端确认"加了理由确实可发"。
-    // 不在前端推断而直接发 —— 前端推断错的话，专册里会留下一笔没有依据的超量发药。
-    if (reason) {
-      const again = await precheckNarcotic(p.prescriptionId, reason);
-      const pc2 = again.data;
-      if (!pc2?.canDispense) {
-        reviewForm.precheck = pc2;
-        ElMessage.error('填写理由后仍存在不可放行的限量问题，请先修正处方');
-        return;
-      }
-    }
-    const checkerId = reviewForm.checkerId || undefined;
-    if (action.type === 'whole') {
-      await dispenseByPrescription(action.row.prescriptionId, checkerId, reason || undefined);
-      ElMessage.success('整单发药成功');
-    } else {
-      await dispense({id: action.row.id, checkerId, overLimitReason: reason || undefined});
-      ElMessage.success('发药成功，库存已扣减');
-    }
-    reviewVisible.value = false;
-    refreshAll();
-  } catch (e) {
-    // 后端闸门的原始结论直接摆出来（含"哪个药、限几日、超几日"），不替换成笼统措辞
-    ElMessage.error(e?.message || '发药失败');
-  } finally {
-    reviewSubmitting.value = false;
-  }
 };
 // 退药（回库存 + 处方状态联动）
 const handleReturn = async (row) => {
@@ -605,12 +302,6 @@ const handleReturn = async (row) => {
     }
   }
 };
-const statusLabel = (s) => {
-  if (s == null)
-    return '未知';
-  return statusMap[s]?.label || `未知(${s})`;
-};
-const statusColor = (s) => statusMap[s]?.color || 'bg-slate-100 text-slate-500';
 onMounted(() => {
   loadNarcoticSupport();
   refreshAll();

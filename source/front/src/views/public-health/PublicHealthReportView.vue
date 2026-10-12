@@ -89,51 +89,11 @@
       </div>
     </el-card>
 
-    <!-- 详情：只读弹框，修改走列表里的「通过/驳回」等动作 -->
-    <el-dialog v-model="detailVisible" :title="`上报详情 ${detail.reportNo || ''}`" width="620px">
-      <el-descriptions :column="2" border size="small">
-        <el-descriptions-item label="患者">{{ detail.patientName }}（{{ detail.patientNo }}）</el-descriptions-item>
-        <el-descriptions-item label="上报类型">{{ typeText(detail.reportType) }}</el-descriptions-item>
-        <el-descriptions-item label="诊断">{{ detail.diagnosis }}</el-descriptions-item>
-        <el-descriptions-item label="ICD-10">{{ detail.diagnosisCode || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="状态">{{ statusText(detail.reportStatus) }}</el-descriptions-item>
-        <el-descriptions-item label="上报时间">{{ fmtTime(detail.reportTime) }}</el-descriptions-item>
-        <el-descriptions-item label="上报人">{{ detail.reportBy || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="审核人">{{ detail.auditBy || '—' }}</el-descriptions-item>
-        <el-descriptions-item :span="2" label="上报内容">{{ detail.reportContent || '—' }}</el-descriptions-item>
-        <el-descriptions-item :span="2" label="审核意见">{{ detail.auditRemark || '—' }}</el-descriptions-item>
-      </el-descriptions>
-    </el-dialog>
+    <!-- 详情：只读弹框（已拆至 PublicHealthReportDetail.vue），修改走列表里的「通过/驳回」等动作 -->
+    <PublicHealthReportDetail v-model="detailVisible" :row="detailRow" :status-dict="statusDict" :type-dict="typeDict"/>
 
-    <!-- 填报 -->
-    <el-dialog v-model="openVisible" destroy-on-close title="新建公卫上报" width="620px">
-      <el-form label-width="110px">
-        <el-form-item label="患者" required>
-          <PatientSelect v-model="form.patientId" data-testid="ph-form-patient" @select="onPatientSelect"/>
-        </el-form-item>
-        <el-form-item label="上报类型" required>
-          <el-select v-model="form.reportType" data-testid="ph-form-type" style="width:100%">
-            <el-option v-for="d in typeDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="诊断" required>
-          <el-input v-model="form.diagnosis" data-testid="ph-form-diagnosis"
-                    placeholder="如 手足口病 / 新型冠状病毒感染"/>
-        </el-form-item>
-        <el-form-item label="ICD-10">
-          <el-input v-model="form.diagnosisCode" data-testid="ph-form-dxcode" placeholder="选填，如 B08.4"/>
-        </el-form-item>
-        <el-form-item label="上报内容" required>
-          <el-input v-model="form.reportContent" :rows="3" data-testid="ph-form-content" placeholder="流行病学史 / 临床表现 / 实验室依据 / 已采取措施"
-                    type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="openVisible = false">取消</el-button>
-        <el-button :loading="submitting" data-testid="ph-form-save" type="primary" @click="onSubmit">提交上报
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 填报（已拆至 PublicHealthReportAdd.vue） -->
+    <PublicHealthReportAdd v-model="openVisible" :type-dict="typeDict" @saved="loadRows"/>
   </div>
 </template>
 
@@ -160,8 +120,9 @@ import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
 import {getDictDataMapList} from '@/api/system'
 import {DICT_TYPE} from '@/lib/dict-cache'
 import {dictLabelText} from '@/lib/utils'
-import PatientSelect from '@/components/his/PatientSelect.vue'
-import {auditPublicHealth, getPublicHealthList, submitPublicHealth} from '@/api/publicHealth'
+import {auditPublicHealth, getPublicHealthList} from '@/api/publicHealth'
+import PublicHealthReportDetail from './PublicHealthReportDetail.vue'
+import PublicHealthReportAdd from './PublicHealthReportAdd.vue'
 
 const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '—')
 
@@ -223,68 +184,18 @@ const resetQuery = () => {
   loadRows()
 }
 
-// ---------------- 详情（只读） ----------------
+// ---------------- 详情（只读，弹框已拆至 PublicHealthReportDetail.vue） ----------------
 const detailVisible = ref(false)
-const detail = ref({})
+const detailRow = ref({})
 const openDetail = (row) => {
-  detail.value = row;
+  detailRow.value = row;
   detailVisible.value = true
 }
 
-// ---------------- 填报 ----------------
+// ---------------- 填报（表单与提交已拆至 PublicHealthReportAdd.vue，这里只管开关） ----------------
 const openVisible = ref(false)
-const submitting = ref(false)
-const form = reactive({
-  patientId: null,
-  patientNo: '',
-  patientName: '',
-  reportType: null,
-  diagnosis: '',
-  diagnosisCode: '',
-  reportContent: ''
-})
-const onPatientSelect = (p) => {
-  form.patientName = p?.patientName || ''
-  form.patientNo = p?.patientNo || p?.patientNoStr || ''
-}
 const onCreate = () => {
-  Object.assign(form, {
-    patientId: null,
-    patientNo: '',
-    patientName: '',
-    reportType: null,
-    diagnosis: '',
-    diagnosisCode: '',
-    reportContent: ''
-  })
   openVisible.value = true
-}
-const onSubmit = async () => {
-  if (!form.patientId) return ElMessage.warning('请选择患者')
-  if (!form.reportType) return ElMessage.warning('请选择上报类型')
-  if (!form.diagnosis?.trim()) return ElMessage.warning('请填写诊断')
-  if (!form.reportContent?.trim()) return ElMessage.warning('请填写上报内容')
-  submitting.value = true
-  try {
-    const res = await submitPublicHealth({
-      patientId: form.patientId,
-      patientNo: form.patientNo,
-      patientName: form.patientName,
-      reportType: Number(form.reportType),
-      diagnosis: form.diagnosis.trim(),
-      diagnosisCode: form.diagnosisCode?.trim() || undefined,
-      reportContent: form.reportContent.trim(),
-    })
-    if (res.code === 200) {
-      ElMessage.success(res.message || '上报已提交，进入待审核')
-      openVisible.value = false
-      await loadRows()
-    } else ElMessage.error(res.message || '提交失败')
-  } catch (e) {
-    console.error(e)
-  } finally {
-    submitting.value = false
-  }
 }
 
 // ---------------- 审核（通过 / 驳回都要写意见） ----------------

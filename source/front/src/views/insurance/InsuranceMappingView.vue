@@ -186,88 +186,8 @@
       </template>
     </el-dialog>
 
-    <!-- 目录管理弹窗 -->
-    <el-dialog v-model="catalogDialog" data-testid="yb-catalog-dialog" title="医保目录管理（只启停不删除，保证已对照追溯链）"
-               width="960px">
-      <div class="flex flex-wrap items-center gap-2 mb-3">
-        <el-select v-model="catalogQuery.catalogType" clearable placeholder="全部类型" style="width: 160px"
-                   @change="loadCatalogs">
-          <el-option v-for="(label, t) in catalogTypeMap" :key="t" :label="label" :value="t"/>
-        </el-select>
-        <el-input v-model="catalogQuery.keyword" clearable placeholder="编码/名称" style="width: 200px"
-                  @keyup.enter="loadCatalogs"/>
-        <el-button :icon="Search" size="default" @click="loadCatalogs">查询</el-button>
-        <div class="flex-1"></div>
-        <el-button plain type="primary"
-                   @click="catalogForm = {catalogType: 1, ybCode: '', ybName: '', spec: '', unit: '', dosageForm: '', insuranceLevel: undefined, payRatio: undefined, status: 1}">
-          人工补录
-        </el-button>
-      </div>
-
-      <el-form v-if="catalogForm" :model="catalogForm" class="mb-3 p-3 rounded bg-slate-50" data-testid="yb-catalog-form"
-               inline>
-        <el-form-item label="类型">
-          <el-select v-model="catalogForm.catalogType" style="width: 140px">
-            <el-option v-for="(label, t) in catalogTypeMap" :key="t" :label="label" :value="t"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="医保编码">
-          <el-input v-model="catalogForm.ybCode" data-testid="yb-catalog-code" style="width: 220px"/>
-        </el-form-item>
-        <el-form-item label="名称">
-          <el-input v-model="catalogForm.ybName" data-testid="yb-catalog-name" style="width: 180px"/>
-        </el-form-item>
-        <el-form-item label="甲乙类">
-          <el-select v-model="catalogForm.insuranceLevel" clearable style="width: 90px">
-            <el-option :value="1" label="甲类"/>
-            <el-option :value="2" label="乙类"/>
-            <el-option :value="3" label="丙类"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="支付比例%">
-          <el-input-number v-model="catalogForm.payRatio" :max="100" :min="0" :precision="2" style="width: 110px"/>
-        </el-form-item>
-        <el-form-item>
-          <el-button data-testid="yb-catalog-save" type="primary" @click="saveCatalog">保存</el-button>
-          <el-button @click="catalogForm = null">取消</el-button>
-        </el-form-item>
-      </el-form>
-
-      <el-table v-loading="catalogsLoading" :data="catalogs" data-testid="yb-catalog-table" height="380" size="small">
-        <el-table-column class-name="font-mono text-xs" label="医保编码" prop="ybCode" show-overflow-tooltip
-                         width="230"/>
-        <el-table-column label="目录名称" min-width="160" prop="ybName" show-overflow-tooltip/>
-        <el-table-column label="类型" width="110">
-          <template #default="{row}">{{ catalogTypeMap[row.catalogType] || `未知(${row.catalogType})` }}</template>
-        </el-table-column>
-        <el-table-column label="规格" prop="spec" show-overflow-tooltip width="110"/>
-        <el-table-column label="甲乙类" width="75">
-          <template #default="{row}">
-            {{ row.insuranceLevel ? (levelMap[row.insuranceLevel] || `未知(${row.insuranceLevel})`) : '—' }}
-          </template>
-        </el-table-column>
-        <el-table-column align="right" label="支付比例" width="85">
-          <template #default="{row}">{{ row.payRatio != null ? row.payRatio + '%' : '—' }}</template>
-        </el-table-column>
-        <el-table-column label="状态" width="80">
-          <template #default="{row}">
-            <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">{{
-                row.status === 1 ? '启用' : '停用'
-              }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="90">
-          <template #default="{row}">
-            <el-button v-perm="'finance:insuranceMapping:edit'" :data-testid="`yb-catalog-toggle-${row.ybCode}`" :type="row.status === 1 ? 'warning' : 'success'"
-                       plain
-                       size="small" @click="toggleCatalog(row)">
-              {{ row.status === 1 ? '停用' : '启用' }}
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-dialog>
+    <!-- 目录管理弹窗（拆到 InsuranceMappingCatalogManage） -->
+    <InsuranceMappingCatalogManage v-model="catalogDialog" :level-map="levelMap" :refresh-token="catalogRefreshTick"/>
   </div>
 </template>
 
@@ -278,21 +198,19 @@ import {Check, Close, Connection, Refresh, Search, Setting, Upload} from '@eleme
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {
   autoMatchYb,
-  changeYbCatalogStatus,
   getYbCatalogList,
   getYbMappingList,
   getYbMappingStats,
   importYbCatalog,
   mapYbItem,
-  unmapYbItem,
-  upsertYbCatalog
+  unmapYbItem
 } from '@/api/insuranceMapping';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import InsuranceMappingCatalogManage from './InsuranceMappingCatalogManage.vue';
 // ---- 口径（无字典枚举，页面内单点定义）----
 const itemTypeMap = {1: '药品', 2: '诊疗项目', 3: '检验项目', 4: '耗材'};
 const matchTypeMap = {1: '自动对照', 2: '人工对照', 3: '批量导入'};
 const levelMap = {1: '甲类', 2: '乙类', 3: '丙类'};
-const catalogTypeMap = {1: '西药/中成药', 2: '中药饮片', 3: '医疗服务项目', 4: '医用耗材'};
 // 院内类型 → 默认候选目录类型（药品 1→西药/中成药；饮片在弹窗里手动切）
 const defaultCatalogType = {1: 1, 2: 3, 3: 3, 4: 4};
 // ---- 统计 ----
@@ -442,43 +360,14 @@ const doImport = async () => {
   ElMessage.success(`导入完成：新增 ${v.inserted} 条，更新 ${v.updated} 条，跳过 ${v.skipped} 条`);
   importDialog.value = false;
   if (catalogDialog.value)
-    await loadCatalogs();
+    catalogRefreshTick.value++;
 };
-// ---- 目录管理（列表 + 启停 + 补录）----
+// ---- 目录管理（列表 + 启停 + 补录已拆到 InsuranceMappingCatalogManage，弹窗打开时自取列表）----
 const catalogDialog = ref(false);
-const catalogs = ref([]);
-const catalogsLoading = ref(false);
-const catalogQuery = ref({catalogType: undefined, keyword: ''});
-const catalogForm = ref(null);
+// CSV 导入后若弹窗开着要刷新目录列表：同页直调 loadCatalogs 改为计数信号，子弹窗 watch 后重拉
+const catalogRefreshTick = ref(0);
 const openCatalogDialog = () => {
   catalogDialog.value = true;
-  loadCatalogs();
-};
-const loadCatalogs = async () => {
-  catalogsLoading.value = true;
-  try {
-    const res = await getYbCatalogList({...catalogQuery.value, pageNum: 1, pageSize: 100});
-    catalogs.value = res.data?.records || [];
-  } finally {
-    catalogsLoading.value = false;
-  }
-};
-const toggleCatalog = async (row) => {
-  const target = row.status === 1 ? 0 : 1;
-  await changeYbCatalogStatus(row.id, target);
-  ElMessage.success(target === 1 ? '已启用' : '已停用（停用后不可新对照）');
-  await loadCatalogs();
-};
-const saveCatalog = async () => {
-  const f = catalogForm.value;
-  if (!f || !f.catalogType || !f.ybCode || !f.ybName) {
-    ElMessage.warning('目录类型、编码、名称为必填');
-    return;
-  }
-  await upsertYbCatalog({...f, id: f.id || undefined, status: f.status ?? 1});
-  ElMessage.success(f.id ? '目录已更新' : '目录已补录');
-  catalogForm.value = null;
-  await loadCatalogs();
 };
 onMounted(loadStats);
 </script>

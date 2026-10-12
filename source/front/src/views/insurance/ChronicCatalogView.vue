@@ -83,58 +83,8 @@
       </div>
     </el-card>
 
-    <!-- ==================== 病种目录 新建/编辑 ==================== -->
-    <el-dialog v-model="catFormVisible" :title="catForm.id ? `修改病种 ${catForm.diseaseCode}` : '新增慢特病病种'"
-               data-testid="catalog-form-dialog" width="640px">
-      <el-form :model="catForm" label-width="110px">
-        <el-row :gutter="16">
-          <el-col :span="12">
-            <el-form-item label="病种编码" required>
-              <el-input v-model="catForm.diseaseCode" data-testid="catalog-form-code" placeholder="如 MZ012"/>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="类别" required>
-              <el-select v-model="catForm.diseaseType" data-testid="catalog-form-type" style="width: 100%">
-                <el-option v-for="d in dictOptions(DICT_TYPE.CHRONIC_DISEASE_TYPE)" :key="d.dictValue"
-                           :label="d.dictLabel" :value="Number(d.dictValue)"/>
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
-            <el-form-item label="病种名称" required>
-              <el-input v-model="catForm.diseaseName" data-testid="catalog-form-name"
-                        placeholder="与国家医保慢特病目录同名"/>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="ICD-10 主码">
-              <el-input v-model="catForm.icdCode" data-testid="catalog-form-icd" placeholder="如 I10"/>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="默认有效期">
-              <el-input-number v-model="catForm.defaultValidMonths" :controls="false" :min="1" data-testid="catalog-form-months"
-                               placeholder="留空＝长期" style="width: 100%"/>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="启用状态">
-              <el-switch v-model="catForm.status" :active-value="1" :inactive-value="0"
-                         data-testid="catalog-form-status"/>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-form-item label="备注">
-          <el-input v-model="catForm.remark" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="catFormVisible = false">取消</el-button>
-        <el-button :loading="catSubmitting" data-testid="catalog-form-save" type="primary" @click="saveCat">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- ==================== 病种目录 新建/编辑（抽到 ChronicCatalogEdit） ==================== -->
+    <ChronicCatalogEdit v-model="catFormVisible" :row="catEditRow" :dicts="dicts" @saved="loadCatalogs"/>
   </div>
 </template>
 
@@ -147,7 +97,8 @@ import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
 import {DICT_TYPE, loadDictDataMap} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
-import {changeChronicCatalogStatus, getChronicCatalogList, upsertChronicCatalog} from '@/api/insuranceChronic';
+import {changeChronicCatalogStatus, getChronicCatalogList} from '@/api/insuranceChronic';
+import ChronicCatalogEdit from './ChronicCatalogEdit.vue';
 
 const router = useRouter();
 const dicts = ref({});
@@ -180,41 +131,15 @@ const resetCatQuery = () => {
   loadCatalogs();
 };
 const catFormVisible = ref(false);
-const catSubmitting = ref(false);
-const emptyCat = () => ({
-  id: null, diseaseCode: '', diseaseName: '', diseaseType: 1,
-  icdCode: '', defaultValidMonths: undefined, status: 1, remark: ''
-});
-const catForm = ref(emptyCat());
+// 传给编辑弹窗的行：null＝新增，有值＝编辑；表单复位与保存逻辑在 ChronicCatalogEdit 内
+const catEditRow = ref(null);
 const openCatCreate = () => {
-  catForm.value = emptyCat();
+  catEditRow.value = null;
   catFormVisible.value = true;
 };
 const openCatEdit = (row) => {
-  catForm.value = {...emptyCat(), ...row, id: row.id, defaultValidMonths: row.defaultValidMonths ?? undefined};
+  catEditRow.value = {...row};
   catFormVisible.value = true;
-};
-const saveCat = async () => {
-  const f = catForm.value;
-  if (!f.diseaseCode || !f.diseaseName || !f.diseaseType) {
-    ElMessage.warning('病种编码、名称、类别都要填');
-    return;
-  }
-  catSubmitting.value = true;
-  try {
-    await upsertChronicCatalog({
-      id: f.id || undefined, diseaseCode: f.diseaseCode.trim(), diseaseName: f.diseaseName.trim(),
-      diseaseType: f.diseaseType, icdCode: f.icdCode || undefined,
-      defaultValidMonths: f.defaultValidMonths ?? undefined, status: f.status, remark: f.remark || undefined
-    });
-    ElMessage.success(f.id ? '病种已更新' : '病种已新增');
-    catFormVisible.value = false;
-    loadCatalogs();
-  } catch (error) {
-    ElMessage.error(error?.message || '病种保存失败');
-  } finally {
-    catSubmitting.value = false;
-  }
 };
 const toggleCatStatus = (row) => {
   const next = row.status === 1 ? 0 : 1;

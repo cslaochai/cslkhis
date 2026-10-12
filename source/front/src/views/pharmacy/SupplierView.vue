@@ -98,56 +98,7 @@
     </el-card>
 
     <!-- 新增/编辑弹窗 -->
-    <el-dialog
-        v-model="dialogVisible"
-        :title="form.supplierId ? '编辑供应商' : '新增供应商'"
-        data-testid="supplier-dialog"
-        width="560px"
-    >
-      <el-form label-width="100px">
-        <el-form-item label="编码">
-          <el-input v-model="form.supplierCode" placeholder="留空由后端生成"/>
-        </el-form-item>
-        <el-form-item label="名称" required>
-          <el-input v-model="form.supplierName" placeholder="供应商名称"/>
-        </el-form-item>
-        <el-form-item label="联系人">
-          <el-input v-model="form.contactPerson"/>
-        </el-form-item>
-        <el-form-item label="联系电话">
-          <el-input v-model="form.phone"/>
-        </el-form-item>
-        <el-form-item label="经营许可证">
-          <el-input v-model="form.businessLicense"/>
-        </el-form-item>
-        <el-form-item label="证照有效期">
-          <el-date-picker v-model="form.licenseExpiry" style="width: 100%" type="date" value-format="YYYY-MM-DD"/>
-        </el-form-item>
-        <el-form-item label="评级">
-          <el-select v-model="form.rating" :fit-input-width="false" style="width: 100%">
-            <el-option v-for="o in ratingOptions" :key="o.value" :label="o.label" :value="o.value"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-radio-group v-model="form.status">
-            <el-radio :value="1">启用</el-radio>
-            <el-radio :value="0">停用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="地址">
-          <el-input v-model="form.address" :rows="2" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="form.remark" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button v-perm="'pharmacy:supplier:add'" :loading="saving" data-testid="supplier-save-btn" type="primary"
-                   @click="save">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <SupplierEdit v-model="dialogVisible" :row="editRow" :rating-options="ratingOptions" @saved="loadList" />
   </div>
 </template>
 
@@ -162,12 +113,13 @@
 import {computed, onMounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {Delete, Edit, Plus, Refresh, Search} from '@element-plus/icons-vue';
-import {deleteSupplier, getSupplierList, upsertSupplier} from '@/api/purchase';
+import {deleteSupplier, getSupplierList} from '@/api/purchase';
 import {getDictDataMapList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import SupplierEdit from './SupplierEdit.vue';
 
 const loading = ref(false);
 const rows = ref([]);
@@ -227,80 +179,14 @@ const resetQuery = () => {
 };
 // ==================== 编辑弹窗 ====================
 const dialogVisible = ref(false);
-const saving = ref(false);
-const form = reactive({
-  supplierId: null,
-  supplierCode: '',
-  supplierName: '',
-  contactPerson: '',
-  phone: '',
-  address: '',
-  licenseNo: '',
-  licenseExpiry: '',
-  rating: 3,
-  status: 1,
-  remark: '',
-});
+const editRow = ref(null);
 const openCreate = () => {
-  form.supplierId = null;
-  form.supplierCode = '';
-  form.supplierName = '';
-  form.contactPerson = '';
-  form.phone = '';
-  form.address = '';
-  form.licenseNo = '';
-  form.licenseExpiry = '';
-  form.rating = 3;
-  form.status = 1;
-  form.remark = '';
+  editRow.value = null;
   dialogVisible.value = true;
 };
 const openEdit = (row) => {
-  form.supplierId = row.supplierId;
-  form.supplierCode = row.supplierCode || '';
-  form.supplierName = row.supplierName || '';
-  form.contactPerson = row.contactPerson || '';
-  form.phone = row.phone || '';
-  form.address = row.address || '';
-  form.licenseNo = row.licenseNo || '';
-  form.licenseExpiry = row.licenseExpiry || '';
-  form.rating = Number(row.rating ?? 3);
-  form.status = Number(row.status ?? 1);
-  form.remark = row.remark || '';
+  editRow.value = row;
   dialogVisible.value = true;
-};
-const save = async () => {
-  if (!form.supplierName.trim()) {
-    ElMessage.warning('请填写供应商名称');
-    return;
-  }
-  saving.value = true;
-  try {
-    const res = await upsertSupplier({
-      supplierId: form.supplierId || undefined,
-      supplierCode: form.supplierCode.trim() || undefined,
-      supplierName: form.supplierName.trim(),
-      contactPerson: form.contactPerson.trim() || undefined,
-      phone: form.phone.trim() || undefined,
-      address: form.address.trim() || undefined,
-      licenseNo: form.licenseNo.trim() || undefined,
-      licenseExpiry: form.licenseExpiry || undefined,
-      rating: form.rating,
-      status: form.status,
-      remark: form.remark.trim() || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success(form.supplierId ? '供应商已更新' : '供应商已创建');
-      dialogVisible.value = false;
-      loadList();
-    } else {
-      ElMessage.error(res.message || '保存失败');
-    }
-  } catch (e) {
-    console.error(e);
-  } finally {
-    saving.value = false;
-  }
 };
 const remove = async (row) => {
   try {

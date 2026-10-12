@@ -37,7 +37,7 @@
         <el-table-column label="科室名称" prop="deptName" width="150"/>
         <el-table-column label="科室类型" prop="deptType" width="120">
           <template #default="{ row }">
-            {{ getDeptTypeLabel(row.deptType) }}
+            {{ deptTypeLabel(deptTypeOptions, row.deptType) }}
           </template>
         </el-table-column>
         <el-table-column label="位置" prop="location" width="150">
@@ -87,129 +87,21 @@
       </div>
     </el-card>
 
-    <!-- 新增/编辑对话框 -->
-    <el-dialog
-        v-model="dialogVisible"
-        :close-on-click-modal="false"
-        :title="dialogTitle"
-        width="700px"
-    >
-      <el-form
-          ref="formRef"
-          :model="formData"
-          :rules="rules"
-          label-width="100px"
-      >
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="科室名称" prop="deptName">
-            <el-input v-model="formData.deptName" placeholder="请输入科室名称"/>
-          </el-form-item>
-          <el-form-item label="上级科室">
-            <el-tree-select
-                v-model="formData.parentId"
-                :data="deptTree"
-                :props="{ label: 'deptName', value: 'id', children: 'children' }"
-                :render-after-expand="false"
-                check-strictly
-                class="w-full"
-                clearable
-                placeholder="请选择上级科室（不选则为顶级）"
-            />
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="科室类型" prop="deptType">
-            <el-select v-model="formData.deptType" :fit-input-width="false" class="w-full" multiple
-                       placeholder="请选择科室类型">
-              <el-option v-for="d in deptTypeOptions" :key="d.dictValue"
-                         :label="d.dictLabel" :value="Number(d.dictValue)"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="排序号">
-            <el-input-number v-model="formData.sortOrder" :min="0" class="w-full"/>
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="位置">
-            <el-input v-model="formData.location" placeholder="如：门诊楼A座3层"/>
-          </el-form-item>
-          <el-form-item label="联系电话">
-            <el-input v-model="formData.contactPhone" placeholder="请输入联系电话"/>
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="科室负责人">
-            <el-select v-model="formData.deptLeaderId" :fit-input-width="false" class="w-full" clearable
-                       filterable
-                       placeholder="请选择科室负责人">
-              <el-option v-for="e in employeeList" :key="e.id"
-                         :label="`${e.empName}（${e.title || '无职称'}）`" :value="e.id"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="状态">
-            <el-radio-group v-model="formData.status">
-              <el-radio :value="1">正常</el-radio>
-              <el-radio :value="0">停用</el-radio>
-            </el-radio-group>
-          </el-form-item>
-        </div>
-        <el-form-item label="科室简介">
-          <el-input v-model="formData.deptDesc" :rows="3" placeholder="请输入科室简介" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button v-perm="'org:dept:add'" :loading="submitLoading" type="primary" @click="handleSubmit">确定
-        </el-button>
-      </template>
-    </el-dialog>
+    <DepartmentsEdit
+        v-model="editVisible"
+        :dept-tree="deptTree"
+        :dept-type-options="deptTypeOptions"
+        :row="editingRow"
+        @saved="loadData"
+    />
 
-    <!-- 科室详情弹框（只读，无保存按钮） -->
-    <el-dialog v-model="detailVisible" destroy-on-close title="科室详情" width="700px">
-      <el-form disabled label-width="100px">
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="科室名称">
-            <el-input v-model="detailData.deptName"/>
-          </el-form-item>
-          <el-form-item label="上级科室">
-            <el-input :value="getParentDeptName(detailData.parentId)"/>
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="科室类型">
-            <el-input :value="getDeptTypeLabel(detailData.deptType)"/>
-          </el-form-item>
-          <el-form-item label="排序号">
-            <el-input-number v-model="detailData.sortOrder" :min="0" class="w-full"/>
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="位置">
-            <el-input v-model="detailData.location"/>
-          </el-form-item>
-          <el-form-item label="联系电话">
-            <el-input v-model="detailData.contactPhone"/>
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="科室负责人">
-            <el-input :value="detailData.deptLeaderName || '-'"/>
-          </el-form-item>
-          <el-form-item label="状态">
-            <el-radio-group v-model="detailData.status">
-              <el-radio :value="1">正常</el-radio>
-              <el-radio :value="0">停用</el-radio>
-            </el-radio-group>
-          </el-form-item>
-        </div>
-        <el-form-item label="科室简介">
-          <el-input v-model="detailData.deptDesc" :rows="3" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="detailVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    <!-- 科室详情（只读，无保存按钮） -->
+    <DepartmentsDetail
+        v-model="detailVisible"
+        :dept-tree="deptTree"
+        :dept-type-options="deptTypeOptions"
+        :id="detailId"
+    />
   </div>
 </template>
 
@@ -217,19 +109,12 @@
 import {onMounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {Delete, Edit, Plus, Refresh, Search} from '@element-plus/icons-vue';
-import {
-  createDepartment,
-  deleteDepartment,
-  getDepartmentDetail,
-  getDepartmentList,
-  getDepartmentTree,
-  getDictDataMapList,
-  getEmployeeList,
-  updateDepartment
-} from '@/api/system';
-import {dictLabelText} from '@/lib/utils';
+import {deleteDepartment, getDepartmentList, getDepartmentTree, getDictDataMapList} from '@/api/system';
+import {deptTypeLabel} from '@/lib/deptType';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import DepartmentsDetail from './DepartmentsDetail.vue';
+import DepartmentsEdit from './DepartmentsEdit.vue';
 
 const loading = ref(false);
 const searchForm = reactive({
@@ -244,45 +129,10 @@ const pagination = ref({
 });
 // 两卡式列表页：表格只设最大高度，超高内部滚动（口径参照 views/system/user/UserView.vue）
 const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight();
-// 新增/编辑对话框
-const dialogVisible = ref(false);
-const dialogTitle = ref('新增科室');
-const submitLoading = ref(false);
-const formRef = ref(null);
-const isEdit = ref(false);
-// 详情对话框
+const editVisible = ref(false);
+const editingRow = ref(null);
 const detailVisible = ref(false);
-const detailData = reactive({
-  id: null,
-  deptCode: '',
-  deptName: '',
-  deptType: '',
-  parentId: 0,
-  sortOrder: 0,
-  location: '',
-  contactPhone: '',
-  deptLeaderId: null,
-  deptLeaderName: '',
-  deptDesc: '',
-  status: 1,
-});
-const formData = reactive({
-  id: null,
-  deptCode: '',
-  deptName: '',
-  deptType: [], // 多选，提交时 join(',')
-  parentId: 0,
-  sortOrder: 0,
-  location: '',
-  contactPhone: '',
-  deptLeaderId: null,
-  deptDesc: '',
-  status: 1,
-});
-const rules = {
-  deptName: [{required: true, message: '请输入科室名称', trigger: 'blur'}],
-  deptType: [{required: true, message: '请选择科室类型', trigger: 'change'}],
-};
+const detailId = ref('');
 // 科室树
 const deptTree = ref([]);
 const loadDeptTree = async () => {
@@ -293,16 +143,6 @@ const loadDeptTree = async () => {
     }
   } catch (error) {
     console.error('加载科室树失败:', error);
-  }
-};
-// 员工列表（用于科室负责人下拉）
-const employeeList = ref([]);
-const loadEmployeeList = async () => {
-  try {
-    const res = await getEmployeeList({});
-    employeeList.value = res.data || [];
-  } catch (error) {
-    console.error('加载员工列表失败:', error);
   }
 };
 /**
@@ -333,7 +173,6 @@ onMounted(() => {
   loadData();
   loadDeptTree();
   loadDeptTypeDict();
-  loadEmployeeList();
 });
 const loadData = async () => {
   loading.value = true;
@@ -376,74 +215,13 @@ const handleCurrentChange = (val) => {
   pagination.value.pageNum = val;
   loadData();
 };
-const resetForm = () => {
-  formData.id = null;
-  formData.deptCode = '';
-  formData.deptName = '';
-  formData.deptType = [];
-  formData.parentId = 0;
-  formData.sortOrder = 0;
-  formData.location = '';
-  formData.contactPhone = '';
-  formData.deptLeaderId = null;
-  formData.deptDesc = '';
-  formData.status = 1;
-};
 const handleAdd = () => {
-  resetForm();
-  isEdit.value = false;
-  dialogTitle.value = '新增科室';
-  dialogVisible.value = true;
+  editingRow.value = null;
+  editVisible.value = true;
 };
-const handleEdit = async (row) => {
-  resetForm();
-  isEdit.value = true;
-  dialogTitle.value = '编辑科室';
-  try {
-    const res = await getDepartmentDetail(row.id);
-    if (res.code === 200) {
-      // 兼容后端返回的逗号分隔字符串，转成数组给 checkbox-group
-      const deptTypeStr = res.data.deptType;
-      formData.deptType = typeof deptTypeStr === 'string'
-          ? deptTypeStr.split(',').map(Number).filter(n => !isNaN(n))
-          : [deptTypeStr];
-      Object.assign(formData, {...res.data, deptType: formData.deptType});
-    }
-  } catch (error) {
-    ElMessage.error(error.message || '获取科室信息失败');
-  }
-  dialogVisible.value = true;
-};
-const handleSubmit = async () => {
-  if (!formRef.value)
-    return;
-  try {
-    await formRef.value.validate();
-  } catch {
-    return;
-  }
-  submitLoading.value = true;
-  try {
-    // 提交前把数组转成逗号分隔字符串
-    const payload = {...formData, deptType: formData.deptType.join(',')};
-    let res;
-    if (isEdit.value) {
-      res = await updateDepartment(payload);
-    } else {
-      res = await createDepartment(payload);
-    }
-    if (res.code === 200) {
-      ElMessage.success(isEdit.value ? '修改成功' : '新增成功');
-      dialogVisible.value = false;
-      loadData();
-    } else {
-      ElMessage.error(res.message || '操作失败');
-    }
-  } catch (error) {
-    ElMessage.error(error.message || '操作失败');
-  } finally {
-    submitLoading.value = false;
-  }
+const handleEdit = (row) => {
+  editingRow.value = row;
+  editVisible.value = true;
 };
 const handleDelete = async (row) => {
   try {
@@ -463,42 +241,9 @@ const handleDelete = async (row) => {
     }
   }
 };
-// 命中不到字典就出「未知(n)」—— 不回落成「其他」，否则脏值看起来像合法值（口径铁律）
-const getDeptTypeLabel = (type) => {
-  // 兼容逗号分隔的多值
-  if (typeof type === 'string' && type.includes(',')) {
-    return type.split(',').map(t => dictLabelText(deptTypeOptions.value, Number(t))).join('、');
-  }
-  return dictLabelText(deptTypeOptions.value, typeof type === 'string' ? Number(type) : type);
-};
-// 获取父级科室名称
-const getParentDeptName = (parentId) => {
-  const findParent = (nodes, id) => {
-    for (const node of nodes) {
-      if (String(node.id) === String(id))
-        return node.deptName;
-      if (node.children?.length) {
-        const found = findParent(node.children, id);
-        if (found)
-          return found;
-      }
-    }
-    return '';
-  };
-  if (!parentId || parentId === 0)
-    return '顶级科室';
-  return findParent(deptTree.value, parentId) || '未知';
-};
 // 单击行查看详情
-const handleRowClick = async (row) => {
-  try {
-    const res = await getDepartmentDetail(row.id);
-    if (res.code === 200) {
-      Object.assign(detailData, res.data);
-      detailVisible.value = true;
-    }
-  } catch (error) {
-    ElMessage.error(error.message || '获取科室详情失败');
-  }
+const handleRowClick = (row) => {
+  detailId.value = String(row.id);
+  detailVisible.value = true;
 };
 </script>

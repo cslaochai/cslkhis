@@ -53,34 +53,19 @@
       </el-table>
     </div>
 
-    <el-dialog v-model="selectedRecord" :title="`费用明细 - ${selectedRecord?.patientName}`" destroy-on-close
-               width="600px">
-      <template v-if="selectedRecord">
-        <div class="space-y-4 py-2">
-          <div class="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 p-4 text-sm">
-            <div><span class="text-slate-400">账单号：</span><span
-                class="font-mono text-slate-700">{{ selectedRecord.billNo }}</span></div>
-            <div><span class="text-slate-400">患者：</span><span class="text-slate-700">{{
-                selectedRecord.patientName
-              }}</span></div>
-            <div><span class="text-slate-400">总费用：</span><span
-                class="text-slate-700">¥{{ selectedRecord.totalAmount?.toFixed(2) }}</span></div>
-            <div><span class="text-slate-400">实收：</span><span
-                class="text-slate-700">¥{{ selectedRecord.paidAmount?.toFixed(2) }}</span></div>
-          </div>
-        </div>
-      </template>
-    </el-dialog>
+    <BillingDetail v-model="detailVisible" :id="selectedRecord?.id" :row="selectedRecord"/>
   </div>
 </template>
 
 <script setup>
 import {computed, onMounted, ref} from 'vue';
 import {CreditCard, Document, Lock, Money, Search} from '@element-plus/icons-vue';
-import {getBillDetailById, getBillListPage} from '@/api/settlementBill';
+import {getBillListPage} from '@/api/settlementBill';
+import BillingDetail from './BillingDetail.vue';
 
 const searchTerm = ref('');
 const statusFilter = ref('all');
+const detailVisible = ref(false);
 const selectedRecord = ref(null);
 const loading = ref(false);
 const billingRecords = ref([]);
@@ -121,13 +106,9 @@ const loadData = async () => {
     loading.value = false;
   }
 };
-const handleViewDetail = async (record) => {
-  try {
-    const res = await getBillDetailById(record.id);
-    selectedRecord.value = res.data || record;
-  } catch (error) {
-    selectedRecord.value = record;
-  }
+const handleViewDetail = (record) => {
+  selectedRecord.value = record;
+  detailVisible.value = true;
 };
 onMounted(() => {
   loadData();

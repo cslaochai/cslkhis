@@ -147,50 +147,7 @@
       </el-tab-pane>
     </el-tabs>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="640px">
-      <el-form :model="form" label-width="110px">
-        <el-form-item label="卡片编码" required>
-          <el-input v-model="form.widgetCode" :disabled="!!form.id"
-                    placeholder="与后端 provider 的 widgetCode 一字不差，如 myTodo"/>
-        </el-form-item>
-        <el-form-item label="卡片名称" required>
-          <el-input v-model="form.widgetName" placeholder="首页卡片标题，如 我的待办"/>
-        </el-form-item>
-        <el-form-item label="分区" required>
-          <el-select v-model="form.area" :fit-input-width="false" style="width: 100%">
-            <el-option v-for="a in AREA_OPTIONS" :key="a.value" :label="a.label" :value="a.value"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="取数来源" required>
-          <el-input v-model="form.apiKey" placeholder="<模块>.<summaryKey>，如 report.hospitalToday（仅对账排查用）"/>
-        </el-form-item>
-        <el-form-item label="权限码">
-          <el-input v-model="form.permission"
-                    placeholder="留空=登录即可见；否则必须是 sys_menu 里已有的码，如 report:stats:list"/>
-        </el-form-item>
-        <el-form-item label="默认宽度">
-          <el-input-number v-model="form.defaultSpan" :max="24" :min="1" :step="6"/>
-          <span class="ml-2 text-[14px] text-slate-400">24 列栅格，6=四分之一宽、24=整行</span>
-        </el-form-item>
-        <el-form-item label="顺序">
-          <el-input-number v-model="form.sortOrder" :max="9999" :min="0" :step="10"/>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-radio-group v-model="form.status">
-            <el-radio :value="1">已上线</el-radio>
-            <el-radio :value="0">未上线</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="form.remark" :rows="2" placeholder="这张卡的数据口径、归属模块、后续要拆到哪"
-                    type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button :loading="submitting" type="primary" @click="submitWidget">保存</el-button>
-      </template>
-    </el-dialog>
+    <WorkbenchConfigEdit v-model="dialogVisible" :area-options="AREA_OPTIONS" :row="editRow" @saved="loadWidgets"/>
   </div>
 </template>
 
@@ -204,9 +161,9 @@ import {
   getRoleWorkbenchConfig,
   roleWorkbenchConfigUpsert,
   widgetListPage,
-  widgetUpsert,
 } from '@/api/workbench';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+import WorkbenchConfigEdit from '@/views/system/workbench/WorkbenchConfigEdit.vue';
 
 const activeTab = ref('role');
 /** 卡片分区，与 sys_workbench_widget.area 一字不差 */
@@ -298,21 +255,8 @@ const widgetRows = ref([]);
 const widgetQuery = reactive({keyword: '', area: '', status: null});
 const widgetPage = reactive({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0});
 const dialogVisible = ref(false);
-const dialogTitle = ref('新增卡片');
-const submitting = ref(false);
-const emptyForm = () => ({
-  id: null,
-  widgetCode: '',
-  widgetName: '',
-  area: 'domain',
-  apiKey: '',
-  permission: '',
-  defaultSpan: 6,
-  sortOrder: 100,
-  status: 0,
-  remark: '',
-});
-const form = ref(emptyForm());
+// 新增/修改共用 WorkbenchConfigEdit，row 为空走新增
+const editRow = ref(null);
 
 async function loadWidgets() {
   widgetLoading.value = true;
@@ -346,41 +290,13 @@ function handleWidgetReset() {
 }
 
 function openAdd() {
-  form.value = emptyForm();
-  dialogTitle.value = '新增卡片';
+  editRow.value = null;
   dialogVisible.value = true;
 }
 
-/** 编辑回显：VO 是 span、DTO 是 defaultSpan，这里一次性对齐 */
 function openEdit(row) {
-  form.value = {
-    id: row.id,
-    widgetCode: row.widgetCode,
-    widgetName: row.widgetName,
-    area: row.area,
-    apiKey: row.apiKey,
-    permission: row.permission || '',
-    defaultSpan: Number(row.span ?? 6),
-    sortOrder: Number(row.sortOrder ?? 100),
-    status: Number(row.status ?? 0),
-    remark: row.remark || '',
-  };
-  dialogTitle.value = `修改卡片 ${row.widgetCode}`;
+  editRow.value = row;
   dialogVisible.value = true;
-}
-
-async function submitWidget() {
-  submitting.value = true;
-  try {
-    await widgetUpsert(form.value);
-    ElMessage.success('保存成功');
-    dialogVisible.value = false;
-    await loadWidgets();
-  } catch (e) {
-    ElMessage.error(e?.message || '保存失败');
-  } finally {
-    submitting.value = false;
-  }
 }
 
 async function removeWidget(row) {

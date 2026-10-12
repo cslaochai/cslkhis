@@ -26,7 +26,7 @@ public class PatientUpsertDTO {
     @NotBlank(message = "患者姓名不能为空")
     private String patientName;
     /**
-     * 性别（1-男 2-女 9-未知）（必选，不允许留空靠默认值兜底）
+     * 性别（1-男 2-女 9-未知）
      */
     @NotNull(message = "性别不能为空（1-男 2-女 9-未知）")
     private Integer gender;
@@ -72,7 +72,7 @@ public class PatientUpsertDTO {
      */
     private String occupation;
     /**
-     * 婚姻状况：1-未婚 2-已婚 3-离异 4-丧偶
+     * 婚姻状况：0-未婚 1-已婚 2-离异 3-丧偶
      */
     private Integer maritalStatus;
     /**

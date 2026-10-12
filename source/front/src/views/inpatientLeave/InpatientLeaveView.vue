@@ -134,150 +134,17 @@
     </el-card>
 
     <!-- 申请表单弹框 -->
-    <el-dialog v-model="fVisible" :title="form.id ? '修改请假单（待审批）' : '填写请假单（申请）'" data-testid="lv-form-dialog"
-               width="720px">
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="120px">
-        <el-form-item label="在院患者" prop="admissionId">
-          <el-select v-model="form.admissionId" :disabled="!!form.id" :fit-input-width="false" class="!w-full"
-                     clearable
-                     data-testid="lv-form-admission" filterable placeholder="搜索姓名/住院号选择在院患者"
-                     @change="onAdmissionPick">
-            <el-option v-for="p in inpatients" :key="p.admissionId"
-                       :label="`${p.bedNo || '—'}床 ${p.patientName}（${p.deptName || '—'}）`" :value="p.admissionId"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="患者快照">
-          <span class="text-sm text-slate-600" data-testid="lv-form-snapshot">
-            {{ form.patientName || '—' }} / {{ form.admissionNo || '—' }} / {{
-              form.wardName || '—'
-            }} {{ form.bedNo ? form.bedNo + '床' : '' }}
-          </span>
-        </el-form-item>
-        <el-form-item label="请假类别" prop="leaveType">
-          <el-radio-group v-model="form.leaveType" data-testid="lv-form-type">
-            <el-radio v-for="d in dict.type" :key="d.dictValue" :value="Number(d.dictValue)">{{
-                d.dictLabel
-              }}
-            </el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="请假事由" prop="reason">
-          <el-input v-model="form.reason" :rows="2" data-testid="lv-form-reason" maxlength="500" show-word-limit
-                    type="textarea"/>
-        </el-form-item>
-        <el-form-item label="去向" prop="destination">
-          <el-input v-model="form.destination" data-testid="lv-form-destination" maxlength="200"
-                    placeholder="写清去哪、能联系到人的地方（责任界定的关键）"/>
-        </el-form-item>
-        <el-form-item label="随行/联系人" required>
-          <div class="flex w-full gap-2">
-            <el-input v-model="form.companionName" data-testid="lv-form-companion" maxlength="50" placeholder="姓名"
-                      style="flex:1"/>
-            <el-select v-model="form.companionRelation" :fit-input-width="false" data-testid="lv-form-relation"
-                       placeholder="与患者关系" style="width:150px">
-              <el-option v-for="d in dict.relation" :key="d.dictValue" :label="d.dictLabel"
-                         :value="Number(d.dictValue)"/>
-            </el-select>
-            <el-input v-model="form.companionPhone" :placeholder="form.id && form.companionPhoneMasked ? `已留存 ${form.companionPhoneMasked}，留空表示不修改` : '联系电话'"
-                      data-testid="lv-form-phone"
-                      maxlength="20" style="width:160px"/>
-          </div>
-        </el-form-item>
-        <el-form-item label="预计离院时间" prop="expectedLeaveTime">
-          <el-date-picker v-model="form.expectedLeaveTime" data-testid="lv-form-leave-time" placeholder="预计离开病区"
-                          style="width:220px" type="datetime" value-format="YYYY-MM-DD HH:mm:ss"/>
-        </el-form-item>
-        <el-form-item label="预计返回时间" prop="expectedReturnTime">
-          <el-date-picker v-model="form.expectedReturnTime" data-testid="lv-form-return-time" placeholder="超过即超期未归"
-                          style="width:220px" type="datetime" value-format="YYYY-MM-DD HH:mm:ss"/>
-          <span class="ml-2 text-xs text-slate-400">单次请假上限见系统参数（默认 72 小时），超上限后端直接拒绝</span>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="form.remark" data-testid="lv-form-remark" maxlength="500"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button data-testid="lv-form-cancel" @click="fVisible = false">取消</el-button>
-        <el-button :loading="fSaving" data-testid="lv-form-save" type="primary" @click="saveForm">保存申请</el-button>
-      </template>
-    </el-dialog>
+    <InpatientLeaveEdit v-model="editVisible" :base="editBase" :dict-relation="dict.relation" :dict-type="dict.type"
+                        :inpatients="inpatients" :row="editRow" @saved="reloadAll"/>
 
     <!-- 审批弹框（批准即医师电子签名 / 拒绝必填理由） -->
-    <el-dialog v-model="apVisible" data-testid="lv-approve-dialog" title="审批请假单" width="560px">
-      <el-form label-width="110px">
-        <el-form-item label="请假单">{{ ap.leaveNo }} / {{ ap.patientName }}</el-form-item>
-        <el-form-item label="审批结论" required>
-          <el-radio-group v-model="ap.allow" data-testid="lv-approve-allow">
-            <el-radio :value="true">批准（医师电子签名锁定）</el-radio>
-            <el-radio :value="false">拒绝</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item v-if="ap.allow" label="医师意见" required>
-          <el-input v-model="ap.doctorAdvice" :rows="4" data-testid="lv-approve-advice" maxlength="1000" placeholder="病情评估：是否允许外出、外出期间注意事项（随签名一并锁定）"
-                    show-word-limit
-                    type="textarea"/>
-        </el-form-item>
-        <el-form-item v-else label="拒绝理由" required>
-          <el-input v-model="ap.rejectReason" :rows="3" data-testid="lv-approve-reject" maxlength="500" placeholder="写清病情为什么不允许外出"
-                    show-word-limit type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button data-testid="lv-approve-cancel" @click="apVisible = false">取消</el-button>
-        <el-button :loading="apSaving" data-testid="lv-approve-submit" type="primary" @click="doApprove">
-          {{ ap.allow ? '确认批准' : '确认拒绝' }}
-        </el-button>
-      </template>
-    </el-dialog>
+    <InpatientLeaveApprove v-model="approveVisible" :row="approveRow" @saved="reloadAll"/>
 
     <!-- 登记离院（患方承诺三要素 + 手写签名板） -->
-    <el-dialog v-model="lvVisible" data-testid="lv-leave-dialog" title="登记离院（患方签署风险告知与责任承诺书）"
-               width="620px">
-      <el-alert :closable="false" class="mb-3" title="未批准不放人；患方三要素（姓名/关系/手写签名）缺一不可 —— 这是「离院期间出事责任界定」的院内凭证。"
-                type="warning"/>
-      <el-form label-width="120px">
-        <el-form-item label="请假单">{{ lv.leaveNo }} / {{ lv.patientName }}</el-form-item>
-        <el-form-item label="确认人姓名" required>
-          <el-input v-model="lv.confirmName" data-testid="lv-leave-name" maxlength="50"/>
-        </el-form-item>
-        <el-form-item label="与患者关系" required>
-          <el-select v-model="lv.confirmRelation" :fit-input-width="false" data-testid="lv-leave-relation"
-                     placeholder="责任界定必填" style="width:220px">
-            <el-option v-for="d in dict.relation" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="联系电话" required>
-          <el-input v-model="lv.confirmPhone" data-testid="lv-leave-phone" maxlength="20"/>
-        </el-form-item>
-        <el-form-item label="实际离院时间">
-          <el-date-picker v-model="lv.actualLeaveTime" data-testid="lv-leave-time" placeholder="默认当前时间"
-                          style="width:220px" type="datetime" value-format="YYYY-MM-DD HH:mm:ss"/>
-        </el-form-item>
-        <el-form-item label="手写签名" required>
-          <SignaturePad ref="signPad"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button data-testid="lv-leave-cancel" @click="lvVisible = false">取消</el-button>
-        <el-button :loading="lvSaving" data-testid="lv-leave-submit" type="primary" @click="doLeave">签署并登记离院
-        </el-button>
-      </template>
-    </el-dialog>
+    <InpatientLeaveDepart v-model="leaveVisible" :dict-relation="dict.relation" :row="leaveRow" @saved="reloadAll"/>
 
     <!-- 销假弹框 -->
-    <el-dialog v-model="bkVisible" data-testid="lv-back-dialog" title="返回销假" width="480px">
-      <el-form label-width="110px">
-        <el-form-item label="请假单">{{ bk.leaveNo }} / {{ bk.patientName }}</el-form-item>
-        <el-form-item label="返回情况">
-          <el-input v-model="bk.returnNote" :rows="3" data-testid="lv-back-note" maxlength="500" placeholder="可空：返回时患者状态等"
-                    show-word-limit type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button data-testid="lv-back-cancel" @click="bkVisible = false">取消</el-button>
-        <el-button :loading="bkSaving" data-testid="lv-back-submit" type="primary" @click="doBack">确认销假</el-button>
-      </template>
-    </el-dialog>
+    <InpatientLeaveReturn v-model="returnVisible" :row="returnRow" @saved="reloadAll"/>
 
     <!-- 取消弹框 -->
     <el-dialog v-model="cxVisible" data-testid="lv-cancel-dialog" title="取消请假单" width="480px">
@@ -293,97 +160,12 @@
     </el-dialog>
 
     <!-- 超期处置弹框 -->
-    <el-dialog v-model="ctVisible" data-testid="lv-contact-dialog" title="超期未归处置" width="520px">
-      <el-alert :closable="false" :title="`已超期 ${ct.overdueHours} 小时未返回病区。联系不上必须升级上报（主管医师 → 护士长 → 医务科/总值班）。`" class="mb-3"
-                type="error"/>
-      <el-form label-width="110px">
-        <el-form-item label="请假单">{{ ct.leaveNo }} / {{ ct.patientName }}</el-form-item>
-        <el-form-item label="联系结果" required>
-          <el-select v-model="ct.contactResult" :fit-input-width="false" data-testid="lv-contact-result" placeholder="请选择"
-                     style="width:100%">
-            <el-option v-for="d in dict.contact" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="上报对象" required>
-          <el-select v-model="ct.reportTo" :fit-input-width="false" data-testid="lv-contact-report" placeholder="请选择"
-                     style="width:100%">
-            <el-option v-for="d in dict.report" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="处置备注">
-          <el-input v-model="ct.contactNote" :rows="3" data-testid="lv-contact-note" maxlength="500" placeholder="联系经过、约定内容等"
-                    show-word-limit type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button data-testid="lv-contact-cancel" @click="ctVisible = false">取消</el-button>
-        <el-button :loading="ctSaving" data-testid="lv-contact-submit" type="primary" @click="doContact">记录处置
-        </el-button>
-      </template>
-    </el-dialog>
+    <InpatientLeaveContact v-model="contactVisible" :dict-contact="dict.contact" :dict-report="dict.report"
+                           :row="contactRow" @saved="reloadAll"/>
 
     <!-- 详情（只读，行点击打开） -->
-    <el-dialog v-model="dvVisible" data-testid="lv-detail-dialog" title="请假单详情（只读）" width="760px">
-      <el-form :disabled="true" label-width="130px">
-        <el-form-item label="单号"><span data-testid="lv-detail-no">{{ dv.leaveNo }}</span></el-form-item>
-        <el-form-item label="患者">{{ dv.patientName }} / {{ dv.admissionNo }} / {{ dv.deptName }} {{ dv.wardName }}
-          {{ dv.bedNo }}
-        </el-form-item>
-        <el-form-item label="类别/状态">{{ typeText(dv.leaveType) }} / {{ statusText(dv.leaveStatus) }}
-          <el-tag v-if="dv.overdue" class="ml-2" size="small" type="danger">超期 {{ dv.overdueHours }} 小时</el-tag>
-        </el-form-item>
-        <el-form-item label="请假事由"><span data-testid="lv-detail-reason">{{ dv.reason }}</span></el-form-item>
-        <el-form-item label="去向">{{ dv.destination }}</el-form-item>
-        <el-form-item label="随行/联系人">{{ dv.companionName }}（{{
-            relationText(dv.companionRelation)
-          }}）{{ dv.companionPhoneMasked || '' }}
-        </el-form-item>
-        <el-form-item label="预计离院/返回">{{ fmt(dv.expectedLeaveTime) }} → {{
-            fmt(dv.expectedReturnTime)
-          }}
-        </el-form-item>
-        <el-form-item label="申请人">{{ dv.applyBy || '—' }} · {{ fmt(dv.applyTime) }}</el-form-item>
-        <el-form-item v-if="dv.doctorAdvice" label="医师意见"><span data-testid="lv-detail-advice">{{
-            dv.doctorAdvice
-          }}</span></el-form-item>
-        <el-form-item v-if="dv.rejectReason" label="拒绝理由">{{ dv.rejectReason }}</el-form-item>
-        <el-form-item v-if="dv.actualLeaveTime" label="实际离院">{{ fmt(dv.actualLeaveTime) }}</el-form-item>
-        <el-form-item v-if="dv.actualReturnTime" label="实际返回">{{ fmt(dv.actualReturnTime) }}
-          {{ dv.returnBy ? `（销假：${dv.returnBy}）` : '' }} {{ dv.returnNote || '' }}
-        </el-form-item>
-        <el-form-item v-if="dv.confirmName" label="患方签署">
-          <div data-testid="lv-detail-confirm">
-            <img v-if="dv.confirmSignature" :src="dv.confirmSignature" alt="患方手写签名"
-                 class="h-11 border border-slate-200"/>
-            <div class="text-xs text-slate-500">{{ dv.confirmName }}（{{
-                relationText(dv.confirmRelation)
-              }}）　{{ dv.confirmPhoneMasked || '' }}　{{ fmt(dv.confirmTime) }}
-            </div>
-          </div>
-        </el-form-item>
-        <el-form-item v-if="dv.overdueContactResult" label="超期处置">
-          <div data-testid="lv-detail-contact">{{ contactText(dv.overdueContactResult) }} ·
-            上报：{{ reportText(dv.reportTo) }} · {{ dv.overdueContactBy || '—' }} {{ fmt(dv.overdueContactTime) }}
-            <div class="text-xs text-slate-500">{{ dv.overdueContactNote || '' }}</div>
-          </div>
-        </el-form-item>
-        <el-form-item v-if="dv.cancelReason" label="取消">{{ dv.cancelBy }} · {{ fmt(dv.cancelTime) }} ·
-          {{ dv.cancelReason }}
-        </el-form-item>
-        <el-form-item v-if="dv.signNo" label="电子签名">
-          <span class="text-xs text-slate-500" data-testid="lv-detail-sign">签名流水 {{
-              dv.signNo
-            }}；摘要 {{
-              String(dv.contentDigest || '').slice(0, 16)
-            }}…；验签 {{
-              Number(dv.verifyStatus) === 1 ? '通过' : Number(dv.verifyStatus) === 2 ? '失败' : '未校验'
-            }}</span>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button data-testid="lv-detail-close" @click="dvVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    <InpatientLeaveDetail v-model="detailVisible" :dict-contact="dict.contact" :dict-relation="dict.relation"
+                          :dict-report="dict.report" :dict-status="dict.status" :dict-type="dict.type" :id="detailId"/>
   </div>
 </template>
 
@@ -405,20 +187,20 @@ import {dictLabelText} from '@/lib/utils'
 import {patientGenderText} from '@/lib/patientGender'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
-import SignaturePad from '@/components/his/SignaturePad.vue'
+import InpatientLeaveApprove from './InpatientLeaveApprove.vue'
+import InpatientLeaveContact from './InpatientLeaveContact.vue'
+import InpatientLeaveDepart from './InpatientLeaveDepart.vue'
+import InpatientLeaveDetail from './InpatientLeaveDetail.vue'
+import InpatientLeaveEdit from './InpatientLeaveEdit.vue'
+import InpatientLeaveReturn from './InpatientLeaveReturn.vue'
 import {
   getLeaveBase,
   getLeaveById,
   getLeaveInpatients,
   getLeaveListPage,
   getLeaveStats,
-  leaveApprove,
-  leaveBack,
   leaveCancel,
-  leaveConfirm,
-  leaveContact,
   leavePrint,
-  leaveUpsert,
 } from '@/api/inpatientLeave'
 
 const NS = {PENDING: 1, APPROVED: 2, LEFT: 3, RETURNED: 4, REJECTED: 5, CANCELLED: 6}
@@ -450,8 +232,6 @@ const loadDicts = async () => {
 const typeText = (v) => dictLabelText(dict.type, v)
 const statusText = (v) => dictLabelText(dict.status, v)
 const relationText = (v) => dictLabelText(dict.relation, v)
-const contactText = (v) => dictLabelText(dict.contact, v)
-const reportText = (v) => dictLabelText(dict.report, v)
 const statusTag = (s) => (Number(s) === NS.PENDING ? 'warning' : Number(s) === NS.APPROVED ? 'primary' : Number(s) === NS.LEFT ? 'danger' : Number(s) === NS.RETURNED ? 'success' : 'info')
 
 const gate = async (p, msg) => {
@@ -538,200 +318,37 @@ const resetQuery = () => {
 const reloadAll = () => Promise.all([loadStats(), loadList(), loadInpatients()])
 
 // ---------------- 申请表单（草稿） ----------------
-const fVisible = ref(false)
-const fSaving = ref(false)
-const formRef = ref(null)
-const form = reactive({
-  id: null, admissionId: null, patientName: '', wardName: '', bedNo: '', admissionNo: '',
-  leaveType: 1, reason: '', destination: '', companionName: '', companionRelation: null, companionPhone: '',
-  expectedLeaveTime: '', expectedReturnTime: '', remark: '',
-  // 编辑草稿时电话拿不到明文（列表不出联系方式、详情只给脱敏值），这一格默认留空＝沿用原值
-  companionPhoneMasked: '',
-})
-// 随行人电话的必填是**动态**的：列表 VO 不出联系方式、详情只给脱敏值，编辑草稿时这一格
-// 必然是空的（后端也同样放宽了 Service 强校验）。若这里写死 required:true，用户点「编辑」
-// 什么都不改直接保存就会被自己的规则弹回「电话不能为空」——现象像修改功能坏了。
-// 有留存值（脱敏串）时允许留空＝沿用原值；新建（没有留存值）才必填。
-const rules = computed(() => ({
-  admissionId: [{required: true, message: '必须挂在一次住院上', trigger: 'change'}],
-  leaveType: [{required: true, message: '请选择请假类别', trigger: 'change'}],
-  reason: [{required: true, message: '请假事由不能为空', trigger: 'blur'}],
-  destination: [{required: true, message: '去向不能为空（写清去哪，责任界定的关键）', trigger: 'blur'}],
-  companionName: [{required: true, message: '随行/联系人不能为空', trigger: 'blur'}],
-  companionPhone: [{required: !form.companionPhoneMasked, message: '随行人联系电话不能为空', trigger: 'blur'}],
-  expectedLeaveTime: [{required: true, message: '预计离院时间不能为空', trigger: 'change'}],
-  expectedReturnTime: [{required: true, message: '预计返回时间不能为空', trigger: 'change'}],
-}))
-const nowText = (plusHours = 0) => {
-  const d = new Date(Date.now() + plusHours * 3600 * 1000)
-  const p = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:00`
-}
+const editVisible = ref(false)
+const editRow = ref(null)
+const editBase = ref(null)
 const openForm = (row, base) => {
-  Object.assign(form, {
-    id: row?.id || null,
-    admissionId: row?.admissionId || base?.admissionId || null,
-    patientName: base?.patientName || row?.patientName || '',
-    wardName: base?.wardName || '',
-    bedNo: base?.bedNo || '',
-    admissionNo: base?.admissionNo || row?.admissionNo || '',
-    leaveType: row?.leaveType || 1,
-    reason: row?.reason || '',
-    destination: row?.destination || '',
-    companionName: row?.companionName || '',
-    companionRelation: row?.companionRelation ?? null,
-    companionPhone: row?.companionPhone || '',
-    expectedLeaveTime: row?.expectedLeaveTime ? String(row.expectedLeaveTime).slice(0, 19) : nowText(1),
-    expectedReturnTime: row?.expectedReturnTime ? String(row.expectedReturnTime).slice(0, 19) : nowText(5),
-    remark: row?.remark || '',
-    companionPhoneMasked: '',
-  })
-  if (row?.id) fillEditableContent(row.id)
-  fVisible.value = true
-}
-/** 编辑草稿：补全详情字段（台账行有全部申请字段，详情只是兜底） */
-const fillEditableContent = async (id) => {
-  const res = await gate(getLeaveById(id), '加载请假单失败')
-  if (!res) return
-  const d = res.data || {}
-  Object.assign(form, {
-    reason: d.reason || form.reason,
-    destination: d.destination || form.destination,
-    companionName: d.companionName || form.companionName,
-    companionRelation: d.companionRelation ?? form.companionRelation,
-    remark: d.remark || form.remark,
-    patientName: d.patientName,
-    wardName: d.wardName,
-    bedNo: d.bedNo,
-    admissionNo: d.admissionNo,
-    companionPhoneMasked: d.companionPhoneMasked || '',
-  })
-}
-const onAdmissionPick = async (admissionId) => {
-  if (!admissionId || form.id) return
-  const res = await gate(getLeaveBase(admissionId), '带出患者信息失败')
-  if (!res) return
-  const b = res.data || {}
-  Object.assign(form, {
-    patientName: b.patientName, wardName: b.wardName, bedNo: b.bedNo, admissionNo: b.admissionNo,
-    reason: form.reason || (b.diagnosis ? '' : ''),
-  })
-}
-const saveForm = async () => {
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
-  if (form.expectedReturnTime <= form.expectedLeaveTime) {
-    return ElMessage.warning('预计返回时间必须晚于预计离院时间')
-  }
-  // 电话：编辑态留空＝沿用原值（列表不出明文、详情只给脱敏值，前端无法回显）；新建必须填
-  if (!form.companionPhone && !form.companionPhoneMasked) {
-    return ElMessage.warning('随行人联系电话不能为空（超期要打电话找人）')
-  }
-  fSaving.value = true
-  const res = await gate(leaveUpsert({
-    id: form.id, admissionId: form.admissionId, leaveType: form.leaveType,
-    reason: form.reason, destination: form.destination,
-    companionName: form.companionName, companionRelation: form.companionRelation,
-    // 留空＝沿用原值（后端口径：列表/详情都不出明文电话，编辑时无法回显）
-    companionPhone: form.companionPhone || undefined,
-    expectedLeaveTime: form.expectedLeaveTime, expectedReturnTime: form.expectedReturnTime, remark: form.remark,
-  }), '保存失败')
-  fSaving.value = false
-  if (!res) return
-  ElMessage.success(res.message || '请假单已保存')
-  fVisible.value = false
-  reloadAll()
+  editRow.value = row || null
+  editBase.value = base || null
+  editVisible.value = true
 }
 
 // ---------------- 审批（批准即电子签名 / 拒绝必填理由） ----------------
-const apVisible = ref(false)
-const apSaving = ref(false)
-const ap = reactive({id: null, leaveNo: '', patientName: '', allow: true, doctorAdvice: '', rejectReason: ''})
+const approveVisible = ref(false)
+const approveRow = ref(null)
 const openApprove = (row) => {
-  Object.assign(ap, {
-    id: row.id,
-    leaveNo: row.leaveNo,
-    patientName: row.patientName,
-    allow: true,
-    doctorAdvice: '',
-    rejectReason: ''
-  })
-  apVisible.value = true
-}
-const doApprove = async () => {
-  if (ap.allow && !ap.doctorAdvice) return ElMessage.warning('批准必须填写医师意见（病情评估：是否允许外出、外出期间注意事项）')
-  if (!ap.allow && !ap.rejectReason) return ElMessage.warning('拒绝必须填写理由（写清病情为什么不允许外出）')
-  apSaving.value = true
-  const res = await gate(leaveApprove({
-    id: ap.id, allow: ap.allow,
-    doctorAdvice: ap.allow ? ap.doctorAdvice : (ap.doctorAdvice || undefined),
-    rejectReason: ap.allow ? undefined : ap.rejectReason,
-  }), '审批失败')
-  apSaving.value = false
-  if (!res) return
-  ElMessage.success(res.message || '已审批')
-  apVisible.value = false
-  reloadAll()
+  approveRow.value = row
+  approveVisible.value = true
 }
 
 // ---------------- 登记离院（患方承诺三要素 + 手写签名板） ----------------
-const lvVisible = ref(false)
-const lvSaving = ref(false)
-const signPad = ref(null)
-const lv = reactive({
-  id: null,
-  leaveNo: '',
-  patientName: '',
-  confirmName: '',
-  confirmRelation: null,
-  confirmPhone: '',
-  actualLeaveTime: ''
-})
+const leaveVisible = ref(false)
+const leaveRow = ref(null)
 const openLeave = (row) => {
-  Object.assign(lv, {
-    id: row.id,
-    leaveNo: row.leaveNo,
-    patientName: row.patientName,
-    confirmName: '',
-    confirmRelation: null,
-    confirmPhone: '',
-    actualLeaveTime: nowText(0)
-  })
-  lvVisible.value = true
-}
-const doLeave = async () => {
-  if (!lv.confirmName) return ElMessage.warning('患方确认人姓名不能为空')
-  if (!lv.confirmRelation) return ElMessage.warning('确认人与患者的关系是责任界定必填项')
-  if (!lv.confirmPhone) return ElMessage.warning('确认人联系电话不能为空')
-  if (!signPad.value || signPad.value.isEmpty()) return ElMessage.warning('请患方在签名板上手写签名（承诺书必须亲笔签署）')
-  lvSaving.value = true
-  const res = await gate(leaveConfirm({
-    id: lv.id, confirmName: lv.confirmName, confirmRelation: lv.confirmRelation, confirmPhone: lv.confirmPhone,
-    confirmSignature: signPad.value.confirm(), actualLeaveTime: lv.actualLeaveTime || undefined,
-  }), '离院登记失败')
-  lvSaving.value = false
-  if (!res) return
-  ElMessage.success(res.message || '患方已签署承诺书并登记离院')
-  lvVisible.value = false
-  reloadAll()
+  leaveRow.value = row
+  leaveVisible.value = true
 }
 
 // ---------------- 返回销假 ----------------
-const bkVisible = ref(false)
-const bkSaving = ref(false)
-const bk = reactive({id: null, leaveNo: '', patientName: '', returnNote: ''})
+const returnVisible = ref(false)
+const returnRow = ref(null)
 const openBack = (row) => {
-  Object.assign(bk, {id: row.id, leaveNo: row.leaveNo, patientName: row.patientName, returnNote: ''})
-  bkVisible.value = true
-}
-const doBack = async () => {
-  bkSaving.value = true
-  const res = await gate(leaveBack({id: bk.id, returnNote: bk.returnNote || undefined}), '销假失败')
-  bkSaving.value = false
-  if (!res) return
-  ElMessage.success(res.message || '已销假')
-  bkVisible.value = false
-  reloadAll()
+  returnRow.value = row
+  returnVisible.value = true
 }
 
 // ---------------- 取消 ----------------
@@ -754,55 +371,19 @@ const doCancel = async () => {
 }
 
 // ---------------- 超期处置 ----------------
-const ctVisible = ref(false)
-const ctSaving = ref(false)
-const ct = reactive({
-  id: null,
-  leaveNo: '',
-  patientName: '',
-  overdueHours: 0,
-  contactResult: null,
-  contactNote: '',
-  reportTo: null
-})
+const contactVisible = ref(false)
+const contactRow = ref(null)
 const openContact = (row) => {
-  Object.assign(ct, {
-    id: row.id,
-    leaveNo: row.leaveNo,
-    patientName: row.patientName,
-    overdueHours: row.overdueHours || 0,
-    contactResult: null,
-    contactNote: '',
-    reportTo: null
-  })
-  ctVisible.value = true
-}
-const doContact = async () => {
-  if (!ct.contactResult) return ElMessage.warning('请选择联系结果')
-  if (!ct.reportTo) return ElMessage.warning('请选择上报对象（联系不上必须升级上报）')
-  ctSaving.value = true
-  const res = await gate(leaveContact({
-    id: ct.id,
-    contactResult: ct.contactResult,
-    contactNote: ct.contactNote || undefined,
-    reportTo: ct.reportTo
-  }), '超期处置失败')
-  ctSaving.value = false
-  if (!res) return
-  ElMessage.success(res.message || '超期处置已记录')
-  ctVisible.value = false
-  reloadAll()
+  contactRow.value = row
+  contactVisible.value = true
 }
 
 // ---------------- 详情（只读） ----------------
-const dvVisible = ref(false)
-const dv = ref({})
-const showDetail = async (row) => {
-  const res = await gate(getLeaveById(row.id), '加载详情失败')
-  if (res) {
-    dv.value = res.data || {};
-    dvVisible.value = true
-  }
+const detailVisible = ref(false)
+const detailId = ref(null)
+const showDetail = (row) => {
+  detailId.value = row.id
+  detailVisible.value = true
 }
 
 // ---------------- 承诺书打印（患方联 + 病历联） ----------------

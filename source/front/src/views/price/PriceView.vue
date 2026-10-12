@@ -148,52 +148,19 @@
       </template>
     </div>
 
-    <el-dialog v-model="changeVisible" destroy-on-close title="调价" width="480px">
-      <div class="space-y-4">
-        <div class="rounded-lg border border-slate-200 p-3 text-sm">
-          <div class="flex items-center gap-2">
-            <el-icon class="text-slate-400">
-              <Tickets/>
-            </el-icon>
-            <span class="font-medium text-slate-800">{{ changeForm.itemName || '—' }}</span>
-            <span class="font-mono text-xs text-slate-400">{{ changeForm.itemCode }}</span>
-          </div>
-          <div class="mt-2 text-slate-500">
-            类型：{{ ITEM_TYPES.find(t => t.key === changeForm.itemType)?.label || changeForm.itemType }}
-            <span class="ml-3">当前价：<span class="font-semibold text-slate-700">¥{{
-                formatMoney(changeForm.oldPrice)
-              }}</span></span>
-          </div>
-        </div>
-        <el-form label-width="84px">
-          <el-form-item label="新价格" required>
-            <el-input-number v-model="changeForm.newPrice" :min="0" :precision="2" :step="1" class="!w-full"/>
-          </el-form-item>
-          <el-form-item label="调价原因" required>
-            <el-input v-model="changeForm.reason" :rows="3" placeholder="如：执行省级药品集中采购新价" type="textarea"/>
-          </el-form-item>
-        </el-form>
-        <p class="rounded-lg bg-amber-50 p-3 text-xs text-amber-700">
-          调价会即时更新价表并写入调价历史，操作人取当前登录人，不可撤回。
-        </p>
-      </div>
-      <template #footer>
-        <el-button @click="changeVisible = false">取消</el-button>
-        <el-button v-perm="'finance:price:edit'" :loading="changeSubmitting" type="primary" @click="submitChange">
-          确认调价
-        </el-button>
-      </template>
-    </el-dialog>
+    <PriceEdit v-model="changeVisible" :row="changeRow" :item-types="ITEM_TYPES" :default-item-type="activeTab"
+               @saved="loadList"/>
   </div>
 </template>
 
 <script setup>
 import {onMounted, reactive, ref} from 'vue';
-import {Edit, Refresh, Search, Tickets} from '@element-plus/icons-vue';
+import {Edit, Refresh, Search} from '@element-plus/icons-vue';
 import {ElMessage} from 'element-plus';
-import {changePrice, getPriceHistoryList, getPriceList, getPriceSummary} from '@/api/price';
+import {getPriceHistoryList, getPriceList, getPriceSummary} from '@/api/price';
 import {formatMoney} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+import PriceEdit from './PriceEdit.vue';
 // 5 类价表：对应后端的 DRUG / CONSUMABLE / INSPECTION / LABORATORY / TREATMENT
 const ITEM_TYPES = [
   {key: 'DRUG', label: '药品', codeLabel: '药品编码', nameLabel: '药品名称'},
@@ -217,16 +184,7 @@ const historyRows = ref([]);
 const historyKeyword = ref('');
 const historyPagination = reactive({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0});
 const changeVisible = ref(false);
-const changeSubmitting = ref(false);
-const changeForm = reactive({
-  itemType: '',
-  itemId: '',
-  itemCode: '',
-  itemName: '',
-  oldPrice: 0,
-  newPrice: 0,
-  reason: '',
-});
+const changeRow = ref(null);
 
 async function loadSummary() {
   try {
@@ -329,41 +287,8 @@ function handleHistoryCurrentChange(page) {
 }
 
 function openChange(row) {
-  changeForm.itemType = row.itemType || activeTab.value;
-  changeForm.itemId = row.itemId;
-  changeForm.itemCode = row.itemCode || '';
-  changeForm.itemName = row.itemName || '';
-  changeForm.oldPrice = Number(row.price ?? 0);
-  changeForm.newPrice = Number(row.price ?? 0);
-  changeForm.reason = '';
+  changeRow.value = row;
   changeVisible.value = true;
-}
-
-async function submitChange() {
-  if (!changeForm.reason.trim()) {
-    ElMessage.warning('调价原因必填（进调价留痕）');
-    return;
-  }
-  if (changeForm.newPrice === null || Number(changeForm.newPrice) < 0) {
-    ElMessage.warning('请填写正确的新价格');
-    return;
-  }
-  changeSubmitting.value = true;
-  try {
-    await changePrice({
-      itemType: changeForm.itemType,
-      itemId: changeForm.itemId,
-      newPrice: Number(changeForm.newPrice),
-      reason: changeForm.reason.trim(),
-    });
-    ElMessage.success('调价成功，已写入调价历史');
-    changeVisible.value = false;
-    loadList();
-  } catch (e) {
-    ElMessage.error(e?.message || '调价失败');
-  } finally {
-    changeSubmitting.value = false;
-  }
 }
 
 onMounted(async () => {

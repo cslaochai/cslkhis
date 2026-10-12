@@ -189,195 +189,34 @@
     </el-card>
 
     <!-- 登记 / 修改筛查 -->
-    <el-dialog v-model="formVisible" :title="form.id ? '修改筛查记录' : '登记营养风险筛查'" data-testid="screen-dialog"
-               width="620px">
-      <el-form label-width="130px">
-        <el-form-item label="住院患者" required>
-          <div data-testid="sel-admission" style="width: 100%">
-            <el-select v-model="form.admissionId" :disabled="!!form.id" filterable placeholder="选择在院患者"
-                       style="width: 100%">
-              <el-option v-for="a in admissions" :key="a.admissionId" :label="admissionLabel(a)"
-                         :value="a.admissionId"/>
-            </el-select>
-          </div>
-        </el-form-item>
-        <el-form-item label="量表" required>
-          <div data-testid="sel-screen-type">
-            <el-select v-model="form.screenType" style="width: 240px" @change="onTypeChange">
-              <el-option v-for="(t, code) in SCREEN_TYPE_TEXT" :key="code" :label="t" :value="Number(code)"/>
-            </el-select>
-          </div>
-        </el-form-item>
-        <el-form-item label="筛查时机" required>
-          <div data-testid="sel-screen-source">
-            <el-select v-model="form.screenSource" style="width: 200px">
-              <el-option v-for="(t, code) in SCREEN_SOURCE_TEXT" :key="code" :label="t" :value="Number(code)"/>
-            </el-select>
-          </div>
-        </el-form-item>
-
-        <template v-if="form.screenType === 1">
-          <el-form-item label="营养状态受损">
-            <div data-testid="sel-impair">
-              <el-select v-model="form.impairScore" style="width: 120px">
-                <el-option v-for="o in SCORE_OPTIONS_0_3" :key="o.value" :label="o.label" :value="o.value"/>
-              </el-select>
-            </div>
-            <span class="muted hint">0-无 1-肿瘤患者 2-重度消耗（卧床、胸腹部术后） 3-重症监护</span>
-          </el-form-item>
-          <el-form-item label="疾病严重程度">
-            <div data-testid="sel-severity">
-              <el-select v-model="form.severityScore" style="width: 120px">
-                <el-option v-for="o in SCORE_OPTIONS_0_3" :key="o.value" :label="o.label" :value="o.value"/>
-              </el-select>
-            </div>
-            <span class="muted hint">1-发热等 2-腹部手术、慢病急性发作 3-ICU、重度颅脑损伤</span>
-          </el-form-item>
-          <el-form-item label="年龄项（≥70 岁 +1）">
-            <span data-testid="age-score">{{ ageScoreHint }}</span>
-          </el-form-item>
-          <el-form-item label="预计总分 / 判定">
-            <span data-testid="local-total">{{ localTotal }} 分</span>
-            <el-tag :type="nrsLocalRisk(localTotal) ? 'danger' : 'success'" class="hint" disable-transitions>
-              {{ nrsLocalRisk(localTotal) ? '达到营养风险阈值（≥3）' : '未达阈值，需 7 天后复筛' }}
-            </el-tag>
-            <div class="muted hint">仅作表单提示，保存后以服务端返回的总分与判定为准。</div>
-          </el-form-item>
-        </template>
-        <el-form-item v-else label="评定总分" required>
-          <el-input-number v-model="form.totalScore" :max="form.screenType === 3 ? 17 : 35" :min="0"
-                           data-testid="input-total"/>
-          <span class="muted hint">{{
-              form.screenType === 3 ? 'MNA 满分 17，<11 判为存在营养不良' : 'PG-SGA 由营养师按 0~35 分级'
-            }}</span>
-        </el-form-item>
-
-        <el-form-item label="身高 / 体重">
-          <el-input-number v-model="form.heightCm" :max="250" :min="0" :precision="1" controls-position="right"
-                           data-testid="input-height" style="width: 140px"/>
-          <span class="muted hint">cm</span>
-          <el-input-number v-model="form.weightKg" :max="400" :min="0" :precision="1" controls-position="right"
-                           data-testid="input-weight" style="width: 140px"/>
-          <span class="muted hint">kg（BMI 由服务端算）</span>
-        </el-form-item>
-        <el-form-item label="近 3 月体重下降">
-          <el-input-number v-model="form.weightLossPercent" :max="100" :min="0" :precision="1" controls-position="right"
-                           data-testid="input-loss" style="width: 140px"/>
-          <span class="muted hint">%</span>
-        </el-form-item>
-        <el-form-item label="下次筛查日期">
-          <div data-testid="sel-next-screen">
-            <el-date-picker v-model="form.nextScreenDate" placeholder="留空：阴性自动取筛查日 +7 天" style="width: 260px"
-                            type="date" value-format="YYYY-MM-DD"/>
-          </div>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="form.remark" :rows="2" maxlength="500" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="formVisible = false">取消</el-button>
-        <el-button :loading="saving" data-testid="btn-save-screen" type="primary" @click="submitForm">保存</el-button>
-      </template>
-    </el-dialog>
+    <NutritionScreenEdit v-model="formVisible" :row="formRow" @saved="onSaved" />
 
     <!-- 只读详情：行点击打开，编辑走列表按钮 -->
-    <el-dialog v-model="detailVisible" data-testid="detail-dialog" title="筛查记录详情" width="560px">
-      <el-form disabled label-width="120px">
-        <el-form-item label="筛查编号">
-          <el-input :value="detail.screenNo"/>
-        </el-form-item>
-        <el-form-item label="患者">
-          <el-input :value="`${detail.patientName || ''}（${detail.patientNo || ''}）`"/>
-        </el-form-item>
-        <el-form-item label="量表">
-          <el-input :value="detail.screenTypeText"/>
-        </el-form-item>
-        <el-form-item label="总分 / 判定">
-          <el-input :value="`${detail.totalScore} 分 · ${detail.riskFlagText}`"/>
-        </el-form-item>
-        <el-form-item label="BMI">
-          <el-input :value="detail.bmi ?? '—'"/>
-        </el-form-item>
-        <el-form-item label="下次筛查">
-          <el-input :value="detail.nextScreenDate || '—'"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input :rows="2" :value="detail.remark || '—'" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button data-testid="btn-plan-for-risk" type="primary" @click="goDietPlan">查看膳食方案</el-button>
-        <el-button @click="detailVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    <NutritionScreenDetail v-model="detailVisible" :row="detailRow" />
 
     <!-- 发起营养会诊 -->
-    <el-dialog v-model="consultVisible" data-testid="consult-dialog" title="发起营养会诊" width="560px">
-      <el-form label-width="120px">
-        <el-form-item label="患者">
-          <el-input :value="`${consultRow.patientName || ''}（${consultRow.admissionNo || ''}）`" disabled/>
-        </el-form-item>
-        <el-form-item label="会诊科室" required>
-          <div data-testid="sel-consult-dept" style="width: 100%">
-            <el-select v-model="consultForm.toDeptId" filterable placeholder="选择营养科" style="width: 100%">
-              <el-option v-for="d in depts" :key="d.id" :label="d.deptName" :value="d.id"/>
-            </el-select>
-          </div>
-        </el-form-item>
-        <el-form-item label="会诊范围" required>
-          <el-radio-group v-model="consultForm.consultType">
-            <el-radio :value="2">科间会诊</el-radio>
-            <el-radio :value="3">全院会诊</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="是否急会诊">
-          <el-radio-group v-model="consultForm.isUrgent">
-            <el-radio :value="0">普通（24 小时内应答）</el-radio>
-            <el-radio :value="1">急会诊（10 分钟内应答）</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="会诊理由" required>
-          <el-input v-model="consultForm.reason" :rows="3" data-testid="input-consult-reason" maxlength="500"
-                    type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="consultVisible = false">取消</el-button>
-        <el-button :loading="savingConsult" data-testid="btn-do-consult" type="primary" @click="submitConsult">
-          提交申请
-        </el-button>
-      </template>
-    </el-dialog>
+    <NutritionScreenConsult v-model="consultVisible" :row="consultRow" />
   </div>
 </template>
 
 <script setup>
-import {computed, onMounted, reactive, ref} from 'vue'
-import {useRouter} from 'vue-router'
+import {onMounted, reactive, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
-import {getInpatientListPage} from '@/api/inpatient'
-import {getDepartmentSelectList} from '@/api/system'
 import {
-  applyNutritionConsult,
   deleteNutritionScreen,
   getNutritionOverview,
   listNutritionScreenPage,
-  upsertNutritionScreen,
 } from '@/api/nutrition'
 import {
   NRS_RISK_CUTOFF,
-  nrsLocalRisk,
-  nrsLocalTotal,
   RISK_FLAG_TAG,
-  SCORE_OPTIONS_0_3,
-  SCREEN_SOURCE_TEXT,
   SCREEN_TYPE_TEXT,
 } from '@/lib/nutrition'
-
-const router = useRouter()
+import NutritionScreenEdit from './NutritionScreenEdit.vue'
+import NutritionScreenDetail from './NutritionScreenDetail.vue'
+import NutritionScreenConsult from './NutritionScreenConsult.vue'
 
 const overview = ref({})
 const rows = ref([])
@@ -448,108 +287,13 @@ function onSizeChange() {
   loadList()
 }
 
-// ---------------- 患者与科室下拉（在院住院，一次抓全量供选择） ----------------
-const admissions = ref([])
-const depts = ref([])
-
-const admissionLabel = (a) => `${a.bedNo || '—'} ${a.patientName || '—'}（${a.wardName || a.deptName || '—'}）`
-
-async function loadBaseData() {
-  try {
-    const res = await getInpatientListPage({admitStatus: 1, pageNum: 1, pageSize: 200})
-    admissions.value = res?.data?.records || []
-  } catch (e) {
-    admissions.value = []
-  }
-  try {
-    const res = await getDepartmentSelectList({})
-    depts.value = res?.data || []
-  } catch (e) {
-    depts.value = []
-  }
-}
-
-// ---------------- 表单 ----------------
+// ---------------- 登记 / 修改（子组件 NutritionScreenEdit） ----------------
 const formVisible = ref(false)
-const saving = ref(false)
-const emptyForm = () => ({
-  id: null,
-  admissionId: null,
-  screenType: 1,
-  screenSource: 1,
-  impairScore: 0,
-  severityScore: 0,
-  totalScore: null,
-  heightCm: null,
-  weightKg: null,
-  weightLossPercent: null,
-  nextScreenDate: null,
-  remark: '',
-})
-const form = reactive(emptyForm())
-
-/** 年龄项只作展示：服务端按患者档案真实年龄算，前端传了也不认 */
-const ageScoreHint = computed(() => {
-  const a = admissions.value.find((x) => String(x.admissionId) === String(form.admissionId))
-  return a?.age != null ? `${a.age} 岁 · 年龄项由服务端按档案年龄判定（≥70 岁 +1 分）` : '由服务端按患者档案年龄判定（≥70 岁 +1 分）'
-})
-const localTotal = computed(() => nrsLocalTotal(form.impairScore, form.severityScore, 0))
-
-function onTypeChange() {
-  if (form.screenType !== 1) {
-    form.impairScore = null
-    form.severityScore = null
-  } else {
-    form.impairScore = 0
-    form.severityScore = 0
-    form.totalScore = null
-  }
-}
+const formRow = ref(null)
 
 function openForm(row) {
-  Object.assign(form, emptyForm())
-  if (row) {
-    Object.assign(form, {
-      id: row.id,
-      admissionId: row.admissionId,
-      screenType: row.screenType,
-      screenSource: row.screenSource,
-      impairScore: row.impairScore,
-      severityScore: row.severityScore,
-      totalScore: row.screenType === 1 ? null : row.totalScore,
-      heightCm: row.heightCm,
-      weightKg: row.weightKg,
-      weightLossPercent: row.weightLossPercent,
-      nextScreenDate: row.nextScreenDate,
-      remark: row.remark || '',
-    })
-  }
+  formRow.value = row || null
   formVisible.value = true
-}
-
-async function submitForm() {
-  if (!form.admissionId) {
-    ElMessage.warning('请选择住院患者');
-    return
-  }
-  if (form.screenType !== 1 && form.totalScore == null) {
-    ElMessage.warning('请填写评定总分');
-    return
-  }
-  saving.value = true
-  try {
-    const res = await upsertNutritionScreen({...form})
-    const saved = res?.data || {}
-    ElMessage.success(`已保存：总分 ${saved.totalScore ?? '-'} 分 · ${saved.riskFlagText || ''}`
-        + (saved.nextScreenDate ? ` · 下次筛查 ${saved.nextScreenDate}` : ''))
-    formVisible.value = false
-    loadList()
-    loadOverview()
-  } catch (e) {
-    ElMessage.error(e?.message || '保存失败')
-  } finally {
-    saving.value = false
-  }
 }
 
 async function doDelete(row) {
@@ -570,72 +314,38 @@ async function doDelete(row) {
   }
 }
 
-// ---------------- 详情 ----------------
+// ---------------- 详情（子组件 NutritionScreenDetail） ----------------
 const detailVisible = ref(false)
-const detail = ref({})
+const detailRow = ref({})
 
 function openDetail(row) {
-  detail.value = row
+  detailRow.value = row
   detailVisible.value = true
 }
 
-function goDietPlan() {
-  detailVisible.value = false
-  router.push({path: '/diet-plan', query: {admissionId: detail.value.admissionId}})
-}
-
-// ---------------- 发起营养会诊 ----------------
+// ---------------- 发起营养会诊（子组件 NutritionScreenConsult） ----------------
 const consultVisible = ref(false)
-const savingConsult = ref(false)
 const consultRow = ref({})
-const consultForm = reactive({toDeptId: null, consultType: 2, isUrgent: 0, reason: ''})
 
+/** 未达阈值的筛出不给从这里发起，这是入口把关，不是表单逻辑 */
 function openConsult(row) {
   if (Number(row.riskFlag) !== 1 && Number(row.totalScore) < NRS_RISK_CUTOFF) {
     ElMessage.warning('该次筛查未达营养风险阈值，一般不需要会诊；确需会诊请到「营养会诊」页发起')
     return
   }
   consultRow.value = row
-  Object.assign(consultForm, {
-    toDeptId: row.deptId || null,
-    consultType: 2,
-    isUrgent: 0,
-    reason: `NRS2002 总分 ${row.totalScore} 分判为有营养风险（${row.screenTypeText || ''}），请营养科会诊制定膳食方案。`,
-  })
   consultVisible.value = true
 }
 
-async function submitConsult() {
-  if (!consultForm.toDeptId) {
-    ElMessage.warning('请选择会诊科室');
-    return
-  }
-  if (!consultForm.reason?.trim()) {
-    ElMessage.warning('会诊理由不能为空');
-    return
-  }
-  savingConsult.value = true
-  try {
-    const res = await applyNutritionConsult({
-      admissionId: consultRow.value.admissionId,
-      toDeptId: consultForm.toDeptId,
-      consultType: consultForm.consultType,
-      isUrgent: consultForm.isUrgent,
-      reason: consultForm.reason,
-    })
-    ElMessage.success(`营养会诊已申请（${res?.data || ''}）`)
-    consultVisible.value = false
-  } catch (e) {
-    ElMessage.error(e?.message || '申请失败')
-  } finally {
-    savingConsult.value = false
-  }
+// ---------------- 子组件保存后的刷新 ----------------
+function onSaved() {
+  loadList()
+  loadOverview()
 }
 
 onMounted(() => {
   loadOverview()
   loadList()
-  loadBaseData()
 })
 </script>
 
@@ -686,9 +396,5 @@ onMounted(() => {
 .muted {
   color: #909399;
   font-size: 12px;
-}
-
-.hint {
-  margin-left: 8px;
 }
 </style>

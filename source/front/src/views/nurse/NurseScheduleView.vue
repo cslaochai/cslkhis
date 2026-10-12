@@ -376,156 +376,24 @@
       </el-tab-pane>
     </el-tabs>
 
-    <!-- 点格排班弹窗 -->
-    <el-dialog v-model="cellVisible" destroy-on-close title="排班" width="460px">
-      <el-form label-position="top" @submit.prevent>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="护士">
-            <el-input :model-value="cellForm.nurseName" disabled/>
-          </el-form-item>
-          <el-form-item label="日期">
-            <el-input :model-value="cellForm.scheduleDate" disabled/>
-          </el-form-item>
-        </div>
-        <el-form-item label="排班状态" required>
-          <el-radio-group v-model="cellForm.scheduleStatus" data-testid="ns-cell-status">
-            <el-radio v-for="o in statusOptions" :key="o.value" :value="o.value">{{ o.label }}</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item :required="cellForm.scheduleStatus === 1" label="班次">
-          <el-select v-model="cellForm.shiftId" :disabled="cellForm.scheduleStatus !== 1" :fit-input-width="false"
-                     class="w-full"
-                     data-testid="ns-cell-shift" placeholder="选择护理班次">
-            <el-option v-for="s in shifts" :key="s.shiftId"
-                       :label="`${s.shiftName} ${s.startTime}~${s.endTime}（${s.durationMinutes}分）`"
-                       :value="String(s.shiftId)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="cellForm.remark" :rows="2" maxlength="500"
-                    placeholder="如：外出培训" show-word-limit
-                    type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button v-if="cellForm.id" v-perm="PERM_DELETE" :icon="Delete" plain type="danger"
-                   @click="removeCell({ ...cellForm })">删除该格
-        </el-button>
-        <el-button @click="cellVisible = false">取消</el-button>
-        <el-button v-perm="PERM_ADD" :loading="cellSaving" data-testid="ns-cell-save" type="primary" @click="saveCell">
-          保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 点格排班弹窗：表单与保存在 NurseScheduleCellEdit -->
+    <NurseScheduleCellEdit v-model="cellVisible" :row="cellRow" :shifts="shifts" :status-options="statusOptions"
+                           :unit-type="unitType" @delete="removeCell" @saved="loadMatrix"/>
 
-    <!-- 人力标准弹窗 -->
-    <el-dialog v-model="ruleVisible" :title="ruleForm.id ? '编辑配置标准' : '新增配置标准'" destroy-on-close
-               width="520px">
-      <el-form label-position="top" @submit.prevent>
-        <el-form-item label="适用班次" required>
-          <el-select v-model="ruleForm.shiftId" :fit-input-width="false" class="w-full" data-testid="ns-rule-shift">
-            <el-option label="病区合计（病区级规则）" value="0"/>
-            <el-option v-for="s in shifts" :key="s.shiftId" :label="s.shiftName" :value="String(s.shiftId)"/>
-          </el-select>
-        </el-form-item>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="最低在岗" required>
-            <el-input-number v-model="ruleForm.minStaff" :max="99" :min="0" class="w-full" data-testid="ns-rule-min"/>
-          </el-form-item>
-          <el-form-item label="最高在岗">
-            <el-input-number v-model="ruleForm.maxStaff" :max="99" :min="0" class="w-full" placeholder="留空=不封顶"/>
-          </el-form-item>
-          <el-form-item label="周工时上限(h)">
-            <el-input-number v-model="ruleForm.maxWeekHours" :disabled="!isWardLevelRule" :max="168" :min="0"
-                             :precision="1" :step="1"
-                             class="w-full" data-testid="ns-rule-hours" placeholder="如 48.0"/>
-          </el-form-item>
-          <el-form-item label="连续夜班上限(天)">
-            <el-input-number v-model="ruleForm.maxConsecutiveNightDays" :disabled="!isWardLevelRule" :max="31" :min="0"
-                             class="w-full"/>
-          </el-form-item>
-          <el-form-item label="连续上班上限(天)">
-            <el-input-number v-model="ruleForm.maxConsecutiveWorkDays" :disabled="!isWardLevelRule" :max="31" :min="0"
-                             class="w-full"/>
-          </el-form-item>
-          <el-form-item label="状态">
-            <el-radio-group v-model="ruleForm.status">
-              <el-radio :value="1">启用</el-radio>
-              <el-radio :value="0">停用</el-radio>
-            </el-radio-group>
-          </el-form-item>
-        </div>
-        <p v-if="!isWardLevelRule" class="-mt-2 mb-3 text-xs text-slate-400">
-          班次级行只校验最低/最高在岗，工时与连班上限一律在「病区合计」行上配。</p>
-        <el-form-item label="备注">
-          <el-input v-model="ruleForm.remark" :rows="2" maxlength="500" show-word-limit type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="ruleVisible = false">取消</el-button>
-        <el-button v-perm="PERM_EDIT" :loading="ruleSaving" data-testid="ns-rule-save" type="primary" @click="saveRule">
-          保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 人力标准弹窗：表单与保存在 NurseScheduleRuleEdit（新增+编辑合并） -->
+    <NurseScheduleRuleEdit v-model="ruleVisible" :row="ruleRow" :shifts="shifts" :ward-id="wardId"
+                           @saved="onRuleSaved"/>
 
-    <!-- 某一天的出勤对照：这里有「补登工时」「确认缺勤」两个动作。
-         为什么必须给人这两个按钮：全院没有考勤机对接，查不到打卡数据的日子只能靠登记。
-         与其让护士长去别的菜单找入口，不如把登记动作放在她看到问题的那一行旁边。 -->
-    <el-drawer v-model="dayDetailVisible" :title="`${dayDetailDate} 出勤对照（计划 vs 实际）`"
-               data-testid="ns-attend-detail"
-               size="70%">
-      <el-table v-loading="dayDetailLoading" :data="dayDetailRows" border size="small" style="width: 100%">
-        <el-table-column fixed label="护士" prop="employeeName" width="110"/>
-        <el-table-column label="班次" prop="shiftName" width="130"/>
-        <el-table-column align="right" label="计划工时" width="90">
-          <template #default="{ row }">{{ row.plannedMinutes ?? 0 }}</template>
-        </el-table-column>
-        <el-table-column align="right" label="实际工时" width="90">
-          <template #default="{ row }">{{ row.actualMinutes ?? '—' }}</template>
-        </el-table-column>
-        <el-table-column label="打卡" width="130">
-          <template #default="{ row }">
-            <span v-if="row.checkIn">
-              {{ String(row.checkIn).slice(11, 16) }} → {{
-                row.checkOut ? String(row.checkOut).slice(11, 16) : '未签退'
-              }}
-            </span>
-            <span v-else class="text-slate-400">无打卡</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="对照结论" min-width="190">
-          <template #default="{ row }">
-            <el-tag :type="diffTagType(row.diffType)" effect="plain" size="small">{{ row.diffReason }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column fixed="right" label="操作" width="200">
-          <template #default="{ row }">
-            <div class="flex items-center gap-2">
-              <el-button v-perm="PERM_EDIT" data-testid="ns-attend-adjust" link size="small" type="primary"
-                         @click="doAdjust(row)">补登工时
-              </el-button>
-              <el-button v-perm="PERM_EDIT" data-testid="ns-attend-absent" link size="small" type="danger"
-                         @click="doMarkAbsent(row)">确认缺勤
-              </el-button>
-              <el-button v-if="row.attendId" v-perm="PERM_EDIT" link size="small" type="info"
-                         @click="doRemoveAttend(row)">撤销
-              </el-button>
-            </div>
-          </template>
-        </el-table-column>
-      </el-table>
-      <template v-if="!dayDetailRows.length && !dayDetailLoading" #footer>
-        <span class="text-xs text-slate-400">这一天该单元没有「上班」排班，没有可对照的行。</span>
-      </template>
-    </el-drawer>
+    <!-- 某一天的出勤对照：数据拉取与补登/缺勤/撤销动作在 NurseScheduleAttendDetail -->
+    <NurseScheduleAttendDetail v-model="dayDetailVisible" :date="dayDetailDate" :org-id="wardId"
+                               :org-type="demandOrgType" @changed="loadAttend"/>
   </div>
 </template>
 
 <script setup>
 import {computed, onMounted, onUnmounted, reactive, ref, watch} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
-import {ArrowLeft, CopyDocument, Delete, Plus, Refresh, Search} from '@element-plus/icons-vue';
+import {ArrowLeft, CopyDocument, Plus, Refresh, Search} from '@element-plus/icons-vue';
 import {
   checkNurseSchedule,
   copyNurseScheduleWeek,
@@ -536,27 +404,20 @@ import {
   getNurseUnitSelectList,
   getNurseWeekMatrix,
   listNurseSchedulePage,
-  upsertNurseScheduleCell,
-  upsertNurseScheduleRule,
 } from '@/api/nurseSchedule';
 import {getStaffDemandGapList, recalcStaffDemand} from '@/api/staffDemand';
-import {
-  adjustAttendance,
-  getAttendanceAdvice,
-  getAttendanceComparison,
-  getAttendanceSummary,
-  markAttendanceAbsent,
-  removeAttendance,
-} from '@/api/staffAttendance';
+import {getAttendanceAdvice, getAttendanceSummary} from '@/api/staffAttendance';
 import {DICT_TYPE, loadDictDataList} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {hasPerm} from '@/lib/perm';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+import {PERM_ADD, PERM_EDIT, PERM_DELETE} from '@/lib/nurseSchedule';
+// 拆分出的弹框组件
+import NurseScheduleCellEdit from './NurseScheduleCellEdit.vue';
+import NurseScheduleRuleEdit from './NurseScheduleRuleEdit.vue';
+import NurseScheduleAttendDetail from './NurseScheduleAttendDetail.vue';
 
 const activeTab = ref('matrix');
-const PERM_ADD = 'nursing:schedule:add';
-const PERM_EDIT = 'nursing:schedule:edit';
-const PERM_DELETE = 'nursing:schedule:delete';
 /** 排班状态字典（1上班/2休息/3请假/4培训/5停排），矩阵格与筛选下拉共用 */
 const statusDict = ref([]);
 const statusText = (v) => dictLabelText(statusDict.value, v);
@@ -711,96 +572,13 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const now0 = new Date();
 const todayStr = `${now0.getFullYear()}-${pad2(now0.getMonth() + 1)}-${pad2(now0.getDate())}`;
 const isFuture = (d) => d > todayStr;
-// 某一天的逐人对照：护士长在这里补登工时、确认缺勤
+// 某一天的出勤对照：抽屉在 NurseScheduleAttendDetail，补登/缺勤/撤销都在那里做
 const dayDetailVisible = ref(false);
-const dayDetailLoading = ref(false);
 const dayDetailDate = ref('');
-const dayDetailRows = ref([]);
-const openDayDetail = async (d) => {
+const openDayDetail = (d) => {
   dayDetailDate.value = d;
   dayDetailVisible.value = true;
-  dayDetailLoading.value = true;
-  try {
-    const res = await getAttendanceComparison({
-      startDate: d, endDate: d, orgType: demandOrgType.value, orgId: wardId.value, staffType: 2,
-    });
-    dayDetailRows.value = res.data || [];
-  } catch {
-    dayDetailRows.value = [];
-  } finally {
-    dayDetailLoading.value = false;
-  }
 };
-const refreshDay = async () => {
-  await loadAttend();
-  await openDayDetail(dayDetailDate.value);
-};
-const doAdjust = async (row) => {
-  let minutes;
-  try {
-    minutes = await ElMessageBox.prompt(`登记 ${row.employeeName} ${dayDetailDate.value}「${row.shiftName || '未排班次'}」的实际工时（分钟）。`
-        + `计划 ${row.plannedMinutes ?? 0} 分钟。没有打卡数据时由你补登，补了就是确认过的事实。`, '补登工时', {
-      inputPattern: /^\d{1,4}$/,
-      inputErrorMessage: '请填 0~9999 的整数分钟'
-    });
-  } catch {
-    return;
-  }
-  try {
-    const res = await adjustAttendance({
-      employeeId: row.employeeId, workDate: dayDetailDate.value, shiftId: row.shiftId,
-      actualMinutes: Number(minutes.value), remark: '护理排班页补登',
-    });
-    ElMessage.success(res.message || '工时已登记');
-    await refreshDay();
-  } catch (e) {
-    ElMessage.error(e.message || '登记失败');
-  }
-};
-const doMarkAbsent = async (row) => {
-  try {
-    await ElMessageBox.confirm(`确认 ${row.employeeName} ${dayDetailDate.value}「${row.shiftName || '未排班次'}」缺勤？`
-        + '系统只在人确认时才记缺勤 —— 查不到打卡记录的行一律算「未回填」，不会自动扣到个人头上。', '确认缺勤', {type: 'warning'});
-  } catch {
-    return;
-  }
-  try {
-    const res = await markAttendanceAbsent({
-      employeeId: row.employeeId, workDate: dayDetailDate.value, shiftId: row.shiftId, remark: '护理排班页确认',
-    });
-    ElMessage.success(res.message || '已确认为缺勤');
-    await refreshDay();
-  } catch (e) {
-    ElMessage.error(e.message || '确认失败');
-  }
-};
-const doRemoveAttend = async (row) => {
-  if (!row.attendId)
-    return;
-  try {
-    await ElMessageBox.confirm('撤销这条出勤登记？（登记错了就该彻底抹掉，好让这天能重新签一次）', '撤销登记', {type: 'warning'});
-  } catch {
-    return;
-  }
-  try {
-    const res = await removeAttendance({id: row.attendId});
-    ElMessage.success(res.message || '已撤销');
-    await refreshDay();
-  } catch (e) {
-    ElMessage.error(e.message || '撤销失败');
-  }
-};
-/** 差异类型 → 标签配色（结论与文案都由后端给，前端不做二次判断） */
-const diffTagType = (t) => ({
-  1: 'success',
-  2: 'warning',
-  3: 'warning',
-  4: 'warning',
-  5: 'info',
-  6: 'danger',
-  7: 'info',
-  8: 'info'
-}[Number(t)] || 'info');
 const shifts = computed(() => matrix.value?.shifts || []);
 /** 班次色卡：按矩阵返回的班次顺序取，保证同一班次在两周内颜色一致 */
 const SHIFT_COLORS = ['#1269B5', '#0E9488', '#7C3AED', '#B45309', '#BE123C', '#475569', '#15803D', '#0369A1'];
@@ -864,20 +642,16 @@ watch(activeTab, (t) => {
   if (t === 'check' && !checkResult.value)
     runCheck();
 });
-// ---------------- 点格排班 ----------------
+// ---------------- 点格排班（表单与保存在 NurseScheduleCellEdit） ----------------
 const cellVisible = ref(false);
-const cellSaving = ref(false);
-const cellForm = reactive({
-  wardId: '', employeeId: '', id: null,
-  nurseName: '', scheduleDate: '', scheduleStatus: 1, shiftId: null, remark: '',
-});
+const cellRow = ref(null);
 const openCell = (nurse, date) => {
   if (!hasPerm(PERM_ADD)) {
     ElMessage.info('当前岗位没有排班权限（nursing:schedule:add），矩阵为只读');
     return;
   }
   const cell = cellOf(nurse.employeeId, date);
-  Object.assign(cellForm, {
+  cellRow.value = {
     wardId: wardId.value,
     employeeId: String(nurse.employeeId),
     id: cell?.id ? String(cell.id) : null,
@@ -887,47 +661,8 @@ const openCell = (nurse, date) => {
     // 班次停用后不在矩阵册子里了 → 回显不出来就当没选，提交才不会撞「班次不属于护理册」
     shiftId: cell?.shiftId && shifts.value.some((s) => String(s.shiftId) === String(cell.shiftId)) ? String(cell.shiftId) : null,
     remark: cell?.remark || '',
-  });
+  };
   cellVisible.value = true;
-};
-/** 告警文案要弹 HTML 框，先转义（后端消息里会带护士名/班次名等入库文本） */
-const escapeHtml = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;'
-}[c]));
-const saveCell = async () => {
-  cellSaving.value = true;
-  try {
-    const res = await upsertNurseScheduleCell({
-      unitType: unitType.value,
-      wardId: cellForm.wardId,
-      employeeId: cellForm.employeeId,
-      scheduleDate: cellForm.scheduleDate,
-      scheduleStatus: cellForm.scheduleStatus,
-      shiftId: Number(cellForm.scheduleStatus) === 1 ? cellForm.shiftId : null,
-      remark: cellForm.remark || null,
-    });
-    if (res.code !== 200) {
-      ElMessage.error(res.message || '保存失败');
-      return;
-    }
-    const warns = res.data?.warnings || [];
-    ElMessage.success(`已保存${warns.length ? `（${warns.length} 条规则提示）` : ''}`);
-    cellVisible.value = false;
-    await loadMatrix();
-    if (warns.length) {
-      ElMessageBox.alert(warns.map((w) => `<div>· ${escapeHtml(w.message || '')}</div>`).join(''), '本次排班的规则提示', {
-        dangerouslyUseHTMLString: true,
-        confirmButtonText: '知道了'
-      });
-    }
-  } catch (e) {
-    ElMessage.error(e.message || '保存失败');
-  } finally {
-    cellSaving.value = false;
-  }
 };
 const removeCell = async (cell) => {
   if (!cell?.id)
@@ -1075,53 +810,18 @@ const loadRules = async () => {
     ruleLoading.value = false;
   }
 };
+// 标准表单在 NurseScheduleRuleEdit（新增+编辑合并），这里只管开合与保存后的重拉
 const ruleVisible = ref(false);
-const ruleSaving = ref(false);
-const ruleForm = reactive({
-  id: null, wardId: null, shiftId: '0',
-  minStaff: null, maxStaff: null,
-  maxWeekHours: null, maxConsecutiveNightDays: null,
-  maxConsecutiveWorkDays: null, status: 1, remark: '',
-});
-const isWardLevelRule = computed(() => String(ruleForm.shiftId) === '0');
+const ruleRow = ref(null);
 const openRule = (row) => {
-  Object.assign(ruleForm, row ? {
-    id: String(row.id), wardId: String(row.wardId), shiftId: String(row.shiftId),
-    minStaff: row.minStaff, maxStaff: row.maxStaff,
-    maxWeekHours: row.maxWeekHours == null ? null : Number(row.maxWeekHours),
-    maxConsecutiveNightDays: row.maxConsecutiveNightDays, maxConsecutiveWorkDays: row.maxConsecutiveWorkDays,
-    status: row.status ?? 1, remark: row.remark || '',
-  } : {
-    id: null, wardId: wardId.value, shiftId: '0', minStaff: null, maxStaff: null,
-    maxWeekHours: null, maxConsecutiveNightDays: null, maxConsecutiveWorkDays: null, status: 1, remark: '',
-  });
+  ruleRow.value = row || null;
   ruleVisible.value = true;
 };
-const saveRule = async () => {
-  ruleSaving.value = true;
-  try {
-    const res = await upsertNurseScheduleRule({
-      ...ruleForm, wardId: wardId.value, remark: ruleForm.remark || null,
-      // 班次级行不填工时/连班上限：后端会把它们强制置空，界面上先讲明白
-      maxWeekHours: isWardLevelRule.value ? ruleForm.maxWeekHours : null,
-      maxConsecutiveNightDays: isWardLevelRule.value ? ruleForm.maxConsecutiveNightDays : null,
-      maxConsecutiveWorkDays: isWardLevelRule.value ? ruleForm.maxConsecutiveWorkDays : null,
-    });
-    if (res.code !== 200) {
-      ElMessage.error(res.message || '保存失败');
-      return;
-    }
-    ElMessage.success(res.message || '标准已保存');
-    ruleVisible.value = false;
-    await loadRules();
-    // 标准变了，本周在岗对照与告警要重算
-    if (activeTab.value === 'matrix')
-      await loadMatrix();
-  } catch (e) {
-    ElMessage.error(e.message || '保存失败');
-  } finally {
-    ruleSaving.value = false;
-  }
+const onRuleSaved = async () => {
+  await loadRules();
+  // 标准变了，本周在岗对照与告警要重算
+  if (activeTab.value === 'matrix')
+    await loadMatrix();
 };
 const removeRule = async (row) => {
   try {

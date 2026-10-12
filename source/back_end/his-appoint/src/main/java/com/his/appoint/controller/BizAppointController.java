@@ -49,7 +49,7 @@ public class BizAppointController {
     }
 
     @PreAuthorize("hasAuthority('opd:appointments:add')")
-    @Operation(summary = "患者挂号或编辑挂号（新增/修改合一）")
+    @Operation(summary = "患者挂号或编辑挂号")
     @PostMapping("/appointUpsert")
     public Result<BizAppointInfoListVO> appointUpsert(@Valid @RequestBody AppointUpsertDTO upsertDTO) {
         return Result.success(upsertDTO.getId() == null ? "挂号成功" : "修改成功", bizAppointService.appointUpsert(upsertDTO));

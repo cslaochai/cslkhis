@@ -111,53 +111,13 @@
       </div>
     </el-card>
 
-    <!-- 登记弹窗 -->
-    <el-dialog v-model="editVisible" :title="editForm.id ? '修改检查' : '登记超声检查'" width="640px">
-      <el-form label-width="90px">
-        <el-form-item label="患者" required>
-          <patient-select v-model="editForm.patientId" @select="onPatientSelect"/>
-        </el-form-item>
-        <el-form-item label="超声类型">
-          <el-select v-model="editForm.usType" style="width: 100%">
-            <el-option v-for="d in usTypeDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="检查部位">
-          <el-input v-model="editForm.bodyPart"/>
-        </el-form-item>
-        <el-form-item label="检查目的">
-          <el-input v-model="editForm.examPurpose"/>
-        </el-form-item>
-        <el-form-item label="临床诊断">
-          <el-input v-model="editForm.clinicalDiagnosis" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button v-perm="['medtech:ultrasound:add', 'medtech:ultrasound:edit']" :loading="editLoading" type="primary"
-                   @click="saveRecord">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 登记/修改弹框（拆至同目录组件：row 为空走登记，有值走修改） -->
+    <UltrasoundEdit v-model="editVisible" :us-type-dict="usTypeDict" @saved="loadList(); loadStats()"/>
 
-    <!-- 执行弹窗 -->
-    <el-dialog v-model="execVisible" :title="`执行检查：${execRow?.recordNo || ''}`" width="480px">
-      <el-form label-width="100px">
-        <el-form-item label="超声医师">
-          <el-input v-model="execForm.sonographer" placeholder="留空默认当前登录人"/>
-        </el-form-item>
-        <el-form-item label="检查部位">
-          <el-input v-model="execForm.bodyPart"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="execVisible = false">取消</el-button>
-        <el-button v-perm="'medtech:ultrasound:edit'" :loading="actLoading" type="primary" @click="saveExecute">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 执行弹框（拆至同目录组件） -->
+    <UltrasoundExecuteEdit v-model="execVisible" :row="execRow" @saved="loadList()"/>
 
-    <!-- 测量值弹窗 -->
+    <!-- 测量值弹窗（留页面：不含 el-form-item 的整单覆盖编辑表格、<40 行纯动作弹框，豁免登记见 workspace/_view_split_exemptions.json） -->
     <el-dialog v-model="measureVisible" :title="`结构化测量值：${measureRow?.recordNo || ''}`" width="760px">
       <el-table :data="measures" size="small">
         <el-table-column label="测量项" min-width="150">
@@ -197,51 +157,11 @@
       </template>
     </el-dialog>
 
-    <!-- 报告弹窗 -->
-    <el-dialog v-model="reportVisible" :title="`超声报告：${reportRow?.recordNo || ''}`" width="680px">
-      <el-form label-width="90px">
-        <el-form-item label="超声所见" required>
-          <el-input v-model="reportForm.findings" :rows="4" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="超声提示" required>
-          <el-input v-model="reportForm.conclusion" :rows="3" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="建议">
-          <el-input v-model="reportForm.suggestion" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="reportVisible = false">取消</el-button>
-        <el-button v-perm="'medtech:ultrasound:edit'" :loading="actLoading" type="primary" @click="saveReport">
-          提交报告
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 报告弹框（拆至同目录组件：新增与修改共用一张表单，标题随 row 变） -->
+    <UltrasoundReportEdit v-model="reportVisible" :row="reportRow" @saved="loadList(); loadStats()"/>
 
-    <!-- 详情 -->
-    <el-dialog v-model="detailVisible" title="超声检查详情" width="680px">
-      <template v-if="detail">
-        <el-descriptions :column="2" border size="small">
-          <el-descriptions-item label="检查号">{{ detail.recordNo }}</el-descriptions-item>
-          <el-descriptions-item label="患者">{{ detail.patientName }}</el-descriptions-item>
-          <el-descriptions-item label="类型">{{ detail.usTypeText }}</el-descriptions-item>
-          <el-descriptions-item label="状态">{{ detail.statusText }}</el-descriptions-item>
-          <el-descriptions-item :span="2" label="超声所见">{{ detail.findings || '-' }}</el-descriptions-item>
-          <el-descriptions-item :span="2" label="超声提示">{{ detail.conclusion || '未出' }}</el-descriptions-item>
-          <el-descriptions-item :span="2" label="建议">{{ detail.suggestion || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="报告医师">{{ detail.reportBy || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="审核医师">{{ detail.auditBy || '-' }}</el-descriptions-item>
-        </el-descriptions>
-        <div class="mt-3 font-medium text-sm text-gray-600">测量值</div>
-        <el-table :data="detail.measures || []" class="mt-1" size="small">
-          <el-table-column label="测量项" min-width="140" prop="measureName"/>
-          <el-table-column label="测量值" prop="measureValue" width="110"/>
-          <el-table-column label="单位" prop="unit" width="80"/>
-          <el-table-column label="参考范围" prop="referenceRange" width="120"/>
-          <el-table-column label="标志" prop="abnormalFlagText" width="90"/>
-        </el-table>
-      </template>
-    </el-dialog>
+    <!-- 详情（拆至同目录组件：只传 id，组件自己取数） -->
+    <UltrasoundDetail v-model="detailVisible" :id="detailId"/>
   </div>
 </template>
 
@@ -262,14 +182,14 @@ import {
   ultrasoundAudit,
   ultrasoundCancel,
   ultrasoundCheckIn,
-  ultrasoundExecute,
   ultrasoundPublish,
-  ultrasoundReport,
   ultrasoundSaveMeasures,
-  ultrasoundUpsert,
 } from '@/api/medicaltech';
 import {getDictDataMapList} from '@/api/system';
-import PatientSelect from '@/components/his/PatientSelect.vue';
+import UltrasoundDetail from './UltrasoundDetail.vue';
+import UltrasoundEdit from './UltrasoundEdit.vue';
+import UltrasoundExecuteEdit from './UltrasoundExecuteEdit.vue';
+import UltrasoundReportEdit from './UltrasoundReportEdit.vue';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
@@ -349,46 +269,8 @@ const resetQuery = () => {
 };
 // ---------------- 登记 ----------------
 const editVisible = ref(false);
-const editForm = reactive({
-  id: null, patientId: null, patientNo: '', patientName: '', gender: null,
-  age: null, visitDate: '', clinicalDiagnosis: '', usType: 1, bodyPart: '', examPurpose: '',
-});
-const editLoading = ref(false);
 const openCreate = () => {
-  Object.assign(editForm, {
-    id: null, patientId: null, patientNo: '', patientName: '', gender: null, age: null, visitDate: '',
-    clinicalDiagnosis: '', usType: 1, bodyPart: '', examPurpose: '',
-  });
   editVisible.value = true;
-};
-const onPatientSelect = (p) => {
-  editForm.patientId = p?.id;
-  editForm.patientName = p?.name || p?.patientName || '';
-  editForm.patientNo = p?.patientNo || '';
-  editForm.gender = p?.gender ?? null;
-  editForm.age = p?.age ?? null;
-};
-const saveRecord = async () => {
-  if (!editForm.patientId || !editForm.patientName.trim()) {
-    ElMessage.warning('请选择患者');
-    return;
-  }
-  editLoading.value = true;
-  try {
-    const res = await ultrasoundUpsert({...editForm, visitDate: editForm.visitDate || undefined});
-    if (res.code === 200) {
-      ElMessage.success(res.message || '已保存');
-      editVisible.value = false;
-      loadList();
-      loadStats();
-    } else
-      ElMessage.error(res.message || '保存失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('保存失败');
-  } finally {
-    editLoading.value = false;
-  }
 };
 // ---------------- 动作 ----------------
 const actLoading = ref(false);
@@ -414,20 +296,10 @@ const checkIn = (row) => doAction(() => ultrasoundCheckIn(row.id), () => {
 });
 const execVisible = ref(false);
 const execRow = ref(null);
-const execForm = reactive({sonographer: '', bodyPart: ''});
 const openExecute = (row) => {
   execRow.value = row;
-  Object.assign(execForm, {sonographer: '', bodyPart: row.bodyPart || ''});
   execVisible.value = true;
 };
-const saveExecute = () => doAction(() => ultrasoundExecute({
-  recordId: execRow.value.id,
-  sonographer: execForm.sonographer.trim() || undefined,
-  bodyPart: execForm.bodyPart.trim() || undefined,
-}), () => {
-  execVisible.value = false;
-  loadList();
-});
 // ---------------- 测量值 ----------------
 const measureVisible = ref(false);
 const measureRow = ref(null);
@@ -479,21 +351,10 @@ const saveMeasures = () => {
 // ---------------- 报告 ----------------
 const reportVisible = ref(false);
 const reportRow = ref(null);
-const reportForm = reactive({findings: '', conclusion: '', suggestion: ''});
 const openReport = (row) => {
   reportRow.value = row;
-  Object.assign(reportForm, {
-    findings: row.findings || '',
-    conclusion: row.conclusion || '',
-    suggestion: row.suggestion || ''
-  });
   reportVisible.value = true;
 };
-const saveReport = () => doAction(() => ultrasoundReport({recordId: reportRow.value.id, ...reportForm}), () => {
-  reportVisible.value = false;
-  loadList();
-  loadStats();
-});
 const doAudit = (row) => doAction(() => ultrasoundAudit({recordId: row.id}), () => {
   loadList();
   loadStats();
@@ -513,19 +374,10 @@ const cancel = (row) => {
 };
 // ---------------- 详情 ----------------
 const detailVisible = ref(false);
-const detail = ref(null);
-const openDetail = async (row) => {
-  try {
-    const res = await getUltrasoundDetail(row.id);
-    if (res.code === 200) {
-      detail.value = res.data;
-      detailVisible.value = true;
-    } else
-      ElMessage.error(res.message || '查询详情失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('查询详情失败');
-  }
+const detailId = ref(null);
+const openDetail = (row) => {
+  detailId.value = row.id;
+  detailVisible.value = true;
 };
 onMounted(() => {
   loadDicts();

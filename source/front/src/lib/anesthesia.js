@@ -1,6 +1,12 @@
 // 手术麻醉链码值文案单点
 export const ALDRETE_DISCHARGE_MIN = 9
 
+export const fmt = (v) => (v ? String(v).replace('T', ' ') : '—')
+export const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(v))
+export const applyLabel = (a) => `${a.applyNo || '—'} · ${a.patientName || '—'} · ${a.plannedOperationName || '—'}${a.isEmergency === 1 ? '（急诊）' : ''}`
+export const statusTagType = (s) => (s === 0 ? 'info' : s === 1 ? 'warning' : s === 2 ? 'success' : 'info')
+export const chargeTagType = (s) => (s === 1 ? 'success' : s === 2 ? 'danger' : 'info')
+
 export const asaText = (v) => ({ 1: 'Ⅰ级', 2: 'Ⅱ级', 3: 'Ⅲ级', 4: 'Ⅳ级', 5: 'Ⅴ级' }[v] ?? '—')
 export const asaOptions = [
   { value: 1, label: 'Ⅰ级' },

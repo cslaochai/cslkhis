@@ -152,31 +152,7 @@
     </el-card>
 
     <!-- 生成快照 -->
-    <el-dialog v-model="genDialogVisible" title="生成月度监测快照" width="460px">
-      <el-form label-width="110px">
-        <el-form-item label="统计月份" required>
-          <div data-testid="gen-month" style="width: 100%">
-            <el-date-picker
-              v-model="genMonth"
-              type="month"
-              placeholder="选择月份"
-              value-format="YYYY-MM"
-              style="width: 100%" />
-          </div>
-        </el-form-item>
-        <el-form-item label="统计范围" required>
-          <el-radio-group v-model="genScope">
-            <el-radio :value="1">全院一条</el-radio>
-            <el-radio :value="2">按科室生成</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <div class="form-tip">同月同范围重复生成会覆盖上一次结果 —— 指标是对外报数，只留最新一次复算。</div>
-      </el-form>
-      <template #footer>
-        <el-button @click="genDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" data-testid="btn-do-generate" @click="doGenerate">生成</el-button>
-      </template>
-    </el-dialog>
+    <AntibioticMonitorGenerate v-model="genDialogVisible" @saved="onGenerated" />
   </div>
 </template>
 
@@ -187,12 +163,11 @@ import { DEFAULT_PAGE_SIZE, PAGE_SIZES } from '@/lib/pagination'
 import { useTableMaxHeight } from '@/lib/useTableMaxHeight'
 import {
   exportAntibioticStatsCsv,
-  generateAntibioticStats,
   listAntibioticStatsPage,
   previewAntibioticStats
 } from '@/api/antibiotic'
+import AntibioticMonitorGenerate from './AntibioticMonitorGenerate.vue'
 
-const saving = ref(false)
 const previewMonth = ref(new Date().toISOString().slice(0, 7))
 const preview = ref({})
 
@@ -229,28 +204,14 @@ function onStatsSizeChange() {
 }
 
 const genDialogVisible = ref(false)
-const genMonth = ref(new Date().toISOString().slice(0, 7))
-const genScope = ref(1)
 
 function openGenerateDialog() {
   genDialogVisible.value = true
 }
 
-async function doGenerate() {
-  if (!genMonth.value) { ElMessage.warning('请选择统计月份'); return }
-  saving.value = true
-  try {
-    const res = await generateAntibioticStats({ statMonth: genMonth.value, scopeType: genScope.value })
-    const n = (res?.data || []).length
-    ElMessage.success(`已生成 ${n} 条快照`)
-    genDialogVisible.value = false
-    query.statMonth = genMonth.value
-    loadStats()
-  } catch (e) {
-    ElMessage.error(e?.message || '生成失败')
-  } finally {
-    saving.value = false
-  }
+function onGenerated(month) {
+  query.statMonth = month
+  loadStats()
 }
 
 async function doExport() {
@@ -330,10 +291,5 @@ onMounted(() => {
 .under-target {
   color: #e6a23c;
   font-weight: 600;
-}
-.form-tip {
-  color: #909399;
-  font-size: 12px;
-  line-height: 1.6;
 }
 </style>

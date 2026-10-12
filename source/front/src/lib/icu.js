@@ -2,6 +2,14 @@
  * ICU 专科监护口径单点 —— 状态标签/颜色与动作显隐，页面禁写本地副本。
  * 文案走字典 his_icu_*（dict-cache），这里只负责「码值 → tag 类型/语义」。
  */
+import {localDateStr} from './utils'
+
+/** 当前时刻文本 yyyy-MM-dd HH:mm:ss（入科/出科/监护记录时刻默认值，弹框组件共用） */
+export const nowText = () => {
+  const d = new Date()
+  const p = (v) => String(v).padStart(2, '0')
+  return `${localDateStr(d)} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
+}
 
 /** 在科状态：1在科 2已出科 */
 export const STAY_STATUS = {

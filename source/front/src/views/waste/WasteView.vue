@@ -93,67 +93,13 @@
     </el-card>
 
     <!-- 登记 -->
-    <el-dialog v-model="createVisible" :close-on-click-modal="false" title="医废登记" width="520px">
-      <el-form label-width="100px">
-        <el-form-item label="医废类别" required>
-          <el-select v-model="createForm.wasteType" :fit-input-width="false" style="width: 220px">
-            <el-option v-for="d in typeDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="重量(kg)">
-          <el-input-number v-model="createForm.weightKg" :min="0" :precision="2" style="width: 180px"/>
-        </el-form-item>
-        <el-form-item label="产生科室" required>
-          <el-select v-model="createForm.deptId" :fit-input-width="false" filterable
-                     placeholder="请选择科室" style="width: 220px" @change="onCreateDeptChange">
-            <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="收集时间" required>
-          <el-date-picker v-model="createForm.collectTime" format="YYYY-MM-DD HH:mm:ss" style="width: 220px"
-                          type="datetime" value-format="YYYY-MM-DD HH:mm:ss"/>
-        </el-form-item>
-        <el-form-item label="收集人">
-          <el-select v-model="createForm.collectorName" :fit-input-width="false" allow-create clearable
-                     default-first-option filterable placeholder="不填默认当前登录人" style="width: 220px">
-            <el-option v-for="e in employeeOptions" :key="e.id" :label="e.empName || e.name"
-                       :value="e.empName || e.name"/>
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="createVisible = false">取消</el-button>
-        <el-button v-perm="'asset:waste:add'" type="primary" @click="submitCreate">登记</el-button>
-      </template>
-    </el-dialog>
+    <WasteRegisterAdd v-model="createVisible" :type-dict="typeDict" @saved="loadList"/>
 
     <!-- 交接 -->
-    <el-dialog v-model="handoverVisible" :close-on-click-modal="false" :title="`医废交接 — ${handoverForm.wasteNo}`"
-               width="440px">
-      <el-form label-width="90px">
-        <el-form-item label="交接人" required>
-          <el-input v-model="handoverForm.handoverName" placeholder="接收方签字人" style="width: 220px"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="handoverVisible = false">取消</el-button>
-        <el-button v-perm="'asset:waste:edit'" type="primary" @click="submitHandover">确认交接</el-button>
-      </template>
-    </el-dialog>
+    <WasteHandoverEdit v-model="handoverVisible" :row="handoverRow" @saved="loadList"/>
 
     <!-- 处置 -->
-    <el-dialog v-model="disposeVisible" :close-on-click-modal="false" :title="`处置确认 — ${disposeForm.wasteNo}`"
-               width="440px">
-      <el-form label-width="90px">
-        <el-form-item label="处置公司" required>
-          <el-input v-model="disposeForm.disposalCompany" style="width: 260px"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="disposeVisible = false">取消</el-button>
-        <el-button v-perm="'asset:waste:edit'" type="primary" @click="submitDispose">确认处置</el-button>
-      </template>
-    </el-dialog>
+    <WasteDisposeEdit v-model="disposeVisible" :row="disposeRow" @saved="loadList"/>
   </div>
 </template>
 
@@ -167,8 +113,11 @@
 import {onMounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {Refresh, Search} from '@element-plus/icons-vue';
-import {wasteCreate, wasteDelete, wasteDispose, wasteHandover, wasteListPage} from '@/api/waste';
-import {getDepartmentSelectList, getDictDataMapList, getEmployeeList} from '@/api/system';
+import WasteRegisterAdd from './WasteRegisterAdd.vue';
+import WasteHandoverEdit from './WasteHandoverEdit.vue';
+import WasteDisposeEdit from './WasteDisposeEdit.vue';
+import {wasteDelete, wasteListPage} from '@/api/waste';
+import {getDictDataMapList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
@@ -176,8 +125,6 @@ import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
 // ---------------- 字典 ----------------
 const typeDict = ref([]);
 const statusDict = ref([]);
-const deptOptions = ref([]);
-const employeeOptions = ref([]);
 const typeText = (v) => dictLabelText(typeDict.value, v);
 const statusText = (v) => dictLabelText(statusDict.value, v);
 const statusTag = (v) => ({1: 'warning', 2: 'primary', 3: 'success'}[v] || 'info');
@@ -188,15 +135,6 @@ const loadDicts = async () => {
     statusDict.value = res?.data?.[DICT_TYPE.WASTE_STATUS] || [];
   } catch (e) {
     console.error('加载字典失败', e);
-  }
-};
-const loadDeptsAndEmployees = async () => {
-  try {
-    const [d, e] = await Promise.all([getDepartmentSelectList({}), getEmployeeList({})]);
-    deptOptions.value = d?.data || [];
-    employeeOptions.value = e?.data || [];
-  } catch (e) {
-    console.error('加载科室/员工失败', e);
   }
 };
 // ---------------- 列表 ----------------
@@ -241,102 +179,21 @@ const reset = () => {
 };
 // ---------------- 登记 ----------------
 const createVisible = ref(false);
-const createForm = reactive({
-  wasteType: 1, weightKg: '', deptId: null, deptName: '',
-  collectTime: '', collectorName: '',
-});
-const nowLocal = () => {
-  const d = new Date();
-  const p = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
-};
 const openCreate = () => {
-  Object.assign(createForm, {
-    wasteType: 1, weightKg: '', deptId: null, deptName: '', collectTime: nowLocal(), collectorName: '',
-  });
   createVisible.value = true;
-};
-const onCreateDeptChange = (id) => {
-  const d = deptOptions.value.find((x) => String(x.id) === String(id));
-  createForm.deptName = d?.deptName || '';
-};
-const submitCreate = async () => {
-  if (!createForm.deptId) {
-    ElMessage.warning('请选择产生科室');
-    return;
-  }
-  if (!createForm.collectTime) {
-    ElMessage.warning('请选择收集时间');
-    return;
-  }
-  try {
-    const res = await wasteCreate({
-      wasteType: createForm.wasteType,
-      weightKg: createForm.weightKg || undefined,
-      deptId: createForm.deptId ?? undefined,
-      deptName: createForm.deptName.trim(),
-      collectTime: createForm.collectTime,
-      collectorName: createForm.collectorName || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success(`登记成功，单号 ${res.data?.wasteNo}`);
-      createVisible.value = false;
-      loadList();
-    } else
-      ElMessage.error(res.message || '登记失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('登记失败');
-  }
 };
 // ---------------- 交接 / 处置 / 删除 ----------------
 const handoverVisible = ref(false);
-const handoverForm = reactive({id: null, wasteNo: '', handoverName: ''});
+const handoverRow = ref(null);
 const openHandover = (row) => {
-  Object.assign(handoverForm, {id: Number(row.id), wasteNo: row.wasteNo, handoverName: ''});
+  handoverRow.value = row;
   handoverVisible.value = true;
 };
-const submitHandover = async () => {
-  if (!handoverForm.handoverName.trim()) {
-    ElMessage.warning('请填写交接人');
-    return;
-  }
-  try {
-    const res = await wasteHandover({id: handoverForm.id, handoverName: handoverForm.handoverName.trim()});
-    if (res.code === 200) {
-      ElMessage.success('交接成功');
-      handoverVisible.value = false;
-      loadList();
-    } else
-      ElMessage.error(res.message || '操作失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('操作失败');
-  }
-};
 const disposeVisible = ref(false);
-const disposeForm = reactive({id: null, wasteNo: '', disposalCompany: ''});
+const disposeRow = ref(null);
 const openDispose = (row) => {
-  Object.assign(disposeForm, {id: Number(row.id), wasteNo: row.wasteNo, disposalCompany: ''});
+  disposeRow.value = row;
   disposeVisible.value = true;
-};
-const submitDispose = async () => {
-  if (!disposeForm.disposalCompany.trim()) {
-    ElMessage.warning('请填写处置公司');
-    return;
-  }
-  try {
-    const res = await wasteDispose({id: disposeForm.id, disposalCompany: disposeForm.disposalCompany.trim()});
-    if (res.code === 200) {
-      ElMessage.success('处置确认成功');
-      disposeVisible.value = false;
-      loadList();
-    } else
-      ElMessage.error(res.message || '操作失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('操作失败');
-  }
 };
 const del = async (row) => {
   try {
@@ -359,7 +216,6 @@ const del = async (row) => {
 const fmtTime = (v) => (v ? String(v).slice(0, 19).replace('T', ' ') : '—');
 onMounted(() => {
   loadDicts();
-  loadDeptsAndEmployees();
   loadList();
 });
 </script>

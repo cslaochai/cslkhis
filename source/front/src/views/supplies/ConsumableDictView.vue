@@ -63,58 +63,8 @@
       </div>
     </el-card>
 
-    <!-- 字典编辑弹窗 -->
-    <el-dialog v-model="dictDialogVisible" :title="dictForm.id ? '编辑耗材' : '新增耗材'" destroy-on-close
-               width="520px">
-      <el-form label-width="90px">
-        <el-form-item label="耗材编码" required>
-          <el-input v-model="dictForm.consumableCode" placeholder="如 HC-HC-006"/>
-        </el-form-item>
-        <el-form-item label="耗材名称" required>
-          <el-input v-model="dictForm.consumableName"/>
-        </el-form-item>
-        <el-form-item label="类别">
-          <el-select v-model="dictForm.category" :fit-input-width="false" style="width: 100%">
-            <el-option v-for="(label, key) in categoryMap" :key="key" :label="label" :value="Number(key)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="规格">
-          <el-input v-model="dictForm.specification"/>
-        </el-form-item>
-        <el-form-item label="单位">
-          <el-input v-model="dictForm.unit" placeholder="包/支/盒/个"/>
-        </el-form-item>
-        <el-form-item label="生产厂家">
-          <el-input v-model="dictForm.manufacturer"/>
-        </el-form-item>
-        <el-form-item label="零售价">
-          <el-input-number v-model="dictForm.retailPrice" :min="0" :precision="2" style="width: 100%"/>
-        </el-form-item>
-        <el-form-item label="高值耗材">
-          <el-switch v-model="dictForm.isHighValue" :active-value="1" :inactive-value="0" active-text="扫码溯源登记"
-                     inactive-text="普通领用"/>
-        </el-form-item>
-        <template v-if="dictForm.isHighValue === 1">
-          <el-form-item label="UDI-DI">
-            <el-input v-model="dictForm.udiDi" placeholder="GS1 数据载体 (01) 段 14 位，扫码按此命中字典"/>
-          </el-form-item>
-          <el-form-item label="注册证号">
-            <el-input v-model="dictForm.regCertNo" placeholder="如 国械注准20173660001"/>
-          </el-form-item>
-        </template>
-        <el-form-item label="状态">
-          <el-select v-model="dictForm.status" :fit-input-width="false" style="width: 100%">
-            <el-option :value="1" label="启用"/>
-            <el-option :value="0" label="停用"/>
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dictDialogVisible = false">取消</el-button>
-        <el-button v-perm="['asset:supplies:add','asset:supplies:edit']" type="primary" @click="handleDictSubmit">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 字典编辑弹窗（新增/修改合一组件） -->
+    <ConsumableDictEdit v-model="dictDialogVisible" :row="dictEditRow" @saved="loadDict"/>
   </div>
 </template>
 
@@ -131,37 +81,20 @@
  */
 import {onMounted, ref} from 'vue';
 import {Plus, Refresh, Search} from '@element-plus/icons-vue';
-import {ElMessage} from 'element-plus';
-import {consumableUpsert, getConsumableList} from '@/api/supplies';
+import {getConsumableList} from '@/api/supplies';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+import {categoryLabel} from '@/lib/supplies';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import ConsumableDictEdit from './ConsumableDictEdit.vue';
 
 const loading = ref(false);
-// 类别口径：1-卫生材料 2-注射穿刺 3-医用敷料 4-防护用品 5-其他 6-植入介入（未知(n) 不回落）
-const categoryMap = {
-  1: '卫生材料', 2: '注射穿刺', 3: '医用敷料', 4: '防护用品', 5: '其他', 6: '植入介入',
-};
-const categoryLabel = (c) => (c == null ? '未知' : categoryMap[c] || `未知(${c})`);
 const dictList = ref([]);
 const dictKeyword = ref('');
 const dictPagination = ref({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0});
 // 两卡式列表页：表格只设最大高度，超高内部滚动（口径参照 views/system/user/UserView.vue）
 const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight();
 const dictDialogVisible = ref(false);
-const dictForm = ref({
-  id: null,
-  consumableCode: '',
-  consumableName: '',
-  category: 5,
-  specification: '',
-  unit: '',
-  manufacturer: '',
-  retailPrice: null,
-  status: 1,
-  isHighValue: 0,
-  udiDi: '',
-  regCertNo: ''
-});
+const dictEditRow = ref(null);
 const loadDict = async () => {
   loading.value = true;
   try {
@@ -178,51 +111,8 @@ const loadDict = async () => {
   }
 };
 const openDictDialog = (row) => {
-  dictForm.value = row
-      ? {
-        id: row.id,
-        consumableCode: row.consumableCode,
-        consumableName: row.consumableName,
-        category: row.category ?? 5,
-        specification: row.specification || '',
-        unit: row.unit || '',
-        manufacturer: row.manufacturer || '',
-        retailPrice: row.retailPrice ?? null,
-        status: row.status ?? 1,
-        isHighValue: row.isHighValue ?? 0,
-        udiDi: row.udiDi || '',
-        regCertNo: row.regCertNo || ''
-      }
-      : {
-        id: null,
-        consumableCode: '',
-        consumableName: '',
-        category: 5,
-        specification: '',
-        unit: '',
-        manufacturer: '',
-        retailPrice: null,
-        status: 1,
-        isHighValue: 0,
-        udiDi: '',
-        regCertNo: ''
-      };
+  dictEditRow.value = row || null;
   dictDialogVisible.value = true;
-};
-const handleDictSubmit = async () => {
-  const f = dictForm.value;
-  if (!f.consumableCode.trim())
-    return ElMessage.warning('耗材编码不能为空');
-  if (!f.consumableName.trim())
-    return ElMessage.warning('耗材名称不能为空');
-  try {
-    await consumableUpsert({...f, consumableCode: f.consumableCode.trim(), consumableName: f.consumableName.trim()});
-    ElMessage.success(f.id ? '字典修改成功' : '字典新增成功');
-    dictDialogVisible.value = false;
-    loadDict();
-  } catch (e) {
-    ElMessage.error(e?.message || '保存失败');
-  }
 };
 onMounted(() => {
   loadDict();

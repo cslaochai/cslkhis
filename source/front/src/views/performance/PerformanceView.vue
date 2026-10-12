@@ -108,63 +108,10 @@
       </el-tab-pane>
     </el-tabs>
 
-    <!-- 成本录入弹窗 -->
-    <el-dialog v-model="costVisible" title="科室月度成本录入" width="520px">
-      <el-form label-width="100px">
-        <el-form-item label="科室" required>
-          <el-select v-model="costForm.deptId" :fit-input-width="false" data-testid="perf-cost-dept" filterable
-                     placeholder="选择科室" style="width: 100%">
-            <el-option v-for="d in depts" :key="d.id" :label="d.deptName" :value="String(d.id)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="核算月份" required>
-          <el-date-picker v-model="costForm.costMonth" style="width: 100%" type="month" value-format="YYYY-MM"/>
-        </el-form-item>
-        <el-form-item label="人力成本">
-          <el-input-number v-model="costForm.laborCost" :min="0" :precision="2" style="width: 100%"/>
-        </el-form-item>
-        <el-form-item label="药品成本">
-          <el-input-number v-model="costForm.drugCost" :min="0" :precision="2" style="width: 100%"/>
-        </el-form-item>
-        <el-form-item label="耗材成本">
-          <el-input-number v-model="costForm.materialCost" :min="0" :precision="2" style="width: 100%"/>
-        </el-form-item>
-        <el-form-item label="设备折旧">
-          <el-input-number v-model="costForm.depreciation" :min="0" :precision="2" style="width: 100%"/>
-        </el-form-item>
-        <el-form-item label="其他成本">
-          <el-input-number v-model="costForm.otherCost" :min="0" :precision="2" style="width: 100%"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="costForm.remark"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="costVisible = false">取消</el-button>
-        <el-button v-perm="'report:perf:add'" data-testid="perf-cost-submit" type="primary" @click="submitCost">保存
-        </el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 核算确认弹窗 -->
-    <el-dialog v-model="calcVisible" title="执行绩效核算" width="480px">
-      <div v-if="info" class="text-sm space-y-2 mb-3 p-3 rounded bg-gray-50" data-testid="perf-calc-info">
-        <p>科室：{{ info.deptName }}（{{ info.costMonth }}）</p>
-        <p>当月收入：<b>{{ money(info.revenue) }}</b>｜药品收入 {{ money(info.drugRevenue) }}</p>
-        <p>成本：<b>{{ info.costExists ? money(info.totalCost) : '未录入（按 0 计）' }}</b></p>
-        <p>结余：<b :class="surplusColor(info.surplus)">{{ money(info.surplus) }}</b></p>
-      </div>
-      <el-form label-width="100px">
-        <el-form-item label="提成系数">
-          <el-input-number v-model="calcForm.bonusRate" :max="1" :min="0" :precision="4" :step="0.01"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="calcVisible = false">取消</el-button>
-        <el-button :loading="calcLoading" data-testid="perf-calc-submit" type="primary" @click="submitCalc">确认核算
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 成本录入 / 执行核算：拆到同目录兄弟组件，页面只管开关与递参 -->
+    <PerformanceCostAdd v-model="costVisible" :depts="depts" @saved="loadCostList"/>
+    <PerformanceCalcEdit v-model="calcVisible" :dept-id="calcForm.deptId" :cost-month="calcForm.costMonth"
+                         @saved="loadPerfList"/>
   </div>
 </template>
 
@@ -179,9 +126,12 @@
 import {onMounted, reactive, ref} from 'vue';
 import {ElMessage} from 'element-plus';
 import {Refresh, Search} from '@element-plus/icons-vue';
-import {perfCalc, perfCostListPage, perfCostSave, perfResultListPage, perfRevenueInfo} from '@/api/perf';
+import {perfCostListPage, perfResultListPage} from '@/api/perf';
 import {getDepartmentSelectList} from '@/api/system';
+import PerformanceCalcEdit from './PerformanceCalcEdit.vue';
+import PerformanceCostAdd from './PerformanceCostAdd.vue';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
+import {money, surplusColor} from '@/lib/performance';
 // ---------------- 科室 ----------------
 const depts = ref([]);
 const loadDepts = async () => {
@@ -192,42 +142,10 @@ const loadDepts = async () => {
     console.error('加载科室失败', e);
   }
 };
-const deptName = (id) => depts.value.find(d => String(d.id) === String(id))?.deptName || '—';
-// ---------------- 成本录入 ----------------
+// ---------------- 成本录入（表单拆到 PerformanceCostAdd，页面只管开关） ----------------
 const costVisible = ref(false);
-const costForm = reactive({
-  deptId: null, costMonth: '', laborCost: 0, drugCost: 0,
-  materialCost: 0, depreciation: 0, otherCost: 0, remark: '',
-});
 const openCost = () => {
-  costForm.deptId = null;
-  const d = new Date();
-  costForm.costMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-  costForm.laborCost = 0;
-  costForm.drugCost = 0;
-  costForm.materialCost = 0;
-  costForm.depreciation = 0;
-  costForm.otherCost = 0;
-  costForm.remark = '';
   costVisible.value = true;
-};
-const submitCost = async () => {
-  if (!costForm.deptId)
-    return ElMessage.warning('请选择科室');
-  if (!costForm.costMonth)
-    return ElMessage.warning('请选择核算月份');
-  try {
-    await perfCostSave({
-      deptId: costForm.deptId, deptName: deptName(costForm.deptId), costMonth: costForm.costMonth,
-      laborCost: costForm.laborCost, drugCost: costForm.drugCost, materialCost: costForm.materialCost,
-      depreciation: costForm.depreciation, otherCost: costForm.otherCost, remark: costForm.remark,
-    });
-    ElMessage.success('成本已录入');
-    costVisible.value = false;
-    loadCostList();
-  } catch (e) {
-    ElMessage.error(e?.response?.data?.message || '成本录入失败');
-  }
 };
 // ---------------- 成本列表 ----------------
 const costLoading = ref(false);
@@ -250,38 +168,15 @@ const loadCostList = async () => {
     costLoading.value = false;
   }
 };
-// ---------------- 执行核算 ----------------
+// ---------------- 执行核算（收入信息获取与核算提交拆到 PerformanceCalcEdit；科室/月份是本 tab 工具栏状态） ----------------
 const calcVisible = ref(false);
-const calcForm = reactive({deptId: null, costMonth: '', bonusRate: 0.06});
-const info = ref(null);
-const calcLoading = ref(false);
-const openCalc = async () => {
+const calcForm = reactive({deptId: null, costMonth: ''});
+const openCalc = () => {
   if (!calcForm.deptId)
     return ElMessage.warning('请选择科室');
   if (!calcForm.costMonth)
     return ElMessage.warning('请选择核算月份');
-  try {
-    const res = await perfRevenueInfo(calcForm.deptId, calcForm.costMonth);
-    info.value = res?.data;
-    calcVisible.value = true;
-  } catch (e) {
-    ElMessage.error(e?.response?.data?.message || '获取收入信息失败');
-  }
-};
-const submitCalc = async () => {
-  calcLoading.value = true;
-  try {
-    const res = await perfCalc({
-      deptId: calcForm.deptId, costMonth: calcForm.costMonth, bonusRate: calcForm.bonusRate,
-    });
-    ElMessage.success(`核算完成：${res?.data?.deptName} ${res?.data?.costMonth} 绩效 ¥${Number(res?.data?.perfAmount || 0).toLocaleString()}`);
-    calcVisible.value = false;
-    loadPerfList();
-  } catch (e) {
-    ElMessage.error(e?.response?.data?.message || '核算失败');
-  } finally {
-    calcLoading.value = false;
-  }
+  calcVisible.value = true;
 };
 // ---------------- 绩效结果 ----------------
 const perfLoading = ref(false);
@@ -304,8 +199,6 @@ const loadPerfList = async () => {
     perfLoading.value = false;
   }
 };
-const money = (v) => '¥' + Number(v || 0).toLocaleString('zh-CN');
-const surplusColor = (v) => (Number(v || 0) >= 0 ? 'text-green-600' : 'text-red-600');
 onMounted(() => {
   loadDepts();
   loadCostList();

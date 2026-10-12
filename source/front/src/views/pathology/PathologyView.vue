@@ -113,117 +113,14 @@
       </div>
     </el-card>
 
-    <!-- 登记弹窗 -->
-    <el-dialog v-model="editVisible" :title="editForm.id ? '修改病理单' : '登记病理单'" width="640px">
-      <el-form label-width="90px">
-        <el-form-item label="患者" required>
-          <patient-select v-model="editForm.patientId" @select="onPatientSelect"/>
-        </el-form-item>
-        <div class="grid grid-cols-2 gap-x-4">
-          <el-form-item label="检查类型">
-            <el-select v-model="editForm.examType" style="width: 100%">
-              <el-option v-for="d in examTypeDict" :key="d.dictValue" :label="d.dictLabel"
-                         :value="Number(d.dictValue)"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="是否冰冻">
-            <el-radio-group v-model="editForm.isFrozen">
-              <el-radio :value="0">否</el-radio>
-              <el-radio :value="1">是</el-radio>
-            </el-radio-group>
-          </el-form-item>
-          <el-form-item label="标本类型">
-            <el-input v-model="editForm.specimenType" placeholder="活检/切除/穿刺等"/>
-          </el-form-item>
-          <el-form-item label="取材部位">
-            <el-input v-model="editForm.specimenPart"/>
-          </el-form-item>
-        </div>
-        <el-form-item label="临床诊断">
-          <el-input v-model="editForm.clinicalDiagnosis" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button v-perm="['medtech:pathology:add', 'medtech:pathology:edit']" :loading="editLoading" type="primary"
-                   @click="saveOrder">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 登记 / 修改（弹框已拆到 PathologyEdit） -->
+    <PathologyEdit v-model="editVisible" :exam-type-dict="examTypeDict" @saved="loadList(); loadStats()"/>
 
-    <!-- 初诊弹窗 -->
-    <el-dialog v-model="reportVisible" :title="`病理初诊：${reportRow?.orderNo || ''}`" width="680px">
-      <el-form label-width="100px">
-        <el-form-item label="肉眼所见">
-          <el-input v-model="reportForm.grossFindings" :rows="2" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="镜下所见">
-          <el-input v-model="reportForm.microscopyFindings" :rows="3" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="免疫组化/特染">
-          <el-input v-model="reportForm.ihcResult" :rows="2" type="textarea"/>
-        </el-form-item>
-        <el-form-item v-if="reportRow && Number(reportRow.isFrozen) === 1" label="冰冻结果" required>
-          <el-input v-model="reportForm.frozenResult" :rows="2" placeholder="术中冰冻快速诊断结果（冰冻单必填）"
-                    type="textarea"/>
-        </el-form-item>
-        <el-form-item label="病理诊断" required>
-          <el-input v-model="reportForm.diagnosis" :rows="3" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="建议">
-          <el-input v-model="reportForm.suggestion" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="reportVisible = false">取消</el-button>
-        <el-button v-perm="'medtech:pathology:edit'" :loading="actLoading" type="primary" @click="saveReport">提交初诊
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 初诊（弹框已拆到 PathologyReportAdd） -->
+    <PathologyReportAdd v-model="reportVisible" :row="reportRow" @saved="loadList(); loadStats()"/>
 
-    <!-- 详情弹窗 -->
-    <el-dialog v-model="detailVisible" title="病理单详情" width="760px">
-      <template v-if="detail">
-        <el-descriptions :column="3" border size="small">
-          <el-descriptions-item label="病理号">{{ detail.orderNo }}</el-descriptions-item>
-          <el-descriptions-item label="患者">{{ detail.patientName }}</el-descriptions-item>
-          <el-descriptions-item label="状态">{{ detail.statusText }}</el-descriptions-item>
-          <el-descriptions-item label="检查类型">{{ detail.examTypeText }}</el-descriptions-item>
-          <el-descriptions-item label="标本">{{ detail.specimenType || '-' }} / {{
-              detail.specimenPart || '-'
-            }}
-          </el-descriptions-item>
-          <el-descriptions-item label="冰冻结果">{{ detail.frozenResult || '-' }}</el-descriptions-item>
-          <el-descriptions-item :span="3" label="诊断">{{ detail.diagnosis || '未出' }}</el-descriptions-item>
-          <el-descriptions-item :span="3" label="建议">{{ detail.suggestion || '-' }}</el-descriptions-item>
-        </el-descriptions>
-        <div class="mt-3 font-medium text-sm text-gray-600">蜡块明细</div>
-        <el-table :data="detail.blocks || []" class="mt-1" size="small">
-          <el-table-column label="蜡块号" prop="blockNo" width="90"/>
-          <el-table-column label="部位" min-width="120" prop="partDesc" show-overflow-tooltip/>
-          <el-table-column label="状态" width="90">
-            <template #default="{ row: b }">
-              <el-tag size="small">{{ b.statusText }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="切片号" prop="sliceNo" width="90"/>
-          <el-table-column label="流转" width="220">
-            <template #default="{ row: b }">
-              <el-button v-if="Number(b.status) === 1" v-perm="'medtech:pathology:edit'" link size="small"
-                         type="primary" @click="blockAction(detail, b, 1)">取材
-              </el-button>
-              <el-button v-if="Number(b.status) === 2" v-perm="'medtech:pathology:edit'" link size="small"
-                         type="primary" @click="blockAction(detail, b, 2)">包埋
-              </el-button>
-              <el-button v-if="Number(b.status) === 3" v-perm="'medtech:pathology:edit'" link size="small"
-                         type="primary" @click="blockAction(detail, b, 3)">切片
-              </el-button>
-              <span v-if="Number(b.status) === 4" class="text-gray-400 text-xs">已完成</span>
-            </template>
-          </el-table-column>
-        </el-table>
-      </template>
-    </el-dialog>
+    <!-- 详情（弹框已拆到 PathologyDetail，组件按 id 自取） -->
+    <PathologyDetail v-model="detailVisible" :id="detailId" @saved="loadList"/>
   </div>
 </template>
 
@@ -240,24 +137,22 @@ import {onMounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {Refresh, Search} from '@element-plus/icons-vue';
 import {
-  getPathologyDetail,
   getPathologyListPage,
   getPathologyStats,
   pathologyAudit,
-  pathologyBlockAction,
   pathologyBlockUpsert,
   pathologyCancel,
   pathologyPublish,
   pathologyReceive,
-  pathologyReport,
-  pathologyUpsert,
 } from '@/api/medicaltech';
 import {getDictDataMapList} from '@/api/system';
-import PatientSelect from '@/components/his/PatientSelect.vue';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import PathologyDetail from './PathologyDetail.vue';
+import PathologyEdit from './PathologyEdit.vue';
+import PathologyReportAdd from './PathologyReportAdd.vue';
 
 const loading = ref(true);
 const rows = ref([]);
@@ -331,55 +226,10 @@ const resetQuery = () => {
   query.pageNum = 1;
   loadList();
 };
-// ---------------- 登记 / 修改 ----------------
+// ---------------- 登记 / 修改（弹框已拆到 PathologyEdit，这里只管打开） ----------------
 const editVisible = ref(false);
-const editForm = reactive({
-  id: null, patientId: null, patientNo: '', patientName: '', gender: null,
-  age: null, visitDate: '', clinicalDiagnosis: '', examType: 1, specimenType: '', specimenPart: '', isFrozen: 0,
-});
-const editLoading = ref(false);
 const openCreate = () => {
-  Object.assign(editForm, {
-    id: null, patientId: null, patientNo: '', patientName: '', gender: null, age: null,
-    visitDate: '', clinicalDiagnosis: '', examType: 1, specimenType: '', specimenPart: '', isFrozen: 0,
-  });
   editVisible.value = true;
-};
-const onPatientSelect = (p) => {
-  editForm.patientId = p?.id;
-  editForm.patientName = p?.name || p?.patientName || '';
-  editForm.patientNo = p?.patientNo || '';
-  editForm.gender = p?.gender ?? null;
-  editForm.age = p?.age ?? null;
-};
-const saveOrder = async () => {
-  if (!editForm.patientId || !editForm.patientName.trim()) {
-    ElMessage.warning('请选择患者');
-    return;
-  }
-  editLoading.value = true;
-  try {
-    const res = await pathologyUpsert({
-      id: editForm.id || undefined,
-      patientId: editForm.patientId, patientNo: editForm.patientNo || undefined,
-      patientName: editForm.patientName.trim(), gender: editForm.gender, age: editForm.age,
-      visitDate: editForm.visitDate || undefined, clinicalDiagnosis: editForm.clinicalDiagnosis || undefined,
-      examType: editForm.examType, specimenType: editForm.specimenType || undefined,
-      specimenPart: editForm.specimenPart || undefined, isFrozen: editForm.isFrozen,
-    });
-    if (res.code === 200) {
-      ElMessage.success(res.message || '已保存');
-      editVisible.value = false;
-      loadList();
-      loadStats();
-    } else
-      ElMessage.error(res.message || '保存失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('保存失败');
-  } finally {
-    editLoading.value = false;
-  }
 };
 // ---------------- 通用动作（接收 / 流程推进 / 初诊 / 审核 / 发布 / 取消） ----------------
 const actLoading = ref(false);
@@ -416,40 +266,16 @@ const addBlock = (row) => {
     })))
         .then((rs) => ({code: rs.every((r) => r.code === 200) ? 200 : 500, message: '蜡块已登记'})), () => {
       loadList();
-      loadDetail(row.id);
     });
   }).catch(() => {
   });
 };
-const blockAction = (row, block, action) => doAction(() => pathologyBlockAction({blockId: block.id, action}), () => {
-  loadDetail(row.id);
-  loadList();
-});
 const reportVisible = ref(false);
 const reportRow = ref(null);
-const reportForm = reactive({
-  grossFindings: '',
-  microscopyFindings: '',
-  ihcResult: '',
-  diagnosis: '',
-  suggestion: '',
-  frozenResult: ''
-});
-const openReport = async (row) => {
-  await loadDetail(row.id);
-  reportRow.value = detail.value;
-  Object.assign(reportForm, {
-    grossFindings: detail.value?.grossFindings || '', microscopyFindings: detail.value?.microscopyFindings || '',
-    ihcResult: detail.value?.ihcResult || '', diagnosis: detail.value?.diagnosis || '',
-    suggestion: detail.value?.suggestion || '', frozenResult: detail.value?.frozenResult || '',
-  });
+const openReport = (row) => {
+  reportRow.value = row;
   reportVisible.value = true;
 };
-const saveReport = () => doAction(() => pathologyReport({orderId: reportRow.value.id, ...reportForm}), () => {
-  reportVisible.value = false;
-  loadList();
-  loadStats();
-});
 const doAudit = (row) => doAction(() => pathologyAudit({orderId: row.id}), () => {
   loadList();
   loadStats();
@@ -467,25 +293,11 @@ const cancel = (row) => {
   })).catch(() => {
   });
 };
-// ---------------- 详情（含蜡块） ----------------
+// ---------------- 详情（含蜡块，弹框已拆到 PathologyDetail，组件按 id 自取） ----------------
 const detailVisible = ref(false);
-const detail = ref(null);
-const loadDetail = async (orderId) => {
-  try {
-    const res = await getPathologyDetail(orderId);
-    if (res.code === 200) {
-      detail.value = res.data;
-      return res.data;
-    }
-    ElMessage.error(res.message || '查询详情失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('查询详情失败');
-  }
-  return null;
-};
-const openDetail = async (row) => {
-  await loadDetail(row.id);
+const detailId = ref('');
+const openDetail = (row) => {
+  detailId.value = String(row.id);
   detailVisible.value = true;
 };
 onMounted(() => {

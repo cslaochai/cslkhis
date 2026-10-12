@@ -27,6 +27,7 @@ public class BiServiceImpl implements BiService {
 
     private final BiMapper biMapper;
     private final DrgGrouper drgGrouper;
+    private final DrgSchemeCache drgSchemeCache;
 
     public BiOverviewVO overview() {
         BiOverviewVO vo = new BiOverviewVO();
@@ -107,7 +108,7 @@ public class BiServiceImpl implements BiService {
             DrgGrouper.GroupResult r = drgGrouper.group(new DrgFacts(s.getIcdCode(),
                     DrgCodes.split(s.getMainOperCodes()), DrgCodes.split(s.getOtherDiagCodes()),
                     DrgCodes.split(s.getOtherOperCodes()), s.getGender(), s.getAge(), s.getAgeUnit(),
-                    s.getAdmissionWeightG()), DrgSchemeCache.DEFAULT_VERSION);
+                    s.getAdmissionWeightG()), drgSchemeCache.getDefaultVersion());
             if (!r.grouped()) {
                 continue;
             }

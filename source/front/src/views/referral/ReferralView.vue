@@ -87,68 +87,11 @@
       </div>
     </el-card>
 
-    <!-- 登记 -->
-    <el-dialog v-model="createVisible" :close-on-click-modal="false" title="转诊登记" width="580px">
-      <el-form label-width="90px">
-        <el-form-item label="患者" required>
-          <PatientSelect v-model="createForm.patientId"/>
-        </el-form-item>
-        <el-form-item label="方向" required>
-          <el-radio-group v-model="createForm.direction">
-            <el-radio v-for="d in dirDict" :key="d.dictValue" :value="Number(d.dictValue)">{{ d.dictLabel }}</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="入院ID">
-          <el-input v-model="createForm.admissionId" placeholder="住院患者转诊时填（可空=门诊）"/>
-        </el-form-item>
-        <el-form-item label="转出科室" required>
-          <el-select v-model="createForm.fromDeptId" :fit-input-width="false" filterable style="width: 240px">
-            <el-option v-for="d in depts" :key="d.id" :label="d.deptName" :value="Number(d.id)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="转入医院">
-          <el-input v-model="createForm.toHospital" placeholder="院际转诊必填（上转上级/下转基层）"/>
-        </el-form-item>
-        <el-form-item label="转入科室">
-          <el-select v-model="createForm.toDeptId" :fit-input-width="false" clearable filterable style="width: 240px">
-            <el-option v-for="d in depts" :key="d.id" :label="d.deptName" :value="Number(d.id)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="转诊原因" required>
-          <el-input v-model="createForm.reason" :rows="2" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="诊断摘要">
-          <el-input v-model="createForm.diagnosis"/>
-        </el-form-item>
-        <el-form-item label="联系电话">
-          <el-input v-model="createForm.contactPhone" style="width: 220px"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="createVisible = false">取消</el-button>
-        <el-button v-perm="'inpatient:referral:add'" :loading="createLoading" type="primary" @click="submitCreate">
-          登记
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 登记（表单与提交已拆至 ReferralAdd.vue） -->
+    <ReferralAdd v-model="createVisible" :depts="depts" :dir-dict="dirDict" @saved="loadList"/>
 
-    <!-- 确认 -->
-    <el-dialog v-model="auditVisible" :close-on-click-modal="false" title="确认转诊" width="480px">
-      <el-form label-width="90px">
-        <el-form-item label="转入科室">
-          <el-select v-model="auditForm.toDeptId" :fit-input-width="false" clearable filterable style="width: 240px">
-            <el-option v-for="d in depts" :key="d.id" :label="d.deptName" :value="Number(d.id)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="确认意见">
-          <el-input v-model="auditForm.auditRemark" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="auditVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitAudit">确认</el-button>
-      </template>
-    </el-dialog>
+    <!-- 确认（已拆至 ReferralAudit.vue） -->
+    <ReferralAudit v-model="auditVisible" :depts="depts" :row="auditRow" @saved="loadList"/>
 
     <!-- 完成 -->
     <el-dialog v-model="finishVisible" :close-on-click-modal="false" title="完成转诊" width="480px">
@@ -172,13 +115,14 @@
 import {onMounted, reactive, ref} from 'vue';
 import {ElMessage} from 'element-plus';
 import {Refresh, Search} from '@element-plus/icons-vue';
-import {referralAudit, referralCancel, referralCreate, referralFinish, referralListPage,} from '@/api/referral';
+import {referralCancel, referralFinish, referralListPage,} from '@/api/referral';
 import {getDepartmentSelectList, getDictDataMapList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
-import PatientSelect from '@/components/his/PatientSelect.vue';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import ReferralAdd from './ReferralAdd.vue';
+import ReferralAudit from './ReferralAudit.vue';
 // 今日总值班：转诊是跨院动作，联系外院与安排转运只有他能拍板（sql/169）
 import DutyOfficerBar from '@/components/his/DutyOfficerBar.vue';
 // ---------------- 字典 ----------------
@@ -242,76 +186,17 @@ const reset = () => {
   Object.assign(query, {direction: null, referralStatus: null, toHospital: '', pageNum: 1});
   loadList();
 };
-// ---------------- 登记 ----------------
+// ---------------- 登记（表单与提交已拆至 ReferralAdd.vue，这里只管开关） ----------------
 const createVisible = ref(false);
-const createLoading = ref(false);
-const createForm = reactive({
-  patientId: null, direction: 1, admissionId: '',
-  fromDeptId: null, toDeptId: null,
-  toHospital: '', reason: '', diagnosis: '', contactPhone: '',
-});
 const openCreate = () => {
-  Object.assign(createForm, {
-    patientId: null, direction: 1, admissionId: '', fromDeptId: null, toDeptId: null,
-    toHospital: '', reason: '', diagnosis: '', contactPhone: '',
-  });
   createVisible.value = true;
 };
-const submitCreate = async () => {
-  if (!createForm.patientId || !createForm.fromDeptId || !createForm.reason.trim()) {
-    ElMessage.warning('患者、转出科室、转诊原因为必填');
-    return;
-  }
-  if (!createForm.toHospital.trim() && !createForm.toDeptId) {
-    ElMessage.warning('院际转诊必须填转入医院，院内转诊必须选转入科室');
-    return;
-  }
-  createLoading.value = true;
-  try {
-    const res = await referralCreate({
-      patientId: createForm.patientId,
-      direction: createForm.direction,
-      admissionId: createForm.admissionId || undefined,
-      fromDeptId: createForm.fromDeptId,
-      toDeptId: createForm.toDeptId ?? undefined,
-      toHospital: createForm.toHospital.trim() || undefined,
-      reason: createForm.reason.trim(),
-      diagnosis: createForm.diagnosis || undefined,
-      contactPhone: createForm.contactPhone || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success('转诊单已登记');
-      createVisible.value = false;
-      loadList();
-    } else
-      ElMessage.error(res.message || '登记失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('登记失败');
-  } finally {
-    createLoading.value = false;
-  }
-};
-// ---------------- 确认 / 完成 / 取消 ----------------
+// ---------------- 确认（已拆至 ReferralAudit.vue，这里只开关 + 传行快照） ----------------
 const auditVisible = ref(false);
-const auditForm = reactive({referralId: null, toDeptId: null, auditRemark: ''});
+const auditRow = ref(null);
 const openAudit = (row) => {
-  Object.assign(auditForm, {referralId: row.referralId, toDeptId: row.toDeptId, auditRemark: ''});
+  auditRow.value = row;
   auditVisible.value = true;
-};
-const submitAudit = async () => {
-  try {
-    const res = await referralAudit(auditForm.referralId, auditForm.toDeptId ?? undefined, auditForm.auditRemark || undefined);
-    if (res.code === 200) {
-      ElMessage.success('转诊已确认');
-      auditVisible.value = false;
-      loadList();
-    } else
-      ElMessage.error(res.message || '操作失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('操作失败');
-  }
 };
 const finishVisible = ref(false);
 const finishForm = reactive({referralId: null, finishRemark: ''});

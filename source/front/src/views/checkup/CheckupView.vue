@@ -71,115 +71,14 @@
     </el-card>
 
     <!-- 登记弹窗 -->
-    <el-dialog v-model="createVisible" title="体检登记" width="480px">
-      <el-form label-width="90px">
-        <el-form-item label="体检人" required>
-          <PatientSelect v-model="createForm.patientId"/>
-        </el-form-item>
-        <el-form-item label="对象类型">
-          <el-radio-group v-model="createForm.personType">
-            <el-radio :value="1">个人</el-radio>
-            <el-radio :value="2">团体</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="套餐" required>
-          <el-select v-model="createForm.packageId" :fit-input-width="false" data-testid="checkup-package-select"
-                     placeholder="选择套餐" style="width: 100%">
-            <el-option v-for="p in packages" :key="p.id" :label="`${p.packageName}（¥${p.price}）`"
-                       :value="String(p.id)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="体检日期" required>
-          <el-date-picker v-model="createForm.checkupDate" style="width: 100%" type="date"
-                          value-format="YYYY-MM-DD"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="createForm.remark" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="createVisible = false">取消</el-button>
-        <el-button v-perm="'checkup:manage:add'" data-testid="checkup-create-submit" type="primary"
-                   @click="submitCreate">登记
-        </el-button>
-      </template>
-    </el-dialog>
+    <CheckupAdd v-model="createVisible" @saved="loadList"/>
 
     <!-- 结果明细弹窗 -->
-    <el-dialog v-model="detailVisible" :title="`结果明细 - ${detail?.patientName || ''}（${detail?.recordNo || ''}）`"
-               width="860px">
-      <div v-if="detail" data-testid="checkup-result-panel">
-        <p class="text-sm text-gray-500 mb-2">
-          状态：
-          <el-tag :type="statusTag(detail.recordStatus)" size="small">{{ statusText(detail.recordStatus) }}</el-tag>
-          <span class="ml-3">套餐：{{ detail.packageName }}（¥{{ detail.totalAmount }}）</span>
-        </p>
-        <el-table :data="detail.results || []" border size="small">
-          <el-table-column label="项目" prop="itemName" width="150"/>
-          <el-table-column label="参考范围" prop="refStandard" show-overflow-tooltip width="160"/>
-          <el-table-column label="结果值" min-width="170">
-            <template #default="{ row }">
-              <el-input v-model="row.resultValue" :data-testid="`checkup-result-input-${row.id}`" :disabled="detail.recordStatus === 4"
-                        size="small"/>
-            </template>
-          </el-table-column>
-          <el-table-column label="标志" width="100">
-            <template #default="{ row }">
-              <el-select v-model="row.abnormalFlag" :disabled="detail.recordStatus === 4" :fit-input-width="false"
-                         size="small">
-                <el-option v-for="d in flagDict" :key="d.dictValue" :label="d.dictLabel"
-                           :value="Number(d.dictValue)"/>
-              </el-select>
-            </template>
-          </el-table-column>
-          <el-table-column label="小结" min-width="140">
-            <template #default="{ row }">
-              <el-input v-model="row.summaryText" :disabled="detail.recordStatus === 4" size="small"/>
-            </template>
-          </el-table-column>
-          <el-table-column label="医师" width="90">
-            <template #default="{ row }">
-              <el-input v-model="row.checkerName" :disabled="detail.recordStatus === 4" size="small"/>
-            </template>
-          </el-table-column>
-          <el-table-column fixed="right" label="操作" width="80">
-            <template #default="{ row }">
-              <el-button v-if="detail.recordStatus !== 4" v-perm="'checkup:manage:edit'" link size="small"
-                         type="primary"
-                         @click="saveOne(row)">保存
-              </el-button>
-              <el-tag v-else :type="flagTag(row.abnormalFlag)" size="small">{{ flagText(row.abnormalFlag) }}</el-tag>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
-      <template #footer>
-        <el-button @click="detailVisible = false">关闭</el-button>
-        <el-button v-if="detail?.recordStatus === 3" v-perm="'checkup:manage:edit'" data-testid="checkup-conclude-btn"
-                   type="primary"
-                   @click="openConclude(detail)">总检出报告
-        </el-button>
-      </template>
-    </el-dialog>
+    <CheckupDetail v-model="detailVisible" :id="detailId" :row="detailRow" :status-dict="statusDict"
+                   :flag-dict="flagDict" @conclude="openConclude"/>
 
     <!-- 总检弹窗 -->
-    <el-dialog v-model="concludeVisible" :title="`总检出报告 - ${concludeForm.recordNo}`" width="480px">
-      <el-form label-width="90px">
-        <el-form-item label="总检结论" required>
-          <el-input v-model="concludeForm.conclusion" :rows="4" data-testid="checkup-conclusion-input"
-                    type="textarea"/>
-        </el-form-item>
-        <el-form-item label="总检医师">
-          <el-input v-model="concludeForm.doctorName"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="concludeVisible = false">取消</el-button>
-        <el-button v-perm="'checkup:manage:edit'" data-testid="checkup-conclude-submit" type="primary"
-                   @click="submitConclude">出报告
-        </el-button>
-      </template>
-    </el-dialog>
+    <CheckupConcludeEdit v-model="concludeVisible" :row="concludeRow" @saved="loadList"/>
   </div>
 </template>
 
@@ -196,30 +95,25 @@ import {onMounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {Refresh, Search} from '@element-plus/icons-vue';
 import {
-  checkupConclude,
-  checkupPackageListPage,
-  checkupRecordCreate,
   checkupRecordDelete,
   checkupRecordListPage,
   checkupRecordStart,
-  checkupResultSave,
-  getCheckupRecord,
 } from '@/api/checkup';
 import {getDictDataMapList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
-import PatientSelect from '@/components/his/PatientSelect.vue';
+import {checkupStatusTag as statusTag} from '@/lib/checkup';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import CheckupAdd from './CheckupAdd.vue';
+import CheckupDetail from './CheckupDetail.vue';
+import CheckupConcludeEdit from './CheckupConcludeEdit.vue';
 // ---------------- 字典 ----------------
 const statusDict = ref([]);
 const personDict = ref([]);
 const flagDict = ref([]);
 const statusText = (v) => dictLabelText(statusDict.value, v);
-const statusTag = (v) => ({1: 'info', 2: 'warning', 3: 'primary', 4: 'success'}[v] || 'info');
 const personText = (v) => dictLabelText(personDict.value, v);
-const flagTag = (v) => ({0: 'success', 1: 'danger', 2: 'warning'}[v] || 'info');
-const flagText = (v) => dictLabelText(flagDict.value, v);
 const loadDicts = async () => {
   try {
     const res = await getDictDataMapList(`${DICT_TYPE.CHECKUP_RECORD_STATUS},${DICT_TYPE.CHECKUP_PERSON_TYPE},${DICT_TYPE.CHECKUP_RESULT_FLAG}`);
@@ -259,72 +153,26 @@ const reset = () => {
   query.pageNum = 1;
   loadList();
 };
-// ---------------- 登记弹窗 ----------------
+// ---------------- 弹框开关（表单逻辑在子组件内） ----------------
 const createVisible = ref(false);
-const createForm = reactive({patientId: null, personType: 1, packageId: null, checkupDate: '', remark: ''});
-const packages = ref([]);
-const loadPackages = async () => {
-  try {
-    const res = await checkupPackageListPage({status: 1, pageNum: 1, pageSize: 100});
-    packages.value = res?.data?.records || [];
-  } catch (e) {
-    console.error('加载套餐失败', e);
-  }
-};
 const openCreate = () => {
-  createForm.patientId = null;
-  createForm.personType = 1;
-  createForm.packageId = null;
-  createForm.checkupDate = '';
-  createForm.remark = '';
   createVisible.value = true;
 };
-const submitCreate = async () => {
-  if (!createForm.patientId)
-    return ElMessage.warning('请选择体检人');
-  if (!createForm.packageId)
-    return ElMessage.warning('请选择套餐');
-  if (!createForm.checkupDate)
-    return ElMessage.warning('请选择体检日期');
-  try {
-    await checkupRecordCreate({
-      patientId: createForm.patientId, personType: createForm.personType,
-      packageId: createForm.packageId, checkupDate: createForm.checkupDate, remark: createForm.remark,
-    });
-    ElMessage.success('登记成功');
-    createVisible.value = false;
-    loadList();
-  } catch (e) {
-    ElMessage.error(e?.response?.data?.message || '登记失败');
-  }
-};
-// ---------------- 详情 / 结果录入 ----------------
 const detailVisible = ref(false);
-const detail = ref(null);
-const openDetail = async (row) => {
-  try {
-    const res = await getCheckupRecord(row.id);
-    detail.value = res?.data || null;
-    detailVisible.value = true;
-  } catch (e) {
-    ElMessage.error(e?.response?.data?.message || '加载详情失败');
-  }
+const detailId = ref(null);
+const detailRow = ref(null);
+const openDetail = (row) => {
+  detailId.value = row.id;
+  detailRow.value = row;
+  detailVisible.value = true;
 };
-const saveOne = async (row) => {
-  if (!row.resultValue || !String(row.resultValue).trim())
-    return ElMessage.warning('请填写结果值');
-  try {
-    await checkupResultSave({
-      resultId: row.id, resultValue: row.resultValue, abnormalFlag: row.abnormalFlag ?? 0,
-      summaryText: row.summaryText, checkerName: row.checkerName,
-    });
-    ElMessage.success('结果已保存');
-    const res = await getCheckupRecord(detail.value.id);
-    detail.value = res?.data;
-  } catch (e) {
-    ElMessage.error(e?.response?.data?.message || '保存失败');
-  }
+const concludeVisible = ref(false);
+const concludeRow = ref(null);
+const openConclude = (row) => {
+  concludeRow.value = row;
+  concludeVisible.value = true;
 };
+// ---------------- 行操作 ----------------
 const startOne = async (row) => {
   try {
     await checkupRecordStart(row.id);
@@ -348,41 +196,8 @@ const deleteOne = async (row) => {
     ElMessage.error(e?.response?.data?.message || '删除失败');
   }
 };
-// ---------------- 总检 ----------------
-const concludeVisible = ref(false);
-const concludeForm = reactive({recordId: null, recordNo: '', conclusion: '', doctorName: ''});
-const openConclude = async (row) => {
-  try {
-    const res = await getCheckupRecord(row.id);
-    const d = res?.data;
-    if (d?.recordStatus !== 3)
-      return ElMessage.warning('存在未录入的结果项，不能总检出报告');
-    concludeForm.recordId = d.id;
-    concludeForm.recordNo = d.recordNo;
-    concludeForm.conclusion = '';
-    concludeForm.doctorName = '';
-    concludeVisible.value = true;
-  } catch (e) {
-    ElMessage.error(e?.response?.data?.message || '加载失败');
-  }
-};
-const submitConclude = async () => {
-  if (!concludeForm.conclusion.trim())
-    return ElMessage.warning('总检结论必填');
-  try {
-    await checkupConclude({
-      recordId: concludeForm.recordId, conclusion: concludeForm.conclusion, doctorName: concludeForm.doctorName,
-    });
-    ElMessage.success('体检报告已出');
-    concludeVisible.value = false;
-    loadList();
-  } catch (e) {
-    ElMessage.error(e?.response?.data?.message || '出报告失败');
-  }
-};
 onMounted(() => {
   loadDicts();
   loadList();
-  loadPackages();
 });
 </script>

@@ -80,45 +80,8 @@
       </div>
     </el-card>
 
-    <!-- 开单/编辑 -->
-    <el-dialog v-model="editVisible" :close-on-click-modal="false" :title="editForm.id ? '编辑带药单' : '开带药单'"
-               width="560px">
-      <el-form label-width="90px">
-        <el-form-item label="入院ID" required>
-          <el-input v-model="editForm.admissionId" :disabled="!!editForm.id" placeholder="入院记录ID"/>
-        </el-form-item>
-        <el-form-item label="药品名称" required>
-          <el-input v-model="editForm.drugName" placeholder="药品名称"/>
-        </el-form-item>
-        <el-form-item label="规格">
-          <el-input v-model="editForm.spec" placeholder="如 0.25g*24片"/>
-        </el-form-item>
-        <el-form-item label="用法用量">
-          <div class="flex gap-2 w-full">
-            <el-input v-model="editForm.dosage" placeholder="每次剂量"/>
-            <el-input v-model="editForm.usageText" placeholder="如 每日三次 饭后"/>
-          </div>
-        </el-form-item>
-        <el-form-item label="带药数量" required>
-          <div class="flex gap-2 w-full">
-            <el-input-number v-model="editForm.quantity" :min="0.01" :precision="2" class="!w-40"/>
-            <el-input v-model="editForm.unit" class="!w-32" placeholder="单位（盒/瓶）"/>
-          </div>
-        </el-form-item>
-        <el-form-item label="用药天数">
-          <el-input-number v-model="editForm.days" :min="1" :precision="0"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="editForm.remark" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button v-perm="['inpatient:dischargeDrug:add','inpatient:dischargeDrug:edit']" :loading="editLoading"
-                   type="primary" @click="submitEdit">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 开单/编辑（子组件自持表单与提交，见 DischargeDrugEdit.vue） -->
+    <DischargeDrugEdit v-model="editVisible" :admission-id="query.admissionId" :row="editRow" @saved="loadList"/>
   </div>
 </template>
 
@@ -136,13 +99,13 @@ import {
   dischargeDrugDelete,
   dischargeDrugDispense,
   dischargeDrugListPage,
-  dischargeDrugUpsert,
 } from '@/api/dischargeDrug';
 import {getDictDataMapList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import DischargeDrugEdit from './DischargeDrugEdit.vue';
 // ---------------- 字典 ----------------
 const statusDict = ref([]);
 const statusText = (v) => dictLabelText(statusDict.value, v);
@@ -190,60 +153,16 @@ const reset = () => {
   loadList();
 };
 const statusTag = (v) => (v === 2 ? 'success' : 'warning');
-// ---------------- 开单 / 编辑 ----------------
+// ---------------- 开单 / 编辑（表单与提交已拆至 DischargeDrugEdit.vue，这里只管开关与行快照） ----------------
 const editVisible = ref(false);
-const editLoading = ref(false);
-const editForm = reactive({
-  id: null, admissionId: '', drugId: null, drugName: '',
-  spec: '', dosage: '', unit: '', quantity: null, usageText: '', days: null, remark: '',
-});
+const editRow = ref(null);
 const openCreate = () => {
-  Object.assign(editForm, {
-    id: null, admissionId: query.admissionId === '' ? '' : query.admissionId, drugId: null, drugName: '',
-    spec: '', dosage: '', unit: '', quantity: null, usageText: '', days: null, remark: '',
-  });
+  editRow.value = null;
   editVisible.value = true;
 };
 const openEdit = (row) => {
-  Object.assign(editForm, {
-    id: row.id, admissionId: row.admissionId, drugId: row.drugId, drugName: row.drugName,
-    spec: row.spec, dosage: row.dosage, unit: row.unit, quantity: row.quantity,
-    usageText: row.usageText, days: row.days, remark: row.remark,
-  });
+  editRow.value = row;
   editVisible.value = true;
-};
-const submitEdit = async () => {
-  if (!editForm.admissionId || !editForm.drugName.trim() || !editForm.quantity) {
-    ElMessage.warning('入院ID、药品名称、带药数量为必填');
-    return;
-  }
-  editLoading.value = true;
-  try {
-    const res = await dischargeDrugUpsert({
-      id: editForm.id ?? undefined,
-      admissionId: editForm.admissionId,
-      drugId: editForm.drugId ?? undefined,
-      drugName: editForm.drugName.trim(),
-      spec: editForm.spec || undefined,
-      dosage: editForm.dosage || undefined,
-      unit: editForm.unit || undefined,
-      quantity: editForm.quantity,
-      usageText: editForm.usageText || undefined,
-      days: editForm.days ?? undefined,
-      remark: editForm.remark || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success('带药单已保存');
-      editVisible.value = false;
-      loadList();
-    } else
-      ElMessage.error(res.message || '保存失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('保存失败');
-  } finally {
-    editLoading.value = false;
-  }
 };
 // ---------------- 发药 / 删除 ----------------
 const dispense = async (row) => {

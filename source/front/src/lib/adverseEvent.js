@@ -20,6 +20,9 @@ export const ADVERSE_EVENT_LEVEL_TAG = {
   4: 'info',
 }
 
+/** 压力性损伤（字典 his_adverse_event_type=3）：唯一要区分院内获得/入院带入的类型 */
+export const EVENT_TYPE_PRESSURE_INJURY = 3
+
 /** 各状态下的下一步动作（1=处理 2=整改 3=结案；4 无） */
 export const ADVERSE_EVENT_NEXT_ACTION = {
   1: { key: 'handle', label: '处理', placeholder: '处理意见（现场核实、对患者的影响与处置）' },

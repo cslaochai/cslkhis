@@ -333,61 +333,20 @@
     </el-tabs>
 
     <!-- 详情弹窗（只读） -->
-    <el-dialog v-model="detailVisible" data-testid="trace-detail-dialog" title="追溯码详情" width="720px">
-      <el-descriptions v-if="detail" :column="2" border>
-        <el-descriptions-item label="追溯码">{{ detail.traceCode }}</el-descriptions-item>
-        <el-descriptions-item label="院内流水号">{{ detail.traceNo }}</el-descriptions-item>
-        <el-descriptions-item label="药品">{{
-            detail.drugName
-          }}{{ detail.specification ? `（${detail.specification}）` : '' }}
-        </el-descriptions-item>
-        <el-descriptions-item label="批准文号">{{ detail.approvalNumber || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="生产厂家">{{ detail.manufacturer || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="批号">{{ detail.stockBatchNo || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="码制">{{ codeTypeText(detail.codeType) }}</el-descriptions-item>
-        <el-descriptions-item label="产品标识">{{ detail.drugDi || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="序列号">{{ detail.serialNo || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="采集来源">{{ sourceText(detail.sourceType) }}</el-descriptions-item>
-        <el-descriptions-item label="状态">{{ statusText(detail.status) }}</el-descriptions-item>
-        <el-descriptions-item label="上传状态">{{ uploadText(detail.uploadStatus) }}</el-descriptions-item>
-        <el-descriptions-item label="采集人">{{ detail.operatorName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="采集时间">{{ detail.scanTime || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="发药单">{{ detail.dispensingNo || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="患者">{{ detail.patientName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="核销时间">{{ detail.dispenseTime || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="核销人">{{ detail.dispenseOperator || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="上传批次">{{ detail.uploadBatchNo || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="上传时间">{{ detail.uploadTime || '-' }}</el-descriptions-item>
-        <el-descriptions-item :span="2" label="上传失败原因">{{ detail.uploadFailReason || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="作废类型">{{
-            detail.voidType ? voidText(detail.voidType) : '-'
-          }}
-        </el-descriptions-item>
-        <el-descriptions-item label="作废原因">{{ detail.voidReason || '-' }}</el-descriptions-item>
-      </el-descriptions>
-      <template #footer>
-        <el-button @click="detailVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    <DrugTraceDetail
+        v-model="detailVisible"
+        :row="detail"
+        :status-dict="statusDict"
+        :upload-dict="uploadDict"
+        :source-dict="sourceDict"
+        :void-dict="voidDict" />
 
     <!-- 作废弹窗 -->
-    <el-dialog v-model="voidVisible" data-testid="void-dialog" title="追溯码作废" width="480px">
-      <el-form label-width="90px">
-        <el-form-item label="作废类型">
-          <el-select v-model="voidForm.voidType" data-testid="select-void-type" style="width: 100%">
-            <el-option v-for="d in voidDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="原因">
-          <el-input v-model="voidForm.reason" :rows="3" data-testid="input-void-reason" placeholder="必填，退药/报损/召回原因"
-                    type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="voidVisible = false">取消</el-button>
-        <el-button data-testid="btn-void-submit" type="primary" @click="submitVoid">确认作废</el-button>
-      </template>
-    </el-dialog>
+    <DrugTraceVoid
+        v-model="voidVisible"
+        :row="voidRow"
+        :void-dict="voidDict"
+        @saved="onVoidSaved" />
   </div>
 </template>
 
@@ -414,7 +373,6 @@ import {
   scanDrugTrace,
   uploadDrugTrace,
   verifyDispenseDrugTrace,
-  voidDrugTrace,
 } from '@/api/drugTrace';
 import {getDispensingList} from '@/api/dispensing';
 import {getDictDataMapList, getDrugSelectList} from '@/api/system';
@@ -430,6 +388,8 @@ import {
   traceStatusTagType,
   uploadStatusTagType,
 } from '@/lib/drugTrace';
+import DrugTraceDetail from './DrugTraceDetail.vue';
+import DrugTraceVoid from './DrugTraceVoid.vue';
 
 const loading = ref(false);
 const rows = ref([]);
@@ -453,8 +413,6 @@ const voidDict = ref([]);
 const statusText = (v) => dictLabelText(statusDict.value, v);
 const uploadText = (v) => dictLabelText(uploadDict.value, v);
 const codeTypeDictText = (v) => dictLabelText(codeTypeDict.value, v);
-const sourceText = (v) => dictLabelText(sourceDict.value, v);
-const voidText = (v) => dictLabelText(voidDict.value, v);
 const loadDicts = async () => {
   try {
     const res = await getDictDataMapList(`${DICT_TYPE.DRUG_TRACE_STATUS},${DICT_TYPE.DRUG_TRACE_UPLOAD_STATUS},${DICT_TYPE.DRUG_TRACE_CODE_TYPE},${DICT_TYPE.DRUG_TRACE_SOURCE_TYPE},${DICT_TYPE.DRUG_TRACE_VOID_TYPE}`);
@@ -660,32 +618,13 @@ const submitDispense = async () => {
 };
 // ============ 作废 ============
 const voidVisible = ref(false);
-const voidForm = reactive({traceId: null, voidType: 1, reason: ''});
+const voidRow = ref(null);
 const openVoid = (row) => {
-  voidForm.traceId = row.id;
-  voidForm.voidType = Number(row.status) === 2 ? 1 : 2;
-  voidForm.reason = '';
+  voidRow.value = row;
   voidVisible.value = true;
 };
-const submitVoid = async () => {
-  if (!voidForm.reason?.trim()) {
-    ElMessage.warning('请填写作废原因');
-    return;
-  }
-  try {
-    const res = await voidDrugTrace({
-      traceId: voidForm.traceId,
-      voidType: voidForm.voidType,
-      reason: voidForm.reason.trim(),
-    });
-    if (res.code === 200) {
-      ElMessage.success('已作废，状态变更将重新上传');
-      voidVisible.value = false;
-      await Promise.all([loadList(), loadStats()]);
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '作废失败');
-  }
+const onVoidSaved = async () => {
+  await Promise.all([loadList(), loadStats()]);
 };
 // ============ 删除 ============
 const doDelete = async (row) => {

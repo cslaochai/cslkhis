@@ -79,33 +79,8 @@
       </div>
     </el-card>
 
-    <el-dialog v-model="openVisible" destroy-on-close title="慢病建档（建档即认定）" width="560px">
-      <el-form label-width="110px">
-        <el-form-item label="患者" required>
-          <PatientSelect v-model="form.patientId" data-testid="chronic-form-patient" @select="onPatientSelect"/>
-        </el-form-item>
-        <el-form-item label="慢病病种" required>
-          <el-select v-model="form.diseaseCode" data-testid="chronic-form-disease" filterable style="width:100%"
-                     @change="onDiseaseChange">
-            <el-option v-for="d in diseaseDict" :key="d.dictValue" :label="`${d.dictLabel}（${d.dictValue}）`"
-                       :value="d.dictValue"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="慢病名称" required>
-          <el-input v-model="form.diseaseName" data-testid="chronic-form-disease-name"
-                    placeholder="选中病种自动回填，可手动补并发症描述"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="form.remark" :rows="2" data-testid="chronic-form-remark" placeholder="诊断依据 / 认定材料说明"
-                    type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="openVisible = false">取消</el-button>
-        <el-button :loading="submitting" data-testid="chronic-form-save" type="primary" @click="onSubmit">保存并认定
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 建档（表单与提交已拆至 ChronicRecordAdd.vue） -->
+    <ChronicRecordAdd v-model="openVisible" @saved="loadRows"/>
   </div>
 </template>
 
@@ -129,21 +104,19 @@ import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {getDictDataMapList} from '@/api/system'
 import {DICT_TYPE} from '@/lib/dict-cache'
 import {dictLabelText} from '@/lib/utils'
-import PatientSelect from '@/components/his/PatientSelect.vue'
-import {cancelChronicRecord, getChronicRecordList, upsertChronicRecord} from '@/api/chronic'
+import {cancelChronicRecord, getChronicRecordList} from '@/api/chronic'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
+import ChronicRecordAdd from './ChronicRecordAdd.vue'
 
 const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '—')
 
-// ---------------- 字典 ----------------
+// ---------------- 字典（建档病种字典已随弹框拆到 ChronicRecordAdd.vue 自加载） ----------------
 const confirmStatusDict = ref([])
-const diseaseDict = ref([])
 const loadDicts = async () => {
   try {
-    const res = await getDictDataMapList([DICT_TYPE.CHRONIC_CONFIRM_STATUS, DICT_TYPE.CHRONIC_DISEASE].join(','))
+    const res = await getDictDataMapList(DICT_TYPE.CHRONIC_CONFIRM_STATUS)
     const d = res?.data || {}
     confirmStatusDict.value = d[DICT_TYPE.CHRONIC_CONFIRM_STATUS] || []
-    diseaseDict.value = d[DICT_TYPE.CHRONIC_DISEASE] || []
   } catch (e) {
     console.error('加载慢病字典失败', e)
   }
@@ -196,46 +169,10 @@ const resetQuery = () => {
   loadRows()
 }
 
-// ---------------- 建档 ----------------
+// ---------------- 建档（表单与提交已拆至 ChronicRecordAdd.vue，这里只管开关） ----------------
 const openVisible = ref(false)
-const submitting = ref(false)
-const form = reactive({patientId: null, patientName: '', patientNo: '', diseaseCode: '', diseaseName: '', remark: ''})
-const onPatientSelect = (p) => {
-  form.patientName = p?.patientName || ''
-  form.patientNo = p?.patientNo || p?.patientNoStr || ''
-}
-const onDiseaseChange = (code) => {
-  const d = diseaseDict.value.find((x) => String(x.dictValue) === String(code))
-  form.diseaseName = d?.dictLabel || ''
-}
 const onCreate = () => {
-  Object.assign(form, {patientId: null, patientName: '', patientNo: '', diseaseCode: '', diseaseName: '', remark: ''})
   openVisible.value = true
-}
-const onSubmit = async () => {
-  if (!form.patientId) return ElMessage.warning('请选择患者')
-  if (!form.diseaseCode) return ElMessage.warning('请选择慢病病种')
-  if (!form.diseaseName?.trim()) return ElMessage.warning('请填写慢病名称')
-  submitting.value = true
-  try {
-    const res = await upsertChronicRecord({
-      patientId: form.patientId,
-      patientNo: form.patientNo,
-      patientName: form.patientName,
-      diseaseCode: form.diseaseCode,
-      diseaseName: form.diseaseName,
-      remark: form.remark?.trim() || undefined,
-    })
-    if (res.code === 200) {
-      ElMessage.success('建档已认定')
-      openVisible.value = false
-      await loadRows()
-    } else ElMessage.error(res.message || '建档失败')
-  } catch (e) {
-    console.error(e)
-  } finally {
-    submitting.value = false
-  }
 }
 
 // ---------------- 作废（单向） ----------------

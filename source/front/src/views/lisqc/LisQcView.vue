@@ -154,97 +154,13 @@
         </div>
 
         <!-- 计划弹窗 -->
-        <el-dialog v-model="planVisible" :title="planForm.id ? '编辑质控计划' : '新建质控计划'" width="640px">
-          <el-form label-width="110px">
-            <div class="grid grid-cols-2 gap-x-4">
-              <el-form-item label="项目编码">
-                <el-input v-model="planForm.itemCode"/>
-              </el-form-item>
-              <el-form-item label="项目名称" required>
-                <el-input v-model="planForm.itemName"/>
-              </el-form-item>
-              <el-form-item label="仪器编号">
-                <el-input v-model="planForm.instrumentNo"/>
-              </el-form-item>
-              <el-form-item label="仪器名称">
-                <el-input v-model="planForm.instrumentName"/>
-              </el-form-item>
-              <el-form-item label="质控水平">
-                <el-select v-model="planForm.qcLevel" style="width: 100%">
-                  <el-option v-for="d in levelDict" :key="d.dictValue" :label="d.dictLabel"
-                             :value="Number(d.dictValue)"/>
-                </el-select>
-              </el-form-item>
-              <el-form-item label="质控品效期">
-                <el-date-picker v-model="planForm.expireDate" style="width: 100%" type="date"
-                                value-format="YYYY-MM-DD"/>
-              </el-form-item>
-              <el-form-item label="质控品名称">
-                <el-input v-model="planForm.controlName"/>
-              </el-form-item>
-              <el-form-item label="批号">
-                <el-input v-model="planForm.controlLotNo"/>
-              </el-form-item>
-              <el-form-item label="靶值（均值）" required>
-                <el-input-number v-model="planForm.meanValue" :precision="4" style="width: 100%"/>
-              </el-form-item>
-              <el-form-item label="标准差 SD" required>
-                <el-input-number v-model="planForm.sdValue" :min="0.0001" :precision="4" style="width: 100%"/>
-              </el-form-item>
-              <el-form-item label="允许 CV 上限%">
-                <el-input-number v-model="planForm.cvLimit" :precision="2" style="width: 100%"/>
-              </el-form-item>
-            </div>
-          </el-form>
-          <template #footer>
-            <el-button @click="planVisible = false">取消</el-button>
-            <el-button v-perm="['medtech:lisQc:add','medtech:lisQc:edit']" :loading="planLoadingBtn" type="primary"
-                       @click="savePlan">保存
-            </el-button>
-          </template>
-        </el-dialog>
+        <LisQcPlanEdit v-model="planVisible" :level-dict="levelDict" :row="planEditRow" @saved="onPlanSaved"/>
 
         <!-- 录入结果弹窗 -->
-        <el-dialog v-model="inputVisible"
-                   :title="`录入质控结果：${inputRow?.itemName || ''}（${levelText(inputRow?.qcLevel)}）`" width="480px">
-          <el-form label-width="100px">
-            <el-form-item label="测定值" required>
-              <el-input-number v-model="inputForm.resultValue" :precision="4" style="width: 100%"/>
-            </el-form-item>
-            <el-form-item label="备注">
-              <el-input v-model="inputForm.remark" :rows="2" type="textarea"/>
-            </el-form-item>
-          </el-form>
-          <div class="text-xs text-gray-400 px-6">Westgard 判定由服务端按计划靶值/SD 计算，页面不做在控/失控判断。</div>
-          <template #footer>
-            <el-button @click="inputVisible = false">取消</el-button>
-            <el-button v-perm="'medtech:lisQc:add'" :loading="inputLoading" type="primary" @click="saveInput">
-              录入并判定
-            </el-button>
-          </template>
-        </el-dialog>
+        <LisQcResultAdd v-model="inputVisible" :level-dict="levelDict" :row="inputRow" @saved="onInputSaved"/>
 
         <!-- 失控处理弹窗 -->
-        <el-dialog v-model="handleVisible" :title="`失控处理：${handleRow?.itemName || ''}`" width="560px">
-          <div class="mb-2 text-sm">
-            <el-tag size="small" type="danger">{{ handleRow?.statusText }}</el-tag>
-            <span class="ml-2 text-gray-500">Z={{ handleRow?.zScore }}　命中：{{ handleRow?.violatedRules || '-' }}</span>
-          </div>
-          <el-form label-width="100px">
-            <el-form-item label="原因分析" required>
-              <el-input v-model="handleForm.handleCause" :rows="3" type="textarea"/>
-            </el-form-item>
-            <el-form-item label="纠正措施" required>
-              <el-input v-model="handleForm.handleMeasure" :rows="3" type="textarea"/>
-            </el-form-item>
-          </el-form>
-          <template #footer>
-            <el-button @click="handleVisible = false">取消</el-button>
-            <el-button v-perm="'medtech:lisQc:edit'" :loading="handleLoading" type="primary" @click="saveHandle">
-              提交处理
-            </el-button>
-          </template>
-        </el-dialog>
+        <LisQcHandleEdit v-model="handleVisible" :row="handleRow" @saved="onHandleSaved"/>
       </el-tab-pane>
       <el-tab-pane label="室间质评" lazy name="eqa">
         <LisEqaView/>
@@ -269,16 +185,16 @@ import {
   getQcPlanListPage,
   getQcRecordListPage,
   getQcStats,
-  qcHandle,
-  qcInputResult,
   qcPlanToggle,
-  qcPlanUpsert,
   qcReview,
 } from '@/api/medicaltech';
 import {getDictDataMapList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
+import LisQcPlanEdit from './LisQcPlanEdit.vue';
+import LisQcResultAdd from './LisQcResultAdd.vue';
+import LisQcHandleEdit from './LisQcHandleEdit.vue';
 
 const activeTab = ref('plan');
 // ---------------- 字典 ----------------
@@ -352,47 +268,14 @@ const loadPlans = async () => {
   }
 };
 const planVisible = ref(false);
-const planForm = reactive({
-  id: null, itemCode: '', itemName: '', instrumentNo: '', instrumentName: '', qcLevel: 2,
-  controlName: '', controlLotNo: '', meanValue: null, sdValue: null,
-  cvLimit: null, expireDate: '',
-});
-const planLoadingBtn = ref(false);
+const planEditRow = ref(null);
 const openPlan = (row) => {
-  Object.assign(planForm, {
-    id: row?.id || null, itemCode: row?.itemCode || '', itemName: row?.itemName || '',
-    instrumentNo: row?.instrumentNo || '', instrumentName: row?.instrumentName || '',
-    qcLevel: row?.qcLevel || 2, controlName: row?.controlName || '', controlLotNo: row?.controlLotNo || '',
-    meanValue: row?.meanValue ?? null, sdValue: row?.sdValue ?? null, cvLimit: row?.cvLimit ?? null,
-    expireDate: row?.expireDate || '',
-  });
+  planEditRow.value = row || null;
   planVisible.value = true;
 };
-const savePlan = async () => {
-  if (!planForm.itemName.trim()) {
-    ElMessage.warning('检验项目名称不能为空');
-    return;
-  }
-  if (planForm.meanValue == null || planForm.sdValue == null) {
-    ElMessage.warning('靶值与 SD 必填');
-    return;
-  }
-  planLoadingBtn.value = true;
-  try {
-    const res = await qcPlanUpsert({...planForm, expireDate: planForm.expireDate || undefined});
-    if (res.code === 200) {
-      ElMessage.success(res.message || '已保存');
-      planVisible.value = false;
-      loadPlans();
-      loadStats();
-    } else
-      ElMessage.error(res.message || '保存失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('保存失败');
-  } finally {
-    planLoadingBtn.value = false;
-  }
+const onPlanSaved = () => {
+  loadPlans();
+  loadStats();
 };
 const togglePlan = (row) => {
   const to = Number(row.status) === 1 ? 0 : 1;
@@ -411,40 +294,14 @@ const togglePlan = (row) => {
 // 录入质控结果
 const inputVisible = ref(false);
 const inputRow = ref(null);
-const inputForm = reactive({resultValue: null, remark: ''});
 const openInput = (row) => {
   inputRow.value = row;
-  Object.assign(inputForm, {resultValue: null, remark: ''});
   inputVisible.value = true;
 };
-const inputLoading = ref(false);
-const saveInput = async () => {
-  if (inputForm.resultValue == null) {
-    ElMessage.warning('请填写测定值');
-    return;
-  }
-  inputLoading.value = true;
-  try {
-    const res = await qcInputResult({
-      planId: inputRow.value.id,
-      resultValue: inputForm.resultValue,
-      remark: inputForm.remark || undefined
-    });
-    if (res.code === 200) {
-      const r = res.data;
-      ElMessage.success(`已录入并判定：${r.statusText}${r.violatedRules ? '（' + r.violatedRules + '）' : ''}`);
-      inputVisible.value = false;
-      activeTab.value = 'record';
-      loadRecords();
-      loadStats();
-    } else
-      ElMessage.error(res.message || '录入失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('录入失败');
-  } finally {
-    inputLoading.value = false;
-  }
+const onInputSaved = () => {
+  activeTab.value = 'record';
+  loadRecords();
+  loadStats();
 };
 // ---------------- 记录 ----------------
 const recLoading = ref(false);
@@ -484,38 +341,13 @@ const resetRec = () => {
 // 失控处理
 const handleVisible = ref(false);
 const handleRow = ref(null);
-const handleForm = reactive({handleCause: '', handleMeasure: ''});
-const handleLoading = ref(false);
 const openHandle = (row) => {
   handleRow.value = row;
-  Object.assign(handleForm, {handleCause: row.handleCause || '', handleMeasure: row.handleMeasure || ''});
   handleVisible.value = true;
 };
-const saveHandle = async () => {
-  if (!handleForm.handleCause.trim() || !handleForm.handleMeasure.trim()) {
-    ElMessage.warning('失控原因与纠正措施必填');
-    return;
-  }
-  handleLoading.value = true;
-  try {
-    const res = await qcHandle({
-      recordId: handleRow.value.id,
-      handleCause: handleForm.handleCause.trim(),
-      handleMeasure: handleForm.handleMeasure.trim()
-    });
-    if (res.code === 200) {
-      ElMessage.success('已处理，待第二人复核');
-      handleVisible.value = false;
-      loadRecords();
-      loadStats();
-    } else
-      ElMessage.error(res.message || '处理失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('处理失败');
-  } finally {
-    handleLoading.value = false;
-  }
+const onHandleSaved = () => {
+  loadRecords();
+  loadStats();
 };
 const doReview = (row) => {
   qcReview(row.id).then((res) => {

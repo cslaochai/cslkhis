@@ -92,44 +92,7 @@
       </div>
     </el-card>
 
-    <el-dialog v-model="detailVisible" destroy-on-close title="发票详情" width="640px">
-      <div v-loading="detailLoading" class="space-y-4 text-sm">
-        <div class="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 p-4">
-          <div><span class="text-slate-400">发票号：</span><span
-              class="font-mono text-slate-700">{{ detail?.invoiceNo || '—' }}</span></div>
-          <div><span class="text-slate-400">发票类型：</span><span
-              class="text-slate-700">{{ invoiceTypeText(detail?.invoiceType) }}</span></div>
-          <div><span class="text-slate-400">患者：</span><span class="text-slate-700">{{
-              detail?.patientName || '—'
-            }}</span></div>
-          <div><span class="text-slate-400">患者号：</span><span class="text-slate-700">{{
-              detail?.patientNo || '—'
-            }}</span></div>
-          <div><span class="text-slate-400">收费单号：</span><span
-              class="font-mono text-slate-700">{{ detail?.chargeNo || '—' }}</span></div>
-          <div><span class="text-slate-400">金额：</span><span
-              class="font-semibold text-slate-800">¥{{ formatMoney(detail?.totalAmount) }}</span></div>
-          <div><span class="text-slate-400">状态：</span><span
-              class="text-slate-700">{{ invoiceStatusText(detail?.invoiceStatus) }}</span></div>
-          <div><span class="text-slate-400">开票时间：</span><span class="text-slate-700">{{
-              detail?.invoiceTime || '—'
-            }}</span></div>
-          <div><span class="text-slate-400">打印时间：</span><span class="text-slate-700">{{
-              detail?.printTime || '—'
-            }}</span></div>
-          <div><span class="text-slate-400">作废时间：</span><span class="text-slate-700">{{
-              detail?.voidTime || '—'
-            }}</span></div>
-        </div>
-        <div v-if="detail?.voidReason" class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-rose-700">
-          作废原因：{{ detail.voidReason }}
-        </div>
-        <div v-if="detail?.electronicUrl" class="rounded-lg border border-slate-200 p-3">
-          电子发票地址：<a :href="detail.electronicUrl" class="text-[#1269B5] hover:underline"
-                          target="_blank">{{ detail.electronicUrl }}</a>
-        </div>
-      </div>
-    </el-dialog>
+    <InvoiceDetail v-model="detailVisible" :id="detailRow?.id" :row="detailRow"/>
   </div>
 </template>
 
@@ -137,11 +100,12 @@
 import {onMounted, reactive, ref} from 'vue';
 import {CircleClose, Printer, Refresh, Search, View} from '@element-plus/icons-vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
-import {getInvoiceDetail, getInvoiceList, printInvoice, voidInvoice} from '@/api/invoice';
+import {getInvoiceList, printInvoice, voidInvoice} from '@/api/invoice';
 import {INVOICE_STATUS_OPTIONS, invoiceStatusTagClass, invoiceStatusText, invoiceTypeText,} from '@/lib/invoiceStatus';
 import {formatMoney} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import InvoiceDetail from './InvoiceDetail.vue';
 // 「加载中 ≠ 没有」：初值 true，未加载完不显示「暂无数据」
 const loading = ref(true);
 const rows = ref([]);
@@ -153,8 +117,7 @@ const pagination = reactive({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0})
 // 两卡式列表页：表格只设最大高度，超高内部滚动（口径参照 views/system/user/UserView.vue）
 const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight();
 const detailVisible = ref(false);
-const detailLoading = ref(false);
-const detail = ref(null);
+const detailRow = ref(null);
 
 async function loadList() {
   loading.value = true;
@@ -199,20 +162,9 @@ function handleCurrentChange(page) {
   loadList();
 }
 
-async function openDetail(row) {
+function openDetail(row) {
+  detailRow.value = row;
   detailVisible.value = true;
-  detailLoading.value = true;
-  detail.value = row;
-  try {
-    const res = await getInvoiceDetail(row.id);
-    if (res.data)
-      detail.value = res.data;
-  } catch (e) {
-    // 详情失败保留列表行，但要明确告知，不能静默
-    ElMessage.warning(e?.message || '获取发票详情失败，已展示列表数据');
-  } finally {
-    detailLoading.value = false;
-  }
 }
 
 async function handlePrint(row) {

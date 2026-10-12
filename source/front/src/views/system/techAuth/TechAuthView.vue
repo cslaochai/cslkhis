@@ -194,65 +194,20 @@
       </el-tabs>
     </div>
 
-    <!-- ============ 登记 / 修改弹框 ============ -->
-    <el-dialog v-model="editVisible" :title="editTitle" data-testid="ta-edit-dialog" width="680px">
-      <el-form :model="form" label-width="96px">
-        <el-form-item label="被授权人" required>
-          <el-select v-model="form.employeeId" :disabled="!!form.id" :fit-input-width="false" class="!w-full"
-                     filterable placeholder="搜索并选择院内员工">
-            <el-option v-for="e in employeeOptions" :key="e.id" :label="e.label" :value="e.id"/>
-          </el-select>
-        </el-form-item>
-        <div class="grid grid-cols-2 gap-x-4">
-          <el-form-item label="授权类别" required>
-            <el-select v-model="form.authCategory" :fit-input-width="false" class="!w-full">
-              <el-option v-for="d in categoryOptions" :key="d.dictValue" :label="d.dictLabel"
-                         :value="Number(d.dictValue)"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="级别上限" required>
-            <el-select v-model="form.techLevel" class="!w-full">
-              <el-option v-for="d in levelOptions" :key="d.dictValue" :label="d.dictLabel"
-                         :value="Number(d.dictValue)"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="授权方式">
-            <el-select v-model="form.authType" :fit-input-width="false" class="!w-full">
-              <el-option v-for="d in authTypeOptions" :key="d.dictValue" :label="d.dictLabel"
-                         :value="Number(d.dictValue)"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="限定术式">
-            <el-input v-model="form.itemScope" placeholder="术式编码，逗号分隔；留空=不限"/>
-          </el-form-item>
-          <el-form-item label="生效日期" required>
-            <el-date-picker v-model="form.validFrom" :clearable="false" class="!w-full" placeholder="yyyy-MM-dd"
-                            type="date" value-format="YYYY-MM-DD"/>
-          </el-form-item>
-          <el-form-item label="有效期至">
-            <el-date-picker v-model="form.validUntil" :disabled="indefinite" class="!w-full" placeholder="yyyy-MM-dd"
-                            type="date" value-format="YYYY-MM-DD"/>
-          </el-form-item>
-        </div>
-        <el-checkbox v-model="indefinite" class="mb-3">长期有效（不过期）</el-checkbox>
-        <el-form-item label="授权依据">
-          <el-input v-model="form.authBasis" :rows="2" placeholder="技术准入评价结论 / 培训考核 / 累计操作例数等，审批时填即可"
-                    type="textarea"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="form.remark" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button :loading="editLoading" type="primary" @click="handleSave">确定</el-button>
-      </template>
-    </el-dialog>
+    <!-- ============ 登记 / 修改弹框（表单逻辑在 TechAuthEdit.vue，页面只控显隐与传行） ============ -->
+    <TechAuthEdit
+        v-model="editVisible"
+        :auth-type-options="authTypeOptions"
+        :category-options="categoryOptions"
+        :level-options="levelOptions"
+        :row="editRow"
+        @saved="loadList"
+    />
   </div>
 </template>
 
 <script setup>
-import {computed, onMounted, ref} from 'vue';
+import {onMounted, ref} from 'vue';
 import {Check, CircleClose, Close, Delete, Edit, Plus, Refresh, Search} from '@element-plus/icons-vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {
@@ -263,11 +218,10 @@ import {
   getTechAuthListPage,
   getTechAuthOverrideListPage,
   revokeTechAuth,
-  techAuthUpsert,
 } from '@/api/employeeTechAuth';
-import {getEmployeeList} from '@/api/system';
 import {loadDictDataMap} from '@/lib/dict-cache';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+import TechAuthEdit from './TechAuthEdit.vue';
 
 const activeTab = ref('ledger');
 const loading = ref(false);
@@ -295,12 +249,6 @@ const levelColor = {
   4: 'bg-rose-100 text-rose-700',
 };
 const pillClass = (map, v) => (v != null && map[v]) || 'bg-slate-100 text-slate-500';
-// ========== 医生（员工）下拉：授权只能授给院内员工 ==========
-const employees = ref([]);
-const employeeOptions = computed(() => employees.value.filter((e) => e.status === 1).map((e) => ({
-  id: String(e.id),
-  label: `${e.empName}　${e.deptName || ''}　${e.title || ''}`,
-})));
 // ========== 台账 ==========
 const list = ref([]);
 const filters = ref({
@@ -341,65 +289,16 @@ const resetFilters = () => {
   loadList();
 };
 // ========== 新增 / 编辑 ==========
+// 表单状态与提交整体搬进 TechAuthEdit.vue，这里只控显隐与传行
 const editVisible = ref(false);
-const editLoading = ref(false);
-const editTitle = ref('登记技术授权');
-const emptyForm = () => ({
-  id: null,
-  employeeId: '',
-  authCategory: 1,
-  techLevel: 2,
-  authType: 1,
-  itemScope: '',
-  authBasis: '',
-  validFrom: '',
-  validUntil: '',
-  remark: '',
-});
-const form = ref(emptyForm());
-const indefinite = ref(false);
+const editRow = ref(null);
 const openCreate = () => {
-  form.value = emptyForm();
-  indefinite.value = false;
-  editTitle.value = '登记技术授权';
+  editRow.value = null;
   editVisible.value = true;
 };
 const openEdit = (row) => {
-  form.value = {
-    id: row.id,
-    employeeId: String(row.employeeId),
-    authCategory: row.authCategory,
-    techLevel: row.techLevel,
-    authType: row.authType || 1,
-    itemScope: row.itemScope || '',
-    authBasis: row.authBasis || '',
-    validFrom: row.validFrom || '',
-    validUntil: row.validUntil || '',
-    remark: row.remark || '',
-  };
-  indefinite.value = !row.validUntil;
-  editTitle.value = `修改授权 - ${row.employeeName}`;
+  editRow.value = row;
   editVisible.value = true;
-};
-const handleSave = async () => {
-  if (!form.value.employeeId)
-    return ElMessage.warning('请选择被授权员工');
-  if (!form.value.validFrom)
-    return ElMessage.warning('生效日期不能为空');
-  editLoading.value = true;
-  try {
-    await techAuthUpsert({
-      ...form.value,
-      validUntil: indefinite.value ? null : (form.value.validUntil || null),
-    });
-    ElMessage.success('保存成功');
-    editVisible.value = false;
-    loadList();
-  } catch (e) {
-    ElMessage.error(e?.message || '保存失败');
-  } finally {
-    editLoading.value = false;
-  }
 };
 // ========== 审批 / 驳回 / 收回 / 删除 ==========
 const handleApprove = async (row, approved) => {
@@ -530,12 +429,6 @@ onMounted(async () => {
     overrideStatusOptions.value = map.his_tech_override_status || [];
   } catch (e) {
     console.error('加载授权字典失败:', e);
-  }
-  try {
-    const res = await getEmployeeList({status: 1});
-    employees.value = res.data?.records || res.data || [];
-  } catch (e) {
-    console.error('加载员工列表失败:', e);
   }
 });
 </script>

@@ -135,162 +135,37 @@
     </el-card>
 
     <!-- 新增库存弹窗（从药品字典选药 + 批次入库） -->
-    <el-dialog v-model="showAddDialog" destroy-on-close title="新增库存（选择药品批次入库）" width="640px">
-      <el-form :model="addForm" label-position="top">
-        <el-form-item label="药品（来自药品字典）" required>
-          <el-select
-              v-model="addForm.drugId"
-              class="w-full"
-              filterable
-              placeholder="搜索或选择药品"
-              @change="handleDrugChange"
-          >
-            <el-option
-                v-for="d in drugOptions"
-                :key="d.id"
-                :label="`${d.drugName}（${d.specification || '—'}）`"
-                :value="d.id"
-            >
-              <span>{{ d.drugName }}</span>
-              <span class="text-xs text-slate-400 ml-2">{{ d.drugCode }} / {{
-                  d.specification || '—'
-                }} / ¥{{ d.retailPrice }}</span>
-            </el-option>
-          </el-select>
-        </el-form-item>
-        <div v-if="selectedDrug" class="grid grid-cols-3 gap-4 mb-4">
-          <div class="rounded bg-slate-50 p-2.5">
-            <p class="text-xs text-slate-500">规格</p>
-            <p class="text-sm font-medium text-slate-900">{{ selectedDrug.specification || '—' }}</p>
-          </div>
-          <div class="rounded bg-slate-50 p-2.5">
-            <p class="text-xs text-slate-500">单位</p>
-            <p class="text-sm font-medium text-slate-900">{{ selectedDrug.unit || '—' }}</p>
-          </div>
-          <div class="rounded bg-slate-50 p-2.5">
-            <p class="text-xs text-slate-500">字典零售价</p>
-            <p class="text-sm font-medium text-slate-900">¥{{ selectedDrug.retailPrice ?? '—' }}</p>
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="批号" required>
-            <el-input v-model="addForm.batchNo" placeholder="生产批号"/>
-          </el-form-item>
-          <el-form-item label="有效期" required>
-            <el-date-picker v-model="addForm.expiryDate" class="w-full" placeholder="有效期至" type="date"
-                            value-format="YYYY-MM-DD"/>
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-3 gap-4">
-          <el-form-item label="生产日期">
-            <el-date-picker v-model="addForm.productionDate" class="w-full" placeholder="生产日期"
-                            type="date" value-format="YYYY-MM-DD"/>
-          </el-form-item>
-          <el-form-item label="入库数量" required>
-            <el-input-number v-model="addForm.quantity" :min="1" class="w-full"/>
-          </el-form-item>
-          <el-form-item label="成本价(元)" required>
-            <el-input-number v-model="addForm.costPrice" :min="0" :precision="2" class="w-full"/>
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-3 gap-4">
-          <el-form-item label="存放位置">
-            <el-input v-model="addForm.location" placeholder="货位，如 A-01-01"/>
-          </el-form-item>
-          <el-form-item label="库存地点" required>
-            <el-select v-model="addForm.stockRoom" :fit-input-width="false" data-testid="stock-room-select">
-              <el-option v-for="d in roomDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="供货商">
-            <el-select
-                v-model="addForm.supplierId"
-                :fit-input-width="false"
-                clearable
-                data-testid="stock-supplier-select"
-                filterable
-                placeholder="挂上档案才能被供应商退货选中"
-                @change="onSupplierPick"
-            >
-              <el-option v-for="s in suppliers" :key="s.supplierId" :label="s.supplierName" :value="s.supplierId"/>
-            </el-select>
-          </el-form-item>
-        </div>
-        <el-alert :closable="false" class="!mt-1" show-icon type="info">
-          <template #title>
-            「药房」的批次才能被发药/锁库；落在「药库」的批次要先在「药品调拨」下拨到药房。
-            供货商留空 = 这一批退不了供应商（历史数据里那列文本多是生产厂家名，不能当退货对象）。
-          </template>
-        </el-alert>
-      </el-form>
-      <template #footer>
-        <el-button @click="showAddDialog = false">取消</el-button>
-        <el-button v-perm="'pharmacy:stock:add'" type="primary" @click="handleAddSubmit">确认新增</el-button>
-      </template>
-    </el-dialog>
+    <PharmacyStockAdd v-model="showAddDialog" :room-dict="roomDict" @saved="loadData"/>
 
     <!-- 入库/出库弹窗 -->
-    <el-dialog v-model="showInOutDialog" :title="inOutType === 'in' ? '入库' : '出库'" destroy-on-close width="400px">
-      <div class="space-y-4 py-2">
-        <div class="rounded-lg bg-slate-50 p-3">
-          <p class="text-sm text-slate-500">药品</p>
-          <p class="font-medium text-slate-900">{{ inOutForm.drugName }}</p>
-        </div>
-        <div class="rounded-lg bg-slate-50 p-3">
-          <p class="text-sm text-slate-500">当前库存</p>
-          <p class="font-medium text-slate-900">{{ inOutForm.currentQty }}</p>
-        </div>
-        <el-form-item :label="inOutType === 'in' ? '入库数量' : '出库数量'" class="!mb-0">
-          <el-input-number v-model="inOutForm.quantity" :max="inOutType === 'out' ? inOutForm.currentQty : 9999"
-                           :min="1" class="w-full"/>
-        </el-form-item>
-      </div>
-      <template #footer>
-        <el-button @click="showInOutDialog = false">取消</el-button>
-        <el-button v-perm="'pharmacy:stock:edit'" :type="inOutType === 'in' ? 'success' : 'warning'"
-                   @click="handleInOutSubmit">
-          {{ inOutType === 'in' ? '确认入库' : '确认出库' }}
-        </el-button>
-      </template>
-    </el-dialog>
+    <PharmacyStockInOut v-model="showInOutDialog" :row="inOutRow" :type="inOutType" @saved="loadData"/>
   </div>
 </template>
 
 <script setup>
 import {computed, onMounted, ref} from 'vue';
 import {ArrowDown, ArrowUp, Box, Money, Plus, Refresh, Search, Tickets, Warning} from '@element-plus/icons-vue';
-import {ElMessage} from 'element-plus';
-import {createStock, getStockList, inboundStock, outboundStock} from '@/api/pharmacy';
-import {getSupplierSelectList} from '@/api/purchase';
-import {getDictDataMapList, getDrugSelectList} from '@/api/system';
+import {getStockList} from '@/api/pharmacy';
+import {getDictDataMapList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import PharmacyStockAdd from './PharmacyStockAdd.vue';
+import PharmacyStockInOut from './PharmacyStockInOut.vue';
 
 const loading = ref(false);
 const medicines = ref([]);
-const selectedMed = ref(null);
 const searchTerm = ref('');
 const statusFilter = ref('all');
 /** 库位筛选（1-药库 2-药房，sql/154）；'all' = 两层都看，不传给后端 */
 const roomFilter = ref('all');
-const activeTab = ref('stock');
 const roomDict = ref([]);
-const suppliers = ref([]);
 const loadDicts = async () => {
   try {
     const res = await getDictDataMapList(DICT_TYPE.STOCK_ROOM);
     roomDict.value = res?.data?.[DICT_TYPE.STOCK_ROOM] || [];
   } catch (e) {
     console.error('加载库位字典失败', e);
-  }
-};
-const loadSuppliers = async () => {
-  try {
-    const res = await getSupplierSelectList();
-    suppliers.value = res?.data || [];
-  } catch (e) {
-    console.error('加载供应商下拉失败', e);
   }
 };
 const pagination = ref({
@@ -300,49 +175,12 @@ const pagination = ref({
 });
 // 两卡式列表页：表格只设最大高度，超高内部滚动（口径参照 views/system/user/UserView.vue）
 const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight();
-// 新增库存（从药品字典选药 + 批次入库）弹窗
+// 新增库存弹窗（选药 + 批次入库的子组件）
 const showAddDialog = ref(false);
-const drugOptions = ref([]);
-const selectedDrug = ref(null);
-const addForm = ref({
-  drugId: null,
-  batchNo: '',
-  productionDate: '',
-  expiryDate: '',
-  quantity: 0,
-  costPrice: 0,
-  location: '',
-  /** 库位：手工建批默认落在药房（与后端默认一致）；要进药库就选 1，之后走调拨下拨 */
-  stockRoom: 2,
-  supplierId: null,
-  supplier: '',
-});
-/** 选供货商：同时把名字快照进 supplier 文本列（历史页面读的是这一列，不能只存 ID） */
-const onSupplierPick = (supplierId) => {
-  const hit = suppliers.value.find((s) => s.supplierId === supplierId);
-  addForm.value.supplier = hit ? hit.supplierName : '';
-};
-// 加载药品字典下拉（库存的新增以 sys_drug 为唯一药品来源）
-const loadDrugOptions = async () => {
-  try {
-    const res = await getDrugSelectList();
-    drugOptions.value = res.data || [];
-  } catch (error) {
-    console.error('加载药品字典失败:', error);
-  }
-};
-const handleDrugChange = (drugId) => {
-  selectedDrug.value = drugOptions.value.find((d) => d.id === drugId) || null;
-};
 // 入库/出库弹窗
 const showInOutDialog = ref(false);
 const inOutType = ref('in');
-const inOutForm = ref({
-  stockId: null,
-  drugName: '',
-  currentQty: 0,
-  quantity: 1,
-});
+const inOutRow = ref(null);
 const statusColors = {
   1: 'bg-emerald-100 text-emerald-700 border-emerald-200',
   2: 'bg-amber-100 text-amber-700 border-amber-200',
@@ -400,74 +238,20 @@ const handleCurrentChange = (val) => {
   pagination.value.pageNum = val;
   loadData();
 };
-// 新增库存
+// 新增库存（打开子组件弹窗，弹窗内自行加载下拉并 reset 表单）
 const handleAdd = () => {
-  addForm.value = {
-    drugId: null, batchNo: '', productionDate: '', expiryDate: '',
-    quantity: 0, costPrice: 0, location: '', stockRoom: 2, supplierId: null, supplier: '',
-  };
-  selectedDrug.value = null;
-  if (!drugOptions.value.length)
-    loadDrugOptions();
-  if (!suppliers.value.length)
-    loadSuppliers();
   showAddDialog.value = true;
-};
-const handleAddSubmit = async () => {
-  if (!addForm.value.drugId) {
-    ElMessage.warning('请从药品字典选择药品');
-    return;
-  }
-  if (!addForm.value.batchNo || !addForm.value.expiryDate) {
-    ElMessage.warning('请填写批号和有效期');
-    return;
-  }
-  if (addForm.value.quantity <= 0) {
-    ElMessage.warning('库存数量必须大于0');
-    return;
-  }
-  try {
-    await createStock(addForm.value);
-    ElMessage.success('新增成功');
-    showAddDialog.value = false;
-    loadData();
-  } catch (error) {
-    ElMessage.error(error.message || '新增失败');
-  }
 };
 // 入库/出库
 const handleInbound = (row) => {
   inOutType.value = 'in';
-  inOutForm.value = {stockId: row.id, drugName: row.drugName, currentQty: row.quantity, quantity: 1};
+  inOutRow.value = row;
   showInOutDialog.value = true;
 };
 const handleOutbound = (row) => {
   inOutType.value = 'out';
-  inOutForm.value = {stockId: row.id, drugName: row.drugName, currentQty: row.quantity, quantity: 1};
+  inOutRow.value = row;
   showInOutDialog.value = true;
-};
-const handleInOutSubmit = async () => {
-  if (!inOutForm.value.stockId || inOutForm.value.quantity <= 0) {
-    ElMessage.warning('请输入有效数量');
-    return;
-  }
-  try {
-    if (inOutType.value === 'in') {
-      await inboundStock(inOutForm.value.stockId, inOutForm.value.quantity);
-      ElMessage.success('入库成功');
-    } else {
-      if (inOutForm.value.quantity > inOutForm.value.currentQty) {
-        ElMessage.warning('出库数量不能大于当前库存');
-        return;
-      }
-      await outboundStock(inOutForm.value.stockId, inOutForm.value.quantity);
-      ElMessage.success('出库成功');
-    }
-    showInOutDialog.value = false;
-    loadData();
-  } catch (error) {
-    ElMessage.error(error.message || '操作失败');
-  }
 };
 onMounted(() => {
   loadDicts();

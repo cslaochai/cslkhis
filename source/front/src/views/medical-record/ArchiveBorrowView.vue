@@ -131,58 +131,7 @@
     </el-card>
 
     <!-- 申请弹窗 -->
-    <el-dialog v-model="applyVisible" data-testid="ab-apply-dialog" title="借阅/复印申请" width="560px">
-      <el-form label-width="100px">
-        <el-form-item label="选择病案" required>
-          <el-select
-              v-model="form.archiveId"
-              :fit-input-width="false"
-              :loading="archiveSearching"
-              :remote-method="searchArchives"
-              data-testid="ab-form-archive"
-              filterable
-              placeholder="输入病历号/患者姓名搜索（已归档/已封存）"
-              remote
-              style="width: 100%"
-              @change="onArchiveChange"
-          >
-            <el-option
-                v-for="a in archiveOptions"
-                :key="a.id"
-                :label="`${a.recordNo} / ${a.patientName}（${a.deptName || '—'}）`"
-                :value="String(a.id)"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="类型" required>
-          <el-radio-group v-model="form.borrowType" data-testid="ab-form-type">
-            <el-radio :value="1">借阅（原件，需应还日期）</el-radio>
-            <el-radio :value="2">复印</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item v-if="form.borrowType === 1" label="应归还日期" required>
-          <el-date-picker
-              v-model="form.expectReturnDate"
-              :disabled-date="(d: Date) => d.getTime() < Date.now() - 86400000"
-              :fit-input-width="false"
-              placeholder="选择应归还日期"
-              style="width: 100%"
-              type="date"
-              value-format="YYYY-MM-DD"
-          />
-        </el-form-item>
-        <el-form-item label="用途" required>
-          <el-input v-model="form.purpose" :rows="3" data-testid="ab-form-purpose" maxlength="500"
-                    placeholder="病历讨论 / 医保核查 / 司法取证 / 科研等" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="applyVisible = false">取消</el-button>
-        <el-button v-perm="'emr:archiveBorrow:add'" :loading="saving" data-testid="ab-apply-save" type="primary"
-                   @click="apply">提交申请
-        </el-button>
-      </template>
-    </el-dialog>
+    <ArchiveBorrowEdit v-model="applyVisible" @saved="onApplySaved"/>
 
     <!-- 审核弹窗 -->
     <el-dialog v-model="auditVisible" :title="`审核 - ${auditRow?.borrowNo || ''}`" data-testid="ab-audit-dialog"
@@ -219,44 +168,7 @@
     </el-dialog>
 
     <!-- 详情弹窗 -->
-    <el-dialog v-model="detailVisible" :title="`借阅/复印单 ${detail?.borrowNo || ''}`" data-testid="ab-detail-dialog"
-               width="640px">
-      <template v-if="detail">
-        <el-descriptions :column="2" border size="small">
-          <el-descriptions-item label="类型">
-            <el-tag :type="typeTagType(detail.borrowType)">{{ typeText(detail.borrowType) }}</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="状态">
-            <el-tag :type="statusTagType(detail.status)">{{ statusText(detail.status) }}</el-tag>
-            <el-tag v-if="isOverdue(detail)" class="ml-1" size="small" type="danger">超期</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="病历号">{{ detail.recordNo || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="患者">{{ detail.patientName || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="科室">{{ detail.deptName || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="应还日期">{{ detail.expectReturnDate || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="申请人">{{ detail.applicantName || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="申请时间">{{
-              (detail.createTime || '').replace('T', ' ').slice(0, 19)
-            }}
-          </el-descriptions-item>
-          <el-descriptions-item :span="2" label="用途">{{ detail.purpose }}</el-descriptions-item>
-          <el-descriptions-item :span="2" label="审核">
-            <template v-if="detail.auditTime">
-              {{ detail.auditByName }} · {{
-                (detail.auditTime || '').replace('T', ' ').slice(0, 19)
-              }}<br/>{{ detail.auditRemark || '（无意见）' }}
-            </template>
-            <template v-else>—</template>
-          </el-descriptions-item>
-          <el-descriptions-item label="借出时间">
-            {{ detail.lendTime ? (detail.lendTime || '').replace('T', ' ').slice(0, 19) : '—' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="归还时间">
-            {{ detail.returnTime ? (detail.returnTime || '').replace('T', ' ').slice(0, 19) : '—' }}
-          </el-descriptions-item>
-        </el-descriptions>
-      </template>
-    </el-dialog>
+    <ArchiveBorrowDetail v-model="detailVisible" :id="detailId" :status-dict="statusDict" :type-dict="typeDict"/>
   </div>
 </template>
 
@@ -265,22 +177,21 @@ import {onMounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {Bell, Plus, Refresh, Search} from '@element-plus/icons-vue';
 import {
-  applyBorrow,
   auditBorrow,
   deleteBorrow,
-  getBorrowDetail,
   getBorrowList,
   getBorrowStats,
   notifyBorrowOverdue,
   returnBorrow,
 } from '@/api/archiveBorrow';
-import {getArchiveList} from '@/api/archive';
 import {getDictDataMapList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {isOverdue, statusTagType, typeTagType} from '@/lib/archiveBorrow';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import ArchiveBorrowEdit from './ArchiveBorrowEdit.vue';
+import ArchiveBorrowDetail from './ArchiveBorrowDetail.vue';
 
 const loading = ref(true);
 const rows = ref([]);
@@ -375,90 +286,15 @@ const runOverdueNotify = async () => {
   }
 };
 // ------------------------------------------------------------------
-// 申请弹窗
+// 申请弹窗（表单与提交逻辑在 ArchiveBorrowEdit.vue）
 // ------------------------------------------------------------------
 const applyVisible = ref(false);
-const saving = ref(false);
-const form = reactive({
-  archiveId: null,
-  archiveLabel: '',
-  archiveStatus: null,
-  borrowType: 1,
-  purpose: '',
-  expectReturnDate: '',
-});
-const archiveOptions = ref([]);
-const archiveSearching = ref(false);
-let archiveSearchTimer = null;
-/** 远程搜病案（已归档/已封存；待归档借不了也复不了印） */
-const searchArchives = (kw) => {
-  if (archiveSearchTimer)
-    clearTimeout(archiveSearchTimer);
-  archiveSearchTimer = setTimeout(async () => {
-    archiveSearching.value = true;
-    try {
-      const res = await getArchiveList({archiveStatus: null, keyword: kw || undefined, pageNum: 1, pageSize: 20});
-      if (res.code === 200) {
-        // 只放行可流通的：2 已归档 / 3 已封存
-        archiveOptions.value = (res.data?.records || []).filter((a) => Number(a.archiveStatus) === 2 || Number(a.archiveStatus) === 3);
-      }
-    } catch (e) {
-      console.error('搜索病案失败', e);
-    } finally {
-      archiveSearching.value = false;
-    }
-  }, 250);
-};
-const onArchiveChange = (id) => {
-  const hit = archiveOptions.value.find(a => String(a.id) === String(id));
-  form.archiveStatus = hit ? Number(hit.archiveStatus) : null;
-};
 const openApply = () => {
-  form.archiveId = null;
-  form.archiveLabel = '';
-  form.archiveStatus = null;
-  form.borrowType = 1;
-  form.purpose = '';
-  form.expectReturnDate = '';
-  archiveOptions.value = [];
   applyVisible.value = true;
-  searchArchives('');
 };
-const apply = async () => {
-  if (!form.archiveId) {
-    ElMessage.warning('请选择病案');
-    return;
-  }
-  if (!form.purpose.trim()) {
-    ElMessage.warning('请填写用途');
-    return;
-  }
-  if (form.borrowType === 1 && !form.expectReturnDate) {
-    ElMessage.warning('借阅必须选择应归还日期');
-    return;
-  }
-  saving.value = true;
-  try {
-    const res = await applyBorrow({
-      archiveId: form.archiveId,
-      borrowType: form.borrowType,
-      purpose: form.purpose.trim(),
-      expectReturnDate: form.borrowType === 1 ? form.expectReturnDate : undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success('申请成功，等待病案室审核');
-      applyVisible.value = false;
-      loadList();
-      loadStats();
-    } else {
-      ElMessage.error(res.message || '申请失败');
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('申请失败');
-  } finally {
-    saving.value = false;
-  }
+const onApplySaved = () => {
+  loadList();
+  loadStats();
 };
 // ------------------------------------------------------------------
 // 审核弹窗（通过 / 拒绝共用）
@@ -538,23 +374,13 @@ const remove = async (row) => {
   }
 };
 // ------------------------------------------------------------------
-// 详情弹窗
+// 详情弹窗（取数与渲染在 ArchiveBorrowDetail.vue）
 // ------------------------------------------------------------------
 const detailVisible = ref(false);
-const detail = ref(null);
-const openDetail = async (row) => {
-  try {
-    const res = await getBorrowDetail(row.id);
-    if (res.code === 200) {
-      detail.value = res.data;
-      detailVisible.value = true;
-    } else {
-      ElMessage.error(res.message || '查询详情失败');
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('查询详情失败');
-  }
+const detailId = ref('');
+const openDetail = (row) => {
+  detailId.value = row.id;
+  detailVisible.value = true;
 };
 onMounted(() => {
   loadDicts();

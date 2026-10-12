@@ -243,133 +243,18 @@
       </el-tabs>
     </div>
 
-    <!-- 入库弹窗 -->
-    <el-dialog v-model="inVisible" title="血袋入库登记" width="680px">
-      <el-form label-width="100px">
-        <div class="grid grid-cols-2 gap-x-4">
-          <el-form-item label="血袋号" required>
-            <el-input v-model="inForm.bagNo" placeholder="全局唯一"/>
-          </el-form-item>
-          <el-form-item label="献血码">
-            <el-input v-model="inForm.donorNo"/>
-          </el-form-item>
-          <el-form-item label="血型" required>
-            <el-select v-model="inForm.bloodType" style="width: 100%">
-              <el-option v-for="d in bloodTypeDict" :key="d.dictValue" :label="d.dictLabel"
-                         :value="Number(d.dictValue)"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="Rh">
-            <el-radio-group v-model="inForm.rhType">
-              <el-radio v-for="d in rhDict" :key="d.dictValue" :value="Number(d.dictValue)">{{ d.dictLabel }}</el-radio>
-            </el-radio-group>
-          </el-form-item>
-          <el-form-item label="血液成分" required>
-            <el-select v-model="inForm.componentType" style="width: 100%">
-              <el-option v-for="d in componentDict" :key="d.dictValue" :label="d.dictLabel"
-                         :value="Number(d.dictValue)"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="血量(ml)">
-            <el-input-number v-model="inForm.volume" :min="0" style="width: 100%"/>
-          </el-form-item>
-          <el-form-item label="单位(U)">
-            <el-input-number v-model="inForm.unitAmount" :min="0" :precision="2" style="width: 100%"/>
-          </el-form-item>
-          <el-form-item label="存放位置">
-            <el-input v-model="inForm.storageLoc" placeholder="储血冰箱A/2层"/>
-          </el-form-item>
-          <el-form-item label="采集日期">
-            <el-date-picker v-model="inForm.collectDate" style="width: 100%" type="date" value-format="YYYY-MM-DD"/>
-          </el-form-item>
-          <el-form-item label="失效日期">
-            <el-date-picker v-model="inForm.expireDate" style="width: 100%" type="date" value-format="YYYY-MM-DD"/>
-          </el-form-item>
-          <el-form-item label="血液来源">
-            <el-select v-model="inForm.sourceType" style="width: 100%">
-              <el-option v-for="d in sourceDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="来源单位/人">
-            <el-input v-model="inForm.sourceName"/>
-          </el-form-item>
-        </div>
-        <el-form-item label="血型复核">
-          <el-radio-group v-model="inForm.aboVerify">
-            <el-radio :value="0">未复核</el-radio>
-            <el-radio :value="1">已复核</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="inVisible = false">取消</el-button>
-        <el-button v-perm="'medtech:bloodBank:add'" :loading="inLoading" type="primary" @click="saveInbound">入库
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 入库弹窗（表单与提交已拆至 BloodBankInboundAdd.vue） -->
+    <BloodBankInboundAdd v-model="inVisible" :blood-type-dict="bloodTypeDict" :component-dict="componentDict"
+                         :rh-dict="rhDict" @saved="loadInventory(); loadStats()"/>
 
-    <!-- 配血单弹窗 -->
-    <el-dialog v-model="cmVisible" title="新建配血单" width="560px">
-      <el-form label-width="100px">
-        <el-form-item label="患者" required>
-          <patient-select v-model="cmForm.patientId" @select="onCmPatient"/>
-        </el-form-item>
-        <div class="grid grid-cols-2 gap-x-4">
-          <el-form-item label="患者血型" required>
-            <el-select v-model="cmForm.patientBloodType" style="width: 100%">
-              <el-option v-for="d in bloodTypeDict" :key="d.dictValue" :label="d.dictLabel"
-                         :value="Number(d.dictValue)"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="患者 Rh">
-            <el-radio-group v-model="cmForm.patientRhType">
-              <el-radio v-for="d in rhDict" :key="d.dictValue" :value="Number(d.dictValue)">{{ d.dictLabel }}</el-radio>
-            </el-radio-group>
-          </el-form-item>
-        </div>
-        <el-form-item label="血袋号" required>
-          <el-input v-model="cmForm.bagNo" placeholder="从库存台账复制在库血袋号"/>
-        </el-form-item>
-        <el-form-item label="用血申请单号">
-          <el-input v-model="cmForm.applyNo"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="cmVisible = false">取消</el-button>
-        <el-button v-perm="'medtech:bloodBank:add'" :loading="cmLoadingBtn" type="primary" @click="saveCm">创建
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 配血单弹窗（表单与提交已拆至 BloodBankCrossmatchAdd.vue） -->
+    <BloodBankCrossmatchAdd v-model="cmVisible" :blood-type-dict="bloodTypeDict" :rh-dict="rhDict"
+                            @saved="loadCrossmatch(); loadStats()"/>
 
-    <!-- 执行配血弹窗 -->
-    <el-dialog v-model="cmExecVisible" :title="`执行配血：${cmExecRow?.matchNo || ''}`" width="520px">
-      <el-form label-width="90px">
-        <el-form-item label="配血方法">
-          <el-select v-model="cmExecForm.method" style="width: 100%">
-            <el-option v-for="d in cmMethodDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="配血结果">
-          <el-radio-group v-model="cmExecForm.result">
-            <el-radio v-for="d in cmResultDict" :key="d.dictValue" :value="Number(d.dictValue)">{{
-                d.dictLabel
-              }}
-            </el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="补充结论">
-          <el-input v-model="cmExecForm.conclusion" :rows="2" placeholder="ABO/Rh 核对说明由服务端生成，这里补充观察记录"
-                    type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <div class="text-xs text-gray-400 px-6">相合的配血单经第二人复核后，血袋自动置「已预留」；发血时凭预留状态 +
-        申请单号执行。
-      </div>
-      <template #footer>
-        <el-button @click="cmExecVisible = false">取消</el-button>
-        <el-button v-perm="'medtech:bloodBank:edit'" type="primary" @click="saveCmExecute">提交</el-button>
-      </template>
-    </el-dialog>
+    <!-- 执行配血弹窗（表单与提交已拆至 BloodBankCrossmatchExecuteEdit.vue） -->
+    <BloodBankCrossmatchExecuteEdit v-model="cmExecVisible" :cm-method-dict="cmMethodDict"
+                                    :cm-result-dict="cmResultDict" :row="cmExecRow"
+                                    @saved="loadCrossmatch(); loadStats()"/>
   </div>
 </template>
 
@@ -386,13 +271,10 @@ import {ElMessage, ElMessageBox} from 'element-plus';
 import {Refresh, Search} from '@element-plus/icons-vue';
 import {
   bloodCancelReserve,
-  bloodInbound,
   bloodIssue,
   bloodReserve,
   bloodReturn,
   bloodScrap,
-  crossmatchCreate,
-  crossmatchExecute,
   crossmatchVerify,
   crossmatchVoid,
   getBloodInventoryPage,
@@ -401,10 +283,12 @@ import {
   getCrossmatchPage,
 } from '@/api/medicaltech';
 import {getDictDataMapList} from '@/api/system';
-import PatientSelect from '@/components/his/PatientSelect.vue';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
+import BloodBankInboundAdd from './BloodBankInboundAdd.vue';
+import BloodBankCrossmatchAdd from './BloodBankCrossmatchAdd.vue';
+import BloodBankCrossmatchExecuteEdit from './BloodBankCrossmatchExecuteEdit.vue';
 
 const activeTab = ref('inventory');
 // ---------------- 字典 ----------------
@@ -412,7 +296,6 @@ const bloodTypeDict = ref([]);
 const rhDict = ref([]);
 const componentDict = ref([]);
 const invStatusDict = ref([]);
-const sourceDict = ref([]);
 const cmStatusDict = ref([]);
 const cmResultDict = ref([]);
 const cmMethodDict = ref([]);
@@ -420,20 +303,18 @@ const bloodTypeText = (v) => dictLabelText(bloodTypeDict.value, v);
 const rhText = (v) => dictLabelText(rhDict.value, v);
 const componentText = (v) => dictLabelText(componentDict.value, v);
 const invStatusText = (v) => dictLabelText(invStatusDict.value, v);
-const sourceText = (v) => dictLabelText(sourceDict.value, v);
 const cmStatusText = (v) => dictLabelText(cmStatusDict.value, v);
 const cmResultText = (v) => dictLabelText(cmResultDict.value, v);
 const cmMethodText = (v) => dictLabelText(cmMethodDict.value, v);
 const loadDicts = async () => {
   try {
     // ⚠ 后端 getDictDataMapList 一次最多 5 个 type，超了直接报错 —— 分两批
-    const res1 = await getDictDataMapList(`${DICT_TYPE.BLOOD_TYPE},${DICT_TYPE.BLOOD_RH},${DICT_TYPE.BLOOD_COMPONENT},${DICT_TYPE.BLOOD_INVENTORY_STATUS},${DICT_TYPE.BLOOD_SOURCE_TYPE}`);
+    const res1 = await getDictDataMapList(`${DICT_TYPE.BLOOD_TYPE},${DICT_TYPE.BLOOD_RH},${DICT_TYPE.BLOOD_COMPONENT},${DICT_TYPE.BLOOD_INVENTORY_STATUS}`);
     const res2 = await getDictDataMapList(`${DICT_TYPE.CROSSMATCH_STATUS},${DICT_TYPE.CROSSMATCH_RESULT},${DICT_TYPE.CROSSMATCH_METHOD}`);
     bloodTypeDict.value = res1?.data?.[DICT_TYPE.BLOOD_TYPE] || [];
     rhDict.value = res1?.data?.[DICT_TYPE.BLOOD_RH] || [];
     componentDict.value = res1?.data?.[DICT_TYPE.BLOOD_COMPONENT] || [];
     invStatusDict.value = res1?.data?.[DICT_TYPE.BLOOD_INVENTORY_STATUS] || [];
-    sourceDict.value = res1?.data?.[DICT_TYPE.BLOOD_SOURCE_TYPE] || [];
     cmStatusDict.value = res2?.data?.[DICT_TYPE.CROSSMATCH_STATUS] || [];
     cmResultDict.value = res2?.data?.[DICT_TYPE.CROSSMATCH_RESULT] || [];
     cmMethodDict.value = res2?.data?.[DICT_TYPE.CROSSMATCH_METHOD] || [];
@@ -505,52 +386,10 @@ const expireTag = (row) => {
     return 'warning';
   return 'success';
 };
-// 入库
+// 入库（表单与提交已拆至 BloodBankInboundAdd.vue，这里只管开关）
 const inVisible = ref(false);
-const inForm = reactive({
-  bagNo: '', bloodType: null, rhType: 1, componentType: null,
-  volume: null, unitAmount: null, collectDate: '', expireDate: '',
-  sourceType: 1, sourceName: '', donorNo: '', aboVerify: 0, storageLoc: '',
-});
-const inLoading = ref(false);
 const openInbound = () => {
-  Object.assign(inForm, {
-    bagNo: '', bloodType: null, rhType: 1, componentType: null, volume: null, unitAmount: null,
-    collectDate: '', expireDate: '', sourceType: 1, sourceName: '', donorNo: '', aboVerify: 0, storageLoc: '',
-  });
   inVisible.value = true;
-};
-const saveInbound = async () => {
-  if (!inForm.bagNo.trim()) {
-    ElMessage.warning('血袋号必填');
-    return;
-  }
-  if (inForm.bloodType == null || inForm.componentType == null) {
-    ElMessage.warning('血型与血液成分必填');
-    return;
-  }
-  inLoading.value = true;
-  try {
-    const res = await bloodInbound({
-      ...inForm, bagNo: inForm.bagNo.trim(),
-      volume: inForm.volume ?? undefined, unitAmount: inForm.unitAmount ?? undefined,
-      collectDate: inForm.collectDate || undefined, expireDate: inForm.expireDate || undefined,
-      sourceName: inForm.sourceName || undefined, donorNo: inForm.donorNo || undefined,
-      storageLoc: inForm.storageLoc || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success('血袋已入库');
-      inVisible.value = false;
-      loadInventory();
-      loadStats();
-    } else
-      ElMessage.error(res.message || '入库失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('入库失败');
-  } finally {
-    inLoading.value = false;
-  }
 };
 // 袋动作
 const doBagAction = (fn, row, done) => {
@@ -638,89 +477,17 @@ const resetCm = () => {
   Object.assign(cmQuery, {matchNo: '', bagNo: '', patientName: '', status: null, pageNum: 1});
   loadCrossmatch();
 };
+// 新建配血单（表单与提交已拆至 BloodBankCrossmatchAdd.vue，这里只管开关）
 const cmVisible = ref(false);
-const cmForm = reactive({
-  applyNo: '', patientId: null, patientNo: '', patientName: '',
-  patientBloodType: null, patientRhType: 1, bagNo: '',
-});
-const cmLoadingBtn = ref(false);
 const openCmCreate = () => {
-  Object.assign(cmForm, {
-    applyNo: '',
-    patientId: null,
-    patientNo: '',
-    patientName: '',
-    patientBloodType: null,
-    patientRhType: 1,
-    bagNo: ''
-  });
   cmVisible.value = true;
 };
-const onCmPatient = (p) => {
-  cmForm.patientId = p?.id;
-  cmForm.patientName = p?.name || p?.patientName || '';
-  cmForm.patientNo = p?.patientNo || '';
-};
-const saveCm = async () => {
-  if (!cmForm.patientId || !cmForm.patientName.trim()) {
-    ElMessage.warning('请选择患者');
-    return;
-  }
-  if (cmForm.patientBloodType == null) {
-    ElMessage.warning('患者血型必填');
-    return;
-  }
-  if (!cmForm.bagNo.trim()) {
-    ElMessage.warning('血袋号必填');
-    return;
-  }
-  cmLoadingBtn.value = true;
-  try {
-    const res = await crossmatchCreate({
-      applyNo: cmForm.applyNo.trim() || undefined,
-      patientId: cmForm.patientId, patientNo: cmForm.patientNo || undefined,
-      patientName: cmForm.patientName.trim(),
-      patientBloodType: cmForm.patientBloodType, patientRhType: cmForm.patientRhType,
-      bagNo: cmForm.bagNo.trim(),
-    });
-    if (res.code === 200) {
-      ElMessage.success(`配血单 ${res.data?.matchNo || ''} 已创建`);
-      cmVisible.value = false;
-      loadCrossmatch();
-      loadStats();
-    } else
-      ElMessage.error(res.message || '创建失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('创建失败');
-  } finally {
-    cmLoadingBtn.value = false;
-  }
-};
+// 执行配血（表单与提交已拆至 BloodBankCrossmatchExecuteEdit.vue，这里只管开关与行快照）
 const cmExecVisible = ref(false);
 const cmExecRow = ref(null);
-const cmExecForm = reactive({result: 1, method: 2, conclusion: ''});
 const openCmExecute = (row) => {
   cmExecRow.value = row;
-  Object.assign(cmExecForm, {result: 1, method: Number(row.method) || 2, conclusion: ''});
   cmExecVisible.value = true;
-};
-const saveCmExecute = () => {
-  crossmatchExecute({
-    matchId: cmExecRow.value.id, result: cmExecForm.result,
-    method: cmExecForm.method, conclusion: cmExecForm.conclusion.trim() || undefined,
-  }).then((res) => {
-    if (res.code === 200) {
-      ElMessage.success('配血已执行，待第二人复核');
-      cmExecVisible.value = false;
-      loadCrossmatch();
-      loadStats();
-    } else
-      ElMessage.error(res.message || '执行失败');
-  }).catch((e) => {
-    console.error(e);
-    ElMessage.error('执行失败');
-  });
 };
 const doCmVerify = (row) => {
   crossmatchVerify(row.id).then((res) => {

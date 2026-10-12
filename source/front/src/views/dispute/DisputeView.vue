@@ -38,18 +38,18 @@
           </el-form-item>
           <el-form-item label="类型">
             <el-select v-model="query.caseType" clearable placeholder="类型" style="width: 130px">
-              <el-option v-for="d in caseTypeDict" :key="d.dictValue" :label="d.dictLabel"
+              <el-option v-for="d in dicts.caseType" :key="d.dictValue" :label="d.dictLabel"
                          :value="Number(d.dictValue)"/>
             </el-select>
           </el-form-item>
           <el-form-item label="状态">
             <el-select v-model="query.status" clearable placeholder="状态" style="width: 130px">
-              <el-option v-for="d in statusDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
+              <el-option v-for="d in dicts.status" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
             </el-select>
           </el-form-item>
           <el-form-item label="等级">
             <el-select v-model="query.level" clearable placeholder="等级" style="width: 120px">
-              <el-option v-for="d in levelDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
+              <el-option v-for="d in dicts.level" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
             </el-select>
           </el-form-item>
           <el-form-item label="被投诉科室">
@@ -155,231 +155,13 @@
       </div>
     </el-card>
 
-    <!-- 登记 / 修改 -->
-    <el-dialog v-model="formVisible" :close-on-click-modal="true" :title="form.id ? '修改纠纷/投诉' : '登记纠纷/投诉'"
-               width="760px">
-      <el-form label-width="110px" size="small">
-        <el-row :gutter="12">
-          <el-col :span="12">
-            <el-form-item label="类型" required>
-              <el-select v-model="form.caseType" placeholder="请选择" style="width: 100%">
-                <el-option v-for="d in caseTypeDict" :key="d.dictValue" :label="d.dictLabel"
-                           :value="Number(d.dictValue)"/>
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="来源" required>
-              <el-select v-model="form.sourceType" placeholder="请选择" style="width: 100%">
-                <el-option v-for="d in sourceDict" :key="d.dictValue" :label="d.dictLabel"
-                           :value="Number(d.dictValue)"/>
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="12">
-          <el-col :span="12">
-            <el-form-item label="等级">
-              <el-select v-model="form.level" style="width: 100%">
-                <el-option v-for="d in levelDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="被投诉科室">
-              <el-select v-model="form.deptId" clearable filterable placeholder="请选择" style="width: 100%">
-                <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName || d.name" :value="d.id"/>
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="12">
-          <el-col :span="12">
-            <el-form-item label="患者">
-              <PatientSelect :model-value="form.patientId" placeholder="搜索患者（姓名/编号）" style="width: 100%"
-                             @select="onPatientSelect"/>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="涉及人员">
-              <el-input v-model="form.involvedStaff" placeholder="多人用逗号分隔"/>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="12">
-          <el-col :span="8">
-            <el-form-item label="投诉人">
-              <el-input v-model="form.complainant" placeholder="姓名"/>
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="与患者关系">
-              <el-select v-model="form.complainantRel" clearable placeholder="请选择" style="width: 100%">
-                <el-option v-for="d in relationDict" :key="d.dictValue" :label="d.dictLabel"
-                           :value="Number(d.dictValue)"/>
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="联系电话">
-              <el-input v-model="form.complainantTel" placeholder="出参脱敏展示"/>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="12">
-          <el-col :span="12">
-            <el-form-item label="发生时间">
-              <el-date-picker v-model="form.occurTime" placeholder="请选择" style="width: 100%"
-                              type="datetime" value-format="YYYY-MM-DD HH:mm"/>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="发生地点">
-              <el-input v-model="form.occurPlace" placeholder="如：内科三病区"/>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-form-item label="内容" required>
-          <el-input v-model="form.content" :rows="3" placeholder="投诉/纠纷的具体内容" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="诉求">
-          <el-input v-model="form.demand" :rows="2" placeholder="投诉人诉求" type="textarea"/>
-        </el-form-item>
-        <el-form-item label="需封存病历">
-          <el-radio-group v-model="form.needSeal">
-            <el-radio :value="0">否</el-radio>
-            <el-radio :value="1">是（受理时联动封存已归档病案）</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="form.remark"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="formVisible = false">取消</el-button>
-        <el-button :loading="saving" type="primary" @click="save">保存</el-button>
-      </template>
-    </el-dialog>
+    <DisputeEdit v-model="editVisible" :row="editRow" :dicts="dicts" :dept-options="deptOptions" @saved="onSaved"/>
 
-    <!-- 详情 -->
-    <el-dialog v-model="detailVisible" title="纠纷/投诉详情" width="820px">
-      <div v-if="detail">
-        <el-descriptions :column="3" border size="small">
-          <el-descriptions-item label="单号">{{ detail.caseNo }}</el-descriptions-item>
-          <el-descriptions-item label="类型">{{ caseTypeText(detail.caseType) }}</el-descriptions-item>
-          <el-descriptions-item label="等级">
-            <el-tag :type="levelTagType(detail.level)" size="small">{{ levelText(detail.level) }}</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="患者">{{ detail.patientName || '—' }}（{{
-              detail.patientNo || '—'
-            }}）
-          </el-descriptions-item>
-          <el-descriptions-item label="被投诉科室">{{ detail.deptName || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="涉及人员">{{ detail.involvedStaff || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="投诉人">{{ detail.complainant || '—' }}（{{
-              relationText(detail.complainantRel)
-            }}）
-          </el-descriptions-item>
-          <el-descriptions-item label="联系电话">{{ detail.complainantTel || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="来源">{{ sourceText(detail.sourceType) }}</el-descriptions-item>
-          <el-descriptions-item label="发生时间">{{ detail.occurTime || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="发生地点">{{ detail.occurPlace || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="状态">
-            <el-tag :type="statusTagType(detail.status)" size="small">{{ statusText(detail.status) }}</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="病历封存">
-            <el-tag v-if="Number(detail.needSeal) === 1" :type="sealTagType(detail.sealStatus)" size="small">
-              {{ sealText(detail.sealStatus) }}
-            </el-tag>
-            <span v-else>未申请</span>
-          </el-descriptions-item>
-          <el-descriptions-item label="受理天数">{{ detail.openDays ?? 0 }} 天</el-descriptions-item>
-          <el-descriptions-item label="登记人">{{ detail.registerBy || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="受理人">{{ detail.acceptBy || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="结案人">{{ detail.closeBy || '—' }}</el-descriptions-item>
-          <el-descriptions-item :span="1" label="处理途径">{{
-              detail.dealType ? dealTypeText(detail.dealType) : '—'
-            }}
-          </el-descriptions-item>
-          <el-descriptions-item label="责任认定">{{
-              detail.dutyType ? dutyText(detail.dutyType) : '—'
-            }}
-          </el-descriptions-item>
-          <el-descriptions-item label="赔偿(元)">{{ detail.compensation ?? '—' }}</el-descriptions-item>
-          <el-descriptions-item :span="3" label="内容">{{ detail.content }}</el-descriptions-item>
-          <el-descriptions-item :span="3" label="诉求">{{ detail.demand || '—' }}</el-descriptions-item>
-          <el-descriptions-item :span="3" label="结论">{{ detail.conclusion || '—' }}</el-descriptions-item>
-          <el-descriptions-item v-if="detail.revokeReason" :span="3" label="撤销原因">{{
-              detail.revokeReason
-            }}
-          </el-descriptions-item>
-        </el-descriptions>
+    <DisputeDetail v-model="detailVisible" :id="detailId" :dicts="dicts"/>
 
-        <div class="flow-title">处理跟踪台账</div>
-        <el-timeline v-if="detail.flows && detail.flows.length">
-          <el-timeline-item v-for="f in detail.flows" :key="f.id" :timestamp="f.operateTime" placement="top">
-            <div class="flow-item">
-              <strong>{{ f.action }}</strong>
-              <span class="flow-status">{{ statusText(f.fromStatus) }} → {{ statusText(f.toStatus) }}</span>
-              <span class="flow-op">{{ f.operator }}</span>
-            </div>
-            <div class="flow-content">{{ f.content || '—' }}</div>
-          </el-timeline-item>
-        </el-timeline>
-        <el-empty v-else :image-size="60" description="暂无处理跟踪记录"/>
-      </div>
-    </el-dialog>
+    <DisputeAct v-model="actVisible" :row="actRow" :act-key="actKey" @saved="onSaved"/>
 
-    <!-- 受理 / 处理跟踪 / 撤销 -->
-    <el-dialog v-model="actVisible" :title="ACT_META[actKey].title" width="560px">
-      <el-form label-width="100px" size="small">
-        <el-form-item v-if="ACT_META[actKey].needAction" label="处理动作" required>
-          <el-input v-model="actAction" placeholder="如：科室调查 / 医患协商 / 医调委调解"/>
-        </el-form-item>
-        <el-form-item v-if="actKey === 'follow'" label="推进状态">
-          <el-select v-model="actToStatus" clearable placeholder="不改变状态" style="width: 100%">
-            <el-option :value="2" label="调查中"/>
-            <el-option :value="3" label="处理中"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item :label="ACT_META[actKey].needContent ? '说明' : '说明（可选）'"
-                      :required="ACT_META[actKey].needContent">
-          <el-input v-model="actContent" :placeholder="ACT_META[actKey].placeholder" :rows="4" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="actVisible = false">取消</el-button>
-        <el-button :loading="actLoading" type="primary" @click="submitAct">确定</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 结案 -->
-    <el-dialog v-model="closeVisible" title="结案" width="600px">
-      <el-form label-width="110px" size="small">
-        <el-form-item label="处理途径" required>
-          <el-select v-model="closeForm.dealType" placeholder="请选择" style="width: 100%">
-            <el-option v-for="d in dealTypeDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="责任认定" required>
-          <el-select v-model="closeForm.dutyType" placeholder="请选择" style="width: 100%">
-            <el-option v-for="d in dutyDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="赔偿金额(元)" required>
-          <el-input-number v-model="closeForm.compensation" :min="0" :precision="2" :step="100"/>
-          <span class="hint">无赔偿请填 0</span>
-        </el-form-item>
-        <el-form-item label="结论" required>
-          <el-input v-model="closeForm.conclusion" :rows="4" placeholder="调查结论 / 处理结果（将写入跟踪台账）"
-                    type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="closeVisible = false">取消</el-button>
-        <el-button :loading="closeLoading" type="primary" @click="submitClose">结案</el-button>
-      </template>
-    </el-dialog>
+    <DisputeClose v-model="closeVisible" :row="closeRow" :dicts="dicts" @saved="onSaved"/>
   </div>
 </template>
 
@@ -403,24 +185,16 @@
 import {onMounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {Plus, Refresh, Search} from '@element-plus/icons-vue';
-import {
-  acceptDispute,
-  closeDispute,
-  deleteDispute,
-  disputeUpsert,
-  followDispute,
-  getDisputeDetail,
-  getDisputeStat,
-  listDisputePage,
-  revokeDispute,
-  sealDisputeNow,
-} from '@/api/dispute';
-import {getDepartmentSelectList, getDictDataMapList} from '@/api/system';
-import {DICT_TYPE} from '@/lib/dict-cache';
+import {deleteDispute, getDisputeStat, listDisputePage, sealDisputeNow} from '@/api/dispute';
+import {getDepartmentSelectList} from '@/api/system';
 import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
-import PatientSelect from '@/components/his/PatientSelect.vue';
+import {fetchDisputeDicts, levelTagType, sealTagType, statusTagType} from '@/lib/dispute';
+import DisputeEdit from './DisputeEdit.vue';
+import DisputeDetail from './DisputeDetail.vue';
+import DisputeAct from './DisputeAct.vue';
+import DisputeClose from './DisputeClose.vue';
 
 const loading = ref(false);
 const rows = ref([]);
@@ -442,81 +216,17 @@ const stats = reactive({
   total: 0, openCount: 0, closedCount: 0, revokedCount: 0,
   compensationTotal: '0', avgCloseDays: '0',
 });
-// 字典：8 张超过单次 5 个 type 的上限 → 分两批取（一次塞 8 个会整个返回空且零报错）
-const caseTypeDict = ref([]);
-const sourceDict = ref([]);
-const statusDict = ref([]);
-const levelDict = ref([]);
-const dealTypeDict = ref([]);
-const dutyDict = ref([]);
-const relationDict = ref([]);
-const sealDict = ref([]);
-const caseTypeText = (v) => dictLabelText(caseTypeDict.value, v);
-const sourceText = (v) => dictLabelText(sourceDict.value, v);
-const statusText = (v) => dictLabelText(statusDict.value, v);
-const levelText = (v) => dictLabelText(levelDict.value, v);
-const dealTypeText = (v) => dictLabelText(dealTypeDict.value, v);
-const dutyText = (v) => dictLabelText(dutyDict.value, v);
-const relationText = (v) => dictLabelText(relationDict.value, v);
-const sealText = (v) => dictLabelText(sealDict.value, v);
+// 字典：页面一次拉取（8 张，lib 内分两批），以 prop 传给各弹框；标签颜色口径（lib）列表与详情共用
+const dicts = ref({caseType: [], source: [], status: [], level: [], dealType: [], duty: [], relation: [], seal: []});
+const caseTypeText = (v) => dictLabelText(dicts.value.caseType, v);
+const statusText = (v) => dictLabelText(dicts.value.status, v);
+const levelText = (v) => dictLabelText(dicts.value.level, v);
+const dealTypeText = (v) => dictLabelText(dicts.value.dealType, v);
+const sealText = (v) => dictLabelText(dicts.value.seal, v);
 const deptOptions = ref([]);
-const statusTagType = (v) => {
-  switch (Number(v)) {
-    case 1:
-      return 'warning';
-    case 2:
-      return 'primary';
-    case 3:
-      return 'danger';
-    case 4:
-      return 'success';
-    case 5:
-      return 'info';
-    default:
-      return 'info';
-  }
-};
-const levelTagType = (v) => {
-  switch (Number(v)) {
-    case 1:
-      return 'info';
-    case 2:
-      return 'warning';
-    case 3:
-      return 'danger';
-    default:
-      return 'info';
-  }
-};
-const sealTagType = (v) => {
-  switch (Number(v)) {
-    case 1:
-      return 'success';
-    case 2:
-      return 'danger';
-    default:
-      return 'info';
-  }
-};
 const loadDicts = async () => {
   try {
-    const a = await getDictDataMapList([
-      DICT_TYPE.DISPUTE_CASE_TYPE, DICT_TYPE.DISPUTE_SOURCE, DICT_TYPE.DISPUTE_STATUS,
-      DICT_TYPE.DISPUTE_LEVEL, DICT_TYPE.DISPUTE_DEAL_TYPE,
-    ].join(','));
-    const b = await getDictDataMapList([
-      DICT_TYPE.DISPUTE_DUTY, DICT_TYPE.DISPUTE_RELATION, DICT_TYPE.DISPUTE_SEAL_STATUS,
-    ].join(','));
-    const da = a?.data || {};
-    const db = b?.data || {};
-    caseTypeDict.value = da[DICT_TYPE.DISPUTE_CASE_TYPE] || [];
-    sourceDict.value = da[DICT_TYPE.DISPUTE_SOURCE] || [];
-    statusDict.value = da[DICT_TYPE.DISPUTE_STATUS] || [];
-    levelDict.value = da[DICT_TYPE.DISPUTE_LEVEL] || [];
-    dealTypeDict.value = da[DICT_TYPE.DISPUTE_DEAL_TYPE] || [];
-    dutyDict.value = db[DICT_TYPE.DISPUTE_DUTY] || [];
-    relationDict.value = db[DICT_TYPE.DISPUTE_RELATION] || [];
-    sealDict.value = db[DICT_TYPE.DISPUTE_SEAL_STATUS] || [];
+    dicts.value = await fetchDisputeDicts();
   } catch (e) {
     console.error('加载纠纷字典失败', e);
   }
@@ -579,256 +289,41 @@ const resetQuery = () => {
   loadList();
 };
 // ------------------------------------------------------------------
-// 登记 / 修改
+// 弹框编排：表单状态 / 校验 / 提交均在子组件，页面只管开关与刷新
 // ------------------------------------------------------------------
-const formVisible = ref(false);
-const saving = ref(false);
-const form = reactive({
-  id: null,
-  caseType: null,
-  sourceType: null,
-  level: 1,
-  patientId: null,
-  patientName: '',
-  deptId: null,
-  involvedStaff: '',
-  complainant: '',
-  complainantRel: null,
-  complainantTel: '',
-  occurTime: '',
-  occurPlace: '',
-  content: '',
-  demand: '',
-  needSeal: 0,
-  remark: '',
-});
-const openCreate = () => {
-  Object.assign(form, {
-    id: null, caseType: null, sourceType: null, level: 1, patientId: null, patientName: '',
-    deptId: null, involvedStaff: '', complainant: '', complainantRel: null, complainantTel: '',
-    occurTime: '', occurPlace: '', content: '', demand: '', needSeal: 0, remark: '',
-  });
-  formVisible.value = true;
-};
-const openEdit = async (row) => {
-  const res = await getDisputeDetail(row.id);
-  const d = res?.data || row;
-  Object.assign(form, {
-    id: d.id,
-    caseType: Number(d.caseType),
-    sourceType: Number(d.sourceType),
-    level: Number(d.level ?? 1),
-    patientId: d.patientId ?? null,
-    patientName: d.patientName || '',
-    deptId: d.deptId ?? null,
-    involvedStaff: d.involvedStaff || '',
-    complainant: d.complainant || '',
-    complainantRel: d.complainantRel ?? null,
-    complainantTel: '',
-    occurTime: (d.occurTime || '').slice(0, 16),
-    occurPlace: d.occurPlace || '',
-    content: d.content || '',
-    demand: d.demand || '',
-    needSeal: Number(d.needSeal ?? 0),
-    remark: d.remark || '',
-  });
-  formVisible.value = true;
-};
-const onPatientSelect = (p) => {
-  form.patientId = p?.id ?? null;
-  form.patientName = p?.name || p?.patientName || '';
-};
-const save = async () => {
-  if (!form.caseType || !form.sourceType) {
-    ElMessage.warning('请选择类型与来源');
-    return;
-  }
-  if (!form.content.trim()) {
-    ElMessage.warning('请填写投诉/纠纷内容');
-    return;
-  }
-  saving.value = true;
-  try {
-    const res = await disputeUpsert({
-      id: form.id || undefined,
-      caseType: form.caseType,
-      sourceType: form.sourceType,
-      level: form.level,
-      patientId: form.patientId || undefined,
-      deptId: form.deptId || undefined,
-      involvedStaff: form.involvedStaff.trim() || undefined,
-      complainant: form.complainant.trim() || undefined,
-      complainantRel: form.complainantRel ?? undefined,
-      complainantTel: form.complainantTel.trim() || undefined,
-      occurTime: form.occurTime ? (form.occurTime.length === 16 ? `${form.occurTime}:00` : form.occurTime) : undefined,
-      occurPlace: form.occurPlace.trim() || undefined,
-      content: form.content.trim(),
-      demand: form.demand.trim() || undefined,
-      needSeal: form.needSeal ?? 0,
-      remark: form.remark.trim() || undefined,
-    });
-    if (res.code === 200) {
-      const vo = res.data;
-      ElMessage.success(form.id ? '修改成功' : `登记成功，单号 ${vo?.caseNo || ''}`);
-      formVisible.value = false;
-      loadList();
-      loadStats();
-    } else {
-      ElMessage.error(res.message || '保存失败');
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('保存失败');
-  } finally {
-    saving.value = false;
-  }
-};
-// ------------------------------------------------------------------
-// 详情抽屉（主单 + 处理跟踪台账）
-// ------------------------------------------------------------------
+const editVisible = ref(false);
+const editRow = ref(null);
 const detailVisible = ref(false);
-const detail = ref(null);
-const openDetail = async (row) => {
-  try {
-    const res = await getDisputeDetail(row.id);
-    if (res.code === 200) {
-      detail.value = res.data;
-      detailVisible.value = true;
-    } else {
-      ElMessage.error(res.message || '加载详情失败');
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('加载详情失败');
-  }
-};
-// ------------------------------------------------------------------
-// 动作弹窗（受理 / 处理跟踪 / 撤销 共用）
-// ------------------------------------------------------------------
+const detailId = ref('');
 const actVisible = ref(false);
-const actKey = ref('accept');
 const actRow = ref(null);
-const actAction = ref('');
-const actContent = ref('');
-const actToStatus = ref(null);
-const actLoading = ref(false);
-const ACT_META = {
-  accept: {title: '受理', needAction: false, needContent: false, placeholder: '受理说明（可选）'},
-  follow: {title: '登记处理跟踪', needAction: true, needContent: true, placeholder: '调查/协商/回复投诉人的具体情况'},
-  revoke: {title: '撤销', needAction: false, needContent: true, placeholder: '撤销原因（必填，将留痕）'},
+const actKey = ref('accept');
+const closeVisible = ref(false);
+const closeRow = ref(null);
+const onSaved = () => {
+  loadList();
+  loadStats();
+};
+const openCreate = () => {
+  editRow.value = null;
+  editVisible.value = true;
+};
+const openEdit = (row) => {
+  editRow.value = row;
+  editVisible.value = true;
+};
+const openDetail = (row) => {
+  detailId.value = row.id;
+  detailVisible.value = true;
 };
 const openAct = (row, key) => {
   actRow.value = row;
   actKey.value = key;
-  actAction.value = '';
-  actContent.value = '';
-  actToStatus.value = null;
   actVisible.value = true;
 };
-const submitAct = async () => {
-  const meta = ACT_META[actKey.value];
-  if (meta.needAction && !actAction.value.trim()) {
-    ElMessage.warning('请填写处理动作');
-    return;
-  }
-  if (meta.needContent && !actContent.value.trim()) {
-    ElMessage.warning('请填写说明内容');
-    return;
-  }
-  actLoading.value = true;
-  try {
-    let res;
-    if (actKey.value === 'accept') {
-      res = await acceptDispute({id: actRow.value.id, content: actContent.value.trim() || undefined});
-    } else if (actKey.value === 'follow') {
-      res = await followDispute({
-        id: actRow.value.id,
-        action: actAction.value.trim(),
-        content: actContent.value.trim(),
-        toStatus: actToStatus.value ?? undefined,
-      });
-    } else {
-      res = await revokeDispute({id: actRow.value.id, content: actContent.value.trim()});
-    }
-    if (res.code === 200) {
-      const vo = res.data;
-      let tip = `${meta.title}成功`;
-      if (actKey.value === 'accept' && vo?.sealStatus === 2) {
-        tip += '（该患者暂无已归档病历，已标记待归档后封存，归档后请点「补封存」）';
-      }
-      if (actKey.value === 'accept' && vo?.sealStatus === 1) {
-        tip += '（已联动封存病历）';
-      }
-      ElMessage.success(tip);
-      actVisible.value = false;
-      loadList();
-      loadStats();
-    } else {
-      ElMessage.error(res.message || `${meta.title}失败`);
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error(`${meta.title}失败`);
-  } finally {
-    actLoading.value = false;
-  }
-};
-// ------------------------------------------------------------------
-// 结案
-// ------------------------------------------------------------------
-const closeVisible = ref(false);
-const closeRow = ref(null);
-const closeForm = reactive({
-  dealType: null,
-  dutyType: null,
-  compensation: 0,
-  conclusion: '',
-});
-const closeLoading = ref(false);
 const openClose = (row) => {
   closeRow.value = row;
-  closeForm.dealType = null;
-  closeForm.dutyType = null;
-  closeForm.compensation = 0;
-  closeForm.conclusion = '';
   closeVisible.value = true;
-};
-const submitClose = async () => {
-  if (!closeForm.dealType || !closeForm.dutyType) {
-    ElMessage.warning('请选择处理途径与责任认定');
-    return;
-  }
-  if (closeForm.compensation == null || Number(closeForm.compensation) < 0) {
-    ElMessage.warning('赔偿金额不能为负（无赔偿请填 0）');
-    return;
-  }
-  if (!closeForm.conclusion.trim()) {
-    ElMessage.warning('请填写调查结论/处理结果');
-    return;
-  }
-  closeLoading.value = true;
-  try {
-    const res = await closeDispute({
-      id: closeRow.value.id,
-      dealType: closeForm.dealType,
-      dutyType: closeForm.dutyType,
-      compensation: Number(closeForm.compensation),
-      conclusion: closeForm.conclusion.trim(),
-    });
-    if (res.code === 200) {
-      ElMessage.success('已结案');
-      closeVisible.value = false;
-      loadList();
-      loadStats();
-    } else {
-      ElMessage.error(res.message || '结案失败');
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('结案失败');
-  } finally {
-    closeLoading.value = false;
-  }
 };
 // ------------------------------------------------------------------
 // 补封存 / 删除
@@ -917,39 +412,5 @@ onMounted(async () => {
 
 .stat-value.money {
   color: #f56c6c;
-}
-
-.flow-title {
-  margin: 16px 0 10px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.flow-item {
-  display: flex;
-  gap: 10px;
-  align-items: baseline;
-}
-
-.flow-status {
-  font-size: 12px;
-  color: #909399;
-}
-
-.flow-op {
-  font-size: 12px;
-  color: #409eff;
-}
-
-.flow-content {
-  margin-top: 4px;
-  color: #606266;
-  white-space: pre-wrap;
-}
-
-.hint {
-  margin-left: 8px;
-  font-size: 12px;
-  color: #909399;
 }
 </style>

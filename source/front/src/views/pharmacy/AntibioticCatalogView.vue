@@ -105,60 +105,10 @@
     </el-tabs>
 
     <!-- ============ 维护分级 ============ -->
-    <el-dialog v-model="levelDialogVisible" title="维护抗菌药物分级" width="520px">
-      <el-form :model="levelForm" label-width="140px">
-        <el-form-item label="药品">
-          <span>{{ levelForm.drugName }}<span class="muted">（{{ levelForm.specification || '—' }} / 发药单位：{{ levelForm.unit || '—' }}）</span></span>
-        </el-form-item>
-        <el-form-item label="抗菌药物分级" required>
-          <div data-testid="level-select" style="width: 100%">
-            <el-select v-model="levelForm.antibioticLevel" style="width: 100%">
-              <el-option v-for="(text, code) in ANTIBIOTIC_LEVEL" :key="code" :label="text" :value="Number(code)" />
-            </el-select>
-          </div>
-        </el-form-item>
-        <el-form-item v-if="levelForm.antibioticLevel > 0" label="WHO DDD（g/日）" required>
-          <el-input v-model="levelForm.dddValue" data-testid="level-ddd-value" placeholder="如 1.0" />
-        </el-form-item>
-        <el-form-item v-if="levelForm.antibioticLevel > 0" label="每单位含药量（g）" required>
-          <el-input v-model="levelForm.dddUnitGram" data-testid="level-ddd-unit" placeholder="按包装折算，如 0.25g×24粒 = 6.0" />
-        </el-form-item>
-        <div v-if="levelForm.antibioticLevel > 0" class="form-tip">
-          DDDs = 发药数量 × 每单位含药量 ÷ DDD 值；使用强度 AUD = DDDs × 100 ÷ 收治患者人天数
-        </div>
-      </el-form>
-      <template #footer>
-        <el-button @click="levelDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" data-testid="btn-save-level" @click="saveLevel">保存</el-button>
-      </template>
-    </el-dialog>
+    <AntibioticCatalogLevelEdit v-model="levelDialogVisible" :row="levelRow" @saved="loadCatalog" />
 
     <!-- ============ 新增别名 ============ -->
-    <el-dialog v-model="aliasDialogVisible" title="新增医嘱别名" width="520px">
-      <el-form :model="aliasForm" label-width="130px">
-        <el-form-item label="别名（医嘱写法）" required>
-          <el-input v-model="aliasForm.aliasName" data-testid="alias-name" placeholder="如：注射用头孢曲松钠" />
-        </el-form-item>
-        <el-form-item label="指向药品" required>
-          <div data-testid="alias-drug-select" style="width: 100%">
-            <el-select v-model="aliasForm.drugId" filterable placeholder="选择抗菌药物目录里的药品" style="width: 100%">
-              <el-option
-                v-for="d in drugOptions"
-                :key="d.id"
-                :label="`${d.drugName}（${ANTIBIOTIC_LEVEL[d.antibioticLevel]}）`"
-                :value="d.id" />
-            </el-select>
-          </div>
-        </el-form-item>
-        <el-form-item label="说明">
-          <el-input v-model="aliasForm.remark" type="textarea" :rows="2" maxlength="500" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="aliasDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" data-testid="btn-save-alias" @click="saveAlias">保存</el-button>
-      </template>
-    </el-dialog>
+    <AntibioticCatalogAliasEdit v-model="aliasDialogVisible" :drug-options="drugOptions" @saved="loadAlias" />
   </div>
 </template>
 
@@ -174,13 +124,12 @@ import {
   deleteAntibioticAlias,
   getAntibioticDrugSelectList,
   listAntibioticAlias,
-  listAntibioticCatalogPage,
-  upsertAntibioticAlias,
-  upsertAntibioticCatalogLevel
+  listAntibioticCatalogPage
 } from '@/api/antibiotic'
+import AntibioticCatalogLevelEdit from './AntibioticCatalogLevelEdit.vue'
+import AntibioticCatalogAliasEdit from './AntibioticCatalogAliasEdit.vue'
 
 const activeTab = ref('catalog')
-const saving = ref(false)
 
 function levelTagType(level) {
   return level === 3 ? 'danger' : level === 2 ? 'warning' : level === 1 ? 'success' : 'info'
@@ -216,38 +165,11 @@ function resetCatalog() {
 }
 
 const levelDialogVisible = ref(false)
-const levelForm = reactive({ id: null, drugName: '', specification: '', unit: '', antibioticLevel: 0, dddValue: '', dddUnitGram: '' })
+const levelRow = ref(null)
 
 function openLevelDialog(row) {
-  Object.assign(levelForm, {
-    id: row.id,
-    drugName: row.drugName,
-    specification: row.specification,
-    unit: row.unit,
-    antibioticLevel: row.antibioticLevel || 0,
-    dddValue: row.dddValue == null ? '' : String(row.dddValue),
-    dddUnitGram: row.dddUnitGram == null ? '' : String(row.dddUnitGram)
-  })
+  levelRow.value = row
   levelDialogVisible.value = true
-}
-
-async function saveLevel() {
-  saving.value = true
-  try {
-    await upsertAntibioticCatalogLevel({
-      id: levelForm.id,
-      antibioticLevel: levelForm.antibioticLevel,
-      dddValue: levelForm.antibioticLevel > 0 ? Number(levelForm.dddValue) : null,
-      dddUnitGram: levelForm.antibioticLevel > 0 ? Number(levelForm.dddUnitGram) : null
-    })
-    ElMessage.success('已保存')
-    levelDialogVisible.value = false
-    loadCatalog()
-  } catch (e) {
-    ElMessage.error(e?.message || '保存失败')
-  } finally {
-    saving.value = false
-  }
 }
 
 // ---------- 别名 ----------
@@ -255,7 +177,6 @@ const aliasRows = ref([])
 const aliasLoading = ref(false)
 const drugOptions = ref([])
 const aliasDialogVisible = ref(false)
-const aliasForm = reactive({ drugId: null, aliasName: '', remark: '' })
 
 async function loadAlias() {
   aliasLoading.value = true
@@ -273,24 +194,7 @@ function aliasLevel(drugId) {
 }
 
 function openAliasDialog() {
-  aliasForm.drugId = null
-  aliasForm.aliasName = ''
-  aliasForm.remark = ''
   aliasDialogVisible.value = true
-}
-
-async function saveAlias() {
-  saving.value = true
-  try {
-    await upsertAntibioticAlias({ ...aliasForm })
-    ElMessage.success('已保存')
-    aliasDialogVisible.value = false
-    loadAlias()
-  } catch (e) {
-    ElMessage.error(e?.message || '保存失败')
-  } finally {
-    saving.value = false
-  }
 }
 
 async function doDeleteAlias(row) {
@@ -330,11 +234,5 @@ onMounted(async () => {
 }
 .muted {
   color: #909399;
-}
-.form-tip {
-  color: #909399;
-  font-size: 12px;
-  line-height: 1.6;
-  margin-bottom: 10px;
 }
 </style>

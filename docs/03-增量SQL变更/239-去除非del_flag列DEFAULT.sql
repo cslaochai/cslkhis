@@ -6,8 +6,6 @@
 -- 说明：DROP DEFAULT 仅改元数据，不触数据；可逆（如需回滚按列 ALTER ... SET DEFAULT 原值）
 -- ============================================================
 
-USE `hn_biz_his`;
-
 -- biz_admission.nursing_level_source  (tinyint, NO)  原 DEFAULT = '1'
 ALTER TABLE `biz_admission` ALTER COLUMN `nursing_level_source` DROP DEFAULT;
 

@@ -329,70 +329,9 @@
       </el-tabs>
     </el-card>
 
-    <!-- 详情：只读（审计记录不给改），编辑没有入口 -->
-    <el-dialog
-        v-model="detailVisible"
-        :title="detailType === 'audit' ? '审计日志详情' : '操作日志详情'"
-        width="720px"
-    >
-      <el-descriptions :column="2" border size="small">
-        <template v-if="detailType === 'audit'">
-          <el-descriptions-item label="时间">{{ detail.createTime }}</el-descriptions-item>
-          <el-descriptions-item label="操作人">{{ detail.userName }}</el-descriptions-item>
-          <el-descriptions-item label="模块">{{ detail.module }}</el-descriptions-item>
-          <el-descriptions-item label="操作">{{ detail.operation }}</el-descriptions-item>
-          <el-descriptions-item label="对象类型">{{ detail.targetType }}</el-descriptions-item>
-          <el-descriptions-item label="对象ID">{{ detail.targetId }}</el-descriptions-item>
-          <el-descriptions-item label="IP">{{ detail.ip }}</el-descriptions-item>
-          <el-descriptions-item label="结果">{{ detail.statusText }}</el-descriptions-item>
-          <el-descriptions-item :span="2" label="内容">{{ detail.content }}</el-descriptions-item>
-          <el-descriptions-item v-if="detail.errorMsg" :span="2" label="失败原因">
-            {{ detail.errorMsg }}
-          </el-descriptions-item>
-        </template>
-        <template v-else>
-          <el-descriptions-item label="时间">{{ detail.operTime }}</el-descriptions-item>
-          <el-descriptions-item label="操作人">{{ detail.operName }}</el-descriptions-item>
-          <el-descriptions-item label="模块">{{ detail.title }}</el-descriptions-item>
-          <el-descriptions-item label="业务类型">{{ detail.businessTypeText }}</el-descriptions-item>
-          <el-descriptions-item label="方法">{{ detail.method }}</el-descriptions-item>
-          <el-descriptions-item label="请求方式">{{ detail.requestMethod }}</el-descriptions-item>
-          <el-descriptions-item label="科室">{{ detail.deptName }}</el-descriptions-item>
-          <el-descriptions-item label="IP">{{ detail.operIp }}（{{ detail.operLocation }}）</el-descriptions-item>
-          <el-descriptions-item label="状态">{{ detail.statusText }}</el-descriptions-item>
-          <el-descriptions-item label="耗时">{{ detail.costTime }} ms</el-descriptions-item>
-          <el-descriptions-item :span="2" label="URL">{{ detail.operUrl }}</el-descriptions-item>
-          <el-descriptions-item :span="2" label="请求参数">
-            <pre class="log-pre">{{ detail.operParam || '-' }}</pre>
-          </el-descriptions-item>
-          <el-descriptions-item :span="2" label="失败原因">{{ detail.errorMsg || '-' }}</el-descriptions-item>
-        </template>
-      </el-descriptions>
-    </el-dialog>
-
-    <!-- 字段变更：同批次明细（一次保存改了哪些字段） -->
-    <el-dialog v-model="batchVisible" data-testid="field-batch-dialog" title="本次修改明细" width="720px">
-      <el-descriptions :column="2" border class="batch-meta" size="small">
-        <el-descriptions-item label="时间">{{ batchMeta.changeTime }}</el-descriptions-item>
-        <el-descriptions-item label="操作人">{{ batchMeta.operatorName }}</el-descriptions-item>
-        <el-descriptions-item label="对象">{{ batchMeta.bizTypeText }} ·
-          {{ batchMeta.bizName || batchMeta.bizNo || batchMeta.bizId }}
-        </el-descriptions-item>
-        <el-descriptions-item label="批次号">{{ batchMeta.batchNo }}</el-descriptions-item>
-      </el-descriptions>
-      <el-table :data="batchRows" border class="batch-table" data-testid="field-batch-table" size="small" stripe>
-        <el-table-column label="字段" prop="fieldLabel" width="140"/>
-        <el-table-column label="变更前" min-width="200">
-          <template #default="{ row }">{{ row.oldValue || '（空）' }}</template>
-        </el-table-column>
-        <el-table-column label="变更后" min-width="200">
-          <template #default="{ row }">{{ row.newValue || '（空）' }}</template>
-        </el-table-column>
-        <template #empty>
-          <span data-testid="field-batch-empty">本批次没有明细</span>
-        </template>
-      </el-table>
-    </el-dialog>
+    <!-- 日志详情（只读）与本批次明细：弹框内部逻辑在子组件，页面只控显隐与传行 -->
+    <LogDetail v-model="detailVisible" :id="detailId" :row="detailRow" :type="detailType"/>
+    <LogChangeDetail v-model="batchVisible" :batch-no="batchNo" :row="batchRow"/>
   </div>
 </template>
 
@@ -416,16 +355,15 @@ import {computed, onMounted, reactive, ref} from 'vue';
 import {ElMessage} from 'element-plus';
 import {
   exportLogCsv,
-  getAuditLogDetail,
-  getFieldChangeBatch,
   getLogStat,
-  getOperLogDetail,
   listAuditLogPage,
   listFieldChangePage,
   listLoginLogPage,
   listOperLogPage,
 } from '@/api/log';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+import LogChangeDetail from './LogChangeDetail.vue';
+import LogDetail from './LogDetail.vue';
 import {
   AUDIT_STATUS,
   auditStatusTagType,
@@ -576,34 +514,28 @@ onMounted(async () => {
   await Promise.all([loadStat(), load()]);
 });
 // ============ 详情 ============
+// 取数与渲染搬进 LogDetail.vue，页面只留显隐 + 当前行（打开瞬间不闪白）
 const detailVisible = ref(false);
 const detailType = ref('oper');
-const detail = ref({});
-const openDetail = async (row) => {
+const detailId = ref(null);
+const detailRow = ref(null);
+const openDetail = (row) => {
   detailType.value = activeTab.value === 'audit' ? 'audit' : 'oper';
-  try {
-    const res = detailType.value === 'audit' ? await getAuditLogDetail(row.id) : await getOperLogDetail(row.id);
-    detail.value = res?.data || {};
-    detailVisible.value = true;
-  } catch (e) {
-    ElMessage.error(e?.message || '加载日志详情失败');
-  }
+  detailId.value = row.id;
+  detailRow.value = row;
+  detailVisible.value = true;
 };
 // ============ 字段变更：同批次明细 ============
 // 一次保存改 5 个字段会落 5 行，列表里散着看不出是"同一个人同一分钟改的"。
 // 点行按 batchNo 拉回整批，一次性看完这一刀动了什么 —— 这才是审计要问的。
+// 拉取与渲染搬进 LogChangeDetail.vue，页面只传批次号与当前行。
 const batchVisible = ref(false);
-const batchRows = ref([]);
-const batchMeta = ref({});
-const openFieldBatch = async (row) => {
-  try {
-    const res = await getFieldChangeBatch(row.batchNo);
-    batchRows.value = res?.data || [];
-    batchMeta.value = row;
-    batchVisible.value = true;
-  } catch (e) {
-    ElMessage.error(e?.message || '加载变更明细失败');
-  }
+const batchNo = ref(null);
+const batchRow = ref(null);
+const openFieldBatch = (row) => {
+  batchNo.value = row.batchNo;
+  batchRow.value = row;
+  batchVisible.value = true;
 };
 // ============ 导出 ============
 const exporting = ref(false);
@@ -693,15 +625,6 @@ const doExport = async () => {
   margin-top: 12px;
 }
 
-.log-pre {
-  margin: 0;
-  max-height: 200px;
-  overflow: auto;
-  white-space: pre-wrap;
-  word-break: break-all;
-  font-size: 12px;
-}
-
 /* 变更前 → 变更后：旧值灰掉划掉，新值主色加重，一眼看出"改成了啥" */
 .diff-old {
   color: var(--el-text-color-secondary);
@@ -720,9 +643,5 @@ const doExport = async () => {
 
 .diff-action {
   color: var(--el-text-color-secondary);
-}
-
-.batch-meta {
-  margin-bottom: 12px;
 }
 </style>

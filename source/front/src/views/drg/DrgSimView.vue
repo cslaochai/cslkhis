@@ -143,40 +143,8 @@
       </el-table>
     </div>
 
-    <!-- 模拟弹窗 -->
-    <el-dialog v-model="simVisible" :title="`DRG 模拟 - ${simForm.patientName}`" width="560px">
-      <el-form label-width="110px">
-        <el-form-item label="首页主诊断">
-          <span>{{ simForm.mainDiagCode || '（缺失）' }} {{ simForm.mainDiagName }}</span>
-        </el-form-item>
-        <el-form-item v-if="!simForm.mainDiagCode" label="补录 ICD 编码" required>
-          <el-input v-model="simForm.icdCode" data-testid="drg-icd-input" placeholder="如 J18.9"/>
-        </el-form-item>
-        <el-form-item v-if="!simForm.mainDiagCode" label="补录诊断名称">
-          <el-input v-model="simForm.icdName" placeholder="如 肺炎"/>
-        </el-form-item>
-        <div v-if="simResult" class="mb-3 p-3 rounded bg-gray-50 text-sm" data-testid="drg-sim-result">
-          <p>入组：<b>{{ simResult.drgCode }}</b> {{ simResult.drgName || '' }}
-            <el-tag :type="simTag(simResult.simStatus)" class="ml-1" size="small">{{
-                simText(simResult.simStatus)
-              }}
-            </el-tag>
-          </p>
-          <p v-if="simResult.simStatus === 1" class="mt-1">
-            权重 {{ simResult.weight ?? '—' }}｜
-            支付标准 {{ simResult.payStandard == null ? '未下发' : '¥' + simResult.payStandard }}｜实际费用
-            ¥{{ simResult.actualAmount }}
-            ｜<span v-if="simResult.profitAmount != null" :class="profitColor(simResult.profitAmount)">
-              {{ Number(simResult.profitAmount) >= 0 ? '结余 +' : '超支 ' }}{{ simResult.profitAmount }}</span>
-            <span v-else class="text-gray-400">盈亏待统筹区下发支付标准</span></p>
-          <p class="mt-1 text-gray-500">{{ simResult.ruleNote }}</p>
-        </div>
-      </el-form>
-      <template #footer>
-        <el-button @click="simVisible = false">关闭</el-button>
-        <el-button data-testid="drg-sim-run" type="primary" @click="runSim">运行模拟</el-button>
-      </template>
-    </el-dialog>
+    <!-- 模拟弹窗：拆到 DrgSimEdit，页面只管开关与递参 -->
+    <DrgSimEdit v-model="simVisible" :row="simRow" :version="version" :sim-dict="simDict" @saved="loadSummary"/>
   </div>
 </template>
 
@@ -190,16 +158,15 @@
 import {onMounted, reactive, ref} from 'vue';
 import {ElMessage} from 'element-plus';
 import {Refresh, Search, VideoPlay} from '@element-plus/icons-vue';
-import {drgGroupList, drgResultListPage, drgSimulate, drgSimulateBatch, drgSummaryList} from '@/api/drg';
+import {drgGroupList, drgResultListPage, drgSimulateBatch, drgSummaryList} from '@/api/drg';
 import {getDictDataMapList} from '@/api/system';
+import DrgSimEdit from './DrgSimEdit.vue';
 import {DICT_TYPE} from '@/lib/dict-cache';
-import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import {profitColor, simTag} from '@/lib/drg';
 
 const simDict = ref([]);
-const simText = (v) => dictLabelText(simDict.value, v);
-const simTag = (v) => ({1: 'success', 2: 'info'}[v] || 'info');
 const loadDicts = async () => {
   try {
     const res = await getDictDataMapList(`${DICT_TYPE.DRG_SIM_STATUS}`);
@@ -227,45 +194,13 @@ const loadSummary = async () => {
     console.error('加载首页列表失败', e);
   }
 };
-// ---------------- 模拟弹窗（补 ICD）----------------
+// ---------------- 模拟弹窗（补 ICD）：表单与模拟逻辑拆到 DrgSimEdit，页面只管开关与递参 ----------------
 const simVisible = ref(false);
-const simForm = reactive({
-  summaryId: null,
-  patientName: '',
-  mainDiagCode: '',
-  mainDiagName: '',
-  icdCode: '',
-  icdName: ''
-});
+const simRow = ref(null);
 const openSim = (row) => {
-  simForm.summaryId = row.summaryId;
-  simForm.patientName = row.patientName;
-  simForm.mainDiagCode = row.mainDiagCode || '';
-  simForm.mainDiagName = row.mainDiagName || '';
-  simForm.icdCode = '';
-  simForm.icdName = '';
+  simRow.value = row;
   simVisible.value = true;
 };
-const runSim = async () => {
-  const code = (simForm.mainDiagCode || simForm.icdCode || '').trim();
-  if (!code)
-    return ElMessage.warning('请补录主诊断 ICD 编码后再模拟');
-  try {
-    const res = await drgSimulate({
-      summaryId: simForm.summaryId,
-      icdCode: code,
-      icdName: (simForm.mainDiagName || simForm.icdName || '').trim() || undefined,
-      version: version.value,
-    });
-    const d = res?.data;
-    simResult.value = d;
-    ElMessage.success(d?.simStatus === 1 ? `已入组 ${d.drgCode}` : '未入组（QY）');
-    loadSummary();
-  } catch (e) {
-    ElMessage.error(e?.response?.data?.message || '模拟失败');
-  }
-};
-const simResult = ref(null);
 // ---------------- 批量 ----------------
 const batchLoading = ref(false);
 const runBatch = async () => {
@@ -319,10 +254,6 @@ const loadGroups = async () => {
   } catch (e) {
     console.error('加载组表失败', e);
   }
-};
-const profitColor = (v) => {
-  const n = Number(v || 0);
-  return n >= 0 ? 'text-green-600' : 'text-red-600';
 };
 onMounted(() => {
   loadDicts();

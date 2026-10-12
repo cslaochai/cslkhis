@@ -93,65 +93,7 @@
       </div>
     </el-card>
 
-    <el-dialog v-model="detailVisible" title="账单详情（行快照 + 收/退流水）" width="860px">
-      <div v-loading="detailLoading">
-        <template v-if="detail">
-          <el-descriptions :column="3" border size="small">
-            <el-descriptions-item label="账单号">{{ detail.billNo }}</el-descriptions-item>
-            <el-descriptions-item label="患者">{{ detail.patientName }}（{{
-                detail.patientNo || '—'
-              }}）
-            </el-descriptions-item>
-            <el-descriptions-item label="状态">{{ billStatusText(detail.billStatus) }}</el-descriptions-item>
-            <el-descriptions-item label="应收">¥{{ formatMoney(detail.totalAmount) }}</el-descriptions-item>
-            <el-descriptions-item label="优惠">¥{{ formatMoney(detail.discountAmount) }}</el-descriptions-item>
-            <el-descriptions-item label="统筹">¥{{ formatMoney(detail.poolAmount) }}</el-descriptions-item>
-            <el-descriptions-item label="应缴">¥{{ formatMoney(detail.payableAmount) }}</el-descriptions-item>
-            <el-descriptions-item label="已收">¥{{ formatMoney(detail.paidAmount) }}</el-descriptions-item>
-            <el-descriptions-item label="尚欠">¥{{ formatMoney(detail.unpaidAmount) }}</el-descriptions-item>
-          </el-descriptions>
-
-          <div class="mt-3 mb-1 text-sm font-medium">账单行快照</div>
-          <el-table :data="detail.items || []" border size="small">
-            <el-table-column label="项目" min-width="150" prop="itemName" show-overflow-tooltip/>
-            <el-table-column align="right" label="单价" min-width="80" prop="price">
-              <template #default="{ row }">¥{{ formatMoney(row.price) }}</template>
-            </el-table-column>
-            <el-table-column align="right" label="数量" min-width="70" prop="quantity"/>
-            <el-table-column align="right" label="金额" min-width="90" prop="amount">
-              <template #default="{ row }">¥{{ formatMoney(row.amount) }}</template>
-            </el-table-column>
-          </el-table>
-
-          <div class="mt-3 mb-1 text-sm font-medium">收/退流水</div>
-          <el-table :data="detail.txns || []" border data-testid="bill-txn-table" size="small">
-            <el-table-column class-name="font-mono text-xs" label="流水号" min-width="150" prop="txnNo"/>
-            <el-table-column label="方向" min-width="70">
-              <template #default="{ row }">{{
-                  dictLabelText(dictOptions(DICT_TYPE.PAY_DIRECTION), row.direction)
-                }}
-              </template>
-            </el-table-column>
-            <el-table-column label="渠道" min-width="90">
-              <template #default="{ row }">{{ payMethodText(row.payMethod) }}</template>
-            </el-table-column>
-            <el-table-column align="right" label="金额" min-width="90" prop="amount">
-              <template #default="{ row }">¥{{ formatMoney(row.amount) }}</template>
-            </el-table-column>
-            <el-table-column label="状态" min-width="80">
-              <template #default="{ row }">{{
-                  dictLabelText(dictOptions(DICT_TYPE.PAY_TXN_STATUS), row.txnStatus)
-                }}
-              </template>
-            </el-table-column>
-            <el-table-column label="来源" min-width="90">
-              <template #default="{ row }">{{ sourceTypeText(row.sourceType) }}</template>
-            </el-table-column>
-            <el-table-column class-name="font-mono text-xs" label="时间" min-width="150" prop="txnTime"/>
-          </el-table>
-        </template>
-      </div>
-    </el-dialog>
+    <SettlementBillDetail v-model="detailVisible" :id="detailId" :dicts="dicts"/>
   </div>
 </template>
 
@@ -167,18 +109,17 @@
 import {onMounted, reactive, ref} from 'vue';
 import {Refresh, Search, View} from '@element-plus/icons-vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
-import {getBillDetailById, getBillListPage, voidBill} from '@/api/settlementBill';
+import {getBillListPage, voidBill} from '@/api/settlementBill';
 import {DICT_TYPE, loadDictDataMap} from '@/lib/dict-cache';
 import {dictLabelText, formatMoney} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import SettlementBillDetail from './SettlementBillDetail.vue';
 
 const dicts = ref({});
 const dictOptions = (type) => dicts.value[type] || [];
 const billStatusText = (v) => dictLabelText(dictOptions(DICT_TYPE.BILL_STATUS), v);
 const billTypeText = (v) => dictLabelText(dictOptions(DICT_TYPE.BILL_TYPE), v);
-const sourceTypeText = (v) => dictLabelText(dictOptions(DICT_TYPE.TXN_SOURCE), v);
-const payMethodText = (v) => dictLabelText(dictOptions(DICT_TYPE.PAY_METHOD), v);
 /** 金额列语义：应收 totalAmount → 患者该掏 payableAmount → 实收 paidAmount → 尚欠 unpaidAmount */
 const statusTagClass = (v) => {
   const map = {
@@ -233,23 +174,13 @@ function handleReset() {
   handleSearch();
 }
 
-// ==================== 详情（行快照 + 收/退流水一次给全） ====================
+// ==================== 详情（行快照 + 收/退流水一次给全）：拆到 SettlementBillDetail，自取数据 ====================
 const detailVisible = ref(false);
-const detailLoading = ref(false);
-const detail = ref(null);
+const detailId = ref('');
 
-async function openDetail(row) {
+function openDetail(row) {
+  detailId.value = row.id;
   detailVisible.value = true;
-  detailLoading.value = true;
-  try {
-    const res = await getBillDetailById(row.id);
-    detail.value = res.data || null;
-  } catch (e) {
-    detail.value = null;
-    ElMessage.error(e.message || '加载账单详情失败');
-  } finally {
-    detailLoading.value = false;
-  }
 }
 
 // ==================== 作废（取消结算） ====================

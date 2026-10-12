@@ -647,109 +647,11 @@
       </template>
     </el-dialog>
 
-    <!-- 证明详情（只读） -->
-    <el-drawer v-model="dvVisible" data-testid="cert-detail-drawer" size="620px" title="死亡证明详情（只读）">
-      <el-form :disabled="true" data-testid="cert-detail-body" label-width="120px">
-        <el-form-item label="证明编号"><span data-testid="cd-cert-no">{{ dv.certNo }}</span></el-form-item>
-        <el-form-item label="状态">{{ certStatusText(dv.certStatus) }} · 上报 {{
-            reportStatusText(dv.reportStatus)
-          }}
-        </el-form-item>
-        <el-form-item label="住院号">{{ dv.admissionNo }}（{{ dv.patientName }} / {{ patientGenderText(dv.gender) }} /
-          {{ dv.age ?? '—' }}岁）
-        </el-form-item>
-        <el-form-item label="一般项目">{{ dv.nation || '—' }} · {{ dv.occupation || '—' }} · 出生
-          {{ fmtDay(dv.birthDate) }} · 身份证 {{ dv.idCard || '—' }}
-        </el-form-item>
-        <el-form-item label="死亡时间">{{ fmt(dv.deathTime) }}</el-form-item>
-        <el-form-item label="死亡地点">{{ placeText(dv.deathPlace) }} {{ dv.deathDeptName || '' }}
-          {{ dv.deathWardName || '' }} 床号 {{ dv.deathBedNo || '—' }}
-        </el-form-item>
-        <el-form-item label="死亡诊断">{{ dv.clinicalDiagnosis }}</el-form-item>
-        <el-form-item label="根本死因">{{ dv.underlyingIcdCode }} {{ dv.underlyingIcdName }}</el-form-item>
-        <el-form-item label="Ⅰ部分 死因链">
-          <div class="w-full text-sm">
-            <div v-for="x in dvChain" :key="x.id" data-testid="cd-chain-row">
-              （{{ String.fromCharCode(65 + Number(x.seqNo) - 1) }}）{{ x.icdName }} {{ x.icdCode }} ·
-              {{ x.intervalText || '间隔未填' }}
-            </div>
-            <div v-if="!dvChain.length" class="text-slate-400">未填写</div>
-          </div>
-        </el-form-item>
-        <el-form-item label="Ⅱ部分 其他疾病">
-          <div class="w-full text-sm">
-            <div v-for="x in dvOther" :key="x.id">{{ x.icdName }} {{ x.icdCode }}</div>
-            <div v-if="!dvOther.length" class="text-slate-400">无</div>
-          </div>
-        </el-form-item>
-        <el-form-item label="近亲属">{{ dv.relativeName || '—' }} {{ dv.relativeRelation || '' }}
-          {{ dv.relativePhone || '' }}
-        </el-form-item>
-        <el-form-item label="填表/审核">{{ dv.physicianName }} {{ fmt(dv.fillTime) }} ／ {{ dv.reviewerName || '—' }}
-          {{ fmt(dv.reviewTime) }}
-        </el-form-item>
-        <el-form-item v-if="dv.reviewOpinion" label="审核意见">{{ dv.reviewOpinion }}</el-form-item>
-        <el-form-item label="签发/打印">{{ fmt(dv.issueTime) }} ／ {{ dv.printCount ?? 0 }} 次（{{
-            dv.printerName || '—'
-          }}）
-        </el-form-item>
-        <el-form-item label="上报时限">{{ fmt(dv.reportDeadline) }} · 上报于 {{ fmt(dv.reportTime) }}</el-form-item>
-        <el-form-item v-if="dv.reportNo" label="回执号">{{ dv.reportNo }}</el-form-item>
-        <el-form-item v-if="dv.voidReason" label="作废原因">{{ dv.voidReason }}（{{ dv.voidBy }} {{
-            fmt(dv.voidTime)
-          }}）
-        </el-form-item>
-        <el-form-item v-if="dv.reissueCertNo" label="重开为">{{ dv.reissueCertNo }}</el-form-item>
-        <el-form-item label="死亡出院">{{ dv.deathDischarged ? '已办理' : '未办理（未办理不能签发）' }}</el-form-item>
-        <el-form-item v-if="dv.registerNo" label="关联登记">{{ dv.registerNo }}（{{
-            registerStatusText(dv.registerStatus)
-          }}）
-        </el-form-item>
-        <el-form-item v-if="dv.reportPayload" label="上报报文">
-          <el-input :model-value="dv.reportPayload" :rows="12" data-testid="cd-payload" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button data-testid="cd-close" @click="dvVisible = false">关闭</el-button>
-      </template>
-    </el-drawer>
+    <!-- 证明详情（只读，已拆至 DeathCertificateDetail.vue，按证明 id 自取详情） -->
+    <DeathCertificateDetail v-model="dvVisible" :dict="dict" :id="dvId"/>
 
-    <!-- 登记详情（只读） -->
-    <el-drawer v-model="rdVisible" data-testid="reg-detail-drawer" size="560px" title="死亡登记详情（只读）">
-      <el-form :disabled="true" data-testid="reg-detail-body" label-width="120px">
-        <el-form-item label="登记号">{{ rd.registerNo }}</el-form-item>
-        <el-form-item label="状态">{{ registerStatusText(rd.registerStatus) }}</el-form-item>
-        <el-form-item label="死者">{{ rd.patientName }} · 住院号 {{ rd.admissionNo }} · 死亡 {{
-            fmt(rd.deathTime)
-          }}
-        </el-form-item>
-        <el-form-item label="死亡科室/床位">{{ rd.deathDeptName || '—' }} / {{ rd.deathBedNo || '—' }}</el-form-item>
-        <el-form-item label="关联证明">{{ rd.certNo || '未开证' }}（{{ certStatusText(rd.certStatus) }}）</el-form-item>
-        <el-form-item label="死亡类型">{{ deathTypeText(rd.deathType) }}</el-form-item>
-        <el-form-item label="公安报案">{{
-            Number(rd.policeFlag) === 1 ? `已报：${rd.policeOrg || ''} ${rd.policeCaseNo || ''} ${fmt(rd.policeReportTime)}` : '未报'
-          }}
-        </el-form-item>
-        <el-form-item label="法医出具">{{ Number(rd.forensicFlag) === 1 ? '是' : '否' }}</el-form-item>
-        <el-form-item label="尸体处理">{{ disposalText(rd.bodyDisposal) }} · {{ rd.bodyUnit || '—' }} · 移出
-          {{ fmt(rd.bodyTransportTime) }}
-        </el-form-item>
-        <el-form-item label="家属">{{ rd.relativeName || '—' }} {{ rd.relativeRelation || '' }}
-          {{ rd.relativePhone || '' }}
-        </el-form-item>
-        <el-form-item label="领取联次">{{ copiesText(rd.receivedCopies) }} · {{ fmt(rd.receiveTime) }}</el-form-item>
-        <el-form-item label="纠纷">{{
-            Number(rd.disputeFlag) === 1 ? `有：${rd.disputeDesc || ''}` : '无'
-          }}
-        </el-form-item>
-        <el-form-item label="登记人/时间">{{ rd.registrarName || '—' }} · {{ fmt(rd.registerTime) }}</el-form-item>
-        <el-form-item v-if="rd.voidReason" label="作废原因">{{ rd.voidReason }}（{{ fmt(rd.voidTime) }}）</el-form-item>
-        <el-form-item label="备注">{{ rd.remark || '—' }}</el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button data-testid="rd-close" @click="rdVisible = false">关闭</el-button>
-      </template>
-    </el-drawer>
+    <!-- 登记详情（只读，已拆至 DeathCertificateRegisterDetail.vue，按登记 id 自取详情） -->
+    <DeathCertificateRegisterDetail v-model="rdVisible" :dict="dict" :id="rdId"/>
   </div>
 </template>
 
@@ -1331,18 +1233,13 @@ const onPrint = async (row) => {
   await reloadAll()
 }
 
-// ---------------- 证明详情（只读） ----------------
+// ---------------- 证明详情（只读，已拆至 DeathCertificateDetail.vue，组件按 id 自取） ----------------
 const dvVisible = ref(false)
-const dv = ref({})
-const showCertDetail = async (row) => {
-  const res = await gate(getCertDetail(row.id), '加载详情失败')
-  if (res) {
-    dv.value = res.data || {};
-    dvVisible.value = true
-  }
+const dvId = ref(null)
+const showCertDetail = (row) => {
+  dvId.value = row.id
+  dvVisible.value = true
 }
-const dvChain = computed(() => (dv.value.causes || []).filter((x) => Number(x.part) !== 2))
-const dvOther = computed(() => (dv.value.causes || []).filter((x) => Number(x.part) === 2))
 
 // ---------------- 登记表单 ----------------
 const rfVisible = ref(false)
@@ -1486,14 +1383,12 @@ const onVoidRegister = async (row) => {
     await reloadAll()
   }
 }
+// ---------------- 登记详情（只读，已拆至 DeathCertificateRegisterDetail.vue，组件按 id 自取） ----------------
 const rdVisible = ref(false)
-const rd = ref({})
-const showRegisterDetail = async (row) => {
-  const res = await gate(getRegisterDetail(row.id), '加载详情失败')
-  if (res) {
-    rd.value = res.data || {};
-    rdVisible.value = true
-  }
+const rdId = ref(null)
+const showRegisterDetail = (row) => {
+  rdId.value = row.id
+  rdVisible.value = true
 }
 
 /** 台账行的可编辑判定：草稿/已审核可改，已开具与已作废走状态动作 */

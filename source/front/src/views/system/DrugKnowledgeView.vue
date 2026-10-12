@@ -228,102 +228,9 @@
       </el-tab-pane>
     </el-tabs>
 
-    <el-dialog v-model="intDialog" :title="intTitle" data-testid="kb-int-dialog" width="720px">
-      <el-form :model="intForm" label-width="120px">
-        <el-form-item label="成分关键字A" required>
-          <el-input v-model="intForm.componentA" data-testid="kb-form-componentA"
-                    placeholder="取成分主干，如「华法林」（命中华法林钠片/华法林抗凝注射液）"/>
-        </el-form-item>
-        <el-form-item label="成分关键字B" required>
-          <el-input v-model="intForm.componentB" data-testid="kb-form-componentB"
-                    placeholder="如「胺碘酮」；两个成分书写顺序不影响唯一性"/>
-        </el-form-item>
-        <el-form-item label="严重度" required>
-          <el-radio-group v-model="intForm.severity">
-            <el-radio v-for="d in severityDict" :key="d.dictValue" :value="Number(d.dictValue)">
-              {{ d.dictLabel }}
-            </el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="相互作用后果" required>
-          <el-input
-              v-model="intForm.interactionDesc"
-              :rows="3"
-              data-testid="kb-form-desc"
-              placeholder="审方被拦时医生看到的正文，逐字引用，请写成可执行的结论"
-              type="textarea"
-          />
-        </el-form-item>
-        <el-form-item label="处理建议">
-          <el-input v-model="intForm.suggestion" :rows="2" placeholder="换什么药 / 减多少量 / 监测什么指标"
-                    type="textarea"/>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-radio-group v-model="intForm.status">
-            <el-radio :value="1">启用</el-radio>
-            <el-radio :value="0">停用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="intForm.remark" :rows="2" placeholder="依据来源（说明书版本 / 指南条目），便于以后复核"
-                    type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="intDialog = false">取消</el-button>
-        <el-button v-perm="'system:drugKnowledge:add'" :loading="intSubmitting" data-testid="kb-int-save" type="primary"
-                   @click="submitInt">保存
-        </el-button>
-      </template>
-    </el-dialog>
-
-    <el-dialog v-model="doseDialog" :title="doseTitle" data-testid="kb-dose-dialog" width="680px">
-      <el-form :model="doseForm" label-width="120px">
-        <el-form-item label="成分关键字" required>
-          <el-input v-model="doseForm.component" data-testid="kb-form-doseComponent" placeholder="如「对乙酰氨基酚」"/>
-        </el-form-item>
-        <el-form-item label="剂量单位" required>
-          <el-radio-group v-model="doseForm.doseUnit">
-            <el-radio v-for="d in doseUnitDict" :key="d.dictValue" :value="d.dictValue">
-              {{ d.dictLabel }}
-            </el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="单次最大量">
-          <el-input-number v-model="doseForm.maxSingleDose" :min="0" :precision="4" :step="1"
-                           controls-position="right"/>
-          <span class="ml-2 text-[14px] text-slate-400">留空=单次不判</span>
-        </el-form-item>
-        <el-form-item label="每日最大量">
-          <el-input-number v-model="doseForm.maxDailyDose" :min="0" :precision="4" :step="1" controls-position="right"/>
-          <span class="ml-2 text-[14px] text-slate-400">留空=日累计不判；频次写法不认识时这项也自动跳过</span>
-        </el-form-item>
-        <el-form-item label="口径说明">
-          <el-input
-              v-model="doseForm.note"
-              :rows="2"
-              data-testid="kb-form-note"
-              placeholder="按什么人群/剂型定的极量。同一成分不同适应证极量差一个量级，必须写清"
-              type="textarea"
-          />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-radio-group v-model="doseForm.status">
-            <el-radio :value="1">启用</el-radio>
-            <el-radio :value="0">停用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="doseForm.remark" :rows="2" type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="doseDialog = false">取消</el-button>
-        <el-button v-perm="'system:drugKnowledge:add'" :loading="doseSubmitting" data-testid="kb-dose-save"
-                   type="primary" @click="submitDose">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 新增/修改表单拆到同级子组件，页面只控显隐、传行与保存后刷新 -->
+    <DrugInteractionEdit v-model="intDialog" :row="intRow" :severity-options="severityDict" @saved="loadInteractions"/>
+    <DrugDoseLimitEdit v-model="doseDialog" :dose-unit-options="doseUnitDict" :row="doseRow" @saved="loadDoseLimits"/>
   </div>
 </template>
 
@@ -341,6 +248,8 @@ import {
 } from '@/api/drugKnowledge';
 import {getDictDataMapList} from '@/api/system';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+import DrugDoseLimitEdit from './DrugDoseLimitEdit.vue';
+import DrugInteractionEdit from './DrugInteractionEdit.vue';
 
 /**
  * 系统管理 → 合理用药知识库（sql/130）
@@ -381,20 +290,9 @@ const intQuery = reactive({
   status: null,
 });
 const intPage = reactive({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0});
+// 表单弹框（新增/修改）状态整体搬进 DrugInteractionEdit.vue，这里只控显隐与传行
 const intDialog = ref(false);
-const intTitle = ref('新增相互作用');
-const intSubmitting = ref(false);
-const emptyIntForm = () => ({
-  id: null,
-  componentA: '',
-  componentB: '',
-  severity: 2,
-  interactionDesc: '',
-  suggestion: '',
-  status: 1,
-  remark: '',
-});
-const intForm = ref(emptyIntForm());
+const intRow = ref(null);
 
 async function loadInteractions() {
   intLoading.value = true;
@@ -430,44 +328,13 @@ function handleIntReset() {
 }
 
 function openIntAdd() {
-  intForm.value = emptyIntForm();
-  intTitle.value = '新增相互作用';
+  intRow.value = null;
   intDialog.value = true;
 }
 
 function openIntEdit(row) {
-  intForm.value = {
-    id: row.id,
-    componentA: row.componentA,
-    componentB: row.componentB,
-    severity: Number(row.severity),
-    interactionDesc: row.interactionDesc || '',
-    suggestion: row.suggestion || '',
-    status: Number(row.status ?? 1),
-    remark: row.remark || '',
-  };
-  intTitle.value = `修改相互作用：${row.componentA} × ${row.componentB}`;
+  intRow.value = row;
   intDialog.value = true;
-}
-
-async function submitInt() {
-  if (!intForm.value.componentA.trim() || !intForm.value.componentB.trim()) {
-    return ElMessage.warning('两个成分关键字都要填');
-  }
-  if (!intForm.value.interactionDesc.trim()) {
-    return ElMessage.warning('相互作用后果不能为空，审方被拦时医生看到的就是这句话');
-  }
-  intSubmitting.value = true;
-  try {
-    await interactionUpsert(intForm.value);
-    ElMessage.success('已保存，下一次审方立即生效');
-    intDialog.value = false;
-    await loadInteractions();
-  } catch (e) {
-    ElMessage.error(e?.message || '保存失败');
-  } finally {
-    intSubmitting.value = false;
-  }
 }
 
 async function toggleInt(row, next) {
@@ -511,20 +378,9 @@ const doseLoading = ref(false);
 const doseRows = ref([]);
 const doseQuery = reactive({component: '', keyword: '', status: null});
 const dosePage = reactive({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0});
+// 表单弹框（新增/修改）状态整体搬进 DrugDoseLimitEdit.vue，这里只控显隐与传行
 const doseDialog = ref(false);
-const doseTitle = ref('新增剂量上限');
-const doseSubmitting = ref(false);
-const emptyDoseForm = () => ({
-  id: null,
-  component: '',
-  doseUnit: 'mg',
-  maxSingleDose: null,
-  maxDailyDose: null,
-  note: '',
-  status: 1,
-  remark: '',
-});
-const doseForm = ref(emptyDoseForm());
+const doseRow = ref(null);
 
 async function loadDoseLimits() {
   doseLoading.value = true;
@@ -558,44 +414,13 @@ function handleDoseReset() {
 }
 
 function openDoseAdd() {
-  doseForm.value = emptyDoseForm();
-  doseTitle.value = '新增剂量上限';
+  doseRow.value = null;
   doseDialog.value = true;
 }
 
 function openDoseEdit(row) {
-  doseForm.value = {
-    id: row.id,
-    component: row.component,
-    doseUnit: row.doseUnit || 'mg',
-    maxSingleDose: row.maxSingleDose === null || row.maxSingleDose === undefined ? null : Number(row.maxSingleDose),
-    maxDailyDose: row.maxDailyDose === null || row.maxDailyDose === undefined ? null : Number(row.maxDailyDose),
-    note: row.note || '',
-    status: Number(row.status ?? 1),
-    remark: row.remark || '',
-  };
-  doseTitle.value = `修改剂量上限：${row.component}`;
+  doseRow.value = row;
   doseDialog.value = true;
-}
-
-async function submitDose() {
-  if (!doseForm.value.component.trim()) {
-    return ElMessage.warning('成分关键字不能为空');
-  }
-  if (doseForm.value.maxSingleDose == null && doseForm.value.maxDailyDose == null) {
-    return ElMessage.warning('单次最大量与每日最大量至少填一项');
-  }
-  doseSubmitting.value = true;
-  try {
-    await doseLimitUpsert(doseForm.value);
-    ElMessage.success('已保存，下一次审方立即生效');
-    doseDialog.value = false;
-    await loadDoseLimits();
-  } catch (e) {
-    ElMessage.error(e?.message || '保存失败');
-  } finally {
-    doseSubmitting.value = false;
-  }
 }
 
 async function toggleDose(row, next) {

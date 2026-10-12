@@ -127,74 +127,10 @@
       </div>
     </el-card>
 
-    <!-- 明细：只读 -->
-    <el-dialog v-model="detailVisible" data-testid="refund-flow-detail-dialog" destroy-on-close title="退费流水明细"
-               width="760px">
-      <div v-loading="detailLoading" class="space-y-4 text-sm">
-        <div class="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 p-4">
-          <div><span class="text-slate-400">退费单号：</span><span
-              class="font-mono text-slate-700">{{ detail?.refundNo || '—' }}</span></div>
-          <div><span class="text-slate-400">原收费单号：</span><span
-              class="font-mono text-slate-700">{{ detail?.chargeNo || '—' }}</span></div>
-          <div><span class="text-slate-400">患者：</span><span class="text-slate-700">{{
-              detail?.patientName || '—'
-            }}</span></div>
-          <div><span class="text-slate-400">患者号：</span><span class="text-slate-700">{{
-              detail?.patientNo || '—'
-            }}</span></div>
-          <div><span class="text-slate-400">实退金额：</span><span
-              class="font-semibold text-slate-800">¥{{ formatMoney(detail?.totalAmount) }}</span></div>
-          <div><span class="text-slate-400">退费类型：</span><span
-              class="text-slate-700">{{ dictLabelText(refundTypeOptions, detail?.refundType) }}</span></div>
-          <div><span class="text-slate-400">流水来源：</span><span
-              class="text-slate-700">{{ dictLabelText(flowSourceOptions, detail?.flowSource) }}</span></div>
-          <div><span class="text-slate-400">来源申请号：</span><span
-              class="font-mono text-slate-700">{{ detail?.applyNo || '—' }}</span></div>
-          <div><span class="text-slate-400">退费方式：</span><span
-              class="text-slate-700">{{ dictLabelText(refundMethodOptions, detail?.refundMethod) }}</span></div>
-          <div><span class="text-slate-400">原支付方式：</span><span
-              class="text-slate-700">{{ dictLabelText(payMethodOptions, detail?.payMethod) }}</span></div>
-          <div><span class="text-slate-400">渠道退费流水号：</span><span
-              class="font-mono text-slate-700">{{ detail?.channelRefundNo || '—' }}</span></div>
-          <div><span class="text-slate-400">医保报盘：</span><span
-              class="text-slate-700">{{ detail?.insuranceCancelled === 1 ? '已随本次退费撤销（2305）' : '不涉及' }}</span>
-          </div>
-          <div><span class="text-slate-400">退费人：</span><span class="text-slate-700">{{
-              detail?.refundBy || '—'
-            }}</span></div>
-          <div><span class="text-slate-400">退费时间：</span><span class="text-slate-700">{{
-              detail?.refundTime || '—'
-            }}</span></div>
-        </div>
-        <div class="rounded-lg border border-slate-200 p-3">
-          <span class="text-slate-400">退费原因：</span><span class="text-slate-700">{{
-            detail?.refundReason || '—'
-          }}</span>
-        </div>
-        <div class="rounded-lg border border-slate-200 p-3">
-          <div class="mb-2 text-slate-400">冲正的收费明细</div>
-          <el-table :data="detail?.details || []" border data-testid="refund-flow-detail-table" size="small">
-            <el-table-column label="项目名称" min-width="180" prop="itemName" show-overflow-tooltip/>
-            <el-table-column label="规格" min-width="110" prop="specification">
-              <template #default="{ row }">{{ row.specification || '—' }}</template>
-            </el-table-column>
-            <el-table-column align="right" label="退费数量" prop="refundQuantity" width="100"/>
-            <el-table-column label="单位" prop="unit" width="70">
-              <template #default="{ row }">{{ row.unit || '—' }}</template>
-            </el-table-column>
-            <el-table-column align="right" label="单价" width="90">
-              <template #default="{ row }">¥{{ formatMoney(row.price) }}</template>
-            </el-table-column>
-            <el-table-column align="right" label="退费金额" width="100">
-              <template #default="{ row }">¥{{ formatMoney(row.refundAmount) }}</template>
-            </el-table-column>
-            <el-table-column class-name="font-mono text-xs" label="来源单号" min-width="150" prop="sourceNo">
-              <template #default="{ row }">{{ row.sourceNo || '—' }}</template>
-            </el-table-column>
-          </el-table>
-        </div>
-      </div>
-    </el-dialog>
+    <!-- 明细：只读，拆到 RefundFlowDetail，自取数据 -->
+    <RefundFlowDetail v-model="detailVisible" :id="detailId" :row="detailRow"
+                      :flow-source-options="flowSourceOptions" :refund-method-options="refundMethodOptions"
+                      :pay-method-options="payMethodOptions" :refund-type-options="refundTypeOptions"/>
   </div>
 </template>
 
@@ -202,8 +138,9 @@
 import {onMounted, reactive, ref} from 'vue';
 import {Refresh, Search, View} from '@element-plus/icons-vue';
 import {ElMessage} from 'element-plus';
-import {getRefundFlowDetail, getRefundFlowList} from '@/api/refundFlow';
+import {getRefundFlowList} from '@/api/refundFlow';
 import {getDictDataMapList} from '@/api/system';
+import RefundFlowDetail from './RefundFlowDetail.vue';
 import {dictLabelText, formatMoney} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
@@ -229,8 +166,8 @@ const refundMethodOptions = ref([]);
 const payMethodOptions = ref([]);
 const refundTypeOptions = ref([]);
 const detailVisible = ref(false);
-const detailLoading = ref(false);
-const detail = ref(null);
+const detailId = ref('');
+const detailRow = ref(null);
 /** 本页合计：退出去的总钱数。按当前筛选条件现算，不是前端自造的数字 */
 const sumAmount = ref(null);
 
@@ -295,19 +232,10 @@ function handleCurrentChange(page) {
   loadList();
 }
 
-async function openDetail(row) {
+function openDetail(row) {
+  detailId.value = row.id;
+  detailRow.value = row;
   detailVisible.value = true;
-  detailLoading.value = true;
-  detail.value = row;
-  try {
-    const res = await getRefundFlowDetail(row.id);
-    if (res.data)
-      detail.value = res.data;
-  } catch (e) {
-    ElMessage.warning(e?.message || '获取退费流水明细失败，已展示列表数据');
-  } finally {
-    detailLoading.value = false;
-  }
 }
 
 onMounted(async () => {

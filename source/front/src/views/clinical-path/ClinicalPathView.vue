@@ -224,251 +224,56 @@
       </el-tab-pane>
     </el-tabs>
 
-    <!-- 模板编辑弹窗（草稿） -->
-    <el-dialog v-model="tplEditVisible" :title="tplForm.id ? '编辑路径模板（草稿）' : '新增路径模板'"
-               data-testid="cp-tpl-edit-dialog" width="1000px">
-      <div class="space-y-4">
-        <el-form class="grid grid-cols-2 gap-x-4" label-width="90px">
-          <el-form-item label="路径编码" required>
-            <el-input v-model="tplForm.pathwayCode" :disabled="!!tplForm.id" data-testid="cp-tpl-code"
-                      placeholder="如 LP-GG-001"/>
-          </el-form-item>
-          <el-form-item label="路径名称" required>
-            <el-input v-model="tplForm.pathwayName" data-testid="cp-tpl-name" placeholder="如 人工全髋关节置换术路径"/>
-          </el-form-item>
-          <el-form-item label="适用科室">
-            <el-select v-model="tplForm.deptId" :fit-input-width="false" class="w-full" clearable filterable
-                       placeholder="科室（可不选）">
-              <el-option v-for="d in depts" :key="d.id" :label="d.deptName" :value="Number(d.id)"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="版本号">
-            <el-input v-model="tplForm.version" placeholder="V1"/>
-          </el-form-item>
-          <el-form-item class="col-span-2" label="适用病种">
-            <el-input v-model="tplForm.diagnosis" placeholder="诊断口径描述，入径时医生判断"/>
-          </el-form-item>
-        </el-form>
+    <!-- 模板编辑弹窗（草稿）：表单状态、步骤清单与保存都在子组件里 -->
+    <ClinicalPathTplEdit v-model="tplEditVisible" :item-type-dict="itemTypeDict" :row="tplRow" @saved="loadTpl"/>
 
-        <div class="flex items-center justify-between">
-          <h4 class="font-semibold text-slate-800">路径步骤（路径日 × 项目，文书不生成医嘱）</h4>
-          <el-button :icon="Plus" data-testid="cp-step-add-btn" size="small" @click="addStep">加步骤</el-button>
-        </div>
-        <el-table :data="tplForm.steps" border data-testid="cp-step-table" max-height="360" size="small">
-          <el-table-column label="路径日" width="120">
-            <template #default="{ row }">
-              <el-input-number v-model="row.dayNo" :max="60" :min="1" class="w-24" controls-position="right"
-                               size="small"/>
-            </template>
-          </el-table-column>
-          <el-table-column label="项目类型" width="150">
-            <template #default="{ row }">
-              <el-select v-model="row.itemType" :fit-input-width="false" class="w-full" size="small">
-                <el-option v-for="d in itemTypeDict" :key="d.dictValue" :label="d.dictLabel"
-                           :value="Number(d.dictValue)"/>
-              </el-select>
-            </template>
-          </el-table-column>
-          <el-table-column label="项目名称" width="240">
-            <template #default="{ row }">
-              <el-select v-model="row.itemName" :fit-input-width="false" :loading="itemNameLoading" :remote-method="searchItemNames" allow-create class="w-full"
-                         data-testid="cp-step-name-select"
-                         default-first-option filterable placeholder="搜索字典或直接输入"
-                         remote
-                         size="small" @change="(v: string) => onItemNameChange(row, v)">
-                <el-option v-for="o in itemNameOptions" :key="o.itemName" :label="o.itemName" :value="o.itemName"/>
-              </el-select>
-            </template>
-          </el-table-column>
-          <el-table-column label="路径要求" min-width="220">
-            <template #default="{ row }">
-              <el-input v-model="row.content" placeholder="该路径日对本项目的要求" size="small"/>
-            </template>
-          </el-table-column>
-          <el-table-column align="center" label="操作" width="70">
-            <template #default="{ $index }">
-              <el-button :icon="Delete" link size="small" type="danger" @click="delStep($index)"/>
-            </template>
-          </el-table-column>
-          <template #empty>
-            <div class="py-3 text-sm text-slate-400">点「加步骤」维护路径日项目</div>
-          </template>
-        </el-table>
-      </div>
-      <template #footer>
-        <el-button @click="tplEditVisible = false">取消</el-button>
-        <el-button :loading="tplSaving" data-testid="cp-tpl-save-btn" type="primary" @click="saveTpl">保存草稿
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 模板详情（只读，组件按 id 自取） -->
+    <ClinicalPathTplDetail v-model="tplViewVisible" :id="tplViewId" :item-type-dict="itemTypeDict"
+                           :status-dict="statusDict"/>
 
-    <!-- 模板详情（只读） -->
-    <el-dialog v-model="tplViewVisible" :title="`模板 ${tplView?.pathwayName || ''} ${tplView?.version || ''}`"
-               width="900px">
-      <div v-if="tplView" class="space-y-3">
-        <div class="flex items-center gap-6 text-sm text-slate-600 flex-wrap">
-          <span>编码：<b class="text-slate-800">{{ tplView.pathwayCode }}</b></span>
-          <span>科室：<b class="text-slate-800">{{ tplView.deptName || '—' }}</b></span>
-          <span>总日数：<b class="text-slate-800">{{ tplView.totalDays }}</b></span>
-          <span>状态：<el-tag :type="pathwayStatusTag(tplView.status)" size="small">{{
-              statusText(tplView.status)
-            }}</el-tag></span>
-          <span>适用病种：{{ tplView.diagnosis || '—' }}</span>
-        </div>
-        <el-table :data="tplView.steps || []" border max-height="420" size="small">
-          <el-table-column align="center" label="路径日" prop="dayNo" width="80"/>
-          <el-table-column label="类型" width="110">
-            <template #default="{ row }">{{ itemTypeText(row.itemType) }}</template>
-          </el-table-column>
-          <el-table-column label="项目" min-width="170" prop="itemName"/>
-          <el-table-column label="路径要求" min-width="260" prop="content" show-overflow-tooltip/>
-        </el-table>
-      </div>
-    </el-dialog>
-
-    <!-- 入径详情弹窗（工作区） -->
-    <el-dialog v-model="detailVisible" :title="`入径 ${detail?.enrollNo || ''}`" data-testid="cp-enroll-detail-dialog"
-               width="1080px">
-      <div v-if="detail" v-loading="detailLoading" class="space-y-3">
-        <div class="flex items-center gap-5 text-sm text-slate-600 flex-wrap">
-          <span>路径：<b class="text-slate-800">{{ detail.pathwayName }} {{ detail.version }}</b>（共 {{
-              detail.totalDays
-            }} 天）</span>
-          <span>患者：<b class="text-slate-800">{{ detail.patientName }}</b>（{{ detail.patientNo }}）</span>
-          <span>科室：{{ detail.deptName || '—' }}</span>
-          <span>入径日期：<b class="text-slate-800">{{ detail.enrollDate }}</b></span>
-          <span>当前路径日：<b class="text-lg font-semibold text-sky-700">{{ detail.currentDay }}</b></span>
-          <span>状态：<el-tag :type="enrollStatusTag(detail.status)" size="small">{{
-              enrollStatusText(detail.status)
-            }}</el-tag></span>
-          <span class="ml-auto flex gap-2">
-            <el-button v-if="canVariance(detail.status)" v-perm="'qc:clinicalPath:edit'" :icon="Plus" data-testid="cp-variance-btn"
-                       plain size="small"
-                       type="warning" @click="openVariance">登记变异</el-button>
-            <el-button v-if="canFinish(detail.status)" v-perm="'qc:clinicalPath:edit'" :loading="actLoading" data-testid="cp-finish-btn" plain
-                       size="small"
-                       type="success" @click="onFinish">完成</el-button>
-            <el-button v-if="canAbort(detail.status)" v-perm="'qc:clinicalPath:edit'" :icon="CircleClose" :loading="actLoading" data-testid="cp-abort-btn"
-                       plain
-                       size="small" type="danger" @click="onAbort">退径</el-button>
-          </span>
-        </div>
-        <div v-if="detail.diagnosis" class="text-xs text-slate-500">入院诊断：{{ detail.diagnosis }}（入径依据）</div>
-
-        <el-table :data="detail.steps || []" :row-class-name="({ row }) => (detail.status === ENROLL_STATUS.ENROLLED && row.dayNo === detail.currentDay ? 'bg-amber-50' : '')" border data-testid="cp-detail-steps" max-height="320"
-                  size="small">
-          <el-table-column align="center" label="路径日" prop="dayNo" width="80"/>
-          <el-table-column label="类型" width="110">
-            <template #default="{ row }">{{ itemTypeText(row.itemType) }}</template>
-          </el-table-column>
-          <el-table-column label="项目" min-width="160" prop="itemName"/>
-          <el-table-column label="路径要求" min-width="240" prop="content" show-overflow-tooltip/>
-        </el-table>
-
-        <div>
-          <h4 class="font-semibold text-slate-800 mb-2">变异台账（{{ (detail.variances || []).length }} 条）</h4>
-          <el-table :data="detail.variances || []" border data-testid="cp-variance-table" max-height="240" size="small">
-            <el-table-column align="center" label="路径日" prop="dayNo" width="80"/>
-            <el-table-column label="类型" width="130">
-              <template #default="{ row }">
-                <el-tag size="small" type="warning">{{ varianceTypeText(row.varianceType) }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="变异原因" min-width="200" prop="varianceReason" show-overflow-tooltip/>
-            <el-table-column label="处理措施" min-width="160" prop="handling" show-overflow-tooltip>
-              <template #default="{ row }">{{ row.handling || '—' }}</template>
-            </el-table-column>
-            <el-table-column label="发生日期" prop="occurredDate" width="105"/>
-            <el-table-column label="登记人" prop="recorderName" width="90"/>
-          </el-table>
-          <div v-if="!(detail.variances || []).length" class="py-2 text-sm text-slate-400">暂无变异记录</div>
-        </div>
-        <div v-if="detail.abortReason" class="text-xs text-red-600">退径留痕：{{ detail.abortReason }}（{{
-            detail.finishBy
-          }} {{ detail.finishDate }}）
-        </div>
-        <div class="text-xs text-slate-400">
-          说明：路径步骤为文书记录，不生成医嘱、不计费；变异不挡完成，偏离大走退径。
-        </div>
-      </div>
-    </el-dialog>
-
-    <!-- 变异登记弹窗 -->
-    <el-dialog v-model="varVisible" data-testid="cp-variance-dialog" title="登记变异" width="620px">
-      <el-form label-width="90px">
-        <el-form-item label="路径日" required>
-          <el-input-number v-model="varForm.dayNo" :max="detail?.totalDays || 60" :min="1" data-testid="cp-var-day"/>
-        </el-form-item>
-        <el-form-item label="变异类型" required>
-          <el-select v-model="varForm.varianceType" :fit-input-width="false" class="w-56" data-testid="cp-var-type">
-            <el-option v-for="d in varianceTypeDict" :key="d.dictValue" :label="d.dictLabel"
-                       :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="发生日期" required>
-          <el-date-picker v-model="varForm.occurredDate" :clearable="false" type="date" value-format="YYYY-MM-DD"/>
-        </el-form-item>
-        <el-form-item label="变异原因" required>
-          <el-input v-model="varForm.varianceReason" :rows="2" data-testid="cp-var-reason" maxlength="255" placeholder="实际诊疗如何偏离路径要求"
-                    show-word-limit type="textarea"/>
-        </el-form-item>
-        <el-form-item label="处理措施">
-          <el-input v-model="varForm.handling" :rows="2" maxlength="255" placeholder="选填" show-word-limit
-                    type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="varVisible = false">取消</el-button>
-        <el-button :loading="varSaving" data-testid="cp-var-save-btn" type="primary" @click="saveVariance">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- 入径详情工作区（含「登记变异」子弹框；完成/退径确认后组件内重取详情） -->
+    <ClinicalPathEnrollDetail v-model="detailVisible" :enroll-status-dict="enrollStatusDict" :id="detailId"
+                              :item-type-dict="itemTypeDict" :variance-type-dict="varianceTypeDict"
+                              @saved="loadEnroll"
+                              @changed="loadEnroll(); loadCandidates()"/>
   </div>
 </template>
 
 <script setup>
 import {computed, onMounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
-import {CircleClose, Delete, Plus, Refresh, Search} from '@element-plus/icons-vue';
+import {Plus, Refresh, Search} from '@element-plus/icons-vue';
 import {
-  abortEnroll,
   deprecatePathway,
   enrollUpsert,
-  finishEnroll,
   getActivePathwayList,
-  getEnrollDetail,
   getPathwayAnalysis,
-  getPathwayDetail,
   listAdmissionsForEnroll,
   listEnrollPage,
   listPathwayPage,
-  pathwayUpsert,
   publishPathway,
-  varianceUpsert,
 } from '@/api/pathway';
-import {getDepartmentSelectList, getDictDataMapList} from '@/api/system';
-import {getTreatmentItemSelectList} from '@/api/treatment';
+import {getDictDataMapList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {
-  canAbort,
   canDeprecate,
   canEditPathway,
-  canFinish,
   canPublish,
-  canVariance,
-  ENROLL_STATUS,
   enrollStatusTag,
   pathwayStatusTag,
 } from '@/lib/pathway';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
+import ClinicalPathEnrollDetail from './ClinicalPathEnrollDetail.vue';
+import ClinicalPathTplDetail from './ClinicalPathTplDetail.vue';
+import ClinicalPathTplEdit from './ClinicalPathTplEdit.vue';
 
 const activeTab = ref('templates');
 const today = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
-// ---------------- 字典与科室 ----------------
+// ---------------- 字典 ----------------
 const statusDict = ref([]);
 const enrollStatusDict = ref([]);
 const varianceTypeDict = ref([]);
@@ -476,8 +281,6 @@ const itemTypeDict = ref([]);
 const statusText = (v) => dictLabelText(statusDict.value, v);
 const enrollStatusText = (v) => dictLabelText(enrollStatusDict.value, v);
 const varianceTypeText = (v) => dictLabelText(varianceTypeDict.value, v);
-const itemTypeText = (v) => dictLabelText(itemTypeDict.value, v);
-const depts = ref([]);
 // ---------------- 页签一：模板 ----------------
 const tplLoading = ref(false);
 const tplRows = ref([]);
@@ -497,14 +300,6 @@ const loadDicts = async () => {
     itemTypeDict.value = res?.data?.[DICT_TYPE.PATHWAY_ITEM_TYPE] || [];
   } catch (e) {
     console.error('加载字典失败', e);
-  }
-};
-const loadDepts = async () => {
-  try {
-    const res = await getDepartmentSelectList({pageSize: 200});
-    depts.value = res?.data?.records || res?.data || [];
-  } catch (e) {
-    console.error('加载科室失败', e);
   }
 };
 const loadTpl = async () => {
@@ -535,122 +330,12 @@ const resetTpl = () => {
   tplQuery.pageNum = 1;
   loadTpl();
 };
-// ---- 模板编辑弹窗（草稿） ----
+// ---- 模板编辑弹窗（已拆到 ClinicalPathTplEdit，这里只管打开） ----
 const tplEditVisible = ref(false);
-const tplSaving = ref(false);
-const tplForm = reactive({
-  id: null,
-  pathwayCode: '',
-  pathwayName: '',
-  deptId: null,
-  diagnosis: '',
-  version: 'V1',
-  remark: '',
-  steps: [],
-});
-const openTplEdit = async (row) => {
-  tplForm.id = null;
-  tplForm.pathwayCode = '';
-  tplForm.pathwayName = '';
-  tplForm.deptId = null;
-  tplForm.diagnosis = '';
-  tplForm.version = 'V1';
-  tplForm.remark = '';
-  tplForm.steps = [{dayNo: 1, itemType: 1, itemName: '', content: '', sortNo: 1}];
-  if (row?.id) {
-    const res = await getPathwayDetail(row.id);
-    if (res.code === 200 && res.data) {
-      const d = res.data;
-      tplForm.id = d.id;
-      tplForm.pathwayCode = d.pathwayCode;
-      tplForm.pathwayName = d.pathwayName;
-      tplForm.deptId = d.deptId ? Number(d.deptId) : null;
-      tplForm.diagnosis = d.diagnosis || '';
-      tplForm.version = d.version || 'V1';
-      tplForm.remark = d.remark || '';
-      tplForm.steps = (d.steps || []).map((s) => ({...s}));
-    } else {
-      ElMessage.error(res.message || '加载模板失败');
-      return;
-    }
-  }
+const tplRow = ref(null);
+const openTplEdit = (row) => {
+  tplRow.value = row || null;
   tplEditVisible.value = true;
-};
-const addStep = () => {
-  const last = tplForm.steps[tplForm.steps.length - 1];
-  tplForm.steps.push({
-    dayNo: last?.dayNo || 1,
-    itemType: last?.itemType || 1,
-    itemName: '',
-    content: '',
-    sortNo: tplForm.steps.length + 1,
-  });
-};
-const delStep = (idx) => {
-  tplForm.steps.splice(idx, 1);
-};
-// 项目名称软带出：治疗项目字典远程搜索，允许自由文本（filterable + allow-create）
-// 选中字典项时同步 row.itemCode（医生站偏离比对只认带编码的步骤）；自由文本编码置空
-const itemNameOptions = ref([]);
-const itemNameLoading = ref(false);
-const searchItemNames = async (kw) => {
-  itemNameLoading.value = true;
-  try {
-    const res = await getTreatmentItemSelectList({keyword: kw || undefined, limit: 20});
-    itemNameOptions.value = (res?.data || []).map((x) => ({itemName: x.itemName, itemCode: x.itemCode}));
-  } catch (e) {
-    console.error(e);
-    itemNameOptions.value = [];
-  } finally {
-    itemNameLoading.value = false;
-  }
-};
-const onItemNameChange = (row, val) => {
-  row.itemCode = itemNameOptions.value.find(o => o.itemName === val)?.itemCode ?? null;
-};
-const saveTpl = async () => {
-  if (!tplForm.pathwayCode.trim() || !tplForm.pathwayName.trim()) {
-    ElMessage.warning('路径编码与名称必填');
-    return;
-  }
-  for (const s of tplForm.steps) {
-    if (!s.dayNo || !s.itemType || !String(s.itemName || '').trim()) {
-      ElMessage.warning('步骤的路径日/项目类型/项目名称必填');
-      return;
-    }
-  }
-  tplSaving.value = true;
-  try {
-    const res = await pathwayUpsert({
-      id: tplForm.id || undefined,
-      pathwayCode: tplForm.pathwayCode.trim(),
-      pathwayName: tplForm.pathwayName.trim(),
-      deptId: tplForm.deptId ?? undefined,
-      diagnosis: tplForm.diagnosis.trim() || undefined,
-      version: tplForm.version.trim() || undefined,
-      remark: tplForm.remark.trim() || undefined,
-      steps: tplForm.steps.map((s, i) => ({
-        dayNo: Number(s.dayNo),
-        itemType: Number(s.itemType),
-        itemName: String(s.itemName).trim(),
-        itemCode: String(s.itemCode || '').trim() || undefined,
-        content: String(s.content || '').trim() || undefined,
-        sortNo: i + 1,
-      })),
-    });
-    if (res.code === 200) {
-      ElMessage.success('模板已保存（草稿）');
-      tplEditVisible.value = false;
-      await loadTpl();
-    } else {
-      ElMessage.error(res.message || '保存失败');
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('保存失败');
-  } finally {
-    tplSaving.value = false;
-  }
 };
 const onPublish = async (row) => {
   try {
@@ -689,21 +374,12 @@ const onDeprecate = async (row) => {
       console.error(e);
   }
 };
-// ---- 模板详情（只读） ----
+// ---- 模板详情（已拆到 ClinicalPathTplDetail，组件按 id 自取） ----
 const tplViewVisible = ref(false);
-const tplView = ref(null);
-const openTplView = async (row) => {
+const tplViewId = ref('');
+const openTplView = (row) => {
+  tplViewId.value = String(row.id);
   tplViewVisible.value = true;
-  try {
-    const res = await getPathwayDetail(row.id);
-    if (res.code === 200)
-      tplView.value = res.data;
-    else
-      ElMessage.error(res.message || '加载模板失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('加载模板失败');
-  }
 };
 // ---------------- 页签二：在径管理 ----------------
 const enLoading = ref(false);
@@ -819,131 +495,14 @@ const doEnroll = async () => {
     enrolling.value = false;
   }
 };
-// ---- 入径详情弹窗 ----
+// ---- 入径详情（已拆到 ClinicalPathEnrollDetail：组件按 id 自取，完成/退径/登记变异都在组件里） ----
 const detailVisible = ref(false);
-const detail = ref(null);
-const detailLoading = ref(false);
-const actLoading = ref(false);
-const openEnrollDetail = async (id) => {
+const detailId = ref('');
+const openEnrollDetail = (id) => {
+  if (!id)
+    return;
+  detailId.value = id;
   detailVisible.value = true;
-  detailLoading.value = true;
-  try {
-    const res = await getEnrollDetail(id);
-    if (res.code === 200)
-      detail.value = res.data;
-    else
-      ElMessage.error(res.message || '查询入径详情失败');
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('查询入径详情失败');
-  } finally {
-    detailLoading.value = false;
-  }
-};
-const refreshDetail = async () => {
-  if (detail.value?.id)
-    await openEnrollDetail(detail.value.id);
-  await Promise.all([loadEnroll(), loadCandidates()]);
-};
-// ---- 变异登记弹窗 ----
-const varVisible = ref(false);
-const varSaving = ref(false);
-const varForm = reactive({
-  enrollId: null,
-  dayNo: 1,
-  varianceType: 1,
-  varianceReason: '',
-  handling: '',
-  occurredDate: today(),
-});
-const openVariance = () => {
-  if (!detail.value?.id)
-    return;
-  varForm.enrollId = detail.value.id;
-  varForm.dayNo = Math.min(detail.value.currentDay || 1, detail.value.totalDays || 1);
-  varForm.varianceType = 1;
-  varForm.varianceReason = '';
-  varForm.handling = '';
-  varForm.occurredDate = today();
-  varVisible.value = true;
-};
-const saveVariance = async () => {
-  if (!varForm.varianceReason.trim()) {
-    ElMessage.warning('变异原因必填');
-    return;
-  }
-  varSaving.value = true;
-  try {
-    const res = await varianceUpsert({
-      enrollId: varForm.enrollId,
-      dayNo: Number(varForm.dayNo),
-      varianceType: Number(varForm.varianceType),
-      varianceReason: varForm.varianceReason.trim(),
-      handling: varForm.handling.trim() || undefined,
-      occurredDate: varForm.occurredDate,
-    });
-    if (res.code === 200) {
-      ElMessage.success('变异已登记');
-      varVisible.value = false;
-      await openEnrollDetail(varForm.enrollId);
-      await loadEnroll();
-    } else {
-      ElMessage.error(res.message || '登记变异失败');
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('登记变异失败');
-  } finally {
-    varSaving.value = false;
-  }
-};
-const onFinish = async () => {
-  if (!detail.value?.id)
-    return;
-  try {
-    await ElMessageBox.confirm('确认该患者完成临床路径？有变异记录不挡完成（完成=按计划走完或临床认可结局）。', '路径完成', {
-      confirmButtonText: '确认完成',
-      cancelButtonText: '取消'
-    });
-    actLoading.value = true;
-    const res = await finishEnroll({id: detail.value.id});
-    if (res.code === 200) {
-      ElMessage.success('已完成');
-      await refreshDetail();
-    } else {
-      ElMessage.error(res.message || '完成失败');
-    }
-  } catch (e) {
-    if (e !== 'cancel' && e?.message !== 'cancel')
-      console.error(e);
-  } finally {
-    actLoading.value = false;
-  }
-};
-const onAbort = async () => {
-  if (!detail.value?.id)
-    return;
-  try {
-    const {value} = await ElMessageBox.prompt('确认退出临床路径？退径后转非路径管理，该住院记录可重新入径。', '退径原因（必填）', {
-      confirmButtonText: '确认退径',
-      cancelButtonText: '取消',
-      inputPattern: /\S+/,
-      inputErrorMessage: '退径原因必填'
-    });
-    actLoading.value = true;
-    const res = await abortEnroll({id: detail.value.id, reason: value.trim()});
-    if (res.code === 200) {
-      ElMessage.success('已退径');
-      await refreshDetail();
-    } else {
-      ElMessage.error(res.message || '退径失败');
-    }
-  } catch (e) {
-    if (e !== 'cancel' && e?.message !== 'cancel')
-      console.error(e);
-  } finally {
-    actLoading.value = false;
-  }
 };
 // ---------------- 页签三：变异分析 ----------------
 const anaLoading = ref(false);
@@ -992,13 +551,7 @@ const onTabChange = (name) => {
   }
 };
 onMounted(async () => {
-  await Promise.all([loadDicts(), loadDepts()]);
+  await loadDicts();
   await loadTpl();
 });
 </script>
-
-<style scoped>
-.w-24 {
-  width: 96px;
-}
-</style>

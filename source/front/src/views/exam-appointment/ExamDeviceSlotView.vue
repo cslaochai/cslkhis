@@ -136,83 +136,9 @@
     </el-card>
 
     <!-- ============ 设备档位弹窗 ============ -->
-    <el-dialog v-model="devDlg.visible" :title="devDlg.form.id ? '编辑设备档位' : '新增设备档位'" data-testid="exam-device-dialog"
-               width="720px">
-      <el-form label-width="110px">
-        <div class="grid grid-cols-2 gap-x-4">
-          <el-form-item label="设备编码" required>
-            <el-input v-model="devDlg.form.deviceCode" placeholder="如 EX-CT03"/>
-          </el-form-item>
-          <el-form-item label="设备名称" required>
-            <el-input v-model="devDlg.form.deviceName"/>
-          </el-form-item>
-          <el-form-item label="设备类别" required>
-            <el-select v-model="devDlg.form.deviceType" style="width: 100%">
-              <el-option v-for="d in deviceTypeDict" :key="d.dictValue" :label="d.dictLabel"
-                         :value="Number(d.dictValue)"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="所属科室">
-            <el-select v-model="devDlg.form.deptId" :fit-input-width="false" clearable filterable placeholder="可空"
-                       style="width: 100%">
-              <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="Number(d.id)"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="设备台账">
-            <el-select v-model="devDlg.form.equipmentId" :fit-input-width="false" clearable filterable
-                       placeholder="可空（台账没建档也能先排号源）" style="width: 100%">
-              <el-option v-for="e in equipOptions" :key="e.id" :label="`${e.equipmentName}（${e.equipmentCode}）`"
-                         :value="e.id"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="机房">
-            <el-input v-model="devDlg.form.roomName"/>
-          </el-form-item>
-          <el-form-item label="上午开始" required>
-            <el-time-picker v-model="devDlg.form.amStart" format="HH:mm" style="width: 100%" value-format="HH:mm"/>
-          </el-form-item>
-          <el-form-item label="上午结束" required>
-            <el-time-picker v-model="devDlg.form.amEnd" format="HH:mm" style="width: 100%" value-format="HH:mm"/>
-          </el-form-item>
-          <el-form-item label="下午开始">
-            <el-time-picker v-model="devDlg.form.pmStart" format="HH:mm" style="width: 100%" value-format="HH:mm"/>
-          </el-form-item>
-          <el-form-item label="下午结束">
-            <el-time-picker v-model="devDlg.form.pmEnd" format="HH:mm" style="width: 100%" value-format="HH:mm"/>
-          </el-form-item>
-          <el-form-item label="号源粒度(分)">
-            <el-input-number v-model="devDlg.form.slotMinutes" :max="240" :min="5" :step="5" style="width: 100%"/>
-          </el-form-item>
-          <el-form-item label="并行检查台数">
-            <el-input-number v-model="devDlg.form.parallelCount" :max="20" :min="1" style="width: 100%"/>
-          </el-form-item>
-          <el-form-item label="开放提前天数">
-            <el-input-number v-model="devDlg.form.aheadDays" :max="90" :min="1" style="width: 100%"/>
-          </el-form-item>
-          <el-form-item label="单次可占上限(分)">
-            <el-input-number v-model="devDlg.form.maxSlotMinutes" :max="1440" :min="5" :step="5" style="width: 100%"/>
-          </el-form-item>
-          <el-form-item label="开放状态">
-            <el-select v-model="devDlg.form.status" style="width: 100%">
-              <el-option v-for="d in deviceStatusDict" :key="d.dictValue" :label="d.dictLabel"
-                         :value="Number(d.dictValue)"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="备注">
-            <el-input v-model="devDlg.form.remark"/>
-          </el-form-item>
-        </div>
-      </el-form>
-      <div class="text-xs text-gray-400 px-2">
-        改开放时间或粒度不会自动重排历史格子：号源一旦被占用就不允许被静默挪走，保存后请到号源台按新口径生成后续日期并做一次对账。
-      </div>
-      <template #footer>
-        <el-button @click="devDlg.visible = false">取消</el-button>
-        <el-button v-perm="['medtech:examAppoint:add', 'medtech:examAppoint:edit']" :loading="devDlg.saving"
-                   type="primary" @click="saveDevice">保存
-        </el-button>
-      </template>
-    </el-dialog>
+    <ExamDeviceSlotEdit v-model="devDlg.visible" :row="devDlg.row" :device-type-dict="deviceTypeDict"
+                        :device-status-dict="deviceStatusDict" :dept-options="deptOptions"
+                        @saved="handleDeviceSaved"/>
 
     <!-- ============ 可开展项目弹窗 ============ -->
     <el-dialog v-model="itemDlg.visible" :title="`可开展项目：${itemDlg.device?.deviceName || ''}`" width="760px">

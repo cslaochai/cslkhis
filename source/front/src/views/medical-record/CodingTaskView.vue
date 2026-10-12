@@ -144,36 +144,7 @@
     </el-dialog>
 
     <!-- 提交编码弹窗 -->
-    <el-dialog v-model="submitVisible" :title="`提交编码 - ${submitRow?.taskNo || ''}`" data-testid="ct-submit-dialog"
-               width="560px">
-      <div v-if="submitRow" class="text-sm text-gray-600 mb-3">
-        <div><span class="text-gray-400">病案：</span>{{ submitRow.recordNo }} / {{
-            submitRow.patientName
-          }}（{{ submitRow.deptName || '—' }}）
-        </div>
-        <div v-if="submitRow.diagnosis"><span class="text-gray-400">病历诊断：</span>{{ submitRow.diagnosis }}</div>
-      </div>
-      <el-form label-width="100px">
-        <el-form-item label="主诊断编码" required>
-          <el-input v-model="submitForm.mainIcdCode" data-testid="ct-submit-code" maxlength="20"
-                    placeholder="ICD-10 编码，如 I10.x00"/>
-        </el-form-item>
-        <el-form-item label="主诊断名称" required>
-          <el-input v-model="submitForm.mainIcdName" data-testid="ct-submit-name" maxlength="200"
-                    placeholder="如 原发性高血压"/>
-        </el-form-item>
-        <el-form-item label="其他诊断">
-          <el-input v-model="submitForm.otherIcdText" :rows="3" maxlength="500" placeholder="其他诊断/手术 ICD，分号分隔（可空）"
-                    type="textarea"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="submitVisible = false">取消</el-button>
-        <el-button v-perm="'emr:codeTask:edit'" :loading="submitLoading" data-testid="ct-submit-save" type="primary"
-                   @click="submitTask">提交
-        </el-button>
-      </template>
-    </el-dialog>
+    <CodingTaskSubmitEdit v-model="submitVisible" :row="submitRow" @saved="onSubmitSaved"/>
 
     <!-- 审核弹窗 -->
     <el-dialog v-model="auditVisible" :title="`审核编码 - ${auditRow?.taskNo || ''}`" data-testid="ct-audit-dialog"
@@ -204,38 +175,7 @@
     </el-dialog>
 
     <!-- 详情弹窗 -->
-    <el-dialog v-model="detailVisible" :title="`编码任务 ${detail?.taskNo || ''}`" data-testid="ct-detail-dialog"
-               width="640px">
-      <template v-if="detail">
-        <el-descriptions :column="2" border size="small">
-          <el-descriptions-item label="状态">
-            <el-tag :type="statusTagType(detail.status)">{{ statusText(detail.status) }}</el-tag>
-            <span v-if="Number(detail.returnCount) > 0" class="ml-1 text-xs text-red-500">累计退修 {{
-                detail.returnCount
-              }} 次</span>
-          </el-descriptions-item>
-          <el-descriptions-item label="编码员">{{ detail.coderName || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="病历号">{{ detail.recordNo || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="患者">{{ detail.patientName || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="科室">{{ detail.deptName || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="分配时间">
-            {{ detail.assignTime ? (detail.assignTime || '').replace('T', ' ').slice(0, 19) : '—' }}
-          </el-descriptions-item>
-          <el-descriptions-item :span="2" label="病历诊断">{{ detail.diagnosis || '—' }}</el-descriptions-item>
-          <el-descriptions-item :span="2" label="主诊断 ICD">
-            {{ detail.mainIcdCode ? `${detail.mainIcdCode} ${detail.mainIcdName}` : '—' }}
-          </el-descriptions-item>
-          <el-descriptions-item :span="2" label="其他诊断">{{ detail.otherIcdText || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="提交时间">
-            {{ detail.submitTime ? (detail.submitTime || '').replace('T', ' ').slice(0, 19) : '—' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="审核时间">
-            {{ detail.auditTime ? (detail.auditTime || '').replace('T', ' ').slice(0, 19) : '—' }}
-          </el-descriptions-item>
-          <el-descriptions-item :span="2" label="审核意见">{{ detail.auditRemark || '—' }}</el-descriptions-item>
-        </el-descriptions>
-      </template>
-    </el-dialog>
+    <CodingTaskDetail v-model="detailVisible" :id="detailId" :status-dict="statusDict"/>
   </div>
 </template>
 
@@ -254,10 +194,8 @@ import {MagicStick, Refresh, Search} from '@element-plus/icons-vue';
 import {
   assignCodeTask,
   auditCodeTask,
-  getCodeTaskDetail,
   getCodeTaskList,
   getCodeTaskStats,
-  submitCodeTask,
   syncCodeTasks,
 } from '@/api/codeTask';
 import {getDictDataMapList, getEmployeeList} from '@/api/system';
@@ -266,6 +204,8 @@ import {dictLabelText} from '@/lib/utils';
 import {CODE_TASK_ACTIONS, statusTagType} from '@/lib/codeTask';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+import CodingTaskSubmitEdit from './CodingTaskSubmitEdit.vue';
+import CodingTaskDetail from './CodingTaskDetail.vue';
 
 const loading = ref(true);
 const rows = ref([]);
@@ -396,46 +336,17 @@ const submitAssign = async () => {
   }
 };
 // ------------------------------------------------------------------
-// 提交编码弹窗
+// 提交编码弹窗（表单与提交逻辑在 CodingTaskSubmitEdit.vue）
 // ------------------------------------------------------------------
 const submitVisible = ref(false);
 const submitRow = ref(null);
-const submitForm = reactive({mainIcdCode: '', mainIcdName: '', otherIcdText: ''});
-const submitLoading = ref(false);
 const openSubmit = (row) => {
   submitRow.value = row;
-  submitForm.mainIcdCode = '';
-  submitForm.mainIcdName = '';
-  submitForm.otherIcdText = '';
   submitVisible.value = true;
 };
-const submitTask = async () => {
-  if (!submitForm.mainIcdCode.trim() || !submitForm.mainIcdName.trim()) {
-    ElMessage.warning('请填写主诊断 ICD 编码与名称');
-    return;
-  }
-  submitLoading.value = true;
-  try {
-    const res = await submitCodeTask({
-      id: submitRow.value.id,
-      mainIcdCode: submitForm.mainIcdCode.trim(),
-      mainIcdName: submitForm.mainIcdName.trim(),
-      otherIcdText: submitForm.otherIcdText.trim() || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage.success('编码已提交，等待审核');
-      submitVisible.value = false;
-      loadList();
-      loadStats();
-    } else {
-      ElMessage.error(res.message || '提交失败');
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('提交失败');
-  } finally {
-    submitLoading.value = false;
-  }
+const onSubmitSaved = () => {
+  loadList();
+  loadStats();
 };
 // ------------------------------------------------------------------
 // 审核弹窗（通过 / 退修共用）
@@ -475,23 +386,13 @@ const submitAudit = async () => {
   }
 };
 // ------------------------------------------------------------------
-// 详情弹窗
+// 详情弹窗（取数与渲染在 CodingTaskDetail.vue）
 // ------------------------------------------------------------------
 const detailVisible = ref(false);
-const detail = ref(null);
-const openDetail = async (row) => {
-  try {
-    const res = await getCodeTaskDetail(row.id);
-    if (res.code === 200) {
-      detail.value = res.data;
-      detailVisible.value = true;
-    } else {
-      ElMessage.error(res.message || '查询详情失败');
-    }
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('查询详情失败');
-  }
+const detailId = ref('');
+const openDetail = (row) => {
+  detailId.value = row.id;
+  detailVisible.value = true;
 };
 onMounted(() => {
   loadDicts();
