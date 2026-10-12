@@ -276,10 +276,13 @@
             </el-table-column>
             <el-table-column label="出账人" prop="billByName" width="100"/>
             <el-table-column label="出账时间" prop="billTime" width="160"/>
-            <el-table-column fixed="right" label="操作" width="230">
+            <el-table-column fixed="right" label="操作" width="280">
               <template #default="{ row }">
                 <el-button v-if="Number(row.unpaidAmount) > 0" data-testid="cash-btn-pay" link type="primary"
                            @click="openPay(row)">收款
+                </el-button>
+                <el-button v-if="Number(row.unpaidAmount) > 0" data-testid="cash-btn-qrpay" link type="primary"
+                           @click="openQrPay(row)">扫码
                 </el-button>
                 <el-button v-if="Number(row.billStatus) === 3" link type="success" @click="openRefund(row)">退费
                 </el-button>
@@ -550,6 +553,10 @@
         <el-button @click="detailDialog = false">关闭</el-button>
       </template>
     </el-dialog>
+
+    <!-- ============ 扫码收款（主扫：医院出码，患者扫；收款结果由渠道确认，不由页面点出来） ============ -->
+    <QrPayDialog v-model="qrPayDialog" :amount="qrPayBill?.unpaidAmount" :bill-id="qrPayBill?.id"
+                 :bill-no="qrPayBill?.billNo" :patient-name="qrPayBill?.patientName" @paid="onQrPaid"/>
   </div>
 </template>
 
@@ -585,6 +592,7 @@ import {
   voidBill,
 } from '@/api/settlementBill';
 import {issueInvoice} from '@/api/invoice';
+import QrPayDialog from '@/components/his/QrPayDialog.vue';
 import {DICT_TYPE, loadDictDataMap} from '@/lib/dict-cache';
 import {dictLabelText, formatMoney} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
@@ -880,6 +888,22 @@ async function runIssue() {
   } catch (error) {
     ElMessage.error(error.message || '出票失败');
   }
+}
+
+// ==================== 扫码收款（主扫：医院出码，患者扫） ====================
+const qrPayDialog = ref(false);
+const qrPayBill = ref(null);
+
+function openQrPay(bill) {
+  qrPayBill.value = bill;
+  qrPayDialog.value = true;
+}
+
+/** 收款事实来自渠道，本页不翻状态：入账成功只重新拉账单与就诊榜 */
+async function onQrPaid() {
+  ElMessage.success('扫码收款已入账');
+  await loadWorkbench();
+  await loadBoard();
 }
 
 // ==================== 退费（红冲记账行 + 原路退回） ====================

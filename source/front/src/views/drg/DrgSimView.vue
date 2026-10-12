@@ -184,7 +184,7 @@
 /**
  * DRG-DIP 分组模拟（G23，菜单 907，挂报表统计；目录 1200 于 sql/188 由「报表与审计」更名）
  *
- * 院内简化模拟器：主诊断 ICD 类目 + 是否手术 → 组表 sys_drg_group（CHS-DRG 1.1 模拟种子）。
+ * 院内简化模拟器：主诊断 ICD 类目 + 是否手术 → 组表 biz_drg_group（CHS-DRG 1.1 模拟种子）。
  * 首页主诊断编码为空时在弹窗里补录 ICD（走 sys_icd10 检索接口），再跑模拟；每首页一条结果重跑覆盖。
  */
 import {onMounted, reactive, ref} from 'vue';

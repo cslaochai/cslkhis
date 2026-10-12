@@ -25,6 +25,20 @@ public class SysPatientTag {
     private String createBy;
 
     /**
+     * 创建人 ID（登录用户 id）
+     */
+    @TableField(fill = FieldFill.INSERT)
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long createById;
+
+    /**
+     * 更新人 ID（登录用户 id）
+     */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long updateById;
+
+    /**
      * 更新人
      */
     @TableField(fill = FieldFill.INSERT_UPDATE)
@@ -56,11 +70,13 @@ public class SysPatientTag {
      * 创建时间
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
     /**
      * 更新时间
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 }

@@ -1,11 +1,11 @@
 package com.his.patient.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -14,15 +14,9 @@ import java.time.LocalDateTime;
  * 护理评估单（G14：压疮 Braden / 跌倒 Morse / 疼痛 NRS）。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_nursing_assessment")
-public class BizNursingAssessment {
-
-    /**
-     * 主键ID
-     */
-    @TableId(type = IdType.ASSIGN_ID)
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long id;
+public class BizNursingAssessment extends BaseEntity {
 
     /**
      * 评估单号 AS+yyyyMMdd+4位
@@ -104,22 +98,6 @@ public class BizNursingAssessment {
      */
     private String assessNurseName;
 
-    /**
-     * 创建人
-     */
-    private String createBy;
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-    /**
-     * 更新人
-     */
-    private String updateBy;
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
     /**
      * 删除标志（0-正常 1-删除）
      */

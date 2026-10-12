@@ -1,10 +1,10 @@
 package com.his.patient.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -14,15 +14,9 @@ import java.time.LocalDateTime;
  * 出院带药单实体（一条一行药品项；挂入院次，出院前即可开单）。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_discharge_drug")
-public class BizDischargeDrug {
-
-    /**
-     * 带药单ID
-     */
-    @TableId(type = IdType.ASSIGN_ID)
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long id;
+public class BizDischargeDrug extends BaseEntity {
 
     /**
      * 带药单号
@@ -106,22 +100,6 @@ public class BizDischargeDrug {
      */
     private LocalDateTime dispenseTime;
 
-    /**
-     * 创建人
-     */
-    private String createBy;
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-    /**
-     * 更新人
-     */
-    private String updateBy;
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
     /**
      * 删除标志（0-正常 1-删除）
      */

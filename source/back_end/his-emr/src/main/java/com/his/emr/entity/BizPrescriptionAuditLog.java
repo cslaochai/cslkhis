@@ -1,45 +1,21 @@
 package com.his.emr.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.baomidou.mybatisplus.annotation.TableField;
 
 /**
  * 处方审方动作流水（L7 审方退回重开闭环，只增不改）。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_prescription_audit_log")
-public class BizPrescriptionAuditLog implements Serializable {
-    /**
-     * 创建人
-     */
-    @TableField(fill = FieldFill.INSERT)
-    private String createBy;
-
-    /**
-     * 更新人
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private String updateBy;
-
-    /**
-     * 更新时间
-     */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updateTime;
+public class BizPrescriptionAuditLog extends BaseEntity implements Serializable {
 
     private static final long serialVersionUID = 1L;
-
-    @TableId(type = IdType.ASSIGN_ID)
-    private Long id;
 
     /**
      * 处方 id（重提后是新 id）
@@ -85,11 +61,6 @@ public class BizPrescriptionAuditLog implements Serializable {
      * 审方意见/退回原因
      */
     private String opinion;
-
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
 
     /**
      * 删除标志

@@ -89,8 +89,6 @@ public class PatientUpsertDTO {
     private String medicalHistory;
     /**
      * 患者类型（参保性质）：1-自费 2-城镇职工医保 3-城乡居民医保 4-公费 5-其他
-     * <p>口径与患者基本信息的患者类型列注释、字典数据(his_patient_type) 一致。
-     * 注意别与「就诊类型（门诊/住院/急诊）」混淆——那是另一套码值。
      */
     private Integer patientType;
     /**

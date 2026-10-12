@@ -1,12 +1,12 @@
 package com.his.patient.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -16,15 +16,9 @@ import java.time.LocalDateTime;
  * 订餐配送（sql/168 §3，院内工作站侧，不含金额）。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_meal_order")
-public class BizMealOrder {
-
-    /**
-     * 主键
-     */
-    @TableId(type = IdType.ASSIGN_ID)
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long id;
+public class BizMealOrder extends BaseEntity {
 
     /**
      * 订餐单号（MO+yyyyMMdd+4位序号）
@@ -151,23 +145,6 @@ public class BizMealOrder {
      * 来源（1-按膳食方案批量生成 2-手工加订）
      */
     private Integer source;
-
-    /**
-     * 创建人
-     */
-    private String createBy;
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-    /**
-     * 更新人
-     */
-    private String updateBy;
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
 
     /**
      * 删除标志（0-正常 1-删除）

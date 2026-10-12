@@ -24,11 +24,11 @@
 
 | 表 | 作用 | 关键列 | 唯一键（已含 version） |
 |----|------|--------|------------------------|
-| `sys_drg_mdc` | 主要诊断大类 MDC（先期分组） | `mdc_code` `mdc_name` `mdc_rule`（规则原文） `sort_no` | `(mdc_code, version, del_flag)` |
-| `sys_drg_adrg` | 核心疾病诊断相关组 ADRG | `adrg_code` `adrg_name` `adrg_rule` `mdc_code`（归属） | `(adrg_code, version, del_flag)` |
-| `sys_drg_group` | DRG 细分组（最终付费组） | `drg_code` `drg_name` `drg_rule` `adrg_code` `mdc_code` `weight` `pay_standard` | `(drg_code, version, del_flag)` |
-| `sys_drg_set` | 规则引用的 ICD 码集合（集合编号→精确码） | `set_code` `icd_code` `set_type`（OP/DI/EX） | `(set_code, icd_code, version, del_flag)` |
-| `sys_drg_ccmcc` | 并发症合并症 CC/MCC 目录 | `icd_code` `cc_level`（MCC/CC/NONE） `excl_group`（排除组） | `(icd_code, version, del_flag)` |
+| `biz_drg_mdc` | 主要诊断大类 MDC（先期分组） | `mdc_code` `mdc_name` `mdc_rule`（规则原文） `sort_no` | `(mdc_code, version, del_flag)` |
+| `biz_drg_adrg` | 核心疾病诊断相关组 ADRG | `adrg_code` `adrg_name` `adrg_rule` `mdc_code`（归属） | `(adrg_code, version, del_flag)` |
+| `biz_drg_group` | DRG 细分组（最终付费组） | `drg_code` `drg_name` `drg_rule` `adrg_code` `mdc_code` `weight` `pay_standard` | `(drg_code, version, del_flag)` |
+| `biz_drg_set` | 规则引用的 ICD 码集合（集合编号→精确码） | `set_code` `icd_code` `set_type`（OP/DI/EX） | `(set_code, icd_code, version, del_flag)` |
+| `biz_drg_ccmcc` | 并发症合并症 CC/MCC 目录 | `icd_code` `cc_level`（MCC/CC/NONE） `excl_group`（排除组） | `(icd_code, version, del_flag)` |
 
 > 每张方案表都有 `version varchar(32)`、`source`、`status` 列。3.0 的存量数据 `version` 默认 `'3.0'`。
 > 规则原文（`*_rule` 列）存的是 **3.0 两跳 DSL**（见 §3），不是自然语言。
@@ -58,7 +58,7 @@ CHS-DRG 3.0 是「**先期分组 → 细分组**」两级，规则用 **两跳 D
 2. **ADRG 层**：在 MDC 内，主诊断 + 手术操作决定进哪个 ADRG。规则形如 `ZYSS in OP_AA1` 或 `{ZYSS, QTSS} in OP2_AC1`。
 3. **DRG 细分组层**：ADRG 内再按 CC/MCC 并发症、性别年龄、手术数量细分。规则形如 `length[OP_IC2 ∩ {ZYSS,QTSS}] >= 2`（交集里手术 ≥ 2 个）。
 
-**「两跳」含义**：规则里写的是**集合编号**（如 `DI_B00`、`OP_AA1`），引擎先到 `sys_drg_set` 把集合编号展开成精确 ICD 码列表，再拿病例的实际码去比——这就是两跳。所以 `sys_drg_set` 是引擎的「字典」，没有它规则就无法落地。
+**「两跳」含义**：规则里写的是**集合编号**（如 `DI_B00`、`OP_AA1`），引擎先到 `biz_drg_set` 把集合编号展开成精确 ICD 码列表，再拿病例的实际码去比——这就是两跳。所以 `biz_drg_set` 是引擎的「字典」，没有它规则就无法落地。
 
 `DrgRuleParser` 只认 3.0 这种 DSL（4 种形状：`in` / `not in` / 数值比较 / `length[∩]>=n` / 常量 `1`）。
 解析失败的行会被丢弃并打警告，**绝不当兜底档**（避免整组病例错入一个没读懂的组）。
@@ -100,7 +100,7 @@ CHS-DRG 3.0 是「**先期分组 → 细分组**」两级，规则用 **两跳 D
 
 | 方案 | 做法 | 代价 / 风险 |
 |------|------|-------------|
-| **A. 等官方结构化数据** | 等统筹区医保局下发 2.0 的 Excel/数据库版目录（含 `sys_drg_*` 5 表 + 两跳 DSL 化规则），直接灌 | 最稳妥；但下发时间不可控，且 2.0 规则本身就不是两跳 DSL，仍需人工或半自动转写 |
+| **A. 等官方结构化数据** | 等统筹区医保局下发 2.0 的 Excel/数据库版目录（含 `biz_drg_*` 5 表 + 两跳 DSL 化规则），直接灌 | 最稳妥；但下发时间不可控，且 2.0 规则本身就不是两跳 DSL，仍需人工或半自动转写 |
 | **B. 手工转写 2.0 规则** | 由懂 DRG 分组的人把 PDF 一跳规则逐条转成两跳 DSL 入库 | 工作量大、需专业知识、易错（**建议只让真懂分组的人做，且必须抽样回算验证**） |
 | **C. 先不灌 2.0** | 维持现状：3.0 可用，2.0 下拉占位但判 QY | 零风险，等数据到位再说 |
 
@@ -112,7 +112,7 @@ CHS-DRG 3.0 是「**先期分组 → 细分组**」两级，规则用 **两跳 D
 
 你选的「A：多版本共存 + 切换」已落地，改动点：
 
-1. **唯一键加 `version`**：`sys_drg_mdc / adrg / set / group` 和 `biz_drg_sim_result` 的唯一键都纳入 `version`，两版码值同名也不撞键。
+1. **唯一键加 `version`**：`biz_drg_mdc / adrg / set / group` 和 `biz_drg_sim_result` 的唯一键都纳入 `version`，两版码值同名也不撞键。
    - 全新库：跑 `01-初始化DDL/04`（已同步）；
    - 已部署库：跑 `03-增量SQL变更/235-DRG多版本隔离（唯一键加version+结果表加version列）.sql`。
 2. **缓存按版本分桶**：`DrgSchemeCache` 从单份方案改为 `Map<version, DrgScheme>`，首次用到某版本惰性装载；`DEFAULT_VERSION = "3.0"`，存量行为不变。

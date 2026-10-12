@@ -3,6 +3,9 @@ package com.his.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.system.api.service.AppointApi;
+import com.his.system.dto.BizClinicSourceBatchItemDTO;
+import com.his.system.dto.BizClinicSourceBatchUpsertDTO;
+import com.his.system.dto.BizClinicSourceReplicateDTO;
 import com.his.system.dto.NurseDutyRow;
 import com.his.system.dto.OnDutyQueryDTO;
 import com.his.system.dto.ScheduleQueryDTO;
@@ -13,12 +16,14 @@ import com.his.system.mapper.BizClinicSourceMapper;
 import com.his.system.mapper.BizScheduleMapper;
 import com.his.system.service.BizClinicSourceService;
 import com.his.system.service.BizClinicSourceSlotService;
+import com.his.system.vo.BizClinicSourceBatchResultVO;
 import com.his.system.vo.OnDutyStaffVO;
 import com.his.system.vo.ScheduleDetailVO;
 import com.his.system.vo.ScheduleSelectListVO;
 import com.his.system.vo.StopImpactItemVO;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.NumUtil;
 import com.his.common.util.ShiftCoverUtil;
 import com.his.common.util.TextUtil;
 import com.his.system.dto.StaffScheduleUpsertDTO;
@@ -41,10 +46,12 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * 挂号服务实现
@@ -52,6 +59,9 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMapper, BizClinicSource> implements BizClinicSourceService {
+
+    /** 复刻的默认后移天数（一周） */
+    private static final int REPLICATE_DEFAULT_OFFSET = 7;
 
     private final DeptScopeService deptScopeService;
 
@@ -119,17 +129,40 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         checkRoomRequired(schedule);
         checkScheduleOverlap(schedule, null);
 
-        schedule.setUsedSource(0);
-        schedule.setAvailableSource(schedule.getTotalSource());
-        if (schedule.getStatus() == null) {
-            schedule.setStatus(ScheduleStatusEnum.NORMAL.getCode());
-        }
+        initNewScheduleRow(schedule);
         boolean ok = clinicSourceMapper.insert(schedule) > 0;
         if (ok && StaffTypeEnum.hasSource(schedule.getStaffType())) {
             bizScheduleSlotService.generateSlots(schedule.getId(), schedule.getStartTime(), schedule.getEndTime(),
                     schedule.getTotalSource(), schedule.getAppointmentSource());
         }
         return ok;
+    }
+
+    /**
+     * 新建号源行的初值收口（手工新增与模板生成共用）。
+     *
+     * <p>本表除 del_flag 外没有任何列默认值，而 MyBatis-Plus 遇到 null 字段会把**整个列从 INSERT 里省掉**，
+     * MySQL 严格模式下就报 1364「doesn't have a default value」——连可空列也一样（可空≠可省略）。
+     * 所以「这条号源池刚建出来是什么状态」只能在这里给死，不许靠库兜。
+     */
+    @Override
+    public void initNewScheduleRow(BizClinicSource schedule) {
+        int total = NumUtil.orZero(schedule.getTotalSource());
+        schedule.setTotalSource(total);
+        schedule.setUsedSource(0);
+        schedule.setAddedSource(0);
+        schedule.setUsedAppointmentSource(0);
+        schedule.setAvailableSource(total);
+        schedule.setAppointmentSource(NumUtil.orZero(schedule.getAppointmentSource()));
+        schedule.setIsAppointment(NumUtil.orZero(schedule.getIsAppointment()));
+        schedule.setConsultStatus(ConsultStatusEnum.NOT_STARTED.getCode());
+        if (schedule.getStatus() == null) {
+            schedule.setStatus(ScheduleStatusEnum.NORMAL.getCode());
+        }
+        schedule.setIsExpert(NumUtil.orZero(schedule.getIsExpert()));
+        schedule.setRegistFee(NumUtil.orZero(schedule.getRegistFee()));
+        schedule.setDiagnosisFee(NumUtil.orZero(schedule.getDiagnosisFee()));
+        schedule.setExpertFee(NumUtil.orZero(schedule.getExpertFee()));
     }
 
     @Override
@@ -371,6 +404,160 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         }
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BizClinicSourceBatchResultVO batchUpsert(BizClinicSourceBatchUpsertDTO batchDTO) {
+        List<BizClinicSourceBatchItemDTO> items = batchDTO.getItems();
+        Set<Long> distinctDoctorIds = new HashSet<>();
+        for (BizClinicSourceBatchItemDTO item : items) {
+            if (!distinctDoctorIds.add(item.getDoctorId())) {
+                throw new BusinessException("排班人员重复选择：" + item.getDoctorName());
+            }
+        }
+        int created = 0;
+        for (BizClinicSourceBatchItemDTO item : items) {
+            for (LocalDate date : batchDTO.getScheduleDates()) {
+                BizClinicSource schedule = toBatchSchedule(batchDTO, item, date);
+                try {
+                    addSchedule(schedule);
+                } catch (BusinessException | DuplicateKeyException e) {
+                    // 整批已经回滚，所以报错必须点名是「哪个人、哪一天」，只说「时间冲突」没人知道该改哪一条
+                    String reason = e instanceof DuplicateKeyException ? "该医生在此时间段已有排班，时间冲突" : e.getMessage();
+                    throw new BusinessException(item.getDoctorName() + " " + date + "：" + reason);
+                }
+                created++;
+            }
+        }
+        BizClinicSourceBatchResultVO vo = new BizClinicSourceBatchResultVO();
+        vo.setCreated(created);
+        vo.setSkipped(0);
+        vo.setMessage("成功创建 " + created + " 条排班（" + items.size() + " 位"
+                + StaffTypeEnum.getText(batchDTO.getStaffType()) + "人员 × " + batchDTO.getScheduleDates().size() + " 天）");
+        return vo;
+    }
+
+    /**
+     * 批量表头 + 人员明细 + 单个日期 → 一条号源行。时间段不取入参，由 addSchedule 按班次覆盖。
+     */
+    private BizClinicSource toBatchSchedule(BizClinicSourceBatchUpsertDTO batch, BizClinicSourceBatchItemDTO item, LocalDate date) {
+        BizClinicSource schedule = new BizClinicSource();
+        schedule.setDeptId(batch.getDeptId());
+        schedule.setDeptName(batch.getDeptName());
+        schedule.setStaffType(batch.getStaffType());
+        schedule.setShiftId(batch.getShiftId());
+        schedule.setStatus(batch.getStatus());
+        schedule.setScheduleDate(date);
+        schedule.setDoctorId(item.getDoctorId());
+        schedule.setDoctorName(item.getDoctorName());
+        schedule.setRoomId(item.getRoomId());
+        schedule.setRoomName(item.getRoomName());
+        schedule.setTotalSource(item.getTotalSource());
+        schedule.setRegistFee(item.getRegistFee());
+        schedule.setDiagnosisFee(item.getDiagnosisFee());
+        schedule.setIsExpert(item.getIsExpert());
+        schedule.setExpertFee(item.getExpertFee());
+        schedule.setIsAppointment(item.getIsAppointment());
+        schedule.setAppointmentSource(item.getAppointmentSource());
+        return schedule;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BizClinicSourceBatchResultVO replicate(BizClinicSourceReplicateDTO dto) {
+        int offset = dto.getDayOffset() == null ? REPLICATE_DEFAULT_OFFSET : dto.getDayOffset();
+        LocalDate today = LocalDate.now();
+        if (dto.getEndDate().isBefore(today)) {
+            throw new BusinessException("复刻区间 " + dto.getStartDate() + " ~ " + dto.getEndDate()
+                    + " 已全部过去，历史排班只读（以门诊日志为准）");
+        }
+        ScheduleQueryDTO sourceQuery = new ScheduleQueryDTO();
+        sourceQuery.setDeptId(dto.getDeptId());
+        sourceQuery.setStartDate(dto.getStartDate());
+        sourceQuery.setEndDate(dto.getEndDate());
+        sourceQuery.setStaffType(dto.getStaffType());
+        List<BizClinicSource> sources = listPage(sourceQuery).stream()
+                .filter(s -> !ScheduleStatusEnum.stopped(s.getStatus()))
+                .toList();
+
+        // 目标区间的既有排班一次捞回来按「人×日」分组：逐条查重就是 N 次查询，而复刻是整周操作
+        List<BizClinicSource> targets = clinicSourceMapper.selectList(new LambdaQueryWrapper<BizClinicSource>()
+                .ge(BizClinicSource::getScheduleDate, dto.getStartDate().plusDays(offset))
+                .le(BizClinicSource::getScheduleDate, dto.getEndDate().plusDays(offset)));
+        Map<Long, List<BizClinicSource>> targetByDoctor = new LinkedHashMap<>();
+        for (BizClinicSource t : targets) {
+            targetByDoctor.computeIfAbsent(t.getDoctorId(), k -> new ArrayList<>()).add(t);
+        }
+
+        int created = 0;
+        int skippedPast = 0;
+        int skippedExist = 0;
+        for (BizClinicSource s : sources) {
+            LocalDate targetDate = s.getScheduleDate().plusDays(offset);
+            if (targetDate.isBefore(today)) {
+                skippedPast++;
+                continue;
+            }
+            boolean occupied = targetByDoctor.getOrDefault(s.getDoctorId(), List.of()).stream()
+                    .anyMatch(t -> targetDate.equals(t.getScheduleDate())
+                            && overlaps(s.getStartTime(), s.getEndTime(), t.getStartTime(), t.getEndTime()));
+            if (occupied) {
+                skippedExist++;
+                continue;
+            }
+            BizClinicSource copy = toReplicateSchedule(s, targetDate);
+            try {
+                addSchedule(copy);
+            } catch (BusinessException | DuplicateKeyException e) {
+                String reason = e instanceof DuplicateKeyException ? "该医生在此时间段已有排班，时间冲突" : e.getMessage();
+                throw new BusinessException(s.getDoctorName() + " " + targetDate + "：" + reason);
+            }
+            created++;
+        }
+        BizClinicSourceBatchResultVO vo = new BizClinicSourceBatchResultVO();
+        vo.setCreated(created);
+        vo.setSkipped(skippedPast + skippedExist);
+        vo.setMessage("复刻到 " + dto.getStartDate().plusDays(offset) + " ~ " + dto.getEndDate().plusDays(offset)
+                + "：成功 " + created + " 条"
+                + (skippedExist > 0 ? "，跳过 " + skippedExist + " 条（目标时段已有排班）" : "")
+                + (skippedPast > 0 ? "，" + skippedPast + " 条目标日期已过未复制" : ""));
+        return vo;
+    }
+
+    /**
+     * 复刻行只带「排的是哪个班」的字段：号源池、费用、状态按源行原样搬，
+     * used/added/remark 这类运行期痕迹必须清零，否则下一周的班次一建出来就带着上周的挂号数。
+     */
+    private BizClinicSource toReplicateSchedule(BizClinicSource source, LocalDate targetDate) {
+        BizClinicSource copy = new BizClinicSource();
+        copy.setDeptId(source.getDeptId());
+        copy.setDeptName(source.getDeptName());
+        copy.setDoctorId(source.getDoctorId());
+        copy.setDoctorName(source.getDoctorName());
+        copy.setStaffType(source.getStaffType());
+        copy.setScheduleDate(targetDate);
+        copy.setShiftId(source.getShiftId());
+        copy.setStartTime(source.getStartTime());
+        copy.setEndTime(source.getEndTime());
+        copy.setTotalSource(source.getTotalSource());
+        copy.setRegistFee(source.getRegistFee());
+        copy.setDiagnosisFee(source.getDiagnosisFee());
+        copy.setIsExpert(source.getIsExpert());
+        copy.setExpertFee(source.getExpertFee());
+        copy.setIsAppointment(source.getIsAppointment());
+        copy.setAppointmentSource(source.getAppointmentSource());
+        copy.setRoomId(source.getRoomId());
+        copy.setRoomName(source.getRoomName());
+        copy.setStatus(ScheduleStatusEnum.NORMAL.getCode());
+        return copy;
+    }
+
+    private boolean overlaps(String startA, String endA, String startB, String endB) {
+        if (startA == null || endA == null || startB == null || endB == null) {
+            return false;
+        }
+        return startA.compareTo(endB) < 0 && startB.compareTo(endA) < 0;
+    }
+
     private List<ScheduleDetailVO> toVOList(List<BizClinicSource> list) {
         List<ScheduleDetailVO> voList = list.stream().map(this::convertToScheduleVO).toList();
         fillShiftDisplay(voList);
@@ -459,8 +646,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
                 .ne(excludeId != null, BizClinicSource::getId, excludeId);
         List<BizClinicSource> existing = clinicSourceMapper.selectList(wrapper);
         for (BizClinicSource s : existing) {
-            if (s.getStartTime().compareTo(schedule.getEndTime()) < 0
-                    && schedule.getStartTime().compareTo(s.getEndTime()) < 0) {
+            if (overlaps(s.getStartTime(), s.getEndTime(), schedule.getStartTime(), schedule.getEndTime())) {
                 throw new BusinessException("该医生在此时间段已有排班，时间冲突");
             }
         }

@@ -1,32 +1,23 @@
 package com.his.pharmacy.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.TableField;
 
 /**
  * 抗菌药物品名别名 —— 住院医嘱名 → 药品目录的精确匹配键。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_antibiotic_alias")
-public class BizAntibioticAlias implements Serializable {
-    /**
-     * 更新人
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private String updateBy;
+public class BizAntibioticAlias extends BaseEntity implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     /** 主键 */
-    @TableId(type = IdType.ASSIGN_ID)
-    private Long id;
 
     /** 药品ID（药品字典的ID） */
     private Long drugId;
@@ -41,13 +32,10 @@ public class BizAntibioticAlias implements Serializable {
     private String aliasName;
 
     /** 创建人 */
-    private String createBy;
 
     /** 创建时间 */
-    private LocalDateTime createTime;
 
     /** 更新时间 */
-    private LocalDateTime updateTime;
 
     /** 备注 */
     private String remark;

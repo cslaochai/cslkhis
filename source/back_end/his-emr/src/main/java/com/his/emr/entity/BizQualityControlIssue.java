@@ -1,48 +1,19 @@
 package com.his.emr.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
-
-import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.baomidou.mybatisplus.annotation.TableField;
 
 /**
  * 病案质控问题明细实体（一条规则命中一行）。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_quality_control_issue")
-public class BizQualityControlIssue {
-    /**
-     * 创建人
-     */
-    @TableField(fill = FieldFill.INSERT)
-    private String createBy;
-
-    /**
-     * 更新人
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private String updateBy;
-
-    /**
-     * 更新时间
-     */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updateTime;
-
-    /**
-     * 主键ID
-     */
-    @TableId(type = IdType.ASSIGN_ID)
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long id;
+public class BizQualityControlIssue extends BaseEntity {
 
     /**
      * 质控单ID
@@ -108,8 +79,4 @@ public class BizQualityControlIssue {
      * 病历原文证据（截断）
      */
     private String evidence;
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
 }

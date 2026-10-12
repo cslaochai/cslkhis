@@ -460,7 +460,7 @@ CREATE TABLE `biz_discharge`
     `remark`                   varchar(500) COMMENT '备注',
     `discharge_way`            tinyint COMMENT '离院方式（1-医嘱离院 2-医嘱转院 3-医嘱转社区 4-非医嘱离院 5-死亡 9-其他）',
     `discharge_diagnosis_code` varchar(32) COMMENT '出院诊断ICD编码',
-    `death_flag`               tinyint              DEFAULT '0' COMMENT '死亡标志（0-否 1-是）',
+    `death_flag`               tinyint                          COMMENT '死亡标志（0-否 1-是）',
     `discharge_summary`        varchar(1000) COMMENT '出院小结 / 出院带药医嘱',
     `create_by`                varchar(64) NOT NULL COMMENT '创建人',
     `create_by_id`             bigint COMMENT '创建人ID',

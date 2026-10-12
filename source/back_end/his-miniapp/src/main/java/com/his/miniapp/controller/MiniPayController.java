@@ -47,6 +47,12 @@ public class MiniPayController {
         return Result.success("退款已受理", null);
     }
 
+    @Operation(summary = "向渠道查单并兜底入账（异步通知丢失/公网回调不可达时用；只查本人支付单）")
+    @PostMapping("/syncFromChannel")
+    public Result<MiniPayOrderVO> syncFromChannel(@RequestParam String payNo) {
+        return Result.success(miniPayService.syncFromChannel(payNo));
+    }
+
     @Operation(summary = "我的待缴账单（含明细，四层结算账单口径；取代旧 /miniapp/charge/pendingPage）")
     @PostMapping("/pendingBills")
     public Result<List<MiniPendingBillListVO>> pendingBills() {

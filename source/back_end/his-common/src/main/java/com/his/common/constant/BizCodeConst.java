@@ -122,6 +122,10 @@ public interface BizCodeConst {
      */
     String BILL_NO_KEY_PREFIX = "BILL";
     /**
+     * 支付单号（扫码收款的收款凭证，与收款流水号分号段：一个是「渠道收过这笔钱」，一个是「本院记了这笔收款」）
+     */
+    String PAY_ORDER_NO_KEY_PREFIX = "PAY";
+    /**
      * 收款流水号
      */
     String PAY_TXN_NO_KEY_PREFIX = "PAY_TXN";
@@ -567,6 +571,10 @@ public interface BizCodeConst {
      * 账单号前缀：SB + yyyyMMdd + 5 位
      */
     String BILL_NO_PREFIX = "SB";
+    /**
+     * 支付单号前缀：PAY + yyyyMMdd + 5 位
+     */
+    String PAY_ORDER_NO_PREFIX = "PAY";
     /**
      * 收款流水号前缀
      */

@@ -1,10 +1,10 @@
 package com.his.emr.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -13,15 +13,9 @@ import java.time.LocalDateTime;
  * 质控检查记录
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_quality_control")
-public class BizQualityControl {
-
-    /**
-     * 主键ID
-     */
-    @TableId(type = IdType.ASSIGN_ID)
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long id;
+public class BizQualityControl extends BaseEntity {
 
     /**
      * 质控编号
@@ -92,22 +86,6 @@ public class BizQualityControl {
      */
     private LocalDateTime qcTime;
 
-    /**
-     * 创建人
-     */
-    private String createBy;
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-    /**
-     * 更新人
-     */
-    private String updateBy;
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
     /**
      * 删除标志（0-正常 1-删除）
      */

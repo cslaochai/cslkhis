@@ -1,6 +1,7 @@
 package com.his.system.controller;
 
 import com.his.common.base.Result;
+import com.his.system.dto.EmployeeQualificationBatchUpsertDTO;
 import com.his.system.dto.EmployeeQualificationUpsertDTO;
 import com.his.system.service.EmployeeQualificationService;
 import com.his.system.vo.EmployeeQualificationVO;
@@ -38,6 +39,14 @@ public class EmployeeQualificationController {
     public Result<Void> qualificationUpsert(@RequestBody @Valid EmployeeQualificationUpsertDTO upsertDTO) {
         employeeQualificationService.upsert(upsertDTO);
         return Result.success(upsertDTO.getId() == null ? "新增成功" : "修改成功", null);
+    }
+
+    @Operation(summary = "批量保存资格证书（整批一个事务）")
+    @PreAuthorize("hasAuthority('org:employee:add')")
+    @PostMapping("/qualificationBatchUpsert")
+    public Result<Void> qualificationBatchUpsert(@RequestBody @Valid EmployeeQualificationBatchUpsertDTO batchDTO) {
+        employeeQualificationService.batchUpsert(batchDTO);
+        return Result.success("已保存 " + batchDTO.getItems().size() + " 本证书", null);
     }
 
     @Operation(summary = "删除资格证书")

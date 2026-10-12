@@ -1,48 +1,21 @@
 package com.his.emr.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.baomidou.mybatisplus.annotation.TableField;
 
 /**
  * 质控流转动作时间线（质控流转动作时间线）
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_record_qc_flow_action")
-public class BizRecordQcFlowAction {
-    /**
-     * 创建人
-     */
-    @TableField(fill = FieldFill.INSERT)
-    private String createBy;
-
-    /**
-     * 更新人
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private String updateBy;
-
-    /**
-     * 更新时间
-     */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updateTime;
-
-    /**
-     * 主键ID
-     */
-    @TableId(type = IdType.ASSIGN_ID)
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long id;
+public class BizRecordQcFlowAction extends BaseEntity {
 
     /**
      * 流转单ID
@@ -91,10 +64,6 @@ public class BizRecordQcFlowAction {
      */
     private LocalDateTime actionTime;
 
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
     /**
      * 删除标志（0-正常 1-删除）
      */

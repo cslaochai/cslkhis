@@ -113,6 +113,6 @@ public interface BiMapper {
     /**
      * DRG 细分组权重（官方方案包不含权重，由统筹区医保局下发；为空的组不参与 CMI 计算）
      */
-    @Select("SELECT drg_code AS drgCode, weight FROM sys_drg_group WHERE del_flag = 0")
+    @Select("SELECT drg_code AS drgCode, weight FROM biz_drg_group WHERE del_flag = 0")
     List<BiDrgWeightRowVO> drgWeights();
 }

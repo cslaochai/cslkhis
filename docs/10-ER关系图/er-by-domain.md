@@ -1,6 +1,6 @@
 # cslk_his 分域 E-R 图（Mermaid）
 
-> 由 `workspace/_er/refresh.mjs` 生成。实体 = 表；连线 = 通过数据覆盖率验证的 `*_id` 外键。
+> 由 `workspace/_er/regen_er_322.mjs` 生成。实体 = 表；连线 = 通过数据覆盖率验证的 `*_id` 外键。
 > 实体名写作 `中文名 · 表名`（Mermaid 实体别名，10.5+ / GitHub 可渲染）；属性行是 `类型 列名 "列中文注释"`。
 > `A ||--o{ B : col` = A 一条对应 B 多条；`||--|{` 表示子表该列 NOT NULL；`||--||` 表示子表该列唯一（1:1）。
 > 每张图只画「本域表 + 被引用到的上游表（只带主键与外键列）」，属性省略非键列。
@@ -287,9 +287,34 @@ erDiagram
     bigint id "主键（雪花）"
     varchar disease_code "病种编码"
   }
-  sys_drg_group["DRG 分组与权重 · sys_drg_group"] {
+  biz_drg_mdc["DRG 主要诊断大类目录 · biz_drg_mdc"] {
+    bigint id "主键ID"
+    varchar mdc_code "MDC 编码"
+    tinyint del_flag "删除标志（0-正常 1-删除）"
+  }
+  biz_drg_adrg["DRG 核心组目录 · biz_drg_adrg"] {
+    bigint id "主键ID"
+    varchar adrg_code "ADRG 编码"
+    varchar mdc_code "所属 MDC 编码"
+    tinyint del_flag "删除标志（0-正常 1-删除）"
+  }
+  biz_drg_set["DRG 分组码集合 · biz_drg_set"] {
+    bigint id "主键ID"
+    varchar set_code "集合编号"
+    varchar icd_code "ICD 编码"
+    tinyint del_flag "删除标志（0-正常 1-删除）"
+  }
+  biz_drg_group["DRG 分组与权重 · biz_drg_group"] {
     bigint id "主键ID"
     varchar drg_code "DRG 组编码"
+    varchar mdc_code "MDC 主要诊断大类"
+    varchar adrg_code "ADRG 编码"
+    tinyint del_flag "删除标志（0-正常 1-删除）"
+  }
+  biz_drg_ccmcc["DRG 并发症合并症目录 · biz_drg_ccmcc"] {
+    bigint id "主键ID"
+    varchar icd_code "诊断编码（ICD-10）"
+    varchar version "分组方案版本（2.0/3.0）"
     tinyint del_flag "删除标志（0-正常 1-删除）"
   }
   sys_checkup_package["体检套餐 · sys_checkup_package"] {
@@ -321,6 +346,9 @@ erDiagram
   sys_department ||--o{ biz_shift : "dept_id"
   sys_checkup_package ||--|{ sys_checkup_package_item : "package_id"
   sys_diagnosis ||--o{ sys_diagnosis : "parent_id"
+  biz_drg_mdc ||--o{ biz_drg_adrg : "mdc_code"
+  biz_drg_adrg ||--o{ biz_drg_group : "adrg_code"
+  biz_drg_mdc ||--o{ biz_drg_group : "mdc_code"
   sys_drug ||--|{ sys_drug_price_history : "drug_id"
   sys_employee ||--o{ sys_drug_price_history : "operator_id"
   sys_department ||--o{ sys_inspection_item : "dept_id"
@@ -440,7 +468,7 @@ erDiagram
   biz_appoint_info ||--o{ biz_compliance_audit : "regist_id"
   biz_compliance_audit ||--|{ biz_compliance_audit_item : "audit_id"
   biz_insurance_settlement ||--|{ biz_insurance_report : "settlement_id"
-  biz_settlement_bill ||--|| biz_insurance_settlement : "bill_id"
+  biz_settlement_bill ||--|{ biz_insurance_settlement : "bill_id"
   biz_patient ||--|{ biz_insurance_settlement : "patient_id"
   biz_appoint_info ||--o{ biz_insurance_settlement : "regist_id"
   sys_department ||--o{ biz_insurance_settlement : "dept_id"
@@ -725,14 +753,6 @@ erDiagram
   biz_settlement_bill ||--o{ biz_appoint_info : "bill_id"
   sys_user ||--o{ biz_appoint_info : "create_by_id"
   sys_user ||--o{ biz_appoint_info : "update_by_id"
-  biz_appoint_info ||--|{ biz_previsit_record : "regist_id"
-  biz_patient ||--|{ biz_previsit_record : "patient_id"
-  sys_department ||--o{ biz_previsit_record : "dept_id"
-  biz_appoint_info ||--|{ biz_queue : "regist_id"
-  biz_patient ||--|{ biz_queue : "patient_id"
-  sys_department ||--|{ biz_queue : "dept_id"
-  sys_employee ||--o{ biz_queue : "doctor_id"
-  sys_clinic_room ||--o{ biz_queue : "room_id"
   biz_schedule ||--o{ biz_clinic_source : "staff_schedule_id"
   sys_department ||--|{ biz_clinic_source : "dept_id"
   sys_clinic_room ||--o{ biz_clinic_source : "room_id"
@@ -749,17 +769,25 @@ erDiagram
   sys_employee ||--|{ biz_clinic_source_template : "doctor_id"
   biz_shift ||--o{ biz_clinic_source_template : "shift_id"
   sys_clinic_room ||--o{ biz_clinic_source_template : "room_id"
+  biz_appoint_info ||--|{ biz_previsit_record : "regist_id"
+  biz_patient ||--|{ biz_previsit_record : "patient_id"
+  sys_department ||--o{ biz_previsit_record : "dept_id"
+  biz_appoint_info ||--|{ biz_queue : "regist_id"
+  biz_patient ||--|{ biz_queue : "patient_id"
+  sys_department ||--|{ biz_queue : "dept_id"
+  sys_employee ||--o{ biz_queue : "doctor_id"
+  sys_clinic_room ||--o{ biz_queue : "room_id"
+  sys_department ||--|{ biz_schedule : "dept_id"
+  sys_employee ||--|{ biz_schedule : "employee_id"
+  sys_employee_post ||--o{ biz_schedule : "employee_post_id"
+  biz_shift ||--|{ biz_schedule : "shift_id"
+  biz_clinic_source_template ||--o{ biz_schedule : "template_id"
   biz_schedule ||--o{ biz_staff_attendance : "staff_schedule_id"
   sys_employee ||--|{ biz_staff_attendance : "employee_id"
   biz_shift ||--|{ biz_staff_attendance : "shift_id"
   sys_employee ||--o{ biz_staff_attendance : "substitute_for"
   biz_shift ||--|{ biz_staff_demand : "shift_id"
   biz_shift ||--|{ biz_staff_plan_rule : "shift_id"
-  sys_department ||--|{ biz_schedule : "dept_id"
-  sys_employee ||--|{ biz_schedule : "employee_id"
-  sys_employee_post ||--o{ biz_schedule : "employee_post_id"
-  biz_shift ||--|{ biz_schedule : "shift_id"
-  biz_clinic_source_template ||--o{ biz_schedule : "template_id"
   biz_queue ||--|{ biz_triage_record : "queue_id"
   biz_appoint_info ||--o{ biz_triage_record : "regist_id"
   biz_patient ||--o{ biz_triage_record : "patient_id"
@@ -999,7 +1027,7 @@ erDiagram
   biz_patient ||--|{ biz_skin_test : "patient_id"
   biz_treatment_record ||--o{ biz_skin_test : "treatment_record_id"
   sys_employee ||--o{ biz_skin_test : "nurse_id"
-  biz_prescription ||--|| biz_tcm_decoct : "prescription_id"
+  biz_prescription ||--|{ biz_tcm_decoct : "prescription_id"
   biz_patient ||--|{ biz_tcm_decoct : "patient_id"
   sys_department ||--o{ biz_tcm_decoct : "pharmacy_id"
   sys_employee ||--o{ biz_tcm_decoct : "operator_id"
@@ -1223,7 +1251,7 @@ erDiagram
   biz_patient ||--o{ biz_bed_allocate : "patient_id"
   sys_employee ||--o{ biz_bed_allocate : "operator_id"
   biz_admission ||--o{ biz_bed_allocate : "admission_id"
-  biz_admission_order ||--|| biz_bed_wait : "admission_order_id"
+  biz_admission_order ||--o{ biz_bed_wait : "admission_order_id"
   biz_patient ||--|{ biz_bed_wait : "patient_id"
   sys_department ||--o{ biz_bed_wait : "apply_dept_id"
   sys_ward ||--o{ biz_bed_wait : "expect_ward_id"
@@ -1339,12 +1367,6 @@ erDiagram
   }
   biz_patient["患者基本信息 · biz_patient"] {
     bigint id "主键ID"
-  }
-  biz_shift["班次字典 · biz_shift"] {
-    bigint id "主键ID"
-  }
-  biz_schedule["员工排班 · biz_schedule"] {
-    bigint id "主键ID（雪花）"
   }
   sys_department["科室 · sys_department"] {
     bigint id "主键ID"
@@ -1465,6 +1487,7 @@ erDiagram
   biz_drg_sim_result["DRG 分组模拟结果 · biz_drg_sim_result"] {
     bigint id "主键ID"
     bigint summary_id "病案首页ID"
+    varchar drg_code "入组编码"
   }
   biz_emr_signature["电子签名证据 · biz_emr_signature"] {
     bigint id "主键ID"
@@ -1495,6 +1518,10 @@ erDiagram
   sys_department["科室 · sys_department"] {
     bigint id "主键ID"
   }
+  biz_drg_group["DRG 分组与权重 · biz_drg_group"] {
+    bigint id "主键ID"
+    varchar drg_code "DRG 组编码"
+  }
   sys_employee["员工 · sys_employee"] {
     bigint id "主键ID"
   }
@@ -1510,7 +1537,8 @@ erDiagram
   biz_medical_record_archive ||--|{ biz_archive_code_task : "archive_id"
   sys_employee ||--o{ biz_archive_code_task : "coder_id"
   sys_employee ||--o{ biz_archive_code_task : "audit_by_id"
-  biz_inpatient_summary ||--|| biz_drg_sim_result : "summary_id"
+  biz_inpatient_summary ||--|{ biz_drg_sim_result : "summary_id"
+  biz_drg_group ||--|{ biz_drg_sim_result : "drg_code"
   biz_patient ||--o{ biz_emr_signature : "patient_id"
   sys_department ||--o{ biz_emr_signature : "dept_id"
   biz_emr_signature ||--o{ biz_emr_signature : "prev_sign_id"
@@ -1531,7 +1559,7 @@ erDiagram
   biz_emr_signature ||--o{ biz_inpatient_record : "sign_id"
   biz_inpatient_record ||--|{ biz_inpatient_record_log : "record_id"
   sys_employee ||--o{ biz_inpatient_record_log : "user_id"
-  biz_admission ||--|| biz_inpatient_summary : "admission_id"
+  biz_admission ||--|{ biz_inpatient_summary : "admission_id"
   biz_patient ||--|{ biz_inpatient_summary : "patient_id"
   sys_department ||--o{ biz_inpatient_summary : "admit_dept_id"
   sys_department ||--o{ biz_inpatient_summary : "dept_id"
@@ -2097,20 +2125,20 @@ erDiagram
   biz_patient ||--|{ biz_anesthesia_followup : "patient_id"
   sys_employee ||--o{ biz_anesthesia_followup : "followup_doctor_id"
   biz_anesthesia_record ||--|{ biz_anesthesia_med : "record_id"
-  biz_anesthesia_record ||--|| biz_anesthesia_pacu : "record_id"
+  biz_anesthesia_record ||--|{ biz_anesthesia_pacu : "record_id"
   biz_operation_apply ||--|{ biz_anesthesia_pacu : "apply_id"
   biz_admission ||--|{ biz_anesthesia_pacu : "admission_id"
   biz_patient ||--|{ biz_anesthesia_pacu : "patient_id"
   sys_employee ||--o{ biz_anesthesia_pacu : "nurse_id"
   sys_employee ||--o{ biz_anesthesia_pacu : "anesthetist_id"
-  biz_operation_apply ||--|| biz_anesthesia_record : "apply_id"
+  biz_operation_apply ||--|{ biz_anesthesia_record : "apply_id"
   biz_admission ||--|{ biz_anesthesia_record : "admission_id"
   biz_patient ||--|{ biz_anesthesia_record : "patient_id"
   biz_anesthesia_visit ||--o{ biz_anesthesia_record : "visit_id"
   sys_employee ||--o{ biz_anesthesia_record : "anesthetist_id"
   sys_employee ||--o{ biz_anesthesia_record : "submit_doctor_id"
   sys_employee ||--o{ biz_anesthesia_record : "audit_doctor_id"
-  biz_operation_apply ||--|| biz_anesthesia_visit : "apply_id"
+  biz_operation_apply ||--|{ biz_anesthesia_visit : "apply_id"
   biz_admission ||--|{ biz_anesthesia_visit : "admission_id"
   biz_patient ||--|{ biz_anesthesia_visit : "patient_id"
   sys_employee ||--o{ biz_anesthesia_visit : "visit_doctor_id"
@@ -2139,7 +2167,7 @@ erDiagram
   biz_admission ||--|{ biz_operation_charge_item : "admission_id"
   biz_patient ||--|{ biz_operation_charge_item : "patient_id"
   biz_fee_record ||--o{ biz_operation_charge_item : "fee_record_id"
-  biz_operation_apply ||--|| biz_operation_count : "apply_id"
+  biz_operation_apply ||--|{ biz_operation_count : "apply_id"
   biz_admission ||--|{ biz_operation_count : "admission_id"
   biz_patient ||--|{ biz_operation_count : "patient_id"
   sys_employee ||--o{ biz_operation_count : "instrument_nurse_id"
@@ -2296,11 +2324,11 @@ erDiagram
   biz_patient["患者基本信息 · biz_patient"] {
     bigint id "主键ID"
   }
-  biz_shift["班次字典 · biz_shift"] {
-    bigint id "主键ID"
-  }
   biz_schedule["员工排班 · biz_schedule"] {
     bigint id "主键ID（雪花）"
+  }
+  biz_shift["班次字典 · biz_shift"] {
+    bigint id "主键ID"
   }
   sys_bed["床位 · sys_bed"] {
     bigint bed_id "床位ID"
@@ -3203,7 +3231,7 @@ erDiagram
     bigint archive_id "透析档案ID"
     bigint patient_id "患者ID"
     bigint prescription_id "使用的透析处方ID"
-    varchar slot_key "机位时段占用键"
+    varchar slot_key
   }
   biz_icu_stay["ICU 入出科登记 · biz_icu_stay"] {
     bigint id "主键ID（雪花）"
@@ -3296,7 +3324,7 @@ erDiagram
   sys_drug ||--|{ biz_antibiotic_alias : "drug_id"
   sys_employee ||--|{ biz_antibiotic_auth : "doctor_id"
   sys_department ||--o{ biz_antibiotic_auth : "dept_id"
-  biz_operation_apply ||--|| biz_antibiotic_incision_review : "operation_apply_id"
+  biz_operation_apply ||--|{ biz_antibiotic_incision_review : "operation_apply_id"
   biz_admission ||--o{ biz_antibiotic_incision_review : "admission_id"
   biz_patient ||--o{ biz_antibiotic_incision_review : "patient_id"
   sys_drug ||--o{ biz_antibiotic_incision_review : "drug_id"
@@ -3318,7 +3346,7 @@ erDiagram
   biz_patient ||--o{ biz_diet_plan : "patient_id"
   sys_department ||--o{ biz_diet_plan : "dept_id"
   sys_ward ||--o{ biz_diet_plan : "ward_id"
-  biz_inpatient_order ||--|| biz_diet_plan : "order_id"
+  biz_inpatient_order ||--o{ biz_diet_plan : "order_id"
   sys_employee ||--o{ biz_diet_plan : "confirmer_id"
   biz_icu_stay ||--|{ biz_icu_monitor : "stay_id"
   sys_employee ||--o{ biz_icu_monitor : "recorder_id"
@@ -3555,7 +3583,7 @@ erDiagram
   sys_user ||--o{ biz_service_message : "user_id"
   biz_patient ||--o{ biz_service_message : "patient_id"
   biz_service_message ||--|{ biz_service_ticket_log : "message_id"
-  biz_survey_dispatch ||--|| biz_survey_answer : "dispatch_id"
+  biz_survey_dispatch ||--|{ biz_survey_answer : "dispatch_id"
   biz_survey_template ||--|{ biz_survey_answer : "template_id"
   biz_patient ||--|{ biz_survey_answer : "patient_id"
   sys_department ||--o{ biz_survey_answer : "dept_id"

@@ -179,11 +179,6 @@ public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, 
         sysEmployeePostMapper.delete(new LambdaQueryWrapper<SysEmployeePost>()
                 .eq(SysEmployeePost::getEmployeeId, employeeId));
 
-        // 主岗位是**人**的属性，一人只留一条（人事主科室的本义）：
-        // 显式勾了多条只认第一条，一条都没勾就把提交里的第一条提上去。
-        // 曾经按「每角色一条」归一化，结果多角色员工在配置表里出现一排「主岗位」，
-        // 连管理员都要先问一句"这是什么"，说明那个口径不该做。
-        // 其他角色的登录落点由 resolvePrimaryPost 现算，不需要每角色再存一个标记。
         boolean anyClaimed = rows.stream().anyMatch(r -> PRIMARY_YES.equals(r.getIsPrimary()));
         boolean primaryTaken = false;
         List<SysEmployeePost> saved = new ArrayList<>();

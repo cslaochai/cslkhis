@@ -13,6 +13,10 @@ import com.his.charge.entity.BizPaymentTxn;
 import com.his.charge.mapper.BizPayChannelBillMapper;
 import com.his.charge.mapper.BizPaymentTxnMapper;
 import com.his.charge.service.PayChannelReconciliationService;
+import com.his.common.enums.PayChannelEnum;
+import com.his.common.enums.PaymentMethodEnum;
+import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.pay.config.AlipayProperties;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -27,9 +31,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 支付渠道对账服务实现
@@ -46,27 +50,31 @@ public class PayChannelReconciliationServiceImpl extends ServiceImpl<BizPayChann
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int importChannelBill(Integer channel, LocalDate billDate) {
-        if (!alipayProperties.isMockEnabled() && channel == 2) {
-            throw new IllegalStateException(
-                    "支付宝对账处于关闭状态（alipay.mock-enabled=false），无法拉取真实账单。" +
-                    "如需测试对账，请在 application-local.yml 中配置支付宝凭据并将 mock-enabled 改为 true。"
+        if (alipayProperties.isMockEnabled() && Objects.equals(channel, PayChannelEnum.ALIPAY.getCode())) {
+            // 模拟模式下渠道侧根本没有这笔交易，账单文件永远拉不到；此时放过去只会在 SDK 那一步炸成 500，
+            // 现象与「医院系统坏了」一样，而真因是配置没打开
+            throw new BusinessException(
+                    "支付宝对账需要渠道侧的真实账单（当前 alipay.mock-enabled=true），" +
+                            "请在 gitignored 的 application-dev.yml 中配置支付宝凭据并将 mock-enabled 改为 false。"
             );
         }
 
         List<BizPayChannelBill> bills;
         try {
-            if (channel == 1) {
+            if (Objects.equals(channel, PayChannelEnum.WECHAT.getCode())) {
                 // TODO: 微信账单下载需要 WxJava 完整实现
                 log.warn("[微信支付对账] 拉取微信账单完整实现待补");
                 bills = new ArrayList<>();
-            } else if (channel == 2) {
+            } else if (Objects.equals(channel, PayChannelEnum.ALIPAY.getCode())) {
                 bills = fetchAlipayBill(billDate);
             } else {
-                throw new IllegalArgumentException("不支持的渠道: " + channel);
+                throw new BusinessException("不支持的对账渠道：" + PayChannelEnum.labelOrUnknown(channel));
             }
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
             log.error("[对账] 拉取渠道账单失败 channel={} date={} err={}", channel, billDate, e.getMessage(), e);
-            throw new RuntimeException("拉取渠道账单失败: " + e.getMessage(), e);
+            throw new BusinessException("拉取渠道账单失败：" + e.getMessage());
         }
 
         // 物理删除当日旧数据（唯一键不含 del_flag，见 agents.md §3）
@@ -147,7 +155,7 @@ public class PayChannelReconciliationServiceImpl extends ServiceImpl<BizPayChann
         AlipayDataDataserviceBillDownloadurlQueryRequest request = new AlipayDataDataserviceBillDownloadurlQueryRequest();
         String bizContent = String.format(
                 "{\"bill_type\":\"trade\",\"bill_date\":\"%s\"}",
-                billDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                billDate.format(DateFormats.DATE)
         );
         request.setBizContent(bizContent);
 
@@ -199,17 +207,20 @@ public class PayChannelReconciliationServiceImpl extends ServiceImpl<BizPayChann
 
     private LocalDateTime parseAlipayTime(String timeStr) {
         try {
-            return LocalDateTime.parse(timeStr.replaceAll("\"", ""), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            return LocalDateTime.parse(timeStr.replaceAll("\"", ""), DateFormats.DATETIME);
         } catch (Exception e) {
             return null;
         }
     }
 
     private BizPaymentTxn findLocalTxn(Integer channel, BizPayChannelBill bill) {
-        Integer payMethod = channel == 1 ? 2 : 3; // 微信→2, 支付宝→3
+        PaymentMethodEnum payMethod = PayChannelEnum.payMethodOf(channel);
+        if (payMethod == null) {
+            return null;
+        }
         return bizPaymentTxnMapper.selectOne(new LambdaQueryWrapper<BizPaymentTxn>()
                 .eq(BizPaymentTxn::getChannelTxnNo, bill.getChannelTradeNo())
-                .eq(BizPaymentTxn::getPayMethod, payMethod)
+                .eq(BizPaymentTxn::getPayMethod, payMethod.getCode())
                 .last("LIMIT 1"));
     }
 

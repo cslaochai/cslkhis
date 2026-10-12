@@ -71,7 +71,7 @@ CREATE TABLE `sys_clinic_room`
     `update_by`    varchar(64)  NOT NULL COMMENT '更新人',
     `update_by_id` bigint COMMENT '更新人ID',
     `update_time`  datetime     NOT NULL COMMENT '更新时间',
-    `del_flag`     tinyint               DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+    `del_flag`     tinyint               NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='诊室';
 
@@ -115,7 +115,7 @@ CREATE TABLE `sys_equipment`
     `purchase_date`       date COMMENT '购置日期',
     `purchase_price`      decimal(14, 2) COMMENT '购置价格(元)',
     `status`              tinyint      NOT NULL COMMENT '状态（1-在用 2-停用 3-维修中 4-报废）',
-    `maintain_cycle_days` int                   DEFAULT '365' COMMENT '维保周期(天)',
+    `maintain_cycle_days` int                               COMMENT '维保周期(天)',
     `last_maintain_date`  date COMMENT '最近维保日期',
     `create_by`           varchar(64)  NOT NULL COMMENT '创建人',
     `create_by_id`        bigint COMMENT '创建人ID',

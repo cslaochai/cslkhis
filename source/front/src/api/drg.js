@@ -22,7 +22,7 @@ export function drgSummaryList(limit, version) {
   return request.get('/report/drg/summary/list', { params: { limit, version } })
 }
 
-// 组表（sys_drg_group）
+// 组表（biz_drg_group）
 export function drgGroupList(version) {
   return request.get('/report/drg/group/list', { params: { version } })
 }

@@ -200,7 +200,7 @@
             </div>
           </el-form-item>
         </div>
-        <!-- 资格证书：独立内嵌资源，即时增删改，不随本表单提交 -->
+        <!-- 资格证书：内嵌表格行内编辑。已保存的行点删除即单条删；新增与改过的行在点「确定」时一次批量提交（不逐条调接口） -->
         <el-form-item label-width="0">
           <div class="w-full">
             <div class="mb-2 flex items-center gap-1.5">
@@ -322,7 +322,7 @@ import {
   getEmployeeQualificationList,
   getRoleList,
   updateEmployee,
-  upsertEmployeeQualification
+  upsertEmployeeQualificationBatch
 } from '@/api/system'
 import {DICT_TYPE, loadDictDataMap} from '@/lib/dict-cache'
 import {isIdCardBirthDateLegal, isIdCardFormatLegal} from '@/lib/patientGender'
@@ -672,7 +672,9 @@ const checkCerts = () => {
   return null
 }
 
-// 统一落库：草稿行新增、字段变过的行更新（与加载时快照比），没动的不发请求
+// 统一落库：草稿行新增、字段变过的行更新（与加载时快照比），没动的不发请求。
+// dirty 一次交给后端批量接口：逐条调单本证书接口时，第 N 条失败前 N-1 条已各自提交，
+// 「存了一半的证书」既回滚不掉也说不清该重试哪几条。
 const flushCertRows = async () => {
   const dirty = certRows.value.filter((row) => {
     if (row.__new) return true
@@ -680,8 +682,10 @@ const flushCertRows = async () => {
     if (!orig) return true
     return ['certType', 'certNo', 'issueOrg', 'issueDate', 'validUntil', 'remark'].some((k) => (orig[k] || '') !== (row[k] || ''))
   })
-  for (const row of dirty) {
-    const res = await upsertEmployeeQualification({
+  if (!dirty.length) return
+  const res = await upsertEmployeeQualificationBatch({
+    employeeId: formData.id,
+    items: dirty.map((row) => ({
       id: row.id || undefined,
       employeeId: formData.id,
       certType: row.certType,
@@ -690,9 +694,9 @@ const flushCertRows = async () => {
       issueDate: row.issueDate || null,
       validUntil: row.validUntil || null,
       remark: row.remark || null,
-    })
-    if (res.code !== 200) throw new Error(res.message || '证书保存失败')
-  }
+    })),
+  })
+  if (res.code !== 200) throw new Error(res.message || '证书保存失败')
 }
 
 const handleDeleteCert = async (row) => {

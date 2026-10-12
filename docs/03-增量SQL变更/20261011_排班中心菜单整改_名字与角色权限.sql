@@ -30,8 +30,8 @@ DELETE FROM sys_role_menu WHERE role_id IN (7, 8, 9) AND menu_id = 2936;
 
 -- 3. 新增合理授权
 -- 3.1 院领导(18) 看排班总览（管理层视角）
-INSERT IGNORE INTO sys_role_menu (id, role_id, menu_id, create_by, update_by, create_by_id, update_by_id)
-VALUES ('2026101100000000001', '18', '2938', 'admin', 'admin', '1', '1');
+INSERT IGNORE INTO sys_role_menu (id, role_id, menu_id, create_by, create_time, update_by, update_time, create_by_id, update_by_id)
+VALUES ('2026101100000000001', '18', '2938', 'admin', NOW(), 'admin', NOW(), '1', '1');
 
 -- 4. 子按钮同步改名（与父菜单语义对齐）
 UPDATE sys_menu SET menu_name = '门诊排班-新增'         WHERE id = 2120;

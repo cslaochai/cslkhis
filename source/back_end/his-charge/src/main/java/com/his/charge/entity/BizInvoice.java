@@ -1,10 +1,10 @@
 package com.his.charge.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -14,15 +14,9 @@ import java.time.LocalDateTime;
  * 发票实体（L4 票据）。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_invoice")
-public class BizInvoice {
-
-    /**
-     * 主键ID
-     */
-    @TableId(type = IdType.ASSIGN_ID)
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long id;
+public class BizInvoice extends BaseEntity {
 
     /**
      * 发票号
@@ -102,22 +96,6 @@ public class BizInvoice {
      */
     private String electronicUrl;
 
-    /**
-     * 创建人
-     */
-    private String createBy;
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-    /**
-     * 更新人
-     */
-    private String updateBy;
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
     /**
      * 删除标志（0-正常 1-删除）
      */

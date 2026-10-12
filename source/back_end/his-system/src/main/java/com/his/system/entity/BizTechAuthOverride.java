@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -12,41 +14,9 @@ import java.time.LocalDateTime;
  * 急诊越权授权事后登记实体：一行 = 一次「没授权但因为急诊/抢救做了」。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_tech_auth_override")
-public class BizTechAuthOverride {
-
-    /**
-     * 主键（雪花ID）
-     */
-    @TableId(type = IdType.ASSIGN_ID)
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long id;
-
-    /**
-     * 创建人
-     */
-    @TableField(fill = FieldFill.INSERT)
-    private String createBy;
-
-    /**
-     * 创建时间
-     */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    @TableField(fill = FieldFill.INSERT)
-    private LocalDateTime createTime;
-
-    /**
-     * 更新人
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private String updateBy;
-
-    /**
-     * 更新时间
-     */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updateTime;
+public class BizTechAuthOverride extends BaseEntity {
 
     /**
      * 来源单据类型（字典 his_tech_override_source / TechOverrideSourceEnum：1-手术申请 2-日间手术 3-住院医嘱 4-内镜记录）

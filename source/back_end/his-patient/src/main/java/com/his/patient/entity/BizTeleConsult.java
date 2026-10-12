@@ -3,6 +3,8 @@ package com.his.patient.entity;
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -12,15 +14,9 @@ import java.time.LocalDateTime;
  * 远程会诊（院际 / 跨院专家会诊）。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_tele_consult")
-public class BizTeleConsult {
-
-    /**
-     * 主键ID
-     */
-    @TableId(type = IdType.ASSIGN_ID)
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long id;
+public class BizTeleConsult extends BaseEntity {
 
     /**
      * 会诊单号
@@ -170,28 +166,6 @@ public class BizTeleConsult {
      * 取消原因
      */
     private String cancelReason;
-
-    /**
-     * 创建人
-     */
-    private String createBy;
-
-    /**
-     * 创建时间
-     */
-    @TableField(fill = FieldFill.INSERT)
-    private LocalDateTime createTime;
-
-    /**
-     * 更新人
-     */
-    private String updateBy;
-
-    /**
-     * 更新时间
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updateTime;
 
     /**
      * 删除标志（0-正常 1-删除）

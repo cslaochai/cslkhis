@@ -1,42 +1,24 @@
 package com.his.emr.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.TableField;
 
 /**
  * 处方点评明细（处方快照 + 点评结论 + 公示状态）。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_rx_review_item")
-public class BizRxReviewItem implements Serializable {
-    /**
-     * 创建人
-     */
-    @TableField(fill = FieldFill.INSERT)
-    private String createBy;
-
-    /**
-     * 更新人
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private String updateBy;
+public class BizRxReviewItem extends BaseEntity implements Serializable {
 
     private static final long serialVersionUID = 1L;
-
-    /**
-     * 主键
-     */
-    @TableId(type = IdType.ASSIGN_ID)
-    private Long id;
 
     /**
      * 批次ID
@@ -157,16 +139,6 @@ public class BizRxReviewItem implements Serializable {
      * 公示时间
      */
     private LocalDateTime publicityTime;
-
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
 
     /**
      * 备注

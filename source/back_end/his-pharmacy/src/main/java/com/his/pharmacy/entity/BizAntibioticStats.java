@@ -1,33 +1,21 @@
 package com.his.pharmacy.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.TableField;
 
 /**
  * 抗菌药物使用监测指标（月度快照：使用率 / 使用强度 AUD / 微生物送检率）。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_antibiotic_stats")
-public class BizAntibioticStats implements Serializable {
-    /**
-     * 创建人
-     */
-    @TableField(fill = FieldFill.INSERT)
-    private String createBy;
-
-    /**
-     * 更新人
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private String updateBy;
+public class BizAntibioticStats extends BaseEntity implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -37,8 +25,6 @@ public class BizAntibioticStats implements Serializable {
     public static final int SCOPE_DEPT = 2;
 
     /** 主键 */
-    @TableId(type = IdType.ASSIGN_ID)
-    private Long id;
 
     /** 统计月份（yyyy-MM） */
     private String statMonth;
@@ -98,10 +84,8 @@ public class BizAntibioticStats implements Serializable {
     private LocalDateTime generateTime;
 
     /** 创建时间 */
-    private LocalDateTime createTime;
 
     /** 更新时间 */
-    private LocalDateTime updateTime;
 
     /** 备注 */
     private String remark;

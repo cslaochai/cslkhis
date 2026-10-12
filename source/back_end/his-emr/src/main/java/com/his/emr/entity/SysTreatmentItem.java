@@ -1,28 +1,22 @@
 package com.his.emr.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 /**
  * 治疗项目字典。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("sys_treatment_item")
-public class SysTreatmentItem implements Serializable {
-
-    /**
-     * 主键ID
-     */
-    @TableId
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long id;
+public class SysTreatmentItem extends BaseEntity implements Serializable {
 
     /**
      * 项目编码（唯一）
@@ -64,32 +58,6 @@ public class SysTreatmentItem implements Serializable {
      * 状态（0-停用 1-启用）
      */
     private Integer status;
-
-    /**
-     * 创建时间
-     */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    @TableField(fill = FieldFill.INSERT)
-    private LocalDateTime createTime;
-
-    /**
-     * 更新人
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private String updateBy;
-
-    /**
-     * 更新时间
-     */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updateTime;
-
-    /**
-     * 创建人
-     */
-    @TableField(fill = FieldFill.INSERT)
-    private String createBy;
 
     /**
      * 删除标志（0-正常 1-删除）

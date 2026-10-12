@@ -34,6 +34,20 @@ public class BizClinicSourceController {
         return Result.success();
     }
 
+    @PreAuthorize("hasAuthority('outpatient:schedule:add')")
+    @Operation(summary = "批量新增排班（人×日 展开与落库在单事务内完成）")
+    @PostMapping("/batchUpsert")
+    public Result<BizClinicSourceBatchResultVO> scheduleBatchUpsert(@Valid @RequestBody BizClinicSourceBatchUpsertDTO batchDTO) {
+        return Result.success(bizScheduleService.batchUpsert(batchDTO));
+    }
+
+    @PreAuthorize("hasAuthority('outpatient:schedule:add')")
+    @Operation(summary = "复刻排班（把源区间内正常排班整体后移若干天）")
+    @PostMapping("/replicate")
+    public Result<BizClinicSourceBatchResultVO> scheduleReplicate(@Valid @RequestBody BizClinicSourceReplicateDTO dto) {
+        return Result.success(bizScheduleService.replicate(dto));
+    }
+
     @PreAuthorize("hasAuthority('outpatient:schedule:delete')")
     @Operation(summary = "删除排班")
     @DeleteMapping("/deleteById")

@@ -1,5 +1,6 @@
 package com.his.patient.entity;
 
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
@@ -10,7 +11,6 @@ import lombok.EqualsAndHashCode;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
@@ -20,33 +20,19 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_patient")
 public class BizPatient extends BaseEntity {
-    /** 逻辑删除标志（0 未删除 1 已删除） */
-    @TableLogic
-    private Integer delFlag;
-
-    /** 备注 */
-    private String remark;
-
-
-
     /**
      * 患者号
      */
     private String patientNo;
 
     /**
-     * 主索引：已并入的主档患者ID（P5.1 EMPI）。
-     *
-     * <p><b>NULL = 自己就是主档</b>（绝大多数患者）；非空 = 本档案已并入该主档，
-     * 查询时按主档归并（{@code id = ? OR master_id = ?}）。
-     * <p>刻意不回填成自身 ID：NULL 与"指向自己"是两种语义，回填自身会让
-     * "我是不是影子"的判断退化成"masterId == id"，很容易写错。
+     * 主索引：已并入的主档患者ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long masterId;
 
     /**
-     * 主索引状态：0-正常 1-已并入主档（本档案失效，只在追溯时可见）
+     * 主索引状态：0-正常 1-已并入主档
      */
     private Integer mergeStatus;
 
@@ -121,7 +107,6 @@ public class BizPatient extends BaseEntity {
     private String medicalHistory;
     /**
      * 患者类型（参保性质）：1-自费 2-城镇职工医保 3-城乡居民医保 4-公费 5-其他
-     * （与列注释、字典数据(his_patient_type) 三方一致）
      */
     private Integer patientType;
     /**
@@ -215,4 +200,16 @@ public class BizPatient extends BaseEntity {
      * 状态（0-停用 1-启用）
      */
     private Integer status;
+    /**
+     * 逻辑删除标志（0 未删除 1 已删除）
+     */
+    @TableLogic
+    private Integer delFlag;
+
+    /**
+     * 备注
+     */
+    private String remark;
+
+
 }

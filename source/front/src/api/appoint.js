@@ -129,6 +129,16 @@ export function createSchedule(data) {
     return request.post('/schedule/scheduleUpsert', data)
 }
 
+// 批量新增排班：整批（人×日）一次提交，展开与事务全部在后端完成，前端禁止循环调单条接口
+export function createScheduleBatch(data) {
+    return request.post('/schedule/batchUpsert', data)
+}
+
+// 复刻排班：把源区间内正常排班整体后移 dayOffset 天，单事务落库
+export function replicateSchedule(data) {
+    return request.post('/schedule/replicate', data)
+}
+
 // 修改排班
 export function updateSchedule(data) {
     return request.post('/schedule/scheduleUpsert', data)

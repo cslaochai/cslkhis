@@ -1,26 +1,19 @@
 package com.his.patient.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
 
 /**
  * 医嘱基础字典
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("sys_dict_data")
-public class SysOrderDictData implements Serializable {
-
-    /**
-     * 主键ID
-     */
-    @TableId(value = "id", type = IdType.ASSIGN_ID)
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long id;
+public class SysOrderDictData extends BaseEntity implements Serializable {
 
     /**
      * 字典类型
@@ -66,28 +59,6 @@ public class SysOrderDictData implements Serializable {
      * 1-系统内置 2-自定义（医嘱字典页新增的都算自定义）
      */
     private Integer dictSource;
-
-    /**
-     * 创建人
-     */
-    private String createBy;
-
-    /**
-     * 创建时间
-     */
-    @TableField(fill = FieldFill.INSERT)
-    private LocalDateTime createTime;
-
-    /**
-     * 更新人
-     */
-    private String updateBy;
-
-    /**
-     * 更新时间
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updateTime;
 
     /**
      * 删除标志（0-正常 1-删除）

@@ -1,5 +1,7 @@
 package com.his.miniapp.dto;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Data;
@@ -33,5 +35,8 @@ public class PayUpsertDTO {
     /**
      * 支付渠道（1-微信 2-支付宝），默认微信
      */
+    @NotNull(message = "支付渠道不能为空")
+    @Min(value = 1, message = "支付渠道不合法（1-微信 2-支付宝）")
+    @Max(value = 2, message = "支付渠道不合法（1-微信 2-支付宝）")
     private Integer channel = 1;
 }

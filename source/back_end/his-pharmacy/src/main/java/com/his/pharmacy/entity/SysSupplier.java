@@ -7,6 +7,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -23,6 +25,20 @@ public class SysSupplier implements Serializable {
     /** 供应商ID */
     @TableId(value = "supplier_id", type = IdType.ASSIGN_ID)
     private Long supplierId;
+
+    /**
+     * 创建人 ID（登录用户 id）
+     */
+    @TableField(fill = FieldFill.INSERT)
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long createById;
+
+    /**
+     * 更新人 ID（登录用户 id）
+     */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long updateById;
 
     /** 供应商编码（唯一） */
     private String supplierCode;

@@ -1,10 +1,10 @@
 package com.his.medicaltech.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -14,15 +14,9 @@ import java.time.LocalDateTime;
  * 病案统计上报台账实体（报文落库留痕，打印预留不对外发送）。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_stat_report")
-public class BizStatReport {
-
-    /**
-     * 主键ID
-     */
-    @TableId(value = "id", type = IdType.ASSIGN_ID)
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long id;
+public class BizStatReport extends BaseEntity {
 
     /**
      * 上报单号
@@ -129,26 +123,6 @@ public class BizStatReport {
      * 报出人
      */
     private String submitByName;
-
-    /**
-     * 创建人
-     */
-    private String createBy;
-
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-
-    /**
-     * 更新人
-     */
-    private String updateBy;
-
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
 
     /**
      * 删除标志（0-正常 1-删除）

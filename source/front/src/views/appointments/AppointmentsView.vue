@@ -983,41 +983,9 @@
       </template>
     </el-dialog>
 
-    <!-- 支付弹窗 -->
-    <el-dialog v-model="showPaymentDialog" :close-on-click-modal="false" :close-on-press-escape="false" :show-close="false"
-               destroy-on-close title="挂号缴费" width="420px">
-      <div class="flex flex-col items-center py-4">
-        <div class="mb-4 text-center">
-          <p class="text-sm text-slate-500">收费单号</p>
-          <p class="font-mono text-lg font-bold text-slate-900">{{ paymentInfo.billNo || '-' }}</p>
-        </div>
-        <div class="mb-4 text-center">
-          <p class="text-sm text-slate-500">患者</p>
-          <p class="text-base font-medium text-slate-700">{{ paymentInfo.patientName }}</p>
-        </div>
-        <div class="mb-6 text-center">
-          <p class="text-sm text-slate-500">应付金额</p>
-          <p class="text-3xl font-bold text-red-500">¥{{ paymentInfo.amount.toFixed(2) }}</p>
-        </div>
-        <!-- 二维码 -->
-        <div class="rounded-lg border border-slate-200 p-3">
-          <img
-              :src="`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=PAY:${paymentInfo.billNo}:${paymentInfo.amount}`"
-              alt="支付二维码"
-              class="h-[180px] w-[180px]"
-          />
-        </div>
-        <p class="mt-3 text-xs text-slate-400">请使用微信/支付宝扫码支付</p>
-      </div>
-      <template #footer>
-        <div class="flex justify-between">
-          <el-button plain type="info" @click="showPaymentDialog = false">稍后支付</el-button>
-          <el-button :loading="paymentLoading" type="success" @click="handleConfirmPayment">
-            确认已支付
-          </el-button>
-        </div>
-      </template>
-    </el-dialog>
+    <!-- 挂号费扫码收款：出码给患者扫，入账由渠道回调/查单确认（页面不点「已支付」） -->
+    <QrPayDialog v-model="showPaymentDialog" :amount="paymentInfo.amount" :bill-id="paymentInfo.billId"
+                 :bill-no="paymentInfo.billNo" :patient-name="paymentInfo.patientName" @paid="onQrPaid"/>
   </div>
 </template>
 
@@ -1051,7 +1019,7 @@ import {
   previewRevisitFee,
   updateRegistration
 } from '@/api/appoint';
-import {getBillDetailById, payBill} from '@/api/settlementBill';
+import {getBillDetailById} from '@/api/settlementBill';
 import {submitRefundApply} from '@/api/refund';
 import {createPatient} from '@/api/patient';
 import {
@@ -1068,6 +1036,7 @@ import {
 } from '@/lib/patientGender';
 import {PATIENT_TYPE_OPTIONS, patientTypeToSettlementType} from '@/lib/patientType';
 import PatientSelect from '@/components/his/PatientSelect.vue';
+import QrPayDialog from '@/components/his/QrPayDialog.vue';
 import {getDepartmentSelectList, getDictDataList, getDictDataMapList, getEmployeeList, getUserInfo} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {VISIT_TYPE} from '@/lib/dict';
@@ -1131,7 +1100,6 @@ const searchForm = ref({
 const showAddDialog = ref(false);
 const showEditDialog = ref(false);
 const showPaymentDialog = ref(false);
-const paymentLoading = ref(false);
 const paymentInfo = ref({
   registNo: '',
   patientName: '',
@@ -1604,7 +1572,7 @@ const handleSubmit = async () => {
     try {
       const billRes = await getBillDetailById(data.billId);
       const bill = billRes.data || {};
-      amount = bill.payableAmount || 0;
+      amount = bill.unpaidAmount ?? bill.payableAmount ?? 0;
       billStatus = bill.billStatus ?? null;
     } catch (e) {
       console.error('获取账单详情失败:', e);
@@ -1768,7 +1736,7 @@ const handleShowPayment = async (row) => {
   let amount = 0;
   try {
     const billRes = await getBillDetailById(row.billId);
-    amount = billRes.data?.payableAmount || 0;
+    amount = billRes.data?.unpaidAmount ?? billRes.data?.payableAmount ?? 0;
   } catch (e) {
     console.error('获取账单详情失败:', e);
   }
@@ -1782,26 +1750,10 @@ const handleShowPayment = async (row) => {
   };
   showPaymentDialog.value = true;
 };
-// ========== 支付确认 ==========
-const handleConfirmPayment = async () => {
-  if (!paymentInfo.value.billId) {
-    ElMessage.error('未找到账单');
-    return;
-  }
-  paymentLoading.value = true;
-  try {
-    await payBill({
-      billId: paymentInfo.value.billId,
-      items: [{payMethod: 2, amount: Number(paymentInfo.value.amount)}], // 微信支付
-    });
-    showPaymentDialog.value = false;
-    ElMessage.success('支付成功');
-    reloadListAndStats();
-  } catch (error) {
-    ElMessage.error(error.message || '支付失败');
-  } finally {
-    paymentLoading.value = false;
-  }
+// ========== 扫码收款结果 ==========
+const onQrPaid = () => {
+  ElMessage.success('挂号费已入账');
+  reloadListAndStats();
 };
 const showRefundDialog = ref(false);
 const refundSubmitting = ref(false);

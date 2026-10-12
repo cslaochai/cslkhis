@@ -58,16 +58,16 @@ UPDATE sys_menu SET permission = 'schedule:overview:list' WHERE id = 2938 AND pe
 -- =====================================================================
 
 INSERT IGNORE INTO sys_role (id, role_code, role_name, role_type, staff_type, data_scope, sort_order, status,
-                            create_by, update_by, del_flag, remark, create_by_id, update_by_id)
-VALUES ('25', '10035', '门诊办', 1, 6, 1, 25, 1, 'admin', 'admin', 0, '门诊排班/号源的业务主管岗（院级职能处室），data_scope=1 全院', '1', '1');
+                            create_by, create_time, update_by, update_time, del_flag, remark, create_by_id, update_by_id)
+VALUES ('25', '10035', '门诊办', 1, 6, 1, 25, 1, 'admin', NOW(), 'admin', NOW(), 0, '门诊排班/号源的业务主管岗（院级职能处室），data_scope=1 全院', '1', '1');
 
 INSERT IGNORE INTO sys_role (id, role_code, role_name, role_type, staff_type, data_scope, sort_order, status,
-                            create_by, update_by, del_flag, remark, create_by_id, update_by_id)
-VALUES ('26', '10036', '医务科', 1, 6, 1, 26, 1, 'admin', 'admin', 0, '全院岗位出勤/岗位人力标准的主管岗，data_scope=1 全院', '1', '1');
+                            create_by, create_time, update_by, update_time, del_flag, remark, create_by_id, update_by_id)
+VALUES ('26', '10036', '医务科', 1, 6, 1, 26, 1, 'admin', NOW(), 'admin', NOW(), 0, '全院岗位出勤/岗位人力标准的主管岗，data_scope=1 全院', '1', '1');
 
 INSERT IGNORE INTO sys_role (id, role_code, role_name, role_type, staff_type, data_scope, sort_order, status,
-                            create_by, update_by, del_flag, remark, create_by_id, update_by_id)
-VALUES ('27', '10037', '科主任', 1, 1, 3, 27, 1, 'admin', 'admin', 0, '本科室门诊排班+岗位出勤负责人，data_scope=3 本部门', '1', '1');
+                            create_by, create_time, update_by, update_time, del_flag, remark, create_by_id, update_by_id)
+VALUES ('27', '10037', '科主任', 1, 1, 3, 27, 1, 'admin', NOW(), 'admin', NOW(), 0, '本科室门诊排班+岗位出勤负责人，data_scope=3 本部门', '1', '1');
 
 
 -- =====================================================================
@@ -86,36 +86,36 @@ VALUES ('27', '10037', '科主任', 1, 1, 3, 27, 1, 'admin', 'admin', 0, '本科
 --   院领导(18) → 维持「只看总览」不变（20261011 已补 2938），不再扩权
 -- =====================================================================
 
-INSERT IGNORE INTO sys_role_menu (id, role_id, menu_id, create_by, update_by, create_by_id, update_by_id) VALUES
+INSERT IGNORE INTO sys_role_menu (id, role_id, menu_id, create_by, create_time, update_by, update_time, create_by_id, update_by_id) VALUES
 -- ---- 门诊办(25)：通用 100/101/102 + 排班中心 + 门诊排班域 + 总览 ----
-(8920610100000000106, 25, 100,  'admin', 'admin', 1, 1),
-(8920610100000000107, 25, 101,  'admin', 'admin', 1, 1),
-(8920610100000000108, 25, 102,  'admin', 'admin', 1, 1),
-(8920610100000000109, 25, 2945, 'admin', 'admin', 1, 1),
-(8920610100000000110, 25, 804,  'admin', 'admin', 1, 1),
-(8920610100000000111, 25, 2120, 'admin', 'admin', 1, 1),
-(8920610100000000112, 25, 2121, 'admin', 'admin', 1, 1),
-(8920610100000000113, 25, 2122, 'admin', 'admin', 1, 1),
-(8920610100000000114, 25, 2938, 'admin', 'admin', 1, 1),
+(8920610100000000106, 25, 100,  'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000107, 25, 101,  'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000108, 25, 102,  'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000109, 25, 2945, 'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000110, 25, 804,  'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000111, 25, 2120, 'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000112, 25, 2121, 'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000113, 25, 2122, 'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000114, 25, 2938, 'admin', NOW(), 'admin', NOW(), 1, 1),
 -- ---- 医务科(26)：通用 + 排班中心 + 岗位出勤域 + 总览 ----
-(8920610100000000115, 26, 100,  'admin', 'admin', 1, 1),
-(8920610100000000116, 26, 101,  'admin', 'admin', 1, 1),
-(8920610100000000117, 26, 102,  'admin', 'admin', 1, 1),
-(8920610100000000118, 26, 2945, 'admin', 'admin', 1, 1),
-(8920610100000000119, 26, 2935, 'admin', 'admin', 1, 1),
-(8920610100000000120, 26, 2937, 'admin', 'admin', 1, 1),
-(8920610100000000121, 26, 2938, 'admin', 'admin', 1, 1),
+(8920610100000000115, 26, 100,  'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000116, 26, 101,  'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000117, 26, 102,  'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000118, 26, 2945, 'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000119, 26, 2935, 'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000120, 26, 2937, 'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000121, 26, 2938, 'admin', NOW(), 'admin', NOW(), 1, 1),
 -- ---- 科主任(27)：通用 + 排班中心 + 门诊排班域 + 岗位出勤 + 总览（本部门）----
-(8920610100000000122, 27, 100,  'admin', 'admin', 1, 1),
-(8920610100000000123, 27, 101,  'admin', 'admin', 1, 1),
-(8920610100000000124, 27, 102,  'admin', 'admin', 1, 1),
-(8920610100000000125, 27, 2945, 'admin', 'admin', 1, 1),
-(8920610100000000126, 27, 804,  'admin', 'admin', 1, 1),
-(8920610100000000127, 27, 2120, 'admin', 'admin', 1, 1),
-(8920610100000000128, 27, 2121, 'admin', 'admin', 1, 1),
-(8920610100000000129, 27, 2122, 'admin', 'admin', 1, 1),
-(8920610100000000130, 27, 2935, 'admin', 'admin', 1, 1),
-(8920610100000000131, 27, 2938, 'admin', 'admin', 1, 1);
+(8920610100000000122, 27, 100,  'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000123, 27, 101,  'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000124, 27, 102,  'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000125, 27, 2945, 'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000126, 27, 804,  'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000127, 27, 2120, 'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000128, 27, 2121, 'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000129, 27, 2122, 'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000130, 27, 2935, 'admin', NOW(), 'admin', NOW(), 1, 1),
+(8920610100000000131, 27, 2938, 'admin', NOW(), 'admin', NOW(), 1, 1);
 
 
 -- =====================================================================

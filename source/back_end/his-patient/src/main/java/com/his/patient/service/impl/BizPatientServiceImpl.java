@@ -5,9 +5,11 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.constant.DictTypeConst;
+import com.his.common.enums.DelFlagEnum;
 import com.his.common.enums.EnableStatusEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
+import com.his.patient.enums.PatientMergeStatusEnum;
 import com.his.system.service.RedisSequenceService;
 import com.his.common.util.SensitiveMaskUtil;
 import com.his.common.util.TextUtil;
@@ -273,12 +275,6 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
     public BizPatient selectByIdCard(String idCard) {
         LambdaQueryWrapper<BizPatient> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BizPatient::getIdCard, idCard).orderByAsc(BizPatient::getId);
-        // 【不能依赖 getOne 的默认行为】库里一旦已存在同身份证的多份档案（历史多来源导入的遗留，
-        // 正是患者主索引要治理的对象），getOne 默认 throwEx=true 会抛 TooManyResultsException，
-        // 于是**建档入口返回 500「系统内部错误」** —— 一个数据问题被伪装成系统故障，
-        // 而且连"该身份证已存在"这句该给的提示都发不出来。
-        // 建档防重的语义只是"存在就拒"，存在几条不影响结论，所以取第一条即可，
-        // 多条的情况记 warn 指向 EMPI 去合并。
         List<BizPatient> list = this.list(wrapper);
         if (list.size() > 1) {
             log.warn("身份证 {} 对应 {} 份档案（疑似重复建档），建档防重按第一条判定；"
@@ -290,10 +286,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean addPatient(BizPatient patient) {
-        // 写入口校验（姓名/性别/身份证必填，身份证校验位，手机号格式）——
-        // 放在 service 而不是只在 controller：addPatient 是公开方法，谁能调谁就得受约束
         PatientProfileValidator.validateForCreate(patient);
-        // 检查身份证号是否已存在
         if (TextUtil.hasText(patient.getIdCard())) {
             BizPatient existing = selectByIdCard(patient.getIdCard());
             if (existing != null) {
@@ -301,28 +294,18 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
             }
         }
         patient.setPatientNo(redisSequenceService.generatePatientNo());
-        // 计算年龄
         if (patient.getBirthDate() != null) {
             patient.setAge(Period.between(patient.getBirthDate(), LocalDate.now()).getYears());
         }
 
-        patient.setStatus(1);
+        patient.setStatus(DelFlagEnum.NORMAL.getCode());
+        patient.setMergeStatus(PatientMergeStatusEnum.NORMAL.getCode());
         boolean result = this.save(patient);
         if (!result) {
             return result;
         }
-        // 新增患者成功后同步健康档案：主档表单里的「过敏史 / 既往病史 / 联系人」是快速录入入口，
-        // 由 patientHealthProfileService 落成结构化明细行，并回算主档文本投影（口径见该服务注释）。
-        //
-        // 这里**删掉了原来那段直接插患者联系方式的代码**：它把
-        // `patient.getContactRelation()`（"配偶" 这样的文本）塞进 `relationship`
-        //（tinyint 码值列），MySQL 隐式转换后静默存成 0 —— 页面上关系显示成 0，
-        // 且不抛任何异常。现在 relationship 是 Integer，类型上就写不进去了。
         patientHealthProfileService.syncAfterPatientSave(patient);
-
-        // 自动打静态标签（根据年龄判断）
         autoAddStaticTags(patient);
-
         return result;
     }
 
@@ -489,55 +472,40 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
             detailVO.setPastDiseases(Collections.emptyList());
             detailVO.setSurgeryHistories(Collections.emptyList());
             detailVO.setFamilyHistories(Collections.emptyList());
-            // 用药史属临床内容，同样裁剪。**联系人**不裁：收费窗口要照联系人打电话催费，
-            // 而且联系人不含诊断信息 —— 裁剪它会连带把「谁来接这个病人」也藏掉。
             detailVO.setMedications(Collections.emptyList());
         }
 
-        // 展示型出参：敏感号码在这里就遮掉，明文字段置 null（与列表同一批工具、同一口径）。
-        // 前端只负责渲染后端给的值 —— 在前端遮等于明文仍在响应体里，抓包/日志/第二个调用方全漏。
         maskDetailSensitiveFields(detailVO);
-
         return detailVO;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public PatientVO upsertPatient(PatientUpsertDTO patientUpsertDTO) {
+    public PatientVO upsertPatient(PatientUpsertDTO upsertDTO) {
         BizPatient patient = new BizPatient();
-        BeanUtils.copyProperties(patientUpsertDTO, patient);
-        if (patientUpsertDTO.getId() == null) {
-            // 新增：姓名 / 性别 / 身份证必填，身份证要过校验位（addPatient 内还会再跑一次）
+        BeanUtils.copyProperties(upsertDTO, patient);
+        if (upsertDTO.getId() == null) {
             PatientProfileValidator.validateForCreate(patient);
             fillBirthDateAndAge(patient);
             if (!addPatient(patient)) {
                 throw new BusinessException("新增失败");
             }
-            // 建档留痕：只记建档时填了值的字段（old 传 null → 变更类型按新增渲染）。
             fieldChangeRecorder.record(PATIENT, patient.getId(), patient.getPatientNo(),
                     patient.getPatientName(), null, patient, PATIENT_FIELDS);
         } else {
-            // 修改：身份证放宽为只验格式，理由见 PatientProfileValidator
             PatientProfileValidator.validateForUpdate(patient);
             fillBirthDateAndAge(patient);
-            // 改之前先取快照 —— 少了这一步就永远答不出"改之前是什么"
-            BizPatient before = this.getById(patientUpsertDTO.getId());
+            BizPatient before = this.getById(upsertDTO.getId());
             if (!this.updateById(patient)) {
                 throw new BusinessException("修改失败");
             }
-            // 主档表单里的「过敏史 / 既往病史 / 联系人」是快速录入入口：
-            // 该组还没有明细时落成明细，已有明细时按明细回算文本（口径见 PatientHealthProfileService）。
-            // 不跑这一步的话，用户在主档里改完过敏史、健康档案页纹丝不动，两处又开始各说各话。
             patientHealthProfileService.syncAfterPatientSave(patient);
-            // 拿落库后的真实值比对，而不是拿 DTO 比：DTO 里 null 的字段 updateById 根本不会写，
-            // 拿 DTO 比会把"这次没传"误记成"被清空了"；syncAfterPatientSave 的回算也只有落库后才看得见。
-            BizPatient after = this.getById(patientUpsertDTO.getId());
+            BizPatient after = this.getById(upsertDTO.getId());
             if (after != null) {
                 fieldChangeRecorder.record(PATIENT, after.getId(), after.getPatientNo(),
                         after.getPatientName(), before, after, PATIENT_FIELDS);
             }
         }
-        // 回传落库后的患者信息（前端新增患者后需立即拿到 id / patientNo 用于后续挂号）
         PatientVO vo = new PatientVO();
         BeanUtils.copyProperties(patient, vo);
         return vo;

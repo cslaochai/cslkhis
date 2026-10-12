@@ -23,6 +23,13 @@ public class BaseEntity implements Serializable {
     private Long id;
 
     /**
+     * 创建人 ID（sys_user.id，员工即 employee_id；患者/系统上下文可能为空）
+     */
+    @TableField(fill = FieldFill.INSERT)
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long createById;
+
+    /**
      * 创建人（姓名）
      */
     @TableField(fill = FieldFill.INSERT)
@@ -36,6 +43,13 @@ public class BaseEntity implements Serializable {
     private LocalDateTime createTime;
 
     /**
+     * 更新人 ID（sys_user.id）
+     */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long updateById;
+
+    /**
      * 更新人（姓名）
      */
     @TableField(fill = FieldFill.INSERT_UPDATE)
@@ -47,18 +61,4 @@ public class BaseEntity implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
-
-    /**
-     * 创建人 ID（sys_user.id，员工即 employee_id；患者/系统上下文可能为空）
-     */
-    @TableField(fill = FieldFill.INSERT)
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long createById;
-
-    /**
-     * 更新人 ID（sys_user.id）
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long updateById;
 }

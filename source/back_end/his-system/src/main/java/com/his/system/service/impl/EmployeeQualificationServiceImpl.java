@@ -3,6 +3,7 @@ package com.his.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
+import com.his.system.dto.EmployeeQualificationBatchUpsertDTO;
 import com.his.system.dto.EmployeeQualificationUpsertDTO;
 import com.his.system.entity.SysEmployee;
 import com.his.system.entity.SysEmployeeQualification;
@@ -12,6 +13,7 @@ import com.his.system.service.EmployeeQualificationService;
 import com.his.system.vo.EmployeeQualificationVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -74,6 +76,22 @@ public class EmployeeQualificationServiceImpl extends ServiceImpl<SysEmployeeQua
             entity.setEmployeeId(old.getEmployeeId());
             entity.setId(upsertDTO.getId());
             sysEmployeeQualificationMapper.updateById(entity);
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void batchUpsert(EmployeeQualificationBatchUpsertDTO batchDTO) {
+        List<EmployeeQualificationUpsertDTO> items = batchDTO.getItems();
+        for (int i = 0; i < items.size(); i++) {
+            EmployeeQualificationUpsertDTO item = items.get(i);
+            // 归属只认批头那个人：条目里传了别人的 employeeId 也改不过来
+            item.setEmployeeId(batchDTO.getEmployeeId());
+            try {
+                upsert(item);
+            } catch (BusinessException e) {
+                throw new BusinessException("第 " + (i + 1) + " 本证书（编号 " + item.getCertNo() + "）：" + e.getMessage());
+            }
         }
     }
 

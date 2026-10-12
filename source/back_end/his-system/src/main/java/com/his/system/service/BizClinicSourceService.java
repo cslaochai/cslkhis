@@ -1,11 +1,14 @@
 package com.his.system.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.his.system.dto.BizClinicSourceBatchUpsertDTO;
+import com.his.system.dto.BizClinicSourceReplicateDTO;
 import com.his.system.dto.OnDutyQueryDTO;
 import com.his.system.dto.ScheduleQueryDTO;
 import com.his.system.dto.ScheduleSelectQueryDTO;
 import com.his.system.dto.ScheduleUpsertDTO;
 import com.his.system.entity.BizClinicSource;
+import com.his.system.vo.BizClinicSourceBatchResultVO;
 import com.his.system.vo.OnDutyStaffVO;
 import com.his.system.vo.ScheduleDetailVO;
 import com.his.system.vo.ScheduleSelectListVO;
@@ -46,6 +49,18 @@ public interface BizClinicSourceService extends IService<BizClinicSource> {
     void scheduleUpsert(ScheduleUpsertDTO upsertDTO);
 
     /**
+     * 批量新增排班：共用表头 × 人员 × 日期 的展开与落库全部在本方法单事务内完成，
+     * 任何一条校验失败整批回滚（前端禁止循环调用单条接口，事务不可控）。
+     */
+    BizClinicSourceBatchResultVO batchUpsert(BizClinicSourceBatchUpsertDTO batchDTO);
+
+    /**
+     * 复刻排班：把源区间内的正常排班整体后移若干天，单事务落库；
+     * 目标日期已过或与既有排班重叠的条目跳过并计数。
+     */
+    BizClinicSourceBatchResultVO replicate(BizClinicSourceReplicateDTO dto);
+
+    /**
      * 查询排班列表
      */
     List<BizClinicSource> listPage(ScheduleQueryDTO queryDTO);
@@ -59,6 +74,12 @@ public interface BizClinicSourceService extends IService<BizClinicSource> {
      * 新增排班
      */
     boolean addSchedule(BizClinicSource schedule);
+
+    /**
+     * 新建号源行的初值收口：本表除 del_flag 外没有列默认值，实体字段留 null 会被 MP 整个省掉列，
+     * 插入即报 1364。手工新增与模板批量生成共用这一处。
+     */
+    void initNewScheduleRow(BizClinicSource schedule);
 
     /**
      * 出诊计划与出勤事实对齐（手工排班、模板批量生成共用同一条口径）。

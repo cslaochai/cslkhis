@@ -35,8 +35,9 @@ public class MiniPayOrderVO {
     private BigDecimal amount;
 
     /**
-     * 真收银台模式下的 wx.requestPayment 参数（timeStamp/nonceStr/package/signType/paySign）；
-     * 模式为 null（后端已直接推进支付成功）。
+     * 真收银台下的渠道参数：微信为 wx.requestPayment 所需的
+     * timeStamp/nonceStr/package/signType/paySign，支付宝为 form 表单串。
+     * 后端不替渠道把单据置成已支付，收款结果只来自渠道异步通知或主动查单。
      */
     private Map<String, String> payParams;
 }

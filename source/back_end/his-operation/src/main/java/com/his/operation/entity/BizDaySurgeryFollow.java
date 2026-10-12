@@ -3,6 +3,8 @@ package com.his.operation.entity;
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -11,20 +13,14 @@ import java.time.LocalDateTime;
  * 日间手术随访台账（出院/转住院后 24h 内必访，追加式可多次）。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_day_surgery_follow")
-public class BizDaySurgeryFollow {
+public class BizDaySurgeryFollow extends BaseEntity {
 
     /**
      * 随访结果：无异常
      */
     public static final int RESULT_NORMAL = 1;
-
-    /**
-     * 主键ID
-     */
-    @TableId(type = IdType.ASSIGN_ID)
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long id;
 
     /**
      * 登记单ID
@@ -62,28 +58,6 @@ public class BizDaySurgeryFollow {
      * 随访时间
      */
     private LocalDateTime followTime;
-
-    /**
-     * 创建人
-     */
-    private String createBy;
-
-    /**
-     * 创建时间
-     */
-    @TableField(fill = FieldFill.INSERT)
-    private LocalDateTime createTime;
-
-    /**
-     * 更新人
-     */
-    private String updateBy;
-
-    /**
-     * 更新时间
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updateTime;
 
     /**
      * 删除标志（0-正常 1-删除）

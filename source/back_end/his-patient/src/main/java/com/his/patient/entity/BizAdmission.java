@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -22,6 +24,20 @@ public class BizAdmission implements Serializable {
     @TableId(value = "admission_id", type = IdType.ASSIGN_ID)
     @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
+
+    /**
+     * 创建人 ID（登录用户 id）
+     */
+    @TableField(fill = FieldFill.INSERT)
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long createById;
+
+    /**
+     * 更新人 ID（登录用户 id）
+     */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long updateById;
 
     /**
      * 入院记录号（ADM + yyyyMMdd + 3位序号）

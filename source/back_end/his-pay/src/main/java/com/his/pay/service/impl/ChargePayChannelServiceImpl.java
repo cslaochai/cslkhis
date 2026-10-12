@@ -1,5 +1,7 @@
 package com.his.pay.service.impl;
 
+import com.his.common.exception.BusinessException;
+import com.his.common.enums.PayChannelEnum;
 import com.his.pay.config.AlipayProperties;
 import com.his.pay.config.PayChannelProperties;
 import com.his.pay.config.UnionPayProperties;
@@ -9,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.Objects;
 
 /**
  * 收费台支付渠道实现（微信/支付宝/云闪付扫码 - 付款码支付）
@@ -36,18 +39,18 @@ public class ChargePayChannelServiceImpl implements ChargePayChannelService {
         if (!payChannelProperties.isEnabled()) {
             throw new IllegalStateException(
                     "收费台支付渠道已关闭（pay.channel.enabled=false），无法调用支付。" +
-                    "如需启用支付，请在 application-local.yml 中将 pay.channel.enabled 改为 true。"
+                    "如需启用支付，请在 application-dev.yml 中将 pay.channel.enabled 改为 true。"
             );
         }
 
         try {
-            if (channel == 1) {
+            if (Objects.equals(channel, PayChannelEnum.WECHAT.getCode())) {
                 // TODO: 微信付款码支付需要 WxJava 完整实现，当前先留桩
                 log.warn("[微信支付] 付款码支付完整实现待补（需要商户号 + APIv3密钥）");
                 return new PayResult(false, null, "微信支付暂未完整实现");
-            } else if (channel == 2) {
+            } else if (Objects.equals(channel, PayChannelEnum.ALIPAY.getCode())) {
                 return alipayMicroPay(authCode, orderNo, amount, subject);
-            } else if (channel == 3) {
+            } else if (Objects.equals(channel, PayChannelEnum.UNIONPAY.getCode())) {
                 // TODO: 云闪付付款码支付待接 SDK
                 log.warn("[云闪付支付] 付款码支付完整实现待补");
                 return new PayResult(false, null, "云闪付支付暂未完整实现");
@@ -65,15 +68,15 @@ public class ChargePayChannelServiceImpl implements ChargePayChannelService {
         if (!payChannelProperties.isEnabled()) {
             throw new IllegalStateException(
                     "收费台支付渠道已关闭（pay.channel.enabled=false），无法调用退款。" +
-                    "如需启用退款，请在 application-local.yml 中将 pay.channel.enabled 改为 true。"
+                    "如需启用退款，请在 application-dev.yml 中将 pay.channel.enabled 改为 true。"
             );
         }
 
         try {
-            if (channel == 1) {
+            if (Objects.equals(channel, PayChannelEnum.WECHAT.getCode())) {
                 log.warn("[微信支付] 退款完整实现待补");
                 return false;
-            } else if (channel == 2) {
+            } else if (Objects.equals(channel, PayChannelEnum.ALIPAY.getCode())) {
                 return alipayRefund(channelTxnNo, refundNo, amount, reason);
             } else {
                 log.warn("[收费台支付] 不支持的退款渠道：{}", channel);

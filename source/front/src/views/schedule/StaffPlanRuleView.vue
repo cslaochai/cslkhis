@@ -25,7 +25,7 @@
           </el-form-item>
         </el-form>
         <div class="flex shrink-0 items-start">
-          <el-button v-perm="'staff:schedule:add'" :icon="Plus" data-testid="plan-rule-add" type="primary"
+          <el-button v-perm="'staff:planRule:add'" :icon="Plus" data-testid="plan-rule-add" type="primary"
                      @click="handleAdd">
             新增标准
           </el-button>
@@ -69,9 +69,9 @@
           <el-table-column label="备注" min-width="160" prop="remark" show-overflow-tooltip/>
           <el-table-column fixed="right" label="操作" width="160">
             <template #default="{ row }">
-              <el-button v-perm="'staff:schedule:add'" :icon="Edit" link type="primary" @click="handleEdit(row)">修改
+              <el-button v-perm="'staff:planRule:add'" :icon="Edit" link type="primary" @click="handleEdit(row)">修改
               </el-button>
-              <el-button v-perm="'staff:schedule:delete'" :icon="Delete" link type="danger" @click="handleDelete(row)">
+              <el-button v-perm="'staff:planRule:delete'" :icon="Delete" link type="danger" @click="handleDelete(row)">
                 删除
               </el-button>
             </template>

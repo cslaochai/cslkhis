@@ -1,28 +1,21 @@
 package com.his.emr.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 /**
  * 病历三级质控流转单实体
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_record_qc_flow")
-public class BizRecordQcFlow {
-
-    /**
-     * 主键ID
-     */
-    @TableId(type = IdType.ASSIGN_ID)
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long id;
+public class BizRecordQcFlow extends BaseEntity {
 
     /**
      * 流转单号 QCF+yyyyMMdd+4位
@@ -107,22 +100,6 @@ public class BizRecordQcFlow {
      */
     private String finalOpinion;
 
-    /**
-     * 创建人
-     */
-    private String createBy;
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-    /**
-     * 更新人
-     */
-    private String updateBy;
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
     /**
      * 删除标志（0-正常 1-删除）
      */

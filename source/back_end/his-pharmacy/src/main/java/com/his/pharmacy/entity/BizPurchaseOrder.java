@@ -7,6 +7,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -23,6 +25,20 @@ public class BizPurchaseOrder implements Serializable {
     /** 采购订单ID */
     @TableId(value = "order_id", type = IdType.ASSIGN_ID)
     private Long orderId;
+
+    /**
+     * 创建人 ID（登录用户 id）
+     */
+    @TableField(fill = FieldFill.INSERT)
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long createById;
+
+    /**
+     * 更新人 ID（登录用户 id）
+     */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long updateById;
 
     /** 采购订单号（CG+yyyyMMdd+4位序号，唯一） */
     private String orderNo;

@@ -3,6 +3,8 @@ package com.his.emr.entity;
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -12,15 +14,9 @@ import java.time.LocalDateTime;
  * 医疗纠纷 / 投诉登记主单。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_dispute_case")
-public class BizDisputeCase {
-
-    /**
-     * 主键ID
-     */
-    @TableId(type = IdType.ASSIGN_ID)
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long id;
+public class BizDisputeCase extends BaseEntity {
 
     /**
      * 单据编号（DS+yyyyMMdd+4位）
@@ -195,28 +191,6 @@ public class BizDisputeCase {
      * 撤销原因
      */
     private String revokeReason;
-
-    /**
-     * 创建人
-     */
-    private String createBy;
-
-    /**
-     * 创建时间
-     */
-    @TableField(fill = FieldFill.INSERT)
-    private LocalDateTime createTime;
-
-    /**
-     * 更新人
-     */
-    private String updateBy;
-
-    /**
-     * 更新时间
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updateTime;
 
     /**
      * 删除标志（0-正常 1-删除）

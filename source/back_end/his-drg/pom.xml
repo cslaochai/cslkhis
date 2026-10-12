@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.his</groupId>
+        <artifactId>his-backend</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>his-drg</artifactId>
+    <packaging>jar</packaging>
+    <name>his-drg</name>
+    <description>DRG 分组器模块（CHS-DRG 知识库+规则库，纯进程内分组，仿 OpenDRG 架构；规则数据落 biz_drg_* 表）</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-common</artifactId>
+        </dependency>
+        <!-- 取当前操作人（审计字段 createBy/updateBy）；UserUtils/CurrentUser 属全局基础设施，不构成领域耦合 -->
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-system</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+    </dependencies>
+</project>

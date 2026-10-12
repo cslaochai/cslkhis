@@ -1,35 +1,22 @@
 package com.his.emr.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.io.Serializable;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.TableField;
 
 /**
  * 处方点评批次（卫医管发〔2010〕28号，事后专项点评；评审必查台账）。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_rx_review_batch")
-public class BizRxReviewBatch implements Serializable {
-    /**
-     * 更新人
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private String updateBy;
+public class BizRxReviewBatch extends BaseEntity implements Serializable {
 
     private static final long serialVersionUID = 1L;
-
-    /**
-     * 主键
-     */
-    @TableId(type = IdType.ASSIGN_ID)
-    private Long id;
 
     /**
      * 批次号（RXRB+yyyyMMdd+4位序号）
@@ -85,21 +72,6 @@ public class BizRxReviewBatch implements Serializable {
      * 点评人姓名
      */
     private String reviewerName;
-
-    /**
-     * 创建人
-     */
-    private String createBy;
-
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
 
     /**
      * 备注

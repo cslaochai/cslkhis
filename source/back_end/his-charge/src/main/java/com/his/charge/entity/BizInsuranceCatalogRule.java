@@ -1,31 +1,23 @@
 package com.his.charge.entity;
 
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 /**
  * 医保目录报销规则（L2 结算分摊依据）。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_insurance_catalog_rule")
-public class BizInsuranceCatalogRule implements Serializable {
+public class BizInsuranceCatalogRule extends BaseEntity implements Serializable {
 
     private static final long serialVersionUID = 1L;
-
-    /**
-     * 主键
-     */
-    @JsonSerialize(using = ToStringSerializer.class)
-    @TableId
-    private Long id;
 
     /**
      * 规则编号（ICR+yyyyMMdd+5位）
@@ -102,22 +94,6 @@ public class BizInsuranceCatalogRule implements Serializable {
      */
     private Integer status;
 
-    /**
-     * 创建人
-     */
-    private String createBy;
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-    /**
-     * 更新人
-     */
-    private String updateBy;
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
     /**
      * 删除标志（0-正常 1-删除）
      */

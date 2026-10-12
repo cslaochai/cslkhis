@@ -1,27 +1,20 @@
 package com.his.pharmacy.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.io.Serializable;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.TableField;
 
 /**
  * 抗菌药物处方权授权（《抗菌药物临床应用管理办法》：三级管理，按职称授予处方权）。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_antibiotic_auth")
-public class BizAntibioticAuth implements Serializable {
-    /**
-     * 更新人
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private String updateBy;
+public class BizAntibioticAuth extends BaseEntity implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -40,8 +33,6 @@ public class BizAntibioticAuth implements Serializable {
     public static final int STATUS_REVOKED = 3;
 
     /** 主键 */
-    @TableId(type = IdType.ASSIGN_ID)
-    private Long id;
 
     /** 授权编号（KJ+yyyyMMdd+4位序号） */
     private String authNo;
@@ -86,13 +77,10 @@ public class BizAntibioticAuth implements Serializable {
     private String revokeReason;
 
     /** 创建人 */
-    private String createBy;
 
     /** 创建时间 */
-    private LocalDateTime createTime;
 
     /** 更新时间 */
-    private LocalDateTime updateTime;
 
     /** 备注 */
     private String remark;

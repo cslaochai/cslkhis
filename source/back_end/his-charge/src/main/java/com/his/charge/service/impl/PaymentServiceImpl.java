@@ -9,6 +9,7 @@ import com.his.charge.dto.BillRefundDTO;
 import com.his.charge.dto.BillVoidDTO;
 import com.his.charge.dto.PaymentTxnQueryPageDTO;
 import com.his.charge.entity.*;
+import com.his.charge.enums.InsuranceCancelFlagEnum;
 import com.his.charge.mapper.BizFundAccountTxnMapper;
 import com.his.charge.mapper.BizPaymentTxnMapper;
 import com.his.charge.mapper.BizSettlementBillItemMapper;
@@ -329,7 +330,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
             throw new BusinessException("预交金充值只能用现金/微信/支付宝/银行卡/转账，不能用" + payMethod.getDesc());
         }
         LocalDateTime txnTime = spec.txnTime() == null ? LocalDateTime.now() : spec.txnTime();
-        BizPaymentTxn txn = new BizPaymentTxn();
+        BizPaymentTxn txn = newTxn();
         txn.setTxnNo(redisSequenceService.generatePayTxnNo());
         // bill_id / bill_no 留空：这笔钱没有对应账单（为什么不为它造一张 0 元账单，见接口注释）
         txn.setPatientId(spec.patientId());
@@ -441,7 +442,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         }
 
         Integer outMethod = toPatientWallet ? PaymentMethodEnum.BALANCE.getCode() : origMethod;
-        BizPaymentTxn txn = new BizPaymentTxn();
+        BizPaymentTxn txn = newTxn();
         txn.setTxnNo(txnNo);
         txn.setPatientId(spec.patientId());
         txn.setPatientNo(spec.patientNo());
@@ -536,7 +537,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
             accountTxn = deductBalance(bill, item, amount, txnNo);
         }
 
-        BizPaymentTxn txn = new BizPaymentTxn();
+        BizPaymentTxn txn = newTxn();
         txn.setTxnNo(txnNo);
         txn.setBillId(bill.getId());
         txn.setBillNo(bill.getBillNo());
@@ -585,6 +586,19 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
                 AccountTxnTypeEnum.BALANCE_PAY.getCode(), amount,
                 inpatient ? bill.getEncounterId() : null, bill.getId(), null,
                 PaymentMethodEnum.BALANCE.getCode(), payTxnNo, "账单 " + bill.getBillNo() + " 余额支付"));
+    }
+
+    /**
+     * 收退流水的统一出口：把「必填且无默认值的列」在一个地方兜住。
+     *
+     * <p>本表这些列全部 NOT NULL 且不带默认值，插入时漏一个就是 1364 报错（整笔收款失败），
+     * 所以新增此类列一律在这里给初值，不要散到四个调用点各写一遍。
+     */
+    private BizPaymentTxn newTxn() {
+        BizPaymentTxn txn = new BizPaymentTxn();
+        // 报盘撤销是退费走到医保侧之后才写的 1，新流水一律从「不涉及」起
+        txn.setInsuranceCancelled(InsuranceCancelFlagEnum.NOT_INVOLVED.getCode());
+        return txn;
     }
 
     /**
@@ -663,7 +677,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
             channelRefundNo = accountTxn.getTxnNo();
         }
 
-        BizPaymentTxn txn = new BizPaymentTxn();
+        BizPaymentTxn txn = newTxn();
         txn.setTxnNo(txnNo);
         txn.setBillId(bill.getId());
         txn.setBillNo(bill.getBillNo());

@@ -3,6 +3,8 @@ package com.his.emr.entity;
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -11,26 +13,9 @@ import java.time.LocalDateTime;
  * 不良事件实体（全院上报 + PDCA 四态留痕）
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_adverse_event")
-public class BizAdverseEvent {
-    /**
-     * 创建人
-     */
-    @TableField(fill = FieldFill.INSERT)
-    private String createBy;
-
-    /**
-     * 更新人
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private String updateBy;
-
-    /**
-     * 主键ID
-     */
-    @TableId(type = IdType.ASSIGN_ID)
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long id;
+public class BizAdverseEvent extends BaseEntity {
 
     /**
      * 事件编号 AE+yyyyMMdd+4位
@@ -205,13 +190,4 @@ public class BizAdverseEvent {
      */
     private Integer delFlag;
 
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
 }

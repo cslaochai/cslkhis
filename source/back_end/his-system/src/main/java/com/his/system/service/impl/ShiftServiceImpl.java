@@ -80,7 +80,9 @@ public class ShiftServiceImpl extends ServiceImpl<BizShiftMapper, BizShift> impl
         shift.setIsNight(dto.getIsNight() == null ? YesOrNoEnum.NO.getCode() : dto.getIsNight());
         shift.setNeedRestHours(dto.getNeedRestHours() == null
                 ? java.math.BigDecimal.ZERO : dto.getNeedRestHours());
-        shift.setStatus(dto.getStatus());
+        // 迟到宽限是 NOT NULL 无默认列：不收这个字段就等于新增班次必报 1364，没传按「不宽限」落
+        shift.setLateGraceMinutes(dto.getLateGraceMinutes() == null ? 0 : dto.getLateGraceMinutes());
+        shift.setStatus(dto.getStatus() == null ? EnableStatusEnum.ENABLED.getCode() : dto.getStatus());
         shift.setRemark(dto.getRemark());
         String error = saveShift(shift);
         if (error != null) {

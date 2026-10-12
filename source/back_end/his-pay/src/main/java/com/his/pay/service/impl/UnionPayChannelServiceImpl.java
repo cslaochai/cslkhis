@@ -1,5 +1,6 @@
 package com.his.pay.service.impl;
 
+import com.his.common.exception.BusinessException;
 import com.his.pay.config.UnionPayProperties;
 import com.his.pay.entity.BizPayOrder;
 import com.his.pay.service.UnionPayChannelService;
@@ -24,9 +25,9 @@ public class UnionPayChannelServiceImpl implements UnionPayChannelService {
     @Override
     public WxPayChannelService.PayUnifiedResult unifiedOrder(BizPayOrder order) {
         if (unionPayProperties.isMockEnabled()) {
-            throw new IllegalStateException(
+            throw new BusinessException(
                     "云闪付支付处于模拟模式（unionpay.mock-enabled=true），无法调用真实支付。" +
-                    "如需测试真实支付，请在 application-local.yml 中配置云闪付凭据并将 mock-enabled 改为 false。"
+                    "如需测试真实支付，请在 application-dev.yml 中配置云闪付凭据并将 mock-enabled 改为 false。"
             );
         }
 

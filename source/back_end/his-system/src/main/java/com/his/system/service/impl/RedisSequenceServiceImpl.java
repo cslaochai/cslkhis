@@ -208,6 +208,11 @@ public class RedisSequenceServiceImpl implements RedisSequenceService {
     }
 
     @Override
+    public String generatePayOrderNo() {
+        return no(BizCodeConst.PAY_ORDER_NO_PREFIX, BizCodeConst.PAY_ORDER_NO_KEY_PREFIX, 5);
+    }
+
+    @Override
     public String generatePayTxnNo() {
         return no(BizCodeConst.PAY_TXN_NO_PREFIX, BizCodeConst.PAY_TXN_NO_KEY_PREFIX, 5);
     }

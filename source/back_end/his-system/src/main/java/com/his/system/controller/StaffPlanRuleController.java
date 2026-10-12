@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 人力配置标准（一个单元 × 一个班次 × 一个岗位类别该配多少人）。
+ *
+ * <p>权限独立于排班（staff:planRule:* 而非 staff:schedule:*）：能排班的岗位（护士长）不应能改排班的分母。
  */
 @Tag(name = "人力配置标准")
 @RestController
@@ -25,14 +27,14 @@ public class StaffPlanRuleController {
     private final StaffPlanRuleService staffPlanRuleService;
 
     @Operation(summary = "分页查询人力标准")
-    @PreAuthorize("hasAuthority('staff:schedule:list')")
+    @PreAuthorize("hasAuthority('staff:planRule:list')")
     @PostMapping("/listPage")
     public Result<PageResult<StaffPlanRuleVO>> listPage(@Valid @RequestBody StaffPlanRuleQueryPageDTO queryDTO) {
         return Result.success(staffPlanRuleService.pageVO(queryDTO));
     }
 
     @Operation(summary = "新增/修改人力标准（同单元同班次同岗位只允许一条）")
-    @PreAuthorize("hasAuthority('staff:schedule:add')")
+    @PreAuthorize("hasAuthority('staff:planRule:add')")
     @PostMapping("/staffPlanRuleUpsert")
     public Result<Long> staffPlanRuleUpsert(@Valid @RequestBody StaffPlanRuleUpsertDTO upsertDTO) {
         Long id = staffPlanRuleService.upsert(upsertDTO);
@@ -40,7 +42,7 @@ public class StaffPlanRuleController {
     }
 
     @Operation(summary = "删除人力标准（物理删）")
-    @PreAuthorize("hasAuthority('staff:schedule:delete')")
+    @PreAuthorize("hasAuthority('staff:planRule:delete')")
     @DeleteMapping("/deleteById")
     public Result<Void> deleteById(@RequestParam Long id) {
         staffPlanRuleService.deleteById(id);

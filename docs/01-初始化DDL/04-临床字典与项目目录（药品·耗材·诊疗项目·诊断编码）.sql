@@ -25,15 +25,15 @@ CREATE TABLE `sys_drug`
     `is_trace_required`      tinyint      NOT NULL COMMENT '是否要求扫码采集追溯码（0-不要求 1-必须采集）',
     `category_id`            bigint COMMENT '药品分类ID',
     `category_name`          varchar(100) COMMENT '药品分类名称',
-    `price`                  decimal(10, 2)        DEFAULT '0.00' COMMENT '单价',
-    `cost_price`             decimal(10, 2)        DEFAULT '0.00' COMMENT '成本价',
-    `retail_price`           decimal(10, 2)        DEFAULT '0.00' COMMENT '零售价',
-    `is_medical_insurance`   tinyint               DEFAULT '0' COMMENT '是否医保药品（0-否 1-是）',
+    `price`                  decimal(10, 2)        COMMENT '单价',
+    `cost_price`             decimal(10, 2)        COMMENT '成本价',
+    `retail_price`           decimal(10, 2)        COMMENT '零售价',
+    `is_medical_insurance`   tinyint               COMMENT '是否医保药品（0-否 1-是）',
     `medical_insurance_code` varchar(50) COMMENT '医保编码',
     `storage_condition`      varchar(200) COMMENT '储存条件',
-    `shelf_life`             int                   DEFAULT '0' COMMENT '有效期（月）',
-    `is_skin_test`           tinyint               DEFAULT '0' COMMENT '是否需要皮试（0-否 1-是）',
-    `is_cold_chain`          tinyint               DEFAULT '0' COMMENT '是否冷链药品（0-否 1-是）',
+    `shelf_life`             int                   COMMENT '有效期（月）',
+    `is_skin_test`           tinyint               COMMENT '是否需要皮试（0-否 1-是）',
+    `is_cold_chain`          tinyint               COMMENT '是否冷链药品（0-否 1-是）',
     `special_flag`           tinyint      NOT NULL COMMENT '特殊管理分类（0-普通 1-麻醉药品 2-第一类精神药品 3-第二类精神药品 4-毒性药品）',
     `antibiotic_level`       tinyint      NOT NULL COMMENT '抗菌药物分级（0-非抗菌药物 1-非限制使用级 2-限制使用级 3-特殊使用级）',
     `ddd_value`              decimal(10, 4) COMMENT 'WHO 限定日剂量（g/日）',
@@ -41,14 +41,14 @@ CREATE TABLE `sys_drug`
     `contraindication`       text COMMENT '禁忌症',
     `adverse_reaction`       text COMMENT '不良反应',
     `usage_dosage`           text COMMENT '用法用量',
-    `status`                 tinyint               DEFAULT '1' COMMENT '状态（0-停用 1-启用）',
+    `status`                 tinyint               COMMENT '状态（0-停用 1-启用）',
     `create_by`              varchar(64)  NOT NULL COMMENT '创建人',
     `create_by_id`           bigint COMMENT '创建人ID',
     `create_time`            datetime     NOT NULL COMMENT '创建时间',
     `update_by`              varchar(64)  NOT NULL COMMENT '更新人',
     `update_by_id`           bigint COMMENT '更新人ID',
     `update_time`            datetime     NOT NULL COMMENT '更新时间',
-    `del_flag`               tinyint               DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+    `del_flag`               tinyint               NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
     `remark`                 varchar(500) COMMENT '备注',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_drug_code` (`drug_code`),
@@ -118,22 +118,22 @@ CREATE TABLE `sys_consumable`
     `id`              bigint                                  NOT NULL COMMENT '主键ID',
     `consumable_code` varchar(32) COLLATE utf8mb4_general_ci  NOT NULL COMMENT '耗材编码（唯一）',
     `consumable_name` varchar(100) COLLATE utf8mb4_general_ci NOT NULL COMMENT '耗材名称',
-    `category`        tinyint                                                       DEFAULT '5' COMMENT '类别（1-卫生材料 2-注射穿刺 3-医用敷料 4-防护用品 5-其他）',
+    `category`        tinyint                                                       COMMENT '类别（1-卫生材料 2-注射穿刺 3-医用敷料 4-防护用品 5-其他）',
     `specification`   varchar(100) COLLATE utf8mb4_general_ci COMMENT '规格',
     `unit`            varchar(20) COLLATE utf8mb4_general_ci COMMENT '单位（包、支、盒、个等）',
     `manufacturer`    varchar(200) COLLATE utf8mb4_general_ci COMMENT '生产厂家',
-    `retail_price`    decimal(10, 2)                                                DEFAULT '0.00' COMMENT '零售价',
+    `retail_price`    decimal(10, 2)                                                COMMENT '零售价',
     `is_high_value`   tinyint                                 NOT NULL COMMENT '是否高值耗材（0-普通 1-高值）',
     `udi_di`          varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '产品级UDI-DI',
     `reg_cert_no`     varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '医疗器械注册证/备案号',
-    `status`          tinyint                                                       DEFAULT '1' COMMENT '状态（0-停用 1-启用）',
+    `status`          tinyint                                                       COMMENT '状态（0-停用 1-启用）',
     `create_by`       varchar(64) COLLATE utf8mb4_general_ci  NOT NULL COMMENT '创建人',
     `create_by_id`    bigint COMMENT '创建人ID',
     `create_time`     datetime                                NOT NULL COMMENT '创建时间',
     `update_by`       varchar(64) COLLATE utf8mb4_general_ci  NOT NULL COMMENT '更新人',
     `update_by_id`    bigint COMMENT '更新人ID',
     `update_time`     datetime                                NOT NULL COMMENT '更新时间',
-    `del_flag`        tinyint                                                       DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+    `del_flag`        tinyint                                                       NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
     `remark`          varchar(500) COLLATE utf8mb4_general_ci COMMENT '备注',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_consumable_code` (`consumable_code`),
@@ -152,21 +152,21 @@ CREATE TABLE `sys_inspection_item`
     `item_type`        tinyint      NOT NULL COMMENT '项目类型（1-放射检查 2-超声检查 3-心电图 4-内镜检查 5-其他）',
     `dept_id`          bigint COMMENT '检查科室ID',
     `body_part`        varchar(200) COMMENT '检查部位',
-    `price`            decimal(10, 2)        DEFAULT '0.00' COMMENT '检查价格',
-    `duration`         int                   DEFAULT '0' COMMENT '检查时长（分钟）',
+    `price`            decimal(10, 2)        COMMENT '检查价格',
+    `duration`         int                   COMMENT '检查时长（分钟）',
     `preparation`      varchar(500) COMMENT '检查前准备',
     `contraindication` varchar(500) COMMENT '检查禁忌',
     `report_template`  text COMMENT '报告模板',
-    `is_emergency`     tinyint               DEFAULT '0' COMMENT '是否支持急诊（0-否 1-是）',
-    `is_appointment`   tinyint               DEFAULT '1' COMMENT '是否需要预约（0-否 1-是）',
-    `status`           tinyint               DEFAULT '1' COMMENT '状态（0-停用 1-启用）',
+    `is_emergency`     tinyint               COMMENT '是否支持急诊（0-否 1-是）',
+    `is_appointment`   tinyint               COMMENT '是否需要预约（0-否 1-是）',
+    `status`           tinyint               COMMENT '状态（0-停用 1-启用）',
     `create_by`        varchar(64)  NOT NULL COMMENT '创建人',
     `create_by_id`     bigint COMMENT '创建人ID',
     `create_time`      datetime     NOT NULL COMMENT '创建时间',
     `update_by`        varchar(64)  NOT NULL COMMENT '更新人',
     `update_by_id`     bigint COMMENT '更新人ID',
     `update_time`      datetime     NOT NULL COMMENT '更新时间',
-    `del_flag`         tinyint               DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+    `del_flag`         tinyint               NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
     `remark`           varchar(500) COMMENT '备注',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_item_code` (`item_code`),
@@ -185,20 +185,20 @@ CREATE TABLE `sys_laboratory_item`
     `item_type`       tinyint      NOT NULL COMMENT '项目类型（1-血液检验 2-尿液检验 3-生化检验 4-免疫检验 5-微生物检验 6-其他）',
     `dept_id`         bigint COMMENT '检验科室ID',
     `specimen_type`   varchar(50) COMMENT '标本类型（血液、尿液、粪便等）',
-    `price`           decimal(10, 2)        DEFAULT '0.00' COMMENT '检验价格',
-    `duration`        int                   DEFAULT '0' COMMENT '出报告时间（小时）',
+    `price`           decimal(10, 2)        COMMENT '检验价格',
+    `duration`        int                   COMMENT '出报告时间（小时）',
     `reference_value` varchar(200) COMMENT '参考值范围',
     `unit`            varchar(50) COMMENT '单位',
-    `is_emergency`    tinyint               DEFAULT '0' COMMENT '是否支持急诊（0-否 1-是）',
-    `is_fasting`      tinyint               DEFAULT '0' COMMENT '是否需要空腹（0-否 1-是）',
-    `status`          tinyint               DEFAULT '1' COMMENT '状态（0-停用 1-启用）',
+    `is_emergency`    tinyint               COMMENT '是否支持急诊（0-否 1-是）',
+    `is_fasting`      tinyint               COMMENT '是否需要空腹（0-否 1-是）',
+    `status`          tinyint               COMMENT '状态（0-停用 1-启用）',
     `create_by`       varchar(64)  NOT NULL COMMENT '创建人',
     `create_by_id`    bigint COMMENT '创建人ID',
     `create_time`     datetime     NOT NULL COMMENT '创建时间',
     `update_by`       varchar(64)  NOT NULL COMMENT '更新人',
     `update_by_id`    bigint COMMENT '更新人ID',
     `update_time`     datetime     NOT NULL COMMENT '更新时间',
-    `del_flag`        tinyint               DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+    `del_flag`        tinyint               NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
     `remark`          varchar(500) COMMENT '备注',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_item_code` (`item_code`),
@@ -217,15 +217,15 @@ CREATE TABLE `sys_laboratory_item_detail`
     `item_name`          varchar(200) NOT NULL COMMENT '明细项目名称',
     `unit`               varchar(50) COMMENT '单位',
     `reference_range`    varchar(100) COMMENT '参考范围',
-    `sort_order`         int                   DEFAULT '0' COMMENT '排序号',
-    `status`             tinyint               DEFAULT '1' COMMENT '状态（0-停用 1-启用）',
+    `sort_order`         int                   COMMENT '排序号',
+    `status`             tinyint               COMMENT '状态（0-停用 1-启用）',
     `create_by`          varchar(64)  NOT NULL COMMENT '创建人',
     `create_by_id`       bigint COMMENT '创建人ID',
     `create_time`        datetime     NOT NULL COMMENT '创建时间',
     `update_by`          varchar(64)  NOT NULL COMMENT '更新人',
     `update_by_id`       bigint COMMENT '更新人ID',
     `update_time`        datetime     NOT NULL COMMENT '更新时间',
-    `del_flag`           tinyint               DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+    `del_flag`           tinyint               NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
     `remark`             varchar(500) COMMENT '备注',
     PRIMARY KEY (`id`),
     KEY                  `idx_laboratory_item_id` (`laboratory_item_id`),
@@ -242,17 +242,17 @@ CREATE TABLE `sys_treatment_item`
     `item_name`    varchar(200) NOT NULL COMMENT '项目名称',
     `item_type`    tinyint      NOT NULL COMMENT '项目类型（1-注射 2-输液 3-换药 4-拆线 5-其他）',
     `dept_id`      bigint COMMENT '执行科室ID',
-    `price`        decimal(10, 2)        DEFAULT '0.00' COMMENT '治疗价格',
-    `duration`     int                   DEFAULT '0' COMMENT '治疗时长（分钟）',
+    `price`        decimal(10, 2)        COMMENT '治疗价格',
+    `duration`     int                   COMMENT '治疗时长（分钟）',
     `usage_method` varchar(200) COMMENT '使用方法',
-    `status`       tinyint               DEFAULT '1' COMMENT '状态（0-停用 1-启用）',
+    `status`       tinyint               COMMENT '状态（0-停用 1-启用）',
     `create_by`    varchar(64)  NOT NULL COMMENT '创建人',
     `create_by_id` bigint COMMENT '创建人ID',
     `create_time`  datetime     NOT NULL COMMENT '创建时间',
     `update_by`    varchar(64)  NOT NULL COMMENT '更新人',
     `update_by_id` bigint COMMENT '更新人ID',
     `update_time`  datetime     NOT NULL COMMENT '更新时间',
-    `del_flag`     tinyint               DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+    `del_flag`     tinyint               NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
     `remark`       varchar(500) COMMENT '备注',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_item_code` (`item_code`),
@@ -268,21 +268,21 @@ CREATE TABLE `sys_diagnosis`
     `id`             bigint       NOT NULL COMMENT '主键ID',
     `diagnosis_code` varchar(32)  NOT NULL COMMENT '诊断编码',
     `diagnosis_name` varchar(200) NOT NULL COMMENT '诊断名称',
-    `diagnosis_type` tinyint               DEFAULT '1' COMMENT '诊断类型（1-西医诊断 2-中医诊断）',
+    `diagnosis_type` tinyint               COMMENT '诊断类型（1-西医诊断 2-中医诊断）',
     `category_name`  varchar(100) COMMENT '诊断分类名称',
-    `parent_id`      bigint                DEFAULT '0' COMMENT '父诊断ID',
-    `sort_order`     int                   DEFAULT '0' COMMENT '排序号',
-    `is_common`      tinyint               DEFAULT '0' COMMENT '是否常用诊断（0-否 1-是）',
-    `is_notifiable`  tinyint               DEFAULT '0' COMMENT '是否传染病（0-否 1-是）',
+    `parent_id`      bigint                COMMENT '父诊断ID',
+    `sort_order`     int                   COMMENT '排序号',
+    `is_common`      tinyint               COMMENT '是否常用诊断（0-否 1-是）',
+    `is_notifiable`  tinyint               COMMENT '是否传染病（0-否 1-是）',
     `disease_stage`  varchar(100) COMMENT '疾病分期',
-    `status`         tinyint               DEFAULT '1' COMMENT '状态（0-停用 1-启用）',
+    `status`         tinyint               COMMENT '状态（0-停用 1-启用）',
     `create_by`      varchar(64)  NOT NULL COMMENT '创建人',
     `create_by_id`   bigint COMMENT '创建人ID',
     `create_time`    datetime     NOT NULL COMMENT '创建时间',
     `update_by`      varchar(64)  NOT NULL COMMENT '更新人',
     `update_by_id`   bigint COMMENT '更新人ID',
     `update_time`    datetime     NOT NULL COMMENT '更新时间',
-    `del_flag`       tinyint               DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+    `del_flag`       tinyint               NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
     `remark`         varchar(500) COMMENT '备注',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_diagnosis_code` (`diagnosis_code`),
@@ -300,15 +300,15 @@ CREATE TABLE `sys_icd10`
     `icd_name`     varchar(200) NOT NULL COMMENT '疾病名称',
     `icd_category` varchar(100) COMMENT '分类',
     `code_std`     tinyint      NOT NULL COMMENT '编码口径（1-医保版贯标码 0-历史缩写码）',
-    `sort_order`   int                   DEFAULT '0' COMMENT '排序',
-    `status`       tinyint               DEFAULT '1' COMMENT '状态（0-停用 1-正常）',
+    `sort_order`   int                   COMMENT '排序',
+    `status`       tinyint               COMMENT '状态（0-停用 1-正常）',
     `create_by`    varchar(64)  NOT NULL,
     `create_by_id` bigint COMMENT '创建人ID',
     `create_time`  datetime     NOT NULL,
     `update_by`    varchar(64)  NOT NULL,
     `update_by_id` bigint COMMENT '更新人ID',
     `update_time`  datetime     NOT NULL,
-    `del_flag`     tinyint               DEFAULT '0',
+    `del_flag`     tinyint               NOT NULL DEFAULT '0',
     `remark`       varchar(500),
     PRIMARY KEY (`id`),
     KEY            `idx_icd_code` (`icd_code`),
@@ -352,7 +352,7 @@ CREATE TABLE `sys_supplier`
     `address`        varchar(256) COMMENT '地址',
     `license_no`     varchar(64) COMMENT '营业执照号',
     `license_expiry` date COMMENT '资质证照有效期',
-    `rating`         tinyint               DEFAULT '3' COMMENT '评级（1-差 2-一般 3-良好 4-优秀）',
+    `rating`         tinyint               COMMENT '评级（1-差 2-一般 3-良好 4-优秀）',
     `status`         tinyint      NOT NULL COMMENT '状态（0-停用 1-正常）',
     `remark`         varchar(500) COMMENT '备注',
     `create_by`      varchar(64)  NOT NULL COMMENT '创建人',
@@ -361,7 +361,7 @@ CREATE TABLE `sys_supplier`
     `update_by`      varchar(64)  NOT NULL COMMENT '更新人',
     `update_by_id`   bigint COMMENT '更新人ID',
     `update_time`    datetime     NOT NULL COMMENT '更新时间',
-    `del_flag`       tinyint               DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+    `del_flag`       tinyint               NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
     PRIMARY KEY (`supplier_id`),
     UNIQUE KEY `uk_supplier_code` (`supplier_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='供应商';
@@ -430,9 +430,9 @@ CREATE TABLE `sys_single_disease`
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='单病种质控目录';
 
 -- ----------------------------
--- sys_drg_mdc  DRG 主要诊断大类（MDC）目录与入组规则
+-- biz_drg_mdc  DRG 主要诊断大类（MDC）目录与入组规则
 -- ----------------------------
-CREATE TABLE `sys_drg_mdc` (
+CREATE TABLE `biz_drg_mdc` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `mdc_code` varchar(8) NOT NULL COMMENT 'MDC 编码',
   `mdc_name` varchar(100) COMMENT 'MDC 名称',
@@ -448,13 +448,13 @@ CREATE TABLE `sys_drg_mdc` (
   `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_mdc_code` (`mdc_code`,`del_flag`)
+  UNIQUE KEY `uk_mdc_code` (`mdc_code`,`version`,`del_flag`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='DRG 主要诊断大类目录';
 
 -- ----------------------------
--- sys_drg_adrg  DRG 核心疾病诊断相关组（ADRG）目录与入组规则
+-- biz_drg_adrg  DRG 核心疾病诊断相关组（ADRG）目录与入组规则
 -- ----------------------------
-CREATE TABLE `sys_drg_adrg` (
+CREATE TABLE `biz_drg_adrg` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `adrg_code` varchar(16) NOT NULL COMMENT 'ADRG 编码',
   `adrg_name` varchar(200) COMMENT 'ADRG 名称',
@@ -471,14 +471,14 @@ CREATE TABLE `sys_drg_adrg` (
   `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_adrg_code` (`adrg_code`,`del_flag`),
+  UNIQUE KEY `uk_adrg_code` (`adrg_code`,`version`,`del_flag`),
   KEY `idx_adrg_mdc` (`mdc_code`,`del_flag`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='DRG 核心组目录';
 
 -- ----------------------------
--- sys_drg_set  分组规则引用的 ICD 码集合（集合编号 → 精确码）
+-- biz_drg_set  分组规则引用的 ICD 码集合（集合编号 → 精确码）
 -- ----------------------------
-CREATE TABLE `sys_drg_set` (
+CREATE TABLE `biz_drg_set` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `set_code` varchar(24) NOT NULL COMMENT '集合编号',
   `icd_code` varchar(32) NOT NULL COMMENT 'ICD 编码',
@@ -493,7 +493,7 @@ CREATE TABLE `sys_drg_set` (
   `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
   `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_set_icd` (`set_code`,`icd_code`,`del_flag`),
+  UNIQUE KEY `uk_set_icd` (`set_code`,`icd_code`,`version`,`del_flag`),
   KEY `idx_set_icd_code` (`icd_code`,`del_flag`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='DRG 分组码集合';
     `set_code`    varchar(24) NOT NULL COMMENT '集合编号',
@@ -516,9 +516,9 @@ CREATE TABLE `sys_drg_set` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='DRG 分组码集合';
 
 -- ----------------------------
--- sys_drg_group  DRG 细分组与权重
+-- biz_drg_group  DRG 细分组与权重
 -- ----------------------------
-CREATE TABLE `sys_drg_group`
+CREATE TABLE `biz_drg_group`
 (
     `id`           bigint      NOT NULL COMMENT '主键ID',
     `drg_code`     varchar(32) NOT NULL COMMENT 'DRG 组编码',
@@ -540,14 +540,14 @@ CREATE TABLE `sys_drg_group`
     `update_time`  datetime    NOT NULL COMMENT '更新时间',
     `del_flag`     tinyint     NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
     `remark`       varchar(500) COMMENT '备注',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_drg_code` (`drg_code`,`del_flag`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_drg_code` (`drg_code`,`version`,`del_flag`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='DRG 分组与权重';
 
 -- ----------------------------
--- sys_drg_ccmcc  DRG 并发症合并症(CC/MCC)目录
+-- biz_drg_ccmcc  DRG 并发症合并症(CC/MCC)目录
 -- ----------------------------
-CREATE TABLE `sys_drg_ccmcc` (
+CREATE TABLE `biz_drg_ccmcc` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `icd_code` varchar(32) NOT NULL COMMENT '诊断编码（ICD-10）',
   `cc_level` varchar(8) NOT NULL COMMENT '级别（MCC-严重并发症合并症 CC-并发症合并症 NONE-无）',
@@ -631,14 +631,14 @@ CREATE TABLE `biz_shift`
     `schedule_type`      tinyint COMMENT '班次类型（1-上午 2-下午 3-全天 4-凌晨）',
     `use_scope`          tinyint                                                      NOT NULL COMMENT '班次适用域（1-门诊 2-病区护理排班）',
     `apply_staff_type`   tinyint COMMENT '适用岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他，空-全部岗位通用）',
-    `status`             tinyint                                                               DEFAULT '1' COMMENT '状态（0-停用 1-启用）',
+    `status`             tinyint                                                               COMMENT '状态（0-停用 1-启用）',
     `create_by`          varchar(64)                                                  NOT NULL COMMENT '创建人',
     `create_by_id`       bigint COMMENT '创建人ID',
     `create_time`        datetime                                                     NOT NULL COMMENT '创建时间',
     `update_by`          varchar(64)                                                  NOT NULL COMMENT '更新人',
     `update_by_id`       bigint COMMENT '更新人ID',
     `update_time`        datetime                                                     NOT NULL COMMENT '更新时间',
-    `del_flag`           tinyint                                                               DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+    `del_flag`           tinyint                                                               NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
     `remark`             varchar(500) COMMENT '备注',
     PRIMARY KEY (`id`),
     KEY                  `idx_shift_dept` (`dept_id`),

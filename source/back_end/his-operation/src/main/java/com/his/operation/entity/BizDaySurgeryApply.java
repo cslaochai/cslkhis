@@ -3,6 +3,8 @@ package com.his.operation.entity;
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -12,8 +14,9 @@ import java.time.LocalDateTime;
  * 日间手术登记单。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_day_surgery_apply")
-public class BizDaySurgeryApply {
+public class BizDaySurgeryApply extends BaseEntity {
 
     public static final int STATUS_WAIT_EVAL = 1;
     public static final int STATUS_EVAL_PASSED = 2;
@@ -49,13 +52,6 @@ public class BizDaySurgeryApply {
      * 随访时限（小时）：出院/转住院后 24 小时内必访
      */
     public static final int FOLLOW_DUE_HOURS = 24;
-
-    /**
-     * 主键ID
-     */
-    @TableId(type = IdType.ASSIGN_ID)
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long id;
 
     /**
      * 登记单号
@@ -231,28 +227,6 @@ public class BizDaySurgeryApply {
      * 取消原因
      */
     private String cancelReason;
-
-    /**
-     * 创建人
-     */
-    private String createBy;
-
-    /**
-     * 创建时间
-     */
-    @TableField(fill = FieldFill.INSERT)
-    private LocalDateTime createTime;
-
-    /**
-     * 更新人
-     */
-    private String updateBy;
-
-    /**
-     * 更新时间
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updateTime;
 
     /**
      * 删除标志（0-正常 1-删除）

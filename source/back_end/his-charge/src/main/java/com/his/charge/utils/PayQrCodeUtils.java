@@ -40,11 +40,4 @@ public final class PayQrCodeUtils {
             return null;
         }
     }
-
-    /**
-     * 组装支付二维码内容（小程序支付入口）
-     */
-    public static String buildMiniappPayUrl(Long billId) {
-        return "http://localhost:5173/miniapp/pay?billId=" + (billId == null ? "" : billId);
-    }
 }

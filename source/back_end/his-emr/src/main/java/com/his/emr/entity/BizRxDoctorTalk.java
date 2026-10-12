@@ -1,34 +1,22 @@
 package com.his.emr.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.TableField;
 
 /**
  * 医师约谈记录（对开具不合理处方医师的约谈/警告/限制/取消处方权台账）。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_rx_doctor_talk")
-public class BizRxDoctorTalk implements Serializable {
-    /**
-     * 更新人
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private String updateBy;
+public class BizRxDoctorTalk extends BaseEntity implements Serializable {
 
     private static final long serialVersionUID = 1L;
-
-    /**
-     * 主键
-     */
-    @TableId(type = IdType.ASSIGN_ID)
-    private Long id;
 
     /**
      * 约谈编号（YT+yyyyMMdd+4位序号）
@@ -119,21 +107,6 @@ public class BizRxDoctorTalk implements Serializable {
      * 医师确认时间
      */
     private LocalDateTime doctorConfirmTime;
-
-    /**
-     * 创建人
-     */
-    private String createBy;
-
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
 
     /**
      * 备注

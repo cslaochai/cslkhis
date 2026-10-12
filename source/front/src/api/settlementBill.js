@@ -63,3 +63,24 @@ export function getBillDetailById(id) {
 export function listItemsByPatient(patientId) {
   return request.get('/charge/settlementBill/listItemsByPatient', {params: {patientId}})
 }
+
+// ==================== 扫码收款（主扫：医院出码，患者扫） ====================
+//
+// 一张码只属于一个渠道（支付宝的收款码微信扫不开），所以先选渠道再生成码。
+// 收款事实不靠前端点按钮：页面轮询 queryResult，后端拿渠道查单兜底入账，
+// 回调只是加速 —— 公网回调断了也照样收得到钱。
+
+// 出码：按账单当前尚需缴建支付单，返回 data:image/png;base64 的码图
+export function createQrPay(data) {
+    return request.post('/charge/qrPay/create', data)
+}
+
+// 查询支付结果：待支付时后端会向渠道查单并兜底入账，返回账单最新尚需缴
+export function queryQrPayResult(data) {
+    return request.post('/charge/qrPay/queryResult', data)
+}
+
+// 关闭支付单（患者放弃付款/换渠道出码时必须关，否则旧码仍可被扫出付款）
+export function closeQrPay(data) {
+    return request.post('/charge/qrPay/close', data)
+}

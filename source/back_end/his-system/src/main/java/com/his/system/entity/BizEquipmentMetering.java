@@ -1,30 +1,23 @@
 package com.his.system.entity;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 /**
  * 设备计量记录实体（86 号脚本新增）。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_equipment_metering")
-public class BizEquipmentMetering {
-
-    /**
-     * 计量记录ID
-     */
-    @TableId(value = "id", type = IdType.ASSIGN_ID)
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long id;
+public class BizEquipmentMetering extends BaseEntity {
 
     /**
      * 设备ID
@@ -67,24 +60,6 @@ public class BizEquipmentMetering {
      * 检定/校准机构
      */
     private String agency;
-    /**
-     * 创建人
-     */
-    private String createBy;
-    /**
-     * 创建时间
-     */
-    @TableField(fill = FieldFill.INSERT)
-    private LocalDateTime createTime;
-    /**
-     * 更新人
-     */
-    private String updateBy;
-    /**
-     * 更新时间
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updateTime;
     /**
      * 删除标志（0-正常 1-删除）
     @TableField(fill = FieldFill.INSERT)

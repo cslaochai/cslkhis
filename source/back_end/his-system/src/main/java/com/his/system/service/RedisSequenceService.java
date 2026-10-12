@@ -182,6 +182,12 @@ public interface RedisSequenceService {
     String generateBillNo();
 
     /**
+     * 支付单号：PAY + yyyyMMdd + 5 位序号（扫码收款的收款凭证号，同时是报给渠道的商户订单号，
+     * 所以必须由分布式序列生成 —— 撞号会让两笔不同的钱共用一个码，谁先扫谁替另一笔付款）
+     */
+    String generatePayOrderNo();
+
+    /**
      * 收款流水号：PT + yyyyMMdd + 5 位序号
      */
     String generatePayTxnNo();

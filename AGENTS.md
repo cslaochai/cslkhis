@@ -854,12 +854,15 @@
 | 类别     | 例子                                                                        | 落点                                            | 入库 |
 |--------|---------------------------------------------------------------------------|-----------------------------------------------|----|
 | 系统登录账号 | `sys_user` 的 480 个账号（`admin` / `shennan` / `13899000001` …，口令统一 `123456`） | `docs/测试账号与凭据.md`                             | ✅  |
-| 环境凭据   | MySQL `xz_feng`、Redis `123456`、Gitea `laochai`、JWT secret、构建工具链口令         | `workspace/环境凭据.md` + `application-local.yml` | ❌  |
+| 环境凭据   | MySQL `xz_feng`、Redis `123456`、Gitea `laochai`、JWT secret、支付私钥、构建工具链口令    | `workspace/环境凭据.md` + `application-dev.yml`   | ❌  |
 
-- **`application.yml` 只放占位**：`password: ${HIS_DB_PASSWORD:}` / `${HIS_REDIS_PASSWORD:}` / `${HIS_JWT_SECRET:}`。
-  真值落 `application-local.yml`（`spring.config.import: optional:classpath:application-local.yml` 加载，
-  `.gitignore` 已排除该文件名，仓库内不落盘）。
-  **新增任何数据源/中间件凭据都照抄这个口径**，不要在 `application.yml` 里直接写字面口令。
+- **`application.yml` 与 `config/domain/*.yml` 只放占位**：`password: ${HIS_DB_PASSWORD:}` / `${HIS_REDIS_PASSWORD:}` /
+  `${ALIPAY_PRIVATE_KEY:}`。
+  真值落 `application-dev.yml`（profile 文件，`.gitignore` 第 78 行按路径精确排除，仓库内不落盘）。
+  ⚠ **优先级实测**：`application-dev.yml` **能**覆盖 `application.yml` 里 `spring.config.import` 进来的领域片段
+  （`alipay.mock-enabled` 片段写 `true`、dev 写 `false` → 生效的是 `false`），所以凭据的正确落点是 dev 文件，
+  不存在 `application-local.yml`（`application.yml` 里没有它的 import，写了也不加载）。
+  **新增任何数据源/中间件凭据都照抄这个口径**，不要在 `application.yml` 或领域片段里直接写字面口令。
 - `.gitignore` 是白名单模式（`/*` + 放行 `source/`·`docs/`），`workspace/` 天然不入库；
   但 `docs/` 是放行的，**新增带凭据的文档必须显式加排除规则**。
   ⚠ 排除规则别写 `*凭据*.md` —— 会误伤可入库的 `docs/测试账号与凭据.md`；
@@ -1161,8 +1164,10 @@
 
 ## 25. NOT NULL 列一律禁止 DEFAULT 默认值（del_flag 除外，业务层强控）
 
-- **铁律**：所有表字段，只要声明 `NOT NULL`，**一律不准写 `DEFAULT` 默认值**。唯一例外是 `del_flag`
-  （逻辑删除标志，保留 `NOT NULL DEFAULT '0'`，由 MP `@TableLogic` + `MetaObjectHandler` 兜底）。
+- **铁律（两半，缺一半就会反复漏）**：
+  ① **非 `del_flag` 的 `NOT NULL` 列一律不准写 `DEFAULT`**；
+  ② **`del_flag` 必须写成 `tinyint NOT NULL DEFAULT '0'`** —— 两个条件都要满足，只写 `DEFAULT '0'` 而漏掉
+  `NOT NULL`（= 可空 + 默认）同样违规，而这半条规矩原先没有任何判据覆盖，导致 97 张表反复「按规范检查通过」却仍是违规状态。
 - **为什么禁止**：`DEFAULT` 只在「列被整个省略」时触发，**不会**因显式传 null 触发（严格模式下显式 null 直接报 1048）。
   但 ORM（MyBatis-Plus 默认 `NOT NULL` 字段策略）在实体字段为 null 时**直接把列从 SQL 省掉** → `DEFAULT` 静默生效。
   而多数默认值是**合法业务值**（如 `org_type DEFAULT '1'` 科室、`duty_status DEFAULT '1'` 上班、`status DEFAULT '1'` 启用），
@@ -1179,18 +1184,113 @@
 - **`DEFAULT NULL` 也一律删掉**：① `NOT NULL DEFAULT NULL` 自相矛盾——NOT NULL 列不可能默认 NULL，
   MySQL 会忽略该 DEFAULT 或建表直接报错，毫无保留价值；② 可空列上的 `DEFAULT NULL` 是冗余噪音，可空列被省略本就默认 NULL，
   写不写行为完全一致。两种情况都直接删。
-- **机械判据**：以下命令必须 0 命中：
+- **机械判据（一条命令查两侧，DDL + 活库同时核对）**：
   ```bash
-  grep -rn "NOT NULL DEFAULT" docs/01-初始化DDL docs/03-增量SQL变更   # 非 del_flag 必须 0
-  grep -rn "DEFAULT NULL"      docs/01-初始化DDL docs/03-增量SQL变更   # 必须 0（含可空列冗余）
+  node workspace/_gate_del_flag_and_notnull_default.mjs   # 必须输出 GATE PASS / DB 两侧全 0
+  grep -rn "DEFAULT NULL" docs/01-初始化DDL docs/03-增量SQL变更   # 必须 0（含可空列冗余）
   ```
+  ⚠ **不要再用 `grep "NOT NULL DEFAULT"` 当这条规矩的判据**：它只能抓到「非 del_flag 列写了默认值」这一半，
+  而 `del_flag tinyint DEFAULT '0'`（可空、缺 NOT NULL）在它眼里完全合规 —— 这就是这半条规矩被反复漏掉的原因
+  （判据自身有盲区，任何"跑过规范检查=已改完"的结论都不成立）。
+  DDL 侧的列声明解析要跳过 `--` 注释行、并认 `ALTER TABLE ... MODIFY/ADD COLUMN` 形态，脚本已含；
+  列名里带 `default` 字样（`is_default`、`default_span`）不算 DEFAULT 关键字，判据按 `DEFAULT ` 带空格匹配。
 - **已执行（DDL 源文件）**：全量 DDL 已扒掉非 `del_flag` 的 `NOT NULL DEFAULT`（含时间戳）与全部 `DEFAULT NULL`（含可空列冗余），
-  仅保留 `del_flag` 默认（共 194 处保留）。机械判据已落地为 0 命中。
+  仅保留 `del_flag` 默认（共 194 处保留）；2026-10-11 补齐另一半：95 处 `del_flag` 声明补上 `NOT NULL`（`workspace/_fix_del_flag_notnull.mjs`）。
 - **已执行（活库 hn_biz_his @ 192.168.88.132:3306）**：增量 SQL 文件
   `docs/03-增量SQL变更/239-去除非del_flag列DEFAULT.sql` 生成并**已 applied**。脚本直读 `information_schema.COLUMNS`
   （`COLUMN_NAME<>'del_flag' AND COLUMN_DEFAULT IS NOT NULL`）产出 1649 条 `ALTER TABLE ... ALTER COLUMN ... DROP DEFAULT`，
   逐条执行 OK=1649 / FAIL=0，回查剩余带默认列 = 0。DROP DEFAULT 仅改元数据、不触数据、可逆（回滚按列 `ALTER ... SET DEFAULT 原值`）。
+- **已执行（活库 del_flag 补 NOT NULL，2026-10-11）**：`docs/03-增量SQL变更/240-del_flag统一为NOT-NULL-DEFAULT-0.sql`
+  按 `information_schema` 现读现生成（保留各表原 `COLUMN_TYPE`/`COMMENT`，含 4 张 `tinyint(1)`）产出 97 条
+  `ALTER TABLE ... MODIFY COLUMN del_flag tinyint NOT NULL DEFAULT '0'`，执行前实测 `del_flag IS NULL` 行数 = 0，
+  逐条执行 OK=97 / FAIL=0，回查 = 0。可逆（回滚 `MODIFY ... tinyint NULL DEFAULT '0'`）。
 - **活库落地后的硬性后续（fail-loud 的代价）**：去掉默认后，任何「insert/全字段 save 时省略该列」会在活库报
   `1364 Field 'xxx' doesn't have a default value`。后端 insert 路径必须真给这些列赋值（或 DTO `@NotNull` 拦在 400）。
   biz_schedule 已验证 service 层全赋值；其余 1649 列所跨表需 rebuild + 冒烟（见 §17 的整 reactor 构建验收口径）。
   机械判据加一条：`python workspace/_gen_drop_default_sql.py` 回查活库应持续 = 0（防 `_gen_ddl_by_domain.mjs` 重新从库导出又把默认带回来）。
+- **判据只查 `IS_NULLABLE='NO'` 那一半，可空列不会报 1364**（2026-10-12 实测：建 `zz_probe_nullable(id, a int, b int DEFAULT NULL)`，
+  `sql_mode` 含 `STRICT_TRANS_TABLES`，`INSERT INTO zz_probe_nullable(id) VALUES(1)` 省略两个无默认列 → **成功落 NULL**）：
+  MySQL 对**可空列**永远有隐式默认 NULL，`DROP DEFAULT` 只是把显式默认去掉，不会让省略变成错误。
+  所以「某张表哪些列必须显式给值」的清单 = `IS_NULLABLE='NO' AND COLUMN_DEFAULT IS NULL`（活库实测 4288 列），
+  把可空列也拉进来只会让门禁虚报、把真漏列淹在噪音里。
+  ⚠ 本条前身的「可空列也一样不可省略（2026-10-11 新增排班报 1364）」是误记：那条 1364 报的是同批次里
+  真正 NOT NULL 无默认的列（同名 `consult_status` 在 `biz_consultation` 上就是 `NOT NULL`），
+  可空的那张 `biz_clinic_source.consult_status` 不可能是元凶。**给可空列显式初值仍然是对的**（落 NULL 与落 0 是两种语义），
+  但它是**业务口径要求**，不是 MySQL 的约束，别把它写成 1364 的判据。
+- **排班域的落点与判据**：新建号源行的初值统一在 `BizClinicSourceServiceImpl.initNewScheduleRow`
+  （手工新增 `addSchedule` 与模板批量生成 `buildSchedule` 共用，给死 used/added/used_appointment/available/
+  appointment_source/is_expert/is_appointment/三项费用/consult_status/status），不要在各插入点手写一份副本。
+  班次字典 `ShiftServiceImpl.upsertShift` 原先连 `lateGraceMinutes` 都没从 DTO copy（该列 NOT NULL 无默认）→
+  新增班次必报 1364，已补默认。判据：`node workspace/_gate_schedule_domain_defaults.mjs` 必须输出
+  `TOTAL unfilled = 0`（它按列名→驼峰 setter 在 his-system 里反查是否真给过值，只查本模块）。
+  其余模块同样例风险（活库实测 55 列「无默认且全仓无 setter」）：`node workspace/_probe_notnull_unfilled.mjs` 出清单，
+  按模块逐个确认——很多是被 `BeanUtils.copyProperties` 填的，不是漏。
+
+## 26. 批量操作一律「一次请求」，展开与事务全在后端（2026-10-12 全仓收口，前端循环调用清零）
+
+- **铁律**：页面上任何一次用户动作要落多条数据（批量排班、多本证书、批量授权、批量分配…），
+  **前端只发一个请求**，把整批原始条目交给后端；展开（人 × 日）、查重、逐条校验、落库全部在
+  **一个 `@Transactional(rollbackFor = Exception.class)` 方法**里完成。
+  前端 `for` 循环调单条 mutation 接口一律算 Bug，不是"写法偏好"：
+  ① 第 N 条失败时前 N-1 条**已经各自提交**，库里留下"存了一半"的半成品，回滚不掉、也说不清该重试哪几条；
+  ② N 次请求 = N 次往返 + N 份独立事务，中途别人插进来会读到不一致的状态（批量排班撞号源/撞连续夜班闸就是这么漏的）；
+  ③ 进度条/提示只能显示"第几条"，用户以为保存成功，实际少了几条没有任何人知道。
+- **接口形态（唯一写法）**：
+  - DTO：`XxxBatchUpsertDTO` = 批头字段（`@NotNull Long employeeId` 这类"整批共用"的归属）+
+    `@Valid @NotEmpty @Size(max = 50) List<XxxUpsertDTO> items`（**嵌套必须写 `@Valid` 才会级联校验**）。
+    `@Size` 是硬上限（批量排班 31 天 × 100 人这类），超限走 400，不许无界收请求。
+  - Service：`batchUpsert` 里**自调用**已有的单条 `upsert(item)`（同一 bean、同一事务，`this.` 调用不拆事务），
+    条目里与批头冲突的归属一律由批头覆盖（`item.setEmployeeId(batchDTO.getEmployeeId())`）——
+    否则一次请求就能把别人的数据挂到另一个人名下。
+  - 报错必须**带条目归属**再抛：`throw new BusinessException("第 " + (i + 1) + " 本证书（编号 " + item.getCertNo() + "）：" + e.getMessage())`、
+    `医生名 日期：原因`。只抛第一条原始消息 = 用户不知道是哪几条失败，整批重跑又撞已成功的行。
+  - 出参 `XxxBatchResultVO`（`created` / `skipped` / `message`），幂等类"复刻/复制到下一周"用 created/skipped 表达跳过，
+    **不要**为了"能重跑"改成覆盖写。
+- **URL 命名**照第 1 节：批量新增/修改 = `xxx/qualificationBatchUpsert`、`/schedule/batchUpsert`、`/schedule/replicate`；
+  单条接口保留（另有单人入口在用），批量入口不复用它的事务。
+- **已按此改造的三处**（新页面要批量时照抄，别再自创）：
+  `ScheduleView.vue` 新增排班 → `POST /schedule/batchUpsert`（人 × 日展开 + 连续夜班闸整批回滚）；
+  `ScheduleView.vue` 复刻到下周 → `POST /schedule/replicate`（目标时段已有排班则 skip，重跑幂等）；
+  `EmployeeView.vue` 资格证书保存 → `POST /system/employee/qualification/qualificationBatchUpsert`
+  （新增行 + 改过的行一次提交，**没动的行不发**，靠 `certSnapshot` 比出来）。
+- **单条用户动作不算批量**，不要顺手合并：表格里点某一行的"删除"、切换一个开关 → 一次点击一条请求，是对的。
+  判据是**一次动作是否要落多条**。
+- **机械判据**：`node workspace/_scan_frontend_batch_loops.mjs` 必须输出 `total hits = 0`
+  （它扫 `source/front/src/**` 与 `source/miniapp/**` 两种形状：① `for`/`while` 循环体（花括号配平，往下看 150 行）里
+  `await 写接口(`，写接口按动词前缀认（`create/update/delete/save/add/remove/upsert/batch/insert/modify/submit/cancel/start/stop/toggle/pay/refund/dispense/generate/replicate`）；
+  ② `Promise.all(` 配 `.map(` 在其中并发调写接口。`load*/refresh*` 前缀的取数函数已排除，不误报列表刷新）。
+  ⚠ 这条判据只抓"循环/并发 + 写接口"的形状，抓不到"前端把一批拆成两次不同接口顺序发"的写法，
+  所以新增批量页面仍要人工确认请求数（浏览器验收口径：hook `XMLHttpRequest.open` 记 URL，
+  保存一次 → 写请求必须恰好 1 条，控制台 0 报错，再回库确认落库条数与"没动的行没被改写"）。
+
+## 27. 业务实体一律挂 `BaseEntity`，主键列不叫 `id` 的才自带审计字段（2026-10-12 全仓 88 个补齐）
+
+- **`com.his.common.base.BaseEntity` = 7 个公共列的唯一声明处**（`id` + `createBy/createTime` +
+  `updateBy/updateTime` + `createById/updateById`），全部带 `@TableField(fill = …)`，由
+  `MyBatisPlusConfig.metaObjectHandler` 统一填。新建实体 = `extends BaseEntity` +
+  `@EqualsAndHashCode(callSuper = true)`（§15），**不再自己写那 7 个字段** ——
+  同名字段与父类并存会让 MP 的表信息出错（重复列 / 主键识别漂移）。
+- **唯一例外：表的主键列不叫 `id`**（`sys_patient_tag.tag_id`、`biz_referral.referral_id`、
+  `sys_message.message_id`、`sys_supplier.supplier_id`、`biz_visit` / `biz_admission` / `sys_bed` …，
+  现存 15 个）。这类表**禁止挂基类**（基类那个 `id` 列在库里不存在，挂上就是 `Unknown column`），
+  改为在实体里自己声明审计字段，**且每个字段必须带 fill 注解**：
+  ```java
+  @TableField(fill = FieldFill.INSERT)       @JsonSerialize(using = ToStringSerializer.class) private Long createById;
+  @TableField(fill = FieldFill.INSERT_UPDATE)@JsonSerialize(using = ToStringSerializer.class) private Long updateById;
+  ```
+- **危害不是"少两列"，是整条 INSERT 报 1364**：§25 把非 `del_flag` 列的 `DEFAULT` 全洗掉之后，
+  `create_by_id`/`update_by_id` 在 300+ 张表上是 `NOT NULL 且无默认`，实体没这两个字段 → 列被省略 →
+  `Field 'create_by_id' doesn't have a default value` → 全局异常兜成 **500「系统内部错误」**，
+  现象与业务失败零区别（2026-10-12 实测 88 个实体中招，覆盖 charge/emr/medicaltech/operation/patient/system/ai）。
+- **⚠「字段声明了」不等于「会被写进去」——这是本条最容易被判据放过的一格**：
+  `SysPatientTag`/`BizReferral` 自己写了 `private LocalDateTime createTime;` 但**没带 `@TableField(fill=…)`**，
+  `MetaObjectHandler` 只填带 fill 的字段 → INSERT 依旧漏列 → 依旧 500。
+  所以判据查的是**注解**，不是字段名（§25 的"插入路径必须显式给值"同样查不到这一格）。
+- **两道门禁必须都跑，单跑第一道会假绿**：
+  ```bash
+  node workspace/_gate_entity_audit_columns.mjs   # 活库「NOT NULL 无默认」的 6 个审计列 × 实体「继承基类 或 本地字段带 fill」→ GATE PASS
+  node workspace/_gate_entity_base_match.mjs       # 反向：挂基类的表必须有那 7 列；表有 id 主键却没挂基类 = 漏改
+  node workspace/_verify_entity_audit_columns.mjs  # 真打 insert/update 接口，回库核 create_by_id/create_time，跑完零残留
+  ```
+- **注释里不要写表名**（§12），本条的落库事实由 `docs/sql/` 与库内 `COMMENT` 表达，Java 侧只留「为什么主键不叫 id 就不能挂基类」这一句 WHY。
+

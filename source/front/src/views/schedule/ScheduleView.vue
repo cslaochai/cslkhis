@@ -39,8 +39,6 @@
       </div>
     </div>
 
-    <!-- 今日在岗（sql/196）：排班的下游出口 —— 此刻这个科室谁在班。
-         全岗位混排，回答的是「今天谁顶着」，跟下方面板回答的「这周怎么排」互补。 -->
     <div class="mb-3 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm" data-testid="on-duty-panel">
       <div class="mb-2 flex flex-wrap items-center gap-3">
         <span class="text-base font-medium text-slate-700">今日在岗</span>
@@ -58,16 +56,15 @@
       <div v-if="!panelDeptId" class="py-2 text-sm text-slate-400" data-testid="on-duty-empty">
         请先在下方选择科室
       </div>
-      <div v-else-if="onDutyList.length === 0" class="py-2 text-sm text-slate-400" data-testid="on-duty-empty">
-        此刻该科室没有在岗排班（可能尚未排班，或正处在两个班次之间的交接空档）
-      </div>
       <div v-else class="flex flex-col gap-2" data-testid="on-duty-groups">
         <div v-for="g in onDutyGroups" :key="g.staffType"
              :data-testid="`on-duty-group-${g.staffType}`"
              class="flex flex-wrap items-center gap-2">
           <span class="w-14 shrink-0 text-xs text-slate-500">{{ g.staffTypeName }}</span>
           <el-tag v-for="s in g.list" :key="s.scheduleId"
-                  :data-testid="`on-duty-item`" :title="`${s.startTime || ''}-${s.endTime || ''}${s.roomName ? ' · ' + s.roomName : ''}`" class="on-duty-tag"
+                  :data-testid="`on-duty-item`"
+                  :title="`${s.startTime || ''}-${s.endTime || ''}${s.roomName ? ' · ' + s.roomName : ''}`"
+                  class="on-duty-tag"
                   effect="light"
                   size="large"
                   type="success">
@@ -100,7 +97,8 @@
               <el-option v-for="o in STAFF_TYPE_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
             </el-select>
             <span class="text-base font-medium text-slate-700">人员</span>
-            <el-select v-model="panelDoctorKey" :fit-input-width="false" class="!w-52" clearable data-testid="panel-doctor"
+            <el-select v-model="panelDoctorKey" :fit-input-width="false" class="!w-52" clearable
+                       data-testid="panel-doctor"
                        filterable placeholder="全部人员"
                        popper-class="schedule-filter-popper"
                        @change="handlePanelDoctorChange">
@@ -119,14 +117,16 @@
               </el-button>
             </div>
             <span class="ml-auto flex items-center gap-2">
-              <el-button v-perm="'outpatient:schedule:add'" :loading="generateLoading" :title="`目标周固定为下周（${nextWeekRangeLabel}），与上面「上一周/下一周」的浏览筛选无关；已过去的日期会自动跳过`"
+              <el-button v-perm="'outpatient:schedule:add'" :loading="generateLoading"
+                         :title="`目标周固定为下周（${nextWeekRangeLabel}），与上面「上一周/下一周」的浏览筛选无关；已过去的日期会自动跳过`"
                          data-testid="generate-by-template"
                          @click="handleGenerateFromTemplate">按模板生成下周排班</el-button>
               <el-button v-perm="'outpatient:schedule:add'" :loading="replicateLoading" type="success"
                          @click="handleReplicateNextWeek">
                 复刻到 {{ replicateTargetLabel }}
               </el-button>
-              <el-button v-perm="'outpatient:schedule:add'" :icon="Plus" type="primary" @click="handleAdd">新增排班</el-button>
+              <el-button v-perm="'outpatient:schedule:add'" :icon="Plus" type="primary"
+                         @click="handleAdd">新增排班</el-button>
             </span>
           </div>
           <div ref="panelTableWrap" v-loading="panelLoading" class="mt-3 min-h-0 flex-1 overflow-x-auto">
@@ -202,12 +202,14 @@
                         <!-- 操作行：修改/停/加 独占一行。高度常驻预留（opacity 切换），悬停不会撑动卡片。日期已过 → 整条不渲染（服务端同口径拒绝） -->
                         <div v-if="s.status === 1 && d >= todayStr"
                              class="mt-1 flex h-5 items-center justify-end gap-1.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                          <button v-perm="'outpatient:schedule:edit'" :data-testid="`panel-edit-${row.doctorId}-${d}`" class="text-xs leading-4 text-blue-600"
+                          <button v-perm="'outpatient:schedule:edit'" :data-testid="`panel-edit-${row.doctorId}-${d}`"
+                                  class="text-xs leading-4 text-blue-600"
                                   title="修改排班"
                                   @click.stop="handlePanelCellEdit(s)">修改
                           </button>
                           <span class="text-slate-200">|</span>
-                          <button v-perm="'outpatient:schedule:delete'" :title="staffTypeHasSource(s.staffType) ? '快捷停诊' : '停用该班次'"
+                          <button v-perm="'outpatient:schedule:delete'"
+                                  :title="staffTypeHasSource(s.staffType) ? '快捷停诊' : '停用该班次'"
                                   class="text-xs leading-4 text-red-500"
                                   @click.stop="handleToggleStatus(s)">停
                           </button>
@@ -375,13 +377,15 @@
               </el-table-column>
               <el-table-column class-name="tpl-op-col" fixed="right" label="操作" width="180">
                 <template #default="{ row }">
-                  <el-button v-if="row.status === 1" v-perm="'outpatient:schedule:edit'" link size="small" type="warning"
+                  <el-button v-if="row.status === 1" v-perm="'outpatient:schedule:edit'" link size="small"
+                             type="warning"
                              @click="handleTplToggle(row)">停用
                   </el-button>
                   <el-button v-else v-perm="'outpatient:schedule:edit'" link size="small" type="success"
                              @click="handleTplToggle(row)">启用
                   </el-button>
-                  <el-button v-perm="'outpatient:schedule:edit'" :icon="Edit" link type="primary" @click="handleTplEdit(row)">
+                  <el-button v-perm="'outpatient:schedule:edit'" :icon="Edit" link type="primary"
+                             @click="handleTplEdit(row)">
                     编辑
                   </el-button>
                   <el-button v-perm="'outpatient:schedule:delete'" :icon="Delete" link type="danger"
@@ -470,7 +474,8 @@
               </template>
             </el-table-column>
           </el-table>
-          <el-pagination :current-page="shiftPagination.pageNum" :page-size="shiftPagination.pageSize" :page-sizes="PAGE_SIZES"
+          <el-pagination :current-page="shiftPagination.pageNum" :page-size="shiftPagination.pageSize"
+                         :page-sizes="PAGE_SIZES"
                          :total="shiftPagination.total" background
                          class="mt-3 justify-end" layout="total, prev, pager, next, sizes"
                          @current-change="handleShiftPageChange" @size-change="handleShiftSizeChange"/>
@@ -482,7 +487,8 @@
     <el-dialog v-model="shiftEditVisible" destroy-on-close title="编辑班次" width="480px">
       <el-form label-position="top" @submit.prevent>
         <el-form-item label="班次名称" required>
-          <el-input v-model="shiftEditName" data-testid="shift-edit-name" maxlength="50" placeholder="班次名称（同科室范围内不可重复）"
+          <el-input v-model="shiftEditName" data-testid="shift-edit-name" maxlength="50"
+                    placeholder="班次名称（同科室范围内不可重复）"
                     show-word-limit/>
         </el-form-item>
         <div class="grid grid-cols-2 gap-4">
@@ -573,7 +579,8 @@
       </el-form>
       <template #footer>
         <el-button @click="shiftAddVisible = false">取消</el-button>
-        <el-button v-perm="'outpatient:schedule:add'" :loading="shiftAddSaving" type="primary" @click="handleShiftAddSubmit">
+        <el-button v-perm="'outpatient:schedule:add'" :loading="shiftAddSaving" type="primary"
+                   @click="handleShiftAddSubmit">
           确定
         </el-button>
       </template>
@@ -599,7 +606,8 @@
             </el-select>
           </el-form-item>
           <el-form-item :label="`${staffTypeText(formData.staffType)}人员`" required>
-            <el-select v-model="formData.doctorIds" :disabled="!formData.deptId" :max-collapse-tags="1" :placeholder="`选择${staffTypeText(formData.staffType)}人员（可多选，一次排完）`" class="w-full"
+            <el-select v-model="formData.doctorIds" :disabled="!formData.deptId" :max-collapse-tags="1"
+                       :placeholder="`选择${staffTypeText(formData.staffType)}人员（可多选，一次排完）`" class="w-full"
                        collapse-tags collapse-tags-tooltip
                        data-testid="form-doctor" multiple @change="ensureDoctorRows">
               <el-option v-for="e in employees" :key="e.id" :label="`${e.empName} - ${getTitleLabel(e.title)}`"
@@ -626,7 +634,8 @@
           </el-form-item>
           <el-form-item label="班次" required>
             <el-select v-model="shiftDictId" class="w-full" data-testid="form-shift-dict"
-                       filterable placeholder="选择班次（时间段由班次带出）" @change="(v: any) => applyShiftDict('schedule', v)">
+                       filterable placeholder="选择班次（时间段由班次带出）"
+                       @change="(v: any) => applyShiftDict('schedule', v)">
               <el-option v-for="s in shiftDictOptions" :key="s.id" :label="shiftDictLabel(s)" :value="s.id"/>
             </el-select>
           </el-form-item>
@@ -719,7 +728,8 @@
             </el-table-column>
             <el-table-column v-if="staffTypeHasSource(formData.staffType)" label="诊疗费" width="100">
               <template #default="{ row }">
-                <el-input-number v-model="row.room.diagnosisFee" :controls="false" :min="0" :precision="2" class="!w-full"
+                <el-input-number v-model="row.room.diagnosisFee" :controls="false" :min="0" :precision="2"
+                                 class="!w-full"
                                  size="small"/>
               </template>
             </el-table-column>
@@ -730,7 +740,8 @@
             </el-table-column>
             <el-table-column v-if="staffTypeHasSource(formData.staffType)" label="专家费" width="100">
               <template #default="{ row }">
-                <el-input-number v-model="row.room.expertFee" :controls="false" :disabled="row.room.isExpert !== 1" :min="0" :precision="2"
+                <el-input-number v-model="row.room.expertFee" :controls="false" :disabled="row.room.isExpert !== 1"
+                                 :min="0" :precision="2"
                                  class="!w-full" size="small"/>
               </template>
             </el-table-column>
@@ -741,7 +752,8 @@
             </el-table-column>
             <el-table-column v-if="staffTypeHasSource(formData.staffType)" label="预约号源" min-width="100">
               <template #default="{ row }">
-                <el-input-number v-model="row.room.appointmentSource" :controls="false" :disabled="row.room.isAppointment !== 1"
+                <el-input-number v-model="row.room.appointmentSource" :controls="false"
+                                 :disabled="row.room.isAppointment !== 1"
                                  :max="row.room.totalSource"
                                  :min="0" class="!w-full" size="small"/>
               </template>
@@ -808,7 +820,8 @@
         <div class="grid grid-cols-2 gap-4">
           <el-form-item label="班次" required>
             <el-select v-model="shiftDictId" class="w-full" data-testid="edit-shift-dict"
-                       filterable placeholder="选择班次（时间段由班次带出）" @change="(v: any) => applyShiftDict('schedule', v)">
+                       filterable placeholder="选择班次（时间段由班次带出）"
+                       @change="(v: any) => applyShiftDict('schedule', v)">
               <el-option v-for="s in shiftDictOptions" :key="s.id" :label="shiftDictLabel(s)" :value="s.id"/>
             </el-select>
           </el-form-item>
@@ -881,9 +894,6 @@
             </el-button>
           </div>
         </div>
-        <p v-if="slotEditEnabled && slotDetailRows.length" class="mb-1 text-xs text-slate-400">
-          逐段调整号源/预约池/停用，整批保存生效；已挂数与已约数是事实，不能改小
-        </p>
         <p v-if="slotDetailLoading" class="py-2 text-center text-xs text-slate-400">加载中…</p>
         <p v-else-if="!slotDetailRows.length" class="py-2 text-center text-xs text-slate-400">
           {{
@@ -995,7 +1005,8 @@
         <div class="grid grid-cols-2 gap-4">
           <el-form-item label="班次" required>
             <el-select v-model="tplShiftDictId" class="w-full" data-testid="tpl-shift-dict"
-                       filterable placeholder="选择班次（时间段由班次带出）" @change="(v: any) => applyShiftDict('template', v)">
+                       filterable placeholder="选择班次（时间段由班次带出）"
+                       @change="(v: any) => applyShiftDict('template', v)">
               <el-option v-for="s in shiftDictOptions" :key="s.id" :label="shiftDictLabel(s)" :value="s.id"/>
             </el-select>
           </el-form-item>
@@ -1074,7 +1085,8 @@
                 </el-table-column>
                 <el-table-column label="段预约池" min-width="130">
                   <template #default="{ row }">
-                    <el-input-number v-model="row.appointmentSource" :disabled="tplFormData.isAppointment !== 1" :max="999" :min="0"
+                    <el-input-number v-model="row.appointmentSource" :disabled="tplFormData.isAppointment !== 1"
+                                     :max="999" :min="0"
                                      class="!w-full" size="small"/>
                   </template>
                 </el-table-column>
@@ -1101,7 +1113,8 @@
       </el-form>
       <template #footer>
         <el-button @click="tplDialogVisible = false">取消</el-button>
-        <el-button v-perm="['outpatient:schedule:add','outpatient:schedule:edit']" :loading="tplSubmitLoading" type="primary"
+        <el-button v-perm="['outpatient:schedule:add','outpatient:schedule:edit']" :loading="tplSubmitLoading"
+                   type="primary"
                    @click="handleTplSubmit">确定
         </el-button>
       </template>
@@ -1203,7 +1216,8 @@
       </div>
       <template #footer>
         <el-button @click="previewVisible = false">取消</el-button>
-        <el-button v-perm="'outpatient:schedule:add'" :disabled="!previewData || !(previewData.willCreate || []).length" :loading="generateLoading"
+        <el-button v-perm="'outpatient:schedule:add'" :disabled="!previewData || !(previewData.willCreate || []).length"
+                   :loading="generateLoading"
                    type="primary"
                    @click="handleConfirmGenerate">确认生成
         </el-button>
@@ -1219,7 +1233,7 @@ import {ElMessage, ElMessageBox} from 'element-plus';
 import {
   addScheduleSource,
   batchCancelRegist,
-  createSchedule,
+  createScheduleBatch,
   createShift,
   deleteSchedule,
   deleteScheduleTemplate,
@@ -1233,6 +1247,7 @@ import {
   getStopImpact,
   previewScheduleTemplate,
   renameShift,
+  replicateSchedule,
   saveScheduleSlots,
   saveScheduleTemplate,
   updateSchedule,
@@ -2382,12 +2397,8 @@ const handlePanelCellAdd = (row, date) => {
 const handlePanelCellEdit = (row) => {
   handleEdit(row);
 };
-/** 日期 + N 天（本地拼串，不用 toISOString） */
-const plusDays = (dateStr, days) => {
-  const d = new Date(dateStr + 'T00:00:00');
-  d.setDate(d.getDate() + days);
-  return fmtISO(d);
-};
+/** 复刻固定后移一周，前后端同一口径 */
+const REPLICATE_OFFSET_DAYS = 7;
 /**
  * 复刻的目标周 = 当前显示周 + 7 天。
  * 文案必须算出来而不是写死「下周」：面板翻到下周时，"下一周"其实是下下周 ——
@@ -2396,69 +2407,43 @@ const plusDays = (dateStr, days) => {
 const replicateTargetLabel = computed(() => {
   if (panelDays.value.length !== 7)
     return '下周';
-  return `${plusDays(panelDays.value[0], 7).slice(5)}~${plusDays(panelDays.value[6], 7).slice(5)}`;
+  const start = new Date(panelDays.value[0] + 'T00:00:00');
+  start.setDate(start.getDate() + REPLICATE_OFFSET_DAYS);
+  const end = new Date(panelDays.value[6] + 'T00:00:00');
+  end.setDate(end.getDate() + REPLICATE_OFFSET_DAYS);
+  return `${fmtISO(start).slice(5)}~${fmtISO(end).slice(5)}`;
 });
-/** 把当前显示的这一周整体滚动复制到下一周（停用条目与目标日期已过的条目不复制） */
+/** 把当前显示的这一周整体滚动复制到下一周（停用条目与目标日期已过的条目由后端跳过） */
 const handleReplicateNextWeek = async () => {
-  const today = fmtISO(new Date());
   const source = panelSchedules.value.filter(s => s.status === 1);
   if (!source.length) {
     ElMessage.warning('当前周没有可复刻的排班');
     return;
   }
-  const pastCount = source.filter((s) => plusDays(s.scheduleDate, 7) < today).length;
   try {
-    await ElMessageBox.confirm(`将把 ${panelDays.value[0]} ~ ${panelDays.value[6]} 的 ${source.length} 条正常排班复制到 ${replicateTargetLabel.value}`
-        + (pastCount ? `（其中 ${pastCount} 条的目标日期已过，不会复制）` : '')
-        + '，是否继续？', '复刻排班到下一周', {confirmButtonText: '复刻', cancelButtonText: '取消', type: 'info'});
+    await ElMessageBox.confirm(`将把 ${panelDays.value[0]} ~ ${panelDays.value[6]} 的 ${source.length} 条正常排班复制到 ${replicateTargetLabel.value}，是否继续？`,
+        '复刻排班到下一周', {confirmButtonText: '复刻', cancelButtonText: '取消', type: 'info'});
   } catch {
     return;
   }
   replicateLoading.value = true;
-  let ok = 0;
-  let skip = 0;
-  let skipPast = 0;
   try {
-    for (const s of source) {
-      const targetDate = plusDays(s.scheduleDate, 7);
-      // 目标日期已过 → 不复制（服务端同样拒绝，这里提前拦并把结论说清楚）
-      if (targetDate < today) {
-        skipPast++;
-        continue;
-      }
-      try {
-        await createSchedule({
-          deptId: s.deptId,
-          deptName: s.deptName,
-          roomId: s.roomId != null ? Number(s.roomId) : null,
-          roomName: s.roomName,
-          doctorId: s.doctorId,
-          doctorName: s.doctorName,
-          // 岗位类别必须原样带过去：漏了会被后端默认成医生，出勤岗一复刻就变成「能挂号的号源池」
-          staffType: s.staffType ?? STAFF_TYPE_DOCTOR,
-          scheduleDate: targetDate,
-          shiftId: s.shiftId ?? null,
-          startTime: s.startTime,
-          endTime: s.endTime,
-          totalSource: s.totalSource,
-          registFee: s.registFee || 0,
-          diagnosisFee: s.diagnosisFee || 0,
-          isExpert: s.isExpert || 0,
-          expertFee: s.expertFee || 0,
-          isAppointment: s.isAppointment || 0,
-          appointmentSource: s.appointmentSource || 0,
-          status: 1,
-        });
-        ok++;
-      } catch {
-        // 同一时段已排班（时间冲突）等，跳过并计数
-        skip++;
-      }
-    }
-    ElMessage.success(`复刻到 ${replicateTargetLabel.value} 完成：成功 ${ok} 条`
-        + (skip ? `，跳过 ${skip} 条（时间冲突、已存在或源排班没挂班次）` : '')
-        + (skipPast ? `，${skipPast} 条目标日期已过未复制` : ''));
+    // 整周复刻只发一次请求：源区间、后移天数、岗位与科室筛选交给后端，
+    // 跳过（日期已过/时段已被占）与落库在同一事务里由它算。
+    const res = await replicateSchedule({
+      deptId: panelDeptId.value ?? undefined,
+      staffType: panelStaffType.value ?? undefined,
+      startDate: panelDays.value[0],
+      endDate: panelDays.value[6],
+      dayOffset: REPLICATE_OFFSET_DAYS,
+    });
+    const msg = res.data?.message || `复刻完成：成功 ${res.data?.created ?? 0} 条`;
+    // 一条都没复刻上不是「完成」：这里原先恒发 success，后端的结论被洗成绿色提示
+    if (!res.data?.created) ElMessage.error(msg);
+    else ElMessage.success(msg);
     loadPanel();
+  } catch (error) {
+    ElMessage.error(error.message || '复刻失败');
   } finally {
     replicateLoading.value = false;
   }
@@ -2797,11 +2782,11 @@ const handleSubmit = async () => {
     days = [formData.value.scheduleDate];
   } else {
     if (formData.value.scheduleDateRange?.length !== 2) {
-      ElMessage.warning('请选择排班日期（只排一天就起止填同一天）');
+      ElMessage.warning('请选择排班日期');
       return;
     }
     days = batchDays(formData.value.scheduleDateRange);
-    // 逐条发请求，区间手滑选大了就是几百次串行提交，先在入口卡住
+    // 与后端 batchUpsert 的 @Size(max=31) 同一口径，这里只是把提示提前到提交前
     if (days.length > 31) {
       ElMessage.warning(`日期区间最多 31 天（当前 ${days.length} 天），跨月请分批排`);
       return;
@@ -2852,9 +2837,6 @@ const handleSubmit = async () => {
           appointmentSource: row.isAppointment === 1 ? Math.min(row.appointmentSource, row.totalSource) : 0,
         };
       });
-  // 启用态必须排诊室（服务端同样校验，这里只是把提示提前到提交前）。
-  // 停诊态允许先建后补 —— 停诊的班次不放号，没有诊室不构成患者找不到房间的问题。
-  // 只有医生岗要诊室：护士/收费/技师这些出勤岗排的是「人在不在」，不是「在哪个房间接诊」。
   if (formData.value.status !== 0 && staffTypeHasSource(formData.value.staffType)) {
     const noRoom = pairs.filter((p) => !p.roomId && !p.roomName);
     if (noRoom.length) {
@@ -2870,26 +2852,28 @@ const handleSubmit = async () => {
       await updateSchedule({...formData.value, ...p, scheduleDate: days[0]});
       ElMessage.success('修改成功');
     } else {
-      // 新增模式：医生 × 日期 逐条建；批量里某条撞车（该医生当天已有排班）不影响其余，但结论要如实报
-      let count = 0;
-      let failed = 0;
-      let lastErr = '';
-      for (const p of pairs) {
-        for (const day of days) {
-          try {
-            await createSchedule({...formData.value, ...p, scheduleDate: day});
-            count++;
-          } catch (e) {
-            failed++;
-            lastErr = e?.message || '';
-          }
-        }
-      }
-      if (failed > 0) {
-        ElMessage.warning(`批量排班完成：成功 ${count} 条 / 共 ${count + failed} 条${lastErr ? '（末条失败：' + lastErr + '）' : ''}`);
-      } else {
-        ElMessage.success(`成功创建 ${count} 条排班（${pairs.length} 位${staffTypeText(formData.value.staffType)}人员 × ${days.length} 天）`);
-      }
+      const res = await createScheduleBatch({
+        deptId: formData.value.deptId,
+        deptName: formData.value.deptName,
+        staffType: formData.value.staffType,
+        shiftId: formData.value.shiftId,
+        status: formData.value.status,
+        scheduleDates: days,
+        items: pairs.map((p) => ({
+          doctorId: p.doctorId,
+          doctorName: p.doctorName,
+          roomId: p.roomId,
+          roomName: p.roomName,
+          totalSource: p.totalSource,
+          registFee: p.registFee,
+          diagnosisFee: p.diagnosisFee,
+          isExpert: p.isExpert,
+          expertFee: p.expertFee,
+          isAppointment: p.isAppointment,
+          appointmentSource: p.appointmentSource,
+        })),
+      });
+      ElMessage.success(res.data?.message || `成功创建 ${res.data?.created ?? days.length * pairs.length} 条排班`);
     }
     dialogVisible.value = false;
     editVisible.value = false;
@@ -2937,8 +2921,6 @@ const handleToggleStatus = async (row) => {
     }
     return;
   }
-  // 出勤岗（护士/技师/收费…）没有在挂患者，「停诊=通知患者退号」这套流程对它没意义：
-  // 直接停用，不弹那份永远是空的影响名单。
   if (!staffTypeHasSource(row.staffType)) {
     try {
       await updateScheduleStatus(row.id, 0);
@@ -3021,14 +3003,11 @@ const loadTitleDict = async () => {
     });
     titleMap.value = map;
   } catch {
-    // 字典加载失败不影响页面使用
   }
 };
 const getTitleLabel = (value) => {
   return titleMap.value[value] || value || '';
 };
-// sys_employee.title 存的是中文标签而非字典 value，故按标签的层级关键词着色：
-// 正高(主任xx)红 / 副高(副主任xx)橙 / 中级(主治·主管)蓝 / 初级(医士·医师等)灰
 const getTitleTagClass = (value) => {
   const label = getTitleLabel(value);
   if (!label)
@@ -3049,26 +3028,10 @@ const expertDefaultOf = (emp) => {
   const on = emp.isExpert === 1 || label.includes('副主任') || label.startsWith('主任') ? 1 : 0;
   return {isExpert: on, expertFee: on === 1 ? Number(emp.expertPrice) || 0 : 0};
 };
-/**
- * 模板表格高度：铺满剩余窗口。卡片顶偏移实测 ~220（Header 64 + main 上边距 + 周统计卡行 + tabs 头），
- * 底部留 16 → 卡片高 = 100vh - 236；卡片内再扣 内边距 32 + 搜索栏 40 + 分页 44 → 表高 = vh - 352。
- * el-table 只认确定高度才能内部滚动，所以给数值而不是百分比。
- */
 const tplTableHeight = ref(420);
 const calcTplTableHeight = () => {
   tplTableHeight.value = Math.max(240, window.innerHeight - 352);
 };
-/**
- * 排班面板高度：医生一多就是几十行，不给高度整页就跟着滚，
- * 筛选行和「本周汇总」被顶出屏幕，排完一班还要滚回去找科室下拉 —— 表自己滚，页面不动。
- *
- * 两步实测而不是写死常量：
- *   1) 卡片高 = 窗口底 - 卡片顶（顶部还有周统计卡行 +「今日在岗」卡，后者随在岗人数换行，
- *      高度不固定，写死常量在人多时会漏出一截）；
- *   2) 卡片内 flex 分完之后，把表格区**实测到的剩余高度**交给 el-table 当 max-height
- *      —— 筛选行固定高，下方「本周汇总」有多少占多少，剩下的全给表格，尽量铺满。
- * 用 max-height 而不是 height：只有两三个医生时表就矮着，不必顶着一屏空白。
- */
 const panelCard = ref(null);
 const panelTableWrap = ref(null);
 const panelCardHeight = ref(420);

@@ -1,28 +1,21 @@
 package com.his.patient.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 /**
  * 体检套餐项目明细实体（体检套餐项目）。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("sys_checkup_package_item")
-public class SysCheckupPackageItem {
-
-    /**
-     * 主键ID
-     */
-    @TableId(value = "id", type = IdType.ASSIGN_ID)
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long id;
+public class SysCheckupPackageItem extends BaseEntity {
 
     /**
      * 套餐ID
@@ -54,26 +47,6 @@ public class SysCheckupPackageItem {
      * 排序
      */
     private Integer sortOrder;
-
-    /**
-     * 创建人
-     */
-    private String createBy;
-
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-
-    /**
-     * 更新人
-     */
-    private String updateBy;
-
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
 
     /**
      * 删除标志（0-正常 1-删除）

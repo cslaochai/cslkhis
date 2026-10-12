@@ -137,7 +137,6 @@
       </div>
     </el-card>
 
-    <!-- 患者详情弹框：统一走通用组件（主档详情 + CDR 全景时间轴），与 Header 共用同一实现 -->
     <PatientDetailDialog
         v-model="showDetailDialog"
         :patient="selectedPatient"
@@ -205,12 +204,6 @@
             <el-input v-model="newPatient.contactPhone" placeholder="请输入联系人电话"/>
           </el-form-item>
           <el-form-item label="与患者关系">
-            <!-- 绑 dictLabel（文案）而不是 dictValue（码值）：biz_patient.contact_relation 这一列
-                 存的是文案（列注释「联系人关系（父母、配偶、子女等）」），绑码值会出现
-                 「主档里存着 '2'、结构化表里存着 2」的两套写法。保存时服务端会把文案反查成码值
-                 写入 biz_patient_contact.relationship，两边从此一致。
-                 也**去掉了 allow-create**：关系必须是字典里的值，自由文本（历史上出现过「父子」）
-                 在结构化表里映射不到任何码值，只能落到 99-其他。 -->
             <el-select v-model="newPatient.contactRelation" class="w-full" default-first-option
                        filterable placeholder="请选择关系">
               <el-option v-for="item in patientRelationList" :key="item.dictValue" :label="item.dictLabel"
@@ -260,7 +253,7 @@
         </div>
 
         <el-form-item label="过敏史">
-          <el-input v-model="newPatient.allergyHistory" :rows="3" placeholder="快速录入用：这里填一句过敏史，保存后会转成一条结构化过敏记录（严重程度记为「未评估」）。按条目维护请到「患者中心 → 健康档案」"
+          <el-input v-model="newPatient.allergyHistory" :rows="3"
                     type="textarea"/>
         </el-form-item>
       </el-form>
@@ -364,7 +357,8 @@
         </div>
 
         <el-form-item label="过敏史">
-          <el-input v-model="editingPatient.allergyHistory" :rows="3" placeholder="该患者已有结构化过敏记录时，此处显示的是明细摘要、保存后会被明细覆盖；按条目维护请到「患者中心 → 健康档案」"
+          <el-input v-model="editingPatient.allergyHistory" :rows="3"
+                    placeholder="该患者已有结构化过敏记录时，此处显示的是明细摘要、保存后会被明细覆盖；按条目维护请到「患者中心 → 健康档案」"
                     type="textarea"/>
         </el-form-item>
       </el-form>

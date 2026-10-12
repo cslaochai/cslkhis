@@ -44,6 +44,13 @@ public class SecurityConfig {
             // 患者端微信一键登录（小程序一期口子；openid 换取后才可能有问题，code 本身匿名可带）
             "/miniapp/auth/wxLogin",
 
+            // 支付渠道异步回调（微信/支付宝服务器推送）。渠道服务器不可能持有我方 token，
+            // 这个端点的鉴权不是身份而是**渠道签名**：验签用渠道公钥（支付宝 RSA2 / 微信 V3 平台证书），
+            // 伪造通知需要渠道私钥。放行后仍不允许信任报文内容，落库前的金额比对与查单确认见
+            // MiniPayServiceImpl#confirmByAlipayNotify。
+            // 注意：这里写的是去掉 context-path(/api) 后的内部路径，写 /api/pay/notify/** 等于没放行。
+            "/pay/notify/**",
+
             // Swagger API 文档
             "/doc.html",
             "/swagger-ui/**",

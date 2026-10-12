@@ -2465,7 +2465,7 @@ INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, com
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
                       update_by_id)
 VALUES ('2937', '岗位人力标准', '2945', 5, 2, '/staff-plan-rule', 'views/schedule/StaffPlanRuleView.vue',
-        'org:staffPlanRule', 'Tools', 'staff:schedule:list', 0, 0, 1, 1, 'admin', 'sql230', 0, NULL, '1', '1');
+        'org:staffPlanRule', 'Tools', 'staff:planRule:list', 0, 0, 1, 1, 'admin', 'sql230', 0, NULL, '1', '1');
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
                       update_by_id)

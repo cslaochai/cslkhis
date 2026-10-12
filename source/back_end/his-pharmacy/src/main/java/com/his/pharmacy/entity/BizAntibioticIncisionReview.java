@@ -1,26 +1,20 @@
 package com.his.pharmacy.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.TableField;
 
 /**
  * I 类切口手术围手术期预防用药点评（专项整治必查）。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("biz_antibiotic_incision_review")
-public class BizAntibioticIncisionReview implements Serializable {
-    /**
-     * 更新人
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private String updateBy;
+public class BizAntibioticIncisionReview extends BaseEntity implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -33,8 +27,6 @@ public class BizAntibioticIncisionReview implements Serializable {
     public static final int MAX_PROPHYLACTIC_HOURS = 24;
 
     /** 主键 */
-    @TableId(type = IdType.ASSIGN_ID)
-    private Long id;
 
     /** 点评编号（KQI+yyyyMMdd+4位序号） */
     private String reviewNo;
@@ -118,13 +110,10 @@ public class BizAntibioticIncisionReview implements Serializable {
     private LocalDateTime reviewTime;
 
     /** 创建人 */
-    private String createBy;
 
     /** 创建时间 */
-    private LocalDateTime createTime;
 
     /** 更新时间 */
-    private LocalDateTime updateTime;
 
     /** 备注 */
     private String remark;

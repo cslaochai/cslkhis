@@ -145,6 +145,11 @@ export function upsertEmployeeQualification(data) {
     return request.post('/system/employee/qualification/qualificationUpsert', data)
 }
 
+// 批量保存资格证书（一个人的多本证书一次提交，展开与事务在后端）
+export function upsertEmployeeQualificationBatch(data) {
+    return request.post('/system/employee/qualification/qualificationBatchUpsert', data)
+}
+
 // 删除资格证书
 export function deleteEmployeeQualification(id) {
     return request.delete('/system/employee/qualification/deleteById', {params: {id}})

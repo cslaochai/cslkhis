@@ -676,8 +676,6 @@ public class BizClinicSourceTemplateServiceImpl extends ServiceImpl<BizClinicSou
         s.setEndTime(shift.getEndTime());
         s.setShiftId(shift.getId());
         s.setTotalSource(tpl.getTotalSource());
-        s.setUsedSource(0);
-        s.setAvailableSource(tpl.getTotalSource());
         s.setRoomId(tpl.getRoomId());
         s.setRoomName(tpl.getRoomName());
         s.setRegistFee(tpl.getRegistFee());
@@ -687,6 +685,7 @@ public class BizClinicSourceTemplateServiceImpl extends ServiceImpl<BizClinicSou
         s.setIsAppointment(tpl.getIsAppointment());
         s.setAppointmentSource(tpl.getAppointmentSource());
         s.setStatus(ScheduleStatusEnum.NORMAL.getCode());
+        bizScheduleService.initNewScheduleRow(s);
         return s;
     }
 

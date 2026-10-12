@@ -7,13 +7,13 @@ SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS=0;
 START TRANSACTION;
 
-DELETE FROM sys_drg_mdc;
-DELETE FROM sys_drg_adrg;
-DELETE FROM sys_drg_set;
-DELETE FROM sys_drg_group;
-DELETE FROM sys_drg_ccmcc;
+DELETE FROM biz_drg_mdc;
+DELETE FROM biz_drg_adrg;
+DELETE FROM biz_drg_set;
+DELETE FROM biz_drg_group;
+DELETE FROM biz_drg_ccmcc;
 
-INSERT INTO sys_drg_mdc (id, mdc_code, mdc_name, mdc_rule, sort_no, version, source, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_mdc (id, mdc_code, mdc_name, mdc_rule, sort_no, version, source, status, del_flag, create_by, update_by) VALUES
 (9100,'MDCA','先期分组',NULL,1,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (9101,'MDCP','新生儿疾病','((NL=0) and (XSRTL>=29) and (XSRTL<366) and (ZYZD in DI_PV1) and (ZYSS not in OP_ALL)) or ((NL=0) and (XSRTL<29))',2,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (9102,'MDCZ','多发严重创伤','((ZYZD in DI_Z01) and (QTZD in {DI_Z02, DI_Z03, DI_Z04, DI_Z05, DI_Z06, DI_Z07, DI_Z08, DI_Z09})) or ((ZYZD in DI_Z02) and (QTZD in {DI_Z01, DI_Z03, DI_Z04, DI_Z05, DI_Z06, DI_Z07, DI_Z08, DI_Z09})) or ((ZYZD in DI_Z03) and (QTZD in {DI_Z01, DI_Z02, DI_Z04, DI_Z05, DI_Z06, DI_Z07, DI_Z08, DI_Z09})) or ((ZYZD in DI_Z04) and (QTZD in {DI_Z01, DI_Z02, DI_Z03, DI_Z05, DI_Z06, DI_Z07, DI_Z08, DI_Z09})) or ((ZYZD in DI_Z05) and (QTZD in {DI_Z01, DI_Z02, DI_Z03, DI_Z04, DI_Z06, DI_Z07, DI_Z08, DI_Z09})) or ((ZYZD in DI_Z06) and (QTZD in {DI_Z01, DI_Z02, DI_Z03, DI_Z04, DI_Z05, DI_Z07, DI_Z08, DI_Z09})) or ((ZYZD in DI_Z07) and (QTZD in {DI_Z01, DI_Z02, DI_Z03, DI_Z04, DI_Z05, DI_Z06, DI_Z08, DI_Z09})) or ((ZYZD in DI_Z08) and (QTZD in {DI_Z01, DI_Z02, DI_Z03, DI_Z04, DI_Z05, DI_Z06, DI_Z07, DI_Z09})) or ((ZYZD in DI_Z09) and (QTZD in {DI_Z01, DI_Z02, DI_Z03, DI_Z04, DI_Z05, DI_Z06, DI_Z07, DI_Z08}))',3,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
@@ -40,7 +40,7 @@ INSERT INTO sys_drg_mdc (id, mdc_code, mdc_name, mdc_rule, sort_no, version, sou
 (9123,'MDCW','烧伤','ZYZD in DI_W00',24,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (9124,'MDCX','影响健康因素及其他就医情况','ZYZD in DI_X00',25,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (9125,'MDCY','HIV感染疾病及相关操作','ZYZD in DI_Y00',26,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin');
-INSERT INTO sys_drg_adrg (id, adrg_code, adrg_name, adrg_rule, mdc_code, sort_no, version, source, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_adrg (id, adrg_code, adrg_name, adrg_rule, mdc_code, sort_no, version, source, status, del_flag, create_by, update_by) VALUES
 (9200,'AA1','心肺移植','ZYSS in OP_AA1','MDCA',1,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (9201,'AA2','肺移植','ZYSS in OP_AA2','MDCA',2,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (9202,'AA3','心脏移植','ZYSS in OP_AA3','MDCA',3,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
@@ -541,7 +541,7 @@ INSERT INTO sys_drg_adrg (id, adrg_code, adrg_name, adrg_rule, mdc_code, sort_no
 (9697,'US1','兴奋剂滥用与依赖','ZYZD in DI_US1','MDCU',3,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (9698,'U00',NULL,NULL,'MDCU',4,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (9699,'VB1','损伤的皮肤移植','ZYSS in OP_VB1','MDCV',1,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin');
-INSERT INTO sys_drg_adrg (id, adrg_code, adrg_name, adrg_rule, mdc_code, sort_no, version, source, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_adrg (id, adrg_code, adrg_name, adrg_rule, mdc_code, sort_no, version, source, status, del_flag, create_by, update_by) VALUES
 (9700,'VC1','与损伤有关的清创术','ZYSS in OP_VC1','MDCV',2,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (9701,'VJ1','其他损伤的手术','ZYSS in OP_VJ1','MDCV',3,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (9702,'VQY',NULL,'ZYSS in OP_ALL','MDCV',4,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
@@ -579,7 +579,7 @@ INSERT INTO sys_drg_adrg (id, adrg_code, adrg_name, adrg_rule, mdc_code, sort_no
 (9734,'ZJ1','与多发伤有关的其他手术操作','ZYSS in OP_ZJ1','MDCZ',4,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (9735,'ZQY',NULL,'ZYSS in OP_ALL','MDCZ',5,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (9736,'ZZ1','多发性重要创伤无手术','1','MDCZ',6,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin');
-INSERT INTO sys_drg_group (id, drg_code, drg_name, mdc_code, adrg_code, drg_rule, sort_no, weight, pay_standard, version, source, status, del_flag, create_by, update_by, create_by_id, update_by_id) VALUES
+INSERT INTO biz_drg_group (id, drg_code, drg_name, mdc_code, adrg_code, drg_rule, sort_no, weight, pay_standard, version, source, status, del_flag, create_by, update_by, create_by_id, update_by_id) VALUES
 (9001,'AA19','心肺移植','MDCA','AA1',NULL,1,NULL,NULL,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin',1,1),
 (9002,'AA29','肺移植','MDCA','AA2',NULL,1,NULL,NULL,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin',1,1),
 (9003,'AA39','心脏移植','MDCA','AA3',NULL,1,NULL,NULL,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin',1,1),
@@ -1080,7 +1080,7 @@ INSERT INTO sys_drg_group (id, drg_code, drg_name, mdc_code, adrg_code, drg_rule
 (9498,'JT19','乳房、皮肤、皮下组织创伤','MDCJ','JT1',NULL,1,NULL,NULL,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin',1,1),
 (9499,'JU13','感染性皮肤病，伴合并症或并发症','MDCJ','JU1','QTZD in {MCC, CC}',1,NULL,NULL,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin',1,1),
 (9500,'JU1G','感染性皮肤病，不伴合并症或并发症，大于等于70岁','MDCJ','JU1','NL>=70',2,NULL,NULL,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin',1,1);
-INSERT INTO sys_drg_group (id, drg_code, drg_name, mdc_code, adrg_code, drg_rule, sort_no, weight, pay_standard, version, source, status, del_flag, create_by, update_by, create_by_id, update_by_id) VALUES
+INSERT INTO biz_drg_group (id, drg_code, drg_name, mdc_code, adrg_code, drg_rule, sort_no, weight, pay_standard, version, source, status, del_flag, create_by, update_by, create_by_id, update_by_id) VALUES
 (9501,'JU15','感染性皮肤病，不伴合并症或并发症','MDCJ','JU1',NULL,3,NULL,NULL,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin',1,1),
 (9502,'JV19','皮肤、皮下组织的非恶性增生性病变','MDCJ','JV1',NULL,1,NULL,NULL,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin',1,1),
 (9503,'JV29','乳房良性病变','MDCJ','JV2',NULL,1,NULL,NULL,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin',1,1),
@@ -1451,7 +1451,7 @@ INSERT INTO sys_drg_group (id, drg_code, drg_name, mdc_code, adrg_code, drg_rule
 (9868,'ZQY',NULL,'MDCZ','ZQY',NULL,1,NULL,NULL,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin',1,1),
 (9869,'ZZ11','多发性重要创伤无手术，伴严重合并症或并发症','MDCZ','ZZ1','QTZD in MCC',1,NULL,NULL,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin',1,1),
 (9870,'ZZ15','多发性重要创伤无手术，不伴严重合并症或并发症','MDCZ','ZZ1',NULL,2,NULL,NULL,'3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin',1,1);
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (200000,'OP_AA1','33.6x00','心脏-肺联合移植术','OP','3.0',1,0,'admin','admin'),
 (200001,'OP_AA2','33.5000','肺移植术','OP','3.0',1,0,'admin','admin'),
 (200002,'OP_AA2','33.5000x001','自体肺移植术','OP','3.0',1,0,'admin','admin'),
@@ -1952,7 +1952,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (200497,'DI_B00','D32.106','硬脊膜下良性肿瘤','DI','3.0',1,0,'admin','admin'),
 (200498,'DI_B00','D32.900','脑脊膜良性肿瘤','DI','3.0',1,0,'admin','admin'),
 (200499,'DI_B00','D32.900x001','皮肤脑膜瘤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (200500,'DI_B00','D32.900x002','脑膜瘤','DI','3.0',1,0,'admin','admin'),
 (200501,'DI_B00','D32.900x003','脑脊膜瘤','DI','3.0',1,0,'admin','admin'),
 (200502,'DI_B00','D33.000','脑幕上的良性肿瘤','DI','3.0',1,0,'admin','admin'),
@@ -2453,7 +2453,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (200997,'DI_B00','G04.800x014','免疫介导性脊髓炎','DI','3.0',1,0,'admin','admin'),
 (200998,'DI_B00','G04.800x015','免疫介导性脊髓神经根神经病','DI','3.0',1,0,'admin','admin'),
 (200999,'DI_B00','G04.800x016','免疫介导性脑干脑炎','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (201000,'DI_B00','G04.801','自体免疫性脑炎','DI','3.0',1,0,'admin','admin'),
 (201001,'DI_B00','G04.802','感染后脑炎','DI','3.0',1,0,'admin','admin'),
 (201002,'DI_B00','G04.803','感染后脑脊髓炎','DI','3.0',1,0,'admin','admin'),
@@ -2954,7 +2954,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (201497,'DI_B00','G43.000','偏头痛不伴有先兆［普通偏头痛］','DI','3.0',1,0,'admin','admin'),
 (201498,'DI_B00','G43.100','偏头痛伴有先兆［典型偏头痛］','DI','3.0',1,0,'admin','admin'),
 (201499,'DI_B00','G43.100x002','偏头痛性先兆[偏头痛等位症]','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (201500,'DI_B00','G43.100x005','有迁延性先兆的偏头痛','DI','3.0',1,0,'admin','admin'),
 (201501,'DI_B00','G43.100x006','有先兆急性发作的偏头痛','DI','3.0',1,0,'admin','admin'),
 (201502,'DI_B00','G43.100x011','典型先兆不伴头痛','DI','3.0',1,0,'admin','admin'),
@@ -3455,7 +3455,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (201997,'DI_B00','G93.000x007','侧脑室囊肿','DI','3.0',1,0,'admin','admin'),
 (201998,'DI_B00','G93.000x009','脉络丛囊肿','DI','3.0',1,0,'admin','admin'),
 (201999,'DI_B00','G93.000x010','外侧裂蛛网膜囊肿','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (202000,'DI_B00','G93.000x011','颅骨板障内蛛网膜囊肿','DI','3.0',1,0,'admin','admin'),
 (202001,'DI_B00','G93.000x012','鞍上蛛网膜囊肿','DI','3.0',1,0,'admin','admin'),
 (202002,'DI_B00','G93.000x013','桥小脑角蛛网膜囊肿','DI','3.0',1,0,'admin','admin'),
@@ -3956,7 +3956,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (202497,'DI_B00','I69.100x002','脑出血恢复期','DI','3.0',1,0,'admin','admin'),
 (202498,'DI_B00','I69.100x003','陈旧性脑出血','DI','3.0',1,0,'admin','admin'),
 (202499,'DI_B00','I69.200x001','颅内出血后遗症','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (202500,'DI_B00','I69.300','脑梗死后遗症','DI','3.0',1,0,'admin','admin'),
 (202501,'DI_B00','I69.300x002','陈旧性脑梗死','DI','3.0',1,0,'admin','admin'),
 (202502,'DI_B00','I69.300x003','脑梗死恢复期','DI','3.0',1,0,'admin','admin'),
@@ -4457,7 +4457,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (202997,'DI_B00','S24.400x003','肺丛神经损伤','DI','3.0',1,0,'admin','admin'),
 (202998,'DI_B00','S24.400x004','星状神经丛损伤','DI','3.0',1,0,'admin','admin'),
 (202999,'DI_B00','S24.400x005','胸部交感神经节损伤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (203000,'DI_B00','S24.500','胸部其他神经的损伤','DI','3.0',1,0,'admin','admin'),
 (203001,'DI_B00','S24.500x001','膈神经损伤','DI','3.0',1,0,'admin','admin'),
 (203002,'DI_B00','S24.600','胸部神经的损伤','DI','3.0',1,0,'admin','admin'),
@@ -4958,7 +4958,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (203497,'OP_BB2','01.0900x007','立体定向颅内血肿穿刺引流术','OP','3.0',1,0,'admin','admin'),
 (203498,'OP_BB2','01.1000x001','颅压监护探极置入术','OP','3.0',1,0,'admin','admin'),
 (203499,'OP_BB2','01.2400x013','硬脑膜外血肿清除术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (203500,'OP_BB2','01.2401','颅后窝血肿清除术','OP','3.0',1,0,'admin','admin'),
 (203501,'OP_BB2','01.2408','颅内血肿清除术','OP','3.0',1,0,'admin','admin'),
 (203502,'OP_BB2','01.2409','颅骨钻孔引流术','OP','3.0',1,0,'admin','admin'),
@@ -5459,7 +5459,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (203997,'OP_BB3','01.5200','大脑半球切除术','OP','3.0',1,0,'admin','admin'),
 (203998,'OP_BB3','01.5301','脑叶次全切除术','OP','3.0',1,0,'admin','admin'),
 (203999,'OP_BB3','01.5302','额叶切除术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (204000,'OP_BB3','01.5303','颞叶切除术','OP','3.0',1,0,'admin','admin'),
 (204001,'OP_BB3','01.5304','标准前颞叶切除术','OP','3.0',1,0,'admin','admin'),
 (204002,'OP_BB3','01.5900x022','多个脑室病损切除术','OP','3.0',1,0,'admin','admin'),
@@ -5960,7 +5960,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (204497,'OP_BB5','01.4201','立体定向苍白球切开术','OP','3.0',1,0,'admin','admin'),
 (204498,'OP_BB5','01.4202','苍白球切开术','OP','3.0',1,0,'admin','admin'),
 (204499,'OP_BB5','01.4203','苍白球射频毁损术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (204500,'OP_BB5','01.4204','苍白球丘脑化学破坏术','OP','3.0',1,0,'admin','admin'),
 (204501,'OP_BB5','01.5100x001','开颅蛛网膜剥离术','OP','3.0',1,0,'admin','admin'),
 (204502,'OP_BB5','01.5100x006','大脑镰脑膜病损切除术','OP','3.0',1,0,'admin','admin'),
@@ -6461,7 +6461,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (204997,'OP_BD3','03.9300x004','脊髓神经刺激器导线置换术','OP','3.0',1,0,'admin','admin'),
 (204998,'OP_BD3','03.9302','脊髓神经刺激器置换术','OP','3.0',1,0,'admin','admin'),
 (204999,'OP_BD4','04.9200x001','周围神经刺激器导线置入术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (205000,'OP_BD4','04.9200x002','周围神经刺激器导线置换术','OP','3.0',1,0,'admin','admin'),
 (205001,'OP_BD4','04.9200x003','骶神经神经刺激器导线置入术','OP','3.0',1,0,'admin','admin'),
 (205002,'OP_BD4','04.9202','周围神经刺激器置换术','OP','3.0',1,0,'admin','admin'),
@@ -6962,7 +6962,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (205497,'OP_BJ1','80.5900x003','椎间盘激光汽化术','OP','3.0',1,0,'admin','admin'),
 (205498,'OP_BJ1','86.0501','皮下神经刺激器去除','OP','3.0',1,0,'admin','admin'),
 (205499,'OP_BJ1','86.0900x009','皮下神经电刺激器置入术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (205500,'OP_BJ1','86.5902','头皮裂伤清创缝合术','OP','3.0',1,0,'admin','admin'),
 (205501,'OP_BJ1','92.3001','脑立体定向双侧扣带回毁损术','OP','3.0',1,0,'admin','admin'),
 (205502,'OP_BJ1','92.3002','脑立体定向药瘾戒断术','OP','3.0',1,0,'admin','admin'),
@@ -7463,7 +7463,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (205997,'DI_BR2','I65.207','颈总动脉闭塞','DI','3.0',1,0,'admin','admin'),
 (205998,'DI_BR2','I65.208','颈内动脉栓塞','DI','3.0',1,0,'admin','admin'),
 (205999,'DI_BR2','I65.300x001','多个入脑前动脉闭塞和狭窄','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (206000,'DI_BR2','I65.300x002','双侧入脑前动脉闭塞','DI','3.0',1,0,'admin','admin'),
 (206001,'DI_BR2','I65.300x003','双侧入脑前动脉狭窄','DI','3.0',1,0,'admin','admin'),
 (206002,'DI_BR2','I65.800x001','无名动脉斑块','DI','3.0',1,0,'admin','admin'),
@@ -7964,7 +7964,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (206497,'DI_BT3','G06.006','颅内感染','DI','3.0',1,0,'admin','admin'),
 (206498,'DI_BT3','G06.100x004','脊髓肉芽肿','DI','3.0',1,0,'admin','admin'),
 (206499,'DI_BT3','G06.100x006','硬脊膜外肉芽肿','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (206500,'DI_BT3','G06.100x008','硬脊膜下肉芽肿','DI','3.0',1,0,'admin','admin'),
 (206501,'DI_BT3','G06.100x009','椎管内感染','DI','3.0',1,0,'admin','admin'),
 (206502,'DI_BT3','G06.101','椎管内肉芽肿','DI','3.0',1,0,'admin','admin'),
@@ -8465,7 +8465,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (206997,'DI_BU1','D48.200x041','骶尾周围神经和自主神经交界性肿瘤','DI','3.0',1,0,'admin','admin'),
 (206998,'DI_BU1','D48.200x042','直肠膀胱隔周围神经和自主神经交界性肿瘤','DI','3.0',1,0,'admin','admin'),
 (206999,'DI_BU1','D48.200x043','直肠阴道隔周围神经和自主神经交界性肿瘤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (207000,'DI_BU1','D48.200x044','直肠周围周围神经和自主神经交界性肿瘤','DI','3.0',1,0,'admin','admin'),
 (207001,'DI_BU1','D48.200x045','坐骨直肠窝周围神经和自主神经交界性肿瘤','DI','3.0',1,0,'admin','admin'),
 (207002,'DI_BU1','D48.200x046','盆腔周围神经和自主神经交界性肿瘤','DI','3.0',1,0,'admin','admin'),
@@ -8966,7 +8966,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (207497,'DI_BV2','G70.800x001','非癌性肌无力综合征','DI','3.0',1,0,'admin','admin'),
 (207498,'DI_BV2','G70.900','肌神经疾患','DI','3.0',1,0,'admin','admin'),
 (207499,'DI_BV2','G70.900x001','喉肌无力','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (207500,'DI_BV2','G70.900x003','面肌肌无力','DI','3.0',1,0,'admin','admin'),
 (207501,'DI_BV2','G70.901','肌无力综合征','DI','3.0',1,0,'admin','admin'),
 (207502,'DI_BV2','G70.902','肌无力','DI','3.0',1,0,'admin','admin'),
@@ -9467,7 +9467,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (207997,'DI_BX2','G56.301','桡神经麻痹','DI','3.0',1,0,'admin','admin'),
 (207998,'DI_BX2','G56.800x001','指间神经瘤','DI','3.0',1,0,'admin','admin'),
 (207999,'DI_BX2','G56.900','上肢单神经病','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (208000,'DI_BX2','G57.000','坐骨神经损害','DI','3.0',1,0,'admin','admin'),
 (208001,'DI_BX2','G57.000x003','坐骨神经粘连','DI','3.0',1,0,'admin','admin'),
 (208002,'DI_BX2','G57.001','梨状肌综合征','DI','3.0',1,0,'admin','admin'),
@@ -9968,7 +9968,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (208497,'DI_BY2','G95.900x004','椎管内外占位性病变','DI','3.0',1,0,'admin','admin'),
 (208498,'DI_BY2','G95.901','椎管内肿物','DI','3.0',1,0,'admin','admin'),
 (208499,'DI_BY2','G96.800x006','脊髓损伤后体温调节功能障碍','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (208500,'DI_BY2','I77.000x012','脊髓动静脉瘘','DI','3.0',1,0,'admin','admin'),
 (208501,'DI_BY2','I77.000x013','硬脊膜下髓周动静脉瘘','DI','3.0',1,0,'admin','admin'),
 (208502,'DI_BY2','I77.002','硬脊膜动静脉瘘','DI','3.0',1,0,'admin','admin'),
@@ -10469,7 +10469,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (208997,'DI_C00','C69.400','睫状体恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (208998,'DI_C00','C69.400x005','虹膜恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (208999,'DI_C00','C69.401','葡萄膜恶性肿瘤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (209000,'DI_C00','C69.500x003','泪管恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (209001,'DI_C00','C69.501','泪腺恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (209002,'DI_C00','C69.502','泪囊恶性肿瘤','DI','3.0',1,0,'admin','admin'),
@@ -10970,7 +10970,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (209497,'DI_C00','H18.900','角膜疾患','DI','3.0',1,0,'admin','admin'),
 (209498,'DI_C00','H18.901','角膜肿物','DI','3.0',1,0,'admin','admin'),
 (209499,'DI_C00','H20.000x003','前房积脓','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (209500,'DI_C00','H20.000x004','急性虹膜睫状体炎','DI','3.0',1,0,'admin','admin'),
 (209501,'DI_C00','H20.001','亚急性虹膜睫状体炎','DI','3.0',1,0,'admin','admin'),
 (209502,'DI_C00','H20.002','复发性虹膜睫状体炎','DI','3.0',1,0,'admin','admin'),
@@ -11471,7 +11471,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (209997,'DI_C00','H50.500x002','内隐斜','DI','3.0',1,0,'admin','admin'),
 (209998,'DI_C00','H50.500x003','外隐斜','DI','3.0',1,0,'admin','admin'),
 (209999,'DI_C00','H50.500x004','交替性上隐斜','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (210000,'DI_C00','H50.600','机械性斜视','DI','3.0',1,0,'admin','admin'),
 (210001,'DI_C00','H50.600x003','外伤性麻痹性斜视','DI','3.0',1,0,'admin','admin'),
 (210002,'DI_C00','H50.600x004','继发性斜视','DI','3.0',1,0,'admin','admin'),
@@ -11972,7 +11972,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (210497,'OP2_CB2','13.9000x006','虹膜隔晶体置入术','OP','3.0',1,0,'admin','admin'),
 (210498,'OP2_CB2','13.9000x007','人工晶体缝合术','OP','3.0',1,0,'admin','admin'),
 (210499,'OP2_CB2','13.9000x008','人工晶体前膜切除术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (210500,'OP2_CB2','13.9000x009','人工晶体睫状沟固定术','OP','3.0',1,0,'admin','admin'),
 (210501,'OP2_CB2','13.9000x010','晶状体前囊切开术','OP','3.0',1,0,'admin','admin'),
 (210502,'OP2_CB2','13.9000x011','晶状体囊膜剪开术','OP','3.0',1,0,'admin','admin'),
@@ -12473,7 +12473,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (210997,'OP_CB9','11.5300x001','结膜瓣角膜修补术','OP','3.0',1,0,'admin','admin'),
 (210998,'OP_CB9','11.5900x001','角膜修补术','OP','3.0',1,0,'admin','admin'),
 (210999,'OP_CB9','11.5900x002','角膜间层烧灼术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (211000,'OP_CB9','11.5901','角膜缝线调整术','OP','3.0',1,0,'admin','admin'),
 (211001,'OP_CB9','11.7100x001','屈光性角膜成形术','OP','3.0',1,0,'admin','admin'),
 (211002,'OP_CB9','11.7100x002','准分子激光角膜原位磨镶术[LASIK]','OP','3.0',1,0,'admin','admin'),
@@ -12974,7 +12974,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (211497,'DI_CS1','H51.800','双眼运动疾患，其他特指的','DI','3.0',1,0,'admin','admin'),
 (211498,'DI_CS1','H51.801','眼球运动障碍','DI','3.0',1,0,'admin','admin'),
 (211499,'DI_CS1','H51.900','双眼运动疾患','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (211500,'DI_CS1','H52.500','调节疾患','DI','3.0',1,0,'admin','admin'),
 (211501,'DI_CS1','H52.500x001','眼内肌麻痹','DI','3.0',1,0,'admin','admin'),
 (211502,'DI_CS1','H52.500x003','调节痉挛','DI','3.0',1,0,'admin','admin'),
@@ -13475,7 +13475,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (211997,'DI_CW1','Q12.002','先天性核性白内障','DI','3.0',1,0,'admin','admin'),
 (211998,'DI_CX1','E05.902+H58.8*','甲状腺毒症性眼病','DI','3.0',1,0,'admin','admin'),
 (211999,'DI_CX1','E10.300x011+H36.0*','1型糖尿病性背景性视网膜病','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (212000,'DI_CX1','E10.300x012+H36.0*','1型糖尿病性背景性出血性视网膜病','DI','3.0',1,0,'admin','admin'),
 (212001,'DI_CX1','E10.300x013+H36.0*','1型糖尿病性背景性硬性渗出物性视网膜病','DI','3.0',1,0,'admin','admin'),
 (212002,'DI_CX1','E10.300x014+H36.0*','1型糖尿病性背景性小动脉瘤视网膜病','DI','3.0',1,0,'admin','admin'),
@@ -13976,7 +13976,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (212497,'DI_CZ1','H33.000x005','巨大裂孔性视网膜脱离','DI','3.0',1,0,'admin','admin'),
 (212498,'DI_CZ1','H33.000x006','脉络膜脱离型视网膜脱离','DI','3.0',1,0,'admin','admin'),
 (212499,'DI_CZ1','H33.000x007','黄斑裂孔性视网膜脱离','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (212500,'DI_CZ1','H33.001','孔源性视网膜脱离','DI','3.0',1,0,'admin','admin'),
 (212501,'DI_CZ1','H33.002','锯齿缘离断','DI','3.0',1,0,'admin','admin'),
 (212502,'DI_CZ1','H33.100','视网膜劈裂症及视网膜囊肿','DI','3.0',1,0,'admin','admin'),
@@ -14477,7 +14477,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (212997,'DI_D00','C08.800x001','舌下腺及下颌下腺恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (212998,'DI_D00','C08.900','大涎腺恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (212999,'DI_D00','C08.900x001','唾液腺恶性肿瘤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (213000,'DI_D00','C09.000','扁桃体窝恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (213001,'DI_D00','C09.100','扁桃体柱恶性肿瘤（前）（后）','DI','3.0',1,0,'admin','admin'),
 (213002,'DI_D00','C09.100x001','舌腭弓恶性肿瘤','DI','3.0',1,0,'admin','admin'),
@@ -14978,7 +14978,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (213497,'DI_D00','G47.300x033','混合性睡眠呼吸暂停低通气综合征','DI','3.0',1,0,'admin','admin'),
 (213498,'DI_D00','G47.300x035','中枢性低通气综合征','DI','3.0',1,0,'admin','admin'),
 (213499,'DI_D00','G47.300x036','中枢性睡眠呼吸暂停低通气综合征','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (213500,'DI_D00','G47.300x037','阻塞性睡眠呼吸暂停低通气综合征','DI','3.0',1,0,'admin','admin'),
 (213501,'DI_D00','G47.301','阻塞性睡眠呼吸暂停综合征','DI','3.0',1,0,'admin','admin'),
 (213502,'DI_D00','G47.302','中枢性睡眠呼吸暂停综合征','DI','3.0',1,0,'admin','admin'),
@@ -15479,7 +15479,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (213997,'DI_D00','J38.702','创伤性喉蹼','DI','3.0',1,0,'admin','admin'),
 (213998,'DI_D00','J38.703','喉瘢痕','DI','3.0',1,0,'admin','admin'),
 (213999,'DI_D00','J38.704','喉溃疡','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (214000,'DI_D00','J38.705','喉囊肿','DI','3.0',1,0,'admin','admin'),
 (214001,'DI_D00','J38.706','喉白斑','DI','3.0',1,0,'admin','admin'),
 (214002,'DI_D00','J38.707','喉脓肿','DI','3.0',1,0,'admin','admin'),
@@ -15980,7 +15980,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (214497,'DI_D00','K11.903','颌下腺肿物','DI','3.0',1,0,'admin','admin'),
 (214498,'DI_D00','K12.000','复发性口腔阿弗他溃疡','DI','3.0',1,0,'admin','admin'),
 (214499,'DI_D00','K12.000x001','轻型阿弗他溃疡','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (214500,'DI_D00','K12.001','复发性坏死性黏膜腺周炎','DI','3.0',1,0,'admin','admin'),
 (214501,'DI_D00','K12.002','口腔阿弗他溃疡','DI','3.0',1,0,'admin','admin'),
 (214502,'DI_D00','K12.003','疱疹样口炎','DI','3.0',1,0,'admin','admin'),
@@ -16481,7 +16481,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (214997,'DI_D00','S01.500x001','口腔开放性损伤','DI','3.0',1,0,'admin','admin'),
 (214998,'DI_D00','S01.500x021','口腔黏膜开放性损伤','DI','3.0',1,0,'admin','admin'),
 (214999,'DI_D00','S01.500x022','脸颊内部开放性损伤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (215000,'DI_D00','S01.500x042','舌和口底开放性损伤','DI','3.0',1,0,'admin','admin'),
 (215001,'DI_D00','S01.500x051','上腭开放性损伤','DI','3.0',1,0,'admin','admin'),
 (215002,'DI_D00','S01.500x052','软腭开放性损伤','DI','3.0',1,0,'admin','admin'),
@@ -16982,7 +16982,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (215497,'OP2_DC3','76.3905','上颌骨切骨术','OP','3.0',1,0,'admin','admin'),
 (215498,'OP2_DC3','76.4100','下颌骨全部切除术同时伴重建术','OP','3.0',1,0,'admin','admin'),
 (215499,'OP2_DC3','76.4200x002','下颌骨全部切除术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (215500,'OP2_DC3','76.4400x002','面骨骨全部切除伴重建术','OP','3.0',1,0,'admin','admin'),
 (215501,'OP2_DC3','76.4400x003','上颌骨全部切除伴重建术','OP','3.0',1,0,'admin','admin'),
 (215502,'OP2_DC3','76.4500x003','面骨骨全部切除术','OP','3.0',1,0,'admin','admin'),
@@ -17483,7 +17483,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (215997,'OP_DC5','30.2200','声带切除术','OP','3.0',1,0,'admin','admin'),
 (215998,'OP_DC5','30.2201','声带部分切除术','OP','3.0',1,0,'admin','admin'),
 (215999,'OP_DC5','30.2202','声带扩大切除术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (216000,'OP_DC5','30.2203','内镜下声带部分切除术','OP','3.0',1,0,'admin','admin'),
 (216001,'OP_DC5','30.2204','内镜下声带切除术','OP','3.0',1,0,'admin','admin'),
 (216002,'OP_DC5','30.2900x002','喉杓状软骨切除术','OP','3.0',1,0,'admin','admin'),
@@ -17984,7 +17984,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (216497,'OP_DC7','27.6302','腭裂上提术','OP','3.0',1,0,'admin','admin'),
 (216498,'OP_DC7','27.6400','腭植入物置入术','OP','3.0',1,0,'admin','admin'),
 (216499,'OP_DD1','20.9500','电磁助听器置入','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (216500,'OP_DD1','20.9501','骨锚式助听器置入术','OP','3.0',1,0,'admin','admin'),
 (216501,'OP_DD1','20.9502','中耳振动声桥置入术','OP','3.0',1,0,'admin','admin'),
 (216502,'OP_DD1','20.9601','人工耳蜗置入术','OP','3.0',1,0,'admin','admin'),
@@ -18485,7 +18485,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (216997,'OP_DG1','31.7400','气管造口修复术','OP','3.0',1,0,'admin','admin'),
 (216998,'OP_DG1','31.7400x001','气管造口扩张术','OP','3.0',1,0,'admin','admin'),
 (216999,'OP_DG1','31.7500x002','气管成形伴人工喉重建术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (217000,'OP_DG1','31.7500x004','人工气管重建术','OP','3.0',1,0,'admin','admin'),
 (217001,'OP_DG1','31.7500x006','发音钮置换术','OP','3.0',1,0,'admin','admin'),
 (217002,'OP_DG1','31.7501','发音重建术','OP','3.0',1,0,'admin','admin'),
@@ -18986,7 +18986,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (217497,'OP_DH2','76.2x04','颌骨囊肿摘除术','OP','3.0',1,0,'admin','admin'),
 (217498,'OP_DH2','76.3100x001','下颌骨部分切除术伴植骨术','OP','3.0',1,0,'admin','admin'),
 (217499,'OP_DH2','76.3100x009','髁突高位切除术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (217500,'OP_DH2','76.3100x010','髁突摘除术','OP','3.0',1,0,'admin','admin'),
 (217501,'OP_DH2','76.3100x011','下颌骨部分切除术','OP','3.0',1,0,'admin','admin'),
 (217502,'OP_DH2','76.3100x012','鼻内镜下下颌骨部分切除术','OP','3.0',1,0,'admin','admin'),
@@ -19487,7 +19487,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (217997,'OP_DJ1','24.6x03','牙嵌顿结扎术','OP','3.0',1,0,'admin','admin'),
 (217998,'OP_DJ1','24.8x03','牙弓修补术','OP','3.0',1,0,'admin','admin'),
 (217999,'OP_DJ1','24.8x04','牙间隙裂闭合术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (218000,'OP_DJ1','24.9101','唇颊沟牵伸术','OP','3.0',1,0,'admin','admin'),
 (218001,'OP_DJ1','24.9102','唇颊沟加深术','OP','3.0',1,0,'admin','admin'),
 (218002,'OP_DJ1','24.9103','舌沟牵伸术','OP','3.0',1,0,'admin','admin'),
@@ -19988,7 +19988,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (218497,'DI_DR1','C77.006','耳淋巴结继发恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (218498,'DI_DR1','C77.007','锁骨上淋巴结继发恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (218499,'DI_DR1','C77.008','气管食管沟淋巴结继发恶性肿瘤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (218500,'DI_DR1','C78.300x004','咽鼓管继发恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (218501,'DI_DR1','C78.300x005','上颌窦继发恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (218502,'DI_DR1','C78.300x006','声带继发恶性肿瘤','DI','3.0',1,0,'admin','admin'),
@@ -20489,7 +20489,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (218997,'DI_DU1','S00.400x052','外耳挫伤','DI','3.0',1,0,'admin','admin'),
 (218998,'DI_DU1','S00.401','耳廓挫伤','DI','3.0',1,0,'admin','admin'),
 (218999,'DI_DU1','S00.402','耳廓血肿','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (219000,'DI_DU1','S00.403','鼓室挫伤','DI','3.0',1,0,'admin','admin'),
 (219001,'DI_DU1','S00.404','鼓膜挫伤','DI','3.0',1,0,'admin','admin'),
 (219002,'DI_DU1','S00.500','唇和口腔浅表损伤','DI','3.0',1,0,'admin','admin'),
@@ -20990,7 +20990,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (219497,'DI_DV1','K11.600x005','口腔黏膜粘液囊肿','DI','3.0',1,0,'admin','admin'),
 (219498,'DI_DV1','K11.600x008','舌下腺粘液囊肿','DI','3.0',1,0,'admin','admin'),
 (219499,'DI_DV1','K11.601','腮腺囊肿','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (219500,'DI_DV1','K11.602','腮腺涎液潴留','DI','3.0',1,0,'admin','admin'),
 (219501,'DI_DV1','K11.603','舌下腺囊肿','DI','3.0',1,0,'admin','admin'),
 (219502,'DI_DV1','K11.604','舌下囊肿','DI','3.0',1,0,'admin','admin'),
@@ -21491,7 +21491,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (219997,'DI_DW1','K14.500x001','裂纹舌','DI','3.0',1,0,'admin','admin'),
 (219998,'DI_DW1','K14.500x002','沟纹舌','DI','3.0',1,0,'admin','admin'),
 (219999,'DI_DW1','K14.600x001','舌痛症','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (220000,'DI_DW1','K14.800x003','舌瘘管','DI','3.0',1,0,'admin','admin'),
 (220001,'DI_DW1','K14.800x005','舌畸形','DI','3.0',1,0,'admin','admin'),
 (220002,'DI_DW1','K14.800x010','舌牙痕','DI','3.0',1,0,'admin','admin'),
@@ -21992,7 +21992,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (220497,'DI_DZ1','Q31.801','先天性会厌裂','DI','3.0',1,0,'admin','admin'),
 (220498,'DI_DZ1','Q31.802','先天性声门关闭不全','DI','3.0',1,0,'admin','admin'),
 (220499,'DI_DZ1','Q31.803','先天性声带沟','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (220500,'DI_DZ1','Q31.804','先天性喉闭锁','DI','3.0',1,0,'admin','admin'),
 (220501,'DI_DZ1','Q31.805','先天性喉隔','DI','3.0',1,0,'admin','admin'),
 (220502,'DI_DZ1','Q31.806','先天性喉狭窄','DI','3.0',1,0,'admin','admin'),
@@ -22493,7 +22493,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (220997,'DI_E00','C79.800x838','胸导管继发恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (220998,'DI_E00','C79.807','胸腔继发恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (220999,'DI_E00','C79.810','膈继发恶性肿瘤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (221000,'DI_E00','C85.900x008','肺淋巴瘤','DI','3.0',1,0,'admin','admin'),
 (221001,'DI_E00','C85.900x013','纵隔淋巴瘤','DI','3.0',1,0,'admin','admin'),
 (221002,'DI_E00','D02.100','气管原位癌','DI','3.0',1,0,'admin','admin'),
@@ -22994,7 +22994,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (221497,'DI_E00','J96.100','慢性呼吸衰竭','DI','3.0',1,0,'admin','admin'),
 (221498,'DI_E00','J96.900x001','呼吸衰竭','DI','3.0',1,0,'admin','admin'),
 (221499,'DI_E00','J96.900x002','I型呼吸衰竭','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (221500,'DI_E00','J96.900x003','Ⅱ型呼吸衰竭','DI','3.0',1,0,'admin','admin'),
 (221501,'DI_E00','J98.000x009','支气管软化','DI','3.0',1,0,'admin','admin'),
 (221502,'DI_E00','J98.000x011','支气管痉挛','DI','3.0',1,0,'admin','admin'),
@@ -23495,7 +23495,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (221997,'OP_EC2','04.2x10','肋间神经冷冻术','OP','3.0',1,0,'admin','admin'),
 (221998,'OP_EC2','07.8100x009','CT引导下胸腺病损射频消融术','OP','3.0',1,0,'admin','admin'),
 (221999,'OP_EC2','07.9100','胸腺区探查术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (222000,'OP_EC2','07.9200x001','胸腺切开探查术','OP','3.0',1,0,'admin','admin'),
 (222001,'OP_EC2','07.9300','胸腺修补术','OP','3.0',1,0,'admin','admin'),
 (222002,'OP_EC2','07.9400','胸腺移植术','OP','3.0',1,0,'admin','admin'),
@@ -23996,7 +23996,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (222497,'DI_ER1','C34.900x006','双肺恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (222498,'DI_ER1','C34.900x008','肺多处恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (222499,'DI_ER1','C34.901','支气管恶性肿瘤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (222500,'DI_ER1','C34.902','细支气管恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (222501,'DI_ER1','C37.x00','胸腺恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (222502,'DI_ER1','C38.100','前纵隔恶性肿瘤','DI','3.0',1,0,'admin','admin'),
@@ -24497,7 +24497,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (222997,'DI_ES4','J86.014','支气管肝脓肿瘘','DI','3.0',1,0,'admin','admin'),
 (222998,'DI_ES4','J86.901','化脓性胸膜炎','DI','3.0',1,0,'admin','admin'),
 (222999,'DI_ES4','J86.902','包裹性脓胸','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (223000,'DI_ES4','J86.903','脓气胸','DI','3.0',1,0,'admin','admin'),
 (223001,'DI_ES4','J95.800x016','手术后脓胸','DI','3.0',1,0,'admin','admin'),
 (223002,'DI_ES4','J95.800x021','手术后成人呼吸窘迫综合症','DI','3.0',1,0,'admin','admin'),
@@ -24998,7 +24998,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (223497,'DI_EZ1','J98.006','支气管肉芽肿','DI','3.0',1,0,'admin','admin'),
 (223498,'DI_EZ1','J98.007','支气管溃疡','DI','3.0',1,0,'admin','admin'),
 (223499,'DI_EZ1','J98.008','支气管钙化','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (223500,'DI_EZ1','J98.009','支气管阻塞','DI','3.0',1,0,'admin','admin'),
 (223501,'DI_EZ1','J98.010','支气管骨化','DI','3.0',1,0,'admin','admin'),
 (223502,'DI_EZ1','J98.011','支气管囊肿','DI','3.0',1,0,'admin','admin'),
@@ -25499,7 +25499,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (223997,'DI_F00','I24.000x004','急性冠状动脉支架内血栓形成','DI','3.0',1,0,'admin','admin'),
 (223998,'DI_F00','I24.000x005','亚急性冠状动脉支架内血栓形成','DI','3.0',1,0,'admin','admin'),
 (223999,'DI_F00','I24.000x009','冠状动脉支架后并发冠状动脉血栓栓塞','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (224000,'DI_F00','I24.000x010','冠状动脉支架后并发冠状动脉分支闭塞','DI','3.0',1,0,'admin','admin'),
 (224001,'DI_F00','I24.001','冠状动脉支架内血栓形成','DI','3.0',1,0,'admin','admin'),
 (224002,'DI_F00','I24.002','冠状动脉闭塞','DI','3.0',1,0,'admin','admin'),
@@ -26000,7 +26000,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (224497,'DI_F00','I70.802','髂动脉闭塞性粥样硬化','DI','3.0',1,0,'admin','admin'),
 (224498,'DI_F00','I70.804','锁骨下动脉粥样硬化','DI','3.0',1,0,'admin','admin'),
 (224499,'DI_F00','I70.805','乳内动脉粥样硬化','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (224500,'DI_F00','I70.810','其他动脉粥样硬化伴坏疽','DI','3.0',1,0,'admin','admin'),
 (224501,'DI_F00','I70.812','髂动脉闭塞性粥样硬化伴坏疽','DI','3.0',1,0,'admin','admin'),
 (224502,'DI_F00','I70.900x002','闭塞性动脉硬化','DI','3.0',1,0,'admin','admin'),
@@ -26501,7 +26501,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (224997,'DI_F00','I97.800x006','手术后腹主动脉阻塞','DI','3.0',1,0,'admin','admin'),
 (224998,'DI_F00','I97.800x008','房间隔缺损修补术后残余分流','DI','3.0',1,0,'admin','admin'),
 (224999,'DI_F00','I97.800x009','右室外管道狭窄','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (225000,'DI_F00','I97.800x010','右室流出道疏通术后残余狭窄','DI','3.0',1,0,'admin','admin'),
 (225001,'DI_F00','I97.800x011','左室流出道疏通术后残余狭窄','DI','3.0',1,0,'admin','admin'),
 (225002,'DI_F00','I97.800x013','心脏瓣膜置换术后瓣周漏','DI','3.0',1,0,'admin','admin'),
@@ -27002,7 +27002,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (225497,'DI_F00','S75.901','创伤性股动静脉瘘','DI','3.0',1,0,'admin','admin'),
 (225498,'DI_F00','S85.000','腘动脉损伤','DI','3.0',1,0,'admin','admin'),
 (225499,'DI_F00','S85.100x001','胫动脉损伤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (225500,'DI_F00','S85.100x002','胫前动脉损伤','DI','3.0',1,0,'admin','admin'),
 (225501,'DI_F00','S85.101','胫后动脉损伤','DI','3.0',1,0,'admin','admin'),
 (225502,'DI_F00','S85.102','创伤性胫后动脉血栓形成','DI','3.0',1,0,'admin','admin'),
@@ -27503,7 +27503,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (225997,'OP_FD2','35.4200x007','卵圆孔开窗术','OP','3.0',1,0,'admin','admin'),
 (225998,'OP_FD2','35.4200x008','房间隔穿刺术','OP','3.0',1,0,'admin','admin'),
 (225999,'OP_FD2','35.4201','布莱洛克-汉隆手术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (226000,'OP_FD2','35.5000','心脏间隔缺损的假体修补术','OP','3.0',1,0,'admin','admin'),
 (226001,'OP_FD2','35.5100x001','房间隔缺损人造补片修补术','OP','3.0',1,0,'admin','admin'),
 (226002,'OP_FD2','35.5100x002','经胸房间隔缺损闭式封堵术','OP','3.0',1,0,'admin','admin'),
@@ -28004,7 +28004,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (226497,'OP1_FF1','39.3111','腘动脉缝合术','OP','3.0',1,0,'admin','admin'),
 (226498,'OP1_FF1','39.3112','肱动脉缝合术','OP','3.0',1,0,'admin','admin'),
 (226499,'OP1_FF1','39.3113','桡动脉缝合术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (226500,'OP1_FF1','39.3200','静脉缝合术','OP','3.0',1,0,'admin','admin'),
 (226501,'OP1_FF1','39.3200x004','门静脉缝合术','OP','3.0',1,0,'admin','admin'),
 (226502,'OP1_FF1','39.3201','肠系膜静脉缝合术','OP','3.0',1,0,'admin','admin'),
@@ -28505,7 +28505,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (226997,'OP_FF2','39.2500x009','髂动脉-股动脉-腘动脉人工血管搭桥术','OP','3.0',1,0,'admin','admin'),
 (226998,'OP_FF2','39.2500x010','髂动脉-股动脉-腘动脉自体血管搭桥术','OP','3.0',1,0,'admin','admin'),
 (226999,'OP_FF2','39.2500x011','髂动脉-股动脉人工血管-腘动脉自体血管搭桥术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (227000,'OP_FF2','39.2500x012','髂动脉-股动脉自体血管搭桥术','OP','3.0',1,0,'admin','admin'),
 (227001,'OP_FF2','39.2500x013','髂动脉-腘动脉自体血管搭桥术','OP','3.0',1,0,'admin','admin'),
 (227002,'OP_FF2','39.2500x014','髂总动脉-腘动脉人工血管架桥术','OP','3.0',1,0,'admin','admin'),
@@ -29006,7 +29006,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (227497,'OP_FK3','00.5000x001','双心室起搏器置入术','OP','3.0',1,0,'admin','admin'),
 (227498,'OP_FK3','00.5000x004','三腔永久起搏器置入术','OP','3.0',1,0,'admin','admin'),
 (227499,'OP_FK3','00.5000x005','三腔永久起搏器置换术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (227500,'OP_FK3','00.5001','心脏再同步起搏器置入术','OP','3.0',1,0,'admin','admin'),
 (227501,'OP_FK3','00.5002','心脏再同步起搏器置换术','OP','3.0',1,0,'admin','admin'),
 (227502,'OP_FK3','00.5100x001','双心室起搏伴心内除颤器置入术','OP','3.0',1,0,'admin','admin'),
@@ -29507,7 +29507,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (227997,'OP_FQ1','93.1103','减重支持系统训练','OP','3.0',1,0,'admin','admin'),
 (227998,'OP_FQ1','93.1200x001','肌肉骨骼运动训练','OP','3.0',1,0,'admin','admin'),
 (227999,'OP_FQ1','93.1300x001','对抗阻力辅助运动训练','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (228000,'OP_FQ1','93.1301','等速肌力训练','OP','3.0',1,0,'admin','admin'),
 (228001,'OP_FQ1','93.1700x001','被动性肌肉骨骼运动训练','OP','3.0',1,0,'admin','admin'),
 (228002,'OP_FQ1','93.1800','呼吸训练','OP','3.0',1,0,'admin','admin'),
@@ -30008,7 +30008,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (228497,'DI_FT3','I38.x02','心脏瓣膜穿孔','DI','3.0',1,0,'admin','admin'),
 (228498,'DI_FT3','I38.x03','心脏瓣膜钙化','DI','3.0',1,0,'admin','admin'),
 (228499,'DI_FT3','I42.100x002','肥厚性主动脉瓣下狭窄','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (228500,'DI_FT3','I51.100x001','心脏腱索断裂','DI','3.0',1,0,'admin','admin'),
 (228501,'DI_FT3','I51.200x001','心脏乳头肌断裂','DI','3.0',1,0,'admin','admin'),
 (228502,'DI_FT3','I51.803','乳头肌功能不全','DI','3.0',1,0,'admin','admin'),
@@ -30509,7 +30509,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (228997,'DI_FW1','I27.001','特发性肺动脉高压[原发性肺动脉高压]','DI','3.0',1,0,'admin','admin'),
 (228998,'DI_FW1','I27.200x002','结缔组织病相关性肺动脉高压','DI','3.0',1,0,'admin','admin'),
 (228999,'DI_FW1','I27.200x003','门静脉高压性肺动脉高压','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (229000,'DI_FW1','I27.200x004','甲状腺相关性肺动脉高压','DI','3.0',1,0,'admin','admin'),
 (229001,'DI_FW1','I27.200x005','药物性肺动脉高压','DI','3.0',1,0,'admin','admin'),
 (229002,'DI_FW1','I27.200x006','食物抑制剂相关性肺动脉高压','DI','3.0',1,0,'admin','admin'),
@@ -31010,7 +31010,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (229497,'DI_FW1','S35.800x001','卵巢动脉损伤','DI','3.0',1,0,'admin','admin'),
 (229498,'DI_FW1','S45.000','腋动脉损伤','DI','3.0',1,0,'admin','admin'),
 (229499,'DI_FW1','S45.001','创伤性腋动脉破裂','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (229500,'DI_FW1','S45.101','创伤性肱动脉损伤','DI','3.0',1,0,'admin','admin'),
 (229501,'DI_FW1','S55.000x001','前臂尺动脉损伤','DI','3.0',1,0,'admin','admin'),
 (229502,'DI_FW1','S55.100x001','前臂桡动脉损伤','DI','3.0',1,0,'admin','admin'),
@@ -31511,7 +31511,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (229997,'DI_FZ1','T82.100x009','心脏电子装置电极导线断裂','DI','3.0',1,0,'admin','admin'),
 (229998,'DI_FZ1','T82.100x010','除颤器起搏功能不良','DI','3.0',1,0,'admin','admin'),
 (229999,'DI_FZ1','T82.100x011','除颤器感知功能不良','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (230000,'DI_FZ1','T82.100x012','心脏电子装置周围组织慢性疼痛','DI','3.0',1,0,'admin','admin'),
 (230001,'DI_FZ1','T82.100x013','心脏电子装置囊袋血肿','DI','3.0',1,0,'admin','admin'),
 (230002,'DI_FZ1','T82.100x014','心脏电子装置囊袋积液','DI','3.0',1,0,'admin','admin'),
@@ -32012,7 +32012,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (230497,'DI_G00','E73.800','乳糖不耐受,其他的','DI','3.0',1,0,'admin','admin'),
 (230498,'DI_G00','E73.900','乳糖不耐受','DI','3.0',1,0,'admin','admin'),
 (230499,'DI_G00','E84.102','远端肠梗阻综合症','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (230500,'DI_G00','E85.417+K93.8*','淀粉样变肠道损害','DI','3.0',1,0,'admin','admin'),
 (230501,'DI_G00','I77.400','腹腔动脉压迫综合征','DI','3.0',1,0,'admin','admin'),
 (230502,'DI_G00','I78.802','胃肠道毛细血管扩张症','DI','3.0',1,0,'admin','admin'),
@@ -32513,7 +32513,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (230997,'DI_G00','K57.106','小肠憩室炎','DI','3.0',1,0,'admin','admin'),
 (230998,'DI_G00','K57.107','空肠憩室炎','DI','3.0',1,0,'admin','admin'),
 (230999,'DI_G00','K57.108','十二指肠憩室炎','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (231000,'DI_G00','K57.200x001','大肠憩室伴穿孔','DI','3.0',1,0,'admin','admin'),
 (231001,'DI_G00','K57.201','大肠憩室病伴有脓肿','DI','3.0',1,0,'admin','admin'),
 (231002,'DI_G00','K57.202','结肠憩室伴腹膜炎','DI','3.0',1,0,'admin','admin'),
@@ -33014,7 +33014,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (231497,'DI_G00','Q43.800x009','先天性空肠异位','DI','3.0',1,0,'admin','admin'),
 (231498,'DI_G00','Q43.800x012','先天性小肠发育异常','DI','3.0',1,0,'admin','admin'),
 (231499,'DI_G00','Q43.800x014','先天性十二指肠憩室','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (231500,'DI_G00','Q43.800x015','先天性小肠憩室','DI','3.0',1,0,'admin','admin'),
 (231501,'DI_G00','Q43.800x017','先天性盲肠憩室','DI','3.0',1,0,'admin','admin'),
 (231502,'DI_G00','Q43.800x018','先天性乙状结肠憩室','DI','3.0',1,0,'admin','admin'),
@@ -33515,7 +33515,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (231997,'OP2_GB1','70.3302','阴道病损破坏术','OP','3.0',1,0,'admin','admin'),
 (231998,'OP2_GB1','70.4x01','阴道切除术','OP','3.0',1,0,'admin','admin'),
 (231999,'OP2_GB1','70.4x02','阴道部分切除术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (232000,'OP2_GB1','70.4x05','腹腔镜辅助阴道切除术','OP','3.0',1,0,'admin','admin'),
 (232001,'OP_GB2','30.3x03','喉咽食管切除术','OP','3.0',1,0,'admin','admin'),
 (232002,'OP_GB2','42.4000','食管切除术','OP','3.0',1,0,'admin','admin'),
@@ -34016,7 +34016,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (232497,'OP_GC3','46.4300x005','结肠造口扩大术','OP','3.0',1,0,'admin','admin'),
 (232498,'OP_GC3','46.4301','结肠造口修复术','OP','3.0',1,0,'admin','admin'),
 (232499,'OP_GC3','46.4302','横结肠造口修复术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (232500,'OP_GC3','46.4303','降结肠造口修复术','OP','3.0',1,0,'admin','admin'),
 (232501,'OP_GC3','46.5000','肠造口闭合术','OP','3.0',1,0,'admin','admin'),
 (232502,'OP_GC3','46.5100x002','回肠造口还纳术','OP','3.0',1,0,'admin','admin'),
@@ -34517,7 +34517,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (232997,'OP_GJ1','54.4x10','腹腔镜下盆腔腹膜病损切除术','OP','3.0',1,0,'admin','admin'),
 (232998,'OP_GJ1','54.4x11','腹腔镜下腹膜病损切除术','OP','3.0',1,0,'admin','admin'),
 (232999,'OP_GJ1','54.4x12','腹腔镜下网膜病损切除术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (233000,'OP_GJ1','54.4x13','腹腔镜下肠系膜病损切除术','OP','3.0',1,0,'admin','admin'),
 (233001,'OP_GJ1','54.4x14','腹腔镜下网膜部分切除术','OP','3.0',1,0,'admin','admin'),
 (233002,'OP_GJ1','54.4x16','腹腔镜下网膜切除术','OP','3.0',1,0,'admin','admin'),
@@ -35018,7 +35018,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (233497,'DI_GU2','K26.900x001','十二指肠溃疡','DI','3.0',1,0,'admin','admin'),
 (233498,'DI_GU2','K26.900x002','十二指肠球部溃疡','DI','3.0',1,0,'admin','admin'),
 (233499,'DI_GU2','K27.000','急性消化性溃疡伴有出血','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (233500,'DI_GU2','K27.300','急性消化性溃疡不伴有出血和穿孔','DI','3.0',1,0,'admin','admin'),
 (233501,'DI_GU2','K27.400','慢性消化性溃疡伴有出血','DI','3.0',1,0,'admin','admin'),
 (233502,'DI_GU2','K27.400x001','多发性溃疡伴出血','DI','3.0',1,0,'admin','admin'),
@@ -35519,7 +35519,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (233997,'DI_GZ1','D37.901','消化器官肿瘤','DI','3.0',1,0,'admin','admin'),
 (233998,'DI_GZ1','D48.117','腹壁结缔组织动态未定肿瘤','DI','3.0',1,0,'admin','admin'),
 (233999,'DI_GZ1','D48.121','腹股沟结缔组织动态未定肿瘤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (234000,'DI_GZ1','D48.129','直肠阴道隔结缔组织动态未定肿瘤','DI','3.0',1,0,'admin','admin'),
 (234001,'DI_GZ1','D48.300x001','腹膜后交界性肿瘤','DI','3.0',1,0,'admin','admin'),
 (234002,'DI_GZ1','D48.301','腹膜后肿瘤','DI','3.0',1,0,'admin','admin'),
@@ -36020,7 +36020,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (234497,'DI_GZ1','K91.100','胃手术后综合征','DI','3.0',1,0,'admin','admin'),
 (234498,'DI_GZ1','K91.100x001','迟发型倾倒综合征','DI','3.0',1,0,'admin','admin'),
 (234499,'DI_GZ1','K91.101','倾倒综合征','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (234500,'DI_GZ1','K91.102','残窦综合征','DI','3.0',1,0,'admin','admin'),
 (234501,'DI_GZ1','K91.103','迷走神经切断后综合征','DI','3.0',1,0,'admin','admin'),
 (234502,'DI_GZ1','K91.200x002','手术后吸收不良综合征','DI','3.0',1,0,'admin','admin'),
@@ -36521,7 +36521,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (234997,'DI_H00','D13.700x001','朗格汉斯胰岛','DI','3.0',1,0,'admin','admin'),
 (234998,'DI_H00','D13.701','胰岛细胞瘤','DI','3.0',1,0,'admin','admin'),
 (234999,'DI_H00','D17.700x015','肝脂肪瘤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (235000,'DI_H00','D18.000x031','胰腺血管瘤','DI','3.0',1,0,'admin','admin'),
 (235001,'DI_H00','D18.013','肝血管瘤','DI','3.0',1,0,'admin','admin'),
 (235002,'DI_H00','D37.600x001','胆囊交界性肿瘤','DI','3.0',1,0,'admin','admin'),
@@ -37022,7 +37022,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (235497,'DI_H00','Q44.700x002','阿拉杰里综合征[Alagille综合征]','DI','3.0',1,0,'admin','admin'),
 (235498,'DI_H00','Q44.700x003','肝异位','DI','3.0',1,0,'admin','admin'),
 (235499,'DI_H00','Q44.700x004','先天性多囊肝','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (235500,'DI_H00','Q44.701','先天性肝内胆管发育不良征','DI','3.0',1,0,'admin','admin'),
 (235501,'DI_H00','Q44.702','先天性肝脏畸形','DI','3.0',1,0,'admin','admin'),
 (235502,'DI_H00','Q44.703','先天性肝纤维化','DI','3.0',1,0,'admin','admin'),
@@ -37523,7 +37523,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (235997,'OP_HJ1','50.6900x002','肝修补术','OP','3.0',1,0,'admin','admin'),
 (235998,'OP_HJ1','50.6900x003','供体肝修补术','OP','3.0',1,0,'admin','admin'),
 (235999,'OP_HJ1','50.6901','肝固定术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (236000,'OP_HJ1','50.9200x001','肝透析[人工肝治疗]','OP','3.0',1,0,'admin','admin'),
 (236001,'OP_HJ1','50.9201','肝透析','OP','3.0',1,0,'admin','admin'),
 (236002,'OP_HJ1','50.9900x003','肝止血术','OP','3.0',1,0,'admin','admin'),
@@ -38024,7 +38024,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (236497,'DI_HS3','B17.902','急性黄疸型病毒性肝炎','DI','3.0',1,0,'admin','admin'),
 (236498,'DI_HS3','B17.903','急性传染性肝炎，未特指','DI','3.0',1,0,'admin','admin'),
 (236499,'DI_HS3','B17.904','急性肝炎，未特指','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (236500,'DI_HS3','B18.000','慢性乙型病毒性肝炎，伴有δ因子','DI','3.0',1,0,'admin','admin'),
 (236501,'DI_HS3','B18.001','慢性乙型丁型病毒性肝炎','DI','3.0',1,0,'admin','admin'),
 (236502,'DI_HS3','B18.002','慢性乙型丁型病毒性肝炎轻度','DI','3.0',1,0,'admin','admin'),
@@ -38525,7 +38525,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (236997,'DI_HZ3','K86.105','慢性间质性胰腺炎','DI','3.0',1,0,'admin','admin'),
 (236998,'DI_HZ3','K86.106','慢性囊性胰腺炎','DI','3.0',1,0,'admin','admin'),
 (236999,'DI_HZ3','K86.107','慢性纤维性胰腺炎','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (237000,'DI_HZ3','K86.200','胰腺囊肿','DI','3.0',1,0,'admin','admin'),
 (237001,'DI_HZ3','K86.300','胰腺假囊肿','DI','3.0',1,0,'admin','admin'),
 (237002,'DI_HZ3','K86.800x001','胰腺肿大','DI','3.0',1,0,'admin','admin'),
@@ -39026,7 +39026,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (237497,'DI_I00','I70.218','闭塞性周围动脉粥样硬化伴坏疽','DI','3.0',1,0,'admin','admin'),
 (237498,'DI_I00','I70.219','肢体动脉硬化性闭塞症伴坏疽','DI','3.0',1,0,'admin','admin'),
 (237499,'DI_I00','K50.902+M07.4*','克罗恩病性关节病','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (237500,'DI_I00','K51.904+M07.5*','溃疡性结肠炎性关节病','DI','3.0',1,0,'admin','admin'),
 (237501,'DI_I00','K52.913+M07.6*','肠病性关节炎','DI','3.0',1,0,'admin','admin'),
 (237502,'DI_I00','L40.501+M07.3*','银屑病性关节炎','DI','3.0',1,0,'admin','admin'),
@@ -39527,7 +39527,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (237997,'DI_I00','M25.810','关节周围异位骨化','DI','3.0',1,0,'admin','admin'),
 (237998,'DI_I00','M25.900x031','腕关节肿物','DI','3.0',1,0,'admin','admin'),
 (237999,'DI_I00','M25.900x061','膝关节肿物','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (238000,'DI_I00','M25.901','关节肿物','DI','3.0',1,0,'admin','admin'),
 (238001,'DI_I00','M30.000','结节性多动脉炎','DI','3.0',1,0,'admin','admin'),
 (238002,'DI_I00','M30.001+G73.7*','结节性多动脉炎性肌病','DI','3.0',1,0,'admin','admin'),
@@ -40028,7 +40028,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (238497,'DI_I00','M67.402','关节腱鞘囊肿','DI','3.0',1,0,'admin','admin'),
 (238498,'DI_I00','M67.800x041','手指屈肌肌腱粘连','DI','3.0',1,0,'admin','admin'),
 (238499,'DI_I00','M67.800x091','滑膜脂肪疝','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (238500,'DI_I00','M67.800x092','肌腱滑脱','DI','3.0',1,0,'admin','admin'),
 (238501,'DI_I00','M67.800x093','肌腱松弛','DI','3.0',1,0,'admin','admin'),
 (238502,'DI_I00','M67.800x094','滑膜嵌顿','DI','3.0',1,0,'admin','admin'),
@@ -40529,7 +40529,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (238997,'DI_I00','M89.301','跖骨肥大','DI','3.0',1,0,'admin','admin'),
 (238998,'DI_I00','M89.302','跗骨肥大','DI','3.0',1,0,'admin','admin'),
 (238999,'DI_I00','M89.303','面骨骨质增生','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (239000,'DI_I00','M89.304','剑突骨质增生','DI','3.0',1,0,'admin','admin'),
 (239001,'DI_I00','M89.305','颧骨肥大','DI','3.0',1,0,'admin','admin'),
 (239002,'DI_I00','M89.306','骨过度生长','DI','3.0',1,0,'admin','admin'),
@@ -41030,7 +41030,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (239497,'DI_I00','Q78.000','成骨不全','DI','3.0',1,0,'admin','admin'),
 (239498,'DI_I00','Q78.100','多骨纤维性结构不良','DI','3.0',1,0,'admin','admin'),
 (239499,'DI_I00','Q78.100x001','先天性弥漫性纤维性骨炎','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (239500,'DI_I00','Q78.100x002','多发性骨纤维发育不良伴性早熟综合征[Albright综合征]','DI','3.0',1,0,'admin','admin'),
 (239501,'DI_I00','Q78.200','骨硬化症','DI','3.0',1,0,'admin','admin'),
 (239502,'DI_I00','Q78.201','播散性骨硬化病','DI','3.0',1,0,'admin','admin'),
@@ -41531,7 +41531,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (239997,'DI_I00','S62.200','第一掌骨骨折','DI','3.0',1,0,'admin','admin'),
 (239998,'DI_I00','S62.200x011','第一掌骨基底骨折','DI','3.0',1,0,'admin','admin'),
 (239999,'DI_I00','S62.200x021','第一掌骨干骨折','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (240000,'DI_I00','S62.200x031','第一掌骨颈骨折','DI','3.0',1,0,'admin','admin'),
 (240001,'DI_I00','S62.200x041','第一掌骨头骨折','DI','3.0',1,0,'admin','admin'),
 (240002,'DI_I00','S62.201','贝内特骨折','DI','3.0',1,0,'admin','admin'),
@@ -42032,7 +42032,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (240497,'DI_I00','T09.200','躯干关节和韧带脱位、扭伤和劳损','DI','3.0',1,0,'admin','admin'),
 (240498,'DI_I00','T09.200x001','躯干关节和韧带脱位','DI','3.0',1,0,'admin','admin'),
 (240499,'DI_I00','T09.200x002','躯干关节脱位','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (240500,'DI_I00','T09.200x003','躯干韧带脱位','DI','3.0',1,0,'admin','admin'),
 (240501,'DI_I00','T09.200x004','躯干关节和韧带扭伤','DI','3.0',1,0,'admin','admin'),
 (240502,'DI_I00','T09.200x005','躯干关节扭伤','DI','3.0',1,0,'admin','admin'),
@@ -42533,7 +42533,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (240997,'DI_IA2','C85.900x034','周围神经血管内淋巴瘤','DI','3.0',1,0,'admin','admin'),
 (240998,'DI_IA2','D16.000x002','肩胛骨良性肿瘤','DI','3.0',1,0,'admin','admin'),
 (240999,'DI_IA2','D16.001','上肢长骨良性肿瘤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (241000,'DI_IA2','D16.002','肱骨良性肿瘤','DI','3.0',1,0,'admin','admin'),
 (241001,'DI_IA2','D16.003','桡骨良性肿瘤','DI','3.0',1,0,'admin','admin'),
 (241002,'DI_IA2','D16.004','尺骨良性肿瘤','DI','3.0',1,0,'admin','admin'),
@@ -43034,7 +43034,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (241497,'DI_IB1','Q76.417','先天性腰椎畸形','DI','3.0',1,0,'admin','admin'),
 (241498,'DI_IB1','Q76.418','先天性第五腰椎骶化','DI','3.0',1,0,'admin','admin'),
 (241499,'OP1_IB1','03.0900x025','腰椎前路椎板切除减压术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (241500,'OP1_IB1','03.0900x026','腰椎后路椎板切除减压术','OP','3.0',1,0,'admin','admin'),
 (241501,'OP1_IB1','03.0900x027','腰椎后路椎板成形术','OP','3.0',1,0,'admin','admin'),
 (241502,'OP1_IB1','03.0900x028','骶椎后路椎管减压术','OP','3.0',1,0,'admin','admin'),
@@ -43535,7 +43535,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (241997,'OP_IC4','81.4400x001','异体韧带重建膝关节内侧支持带术','OP','3.0',1,0,'admin','admin'),
 (241998,'OP_IC4','81.4400x002','异体韧带重建膝关节外侧支持带术','OP','3.0',1,0,'admin','admin'),
 (241999,'OP_IC4','81.4401','关节镜髌骨稳定术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (242000,'OP_IC4','81.4402','髌骨支持带外侧松解，内侧紧缩术','OP','3.0',1,0,'admin','admin'),
 (242001,'OP_IC4','81.4403','髌骨习惯性脱位韧带成形术','OP','3.0',1,0,'admin','admin'),
 (242002,'OP_IC4','81.4501','膝关节前交叉韧带重建术','OP','3.0',1,0,'admin','admin'),
@@ -44036,7 +44036,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (242497,'OP1_ID1','79.1700x005','跖骨骨折闭合复位钢针内固定术','OP','3.0',1,0,'admin','admin'),
 (242498,'OP1_ID1','79.1700x006','跖骨骨折闭合复位螺钉内固定术','OP','3.0',1,0,'admin','admin'),
 (242499,'OP1_ID1','79.1700x007','跗骨骨折闭合复位螺钉内固定术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (242500,'OP1_ID1','79.1700x009','跟骨骨折闭合复位钢针内固定术','OP','3.0',1,0,'admin','admin'),
 (242501,'OP1_ID1','79.1700x010','跟骨骨折闭合复位螺钉内固定术','OP','3.0',1,0,'admin','admin'),
 (242502,'OP1_ID1','79.1700x011','跖骨骨折闭合复位髓内针内固定术','OP','3.0',1,0,'admin','admin'),
@@ -44537,7 +44537,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (242997,'OP_IE3','84.1200','经足截断术','OP','3.0',1,0,'admin','admin'),
 (242998,'OP_IE3','84.1500x002','经胫骨和腓骨的小腿离断术','OP','3.0',1,0,'admin','admin'),
 (242999,'OP_IE3','84.1501','小腿截断术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (243000,'OP_IE3','84.2601','断足再植术','OP','3.0',1,0,'admin','admin'),
 (243001,'OP_IE3','84.2701','小腿断肢再植术','OP','3.0',1,0,'admin','admin'),
 (243002,'OP_IE3','84.2801','大腿断肢再植术','OP','3.0',1,0,'admin','admin'),
@@ -45038,7 +45038,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (243497,'OP_IG1','04.0202','颞下三叉神经根切断术','OP','3.0',1,0,'admin','admin'),
 (243498,'OP_IG1','04.0300x002','闭孔神经切断术','OP','3.0',1,0,'admin','admin'),
 (243499,'OP_IG1','04.0300x003','脊神经根切断术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (243500,'OP_IG1','04.0300x009','颈神经后根切断术','OP','3.0',1,0,'admin','admin'),
 (243501,'OP_IG1','04.0300x010','腰骶神经后根切断术','OP','3.0',1,0,'admin','admin'),
 (243502,'OP_IG1','04.0301','颅神经切断术','OP','3.0',1,0,'admin','admin'),
@@ -45539,7 +45539,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (243997,'OP_IH1','83.9103','臀筋膜挛缩松解术','OP','3.0',1,0,'admin','admin'),
 (243998,'OP_IH1','83.9104','筋膜松解术','OP','3.0',1,0,'admin','admin'),
 (243999,'OP_IH1','83.9105','针刀松解术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (244000,'OP_IH1','83.9201','骨骼肌刺激器置入术','OP','3.0',1,0,'admin','admin'),
 (244001,'OP_IH1','83.9202','骨骼肌刺激器置换术','OP','3.0',1,0,'admin','admin'),
 (244002,'OP_IH1','83.9300','去除骨骼肌刺激器','OP','3.0',1,0,'admin','admin'),
@@ -46040,7 +46040,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (244497,'DI_IS1','S66.500x006','腕部指内在肌腱损伤','DI','3.0',1,0,'admin','admin'),
 (244498,'DI_IS1','S66.500x007','手部指内在肌和肌腱损伤','DI','3.0',1,0,'admin','admin'),
 (244499,'DI_IS1','S66.500x008','手部指内在肌损伤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (244500,'DI_IS1','S66.500x009','手部指内在肌腱损伤','DI','3.0',1,0,'admin','admin'),
 (244501,'DI_IS1','S66.600x001','腕和手多处屈肌和肌腱损伤','DI','3.0',1,0,'admin','admin'),
 (244502,'DI_IS1','S66.601','多发性手屈肌断裂','DI','3.0',1,0,'admin','admin'),
@@ -46541,7 +46541,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (244997,'DI_IS2','S93.200x002','踝部韧带断裂','DI','3.0',1,0,'admin','admin'),
 (244998,'DI_IS2','S93.200x004','踝距腓前韧带断裂','DI','3.0',1,0,'admin','admin'),
 (244999,'DI_IS2','S93.200x005','跟腓韧带断裂','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (245000,'DI_IS2','S93.400','踝扭伤和劳损','DI','3.0',1,0,'admin','admin'),
 (245001,'DI_IS2','S93.400x002','踝关节损伤','DI','3.0',1,0,'admin','admin'),
 (245002,'DI_IS2','S93.400x003','创伤性踝关节积血','DI','3.0',1,0,'admin','admin'),
@@ -47042,7 +47042,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (245497,'DI_IU1','M16.900','髋关节病','DI','3.0',1,0,'admin','admin'),
 (245498,'DI_IU1','M16.900x002','双侧髋关节骨性关节病','DI','3.0',1,0,'admin','admin'),
 (245499,'DI_IU1','M16.900x011','髋关节周围炎','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (245500,'DI_IU1','M16.900x012','髋关节退行性病变','DI','3.0',1,0,'admin','admin'),
 (245501,'DI_IU1','M16.901','老年性髋关节病','DI','3.0',1,0,'admin','admin'),
 (245502,'DI_IU1','M17.000','原发性双侧膝关节病','DI','3.0',1,0,'admin','admin'),
@@ -47543,7 +47543,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (245997,'DI_IU2','M48.811','肌性脊柱炎','DI','3.0',1,0,'admin','admin'),
 (245998,'DI_IU2','M48.812','老年性脊椎萎缩','DI','3.0',1,0,'admin','admin'),
 (245999,'DI_IU2','M48.900x002','腰椎骨质增生','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (246000,'DI_IU2','M48.901','颈椎退行性病变','DI','3.0',1,0,'admin','admin'),
 (246001,'DI_IU2','M48.902','胸椎退行性病变','DI','3.0',1,0,'admin','admin'),
 (246002,'DI_IU2','M48.903','腰椎退行性病变','DI','3.0',1,0,'admin','admin'),
@@ -48044,7 +48044,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (246497,'DI_IV1','Q68.300x002','先天性股骨短缩畸形','DI','3.0',1,0,'admin','admin'),
 (246498,'DI_IV1','Q68.401','先天性腓骨弯曲','DI','3.0',1,0,'admin','admin'),
 (246499,'DI_IV1','Q68.402','先天性胫骨弯曲','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (246500,'DI_IV1','Q68.500','先天性腿长骨弯曲','DI','3.0',1,0,'admin','admin'),
 (246501,'DI_IV1','Q68.501','先天性弓形腿','DI','3.0',1,0,'admin','admin'),
 (246502,'DI_IV1','Q68.800x006','先天性桡骨小头半脱位','DI','3.0',1,0,'admin','admin'),
@@ -48545,7 +48545,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (246997,'DI_IZ2','M21.900x011','后天性肩关节变形','DI','3.0',1,0,'admin','admin'),
 (246998,'DI_IZ2','M21.900x041','后天性腕关节变形','DI','3.0',1,0,'admin','admin'),
 (246999,'DI_IZ2','M21.900x051','后天性上肢变形','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (247000,'DI_IZ2','M21.901','后天性上臂畸形','DI','3.0',1,0,'admin','admin'),
 (247001,'DI_IZ2','M21.902','后天性尺骨畸形','DI','3.0',1,0,'admin','admin'),
 (247002,'DI_IZ2','M21.903','后天性桡骨畸形','DI','3.0',1,0,'admin','admin'),
@@ -49046,7 +49046,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (247497,'DI_IZ2','M79.500x061','小腿软组织异物残留','DI','3.0',1,0,'admin','admin'),
 (247498,'DI_IZ2','M79.500x082','躯干软组织异物残留','DI','3.0',1,0,'admin','admin'),
 (247499,'DI_IZ2','M79.501','肩区软组织异物残留','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (247500,'DI_IZ2','M79.502','上臂软组织异物残留','DI','3.0',1,0,'admin','admin'),
 (247501,'DI_IZ2','M79.503','前臂软组织异物残留','DI','3.0',1,0,'admin','admin'),
 (247502,'DI_IZ2','M79.504','手软组织异物残留','DI','3.0',1,0,'admin','admin'),
@@ -49547,7 +49547,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (247997,'DI_J00','D03.800','原位黑色素瘤，其他部位的','DI','3.0',1,0,'admin','admin'),
 (247998,'DI_J00','D03.900','原位黑色素瘤','DI','3.0',1,0,'admin','admin'),
 (247999,'DI_J00','D03.900x002','浅表扩散性原位黑色素瘤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (248000,'DI_J00','D04.500','躯干皮肤原位癌','DI','3.0',1,0,'admin','admin'),
 (248001,'DI_J00','D04.501','乳房皮肤原位癌','DI','3.0',1,0,'admin','admin'),
 (248002,'DI_J00','D04.502','肛门边缘皮肤原位癌','DI','3.0',1,0,'admin','admin'),
@@ -50048,7 +50048,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (248497,'DI_J00','L50.600','接触性荨麻疹','DI','3.0',1,0,'admin','admin'),
 (248498,'DI_J00','L50.801','急性荨麻疹','DI','3.0',1,0,'admin','admin'),
 (248499,'DI_J00','L50.802','慢性荨麻疹','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (248500,'DI_J00','L50.803','胃肠型荨麻疹','DI','3.0',1,0,'admin','admin'),
 (248501,'DI_J00','L50.900','荨麻疹','DI','3.0',1,0,'admin','admin'),
 (248502,'DI_J00','L51.000','非大疱型多形性红斑','DI','3.0',1,0,'admin','admin'),
@@ -50549,7 +50549,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (248997,'DI_J00','N60.202','乳腺纤维囊性增生','DI','3.0',1,0,'admin','admin'),
 (248998,'DI_J00','N60.300','乳房纤维硬化','DI','3.0',1,0,'admin','admin'),
 (248999,'DI_J00','N60.400','乳管扩张症','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (249000,'DI_J00','N60.801','乳腺不典型增生','DI','3.0',1,0,'admin','admin'),
 (249001,'DI_J00','N60.900','良性乳腺发育不良','DI','3.0',1,0,'admin','admin'),
 (249002,'DI_J00','N61.x00x004','乳头炎','DI','3.0',1,0,'admin','admin'),
@@ -51050,7 +51050,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (249497,'OP4_JA1','40.2900x002','单纯淋巴结切除术','OP','3.0',1,0,'admin','admin'),
 (249498,'OP4_JA1','40.2901','锁骨上淋巴结切除术','OP','3.0',1,0,'admin','admin'),
 (249499,'OP4_JA1','40.2910','淋巴管瘤切除术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (249500,'OP4_JA1','40.3x00x001','淋巴结扩大性区域性切除术','OP','3.0',1,0,'admin','admin'),
 (249501,'OP4_JA1','40.3x00x002','淋巴结区域性切除术','OP','3.0',1,0,'admin','admin'),
 (249502,'OP4_JA1','40.3x00x003','腔镜下区域性腋窝淋巴结区域切除术','OP','3.0',1,0,'admin','admin'),
@@ -51551,7 +51551,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (249997,'OP_JJ1','18.3901','外耳切断术','OP','3.0',1,0,'admin','admin'),
 (249998,'OP_JJ1','20.5100x002','耳后病损切除术','OP','3.0',1,0,'admin','admin'),
 (249999,'OP_JJ1','21.3201','鼻部皮肤病损切除术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (250000,'OP_JJ1','21.4x00','鼻部分切除术','OP','3.0',1,0,'admin','admin'),
 (250001,'OP_JJ1','21.7200','鼻骨折开放性复位术','OP','3.0',1,0,'admin','admin'),
 (250002,'OP_JJ1','21.7200x001','内镜下鼻骨骨折切开复位术','OP','3.0',1,0,'admin','admin'),
@@ -52052,7 +52052,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (250497,'DI_JS2','L11.900','皮肤棘层松解性疾患','DI','3.0',1,0,'admin','admin'),
 (250498,'DI_JS2','L12.000','大疱性类天疱疮','DI','3.0',1,0,'admin','admin'),
 (250499,'DI_JS2','L12.100','瘢痕性类天疱疮','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (250500,'DI_JS2','L12.101','良性黏膜类天疱疮','DI','3.0',1,0,'admin','admin'),
 (250501,'DI_JS2','L12.102+H13.3*','结膜天疱疹','DI','3.0',1,0,'admin','admin'),
 (250502,'DI_JS2','L12.103+H13.3*','眼天疱疹','DI','3.0',1,0,'admin','admin'),
@@ -52553,7 +52553,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (250997,'DI_JV1','D22.502','背黑素细胞痣','DI','3.0',1,0,'admin','admin'),
 (250998,'DI_JV1','D22.503','乳房黑素细胞痣','DI','3.0',1,0,'admin','admin'),
 (250999,'DI_JV1','D22.504','耻骨黑素细胞痣','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (251000,'DI_JV1','D22.505','会阴黑素细胞痣','DI','3.0',1,0,'admin','admin'),
 (251001,'DI_JV1','D22.506','肛门边缘黑素细胞痣','DI','3.0',1,0,'admin','admin'),
 (251002,'DI_JV1','D22.507','肛门皮肤黑素细胞痣','DI','3.0',1,0,'admin','admin'),
@@ -53054,7 +53054,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (251497,'DI_JZ1','L66.000','假性斑秃','DI','3.0',1,0,'admin','admin'),
 (251498,'DI_JZ1','L66.100','毛发扁平苔藓','DI','3.0',1,0,'admin','admin'),
 (251499,'DI_JZ1','L66.200','脱发性毛囊炎','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (251500,'DI_JZ1','L66.400','网状红斑性毛囊炎','DI','3.0',1,0,'admin','admin'),
 (251501,'DI_JZ1','L66.800','瘢痕性脱发，其他的','DI','3.0',1,0,'admin','admin'),
 (251502,'DI_JZ1','L66.900','瘢痕性脱发','DI','3.0',1,0,'admin','admin'),
@@ -53555,7 +53555,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (251997,'DI_K00','E06.304','桥本甲状腺炎','DI','3.0',1,0,'admin','admin'),
 (251998,'DI_K00','E06.400','药物性甲状腺炎','DI','3.0',1,0,'admin','admin'),
 (251999,'DI_K00','E06.400x002','医源性甲状腺炎','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (252000,'DI_K00','E06.500x001','慢性侵袭性甲状腺炎','DI','3.0',1,0,'admin','admin'),
 (252001,'DI_K00','E06.500x002','慢性纤维性甲状腺炎','DI','3.0',1,0,'admin','admin'),
 (252002,'DI_K00','E06.500x004','甲状腺炎性包块','DI','3.0',1,0,'admin','admin'),
@@ -54056,7 +54056,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (252497,'DI_K00','E65.x08','面颊脂肪堆积','DI','3.0',1,0,'admin','admin'),
 (252498,'DI_K00','E65.x09','大腿脂肪堆积','DI','3.0',1,0,'admin','admin'),
 (252499,'DI_K00','E65.x10','腹部脂肪堆积','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (252500,'DI_K00','E65.x11','臀部脂肪堆积','DI','3.0',1,0,'admin','admin'),
 (252501,'DI_K00','E65.x12','盆腔脂肪增多症','DI','3.0',1,0,'admin','admin'),
 (252502,'DI_K00','E65.x13','硬膜外脂肪过多症','DI','3.0',1,0,'admin','admin'),
@@ -54557,7 +54557,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (252997,'OP_KD2','06.8905','移植甲状旁腺切除术','OP','3.0',1,0,'admin','admin'),
 (252998,'OP_KD2','06.9100x001','甲状腺峡部横断术','OP','3.0',1,0,'admin','admin'),
 (252999,'OP_KD2','06.9200','甲状腺血管结扎术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (253000,'OP_KD2','06.9300','甲状腺缝合术','OP','3.0',1,0,'admin','admin'),
 (253001,'OP_KD2','06.9501','甲状旁腺自体移植术','OP','3.0',1,0,'admin','admin'),
 (253002,'OP_KD2','06.9502','甲状旁腺异体移植术','OP','3.0',1,0,'admin','admin'),
@@ -55058,7 +55058,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (253497,'DI_KR1','D35.200x010','垂体瘤','DI','3.0',1,0,'admin','admin'),
 (253498,'DI_KR1','D35.200x011','复杂垂体瘤','DI','3.0',1,0,'admin','admin'),
 (253499,'DI_KR1','D35.601','节旁体良性肿瘤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (253500,'DI_KR1','D35.800','累及多个腺体的良性肿瘤','DI','3.0',1,0,'admin','admin'),
 (253501,'DI_KR1','D35.900','内分泌腺良性肿瘤','DI','3.0',1,0,'admin','admin'),
 (253502,'DI_KR1','D44.000x001','甲状腺交界性肿瘤','DI','3.0',1,0,'admin','admin'),
@@ -55559,7 +55559,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (253997,'DI_KT1','E27.807','大结节性肾上腺皮质增生','DI','3.0',1,0,'admin','admin'),
 (253998,'DI_KT1','E27.808','原发性色素性结节性肾上腺皮质增生','DI','3.0',1,0,'admin','admin'),
 (253999,'DI_KT1','E27.809','肾上腺囊肿伴囊内出血','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (254000,'DI_KT1','E27.810','肾上腺假性囊肿','DI','3.0',1,0,'admin','admin'),
 (254001,'DI_KT1','E27.901','肾上腺肿物','DI','3.0',1,0,'admin','admin'),
 (254002,'DI_KT1','E30.000','青春期延迟','DI','3.0',1,0,'admin','admin'),
@@ -56060,7 +56060,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (254497,'DI_KZ1','E87.701','水中毒','DI','3.0',1,0,'admin','admin'),
 (254498,'DI_KZ1','E87.800x004','低钾钠氯综合征','DI','3.0',1,0,'admin','admin'),
 (254499,'DI_KZ1','E87.801','电解质代谢紊乱','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (254500,'DI_KZ1','E87.802','高氯血症','DI','3.0',1,0,'admin','admin'),
 (254501,'DI_KZ1','E87.803','低氯血症','DI','3.0',1,0,'admin','admin'),
 (254502,'DI_KZ1','E89.102','手术后低胰岛素血症','DI','3.0',1,0,'admin','admin'),
@@ -56561,7 +56561,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (254997,'DI_L00','N28.832','输尿管疝','DI','3.0',1,0,'admin','admin'),
 (254998,'DI_L00','N28.833','输尿管息肉','DI','3.0',1,0,'admin','admin'),
 (254999,'DI_L00','N28.834','输尿管炎','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (255000,'DI_L00','N28.835','输尿管直肠瘘','DI','3.0',1,0,'admin','admin'),
 (255001,'DI_L00','N28.836','囊性输尿管炎','DI','3.0',1,0,'admin','admin'),
 (255002,'DI_L00','N28.837','被动性肾充血','DI','3.0',1,0,'admin','admin'),
@@ -57062,7 +57062,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (255497,'OP_LB1','55.0300x007','经皮肾镜取石术(II期)(同次住院)','OP','3.0',1,0,'admin','admin'),
 (255498,'OP_LB1','55.0301','经皮肾盂造口取石术','OP','3.0',1,0,'admin','admin'),
 (255499,'OP_LB1','55.0302','经皮肾镜取石术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (255500,'OP_LB1','55.0400x005','经皮肾镜超声碎石取石术(II期)(再次住院)','OP','3.0',1,0,'admin','admin'),
 (255501,'OP_LB1','55.0400x006','经皮肾镜激光碎石取石术(II期)(再次住院)','OP','3.0',1,0,'admin','admin'),
 (255502,'OP_LB1','55.0400x007','经皮肾镜气压弹道碎石取石术(II期)(再次住院)','OP','3.0',1,0,'admin','admin'),
@@ -57563,7 +57563,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (255997,'DI_LR1','I13.100x001','高血压性心脏病和肾脏病伴肾衰竭','DI','3.0',1,0,'admin','admin'),
 (255998,'DI_LR1','N00.000','急性肾炎综合征伴有轻微的肾小球异常','DI','3.0',1,0,'admin','admin'),
 (255999,'DI_LR1','N00.100x001','局灶坏死性肾小球肾炎','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (256000,'DI_LR1','N00.200','急性肾炎综合征伴有弥漫性膜性肾小球肾炎','DI','3.0',1,0,'admin','admin'),
 (256001,'DI_LR1','N00.301','急性系膜增殖性肾小球肾炎','DI','3.0',1,0,'admin','admin'),
 (256002,'DI_LR1','N00.400','急性肾炎综合征伴有弥漫性毛细血管内增生性肾小球肾炎','DI','3.0',1,0,'admin','admin'),
@@ -58064,7 +58064,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (256497,'DI_LW1','R35.x00x001','尿频','DI','3.0',1,0,'admin','admin'),
 (256498,'DI_LW1','R35.x00x003','夜尿增多','DI','3.0',1,0,'admin','admin'),
 (256499,'DI_LW1','R36.x01','尿道溢液','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (256500,'DI_LW1','R39.000','尿外渗','DI','3.0',1,0,'admin','admin'),
 (256501,'DI_LW1','R39.100x001','尿线分叉','DI','3.0',1,0,'admin','admin'),
 (256502,'DI_LW1','R39.100x002','尿线不佳','DI','3.0',1,0,'admin','admin'),
@@ -58565,7 +58565,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (256997,'DI_M00','D29.100','前列腺良性肿瘤','DI','3.0',1,0,'admin','admin'),
 (256998,'DI_M00','D29.200','睾丸良性肿瘤','DI','3.0',1,0,'admin','admin'),
 (256999,'DI_M00','D29.300','附睾良性肿瘤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (257000,'DI_M00','D29.400','阴囊良性肿瘤','DI','3.0',1,0,'admin','admin'),
 (257001,'DI_M00','D29.401','阴囊皮肤良性肿瘤','DI','3.0',1,0,'admin','admin'),
 (257002,'DI_M00','D29.700x004','输精管良性肿瘤','DI','3.0',1,0,'admin','admin'),
@@ -59066,7 +59066,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (257497,'OP_MJ1','40.5400x003','腹股沟浅淋巴结清扫术','OP','3.0',1,0,'admin','admin'),
 (257498,'OP_MJ1','40.5909','肠系膜淋巴结清扫术','OP','3.0',1,0,'admin','admin'),
 (257499,'OP_MJ1','40.5910','盆腔淋巴结清扫术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (257500,'OP_MJ1','40.5912','腹腔镜盆腔淋巴结清扫术','OP','3.0',1,0,'admin','admin'),
 (257501,'OP_MJ1','54.0x00x010','腹壁血肿清除术','OP','3.0',1,0,'admin','admin'),
 (257502,'OP_MJ1','54.0x00x021','腹膜外血肿清除术','OP','3.0',1,0,'admin','admin'),
@@ -59567,7 +59567,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (257997,'DI_MZ1','S39.900x007','阴囊损伤','DI','3.0',1,0,'admin','admin'),
 (257998,'DI_MZ1','S39.900x009','附睾损伤','DI','3.0',1,0,'admin','admin'),
 (257999,'DI_MZ1','S39.900x010','睾丸损伤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (258000,'DI_MZ1','S39.903','会阴损伤','DI','3.0',1,0,'admin','admin'),
 (258001,'DI_MZ1','S39.904','阴茎损伤','DI','3.0',1,0,'admin','admin'),
 (258002,'DI_MZ1','T19.800x002','阴茎内异物','DI','3.0',1,0,'admin','admin'),
@@ -60068,7 +60068,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (258497,'DI_N00','N88.300','宫颈功能不全','DI','3.0',1,0,'admin','admin'),
 (258498,'DI_N00','N88.400','宫颈肥厚性延长','DI','3.0',1,0,'admin','admin'),
 (258499,'DI_N00','N88.800x010','子宫颈钙化','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (258500,'DI_N00','N88.801','宫颈残端出血','DI','3.0',1,0,'admin','admin'),
 (258501,'DI_N00','N88.802','宫颈肥大','DI','3.0',1,0,'admin','admin'),
 (258502,'DI_N00','N88.803','宫颈囊肿','DI','3.0',1,0,'admin','admin'),
@@ -60569,7 +60569,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (258997,'DI_NA2','C79.800x205','子宫角继发恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (258998,'DI_NA2','C79.800x206','子宫体继发恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (258999,'DI_NA2','C79.800x209','子宫颈继发恶性肿瘤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (259000,'DI_NA2','C79.800x211','子宫旁继发恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (259001,'DI_NA2','C79.800x213','子宫下段继发恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (259002,'DI_NA2','C79.800x214','子宫韧带继发恶性肿瘤','DI','3.0',1,0,'admin','admin'),
@@ -61070,7 +61070,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (259497,'OP2_NC1','66.8x01','输卵管通液术','OP','3.0',1,0,'admin','admin'),
 (259498,'OP2_NC1','66.8x02','腹腔镜输卵管通液术','OP','3.0',1,0,'admin','admin'),
 (259499,'OP2_NC1','66.8x03','宫腔镜输卵管通液术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (259500,'OP2_NC1','66.9100x003','腹腔镜下输卵管穿刺引流术','OP','3.0',1,0,'admin','admin'),
 (259501,'OP2_NC1','66.9100x004','经阴道输卵管穿刺引流术','OP','3.0',1,0,'admin','admin'),
 (259502,'OP2_NC1','66.9200x001','阴道式输卵管结扎术','OP','3.0',1,0,'admin','admin'),
@@ -61571,7 +61571,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (259997,'OP_NF1','70.3301','阴道病损切除术','OP','3.0',1,0,'admin','admin'),
 (259998,'OP_NF1','70.3302','阴道病损破坏术','OP','3.0',1,0,'admin','admin'),
 (259999,'OP_NF1','70.3303','阴道囊肿袋形缝合术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (260000,'OP_NF1','70.3304','处女膜病损切除术','OP','3.0',1,0,'admin','admin'),
 (260001,'OP_NF1','70.4x01','阴道切除术','OP','3.0',1,0,'admin','admin'),
 (260002,'OP_NF1','70.4x02','阴道部分切除术','OP','3.0',1,0,'admin','admin'),
@@ -62072,7 +62072,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (260497,'DI_NS1','N71.002','急性子宫炎','DI','3.0',1,0,'admin','admin'),
 (260498,'DI_NS1','N71.101','慢性子宫内膜炎','DI','3.0',1,0,'admin','admin'),
 (260499,'DI_NS1','N71.102','慢性子宫炎','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (260500,'DI_NS1','N71.900x001','子宫肌炎','DI','3.0',1,0,'admin','admin'),
 (260501,'DI_NS1','N71.901','子宫积脓','DI','3.0',1,0,'admin','admin'),
 (260502,'DI_NS1','N71.902','子宫内膜炎','DI','3.0',1,0,'admin','admin'),
@@ -62573,7 +62573,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (260997,'DI_NZ1','N99.800x010','子宫切口憩室','DI','3.0',1,0,'admin','admin'),
 (260998,'DI_NZ1','N99.801','残余卵巢综合征','DI','3.0',1,0,'admin','admin'),
 (260999,'DI_NZ1','N99.807','阴道残端出血','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (261000,'DI_NZ1','Q27.813','先天性子宫血管畸形','DI','3.0',1,0,'admin','admin'),
 (261001,'DI_NZ1','Q27.814','先天性卵巢血管畸形','DI','3.0',1,0,'admin','admin'),
 (261002,'DI_NZ1','Q27.816','先天性盆腔血管畸形','DI','3.0',1,0,'admin','admin'),
@@ -63074,7 +63074,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (261497,'DI_O00','O32.000x001','不稳定产式','DI','3.0',1,0,'admin','admin'),
 (261498,'DI_O00','O32.100x004','膝先露','DI','3.0',1,0,'admin','admin'),
 (261499,'DI_O00','O32.101','臀先露','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (261500,'DI_O00','O32.102','足先露','DI','3.0',1,0,'admin','admin'),
 (261501,'DI_O00','O32.201','肩先露','DI','3.0',1,0,'admin','admin'),
 (261502,'DI_O00','O32.202','斜位','DI','3.0',1,0,'admin','admin'),
@@ -63575,7 +63575,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (261997,'DI_O00','O81.200','中位产钳术伴有旋转','DI','3.0',1,0,'admin','admin'),
 (261998,'DI_O00','O81.301','产钳助产','DI','3.0',1,0,'admin','admin'),
 (261999,'DI_O00','O81.401','吸引器助产分娩','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (262000,'DI_O00','O81.500','同时借助产钳和真空吸引器分娩','DI','3.0',1,0,'admin','admin'),
 (262001,'DI_O00','O82.000','经选择性剖宫产术的分娩','DI','3.0',1,0,'admin','admin'),
 (262002,'DI_O00','O82.100','经急症剖宫产术的分娩','DI','3.0',1,0,'admin','admin'),
@@ -64076,7 +64076,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (262497,'OP2_OB1','65.2900x007','卵巢黄体血肿清除术','OP','3.0',1,0,'admin','admin'),
 (262498,'OP2_OB1','65.2900x011','卵巢囊肿穿刺术','OP','3.0',1,0,'admin','admin'),
 (262499,'OP2_OB1','65.2900x022','经阴道卵巢囊肿穿刺术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (262500,'OP2_OB1','65.2901','卵巢病损切除术','OP','3.0',1,0,'admin','admin'),
 (262501,'OP2_OB1','65.2902','卵巢病损破坏术','OP','3.0',1,0,'admin','admin'),
 (262502,'OP2_OB1','65.2903','经阴道卵巢病损切除术','OP','3.0',1,0,'admin','admin'),
@@ -64577,7 +64577,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (262997,'DI_OBD','O71.201','产后子宫外翻','DI','3.0',1,0,'admin','admin'),
 (262998,'DI_OBD','O71.202','分娩并发子宫内翻','DI','3.0',1,0,'admin','admin'),
 (262999,'DI_OBD','O71.301','产伤性宫颈裂伤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (263000,'DI_OBD','O71.400','产科高位阴道裂伤','DI','3.0',1,0,'admin','admin'),
 (263001,'DI_OBD','O71.401','产伤性中上三分之一阴道裂伤','DI','3.0',1,0,'admin','admin'),
 (263002,'DI_OBD','O71.402','产伤性阴道后穹隆裂伤','DI','3.0',1,0,'admin','admin'),
@@ -65078,7 +65078,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (263497,'OP_OC4','75.5100','子宫颈近期产科裂伤修补术','OP','3.0',1,0,'admin','admin'),
 (263498,'OP_OC4','75.5200','子宫体近期产科裂伤修补术','OP','3.0',1,0,'admin','admin'),
 (263499,'OP_OC4','75.6101','膀胱近期产科裂伤修补术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (263500,'OP_OC4','75.6102','尿道近期产科裂伤修补术','OP','3.0',1,0,'admin','admin'),
 (263501,'OP_OC4','75.6201','直肠近期产科裂伤修补术','OP','3.0',1,0,'admin','admin'),
 (263502,'OP_OC4','75.6202','肛门括约肌近期产科裂伤修补术','OP','3.0',1,0,'admin','admin'),
@@ -65579,7 +65579,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (263997,'DI1_OF1','O35.809','胎儿膈疝','DI','3.0',1,0,'admin','admin'),
 (263998,'DI1_OF1','O35.810','胎儿颈部囊性淋巴管瘤','DI','3.0',1,0,'admin','admin'),
 (263999,'DI1_OF1','O35.811','胎儿联体双胎畸形','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (264000,'DI1_OF1','O35.812','胎儿尿道下裂','DI','3.0',1,0,'admin','admin'),
 (264001,'DI1_OF1','O35.813','胎儿皮下组织增厚','DI','3.0',1,0,'admin','admin'),
 (264002,'DI1_OF1','O35.814','胎儿脐膨出','DI','3.0',1,0,'admin','admin'),
@@ -66080,7 +66080,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (264497,'DI_OS1','O73.102','胎盘部分滞留不伴出血','DI','3.0',1,0,'admin','admin'),
 (264498,'DI_OS1','O85.x00','产褥期脓毒病','DI','3.0',1,0,'admin','admin'),
 (264499,'DI_OS1','O85.x00x006','产褥期菌血症','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (264500,'DI_OS1','O85.x01','产褥期腹膜炎','DI','3.0',1,0,'admin','admin'),
 (264501,'DI_OS1','O85.x03','产褥期子宫内膜炎','DI','3.0',1,0,'admin','admin'),
 (264502,'DI_OS1','O86.000','产科手术伤口的感染','DI','3.0',1,0,'admin','admin'),
@@ -66581,7 +66581,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (264997,'DI_OZ1','O34.100x011','妊娠合并子宫肿瘤','DI','3.0',1,0,'admin','admin'),
 (264998,'DI_OZ1','O34.101','妊娠合并子宫韧带良性肿瘤','DI','3.0',1,0,'admin','admin'),
 (264999,'DI_OZ1','O34.102','妊娠合并子宫体肿瘤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (265000,'DI_OZ1','O34.200x002','剖宫产史的妊娠','DI','3.0',1,0,'admin','admin'),
 (265001,'DI_OZ1','O34.201','妊娠合并子宫瘢痕','DI','3.0',1,0,'admin','admin'),
 (265002,'DI_OZ1','O34.301','妊娠合并宫颈功能不全','DI','3.0',1,0,'admin','admin'),
@@ -67082,7 +67082,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (265497,'DI_OZ1','O98.500','其他病毒性疾病，并发于妊娠、分娩和产褥期','DI','3.0',1,0,'admin','admin'),
 (265498,'DI_OZ1','O98.501','妊娠合并病毒性脑炎','DI','3.0',1,0,'admin','admin'),
 (265499,'DI_OZ1','O98.502','妊娠合并风疹','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (265500,'DI_OZ1','O98.503','妊娠合并巨细胞病毒感染','DI','3.0',1,0,'admin','admin'),
 (265501,'DI_OZ1','O98.506','妊娠合并水痘','DI','3.0',1,0,'admin','admin'),
 (265502,'DI_OZ1','O98.600','原虫性疾病并发于妊娠、分娩和产褥期','DI','3.0',1,0,'admin','admin'),
@@ -67583,7 +67583,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (265997,'OP_PB1','35.9900x002','三尖瓣闭合术(单心室)','OP','3.0',1,0,'admin','admin'),
 (265998,'OP_PB1','36.0300x002','冠状动脉内膜剥脱术','OP','3.0',1,0,'admin','admin'),
 (265999,'OP_PB1','36.0300x003','冠状动脉内膜剥脱术伴补片移植术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (266000,'OP_PB1','36.0300x006','冠状动脉开口成形术','OP','3.0',1,0,'admin','admin'),
 (266001,'OP_PB1','36.0301','冠状动脉内膜切除术','OP','3.0',1,0,'admin','admin'),
 (266002,'OP_PB1','36.0302','冠状动脉内膜切除伴补片修补术','OP','3.0',1,0,'admin','admin'),
@@ -68084,7 +68084,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (266497,'OP_PC1','45.7900x002','巨结肠切除术','OP','3.0',1,0,'admin','admin'),
 (266498,'OP_PC1','45.7900x003','经肛门巨结肠根治术（改良Soave法）','OP','3.0',1,0,'admin','admin'),
 (266499,'OP_PC1','46.7901','肠穿孔修补术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (266500,'OP_PC1','49.7902','肛门括约肌成形术','OP','3.0',1,0,'admin','admin'),
 (266501,'OP_PC1','49.7903','肛门成形术','OP','3.0',1,0,'admin','admin'),
 (266502,'OP_PC1','49.7904','腹腔镜下肛门成形术','OP','3.0',1,0,'admin','admin'),
@@ -68585,7 +68585,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (266997,'OP_PD1','50.0x02','肝切开异物取出术','OP','3.0',1,0,'admin','admin'),
 (266998,'OP_PD1','50.0x03','腹腔镜下肝囊肿开窗引流术','OP','3.0',1,0,'admin','admin'),
 (266999,'OP_PD1','50.0x04','腹腔镜下肝脓肿切开引流术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (267000,'OP_PD1','50.0x05','腹腔镜下肝异物去除术','OP','3.0',1,0,'admin','admin'),
 (267001,'OP_PD1','50.1200','开放性肝活组织检查','OP','3.0',1,0,'admin','admin'),
 (267002,'OP_PD1','50.1400','腹腔镜下肝活组织检查','OP','3.0',1,0,'admin','admin'),
@@ -69086,7 +69086,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (267497,'DI_PU1','J15.903','社区获得性肺炎，重症','DI','3.0',1,0,'admin','admin'),
 (267498,'DI_PU1','J18.903','重症肺炎','DI','3.0',1,0,'admin','admin'),
 (267499,'DI_PU1','J69.001','吸入性肺炎','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (267500,'DI_PU1','J96.000','急性呼吸衰竭','DI','3.0',1,0,'admin','admin'),
 (267501,'DI_PU1','J96.900x001','呼吸衰竭','DI','3.0',1,0,'admin','admin'),
 (267502,'DI_PU1','J96.900x002','I型呼吸衰竭','DI','3.0',1,0,'admin','admin'),
@@ -69587,7 +69587,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (267997,'DI_PU3','P78.300x003','新生儿生理性腹泻','DI','3.0',1,0,'admin','admin'),
 (267998,'DI_PU3','P78.800x004','新生儿贲门失弛缓','DI','3.0',1,0,'admin','admin'),
 (267999,'DI_PU3','P78.800x006','新生儿便秘','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (268000,'DI_PU3','P78.800x010','新生儿气胀','DI','3.0',1,0,'admin','admin'),
 (268001,'DI_PU3','P78.800x012','新生儿吞咽动作不协调','DI','3.0',1,0,'admin','admin'),
 (268002,'DI_PU3','P78.801','新生儿胆囊结石','DI','3.0',1,0,'admin','admin'),
@@ -70088,7 +70088,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (268497,'DI_PV1','P94.900','新生儿肌张力疾患','DI','3.0',1,0,'admin','admin'),
 (268498,'DI_PV1','P95.x00','胎儿死亡','DI','3.0',1,0,'admin','admin'),
 (268499,'DI_PV1','P96.000x001','先天性肾功能衰竭','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (268500,'DI_PV1','P96.000x002','新生儿尿毒症','DI','3.0',1,0,'admin','admin'),
 (268501,'DI_PV1','P96.100x001','新生儿撤药综合征（母亲药瘾）','DI','3.0',1,0,'admin','admin'),
 (268502,'DI_PV1','P96.100x002','新生儿药物戒断综合征（母亲药瘾）','DI','3.0',1,0,'admin','admin'),
@@ -70589,7 +70589,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (268997,'DI_Q00','D81.000x002','网状组织发育不全','DI','3.0',1,0,'admin','admin'),
 (268998,'DI_Q00','D81.100','重症联合免疫缺陷［SCID］伴有低数量的T和B细胞','DI','3.0',1,0,'admin','admin'),
 (268999,'DI_Q00','D81.200','重症联合免疫缺陷［SCID］伴有低或正常数量的B细胞','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (269000,'DI_Q00','D81.400','奈泽洛夫综合征','DI','3.0',1,0,'admin','admin'),
 (269001,'DI_Q00','D81.600','主要组织相容性复合体一级缺乏','DI','3.0',1,0,'admin','admin'),
 (269002,'DI_Q00','D81.601','淋巴细胞稀少综合征','DI','3.0',1,0,'admin','admin'),
@@ -71090,7 +71090,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (269497,'DI_QR3','D18.100x024','下肢淋巴管瘤','DI','3.0',1,0,'admin','admin'),
 (269498,'DI_QR3','D18.103','躯干淋巴管瘤','DI','3.0',1,0,'admin','admin'),
 (269499,'DI_QR3','D18.104','肢体淋巴管瘤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (269500,'DI_QR3','D18.107','盆腔淋巴管瘤','DI','3.0',1,0,'admin','admin'),
 (269501,'DI_QR3','D21.900x015','木村病','DI','3.0',1,0,'admin','admin'),
 (269502,'DI_QR3','D36.000','淋巴结良性肿瘤','DI','3.0',1,0,'admin','admin'),
@@ -71591,7 +71591,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (269997,'DI_QT3','D68.000x001','血管性血友病','DI','3.0',1,0,'admin','admin'),
 (269998,'DI_QT3','D68.000x002','因子Ⅷ缺乏伴血管缺陷','DI','3.0',1,0,'admin','admin'),
 (269999,'DI_QT3','D68.001','获得性血管性血友病','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (270000,'DI_QT3','D68.100x001','血浆凝血致活酶前质缺乏','DI','3.0',1,0,'admin','admin'),
 (270001,'DI_QT3','D68.101','血友病C型','DI','3.0',1,0,'admin','admin'),
 (270002,'DI_QT3','D68.200x001','凝血酶原缺乏','DI','3.0',1,0,'admin','admin'),
@@ -72092,7 +72092,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (270497,'DI_R00','C95.003','未分化细胞白血病','DI','3.0',1,0,'admin','admin'),
 (270498,'DI_R00','C95.004','急性双系白血病','DI','3.0',1,0,'admin','admin'),
 (270499,'DI_R00','C95.005','急性混合型单系白血病','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (270500,'DI_R00','C95.006','急性双表型白血病','DI','3.0',1,0,'admin','admin'),
 (270501,'DI_R00','C95.100','慢性白血病','DI','3.0',1,0,'admin','admin'),
 (270502,'DI_R00','C95.100x011','慢性白血病伴缓解','DI','3.0',1,0,'admin','admin'),
@@ -72593,7 +72593,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (270997,'DI_RA1','C93.300','幼年型骨髓单核细胞白血病','DI','3.0',1,0,'admin','admin'),
 (270998,'DI_RA1','C93.300x001','幼年型粒单核细胞白血病伴缓解','DI','3.0',1,0,'admin','admin'),
 (270999,'DI_RA1','C93.700','单核细胞白血病，其他的','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (271000,'DI_RA1','C93.701','非白血性单核细胞白血病','DI','3.0',1,0,'admin','admin'),
 (271001,'DI_RA1','C93.900','单核细胞白血病','DI','3.0',1,0,'admin','admin'),
 (271002,'DI_RA1','C93.901','组织细胞白血病','DI','3.0',1,0,'admin','admin'),
@@ -73094,7 +73094,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (271497,'OP_RA1','42.5100','胸内食管食管吻合术','OP','3.0',1,0,'admin','admin'),
 (271498,'OP_RA1','42.5200','胸内食管胃吻合术','OP','3.0',1,0,'admin','admin'),
 (271499,'OP_RA1','42.5200x005','胸内食管-胃颈部吻合术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (271500,'OP_RA1','42.5201','食管胃弓上吻合术','OP','3.0',1,0,'admin','admin'),
 (271501,'OP_RA1','42.5202','食管胃弓下吻合术','OP','3.0',1,0,'admin','admin'),
 (271502,'OP_RA1','42.5300x001','胸内空肠代食管术','OP','3.0',1,0,'admin','admin'),
@@ -73595,7 +73595,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (271997,'OP_RA1','57.8302','膀胱乙状结肠瘘修补术','OP','3.0',1,0,'admin','admin'),
 (271998,'OP_RA1','57.8303','膀胱结肠瘘修补术','OP','3.0',1,0,'admin','admin'),
 (271999,'OP_RA1','57.8304','膀胱直肠瘘修补术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (272000,'OP_RA1','57.8305','膀胱阴道直肠瘘修补术','OP','3.0',1,0,'admin','admin'),
 (272001,'OP_RA1','57.8400x004','腹腔镜下膀胱-阴道瘘修补术','OP','3.0',1,0,'admin','admin'),
 (272002,'OP_RA1','57.8400x005','经阴道膀胱-阴道瘘修补术','OP','3.0',1,0,'admin','admin'),
@@ -74096,7 +74096,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (272497,'DI_RA2','C96.705','种痘样水疱病样淋巴瘤','DI','3.0',1,0,'admin','admin'),
 (272498,'DI_RA2','C96.800','组织细胞肉瘤','DI','3.0',1,0,'admin','admin'),
 (272499,'DI_RA2','C96.801','恶性组织细胞增生症','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (272500,'DI_RA2','C96.900','淋巴、造血和有关组织的恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (272501,'DI_RA2','C97.x00','独立（原发）多个部位的恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (272502,'DI_RA2','C97.x01','复合癌','DI','3.0',1,0,'admin','admin'),
@@ -74597,7 +74597,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (272997,'OP_RA2','83.3900x017','软组织病损切除术','OP','3.0',1,0,'admin','admin'),
 (272998,'DI_RA3','C76.101','腋恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (272999,'DI_RA3','C76.200x002','髂窝恶性肿瘤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (273000,'DI_RA3','C76.300','盆腔恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (273001,'DI_RA3','C76.302','骶恶性肿瘤','DI','3.0',1,0,'admin','admin'),
 (273002,'DI_RA3','C76.305','骶尾部恶性肿瘤','DI','3.0',1,0,'admin','admin'),
@@ -75098,7 +75098,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (273497,'OP_RA3','45.7401','横结肠部分切除术','OP','3.0',1,0,'admin','admin'),
 (273498,'OP_RA3','45.7500','左半结肠切除术','OP','3.0',1,0,'admin','admin'),
 (273499,'OP_RA3','45.7500x001','降结肠部分切除术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (273500,'OP_RA3','45.7501','左半结肠根治性切除术','OP','3.0',1,0,'admin','admin'),
 (273501,'OP_RA3','45.7600x008','乙状结肠切除术','OP','3.0',1,0,'admin','admin'),
 (273502,'OP_RA3','45.7601','乙状结肠部分切除术','OP','3.0',1,0,'admin','admin'),
@@ -75599,7 +75599,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (273997,'DI_RA4','C90.000x023','多发性骨髓瘤（轻链λ型）','DI','3.0',1,0,'admin','admin'),
 (273998,'DI_RA4','C90.000x024','多发性骨髓瘤（轻链к型）','DI','3.0',1,0,'admin','admin'),
 (273999,'DI_RA4','C90.000x025','多发性骨髓瘤（无分泌型）','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (274000,'DI_RA4','C90.000x026','多发性骨髓瘤（IgDλ型）','DI','3.0',1,0,'admin','admin'),
 (274001,'DI_RA4','C90.000x027','多发性骨髓瘤（IgAλ型）','DI','3.0',1,0,'admin','admin'),
 (274002,'DI_RA4','C90.000x028','多发性骨髓瘤（IgAк型）','DI','3.0',1,0,'admin','admin'),
@@ -76100,7 +76100,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (274497,'DI_RK2','C81.400','富淋巴细胞性（经典型）霍奇金淋巴瘤','DI','3.0',1,0,'admin','admin'),
 (274498,'DI_RK2','C81.700','经典型霍奇金淋巴瘤，其他类型的','DI','3.0',1,0,'admin','admin'),
 (274499,'DI_RK2','C81.701','霍奇金副肉芽肿','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (274500,'DI_RK2','C81.702','霍奇金肉芽肿','DI','3.0',1,0,'admin','admin'),
 (274501,'DI_RK2','C81.703','霍奇金肉瘤','DI','3.0',1,0,'admin','admin'),
 (274502,'DI_RK2','C81.900','霍奇金淋巴瘤，未特指','DI','3.0',1,0,'admin','admin'),
@@ -76601,7 +76601,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (274997,'DI3_RN1','C92.100x018','慢性中幼粒细胞性白血病','DI','3.0',1,0,'admin','admin'),
 (274998,'DI3_RN1','C92.100x019','慢性髓系白血病，BCR/ABL阳性','DI','3.0',1,0,'admin','admin'),
 (274999,'DI3_RN1','C92.101','费城染色体（Ph1）阳性慢性粒细胞白血病','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (275000,'DI3_RN1','C92.102','慢性粒细胞白血病t（9:22）（q34；q11）','DI','3.0',1,0,'admin','admin'),
 (275001,'DI3_RN1','C92.103','慢性粒细胞白血病原始细胞危象','DI','3.0',1,0,'admin','admin'),
 (275002,'DI3_RN1','C92.200','非典型性慢性髓系白血病，BCR/ABL阴性','DI','3.0',1,0,'admin','admin'),
@@ -77102,7 +77102,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (275497,'DI2_RP1','C92.100x001','慢性粒细胞性白血病','DI','3.0',1,0,'admin','admin'),
 (275498,'DI2_RP1','C92.100x002','慢性粒细胞性白血病（急性变）','DI','3.0',1,0,'admin','admin'),
 (275499,'DI2_RP1','C92.100x004','慢性髓单核细胞性白血病','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (275500,'DI2_RP1','C92.100x011','慢性粒细胞性白血病伴缓解','DI','3.0',1,0,'admin','admin'),
 (275501,'DI2_RP1','C92.100x012','慢性粒细胞性白血病伴缓解（急性变）','DI','3.0',1,0,'admin','admin'),
 (275502,'DI2_RP1','C92.100x014','慢性髓单核细胞性白血病伴缓解','DI','3.0',1,0,'admin','admin'),
@@ -77603,7 +77603,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (275997,'DI2_RP5','C93.001','急性髓细胞白血病，M5a型','DI','3.0',1,0,'admin','admin'),
 (275998,'DI2_RP5','C93.002','急性髓细胞白血病，M5b型','DI','3.0',1,0,'admin','admin'),
 (275999,'DI2_RP5','C93.003','急性髓细胞白血病，M5型','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (276000,'DI2_RP5','C93.100','慢性粒单核细胞白血病','DI','3.0',1,0,'admin','admin'),
 (276001,'DI2_RP5','C93.100x011','慢性单核细胞白血病伴缓解','DI','3.0',1,0,'admin','admin'),
 (276002,'DI2_RP5','C93.100x012','慢性单核细胞白血病，急性加重','DI','3.0',1,0,'admin','admin'),
@@ -78104,7 +78104,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (276497,'DI_RR1','C95.000x017','T淋巴细胞和髓系混合表型急性白血病','DI','3.0',1,0,'admin','admin'),
 (276498,'DI_RR1','C95.000x018','NK细胞淋巴母细胞性白血病/淋巴瘤','DI','3.0',1,0,'admin','admin'),
 (276499,'DI_RR1','C95.000x101','急性白血病伴缓解','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (276500,'DI_RR1','C95.000x102','急性白血病髓外复发伴缓解','DI','3.0',1,0,'admin','admin'),
 (276501,'DI_RR1','C95.000x115','急性白血病伴缓解（谱系未定）','DI','3.0',1,0,'admin','admin'),
 (276502,'DI_RR1','C95.000x116','B淋巴细胞和髓系混合表型急性白血病伴缓解','DI','3.0',1,0,'admin','admin'),
@@ -78605,7 +78605,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (276997,'DI_RW2','Z51.100x004','恶性肿瘤终末期化疗','DI','3.0',1,0,'admin','admin'),
 (276998,'DI_RW2','Z51.500x001','姑息医疗','DI','3.0',1,0,'admin','admin'),
 (276999,'DI_RW2','Z51.500x002','恶性肿瘤支持治疗','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (277000,'DI_RW2','Z51.500x003','恶性肿瘤终末期维持治疗','DI','3.0',1,0,'admin','admin'),
 (277001,'DI_RW2','Z51.800x953','恶性肿瘤终末期免疫治疗','DI','3.0',1,0,'admin','admin'),
 (277002,'DI_RW2','Z51.800x983','恶性肿瘤终末期靶向治疗','DI','3.0',1,0,'admin','admin'),
@@ -79106,7 +79106,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (277497,'DI_S00','B00.900x007','接种性单纯疱疹','DI','3.0',1,0,'admin','admin'),
 (277498,'DI_S00','B00.901','EB病毒感染','DI','3.0',1,0,'admin','admin'),
 (277499,'DI_S00','B00.902','单纯疱疹','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (277500,'DI_S00','B01.800x002+N08.0*','水痘并发肾炎','DI','3.0',1,0,'admin','admin'),
 (277501,'DI_S00','B01.800x004','痘感染相关性视神经炎','DI','3.0',1,0,'admin','admin'),
 (277502,'DI_S00','B01.801','水痘肝炎','DI','3.0',1,0,'admin','admin'),
@@ -79607,7 +79607,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (277997,'DI_SS1','T82.701','化疗泵植入感染','DI','3.0',1,0,'admin','admin'),
 (277998,'DI_SS1','T84.701','下颌骨假体植入感染','DI','3.0',1,0,'admin','admin'),
 (277999,'DI_SS1','T85.700x808','植入装置后感染','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (278000,'DI_SS1','T85.700x809','鼻假体植入后感染','DI','3.0',1,0,'admin','admin'),
 (278001,'DI_SS1','T85.701','脑室腹腔分流管置入感染','DI','3.0',1,0,'admin','admin'),
 (278002,'DI_SS1','T85.702','人工硬脑膜植入感染','DI','3.0',1,0,'admin','admin'),
@@ -80108,7 +80108,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (278497,'DI_SZ1','A54.500','淋球菌性咽炎','DI','3.0',1,0,'admin','admin'),
 (278498,'DI_SZ1','A54.600x001','淋球菌性直肠炎','DI','3.0',1,0,'admin','admin'),
 (278499,'DI_SZ1','A54.601','直肠淋球菌感染','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (278500,'DI_SZ1','A54.602','肛门淋球菌感染','DI','3.0',1,0,'admin','admin'),
 (278501,'DI_SZ1','A54.809','淋球菌性皮肤病','DI','3.0',1,0,'admin','admin'),
 (278502,'DI_SZ1','A54.900','淋球菌感染','DI','3.0',1,0,'admin','admin'),
@@ -80609,7 +80609,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (278997,'DI_T00','F30.200','伴有精神病性症状的躁狂','DI','3.0',1,0,'admin','admin'),
 (278998,'DI_T00','F30.200x001','伴有精神病性症状的躁狂发作','DI','3.0',1,0,'admin','admin'),
 (278999,'DI_T00','F30.200x002','躁狂性木僵','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (279000,'DI_T00','F30.201','谵妄性躁狂症','DI','3.0',1,0,'admin','admin'),
 (279001,'DI_T00','F30.800x002','兴奋状态','DI','3.0',1,0,'admin','admin'),
 (279002,'DI_T00','F30.900','躁狂发作','DI','3.0',1,0,'admin','admin'),
@@ -81110,7 +81110,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (279497,'DI_TR2','F23.901','反应性精神病','DI','3.0',1,0,'admin','admin'),
 (279498,'DI_TR2','F23.902','旅途精神病','DI','3.0',1,0,'admin','admin'),
 (279499,'DI_TR2','F23.903','急性反应性木僵状态','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (279500,'DI_TR2','F24.x00','感应性妄想性障碍','DI','3.0',1,0,'admin','admin'),
 (279501,'DI_TR2','F28.x00x002','更年期精神病','DI','3.0',1,0,'admin','admin'),
 (279502,'DI_TR2','F28.x00x011','违拗状态','DI','3.0',1,0,'admin','admin'),
@@ -81611,7 +81611,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (279997,'DI_TW1','F06.805','脑瘤所致精神障碍','DI','3.0',1,0,'admin','admin'),
 (279998,'DI_TW1','F06.806','肝豆核变性症所致精神障碍','DI','3.0',1,0,'admin','admin'),
 (279999,'DI_TW1','F06.807','多发性硬化症所致精神障碍','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (280000,'DI_TW1','F06.808','躯体疾病所致精神障碍','DI','3.0',1,0,'admin','admin'),
 (280001,'DI_TW1','F06.809','脑血管病所致精神障碍','DI','3.0',1,0,'admin','admin'),
 (280002,'DI_TW1','F06.810','卒中后精神病态','DI','3.0',1,0,'admin','admin'),
@@ -82112,7 +82112,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (280497,'DI_V00','R78.700','血中发现重金属水平异常','DI','3.0',1,0,'admin','admin'),
 (280498,'DI_V00','R78.801','血锂异常','DI','3.0',1,0,'admin','admin'),
 (280499,'DI_V00','R78.900','血中发现通常不出现的物质','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (280500,'DI_V00','S00.102','额部血肿','DI','3.0',1,0,'admin','admin'),
 (280501,'DI_V00','S07.000','面部挤压伤','DI','3.0',1,0,'admin','admin'),
 (280502,'DI_V00','S07.100','颅骨挤压伤','DI','3.0',1,0,'admin','admin'),
@@ -82613,7 +82613,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (280997,'DI_V00','T50.600x002','解毒剂中毒','DI','3.0',1,0,'admin','admin'),
 (280998,'DI_V00','T50.600x003','螯合剂中毒','DI','3.0',1,0,'admin','admin'),
 (280999,'DI_V00','T50.700x001','兴奋药中毒','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (281000,'DI_V00','T50.700x002','阿片样物质受体拮抗剂中毒','DI','3.0',1,0,'admin','admin'),
 (281001,'DI_V00','T50.800','诊断性制剂中毒','DI','3.0',1,0,'admin','admin'),
 (281002,'DI_V00','T50.900','药物、药剂和生物制品中毒，其他和未特指的','DI','3.0',1,0,'admin','admin'),
@@ -83114,7 +83114,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (281497,'DI_V00','T81.700x206','射频消融术后冠状动脉撕裂','DI','3.0',1,0,'admin','admin'),
 (281498,'DI_V00','T81.700x207','射频消融术后冠状动脉穿孔','DI','3.0',1,0,'admin','admin'),
 (281499,'DI_V00','T81.700x208','射频消融术后冠状动脉急性闭塞','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (281500,'DI_V00','T81.700x305','心导管检查术后冠状动脉撕裂','DI','3.0',1,0,'admin','admin'),
 (281501,'DI_V00','T81.700x306','心导管检查术后冠状动脉穿孔','DI','3.0',1,0,'admin','admin'),
 (281502,'DI_V00','T81.700x307','心导管检查术后冠状动脉急性闭塞','DI','3.0',1,0,'admin','admin'),
@@ -83615,7 +83615,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (281997,'OP_VJ1','09.2300','全部泪腺切除术','OP','3.0',1,0,'admin','admin'),
 (281998,'OP_VJ1','09.4100','泪点探通术','OP','3.0',1,0,'admin','admin'),
 (281999,'OP_VJ1','09.4402','鼻泪管激光探通插管术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (282000,'OP_VJ1','09.4404','人工泪管置入术','OP','3.0',1,0,'admin','admin'),
 (282001,'OP_VJ1','09.4405','泪小管穿线插管术','OP','3.0',1,0,'admin','admin'),
 (282002,'OP_VJ1','09.4900x002','鼻内镜下人工泪管取出术','OP','3.0',1,0,'admin','admin'),
@@ -84116,7 +84116,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (282497,'OP_VJ1','27.9900x010','颊系带切开术','OP','3.0',1,0,'admin','admin'),
 (282498,'OP_VJ1','27.9901','颊部病损切除术','OP','3.0',1,0,'admin','admin'),
 (282499,'OP_VJ1','27.9902','颏下病损切除术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (282500,'OP_VJ1','27.9903','颊脂垫修复术','OP','3.0',1,0,'admin','admin'),
 (282501,'OP_VJ1','27.9904','颅颌面裂矫形术','OP','3.0',1,0,'admin','admin'),
 (282502,'OP_VJ1','28.7x01','扁桃体切除术后止血','OP','3.0',1,0,'admin','admin'),
@@ -84617,7 +84617,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (282997,'OP_VJ1','39.3100x005','颈总动脉修补术','OP','3.0',1,0,'admin','admin'),
 (282998,'OP_VJ1','39.3100x006','肋间动脉修补术','OP','3.0',1,0,'admin','admin'),
 (282999,'OP_VJ1','39.3100x007','桡动脉修补术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (283000,'OP_VJ1','39.3100x009','足背动脉修补术','OP','3.0',1,0,'admin','admin'),
 (283001,'OP_VJ1','39.3100x010','尺动脉吻合术','OP','3.0',1,0,'admin','admin'),
 (283002,'OP_VJ1','39.3101','胫动脉缝合术','OP','3.0',1,0,'admin','admin'),
@@ -85118,7 +85118,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (283497,'OP_VJ1','46.3905','腹腔镜空肠造口术','OP','3.0',1,0,'admin','admin'),
 (283498,'OP_VJ1','46.4101','回肠造口修复术','OP','3.0',1,0,'admin','admin'),
 (283499,'OP_VJ1','46.4102','空肠造口修复术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (283500,'OP_VJ1','46.4103','回肠造口周围疝修补术','OP','3.0',1,0,'admin','admin'),
 (283501,'OP_VJ1','46.4200','结肠造口周围疝修补术','OP','3.0',1,0,'admin','admin'),
 (283502,'OP_VJ1','46.4201','腹腔镜结肠造口周围疝修补术','OP','3.0',1,0,'admin','admin'),
@@ -85619,7 +85619,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (283997,'OP_VJ1','57.7101','膀胱尿道全切除术','OP','3.0',1,0,'admin','admin'),
 (283998,'OP_VJ1','57.7102','男性盆腔脏器去除术','OP','3.0',1,0,'admin','admin'),
 (283999,'OP_VJ1','57.7900x001','膀胱全切除术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (284000,'OP_VJ1','57.7901','腹腔镜下全膀胱切除术','OP','3.0',1,0,'admin','admin'),
 (284001,'OP_VJ1','57.8100','膀胱裂伤缝合术','OP','3.0',1,0,'admin','admin'),
 (284002,'OP_VJ1','57.8500x002','膀胱颈重建术','OP','3.0',1,0,'admin','admin'),
@@ -86120,7 +86120,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (284497,'OP_VJ1','78.5903','趾骨内固定术','OP','3.0',1,0,'admin','admin'),
 (284498,'OP_VJ1','78.5904','椎骨内固定术','OP','3.0',1,0,'admin','admin'),
 (284499,'OP_VJ1','78.6100x004','肩锁关节内固定物取出术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (284500,'OP_VJ1','78.6101','肩胛骨内固定装置去除术','OP','3.0',1,0,'admin','admin'),
 (284501,'OP_VJ1','78.6102','肩胛骨外固定装置去除术','OP','3.0',1,0,'admin','admin'),
 (284502,'OP_VJ1','78.6103','锁骨内固定装置去除术','OP','3.0',1,0,'admin','admin'),
@@ -86621,7 +86621,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (284997,'OP_VJ1','83.0201','肌肉筋膜切开减压术','OP','3.0',1,0,'admin','admin'),
 (284998,'OP_VJ1','83.0202','肌肉切开探查术','OP','3.0',1,0,'admin','admin'),
 (284999,'OP_VJ1','83.0203','肌肉切开异物取出术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (285000,'OP_VJ1','83.0204','肌肉切开引流术','OP','3.0',1,0,'admin','admin'),
 (285001,'OP_VJ1','83.0900x003','筋膜间隙切开减压术','OP','3.0',1,0,'admin','admin'),
 (285002,'OP_VJ1','83.0901','筋膜切开术','OP','3.0',1,0,'admin','admin'),
@@ -87122,7 +87122,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (285497,'DI_VS1','T78.200','过敏性休克','DI','3.0',1,0,'admin','admin'),
 (285498,'DI_VS1','T78.201','赫克斯海默反应','DI','3.0',1,0,'admin','admin'),
 (285499,'DI_VS1','T78.300','血管神经性水肿','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (285500,'DI_VS1','T78.300x003','耳廓血管神经性反应','DI','3.0',1,0,'admin','admin'),
 (285501,'DI_VS1','T78.300x004','巨大荨麻疹','DI','3.0',1,0,'admin','admin'),
 (285502,'DI_VS1','T78.301','急性特发性水肿','DI','3.0',1,0,'admin','admin'),
@@ -87623,7 +87623,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (285997,'DI_VS2','T63.001','毒蛇咬伤','DI','3.0',1,0,'admin','admin'),
 (285998,'DI_VS2','T63.100','爬行动物类毒液的毒性效应，其他的','DI','3.0',1,0,'admin','admin'),
 (285999,'DI_VS2','T63.100x001','蜥蜴毒液中毒','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (286000,'DI_VS2','T63.200','蝎子毒液的毒性效应','DI','3.0',1,0,'admin','admin'),
 (286001,'DI_VS2','T63.300','蜘蛛毒液的毒性效应','DI','3.0',1,0,'admin','admin'),
 (286002,'DI_VS2','T63.400','节肢动物的毒液的毒性效应，其他的','DI','3.0',1,0,'admin','admin'),
@@ -88124,7 +88124,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (286497,'DI_W00','T21.100x033','腹股沟一度烧伤','DI','3.0',1,0,'admin','admin'),
 (286498,'DI_W00','T21.100x041','臀部一度烧伤','DI','3.0',1,0,'admin','admin'),
 (286499,'DI_W00','T21.100x042','背部一度烧伤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (286500,'DI_W00','T21.100x043','肩胛间区一度烧伤','DI','3.0',1,0,'admin','admin'),
 (286501,'DI_W00','T21.100x051','大阴唇一度烧伤','DI','3.0',1,0,'admin','admin'),
 (286502,'DI_W00','T21.100x052','小阴唇一度烧伤','DI','3.0',1,0,'admin','admin'),
@@ -88625,7 +88625,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (286997,'OP_WB1','04.4911','坐骨神经松解术','OP','3.0',1,0,'admin','admin'),
 (286998,'OP_WB1','04.4913','股神经松解术','OP','3.0',1,0,'admin','admin'),
 (286999,'OP_WB1','04.4914','胫神经松解术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (287000,'OP_WB1','04.4915','腓总神经松解术','OP','3.0',1,0,'admin','admin'),
 (287001,'OP_WB1','04.4916','腓神经松解术','OP','3.0',1,0,'admin','admin'),
 (287002,'OP_WB1','04.4917','足神经松解术','OP','3.0',1,0,'admin','admin'),
@@ -89126,7 +89126,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (287497,'DI1_WB3','T20.100x004','头皮一度烧伤','DI','3.0',1,0,'admin','admin'),
 (287498,'DI1_WB3','T20.100x005','面部一度烧伤','DI','3.0',1,0,'admin','admin'),
 (287499,'DI1_WB3','T20.100x006','鼻部一度烧伤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (287500,'DI1_WB3','T20.100x007','颞部一度烧伤','DI','3.0',1,0,'admin','admin'),
 (287501,'DI1_WB3','T20.100x008','唇部一度烧伤','DI','3.0',1,0,'admin','admin'),
 (287502,'DI1_WB3','T20.100x009','耳部一度烧伤','DI','3.0',1,0,'admin','admin'),
@@ -89627,7 +89627,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (287997,'OP_WJ1','86.6601','同种皮片移植术','OP','3.0',1,0,'admin','admin'),
 (287998,'OP_WJ1','86.6701','脱细胞异体真皮植皮术','OP','3.0',1,0,'admin','admin'),
 (287999,'OP_WJ1','86.6702','人工皮肤移植术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (288000,'OP_WJ1','86.6900x010','全厚皮片移植术','OP','3.0',1,0,'admin','admin'),
 (288001,'OP_WJ1','86.6901','刃厚皮片移植术','OP','3.0',1,0,'admin','admin'),
 (288002,'OP_WJ1','86.6902','中厚皮片移植术','OP','3.0',1,0,'admin','admin'),
@@ -90128,7 +90128,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (288497,'DI1_WR2','T33.901','浅表冻伤','DI','3.0',1,0,'admin','admin'),
 (288498,'DI1_WR2','T34.000','头部冻伤伴有组织坏死','DI','3.0',1,0,'admin','admin'),
 (288499,'DI1_WR2','T34.100','颈部冻伤伴有组织坏死','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (288500,'DI1_WR2','T34.200','胸部冻伤伴有组织坏死','DI','3.0',1,0,'admin','admin'),
 (288501,'DI1_WR2','T34.300x001','腹壁冻伤伴组织坏死','DI','3.0',1,0,'admin','admin'),
 (288502,'DI1_WR2','T34.300x002','背部冻伤伴组织坏死','DI','3.0',1,0,'admin','admin'),
@@ -90629,7 +90629,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (288997,'DI_X00','T91.400','胸内器官损伤后遗症','DI','3.0',1,0,'admin','admin'),
 (288998,'DI_X00','T91.401','陈旧性胸内器官损伤','DI','3.0',1,0,'admin','admin'),
 (288999,'DI_X00','T91.500x001','腹内器官损伤后遗症','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (289000,'DI_X00','T91.500x003','盆腔器官损伤后遗症','DI','3.0',1,0,'admin','admin'),
 (289001,'DI_X00','T91.501','陈旧性腹内器官损伤','DI','3.0',1,0,'admin','admin'),
 (289002,'DI_X00','T91.502','陈旧性盆腔器官损伤','DI','3.0',1,0,'admin','admin'),
@@ -91130,7 +91130,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (289497,'DI_X00','Z45.900','植入装置的调整和管理','DI','3.0',1,0,'admin','admin'),
 (289498,'DI_X00','Z46.500x001','回肠造口的安装和调整','DI','3.0',1,0,'admin','admin'),
 (289499,'DI_X00','Z46.501','更换空肠造口导管','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (289500,'DI_X00','Z46.502','调整或更换回肠造口导管','DI','3.0',1,0,'admin','admin'),
 (289501,'DI_X00','Z46.503','调整或更换结肠造口导管','DI','3.0',1,0,'admin','admin'),
 (289502,'DI_X00','Z46.600x001','取出输尿管D-J管','DI','3.0',1,0,'admin','admin'),
@@ -91631,7 +91631,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (289997,'DI_XR2','T91.205','陈旧性耻骨骨折','DI','3.0',1,0,'admin','admin'),
 (289998,'DI_XR2','T91.206','陈旧性尾骨骨折','DI','3.0',1,0,'admin','admin'),
 (289999,'DI_XR2','T91.400','胸内器官损伤后遗症','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (290000,'DI_XR2','T91.401','陈旧性胸内器官损伤','DI','3.0',1,0,'admin','admin'),
 (290001,'DI_XR2','T91.500x001','腹内器官损伤后遗症','DI','3.0',1,0,'admin','admin'),
 (290002,'DI_XR2','T91.500x003','盆腔器官损伤后遗症','DI','3.0',1,0,'admin','admin'),
@@ -92132,7 +92132,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (290497,'DI_XT1','Z43.700','人工阴道维护','DI','3.0',1,0,'admin','admin'),
 (290498,'DI_XT1','Z43.801','脑室引流管维护','DI','3.0',1,0,'admin','admin'),
 (290499,'DI_XT1','Z43.802','关闭动静脉造口','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (290500,'DI_XT1','Z43.900x001','人工造口维护','DI','3.0',1,0,'admin','admin'),
 (290501,'DI_XT1','Z44.200x002','人工眼的调整','DI','3.0',1,0,'admin','admin'),
 (290502,'DI_XT1','Z44.300','外部假乳房的安装和调整','DI','3.0',1,0,'admin','admin'),
@@ -92633,7 +92633,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (290997,'DI_XT3','Z61.200x001','与童年时家庭关系模式改变有关的问题','DI','3.0',1,0,'admin','admin'),
 (290998,'DI_XT3','Z61.300x001','与童年时导致丧失自尊事件有关的问题','DI','3.0',1,0,'admin','admin'),
 (290999,'DI_XT3','Z61.400x001','与儿童据说受家族内成员的性虐待有关的问题','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (291000,'DI_XT3','Z61.500x001','与儿童据说受家族以外人员的性虐待有关问题','DI','3.0',1,0,'admin','admin'),
 (291001,'DI_XT3','Z61.600x001','与儿童据说身体被虐待有关的问题','DI','3.0',1,0,'admin','admin'),
 (291002,'DI_XT3','Z61.700x001','与童年时受惊吓的经历有关的问题','DI','3.0',1,0,'admin','admin'),
@@ -93134,7 +93134,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (291497,'DI_Z02','S27.401','创伤性支气管断裂','DI','3.0',1,0,'admin','admin'),
 (291498,'DI_Z02','S27.410','开放性支气管损伤','DI','3.0',1,0,'admin','admin'),
 (291499,'DI_Z02','S27.500','胸部气管损伤','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (291500,'DI_Z02','S27.501','创伤性胸部气管破裂','DI','3.0',1,0,'admin','admin'),
 (291501,'DI_Z02','S27.510','开放性胸部气管损伤','DI','3.0',1,0,'admin','admin'),
 (291502,'DI_Z02','S27.700','胸内器官多处损伤','DI','3.0',1,0,'admin','admin'),
@@ -93635,7 +93635,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (291997,'DI_Z07','S61.800x021','腕和手开放性损伤伴脱位','DI','3.0',1,0,'admin','admin'),
 (291998,'DI_Z07','S61.800x022','手部开放性损伤伴脱位','DI','3.0',1,0,'admin','admin'),
 (291999,'DI_Z07','S61.800x023','腕部开放性损伤伴脱位','DI','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (292000,'DI_Z07','S61.800x081','手掌开放性损伤','DI','3.0',1,0,'admin','admin'),
 (292001,'DI_Z07','S61.900','腕和手的开放性伤口','DI','3.0',1,0,'admin','admin'),
 (292002,'DI_Z07','S61.900x002','腕部开放性损伤','DI','3.0',1,0,'admin','admin'),
@@ -94136,7 +94136,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (292497,'OP_ZB1','07.7203','经蝶骨垂体脓肿清除术','OP','3.0',1,0,'admin','admin'),
 (292498,'OP_ZB1','07.7901','蝶鞍填塞','OP','3.0',1,0,'admin','admin'),
 (292499,'OP_ZB1','38.6102','脑血管瘤切除术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (292500,'OP_ZC1','03.5300x001','脊椎骨折复位术','OP','3.0',1,0,'admin','admin'),
 (292501,'OP_ZC1','03.5301','脊椎骨折切开复位内固定术','OP','3.0',1,0,'admin','admin'),
 (292502,'OP_ZC1','03.5302','颈椎骨折切开复位内固定术','OP','3.0',1,0,'admin','admin'),
@@ -94637,7 +94637,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (292997,'OP_ZC1','83.8700x003','肩关节肌肉成形术','OP','3.0',1,0,'admin','admin'),
 (292998,'OP_ZC1','83.8700x007','下肢肌肉成形术','OP','3.0',1,0,'admin','admin'),
 (292999,'OP_ZC1','83.8800x010','距腓韧带缝合修补术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (293000,'OP_ZC1','83.8800x012','足肌腱成形术','OP','3.0',1,0,'admin','admin'),
 (293001,'OP_ZC1','83.8800x014','肩关节镜下肱二头肌肌腱长头固定术','OP','3.0',1,0,'admin','admin'),
 (293002,'OP_ZC1','83.9100x004','前臂束带松解术','OP','3.0',1,0,'admin','admin'),
@@ -95138,7 +95138,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (293497,'OP_ZJ1','02.4301','脑室腹腔引流管夹闭术','OP','3.0',1,0,'admin','admin'),
 (293498,'OP_ZJ1','02.4302','脑室Ommaya泵去除术','OP','3.0',1,0,'admin','admin'),
 (293499,'OP_ZJ1','02.9302','颅内神经刺激器置换术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (293500,'OP_ZJ1','02.9303','脑深部电极置入术','OP','3.0',1,0,'admin','admin'),
 (293501,'OP_ZJ1','02.9304','丘脑底核电极刺激器置入术','OP','3.0',1,0,'admin','admin'),
 (293502,'OP_ZJ1','03.1x00x001','椎管内神经根切断术','OP','3.0',1,0,'admin','admin'),
@@ -95639,7 +95639,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (293997,'OP_ZJ1','09.6x03','泪道病损切除术','OP','3.0',1,0,'admin','admin'),
 (293998,'OP_ZJ1','09.6x04','泪小管切除术','OP','3.0',1,0,'admin','admin'),
 (293999,'OP_ZJ1','09.7100','泪点外翻矫正术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (294000,'OP_ZJ1','09.7200x001','泪点修补术','OP','3.0',1,0,'admin','admin'),
 (294001,'OP_ZJ1','09.7201','泪点重建术','OP','3.0',1,0,'admin','admin'),
 (294002,'OP_ZJ1','09.7300x001','泪小管成形术','OP','3.0',1,0,'admin','admin'),
@@ -96140,7 +96140,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (294497,'OP_ZJ1','20.4902','乳突病损切除术','OP','3.0',1,0,'admin','admin'),
 (294498,'OP_ZJ1','20.5100','中耳病损切除术','OP','3.0',1,0,'admin','admin'),
 (294499,'OP_ZJ1','20.5100x002','耳后病损切除术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (294500,'OP_ZJ1','20.5100x003','鼓室病损切除术','OP','3.0',1,0,'admin','admin'),
 (294501,'OP_ZJ1','20.5101','颈静脉球瘤切除术','OP','3.0',1,0,'admin','admin'),
 (294502,'OP_ZJ1','20.5102','鼓膜病损切除术','OP','3.0',1,0,'admin','admin'),
@@ -96641,7 +96641,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (294997,'OP_ZJ1','37.1101','心肌切开术','OP','3.0',1,0,'admin','admin'),
 (294998,'OP_ZJ1','37.1102','心内膜切开术','OP','3.0',1,0,'admin','admin'),
 (294999,'OP_ZJ1','37.1103','心室切开术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (295000,'OP_ZJ1','37.1200x005','心包切开探查术','OP','3.0',1,0,'admin','admin'),
 (295001,'OP_ZJ1','37.1202','心包异物取出术','OP','3.0',1,0,'admin','admin'),
 (295002,'OP_ZJ1','37.1203','心包开窗术','OP','3.0',1,0,'admin','admin'),
@@ -97142,7 +97142,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (295497,'OP_ZJ1','42.7x02','腹腔镜食管贲门肌层切开术','OP','3.0',1,0,'admin','admin'),
 (295498,'OP_ZJ1','42.7x04','胸腔镜食管肌层切开术','OP','3.0',1,0,'admin','admin'),
 (295499,'OP_ZJ1','42.8100','食管置入永久性管','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (295500,'OP_ZJ1','42.8101','内镜下食管支架置入术','OP','3.0',1,0,'admin','admin'),
 (295501,'OP_ZJ1','42.8200','食管裂伤缝合术','OP','3.0',1,0,'admin','admin'),
 (295502,'OP_ZJ1','42.8300','食管造口闭合术','OP','3.0',1,0,'admin','admin'),
@@ -97643,7 +97643,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (295997,'OP_ZJ1','58.4400x001','尿道拖入术','OP','3.0',1,0,'admin','admin'),
 (295998,'OP_ZJ1','58.4401','尿道吻合术','OP','3.0',1,0,'admin','admin'),
 (295999,'OP_ZJ1','58.4600x001','膀胱粘膜瓣代尿道成形术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (296000,'OP_ZJ1','58.4600x002','颊粘膜代尿道成形术','OP','3.0',1,0,'admin','admin'),
 (296001,'OP_ZJ1','58.4600x003','结肠粘膜代尿道成形术','OP','3.0',1,0,'admin','admin'),
 (296002,'OP_ZJ1','58.4600x004','回肠粘膜代尿道成形术','OP','3.0',1,0,'admin','admin'),
@@ -98144,7 +98144,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (296497,'OP_ZJ1','78.1104','胸骨外固定架固定术','OP','3.0',1,0,'admin','admin'),
 (296498,'OP_ZJ1','78.1201','肱骨外固定术','OP','3.0',1,0,'admin','admin'),
 (296499,'OP_ZJ1','78.1301','桡骨外固定术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (296500,'OP_ZJ1','78.1302','尺骨外固定术','OP','3.0',1,0,'admin','admin'),
 (296501,'OP_ZJ1','78.1401','腕骨外固定术','OP','3.0',1,0,'admin','admin'),
 (296502,'OP_ZJ1','78.1402','掌骨外固定术','OP','3.0',1,0,'admin','admin'),
@@ -98645,7 +98645,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (296997,'OP_ZJ1','82.6102','手指转位代拇指术','OP','3.0',1,0,'admin','admin'),
 (296998,'OP_ZJ1','82.7100x003','游离腱片法屈肌腱滑车重建术','OP','3.0',1,0,'admin','admin'),
 (296999,'OP_ZJ1','82.7100x004','腱环法屈肌腱滑车重建术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (297000,'OP_ZJ1','82.7101','拇对掌肌功能重建术','OP','3.0',1,0,'admin','admin'),
 (297001,'OP_ZJ1','82.7901','手肌腱硅条成形术','OP','3.0',1,0,'admin','admin'),
 (297002,'OP_ZJ1','82.8101','手指代手指再造术','OP','3.0',1,0,'admin','admin'),
@@ -99146,7 +99146,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (297497,'OP_ALL','01.3905','脑立体定向血肿碎吸术','OP','3.0',1,0,'admin','admin'),
 (297498,'OP_ALL','01.3906','内镜下脑血肿引流术','OP','3.0',1,0,'admin','admin'),
 (297499,'OP_ALL','01.3907','脑切开异物取出术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (297500,'OP_ALL','01.3908','大脑半球切开术','OP','3.0',1,0,'admin','admin'),
 (297501,'OP_ALL','01.3909','脑囊肿切开引流术','OP','3.0',1,0,'admin','admin'),
 (297502,'OP_ALL','01.3910','脑血肿切开引流术','OP','3.0',1,0,'admin','admin'),
@@ -99647,7 +99647,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (297997,'OP_ALL','04.4210','内镜下舌咽神经微血管减压术','OP','3.0',1,0,'admin','admin'),
 (297998,'OP_ALL','04.4211','迷走神经减压术','OP','3.0',1,0,'admin','admin'),
 (297999,'OP_ALL','04.4212','喉返神经松解术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (298000,'OP_ALL','04.4213','副神经减压术','OP','3.0',1,0,'admin','admin'),
 (298001,'OP_ALL','04.4300','腕管松解术','OP','3.0',1,0,'admin','admin'),
 (298002,'OP_ALL','04.4301','关节镜下腕管松解术','OP','3.0',1,0,'admin','admin'),
@@ -100148,7 +100148,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (298497,'OP_ALL','10.4403','羊膜移植结膜修补术','OP','3.0',1,0,'admin','admin'),
 (298498,'OP_ALL','10.4900x001','结膜成形术','OP','3.0',1,0,'admin','admin'),
 (298499,'OP_ALL','10.4900x003','结膜修补术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (298500,'OP_ALL','10.4901','结膜滤过泡瘘修补术','OP','3.0',1,0,'admin','admin'),
 (298501,'OP_ALL','10.4903','结膜囊成形术','OP','3.0',1,0,'admin','admin'),
 (298502,'OP_ALL','10.4904','结膜瓣修补术','OP','3.0',1,0,'admin','admin'),
@@ -100649,7 +100649,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (298997,'OP_ALL','19.1900x004','人工镫骨置入术','OP','3.0',1,0,'admin','admin'),
 (298998,'OP_ALL','19.1900x005','人工镫骨置换术','OP','3.0',1,0,'admin','admin'),
 (298999,'OP_ALL','19.1900x006','镫骨足板开窗术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (299000,'OP_ALL','19.1900x007','内镜下镫骨切除术','OP','3.0',1,0,'admin','admin'),
 (299001,'OP_ALL','19.1900x008','内镜下镫骨足板开窗术','OP','3.0',1,0,'admin','admin'),
 (299002,'OP_ALL','19.1901','镫骨部分切除术','OP','3.0',1,0,'admin','admin'),
@@ -101150,7 +101150,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (299497,'OP_ALL','27.6301','腭裂二期修复术','OP','3.0',1,0,'admin','admin'),
 (299498,'OP_ALL','27.6302','腭裂上提术','OP','3.0',1,0,'admin','admin'),
 (299499,'OP_ALL','27.6400','腭植入物置入术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (299500,'OP_ALL','27.6900x003','软腭激光烧灼术','OP','3.0',1,0,'admin','admin'),
 (299501,'OP_ALL','27.6900x004','咽腭弓延长成形术','OP','3.0',1,0,'admin','admin'),
 (299502,'OP_ALL','27.6900x007','悬雍垂-软腭-咽成形术[UPPP]','OP','3.0',1,0,'admin','admin'),
@@ -101651,7 +101651,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (299997,'OP_ALL','34.9905','胸腔镜下胸膜固定术','OP','3.0',1,0,'admin','admin'),
 (299998,'OP_ALL','35.0100x002','经皮主动脉瓣探查术','OP','3.0',1,0,'admin','admin'),
 (299999,'OP_ALL','35.0101','主动脉瓣闭式扩张术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (300000,'OP_ALL','35.0200x003','经皮二尖瓣探查术','OP','3.0',1,0,'admin','admin'),
 (300001,'OP_ALL','35.0201','二尖瓣闭式扩张术','OP','3.0',1,0,'admin','admin'),
 (300002,'OP_ALL','35.0300x002','经皮肺动脉瓣探查术','OP','3.0',1,0,'admin','admin'),
@@ -102152,7 +102152,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (300497,'OP_ALL','38.1603','髂动脉内膜切除伴补片修补术','OP','3.0',1,0,'admin','admin'),
 (300498,'OP_ALL','38.1604','肾动脉内膜切除术','OP','3.0',1,0,'admin','admin'),
 (300499,'OP_ALL','38.1800x001','股动脉内膜剥脱术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (300500,'OP_ALL','38.1800x002','股动脉内膜剥脱伴血栓切除术','OP','3.0',1,0,'admin','admin'),
 (300501,'OP_ALL','38.1800x003','腘动脉内膜剥脱伴补片修补术','OP','3.0',1,0,'admin','admin'),
 (300502,'OP_ALL','38.1800x004','腘动脉内膜剥脱术','OP','3.0',1,0,'admin','admin'),
@@ -102653,7 +102653,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (300997,'OP_ALL','39.3100x015','肠系膜动脉缝合术','OP','3.0',1,0,'admin','admin'),
 (300998,'OP_ALL','39.3100x016','子宫动脉缝合术','OP','3.0',1,0,'admin','admin'),
 (300999,'OP_ALL','39.3100x017','掌指动脉缝合术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (301000,'OP_ALL','39.3100x018','指动脉缝合术','OP','3.0',1,0,'admin','admin'),
 (301001,'OP_ALL','39.3100x019','腓动脉缝合术','OP','3.0',1,0,'admin','admin'),
 (301002,'OP_ALL','39.3101','胫动脉缝合术','OP','3.0',1,0,'admin','admin'),
@@ -103154,7 +103154,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (301497,'OP_ALL','40.9x00x005','腰淋巴干-小静脉吻合术','OP','3.0',1,0,'admin','admin'),
 (301498,'OP_ALL','40.9x00x006','髂淋巴干-小静脉吻合术','OP','3.0',1,0,'admin','admin'),
 (301499,'OP_ALL','40.9x00x007','肠淋巴干-小静脉吻合术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (301500,'OP_ALL','40.9x00x008','淋巴水肿矫正Homans-Macey手术[Homan手术]','OP','3.0',1,0,'admin','admin'),
 (301501,'OP_ALL','40.9x00x009','淋巴水肿矫正Charles手术[Charles手术]','OP','3.0',1,0,'admin','admin'),
 (301502,'OP_ALL','40.9x00x010','淋巴水肿矫正Thompson手术[Thompson手术]','OP','3.0',1,0,'admin','admin'),
@@ -103655,7 +103655,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (301997,'OP_ALL','46.0400x002','肠外置段的切除术','OP','3.0',1,0,'admin','admin'),
 (301998,'OP_ALL','46.0401','肠外置术（二期）','OP','3.0',1,0,'admin','admin'),
 (301999,'OP_ALL','46.0402','结肠襻切除术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (302000,'OP_ALL','46.1000','结肠造口术','OP','3.0',1,0,'admin','admin'),
 (302001,'OP_ALL','46.1000x007','腹腔镜下结肠造口术','OP','3.0',1,0,'admin','admin'),
 (302002,'OP_ALL','46.1100','暂时性结肠造口术','OP','3.0',1,0,'admin','admin'),
@@ -104156,7 +104156,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (302497,'OP_ALL','51.5900x006','腹腔镜下胆道探查术','OP','3.0',1,0,'admin','admin'),
 (302498,'OP_ALL','51.5900x008','肝内胆管引流术','OP','3.0',1,0,'admin','admin'),
 (302499,'OP_ALL','51.5900x009','内镜下胆道异物去除术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (302500,'OP_ALL','51.5901','肝管切开引流术','OP','3.0',1,0,'admin','admin'),
 (302501,'OP_ALL','51.5902','肝管切开探查术','OP','3.0',1,0,'admin','admin'),
 (302502,'OP_ALL','51.5903','胆管切开探查术','OP','3.0',1,0,'admin','admin'),
@@ -104657,7 +104657,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (302997,'OP_ALL','55.0403','经皮肾镜超声碎石术','OP','3.0',1,0,'admin','admin'),
 (302998,'OP_ALL','55.0404','经皮肾镜激光碎石术','OP','3.0',1,0,'admin','admin'),
 (302999,'OP_ALL','55.0405','经肾造口碎石术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (303000,'OP_ALL','55.1100x001','肾盂切开探查术','OP','3.0',1,0,'admin','admin'),
 (303001,'OP_ALL','55.1100x002','输尿管镜下肾盂旁囊肿切开引流术','OP','3.0',1,0,'admin','admin'),
 (303002,'OP_ALL','55.1101','肾盂切开取石术','OP','3.0',1,0,'admin','admin'),
@@ -105158,7 +105158,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (303497,'OP_ALL','61.4202','阴囊皮肤瘘修补术','OP','3.0',1,0,'admin','admin'),
 (303498,'OP_ALL','61.4900x002','鞘膜高位结扎术','OP','3.0',1,0,'admin','admin'),
 (303499,'OP_ALL','61.4901','睾丸鞘状突高位结扎术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (303500,'OP_ALL','61.4902','阴囊修补术','OP','3.0',1,0,'admin','admin'),
 (303501,'OP_ALL','61.4903','阴囊再造术','OP','3.0',1,0,'admin','admin'),
 (303502,'OP_ALL','61.4904','睾丸鞘膜翻转术','OP','3.0',1,0,'admin','admin'),
@@ -105659,7 +105659,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (303997,'OP_ALL','69.2207','圆韧带缩短术','OP','3.0',1,0,'admin','admin'),
 (303998,'OP_ALL','69.2208','腹腔镜圆韧带缩短术','OP','3.0',1,0,'admin','admin'),
 (303999,'OP_ALL','69.2209','腹腔镜宫骶韧带缩短术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (304000,'OP_ALL','69.2210','腹腔镜高位宫骶韧带悬吊术','OP','3.0',1,0,'admin','admin'),
 (304001,'OP_ALL','69.2211','腹腔镜子宫韧带加固术','OP','3.0',1,0,'admin','admin'),
 (304002,'OP_ALL','69.2212','腹腔镜子宫悬吊术','OP','3.0',1,0,'admin','admin'),
@@ -106160,7 +106160,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (304497,'OP_ALL','77.1500x006','股骨钻孔减压术','OP','3.0',1,0,'admin','admin'),
 (304498,'OP_ALL','77.1501','股骨切开引流术','OP','3.0',1,0,'admin','admin'),
 (304499,'OP_ALL','77.1502','股骨减压术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (304500,'OP_ALL','77.1600x001','髌骨开窗引流术','OP','3.0',1,0,'admin','admin'),
 (304501,'OP_ALL','77.1601','髌骨减压术','OP','3.0',1,0,'admin','admin'),
 (304502,'OP_ALL','77.1700x001','胫骨开窗引流术','OP','3.0',1,0,'admin','admin'),
@@ -106661,7 +106661,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (304997,'OP_ALL','78.6502','股骨外固定装置去除术','OP','3.0',1,0,'admin','admin'),
 (304998,'OP_ALL','78.6600x002','膝关节内固定物取出术','OP','3.0',1,0,'admin','admin'),
 (304999,'OP_ALL','78.6600x003','膝关节镜下内固定物取出术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (305000,'OP_ALL','78.6601','髌骨内固定装置去除术','OP','3.0',1,0,'admin','admin'),
 (305001,'OP_ALL','78.6602','髌骨外固定装置去除术','OP','3.0',1,0,'admin','admin'),
 (305002,'OP_ALL','78.6701','胫骨内固定装置去除术','OP','3.0',1,0,'admin','admin'),
@@ -107162,7 +107162,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (305497,'OP_ALL','80.7600','膝关节滑膜切除术','OP','3.0',1,0,'admin','admin'),
 (305498,'OP_ALL','80.7601','关节镜膝关节滑膜切除术','OP','3.0',1,0,'admin','admin'),
 (305499,'OP_ALL','80.7700','踝关节滑膜切除术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (305500,'OP_ALL','80.7701','关节镜踝关节滑膜切除术','OP','3.0',1,0,'admin','admin'),
 (305501,'OP_ALL','80.7800','足和趾关节滑膜切除术','OP','3.0',1,0,'admin','admin'),
 (305502,'OP_ALL','80.7800x002','跖关节镜下跖关节滑膜切除术','OP','3.0',1,0,'admin','admin'),
@@ -107663,7 +107663,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (305997,'OP_ALL','83.4202','腱鞘切除术','OP','3.0',1,0,'admin','admin'),
 (305998,'OP_ALL','83.4300x001','肌肉切取术','OP','3.0',1,0,'admin','admin'),
 (305999,'OP_ALL','83.4301','肌肉切取用做移植物','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (306000,'OP_ALL','83.4302','筋膜切取用做移植物','OP','3.0',1,0,'admin','admin'),
 (306001,'OP_ALL','83.4400x001','筋膜切除术','OP','3.0',1,0,'admin','admin'),
 (306002,'OP_ALL','83.4400x002','阔筋膜部分切除术','OP','3.0',1,0,'admin','admin'),
@@ -108164,7 +108164,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (306497,'OP_ALL','86.7100x009','皮瓣预制术','OP','3.0',1,0,'admin','admin'),
 (306498,'OP_ALL','86.7101','带蒂皮瓣断蒂术','OP','3.0',1,0,'admin','admin'),
 (306499,'OP_ALL','86.7102','皮管成形术','OP','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (306500,'OP_ALL','86.7103','带蒂皮瓣延迟术','OP','3.0',1,0,'admin','admin'),
 (306501,'OP_ALL','86.7104','腹部埋藏皮瓣术','OP','3.0',1,0,'admin','admin'),
 (306502,'OP_ALL','86.7105','带蒂皮瓣制备术','OP','3.0',1,0,'admin','admin'),
@@ -108665,7 +108665,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (306997,'EX_1','A09.005','脓毒性肠炎','EX','3.0',1,0,'admin','admin'),
 (306998,'EX_1','A09.006','急性出血性肠炎','EX','3.0',1,0,'admin','admin'),
 (306999,'EX_1','A09.007','急性感染性肠炎','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (307000,'EX_1','A09.900x003','急性肠炎','EX','3.0',1,0,'admin','admin'),
 (307001,'EX_1','A09.900x004','急性小肠炎','EX','3.0',1,0,'admin','admin'),
 (307002,'EX_1','A09.900x005','新生儿腹泻','EX','3.0',1,0,'admin','admin'),
@@ -109166,7 +109166,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (307497,'EX_3','A20.000x001','腺鼠疫','EX','3.0',1,0,'admin','admin'),
 (307498,'EX_3','A20.100','蜂窝织皮下型鼠疫','EX','3.0',1,0,'admin','admin'),
 (307499,'EX_3','A20.101','皮肤型鼠疫','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (307500,'EX_3','A20.200','肺鼠疫','EX','3.0',1,0,'admin','admin'),
 (307501,'EX_3','A20.300','脑膜炎型鼠疫','EX','3.0',1,0,'admin','admin'),
 (307502,'EX_3','A20.700','脓毒症型鼠疫','EX','3.0',1,0,'admin','admin'),
@@ -109667,7 +109667,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (307997,'EX_6','A77.200x001','北亚蜱传斑点热','EX','3.0',1,0,'admin','admin'),
 (307998,'EX_6','A77.300','澳洲立克次体性斑疹热','EX','3.0',1,0,'admin','admin'),
 (307999,'EX_6','A77.300x001','昆士兰蜱传斑点热','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (308000,'EX_6','A77.800','斑疹热,其他的','EX','3.0',1,0,'admin','admin'),
 (308001,'EX_6','A77.900','斑疹热','EX','3.0',1,0,'admin','admin'),
 (308002,'EX_6','A77.900x001','蜱传斑点热','EX','3.0',1,0,'admin','admin'),
@@ -110168,7 +110168,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (308497,'EX_13','B36.300','黑色发结节病','EX','3.0',1,0,'admin','admin'),
 (308498,'EX_13','B36.300x002','毛结节菌病','EX','3.0',1,0,'admin','admin'),
 (308499,'EX_13','B36.800','浅部真菌病，其他特指的','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (308500,'EX_13','B36.801','播散性阿萨希毛孢子菌感染','EX','3.0',1,0,'admin','admin'),
 (308501,'EX_13','B36.901','皮肤真菌感染','EX','3.0',1,0,'admin','admin'),
 (308502,'EX_13','B36.902+H62.2*','耳真菌病','EX','3.0',1,0,'admin','admin'),
@@ -110669,7 +110669,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (308997,'EX_16','C84.406','Lennert淋巴瘤','EX','3.0',1,0,'admin','admin'),
 (308998,'EX_16','C84.407','淋巴上皮样淋巴瘤','EX','3.0',1,0,'admin','admin'),
 (308999,'EX_16','C84.500','其他成熟的T/NK细胞淋巴瘤','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (309000,'EX_16','C84.500x004','儿童系统性EBV阳性T细胞增殖性疾病','EX','3.0',1,0,'admin','admin'),
 (309001,'EX_16','C84.500x012','原发皮肤外周T细胞淋巴瘤（罕见类型）','EX','3.0',1,0,'admin','admin'),
 (309002,'EX_16','C84.500x016','原发皮肤CD4+小/中多形性T细胞淋巴瘤','EX','3.0',1,0,'admin','admin'),
@@ -111170,7 +111170,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (309497,'EX_19','D65.x00x001','弥散性血管内凝血','EX','3.0',1,0,'admin','admin'),
 (309498,'EX_19','D65.x00x003','坏疽性紫癜','EX','3.0',1,0,'admin','admin'),
 (309499,'EX_19','D65.x00x005','消耗性凝血障碍','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (309500,'EX_19','D65.x01','后天性纤维蛋白原缺乏血症','EX','3.0',1,0,'admin','admin'),
 (309501,'EX_19','D65.x02','后天性纤维蛋白溶解性出血','EX','3.0',1,0,'admin','admin'),
 (309502,'EX_19','D65.x03','纤维蛋白溶解性紫癜','EX','3.0',1,0,'admin','admin'),
@@ -111671,7 +111671,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (309997,'EX_23','E10.200x015+N08.3*','1型糖尿病性前期可逆的肾病','EX','3.0',1,0,'admin','admin'),
 (309998,'EX_23','E10.200x016+N08.3*','1型糖尿病性前期微白蛋白尿','EX','3.0',1,0,'admin','admin'),
 (309999,'EX_23','E10.200x017+N08.3*','1型糖尿病性前期持续性微白蛋白尿','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (310000,'EX_23','E10.200x023+N08.3*','1型糖尿病性肾小球硬化症','EX','3.0',1,0,'admin','admin'),
 (310001,'EX_23','E10.200x024+N08.3*','1型糖尿病性弥漫性肾小球硬化症','EX','3.0',1,0,'admin','admin'),
 (310002,'EX_23','E10.200x025+N08.3*','1型糖尿病性结节性肾小球硬化症','EX','3.0',1,0,'admin','admin'),
@@ -112172,7 +112172,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (310497,'EX_24','E16.800x004','胰腺生长激素释放激素分泌过多','EX','3.0',1,0,'admin','admin'),
 (310498,'EX_24','E16.800x006','A型胰岛素抵抗综合征','EX','3.0',1,0,'admin','admin'),
 (310499,'EX_24','E16.800x007','B型胰岛素抵抗综合征','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (310500,'EX_24','E16.800x011','糖耐量受损伴周围血管病','EX','3.0',1,0,'admin','admin'),
 (310501,'EX_24','E16.800x021','糖耐量受损伴周围血管病及坏疽','EX','3.0',1,0,'admin','admin'),
 (310502,'EX_24','E16.800x101','糖耐量受损伴肥胖型高血压','EX','3.0',1,0,'admin','admin'),
@@ -112673,7 +112673,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (310997,'EX_28','E74.402','磷酸烯醇丙酮酸羧激酶缺乏','EX','3.0',1,0,'admin','admin'),
 (310998,'EX_28','E74.403','丙酮酸脱氢酶缺乏','EX','3.0',1,0,'admin','admin'),
 (310999,'EX_28','E74.800x006','高乳酸血症','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (311000,'EX_28','E74.800x007','葡萄糖转运体1缺陷','EX','3.0',1,0,'admin','admin'),
 (311001,'EX_28','E74.801','肾性糖尿','EX','3.0',1,0,'admin','admin'),
 (311002,'EX_28','E74.802','原发性戊糖尿','EX','3.0',1,0,'admin','admin'),
@@ -113174,7 +113174,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (311497,'EX_30','G04.800x012','免疫介导性脑脊髓炎','EX','3.0',1,0,'admin','admin'),
 (311498,'EX_30','G04.800x013','免疫介导性脑炎','EX','3.0',1,0,'admin','admin'),
 (311499,'EX_30','G04.800x014','免疫介导性脊髓炎','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (311500,'EX_30','G04.800x015','免疫介导性脊髓神经根神经病','EX','3.0',1,0,'admin','admin'),
 (311501,'EX_30','G04.800x016','免疫介导性脑干脑炎','EX','3.0',1,0,'admin','admin'),
 (311502,'EX_30','G04.801','自体免疫性脑炎','EX','3.0',1,0,'admin','admin'),
@@ -113675,7 +113675,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (311997,'EX_34','G45.003','椎-基底动脉盗血综合征','EX','3.0',1,0,'admin','admin'),
 (311998,'EX_34','G45.004','后循环缺血','EX','3.0',1,0,'admin','admin'),
 (311999,'EX_34','G45.100','颈动脉综合征（大脑半球的）','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (312000,'EX_34','G45.100x002','颈内动脉缺血','EX','3.0',1,0,'admin','admin'),
 (312001,'EX_34','G45.101','颈内动脉供血不足','EX','3.0',1,0,'admin','admin'),
 (312002,'EX_34','G45.102','颈动脉闭塞综合征','EX','3.0',1,0,'admin','admin'),
@@ -114176,7 +114176,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (312497,'EX_38','G97.800x004','手术后瘫痪','EX','3.0',1,0,'admin','admin'),
 (312498,'EX_38','G97.800x005','手术后颅内积气','EX','3.0',1,0,'admin','admin'),
 (312499,'EX_38','G97.800x006','手术后脑积水','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (312500,'EX_38','G97.800x008','手术后脑神经损伤','EX','3.0',1,0,'admin','admin'),
 (312501,'EX_38','G97.800x009','脑部手术后皮下积液','EX','3.0',1,0,'admin','admin'),
 (312502,'EX_38','G97.801','操作后缺氧性脑损害','EX','3.0',1,0,'admin','admin'),
@@ -114677,7 +114677,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (312997,'EX_44','I26.001','急性肺源性心脏病','EX','3.0',1,0,'admin','admin'),
 (312998,'EX_44','I26.900x001','肺栓塞','EX','3.0',1,0,'admin','admin'),
 (312999,'EX_44','I26.900x002','肺动脉血栓形成','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (313000,'EX_44','I26.900x003','肺血栓栓塞症','EX','3.0',1,0,'admin','admin'),
 (313001,'EX_44','I26.900x005','大面积肺血栓栓塞症','EX','3.0',1,0,'admin','admin'),
 (313002,'EX_44','I26.900x006','次大面积肺血栓肺栓塞症','EX','3.0',1,0,'admin','admin'),
@@ -115178,7 +115178,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (313497,'EX_46','I61.800x001','脑穿支动脉出血','EX','3.0',1,0,'admin','admin'),
 (313498,'EX_46','I61.801','间脑出血','EX','3.0',1,0,'admin','admin'),
 (313499,'EX_46','I61.802','丘脑出血','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (313500,'EX_46','I61.803','丘脑下部出血','EX','3.0',1,0,'admin','admin'),
 (313501,'EX_46','I61.900x002','脑出血','EX','3.0',1,0,'admin','admin'),
 (313502,'EX_46','I61.900x004','脑出血血肿扩大','EX','3.0',1,0,'admin','admin'),
@@ -115679,7 +115679,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (313997,'EX_47','I74.004','平肾腹主动脉闭塞','EX','3.0',1,0,'admin','admin'),
 (313998,'EX_47','I74.005','肾下腹主动脉闭塞','EX','3.0',1,0,'admin','admin'),
 (313999,'EX_47','I74.006','腹主动脉闭塞','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (314000,'EX_47','I74.101','主动脉栓塞','EX','3.0',1,0,'admin','admin'),
 (314001,'EX_47','I74.102','主动脉血栓形成','EX','3.0',1,0,'admin','admin'),
 (314002,'EX_47','I74.200x001','上肢动脉闭塞','EX','3.0',1,0,'admin','admin'),
@@ -116180,7 +116180,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (314497,'EX_50','J05.000','急性梗阻性喉炎［哮吼］','EX','3.0',1,0,'admin','admin'),
 (314498,'EX_50','J05.100','急性会厌炎','EX','3.0',1,0,'admin','admin'),
 (314499,'EX_50','J06.000','急性咽喉炎','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (314500,'EX_50','J06.000x002','过敏性咽喉炎','EX','3.0',1,0,'admin','admin'),
 (314501,'EX_50','J06.800x001','急性咽气管炎','EX','3.0',1,0,'admin','admin'),
 (314502,'EX_50','J06.900','急性上呼吸道感染','EX','3.0',1,0,'admin','admin'),
@@ -116681,7 +116681,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (314997,'EX_55','J63.500','锡沉着病','EX','3.0',1,0,'admin','admin'),
 (314998,'EX_55','J63.800','无机粉尘引起的肺尘埃沉着病，其他特指的','EX','3.0',1,0,'admin','admin'),
 (314999,'EX_55','J63.800x001','铸工尘肺','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (315000,'EX_55','J63.800x003','电焊工尘肺','EX','3.0',1,0,'admin','admin'),
 (315001,'EX_55','J63.800x005','云母尘肺','EX','3.0',1,0,'admin','admin'),
 (315002,'EX_55','J63.800x009','锑尘肺','EX','3.0',1,0,'admin','admin'),
@@ -117182,7 +117182,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (315497,'EX_59','K07.302','牙列不齐','EX','3.0',1,0,'admin','admin'),
 (315498,'EX_59','K07.303','牙体缺损','EX','3.0',1,0,'admin','admin'),
 (315499,'EX_59','K07.304','牙拥挤','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (315500,'EX_59','K07.305','异位牙','EX','3.0',1,0,'admin','admin'),
 (315501,'EX_59','K07.400x001','错𬌗畸形','EX','3.0',1,0,'admin','admin'),
 (315502,'EX_59','K07.500x002','颌骨闭合异常','EX','3.0',1,0,'admin','admin'),
@@ -117683,7 +117683,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (315997,'EX_60','K29.605','肉芽肿性胃炎','EX','3.0',1,0,'admin','admin'),
 (315998,'EX_60','K29.606','胃黏膜肥厚','EX','3.0',1,0,'admin','admin'),
 (315999,'EX_60','K29.608','药物性胃炎','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (316000,'EX_60','K29.700','胃炎','EX','3.0',1,0,'admin','admin'),
 (316001,'EX_60','K29.700x002','胃炎性假瘤','EX','3.0',1,0,'admin','admin'),
 (316002,'EX_60','K29.701','残胃炎','EX','3.0',1,0,'admin','admin'),
@@ -118184,7 +118184,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (316497,'EX_64','K63.304','原发性小肠溃疡','EX','3.0',1,0,'admin','admin'),
 (316498,'EX_64','K63.305','结肠溃疡','EX','3.0',1,0,'admin','admin'),
 (316499,'EX_64','K63.306','盲肠溃疡','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (316500,'EX_64','K63.307','直肠乙状结肠溃疡','EX','3.0',1,0,'admin','admin'),
 (316501,'EX_64','K63.308','肠糜烂','EX','3.0',1,0,'admin','admin'),
 (316502,'EX_64','K63.400','肠下垂','EX','3.0',1,0,'admin','admin'),
@@ -118685,7 +118685,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (316997,'EX_67','K86.105','慢性间质性胰腺炎','EX','3.0',1,0,'admin','admin'),
 (316998,'EX_67','K86.106','慢性囊性胰腺炎','EX','3.0',1,0,'admin','admin'),
 (316999,'EX_67','K86.107','慢性纤维性胰腺炎','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (317000,'EX_67','K86.200','胰腺囊肿','EX','3.0',1,0,'admin','admin'),
 (317001,'EX_67','K86.300','胰腺假囊肿','EX','3.0',1,0,'admin','admin'),
 (317002,'EX_67','K86.800x001','胰腺肿大','EX','3.0',1,0,'admin','admin'),
@@ -119186,7 +119186,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (317497,'EX_72','L90.500x073','阴囊瘢痕','EX','3.0',1,0,'admin','admin'),
 (317498,'EX_72','L90.500x074','男性外阴瘢痕','EX','3.0',1,0,'admin','admin'),
 (317499,'EX_72','L90.501','瘢痕','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (317500,'EX_72','L90.502','瘢痕挛缩','EX','3.0',1,0,'admin','admin'),
 (317501,'EX_72','L90.503','瘢痕粘连','EX','3.0',1,0,'admin','admin'),
 (317502,'EX_72','L90.504','痛性瘢痕','EX','3.0',1,0,'admin','admin'),
@@ -119687,7 +119687,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (317997,'EX_75','M25.400','关节渗出','EX','3.0',1,0,'admin','admin'),
 (317998,'EX_75','M25.401','肩关节积液','EX','3.0',1,0,'admin','admin'),
 (317999,'EX_75','M25.402','肩关节肿胀','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (318000,'EX_75','M25.403','肘关节积液','EX','3.0',1,0,'admin','admin'),
 (318001,'EX_75','M25.404','肘关节肿胀','EX','3.0',1,0,'admin','admin'),
 (318002,'EX_75','M25.405','腕关节积液','EX','3.0',1,0,'admin','admin'),
@@ -120188,7 +120188,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (318497,'EX_80','M70.600','转子滑囊炎','EX','3.0',1,0,'admin','admin'),
 (318498,'EX_80','M70.600x001','转子腱炎','EX','3.0',1,0,'admin','admin'),
 (318499,'EX_80','M70.700','髋的其他滑囊炎','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (318500,'EX_80','M70.700x002','髂耻滑囊炎','EX','3.0',1,0,'admin','admin'),
 (318501,'EX_80','M70.701','坐骨滑囊炎','EX','3.0',1,0,'admin','admin'),
 (318502,'EX_80','M70.702','大粗隆滑囊炎','EX','3.0',1,0,'admin','admin'),
@@ -120689,7 +120689,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (318997,'EX_82','M87.900x021','肱骨骨坏死','EX','3.0',1,0,'admin','admin'),
 (318998,'EX_82','M87.900x061','胫骨骨坏死','EX','3.0',1,0,'admin','admin'),
 (318999,'EX_82','M87.900x071','距骨骨坏死','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (319000,'EX_82','M87.901','股骨骨坏死','EX','3.0',1,0,'admin','admin'),
 (319001,'EX_82','M88.000','颅骨佩吉特病','EX','3.0',1,0,'admin','admin'),
 (319002,'EX_82','M88.800','骨的佩吉特病，其他的','EX','3.0',1,0,'admin','admin'),
@@ -121190,7 +121190,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (319497,'EX_88','N31.000x001','无抑制神经病性膀胱','EX','3.0',1,0,'admin','admin'),
 (319498,'EX_88','N31.100x001','反射性神经病性膀胱','EX','3.0',1,0,'admin','admin'),
 (319499,'EX_88','N31.200x001','迟缓性神经病性膀胱','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (319500,'EX_88','N31.200x002','迟缓性运动神经病性膀胱','EX','3.0',1,0,'admin','admin'),
 (319501,'EX_88','N31.200x003','迟缓性感觉神经病性膀胱','EX','3.0',1,0,'admin','admin'),
 (319502,'EX_88','N31.200x006','自主性神经病性膀胱','EX','3.0',1,0,'admin','admin'),
@@ -121691,7 +121691,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (319997,'EX_91','N85.803','子宫白斑','EX','3.0',1,0,'admin','admin'),
 (319998,'EX_91','N85.804','子宫穿孔','EX','3.0',1,0,'admin','admin'),
 (319999,'EX_91','N85.805','子宫钙化','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (320000,'EX_91','N85.806','子宫肌层囊肿','EX','3.0',1,0,'admin','admin'),
 (320001,'EX_91','N85.807','子宫积水','EX','3.0',1,0,'admin','admin'),
 (320002,'EX_91','N85.808','子宫溃疡','EX','3.0',1,0,'admin','admin'),
@@ -122192,7 +122192,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (320497,'EX_95','O26.607','妊娠期急性脂肪肝','EX','3.0',1,0,'admin','admin'),
 (320498,'EX_95','O26.608','妊娠合并自身免疫性肝炎','EX','3.0',1,0,'admin','admin'),
 (320499,'EX_95','O26.609','妊娠合并肝囊肿','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (320500,'EX_95','O26.701','妊娠合并耻骨联合分离','EX','3.0',1,0,'admin','admin'),
 (320501,'EX_95','O26.800','与妊娠有关的情况，其他特指的','EX','3.0',1,0,'admin','admin'),
 (320502,'EX_95','O26.800x011','妊娠合并肾病','EX','3.0',1,0,'admin','admin'),
@@ -122693,7 +122693,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (320997,'EX_97','O71.801','产伤性腹直肌分离','EX','3.0',1,0,'admin','admin'),
 (320998,'EX_97','O71.802','产伤性腰骶神经根损害','EX','3.0',1,0,'admin','admin'),
 (320999,'EX_97','O71.900','产科创伤','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (321000,'EX_97','O72.000','第三产程出血','EX','3.0',1,0,'admin','admin'),
 (321001,'EX_97','O72.000x003','胎盘嵌顿伴出血','EX','3.0',1,0,'admin','admin'),
 (321002,'EX_97','O72.001','胎盘粘连伴出血','EX','3.0',1,0,'admin','admin'),
@@ -123194,7 +123194,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (321497,'EX_102','P11.900x001','新生儿中枢神经系统损伤','EX','3.0',1,0,'admin','admin'),
 (321498,'EX_102','P12.000x001','新生儿头颅血肿','EX','3.0',1,0,'admin','admin'),
 (321499,'EX_102','P12.100','产伤引起的热带毛孢子菌病','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (321500,'EX_102','P12.201','产伤引起的帽状腱膜下血肿','EX','3.0',1,0,'admin','admin'),
 (321501,'EX_102','P12.300','产伤引起的头皮挫伤','EX','3.0',1,0,'admin','admin'),
 (321502,'EX_102','P12.400','新生儿头皮监测性损伤','EX','3.0',1,0,'admin','admin'),
@@ -123695,7 +123695,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (321997,'EX_110','Q06.800x002','双脊髓畸形','EX','3.0',1,0,'admin','admin'),
 (321998,'EX_110','Q06.800x003','先天性脊髓低位','EX','3.0',1,0,'admin','admin'),
 (321999,'EX_110','Q06.800x005','椎管内肠源性囊肿','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (322000,'EX_110','Q06.801','先天性脊髓栓系综合征','EX','3.0',1,0,'admin','admin'),
 (322001,'EX_110','Q06.900','脊髓先天性畸形','EX','3.0',1,0,'admin','admin'),
 (322002,'EX_110','Q06.901','腰骶神经根囊肿','EX','3.0',1,0,'admin','admin'),
@@ -124196,7 +124196,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (322497,'EX_113','Q43.201','先天性结肠扩张','EX','3.0',1,0,'admin','admin'),
 (322498,'EX_113','Q43.300x201','先天性肠粘连','EX','3.0',1,0,'admin','admin'),
 (322499,'EX_113','Q43.300x901','先天性杰克逊膜','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (322500,'EX_113','Q43.301','先天性肠旋转不良','EX','3.0',1,0,'admin','admin'),
 (322501,'EX_113','Q43.401','结肠重复畸形','EX','3.0',1,0,'admin','admin'),
 (322502,'EX_113','Q43.402','双阑尾','EX','3.0',1,0,'admin','admin'),
@@ -124697,7 +124697,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (322997,'EX_115','Q78.200','骨硬化症','EX','3.0',1,0,'admin','admin'),
 (322998,'EX_115','Q78.201','播散性骨硬化病','EX','3.0',1,0,'admin','admin'),
 (322999,'EX_115','Q78.300','进行性骨干发育异常','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (323000,'EX_115','Q78.400','内生软骨瘤病','EX','3.0',1,0,'admin','admin'),
 (323001,'EX_115','Q78.400x002','先天性膝关节滑膜骨软骨瘤病','EX','3.0',1,0,'admin','admin'),
 (323002,'EX_115','Q78.400x006','先天性多发性骨软骨瘤','EX','3.0',1,0,'admin','admin'),
@@ -125198,7 +125198,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (323497,'EX_120','R25.200x008','痉挛3级','EX','3.0',1,0,'admin','admin'),
 (323498,'EX_120','R25.200x009','痉挛4级','EX','3.0',1,0,'admin','admin'),
 (323499,'EX_120','R25.300','肌束震颤','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (323500,'EX_120','R25.300x002','颤搐','EX','3.0',1,0,'admin','admin'),
 (323501,'EX_120','R25.800x001','不自主运动','EX','3.0',1,0,'admin','admin'),
 (323502,'EX_120','R25.801','反射性发作','EX','3.0',1,0,'admin','admin'),
@@ -125699,7 +125699,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (323997,'EX_128','S02.311','开放性眶底骨折','EX','3.0',1,0,'admin','admin'),
 (323998,'EX_128','S02.400x001','颧弓骨折','EX','3.0',1,0,'admin','admin'),
 (323999,'EX_128','S02.400x003','上颌骨骨折','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (324000,'EX_128','S02.400x005','上颌窦骨折','EX','3.0',1,0,'admin','admin'),
 (324001,'EX_128','S02.401','颧骨骨折','EX','3.0',1,0,'admin','admin'),
 (324002,'EX_128','S02.411','开放性上颌骨骨折','EX','3.0',1,0,'admin','admin'),
@@ -126200,7 +126200,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (324497,'EX_130','S24.600','胸部神经的损伤','EX','3.0',1,0,'admin','admin'),
 (324498,'EX_130','S25.000','胸主动脉损伤','EX','3.0',1,0,'admin','admin'),
 (324499,'EX_130','S25.001','创伤性胸主动脉瘤','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (324500,'EX_130','S25.100x002','无名动脉损伤','EX','3.0',1,0,'admin','admin'),
 (324501,'EX_130','S25.101','锁骨下动脉损伤','EX','3.0',1,0,'admin','admin'),
 (324502,'EX_130','S25.200x001','腔静脉损伤','EX','3.0',1,0,'admin','admin'),
@@ -126701,7 +126701,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (324997,'EX_132','S41.100','上臂开放性伤口','EX','3.0',1,0,'admin','admin'),
 (324998,'EX_132','S41.700','肩和上臂多处开放性伤口','EX','3.0',1,0,'admin','admin'),
 (324999,'EX_132','S41.800x001','腋窝开放性损伤','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (325000,'EX_132','S41.800x011','肩部开放性损伤伴骨折','EX','3.0',1,0,'admin','admin'),
 (325001,'EX_132','S41.800x012','上臂开放性损伤伴骨折','EX','3.0',1,0,'admin','admin'),
 (325002,'EX_132','S41.800x021','肩部开放性损伤伴脱位','EX','3.0',1,0,'admin','admin'),
@@ -127202,7 +127202,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (325497,'EX_134','S66.500x008','手部指内在肌损伤','EX','3.0',1,0,'admin','admin'),
 (325498,'EX_134','S66.500x009','手部指内在肌腱损伤','EX','3.0',1,0,'admin','admin'),
 (325499,'EX_134','S66.600x001','腕和手多处屈肌和肌腱损伤','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (325500,'EX_134','S66.601','多发性手屈肌断裂','EX','3.0',1,0,'admin','admin'),
 (325501,'EX_134','S66.700x001','腕和手多处伸肌和肌腱损伤','EX','3.0',1,0,'admin','admin'),
 (325502,'EX_134','S66.800','在腕和手水平的其他肌肉和肌腱的损伤','EX','3.0',1,0,'admin','admin'),
@@ -127703,7 +127703,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (325997,'EX_137','S98.200x001','两趾切断','EX','3.0',1,0,'admin','admin'),
 (325998,'EX_137','S98.200x002','多趾切断','EX','3.0',1,0,'admin','admin'),
 (325999,'EX_137','S98.300','足其他部位的创伤性切断','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (326000,'EX_137','S98.400','足创伤性切断','EX','3.0',1,0,'admin','admin'),
 (326001,'EX_137','S99.700x001','足部多处损伤','EX','3.0',1,0,'admin','admin'),
 (326002,'EX_137','S99.700x002','踝部多处损伤','EX','3.0',1,0,'admin','admin'),
@@ -128204,7 +128204,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (326497,'EX_141','T21.700x033','腹股沟三度腐蚀伤','EX','3.0',1,0,'admin','admin'),
 (326498,'EX_141','T21.700x041','臀部三度腐蚀伤','EX','3.0',1,0,'admin','admin'),
 (326499,'EX_141','T21.700x042','背部三度腐蚀伤','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (326500,'EX_141','T21.700x043','肩胛间区三度腐蚀伤','EX','3.0',1,0,'admin','admin'),
 (326501,'EX_141','T21.700x051','大阴唇三度腐蚀伤','EX','3.0',1,0,'admin','admin'),
 (326502,'EX_141','T21.700x052','小阴唇三度腐蚀伤','EX','3.0',1,0,'admin','admin'),
@@ -128705,7 +128705,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (326997,'EX_147','T81.000x032','操作中肺出血','EX','3.0',1,0,'admin','admin'),
 (326998,'EX_147','T81.000x033','操作后胃出血','EX','3.0',1,0,'admin','admin'),
 (326999,'EX_147','T81.000x034','操作后胃吻合口出血','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (327000,'EX_147','T81.000x035','操作后胆管出血','EX','3.0',1,0,'admin','admin'),
 (327001,'EX_147','T81.000x036','操作后胆囊出血','EX','3.0',1,0,'admin','admin'),
 (327002,'EX_147','T81.000x037','操作后盆腔出血','EX','3.0',1,0,'admin','admin'),
@@ -129206,7 +129206,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (327497,'EX_147','T86.200x002','心脏移植排斥','EX','3.0',1,0,'admin','admin'),
 (327498,'EX_147','T86.300x001','心肺移植失败','EX','3.0',1,0,'admin','admin'),
 (327499,'EX_147','T86.300x002','心肺移植排斥','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_set (id, set_code, icd_code, icd_name, set_type, version, status, del_flag, create_by, update_by) VALUES
 (327500,'EX_147','T86.400x001','肝移植失败','EX','3.0',1,0,'admin','admin'),
 (327501,'EX_147','T86.400x003','肝移植排斥','EX','3.0',1,0,'admin','admin'),
 (327502,'EX_147','T86.400x004','肝移植物急性抗宿主病','EX','3.0',1,0,'admin','admin'),
@@ -129580,7 +129580,7 @@ INSERT INTO sys_drg_set (id, set_code, icd_code, icd_name, set_type, version, st
 (327870,'EX_148','T98.300x006','手术后颌骨异物残留的后遗症','EX','3.0',1,0,'admin','admin'),
 (327871,'EX_148','T98.300x007','手术后缺氧性脑损害的后遗症','EX','3.0',1,0,'admin','admin'),
 (327872,'EX_148','T98.301','陈旧性手术后缺氧性脑损害','EX','3.0',1,0,'admin','admin');
-INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
 (9500,'A00.000x001','MCC','EX_1','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (9501,'A00.100x001','MCC','EX_1','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (9502,'A00.900','MCC','EX_1','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
@@ -130081,7 +130081,7 @@ INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, 
 (9997,'I60.900x004','MCC','EX_46','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (9998,'I60.900x005','MCC','EX_46','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (9999,'I60.900x006','MCC','EX_46','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin');
-INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
 (10000,'I60.902+H45.0*','MCC','EX_46','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (10001,'I61.000x006','MCC','EX_46','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (10002,'I61.000x007','MCC','EX_46','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
@@ -130582,7 +130582,7 @@ INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, 
 (10497,'N01.300x001','MCC','EX_84','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (10498,'N01.400x001','MCC','EX_84','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (10499,'N01.500x001','MCC','EX_84','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin');
-INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
 (10500,'N01.600x001','MCC','EX_84','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (10501,'N01.700x001','MCC','EX_84','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (10502,'N01.800','MCC','EX_84','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
@@ -131083,7 +131083,7 @@ INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, 
 (10997,'T05.300','MCC','EX_138','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (10998,'T05.300x002','MCC','EX_138','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (10999,'T05.400x001','MCC','EX_138','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin');
-INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
 (11000,'T05.500x001','MCC','EX_138','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (11001,'T05.600x001','MCC','EX_138','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (11002,'T05.800x001','MCC','EX_138','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
@@ -131584,7 +131584,7 @@ INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, 
 (11497,'B44.100x003','CC','EX_13','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (11498,'B44.101+J99.8*','CC','EX_13','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (11499,'B44.200x001+J99.8*','CC','EX_13','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin');
-INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
 (11500,'B44.700','CC','EX_13','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (11501,'B44.800x001','CC','EX_13','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (11502,'B44.800x002','CC','EX_13','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
@@ -132085,7 +132085,7 @@ INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, 
 (11997,'C96.601','CC','EX_16','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (11998,'C96.602','CC','EX_16','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (11999,'C96.603','CC','EX_16','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin');
-INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
 (12000,'C96.604','CC','EX_16','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (12001,'C96.700','CC','EX_16','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (12002,'C96.704','CC','EX_16','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
@@ -132586,7 +132586,7 @@ INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, 
 (12497,'G40.804','CC','EX_34','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (12498,'G40.805','CC','EX_34','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (12499,'G40.900','CC','EX_34','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin');
-INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
 (12500,'G40.903+F02.8*','CC','EX_34','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (12501,'G43.300','CC','EX_34','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (12502,'G61.000','CC','EX_35','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
@@ -133087,7 +133087,7 @@ INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, 
 (12997,'I74.800x004','CC','EX_47','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (12998,'I74.800x005','CC','EX_47','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (12999,'I74.800x006','CC','EX_47','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin');
-INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
 (13000,'I74.800x007','CC','EX_47','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (13001,'I74.800x010','CC','EX_47','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (13002,'I74.800x012','CC','EX_47','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
@@ -133588,7 +133588,7 @@ INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, 
 (13497,'K57.200x001','CC','EX_64','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (13498,'K57.201','CC','EX_64','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (13499,'K57.202','CC','EX_64','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin');
-INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
 (13500,'K57.400','CC','EX_64','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (13501,'K57.401','CC','EX_64','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (13502,'K57.800','CC','EX_64','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
@@ -134089,7 +134089,7 @@ INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, 
 (13997,'M86.908','CC','EX_82','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (13998,'M86.909','CC','EX_82','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (13999,'M86.910','CC','EX_82','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin');
-INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
 (14000,'M86.911','CC','EX_82','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (14001,'M86.912','CC','EX_82','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (14002,'M86.913','CC','EX_82','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
@@ -134590,7 +134590,7 @@ INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, 
 (14497,'O87.300','CC','EX_99','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (14498,'O87.301','CC','EX_99','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (14499,'O87.801','CC','EX_99','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin');
-INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
 (14500,'O87.802','CC','EX_99','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (14501,'O98.100','CC','EX_100','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (14502,'O98.100x021','CC','EX_100','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
@@ -135091,7 +135091,7 @@ INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, 
 (14997,'Q43.800x012','CC','EX_113','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (14998,'Q43.800x014','CC','EX_113','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (14999,'Q43.800x015','CC','EX_113','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin');
-INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
 (15000,'Q43.800x017','CC','EX_113','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (15001,'Q43.800x018','CC','EX_113','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (15002,'Q43.800x019','CC','EX_113','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
@@ -135592,7 +135592,7 @@ INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, 
 (15497,'S06.801','CC','EX_128','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (15498,'S06.802','CC','EX_128','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (15499,'S06.803','CC','EX_128','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin');
-INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
 (15500,'S06.804','CC','EX_128','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (15501,'S06.805','CC','EX_128','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (15502,'S06.811','CC','EX_128','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
@@ -136093,7 +136093,7 @@ INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, 
 (15997,'S45.200x002','CC','EX_132','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (15998,'S45.201','CC','EX_132','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (15999,'S45.300x001','CC','EX_132','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin');
-INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
 (16000,'S45.300x002','CC','EX_132','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (16001,'S45.301','CC','EX_132','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (16002,'S45.700x001','CC','EX_132','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
@@ -136594,7 +136594,7 @@ INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, 
 (16497,'T02.900','CC','EX_138','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (16498,'T02.910','CC','EX_138','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (16499,'T03.000x001','CC','EX_138','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin');
-INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
 (16500,'T03.000x002','CC','EX_138','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (16501,'T03.000x003','CC','EX_138','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (16502,'T03.100x001','CC','EX_138','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
@@ -137095,7 +137095,7 @@ INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, 
 (16997,'T82.100x006','CC','EX_147','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (16998,'T82.100x007','CC','EX_147','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (16999,'T82.100x008','CC','EX_147','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin');
-INSERT INTO sys_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
+INSERT INTO biz_drg_ccmcc (id, icd_code, cc_level, excl_group, version, source, status, del_flag, create_by, update_by) VALUES
 (17000,'T82.100x009','CC','EX_147','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (17001,'T82.100x010','CC','EX_147','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
 (17002,'T82.100x011','CC','EX_147','3.0','国家医保局3.0版分组方案配置信息',1,0,'admin','admin'),
