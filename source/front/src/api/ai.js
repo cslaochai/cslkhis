@@ -266,6 +266,44 @@ export function rebuildKnowledgeIndex() {
   return request.post('/ai/knowledge/rebuild')
 }
 
+// ========== 知识库离线评测（评测集 + recall@k / MRR） ==========
+
+// 评测用例分页
+// params: { pageNum, pageSize, question? }  data 为 IPage<KnowledgeEvalCaseVO>
+export function listKnowledgeEvalCase(params) {
+  return request.post('/ai/knowledge/evalCase/listPage', params)
+}
+
+// 新增/修改评测用例（id 为空新增，非空修改）
+// params: { id?, question, expectedDocIds, expectedDocTitles?, remark? }  expectedDocIds 为分号分隔的文档ID
+export function upsertKnowledgeEvalCase(params) {
+  return request.post('/ai/knowledge/evalCase/upsert', params)
+}
+
+// 删除评测用例（软删）
+// params: { id }
+export function deleteKnowledgeEvalCase(params) {
+  return request.post('/ai/knowledge/evalCase/deleteById', params)
+}
+
+// 运行离线评测（同步，对全部用例检索算 recall@k / MRR）
+// data 为 KnowledgeEvalRunVO（status 2-完成 3-失败）
+export function runKnowledgeEval() {
+  return request.post('/ai/knowledge/eval/run')
+}
+
+// 评测运行历史分页（按运行时间倒序，用于回归对比）
+// params: { pageNum, pageSize }
+export function listKnowledgeEvalRun(params) {
+  return request.post('/ai/knowledge/eval/runListPage', params)
+}
+
+// 评测运行明细（每用例一条）
+// params: { id }  id 为运行ID
+export function getKnowledgeEvalRunDetail(params) {
+  return request.post('/ai/knowledge/eval/runDetail', params)
+}
+
 // 灌入内置示例语料（仅库为空时生效，返回灌入条数）
 export function seedKnowledgeCorpus() {
   return request.post('/ai/knowledge/seed')

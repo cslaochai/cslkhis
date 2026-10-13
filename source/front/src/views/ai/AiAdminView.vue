@@ -289,10 +289,138 @@
           </div>
         </el-dialog>
       </el-tab-pane>
+
+      <!-- ============ 评测中心 ============ -->
+      <el-tab-pane v-if="canManage" label="评测中心" name="eval">
+        <!-- 评测用例 -->
+        <el-card class="query-card mb-3" shadow="never">
+          <div class="flex items-center justify-between mb-3">
+            <span class="card-title">评测用例</span>
+            <div class="flex gap-2">
+              <el-button :loading="evalRunning" type="primary" @click="runEval">运行评测</el-button>
+              <el-button :icon="Plus" @click="openEvalCaseEdit()">新增用例</el-button>
+            </div>
+          </div>
+          <el-table v-loading="evalCaseLoading" :data="evalCaseRows" stripe>
+            <el-table-column label="评测问题" min-width="220" show-overflow-tooltip>
+              <template #default="{ row }">{{ row.question }}</template>
+            </el-table-column>
+            <el-table-column label="期望命中文档" min-width="220">
+              <template #default="{ row }">
+                <template v-if="row.expectedDocTitles">
+                  <el-tag v-for="(d, i) in row.expectedDocTitles.split(';')" :key="i" size="small" effect="plain" class="mr-1 mb-1">{{ d }}</el-tag>
+                </template>
+                <span v-else class="text-gray-400 text-sm">{{ row.expectedDocIds }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="说明" prop="remark" min-width="140" show-overflow-tooltip>
+              <template #default="{ row }">{{ row.remark || '—' }}</template>
+            </el-table-column>
+            <el-table-column label="创建时间" prop="createTime" min-width="150"/>
+            <el-table-column label="操作" width="110" align="center">
+              <template #default="{ row }">
+                <el-button link type="primary" @click="openEvalCaseEdit(row)">编辑</el-button>
+                <el-button link type="danger" @click="removeEvalCase(row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div class="list-footer flex items-center justify-end mt-3">
+            <el-pagination v-model:current-page="evalCaseQuery.pageNum" v-model:page-size="evalCaseQuery.pageSize"
+                           :page-sizes="PAGE_SIZES" :total="evalCaseTotal"
+                           layout="total, sizes, prev, pager, next, jumper"
+                           @size-change="onEvalCaseSizeChange" @current-change="loadEvalCases"/>
+          </div>
+        </el-card>
+
+        <!-- 运行历史 -->
+        <el-card class="table-card" shadow="never">
+          <div class="flex items-center justify-between mb-3">
+            <span class="card-title">运行历史（改切块参数 / embedding / 提示词后跑一次，纵向对比回归）</span>
+            <el-button :icon="Refresh" @click="loadEvalRuns">刷新</el-button>
+          </div>
+          <el-table v-loading="evalRunLoading" :data="evalRunRows" stripe>
+            <el-table-column label="运行时间" prop="createTime" min-width="150"/>
+            <el-table-column label="用例数" prop="caseCount" width="70" align="center"/>
+            <el-table-column label="命中用例" prop="hitCaseCount" width="80" align="center"/>
+            <el-table-column label="召回率" width="90" align="right">
+              <template #default="{ row }">
+                <span :class="row.status === 2 && row.recallAtK >= 80 ? 'metric-good' : 'metric-mid'">{{ row.recallAtK }}%</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="MRR" width="80" align="right">
+              <template #default="{ row }">
+                <span class="metric-mid">{{ row.mrr }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="平均耗时" width="90" align="right">
+              <template #default="{ row }">{{ row.avgLatencyMs }} ms</template>
+            </el-table-column>
+            <el-table-column label="配置快照" prop="configSnapshot" min-width="180" show-overflow-tooltip/>
+            <el-table-column label="状态" width="80" align="center">
+              <template #default="{ row }">
+                <el-tag :type="row.status === 2 ? 'success' : 'danger'" size="small">
+                  {{ row.status === 2 ? '完成' : '失败' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="90" align="center">
+              <template #default="{ row }">
+                <el-button link type="primary" @click="openEvalRunDetail(row)">结果</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div class="list-footer flex items-center justify-end mt-3">
+            <el-pagination v-model:current-page="evalRunQuery.pageNum" v-model:page-size="evalRunQuery.pageSize"
+                           :page-sizes="PAGE_SIZES" :total="evalRunTotal"
+                           layout="total, sizes, prev, pager, next, jumper"
+                           @size-change="onEvalRunSizeChange" @current-change="loadEvalRuns"/>
+          </div>
+        </el-card>
+
+        <!-- 运行结果明细 -->
+        <el-dialog v-model="evalRunDetailVisible" :title="'评测结果 · ' + (evalRunRow?.createTime || '')" width="860px" append-to-body>
+          <div class="eval-run-summary">
+            用例 {{ evalRunRow?.caseCount }} · 命中 {{ evalRunRow?.hitCaseCount }} · 召回率
+            <b :class="evalRunRow?.status === 2 && evalRunRow?.recallAtK >= 80 ? 'metric-good' : 'metric-mid'">{{ evalRunRow?.recallAtK }}%</b>
+            · MRR <b>{{ evalRunRow?.mrr }}</b> · 平均 {{ evalRunRow?.avgLatencyMs }} ms
+          </div>
+          <el-table v-loading="evalRunDetailLoading" :data="evalRunDetailRows" stripe max-height="420">
+            <el-table-column label="命中" width="70" align="center">
+              <template #default="{ row }">
+                <el-tag :type="row.hitFlag === 1 ? 'success' : 'danger'" size="small">{{ row.hitFlag === 1 ? '命中' : '未命中' }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="位次" width="70" align="center">
+              <template #default="{ row }">{{ row.hitRank > 0 ? '#' + row.hitRank : '—' }}</template>
+            </el-table-column>
+            <el-table-column label="问题" min-width="180" show-overflow-tooltip>
+              <template #default="{ row }">{{ row.question }}</template>
+            </el-table-column>
+            <el-table-column label="期望命中文档" min-width="150">
+              <template #default="{ row }">
+                <template v-if="row.expectedDocTitles">
+                  <el-tag v-for="(d, i) in row.expectedDocTitles.split(';')" :key="i" size="small" effect="plain" class="mr-1 mb-1">{{ d }}</el-tag>
+                </template>
+                <span v-else class="text-gray-400 text-sm">{{ row.expectedDocIds }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="实际命中" min-width="150">
+              <template #default="{ row }">
+                <template v-if="row.hitDocTitles">
+                  <el-tag v-for="(d, i) in row.hitDocTitles.split(';')" :key="i" size="small" class="mr-1 mb-1" type="info">{{ d }}</el-tag>
+                </template>
+                <span v-else class="text-gray-400 text-sm">无</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="命中块" prop="hitCount" width="80" align="center"/>
+          </el-table>
+        </el-dialog>
+      </el-tab-pane>
     </el-tabs>
 
     <AiAdminIngestAdd v-model="ingestVisible" @saved="onIngestSaved"/>
     <AiAdminDocEdit v-model="editVisible" :id="editId" @saved="onDocEditSaved" @rebuilt="onDocEditRebuilt"/>
+    <AiAdminEvalCaseEdit v-model="evalCaseEditVisible" :row="evalCaseEditRow" @saved="onEvalCaseSaved"/>
   </div>
 </template>
 
@@ -302,10 +430,15 @@ import {ElMessage, ElMessageBox} from 'element-plus';
 import {
   askKnowledge,
   deleteKnowledgeDocById,
+  deleteKnowledgeEvalCase,
   feedbackKnowledgeQueryLog,
   getKnowledgeDocPage,
+  getKnowledgeEvalRunDetail,
   getKnowledgeRebuildProgress,
+  listKnowledgeEvalCase,
+  listKnowledgeEvalRun,
   listKnowledgeQueryLog,
+  runKnowledgeEval,
   seedKnowledgeCorpus,
   submitRebuildKnowledgeDoc,
   updateKnowledgeDocStatus,
@@ -316,6 +449,7 @@ import {hasPerm} from '@/lib/perm';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import AiAdminIngestAdd from './AiAdminIngestAdd.vue';
 import AiAdminDocEdit from './AiAdminDocEdit.vue';
+import AiAdminEvalCaseEdit from './AiAdminEvalCaseEdit.vue';
 
 const activeTab = ref('qa');
 
@@ -642,13 +776,146 @@ const openObs = (row) => {
   obsVisible.value = true;
 };
 
+// ---------------- 评测中心（离线评测：recall@k / MRR） ----------------
+// 评测用例
+const evalCaseQuery = reactive({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE});
+const evalCaseLoading = ref(false);
+const evalCaseRows = ref([]);
+const evalCaseTotal = ref(0);
+const loadEvalCases = async () => {
+  evalCaseLoading.value = true;
+  try {
+    const res = await listKnowledgeEvalCase({
+      pageNum: evalCaseQuery.pageNum,
+      pageSize: evalCaseQuery.pageSize,
+    });
+    evalCaseRows.value = res?.data?.records || [];
+    evalCaseTotal.value = Number(res?.data?.total || 0);
+  } catch (e) {
+    console.error('加载评测用例失败', e);
+  } finally {
+    evalCaseLoading.value = false;
+  }
+};
+const onEvalCaseSizeChange = () => {
+  evalCaseQuery.pageNum = 1;
+  loadEvalCases();
+};
+const evalCaseEditVisible = ref(false);
+const evalCaseEditRow = ref(null);
+const openEvalCaseEdit = (row) => {
+  evalCaseEditRow.value = row || null;
+  evalCaseEditVisible.value = true;
+};
+const onEvalCaseSaved = () => {
+  loadEvalCases();
+};
+const removeEvalCase = async (row) => {
+  await ElMessageBox.confirm(`确认删除评测用例「${row.question}」？`, '删除确认', {type: 'warning'});
+  try {
+    await deleteKnowledgeEvalCase({id: row.id});
+    ElMessage.success('已删除');
+    loadEvalCases();
+  } catch (e) {
+    console.error('删除评测用例失败', e);
+  }
+};
+// 运行评测（同步执行，完成后提示指标并刷新历史）
+const evalRunning = ref(false);
+const runEval = async () => {
+  await ElMessageBox.confirm('将对全部评测用例执行检索并计算召回率 / MRR，运行时间取决于用例数，确认开始？', '运行评测', {
+    type: 'warning',
+  });
+  evalRunning.value = true;
+  try {
+    const res = await runKnowledgeEval();
+    const r = res?.data;
+    if (r?.status === 2) {
+      ElMessage.success(`评测完成：召回率 ${r.recallAtK}%，MRR ${r.mrr}（命中 ${r.hitCaseCount}/${r.caseCount}）`);
+    } else {
+      ElMessage.error(r?.errorMsg || '评测运行失败');
+    }
+    loadEvalRuns();
+    loadEvalCases();
+  } catch (e) {
+    console.error('运行评测失败', e);
+  } finally {
+    evalRunning.value = false;
+  }
+};
+// 运行历史
+const evalRunQuery = reactive({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE});
+const evalRunLoading = ref(false);
+const evalRunRows = ref([]);
+const evalRunTotal = ref(0);
+const loadEvalRuns = async () => {
+  evalRunLoading.value = true;
+  try {
+    const res = await listKnowledgeEvalRun({
+      pageNum: evalRunQuery.pageNum,
+      pageSize: evalRunQuery.pageSize,
+    });
+    evalRunRows.value = res?.data?.records || [];
+    evalRunTotal.value = Number(res?.data?.total || 0);
+  } catch (e) {
+    console.error('加载评测运行历史失败', e);
+  } finally {
+    evalRunLoading.value = false;
+  }
+};
+const onEvalRunSizeChange = () => {
+  evalRunQuery.pageNum = 1;
+  loadEvalRuns();
+};
+// 运行结果明细
+const evalRunDetailVisible = ref(false);
+const evalRunRow = ref(null);
+const evalRunDetailLoading = ref(false);
+const evalRunDetailRows = ref([]);
+const openEvalRunDetail = async (row) => {
+  evalRunRow.value = row;
+  evalRunDetailVisible.value = true;
+  evalRunDetailLoading.value = true;
+  try {
+    const res = await getKnowledgeEvalRunDetail({id: row.id});
+    evalRunDetailRows.value = res?.data || [];
+  } catch (e) {
+    console.error('加载评测运行明细失败', e);
+  } finally {
+    evalRunDetailLoading.value = false;
+  }
+};
+
 onMounted(() => {
   loadDocs();
+  loadEvalCases();
+  loadEvalRuns();
 });
 onBeforeUnmount(clearRebuildPollers);
 </script>
 
 <style scoped>
+.card-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.metric-good {
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+.metric-mid {
+  color: #1269b5;
+  font-weight: 600;
+}
+
+.eval-run-summary {
+  font-size: 13px;
+  color: #606266;
+  margin-bottom: 10px;
+}
+
 .obs-detail {
   display: flex;
   flex-direction: column;

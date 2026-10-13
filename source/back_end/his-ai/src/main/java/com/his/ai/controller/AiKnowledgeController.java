@@ -3,6 +3,8 @@ package com.his.ai.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.ai.dto.KnowledgeAskDTO;
 import com.his.ai.dto.KnowledgeDocQueryPageDTO;
+import com.his.ai.dto.KnowledgeEvalCaseQueryPageDTO;
+import com.his.ai.dto.KnowledgeEvalCaseUpsertDTO;
 import com.his.ai.dto.KnowledgeFeedbackDTO;
 import com.his.ai.dto.KnowledgeIdDTO;
 import com.his.ai.dto.KnowledgeImportCommitDTO;
@@ -12,6 +14,7 @@ import com.his.ai.dto.KnowledgePreviewDTO;
 import com.his.ai.dto.KnowledgeQueryLogQueryPageDTO;
 import com.his.ai.dto.KnowledgeStatusDTO;
 import com.his.ai.dto.KnowledgeTaskIdDTO;
+import com.his.ai.service.KnowledgeEvalService;
 import com.his.ai.service.KnowledgeImportService;
 import com.his.ai.service.KnowledgeQaCapability;
 import com.his.ai.service.KnowledgeQueryLogService;
@@ -21,6 +24,9 @@ import com.his.ai.vo.KnowledgeChunkPreviewVO;
 import com.his.ai.vo.KnowledgeDocHistoryVO;
 import com.his.ai.vo.KnowledgeDocListVO;
 import com.his.ai.vo.KnowledgeDocVO;
+import com.his.ai.vo.KnowledgeEvalCaseVO;
+import com.his.ai.vo.KnowledgeEvalRunDetailVO;
+import com.his.ai.vo.KnowledgeEvalRunVO;
 import com.his.ai.vo.KnowledgeImportTaskVO;
 import com.his.ai.vo.KnowledgeQueryLogVO;
 import com.his.ai.vo.KnowledgeRebuildTaskVO;
@@ -54,6 +60,7 @@ public class AiKnowledgeController {
     private final KnowledgeStoreService knowledgeStoreService;
     private final KnowledgeImportService knowledgeImportService;
     private final KnowledgeQueryLogService knowledgeQueryLogService;
+    private final KnowledgeEvalService knowledgeEvalService;
 
     @PostMapping("/ask")
     @Operation(summary = "知识库问答（RAG 检索增强生成；模型不可用降级返回检索原文）")
@@ -189,6 +196,49 @@ public class AiKnowledgeController {
     public Result<Void> queryLogFeedback(@Valid @RequestBody KnowledgeFeedbackDTO dto) {
         knowledgeQueryLogService.feedback(dto.getId(), dto.getFeedback());
         return Result.success("已反馈", null);
+    }
+
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
+    @PostMapping("/evalCase/listPage")
+    @Operation(summary = "评测用例分页")
+    public Result<IPage<KnowledgeEvalCaseVO>> evalCaseListPage(@Valid @RequestBody KnowledgeEvalCaseQueryPageDTO dto) {
+        return Result.success(knowledgeEvalService.listCasePage(dto));
+    }
+
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
+    @PostMapping("/evalCase/upsert")
+    @Operation(summary = "新增/修改评测用例（id 为空新增，非空修改）")
+    public Result<Long> evalCaseUpsert(@Valid @RequestBody KnowledgeEvalCaseUpsertDTO dto) {
+        return Result.success(knowledgeEvalService.upsertCase(dto));
+    }
+
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
+    @PostMapping("/evalCase/deleteById")
+    @Operation(summary = "删除评测用例（软删）")
+    public Result<Void> evalCaseDelete(@Valid @RequestBody KnowledgeIdDTO dto) {
+        knowledgeEvalService.deleteCase(dto.getId());
+        return Result.success("已删除", null);
+    }
+
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
+    @PostMapping("/eval/run")
+    @Operation(summary = "运行离线评测（对全部用例检索，算 recall@k / MRR，落运行汇总与明细）")
+    public Result<KnowledgeEvalRunVO> evalRun() {
+        return Result.success(knowledgeEvalService.runEval());
+    }
+
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
+    @PostMapping("/eval/runListPage")
+    @Operation(summary = "评测运行历史分页（按运行时间倒序，用于回归对比）")
+    public Result<IPage<KnowledgeEvalRunVO>> evalRunListPage(@Valid @RequestBody KnowledgeEvalCaseQueryPageDTO dto) {
+        return Result.success(knowledgeEvalService.listRunPage(dto));
+    }
+
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
+    @PostMapping("/eval/runDetail")
+    @Operation(summary = "评测运行明细（每用例一条：是否命中/位次/实际命中）")
+    public Result<List<KnowledgeEvalRunDetailVO>> evalRunDetail(@Valid @RequestBody KnowledgeIdDTO dto) {
+        return Result.success(knowledgeEvalService.listRunDetail(dto.getId()));
     }
 
     @PreAuthorize("hasAuthority('ai:knowledge:manage')")

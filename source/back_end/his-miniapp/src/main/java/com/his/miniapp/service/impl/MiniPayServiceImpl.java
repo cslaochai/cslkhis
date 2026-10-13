@@ -30,6 +30,7 @@ import com.his.pay.service.AlipayChannelService;
 import com.his.pay.service.PayNotifyLogService;
 import com.his.pay.service.PayOrderService;
 import com.his.pay.service.WxPayChannelService;
+import com.his.pay.support.PayRateLimitSupport;
 import com.his.pay.vo.PayOrderVO;
 import com.his.system.service.SysMessageService;
 import com.his.system.support.SystemOperatorContext;
@@ -66,6 +67,23 @@ public class MiniPayServiceImpl implements MiniPayService {
     private static final int MY_ORDERS_LIMIT = 50;
     private static final String DEFAULT_REFUND_REASON = "患者退号";
 
+    /**
+     * 单个患者在一个统计窗口内允许的下单次数上限（防的是连点 / 脚本反复调起渠道收银台）。
+     * 患者正常缴费一次只下一单，撞不上；同一账单的重复点由支付单去重挡（{@code latestPaidByBiz} 与
+     * 建单复用），不占这里的量，这里只压「换着业务单、脚本连刷」这种去重管不到的总量。
+     */
+    private static final int ORDER_QUOTA_PER_WINDOW = 20;
+    private static final int ORDER_QUOTA_WINDOW_SECONDS = 60;
+
+    /**
+     * 同一张支付单两次「真的去渠道查单」之间的最小间隔（秒），与收费台同口径。
+     * 到账主要靠渠道异步通知，查单只是公网穿透断了时的兜底，渠道状态不会秒级变。
+     */
+    private static final int CHANNEL_QUERY_INTERVAL_SECONDS = 5;
+
+    private static final String ORDER_QUOTA_KEY_PREFIX = "his:pay:mini:quota:";
+    private static final String CHANNEL_QUERY_KEY_PREFIX = "his:pay:mini:query:";
+
     private final WxPayChannelService wxPayChannelService;
 
     private final AlipayChannelService alipayChannelService;
@@ -73,6 +91,8 @@ public class MiniPayServiceImpl implements MiniPayService {
     private final PayOrderService payOrderService;
 
     private final PayNotifyLogService payNotifyLogService;
+
+    private final PayRateLimitSupport payRateLimitSupport;
 
     private final SettlementBillService settlementBillService;
 
@@ -93,6 +113,12 @@ public class MiniPayServiceImpl implements MiniPayService {
         if (paid != null) {
             return toVO(paid, null);
         }
+
+        // 防刷配额闸：按患者在固定窗口内封顶下单次数（同一业务单的重复点已被上面的已收款短路 + 建单复用挡掉）。
+        // 只在真要往下走渠道下单前计数，已收款直接返回的幂等请求不占配额；fail-open 口径与收费台一致，
+        // Redis 故障时放行（减压闸不是资金闸）。
+        payRateLimitSupport.assertQuota(ORDER_QUOTA_KEY_PREFIX + current.getPatientId(),
+                ORDER_QUOTA_PER_WINDOW, ORDER_QUOTA_WINDOW_SECONDS, "下单");
 
         PayOrderVO order = payOrderService.createPending(new PayOrderService.CreateSpec(
                 dto.getBizType(), dto.getBizId(), current.getPatientId(), current.getRealName(),
@@ -305,6 +331,14 @@ public class MiniPayServiceImpl implements MiniPayService {
                     + PayChannelEnum.labelOrUnknown(order.getChannel()));
         }
         if (Objects.equals(order.getPayStatus(), PayOrderStatusEnum.PAID.getCode())) {
+            return toVO(order, null);
+        }
+
+        // 查单节流：轮询节奏由前端决定、页面多开成倍放大，同一张单 5 秒内只真打渠道一次。
+        // 被节流就回本地状态（仍是待支付），钱真到了渠道通知会把状态翻过来；
+        // Redis 故障时照常查单（fail-open）——查单是收款事实的兜底来源，不能被减压闸挡住。
+        if (!payRateLimitSupport.allowsChannelQuery(
+                CHANNEL_QUERY_KEY_PREFIX + payNo, CHANNEL_QUERY_INTERVAL_SECONDS)) {
             return toVO(order, null);
         }
 
