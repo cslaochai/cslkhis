@@ -105,8 +105,8 @@ async function submit() {
     ElMessage.success('调价成功，已写入调价历史');
     visible.value = false;
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.message || '调价失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     submitting.value = false;
   }

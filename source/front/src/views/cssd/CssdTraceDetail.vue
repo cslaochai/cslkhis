@@ -53,11 +53,10 @@ watch(visible, async (open) => {
     const res = await getCssdDetail(props.id);
     if (res.code === 200)
       detail.value = res.data;
-    else
-      ElMessage.error(res.message || '查询失败');
+    
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   }
 });
 

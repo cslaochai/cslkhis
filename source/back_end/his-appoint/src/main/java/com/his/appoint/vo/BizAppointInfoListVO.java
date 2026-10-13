@@ -135,12 +135,12 @@ public class BizAppointInfoListVO {
     private Integer scheduleType;
 
     /**
-     * 结算方式（1-自费 2-城镇职工医保 3-城乡居民医保 4-公费 5-商业保险）
+     * 本单结算方式（1-全自费 2-医保联网）
      */
     private Integer settlementType;
 
     /**
-     * 医保类型（如：在职职工、退休职工、城乡居民等）
+     * 费别/参保类型（自费/城镇职工医保/城乡居民医保/公费医疗/商业医疗保险）
      */
     private String medicalInsuranceType;
 

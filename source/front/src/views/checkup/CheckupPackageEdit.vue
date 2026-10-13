@@ -141,7 +141,7 @@ watch(
         form.items = [blankItem()];
     } catch (e) {
       console.error(e);
-      ElMessage.error('查询失败');
+      
       visible.value = false;
     }
   }
@@ -180,12 +180,10 @@ const save = async () => {
       ElMessage.success(form.id ? '套餐已保存' : '套餐已创建');
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '保存失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('保存失败');
+    
   } finally {
     saving.value = false;
   }

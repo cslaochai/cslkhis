@@ -30,3 +30,30 @@ export const settlementLabel = (code) => {
 
 export const ALL_DEPT = '__ALL__';
 export const isAllDept = (v) => v === ALL_DEPT || v == null || v === '';
+
+/**
+ * 账单上已经有收到的钱（1-待支付 2-部分支付 3-已支付 4-已作废 5-已退费）。
+ * 已收费的挂号改约要过「同医生 + 同费用」闸，看板卡片与改约弹窗共用这一份判定。
+ */
+export const isRegistPaid = (r) => [2, 3].includes(Number(r?.billStatus));
+
+/** 号源原价 = 挂号费 + 诊查费，单位「分」（与后端出账口径一致；用分比避免浮点误差） */
+export const scheduleFeeCents = (s) => Math.round((Number(s?.registFee) || 0) * 100)
+    + Math.round((Number(s?.diagnosisFee) || 0) * 100);
+
+/**
+ * 已收费号改约的候选判定（与后端 assertPaidRescheduleSamePrice 同一口径）：
+ * 只留「同医生 + 同费用」的号源，其余不进候选列表。
+ *
+ * 后端只放这一档：价差没人补/退，收入归属一经出账不改写。
+ * `origFeeCents` 传 null 表示原号源费用无从得知（历史号源已被删）→ 不比费用，由后端兜底判。
+ */
+export const isPaidRescheduleCandidate = (row, origFeeCents, schedule) => {
+  if (!isRegistPaid(row))
+    return true;
+  if (row?.doctorId && String(schedule?.doctorId) !== String(row.doctorId))
+    return false;
+  if (origFeeCents !== null && scheduleFeeCents(schedule) !== origFeeCents)
+    return false;
+  return true;
+};

@@ -96,7 +96,7 @@ watch(visible, async (open) => {
     detail.value = res.data || null;
   } catch (e) {
     detail.value = null;
-    ElMessage.error(e.message || '加载账单详情失败');
+    
   } finally {
     detailLoading.value = false;
   }

@@ -113,11 +113,9 @@ const loadList = async () => {
     if (res.code === 200) {
       rows.value = res.data?.records || [];
       total.value = Number(res.data?.total || 0);
-    } else {
-      ElMessage.error(res.message || '查询机位失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '查询机位失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }

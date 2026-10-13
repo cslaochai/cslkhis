@@ -215,7 +215,7 @@ async function loadList() {
   } catch (e) {
     rows.value = [];
     pagination.total = 0;
-    ElMessage.error(e?.message || '加载价格列表失败');
+    
   } finally {
     loading.value = false;
   }
@@ -236,7 +236,7 @@ async function loadHistory() {
   } catch (e) {
     historyRows.value = [];
     historyPagination.total = 0;
-    ElMessage.error(e?.message || '加载调价历史失败');
+    
   } finally {
     historyLoading.value = false;
   }

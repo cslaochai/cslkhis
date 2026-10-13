@@ -188,12 +188,10 @@ const save = async () => {
       ElMessage.success(form.id ? '修改成功' : '上报成功');
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '保存失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('保存失败');
+    
   } finally {
     saving.value = false;
   }

@@ -442,11 +442,9 @@ const loadBoard = async () => {
       board.slot3 = res.data?.slot3 || [];
       board.sessionCount = res.data?.sessionCount || 0;
       board.doneCount = res.data?.doneCount || 0;
-    } else {
-      ElMessage.error(res.message || '加载看板失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '加载看板失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     boardLoading.value = false;
   }
@@ -510,11 +508,9 @@ const loadArchive = async () => {
     if (res.code === 200) {
       arRows.value = res.data?.records || [];
       arTotal.value = Number(res.data?.total || 0);
-    } else {
-      ElMessage.error(res.message || '查询档案失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '查询档案失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     arLoading.value = false;
   }
@@ -572,11 +568,9 @@ const loadSession = async () => {
     if (res.code === 200) {
       seRows.value = res.data?.records || [];
       seTotal.value = Number(res.data?.total || 0);
-    } else {
-      ElMessage.error(res.message || '查询透析单失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '查询透析单失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     seLoading.value = false;
   }
@@ -623,11 +617,9 @@ const loadStats = async () => {
     const res = await getDialysisStats({startDate: stRange.value[0], endDate: stRange.value[1]});
     if (res.code === 200) {
       stats.value = res.data;
-    } else {
-      ElMessage.error(res.message || '统计失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '统计失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     stLoading.value = false;
   }

@@ -46,6 +46,11 @@ public class ScheduleSelectListVO implements Serializable {
     private BigDecimal registFee;
 
     /**
+     * 诊查费（改约要比「号源原价 = 挂号费 + 诊查费」，只给挂号费就会把价差判错）
+     */
+    private BigDecimal diagnosisFee;
+
+    /**
      * 剩余号源
      */
     private Integer availableSource;

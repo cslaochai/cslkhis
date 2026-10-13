@@ -139,11 +139,10 @@ const submitReceive = async () => {
       ElMessage.success(`回收登记成功，条码 ${res.data?.packNo}`);
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '登记失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('登记失败');
+    
   }
 };
 </script>

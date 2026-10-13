@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
- * 出票入参（L4）。
+ * 出票入参。
  */
 @Data
 public class InvoiceIssueDTO {

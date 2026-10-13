@@ -166,8 +166,8 @@ const loadList = async () => {
     });
     rows.value = res?.data?.records || [];
     total.value = Number(res?.data?.total || 0);
-  } catch (e) {
-    ElMessage.error(e?.message || '加载组套失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }
@@ -211,8 +211,8 @@ const remove = async (row) => {
     await deleteOrderSetById(row.id);
     ElMessage.success('已删除');
     loadList();
-  } catch (e) {
-    ElMessage.error(e?.message || '删除失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 onMounted(() => {

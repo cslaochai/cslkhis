@@ -226,8 +226,8 @@ const submitStart = async () => {
     ElMessage.success('已开始输注（双人核对完成）');
     visible.value = false;
     emit('saved');
-  } catch (error) {
-    ElMessage.error(error.message || '开始输注失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     startSubmitting.value = false;
   }

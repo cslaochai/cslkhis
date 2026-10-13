@@ -67,8 +67,7 @@ const load = async (orderId) => {
     const res = await getPurchaseOrderDetail(orderId);
     if (res.code === 200)
       detail.value = res.data;
-    else
-      ElMessage.error(res.message || '加载详情失败');
+    
   } catch (e) {
     console.error(e);
   }

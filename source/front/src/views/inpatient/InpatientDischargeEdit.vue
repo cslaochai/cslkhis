@@ -129,8 +129,8 @@ const submitDischarge = async () => {
     ElMessage.success('出院办理成功：床位已释放、病案首页已回写住院天数与离院方式');
     visible.value = false;
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.message || '出院办理失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     dischargeLoading.value = false;
   }

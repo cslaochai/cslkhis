@@ -88,8 +88,8 @@ const submitCost = async () => {
     ElMessage.success('成本已录入');
     visible.value = false;
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.response?.data?.message || '成本录入失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 </script>

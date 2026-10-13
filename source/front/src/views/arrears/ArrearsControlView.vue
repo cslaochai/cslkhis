@@ -135,11 +135,10 @@ const savePolicy = async () => {
     if (res.code === 200) {
       ElMessage.success('策略已保存');
       loadPolicy();
-    } else
-      ElMessage.error(res.message || '保存失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('保存失败');
+    
   } finally {
     policySaving.value = false;
   }
@@ -161,11 +160,10 @@ const loadBoard = async () => {
     if (res.code === 200) {
       rows.value = res.data?.records || [];
       total.value = Number(res.data?.total || 0);
-    } else
-      ElMessage.error(res.message || '查询失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     loading.value = false;
   }

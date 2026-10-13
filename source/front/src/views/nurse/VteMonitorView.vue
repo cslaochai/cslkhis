@@ -213,8 +213,8 @@ async function loadPreview() {
   try {
     const res = await previewVteStats(previewMonth.value)
     preview.value = res?.data || {}
-  } catch (e) {
-    ElMessage.error(e?.message || '试算失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 
@@ -270,8 +270,8 @@ async function doExport() {
     a.click()
     URL.revokeObjectURL(a.href)
     ElMessage.success('已导出')
-  } catch (e) {
-    ElMessage.error(e?.message || '导出失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 

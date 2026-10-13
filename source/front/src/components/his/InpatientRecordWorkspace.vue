@@ -584,8 +584,8 @@ const loadRecords = async () => {
     });
     rows.value = (res.data?.records || []);
     total.value = Number(res.data?.total ?? 0);
-  } catch (error) {
-    ElMessage.error(error.message || '加载病历列表失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }
@@ -613,8 +613,8 @@ const loadLogs = async () => {
     });
     logs.value = (res.data?.records || []);
     logTotal.value = Number(res.data?.total ?? 0);
-  } catch (error) {
-    ElMessage.error(error.message || '加载修改留痕失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     logLoading.value = false;
   }
@@ -726,8 +726,8 @@ const openEdit = async (row) => {
     aiRaw.value = '';
     aiNote.value = '';
     dialog.value = true;
-  } catch (error) {
-    ElMessage.error(error.message || '加载病历详情失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ---------------- ICD-10 诊断选码（G3） ----------------
@@ -843,8 +843,8 @@ const extractByAi = async () => {
     aiNote.value = rejected > 0
         ? `抽取完成，${rejected} 条被判为「原文中找不到依据 / 字段不可写」已丢弃`
         : '抽取完成，请逐条核对后点「填入」';
-  } catch (error) {
-    ElMessage.error(error.message || '病历文本抽取失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     aiLoading.value = false;
   }
@@ -873,8 +873,8 @@ const submitRecord = async () => {
     ElMessage.success(editingId.value ? '病历已修改（变更已逐字段留痕）' : '病历文书已创建');
     dialog.value = false;
     await reloadAll();
-  } catch (error) {
-    ElMessage.error(error.message || '保存病历失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     saving.value = false;
   }
@@ -884,8 +884,8 @@ const doSubmit = async (row) => {
     const res = await submitInpatientRecord({ids: [row.id]});
     ElMessage.success(`已提交 ${res.data} 份病历`);
     await reloadAll();
-  } catch (error) {
-    ElMessage.error(error.message || '提交失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const doArchive = async (row) => {
@@ -905,7 +905,7 @@ const doArchive = async (row) => {
   } catch (error) {
     if (error === 'cancel' || error === 'close')
       return;
-    ElMessage.error(error.message || '归档失败');
+    
   }
 };
 // ---------------- 详情（要素明细） ----------------
@@ -918,8 +918,8 @@ const openDetail = async (row) => {
     detail.value = res.data || {};
     detailElements.value = (res.data?.elements || []);
     detailDialog.value = true;
-  } catch (error) {
-    ElMessage.error(error.message || '加载病历详情失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const rateColor = (rate) => {

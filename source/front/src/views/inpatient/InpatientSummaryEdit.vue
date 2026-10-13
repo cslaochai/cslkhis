@@ -347,7 +347,7 @@ watch(visible, async (open) => {
     // 诊断条数的主诊断约束由后端把关，但主要诊断必须排第一条，前端保存前顺手排一下
     normalizeOrder();
   } catch (e) {
-    ElMessage.error(e?.message || '加载病案首页失败');
+    
     visible.value = false;
   } finally {
     summaryLoading.value = false;
@@ -399,8 +399,8 @@ const submitSummary = async () => {
     ElMessage.success('病案首页已保存');
     visible.value = false;
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.message || '保存病案首页失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     summaryLoading.value = false;
   }

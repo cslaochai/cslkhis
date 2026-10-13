@@ -235,7 +235,7 @@ const loadList = async () => {
       total.value = Number(res.data.total || 0);
     }
   } catch (e) {
-    ElMessage.error('加载归档记录失败');
+    
     console.error(e);
   } finally {
     loading.value = false;
@@ -277,10 +277,9 @@ const doArchive = async (row) => {
       if (res.code === 200) {
         ElMessage.success('归档成功');
         await reloadAll();
-      } else
-        ElMessage.error(res.message || '归档失败');
-    } catch (e) {
-      ElMessage.error(e?.response?.data?.message || '归档失败');
+      } 
+    } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+      
     } finally {
       actionLoading.value = false;
     }
@@ -306,10 +305,9 @@ const doSeal = async (row) => {
     if (res.code === 200) {
       ElMessage.success('封存成功');
       await reloadAll();
-    } else
-      ElMessage.error(res.message || '封存失败');
-  } catch (e) {
-    ElMessage.error(e?.response?.data?.message || '封存失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     actionLoading.value = false;
   }
@@ -320,10 +318,9 @@ const doNotifyOverdue = async () => {
     const res = await notifyArchiveOverdue();
     if (res.code === 200)
       ElMessage.success(`已补跑超期提醒，生成 ${res.data ?? 0} 条`);
-    else
-      ElMessage.error(res.message || '补跑失败');
-  } catch (e) {
-    ElMessage.error(e?.response?.data?.message || '补跑失败');
+    
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const canArchive = (row) => Number(row.archiveStatus) === 1;

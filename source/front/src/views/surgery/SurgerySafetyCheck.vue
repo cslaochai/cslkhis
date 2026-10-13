@@ -161,8 +161,8 @@ const loadSafetyCards = async (applyId) => {
   try {
     const res = await getSafetyCheckCards(applyId);
     safetyCards.value = (res.data || []);
-  } catch (error) {
-    ElMessage.error(error.message || '加载安全核查单失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     safetyLoading.value = false;
   }
@@ -223,8 +223,8 @@ const submitSafety = async () => {
     safetyForm.items = [];
     emit('saved');
     await loadSafetyCards(safetyTarget.value.id);
-  } catch (error) {
-    ElMessage.error(error.message || '核查签核失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     safetySubmitting.value = false;
   }

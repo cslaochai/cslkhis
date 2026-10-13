@@ -86,11 +86,10 @@ watch(visible, async (open) => {
     const res = await getEquipmentDetail(props.id);
     if (res.code === 200)
       detail.value = res.data;
-    else
-      ElMessage.error(res.message || '查询失败');
+    
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   }
 });
 
@@ -111,11 +110,10 @@ const delMaintain = async (row) => {
       if (detailRes.code === 200)
         detail.value = detailRes.data;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '删除失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('删除失败');
+    
   }
 };
 const delMetering = async (row) => {
@@ -132,11 +130,10 @@ const delMetering = async (row) => {
       if (detailRes.code === 200)
         detail.value = detailRes.data;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '删除失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('删除失败');
+    
   }
 };
 </script>

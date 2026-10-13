@@ -14,7 +14,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * 费用记账服务（L1）：应收的唯一来源。
+ * 费用记账服务：应收的唯一来源。
  */
 public interface FeeRecordService extends IService<BizFeeRecord> {
 

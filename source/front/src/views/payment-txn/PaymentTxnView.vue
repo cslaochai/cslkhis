@@ -186,7 +186,7 @@ async function loadList() {
     pagination.total = Number(res.data?.total || 0);
   } catch (e) {
     rows.value = [];
-    ElMessage.error(e.message || '加载支付流水失败');
+    
   } finally {
     loading.value = false;
   }

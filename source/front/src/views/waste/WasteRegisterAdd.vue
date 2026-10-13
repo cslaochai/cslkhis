@@ -110,11 +110,10 @@ const submitCreate = async () => {
       ElMessage.success(`登记成功，单号 ${res.data?.wasteNo}`);
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '登记失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('登记失败');
+    
   }
 };
 </script>

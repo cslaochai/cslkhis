@@ -72,11 +72,10 @@ const saveCmExecute = () => {
       ElMessage.success('配血已执行，待第二人复核');
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '执行失败');
+    } 
   }).catch((e) => {
     console.error(e);
-    ElMessage.error('执行失败');
+    
   });
 };
 </script>

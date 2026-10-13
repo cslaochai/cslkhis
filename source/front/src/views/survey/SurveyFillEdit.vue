@@ -132,14 +132,8 @@ const loadPaper = async () => {
   Object.assign(fillForm, {fillSource: 2, anonymousFlag: 0, commentText: '', remark: ''});
   try {
     const [d, t] = await Promise.all([getDispatchDetail(props.row.id), getTemplateDetail(props.row.templateId)]);
-    if (d.code !== 200) {
-      ElMessage.error(d.message || '加载发放单失败');
-      return;
-    }
-    if (t.code !== 200) {
-      ElMessage.error(t.message || '加载问卷失败');
-      return;
-    }
+    
+    
     fillDispatch.value = d.data;
     fillPaper.value = (t.data?.items || []).slice().sort((x, y) => Number(x.seqNo) - Number(y.seqNo));
     fillPaper.value.forEach(it => {
@@ -147,7 +141,7 @@ const loadPaper = async () => {
     });
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载失败');
+    
   } finally {
     fillLoading.value = false;
   }
@@ -199,11 +193,10 @@ const submitFill = async () => {
           : `已回收：总分 ${res.data?.score100} 分（均分 ${res.data?.avgScore}）`);
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '提交失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('提交失败');
+    
   } finally {
     fillBusy.value = false;
   }

@@ -745,9 +745,8 @@ const handleTplDelete = async (row) => {
     await deleteScheduleTemplate(row.id);
     ElMessage.success('模板已删除');
     loadTemplates();
-  } catch (error) {
-    if (error !== 'cancel')
-      ElMessage.error(error.message || '删除失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleTplToggle = async (row) => {
@@ -756,8 +755,8 @@ const handleTplToggle = async (row) => {
     await updateScheduleTemplateStatus(row.id, stop ? 0 : 1);
     ElMessage.success(stop ? '模板已停用' : '模板已启用');
     loadTemplates();
-  } catch (error) {
-    ElMessage.error(error.message || '操作失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ========== 生成预览（dryRun） ==========
@@ -790,7 +789,7 @@ const handleGenerateFromTemplate = async () => {
     const res = await previewScheduleTemplate(GENERATE_TARGET_WEEK_OFFSET, panelDeptId.value, panelStaffType.value);
     previewData.value = res.data || {};
   } catch (error) {
-    ElMessage.error(error.message || '预览失败');
+    
     previewVisible.value = false;
   } finally {
     previewLoading.value = false;
@@ -803,8 +802,8 @@ const handleConfirmGenerate = async () => {
     ElMessage.success(res.message || '生成完成');
     previewVisible.value = false;
     loadPanel();
-  } catch (error) {
-    ElMessage.error(error.message || '生成失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     generateLoading.value = false;
   }
@@ -1337,8 +1336,8 @@ const handleReplicateNextWeek = async () => {
     if (!res.data?.created) ElMessage.error(msg);
     else ElMessage.success(msg);
     loadPanel();
-  } catch (error) {
-    ElMessage.error(error.message || '复刻失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     replicateLoading.value = false;
   }
@@ -1374,10 +1373,8 @@ const handleDelete = async (row) => {
     await deleteSchedule(row.id);
     ElMessage.success('删除成功');
     loadPanel();
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.message || '删除失败');
-    }
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ========== 停诊闭环（影响名单 + 批量退号） ==========
@@ -1396,8 +1393,8 @@ const handleToggleStatus = async (row) => {
       await updateScheduleStatus(row.id, 1);
       ElMessage.success('已启用');
       loadPanel();
-    } catch (error) {
-      ElMessage.error(error.message || '操作失败');
+    } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+      
     }
     return;
   }
@@ -1406,8 +1403,8 @@ const handleToggleStatus = async (row) => {
       await updateScheduleStatus(row.id, 0);
       ElMessage.success('已停用该出勤班次');
       loadPanel();
-    } catch (error) {
-      ElMessage.error(error.message || '操作失败');
+    } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+      
     }
     return;
   }
@@ -1419,7 +1416,7 @@ const handleToggleStatus = async (row) => {
     const res = await getStopImpact(row.id);
     stopImpactList.value = res.data || [];
   } catch (error) {
-    ElMessage.error(error.message || '获取影响名单失败');
+    
     stopImpactVisible.value = false;
   } finally {
     stopImpactLoading.value = false;
@@ -1437,8 +1434,8 @@ const handleBatchCancel = async () => {
     await updateScheduleStatus(stopImpactSchedule.value.id, 0);
     stopImpactVisible.value = false;
     loadPanel();
-  } catch (error) {
-    ElMessage.error(error.message || '批量退号失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     batchCancelLoading.value = false;
   }
@@ -1449,8 +1446,8 @@ const handleStopOnly = async () => {
     ElMessage.success('已停诊，请按名单通知患者改约或退号');
     stopImpactVisible.value = false;
     loadPanel();
-  } catch (error) {
-    ElMessage.error(error.message || '操作失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ========== 加号 ==========
@@ -1469,9 +1466,8 @@ const handleAddSource = async (row) => {
     await addScheduleSource(row.id, num, reason.value);
     ElMessage.success(`已加号 ${num} 个`);
     loadPanel();
-  } catch (error) {
-    if (error !== 'cancel' && error?.message)
-      ElMessage.error(error.message);
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const loadTitleDict = async () => {

@@ -179,8 +179,8 @@ watch(visible, async (open) => {
   try {
     const res = await getSignatureDetail(props.id);
     detail.value = res.data;
-  } catch (e) {
-    ElMessage.error(e?.message || '加载签名详情失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     detailLoading.value = false;
   }
@@ -195,8 +195,8 @@ const doVerify = async () => {
     verifyResult.value = res.data;
     // 验签会回写核查结果，列表里的"验签"列必须跟着变，否则页面自相矛盾
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.message || '验签失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     verifying.value = false;
   }
@@ -215,8 +215,8 @@ const doInvalidate = async () => {
     ElMessage.success('已作废该签名（历史行保留，内容锁定已解除）');
     visible.value = false;
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.message || '作废失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     invalidating.value = false;
   }

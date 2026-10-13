@@ -110,6 +110,8 @@ public class ChargeApiImpl implements ChargeApi {
         settleDTO.setEncounterId(command.getRegistId());
         settleDTO.setFeeIds(feeIds);
         settleDTO.setBillType(BillTypeEnum.REGISTRATION.getCode());
+        // 本单结算方式（1-全自费 2-医保联网）由挂号单透传，允许医保患者本单改自费
+        settleDTO.setSettlementMode(command.getSettlementMode());
         // 部分免收（只免挂号费、诊查费照收）时账单仍要缴，但备注里必须留「免了哪一项、依据哪条策略」
         settleDTO.setRemark(TextUtil.hasText(command.getWaiveReason()) ? command.getWaiveReason() : null);
         BizSettlementBill bill = settlementBillService.settle(settleDTO);

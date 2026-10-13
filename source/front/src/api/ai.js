@@ -124,8 +124,13 @@ export function draftEmrText(params) {
 export function transcribeVoice(formData) {
   // request.js 实例默认 Content-Type: application/json，axios 1.x 对「FormData + JSON 头」
   // 会走 formDataToJSON 把文件序列化成 JSON 体，后端直接 MultipartException ——
-  // 请求级显式声明 multipart，axios 才会让浏览器自己带 boundary 发原始表单
-  return request.post('/ai/emrText/transcribe', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+  // 请求级显式声明 multipart，axios 才会让浏览器自己带 boundary 发原始表单。
+  // silent：转写失败的提示在医生工作站按「失败必须可见」自行处理（含更具体的兜底文案），
+  // 拦截器不再重复弹。
+  return request.post('/ai/emrText/transcribe', formData, {
+    silent: true,
+    headers: {'Content-Type': 'multipart/form-data'}
+  })
 }
 
 // ========== AI 运营问数（NL2SQL） ==========

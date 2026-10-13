@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * 结算入参（L2）：把一批待结算记账行锁成一张账单。
+ * 结算入参：把一批待结算记账行锁成一张账单。
  */
 @Data
 public class BillSettleUpsertDTO {

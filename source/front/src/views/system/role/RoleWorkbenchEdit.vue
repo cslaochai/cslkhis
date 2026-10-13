@@ -142,8 +142,8 @@ async function loadRoleConfig() {
       visible: Number(w.visible ?? 0),
       sortOrder: Number(w.sortOrder ?? 0),
     }))
-  } catch (e) {
-    ElMessage.error(e?.message || '工作台配置加载失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     roleLoading.value = false
   }
@@ -171,8 +171,8 @@ async function saveRoleConfig() {
     ElMessage.success('已保存，该角色下次登录或切换角色时生效')
     visible.value = false
     emit('saved')
-  } catch (e) {
-    ElMessage.error(e?.message || '保存失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     savingRole.value = false
   }

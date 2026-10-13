@@ -124,7 +124,6 @@ public class InsuranceSettlementServiceImpl
                 vo.setMedicalInsuranceNo(patient.getMedicalInsuranceNo());
             }
             vo.setPhone(patient.getPhone());
-            vo.setPatientType(patient.getPatientType());
             if (!TextUtil.hasText(vo.getInsuranceType())) {
                 vo.setInsuranceType(patient.getMedicalInsuranceType());
             }

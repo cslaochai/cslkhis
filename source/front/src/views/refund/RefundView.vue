@@ -279,7 +279,7 @@ async function loadList() {
   } catch (e) {
     rows.value = [];
     pagination.total = 0;
-    ElMessage.error(e?.message || '加载退费申请失败');
+    
   } finally {
     loading.value = false;
   }
@@ -348,8 +348,8 @@ async function submitAudit() {
     ElMessage.success(auditForm.approved ? '已审核通过' : '已驳回');
     auditVisible.value = false;
     loadList();
-  } catch (e) {
-    ElMessage.error(e?.message || '审核失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     auditSubmitting.value = false;
   }
@@ -378,8 +378,8 @@ async function submitDiscard() {
     ElMessage.success('已作废，这张收费单可以重新发起退费申请了');
     discardVisible.value = false;
     loadList();
-  } catch (e) {
-    ElMessage.error(e?.message || '作废失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     discardSubmitting.value = false;
   }
@@ -399,8 +399,8 @@ async function handleExecute(row) {
     await executeRefund(row.id);
     ElMessage.success('退费已执行');
     loadList();
-  } catch (e) {
-    ElMessage.error(e?.message || '执行退费失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 

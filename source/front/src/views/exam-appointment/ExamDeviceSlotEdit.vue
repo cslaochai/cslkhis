@@ -160,11 +160,10 @@ const saveDevice = async () => {
       ElMessage({type: res.data?.warning ? 'warning' : 'success', message: res.message || '已保存', duration: 6000});
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '保存失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('保存失败');
+    
   } finally {
     saving.value = false;
   }

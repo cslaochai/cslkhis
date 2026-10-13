@@ -258,11 +258,10 @@ const loadPending = async () => {
     if (res.code === 200) {
       pendRows.value = res.data?.records || [];
       pendTotal.value = Number(res.data?.total || 0);
-    } else
-      ElMessage.error(res.message || '查询失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     pendLoading.value = false;
   }
@@ -313,13 +312,12 @@ const loadAppts = async () => {
     if (page.code === 200) {
       apptRows.value = page.data?.records || [];
       apptTotal.value = Number(page.data?.total || 0);
-    } else
-      ElMessage.error(page.message || '查询失败');
+    } 
     if (cnt.code === 200)
       apptCounts.value = cnt.data || [];
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     apptLoading.value = false;
   }
@@ -345,8 +343,7 @@ const doArrive = async (row) => {
   const res = await examAppointArrive(row.id).catch((e) => ({message: e?.message}));
   if (res.code === 200) {
     ElMessage.success(res.message || '已到检');
-  } else
-    ElMessage.error(res.message || '操作失败');
+  } 
   loadAppts();
   loadStats();
 };
@@ -354,8 +351,7 @@ const doFinish = async (row) => {
   const res = await examAppointFinish(row.id).catch((e) => ({message: e?.message}));
   if (res.code === 200) {
     ElMessage.success(res.message || '已完成');
-  } else
-    ElMessage.error(res.message || '操作失败');
+  } 
   loadAppts();
   loadStats();
 };
@@ -368,8 +364,7 @@ const doCancel = async (row) => {
     const res = await examAppointCancel({apptId: row.id, cancelReason: value.trim()});
     if (res.code === 200) {
       ElMessage.success(res.message || '已取消');
-    } else
-      ElMessage.error(res.message || '取消失败');
+    } 
     loadAppts();
     loadPending();
     loadStats();
@@ -380,8 +375,7 @@ const runNoShow = async () => {
   const res = await examAppointAutoNoShow().catch((e) => ({message: e?.message}));
   if (res.code === 200)
     ElMessage.success(res.message || '扫描完成');
-  else
-    ElMessage.error(res.message || '扫描失败');
+  
   loadAppts();
   loadStats();
 };

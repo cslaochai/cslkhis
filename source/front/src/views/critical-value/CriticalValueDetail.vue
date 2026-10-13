@@ -137,8 +137,8 @@ watch(visible, async (open) => {
     if (res.data) {
       detail.value = res.data;
     }
-  } catch (error) {
-    ElMessage.error(error.message || '加载危急值详情失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     detailLoading.value = false;
   }
@@ -155,10 +155,8 @@ const handleReceive = async (row) => {
     emit('saved');
     const res = await getCriticalValueDetail(row.id);
     detail.value = res.data || detail.value;
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.message || '接收失败');
-    }
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 </script>

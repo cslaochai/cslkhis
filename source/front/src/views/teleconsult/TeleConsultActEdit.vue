@@ -59,12 +59,10 @@ const submitTeleAct = async () => {
       ElMessage.success(props.actKey === 'complete' ? '会诊已完成' : '已取消');
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '操作失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('操作失败');
+    
   } finally {
     teleActLoading.value = false;
   }

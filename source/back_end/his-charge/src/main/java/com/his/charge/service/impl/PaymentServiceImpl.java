@@ -41,7 +41,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 支付资金流水实现（L3）
+ * 支付资金流水实现
  */
 @Slf4j
 @Service
@@ -103,10 +103,16 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
             throw new BusinessException("收款流水的来源不能是退费类");
         }
 
-        // 幂等保护：同一账单 + 同一支付方式 + 相同金额，1分钟内不允许重复提交
+        // 幂等保护：同一账单 + 同一支付方式 + 相同金额，1分钟内不允许重复提交。
+        // 覆盖所有「本地自行决定」的收款：现金/院内余额/医保个账没有渠道回执，收银员连点两下就是两笔流水，
+        // 而抽屉里只有一张钞 —— 这种账实不符只会在班结时才暴露，必须在写入前拦住。
+        // 唯一排除的是「渠道已实收的回填入账」（channelBacked 且不带来码，见 QrPayServiceImpl.bookBill）：
+        // 那笔钱由渠道证明过，判重把它否掉等于「钱到了却没入账」，比多一笔流水严重得多。
         for (BillPayDTO.PayItem item : dto.getItems()) {
             PaymentMethodEnum payMethod = PaymentMethodEnum.getByCode(item.getPayMethod());
-            if (payMethod != null && payMethod.channelBacked() && TextUtil.hasText(item.getAuthCode())) {
+            boolean channelSettled = payMethod != null && payMethod.channelBacked()
+                    && !TextUtil.hasText(item.getAuthCode());
+            if (payMethod != null && !channelSettled) {
                 long duplicateCount = this.count(new LambdaQueryWrapper<BizPaymentTxn>()
                         .eq(BizPaymentTxn::getBillId, dto.getBillId())
                         .eq(BizPaymentTxn::getPayMethod, item.getPayMethod())

@@ -155,8 +155,8 @@ const submitFinish = async () => {
     ElMessage.success('输血已完成（已回写输血记录病历与病案首页是否输血标志）');
     visible.value = false;
     emit('saved');
-  } catch (error) {
-    ElMessage.error(error.message || '登记完成失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     finishSubmitting.value = false;
   }

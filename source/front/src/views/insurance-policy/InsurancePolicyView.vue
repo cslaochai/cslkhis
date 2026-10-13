@@ -177,7 +177,7 @@ async function loadList() {
   } catch (e) {
     rows.value = [];
     pagination.total = 0;
-    ElMessage.error(e?.message || '加载医保政策失败');
+    
   } finally {
     loading.value = false;
   }
@@ -236,8 +236,8 @@ async function handleDelete(row) {
       pagination.pageNum -= 1;
     }
     loadList();
-  } catch (e) {
-    ElMessage.error(e?.message || '删除失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 

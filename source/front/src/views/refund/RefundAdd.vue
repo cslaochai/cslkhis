@@ -118,8 +118,8 @@ async function onPatientSelect(patient) {
       pageSize: 200,
     });
     billOptions.value = res.data?.records || [];
-  } catch (e) {
-    ElMessage.error(e?.message || '加载该患者的结算账单失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     billLoading.value = false;
   }
@@ -170,8 +170,8 @@ async function submitApply() {
     ElMessage.success('退费申请已提交，等待审核');
     visible.value = false;
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.message || '提交退费申请失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     applySubmitting.value = false;
   }

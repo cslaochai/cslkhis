@@ -278,7 +278,7 @@ const loadList = async () => {
     pagination.value.total = res.data?.total || 0;
   } catch (e) {
     console.error('加载技术授权台账失败:', e);
-    ElMessage.error(e?.message || '加载技术授权台账失败');
+    
   } finally {
     loading.value = false;
   }
@@ -327,8 +327,8 @@ const handleApprove = async (row, approved) => {
     const res = await approveTechAuth({id: row.id, approved, approveOpinion: opinion});
     ElMessage.success(res.message || '已处理');
     loadList();
-  } catch (e) {
-    ElMessage.error(e?.message || '审批失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleRevoke = async (row) => {
@@ -341,9 +341,8 @@ const handleRevoke = async (row) => {
     const res = await revokeTechAuth({id: row.id, revokeReason: value});
     ElMessage.success(res.message || '已收回');
     loadList();
-  } catch (e) {
-    if (e !== 'cancel' && e?.message)
-      ElMessage.error(e.message || '收回失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleDelete = async (row) => {
@@ -356,9 +355,8 @@ const handleDelete = async (row) => {
     await deleteTechAuth(row.id);
     ElMessage.success('已删除');
     loadList();
-  } catch (e) {
-    if (e !== 'cancel' && e?.message)
-      ElMessage.error(e.message || '删除失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ========== 我的授权 ==========
@@ -371,7 +369,7 @@ const loadMine = async () => {
     mineList.value = res.data || [];
   } catch (e) {
     console.error('加载我的技术授权失败:', e);
-    ElMessage.error(e?.message || '加载我的技术授权失败');
+    
   } finally {
     mineLoading.value = false;
   }
@@ -394,7 +392,7 @@ const loadOverride = async () => {
     ovPagination.value.total = res.data?.total || 0;
   } catch (e) {
     console.error('加载越权登记失败:', e);
-    ElMessage.error(e?.message || '加载越权登记失败');
+    
   } finally {
     ovLoading.value = false;
   }
@@ -408,9 +406,8 @@ const handleConfirmOverride = async (row) => {
     const res = await confirmTechAuthOverride({id: row.id, confirmOpinion: value});
     ElMessage.success(res.message || '已确认');
     loadOverride();
-  } catch (e) {
-    if (e !== 'cancel' && e?.message)
-      ElMessage.error(e.message || '确认失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const onTabChange = (name) => {

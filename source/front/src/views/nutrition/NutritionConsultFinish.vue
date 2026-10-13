@@ -77,8 +77,8 @@ async function doFinish() {
     ElMessage.success(res?.data ? `已完成，病历号 ${res.data}` : '已完成并回写病历')
     visible.value = false
     emit('saved')
-  } catch (e) {
-    ElMessage.error(e?.message || '完成失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     saving.value = false
   }

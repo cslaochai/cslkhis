@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 public class InpatientSettlementVO implements Serializable {
 
     /**
-     * 结算账单ID（L2）
+     * 结算账单ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;

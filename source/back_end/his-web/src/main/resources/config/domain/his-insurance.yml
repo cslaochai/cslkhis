@@ -1,6 +1,11 @@
 # 医保合规审核配置
 his:
   insurance:
+    channel:
+      mode: remote
+      base-url: http://localhost:8090/mss
+      connect-timeout-ms: 5000
+      read-timeout-ms: 15000
     compliance:
       # 总开关。false 时审核接口直接报错拒绝，不会给出误导性的「全部通过」
       enabled: true

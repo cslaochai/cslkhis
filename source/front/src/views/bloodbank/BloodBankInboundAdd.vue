@@ -144,11 +144,10 @@ const saveInbound = async () => {
       ElMessage.success('血袋已入库');
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '入库失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('入库失败');
+    
   } finally {
     loading.value = false;
   }

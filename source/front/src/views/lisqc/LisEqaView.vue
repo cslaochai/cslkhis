@@ -447,11 +447,10 @@ const loadPlans = async () => {
     if (res.code === 200) {
       planRows.value = res.data?.records || [];
       planTotal.value = Number(res.data?.total || 0);
-    } else
-      ElMessage.error(res.message || '查询失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     planLoading.value = false;
   }
@@ -478,11 +477,10 @@ const doArchive = (row) => {
             loadPlans();
             loadPlanOptions();
             loadStats();
-          } else
-            ElMessage.error(res.message || '归档失败');
+          } 
         } catch (e) {
           console.error(e);
-          ElMessage.error('归档失败');
+          
         }
       })
       .catch(() => {
@@ -515,11 +513,10 @@ const loadSamples = async () => {
     if (res.code === 200) {
       smpRows.value = res.data?.records || [];
       smpTotal.value = Number(res.data?.total || 0);
-    } else
-      ElMessage.error(res.message || '查询失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     smpLoading.value = false;
   }
@@ -588,11 +585,10 @@ const doReport = async () => {
       loadPlans();
       loadPlanOptions();
       loadStats();
-    } else
-      ElMessage.error(res.message || '上报失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('上报失败');
+    
   }
 };
 const doDeleteSample = (row) => {
@@ -604,11 +600,10 @@ const doDeleteSample = (row) => {
             ElMessage.success(res.message || '已删除');
             loadSamples();
             loadStats();
-          } else
-            ElMessage.error(res.message || '删除失败');
+          } 
         } catch (e) {
           console.error(e);
-          ElMessage.error('删除失败');
+          
         }
       })
       .catch(() => {
@@ -633,11 +628,10 @@ const loadReturns = async () => {
     if (res.code === 200) {
       retRows.value = (res.data?.records || []).map((r) => ({...r}));
       retTotal.value = Number(res.data?.total || 0);
-    } else
-      ElMessage.error(res.message || '查询失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     retLoading.value = false;
   }
@@ -673,11 +667,10 @@ const submitScore = async () => {
       loadPlanOptions();
       loadStats();
       loadCompares();
-    } else
-      ElMessage.error(res.message || '回报失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('回报失败');
+    
   } finally {
     scoreSaving.value = false;
   }
@@ -700,11 +693,10 @@ const doFixReview = (row) => {
       loadReturns();
       loadPlans();
       loadStats();
-    } else
-      ElMessage.error(res.message || '复核失败');
+    } 
   }).catch((e) => {
     console.error(e);
-    ElMessage.error('复核失败');
+    
   });
 };
 // ---------------- 室间差 ----------------
@@ -723,11 +715,10 @@ const loadCompares = async () => {
     if (res.code === 200) {
       cmpRows.value = res.data?.records || [];
       cmpTotal.value = Number(res.data?.total || 0);
-    } else
-      ElMessage.error(res.message || '查询失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     cmpLoading.value = false;
   }

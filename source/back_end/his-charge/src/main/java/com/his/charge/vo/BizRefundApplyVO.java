@@ -26,7 +26,7 @@ public class BizRefundApplyVO {
     private String refundApplyNo;
 
     /**
-     * 原结算账单ID（L2）
+     * 原结算账单ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long billId;

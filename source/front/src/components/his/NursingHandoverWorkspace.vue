@@ -145,16 +145,13 @@ const defaultShift = () => {
 const loadWards = async () => {
   try {
     const res = await getInpatientWardList();
-    if (res.code !== 200) {
-      ElMessage.error(res.message || '病区列表加载失败');
-      return;
-    }
+    
     wardOptions.value = res.data || [];
     if (wardOptions.value.length && !wardId.value) {
       wardId.value = String(wardOptions.value[0].wardId);
     }
-  } catch (e) {
-    ElMessage.error(e?.message || '病区列表加载失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const compose = async () => {
@@ -169,14 +166,11 @@ const compose = async () => {
       shift: shift.value,
       shiftDate: shiftDate.value,
     });
-    if (res.code !== 200) {
-      ElMessage.error(res.message || '摘要生成失败');
-      return;
-    }
+    
     result.value = res.data;
     summaryText.value = res.data?.summary || '';
-  } catch (e) {
-    ElMessage.error(e?.message || '摘要生成失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     composeLoading.value = false;
   }
@@ -187,8 +181,8 @@ const copySummary = async () => {
   try {
     await navigator.clipboard.writeText(summaryText.value);
     ElMessage.success('摘要已复制，请粘贴到交班记录并核对');
-  } catch {
-    ElMessage.error('复制失败，请手动选择文本复制');
+  } catch  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 onMounted(async () => {

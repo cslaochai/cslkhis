@@ -183,7 +183,7 @@ watch(visible, async (open) => {
     });
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载纠纷单据失败');
+    
     visible.value = false;
   }
 });
@@ -227,12 +227,10 @@ const save = async () => {
       ElMessage.success(form.id ? '修改成功' : `登记成功，单号 ${vo?.caseNo || ''}`);
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '保存失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('保存失败');
+    
   } finally {
     saving.value = false;
   }

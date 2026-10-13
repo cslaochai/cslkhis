@@ -283,8 +283,8 @@ const runInterpret = async (overwrite) => {
       ElMessage.success('结论已写回检验记录');
       emit('saved');
     }
-  } catch (error) {
-    ElMessage.error(error.message || '解读失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     interpretLoading.value = false;
   }

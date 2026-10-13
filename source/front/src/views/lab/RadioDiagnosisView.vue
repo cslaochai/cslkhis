@@ -210,8 +210,8 @@ const loadData = async () => {
     const res = await getRadioReportListPage(buildQuery());
     rows.value = res.data?.records || [];
     pagination.value.total = res.data?.total || 0;
-  } catch (e) {
-    ElMessage.error(e?.message || '加载失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }
@@ -276,8 +276,8 @@ const openAudit = async (row) => {
   try {
     const res = await getRadioReportDetailByRecordId(row.recordId);
     auditDetail.value = res.data;
-  } catch (e) {
-    ElMessage.error(e?.message || '加载详情失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
   showAudit.value = true;
 };
@@ -288,9 +288,9 @@ const doAudit = async () => {
     ElMessage.success('审核通过（审核医师签名已完成）');
     showAudit.value = false;
     await Promise.all([loadData(), loadTabCounts()]);
-  } catch (e) {
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
     // 服务端会拒绝「自己审自己」与「跳过审核」，这两条必须原样弹出来，不能吞掉
-    ElMessage.error(e?.message || '审核失败');
+    
   } finally {
     submitting.value = false;
   }
@@ -304,8 +304,8 @@ const doReject = async () => {
     ElMessage.success('已退回，报告回到草稿');
     showAudit.value = false;
     await Promise.all([loadData(), loadTabCounts()]);
-  } catch (e) {
-    ElMessage.error(e?.message || '退回失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     submitting.value = false;
   }
@@ -324,8 +324,8 @@ const doPublish = async (row) => {
     await publishRadioReport(row.reportId);
     ElMessage.success('报告已发布');
     await Promise.all([loadData(), loadTabCounts()]);
-  } catch (e) {
-    ElMessage.error(e?.message || '发布失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const statusTagType = (st) => {

@@ -134,8 +134,8 @@ const submitReaction = async () => {
     ElMessage.success('输血反应已上报');
     visible.value = false;
     emit('saved');
-  } catch (error) {
-    ElMessage.error(error.message || '输血反应上报失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     reactionSubmitting.value = false;
   }

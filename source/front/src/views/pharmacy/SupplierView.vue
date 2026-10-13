@@ -165,7 +165,7 @@ const loadList = async () => {
       ElMessage.error(res.message || '加载供应商失败');
     }
   } catch (e) {
-    ElMessage.error('加载供应商失败');
+    
     console.error(e);
   } finally {
     loading.value = false;
@@ -203,9 +203,7 @@ const remove = async (row) => {
     if (res.code === 200) {
       ElMessage.success('已删除');
       loadList();
-    } else {
-      ElMessage.error(res.message || '删除失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
   }

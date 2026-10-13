@@ -89,12 +89,10 @@ const submitClose = async () => {
       ElMessage.success('已结案');
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '结案失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('结案失败');
+    
   } finally {
     closeLoading.value = false;
   }

@@ -37,7 +37,7 @@ public class MiniDirectoryServiceImpl implements MiniDirectoryService {
 
     @Override
     public List<MiniScheduleSelectVO> schedules(ScheduleSelectQueryDTO queryDTO) {
-        List<BizClinicSource> list = bizScheduleService.scheduleSelectList(queryDTO);
+        List<BizClinicSource> list = bizScheduleService.scheduleSelectListUnbounded(queryDTO);
         return list.stream().map(detail -> {
             MiniScheduleSelectVO vo = new MiniScheduleSelectVO();
             BeanUtils.copyProperties(detail, vo);

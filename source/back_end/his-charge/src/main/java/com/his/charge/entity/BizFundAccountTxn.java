@@ -14,7 +14,7 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
- * 资金账户流水（L3）：账户只回答"这里有多少钱"，账单只回答"该收多少"，
+ * 资金账户流水：账户只回答"这里有多少钱"，账单只回答"该收多少"，
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

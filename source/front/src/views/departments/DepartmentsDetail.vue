@@ -114,8 +114,8 @@ watch(visible, async (open) => {
     if (res.code === 200) {
       Object.assign(detail, res.data);
     }
-  } catch (error) {
-    ElMessage.error(error.message || '获取科室详情失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }

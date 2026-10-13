@@ -23,9 +23,9 @@ public class PatientQueryPageDTO extends PageParam {
      */
     private String patientNo;
     /**
-     * 患者类型：1-自费 2-城镇职工医保 3-城乡居民医保 4-公费 5-其他
+     * 费别/参保类型（精确匹配；字典 medical_insurance_type）
      */
-    private Integer patientType;
+    private String medicalInsuranceType;
     /**
      * 标签ID（按标签筛选患者）
      */

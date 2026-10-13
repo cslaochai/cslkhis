@@ -114,8 +114,8 @@ const submit = async () => {
     visible.value = false;
     // 把新建的申请单 id 带回给父页面：切过去并加载清点单
     emit('saved', form.applyId);
-  } catch (e) {
-    ElMessage.error(e.message || '建立清点单失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     submitting.value = false;
   }

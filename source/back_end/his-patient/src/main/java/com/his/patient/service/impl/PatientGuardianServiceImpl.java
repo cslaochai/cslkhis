@@ -276,7 +276,7 @@ public class PatientGuardianServiceImpl extends ServiceImpl<BizPatientGuardianMa
         patient.setIdCard(idCard);
         patient.setPhone(phone);
         patient.setPatientNo(redisSequenceService.generatePatientNo());
-        patient.setPatientType(1); // 1-自费
+        patient.setMedicalInsuranceType(MedicalInsuranceTypeEnum.SELF_PAY.getName()); // 监护人代建档默认自费
         patient.setStatus(1);
         LocalDate birth = parseBirthDate(idCard);
         if (birth != null) {

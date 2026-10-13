@@ -257,7 +257,7 @@ async function runPrecheck() {
     reviewForm.precheck = res.data;
   } catch (e) {
     // 预检接口本身失败（网络/权限）不能当成"可以发"——直接关掉弹窗，让药师重试
-    ElMessage.error(e?.message || '麻精预检失败，请稍后重试');
+    
     visible.value = false;
   } finally {
     loading.value = false;
@@ -293,9 +293,9 @@ const submitDispense = async () => {
     }
     visible.value = false;
     emit('saved');
-  } catch (e) {
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
     // 后端闸门的原始结论直接摆出来（含"哪个药、限几日、超几日"），不替换成笼统措辞
-    ElMessage.error(e?.message || '发药失败');
+    
   } finally {
     submitting.value = false;
   }

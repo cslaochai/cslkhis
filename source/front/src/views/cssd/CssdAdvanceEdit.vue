@@ -86,11 +86,10 @@ const submitAdvance = async () => {
       ElMessage.success('流转成功');
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '流转失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('流转失败');
+    
   }
 };
 </script>

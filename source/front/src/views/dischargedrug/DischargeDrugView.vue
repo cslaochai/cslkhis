@@ -139,11 +139,10 @@ const loadList = async () => {
     if (res.code === 200) {
       rows.value = res.data?.records || [];
       total.value = Number(res.data?.total || 0);
-    } else
-      ElMessage.error(res.message || '查询失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     loading.value = false;
   }
@@ -171,11 +170,10 @@ const dispense = async (row) => {
     if (res.code === 200) {
       ElMessage.success('发药完成');
       loadList();
-    } else
-      ElMessage.error(res.message || '发药失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('发药失败');
+    
   }
 };
 const remove = async (row) => {
@@ -184,11 +182,10 @@ const remove = async (row) => {
     if (res.code === 200) {
       ElMessage.success('已删除');
       loadList();
-    } else
-      ElMessage.error(res.message || '删除失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('删除失败');
+    
   }
 };
 onMounted(() => {

@@ -62,11 +62,10 @@ const save = async () => {
       ElMessage.success(res.message || '已整改');
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '整改失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('整改失败');
+    
   } finally {
     saving.value = false;
   }

@@ -236,7 +236,7 @@ const loadData = async () => {
     pagination.value.total = res.data?.total || 0;
   } catch (error) {
     console.error('加载发药列表失败:', error);
-    ElMessage.error(error?.message || '加载发药列表失败');
+    
   } finally {
     loading.value = false;
   }
@@ -296,10 +296,8 @@ const handleReturn = async (row) => {
     await returnDrug(row.id, value.trim());
     ElMessage.success('退药成功，库存已回加');
     refreshAll();
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(error?.message || '退药失败');
-    }
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 onMounted(() => {

@@ -104,12 +104,10 @@ const saveApply = async () => {
       ElMessage.success(applyForm.id ? '修改成功' : `预约登记成功，单号 ${res.data?.applyNo || ''}`);
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '保存失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('保存失败');
+    
   } finally {
     applySaving.value = false;
   }

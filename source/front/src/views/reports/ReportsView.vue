@@ -473,8 +473,8 @@ const loadData = async () => {
   try {
     const res = await getStatsOverview({startDate: range.value[0], endDate: range.value[1]});
     data.value = res.data || {};
-  } catch (e) {
-    ElMessage.error(e?.message || '加载报表数据失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }

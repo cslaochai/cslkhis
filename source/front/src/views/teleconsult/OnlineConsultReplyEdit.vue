@@ -67,12 +67,10 @@ const submitReply = async () => {
       ElMessage.success('已回复并结束');
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '回复失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('回复失败');
+    
   } finally {
     replyLoading.value = false;
   }

@@ -168,7 +168,7 @@ watch(visible, async (open) => {
     const res = await getInpatientDetail(props.id);
     detail.value = res.data;
   } catch (e) {
-    ElMessage.error(e?.message || '加载详情失败');
+    
     visible.value = false;
   } finally {
     detailLoading.value = false;

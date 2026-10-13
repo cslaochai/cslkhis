@@ -129,8 +129,8 @@ const load = async () => {
   try {
     const res = await getQualityControlDetail(props.id);
     detail.value = res.data;
-  } catch (e) {
-    ElMessage.error(e?.message || '加载质控单详情失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     detailLoading.value = false;
   }
@@ -150,8 +150,8 @@ const submitHandle = async (ignore) => {
     ElMessage.success(ignore ? '已忽略该质控单' : '已标记为处理完成');
     visible.value = false;
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.message || '处理失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     handling.value = false;
   }

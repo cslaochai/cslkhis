@@ -324,8 +324,8 @@ const loadSummary = async () => {
   try {
     const res = await getDeductSummary();
     summary.value = res.data || {};
-  } catch (error) {
-    ElMessage.error(error?.message || '扣款汇总加载失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ==================== 扣款通知列表 ====================
@@ -346,8 +346,8 @@ const loadNotices = async () => {
     });
     noticeRows.value = res.data?.records || [];
     noticePage.total = res.data?.total || 0;
-  } catch (error) {
-    ElMessage.error(error?.message || '扣款通知列表加载失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     noticeLoading.value = false;
   }
@@ -380,8 +380,8 @@ const loadInspectionOptions = async () => {
   try {
     const res = await getYbInspectionSelectList();
     inspectionOptions.value = res.data || [];
-  } catch (error) {
-    ElMessage.error(error?.message || '飞检批次候选加载失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ==================== 通知单 新建/编辑 ====================
@@ -441,8 +441,8 @@ const cancelDeductRow = (row) => {
       await cancelDeduct({id: row.id, reason: value.trim()});
       ElMessage.success('已作废');
       await Promise.all([loadNotices(), loadSummary()]);
-    } catch (error) {
-      ElMessage.error(error?.message || '作废失败');
+    } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+      
     }
   }).catch(() => {
   });
@@ -462,8 +462,8 @@ const loadInspections = async () => {
     });
     inspectRows.value = res.data?.records || [];
     inspectPage.total = res.data?.total || 0;
-  } catch (error) {
-    ElMessage.error(error?.message || '飞检批次列表加载失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     inspectLoading.value = false;
   }
@@ -502,8 +502,8 @@ const cancelInspectRow = (row) => {
       await cancelYbInspection({id: row.id, reason: value.trim()});
       ElMessage.success('已作废');
       await Promise.all([loadInspections(), loadInspectionOptions()]);
-    } catch (error) {
-      ElMessage.error(error?.message || '批次作废失败');
+    } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+      
     }
   }).catch(() => {
   });
@@ -525,8 +525,8 @@ const loadDepts = async () => {
   try {
     const res = await getDepartmentSelectList({scope: 'ALL'});
     deptOptions.value = res.data || [];
-  } catch (error) {
-    ElMessage.error(error?.message || '科室候选加载失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 </script>

@@ -514,8 +514,8 @@ const loadWards = async () => {
   try {
     const res = await getQcWardSelectList();
     wards.value = res.data || [];
-  } catch (e) {
-    ElMessage.error(e.message || '加载病区失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ---------------- 看板：KPI + 趋势 + 病区对比 ----------------
@@ -538,15 +538,12 @@ const loadBoard = async () => {
       }),
       getQcWardCompare({statMonth: statMonth.value, indicatorCode: boardCode.value}),
     ]);
-    if (m.code !== 200) {
-      ElMessage.error(m.message || '加载月度指标失败');
-      return;
-    }
+    
     kpis.value = m.data || [];
     trendPoints.value = t.code === 200 ? (t.data || []) : [];
     compareRows.value = c.code === 200 ? (c.data || []) : [];
-  } catch (e) {
-    ElMessage.error(e.message || '加载看板失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     boardLoading.value = false;
   }
@@ -615,14 +612,11 @@ const loadChecks = async () => {
   checkLoading.value = true;
   try {
     const res = await listQcCheckPage({...checkQuery});
-    if (res.code !== 200) {
-      ElMessage.error(res.message || '加载检查单失败');
-      return;
-    }
+    
     checks.value = res.data?.records || [];
     checkTotal.value = Number(res.data?.total || 0);
-  } catch (e) {
-    ElMessage.error(e.message || '加载检查单失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     checkLoading.value = false;
   }
@@ -680,8 +674,8 @@ const loadInspectors = async (wid) => {
   try {
     const res = await getQcInspectorSelectList({wardId: wid});
     inspectors.value = res.data || [];
-  } catch (e) {
-    ElMessage.error(e.message || '加载检查人失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 /** 目录 → 表单行：已有明细按 itemId 回填，没录入的留空（空行不提交，等于本轮没查这项） */
@@ -707,8 +701,8 @@ const buildRows = async (category, items = []) => {
         rectifyMeasure: hit?.rectifyMeasure || '',
       };
     });
-  } catch (e) {
-    ElMessage.error(e.message || '加载检查项目失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     catalogLoading.value = false;
   }
@@ -729,10 +723,7 @@ const openCreate = async () => {
 const openEdit = async (row) => {
   try {
     const res = await getQcCheckDetailById(row.id);
-    if (res.code !== 200) {
-      ElMessage.error(res.message || '加载检查单失败');
-      return;
-    }
+    
     const c = res.data.check;
     form.id = c.id;
     form.wardId = String(c.wardId);
@@ -745,8 +736,8 @@ const openEdit = async (row) => {
     editVisible.value = true;
     await loadInspectors(form.wardId);
     await buildRows(form.category, res.data.items);
-  } catch (e) {
-    ElMessage.error(e.message || '加载检查单失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const onFormWard = async (v) => {
@@ -801,11 +792,9 @@ const save = async () => {
       await loadChecks();
       if (activeTab.value === 'board')
         loadBoard();
-    } else {
-      ElMessage.error(res.message || '保存失败');
-    }
-  } catch (e) {
-    ElMessage.error(e.message || '保存失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     saving.value = false;
   }
@@ -823,11 +812,9 @@ const changeStatus = async (row, status) => {
     if (res.code === 200) {
       ElMessage.success(res.message || `${label}成功`);
       await loadChecks();
-    } else {
-      ElMessage.error(res.message || `${label}失败`);
-    }
-  } catch (e) {
-    ElMessage.error(e.message || `${label}失败`);
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const removeCheck = async (row) => {
@@ -843,11 +830,9 @@ const removeCheck = async (row) => {
       await loadChecks();
       if (activeTab.value === 'board')
         loadBoard();
-    } else {
-      ElMessage.error(res.message || '删除失败');
-    }
-  } catch (e) {
-    ElMessage.error(e.message || '删除失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ---------------- 指标台账 ----------------
@@ -862,14 +847,11 @@ const loadLedger = async () => {
   ledgerLoading.value = true;
   try {
     const res = await listQcLedgerPage({...ledgerQuery});
-    if (res.code !== 200) {
-      ElMessage.error(res.message || '加载台账失败');
-      return;
-    }
+    
     ledger.value = res.data?.records || [];
     ledgerTotal.value = Number(res.data?.total || 0);
-  } catch (e) {
-    ElMessage.error(e.message || '加载台账失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     ledgerLoading.value = false;
   }
@@ -884,11 +866,9 @@ const doRecalc = async () => {
       await loadLedger();
       if (activeTab.value === 'board')
         loadBoard();
-    } else {
-      ElMessage.error(res.message || '重算失败');
-    }
-  } catch (e) {
-    ElMessage.error(e.message || '重算失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     calcBusy.value = false;
   }
@@ -913,11 +893,9 @@ const doReport = async (reportStatus) => {
     if (res.code === 200) {
       ElMessage.success(res.message || `${label}成功`);
       await loadLedger();
-    } else {
-      ElMessage.error(res.message || `${label}失败`);
-    }
-  } catch (e) {
-    ElMessage.error(e.message || `${label}失败`);
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     calcBusy.value = false;
   }
@@ -935,11 +913,9 @@ const removeLedger = async (row) => {
       await loadLedger();
       if (activeTab.value === 'board')
         loadBoard();
-    } else {
-      ElMessage.error(res.message || '删除失败');
-    }
-  } catch (e) {
-    ElMessage.error(e.message || '删除失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ---------------- 表格高度：撑满视口，表体内部滚动，分页钉在卡片底 ----------------

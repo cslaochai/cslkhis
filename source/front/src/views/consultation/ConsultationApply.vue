@@ -104,8 +104,8 @@ const submitApply = async () => {
     ElMessage.success(`会诊申请已提交：${res.data}`);
     visible.value = false;
     emit('saved');
-  } catch (error) {
-    ElMessage.error(error.message || '会诊申请提交失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     saveLoading.value = false;
   }

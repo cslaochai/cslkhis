@@ -423,7 +423,7 @@ watch(() => [newAppointment.value.visitType, newAppointment.value.revisitSource,
     if (token !== previewToken)
       return;
     revisitPreview.value = null;
-    ElMessage.error(error?.message || '复诊费用预估失败');
+    
   } finally {
     if (token === previewToken)
       revisitPreviewLoading.value = false;
@@ -650,8 +650,8 @@ const handleSubmit = async () => {
     });
     emit('saved');
     resetForm();
-  } catch (error) {
-    ElMessage.error(error.message || '挂号失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     addSubmitLoading.value = false;
   }

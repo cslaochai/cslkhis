@@ -90,13 +90,10 @@ const load = async () => {
   detail.value = null;
   try {
     const res = await getQcCheckDetailById(props.id);
-    if (res.code !== 200) {
-      ElMessage.error(res.message || '加载详情失败');
-      return;
-    }
+    
     detail.value = res.data;
-  } catch (e) {
-    ElMessage.error(e.message || '加载详情失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 watch(() => props.modelValue, (v) => {

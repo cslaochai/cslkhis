@@ -213,8 +213,8 @@ const loadSummary = async () => {
   try {
     const res = await getChronicRegSummary();
     summary.value = res.data || {};
-  } catch (error) {
-    ElMessage.error(error?.message || '备案汇总加载失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ==================== 备案台账 ====================
@@ -239,8 +239,8 @@ const loadRegs = async () => {
     });
     regRows.value = res.data?.records || [];
     regPage.total = res.data?.total || 0;
-  } catch (error) {
-    ElMessage.error(error?.message || '备案台账加载失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     regLoading.value = false;
   }
@@ -300,8 +300,8 @@ const terminalReg = (row, kind) => {
       await (kind === 'cancel' ? cancelChronicReg(payload) : rejectChronicReg(payload));
       ElMessage.success(`已${label}`);
       await Promise.all([loadRegs(), loadSummary()]);
-    } catch (error) {
-      ElMessage.error(error?.message || `${label}失败`);
+    } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+      
     }
   }).catch(() => {
   });
@@ -313,8 +313,8 @@ const loadCatFilterOptions = async () => {
   try {
     const res = await getChronicCatalogList({pageNum: 1, pageSize: 200});
     catFilterOptions.value = res.data?.records || [];
-  } catch (error) {
-    ElMessage.error(error?.message || '病种筛选候选加载失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 /** 待续备名单：点汇总卡片直接把台账筛成「有效但已过期」 */

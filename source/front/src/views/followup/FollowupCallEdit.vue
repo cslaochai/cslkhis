@@ -73,7 +73,7 @@ watch(visible, async (open) => {
         ElMessage.error(res.message || '加载任务失败');
     } catch (e) {
       console.error(e);
-      ElMessage.error('加载任务失败');
+      
     }
     return;
   }
@@ -87,7 +87,7 @@ watch(visible, async (open) => {
       ElMessage.error(res.message || '外呼登记失败');
   } catch (e) {
     console.error(e);
-    ElMessage.error('外呼登记失败');
+    
   }
 });
 
@@ -114,7 +114,7 @@ const composeCallScript = async () => {
       ElMessage.error(res.message || 'AI 未生成话术');
   } catch (e) {
     console.error(e);
-    ElMessage.error('AI 拟话术失败');
+    
   }
 };
 const submitCallResult = async (connected) => {
@@ -129,11 +129,10 @@ const submitCallResult = async (connected) => {
       ElMessage.success(connected ? '已接通，任务已转随访中' : '已登记未接通，可稍后再次外呼');
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '操作失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('操作失败');
+    
   } finally {
     callResultLoading.value = false;
   }

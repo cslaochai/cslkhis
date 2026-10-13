@@ -86,8 +86,8 @@ const openCollect = async () => {
   try {
     const res = await getEcgDetailByRecordId(props.row?.recordId);
     collectDetail.value = res.data;
-  } catch (e) {
-    ElMessage.error(e?.message || '加载详情失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const doCheckIn = async () => {
@@ -98,8 +98,8 @@ const doCheckIn = async () => {
     collectRow.value = {...collectRow.value, recordStatus: 2, recordStatusText: '已签到'};
     ElMessage.success('已签到');
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.message || '签到失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     collectSubmitting.value = false;
   }
@@ -111,8 +111,8 @@ const doSimulate = async () => {
     collectDetail.value = res.data;
     ElMessage.success('波形已入库（该检查已出结果）');
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.message || '采集失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     collectSubmitting.value = false;
   }

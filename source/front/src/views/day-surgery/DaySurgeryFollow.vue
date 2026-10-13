@@ -63,12 +63,10 @@ const submitFollow = async () => {
       ElMessage.success('随访已登记');
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '随访登记失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('随访登记失败');
+    
   } finally {
     foLoading.value = false;
   }

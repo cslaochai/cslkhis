@@ -233,13 +233,9 @@ const handleDelete = async (row) => {
     if (res.code === 200) {
       ElMessage.success('删除成功');
       loadData();
-    } else {
-      ElMessage.error(res.message || '删除失败');
-    }
-  } catch (error) {
-    if (error !== 'cancel' && error.message) {
-      ElMessage.error(error.message);
-    }
+    } 
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // 操作列「详情」：打开只读详情弹框

@@ -208,7 +208,7 @@ const initEdit = async (row) => {
     }));
     ensureDicts();
   } catch (e) {
-    ElMessage.error(e?.message || '加载组套明细失败');
+    
     visible.value = false;
   }
 };
@@ -280,8 +280,8 @@ const submit = async () => {
     ElMessage.success(editingId.value ? '组套已修改' : '组套已创建');
     visible.value = false;
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.message || '保存失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     saving.value = false;
   }

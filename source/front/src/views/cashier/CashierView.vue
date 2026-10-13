@@ -87,11 +87,24 @@
           </div>
         </div>
 
-        <!-- 待结算记账行 -->
+        <!-- 收款待办：有未收账单时始终置顶，避免主区空了看不到钱在哪儿（标准 HIS 收费台会把待收金额挂在最显眼处） -->
+        <el-alert
+            v-if="unpaidBillAmount > 0"
+            :closable="false"
+            class="!border-amber-200 !bg-amber-50"
+            show-icon
+            type="warning"
+        >
+          <template #title>
+            本就诊有 <b>¥{{ money(unpaidBillAmount) }}</b> 待收款，请对下方「已出账单」点收款
+          </template>
+        </el-alert>
+
+        <!-- 待结算费用（L1）：勾选后出账 -->
         <div>
           <div class="mb-2 flex items-center justify-between">
             <span class="text-sm text-slate-500">
-              全部 ¥{{ money(feeTotal) }} · 已勾选 <b class="text-slate-900">{{ selectedFees.length }}</b> 行
+              待结算费用 · 全部 ¥{{ money(feeTotal) }} · 已勾选 <b class="text-slate-900">{{ selectedFees.length }}</b> 行
               ¥{{ money(selectedTotal) }}
             </span>
           </div>
@@ -130,7 +143,11 @@
               </template>
             </el-table-column>
             <el-table-column label="记账时间" prop="bookTime" width="160"/>
-            <template #empty><span class="text-sm text-slate-400">该就诊没有待结算的记账行</span></template>
+            <template #empty>
+              <span class="text-sm text-slate-400">
+                该就诊没有待结算的记账行{{ bills.length ? '，费用已全部出账，请对下方账单收款' : '' }}
+              </span>
+            </template>
           </el-table>
         </div>
 
@@ -237,7 +254,7 @@
         <!-- 本次就诊已出账单 -->
         <div>
           <div class="mb-2 flex items-center justify-between">
-            <h4 class="text-sm font-bold text-slate-700">本次就诊的账单（L2）</h4>
+            <h4 class="text-sm font-bold text-slate-700">已出账单（L2 · 收款 / 退费 / 作废）</h4>
             <span class="text-sm text-slate-500">未收齐合计 <b class="text-red-600">¥{{
                 money(unpaidBillAmount)
               }}</b></span>
@@ -550,8 +567,8 @@ async function loadBoard() {
     });
     boardRows.value = res.data?.records || [];
     pagination.value.total = Number(res.data?.total || 0);
-  } catch (error) {
-    ElMessage.error(error.message || '加载待收费就诊失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     boardLoading.value = false;
   }
@@ -629,8 +646,8 @@ async function loadWorkbench() {
     unpaidBillAmount.value = Number(feeRes.data?.unpaidBillAmount || 0);
     // 已作废的账单留在台账页看，收费台只关心还要处理的：待支付 / 部分支付 / 已支付（可退费出票）
     bills.value = (billRes.data?.records || []).filter((b) => Number(b.billStatus) !== 4);
-  } catch (error) {
-    ElMessage.error(error.message || '加载就诊费用失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     workLoading.value = false;
   }
@@ -668,7 +685,7 @@ async function runPreview() {
     preview.value = res.data || null;
   } catch (error) {
     preview.value = null;
-    ElMessage.error(error.message || '出账试算失败');
+    
   } finally {
     previewLoading.value = false;
   }
@@ -691,8 +708,8 @@ async function runSettle() {
     if (Number(bill?.payableAmount || 0) > 0) {
       await openPay(bill);
     }
-  } catch (error) {
-    ElMessage.error(error.message || '出账失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     settling.value = false;
   }
@@ -747,8 +764,8 @@ async function loadPayBill(billId, resetItems = false) {
     if (resetItems || !payItems.value.length) {
       seedPayItems();
     }
-  } catch (error) {
-    ElMessage.error(error.message || '加载账单失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     payLoading.value = false;
   }
@@ -789,8 +806,8 @@ async function submitPay() {
     if (Number(payBillRow.value.billStatus) === 3) {
       ElMessage.success('账单已结清，可出票');
     }
-  } catch (error) {
-    ElMessage.error(error.message || '收款失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     paying.value = false;
   }
@@ -802,8 +819,8 @@ async function runIssue() {
   try {
     const res = await issueInvoice({billId: payBillRow.value.id, invoiceType: 1});
     ElMessage.success(`已出票 ${res.data?.invoiceNo || ''}`);
-  } catch (error) {
-    ElMessage.error(error.message || '出票失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 
@@ -844,8 +861,8 @@ async function openRefund(bill) {
     refundItems.value = res.data?.items || [];
     // 默认整单退（不点名记账行 = 后端按全部行处理），但这里显式全选，页面上能看到退的是哪些行
     refundSelected.value = [...refundItems.value];
-  } catch (error) {
-    ElMessage.error(error.message || '加载账单明细失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     refundLoading.value = false;
   }
@@ -877,8 +894,8 @@ async function submitRefund() {
     refundDialog.value = false;
     await loadWorkbench();
     await loadBoard();
-  } catch (error) {
-    ElMessage.error(error.message || '退费失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     refunding.value = false;
   }
@@ -901,8 +918,8 @@ async function runVoid(bill) {
     ElMessage.success('账单已作废，记账行已解锁');
     await loadWorkbench();
     await loadBoard();
-  } catch (error) {
-    ElMessage.error(error.message || '作废失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 

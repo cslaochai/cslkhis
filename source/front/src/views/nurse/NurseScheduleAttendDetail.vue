@@ -127,8 +127,8 @@ const doAdjust = async (row) => {
     });
     ElMessage.success(res.message || '工时已登记');
     await refresh();
-  } catch (e) {
-    ElMessage.error(e.message || '登记失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const doMarkAbsent = async (row) => {
@@ -144,8 +144,8 @@ const doMarkAbsent = async (row) => {
     });
     ElMessage.success(res.message || '已确认为缺勤');
     await refresh();
-  } catch (e) {
-    ElMessage.error(e.message || '确认失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const doRemoveAttend = async (row) => {
@@ -160,8 +160,8 @@ const doRemoveAttend = async (row) => {
     const res = await removeAttendance({id: row.attendId});
     ElMessage.success(res.message || '已撤销');
     await refresh();
-  } catch (e) {
-    ElMessage.error(e.message || '撤销失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 /** 差异类型 → 标签配色（结论与文案都由后端给，前端不做二次判断） */

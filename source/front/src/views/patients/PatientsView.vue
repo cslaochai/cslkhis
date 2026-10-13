@@ -281,10 +281,8 @@ const handleDelete = async (row) => {
     await deletePatient(row.id);
     ElMessage.success('删除成功');
     loadData();
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.message || '删除失败');
-    }
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const openEdit = (row) => {
@@ -295,8 +293,8 @@ const handleCopyName = (name) => {
   if (navigator.clipboard) {
     navigator.clipboard.writeText(name).then(() => {
       ElMessage.success('已复制');
-    }).catch(() => {
-      ElMessage.error('复制失败');
+    }).catch(() =>  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+      
     });
   } else {
     // 降级方案

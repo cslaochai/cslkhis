@@ -69,11 +69,9 @@ const saveStatus = async () => {
       ElMessage.success(res.message || '状态已更新');
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '状态更新失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '状态更新失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     statusSaving.value = false;
   }

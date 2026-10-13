@@ -149,10 +149,10 @@ const loadRows = async () => {
     if (res.code === 200) {
       rows.value = res.data?.records || [];
       total.value = res.data?.total || 0
-    } else ElMessage.error(res.message || '加载慢病档案失败')
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载慢病档案失败')
+    
   } finally {
     loading.value = false
   }
@@ -190,7 +190,7 @@ const doCancel = async (row) => {
     if (res.code === 200) {
       ElMessage.success('已作废');
       await loadRows()
-    } else ElMessage.error(res.message || '作废失败')
+    } 
   } catch (e) {
     console.error(e)
   }

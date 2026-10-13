@@ -25,7 +25,7 @@ public class BizRefundApply extends BaseEntity {
     private String refundApplyNo;
 
     /**
-     * 原结算账单ID（L2）。旧模型这里挂的是收费单ID，四层后收费单已退役：
+     * 原结算账单ID。旧模型这里挂的是收费单ID，四层后收费单已退役：
      * 退费退的是"患者为这张账单掏过的钱"，锚点必须是账单，不是任何状态列。
      */
     @JsonSerialize(using = ToStringSerializer.class)

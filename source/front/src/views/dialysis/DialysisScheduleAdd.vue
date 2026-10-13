@@ -94,11 +94,9 @@ const doSchedule = async () => {
       ElMessage.success(res.message || '已排班');
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '排班失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '排班失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     scheduling.value = false;
   }

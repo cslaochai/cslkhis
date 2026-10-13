@@ -108,7 +108,7 @@ public class FollowupTaskDTO {
         private Long slotId;
 
         /**
-         * 结算方式（1-自费 2-城镇职工医保 3-城乡居民医保 4-公费 5-商业保险），默认自费
+         * 本单结算方式（1-全自费 2-医保联网），默认自费
          */
         private Integer settlementType;
     }

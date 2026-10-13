@@ -156,8 +156,8 @@ const loadData = async () => {
     if (res.code === 200) {
       dictTypeList.value = res.data || []
     }
-  } catch (error) {
-    ElMessage.error(error.message || '加载数据失败')
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false
   }
@@ -176,8 +176,8 @@ const loadDictData = async (dictType) => {
     if (res.code === 200) {
       dictDataList.value = res.data || []
     }
-  } catch (error) {
-    ElMessage.error(error.message || '加载字典数据失败')
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     dataLoading.value = false
   }
@@ -213,13 +213,9 @@ const handleDeleteType = async (type) => {
         dictDataList.value = []
       }
       loadData()
-    } else {
-      ElMessage.error(res.message || '删除失败')
-    }
-  } catch (error) {
-    if (error !== 'cancel' && error.message) {
-      ElMessage.error(error.message)
-    }
+    } 
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 
@@ -251,13 +247,9 @@ const handleDeleteData = async (row) => {
     if (res.code === 200) {
       ElMessage.success('删除成功')
       await loadDictData(selectedDictType.value.dictType)
-    } else {
-      ElMessage.error(res.message || '删除失败')
-    }
-  } catch (error) {
-    if (error !== 'cancel' && error.message) {
-      ElMessage.error(error.message)
-    }
+    } 
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 

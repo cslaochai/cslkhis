@@ -186,8 +186,8 @@ const loadData = async () => {
       tableData.value = res.data.records || []
       pagination.value.total = res.data.total || 0
     }
-  } catch (error) {
-    ElMessage.error(error.message || '加载数据失败')
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false
   }
@@ -234,13 +234,9 @@ const handleToggleStatus = async (row) => {
     if (res.code === 200) {
       ElMessage.success(`${action}成功`)
       loadData()
-    } else {
-      ElMessage.error(res.message || `${action}失败`)
-    }
-  } catch (error) {
-    if (error !== 'cancel' && error.message) {
-      ElMessage.error(error.message)
-    }
+    } 
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 

@@ -156,7 +156,7 @@ async function loadList() {
     pagination.total = Number(res.data?.total || 0);
   } catch (e) {
     rows.value = [];
-    ElMessage.error(e.message || '加载账单失败');
+    
   } finally {
     loading.value = false;
   }
@@ -200,8 +200,8 @@ async function runVoid(row) {
     await voidBill({billId: row.id, reason: res.value});
     ElMessage.success('已作废，记账行已解锁');
     await loadList();
-  } catch (e) {
-    ElMessage.error(e.message || '作废失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     voidSaving.value = false;
   }

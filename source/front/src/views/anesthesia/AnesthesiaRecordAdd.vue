@@ -107,8 +107,8 @@ const submitCreate = async () => {
     ElMessage.success(`麻醉记录单已开立：${res.data || ''}（记录中）`);
     visible.value = false;
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e.message || '开立麻醉记录单失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     createSubmitting.value = false;
   }

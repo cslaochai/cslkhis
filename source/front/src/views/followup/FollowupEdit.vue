@@ -79,10 +79,7 @@ const fillBlank = () => {
 const fillFromTask = async (id) => {
   try {
     const res = await getFollowupDetail(id);
-    if (res.code !== 200) {
-      ElMessage.error(res.message || '加载任务失败');
-      return false;
-    }
+    
     const t = res.data || {};
     Object.assign(editForm, {
       id: t.id, patientId: t.patientId, patientName: t.patientName, followupType: t.followupType,
@@ -93,7 +90,7 @@ const fillFromTask = async (id) => {
     return true;
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载任务失败');
+    
     return false;
   }
 };
@@ -139,7 +136,7 @@ const composeAiContent = async () => {
       ElMessage.error(res.message || 'AI 未生成话术');
   } catch (e) {
     console.error(e);
-    ElMessage.error('AI 拟话术失败');
+    
   } finally {
     composing.value = false;
   }
@@ -164,11 +161,10 @@ const submitEdit = async () => {
       ElMessage.success('随访任务已保存');
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '保存失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('保存失败');
+    
   } finally {
     editLoading.value = false;
   }

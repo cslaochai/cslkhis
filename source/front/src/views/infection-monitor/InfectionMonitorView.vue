@@ -334,10 +334,10 @@ const loadCases = async () => {
     if (res.code === 200) {
       caseRows.value = res.data?.records || [];
       caseTotal.value = res.data?.total || 0
-    } else ElMessage.error(res.message || '加载病例失败')
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载病例失败')
+    
   } finally {
     caseLoading.value = false
   }
@@ -373,7 +373,7 @@ const doCaseAudit = async (row, result) => {
     if (res.code === 200) {
       ElMessage.success('核实完成');
       await Promise.all([loadCases(), loadCaseStats()])
-    } else ElMessage.error(res.message || '核实失败')
+    } 
   } catch (e) {
     console.error(e)
   }
@@ -407,10 +407,10 @@ const loadMonitors = async () => {
     if (res.code === 200) {
       monitorRows.value = res.data?.records || [];
       monitorTotal.value = res.data?.total || 0
-    } else ElMessage.error(res.message || '加载监测失败')
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载监测失败')
+    
   } finally {
     monitorLoading.value = false
   }
@@ -440,7 +440,7 @@ const onPunch = async (row) => {
     if (res.code === 200) {
       ElMessage.success('打卡成功');
       await Promise.all([loadMonitors(), loadMonitorStats()])
-    } else ElMessage.error(res.message || '打卡失败')
+    } 
   } catch (e) {
     if (e !== 'cancel' && e?.message) console.error(e)
   }
@@ -458,7 +458,7 @@ const onRemove = async (row) => {
     if (res.code === 200) {
       ElMessage.success('拔管登记完成');
       await Promise.all([loadMonitors(), loadMonitorStats()])
-    } else ElMessage.error(res.message || '拔管失败')
+    } 
   } catch (e) { /* 取消 */
   }
 }
@@ -486,7 +486,7 @@ const onConfirmInfection = async (row) => {
     if (res.code === 200) {
       ElMessage.success('感染确认完成');
       await Promise.all([loadMonitors(), loadMonitorStats()])
-    } else ElMessage.error(res.message || '感染确认失败')
+    } 
   } catch (e) { /* 取消 */
   }
 }

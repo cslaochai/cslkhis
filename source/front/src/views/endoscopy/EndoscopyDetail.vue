@@ -56,11 +56,10 @@ const loadDetail = async () => {
     const res = await getEndoscopyDetail(props.id);
     if (res.code === 200)
       detail.value = res.data;
-    else
-      ElMessage.error(res.message || '查询详情失败');
+    
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询详情失败');
+    
   } finally {
     detailLoading.value = false;
   }

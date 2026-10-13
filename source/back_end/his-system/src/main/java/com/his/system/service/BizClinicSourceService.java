@@ -66,9 +66,21 @@ public interface BizClinicSourceService extends IService<BizClinicSource> {
     List<BizClinicSource> listPage(ScheduleQueryDTO queryDTO);
 
     /**
-     * 查询号源列表
+     * 查询号源列表（员工端，套院内科室数据权限）。
+     *
+     * <p>科室过滤走 {@code DeptScopeService} 收口：指定越权科室直接抛、受限岗位只查授权科室、
+     * 全院角色查全部。无 employeeId（患者）调用会抛"患者身份无权访问院内业务数据"。
      */
     List<BizClinicSource> scheduleSelectList(ScheduleSelectQueryDTO scheduleQueryDTO);
+
+    /**
+     * 查询号源列表（患者端挂号目录用，<b>不走院内科室数据权限</b>）。
+     *
+     * <p>患者身份没有 employeeId，走 {@link #scheduleSelectList} 的 deptScope 收口会直接抛
+     * "患者身份无权访问院内业务数据"——但选号挂号本就是患者授权的公开业务，应按患者显式
+     * 选择的 deptId/doctorId/visitDate 直接取数，不套用院内岗位科室范围。
+     */
+    List<BizClinicSource> scheduleSelectListUnbounded(ScheduleSelectQueryDTO scheduleQueryDTO);
 
     /**
      * 新增排班

@@ -59,8 +59,8 @@ const submitAppealResult = async () => {
     ElMessage.success(resultForm.appealResult === 1 ? '已记申诉成功，扣款撤销' : '已记申诉驳回，转入待缴');
     visible.value = false;
     emit('saved');
-  } catch (error) {
-    ElMessage.error(error?.message || '申诉结果录入失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     resultSubmitting.value = false;
   }

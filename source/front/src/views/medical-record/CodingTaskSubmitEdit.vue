@@ -75,12 +75,10 @@ const submitTask = async () => {
       ElMessage.success('编码已提交，等待审核');
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '提交失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('提交失败');
+    
   } finally {
     submitLoading.value = false;
   }

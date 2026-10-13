@@ -254,8 +254,8 @@ async function loadList() {
     const res = await listMealOrderPage({...query})
     rows.value = res?.data?.records || []
     total.value = Number(res?.data?.total || 0)
-  } catch (e) {
-    ElMessage.error(e?.message || '查询失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false
   }
@@ -359,8 +359,8 @@ async function doDelete(row) {
     ElMessage.success('已删除')
     loadList()
     loadOverview()
-  } catch (e) {
-    ElMessage.error(e?.message || '删除失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 

@@ -87,8 +87,8 @@ async function doGenerate() {
     ElMessage.success(`${vo.message || ''}（扫到方案 ${vo.planCount ?? 0} 个，生成 ${vo.generatedCount ?? 0} 条，跳过 ${vo.skippedCount ?? 0} 人）`)
     visible.value = false
     emit('saved', genForm.mealDate)
-  } catch (e) {
-    ElMessage.error(e?.message || '生成失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     saving.value = false
   }

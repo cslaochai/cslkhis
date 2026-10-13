@@ -101,12 +101,31 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
 
     @Override
     public List<BizClinicSource> scheduleSelectList(ScheduleSelectQueryDTO scheduleQueryDTO) {
+        return clinicSourceMapper.selectList(buildScheduleSelectWrapper(scheduleQueryDTO, true));
+    }
+
+    @Override
+    public List<BizClinicSource> scheduleSelectListUnbounded(ScheduleSelectQueryDTO scheduleQueryDTO) {
+        return clinicSourceMapper.selectList(buildScheduleSelectWrapper(scheduleQueryDTO, false));
+    }
+
+    /**
+     * 选号查询的 SQL 收口（员工端套科室权限，患者端按所选条件直接取数）。
+     *
+     * @param applyDeptScope true = 员工端，套 {@link DeptScopeService} 的科室收口；
+     *                       false = 患者端，跳过院内科室权限，仅按查询参数里的 deptId/doctorId/visitDate 过滤
+     */
+    private LambdaQueryWrapper<BizClinicSource> buildScheduleSelectWrapper(ScheduleSelectQueryDTO scheduleQueryDTO, boolean applyDeptScope) {
         LambdaQueryWrapper<BizClinicSource> wrapper = new LambdaQueryWrapper<>();
-        Long scopedDeptId = deptScopeService.resolveDeptId(scheduleQueryDTO.getDeptId());
-        if (scopedDeptId != null) {
-            wrapper.eq(BizClinicSource::getDeptId, scopedDeptId);
-        } else if (deptScopeService.isScoped()) {
-            wrapper.in(BizClinicSource::getDeptId, deptScopeService.allowedDeptIds());
+        if (applyDeptScope) {
+            Long scopedDeptId = deptScopeService.resolveDeptId(scheduleQueryDTO.getDeptId());
+            if (scopedDeptId != null) {
+                wrapper.eq(BizClinicSource::getDeptId, scopedDeptId);
+            } else if (deptScopeService.isScoped()) {
+                wrapper.in(BizClinicSource::getDeptId, deptScopeService.allowedDeptIds());
+            }
+        } else if (scheduleQueryDTO.getDeptId() != null) {
+            wrapper.eq(BizClinicSource::getDeptId, scheduleQueryDTO.getDeptId());
         }
         wrapper.eq(BizClinicSource::getStaffType, StaffTypeEnum.DOCTOR.getCode())
                 .eq(scheduleQueryDTO.getVisitDate() != null,
@@ -116,7 +135,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
                 .gt(BizClinicSource::getAvailableSource, 0)
                 .eq(BizClinicSource::getStatus, ScheduleStatusEnum.NORMAL.getCode())
                 .orderByAsc(BizClinicSource::getStartTime);
-        return clinicSourceMapper.selectList(wrapper);
+        return wrapper;
     }
 
     @Override

@@ -7,6 +7,7 @@ import com.his.common.base.PageResult;
 import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.DelFlagEnum;
 import com.his.common.enums.EnableStatusEnum;
+import com.his.common.enums.MedicalInsuranceTypeEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.patient.enums.PatientMergeStatusEnum;
@@ -90,10 +91,8 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
             FieldSpec.of("bloodType", "血型"),
             FieldSpec.of("allergyHistory", "过敏史"),
             FieldSpec.of("medicalHistory", "既往病史"),
-            FieldSpec.render("patientType", "患者类型",
-                    v -> dictText(DictTypeConst.PATIENT_TYPE, v)),
+            FieldSpec.of("medicalInsuranceType", "费别"),
             FieldSpec.masked("medicalInsuranceNo", "医保卡号", MaskEnum.BANK_NO),
-            FieldSpec.of("medicalInsuranceType", "医保类型"),
             FieldSpec.render("cardType", "证件类型", v -> dictText(DictTypeConst.CARD_TYPE, v)),
             FieldSpec.masked("cardNo", "证件号码", MaskEnum.BANK_NO),
             FieldSpec.render("status", "状态", v -> EnableStatusEnum.getText((Integer) v))
@@ -194,27 +193,27 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
 
     @Override
     public PageResult<BizPatient> selectPatientPage(String patientName, String phone, String patientNo,
-                                                    Integer patientType, String keyword, int pageNum, int pageSize) {
-        return selectPatientPage(patientName, phone, patientNo, patientType, keyword, pageNum, pageSize, null, null);
+                                                    String medicalInsuranceType, String keyword, int pageNum, int pageSize) {
+        return selectPatientPage(patientName, phone, patientNo, medicalInsuranceType, keyword, pageNum, pageSize, null, null);
     }
 
     @Override
     public PageResult<BizPatient> selectPatientPage(String patientName, String phone, String patientNo,
-                                                    Integer patientType, String keyword, int pageNum, int pageSize,
+                                                    String medicalInsuranceType, String keyword, int pageNum, int pageSize,
                                                     List<Long> tagPatientIds) {
-        return selectPatientPage(patientName, phone, patientNo, patientType, keyword, pageNum, pageSize,
+        return selectPatientPage(patientName, phone, patientNo, medicalInsuranceType, keyword, pageNum, pageSize,
                 tagPatientIds, null);
     }
 
     @Override
     public PageResult<BizPatient> selectPatientPage(String patientName, String phone, String patientNo,
-                                                    Integer patientType, String keyword, int pageNum, int pageSize,
+                                                    String medicalInsuranceType, String keyword, int pageNum, int pageSize,
                                                     List<Long> tagPatientIds, PatientSearchScopeDTO scope) {
         LambdaQueryWrapper<BizPatient> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(patientName), BizPatient::getPatientName, patientName)
                 .like(TextUtil.hasText(phone), BizPatient::getPhone, phone)
                 .like(TextUtil.hasText(patientNo), BizPatient::getPatientNo, patientNo)
-                .eq(patientType != null, BizPatient::getPatientType, patientType)
+                .eq(TextUtil.hasText(medicalInsuranceType), BizPatient::getMedicalInsuranceType, medicalInsuranceType)
                 .in(tagPatientIds != null && !tagPatientIds.isEmpty(), BizPatient::getId, tagPatientIds);
         // 综合关键字：姓名 / 患者号 / 手机号 / 身份证号四者 OR，必须整体括号包裹，
         // 否则会把前面精确条件的 AND 关系吃掉（OR 优先级低于 AND）
@@ -393,7 +392,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
 
         PageResult<BizPatient> pageResult = selectPatientPage(
                 queryDTO.getPatientName(), queryDTO.getPhone(), queryDTO.getPatientNo(),
-                queryDTO.getPatientType(), queryDTO.getKeyword(),
+                queryDTO.getMedicalInsuranceType(), queryDTO.getKeyword(),
                 queryDTO.getPageNum(), queryDTO.getPageSize(), tagPatientIds,
                 scope);
 
@@ -730,7 +729,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
         patient.setIdCard(dto.getIdCard().toUpperCase());
         patient.setPhone(dto.getPhone());
         patient.setPatientNo(redisSequenceService.generatePatientNo());
-        patient.setPatientType(1); // 1-自费
+        patient.setMedicalInsuranceType(MedicalInsuranceTypeEnum.SELF_PAY.getName()); // 小程序自助建档默认自费
         patient.setStatus(1);
         LocalDate birth = parseBirthDate(dto.getIdCard());
         if (birth != null) {

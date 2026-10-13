@@ -143,12 +143,10 @@ const apply = async () => {
       ElMessage.success('申请成功，等待病案室审核');
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '申请失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('申请失败');
+    
   } finally {
     saving.value = false;
   }

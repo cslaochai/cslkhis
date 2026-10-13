@@ -25,7 +25,7 @@ public enum PatientProfileFieldEnum {
     CONTACT_PHONE("contactPhone", "联系人电话"),
     ALLERGY_HISTORY("allergyHistory", "过敏史"),
     MEDICAL_HISTORY("medicalHistory", "既往病史"),
-    MEDICAL_INSURANCE_TYPE("medicalInsuranceType", "医保类型");
+    MEDICAL_INSURANCE_TYPE("medicalInsuranceType", "费别");
 
     private final String code;
     private final String label;

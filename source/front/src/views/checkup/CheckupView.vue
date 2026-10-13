@@ -178,8 +178,8 @@ const startOne = async (row) => {
     await checkupRecordStart(row.id);
     ElMessage.success('已开始体检');
     loadList();
-  } catch (e) {
-    ElMessage.error(e?.response?.data?.message || '操作失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const deleteOne = async (row) => {
@@ -192,8 +192,8 @@ const deleteOne = async (row) => {
     await checkupRecordDelete(row.id);
     ElMessage.success('已删除');
     loadList();
-  } catch (e) {
-    ElMessage.error(e?.response?.data?.message || '删除失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 onMounted(() => {

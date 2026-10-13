@@ -62,7 +62,7 @@ watch(
       concludeForm.recordId = d.id;
       concludeForm.recordNo = d.recordNo;
     } catch (e) {
-      ElMessage.error(e?.response?.data?.message || '加载失败');
+      
       visible.value = false;
     }
   }
@@ -78,8 +78,8 @@ const submitConclude = async () => {
     ElMessage.success('体检报告已出');
     visible.value = false;
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.response?.data?.message || '出报告失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 </script>

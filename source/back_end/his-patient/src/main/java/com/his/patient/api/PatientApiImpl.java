@@ -65,7 +65,6 @@ public class PatientApiImpl implements PatientApi {
         brief.setAge(e.getAge());
         brief.setPhone(e.getPhone());
         brief.setIdCard(e.getIdCard());
-        brief.setPatientType(e.getPatientType());
         brief.setMedicalInsuranceType(e.getMedicalInsuranceType());
         brief.setMedicalInsuranceNo(e.getMedicalInsuranceNo());
         return brief;

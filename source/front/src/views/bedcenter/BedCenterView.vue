@@ -528,11 +528,9 @@ const loadQueue = async () => {
     if (res.code === 200) {
       rows.value = res.data?.records || [];
       total.value = Number(res.data?.total || 0);
-    } else {
-      ElMessage.error(res.message || '队列加载失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '队列加载失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }
@@ -544,11 +542,9 @@ const loadPool = async () => {
     if (res.code === 200) {
       poolRows.value = res.data?.rows || [];
       poolTotal.value = Number(res.data?.total || 0);
-    } else {
-      ElMessage.error(res.message || '床位池加载失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '床位池加载失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     poolLoading.value = false;
   }
@@ -631,11 +627,9 @@ const loadMatch = async () => {
       if (!assignRows.value.length) {
         ElMessage.warning('当前没有符合硬条件的空闲床位（普通需求不会占用 ICU / 特需床）');
       }
-    } else {
-      ElMessage.error(res.message || '床位匹配失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '床位匹配失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const loadManualBeds = async () => {
@@ -647,11 +641,9 @@ const loadManualBeds = async () => {
     });
     if (res.code === 200) {
       assignRows.value = (res.data?.rows || []).map((b) => ({...b, bedTypeText: b.bedTypeText}));
-    } else {
-      ElMessage.error(res.message || '床位查询失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '床位查询失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const onPickBed = (row) => {
@@ -668,11 +660,9 @@ const submitAssign = async () => {
       ElMessage.success(res.message || '床位已预留');
       assignVisible.value = false;
       await reloadAll();
-    } else {
-      ElMessage.error(res.message || '安排失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '安排失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     submitting.value = false;
   }
@@ -706,11 +696,9 @@ const submitReason = async () => {
       ElMessage.success(res.message || '操作成功');
       reasonVisible.value = false;
       await reloadAll();
-    } else {
-      ElMessage.error(res.message || '操作失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '操作失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     submitting.value = false;
   }
@@ -756,11 +744,9 @@ const loadMap = async () => {
       // 「下拉看着是 A 科室、画出来的是 B 科室」，这种错位最难排查
       if (!mapQuery.deptId && res.data?.deptId)
         mapQuery.deptId = res.data.deptId;
-    } else {
-      ElMessage.error(res.message || '床位图加载失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '床位图加载失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     mapLoading.value = false;
   }
@@ -841,11 +827,9 @@ const submitReserve = async () => {
       ElMessage.success(res.message || '床位已预留');
       reserveVisible.value = false;
       await reloadAll();
-    } else {
-      ElMessage.error(res.message || '预留失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '预留失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     submitting.value = false;
   }
@@ -867,8 +851,8 @@ const admitFromMap = async () => {
     } else {
       ElMessage.error(res.message || '未取到排队记录');
     }
-  } catch (e) {
-    ElMessage.error(e?.message || '未取到排队记录');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ---------------- 展示 ----------------

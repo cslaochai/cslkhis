@@ -314,12 +314,10 @@ const loadTpl = async () => {
     if (res.code === 200) {
       tplRows.value = res.data?.records || [];
       tplTotal.value = Number(res.data?.total || 0);
-    } else {
-      ElMessage.error(res.message || '查询模板失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询模板失败');
+    
   } finally {
     tplLoading.value = false;
   }
@@ -347,9 +345,7 @@ const onPublish = async (row) => {
     if (res.code === 200) {
       ElMessage.success('已发布为使用中');
       await loadTpl();
-    } else {
-      ElMessage.error(res.message || '发布失败');
-    }
+    } 
   } catch (e) {
     if (e !== 'cancel' && e?.message !== 'cancel')
       console.error(e);
@@ -366,9 +362,7 @@ const onDeprecate = async (row) => {
     if (res.code === 200) {
       ElMessage.success('已停用');
       await loadTpl();
-    } else {
-      ElMessage.error(res.message || '停用失败');
-    }
+    } 
   } catch (e) {
     if (e !== 'cancel' && e?.message !== 'cancel')
       console.error(e);
@@ -417,12 +411,10 @@ const loadEnroll = async () => {
     if (res.code === 200) {
       enRows.value = res.data?.records || [];
       enTotal.value = Number(res.data?.total || 0);
-    } else {
-      ElMessage.error(res.message || '查询入径台账失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询入径台账失败');
+    
   } finally {
     enLoading.value = false;
   }
@@ -447,11 +439,10 @@ const loadCandidates = async () => {
     const res = await listAdmissionsForEnroll({keyword: candKeyword.value.trim() || undefined, limit: 50});
     if (res.code === 200)
       candidates.value = res.data || [];
-    else
-      ElMessage.error(res.message || '查询在院患者失败');
+    
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询在院患者失败');
+    
   } finally {
     candLoading.value = false;
   }
@@ -483,9 +474,7 @@ const doEnroll = async () => {
       enrollForm.pathwayId = null;
       await Promise.all([loadCandidates(), loadEnroll()]);
       openEnrollDetail(res.data?.id);
-    } else {
-      ElMessage.error(res.message || '入径失败');
-    }
+    } 
   } catch (e) {
     if (e !== 'cancel' && e?.message !== 'cancel') {
       console.error(e);
@@ -524,11 +513,10 @@ const loadAnalysis = async () => {
     const res = await getPathwayAnalysis({pathwayId: anaPathwayId.value ?? undefined});
     if (res.code === 200)
       ana.value = res.data;
-    else
-      ElMessage.error(res.message || '查询变异分析失败');
+    
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询变异分析失败');
+    
   } finally {
     anaLoading.value = false;
   }

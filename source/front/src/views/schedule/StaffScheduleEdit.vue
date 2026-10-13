@@ -190,8 +190,8 @@ const ensureOptions = async () => {
     wardOptions.value = (wRes?.data || []).map((w) => ({id: w.id ?? w.wardId, name: w.wardName ?? w.name}))
     shiftOptions.value = (sRes?.data || []).map((s) => ({id: s.id, shiftName: s.shiftName}))
     optionsLoaded = true
-  } catch (e) {
-    ElMessage.error(e.message || '加载下拉数据失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 
@@ -264,11 +264,9 @@ const handleSubmit = async () => {
       ElMessage.success(res.message || (formData.id ? '修改成功' : '登记成功'))
       visible.value = false
       emit('saved')
-    } else {
-      ElMessage.error(res.message || '操作失败')
-    }
-  } catch (e) {
-    ElMessage.error(e.message || '操作失败')
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     submitLoading.value = false
   }

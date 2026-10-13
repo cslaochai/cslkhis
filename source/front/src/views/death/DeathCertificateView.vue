@@ -765,7 +765,7 @@ const loadStats = async () => {
     if (res.code === 200) stats.value = res.data || {}
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载统计失败')
+    
   }
 }
 const statCards = computed(() => [
@@ -798,10 +798,10 @@ const loadPending = async () => {
     if (res.code === 200) {
       pRows.value = res.data?.records || [];
       pTotal.value = res.data?.total || 0
-    } else ElMessage.error(res.message || '加载待开证榜失败')
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载待开证榜失败')
+    
   } finally {
     pLoading.value = false
   }
@@ -829,10 +829,10 @@ const loadCerts = async () => {
     if (res.code === 200) {
       cRows.value = res.data?.records || [];
       cTotal.value = res.data?.total || 0
-    } else ElMessage.error(res.message || '加载证明台账失败')
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载证明台账失败')
+    
   } finally {
     cLoading.value = false
   }
@@ -870,10 +870,10 @@ const loadRegisters = async () => {
     if (res.code === 200) {
       rRows.value = res.data?.records || [];
       rTotal.value = res.data?.total || 0
-    } else ElMessage.error(res.message || '加载死亡登记失败')
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载死亡登记失败')
+    
   } finally {
     rLoading.value = false
   }
@@ -911,10 +911,10 @@ const loadReport = async () => {
     if (res.code === 200) {
       mRows.value = res.data?.records || [];
       mTotal.value = res.data?.total || 0
-    } else ElMessage.error(res.message || '加载上报台账失败')
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载上报台账失败')
+    
   } finally {
     mLoading.value = false
   }
@@ -974,8 +974,8 @@ const openCertFormByAdmission = async (admissionId) => {
     cfBase.value = snap
     cfTitle.value = '填写死亡证明'
     cfVisible.value = true
-  } catch (e) {
-    ElMessage.error(String((e && e.message) || '加载开证底稿失败'))
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 const openCertEdit = async (id) => {
@@ -1059,9 +1059,9 @@ const saveCert = async () => {
       ElMessage.success(res.message || '证明已保存')
       cfVisible.value = false
       await reloadAll()
-    } else ElMessage.error(res.message || '保存失败')
-  } catch (e) {
-    ElMessage.error(String((e && e.message) || '保存失败'))
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     cfSaving.value = false
   }
@@ -1081,7 +1081,7 @@ const gate = async (promise, fallback) => {
     ElMessage.error(String((res && res.message) || fallback))
     return null
   } catch (e) {
-    ElMessage.error(String((e && e.message) || fallback))
+    
     return null
   }
 }
@@ -1152,10 +1152,10 @@ const onNotify = async () => {
   try {
     const res = await certNotifyOverdue()
     if (res.code === 200) ElMessage.success(`催报完成，发送 ${res.data || 0} 条站内信`)
-    else ElMessage.error(res.message || '催报失败')
+    
     await loadStats()
   } catch (e) {
-    ElMessage.error(String((e && e.message) || '催报失败'))
+    
     await loadStats()
   } finally {
     notifying.value = false
@@ -1352,9 +1352,9 @@ const saveRegister = async () => {
       ElMessage.success(res.message || '登记已保存');
       rfVisible.value = false;
       await reloadAll()
-    } else ElMessage.error(res.message || '保存失败')
-  } catch (e) {
-    ElMessage.error(String((e && e.message) || '保存失败'))
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     rfSaving.value = false
   }

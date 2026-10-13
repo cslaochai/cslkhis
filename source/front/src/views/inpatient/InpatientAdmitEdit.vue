@@ -196,8 +196,8 @@ const submitAdmit = async () => {
         : `入院登记成功，住院号已生成（入院ID ${res.data}）`);
     visible.value = false;
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.message || '入院登记失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     admitLoading.value = false;
   }

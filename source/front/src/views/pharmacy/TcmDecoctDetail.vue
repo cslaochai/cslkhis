@@ -109,8 +109,7 @@ const load = async () => {
     const res = await tcmDecoctGetDetailById(props.id);
     if (res.code === 200)
       detail.value = res.data;
-    else
-      ElMessage.error(res.message || '加载代煎单详情失败');
+    
   } catch (e) {
     console.error(e);
   } finally {

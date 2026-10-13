@@ -58,11 +58,10 @@ const loadDetail = async () => {
     const res = await getPathwayDetail(props.id);
     if (res.code === 200)
       tplView.value = res.data;
-    else
-      ElMessage.error(res.message || '加载模板失败');
+    
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载模板失败');
+    
   }
 };
 

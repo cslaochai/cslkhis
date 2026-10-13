@@ -282,8 +282,8 @@ async function loadDetail() {
     const row = props.row;
     const res = row?.id ? await getDayDetailById(row.id) : await getDayDetailByDate(row?.settleDate);
     dayDetail.value = res.data || null;
-  } catch (e) {
-    ElMessage.error(e?.message || '加载日结详情失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     dayDetailLoading.value = false;
   }
@@ -317,8 +317,8 @@ async function handleAudit() {
     ElMessage.success('日结单已审核');
     await loadDetail();
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.message || '审核失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 </script>

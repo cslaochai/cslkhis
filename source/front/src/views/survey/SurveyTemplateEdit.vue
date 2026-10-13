@@ -146,10 +146,7 @@ const loadTemplate = async () => {
   tpEditLoading.value = true;
   try {
     const res = await getTemplateDetail(props.row.id);
-    if (res.code !== 200) {
-      ElMessage.error(res.message || '加载问卷失败');
-      return;
-    }
+    
     const t = res.data;
     Object.assign(tpForm, {
       id: t.id, templateName: t.templateName, scene: t.scene, status: t.status,
@@ -166,7 +163,7 @@ const loadTemplate = async () => {
     }));
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载问卷失败');
+    
   } finally {
     tpEditLoading.value = false;
   }
@@ -215,11 +212,10 @@ const submitTemplate = async () => {
       ElMessage.success('问卷已保存（整卷覆盖：题目以本次提交为准）');
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '保存失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('保存失败');
+    
   } finally {
     tpEditBusy.value = false;
   }

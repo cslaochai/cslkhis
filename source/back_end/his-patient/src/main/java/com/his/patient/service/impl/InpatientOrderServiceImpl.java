@@ -845,7 +845,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
     }
 
     /**
-     * 一次执行 = 一笔记账行（L1），全部快照由医嘱与执行记录带过去，记账侧不回查医嘱。
+     * 一次执行 = 一笔记账行，全部快照由医嘱与执行记录带过去，记账侧不回查医嘱。
      *
      * <p>三条口径：
      * <ol>

@@ -258,11 +258,10 @@ const loadPlans = async () => {
     if (res.code === 200) {
       planRows.value = res.data?.records || [];
       planTotal.value = Number(res.data?.total || 0);
-    } else
-      ElMessage.error(res.message || '查询失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     planLoading.value = false;
   }
@@ -284,11 +283,10 @@ const togglePlan = (row) => {
       ElMessage.success(res.message || '已变更');
       loadPlans();
       loadStats();
-    } else
-      ElMessage.error(res.message || '操作失败');
+    } 
   }).catch((e) => {
     console.error(e);
-    ElMessage.error('操作失败');
+    
   });
 };
 // 录入质控结果
@@ -325,11 +323,10 @@ const loadRecords = async () => {
     if (res.code === 200) {
       recRows.value = res.data?.records || [];
       recTotal.value = Number(res.data?.total || 0);
-    } else
-      ElMessage.error(res.message || '查询失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     recLoading.value = false;
   }
@@ -355,11 +352,10 @@ const doReview = (row) => {
       ElMessage.success('复核通过，失控闭环完成');
       loadRecords();
       loadStats();
-    } else
-      ElMessage.error(res.message || '复核失败');
+    } 
   }).catch((e) => {
     console.error(e);
-    ElMessage.error('复核失败');
+    
   });
 };
 const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '-');

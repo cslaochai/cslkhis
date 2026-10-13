@@ -217,8 +217,8 @@ const loadData = async () => {
         expandedKeys.value = deptTree.value.map(item => item.id)
       }
     }
-  } catch (error) {
-    ElMessage.error(error.message || '加载数据失败')
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false
   }
@@ -291,8 +291,8 @@ const handleNodeClick = async (data) => {
         }
       }
     }
-  } catch (error) {
-    ElMessage.error(error.message || '获取部门信息失败')
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     formLoading.value = false
   }
@@ -332,11 +332,9 @@ const handleSave = async () => {
     if (res.code === 200) {
       ElMessage.success(formData.id ? '修改成功' : '新增成功')
       loadData()
-    } else {
-      ElMessage.error(res.message || '操作失败')
-    }
-  } catch (error) {
-    ElMessage.error(error.message || '操作失败')
+    } 
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     formLoading.value = false
   }
@@ -368,13 +366,9 @@ const handleDelete = async (data) => {
         formData.id = null
       }
       loadData()
-    } else {
-      ElMessage.error(res.message || '删除失败')
-    }
-  } catch (error) {
-    if (error !== 'cancel' && error.message) {
-      ElMessage.error(error.message)
-    }
+    } 
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 

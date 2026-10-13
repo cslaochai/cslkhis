@@ -112,11 +112,10 @@ const saveCm = async () => {
       ElMessage.success(`配血单 ${res.data?.matchNo || ''} 已创建`);
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '创建失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('创建失败');
+    
   } finally {
     loading.value = false;
   }

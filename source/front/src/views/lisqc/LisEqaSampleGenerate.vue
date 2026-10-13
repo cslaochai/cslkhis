@@ -101,11 +101,10 @@ const save = async () => {
       ElMessage.success(res.message || '已生成');
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '生成失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('生成失败');
+    
   } finally {
     saving.value = false;
   }

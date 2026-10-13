@@ -653,8 +653,8 @@ const loadTsaStatus = async () => {
     const res = await getTsaStatus();
     tsaStatus.value = res.data;
     syncSourceDraft();
-  } catch (e) {
-    ElMessage.error(e?.message || '加载TSA状态失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     tsaLoading.value = false;
   }
@@ -668,8 +668,8 @@ const loadTsaTokenList = async () => {
     const res = await getTsaTokenList(params);
     tsaTokenList.value = res.data?.records || [];
     tsaTokenTotal.value = Number(res.data?.total ?? 0);
-  } catch (e) {
-    ElMessage.error(e?.message || '加载时间戳台账失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     tsaTokenLoading.value = false;
   }
@@ -705,7 +705,7 @@ const onTimeSourceChange = async (val) => {
     syncSourceDraft();
     ElMessage.success('时间来源已切换');
   } catch (e) {
-    ElMessage.error(e?.message || '切换失败');
+    
     syncSourceDraft();
   } finally {
     tsaOpsLoading.value = false;
@@ -728,8 +728,8 @@ const onToggleTsa = async () => {
     const res = await updateTsaStatus(stop ? 0 : 1);
     tsaStatus.value = res.data;
     ElMessage.success(stop ? 'TSA 已停用' : 'TSA 已启用');
-  } catch (e) {
-    ElMessage.error(e?.message || '操作失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     tsaOpsLoading.value = false;
   }
@@ -746,8 +746,8 @@ const onVerifyTsaToken = async (row) => {
     } else {
       ElMessage.warning(res.data?.failReason || '令牌复验不通过');
     }
-  } catch (e) {
-    ElMessage.error(e?.message || '复验失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     verifyingTokenId.value = '';
   }
@@ -766,8 +766,8 @@ const loadOverview = async () => {
   try {
     const res = await getSignatureSummary();
     overview.value = res.data;
-  } catch (e) {
-    ElMessage.error(e?.message || '加载签名概览失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     overviewLoading.value = false;
   }
@@ -776,8 +776,8 @@ const loadOptions = async () => {
   try {
     const res = await getSignatureQueryOptions();
     options.value = res.data || {};
-  } catch (e) {
-    ElMessage.error(e?.message || '加载下拉选项失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const loadSignList = async () => {
@@ -803,8 +803,8 @@ const loadSignList = async () => {
     const res = await getSignatureList(params);
     signList.value = res.data?.records || [];
     signTotal.value = Number(res.data?.total ?? 0);
-  } catch (e) {
-    ElMessage.error(e?.message || '加载签名记录失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     signLoading.value = false;
   }
@@ -822,8 +822,8 @@ const loadCertList = async () => {
     const res = await getSignCertList(params);
     certList.value = res.data?.records || [];
     certTotal.value = Number(res.data?.total ?? 0);
-  } catch (e) {
-    ElMessage.error(e?.message || '加载证书列表失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     certLoading.value = false;
   }
@@ -882,8 +882,8 @@ const submitRevoke = async () => {
     ElMessage.success('已吊销该证书（历史签名仍可用其公钥验签）');
     revokeVisible.value = false;
     await Promise.all([loadCertList(), loadOverview()]);
-  } catch (e) {
-    ElMessage.error(e?.message || '吊销失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     revoking.value = false;
   }

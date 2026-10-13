@@ -74,8 +74,8 @@ const handleConsumeSubmit = async () => {
     ElMessage.success('领用成功，库存已按先过期先出扣减');
     visible.value = false;
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.message || '领用失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 </script>

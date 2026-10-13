@@ -304,8 +304,8 @@ const loadData = async () => {
     });
     rows.value = res.data?.records || [];
     pagination.value.total = res.data?.total || 0;
-  } catch (e) {
-    ElMessage.error(e?.message || '加载失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }
@@ -355,8 +355,8 @@ const searchRecords = async () => {
     recordCandidates.value = res.data?.records || [];
     if (!recordCandidates.value.length)
       ElMessage.info('没有查到该患者的检查记录');
-  } catch (e) {
-    ElMessage.error(e?.message || '查询失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     recordLoading.value = false;
   }
@@ -392,8 +392,8 @@ const doSave = async () => {
     ElMessage.success(`已登记 ${addForm.value.quantity} 张，金额 ¥${money(addAmount.value)}`);
     showAdd.value = false;
     refresh();
-  } catch (e) {
-    ElMessage.error(e?.message || '登记失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     saving.value = false;
   }
@@ -414,8 +414,8 @@ const doCharge = async (row) => {
     ElMessage.success('已生成记账');
     loadData();
     loadStats();
-  } catch (e) {
-    ElMessage.error(e?.message || '记账失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const doPrint = async (row) => {
@@ -423,8 +423,8 @@ const doPrint = async (row) => {
     await examFilmMarkPrinted(row.id);
     ElMessage.success('已标记打印');
     loadData();
-  } catch (e) {
-    ElMessage.error(e?.message || '操作失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const doDeliver = async (row) => {
@@ -439,8 +439,8 @@ const doDeliver = async (row) => {
     await examFilmDeliver(row.id);
     ElMessage.success('已标记发放');
     loadData();
-  } catch (e) {
-    ElMessage.error(e?.message || '操作失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const doDelete = async (row) => {
@@ -455,9 +455,8 @@ const doDelete = async (row) => {
     ElMessage.success('已作废（操作已留痕）');
     loadData();
     loadStats();
-  } catch (e) {
-    if (e !== 'cancel')
-      ElMessage.error(e?.message || '作废失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ========== 规格价目 ==========
@@ -493,8 +492,8 @@ const doDeleteSpec = async (row) => {
     const r = await getFilmSpecSelectList();
     specRows.value = r.data || [];
     specOptions.value = r.data || [];
-  } catch (e) {
-    ElMessage.error(e?.message || '删除失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const statusTagType = (st) => {

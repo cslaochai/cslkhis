@@ -255,17 +255,14 @@ const load = async () => {
       deptId: deptId.value || undefined,
       wardId: wardId.value || undefined,
     });
-    if (res.code !== 200) {
-      ElMessage.error(res.message || '床位图加载失败');
-      return;
-    }
+    
     data.value = res.data || data.value;
     // 首屏后端会把自己落在主岗位科室，回填到下拉，否则切走就切不回来
     if (!deptId.value && res.data?.deptId)
       deptId.value = String(res.data.deptId);
     await loadAlerts();
-  } catch (e) {
-    ElMessage.error(e?.message || '床位图加载失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }
@@ -368,7 +365,7 @@ const openAlert = async (row) => {
     }
     alertDetail.value = res.data;
   } catch (e) {
-    ElMessage.error(e?.message || '预警详情加载失败');
+    
     alertVisible.value = false;
   } finally {
     alertLoading.value = false;

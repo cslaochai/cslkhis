@@ -187,7 +187,7 @@ const initEdit = async (orderId) => {
     if (!items.value.length)
       items.value = [emptyItem()];
   } catch (e) {
-    ElMessage.error('加载订单详情失败');
+    
     console.error(e);
   }
 };
@@ -238,9 +238,7 @@ const save = async () => {
       ElMessage.success(props.orderId ? '订单已更新（审批状态回到待审批）' : '订单已创建');
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '保存失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
   } finally {

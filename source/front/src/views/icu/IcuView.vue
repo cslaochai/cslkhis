@@ -416,11 +416,9 @@ const loadBoard = async () => {
     const res = await getIcuBedBoard();
     if (res.code === 200) {
       beds.value = res.data || [];
-    } else {
-      ElMessage.error(res.message || '加载床位看板失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '加载床位看板失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     bedLoading.value = false;
   }
@@ -475,11 +473,9 @@ const loadStay = async () => {
     if (res.code === 200) {
       stayRows.value = res.data?.records || [];
       stayTotal.value = Number(res.data?.total || 0);
-    } else {
-      ElMessage.error(res.message || '查询入出科台账失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '查询入出科台账失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     stayLoading.value = false;
   }
@@ -549,11 +545,9 @@ const loadMonitor = async () => {
     if (res.code === 200) {
       monRows.value = res.data?.records || [];
       monTotal.value = Number(res.data?.total || 0);
-    } else {
-      ElMessage.error(res.message || '查询监护记录失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '查询监护记录失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     monLoading.value = false;
   }
@@ -612,11 +606,9 @@ const refreshTrend = async () => {
     const res = await getIcuMonitorTrend(trendStayId.value, trendHours.value || undefined);
     if (res.code === 200) {
       trendRows.value = res.data || [];
-    } else {
-      ElMessage.error(res.message || '查询监护趋势失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '查询监护趋势失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ---------------- 页签四：科室指标 ----------------
@@ -634,11 +626,9 @@ const loadStats = async () => {
     });
     if (res.code === 200) {
       stats.value = res.data || null;
-    } else {
-      ElMessage.error(res.message || '查询科室指标失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '查询科室指标失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     statsLoading.value = false;
   }

@@ -66,11 +66,10 @@ const doReschedule = async () => {
       ElMessage.success(res.message || '已改期');
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '改期失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('改期失败');
+    
   } finally {
     saving.value = false;
   }

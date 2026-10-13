@@ -120,8 +120,8 @@ const loadRooms = async () => {
   try {
     const res = await getOperationRoomAll();
     roomRows.value = (res.data || []);
-  } catch (error) {
-    ElMessage.error(error.message || '加载手术间失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     roomLoading.value = false;
   }
@@ -170,8 +170,8 @@ const submitRoom = async () => {
     roomFormVisible.value = false;
     emit('saved');
     await loadRooms();
-  } catch (error) {
-    ElMessage.error(error.message || '保存手术间失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     roomSubmitting.value = false;
   }
@@ -192,8 +192,8 @@ const removeRoom = async (row) => {
     ElMessage.success('手术间已删除');
     emit('changed');
     await loadRooms();
-  } catch (error) {
-    ElMessage.error(error.message || '删除手术间失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const toggleRoomStatus = async (row, status) => {
@@ -209,8 +209,8 @@ const toggleRoomStatus = async (row, status) => {
     ElMessage.success(status === 1 ? '手术间已启用' : '手术间已停用（总表不再出列，历史手术不受影响）');
     emit('changed');
     await loadRooms();
-  } catch (error) {
-    ElMessage.error(error.message || '状态更新失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 </script>

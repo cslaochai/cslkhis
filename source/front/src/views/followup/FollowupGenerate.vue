@@ -75,11 +75,10 @@ const submitGenerate = async () => {
       ElMessage.success('随访计划已生成（同一出院记录重复生成会返回已生成任务）');
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '生成失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('生成失败');
+    
   } finally {
     genLoading.value = false;
   }

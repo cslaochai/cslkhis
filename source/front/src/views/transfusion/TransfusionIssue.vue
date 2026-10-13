@@ -72,8 +72,8 @@ const submitIssue = async () => {
     ElMessage.success('已发血，请病区双人核对后输注');
     visible.value = false;
     emit('saved');
-  } catch (error) {
-    ElMessage.error(error.message || '发血失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     issueSubmitting.value = false;
   }

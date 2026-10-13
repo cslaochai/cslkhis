@@ -95,7 +95,7 @@ const onSubmit = async () => {
       ElMessage.success('建档已认定')
       visible.value = false
       emit('saved')
-    } else ElMessage.error(res.message || '建档失败')
+    } 
   } catch (e) {
     console.error(e)
   } finally {

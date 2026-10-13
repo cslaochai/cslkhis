@@ -216,9 +216,7 @@ const load = async (id) => {
           editMap[it.id] = { countedQuantity: Number(it.countedQuantity), remark: it.remark || '' };
         }
       });
-    } else {
-      ElMessage.error(res.message || '加载详情失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
   }
@@ -242,9 +240,7 @@ const doSaveCount = async () => {
       ElMessage.success('实盘数已保存');
       await load(res.data);
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '保存失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
   } finally {

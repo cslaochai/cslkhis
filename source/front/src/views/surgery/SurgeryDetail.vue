@@ -145,8 +145,8 @@ watch(visible, async (open) => {
   try {
     const res = await getOperationApplyDetail(props.id);
     detail.value = (res.data || props.row);
-  } catch (error) {
-    ElMessage.error(error.message || '加载手术详情失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 });
 </script>

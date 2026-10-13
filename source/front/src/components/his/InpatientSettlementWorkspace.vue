@@ -333,8 +333,8 @@ const loadSummary = async () => {
     ]);
     summary.value = s.data || {};
     balance.value = b.data || {};
-  } catch (error) {
-    ElMessage.error(error.message || '加载账务概览失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const arrears = computed(() => !!summary.value?.arrears);
@@ -355,8 +355,8 @@ const loadPrepay = async () => {
     });
     prepayRows.value = (res.data?.records || []);
     prepayTotal.value = Number(res.data?.total || 0);
-  } catch (error) {
-    ElMessage.error(error.message || '加载预交金流水失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }
@@ -389,8 +389,8 @@ const submitPrepay = async () => {
     ElMessage.success(rows.length > 1 ? `已登记 ${rows.length} 笔流水` : '预交金已登记');
     prepayDialog.value = false;
     await Promise.all([loadPrepay(), loadSummary(), loadBill(), loadSettlement()]);
-  } catch (error) {
-    ElMessage.error(error.message || '登记失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     saving.value = false;
   }
@@ -405,8 +405,8 @@ const loadBill = async () => {
   try {
     const res = await getDailyBill({admissionId: admissionId.value});
     bill.value = res.data || {days: []};
-  } catch (error) {
-    ElMessage.error(error.message || '加载日清单失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     billLoading.value = false;
   }
@@ -437,7 +437,7 @@ const runPreview = async () => {
     preview.value = res.data || null;
   } catch (error) {
     preview.value = null;
-    ElMessage.error(error.message || '结算试算失败');
+    
   } finally {
     previewLoading.value = false;
   }
@@ -461,8 +461,8 @@ const runSettle = async () => {
     settlement.value = res.data || null;
     preview.value = null;
     await Promise.all([loadSummary(), loadBill()]);
-  } catch (error) {
-    ElMessage.error(error.message || '结算失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     settling.value = false;
   }

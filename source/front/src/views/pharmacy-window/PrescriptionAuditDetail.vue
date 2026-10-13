@@ -165,8 +165,8 @@ const handleVerify = async () => {
     if (!verifyResults.value.length) {
       ElMessage.warning('该处方没有任何签名记录');
     }
-  } catch (error) {
-    ElMessage.error(error.message || '验签失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     verifying.value = false;
   }

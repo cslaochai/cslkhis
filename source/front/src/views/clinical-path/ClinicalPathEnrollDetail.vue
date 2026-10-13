@@ -121,11 +121,10 @@ const loadDetail = async () => {
     const res = await getEnrollDetail(props.id);
     if (res.code === 200)
       detail.value = res.data;
-    else
-      ElMessage.error(res.message || '查询入径详情失败');
+    
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询入径详情失败');
+    
   } finally {
     detailLoading.value = false;
   }
@@ -163,9 +162,7 @@ const onFinish = async () => {
       ElMessage.success('已完成');
       await loadDetail();
       emit('changed');
-    } else {
-      ElMessage.error(res.message || '完成失败');
-    }
+    } 
   } catch (e) {
     if (e !== 'cancel' && e?.message !== 'cancel')
       console.error(e);
@@ -189,9 +186,7 @@ const onAbort = async () => {
       ElMessage.success('已退径');
       await loadDetail();
       emit('changed');
-    } else {
-      ElMessage.error(res.message || '退径失败');
-    }
+    } 
   } catch (e) {
     if (e !== 'cancel' && e?.message !== 'cancel')
       console.error(e);

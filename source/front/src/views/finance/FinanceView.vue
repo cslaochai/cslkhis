@@ -357,7 +357,7 @@ async function loadCounts() {
     counts.value = res.data || {};
   } catch (e) {
     counts.value = {};
-    ElMessage.error(e?.message || '加载财务状态统计失败');
+    
   } finally {
     countLoading.value = false;
   }
@@ -387,7 +387,7 @@ async function loadCashierList() {
   } catch (e) {
     cashierRows.value = [];
     cashierPage.total = 0;
-    ElMessage.error(e?.message || '加载交班单失败');
+    
   } finally {
     cashierLoading.value = false;
   }
@@ -422,7 +422,7 @@ async function loadDayList() {
   } catch (e) {
     dayRows.value = [];
     dayPage.total = 0;
-    ElMessage.error(e?.message || '加载日结单失败');
+    
   } finally {
     dayLoading.value = false;
   }

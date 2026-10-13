@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 账单行快照出参（L2）：项目名/价格/医保拆分抄自出账那一刻的字典与价格，不随其后变更漂移。
+ * 账单行快照出参：项目名/价格/医保拆分抄自出账那一刻的字典与价格，不随其后变更漂移。
  */
 @Data
 public class BizSettlementBillItemVO {

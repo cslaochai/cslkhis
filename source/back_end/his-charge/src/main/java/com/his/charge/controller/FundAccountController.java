@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 资金账户台账（L3）：门诊余额与住院预交金的统一账本查询。
+ * 资金账户台账：门诊余额与住院预交金的统一账本查询。
  */
 @Tag(name = "资金账户")
 @RestController

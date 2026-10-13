@@ -54,11 +54,10 @@ const save = async () => {
       ElMessage.success(res.message || '已录入');
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '录入失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('录入失败');
+    
   } finally {
     saving.value = false;
   }

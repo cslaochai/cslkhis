@@ -300,8 +300,8 @@ async function loadList() {
     const res = await listDietPlanPage({ ...query })
     rows.value = res?.data?.records || []
     total.value = Number(res?.data?.total || 0)
-  } catch (e) {
-    ElMessage.error(e?.message || '查询失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false
   }
@@ -361,8 +361,8 @@ async function doConfirm() {
     selection.value = []
     loadList()
     loadOverview()
-  } catch (e) {
-    ElMessage.error(e?.message || '操作失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     saving.value = false
   }
@@ -432,8 +432,8 @@ async function generateTodayMeal(row) {
     ElMessage.success(res?.data?.message || '已补生成')
     loadList()
     loadOverview()
-  } catch (e) {
-    ElMessage.error(e?.message || '补生成失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     saving.value = false
   }

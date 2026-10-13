@@ -78,11 +78,10 @@ const openDetail = async () => {
     const res = await getExamAppointDetail(props.apptId);
     if (res.code === 200)
       detail.data = res.data;
-    else
-      ElMessage.error(res.message || '加载详情失败');
+    
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载详情失败');
+    
   } finally {
     detail.loading = false;
   }

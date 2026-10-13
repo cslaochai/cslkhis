@@ -101,8 +101,8 @@ watch(visible, async (open) => {
     if (res.code === 200 && res.data) {
       detailData.value = res.data
     }
-  } catch (error) {
-    ElMessage.error(error.message || '获取详情失败')
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     detailLoading.value = false
   }

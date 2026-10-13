@@ -271,11 +271,10 @@ const loadDevices = async () => {
     if (res.code === 200) {
       devRows.value = res.data?.records || [];
       devTotal.value = Number(res.data?.total || 0);
-    } else
-      ElMessage.error(res.message || '查询失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     devLoading.value = false;
   }
@@ -334,11 +333,10 @@ const saveDevice = async () => {
       ElMessage({type: res.data?.warning ? 'warning' : 'success', message: res.message || '已保存', duration: 6000});
       devDlg.visible = false;
       await Promise.all([loadDevices(), loadSlotDevices()]);
-    } else
-      ElMessage.error(res.message || '保存失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('保存失败');
+    
   } finally {
     devDlg.saving = false;
   }
@@ -350,8 +348,7 @@ const removeDevice = async (row) => {
     if (res.code === 200) {
       ElMessage.success(res.message || '已删除');
       await Promise.all([loadDevices(), loadSlotDevices()]);
-    } else
-      ElMessage.error(res.message || '删除失败');
+    } 
   } catch (e) { /* 用户放弃 */
   }
 };
@@ -371,11 +368,10 @@ const openItems = async (row) => {
     const res = await getExamDeviceItems(row.id);
     if (res.code === 200)
       itemDlg.rows = (res.data || []).map((i) => ({...i}));
-    else
-      ElMessage.error(res.message || '加载项目失败');
+    
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载项目失败');
+    
   }
 };
 const searchCandidates = async () => {
@@ -384,11 +380,10 @@ const searchCandidates = async () => {
     if (res.code === 200) {
       const owned = new Set(itemDlg.rows.map((r) => String(r.itemId)));
       itemDlg.candidates = (res.data || []).filter((c) => !owned.has(String(c.itemId)));
-    } else
-      ElMessage.error(res.message || '搜索失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('搜索失败');
+    
   }
 };
 const addItem = (c) => {
@@ -414,11 +409,10 @@ const saveItems = async () => {
       ElMessage.success(res.message || '已保存');
       itemDlg.visible = false;
       loadDevices();
-    } else
-      ElMessage.error(res.message || '保存失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('保存失败');
+    
   } finally {
     itemDlg.saving = false;
   }
@@ -454,11 +448,10 @@ const loadBoardPanel = async () => {
     const res = await getExamSlotBoard({deviceId: slot.deviceId, slotDate: slot.date});
     if (res.code === 200)
       slot.board = res.data;
-    else
-      ElMessage.error(res.message || '加载号源失败');
+    
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载号源失败');
+    
   } finally {
     slot.loading = false;
   }
@@ -473,11 +466,10 @@ const genSlots = async () => {
     if (res.code === 200) {
       ElMessage.success(res.data?.message || res.message || '号源已生成');
       loadBoardPanel();
-    } else
-      ElMessage.error(res.message || '生成失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('生成失败');
+    
   }
 };
 const toggleSlot = async (cell) => {
@@ -500,8 +492,7 @@ const toggleSlot = async (cell) => {
   }).catch((e) => ({message: e?.message}));
   if (res.code === 200)
     ElMessage.success(res.message || '已变更');
-  else
-    ElMessage.error(res.message || '操作失败');
+  
   loadBoardPanel();
 };
 const runRecalc = async () => {
@@ -517,11 +508,10 @@ const runRecalc = async () => {
         duration: 6000
       });
       loadBoardPanel();
-    } else
-      ElMessage.error(res.message || '对账失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('对账失败');
+    
   }
 };
 /** 号源台没有"被选中待占号"的格子（那是预约侧的事），只按格子自身状态着色 */

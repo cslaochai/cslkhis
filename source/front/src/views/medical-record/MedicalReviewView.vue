@@ -364,10 +364,8 @@ const handleReview = async (row, approved) => {
       detailData.value = res.data || {};
       selectedRecord.value = {...selectedRecord.value, reviewStatus: approved ? 2 : 3};
     }
-  } catch (error) {
-    if (error !== 'cancel' && error?.message !== 'cancel') {
-      ElMessage.error(error.message || '审核失败');
-    }
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const getReviewStatus = (row) => reviewMap[row.reviewStatus] || {label: '未知', type: 'info'};

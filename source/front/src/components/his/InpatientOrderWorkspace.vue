@@ -1393,8 +1393,8 @@ const loadAdmissions = async () => {
       admissionId.value = first ? String(first.admissionId) : '';
       currentAdmission.value = first;
     }
-  } catch (error) {
-    ElMessage.error(error.message || '加载在院患者失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     admissionLoading.value = false;
   }
@@ -1484,8 +1484,8 @@ const loadInsRows = async () => {
     });
     insRows.value = (res.data?.records || []);
     insTotal.value = Number(res.data?.total ?? 0);
-  } catch (error) {
-    ElMessage.error(error.message || '加载检查回报失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     insLoading.value = false;
   }
@@ -1507,8 +1507,8 @@ const loadLabRows = async () => {
     });
     labRows.value = (res.data?.records || []);
     labTotal.value = Number(res.data?.total ?? 0);
-  } catch (error) {
-    ElMessage.error(error.message || '加载检验回报失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     labLoading.value = false;
   }
@@ -1521,8 +1521,8 @@ const openLabDetail = async (row) => {
   try {
     const res = await getLaboratoryDetail(row.id);
     labDetail.value = (res.data || null);
-  } catch (error) {
-    ElMessage.error(error.message || '加载检验报告失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     labDetailLoading.value = false;
   }
@@ -1556,8 +1556,8 @@ const loadOrders = async () => {
     });
     orders.value = (res.data?.records || []);
     orderTotal.value = Number(res.data?.total ?? 0);
-  } catch (error) {
-    ElMessage.error(error.message || '加载医嘱列表失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     orderLoading.value = false;
   }
@@ -1578,8 +1578,8 @@ const loadVerifyRows = async () => {
     });
     verifyRows.value = (res.data?.records || []);
     verifyTotal.value = Number(res.data?.total ?? 0);
-  } catch (error) {
-    ElMessage.error(error.message || '加载待校对医嘱失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     verifyLoading.value = false;
   }
@@ -1603,8 +1603,8 @@ const loadPendingRows = async () => {
     });
     pendingRows.value = (res.data?.records || []);
     pendingTotal.value = Number(res.data?.total ?? 0);
-  } catch (error) {
-    ElMessage.error(error.message || '加载待执行队列失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     execLoading.value = false;
   }
@@ -1627,8 +1627,8 @@ const loadLogRows = async () => {
     });
     logRows.value = (res.data?.records || []);
     execTotal.value = Number(res.data?.total ?? 0);
-  } catch (error) {
-    ElMessage.error(error.message || '加载执行记录失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     logLoading.value = false;
   }
@@ -1962,7 +1962,7 @@ const applyTemplate = async (id) => {
       ElMessage.warning(`${delisted.length} 条项目字典里已查不到，请核对名称或重新选择：${delisted.slice(0, 3).join('、')}${delisted.length > 3 ? ' …' : ''}`);
     }
   } catch (error) {
-    ElMessage.error(error.message || '套用模板失败');
+    
     applyTemplateId.value = '';
   }
 };
@@ -1984,7 +1984,7 @@ const saveAsTemplate = async () => {
   } catch (error) {
     if (error === 'cancel' || error === 'close')
       return;
-    ElMessage.error(error.message || '获取模板名称失败');
+    
     return;
   }
   try {
@@ -1998,8 +1998,8 @@ const saveAsTemplate = async () => {
     applyTemplateId.value = String(res.data ?? '');
     if (templateDialog.value)
       await loadTemplatePage();
-  } catch (error) {
-    ElMessage.error(error.message || '保存模板失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const templateDialog = ref(false);
@@ -2037,8 +2037,8 @@ const loadTemplatePage = async () => {
     });
     templateRows.value = res?.data?.records || [];
     templateTotal.value = Number(res?.data?.total ?? 0);
-  } catch (error) {
-    ElMessage.error(error.message || '加载模板列表失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     templateLoading.value = false;
   }
@@ -2053,8 +2053,8 @@ const toggleTemplatePreview = async (row) => {
   try {
     const res = await getOrderTemplateById(row.id);
     previewItems.value = res?.data?.items || [];
-  } catch (error) {
-    ElMessage.error(error.message || '加载模板明细失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const removeTemplate = async (row) => {
@@ -2076,8 +2076,8 @@ const removeTemplate = async (row) => {
     ElMessage.success('模板已删除');
     await loadTemplatePage();
     await loadTemplateOptions();
-  } catch (error) {
-    ElMessage.error(error.message || '删除模板失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 /** 医嘱明细行 → 后端 InpatientOrderItemDTO（开立、修改、存模板共用同一份映射，避免两处漂移） */
@@ -2134,8 +2134,8 @@ const submitOrder = async () => {
     // 软约束：开单成功后与在径模板比对，只提示登记变异、不回滚医嘱
     if (!isEditing.value && pathEnroll.value)
       await checkPathwayDeviation(items);
-  } catch (error) {
-    ElMessage.error(error.message || (isEditing.value ? '修改医嘱失败' : '开立医嘱失败'));
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     saving.value = false;
   }
@@ -2149,8 +2149,8 @@ const doVerify = async (ids) => {
     const res = await verifyInpatientOrder({orderIds: ids});
     ElMessage.success(`已校对 ${res.data} 条医嘱`);
     await reloadAll();
-  } catch (error) {
-    ElMessage.error(error.message || '医嘱校对失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const doStop = async (row) => {
@@ -2166,7 +2166,7 @@ const doStop = async (row) => {
   } catch (error) {
     if (error === 'cancel' || error === 'close')
       return;
-    ElMessage.error(error.message || '停止医嘱失败');
+    
   }
 };
 const doCancel = async (row) => {
@@ -2182,7 +2182,7 @@ const doCancel = async (row) => {
   } catch (error) {
     if (error === 'cancel' || error === 'close')
       return;
-    ElMessage.error(error.message || '作废医嘱失败');
+    
   }
 };
 const doExecute = async (status) => {
@@ -2214,8 +2214,8 @@ const doExecute = async (status) => {
     });
     ElMessage.success(status === 2 ? `已记录执行 ${res.data} 条（已计费）` : `已记录跳过 ${res.data} 条（不计费）`);
     await reloadAll();
-  } catch (error) {
-    ElMessage.error(error.message || '医嘱执行处理失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const doExecuteOne = async (row, status) => {
@@ -2260,8 +2260,8 @@ const loadInfusionRounds = async () => {
   try {
     const res = await getInfusionRounds(infusionExec.value.id);
     infusionRounds.value = (res.data || []);
-  } catch (error) {
-    ElMessage.error(error.message || '加载巡视记录失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     infusionLoading.value = false;
   }
@@ -2282,8 +2282,8 @@ const doStartInfusion = async () => {
     ElMessage.success('输注已开始');
     infusionExec.value = {...infusionExec.value, ...res.data};
     await loadLogRows();
-  } catch (error) {
-    ElMessage.error(error.message || '开始输注失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const doInfusionRound = async () => {
@@ -2300,8 +2300,8 @@ const doInfusionRound = async () => {
     infusionForm.value.remainingVolume = undefined;
     infusionForm.value.remark = '';
     await loadInfusionRounds();
-  } catch (error) {
-    ElMessage.error(error.message || '记录巡视失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const doFinishInfusion = async () => {
@@ -2319,8 +2319,8 @@ const doFinishInfusion = async () => {
     ElMessage.success('输注已结束');
     infusionExec.value = {...infusionExec.value, ...res.data};
     await loadLogRows();
-  } catch (error) {
-    ElMessage.error(error.message || '结束输注失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 onMounted(async () => {

@@ -103,8 +103,8 @@ const handleAddSubmit = async () => {
     ElMessage.success('建批入库成功');
     visible.value = false;
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.message || '建批入库失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 </script>

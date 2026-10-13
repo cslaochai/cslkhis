@@ -130,8 +130,8 @@ async function loadWidgets() {
     });
     widgetRows.value = res.data?.records || [];
     widgetPage.total = Number(res.data?.total || 0);
-  } catch (e) {
-    ElMessage.error(e?.message || '卡片列表加载失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     widgetLoading.value = false;
   }
@@ -169,8 +169,8 @@ async function removeWidget(row) {
     await deleteWidgetById(row.id);
     ElMessage.success('删除成功');
     loadWidgets();
-  } catch (e) {
-    ElMessage.error(e?.message || '删除失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 

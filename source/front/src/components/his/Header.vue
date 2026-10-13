@@ -1020,12 +1020,10 @@ const handleSwitchPost = async (post) => {
       // 清全套会话缓存（含按钮权限集）+ 回到本岗位工作台，而不是 reload 原地重来 ——
       // 否则会停在「新岗位的页面上还显示旧科室的患者」这种更隐蔽的错配
       await landOnRoleWorkspace()
-    } else {
-      ElMessage.error(res.message || '岗位切换失败')
-    }
-  } catch (error) {
+    } 
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
     // 后端 fail-closed：越权组合（这个角色在这个科室没配过岗位）直接拒绝，原因原样弹出
-    ElMessage.error(error.message || '岗位切换失败')
+    
   } finally {
     postsLoading.value = false
   }
@@ -1186,11 +1184,9 @@ const submitChangePassword = async () => {
     if (res.code === 200) {
       ElMessage.success('密码修改成功')
       passwordDialogVisible.value = false
-    } else {
-      ElMessage.error(res.message || '密码修改失败')
-    }
-  } catch (error) {
-    ElMessage.error(error.message || '密码修改失败')
+    } 
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     passwordLoading.value = false
   }

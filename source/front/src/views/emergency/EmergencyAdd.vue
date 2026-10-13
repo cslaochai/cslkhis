@@ -371,8 +371,8 @@ const runTriageSuggest = async () => {
       age: addForm.value.age || undefined,
     });
     triageSuggestion.value = res.data;
-  } catch (error) {
-    ElMessage.error(error.message || '分诊建议获取失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     triageSuggesting.value = false;
   }
@@ -482,8 +482,8 @@ const handleAddSubmit = async () => {
             : '急诊登记成功，该科室此刻无在岗医生，已进待派单池'));
     visible.value = false;
     emit('saved');
-  } catch (error) {
-    ElMessage.error(error.message || '登记失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 </script>

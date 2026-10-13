@@ -148,8 +148,8 @@ const loadFollowupTargets = async () => {
           patientName: r.patientName,
           anesthesiaEndTime: r.anesthesiaEndTime,
         }));
-  } catch (e) {
-    ElMessage.error(e.message || '加载可随访的麻醉记录失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 
@@ -208,8 +208,8 @@ const submitFollowup = async () => {
     ElMessage.success(`${followupForm.id ? '随访草稿已更新' : '随访草稿已建'}：${res.data || ''}（轮次由服务端定）`);
     visible.value = false;
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e.message || '保存随访失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     followupSubmitting.value = false;
   }

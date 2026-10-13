@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 支付资金流水服务（L3）：真金白银进出的唯一事实。
+ * 支付资金流水服务：真金白银进出的唯一事实。
  */
 public interface PaymentService extends IService<BizPaymentTxn> {
 

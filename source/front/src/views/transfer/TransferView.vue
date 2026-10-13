@@ -298,8 +298,8 @@ const loadList = async () => {
     });
     rows.value = (res.data?.records || []);
     total.value = Number(res.data?.total || 0);
-  } catch (error) {
-    ElMessage.error(error.message || '加载转科记录失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }
@@ -353,7 +353,7 @@ const handleCancel = async (row) => {
   } catch (error) {
     if (error === 'cancel' || error === 'close')
       return;
-    ElMessage.error(error.message || '取消失败');
+    
   }
 };
 // ---------------- 详情（展示在 TransferDetail.vue，子组件自己按 id 取数） ----------------

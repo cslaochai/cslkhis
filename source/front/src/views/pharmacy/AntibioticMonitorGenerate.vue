@@ -55,8 +55,8 @@ async function doGenerate() {
     ElMessage.success(`已生成 ${n} 条快照`)
     visible.value = false
     emit('saved', genMonth.value)
-  } catch (e) {
-    ElMessage.error(e?.message || '生成失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     saving.value = false
   }

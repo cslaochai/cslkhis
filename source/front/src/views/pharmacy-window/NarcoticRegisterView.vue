@@ -268,7 +268,7 @@ const loadList = async () => {
       total.value = Number(res.data.total || 0);
     }
   } catch (e) {
-    ElMessage.error('加载麻精专册失败');
+    
     console.error(e);
   } finally {
     loading.value = false;

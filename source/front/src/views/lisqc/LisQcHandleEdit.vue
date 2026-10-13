@@ -60,11 +60,10 @@ const save = async () => {
       ElMessage.success('已处理，待第二人复核');
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '处理失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('处理失败');
+    
   } finally {
     saving.value = false;
   }

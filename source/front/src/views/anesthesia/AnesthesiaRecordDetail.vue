@@ -114,8 +114,8 @@ watch(visible, async (open) => {
   try {
     const res = await getAnesthesiaRecordDetail(props.row.id);
     detail.value = (res.data || props.row);
-  } catch (e) {
-    ElMessage.error(e.message || '加载麻醉记录详情失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 });
 </script>

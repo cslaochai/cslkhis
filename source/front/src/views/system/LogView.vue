@@ -656,8 +656,8 @@ const load = async () => {
     else if (activeTab.value === 'ai') await loadAi();
     else if (activeTab.value === 'draftDiff') await loadDraftDiff();
     else await loadAudit();
-  } catch (e) {
-    ElMessage.error(e?.message || '加载日志失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }
@@ -736,8 +736,8 @@ const doExport = async () => {
     URL.revokeObjectURL(url);
     ElMessage.success('导出完成');
     await loadStat();
-  } catch (e) {
-    ElMessage.error(e?.message || '导出失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     exporting.value = false;
   }

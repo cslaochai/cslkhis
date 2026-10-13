@@ -82,7 +82,7 @@ watch(visible, async (open) => {
     const res = await getTransferDetail(props.id);
     detail.value = (res.data || props.row);
   } catch (error) {
-    ElMessage.error(error.message || '加载转科详情失败');
+    
     visible.value = false;
   }
 });

@@ -186,10 +186,10 @@ const loadRows = async () => {
     if (res.code === 200) {
       rows.value = res.data?.records || [];
       total.value = res.data?.total || 0
-    } else ElMessage.error(res.message || '加载观察记录失败')
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载观察记录失败')
+    
   } finally {
     loading.value = false
   }
@@ -250,7 +250,7 @@ const onSave = async () => {
       ElMessage.success(res.message || '观察记录已保存')
       openVisible.value = false
       await Promise.all([loadRows(), loadStats()])
-    } else ElMessage.error(res.message || '保存失败')
+    } 
   } catch (e) {
     console.error(e)
   }

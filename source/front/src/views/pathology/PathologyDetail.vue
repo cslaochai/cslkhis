@@ -75,11 +75,10 @@ const loadDetail = async () => {
     const res = await getPathologyDetail(props.id);
     if (res.code === 200)
       detail.value = res.data;
-    else
-      ElMessage.error(res.message || '查询详情失败');
+    
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询详情失败');
+    
   } finally {
     detailLoading.value = false;
   }
@@ -98,11 +97,10 @@ const blockAction = async (block, action) => {
       ElMessage.success(res.message || '操作成功');
       await loadDetail();
       emit('saved');
-    } else
-      ElMessage.error(res.message || '操作失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('操作失败');
+    
   }
 };
 </script>

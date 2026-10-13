@@ -185,12 +185,10 @@ const loadCandidates = async () => {
       candidates.value = res.data || [];
       if (!candidates.value.length)
         ElMessage.info('该病区当天没有可摆药的医嘱');
-    } else {
-      ElMessage.error(res.message || '查询可摆医嘱失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询可摆医嘱失败');
+    
   } finally {
     candidatesLoading.value = false;
   }
@@ -214,12 +212,10 @@ const doGenerate = async () => {
       candidates.value = [];
       await Promise.all([loadList(), loadStats()]);
       openDetail(res.data?.id);
-    } else {
-      ElMessage.error(res.message || '生成摆药单失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('生成摆药单失败');
+    
   } finally {
     generating.value = false;
   }
@@ -269,12 +265,10 @@ const loadList = async () => {
     if (res.code === 200) {
       rows.value = res.data?.records || [];
       total.value = Number(res.data?.total || 0);
-    } else {
-      ElMessage.error(res.message || '查询失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     loading.value = false;
   }

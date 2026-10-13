@@ -595,10 +595,8 @@ const handleStatusChange = async (row, newStatus) => {
     ElMessage.success('状态更新成功');
     loadData();
     loadStats();
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.message || '操作失败');
-    }
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // 病区名册由页面加载一次，传给留观与转住院两个弹框
@@ -667,8 +665,8 @@ const loadHoLedger = async () => {
     const res = await getEmergencyHandoverListPage(params);
     hoLedgerList.value = res.data?.records || [];
     hoLedgerPage.value.total = res.data?.total || 0;
-  } catch (error) {
-    ElMessage.error(error.message || '交班台账加载失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     hoLedgerLoading.value = false;
   }

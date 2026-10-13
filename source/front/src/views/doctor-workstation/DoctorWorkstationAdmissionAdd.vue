@@ -174,8 +174,8 @@ const submitOrder = async () => {
     });
     ElMessage.success(`住院证已开具（${res.data}），患者持证到入院处排床即可`);
     visible.value = false;
-  } catch (e) {
-    ElMessage.error(e?.message || '开住院证失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     orderSubmitting.value = false;
   }

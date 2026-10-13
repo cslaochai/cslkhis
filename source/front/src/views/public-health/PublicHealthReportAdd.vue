@@ -108,7 +108,7 @@ const onSubmit = async () => {
       ElMessage.success(res.message || '上报已提交，进入待审核')
       visible.value = false
       emit('saved')
-    } else ElMessage.error(res.message || '提交失败')
+    } 
   } catch (e) {
     console.error(e)
   } finally {

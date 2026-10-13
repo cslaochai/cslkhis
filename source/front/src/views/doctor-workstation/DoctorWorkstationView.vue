@@ -2948,8 +2948,8 @@ const handleDeleteDiagTemplate = async (idx) => {
     await deleteDiagTemplate(item.id);
     myDiagTemplates.value.splice(idx, 1);
     ElMessage.success('常用诊断已删除');
-  } catch (e) {
-    ElMessage.error(e.message || '删除失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleDiagSearchInDialog = async (query) => {
@@ -2975,8 +2975,8 @@ const handleAddDiagFromDialog = async (item) => {
     diagSearchKeyword.value = '';
     diagSearchResults.value = [];
     ElMessage.success('已添加');
-  } catch (e) {
-    ElMessage.error(e.message || '添加失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleQuickSelectDiag = (tpl) => {
@@ -2999,16 +2999,16 @@ const handleAddDiagToTemplate = async () => {
     await saveDiagTemplates(newList);
     myDiagTemplates.value = newList;
     ElMessage.success('已添加到常用诊断');
-  } catch (e) {
-    ElMessage.error(e.message || '添加失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleSaveDiagTemplates = async () => {
   try {
     await saveDiagTemplates(myDiagTemplates.value);
     ElMessage.success('保存成功');
-  } catch (e) {
-    ElMessage.error(e.message || '保存失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const loadRxTemplates = async () => {
@@ -3036,8 +3036,8 @@ const handleAddRxTemplate = async () => {
     newTemplateName.value = '';
     ElMessage.success('模板保存成功');
     loadRxTemplates();
-  } catch (e) {
-    ElMessage.error(e.message || '保存失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleApplyRxTemplate = async (tpl) => {
@@ -3047,8 +3047,8 @@ const handleApplyRxTemplate = async (tpl) => {
     loadInsuranceInfo();
     showRxTemplateDialog.value = false;
     ElMessage.success(`已套用模板「${tpl.templateName}」`);
-  } catch (e) {
-    ElMessage.error(e.message || '套用失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleApplyRxTemplateToRecord = async (record, tpl) => {
@@ -3074,8 +3074,8 @@ const handleApplyRxTemplateToRecord = async (record, tpl) => {
         applyTcmGrams(record);
     }
     ElMessage.success(`已套用模板「${tpl.templateName}」`);
-  } catch (e) {
-    ElMessage.error(e.message || '套用失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleDeleteRxTemplate = async (idx) => {
@@ -3084,8 +3084,8 @@ const handleDeleteRxTemplate = async (idx) => {
     await deleteRxTemplate(item.id);
     myRxTemplates.value.splice(idx, 1);
     ElMessage.success('处方模板已删除');
-  } catch (e) {
-    ElMessage.error(e.message || '删除失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const loadDrugPackages = async () => {
@@ -3111,8 +3111,8 @@ const handleApplyPackage = async (pkg) => {
     });
     showPackageDialog.value = false;
     ElMessage.success(`已套用套餐「${pkg.packageName}」`);
-  } catch (e) {
-    ElMessage.error(e.message || '套用失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleDeletePackage = async (idx) => {
@@ -3121,8 +3121,8 @@ const handleDeletePackage = async (idx) => {
     await deleteDrugPackage(item.id);
     myPackages.value.splice(idx, 1);
     ElMessage.success('套餐已删除');
-  } catch (e) {
-    ElMessage.error(e.message || '删除失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleSaveNewPackage = async () => {
@@ -3164,8 +3164,8 @@ const handleSaveNewPackage = async () => {
     showAddPackageDialog.value = false;
     ElMessage.success('套餐保存成功');
     loadDrugPackages();
-  } catch (e) {
-    ElMessage.error(e.message || '保存失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ========== 检查申请模板 ==========
@@ -3183,8 +3183,8 @@ const handleDeleteInspectionTemplate = async (idx) => {
     await deleteInspectionTemplate(item.id);
     myInspectionTemplates.value.splice(idx, 1);
     ElMessage.success('检查模板已删除');
-  } catch (e) {
-    ElMessage.error(e.message || '删除失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleInspectionTemplateItemSearch = async (query) => {
@@ -3233,8 +3233,8 @@ const handleSaveInspectionTemplate = async () => {
     };
     ElMessage.success('模板保存成功');
     loadInspectionTemplates();
-  } catch (e) {
-    ElMessage.error(e.message || '保存失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleApplyInspectionTemplate = (tpl) => {
@@ -3269,8 +3269,8 @@ const handleDeleteLaboratoryTemplate = async (idx) => {
     await deleteLaboratoryTemplate(item.id);
     myLaboratoryTemplates.value.splice(idx, 1);
     ElMessage.success('检验模板已删除');
-  } catch (e) {
-    ElMessage.error(e.message || '删除失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleLaboratoryTemplateItemSearch = async (query) => {
@@ -3319,8 +3319,8 @@ const handleSaveLaboratoryTemplate = async () => {
     };
     ElMessage.success('模板保存成功');
     loadLaboratoryTemplates();
-  } catch (e) {
-    ElMessage.error(e.message || '保存失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleApplyLaboratoryTemplate = (tpl) => {
@@ -3373,8 +3373,8 @@ const copyToClipboard = async (text) => {
   try {
     await navigator.clipboard.writeText(text);
     ElMessage.success('已复制到剪贴板');
-  } catch {
-    ElMessage.error('复制失败');
+  } catch  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const loadAllTags = async () => {
@@ -3401,8 +3401,8 @@ const handleAddTag = async (tagId) => {
     });
     await loadPatientTags();
     ElMessage.success('标签添加成功');
-  } catch (error) {
-    ElMessage.error(error.message || '添加失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleRemoveTag = async (tagId) => {
@@ -3415,8 +3415,8 @@ const handleRemoveTag = async (tagId) => {
     });
     await loadPatientTags();
     ElMessage.success('标签已移除');
-  } catch (error) {
-    ElMessage.error(error.message || '移除失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const isTagAdded = (tagId) => {
@@ -3757,7 +3757,7 @@ const startVoiceRecord = async () => {
   try {
     voiceStream = await navigator.mediaDevices.getUserMedia({audio: true});
   } catch (e) {
-    ElMessage.error('无法访问麦克风，请检查浏览器权限设置');
+    
     return;
   }
   voiceMime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4']
@@ -3814,7 +3814,7 @@ const doTranscribe = async (blob, durationSeconds) => {
     // 失败必须可见：ASR 拒识别/上游异常时医生要看到原因（request.js 对 500 只 console 不 toast），
     // 「点了没反应」会让医生以为录音功能坏了
     const msg = e?.response?.data?.message || e?.message || '语音转写失败，请重试';
-    ElMessage.error(msg);
+    
     console.error('语音转写失败:', e);
   } finally {
     voiceTranscribing.value = false;
@@ -4017,7 +4017,7 @@ const persistInspectionRow = async (record) => {
     loadInsuranceInfo();
     return true;
   } catch (error) {
-    ElMessage.error(error.message || '检查开单失败');
+    
     return false;
   }
 };
@@ -4097,7 +4097,7 @@ const persistLaboratoryRow = async (record) => {
     loadInsuranceInfo();
     return true;
   } catch (error) {
-    ElMessage.error(error.message || '检验开单失败');
+    
     return false;
   }
 };
@@ -4377,8 +4377,8 @@ const handleRecallPatient = async () => {
   try {
     await recallPatient(currentCalledPatient.value.id);
     ElMessage.success(`已重呼 ${currentCalledPatient.value.patientName}`);
-  } catch (error) {
-    ElMessage.error(error.message || '重呼失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ========== 呼叫指定患者（插队）/ 回诊 ==========
@@ -4408,10 +4408,8 @@ const handleCallSpecific = async (row) => {
     await loadData();
     await selectPatient(called);
     ElMessage.success(`${called.reconsult || reconsult ? '已回诊' : '已呼叫'} ${called.patientName || row.patientName}`);
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.message || '呼叫失败');
-    }
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ========== 暂离诊室 / 恢复接诊 ==========
@@ -4432,8 +4430,8 @@ const handlePause = async () => {
     await setDoctorStatus(next);
     doctorPaused.value = next === 2;
     ElMessage.success(next === 2 ? '已暂离，叫号将跳过本诊室' : '已恢复接诊');
-  } catch (error) {
-    ElMessage.error(error?.message || '接诊状态切换失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ========== 结诊 ==========
@@ -4583,9 +4581,8 @@ const handleComplete = async () => {
     laboratoryRecords.value = [];
     // 刷新队列
     loadData();
-  } catch (error) {
-    if (error !== 'cancel')
-      ElMessage.error(error.message || '操作失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ========== 建复诊（批次E/E6）==========
@@ -4633,10 +4630,8 @@ const handleCreateRevisit = async (item) => {
     });
     ElMessage.success('复诊号已创建（免挂号费），签到后即可接诊');
     loadData();
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.message || '创建失败');
-    }
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ========== 医嘱复诊预约（来源 2，sql/121） ==========
@@ -4670,8 +4665,8 @@ const handleRevisitAppoint = async (payload) => {
     showRevisitAppoint.value = false;
     ElMessage.success(`复诊号已预约${res.data?.registNo ? `（${res.data.registNo}）` : ''}，请让患者按预约时段来院`);
     loadData();
-  } catch (error) {
-    ElMessage.error(error?.message || '预约复诊失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     revisitAppointBusy.value = false;
   }
@@ -4740,8 +4735,8 @@ const handleSaveRecord = async () => {
     // 草稿会话结束：本次保存已产生 diff 留痕，下次保存不再重复带
     aiDraftAppliedText.value = '';
     ElMessage.success('病历保存成功');
-  } catch (error) {
-    ElMessage.error(error.message || '保存失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleRemoveDrug = (index) => {
@@ -4944,8 +4939,8 @@ const handleDeleteInspectionRecord = async (idx) => {
     inspectionRecords.value.splice(idx, 1);
     ElMessage.success('检查申请已删除');
     loadInsuranceInfo();
-  } catch (error) {
-    ElMessage.error(error.message || '删除失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleDeleteLaboratoryRecord = async (idx) => {
@@ -4973,8 +4968,8 @@ const handleDeleteLaboratoryRecord = async (idx) => {
     laboratoryRecords.value.splice(idx, 1);
     ElMessage.success('检验申请已删除');
     loadInsuranceInfo();
-  } catch (error) {
-    ElMessage.error(error.message || '删除失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ========== 查看报告 ==========
@@ -5044,7 +5039,7 @@ const handleViewInspectionReport = async (item) => {
     const res = await getInspectionDetail(item.execRecordId);
     data = res.data || {};
   } catch (error) {
-    ElMessage.error(error.message || '报告加载失败');
+    
     return;
   }
   const record = data.record || {};
@@ -5183,8 +5178,8 @@ const handleViewLaboratoryReport = async (item) => {
         'max-width': '40%'
       }
     });
-  } catch (error) {
-    ElMessage.error(error.message || '获取报告失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ========== 打印指引单 ==========

@@ -466,13 +466,12 @@ const loadBoard = async () => {
     if (pageRes.code === 200) {
       boardRows.value = pageRes.data?.records || [];
       boardTotal.value = Number(pageRes.data?.total || 0);
-    } else
-      ElMessage.error(pageRes.message || '查询失败');
+    } 
     if (countRes.code === 200)
       boardCounts.value = countRes.data || [];
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     boardLoading.value = false;
   }
@@ -522,8 +521,7 @@ const doRetryCharge = async (row) => {
   if (res.code === 200) {
     ElMessage.success(res.message || '已补记');
     await refreshAll();
-  } else
-    ElMessage.error(res.message || '补记失败');
+  } 
 };
 // ================= B 治疗开单 =================
 const openForm = reactive({
@@ -548,11 +546,10 @@ const loadRegists = async (patientId) => {
       openForm.registOptions = (res.data?.records || []).filter((r) => Number(r.registStatus) !== 5);
       if (!openForm.registOptions.length)
         ElMessage.warning('该患者没有可开治疗的就诊记录（已退号的已过滤）');
-    } else
-      ElMessage.error(res.message || '加载就诊记录失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载就诊记录失败');
+    
   }
 };
 const onPatientSelect = async (p) => {
@@ -599,11 +596,10 @@ const submitApply = async () => {
       openForm.remark = '';
       // 治疗台也要一起刷：开单一次生成全部排期流水，不刷的话今天那次在治疗台上看不见
       await refreshAll();
-    } else
-      ElMessage.error(res.message || '开单失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('开单失败');
+    
   } finally {
     openForm.saving = false;
   }
@@ -626,11 +622,10 @@ const loadApplies = async () => {
     if (res.code === 200) {
       applyRows.value = res.data?.records || [];
       applyTotal.value = Number(res.data?.total || 0);
-    } else
-      ElMessage.error(res.message || '查询失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     applyLoading.value = false;
   }
@@ -657,8 +652,7 @@ const doApplyCancel = async (row) => {
   if (res.code === 200) {
     ElMessage.success(res.message || '已取消');
     await refreshAll();
-  } else
-    ElMessage.error(res.message || '取消失败');
+  } 
 };
 const doApplyDelete = async (row) => {
   try {
@@ -670,8 +664,7 @@ const doApplyDelete = async (row) => {
   if (res.code === 200) {
     ElMessage.success(res.message || '已删除');
     await refreshAll();
-  } else
-    ElMessage.error(res.message || '删除失败');
+  } 
 };
 // ---------------- 疗程详情 ----------------
 const detailVisible = ref(false);
@@ -707,13 +700,12 @@ const loadLedger = async () => {
     if (pageRes.code === 200) {
       ledRows.value = pageRes.data?.records || [];
       ledTotal.value = Number(pageRes.data?.total || 0);
-    } else
-      ElMessage.error(pageRes.message || '查询失败');
+    } 
     if (countRes.code === 200)
       ledCounts.value = countRes.data || [];
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     ledLoading.value = false;
   }

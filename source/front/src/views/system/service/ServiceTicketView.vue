@@ -240,8 +240,8 @@ const loadData = async () => {
       tableData.value = res.data.records || []
       pagination.value.total = res.data.total || 0
     }
-  } catch (error) {
-    ElMessage.error(error.message || '加载数据失败')
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false
   }
@@ -279,8 +279,8 @@ const openDetail = async (row) => {
   try {
     const res = await getTicketDetail(row.id)
     if (res.code === 200) detail.value = res.data
-  } catch (error) {
-    ElMessage.error(error.message || '获取详情失败')
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     drawerLoading.value = false
   }
@@ -293,8 +293,8 @@ const quickAccept = async (row) => {
     ElMessage.success('已受理')
     loadData()
     loadStats()
-  } catch (error) {
-    ElMessage.error(error.message || '受理失败')
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 
@@ -330,8 +330,8 @@ const submitHandle = async () => {
     if (res.code === 200) detail.value = res.data
     loadData()
     loadStats()
-  } catch (error) {
-    ElMessage.error(error.message || '操作失败')
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     submitting.value = false
   }

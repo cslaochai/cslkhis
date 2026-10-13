@@ -227,7 +227,7 @@ const loadList = async () => {
       ElMessage.error(res.message || '加载调拨单失败');
     }
   } catch (e) {
-    ElMessage.error('加载调拨单失败');
+    
     console.error(e);
   } finally {
     loading.value = false;
@@ -322,9 +322,7 @@ const doDelete = async (row) => {
       ElMessage.success('已删除');
       drawerVisible.value = false;
       loadList();
-    } else {
-      ElMessage.error(res.message || '删除失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
   }
@@ -336,9 +334,7 @@ const runAction = async (call, okText) => {
       ElMessage.success(res.message || okText);
       loadList();
       reloadDrawer(res.data);
-    } else {
-      ElMessage.error(res.message || '操作失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
   }

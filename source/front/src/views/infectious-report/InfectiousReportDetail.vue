@@ -75,10 +75,10 @@ watch(() => props.modelValue, async (v) => {
     const res = await getReportDetail(props.id)
     if (res.code === 200) {
       detail.value = res.data || {}
-    } else ElMessage.error(res.message || '加载详情失败')
+    } 
   } catch (e) {
     console.error(e)
-    ElMessage.error('加载详情失败')
+    
   }
 })
 </script>

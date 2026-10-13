@@ -72,11 +72,10 @@ const doApplyReschedule = async () => {
       ElMessage.success(res.message || '疗程已重排');
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '重排失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('重排失败');
+    
   } finally {
     saving.value = false;
   }

@@ -38,7 +38,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 费用记账实现（L1）。
+ * 费用记账实现。
  */
 @Slf4j
 @Service

@@ -338,11 +338,9 @@ watch(visible, async (open) => {
       }
       // 岗位（角色 × 科室）成对回显；roleCodes/deptIds 只是后端从岗位派生的只读值，不再回填
       postRows.value = postsFromApi(res.data.posts)
-    } else {
-      ElMessage.error(res.message || '获取用户信息失败')
-    }
-  } catch (error) {
-    ElMessage.error(error.message || '获取用户信息失败')
+    } 
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 })
 
@@ -394,11 +392,9 @@ const handleSubmit = async () => {
       ElMessage.success(formData.id ? '修改成功' : '新增成功')
       visible.value = false
       emit('saved')
-    } else {
-      ElMessage.error(res.message || '操作失败')
-    }
-  } catch (error) {
-    ElMessage.error(error.message || '操作失败')
+    } 
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     submitLoading.value = false
   }

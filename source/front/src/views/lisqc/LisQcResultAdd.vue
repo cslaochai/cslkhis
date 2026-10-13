@@ -61,11 +61,10 @@ const save = async () => {
       ElMessage.success(`已录入并判定：${r.statusText}${r.violatedRules ? '（' + r.violatedRules + '）' : ''}`);
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '录入失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('录入失败');
+    
   } finally {
     saving.value = false;
   }

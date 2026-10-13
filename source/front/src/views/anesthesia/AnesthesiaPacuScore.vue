@@ -124,8 +124,8 @@ const submitScore = async () => {
     ElMessage.success(`Aldrete 评分已记录（服务端计算总分 ${scoreLocalTotal.value} 分）`);
     visible.value = false;
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e.message || '评分失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     scoreSubmitting.value = false;
   }

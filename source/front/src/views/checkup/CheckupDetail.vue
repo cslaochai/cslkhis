@@ -97,7 +97,7 @@ watch(
       const res = await getCheckupRecord(props.id);
       detail.value = res?.data || null;
     } catch (e) {
-      ElMessage.error(e?.response?.data?.message || '加载详情失败');
+      
       visible.value = false;
     }
   }
@@ -114,8 +114,8 @@ const saveOne = async (row) => {
     ElMessage.success('结果已保存');
     const res = await getCheckupRecord(detail.value.id);
     detail.value = res?.data;
-  } catch (e) {
-    ElMessage.error(e?.response?.data?.message || '保存失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 </script>

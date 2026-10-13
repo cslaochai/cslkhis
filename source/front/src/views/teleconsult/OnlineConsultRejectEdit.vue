@@ -51,12 +51,10 @@ const submitReject = async () => {
       ElMessage.success('已退诊');
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '退诊失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('退诊失败');
+    
   } finally {
     rejectLoading.value = false;
   }

@@ -197,8 +197,8 @@ const submitUpdate = async () => {
     ElMessage.success('麻醉记录已更新');
     visible.value = false;
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e.message || '更新失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     updateSubmitting.value = false;
   }

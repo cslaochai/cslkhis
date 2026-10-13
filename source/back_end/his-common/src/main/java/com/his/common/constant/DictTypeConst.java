@@ -293,9 +293,9 @@ public interface DictTypeConst {
     public static final String PATIENT_RELATION = "sys_patient_relation";
 
     /**
-     * 患者类型
+     * 费别/参保类型（自费/城镇职工医保/城乡居民医保/公费医疗/商业医疗保险）
      */
-    public static final String PATIENT_TYPE = "his_patient_type";
+    public static final String MEDICAL_INSURANCE_TYPE = "medical_insurance_type";
 
     /**
      * 报告阴阳性

@@ -234,7 +234,7 @@ watch(() => props.modelValue, async (v) => {
     form.createTime = d.createTime || '';
   } catch (e) {
     console.error('加载知识文档详情失败', e);
-    ElMessage.error('加载文档失败，请重试');
+    
     visible.value = false;
   } finally {
     loading.value = false;
@@ -335,7 +335,7 @@ const previewChunks = async () => {
     previewVisible.value = true;
   } catch (e) {
     console.error('切块预览失败', e);
-    ElMessage.error(e?.message || '切块预览失败');
+    
   } finally {
     previewing.value = false;
   }
@@ -357,7 +357,7 @@ const loadHistory = async () => {
     historyRows.value = res?.data || [];
   } catch (e) {
     console.error('加载历史版本失败', e);
-    ElMessage.error('加载历史版本失败');
+    
   } finally {
     historyLoading.value = false;
   }

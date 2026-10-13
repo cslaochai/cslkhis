@@ -72,11 +72,9 @@ const loadSessionView = async () => {
     const res = await getDialysisSession(props.id);
     if (res.code === 200) {
       sessionView.value = res.data;
-    } else {
-      ElMessage.error(res.message || '查询透析单失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '查询透析单失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 

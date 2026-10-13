@@ -61,8 +61,8 @@ const submitCancel = async () => {
     ElMessage.success('会诊申请已取消');
     visible.value = false;
     emit('saved');
-  } catch (error) {
-    ElMessage.error(error.message || '取消失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     cancelLoading.value = false;
   }

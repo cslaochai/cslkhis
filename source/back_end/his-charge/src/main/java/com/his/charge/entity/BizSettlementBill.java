@@ -15,7 +15,7 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
- * 结算账单（L2）：把若干条记账行锁定成"这一笔该收多少、怎么分"。
+ * 结算账单：把若干条记账行锁定成"这一笔该收多少、怎么分"。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

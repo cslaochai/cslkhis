@@ -309,11 +309,10 @@ const loadStat = async () => {
     const res = await getFollowupStat();
     if (res.code === 200)
       stat.value = res.data;
-    else
-      ElMessage.error(res.message || '看板加载失败');
+    
   } catch (e) {
     console.error(e);
-    ElMessage.error('看板加载失败');
+    
   } finally {
     statLoading.value = false;
   }
@@ -340,11 +339,10 @@ const loadList = async () => {
     if (res.code === 200) {
       rows.value = res.data?.records || [];
       total.value = Number(res.data?.total || 0);
-    } else
-      ElMessage.error(res.message || '查询失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     loading.value = false;
   }
@@ -406,11 +404,10 @@ const submitComplete = async () => {
       completeVisible.value = false;
       loadList();
       loadStat();
-    } else
-      ElMessage.error(res.message || '操作失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('操作失败');
+    
   }
 };
 const start = async (row) => {
@@ -420,11 +417,10 @@ const start = async (row) => {
       ElMessage.success('已开始随访');
       loadList();
       loadStat();
-    } else
-      ElMessage.error(res.message || '操作失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('操作失败');
+    
   }
 };
 const cancel = async (row) => {
@@ -434,11 +430,10 @@ const cancel = async (row) => {
       ElMessage.success('已取消');
       loadList();
       loadStat();
-    } else
-      ElMessage.error(res.message || '操作失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('操作失败');
+    
   }
 };
 // ---------------- 电话外呼（G-15，mock 通道=人工登记待呼） ----------------
@@ -498,11 +493,10 @@ const submitRevisit = async (payload) => {
       revisitVisible.value = false;
       loadList();
       loadStat();
-    } else
-      ElMessage.error(res.message || '生成复诊号失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error(e?.message || '生成复诊号失败');
+    
   } finally {
     revisitBusy.value = false;
   }

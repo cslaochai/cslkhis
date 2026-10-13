@@ -282,8 +282,8 @@ const loadList = async () => {
     const res = await getConsultationListPage(queryParams());
     rows.value = (res.data?.records || []);
     total.value = Number(res.data?.total || 0);
-  } catch (error) {
-    ElMessage.error(error.message || '加载会诊列表失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }
@@ -356,8 +356,8 @@ const handleAccept = async (row) => {
     await acceptConsultation({consultationId: row.consultationId});
     ElMessage.success('已接诊');
     await reloadAll();
-  } catch (error) {
-    ElMessage.error(error.message || '接诊失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ---------------- 完成（回写病历） ----------------

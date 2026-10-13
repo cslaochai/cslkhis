@@ -190,12 +190,10 @@ const saveTele = async () => {
       ElMessage.success(teleForm.id ? '修改成功' : `会诊申请已提交，单号 ${res.data?.consultNo || ''}`);
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '保存失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('保存失败');
+    
   } finally {
     teleSaving.value = false;
   }

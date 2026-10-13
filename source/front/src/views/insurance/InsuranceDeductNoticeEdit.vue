@@ -142,8 +142,8 @@ watch(visible, async (open) => {
       deptId: res.data?.deptId ? String(res.data.deptId) : undefined,
       patientId: res.data?.patientId ? String(res.data.patientId) : undefined
     };
-  } catch (error) {
-    ElMessage.error(error?.message || '扣款单详情加载失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     detailLoading.value = false;
   }
@@ -177,8 +177,8 @@ const saveNotice = async () => {
     ElMessage.success(f.id ? '扣款通知已更新' : '扣款通知已录入');
     visible.value = false;
     emit('saved');
-  } catch (error) {
-    ElMessage.error(error?.message || '保存失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     noticeSubmitting.value = false;
   }

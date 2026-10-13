@@ -95,11 +95,10 @@ const loadDetail = async () => {
     const res = await getAnswerDetail(props.id);
     if (res.code === 200)
       anDetail.value = res.data;
-    else
-      ElMessage.error(res.message || '加载答卷失败');
+    
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载答卷失败');
+    
   } finally {
     anDetailLoading.value = false;
   }

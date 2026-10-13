@@ -71,8 +71,8 @@ const searchEmp = async (keyword) => {
   try {
     const res = await getEmployeeList({keyword: keyword || undefined});
     empOptions.value = res.data || [];
-  } catch (e) {
-    ElMessage.error(e?.message || '加载员工列表失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     empLoading.value = false;
   }
@@ -116,8 +116,8 @@ const submitIssue = async () => {
     ElMessage.success(`已签发证书 ${res.data?.certNo || ''}（指纹 ${res.data?.keyFingerprintGroups || ''}）`);
     visible.value = false;
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.message || '签发失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     issuing.value = false;
   }

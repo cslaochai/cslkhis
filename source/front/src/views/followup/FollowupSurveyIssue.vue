@@ -69,11 +69,10 @@ const submitIssue = async () => {
     if (res.code === 200) {
       ElMessage.success(`已发放：${res.data?.dispatchNo || ''}（到「满意度评价 → 发放回收」录入答卷）`);
       visible.value = false;
-    } else
-      ElMessage.error(res.message || '发放失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('发放失败');
+    
   } finally {
     issueLoading.value = false;
   }

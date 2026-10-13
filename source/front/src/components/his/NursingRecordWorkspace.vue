@@ -756,8 +756,8 @@ const loadSheet = async () => {
   try {
     const res = await getTempSheet({admissionId: admissionId.value || undefined});
     sheet.value = (res.data || {points: []});
-  } catch (error) {
-    ElMessage.error(error.message || '加载三测单失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     sheetLoading.value = false;
   }
@@ -806,8 +806,8 @@ const loadRows = async () => {
     });
     rows.value = (res.data?.records || []);
     total.value = Number(res.data?.total ?? 0);
-  } catch (error) {
-    ElMessage.error(error.message || '加载护理文书失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }
@@ -885,8 +885,8 @@ const submitNursing = async () => {
     ElMessage.success('护理文书已保存');
     dialog.value = false;
     await reloadAll();
-  } catch (error) {
-    ElMessage.error(error.message || '保存护理文书失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     saving.value = false;
   }
@@ -958,8 +958,8 @@ const submitBatch = async () => {
     ElMessage.success(`批量录入成功：${res.data} 条`);
     batchDialog.value = false;
     await reloadAll();
-  } catch (error) {
-    ElMessage.error(error.message || '批量录入失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     batchSaving.value = false;
   }
@@ -984,8 +984,8 @@ const loadLatest = async () => {
     for (const row of (res.data || []))
       map[row.assessType] = row;
     latestByType.value = map;
-  } catch (error) {
-    ElMessage.error(error.message || '加载专项透视失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     latestLoading.value = false;
   }
@@ -1002,8 +1002,8 @@ const loadAssessments = async () => {
     });
     assessRows.value = (res.data?.records || []);
     assessTotal.value = Number(res.data?.total ?? 0);
-  } catch (error) {
-    ElMessage.error(error.message || '加载评估单失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     assessLoading.value = false;
   }
@@ -1128,8 +1128,8 @@ const submitSpecial = async () => {
     ElMessage.success('评估单已保存');
     specialDialog.value = false;
     await Promise.all([loadAssessments(), loadLatest()]);
-  } catch (error) {
-    ElMessage.error(error.message || '保存评估单失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     specialSaving.value = false;
   }
@@ -1149,8 +1149,8 @@ const loadIoSummary = async () => {
       endDate: ioRange.value?.[1] || undefined,
     });
     ioSummary.value = res.data;
-  } catch (error) {
-    ElMessage.error(error.message || '加载出入量小结失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     ioLoading.value = false;
   }

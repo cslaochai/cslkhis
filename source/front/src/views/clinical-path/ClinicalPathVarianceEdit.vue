@@ -93,12 +93,10 @@ const saveVariance = async () => {
       ElMessage.success('变异已登记');
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '登记变异失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('登记变异失败');
+    
   } finally {
     varSaving.value = false;
   }

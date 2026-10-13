@@ -240,8 +240,8 @@ const submitApply = async () => {
     ElMessage.success(`转科申请已提交：${res.data || ''}（等待转入科室接收）`);
     visible.value = false;
     emit('saved');
-  } catch (error) {
-    ElMessage.error(error.message || '转科申请提交失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     applySubmitting.value = false;
   }

@@ -151,10 +151,8 @@ const handleDelete = async (row) => {
     await deletePatientTag(row.tagId);
     ElMessage.success('删除成功');
     loadData();
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.message || '删除失败');
-    }
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleSizeChange = (val) => {

@@ -58,11 +58,10 @@ const submitAudit = async () => {
       ElMessage.success('转诊已确认');
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '操作失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('操作失败');
+    
   }
 };
 </script>

@@ -50,7 +50,7 @@ watch(visible, async (open) => {
     const res = await perfRevenueInfo(props.deptId, props.costMonth);
     info.value = res?.data;
   } catch (e) {
-    ElMessage.error(e?.response?.data?.message || '获取收入信息失败');
+    
     visible.value = false;
   }
 });
@@ -64,8 +64,8 @@ const submitCalc = async () => {
     ElMessage.success(`核算完成：${res?.data?.deptName} ${res?.data?.costMonth} 绩效 ¥${Number(res?.data?.perfAmount || 0).toLocaleString()}`);
     visible.value = false;
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.response?.data?.message || '核算失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     calcLoading.value = false;
   }

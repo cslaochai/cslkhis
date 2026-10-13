@@ -62,12 +62,10 @@ const submitDischarge = async () => {
       ElMessage.success('离院已登记，请在 24 小时内完成随访');
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '登记失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('登记失败');
+    
   } finally {
     disLoading.value = false;
   }

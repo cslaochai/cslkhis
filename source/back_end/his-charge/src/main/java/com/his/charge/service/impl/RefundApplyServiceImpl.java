@@ -278,7 +278,7 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
      * 执行退费 = <b>真的把钱退出去</b>，但本方法一行钱都不碰：
      * 按「类型 + 金额」在账单里选出要整行红冲的记账行，然后交给支付层。
      *
-     * <p>{@link PaymentService#refund} 在一个事务里做完：红冲 L1 记账行 → 按原收款流水逐路退款（L3）
+     * <p>{@link PaymentService#refund} 在一个事务里做完：红冲 L1 记账行 → 按原收款流水逐路退款
      * → 刷新账单镜像 → 把来源单据（处方/申请单/发药）退回未缴费 → 作废或重置医保清单。
      * 任何一步失败全部回滚，申请单也就停在「审核通过」，收费处看到的就是原始原因，改完再点一次。
      *

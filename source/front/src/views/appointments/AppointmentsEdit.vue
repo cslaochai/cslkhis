@@ -35,17 +35,17 @@
         </el-form-item>
       </div>
       <el-form-item label="选择号源" required>
-        <el-select v-model="editForm.scheduleId" :disabled="!editSchedules.length" class="w-full"
+        <el-select v-model="editForm.scheduleId" :disabled="!editOptions.length" class="w-full"
                    placeholder="请先选择科室和日期">
           <el-option
-              v-for="s in editSchedules"
+              v-for="s in editOptions"
               :key="s.id"
               :label="`${s.doctorName} | ${s.startTime}-${s.endTime} | 余号:${s.availableSource} | 挂号费:¥${s.registFee}`"
               :value="s.id ?? s.doctorName"
           />
         </el-select>
-        <p v-if="editForm.deptId && editForm.visitDate && !editSchedules.length" class="mt-1 text-xs text-slate-400">
-          该日期无可挂号源
+        <p v-if="editForm.deptId && editForm.visitDate && !editOptions.length" class="mt-1 text-xs text-slate-400">
+          {{ editSchedules.length ? '该日无可改的同费用号源' : '该日期无可挂号源' }}
         </p>
       </el-form-item>
     </el-form>
@@ -64,15 +64,16 @@ import {ElMessage} from 'element-plus';
 import {getAvailableSchedule, updateRegistration} from '@/api/appoint';
 import {getEmployeeList} from '@/api/system';
 import {VISIT_TYPE} from '@/lib/dict';
+import {isPaidRescheduleCandidate, isRegistPaid, scheduleFeeCents} from '@/lib/appointments';
 
-// 编辑挂号弹窗（从 AppointmentsView 拆出）。改的是挂号单的号源指向（updateRegistration 换
-// scheduleId / visitType），不碰号源余量 —— 占号/释放由后端在同一事务里处理。
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
   /** 要修改的挂号行 */
   row: {type: Object, default: null},
   /** 科室候选（页面级参照数据，主页面按 deptType:1 加载后传入） */
   departments: {type: Array, default: () => []},
+  /** 该挂号当前挂的排班本体（可能取不到：记录跨了看板日期区间），已收费的号要靠它算原费用 */
+  schedule: {type: Object, default: null},
 });
 const emit = defineEmits(['update:modelValue', 'saved']);
 const visible = computed({
@@ -87,9 +88,16 @@ const editForm = ref({
   scheduleId: null,
   visitDate: '',
   visitType: '',
+  // 后端新增/修改共用一个 DTO，patientId/settlementType 是必填项：改号源时原样带回，修改分支不写它们
+  patientId: null,
+  settlementType: null,
 });
 const employeeList = ref([]);
 const editSchedules = ref([]);
+/** 已收费的号只留「同医生 + 同费用」的候选（与后端闸同一口径），原价取不到时不比费用、交给后端判 */
+const origFeeCents = computed(() => (props.schedule ? scheduleFeeCents(props.schedule) : null));
+const editOptions = computed(() => editSchedules.value
+    .filter((s) => isPaidRescheduleCandidate(props.row, origFeeCents.value, s)));
 watch(visible, (open) => {
   if (!open)
     return;
@@ -101,6 +109,8 @@ watch(visible, (open) => {
     scheduleId: null,
     visitDate: row.visitDate || '',
     visitType: row.visitType || 1,
+    patientId: row.patientId ?? null,
+    settlementType: row.settlementType ?? null,
   };
   editSchedules.value = [];
   // 加载当前科室的医生列表
@@ -135,7 +145,9 @@ const handleEditDateChange = async () => {
   if (!editForm.value.deptId || !editForm.value.visitDate)
     return;
   try {
-    const res = await getAvailableSchedule(editForm.value.deptId, editForm.value.visitDate);
+    // 已收费只认同医生的号源，取数时就按 doctorId 收口（换了科室也必然对不上医生）
+    const doctorId = isRegistPaid(props.row) ? props.row?.doctorId : undefined;
+    const res = await getAvailableSchedule(editForm.value.deptId, editForm.value.visitDate, doctorId);
     editSchedules.value = res.data || [];
   } catch (e) {
     editSchedules.value = [];
@@ -150,14 +162,16 @@ const handleEditSubmit = async () => {
   try {
     await updateRegistration({
       id: editForm.value.id,
+      patientId: editForm.value.patientId,
       scheduleId: editForm.value.scheduleId,
       visitType: editForm.value.visitType,
+      settlementType: editForm.value.settlementType,
     });
     ElMessage.success('修改成功');
     visible.value = false;
     emit('saved');
-  } catch (error) {
-    ElMessage.error(error.message || '修改失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     submitLoading.value = false;
   }

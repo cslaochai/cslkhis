@@ -101,10 +101,7 @@ const save = async () => {
       shiftId: Number(form.scheduleStatus) === 1 ? form.shiftId : null,
       remark: form.remark || null,
     });
-    if (res.code !== 200) {
-      ElMessage.error(res.message || '保存失败');
-      return;
-    }
+    
     const warns = res.data?.warnings || [];
     ElMessage.success(`已保存${warns.length ? `（${warns.length} 条规则提示）` : ''}`);
     visible.value = false;
@@ -115,8 +112,8 @@ const save = async () => {
         confirmButtonText: '知道了'
       });
     }
-  } catch (e) {
-    ElMessage.error(e.message || '保存失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     saving.value = false;
   }

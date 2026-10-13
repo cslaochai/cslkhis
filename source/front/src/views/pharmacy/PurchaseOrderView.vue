@@ -224,7 +224,7 @@ const loadList = async () => {
       ElMessage.error(res.message || '加载采购订单失败');
     }
   } catch (e) {
-    ElMessage.error('加载采购订单失败');
+    
     console.error(e);
   } finally {
     loading.value = false;
@@ -281,9 +281,7 @@ const audit = async (row, pass) => {
     if (res.code === 200) {
       ElMessage.success(pass ? '已通过' : '已驳回');
       loadList();
-    } else {
-      ElMessage.error(res.message || '审批失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
   }
@@ -303,9 +301,7 @@ const genInbound = async (row) => {
     if (res.code === 200) {
       ElMessage.success(`入库单 ${res.data?.inboundNo || ''} 已生成`);
       loadList();
-    } else {
-      ElMessage.error(res.message || '生成入库单失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
   }
@@ -321,9 +317,7 @@ const remove = async (row) => {
     if (res.code === 200) {
       ElMessage.success('已删除');
       loadList();
-    } else {
-      ElMessage.error(res.message || '删除失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
   }

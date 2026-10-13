@@ -56,12 +56,10 @@ const submitEval = async () => {
       ElMessage.success(evalForm.evalResult === 1 ? '评估通过，可安排手术' : '评估不通过，不得安排日间手术');
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '评估失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('评估失败');
+    
   } finally {
     evalLoading.value = false;
   }

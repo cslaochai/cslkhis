@@ -89,12 +89,10 @@ const submitArrange = async () => {
       ElMessage.success('已安排');
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '安排失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('安排失败');
+    
   } finally {
     arrangeLoading.value = false;
   }

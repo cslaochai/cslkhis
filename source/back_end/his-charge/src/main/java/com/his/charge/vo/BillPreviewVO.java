@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * 结算试算出参（L2）：与结算同一套计算（共用草稿），只是不落库。
+ * 结算试算出参：与结算同一套计算（共用草稿），只是不落库。
  */
 @Data
 public class BillPreviewVO {

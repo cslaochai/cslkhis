@@ -255,12 +255,10 @@ const loadList = async () => {
     if (res.code === 200) {
       rows.value = res.data?.records || [];
       total.value = Number(res.data?.total || 0);
-    } else {
-      ElMessage.error(res.message || '查询失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     loading.value = false;
   }
@@ -280,12 +278,10 @@ const runSync = async () => {
       ElMessage.success(res.message || '同步完成');
       loadList();
       loadStats();
-    } else {
-      ElMessage.error(res.message || '同步失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('同步失败');
+    
   }
 };
 // ------------------------------------------------------------------
@@ -325,12 +321,10 @@ const submitAssign = async () => {
       ElMessage.success('分配成功');
       assignVisible.value = false;
       loadList();
-    } else {
-      ElMessage.error(res.message || '分配失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('分配失败');
+    
   } finally {
     assignLoading.value = false;
   }
@@ -375,12 +369,10 @@ const submitAudit = async () => {
       auditVisible.value = false;
       loadList();
       loadStats();
-    } else {
-      ElMessage.error(res.message || '审核失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('审核失败');
+    
   } finally {
     auditLoading.value = false;
   }

@@ -102,8 +102,8 @@ const submitMed = async () => {
     ElMessage.success('麻醉用药已记录');
     visible.value = false;
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e.message || '记录用药失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     medSubmitting.value = false;
   }

@@ -265,10 +265,8 @@ const handleAudit = async (row) => {
     const res = await auditPrescription({prescriptionId: row.id, auditResult: 1, auditOpinion: value || ''});
     ElMessage.success(`审方完成，已签署药师签名（${res.data?.auditBy || '当前药师'}）`);
     loadData();
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.message || '审方失败');
-    }
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 /** 审方退回（L7）：原因必填；不产生药师签名，处方置「审方退回」等医生改方重提 */
@@ -285,10 +283,8 @@ const handleReturn = async (row) => {
     await auditPrescription({prescriptionId: row.id, auditResult: 2, auditOpinion: value.trim()});
     ElMessage.success('已退回，医生将收到站内信通知');
     loadData();
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.message || '退回失败');
-    }
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 onMounted(() => {

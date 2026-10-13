@@ -399,8 +399,8 @@ const loadData = async () => {
       tableData.value = res.data.records || []
       pagination.value.total = res.data.total || 0
     }
-  } catch (e) {
-    ElMessage.error(e.message || '加载值班日志失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false
   }
@@ -479,11 +479,9 @@ const handleSubmit = async () => {
       ElMessage.success(formData.id ? '修改成功' : '登记成功')
       dialogVisible.value = false
       refreshAll()
-    } else {
-      ElMessage.error(res.message || '操作失败')
-    }
-  } catch (e) {
-    ElMessage.error(e.message || '操作失败')
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     submitLoading.value = false
   }
@@ -504,11 +502,9 @@ const handleHandover = async () => {
       ElMessage.success(res.message || '已交班')
       handoverVisible.value = false
       refreshAll()
-    } else {
-      ElMessage.error(res.message || '交班失败')
-    }
-  } catch (e) {
-    ElMessage.error(e.message || '交班失败')
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     submitLoading.value = false
   }
@@ -521,11 +517,9 @@ const handleAck = async (row) => {
     if (res.code === 200) {
       ElMessage.success(res.message || '已签收')
       refreshAll()
-    } else {
-      ElMessage.error(res.message || '签收失败')
-    }
-  } catch (e) {
-    if (e !== 'cancel' && e.message) ElMessage.error(e.message)
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 
@@ -536,11 +530,9 @@ const handleDelete = async (row) => {
     if (res.code === 200) {
       ElMessage.success('删除成功')
       refreshAll()
-    } else {
-      ElMessage.error(res.message || '删除失败')
-    }
-  } catch (e) {
-    if (e !== 'cancel' && e.message) ElMessage.error(e.message)
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 

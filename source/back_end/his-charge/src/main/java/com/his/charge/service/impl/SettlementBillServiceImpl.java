@@ -43,7 +43,7 @@ import java.util.*;
 import java.util.function.Function;
 
 /**
- * 结算账单实现（L2）
+ * 结算账单实现
  */
 @Slf4j
 @Service

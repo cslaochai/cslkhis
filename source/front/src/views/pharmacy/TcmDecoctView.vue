@@ -178,7 +178,7 @@ const loadList = async () => {
       ElMessage.error(res.message || '加载代煎台账失败');
     }
   } catch (e) {
-    ElMessage.error('加载代煎台账失败');
+    
     console.error(e);
   } finally {
     loading.value = false;

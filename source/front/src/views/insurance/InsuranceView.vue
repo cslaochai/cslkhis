@@ -924,8 +924,8 @@ const openCompliance = async (row) => {
     const res = await getSettlementCoding(row.id);
     diagnoses.value = (res.data?.diagnoses || []).map((d) => ({...d}));
     operations.value = (res.data?.operations || []).map((o) => ({...o}));
-  } catch (error) {
-    ElMessage.error(error?.message || '加载编码明细失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     complianceLoading.value = false;
   }
@@ -960,7 +960,7 @@ const saveCoding = async (silent = false) => {
       ElMessage.success('编码明细已保存');
     return true;
   } catch (error) {
-    ElMessage.error(error?.message || '保存失败');
+    
     return false;
   }
 };
@@ -984,8 +984,8 @@ const runComplianceAudit = async () => {
     } else {
       ElMessage.success(`未发现违规，${data?.naCount || 0} 条规则因缺依据未评估`);
     }
-  } catch (error) {
-    ElMessage.error(error?.message || '合规审核失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     complianceAuditing.value = false;
   }
@@ -1058,8 +1058,8 @@ const handleSettle = async (row) => {
     await settle(row.id);
     ElMessage.success('结算完成');
     refreshAll();
-  } catch (error) {
-    ElMessage.error(error?.message || '结算失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     acting.value = false;
   }
@@ -1076,7 +1076,7 @@ const handleUpload = async (row) => {
     ElMessage.success('报盘成功，已收到医保回执');
     refreshAll();
   } catch (error) {
-    ElMessage.error(error?.message || '报盘失败');
+    
     refreshAll();
   } finally {
     acting.value = false;
@@ -1098,8 +1098,8 @@ const handleCancelUpload = async (row) => {
     await cancelUploadSettlement({id: row.id, reason});
     ElMessage.success('撤销成功，清单已回到「已结算」');
     refreshAll();
-  } catch (error) {
-    ElMessage.error(error?.message || '撤销失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     acting.value = false;
   }
@@ -1128,8 +1128,8 @@ const openReports = async (row) => {
   try {
     const res = await getReportListPage({settlementId: row.id, pageNum: 1, pageSize: 50});
     reports.value = res.data?.records || [];
-  } catch (error) {
-    ElMessage.error(error?.message || '加载报文台账失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     reportLoading.value = false;
   }
@@ -1144,8 +1144,8 @@ const viewPayload = async (r) => {
   try {
     const res = await getReportById(r.id);
     payloadRow.value = res.data || null;
-  } catch (error) {
-    ElMessage.error(error?.message || '加载报文全文失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     payloadLoading.value = false;
   }
@@ -1165,8 +1165,8 @@ const runReconcile = async () => {
   try {
     const res = await reconcileSettlement({billDate: reconcileDate.value});
     reconcileResult.value = res.data || null;
-  } catch (error) {
-    ElMessage.error(error?.message || '对账失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     reconcileLoading.value = false;
   }

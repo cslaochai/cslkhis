@@ -65,6 +65,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * 挂号服务实现
@@ -419,9 +420,9 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         }
         appointInfo.setRegistSource(registSource);
         appointInfo.setPatientName(bizPatient.getPatientName());
+        // 本单结算方式由前端选择（1-全自费 2-医保联网）；费别/医保号是患者主档属性，
+        // 查到主档后统一快照（见下方），不直接取入参，避免与主档口径漂移。
         appointInfo.setSettlementType(upsertDTO.getSettlementType());
-        appointInfo.setMedicalInsuranceType(upsertDTO.getMedicalInsuranceType());
-        appointInfo.setMedicalInsuranceNo(upsertDTO.getMedicalInsuranceNo());
         appointInfo.setVisitType(upsertDTO.getVisitType());
         appointInfo.setRevisitSource(revisit ? upsertDTO.getRevisitSource() : null);
 
@@ -482,27 +483,30 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         if (patient == null) {
             throw new BusinessException("患者不存在");
         }
+
+        // 挂号时若显式传了费别/医保号且主档尚缺（录入新患者未补全等），先补全主档，保证口径单一
+        boolean needUpdate = false;
+        if (TextUtil.hasText(upsertDTO.getMedicalInsuranceType()) && !TextUtil.hasText(patient.getMedicalInsuranceType())) {
+            patient.setMedicalInsuranceType(upsertDTO.getMedicalInsuranceType());
+            needUpdate = true;
+        }
+        if (TextUtil.hasText(upsertDTO.getMedicalInsuranceNo()) && !TextUtil.hasText(patient.getMedicalInsuranceNo())) {
+            patient.setMedicalInsuranceNo(upsertDTO.getMedicalInsuranceNo());
+            needUpdate = true;
+        }
+        if (needUpdate) {
+            bizPatientMapper.updateById(patient);
+        }
+
         appointInfo.setPatientNo(patient.getPatientNo());
         appointInfo.setPatientName(patient.getPatientName());
         appointInfo.setGender(patient.getGender());
         appointInfo.setAge(patient.getAge());
         appointInfo.setPhone(patient.getPhone());
-
-        // 如果挂号时设置了医保信息且患者之前没有，回填到患者信息
-        if (TextUtil.hasText(appointInfo.getMedicalInsuranceType()) || TextUtil.hasText(appointInfo.getMedicalInsuranceNo())) {
-            boolean needUpdate = false;
-            if (TextUtil.hasText(appointInfo.getMedicalInsuranceType()) && !TextUtil.hasText(patient.getMedicalInsuranceType())) {
-                patient.setMedicalInsuranceType(appointInfo.getMedicalInsuranceType());
-                needUpdate = true;
-            }
-            if (TextUtil.hasText(appointInfo.getMedicalInsuranceNo()) && !TextUtil.hasText(patient.getMedicalInsuranceNo())) {
-                patient.setMedicalInsuranceNo(appointInfo.getMedicalInsuranceNo());
-                needUpdate = true;
-            }
-            if (needUpdate) {
-                bizPatientMapper.updateById(patient);
-            }
-        }
+        // 费别/医保号以患者主档为准快照到挂号单；本单是否走统筹只看 settlementType，
+        // 因此"医保患者本单改自费"时费别快照仍是参保类型，仅结算方式为 1。
+        appointInfo.setMedicalInsuranceType(patient.getMedicalInsuranceType());
+        appointInfo.setMedicalInsuranceNo(patient.getMedicalInsuranceNo());
 
         // 生成挂号单号
         String appointNo = redisSequenceService.generateAppointNo();
@@ -589,6 +593,8 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
             command.setDiagnosisFee(feeDecision.getDiagnosisFee());
             command.setWaived(feeDecision.isWaived());
             command.setWaiveReason(feeDecision.getReason());
+            // 本单结算方式（1-全自费 2-医保联网）：挂号单选什么就透什么，支持医保患者本单改自费
+            command.setSettlementMode(appointInfo.getSettlementType());
 
             BillBriefVO bill = gateway.createRegistCharge(command);
             if (bill != null) {
@@ -920,17 +926,21 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
     }
 
     /**
-     * 换号源前校验「这笔挂号还没收钱」。
+     * 已收费的挂号换号源 —— 只放开「同医生 + 同费用」这一档，其余一律退回「退号退费 → 重新挂号」。
      *
-     * <p>为什么要拦：账单是挂在挂号单上的（挂号信息的账单ID）。挂号记录一改，
-     * 科室/医生/日期/号别全变，账单却还指着原来的事实 —— 财务对账、科室日报、医保对账全部错位；
-     * 而且普通号 ↔ 专家号有价差，改号源时没有人处理这笔差额。
+     * <p>为什么已收费还允许改：患者临时有事往后挪一档时间是最高频的诉求，而钱已经在账上 ——
+     * 只要新号源一分钱不差，这笔实收就原样跟着人走，不需要任何资金动作（不补差、不退差、不冲正）。
      *
-     * <p>手机端/网上预约付过款的尤其如此：钱已经进了微信/支付宝，挂号台把号源一换，
-     * 没有任何人能把这笔钱挪到新号源上。真实窗口的做法也是这一条：
-     * 已缴费患者换号走「退号退费（按原支付渠道退回）→ 重新挂号」。
+     * <p>为什么只放这一档，三种情形必须退号重挂：
+     * ① <b>价差</b> —— 普通号 ↔ 专家号换过去，已收的金额既不够补差也无需退差，两边台账都不认；
+     * ② <b>收入归属</b> —— 记账行的医生快照一经出账不再改写，换医生等于把这笔挂号费记到别人头上；
+     * ③ <b>复诊号</b> —— 费用由复诊收费策略按「与原就诊的间隔天数」现算，改期会让免收口径失效
+     *    （免收的号改出策略窗口，等于该收的钱没收，且没有任何地方会报错）。
+     *
+     * <p>判费用用的是<b>号源原价</b>（挂号费 + 诊查费）而不是账单实收：实收可能已被策略减免，
+     * 拿它跟原价比会让「原价相同、都被免收」的两条号源误判成不同价。
      */
-    private void assertSourceChangeUnpaid(BizAppointInfo existing) {
+    private void assertPaidRescheduleSamePrice(BizAppointInfo existing, BizClinicSource newSchedule) {
         if (existing.getBillId() == null) {
             return;
         }
@@ -941,16 +951,38 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
             return;
         }
         BillBriefVO bill = gateway.getBill(existing.getBillId());
-        if (bill == null) {
-            return;
-        }
-        BigDecimal paid = NumUtil.orZero(bill.getPaidAmount());
+        BigDecimal paid = bill == null ? BigDecimal.ZERO : NumUtil.orZero(bill.getPaidAmount());
         if (paid.signum() <= 0) {
             return;
         }
-        throw new BusinessException("该挂号已收费（账单 " + bill.getBillNo()
-                + "，实收 ¥" + paid.toPlainString()
-                + "），不能直接变更号源；请先退号退费（按原支付渠道退回）后重新挂号");
+        String billText = "该挂号已收费（账单 " + bill.getBillNo() + "，实收 ¥" + paid.toPlainString() + "）";
+        if (existing.getRevisitSource() != null) {
+            throw new BusinessException(billText + "是复诊号，费用按复诊收费策略现算，改期会使免收口径失效；"
+                    + "请退号退费（按原支付渠道退回）后重新挂号");
+        }
+        if (!Objects.equals(existing.getDeptId(), newSchedule.getDeptId())) {
+            throw new BusinessException(billText + "改约不允许换科室；请退号退费（按原支付渠道退回）后重新挂号");
+        }
+        if (!Objects.equals(existing.getDoctorId(), newSchedule.getDoctorId())) {
+            throw new BusinessException(billText + "改约不允许换医生（挂号费收入按医生记账，出账后不改写归属）；"
+                    + "请退号退费（按原支付渠道退回）后重新挂号");
+        }
+        BizClinicSource oldSchedule = existing.getScheduleId() == null ? null : bizScheduleMapper.selectById(existing.getScheduleId());
+        if (oldSchedule == null) {
+            throw new BusinessException(billText + "原号源已不存在，无法核对费用是否一致；"
+                    + "请退号退费（按原支付渠道退回）后重新挂号");
+        }
+        BigDecimal oldFee = scheduleFeeTotal(oldSchedule);
+        BigDecimal newFee = scheduleFeeTotal(newSchedule);
+        if (oldFee.compareTo(newFee) != 0) {
+            throw new BusinessException(billText + "改约只放同费用号源：新号源 ¥" + newFee.toPlainString()
+                    + "、原号源 ¥" + oldFee.toPlainString() + "；请退号退费（按原支付渠道退回）后重新挂号");
+        }
+    }
+
+    /** 号源原价 = 挂号费 + 诊查费，与出账口径一致（专家号的高低体现在挂号费上，不另列） */
+    private static BigDecimal scheduleFeeTotal(BizClinicSource schedule) {
+        return NumUtil.orZero(schedule.getRegistFee()).add(NumUtil.orZero(schedule.getDiagnosisFee()));
     }
 
     /**
@@ -1001,11 +1033,16 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         // 渠道跟随原挂号记录：窗口(1/2/3)走现场池，预约(4)走预约池（扣新号双列同扣、还旧号按渠道回池）
         boolean apptChannel = existing.getRegistSource() == 4;
 
-        // 换号源前先看钱：已收费的挂号不能直接改号源（价差、收费单归属都会错位）
+        // 换号源：先取到新排班再过闸（闸要看新号源的费用，不能先还旧号再发现不让改）
         boolean sourceChanging = registInfo.getScheduleId() != null
                 && !registInfo.getScheduleId().equals(existing.getScheduleId());
+        BizClinicSource newSchedule = null;
         if (sourceChanging) {
-            assertSourceChangeUnpaid(existing);
+            newSchedule = bizScheduleMapper.selectById(registInfo.getScheduleId());
+            if (newSchedule == null) {
+                throw new BusinessException("新排班信息不存在");
+            }
+            assertPaidRescheduleSamePrice(existing, newSchedule);
         }
 
         Long oldSlotId = existing.getSlotId();
@@ -1058,10 +1095,6 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
                 }
             }
 
-            BizClinicSource newSchedule = bizScheduleMapper.selectById(registInfo.getScheduleId());
-            if (newSchedule == null) {
-                throw new BusinessException("新排班信息不存在");
-            }
             boolean sameDayWalkin = isSameDayWalkin(apptChannel, newSchedule.getScheduleDate());
             BizClinicSourceSlot newSlot = null;
             if (registInfo.getSlotId() != null) {

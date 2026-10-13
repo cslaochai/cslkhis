@@ -125,8 +125,8 @@ const submitAdmit = async () => {
     ElMessage.success(`转住院成功，入院登记已办理（入院ID ${res.data}）`);
     visible.value = false;
     emit('saved');
-  } catch (error) {
-    ElMessage.error(error.message || '转住院失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     admitSubmitting.value = false;
   }

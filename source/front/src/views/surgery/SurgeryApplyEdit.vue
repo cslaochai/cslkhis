@@ -226,8 +226,8 @@ const submitApply = async () => {
     ElMessage.success(`${applyForm.id ? '手术申请已修改' : '手术申请已提交'}：${res.data || ''}（等待手术室排台）`);
     visible.value = false;
     emit('saved');
-  } catch (error) {
-    ElMessage.error(error.message || '手术申请提交失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     applySubmitting.value = false;
   }

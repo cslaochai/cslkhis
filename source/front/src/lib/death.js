@@ -18,7 +18,7 @@ export const gate = async (promise, fallback) => {
     ElMessage.error(String((res && res.message) || fallback))
     return null
   } catch (e) {
-    ElMessage.error(String((e && e.message) || fallback))
+    
     return null
   }
 }

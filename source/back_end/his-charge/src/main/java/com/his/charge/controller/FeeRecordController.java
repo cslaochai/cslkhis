@@ -16,7 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 费用记账台账（L1）。
+ * 费用记账台账。
  */
 @Tag(name = "费用记账")
 @RestController

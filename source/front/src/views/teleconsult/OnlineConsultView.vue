@@ -210,12 +210,10 @@ const loadList = async () => {
     if (res.code === 200) {
       rows.value = res.data?.records || [];
       total.value = Number(res.data?.total || 0);
-    } else {
-      ElMessage.error(res.message || '查询失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     loading.value = false;
   }
@@ -241,11 +239,10 @@ const doAccept = async (row) => {
       ElMessage.success('已接诊');
       loadList();
       loadStats();
-    } else
-      ElMessage.error(res.message || '接诊失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('接诊失败');
+    
   }
 };
 // ---------------- 回复并结束（表单与提交在 OnlineConsultReplyEdit） ----------------
@@ -274,11 +271,10 @@ const remove = async (row) => {
       ElMessage.success('删除成功');
       loadList();
       loadStats();
-    } else
-      ElMessage.error(res.message || '删除失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('删除失败');
+    
   }
 };
 // ---------------- 详情（按 id 取数在 OnlineConsultDetail） ----------------

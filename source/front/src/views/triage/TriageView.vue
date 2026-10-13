@@ -677,8 +677,8 @@ const handleCall = async (row) => {
     await callPatient(row.id);
     ElMessage.success(`已呼叫 ${row.patientName}`);
     await reload();
-  } catch (error) {
-    ElMessage.error(error.message || '呼叫失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleRecall = async (row) => {
@@ -686,8 +686,8 @@ const handleRecall = async (row) => {
     await recallPatient(row.id);
     ElMessage.success(`已重呼 ${row.patientName}`);
     await reload();
-  } catch (error) {
-    ElMessage.error(error.message || '重呼失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleOverdue = async (row) => {
@@ -704,9 +704,8 @@ const handleOverdue = async (row) => {
     await overdueQueue(row.id, value.trim());
     ElMessage.success('已标记过号');
     await reload();
-  } catch (error) {
-    if (error !== 'cancel' && error !== 'close')
-      ElMessage.error(error.message || '操作失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 /**
@@ -731,9 +730,8 @@ const handleRejoin = async (row) => {
     const action = overdue ? '已重新入队' : '已置为优先';
     ElMessage.success(res.data != null ? `${action}，当前序号 ${res.data}` : (res.message || action));
     await reload();
-  } catch (error) {
-    if (error !== 'cancel' && error !== 'close')
-      ElMessage.error(error.message || '操作失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ========== 分诊卡 ==========
@@ -833,8 +831,8 @@ const handleSaveTriage = async () => {
     ElMessage.success(res.message || '分诊已保存');
     await openTriage(selected.value);
     await Promise.all([loadList(), loadStats()]);
-  } catch (error) {
-    ElMessage.error(error.message || '保存失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     saving.value = false;
   }
@@ -866,8 +864,8 @@ const doCheckIn = async (row) => {
     ElMessage.success(`${row.patientName} 已签到`);
     await openCheckInDrawer();
     await reload();
-  } catch (error) {
-    ElMessage.error(error.message || '签到失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const doBatchCheckIn = async () => {

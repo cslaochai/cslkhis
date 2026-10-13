@@ -109,11 +109,10 @@ const load = async (id) => {
     const res = await getWardDispenseDetail(id);
     if (res.code === 200)
       detail.value = res.data;
-    else
-      ElMessage.error(res.message || '查询详情失败');
+    
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询详情失败');
+    
   } finally {
     detailLoading.value = false;
   }
@@ -132,12 +131,10 @@ const onDispense = async (item) => {
     if (res.code === 200) {
       ElMessage.success(`明细已配药（${item.drugName} × ${item.quantity}），库存已扣减并计费`);
       await refreshDetail();
-    } else {
-      ElMessage.error(res.message || '配药失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('配药失败');
+    
   } finally {
     actLoading.value = false;
   }
@@ -149,12 +146,10 @@ const onCheck = async (item) => {
     if (res.code === 200) {
       ElMessage.success('核对通过');
       await refreshDetail();
-    } else {
-      ElMessage.error(res.message || '核对失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('核对失败');
+    
   } finally {
     actLoading.value = false;
   }
@@ -172,9 +167,7 @@ const onReturn = async (item) => {
     if (res.code === 200) {
       ElMessage.success('退药完成（已回库并负冲账）');
       await refreshDetail();
-    } else {
-      ElMessage.error(res.message || '退药失败');
-    }
+    } 
   } catch (e) {
     if (e !== 'cancel' && e?.message !== 'cancel')
       console.error(e);

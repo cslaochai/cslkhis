@@ -158,7 +158,7 @@ async function loadRunPreview() {
     }
   } catch (e) {
     runDetail.value = null;
-    ElMessage.error(e?.message || '加载对账预览失败');
+    
   } finally {
     runPreviewLoading.value = false;
   }
@@ -196,8 +196,8 @@ async function submitRun() {
     }
     visible.value = false;
     emit('saved', vo);
-  } catch (e) {
-    ElMessage.error(e?.message || '日结失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     runSubmitting.value = false;
   }

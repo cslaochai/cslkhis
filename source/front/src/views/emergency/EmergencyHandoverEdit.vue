@@ -165,8 +165,8 @@ const loadHandoverPending = async () => {
     hoPending.value.forEach((row) => {
       hoRows.value[String(row.emergencyId)] = {takeDoctorId: null, disposition: '', handoverNote: ''};
     });
-  } catch (error) {
-    ElMessage.error(error.message || '待交班清单加载失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     hoLoading.value = false;
   }
@@ -217,7 +217,7 @@ const submitHandover = async () => {
     visible.value = false;
     emit('saved');
   } catch (error) {
-    ElMessage.error(error.message || '交班失败');
+    
     // 清单可能已被别人改动（新登记/已接诊），失败后重新拉一次再让用户点名
     await loadHandoverPending();
   } finally {

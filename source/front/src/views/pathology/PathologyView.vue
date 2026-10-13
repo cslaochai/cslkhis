@@ -209,11 +209,10 @@ const loadList = async () => {
     if (res.code === 200) {
       rows.value = res.data?.records || [];
       total.value = Number(res.data?.total || 0);
-    } else
-      ElMessage.error(res.message || '查询失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     loading.value = false;
   }
@@ -240,11 +239,10 @@ const doAction = async (fn, done) => {
     if (res.code === 200) {
       ElMessage.success(res.message || '操作成功');
       done();
-    } else
-      ElMessage.error(res.message || '操作失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('操作失败');
+    
   } finally {
     actLoading.value = false;
   }

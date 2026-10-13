@@ -112,15 +112,12 @@ const save = async () => {
       maxConsecutiveNightDays: isWardLevelRule.value ? form.maxConsecutiveNightDays : null,
       maxConsecutiveWorkDays: isWardLevelRule.value ? form.maxConsecutiveWorkDays : null,
     });
-    if (res.code !== 200) {
-      ElMessage.error(res.message || '保存失败');
-      return;
-    }
+    
     ElMessage.success(res.message || '标准已保存');
     visible.value = false;
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e.message || '保存失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     saving.value = false;
   }

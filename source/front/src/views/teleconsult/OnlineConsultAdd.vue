@@ -102,12 +102,10 @@ const save = async () => {
       ElMessage.success(`问诊已发起，单号 ${res.data?.consultNo || ''}`);
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '发起失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('发起失败');
+    
   } finally {
     saving.value = false;
   }

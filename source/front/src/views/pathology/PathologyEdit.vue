@@ -100,11 +100,10 @@ const saveOrder = async () => {
       ElMessage.success(res.message || '已保存');
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '保存失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('保存失败');
+    
   } finally {
     editLoading.value = false;
   }

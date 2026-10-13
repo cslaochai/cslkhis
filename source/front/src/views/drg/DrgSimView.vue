@@ -209,8 +209,8 @@ const runBatch = async () => {
     await drgSimulateBatch({version: version.value});
     ElMessage.success('批量模拟完成（主诊断编码为空的行已跳过）');
     loadSummary();
-  } catch (e) {
-    ElMessage.error(e?.response?.data?.message || '批量模拟失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     batchLoading.value = false;
   }

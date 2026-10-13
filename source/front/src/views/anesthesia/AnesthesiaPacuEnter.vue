@@ -80,8 +80,8 @@ const submitPacuEnter = async () => {
     ElMessage.success(`已登记入 PACU：${res.data || ''}`);
     visible.value = false;
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e.message || '入 PACU 登记失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     enterSubmitting.value = false;
   }

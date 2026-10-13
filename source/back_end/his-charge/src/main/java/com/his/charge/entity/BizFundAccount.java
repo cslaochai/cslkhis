@@ -14,7 +14,7 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
- * 资金账户（L3）：门诊余额挂在「人」上、住院预交金挂在「这次入院」上，
+ * 资金账户：门诊余额挂在「人」上、住院预交金挂在「这次入院」上，
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

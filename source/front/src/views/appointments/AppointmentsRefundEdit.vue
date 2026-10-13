@@ -133,8 +133,8 @@ const handleSubmitRefund = async () => {
     });
     ElMessage.success('退费申请已提交，请到收费处「退费管理」审核并执行');
     visible.value = false;
-  } catch (error) {
-    ElMessage.error(error.message || '提交退费申请失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     refundSubmitting.value = false;
   }

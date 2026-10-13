@@ -165,8 +165,8 @@ async function loadImages() {
   try {
     const res = await examImageListByApplyId(props.bizType, props.applyId);
     images.value = res.data || [];
-  } catch (e) {
-    ElMessage.error(e?.message || '影像列表加载失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }
@@ -206,8 +206,8 @@ async function onPickFile(ev) {
     });
     ElMessage.success('影像已上传');
     await loadImages();
-  } catch (e) {
-    ElMessage.error(e?.message || '上传失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     uploading.value = false;
   }
@@ -228,8 +228,8 @@ async function submitMockImport() {
     ElMessage.success(`已导入 ${(res.data || []).length} 帧模拟影像（非真实检查结果）`);
     mockVisible.value = false;
     await loadImages();
-  } catch (e) {
-    ElMessage.error(e?.message || '导入失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     uploading.value = false;
   }
@@ -252,8 +252,8 @@ async function onDelete(img) {
     await examImageDeleteById(img.id, reason);
     ElMessage.success('已删除（操作已留痕）');
     await loadImages();
-  } catch (e) {
-    ElMessage.error(e?.message || '删除失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 

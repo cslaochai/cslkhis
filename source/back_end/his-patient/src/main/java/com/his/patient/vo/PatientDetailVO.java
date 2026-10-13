@@ -90,17 +90,13 @@ public class PatientDetailVO {
      */
     private String medicalHistory;
     /**
-     * 患者类型：1-自费 2-城镇职工医保 3-城乡居民医保 4-公费 5-其他
+     * 费别/参保类型（自费/城镇职工医保/城乡居民医保/公费医疗/商业医疗保险）
      */
-    private Integer patientType;
+    private String medicalInsuranceType;
     /**
      * 医保卡号
      */
     private String medicalInsuranceNo;
-    /**
-     * 医保类型（如：职工医保、居民医保）
-     */
-    private String medicalInsuranceType;
     /**
      * 卡片类型（1-就诊卡 2-身份证 3-医保卡）
      */

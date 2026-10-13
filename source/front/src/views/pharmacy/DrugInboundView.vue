@@ -208,7 +208,7 @@ const loadList = async () => {
       ElMessage.error(res.message || '加载入库单失败');
     }
   } catch (e) {
-    ElMessage.error('加载入库单失败');
+    
     console.error(e);
   } finally {
     loading.value = false;
@@ -235,9 +235,7 @@ const doAudit = async (row) => {
     if (res.code === 200) {
       ElMessage.success('已审核');
       loadList();
-    } else {
-      ElMessage.error(res.message || '审核失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
   }
@@ -256,9 +254,7 @@ const doStockIn = async (row) => {
     if (res.code === 200) {
       ElMessage.success('已入库，库存批次已更新');
       loadList();
-    } else {
-      ElMessage.error(res.message || '入库失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
   }
@@ -281,9 +277,7 @@ const doCancel = async (row) => {
     if (res.code === 200) {
       ElMessage.success('已取消');
       loadList();
-    } else {
-      ElMessage.error(res.message || '取消失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
   }
@@ -299,9 +293,7 @@ const doDelete = async (row) => {
     if (res.code === 200) {
       ElMessage.success('已删除');
       loadList();
-    } else {
-      ElMessage.error(res.message || '删除失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
   }

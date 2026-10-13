@@ -52,8 +52,8 @@ const runSettle = async (dryRun) => {
       visible.value = false;
       emit('saved');
     }
-  } catch (err) {
-    ElMessage.error(err.message || '日终结转失败');
+  } catch (err)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     settleLoading.value = false;
   }

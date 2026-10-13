@@ -342,11 +342,18 @@
                                     class="min-w-0 flex-1 break-all font-bold leading-5">
                               {{ r.patientName }}
                             </span>
-                              <span v-if="deskStatusChip[Number(r.registStatus)]"
-                                    :class="deskStatusChip[Number(r.registStatus)].cls"
-                                    class="ml-auto shrink-0 rounded px-1 py-0.5 text-xs font-medium whitespace-nowrap">
-                              {{ deskStatusChip[Number(r.registStatus)].text }}
-                            </span>
+                              <span class="ml-auto flex shrink-0 items-center gap-1">
+                                <span v-if="deskStatusChip[Number(r.registStatus)]"
+                                      :class="deskStatusChip[Number(r.registStatus)].cls"
+                                      class="rounded px-1 py-0.5 text-xs font-medium whitespace-nowrap">
+                                  {{ deskStatusChip[Number(r.registStatus)].text }}
+                                </span>
+                                <!-- 已收费 = 钱已在账上：改约只放同医生、同费用的号源（后端同样拦），与状态同排一次读完 -->
+                                <span v-if="isRegistPaid(r)"
+                                      class="rounded bg-emerald-50 px-1 py-0.5 text-xs font-medium text-emerald-700 whitespace-nowrap">
+                                  已收费
+                                </span>
+                              </span>
                             </div>
                             <p v-if="deskPatientMeta(r) || deskCardVisitNo(r)" class="text-xs text-slate-500">
                               {{ [deskPatientMeta(r), deskCardVisitNo(r)].filter(Boolean).join(' · ') }}
@@ -354,23 +361,17 @@
                             <p class="truncate text-xs text-slate-500">
                               {{ deskCardDoctorLine(r) }}
                             </p>
-                            <div v-if="deskCardMetaLine(r) || isRegistPaid(r)" class="flex items-center gap-1">
-                              <p v-if="deskCardMetaLine(r)" class="truncate text-xs text-slate-500">
-                                {{ deskCardMetaLine(r) }}
-                              </p>
-                              <!-- 已收费 = 这笔钱已经在账上，改号源按钮因此不出现（后端同样拦） -->
-                              <span v-if="isRegistPaid(r)"
-                                    class="shrink-0 rounded bg-emerald-50 px-1 py-0.5 text-xs font-medium text-emerald-700">
-                              已收费
-                            </span>
-                            </div>
+                            <p v-if="deskCardMetaLine(r)" class="truncate text-xs text-slate-500">
+                              {{ deskCardMetaLine(r) }}
+                            </p>
                             <!-- 收款入口只认账单欠款事实（1-待支付 2-部分支付）：免收/已收齐/账单作废都不是「没收款」。
-                                 放退号前面：先办钱再谈退号，收银动线如此 -->
+                                 放退号前面：先办钱再谈退号，收银动线如此。
+                                 一个「收费」口进去选档（现金/支付宝/微信），做成两个按钮等于让收银员先猜客户掏什么 -->
                             <div v-if="canCollectFee(r) || canCancelRegist(r)" class="mt-1 flex justify-end gap-1">
                               <button v-if="canCollectFee(r)"
                                       class="cursor-pointer rounded border border-emerald-200 bg-white px-2 py-0.5 text-xs font-medium text-emerald-600 hover:bg-emerald-50"
                                       data-testid="desk-collect"
-                                      @click.stop="handleShowPayment(r)">收款
+                                      @click.stop="handleShowPayment(r)">收费
                               </button>
                               <button v-if="canCancelRegist(r)"
                                   class="cursor-pointer rounded border border-red-200 bg-white px-2 py-0.5 text-xs font-medium text-red-500 hover:bg-red-50"
@@ -549,7 +550,7 @@
                   </el-button>
                   <el-button v-if="canCollectFee(row)" link size="small" type="success"
                              @click="handleShowPayment(row)">
-                    支付
+                    收费
                   </el-button>
                   <!-- 只有「已挂号(1)」「已签到(2)」才有退号入口，其余状态一律不出现（含灰色禁用态）：
                        已接诊/已就诊是诊疗已经发生，已过号/爽约/未就诊的号源属过去日期、退了也还不了池
@@ -601,17 +602,19 @@
                             :hidden-count="selectedCell ? cellHiddenCount(selectedCell.date, selectedCell.doctorId) : 0"
                             @register="goRegister"/>
 
-    <!-- 新增挂号弹窗：seed 为看板开单的预填（工具栏入口为空）；需要缴费时账单事实回抛给扫码收款窗 -->
+    <!-- 新增挂号弹窗：seed 为看板开单的预填（工具栏入口为空）；需要缴费时账单事实回抛给收费窗。
+         只刷看板不刷挂号记录表：新号要先在格子上看见（已挂 N/余 M 跟着变），记录表是翻页查询，等下一次查询自然带上 -->
     <AppointmentsAdd v-model="showAddDialog" :departments="departments" :revisit-source-dict="revisitSourceDict"
-                     :seed="addSeed" @saved="reloadListAndStats" @pay="onAddPay"/>
+                     :seed="addSeed" @saved="loadDesk" @pay="onAddPay"/>
 
-    <!-- 编辑挂号弹窗 -->
-    <AppointmentsEdit v-model="showEditDialog" :row="editRow" :departments="departments"
+    <!-- 编辑挂号弹窗（schedule 传原号源本体：已收费的号要比「同费用」才让选候选，弹窗自己算不出原价） -->
+    <AppointmentsEdit v-model="showEditDialog" :departments="departments" :row="editRow"
+                      :schedule="editRow ? (deskScheduleMap[editRow.scheduleId] || null) : null"
                       @saved="reloadListAndStats"/>
 
-    <!-- 挂号费扫码收款：出码给患者扫，入账由渠道回调/查单确认（页面不点「已支付」） -->
-    <QrPayDialog v-model="showPaymentDialog" :amount="paymentInfo.amount" :bill-id="paymentInfo.billId"
-                 :bill-no="paymentInfo.billNo" :patient-name="paymentInfo.patientName" @paid="onQrPaid"/>
+    <!-- 挂号费收费：默认现金档（窗口当场点钞记流水），切支付宝/微信即出对应渠道的码 -->
+    <QrPayDialog v-model="showPaymentDialog" allow-cash :amount="paymentInfo.amount" :bill-id="paymentInfo.billId"
+                 :bill-no="paymentInfo.billNo" :patient-name="paymentInfo.patientName" @paid="onPaid"/>
   </div>
 </template>
 
@@ -647,7 +650,7 @@ import {getDepartmentSelectList, getDictDataList, getEmployeeList, getUserInfo} 
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {VISIT_TYPE} from '@/lib/dict';
 import {REGIST_TYPE, revisitTypeOf, statusOf} from '@/lib/statusColor';
-import {isAllDept, settlementLabel, settlementTypes} from '@/lib/appointments';
+import {isAllDept, isRegistPaid, settlementLabel, settlementTypes} from '@/lib/appointments';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import AppointmentsAdd from './AppointmentsAdd.vue';
 import AppointmentsEdit from './AppointmentsEdit.vue';
@@ -804,8 +807,8 @@ const handleCheckIn = async (row) => {
     await checkInByRegist(row.id);
     ElMessage.success('签到成功，患者已进入候诊队列');
     reloadListAndStats();
-  } catch (error) {
-    ElMessage.error(error.message || '签到失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleCancel = async (row) => {
@@ -826,10 +829,8 @@ const handleCancel = async (row) => {
     await cancelRegistration(row.id, '患者主动取消');
     ElMessage.success('取消成功');
     reloadListAndStats();
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.message || '取消失败');
-    }
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleEdit = (row) => {
@@ -837,10 +838,11 @@ const handleEdit = (row) => {
   showEditDialog.value = true;
 };
 // ========== 显示支付弹框 ==========
-const handleShowPayment = async (row) => {
+/** 收款取数：金额一律来自账单事实（尚需缴），不由挂号行自带的应收推 */
+const buildCollectInfo = async (row) => {
   if (!row.billId) {
     ElMessage.error('未找到关联的账单');
-    return;
+    return null;
   }
   // 查询账单详情获取金额
   let amount = 0;
@@ -850,7 +852,7 @@ const handleShowPayment = async (row) => {
   } catch (e) {
     console.error('获取账单详情失败:', e);
   }
-  paymentInfo.value = {
+  return {
     registNo: row.registNo || '',
     patientName: row.patientName,
     amount: amount,
@@ -858,16 +860,21 @@ const handleShowPayment = async (row) => {
     billId: row.billId || null,
     billNo: row.billNo || '',
   };
+};
+const handleShowPayment = async (row) => {
+  const info = await buildCollectInfo(row);
+  if (!info)
+    return;
+  paymentInfo.value = info;
   showPaymentDialog.value = true;
 };
-// ========== 扫码收款结果 ==========
-const onQrPaid = () => {
+/** 收款落账（现金与扫码同一路：一笔流水 → 账单状态由后端现算）：入口与角标都跟着账单事实走，看板必须一起刷 */
+const onPaid = () => {
   ElMessage.success('挂号费已入账');
   reloadListAndStats();
-  // 看板卡片的「已收费」角标与「收款」入口都由账单状态现算，收款成功必须连看板一起刷（同看板退号路径）
   loadDesk();
 };
-/** 新增挂号成功且需缴费：账单事实由子组件回抛，扫码收款弹窗（共享组件）留在本页 */
+/** 新增挂号成功且需缴费：账单事实由子组件回抛，收款弹窗（共享组件）留在本页 */
 const onAddPay = (info) => {
   paymentInfo.value = info;
   showPaymentDialog.value = true;
@@ -1941,9 +1948,15 @@ const drillToDay = (date) => {
   selectedCell.value = null;
   loadDesk();
 };
-/** 账单上已经有收到的钱（2-部分支付 3-已支付）：改约会被后端拦（钱已进账，要先退费再重挂） */
-const isRegistPaid = (r) => [2, 3].includes(Number(r?.billStatus));
-const canReschedule = (r) => Number(r?.registStatus) === 1 && !isRegistPaid(r) && !isVisitDatePast(r);
+/** 复诊号：费用按复诊收费策略按间隔天数现算，改期会让免收口径失效 → 已收费一律不许改约 */
+const isRevisitRegist = (r) => Number(r?.revisitSource) > 0;
+/**
+ * 能不能改约：只有「已挂号」且就诊日未过。
+ * 已收费的号不再一刀切禁掉 —— 后端闸放的是「同医生 + 同费用」的号源（改约弹窗按这个筛候选），
+ * 复诊号除外（见 isRevisitRegist）。
+ */
+const canReschedule = (r) => Number(r?.registStatus) === 1 && !isVisitDatePast(r)
+    && (!isRegistPaid(r) || !isRevisitRegist(r));
 const isVisitDatePast = (r) => {
   const d = String(r?.visitDate || '').slice(0, 10);
   return !!d && d < fmtDate(new Date());
@@ -1961,7 +1974,9 @@ const sourceLockReason = (r) => {
     return `就诊日 ${String(r?.visitDate || '').slice(0, 10)} 已过，不能退号或改约，患者未到诊需退挂号费的，请到「挂号记录」里发起退费申请`;
   }
   if (Number(r?.registStatus) === 1 && isRegistPaid(r)) {
-    return '该挂号已收费，不能直接变更号源；请先退号退费（按原支付渠道退回）后重新挂号';
+    return isRevisitRegist(r)
+        ? '该挂号已收费且是复诊号：费用按复诊收费策略现算，改期会使免收口径失效；请先退号退费（按原支付渠道退回）后重新挂号'
+        : '该挂号已收费：改约只能选同医生、同费用的号源（弹窗里已按此过滤）；不同价请先退号退费（按原支付渠道退回）后重新挂号';
   }
   switch (Number(r?.registStatus)) {
     case 3:
@@ -2066,8 +2081,8 @@ const handleDeskCancel = async (r) => {
     await cancelRegistration(r.id, '看板退号');
     ElMessage.success('退号成功');
     loadDesk();
-  } catch (error) {
-    ElMessage.error(error.message || '退号失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleTabChange = (tab) => {

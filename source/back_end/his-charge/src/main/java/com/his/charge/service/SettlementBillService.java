@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 结算账单服务（L2）：把一批记账行锁成"这笔该收多少、怎么分"。
+ * 结算账单服务：把一批记账行锁成"这笔该收多少、怎么分"。
  */
 public interface SettlementBillService extends IService<BizSettlementBill> {
 

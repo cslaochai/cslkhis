@@ -531,8 +531,8 @@ const savePrompt = async () => {
     editingPrompt.value = false
     promptDialogVisible.value = false
     await loadPromptList()
-  } catch (e) {
-    ElMessage.error(e?.message || '保存失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     promptSaving.value = false
   }
@@ -653,7 +653,7 @@ const startRebuild = async (row) => {
     pollRebuild(row.id, taskId);
   } catch (e) {
     console.error('提交重建索引失败', e);
-    ElMessage.error(e?.message || '提交失败，请重试');
+    
   }
 };
 const pollRebuild = (rowId, taskId) => {
@@ -681,7 +681,7 @@ const pollRebuild = (rowId, taskId) => {
     } catch (e) {
       console.error('查询重建进度失败', e);
       delete rebuildMap[rowId];
-      ElMessage.error('查询重建进度失败，请重新点击重建索引');
+      
     }
   }, REBUILD_POLL_INTERVAL);
   rebuildPollTimers.set(rowId, timer);

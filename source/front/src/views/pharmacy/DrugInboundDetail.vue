@@ -77,9 +77,7 @@ watch(visible, async (open) => {
     const res = await getInboundDetail(props.id)
     if (res.code === 200) {
       detail.value = res.data
-    } else {
-      ElMessage.error(res.message || '加载详情失败')
-    }
+    } 
   } catch (e) {
     console.error(e)
   }

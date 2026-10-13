@@ -24,13 +24,13 @@ public interface BizPatientService extends IService<BizPatient> {
      * 分页查询患者列表
      */
     PageResult<BizPatient> selectPatientPage(String patientName, String phone, String patientNo,
-                                             Integer patientType, String keyword, int pageNum, int pageSize);
+                                             String medicalInsuranceType, String keyword, int pageNum, int pageSize);
 
     /**
      * 分页查询患者列表（支持标签过滤）
      */
     PageResult<BizPatient> selectPatientPage(String patientName, String phone, String patientNo,
-                                             Integer patientType, String keyword, int pageNum, int pageSize,
+                                             String medicalInsuranceType, String keyword, int pageNum, int pageSize,
                                              List<Long> tagPatientIds);
 
     /**
@@ -41,7 +41,7 @@ public interface BizPatientService extends IService<BizPatient> {
      *              前端再排也来不及。
      */
     PageResult<BizPatient> selectPatientPage(String patientName, String phone, String patientNo,
-                                             Integer patientType, String keyword, int pageNum, int pageSize,
+                                             String medicalInsuranceType, String keyword, int pageNum, int pageSize,
                                              List<Long> tagPatientIds, PatientSearchScopeDTO scope);
 
     /**

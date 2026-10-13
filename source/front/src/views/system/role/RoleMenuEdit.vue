@@ -74,8 +74,8 @@ watch(visible, async (open) => {
     }
     collectParents(menuTree.value)
     menuTreeRef.value?.setCheckedKeys(ids.map(String).filter(id => !parentIds.has(id)))
-  } catch (error) {
-    ElMessage.error(error.message || '加载菜单权限失败')
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     menuLoading.value = false
   }
@@ -96,11 +96,9 @@ const handleSaveRoleMenu = async () => {
       ElMessage.success('菜单权限保存成功')
       visible.value = false
       emit('saved')
-    } else {
-      ElMessage.error(res.message || '保存失败')
-    }
-  } catch (error) {
-    ElMessage.error(error.message || '保存失败')
+    } 
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     menuSubmitting.value = false
   }

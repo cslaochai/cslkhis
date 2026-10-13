@@ -49,12 +49,7 @@ public class PatientBriefVO {
     private String idCard;
 
     /**
-     * 患者类型
-     */
-    private Integer patientType;
-
-    /**
-     * 医保类型
+     * 费别/参保类型（自费/城镇职工医保/城乡居民医保/公费医疗/商业医疗保险）
      */
     private String medicalInsuranceType;
 

@@ -426,10 +426,8 @@ const handleReceiveSpecimen = async (row) => {
     await receiveSpecimen(row.id, '当前用户');
     ElMessage.success('标本接收成功');
     loadData();
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.message || '接收失败');
-    }
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleResultEntry = async (row) => {
@@ -535,8 +533,8 @@ const handleSubmitResult = async () => {
     ElMessage.success('检验结果提交成功');
     showResultDialog.value = false;
     loadData();
-  } catch (error) {
-    ElMessage.error(error.message || '提交失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleAudit = async (row) => {
@@ -564,8 +562,8 @@ const handleSubmitAudit = async () => {
     ElMessage.success('审核成功');
     showAuditDialog.value = false;
     loadData();
-  } catch (error) {
-    ElMessage.error(error.message || '审核失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const addLabResultItem = () => {

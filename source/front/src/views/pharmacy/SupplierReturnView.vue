@@ -233,7 +233,7 @@ const loadList = async () => {
       ElMessage.error(res.message || '加载退货单失败');
     }
   } catch (e) {
-    ElMessage.error('加载退货单失败');
+    
     console.error(e);
   } finally {
     loading.value = false;
@@ -271,9 +271,7 @@ const openDetail = async (rowOrId) => {
     if (res.code === 200) {
       detail.value = res.data;
       drawerVisible.value = true;
-    } else {
-      ElMessage.error(res.message || '加载详情失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
   }
@@ -320,9 +318,7 @@ const doDelete = async (row) => {
       ElMessage.success('已删除');
       drawerVisible.value = false;
       loadList();
-    } else {
-      ElMessage.error(res.message || '删除失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
   }
@@ -335,9 +331,7 @@ const runAction = async (call, okText) => {
       loadList();
       if (drawerVisible.value)
         await openDetail(res.data);
-    } else {
-      ElMessage.error(res.message || '操作失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
   }

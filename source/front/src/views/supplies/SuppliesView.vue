@@ -503,7 +503,7 @@ const loadStock = async () => {
     stockPagination.value.total = res.data?.total || 0;
   } catch (e) {
     console.error('加载耗材库存失败:', e);
-    ElMessage.error(e?.message || '加载耗材库存失败');
+    
   } finally {
     loading.value = false;
   }
@@ -524,9 +524,8 @@ const handleInbound = async (row) => {
     await inboundStock(row.id, Number(value));
     ElMessage.success('补货入库成功');
     loadStock();
-  } catch (e) {
-    if (e !== 'cancel')
-      ElMessage.error(e?.message || '入库失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // 其他出库
@@ -540,9 +539,8 @@ const handleOutbound = async (row) => {
     await outboundStock(row.id, Number(value));
     ElMessage.success('出库成功');
     loadStock();
-  } catch (e) {
-    if (e !== 'cancel')
-      ElMessage.error(e?.message || '出库失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ========== 科室领用 ==========
@@ -626,7 +624,7 @@ const handleUdiScan = async () => {
     else if (!res.data?.parsed)
       ElMessage.warning(res.data?.tip || '无法解析 UDI');
   } catch (e) {
-    ElMessage.error(e?.message || '扫码解析失败');
+    
     traceScan.value = null;
   } finally {
     traceScanning.value = false;
@@ -715,8 +713,8 @@ const handleTraceUseSubmit = async () => {
     traceScan.value = null;
     traceResult.value = res.data;
     loadStock();
-  } catch (e) {
-    ElMessage.error(e?.message || '登记失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const resetTraceForm = () => {
@@ -773,8 +771,8 @@ const openTraceDetail = async (row) => {
     const res = await getTraceDetailById(row.id);
     traceDetail.value = res.data;
     traceDetailVisible.value = true;
-  } catch (e) {
-    ElMessage.error(e?.message || '加载详情失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleTraceVoid = async (row) => {
@@ -788,9 +786,8 @@ const handleTraceVoid = async (row) => {
     ElMessage.success('已作废，耗材退回批次');
     loadTrace();
     loadStock();
-  } catch (e) {
-    if (e !== 'cancel')
-      ElMessage.error(e?.message || '作废失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleTraceRecharge = async (row) => {
@@ -801,8 +798,8 @@ const handleTraceRecharge = async (row) => {
     else
       ElMessage.warning(res.data?.chargeFailReason || '补记后仍未计费');
     loadTrace();
-  } catch (e) {
-    ElMessage.error(e?.message || '补记失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleTabChange = (tab) => {

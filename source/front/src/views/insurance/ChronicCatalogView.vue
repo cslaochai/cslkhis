@@ -117,8 +117,8 @@ const loadCatalogs = async () => {
     const res = await getChronicCatalogList({...catQuery, pageNum: catPage.pageNum, pageSize: catPage.pageSize});
     catRows.value = res.data?.records || [];
     catPage.total = res.data?.total || 0;
-  } catch (error) {
-    ElMessage.error(error?.message || '病种目录加载失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     catLoading.value = false;
   }
@@ -152,8 +152,8 @@ const toggleCatStatus = (row) => {
           await changeChronicCatalogStatus(row.id, next);
           ElMessage.success(next === 0 ? '已停用' : '已启用');
           loadCatalogs();
-        } catch (error) {
-          ElMessage.error(error?.message || '病种状态变更失败');
+        } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+          
         }
       })
       .catch(() => {

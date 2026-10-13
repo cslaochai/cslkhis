@@ -305,8 +305,8 @@ const loadData = async () => {
     });
     rows.value = res.data?.records || [];
     pagination.value.total = res.data?.total || 0;
-  } catch (error) {
-    ElMessage.error(error.message || '加载危急值列表失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }
@@ -353,10 +353,8 @@ const handleReceive = async (row) => {
     await receiveCriticalValue(row.id);
     ElMessage.success('已确认接收');
     await reload();
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.message || '接收失败');
-    }
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const showHandleDialog = ref(false);
@@ -384,8 +382,8 @@ const submitHandle = async () => {
       showDetail.value = false;
     }
     await reload();
-  } catch (error) {
-    ElMessage.error(error.message || '处置失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     handling.value = false;
   }

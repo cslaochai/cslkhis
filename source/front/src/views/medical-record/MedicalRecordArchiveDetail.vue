@@ -70,7 +70,7 @@ const loadDetail = async () => {
       ElMessage.error(res.message || '获取归档详情失败');
     }
   } catch (e) {
-    ElMessage.error('获取归档详情失败');
+    
     console.error(e);
   }
 };

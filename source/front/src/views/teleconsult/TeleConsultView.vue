@@ -208,12 +208,10 @@ const loadTele = async () => {
     if (res.code === 200) {
       teleRows.value = res.data?.records || [];
       teleTotal.value = Number(res.data?.total || 0);
-    } else {
-      ElMessage.error(res.message || '查询失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     teleLoading.value = false;
   }
@@ -265,11 +263,10 @@ const removeTele = async (row) => {
     if (res.code === 200) {
       ElMessage.success('删除成功');
       reloadAfterChange();
-    } else
-      ElMessage.error(res.message || '删除失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('删除失败');
+    
   }
 };
 // 详情（按 id 取数在 TeleConsultDetail）

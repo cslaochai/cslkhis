@@ -496,8 +496,8 @@ const handleTplSubmit = async () => {
     ElMessage.success(tplFormData.value.id ? '模板已更新' : '模板已创建');
     visible.value = false;
     emit('saved');
-  } catch (error) {
-    ElMessage.error(error.message || '保存失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     tplSubmitLoading.value = false;
   }

@@ -681,8 +681,8 @@ const loadOverview = async () => {
   try {
     const res = await getQualityControlOverview();
     overview.value = res.data;
-  } catch (e) {
-    ElMessage.error(e?.message || '加载质控概览失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     overviewLoading.value = false;
   }
@@ -704,8 +704,8 @@ const loadQcList = async () => {
     const res = await getQualityControlList(params);
     qcList.value = res.data?.records || [];
     qcTotal.value = Number(res.data?.total ?? 0);
-  } catch (e) {
-    ElMessage.error(e?.message || '加载质控单失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     qcLoading.value = false;
   }
@@ -729,8 +729,8 @@ const loadCandidates = async () => {
     const res = await listQcCandidatePage(params);
     candList.value = res.data?.records || [];
     candTotal.value = Number(res.data?.total ?? 0);
-  } catch (e) {
-    ElMessage.error(e?.message || '加载待质控病历失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     candLoading.value = false;
   }
@@ -740,8 +740,8 @@ const loadRules = async () => {
   try {
     const res = await listQcRuleMetric();
     ruleList.value = res.data || [];
-  } catch (e) {
-    ElMessage.error(e?.message || '加载规则清单失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     ruleLoading.value = false;
   }
@@ -750,8 +750,8 @@ const loadDicts = async () => {
   try {
     const res = await getQcTypeDict();
     qcTypeOptions.value = res.data || [];
-  } catch (e) {
-    ElMessage.error(e?.message || '加载质控类型字典失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const refreshAll = async () => {
@@ -778,8 +778,8 @@ const runQc = async (row) => {
     lastResult.value = res.data;
     ElMessage.success(`${row.recordNo}：${res.data?.score ?? '—'} 分 / ${res.data?.gradeText ?? '—'}级 / ${res.data?.qcResultText ?? ''}`);
     await Promise.all([loadQcList(), loadCandidates(), loadOverview(), loadRules()]);
-  } catch (e) {
-    ElMessage.error(e?.message || '执行质控失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     qcRunning.value = false;
   }
@@ -803,8 +803,8 @@ const runBatch = async () => {
     ElMessage.success(`已质控 ${results.length} 份，其中 ${failed} 份不通过`);
     candTableRef.value?.clearSelection?.();
     await Promise.all([loadQcList(), loadCandidates(), loadOverview(), loadRules()]);
-  } catch (e) {
-    ElMessage.error(e?.message || '批量质控失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     qcRunning.value = false;
   }
@@ -852,8 +852,8 @@ const loadFlowList = async () => {
     const res = await getQcFlowListPage(params);
     flowList.value = res.data?.records || [];
     flowTotal.value = Number(res.data?.total ?? 0);
-  } catch (e) {
-    ElMessage.error(e?.message || '加载流转单失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     flowLoading.value = false;
   }
@@ -878,8 +878,8 @@ const loadStartCandidates = async () => {
     const res = await listQcCandidatePage(params);
     startList.value = res.data?.records || [];
     startTotal.value = Number(res.data?.total ?? 0);
-  } catch (e) {
-    ElMessage.error(e?.message || '加载候选病历失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     startLoading.value = false;
   }
@@ -899,8 +899,8 @@ const submitStart = async () => {
     ElMessage.success('已发起，进入科级待审');
     startDialog.value = false;
     await loadFlowList();
-  } catch (e) {
-    ElMessage.error(e?.message || '发起失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // 详情抽屉（含时间线 + 分级操作，见 MedicalRecordQcFlowDetail.vue）

@@ -533,8 +533,8 @@ const submitMerge = async () => {
     ElMessage.success(`合并完成：${res.data?.mergedNo} 并入 ${res.data?.masterNo}，级别「${res.data?.matchTypeText}」。已写入审计，可撤销。`);
     mergeVisible.value = false;
     await Promise.all([loadDuplicates(), loadStats(), loadList()]);
-  } catch (e) {
-    ElMessage.error(e?.message || '合并失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     mergeSubmitting.value = false;
   }
@@ -550,9 +550,8 @@ const handleRevert = async (log) => {
     await revertPatientMerge({logId: log.id, revertReason: value});
     ElMessage.success('已撤销合并，档案重新在册');
     await Promise.all([loadLogs(), loadStats(), loadDuplicates()]);
-  } catch (e) {
-    if (e !== 'cancel')
-      ElMessage.error(e?.message || '撤销失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ---------- 详情抽屉（已拆至 PatientIndexDetail.vue，组件按 id 自取详情） ----------

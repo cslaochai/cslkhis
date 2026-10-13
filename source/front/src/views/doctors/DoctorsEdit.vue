@@ -104,8 +104,8 @@ watch(visible, async (open) => {
         isExpert: data.isExpert || '0',
       }
     }
-  } catch (error) {
-    ElMessage.error(error.message || '获取详情失败')
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     editLoading.value = false
   }
@@ -123,11 +123,9 @@ const handleEditSubmit = async () => {
       ElMessage.success('编辑成功')
       visible.value = false
       emit('saved')
-    } else {
-      ElMessage.error(res.message || '编辑失败')
-    }
-  } catch (error) {
-    ElMessage.error(error.message || '编辑失败')
+    } 
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 </script>

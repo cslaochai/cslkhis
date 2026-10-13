@@ -180,7 +180,7 @@ const onSaveCase = async () => {
       ElMessage.success(res.message || '报卡已保存')
       visible.value = false
       emit('saved')
-    } else ElMessage.error(res.message || '保存失败')
+    } 
   } catch (e) {
     console.error(e)
   }

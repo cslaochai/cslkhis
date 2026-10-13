@@ -472,8 +472,8 @@ const loadUnits = async () => {
       unitType.value = first.unitType;
       wardId.value = first.wardId;
     }
-  } catch (e) {
-    ElMessage.error(e.message || '加载排班单元失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ---------------- 周矩阵 ----------------
@@ -489,13 +489,10 @@ const loadMatrix = async () => {
       wardId: wardId.value,
       weekStart: weekStart.value
     });
-    if (res.code !== 200) {
-      ElMessage.error(res.message || '加载排班矩阵失败');
-      return;
-    }
+    
     matrix.value = res.data;
-  } catch (e) {
-    ElMessage.error(e.message || '加载排班矩阵失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     matrixLoading.value = false;
   }
@@ -539,8 +536,8 @@ const doRecalcDemand = async () => {
     const res = await recalcStaffDemand({startDate: weekStart.value, endDate: weekEnd.value});
     ElMessage.success(res.message || '需求已重算');
     await loadGaps();
-  } catch (e) {
-    ElMessage.error(e.message || '重算需求失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ---------------- 本周出勤执行（sql/214，闭环第3步：计划 vs 实际） ----------------
@@ -673,10 +670,7 @@ const removeCell = async (cell) => {
     return;
   }
   const res = await deleteNurseScheduleCell(cell.id);
-  if (res.code !== 200) {
-    ElMessage.error(res.message || '删除失败');
-    return;
-  }
+  
   ElMessage.success(res.message || '已删除');
   cellVisible.value = false;
   await loadMatrix();
@@ -695,10 +689,7 @@ const doCopyWeek = async () => {
     sourceWeekStart: source,
     targetWeekStart: weekStart.value
   });
-  if (res.code !== 200) {
-    ElMessage.error(res.message || '复制失败');
-    return;
-  }
+  
   ElMessage.success(res.message || `已复制 ${res.data?.copiedCount ?? 0} 格`);
   await loadMatrix();
 };
@@ -715,13 +706,10 @@ const runCheck = async () => {
       startDate: checkQuery.startDate,
       endDate: checkQuery.endDate
     });
-    if (res.code !== 200) {
-      ElMessage.error(res.message || '校验失败');
-      return;
-    }
+    
     checkResult.value = res.data;
-  } catch (e) {
-    ElMessage.error(e.message || '校验失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     checkLoading.value = false;
   }
@@ -744,13 +732,10 @@ const loadWorkload = async () => {
       wardId: wardId.value,
       month: workloadMonth.value
     });
-    if (res.code !== 200) {
-      ElMessage.error(res.message || '加载工时失败');
-      return;
-    }
+    
     workload.value = res.data;
-  } catch (e) {
-    ElMessage.error(e.message || '加载工时失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     workloadLoading.value = false;
   }
@@ -774,14 +759,11 @@ const loadLedger = async () => {
       endDate: ledger.dateRange?.[1] || undefined,
       pageNum: ledger.pageNum, pageSize: ledger.pageSize,
     });
-    if (res.code !== 200) {
-      ElMessage.error(res.message || '加载台账失败');
-      return;
-    }
+    
     ledgerRows.value = res.data?.records || [];
     ledgerTotal.value = Number(res.data?.total || 0);
-  } catch (e) {
-    ElMessage.error(e.message || '加载台账失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     ledgerLoading.value = false;
   }
@@ -799,13 +781,10 @@ const loadRules = async () => {
   ruleLoading.value = true;
   try {
     const res = await getNurseScheduleRuleList(unitType.value, wardId.value);
-    if (res.code !== 200) {
-      ElMessage.error(res.message || '加载标准失败');
-      return;
-    }
+    
     rules.value = res.data || [];
-  } catch (e) {
-    ElMessage.error(e.message || '加载标准失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     ruleLoading.value = false;
   }
@@ -830,10 +809,7 @@ const removeRule = async (row) => {
     return;
   }
   const res = await deleteNurseScheduleRule(row.id);
-  if (res.code !== 200) {
-    ElMessage.error(res.message || '删除失败');
-    return;
-  }
+  
   ElMessage.success(res.message || '已删除');
   await loadRules();
   if (activeTab.value === 'matrix')

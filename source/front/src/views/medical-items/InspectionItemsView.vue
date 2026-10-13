@@ -142,9 +142,9 @@ const handleDelete = async (row) => {
     if (res.code === 200) {
       ElMessage.success('删除成功');
       loadData()
-    } else ElMessage.error(res.message || '删除失败')
-  } catch (e) {
-    if (e !== 'cancel') ElMessage.error(e.message || '删除失败')
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 

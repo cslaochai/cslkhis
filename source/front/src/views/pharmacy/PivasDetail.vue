@@ -129,11 +129,10 @@ const load = async (id) => {
     const res = await getPivasDetail(id);
     if (res.code === 200)
       detail.value = res.data;
-    else
-      ElMessage.error(res.message || '查询详情失败');
+    
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询详情失败');
+    
   } finally {
     detailLoading.value = false;
   }
@@ -150,12 +149,10 @@ const onAuditPass = async (item) => {
     if (res.code === 200) {
       ElMessage.success(`审方通过（${item.drugName} × ${item.quantity}）`);
       await refreshDetail();
-    } else {
-      ElMessage.error(res.message || '审方失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('审方失败');
+    
   } finally {
     actLoading.value = false;
   }
@@ -173,9 +170,7 @@ const onAuditReject = async (item) => {
     if (res.code === 200) {
       ElMessage.success('已退回（该医嘱可重新入单）');
       await refreshDetail();
-    } else {
-      ElMessage.error(res.message || '退回失败');
-    }
+    } 
   } catch (e) {
     if (e !== 'cancel' && e?.message !== 'cancel')
       console.error(e);
@@ -196,9 +191,7 @@ const onLabelBatch = async () => {
     if (res.code === 200) {
       ElMessage.success('已排队取号，等待调配');
       await refreshDetail();
-    } else {
-      ElMessage.error(res.message || '打标签排队失败');
-    }
+    } 
   } catch (e) {
     if (e !== 'cancel' && e?.message !== 'cancel')
       console.error(e);
@@ -213,12 +206,10 @@ const onCompound = async (item) => {
     if (res.code === 200) {
       ElMessage.success(`调配完成（${item.drugName}）`);
       await refreshDetail();
-    } else {
-      ElMessage.error(res.message || '调配失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('调配失败');
+    
   } finally {
     actLoading.value = false;
   }
@@ -230,12 +221,10 @@ const onVerify = async (item) => {
     if (res.code === 200) {
       ElMessage.success('成品核对通过，已配送病区');
       await refreshDetail();
-    } else {
-      ElMessage.error(res.message || '核对发放失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('核对发放失败');
+    
   } finally {
     actLoading.value = false;
   }

@@ -137,7 +137,7 @@ const loadDetail = async () => {
     // 其他类型：直接展示 message.content（模板里兜底）
   } catch (error) {
     console.error('加载消息详情失败', error);
-    ElMessage.error(error?.message || '加载消息详情失败');
+    
   } finally {
     loading.value = false;
   }
@@ -242,8 +242,8 @@ const submitReceive = async () => {
     ElMessage.success('已确认接收，请及时填写处置措施');
     await loadCritical(criticalDetail.value.id);
     emit('processed');
-  } catch (error) {
-    ElMessage.error(error?.message || '接收失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     receiving.value = false;
   }
@@ -261,8 +261,8 @@ const submitHandle = async () => {
     ElMessage.success('处置已记录，危急值闭环完成');
     await loadCritical(criticalDetail.value.id);
     emit('processed');
-  } catch (error) {
-    ElMessage.error(error?.message || '处置失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     handling.value = false;
   }

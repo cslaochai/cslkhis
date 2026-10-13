@@ -275,8 +275,8 @@ const loadData = async () => {
     }));
     pagination.value.total = listRes.data?.total || 0;
     stats.value = statsRes.data || {};
-  } catch (e) {
-    ElMessage.error(e.message || '加载失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }
@@ -304,8 +304,8 @@ const confirmAssignBarcode = async () => {
     ElMessage.success('条码分配成功');
     showBarcodeDialog.value = false;
     loadData();
-  } catch (e) {
-    ElMessage.error(e.message || '操作失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleSample = async (row) => {
@@ -318,9 +318,8 @@ const handleSample = async (row) => {
     await sampleSpecimen(row.id, '护士');
     ElMessage.success('采集确认成功');
     loadData();
-  } catch (e) {
-    if (e !== 'cancel' && e?.message)
-      ElMessage.error(e.message);
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleReject = async (row) => {
@@ -335,9 +334,8 @@ const handleReject = async (row) => {
     await rejectSpecimen(row.id, reason);
     ElMessage.success('退回成功');
     loadData();
-  } catch (e) {
-    if (e !== 'cancel' && e?.message)
-      ElMessage.error(e.message);
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const traceNodes = (row) => {

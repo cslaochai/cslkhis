@@ -222,8 +222,8 @@ async function loadOverview() {
   try {
     const res = await getVteOverview()
     overview.value = res?.data || {}
-  } catch (e) {
-    ElMessage.error(e?.message || '看板加载失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 
@@ -273,8 +273,8 @@ async function openMeasures(row) {
     const res = await listVtePreventByAdmission(row.admissionId)
     detailRows.value = res?.data || []
     detailVisible.value = true
-  } catch (e) {
-    ElMessage.error(e?.message || '措施记录加载失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 
@@ -296,8 +296,8 @@ async function doDelete(id) {
     await deleteVtePrevent(id)
     ElMessage.success('已删除')
     loadRows()
-  } catch (e) {
-    ElMessage.error(e?.message || '删除失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 

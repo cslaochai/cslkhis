@@ -84,8 +84,8 @@ const submitAccept = async () => {
     ElMessage.success('已接收，转科生效（原科室长期医嘱已按规则处置，并回写转科记录病历）');
     visible.value = false;
     emit('saved');
-  } catch (error) {
-    ElMessage.error(error.message || '接收失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     acceptSubmitting.value = false;
   }

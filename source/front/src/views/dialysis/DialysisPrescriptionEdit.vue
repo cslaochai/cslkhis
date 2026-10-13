@@ -173,11 +173,9 @@ const savePrescription = async () => {
       resetPreForm();
       await loadPrescriptions();
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '处方保存失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '处方保存失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const stopPrescription = async (row) => {
@@ -187,11 +185,9 @@ const stopPrescription = async (row) => {
       ElMessage.success(res.message || '处方已停用');
       await loadPrescriptions();
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '处方停用失败');
-    }
-  } catch (e) {
-    ElMessage.error(e?.message || '处方停用失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 

@@ -125,8 +125,8 @@ async function load() {
   try {
     const res = await getBillDetailById(props.id);
     detail.value = res.data || null;
-  } catch (error) {
-    ElMessage.error(error.message || '加载账单详情失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }

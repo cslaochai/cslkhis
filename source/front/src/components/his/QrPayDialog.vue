@@ -1,5 +1,5 @@
 <template>
-  <el-dialog v-model="visible" destroy-on-close title="扫码收款" width="460px" @closed="onClosed">
+  <el-dialog v-model="visible" destroy-on-close :title="dialogTitle" width="460px" @closed="onClosed">
     <div class="space-y-3">
       <div class="rounded-lg bg-slate-50 px-3 py-2 text-sm">
         <div class="flex justify-between">
@@ -36,11 +36,27 @@
         </div>
       </div>
 
-      <el-radio-group v-model="channel" :disabled="creating || isPaid" @change="generate">
-        <el-radio v-for="item in CHANNEL_OPTIONS" :key="item.code" :value="item.code">{{ item.label }}</el-radio>
+      <el-radio-group v-model="method" :disabled="creating || isPaid || cashSubmitting" @change="onMethodChange">
+        <el-radio v-for="item in methodOptions" :key="item.code" :value="item.code">{{ item.label }}</el-radio>
       </el-radio-group>
 
-      <div class="flex min-h-[236px] flex-col items-center justify-center rounded-lg border border-slate-200 p-3">
+      <!-- 现金：窗口当场收钱记流水，没有「等患者扫」这一段，所以码区/倒计时/轮询全不出现 -->
+      <div v-if="isCash" class="min-h-[236px] rounded-lg border border-slate-200 p-3 text-sm">
+        <div class="flex justify-between py-1">
+          <span class="text-slate-500">收款方式</span>
+          <span>现金</span>
+        </div>
+        <div class="flex justify-between py-1">
+          <span class="text-slate-500">收款金额</span>
+          <b class="text-red-600">{{ moneyText(cashAmount) }}</b>
+        </div>
+        <p class="mt-2 text-xs leading-5 text-slate-500">
+          金额取账单尚需缴，页面不改数：多收的是找零，不进流水。
+          抽屉里的实钞与这笔现金是否相符，由「财务结算 → 交班」按班清点核对留痕。
+        </p>
+        <p v-if="error" class="mt-2 text-center text-sm text-red-600">{{ error }}</p>
+      </div>
+      <div v-else class="flex min-h-[236px] flex-col items-center justify-center rounded-lg border border-slate-200 p-3">
         <el-skeleton v-if="creating" :rows="3" animated class="w-full"/>
         <div v-else-if="qrImage && !isPaid" class="relative">
           <img :alt="`${channelLabel}收款码`" :class="{ 'opacity-40 blur-[3px]': qrExpired }" :src="qrImage"
@@ -68,7 +84,7 @@
         <p v-else class="px-2 text-center text-sm text-red-600">{{ error || '还没有生成收款码' }}</p>
       </div>
 
-      <p class="text-center text-xs text-slate-400">
+      <p v-if="!isCash" class="text-center text-xs text-slate-400">
         <template v-if="isPaid">收款流水已由后端按渠道查单确认，页面不代替它翻状态</template>
         <template v-else-if="qrImage && qrExpired">二维码已过期，点击「刷新收款码」重新出码</template>
         <template v-else-if="qrImage">
@@ -80,10 +96,18 @@
 
     <template #footer>
       <div class="flex justify-end space-x-2">
-        <el-button :disabled="!isPaid" :type="isPaid ? 'success' : 'info'" @click="visible = false">
-          {{ isPaid ? '完成' : (qrExpired ? '已过期' : '等待患者支付') }}
-        </el-button>
-        <el-button v-if="!isPaid" @click="visible = false">取消</el-button>
+        <template v-if="isCash">
+          <el-button :loading="cashSubmitting" data-testid="qrpay-cash-confirm" type="primary"
+                     @click="confirmCash">确认收到现金
+          </el-button>
+          <el-button @click="visible = false">取消</el-button>
+        </template>
+        <template v-else>
+          <el-button :disabled="!isPaid" :type="isPaid ? 'success' : 'info'" @click="visible = false">
+            {{ isPaid ? '完成' : (qrExpired ? '已过期' : '等待患者支付') }}
+          </el-button>
+          <el-button v-if="!isPaid" @click="visible = false">取消</el-button>
+        </template>
       </div>
     </template>
   </el-dialog>
@@ -92,14 +116,22 @@
 <script setup>
 import {computed, onUnmounted, ref, watch} from 'vue';
 import {Refresh} from '@element-plus/icons-vue';
-import {closeQrPay, createQrPay, getBillDetailById, queryQrPayResult} from '@/api/settlementBill';
+import {
+  closeQrPay,
+  createQrPay,
+  getBillDetailById,
+  payBill,
+  queryQrPayResult,
+} from '@/api/settlementBill';
 import {moneyText} from '@/lib/patientField';
 
 /**
- * 主扫收款弹层（收费台与挂号共用）：医院出码、患者扫码，页面只轮询结果。
+ * 收款弹层：一笔账单收一次，方式在弹层里选。
  *
- * 界面不出现「确认已支付」那类按钮 —— 收款事实来自渠道（异步通知 + 查单兜底），
+ * 界面不出现「确认已支付」那类按钮 —— 扫码那两档的收款事实来自渠道（异步通知 + 查单兜底），
  * 前端点一下就把账单置成已支付，等于让没收到钱的账先平了。
+ * 现金是唯一「本地自己决定」的一档：收银员当场点钞收到，按下确认即记一笔现金流水，
+ * 金额一律取账单尚欠（不给输入框），账实是否相符交给交班清点核对。
  *
  * 过期时间是服务端现算的（支付单创建时间 + 有效期），前端只负责按它做倒计时；
  * 倒计时走完后由服务端在轮询里把单关掉，刷新按钮出的是全新一张码。
@@ -110,6 +142,8 @@ const props = defineProps({
   billNo: {type: String, default: ''},
   patientName: {type: String, default: ''},
   amount: {type: [String, Number], default: 0},
+  /** 打开即给现金档（挂号窗口默认收现金）；收费台按「先扫码」的旧口径保持关闭 */
+  allowCash: {type: Boolean, default: false},
 });
 const emit = defineEmits(['update:modelValue', 'paid']);
 
@@ -118,6 +152,10 @@ const PAY_STATUS_PENDING = 0;
 const PAY_STATUS_CLOSED = 2;
 /** 渠道码值（PayChannelEnum）：1-微信 2-支付宝。支付宝已接通，微信缺商户证书，出码会明确报错 */
 const CHANNEL_OPTIONS = [{code: 2, label: '支付宝'}, {code: 1, label: '微信'}];
+/** 现金档的哨兵值（不是渠道码，也不是落库码值），只在弹层内部做分支 */
+const CASH_METHOD = 'CASH';
+/** 支付方式码值 1-现金（PaymentMethodEnum.CASH） */
+const PAY_METHOD_CASH = 1;
 /** 轮询间隔与后端「同单查单节流」同宽：比它更快只会撞上被节流的那一轮，白多一次请求 */
 const POLL_MS = 5000;
 const TICK_MS = 1000;
@@ -128,6 +166,9 @@ const visible = computed({
 });
 
 const channel = ref(CHANNEL_OPTIONS[0].code);
+/** 当前收款档：CASH 或渠道码值；method 与 channel 同步，渠道侧调用一律读 channel */
+const method = ref(CHANNEL_OPTIONS[0].code);
+const cashSubmitting = ref(false);
 const payNo = ref('');
 const qrImage = ref('');
 const payStatus = ref(null);
@@ -144,6 +185,13 @@ let tickTimer = null;
 
 const isPaid = computed(() => Number(payStatus.value) === PAY_STATUS_PAID);
 const isClosed = computed(() => Number(payStatus.value) === PAY_STATUS_CLOSED);
+const isCash = computed(() => method.value === CASH_METHOD);
+const methodOptions = computed(() => (props.allowCash
+    ? [{code: CASH_METHOD, label: '现金'}, ...CHANNEL_OPTIONS]
+    : CHANNEL_OPTIONS));
+const dialogTitle = computed(() => (props.allowCash ? '收费' : '扫码收款'));
+/** 现金只收账单尚欠：应收/已收都由服务端现算，页面不自减（尚欠没回来时退回父页面传入的本单金额） */
+const cashAmount = computed(() => Number(summary.value.unpaidAmount ?? props.amount) || 0);
 const channelLabel = computed(() => CHANNEL_OPTIONS.find((i) => i.code === channel.value)?.label || '');
 const feeItems = computed(() => billDetail.value?.items || []);
 const summary = computed(() => billDetail.value || {});
@@ -156,8 +204,12 @@ const countdownText = computed(() => {
 });
 
 watch(visible, (v) => {
-  if (v) {
-    loadBillDetail();
+  if (!v) {
+    return;
+  }
+  method.value = props.allowCash ? CASH_METHOD : CHANNEL_OPTIONS[0].code;
+  loadBillDetail();
+  if (!isCash.value) {
     generate();
   }
 });
@@ -254,6 +306,51 @@ async function generate() {
   }
 }
 
+/**
+ * 档位切换：现金与码不能并存 —— 收了现金还留着一张能扫的码，患者扫完就是同一笔账收两次，
+ * 所以切走时必须关掉待支付的支付单（与关掉弹框同一口径）。
+ */
+async function onMethodChange(val) {
+  if (val === CASH_METHOD) {
+    stopPoll();
+    stopTick();
+    if (payNo.value && Number(payStatus.value) === PAY_STATUS_PENDING) {
+      closeQrPay({payNo: payNo.value}).catch(() => {});
+    }
+    payNo.value = '';
+    qrImage.value = '';
+    payStatus.value = null;
+    error.value = '';
+    return;
+  }
+  channel.value = val;
+  error.value = '';
+  await generate();
+}
+
+/** 现金入账：记一笔现金流水，账单是否付清由后端按流水现算 */
+async function confirmCash() {
+  if (!props.billId) {
+    error.value = '缺少账单，无法收款';
+    return;
+  }
+  if (cashAmount.value <= 0) {
+    error.value = '该账单没有应缴金额';
+    return;
+  }
+  cashSubmitting.value = true;
+  error.value = '';
+  try {
+    await payBill({billId: props.billId, items: [{payMethod: PAY_METHOD_CASH, amount: cashAmount.value}]});
+    emit('paid', {payMethod: PAY_METHOD_CASH, amount: cashAmount.value});
+    visible.value = false;
+  } catch (e) {
+    error.value = e.message || '现金收款失败';
+  } finally {
+    cashSubmitting.value = false;
+  }
+}
+
 async function pollOnce() {
   if (!payNo.value || isPaid.value) {
     return;
@@ -302,6 +399,8 @@ function onClosed() {
   if (payNo.value && Number(payStatus.value) === PAY_STATUS_PENDING) {
     closeQrPay({payNo: payNo.value}).catch(() => {});
   }
+  method.value = props.allowCash ? CASH_METHOD : CHANNEL_OPTIONS[0].code;
+  cashSubmitting.value = false;
   payNo.value = '';
   qrImage.value = '';
   payStatus.value = null;

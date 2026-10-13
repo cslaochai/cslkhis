@@ -46,12 +46,10 @@ const submitCancel = async () => {
       ElMessage.success('已取消');
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '取消失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('取消失败');
+    
   } finally {
     cancelLoading.value = false;
   }

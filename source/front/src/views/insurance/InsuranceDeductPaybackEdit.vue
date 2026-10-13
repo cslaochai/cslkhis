@@ -76,10 +76,10 @@ const submitPayback = async () => {
     ElMessage.success('已录入缴回，这张扣款单闭环');
     visible.value = false;
     emit('saved');
-  } catch (error) {
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
     // 缴回金额与实扣不符、未确认追责先缴回这类情况由后端判定，拒的原因必须原样回给用户，
     // 否则点「确定」后弹窗静止、用户以为页面坏了
-    ElMessage.error(error?.message || '缴回登记失败');
+    
   } finally {
     paybackSubmitting.value = false;
   }

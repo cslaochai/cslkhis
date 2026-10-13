@@ -24,4 +24,10 @@ public class RegistChargeCommandVO {
     private BigDecimal diagnosisFee;
     private boolean waived;
     private String waiveReason;
+
+    /**
+     * 本单结算方式（与收费账单 settlement_mode 同口径）：1-全自费 2-医保联网。
+     * 由挂号单 settlement_type 透传，允许医保患者本单改自费；不传时收费侧按患者费别/医保号推断。
+     */
+    private Integer settlementMode;
 }

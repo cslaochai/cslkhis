@@ -224,8 +224,8 @@ const loadData = async () => {
       tableData.value = res.data.records || []
       pagination.value.total = res.data.total || 0
     }
-  } catch (e) {
-    ElMessage.error(e.message || '加载排班失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false
   }
@@ -263,11 +263,9 @@ const handleCancelSubstitute = async (row) => {
     if (res.code === 200) {
       ElMessage.success('已撤回换班')
       loadData()
-    } else {
-      ElMessage.error(res.message || '撤回失败')
-    }
-  } catch (e) {
-    if (e !== 'cancel' && e.message) ElMessage.error(e.message)
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 
@@ -280,11 +278,9 @@ const handleDelete = async (row) => {
     if (res.code === 200) {
       ElMessage.success('删除成功')
       loadData()
-    } else {
-      ElMessage.error(res.message || '删除失败')
-    }
-  } catch (e) {
-    if (e !== 'cancel' && e.message) ElMessage.error(e.message)
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 

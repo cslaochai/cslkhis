@@ -26,11 +26,14 @@
           <el-select v-model="rescheduleForm.scheduleId" :fit-input-width="false"
                      :loading="rescheduleLoading" class="!w-full" placeholder="选择新号源"
                      @change="handleRescheduleScheduleChange">
-            <el-option v-for="s in rescheduleSchedules" :key="s.id" :label="`${s.scheduleDate} ${deskShiftLabel(s.scheduleType)} ${s.startTime}-${s.endTime} ${s.doctorName} 余${s.availableSource}`"
+            <el-option v-for="s in rescheduleOptions" :key="s.id"
+                       :label="`${s.scheduleDate} ${deskShiftLabel(s.scheduleType)} ${s.startTime}-${s.endTime} ${s.doctorName} 余${s.availableSource}`"
                        :value="s.id"/>
           </el-select>
-          <p v-if="rescheduleForm.visitDate && !rescheduleSchedules.length && !rescheduleLoading"
-             class="mt-1 text-xs text-amber-600">该日此科室暂有余号班次，换一天试试</p>
+          <p v-if="rescheduleForm.visitDate && !rescheduleLoading && !rescheduleOptions.length"
+             class="mt-1 text-xs text-amber-600">
+            {{ rescheduleSchedules.length ? '该日该医生暂无同费用的余号班次，换一天试试' : '该日此科室暂有余号班次，换一天试试' }}
+          </p>
         </el-form-item>
         <el-form-item label="时间段">
           <!-- 选了段：后端按段迁移（还旧段/扣新段）；不选：只迁移主表号源 -->
@@ -56,7 +59,7 @@
 import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {getAvailableSchedule, getScheduleSlots, updateRegistration} from '@/api/appoint';
-import {deskShiftLabel, slotLabel} from '@/lib/appointments';
+import {deskShiftLabel, isRegistPaid, isPaidRescheduleCandidate, scheduleFeeCents, slotLabel} from '@/lib/appointments';
 
 // 看板改约弹窗（从 AppointmentsView 拆出）。提交仍是 updateRegistration 换 scheduleId/slotId：
 // 释放旧号/扣新号是后端原子动作，页面只负责把「从哪改到哪」选清楚。
@@ -81,6 +84,11 @@ const rescheduleForm = ref({
   scheduleId: null,
   // 新号源下的时间段（可选）：传了按段迁移（还旧段扣新段），不传只迁移主表号源
   slotId: null,
+  // 后端 appointUpsert 是新增/修改共用一个 DTO，patientId/visitType/settlementType 是必填项：
+  // 改约只换号源、这三个值原样带回（修改分支只读 scheduleId/slotId/visitType，不会改写它们）
+  patientId: null,
+  visitType: null,
+  settlementType: null,
   // ↓ 仅展示用（不提交）：打开弹窗时把这条预约**现在**挂的号源/时间段带出来，
   //   否则改约的人对着一个空表单根本不知道自己正在从哪改到哪
   currentSourceText: '',
@@ -89,6 +97,14 @@ const rescheduleForm = ref({
 const rescheduleSchedules = ref([]);
 const rescheduleSlots = ref([]);
 const rescheduleSlotLoading = ref(false);
+/**
+ * 已收费的号只留「同医生 + 同费用」的候选（与后端闸同一口径）：
+ * 医生这一维在取数时就按 doctorId 收口（见 loadRescheduleSchedules），费用在前端比。
+ * 原价取当前号源的挂号费 + 诊查费；拿不到原价（历史号源已被删）时不比费用，交给后端判。
+ */
+const origFeeCents = computed(() => (props.schedule ? scheduleFeeCents(props.schedule) : null));
+const rescheduleOptions = computed(() => rescheduleSchedules.value
+    .filter((s) => isPaidRescheduleCandidate(props.row, origFeeCents.value, s)));
 watch(visible, (open) => {
   if (!open)
     return;
@@ -100,6 +116,9 @@ watch(visible, (open) => {
     visitDate: r.visitDate,
     scheduleId: r.scheduleId || null,
     slotId: r.slotId || null,
+    patientId: r.patientId ?? null,
+    visitType: r.visitType ?? null,
+    settlementType: r.settlementType ?? null,
     // 当前号源 = 挂号挂的那条排班（主页面从 deskScheduleMap 取好传进 schedule）；时间段优先用挂号
     // 自带的段快照（精确到半小时档），没有段快照（历史挂号）就只展示排班窗口
     currentSourceText: (() => {
@@ -139,7 +158,9 @@ const loadRescheduleSchedules = async () => {
   }
   rescheduleLoading.value = true;
   try {
-    const res = await getAvailableSchedule(rescheduleForm.value.deptId, rescheduleForm.value.visitDate);
+    // 已收费只认同医生的号源，取数时就按 doctorId 收口，不把不该出现的候选捞回前端再筛
+    const doctorId = isRegistPaid(props.row) ? props.row?.doctorId : undefined;
+    const res = await getAvailableSchedule(rescheduleForm.value.deptId, rescheduleForm.value.visitDate, doctorId);
     // 改约只列还有余号的班次
     rescheduleSchedules.value = (res.data || []).filter((s) => s.availableSource > 0);
   } catch (error) {
@@ -157,14 +178,17 @@ const handleConfirmReschedule = async () => {
   try {
     await updateRegistration({
       id: rescheduleForm.value.registId,
+      patientId: rescheduleForm.value.patientId,
       scheduleId: rescheduleForm.value.scheduleId,
       slotId: rescheduleForm.value.slotId || undefined,
+      visitType: rescheduleForm.value.visitType,
+      settlementType: rescheduleForm.value.settlementType,
     });
     visible.value = false;
     ElMessage.success('改约成功');
     emit('saved');
-  } catch (error) {
-    ElMessage.error(error.message || '改约失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     rescheduleLoading.value = false;
   }

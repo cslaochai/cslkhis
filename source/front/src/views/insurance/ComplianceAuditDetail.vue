@@ -118,10 +118,10 @@ watch(visible, async (open) => {
     if (res.code === 200) {
       detail.value = res.data || props.row || {}
       items.value = res.data?.items || []
-    } else ElMessage.error(res.message || '加载审核详情失败')
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载审核详情失败')
+    
   } finally {
     detailLoading.value = false
   }
@@ -141,10 +141,10 @@ const runAiEvidence = async () => {
     if (res.code === 200) {
       aiEvidence.value = res.data
       if (res.data?.degraded) ElMessage.warning(`AI 证据判定暂不可用（${res.data.degradeReason || '原因未知'}），请人工核对证据`)
-    } else ElMessage.error(res.message || 'AI 证据判定失败')
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('AI 证据判定失败')
+    
   } finally {
     aiEvidenceLoading.value = false
   }

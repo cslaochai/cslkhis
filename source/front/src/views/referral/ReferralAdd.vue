@@ -113,11 +113,10 @@ const submitCreate = async () => {
       ElMessage.success('转诊单已登记');
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '登记失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('登记失败');
+    
   } finally {
     saving.value = false;
   }

@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * 账单收款入参（L3）：一次提交可以带多笔、多渠道（现金 30 + 余额 50 + 医保个账 20）。
+ * 账单收款入参：一次提交可以带多笔、多渠道（现金 30 + 余额 50 + 医保个账 20）。
  */
 @Data
 public class BillPayDTO {

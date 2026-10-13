@@ -415,10 +415,8 @@ const handleCheckIn = async (row) => {
     await checkIn(row.id);
     ElMessage.success('签到成功');
     loadData();
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.message || '签到失败');
-    }
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleStartExam = async (row) => {
@@ -431,10 +429,8 @@ const handleStartExam = async (row) => {
     await startInspection(row.id);
     ElMessage.success('已开始检查');
     loadData();
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.message || '操作失败');
-    }
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 /**
@@ -458,8 +454,8 @@ const handleFinishShoot = async (row) => {
     await finishShoot(row.id);
     ElMessage.success('拍片完成，已转到放射诊断工作站');
     loadData();
-  } catch (error) {
-    ElMessage.error(error.message || '操作失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleResultEntry = async (row) => {
@@ -483,8 +479,8 @@ const handleSubmitResult = async () => {
     ElMessage.success('检查结果提交成功');
     showResultDialog.value = false;
     loadData();
-  } catch (error) {
-    ElMessage.error(error.message || '提交失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleAudit = async (row) => {
@@ -508,8 +504,8 @@ const handleSubmitAudit = async () => {
     ElMessage.success('审核成功');
     showAuditDialog.value = false;
     loadData();
-  } catch (error) {
-    ElMessage.error(error.message || '审核失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 onMounted(() => {

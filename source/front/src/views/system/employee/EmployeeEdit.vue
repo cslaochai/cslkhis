@@ -362,8 +362,8 @@ watch(visible, async (open) => {
       postRows.value = postsFromApi(data.posts)
       loadCertRows(data.id)
     }
-  } catch (error) {
-    ElMessage.error(error.message || '获取员工信息失败')
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 })
 
@@ -415,11 +415,9 @@ const handleSubmit = async () => {
       ElMessage.success(formData.id ? '修改成功' : '新增成功')
       visible.value = false
       emit('saved')
-    } else {
-      ElMessage.error(res.message || '操作失败')
-    }
-  } catch (error) {
-    ElMessage.error(error.message || '操作失败')
+    } 
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     submitLoading.value = false
   }
@@ -433,8 +431,8 @@ const loadCertRows = async (employeeId) => {
       certRows.value = res.data || []
       certSnapshot.value = (res.data || []).map((row) => ({...row}))
     }
-  } catch (error) {
-    ElMessage.error(error.message || '加载资格证书失败')
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 
@@ -503,13 +501,9 @@ const handleDeleteCert = async (row) => {
     if (res.code === 200) {
       ElMessage.success('删除成功')
       loadCertRows(formData.id)
-    } else {
-      ElMessage.error(res.message || '删除失败')
-    }
-  } catch (error) {
-    if (error !== 'cancel' && error.message) {
-      ElMessage.error(error.message)
-    }
+    } 
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 

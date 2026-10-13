@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 支付资金流水台账（L3）。
+ * 支付资金流水台账。
  */
 @Tag(name = "支付流水")
 @RestController

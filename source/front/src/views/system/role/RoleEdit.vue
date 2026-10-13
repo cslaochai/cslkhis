@@ -124,7 +124,7 @@ watch(visible, async (open) => {
       visible.value = false
     }
   } catch (error) {
-    ElMessage.error(error.message || '获取角色信息失败')
+    
     visible.value = false
   }
 })
@@ -151,11 +151,9 @@ const handleSubmit = async () => {
       ElMessage.success(formData.id ? '修改成功' : '新增成功')
       visible.value = false
       emit('saved')
-    } else {
-      ElMessage.error(res.message || '操作失败')
-    }
-  } catch (error) {
-    ElMessage.error(error.message || '操作失败')
+    } 
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     submitLoading.value = false
   }

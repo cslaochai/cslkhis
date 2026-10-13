@@ -71,11 +71,10 @@ watch(visible, async (open) => {
     const res = await getTreatmentApplyDetail(props.id);
     if (res.code === 200)
       data.value = res.data;
-    else
-      ElMessage.error(res.message || '加载详情失败');
+    
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载详情失败');
+    
   } finally {
     loading.value = false;
   }

@@ -463,8 +463,8 @@ const loadList = async () => {
       rows.value = res.data.records || [];
       total.value = Number(res.data.total || 0);
     }
-  } catch (e) {
-    ElMessage.error(e?.message || '加载追溯码台账失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }
@@ -520,8 +520,8 @@ const doScanCollect = async () => {
       collectForm.stockId = String(d.batches[0].stockId);
     if (d && !d.canCollect && d.tip)
       ElMessage.warning(d.tip);
-  } catch (e) {
-    ElMessage.error(e?.message || '扫码解析失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const submitCollect = async () => {
@@ -549,8 +549,8 @@ const submitCollect = async () => {
       collectScan.value = null;
       await Promise.all([loadList(), loadStats()]);
     }
-  } catch (e) {
-    ElMessage.error(e?.message || '采集失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ============ 发药核销 ============
@@ -591,8 +591,8 @@ const doScanDispense = async () => {
     const d = res?.data;
     if (d && !d.canDispense && d.tip)
       ElMessage.warning(d.tip);
-  } catch (e) {
-    ElMessage.error(e?.message || '扫码校验失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const submitDispense = async () => {
@@ -611,8 +611,8 @@ const submitDispense = async () => {
       dispenseScan.value = null;
       await Promise.all([loadList(), loadStats()]);
     }
-  } catch (e) {
-    ElMessage.error(e?.message || '核销失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ============ 作废 ============
@@ -638,8 +638,8 @@ const doDelete = async (row) => {
       ElMessage.success('已删除');
       await Promise.all([loadList(), loadStats()]);
     }
-  } catch (e) {
-    ElMessage.error(e?.message || '删除失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ============ 上传 ============
@@ -663,8 +663,8 @@ const doUpload = async (ids) => {
       }
       await Promise.all([loadList(), loadStats()]);
     }
-  } catch (e) {
-    ElMessage.error(e?.message || '上传失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     uploading.value = false;
   }

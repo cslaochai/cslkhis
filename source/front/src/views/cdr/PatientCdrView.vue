@@ -571,8 +571,8 @@ const load = async () => {
       clinical.value = null;
       console.error('临床摘要加载失败', cs.reason);
     }
-  } catch (e) {
-    ElMessage.error(e?.message || '加载患者全景失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }

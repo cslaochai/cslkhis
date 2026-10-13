@@ -68,11 +68,10 @@ const doExecute = async () => {
       ElMessage.success(res.message || '已打卡');
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '打卡失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('打卡失败');
+    
   } finally {
     saving.value = false;
   }

@@ -242,8 +242,8 @@ const handleGenerate = async () => {
     });
     ElMessage.success(res.message || '上报报文已生成');
     loadList();
-  } catch (e) {
-    ElMessage.error(e?.message || '生成失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     genLoading.value = false;
   }
@@ -274,7 +274,7 @@ const loadList = async () => {
     pagination.value.total = res.data?.total || 0;
   } catch (e) {
     console.error('加载上报台账失败:', e);
-    ElMessage.error(e?.message || '加载上报台账失败');
+    
   } finally {
     loading.value = false;
   }
@@ -298,9 +298,8 @@ const handleSubmit = async (row) => {
     const res = await submitStatReport(row.id);
     ElMessage.success(res.message || '已报出');
     loadList();
-  } catch (e) {
-    if (e !== 'cancel' && e?.message)
-      ElMessage.error(e.message || '报出失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleVoid = async (row) => {
@@ -314,9 +313,8 @@ const handleVoid = async (row) => {
     if (previewVisible.value && previewRow.value?.id === row.id)
       closePreview();
     loadList();
-  } catch (e) {
-    if (e !== 'cancel' && e?.message)
-      ElMessage.error(e.message || '作废失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ========== 报文预览 / 打印 ==========
@@ -333,8 +331,8 @@ const openPreview = async (row) => {
     previewPayload.value = JSON.parse(res.data?.payload || '{}');
     showRaw.value = false;
     previewVisible.value = true;
-  } catch (e) {
-    ElMessage.error(e?.message || '加载报文失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const closePreview = () => {

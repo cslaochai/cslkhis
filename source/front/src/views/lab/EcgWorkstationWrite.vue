@@ -350,7 +350,7 @@ const openWrite = async () => {
       templates.value = t.data || [];
     }
   } catch (e) {
-    ElMessage.error(e?.message || '打开失败');
+    
     visible.value = false;
   }
 };
@@ -380,8 +380,8 @@ const doSaveMeasure = async () => {
     const res = await ecgSaveMeasure({recordId: detail.value?.recordId, ...measureForm.value});
     detail.value = res.data;
     ElMessage.success('测量参数已保存');
-  } catch (e) {
-    ElMessage.error(e?.message || '保存失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     submitting.value = false;
   }
@@ -396,8 +396,8 @@ const doSaveHolter = async () => {
     detail.value = res.data;
     ElMessage.success('Holter 分析已保存');
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.message || '保存失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     submitting.value = false;
   }
@@ -420,8 +420,8 @@ const doSaveDraft = async () => {
     form.value.reportId = res.data?.reportId;
     ElMessage.success('草稿已保存');
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.message || '保存失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     submitting.value = false;
   }
@@ -450,8 +450,8 @@ const doSubmit = async () => {
     ElMessage.success('已提交审核（报告医师签名已完成）');
     visible.value = false;
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.message || '提交失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     submitting.value = false;
   }

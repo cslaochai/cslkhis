@@ -51,11 +51,10 @@ const submitDispose = async () => {
       ElMessage.success('处置确认成功');
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '操作失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('操作失败');
+    
   }
 };
 </script>

@@ -255,12 +255,10 @@ const loadList = async () => {
     if (res.code === 200) {
       rows.value = res.data?.records || [];
       total.value = Number(res.data?.total || 0);
-    } else {
-      ElMessage.error(res.message || '查询失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     loading.value = false;
   }
@@ -278,11 +276,10 @@ const runOverdueNotify = async () => {
     const res = await notifyBorrowOverdue();
     if (res.code === 200)
       ElMessage.success(res.message || '已补跑超期提醒');
-    else
-      ElMessage.error(res.message || '补跑失败');
+    
   } catch (e) {
     console.error(e);
-    ElMessage.error('补跑失败');
+    
   }
 };
 // ------------------------------------------------------------------
@@ -323,12 +320,10 @@ const submitAudit = async () => {
       auditVisible.value = false;
       loadList();
       loadStats();
-    } else {
-      ElMessage.error(res.message || '审核失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('审核失败');
+    
   } finally {
     auditLoading.value = false;
   }
@@ -345,12 +340,10 @@ const giveBack = async (row) => {
       ElMessage.success('归还登记成功');
       loadList();
       loadStats();
-    } else {
-      ElMessage.error(res.message || '归还失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('归还失败');
+    
   }
 };
 const remove = async (row) => {
@@ -365,12 +358,10 @@ const remove = async (row) => {
       ElMessage.success('删除成功');
       loadList();
       loadStats();
-    } else {
-      ElMessage.error(res.message || '删除失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('删除失败');
+    
   }
 };
 // ------------------------------------------------------------------

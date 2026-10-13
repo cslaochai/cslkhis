@@ -56,11 +56,10 @@ const saveExecute = async () => {
       ElMessage.success(res.message || '操作成功');
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '操作失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('操作失败');
+    
   } finally {
     actLoading.value = false;
   }

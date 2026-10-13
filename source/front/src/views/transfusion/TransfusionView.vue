@@ -513,8 +513,8 @@ const loadList = async () => {
     });
     rows.value = (res.data?.records || []);
     total.value = Number(res.data?.total || 0);
-  } catch (error) {
-    ElMessage.error(error.message || '加载用血申请失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }
@@ -658,7 +658,7 @@ const handleCancel = async (row) => {
   } catch (error) {
     if (error === 'cancel' || error?.message === 'cancel')
       return;
-    ElMessage.error(error.message || '取消失败');
+    
   }
 };
 // ---------------- 详情 ----------------

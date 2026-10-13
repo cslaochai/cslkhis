@@ -228,10 +228,10 @@ const loadStats = async () => {
   try {
     const res = await getReportStats()
     if (res.code === 200) stats.value = res.data || {}
-    else ElMessage.error(res.message || '加载统计失败')
+    
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载统计失败')
+    
   }
 }
 const notifying = ref(false)
@@ -240,7 +240,7 @@ const onNotify = async () => {
   try {
     const res = await reportNotifyOverdue()
     if (res.code === 200) ElMessage.success(`超时限催报完成，发送 ${res.data || 0} 条站内信`)
-    else ElMessage.error(res.message || '催报失败')
+    
     await loadStats()
   } finally {
     notifying.value = false
@@ -268,10 +268,10 @@ const loadRows = async () => {
     if (res.code === 200) {
       rows.value = res.data?.records || [];
       total.value = res.data?.total || 0
-    } else ElMessage.error(res.message || '加载报卡失败')
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载报卡失败')
+    
   } finally {
     loading.value = false
   }
@@ -370,7 +370,7 @@ const onSave = async () => {
       ElMessage.success(res.message || '报卡已保存')
       openVisible.value = false
       await Promise.all([loadRows(), loadStats()])
-    } else ElMessage.error(res.message || '保存失败')
+    } 
   } catch (e) {
     console.error(e)
   }
@@ -387,7 +387,7 @@ const onAudit = async (row) => {
   if (res.code === 200) {
     ElMessage.success('审核通过，可直报');
     await Promise.all([loadRows(), loadStats()])
-  } else ElMessage.error(res.message || '审核失败')
+  } 
 }
 const onReturn = async (row) => {
   const {value} = await ElMessageBox.prompt(`退回报卡 ${row.reportNo}，修改后可重报（重报次数会留痕）`, '退报原因（必填）', {
@@ -399,7 +399,7 @@ const onReturn = async (row) => {
   if (res.code === 200) {
     ElMessage.success('已退报');
     await Promise.all([loadRows(), loadStats()])
-  } else ElMessage.error(res.message || '退报失败')
+  } 
 }
 const onDirect = async (row) => {
   await ElMessageBox.confirm(
@@ -413,7 +413,7 @@ const onDirect = async (row) => {
           await loadRows();
           await loadStats();
           await showDetail({id: row.id})
-        } else ElMessage.error(res.message || '直报失败')
+        } 
       })
 }
 

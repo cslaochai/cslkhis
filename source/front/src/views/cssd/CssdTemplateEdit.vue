@@ -160,7 +160,7 @@ watch(visible, async (v) => {
     });
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
     visible.value = false;
   }
 });
@@ -196,11 +196,10 @@ const save = async () => {
       ElMessage.success('模板已保存');
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '保存失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('保存失败');
+    
   } finally {
     saving.value = false;
   }

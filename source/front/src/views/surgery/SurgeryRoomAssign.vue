@@ -172,8 +172,8 @@ const submitSchedule = async () => {
     ElMessage.success('已排台');
     visible.value = false;
     emit('saved');
-  } catch (error) {
-    ElMessage.error(error.message || '排台失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     scheduleSubmitting.value = false;
   }

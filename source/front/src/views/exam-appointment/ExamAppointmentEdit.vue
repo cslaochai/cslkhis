@@ -115,11 +115,10 @@ const loadBookDevices = async (itemId) => {
       dlg.devices = res.data || [];
       if (!dlg.devices.length)
         ElMessage.warning('该项目还没有配置可开展设备，请到「设备与号源」页配置');
-    } else
-      ElMessage.error(res.message || '加载设备失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载设备失败');
+    
   }
 };
 
@@ -175,11 +174,10 @@ const loadBoard = async () => {
     const res = await getExamSlotBoard({deviceId: dlg.form.deviceId, slotDate: dlg.form.examDate});
     if (res.code === 200)
       dlg.board = res.data;
-    else
-      ElMessage.error(res.message || '加载号源失败');
+    
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载号源失败');
+    
   } finally {
     dlg.boardLoading = false;
   }
@@ -217,11 +215,10 @@ const runRecommend = async () => {
       dlg.rec = res.data;
       if (!res.data?.options?.length)
         ElMessage.info(res.data?.message || '近期没有可用时段');
-    } else
-      ElMessage.error(res.message || '推荐失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('推荐失败');
+    
   } finally {
     dlg.recLoading.value = false;
   }
@@ -273,11 +270,10 @@ const submitAppt = async () => {
       ElMessage.success(res.message || '操作成功');
       visible.value = false;
       emit('saved');
-    } else
-      ElMessage.error(res.message || '预约失败');
-  } catch (e) {
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
     // 冲突由服务端判定，message 里点名占用者，必须原样给用户看
-    ElMessage.error(e?.response?.data?.message || e?.message || '预约失败');
+    
   } finally {
     dlg.submitting = false;
   }

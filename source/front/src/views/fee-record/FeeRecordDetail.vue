@@ -74,7 +74,7 @@ async function load() {
     detail.value = res.data || null;
   } catch (e) {
     detail.value = null;
-    ElMessage.error(e.message || '加载详情失败');
+    
   } finally {
     loading.value = false;
   }

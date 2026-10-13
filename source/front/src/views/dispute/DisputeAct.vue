@@ -97,12 +97,10 @@ const submitAct = async () => {
       ElMessage.success(tip);
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || `${meta.title}失败`);
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error(`${meta.title}失败`);
+    
   } finally {
     actLoading.value = false;
   }

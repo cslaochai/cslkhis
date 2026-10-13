@@ -252,8 +252,8 @@ async function loadList() {
     const res = await listNutritionConsultPage({...query})
     rows.value = res?.data?.records || []
     total.value = Number(res?.data?.total || 0)
-  } catch (e) {
-    ElMessage.error(e?.message || '查询失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false
   }
@@ -312,8 +312,8 @@ async function doAccept(row) {
     ElMessage.success('已接诊（接诊人 = 当前登录用户）')
     loadList()
     loadOverview()
-  } catch (e) {
-    ElMessage.error(e?.message || '接诊失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     saving.value = false
   }
@@ -343,8 +343,8 @@ async function doCancel(row) {
     ElMessage.success('已取消')
     loadList()
     loadOverview()
-  } catch (e) {
-    ElMessage.error(e?.message || '取消失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 

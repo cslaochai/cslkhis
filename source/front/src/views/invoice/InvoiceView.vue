@@ -134,7 +134,7 @@ async function loadList() {
   } catch (e) {
     rows.value = [];
     pagination.total = 0;
-    ElMessage.error(e?.message || '加载发票列表失败');
+    
   } finally {
     loading.value = false;
   }
@@ -181,8 +181,8 @@ async function handlePrint(row) {
     await printInvoice(row.id);
     ElMessage.success('打印已记录');
     loadList();
-  } catch (e) {
-    ElMessage.error(e?.message || '打印失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 
@@ -204,8 +204,8 @@ async function handleVoid(row) {
     await voidInvoice(row.id, reason);
     ElMessage.success('发票已作废');
     loadList();
-  } catch (e) {
-    ElMessage.error(e?.message || '作废失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 

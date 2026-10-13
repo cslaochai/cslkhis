@@ -114,8 +114,8 @@ const submitPreopCheck = async () => {
     ElMessage.success('术前核对已完成，可以上台并登记手术完成');
     visible.value = false;
     emit('saved');
-  } catch (error) {
-    ElMessage.error(error.message || '术前核对失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     checkSubmitting.value = false;
   }

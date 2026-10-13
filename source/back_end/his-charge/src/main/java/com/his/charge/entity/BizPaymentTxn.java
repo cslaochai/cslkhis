@@ -15,7 +15,7 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
- * 支付资金流水（L3）：一笔真金白银一行，收退同表带符号（收款正、退款负）。
+ * 支付资金流水：一笔真金白银一行，收退同表带符号（收款正、退款负）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

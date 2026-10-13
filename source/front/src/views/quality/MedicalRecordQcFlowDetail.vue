@@ -134,8 +134,8 @@ const load = async () => {
     const [d, a] = await Promise.all([getQcFlowDetail(props.id), getQcFlowActions(props.id)]);
     flowDetail.value = d.data;
     flowActions.value = a.data || [];
-  } catch (e) {
-    ElMessage.error(e?.message || '加载流转详情失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     flowDetailLoading.value = false;
   }
@@ -152,8 +152,8 @@ const doApprove = async () => {
     await approveQcFlow({flowId: flowDetail.value.id, opinion: flowOpinion.value || undefined});
     ElMessage.success('审核通过，已送下一级');
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.message || '审核失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     flowBusy.value = false;
   }
@@ -174,8 +174,8 @@ const doReturn = async () => {
     });
     ElMessage.success('已退回整改');
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.message || '退回失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     flowBusy.value = false;
   }
@@ -186,8 +186,8 @@ const doResubmit = async () => {
     await resubmitQcFlow({flowId: flowDetail.value.id, opinion: flowOpinion.value || undefined});
     ElMessage.success('整改已提交');
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.message || '提交失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     flowBusy.value = false;
   }
@@ -207,8 +207,8 @@ const doFinal = async () => {
     });
     ElMessage.success('终审通过');
     emit('saved');
-  } catch (e) {
-    ElMessage.error(e?.message || '终审失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     flowBusy.value = false;
   }

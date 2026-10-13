@@ -164,7 +164,7 @@ watch(visible, async (open) => {
     await loadDetail();
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载模板失败');
+    
   }
 });
 
@@ -234,12 +234,10 @@ const saveTpl = async () => {
       ElMessage.success('模板已保存（草稿）');
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '保存失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('保存失败');
+    
   } finally {
     tplSaving.value = false;
   }

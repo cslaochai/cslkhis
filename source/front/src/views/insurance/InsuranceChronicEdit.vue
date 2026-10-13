@@ -121,8 +121,8 @@ const loadDepts = async () => {
   try {
     const res = await getDepartmentSelectList({scope: 'ALL'});
     deptOptions.value = res.data || [];
-  } catch (error) {
-    ElMessage.error(error?.message || '科室候选加载失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const deptNameOf = (id) => deptOptions.value.find((d) => String(d.id) === String(id))?.deptName || '';
@@ -132,8 +132,8 @@ const loadCatalogOptions = async () => {
   try {
     const res = await getChronicCatalogSelectList();
     catalogOptions.value = res.data || [];
-  } catch (error) {
-    ElMessage.error(error?.message || '病种候选加载失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 
@@ -176,7 +176,7 @@ watch(visible, async (open) => {
       regForm.value.certifyDate = today();
     }
   } catch (error) {
-    ElMessage.error(error?.message || '备案详情加载失败');
+    
     visible.value = false;
   } finally {
     detailLoading.value = false;
@@ -260,10 +260,10 @@ const submitReg = async () => {
     ElMessage.success(f.id ? '备案已更新' : '备案已登记');
     visible.value = false;
     emit('saved');
-  } catch (error) {
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
     // 「同一患者同一病种已有有效备案」这类判定只在后端有据（要查历史单号与待遇期），
     // 拒绝理由必须原样弹出来，否则用户只看到弹窗不动
-    ElMessage.error(error?.message || '备案保存失败');
+    
   } finally {
     regSubmitting.value = false;
   }

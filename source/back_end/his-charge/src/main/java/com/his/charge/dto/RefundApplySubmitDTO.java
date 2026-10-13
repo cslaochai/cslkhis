@@ -13,7 +13,7 @@ import java.math.BigDecimal;
 public class RefundApplySubmitDTO {
 
     /**
-     * 原结算账单ID（L2）
+     * 原结算账单ID
      */
     @NotNull(message = "缺少原结算账单，不能发起退费申请")
     private Long billId;

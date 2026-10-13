@@ -83,8 +83,8 @@ const submitFinish = async () => {
     ElMessage.success(`会诊已完成，已回写病历（病历ID ${res.data || '—'}）`);
     visible.value = false;
     emit('saved');
-  } catch (error) {
-    ElMessage.error(error.message || '完成会诊失败');
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     finishLoading.value = false;
   }

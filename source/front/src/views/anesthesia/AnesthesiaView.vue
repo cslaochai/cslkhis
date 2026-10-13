@@ -563,8 +563,8 @@ const loadList = async () => {
     });
     rows.value = (res.data?.records || []);
     total.value = Number(res.data?.total || 0);
-  } catch (e) {
-    ElMessage.error(e.message || '加载麻醉记录失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }
@@ -618,8 +618,8 @@ const handleSubmit = async (row) => {
       ElMessage.success(`麻醉记录已提交，计费 ${s.successItems} 项共 ${s.amount} 元 → ${s.chargeNo || ''}`);
     }
     await Promise.all([loadList(), loadStats()]);
-  } catch (e) {
-    ElMessage.error(e.message || '提交失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleAudit = async (row) => {
@@ -627,8 +627,8 @@ const handleAudit = async (row) => {
     await auditAnesthesiaRecord({id: row.id});
     ElMessage.success('麻醉记录已审核');
     await loadList();
-  } catch (e) {
-    ElMessage.error(e.message || '审核失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleCharge = async (row) => {
@@ -640,8 +640,8 @@ const handleCharge = async (row) => {
       message: `成功 ${s.successItems} 项 / 失败 ${s.failedItems} 项，金额 ${s.amount} 元`,
     });
     await Promise.all([loadList(), loadStats()]);
-  } catch (e) {
-    ElMessage.error(e.message || '计费失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ---- 详情 ----
@@ -667,8 +667,8 @@ const loadVisits = async () => {
     });
     visitRows.value = (res.data?.records || []);
     visitTotal.value = Number(res.data?.total || 0);
-  } catch (e) {
-    ElMessage.error(e.message || '加载术前访视失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     visitLoading.value = false;
   }
@@ -701,7 +701,7 @@ const handleVisitFinish = async (row) => {
   } catch (e) {
     if (e === 'cancel' || e === 'close')
       return;
-    ElMessage.error(e.message || '完成访视失败');
+    
   }
 };
 const pacuRows = ref([]);
@@ -720,8 +720,8 @@ const loadPacus = async () => {
     });
     pacuRows.value = (res.data?.records || []);
     pacuTotal.value = Number(res.data?.total || 0);
-  } catch (e) {
-    ElMessage.error(e.message || '加载 PACU 记录失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     pacuLoading.value = false;
   }
@@ -767,7 +767,7 @@ const handleLeave = async (row) => {
   } catch (e) {
     if (e === 'cancel' || e === 'close')
       return;
-    ElMessage.error(e.message || '出室失败');
+    
   }
 };
 const followupRows = ref([]);
@@ -787,8 +787,8 @@ const loadFollowups = async () => {
     });
     followupRows.value = (res.data?.records || []);
     followupTotal.value = Number(res.data?.total || 0);
-  } catch (e) {
-    ElMessage.error(e.message || '加载麻醉随访失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     followupLoading.value = false;
   }
@@ -819,8 +819,8 @@ const handleFollowupFinish = async (row) => {
     await finishFollowup(row.id);
     ElMessage.success('随访已完成（已锁定）');
     await reloadFollowupAll();
-  } catch (e) {
-    ElMessage.error(e.message || '完成随访失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const handleFollowupDelete = async (row) => {
@@ -837,8 +837,8 @@ const handleFollowupDelete = async (row) => {
     await deleteFollowup(row.id);
     ElMessage.success('随访草稿已删除');
     await reloadFollowupAll();
-  } catch (e) {
-    ElMessage.error(e.message || '删除失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 const refreshAll = async () => {

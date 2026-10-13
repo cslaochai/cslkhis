@@ -203,7 +203,7 @@ async function loadList() {
     rows.value = [];
     pagination.total = 0;
     sumAmount.value = null;
-    ElMessage.error(e?.message || '加载退费流水失败');
+    
   } finally {
     loading.value = false;
   }

@@ -142,7 +142,7 @@ async function loadList() {
     pagination.total = Number(res.data?.total || 0);
   } catch (e) {
     rows.value = [];
-    ElMessage.error(e.message || '加载资金账户失败');
+    
   } finally {
     loading.value = false;
   }
@@ -174,7 +174,7 @@ async function openTxns(row) {
     txnRows.value = res.data || [];
   } catch (e) {
     txnRows.value = [];
-    ElMessage.error(e.message || '加载账户流水失败');
+    
   } finally {
     txnLoading.value = false;
   }

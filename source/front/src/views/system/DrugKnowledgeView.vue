@@ -275,8 +275,8 @@ async function loadDicts() {
     const res = await getDictDataMapList('his_drug_interaction_severity,his_dose_unit');
     severityDict.value = res.data?.his_drug_interaction_severity || [];
     doseUnitDict.value = res.data?.his_dose_unit || [];
-  } catch (e) {
-    ElMessage.error(e?.message || '字典加载失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 
@@ -307,8 +307,8 @@ async function loadInteractions() {
     });
     intRows.value = res.data?.records || [];
     intPage.total = Number(res.data?.total || 0);
-  } catch (e) {
-    ElMessage.error(e?.message || '相互作用列表加载失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     intLoading.value = false;
   }
@@ -352,8 +352,8 @@ async function toggleInt(row, next) {
     });
     ElMessage.success(next === 1 ? '已启用' : '已停用（保留条目，不再参与比对）');
     await loadInteractions();
-  } catch (e) {
-    ElMessage.error(e?.message || '操作失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 
@@ -368,8 +368,8 @@ async function removeInt(row) {
     await interactionDeleteById(row.id);
     ElMessage.success('删除成功');
     await loadInteractions();
-  } catch (e) {
-    ElMessage.error(e?.message || '删除失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 
@@ -394,8 +394,8 @@ async function loadDoseLimits() {
     });
     doseRows.value = res.data?.records || [];
     dosePage.total = Number(res.data?.total || 0);
-  } catch (e) {
-    ElMessage.error(e?.message || '剂量上限列表加载失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     doseLoading.value = false;
   }
@@ -437,8 +437,8 @@ async function toggleDose(row, next) {
     });
     ElMessage.success(next === 1 ? '已启用' : '已停用');
     await loadDoseLimits();
-  } catch (e) {
-    ElMessage.error(e?.message || '操作失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 
@@ -452,8 +452,8 @@ async function removeDose(row) {
     await doseLimitDeleteById(row.id);
     ElMessage.success('删除成功');
     await loadDoseLimits();
-  } catch (e) {
-    ElMessage.error(e?.message || '删除失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 }
 

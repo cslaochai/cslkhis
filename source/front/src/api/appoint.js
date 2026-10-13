@@ -79,9 +79,9 @@ export function getScheduleList(params) {
     return request.post('/schedule/list', params)
 }
 
-// 查询可挂号源
-export function getAvailableSchedule(deptId, visitDate) {
-    return request.post('/schedule/selectList', {deptId, visitDate})
+// 查询可挂号源（doctorId 可选：已收费号改约只认同医生的号源，取数时就收口）
+export function getAvailableSchedule(deptId, visitDate, doctorId) {
+    return request.post('/schedule/selectList', {deptId, visitDate, doctorId})
 }
 
 /**
@@ -219,7 +219,8 @@ export function runDayEndSettle(data = {}) {
 
 // 叫下一位
 export function callNextQueue(data) {
-    return request.post('/queue/callNext', data)
+    // silent：医生工作站需要按后端文案分流（「没有候诊患者」改成行动指引），错误提示由该页 catch 自行处理
+    return request.post('/queue/callNext', data, {silent: true})
 }
 
 // 按挂号记录签到

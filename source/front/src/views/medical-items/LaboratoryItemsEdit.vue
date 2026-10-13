@@ -114,8 +114,8 @@ watch(visible, async (open) => {
   try {
     const res = await getLaboratoryItemDetail(props.row.id)
     if (res.code === 200) Object.assign(formData, res.data)
-  } catch (e) {
-    ElMessage.error('获取详情失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 })
 
@@ -134,9 +134,9 @@ const handleSubmit = async () => {
       ElMessage.success(isEdit.value ? '修改成功' : '新增成功');
       visible.value = false;
       emit('saved')
-    } else ElMessage.error(res.message || '操作失败')
-  } catch (e) {
-    ElMessage.error(e.message || '操作失败')
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     submitLoading.value = false
   }

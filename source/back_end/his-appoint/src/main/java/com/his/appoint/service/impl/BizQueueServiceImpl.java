@@ -25,6 +25,7 @@ import com.his.appoint.vo.*;
 import com.his.system.api.service.ChargeApi;
 import com.his.common.base.PageResult;
 import com.his.common.enums.BillStatusEnum;
+import com.his.common.enums.MedicalInsuranceTypeEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.system.api.vo.BillBriefVO;
@@ -656,8 +657,9 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         BigDecimal totalFee = drugTotal.add(inspectionTotal).add(laboratoryTotal);
         vo.setTotalFee(totalFee);
 
-        // 判断是否为医保患者（settlementType: 1-自费 2-城镇职工医保 3-城乡居民医保 4-公费 5-商业保险）
-        boolean isInsurancePatient = dto.getSettlementType() != null && dto.getSettlementType() >= 2;
+        // 本单结算方式（两档）：1-全自费 2-医保联网。是否走统筹只看本单是否联网；
+        // 险种不再用 settlementType 表达（它已合并为两档），改为由费别 medicalInsuranceType 解析。
+        boolean isInsurancePatient = dto.getSettlementType() != null && dto.getSettlementType() == 2;
 
         // 设置医保类型显示名称
         if (!isInsurancePatient) {
@@ -668,13 +670,19 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
 
         // 根据结算方式计算
         if (!isInsurancePatient) {
-            // 自费
+            // 全自费
             vo.setCoverageRatio(BigDecimal.ZERO);
             vo.setInsurancePay(BigDecimal.ZERO);
             vo.setSelfPay(totalFee);
         } else {
-            // 医保
-            BigDecimal coverageRatio = insurancePolicyService.getCoverageRatio(dto.getSettlementType(), dto.getMedicalInsuranceType());
+            // 医保联网：先按费别解析出政策险种键（职工2/居民3/公费4）；
+            // 自费、商业保险或无法识别的费别没有统筹政策，比例按 0 处理（全额自付）。
+            MedicalInsuranceTypeEnum typeEnum = MedicalInsuranceTypeEnum.parse(dto.getMedicalInsuranceType());
+            Integer policyKey = typeEnum != null && typeEnum.isPoolCovered()
+                    ? typeEnum.getSettlementType() : null;
+            BigDecimal coverageRatio = policyKey == null
+                    ? BigDecimal.ZERO
+                    : insurancePolicyService.getCoverageRatio(policyKey, dto.getMedicalInsuranceType());
             vo.setCoverageRatio(coverageRatio);
 
             // 计算统筹支付

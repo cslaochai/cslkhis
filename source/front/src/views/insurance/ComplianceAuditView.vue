@@ -150,10 +150,10 @@ const loadRows = async () => {
     if (res.code === 200) {
       rows.value = res.data?.records || [];
       total.value = res.data?.total || 0
-    } else ElMessage.error(res.message || '加载合规审核记录失败')
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('加载合规审核记录失败')
+    
   } finally {
     loading.value = false
   }

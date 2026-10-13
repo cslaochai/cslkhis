@@ -358,11 +358,10 @@ const loadInventory = async () => {
     if (res.code === 200) {
       invRows.value = res.data?.records || [];
       invTotal.value = Number(res.data?.total || 0);
-    } else
-      ElMessage.error(res.message || '查询失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     invLoading.value = false;
   }
@@ -397,11 +396,10 @@ const doBagAction = (fn, row, done) => {
     if (res.code === 200) {
       ElMessage.success(res.message || '操作成功');
       done();
-    } else
-      ElMessage.error(res.message || '操作失败');
+    } 
   }).catch((e) => {
     console.error(e);
-    ElMessage.error('操作失败');
+    
   });
 };
 const reserve = (row) => doBagAction((r) => bloodReserve({bagId: r.id}), row, () => {
@@ -464,11 +462,10 @@ const loadCrossmatch = async () => {
     if (res.code === 200) {
       cmRows.value = res.data?.records || [];
       cmTotal.value = Number(res.data?.total || 0);
-    } else
-      ElMessage.error(res.message || '查询失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     cmLoading.value = false;
   }
@@ -495,11 +492,10 @@ const doCmVerify = (row) => {
       ElMessage.success('复核通过' + (Number(row.result) === 1 ? '，血袋已自动预留' : ''));
       loadCrossmatch();
       loadStats();
-    } else
-      ElMessage.error(res.message || '复核失败');
+    } 
   }).catch((e) => {
     console.error(e);
-    ElMessage.error('复核失败');
+    
   });
 };
 const doCmVoid = (row) => {
@@ -508,11 +504,10 @@ const doCmVoid = (row) => {
       ElMessage.success('已作废');
       loadCrossmatch();
       loadStats();
-    } else
-      ElMessage.error(res.message || '作废失败');
+    } 
   }).catch((e) => {
     console.error(e);
-    ElMessage.error('作废失败');
+    
   });
 };
 // ---------------- 流水 ----------------
@@ -535,11 +530,10 @@ const loadLogs = async () => {
     if (res.code === 200) {
       logRows.value = res.data?.records || [];
       logTotal.value = Number(res.data?.total || 0);
-    } else
-      ElMessage.error(res.message || '查询失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     logLoading.value = false;
   }

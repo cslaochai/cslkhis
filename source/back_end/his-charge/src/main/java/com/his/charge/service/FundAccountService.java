@@ -14,7 +14,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * 资金账户服务（L3）：门诊余额与住院预交金统一建模，差别只在 owner_type。
+ * 资金账户服务：门诊余额与住院预交金统一建模，差别只在 owner_type。
  */
 public interface FundAccountService extends IService<BizFundAccount> {
 

@@ -99,7 +99,7 @@ const onSaveMonitor = async () => {
       ElMessage.success(res.message || '监测登记已保存')
       visible.value = false
       emit('saved')
-    } else ElMessage.error(res.message || '保存失败')
+    } 
   } catch (e) {
     console.error(e)
   }

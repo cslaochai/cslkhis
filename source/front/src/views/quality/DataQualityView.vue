@@ -342,8 +342,8 @@ const loadSummary = async () => {
   try {
     const res = await getQualitySummary();
     summary.value = res.data;
-  } catch (e) {
-    ElMessage.error(e?.message || '加载数据质量总览失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }
@@ -366,8 +366,8 @@ const loadIssues = async () => {
     const res = await listQualityIssuePage(params);
     issues.value = res.data?.records || [];
     total.value = res.data?.total || 0;
-  } catch (e) {
-    ElMessage.error(e?.message || '加载问题清单失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     issueLoading.value = false;
   }

@@ -9,7 +9,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 /**
- * 记账入参（L1）。
+ * 记账入参。
  */
 @Data
 public class FeeBookDTO {

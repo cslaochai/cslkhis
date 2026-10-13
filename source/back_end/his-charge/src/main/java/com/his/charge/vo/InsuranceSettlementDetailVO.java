@@ -134,11 +134,6 @@ public class InsuranceSettlementDetailVO implements Serializable {
      */
     private String phoneMasked;
 
-    /**
-     * 患者类型：1-自费 2-城镇职工医保 3-城乡居民医保 4-公费 5-其他
-     */
-    private Integer patientType;
-
     // 就诊信息
 
     /**
@@ -188,7 +183,7 @@ public class InsuranceSettlementDetailVO implements Serializable {
      */
     private String diagnosisName;
 
-    // 关联结算账单（L2）
+    // 关联结算账单
 
     /**
      * 结算账单ID

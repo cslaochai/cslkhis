@@ -88,17 +88,14 @@ public class PatientUpsertDTO {
      */
     private String medicalHistory;
     /**
-     * 患者类型（参保性质）：1-自费 2-城镇职工医保 3-城乡居民医保 4-公费 5-其他
-     */
-    private Integer patientType;
-    /**
-     * 医保卡号
-     */
-    private String medicalInsuranceNo;
-    /**
-     * 医保类型（如：职工医保、居民医保）
+     * 费别/参保类型（字典 medical_insurance_type：自费/城镇职工医保/城乡居民医保/公费医疗/商业医疗保险）；
+     * 不传时默认自费
      */
     private String medicalInsuranceType;
+    /**
+     * 医保卡号（费别为医保类时填写）
+     */
+    private String medicalInsuranceNo;
     /**
      * 卡片类型（1-就诊卡 2-身份证 3-医保卡）
      */

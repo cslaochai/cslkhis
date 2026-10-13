@@ -172,9 +172,7 @@ const loadCandidates = async () => {
     });
     if (res.code === 200) {
       candidates.value = res.data || [];
-    } else {
-      ElMessage.error(res.message || '加载批次候选失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
   } finally {
@@ -255,7 +253,7 @@ watch(visible, async (v) => {
       full = res.data;
     } catch (e) {
       console.error(e);
-      ElMessage.error('加载明细失败，请重试');
+      
       emit('update:modelValue', false);
       return;
     }
@@ -318,9 +316,7 @@ const saveForm = async () => {
       ElMessage.success(res.message || '已保存');
       visible.value = false;
       emit('saved', res.data);
-    } else {
-      ElMessage.error(res.message || '保存失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
   } finally {

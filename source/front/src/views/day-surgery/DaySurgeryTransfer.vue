@@ -58,11 +58,9 @@ const submitTransfer = async () => {
       ElMessage.success('已转住院');
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '转住院失败');
-    }
-  } catch (e) {
-    ElMessage.error('转住院失败');
+    } 
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     trLoading.value = false;
   }

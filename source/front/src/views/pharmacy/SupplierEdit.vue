@@ -139,9 +139,7 @@ const save = async () => {
       ElMessage.success(form.supplierId ? '供应商已更新' : '供应商已创建');
       visible.value = false;
       emit('saved');
-    } else {
-      ElMessage.error(res.message || '保存失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
   } finally {

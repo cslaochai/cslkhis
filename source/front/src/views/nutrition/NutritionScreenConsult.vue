@@ -109,8 +109,8 @@ async function submitConsult() {
     })
     ElMessage.success(`营养会诊已申请（${res?.data || ''}）`)
     visible.value = false
-  } catch (e) {
-    ElMessage.error(e?.message || '申请失败')
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     savingConsult.value = false
   }

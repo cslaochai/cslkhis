@@ -281,7 +281,7 @@ const submitImport = async () => {
     startPolling();
   } catch (e) {
     console.error('批量上传失败', e);
-    ElMessage.error('上传失败，请重试');
+    
   } finally {
     importSubmitting.value = false;
   }

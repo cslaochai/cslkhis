@@ -491,11 +491,10 @@ const loadStat = async () => {
     });
     if (res.code === 200)
       stat.value = res.data;
-    else
-      ElMessage.error(res.message || '看板加载失败');
+    
   } catch (e) {
     console.error(e);
-    ElMessage.error('看板加载失败');
+    
   } finally {
     statLoading.value = false;
   }
@@ -531,11 +530,10 @@ const loadDispatch = async () => {
     if (res.code === 200) {
       dpRows.value = res.data?.records || [];
       dpTotal.value = Number(res.data?.total || 0);
-    } else
-      ElMessage.error(res.message || '查询失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     dpLoading.value = false;
   }
@@ -562,11 +560,10 @@ const mark = async (row, action) => {
       ElMessage.success(action === 1 ? '已标记推送' : '已标记拒答');
       loadDispatch();
       loadStat();
-    } else
-      ElMessage.error(res.message || '操作失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('操作失败');
+    
   }
 };
 // 只读详情（行点击）：列表行已含全部展示字段，不再回后端取明文手机号
@@ -607,11 +604,10 @@ const loadAnswer = async () => {
     if (res.code === 200) {
       anRows.value = res.data?.records || [];
       anTotal.value = Number(res.data?.total || 0);
-    } else
-      ElMessage.error(res.message || '查询失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     anLoading.value = false;
   }
@@ -656,11 +652,10 @@ const submitVoid = async () => {
       loadAnswer();
       loadDispatch();
       loadStat();
-    } else
-      ElMessage.error(res.message || '作废失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('作废失败');
+    
   } finally {
     voidBusy.value = false;
   }
@@ -682,11 +677,10 @@ const loadTemplate = async () => {
     if (res.code === 200) {
       tpRows.value = res.data?.records || [];
       tpTotal.value = Number(res.data?.total || 0);
-    } else
-      ElMessage.error(res.message || '查询失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     tpLoading.value = false;
   }
@@ -712,11 +706,10 @@ const removeTemplate = async (row) => {
     if (res.code === 200) {
       ElMessage.success('已删除');
       loadTemplate();
-    } else
-      ElMessage.error(res.message || '删除失败');
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('删除失败');
+    
   }
 };
 /**
@@ -727,10 +720,7 @@ const toggleTemplateStatus = async (row) => {
   const next = Number(row.status) === 1 ? 2 : 1;
   try {
     const d = await getTemplateDetail(row.id);
-    if (d.code !== 200) {
-      ElMessage.error(d.message || '加载问卷失败');
-      return;
-    }
+    
     const items = (d.data?.items || []).map((i) => ({
       seqNo: i.seqNo, dimension: i.dimension, questionType: i.questionType, title: i.title,
       required: i.required, weight: i.weight, maxScore: i.maxScore,
@@ -742,15 +732,12 @@ const toggleTemplateStatus = async (row) => {
     const res = await templateUpsert({
       id: row.id, templateName: row.templateName, scene: row.scene, status: next, items,
     });
-    if (res.code !== 200) {
-      ElMessage.error(res.message || '操作失败');
-      return;
-    }
+    
     ElMessage.success(next === 1 ? '已启用' : '已停用（停用后不再自动发放，历史答卷不受影响）');
     loadTemplate();
   } catch (e) {
     console.error(e);
-    ElMessage.error('操作失败');
+    
   }
 };
 const reloadAll = () => {

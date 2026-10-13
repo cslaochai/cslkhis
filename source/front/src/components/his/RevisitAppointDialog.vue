@@ -181,7 +181,7 @@ const loadRecords = async () => {
     }
   } catch (e) {
     recordOptions.value = [];
-    ElMessage.error(e?.message || '加载原病历失败');
+    
   } finally {
     recordLoading.value = false;
   }
@@ -197,8 +197,8 @@ const loadSchedules = async () => {
   try {
     const res = await getAvailableSchedule(form.value.deptId, form.value.visitDate);
     scheduleOptions.value = (res.data || []).filter((s) => Number(s.availableSource) > 0);
-  } catch (e) {
-    ElMessage.error(e?.message || '加载号源失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     scheduleLoading.value = false;
   }
@@ -212,8 +212,8 @@ const loadSlots = async () => {
   try {
     const res = await getScheduleSlots(form.value.scheduleId);
     slotRows.value = res.data || [];
-  } catch (e) {
-    ElMessage.error(e?.message || '加载时间段失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     slotLoading.value = false;
   }
@@ -246,7 +246,7 @@ const runPreview = async () => {
     if (token !== previewToken)
       return;
     preview.value = null;
-    ElMessage.error(e?.message || '复诊费用预估失败');
+    
   } finally {
     if (token === previewToken)
       previewLoading.value = false;

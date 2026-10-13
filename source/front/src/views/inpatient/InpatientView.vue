@@ -400,8 +400,8 @@ const loadList = async () => {
     });
     rows.value = res.data?.records || [];
     total.value = Number(res.data?.total || 0);
-  } catch (e) {
-    ElMessage.error(e?.message || '加载住院列表失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     loading.value = false;
   }
@@ -480,8 +480,8 @@ const loadPending = async () => {
     });
     pendingRows.value = res.data?.records || [];
     pendingTotal.value = Number(res.data?.total || 0);
-  } catch (e) {
-    ElMessage.error(e?.message || '待收治列表加载失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   } finally {
     pendingLoading.value = false;
   }
@@ -499,9 +499,8 @@ const cancelOrder = async (row) => {
     await cancelAdmissionOrder({id: row.id, cancelReason: value});
     ElMessage.success('住院证已作废');
     await Promise.all([loadPending(), loadStats()]);
-  } catch (e) {
-    if (e !== 'cancel')
-      ElMessage.error(e?.message || '作废失败');
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
   }
 };
 // ------------------------------------------------------------------

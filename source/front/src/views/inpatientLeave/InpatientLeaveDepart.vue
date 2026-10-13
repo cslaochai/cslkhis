@@ -58,7 +58,7 @@ const gate = async (p, msg) => {
     ElMessage.error(res.message || msg)
     return null
   } catch (e) {
-    ElMessage.error(String((e && e.message) || msg))
+    
     return null
   }
 }

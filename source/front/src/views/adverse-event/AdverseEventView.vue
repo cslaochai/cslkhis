@@ -294,12 +294,10 @@ const loadList = async () => {
     if (res.code === 200) {
       rows.value = res.data?.records || [];
       total.value = Number(res.data?.total || 0);
-    } else {
-      ElMessage.error(res.message || '查询失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('查询失败');
+    
   } finally {
     loading.value = false;
   }
@@ -344,12 +342,10 @@ const remove = async (row) => {
       ElMessage.success('删除成功');
       loadList();
       loadStats();
-    } else {
-      ElMessage.error(res.message || '删除失败');
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error('删除失败');
+    
   }
 };
 // ------------------------------------------------------------------
@@ -383,12 +379,10 @@ const submitAction = async () => {
       actionVisible.value = false;
       loadList();
       loadStats();
-    } else {
-      ElMessage.error(res.message || `${actionLabel()}失败`);
-    }
+    } 
   } catch (e) {
     console.error(e);
-    ElMessage.error(`${actionLabel()}失败`);
+    
   } finally {
     actionLoading.value = false;
   }
