@@ -180,6 +180,115 @@
           </div>
         </el-card>
       </el-tab-pane>
+
+      <!-- ============ 问答观测 ============ -->
+      <el-tab-pane v-if="canManage" label="问答观测" name="obs">
+        <el-card class="query-card mb-3" shadow="never">
+          <div class="flex items-start justify-between gap-4">
+            <el-form :model="obsQuery" inline>
+              <el-form-item label="问题">
+                <el-input v-model="obsQuery.question" clearable placeholder="问题关键词" style="width: 200px" @keyup.enter="searchObs"/>
+              </el-form-item>
+              <el-form-item label="回答方式">
+                <el-select v-model="obsQuery.degraded" :fit-input-width="false" clearable style="width: 120px">
+                  <el-option label="全部" value="ALL"/>
+                  <el-option label="正常（模型回答）" :value="0"/>
+                  <el-option label="降级（原文片段）" :value="1"/>
+                </el-select>
+              </el-form-item>
+              <el-form-item label="用户反馈">
+                <el-select v-model="obsQuery.feedback" :fit-input-width="false" clearable style="width: 120px">
+                  <el-option label="全部" value="ALL"/>
+                  <el-option label="未反馈" :value="0"/>
+                  <el-option label="有用" :value="1"/>
+                  <el-option label="无用" :value="2"/>
+                </el-select>
+              </el-form-item>
+              <el-form-item>
+                <el-button :icon="Search" type="primary" @click="searchObs">查询</el-button>
+                <el-button :icon="Refresh" @click="resetObs">重置</el-button>
+              </el-form-item>
+            </el-form>
+          </div>
+        </el-card>
+
+        <el-card class="table-card" shadow="never">
+          <el-table v-loading="obsLoading" :data="obsRows" stripe>
+            <el-table-column label="提问时间" prop="createTime" min-width="150"/>
+            <el-table-column label="问题" min-width="180" show-overflow-tooltip>
+              <template #default="{ row }">{{ row.question }}</template>
+            </el-table-column>
+            <el-table-column label="回答" min-width="220" show-overflow-tooltip>
+              <template #default="{ row }">
+                <el-link type="primary" @click="openObs(row)">{{ (row.answer || '').slice(0, 80) }}</el-link>
+              </template>
+            </el-table-column>
+            <el-table-column label="命中文档" min-width="160">
+              <template #default="{ row }">
+                <template v-if="row.hitDocs">
+                  <el-tag v-for="(d, i) in row.hitDocs.split(';')" :key="i" size="small" effect="plain" class="mr-1 mb-1">{{ d }}</el-tag>
+                </template>
+                <span v-else class="text-gray-400 text-sm">无</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="命中块" prop="hitCount" width="70" align="center"/>
+            <el-table-column label="耗时" width="90" align="right">
+              <template #default="{ row }">{{ row.latencyMs }} ms</template>
+            </el-table-column>
+            <el-table-column label="回答方式" width="90" align="center">
+              <template #default="{ row }">
+                <el-tag :type="row.degraded === 1 ? 'warning' : 'success'" size="small">
+                  {{ row.degraded === 1 ? '降级' : '模型' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="提问人" prop="operatorName" min-width="90">
+              <template #default="{ row }">{{ row.operatorName || '—' }}</template>
+            </el-table-column>
+            <el-table-column label="反馈" width="130" align="center">
+              <template #default="{ row }">
+                <el-button link :type="row.feedback === 1 ? 'primary' : 'default'" @click="feedbackObs(row, 1)">有用</el-button>
+                <el-button link :type="row.feedback === 2 ? 'danger' : 'default'" @click="feedbackObs(row, 2)">无用</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div class="list-footer flex items-center justify-end mt-3">
+            <el-pagination v-model:current-page="obsQuery.pageNum" v-model:page-size="obsQuery.pageSize"
+                           :page-sizes="PAGE_SIZES" :total="obsTotal"
+                           layout="total, sizes, prev, pager, next, jumper"
+                           @size-change="onObsSizeChange" @current-change="loadObs"/>
+          </div>
+        </el-card>
+
+        <!-- 回答详情 -->
+        <el-dialog v-model="obsVisible" :title="'问答记录 · ' + (obsRow?.createTime || '')" width="680px" append-to-body>
+          <div v-if="obsRow" class="obs-detail">
+            <div class="obs-block">
+              <div class="obs-label">问题</div>
+              <div class="obs-text">{{ obsRow.question }}</div>
+            </div>
+            <div class="obs-block">
+              <div class="obs-label">回答</div>
+              <div class="obs-text obs-answer">{{ obsRow.answer }}</div>
+            </div>
+            <div class="obs-block">
+              <div class="obs-label">命中文档</div>
+              <div v-if="obsRow.hitDocs">
+                <el-tag v-for="(d, i) in obsRow.hitDocs.split(';')" :key="i" size="small" effect="plain" class="mr-1 mb-1">{{ d }}</el-tag>
+              </div>
+              <span v-else class="text-gray-400">无</span>
+            </div>
+            <div class="obs-meta">
+              <el-tag :type="obsRow.degraded === 1 ? 'warning' : 'success'" size="small">
+                {{ obsRow.degraded === 1 ? '降级' : '模型回答' }}
+              </el-tag>
+              <span v-if="obsRow.degradeReason" class="obs-reason">{{ obsRow.degradeReason }}</span>
+              <span>命中 {{ obsRow.hitCount }} 块 · {{ obsRow.latencyMs }} ms</span>
+              <span>提问人：{{ obsRow.operatorName || '—' }}</span>
+            </div>
+          </div>
+        </el-dialog>
+      </el-tab-pane>
     </el-tabs>
 
     <AiAdminIngestAdd v-model="ingestVisible" @saved="onIngestSaved"/>
@@ -193,8 +302,10 @@ import {ElMessage, ElMessageBox} from 'element-plus';
 import {
   askKnowledge,
   deleteKnowledgeDocById,
+  feedbackKnowledgeQueryLog,
   getKnowledgeDocPage,
   getKnowledgeRebuildProgress,
+  listKnowledgeQueryLog,
   seedKnowledgeCorpus,
   submitRebuildKnowledgeDoc,
   updateKnowledgeDocStatus,
@@ -470,6 +581,67 @@ const seedCorpus = async () => {
   }
 };
 
+// ---------------- 问答观测（在线观测：日志留痕 + 反馈） ----------------
+const obsQuery = reactive({
+  pageNum: 1,
+  pageSize: DEFAULT_PAGE_SIZE,
+  question: '',
+  degraded: 'ALL',
+  feedback: 'ALL',
+});
+const obsLoading = ref(false);
+const obsRows = ref([]);
+const obsTotal = ref(0);
+const loadObs = async () => {
+  obsLoading.value = true;
+  try {
+    const res = await listKnowledgeQueryLog({
+      pageNum: obsQuery.pageNum,
+      pageSize: obsQuery.pageSize,
+      question: obsQuery.question || undefined,
+      degraded: obsQuery.degraded === 'ALL' ? undefined : obsQuery.degraded,
+      feedback: obsQuery.feedback === 'ALL' ? undefined : obsQuery.feedback,
+    });
+    obsRows.value = res?.data?.records || [];
+    obsTotal.value = Number(res?.data?.total || 0);
+  } catch (e) {
+    console.error('加载问答观测日志失败', e);
+  } finally {
+    obsLoading.value = false;
+  }
+};
+const searchObs = () => {
+  obsQuery.pageNum = 1;
+  loadObs();
+};
+const resetObs = () => {
+  obsQuery.question = '';
+  obsQuery.degraded = 'ALL';
+  obsQuery.feedback = 'ALL';
+  obsQuery.pageNum = 1;
+  loadObs();
+};
+const onObsSizeChange = () => {
+  obsQuery.pageNum = 1;
+  loadObs();
+};
+// 反馈（顶/踩）：重复提交覆盖，成功后本地更新行状态
+const feedbackObs = async (row, fb) => {
+  try {
+    await feedbackKnowledgeQueryLog({id: row.id, feedback: fb});
+    row.feedback = fb;
+    ElMessage.success(fb === 1 ? '已标记为有用' : '已标记为无用');
+  } catch (e) {
+    console.error('提交反馈失败', e);
+  }
+};
+const obsVisible = ref(false);
+const obsRow = ref(null);
+const openObs = (row) => {
+  obsRow.value = row;
+  obsVisible.value = true;
+};
+
 onMounted(() => {
   loadDocs();
 });
@@ -477,6 +649,51 @@ onBeforeUnmount(clearRebuildPollers);
 </script>
 
 <style scoped>
+.obs-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.obs-block {
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 4px;
+  padding: 10px 12px;
+}
+
+.obs-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #909399;
+  margin-bottom: 6px;
+}
+
+.obs-text {
+  font-size: 13px;
+  color: #333;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.7;
+}
+
+.obs-answer {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.obs-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.obs-reason {
+  color: #e6a23c;
+}
+
 .prompt-layout { display: flex; gap: 12px; }
 .prompt-item { padding: 8px 10px; cursor: pointer; border-radius: 6px; font-size: 13px; border: 1px solid var(--el-border-color-lighter); margin-bottom: 6px; }
 .prompt-item:hover { background: var(--el-fill-color-light); border-color: var(--el-border-color); }

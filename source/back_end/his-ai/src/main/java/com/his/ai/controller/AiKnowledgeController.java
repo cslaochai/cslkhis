@@ -3,15 +3,18 @@ package com.his.ai.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.ai.dto.KnowledgeAskDTO;
 import com.his.ai.dto.KnowledgeDocQueryPageDTO;
+import com.his.ai.dto.KnowledgeFeedbackDTO;
 import com.his.ai.dto.KnowledgeIdDTO;
 import com.his.ai.dto.KnowledgeImportCommitDTO;
 import com.his.ai.dto.KnowledgeImportQueryDTO;
 import com.his.ai.dto.KnowledgeIngestDTO;
 import com.his.ai.dto.KnowledgePreviewDTO;
+import com.his.ai.dto.KnowledgeQueryLogQueryPageDTO;
 import com.his.ai.dto.KnowledgeStatusDTO;
 import com.his.ai.dto.KnowledgeTaskIdDTO;
 import com.his.ai.service.KnowledgeImportService;
 import com.his.ai.service.KnowledgeQaCapability;
+import com.his.ai.service.KnowledgeQueryLogService;
 import com.his.ai.service.KnowledgeStoreService;
 import com.his.ai.vo.KnowledgeAskVO;
 import com.his.ai.vo.KnowledgeChunkPreviewVO;
@@ -19,6 +22,7 @@ import com.his.ai.vo.KnowledgeDocHistoryVO;
 import com.his.ai.vo.KnowledgeDocListVO;
 import com.his.ai.vo.KnowledgeDocVO;
 import com.his.ai.vo.KnowledgeImportTaskVO;
+import com.his.ai.vo.KnowledgeQueryLogVO;
 import com.his.ai.vo.KnowledgeRebuildTaskVO;
 import com.his.common.base.Result;
 import io.swagger.v3.oas.annotations.Operation;
@@ -49,6 +53,7 @@ public class AiKnowledgeController {
     private final KnowledgeQaCapability knowledgeQaCapability;
     private final KnowledgeStoreService knowledgeStoreService;
     private final KnowledgeImportService knowledgeImportService;
+    private final KnowledgeQueryLogService knowledgeQueryLogService;
 
     @PostMapping("/ask")
     @Operation(summary = "知识库问答（RAG 检索增强生成；模型不可用降级返回检索原文）")
@@ -169,6 +174,21 @@ public class AiKnowledgeController {
     @Operation(summary = "回退到指定历史版本（快照写回当前文档并清旧向量，需重建索引）")
     public Result<Long> revertHistory(@Valid @RequestBody KnowledgeIdDTO dto) {
         return Result.success(knowledgeStoreService.revertHistory(dto.getId()));
+    }
+
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
+    @PostMapping("/queryLog/listPage")
+    @Operation(summary = "问答观测日志分页（按提问时间倒序；degraded 0-正常 1-降级，feedback 0-未反馈 1-有用 2-无用）")
+    public Result<IPage<KnowledgeQueryLogVO>> queryLogListPage(@Valid @RequestBody KnowledgeQueryLogQueryPageDTO dto) {
+        return Result.success(knowledgeQueryLogService.listPage(dto));
+    }
+
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
+    @PostMapping("/queryLog/feedback")
+    @Operation(summary = "问答观测反馈（1-有用 2-无用，同一记录重复提交覆盖）")
+    public Result<Void> queryLogFeedback(@Valid @RequestBody KnowledgeFeedbackDTO dto) {
+        knowledgeQueryLogService.feedback(dto.getId(), dto.getFeedback());
+        return Result.success("已反馈", null);
     }
 
     @PreAuthorize("hasAuthority('ai:knowledge:manage')")

@@ -249,6 +249,18 @@ export function revertKnowledgeDocHistory(params) {
   return request.post('/ai/knowledge/history/revert', params)
 }
 
+// 问答观测日志分页（按提问时间倒序）
+// params: { pageNum, pageSize, question?, degraded?, feedback? }  degraded: 0-正常 1-降级；feedback: 0-未反馈 1-有用 2-无用
+export function listKnowledgeQueryLog(params) {
+  return request.post('/ai/knowledge/queryLog/listPage', params)
+}
+
+// 问答观测反馈（1-有用 2-无用，重复提交覆盖）
+// params: { id, feedback }
+export function feedbackKnowledgeQueryLog(params) {
+  return request.post('/ai/knowledge/queryLog/feedback', params)
+}
+
 // 全量重建向量索引（灾难恢复用，正常流程不再暴露入口）
 export function rebuildKnowledgeIndex() {
   return request.post('/ai/knowledge/rebuild')
