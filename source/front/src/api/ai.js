@@ -155,16 +155,16 @@ export function askKnowledge(params) {
   return request.post('/ai/knowledge/ask', params)
 }
 
-// ========== 知识库维护（ai:knowledge:manage，AI 管理台维护签页） ==========
+// ========== 知识库管理（ai:knowledge:manage，AI 管理台维护签页） ==========
 
-// 录入/更新知识文档（自动切块建索引）
-// params: { title, category?, content, sourceType?, version?, sourceName? }
-//   sourceType: 2-手工录入 3-文件导入；version: 版本号（如 v1.0）；sourceName: 内容来源（诊疗指南/论坛等）
+// 录入/更新知识文档（只保存不建索引；id 为空新增，id 非空修改并清掉旧向量；索引由「重建索引」触发）
+// params: { id?, title, category?, content, sourceType?, version?, sourceName? }
+//   id: 修改时必传（雪花ID字符串）；sourceType: 2-手工录入 3-文件导入；version: 版本号（如 v1.0）；sourceName: 内容来源（诊疗指南/论坛等）
 export function ingestKnowledgeDoc(params) {
   return request.post('/ai/knowledge/ingest', params)
 }
 
-// 上传知识文件（自动解析 + 切块 + 建索引；支持 pdf/docx/txt/md，≤20MB）
+// 上传知识文件（自动解析；只保存不建索引；支持 pdf/docx/txt/md，≤20MB）
 // formData: { file, title?, category?, version?, sourceName? }  data 为 KnowledgeDocListVO（含 id / chunkCount，不含原文）
 export function uploadKnowledgeFile(formData) {
   // 与 transcribeVoice 同口径：请求级显式声明 multipart，axios 才会让浏览器自己带 boundary 发原始表单
@@ -177,13 +177,13 @@ export function submitKnowledgeImport(formData) {
   return request.post('/ai/knowledge/import/submit', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
 }
 
-// 查询导入任务状态（轮询解析/入库进度）
+// 查询导入任务状态（轮询解析/保存进度）
 // params: { ids: string[] }  data 为 KnowledgeImportTaskVO[]
 export function getKnowledgeImportList(params) {
   return request.post('/ai/knowledge/import/list', params)
 }
 
-// 确认导入任务入库（预览解析文本后补充元数据，异步切块 + embedding + 灌 Milvus）
+// 确认导入任务入库（预览解析文本后补充元数据；只保存不建索引，索引由「重建索引」触发）
 // params: { id, title, category?, version?, sourceName? }  id 全程字符串
 export function commitKnowledgeImport(params) {
   return request.post('/ai/knowledge/import/commit', params)
@@ -207,13 +207,49 @@ export function getKnowledgeDocById(params) {
   return request.post('/ai/knowledge/getById', params)
 }
 
-// 删除知识文档（同步删除切块与索引）
+// 删除知识文档（同步删除切块与索引；历史版本保留）
 // params: { id }  id 全程字符串
 export function deleteKnowledgeDocById(params) {
   return request.post('/ai/knowledge/deleteById', params)
 }
 
-// 重建向量索引（从 doc 全文重新切分灌入 Milvus；Milvus 空库或数据异常时用于恢复）
+// 提交单文档重建索引任务（异步，返回任务 ID 供轮询进度）
+// params: { id }  id 全程字符串；data 为任务 ID（字符串）
+export function submitRebuildKnowledgeDoc(params) {
+  return request.post('/ai/knowledge/rebuildById', params)
+}
+
+// 查询重建索引任务进度
+// params: { taskId }  data 为 KnowledgeRebuildTaskVO（status 1-进行中 2-完成 3-失败）
+export function getKnowledgeRebuildProgress(params) {
+  return request.post('/ai/knowledge/rebuildProgress', params)
+}
+
+// 切块预览（按当前切块参数计算，不落库不灌向量）
+// params: { content }  data 为 KnowledgeChunkPreviewVO（chunkCount / totalChars / chunks 每块前 200 字）
+export function previewKnowledgeChunks(params) {
+  return request.post('/ai/knowledge/previewChunks', params)
+}
+
+// 停用/启用知识文档
+// params: { id, status }  status: 0-正常 1-停用
+export function updateKnowledgeDocStatus(params) {
+  return request.post('/ai/knowledge/updateStatus', params)
+}
+
+// 知识文档历史版本列表（按操作时间倒序）
+// params: { id }  id 为文档 ID；data 为 KnowledgeDocHistoryVO[]
+export function listKnowledgeDocHistory(params) {
+  return request.post('/ai/knowledge/history/list', params)
+}
+
+// 回退到指定历史版本（快照写回当前文档并清旧向量，需重建索引）
+// params: { id }  id 为历史版本 ID；data 为文档 ID
+export function revertKnowledgeDocHistory(params) {
+  return request.post('/ai/knowledge/history/revert', params)
+}
+
+// 全量重建向量索引（灾难恢复用，正常流程不再暴露入口）
 export function rebuildKnowledgeIndex() {
   return request.post('/ai/knowledge/rebuild')
 }
@@ -232,9 +268,9 @@ export function composeFollowup(params) {
   return request.post('/ai/followup/compose', params)
 }
 
-// ========== 草稿留痕（G-10，AI 管理台） ==========
+// ========== AI 病历草拟记录（G-10，日志中心） ==========
 
-// 病历草稿 vs 终稿 diff 分页（表在 his-emr，权限复用 ai:admin:list）
+// 病历 AI 草拟草稿 vs 医生终稿 diff 分页（表在 his-emr，挂在系统管理→日志中心）
 // params: { pageNum, pageSize, patientName?, doctorName?, changed? }
 // row.diffJson 是分段数组 JSON：[{type:0|1|2, text}]，0-相同 1-删 2-增；渲染用模板插值，禁止 v-html。
 export function listDraftDiffPage(params) {
@@ -357,4 +393,24 @@ export function getOperationQaColumnSelectList(tableName) {
 // 重写刷新：扫描当前库全表结构，一次性覆盖表/列配置（表结构同步唯一入口）
 export function rewriteOperationQaSchema() {
   return request.post('/ai/operationQa/config/rewriteSchema')
+}
+
+// ========== 提示词管理 ==========
+export function listPromptTemplates(params) {
+  return request.get('/ai/promptTemplate/listPage', { params })
+}
+export function getPromptTemplate(name) {
+  return request.get('/ai/promptTemplate/getByName', { params: { name } })
+}
+export function upsertPromptTemplate(data) {
+  return request.post('/ai/promptTemplate/upsert', data)
+}
+export function activatePromptTemplate(id) {
+  return request.post('/ai/promptTemplate/activate', null, { params: { id } })
+}
+export function listAvailablePromptNames() {
+  return request.get('/ai/promptTemplate/availableNames')
+}
+export function listPromptHistory(code) {
+  return request.get('/ai/promptTemplate/history', { params: { code } })
 }

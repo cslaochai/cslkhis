@@ -8,7 +8,7 @@
         </el-radio-group>
       </el-form-item>
 
-      <!-- 手工录入：粘贴全文，保存后自动切块建索引 -->
+      <!-- 手工录入：粘贴全文，保存后到列表重建索引 -->
       <template v-if="ingestForm.sourceType === 2">
         <el-form-item label="标题" required>
           <el-input v-model="ingestForm.title" maxlength="100" placeholder="文档标题（必填）"/>
@@ -55,20 +55,20 @@
               v-model="ingestForm.content"
               :rows="12"
               maxlength="20000"
-              placeholder="文档全文；保存后自动切块并建立向量索引"
+              placeholder="文档全文；保存后需在列表点击「重建索引」建立检索"
               show-word-limit
               type="textarea"
           />
         </el-form-item>
       </template>
 
-      <!-- 文件导入：多文件批量 → 异步解析（进度）→ 预览确认 → 入库（进度） -->
+      <!-- 文件导入：多文件批量 → 异步解析（进度）→ 预览确认 → 保存（不建索引） -->
       <template v-else>
         <el-alert
             :closable="false"
             class="import-step-hint"
             show-icon
-            title="上传后先异步解析并预览文本，确认无误后才真正入库（切块 + 建向量索引），不会自动入库"
+            title="上传后先异步解析并预览文本，确认无误后点击「确认入库」——只保存文本，不自动切块建索引，之后到列表逐个点击「重建索引」"
             type="info"
         />
         <el-form-item label="文件" required>
@@ -84,7 +84,7 @@
             >
               <div class="upload-hint">
                 <div>将文件拖到此处，或<em>点击选择文件</em>（可多选）</div>
-                <div class="upload-sub">支持 pdf / docx / txt / md，单个 ≤20MB；上传后先异步解析，预览确认后才入库</div>
+                <div class="upload-sub">支持 pdf / docx / txt / md，单个 ≤20MB；上传后先异步解析，确认保存（不建索引），再到列表重建索引</div>
               </div>
             </el-upload>
             <el-button :loading="importSubmitting" class="import-submit-btn" type="primary" @click="submitImport">
@@ -105,7 +105,7 @@
             <el-progress v-if="task.status === 1" :duration="2" :indeterminate="true" :percentage="100"/>
             <!-- 待确认：预览解析文本 + 元数据 -->
             <div v-else-if="task.status === 2" class="task-confirm">
-              <div class="confirm-hint">✔ 已解析完成，请核对下方文本与元数据，确认无误后点击「确认入库」</div>
+              <div class="confirm-hint">✔ 已解析完成，请核对下方文本与元数据，确认无误后点击「确认入库」（只保存文本，不建索引）</div>
               <el-input :model-value="task.contentPreview" :rows="5" readonly type="textarea"/>
               <div class="preview-meta">
                 解析文本共 {{ task.contentLength }} 字符（预览前 3000 字符，确认后全文入库）
@@ -147,10 +147,10 @@
                 <el-button size="small" @click="cancelTask(task)">取消</el-button>
               </div>
             </div>
-            <!-- 入库中（切块 + embedding，chunk 级进度） -->
+            <!-- 保存中 -->
             <el-progress v-else-if="task.status === 3" :percentage="task.progress ?? 0"/>
             <!-- 完成 -->
-            <div v-else-if="task.status === 4" class="task-done">已入库并建立索引</div>
+            <div v-else-if="task.status === 4" class="task-done">已保存（未建索引，请到列表点「重建索引」）</div>
             <!-- 失败 -->
             <div v-else-if="task.status === 5" class="task-error">
               <span>失败：{{ task.errorMsg }}</span>
@@ -162,17 +162,17 @@
               <el-button size="small" @click="removeTask(task)">移除</el-button>
             </div>
           </div>
-          <div class="import-summary">共 {{ tasks.length }} 个文件 · 已入库 {{ doneCount }} 个</div>
+          <div class="import-summary">共 {{ tasks.length }} 个文件 · 已保存 {{ doneCount }} 个</div>
         </div>
       </template>
     </el-form>
 
     <template #footer>
-      <el-button @click="closeDialog">关闭</el-button>
       <el-button v-if="ingestForm.sourceType === 2" :loading="ingestSubmitting" type="primary" @click="submitIngest">
         保存
       </el-button>
-      <el-button v-else-if="hasActiveImport" disabled :loading="true">入库中…</el-button>
+      <el-button v-else-if="hasActiveImport" disabled :loading="true">保存中…</el-button>
+      <el-button @click="closeDialog">关闭</el-button>
     </template>
   </el-dialog>
 </template>
@@ -181,11 +181,11 @@
 /**
  * 知识文档「录入」弹框（自 AiAdminView 拆出）
  *
- * 只有新增语义（后端接口即建库+切块+建索引，页面无修改入口），故用 Add 而不是 Edit；
+ * 只有新增语义（页面无修改入口，修改在 AiAdminDocEdit），故用 Add 而不是 Edit；
  * 表单 state / 校验 / 提交都留在这里。
- * - 手工录入：/ai/knowledge/ingest，保存后自动切块建索引。
+ * - 手工录入：/ai/knowledge/ingest，只保存不建索引，之后到列表点「重建索引」。
  * - 文件导入：多文件批量 → /ai/knowledge/import/submit 异步解析 → 轮询任务进度 →
- *   解析完成预览文本、填写元数据 → /ai/knowledge/import/commit 异步切块入库（带 chunk 级进度）。
+ *   解析完成预览文本、填写元数据 → /ai/knowledge/import/commit 异步保存并留历史版本（不建索引）。
  */
 import {computed, onBeforeUnmount, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
@@ -346,7 +346,7 @@ const notifyIfChanged = () => {
   }
 };
 
-// 确认入库：预览后补充元数据，异步切块 + embedding + 灌 Milvus
+// 确认入库：预览后补充元数据，异步保存并留历史版本（不建索引）
 const commitTask = async (task) => {
   if (!task.title?.trim()) {
     ElMessage.warning('标题不能为空');
@@ -415,7 +415,7 @@ const submitIngest = async () => {
   ingestSubmitting.value = true;
   try {
     await ingestKnowledgeDoc({...ingestForm});
-    ElMessage.success('已录入并建立索引');
+    ElMessage.success('已保存（未建索引），请在列表点击「重建索引」');
     visible.value = false;
     emit('saved');
   } catch (e) {

@@ -7,6 +7,8 @@ import com.his.ai.service.KnowledgeStoreService;
 import com.his.ai.vo.KnowledgeImportTaskVO;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
+import com.his.system.entity.CurrentUser;
+import com.his.system.utils.UserUtils;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +29,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * 知识库文件导入任务实现。
  * <p>任务状态机：1-解析中 → 2-待确认 →（commit）→ 3-入库中 → 4-完成；异常 → 5-失败；
  * 仅 1/2 可取消 → 6-已取消。
- * <p>解析（本地 CPU）与入库（远程 embedding + Milvus，IO 密集）分池异步执行；
+ * <p>解析（本地 CPU）异步执行；确认入库只保存全文不建索引（切块由列表页「重建索引」逐个触发），
  * 任务表为进程内存态——导入是一次性过程，应用重启后任务失效，前端轮询不到时提示重传即可。
  */
 @Slf4j
@@ -138,6 +140,10 @@ public class KnowledgeImportServiceImpl implements KnowledgeImportService {
             task.sourceName = sourceName.trim();
             task.status = STATUS_COMMITTING;
             task.progress = 0;
+            // 操作人随任务带走（commit 在 web 线程，SecurityContext 可用；doCommit 在异步线程拿不到）
+            CurrentUser user = UserUtils.getCurrentUser();
+            task.operatorName = user == null ? null : user.getUsername();
+            task.operatorId = user == null ? null : user.getUserId();
         }
         commitExecutor.execute(() -> doCommit(task));
         return toVo(task);
@@ -152,9 +158,12 @@ public class KnowledgeImportServiceImpl implements KnowledgeImportService {
             doc.setSourceName(task.sourceName);
             doc.setContent(task.fullText);
             doc.setSourceType(SOURCE_TYPE_FILE);
+            // 只保存不建索引（切块由列表页「重建索引」逐个触发），留一条新建历史
             knowledgeStoreService.ingest(doc, p -> task.progress = p);
+            knowledgeStoreService.recordHistory(doc, KnowledgeStoreServiceImpl.CHANGE_TYPE_CREATE,
+                    task.operatorName, task.operatorId);
             task.status = STATUS_DONE;
-            log.info("[RAG] 导入任务 {}（{}）入库完成", task.id, task.title);
+            log.info("[RAG] 导入任务 {}（{}）已保存（未建索引，待手动重建）", task.id, task.title);
         } catch (Exception ex) {
             task.status = STATUS_FAILED;
             task.errorMsg = ex.getMessage();
@@ -221,5 +230,8 @@ public class KnowledgeImportServiceImpl implements KnowledgeImportService {
         private volatile String sourceName;
         private volatile String fullText;
         private volatile String errorMsg;
+        /** 操作人（commit 时从 SecurityContext 捕获，供留痕；异步线程里拿不到） */
+        private volatile String operatorName;
+        private volatile Long operatorId;
     }
 }

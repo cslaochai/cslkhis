@@ -7,13 +7,19 @@ import com.his.ai.dto.KnowledgeIdDTO;
 import com.his.ai.dto.KnowledgeImportCommitDTO;
 import com.his.ai.dto.KnowledgeImportQueryDTO;
 import com.his.ai.dto.KnowledgeIngestDTO;
+import com.his.ai.dto.KnowledgePreviewDTO;
+import com.his.ai.dto.KnowledgeStatusDTO;
+import com.his.ai.dto.KnowledgeTaskIdDTO;
 import com.his.ai.service.KnowledgeImportService;
 import com.his.ai.service.KnowledgeQaCapability;
 import com.his.ai.service.KnowledgeStoreService;
 import com.his.ai.vo.KnowledgeAskVO;
+import com.his.ai.vo.KnowledgeChunkPreviewVO;
+import com.his.ai.vo.KnowledgeDocHistoryVO;
 import com.his.ai.vo.KnowledgeDocListVO;
 import com.his.ai.vo.KnowledgeDocVO;
 import com.his.ai.vo.KnowledgeImportTaskVO;
+import com.his.ai.vo.KnowledgeRebuildTaskVO;
 import com.his.common.base.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -52,14 +58,14 @@ public class AiKnowledgeController {
 
     @PreAuthorize("hasAuthority('ai:knowledge:manage')")
     @PostMapping("/ingest")
-    @Operation(summary = "录入/更新知识文档（手工或文件导入；自动切块建索引）")
+    @Operation(summary = "录入/更新知识文档（只保存不建索引，索引由「重建索引」触发）")
     public Result<Long> ingest(@Valid @RequestBody KnowledgeIngestDTO ingestDTO) {
         return Result.success(knowledgeStoreService.ingestFromDto(ingestDTO));
     }
 
     @PreAuthorize("hasAuthority('ai:knowledge:manage')")
     @PostMapping("/upload")
-    @Operation(summary = "上传知识文件（自动解析 + 切块 + 建索引；元数据全部必填；支持 pdf / docx / txt / md，≤20MB）")
+    @Operation(summary = "上传知识文件（自动解析；只保存不建索引，索引由「重建索引」触发；元数据全部必填；支持 pdf / docx / txt / md，≤20MB）")
     public Result<KnowledgeDocListVO> upload(
             @RequestParam("file") MultipartFile file,
             @RequestParam("title") String title,
@@ -120,6 +126,49 @@ public class AiKnowledgeController {
     public Result<Void> deleteById(@Valid @RequestBody KnowledgeIdDTO dto) {
         knowledgeStoreService.deleteById(dto.getId());
         return Result.success("已删除", null);
+    }
+
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
+    @PostMapping("/rebuildById")
+    @Operation(summary = "提交单文档重建索引任务（异步执行，返回任务 ID 供轮询进度）")
+    public Result<Long> rebuildById(@Valid @RequestBody KnowledgeIdDTO dto) {
+        return Result.success(knowledgeStoreService.submitRebuild(dto.getId()));
+    }
+
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
+    @PostMapping("/rebuildProgress")
+    @Operation(summary = "查询单文档重建索引任务进度（status 1-进行中 2-完成 3-失败）")
+    public Result<KnowledgeRebuildTaskVO> rebuildProgress(@Valid @RequestBody KnowledgeTaskIdDTO dto) {
+        return Result.success(knowledgeStoreService.getRebuildProgress(dto.getTaskId()));
+    }
+
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
+    @PostMapping("/previewChunks")
+    @Operation(summary = "切块预览（按当前切块参数计算，不落库不灌向量）")
+    public Result<KnowledgeChunkPreviewVO> previewChunks(@Valid @RequestBody KnowledgePreviewDTO dto) {
+        return Result.success(knowledgeStoreService.previewChunks(dto.getContent()));
+    }
+
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
+    @PostMapping("/updateStatus")
+    @Operation(summary = "停用/启用知识文档（status 0-正常 1-停用）")
+    public Result<Void> updateStatus(@Valid @RequestBody KnowledgeStatusDTO dto) {
+        knowledgeStoreService.updateStatus(dto.getId(), dto.getStatus());
+        return Result.success("已更新", null);
+    }
+
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
+    @PostMapping("/history/list")
+    @Operation(summary = "知识文档历史版本列表（按操作时间倒序）")
+    public Result<List<KnowledgeDocHistoryVO>> listHistory(@Valid @RequestBody KnowledgeIdDTO dto) {
+        return Result.success(knowledgeStoreService.listHistory(dto.getId()));
+    }
+
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
+    @PostMapping("/history/revert")
+    @Operation(summary = "回退到指定历史版本（快照写回当前文档并清旧向量，需重建索引）")
+    public Result<Long> revertHistory(@Valid @RequestBody KnowledgeIdDTO dto) {
+        return Result.success(knowledgeStoreService.revertHistory(dto.getId()));
     }
 
     @PreAuthorize("hasAuthority('ai:knowledge:manage')")

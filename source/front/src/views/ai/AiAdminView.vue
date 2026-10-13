@@ -1,56 +1,6 @@
 <template>
   <div class="ai-admin">
     <el-tabs v-model="activeTab">
-      <!-- ============ 草稿留痕 ============ -->
-      <el-tab-pane label="草稿留痕" name="diff">
-        <el-card class="query-card mb-3" shadow="never">
-          <el-form :model="diffQuery" inline>
-            <el-form-item label="患者">
-              <el-input v-model="diffQuery.patientName" clearable placeholder="患者姓名" style="width: 150px" @keyup.enter="searchDraftDiffs"/>
-            </el-form-item>
-            <el-form-item label="医生">
-              <el-input v-model="diffQuery.doctorName" clearable placeholder="医生姓名" style="width: 150px" @keyup.enter="searchDraftDiffs"/>
-            </el-form-item>
-            <el-form-item label="状态">
-              <el-select v-model="diffQuery.changed" clearable placeholder="全部" style="width: 120px">
-                <el-option :value="1" label="有修改"/>
-                <el-option :value="0" label="未修改"/>
-              </el-select>
-            </el-form-item>
-            <el-form-item>
-              <el-button :icon="Search" type="primary" @click="searchDraftDiffs">搜索</el-button>
-              <el-button :icon="Refresh" @click="resetDiff">重置</el-button>
-            </el-form-item>
-          </el-form>
-        </el-card>
-
-        <el-card class="table-card" shadow="never">
-          <el-table v-loading="diffLoading" :data="diffRows" stripe>
-            <el-table-column label="发生时间" prop="createTime" min-width="160"/>
-            <el-table-column label="患者" prop="patientName" min-width="100" show-overflow-tooltip/>
-            <el-table-column label="科室" prop="deptName" min-width="120" show-overflow-tooltip/>
-            <el-table-column label="医生" prop="doctorName" min-width="100" show-overflow-tooltip/>
-            <el-table-column label="状态" min-width="90" align="center">
-              <template #default="{ row }">
-                <el-tag :type="row.changed ? 'warning' : 'info'" size="small">{{ row.changed ? '有修改' : '未修改' }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="AI 草稿" prop="draftText" min-width="200" show-overflow-tooltip/>
-            <el-table-column fixed="right" label="操作" width="100" align="center">
-              <template #default="{ row }">
-                <el-button link type="primary" @click="showDiff(row)">查看留痕</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <div class="list-footer flex items-center justify-end mt-3">
-            <el-pagination v-model:current-page="diffQuery.pageNum" v-model:page-size="diffQuery.pageSize"
-                           :page-sizes="PAGE_SIZES" :total="diffTotal"
-                           layout="total, sizes, prev, pager, next, jumper"
-                           @size-change="onDiffSizeChange" @current-change="loadDraftDiffs"/>
-          </div>
-        </el-card>
-      </el-tab-pane>
-
       <!-- ============ 知识库问答 ============ -->
       <el-tab-pane label="知识库问答" name="qa">
         <el-card shadow="never">
@@ -78,8 +28,93 @@
         </el-card>
       </el-tab-pane>
 
-      <!-- ============ 知识库维护 ============ -->
-      <el-tab-pane v-if="canManage" label="知识库维护" name="manage">
+      <!-- ============ 提示词管理 ============ -->
+      <el-tab-pane label="提示词管理" name="prompt">
+        <el-card class="query-card mb-3" shadow="never">
+          <el-form inline>
+            <el-form-item label="关键词">
+              <el-input v-model="promptQuery.keyword" clearable placeholder="模板名" style="width:200px" @keyup.enter="searchPromptList"/>
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" @click="searchPromptList">查询</el-button>
+              <el-button @click="resetPromptSearch">重置</el-button>
+            </el-form-item>
+          </el-form>
+        </el-card>
+        <el-card class="table-card" shadow="never">
+          <el-table v-loading="promptLoading" :data="promptRows" stripe>
+            <el-table-column label="模板编码" prop="templateCode" min-width="180"/>
+            <el-table-column label="模板名称" prop="templateName" min-width="180"/>
+            <el-table-column label="当前生效版本" width="200" align="center">
+              <template #default="{ row }">
+                <el-tag size="small">v{{ row.version }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="修改人备注" prop="remark" min-width="200" show-overflow-tooltip/>
+            <el-table-column label="更新时间" width="200">
+              <template #default="{ row }">{{ formatT(row.updateTime) }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="140" align="center">
+              <template #default="{ row }">
+                <el-button link type="primary" @click.stop="openPromptDetail(row)">详细</el-button>
+                <el-button link type="primary" @click.stop="openPromptEdit(row)">编辑</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div class="list-footer flex items-center justify-end mt-3">
+            <el-pagination v-model:current-page="promptQuery.pageNum" v-model:page-size="promptQuery.pageSize"
+                           :page-sizes="PAGE_SIZES" :total="promptTotal"
+                           layout="total, sizes, prev, pager, next, jumper"
+                           @current-change="loadPromptList" @size-change="searchPromptList"/>
+          </div>
+        </el-card>
+
+        <!-- 详情弹框：左侧历史版本，右侧内容 -->
+        <el-dialog v-model="promptDialogVisible" :title="currentPromptName" width="60%" top="8vh">
+          <template #header>
+            <span style="font-weight:600;">{{ currentPromptName }}
+              <el-tag v-if="currentVersionRow?.isActive === 1" type="success" size="small" style="margin-left:8px;">当前生效</el-tag>
+            </span>
+          </template>
+          <div class="prompt-layout">
+            <div style="width:240px; flex-shrink:0; border-right:1px solid var(--el-border-color-lighter); padding-right:12px;">
+              <div style="font-weight:600; margin-bottom:8px;">历史版本</div>
+              <el-scrollbar height="450px">
+                <div v-for="v in promptHistory" :key="v.id"
+                     class="prompt-item" :class="{active: v.id === currentVersionRow?.id}"
+                     @click="switchVersion(v)">
+                  <div style="font-weight:600;">v{{ v.version }}
+                    <el-tag v-if="v.isActive === 1" size="small" type="success" style="margin-left:4px;">生效</el-tag>
+                  </div>
+                  <div style="font-size:12px; color:#9ca3af; margin-top:2px;">{{ formatT(v.updateTime) }}</div>
+                  <div v-if="v.remark" style="font-size:12px; color:#6b7280; margin-top:2px;">{{ v.remark }}</div>
+                  <el-button v-if="v.isActive !== 1" size="small" type="warning" plain style="margin-top:4px;"
+                             @click.stop="activateVersion(v)">切回此版本</el-button>
+                </div>
+              </el-scrollbar>
+            </div>
+            <div style="flex:1; padding-left:16px;">
+              <div style="margin-bottom:10px;">v{{ currentVersionRow?.version }} 内容</div>
+              <el-input v-model="currentPromptContent" type="textarea" :rows="18"
+                        :readonly="!editingPrompt"
+                        style="font-family: monospace; font-size:13px;"/>
+              <template v-if="editingPrompt">
+                <div style="margin-top:10px;">
+                  <div style="font-size:13px; margin-bottom:4px;">备注（本次改了什么）</div>
+                  <el-input v-model="promptRemark" type="textarea" :rows="3" placeholder="备注"/>
+                </div>
+                <div style="margin-top:12px; text-align:right;">
+                  <el-button type="primary" :loading="promptSaving" @click="savePrompt">保存新版本</el-button>
+                  <el-button @click="promptDialogVisible = false">取消</el-button>
+                </div>
+              </template>
+            </div>
+          </div>
+        </el-dialog>
+      </el-tab-pane>
+
+      <!-- ============ 知识库管理 ============ -->
+      <el-tab-pane v-if="canManage" label="知识库管理" name="manage">
         <el-card class="query-card mb-3" shadow="never">
           <div class="flex items-start justify-between gap-4">
             <el-form :model="docQuery" inline>
@@ -93,7 +128,6 @@
             </el-form>
             <div class="flex shrink-0 items-start gap-2">
               <el-button :icon="Plus" type="primary" @click="openIngest">录入文档</el-button>
-              <el-button :icon="RefreshRight" plain @click="rebuildIndex">重建索引</el-button>
               <el-button plain @click="seedCorpus">灌入示例</el-button>
             </div>
           </div>
@@ -112,17 +146,29 @@
             <el-table-column label="来源" min-width="90" align="center">
               <template #default="{ row }">{{ sourceTypeText(row.sourceType) }}</template>
             </el-table-column>
-            <el-table-column label="切块数" prop="chunkCount" min-width="80" align="right"/>
+            <el-table-column label="索引" min-width="110" align="center">
+              <template #default="{ row }">
+                <el-progress v-if="rebuildMap[row.id]?.running" :percentage="rebuildMap[row.id].progress" :stroke-width="6"
+                             style="width: 84px; margin: 0 auto;"/>
+                <el-tag v-else-if="!row.chunkCount" size="small" type="info">未索引</el-tag>
+                <span v-else>{{ row.chunkCount }} 块</span>
+              </template>
+            </el-table-column>
             <el-table-column label="状态" min-width="80" align="center">
               <template #default="{ row }">
                 <el-tag :type="row.status === 0 ? 'success' : 'info'" size="small">{{ row.status === 0 ? '正常' : '停用' }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column label="创建时间" prop="createTime" min-width="160"/>
-            <el-table-column fixed="right" label="操作" width="130" align="center">
+            <el-table-column fixed="right" label="操作" width="250" align="center">
               <template #default="{ row }">
-                <el-button :icon="View" link type="primary" @click="showDetail(row)">详情</el-button>
-                <el-button :icon="Delete" link type="danger" @click="removeDoc(row)">删除</el-button>
+                <el-button link type="primary" @click.stop="openDocEdit(row)">编辑</el-button>
+                <el-button v-if="rebuildMap[row.id]?.running" disabled link type="primary">重建中 {{ rebuildMap[row.id].progress }}%</el-button>
+                <el-button v-else link type="primary" @click.stop="startRebuild(row)">重建索引</el-button>
+                <el-button link :type="row.status === 0 ? 'warning' : 'success'" @click.stop="toggleStatus(row)">
+                  {{ row.status === 0 ? '停用' : '启用' }}
+                </el-button>
+                <el-button link type="danger" @click="removeDoc(row)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -137,30 +183,115 @@
     </el-tabs>
 
     <AiAdminIngestAdd v-model="ingestVisible" @saved="onIngestSaved"/>
-    <AiAdminDocDetail v-model="detailVisible" :id="detailId"/>
-    <AiAdminDiffDetail v-model="diffVisible" :row="diffRow"/>
+    <AiAdminDocEdit v-model="editVisible" :id="editId" @saved="onDocEditSaved" @rebuilt="onDocEditRebuilt"/>
   </div>
 </template>
 
 <script setup>
-import {onMounted, reactive, ref} from 'vue';
+import {onBeforeUnmount, onMounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {
   askKnowledge,
   deleteKnowledgeDocById,
   getKnowledgeDocPage,
-  listDraftDiffPage,
-  rebuildKnowledgeIndex,
+  getKnowledgeRebuildProgress,
   seedKnowledgeCorpus,
+  submitRebuildKnowledgeDoc,
+  updateKnowledgeDocStatus,
 } from '@/api/ai';
+import { listPromptTemplates, listPromptHistory, upsertPromptTemplate, activatePromptTemplate } from '@/api/ai';
 import {sourceTypeText} from '@/lib/ai';
 import {hasPerm} from '@/lib/perm';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import AiAdminIngestAdd from './AiAdminIngestAdd.vue';
-import AiAdminDocDetail from './AiAdminDocDetail.vue';
-import AiAdminDiffDetail from './AiAdminDiffDetail.vue';
+import AiAdminDocEdit from './AiAdminDocEdit.vue';
 
-const activeTab = ref('diff');
+const activeTab = ref('qa');
+
+// ---------------- 提示词管理 ----------------
+const promptQuery = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, keyword: '' })
+const promptRows = ref([])
+const promptTotal = ref(0)
+const promptLoading = ref(false)
+const promptDialogVisible = ref(false)
+const promptHistory = ref([])
+const currentPromptName = ref('')
+const currentPromptCode = ref('')
+const currentVersionRow = ref(null)
+const currentPromptContent = ref('')
+const editingPrompt = ref(false)
+const promptRemark = ref('')
+const promptSaving = ref(false)
+const formatT = (t) => t ? String(t).replace('T', ' ').slice(0, 19) : '—'
+onMounted(async () => {
+  await loadPromptList()
+})
+const loadPromptList = async () => {
+  promptLoading.value = true
+  try {
+    const res = await listPromptTemplates(promptQuery)
+    promptRows.value = res?.data?.records || []
+    promptTotal.value = Number(res?.data?.total || 0)
+  } finally {
+    promptLoading.value = false
+  }
+}
+const searchPromptList = () => {
+  promptQuery.pageNum = 1
+  loadPromptList()
+}
+const resetPromptSearch = () => {
+  promptQuery.keyword = ''
+  promptQuery.pageNum = 1
+  loadPromptList()
+}
+const openPromptDetail = async (row) => {
+  currentPromptName.value = row.templateName
+  currentPromptCode.value = row.templateCode
+  promptDialogVisible.value = true
+  editingPrompt.value = false
+  const res = await listPromptHistory(row.templateCode)
+  promptHistory.value = res?.data || []
+  // is_active=1 的已经在后端排最前
+  const active = promptHistory.value.find(v => v.isActive === 1) || promptHistory.value[0]
+  switchVersion(active)
+}
+const openPromptEdit = async (row) => {
+  await openPromptDetail(row)
+  editingPrompt.value = true
+}
+const activateVersion = async (v) => {
+  await ElMessageBox.confirm(`确定切回 v${v.version} 吗？`, '版本回退', { type: 'warning' })
+  await activatePromptTemplate(v.id)
+  ElMessage.success('已切回 v' + v.version)
+  // 刷新历史列表
+  const res = await listPromptHistory(currentPromptCode.value)
+  promptHistory.value = res?.data || []
+  switchVersion(promptHistory.value.find(x => x.isActive === 1))
+  await loadPromptList()
+}
+const switchVersion = (v) => {
+  currentVersionRow.value = v
+  currentPromptContent.value = v?.content || ''
+}
+const savePrompt = async () => {
+  promptSaving.value = true
+  try {
+    const res = await upsertPromptTemplate({
+      templateCode: currentPromptCode.value,      content: currentPromptContent.value,
+      remark: promptRemark.value,
+    })
+    ElMessage.success('已保存，版本 ' + res?.data)
+    promptRemark.value = ''
+    editingPrompt.value = false
+    promptDialogVisible.value = false
+    await loadPromptList()
+  } catch (e) {
+    ElMessage.error(e?.message || '保存失败')
+  } finally {
+    promptSaving.value = false
+  }
+}
 // ---------------- 知识库问答 ----------------
 const kQuestion = ref('');
 const kLoading = ref(false);
@@ -227,15 +358,27 @@ const onIngestSaved = () => {
   docQuery.pageNum = 1;
   loadDocs();
 };
-// 文档详情弹框（已拆至 AiAdminDocDetail.vue，组件按 id 自取详情）
-const detailVisible = ref(false);
-const detailId = ref(null);
-const showDetail = (row) => {
-  detailId.value = row.id;
-  detailVisible.value = true;
+// 文档编辑弹框（已拆至 AiAdminDocEdit.vue，组件按 id 自取详情，保存后回写列表）
+const editVisible = ref(false);
+const editId = ref(null);
+const openDocEdit = (row) => {
+  editId.value = row.id;
+  editVisible.value = true;
+};
+const onDocEditSaved = () => {
+  docQuery.pageNum = 1;
+  loadDocs();
+};
+// 编辑弹框「保存&重索引」：接管该文档的重建任务，行内显示进度并轮询
+const onDocEditRebuilt = ({docId, taskId}) => {
+  if (rebuildMap[docId]?.running) {
+    return;
+  }
+  rebuildMap[docId] = {running: true, progress: 0, taskId};
+  pollRebuild(docId, taskId);
 };
 const removeDoc = async (row) => {
-  await ElMessageBox.confirm(`确认删除知识文档「${row.title}」？其切块与索引将一并删除。`, '删除确认', {
+  await ElMessageBox.confirm(`确认删除知识文档「${row.title}」？其切块与索引将一并删除，历史版本保留。`, '删除确认', {
     type: 'warning',
   });
   try {
@@ -246,75 +389,98 @@ const removeDoc = async (row) => {
     console.error('删除知识文档失败', e);
   }
 };
-const rebuildIndex = async () => {
+// 单文档重建索引（异步任务 + 进度轮询；任务在服务端内存态，重启后失效需重试）
+const rebuildMap = reactive({});
+const rebuildPollTimers = new Map();
+const REBUILD_POLL_INTERVAL = 1500;
+const startRebuild = async (row) => {
+  if (rebuildMap[row.id]?.running) {
+    return;
+  }
   try {
-    await rebuildKnowledgeIndex();
-    ElMessage.success('向量索引已重建');
+    const res = await submitRebuildKnowledgeDoc({id: row.id});
+    const taskId = res?.data;
+    if (!taskId) {
+      ElMessage.warning('提交重建任务失败，请重试');
+      return;
+    }
+    rebuildMap[row.id] = {running: true, progress: 0, taskId};
+    pollRebuild(row.id, taskId);
   } catch (e) {
-    console.error('重建索引失败', e);
+    console.error('提交重建索引失败', e);
+    ElMessage.error(e?.message || '提交失败，请重试');
+  }
+};
+const pollRebuild = (rowId, taskId) => {
+  const timer = setTimeout(async () => {
+    rebuildPollTimers.delete(rowId);
+    try {
+      const res = await getKnowledgeRebuildProgress({taskId});
+      const t = res?.data;
+      if (!t) {
+        ElMessage.warning('重建任务已失效（服务可能重启），请重新点击重建索引');
+        delete rebuildMap[rowId];
+        return;
+      }
+      if (t.status === 1) {
+        rebuildMap[rowId] = {running: true, progress: t.progress ?? 0, taskId};
+        pollRebuild(rowId, taskId);
+      } else if (t.status === 2) {
+        ElMessage.success(`索引重建完成，共 ${t.chunkCount ?? 0} 块`);
+        delete rebuildMap[rowId];
+        loadDocs();
+      } else {
+        ElMessage.error(t.errorMsg || '重建索引失败');
+        delete rebuildMap[rowId];
+      }
+    } catch (e) {
+      console.error('查询重建进度失败', e);
+      delete rebuildMap[rowId];
+      ElMessage.error('查询重建进度失败，请重新点击重建索引');
+    }
+  }, REBUILD_POLL_INTERVAL);
+  rebuildPollTimers.set(rowId, timer);
+};
+const clearRebuildPollers = () => {
+  rebuildPollTimers.forEach((t) => clearTimeout(t));
+  rebuildPollTimers.clear();
+};
+const toggleStatus = async (row) => {
+  const toStop = row.status === 0;
+  if (toStop) {
+    await ElMessageBox.confirm(`确认停用知识文档「${row.title}」？停用后问答检索将不再命中该文档。`, '停用确认', {
+      type: 'warning',
+    });
+  }
+  try {
+    await updateKnowledgeDocStatus({id: row.id, status: toStop ? 1 : 0});
+    ElMessage.success(toStop ? '已停用' : '已启用');
+    loadDocs();
+  } catch (e) {
+    console.error('更新文档状态失败', e);
   }
 };
 const seedCorpus = async () => {
   try {
     const res = await seedKnowledgeCorpus();
-    ElMessage.success(`已灌入 ${res?.data ?? 0} 篇示例语料`);
+    ElMessage.success(`已灌入 ${res?.data ?? 0} 篇示例语料（已建索引）`);
     loadDocs();
   } catch (e) {
     console.error('灌入语料失败', e);
   }
 };
-// ---------------- 草稿留痕（G-10） ----------------
-const diffQuery = reactive({
-  pageNum: 1,
-  pageSize: DEFAULT_PAGE_SIZE,
-  patientName: '',
-  doctorName: '',
-  changed: undefined,
-});
-const diffLoading = ref(false);
-const diffRows = ref([]);
-const diffTotal = ref(0);
-const loadDraftDiffs = async () => {
-  diffLoading.value = true;
-  try {
-    const res = await listDraftDiffPage({
-      pageNum: diffQuery.pageNum,
-      pageSize: diffQuery.pageSize,
-      patientName: diffQuery.patientName || undefined,
-      doctorName: diffQuery.doctorName || undefined,
-      changed: diffQuery.changed,
-    });
-    diffRows.value = res?.data?.records || [];
-    diffTotal.value = res?.data?.total || 0;
-  } catch (e) {
-    console.error('加载草稿留痕失败', e);
-  } finally {
-    diffLoading.value = false;
-  }
-};
-const searchDraftDiffs = () => {
-  diffQuery.pageNum = 1;
-  loadDraftDiffs();
-};
-const onDiffSizeChange = () => {
-  diffQuery.pageNum = 1;
-  loadDraftDiffs();
-};
-// 草稿留痕弹框（已拆至 AiAdminDiffDetail.vue，组件按行快照解析 diffJson）
-const diffVisible = ref(false);
-const diffRow = ref(null);
-const showDiff = (row) => {
-  diffRow.value = row;
-  diffVisible.value = true;
-};
 
 onMounted(() => {
   loadDocs();
-  loadDraftDiffs();
 });
+onBeforeUnmount(clearRebuildPollers);
 </script>
 
 <style scoped>
+.prompt-layout { display: flex; gap: 12px; }
+.prompt-item { padding: 8px 10px; cursor: pointer; border-radius: 6px; font-size: 13px; border: 1px solid var(--el-border-color-lighter); margin-bottom: 6px; }
+.prompt-item:hover { background: var(--el-fill-color-light); border-color: var(--el-border-color); }
+.prompt-item.active { background: var(--el-color-primary-light-8); color: var(--el-color-primary); border-color: var(--el-color-primary); }
 .ai-admin {
   padding: 16px;
 }

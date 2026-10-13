@@ -4,10 +4,15 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 /**
- * 知识文档录入请求（手工录入 / 文件导入统一入口）。
+ * 知识文档录入/更新请求（手工录入 / 文件导入统一入口）。
  */
 @Data
 public class KnowledgeIngestDTO {
+
+    /**
+     * 文档ID（修改时必填；为空表示新增）
+     */
+    private Long id;
 
     /**
      * 标题（必填）
