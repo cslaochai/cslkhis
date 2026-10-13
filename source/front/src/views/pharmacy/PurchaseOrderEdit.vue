@@ -95,10 +95,10 @@
     </el-form-item>
 
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="['pharmacy:purchase:add', 'pharmacy:purchase:edit']" :loading="saving" data-testid="order-save-btn"
                  type="primary" @click="save">保存
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

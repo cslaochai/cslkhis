@@ -11,9 +11,9 @@
     </el-form>
     <div class="text-xs text-gray-400 px-6">盲样须按常规标本流程上机检测，靶值由组织方回报，录入时不可知。</div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'medtech:lisEqa:edit'" :loading="saving" type="primary" @click="save">保存
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

@@ -46,10 +46,10 @@
       </div>
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'ipd:anesthesia:edit'" :loading="scoreSubmitting" data-testid="g15-pacu-score-submit"
                  type="primary" @click="submitScore">记录评分
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

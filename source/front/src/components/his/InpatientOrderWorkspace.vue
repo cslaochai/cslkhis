@@ -1147,11 +1147,11 @@
           />
         </el-form>
         <template #footer>
-          <el-button @click="openDialog = false">取消</el-button>
           <el-button v-perm="orderPerm('add')" :loading="saving" data-testid="p1-submit-order" type="primary"
                      @click="submitOrder">
             {{ isEditing ? '保存修改' : '提交医嘱' }}
           </el-button>
+          <el-button @click="openDialog = false">取消</el-button>
         </template>
       </el-dialog>
 

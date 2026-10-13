@@ -41,10 +41,10 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'system:drugKnowledge:add'" :loading="submitting" data-testid="kb-int-save" type="primary"
                  @click="handleSubmit">保存
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

@@ -23,9 +23,9 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'medtech:pathology:edit'" :loading="actLoading" type="primary" @click="saveReport">提交初诊
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

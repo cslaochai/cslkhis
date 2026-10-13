@@ -15,10 +15,10 @@
       </el-form-item>
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'pharmacy:stock:edit'" :type="isIn ? 'success' : 'warning'" @click="handleSubmit">
         {{ isIn ? '确认入库' : '确认出库' }}
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

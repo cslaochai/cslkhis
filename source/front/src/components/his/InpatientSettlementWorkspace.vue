@@ -277,9 +277,9 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="prepayDialog = false">取消</el-button>
         <el-button :loading="saving" data-testid="p3-submit-prepay" type="primary" @click="submitPrepay">保存
         </el-button>
+        <el-button @click="prepayDialog = false">取消</el-button>
       </template>
     </el-dialog>
   </div>

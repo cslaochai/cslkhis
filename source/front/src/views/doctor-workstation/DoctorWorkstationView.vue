@@ -1797,10 +1797,10 @@
       </div>
     </div>
     <template #footer>
-      <el-button @click="aiGuideDialogVisible = false">关闭</el-button>
       <el-button type="primary" @click="handleAdoptAiDiagnosis(aiGuideData)">
         采纳该诊断
       </el-button>
+      <el-button @click="aiGuideDialogVisible = false">关闭</el-button>
     </template>
   </el-dialog>
 
@@ -1819,8 +1819,8 @@
       </div>
     </div>
     <template #footer>
-      <el-button @click="showGuideSheetDialog = false">关闭</el-button>
       <el-button type="primary" @click="printGuidePdf">打印</el-button>
+      <el-button @click="showGuideSheetDialog = false">关闭</el-button>
     </template>
   </el-dialog>
 
@@ -1981,8 +1981,8 @@
       </div>
     </div>
     <template #footer>
-      <el-button @click="showAddPackageDialog = false">取消</el-button>
       <el-button type="primary" @click="handleSaveNewPackage">保存</el-button>
+      <el-button @click="showAddPackageDialog = false">取消</el-button>
     </template>
   </el-dialog>
 
@@ -2042,8 +2042,8 @@
       <el-switch v-model="inspectionTemplateForm.isEmergency" :active-value="1" :inactive-value="0" active-text="急诊"/>
     </div>
     <template #footer>
-      <el-button @click="showAddInspectionTemplateDialog = false">取消</el-button>
       <el-button type="primary" @click="handleSaveInspectionTemplate">保存</el-button>
+      <el-button @click="showAddInspectionTemplateDialog = false">取消</el-button>
     </template>
   </el-dialog>
 
@@ -2106,8 +2106,8 @@
       <el-switch v-model="laboratoryTemplateForm.isEmergency" :active-value="1" :inactive-value="0" active-text="急诊"/>
     </div>
     <template #footer>
-      <el-button @click="showAddLaboratoryTemplateDialog = false">取消</el-button>
       <el-button type="primary" @click="handleSaveLaboratoryTemplate">保存</el-button>
+      <el-button @click="showAddLaboratoryTemplateDialog = false">取消</el-button>
     </template>
   </el-dialog>
 
@@ -2251,10 +2251,10 @@
     </div>
 
     <template #footer>
-      <el-button @click="draftDialogVisible = false">关闭</el-button>
       <el-button :disabled="!draftResult?.presentIllness" type="primary" @click="applyDraft">
         填入现病史
       </el-button>
+      <el-button @click="draftDialogVisible = false">关闭</el-button>
     </template>
   </el-dialog>
 
@@ -2281,13 +2281,13 @@
                 type="textarea"/>
     </div>
     <template #footer>
-      <el-button @click="voiceDialogVisible = false">关闭</el-button>
       <el-button :disabled="!voiceText.trim() || voiceTranscribing" plain @click="applyVoiceToField">
         填入现病史
       </el-button>
       <el-button :disabled="!voiceText.trim() || voiceTranscribing" type="primary" @click="draftFromVoice">
         AI 整理为现病史
       </el-button>
+      <el-button @click="voiceDialogVisible = false">关闭</el-button>
     </template>
   </el-dialog>
 

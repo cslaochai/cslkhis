@@ -137,11 +137,11 @@
       </template>
     </div>
     <template #footer>
-      <el-button @click="visible = false">{{ viewOnly ? '关闭' : '取消' }}</el-button>
       <el-button v-if="!viewOnly" v-perm="['system:user:add','system:user:edit']" :loading="submitLoading"
                  type="primary" @click="handleSubmit">
         确定
       </el-button>
+      <el-button @click="visible = false">{{ viewOnly ? '关闭' : '取消' }}</el-button>
     </template>
   </el-dialog>
 </template>

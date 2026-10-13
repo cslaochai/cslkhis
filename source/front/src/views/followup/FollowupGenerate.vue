@@ -23,9 +23,9 @@
       这里服务的是自动建单失败后的补录，以及慢病/用药指导这类额外计划。
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'inpatient:followup:add'" :loading="genLoading" type="primary" @click="submitGenerate">生成
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

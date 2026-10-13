@@ -18,10 +18,10 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button data-testid="ir-admit-cancel" @click="visible = false">取消</el-button>
       <el-button v-perm="'medtech:infusion:edit'" data-testid="ir-admit-save" type="primary" @click="saveAdmit">
         确认入座
       </el-button>
+      <el-button data-testid="ir-admit-cancel" @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

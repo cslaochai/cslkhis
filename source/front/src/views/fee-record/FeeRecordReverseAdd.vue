@@ -13,8 +13,8 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :loading="saving" data-testid="fee-reverse-submit" type="danger" @click="submit">确认红冲</el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

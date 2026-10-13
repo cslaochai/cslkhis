@@ -165,10 +165,10 @@
         </el-table-column>
       </el-table>
       <template #footer>
-        <el-button @click="mapDialog = false">取消</el-button>
         <el-button :disabled="!selectedCatalog" data-testid="yb-map-confirm" type="primary" @click="confirmMap">
           确认对照
         </el-button>
+        <el-button @click="mapDialog = false">取消</el-button>
       </template>
     </el-dialog>
 
@@ -181,8 +181,8 @@
                 type="textarea"/>
       <div class="text-xs text-slate-500 mt-2">已解析 {{ parsedCsv.length }} 行（按医保编码幂等：已存在则更新）</div>
       <template #footer>
-        <el-button @click="importDialog = false">取消</el-button>
         <el-button data-testid="yb-import-confirm" type="primary" @click="doImport">导入</el-button>
+        <el-button @click="importDialog = false">取消</el-button>
       </template>
     </el-dialog>
 

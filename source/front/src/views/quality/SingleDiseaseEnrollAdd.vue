@@ -12,10 +12,10 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button data-testid="sd-enroll-cancel" @click="visible = false">取消</el-button>
       <el-button v-perm="'qc:singleDisease:edit'" data-testid="sd-enroll-save" type="primary" @click="save">
         纳入
       </el-button>
+      <el-button data-testid="sd-enroll-cancel" @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

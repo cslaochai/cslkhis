@@ -62,7 +62,6 @@
               data-testid="oper-log-table"
               size="small"
               stripe
-              @row-click="openDetail"
           >
             <el-table-column label="时间" prop="operTime" width="160"/>
             <el-table-column label="模块" prop="title" show-overflow-tooltip width="120"/>
@@ -198,7 +197,6 @@
               data-testid="audit-log-table"
               size="small"
               stripe
-              @row-click="openDetail"
           >
             <el-table-column label="时间" prop="createTime" width="160"/>
             <el-table-column label="模块" prop="module" width="120"/>
@@ -278,7 +276,6 @@
               data-testid="field-log-table"
               size="small"
               stripe
-              @row-click="openFieldBatch"
           >
             <el-table-column label="时间" prop="changeTime" width="160"/>
             <el-table-column label="对象类型" prop="bizTypeText" width="100"/>
@@ -306,7 +303,7 @@
             <el-table-column label="科室" prop="deptName" width="110"/>
             <el-table-column fixed="right" label="操作" width="90">
               <template #default="{ row }">
-                <el-button link type="primary" @click.stop="openFieldBatch(row)">本批次</el-button>
+                <el-button link type="primary" @click.stop="openFieldBatch(row)">详情</el-button>
               </template>
             </el-table-column>
             <template #empty>
@@ -345,7 +342,7 @@
             <el-button @click="resetQuery">重置</el-button>
           </div>
 
-          <el-table v-loading="loading" :data="aiRows" border size="small" stripe @row-click="openAiDetail">
+          <el-table v-loading="loading" :data="aiRows" border size="small" stripe>
             <el-table-column label="时间" width="160">
               <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
             </el-table-column>
@@ -385,6 +382,48 @@
                            @current-change="load" @size-change="load"/>
           </div>
         </el-tab-pane>
+
+        <!-- AI 病历草拟记录（G-10）：医生工作站「AI 草拟」现病史 → 医生修改 → 保存病历 的 diff 留痕 -->
+        <el-tab-pane label="AI病历草拟" name="draftDiff">
+          <div class="filter-bar">
+            <el-input v-model="diffQuery.patientName" clearable placeholder="患者姓名" style="width: 150px"/>
+            <el-input v-model="diffQuery.doctorName" clearable placeholder="医生姓名" style="width: 150px"/>
+            <el-select v-model="diffQuery.changed" clearable placeholder="修改状态" style="width: 130px">
+              <el-option :value="1" label="有修改"/>
+              <el-option :value="0" label="未修改"/>
+            </el-select>
+            <el-button type="primary" @click="diffQuery.pageNum = 1; load()">查询</el-button>
+            <el-button @click="resetQuery">重置</el-button>
+          </div>
+
+          <el-table v-loading="loading" :data="diffRows" border size="small" stripe>
+            <el-table-column label="发生时间" prop="createTime" width="160"/>
+            <el-table-column label="患者" prop="patientName" min-width="100" show-overflow-tooltip/>
+            <el-table-column label="科室" prop="deptName" min-width="120" show-overflow-tooltip/>
+            <el-table-column label="医生" prop="doctorName" min-width="100" show-overflow-tooltip/>
+            <el-table-column label="状态" width="90" align="center">
+              <template #default="{ row }">
+                <el-tag :type="row.changed ? 'warning' : 'info'" size="small">{{ row.changed ? '有修改' : '未修改' }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="AI 草稿" prop="draftText" min-width="220" show-overflow-tooltip/>
+            <el-table-column fixed="right" label="操作" width="80" align="center">
+              <template #default="{ row }">
+                <el-button link type="primary" @click.stop="openDiffDetail(row)">详情</el-button>
+              </template>
+            </el-table-column>
+            <template #empty>
+              <span data-testid="draft-diff-empty">暂无 AI 病历草拟记录</span>
+            </template>
+          </el-table>
+
+          <div class="pager">
+            <el-pagination v-model:current-page="diffQuery.pageNum" v-model:page-size="diffQuery.pageSize"
+                           :page-sizes="PAGE_SIZES" :total="diffTotal"
+                           layout="total, sizes, prev, pager, next, jumper"
+                           @current-change="load" @size-change="load"/>
+          </div>
+        </el-tab-pane>
       </el-tabs>
     </el-card>
 
@@ -392,6 +431,7 @@
     <LogDetail v-model="detailVisible" :id="detailId" :row="detailRow" :type="detailType"/>
     <LogChangeDetail v-model="batchVisible" :batch-no="batchNo" :row="batchRow"/>
     <AiAuditDetail v-model="aiDetailVisible" :row="aiDetailRow"/>
+    <LogDraftDiffDetail v-model="diffVisible" :row="diffRow"/>
   </div>
 </template>
 
@@ -421,10 +461,11 @@ import {
   listLoginLogPage,
   listOperLogPage,
 } from '@/api/log';
-import { getAiAuditLogPage } from '@/api/ai';
+import { getAiAuditLogPage, listDraftDiffPage } from '@/api/ai';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import LogChangeDetail from './LogChangeDetail.vue';
 import LogDetail from './LogDetail.vue';
+import LogDraftDiffDetail from './LogDraftDiffDetail.vue';
 import AiAuditDetail from './AiAuditDetail.vue';
 import {
   AUDIT_STATUS,
@@ -511,6 +552,27 @@ const openAiDetail = (row) => {
   aiDetailRow.value = row;
   aiDetailVisible.value = true;
 };
+// AI 病历草拟记录（G-10）：后端 /emr/draftDiff/listPage 不支持时间范围，本 tab 不挂共用 dateRange
+const diffQuery = makeQuery({ patientName: '', doctorName: '', changed: undefined });
+const diffRows = ref([]);
+const diffTotal = ref(0);
+const loadDraftDiff = async () => {
+  const res = await listDraftDiffPage({
+    pageNum: diffQuery.pageNum,
+    pageSize: diffQuery.pageSize,
+    patientName: diffQuery.patientName || undefined,
+    doctorName: diffQuery.doctorName || undefined,
+    changed: diffQuery.changed,
+  });
+  diffRows.value = res?.data?.records || [];
+  diffTotal.value = Number(res?.data?.total || 0);
+};
+const diffVisible = ref(false);
+const diffRow = ref(null);
+const openDiffDetail = (row) => {
+  diffRow.value = row;
+  diffVisible.value = true;
+};
 const operRows = ref([]);
 const loginRows = ref([]);
 const auditRows = ref([]);
@@ -524,6 +586,7 @@ const currentQuery = () => {
   if (activeTab.value === 'login') return loginQuery;
   if (activeTab.value === 'field') return fieldQuery;
   if (activeTab.value === 'ai') return aiQuery;
+  if (activeTab.value === 'draftDiff') return diffQuery;
   return auditQuery;
 };
 const range = () => ({
@@ -591,6 +654,7 @@ const load = async () => {
     else if (activeTab.value === 'login') await loadLogin();
     else if (activeTab.value === 'field') await loadField();
     else if (activeTab.value === 'ai') await loadAi();
+    else if (activeTab.value === 'draftDiff') await loadDraftDiff();
     else await loadAudit();
   } catch (e) {
     ElMessage.error(e?.message || '加载日志失败');
@@ -602,6 +666,11 @@ const onTabChange = () => {
   load();
 };
 const resetQuery = () => {
+  if (activeTab.value === 'draftDiff') {
+    Object.assign(diffQuery, {patientName: '', doctorName: '', changed: undefined, pageNum: 1});
+    load();
+    return;
+  }
   const q = currentQuery();
   Object.assign(q, {keyword: '', operator: '', status: null, pageNum: 1});
   if (activeTab.value === 'oper')

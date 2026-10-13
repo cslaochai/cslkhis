@@ -150,10 +150,10 @@
       <el-button v-perm="'medtech:ultrasound:add'" :icon="Plus" class="mt-2" size="small" @click="addMeasure">加测量项
       </el-button>
       <template #footer>
-        <el-button @click="measureVisible = false">取消</el-button>
         <el-button v-perm="['medtech:ultrasound:add', 'medtech:ultrasound:edit']" :loading="actLoading" type="primary"
                    @click="saveMeasures">保存（整单覆盖）
         </el-button>
+        <el-button @click="measureVisible = false">取消</el-button>
       </template>
     </el-dialog>
 

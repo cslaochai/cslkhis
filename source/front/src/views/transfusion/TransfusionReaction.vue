@@ -49,7 +49,6 @@
       </el-alert>
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button
           v-perm="'medtech:transfusion:add'"
           :loading="reactionSubmitting"
@@ -59,6 +58,7 @@
       >
         确认上报
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

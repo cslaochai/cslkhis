@@ -8,8 +8,8 @@
       <div class="form-tip">退回去的是「让开嘱医师改医嘱」，方案会停在「已退回」，食堂不会为它配餐；改完由医师重新校对派生。</div>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button type="danger" :loading="saving" data-testid="btn-do-reject" @click="doReject">确认退回 {{ ids.length }} 条</el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

@@ -42,7 +42,7 @@ public class PayOrderServiceImpl implements PayOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public PayOrderVO createPending(CreateSpec spec) {
+    public CreateResult createPending(CreateSpec spec) {
         // 内部指令入参（跨模块调用，不经过参数绑定），Bean Validation 跑不到，只能在这里收口
         if (spec == null || spec.bizType() == null || spec.bizId() == null) {
             throw new BusinessException("支付单缺少业务归属（业务类型/业务单ID）");
@@ -58,22 +58,15 @@ public class PayOrderServiceImpl implements PayOrderService {
             throw new BusinessException("支付金额必须大于 0");
         }
 
-        BizPayOrder valid = bizPayOrderMapper.selectOne(new LambdaQueryWrapper<BizPayOrder>()
-                .eq(BizPayOrder::getBizType, spec.bizType())
-                .eq(BizPayOrder::getBizId, spec.bizId())
-                .in(BizPayOrder::getPayStatus, PayOrderStatusEnum.PENDING.getCode(), PayOrderStatusEnum.PAID.getCode())
-                .orderByDesc(BizPayOrder::getId)
-                .last("LIMIT 1"));
+        BizPayOrder valid = selectLastValid(spec.bizType(), spec.bizId());
         if (valid != null) {
             if (Objects.equals(valid.getPayStatus(), PayOrderStatusEnum.PAID.getCode())) {
                 throw new BusinessException("该业务单已收款（支付单 " + valid.getPayNo() + "），请勿重复收取");
             }
             // 同渠道同金额且码未过期：复用原单号，渠道会幂等返回同一张码，不再产生第二张可付的码。
             // 过期不复用：旧码的倒计时已走完，复用等于让新码一出生就显示过期，必须关掉重出。
-            if (!isExpired(valid)
-                    && Objects.equals(valid.getChannel(), spec.channel())
-                    && valid.getAmount().compareTo(amount) == 0) {
-                return toVO(valid);
+            if (isReusable(valid, spec.channel(), amount)) {
+                return new CreateResult(toVO(valid), true);
             }
             // 换了渠道、金额变了（窗口期间账被收过一部分）或原码已过期：旧码必须作废再出新码，
             // 否则两张码同时有效，患者扫哪张都可能付，而本地只认最后一张
@@ -93,7 +86,43 @@ public class PayOrderServiceImpl implements PayOrderService {
         bizPayOrderMapper.insert(order);
         log.info("[支付单] 新建 payNo={} 业务 {}#{} 渠道={} 金额={}", order.getPayNo(),
                 spec.bizType(), spec.bizId(), PayChannelEnum.getText(spec.channel()), amount.toPlainString());
-        return toVO(order);
+        return new CreateResult(toVO(order), false);
+    }
+
+    @Override
+    public PayOrderVO reusablePending(Integer bizType, Long bizId, Integer channel, BigDecimal amount) {
+        if (bizType == null || bizId == null) {
+            throw new BusinessException("支付单缺少业务归属（业务类型/业务单ID）");
+        }
+        if (amount == null) {
+            throw new BusinessException("缺少支付金额");
+        }
+        BizPayOrder valid = selectLastValid(bizType, bizId);
+        if (valid == null || !isReusable(valid, channel, NumUtil.scale(amount, AMOUNT_SCALE))) {
+            return null;
+        }
+        return toVO(valid);
+    }
+
+    /**
+     * 该业务单当前挂着的有效单（待支付或已支付，取最新一条）。
+     */
+    private BizPayOrder selectLastValid(Integer bizType, Long bizId) {
+        return bizPayOrderMapper.selectOne(new LambdaQueryWrapper<BizPayOrder>()
+                .eq(BizPayOrder::getBizType, bizType)
+                .eq(BizPayOrder::getBizId, bizId)
+                .in(BizPayOrder::getPayStatus, PayOrderStatusEnum.PENDING.getCode(), PayOrderStatusEnum.PAID.getCode())
+                .orderByDesc(BizPayOrder::getId)
+                .last("LIMIT 1"));
+    }
+
+    /**
+     * 「算不算同一张码」的唯一判据：建单复用与出码节流都走这里，不许在调用方各抄一份。
+     */
+    private static boolean isReusable(BizPayOrder valid, Integer channel, BigDecimal amount) {
+        return !isExpired(valid)
+                && Objects.equals(valid.getChannel(), channel)
+                && valid.getAmount().compareTo(amount) == 0;
     }
 
     @Override

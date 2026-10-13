@@ -200,8 +200,8 @@
         </div>
       </div>
       <template #footer>
-        <el-button @click="showAdd = false">取消</el-button>
         <el-button :loading="saving" type="primary" @click="doSave">保存</el-button>
+        <el-button @click="showAdd = false">取消</el-button>
       </template>
     </el-dialog>
 

@@ -60,9 +60,9 @@
       保存后进入队列并按「优先级 → 登记时间」排序；门急诊所开的住院证会由系统自动入队，不需要在这里重复登记。
     </p>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :loading="submitting" data-testid="bc-form-submit" type="primary" @click="submitForm">保存
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

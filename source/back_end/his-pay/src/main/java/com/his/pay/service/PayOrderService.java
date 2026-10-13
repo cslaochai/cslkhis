@@ -31,11 +31,32 @@ public interface PayOrderService {
     }
 
     /**
+     * 建单结果：{@code reused} 表示命中原有的可复用待支付单（没有新建、也没关任何单）。
+     *
+     * <p>调用方必须按这个标志分支：复用意味着<b>渠道侧那笔预下单还在、码串没变</b>，
+     * 再打一次出码接口只是把同一句话问渠道要一遍，白给渠道加量。
+     */
+    record CreateResult(PayOrderVO order, boolean reused) {
+    }
+
+    /**
      * 建待支付单。同一个业务单不会同时挂两张能付的码：
      * 已有同渠道、金额未变、且未过期的待支付单 → 复用原单号（渠道按商户订单号幂等返回同一张码）；
      * 金额变了、换了渠道或原码已过期 → 先关掉旧单再建新单，否则旧码还能被扫出来付款，而本地已不认它。
      */
-    PayOrderVO createPending(CreateSpec spec);
+    CreateResult createPending(CreateSpec spec);
+
+    /**
+     * 当前<b>可复用</b>的待支付单：同渠道、同金额、未过期，没有则返回 null。
+     *
+     * <p>判据与 {@link #createPending} 内部完全同一个（共用一个实现），不要在调用方再抄一份 ——
+     * 两份「算不算同一张码」的口径迟早漂移成「一处复用、一处重出」。
+     *
+     * <p>为什么要单独暴露：出码侧的节流闸要在<b>决定建新单之前</b>就知道「这次能不能只回原码」。
+     * 直接调 {@link #createPending} 会在换渠道/金额变化时顺手关掉患者手上那张还没扫完的码，
+     * 那种干扰比多一次请求贵得多，所以间隔内的请求必须先问一句再决定放不放行。
+     */
+    PayOrderVO reusablePending(Integer bizType, Long bizId, Integer channel, BigDecimal amount);
 
     /**
      * 按支付单号取单；不存在返回 null（调用方决定是报错还是当「查无此单」）。

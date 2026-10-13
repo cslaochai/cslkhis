@@ -23,11 +23,11 @@
       </el-alert>
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'medtech:transfusion:edit'" :loading="issueSubmitting" data-testid="p4-tf-issue-submit"
                  type="primary" @click="submitIssue">
         确认发血
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

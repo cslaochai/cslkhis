@@ -36,8 +36,8 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'asset:supplies:add'" type="primary" @click="handleAddSubmit">确认入库</el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

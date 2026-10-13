@@ -195,9 +195,9 @@
         </p>
       </div>
       <template #footer>
-        <el-button @click="showHandleDialog = false">取消</el-button>
         <el-button v-perm="'medtech:criticalValue:edit'" :loading="handling" type="primary" @click="submitHandle">提交
         </el-button>
+        <el-button @click="showHandleDialog = false">取消</el-button>
       </template>
     </el-dialog>
   </div>

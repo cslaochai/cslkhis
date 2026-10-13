@@ -39,10 +39,10 @@
       </div>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :loading="confirmSubmitting" data-testid="deduct-confirm-submit" type="primary"
                  @click="submitConfirm">确认扣款
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

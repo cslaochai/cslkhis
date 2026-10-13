@@ -64,8 +64,7 @@
 
     <!-- 表格卡：发药明细列表（每行 = 药品 × 处方） -->
     <el-card class="table-card" shadow="never">
-      <el-table v-loading="loading" :data="dispensingList" :max-height="tableMaxHeight" stripe style="width: 100%"
-                @row-click="viewDetail">
+      <el-table v-loading="loading" :data="dispensingList" :max-height="tableMaxHeight" stripe style="width: 100%">
         <el-table-column label="患者" prop="patientName" width="110"/>
         <el-table-column class-name="font-mono" label="处方号" prop="prescriptionNo" width="180"/>
         <el-table-column label="药品" min-width="170" prop="drugName" show-overflow-tooltip>
@@ -100,8 +99,9 @@
         </el-table-column>
         <el-table-column label="发药药师" prop="pharmacistName" width="100"/>
         <el-table-column label="发药时间" prop="dispensingTime" width="160"/>
-        <el-table-column fixed="right" label="操作" width="210">
+        <el-table-column fixed="right" label="操作" width="250">
           <template #default="{ row }">
+            <el-button link type="primary" @click.stop="viewDetail(row)">详情</el-button>
             <template v-if="row.dispensingStatus === 1">
               <el-button v-perm="'pharmacy:dispensing:edit'" :icon="Check" data-testid="pharm-dispense-btn" link
                          type="primary" @click.stop="startDispense(row, false)">发药

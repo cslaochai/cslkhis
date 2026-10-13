@@ -175,9 +175,9 @@
           type="textarea"
       />
       <template #footer>
-        <el-button @click="actionVisible = false">取消</el-button>
         <el-button :loading="actionLoading" data-testid="ae-action-submit" type="primary" @click="submitAction">确定
         </el-button>
+        <el-button @click="actionVisible = false">取消</el-button>
       </template>
     </el-dialog>
 

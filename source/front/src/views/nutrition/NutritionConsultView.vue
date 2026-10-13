@@ -80,8 +80,7 @@
     </el-card>
 
     <el-card class="table-card" shadow="never">
-      <el-table :data="rows" stripe :max-height="tableMaxHeight" v-loading="loading" data-testid="consult-table"
-                @row-click="openDetail">
+      <el-table :data="rows" stripe :max-height="tableMaxHeight" v-loading="loading" data-testid="consult-table">
         <el-table-column label="患者" min-width="130">
           <template #default="{ row }">
             <div>{{ row.patientName || '-' }}</div>
@@ -133,8 +132,13 @@
             <div class="muted">{{ row.recordNo ? '病历 ' + row.recordNo : '' }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
+            <el-button
+                link
+                type="primary"
+                @click.stop="openDetail(row)">详情
+            </el-button>
             <el-button
                 v-if="row.canAccept"
                 v-perm="'ipd:nutrition:consultEdit'"

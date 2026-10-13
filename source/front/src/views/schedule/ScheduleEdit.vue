@@ -172,10 +172,10 @@
     </div>
 
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'outpatient:schedule:edit'" :loading="submitLoading" data-testid="edit-submit" type="primary"
                  @click="handleSubmit">保存
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

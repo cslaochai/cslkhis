@@ -223,7 +223,6 @@
     </div>
 
     <template #footer>
-      <el-button @click="visible = false">关闭</el-button>
       <el-button
           v-if="detailSettlement && !audited"
           v-perm="'finance:settlement:edit'"
@@ -234,6 +233,7 @@
       >
         审核日结单
       </el-button>
+      <el-button @click="visible = false">关闭</el-button>
     </template>
   </el-drawer>
 </template>

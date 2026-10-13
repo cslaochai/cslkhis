@@ -33,10 +33,10 @@
       </el-form>
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'ipd:anesthesia:edit'" :loading="vitalSubmitting" data-testid="g15-vital-submit"
                  type="primary" @click="submitVital">记录
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

@@ -37,11 +37,11 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'medtech:transfusion:edit'" :loading="approveSubmitting" data-testid="p4-tf-approve-submit"
                  type="primary" @click="submitApprove">
         提交审批结论
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

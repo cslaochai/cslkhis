@@ -101,7 +101,6 @@
       </div>
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button
           v-perm="'finance:settlement:edit'"
           :disabled="!!runReconcile && !runPassed && !runForm.allowDiff"
@@ -112,6 +111,7 @@
       >
         确认日结
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

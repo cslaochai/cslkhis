@@ -90,7 +90,6 @@
       </el-alert>
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button
           v-perm="'ipd:surgery:edit'"
           :loading="finishSubmitting"
@@ -100,6 +99,7 @@
       >
         确认完成并回写
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

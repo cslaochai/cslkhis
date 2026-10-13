@@ -85,7 +85,6 @@
     </div>
 
     <template #footer>
-      <el-button @click="visible = false">关闭</el-button>
       <el-button
           v-if="detail?.status === 1"
           v-perm="'medtech:criticalValue:edit'"
@@ -102,6 +101,7 @@
       >
         记录处置
       </el-button>
+      <el-button @click="visible = false">关闭</el-button>
     </template>
   </el-dialog>
 </template>

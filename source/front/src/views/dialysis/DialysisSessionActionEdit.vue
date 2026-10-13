@@ -77,8 +77,8 @@
       </template>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :loading="actionSaving" data-testid="hd-action-ok" type="primary" @click="doAction">确认</el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

@@ -26,10 +26,10 @@
       </el-alert>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :loading="formSaving" data-testid="stocktake-form-save" type="primary" @click="saveForm">
         {{ id ? '保存' : '建单并抓快照' }}
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

@@ -10,10 +10,10 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button data-testid="ir-skin-cancel" @click="visible = false">取消</el-button>
       <el-button v-perm="'medtech:infusion:edit'" data-testid="ir-skin-save" type="primary" @click="saveSkinTest">
         确认打皮试
       </el-button>
+      <el-button data-testid="ir-skin-cancel" @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

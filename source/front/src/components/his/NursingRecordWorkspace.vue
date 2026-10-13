@@ -468,10 +468,10 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialog = false">取消</el-button>
         <el-button v-perm="'ipd:nurse:add'" :loading="saving" data-testid="p2-submit-nursing" type="primary"
                    @click="submitNursing">保存
         </el-button>
+        <el-button @click="dialog = false">取消</el-button>
       </template>
     </el-dialog>
 
@@ -570,11 +570,11 @@
       </el-table>
       <div v-else class="py-6 text-center text-sm text-slate-400">先在上面的下拉里勾选本次测量到的患者</div>
       <template #footer>
-        <el-button @click="batchDialog = false">取消</el-button>
         <el-button v-perm="'ipd:nurse:add'" :loading="batchSaving" data-testid="g14-submit-batch" type="primary"
                    @click="submitBatch">
           提交本批（{{ batchRows.length }} 行）
         </el-button>
+        <el-button @click="batchDialog = false">取消</el-button>
       </template>
     </el-dialog>
 
@@ -697,10 +697,10 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="specialDialog = false">取消</el-button>
         <el-button v-perm="'ipd:nurse:add'" :loading="specialSaving" data-testid="n-submit-assess" type="primary"
                    @click="submitSpecial">保存
         </el-button>
+        <el-button @click="specialDialog = false">取消</el-button>
       </template>
     </el-dialog>
   </div>

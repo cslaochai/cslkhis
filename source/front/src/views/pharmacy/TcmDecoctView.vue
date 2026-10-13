@@ -41,7 +41,7 @@
 
     <el-card class="table-card" shadow="never">
       <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" data-testid="tcm-decoct-table" row-key="id"
-                stripe @row-click="openDetail">
+                stripe>
         <el-table-column label="代煎单号" prop="decoctNo" width="170"/>
         <el-table-column label="患者" prop="patientName" width="100"/>
         <el-table-column align="center" label="剂数" prop="doseCount" width="70"/>

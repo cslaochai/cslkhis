@@ -60,8 +60,7 @@
 
     <!-- 台账 -->
     <el-card class="table-card" shadow="never">
-      <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" data-testid="cn-table" stripe
-                @row-click="showDetail">
+      <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" data-testid="cn-table" stripe>
         <el-table-column label="单号" min-width="140" prop="noticeNo"/>
         <el-table-column label="患者" min-width="100">
           <template #default="{ row }">{{ row.patientName }}（{{ row.admissionNo || '—' }}）</template>
@@ -97,8 +96,9 @@
             <div class="text-slate-400">{{ signTagText(row.signStatus) }}</div>
           </template>
         </el-table-column>
-        <el-table-column fixed="right" label="操作" width="240">
+        <el-table-column fixed="right" label="操作" width="280">
           <template #default="{ row }">
+            <el-button size="small" type="primary" @click.stop="showDetail(row)">详情</el-button>
             <el-button v-if="Number(row.noticeStatus) === NS.DRAFT" v-perm="'ipd:criticalNotice:add'" data-testid="cn-btn-edit"
                        size="small" @click.stop="openForm(row)">编辑
             </el-button>
@@ -140,12 +140,12 @@
       <el-input v-model="vForm.voidReason" :rows="3" data-testid="cn-void-reason" maxlength="500" placeholder="作废原因（必填：写清错在哪）"
                 show-word-limit type="textarea"/>
       <template #footer>
-        <el-button data-testid="cn-void-cancel" @click="vVisible = false">取消</el-button>
         <el-button data-testid="cn-void-submit" type="danger" @click="doVoid">确认作废</el-button>
+        <el-button data-testid="cn-void-cancel" @click="vVisible = false">取消</el-button>
       </template>
     </el-dialog>
 
-    <!-- 详情（只读，行点击打开）：按 id 自拉数据，见 CriticalNoticeDetail -->
+    <!-- 详情（只读，操作列「详情」打开）：按 id 自拉数据，见 CriticalNoticeDetail -->
     <CriticalNoticeDetail v-model="dvVisible" :dict="dict" :id="dvId"/>
   </div>
 </template>
@@ -342,13 +342,11 @@ const doVoid = async () => {
 
 // ---------------- 详情（只读） ----------------
 const dvVisible = ref(false)
-const dv = ref({})
-const showDetail = async (row) => {
-  const res = await gate(getNoticeById(row.id), '加载详情失败')
-  if (res) {
-    dv.value = res.data || {};
-    dvVisible.value = true
-  }
+const dvId = ref(null)
+// 详情组件 CriticalNoticeDetail 打开时按 id 自拉数据，这里只传 id 并打开
+const showDetail = (row) => {
+  dvId.value = row.id
+  dvVisible.value = true
 }
 
 // ---------------- 两联回执打印 ----------------
@@ -415,7 +413,8 @@ const onPrint = async (row) => {
 }
 
 onMounted(async () => {
-  await Promise.all([loadDicts(), loadDoctors()])
+  // 医生候选在 CriticalNoticeEdit 子组件内自加载；主页只展示后端返回的 doctorName，无需 loadDoctors
+  await loadDicts()
   await reloadAll()
 })
 </script>

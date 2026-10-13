@@ -85,7 +85,7 @@
     <el-card class="table-card" shadow="never">
       <!-- ==================== 备案台账 ==================== -->
       <el-table v-loading="regLoading" :data="regRows" :max-height="tableMaxHeight" data-testid="chronic-table"
-                stripe style="width: 100%" @row-click="openRegDetail">
+                stripe style="width: 100%">
         <el-table-column class-name="font-mono" label="备案单号" prop="regNo" width="150"/>
         <el-table-column label="患者" show-overflow-tooltip width="150">
           <template #default="{row}">

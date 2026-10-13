@@ -48,10 +48,10 @@
       状态机由后端强制
     </div>
     <template #footer>
-      <el-button @click="visible = false">关闭</el-button>
       <el-button v-if="detail?.canFinish" v-perm="'ipd:consultation:edit'" type="primary"
                  @click="finishFromDetail">完成会诊
       </el-button>
+      <el-button @click="visible = false">关闭</el-button>
     </template>
   </el-dialog>
 </template>

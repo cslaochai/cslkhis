@@ -99,7 +99,7 @@
     </el-card>
 
     <el-card class="table-card" shadow="never">
-      <el-table :data="rows" stripe :max-height="tableMaxHeight" v-loading="loading" data-testid="plan-table" @selection-change="selection = $event" @row-click="onRowClick">
+      <el-table :data="rows" stripe :max-height="tableMaxHeight" v-loading="loading" data-testid="plan-table" @selection-change="selection = $event">
       <el-table-column type="selection" width="42" />
       <el-table-column label="患者" min-width="140">
         <template #default="{ row }">
@@ -166,8 +166,12 @@
           <span data-testid="cell-today-meal">{{ row.todayMealCount ?? 0 }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="255" fixed="right">
+      <el-table-column label="操作" width="295" fixed="right">
         <template #default="{ row }">
+          <el-button
+            link
+            type="primary"
+            @click.stop="openDetail(row)">详情</el-button>
           <el-button
             v-if="row.confirmStatus === 0"
             v-perm="'ipd:diet:confirm'"
@@ -395,12 +399,6 @@ function openStop(row) {
 // ---------------- 详情 / 跳转订餐 ----------------
 const detailVisible = ref(false)
 const detail = ref({})
-
-/** 勾选列的点击也会冒泡成 row-click，勾一下弹一个详情是灾难 */
-function onRowClick(row, column) {
-  if (column && column.type === 'selection') return
-  openDetail(row)
-}
 
 function openDetail(row) {
   detail.value = row

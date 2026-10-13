@@ -34,11 +34,11 @@
       </el-form>
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'ipd:transfer:edit'" :loading="acceptSubmitting" data-testid="p4-accept-submit"
                  type="primary" @click="submitAccept">
         确认接收
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

@@ -96,8 +96,7 @@
     </el-card>
 
     <el-card class="table-card" shadow="never">
-      <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" data-testid="screen-table" stripe
-                @row-click="openDetail">
+      <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" data-testid="screen-table" stripe>
         <el-table-column label="患者" min-width="150">
           <template #default="{ row }">
             <div>{{ row.patientName || '-' }}</div>
@@ -149,8 +148,13 @@
           </template>
         </el-table-column>
         <el-table-column label="筛查人" prop="screenerName" width="100"/>
-        <el-table-column fixed="right" label="操作" width="170">
+        <el-table-column fixed="right" label="操作" width="210">
           <template #default="{ row }">
+            <el-button
+                link
+                type="primary"
+                @click.stop="openDetail(row)">详情
+            </el-button>
             <el-button
                 v-perm="'ipd:nutrition:screenEdit'"
                 data-testid="btn-edit-screen"

@@ -160,10 +160,10 @@
           type="textarea"
       />
       <template #footer>
-        <el-button @click="auditVisible = false">取消</el-button>
         <el-button v-perm="'emr:archiveBorrow:edit'" :loading="auditLoading" data-testid="ab-audit-submit"
                    type="primary" @click="submitAudit">确定
         </el-button>
+        <el-button @click="auditVisible = false">取消</el-button>
       </template>
     </el-dialog>
 

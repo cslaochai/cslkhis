@@ -14,8 +14,8 @@
                 title="当前未接真实渠道：后端打印会在服务端控制台打印拉取动作，并按本地当日支付流水生成模拟账单（幂等，可重复拉取）" />
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button type="primary" data-testid="payc-import-ok" @click="doImport">拉取</el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

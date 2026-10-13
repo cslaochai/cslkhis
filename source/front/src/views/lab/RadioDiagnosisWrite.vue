@@ -69,7 +69,6 @@
       </div>
     </template>
     <template #footer>
-      <el-button @click="visible = false">关闭</el-button>
       <el-button v-if="!readonlyMode" v-perm="'medtech:radioDiagnosis:write'" :loading="submitting"
                  @click="doSaveDraft">
         <el-icon class="mr-0.5">
@@ -84,6 +83,7 @@
         </el-icon>
         提交审核
       </el-button>
+      <el-button @click="visible = false">关闭</el-button>
     </template>
   </el-dialog>
 </template>

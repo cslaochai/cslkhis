@@ -87,9 +87,9 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :loading="noticeSubmitting" data-testid="deduct-form-save" type="primary" @click="saveNotice">保存
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

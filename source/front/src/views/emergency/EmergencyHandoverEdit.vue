@@ -98,11 +98,11 @@
         共 {{ hoPending.length }} 条（其中待派单 {{ hoPoolCount }} 条）<template v-if="hoMissing > 0">
           · <span class="font-medium text-red-600">未点名 {{ hoMissing }} 条</span></template>
       </span>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :disabled="hoPending.length === 0 || hoMissing > 0" :loading="hoSubmitting" data-testid="emg-ho-submit"
                  type="warning" @click="submitHandover">
         确认交班
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

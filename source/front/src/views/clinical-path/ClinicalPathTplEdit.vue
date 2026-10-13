@@ -71,9 +71,9 @@
       </el-table>
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :loading="tplSaving" data-testid="cp-tpl-save-btn" type="primary" @click="saveTpl">保存草稿
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

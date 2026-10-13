@@ -23,9 +23,9 @@
     </div>
     <template #footer>
       <el-button :disabled="!callTask?.patientId" @click="composeCallScript">AI 拟话术</el-button>
-      <el-button @click="visible = false">关闭</el-button>
       <el-button :loading="callResultLoading" type="warning" @click="submitCallResult(false)">未接通</el-button>
       <el-button :loading="callResultLoading" type="primary" @click="submitCallResult(true)">已接通</el-button>
+      <el-button @click="visible = false">关闭</el-button>
     </template>
   </el-dialog>
 </template>

@@ -175,11 +175,11 @@
         </el-table-column>
       </el-table>
       <template #footer>
-        <el-button @click="itemDlg.visible = false">取消</el-button>
         <el-button v-perm="['medtech:examAppoint:add', 'medtech:examAppoint:edit', 'medtech:examAppoint:delete']" :loading="itemDlg.saving"
                    type="primary"
                    @click="saveItems">保存（共 {{ itemDlg.rows.length }} 项）
         </el-button>
+        <el-button @click="itemDlg.visible = false">取消</el-button>
       </template>
     </el-dialog>
   </div>

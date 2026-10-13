@@ -243,8 +243,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
         <el-button :loading="submitLoading" type="primary" @click="handleSubmit">确定</el-button>
+        <el-button @click="dialogVisible = false">取消</el-button>
       </template>
     </el-dialog>
 
@@ -286,8 +286,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="handoverVisible = false">取消</el-button>
         <el-button :loading="submitLoading" type="primary" @click="handleHandover">确定交班</el-button>
+        <el-button @click="handoverVisible = false">取消</el-button>
       </template>
     </el-dialog>
   </div>

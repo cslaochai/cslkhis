@@ -68,9 +68,9 @@
       <span class="foot-hint text-xs text-gray-400">
         {{ unansweredRequired.length ? `还有 ${unansweredRequired.length} 道必答题未作答` : '必答题已全部作答' }}
       </span>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :disabled="!fillPaper.length" :loading="fillBusy" type="primary" @click="submitFill">提交回收
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

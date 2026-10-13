@@ -58,10 +58,10 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="['emr:adverseEvent:add','emr:adverseEvent:edit']" :loading="saving" data-testid="ae-save-btn"
                  type="primary" @click="save">保存
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

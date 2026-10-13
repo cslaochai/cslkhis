@@ -61,8 +61,7 @@
 
     <!-- 台账 -->
     <el-card class="table-card" shadow="never">
-      <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" data-testid="lv-table" stripe
-                @row-click="showDetail">
+      <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" data-testid="lv-table" stripe>
         <el-table-column label="单号" min-width="140" prop="leaveNo"/>
         <el-table-column label="患者" min-width="100">
           <template #default="{ row }">{{ row.patientName }}（{{ row.admissionNo || '—' }}）</template>
@@ -98,8 +97,10 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column fixed="right" label="操作" width="260">
+        <el-table-column fixed="right" label="操作" width="300">
           <template #default="{ row }">
+            <el-button size="small" type="primary" @click.stop="showDetail(row)">详情
+            </el-button>
             <el-button v-if="Number(row.leaveStatus) === NS.PENDING" v-perm="'ipd:leave:add'" data-testid="lv-btn-edit"
                        size="small" @click.stop="openForm(row)">编辑
             </el-button>
@@ -153,9 +154,9 @@
       <el-input v-model="cx.cancelReason" :rows="3" data-testid="lv-cancel-reason" maxlength="500" placeholder="取消原因（必填：写清为什么取消）"
                 show-word-limit type="textarea"/>
       <template #footer>
-        <el-button data-testid="lv-cancel-cancel" @click="cxVisible = false">取消</el-button>
         <el-button :loading="cxSaving" data-testid="lv-cancel-submit" type="danger" @click="doCancel">确认取消
         </el-button>
+        <el-button data-testid="lv-cancel-cancel" @click="cxVisible = false">取消</el-button>
       </template>
     </el-dialog>
 

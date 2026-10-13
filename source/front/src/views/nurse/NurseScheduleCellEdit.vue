@@ -34,10 +34,10 @@
       <el-button v-if="form.id" v-perm="PERM_DELETE" :icon="Delete" plain type="danger"
                  @click="emit('delete', { ...form })">删除该格
       </el-button>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="PERM_ADD" :loading="saving" data-testid="ns-cell-save" type="primary" @click="save">
         保存
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

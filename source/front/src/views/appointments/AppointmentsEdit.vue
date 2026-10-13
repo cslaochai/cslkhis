@@ -50,10 +50,10 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'opd:appointments:edit'" :loading="submitLoading" type="primary" @click="handleEditSubmit">
         确认修改
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

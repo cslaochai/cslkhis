@@ -11,9 +11,9 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button data-testid="sd-qc-cancel" @click="visible = false">取消</el-button>
       <el-button v-perm="'qc:singleDisease:edit'" data-testid="sd-qc-save" type="primary" @click="save">提交质控
       </el-button>
+      <el-button data-testid="sd-qc-cancel" @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

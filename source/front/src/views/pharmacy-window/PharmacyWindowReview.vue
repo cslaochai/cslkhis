@@ -128,7 +128,6 @@
     <template #footer>
       <span v-if="reviewMissingHint" class="mr-auto align-middle text-xs text-rose-600"
             data-testid="pharm-review-hint">{{ reviewMissingHint }}</span>
-      <el-button @click="visible = false">取消</el-button>
       <el-button
           v-perm="'pharmacy:dispensing:edit'"
           :disabled="!canSubmitReview || loading"
@@ -138,6 +137,7 @@
           @click="submitDispense"
       >{{ pendingAction?.type === 'whole' ? '确认整单发药' : '确认发药' }}
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

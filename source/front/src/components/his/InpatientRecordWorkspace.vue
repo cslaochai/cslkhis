@@ -471,11 +471,11 @@
         </el-form>
       </el-scrollbar>
       <template #footer>
-        <el-button @click="dialog = false">取消</el-button>
         <el-button v-perm="['ipd:record:add','ipd:record:edit']" :loading="saving" data-testid="p2-submit-record"
                    type="primary" @click="submitRecord">
           {{ editingId ? '保存修改' : '创建文书' }}
         </el-button>
+        <el-button @click="dialog = false">取消</el-button>
       </template>
     </el-dialog>
 

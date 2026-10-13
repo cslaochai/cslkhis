@@ -174,7 +174,7 @@
           </div>
 
           <el-table v-loading="checkLoading" :data="checks" :height="tableHeight" border data-testid="qc-ck-table"
-                    size="small" @row-click="openDetail">
+                    size="small">
             <el-table-column label="单号" prop="checkNo" width="150"/>
             <el-table-column label="病区" prop="wardName" show-overflow-tooltip width="130"/>
             <el-table-column align="center" label="月份" prop="checkMonth" width="90"/>
@@ -203,8 +203,11 @@
               </template>
             </el-table-column>
             <el-table-column label="小结" min-width="200" prop="summary" show-overflow-tooltip/>
-            <el-table-column align="center" fixed="right" label="操作" width="200">
+            <el-table-column align="center" fixed="right" label="操作" width="230">
               <template #default="{ row }">
+                <el-button data-testid="qc-ck-detail" link size="small" type="primary"
+                           @click.stop="openDetail(row)">详情
+                </el-button>
                 <el-button v-perm="PERM_EDIT" :disabled="Number(row.status) === 2" data-testid="qc-ck-edit" link
                            size="small"
                            type="primary" @click.stop="openEdit(row)">编辑
@@ -411,8 +414,8 @@
         }}
       </p>
       <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
         <el-button :loading="saving" data-testid="qc-f-save" type="primary" @click="save">保存</el-button>
+        <el-button @click="editVisible = false">取消</el-button>
       </template>
     </el-dialog>
   </div>

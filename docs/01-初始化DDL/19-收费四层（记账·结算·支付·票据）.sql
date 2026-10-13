@@ -1,5 +1,5 @@
 -- 领域：19-收费四层（记账·结算·支付·票据）
--- 库：hn_biz_his    表数：17
+-- 库：hn_biz_his    表数：18
 -- 说明：DDL 快照（由线上库 SHOW CREATE TABLE 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
 
 -- ----------------------------
@@ -237,6 +237,37 @@ CREATE TABLE `biz_pay_order`
     KEY            `idx_biz` (`biz_type`,`biz_id`),
     KEY            `idx_patient` (`patient_id`,`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='患者端统一支付单';
+
+-- ----------------------------
+-- biz_pay_notify_log  渠道异步通知留痕
+-- ----------------------------
+CREATE TABLE `biz_pay_notify_log`
+(
+    `id`            bigint         NOT NULL COMMENT '主键（雪花）',
+    `pay_no`        varchar(32) COMMENT '支付单号（通知报文里的商户订单号）',
+    `channel`       tinyint        NOT NULL COMMENT '支付渠道（1-微信 2-支付宝 3-云闪付）',
+    `notify_scene`  tinyint        NOT NULL COMMENT '通知入口（1-收费台出码 2-患者端小程序）',
+    `trade_no`      varchar(64) COMMENT '渠道交易号',
+    `trade_status`  varchar(32) COMMENT '渠道交易状态原文',
+    `total_amount`  decimal(10, 2) COMMENT '渠道报文金额（元）',
+    `app_id`        varchar(32) COMMENT '渠道应用ID',
+    `sign_verified` tinyint        NOT NULL COMMENT '验签结果（1-通过 0-未通过）',
+    `notify_result` tinyint        NOT NULL COMMENT '处理结果（1-已入账 2-重复通知 3-未付款通知 4-验签失败 5-支付单不存在 6-渠道不符 7-金额非法 8-通知不受理 9-入账异常）',
+    `ack_body`      varchar(16)    NOT NULL COMMENT '应答内容（success-已受理 failure-要求重试）',
+    `raw_body`      text           NOT NULL COMMENT '通知原文（表单参数序列化）',
+    `error_msg`     varchar(500) COMMENT '拒收/异常原因',
+    `create_by`     varchar(64) COMMENT '创建人',
+    `create_by_id`  bigint COMMENT '创建人ID',
+    `create_time`   datetime       NOT NULL COMMENT '创建时间',
+    `update_by`     varchar(64) COMMENT '更新人',
+    `update_by_id`  bigint COMMENT '更新人ID',
+    `update_time`   datetime       NOT NULL COMMENT '更新时间',
+    `del_flag`      tinyint        NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+    PRIMARY KEY (`id`),
+    KEY            `idx_pay_no` (`pay_no`),
+    KEY            `idx_result_time` (`notify_result`, `create_time`),
+    KEY            `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='渠道异步通知留痕';
 
 -- ----------------------------
 -- biz_fund_account  资金账户

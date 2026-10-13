@@ -89,8 +89,8 @@
       </el-alert>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'pharmacy:stock:add'" type="primary" @click="handleSubmit">确认新增</el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

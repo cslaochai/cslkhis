@@ -88,11 +88,11 @@
       </el-alert>
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'ipd:surgery:edit'" :loading="scheduleSubmitting" data-testid="p4-op-schedule-submit"
                  type="primary" @click="submitSchedule">
         确认排台
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

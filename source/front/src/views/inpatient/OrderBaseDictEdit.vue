@@ -37,8 +37,8 @@
         type="info"
     />
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :loading="saving" data-testid="orderdict-submit" type="primary" @click="submit">保存</el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

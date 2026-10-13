@@ -90,7 +90,6 @@
       </el-form>
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button
           v-perm="'medtech:transfusion:edit'"
           :loading="crossSubmitting"
@@ -100,6 +99,7 @@
       >
         提交配血结果
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

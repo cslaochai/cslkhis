@@ -70,10 +70,10 @@
       改开放时间或粒度不会自动重排历史格子：号源一旦被占用就不允许被静默挪走，保存后请到号源台按新口径生成后续日期并做一次对账。
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="['medtech:examAppoint:add', 'medtech:examAppoint:edit']" :loading="saving"
                  type="primary" @click="saveDevice">保存
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

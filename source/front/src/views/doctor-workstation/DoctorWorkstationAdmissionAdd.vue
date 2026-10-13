@@ -51,10 +51,10 @@
       住院证默认 7 天有效（系统参数 <span class="font-mono">admission_order.valid_days</span>），过期后不能再收治。
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'opd:doctorWorkstation:add'" :loading="orderSubmitting" type="primary" @click="submitOrder">
         开具住院证
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

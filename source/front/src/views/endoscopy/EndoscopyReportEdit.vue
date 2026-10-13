@@ -13,9 +13,9 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'medtech:endoscopy:edit'" :loading="actLoading" type="primary" @click="saveReport">提交报告
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

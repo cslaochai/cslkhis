@@ -176,7 +176,6 @@
         </div>
       </template>
       <template #footer>
-        <el-button @click="showAudit = false">取消</el-button>
         <el-button v-perm="'medtech:ecg:audit'" :loading="submitting" type="danger" @click="doReject">
           <el-icon class="mr-0.5">
             <Close/>
@@ -189,6 +188,7 @@
           </el-icon>
           审核通过
         </el-button>
+        <el-button @click="showAudit = false">取消</el-button>
       </template>
     </el-dialog>
   </div>

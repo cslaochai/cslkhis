@@ -21,8 +21,8 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :icon="Scissor" :loading="arrangeLoading" type="primary" @click="submitArrange">安排</el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

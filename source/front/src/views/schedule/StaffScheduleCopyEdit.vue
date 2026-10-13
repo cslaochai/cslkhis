@@ -27,9 +27,9 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :loading="submitLoading" data-testid="ss-copy-submit" type="primary" @click="handleCopy">开始复制
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

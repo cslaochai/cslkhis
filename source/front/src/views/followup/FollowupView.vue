@@ -69,7 +69,7 @@
             <el-button v-perm="'inpatient:followup:add'" type="primary" @click="openCreate">新建随访</el-button>
           </div>
           <el-table v-loading="loading" :data="rows" border data-testid="followup-table" size="small"
-                    stripe @row-click="openDetail">
+                    stripe>
             <el-table-column label="任务编号" prop="taskNo" width="200"/>
             <el-table-column label="患者" prop="patientName" width="120">
               <template #default="{ row }">{{ row.patientName }}<span
@@ -117,9 +117,11 @@
                 <span v-else class="text-gray-400 text-xs">未预约</span>
               </template>
             </el-table-column>
-            <el-table-column fixed="right" label="操作" width="300">
+            <el-table-column fixed="right" label="操作" width="340">
               <template #default="{ row }">
                 <!-- 行点击会开详情弹框，操作列每个按钮必须 .stop，否则点「编辑」同时弹两个框 -->
+                <el-button link size="small" type="primary" @click.stop="openDetail(row)">详情
+                </el-button>
                 <el-button v-if="row.followupStatus !== 4" v-perm="'inpatient:followup:edit'"
                            link size="small" type="warning" @click.stop="openRevisit(row)">
                   {{ row.revisitAppointId ? '重约复诊号' : '生成复诊号' }}
@@ -217,8 +219,8 @@
         没有启用中的问卷时随访照常完成，可在列表「补发问卷」人工兜底。
       </div>
       <template #footer>
-        <el-button @click="completeVisible = false">取消</el-button>
         <el-button type="primary" @click="submitComplete">提交</el-button>
+        <el-button @click="completeVisible = false">取消</el-button>
       </template>
     </el-dialog>
 

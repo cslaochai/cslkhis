@@ -161,10 +161,10 @@
         </div>
       </div>
       <template #footer>
-        <el-button data-testid="open-cancel" @click="openVisible = false">取消</el-button>
         <el-button v-perm="['emr:infectiousReport:add','emr:infectiousReport:edit']" data-testid="open-save"
                    type="primary" @click="onSave">保存
         </el-button>
+        <el-button data-testid="open-cancel" @click="openVisible = false">取消</el-button>
       </template>
     </el-dialog>
 

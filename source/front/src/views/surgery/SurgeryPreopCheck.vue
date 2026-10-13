@@ -38,7 +38,6 @@
       </el-form>
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button
           v-perm="'ipd:surgery:edit'"
           :loading="checkSubmitting"
@@ -48,6 +47,7 @@
       >
         确认已完成核对
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

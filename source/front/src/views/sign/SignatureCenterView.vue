@@ -215,7 +215,7 @@
           </div>
 
           <div v-loading="signLoading" class="p-4">
-            <el-table :data="signList" border data-testid="p5-sign-table" size="small" @row-click="openDetail">
+            <el-table :data="signList" border data-testid="p5-sign-table" size="small">
               <el-table-column label="签名编号" width="170">
                 <template #default="{ row }">
                   <span class="text-xs font-medium text-slate-700">{{ row.signNo }}</span>
@@ -547,10 +547,10 @@
       <el-input v-model="revokeForm.reason" class="mt-3" data-testid="p5-sign-revoke-reason"
                 placeholder="吊销理由（必填）"/>
       <template #footer>
-        <el-button @click="revokeVisible = false">取消</el-button>
         <el-button :loading="revoking" data-testid="p5-sign-revoke-submit" type="danger" @click="submitRevoke">
           确认吊销
         </el-button>
+        <el-button @click="revokeVisible = false">取消</el-button>
       </template>
     </el-dialog>
   </div>

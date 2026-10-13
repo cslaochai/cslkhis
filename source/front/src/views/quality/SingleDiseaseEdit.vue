@@ -15,10 +15,10 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button data-testid="sd-disease-cancel" @click="visible = false">取消</el-button>
       <el-button v-perm="'qc:singleDisease:add'" data-testid="sd-disease-save" type="primary" @click="save">
         保存
       </el-button>
+      <el-button data-testid="sd-disease-cancel" @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

@@ -76,7 +76,7 @@
         </el-card>
 
         <el-card class="table-card" shadow="never">
-          <el-table v-loading="semanticLoading" :data="semanticRows" stripe @row-click="openSemanticDetail">
+          <el-table v-loading="semanticLoading" :data="semanticRows" stripe>
             <el-table-column label="语义词" prop="term" min-width="120"/>
             <el-table-column label="命中表" prop="tableName" min-width="180"/>
             <el-table-column label="目标列" min-width="110">
@@ -92,8 +92,9 @@
                 <el-tag :type="row.isEnabled ? 'success' : 'warning'" size="small">{{ row.isEnabled ? '启用' : '停用' }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column fixed="right" label="操作" width="140" align="center">
+            <el-table-column fixed="right" label="操作" width="180" align="center">
               <template #default="{ row }">
+                <el-button :icon="View" link type="primary" @click.stop="openSemanticDetail(row)">详情</el-button>
                 <el-button :icon="Edit" link type="primary" @click.stop="openSemanticEdit(row)">编辑</el-button>
                 <el-button :icon="Delete" link type="danger" @click.stop="removeSemantic(row)">删除</el-button>
               </template>
@@ -203,7 +204,7 @@
 <script setup>
 import { onMounted, reactive, ref, nextTick, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, Edit, Plus, Refresh, RefreshRight, Search, Setting } from '@element-plus/icons-vue'
+import { Delete, Edit, Plus, Refresh, RefreshRight, Search, Setting, View } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import {
   deleteOperationQaRelation,

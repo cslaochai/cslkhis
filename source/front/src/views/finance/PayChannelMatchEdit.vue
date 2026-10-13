@@ -18,8 +18,8 @@
                 title="两侧金额（收正退负）不一致会被拒绝；差额需要定性的请改用「差额处理」登记长款/短款" />
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button type="primary" data-testid="payc-match-ok" @click="doMatch">确认勾对</el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

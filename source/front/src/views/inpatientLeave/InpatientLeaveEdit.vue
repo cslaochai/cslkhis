@@ -62,8 +62,8 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button data-testid="lv-form-cancel" @click="visible = false">取消</el-button>
       <el-button :loading="fSaving" data-testid="lv-form-save" type="primary" @click="saveForm">保存申请</el-button>
+      <el-button data-testid="lv-form-cancel" @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

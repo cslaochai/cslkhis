@@ -18,10 +18,10 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :loading="paybackSubmitting" data-testid="deduct-payback-submit" type="primary"
                  @click="submitPayback">确认缴回
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

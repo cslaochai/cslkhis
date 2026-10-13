@@ -32,7 +32,7 @@
     </div>
 
     <div class="rounded-lg border border-slate-200 bg-white shadow-sm">
-      <el-table :data="filtered" style="width: 100%" @row-click="handleViewDetail">
+      <el-table :data="filtered" style="width: 100%">
         <el-table-column class-name="font-mono text-sm" label="账单号" prop="billNo" width="180"/>
         <el-table-column label="患者" prop="patientName"/>
         <el-table-column align="right" label="总费用" width="100">
@@ -50,6 +50,11 @@
           </template>
         </el-table-column>
         <el-table-column label="时间" prop="billTime" width="200"/>
+        <el-table-column fixed="right" label="操作" width="90">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="handleViewDetail(row)">详情</el-button>
+          </template>
+        </el-table-column>
       </el-table>
     </div>
 

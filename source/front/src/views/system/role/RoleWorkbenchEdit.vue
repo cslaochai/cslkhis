@@ -72,12 +72,10 @@
     </div>
 
     <template #footer>
-      <div class="flex items-center justify-between">
+      <div class="flex items-center justify-end gap-2">
         <el-button :icon="Refresh" :loading="roleLoading" @click="loadRoleConfig">重新加载</el-button>
-        <div class="flex gap-2">
-          <el-button @click="visible = false">取消</el-button>
-          <el-button :loading="savingRole" type="primary" @click="saveRoleConfig">保存</el-button>
-        </div>
+        <el-button :loading="savingRole" type="primary" @click="saveRoleConfig">保存</el-button>
+        <el-button @click="visible = false">取消</el-button>
       </div>
     </template>
   </el-dialog>

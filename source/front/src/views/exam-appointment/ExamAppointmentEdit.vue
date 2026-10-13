@@ -54,12 +54,12 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="['medtech:examAppoint:add', 'medtech:examAppoint:edit']" :loading="dlg.submitting"
                  data-testid="book-submit" type="primary"
                  @click="submitAppt">
         {{ mode === 'book' ? '确认占号' : '确认改约' }}
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

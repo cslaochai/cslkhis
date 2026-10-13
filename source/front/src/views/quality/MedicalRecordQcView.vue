@@ -130,7 +130,7 @@
           </div>
 
           <div v-loading="qcLoading" class="p-4">
-            <el-table :data="qcList" border data-testid="p5-qc-table" size="small" @row-click="openDetail">
+            <el-table :data="qcList" border data-testid="p5-qc-table" size="small">
               <el-table-column label="质控单号" width="170">
                 <template #default="{ row }">
                   <span class="text-xs font-medium text-slate-700">{{ row.qcNo }}</span>
@@ -583,10 +583,10 @@
                      @current-change="loadStartCandidates"/>
       <p class="mt-2 text-xs text-slate-400">发起后进入科级待审；同一病历同时只允许一条在途流转。</p>
       <template #footer>
-        <el-button @click="startDialog = false">取消</el-button>
         <el-button v-perm="'qc:recordQc:add'" :disabled="!startRow" data-testid="g18-start-confirm" type="primary"
                    @click="submitStart">发起流转
         </el-button>
+        <el-button @click="startDialog = false">取消</el-button>
       </template>
     </el-dialog>
 

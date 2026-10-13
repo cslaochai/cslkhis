@@ -107,11 +107,11 @@
       同一次住院只允许一条「主要手术」申请（首页主要手术只能有 1 条）。
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="['ipd:surgery:add','ipd:surgery:edit']" :loading="applySubmitting" data-testid="p4-op-apply-submit"
                  type="primary" @click="submitApply">
         {{ applyForm.id ? '保存修改' : '提交手术申请' }}
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

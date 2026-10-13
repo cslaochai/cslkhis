@@ -32,7 +32,7 @@
     <!-- 表格区域 -->
     <el-card class="table-card" shadow="never">
       <el-table v-loading="loading" :data="tableData" :max-height="tableMaxHeight" highlight-current-row
-                stripe style="cursor: pointer" @row-click="handleRowClick">
+                stripe>
         <el-table-column label="科室编码" prop="deptCode" width="120"/>
         <el-table-column label="科室名称" prop="deptName" width="150"/>
         <el-table-column label="科室类型" prop="deptType" width="120">
@@ -63,8 +63,9 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column fixed="right" label="操作" width="150">
+        <el-table-column fixed="right" label="操作" width="180">
           <template #default="{ row }">
+            <el-button :icon="View" link type="primary" @click.stop="handleDetail(row)">详情</el-button>
             <el-button v-perm="'org:dept:add'" :icon="Edit" link type="primary" @click.stop="handleEdit(row)">编辑
             </el-button>
             <el-button v-perm="'org:dept:delete'" :icon="Delete" link type="danger" @click.stop="handleDelete(row)">
@@ -108,7 +109,7 @@
 <script setup>
 import {onMounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
-import {Delete, Edit, Plus, Refresh, Search} from '@element-plus/icons-vue';
+import {Delete, Edit, Plus, Refresh, Search, View} from '@element-plus/icons-vue';
 import {deleteDepartment, getDepartmentList, getDepartmentTree, getDictDataMapList} from '@/api/system';
 import {deptTypeLabel} from '@/lib/deptType';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
@@ -241,8 +242,8 @@ const handleDelete = async (row) => {
     }
   }
 };
-// 单击行查看详情
-const handleRowClick = (row) => {
+// 操作列「详情」：打开只读详情弹框
+const handleDetail = (row) => {
   detailId.value = String(row.id);
   detailVisible.value = true;
 };

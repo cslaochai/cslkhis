@@ -40,8 +40,8 @@
       </p>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :loading="admitSubmitting" type="success" @click="submitAdmit">确认入院登记</el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

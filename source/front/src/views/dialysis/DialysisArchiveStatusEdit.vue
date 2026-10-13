@@ -18,9 +18,9 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :loading="statusSaving" data-testid="hd-status-ok" type="primary" @click="saveStatus">确认变更
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

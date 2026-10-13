@@ -1,5 +1,7 @@
 package com.his.ai.support;
 
+import com.his.ai.entity.SysAiPromptTemplate;
+import com.his.ai.mapper.SysAiPromptTemplateMapper;
 import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +20,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 提示词模板渲染器。
+ * 提示词模板渲染器。数据库优先，classpath 文件兜底。
  */
 @Slf4j
 @Component
@@ -30,12 +32,11 @@ public class PromptTemplate {
     private static final String FRONT_MATTER = "---";
     private static final String DEFAULT_VERSION = "unknown";
 
-    /**
-     * 渲染后仍残留的占位符形态。分组 1 取占位符名，只用于日志点名，不回显正文。
-     */
     private static final Pattern UNFILLED_PATTERN = Pattern.compile("\\{\\{([A-Za-z0-9_]+)}}");
 
     private final ResourceLoader resourceLoader;
+
+    private final SysAiPromptTemplateMapper promptTemplateMapper;
 
     private final Map<String, ParsedTemplate> cache = new ConcurrentHashMap<>();
 
@@ -101,16 +102,25 @@ public class PromptTemplate {
     }
 
     private ParsedTemplate load(String name) {
-        String location = "classpath:" + PROMPT_DIR + name + ".md";
-        Resource resource = resourceLoader.getResource(location);
-        if (!resource.exists()) {
-            throw new IllegalStateException("提示词模板不存在：" + location);
+        SysAiPromptTemplate dbRow = promptTemplateMapper.selectOne(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysAiPromptTemplate>()
+                        .eq(SysAiPromptTemplate::getTemplateCode, name)
+                        .eq(SysAiPromptTemplate::getIsActive, 1)
+                        .last("LIMIT 1"));
+        if (dbRow == null || !TextUtil.hasText(dbRow.getContent())) {
+            throw new IllegalStateException("提示词模板未配置：" + name + "，请在「RAG知识库 → 提示词管理」中维护");
         }
-        try (InputStream input = resource.getInputStream()) {
-            String raw = new String(input.readAllBytes(), StandardCharsets.UTF_8);
-            return parse(name, raw);
-        } catch (IOException ex) {
-            throw new IllegalStateException("提示词模板读取失败：" + location, ex);
+        return parse(name, dbRow.getContent());
+    }
+
+    /**
+     * 清缓存：管理端编辑提示词后调，下次渲染时重新加载
+     */
+    public void evictCache(String name) {
+        if (name == null) {
+            cache.clear();
+        } else {
+            cache.remove(name);
         }
     }
 

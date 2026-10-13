@@ -28,8 +28,8 @@
       </div>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button type="primary" :loading="saving" data-testid="btn-do-generate" @click="doGenerate">生成</el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

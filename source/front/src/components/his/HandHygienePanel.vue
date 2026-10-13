@@ -102,9 +102,9 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="openVisible = false">取消</el-button>
         <el-button v-perm="'emr:infectionMonitor:add'" data-testid="hand-save" type="primary" @click="onSave">保存
         </el-button>
+        <el-button @click="openVisible = false">取消</el-button>
       </template>
     </el-dialog>
   </div>

@@ -8,8 +8,8 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button data-testid="lv-back-cancel" @click="visible = false">取消</el-button>
       <el-button :loading="bkSaving" data-testid="lv-back-submit" type="primary" @click="doBack">确认销假</el-button>
+      <el-button data-testid="lv-back-cancel" @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

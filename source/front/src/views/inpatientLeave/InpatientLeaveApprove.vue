@@ -19,10 +19,10 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button data-testid="lv-approve-cancel" @click="visible = false">取消</el-button>
       <el-button :loading="apSaving" data-testid="lv-approve-submit" type="primary" @click="doApprove">
         {{ ap.allow ? '确认批准' : '确认拒绝' }}
       </el-button>
+      <el-button data-testid="lv-approve-cancel" @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

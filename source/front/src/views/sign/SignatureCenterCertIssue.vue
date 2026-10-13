@@ -31,9 +31,9 @@
       同一员工已有有效证书时会被拒绝（需先吊销旧证书）。签发后私钥加密入库，接口只回公钥与指纹。
     </p>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :loading="issuing" data-testid="p5-sign-issue-submit" type="primary" @click="submitIssue">签发
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

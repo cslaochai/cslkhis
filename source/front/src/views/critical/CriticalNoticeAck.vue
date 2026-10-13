@@ -23,8 +23,8 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button data-testid="cn-ack-cancel" @click="visible = false">取消</el-button>
       <el-button :loading="ackSaving" data-testid="cn-ack-submit" type="primary" @click="doAck">确认签收</el-button>
+      <el-button data-testid="cn-ack-cancel" @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

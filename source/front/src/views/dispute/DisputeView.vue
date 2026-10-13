@@ -76,7 +76,7 @@
     </el-card>
 
     <el-card class="table-card" shadow="never">
-      <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" stripe @row-click="openDetail">
+      <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" stripe>
         <el-table-column label="单号" prop="caseNo" width="150"/>
         <el-table-column label="类型" width="110">
           <template #default="{ row }">
@@ -118,8 +118,10 @@
           <template #default="{ row }">{{ row.openDays ?? 0 }}</template>
         </el-table-column>
         <el-table-column label="登记时间" prop="createTime" width="160"/>
-        <el-table-column fixed="right" label="操作" width="330">
+        <el-table-column fixed="right" label="操作" width="370">
           <template #default="{ row }">
+            <el-button link size="small" type="primary" @click.stop="openDetail(row)">详情
+            </el-button>
             <el-button v-if="row.canAccept" v-perm="'qc:dispute:edit'" link size="small" type="primary"
                        @click.stop="openAct(row, 'accept')">受理
             </el-button>

@@ -98,8 +98,8 @@
       <el-input v-model="finishForm.finishRemark" :rows="3" placeholder="转诊结局 / 接收医院反馈"
                 type="textarea"/>
       <template #footer>
-        <el-button @click="finishVisible = false">取消</el-button>
         <el-button type="primary" @click="submitFinish">完成</el-button>
+        <el-button @click="finishVisible = false">取消</el-button>
       </template>
     </el-dialog>
   </div>

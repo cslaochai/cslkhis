@@ -197,9 +197,9 @@
         </div>
       </template>
       <template #footer>
-        <el-button @click="showResultDialog = false">取消</el-button>
         <el-button v-perm="'medtech:laboratoryWorkstation:edit'" type="primary" @click="handleSubmitResult">提交结果
         </el-button>
+        <el-button @click="showResultDialog = false">取消</el-button>
       </template>
     </el-dialog>
 
@@ -258,13 +258,13 @@
         </div>
       </template>
       <template #footer>
-        <el-button @click="showAuditDialog = false">取消</el-button>
         <el-button v-perm="'medtech:laboratoryWorkstation:edit'" type="primary" @click="handleSubmitAudit">
           <el-icon class="mr-0.5">
             <Check/>
           </el-icon>
           确认审核通过
         </el-button>
+        <el-button @click="showAuditDialog = false">取消</el-button>
       </template>
     </el-dialog>
   </div>

@@ -65,7 +65,7 @@
     </el-card>
 
     <el-card class="table-card" shadow="never">
-      <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" stripe @row-click="openDetail">
+      <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" stripe>
         <el-table-column label="登记单号" prop="applyNo" width="150"/>
         <el-table-column label="患者" prop="patientName" width="100"/>
         <el-table-column label="术式" min-width="180" prop="itemName" show-overflow-tooltip/>
@@ -100,8 +100,10 @@
         </el-table-column>
         <el-table-column label="手术间" prop="operatingRoom" width="100"/>
         <el-table-column label="主刀" prop="surgeon" width="100"/>
-        <el-table-column fixed="right" label="操作" width="380">
+        <el-table-column fixed="right" label="操作" width="420">
           <template #default="{ row }">
+            <el-button link size="small" type="primary" @click.stop="openDetail(row)">详情
+            </el-button>
             <el-button v-if="row.canEvaluate" v-perm="'ipd:daySurgery:edit'" link size="small" type="primary"
                        @click.stop="openEval(row)">术前评估
             </el-button>

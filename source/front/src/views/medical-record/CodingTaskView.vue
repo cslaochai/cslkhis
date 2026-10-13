@@ -136,10 +136,10 @@
                    :value="String(e.id)"/>
       </el-select>
       <template #footer>
-        <el-button @click="assignVisible = false">取消</el-button>
         <el-button v-perm="'emr:codeTask:edit'" :loading="assignLoading" data-testid="ct-assign-submit" type="primary"
                    @click="submitAssign">确定
         </el-button>
+        <el-button @click="assignVisible = false">取消</el-button>
       </template>
     </el-dialog>
 
@@ -167,10 +167,10 @@
           type="textarea"
       />
       <template #footer>
-        <el-button @click="auditVisible = false">取消</el-button>
         <el-button v-perm="'emr:codeTask:edit'" :loading="auditLoading" data-testid="ct-audit-submit" type="primary"
                    @click="submitAudit">确定
         </el-button>
+        <el-button @click="auditVisible = false">取消</el-button>
       </template>
     </el-dialog>
 

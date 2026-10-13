@@ -23,10 +23,10 @@
       </div>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :type="target === 4 ? 'danger' : 'primary'" :loading="saving" data-testid="btn-do-advance"
                  @click="doAdvance">确认
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

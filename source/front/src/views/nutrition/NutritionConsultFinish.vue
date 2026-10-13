@@ -22,9 +22,9 @@
       <div class="form-tip">结论会回写进住院病历，没有结论的「已完成」在病历上等于什么都没发生。</div>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button type="primary" :loading="saving" data-testid="btn-do-finish" @click="doFinish">完成并回写病历
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

@@ -46,10 +46,10 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'emr:archiveBorrow:add'" :loading="saving" data-testid="ab-apply-save" type="primary"
                  @click="apply">提交申请
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

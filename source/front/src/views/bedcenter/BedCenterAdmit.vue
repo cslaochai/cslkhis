@@ -29,9 +29,9 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :loading="submitting" data-testid="bc-admit-submit" type="primary" @click="submitAdmit">确认入院
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

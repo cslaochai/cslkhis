@@ -11,10 +11,10 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">返回</el-button>
       <el-button v-perm="'ipd:consultation:delete'" :loading="cancelLoading" data-testid="p4-cancel-submit"
                  type="danger" @click="submitCancel">确认取消
       </el-button>
+      <el-button @click="visible = false">返回</el-button>
     </template>
   </el-dialog>
 </template>

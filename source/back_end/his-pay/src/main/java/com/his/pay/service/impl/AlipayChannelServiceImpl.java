@@ -63,6 +63,17 @@ public class AlipayChannelServiceImpl implements AlipayChannelService {
     private static final int MOCK_PAID_TTL_HOURS = 2;
 
     /**
+     * 已出码串的存放 key 前缀（按支付单号）：同一张单在有效期内问渠道要几次都是同一句话，
+     * 出过一次就该记住，让「刷新收款码」这类动作只花本地画图的钱。
+     */
+    private static final String PRECREATE_QR_KEY_PREFIX = "his:pay:alipay:qr:";
+
+    /**
+     * 码串存活时长（分钟）：比有效期多留 1 分钟。缓存先于支付单过期，等于让一次正常刷新白打渠道一趟。
+     */
+    private static final int PRECREATE_QR_TTL_MINUTES = PayOrderService.PAY_ORDER_EXPIRE_MINUTES + 1;
+
+    /**
      * 渠道侧「钱已收到」的状态原文（协议字段，不是本库码值）：
      * TRADE_SUCCESS 可退款，TRADE_FINISHED 已过退款期，两者都已实收，漏判后者会让超期后才到账的单永远不入账。
      */
@@ -125,7 +136,9 @@ public class AlipayChannelServiceImpl implements AlipayChannelService {
             // 但钱不会因此自己到账，必须由 markMockPaid 显式登记
             log.warn("[支付宝出码·模拟] payNo={} amount={} 出的是占位码，手机扫不开、渠道无此交易",
                     order.getPayNo(), order.getAmount());
-            return WxPayChannelService.PayUnifiedResult.cashier(Map.of("qrCode", MOCK_QR_PREFIX + order.getPayNo()));
+            String mockQrCode = MOCK_QR_PREFIX + order.getPayNo();
+            cacheQrCode(order.getPayNo(), mockQrCode);
+            return WxPayChannelService.PayUnifiedResult.cashier(Map.of("qrCode", mockQrCode));
         }
         AlipayClient client = alipayClient();
 
@@ -149,12 +162,43 @@ public class AlipayChannelServiceImpl implements AlipayChannelService {
                 return WxPayChannelService.PayUnifiedResult.fail("支付宝出码失败: " + response.getSubMsg());
             }
             log.info("[支付宝出码] 成功 payNo={} amount={}", order.getPayNo(), order.getAmount());
+            cacheQrCode(order.getPayNo(), response.getQrCode());
             return WxPayChannelService.PayUnifiedResult.cashier(Map.of("qrCode", response.getQrCode()));
         } catch (Exception e) {
             // SDK 把「私钥格式不对」这类配置错包成 RuntimeException 抛出，只 catch AlipayApiException 就会漏成
             // 500「系统内部错误」——用户看不出是自己配错了，只会以为医院系统坏了
             log.error("[支付宝出码] 调用失败 payNo={} err={}", order.getPayNo(), e.getMessage(), e);
             return WxPayChannelService.PayUnifiedResult.fail("支付宝出码失败：" + e.getMessage());
+        }
+    }
+
+    @Override
+    public String recallQrCode(String payNo) {
+        if (!TextUtil.hasText(payNo)) {
+            return null;
+        }
+        try {
+            return stringRedisTemplate.opsForValue().get(PRECREATE_QR_KEY_PREFIX + payNo);
+        } catch (Exception e) {
+            // 缓存读失败不能把出码顶死：退回真出码一次即可，代价是多一趟渠道请求，
+            // 而报「出码失败」会让收银员以为系统坏了、当场停下收款
+            log.warn("[支付宝出码] 码串缓存读取失败，退回真出码 payNo={} err={}", payNo, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 记住这张单的码串。写失败只留 warn：最坏结果是下次刷新真的去打一趟渠道，不值得为缓存打断收款。
+     */
+    private void cacheQrCode(String payNo, String qrCode) {
+        if (!TextUtil.hasText(qrCode)) {
+            return;
+        }
+        try {
+            stringRedisTemplate.opsForValue()
+                    .set(PRECREATE_QR_KEY_PREFIX + payNo, qrCode, PRECREATE_QR_TTL_MINUTES, TimeUnit.MINUTES);
+        } catch (Exception e) {
+            log.warn("[支付宝出码] 码串缓存写入失败 payNo={} err={}", payNo, e.getMessage());
         }
     }
 

@@ -23,8 +23,11 @@ import com.his.miniapp.vo.MiniPayOrderListVO;
 import com.his.miniapp.vo.MiniPayOrderVO;
 import com.his.miniapp.vo.MiniPendingBillItemVO;
 import com.his.miniapp.vo.MiniPendingBillListVO;
+import com.his.pay.enums.PayNotifyResultEnum;
+import com.his.pay.enums.PayNotifySceneEnum;
 import com.his.pay.enums.PayOrderBizTypeEnum;
 import com.his.pay.service.AlipayChannelService;
+import com.his.pay.service.PayNotifyLogService;
 import com.his.pay.service.PayOrderService;
 import com.his.pay.service.WxPayChannelService;
 import com.his.pay.vo.PayOrderVO;
@@ -37,6 +40,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -68,6 +72,8 @@ public class MiniPayServiceImpl implements MiniPayService {
 
     private final PayOrderService payOrderService;
 
+    private final PayNotifyLogService payNotifyLogService;
+
     private final SettlementBillService settlementBillService;
 
     private final PaymentService paymentService;
@@ -90,7 +96,7 @@ public class MiniPayServiceImpl implements MiniPayService {
 
         PayOrderVO order = payOrderService.createPending(new PayOrderService.CreateSpec(
                 dto.getBizType(), dto.getBizId(), current.getPatientId(), current.getRealName(),
-                resolveAmount(dto), dto.getChannel(), "患者端小程序支付"));
+                resolveAmount(dto), dto.getChannel(), "患者端小程序支付")).order();
 
         // 真收银台：渠道只出参数，收款事实由异步通知或主动查单确认，这里绝不替渠道把单据置成已支付
         WxPayChannelService.PayUnifiedResult unified = unifiedOrderOfChannel(order);
@@ -194,11 +200,16 @@ public class MiniPayServiceImpl implements MiniPayService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String confirmByAlipayNotify(Map<String, String> params) {
+        // 留痕必须拍在验签之前：渠道 SDK 拼签名串时会把传入 Map 里的 sign/sign_type 就地摘掉，
+        // 验签之后再序列化，恰好丢掉「它到底拿什么签的」这两个排查伪造通知时最要紧的键
+        Map<String, String> rawNotify = params == null ? Map.of() : new LinkedHashMap<>(params);
         String payNo = params == null ? null : params.get("out_trade_no");
 
         // 闸1 身份：签名由支付宝私钥产出，改一个字节签名就断；再认 app_id，别人的应用签得再对也不是本应用的收款
         if (!alipayChannelService.verifyNotify(params)) {
             log.warn("[支付宝回调] 验签未通过，不入账 payNo={}", payNo);
+            recordAlipayNotify(PayNotifyResultEnum.SIGN_INVALID, NOTIFY_RETRY, false,
+                    "验签未通过（签名或 app_id 不符）", rawNotify);
             return NOTIFY_RETRY;
         }
 
@@ -206,6 +217,8 @@ public class MiniPayServiceImpl implements MiniPayService {
         // 这里若回 failure，支付宝会对一条永远不会变成已付款的通知按策略重试整天。
         if (!alipayChannelService.isPaidStatus(params.get("trade_status"))) {
             log.info("[支付宝回调] 交易未处于已付款状态，无需入账 payNo={} tradeStatus={}", payNo, params.get("trade_status"));
+            recordAlipayNotify(PayNotifyResultEnum.NOT_PAID, NOTIFY_ACK, true,
+                    "交易状态未达实收：" + TextUtil.trimToEmpty(params.get("trade_status")), rawNotify);
             return NOTIFY_ACK;
         }
 
@@ -213,11 +226,15 @@ public class MiniPayServiceImpl implements MiniPayService {
         PayOrderVO order = payOrderService.getByPayNo(payNo);
         if (order == null) {
             log.error("[支付宝回调] 通知里的支付单不存在，疑似跨系统串单 payNo={} tradeNo={}", payNo, params.get("trade_no"));
+            recordAlipayNotify(PayNotifyResultEnum.ORDER_MISSING, NOTIFY_RETRY, true,
+                    "支付单不存在，疑似跨系统串单", rawNotify);
             return NOTIFY_RETRY;
         }
         if (!Objects.equals(order.getChannel(), PayChannelEnum.ALIPAY.getCode())) {
             log.error("[支付宝回调] 支付单渠道不是支付宝，拒入账 payNo={} orderChannel={}",
                     payNo, PayChannelEnum.labelOrUnknown(order.getChannel()));
+            recordAlipayNotify(PayNotifyResultEnum.CHANNEL_MISMATCH, NOTIFY_RETRY, true,
+                    "支付单渠道不是支付宝：" + PayChannelEnum.labelOrUnknown(order.getChannel()), rawNotify);
             return NOTIFY_RETRY;
         }
 
@@ -228,6 +245,8 @@ public class MiniPayServiceImpl implements MiniPayService {
             notifyAmount = new BigDecimal(TextUtil.trimToEmpty(params.get("total_amount")));
         } catch (NumberFormatException e) {
             log.error("[支付宝回调] total_amount 不是合法金额，不入账 payNo={} raw={}", payNo, params.get("total_amount"));
+            recordAlipayNotify(PayNotifyResultEnum.AMOUNT_INVALID, NOTIFY_RETRY, true,
+                    "total_amount 不是合法金额：" + TextUtil.trimToEmpty(params.get("total_amount")), rawNotify);
             return NOTIFY_RETRY;
         }
 
@@ -236,18 +255,39 @@ public class MiniPayServiceImpl implements MiniPayService {
         SystemOperatorContext.bindPatient(order.getCashierId(), order.getPatientId(),
                 TextUtil.trimToEmpty(order.getCashierName()));
         try {
-            settlePaid(payNo, PayChannelEnum.ALIPAY.getCode(), notifyAmount, params.get("trade_no"));
+            boolean booked = settlePaid(payNo, PayChannelEnum.ALIPAY.getCode(), notifyAmount, params.get("trade_no"));
+            recordAlipayNotify(booked ? PayNotifyResultEnum.BOOKED : PayNotifyResultEnum.DUPLICATED,
+                    NOTIFY_ACK, true, booked ? null : "支付单早已入账，本次为重复通知", rawNotify);
             log.info("[支付宝回调] 已受理 payNo={} tradeNo={} amount={}",
                     payNo, params.get("trade_no"), notifyAmount.toPlainString());
             return NOTIFY_ACK;
+        } catch (RuntimeException e) {
+            // 入账失败必须先把这条通知钉在留痕里再抛：外层事务会把状态改动全洗掉，
+            // 而「渠道说钱到了、本地没记上」正是事后最难复现的一种账，光靠日志翻不回当时那份报文
+            recordAlipayNotify(PayNotifyResultEnum.BOOK_FAILED, NOTIFY_RETRY, true,
+                    "入账失败：" + TextUtil.trimToEmpty(e.getMessage()), rawNotify);
+            throw e;
         } finally {
             SystemOperatorContext.clear();
         }
     }
 
+    /**
+     * 患者端通知出口的留痕收口：报文里能自取的字段全交给工厂方法提，本方只声明「怎么处理到哪一步」。
+     */
+    private void recordAlipayNotify(PayNotifyResultEnum result, String ackBody, boolean signVerified,
+                                    String errorMsg, Map<String, String> params) {
+        payNotifyLogService.recordNotify(PayNotifyLogService.NotifyRecord.ofAlipay(
+                PayNotifySceneEnum.PATIENT_MINI, result, ackBody, signVerified, errorMsg, params));
+    }
+
     @Override
     public String confirmByWxNotify(String body) {
         log.error("[微信回调] 微信通知通道未接通（JSAPI 下单与 V3 验签解密均未实现），本次通知不受理");
+        // 微信 V3 是加密报文，解密前取不出任何字段，原文整体留痕（这也是将来接真实现时唯一的排查素材来源）
+        payNotifyLogService.recordNotify(PayNotifyLogService.NotifyRecord.ofRawText(
+                PayNotifySceneEnum.PATIENT_MINI, PayNotifyResultEnum.REJECTED, NOTIFY_RETRY,
+                PayChannelEnum.WECHAT.getCode(), false, "微信通知通道未接通，不受理", body));
         return NOTIFY_RETRY;
     }
 
@@ -283,15 +323,17 @@ public class MiniPayServiceImpl implements MiniPayService {
     /**
      * 确认实收并推进业务：翻转（条件更新，只允许成功一次）与推进必须在同一事务里，
      * 否则会出现「钱已记成实收、账还停在待支付」的永久漏账。
-     * 翻转返回 null 表示这条通知重复到达（或并发那一路先赢），直接跳过推进。
+     *
+     * @return 本次是否真的推进了业务；false = 这条通知重复到达（或并发那一路先赢），推进已由赢家做完
      */
-    private void settlePaid(String payNo, Integer channel, BigDecimal channelAmount, String channelTxnNo) {
+    private boolean settlePaid(String payNo, Integer channel, BigDecimal channelAmount, String channelTxnNo) {
         PayOrderVO paid = payOrderService.confirmPaid(payNo, channel, channelAmount, channelTxnNo);
         if (paid == null) {
             log.info("[患者端支付] 支付单已入账，跳过推进 payNo={}", payNo);
-            return;
+            return false;
         }
         advance(paid);
+        return true;
     }
 
     private void advance(PayOrderVO order) {

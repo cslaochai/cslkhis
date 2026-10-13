@@ -40,10 +40,10 @@
       </div>
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'pharmacy:narcotic:edit'" :loading="submitting" data-testid="narco-ampoule-submit"
                  type="danger" @click="submit">确认登记
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

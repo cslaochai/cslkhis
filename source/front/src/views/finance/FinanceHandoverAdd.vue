@@ -36,7 +36,6 @@
       </el-form>
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button
           v-perm="'finance:settlement:edit'"
           :loading="handoverSubmitting"
@@ -46,6 +45,7 @@
       >
         确认交班
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

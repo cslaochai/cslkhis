@@ -57,7 +57,6 @@
             border
             data-testid="trace-table"
             stripe
-            @row-click="openDetail"
             @selection-change="onSelectionChange"
         >
           <el-table-column type="selection" width="46"/>

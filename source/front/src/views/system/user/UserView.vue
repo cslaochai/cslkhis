@@ -38,9 +38,7 @@
           v-loading="loading"
           :data="tableData"
           :max-height="tableMaxHeight"
-          :row-style="{ cursor: 'pointer' }"
           stripe
-          @row-click="handleRowClick"
       >
         <el-table-column label="用户名" min-width="120" prop="userName"/>
         <el-table-column label="姓名" min-width="100" prop="realName"/>
@@ -82,8 +80,9 @@
           </template>
         </el-table-column>
         <el-table-column label="创建时间" min-width="180" prop="createTime"/>
-        <el-table-column fixed="right" label="操作" width="300">
+        <el-table-column fixed="right" label="操作" width="340">
           <template #default="{ row }">
+            <el-button :icon="View" link type="primary" @click.stop="openUserDialog(row, true)">详情</el-button>
             <el-button v-if="canEdit(row)" v-perm="'system:user:edit'" :icon="Edit" link type="primary"
                        @click.stop="handleEdit(row)">编辑
             </el-button>
@@ -120,7 +119,7 @@
 <script lang="js" setup>
 import {onMounted, reactive, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
-import {Delete, Edit, Plus, Refresh, Search} from '@element-plus/icons-vue'
+import {Delete, Edit, Plus, Refresh, Search, View} from '@element-plus/icons-vue'
 import {deleteUser, getUserList, resetPassword} from '@/api/system'
 import {getDictLabel, USER_STATUS} from '@/lib/dict'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
@@ -142,7 +141,7 @@ const pagination = ref({
 // 表单弹框（新增/编辑/详情）状态已整体搬进 UserEdit.vue，这里只控显隐与传行
 const dialogVisible = ref(false)
 const dialogRow = ref(null)
-// 行点击打开的详情：患者/其他账号不可编辑，弹窗只读
+// 操作列「详情」打开：患者/其他账号不可编辑，弹窗只读
 const dialogViewOnly = ref(false)
 
 // 列表页布局（两卡式）：查询卡与表格卡分隔；面板高随内容自适应，不锁死。
@@ -195,9 +194,7 @@ const handleAdd = () => {
   dialogVisible.value = true
 }
 
-// 点行 = 只看详情；改资料必须走「编辑」按钮
-const handleRowClick = (row) => openUserDialog(row, true)
-
+// 「详情」= 只看；改资料必须走「编辑」按钮
 const handleEdit = (row) => openUserDialog(row, false)
 
 const openUserDialog = (row, asView) => {

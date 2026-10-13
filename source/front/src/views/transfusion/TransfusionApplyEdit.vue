@@ -140,11 +140,11 @@
       血型以本次输血前鉴定为准 —— 与患者档案不一致时系统会在备注里提示，但不阻断（档案常是旧的）。
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="['medtech:transfusion:add','medtech:transfusion:edit']" :loading="applySubmitting"
                  data-testid="p4-tf-apply-submit" type="primary" @click="submitApply">
         {{ applyForm.id ? '保存修改' : '提交用血申请' }}
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

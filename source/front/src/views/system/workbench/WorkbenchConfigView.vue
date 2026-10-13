@@ -62,7 +62,7 @@
             <el-tag v-else size="small" type="info">未上线</el-tag>
           </template>
         </el-table-column>
-        <el-table-column align="center" fixed="right" label="操作" width="140">
+        <el-table-column align="center" fixed="right" label="操作" width="200">
           <template #default="{ row }">
             <el-button :icon="Edit" link type="primary" @click="openEdit(row)">编辑</el-button>
             <el-button :icon="Delete" link type="danger" @click="removeWidget(row)">删除</el-button>

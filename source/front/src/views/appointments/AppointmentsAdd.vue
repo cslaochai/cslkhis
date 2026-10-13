@@ -205,10 +205,10 @@
       </div>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'opd:appointments:add'" :loading="addSubmitLoading" type="primary" @click="handleSubmit">
         确认挂号
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

@@ -89,8 +89,7 @@
 
     <el-card class="table-card" shadow="never">
       <!-- 表格 -->
-      <el-table v-loading="loading" :data="filtered" :max-height="tableMaxHeight" class="cursor-pointer" stripe
-                @row-click="openDetail">
+      <el-table v-loading="loading" :data="filtered" :max-height="tableMaxHeight" stripe>
         <el-table-column label="标本条码" prop="specimenNo" width="150">
           <template #default="{row}">
             <span v-if="row.specimenNo" class="font-mono text-blue-600">{{ row.specimenNo }}</span>
@@ -121,8 +120,12 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column align="center" fixed="right" label="操作" width="160">
+        <el-table-column align="center" fixed="right" label="操作" width="200">
           <template #default="{row}">
+            <el-button link size="small" type="primary"
+                       @click.stop="openDetail(row)">
+              详情
+            </el-button>
             <template v-if="row.recordStatus === 1">
               <el-button v-if="!row.specimenNo" v-perm="'medtech:specimen:edit'" link size="small" type="primary"
                          @click.stop="handleAssignBarcode(row)">
@@ -173,8 +176,8 @@
         </div>
       </div>
       <template #footer>
-        <el-button @click="showBarcodeDialog = false">取消</el-button>
         <el-button v-perm="'medtech:specimen:edit'" type="primary" @click="confirmAssignBarcode">确认分配</el-button>
+        <el-button @click="showBarcodeDialog = false">取消</el-button>
       </template>
     </el-dialog>
   </div>

@@ -11,10 +11,10 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :loading="concludeSubmitting" data-testid="inspect-conclude-submit" type="primary"
                  @click="submitConclude">确认结项
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

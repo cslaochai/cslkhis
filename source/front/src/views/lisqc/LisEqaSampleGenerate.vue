@@ -28,9 +28,9 @@
     </el-form>
     <div class="text-xs text-gray-400 px-6">已存在的（序号 + 项目 + 仪器）组合会跳过，不会覆盖已录的检测值。</div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'medtech:lisEqa:add'" :loading="saving" type="primary" @click="save">生成
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

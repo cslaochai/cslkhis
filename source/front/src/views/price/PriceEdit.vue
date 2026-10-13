@@ -29,8 +29,8 @@
       </p>
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'finance:price:edit'" :loading="submitting" type="primary" @click="submit">确认调价</el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

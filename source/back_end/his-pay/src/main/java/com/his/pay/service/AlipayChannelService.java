@@ -26,6 +26,15 @@ public interface AlipayChannelService {
     WxPayChannelService.PayUnifiedResult precreate(PayOrderVO order);
 
     /**
+     * 取回这张单已出过的码串，没有（没出过、或已过期被清）返回 null。
+     *
+     * <p>存在的理由就是别把「同一张码」问渠道两遍：码串在有效期内对同一商户订单号恒定不变，
+     * 出过一次就该按单号留在缓存里，收银员点刷新、前端重连、页面重开都只该本地重画。
+     * 缓存活着而支付单还待支付，说明渠道侧那笔预下单也还活着（两侧有效期同口径）。
+     */
+    String recallQrCode(String payNo);
+
+    /**
      * 关闭渠道侧交易（患者放弃付款、收银员换渠道出码时必须调）。
      *
      * <p>不关就等于把「一个订单号可以付一次」的额度一直悬在渠道侧：患者事后拿旧码扫出来照样能付，

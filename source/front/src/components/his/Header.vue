@@ -299,10 +299,10 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="passwordDialogVisible = false">取消</el-button>
       <el-button :loading="passwordLoading" type="primary" @click="submitChangePassword">
         确定修改
       </el-button>
+      <el-button @click="passwordDialogVisible = false">取消</el-button>
     </template>
   </el-dialog>
   <el-dialog v-model="showSwitchPostDialog" destroy-on-close title="切换岗位" width="460px">

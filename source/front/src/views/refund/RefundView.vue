@@ -154,7 +154,6 @@
         />
       </div>
       <template #footer>
-        <el-button @click="auditVisible = false">取消</el-button>
         <el-button
             v-perm="'finance:refund:edit'"
             :loading="auditSubmitting"
@@ -163,6 +162,7 @@
         >
           确认{{ auditForm.approved ? '通过' : '驳回' }}
         </el-button>
+        <el-button @click="auditVisible = false">取消</el-button>
       </template>
     </el-dialog>
     <!-- 作废 -->
@@ -184,7 +184,6 @@
         />
       </div>
       <template #footer>
-        <el-button @click="discardVisible = false">取消</el-button>
         <el-button
             v-perm="'finance:refund:edit'"
             :loading="discardSubmitting"
@@ -194,6 +193,7 @@
         >
           确认作废
         </el-button>
+        <el-button @click="discardVisible = false">取消</el-button>
       </template>
     </el-dialog>
   </div>

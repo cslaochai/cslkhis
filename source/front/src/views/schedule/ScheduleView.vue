@@ -560,13 +560,13 @@
         </p>
       </div>
       <template #footer>
-        <el-button @click="stopImpactVisible = false">取消</el-button>
         <el-button v-if="stopImpactList.length" v-perm="'outpatient:schedule:delete'" :loading="batchCancelLoading"
                    type="warning" @click="handleBatchCancel">
           停诊并批量退号（{{ stopImpactList.length }}）
         </el-button>
         <el-button v-perm="'outpatient:schedule:delete'" type="danger" @click="handleStopOnly">仅停诊（名单留存自行通知）
         </el-button>
+        <el-button @click="stopImpactVisible = false">取消</el-button>
       </template>
     </el-dialog>
 
@@ -620,12 +620,12 @@
         </template>
       </div>
       <template #footer>
-        <el-button @click="previewVisible = false">取消</el-button>
         <el-button v-perm="'outpatient:schedule:add'" :disabled="!previewData || !(previewData.willCreate || []).length"
                    :loading="generateLoading"
                    type="primary"
                    @click="handleConfirmGenerate">确认生成
         </el-button>
+        <el-button @click="previewVisible = false">取消</el-button>
       </template>
     </el-dialog>
   </div>

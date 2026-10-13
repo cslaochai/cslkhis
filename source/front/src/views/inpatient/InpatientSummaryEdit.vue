@@ -237,11 +237,11 @@
       </fieldset>
     </div>
     <template #footer>
-      <el-button @click="visible = false">关闭</el-button>
       <el-button v-if="summaryEditable" v-perm="'ipd:inpatient:edit'" :loading="summaryLoading" type="primary"
                  @click="submitSummary">保存病案首页
       </el-button>
       <el-button v-else disabled>已归档，不可修改</el-button>
+      <el-button @click="visible = false">关闭</el-button>
     </template>
   </el-dialog>
 </template>

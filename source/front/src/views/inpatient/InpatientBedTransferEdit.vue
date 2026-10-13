@@ -18,10 +18,10 @@
       只能在同一科室内部换床；跨科室属于「转科」，走转科流程并需要重新确定主管医师。
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'ipd:inpatient:edit'" :loading="transferLoading" type="primary" @click="submitTransfer">
         确认换床
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

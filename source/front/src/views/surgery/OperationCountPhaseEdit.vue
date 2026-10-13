@@ -46,10 +46,10 @@
       </div>
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'ipd:operationCount:edit'" :loading="submitting" data-testid="g15-count-phase-submit"
                  type="primary" @click="submit">登记清点
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

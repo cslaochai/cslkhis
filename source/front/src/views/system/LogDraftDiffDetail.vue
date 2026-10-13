@@ -1,7 +1,7 @@
 <template>
   <el-dialog
       v-model="visible"
-      :title="`草稿留痕 · ${row?.patientName || ''}（${row?.deptName || ''}）`"
+      :title="`AI 病历草拟记录 · ${row?.patientName || ''}（${row?.deptName || ''}）`"
       width="720px"
   >
     <p class="diff-meta">
@@ -17,7 +17,7 @@
     </div>
     <p class="diff-legend">
       <span class="diff-del">删除</span> / <span class="diff-add">新增</span> ——
-      医生对 AI 草稿的改动；文本过长时尾部可能被截断
+      医生对 AI 现病史草稿的改动；文本过长时尾部可能被截断
     </p>
     <template #footer>
       <el-button @click="visible = false">关闭</el-button>
@@ -27,9 +27,10 @@
 
 <script setup>
 /**
- * 草稿留痕详情弹框（自 AiAdminView 拆出，只读，红删绿增渲染用模板插值，禁止 v-html）
+ * AI 病历草拟记录详情弹框（日志中心只读，红删绿增渲染用模板插值，禁止 v-html）
  *
- * 留痕没有单条查询接口，数据源就是列表行快照（row.diffJson 为分段数组），打开时解析一次。
+ * 记录的是医生工作站「AI 草拟」现病史 → 医生修改 → 保存病历 这条链路的 diff 快照。
+ * 没有单条查询接口，数据源就是列表行快照（row.diffJson 为分段数组），打开时解析一次。
  */
 import {computed, ref, watch} from 'vue';
 

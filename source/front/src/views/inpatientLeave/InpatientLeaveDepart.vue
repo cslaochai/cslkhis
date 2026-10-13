@@ -26,9 +26,9 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button data-testid="lv-leave-cancel" @click="visible = false">取消</el-button>
       <el-button :loading="lvSaving" data-testid="lv-leave-submit" type="primary" @click="doLeave">签署并登记离院
       </el-button>
+      <el-button data-testid="lv-leave-cancel" @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

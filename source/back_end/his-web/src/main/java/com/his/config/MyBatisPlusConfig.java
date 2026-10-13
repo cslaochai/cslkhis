@@ -42,7 +42,14 @@ public class MyBatisPlusConfig {
                 this.strictInsertFill(metaObject, "updateTime", LocalDateTime.class, now);
                 this.strictInsertFill(metaObject, "delFlag", Integer.class, 0);
                 CurrentUser currentUser = UserUtils.getCurrentUser();
-                if (currentUser != null && currentUser.getUserType() == UserTypeEnum.INNER.getCode()) {
+                // 渠道异步回调这类无登录态入口取不到当前人：操作人列一律留空（表上可空），
+                // 既不填 "system" 之类的假名字（填了就把「无人归因」藏进库里，出事查不到人），
+                // 也不能继续往下取值 —— 下面两个分支都直接对 currentUser 取字段，null 时整条插入抛 NPE，
+                // 现象是「渠道已经收到钱、本地一句系统内部错误」。
+                if (currentUser == null) {
+                    return;
+                }
+                if (currentUser.getUserType() == UserTypeEnum.INNER.getCode()) {
                     this.strictInsertFill(metaObject, "createBy", String.class, currentUser.getEmployeeName());
                     this.strictInsertFill(metaObject, "updateBy", String.class, currentUser.getEmployeeName());
                     this.strictInsertFill(metaObject, "createById", Long.class, currentUser.getEmployeeId());
@@ -59,7 +66,11 @@ public class MyBatisPlusConfig {
             public void updateFill(MetaObject metaObject) {
                 this.strictUpdateFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
                 CurrentUser currentUser = UserUtils.getCurrentUser();
-                if (currentUser != null && currentUser.getUserType() == UserTypeEnum.INNER.getCode()) {
+                // 与 insertFill 同一口径：无登录态时更新人留空，不假填、也不 NPE
+                if (currentUser == null) {
+                    return;
+                }
+                if (currentUser.getUserType() == UserTypeEnum.INNER.getCode()) {
                     this.strictUpdateFill(metaObject, "updateBy", String.class, currentUser.getEmployeeName());
                     this.strictUpdateFill(metaObject, "updateById", Long.class, currentUser.getEmployeeId());
                 } else {

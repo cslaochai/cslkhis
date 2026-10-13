@@ -11,10 +11,10 @@
     </el-form>
     <div class="text-xs text-gray-400 px-6">Westgard 判定由服务端按计划靶值/SD 计算，页面不做在控/失控判断。</div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'medtech:lisQc:add'" :loading="saving" type="primary" @click="save">
         录入并判定
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

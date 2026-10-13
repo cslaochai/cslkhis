@@ -19,9 +19,9 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button data-testid="ir-seat-cancel" @click="visible = false">取消</el-button>
       <el-button v-perm="'medtech:infusion:add'" data-testid="ir-seat-save" type="primary" @click="saveSeat">保存
       </el-button>
+      <el-button data-testid="ir-seat-cancel" @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

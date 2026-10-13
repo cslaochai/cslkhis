@@ -504,10 +504,10 @@
         </div>
       </div>
       <template #footer>
-        <el-button data-testid="cf-cancel" @click="cfVisible = false">取消</el-button>
-        <el-button v-perm="'ipd:deathCertificate:add'" :loading="cfSaving" data-testid="cf-save" type="primary"
-                   @click="saveCert">保存
+      <el-button v-perm="'ipd:deathCertificate:add'" :loading="cfSaving" data-testid="cf-save" type="primary"
+                 @click="saveCert">保存
         </el-button>
+        <el-button data-testid="cf-cancel" @click="cfVisible = false">取消</el-button>
       </template>
     </el-dialog>
 
@@ -640,10 +640,10 @@
         </div>
       </div>
       <template #footer>
-        <el-button data-testid="rf-cancel" @click="rfVisible = false">取消</el-button>
-        <el-button v-perm="'ipd:deathRegister:add'" :loading="rfSaving" data-testid="rf-save" type="primary"
-                   @click="saveRegister">保存
+      <el-button v-perm="'ipd:deathRegister:add'" :loading="rfSaving" data-testid="rf-save" type="primary"
+                 @click="saveRegister">保存
         </el-button>
+        <el-button data-testid="rf-cancel" @click="rfVisible = false">取消</el-button>
       </template>
     </el-dialog>
 

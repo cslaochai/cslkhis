@@ -159,7 +159,7 @@
             <el-button :icon="Refresh" @click="resetDispatch">重置</el-button>
           </div>
           <el-table v-loading="dpLoading" :data="dpRows" border data-testid="survey-dispatch-table" size="small"
-                    stripe @row-click="openDispatchDetail">
+                    stripe>
             <el-table-column label="发放单号" prop="dispatchNo" width="170"/>
             <el-table-column label="问卷" prop="templateName" show-overflow-tooltip width="180"/>
             <el-table-column label="患者" prop="patientName" width="110">
@@ -190,8 +190,9 @@
             <el-table-column label="截止时间" width="150">
               <template #default="{ row }">{{ fmtTime(row.expireTime) }}</template>
             </el-table-column>
-            <el-table-column fixed="right" label="操作" width="220">
+            <el-table-column fixed="right" label="操作" width="250">
               <template #default="{ row }">
+                <el-button link size="small" type="primary" @click.stop="openDispatchDetail(row)">详情</el-button>
                 <el-button v-if="row.canFill" v-perm="'qc:survey:edit'" link size="small" type="primary"
                            @click.stop="openFill(row)">录入答卷
                 </el-button>
@@ -234,7 +235,7 @@
             <el-button :icon="Refresh" @click="resetAnswer">重置</el-button>
           </div>
           <el-table v-loading="anLoading" :data="anRows" border data-testid="survey-answer-table" size="small"
-                    stripe @row-click="openAnswer">
+                    stripe>
             <el-table-column label="答卷号" prop="answerNo" width="170"/>
             <el-table-column label="问卷" prop="templateName" show-overflow-tooltip width="170"/>
             <el-table-column label="患者" prop="patientName" width="110"/>
@@ -266,12 +267,11 @@
                 <el-tag v-if="row.disputeCaseId" class="ml-1" size="small" type="danger">已转投诉</el-tag>
               </template>
             </el-table-column>
-            <el-table-column fixed="right" label="操作" width="120">
+            <el-table-column fixed="right" label="操作" width="130">
               <template #default="{ row }">
+                <el-button link size="small" type="primary" @click.stop="openAnswer(row)">详情</el-button>
                 <el-button v-if="row.canVoid" v-perm="'qc:survey:edit'" link size="small" type="danger"
                            @click.stop="openVoid(row)">作废
-                </el-button>
-                <el-button v-if="!row.canVoid" link size="small" type="primary" @click.stop="openAnswer(row)">查看
                 </el-button>
               </template>
             </el-table-column>
@@ -370,8 +370,8 @@
         已转出投诉的答卷不允许重填，作废前请先在投诉台账结案。
       </div>
       <template #footer>
-        <el-button @click="voidVisible = false">取消</el-button>
         <el-button :loading="voidBusy" type="danger" @click="submitVoid">确认作废</el-button>
+        <el-button @click="voidVisible = false">取消</el-button>
       </template>
     </el-dialog>
 

@@ -108,7 +108,6 @@
       </div>
     </div>
     <template #footer>
-      <el-button @click="visible = false">关闭</el-button>
       <el-button
           v-if="safetyForm.phase"
           v-perm="['ipd:surgery:edit', 'ipd:anesthesia:edit']"
@@ -119,6 +118,7 @@
       >
         确认三方已在场并签核
       </el-button>
+      <el-button @click="visible = false">关闭</el-button>
     </template>
   </el-dialog>
 </template>

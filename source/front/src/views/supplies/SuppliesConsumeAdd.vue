@@ -23,8 +23,8 @@
       <p class="pl-2 text-xs text-slate-400">领用将按先过期先出（FEFO）扣减批次库存，并落出入库流水。</p>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'asset:supplies:add'" type="primary" @click="handleConsumeSubmit">确认领用</el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

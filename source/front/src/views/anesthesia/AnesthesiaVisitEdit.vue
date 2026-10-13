@@ -66,10 +66,10 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'ipd:anesthesia:add'" :loading="visitSubmitting" data-testid="g15-visit-submit"
                  type="primary" @click="submitVisit">保存
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

@@ -28,8 +28,8 @@
       </div>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">关闭</el-button>
       <el-button data-testid="drg-sim-run" type="primary" @click="runSim">运行模拟</el-button>
+      <el-button @click="visible = false">关闭</el-button>
     </template>
   </el-dialog>
 </template>

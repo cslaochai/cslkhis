@@ -20,8 +20,8 @@
       <div class="form-tip">同月同范围重复生成会覆盖上一次结果 —— 指标是对外报数，只留最新一次复算。</div>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button type="primary" :loading="saving" data-testid="btn-do-generate" @click="doGenerate">生成</el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

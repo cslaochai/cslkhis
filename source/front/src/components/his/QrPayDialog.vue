@@ -52,7 +52,8 @@
             </el-button>
           </div>
           <el-tooltip v-else content="刷新收款码" placement="top">
-            <button class="absolute bottom-0.5 right-0.5 flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm hover:text-[#1269B5]"
+            <button :disabled="creating"
+                    class="absolute bottom-0.5 right-0.5 flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm hover:text-[#1269B5] disabled:cursor-not-allowed disabled:opacity-40"
                     data-testid="qrpay-refresh-corner" type="button" @click="generate">
               <el-icon>
                 <Refresh/>
@@ -69,12 +70,11 @@
 
       <p class="text-center text-xs text-slate-400">
         <template v-if="isPaid">收款流水已由后端按渠道查单确认，页面不代替它翻状态</template>
-        <template v-else-if="qrImage && qrExpired">二维码已过期：旧码不能再扫，点击「刷新收款码」重新出码</template>
+        <template v-else-if="qrImage && qrExpired">二维码已过期，点击「刷新收款码」重新出码</template>
         <template v-else-if="qrImage">
           请患者用{{ channelLabel }}扫此码 · 收款码 {{ countdownText }} 后过期 ·
           已自动确认支付结果{{ pollError ? `（最近一次查询失败：${pollError}）` : '' }}
         </template>
-        <template v-else>一张码只属于一个渠道，换渠道会作废前一张码</template>
       </p>
     </div>
 
@@ -118,7 +118,8 @@ const PAY_STATUS_PENDING = 0;
 const PAY_STATUS_CLOSED = 2;
 /** 渠道码值（PayChannelEnum）：1-微信 2-支付宝。支付宝已接通，微信缺商户证书，出码会明确报错 */
 const CHANNEL_OPTIONS = [{code: 2, label: '支付宝'}, {code: 1, label: '微信'}];
-const POLL_MS = 2500;
+/** 轮询间隔与后端「同单查单节流」同宽：比它更快只会撞上被节流的那一轮，白多一次请求 */
+const POLL_MS = 5000;
 const TICK_MS = 1000;
 
 const visible = computed({

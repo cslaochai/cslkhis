@@ -17,10 +17,10 @@
       />
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :loading="menuSubmitting" type="primary" @click="handleSaveRoleMenu">
         保存
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

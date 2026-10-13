@@ -8,8 +8,8 @@
     </el-form>
     <div class="form-tip">处方须为已审核/已发药状态，且未被任何批次收录（一处方只点评一次）</div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button type="primary" :loading="saving" @click="doAddByNo">补录</el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

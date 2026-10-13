@@ -34,9 +34,9 @@
       </div>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :loading="scheduling" data-testid="hd-schedule-ok" type="primary" @click="doSchedule">确认排班
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

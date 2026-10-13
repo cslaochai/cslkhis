@@ -34,10 +34,10 @@
       清单在开始清点之前定：进入任何阶段后不能再加行（后补的基线没有比对意义）。
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'ipd:operationCount:add'" :loading="submitting" data-testid="g15-count-create-submit"
                  type="primary" @click="submit">建立
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

@@ -378,7 +378,6 @@
         </p>
       </div>
       <template #footer>
-        <el-button @click="mergeVisible = false">取消</el-button>
         <el-button
             v-perm="'patient:empi:edit'"
             :loading="mergeSubmitting"
@@ -388,6 +387,7 @@
         >
           确认合并
         </el-button>
+        <el-button @click="mergeVisible = false">取消</el-button>
       </template>
     </el-dialog>
 

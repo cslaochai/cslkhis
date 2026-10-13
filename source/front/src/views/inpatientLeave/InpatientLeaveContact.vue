@@ -22,9 +22,9 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button data-testid="lv-contact-cancel" @click="visible = false">取消</el-button>
       <el-button :loading="ctSaving" data-testid="lv-contact-submit" type="primary" @click="doContact">记录处置
       </el-button>
+      <el-button data-testid="lv-contact-cancel" @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

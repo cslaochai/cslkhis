@@ -105,11 +105,11 @@
       接收时系统会自动停掉原科室「已校对 / 执行中」的长期医嘱，并回写一份转科记录病历。
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'ipd:transfer:add'" :loading="applySubmitting" data-testid="p4-apply-submit" type="primary"
                  @click="submitApply">
         提交转科申请
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

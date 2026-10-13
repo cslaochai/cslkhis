@@ -80,7 +80,7 @@
           </div>
 
           <el-table v-loading="noticeLoading" :data="noticeRows" data-testid="deduct-table" size="default"
-                    style="width: 100%" @row-click="openNoticeDetail">
+                    style="width: 100%">
             <el-table-column class-name="font-mono text-xs" label="扣款单号" prop="deductNo" width="150"/>
             <el-table-column label="来源" show-overflow-tooltip width="140">
               <template #default="{row}">{{ dictText(DICT_TYPE.YB_DEDUCT_SOURCE, row.sourceType) }}</template>
@@ -117,8 +117,12 @@
                   }} 天</span>
               </template>
             </el-table-column>
-            <el-table-column fixed="right" label="操作" width="250">
+            <el-table-column fixed="right" label="操作" width="290">
               <template #default="{row}">
+                <el-button plain
+                           size="small"
+                           type="primary" @click.stop="openNoticeDetail(row)">详情
+                </el-button>
                 <el-button v-if="canAppeal(row)" v-perm="'finance:insuranceDeduct:edit'" :data-testid="`deduct-appeal-${row.deductNo}`" plain
                            size="small"
                            type="primary" @click.stop="openAppeal(row)">申诉

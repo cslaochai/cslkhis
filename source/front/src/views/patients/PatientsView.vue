@@ -46,8 +46,7 @@
 
     <!-- 表格卡 -->
     <el-card class="table-card" shadow="never">
-      <el-table v-loading="loading" :data="patients" :max-height="tableMaxHeight" stripe style="width: 100%"
-                @row-click="handleViewDetail">
+      <el-table v-loading="loading" :data="patients" :max-height="tableMaxHeight" stripe style="width: 100%">
         <el-table-column class-name="font-mono" label="患者号" prop="patientNo" width="150"/>
         <el-table-column label="姓名" min-width="170">
           <template #default="{ row }">
@@ -113,8 +112,10 @@
           </template>
         </el-table-column>
         <el-table-column label="过敏史" prop="allergyHistory" show-overflow-tooltip width="200"/>
-        <el-table-column align="right" label="操作" width="120">
+        <el-table-column align="right" label="操作" width="150">
           <template #default="{ row }">
+            <el-button link size="small" type="primary" @click.stop="handleViewDetail(row)">详情
+            </el-button>
             <el-button v-perm="'patient:edit'" link size="small" type="primary" @click.stop="openEdit(row)">编辑
             </el-button>
             <el-button link size="small" type="danger" @click.stop="handleDelete(row)">删除</el-button>

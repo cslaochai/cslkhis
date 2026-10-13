@@ -30,7 +30,6 @@
       <el-descriptions-item label="备注">{{ bed.remark || '—' }}</el-descriptions-item>
     </el-descriptions>
     <template #footer>
-      <el-button @click="visible = false">关闭</el-button>
       <el-button v-if="bed.canReserve" v-perm="'ipd:bedCenter:assign'" data-testid="bc-bed-reserve"
                  type="primary" @click="emit('reserve')">预留给等床患者
       </el-button>
@@ -40,6 +39,7 @@
       <el-button v-if="bed.canAdmit" v-perm="'ipd:bedCenter:admit'" data-testid="bc-bed-admit"
                  type="primary" @click="emit('admit')">办理入院
       </el-button>
+      <el-button @click="visible = false">关闭</el-button>
     </template>
   </el-dialog>
 </template>

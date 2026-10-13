@@ -389,7 +389,6 @@
       </div>
 
       <template #footer>
-        <el-button @click="payDialog = false">关闭</el-button>
         <el-button v-if="isPaid" :icon="Tickets" data-testid="cash-issue" type="success" @click="runIssue">
           按账单出票
         </el-button>
@@ -403,6 +402,7 @@
         >
           确认收款 ¥{{ money(payTotal) }}
         </el-button>
+        <el-button @click="payDialog = false">关闭</el-button>
       </template>
     </el-dialog>
 
@@ -458,10 +458,10 @@
       </div>
 
       <template #footer>
-        <el-button @click="refundDialog = false">取消</el-button>
         <el-button :loading="refunding" data-testid="cash-refund-submit" type="danger" @click="submitRefund">
           确认退费
         </el-button>
+        <el-button @click="refundDialog = false">取消</el-button>
       </template>
     </el-dialog>
 

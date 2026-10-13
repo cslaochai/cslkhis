@@ -16,8 +16,8 @@
       <div class="form-tip">医嘱没停但临床上不吃了才用这里。停方案会把该时间之后还没配送的餐一并作废，已经送出去的不追。</div>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button type="warning" :loading="saving" data-testid="btn-do-stop" @click="doStop">确认停餐</el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

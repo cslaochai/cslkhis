@@ -411,10 +411,10 @@
         确认后该床会被<b>锁定</b>并挂上此患者（其他排队记录安排不到它），随后在列表里点「办理入院」正式占用。
       </p>
       <template #footer>
-        <el-button @click="assignVisible = false">取消</el-button>
         <el-button :disabled="!pickedBedId" :loading="submitting" data-testid="bc-assign-submit" type="primary"
                    @click="submitAssign">确认安排
         </el-button>
+        <el-button @click="assignVisible = false">取消</el-button>
       </template>
     </el-dialog>
 
@@ -423,9 +423,9 @@
       <el-input v-model="reason" :placeholder="reasonPlaceholder" :rows="3" data-testid="bc-reason-input"
                 type="textarea"/>
       <template #footer>
-        <el-button @click="reasonVisible = false">取消</el-button>
         <el-button :loading="submitting" data-testid="bc-reason-submit" type="primary" @click="submitReason">确认
         </el-button>
+        <el-button @click="reasonVisible = false">取消</el-button>
       </template>
     </el-dialog>
 
@@ -452,10 +452,10 @@
       </div>
       <div v-else-if="reserveWaitId" class="mt-2 text-xs text-slate-400">正在核对匹配档位……</div>
       <template #footer>
-        <el-button @click="reserveVisible = false">取消</el-button>
         <el-button :disabled="!reserveWaitId" :loading="submitting" data-testid="bc-reserve-submit"
                    type="primary" @click="submitReserve">确认预留
         </el-button>
+        <el-button @click="reserveVisible = false">取消</el-button>
       </template>
     </el-dialog>
   </div>

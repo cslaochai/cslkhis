@@ -13,10 +13,10 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :loading="appealSubmitting" data-testid="deduct-appeal-submit" type="primary" @click="submitAppeal">
         提交申诉
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

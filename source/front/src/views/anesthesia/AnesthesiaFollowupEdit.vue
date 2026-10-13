@@ -88,11 +88,11 @@
       勾选任何并发症则经过与处理必须写全 —— 闸门在服务端。
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="['ipd:anesthesia:add', 'ipd:anesthesia:edit']" :loading="followupSubmitting" data-testid="p134-fu-submit"
                  type="primary" @click="submitFollowup">
         保存草稿
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

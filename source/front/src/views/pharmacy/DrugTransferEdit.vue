@@ -107,10 +107,10 @@
     </el-alert>
 
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :loading="formSaving" data-testid="transfer-form-save" type="primary" @click="saveForm">
         {{ form.id ? '保存明细' : '建单' }}
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

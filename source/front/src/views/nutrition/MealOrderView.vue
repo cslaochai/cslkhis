@@ -85,7 +85,7 @@
 
     <el-card class="table-card" shadow="never">
       <el-table :data="rows" stripe :max-height="tableMaxHeight" v-loading="loading" data-testid="meal-table"
-                @selection-change="selection = $event" @row-click="onRowClick">
+                @selection-change="selection = $event">
         <el-table-column type="selection" width="42"/>
         <el-table-column label="患者" min-width="130">
           <template #default="{ row }">
@@ -137,8 +137,13 @@
             <div class="muted">{{ row.mealNo || '' }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
+            <el-button
+                link
+                type="primary"
+                @click.stop="openDetail(row)">详情
+            </el-button>
             <el-button
                 v-if="Number(row.canAdvance) === 1"
                 v-perm="'ipd:meal:status'"
@@ -363,9 +368,7 @@ async function doDelete(row) {
 const detailVisible = ref(false)
 const detail = ref({})
 
-/** 勾选列的点击也会冒泡成 row-click */
-function onRowClick(row, column) {
-  if (column && column.type === 'selection') return
+function openDetail(row) {
   detail.value = row
   detailVisible.value = true
 }

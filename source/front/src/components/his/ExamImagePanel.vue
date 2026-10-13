@@ -118,10 +118,10 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="mockVisible = false">取消</el-button>
         <el-button :loading="uploading" data-testid="exam-mock-ok" type="primary" @click="submitMockImport">
           导入
         </el-button>
+        <el-button @click="mockVisible = false">取消</el-button>
       </template>
     </el-dialog>
   </div>

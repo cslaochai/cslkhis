@@ -48,11 +48,11 @@
       </el-table>
     </div>
     <template #footer>
-      <el-button @click="visible = false">关闭</el-button>
       <el-button v-if="detail?.recordStatus === 3" v-perm="'checkup:manage:edit'" data-testid="checkup-conclude-btn"
                  type="primary"
                  @click="emit('conclude', detail)">总检出报告
       </el-button>
+      <el-button @click="visible = false">关闭</el-button>
     </template>
   </el-dialog>
 </template>

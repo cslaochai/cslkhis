@@ -79,10 +79,10 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'ipd:inpatient:add'" :loading="admitLoading" type="primary" @click="submitAdmit">
         {{ admitFromOrder ? '确认收治' : '确认登记' }}
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

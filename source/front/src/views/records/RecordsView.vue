@@ -29,8 +29,7 @@
 
     <!-- 患者列表 -->
     <div class="rounded-lg border border-slate-200 bg-white shadow-sm">
-      <el-table v-loading="loading" :data="records" row-class-name="cursor-pointer" style="width: 100%"
-                @row-click="openDrawer">
+      <el-table v-loading="loading" :data="records" style="width: 100%">
         <el-table-column label="患者" min-width="160">
           <template #default="{ row }">
             <div class="flex items-center gap-2">
@@ -71,6 +70,11 @@
             <el-tag :type="recordStatusTagType(row.recordStatus)" effect="plain" size="small">
               {{ recordStatusText(row.recordStatus) }}
             </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column fixed="right" label="操作" width="90">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="openDrawer(row)">详情</el-button>
           </template>
         </el-table-column>
       </el-table>

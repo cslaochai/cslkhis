@@ -14,10 +14,10 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button :loading="resultSubmitting" data-testid="deduct-result-submit" type="primary"
                  @click="submitAppealResult">保存
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

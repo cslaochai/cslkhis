@@ -47,10 +47,10 @@
       死亡病例必须同时满足「是否死亡=是」与「离院方式=死亡」，两者不一致会被拒绝 —— 这两个字段是医保审核死亡病例的第一着眼点。
     </div>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
       <el-button v-perm="'ipd:inpatient:edit'" :loading="dischargeLoading" type="primary" @click="submitDischarge">
         确认出院
       </el-button>
+      <el-button @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
 </template>

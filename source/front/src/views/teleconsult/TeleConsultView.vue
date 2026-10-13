@@ -58,8 +58,7 @@
     </el-card>
 
     <el-card class="table-card" shadow="never">
-      <el-table v-loading="teleLoading" :data="teleRows" :max-height="tableMaxHeight" stripe
-                @row-click="openTeleDetail">
+      <el-table v-loading="teleLoading" :data="teleRows" :max-height="tableMaxHeight" stripe>
         <el-table-column label="会诊单号" prop="consultNo" width="150"/>
         <el-table-column label="患者" prop="patientName" width="100"/>
         <el-table-column label="类型" width="110">
@@ -82,8 +81,10 @@
             <el-tag :type="teleStatusTag(row.status)" size="small">{{ teleStatusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column fixed="right" label="操作" width="260">
+        <el-table-column fixed="right" label="操作" width="300">
           <template #default="{ row }">
+            <el-button link size="small" type="primary" @click.stop="openTeleDetail(row)">详情
+            </el-button>
             <el-button v-if="row.canArrange" v-perm="'ipd:teleconsult:edit'" link size="small" type="primary"
                        @click.stop="openArrange(row)">安排
             </el-button>
