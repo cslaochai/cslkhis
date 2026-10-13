@@ -2,12 +2,16 @@ package com.his.ai.controller;
 
 import com.his.ai.dto.OperationQaColumnQueryPageDTO;
 import com.his.ai.dto.OperationQaColumnUpsertDTO;
+import com.his.ai.dto.OperationQaRelationQueryPageDTO;
+import com.his.ai.dto.OperationQaRelationUpsertDTO;
 import com.his.ai.dto.OperationQaSchemaQueryPageDTO;
 import com.his.ai.dto.OperationQaSchemaUpsertDTO;
 import com.his.ai.dto.OperationQaSemanticQueryPageDTO;
 import com.his.ai.dto.OperationQaSemanticUpsertDTO;
 import com.his.ai.service.OperationQaConfigService;
 import com.his.ai.vo.OperationQaColumnListVO;
+import com.his.ai.vo.OperationQaColumnSelectListVO;
+import com.his.ai.vo.OperationQaRelationListVO;
 import com.his.ai.vo.OperationQaSchemaListVO;
 import com.his.ai.vo.OperationQaSchemaSelectListVO;
 import com.his.ai.vo.OperationQaSemanticListVO;
@@ -23,7 +27,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * AI 运营问数配置管理接口（数据表/列/语义映射维护）。
+ * AI 运营问数配置管理接口（数据表/列/语义映射/表间关系维护）。
  */
 @Tag(name = "AI 能力-运营问数配置")
 @RestController
@@ -103,10 +107,40 @@ public class AiOperationQaConfigController {
     }
 
     @PreAuthorize("hasAuthority('ai:operationQa:config')")
+    @Operation(summary = "表间关系配置分页查询")
+    @PostMapping("/relationListPage")
+    public Result<PageResult<OperationQaRelationListVO>> relationListPage(@RequestBody @Valid OperationQaRelationQueryPageDTO dto) {
+        return Result.success(operationQaConfigService.listRelationPage(dto));
+    }
+
+    @PreAuthorize("hasAuthority('ai:operationQa:config')")
+    @Operation(summary = "表间关系配置新增/修改")
+    @PostMapping("/relationUpsert")
+    public Result<Void> relationUpsert(@RequestBody @Valid OperationQaRelationUpsertDTO dto) {
+        operationQaConfigService.upsertRelation(dto);
+        return Result.success();
+    }
+
+    @PreAuthorize("hasAuthority('ai:operationQa:config')")
+    @Operation(summary = "删除表间关系配置")
+    @DeleteMapping("/relationDeleteById")
+    public Result<Void> relationDeleteById(@RequestParam Long id) {
+        operationQaConfigService.deleteRelationById(id);
+        return Result.success();
+    }
+
+    @PreAuthorize("hasAuthority('ai:operationQa:config')")
     @Operation(summary = "启用表下拉选项（配置弹框选表用）")
     @GetMapping("/schemaSelectList")
     public Result<List<OperationQaSchemaSelectListVO>> schemaSelectList() {
         return Result.success(operationQaConfigService.schemaSelectList());
+    }
+
+    @PreAuthorize("hasAuthority('ai:operationQa:config')")
+    @Operation(summary = "指定表的启用字段下拉选项（关系/语义配置弹框选列用）")
+    @GetMapping("/columnSelectList")
+    public Result<List<OperationQaColumnSelectListVO>> columnSelectList(@RequestParam String tableName) {
+        return Result.success(operationQaConfigService.columnSelectList(tableName));
     }
 
     @PreAuthorize("hasAuthority('ai:operationQa:config')")

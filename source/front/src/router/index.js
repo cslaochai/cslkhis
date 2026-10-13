@@ -787,7 +787,13 @@ const routes = [
                 path: 'ai-admin',
                 name: 'AiAdmin',
                 component: () => import('@/views/ai/AiAdminView.vue'),
-                meta: {title: 'AI 管理台'}
+                meta: {title: 'RAG 知识库配置'}
+            },
+            {
+                path: 'knowledge-graph',
+                name: 'KnowledgeGraph',
+                component: () => import('@/views/ai/KnowledgeGraphView.vue'),
+                meta: {title: '知识图谱'}
             },
         ],
     },

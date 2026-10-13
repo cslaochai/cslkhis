@@ -1,89 +1,88 @@
 <template>
   <div class="operation-qa">
-    <div class="qa-header">
-      <div>
-        <h2 class="qa-title">AI 运营问数</h2>
-        <p class="qa-sub">用自然语言问经营数据：只读查询，结果由受控 SQL 从白名单经营表算出，模型不接触患者临床信息。</p>
-      </div>
-    </div>
+    <el-tabs v-model="activeTab">
+      <!-- ============ AI 运营问数 ============ -->
+      <el-tab-pane label="AI运营问数" name="ask">
+        <el-card class="qa-ask-card" shadow="never">
+          <div class="qa-input-row">
+            <el-input
+                v-model="question"
+                clearable
+                maxlength="200"
+                placeholder="例如：最近7天每天的发药处方数量和金额"
+                @keyup.enter="ask()"
+            />
+            <el-checkbox v-model="withSummary" class="qa-summary-check">生成结论</el-checkbox>
+            <el-button v-perm="'ai:operationQa:ask'" :loading="loading" type="primary" @click="ask()">查询</el-button>
+          </div>
+          <div class="qa-chips">
+            <el-tag
+                v-for="q in quickQuestions"
+                :key="q"
+                class="qa-chip"
+                effect="plain"
+                type="info"
+                @click="ask(q)"
+            >{{ q }}
+            </el-tag>
+          </div>
+        </el-card>
 
-    <el-card class="qa-ask-card" shadow="never">
-      <div class="qa-input-row">
-        <el-input
-            v-model="question"
-            clearable
-            maxlength="200"
-            placeholder="例如：最近7天每天的发药处方数量和金额"
-            @keyup.enter="ask()"
+        <el-alert
+            v-if="result?.degraded"
+            :closable="false"
+            :description="result.degradeReason"
+            class="qa-degraded"
+            show-icon
+            title="本次未生成或未执行查询"
+            type="warning"
         />
-        <el-checkbox v-model="withSummary" class="qa-summary-check">生成结论</el-checkbox>
-        <el-button v-perm="'ai:operationQa:ask'" :loading="loading" type="primary" @click="ask()">查询</el-button>
-      </div>
-      <div class="qa-chips">
-        <el-tag
-            v-for="q in quickQuestions"
-            :key="q"
-            class="qa-chip"
-            effect="plain"
-            type="info"
-            @click="ask(q)"
-        >{{ q }}
-        </el-tag>
-      </div>
-    </el-card>
 
-    <el-alert
-        v-if="result?.degraded"
-        :closable="false"
-        :description="result.degradeReason"
-        class="qa-degraded"
-        show-icon
-        title="本次未生成或未执行查询"
-        type="warning"
-    />
+        <el-card v-if="result" class="qa-result-card" shadow="never">
+          <template #header>
+            <div class="qa-result-head">
+              <span class="qa-result-title">{{ result.title || result.question }}</span>
+              <span class="qa-result-meta">
+                {{ result.rowCount }} 行<template v-if="result.truncated">（超过 100 行已截断）</template>
+                · {{ result.elapsedMs }} ms
+              </span>
+            </div>
+          </template>
 
-    <el-card v-if="result" class="qa-result-card" shadow="never">
-      <template #header>
-        <div class="qa-result-head">
-          <span class="qa-result-title">{{ result.title || result.question }}</span>
-          <span class="qa-result-meta">
-            {{ result.rowCount }} 行<template v-if="result.truncated">（超过 100 行已截断）</template>
-            · {{ result.elapsedMs }} ms
-          </span>
-        </div>
-      </template>
+          <p v-if="result.summary" class="qa-summary">{{ result.summary }}</p>
 
-      <p v-if="result.summary" class="qa-summary">{{ result.summary }}</p>
+          <el-table v-loading="loading" :data="tableRows" border class="qa-table" empty-text="没有查到符合条件的数据"
+                    stripe>
+            <el-table-column
+                v-for="col in result.columns"
+                :key="col.key"
+                :label="col.label"
+                :min-width="140"
+                :prop="col.key"
+            />
+          </el-table>
 
-      <el-table v-loading="loading" :data="tableRows" border class="qa-table" empty-text="没有查到符合条件的数据"
-                stripe>
-        <el-table-column
-            v-for="col in result.columns"
-            :key="col.key"
-            :label="col.label"
-            :min-width="140"
-            :prop="col.key"
-        />
-      </el-table>
+          <el-collapse class="qa-sql-collapse">
+            <el-collapse-item name="sql">
+              <template #title>查看实际执行的 SQL</template>
+              <pre class="qa-sql">{{ result.sql || '（未生成 SQL）' }}</pre>
+            </el-collapse-item>
+          </el-collapse>
+        </el-card>
+      </el-tab-pane>
 
-      <el-collapse class="qa-sql-collapse">
-        <el-collapse-item name="sql">
-          <template #title>查看实际执行的 SQL（透明可查）</template>
-          <pre class="qa-sql">{{ result.sql || '（未生成 SQL）' }}</pre>
-        </el-collapse-item>
-      </el-collapse>
-    </el-card>
-
-    <el-card class="qa-schema-card" shadow="never">
-      <template #header>可查询的数据域</template>
-      <div class="qa-schema-list">
-        <div v-for="item in schemaList" :key="item.tableName" class="qa-schema-item">
-          <span class="qa-schema-usage">{{ item.description }}</span>
-          <span class="qa-schema-table">{{ item.tableName }}</span>
-        </div>
-      </div>
-      <p class="qa-schema-note">仅支持只读统计查询；个体患者的临床信息不在可查询范围内。</p>
-    </el-card>
+      <!-- ============ 数据域 ============ -->
+      <el-tab-pane label="数据域" name="schema">
+        <el-card class="qa-schema-card" shadow="never">
+          <div class="qa-schema-list">
+            <div v-for="item in schemaList" :key="item.tableName" class="qa-schema-item">
+              <span class="qa-schema-usage">{{ item.description }}</span>
+              <span class="qa-schema-table">{{ item.tableName }}</span>
+            </div>
+          </div>
+        </el-card>
+      </el-tab-pane>
+    </el-tabs>
   </div>
 </template>
 
@@ -92,6 +91,7 @@ import {computed, onMounted, ref} from 'vue';
 import {ElMessage} from 'element-plus';
 import {askOperationQa, getOperationSchema} from '@/api/ai';
 
+const activeTab = ref('ask');
 const question = ref('');
 const withSummary = ref(true);
 const loading = ref(false);
@@ -147,21 +147,6 @@ onMounted(async () => {
 <style scoped>
 .operation-qa {
   padding: 16px;
-}
-
-.qa-header {
-  margin-bottom: 12px;
-}
-
-.qa-title {
-  margin: 0;
-  font-size: 18px;
-}
-
-.qa-sub {
-  margin: 4px 0 0;
-  color: #6b7280;
-  font-size: 13px;
 }
 
 .qa-ask-card {
@@ -268,12 +253,6 @@ onMounted(async () => {
 .qa-schema-table {
   color: #9ca3af;
   font-family: monospace;
-  font-size: 12px;
-}
-
-.qa-schema-note {
-  margin: 10px 0 0;
-  color: #9ca3af;
   font-size: 12px;
 }
 </style>

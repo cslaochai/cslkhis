@@ -5,19 +5,10 @@ import com.his.ai.dto.AiCallDTO;
 import com.his.ai.dto.OperationQaAskDTO;
 import com.his.ai.dto.OperationQaLlmOutputDTO;
 import com.his.ai.dto.OperationQaSummaryLlmOutputDTO;
-import com.his.ai.service.AiExecutionService;
-import com.his.ai.service.OperationQaCapability;
-import com.his.ai.service.OperationQaConfigService;
-import com.his.ai.service.OperationTableSelection;
-import com.his.ai.service.OperationTableSelector;
+import com.his.ai.service.*;
 import com.his.ai.support.OperationSchemaCatalog;
 import com.his.ai.support.OperationSqlGuard;
-import com.his.ai.vo.OperationColumnVO;
-import com.his.ai.vo.OperationQaPromptVariablesVO;
-import com.his.ai.vo.OperationQaResultVO;
-import com.his.ai.vo.OperationQaSummaryPromptVariablesVO;
-import com.his.ai.vo.OperationRowVO;
-import com.his.ai.vo.OperationSchemaVO;
+import com.his.ai.vo.*;
 import com.his.common.util.DateFormats;
 import com.his.common.util.SensitiveMaskUtil;
 import com.his.common.util.TextUtil;
@@ -34,6 +25,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * AI 运营问数能力：把管理者的自然语言问题翻译成一条受控 SELECT 并执行。
@@ -128,16 +122,22 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
 
         // 第一段：按需加载 —— 先选问题相关的表，只把相关表 schema 与命中语义注入生成段
         OperationTableSelection selection = tableSelector.select(question);
-        java.util.Set<String> selectedTables = selection.tables().isEmpty()
+        Set<String> selectedTables = selection.tables().isEmpty()
                 ? allTableNames(allowedTables)
                 : selection.tables();
 
-        // 第二段：生成 SQL（只查选中表的结构 + 命中语义 + 敏感字段约束）
+        // 第二段：生成 SQL（只查选中表的结构 + 命中语义 + 敏感字段约束 + 表间关系）
         List<OperationSchemaCatalog.SensitiveDef> sensitiveDefs = operationQaConfigService.sensitiveDefs();
+        List<OperationSchemaCatalog.RelationDef> relatedRelations = operationQaConfigService.relationDefs().stream()
+                .filter(r -> selectedTables.contains(r.sourceTable().toLowerCase(Locale.ROOT))
+                        || selectedTables.contains(r.targetTable().toLowerCase(Locale.ROOT)))
+                .collect(Collectors.toList());
+
         Optional<OperationQaLlmOutputDTO> generated = callGenerate(question,
                 OperationSchemaCatalog.schemaText(operationQaConfigService.tableDefs(selectedTables), selectedTables),
                 OperationSchemaCatalog.semanticText(selection.semantics()),
-                OperationSchemaCatalog.sensitiveRulesText(sensitiveDefs));
+                OperationSchemaCatalog.sensitiveRulesText(sensitiveDefs),
+                OperationSchemaCatalog.relationsText(relatedRelations));
         if (generated.isEmpty()) {
             return degrade(vo, aiExecutionService.degradeReasonOf(AiCapabilityKeys.OPERATION_QA)
                     + "；本次未能生成查询，请稍后重试", start);
@@ -175,10 +175,6 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
         vo.setSql(executableSql);
 
         // 第四段：执行
-        // 这里保留 List<Map<String, Object>> 是刻意的：SELECT 的列由模型按问题现场决定
-        // （SELECT 出院人数、SELECT 月度收入……），编译期根本不存在对应的实体或 VO 可建，
-        // 建 VO 等于把任意问数能力砍死。行数据在此处立即转成 OperationColumnVO/OperationRowVO，
-        // Map 不会离开本方法。
         List<Map<String, Object>> resultRows;
         try {
             resultRows = queryTemplate.queryForList(executableSql);
@@ -216,11 +212,12 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
     }
 
     private Optional<OperationQaLlmOutputDTO> callGenerate(String question, String schemaText, String semanticText,
-                                                           String sensitiveRulesText) {
+                                                           String sensitiveRulesText, String relationsText) {
         OperationQaPromptVariablesVO variables = new OperationQaPromptVariablesVO();
         variables.setSchema(schemaText);
         variables.setSemantics(semanticText);
         variables.setSensitiveRules(sensitiveRulesText);
+        variables.setRelations(relationsText);
         variables.setQuestion(question);
         variables.setToday(LocalDate.now().format(DateFormats.DATE));
 
@@ -239,7 +236,7 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
     /**
      * 全部启用表名（选表未选出任何表时的兜底，等价于旧的全量注入行为）。
      */
-    private java.util.Set<String> allTableNames(java.util.Set<String> allowedTables) {
+    private Set<String> allTableNames(Set<String> allowedTables) {
         return allowedTables;
     }
 
@@ -338,7 +335,7 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
         }
         // 结果列名 → 源列名
         Map<String, String> colByResultLabel = new HashMap<>();
-        java.util.regex.Matcher m = java.util.regex.Pattern
+        Matcher m = Pattern
                 .compile("(?is)\\bselect\\b(.*?)\\bfrom\\b")
                 .matcher(sql);
         if (m.find()) {
@@ -349,12 +346,11 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
                 }
                 String[] withAlias = expr.split("\\s+as\\s+", 2);
                 String src = withAlias[0].trim();
-                String label = withAlias.length > 1 ? withAlias[1].trim() : src;
                 String column = null;
                 if (src.matches("[a-zA-Z_][a-zA-Z0-9_]*")) {
                     column = src;
                 } else {
-                    java.util.regex.Matcher qualified = java.util.regex.Pattern
+                    Matcher qualified = Pattern
                             .compile("^[a-zA-Z_][a-zA-Z0-9_]*\\.([a-zA-Z_][a-zA-Z0-9_]*)$")
                             .matcher(src);
                     if (qualified.matches()) {
@@ -362,6 +358,8 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
                     }
                 }
                 if (column != null) {
+                    // 结果列名：AS 别名优先；无别名时 JDBC 返回裸列名（tbl.col 无别名 → col）
+                    String label = withAlias.length > 1 ? withAlias[1].trim() : column;
                     colByResultLabel.put(label.toLowerCase(Locale.ROOT), column.toLowerCase(Locale.ROOT));
                 }
             }
@@ -382,7 +380,7 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
      * @return 命中的禁止列名；无命中返回 null
      */
     private String findForbiddenColumnInSql(String sql, List<String> forbiddenColumns) {
-        java.util.regex.Matcher m = java.util.regex.Pattern
+        Matcher m = Pattern
                 .compile("(?is)\\bselect\\b(.*?)\\bfrom\\b")
                 .matcher(sql);
         if (!m.find()) {
@@ -390,9 +388,9 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
         }
         String selectList = m.group(1);
         for (String col : forbiddenColumns) {
-            java.util.regex.Pattern p = java.util.regex.Pattern
-                    .compile("\\b" + java.util.regex.Pattern.quote(col) + "\\b",
-                            java.util.regex.Pattern.CASE_INSENSITIVE);
+            Pattern p = Pattern
+                    .compile("\\b" + Pattern.quote(col) + "\\b",
+                            Pattern.CASE_INSENSITIVE);
             if (p.matcher(selectList).find()) {
                 return col;
             }

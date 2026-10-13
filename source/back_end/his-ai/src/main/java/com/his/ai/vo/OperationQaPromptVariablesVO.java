@@ -25,6 +25,11 @@ public class OperationQaPromptVariablesVO implements PromptVariables {
     private String sensitiveRules;
 
     /**
+     * 表间关系文本（权威 join 键，图谱第三层注入；只含与选中表相关的边）
+     */
+    private String relations;
+
+    /**
      * 管理者的原始问题
      */
     private String question;

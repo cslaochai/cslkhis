@@ -328,9 +328,30 @@ export function deleteOperationQaSemantic(id) {
   return request.delete('/ai/operationQa/config/semanticDeleteById', { params: { id } })
 }
 
+// 表间关系分页（join 图谱：源表.源列 → 目标表.目标列，注入模型 prompt 的权威 JOIN 键）
+// params: { pageNum, pageSize, sourceTable?, targetTable?, relationType?, isEnabled? }
+export function getOperationQaRelationPage(params) {
+  return request.post('/ai/operationQa/config/relationListPage', params)
+}
+
+// 新增/修改表间关系
+export function upsertOperationQaRelation(params) {
+  return request.post('/ai/operationQa/config/relationUpsert', params)
+}
+
+// 删除表间关系
+export function deleteOperationQaRelation(id) {
+  return request.delete('/ai/operationQa/config/relationDeleteById', { params: { id } })
+}
+
 // 启用表下拉选项（配置弹框选表用）
 export function getOperationQaSchemaSelectList() {
   return request.get('/ai/operationQa/config/schemaSelectList')
+}
+
+// 指定表的启用字段下拉选项（关系/语义配置弹框选列用）
+export function getOperationQaColumnSelectList(tableName) {
+  return request.get('/ai/operationQa/config/columnSelectList', { params: { tableName } })
 }
 
 // 重写刷新：扫描当前库全表结构，一次性覆盖表/列配置（表结构同步唯一入口）

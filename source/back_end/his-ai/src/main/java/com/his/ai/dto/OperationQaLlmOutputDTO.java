@@ -1,6 +1,7 @@
 package com.his.ai.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.his.ai.support.AiAuditPlain;
 import lombok.Data;
 
 /**
@@ -13,10 +14,12 @@ public class OperationQaLlmOutputDTO {
     /**
      * 对查询内容的简短概括
      */
+    @AiAuditPlain
     private String title;
 
     /**
      * 模型生成的 SELECT；问题与经营统计无关时为空串，执行前必须过安全闸门
      */
+    @AiAuditPlain
     private String sql;
 }

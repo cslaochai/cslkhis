@@ -5,25 +5,31 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.ai.dto.OperationQaColumnQueryPageDTO;
 import com.his.ai.dto.OperationQaColumnUpsertDTO;
+import com.his.ai.dto.OperationQaRelationQueryPageDTO;
+import com.his.ai.dto.OperationQaRelationUpsertDTO;
 import com.his.ai.dto.OperationQaSchemaQueryPageDTO;
 import com.his.ai.dto.OperationQaSchemaUpsertDTO;
 import com.his.ai.dto.OperationQaSemanticQueryPageDTO;
 import com.his.ai.dto.OperationQaSemanticUpsertDTO;
 import com.his.ai.entity.SysAiQaColumn;
+import com.his.ai.entity.SysAiQaRelation;
 import com.his.ai.entity.SysAiQaSchema;
 import com.his.ai.entity.SysAiQaSemantic;
 import com.his.ai.mapper.SysAiQaColumnMapper;
+import com.his.ai.mapper.SysAiQaRelationMapper;
 import com.his.ai.mapper.SysAiQaSchemaMapper;
 import com.his.ai.mapper.SysAiQaSemanticMapper;
 import com.his.ai.service.OperationQaConfigService;
 import com.his.ai.support.OperationSchemaCatalog;
 import com.his.ai.vo.OperationQaColumnListVO;
+import com.his.ai.vo.OperationQaRelationListVO;
 import com.his.ai.vo.OperationQaSchemaListVO;
 import com.his.ai.vo.OperationQaSchemaSelectListVO;
 import com.his.ai.vo.OperationQaSemanticListVO;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
+import com.his.ai.vo.OperationQaColumnSelectListVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -60,6 +66,8 @@ public class OperationQaConfigServiceImpl
     private final SysAiQaColumnMapper columnMapper;
 
     private final SysAiQaSemanticMapper semanticMapper;
+
+    private final SysAiQaRelationMapper relationMapper;
 
     private final DataSource dataSource;
 
@@ -262,6 +270,83 @@ public class OperationQaConfigServiceImpl
         semanticMapper.purgeById(id);
     }
 
+    // ---------------- relation（表间关系/join 图谱） ----------------
+
+    @Override
+    public PageResult<OperationQaRelationListVO> listRelationPage(OperationQaRelationQueryPageDTO dto) {
+        LambdaQueryWrapper<SysAiQaRelation> wrapper = new LambdaQueryWrapper<>();
+        wrapper.like(TextUtil.hasText(dto.getSourceTable()), SysAiQaRelation::getSourceTable, dto.getSourceTable())
+                .like(TextUtil.hasText(dto.getTargetTable()), SysAiQaRelation::getTargetTable, dto.getTargetTable())
+                .eq(dto.getRelationType() != null, SysAiQaRelation::getRelationType, dto.getRelationType())
+                .eq(dto.getIsEnabled() != null, SysAiQaRelation::getIsEnabled, dto.getIsEnabled())
+                .orderByAsc(SysAiQaRelation::getSortOrder)
+                .orderByAsc(SysAiQaRelation::getId);
+
+        Page<SysAiQaRelation> page = relationMapper.selectPage(
+                new Page<>(dto.getPageNum(), dto.getPageSize()), wrapper);
+
+        List<OperationQaRelationListVO> records = page.getRecords().stream().map(entity -> {
+            OperationQaRelationListVO vo = new OperationQaRelationListVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
+        return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void upsertRelation(OperationQaRelationUpsertDTO dto) {
+        String sourceTable = dto.getSourceTable().trim();
+        String sourceColumn = dto.getSourceColumn().trim();
+        String targetTable = dto.getTargetTable().trim();
+        String targetColumn = dto.getTargetColumn().trim();
+        // 源/目标表必须都在启用表中（关系只描述白名单内可查表的 join 路径）
+        Set<String> enabled = enabledTableNames();
+        if (!enabled.contains(sourceTable.toLowerCase(Locale.ROOT))) {
+            throw new BusinessException("源表 " + sourceTable + " 不在启用数据表配置中，请先启用数据表");
+        }
+        if (!enabled.contains(targetTable.toLowerCase(Locale.ROOT))) {
+            throw new BusinessException("目标表 " + targetTable + " 不在启用数据表配置中，请先启用数据表");
+        }
+        Long exist = relationMapper.selectCount(new LambdaQueryWrapper<SysAiQaRelation>()
+                .eq(SysAiQaRelation::getSourceTable, sourceTable)
+                .eq(SysAiQaRelation::getSourceColumn, sourceColumn)
+                .eq(SysAiQaRelation::getTargetTable, targetTable)
+                .eq(SysAiQaRelation::getTargetColumn, targetColumn)
+                .ne(dto.getId() != null, SysAiQaRelation::getId, dto.getId()));
+        if (exist != null && exist > 0) {
+            throw new BusinessException("关系 " + sourceTable + "." + sourceColumn
+                    + " → " + targetTable + "." + targetColumn + " 已存在");
+        }
+        SysAiQaRelation entity = new SysAiQaRelation();
+        BeanUtils.copyProperties(dto, entity);
+        entity.setSourceTable(sourceTable);
+        entity.setSourceColumn(sourceColumn);
+        entity.setTargetTable(targetTable);
+        entity.setTargetColumn(targetColumn);
+        if (entity.getIsEnabled() == null) {
+            entity.setIsEnabled(1);
+        }
+        if (entity.getSortOrder() == null) {
+            entity.setSortOrder(0);
+        }
+        if (dto.getId() == null) {
+            relationMapper.insert(entity);
+        } else {
+            relationMapper.updateById(entity);
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteRelationById(Long id) {
+        if (relationMapper.selectById(id) == null) {
+            throw new BusinessException("表间关系配置不存在");
+        }
+        // 物理删：软删旧行占唯一键 uk_rel_src_tgt，同关系重建后再次删除会撞键（G12 口径，配置无留档价值）
+        relationMapper.purgeById(id);
+    }
+
     // ---------------- 下拉与运行时查询（直接查库，无内存快照） ----------------
 
     @Override
@@ -275,6 +360,27 @@ public class OperationQaConfigServiceImpl
                     OperationQaSchemaSelectListVO vo = new OperationQaSchemaSelectListVO();
                     vo.setTableName(s.getTableName());
                     vo.setTableDesc(s.getTableDesc());
+                    return vo;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<OperationQaColumnSelectListVO> columnSelectList(String tableName) {
+        if (!TextUtil.hasText(tableName)) {
+            return List.of();
+        }
+        return columnMapper.selectList(
+                        new LambdaQueryWrapper<SysAiQaColumn>()
+                                .eq(SysAiQaColumn::getTableName, tableName.trim())
+                                .eq(SysAiQaColumn::getIsEnabled, 1)
+                                .orderByAsc(SysAiQaColumn::getSortOrder))
+                .stream()
+                .map(c -> {
+                    OperationQaColumnSelectListVO vo = new OperationQaColumnSelectListVO();
+                    vo.setColumnName(c.getColumnName());
+                    vo.setColumnDesc(c.getColumnDesc());
+                    vo.setColumnType(c.getColumnType());
                     return vo;
                 })
                 .collect(Collectors.toList());
@@ -350,6 +456,19 @@ public class OperationQaConfigServiceImpl
                 .filter(c -> enabled.contains(c.getTableName().toLowerCase(Locale.ROOT)))
                 .map(c -> new OperationSchemaCatalog.SensitiveDef(
                         c.getTableName(), c.getColumnName(), c.getSensitiveType(), c.getMaskType()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<OperationSchemaCatalog.RelationDef> relationDefs() {
+        return relationMapper.selectList(new LambdaQueryWrapper<SysAiQaRelation>()
+                        .eq(SysAiQaRelation::getIsEnabled, 1)
+                        .orderByAsc(SysAiQaRelation::getSortOrder))
+                .stream()
+                .map(r -> new OperationSchemaCatalog.RelationDef(
+                        r.getSourceTable(), r.getSourceColumn(),
+                        r.getTargetTable(), r.getTargetColumn(),
+                        r.getRelationType(), r.getDescription()))
                 .collect(Collectors.toList());
     }
 

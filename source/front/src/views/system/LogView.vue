@@ -326,12 +326,72 @@
             />
           </div>
         </el-tab-pane>
+
+        <!-- AI 调用审计 -->
+        <el-tab-pane label="AI审计" name="ai">
+          <div class="filter-bar">
+            <el-select v-model="aiQuery.capabilityKey" clearable placeholder="能力" style="width: 160px">
+              <el-option v-for="c in AI_CAPABILITIES" :key="c.value" :label="c.label" :value="c.value"/>
+            </el-select>
+            <el-select v-model="aiQuery.status" clearable placeholder="状态" style="width: 110px">
+              <el-option v-for="s in AI_STATUS" :key="s.value" :label="s.label" :value="s.value"/>
+            </el-select>
+            <el-input v-model="aiQuery.operator" clearable placeholder="操作人账号" style="width: 140px"/>
+            <div data-testid="log-date-range">
+              <el-date-picker v-model="dateRange" end-placeholder="结束日期" start-placeholder="开始日期"
+                              style="width: 240px" type="daterange" value-format="YYYY-MM-DD"/>
+            </div>
+            <el-button type="primary" @click="aiQuery.pageNum = 1; load()">查询</el-button>
+            <el-button @click="resetQuery">重置</el-button>
+          </div>
+
+          <el-table v-loading="loading" :data="aiRows" border size="small" stripe @row-click="openAiDetail">
+            <el-table-column label="时间" width="160">
+              <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
+            </el-table-column>
+            <el-table-column label="能力" min-width="130">
+              <template #default="{ row }">{{ aiCapabilityLabel(row.capabilityKey) }}</template>
+            </el-table-column>
+            <el-table-column label="状态" width="80" align="center">
+              <template #default="{ row }">
+                <el-tag :type="aiStatusTag(row.status)" size="small">{{ aiStatusLabel(row) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="模型" prop="model" min-width="130" show-overflow-tooltip/>
+            <el-table-column label="耗时" prop="latencyMs" width="80" align="right">
+              <template #default="{ row }">{{ row.latencyMs != null ? row.latencyMs + 'ms' : '—' }}</template>
+            </el-table-column>
+            <el-table-column label="Token(入/出)" width="110" align="right">
+              <template #default="{ row }">{{ row.promptTokens ?? '—' }}/{{ row.completionTokens ?? '—' }}</template>
+            </el-table-column>
+            <el-table-column label="操作人" prop="operator" min-width="100" show-overflow-tooltip/>
+            <el-table-column label="业务" min-width="130" show-overflow-tooltip>
+              <template #default="{ row }">
+                <template v-if="row.bizType">{{ row.bizType }}<template v-if="row.bizId"> #{{ row.bizId }}</template></template>
+                <span v-else>—</span>
+              </template>
+            </el-table-column>
+            <el-table-column fixed="right" label="操作" width="70" align="center">
+              <template #default="{ row }">
+                <el-button link type="primary" @click.stop="openAiDetail(row)">详情</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <div class="pager">
+            <el-pagination v-model:current-page="aiQuery.pageNum" v-model:page-size="aiQuery.pageSize"
+                           :page-sizes="PAGE_SIZES" :total="aiTotal"
+                           layout="total, sizes, prev, pager, next, jumper"
+                           @current-change="load" @size-change="load"/>
+          </div>
+        </el-tab-pane>
       </el-tabs>
     </el-card>
 
     <!-- 日志详情（只读）与本批次明细：弹框内部逻辑在子组件，页面只控显隐与传行 -->
     <LogDetail v-model="detailVisible" :id="detailId" :row="detailRow" :type="detailType"/>
     <LogChangeDetail v-model="batchVisible" :batch-no="batchNo" :row="batchRow"/>
+    <AiAuditDetail v-model="aiDetailVisible" :row="aiDetailRow"/>
   </div>
 </template>
 
@@ -361,9 +421,11 @@ import {
   listLoginLogPage,
   listOperLogPage,
 } from '@/api/log';
+import { getAiAuditLogPage } from '@/api/ai';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import LogChangeDetail from './LogChangeDetail.vue';
 import LogDetail from './LogDetail.vue';
+import AiAuditDetail from './AiAuditDetail.vue';
 import {
   AUDIT_STATUS,
   auditStatusTagType,
@@ -399,6 +461,56 @@ const fieldQuery = makeQuery({
   targetId: '',
   fieldName: '',
 });
+// AI 审计
+const aiQuery = makeQuery({ capabilityKey: '', status: null });
+const aiRows = ref([]);
+const aiTotal = ref(0);
+const AI_CAPABILITIES = [
+  {value: 'icd10', label: 'ICD-10 编码'},
+  {value: 'drug_audit', label: '处方审核'},
+  {value: 'emr_qc', label: '病历质控'},
+  {value: 'lab_interpret', label: '检验解读'},
+  {value: 'emergency_triage', label: '急诊分诊'},
+  {value: 'emr_extract', label: '病历抽取'},
+  {value: 'emr_draft', label: '病历草拟'},
+  {value: 'patient_report_explain', label: '患者报告解读'},
+  {value: 'patient_triage_normalize', label: '导诊口语归一'},
+  {value: 'knowledge_qa', label: '知识库问答'},
+  {value: 'operation_qa', label: '运营问数'},
+  {value: 'previsit_summary', label: '预问诊摘要'},
+  {value: 'followup_compose', label: '随访话术'},
+  {value: 'insurance_evidence', label: '医保证据判定'},
+  {value: 'health_check', label: '连通性自检'},
+];
+const AI_STATUS = [
+  {value: 1, label: '成功'},
+  {value: 2, label: '失败'},
+  {value: 3, label: '超时'},
+  {value: 4, label: '降级'},
+  {value: 5, label: '熔断'},
+];
+const aiCapabilityLabel = (key) => AI_CAPABILITIES.find(c => c.value === key)?.label || key;
+const aiStatusTag = (s) => ({1:'success',2:'danger',3:'warning',4:'warning',5:'danger'})[s] || 'info';
+const aiStatusLabel = (row) => row.statusText || AI_STATUS.find(s => s.value === row.status)?.label || row.status;
+const formatTime = (t) => t ? String(t).replace('T', ' ').slice(0, 19) : '—';
+const loadAi = async () => {
+  const res = await getAiAuditLogPage({
+    ...aiQuery,
+    ...range(),
+    capabilityKey: aiQuery.capabilityKey || undefined,
+    startDate: dateRange.value?.[0] || undefined,
+    endDate: dateRange.value?.[1] || undefined,
+  });
+  aiRows.value = res?.data?.records || [];
+  aiTotal.value = Number(res?.data?.total || 0);
+};
+// AI 审计详情弹框
+const aiDetailVisible = ref(false);
+const aiDetailRow = ref(null);
+const openAiDetail = (row) => {
+  aiDetailRow.value = row;
+  aiDetailVisible.value = true;
+};
 const operRows = ref([]);
 const loginRows = ref([]);
 const auditRows = ref([]);
@@ -408,12 +520,10 @@ const loginTotal = ref(0);
 const auditTotal = ref(0);
 const fieldTotal = ref(0);
 const currentQuery = () => {
-  if (activeTab.value === 'oper')
-    return operQuery;
-  if (activeTab.value === 'login')
-    return loginQuery;
-  if (activeTab.value === 'field')
-    return fieldQuery;
+  if (activeTab.value === 'oper') return operQuery;
+  if (activeTab.value === 'login') return loginQuery;
+  if (activeTab.value === 'field') return fieldQuery;
+  if (activeTab.value === 'ai') return aiQuery;
   return auditQuery;
 };
 const range = () => ({
@@ -477,14 +587,11 @@ const loadField = async () => {
 const load = async () => {
   loading.value = true;
   try {
-    if (activeTab.value === 'oper')
-      await loadOper();
-    else if (activeTab.value === 'login')
-      await loadLogin();
-    else if (activeTab.value === 'field')
-      await loadField();
-    else
-      await loadAudit();
+    if (activeTab.value === 'oper') await loadOper();
+    else if (activeTab.value === 'login') await loadLogin();
+    else if (activeTab.value === 'field') await loadField();
+    else if (activeTab.value === 'ai') await loadAi();
+    else await loadAudit();
   } catch (e) {
     ElMessage.error(e?.message || '加载日志失败');
   } finally {

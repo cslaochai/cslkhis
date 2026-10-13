@@ -2,12 +2,16 @@ package com.his.ai.service;
 
 import com.his.ai.dto.OperationQaColumnQueryPageDTO;
 import com.his.ai.dto.OperationQaColumnUpsertDTO;
+import com.his.ai.dto.OperationQaRelationQueryPageDTO;
+import com.his.ai.dto.OperationQaRelationUpsertDTO;
 import com.his.ai.dto.OperationQaSchemaQueryPageDTO;
 import com.his.ai.dto.OperationQaSchemaUpsertDTO;
 import com.his.ai.dto.OperationQaSemanticQueryPageDTO;
 import com.his.ai.dto.OperationQaSemanticUpsertDTO;
 import com.his.ai.support.OperationSchemaCatalog;
 import com.his.ai.vo.OperationQaColumnListVO;
+import com.his.ai.vo.OperationQaColumnSelectListVO;
+import com.his.ai.vo.OperationQaRelationListVO;
 import com.his.ai.vo.OperationQaSchemaListVO;
 import com.his.ai.vo.OperationQaSchemaSelectListVO;
 import com.his.ai.vo.OperationQaSemanticListVO;
@@ -73,9 +77,29 @@ public interface OperationQaConfigService {
     void deleteSemanticById(Long id);
 
     /**
+     * 表间关系配置分页查询
+     */
+    PageResult<OperationQaRelationListVO> listRelationPage(OperationQaRelationQueryPageDTO dto);
+
+    /**
+     * 表间关系配置新增/修改
+     */
+    void upsertRelation(OperationQaRelationUpsertDTO dto);
+
+    /**
+     * 删除表间关系配置
+     */
+    void deleteRelationById(Long id);
+
+    /**
      * 启用表下拉选项（配置弹框选表用，仅启用表）
      */
     List<OperationQaSchemaSelectListVO> schemaSelectList();
+
+    /**
+     * 指定表的启用字段下拉选项（关系/语义配置弹框选列用）
+     */
+    List<OperationQaColumnSelectListVO> columnSelectList(String tableName);
 
     // ---------------- 运行时按需查询（问数链路用，直接查库） ----------------
 
@@ -98,6 +122,11 @@ public interface OperationQaConfigService {
      * 启用表下的敏感列配置（脱敏/禁止出库），问数链路按此约束提示词与出参。
      */
     List<OperationSchemaCatalog.SensitiveDef> sensitiveDefs();
+
+    /**
+     * 启用表间关系（join 图谱边），问数链路做图遍历补维度表 + 注入权威 join 键。
+     */
+    List<OperationSchemaCatalog.RelationDef> relationDefs();
 
     // ---------------- 重写刷新 ----------------
 

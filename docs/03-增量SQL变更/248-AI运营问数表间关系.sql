@@ -18,14 +18,34 @@ CREATE TABLE IF NOT EXISTS `sys_ai_qa_relation` (
     `is_enabled`    tinyint      NOT NULL DEFAULT '1' COMMENT '是否启用（1-启用 0-停用）',
     `sort_order`    int          NOT NULL DEFAULT '0' COMMENT '排序号',
     `create_by_id`  bigint COMMENT '创建人ID',
+    `create_by`     varchar(64)  NOT NULL DEFAULT '' COMMENT '创建人',
     `create_time`   datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_by_id`  bigint COMMENT '更新人ID',
+    `update_by`     varchar(64)  NOT NULL DEFAULT '' COMMENT '更新人',
     `update_time`   datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `del_flag`      tinyint      NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
     `remark`        varchar(500) COMMENT '备注',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_rel_src_tgt` (`source_table`, `source_column`, `target_table`, `target_column`, `del_flag`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI运营问数表间关系配置（join 权威键）';
+
+-- 兼容旧版建表缺列（CREATE TABLE IF NOT EXISTS 跳过场景）：幂等补 create_by/update_by
+SET @has_cb := (SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_schema = DATABASE() AND table_name = 'sys_ai_qa_relation' AND column_name = 'create_by');
+SET @sql_cb := IF(@has_cb = 0,
+    'ALTER TABLE sys_ai_qa_relation ADD COLUMN create_by varchar(64) NOT NULL DEFAULT \'\' COMMENT \'创建人\' AFTER create_by_id',
+    'SELECT 1');
+PREPARE s_cb FROM @sql_cb;
+EXECUTE s_cb;
+DEALLOCATE PREPARE s_cb;
+SET @has_ub := (SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_schema = DATABASE() AND table_name = 'sys_ai_qa_relation' AND column_name = 'update_by');
+SET @sql_ub := IF(@has_ub = 0,
+    'ALTER TABLE sys_ai_qa_relation ADD COLUMN update_by varchar(64) NOT NULL DEFAULT \'\' COMMENT \'更新人\' AFTER update_by_id',
+    'SELECT 1');
+PREPARE s_ub FROM @sql_ub;
+EXECUTE s_ub;
+DEALLOCATE PREPARE s_ub;
 
 -- 铺底：白名单 11 表权威关联（与语义口径对齐：按科室 join sys_department.id；dept_code 禁止关联）
 INSERT INTO `sys_ai_qa_relation`
@@ -41,8 +61,12 @@ VALUES
     (2480000000000000508, 'biz_payment_txn', 'bill_id', 'biz_settlement_bill', 'id', 1, '支付流水→结算账单：收款/净收款按账单归集时 join 此键', 1, 8),
     (2480000000000000509, 'biz_prescription_detail', 'prescription_id', 'biz_prescription', 'id', 1, '处方明细→处方主表：药品明细归处方时 join 此键', 1, 9),
     (2480000000000000510, 'biz_admission', 'visit_id', 'biz_visit', 'visit_id', 1, '入院单→就诊次：入院与就诊次关联时 join 此键', 1, 10),
-    (2480000000000000511, 'biz_operation_apply', 'admission_id', 'biz_admission', 'id', 1, '手术申请→入院单：住院手术按入院归集时 join 此键', 1, 11)
+    (2480000000000000511, 'biz_operation_apply', 'admission_id', 'biz_admission', 'admission_id', 1, '手术申请→入院单：住院手术按入院归集时 join 此键', 1, 11),
+    (2480000000000000512, 'biz_admission', 'ward_id', 'sys_ward', 'ward_id', 2, '住院→病区维度表：按病区统计床位/在院人数时 join 此键', 1, 12),
+    (2480000000000000513, 'sys_ward', 'dept_id', 'sys_department', 'id', 2, '病区→所属科室维度表：病区维度转科室维度时 join 此键', 1, 13)
 ON DUPLICATE KEY UPDATE
+    `source_column` = VALUES(`source_column`),
+    `target_column` = VALUES(`target_column`),
     `description` = VALUES(`description`),
     `relation_type` = VALUES(`relation_type`),
     `is_enabled` = 1,

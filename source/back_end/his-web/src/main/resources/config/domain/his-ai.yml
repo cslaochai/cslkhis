@@ -112,8 +112,8 @@ his:
       # 向量库：milvus-持久化（重启不丢）/ memory-进程内存（重启靠 doc 全文重建）
       vector-store: milvus
       milvus:
-        uri: grpc://192.168.88.132:19530
-        token: ""
+        uri: ${HIS_MILVUS_URL:}
+        token: ${HIS_MILVUS_TOKEN:}
         collection-name: his_knowledge_chunk
         vector-dim: 1024
       embed-base-url: https://dashscope.aliyuncs.com/compatible-mode/v1

@@ -56,6 +56,16 @@ public final class OperationSchemaCatalog {
     }
 
     /**
+     * 表间关系（join 图谱边）：源表.源列 → 目标表.目标列。
+     *
+     * @param relationType 关系类型（1-业务关联 2-维度关联）
+     * @param description  关联说明（喂给模型：何时用此关联）
+     */
+    public record RelationDef(String sourceTable, String sourceColumn, String targetTable, String targetColumn,
+                              Integer relationType, String description) {
+    }
+
+    /**
      * 提示词用的表结构文本（{{schema}} 变量），只渲染选中的表。
      *
      * @param tables     已查询的表定义（含启用列）
@@ -129,5 +139,21 @@ public final class OperationSchemaCatalog {
                     + "返回结果会按脱敏方式自动打码：").append(masked).append('。');
         }
         return text.toString();
+    }
+
+    /**
+     * 提示词用的表间关系文本（{{relations}} 变量）：权威 join 键，模型写 JOIN 时直接使用。
+     *
+     * @param relations 与选中表相关的启用关系边（已在图遍历后收窄）
+     */
+    public static String relationsText(List<RelationDef> relations) {
+        if (relations == null || relations.isEmpty()) {
+            return "（当前无预设表间关联，需要 join 时先确认列名真实存在，禁止臆造关联列）";
+        }
+        return relations.stream()
+                .map(r -> r.sourceTable() + "." + r.sourceColumn() + " = " + r.targetTable() + "." + r.targetColumn()
+                        + "（" + (r.relationType() != null && r.relationType() == 2 ? "维度关联" : "业务关联")
+                        + "：" + r.description() + "）")
+                .collect(Collectors.joining("\n"));
     }
 }
