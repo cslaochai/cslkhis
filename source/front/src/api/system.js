@@ -182,9 +182,18 @@ export function deleteDictType(id) {
     return request.delete('/system/dict/type/deleteById', {params: {typeId: id}})
 }
 
+// 业务下拉只展示启用项（status=1）；后端 selectList 按缓存返回全量（含停用），
+// 这里统一过滤掉明确停用（status=0）的字典项；字典管理页走分页接口，不受影响。
+const isDictEnabled = d => d && d.status !== 0 && d.status !== '0'
+
 // 查询字典数据列表
 export function getDictDataList(dictTypes) {
-    return request.post('/system/dict/data/selectList', {dictTypes})
+    return request.post('/system/dict/data/selectList', {dictTypes}).then(res => {
+        if (res && res.code === 200 && Array.isArray(res.data)) {
+            res.data = res.data.filter(isDictEnabled)
+        }
+        return res
+    })
 }
 
 // 批量获取字典数据（后端返回按类型分组的数组，这里还原为视图使用的对象结构）
@@ -193,7 +202,7 @@ export function getDictDataMapList(dictTypes) {
         if (res && res.code === 200 && Array.isArray(res.data)) {
             const map = {}
             res.data.forEach(group => {
-                map[group.dictType] = group.dataList || []
+                map[group.dictType] = (group.dataList || []).filter(isDictEnabled)
             })
             return {...res, data: map}
         }

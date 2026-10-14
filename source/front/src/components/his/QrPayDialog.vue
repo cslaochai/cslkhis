@@ -50,10 +50,6 @@
           <span class="text-slate-500">收款金额</span>
           <b class="text-red-600">{{ moneyText(cashAmount) }}</b>
         </div>
-        <p class="mt-2 text-xs leading-5 text-slate-500">
-          金额取账单尚需缴，页面不改数：多收的是找零，不进流水。
-          抽屉里的实钞与这笔现金是否相符，由「财务结算 → 交班」按班清点核对留痕。
-        </p>
         <p v-if="error" class="mt-2 text-center text-sm text-red-600">{{ error }}</p>
       </div>
       <div v-else class="flex min-h-[236px] flex-col items-center justify-center rounded-lg border border-slate-200 p-3">

@@ -1469,8 +1469,7 @@
             <div class="rounded-lg bg-amber-50 p-3">
               <div class="text-xs text-slate-500">结算方式</div>
               <div class="text-xs font-medium text-amber-700">{{
-                  insuranceInfo?.settlementType == 1 ? '自费' :
-                      insuranceInfo?.settlementType == 4 ? '公费医疗' : '医保统筹'
+                  Number(insuranceInfo?.settlementType) === 1 ? '全自费' : '医保联网'
                 }}
               </div>
             </div>

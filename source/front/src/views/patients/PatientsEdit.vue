@@ -23,11 +23,6 @@
         <el-form-item label="联系电话" required>
           <el-input v-model="form.phone" placeholder="请输入 11 位手机号"/>
         </el-form-item>
-        <el-form-item label="患者类型">
-          <el-select v-model="form.patientType" class="w-full">
-            <el-option v-for="o in PATIENT_TYPE_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
-          </el-select>
-        </el-form-item>
       </div>
 
       <h4 class="mb-2 mt-4 text-sm font-medium text-slate-700">联系人信息</h4>
@@ -82,17 +77,18 @@
         <el-input v-model="form.address" placeholder="请输入家庭住址"/>
       </el-form-item>
 
-      <h4 class="mb-2 mt-4 text-sm font-medium text-slate-700">医保信息</h4>
+      <h4 class="mb-2 mt-4 text-sm font-medium text-slate-700">参保信息</h4>
       <div class="grid grid-cols-2 gap-4">
-        <el-form-item label="医保类型">
-          <el-select v-model="form.medicalInsuranceType" class="w-full" clearable filterable
-                     placeholder="请选择医保类型">
+        <el-form-item label="费别" required>
+          <el-select v-model="form.medicalInsuranceType" class="w-full" filterable
+                     placeholder="请选择费别">
             <el-option v-for="item in medicalInsuranceTypes" :key="item.dictValue" :label="item.dictLabel"
                        :value="item.dictValue"/>
           </el-select>
         </el-form-item>
         <el-form-item label="医保卡号">
-          <el-input v-model="form.medicalInsuranceNo" placeholder="请输入医保卡号"/>
+          <el-input v-model="form.medicalInsuranceNo" :disabled="isSelfPay"
+                    :placeholder="isSelfPay ? '自费患者无需填写' : '请输入医保卡号'"/>
         </el-form-item>
       </div>
 
@@ -126,7 +122,6 @@ import {
   isPhoneLegal,
   PATIENT_GENDER_OPTIONS
 } from '@/lib/patientGender';
-import {PATIENT_TYPE_OPTIONS} from '@/lib/patientType';
 
 const props = defineProps({
   // v-model 控制显隐
@@ -150,7 +145,6 @@ function emptyForm() {
     birthDate: '',
     idCard: '',
     phone: '',
-    patientType: 1,
     contactName: '',
     contactPhone: '',
     contactRelation: '',
@@ -159,11 +153,15 @@ function emptyForm() {
     occupation: '',
     maritalStatus: null,
     address: '',
-    medicalInsuranceType: '',
+    // 费别默认自费；下拉字典 medical_insurance_type（标准 5 项，含自费）
+    medicalInsuranceType: '自费',
     medicalInsuranceNo: '',
     allergyHistory: '',
   };
 }
+
+// 费别为自费时禁用医保号录入（自费不参与医保结算）
+const isSelfPay = computed(() => !form.value.medicalInsuranceType || form.value.medicalInsuranceType.includes('自费'));
 
 const form = ref(emptyForm());
 
@@ -187,6 +185,8 @@ const loadFull = async () => {
     const res = await getPatientDetail(props.row.id);
     if (res.data) {
       form.value = {...emptyForm(), ...props.row, ...res.data};
+      // 老数据费别可能为空，统一回显成自费，避免下拉空白且保存时漏传
+      if (!form.value.medicalInsuranceType) form.value.medicalInsuranceType = '自费';
     }
   } catch (error) {
     console.error('加载患者全量信息失败（编辑表单按列表行数据展示）:', error);
@@ -231,11 +231,14 @@ const handleSubmit = async () => {
   if (submitting.value) return;
   submitting.value = true;
   try {
+    // 自费患者不参与医保结算，提交前清掉医保号，避免残留旧号导致被误判为医保患者
+    const payload = {...form.value};
+    if (isSelfPay.value) payload.medicalInsuranceNo = '';
     if (isAdd.value) {
-      await createPatient(form.value);
+      await createPatient(payload);
       ElMessage.success('新增成功');
     } else {
-      await updatePatient(form.value);
+      await updatePatient(payload);
       ElMessage.success('修改成功');
     }
     visible.value = false;

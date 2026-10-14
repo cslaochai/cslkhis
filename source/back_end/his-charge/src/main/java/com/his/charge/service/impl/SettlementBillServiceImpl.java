@@ -407,6 +407,16 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         for (BizSettlementBill bill : page.getRecords()) {
             records.add(toVO(bill));
         }
+        // 费用构成：整页账单一次性按费用类别聚合，避免逐单查（N+1）
+        List<Long> billIds = records.stream().map(BizSettlementBillVO::getId)
+                .filter(java.util.Objects::nonNull).toList();
+        if (!billIds.isEmpty()) {
+            Map<Long, List<BillFeeTypeSumVO>> byBill = bizSettlementBillItemMapper.sumByBillIds(billIds).stream()
+                    .collect(java.util.stream.Collectors.groupingBy(BillFeeTypeSumVO::getBillId));
+            for (BizSettlementBillVO vo : records) {
+                vo.setFeeComposition(byBill.getOrDefault(vo.getId(), java.util.Collections.emptyList()));
+            }
+        }
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 

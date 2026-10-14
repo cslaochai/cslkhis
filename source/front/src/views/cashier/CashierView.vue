@@ -2,10 +2,8 @@
   <div class="space-y-4">
     <el-card shadow="never">
       <div class="flex flex-wrap items-center gap-3">
-        <el-radio-group v-model="encounterType" @change="switchEncounterType">
-          <el-radio-button :value="1">门诊</el-radio-button>
-          <el-radio-button :value="2">住院</el-radio-button>
-        </el-radio-group>
+        <!-- 收费台=门诊收费窗：住院不走这里（住院有专属的「住院结算」页，管预交金+出院汇总+多退少补）。
+             真实 HIS 也是按岗位分窗口，绝不在收费台内切门诊/住院，否则会和住院结算页抢同一批费（同 encounter_id=admission_id）造成双重计费 -->
         <el-input
             v-model="keyword"
             clearable
@@ -87,34 +85,23 @@
           </div>
         </div>
 
-        <!-- 收款待办：有未收账单时始终置顶，避免主区空了看不到钱在哪儿（标准 HIS 收费台会把待收金额挂在最显眼处） -->
-        <el-alert
-            v-if="unpaidBillAmount > 0"
-            :closable="false"
-            class="!border-amber-200 !bg-amber-50"
-            show-icon
-            type="warning"
-        >
-          <template #title>
-            本就诊有 <b>¥{{ money(unpaidBillAmount) }}</b> 待收款，请对下方「已出账单」点收款
-          </template>
-        </el-alert>
-
-        <!-- 待结算费用（L1）：勾选后出账 -->
+        <!-- ① 费用明细（标准 HIS 收费台主区：待收费项目逐行列出，收不收都看得见）。盒式与②③统一 -->
         <div>
           <div class="mb-2 flex items-center justify-between">
+            <h4 class="text-sm font-bold text-slate-700">① 费用明细（待收费项目）</h4>
             <span class="text-sm text-slate-500">
-              待结算费用 · 全部 ¥{{ money(feeTotal) }} · 已勾选 <b class="text-slate-900">{{ selectedFees.length }}</b> 行
+              应收合计 ¥{{ money(feeTotal) }} · 已勾选 <b class="text-slate-900">{{ selectedFees.length }}</b> 行
               ¥{{ money(selectedTotal) }}
             </span>
           </div>
-          <el-table
-              :data="fees"
-              data-testid="cash-fee-table"
-              max-height="240"
-              size="small"
-              @selection-change="onFeeSelectionChange"
-          >
+          <div class="rounded-lg border border-slate-200 p-3">
+            <el-table
+                :data="fees"
+                data-testid="cash-fee-table"
+                max-height="240"
+                size="small"
+                @selection-change="onFeeSelectionChange"
+            >
             <el-table-column type="selection" width="42"/>
             <el-table-column label="记账号" prop="feeNo" width="150"/>
             <el-table-column label="项目名称" min-width="180" prop="itemName" show-overflow-tooltip/>
@@ -142,127 +129,154 @@
                   }}</span>
               </template>
             </el-table-column>
+            <el-table-column label="状态" width="90">
+              <template #default="{ row }">
+                <el-tag :type="feeStatusTag(row.feeStatus)" size="small">{{ feeStatusText(row.feeStatus) }}</el-tag>
+              </template>
+            </el-table-column>
             <el-table-column label="记账时间" prop="bookTime" width="160"/>
             <template #empty>
               <span class="text-sm text-slate-400">
-                该就诊没有待结算的记账行{{ bills.length ? '，费用已全部出账，请对下方账单收款' : '' }}
+                该就诊没有待收费项目{{ bills.length ? '，费用已全部出账，请对下方收款单据收款' : '' }}
               </span>
             </template>
-          </el-table>
-        </div>
-
-        <!-- 结算设置 + 试算 -->
-        <div class="rounded-lg border border-slate-200 p-3">
-          <div class="flex flex-wrap items-center gap-4">
-            <div class="flex items-center gap-2">
-              <span class="text-sm text-slate-500">结算方式</span>
-              <el-select v-model="settleForm.settlementMode" class="!w-28" data-testid="cash-settle-mode"
-                         @change="invalidatePreview">
-                <el-option v-for="o in selectOptions(DICT_TYPE.SETTLEMENT_MODE)" :key="o.value" :label="o.label"
-                           :value="o.value"/>
-              </el-select>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-sm text-slate-500">账单类型</span>
-              <el-select v-model="settleForm.billType" class="!w-40" clearable placeholder="自动"
-                         @change="invalidatePreview">
-                <el-option v-for="o in selectOptions(DICT_TYPE.BILL_TYPE)" :key="o.value" :label="o.label"
-                           :value="o.value"/>
-              </el-select>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-sm text-slate-500">院内优惠</span>
-              <el-input-number
-                  v-model="settleForm.discountAmount"
-                  :min="0"
-                  :precision="2"
-                  :step="10"
-                  class="!w-36"
-                  controls-position="right"
-                  data-testid="cash-discount"
-                  @change="invalidatePreview"
-              />
-            </div>
-            <el-button :icon="Document" :loading="previewLoading" data-testid="cash-preview" @click="runPreview">
-              出账试算
-            </el-button>
-            <el-button
-                :disabled="!preview"
-                :icon="Coin"
-                :loading="settling"
-                data-testid="cash-settle"
-                type="primary"
-                @click="runSettle"
-            >
-              确认出账
-            </el-button>
-          </div>
-
-          <div v-if="preview" class="mt-3 space-y-2" data-testid="cash-preview-result">
-            <div class="grid grid-cols-3 gap-2 text-sm sm:grid-cols-8">
-              <div><p class="text-xs text-slate-400">记账行数</p><b>{{ preview.feeCount }}</b></div>
-              <div><p class="text-xs text-slate-400">应收合计</p><b>¥{{ money(preview.totalAmount) }}</b></div>
-              <div><p class="text-xs text-slate-400">优惠</p><b>¥{{ money(preview.discountAmount) }}</b></div>
-              <div><p class="text-xs text-slate-400">统筹</p><b class="text-emerald-700">¥{{
-                  money(preview.poolAmount)
-                }}</b></div>
-              <div><p class="text-xs text-slate-400">个账</p><b
-                  class="text-emerald-700">¥{{ money(preview.accountAmount) }}</b></div>
-              <div><p class="text-xs text-slate-400">自付</p><b>¥{{ money(preview.selfAmount) }}</b></div>
-              <div><p class="text-xs text-slate-400">患者应缴</p><b
-                  class="text-red-600">¥{{ money(preview.payableAmount) }}</b></div>
-              <div>
-                <p class="text-xs text-slate-400">{{ preview.settlementModeText }}</p>
-                <b class="text-sm">{{ preview.insuranceType || '—' }}
-                  <span v-if="preview.coverageRatio != null" class="text-xs font-normal text-slate-500">
-                    报销 {{ money(preview.coverageRatio) }}%
-                  </span>
-                </b>
-              </div>
-            </div>
-            <el-table :data="preview.items || []" max-height="200" size="small">
-              <el-table-column label="项目" min-width="180" prop="itemName" show-overflow-tooltip/>
-              <el-table-column label="类别" width="90">
-                <template #default="{ row }">{{ itemTypeText(row.itemType) }}</template>
-              </el-table-column>
-              <el-table-column align="center" label="目录" width="70">
-                <template #default="{ row }">
-                  {{ ['自费', '甲类', '乙类', '丙类'][Number(row.catalogType)] || '—' }}
-                </template>
-              </el-table-column>
-              <el-table-column align="right" label="金额" width="100">
-                <template #default="{ row }">{{ money(row.amount) }}</template>
-              </el-table-column>
-              <el-table-column align="right" label="优惠" width="90">
-                <template #default="{ row }">{{ money(row.discountAmount) }}</template>
-              </el-table-column>
-              <el-table-column align="right" label="统筹" width="90">
-                <template #default="{ row }">{{ money(row.poolAmount) }}</template>
-              </el-table-column>
-              <el-table-column align="right" label="个账" width="90">
-                <template #default="{ row }">{{ money(row.accountAmount) }}</template>
-              </el-table-column>
-              <el-table-column align="right" label="自付" width="90">
-                <template #default="{ row }">
-                  <span class="font-medium">{{ money(row.selfAmount) }}</span>
-                </template>
-              </el-table-column>
             </el-table>
           </div>
         </div>
 
-        <!-- 本次就诊已出账单 -->
+        <!-- ② 收费 / 出账：标准 HIS 收费台的「收费」动作，选结算方式 → 出账试算 → 确认出账。
+             标题与 ①③ 同级（不缩进边框盒子里）；试算明细列表常驻显示，没试算时给空态引导 -->
+        <div>
+          <h4 class="mb-2 text-sm font-bold text-slate-700">② 收费 / 出账</h4>
+          <div class="rounded-lg border border-slate-200 p-3">
+            <div class="flex flex-wrap items-center gap-4">
+              <div class="flex items-center gap-2">
+                <span class="text-sm text-slate-500">结算方式</span>
+                <el-select v-model="settleForm.settlementMode" class="!w-28" data-testid="cash-settle-mode"
+                           @change="invalidatePreview">
+                  <el-option v-for="o in selectOptions(DICT_TYPE.SETTLEMENT_MODE)" :key="o.value" :label="o.label"
+                             :value="o.value"/>
+                </el-select>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-sm text-slate-500">账单类型</span>
+                <el-select v-model="settleForm.billType" class="!w-40" clearable placeholder="自动"
+                           @change="invalidatePreview">
+                  <el-option v-for="o in selectOptions(DICT_TYPE.BILL_TYPE)" :key="o.value" :label="o.label"
+                             :value="o.value"/>
+                </el-select>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-sm text-slate-500">院内优惠</span>
+                <el-input-number
+                    v-model="settleForm.discountAmount"
+                    :min="0"
+                    :precision="2"
+                    :step="10"
+                    class="!w-36"
+                    controls-position="right"
+                    data-testid="cash-discount"
+                    @change="invalidatePreview"
+                />
+              </div>
+              <el-button :icon="Document" :loading="previewLoading" data-testid="cash-preview" @click="runPreview">
+                出账试算
+              </el-button>
+              <el-button
+                  :disabled="!preview"
+                  :icon="Coin"
+                  :loading="settling"
+                  data-testid="cash-settle"
+                  type="primary"
+                  @click="runSettle"
+              >
+                确认出账
+              </el-button>
+            </div>
+
+            <div class="mt-3 space-y-2" data-testid="cash-preview-result">
+              <div v-if="preview" class="grid grid-cols-3 gap-2 text-sm sm:grid-cols-8">
+                <div><p class="text-xs text-slate-400">记账行数</p><b>{{ preview.feeCount }}</b></div>
+                <div><p class="text-xs text-slate-400">应收合计</p><b>¥{{ money(preview.totalAmount) }}</b></div>
+                <div><p class="text-xs text-slate-400">优惠</p><b>¥{{ money(preview.discountAmount) }}</b></div>
+                <div><p class="text-xs text-slate-400">统筹</p><b class="text-emerald-700">¥{{
+                    money(preview.poolAmount)
+                  }}</b></div>
+                <div><p class="text-xs text-slate-400">个账</p><b
+                    class="text-emerald-700">¥{{ money(preview.accountAmount) }}</b></div>
+                <div><p class="text-xs text-slate-400">自付</p><b>¥{{ money(preview.selfAmount) }}</b></div>
+                <div><p class="text-xs text-slate-400">患者应缴</p><b
+                    class="text-red-600">¥{{ money(preview.payableAmount) }}</b></div>
+                <div>
+                  <p class="text-xs text-slate-400">{{ preview.settlementModeText }}</p>
+                  <b class="text-sm">{{ preview.insuranceType || '—' }}
+                    <span v-if="preview.coverageRatio != null" class="text-xs font-normal text-slate-500">
+                      报销 {{ money(preview.coverageRatio) }}%
+                    </span>
+                  </b>
+                </div>
+              </div>
+              <el-table :data="preview?.items || []" max-height="200" size="small">
+                <el-table-column label="项目" min-width="180" prop="itemName" show-overflow-tooltip/>
+                <el-table-column label="类别" width="90">
+                  <template #default="{ row }">{{ itemTypeText(row.itemType) }}</template>
+                </el-table-column>
+                <el-table-column align="center" label="目录" width="70">
+                  <template #default="{ row }">
+                    {{ ['自费', '甲类', '乙类', '丙类'][Number(row.catalogType)] || '—' }}
+                  </template>
+                </el-table-column>
+                <el-table-column align="right" label="金额" width="100">
+                  <template #default="{ row }">{{ money(row.amount) }}</template>
+                </el-table-column>
+                <el-table-column align="right" label="优惠" width="90">
+                  <template #default="{ row }">{{ money(row.discountAmount) }}</template>
+                </el-table-column>
+                <el-table-column align="right" label="统筹" width="90">
+                  <template #default="{ row }">{{ money(row.poolAmount) }}</template>
+                </el-table-column>
+                <el-table-column align="right" label="个账" width="90">
+                  <template #default="{ row }">{{ money(row.accountAmount) }}</template>
+                </el-table-column>
+                <el-table-column align="right" label="自付" width="90">
+                  <template #default="{ row }">
+                    <span class="font-medium">{{ money(row.selfAmount) }}</span>
+                  </template>
+                </el-table-column>
+                <template #empty>
+                  <span class="text-sm text-slate-400">勾选上方费用后点「出账试算」，试算明细显示在这里</span>
+                </template>
+              </el-table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ③ 收款单据（已出账账单）。盒式与①②统一 -->
         <div>
           <div class="mb-2 flex items-center justify-between">
-            <h4 class="text-sm font-bold text-slate-700">已出账单（L2 · 收款 / 退费 / 作废）</h4>
+            <h4 class="text-sm font-bold text-slate-700">③ 收款单据（已出账账单）</h4>
             <span class="text-sm text-slate-500">未收齐合计 <b class="text-red-600">¥{{
                 money(unpaidBillAmount)
               }}</b></span>
           </div>
+          <div class="rounded-lg border border-slate-200 p-3">
           <el-table :data="bills" data-testid="cash-bill-table" max-height="220" size="small">
             <el-table-column label="账单号" prop="billNo" width="160"/>
-            <el-table-column label="类型" width="120">
+            <el-table-column label="结算类型" width="120">
               <template #default="{ row }">{{ billTypeText(row.billType) }}</template>
+            </el-table-column>
+            <el-table-column label="费用构成" min-width="220">
+              <template #default="{ row }">
+                <div v-if="row.feeComposition?.length" class="flex flex-wrap gap-1">
+                  <el-tag
+                      v-for="c in row.feeComposition"
+                      :key="c.itemType"
+                      size="small"
+                      type="info"
+                  >{{ itemTypeText(c.itemType) }} ¥{{ money(c.amount) }}</el-tag>
+                </div>
+                <span v-else class="text-slate-300">—</span>
+              </template>
             </el-table-column>
             <el-table-column label="状态" width="100">
               <template #default="{ row }">
@@ -293,23 +307,21 @@
             </el-table-column>
             <el-table-column label="出账人" prop="billByName" width="100"/>
             <el-table-column label="出账时间" prop="billTime" width="160"/>
-            <el-table-column fixed="right" label="操作" width="280">
+            <el-table-column fixed="right" label="操作" width="90">
               <template #default="{ row }">
+                <!-- 收费员动线只留一个口：未收齐点「收款」→ 复用预约收费弹层（默认现金，切支付宝/微信出码）；
+                     已结清给「出票」（L4）。退费/作废走退费管理与账单台账页，不在收费台铺开 -->
                 <el-button v-if="Number(row.unpaidAmount) > 0" data-testid="cash-btn-pay" link type="primary"
                            @click="openPay(row)">收款
                 </el-button>
-                <el-button v-if="Number(row.unpaidAmount) > 0" data-testid="cash-btn-qrpay" link type="primary"
-                           @click="openQrPay(row)">扫码
+                <el-button v-else-if="Number(row.billStatus) === 3" data-testid="cash-btn-issue" link type="success"
+                           @click="runIssue(row)">出票
                 </el-button>
-                <el-button v-if="Number(row.billStatus) === 3" link type="success" @click="openRefund(row)">退费
-                </el-button>
-                <el-button v-if="Number(row.billStatus) === 1" link type="warning" @click="runVoid(row)">作废
-                </el-button>
-                <el-button link @click="openDetail(row)">详情</el-button>
               </template>
             </el-table-column>
             <template #empty><span class="text-sm text-slate-400">该就诊还没有账单</span></template>
           </el-table>
+          </div>
         </div>
       </div>
 
@@ -319,177 +331,10 @@
     </el-dialog>
 
     <!-- ============ 收款 ============ -->
-    <el-dialog v-model="payDialog" data-testid="cash-pay-dialog" title="账单收款（一笔钱一行流水）" width="860px">
-      <div v-if="payBillRow" v-loading="payLoading" class="space-y-3">
-        <div class="rounded-lg bg-slate-50 p-3">
-          <div class="grid grid-cols-2 gap-2 text-sm sm:grid-cols-6">
-            <div><span class="text-slate-500">账单号</span><br/>{{ payBillRow.billNo }}</div>
-            <div><span class="text-slate-500">患者</span><br/>{{ payBillRow.patientName }}</div>
-            <div><span class="text-slate-500">应缴</span><br/><b>¥{{ money(payBillRow.payableAmount) }}</b></div>
-            <div><span class="text-slate-500">已收</span><br/>¥{{ money(payBillRow.paidAmount) }}</div>
-            <div><span class="text-slate-500">已退</span><br/>¥{{ money(payBillRow.refundAmount) }}</div>
-            <div><span class="text-slate-500">尚需缴</span><br/><b class="text-red-600">¥{{ money(payRemaining) }}</b>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex items-center justify-between">
-          <h4 class="text-sm font-bold text-slate-700">收款明细</h4>
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-slate-500">本次合计 <b class="text-slate-900">¥{{ money(payTotal) }}</b></span>
-            <el-button link type="primary" @click="addPayItem">加一笔</el-button>
-          </div>
-        </div>
-        <el-table :data="payItems" data-testid="cash-pay-items" size="small">
-          <el-table-column label="支付方式" width="180">
-            <template #default="{ row }">
-              <el-select v-model="row.payMethod" class="!w-full">
-                <el-option v-for="o in selectOptions(DICT_TYPE.PAY_METHOD)" :key="o.value" :label="o.label"
-                           :value="o.value"/>
-              </el-select>
-            </template>
-          </el-table-column>
-          <el-table-column label="金额" width="200">
-            <template #default="{ row }">
-              <el-input-number
-                  v-model="row.amount"
-                  :min="0"
-                  :precision="2"
-                  :step="10"
-                  class="!w-full"
-                  controls-position="right"
-                  data-testid="cash-pay-amount"
-              />
-            </template>
-          </el-table-column>
-          <el-table-column label="备注" min-width="180">
-            <template #default="{ row }">
-              <el-input v-model="row.remark" placeholder="可留空"/>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="80">
-            <template #default="{ $index }">
-              <el-button :icon="Remove" link type="danger" @click="removePayItem($index)">删</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-        <p class="text-xs text-slate-400">
-          一笔钱一行、收退同表带符号：现金 30 + 余额 50 + 医保个账 20 就是三笔流水，
-          合并成一笔会让退费无从知道该退回哪个渠道。「院内余额」按本就诊对应账户扣减。
-        </p>
-
-        <div v-if="payTxns.length" class="space-y-1">
-          <h4 class="text-sm font-bold text-slate-700">本账单已有流水</h4>
-          <el-table :data="payTxns" max-height="180" size="small">
-            <el-table-column label="流水号" prop="txnNo" width="170"/>
-            <el-table-column align="center" label="方向" width="70">
-              <template #default="{ row }">{{ Number(row.direction) === 1 ? '收款' : '退款' }}</template>
-            </el-table-column>
-            <el-table-column label="方式" width="100">
-              <template #default="{ row }">{{ payMethodText(row.payMethod) }}</template>
-            </el-table-column>
-            <el-table-column align="right" label="金额" width="110">
-              <template #default="{ row }">
-                <span :class="Number(row.amount) < 0 ? 'text-emerald-600' : 'font-medium'">{{
-                    money(row.amount)
-                  }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="来源" width="120">
-              <template #default="{ row }">{{ txnSourceText(row.sourceType) }}</template>
-            </el-table-column>
-            <el-table-column label="渠道流水号" prop="channelTxnNo" show-overflow-tooltip width="180"/>
-            <el-table-column label="收银" prop="cashierName" width="90"/>
-            <el-table-column label="时间" prop="txnTime" width="160"/>
-          </el-table>
-        </div>
-      </div>
-
-      <template #footer>
-        <el-button v-if="isPaid" :icon="Tickets" data-testid="cash-issue" type="success" @click="runIssue">
-          按账单出票
-        </el-button>
-        <el-button
-            :disabled="payRemaining <= 0"
-            :icon="Coin"
-            :loading="paying"
-            data-testid="cash-pay-submit"
-            type="primary"
-            @click="submitPay"
-        >
-          确认收款 ¥{{ money(payTotal) }}
-        </el-button>
-        <el-button @click="payDialog = false">关闭</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- ============ 退费 ============ -->
-    <el-dialog v-model="refundDialog" data-testid="cash-refund-dialog" title="按账单退费（红冲记账行 + 原路退回）"
-               width="860px">
-      <div v-if="refundBillRow" v-loading="refundLoading" class="space-y-3">
-        <div class="rounded-lg bg-slate-50 p-3 text-sm">
-          账单 {{ refundBillRow.billNo }} · {{ refundBillRow.patientName }} ·
-          应缴 ¥{{ money(refundBillRow.payableAmount) }} · 已收 ¥{{ money(refundBillRow.paidAmount) }}
-        </div>
-        <p class="text-xs text-slate-500">
-          退多少不由本页填金额：永远是「被红冲记账行的净额」。勾选全部行 = 整单退（医保清单会发 2305 冲正），
-          只勾部分行时医保清单退回待重新结算。
-        </p>
-        <el-table
-            :data="refundItems"
-            data-testid="cash-refund-table"
-            max-height="280"
-            size="small"
-            @selection-change="(rows: any[]) => (refundSelected = rows)"
-        >
-          <el-table-column type="selection" width="42"/>
-          <el-table-column label="项目" min-width="180" prop="itemName" show-overflow-tooltip/>
-          <el-table-column label="类别" width="90">
-            <template #default="{ row }">{{ itemTypeText(row.itemType) }}</template>
-          </el-table-column>
-          <el-table-column align="right" label="数量" width="80">
-            <template #default="{ row }">{{ row.quantity }}</template>
-          </el-table-column>
-          <el-table-column align="right" label="金额" width="100">
-            <template #default="{ row }">{{ money(row.amount) }}</template>
-          </el-table-column>
-          <el-table-column align="right" label="统筹" width="100">
-            <template #default="{ row }">{{ money(row.poolAmount) }}</template>
-          </el-table-column>
-          <el-table-column align="right" label="患者实付" width="110">
-            <template #default="{ row }">{{ money(row.selfAmount) }}</template>
-          </el-table-column>
-        </el-table>
-        <div class="flex items-center justify-between">
-          <span class="text-sm text-slate-500">本次退费合计 <b class="text-red-600">¥{{ money(refundTotal) }}</b></span>
-        </div>
-        <el-input
-            v-model="refundReason"
-            :rows="2"
-            data-testid="cash-refund-reason"
-            maxlength="200"
-            placeholder="退费原因（必填，会写入红冲行与退费流水）"
-            show-word-limit
-            type="textarea"
-        />
-      </div>
-
-      <template #footer>
-        <el-button :loading="refunding" data-testid="cash-refund-submit" type="danger" @click="submitRefund">
-          确认退费
-        </el-button>
-        <el-button @click="refundDialog = false">取消</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- ============ 账单详情 ============ -->
-    <CashierDetail v-model="detailDialog" :id="detailBillId" :bill-status-tag="billStatusTag"
-                   :bill-status-text="billStatusText" :bill-type-text="billTypeText" :money="money"
-                   :pay-method-text="payMethodText" :txn-source-text="txnSourceText"/>
-
-    <!-- ============ 扫码收款（主扫：医院出码，患者扫；收款结果由渠道确认，不由页面点出来） ============ -->
-    <QrPayDialog v-model="qrPayDialog" :amount="qrPayBill?.unpaidAmount" :bill-id="qrPayBill?.id"
-                 :bill-no="qrPayBill?.billNo" :patient-name="qrPayBill?.patientName" @paid="onQrPaid"/>
+    <!-- 与预约收费同一弹层：默认现金档（窗口当场点钞记流水），切支付宝/微信即出对应渠道的码；
+         金额取账单尚需缴，页面不改数。多渠道拆笔（余额+医保）由退费/台账侧的账单详情承接 -->
+    <QrPayDialog v-model="qrPayDialog" allow-cash :amount="qrPayBill?.unpaidAmount" :bill-id="qrPayBill?.id"
+                 :bill-no="qrPayBill?.billNo" :patient-name="qrPayBill?.patientName" @paid="onPaid"/>
   </div>
 </template>
 
@@ -498,7 +343,7 @@
  * 收费结算窗口（四层：L1 记账 → L2 结算 → L3 支付 → L4 票据）
  *
  * 页面只走一条链，每一步都只碰自己那一层：
- *   待收费就诊榜 →（选记账行）出账单 → （多笔多渠道）收款 → 出票
+ *   待收费就诊榜 →（选记账行）出账单 → 收款（默认现金，可切支付宝/微信出码）→ 出票
  *
  * 三条前端必须守住的口径：
  * 1. **应收金额不由本页传入**：settle 只提交「哪些记账行 + 优惠多少 + 结算方式」，
@@ -511,25 +356,20 @@
  *    unpaidAmount 由后端算，前端不再减一遍。
  */
 import {computed, onMounted, ref} from 'vue';
-import {Coin, Document, Refresh, Remove, Search, Tickets} from '@element-plus/icons-vue';
-import {ElMessage, ElMessageBox} from 'element-plus';
+import {Coin, Document, Refresh, Search} from '@element-plus/icons-vue';
+import {ElMessage} from 'element-plus';
 import {
-  getBillDetailById,
   getBillListPage,
   getPendingEncounterPage,
   listPendingFees,
-  payBill,
-  refundBill,
   settleBill,
   settlePreview,
-  voidBill,
 } from '@/api/settlementBill';
 import {issueInvoice} from '@/api/invoice';
 import QrPayDialog from '@/components/his/QrPayDialog.vue';
 import {DICT_TYPE, loadDictDataMap} from '@/lib/dict-cache';
 import {dictLabelText, formatMoney} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
-import CashierDetail from './CashierDetail.vue';
 
 /** 金额累加先转成分，避免浮点误差把「合计」和后端算出来的差出 0.01 */
 const sumMoney = (rows, key = 'amount') => rows.reduce((acc, r) => acc + Math.round(Number(r?.[key] || 0) * 100), 0) / 100;
@@ -545,13 +385,12 @@ function selectOptions(type) {
 
 const billStatusText = (v) => dictLabelText(dictOptions(DICT_TYPE.BILL_STATUS), v);
 const billTypeText = (v) => dictLabelText(dictOptions(DICT_TYPE.BILL_TYPE), v);
-const payMethodText = (v) => dictLabelText(dictOptions(DICT_TYPE.PAY_METHOD), v);
-const txnSourceText = (v) => dictLabelText(dictOptions(DICT_TYPE.TXN_SOURCE), v);
 const itemTypeText = (v) => dictLabelText(dictOptions(DICT_TYPE.CHARGE_ITEM_TYPE), v);
 const sourceTypeText = (v) => dictLabelText(dictOptions(DICT_TYPE.FEE_SOURCE_TYPE), v);
+const feeStatusText = (v) => dictLabelText(dictOptions(DICT_TYPE.FEE_STATUS), v);
+const feeStatusTag = (v) => ({1: '', 2: 'info', 3: 'success', 4: 'danger'}[Number(v)] ?? '');
 // ==================== 待收费就诊榜 ====================
 const boardLoading = ref(false);
-const encounterType = ref(1);
 const keyword = ref('');
 const boardRows = ref([]);
 const pagination = ref({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0});
@@ -560,7 +399,7 @@ async function loadBoard() {
   boardLoading.value = true;
   try {
     const res = await getPendingEncounterPage({
-      encounterType: encounterType.value,
+      encounterType: 1,
       keyword: keyword.value || undefined,
       pageNum: pagination.value.pageNum,
       pageSize: pagination.value.pageSize,
@@ -584,22 +423,14 @@ function handleReset() {
   handleSearch();
 }
 
-function switchEncounterType() {
-  pagination.value.pageNum = 1;
-  loadBoard();
-}
-
 onMounted(async () => {
   dicts.value = await loadDictDataMap([
     DICT_TYPE.BILL_STATUS,
     DICT_TYPE.BILL_TYPE,
-    DICT_TYPE.PAY_METHOD,
     DICT_TYPE.CHARGE_ITEM_TYPE,
     DICT_TYPE.FEE_SOURCE_TYPE,
-    DICT_TYPE.TXN_SOURCE,
+    DICT_TYPE.FEE_STATUS,
     DICT_TYPE.SETTLEMENT_MODE,
-    DICT_TYPE.PAY_DIRECTION,
-    DICT_TYPE.PAY_TXN_STATUS,
   ].join(','));
   await loadBoard();
 });
@@ -715,220 +546,31 @@ async function runSettle() {
   }
 }
 
-// ==================== 收款（L3：一笔钱一行流水） ====================
-const payDialog = ref(false);
-const payLoading = ref(false);
-const paying = ref(false);
-const payBillRow = ref(null);
-const payTxns = ref([]);
-const payItems = ref([]);
-const payRemaining = computed(() => Number(payBillRow.value?.unpaidAmount || 0));
-const payTotal = computed(() => sumMoney(payItems.value));
-
-function emptyPayItem() {
-  return {payMethod: 1, amount: undefined, remark: ''};
-}
-
-/** 一账单多笔、多渠道是这一层的常态：默认给一笔「现金 = 尚需缴」，收银员再按需拆分 */
-function seedPayItems() {
-  const remaining = payRemaining.value;
-  payItems.value = [remaining > 0 ? {...emptyPayItem(), amount: remaining} : emptyPayItem()];
-}
-
-function addPayItem() {
-  payItems.value.push(emptyPayItem());
-}
-
-function removePayItem(index) {
-  if (payItems.value.length <= 1) {
-    ElMessage.warning('至少保留一笔收款');
-    return;
-  }
-  payItems.value.splice(index, 1);
-}
-
-async function openPay(bill) {
-  payBillRow.value = bill;
-  payItems.value = [];
-  payTxns.value = [];
-  payDialog.value = true;
-  await loadPayBill(bill.id, true);
-}
-
-async function loadPayBill(billId, resetItems = false) {
-  payLoading.value = true;
-  try {
-    const res = await getBillDetailById(billId);
-    payBillRow.value = res.data || payBillRow.value;
-    payTxns.value = res.data?.txns || [];
-    if (resetItems || !payItems.value.length) {
-      seedPayItems();
-    }
-  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
-  } finally {
-    payLoading.value = false;
-  }
-}
-
-async function submitPay() {
-  const items = payItems.value.filter((i) => Number(i.amount) > 0);
-  if (!items.length) {
-    ElMessage.warning('请至少填写一笔大于 0 的收款金额');
-    return;
-  }
-  if (payTotal.value > payRemaining.value) {
-    ElMessage.warning(`收款合计 ¥${money(payTotal.value)} 超过尚需缴纳 ¥${money(payRemaining.value)}`);
-    return;
-  }
-  paying.value = true;
-  try {
-    // 支付方式 5-院内余额扣的是「本就诊对应账户」：门诊=患者账户、住院=住院账户，
-    // 由本页按就诊定位，不让收银员手填主体ID（填错就是扣了别人的钱）
-    const payload = {
-      billId: payBillRow.value.id,
-      items: items.map((i) => ({
-        payMethod: i.payMethod,
-        amount: Number(i.amount),
-        ownerId: Number(i.payMethod) === 5
-            ? (Number(current.value?.encounterType || payBillRow.value.encounterType) === 2
-                ? Number(current.value?.encounterId || payBillRow.value.encounterId)
-                : Number(payBillRow.value.patientId))
-            : undefined,
-        remark: i.remark || undefined,
-      })),
-    };
-    const res = await payBill(payload);
-    ElMessage.success(`已收 ${res.data?.length || 0} 笔流水`);
-    await loadPayBill(payBillRow.value.id, true);
-    await loadWorkbench();
-    await loadBoard();
-    if (Number(payBillRow.value.billStatus) === 3) {
-      ElMessage.success('账单已结清，可出票');
-    }
-  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
-  } finally {
-    paying.value = false;
-  }
-}
-
-const isPaid = computed(() => Number(payBillRow.value?.billStatus) === 3);
-
-async function runIssue() {
-  try {
-    const res = await issueInvoice({billId: payBillRow.value.id, invoiceType: 1});
-    ElMessage.success(`已出票 ${res.data?.invoiceNo || ''}`);
-  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
-  }
-}
-
-// ==================== 扫码收款（主扫：医院出码，患者扫） ====================
+// ==================== 收款（L3：与预约收费同一弹层，默认现金档） ====================
 const qrPayDialog = ref(false);
 const qrPayBill = ref(null);
 
-function openQrPay(bill) {
-  qrPayBill.value = bill;
+function openPay(bill) {
+  // 出账后直接拉起时，settle 响应可能不带患者名，兜底取当前就诊的，避免弹层闪「—」
+  qrPayBill.value = {...bill, patientName: bill.patientName || current.value?.patientName};
   qrPayDialog.value = true;
 }
 
-/** 收款事实来自渠道，本页不翻状态：入账成功只重新拉账单与就诊榜 */
-async function onQrPaid() {
-  ElMessage.success('扫码收款已入账');
+/** 收款事实来自现金清点或渠道查单，本页不翻状态：入账成功只重新拉账单与就诊榜 */
+async function onPaid() {
+  ElMessage.success('收款已入账');
   await loadWorkbench();
   await loadBoard();
 }
 
-// ==================== 退费（红冲记账行 + 原路退回） ====================
-const refundDialog = ref(false);
-const refundLoading = ref(false);
-const refunding = ref(false);
-const refundBillRow = ref(null);
-const refundItems = ref([]);
-const refundSelected = ref([]);
-const refundReason = ref('');
-const refundTotal = computed(() => sumMoney(refundSelected.value));
-
-async function openRefund(bill) {
-  refundBillRow.value = bill;
-  refundReason.value = '';
-  refundSelected.value = [];
-  refundDialog.value = true;
-  refundLoading.value = true;
+// ==================== 出票（L4：账单结清后打发票） ====================
+async function runIssue(bill) {
   try {
-    const res = await getBillDetailById(bill.id);
-    refundItems.value = res.data?.items || [];
-    // 默认整单退（不点名记账行 = 后端按全部行处理），但这里显式全选，页面上能看到退的是哪些行
-    refundSelected.value = [...refundItems.value];
-  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
-  } finally {
-    refundLoading.value = false;
-  }
-}
-
-async function submitRefund() {
-  if (!refundReason.value.trim()) {
-    ElMessage.warning('请填写退费原因');
-    return;
-  }
-  if (!refundSelected.value.length) {
-    ElMessage.warning('请勾选要退费的记账行');
-    return;
-  }
-  const whole = refundSelected.value.length >= refundItems.value.length;
-  try {
-    await ElMessageBox.confirm(`确认退费 ¥${money(refundTotal.value)}（${whole ? '整单退，医保侧会发 2305 冲正' : '部分退，医保清单将退回待重新结算'}），款项按原收款渠道逐笔退回？`, '退费确认', {type: 'warning'});
-  } catch {
-    return;
-  }
-  refunding.value = true;
-  try {
-    const res = await refundBill({
-      billId: refundBillRow.value.id,
-      feeIds: whole ? undefined : refundSelected.value.map((i) => i.feeRecordId),
-      reason: refundReason.value.trim(),
-    });
-    ElMessage.success(`已退 ${res.data?.length || 0} 笔，原路退回`);
-    refundDialog.value = false;
+    const res = await issueInvoice({billId: bill.id, invoiceType: 1});
+    ElMessage.success(`已出票 ${res.data?.invoiceNo || ''}`);
     await loadWorkbench();
-    await loadBoard();
   } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
-  } finally {
-    refunding.value = false;
   }
-}
-
-// ==================== 取消结算 / 账单详情 ====================
-async function runVoid(bill) {
-  let reason = '';
-  try {
-    const r = await ElMessageBox.prompt('作废会把记账行解锁回「待结算」，不动资金（已有收款的账单会被拒绝）', `作废账单 ${bill.billNo}`, {
-      inputPlaceholder: '请填写作废原因',
-      inputValidator: (v) => !!v?.trim() || '必须填写原因'
-    });
-    reason = String(r.value || '').trim();
-  } catch {
-    return;
-  }
-  try {
-    await voidBill({billId: bill.id, reason});
-    ElMessage.success('账单已作废，记账行已解锁');
-    await loadWorkbench();
-    await loadBoard();
-  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
-  }
-}
-
-const detailDialog = ref(false);
-const detailBillId = ref(null);
-
-function openDetail(bill) {
-  detailBillId.value = bill.id;
-  detailDialog.value = true;
 }
 
 const billStatusTag = (status) => Number(status) === 3 ? 'success' : Number(status) === 2 ? 'warning' : Number(status) === 4 || Number(status) === 5 ? 'info' : '';

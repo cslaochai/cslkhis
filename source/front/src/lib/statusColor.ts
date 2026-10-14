@@ -171,13 +171,10 @@ export const CHARGE_STATUS: Record<number, StatusStyle> = {
     5: {label: '已取消', color: 'bg-slate-100 text-slate-500', tagType: 'info'},
 }
 
-/** 结算方式结算：biz_appoint_info.settlement_type 1 自费 2 城镇职工医保 3 城乡居民医保 4 公费 5 商业保险 */
+/** 本单结算方式：biz_appoint_info.settlement_type（与收费账单 settlement_mode 同口径，统一两档）1 全自费 2 医保联网。具体险种看患者费别。 */
 export const SETTLEMENT_TYPE: Record<number, StatusStyle> = {
-    1: {label: '自费', color: 'bg-slate-100 text-slate-600', tagType: 'info'},
-    2: {label: '职工医保', color: 'bg-blue-100 text-blue-700', tagType: 'primary'},
-    3: {label: '居民医保', color: 'bg-emerald-100 text-emerald-700', tagType: 'success'},
-    4: {label: '公费', color: 'bg-purple-100 text-purple-700', tagType: 'primary'},
-    5: {label: '商业保险', color: 'bg-amber-100 text-amber-700', tagType: 'warning'},
+    1: {label: '全自费', color: 'bg-slate-100 text-slate-600', tagType: 'info'},
+    2: {label: '医保联网', color: 'bg-emerald-100 text-emerald-700', tagType: 'success'},
 }
 
 /** 检查执行状态 InsRecordStatusEnum 1 已登记 … 7 已取消 */

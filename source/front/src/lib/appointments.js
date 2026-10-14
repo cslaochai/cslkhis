@@ -10,17 +10,15 @@ export const deskShiftLabel = (type) => boardShifts.find(s => s.type === type)?.
 /** 时间片段选项文案（biz_schedule_slot） */
 export const slotLabel = (s) => `${s.startTime} ~ ${s.endTime}（余 ${s.availableSource}/${s.totalSource}）`;
 
-// 结算方式选项（口径 = 字典 his_settlement_type_regist，与 biz_appoint_info.settlement_type 列注释一致）
+// 本单结算方式（与收费账单 settlement_mode、字典 his_settlement_mode 同口径，统一为两档）：
+// 1-全自费 2-医保联网。具体险种（职工/居民/公费）看患者费别 medicalInsuranceType，不在本单结算方式里再分。
 export const settlementTypes = [
-  {value: 1, label: '自费', color: 'text-slate-600'},
-  {value: 2, label: '城镇职工医保', color: 'text-blue-600'},
-  {value: 3, label: '城乡居民医保', color: 'text-emerald-600'},
-  {value: 4, label: '公费', color: 'text-purple-600'},
-  {value: 5, label: '商业保险', color: 'text-amber-600'},
+  {value: 1, label: '全自费', color: 'text-slate-600'},
+  {value: 2, label: '医保联网', color: 'text-emerald-600'},
 ];
 /**
- * 结算方式文案。命中不到就出「未知(n)」——**不要回落成「自费」**：
- * 结算方式决定这单走不走医保结算，把它显示成自费会让人以为患者没医保。
+ * 本单结算方式文案。命中不到就出「未知(n)」——**不要回落成「全自费」**：
+ * 结算方式决定这单走不走医保联网，把它显示成自费会让人以为这单没走医保。
  */
 export const settlementLabel = (code) => {
   if (code === null || code === undefined || code === '')

@@ -75,9 +75,6 @@
               <span v-if="insuranceLabel(p)" class="ps-chip ps-chip-insurance">
               {{ insuranceLabel(p) }}
             </span>
-              <span v-if="p.patientType" class="ps-chip ps-chip-plain">
-              {{ patientTypeText(p.patientType) }}
-            </span>
               <span v-if="p.status === 0" class="ps-chip ps-chip-off">已停用</span>
             </div>
 
@@ -135,7 +132,6 @@ import {computed, ref, watch} from 'vue'
 import {Search} from '@element-plus/icons-vue'
 import {getPatientDetail, getPatientList} from '@/api/patient'
 import {patientAvatarTone, patientGenderSymbol} from '@/lib/patientGender'
-import {patientTypeText} from '@/lib/patientType'
 import {tagChipText} from '@/lib/patientTag'
 
 const props = defineProps({
@@ -266,6 +262,8 @@ const patientAge = (p) => (p.age != null && p.age !== '' ? p.age : calcAge(p.bir
 const insuranceShortLabel = (type) => {
   const t = String(type || '')
   if (!t) return ''
+  // 自费是默认态，不打医保角标（避免满屏「自费」）
+  if (t.includes('自费')) return ''
   if (t.includes('职工')) return '职工医保'
   if (t.includes('居民')) return '居民医保'
   if (t.includes('农村') || t.includes('新农合')) return '新农合'
@@ -274,9 +272,6 @@ const insuranceShortLabel = (type) => {
   return t
 }
 const insuranceLabel = (p) => insuranceShortLabel(p.medicalInsuranceType) || (p.medicalInsuranceNo ? '医保' : '')
-
-// 患者类型文案统一走 @/lib/patientType（曾在这里写 {1:'门诊',2:'住院',3:'急诊'}，
-// 把「城镇职工医保」渲染成「住院」——那套是就诊类型的口径，不是参保性质）
 
 const tagChipStyle = (tag) => {
   const color = tag.tagColor || '#0E9488'

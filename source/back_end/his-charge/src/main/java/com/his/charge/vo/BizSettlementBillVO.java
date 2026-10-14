@@ -8,6 +8,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 结算账单出参（L2 台账列表）。字典码值文案由前端字典渲染。
@@ -221,4 +222,10 @@ public class BizSettlementBillVO {
      * 尚需缴 = 应缴 -(已收 - 已退)，现算，列表页"还欠多少"只有这一个口径
      */
     private BigDecimal unpaidAmount;
+
+    /**
+     * 费用构成：本账单所含记账行按费用类别（his_charge_item_type）汇总（行数 + 金额）。
+     * 前端按字典翻 itemType 成"挂号费/西药/检查/检验/治疗/耗材材料"等，收银员一眼看清"是什么费"。
+     */
+    private List<BillFeeTypeSumVO> feeComposition;
 }

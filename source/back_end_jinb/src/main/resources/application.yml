@@ -1,0 +1,77 @@
+server:
+  port: 8090
+  servlet:
+    context-path: /mss
+
+spring:
+  application:
+    name: mss-back-end
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    serialization:
+      write-dates-as-timestamps: false
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${JINB_DB_URL:jdbc:mysql://192.168.88.132:3306/mss_insurance?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true}
+    username: ${JINB_DB_USERNAME:xz_feng}
+    password: ${JINB_DB_PASSWORD:Feng123456!}
+    hikari:
+      connection-timeout: 30000
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-test-query: SELECT 1
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/schema.sql
+      data-locations: classpath:db/data.sql
+      encoding: UTF-8
+      continue-on-error: false
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    db-config:
+      id-type: AUTO
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+logging:
+  level:
+    com.mss: debug
+
+# ===== 医保结算经办（医保局端）模拟平台业务参数 =====
+jinb:
+  # 准入的定点医疗机构（HIS 用这套凭据签到）
+  medins:
+    code: H4301000001
+    name: 长沙市麓康医院
+    app-secret: mss-mock-secret-2026
+  # 月度审核规则（确定性，便于演示复现）
+  audit:
+    # 质量保证金预留比例（占申报统筹）
+    reserve-ratio: 0.05
+    # 智能审核：结算单号末位命中这些数字的单据判为违规（超限价/不合理诊疗），按拒付比例扣减
+    refuse-tail-digits: 3,7
+    # 命中规则单据的扣款比例（占该单统筹：1.0=全额拒付）
+    refuse-ratio: 1.00
+  # 2304 平台侧即时核定政策：起付线 / 报销比例（演示用，按险种 × 门诊住院）
+  policy:
+    employee:
+      outpatient: {deductible: 0,   ratio: 0.70}
+      inpatient:  {deductible: 800, ratio: 0.85}
+    resident:
+      outpatient: {deductible: 0,    ratio: 0.55}
+      inpatient:  {deductible: 1000, ratio: 0.70}

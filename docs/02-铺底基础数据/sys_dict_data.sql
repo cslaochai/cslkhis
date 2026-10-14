@@ -317,15 +317,20 @@ VALUES ('144', 'hospital_position', '病案与编码岗', '45', 84, NULL, 'defau
         '1');
 INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
                            create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('1001', 'medical_insurance_type', '城镇职工基本医疗保险', '城镇职工基本医疗保险', 1, 'primary', 'primary', 0, 1,
+-- 费别（参保类型）标准 5 项：自费 / 城镇职工医保 / 城乡居民医保 / 公费医疗 / 商业医疗保险。
+-- 患者主档只存费别 medical_insurance_type + 医保号，不再有独立 patient_type；
+-- 本单结算方式是两档（his_settlement_mode），与费别是两回事。
+INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
+                           create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
+VALUES ('1011', 'medical_insurance_type', '自费', '自费', 1, 'info', 'info', 1, 1,
+        'admin', 'admin', 0, '全自费（默认费别）', 1, '1', '1');
+INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
+                           create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
+VALUES ('1001', 'medical_insurance_type', '城镇职工医保', '城镇职工医保', 2, 'primary', 'primary', 0, 1,
         'admin', 'admin', 0, NULL, 1, '1', '1');
 INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
                            create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('1002', 'medical_insurance_type', '城镇居民基本医疗保险', '城镇居民基本医疗保险', 2, 'success', 'success', 0, 1,
-        'admin', 'admin', 0, NULL, 1, '1', '1');
-INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
-                           create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('1003', 'medical_insurance_type', '新型农村合作医疗', '新型农村合作医疗', 3, 'warning', 'warning', 0, 1,
+VALUES ('1002', 'medical_insurance_type', '城乡居民医保', '城乡居民医保', 3, 'success', 'success', 0, 1,
         'admin', 'admin', 0, NULL, 1, '1', '1');
 INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
                            create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
@@ -335,26 +340,6 @@ INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dic
                            create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
 VALUES ('1005', 'medical_insurance_type', '商业医疗保险', '商业医疗保险', 5, 'danger', 'danger', 0, 1, 'admin', 'admin',
         0, NULL, 1, '1', '1');
-INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
-                           create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('1006', 'medical_insurance_type', '离休人员医疗', '离休人员医疗', 6, 'primary', 'primary', 0, 1, 'admin',
-        'admin', 0, NULL, 1, '1', '1');
-INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
-                           create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('1007', 'medical_insurance_type', '建国前老工人医疗', '建国前老工人医疗', 7, 'primary', 'primary', 0, 1,
-        'admin', 'admin', 0, NULL, 1, '1', '1');
-INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
-                           create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('1008', 'medical_insurance_type', '一至六级伤残军人医疗', '一至六级伤残军人医疗', 8, 'warning', 'warning', 0, 1,
-        'admin', 'admin', 0, NULL, 1, '1', '1');
-INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
-                           create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('1009', 'medical_insurance_type', '生育保险', '生育保险', 9, 'success', 'success', 0, 1, 'admin', 'admin', 0,
-        NULL, 1, '1', '1');
-INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
-                           create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('1010', 'medical_insurance_type', '工伤保险', '工伤保险', 10, 'danger', 'danger', 0, 1, 'admin', 'admin', 0,
-        NULL, 1, '1', '1');
 INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
                            create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
 VALUES ('10101', 'sys_hospital_title', '医士', '101', 1, NULL, 'default', 0, 1, 'admin', 'admin', 0, NULL, 1, '1', '1');
@@ -922,32 +907,13 @@ VALUES ('891000000000000031', 'his_review_status', '审核驳回', '3', 4, NULL,
         '1', '1');
 INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
                            create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('891000000000000032', 'his_settlement_mode', '自费', '1', 1, NULL, NULL, 0, 1, 'admin', 'admin', 0, NULL, 1,
+-- 本单结算方式两档：挂号单 settlement_type 与收费账单 settlement_mode 同口径
+VALUES ('891000000000000032', 'his_settlement_mode', '全自费', '1', 1, NULL, NULL, 0, 1, 'admin', 'admin', 0, NULL, 1,
         '1', '1');
 INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
                            create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('891000000000000033', 'his_settlement_mode', '医保', '2', 2, NULL, NULL, 0, 1, 'admin', 'admin', 0, NULL, 1,
+VALUES ('891000000000000033', 'his_settlement_mode', '医保联网', '2', 2, NULL, NULL, 0, 1, 'admin', 'admin', 0, NULL, 1,
         '1', '1');
-INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
-                           create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('891000000000000034', 'his_settlement_type_regist', '自费', '1', 1, NULL, NULL, 0, 1, 'admin', 'admin', 0, NULL,
-        1, '1', '1');
-INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
-                           create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('891000000000000035', 'his_settlement_type_regist', '城镇职工医保', '2', 2, NULL, NULL, 0, 1, 'admin', 'admin',
-        0, NULL, 1, '1', '1');
-INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
-                           create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('891000000000000036', 'his_settlement_type_regist', '城乡居民医保', '3', 3, NULL, NULL, 0, 1, 'admin', 'admin',
-        0, NULL, 1, '1', '1');
-INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
-                           create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('891000000000000037', 'his_settlement_type_regist', '公费', '4', 4, NULL, NULL, 0, 1, 'admin', 'admin', 0, NULL,
-        1, '1', '1');
-INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
-                           create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('891000000000000038', 'his_settlement_type_regist', '商业保险', '5', 5, NULL, NULL, 0, 1, 'admin', 'admin', 0,
-        NULL, 1, '1', '1');
 INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
                            create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
 VALUES ('891000000000000039', 'his_medical_insurance_type_code', '商业医疗保险', '0', 1, NULL, NULL, 0, 1, 'admin',
@@ -964,26 +930,6 @@ INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dic
                            create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
 VALUES ('891000000000000042', 'his_medical_insurance_type_code', '公费医疗', '4', 4, NULL, NULL, 0, 1, 'admin', 'admin',
         0, NULL, 1, '1', '1');
-INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
-                           create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('891000000000000043', 'his_patient_type', '自费', '1', 1, NULL, NULL, 0, 1, 'admin', 'admin', 0, NULL, 1, '1',
-        '1');
-INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
-                           create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('891000000000000044', 'his_patient_type', '城镇职工医保', '2', 2, NULL, NULL, 0, 1, 'admin', 'admin', 0, NULL,
-        1, '1', '1');
-INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
-                           create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('891000000000000045', 'his_patient_type', '城乡居民医保', '3', 3, NULL, NULL, 0, 1, 'admin', 'admin', 0, NULL,
-        1, '1', '1');
-INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
-                           create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('891000000000000046', 'his_patient_type', '公费', '4', 4, NULL, NULL, 0, 1, 'admin', 'admin', 0, NULL, 1, '1',
-        '1');
-INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
-                           create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('891000000000000047', 'his_patient_type', '其他', '5', 5, NULL, NULL, 0, 1, 'admin', 'admin', 0, NULL, 1, '1',
-        '1');
 INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
                            create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
 VALUES ('891000000000000048', 'his_card_type', '就诊卡', '1', 1, NULL, NULL, 0, 1, 'admin', 'admin', 0, NULL, 1, '1',

@@ -3,6 +3,7 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.enums.MedicalInsuranceTypeEnum;
 import com.his.common.enums.UserTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.system.service.RedisSequenceService;

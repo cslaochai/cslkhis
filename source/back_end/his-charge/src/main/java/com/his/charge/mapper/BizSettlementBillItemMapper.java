@@ -2,6 +2,7 @@ package com.his.charge.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.charge.entity.BizSettlementBillItem;
+import com.his.charge.vo.BillFeeTypeSumVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -35,4 +36,23 @@ public interface BizSettlementBillItemMapper extends BaseMapper<BizSettlementBil
             </script>
             """)
     List<Long> selectOccupiedFeeIds(@Param("feeIds") List<Long> feeIds);
+
+    /**
+     * 一批账单各自按费用类别（his_charge_item_type）汇总的行数与金额，给账单列表"费用构成"列用。
+     *
+     * <p>一次 IN 查询覆盖整页账单（最多 50 条），避免逐单查（N+1）。账单的费行即本表行，
+     * 出账时由 {@code bizSettlementBillItemMapper.insert} 落库，是账单内容的权威来源。
+     */
+    @Select("""
+            <script>
+            SELECT i.bill_id AS billId, i.item_type AS itemType, COUNT(*) AS count,
+                   IFNULL(SUM(i.amount), 0) AS amount
+            FROM biz_settlement_bill_item i
+            WHERE i.del_flag = 0 AND i.bill_id IN
+            <foreach collection='billIds' item='id' open='(' close=')' separator=','>#{id}</foreach>
+            GROUP BY i.bill_id, i.item_type
+            ORDER BY i.bill_id, i.item_type
+            </script>
+            """)
+    List<BillFeeTypeSumVO> sumByBillIds(@Param("billIds") List<Long> billIds);
 }

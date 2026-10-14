@@ -8,7 +8,7 @@ export const DICT_TYPE = {
     SYS_GENDER: 'sys_gender',                    // 性别（1男/2女/9未知，员工与患者同口径）
     ENABLE_STATUS: 'his_enable_status',          // （0停用/1启用/2锁定）已删除 —— 代码里从没有过「锁定」态。
     SYS_USER_TYPE: 'his_user_type',              // 用户类型（1院内/2院外/3患者/4其他）
-    MEDICAL_INSURANCE_TYPE: 'medical_insurance_type', // 医保类型
+    MEDICAL_INSURANCE_TYPE: 'medical_insurance_type', // 费别/参保类型（自费/城镇职工医保/城乡居民医保/公费医疗/商业医疗保险，值即中文费别名）
     DRUG_TYPE: 'his_drug_type',                  // 药品类型（1西药 2中成药 3中药饮片）
     DRUG_SPECIAL_FLAG: 'his_drug_special_flag',
     // 收费相关
@@ -31,10 +31,9 @@ export const DICT_TYPE = {
     // 挂号相关
     REGIST_TYPE: 'his_regist_type',              // 挂号类型
     REGIST_SOURCE: 'his_regist_source',          // 挂号来源
-    // 结算方式有**三个**口径，别混（挂号五分 / 通用 / 二分）：
-    SETTLEMENT_TYPE_REGIST: 'his_settlement_type_regist', // 结算方式(挂号五分)
-    PAY_TYPE: 'his_pay_type',                    // 结算方式(通用)
-    SETTLEMENT_MODE: 'his_settlement_mode',      // 结算方式(二分：医保/自费)
+    // 本单结算方式：挂号单 settlement_type 与收费账单 settlement_mode 已统一为**两档**（1全自费/2医保联网）
+    SETTLEMENT_MODE: 'his_settlement_mode',      // 结算方式(两档：1全自费/2医保联网)
+    PAY_TYPE: 'his_pay_type',                    // 结算方式(通用，其它单据沿用)
 
     // 就诊相关
     VISIT_TYPE: 'his_visit_type_enum',           // 就诊类型
@@ -55,8 +54,7 @@ export const DICT_TYPE = {
     INSPECTION_RECORD_STATUS: 'his_inspection_record_status',
     LABORATORY_RECORD_STATUS: 'his_laboratory_record_status',
 
-    // 患者相关
-    PATIENT_TYPE: 'his_patient_type',            // 患者类型（1自费 2城镇职工医保 3城乡居民医保 4公费 5其他）
+    // 患者相关（费别用 MEDICAL_INSURANCE_TYPE，已无独立的患者类型字段）
     SYS_NATIONALITY: 'sys_nationality',          // 民族
     SYS_PATIENT_RELATION: 'sys_patient_relation',
 

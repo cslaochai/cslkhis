@@ -58,7 +58,7 @@
             <div class="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
               <span>电话：{{ freeText(headPatient.phoneMasked) }}</span>
               <span>血型：{{ freeText(headPatient.bloodType) }}</span>
-              <span>患者类型：{{ patientTypeText(headPatient.patientType) }}</span>
+              <span>费别：{{ freeText(headPatient.medicalInsuranceType) }}</span>
               <span>身份证：{{ freeText(headPatient.idCardMasked) }}</span>
             </div>
             <!-- 患者标签：运营标记（VIP / 高血压 / 建档提醒…），与列表页、搜索下拉同一套色值口径。
@@ -412,7 +412,6 @@ import {Clock, CopyDocument, Document, FirstAidKit, Link, WarningFilled} from '@
 import {getPatientFullDetail} from '@/api/patient'
 import {getPatientCdr} from '@/api/cdr'
 import {patientAgeText, patientAvatarTone, patientGenderText} from '@/lib/patientGender'
-import {patientTypeText} from '@/lib/patientType'
 import {copyText} from '@/lib/clipboard'
 import {hasPermission, loadPermissions} from '@/lib/permission'
 import {TAG_VISIBLE_LIMIT, tagChipText} from '@/lib/patientTag'
@@ -693,8 +692,7 @@ const basicGroups = computed(() => {
     {
       title: '参保与账户',
       items: [
-        {label: '患者类型', value: patientTypeText(d.patientType)},
-        {label: '医保类型', value: freeText(d.medicalInsuranceType)},
+        {label: '费别', value: freeText(d.medicalInsuranceType)},
         {label: '医保卡号', value: freeText(d.medicalInsuranceNoMasked)},
         {label: '账户余额', value: moneyText(d.balance)},
         {label: '累计消费', value: moneyText(d.totalExpense)},

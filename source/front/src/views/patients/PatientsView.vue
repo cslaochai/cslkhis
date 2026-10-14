@@ -22,9 +22,10 @@
               <el-option :value="2" label="女"/>
             </el-select>
           </el-form-item>
-          <el-form-item label="患者类型">
-            <el-select v-model="searchForm.patientType" class="!w-32" clearable placeholder="全部">
-              <el-option v-for="o in PATIENT_TYPE_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
+          <el-form-item label="费别">
+            <el-select v-model="searchForm.medicalInsuranceType" class="!w-36" clearable placeholder="全部">
+              <el-option v-for="item in feeTypeOptions" :key="item.dictValue" :label="item.dictLabel"
+                         :value="item.dictValue"/>
             </el-select>
           </el-form-item>
           <el-form-item label="标签">
@@ -154,9 +155,9 @@ import {onMounted, ref} from 'vue';
 import {Plus, Refresh, Search} from '@element-plus/icons-vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {deletePatient, getPatientList, getPatientTags} from '@/api/patient';
-import {getPatientTagList} from '@/api/system';
+import {getDictDataList, getPatientTagList} from '@/api/system';
 import {patientAgeText, patientGenderText} from '@/lib/patientGender';
-import {PATIENT_TYPE_OPTIONS} from '@/lib/patientType';
+import {DICT_TYPE} from '@/lib/dict-cache';
 import {TAG_LIST_VISIBLE_LIMIT, tagChipText, tagChipTitle} from '@/lib/patientTag';
 // 患者详情弹框统一走通用组件（原页面内联实现已删除：它读的 medicalRecords / prescriptions /
 // inspections / laboratories 字段并不在返回体里，4 个 tab 恒为空）
@@ -170,9 +171,11 @@ const searchForm = ref({
   patientNo: '',
   phone: '',
   gender: null,
-  patientType: null,
+  medicalInsuranceType: null,
   tagId: null,
 });
+// 费别下拉（字典 medical_insurance_type，标准 5 项含自费；值即中文费别名）
+const feeTypeOptions = ref([]);
 // 详情弹框：selectedPatient 只用于「打开瞬间先用列表行数据渲染头部」避免闪白，
 // 完整数据由 PatientDetailDialog 按 patientId 自己取（主档详情 + CDR 全景时间轴）
 const selectedPatient = ref(null);
@@ -201,8 +204,7 @@ const statusMap = {
 // 性别文案统一走 lib/patientGender（sys_gender 口径：1男 2女 9未知，0 等异常码值渲染成「未知(0)」而不是"女"）
 // 婚姻状况文案统一走 @/lib/patientField（0未婚/1已婚/2离异/3丧偶，异常码值渲染「未知(n)」）。
 // 原地的 maritalStatusMap 从未被引用，已删除 —— 口径只留 lib 一份。
-// 患者类型文案走 @/lib/patientType（曾在这里写 {1:'普通患者',2:'医保患者',3:'公费患者'}，
-// 2/3 实际是「城镇职工医保 / 城乡居民医保」，不是"医保患者 / 公费患者"）
+// 费别（参保类型）统一走字典 medical_insurance_type，患者主档不再有独立的 patient_type 字段
 const handleSearch = () => {
   pagination.value.pageNum = 1;
   loadData();
@@ -213,7 +215,7 @@ const handleReset = () => {
     patientNo: '',
     phone: '',
     gender: null,
-    patientType: null,
+    medicalInsuranceType: null,
     tagId: null,
   };
   handleSearch();
@@ -242,8 +244,8 @@ const loadData = async () => {
       params.phone = searchForm.value.phone;
     if (searchForm.value.gender !== null)
       params.gender = searchForm.value.gender;
-    if (searchForm.value.patientType !== null)
-      params.patientType = searchForm.value.patientType;
+    if (searchForm.value.medicalInsuranceType)
+      params.medicalInsuranceType = searchForm.value.medicalInsuranceType;
     if (searchForm.value.tagId)
       params.tagId = searchForm.value.tagId;
     const res = await getPatientList(params);
@@ -349,5 +351,8 @@ const loadPatientTagsBatch = async (patientIds) => {
 onMounted(() => {
   loadData();
   loadTagList();
+  getDictDataList(DICT_TYPE.MEDICAL_INSURANCE_TYPE)
+      .then(res => { feeTypeOptions.value = res.data || []; })
+      .catch(() => { feeTypeOptions.value = []; });
 });
 </script>
