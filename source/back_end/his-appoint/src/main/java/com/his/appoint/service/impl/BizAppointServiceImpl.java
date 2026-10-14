@@ -33,6 +33,7 @@ import com.his.system.api.vo.RecordBriefVO;
 import com.his.common.base.PageResult;
 import com.his.common.enums.AttendModeEnum;
 import com.his.common.enums.MedicalInsuranceTypeEnum;
+import com.his.charge.config.InsuranceProperties;
 import com.his.common.enums.SettlementModeEnum;
 import com.his.common.enums.StaffDutyStatusEnum;
 import com.his.common.enums.StaffTypeEnum;
@@ -55,7 +56,6 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -80,8 +80,7 @@ import java.util.Objects;
 public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizAppointInfo> implements BizAppointService {
 
     /** 医保联网结算总开关（his.insurance.enabled）：false=不支持医保结算，挂号侧直接拒 */
-    @Value("${his.insurance.enabled:true}")
-    private boolean insuranceEnabled;
+    private final InsuranceProperties insuranceProperties;
 
     private final DeptScopeService deptScopeService;
 
@@ -571,7 +570,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         // 结算方式=医保(2) 用枚举而非魔法数字，与 charge 侧 SettlementModeEnum 同源
         if (SettlementModeEnum.INSURANCE.getCode().equals(appointInfo.getSettlementType())) {
             // 医保联网结算总开关：关闭时不支持医保结算，挂号侧直接拒（不查任何参保库）
-            if (!insuranceEnabled) {
+            if (!insuranceProperties.isEnabled()) {
                 throw new BusinessException("医保联网结算未启用，请改按全自费结算");
             }
             MedicalInsuranceTypeEnum feeType = MedicalInsuranceTypeEnum.parse(appointInfo.getMedicalInsuranceType());

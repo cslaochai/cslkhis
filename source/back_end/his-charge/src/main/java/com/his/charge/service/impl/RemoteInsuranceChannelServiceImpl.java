@@ -2,11 +2,11 @@ package com.his.charge.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.his.charge.config.InsuranceProperties;
 import com.his.charge.service.InsuranceChannelService;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -38,18 +38,19 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
 
     private final ObjectMapper objectMapper;
     private final RestClient restClient;
+    private final InsuranceProperties properties;
 
     public RemoteInsuranceChannelServiceImpl(
             ObjectMapper objectMapper,
-            @Value("${his.insurance.channel.base-url:http://localhost:8090/mss}") String baseUrl,
-            @Value("${his.insurance.channel.connect-timeout-ms:5000}") int connectTimeoutMs,
-            @Value("${his.insurance.channel.read-timeout-ms:15000}") int readTimeoutMs) {
+            InsuranceProperties properties) {
         this.objectMapper = objectMapper;
+        this.properties = properties;
+        InsuranceProperties.Channel channel = properties.getChannel();
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(connectTimeoutMs);
-        factory.setReadTimeout(readTimeoutMs);
-        this.restClient = RestClient.builder().baseUrl(baseUrl).requestFactory(factory).build();
-        log.info("[医保通道] 已启用远程医保结算经办平台 HTTP 通道：{}", baseUrl);
+        factory.setConnectTimeout(channel.getConnectTimeoutMs());
+        factory.setReadTimeout(channel.getReadTimeoutMs());
+        this.restClient = RestClient.builder().baseUrl(channel.getBaseUrl()).requestFactory(factory).build();
+        log.info("[医保通道] 已启用远程医保结算经办平台 HTTP 通道：{}", channel.getBaseUrl());
     }
 
     @Override

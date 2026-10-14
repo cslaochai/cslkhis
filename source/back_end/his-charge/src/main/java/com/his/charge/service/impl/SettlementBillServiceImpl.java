@@ -31,7 +31,8 @@ import com.his.system.api.vo.PatientBriefVO;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import com.his.charge.config.InsuranceProperties;
+import com.his.charge.config.ComplianceProperties;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -89,10 +90,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
     private final RedisSequenceService redisSequenceService;
     private final BizInsuranceCatalogRuleMapper bizInsuranceCatalogRuleMapper;
     private final InsuranceChannelService insuranceChannelService;
-
-    /** 医保联网结算总开关（his.insurance.enabled）：false=不支持医保结算，不查任何参保库 */
-    @Value("${his.insurance.enabled:true}")
-    private boolean insuranceEnabled;
+    private final InsuranceProperties insuranceProperties;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -797,7 +795,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
             return new PatientInsurance(SettlementModeEnum.SELF_PAY, null, BigDecimal.ZERO, BigDecimal.ZERO);
         }
         // 医保联网结算总开关：关闭时不支持医保结算，不查 MIS/镜像库任何参保数据，直接拒改自费
-        if (!insuranceEnabled) {
+        if (!insuranceProperties.isEnabled()) {
             throw new BusinessException("医保联网结算功能未启用，请改按全自费结算");
         }
         if (!hasInsurance) {
