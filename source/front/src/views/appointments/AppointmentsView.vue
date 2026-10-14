@@ -314,6 +314,7 @@
                                   title="查看这位医生当天的每个班次：时段 / 余号 / 挂号费"
                                   @click.stop="openCellDialog(col.date, row.key)">余号</button>
                           <button
+                              v-if="!isCellTimePassed(col, row.key) && deskAvail(deskCell(col.key, row.key).schedules) > 0"
                               class="shrink-0 cursor-pointer rounded border border-blue-200 bg-white px-1 text-xs font-bold leading-4 text-blue-600 hover:bg-blue-50"
                               data-testid="desk-cell-add"
                               title="新增预约：带入该时段的排班、医生、诊室、科室"
