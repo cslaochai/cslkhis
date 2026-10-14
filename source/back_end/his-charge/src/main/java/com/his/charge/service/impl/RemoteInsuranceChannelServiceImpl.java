@@ -19,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 医保前置机出口（HTTP 实现）：把 2304/2305 报文通过 HTTP 发到独立的医保结算经办平台（back_end_mss，
@@ -121,6 +122,49 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
         } catch (Exception e) {
             log.error("[医保通道] 对账结果解析失败 billDate={} body={}", billDate, response, e);
             throw new BusinessException("医保平台对账结果解析失败：" + e.getMessage());
+        }
+    }
+
+    @Override
+    public InsuredStatus checkInsured(String insuranceNo) {
+        String response;
+        try {
+            String body = objectMapper.writeValueAsString(Map.of("insuranceNo", insuranceNo));
+            response = restClient.post()
+                    .uri("/insure/person/query")
+                    .contentType(JSON_UTF8)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .body(body)
+                    .retrieve()
+                    .body(String.class);
+        } catch (RestClientException e) {
+            // 平台连不上：参保状态不可知，按「不可用」返回，结算侧据此拒医保（fail-closed，不因专线抖动放行医保）
+            log.error("[医保通道] 参保查询失败 insuranceNo={}：{}", insuranceNo, e.getMessage());
+            return new InsuredStatus(false, false, null, null, "医保平台连接失败：" + e.getMessage());
+        } catch (Exception e) {
+            log.error("[医保通道] 参保查询请求构造失败 insuranceNo={}：{}", insuranceNo, e.getMessage());
+            return new InsuredStatus(false, false, null, null, "医保平台参保查询请求构造失败：" + e.getMessage());
+        }
+        try {
+            JsonNode root = objectMapper.readTree(response);
+            int code = root.path("code").asInt(-1);
+            if (code != 200) {
+                String msg = root.path("message").asText(null);
+                return new InsuredStatus(false, false, null, null,
+                        TextUtil.hasText(msg) ? msg : "医保平台参保查询失败（code=" + code + "）");
+            }
+            JsonNode data = root.path("data");
+            if (data.isMissingNode() || data.isNull()) {
+                return new InsuredStatus(false, false, null, null,
+                        "参保库查无此卡号（" + insuranceNo + "），未参保登记");
+            }
+            boolean active = data.path("personStatus").asInt(0) == 1;
+            return new InsuredStatus(true, active,
+                    text(data, "insuranceType"), text(data, "name"),
+                    active ? null : "参保状态为停保（" + insuranceNo + "）");
+        } catch (Exception e) {
+            log.error("[医保通道] 参保查询结果解析失败 insuranceNo={} body={}", insuranceNo, response, e);
+            return new InsuredStatus(false, false, null, null, "医保平台参保查询结果解析失败：" + e.getMessage());
         }
     }
 

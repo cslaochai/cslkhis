@@ -15,6 +15,7 @@ import com.his.charge.mapper.BizPaymentTxnMapper;
 import com.his.charge.mapper.BizSettlementBillItemMapper;
 import com.his.charge.mapper.BizSettlementBillMapper;
 import com.his.charge.service.FeeRecordService;
+import com.his.charge.service.InsuranceChannelService;
 import com.his.charge.service.InsuranceSettlementService;
 import com.his.charge.service.SettlementBillService;
 import com.his.charge.service.SourceAdvanceService;
@@ -86,6 +87,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
     private final InsurancePolicyService insurancePolicyService;
     private final RedisSequenceService redisSequenceService;
     private final BizInsuranceCatalogRuleMapper bizInsuranceCatalogRuleMapper;
+    private final InsuranceChannelService insuranceChannelService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -791,6 +793,15 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         }
         if (!hasInsurance) {
             throw new BusinessException("该患者没有医保号，不能按医保结算");
+        }
+        // 参保核验（对齐真实 HIS 联网参保查询）：按医保卡号查医保局端参保状态。
+        // 未参保登记 / 停保 → 拒医保结算，由收费员改按自费或核对卡号 —— 不静默按政策比例报销
+        InsuranceChannelService.InsuredStatus insured = insuranceChannelService.checkInsured(patient.getMedicalInsuranceNo());
+        if (!insured.isFound()) {
+            throw new BusinessException("该医保卡号未参保登记，不能按医保结算，请核对医保卡号或改按自费结算");
+        }
+        if (!insured.isActive()) {
+            throw new BusinessException("该参保人当前停保（参保状态异常），不能按医保结算，请改按自费结算");
         }
         String insuranceType = patient.getMedicalInsuranceType();
         MedicalInsuranceTypeEnum typeEnum = MedicalInsuranceTypeEnum.parse(insuranceType);

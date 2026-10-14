@@ -549,9 +549,14 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         appointInfo.setGender(patient.getGender());
         appointInfo.setAge(patient.getAge());
         appointInfo.setPhone(patient.getPhone());
-        // 费别/医保号以患者主档为准快照到挂号单；本单是否走统筹只看 settlementType，
-        // 因此"医保患者本单改自费"时费别快照仍是参保类型，仅结算方式为 1。
-        appointInfo.setMedicalInsuranceType(patient.getMedicalInsuranceType());
+        // 费别快照以本单入参为准：挂号弹窗允许按本单覆盖（主档漏登医保、收费员挂号时直接按医保走这一单），
+        // 改的只是这一单的结算性质，不动患者主档。
+        // 医保号快照仍以患者主档为准 —— 号是敏感主档信息，手误写错会影响该患者全部后续结算，
+        // 要改请去患者管理页；主档无号时入参号已在上一步补登，这里取到的是补登后的值。
+        appointInfo.setMedicalInsuranceType(
+                TextUtil.hasText(upsertDTO.getMedicalInsuranceType())
+                        ? upsertDTO.getMedicalInsuranceType()
+                        : patient.getMedicalInsuranceType());
         appointInfo.setMedicalInsuranceNo(patient.getMedicalInsuranceNo());
 
         // 医保联网的硬闸统一放在保存时判（入参医保号已在上一步补登主档，这里看的是补登后的最终口径）。

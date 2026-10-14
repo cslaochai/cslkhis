@@ -29,17 +29,6 @@ export function isInsuranceFeeType(medicalInsuranceType) {
 }
 
 /**
- * 按费别 + 医保号给本单默认结算方式：
- * 费别为医保类（职工/居民/公费）且有医保号 → 2（医保联网），否则 1（全自费）。
- * @param {string} medicalInsuranceType 费别中文名
- * @param {string} medicalInsuranceNo 医保号
- * @returns {number} 1-全自费 2-医保联网
- */
-export function defaultSettlementType(medicalInsuranceType, medicalInsuranceNo) {
-  return isInsuranceFeeType(medicalInsuranceType) && medicalInsuranceNo ? 2 : 1
-}
-
-/**
  * 费别短标签（角标用）：自费返回空串（默认态不打标），其余压缩成两到四字。
  * @param {string} medicalInsuranceType
  * @returns {string}

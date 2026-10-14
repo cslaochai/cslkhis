@@ -5,9 +5,11 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.charge.entity.BizInsuranceReport;
+import com.his.charge.entity.BizInsuredPerson;
 import com.his.charge.enums.InsuranceReportStatusEnum;
 import com.his.charge.enums.InsuranceReportTypeEnum;
 import com.his.charge.mapper.BizInsuranceReportMapper;
+import com.his.charge.mapper.BizInsuredPersonMapper;
 import com.his.charge.service.InsuranceChannelService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
@@ -32,6 +34,7 @@ import java.util.Map;
 public class InsuranceChannelServiceImpl extends ServiceImpl<BizInsuranceReportMapper, BizInsuranceReport> implements InsuranceChannelService {
 
     private final BizInsuranceReportMapper bizInsuranceReportMapper;
+    private final BizInsuredPersonMapper bizInsuredPersonMapper;
     private final ObjectMapper objectMapper;
 
     /**
@@ -94,6 +97,26 @@ public class InsuranceChannelServiceImpl extends ServiceImpl<BizInsuranceReportM
                 .map(r -> new RemoteSettlement(r.getTradeNo(), r.getSettlementNo(),
                         r.getTotalAmount(), r.getInsurancePay(), r.getReceiptNo()))
                 .toList();
+    }
+
+    /**
+     * 参保核验（mock）：查 HIS 本地参保台账（医保局参保库的院内镜像）。
+     * 真实环境 = 调医保前置机 2201/2202 人员参保信息查询；台账内容靠参保变更同步维护。
+     */
+    public InsuredStatus checkInsured(String insuranceNo) {
+        if (!TextUtil.hasText(insuranceNo)) {
+            return new InsuredStatus(false, false, null, null, "医保卡号为空");
+        }
+        BizInsuredPerson person = bizInsuredPersonMapper.selectOne(new LambdaQueryWrapper<BizInsuredPerson>()
+                .eq(BizInsuredPerson::getInsuranceNo, insuranceNo)
+                .last("LIMIT 1"));
+        if (person == null) {
+            return new InsuredStatus(false, false, null, null,
+                    "参保库查无此卡号（" + insuranceNo + "），未参保登记");
+        }
+        boolean active = Integer.valueOf(1).equals(person.getPersonStatus());
+        return new InsuredStatus(true, active, person.getInsuranceType(), person.getName(),
+                active ? null : "参保状态为停保（" + insuranceNo + "）");
     }
 
     private Receipt fail(String errMsg, String replyTime, OutboundMessage message) {

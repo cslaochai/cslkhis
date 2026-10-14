@@ -543,3 +543,31 @@ CREATE TABLE `biz_compliance_audit_item`
     PRIMARY KEY (`id`),
     KEY            `idx_cai_audit` (`audit_id`,`del_flag`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='医保合规审核明细';
+
+-- ----------------------------
+-- biz_insured_person  参保台账（医保局参保库镜像）
+-- ----------------------------
+CREATE TABLE `biz_insured_person`
+(
+    `id`              bigint         NOT NULL COMMENT '主键（雪花）',
+    `id_card`         varchar(18) COMMENT '身份证号',
+    `insurance_no`    varchar(32)    NOT NULL COMMENT '医保卡号',
+    `name`            varchar(50)    NOT NULL COMMENT '姓名',
+    `gender`          varchar(10) COMMENT '性别',
+    `insurance_type`  varchar(32) COMMENT '险种（城镇职工医保/城乡居民医保/公费医疗）',
+    `person_status`   tinyint        NOT NULL COMMENT '参保状态（1-正常参保 0-停保）',
+    `account_balance` decimal(10, 2) NOT NULL DEFAULT '0.00' COMMENT '个账余额（元）',
+    `region`          varchar(64) COMMENT '参保地区',
+    `create_by`       varchar(64)    NOT NULL COMMENT '创建人',
+    `create_by_id`    bigint COMMENT '创建人ID',
+    `create_time`     datetime       NOT NULL COMMENT '创建时间',
+    `update_by`       varchar(64)    NOT NULL COMMENT '更新人',
+    `update_by_id`    bigint COMMENT '更新人ID',
+    `update_time`     datetime       NOT NULL COMMENT '更新时间',
+    `del_flag`        tinyint        NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+    `remark`          varchar(500) COMMENT '备注',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_insurance_no` (`insurance_no`),
+    KEY              `idx_id_card` (`id_card`),
+    KEY              `idx_person_status` (`person_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='参保台账（医保局参保库镜像）';

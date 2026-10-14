@@ -81,6 +81,13 @@
 
       <div class="appt-block">
         <div class="appt-block__title">费用信息</div>
+        <!-- 顺序：先定这一单怎么结，再填费别、医保卡号 —— 结算方式是总开关（联网才需要后两项） -->
+        <el-form-item label="结算方式" required>
+          <el-select v-model="newAppointment.settlementType" class="w-full" placeholder="选择结算方式"
+                     @change="settlementTouched = true">
+            <el-option v-for="item in settlementTypes" :key="item.value" :label="item.label" :value="item.value"/>
+          </el-select>
+        </el-form-item>
         <div class="grid grid-cols-2 gap-x-4">
           <el-form-item label="费别" :required="addMode === 'new'">
             <el-select v-if="addMode === 'new'" v-model="newPatientForm.medicalInsuranceType" class="w-full" filterable
@@ -88,8 +95,8 @@
               <el-option v-for="item in medicalInsuranceTypes" :key="item.dictValue" :label="item.dictLabel"
                          :value="item.dictValue ?? item.dictLabel"/>
             </el-select>
-            <el-select v-else :model-value="newAppointment.medicalInsuranceType || ''" class="w-full"
-                       placeholder="—">
+            <!-- 已有患者：选人带出的值也允许按本单改（后端快照以入参为准，患者主档不动） -->
+            <el-select v-else v-model="newAppointment.medicalInsuranceType" class="w-full" placeholder="选择费别">
               <el-option v-for="item in medicalInsuranceTypes" :key="item.dictValue" :label="item.dictLabel"
                          :value="item.dictValue ?? item.dictLabel"/>
               <el-option v-if="newAppointment.medicalInsuranceType
@@ -105,19 +112,6 @@
             <el-input v-else v-model="newAppointment.medicalInsuranceNo" placeholder="请输入医保卡号"/>
           </el-form-item>
         </div>
-        <!-- 结算方式：费别在统筹范围才有「联网 / 全自费」的真实选择；自费患者唯一结法就是全自费，只读说明来路 -->
-        <el-form-item label="结算方式" required>
-          <el-select v-if="isAppointmentInsuranceFee" v-model="newAppointment.settlementType"
-                     class="w-full" placeholder="选择结算方式">
-            <el-option v-for="item in settlementTypes" :key="item.value" :label="item.label" :value="item.value"/>
-          </el-select>
-          <template v-else>
-            <el-input :model-value="settlementTypes.find((s) => s.value === 1)?.label || '全自费'" readonly/>
-            <p class="w-full text-xs text-slate-400 mt-1">
-              患者费别为「{{ newAppointment.medicalInsuranceType || '未设置' }}」，不涉及医保统筹，本单按全自费结算
-            </p>
-          </template>
-        </el-form-item>
         <!-- 费别不在统筹范围却选了联网：只留这一条警示（正常联网态不需要提示文案，不占版面） -->
         <p v-if="Number(newAppointment.settlementType) === 2 && !isAppointmentInsuranceFee"
            class="m-0 text-xs text-amber-700">
@@ -260,7 +254,7 @@ import {
   PATIENT_GENDER_OPTIONS,
   patientGenderSymbol
 } from '@/lib/patientGender';
-import {defaultSettlementType, feeShortLabel, isInsuranceFeeType} from '@/lib/payType';
+import {feeShortLabel, isInsuranceFeeType} from '@/lib/payType';
 import {REVISIT_SOURCE, revisitNeedsNoSchedule} from '@/lib/revisitPolicy';
 import {isAllDept, settlementTypes, slotLabel} from '@/lib/appointments';
 import AppointmentPatientSelect from '@/components/his/AppointmentPatientSelect.vue';
@@ -319,6 +313,9 @@ const newAppointment = ref({
 });
 // 当前挂号所选患者的费别是否在统筹范围（联网块提示用；也决定结算方式出不出下拉）
 const isAppointmentInsuranceFee = computed(() => isInsuranceFeeType(newAppointment.value.medicalInsuranceType));
+// 用户是否在本单显式选过结算方式 —— 选过就不再被费别联动覆盖
+// （「医保患者本单改自费」是合法场景，不能被改费别/补医保号静默掀回联网）
+const settlementTouched = ref(false);
 // 兜底：费别不在统筹范围时本单只能全自费 —— 各联动路径（选人/改费别/切 tab）漏重置的话在这里拦住
 watch(isAppointmentInsuranceFee, (ins) => {
   if (!ins && Number(newAppointment.value.settlementType) !== 1)
@@ -332,8 +329,14 @@ watch(
       if (addMode.value !== 'new') return;
       newAppointment.value.medicalInsuranceType = newPatientForm.value.medicalInsuranceType || '自费';
       newAppointment.value.medicalInsuranceNo = newPatientForm.value.medicalInsuranceNo || '';
-      newAppointment.value.settlementType = defaultSettlementType(
-          newAppointment.value.medicalInsuranceType, newAppointment.value.medicalInsuranceNo);
+      // 结算方式跟随费别纠偏，但不覆盖用户显式选过的：非统筹只能全自费；
+      // 统筹范围且用户没选过 → 默认联网（医保号可后补，提交时校验）。
+      // 老逻辑「统筹+无号才联网」会在号还没填时把用户先选的联网静默改回自费。
+      if (!isInsuranceFeeType(newAppointment.value.medicalInsuranceType)) {
+        newAppointment.value.settlementType = 1;
+      } else if (!settlementTouched.value) {
+        newAppointment.value.settlementType = 2;
+      }
     },
 );
 /**
@@ -401,6 +404,7 @@ const handlePatientSelect = (patient) => {
   // 默认结算方式：已存在患者按费别即可 —— 费别医保类（职工/居民/公费）默认联网，
   // 医保号由后端从主档读取（列表可能没带明文）；只是默认值，本单可改全自费。
   newAppointment.value.settlementType = isInsuranceFeeType(newAppointment.value.medicalInsuranceType) ? 2 : 1;
+  settlementTouched.value = false;
   // 医保号真值补齐：列表接口不回明文医保号（恒 null），而联网结算的提交校验要靠它判断
   // 「主档到底有没有号」。详情接口回明文，选中后取一次补上；用户已手动填过就不覆盖。
   getPatientDetail(patient.id).then((res) => {
@@ -491,6 +495,9 @@ const handleVisitTypeChange = () => {
 // ========== 新建患者 ==========
 /** 切换患者来源 tab；切到「录入新患者」时清空表单（避免上一单填的残留带过来） */
 const switchPatientMode = (mode) => {
+  // 换 tab = 换一轮：结算方式的「用户显式选过」标记归零，否则上一轮选过的联网/自费
+  // 会被这一轮的费别联动继承（改费别时该升级不升级、该保持不保持）
+  settlementTouched.value = false;
   addMode.value = mode;
   if (mode === 'new') {
     resetNewPatientForm();
@@ -762,6 +769,7 @@ const handleSubmit = async () => {
   }
 };
 const resetForm = () => {
+  settlementTouched.value = false;
   newAppointment.value = {
     patientId: null,
     patientName: '',

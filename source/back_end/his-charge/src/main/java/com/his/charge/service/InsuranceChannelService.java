@@ -15,6 +15,28 @@ public interface InsuranceChannelService {
 
     List<RemoteSettlement> queryDayBill(LocalDate billDate);
 
+    /**
+     * 参保核验：按医保卡号查医保局端参保状态（对齐真实 HIS 的联网参保查询）。
+     * 未参保登记 / 停保 / 待遇状态异常 → found=false 或 active=false，结算前据此拒医保结算。
+     */
+    InsuredStatus checkInsured(String insuranceNo);
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class InsuredStatus implements Serializable {
+        /** 参保库是否查到此卡号 */
+        private boolean found;
+        /** 参保状态是否正常（1-正常参保） */
+        private boolean active;
+        /** 险种（城镇职工医保/城乡居民医保/公费医疗） */
+        private String insuranceType;
+        /** 参保人姓名 */
+        private String name;
+        /** 异常说明（未参保/停保/医保平台不可用时的原因） */
+        private String errMsg;
+    }
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

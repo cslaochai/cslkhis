@@ -839,10 +839,6 @@ VALUES ('2103308774428188675', '7', '200', 'admin', 'admin', '1', '1');
 INSERT INTO sys_role_menu (id, role_id, menu_id, create_by, update_by, create_by_id, update_by_id)
 VALUES ('2103308774428188676', '7', '201', 'admin', 'admin', '1', '1');
 INSERT INTO sys_role_menu (id, role_id, menu_id, create_by, update_by, create_by_id, update_by_id)
-VALUES ('2103308774428188677', '7', '202', 'admin', 'admin', '1', '1');
-INSERT INTO sys_role_menu (id, role_id, menu_id, create_by, update_by, create_by_id, update_by_id)
-VALUES ('2103308774495297538', '7', '204', 'admin', 'admin', '1', '1');
-INSERT INTO sys_role_menu (id, role_id, menu_id, create_by, update_by, create_by_id, update_by_id)
 VALUES ('2103308774495297539', '7', '2001', 'admin', 'admin', '1', '1');
 INSERT INTO sys_role_menu (id, role_id, menu_id, create_by, update_by, create_by_id, update_by_id)
 VALUES ('2103308774495297540', '7', '2002', 'admin', 'admin', '1', '1');
@@ -850,10 +846,6 @@ INSERT INTO sys_role_menu (id, role_id, menu_id, create_by, update_by, create_by
 VALUES ('2103308774495297541', '7', '2003', 'admin', 'admin', '1', '1');
 INSERT INTO sys_role_menu (id, role_id, menu_id, create_by, update_by, create_by_id, update_by_id)
 VALUES ('2103308774495297542', '7', '2004', 'admin', 'admin', '1', '1');
-INSERT INTO sys_role_menu (id, role_id, menu_id, create_by, update_by, create_by_id, update_by_id)
-VALUES ('2103308774495297543', '7', '2005', 'admin', 'admin', '1', '1');
-INSERT INTO sys_role_menu (id, role_id, menu_id, create_by, update_by, create_by_id, update_by_id)
-VALUES ('2103308774558212098', '7', '2006', 'admin', 'admin', '1', '1');
 INSERT INTO sys_role_menu (id, role_id, menu_id, create_by, update_by, create_by_id, update_by_id)
 VALUES ('2103308774558212099', '7', '2105', 'admin', 'admin', '1', '1');
 INSERT INTO sys_role_menu (id, role_id, menu_id, create_by, update_by, create_by_id, update_by_id)
