@@ -26,6 +26,7 @@ import com.his.system.api.service.ChargeApi;
 import com.his.common.base.PageResult;
 import com.his.common.enums.BillStatusEnum;
 import com.his.common.enums.MedicalInsuranceTypeEnum;
+import com.his.common.enums.SettlementModeEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.system.api.vo.BillBriefVO;
@@ -659,7 +660,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
 
         // 本单结算方式（两档）：1-全自费 2-医保联网。是否走统筹只看本单是否联网；
         // 险种不再用 settlementType 表达（它已合并为两档），改为由费别 medicalInsuranceType 解析。
-        boolean isInsurancePatient = dto.getSettlementType() != null && dto.getSettlementType() == 2;
+        boolean isInsurancePatient = SettlementModeEnum.INSURANCE.getCode().equals(dto.getSettlementType());
 
         // 设置医保类型显示名称
         if (!isInsurancePatient) {

@@ -110,6 +110,8 @@ public class InsuranceChannelServiceImpl extends ServiceImpl<BizInsuranceReportM
         BizInsuredPerson person = bizInsuredPersonMapper.selectOne(new LambdaQueryWrapper<BizInsuredPerson>()
                 .eq(BizInsuredPerson::getInsuranceNo, insuranceNo)
                 .last("LIMIT 1"));
+        log.info("参保核验: insuranceNo={} found={} status={}", insuranceNo,
+                person != null, person == null ? null : person.getPersonStatus());
         if (person == null) {
             return new InsuredStatus(false, false, null, null,
                     "参保库查无此卡号（" + insuranceNo + "），未参保登记");

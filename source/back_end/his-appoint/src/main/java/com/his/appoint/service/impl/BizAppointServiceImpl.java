@@ -33,6 +33,7 @@ import com.his.system.api.vo.RecordBriefVO;
 import com.his.common.base.PageResult;
 import com.his.common.enums.AttendModeEnum;
 import com.his.common.enums.MedicalInsuranceTypeEnum;
+import com.his.common.enums.SettlementModeEnum;
 import com.his.common.enums.StaffDutyStatusEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
@@ -562,7 +563,8 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         // 医保联网的硬闸统一放在保存时判（入参医保号已在上一步补登主档，这里看的是补登后的最终口径）。
         // 不能下沉到 DTO 注解：患者列表接口不回明文医保号，主档有号而入参为空是合法请求，
         // DTO 层 @NotBlank 会误杀这类请求；只有快照出最终值之后才知道「到底有没有号」。
-        if (Integer.valueOf(2).equals(appointInfo.getSettlementType())) {
+        // 结算方式=医保(2) 用枚举而非魔法数字，与 charge 侧 SettlementModeEnum 同源
+        if (SettlementModeEnum.INSURANCE.getCode().equals(appointInfo.getSettlementType())) {
             MedicalInsuranceTypeEnum feeType = MedicalInsuranceTypeEnum.parse(appointInfo.getMedicalInsuranceType());
             if (feeType == null || !feeType.isPoolCovered()) {
                 throw new BusinessException("患者费别为「"
