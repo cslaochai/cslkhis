@@ -26,9 +26,12 @@ import java.util.List;
 public class InpatientAccountController {
 
     /**
-     * 账务查看：欠费管控页与住院工作站任一入口都可读
+     * 账务查看：三个入口任一即可读
+     *   - charge:arrearsControl:list  欠费管控页
+     *   - ipd:inpatient:list         入出院管理（医生/护士站）
+     *   - ipd:settlement:list        住院结算页（财务岗）—— 住院结算员只挂 305 菜单即可，不再借欠费管控的码
      */
-    private static final String VIEW = "hasAnyAuthority('charge:arrearsControl:list', 'ipd:inpatient:list')";
+    private static final String VIEW = "hasAnyAuthority('charge:arrearsControl:list', 'ipd:inpatient:list', 'ipd:settlement:list')";
 
     private final InpatientAccountService inpatientAccountService;
 

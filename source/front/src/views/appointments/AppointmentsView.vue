@@ -1182,6 +1182,7 @@ const deskLoading = ref(false);
 const deskDays = ref([]); // 当前窗口的日期：日视图 1 天 / 周视图 7 天
 const deskRegs = ref({}); // 就诊日 -> 挂号
 const deskSchedules = ref([]); // 当前窗口排班（带 totalSource / availableSource，余号直接用它）
+const deskScheduledDoctors = ref([]); // 当前窗口「已排班医生」集合 —— 后端 /system/employee/selectList?onlyScheduled=true 过滤结果，前端不再自算
 const deskScheduleMap = ref({});
 /**
  * 当前窗口的**时间片段**（biz_schedule_slot，半小时一档）。
@@ -1229,20 +1230,17 @@ const byDoctorId = (a, b) => {
   return x < y ? -1 : x > y ? 1 : 0;
 };
 /**
- * 医生下拉选项 = 当前窗口「有排班」的医生。
+ * 医生下拉选项 = 当前窗口「已排班」的医生，**直接取后端过滤结果**（`selectList?onlyScheduled=true`）。
  *
- * 直接从已加载的排班里取，不再单独调一套「科室-医生」联动接口：
- * 与科室筛选天然一致，不会出现「下拉里有人、看板上没他」的错位。
- * 按拼音序排：下拉里十几个人混着排的时候，找到目标全靠肉眼过滤。
+ * 身份判定收口在后端：不传任何联动参数，下拉与看板行天然同口径（同一份集合），
+ * 不会出现「下拉里有人、看板上没他」的错位。按拼音序排：下拉里十几个人混着排的时候，找到目标全靠肉眼过滤。
  */
 const deskDoctorOptions = computed(() => {
-  const seen = new Map();
-  for (const s of deskSchedules.value) {
-    if (s.doctorId && !seen.has(s.doctorId)) {
-      seen.set(s.doctorId, {id: s.doctorId, doctorName: s.doctorName || '未定医生', deptName: s.deptName});
-    }
-  }
-  return [...seen.values()].sort(byDoctorId);
+  return deskScheduledDoctors.value.map(e => ({
+    id: e.id,
+    doctorName: e.empName || '未定医生',
+    deptName: e.deptName,
+  })).sort(byDoctorId);
 });
 /** 当前窗口的日期列表：日视图 1 天，周视图 7 天（周一起） */
 const deskDateList = () => {
@@ -1273,9 +1271,6 @@ const deskDateList = () => {
 const loadDesk = async () => {
   deskLoading.value = true;
   try {
-    // 周视图的行 = 医生名册（含没排班的），必须排在之行加载完再渲染，否则首帧缺行
-    if (deskViewMode.value === 'week')
-      await loadWeekRoster();
     const days = deskDateList();
     deskDays.value = days;
     const params = {startDate: days[0], endDate: days[days.length - 1]};
@@ -1283,13 +1278,20 @@ const loadDesk = async () => {
       params.deptId = deskDeptId.value;
     if (deskDoctorId.value)
       params.doctorId = deskDoctorId.value;
-    // 排班 + 挂号并行，两个都是「整段一次查」，共 2 个请求
-    const [schedRes, regRes] = await Promise.all([
+    // 排班 + 挂号 + 已排班医生集合并行：集合也走后端 onlyScheduled 过滤（身份判定收口在后端），共 3 个请求
+    const [schedRes, regRes, doctorRes] = await Promise.all([
       getScheduleList(params),
       getBoardRegistList(params),
+      getEmployeeList({onlyScheduled: true, startDate: params.startDate, endDate: params.endDate, deptId: params.deptId}),
     ]);
     const scheds = schedRes.data?.records || schedRes.data || [];
     deskSchedules.value = scheds;
+    deskScheduledDoctors.value = doctorRes.data || [];
+    // 行/下拉都只认「当前窗口有排班的医生」（后端集合判定）：翻周/换天后选中的医生若该窗口无排班，行会消失，
+    // 必须自动清掉，否则周视图空板、下拉顶着一个不存在的选中值
+    if (deskDoctorId.value && !deskScheduledDoctors.value.some(e => String(e.id) === String(deskDoctorId.value))) {
+      deskDoctorId.value = null;
+    }
     const map = {};
     scheds.forEach((s) => {
       map[s.id] = s;
@@ -1339,46 +1341,6 @@ const loadDeskSlots = async (scheds) => {
   } catch (error) {
     console.error('加载时间片段失败:', error);
     deskSlots.value = [];
-  }
-};
-/**
- * 周视图的 Y 轴是**医生**，所以必须先有一份「医生名册」。
- *
- * 没排班的医生在 `biz_schedule` 里压根查不到 —— 只按排班去重凑不出他的行，
- * 而"这周谁还没排班"正是周视图要回答的半句话（另一半是"哪天满了"）。
- * 所以行 = 名册（在岗医生）∪ 排班数据，没有排班的医生占一整行七格「未排班」。
- *
- * 与排班面板同一个数据源 + 同一套过滤（`/system/employee/selectList`，empType=1 且 status=1）：
- * 两个页面对"谁是医生"必须给出同一个答案，否则会出现"排班页有他、看板没有他"。
- *
- * 反向的并集不能省：排班里的医生可能是外院/多点执业的（sys_employee 里查不到），
- * 只按名册出行会**漏掉真实排班**。
- */
-const weekRoster = ref([]);
-let rosterDeptKey = null;
-const loadWeekRoster = async () => {
-  // 只跟科室有关，与翻周/翻天无关 → 按科室缓存，翻周不重复请求
-  const key = String(deskDeptId.value ?? '__ALL__');
-  if (rosterDeptKey === key)
-    return;
-  try {
-    const params = {empType: 1};
-    if (!isAllDept(deskDeptId.value))
-      params.deptId = deskDeptId.value;
-    const res = await getEmployeeList(params);
-    const list = res.data?.records || res.data || [];
-    weekRoster.value = list
-        .filter((e) => e.status === 1)
-        .map((e) => ({
-          doctorId: e.id,
-          doctorName: e.empName,
-          deptId: e.deptId,
-          deptName: e.deptName || departments.value.find((d) => String(d.id) === String(e.deptId))?.deptName || '',
-        }));
-    rosterDeptKey = key;
-  } catch (error) {
-    // 失败不清空也不抛：拿不到名册时退化为「只有排班里的医生」，行会少，但绝不白屏
-    console.error('加载医生名册失败:', error);
   }
 };
 // ========== 看板高度：撑满当前窗口 ==========
@@ -1549,73 +1511,50 @@ const daySlotCellRegs = (doctorId, slotStart) => {
 const dayCellSchedules = (doctorId, type) => deskSchedules.value.filter(s => s.doctorId === doctorId && Number(s.scheduleType) === type);
 const dayCellRegs = (doctorId, type) => deskRegsOfSchedules(deskDay.value, dayCellSchedules(doctorId, type));
 /**
- * 把一组排班去重成「医生集合」。
+ * 医生身份 = 后端 `selectList?onlyScheduled=true` 的过滤结果（`deskScheduledDoctors`），
+ * 前端只做字段装配（映射 + 排序），不做"谁算已排班"的判定。
  *
- * 日视图用它按**当天**去重出医生列，周视图按**整周窗口**去重出医生行 ——
- * 同一套身份口径（`doctorId` 唯一），换周/换天不会出现"这列多了个人"。
+ * 日视图用它按**当天**（day 模式窗口 = 当天）出医生列，周视图按**整周窗口**出医生行 ——
+ * 同一份后端集合，换周/换天不会出现"这列多了个人"。
+ * `roomName`（诊室）是排班侧属性，员工接口没有：从已加载排班补装配，身份判定不依赖它。
  */
-const doctorsOfSchedules = (scheds) => {
-  const seen = new Map();
-  for (const s of scheds) {
-    if (!s.doctorId)
-      continue;
-    const key = String(s.doctorId);
-    const exist = seen.get(key);
-    if (!exist) {
-      seen.set(key, {
-        id: s.doctorId,
-        doctorName: s.doctorName || '未定医生',
-        deptId: s.deptId,
-        deptName: s.deptName,
-        roomName: s.roomName,
-      });
-    } else if (!exist.roomName && s.roomName) {
-      exist.roomName = s.roomName;
-    }
-  }
-  return seen;
-};
-/** 日视图的医生列：当天有排班的医生（同一医生多诊室多班次合成一列），按拼音序排 */
-const dayDoctors = computed(() => [...doctorsOfSchedules(deskSchedules.value.filter(s => s.scheduleDate === deskDay.value)).values()]
-    .sort(byDoctorId));
+const toDoctorView = (emp) => ({
+  id: emp.id,
+  doctorId: emp.id,
+  doctorName: emp.empName || '未定医生',
+  deptId: emp.deptId,
+  deptName: emp.deptName,
+  roomName: deskSchedules.value.find(s => String(s.doctorId) === String(emp.id))?.roomName,
+});
+/** 日视图的医生列：当天有排班的医生（后端过滤，day 窗口 = 当天），同一医生多诊室多班次合成一列，按拼音序排 */
+const dayDoctors = computed(() => deskScheduledDoctors.value.map(toDoctorView).sort(byDoctorId));
 /**
  * 周视图的行 = **医生**（2026-09-22：原为班次，行是半天粒度、格里塞满患者卡片，
  * 回答不了"某医生这周排没排、还剩多少"）。
  *
- * 行取 「在岗医生名册 ∪ 本周有排班的医生」：
- *   名册兜住没排班的人（`weekRoster`），排班兜住名册里没有的外院/多点执业医生 —— 两边都不能省。
+ * 行 = 当前窗口「已排班的医生」，**由后端 `selectList?onlyScheduled=true` 过滤**（2026-10-14 起不再前端投影、不再并名册）：
+ *   挂号看板只回答"现在能挂谁的号"，整周无排班的医生一行七格「-」是纯噪音；
+ *   "谁这周还没排班"是排班管理页的职责（那页有应排/实排统计，仍按全量名册出行）。
+ *   外院/多点执业医生天然在排班数据里，不需要名册兜底。
  * 选中了具体医生时只留他一行：周视图此时就是"这一位医生的一周"，别人的行是噪声。
  * 同日视图一样按拼音序排 —— 两边的行/列顺序打架，翻一次视图就得重新找人。
  */
 const weekDoctorRows = computed(() => {
   if (deskViewMode.value !== 'week')
     return [];
-  const seen = doctorsOfSchedules(deskSchedules.value);
-  for (const e of weekRoster.value) {
-    const key = String(e.doctorId);
-    if (!seen.has(key)) {
-      seen.set(key, {
-        id: e.doctorId,
-        doctorName: e.doctorName || '未定医生',
-        deptId: e.deptId,
-        deptName: e.deptName,
-        roomName: '',
-      });
-    }
-  }
-  let list = [...seen.values()];
+  let list = deskScheduledDoctors.value.map(e => ({
+    key: String(e.id),
+    doctorId: e.id,
+    label: e.empName || '未定医生',
+    deptName: e.deptName,
+  }));
   if (deskDoctorId.value) {
-    list = list.filter(d => String(d.id) === String(deskDoctorId.value));
+    list = list.filter(d => String(d.doctorId) === String(deskDoctorId.value));
   }
   // 行内的统计（已挂 / 剩余）在下面 weekRowStat 里按 `deskSchedules` 现算，不在这里缓存：
   // 挂号/退号之后 deskRegs 变了，行要有反应 —— 缓存一份就等于让行停在上一刻。
   // 行序与日视图的列序用同一个比较器（byDoctorId），翻视图时位置不漂移。
-  return list.sort(byDoctorId).map(d => ({
-    key: String(d.id),
-    doctorId: d.id,
-    label: d.doctorName,
-    deptName: d.deptName,
-  }));
+  return list.sort(byDoctorId);
 });
 /**
  * 周视图行（某医生）在**当前这一周**的合计。
@@ -1926,7 +1865,6 @@ const handleDeskStep = (delta) => {
 };
 const handleDeskRefresh = async () => {
   selectedCell.value = null;
-  rosterDeptKey = null; // 强制重取名册：新入职/离职的人要反映到周视图的行上
   await loadDesk();
   loadCalServiceDays(); // 不 await：圆点是导航装饰，晚一拍到不影响任何操作
 };

@@ -523,34 +523,50 @@ main p, main span, main div {
     border: 1px solid var(--his-card-border);
 }
 
-.patient-search-popper .el-select-dropdown__list {
+.patient-search-popper .el-select-dropdown__list,
+.appointment-patient-popper .el-select-dropdown__list {
     padding: 6px !important;
 }
 
-.patient-search-popper .el-select-dropdown__item {
+.patient-search-popper .el-select-dropdown__item,
+.appointment-patient-popper .el-select-dropdown__item {
     height: auto !important;
     line-height: normal !important;
-    min-height: 92px !important;
     padding: 9px 10px !important;
     border-radius: 9px;
     margin-bottom: 2px;
 }
 
-.patient-search-popper .el-select-dropdown__item:last-child {
+/* 卡片行高按信息量分档：全局患者搜索是四行富卡片（92px），
+   挂号患者下拉只两行（64px）—— 同一个 .ps-item 骨架，行高不共享 */
+.patient-search-popper .el-select-dropdown__item {
+    min-height: 92px !important;
+}
+
+.appointment-patient-popper .el-select-dropdown__item {
+    min-height: 64px !important;
+}
+
+.patient-search-popper .el-select-dropdown__item:last-child,
+.appointment-patient-popper .el-select-dropdown__item:last-child {
     margin-bottom: 0;
 }
 
 .patient-search-popper .el-select-dropdown__item.is-hovering,
-.patient-search-popper .el-select-dropdown__item:hover {
+.appointment-patient-popper .el-select-dropdown__item.is-hovering,
+.patient-search-popper .el-select-dropdown__item:hover,
+.appointment-patient-popper .el-select-dropdown__item:hover {
     background: #EAF3FB;
 }
 
-.patient-search-popper .el-select-dropdown__item.is-selected {
+.patient-search-popper .el-select-dropdown__item.is-selected,
+.appointment-patient-popper .el-select-dropdown__item.is-selected {
     background: #DCEBF9;
     font-weight: inherit;
 }
 
-.patient-search-popper .el-select-dropdown__empty {
+.patient-search-popper .el-select-dropdown__empty,
+.appointment-patient-popper .el-select-dropdown__empty {
     padding: 22px 0;
     color: #8CA6BD;
     font-size: 13px;
@@ -570,7 +586,8 @@ main p, main span, main div {
 /* --- 分组标题（今日就诊 / 全院档案）---
    样式必须写全局：下拉 popper teleport 到 body，组件内 scoped 的 :deep 编译后带 [data-v-x]
    前缀，body 下没有祖先命中，规则会被静默丢弃。 */
-.patient-search-popper .el-select-group__title {
+.patient-search-popper .el-select-group__title,
+.appointment-patient-popper .el-select-group__title {
     padding: 5px 16px;
     font-size: 11px;
     font-weight: 600;
@@ -580,11 +597,13 @@ main p, main span, main div {
 }
 
 /* 只有一组时不打标题 —— 渲染出的空标题元素要彻底收起，否则留一条空白带 */
-.patient-search-popper .el-select-group__title:empty {
+.patient-search-popper .el-select-group__title:empty,
+.appointment-patient-popper .el-select-group__title:empty {
     display: none;
 }
 
-.patient-search-popper .el-select-group + .el-select-group {
+.patient-search-popper .el-select-group + .el-select-group,
+.appointment-patient-popper .el-select-group + .el-select-group {
     border-top: 1px solid #EEF2F7;
 }
 
@@ -823,6 +842,66 @@ main p, main span, main div {
     color: var(--his-primary);
     font-weight: 700;
     margin-right: 2px;
+}
+
+/* ===================================================================
+   挂号患者下拉（AppointmentPatientSelect，components/his/）
+   与全局患者搜索共用 .ps-* 卡片类和上面那组下拉框架样式（选择器已并列扩展），
+   差异都写在这里：
+   ① 宽度收窄到 360px：只展示挂号相关信息（已砍掉标签/过敏史/住址等长串），
+      不需要全局搜索那 520px；信息短了还撑那么宽只会把下拉甩到弹窗外、离输入框老远；
+   ② 行高压到 64px（见上面 .appointment-patient-popper .el-select-dropdown__item）；
+   ③ 卡片再压一档（头像 34 / 姓名 14 / 行间距 5）：360px 里塞得下两行紧凑信息，不换行。
+   popper 同样 teleport 到 body，必须写全局，不能写进组件 scoped。
+   =================================================================== */
+.appointment-patient-popper.el-popper {
+    min-width: 360px !important;
+    width: 360px !important;
+    border-radius: 12px;
+    box-shadow: 0 14px 40px rgba(9, 47, 84, 0.18);
+    border: 1px solid var(--his-card-border);
+}
+
+/* 仅挂号下拉压缩卡片：全局搜索（520px）保持原样，避免两处形状分歧 */
+.appointment-patient-popper .ps-avatar {
+    width: 34px;
+    height: 34px;
+    font-size: 15px;
+}
+
+.appointment-patient-popper .ps-name {
+    font-size: 14px;
+}
+
+.appointment-patient-popper .ps-line {
+    gap: 5px;
+}
+
+/* ===================================================================
+   新增挂号弹窗 · 患者信息 / 预约信息 分区
+   录入新患者拆成「患者信息」「预约信息」两块，选择已有患者时只有「预约信息」一块。
+   轻量分区标题（左侧色条 + 小标题），不画重边框，避免和弹窗本身的卡片重复。
+   =================================================================== */
+.appt-block {
+    margin-bottom: 8px;
+}
+
+.appt-block__title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 2px 0 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+}
+
+.appt-block__title::before {
+    content: '';
+    width: 3px;
+    height: 13px;
+    border-radius: 2px;
+    background: var(--his-primary, #1269B5);
 }
 
 /* ===================================================================

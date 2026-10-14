@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -62,11 +63,16 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
         LambdaQueryWrapper<SysEmployee> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(queryDTO.getEmpName()), SysEmployee::getEmpName, queryDTO.getEmpName())
                 .eq(queryDTO.getEmpType() != null, SysEmployee::getEmpType, queryDTO.getEmpType());
-        applyDeptScope(wrapper, queryDTO);
-        applyStaffTypeFilter(wrapper, queryDTO);
+        if (Boolean.TRUE.equals(queryDTO.getOnlyScheduled())) {
+            // 已排班场景：deptId 语义切换为「排班的出诊科室」，不再走主科室/岗位科室过滤（见 applyScheduledFilter）
+            applyScheduledFilter(wrapper, queryDTO);
+        } else {
+            applyDeptScope(wrapper, queryDTO);
+            applyStaffTypeFilter(wrapper, queryDTO);
+        }
 
         // 2026-09-22：下拉/名册一律按 **主键升序**（原来是工号序）。
-        // 这份列表主要给人挑人用（排班面板名册、预约看板周视图的医生行、各类医生下拉），
+        // 这份列表主要给人挑人用（排班面板名册、各类医生下拉），
         // 而排班记录里存的医生标识就是这同一个主键 —— 两边统一按它排，
         // 看板上就不会出现「名册是 A 序、排班是 B 序」的错位。
         // ⚠️ 用 last() 就不要再叠 orderByAsc：两者都会生成 ORDER BY，拼成两段 ORDER BY 是语法错误。
@@ -76,6 +82,46 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
                 .map(this::convertToVO)
                 .peek(this::maskSensitive)
                 .toList();
+    }
+
+    /**
+     * 「已排班员工」过滤（{@code onlyScheduled=true} 时走这里，替代默认的主科室/岗位科室口径）：
+     * 区间内（startDate/endDate，可单边省略）在门诊号源表 {@code biz_clinic_source}（del_flag=0）
+     * 存在排班记录的员工才返回。
+     *
+     * <p>与默认口径的两点区别：
+     * <ul>
+     *   <li>deptId 不再过滤员工主科室，而是过滤<b>排班的出诊科室</b>（cs.dept_id）——医生在哪个
+     *       科室出诊是排班事实，与档案主科室无关（多点执业在同一表里各占一条排班）；</li>
+     *   <li>数据权限按「授权科室内的排班」收口：传 deptId 先过
+     *       {@link DeptScopeService#resolveDeptId}（越权科室直接报错）；没传 deptId 收口到
+     *       {@code allowedDeptIds()}（全院角色物化为全科室集合，IN 条件不改变结果）。</li>
+     * </ul>
+     *
+     * <p>日期是受控的 {@link LocalDate}，{@code toString()} 恒为 yyyy-MM-dd，直接拼 SQL 无注入面。
+     */
+    private void applyScheduledFilter(LambdaQueryWrapper<SysEmployee> wrapper, EmployeeQueryDTO queryDTO) {
+        StringBuilder sql = new StringBuilder(256)
+                .append("SELECT 1 FROM biz_clinic_source cs WHERE cs.doctor_id = sys_employee.id AND cs.del_flag = 0");
+        if (queryDTO.getStartDate() != null || queryDTO.getEndDate() != null) {
+            LocalDate start = queryDTO.getStartDate() != null ? queryDTO.getStartDate() : LocalDate.of(1900, 1, 1);
+            LocalDate end = queryDTO.getEndDate() != null ? queryDTO.getEndDate() : LocalDate.of(9999, 12, 31);
+            sql.append(" AND cs.schedule_date BETWEEN '").append(start).append("' AND '").append(end).append("'");
+        }
+        if (queryDTO.getDeptId() != null) {
+            // 受限岗位传越权科室直接报错；全院角色（allowedDeptIds 物化为全集）返回原值
+            deptScopeService.resolveDeptId(queryDTO.getDeptId());
+            sql.append(" AND cs.dept_id = ").append(queryDTO.getDeptId());
+            wrapper.exists(sql.toString());
+            return;
+        }
+        Set<Long> allowed = deptScopeService.allowedDeptIds();
+        if (allowed.isEmpty()) {
+            throw new BusinessException("当前岗位未绑定任何科室，无法查看员工数据（请在系统管理为岗位分配科室）");
+        }
+        String deptIds = allowed.stream().map(String::valueOf).collect(Collectors.joining(","));
+        sql.append(" AND cs.dept_id IN (").append(deptIds).append(")");
+        wrapper.exists(sql.toString());
     }
 
     @Override

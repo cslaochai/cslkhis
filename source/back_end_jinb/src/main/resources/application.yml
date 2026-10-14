@@ -52,6 +52,13 @@ logging:
   level:
     com.mss: debug
 
+# ===== 登录鉴权（JWT）=====
+jwt:
+  # HS256 签名密钥（生产用环境变量覆盖）
+  secret: ${JWT_SECRET:mss-insurance-jwt-secret-2026-0123456789abcdef}
+  # token 有效期（毫秒），默认 24 小时
+  expiration: 86400000
+
 # ===== 医保结算经办（医保局端）模拟平台业务参数 =====
 jinb:
   # 准入的定点医疗机构（HIS 用这套凭据签到）

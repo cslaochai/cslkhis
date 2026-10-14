@@ -280,3 +280,238 @@ CREATE TABLE IF NOT EXISTS mss_recon (
     PRIMARY KEY (id),
     UNIQUE KEY uk_recon_period (period)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='清算对账';
+
+-- =====================================================================
+-- 系统基础（仿 HIS 01-系统基础：组织·用户·岗位·权限·参数·字典）
+-- 独立库 mss_insurance 内使用 mss_ 前缀；删除均走软删（del_flag），
+-- 岗位/角色/菜单这类唯一键不含 del_flag 的关联表删除走物理删。
+-- =====================================================================
+
+-- 经办科室（平台内部科室，岗位 = 角色 × 科室 中的“科室”）
+CREATE TABLE IF NOT EXISTS mss_department (
+    id               BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    dept_code        VARCHAR(32)  NOT NULL COMMENT '科室编码（唯一）',
+    dept_name        VARCHAR(100) NOT NULL COMMENT '科室名称',
+    dept_type        TINYINT      DEFAULT 1 COMMENT '科室类型（1-前台经办 2-审核稽核 3-基金财务 4-综合管理）',
+    parent_id        BIGINT       NOT NULL DEFAULT 0 COMMENT '父科室ID',
+    sort_order       INT          DEFAULT 0 COMMENT '排序号',
+    dept_leader_id   BIGINT       DEFAULT NULL COMMENT '科室负责人（mss_employee.id）',
+    status           TINYINT      DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
+    create_by        VARCHAR(64)  NOT NULL DEFAULT 'system' COMMENT '创建人',
+    create_by_id     BIGINT       DEFAULT NULL COMMENT '创建人ID',
+    create_time      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_by        VARCHAR(64)  NOT NULL DEFAULT 'system' COMMENT '更新人',
+    update_by_id     BIGINT       DEFAULT NULL COMMENT '更新人ID',
+    update_time      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    del_flag         TINYINT      NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+    remark           VARCHAR(500) DEFAULT NULL COMMENT '备注',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_dept_code (dept_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='经办科室';
+
+-- 角色
+CREATE TABLE IF NOT EXISTS mss_role (
+    id           BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    role_code    VARCHAR(32)  NOT NULL COMMENT '角色编码（唯一）',
+    role_name    VARCHAR(100) NOT NULL COMMENT '角色名称',
+    role_type    TINYINT      DEFAULT 1 COMMENT '角色类型（1-系统角色 2-自定义角色）',
+    data_scope   TINYINT      DEFAULT 1 COMMENT '数据权限范围（1-全部数据 2-自定义数据 3-本部门数据 5-仅本人数据）',
+    sort_order   INT          DEFAULT 0 COMMENT '排序号',
+    status       TINYINT      DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
+    create_by    VARCHAR(64)  NOT NULL DEFAULT 'system' COMMENT '创建人',
+    create_by_id BIGINT       DEFAULT NULL COMMENT '创建人ID',
+    create_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_by    VARCHAR(64)  NOT NULL DEFAULT 'system' COMMENT '更新人',
+    update_by_id BIGINT       DEFAULT NULL COMMENT '更新人ID',
+    update_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    del_flag     TINYINT      NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+    remark       VARCHAR(500) DEFAULT NULL COMMENT '备注',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_role_code (role_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色';
+
+-- 菜单
+CREATE TABLE IF NOT EXISTS mss_menu (
+    id           BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    menu_name    VARCHAR(100) NOT NULL COMMENT '菜单名称',
+    parent_id    BIGINT       DEFAULT 0 COMMENT '父菜单ID',
+    sort_order   INT          DEFAULT 0 COMMENT '排序号',
+    menu_type    TINYINT      DEFAULT 2 COMMENT '菜单类型（1-目录 2-菜单 3-按钮）',
+    path         VARCHAR(200) DEFAULT NULL COMMENT '路由地址',
+    component    VARCHAR(200) DEFAULT NULL COMMENT '组件路径',
+    menu_key     VARCHAR(100) DEFAULT NULL COMMENT '菜单标识（唯一）',
+    icon         VARCHAR(100) DEFAULT NULL COMMENT '图标',
+    permission   VARCHAR(200) DEFAULT NULL COMMENT '权限标识',
+    is_frame     TINYINT      DEFAULT 0 COMMENT '是否外链（0-否 1-是）',
+    is_cache     TINYINT      DEFAULT 0 COMMENT '是否缓存（0-否 1-是）',
+    is_visible   TINYINT      DEFAULT 1 COMMENT '是否可见（0-隐藏 1-显示）',
+    status       TINYINT      DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
+    create_by    VARCHAR(64)  NOT NULL DEFAULT 'system' COMMENT '创建人',
+    create_by_id BIGINT       DEFAULT NULL COMMENT '创建人ID',
+    create_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_by    VARCHAR(64)  NOT NULL DEFAULT 'system' COMMENT '更新人',
+    update_by_id BIGINT       DEFAULT NULL COMMENT '更新人ID',
+    update_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    del_flag     TINYINT      NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+    remark       VARCHAR(500) DEFAULT NULL COMMENT '备注',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_menu_key (menu_key),
+    KEY idx_parent_id (parent_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='菜单';
+
+-- 角色菜单关联（本表无 del_flag，删除走物理删）
+CREATE TABLE IF NOT EXISTS mss_role_menu (
+    id           BIGINT      NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    role_id      BIGINT      NOT NULL COMMENT '角色ID',
+    menu_id      BIGINT      NOT NULL COMMENT '菜单ID',
+    create_by    VARCHAR(64) NOT NULL DEFAULT 'system' COMMENT '创建人',
+    create_by_id BIGINT      DEFAULT NULL COMMENT '创建人ID',
+    create_time  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_by    VARCHAR(64) NOT NULL DEFAULT 'system' COMMENT '更新人',
+    update_by_id BIGINT      DEFAULT NULL COMMENT '更新人ID',
+    update_time  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_role_menu (role_id, menu_id),
+    KEY idx_menu_id (menu_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色菜单关联';
+
+-- 用户
+CREATE TABLE IF NOT EXISTS mss_user (
+    id                   BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    user_name            VARCHAR(64)  NOT NULL COMMENT '用户名（唯一）',
+    password             VARCHAR(200) NOT NULL COMMENT '密码（BCrypt）',
+    real_name            VARCHAR(64)  DEFAULT NULL COMMENT '真实姓名',
+    emp_id               BIGINT       DEFAULT NULL COMMENT '关联员工ID',
+    user_type            TINYINT      DEFAULT 1 COMMENT '用户类型（1-系统用户 2-外部用户）',
+    avatar               VARCHAR(200) DEFAULT NULL COMMENT '头像地址',
+    last_login_time      DATETIME     DEFAULT NULL COMMENT '最后登录时间',
+    last_login_ip        VARCHAR(50)  DEFAULT NULL COMMENT '最后登录IP',
+    login_count          INT          DEFAULT 0 COMMENT '登录次数',
+    password_update_time DATETIME     DEFAULT NULL COMMENT '密码更新时间',
+    status               TINYINT      DEFAULT 1 COMMENT '状态（0-停用 1-启用 2-锁定）',
+    create_by            VARCHAR(64)  NOT NULL DEFAULT 'system' COMMENT '创建人',
+    create_by_id         BIGINT       DEFAULT NULL COMMENT '创建人ID',
+    create_time          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_by            VARCHAR(64)  NOT NULL DEFAULT 'system' COMMENT '更新人',
+    update_by_id         BIGINT       DEFAULT NULL COMMENT '更新人ID',
+    update_time          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    del_flag             TINYINT      NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+    remark               VARCHAR(500) DEFAULT NULL COMMENT '备注',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_user_name (user_name),
+    KEY idx_emp_id (emp_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户';
+
+-- 经办人员（员工）
+CREATE TABLE IF NOT EXISTS mss_employee (
+    id           BIGINT      NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    emp_code     VARCHAR(32) NOT NULL COMMENT '员工编号（唯一）',
+    emp_name     VARCHAR(50) NOT NULL COMMENT '员工姓名',
+    emp_type     TINYINT     NOT NULL DEFAULT 1 COMMENT '员工类型（1-经办员 2-审核员 3-管理员 4-其他）',
+    gender       TINYINT     DEFAULT NULL COMMENT '性别（1-男 2-女 3-未知）',
+    birth_date   DATE        DEFAULT NULL COMMENT '出生日期',
+    hire_date    DATE        DEFAULT NULL COMMENT '入职日期',
+    id_card      VARCHAR(18) DEFAULT NULL COMMENT '身份证号',
+    phone        VARCHAR(20) DEFAULT NULL COMMENT '手机号码',
+    email        VARCHAR(100) DEFAULT NULL COMMENT '电子邮箱',
+    dept_id      BIGINT      DEFAULT NULL COMMENT '科室ID',
+    dept_name    VARCHAR(200) DEFAULT NULL COMMENT '科室名称（快照）',
+    title        VARCHAR(50) DEFAULT NULL COMMENT '职称',
+    position     VARCHAR(50) DEFAULT NULL COMMENT '职位',
+    status       TINYINT     DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
+    create_by    VARCHAR(64) NOT NULL DEFAULT 'system' COMMENT '创建人',
+    create_by_id BIGINT      DEFAULT NULL COMMENT '创建人ID',
+    create_time  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_by    VARCHAR(64) NOT NULL DEFAULT 'system' COMMENT '更新人',
+    update_by_id BIGINT      DEFAULT NULL COMMENT '更新人ID',
+    update_time  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    del_flag     TINYINT     NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+    remark       VARCHAR(500) DEFAULT NULL COMMENT '备注',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_emp_code (emp_code),
+    KEY idx_dept_id (dept_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='经办人员';
+
+-- 员工岗位（角色 × 科室；本表无 del_flag，删除走物理删）
+CREATE TABLE IF NOT EXISTS mss_employee_post (
+    id             BIGINT      NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    employee_id    BIGINT      NOT NULL COMMENT '员工ID',
+    role_id        BIGINT      NOT NULL COMMENT '角色ID',
+    dept_id        BIGINT      NOT NULL COMMENT '科室ID',
+    is_primary     TINYINT     DEFAULT 0 COMMENT '是否主岗位（0-否 1-是）',
+    effective_date DATE        DEFAULT NULL COMMENT '岗位生效日期',
+    expire_date    DATE        DEFAULT NULL COMMENT '岗位失效日期',
+    create_by      VARCHAR(64) NOT NULL DEFAULT 'system' COMMENT '创建人',
+    create_by_id   BIGINT      DEFAULT NULL COMMENT '创建人ID',
+    create_time    DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_by      VARCHAR(64) NOT NULL DEFAULT 'system' COMMENT '更新人',
+    update_by_id   BIGINT      DEFAULT NULL COMMENT '更新人ID',
+    update_time    DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_emp_role_dept (employee_id, role_id, dept_id),
+    KEY idx_employee_id (employee_id),
+    KEY idx_dept_id (dept_id),
+    KEY idx_role_id (role_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='员工岗位（角色×科室）';
+
+-- 系统参数
+CREATE TABLE IF NOT EXISTS mss_config (
+    config_id    BIGINT      NOT NULL AUTO_INCREMENT COMMENT '配置ID',
+    config_name  VARCHAR(64) NOT NULL COMMENT '配置名称',
+    config_key   VARCHAR(64) NOT NULL COMMENT '配置键',
+    config_value VARCHAR(500) DEFAULT NULL COMMENT '配置值',
+    config_type  TINYINT     NOT NULL DEFAULT 1 COMMENT '类型（0-系统 1-业务）',
+    is_system    TINYINT     NOT NULL DEFAULT 1 COMMENT '是否系统内置（0-否 1-是）',
+    remark       VARCHAR(500) DEFAULT NULL COMMENT '备注',
+    create_by    VARCHAR(64) NOT NULL DEFAULT 'system' COMMENT '创建人',
+    create_by_id BIGINT      DEFAULT NULL COMMENT '创建人ID',
+    create_time  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_by    VARCHAR(64) NOT NULL DEFAULT 'system' COMMENT '更新人',
+    update_by_id BIGINT      DEFAULT NULL COMMENT '更新人ID',
+    update_time  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (config_id),
+    UNIQUE KEY uk_config_key (config_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统参数';
+
+-- 字典类型
+CREATE TABLE IF NOT EXISTS mss_dict_type (
+    id           BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    dict_type    VARCHAR(100) NOT NULL COMMENT '字典类型（唯一）',
+    dict_name    VARCHAR(100) NOT NULL COMMENT '字典名称',
+    status       TINYINT      DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
+    dict_source  TINYINT      DEFAULT 1 COMMENT '来源（1-系统级 2-自定义）',
+    create_by    VARCHAR(64)  NOT NULL DEFAULT 'system' COMMENT '创建人',
+    create_by_id BIGINT       DEFAULT NULL COMMENT '创建人ID',
+    create_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_by    VARCHAR(64)  NOT NULL DEFAULT 'system' COMMENT '更新人',
+    update_by_id BIGINT       DEFAULT NULL COMMENT '更新人ID',
+    update_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    del_flag     TINYINT      NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+    remark       VARCHAR(500) DEFAULT NULL COMMENT '备注',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_dict_type (dict_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='字典类型';
+
+-- 字典数据
+CREATE TABLE IF NOT EXISTS mss_dict_data (
+    id           BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    dict_type    VARCHAR(100) NOT NULL COMMENT '字典类型',
+    dict_label   VARCHAR(100) NOT NULL COMMENT '字典标签',
+    dict_value   VARCHAR(100) NOT NULL COMMENT '字典值',
+    dict_sort    INT          DEFAULT 0 COMMENT '排序号',
+    dict_class   VARCHAR(100) DEFAULT NULL COMMENT '样式属性',
+    list_class   VARCHAR(100) DEFAULT NULL COMMENT '表格回显样式',
+    is_default   TINYINT      DEFAULT 0 COMMENT '是否默认（0-否 1-是）',
+    status       TINYINT      DEFAULT 1 COMMENT '状态（0-停用 1-启用）',
+    dict_source  TINYINT      DEFAULT 1 COMMENT '来源（1-系统级 2-自定义）',
+    create_by    VARCHAR(64)  NOT NULL DEFAULT 'system' COMMENT '创建人',
+    create_by_id BIGINT       DEFAULT NULL COMMENT '创建人ID',
+    create_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_by    VARCHAR(64)  NOT NULL DEFAULT 'system' COMMENT '更新人',
+    update_by_id BIGINT       DEFAULT NULL COMMENT '更新人ID',
+    update_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    del_flag     TINYINT      NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
+    remark       VARCHAR(500) DEFAULT NULL COMMENT '备注',
+    PRIMARY KEY (id),
+    KEY idx_dict_type (dict_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='字典数据';

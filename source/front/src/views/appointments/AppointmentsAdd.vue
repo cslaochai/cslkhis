@@ -1,7 +1,11 @@
 <template>
-  <el-dialog v-model="visible" destroy-on-close title="新增挂号" width="760px" @closed="resetForm">
+  <!-- 新增挂号弹窗：患者区按 tab 切换；下方三块共享 —— 患者信息（仅录入新患者）/
+       费用信息（费别+医保卡号+结算方式，置于预约信息之上）/ 预约信息（就诊类型→科室→号源→时段）。
+       费用信息：费别是患者主档属性（新患者可编辑、已有患者只读），医保卡号不做联动隐藏；
+       结算方式由费别推导 —— 医保类费别才出现「联网/全自费」下拉，其余只读显示全自费。 -->
+  <el-dialog v-model="visible" destroy-on-close title="新增挂号" width="880px" @closed="resetForm">
     <!-- 患者来源切换（与急诊登记同一交互）：tab 只切换**患者输入区**，
-         下面的科室 / 日期 / 号源 / 时段 / 就诊类型 / 结算方式 是共享字段 -->
+         下面的就诊类型 / 复诊 / 号源 / 时段 / 结算方式 是共享字段 -->
     <div class="mb-4 flex rounded-lg border border-slate-200 bg-slate-50 p-1">
       <button
           :class="addMode === 'existing' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
@@ -20,10 +24,10 @@
     </div>
 
     <el-form :model="newAppointment" label-position="top">
-      <!-- tab1：选择已有患者 -->
+      <!-- tab1：选择已有患者（选择框占半宽，留白不撑满，选完下方回显卡整宽确认） -->
       <template v-if="addMode === 'existing'">
-        <el-form-item label="选择患者" required>
-          <PatientSelect
+        <el-form-item label="选择患者" required class="!w-1/2">
+          <AppointmentPatientSelect
               v-model="newAppointment.patientId"
               @select="handlePatientSelect"
           />
@@ -39,106 +43,120 @@
             <div>
               <span class="font-medium text-slate-900">{{ newAppointment.patientName }}</span>
               <span class="ml-2 text-xs text-slate-500">{{ newAppointment.patientNo }}</span>
+              <span v-if="feeShortLabel(newAppointment.medicalInsuranceType)"
+                    class="ml-2 inline-flex items-center rounded border border-teal-200 bg-teal-50 px-1.5 text-xs text-teal-700">
+                {{ feeShortLabel(newAppointment.medicalInsuranceType) }}
+              </span>
             </div>
           </div>
         </div>
       </template>
 
-      <!-- tab2：录入新患者 -->
+      <!-- tab2：录入新患者 → 患者信息块（身份与联系方式；费别/医保/结算已上移到「费用信息」块） -->
       <template v-else>
-        <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-          将在患者主档新建档案，确认挂号时一并提交；其余信息可到「患者管理」补全
+        <div class="appt-block">
+          <div class="appt-block__title">患者信息</div>
+          <div class="grid grid-cols-2 gap-x-4">
+            <el-form-item label="患者姓名" required>
+              <el-input v-model="newPatientForm.patientName" placeholder="请输入患者姓名"/>
+            </el-form-item>
+            <el-form-item label="性别" required>
+              <el-radio-group v-model="newPatientForm.gender">
+                <el-radio v-for="g in PATIENT_GENDER_OPTIONS" :key="g.value" :value="g.value">{{ g.label }}</el-radio>
+              </el-radio-group>
+            </el-form-item>
+            <el-form-item label="出生日期">
+              <el-date-picker
+                  v-model="newPatientForm.birthDate"
+                  class="w-full"
+                  placeholder="选择出生日期"
+                  type="date"
+                  value-format="YYYY-MM-DD"
+              />
+            </el-form-item>
+            <el-form-item label="联系电话" required>
+              <el-input v-model="newPatientForm.phone" placeholder="请输入 11 位手机号"/>
+            </el-form-item>
+            <el-form-item label="身份证号" required>
+              <el-input v-model="newPatientForm.idCard" placeholder="请输入身份证号" @blur="syncPatientBirthDate"/>
+            </el-form-item>
+          </div>
+          <el-form-item label="家庭住址">
+            <el-input v-model="newPatientForm.address" placeholder="请输入家庭住址"/>
+          </el-form-item>
         </div>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="患者姓名" required>
-            <el-input v-model="newPatientForm.patientName" placeholder="请输入患者姓名"/>
-          </el-form-item>
-          <el-form-item label="性别" required>
-            <el-radio-group v-model="newPatientForm.gender">
-              <el-radio v-for="g in PATIENT_GENDER_OPTIONS" :key="g.value" :value="g.value">{{ g.label }}</el-radio>
-            </el-radio-group>
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="出生日期">
-            <el-date-picker
-                v-model="newPatientForm.birthDate"
-                class="w-full"
-                placeholder="选择出生日期"
-                type="date"
-                value-format="YYYY-MM-DD"
-            />
-          </el-form-item>
-          <el-form-item label="联系电话">
-            <el-input v-model="newPatientForm.phone" placeholder="选填（填了须为 11 位手机号）"/>
-          </el-form-item>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="身份证号" required>
-            <el-input v-model="newPatientForm.idCard" placeholder="请输入身份证号" @blur="syncPatientBirthDate"/>
-          </el-form-item>
-          <el-form-item label="费别">
-            <el-select v-model="newPatientForm.medicalInsuranceType" class="w-full" filterable
+      </template>
+
+      <!-- 费用信息块（两 tab 共用，置于预约信息之上）：费别 + 医保卡号 + 结算方式三者归一处。
+           录入新患者时费别/医保卡号可编辑（写入患者主档）；选择已有患者时费别只读（来自主档）、医保卡号可补登。
+           费别与医保卡号不做联动隐藏 —— 自费患者也有医保字段（只是为空），摆着让人知道"这一栏就是没有"，不会误以为漏填。 -->
+      <div class="appt-block">
+        <div class="appt-block__title">费用信息</div>
+        <div class="grid grid-cols-2 gap-x-4">
+          <!-- 费别：新患者可编辑，已有患者只读（主档属性，改请到患者档案） -->
+          <el-form-item label="费别" :required="addMode === 'new'">
+            <el-select v-if="addMode === 'new'" v-model="newPatientForm.medicalInsuranceType" class="w-full" filterable
                        placeholder="选择费别">
               <el-option v-for="item in medicalInsuranceTypes" :key="item.dictValue" :label="item.dictLabel"
                          :value="item.dictValue ?? item.dictLabel"/>
             </el-select>
+            <el-input v-else :model-value="newAppointment.medicalInsuranceType || '—'" readonly/>
           </el-form-item>
-        </div>
-        <div v-if="isNewPatientInsurance" class="grid grid-cols-2 gap-4">
+          <!-- 医保卡号：始终展示，不再按费别联动隐藏 -->
           <el-form-item label="医保卡号">
-            <el-input v-model="newPatientForm.medicalInsuranceNo" placeholder="请输入医保卡号"/>
+            <el-input v-if="addMode === 'new'" v-model="newPatientForm.medicalInsuranceNo" placeholder="请输入医保卡号"/>
+            <el-input v-else v-model="newAppointment.medicalInsuranceNo" placeholder="请输入医保卡号"/>
           </el-form-item>
         </div>
-        <el-form-item label="家庭住址">
-          <el-input v-model="newPatientForm.address" placeholder="请输入家庭住址"/>
+        <!-- 结算方式：费别在统筹范围才有「联网 / 全自费」的真实选择；自费患者唯一结法就是全自费，只读说明来路 -->
+        <el-form-item label="结算方式" required>
+          <el-select v-if="isAppointmentInsuranceFee" v-model="newAppointment.settlementType"
+                     class="w-full" placeholder="选择结算方式">
+            <el-option v-for="item in settlementTypes" :key="item.value" :label="item.label" :value="item.value"/>
+          </el-select>
+          <template v-else>
+            <el-input :model-value="settlementTypes.find((s) => s.value === 1)?.label || '全自费'" readonly/>
+            <p class="w-full text-xs text-slate-400 mt-1">
+              患者费别为「{{ newAppointment.medicalInsuranceType || '未设置' }}」，不涉及医保统筹，本单按全自费结算
+            </p>
+          </template>
         </el-form-item>
-      </template>
-
-      <!-- 就诊类型提到科室之前：选「复诊 + 当日回诊」时下面的科室/日期/号源整块都不填，
-           放在最后等于让人先填完再看着它们消失 -->
-      <el-form-item label="就诊类型">
-        <el-select v-model="newAppointment.visitType" class="w-full" placeholder="选择类型"
-                   @change="handleVisitTypeChange">
-          <el-option v-for="item in VISIT_TYPE" :key="item.value" :label="item.label" :value="item.value"/>
-        </el-select>
-      </el-form-item>
-      <template v-if="isRevisit">
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="复诊来源" required>
-            <el-select v-model="newAppointment.revisitSource" class="w-full" placeholder="选择复诊来源">
-              <el-option v-for="o in windowRevisitSourceOptions" :key="o.dictValue" :label="o.dictLabel"
-                         :value="Number(o.dictValue)"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="原病历（哪一次就诊）" required>
-            <el-select v-model="newAppointment.revisitRecordId" :disabled="!newAppointment.patientId"
-                       :loading="revisitRecordLoading"
-                       :placeholder="newAppointment.patientId ? '选择原病历' : '请先选择患者'"
-                       class="w-full">
-              <el-option v-for="r in revisitRecords" :key="r.id" :label="revisitRecordLabel(r)" :value="r.id"/>
-            </el-select>
-          </el-form-item>
+        <!-- 医保联网提示：结算方式为联网时的确认文案 / 风险提醒（费别与医保卡号已上移，这里只说话不重复字段） -->
+        <div v-if="Number(newAppointment.settlementType) === 2" class="rounded-lg border border-blue-200 bg-blue-50 p-3">
+          <template v-if="addMode === 'new'">
+            <p v-if="!isAppointmentInsuranceFee" class="m-0 text-xs text-amber-700">
+              该患者费别为「{{ newAppointment.medicalInsuranceType || '未设置' }}」，不在医保统筹范围，联网也无统筹报销，建议改回全自费
+            </p>
+            <p v-else class="m-0 text-xs text-slate-500">
+              联网结算将按上方费别与医保卡号记账，请确认无误
+            </p>
+          </template>
+          <template v-else>
+            <p v-if="!isAppointmentInsuranceFee" class="m-0 text-xs text-amber-700">
+              该患者费别为「{{ newAppointment.medicalInsuranceType || '未设置' }}」，不在医保统筹范围，联网也无统筹报销，建议改回全自费
+            </p>
+            <p v-else-if="!newAppointment.medicalInsuranceNo" class="m-0 text-xs text-amber-700">
+              该患者未登记医保卡号，联网结算将无法记账统筹，请先补全医保卡号
+            </p>
+          </template>
         </div>
-        <!-- 「查过了但没病历」要说清是没病历，不是没选（否则人会回去反复点患者） -->
-        <p v-if="newAppointment.patientId && !revisitRecordLoading && !revisitRecords.length"
-           class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-          该患者还没有可关联的就诊病历 —— 请改为初诊，或由医生在诊室里开「当日回诊」
-        </p>
-      </template>
+      </div>
 
-      <!-- 当日回诊是同一次挂号的延续：不占号源，也就不需要科室 / 日期 / 号源 / 时段 -->
-      <template v-if="!isSameDayReturn">
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="选择科室" required>
-            <el-select v-model="newAppointment.deptId" class="w-full" filterable placeholder="选择科室"
-                       @change="handleDeptChange">
-              <el-option v-for="d in departments" :key="d.id"
-                         :label="d.parentDeptName ? `${d.parentDeptName} / ${d.deptName}` : d.deptName"
-                         :value="d.id ?? d.deptName"/>
+      <!-- 预约信息块（两 tab 共用）：就诊类型 → 复诊上下文 →
+           预约日期 / 科室（两栏、日期在前）→ 号源（整行，信息多）→ 时间段。
+           号源整行不挤两栏：它的选项要带医生 / 诊室 / 时段 / 余号 / 挂号费，塞进半栏必被截断。 -->
+      <div class="appt-block">
+        <div class="appt-block__title">预约信息</div>
+
+        <!-- 就诊类型 + 预约日期 同行：先定「什么类型 / 哪天来」，再定科室号源 -->
+        <div class="grid grid-cols-2 gap-x-5 items-start">
+          <el-form-item :class="{'col-span-2': isSameDayReturn}" label="就诊类型">
+            <el-select v-model="newAppointment.visitType" class="w-full" placeholder="选择类型"
+                       @change="handleVisitTypeChange">
+              <el-option v-for="item in VISIT_TYPE" :key="item.value" :label="item.label" :value="item.value"/>
             </el-select>
           </el-form-item>
-          <el-form-item label="预约日期" required>
+          <el-form-item v-if="!isSameDayReturn" label="预约日期" required>
             <el-date-picker
                 v-model="newAppointment.visitDate"
                 :disabled-date="(time: Date) => time.getTime() < Date.now() - 86400000"
@@ -150,68 +168,88 @@
             />
           </el-form-item>
         </div>
-        <el-form-item label="选择号源" required>
-          <el-select v-model="newAppointment.scheduleId" :disabled="!availableSchedules.length" :placeholder="schedulePlaceholder"
-                     class="w-full" @change="handleScheduleChange">
-            <el-option
-                v-for="s in availableSchedules"
-                :key="s.id"
-                :label="`${s.doctorName} | ${s.roomName || '诊室待定'} | ${s.startTime}-${s.endTime} | 余号:${s.availableSource} | 挂号费:¥${s.registFee}`"
-                :value="s.id ?? s.doctorName"
-            />
-          </el-select>
-          <!-- 「查过了但没号」由 placeholder 说（schedulePlaceholder），这里不再重复第二遍 -->
-        </el-form-item>
-        <el-form-item label="时间段（半小时一档）">
-          <!-- 号源事实在段上：选段 = 定下这半小时的号；余 0 的段禁用，段已满提示换相邻段 -->
-          <el-select v-model="newAppointment.slotId" :disabled="!slotRows.length" :loading="slotLoading" class="w-full"
-                     clearable placeholder="请选择时间段">
-            <el-option v-for="s in slotRows" :key="s.id" :disabled="s.status !== 1 || s.availableSource <= 0" :label="slotLabel(s)"
-                       :value="s.id"/>
-          </el-select>
-          <p v-if="newAppointment.scheduleId && !slotRows.length && !slotLoading"
-             class="w-full text-xs text-slate-400 mt-1">该号源暂无时间段明细，将按整班次号源挂号</p>
-        </el-form-item>
-      </template>
-      <div v-if="isRevisit && (revisitPreview || revisitPreviewLoading)"
-           class="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-        <div class="flex items-center justify-between text-sm">
-          <span class="text-slate-500">复诊应收</span>
-          <span :class="Number(revisitPreview?.totalFee) > 0 ? 'text-red-500' : 'text-emerald-600'"
-                class="font-mono text-lg font-bold">
-            {{ revisitPreviewLoading ? '计算中…' : `¥${Number(revisitPreview?.totalFee || 0).toFixed(2)}` }}
-          </span>
-        </div>
-        <div v-if="revisitPreview && !revisitPreviewLoading" class="mt-1 text-xs text-slate-500">
-          挂号费 ¥{{ Number(revisitPreview.registFee || 0).toFixed(2) }} ·
-          诊查费 ¥{{ Number(revisitPreview.diagnosisFee || 0).toFixed(2) }} ·
-          {{ revisitPreview.policyName ? `命中策略「${revisitPreview.policyName}」` : '未命中策略，按全额收费' }}
-        </div>
-        <p v-if="revisitPreview?.reason && !revisitPreviewLoading" class="mt-1 text-xs text-slate-400">
-          {{ revisitPreview.reason }}
-        </p>
-      </div>
-      <el-form-item label="结算方式" required>
-        <el-select v-model="newAppointment.settlementType" class="w-full" placeholder="选择结算方式">
-          <el-option v-for="item in settlementTypes" :key="item.value" :label="item.label" :value="item.value"/>
-        </el-select>
-      </el-form-item>
-      <div v-if="newAppointment.settlementType === 2" class="rounded-lg border border-blue-200 bg-blue-50 p-3">
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item class="!mb-0" label="费别">
-            <!-- 费别是患者主档属性，本单不允许改；要改请到患者档案 -->
-            <el-input :model-value="newAppointment.medicalInsuranceType || '—'" readonly/>
+
+        <template v-if="isRevisit">
+          <div class="grid grid-cols-2 gap-x-5 items-start">
+            <el-form-item label="复诊来源" required>
+              <el-select v-model="newAppointment.revisitSource" class="w-full" placeholder="选择复诊来源">
+                <el-option v-for="o in windowRevisitSourceOptions" :key="o.dictValue" :label="o.dictLabel"
+                           :value="Number(o.dictValue)"/>
+              </el-select>
+            </el-form-item>
+            <el-form-item label="原病历（哪一次就诊）" required>
+              <el-select v-model="newAppointment.revisitRecordId" :disabled="!newAppointment.patientId"
+                         :loading="revisitRecordLoading"
+                         :placeholder="newAppointment.patientId ? '选择原病历' : '请先选择患者'"
+                         class="w-full">
+                <el-option v-for="r in revisitRecords" :key="r.id" :label="revisitRecordLabel(r)" :value="r.id"/>
+              </el-select>
+            </el-form-item>
+          </div>
+          <!-- 「查过了但没病历」要说清是没病历，不是没选（否则人会回去反复点患者） -->
+          <p v-if="newAppointment.patientId && !revisitRecordLoading && !revisitRecords.length"
+             class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            该患者还没有可关联的就诊病历 —— 请改为初诊，或由医生在诊室里开「当日回诊」
+          </p>
+        </template>
+
+        <!-- 当日回诊是同一次挂号的延续：不占号源，也就不需要科室 / 日期 / 号源 / 时段 -->
+        <template v-if="!isSameDayReturn">
+          <!-- 科室单列紧跟日期（下方号源 / 时间段都是整行，半栏放科室会和下方的满栏错位） -->
+          <el-form-item label="选择科室" required>
+            <el-select v-model="newAppointment.deptId" class="w-full" filterable placeholder="选择科室"
+                       @change="handleDeptChange">
+              <el-option v-for="d in departments" :key="d.id"
+                         :label="d.parentDeptName ? `${d.parentDeptName} / ${d.deptName}` : d.deptName"
+                         :value="d.id ?? d.deptName"/>
+            </el-select>
           </el-form-item>
-          <el-form-item class="!mb-0" label="医保卡号">
-            <el-input v-model="newAppointment.medicalInsuranceNo" placeholder="请输入医保卡号"/>
+          <!-- 号源信息多，单独整行：医生 | 诊室 | 时段 | 余号 | 挂号费，半栏放不下 -->
+          <el-form-item label="选择号源" required>
+            <el-select v-model="newAppointment.scheduleId" :disabled="!availableSchedules.length"
+                       :placeholder="schedulePlaceholder"
+                       class="w-full" @change="handleScheduleChange">
+              <el-option
+                  v-for="s in availableSchedules"
+                  :key="s.id"
+                  :label="`${s.doctorName} | ${s.roomName || '诊室待定'} | ${s.startTime}-${s.endTime} | 余号:${s.availableSource} | 挂号费:¥${s.registFee}`"
+                  :value="s.id ?? s.doctorName"
+              />
+            </el-select>
+            <!-- 「查过了但没号」由 placeholder 说（schedulePlaceholder），这里不再重复第二遍 -->
           </el-form-item>
+          <el-form-item label="时间段">
+            <!-- 号源事实在段上：选段 = 定下这半小时的号；余 0 的段禁用，段已满提示换相邻段 -->
+            <el-select v-model="newAppointment.slotId" :disabled="!slotRows.length" :loading="slotLoading"
+                       class="w-full"
+                       clearable placeholder="请选择时间段">
+              <el-option v-for="s in slotRows" :key="s.id" :disabled="s.status !== 1 || s.availableSource <= 0"
+                         :label="slotLabel(s)"
+                         :value="s.id"/>
+            </el-select>
+            <p v-if="newAppointment.scheduleId && !slotRows.length && !slotLoading"
+               class="w-full text-xs text-slate-400 mt-1">该号源暂无时间段明细，将按整班次号源挂号</p>
+          </el-form-item>
+        </template>
+
+        <div v-if="isRevisit && (revisitPreview || revisitPreviewLoading)"
+             class="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-slate-500">复诊应收</span>
+            <span :class="Number(revisitPreview?.totalFee) > 0 ? 'text-red-500' : 'text-emerald-600'"
+                  class="font-mono text-lg font-bold">
+              {{ revisitPreviewLoading ? '计算中…' : `¥${Number(revisitPreview?.totalFee || 0).toFixed(2)}` }}
+            </span>
+          </div>
+          <div v-if="revisitPreview && !revisitPreviewLoading" class="mt-1 text-xs text-slate-500">
+            挂号费 ¥{{ Number(revisitPreview.registFee || 0).toFixed(2) }} ·
+            诊查费 ¥{{ Number(revisitPreview.diagnosisFee || 0).toFixed(2) }} ·
+            {{ revisitPreview.policyName ? `命中策略「${revisitPreview.policyName}」` : '未命中策略，按全额收费' }}
+          </div>
+          <p v-if="revisitPreview?.reason && !revisitPreviewLoading" class="mt-1 text-xs text-slate-400">
+            {{ revisitPreview.reason }}
+          </p>
         </div>
-        <p v-if="!isAppointmentInsuranceFee" class="mt-1 text-xs text-amber-700">
-          该患者费别为「{{ newAppointment.medicalInsuranceType || '未设置' }}」，不在医保统筹范围，联网也无统筹报销，建议改回全自费
-        </p>
-        <p v-else-if="!newAppointment.medicalInsuranceNo" class="mt-1 text-xs text-amber-700">
-          该患者未登记医保卡号，联网结算将无法记账统筹，请先补全医保卡号
-        </p>
       </div>
     </el-form>
     <template #footer>
@@ -248,10 +286,10 @@ import {
   PATIENT_GENDER_OPTIONS,
   patientGenderSymbol
 } from '@/lib/patientGender';
-import {defaultSettlementType, isInsuranceFeeType} from '@/lib/payType';
+import {defaultSettlementType, feeShortLabel, isInsuranceFeeType} from '@/lib/payType';
 import {REVISIT_SOURCE, revisitNeedsNoSchedule} from '@/lib/revisitPolicy';
 import {isAllDept, settlementTypes, slotLabel} from '@/lib/appointments';
-import PatientSelect from '@/components/his/PatientSelect.vue';
+import AppointmentPatientSelect from '@/components/his/AppointmentPatientSelect.vue';
 
 // 新增挂号弹窗（从 AppointmentsView 拆出）。
 // 号源余量、占号、幂等的事实仍由提交本身把关：这里只是把表单 UI 与校验收拢到一处。
@@ -285,8 +323,6 @@ const newPatientForm = ref({
   medicalInsuranceType: '自费',
   medicalInsuranceNo: '',
 });
-// 录入新患者费别是否为医保类（控制医保卡号输入框显隐）
-const isNewPatientInsurance = computed(() => isInsuranceFeeType(newPatientForm.value.medicalInsuranceType));
 const availableSchedules = ref([]);
 const newAppointment = ref({
   patientId: null,
@@ -310,8 +346,13 @@ const newAppointment = ref({
   medicalInsuranceType: '',
   medicalInsuranceNo: '',
 });
-// 当前挂号所选患者的费别是否在统筹范围（联网块提示用）
+// 当前挂号所选患者的费别是否在统筹范围（联网块提示用；也决定结算方式出不出下拉）
 const isAppointmentInsuranceFee = computed(() => isInsuranceFeeType(newAppointment.value.medicalInsuranceType));
+// 兜底：费别不在统筹范围时本单只能全自费 —— 各联动路径（选人/改费别/切 tab）漏重置的话在这里拦住
+watch(isAppointmentInsuranceFee, (ins) => {
+  if (!ins && Number(newAppointment.value.settlementType) !== 1)
+    newAppointment.value.settlementType = 1;
+});
 // 录入新患者：费别/医保号实时同步到挂号单，并重算默认结算方式
 // （已存在患者走 handlePatientSelect；费别是结算方式的决定因素，录入时联动最自然）
 watch(
@@ -332,7 +373,7 @@ watch(
  */
 const schedulePlaceholder = computed(() => {
   if (!newAppointment.value.deptId || !newAppointment.value.visitDate)
-    return '请先选择科室和日期';
+    return '请先选择预约日期和科室';
   if (availableSchedules.value.length)
     return '请选择号源';
   return '该日期无可挂号源';
@@ -374,7 +415,7 @@ const loadMedicalInsuranceTypes = async () => {
     console.error('加载医保类型字典失败:', error);
   }
 };
-// 患者搜索已抽成 PatientSelect 组件
+// 患者搜索已抽成挂号专用组件 AppointmentPatientSelect（只展示挂号相关信息，比全局搜索窄一档）
 const handlePatientSelect = (patient) => {
   if (!patient)
     return;
@@ -503,9 +544,8 @@ const syncPatientBirthDate = () => {
 /**
  * 校验「录入新患者」表单，不通过则提示并返回 false。
  *
- * 建档口径与患者管理页一致：姓名 / 性别 / 身份证必填，手机号"填了必须合法、空着放行"。
- * 这里比急诊登记严 —— 急诊面向三无患者（身份证可能根本要不到），门诊挂号窗口患者清醒、
- * 能出示证件，是补全主档成本最低的时机（身份证也是 EMPI 去重的匹配键）。
+ * 建档口径与患者管理页一致：姓名 / 性别 / 身份证必填；联系电话必填且须合法（挂号窗口面对清醒患者，
+ * 是补全主档成本最低的时机，身份证与手机号都是 EMPI 去重的匹配键）。
  */
 const validateNewPatientForm = () => {
   if (!newPatientForm.value.patientName) {
@@ -533,7 +573,12 @@ const validateNewPatientForm = () => {
     ElMessage.warning('身份证号校验位不正确，请核对');
     return false;
   }
-  if (newPatientForm.value.phone && !isPhoneLegal(newPatientForm.value.phone)) {
+  // 联系电话改为必填：挂号窗口面对清醒患者，是补全主档（含联系方式）成本最低的时机
+  if (!newPatientForm.value.phone) {
+    ElMessage.warning('请输入联系电话');
+    return false;
+  }
+  if (!isPhoneLegal(newPatientForm.value.phone)) {
     ElMessage.warning('手机号格式不正确：应为 11 位手机号');
     return false;
   }
