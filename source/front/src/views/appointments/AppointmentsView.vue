@@ -345,12 +345,12 @@
                               <span class="ml-auto flex shrink-0 items-center gap-1">
                                 <span v-if="deskStatusChip[Number(r.registStatus)]"
                                       :class="deskStatusChip[Number(r.registStatus)].cls"
-                                      class="rounded px-1 py-0.5 text-[10px] font-medium leading-3 whitespace-nowrap">
+                                      class="rounded px-1 py-0.5 text-[9px] font-medium leading-3 whitespace-nowrap">
                                   {{ deskStatusChip[Number(r.registStatus)].text }}
                                 </span>
                                 <!-- 已收费 = 钱已在账上：改约只放同医生、同费用的号源（后端同样拦），与状态同排一次读完 -->
                                 <span v-if="isRegistPaid(r)"
-                                      class="rounded bg-emerald-50 px-1 py-0.5 text-[10px] font-medium leading-3 text-emerald-700 whitespace-nowrap">
+                                      class="rounded bg-emerald-50 px-1 py-0.5 text-[9px] font-medium leading-3 text-emerald-700 whitespace-nowrap">
                                   已收费
                                 </span>
                               </span>
@@ -1778,18 +1778,20 @@ const REGIST_CUTOFF_MINUTES = 10;
  *   · 格子走 `desk-cell-na`（淡灰底 + `cursor: not-allowed`）
  * 两处各写一遍 `!…srcSchedules.length` 迟早会出现"字写着未排班、格子看着能点"。
  *
- * 2026-10-14 扩展：**已过挂号截止时间**也算不可用（用户口径：时段开始前 10 分钟截止，
- * 12:17 挂 12:10 的号不行）。时间判定收在 `isCellTimePassed`，这里只做「无排班 || 已过」合并。
+ * 2026-10-14 扩展：**已过挂号截止时间不算"格子不可用"**（用户口径：能看不能挂）——
+ * 已过时段的格子照常显示排班/余号/预约按钮，超时拦截收在挂号动作里（addFromCell
+ * 与弹窗候选过滤、提交校验），不置灰 —— 否则"上午班过了、下午班还在"会把整格误伤成灰。
+ * 这里只保留「无排班」判据。
  */
-const isCellUnavailable = (col, rowKey) => !deskCell(col.key, rowKey).srcSchedules.length || isCellTimePassed(col, rowKey);
+const isCellUnavailable = (col, rowKey) => !deskCell(col.key, rowKey).srcSchedules.length;
 /**
  * 该格子是否已过挂号截止（开诊前 {@link #REGIST_CUTOFF_MINUTES} 分钟，用户口径 2026-10-14）：
+ * 只用于**挂号动作时拦截**（addFromCell 入口 + 弹窗候选过滤 + 提交校验），不参与格子置灰。
  *   · 就诊日 < 今天 → 整格不可挂（历史日期）
  *   · 就诊日 = 今天：
- *       日视图格子（rowKey 是 "HH:mm" 半小时档）→ 档开始-10min ≤ 现在即置灰；
- *       周视图格子（rowKey 是医生）→ 该格**所有**班次开始-10min 都已过才置灰，
- *         只要还有一个未截止班次，格子仍可点 —— 弹窗里（AppointmentsAdd）再滤掉已过班次，
- *         避免"上午班已过、下午班还在，整格却灰了"的误伤。
+ *       日视图格子（rowKey 是 "HH:mm" 半小时档）→ 档开始-10min ≤ 现在即不可挂；
+ *       周视图格子（rowKey 是医生）→ 该格**所有**班次开始-10min 都已过才整格拦截，
+ *         只要还有一个未截止班次，放行进弹窗 —— 弹窗里（AppointmentsAdd）再滤掉已过班次。
  */
 const isCellTimePassed = (col, rowKey) => {
   const date = String(col.date || '');
