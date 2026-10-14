@@ -46,6 +46,11 @@ export function scheduleOperation(data) {
     return request.post('/patient/inpatient/operationApply/schedule', data)
 }
 
+// AI 排台建议（贪心+约束，只出建议不落库；采纳走 scheduleOperation）
+export function aiSuggestOperationApply(date) {
+    return request.post('/patient/inpatient/operationApply/aiSuggest', {date})
+}
+
 // 术前核对（已排期→术前核对完成；1/2/3/4 四项必核项缺一不可）
 export function preopCheckOperation(data) {
     return request.post('/patient/inpatient/operationApply/preopCheck', data)
@@ -79,6 +84,11 @@ export function getOperationCheckItems() {
 // 排台总表（某天 × 手术间矩阵；date 为空按今天，格式 yyyy-MM-dd）
 export function getOperationScheduleMatrix(date) {
     return request.get('/patient/inpatient/operationApply/scheduleMatrix', {params: {date}})
+}
+
+// 手术间利用率（区间内各启用手术间台数/急诊/占用/利用率，末行全院合计；from/to 格式 yyyy-MM-dd）
+export function getOperationRoomUtilization(from, to) {
+    return request.get('/patient/inpatient/operationApply/roomUtilization', {params: {from, to}})
 }
 
 // ---------------- 手术间主数据（P134.1，排台总表的"台"） ----------------

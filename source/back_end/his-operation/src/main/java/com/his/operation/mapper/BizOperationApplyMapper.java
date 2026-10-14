@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.operation.dto.OperationApplyQueryPageDTO;
 import com.his.operation.entity.BizOperationApply;
 import com.his.operation.vo.OperationApplyVO;
+import com.his.operation.vo.RoomUtilizationStatVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -187,6 +188,34 @@ public interface BizOperationApplyMapper extends BaseMapper<BizOperationApply> {
                                                 @Param("excludeId") Long excludeId);
 
     /**
+     * 跨手术间人力冲突：同一人（主刀/麻醉/巡回/洗手护士）在同一时段已排在其他手术间。
+     *
+     * <p>同一人同一时段分身两台，比同间冲突更隐蔽——不同手术间各自不撞，
+     * 排台却同时占用了同一个人。主刀/麻醉/巡回/洗手四列全查；
+     * 助手是逗号分隔文本无法精确比，不查。
+     */
+    @Select("""
+            SELECT id, apply_no, operation_room, patient_name, planned_operation_name,
+                   planned_start_time, planned_end_time, operation_status,
+                   surgeon_id, anesthetist_id, circulating_nurse_id, scrub_nurse_id
+            FROM biz_operation_apply
+            WHERE del_flag = 0
+              AND operation_status IN (1, 2, 3)
+              AND planned_start_time IS NOT NULL
+              AND planned_end_time IS NOT NULL
+              AND planned_start_time < #{endTime}
+              AND planned_end_time > #{startTime}
+              AND (#{excludeId} IS NULL OR id <> #{excludeId})
+              AND (surgeon_id = #{employeeId} OR anesthetist_id = #{employeeId}
+                   OR circulating_nurse_id = #{employeeId} OR scrub_nurse_id = #{employeeId})
+            ORDER BY planned_start_time ASC
+            """)
+    List<BizOperationApply> selectPersonConflicts(@Param("employeeId") Long employeeId,
+                                                  @Param("startTime") LocalDateTime startTime,
+                                                  @Param("endTime") LocalDateTime endTime,
+                                                  @Param("excludeId") Long excludeId);
+
+    /**
      * 排台总表：某时段内已排台/核对完成/已完成的手术（矩阵列内的卡片）。
      *
      * <p>按计划开始时间升序 —— 总表就是手术室一天的日程，顺序即时间轴。
@@ -218,6 +247,27 @@ public interface BizOperationApplyMapper extends BaseMapper<BizOperationApply> {
             </script>
             """)
     List<OperationApplyVO> selectUnscheduled(@Param("deptIds") List<Long> deptIds);
+
+    /**
+     * 手术间利用率聚合：区间内按手术间 group by 的台数/急诊数/占用分钟。
+     *
+     * <p>占用分钟 = Σ(计划结束-计划开始)，跨天台不做截断（务实口径）；
+     * 手术间名与主数据对不上的（手工输入值）进不了启用列，由 service 归入汇总差额，不丢。
+     */
+    @Select("""
+            SELECT operation_room AS roomName,
+                   COUNT(*) AS scheduledCount,
+                   COALESCE(SUM(is_emergency = 1), 0) AS emergencyCount,
+                   COALESCE(SUM(TIMESTAMPDIFF(MINUTE, planned_start_time, planned_end_time)), 0) AS occupiedMinutes
+            FROM biz_operation_apply
+            WHERE del_flag = 0
+              AND operation_status IN (1, 2, 3)
+              AND planned_start_time IS NOT NULL AND planned_end_time IS NOT NULL
+              AND planned_start_time >= #{from} AND planned_start_time < #{to}
+            GROUP BY operation_room
+            """)
+    List<RoomUtilizationStatVO> selectRoomUtilization(@Param("from") LocalDateTime from,
+                                                      @Param("to") LocalDateTime to);
 
     /**
      * 已用过的手术间（下拉候选；取不到就返回空列表，由前端允许自由输入）

@@ -20,7 +20,7 @@ VALUES ('102', '消息待办', '100', 2, 2, '/messages', 'messages/MessagesView'
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
                       update_by_id)
-VALUES ('200', '门诊业务', '0', 20, 1, '/opd', NULL, 'opd', 'FirstAidKit', NULL, 0, 0, 1, 1, 'admin', 'admin', 0, NULL,
+VALUES ('200', '门（急）诊管理', '0', 20, 1, '/opd', NULL, 'opd', 'FirstAidKit', NULL, 0, 0, 1, 1, 'admin', 'admin', 0, NULL,
         '1', '1');
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
@@ -46,7 +46,7 @@ VALUES ('204', '就诊总览', '200', 4, 2, '/today-visits', 'today-visits/Today
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
                       update_by_id)
-VALUES ('205', '急诊中心', '200', 5, 2, '/emergency', 'emergency/EmergencyView', 'opd.emergency', 'Phone',
+VALUES ('205', '急诊工作站', '200', 5, 2, '/emergency', 'emergency/EmergencyView', 'opd.emergency', 'Phone',
         'opd:emergency:list', 0, 0, 1, 1, 'admin', 'admin', 0, NULL, '1', '1');
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
@@ -67,7 +67,7 @@ VALUES ('208', '慢病建档与长处方认定', '200', 20, 2, '/chronic-record'
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
                       update_by_id)
-VALUES ('300', '住院业务', '0', 30, 1, '/ipd', NULL, 'ipd', 'Suitcase', NULL, 0, 0, 1, 1, 'admin', 'admin', 0, NULL,
+VALUES ('300', '住院管理', '0', 30, 1, '/ipd', NULL, 'ipd', 'Suitcase', NULL, 0, 0, 1, 1, 'admin', 'admin', 0, NULL,
         '1', '1');
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
@@ -846,12 +846,12 @@ VALUES ('2009', '医生工作站-删除', '203', 3, 3, NULL, NULL, 'opd.doctorWo
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
                       update_by_id)
-VALUES ('2010', '急诊中心-新增', '205', 1, 3, NULL, NULL, 'opd.emergency:add', NULL, 'opd:emergency:add', 0, 1, 0, 1,
+VALUES ('2010', '急诊工作站-新增', '205', 1, 3, NULL, NULL, 'opd.emergency:add', NULL, 'opd:emergency:add', 0, 1, 0, 1,
         'admin', 'admin', 0, NULL, '1', '1');
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
                       update_by_id)
-VALUES ('2011', '急诊中心-修改', '205', 2, 3, NULL, NULL, 'opd.emergency:edit', NULL, 'opd:emergency:edit', 0, 1, 0, 1,
+VALUES ('2011', '急诊工作站-修改', '205', 2, 3, NULL, NULL, 'opd.emergency:edit', NULL, 'opd:emergency:edit', 0, 1, 0, 1,
         'admin', 'admin', 0, NULL, '1', '1');
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
@@ -2041,7 +2041,7 @@ VALUES ('2510', '日志审计-导出', '1108', 1, 3, NULL, NULL, 'system.log.exp
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,
                       update_by_id)
-VALUES ('2601', '急诊中心-交班清零', '205', 3, 3, '', '', 'opd.emergency:handover', '', 'opd:emergency:handover', 0, 0,
+VALUES ('2601', '急诊工作站-交班清零', '205', 3, 3, '', '', 'opd.emergency:handover', '', 'opd:emergency:handover', 0, 0,
         1, 1, 'admin', 'admin', 0, NULL, '1', '1');
 INSERT INTO sys_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission,
                       is_frame, is_cache, is_visible, status, create_by, update_by, del_flag, remark, create_by_id,

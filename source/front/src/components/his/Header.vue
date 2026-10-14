@@ -30,10 +30,6 @@
           <span class="text-[18px] font-semibold text-white tracking-wide">长沙市麓康医院</span>
         </div>
       </router-link>
-      <!--
-        菜单伸缩按钮：与 Sidebar 底部箭头共用一个开关（lib/sidebarState）。
-        展开时侧栏撑到 256px 把主内容整体往右推，收起时退成 64px 图标条。
-      -->
       <button
           :title="sidebarCollapsed ? '展开菜单' : '收起菜单'"
           class="shrink-0 rounded-lg p-1.5 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
@@ -118,6 +114,17 @@
           <Bell class="h-5 w-5"/>
         </button>
       </el-badge>
+
+      <!-- 自助打卡胶囊按钮：未签到=绿色，已签到未签退=橙色，已签退=灰色 -->
+      <div v-if="attendance.visible"
+           class="attendance-pill"
+           :class="`state-${attendance.state}`"
+           :title="attendance.tooltip"
+           @click="handleAttendanceClick">
+        <Clock class="h-3.5 w-3.5"/>
+        <span>{{ attendance.label }}</span>
+        <span v-if="attendance.meta" class="attendance-meta">{{ attendance.meta }}</span>
+      </div>
 
       <div class="h-6 w-px bg-white/30"/>
 
@@ -417,6 +424,7 @@ import {
   ArrowRight,
   Bell,
   Calendar,
+  Clock,
   Close,
   Expand,
   Fold,
@@ -439,6 +447,7 @@ import {
   switchPost
 } from '@/api/system'
 import {openMessageStream} from '@/api/messageStream'
+import {getMyToday, myCheckIn, myCheckOut} from '@/api/staffAttendance'
 import {encryptPassword} from '@/lib/password'
 import {loadDictDataMap} from '@/lib/dict-cache'
 import {findMenuByPath, loadMenuTree} from '@/lib/menu-cache'
@@ -558,6 +567,101 @@ const currentWeekday = ref('')
 const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 let clockTimer = null
 let messagePollTimer = null
+
+// ========== 自助打卡胶囊按钮（顶栏右侧）==========
+// 状态机：none(未签到) → checkedIn(已签到未签退) → checkedOut(已签退)
+// employeeId 由后端从 token 取，前端不传；查不到（患者账号等）就不显示按钮。
+const attendance = reactive({
+  visible: false,
+  loading: false,
+  state: 'none',
+  label: '签到',
+  meta: '',
+  tooltip: '点击签到',
+})
+
+const fmtClockTime = (t) => t ? String(t).slice(11, 16) : ''
+const fmtMinutes = (m) => {
+  if (!m) return ''
+  const h = Math.floor(m / 60)
+  const mm = m % 60
+  return h > 0 ? `${h}h${mm > 0 ? mm + 'm' : ''}` : `${mm}m`
+}
+
+const loadMyAttendance = async () => {
+  try {
+    const res = await getMyToday()
+    if (res.code !== 200) return
+    const row = res.data
+    attendance.visible = true
+    if (!row) {
+      attendance.state = 'none'
+      attendance.label = '签到'
+      attendance.meta = ''
+      attendance.tooltip = '点击签到'
+      return
+    }
+    if (row.checkIn && !row.checkOut) {
+      attendance.state = 'checkedIn'
+      attendance.label = '签退'
+      attendance.meta = fmtClockTime(row.checkIn)
+      attendance.tooltip = `已签到 ${fmtClockTime(row.checkIn)}（${row.attendanceStatusText || '正常'}），点击签退`
+    } else if (row.checkOut) {
+      attendance.state = 'checkedOut'
+      attendance.label = '已签退'
+      attendance.meta = fmtClockTime(row.checkOut)
+      attendance.tooltip = `签退 ${fmtClockTime(row.checkOut)}（${row.attendanceStatusText || '正常'}）· 点击开始新一段出勤`
+    } else {
+      attendance.state = 'none'
+      attendance.label = '签到'
+      attendance.meta = ''
+      attendance.tooltip = '点击签到'
+    }
+  } catch (e) {
+    // 打卡按钮是辅助功能，挂了不该顶栏崩掉
+  }
+}
+
+const handleAttendanceClick = async () => {
+  if (attendance.loading) return
+  // 已签退状态：再点 = 开始今天第二段出勤（下午加班等场景），先确认
+  if (attendance.state === 'checkedOut') {
+    try {
+      await ElMessageBox.confirm(
+        '今天已签退，是否开始新一段出勤（加班/第二班）？',
+        '继续打卡',
+        { confirmButtonText: '开始签到', cancelButtonText: '取消', type: 'info' }
+      )
+    } catch {
+      return
+    }
+  }
+  // 已签到未签退：点按钮 = 签退，二次确认防误触
+  if (attendance.state === 'checkedIn') {
+    try {
+      await ElMessageBox.confirm(
+        '确认现在签退吗？',
+        '签退确认',
+        { confirmButtonText: '确认签退', cancelButtonText: '取消', type: 'warning' }
+      )
+    } catch {
+      return
+    }
+  }
+  attendance.loading = true
+  try {
+    const api = attendance.state === 'checkedIn' ? myCheckOut : myCheckIn
+    const res = await api()
+    if (res.code === 200) {
+      ElMessage.success(res.data?.message || (attendance.state === 'checkedIn' ? '已签退' : '已签到'))
+      await loadMyAttendance()
+    }
+  } catch (e) {
+    // 全局拦截器统一弹错
+  } finally {
+    attendance.loading = false
+  }
+}
 // SSE 关闭函数（openMessageStream 返回）；null = 未连接或已降级轮询
 let closeMessageStream = null
 
@@ -782,6 +886,7 @@ onMounted(() => {
   updateClock()
   clockTimer = setInterval(updateClock, 1000)
   connectMessageStream()
+  loadMyAttendance()
 })
 
 onUnmounted(() => {
@@ -1336,5 +1441,45 @@ const handleLogout = async () => {
 .cp-close:hover {
   background: rgba(255, 255, 255, 0.32);
   color: #fff;
+}
+
+/* ---------- 自助打卡胶囊按钮 ----------
+   三态：未签到=绿色（亮、吸引点），已签到未签退=橙色（提醒该走了），
+   已签退=半透明白（完成态，不可点）。胶囊形状与顶栏深色底形成对比。 */
+.attendance-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  user-select: none;
+  transition: filter 0.15s ease, background 0.15s ease;
+  box-shadow: 0 2px 6px rgba(6, 45, 84, 0.25);
+}
+.attendance-pill:hover {
+  filter: brightness(1.08);
+}
+.attendance-pill.state-none {
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+}
+.attendance-pill.state-checkedIn {
+  background: linear-gradient(135deg, #ea580c, #f97316);
+}
+.attendance-pill.state-checkedOut {
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: none;
+}
+.attendance-pill.state-checkedOut:hover {
+  filter: brightness(1.15);
+}
+.attendance-meta {
+  font-weight: 400;
+  opacity: 0.92;
+  font-variant-numeric: tabular-nums;
+  margin-left: 2px;
 }
 </style>

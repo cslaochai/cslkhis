@@ -275,9 +275,14 @@ export function getStopImpact(scheduleId) {
     return request.get('/schedule/stopImpact', {params: {scheduleId}})
 }
 
-// 停诊批量退号
-export function batchCancelRegist(registIds, reason) {
-    return request.post('/schedule/batchCancel', {registIds, reason})
+// 停诊批量退号（scheduleId 可空：空则只退号、不落排班变更日志）
+export function batchCancelRegist(scheduleId, registIds, reason) {
+    return request.post('/schedule/batchCancel', {scheduleId, registIds, reason})
+}
+
+// 门诊排班变更留痕分页（审计：谁在何时对哪个班次做了什么、为什么）
+export function getClinicSourceLogPage(data) {
+    return request.post('/schedule/logPage', data)
 }
 
 // 加号（号源总数/剩余同步增加并留痕）

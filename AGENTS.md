@@ -1315,3 +1315,21 @@
   ```
 - **注释里不要写表名**（§12），本条的落库事实由 `docs/sql/` 与库内 `COMMENT` 表达，Java 侧只留「为什么主键不叫 id 就不能挂基类」这一句 WHY。
 
+
+## 本机验证环境与重启约定（2026-10-14 用户确认）
+
+- **后端 8080 = `run_8080.cmd` 托管的独立 Java 实例**（classpath 取自原 IDEA 调试进程的 `<各模块 target/classes>`，`com.his.HisApplication --server.port=8080`，进程日志 `run8080.log`，脚本与日志在 agent workspace 根）；**前端 3000 = vite dev**。
+- **验证新代码可以直接停旧进程、重启 8080 / 3000**（用户已确认无碍），不必另开验证端口；改前端文件 vite 热更新即生效。
+- **重启后端推荐直接复用运行中进程的 classpath**（`Get-CimInstance Win32_Process` 拿 `-classpath`），不要依赖 `his-web/target/his-backend.jar`：该 jar 常被其他工具（如 Qoder 在 8099 起的 `java -jar` 验证实例）锁住，导致 `mvn clean/repackage` 的 rename 失败。
+- **8099 端口是其他工具（Qoder）的 jar 验证实例，非本项目常态服务，勿停勿动**；本项目服务只认 8080（后端）+ 3000（前端）。
+- 数据库连接（dev）：`192.168.88.132:3306/hn_biz_his`，`xz_feng / Feng123456!`（pymysql 只读/执行均可）。
+
+## 手术排班域口径（2026-10-14 重构：护士跟台 + 人力冲突）
+
+- **排台接口**：`POST /patient/inpatient/operationApply/schedule`（Controller 类级 `hasAnyAuthority('ipd:anesthesia:list','ipd:surgery:list','ipd:operationCount:list')`，schedule 方法需 `hasAuthority('ipd:surgery:edit')`；有该按钮权限的岗位：系统管理员 + 医生角色，护士/护士长无）。body=OperationScheduleDTO：`applyId / operationRoom / plannedStartTime / plannedEndTime`（yyyy-MM-dd HH:mm:ss）/ `surgeonId / assistantName / anesthetistId / circulatingNurseId / scrubNurseId / scheduleRemark`，后四者可空。
+- **排台两道后端校验**：① 同手术间时段重叠（`selectRoomConflicts`，端点相接不算冲突）；② **同一主刀/麻醉医师跨手术间时段分身**（`selectPersonConflicts`：surgeon_id=#{employeeId} OR anesthetist_id=#{employeeId}，status IN (1,2,3)，excludeId 排除本台）。拒绝文案点名冲突台：`主刀医师 X 在「N号手术间」HH:mm~HH:mm 已排 YYY，同一时段不能分身两台`。
+- **护士跟台字段**：`biz_operation_apply.circulating_nurse_id/name`、`scrub_nurse_id/name` 四列（SQL 263 幂等加列）；排台落库时服务端按 employeeId 解析姓名（`employeeNameOf`），不信任前端传名。排台总表矩阵卡片显示 `巡回：xx · 洗手：yy`（未填显示 —）；排台弹窗= `views/surgery/SurgeryRoomAssign.vue`（列表「排台」与矩阵卡片「改期」共用，巡回/洗手护士 el-select 复用 employees 下拉）。
+- **排台总表矩阵**：`GET /patient/inpatient/operationApply/scheduleMatrix?date=yyyy-MM-dd`（date 空=今天）；按**数据范围收口**（`scopedDeptIds(null)`）：全院角色物化成 `sys_department` 全集做 IN，**孤儿 dept_id 的手术单全院角色也看不到**（夹具 P134 单曾挂 dept_id=2 而真实科室树无此 id，矩阵 0 台；已把夹具单改挂真实普通外科 19580013）。这是既有口径，勿为夹具放开。
+- **手术域权限/数据范围验证账号**：admin/123456（全权限，排台实测用它；图形验证码需 reload 重读，输错 401）；moyuanhang（医生，有 ipd:surgery:edit 但数据范围只覆盖其岗位科室，排夹具单会 500「数据所属科室不在当前岗位的数据范围内」）；caoyumei（护士长，无手术权限 403）。
+- **手术间利用率**：`GET /patient/inpatient/operationApply/roomUtilization?from=yyyy-MM-dd&to=yyyy-MM-dd`（空=今天；返回启用手术间全列 + 手工名兜底行 + 末行「全院合计」）。口径（务实，注释声明）：占用分钟 = Σ(计划结束-开始)（跨天台不截断）；可用分钟 = 单间日运营窗口 600L（08:00~18:00 常量）× 区间天数；利用率 = 占用/可用保留 1 位百分比。聚合 SQL 在 `BizOperationApplyMapper.selectRoomUtilization`（status IN (1,2,3)，`planned_start_time >= from AND < to+1天`；**纯 @Select 文本块里比较符直接写 `<`，别用 XML 的 `&lt;`**——曾因此 500 语法错误）。前端看板= `views/surgery/SurgeryView.vue` 第三个页签「利用率」（daterange + 汇总卡 + 明细表 + 利用率进度条），API 见 `src/api/inpatientOperation.js getOperationRoomUtilization`。浏览器改 daterange 用「键入日期 + Enter」比点日历面板稳（两次实测面板点击不生效）。
+- **AI 智能排台**：`POST /patient/inpatient/operationApply/aiSuggest`（body `AiSuggestQueryDTO {date, roomIds 可空}`，类级 `hasAnyAuthority('ipd:anesthesia:list','ipd:surgery:list','ipd:operationCount:list')`）→ `AiSuggestResultVO {date, capacityMinutesPerRoom, suggestions[], blocked[]}`。**只出建议不落库，采纳走既有 `POST .../operationApply/schedule`（需 `ipd:surgery:edit`）**。算法=贪心+约束（`OperationApplyServiceImpl.aiSuggest`）：待排期单（`selectUnscheduled`）逐单遍历启用手术间，`availableSlots` 找营业窗口 08:00~18:00 内 ≥duration 的全部空档**逐个试人力**（已定主刀/麻醉/巡回/洗手 `personFree` 不分身，全局取最早可行档）；急诊优先、按申请先后；时长按级别预估 1级60/2级90/3级120/4级180（null=90）。**三个实测坑**：① `AiSuggestionVO` 的 `applyId/surgeonId/anesthetistId/circulatingNurseId/scrubNurseId` 必须 `@JsonSerialize(ToStringSerializer)`——Long 直接出 JSON 在 JS 侧丢精度，采纳时 schedule 查单报「手术申请单不存在」（曾因此闭环失败）；② 每间房只取最早空档撞人力就弃房是错的（10-15 周远三台时 15:00 后明明有档却 blocked），必须 `availableSlots` 返回全部空档逐个试；③ 未定主刀的单不能采纳（schedule `surgeonId` 有 `@NotNull`「主刀医师不能为空（排台的核心是定人）」），前端对 `!row.surgeonId` 的行弹 warning 不调接口，`acceptAll` 自动跳过并提示条数。前端= `views/surgery/SurgeryAiSuggest.vue`（弹窗：日期默认跟随总表 `initialDate`、重新生成/全部采纳、建议表格每条采纳、受阻子表），入口= `SurgeryView.vue` 排台总表顶部「AI 排台」按钮（v-perm ipd:surgery:edit）。演示夹具：SS202610080021/SS202610080025 已定主刀周远(9301)/麻醉林小舟(9302) 用于采纳闭环验收；10-14 已采纳 SS025 → 2号间 11:00~12:30（保留在库）。

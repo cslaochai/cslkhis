@@ -481,6 +481,55 @@
                          @current-change="handleShiftPageChange" @size-change="handleShiftSizeChange"/>
         </div>
       </el-tab-pane>
+
+      <!-- 变更记录：门诊排班审计（谁在何时对哪个班次做了什么、为什么），停诊/加号/退号/段编辑全落账 -->
+      <el-tab-pane label="变更记录" name="logs">
+        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div class="filter-row mb-3 flex flex-wrap items-center gap-3">
+            <span class="text-base font-medium text-slate-700">科室</span>
+            <el-select v-model="logSearchForm.deptId" :fit-input-width="false" class="!w-48" clearable
+                       data-testid="log-dept" filterable placeholder="全部科室" popper-class="schedule-filter-popper">
+              <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id"/>
+            </el-select>
+            <span class="text-base font-medium text-slate-700">排班日期</span>
+            <el-date-picker v-model="logDateRange" data-testid="log-date-range" :value-format="'yyyy-MM-dd'"
+                            end-placeholder="结束日期" range-separator="~" start-placeholder="开始日期"
+                            type="daterange" class="!w-64"/>
+            <span class="text-base font-medium text-slate-700">动作</span>
+            <el-select v-model="logSearchForm.actionType" :fit-input-width="false" class="!w-32" clearable
+                       data-testid="log-action" placeholder="全部动作" popper-class="schedule-filter-popper">
+              <el-option v-for="o in LOG_ACTION_TYPES" :key="o.value" :label="o.label" :value="o.value"/>
+            </el-select>
+            <el-button :icon="Search" data-testid="log-search" type="primary" @click="handleLogSearch">查询</el-button>
+            <el-button @click="handleLogReset">重置</el-button>
+          </div>
+          <el-table v-loading="logLoading" :data="logList" border data-testid="log-table" size="default">
+            <el-table-column label="排班日期" min-width="110">
+              <template #default="{row}">{{ row.scheduleDate || '—' }}</template>
+            </el-table-column>
+            <el-table-column label="科室" min-width="130" prop="deptName"/>
+            <el-table-column label="医生" min-width="100" prop="doctorName"/>
+            <el-table-column label="动作" min-width="90">
+              <template #default="{row}">
+                <el-tag :type="logActionTagType(row.actionType)" size="small">{{ row.actionTypeText }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="数量" min-width="70" align="right">
+              <template #default="{row}">{{ row.amount ?? '—' }}</template>
+            </el-table-column>
+            <el-table-column label="原因" min-width="200" prop="reason" show-overflow-tooltip/>
+            <el-table-column label="操作人" min-width="90" prop="createBy"/>
+            <el-table-column label="发生时间" min-width="160" prop="occurTime"/>
+          </el-table>
+          <div class="mt-3 flex items-center justify-between">
+            <span class="text-xs text-slate-400">共 {{ logPagination.total }} 条（仅记录门诊排班维护动作，历史数据无留痕属存量事实）</span>
+            <el-pagination v-model:current-page="logPagination.pageNum" v-model:page-size="logPagination.pageSize"
+                           :page-sizes="PAGE_SIZES" :total="logPagination.total"
+                           background layout="total, sizes, prev, pager, next, jumper"
+                           @current-change="loadLogs" @size-change="handleLogSizeChange"/>
+          </div>
+        </div>
+      </el-tab-pane>
     </el-tabs>
 
     <!-- 班次编辑弹窗：展示完整详情，仅名称可改（时间/科室/类型/状态只读） -->
@@ -641,6 +690,7 @@ import {
   deleteSchedule,
   deleteScheduleTemplate,
   generateScheduleFromTemplate,
+  getClinicSourceLogPage,
   getOnDutyStaff,
   getScheduleList,
   getScheduleTemplateListPage,
@@ -872,6 +922,62 @@ const handleShiftEdit = (row) => {
 const shiftAddVisible = ref(false);
 const handleShiftAdd = () => {
   shiftAddVisible.value = true;
+};
+// ---------- 变更记录（门诊排班审计）：停诊/启用/加号/批量退号/段级编辑/新增/修改/删除/复刻全落账 ----------
+const LOG_ACTION_TYPES = [
+  {value: 1, label: '新增排班'},
+  {value: 2, label: '修改排班'},
+  {value: 3, label: '删除排班'},
+  {value: 4, label: '停诊'},
+  {value: 5, label: '启用'},
+  {value: 6, label: '加号'},
+  {value: 7, label: '批量退号'},
+  {value: 8, label: '段级编辑'},
+  {value: 9, label: '复刻'},
+];
+const logActionTagType = (actionType) => {
+  if (actionType === 4) return 'danger';    // 停诊
+  if (actionType === 3 || actionType === 7) return 'warning'; // 删除/批量退号
+  if (actionType === 5 || actionType === 1) return 'success'; // 启用/新增
+  return 'info';
+};
+const logDateRange = ref([]);
+const logSearchForm = ref({deptId: null, actionType: null});
+const logPagination = ref({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0});
+const logList = ref([]);
+const logLoading = ref(false);
+const loadLogs = async () => {
+  logLoading.value = true;
+  try {
+    const res = await getClinicSourceLogPage({
+      pageNum: logPagination.value.pageNum,
+      pageSize: logPagination.value.pageSize,
+      deptId: logSearchForm.value.deptId || undefined,
+      startDate: logDateRange.value?.[0] || undefined,
+      endDate: logDateRange.value?.[1] || undefined,
+      actionType: logSearchForm.value.actionType ?? undefined,
+    });
+    logList.value = res.data?.records || [];
+    logPagination.value.total = res.data?.total || 0;
+  } catch (error) {
+    console.error('加载门诊排班变更记录失败:', error);
+  } finally {
+    logLoading.value = false;
+  }
+};
+const handleLogSearch = () => {
+  logPagination.value.pageNum = 1;
+  loadLogs();
+};
+const handleLogReset = () => {
+  logSearchForm.value = {deptId: null, actionType: null};
+  logDateRange.value = [];
+  handleLogSearch();
+};
+const handleLogSizeChange = (val) => {
+  logPagination.value.pageSize = val;
+  logPagination.value.pageNum = 1;
+  loadLogs();
 };
 // 本地日期格式化在 lib/scheduleDate.js（新增/修改排班组件同一份，不在此重复定义）
 const statusMap = {0: '停用', 1: '正常'};
@@ -1428,7 +1534,7 @@ const handleBatchCancel = async () => {
     return;
   batchCancelLoading.value = true;
   try {
-    const res = await batchCancelRegist(ids, `班次停诊（${stopImpactSchedule.value?.doctorName || ''} ${stopImpactSchedule.value?.scheduleDate || ''}）批量退号`);
+    const res = await batchCancelRegist(stopImpactSchedule.value?.id, ids, `班次停诊（${stopImpactSchedule.value?.doctorName || ''} ${stopImpactSchedule.value?.scheduleDate || ''}）批量退号`);
     ElMessage.success(res.message || '批量退号完成');
     // 退完直接停诊
     await updateScheduleStatus(stopImpactSchedule.value.id, 0);
@@ -1505,6 +1611,9 @@ watch(activeView, (val) => {
   if (val === 'template') {
     calcTplTableHeight();
     loadTemplates();
+  }
+  if (val === 'logs') {
+    loadLogs();
   }
   nextTick(calcPanelTableHeight);
 });

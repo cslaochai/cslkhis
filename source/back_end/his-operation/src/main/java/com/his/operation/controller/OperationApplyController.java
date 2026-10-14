@@ -6,6 +6,8 @@ import com.his.operation.dto.*;
 import com.his.operation.service.OperationApplyService;
 import com.his.operation.vo.OperationApplyVO;
 import com.his.operation.vo.OperationScheduleMatrixVO;
+import com.his.operation.vo.AiSuggestResultVO;
+import com.his.operation.vo.RoomUtilizationVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -95,6 +97,20 @@ public class OperationApplyController {
     public Result<OperationScheduleMatrixVO> scheduleMatrix(
             @RequestParam(required = false) String date) {
         return Result.success(operationApplyService.scheduleMatrix(date));
+    }
+
+    @Operation(summary = "手术间利用率（区间内各启用手术间台数/急诊/占用/利用率，末行全院合计；from/to 为空按今天）")
+    @GetMapping("/roomUtilization")
+    public Result<List<RoomUtilizationVO>> roomUtilization(
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        return Result.success(operationApplyService.roomUtilization(from, to));
+    }
+
+    @Operation(summary = "AI 排台建议（贪心+约束，只出建议不落库；date 空按今天，roomIds 空=全部启用手术间）")
+    @PostMapping("/aiSuggest")
+    public Result<AiSuggestResultVO> aiSuggest(@RequestBody AiSuggestQueryDTO dto) {
+        return Result.success(operationApplyService.aiSuggest(dto));
     }
 
     @PreAuthorize("isAuthenticated()")

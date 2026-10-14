@@ -16,6 +16,7 @@ import com.his.system.mapper.BizClinicSourceMapper;
 import com.his.system.mapper.BizScheduleMapper;
 import com.his.system.service.BizClinicSourceService;
 import com.his.system.service.BizClinicSourceSlotService;
+import com.his.system.service.ClinicSourceLogService;
 import com.his.system.vo.BizClinicSourceBatchResultVO;
 import com.his.system.vo.OnDutyStaffVO;
 import com.his.system.vo.ScheduleDetailVO;
@@ -79,6 +80,8 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
     private final BizScheduleMapper bizScheduleMapper;
 
     private final AppointApi appointApi;
+
+    private final ClinicSourceLogService clinicSourceLogService;
 
 
 
@@ -307,6 +310,9 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         boolean ok = clinicSourceMapper.physicalDeleteById(id) > 0;
         if (ok) {
             releaseCoreSchedule(existing.getStaffScheduleId());
+            clinicSourceLogService.record(id, ClinicSourceChangeTypeEnum.DELETE, null,
+                    existing.getDoctorName() + " " + existing.getScheduleDate() + " "
+                    + existing.getStartTime() + "-" + existing.getEndTime(), existing);
         }
         return ok;
     }
@@ -418,6 +424,11 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
             if (!success) {
                 throw new BusinessException(upsertDTO.getId() == null ? "新增失败" : "修改失败");
             }
+            // 留痕：单条新增/修改在此落账；批量与复刻在各自循环里逐条落账（快照随行，删除/改期后仍可读）
+            clinicSourceLogService.record(schedule.getId(),
+                    upsertDTO.getId() == null ? ClinicSourceChangeTypeEnum.CREATE : ClinicSourceChangeTypeEnum.UPDATE,
+                    null, schedule.getDoctorName() + " " + schedule.getScheduleDate() + " "
+                    + schedule.getStartTime() + "-" + schedule.getEndTime(), schedule);
         } catch (DuplicateKeyException e) {
             throw new BusinessException("该医生在此时间段已有排班，时间冲突");
         }
@@ -444,6 +455,9 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
                     String reason = e instanceof DuplicateKeyException ? "该医生在此时间段已有排班，时间冲突" : e.getMessage();
                     throw new BusinessException(item.getDoctorName() + " " + date + "：" + reason);
                 }
+                clinicSourceLogService.record(schedule.getId(), ClinicSourceChangeTypeEnum.CREATE, null,
+                        "批量新增：" + item.getDoctorName() + " " + date + " "
+                        + schedule.getStartTime() + "-" + schedule.getEndTime(), schedule);
                 created++;
             }
         }
@@ -530,6 +544,9 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
                 String reason = e instanceof DuplicateKeyException ? "该医生在此时间段已有排班，时间冲突" : e.getMessage();
                 throw new BusinessException(s.getDoctorName() + " " + targetDate + "：" + reason);
             }
+            clinicSourceLogService.record(copy.getId(), ClinicSourceChangeTypeEnum.REPLICATE, null,
+                    "复刻：" + copy.getDoctorName() + " " + targetDate + " "
+                    + copy.getStartTime() + "-" + copy.getEndTime(), copy);
             created++;
         }
         BizClinicSourceBatchResultVO vo = new BizClinicSourceBatchResultVO();
@@ -711,6 +728,11 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         if (ok) {
             // 段状态随主表联动：停诊 → 段全停（扣减 SQL 带 status=1，停用段不可再挂）；启用 → 段恢复
             bizScheduleSlotService.syncStatusToSlots(scheduleId, status);
+            boolean stopping = ScheduleStatusEnum.stopped(status);
+            clinicSourceLogService.record(scheduleId,
+                    stopping ? ClinicSourceChangeTypeEnum.STOP : ClinicSourceChangeTypeEnum.ENABLE,
+                    null, old.getDoctorName() + " " + old.getScheduleDate()
+                    + "（" + (stopping ? "停诊" : "启用") + "）", old);
         }
         return ok;
     }
@@ -724,7 +746,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
     }
 
     @Override
-    public String batchCancel(List<Long> registIds, String reason) {
+    public String batchCancel(Long scheduleId, List<Long> registIds, String reason) {
         String cancelReason = TextUtil.hasText(reason) ? reason : "班次停诊，批量退号";
         int ok = 0;
         for (Long id : registIds) {
@@ -735,6 +757,9 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
             } catch (Exception ignored) {
                 // 单条失败（如已支付需先退费）不中断整批，结论里如实计数
             }
+        }
+        if (ok > 0 && scheduleId != null) {
+            clinicSourceLogService.record(scheduleId, ClinicSourceChangeTypeEnum.BATCH_CANCEL, ok, cancelReason, null);
         }
         return "批量退号完成：成功 " + ok + " 条 / 共 " + registIds.size() + " 条"
                 + (ok < registIds.size()
@@ -968,6 +993,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         if (ok) {
             // 加号摊到段（余数给前面的段），Σ段写回主表——号源事实在段上，主表只是汇总
             bizScheduleSlotService.spreadAddSource(scheduleId, addNum);
+            clinicSourceLogService.record(scheduleId, ClinicSourceChangeTypeEnum.ADD_SOURCE, addNum, reason, schedule);
         }
         return ok;
     }

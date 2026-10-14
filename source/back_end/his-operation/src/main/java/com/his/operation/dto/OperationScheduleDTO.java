@@ -57,6 +57,16 @@ public class OperationScheduleDTO implements Serializable {
     private Long anesthetistId;
 
     /**
+     * 巡回护士ID（员工ID，可空 = 未指定）
+     */
+    private Long circulatingNurseId;
+
+    /**
+     * 洗手护士ID（员工ID，可空 = 未指定）
+     */
+    private Long scrubNurseId;
+
+    /**
      * 排台备注
      */
     private String scheduleRemark;

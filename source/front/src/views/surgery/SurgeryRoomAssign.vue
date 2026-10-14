@@ -78,13 +78,46 @@
             <el-option v-for="e in employees" :key="e.id" :label="e.empName || e.id" :value="String(e.id)"/>
           </el-select>
         </el-form-item>
+        <el-form-item label="巡回护士">
+          <el-select
+              v-model="scheduleForm.circulatingNurseId"
+              class="!w-full"
+              clearable
+              filterable
+              placeholder="可空（未指定）"
+          >
+            <el-option
+                v-for="e in employees"
+                :key="e.id"
+                :label="`${e.empName || e.id}${e.deptName ? '（' + e.deptName + '）' : ''}`"
+                :value="String(e.id)"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="洗手护士">
+          <el-select
+              v-model="scheduleForm.scrubNurseId"
+              class="!w-full"
+              clearable
+              filterable
+              placeholder="可空（未指定）"
+          >
+            <el-option
+                v-for="e in employees"
+                :key="e.id"
+                :label="`${e.empName || e.id}${e.deptName ? '（' + e.deptName + '）' : ''}`"
+                :value="String(e.id)"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="排台备注">
           <el-input v-model="scheduleForm.scheduleRemark" :rows="2" placeholder="可空" type="textarea"/>
         </el-form-item>
       </el-form>
       <el-alert :closable="false" show-icon type="info">
-        同一手术间、时间区间重叠的在途手术会被后端拒绝（并发手术台会给不出资源）。
-        端点相接不算冲突：上一台 10:00 结束、下一台 10:00 开始是允许的。
+        同一手术间、时间区间重叠的在途手术会被后端拒绝；同一主刀/麻醉医师在同一时段
+        已排其他手术间也会被拒绝（不能分身两台）。端点相接不算冲突：上一台 10:00 结束、
+        下一台 10:00 开始是允许的。
       </el-alert>
     </div>
     <template #footer>
@@ -127,6 +160,8 @@ const scheduleForm = reactive({
   surgeonId: '',
   assistantName: '',
   anesthetistId: '',
+  circulatingNurseId: '',
+  scrubNurseId: '',
   scheduleRemark: '',
 });
 
@@ -139,6 +174,8 @@ watch(visible, (open) => {
   scheduleForm.surgeonId = row.surgeonId || '';
   scheduleForm.assistantName = row.assistantName || '';
   scheduleForm.anesthetistId = '';
+  scheduleForm.circulatingNurseId = row.circulatingNurseId || '';
+  scheduleForm.scrubNurseId = row.scrubNurseId || '';
   scheduleForm.scheduleRemark = '';
 });
 
@@ -167,6 +204,8 @@ const submitSchedule = async () => {
       surgeonId: scheduleForm.surgeonId,
       assistantName: scheduleForm.assistantName.trim() || undefined,
       anesthetistId: scheduleForm.anesthetistId || undefined,
+      circulatingNurseId: scheduleForm.circulatingNurseId || undefined,
+      scrubNurseId: scheduleForm.scrubNurseId || undefined,
       scheduleRemark: scheduleForm.scheduleRemark.trim() || undefined,
     });
     ElMessage.success('已排台');

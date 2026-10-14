@@ -21,11 +21,25 @@ import java.util.List;
 @RestController
 @RequestMapping("/patient/inpatient")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyAuthority('ipd:inpatient:list', 'ipd:consultation:list', 'ipd:surgery:list', 'ipd:transfer:list', 'medtech:transfusion:list', 'pharmacy:wardDispense:list')")
 public class InpatientController {
+
+    /**
+     * 住院参照数据的读权限持有者：入出院/会诊/手术/转科/输血/摆药 六类页面各自的 list 码任一即可。
+     */
+    private static final String READERS = "'ipd:inpatient:list', 'ipd:consultation:list', 'ipd:surgery:list', "
+            + "'ipd:transfer:list', 'medtech:transfusion:list', 'pharmacy:wardDispense:list'";
+
+    private static final String READ = "hasAnyAuthority(" + READERS + ")";
+
+    /**
+     * 在院患者列表额外放开给住院结算页：财务岗只有 ipd:settlement:list，
+     * 让它为了列出于院患者去借入出院管理的码，等于把医护岗的入口一并授出去。
+     */
+    private static final String READ_OR_SETTLEMENT = "hasAnyAuthority(" + READERS + ", 'ipd:settlement:list')";
 
     private final InpatientService inpatientService;
 
+    @PreAuthorize(READ_OR_SETTLEMENT)
     @Operation(summary = "住院列表分页（在院/已出院）")
     @GetMapping("/listPage")
     public Result<IPage<InpatientVO>> listPage(@Valid InpatientQueryPageDTO query) {
@@ -39,24 +53,28 @@ public class InpatientController {
         return Result.success(inpatientService.listMyDeptPage(query));
     }
 
+    @PreAuthorize(READ)
     @Operation(summary = "住院详情（入院信息+病案首页+诊断明细+手术明细）")
     @GetMapping("/detail")
     public Result<InpatientDetailVO> detail(@RequestParam Long admissionId) {
         return Result.success(inpatientService.detail(admissionId));
     }
 
+    @PreAuthorize(READ)
     @Operation(summary = "住院统计卡片")
     @GetMapping("/stats")
     public Result<InpatientStatsVO> stats() {
         return Result.success(inpatientService.stats());
     }
 
+    @PreAuthorize(READ)
     @Operation(summary = "病区列表（床位数实时取自床位表）")
     @GetMapping("/ward/list")
     public Result<List<WardVO>> listWards() {
         return Result.success(inpatientService.listWards());
     }
 
+    @PreAuthorize(READ)
     @Operation(summary = "床位列表（床位图/选床）")
     @GetMapping("/bed/list")
     public Result<List<BedVO>> listBeds(@RequestParam(required = false) Long wardId,
@@ -67,8 +85,8 @@ public class InpatientController {
 
     /**
      * 病区床位图：一床一卡（含空床），科室边界由服务端按登录态收口。
-     * <p>方法级注解是必需的 —— 类上那串 authority 里没有 {@code ipd:nurse:list}，
-     * 护士站调不到；但也不能漏写，漏了就继承类级注解，医生能看、护士看不到。
+     * <p>方法级注解必须写 —— 本类没有类级兜底，漏一行就退化成「任何登录用户都能拉全院床位图」，
+     * 而读侧的科室收口只在这条链路上做，接口本身不再有任何闸门。
      */
     @Operation(summary = "病区床位图（住院患者总览，按登录岗位科室收口）")
     @GetMapping("/bedMap")

@@ -11,6 +11,7 @@ import com.his.system.entity.BizClinicSourceSlotTemplate;
 import com.his.system.mapper.BizClinicSourceMapper;
 import com.his.system.mapper.BizClinicSourceSlotMapper;
 import com.his.system.service.BizClinicSourceSlotService;
+import com.his.system.service.ClinicSourceLogService;
 import com.his.system.vo.ScheduleSlotVO;
 import com.his.common.enums.EnableStatusEnum;
 import com.his.common.enums.ScheduleStatusEnum;
@@ -38,6 +39,8 @@ public class BizClinicSourceSlotServiceImpl extends ServiceImpl<BizClinicSourceS
     private final BizClinicSourceMapper bizScheduleMapper;
 
     private final DeptScopeService deptScopeService;
+
+    private final ClinicSourceLogService clinicSourceLogService;
 
     @Override
     public List<BizClinicSourceSlot> generateSlots(Long scheduleId, String startTime, String endTime,
@@ -278,6 +281,8 @@ public class BizClinicSourceSlotServiceImpl extends ServiceImpl<BizClinicSourceS
             up.setId(schedule.getId());
             up.setRemark(newRemark);
             bizScheduleMapper.updateById(up);
+            // 结构化留痕：段级编辑（原因=本次实际变化的段摘要，与备注口径一致）
+            clinicSourceLogService.record(dto.getScheduleId(), com.his.common.enums.ClinicSourceChangeTypeEnum.SLOT_EDIT, null, summary, schedule);
         }
     }
 

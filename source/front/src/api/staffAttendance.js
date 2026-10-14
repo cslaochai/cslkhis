@@ -52,3 +52,21 @@ export function confirmAttendance(params) {
 export function removeAttendance(params) {
   return request.post('/system/staffAttendance/remove', null, { params })
 }
+
+// ========== 自助打卡（顶栏按钮）==========
+// employeeId 由后端从 token 取，前端不传 —— 与上面 checkIn/checkOut（护士长代登）分开。
+
+// 查我今天的打卡状态（进页面拉一次，打卡成功后再拉一次）
+export function getMyToday() {
+  return request.get('/system/staffAttendance/myToday')
+}
+
+// 我自己签到
+export function myCheckIn() {
+  return request.post('/system/staffAttendance/myCheckIn')
+}
+
+// 我自己签退
+export function myCheckOut() {
+  return request.post('/system/staffAttendance/myCheckOut')
+}

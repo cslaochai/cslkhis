@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.operation.dto.*;
 import com.his.operation.vo.OperationApplyVO;
 import com.his.operation.vo.OperationScheduleMatrixVO;
+import com.his.operation.vo.AiSuggestResultVO;
+import com.his.operation.vo.RoomUtilizationVO;
 
 import java.util.List;
 
@@ -66,6 +68,17 @@ public interface OperationApplyService {
      * 已用过的手术间（下拉候选）
      */
     List<String> roomList();
+
+    /**
+     * 手术间利用率（区间内各启用手术间的台数/急诊数/占用时长/利用率；含汇总行）
+     */
+    List<RoomUtilizationVO> roomUtilization(String from, String to);
+
+    /**
+     * AI 排台建议（贪心 + 约束：急诊优先、按申请先后，同间时段不重叠、营业窗口内、已定人力不分身；
+     * 只出建议不落库，采纳走 schedule）
+     */
+    AiSuggestResultVO aiSuggest(AiSuggestQueryDTO dto);
 
     /**
      * 术前核对要点字典

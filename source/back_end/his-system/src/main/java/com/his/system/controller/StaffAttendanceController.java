@@ -111,4 +111,32 @@ public class StaffAttendanceController {
             @RequestParam(required = false) Integer staffType) {
         return Result.success(staffAttendanceService.advice(orgType, orgId, staffType));
     }
+
+    // ------------------------------------------------------------------
+    // 自助打卡（顶栏按钮）：employeeId 强制从 token 取，不接收入参。
+    // 与上面 checkIn/checkOut（护士长代登）分开，避免传谁 ID 给谁打卡。
+    // ------------------------------------------------------------------
+
+    @Operation(summary = "查我今天的打卡状态（顶栏按钮轮询）")
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/myToday")
+    public Result<StaffAttendanceVO> myToday() {
+        return Result.success(staffAttendanceService.myToday());
+    }
+
+    @Operation(summary = "我自己签到")
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/myCheckIn")
+    public Result<StaffAttendanceVO> myCheckIn() {
+        StaffAttendanceVO vo = staffAttendanceService.myCheckIn();
+        return Result.success(vo.getMessage(), vo);
+    }
+
+    @Operation(summary = "我自己签退")
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/myCheckOut")
+    public Result<StaffAttendanceVO> myCheckOut() {
+        StaffAttendanceVO vo = staffAttendanceService.myCheckOut();
+        return Result.success(vo.getMessage(), vo);
+    }
 }

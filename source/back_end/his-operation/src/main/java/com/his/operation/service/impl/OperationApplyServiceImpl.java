@@ -28,6 +28,10 @@ import com.his.operation.support.OperationCheckItems;
 import com.his.operation.support.SafetyCheckItems;
 import com.his.operation.vo.OperationApplyVO;
 import com.his.operation.vo.OperationScheduleMatrixVO;
+import com.his.operation.vo.AiSuggestResultVO;
+import com.his.operation.vo.AiSuggestionVO;
+import com.his.operation.vo.RoomUtilizationStatVO;
+import com.his.operation.vo.RoomUtilizationVO;
 import com.his.patient.entity.BizAdmission;
 import com.his.patient.entity.BizInpatientOperation;
 import com.his.patient.entity.BizInpatientRecord;
@@ -52,8 +56,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 
 /**
@@ -89,6 +96,11 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
     private final DictCacheService dictCacheService;
 
     private final DeptScopeService deptScopeService;
+
+    /**
+     * 手术间单日运营窗口分钟数（08:00~18:00 = 600 分钟；利用率口径常量，如需按院方上下班配置改为读字典）。
+     */
+    private static final long ROOM_DAILY_CAPACITY_MINUTES = 600L;
 
     // 查询
     private static String textOr(String value, String fallback) {
@@ -202,6 +214,302 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         }
         return rooms;
     }
+
+    /**
+     * 手术间利用率：区间内各启用手术间已排台数/急诊数/占用分钟/可用分钟/利用率，末行是全院汇总。
+     *
+     * <p>口径（务实，注释声明）：可用分钟 = 单间每日运营窗口(08:00~18:00 常量) × 区间天数；
+     * 占用分钟按排台计划起止计算，跨天台不截断；利用率 = 占用/可用保留 1 位百分比。
+     * 未排台/无排台的启用手术间也出列（利用率 0），排到未登记手术间的手工名进汇总差额。
+     */
+    @Override
+    public List<RoomUtilizationVO> roomUtilization(String from, String to) {
+        LocalDate startDay = parseDay(from, "开始日期");
+        LocalDate endDay = parseDay(to, "结束日期");
+        if (endDay.isBefore(startDay)) {
+            throw new BusinessException("结束日期不能早于开始日期");
+        }
+        long days = startDay.toEpochDay() == endDay.toEpochDay() ? 1
+                : endDay.toEpochDay() - startDay.toEpochDay() + 1;
+        long capacityMinutes = ROOM_DAILY_CAPACITY_MINUTES * days;
+
+        LocalDateTime fromLdt = startDay.atStartOfDay();
+        LocalDateTime toLdt = endDay.plusDays(1).atStartOfDay();
+        List<RoomUtilizationStatVO> stats = bizOperationApplyMapper.selectRoomUtilization(fromLdt, toLdt);
+        Map<String, RoomUtilizationStatVO> byRoom = new HashMap<>();
+        for (RoomUtilizationStatVO s : stats) {
+            byRoom.put(textOr(s.getRoomName(), "未指定手术间"), s);
+        }
+
+        List<RoomUtilizationVO> rows = new ArrayList<>();
+        List<SysOperationRoom> rooms = sysOperationRoomMapper.selectList(new LambdaQueryWrapper<SysOperationRoom>()
+                .eq(SysOperationRoom::getStatus, 1)
+                .orderByAsc(SysOperationRoom::getSortOrder)
+                .orderByAsc(SysOperationRoom::getRoomCode));
+        for (SysOperationRoom room : rooms) {
+            RoomUtilizationStatVO s = byRoom.remove(room.getRoomName());
+            RoomUtilizationVO vo = new RoomUtilizationVO();
+            vo.setRoomId(room.getId());
+            vo.setRoomCode(room.getRoomCode());
+            vo.setRoomName(room.getRoomName());
+            vo.setLocation(room.getLocation());
+            if (s != null) {
+                vo.setScheduledCount(s.getScheduledCount());
+                vo.setEmergencyCount(s.getEmergencyCount());
+                vo.setOccupiedMinutes(s.getOccupiedMinutes());
+            } else {
+                vo.setScheduledCount(0);
+                vo.setEmergencyCount(0);
+                vo.setOccupiedMinutes(0L);
+            }
+            vo.setCapacityMinutes(capacityMinutes);
+            vo.setUtilizationRate(rateOf(vo.getOccupiedMinutes(), capacityMinutes));
+            rows.add(vo);
+        }
+        // 未登记手术间（手工输入名）的台也计入全院汇总差额，不丢
+        long orphanMinutes = byRoom.values().stream().mapToLong(RoomUtilizationStatVO::getOccupiedMinutes).sum();
+        long orphanCount = byRoom.values().stream().mapToLong(s -> s.getScheduledCount() == null ? 0 : s.getScheduledCount()).sum();
+        if (orphanMinutes > 0 || orphanCount > 0) {
+            RoomUtilizationVO orphan = new RoomUtilizationVO();
+            orphan.setRoomName("未登记手术间（手工名）");
+            orphan.setScheduledCount((int) orphanCount);
+            orphan.setEmergencyCount(0);
+            orphan.setOccupiedMinutes(orphanMinutes);
+            orphan.setCapacityMinutes(0L);
+            orphan.setUtilizationRate(BigDecimal.ZERO);
+            rows.add(orphan);
+        }
+        // 全院汇总行
+        long totalOccupied = rows.stream().mapToLong(v -> v.getOccupiedMinutes() == null ? 0 : v.getOccupiedMinutes()).sum();
+        long totalCapacity = rows.stream().mapToLong(v -> v.getCapacityMinutes() == null ? 0 : v.getCapacityMinutes()).sum();
+        RoomUtilizationVO total = new RoomUtilizationVO();
+        total.setRoomName("全院合计");
+        total.setScheduledCount(rows.stream().mapToInt(v -> v.getScheduledCount() == null ? 0 : v.getScheduledCount()).sum());
+        total.setEmergencyCount(rows.stream().mapToInt(v -> v.getEmergencyCount() == null ? 0 : v.getEmergencyCount()).sum());
+        total.setOccupiedMinutes(totalOccupied);
+        total.setCapacityMinutes(totalCapacity);
+        total.setUtilizationRate(rateOf(totalOccupied, totalCapacity));
+        rows.add(total);
+        return rows;
+    }
+
+    private LocalDate parseDay(String text, String label) {
+        try {
+            return TextUtil.hasText(text) ? LocalDate.parse(text.trim()) : LocalDate.now();
+        } catch (DateTimeParseException e) {
+            throw new BusinessException(label + "格式不正确：" + text + "（应为 yyyy-MM-dd）");
+        }
+    }
+
+    private BigDecimal rateOf(Long occupied, Long capacity) {
+        if (occupied == null || capacity == null || capacity <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return BigDecimal.valueOf(occupied * 100.0 / capacity).setScale(1, RoundingMode.HALF_UP);
+    }
+
+    // ==================== AI 排台建议（贪心 + 约束，只出建议不落库） ====================
+
+    /** AI 预估时长：按手术级别（1级60 / 2级90 / 3级120 / 4级180 分钟），未定级别 90 */
+    private static int estimateDurationMinutes(Integer operationLevel) {
+        if (operationLevel == null) {
+            return 90;
+        }
+        return switch (operationLevel) {
+            case 1 -> 60;
+            case 3 -> 120;
+            case 4 -> 180;
+            default -> 90;
+        };
+    }
+
+    @Override
+    public AiSuggestResultVO aiSuggest(AiSuggestQueryDTO dto) {
+        LocalDate day = parseDay(dto == null ? null : dto.getDate(), "排台日期");
+        List<Long> roomIds = dto == null ? null : dto.getRoomIds();
+        List<Long> deptIds = deptScopeService.scopedDeptIds(null);
+        LocalDateTime dayFrom = day.atStartOfDay();
+        LocalDateTime dayTo = day.plusDays(1).atStartOfDay();
+
+        // 手术间：roomIds 空=全部启用，否则在启用里过滤
+        List<SysOperationRoom> rooms = sysOperationRoomMapper.selectList(new LambdaQueryWrapper<SysOperationRoom>()
+                .eq(SysOperationRoom::getStatus, 1)
+                .orderByAsc(SysOperationRoom::getSortOrder)
+                .orderByAsc(SysOperationRoom::getRoomCode));
+        List<SysOperationRoom> candidates = new ArrayList<>();
+        for (SysOperationRoom room : rooms) {
+            if (roomIds == null || roomIds.isEmpty() || roomIds.contains(room.getId())) {
+                candidates.add(room);
+            }
+        }
+        if (candidates.isEmpty()) {
+            throw new BusinessException("未选择可用的手术间（无启用手术间或所选 id 不在启用列表）");
+        }
+
+        // 当日已排台（同间时段 + 人力占用）
+        List<OperationApplyVO> scheduled = bizOperationApplyMapper.selectScheduledBetween(dayFrom, dayTo, deptIds);
+        Map<String, List<LocalDateTime[]>> byRoom = new HashMap<>();
+        Map<Long, List<LocalDateTime[]>> byPerson = new HashMap<>();
+        for (OperationApplyVO s : scheduled) {
+            String room = textOr(s.getOperationRoom(), "未登记手术间");
+            byRoom.computeIfAbsent(room, k -> new ArrayList<>())
+                    .add(new LocalDateTime[]{s.getPlannedStartTime(), s.getPlannedEndTime()});
+            addPersonSpan(byPerson, s.getSurgeonId(), s.getPlannedStartTime(), s.getPlannedEndTime());
+            addPersonSpan(byPerson, s.getAnesthetistId(), s.getPlannedStartTime(), s.getPlannedEndTime());
+            addPersonSpan(byPerson, s.getCirculatingNurseId(), s.getPlannedStartTime(), s.getPlannedEndTime());
+            addPersonSpan(byPerson, s.getScrubNurseId(), s.getPlannedStartTime(), s.getPlannedEndTime());
+        }
+        byRoom.values().forEach(list -> list.sort(Comparator.comparing(a -> a[0])));
+
+        LocalTime open = LocalTime.of(8, 0);
+        LocalTime close = LocalTime.of(18, 0);
+        AiSuggestResultVO result = new AiSuggestResultVO();
+        result.setDate(day.toString());
+        result.setCapacityMinutesPerRoom(ROOM_DAILY_CAPACITY_MINUTES);
+
+        List<OperationApplyVO> pending = bizOperationApplyMapper.selectUnscheduled(deptIds);
+        for (OperationApplyVO op : pending) {
+            int duration = estimateDurationMinutes(op.getOperationLevel());
+            AiSuggestionVO best = null;
+            for (SysOperationRoom room : candidates) {
+                List<LocalDateTime[]> spans = byRoom.getOrDefault(room.getRoomName(), List.of());
+                // 该房间当天全部可用空档逐个试人力：最早空档撞主刀/麻醉/护士时段分身时，
+                // 继续试该房间后续空档（贪心取全局最早可行档，而不是一撞就弃房）
+                for (LocalDateTime slotStart : availableSlots(day, open, close, spans, duration)) {
+                    LocalDateTime slotEnd = slotStart.plusMinutes(duration);
+                    if (!personFree(byPerson, op, slotStart, slotEnd)) {
+                        continue;
+                    }
+                    if (best == null || slotStart.isBefore(best.getSuggestedStart())) {
+                        best = toSuggestion(op, duration, room.getRoomName(), slotStart, slotEnd, byRoom.get(room.getRoomName()));
+                    }
+                    break; // 该房间取第一个可行档即可，其余档由全局最早约束裁掉
+                }
+            }
+            if (best != null) {
+                result.getSuggestions().add(best);
+                // 建议占用：同间 + 人力都推进（供后续单继续贪心）
+                byRoom.computeIfAbsent(best.getSuggestedRoomName(), k -> new ArrayList<>())
+                        .add(new LocalDateTime[]{best.getSuggestedStart(), best.getSuggestedEnd()});
+                byRoom.get(best.getSuggestedRoomName()).sort(Comparator.comparing(a -> a[0]));
+                addPersonSpan(byPerson, op.getSurgeonId(), best.getSuggestedStart(), best.getSuggestedEnd());
+                addPersonSpan(byPerson, op.getAnesthetistId(), best.getSuggestedStart(), best.getSuggestedEnd());
+                addPersonSpan(byPerson, op.getCirculatingNurseId(), best.getSuggestedStart(), best.getSuggestedEnd());
+                addPersonSpan(byPerson, op.getScrubNurseId(), best.getSuggestedStart(), best.getSuggestedEnd());
+            } else {
+                AiSuggestionVO blocked = toSuggestion(op, duration, null, null, null, null);
+                blocked.setReason("当日全部手术间在营业时段（08:00~18:00）内均无 ≥ " + duration + " 分钟的连续空档（或已定主刀/麻醉/护士时段分身）");
+                result.getBlocked().add(blocked);
+            }
+        }
+        return result;
+    }
+
+    private static void addPersonSpan(Map<Long, List<LocalDateTime[]>> byPerson, Long employeeId,
+                                      LocalDateTime start, LocalDateTime end) {
+        if (employeeId != null && start != null && end != null) {
+            byPerson.computeIfAbsent(employeeId, k -> new ArrayList<>())
+                    .add(new LocalDateTime[]{start, end});
+        }
+    }
+
+    /** 同手术间当天全部可用空档（营业窗口内，与已排区间不重叠，每段至少 duration 分钟） */
+    private static List<LocalDateTime> availableSlots(LocalDate day, LocalTime open, LocalTime close,
+                                                      List<LocalDateTime[]> spans, int duration) {
+        List<LocalDateTime> out = new ArrayList<>();
+        LocalDateTime cursor = LocalDateTime.of(day, open);
+        LocalDateTime dayEnd = LocalDateTime.of(day, close);
+        for (LocalDateTime[] span : spans) {
+            LocalDateTime s = span[0] == null ? cursor : span[0];
+            LocalDateTime e = span[1] == null ? cursor : span[1];
+            if (s.isBefore(cursor)) {
+                // 与当前游标重叠/跨段：游标推到该段之后（若该段已开始）
+                if (e.isAfter(cursor)) {
+                    cursor = e;
+                }
+                continue;
+            }
+            if (e.isAfter(cursor)) {
+                if (e.isBefore(dayEnd)) {
+                    if (Duration.between(cursor, s).toMinutes() >= duration) {
+                        out.add(cursor);
+                    }
+                    cursor = e;
+                } else {
+                    // 区间占满到营业结束
+                    if (Duration.between(cursor, s).toMinutes() >= duration) {
+                        out.add(cursor);
+                    }
+                    cursor = dayEnd;
+                    break;
+                }
+            }
+        }
+        if (!cursor.plusMinutes(duration).isAfter(dayEnd)) {
+            out.add(cursor);
+        }
+        return out;
+    }
+
+    /** 已定主刀/麻醉/护士是否与建议时段分身（未定人不受限） */
+    private static boolean personFree(Map<Long, List<LocalDateTime[]>> byPerson, OperationApplyVO op,
+                                      LocalDateTime start, LocalDateTime end) {
+        return spanFree(byPerson, op.getSurgeonId(), start, end)
+                && spanFree(byPerson, op.getAnesthetistId(), start, end)
+                && spanFree(byPerson, op.getCirculatingNurseId(), start, end)
+                && spanFree(byPerson, op.getScrubNurseId(), start, end);
+    }
+
+    private static boolean spanFree(Map<Long, List<LocalDateTime[]>> byPerson, Long employeeId,
+                                    LocalDateTime start, LocalDateTime end) {
+        if (employeeId == null) {
+            return true;
+        }
+        for (LocalDateTime[] span : byPerson.getOrDefault(employeeId, List.of())) {
+            if (span[0] != null && span[1] != null
+                    && start.isBefore(span[1]) && span[0].isBefore(end)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static AiSuggestionVO toSuggestion(OperationApplyVO op, int duration, String roomName,
+                                               LocalDateTime start, LocalDateTime end,
+                                               List<LocalDateTime[]> roomSpans) {
+        AiSuggestionVO vo = new AiSuggestionVO();
+        vo.setApplyId(op.getId());
+        vo.setApplyNo(op.getApplyNo());
+        vo.setPatientName(op.getPatientName());
+        vo.setPlannedOperationName(op.getPlannedOperationName());
+        vo.setOperationLevel(op.getOperationLevel());
+        vo.setIsEmergency(op.getIsEmergency());
+        vo.setApplyDeptName(op.getApplyDeptName());
+        vo.setDurationMinutes(duration);
+        vo.setSurgeonId(op.getSurgeonId());
+        vo.setSurgeonName(op.getSurgeonName());
+        vo.setAnesthetistId(op.getAnesthetistId());
+        vo.setAnesthetistName(op.getAnesthetistName());
+        vo.setCirculatingNurseId(op.getCirculatingNurseId());
+        vo.setScrubNurseId(op.getScrubNurseId());
+        vo.setSuggestedRoomName(roomName);
+        vo.setSuggestedStart(start);
+        vo.setSuggestedEnd(end);
+        if (start != null) {
+            boolean first = start.toLocalTime().equals(LocalTime.of(8, 0));
+            String prev = "当日首台空档";
+            if (!first && roomSpans != null) {
+                for (LocalDateTime[] span : roomSpans) {
+                    if (span[1] != null && !span[1].isAfter(start)) {
+                        prev = "前一班 " + span[1].toLocalTime() + " 结束的接台空档";
+                    }
+                }
+            }
+            vo.setReason("AI 建议：" + prev + "（急诊优先 / 按申请先后 / 避开同间时段与人力分身）");
+        }
+        return vo;
+    }
+
 
     // 四、完成（术前核对完成 → 已完成；回写首页明细 + 手术记录病历）
 
@@ -446,7 +754,21 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
                     + c.getPlannedOperationName() + "）占用，请换手术间或换时段");
         }
 
+        // 跨手术间人力冲突：主刀/麻醉/巡回/洗手护士同一时段不能分身两台（不同间各自不撞，却占用了同一个人）
         String surgeonName = employeeNameOf(dto.getSurgeonId());
+        assertNoPersonConflict(dto.getSurgeonId(), "主刀医师", surgeonName, start, end, entity.getId());
+        if (dto.getAnesthetistId() != null) {
+            assertNoPersonConflict(dto.getAnesthetistId(), "麻醉医师", employeeNameOf(dto.getAnesthetistId()),
+                    start, end, entity.getId());
+        }
+        if (dto.getCirculatingNurseId() != null) {
+            assertNoPersonConflict(dto.getCirculatingNurseId(), "巡回护士", employeeNameOf(dto.getCirculatingNurseId()),
+                    start, end, entity.getId());
+        }
+        if (dto.getScrubNurseId() != null) {
+            assertNoPersonConflict(dto.getScrubNurseId(), "洗手护士", employeeNameOf(dto.getScrubNurseId()),
+                    start, end, entity.getId());
+        }
         entity.setOperationRoom(dto.getOperationRoom());
         entity.setPlannedStartTime(start);
         entity.setPlannedEndTime(end);
@@ -455,6 +777,10 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         entity.setAssistantName(dto.getAssistantName());
         entity.setAnesthetistId(dto.getAnesthetistId());
         entity.setAnesthetistName(employeeNameOf(dto.getAnesthetistId()));
+        entity.setCirculatingNurseId(dto.getCirculatingNurseId());
+        entity.setCirculatingNurseName(dto.getCirculatingNurseId() == null ? null : employeeNameOf(dto.getCirculatingNurseId()));
+        entity.setScrubNurseId(dto.getScrubNurseId());
+        entity.setScrubNurseName(dto.getScrubNurseId() == null ? null : employeeNameOf(dto.getScrubNurseId()));
         entity.setScheduleDoctorId(operatorUser.getEmployeeId());
         entity.setScheduleDoctorName(operatorUser.getRealName());
         entity.setScheduleTime(TimeUtil.nowSeconds());
@@ -882,6 +1208,46 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         }
         String name = bizOperationApplyMapper.selectEmployeeName(empId);
         return TextUtil.hasText(name) ? name : "未知员工(ID=" + empId + ")";
+    }
+
+    /**
+     * 跨手术间人力冲突校验：同一人（主刀/麻醉/巡回/洗手护士）目标时段已排在其他手术间则拒绝。
+     *
+     * <p>同手术间冲突拦得住"资源"，拦不住"人"——两台在不同手术间各自合法，
+     * 但同一人同时跟两台是事故级错误（医生开两台、护士跟两台都不成立）。
+     * 端点相接不算冲突（连台是常态）。命中台以本人实际担任的角色出文案。
+     */
+    private void assertNoPersonConflict(Long employeeId, String roleLabel, String empName,
+                                        LocalDateTime start, LocalDateTime end, Long excludeId) {
+        List<BizOperationApply> hits = bizOperationApplyMapper.selectPersonConflicts(employeeId, start, end, excludeId);
+        if (hits.isEmpty()) {
+            return;
+        }
+        BizOperationApply c = hits.get(0);
+        String roleInHit = personRoleLabel(c, employeeId);
+        throw new BusinessException(roleLabel + " " + empName + " 在「" + c.getOperationRoom() + "」"
+                + c.getPlannedStartTime().format(DateFormats.TIME_MINUTE) + "~" + c.getPlannedEndTime().format(DateFormats.TIME_MINUTE)
+                + " 已排 " + c.getApplyNo() + "（" + c.getPatientName() + " " + c.getPlannedOperationName()
+                + "，" + roleInHit + "），同一时段不能分身两台，请先处理该台或改时段");
+    }
+
+    /**
+     * 命中冲突台里，employeeId 是以什么身份被占用的（按四列逐一比对，主刀优先于麻醉优先于巡回优先于洗手）。
+     */
+    private String personRoleLabel(BizOperationApply row, Long employeeId) {
+        if (row.getSurgeonId() != null && row.getSurgeonId().equals(employeeId)) {
+            return "主刀";
+        }
+        if (row.getAnesthetistId() != null && row.getAnesthetistId().equals(employeeId)) {
+            return "麻醉";
+        }
+        if (row.getCirculatingNurseId() != null && row.getCirculatingNurseId().equals(employeeId)) {
+            return "巡回护士";
+        }
+        if (row.getScrubNurseId() != null && row.getScrubNurseId().equals(employeeId)) {
+            return "洗手护士";
+        }
+        return "跟台人员";
     }
 
     private String nextApplyNo() {

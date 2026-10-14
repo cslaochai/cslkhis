@@ -51,7 +51,7 @@ const routes = [
                 path: 'emergency',
                 name: 'Emergency',
                 component: () => import('@/views/emergency/EmergencyView.vue'),
-                meta: {title: '急诊中心'}
+                meta: {title: '急诊工作站'}
             },
             {path: 'inpatient', name: 'Inpatient', component: () => import('@/views/inpatient/InpatientView.vue')},
             {

@@ -68,4 +68,23 @@ public interface StaffAttendanceService {
      * <p>只给建议，不自动改编制：编制是护理部的权，系统给出数、人做决定。
      */
     List<CalibrationAdviceVO> advice(Integer orgType, Long orgId, Integer staffType);
+
+    // ------------------------------------------------------------------
+    // 自助打卡：employeeId 强制取自 token，前端不允许传 ——
+    // 老 checkIn/checkOut 是护士长代登用的（DTO 要传 employeeId），
+    // 自助打卡不能复用那个口子，否则传谁 ID 就能给谁打卡。
+    // ------------------------------------------------------------------
+
+    /**
+     * 查当前登录人今天的打卡状态（顶栏打卡按钮轮询用）。
+     * <p>返回 null 表示今天还没签到。一天多班时挑"还没签退"的那条；
+     * 全签退了返回最后一条，让按钮显示"已完成"。
+     */
+    StaffAttendanceVO myToday();
+
+    /** 自己签到（时间=此刻；没排班则按主科室兜底记为加班）。 */
+    StaffAttendanceVO myCheckIn();
+
+    /** 自己签退（时间=此刻）。 */
+    StaffAttendanceVO myCheckOut();
 }

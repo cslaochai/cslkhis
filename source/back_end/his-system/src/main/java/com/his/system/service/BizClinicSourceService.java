@@ -129,9 +129,11 @@ public interface BizClinicSourceService extends IService<BizClinicSource> {
     List<StopImpactItemVO> stopImpact(Long scheduleId);
 
     /**
-     * 停诊批量退号：逐条走真实退号（按渠道还池），返回「成功 N/共 M」结论
+     * 停诊批量退号：逐条走真实退号（按渠道还池），返回「成功 N/共 M」结论。
+     *
+     * @param scheduleId 所属排班ID（可空；空则只退号、不落排班变更日志）
      */
-    String batchCancel(List<Long> registIds, String reason);
+    String batchCancel(Long scheduleId, List<Long> registIds, String reason);
 
     /**
      * 加号：total/available 同步 +addNum，added_source 累计留痕，原因写 remark

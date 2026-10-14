@@ -240,6 +240,26 @@ public class OperationApplyVO implements Serializable {
     private String anesthetistName;
 
     /**
+     * 巡回护士 id
+     */
+    private Long circulatingNurseId;
+
+    /**
+     * 洗手护士 id
+     */
+    private Long scrubNurseId;
+
+    /**
+     * 巡回护士姓名
+     */
+    private String circulatingNurseName;
+
+    /**
+     * 洗手护士姓名
+     */
+    private String scrubNurseName;
+
+    /**
      * 排台操作人姓名
      */
     private String scheduleDoctorName;

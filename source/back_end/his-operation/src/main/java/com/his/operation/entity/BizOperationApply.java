@@ -199,6 +199,28 @@ public class BizOperationApply extends BaseEntity {
     private String anesthetistName;
 
     /**
+     * 巡回护士ID（员工ID）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long circulatingNurseId;
+
+    /**
+     * 巡回护士姓名
+     */
+    private String circulatingNurseName;
+
+    /**
+     * 洗手护士ID（员工ID）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long scrubNurseId;
+
+    /**
+     * 洗手护士姓名
+     */
+    private String scrubNurseName;
+
+    /**
      * 排台操作人ID（员工ID）
      */
     @JsonSerialize(using = ToStringSerializer.class)

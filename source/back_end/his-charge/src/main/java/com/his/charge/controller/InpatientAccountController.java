@@ -29,9 +29,20 @@ public class InpatientAccountController {
      * 账务查看：三个入口任一即可读
      *   - charge:arrearsControl:list  欠费管控页
      *   - ipd:inpatient:list         入出院管理（医生/护士站）
-     *   - ipd:settlement:list        住院结算页（财务岗）—— 住院结算员只挂 305 菜单即可，不再借欠费管控的码
+     *   - ipd:settlement:list        住院结算页（财务岗）—— 住院结算员只挂本页菜单即可，不再借欠费管控的码
      */
     private static final String VIEW = "hasAnyAuthority('charge:arrearsControl:list', 'ipd:inpatient:list', 'ipd:settlement:list')";
+
+    /**
+     * 收预交金：住院结算页用自己的按钮码，入出院管理页沿用 ipd:inpatient:add。
+     * 两侧都认是为了让「财务岗办住院收费」不必借医护页面的码 —— 借来的码收不回来（一收就把入出院管理的新增一起关掉）。
+     */
+    private static final String SAVE_PREPAY = "hasAnyAuthority('ipd:settlement:add', 'ipd:inpatient:add')";
+
+    /**
+     * 办理出院结算（自费与医保同一入口，由入参 settleMode 分流）：同上，住院结算页用 ipd:settlement:edit。
+     */
+    private static final String DO_SETTLE = "hasAnyAuthority('ipd:settlement:edit', 'ipd:inpatient:edit')";
 
     private final InpatientAccountService inpatientAccountService;
 
@@ -49,7 +60,7 @@ public class InpatientAccountController {
         return Result.success(inpatientAccountService.balance(admissionId));
     }
 
-    @PreAuthorize("hasAuthority('ipd:inpatient:add')")
+    @PreAuthorize(SAVE_PREPAY)
     @Operation(summary = "收预交金（充值 / 退款；金额一律传正数，方向由 prepayType 决定；退款可能摊成多笔流水）")
     @PostMapping("/prepay/save")
     public Result<List<PrepayVO>> savePrepay(@Valid @RequestBody PrepayUpsertDTO dto) {
@@ -73,7 +84,7 @@ public class InpatientAccountController {
         return Result.success(inpatientAccountService.preview(admissionId, settleMode));
     }
 
-    @PreAuthorize("hasAuthority('ipd:inpatient:edit')")
+    @PreAuthorize(DO_SETTLE)
     @Operation(summary = "办理出院结算（出 L2 账单 + 余额抵扣 + 退差；欠费时账单留在未付清）")
     @PostMapping("/settlement/settle")
     public Result<InpatientSettlementVO> settle(@Valid @RequestBody InpatientSettlementUpsertDTO dto) {

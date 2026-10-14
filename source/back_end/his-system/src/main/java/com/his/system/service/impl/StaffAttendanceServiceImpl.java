@@ -41,6 +41,11 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
      */
     private static final int MAX_QUERY_DAYS = 92;
 
+    /**
+     * 单次在岗最短时长（分钟）：签到后不足 10 分钟不允许签退，防误点/连点
+     */
+    private static final long MIN_WORK_MINUTES = 10L;
+
     @Override
     public StaffAttendanceVO checkIn(AttendanceDTO dto) {
         Long employeeId = requireEmployee(dto);
@@ -102,9 +107,19 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
         }
 
         BizStaffAttendance row = baseMapper.selectOneAttend(employeeId, date, orgType, orgId, shiftId);
-        if (row != null && row.getCheckIn() != null) {
-            // 幂等：重复刷卡不代表两个事实，也不该把迟到刷成准时（保留最早那次签到）
+        if (row != null && row.getCheckIn() != null && row.getCheckOut() == null) {
+            // 幂等：同键且未签退 = 重复刷卡，不改写最早那次签到时间
             return toVO(row, checkInMessage(row.getAttendanceStatus()));
+        }
+        if (row != null && row.getCheckOut() != null) {
+            // 同日第二段及以后（上午一段、下午加班又一段）：
+            // 唯一键不含"段号"，用负 shiftId 占位找一个不冲突的键，然后走新 insert。
+            long seg = -1;
+            while (baseMapper.selectOneAttend(employeeId, date, orgType, orgId, seg) != null) {
+                seg--;
+            }
+            shiftId = seg;
+            row = null;
         }
         if (row == null) {
             row = new BizStaffAttendance();
@@ -115,6 +130,11 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
             row.setShiftId(shiftId);
             row.setDelFlag(0);
             row.setStatus(1);
+            // 签到瞬间还没签退，实际工时/加班工时都还是 0（NOT NULL 列必须给值）
+            row.setActualMinutes(0);
+            row.setOvertimeMinutes(0);
+            // 自助打卡即本人确认到岗，不需要护士长二次确认
+            row.setConfirmStatus(1);
         }
         // 走到这儿要么是新签到，要么是之前被登记成缺勤/手工登记而现在人真来了 ——
         // 人来了就把那条结论推翻，否则名单上会同时挂着"缺勤"和"签到时间"两件矛盾的事。
@@ -147,11 +167,18 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
             throw new BusinessException("这条出勤没有签到时间，算不出实际工时：没有打卡数据的日子请走「工时修正」由护士长补登");
         }
         LocalDateTime out = dto.getCheckOut() == null ? LocalDateTime.now() : dto.getCheckOut();
-        long minutes = Duration.between(row.getCheckIn(), out).toMinutes();
-        if (minutes <= 0) {
-            throw new BusinessException("签退时间必须晚于签到时间");
+        long seconds = Duration.between(row.getCheckIn(), out).getSeconds();
+        if (seconds < 0) {
+            throw new BusinessException("签退时间早于签到时间，请检查");
         }
-        int actual = (int) Math.min(minutes, 1440L);
+        long minutes = seconds / 60;
+        // 最短在岗 10 分钟：防误点/连点，不是真考勤制度
+        if (minutes < MIN_WORK_MINUTES) {
+            long remain = MIN_WORK_MINUTES - minutes;
+            throw new BusinessException("签到后需在岗 " + MIN_WORK_MINUTES + " 分钟才能签退（还差 " + remain + " 分钟）");
+        }
+        // 不足 1 分钟按 1 分钟算（签到后误点签退、网络延迟等场景不该被硬拦）；最长不超过一天
+        int actual = (int) Math.min(Math.max(1, (int) minutes), 1440L);
         row.setCheckOut(out);
         row.setActualMinutes(actual);
         row.setOvertimeMinutes(Math.max(0, actual - nvlZero(row.getPlannedMinutes())));
@@ -580,6 +607,58 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
 
     private String normalizeRemark(String remark) {
         return !TextUtil.hasText(remark) ? null : remark.trim();
+    }
+
+    // -------------------------------------------------------------------------
+    // 自助打卡：employeeId 强制取自 token
+    // -------------------------------------------------------------------------
+
+    @Override
+    public StaffAttendanceVO myToday() {
+        CurrentUser me = requireMe();
+        List<BizStaffAttendance> rows = baseMapper.selectDayOfEmployee(me.getEmployeeId(), LocalDate.now());
+        if (rows == null || rows.isEmpty()) {
+            return null;
+        }
+        // 优先返回"已签到但还没签退"的那条 —— 顶栏按钮该显示"签退"
+        BizStaffAttendance row = rows.stream()
+                .filter(r -> r.getCheckIn() != null && r.getCheckOut() == null)
+                .findFirst()
+                .orElse(rows.get(0));
+        return toVO(row, null);
+    }
+
+    @Override
+    public StaffAttendanceVO myCheckIn() {
+        CurrentUser me = requireMe();
+        AttendanceDTO dto = new AttendanceDTO();
+        dto.setEmployeeId(me.getEmployeeId());
+        // 没排班计划时走"加班"分支，必须给单元；用当前登录人的主科室兜底，
+        // 不弹框问用户——自己打卡时弹窗选科室是反人类的。
+        List<BizSchedule> plans = baseMapper.selectDayPlanOfEmployee(me.getEmployeeId(), LocalDate.now());
+        if (plans == null || plans.isEmpty()) {
+            if (me.getDeptId() != null) {
+                dto.setOrgType(1);
+                dto.setOrgId(me.getDeptId());
+            }
+        }
+        return checkIn(dto);
+    }
+
+    @Override
+    public StaffAttendanceVO myCheckOut() {
+        CurrentUser me = requireMe();
+        AttendanceDTO dto = new AttendanceDTO();
+        dto.setEmployeeId(me.getEmployeeId());
+        return checkOut(dto);
+    }
+
+    private CurrentUser requireMe() {
+        CurrentUser me = UserUtils.getCurrentUser();
+        if (me == null || me.getEmployeeId() == null) {
+            throw new BusinessException("当前账号未关联员工档案，无法打卡");
+        }
+        return me;
     }
 
 }

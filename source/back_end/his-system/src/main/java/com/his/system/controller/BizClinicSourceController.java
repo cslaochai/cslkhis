@@ -4,8 +4,10 @@ package com.his.system.controller;
 import com.his.system.dto.*;
 import com.his.system.service.BizClinicSourceService;
 import com.his.system.service.BizClinicSourceSlotService;
+import com.his.system.service.ClinicSourceLogService;
 import com.his.system.vo.*;
 import com.his.common.base.Result;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -25,6 +27,8 @@ public class BizClinicSourceController {
     private final BizClinicSourceService bizScheduleService;
 
     private final BizClinicSourceSlotService bizScheduleSlotService;
+
+    private final ClinicSourceLogService clinicSourceLogService;
 
     @PreAuthorize("hasAuthority('outpatient:schedule:add')")
     @Operation(summary = "新增或修改排班")
@@ -101,7 +105,7 @@ public class BizClinicSourceController {
     @Operation(summary = "停诊批量退号")
     @PostMapping("/batchCancel")
     public Result<String> batchCancel(@Valid @RequestBody ScheduleBatchCancelDTO dto) {
-        return Result.success(bizScheduleService.batchCancel(dto.getRegistIds(), dto.getReason()), null);
+        return Result.success(bizScheduleService.batchCancel(dto.getScheduleId(), dto.getRegistIds(), dto.getReason()), null);
     }
 
     /**
@@ -143,6 +147,13 @@ public class BizClinicSourceController {
     public Result<Void> slotUpsert(@Valid @RequestBody ScheduleSlotUpsertDTO dto) {
         bizScheduleSlotService.updateSlotSources(dto);
         return Result.success();
+    }
+
+    @PreAuthorize("hasAuthority('outpatient:schedule:list')")
+    @Operation(summary = "门诊排班变更留痕分页（审计：谁在何时对哪个班次做了什么、为什么）")
+    @PostMapping("/logPage")
+    public Result<IPage<ClinicSourceLogVO>> logPage(@Valid @RequestBody ClinicSourceLogQueryDTO queryDTO) {
+        return Result.success(clinicSourceLogService.pageByQuery(queryDTO));
     }
 
 }

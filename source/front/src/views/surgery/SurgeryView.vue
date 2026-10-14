@@ -28,7 +28,7 @@
       </div>
     </div>
 
-    <el-tabs v-model="activeTab" data-testid="p134-op-tabs" @tab-change="onTabChange">
+    <el-tabs v-model="activeTab" data-testid="p134-op-tabs" @tab-change="onTabChangeAll">
       <el-tab-pane label="手术申请" name="apply">
         <!-- 统计卡片 -->
         <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
@@ -133,10 +133,13 @@
                 <div class="text-[11px] text-slate-400">{{ text(row.plannedTimeText) }}</div>
               </template>
             </el-table-column>
-            <el-table-column label="主刀" width="100">
+            <el-table-column label="主刀 / 跟台" min-width="150">
               <template #default="{ row }">
                 <span class="text-slate-700">{{ text(row.surgeonName) }}</span>
                 <div v-if="row.isMain === 1" class="text-[11px] text-slate-400">主要手术</div>
+                <div v-if="row.circulatingNurseName || row.scrubNurseName" class="mt-1 text-[11px] text-slate-500">
+                  巡 {{ text(row.circulatingNurseName) }} · 洗 {{ text(row.scrubNurseName) }}
+                </div>
               </template>
             </el-table-column>
             <el-table-column label="状态 / 进度" min-width="190">
@@ -277,6 +280,16 @@
               @change="loadMatrix"
           />
           <el-button :icon="Refresh" data-testid="p134-mx-refresh" @click="loadMatrix">刷新</el-button>
+          <el-button
+              v-perm="'ipd:surgery:edit'"
+              type="primary"
+              plain
+              :icon="Setting"
+              data-testid="p134-mx-ai"
+              @click="openAi"
+          >
+            AI 排台
+          </el-button>
           <span v-if="matrix" class="text-[12px] text-slate-500" data-testid="p134-mx-summary">
             当天已排 {{ matrix.scheduledCount ?? 0 }} 台 · 急诊 {{ matrix.emergencyCount ?? 0 }} 台 ·
             待排期 {{ (matrix.unscheduled || []).length }} 条 · 未登记手术间 {{ (matrix.others || []).length }} 组
@@ -332,6 +345,9 @@
                           class="text-[11px] font-medium">
                       核查 {{ phaseOf(op) }}/3
                     </span>
+                  </div>
+                  <div v-if="op.circulatingNurseName || op.scrubNurseName" class="mt-1 text-[11px] text-slate-500">
+                    巡回：{{ text(op.circulatingNurseName) }} · 洗手：{{ text(op.scrubNurseName) }}
                   </div>
                   <div class="mt-1 flex flex-wrap gap-x-2">
                     <el-button
@@ -414,6 +430,81 @@
           </div>
         </div>
       </el-tab-pane>
+
+      <el-tab-pane label="利用率" name="utilization">
+        <div class="query-grid-wrap" style="margin-bottom: 12px;">
+          <div class="query-grid">
+            <el-form-item label="统计区间">
+              <el-date-picker
+                  v-model="utilRange"
+                  type="daterange"
+                  value-format="YYYY-MM-DD"
+                  range-separator="至"
+                  start-placeholder="开始日期"
+                  end-placeholder="结束日期"
+                  style="width: 300px;"
+              />
+            </el-form-item>
+          </div>
+          <div class="query-grid-ops">
+            <el-button type="primary" :loading="utilLoading" data-testid="p134-util-query" @click="loadUtilization">查询</el-button>
+          </div>
+        </div>
+
+        <el-row :gutter="12" class="mb-3">
+          <el-col :span="6">
+            <div class="util-stat-card">
+              <div class="util-stat-value">{{ utilTotal?.scheduledCount ?? 0 }}</div>
+              <div class="util-stat-label">区间手术台数</div>
+            </div>
+          </el-col>
+          <el-col :span="6">
+            <div class="util-stat-card">
+              <div class="util-stat-value">{{ utilTotal?.emergencyCount ?? 0 }}</div>
+              <div class="util-stat-label">其中急诊台数</div>
+            </div>
+          </el-col>
+          <el-col :span="6">
+            <div class="util-stat-card">
+              <div class="util-stat-value">{{ fmtMinutes(utilTotal?.occupiedMinutes) }}</div>
+              <div class="util-stat-label">占用时长</div>
+            </div>
+          </el-col>
+          <el-col :span="6">
+            <div class="util-stat-card">
+              <div class="util-stat-value">{{ utilTotal?.utilizationRate ?? 0 }}%</div>
+              <div class="util-stat-label">全院利用率</div>
+            </div>
+          </el-col>
+        </el-row>
+
+        <el-table :data="utilRows" border stripe size="small" data-testid="p134-util-table" style="width: 100%">
+          <el-table-column prop="roomName" label="手术间" min-width="130" />
+          <el-table-column prop="roomCode" label="编码" width="90" />
+          <el-table-column prop="location" label="位置" min-width="120" show-overflow-tooltip />
+          <el-table-column prop="scheduledCount" label="台数" width="70" align="center" />
+          <el-table-column prop="emergencyCount" label="急诊台" width="80" align="center" />
+          <el-table-column label="占用时长" width="120" align="right">
+            <template #default="{ row }">{{ fmtMinutes(row.occupiedMinutes) }}</template>
+          </el-table-column>
+          <el-table-column label="可用时长" width="120" align="right">
+            <template #default="{ row }">{{ fmtMinutes(row.capacityMinutes) }}</template>
+          </el-table-column>
+          <el-table-column label="利用率" min-width="170">
+            <template #default="{ row }">
+              <div class="util-cell">
+                <el-progress
+                    :percentage="Number(row.utilizationRate ?? 0)"
+                    :color="utilColor(row.utilizationRate)"
+                    :stroke-width="8"
+                    style="flex: 1;"
+                />
+                <span class="util-pct">{{ row.utilizationRate ?? 0 }}%</span>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-tab-pane>
     </el-tabs>
 
     <SurgeryApplyEdit
@@ -429,6 +520,12 @@
         :employees="employees"
         :rooms="rooms"
         :row="scheduleRow"
+        @saved="refreshAfterChange"
+    />
+
+    <SurgeryAiSuggest
+        v-model="aiVisible"
+        :initial-date="matrixDate"
         @saved="refreshAfterChange"
     />
 
@@ -493,6 +590,7 @@ import {
   cancelOperation,
   getOperationApplyListPage,
   getOperationRoomList,
+  getOperationRoomUtilization,
   getOperationScheduleMatrix,
   getOperationUnfinishedCount,
 } from '@/api/inpatientOperation';
@@ -500,6 +598,7 @@ import {getInpatientListPage} from '@/api/inpatient';
 import {getEmployeeList} from '@/api/system';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import SurgeryApplyEdit from './SurgeryApplyEdit.vue';
+import SurgeryAiSuggest from './SurgeryAiSuggest.vue';
 import SurgeryDetail from './SurgeryDetail.vue';
 import SurgeryFinish from './SurgeryFinish.vue';
 import SurgeryPreopCheck from './SurgeryPreopCheck.vue';
@@ -704,6 +803,10 @@ const onTabChange = (name) => {
   if (name === 'matrix' && !matrix.value)
     loadMatrix();
 };
+const onTabChangeAll = (name) => {
+  onTabChange(name);
+  onTabChangeUtil(name);
+};
 const hm = (t) => (t ? String(t).replace('T', ' ').slice(11, 16) : '—');
 const phaseOf = (op) => Number(op.safetyCheckPhases ?? 0);
 const phaseClass = (op) => phaseOf(op) >= 3 ? 'text-emerald-600' : phaseOf(op) > 0 ? 'text-amber-600' : 'text-slate-400';
@@ -719,6 +822,10 @@ const roomVisible = ref(false);
 const openRooms = () => {
   roomVisible.value = true;
 };
+const aiVisible = ref(false);
+const openAi = () => {
+  aiVisible.value = true;
+};
 const onRoomSaved = async () => {
   await Promise.all([loadList(), loadMatrixIfOpen()]);
 };
@@ -732,8 +839,69 @@ const openSafety = (row) => {
   safetyRow.value = row;
   safetyVisible.value = true;
 };
+// ---------------- 手术间利用率（P134.1.3） ----------------
+const utilRange = ref([today(), today()]);
+const utilRows = ref([]);
+const utilLoading = ref(false);
+const utilTotal = computed(() => utilRows.value.find((r) => r.roomName === '全院合计') || null);
+const fmtMinutes = (m) => {
+  const n = Number(m || 0);
+  const h = Math.floor(n / 60);
+  return h > 0 ? `${h}h${n % 60 ? n % 60 + 'min' : ''}` : `${n}min`;
+};
+const utilColor = (rate) => {
+  const r = Number(rate || 0);
+  if (r >= 70) return '#e64340';
+  if (r >= 40) return '#e6a23c';
+  return '#0E9488';
+};
+const loadUtilization = async () => {
+  utilLoading.value = true;
+  try {
+    const [from, to] = utilRange.value || [today(), today()];
+    const res = await getOperationRoomUtilization(from, to);
+    utilRows.value = (res.data || []).filter((r) => r.roomName !== '未登记手术间（手工名）');
+  } catch (error)  /* 错误已由全局拦截器统一提示 */{
+    
+  } finally {
+    utilLoading.value = false;
+  }
+};
+const onTabChangeUtil = (name) => {
+  if (name === 'utilization' && !utilRows.value.length)
+    loadUtilization();
+};
 onMounted(async () => {
   await loadBaseData();
   await Promise.all([loadList(), loadUnfinishedCount()]);
 });
 </script>
+
+<style scoped>
+.util-stat-card {
+  background: #f7f9fc;
+  border: 1px solid #e5e9f0;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+.util-stat-value {
+  font-size: 22px;
+  font-weight: 600;
+  color: #1269B5;
+}
+.util-stat-label {
+  font-size: 12px;
+  color: #8a94a6;
+  margin-top: 2px;
+}
+.util-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.util-pct {
+  font-size: 12px;
+  color: #475569;
+  white-space: nowrap;
+}
+</style>
