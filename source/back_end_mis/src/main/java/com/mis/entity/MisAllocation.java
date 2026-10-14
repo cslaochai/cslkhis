@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
  */
 @Data
 @TableName("mss_allocation")
-public class JinbAllocation implements Serializable {
+public class MisAllocation implements Serializable {
 
     @TableId(type = IdType.AUTO)
     @JsonSerialize(using = ToStringSerializer.class)

@@ -16,10 +16,10 @@
     </parent>
 
     <groupId>com.mis</groupId>
-    <artifactId>mis-back-end</artifactId>
+    <artifactId>mis-backend</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
-    <name>mis-back-end</name>
+    <name>mis-backend</name>
     <description>医保结算经办（医保局端）模拟平台：参保查询 / 2304上传 / 2305撤销 / 日对账 / 月度申报审核拨付清算</description>
 
     <properties>
@@ -93,13 +93,13 @@
     </dependencies>
 
     <build>
-        <finalName>mis-back-end</finalName>
+        <finalName>mis-backend</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.mis.MssApplication</mainClass>
+                    <mainClass>com.mis.MisApplication</mainClass>
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>

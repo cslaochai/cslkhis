@@ -16,7 +16,7 @@
       </button>
     </div>
 
-    <el-form :model="addForm" label-position="top">
+    <el-form :model="addForm" label-position="left">
       <!-- 已有患者模式 -->
       <template v-if="addMode === 'existing'">
         <el-form-item label="选择患者" required>

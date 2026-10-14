@@ -1,6 +1,6 @@
 <template>
   <el-dialog v-model="visible" destroy-on-close :title="isAdd ? '新增患者' : '编辑患者'" width="800px">
-    <el-form :model="form" label-position="top">
+    <el-form :model="form" label-position="left">
       <h4 class="mb-2 text-sm font-medium text-slate-700">基本信息</h4>
       <div class="grid grid-cols-3 gap-4">
         <el-form-item label="姓名" required>

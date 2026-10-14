@@ -535,6 +535,11 @@ main p, main span, main div {
     padding: 9px 10px !important;
     border-radius: 9px;
     margin-bottom: 2px;
+    /* 覆盖 EP 默认 nowrap + hidden + ellipsis：内容超宽要在 option 自己这一块里
+       换行展示，不是被裁成一截 —— 挂号窗口靠这些信息核身，裁掉等于看不见 */
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
 }
 
 /* 卡片行高按信息量分档：全局患者搜索是四行富卡片（92px），
@@ -704,6 +709,9 @@ main p, main span, main div {
     align-items: center;
     flex-wrap: wrap;
     gap: 6px;
+    /* 患者号 / 手机号 / 身份证这类无空格长串也要能断行，否则一个超长值
+       能把整行顶破 option 边界 */
+    overflow-wrap: anywhere;
 }
 
 .ps-line + .ps-line {
@@ -754,6 +762,11 @@ main p, main span, main div {
     border-radius: 4px;
     border: 1px solid transparent;
     white-space: nowrap;
+    /* 单枚 chip 超长（脏值费别等）时整体省略，不撑破 option 右边界；
+       短 chip（患者号/字典费别）远够宽，走不到省略 */
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .ps-chip-code {
@@ -815,6 +828,7 @@ main p, main span, main div {
 .ps-meta-key {
     color: #9CB2C7;
     margin-right: 3px;
+    white-space: nowrap;
 }
 
 .ps-meta-sep {
@@ -848,15 +862,16 @@ main p, main span, main div {
    挂号患者下拉（AppointmentPatientSelect，components/his/）
    与全局患者搜索共用 .ps-* 卡片类和上面那组下拉框架样式（选择器已并列扩展），
    差异都写在这里：
-   ① 宽度收窄到 360px：只展示挂号相关信息（已砍掉标签/过敏史/住址等长串），
-      不需要全局搜索那 520px；信息短了还撑那么宽只会把下拉甩到弹窗外、离输入框老远；
+   ① 宽度不写死：组件去掉 fit-input-width=false 后，popper 跟随输入框宽度
+      （EP 内联 width）。弹窗里患者框是半宽，popper 就该是半宽 —— 曾固定 360px，
+      那时患者框满宽；改半宽后 360 ≠ 输入框宽，下拉会歪出输入框边界。
    ② 行高压到 64px（见上面 .appointment-patient-popper .el-select-dropdown__item）；
-   ③ 卡片再压一档（头像 34 / 姓名 14 / 行间距 5）：360px 里塞得下两行紧凑信息，不换行。
+   ③ 卡片压一档（头像 34 / 姓名 14 / 行间距 5）：两行紧凑信息，放不下就换行。
+   ④ item 层必须覆盖 EP 默认的 white-space:nowrap + overflow:hidden + ellipsis ——
+      不然内容一超宽就被裁掉，而不是在 option 自己那一小块里换行。
    popper 同样 teleport 到 body，必须写全局，不能写进组件 scoped。
    =================================================================== */
 .appointment-patient-popper.el-popper {
-    min-width: 360px !important;
-    width: 360px !important;
     border-radius: 12px;
     box-shadow: 0 14px 40px rgba(9, 47, 84, 0.18);
     border: 1px solid var(--his-card-border);

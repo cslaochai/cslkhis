@@ -1,7 +1,7 @@
 <template>
   <!-- 新增库存弹窗（从药品字典选药 + 批次入库） -->
   <el-dialog v-model="visible" destroy-on-close title="新增库存（选择药品批次入库）" width="640px">
-    <el-form :model="form" label-position="top">
+    <el-form :model="form" label-position="left">
       <el-form-item label="药品（来自药品字典）" required>
         <el-select
             v-model="form.drugId"

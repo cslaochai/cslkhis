@@ -1,6 +1,6 @@
 package com.mis.engine;
 
-import com.mis.config.JinbProperties;
+import com.mis.config.MisProperties;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -14,9 +14,9 @@ import java.math.RoundingMode;
 @Component
 public class PolicyEngine {
 
-    private final JinbProperties props;
+    private final MisProperties props;
 
-    public PolicyEngine(JinbProperties props) {
+    public PolicyEngine(MisProperties props) {
         this.props = props;
     }
 
@@ -27,10 +27,10 @@ public class PolicyEngine {
         if (total == null || total.signum() <= 0) {
             return BigDecimal.ZERO;
         }
-        JinbProperties.Scheme scheme = isEmployee(insuranceType)
+        MisProperties.Scheme scheme = isEmployee(insuranceType)
                 ? props.getPolicy().getEmployee()
                 : props.getPolicy().getResident();
-        JinbProperties.Rate rate = isInpatient(encounterType)
+        MisProperties.Rate rate = isInpatient(encounterType)
                 ? scheme.getInpatient()
                 : scheme.getOutpatient();
 

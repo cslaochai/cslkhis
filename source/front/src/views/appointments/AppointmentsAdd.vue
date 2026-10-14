@@ -1,11 +1,5 @@
 <template>
-  <!-- 新增挂号弹窗：患者区按 tab 切换；下方三块共享 —— 患者信息（仅录入新患者）/
-       费用信息（费别+医保卡号+结算方式，置于预约信息之上）/ 预约信息（就诊类型→科室→号源→时段）。
-       费用信息：费别是患者主档属性（新患者可编辑、已有患者只读），医保卡号不做联动隐藏；
-       结算方式由费别推导 —— 医保类费别才出现「联网/全自费」下拉，其余只读显示全自费。 -->
   <el-dialog v-model="visible" class="appt-dialog" destroy-on-close title="新增挂号" width="880px" @closed="resetForm">
-    <!-- 患者来源切换（与急诊登记同一交互）：tab 只切换**患者输入区**，
-         下面的就诊类型 / 复诊 / 号源 / 时段 / 结算方式 是共享字段 -->
     <div class="mb-4 flex rounded-lg border border-slate-200 bg-slate-50 p-1">
       <button
           :class="addMode === 'existing' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
@@ -23,9 +17,7 @@
       </button>
     </div>
 
-    <el-form :model="newAppointment" label-position="top">
-      <!-- tab1：选择已有患者。下拉占半宽，已选患者卡片紧跟其后同一行 ——
-           挂号窗口最容易犯的错是挂错人，选完必须让人在下拉旁一眼确认，不用滚下去找 -->
+    <el-form :model="newAppointment" label-position="left">
       <template v-if="addMode === 'existing'">
         <div class="flex items-start gap-4">
           <el-form-item label="选择患者" required class="!w-1/2 shrink-0">
@@ -87,36 +79,29 @@
         </div>
       </template>
 
-      <!-- 费用信息块（两 tab 共用，置于预约信息之上）：费别 + 医保卡号 + 结算方式三者归一处。
-           录入新患者时费别/医保卡号可编辑（写入患者主档）；选择已有患者时费别只读（来自主档）、医保卡号可补登。
-           费别与医保卡号不做联动隐藏 —— 自费患者也有医保字段（只是为空），摆着让人知道"这一栏就是没有"，不会误以为漏填。 -->
       <div class="appt-block">
         <div class="appt-block__title">费用信息</div>
         <div class="grid grid-cols-2 gap-x-4">
-          <!-- 费别：新患者可编辑；已有患者是选人时从主档带出来的 —— 保留下拉形态但置灰，
-               一眼能看出「这是个下拉字段、当前值来自患者档案、这里改不了」 -->
           <el-form-item label="费别" :required="addMode === 'new'">
             <el-select v-if="addMode === 'new'" v-model="newPatientForm.medicalInsuranceType" class="w-full" filterable
                        placeholder="选择费别">
               <el-option v-for="item in medicalInsuranceTypes" :key="item.dictValue" :label="item.dictLabel"
                          :value="item.dictValue ?? item.dictLabel"/>
             </el-select>
-            <el-select v-else :model-value="newAppointment.medicalInsuranceType || ''" class="w-full" disabled
+            <el-select v-else :model-value="newAppointment.medicalInsuranceType || ''" class="w-full"
                        placeholder="—">
               <el-option v-for="item in medicalInsuranceTypes" :key="item.dictValue" :label="item.dictLabel"
                          :value="item.dictValue ?? item.dictLabel"/>
-              <!-- 主档费别不在字典里（历史脏值）时也要显示出原值，不能变成一个空框 -->
               <el-option v-if="newAppointment.medicalInsuranceType
                 && !medicalInsuranceTypes.some((i) => (i.dictValue ?? i.dictLabel) === newAppointment.medicalInsuranceType)"
                          :label="newAppointment.medicalInsuranceType" :value="newAppointment.medicalInsuranceType"/>
             </el-select>
           </el-form-item>
-          <!-- 医保卡号：始终展示，不再按费别联动隐藏。联网结算时必填（红星提示），
-               但「填没填」的拦截放在提交时 + 后端保存闸，不在输入过程中烦人 -->
           <el-form-item
               :required="Number(newAppointment.settlementType) === 2 && isAppointmentInsuranceFee"
               label="医保卡号">
-            <el-input v-if="addMode === 'new'" v-model="newPatientForm.medicalInsuranceNo" placeholder="请输入医保卡号"/>
+            <el-input v-if="addMode === 'new'" v-model="newPatientForm.medicalInsuranceNo"
+                      placeholder="请输入医保卡号"/>
             <el-input v-else v-model="newAppointment.medicalInsuranceNo" placeholder="请输入医保卡号"/>
           </el-form-item>
         </div>
@@ -140,13 +125,8 @@
         </p>
       </div>
 
-      <!-- 预约信息块（两 tab 共用）：就诊类型 → 复诊上下文 →
-           预约日期 / 科室（两栏、日期在前）→ 号源（整行，信息多）→ 时间段。
-           号源整行不挤两栏：它的选项要带医生 / 诊室 / 时段 / 余号 / 挂号费，塞进半栏必被截断。 -->
       <div class="appt-block">
         <div class="appt-block__title">预约信息</div>
-
-        <!-- 就诊类型 + 预约日期 同行：先定「什么类型 / 哪天来」，再定科室号源 -->
         <div class="grid grid-cols-2 gap-x-5 items-start">
           <el-form-item :class="{'col-span-2': isSameDayReturn}" label="就诊类型">
             <el-select v-model="newAppointment.visitType" class="w-full" placeholder="选择类型"
@@ -184,14 +164,12 @@
               </el-select>
             </el-form-item>
           </div>
-          <!-- 「查过了但没病历」要说清是没病历，不是没选（否则人会回去反复点患者） -->
           <p v-if="newAppointment.patientId && !revisitRecordLoading && !revisitRecords.length"
              class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
             该患者还没有可关联的就诊病历 —— 请改为初诊，或由医生在诊室里开「当日回诊」
           </p>
         </template>
 
-        <!-- 当日回诊是同一次挂号的延续：不占号源，也就不需要科室 / 日期 / 号源 / 时段 -->
         <template v-if="!isSameDayReturn">
           <!-- 科室单列紧跟日期（下方号源 / 时间段都是整行，半栏放科室会和下方的满栏错位） -->
           <el-form-item label="选择科室" required>
@@ -214,10 +192,8 @@
                   :value="s.id ?? s.doctorName"
               />
             </el-select>
-            <!-- 「查过了但没号」由 placeholder 说（schedulePlaceholder），这里不再重复第二遍 -->
           </el-form-item>
           <el-form-item label="时间段">
-            <!-- 号源事实在段上：选段 = 定下这半小时的号；余 0 的段禁用，段已满提示换相邻段 -->
             <el-select v-model="newAppointment.slotId" :disabled="!slotRows.length" :loading="slotLoading"
                        class="w-full"
                        clearable placeholder="请选择时间段">
@@ -289,9 +265,6 @@ import {REVISIT_SOURCE, revisitNeedsNoSchedule} from '@/lib/revisitPolicy';
 import {isAllDept, settlementTypes, slotLabel} from '@/lib/appointments';
 import AppointmentPatientSelect from '@/components/his/AppointmentPatientSelect.vue';
 
-// 新增挂号弹窗（从 AppointmentsView 拆出）。
-// 号源余量、占号、幂等的事实仍由提交本身把关：这里只是把表单 UI 与校验收拢到一处。
-// seed = 看板带进来的预填（科室/日期/号源/段/医生），为空 = 工具栏「新增挂号」的空白开单。
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
   /** 科室候选（页面级参照数据，主页面按 deptType:1 加载后传入） */
@@ -435,7 +408,8 @@ const handlePatientSelect = (patient) => {
     if (detail && String(detail.id) === String(patient.id) && !newAppointment.value.medicalInsuranceNo) {
       newAppointment.value.medicalInsuranceNo = detail.medicalInsuranceNo || '';
     }
-  }).catch(() => { /* 补不齐不拦人：提交时还有一道校验 + 后端保存闸 */ });
+  }).catch(() => { /* 补不齐不拦人：提交时还有一道校验 + 后端保存闸 */
+  });
   // 换人 = 换病历：原来选中的原病历属于上一个人，留着就会拿别人的就诊日判策略
   newAppointment.value.revisitRecordId = null;
   if (isRevisit.value) {
@@ -497,7 +471,7 @@ watch(() => [newAppointment.value.visitType, newAppointment.value.revisitSource,
     if (token !== previewToken)
       return;
     revisitPreview.value = null;
-    
+
   } finally {
     if (token === previewToken)
       revisitPreviewLoading.value = false;
@@ -781,8 +755,8 @@ const handleSubmit = async () => {
     });
     emit('saved');
     resetForm();
-  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   } finally {
     addSubmitLoading.value = false;
   }

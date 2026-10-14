@@ -1,6 +1,6 @@
 <template>
   <el-dialog v-model="visible" destroy-on-close title="修改挂号" width="600px">
-    <el-form :model="editForm" label-position="top">
+    <el-form :model="editForm" label-position="left">
       <div class="grid grid-cols-2 gap-4">
         <el-form-item label="选择科室" required>
           <el-select v-model="editForm.deptId" class="w-full" placeholder="选择科室" @change="handleEditDeptChange">

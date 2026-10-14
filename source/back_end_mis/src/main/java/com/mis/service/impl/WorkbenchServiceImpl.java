@@ -6,10 +6,14 @@ import com.mis.entity.MssBill;
 import com.mis.entity.MssFeeAudit;
 import com.mis.entity.MssPendingSettle;
 import com.mis.entity.MssRecon;
+import com.mis.entity.MssRecover;
+import com.mis.entity.MssSuspicion;
 import com.mis.mapper.MssBillMapper;
 import com.mis.mapper.MssFeeAuditMapper;
 import com.mis.mapper.MssPendingSettleMapper;
 import com.mis.mapper.MssReconMapper;
+import com.mis.mapper.MssRecoverMapper;
+import com.mis.mapper.MssSuspicionMapper;
 import com.mis.service.WorkbenchService;
 import com.mis.vo.BillVO;
 import com.mis.vo.StatsVO;
@@ -34,6 +38,8 @@ public class WorkbenchServiceImpl implements WorkbenchService {
     private final MssPendingSettleMapper pendingMapper;
     private final MssFeeAuditMapper auditMapper;
     private final MssReconMapper reconMapper;
+    private final MssSuspicionMapper suspicionMapper;
+    private final MssRecoverMapper recoverMapper;
 
     @Override
     public WorkbenchVO summary() {
@@ -60,13 +66,19 @@ public class WorkbenchServiceImpl implements WorkbenchService {
                 .eq(MssRecon::getStatus, "待对账"));
         long refund = billMapper.selectCount(new LambdaQueryWrapper<MssBill>()
                 .eq(MssBill::getStatus, "已退费"));
+        long suspicion = suspicionMapper.selectCount(new LambdaQueryWrapper<MssSuspicion>()
+                .eq(MssSuspicion::getStatus, "待核实"));
+        long recover = recoverMapper.selectCount(new LambdaQueryWrapper<MssRecover>()
+                .eq(MssRecover::getStatus, "待追回"));
 
         WorkbenchVO.Todo todo = new WorkbenchVO.Todo();
         todo.setPendingSettle((int) pending);
         todo.setAudit((int) audit);
         todo.setReconcile((int) reconcile);
         todo.setRefund((int) refund);
-        todo.setTotal((int) (pending + audit + reconcile));
+        todo.setSuspicion((int) suspicion);
+        todo.setRecover((int) recover);
+        todo.setTotal((int) (pending + audit + reconcile + suspicion + recover));
 
         List<MssBill> recent = billMapper.selectPage(new Page<>(1, 6),
                 new LambdaQueryWrapper<MssBill>().orderByDesc(MssBill::getSettleTime)).getRecords();

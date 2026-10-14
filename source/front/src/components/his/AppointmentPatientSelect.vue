@@ -3,7 +3,7 @@
       v-model="selectedId"
       :clearable="clearable"
       :disabled="disabled"
-      :fit-input-width="false"
+      :fit-input-width="true"
       :loading="loading"
       :no-data-text="keyword ? '未找到匹配的患者' : '输入姓名 / 患者号 / 手机号 / 身份证号搜索'"
       :placeholder="placeholder"

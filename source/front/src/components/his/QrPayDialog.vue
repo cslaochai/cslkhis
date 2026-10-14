@@ -31,6 +31,8 @@
         <div class="flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-100 px-3 py-1.5 text-xs text-slate-500">
           <span>应收 <b class="font-mono text-slate-700">{{ moneyText(summary.totalAmount) }}</b></span>
           <span v-if="Number(summary.discountAmount) > 0">优惠 <b class="font-mono text-slate-700">-{{ moneyText(summary.discountAmount) }}</b></span>
+          <span v-if="Number(summary.poolAmount) > 0">统筹报销 <b class="font-mono text-emerald-600">-{{ moneyText(summary.poolAmount) }}</b></span>
+          <span v-if="Number(summary.accountAmount) > 0">个账 <b class="font-mono text-emerald-600">-{{ moneyText(summary.accountAmount) }}</b></span>
           <span>应缴 <b class="font-mono text-slate-700">{{ moneyText(summary.payableAmount) }}</b></span>
           <span>尚欠 <b class="font-mono text-red-600">{{ moneyText(summary.unpaidAmount) }}</b></span>
         </div>

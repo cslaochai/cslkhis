@@ -9,7 +9,7 @@
     </div>
 
     <div class="mb-3 grid grid-cols-2 gap-4">
-      <el-form :model="hoForm" label-position="top">
+      <el-form :model="hoForm" label-position="left">
         <el-form-item label="接班人（总接班，逐条可再指定别的接续医生）" required>
           <el-select v-model="hoForm.takeEmpId" class="!w-full" data-testid="emg-ho-taker"
                      filterable placeholder="选择接班医生">
@@ -20,7 +20,7 @@
           </el-select>
         </el-form-item>
       </el-form>
-      <el-form :model="hoForm" label-position="top">
+      <el-form :model="hoForm" label-position="left">
         <el-form-item label="整班备注（可选）">
           <el-input v-model="hoForm.remark" placeholder="如：夜班 1 例在抢救、设备科已通知"/>
         </el-form-item>

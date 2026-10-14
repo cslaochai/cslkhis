@@ -2,7 +2,7 @@
   <!-- 人力标准弹窗（新增+编辑合并：row 为空即新增，带 id 即编辑） -->
   <el-dialog v-model="visible" :title="form.id ? '编辑配置标准' : '新增配置标准'" destroy-on-close
              width="520px">
-    <el-form label-position="top" @submit.prevent>
+    <el-form label-position="left" @submit.prevent>
       <el-form-item label="适用班次" required>
         <el-select v-model="form.shiftId" :fit-input-width="false" class="w-full" data-testid="ns-rule-shift">
           <el-option label="病区合计（病区级规则）" value="0"/>

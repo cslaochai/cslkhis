@@ -175,3 +175,30 @@ INSERT IGNORE INTO mss_config (config_id, config_name, config_key, config_value,
 (1, '平台名称',   'mss.platform.name', '医保结算经办平台', 0, 1),
 (2, '定点机构编码', 'mss.medins.code',  'H4301000001',     1, 1),
 (3, '定点机构名称', 'mss.medins.name',  '长沙市麓康医院',  1, 1);
+
+-- =====================================================================
+-- 基金监管铺底：内置监管规则 + 菜单 + 角色授权
+-- =====================================================================
+
+-- 内置监管规则（规则引擎按 rule_type 分派扫描逻辑）
+INSERT IGNORE INTO mss_audit_rule (id, rule_code, rule_name, rule_type, target, severity, params, description, status) VALUES
+(1, 'RULE_DUP_CHARGE',     '重复收费',          'duplicate_charge',         1, 2, '{"minAmount":200}',     '同一结算单同项目多次计费且合计达阈值', 1),
+(2, 'RULE_OVER_LIMIT',     '超限价收费',        'over_limit_price',         1, 2, '{"overRatio":0.1}',      '项目单价高于医保限价比例阈值',       1),
+(3, 'RULE_SPLIT_HOSP',     '分解住院',          'split_hospitalization',    2, 3, '{"windowDays":15,"minCount":2}', '同一参保人短期内多次住院结算', 1),
+(4, 'RULE_BED_HANG',       '挂床住院',          'bed_hanging',              1, 2, '{"minDays":10,"maxAmount":500}', '住院天数长而费用极低',       1),
+(5, 'RULE_ABNORMAL_COST',  '高额住院费用',      'abnormal_cost',            2, 3, '{"avgTimes":3}',         '住院费用显著高于同险种均值',         1),
+(6, 'RULE_PAYCLASS_C',     '丙类项目入统筹',    'payclass_c',               1, 2, '{"minAmount":200}',     '结算单含丙类项目金额并发生统筹支付',   1);
+
+-- 基金监管菜单（目录=13，子菜单 131-135）
+INSERT IGNORE INTO mss_menu (id, menu_name, parent_id, sort_order, menu_type, path, component, menu_key, icon, permission) VALUES
+(13,  '基金监管',         0,  45, 1, '/supervise',            NULL,                         'supervise',        'Monitor',    NULL),
+(131, '监管工作台',       13, 1,  2, '/supervise/dashboard',  'supervise/SuperviseDashboard', 'supervise.dashboard', 'DataBoard', 'supervise:dashboard:view'),
+(132, '规则配置',         13, 2,  2, '/supervise/rule',       'supervise/RuleView',         'supervise.rule',   'SetUp',      'supervise:rule:list'),
+(133, '疑点稽核',         13, 3,  2, '/supervise/suspicion',  'supervise/SuspicionView',    'supervise.suspicion', 'Search',  'supervise:suspicion:list'),
+(134, '飞检任务',         13, 4,  2, '/supervise/inspection', 'supervise/InspectionView',   'supervise.inspection', 'Van',      'supervise:inspection:list'),
+(135, '违规追回',         13, 5,  2, '/supervise/recover',    'supervise/RecoverView',      'supervise.recover', 'RefreshLeft', 'supervise:recover:list');
+
+-- 基金监管角色授权：经办管理员全量 + 审核员监管全量
+INSERT IGNORE INTO mss_role_menu (role_id, menu_id) VALUES
+(1,13),(1,131),(1,132),(1,133),(1,134),(1,135),
+(3,13),(3,131),(3,132),(3,133),(3,134),(3,135);

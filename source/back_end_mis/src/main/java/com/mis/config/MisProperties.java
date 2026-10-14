@@ -12,7 +12,7 @@ import java.util.List;
  */
 @Data
 @ConfigurationProperties(prefix = "jinb")
-public class JinbProperties {
+public class MisProperties {
 
     /** 准入的定点医疗机构 */
     private Medins medins = new Medins();

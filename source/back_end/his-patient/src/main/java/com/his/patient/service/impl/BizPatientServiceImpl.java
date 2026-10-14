@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.constant.DictTypeConst;
-import com.his.common.enums.DelFlagEnum;
 import com.his.common.enums.EnableStatusEnum;
 import com.his.common.enums.MedicalInsuranceTypeEnum;
 import com.his.common.enums.SysGenderEnum;
@@ -297,7 +296,9 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
             patient.setAge(Period.between(patient.getBirthDate(), LocalDate.now()).getYears());
         }
 
-        patient.setStatus(DelFlagEnum.NORMAL.getCode());
+        // status 是「启用状态」（0-停用 1-启用），不是删除标志 —— 曾错用 DelFlagEnum.NORMAL(0)，
+        // 把当天所有新患者建成「停用」（患者下拉挂红签、列表页显示停用）。register/监护人建档都写 1，统一口径。
+        patient.setStatus(EnableStatusEnum.ENABLED.getCode());
         patient.setMergeStatus(PatientMergeStatusEnum.NORMAL.getCode());
         boolean result = this.save(patient);
         if (!result) {

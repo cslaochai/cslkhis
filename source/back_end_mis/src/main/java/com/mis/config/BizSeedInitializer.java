@@ -39,7 +39,13 @@ public class BizSeedInitializer implements ApplicationRunner {
     private final JinbMonthlyDeductMapper deductMapper;
     private final JinbAllocationMapper allocationMapper;
     private final JinbInsuredPersonMapper personMapper;
-    private final JinbProperties properties;
+    private final MssBillMapper billMapper;
+    private final MssAuditRuleMapper ruleMapper;
+    private final MssSuspicionMapper suspicionMapper;
+    private final MssInspectionMapper inspectionMapper;
+    private final MssInspectionItemMapper inspectionItemMapper;
+    private final MssRecoverMapper recoverMapper;
+    private final MisProperties properties;
     private final ObjectMapper objectMapper;
 
     private long seed = 20261014L;
@@ -56,8 +62,10 @@ public class BizSeedInitializer implements ApplicationRunner {
         List<JinbInsuredPerson> insured = seedInsuredPersons();
         List<JinbSettlement> settlements = seedSettlements(insured);
         seedMonthly(settlements);
-        log.info("[经办平台] 数据补洞完成：参保人{} 2304报盘{} 月度结算{}",
-                personMapper.selectCount(null), settlementMapper.selectCount(null), monthlyMapper.selectCount(null));
+        seedSupervise(settlements);
+        log.info("[经办平台] 数据补洞完成：参保人{} 2304报盘{} 月度结算{} 监管疑点{}",
+                personMapper.selectCount(null), settlementMapper.selectCount(null), monthlyMapper.selectCount(null),
+                suspicionMapper.selectCount(null));
     }
 
     // --------------------------------------------------------------- 参保人
@@ -259,7 +267,7 @@ public class BizSeedInitializer implements ApplicationRunner {
 
         // 拨付单
         if (stage >= 3) {
-            JinbAllocation alloc = new JinbAllocation();
+            MisAllocation alloc = new MisAllocation();
             alloc.setMonth(month);
             alloc.setAllocNo("BF" + month.replace("-", "") + String.format("%03d", 1));
             alloc.setAllocType(1);
@@ -268,7 +276,7 @@ public class BizSeedInitializer implements ApplicationRunner {
             alloc.setCreateTime(m.getAllocateTime());
             allocationMapper.insert(alloc);
             if (stage >= 4) {
-                JinbAllocation refund = new JinbAllocation();
+                MisAllocation refund = new MisAllocation();
                 refund.setMonth(month);
                 refund.setAllocNo("BF" + month.replace("-", "") + String.format("%03d", 2));
                 refund.setAllocType(2);
@@ -278,6 +286,177 @@ public class BizSeedInitializer implements ApplicationRunner {
                 allocationMapper.insert(refund);
             }
         }
+    }
+
+    // --------------------------------------------------------------- 基金监管演示数据
+
+    /**
+     * 监管侧补洞（幂等，仅表空时执行）：疑点记录（含已确认/已排除）、
+     * 违规追回单（已追回/待追回各 1 张）、飞检任务（1 检查中 + 1 已完成）。
+     * 一键稽核（/supervise/suspicion/run）会在其上增量扫描，种子数据不重复。
+     */
+    private void seedSupervise(List<JinbSettlement> settlements) {
+        if (suspicionMapper.selectCount(null) != null && suspicionMapper.selectCount(null) > 0) {
+            return;
+        }
+        List<MssAuditRule> rules = ruleMapper.selectList(null);
+        List<MssBill> bills = billMapper.selectList(null);
+        List<MssSuspicion> suspects = new ArrayList<>();
+        String today8 = LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+        int seq = 1;
+
+        // 机构报盘侧疑点（取前 4 条结算单）：2 待核实 + 1 已确认 + 1 已排除
+        List<MssAuditRule> rulesSett = filterRules(rules, 2);
+        for (int i = 0; i < 4 && i < settlements.size(); i++) {
+            JinbSettlement s = settlements.get(i);
+            MssAuditRule rule = rulesSett.isEmpty() ? null : rulesSett.get(i % rulesSett.size());
+            MssSuspicion sp = new MssSuspicion();
+            sp.setSuspicionNo("YZ" + today8 + String.format("%03d", seq++));
+            sp.setRuleId(rule == null ? null : rule.getId());
+            sp.setRuleName(rule == null ? "分解住院" : rule.getRuleName());
+            sp.setRuleType(rule == null ? "split_hospitalization" : rule.getRuleType());
+            sp.setBizSource(2);
+            sp.setBizId(s.getId());
+            sp.setBizNo(s.getTradeNo());
+            sp.setPatientName(s.getPatientName());
+            sp.setIdCardMask(maskIdCard(s.getIdCard()));
+            sp.setInsuranceType(s.getInsuranceType());
+            sp.setEncounterType(s.getEncounterType());
+            sp.setBizDate(s.getBillDate());
+            sp.setInvolvedAmount(s.getInsurancePay());
+            sp.setReason("规则引擎扫描命中：" + (rule == null ? "分解住院" : rule.getRuleName()) + "（" + sp.getBizNo() + "）");
+            if (i < 2) {
+                sp.setStatus("待核实");
+            } else if (i == 2) {
+                sp.setStatus("已确认");
+                sp.setConfirmAmount(sp.getInvolvedAmount());
+                sp.setHandleUser("yb002");
+                sp.setHandleTime(LocalDateTime.now().minusDays(1));
+            } else {
+                sp.setStatus("已排除");
+                sp.setHandleUser("yb002");
+                sp.setHandleTime(LocalDateTime.now().minusDays(1));
+                sp.setRemark("复核票据与病程记录一致，排除疑点");
+            }
+            suspicionMapper.insert(sp);
+            suspects.add(sp);
+        }
+        // 经办结算单侧疑点（取前 3 条账单）：2 待核实 + 1 已确认
+        List<MssAuditRule> rulesBill = filterRules(rules, 1);
+        for (int i = 0; i < 3 && i < bills.size(); i++) {
+            MssBill b = bills.get(i);
+            MssAuditRule rule = rulesBill.isEmpty() ? null : rulesBill.get(i % rulesBill.size());
+            MssSuspicion sp = new MssSuspicion();
+            sp.setSuspicionNo("YZ" + today8 + String.format("%03d", seq++));
+            sp.setRuleId(rule == null ? null : rule.getId());
+            sp.setRuleName(rule == null ? "重复收费" : rule.getRuleName());
+            sp.setRuleType(rule == null ? "duplicate_charge" : rule.getRuleType());
+            sp.setBizSource(1);
+            sp.setBizId(b.getId());
+            sp.setBizNo(b.getBillNo());
+            sp.setPatientName(b.getPatientName());
+            sp.setIdCardMask(b.getIdCardMask() != null ? b.getIdCardMask() : maskIdCard(b.getIdCard()));
+            sp.setInsuranceType(b.getInsuranceType());
+            sp.setEncounterType(b.getSettleType());
+            sp.setDept(b.getDept());
+            sp.setDoctor(b.getDoctor());
+            sp.setBizDate(b.getSettleTime() == null ? null : b.getSettleTime().toLocalDate());
+            sp.setInvolvedAmount(b.getInsurancePay());
+            sp.setReason("规则引擎扫描命中：" + (rule == null ? "重复收费" : rule.getRuleName()) + "（" + sp.getBizNo() + "）");
+            if (i == 2) {
+                sp.setStatus("已确认");
+                sp.setConfirmAmount(sp.getInvolvedAmount());
+                sp.setHandleUser("yb002");
+                sp.setHandleTime(LocalDateTime.now().minusDays(1));
+            } else {
+                sp.setStatus("待核实");
+            }
+            suspicionMapper.insert(sp);
+            suspects.add(sp);
+        }
+
+        // 已确认疑点生成追回单：1 已追回 + 1 待追回
+        List<MssSuspicion> confirmed = new ArrayList<>();
+        for (MssSuspicion sp : suspects) {
+            if ("已确认".equals(sp.getStatus())) {
+                confirmed.add(sp);
+            }
+        }
+        for (int i = 0; i < confirmed.size(); i++) {
+            MssSuspicion sp = confirmed.get(i);
+            MssRecover r = new MssRecover();
+            r.setRecoverNo("ZJ" + today8 + String.format("%03d", i + 1));
+            r.setSourceType(1);
+            r.setSourceNo(sp.getSuspicionNo());
+            r.setTargetOrgCode(properties.getMedins().getCode());
+            r.setTargetOrgName(properties.getMedins().getName());
+            r.setMonth(sp.getBizDate() == null ? null : sp.getBizDate().toString().substring(0, 7));
+            r.setRecoverAmount(sp.getConfirmAmount());
+            r.setReason("稽核确认违规：" + sp.getReason());
+            if (i == 0) {
+                r.setStatus("已追回");
+                r.setRecoverTime(LocalDateTime.now().minusDays(2));
+                r.setHandler("yb002");
+            } else {
+                r.setStatus("待追回");
+            }
+            recoverMapper.insert(r);
+        }
+
+        // 飞检任务：1 检查中（含 3 条问题明细）+ 1 已完成
+        MssInspection ins = new MssInspection();
+        ins.setInspectionNo("FJ" + today8 + "001");
+        ins.setTitle("2026 年第三季度专项飞检——重复收费与超限价");
+        ins.setInspectType("专项检查");
+        ins.setTargetOrg(properties.getMedins().getName());
+        ins.setPlanStart(LocalDate.now().minusDays(5));
+        ins.setPlanEnd(LocalDate.now().plusDays(2));
+        ins.setLeader("审核稽核科");
+        ins.setMembers("审核稽核科");
+        ins.setScopeDesc("抽查近 3 个月结算单重复收费、超限价收费、丙类项目入统筹问题");
+        ins.setStatus("检查中");
+        inspectionMapper.insert(ins);
+        String[] pTypes = {"重复收费", "超限价收费", "丙类项目入统筹"};
+        String[] pDisposes = {"追回", "整改", "移交稽核"};
+        for (int i = 0; i < 3; i++) {
+            MssInspectionItem it = new MssInspectionItem();
+            it.setInspectionId(ins.getId());
+            it.setProblemType(pTypes[i]);
+            it.setProblemDesc("抽查发现「" + pTypes[i] + "」问题 " + (i + 1) + " 例");
+            it.setEvidence("结算明细与目录限价比对记录");
+            it.setInvolvedAmount(bd(300 + i * 220));
+            it.setDispose(pDisposes[i]);
+            inspectionItemMapper.insert(it);
+        }
+        MssInspection done = new MssInspection();
+        done.setInspectionNo("FJ" + today8 + "002");
+        done.setTitle("群众举报核查——虚记诊疗项目");
+        done.setInspectType("举报核查");
+        done.setTargetOrg(properties.getMedins().getName());
+        done.setPlanStart(LocalDate.now().minusDays(20));
+        done.setPlanEnd(LocalDate.now().minusDays(15));
+        done.setLeader("审核稽核科");
+        done.setStatus("已完成");
+        done.setResultSummary("经核查，个别结算单存在虚记诊疗项目情形，已下达整改通知并移交追回。");
+        inspectionMapper.insert(done);
+    }
+
+    private List<MssAuditRule> filterRules(List<MssAuditRule> rules, Integer target) {
+        List<MssAuditRule> out = new ArrayList<>();
+        for (MssAuditRule r : rules) {
+            if (target.equals(r.getTarget())) {
+                out.add(r);
+            }
+        }
+        return out;
+    }
+
+    private String maskIdCard(String idCard) {
+        if (idCard == null || idCard.length() <= 8) {
+            return idCard;
+        }
+        int stars = idCard.length() - 8;
+        return idCard.substring(0, 4) + "*".repeat(stars) + idCard.substring(idCard.length() - 4);
     }
 
     // --------------------------------------------------------------- 工具

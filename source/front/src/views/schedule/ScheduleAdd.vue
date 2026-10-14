@@ -2,7 +2,7 @@
   <!-- 新增排班（批量：医生多选 × 日期区间）与修改排班（单条）是两个弹窗。
        以前一个弹窗靠 v-if="isEdit" 分叉，两套排版挤在一起，改一边就碰坏另一边。 -->
   <el-dialog v-model="visible" destroy-on-close title="新增排班" width="980px">
-    <el-form :model="formData" label-position="top">
+    <el-form :model="formData" label-position="left">
       <div class="grid grid-cols-3 gap-4">
         <el-form-item label="科室" required>
           <el-select v-model="formData.deptId" class="w-full" filterable placeholder="输入科室名称搜索"

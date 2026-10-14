@@ -1,7 +1,7 @@
 <template>
   <!-- 修改排班：单条。医生不可换人（换人=别人的班次），日期只有一天 -->
   <el-dialog v-model="visible" destroy-on-close title="修改排班" width="780px">
-    <el-form :model="formData" label-position="top">
+    <el-form :model="formData" label-position="left">
       <div class="grid grid-cols-3 gap-4">
         <el-form-item label="科室">
           <el-input :model-value="formData.deptName" disabled/>

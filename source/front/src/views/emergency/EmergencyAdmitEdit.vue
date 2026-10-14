@@ -1,7 +1,7 @@
 <template>
   <!-- 转住院：一次动作完成入院登记（途径=急诊）+ 急诊终态，不再"只翻状态不落入院" -->
   <el-dialog v-model="visible" destroy-on-close title="急诊转住院（入院登记）" width="560px">
-    <el-form :model="admitForm" label-position="top">
+    <el-form :model="admitForm" label-position="left">
       <div class="grid grid-cols-2 gap-x-4">
         <el-form-item label="患者">
           <el-input :model-value="admitForm.patientName" disabled/>

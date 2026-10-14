@@ -1,7 +1,7 @@
 <template>
   <!-- 点格排班弹窗 -->
   <el-dialog v-model="visible" destroy-on-close title="排班" width="460px">
-    <el-form label-position="top" @submit.prevent>
+    <el-form label-position="left" @submit.prevent>
       <div class="grid grid-cols-2 gap-4">
         <el-form-item label="护士">
           <el-input :model-value="form.nurseName" disabled/>

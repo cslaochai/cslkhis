@@ -1,7 +1,7 @@
 <template>
   <!-- 转入留观：必须选一张急诊病区的空闲床（占 sys_bed，住院分床不会再发这张床） -->
   <el-dialog v-model="visible" destroy-on-close title="转入留观" width="460px">
-    <el-form :model="obsForm" label-position="top">
+    <el-form :model="obsForm" label-position="left">
       <el-form-item label="患者">
         <el-input :model-value="obsForm.patientName" disabled/>
       </el-form-item>

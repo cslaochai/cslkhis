@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mis.common.base.PageResult;
 import com.mis.common.exception.BusinessException;
-import com.mis.config.JinbProperties;
+import com.mis.config.MisProperties;
 import com.mis.engine.PolicyEngine;
-import com.mis.entity.JinbAllocation;
+import com.mis.entity.MisAllocation;
 import com.mis.entity.JinbMonthly;
 import com.mis.entity.JinbMonthlyDeduct;
 import com.mis.entity.JinbSettlement;
@@ -34,14 +34,14 @@ public class MonthlyServiceImpl implements MonthlyService {
     private final JinbAllocationMapper allocationMapper;
     private final JinbSettlementMapper settlementMapper;
     private final PolicyEngine policyEngine;
-    private final JinbProperties properties;
+    private final MisProperties properties;
 
     public MonthlyServiceImpl(JinbMonthlyMapper monthlyMapper,
                               JinbMonthlyDeductMapper deductMapper,
                               JinbAllocationMapper allocationMapper,
                               JinbSettlementMapper settlementMapper,
                               PolicyEngine policyEngine,
-                              JinbProperties properties) {
+                              MisProperties properties) {
         this.monthlyMapper = monthlyMapper;
         this.deductMapper = deductMapper;
         this.allocationMapper = allocationMapper;
@@ -150,7 +150,7 @@ public class MonthlyServiceImpl implements MonthlyService {
         }
         BigDecimal payable = nz(m.getPayableAmount());
         if (payable.signum() > 0) {
-            JinbAllocation a = new JinbAllocation();
+            MisAllocation a = new MisAllocation();
             a.setMonth(month);
             a.setAllocNo("YBB" + month.replace("-", "") + "01");
             a.setAllocType(1);
@@ -178,7 +178,7 @@ public class MonthlyServiceImpl implements MonthlyService {
         // 模拟年度考核合格：全额返还质量保证金
         BigDecimal reserve = nz(m.getReserveAmount());
         if (reserve.signum() > 0) {
-            JinbAllocation a = new JinbAllocation();
+            MisAllocation a = new MisAllocation();
             a.setMonth(month);
             a.setAllocNo("YBN" + month.replace("-", "") + "01");
             a.setAllocType(2);
@@ -202,9 +202,9 @@ public class MonthlyServiceImpl implements MonthlyService {
         List<JinbMonthlyDeduct> deducts = deductMapper.selectList(new LambdaQueryWrapper<JinbMonthlyDeduct>()
                 .eq(JinbMonthlyDeduct::getMonth, month)
                 .orderByAsc(JinbMonthlyDeduct::getId));
-        List<JinbAllocation> allocations = allocationMapper.selectList(new LambdaQueryWrapper<JinbAllocation>()
-                .eq(JinbAllocation::getMonth, month)
-                .orderByAsc(JinbAllocation::getId));
+        List<MisAllocation> allocations = allocationMapper.selectList(new LambdaQueryWrapper<MisAllocation>()
+                .eq(MisAllocation::getMonth, month)
+                .orderByAsc(MisAllocation::getId));
 
         MonthlyResultVO vo = new MonthlyResultVO();
         vo.setMonth(month);

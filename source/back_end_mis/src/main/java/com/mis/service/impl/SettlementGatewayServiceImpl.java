@@ -3,7 +3,7 @@ package com.mis.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mis.common.base.PageVO;
-import com.mis.config.JinbProperties;
+import com.mis.config.MisProperties;
 import com.mis.dto.CancelSettlementDTO;
 import com.mis.dto.UploadSettlementDTO;
 import com.mis.engine.PolicyEngine;
@@ -37,13 +37,13 @@ public class SettlementGatewayServiceImpl implements SettlementGatewayService {
     private final JinbMessageMapper messageMapper;
     private final JinbInsuredPersonMapper personMapper;
     private final PolicyEngine policyEngine;
-    private final JinbProperties properties;
+    private final MisProperties properties;
 
     public SettlementGatewayServiceImpl(JinbSettlementMapper settlementMapper,
                                         JinbMessageMapper messageMapper,
                                         JinbInsuredPersonMapper personMapper,
                                         PolicyEngine policyEngine,
-                                        JinbProperties properties) {
+                                        MisProperties properties) {
         this.settlementMapper = settlementMapper;
         this.messageMapper = messageMapper;
         this.personMapper = personMapper;

@@ -10,7 +10,7 @@
       <span v-if="patientName">患者：{{ patientName }}</span>
     </div>
 
-    <el-form :model="form" label-position="top">
+    <el-form :model="form" label-position="left">
       <el-form-item label="原病历（按哪一次就诊复诊）" required>
         <el-select
             v-model="form.revisitRecordId"

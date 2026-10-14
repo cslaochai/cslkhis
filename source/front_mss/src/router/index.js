@@ -85,6 +85,37 @@ const routes = [
         component: () => import('@/views/stats/StatsView.vue'),
         meta: { title: '统计报表' },
       },
+      // ---------------- 基金监管 ----------------
+      {
+        path: 'supervise/dashboard',
+        name: 'SuperviseDashboard',
+        component: () => import('@/views/supervise/SuperviseDashboard.vue'),
+        meta: { title: '监管工作台' },
+      },
+      {
+        path: 'supervise/rule',
+        name: 'SuperviseRule',
+        component: () => import('@/views/supervise/RuleView.vue'),
+        meta: { title: '规则配置' },
+      },
+      {
+        path: 'supervise/suspicion',
+        name: 'SuperviseSuspicion',
+        component: () => import('@/views/supervise/SuspicionView.vue'),
+        meta: { title: '疑点稽核' },
+      },
+      {
+        path: 'supervise/inspection',
+        name: 'SuperviseInspection',
+        component: () => import('@/views/supervise/InspectionView.vue'),
+        meta: { title: '飞检任务' },
+      },
+      {
+        path: 'supervise/recover',
+        name: 'SuperviseRecover',
+        component: () => import('@/views/supervise/RecoverView.vue'),
+        meta: { title: '违规追回' },
+      },
       // ---------------- 系统管理 ----------------
       {
         path: 'system/user',

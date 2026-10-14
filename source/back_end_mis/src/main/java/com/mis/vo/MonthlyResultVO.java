@@ -1,6 +1,6 @@
 package com.mis.vo;
 
-import com.mis.entity.JinbAllocation;
+import com.mis.entity.MisAllocation;
 import com.mis.entity.JinbMonthlyDeduct;
 import lombok.Data;
 
@@ -31,5 +31,5 @@ public class MonthlyResultVO {
     private BigDecimal allocatedAmount;
 
     private List<JinbMonthlyDeduct> deducts;
-    private List<JinbAllocation> allocations;
+    private List<MisAllocation> allocations;
 }

@@ -1,7 +1,7 @@
 <template>
   <!-- 新增/编辑排班模板弹窗 -->
   <el-dialog v-model="visible" :title="tplDialogTitle" destroy-on-close width="680px">
-    <el-form :model="tplFormData" label-position="top">
+    <el-form :model="tplFormData" label-position="left">
       <div class="grid grid-cols-4 gap-4">
         <el-form-item label="科室" required>
           <el-select v-model="tplFormData.deptId" class="w-full" filterable placeholder="输入科室名称搜索"

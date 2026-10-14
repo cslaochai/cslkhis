@@ -1,7 +1,7 @@
 <template>
   <!-- 新增班次弹窗：完整建条（防重/时间校验在后端 shiftUpsert） -->
   <el-dialog v-model="visible" destroy-on-close title="新增字典" width="480px">
-    <el-form label-position="top" @submit.prevent>
+    <el-form label-position="left" @submit.prevent>
       <el-form-item label="班次名称" required>
         <el-input v-model="shiftAddForm.shiftName" maxlength="50" placeholder="如：康复科上午班"
                   show-word-limit/>

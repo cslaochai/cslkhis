@@ -1,7 +1,7 @@
 <template>
   <!-- 班次编辑弹窗：展示完整详情，仅名称可改（时间/科室/类型/状态只读） -->
   <el-dialog v-model="visible" destroy-on-close title="编辑班次" width="480px">
-    <el-form label-position="top" @submit.prevent>
+    <el-form label-position="left" @submit.prevent>
       <el-form-item label="班次名称" required>
         <el-input v-model="shiftEditName" data-testid="shift-edit-name" maxlength="50"
                   placeholder="班次名称（同科室范围内不可重复）"

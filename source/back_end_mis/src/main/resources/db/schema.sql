@@ -539,3 +539,114 @@ CREATE TABLE IF NOT EXISTS mss_dict_data (
     PRIMARY KEY (id),
     KEY idx_dict_type (dict_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='字典数据';
+
+-- =====================================================================
+-- 基金监管（医保局端监管侧：规则引擎 / 疑点稽核 / 飞检 / 违规追回）
+-- =====================================================================
+
+-- 监管规则
+CREATE TABLE IF NOT EXISTS mss_audit_rule (
+    id            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    rule_code     VARCHAR(32)  NOT NULL COMMENT '规则编码（唯一）',
+    rule_name     VARCHAR(64)  NOT NULL COMMENT '规则名称',
+    rule_type     VARCHAR(32)  NOT NULL COMMENT '规则类型（duplicate_charge-重复收费 over_limit_price-超限价收费 split_hospitalization-分解住院 bed_hanging-挂床住院 abnormal_cost-高额住院 payclass_c-丙类项目入统筹）',
+    target        INT          DEFAULT 1 COMMENT '稽核对象（1-经办结算单 2-机构报盘）',
+    severity      INT          DEFAULT 1 COMMENT '违规级别（1-一般 2-较重 3-严重）',
+    params        VARCHAR(500) DEFAULT NULL COMMENT '规则参数（JSON）',
+    description   VARCHAR(500) DEFAULT NULL COMMENT '规则说明',
+    status        INT          DEFAULT 1 COMMENT '状态（1-启用 0-停用）',
+    create_time   DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time   DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_rule_code (rule_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='监管规则';
+
+-- 疑点记录（规则引擎扫描结算数据产出）
+CREATE TABLE IF NOT EXISTS mss_suspicion (
+    id               BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    suspicion_no     VARCHAR(32)  NOT NULL COMMENT '疑点单号（唯一）',
+    rule_id          BIGINT       DEFAULT NULL COMMENT '命中规则id',
+    rule_name        VARCHAR(64)  DEFAULT NULL COMMENT '命中规则名称',
+    rule_type        VARCHAR(32)  DEFAULT NULL COMMENT '规则类型',
+    biz_source       INT          DEFAULT 1 COMMENT '疑点来源（1-经办结算单 2-机构报盘）',
+    biz_id           BIGINT       DEFAULT NULL COMMENT '来源单据id',
+    biz_no           VARCHAR(64)  DEFAULT NULL COMMENT '来源单据号',
+    patient_name     VARCHAR(64)  DEFAULT NULL COMMENT '患者姓名',
+    id_card_mask     VARCHAR(32)  DEFAULT NULL COMMENT '脱敏身份证号',
+    insurance_type   VARCHAR(16)  DEFAULT NULL COMMENT '参保类型',
+    encounter_type   VARCHAR(16)  DEFAULT NULL COMMENT '就诊类型（门诊/住院）',
+    dept             VARCHAR(64)  DEFAULT NULL COMMENT '科室',
+    doctor           VARCHAR(64)  DEFAULT NULL COMMENT '医师',
+    biz_date         DATE         DEFAULT NULL COMMENT '业务日期',
+    involved_amount  DECIMAL(12,2) DEFAULT 0 COMMENT '疑点涉及金额',
+    reason           VARCHAR(500) DEFAULT NULL COMMENT '疑点说明',
+    status           VARCHAR(16)  DEFAULT '待核实' COMMENT '状态（待核实/已确认/已排除）',
+    confirm_amount   DECIMAL(12,2) DEFAULT 0 COMMENT '确认违规金额',
+    handle_user      VARCHAR(64)  DEFAULT NULL COMMENT '处置人',
+    handle_time      DATETIME     DEFAULT NULL COMMENT '处置时间',
+    remark           VARCHAR(500) DEFAULT NULL COMMENT '备注',
+    create_time      DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time      DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_susp_no (suspicion_no),
+    UNIQUE KEY uk_susp_biz_rule (biz_source, biz_id, rule_id),
+    KEY idx_susp_rule (rule_id),
+    KEY idx_susp_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='疑点记录';
+
+-- 飞检任务
+CREATE TABLE IF NOT EXISTS mss_inspection (
+    id             BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    inspection_no  VARCHAR(32)  NOT NULL COMMENT '任务单号（唯一）',
+    title          VARCHAR(128) DEFAULT NULL COMMENT '任务名称',
+    inspect_type   VARCHAR(16)  DEFAULT NULL COMMENT '检查类型（专项检查/日常巡查/举报核查）',
+    target_org     VARCHAR(128) DEFAULT NULL COMMENT '被查机构',
+    plan_start     DATE         DEFAULT NULL COMMENT '计划开始日',
+    plan_end       DATE         DEFAULT NULL COMMENT '计划结束日',
+    leader         VARCHAR(64)  DEFAULT NULL COMMENT '带队人',
+    members        VARCHAR(200) DEFAULT NULL COMMENT '检查组成员',
+    scope_desc     VARCHAR(500) DEFAULT NULL COMMENT '检查范围',
+    status         VARCHAR(16)  DEFAULT '草稿' COMMENT '状态（草稿/待开展/检查中/已完成）',
+    result_summary VARCHAR(1000) DEFAULT NULL COMMENT '检查结果小结',
+    create_time    DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time    DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_ins_no (inspection_no),
+    KEY idx_ins_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='飞检任务';
+
+-- 飞检发现问题明细
+CREATE TABLE IF NOT EXISTS mss_inspection_item (
+    id              BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    inspection_id   BIGINT       NOT NULL COMMENT '任务id',
+    problem_type    VARCHAR(32)  DEFAULT NULL COMMENT '问题类型',
+    problem_desc    VARCHAR(500) DEFAULT NULL COMMENT '问题描述',
+    evidence        VARCHAR(500) DEFAULT NULL COMMENT '证据说明',
+    involved_amount DECIMAL(12,2) DEFAULT 0 COMMENT '涉及金额',
+    dispose         VARCHAR(16)  DEFAULT NULL COMMENT '处置方式（整改/追回/移交稽核）',
+    create_time     DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    KEY idx_item_inspection (inspection_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='飞检发现问题明细';
+
+-- 违规追回单
+CREATE TABLE IF NOT EXISTS mss_recover (
+    id               BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    recover_no       VARCHAR(32)  NOT NULL COMMENT '追回单号（唯一）',
+    source_type      INT          DEFAULT 1 COMMENT '来源类型（1-疑点稽核 2-飞检）',
+    source_no        VARCHAR(64)  DEFAULT NULL COMMENT '来源单号',
+    target_org_code  VARCHAR(32)  DEFAULT NULL COMMENT '定点机构编码',
+    target_org_name  VARCHAR(128) DEFAULT NULL COMMENT '定点机构名称',
+    month            VARCHAR(7)   DEFAULT NULL COMMENT '所属账期（yyyy-MM）',
+    recover_amount   DECIMAL(12,2) DEFAULT 0 COMMENT '追回金额',
+    reason           VARCHAR(500) DEFAULT NULL COMMENT '追回原因',
+    status           VARCHAR(16)  DEFAULT '待追回' COMMENT '状态（待追回/已追回/已核销）',
+    recover_time     DATETIME     DEFAULT NULL COMMENT '追回时间',
+    handler          VARCHAR(64)  DEFAULT NULL COMMENT '经办人',
+    remark           VARCHAR(500) DEFAULT NULL COMMENT '备注',
+    create_time      DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time      DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_recover_no (recover_no),
+    KEY idx_recover_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='违规追回单';

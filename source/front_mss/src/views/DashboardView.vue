@@ -30,6 +30,14 @@
             <div><div class="text-[13px] font-medium">已退费</div><div class="text-[11px] text-gray-500">本期冲正</div></div>
             <span class="text-gray-500 text-[13px]">{{ summary.todo.refund }} 笔</span>
           </div>
+          <div class="flex items-center justify-between p-3 rounded-lg bg-[#FEF9C3]">
+            <div><div class="text-[13px] font-medium">待核实监管疑点</div><div class="text-[11px] text-gray-500">规则引擎稽核</div></div>
+            <el-button type="warning" link @click="go('/supervise/suspicion')">{{ summary.todo.suspicion }} 条 ›</el-button>
+          </div>
+          <div class="flex items-center justify-between p-3 rounded-lg bg-[#FEE2E2]">
+            <div><div class="text-[13px] font-medium">待追回违规资金</div><div class="text-[11px] text-gray-500">疑点/飞检确认</div></div>
+            <el-button type="danger" link @click="go('/supervise/recover')">{{ summary.todo.recover }} 张 ›</el-button>
+          </div>
         </div>
       </div>
 

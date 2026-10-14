@@ -22,6 +22,10 @@ public class WorkbenchVO implements Serializable {
         private int audit;
         private int reconcile;
         private int refund;
+        /** 待核实监管疑点 */
+        private int suspicion;
+        /** 待追回单数 */
+        private int recover;
         private int total;
     }
 
