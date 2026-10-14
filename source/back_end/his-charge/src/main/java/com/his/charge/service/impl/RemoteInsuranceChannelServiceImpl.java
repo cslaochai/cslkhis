@@ -126,10 +126,15 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
     }
 
     @Override
-    public InsuredStatus checkInsured(String insuranceNo) {
+    public InsuredStatus checkInsured(String insuranceNo, String idCard, String name) {
+        // 实名核验口径：主档有身份证 → 身份证是金标准，按身份证查参保（查无即未参保）；
+        // 主档无身份证 → 退按医保卡号查参保，命中后比姓名防冒用他人卡号
+        boolean byIdCard = TextUtil.hasText(idCard);
         String response;
         try {
-            String body = objectMapper.writeValueAsString(Map.of("insuranceNo", insuranceNo));
+            String body = objectMapper.writeValueAsString(byIdCard
+                    ? Map.of("idCard", idCard)
+                    : Map.of("insuranceNo", insuranceNo));
             response = restClient.post()
                     .uri("/insure/person/query")
                     .contentType(JSON_UTF8)
@@ -139,10 +144,10 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
                     .body(String.class);
         } catch (RestClientException e) {
             // 平台连不上：参保状态不可知，按「不可用」返回，结算侧据此拒医保（fail-closed，不因专线抖动放行医保）
-            log.error("[医保通道] 参保查询失败 insuranceNo={}：{}", insuranceNo, e.getMessage());
+            log.error("[医保通道] 参保查询失败 insuranceNo={} idCard={}：{}", insuranceNo, idCard, e.getMessage());
             return new InsuredStatus(false, false, null, null, "医保平台连接失败：" + e.getMessage());
         } catch (Exception e) {
-            log.error("[医保通道] 参保查询请求构造失败 insuranceNo={}：{}", insuranceNo, e.getMessage());
+            log.error("[医保通道] 参保查询请求构造失败 insuranceNo={} idCard={}：{}", insuranceNo, idCard, e.getMessage());
             return new InsuredStatus(false, false, null, null, "医保平台参保查询请求构造失败：" + e.getMessage());
         }
         try {
@@ -155,15 +160,30 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
             }
             JsonNode data = root.path("data");
             if (data.isMissingNode() || data.isNull()) {
+                return byIdCard
+                        ? new InsuredStatus(false, false, null, null,
+                                "按身份证未查询到参保记录（未参保登记），请核对身份证/医保卡号或改按自费结算")
+                        : new InsuredStatus(false, false, null, null,
+                                "参保库查无此卡号（" + insuranceNo + "），未参保登记");
+            }
+            // 按卡号查询时做姓名比对，防止冒用他人医保卡号
+            if (!byIdCard && TextUtil.hasText(name) && !name.equals(text(data, "name"))) {
                 return new InsuredStatus(false, false, null, null,
-                        "参保库查无此卡号（" + insuranceNo + "），未参保登记");
+                        "参保人身份与患者档案不符（姓名不一致），请核对医保卡号或改按自费结算");
+            }
+            // 按身份证查到参保人后，再比对其参保卡号与患者主档卡号：不一致 = 卡号填错/冒用他人卡号
+            String insuredNo = text(data, "insuranceNo");
+            if (byIdCard && TextUtil.hasText(insuredNo) && !insuredNo.equals(insuranceNo)) {
+                return new InsuredStatus(false, false, null, null,
+                        "医保卡号与参保人身份不符（按身份证查到的参保卡号为 " + insuredNo + "），"
+                                + "可能填错或冒用他人卡号，请核对后改按自费结算");
             }
             boolean active = data.path("personStatus").asInt(0) == 1;
             return new InsuredStatus(true, active,
                     text(data, "insuranceType"), text(data, "name"),
-                    active ? null : "参保状态为停保（" + insuranceNo + "）");
+                    active ? null : "参保状态为停保（" + (TextUtil.hasText(insuredNo) ? insuredNo : insuranceNo) + "）");
         } catch (Exception e) {
-            log.error("[医保通道] 参保查询结果解析失败 insuranceNo={} body={}", insuranceNo, response, e);
+            log.error("[医保通道] 参保查询结果解析失败 insuranceNo={} idCard={} body={}", insuranceNo, idCard, response, e);
             return new InsuredStatus(false, false, null, null, "医保平台参保查询结果解析失败：" + e.getMessage());
         }
     }

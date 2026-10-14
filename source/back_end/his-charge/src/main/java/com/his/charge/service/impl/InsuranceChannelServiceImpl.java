@@ -102,19 +102,30 @@ public class InsuranceChannelServiceImpl extends ServiceImpl<BizInsuranceReportM
     /**
      * 参保核验（mock）：查 HIS 本地参保台账（医保局参保库的院内镜像）。
      * 真实环境 = 调医保前置机 2201/2202 人员参保信息查询；台账内容靠参保变更同步维护。
+     * <p>防冒名：台账命中后比对患者主档身份证（金标准）/姓名，不一致判「身份不符」拒医保。
      */
-    public InsuredStatus checkInsured(String insuranceNo) {
+    public InsuredStatus checkInsured(String insuranceNo, String idCard, String name) {
         if (!TextUtil.hasText(insuranceNo)) {
             return new InsuredStatus(false, false, null, null, "医保卡号为空");
         }
         BizInsuredPerson person = bizInsuredPersonMapper.selectOne(new LambdaQueryWrapper<BizInsuredPerson>()
                 .eq(BizInsuredPerson::getInsuranceNo, insuranceNo)
                 .last("LIMIT 1"));
-        log.info("参保核验: insuranceNo={} found={} status={}", insuranceNo,
-                person != null, person == null ? null : person.getPersonStatus());
+        log.info("参保核验: insuranceNo={} idCard={} name={} found={} status={}", insuranceNo,
+                idCard, name, person != null, person == null ? null : person.getPersonStatus());
         if (person == null) {
             return new InsuredStatus(false, false, null, null,
                     "参保库查无此卡号（" + insuranceNo + "），未参保登记");
+        }
+        // 防冒名：主档有身份证比身份证（金标准），主档无身份证退姓名兜底
+        if (TextUtil.hasText(idCard)) {
+            if (!idCard.equals(person.getIdCard())) {
+                return new InsuredStatus(false, false, null, null,
+                        "参保人身份与患者档案不符（身份证不一致），请核对医保卡号或改按自费结算");
+            }
+        } else if (TextUtil.hasText(name) && !name.equals(person.getName())) {
+            return new InsuredStatus(false, false, null, null,
+                    "参保人身份与患者档案不符（姓名不一致），请核对医保卡号或改按自费结算");
         }
         boolean active = Integer.valueOf(1).equals(person.getPersonStatus());
         return new InsuredStatus(true, active, person.getInsuranceType(), person.getName(),

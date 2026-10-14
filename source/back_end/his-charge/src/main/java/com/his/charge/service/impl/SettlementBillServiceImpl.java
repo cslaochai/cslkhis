@@ -795,8 +795,10 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
             throw new BusinessException("该患者没有医保号，不能按医保结算");
         }
         // 参保核验（对齐真实 HIS 联网参保查询）：按医保卡号查医保局端参保状态。
-        // 未参保登记 / 停保 → 拒医保结算，由收费员改按自费或核对卡号 —— 不静默按政策比例报销
-        InsuranceChannelService.InsuredStatus insured = insuranceChannelService.checkInsured(patient.getMedicalInsuranceNo());
+        // 同时带上患者主档身份证/姓名做防冒名比对：身份证是实名金标准，姓名兜底。
+        // 未参保登记 / 停保 / 身份不符 → 拒医保结算，由收费员改按自费或核对卡号 —— 不静默按政策比例报销
+        InsuranceChannelService.InsuredStatus insured = insuranceChannelService.checkInsured(
+                patient.getMedicalInsuranceNo(), patient.getIdCard(), patient.getPatientName());
         if (!insured.isFound()) {
             throw new BusinessException("该医保卡号未参保登记，不能按医保结算，请核对医保卡号或改按自费结算");
         }
