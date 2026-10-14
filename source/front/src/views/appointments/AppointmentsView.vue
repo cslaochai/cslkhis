@@ -87,7 +87,7 @@
                         :class="c.date === deskDay
                           ? 'bg-blue-600 font-semibold text-white shadow-sm hover:bg-blue-700'
                           : (!c.inMonth
-                            ? 'text-slate-300 hover:bg-slate-50'
+                            ? 'bg-slate-200/70 text-slate-400 hover:bg-slate-300/70'
                             : (c.isToday
                               ? 'bg-white font-semibold text-blue-600 ring-1 ring-inset ring-blue-300 hover:bg-blue-50'
                               : 'bg-white text-slate-700 hover:bg-slate-100'))" :data-date="c.date"

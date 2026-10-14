@@ -17,7 +17,7 @@
       </button>
     </div>
 
-    <el-form :model="newAppointment" label-position="left">
+    <el-form :model="newAppointment" label-position="left" label-width="80px">
       <template v-if="addMode === 'existing'">
         <div class="flex items-start gap-4">
           <el-form-item label="选择患者" required class="!w-1/2 shrink-0">
@@ -27,15 +27,11 @@
             />
           </el-form-item>
           <div v-if="newAppointment.patientId"
-               class="mt-7 flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm">
+               class="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 text-sm">
             <span class="shrink-0 text-xs text-slate-500">已选患者：</span>
-            <span :class="['inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white',
-              newAppointment.patientGender === 1 ? 'bg-blue-500'
-                : newAppointment.patientGender === 2 ? 'bg-pink-500' : 'bg-slate-400']">
-              {{ patientGenderSymbol(newAppointment.patientGender) }}
-            </span>
             <span class="shrink-0 font-medium text-slate-900">{{ newAppointment.patientName }}</span>
-            <span class="shrink-0 text-xs text-slate-500">{{ newAppointment.patientNo }}</span>
+            <span class="shrink-0 text-xs text-slate-600">{{ patientGenderText(newAppointment.patientGender) }}</span>
+            <span v-if="newAppointment.patientIdCardMasked" class="shrink-0 text-xs text-slate-500">{{ newAppointment.patientIdCardMasked }}</span>
             <span v-if="feeShortLabel(newAppointment.medicalInsuranceType)"
                   class="inline-flex shrink-0 items-center rounded border border-teal-200 bg-teal-50 px-1.5 text-xs text-teal-700">
               {{ feeShortLabel(newAppointment.medicalInsuranceType) }}
@@ -81,7 +77,6 @@
 
       <div class="appt-block">
         <div class="appt-block__title">费用信息</div>
-        <!-- 顺序：先定这一单怎么结，再填费别、医保卡号 —— 结算方式是总开关（联网才需要后两项） -->
         <el-form-item label="结算方式" required>
           <el-select v-model="newAppointment.settlementType" class="w-full" placeholder="选择结算方式"
                      @change="settlementTouched = true">
@@ -89,7 +84,7 @@
           </el-select>
         </el-form-item>
         <div class="grid grid-cols-2 gap-x-4">
-          <el-form-item label="费别" :required="addMode === 'new'">
+          <el-form-item label="费别" :required="addMode === 'new' || Number(newAppointment.settlementType) === 2">
             <el-select v-if="addMode === 'new'" v-model="newPatientForm.medicalInsuranceType" class="w-full" filterable
                        placeholder="选择费别">
               <el-option v-for="item in medicalInsuranceTypes" :key="item.dictValue" :label="item.dictLabel"
@@ -104,18 +99,16 @@
                          :label="newAppointment.medicalInsuranceType" :value="newAppointment.medicalInsuranceType"/>
             </el-select>
           </el-form-item>
-          <el-form-item
-              :required="Number(newAppointment.settlementType) === 2 && isAppointmentInsuranceFee"
-              label="医保卡号">
+          <el-form-item :required="Number(newAppointment.settlementType) === 2" label="医保卡号">
             <el-input v-if="addMode === 'new'" v-model="newPatientForm.medicalInsuranceNo"
                       placeholder="请输入医保卡号"/>
             <el-input v-else v-model="newAppointment.medicalInsuranceNo" placeholder="请输入医保卡号"/>
           </el-form-item>
         </div>
-        <!-- 费别不在统筹范围却选了联网：只留这一条警示（正常联网态不需要提示文案，不占版面） -->
+        <!-- 费别不在统筹范围却选了联网：按必填校验错误的样式提示（EP danger 红，一眼看出这单提交不过去） -->
         <p v-if="Number(newAppointment.settlementType) === 2 && !isAppointmentInsuranceFee"
-           class="m-0 text-xs text-amber-700">
-          该患者费别为「{{ newAppointment.medicalInsuranceType || '未设置' }}」，不在医保统筹范围，联网也无统筹报销，建议改回全自费
+           class="appt-settle-conflict m-0 text-xs text-[var(--el-color-danger)]">
+          该患者费别为「{{ newAppointment.medicalInsuranceType || '未设置' }}」，不在医保统筹范围，不能联网结算，请改为全自费
         </p>
       </div>
 
@@ -252,7 +245,7 @@ import {
   isPatientGenderCollected,
   isPhoneLegal,
   PATIENT_GENDER_OPTIONS,
-  patientGenderSymbol
+  patientGenderText
 } from '@/lib/patientGender';
 import {feeShortLabel, isInsuranceFeeType} from '@/lib/payType';
 import {REVISIT_SOURCE, revisitNeedsNoSchedule} from '@/lib/revisitPolicy';
@@ -293,7 +286,8 @@ const newAppointment = ref({
   patientId: null,
   patientName: '',
   patientNo: '',
-  // 仅用于「已选患者」回显头像，不参与提交
+  patientIdCardMasked: '',
+  // 仅用于「已选患者」回显性别文案，不参与提交
   patientGender: null,
   deptId: null,
   visitDate: '',
@@ -398,6 +392,7 @@ const handlePatientSelect = (patient) => {
   newAppointment.value.patientName = patient.patientName;
   newAppointment.value.patientNo = patient.patientNo;
   newAppointment.value.patientGender = patient.gender ?? null;
+  newAppointment.value.patientIdCardMasked = patient.idCardMasked || '';
   // 费别以患者主档为准带出（费别不脱敏）；医保号列表接口不回明文，先置空再异步补真值
   newAppointment.value.medicalInsuranceType = patient.medicalInsuranceType || '自费';
   newAppointment.value.medicalInsuranceNo = patient.medicalInsuranceNo || '';
@@ -774,6 +769,7 @@ const resetForm = () => {
     patientId: null,
     patientName: '',
     patientNo: '',
+    patientIdCardMasked: '',
     patientGender: null,
     deptId: null,
     visitDate: '',

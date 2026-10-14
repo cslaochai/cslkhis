@@ -3,16 +3,14 @@ package com.his.ai.rag.store;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.his.ai.config.AiProperties;
+import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import io.milvus.v2.client.ConnectConfig;
 import io.milvus.v2.client.MilvusClientV2;
 import io.milvus.v2.common.ConsistencyLevel;
 import io.milvus.v2.common.DataType;
 import io.milvus.v2.common.IndexParam;
-import io.milvus.v2.service.collection.request.AddFieldReq;
-import io.milvus.v2.service.collection.request.CreateCollectionReq;
-import io.milvus.v2.service.collection.request.DropCollectionReq;
-import io.milvus.v2.service.collection.request.HasCollectionReq;
-import io.milvus.v2.service.collection.request.LoadCollectionReq;
+import io.milvus.v2.service.collection.request.*;
 import io.milvus.v2.service.vector.request.DeleteReq;
 import io.milvus.v2.service.vector.request.QueryReq;
 import io.milvus.v2.service.vector.request.SearchReq;
@@ -25,34 +23,84 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 /**
- * Milvus 向量库实现（vector-store=milvus 时装配）。
- * 切块的文本 + 向量 + 元数据整体持久化到 Milvus，重启不丢，无需从 doc 全文重建。
- *
- * <p>集合结构（his_knowledge_chunk）：
- * 主键 chunk_id(Int64)，标量 doc_id / doc_title / category / doc_version / doc_source_name / content，
- * 向量 embedding(FloatVector, dim 与 embedding 输出一致，默认 1024)。
- *
- * <p>连接为懒连接：bean 创建不访问 Milvus，首次操作时建集合；Milvus 不可达时操作抛异常，
- * 由上层 ensureIndexLoaded 的兜底逻辑降级为空索引。
+ * Milvus 向量库实现
  */
 @Slf4j
 public class MilvusVectorStore implements VectorStore {
 
+    /**
+     * 报错消息里原始异常文本的上限（gRPC Status 带一堆堆栈行，够定位即可，别灌进响应体）
+     */
+    private static final int CAUSE_MAX_LENGTH = 300;
+
     private final AiProperties.Milvus cfg;
-    private final MilvusClientV2 client;
-    /** 集合是否已确保存在（幂等标记，避免每次操作都探活） */
+    /**
+     * 懒建的客户端；创建失败保持 null，下次操作重试
+     */
+    private volatile MilvusClientV2 client;
+    /**
+     * 集合是否已确保存在（幂等标记，避免每次操作都探活）
+     */
     private final AtomicBoolean collectionReady = new AtomicBoolean(false);
 
     public MilvusVectorStore(AiProperties.Milvus cfg) {
         this.cfg = cfg;
-        this.client = new MilvusClientV2(ConnectConfig.builder()
-                .uri(cfg.getUri())
-                .token(cfg.getToken())
-                .build());
+    }
+
+    private MilvusClientV2 client() {
+        MilvusClientV2 current = client;
+        if (current != null) {
+            return current;
+        }
+        synchronized (this) {
+            if (client == null) {
+                try {
+                    client = new MilvusClientV2(ConnectConfig.builder()
+                            .uri(cfg.getUri())
+                            .token(cfg.getToken())
+                            .build());
+                } catch (Exception ex) {
+                    // 不缓存失败的客户端：Milvus 起来后下一次操作能连上
+                    throw unavailable("建连", ex);
+                }
+            }
+            return client;
+        }
+    }
+
+    /**
+     * 把 SDK/gRPC 的技术异常收成一句人话，让 AI 功能的调用方拿到「连不上」而不是「系统内部错误」
+     */
+    private BusinessException unavailable(String action, Exception ex) {
+        String message = "向量库（Milvus）不可用，" + action + "失败：" + TextUtil.cut(ex.getMessage(), CAUSE_MAX_LENGTH);
+        return new BusinessException(message);
+    }
+
+    /**
+     * 有返回值的 Milvus 调用出口：连接层与 SDK 抛出的异常统一转成业务错误
+     */
+    private <T> T call(String action, Supplier<T> body) {
+        try {
+            return body.get();
+        } catch (BusinessException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw unavailable(action, ex);
+        }
+    }
+
+    /**
+     * SDK 的 createCollection/loadCollection/delete 是 void，走这条同样的异常口径
+     */
+    private void run(String action, Runnable body) {
+        call(action, () -> {
+            body.run();
+            return null;
+        });
     }
 
     private void ensureCollection() {
@@ -63,20 +111,21 @@ public class MilvusVectorStore implements VectorStore {
             if (collectionReady.get()) {
                 return;
             }
-            boolean exists = client.hasCollection(HasCollectionReq.builder()
+            MilvusClientV2 milvusClient = client();
+            boolean exists = call("探测集合", () -> milvusClient.hasCollection(HasCollectionReq.builder()
                     .collectionName(cfg.getCollectionName())
-                    .build());
+                    .build()));
             if (!exists) {
-                createCollection();
+                createCollection(milvusClient);
             } else {
-                loadCollection();
+                loadCollection(milvusClient);
             }
             collectionReady.set(true);
         }
     }
 
-    private void createCollection() {
-        CreateCollectionReq.CollectionSchema schema = client.createSchema();
+    private void createCollection(MilvusClientV2 milvusClient) {
+        CreateCollectionReq.CollectionSchema schema = milvusClient.createSchema();
         schema.addField(AddFieldReq.builder().fieldName("chunk_id").dataType(DataType.Int64)
                 .isPrimaryKey(true).autoID(false).build());
         schema.addField(AddFieldReq.builder().fieldName("doc_id").dataType(DataType.Int64).build());
@@ -94,19 +143,19 @@ public class MilvusVectorStore implements VectorStore {
                 .metricType(IndexParam.MetricType.COSINE)
                 .build();
 
-        client.createCollection(CreateCollectionReq.builder()
+        run("创建集合", () -> milvusClient.createCollection(CreateCollectionReq.builder()
                 .collectionName(cfg.getCollectionName())
                 .collectionSchema(schema)
                 .indexParams(List.of(index))
-                .build());
-        loadCollection();
+                .build()));
+        loadCollection(milvusClient);
         log.info("[RAG] Milvus 集合 {} 已创建（向量维度 {}）", cfg.getCollectionName(), cfg.getVectorDim());
     }
 
-    private void loadCollection() {
-        client.loadCollection(LoadCollectionReq.builder()
+    private void loadCollection(MilvusClientV2 milvusClient) {
+        run("加载集合", () -> milvusClient.loadCollection(LoadCollectionReq.builder()
                 .collectionName(cfg.getCollectionName())
-                .build());
+                .build()));
     }
 
     @Override
@@ -117,7 +166,7 @@ public class MilvusVectorStore implements VectorStore {
     @Override
     public boolean hasData() {
         try {
-            QueryResp resp = client.query(QueryReq.builder()
+            QueryResp resp = client().query(QueryReq.builder()
                     .collectionName(cfg.getCollectionName())
                     .filter("chunk_id > 0")
                     .outputFields(List.of("count(*)"))
@@ -129,7 +178,7 @@ public class MilvusVectorStore implements VectorStore {
             Object count = rows.get(0).getEntity().get("count(*)");
             return count != null && ((Number) count).longValue() > 0;
         } catch (Exception ex) {
-            // 集合不存在/连接异常：视为无数据，由上层决定是否重建
+            // 探测只用于决定「要不要从全文重建」，失败按无数据处理，不做报错的源头
             log.warn("[RAG] Milvus hasData 探测失败：{}", ex.getMessage());
             return false;
         }
@@ -152,26 +201,26 @@ public class MilvusVectorStore implements VectorStore {
             vec.add(f);
         }
         row.add("embedding", vec);
-        client.upsert(UpsertReq.builder()
+        run("写入切块向量", () -> client().upsert(UpsertReq.builder()
                 .collectionName(cfg.getCollectionName())
                 .data(List.of(row))
-                .build());
+                .build()));
     }
 
     @Override
     public void removeByDocId(long docId) {
         ensureCollection();
-        client.delete(DeleteReq.builder()
+        run("删除切块", () -> client().delete(DeleteReq.builder()
                 .collectionName(cfg.getCollectionName())
                 .filter("doc_id == " + docId)
-                .build());
+                .build()));
     }
 
     @Override
     public void clear() {
         // Milvus 无清空语义：删集合重建（rebuild 前先清后灌）
         try {
-            client.dropCollection(DropCollectionReq.builder()
+            client().dropCollection(DropCollectionReq.builder()
                     .collectionName(cfg.getCollectionName())
                     .build());
         } catch (Exception ex) {
@@ -187,7 +236,7 @@ public class MilvusVectorStore implements VectorStore {
             return List.of();
         }
         ensureCollection();
-        SearchResp resp = client.search(SearchReq.builder()
+        SearchResp resp = call("检索", () -> client().search(SearchReq.builder()
                 .collectionName(cfg.getCollectionName())
                 .annsField("embedding")
                 .data(List.of(new FloatVec(queryVector)))
@@ -196,7 +245,7 @@ public class MilvusVectorStore implements VectorStore {
                         "doc_version", "doc_source_name", "content"))
                 // 强一致：ingest/rebuild 完成后立即问答也要能读到刚写入的数据
                 .consistencyLevel(ConsistencyLevel.STRONG)
-                .build());
+                .build()));
         List<RetrievedChunk> out = new ArrayList<>();
         for (List<SearchResp.SearchResult> group : resp.getSearchResults()) {
             for (SearchResp.SearchResult r : group) {

@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.system.api.service.PatientApi;
+import com.his.charge.config.InsuranceProperties;
 import com.his.charge.dto.BillQueryPageDTO;
 import com.his.charge.dto.BillSettleUpsertDTO;
 import com.his.charge.dto.BillVoidDTO;
@@ -14,25 +14,20 @@ import com.his.charge.mapper.BizInsuranceCatalogRuleMapper;
 import com.his.charge.mapper.BizPaymentTxnMapper;
 import com.his.charge.mapper.BizSettlementBillItemMapper;
 import com.his.charge.mapper.BizSettlementBillMapper;
-import com.his.charge.service.FeeRecordService;
-import com.his.charge.service.InsuranceChannelService;
-import com.his.charge.service.InsuranceSettlementService;
-import com.his.charge.service.SettlementBillService;
-import com.his.charge.service.SourceAdvanceService;
+import com.his.charge.service.*;
 import com.his.charge.vo.*;
 import com.his.common.base.PageResult;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
-import com.his.system.service.InsurancePolicyService;
+import com.his.system.api.service.PatientApi;
 import com.his.system.api.vo.PatientBriefVO;
+import com.his.system.service.InsurancePolicyService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import com.his.charge.config.InsuranceProperties;
-import com.his.charge.config.ComplianceProperties;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -81,15 +76,25 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
     private static final int W_REMARK = 500;
 
     private final FeeRecordService feeRecordService;
+
     private final InsuranceSettlementService insuranceSettlementService;
+
     private final SourceAdvanceService sourceAdvanceService;
+
     private final BizSettlementBillItemMapper bizSettlementBillItemMapper;
+
     private final BizPaymentTxnMapper bizPaymentTxnMapper;
+
     private final PatientApi patientApi;
+
     private final InsurancePolicyService insurancePolicyService;
+
     private final RedisSequenceService redisSequenceService;
+
     private final BizInsuranceCatalogRuleMapper bizInsuranceCatalogRuleMapper;
+
     private final InsuranceChannelService insuranceChannelService;
+
     private final InsuranceProperties insuranceProperties;
 
     @Override
