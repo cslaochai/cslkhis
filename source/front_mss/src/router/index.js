@@ -116,6 +116,18 @@ const routes = [
         component: () => import('@/views/system/DictView.vue'),
         meta: { title: '字典管理' },
       },
+      {
+        path: 'system/dept',
+        name: 'SystemDept',
+        component: () => import('@/views/system/DeptView.vue'),
+        meta: { title: '科室管理' },
+      },
+      {
+        path: 'system/employee',
+        name: 'SystemEmployee',
+        component: () => import('@/views/system/EmployeeView.vue'),
+        meta: { title: '员工管理' },
+      },
     ],
   },
 ]

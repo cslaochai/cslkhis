@@ -904,6 +904,14 @@ main p, main span, main div {
     background: var(--his-primary, #1269B5);
 }
 
+/* 新增挂号弹窗：字段多，body 区独立滚动，footer 按钮常驻可见。
+   必须写全局：el-dialog teleport 到 body，scoped 选择器命中不到。
+   280px ≈ header(54) + footer(60) + 弹窗上下留白，视口再矮也能露出按钮。 */
+.appt-dialog .el-dialog__body {
+    max-height: calc(100vh - 280px);
+    overflow-y: auto;
+}
+
 /* ===================================================================
    排班管理 · 科室/医生筛选下拉
    医生选项标签形如「任永星（全科医学科）」「压测医生丁（看板压测科（夹具））」，

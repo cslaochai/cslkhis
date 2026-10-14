@@ -3,7 +3,7 @@
        费用信息（费别+医保卡号+结算方式，置于预约信息之上）/ 预约信息（就诊类型→科室→号源→时段）。
        费用信息：费别是患者主档属性（新患者可编辑、已有患者只读），医保卡号不做联动隐藏；
        结算方式由费别推导 —— 医保类费别才出现「联网/全自费」下拉，其余只读显示全自费。 -->
-  <el-dialog v-model="visible" destroy-on-close title="新增挂号" width="880px" @closed="resetForm">
+  <el-dialog v-model="visible" class="appt-dialog" destroy-on-close title="新增挂号" width="880px" @closed="resetForm">
     <!-- 患者来源切换（与急诊登记同一交互）：tab 只切换**患者输入区**，
          下面的就诊类型 / 复诊 / 号源 / 时段 / 结算方式 是共享字段 -->
     <div class="mb-4 flex rounded-lg border border-slate-200 bg-slate-50 p-1">
@@ -24,30 +24,30 @@
     </div>
 
     <el-form :model="newAppointment" label-position="top">
-      <!-- tab1：选择已有患者（选择框占半宽，留白不撑满，选完下方回显卡整宽确认） -->
+      <!-- tab1：选择已有患者。下拉占半宽，已选患者卡片紧跟其后同一行 ——
+           挂号窗口最容易犯的错是挂错人，选完必须让人在下拉旁一眼确认，不用滚下去找 -->
       <template v-if="addMode === 'existing'">
-        <el-form-item label="选择患者" required class="!w-1/2">
-          <AppointmentPatientSelect
-              v-model="newAppointment.patientId"
-              @select="handlePatientSelect"
-          />
-        </el-form-item>
-        <!-- 已选患者回显：挂号窗口最容易犯的错是挂错人，选完必须让人一眼确认 -->
-        <div v-if="newAppointment.patientId" class="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
-          <div class="flex items-center gap-3 text-sm">
-            <span :class="['inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold text-white',
+        <div class="flex items-start gap-4">
+          <el-form-item label="选择患者" required class="!w-1/2 shrink-0">
+            <AppointmentPatientSelect
+                v-model="newAppointment.patientId"
+                @select="handlePatientSelect"
+            />
+          </el-form-item>
+          <div v-if="newAppointment.patientId"
+               class="mt-7 flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm">
+            <span class="shrink-0 text-xs text-slate-500">已选患者：</span>
+            <span :class="['inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white',
               newAppointment.patientGender === 1 ? 'bg-blue-500'
                 : newAppointment.patientGender === 2 ? 'bg-pink-500' : 'bg-slate-400']">
               {{ patientGenderSymbol(newAppointment.patientGender) }}
             </span>
-            <div>
-              <span class="font-medium text-slate-900">{{ newAppointment.patientName }}</span>
-              <span class="ml-2 text-xs text-slate-500">{{ newAppointment.patientNo }}</span>
-              <span v-if="feeShortLabel(newAppointment.medicalInsuranceType)"
-                    class="ml-2 inline-flex items-center rounded border border-teal-200 bg-teal-50 px-1.5 text-xs text-teal-700">
-                {{ feeShortLabel(newAppointment.medicalInsuranceType) }}
-              </span>
-            </div>
+            <span class="shrink-0 font-medium text-slate-900">{{ newAppointment.patientName }}</span>
+            <span class="shrink-0 text-xs text-slate-500">{{ newAppointment.patientNo }}</span>
+            <span v-if="feeShortLabel(newAppointment.medicalInsuranceType)"
+                  class="inline-flex shrink-0 items-center rounded border border-teal-200 bg-teal-50 px-1.5 text-xs text-teal-700">
+              {{ feeShortLabel(newAppointment.medicalInsuranceType) }}
+            </span>
           </div>
         </div>
       </template>
@@ -93,14 +93,23 @@
       <div class="appt-block">
         <div class="appt-block__title">费用信息</div>
         <div class="grid grid-cols-2 gap-x-4">
-          <!-- 费别：新患者可编辑，已有患者只读（主档属性，改请到患者档案） -->
+          <!-- 费别：新患者可编辑；已有患者是选人时从主档带出来的 —— 保留下拉形态但置灰，
+               一眼能看出「这是个下拉字段、当前值来自患者档案、这里改不了」 -->
           <el-form-item label="费别" :required="addMode === 'new'">
             <el-select v-if="addMode === 'new'" v-model="newPatientForm.medicalInsuranceType" class="w-full" filterable
                        placeholder="选择费别">
               <el-option v-for="item in medicalInsuranceTypes" :key="item.dictValue" :label="item.dictLabel"
                          :value="item.dictValue ?? item.dictLabel"/>
             </el-select>
-            <el-input v-else :model-value="newAppointment.medicalInsuranceType || '—'" readonly/>
+            <el-select v-else :model-value="newAppointment.medicalInsuranceType || ''" class="w-full" disabled
+                       placeholder="—">
+              <el-option v-for="item in medicalInsuranceTypes" :key="item.dictValue" :label="item.dictLabel"
+                         :value="item.dictValue ?? item.dictLabel"/>
+              <!-- 主档费别不在字典里（历史脏值）时也要显示出原值，不能变成一个空框 -->
+              <el-option v-if="newAppointment.medicalInsuranceType
+                && !medicalInsuranceTypes.some((i) => (i.dictValue ?? i.dictLabel) === newAppointment.medicalInsuranceType)"
+                         :label="newAppointment.medicalInsuranceType" :value="newAppointment.medicalInsuranceType"/>
+            </el-select>
           </el-form-item>
           <!-- 医保卡号：始终展示，不再按费别联动隐藏。联网结算时必填（红星提示），
                但「填没填」的拦截放在提交时 + 后端保存闸，不在输入过程中烦人 -->
@@ -124,16 +133,11 @@
             </p>
           </template>
         </el-form-item>
-        <!-- 医保联网提示：只做确认文案 / 费别不在统筹的建议，不做「缺卡号」的联动校验 ——
-             那道闸在提交时（handleSubmit）和后端保存时统一判，提示文案各说各话只会漏 -->
-        <div v-if="Number(newAppointment.settlementType) === 2" class="rounded-lg border border-blue-200 bg-blue-50 p-3">
-          <p v-if="!isAppointmentInsuranceFee" class="m-0 text-xs text-amber-700">
-            该患者费别为「{{ newAppointment.medicalInsuranceType || '未设置' }}」，不在医保统筹范围，联网也无统筹报销，建议改回全自费
-          </p>
-          <p v-else class="m-0 text-xs text-slate-500">
-            联网结算将按上方费别与医保卡号记账，请确认无误
-          </p>
-        </div>
+        <!-- 费别不在统筹范围却选了联网：只留这一条警示（正常联网态不需要提示文案，不占版面） -->
+        <p v-if="Number(newAppointment.settlementType) === 2 && !isAppointmentInsuranceFee"
+           class="m-0 text-xs text-amber-700">
+          该患者费别为「{{ newAppointment.medicalInsuranceType || '未设置' }}」，不在医保统筹范围，联网也无统筹报销，建议改回全自费
+        </p>
       </div>
 
       <!-- 预约信息块（两 tab 共用）：就诊类型 → 复诊上下文 →

@@ -1,6 +1,7 @@
-// 登录态 store：token + 当前用户 + 可见菜单树
+// 登录态 store：token + 当前用户 + 可见菜单树 + 权限码集合
 import { defineStore } from 'pinia'
 import { loginApi, userInfoApi, menuTreeApi, logoutApi } from '@/api/auth'
+import { setPermList } from '@/lib/perm'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -33,6 +34,8 @@ export const useAuthStore = defineStore('auth', {
       this.userInfo = infoRes.data
       this.menus = menuRes.data || []
       localStorage.setItem('userInfo', JSON.stringify(this.userInfo))
+      // 权限码集合喂给 v-perm（异步到达，指令订阅集合变化自动收敛）
+      setPermList(this.userInfo?.permissions || [])
     },
     async logout() {
       try {

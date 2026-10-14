@@ -92,3 +92,19 @@ body {
     color: #fff;
     letter-spacing: 1px;
 }
+
+/* ---------- 标准两卡式列表页（抄 HIS：UserView/RoleView 用 el-card query-card/table-card）----------
+   查询卡与表格卡分离（卡间距 mb-3）；表格卡 body 置 0 内边距让表格全幅贴边；
+   查询卡表单项不要默认下边距；分页在流内紧跟表格底。 */
+.query-card .el-form-item {
+    margin-bottom: 0;
+}
+
+.table-card .el-card__body {
+    padding: 0;
+}
+
+.list-footer {
+    padding: 12px 20px;
+}
+
