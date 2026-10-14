@@ -72,7 +72,7 @@ public class SystemUserServiceImpl implements SystemUserService {
             }
             user.setPassword(passwordEncoder.encode(dto.getPassword()));
             user.setLoginCount(0);
-            user.setCreateBy(UserContextName());
+            user.setCreateBy(operatorName());
             userMapper.insert(user);
         } else {
             MssUser exist = userMapper.selectById(dto.getId());
@@ -85,7 +85,7 @@ public class SystemUserServiceImpl implements SystemUserService {
             } else {
                 user.setPassword(null);
             }
-            user.setUpdateBy(UserContextName());
+            user.setUpdateBy(operatorName());
             userMapper.updateById(user);
         }
         return user;
@@ -101,7 +101,7 @@ public class SystemUserServiceImpl implements SystemUserService {
         update.setId(dto.getId());
         update.setPassword(passwordEncoder.encode(dto.getPassword()));
         update.setPasswordUpdateTime(LocalDateTime.now());
-        update.setUpdateBy(UserContextName());
+        update.setUpdateBy(operatorName());
         userMapper.updateById(update);
     }
 
@@ -114,7 +114,7 @@ public class SystemUserServiceImpl implements SystemUserService {
         MssUser update = new MssUser();
         update.setId(dto.getId());
         update.setStatus(dto.getStatus());
-        update.setUpdateBy(UserContextName());
+        update.setUpdateBy(operatorName());
         userMapper.updateById(update);
     }
 
@@ -157,7 +157,7 @@ public class SystemUserServiceImpl implements SystemUserService {
         return roleMapper.selectBatchIds(roleIds);
     }
 
-    private String UserContextName() {
+    private String operatorName() {
         com.mss.config.LoginUser loginUser = com.mss.config.UserContext.get();
         return loginUser == null ? "system" : loginUser.getUsername();
     }

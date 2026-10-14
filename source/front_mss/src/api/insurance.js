@@ -108,3 +108,31 @@ export function auditPass(id) {
 export function auditReject(id) {
   return request.post('/audit/reject', idBody(id))
 }
+
+// ---------------- 月度结算管理（申报→审核→拨付→年终清算） ----------------
+export function monthlyPage(params) {
+  return request.get('/monthly/listPage', { params: cleanParams(params) })
+}
+export function monthlyResult(month) {
+  return request.get('/monthly/result', { params: { month } })
+}
+export function monthlyDeclare(month) {
+  return request.post('/monthly/declare', { month })
+}
+export function monthlyAudit(month) {
+  return request.post('/monthly/audit', { month })
+}
+export function monthlyAllocate(month) {
+  return request.post('/monthly/allocate', { month })
+}
+export function monthlyYearSettle(month) {
+  return request.post('/monthly/yearSettle', { month })
+}
+
+// ---------------- 参保人管理 ----------------
+export function personListPage(params) {
+  return request.get('/insure/person/listPage', { params: cleanParams(params) })
+}
+export function personSave(data) {
+  return request.post('/insure/person/save', data)
+}

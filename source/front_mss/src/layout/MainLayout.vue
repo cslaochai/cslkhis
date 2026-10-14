@@ -18,43 +18,30 @@
           active-text-color="#ffffff"
           class="!border-none"
         >
-          <el-menu-item index="/dashboard">
-            <el-icon><DataBoard /></el-icon><span>经办工作台</span>
-          </el-menu-item>
-
-          <el-sub-menu index="settlement">
-            <template #title>
-              <el-icon><Money /></el-icon><span>医保结算</span>
-            </template>
-            <el-menu-item index="/settlement/outpatient">门诊医保结算</el-menu-item>
-            <el-menu-item index="/settlement/inpatient">住院医保结算</el-menu-item>
-            <el-menu-item index="/settlement/bill">结算单管理</el-menu-item>
-            <el-menu-item index="/settlement/gateway">机构报盘接收</el-menu-item>
-          </el-sub-menu>
-
-          <el-menu-item index="/audit/fee">
-            <el-icon><Stamp /></el-icon><span>费用审核</span>
-          </el-menu-item>
-
-          <el-menu-item index="/catalog">
-            <el-icon><Notebook /></el-icon><span>三大目录与对照</span>
-          </el-menu-item>
-
-          <el-menu-item index="/filing/cross-region">
-            <el-icon><Promotion /></el-icon><span>异地就医备案</span>
-          </el-menu-item>
-
-          <el-menu-item index="/reconciliation">
-            <el-icon><DataAnalysis /></el-icon><span>清算对账</span>
-          </el-menu-item>
-
-          <el-menu-item index="/stats">
-            <el-icon><TrendCharts /></el-icon><span>统计报表</span>
-          </el-menu-item>
+          <template v-for="menu in auth.menus" :key="menu.id">
+            <el-sub-menu v-if="menu.menuType === 1" :index="String(menu.id)">
+              <template #title>
+                <el-icon v-if="menu.icon"><component :is="menu.icon" /></el-icon>
+                <span>{{ menu.menuName }}</span>
+              </template>
+              <el-menu-item
+                v-for="child in menu.children || []"
+                :key="child.id"
+                :index="child.path || '/'"
+              >
+                <el-icon v-if="child.icon"><component :is="child.icon" /></el-icon>
+                <span>{{ child.menuName }}</span>
+              </el-menu-item>
+            </el-sub-menu>
+            <el-menu-item v-else :index="menu.path || '/'">
+              <el-icon v-if="menu.icon"><component :is="menu.icon" /></el-icon>
+              <span>{{ menu.menuName }}</span>
+            </el-menu-item>
+          </template>
         </el-menu>
       </el-scrollbar>
       <div class="px-4 py-3 text-[11px] text-white/50 border-t border-white/10">
-        经办点：长沙市麓康医院<br />定点机构编码 P43010500001
+        经办点：长沙市麓康医院<br />定点机构编码 H4301000001
       </div>
     </el-aside>
 
@@ -70,11 +57,21 @@
             <el-icon :size="20" class="text-gray-500"><Bell /></el-icon>
           </el-badge>
           <el-divider direction="vertical" />
-          <el-avatar :size="32" style="background:#1269B5">湘</el-avatar>
-          <div class="leading-tight">
-            <div class="text-[13px] font-medium">医保经办员</div>
-            <div class="text-[11px] text-gray-400">湘医保 · 结算岗</div>
-          </div>
+          <el-dropdown trigger="click" @command="onCommand">
+            <div class="flex items-center gap-2 cursor-pointer select-none">
+              <el-avatar :size="32" style="background:#1269B5">{{ avatarChar }}</el-avatar>
+              <div class="leading-tight">
+                <div class="text-[13px] font-medium">{{ auth.realName }}</div>
+                <div class="text-[11px] text-gray-400">{{ auth.deptName }} · {{ auth.roleName }}</div>
+              </div>
+            </div>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="password">修改密码</el-dropdown-item>
+                <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </el-header>
 
@@ -82,26 +79,103 @@
         <router-view />
       </el-main>
     </el-container>
+
+    <!-- 修改密码 -->
+    <el-dialog v-model="pwdVisible" title="修改密码" width="420px" append-to-body>
+      <el-form ref="pwdFormRef" :model="pwdForm" :rules="pwdRules" label-width="80px">
+        <el-form-item label="旧密码" prop="oldPassword">
+          <el-input v-model="pwdForm.oldPassword" type="password" show-password />
+        </el-form-item>
+        <el-form-item label="新密码" prop="newPassword">
+          <el-input v-model="pwdForm.newPassword" type="password" show-password />
+        </el-form-item>
+        <el-form-item label="确认密码" prop="confirmPassword">
+          <el-input v-model="pwdForm.confirmPassword" type="password" show-password />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="pwdVisible = false">取消</el-button>
+        <el-button type="primary" :loading="pwdSaving" @click="onChangePassword">确定</el-button>
+      </template>
+    </el-dialog>
   </el-container>
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { useAuthStore } from '@/stores/auth'
+import { changePasswordApi } from '@/api/auth'
+import { dashboardSummary } from '@/api/insurance'
 
 const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
+
 const activeMenu = computed(() => route.path)
 const pageTitle = computed(() => route.meta?.title || '医保结算经办平台')
+const avatarChar = computed(() => (auth.realName || '用').slice(0, 1))
 
 const now = new Date()
 const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
 // 顶部待办角标：从工作台汇总接口读取
-import { dashboardSummary } from '@/api/insurance'
-import { ref, onMounted } from 'vue'
 const pendingCount = ref(0)
 onMounted(async () => {
-  const res = await dashboardSummary()
-  pendingCount.value = (res.data.todo?.total || 0)
+  try {
+    const res = await dashboardSummary()
+    pendingCount.value = res.data.todo?.total || 0
+  } catch (e) {
+    // 工作台接口失败不阻塞布局
+  }
 })
+
+async function onCommand(cmd) {
+  if (cmd === 'logout') {
+    await ElMessageBox.confirm('确定退出登录吗？', '提示', { type: 'warning' })
+    await auth.logout()
+    router.replace('/login')
+  } else if (cmd === 'password') {
+    pwdForm.oldPassword = pwdForm.newPassword = pwdForm.confirmPassword = ''
+    pwdVisible.value = true
+  }
+}
+
+// 修改密码
+const pwdVisible = ref(false)
+const pwdSaving = ref(false)
+const pwdFormRef = ref()
+const pwdForm = ref({ oldPassword: '', newPassword: '', confirmPassword: '' })
+const pwdRules = {
+  oldPassword: [{ required: true, message: '请输入旧密码', trigger: 'blur' }],
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, message: '密码至少 6 位', trigger: 'blur' },
+  ],
+  confirmPassword: [
+    { required: true, message: '请再次输入新密码', trigger: 'blur' },
+    {
+      validator: (rule, value, cb) =>
+        value === pwdForm.value.newPassword ? cb() : cb(new Error('两次输入的密码不一致')),
+      trigger: 'blur',
+    },
+  ],
+}
+async function onChangePassword() {
+  await pwdFormRef.value.validate()
+  pwdSaving.value = true
+  try {
+    await changePasswordApi({
+      oldPassword: pwdForm.value.oldPassword,
+      newPassword: pwdForm.value.newPassword,
+    })
+    ElMessage.success('密码修改成功')
+    pwdVisible.value = false
+  } catch (e) {
+    // 后端 message 已全局提示
+  } finally {
+    pwdSaving.value = false
+  }
+}
 </script>

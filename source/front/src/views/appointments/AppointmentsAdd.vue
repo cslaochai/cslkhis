@@ -102,8 +102,11 @@
             </el-select>
             <el-input v-else :model-value="newAppointment.medicalInsuranceType || '—'" readonly/>
           </el-form-item>
-          <!-- 医保卡号：始终展示，不再按费别联动隐藏 -->
-          <el-form-item label="医保卡号">
+          <!-- 医保卡号：始终展示，不再按费别联动隐藏。联网结算时必填（红星提示），
+               但「填没填」的拦截放在提交时 + 后端保存闸，不在输入过程中烦人 -->
+          <el-form-item
+              :required="Number(newAppointment.settlementType) === 2 && isAppointmentInsuranceFee"
+              label="医保卡号">
             <el-input v-if="addMode === 'new'" v-model="newPatientForm.medicalInsuranceNo" placeholder="请输入医保卡号"/>
             <el-input v-else v-model="newAppointment.medicalInsuranceNo" placeholder="请输入医保卡号"/>
           </el-form-item>
@@ -121,24 +124,15 @@
             </p>
           </template>
         </el-form-item>
-        <!-- 医保联网提示：结算方式为联网时的确认文案 / 风险提醒（费别与医保卡号已上移，这里只说话不重复字段） -->
+        <!-- 医保联网提示：只做确认文案 / 费别不在统筹的建议，不做「缺卡号」的联动校验 ——
+             那道闸在提交时（handleSubmit）和后端保存时统一判，提示文案各说各话只会漏 -->
         <div v-if="Number(newAppointment.settlementType) === 2" class="rounded-lg border border-blue-200 bg-blue-50 p-3">
-          <template v-if="addMode === 'new'">
-            <p v-if="!isAppointmentInsuranceFee" class="m-0 text-xs text-amber-700">
-              该患者费别为「{{ newAppointment.medicalInsuranceType || '未设置' }}」，不在医保统筹范围，联网也无统筹报销，建议改回全自费
-            </p>
-            <p v-else class="m-0 text-xs text-slate-500">
-              联网结算将按上方费别与医保卡号记账，请确认无误
-            </p>
-          </template>
-          <template v-else>
-            <p v-if="!isAppointmentInsuranceFee" class="m-0 text-xs text-amber-700">
-              该患者费别为「{{ newAppointment.medicalInsuranceType || '未设置' }}」，不在医保统筹范围，联网也无统筹报销，建议改回全自费
-            </p>
-            <p v-else-if="!newAppointment.medicalInsuranceNo" class="m-0 text-xs text-amber-700">
-              该患者未登记医保卡号，联网结算将无法记账统筹，请先补全医保卡号
-            </p>
-          </template>
+          <p v-if="!isAppointmentInsuranceFee" class="m-0 text-xs text-amber-700">
+            该患者费别为「{{ newAppointment.medicalInsuranceType || '未设置' }}」，不在医保统筹范围，联网也无统筹报销，建议改回全自费
+          </p>
+          <p v-else class="m-0 text-xs text-slate-500">
+            联网结算将按上方费别与医保卡号记账，请确认无误
+          </p>
         </div>
       </div>
 
@@ -272,7 +266,7 @@ import {
   previewRevisitFee
 } from '@/api/appoint';
 import {getBillDetailById} from '@/api/settlementBill';
-import {createPatient} from '@/api/patient';
+import {createPatient, getPatientDetail} from '@/api/patient';
 import {getDictDataList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {VISIT_TYPE} from '@/lib/dict';
@@ -393,7 +387,8 @@ const loadSlotRows = async (scheduleId) => {
   slotLoading.value = true;
   try {
     const res = await getScheduleSlots(id);
-    slotRows.value = res.data || [];
+    // 段级同口径：当天已过截止（开诊前 10 分钟）的段不放进候选（日期取所选就诊日）
+    slotRows.value = (res.data || []).filter((s) => !cutoffPassed(newAppointment.value.visitDate, s.startTime));
   } catch (error) {
     console.error('加载时间段失败:', error);
   } finally {
@@ -423,12 +418,20 @@ const handlePatientSelect = (patient) => {
   newAppointment.value.patientName = patient.patientName;
   newAppointment.value.patientNo = patient.patientNo;
   newAppointment.value.patientGender = patient.gender ?? null;
-  // 费别以患者主档为准带出（费别不脱敏）；医保号列表可能脱敏，带出的仅作展示，后端结算时以主档为准
+  // 费别以患者主档为准带出（费别不脱敏）；医保号列表接口不回明文，先置空再异步补真值
   newAppointment.value.medicalInsuranceType = patient.medicalInsuranceType || '自费';
   newAppointment.value.medicalInsuranceNo = patient.medicalInsuranceNo || '';
   // 默认结算方式：已存在患者按费别即可 —— 费别医保类（职工/居民/公费）默认联网，
   // 医保号由后端从主档读取（列表可能没带明文）；只是默认值，本单可改全自费。
   newAppointment.value.settlementType = isInsuranceFeeType(newAppointment.value.medicalInsuranceType) ? 2 : 1;
+  // 医保号真值补齐：列表接口不回明文医保号（恒 null），而联网结算的提交校验要靠它判断
+  // 「主档到底有没有号」。详情接口回明文，选中后取一次补上；用户已手动填过就不覆盖。
+  getPatientDetail(patient.id).then((res) => {
+    const detail = res?.data;
+    if (detail && String(detail.id) === String(patient.id) && !newAppointment.value.medicalInsuranceNo) {
+      newAppointment.value.medicalInsuranceNo = detail.medicalInsuranceNo || '';
+    }
+  }).catch(() => { /* 补不齐不拦人：提交时还有一道校验 + 后端保存闸 */ });
   // 换人 = 换病历：原来选中的原病历属于上一个人，留着就会拿别人的就诊日判策略
   newAppointment.value.revisitRecordId = null;
   if (isRevisit.value) {
@@ -603,10 +606,32 @@ const loadAvailableSchedules = async () => {
     return;
   try {
     const res = await getAvailableSchedule(newAppointment.value.deptId, newAppointment.value.visitDate);
-    availableSchedules.value = res.data || [];
+    // 已过挂号截止（开诊前 10 分钟）的号源不放进候选：当天只留未过时段，历史日期整日清空
+    availableSchedules.value = (res.data || []).filter((s) => !cutoffPassed(s.scheduleDate, s.startTime));
   } catch (error) {
     console.error('加载号源失败:', error);
   }
+};
+/**
+ * 分时段挂号截止提前量（分钟）：时段开始前 10 分钟之后不再放号（用户口径 2026-10-14）。
+ * 与后端 BizAppointServiceImpl.REGIST_CUTOFF_MINUTES 同口径，改动必须两边同步。
+ */
+const REGIST_CUTOFF_MINUTES = 10;
+/** 该号源/时间段是否已过挂号截止（开诊前 10 分钟）。dateStr 形如 2026-10-14 */
+const cutoffPassed = (dateStr, startTime) => {
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  if (!dateStr)
+    return false;
+  if (dateStr < todayStr)
+    return true;
+  if (dateStr > todayStr)
+    return false;
+  const m = /^(\d{1,2}):(\d{2})/.exec(String(startTime ?? '').trim());
+  if (!m)
+    return false;
+  const nowMin = today.getHours() * 60 + today.getMinutes();
+  return Number(m[1]) * 60 + Number(m[2]) - REGIST_CUTOFF_MINUTES <= nowMin;
 };
 const handleSubmit = async () => {
   // ① 患者：按 tab 分支校验
@@ -643,20 +668,39 @@ const handleSubmit = async () => {
       ElMessage.warning('请选择号源');
       return;
     }
+    // 时间闸兜底：弹窗开着不关（选完号源等半天），号源/段到点失效 —— 提交时再验一次。
+    // 号源候选已按截止过滤，这里只管「列表里还在、但此刻刚过点」的边界。
+    const schedSel = availableSchedules.value.find((x) => (x.id ?? x.doctorName) === newAppointment.value.scheduleId);
+    if (schedSel && cutoffPassed(schedSel.scheduleDate, schedSel.startTime)) {
+      ElMessage.warning(`该号源已过挂号截止时间（开诊前 ${REGIST_CUTOFF_MINUTES} 分钟截止），请重新选择`);
+      return;
+    }
     // 号源事实在段上：有段可选时必须选段（后端按段扣号源），不选段会退化为只扣主表的旧路径
     if (slotRows.value.length && !newAppointment.value.slotId) {
       ElMessage.warning('请选择时间段');
       return;
     }
+    // 段也过了截止（或已被过滤掉）→ 强制重选，不能让 stale 的 slotId 一路提交到后端
+    if (newAppointment.value.slotId) {
+      const slotSel = slotRows.value.find((x) => String(x.id) === String(newAppointment.value.slotId));
+      if (!slotSel || cutoffPassed(newAppointment.value.visitDate, slotSel.startTime)) {
+        ElMessage.warning('所选时间段已过挂号截止时间，请重新选择');
+        return;
+      }
+    }
   }
-  // ④ 结算方式：联网必须费别在统筹范围；新患者建档时没填医保号则主档无号、联网必被后端拒，前置拦截
+  // ④ 结算方式：联网必须费别在统筹范围且有医保卡号 —— 这是提交时的统一闸，两个 tab 同口径
+  //（已有患者选人时已从详情接口补齐主档真值；录入新患者看建档表单）。后端保存时还有同口径硬闸兜底。
   if (Number(newAppointment.value.settlementType) === 2) {
     if (!isAppointmentInsuranceFee.value) {
       ElMessage.warning('该患者费别不在医保统筹范围，不能联网结算，请改为全自费');
       return;
     }
-    if (addMode.value === 'new' && !newPatientForm.value.medicalInsuranceNo) {
-      ElMessage.warning('医保联网结算需要医保卡号，请在上方填写该患者的医保卡号');
+    const insuranceNo = addMode.value === 'new'
+        ? newPatientForm.value.medicalInsuranceNo
+        : newAppointment.value.medicalInsuranceNo;
+    if (!insuranceNo) {
+      ElMessage.warning('医保联网结算需要医保卡号：患者主档未登记，请在「费用信息」补全后再提交');
       return;
     }
   }

@@ -76,7 +76,7 @@ public class SystemMenuServiceImpl implements SystemMenuService {
         List<Long> ids = new ArrayList<>();
         collectTreeIds(id, ids);
         ids.add(id);
-        menuMapper.deleteByIds(ids);
+        menuMapper.deleteBatchIds(ids);
         roleMenuMapper.delete(new LambdaQueryWrapper<MssRoleMenu>().in(MssRoleMenu::getMenuId, ids));
     }
 

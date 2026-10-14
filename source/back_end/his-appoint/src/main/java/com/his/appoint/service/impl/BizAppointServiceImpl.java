@@ -32,6 +32,7 @@ import com.his.system.api.vo.CancelCommandVO;
 import com.his.system.api.vo.RecordBriefVO;
 import com.his.common.base.PageResult;
 import com.his.common.enums.AttendModeEnum;
+import com.his.common.enums.MedicalInsuranceTypeEnum;
 import com.his.common.enums.StaffDutyStatusEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
@@ -60,6 +61,7 @@ import org.springframework.util.CollectionUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -103,6 +105,12 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
 
     private final DayEndSettleTrigger dayEndSettleTrigger;
 
+    /**
+     * 分时段挂号截止提前量（分钟）：时段开始前 10 分钟之后不再放号（用户口径 2026-10-14）。
+     * 前端置灰与后端硬校验共用同一口径，改这里必须同步改挂号页两处过滤。
+     */
+    private static final int REGIST_CUTOFF_MINUTES = 10;
+
     private static String visitDatePastReason(BizAppointInfo regist, String action) {
         LocalDate visitDate = regist.getVisitDate();
         if (visitDate == null || !visitDate.isBefore(LocalDate.now())) {
@@ -110,6 +118,41 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         }
         return "就诊日 " + visitDate + " 已过，不允许" + action
                 + "：患者未到诊需退挂号费的，请到收费处「退费管理」发起退费申请。";
+    }
+
+    /**
+     * 分时段挂号时间闸（新增/改约共用，后端兜底）：
+     * <ul>
+     *   <li>就诊日早于今天 → 拒绝（历史日期整日不可挂）；</li>
+     *   <li>就诊日=今天 → 时段开始前 {@link #REGIST_CUTOFF_MINUTES} 分钟为截止，
+     *       已过截止即拒绝（12:17 挂 12:10 的号：12:10-10min=12:00 ≤ 12:17 → 拒）。</li>
+     * </ul>
+     * 时段粒度：有段用段开始，无段用班次开始；段开始必然不早于班次开始，段粒度更贴近用户直觉。
+     * startText 格式异常时不拦（历史脏数据/旧 slotTime 路径由 {@code validateSlotTime} 管），
+     * 不把整单挂掉的锅扣在时间闸上。
+     */
+    private static void assertRegistTimeNotPassed(LocalDate schedDate, String startText, String action) {
+        LocalDate today = LocalDate.now();
+        if (schedDate == null || !TextUtil.hasText(startText)) {
+            return;
+        }
+        if (schedDate.isBefore(today)) {
+            throw new BusinessException("该号源就诊日期（" + schedDate + "）已过，不允许" + action);
+        }
+        if (!schedDate.equals(today)) {
+            return;
+        }
+        String hm = startText.length() >= 5 ? startText.substring(0, 5) : startText;
+        LocalTime start;
+        try {
+            start = LocalTime.parse(hm);
+        } catch (Exception e) {
+            return;
+        }
+        if (!LocalTime.now().isBefore(start.minusMinutes(REGIST_CUTOFF_MINUTES))) {
+            throw new BusinessException("该时段（" + startText + "）已过挂号截止时间"
+                    + "（开诊前 " + REGIST_CUTOFF_MINUTES + " 分钟截止），不允许" + action);
+        }
     }
 
     /**
@@ -473,6 +516,9 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
                 validateSlotTime(upsertDTO.getSlotTime(), schedule);
                 appointInfo.setSlotTime(upsertDTO.getSlotTime());
             }
+            // 时间闸（后端兜底，前端已置灰）：就诊日已过 / 当天已过「开诊前 10 分钟」截止
+            assertRegistTimeNotPassed(schedule.getScheduleDate(),
+                    slot != null ? slot.getStartTime() : schedule.getStartTime(), "新增挂号");
         } else if (!noSchedule) {
             // B类（条件必填）：只有「当日回诊」免号源，其余来源必须选排班，注解无法按来源分支
             throw new BusinessException("请选择号源");
@@ -507,6 +553,21 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         // 因此"医保患者本单改自费"时费别快照仍是参保类型，仅结算方式为 1。
         appointInfo.setMedicalInsuranceType(patient.getMedicalInsuranceType());
         appointInfo.setMedicalInsuranceNo(patient.getMedicalInsuranceNo());
+
+        // 医保联网的硬闸统一放在保存时判（入参医保号已在上一步补登主档，这里看的是补登后的最终口径）。
+        // 不能下沉到 DTO 注解：患者列表接口不回明文医保号，主档有号而入参为空是合法请求，
+        // DTO 层 @NotBlank 会误杀这类请求；只有快照出最终值之后才知道「到底有没有号」。
+        if (Integer.valueOf(2).equals(appointInfo.getSettlementType())) {
+            MedicalInsuranceTypeEnum feeType = MedicalInsuranceTypeEnum.parse(appointInfo.getMedicalInsuranceType());
+            if (feeType == null || !feeType.isPoolCovered()) {
+                throw new BusinessException("患者费别为「"
+                        + TextUtil.blankToDefault(appointInfo.getMedicalInsuranceType(), "未设置")
+                        + "」，不在医保统筹范围，不能联网结算，请改为全自费");
+            }
+            if (!TextUtil.hasText(appointInfo.getMedicalInsuranceNo())) {
+                throw new BusinessException("医保联网结算需要医保卡号：患者主档未登记，请先补全后再提交");
+            }
+        }
 
         // 生成挂号单号
         String appointNo = redisSequenceService.generateAppointNo();
@@ -1042,6 +1103,8 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
             if (newSchedule == null) {
                 throw new BusinessException("新排班信息不存在");
             }
+            // 时间闸：新号源就诊日已过 / 当天已过「开诊前 10 分钟」截止，不允许改约
+            assertRegistTimeNotPassed(newSchedule.getScheduleDate(), newSchedule.getStartTime(), "变更号源/改约");
             assertPaidRescheduleSamePrice(existing, newSchedule);
         }
 
@@ -1057,6 +1120,8 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
             if (newSlot.getStatus() == null || newSlot.getStatus() != 1) {
                 throw new BusinessException("新时间段已停用，请重新选择");
             }
+            // 时间闸：当天改段，新段已过「开诊前 10 分钟」截止同样不允许
+            assertRegistTimeNotPassed(existing.getVisitDate(), newSlot.getStartTime(), "变更时间段/改约");
             if (oldSlotId != null) {
                 int releasedSlot = apptChannel
                         ? bizScheduleSlotMapper.releaseSlotSourceForAppointment(oldSlotId)

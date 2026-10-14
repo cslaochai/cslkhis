@@ -345,12 +345,12 @@
                               <span class="ml-auto flex shrink-0 items-center gap-1">
                                 <span v-if="deskStatusChip[Number(r.registStatus)]"
                                       :class="deskStatusChip[Number(r.registStatus)].cls"
-                                      class="rounded px-1 py-0.5 text-xs font-medium whitespace-nowrap">
+                                      class="rounded px-1 py-0.5 text-[10px] font-medium leading-3 whitespace-nowrap">
                                   {{ deskStatusChip[Number(r.registStatus)].text }}
                                 </span>
                                 <!-- 已收费 = 钱已在账上：改约只放同医生、同费用的号源（后端同样拦），与状态同排一次读完 -->
                                 <span v-if="isRegistPaid(r)"
-                                      class="rounded bg-emerald-50 px-1 py-0.5 text-xs font-medium text-emerald-700 whitespace-nowrap">
+                                      class="rounded bg-emerald-50 px-1 py-0.5 text-[10px] font-medium leading-3 text-emerald-700 whitespace-nowrap">
                                   已收费
                                 </span>
                               </span>
@@ -1765,6 +1765,11 @@ const deskCell = (colKey, rowKey) => deskCellMap.value[`${colKey}|${rowKey}`] ||
   srcSchedules: []
 };
 /**
+ * 分时段挂号截止提前量（分钟）：时段开始前 10 分钟之后不再放号（用户口径 2026-10-14）。
+ * 与后端 BizAppointServiceImpl.REGIST_CUTOFF_MINUTES 同口径，改动必须两边同步。
+ */
+const REGIST_CUTOFF_MINUTES = 10;
+/**
  * 这一格「没号可挂」= 压根**没有排班**（2026-09-22）。
  *
  * 判据用 `srcSchedules`（覆盖这一档的排班本体），不用段投影：段没拉到 ≠ 没排班。
@@ -1772,8 +1777,37 @@ const deskCell = (colKey, rowKey) => deskCellMap.value[`${colKey}|${rowKey}`] ||
  *   · 文案走「未排班」分支
  *   · 格子走 `desk-cell-na`（淡灰底 + `cursor: not-allowed`）
  * 两处各写一遍 `!…srcSchedules.length` 迟早会出现"字写着未排班、格子看着能点"。
+ *
+ * 2026-10-14 扩展：**已过挂号截止时间**也算不可用（用户口径：时段开始前 10 分钟截止，
+ * 12:17 挂 12:10 的号不行）。时间判定收在 `isCellTimePassed`，这里只做「无排班 || 已过」合并。
  */
-const isCellUnavailable = (col, rowKey) => !deskCell(col.key, rowKey).srcSchedules.length;
+const isCellUnavailable = (col, rowKey) => !deskCell(col.key, rowKey).srcSchedules.length || isCellTimePassed(col, rowKey);
+/**
+ * 该格子是否已过挂号截止（开诊前 {@link #REGIST_CUTOFF_MINUTES} 分钟，用户口径 2026-10-14）：
+ *   · 就诊日 < 今天 → 整格不可挂（历史日期）
+ *   · 就诊日 = 今天：
+ *       日视图格子（rowKey 是 "HH:mm" 半小时档）→ 档开始-10min ≤ 现在即置灰；
+ *       周视图格子（rowKey 是医生）→ 该格**所有**班次开始-10min 都已过才置灰，
+ *         只要还有一个未截止班次，格子仍可点 —— 弹窗里（AppointmentsAdd）再滤掉已过班次，
+ *         避免"上午班已过、下午班还在，整格却灰了"的误伤。
+ */
+const isCellTimePassed = (col, rowKey) => {
+  const date = String(col.date || '');
+  const today = fmtDate(new Date());
+  if (!date || date > today) return false;
+  if (date < today) return true;
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  if (deskViewMode.value === 'day') {
+    const m = toMin(rowKey);
+    return m !== null && m - REGIST_CUTOFF_MINUTES <= nowMin;
+  }
+  const scheds = deskCell(col.key, rowKey).srcSchedules;
+  if (!scheds.length) return false; // 无排班由 isCellUnavailable 原有分支管
+  return scheds.every((s) => {
+    const m = toMin(s.startTime);
+    return m !== null && m - REGIST_CUTOFF_MINUTES <= nowMin;
+  });
+};
 const showRescheduleDialog = ref(false);
 // 打开改约弹窗前由本页写好：被改约的卡片 + 它当前挂的排班（组件用它回显「当前号源」）
 const rescheduleRow = ref(null);
@@ -2144,6 +2178,11 @@ const goRegister = (s) => {
   });
 };
 const addFromCell = (col, rowKey) => {
+  // 兜底：模板里不可用格已置灰无按钮，但直连/键盘触发时给一句人话，别静默进弹窗选不到时段
+  if (isCellTimePassed(col, rowKey)) {
+    ElMessage.info(`该时段已过挂号截止时间（开诊前 ${REGIST_CUTOFF_MINUTES} 分钟截止），无法挂号`);
+    return;
+  }
   const cellScheds = cellSchedulesFor(col, rowKey);
   if (!cellScheds.length) {
     // 分清两种"没号源"：本来就没排班 vs 被「隐藏已满/停诊」开关藏掉了

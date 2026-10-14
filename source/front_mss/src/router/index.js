@@ -1,6 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const routes = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/LoginView.vue'),
+    meta: { title: '登录' },
+  },
   {
     path: '/',
     component: () => import('@/layout/MainLayout.vue'),
@@ -37,6 +44,18 @@ const routes = [
         meta: { title: '机构报盘接收' },
       },
       {
+        path: 'settlement/monthly',
+        name: 'MonthlySettle',
+        component: () => import('@/views/settlement/MonthlySettleView.vue'),
+        meta: { title: '月度结算管理' },
+      },
+      {
+        path: 'insured/person',
+        name: 'InsuredPerson',
+        component: () => import('@/views/insured/InsuredPersonView.vue'),
+        meta: { title: '参保人管理' },
+      },
+      {
         path: 'audit/fee',
         name: 'FeeAudit',
         component: () => import('@/views/audit/FeeAuditView.vue'),
@@ -66,6 +85,37 @@ const routes = [
         component: () => import('@/views/stats/StatsView.vue'),
         meta: { title: '统计报表' },
       },
+      // ---------------- 系统管理 ----------------
+      {
+        path: 'system/user',
+        name: 'SystemUser',
+        component: () => import('@/views/system/UserView.vue'),
+        meta: { title: '用户管理' },
+      },
+      {
+        path: 'system/role',
+        name: 'SystemRole',
+        component: () => import('@/views/system/RoleView.vue'),
+        meta: { title: '角色管理' },
+      },
+      {
+        path: 'system/menu',
+        name: 'SystemMenu',
+        component: () => import('@/views/system/MenuView.vue'),
+        meta: { title: '菜单管理' },
+      },
+      {
+        path: 'system/post',
+        name: 'SystemPost',
+        component: () => import('@/views/system/PostView.vue'),
+        meta: { title: '岗位管理' },
+      },
+      {
+        path: 'system/dict',
+        name: 'SystemDict',
+        component: () => import('@/views/system/DictView.vue'),
+        meta: { title: '字典管理' },
+      },
     ],
   },
 ]
@@ -73,6 +123,19 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+})
+
+// 登录守卫：无 token 一律去登录页；已登录访问登录页回首页
+router.beforeEach((to) => {
+  const auth = useAuthStore()
+  const token = auth.token || localStorage.getItem('token')
+  if (to.path === '/login') {
+    return token ? '/' : true
+  }
+  if (!token) {
+    return { path: '/login', replace: true }
+  }
+  return true
 })
 
 router.afterEach((to) => {
