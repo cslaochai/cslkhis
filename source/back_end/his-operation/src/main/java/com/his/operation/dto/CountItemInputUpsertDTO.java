@@ -1,5 +1,6 @@
 package com.his.operation.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -18,8 +19,9 @@ public class CountItemInputUpsertDTO implements Serializable {
      * 类别（纱布/纱垫）（1-器械 2-敷料 3-缝针 4-刀片 5-其他）
      */
     @NotNull(message = "清点项类别不能为空")
-    @Min(value = 1, message = "清点项类别取值不合法（应为 1-器械 2-敷料 3-缝针 4-刀片 5-其他）")
-    @Max(value = 5, message = "清点项类别取值不合法（应为 1-器械 2-敷料 3-缝针 4-刀片 5-其他）")
+    @Min(value = 1, message = "清点项类别取值不合法")
+    @Max(value = 5, message = "清点项类别取值不合法")
+    @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "清点项类别取值不合法")
     private Integer itemCategory;
 
     /**

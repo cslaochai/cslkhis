@@ -63,7 +63,7 @@ public class BizDrugStockUpsertDTO {
     /**
      * 库存地点：1-药库 2-药房（不传=药房，sql/154）
      */
-    @AllowedValues(values = {"1", "2"}, message = "库存地点取值不合法（1-药库 2-药房）")
+    @AllowedValues(values = {"1", "2"}, message = "库存地点取值不合法")
     private Integer stockRoom;
     /**
      * 供应商
@@ -76,5 +76,6 @@ public class BizDrugStockUpsertDTO {
     /**
      * 库存状态：1-正常 2-预警 3-缺货 4-过期
      */
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "库存状态取值不合法")
     private Integer stockStatus;
 }

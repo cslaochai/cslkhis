@@ -15,7 +15,9 @@ import java.time.LocalDate;
 @EqualsAndHashCode(callSuper = true)
 public class WardDispenseQueryPageDTO extends PageParam implements Serializable {
 
-    /** 病区ID */
+    /**
+     * 病区ID
+     */
     private Long wardId;
 
     /**

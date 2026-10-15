@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.system.dto.AttendanceDTO;
+import com.his.system.entity.BizSchedule;
 import com.his.system.entity.BizShift;
 import com.his.system.entity.BizStaffAttendance;
-import com.his.system.entity.BizSchedule;
 import com.his.system.entity.CurrentUser;
 import com.his.system.enums.StaffAttendanceStatusEnum;
 import com.his.system.mapper.BizStaffAttendanceMapper;
@@ -317,7 +317,7 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
         }
         BizStaffAttendance row = requireRow(id);
         if (confirmStatus == null || confirmStatus < 0 || confirmStatus > 2) {
-            throw new BusinessException("确认状态只能是 0-待确认、1-已确认、2-有异议");
+            throw new BusinessException("确认状态取值不合法");
         }
         row.setConfirmStatus(confirmStatus);
         row.setConfirmBy(operatorUser.getRealName());
@@ -480,7 +480,7 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
      * </ol>
      */
     private BizSchedule matchPlan(List<BizSchedule> plans, AttendanceDTO dto,
-                                       LocalDate date, boolean allowNearest) {
+                                  LocalDate date, boolean allowNearest) {
         if (plans == null || plans.isEmpty()) {
             return null;
         }

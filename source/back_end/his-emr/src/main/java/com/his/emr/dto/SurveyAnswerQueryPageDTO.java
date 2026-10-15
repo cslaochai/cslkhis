@@ -30,7 +30,7 @@ public class SurveyAnswerQueryPageDTO extends PageParam implements Serializable 
     private Long templateId;
 
     /**
-     * 场景
+     * 适用场景（1-出院随访 2-门诊 3-住院在院 4-体检）
      */
     private Integer scene;
 

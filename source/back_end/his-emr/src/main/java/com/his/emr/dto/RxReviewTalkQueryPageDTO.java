@@ -22,7 +22,7 @@ public class RxReviewTalkQueryPageDTO extends PageParam {
     private String keyword;
 
     /**
-     * 约谈类型（1~5）
+     * 约谈类型（1~5：1-首次约谈 2-警告约谈 3-限制处方权 4-取消处方权 5-恢复处方权）
      */
     @Min(value = 1, message = "约谈类型非法")
     @Max(value = 5, message = "约谈类型非法")

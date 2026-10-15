@@ -1,5 +1,6 @@
 package com.his.system.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -13,6 +14,7 @@ public class SignatureSignDTO {
      * 签名对象类型（1-住院病历 2-门诊病历 3-住院医嘱）
      */
     @NotNull(message = "签名对象类型不能为空")
+    @AllowedValues(values = {"1", "2", "3"}, message = "签名对象类型不合法")
     private Integer bizType;
 
     /**
@@ -24,6 +26,7 @@ public class SignatureSignDTO {
     /**
      * 签名场景，缺省为 5-补签
      */
+    @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "签名场景不合法")
     private Integer signScene;
 
     /**

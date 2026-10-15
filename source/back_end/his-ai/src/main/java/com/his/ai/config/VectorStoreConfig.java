@@ -9,10 +9,6 @@ import org.springframework.context.annotation.Configuration;
 
 /**
  * 向量库装配：his.ai.rag.vector-store 决定实现。
- * <ul>
- *   <li>{@code milvus}：Milvus 持久化向量库（重启不丢，推荐）</li>
- *   <li>{@code memory}（默认）：进程内存，重启丢失，靠 doc 全文懒加载重建</li>
- * </ul>
  */
 @Configuration
 public class VectorStoreConfig {

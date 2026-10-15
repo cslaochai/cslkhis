@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -26,6 +25,7 @@ import com.his.patient.vo.DeathCertificateVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.provider.DeptScopeService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -101,7 +101,7 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
         for (DeathCertificateDTO.CauseRow row : rows) {
             Integer part = row.getPart() == null ? DeathCausePartEnum.CHAIN.getCode() : row.getPart();
             if (part != DeathCausePartEnum.CHAIN.getCode() && part != DeathCausePartEnum.OTHER.getCode()) {
-                throw new BusinessException("死因链部分只能是Ⅰ部分或Ⅱ部分");
+                throw new BusinessException("死因链部分取值不合法");
             }
             if (row.getSeqNo() == null || row.getSeqNo() < 1) {
                 throw new BusinessException("死因链行序必须从 1 开始");

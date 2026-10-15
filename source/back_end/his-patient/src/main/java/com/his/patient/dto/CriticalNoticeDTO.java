@@ -30,10 +30,12 @@ public class CriticalNoticeDTO {
         /**
          * 通知类别（1-病危 2-病重）
          */
+        @AllowedValues(values = {"1", "2"}, message = "通知类别取值不合法")
         private Integer noticeType;
         /**
          * 状态（1-草稿 2-已签发 3-已签收 4-已作废）
          */
+        @AllowedValues(values = {"1", "2", "3", "4"}, message = "通知状态取值不合法")
         private Integer noticeStatus;
         /**
          * 开单科室ID
@@ -67,12 +69,13 @@ public class CriticalNoticeDTO {
          * 通知类别（1-病危 2-病重）
          */
         @NotNull(message = "通知类别不能为空")
-        @AllowedValues(values = {"1", "2"}, message = "通知类别取值不合法（1-病危 2-病重）")
+        @AllowedValues(values = {"1", "2"}, message = "通知类别取值不合法")
         private Integer noticeType;
         /**
          * 患者神志（1-清醒 2-嗜睡 3-意识模糊 4-昏迷 9-其他）
          */
         @NotNull(message = "患者神志不能为空")
+        @AllowedValues(values = {"1", "2", "3", "4", "9"}, message = "患者神志取值不合法")
         private Integer consciousnessStatus;
         /**
          * 长度不加入参闸：服务端按列宽截断，粘贴超长说明不该变 400（AGENTS §3）
@@ -157,6 +160,8 @@ public class CriticalNoticeDTO {
          * 签收人与患者关系
          */
         @NotNull(message = "签收人与患者的关系不能为空（法定必填）")
+        @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "99"},
+                message = "签收人与患者的关系取值不合法")
         private Integer signerRelation;
         /**
          * 签收人证件号

@@ -1,5 +1,6 @@
 package com.his.charge.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 
@@ -20,6 +21,7 @@ public class ComplianceBatchAuditDTO {
     /**
      * 审核类型（1-结算前自查 2-批量筛查 3-医保反馈复核）
      */
+    @AllowedValues(values = {"1", "2", "3"}, message = "审核类型不合法")
     private Integer auditType;
 
     /**

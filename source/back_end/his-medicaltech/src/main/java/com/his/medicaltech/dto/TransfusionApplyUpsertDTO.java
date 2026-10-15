@@ -28,6 +28,7 @@ public class TransfusionApplyUpsertDTO implements Serializable {
     /**
      * 受血者 ABO 血型（必填）：A/B/O/AB
      */
+    @AllowedValues(values = {"A", "B", "O", "AB"}, message = "ABO 血型取值不合法")
     private String patientAbo;
 
     /**
@@ -39,7 +40,7 @@ public class TransfusionApplyUpsertDTO implements Serializable {
      * 血液品种（必填）：1-红细胞悬液 2-血浆 3-血小板 4-冷沉淀 5-全血 6-其他
      */
     @NotNull(message = "血液品种不能为空")
-    @AllowedValues(values = {"1", "2", "3", "4", "5", "6"}, message = "血液品种取值不合法（1-红细胞悬液 2-血浆 3-血小板 4-冷沉淀 5-全血 6-其他）")
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6"}, message = "血液品种取值不合法")
     private Integer bloodComponent;
 
     /**
@@ -60,6 +61,7 @@ public class TransfusionApplyUpsertDTO implements Serializable {
     /**
      * 总量单位：U / ml / 治疗量
      */
+    @AllowedValues(values = {"U", "ml", "治疗量"}, message = "总量单位取值不合法")
     private String amountUnit;
 
     /**
@@ -106,6 +108,7 @@ public class TransfusionApplyUpsertDTO implements Serializable {
     /**
      * 是否紧急用血：0-否 1-是（为空按否）
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否紧急用血取值不合法")
     private Integer isEmergency;
 
     /**

@@ -40,7 +40,7 @@ public class InpatientTransferUpsertDTO implements Serializable {
     /**
      * 转科类型：1-普通转科 2-急诊转科 3-转入ICU 4-ICU转出（为空按普通转科）
      */
-    @AllowedValues(values = {"1", "2", "3", "4"}, message = "转科类型取值不合法（应为 1~4）")
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "转科类型取值不合法")
     private Integer transferType;
 
     /**

@@ -1,5 +1,6 @@
 package com.his.patient.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -29,6 +30,7 @@ public class AttendingBindDTO {
     /**
      * 关系类型（1-主管 2-主诊组长 3-协作，空=主管）
      */
+    @AllowedValues(values = {"1", "2", "3"}, message = "关系类型取值不合法")
     private Integer relationType;
 
     /**

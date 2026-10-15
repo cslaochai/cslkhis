@@ -1,5 +1,6 @@
 package com.his.miniapp.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -13,6 +14,7 @@ public class PayRefundDTO {
      * 业务类型（1-门诊缴费 2-挂号费 3-住院押金）
      */
     @NotNull(message = "业务类型不能为空")
+    @AllowedValues(values = {"1", "2", "3"}, message = "业务类型取值不合法")
     private Integer bizType;
 
     /**

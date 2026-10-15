@@ -1,5 +1,6 @@
 package com.his.charge.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -42,6 +43,7 @@ public class FeeBookDTO {
      * 就诊类型（字典 his_encounter_type：1-门诊 2-住院）
      */
     @NotNull(message = "缺少就诊类型")
+    @AllowedValues(values = {"1", "2"}, message = "就诊类型不合法")
     private Integer encounterType;
 
     /**
@@ -83,6 +85,7 @@ public class FeeBookDTO {
      * 项目类型（1-挂号费 2-西药 3-中成药 4-中药饮片 5-检查 6-检验 7-治疗 8-耗材）
      */
     @NotNull(message = "缺少项目类型")
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7", "8"}, message = "项目类型不合法")
     private Integer itemType;
 
     /**
@@ -128,6 +131,7 @@ public class FeeBookDTO {
      * 费用来源单据（字典 his_fee_source_type）
      */
     @NotNull(message = "缺少费用来源")
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"}, message = "费用来源不合法")
     private Integer sourceType;
 
     /**
@@ -145,6 +149,7 @@ public class FeeBookDTO {
     /**
      * 医保目录类别（0-自费 1-甲类 2-乙类 3-丙类），决定结算层的报销分摊；不传按自费
      */
+    @AllowedValues(values = {"0", "1", "2", "3"}, message = "医保目录类别不合法")
     private Integer catalogType;
 
     /**

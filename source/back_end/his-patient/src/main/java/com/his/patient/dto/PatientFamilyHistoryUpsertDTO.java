@@ -36,7 +36,7 @@ public class PatientFamilyHistoryUpsertDTO {
     /**
      * 是否在世（0-已故 1-在世）
      */
-    @AllowedValues(values = {"0", "1"}, message = "是否在世取值不合法（0-已故 1-在世）")
+    @AllowedValues(values = {"0", "1"}, message = "是否在世取值不合法")
     private Integer isAlive;
     /**
      * 死亡原因

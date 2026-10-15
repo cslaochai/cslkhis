@@ -1,6 +1,7 @@
 package com.his.charge.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -22,6 +23,7 @@ public class YbInspectionUpsertDTO {
      * 检查类型（1-国家飞检 2-省级飞检 3-智能审核转来 4-日常驻点审核）
      */
     @NotNull(message = "检查类型不能为空")
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "检查类型不合法")
     private Integer inspectType;
 
     /**

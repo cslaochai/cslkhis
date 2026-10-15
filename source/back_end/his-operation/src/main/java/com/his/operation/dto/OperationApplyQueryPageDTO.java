@@ -7,7 +7,7 @@ import lombok.EqualsAndHashCode;
 import java.io.Serializable;
 
 /**
- * 住院手术申请分页查询入参（命名遵循 AGENTS.md：分页查询用 `xxxQueryPageDTO`）。
+ * 住院手术申请分页查询入参
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

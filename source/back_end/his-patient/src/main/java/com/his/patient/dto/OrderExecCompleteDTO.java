@@ -24,8 +24,8 @@ public class OrderExecCompleteDTO implements Serializable {
     /**
      * 执行状态（本端点只接受 2-已执行 3-已跳过；1-待执行 4-已退回由其他动作推进）
      */
-    @Min(value = 2, message = "执行结果取值不合法（应为 2-已执行 3-已跳过）")
-    @Max(value = 3, message = "执行结果取值不合法（应为 2-已执行 3-已跳过）")
+    @Min(value = 2, message = "执行结果取值不合法")
+    @Max(value = 3, message = "执行结果取值不合法")
     private Integer execStatus;
 
     /**

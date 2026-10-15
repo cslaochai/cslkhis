@@ -1,6 +1,9 @@
 package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.mq.HisMqPublisher;
+import com.his.common.mq.HisMqTopics;
+import com.his.common.mq.event.AuditLogEvent;
 import com.his.common.util.TextUtil;
 import com.his.system.entity.SysAuditLog;
 import com.his.system.mapper.SysAuditLogMapper;
@@ -13,14 +16,14 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 /**
- * 操作审计日志落库服务（审计日志）。
+ * 操作审计日志落库服务。
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class SysAuditLogServiceImpl extends ServiceImpl<SysAuditLogMapper, SysAuditLog> implements SysAuditLogService {
 
-    private final SysAuditLogMapper sysAuditLogMapper;
+    private final HisMqPublisher mqPublisher;
 
     private static String currentIp() {
         if (!(RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attrs)) {
@@ -36,28 +39,32 @@ public class SysAuditLogServiceImpl extends ServiceImpl<SysAuditLogMapper, SysAu
     }
 
     /**
-     * 记一条审计。content/errorMsg 由调用方负责先做 PII 打码，这里只保证列宽截断。
+     * 记一条审计
      */
+    @Override
     public void record(Long userId, String userName, String module, String operation,
                        String targetType, Object targetId, String content,
                        boolean success, String errorMsg) {
         try {
-            SysAuditLog row = new SysAuditLog();
-            row.setUserId(userId);
-            row.setUserName(TextUtil.cut(userName, 64));
-            row.setModule(TextUtil.cut(module, 50));
-            row.setOperation(TextUtil.cut(operation, 50));
-            row.setTargetType(TextUtil.cut(targetType, 50));
-            row.setTargetId(TextUtil.cut(targetId == null ? null : String.valueOf(targetId), 50));
-            row.setContent(content);
-            row.setIp(TextUtil.cut(currentIp(), 50));
-            row.setStatus(success ? 1 : 0);
-            row.setErrorMsg(TextUtil.cut(errorMsg, 500));
-            row.setCreateBy(TextUtil.cut(userName, 64));
-            sysAuditLogMapper.insert(row);
+            AuditLogEvent event = AuditLogEvent.builder()
+                    .userId(userId)
+                    .userName(TextUtil.cut(userName, 64))
+                    .module(TextUtil.cut(module, 50))
+                    .operation(TextUtil.cut(operation, 50))
+                    .targetType(TextUtil.cut(targetType, 50))
+                    .targetId(TextUtil.cut(targetId == null ? null : String.valueOf(targetId), 50))
+                    .content(content)
+                    .ip(TextUtil.cut(currentIp(), 50))
+                    .status(success ? 1 : 0)
+                    .errorMsg(TextUtil.cut(errorMsg, 500))
+                    .createById(userId)
+                    .createBy(TextUtil.cut(userName, 64))
+                    .build();
+            mqPublisher.send(HisMqTopics.AUDIT_LOG, "audit", event,
+                    userId == null ? null : String.valueOf(userId));
         } catch (Exception e) {
-            log.error("审计日志写入失败 module={} operation={} userId={}", module, operation, userId, e);
+            // 双保险：MQ 都发不出去时至少留日志，不能让审计动作本身把业务带崩
+            log.error("审计日志事件投递失败 module={} operation={} userId={}", module, operation, userId, e);
         }
     }
-
 }

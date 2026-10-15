@@ -1,7 +1,6 @@
 package com.his.medicaltech.dto;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -49,10 +48,12 @@ public class EcgReportUpsertDTO {
     /**
      * 阴阳性（字典 his_positive_flag：0-未判定 1-阴性 2-阳性 3-未见异常）
      */
+    @AllowedValues(values = {"0", "1", "2", "3"}, message = "阴阳性取值不合法")
     private Integer positiveFlag;
 
     /**
      * 是否危急（0-否 1-是）
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否危急取值不合法")
     private Integer isCritical;
 }

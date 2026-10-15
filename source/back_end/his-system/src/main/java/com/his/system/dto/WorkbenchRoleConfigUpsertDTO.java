@@ -1,5 +1,6 @@
 package com.his.system.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -22,6 +23,7 @@ public class WorkbenchRoleConfigUpsertDTO {
      * 登录/切角色落点（0-默认 1-一律工作台 2-一律患者工作站）
      */
     @NotNull(message = "落点策略不能为空")
+    @AllowedValues(values = {"0", "1", "2"}, message = "落点策略不合法")
     private Integer landingScope;
 
     /**

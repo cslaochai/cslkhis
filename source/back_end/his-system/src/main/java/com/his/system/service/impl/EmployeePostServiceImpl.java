@@ -125,8 +125,6 @@ public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, 
             target = matchPost(posts, roleCode, deptId);
             checkOnDuty(target);
         } catch (BusinessException e) {
-            // 被拒的切换正是要留痕的那一类：谁试图以什么身份出现在哪个科室。
-            // 目标解析不出名字（正因为不是他的岗位），只能记编码，但比一个 "?" 强 —— 事后查的人看得懂。
             sysAuditLogService.record(user.getUserId(), user.getUsername(), "认证", "切换岗位",
                     "employee", user.getEmployeeId(),
                     from + " → 试图切换 " + roleCode + "/" + deptId, false, e.getMessage());
@@ -142,7 +140,6 @@ public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, 
         vo.setRoleName(target.getRoleName());
         vo.setDeptId(target.getDeptId());
         vo.setDeptName(target.getDeptName());
-        // 岗位是会话级选择，只活在这个 token 里：不重签就是「切了但下一次请求又按库里的默认身份算」
         vo.setToken(jwtUtils.generateToken(user.getUserId(), user.getUsername(),
                 target.getRoleCode(), target.getDeptId(), target.getDeptName()));
 
@@ -153,15 +150,6 @@ public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, 
 
     /**
      * 整体替换岗位。
-     *
-     * <p><b>{@code input == null} 表示「本次没有提交岗位」，原样保留并回报现有主岗位。</b>
-     * 不能把它当空列表处理：医生名册的「启用/禁用」只传 {@code {id, status}}，
-     * 按空列表走就会把这个人的岗位和角色全部物理删掉（静默毁数据，且没有任何报错）。
-     * 想清空必须显式传空数组。
-     *
-     * <p>先删后插是物理删（本表没有 del_flag 列），不会留下占着
-     * {@code uk_emp_role_dept} 的软删行 —— AGENTS.md 里 L12 那条「配置表整表替换必撞唯一键」的坑，
-     * 这张表天生免疫。
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -250,8 +238,7 @@ public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, 
     }
 
     /**
-     * 岗位存在但不在生效期内同样切不过去（sql/113）—— 分开报「已失效」和「未到生效日」，
-     * 让用户知道是去找管理员续期还是等两天，而不是笼统的「无权切换」。
+     * 岗位存在但不在生效期内同样切不过去
      */
     private void checkOnDuty(EmployeePostVO post) {
         LocalDate today = LocalDate.now();

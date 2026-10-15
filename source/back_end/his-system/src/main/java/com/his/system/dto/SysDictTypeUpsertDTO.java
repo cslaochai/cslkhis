@@ -1,5 +1,6 @@
 package com.his.system.dto;
 
+import com.his.common.validation.AllowedValues;
 import lombok.Data;
 
 /**
@@ -26,10 +27,12 @@ public class SysDictTypeUpsertDTO {
     /**
      * 字典来源：1-系统级 2-自定义
      */
+    @AllowedValues(values = {"1", "2"}, message = "字典来源取值不合法")
     private Integer dictSource;
 
     /**
      * 状态：0-停用 1-启用
      */
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 }

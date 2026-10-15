@@ -1,6 +1,7 @@
 package com.his.system.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -16,6 +17,7 @@ public class StaffScheduleCopyDTO {
      * 排班单元类型（1-科室 2-病区 3-全院）
      */
     @NotNull(message = "排班单元类型不能为空")
+    @AllowedValues(values = {"1", "2", "3"}, message = "排班单元类型取值不合法")
     private Integer orgType;
 
     /**

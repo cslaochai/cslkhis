@@ -1,6 +1,7 @@
 package com.his.charge.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -16,6 +17,7 @@ public class PayChannelImportDTO {
      * 支付渠道：2-微信 3-支付宝 6-银行卡（对齐支付资金流水的支付方式）
      */
     @NotNull(message = "支付渠道不能为空")
+    @AllowedValues(values = {"2", "3", "6"}, message = "支付渠道不合法")
     private Integer channel;
 
     /**

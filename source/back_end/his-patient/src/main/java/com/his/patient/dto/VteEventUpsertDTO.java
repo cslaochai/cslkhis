@@ -29,14 +29,14 @@ public class VteEventUpsertDTO {
      * 事件类型（1-深静脉血栓DVT 2-肺栓塞PE 3-预防相关出血）
      */
     @NotNull(message = "事件类型不能为空")
-    @AllowedValues(values = {"1", "2", "3"}, message = "事件类型取值不合法（1-DVT 2-肺栓塞 3-预防相关出血）")
+    @AllowedValues(values = {"1", "2", "3"}, message = "事件类型取值不合法")
     private Integer eventType;
 
     /**
      * 发生时机（1-院内发生 2-入院时已存在）
      */
     @NotNull(message = "发生时机不能为空")
-    @AllowedValues(values = {"1", "2"}, message = "发生时机取值不合法（1-院内发生 2-入院时已存在）")
+    @AllowedValues(values = {"1", "2"}, message = "发生时机取值不合法")
     private Integer onsetType;
 
     /**
@@ -49,6 +49,7 @@ public class VteEventUpsertDTO {
     /**
      * 诊断依据（1-超声 2-CT肺动脉造影 3-静脉造影 4-临床诊断 5-其他）
      */
+    @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "诊断依据取值不合法")
     private Integer diagnosisBasis;
 
     /**
@@ -60,11 +61,13 @@ public class VteEventUpsertDTO {
     /**
      * 转归（1-好转 2-未愈 3-死亡 4-未知）
      */
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "转归取值不合法")
     private Integer outcome;
 
     /**
      * 事件发生时是否正在药物预防（0-否 1-是）
      */
+    @AllowedValues(values = {"0", "1"}, message = "事件发生时是否正在药物预防取值不合法")
     private Integer drugPreventFlag;
 
     /**

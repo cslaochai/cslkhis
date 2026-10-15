@@ -1,5 +1,5 @@
 <template>
-  <el-dialog v-model="visible" destroy-on-close :title="dialogTitle" width="460px" @closed="onClosed">
+  <el-dialog v-model="visible" :title="dialogTitle" destroy-on-close width="460px" @closed="onClosed">
     <div class="space-y-3">
       <div class="rounded-lg bg-slate-50 px-3 py-2 text-sm">
         <div class="flex justify-between">
@@ -30,9 +30,12 @@
         </el-table>
         <div class="flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-100 px-3 py-1.5 text-xs text-slate-500">
           <span>应收 <b class="font-mono text-slate-700">{{ moneyText(summary.totalAmount) }}</b></span>
-          <span v-if="Number(summary.discountAmount) > 0">优惠 <b class="font-mono text-slate-700">-{{ moneyText(summary.discountAmount) }}</b></span>
-          <span v-if="Number(summary.poolAmount) > 0">统筹报销 <b class="font-mono text-emerald-600">-{{ moneyText(summary.poolAmount) }}</b></span>
-          <span v-if="Number(summary.accountAmount) > 0">个账 <b class="font-mono text-emerald-600">-{{ moneyText(summary.accountAmount) }}</b></span>
+          <span v-if="Number(summary.discountAmount) > 0">优惠 <b
+              class="font-mono text-slate-700">-{{ moneyText(summary.discountAmount) }}</b></span>
+          <span v-if="Number(summary.poolAmount) > 0">统筹报销 <b
+              class="font-mono text-emerald-600">-{{ moneyText(summary.poolAmount) }}</b></span>
+          <span v-if="Number(summary.accountAmount) > 0">个账 <b
+              class="font-mono text-emerald-600">-{{ moneyText(summary.accountAmount) }}</b></span>
           <span>应缴 <b class="font-mono text-slate-700">{{ moneyText(summary.payableAmount) }}</b></span>
           <span>尚欠 <b class="font-mono text-red-600">{{ moneyText(summary.unpaidAmount) }}</b></span>
         </div>
@@ -54,7 +57,8 @@
         </div>
         <p v-if="error" class="mt-2 text-center text-sm text-red-600">{{ error }}</p>
       </div>
-      <div v-else class="flex min-h-[236px] flex-col items-center justify-center rounded-lg border border-slate-200 p-3">
+      <div v-else
+           class="flex min-h-[236px] flex-col items-center justify-center rounded-lg border border-slate-200 p-3">
         <el-skeleton v-if="creating" :rows="3" animated class="w-full"/>
         <div v-else-if="qrImage && !isPaid" class="relative">
           <img :alt="`${channelLabel}收款码`" :class="{ 'opacity-40 blur-[3px]': qrExpired }" :src="qrImage"
@@ -114,13 +118,7 @@
 <script setup>
 import {computed, onUnmounted, ref, watch} from 'vue';
 import {Refresh} from '@element-plus/icons-vue';
-import {
-  closeQrPay,
-  createQrPay,
-  getBillDetailById,
-  payBill,
-  queryQrPayResult,
-} from '@/api/settlementBill';
+import {closeQrPay, createQrPay, getBillDetailById, payBill, queryQrPayResult,} from '@/api/settlementBill';
 import {moneyText} from '@/lib/patientField';
 
 /**
@@ -171,6 +169,9 @@ const payNo = ref('');
 const qrImage = ref('');
 const payStatus = ref(null);
 const creating = ref(false);
+/** 本次收款意图的请求幂等号（防重提交）：同一笔收款双击/网络重试复用同一值，
+ *  后端按 (账单, requestId) 判重拦重放；重开弹窗才是新的一笔，onClosed 里换新值 */
+const requestId = ref('');
 const error = ref('');
 const pollError = ref('');
 const billDetail = ref(null);
@@ -313,7 +314,8 @@ async function onMethodChange(val) {
     stopPoll();
     stopTick();
     if (payNo.value && Number(payStatus.value) === PAY_STATUS_PENDING) {
-      closeQrPay({payNo: payNo.value}).catch(() => {});
+      closeQrPay({payNo: payNo.value}).catch(() => {
+      });
     }
     payNo.value = '';
     qrImage.value = '';
@@ -336,10 +338,17 @@ async function confirmCash() {
     error.value = '该账单没有应缴金额';
     return;
   }
+  // 本次收款意图只生成一次幂等号：双击确认/网络重试带上同一个值，
+  // 后端判重把重放拦下，不会收出第二笔钱
+  requestId.value = requestId.value || genRequestId();
   cashSubmitting.value = true;
   error.value = '';
   try {
-    await payBill({billId: props.billId, items: [{payMethod: PAY_METHOD_CASH, amount: cashAmount.value}]});
+    await payBill({
+      billId: props.billId,
+      requestId: requestId.value,
+      items: [{payMethod: PAY_METHOD_CASH, amount: cashAmount.value}],
+    });
     emit('paid', {payMethod: PAY_METHOD_CASH, amount: cashAmount.value});
     visible.value = false;
   } catch (e) {
@@ -347,6 +356,14 @@ async function confirmCash() {
   } finally {
     cashSubmitting.value = false;
   }
+}
+
+/** 生成请求幂等号：优先 crypto.randomUUID（Edge/Chrome 均支持），低版本回退时间戳+随机串 */
+function genRequestId() {
+  if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+    return window.crypto.randomUUID();
+  }
+  return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
 }
 
 async function pollOnce() {
@@ -395,10 +412,12 @@ function onClosed() {
   stopTick();
   // 未付款的码必须关掉：留着它就是一张「本地已作废、渠道还能扫出来付款」的活码
   if (payNo.value && Number(payStatus.value) === PAY_STATUS_PENDING) {
-    closeQrPay({payNo: payNo.value}).catch(() => {});
+    closeQrPay({payNo: payNo.value}).catch(() => {
+    });
   }
   method.value = props.allowCash ? CASH_METHOD : CHANNEL_OPTIONS[0].code;
   cashSubmitting.value = false;
+  requestId.value = '';
   payNo.value = '';
   qrImage.value = '';
   payStatus.value = null;

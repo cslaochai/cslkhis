@@ -1,6 +1,7 @@
 package com.his.charge.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -24,6 +25,7 @@ public class PrepayUpsertDTO {
      * 流水类型（必填）：1-充值 2-退款
      */
     @NotNull(message = "缺少流水类型（1-充值 2-退款）")
+    @AllowedValues(values = {"1", "2"}, message = "流水类型取值不合法")
     private Integer prepayType;
 
     /**
@@ -38,6 +40,7 @@ public class PrepayUpsertDTO {
      * <b>4-医保个账与 5-院内余额不能当预交金来源</b>（个账是刷参保人卡的额度、
      * 余额没进过现金抽屉，日结会凭空多出一块），服务端当场拒绝。
      */
+    @AllowedValues(values = {"1", "2", "3", "6", "7"}, message = "预交金支付方式不合法")
     private Integer payMethod;
 
     /**

@@ -1,6 +1,7 @@
 package com.his.emr.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -43,6 +44,8 @@ public class RxReviewTalkUpsertDTO {
     @NotNull(message = "约谈类型不能为空")
     @Min(value = 1, message = "约谈类型非法")
     @Max(value = 5, message = "约谈类型非法")
+    @AllowedValues(values = {"1", "2", "3", "4", "5"},
+            message = "约谈类型不合法")
     private Integer talkType;
 
     /**
@@ -87,6 +90,7 @@ public class RxReviewTalkUpsertDTO {
      */
     @Min(value = 1, message = "整改状态非法")
     @Max(value = 2, message = "整改状态非法")
+    @AllowedValues(values = {"1", "2"}, message = "整改状态取值不合法")
     private Integer rectifyStatus;
 
     /**

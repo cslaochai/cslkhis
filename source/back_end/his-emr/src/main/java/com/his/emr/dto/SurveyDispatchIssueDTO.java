@@ -1,5 +1,6 @@
 package com.his.emr.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -17,6 +18,8 @@ public class SurveyDispatchIssueDTO implements Serializable {
     /**
      * 回收渠道:1-电话代填 2-短信 3-微信 4-现场扫码（默认 1）
      */
+    @AllowedValues(values = {"1", "2", "3", "4"},
+            message = "回收渠道不合法")
     private Integer channel;
 
     /**

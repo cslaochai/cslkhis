@@ -1,7 +1,6 @@
 package com.his.system.dto;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.validation.AllowedValues;
 import lombok.Data;
 
 /**
@@ -38,5 +37,6 @@ public class ClinicRoomUpsertDTO {
     /**
      * 诊室状态（1-启用 0-停用）
      */
+    @AllowedValues(values = {"0", "1"}, message = "诊室状态取值不合法")
     private Integer status;
 }

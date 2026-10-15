@@ -15,11 +15,7 @@ import com.his.ai.rag.parse.DocumentParser;
 import com.his.ai.rag.split.TextSplitter;
 import com.his.ai.rag.store.VectorStore;
 import com.his.ai.service.KnowledgeStoreService;
-import com.his.ai.vo.KnowledgeChunkPreviewVO;
-import com.his.ai.vo.KnowledgeDocHistoryVO;
-import com.his.ai.vo.KnowledgeDocListVO;
-import com.his.ai.vo.KnowledgeDocVO;
-import com.his.ai.vo.KnowledgeRebuildTaskVO;
+import com.his.ai.vo.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.system.entity.CurrentUser;
@@ -60,12 +56,16 @@ import java.util.concurrent.atomic.AtomicLong;
 @RequiredArgsConstructor
 public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
 
-    /** 历史变更类型：1-新建 2-编辑 3-回退（与 SQL 注释同口径） */
+    /**
+     * 历史变更类型：1-新建 2-编辑 3-回退（与 SQL 注释同口径）
+     */
     public static final int CHANGE_TYPE_CREATE = 1;
     public static final int CHANGE_TYPE_EDIT = 2;
     public static final int CHANGE_TYPE_REVERT = 3;
 
-    /** 重建任务状态：1-进行中 2-完成 3-失败 */
+    /**
+     * 重建任务状态：1-进行中 2-完成 3-失败
+     */
     private static final int REBUILD_RUNNING = 1;
     private static final int REBUILD_DONE = 2;
     private static final int REBUILD_FAILED = 3;
@@ -79,19 +79,18 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
     private final ResourceLoader resourceLoader;
     private final DocumentParser documentParser;
 
-    /** 向量索引是否已就绪（懒加载标记，Milvus 有数据或重建成功后置位） */
+    /**
+     * 向量索引是否已就绪（懒加载标记，Milvus 有数据或重建成功后置位）
+     */
     private final AtomicBoolean indexLoaded = new AtomicBoolean(false);
 
-    /** 单文档重建任务（内存态；应用重启后任务失效，前端轮询不到时提示重试即可） */
+    /**
+     * 单文档重建任务（内存态；应用重启后任务失效，前端轮询不到时提示重试即可）
+     */
     private final Map<Long, RebuildTask> rebuildTasks = new ConcurrentHashMap<>();
     private final AtomicLong rebuildIdGen = new AtomicLong(5000);
     private final ExecutorService rebuildExecutor =
             Executors.newSingleThreadExecutor(namedThreadFactory("knowledge-rebuild"));
-
-    @PreDestroy
-    public void shutdown() {
-        rebuildExecutor.shutdownNow();
-    }
 
     private static ThreadFactory namedThreadFactory(String prefix) {
         AtomicInteger seq = new AtomicInteger(1);
@@ -100,6 +99,19 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
             t.setDaemon(true);
             return t;
         };
+    }
+
+    /**
+     * 切块向量主键：docId * 10000 + idx。
+     * 同一文档内稳定且唯一（单文档切块数远小于 10000），rebuild 与 ingest 幂等覆盖。
+     */
+    private static long composeChunkId(long docId, int idx) {
+        return docId * 10000L + idx;
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        rebuildExecutor.shutdownNow();
     }
 
     @Override
@@ -301,6 +313,8 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
         log.info("[RAG] 索引重建完成，载入切块 {} 条", count);
     }
 
+    // ---------------- 单文档重建索引（异步任务 + 进度） ----------------
+
     @Override
     public int seedIfEmpty() {
         if (!aiProperties.getRag().isAutoSeed()) {
@@ -337,8 +351,6 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
         log.info("[RAG] 已自动灌入内置示例语料 {} 篇", seeded);
         return seeded;
     }
-
-    // ---------------- 单文档重建索引（异步任务 + 进度） ----------------
 
     @Override
     public Long submitRebuild(Long docId) {
@@ -409,7 +421,9 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
         }
     }
 
-    /** 单文档重建（同步，供种子语料直接建索引复用；切块与 doRebuild 同口径） */
+    /**
+     * 单文档重建（同步，供种子语料直接建索引复用；切块与 doRebuild 同口径）
+     */
     private void rebuildDocIndex(SysKnowledgeDoc doc) {
         if (!TextUtil.hasText(doc.getContent())) {
             return;
@@ -427,14 +441,6 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
         }
         doc.setChunkCount(pieces.size());
         sysKnowledgeDocMapper.updateById(doc);
-    }
-
-    /**
-     * 切块向量主键：docId * 10000 + idx。
-     * 同一文档内稳定且唯一（单文档切块数远小于 10000），rebuild 与 ingest 幂等覆盖。
-     */
-    private static long composeChunkId(long docId, int idx) {
-        return docId * 10000L + idx;
     }
 
     // ---------------- 切块预览 / 停用启用 / 历史版本 ----------------
@@ -456,9 +462,7 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
 
     @Override
     public void updateStatus(Long id, Integer status) {
-        if (status == null || (status != 0 && status != 1)) {
-            throw new BusinessException("状态值不合法（0-正常 1-停用）");
-        }
+        // 码值白名单已由 DTO @AllowedValues 收口（web 入口 400）
         SysKnowledgeDoc doc = sysKnowledgeDocMapper.selectById(id);
         if (doc == null) {
             throw new BusinessException("知识文档不存在");
@@ -537,7 +541,9 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
         return v;
     }
 
-    /** 重建任务（内存态） */
+    /**
+     * 重建任务（内存态）
+     */
     private static class RebuildTask {
         private long id;
         private long docId;

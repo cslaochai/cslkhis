@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.his</groupId>
+        <artifactId>his-backend</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>his-consumer</artifactId>
+    <packaging>jar</packaging>
+    <name>his-consumer</name>
+    <description>异步消费者集中层：所有 @RocketMQMessageListener 统一收口于此模块，
+        后续拆分独立服务时只换启动类+改 pom 依赖，业务模块零改动。
+    </description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-system</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.rocketmq</groupId>
+            <artifactId>rocketmq-spring-boot-starter</artifactId>
+        </dependency>
+    </dependencies>
+</project>

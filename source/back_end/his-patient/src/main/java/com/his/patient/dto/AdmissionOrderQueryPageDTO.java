@@ -58,8 +58,6 @@ public class AdmissionOrderQueryPageDTO extends PageParam {
 
     /**
      * 是否只查「待收治且未过期」：1-是，其它/不传-否。
-     * <p>刻意用 Integer 而不是 Boolean：MySQL 里 boolean 会被 JDBC 绑成 1/0，
-     * 写 {@code #{q.onlyPending} = 0} 这种判断在布尔语义下很容易读错，用整数最直白。
      */
     private Integer onlyPending;
 }

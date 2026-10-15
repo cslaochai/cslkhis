@@ -1,11 +1,8 @@
 package com.his.system.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import com.his.common.validation.AllowedValues;
+import jakarta.validation.constraints.*;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -33,8 +30,9 @@ public class DutyLogUpsertDTO {
      * 班次 1-白班 2-夜班（1-白班 2-夜班）
      */
     @NotNull(message = "班次不能为空")
-    @Min(value = 1, message = "班次取值不合法（1-白班 2-夜班）")
-    @Max(value = 2, message = "班次取值不合法（1-白班 2-夜班）")
+    @Min(value = 1, message = "班次取值不合法")
+    @Max(value = 2, message = "班次取值不合法")
+    @AllowedValues(values = {"1", "2"}, message = "班次取值不合法")
     private Integer shiftType;
 
     /**
@@ -46,8 +44,9 @@ public class DutyLogUpsertDTO {
      * 记录类型 1-值班事件 2-遗留事项 3-巡查记录（1-值班事件 2-遗留事项 3-巡查记录）
      */
     @NotNull(message = "记录类型不能为空")
-    @Min(value = 1, message = "记录类型取值不合法（1-值班事件 2-遗留事项 3-巡查记录）")
-    @Max(value = 3, message = "记录类型取值不合法（1-值班事件 2-遗留事项 3-巡查记录）")
+    @Min(value = 1, message = "记录类型取值不合法")
+    @Max(value = 3, message = "记录类型取值不合法")
+    @AllowedValues(values = {"1", "2", "3"}, message = "记录类型取值不合法")
     private Integer logType;
 
     /**
@@ -78,6 +77,7 @@ public class DutyLogUpsertDTO {
     /**
      * 状态 0-待处理 1-已处理 2-已交班（0-待处理 1-已处理 2-已交班）
      */
+    @AllowedValues(values = {"0", "1", "2"}, message = "状态取值不合法")
     private Integer status;
 
     /**

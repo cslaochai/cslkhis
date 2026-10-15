@@ -29,14 +29,6 @@ public class AiConfigProvider {
 
     /**
      * 只看配置里的能力开关，不考虑全局是否就绪。
-     * <p>
-     * 与 {@link #isCapabilityEnabled} 的区别必须分清：后者回答「这个能力现在能不能工作」
-     * （总开关、地址、密钥、模型任一不满足就是 false），前者回答「配置里是否允许这个能力」。
-     * <p>
-     * <b>健康检查必须显示后者。</b> 这里踩过一次坑：healthCheck 一开始用 isCapabilityEnabled，
-     * 于是在没配密钥的环境里 7 个能力全显示 false —— 运维看到的是「yml 里明明开了却不生效」，
-     * 而真正原因（缺 HIS_AI_API_KEY）藏在同一份返回的 notReadyReason 里。
-     * 「开关状态」和「可用状态」是两个问题，不能合成一个字段回答。
      */
     public boolean switchedOn(String capabilityKey) {
         Boolean feature = aiProperties.getFeatures().get(capabilityKey);
@@ -57,9 +49,6 @@ public class AiConfigProvider {
 
     /**
      * 说明当前为什么用不了模型。用于降级原因回传前端 ——
-     * 「AI 不可用」这句话对医生没有价值，「服务地址未配置」才有价值。
-     * <p>
-     * 文案里必须带上配置项的真实位置，否则运维照着系统参数找一个已经不存在的键。
      */
     public String notReadyReason() {
         if (!aiProperties.isEnabled()) {
@@ -79,10 +68,6 @@ public class AiConfigProvider {
 
     /**
      * 说明某能力为什么被关闭。
-     * <p>
-     * <b>能力可用时必须返回空串</b>。这里踩过一个坑：最初实现无论能力是否开启
-     * 都会返回「能力开关已关闭」，导致真实网络失败时前端看到的原因驴唇不对马嘴 ——
-     * 排查方向被带偏。凡是这种「拿来做判断依据」的文案，返回值语义必须严格。
      */
     public String capabilityDisabledReason(String capabilityKey) {
         String notReady = notReadyReason();

@@ -44,7 +44,7 @@ public class YbMappingServiceImpl extends ServiceImpl<BizYbMappingMapper, BizYbM
             case 2 -> bizYbMappingMapper.selectTreatmentPage(page, queryDTO);
             case 3 -> bizYbMappingMapper.selectLaboratoryPage(page, queryDTO);
             case 4 -> bizYbMappingMapper.selectConsumablePage(page, queryDTO);
-            default -> throw new BusinessException("项目类型不合法（1-药品 2-诊疗项目 3-检验项目 4-耗材）");
+            default -> throw new BusinessException("项目类型不合法");
         };
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
     }
@@ -140,7 +140,7 @@ public class YbMappingServiceImpl extends ServiceImpl<BizYbMappingMapper, BizYbM
                 case 2 -> bizYbMappingMapper.selectUnmappedTreatments();
                 case 3 -> bizYbMappingMapper.selectUnmappedLaboratories();
                 case 4 -> bizYbMappingMapper.selectUnmappedConsumables();
-                default -> throw new BusinessException("项目类型不合法（1-药品 2-诊疗项目 3-检验项目 4-耗材）");
+                default -> throw new BusinessException("项目类型不合法");
             };
             for (YbUnmappedItemVO item : items) {
                 List<Integer> catalogTypes = candidateCatalogTypes(type, item.getSubType());
@@ -186,7 +186,7 @@ public class YbMappingServiceImpl extends ServiceImpl<BizYbMappingMapper, BizYbM
 
     private void checkItemType(Integer itemType) {
         if (itemType == null || itemType < 1 || itemType > 4) {
-            throw new BusinessException("项目类型不合法（1-药品 2-诊疗项目 3-检验项目 4-耗材）");
+            throw new BusinessException("项目类型不合法");
         }
     }
 

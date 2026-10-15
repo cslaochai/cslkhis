@@ -1,6 +1,7 @@
 package com.his.operation.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -32,11 +33,13 @@ public class AnesthesiaRecordUpsertDTO implements Serializable {
     /**
      * 麻醉方式（1-全麻 2-椎管内 3-神经阻滞 4-局麻 5-其他）
      */
+    @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "麻醉方式取值不合法")
     private Integer anesthesiaType;
 
     /**
      * ASA 分级：不传则取访视单结论
      */
+    @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "ASA 分级取值不合法")
     private Integer asaGrade;
 
     /**

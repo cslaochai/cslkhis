@@ -1,5 +1,6 @@
 package com.his.patient.dto;
 
+import com.his.common.validation.AllowedValues;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -53,6 +54,7 @@ public class PatientContactUpsertDTO {
      * 是否主要联系人（0-否 1-是）
      */
     @Schema(description = "是否主要联系人：0-否 1-是")
+    @AllowedValues(values = {"0", "1"}, message = "是否主要联系人取值不合法")
     private Integer isPrimary;
 
     /**
@@ -65,6 +67,7 @@ public class PatientContactUpsertDTO {
      * 状态（0-停用 1-启用）
      */
     @Schema(description = "状态：0-停用 1-启用")
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 
     /**

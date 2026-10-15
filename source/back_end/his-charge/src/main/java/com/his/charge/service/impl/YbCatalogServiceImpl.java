@@ -138,9 +138,7 @@ public class YbCatalogServiceImpl extends ServiceImpl<BizYbCatalogMapper, BizYbC
     }
 
     private void validate(YbCatalogUpsertDTO dto) {
-        if (dto.getCatalogType() == null || dto.getCatalogType() < 1 || dto.getCatalogType() > 4) {
-            throw new BusinessException("目录类型不合法（1-西药/中成药 2-中药饮片 3-医疗服务项目 4-医用耗材）");
-        }
+        // 目录类型码值白名单已由 DTO @AllowedValues 收口（web 入口 400；非空由 @NotNull 收口）
         // yb_code 唯一校验（排除自身）
         Long id = dto.getId();
         BizYbCatalog dup = bizYbCatalogMapper.selectOne(new LambdaQueryWrapper<BizYbCatalog>()

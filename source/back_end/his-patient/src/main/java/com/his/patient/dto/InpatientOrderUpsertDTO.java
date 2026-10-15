@@ -2,6 +2,7 @@ package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.his.common.validation.AllowedValues;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -31,7 +32,7 @@ public class InpatientOrderUpsertDTO implements Serializable {
      * 医嘱类型：1-长期 2-临时（必填）
      */
     @NotNull(message = "医嘱类型不能为空（1-长期 2-临时）")
-    @AllowedValues(values = {"1", "2"}, message = "医嘱类型取值不合法（应为 1-长期 2-临时）")
+    @AllowedValues(values = {"1", "2"}, message = "医嘱类型取值不合法")
     private Integer orderType;
 
     /**
@@ -42,11 +43,13 @@ public class InpatientOrderUpsertDTO implements Serializable {
     /**
      * 医嘱来源：1-医生 2-模板 3-组套（默认 1-医生）
      */
+    @AllowedValues(values = {"1", "2", "3"}, message = "医嘱来源取值不合法")
     private Integer source;
 
     /**
      * 是否加急：0-否 1-是
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否加急取值不合法")
     private Integer isUrgent;
 
     /**
@@ -74,5 +77,6 @@ public class InpatientOrderUpsertDTO implements Serializable {
      * 医嘱明细（≥1 条）
      */
     @NotEmpty(message = "医嘱明细不能为空（至少 1 条项目）")
+    @Valid
     private List<InpatientOrderItemDTO> items;
 }

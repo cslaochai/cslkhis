@@ -1,7 +1,6 @@
 package com.his.medicaltech.dto;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -56,5 +55,6 @@ public class ExamFilmSpecUpsertDTO {
     /**
      * 状态（0-停用 1-启用）
      */
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 }

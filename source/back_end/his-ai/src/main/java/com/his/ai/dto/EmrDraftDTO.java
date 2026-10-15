@@ -1,5 +1,6 @@
 package com.his.ai.dto;
 
+import com.his.common.validation.AllowedValues;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -17,6 +18,7 @@ public class EmrDraftDTO {
      * 性别（1-男 2-女 9-未知）
      */
     @Schema(description = "性别（1-男 2-女），可选")
+    @AllowedValues(values = {"1", "2", "9"}, message = "性别不合法")
     private Integer gender;
 
     /**

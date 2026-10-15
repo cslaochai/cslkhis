@@ -8,11 +8,7 @@ import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.service.InpatientAccountService;
 import com.his.charge.service.PaymentService;
 import com.his.charge.service.SettlementBillService;
-import com.his.common.enums.PayChannelEnum;
-import com.his.common.enums.PayDirectionEnum;
-import com.his.common.enums.PayOrderStatusEnum;
-import com.his.common.enums.PaymentMethodEnum;
-import com.his.common.enums.TxnSourceEnum;
+import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
@@ -32,7 +28,6 @@ import com.his.pay.service.PayOrderService;
 import com.his.pay.service.WxPayChannelService;
 import com.his.pay.support.PayRateLimitSupport;
 import com.his.pay.vo.PayOrderVO;
-import com.his.system.service.SysMessageService;
 import com.his.system.support.SystemOperatorContext;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -99,8 +94,6 @@ public class MiniPayServiceImpl implements MiniPayService {
     private final PaymentService paymentService;
 
     private final InpatientAccountService inpatientAccountService;
-
-    private final SysMessageService sysMessageService;
 
     private final BizAppointService bizAppointService;
 
@@ -381,7 +374,6 @@ public class MiniPayServiceImpl implements MiniPayService {
         } else {
             throw new BusinessException("未知业务类型：" + PayOrderBizTypeEnum.labelOrUnknown(bizType));
         }
-        notifyPatient(order, "支付成功");
     }
 
     /**
@@ -500,25 +492,6 @@ public class MiniPayServiceImpl implements MiniPayService {
     private BigDecimal unpaidOf(BizSettlementBill bill) {
         return NumUtil.scale(NumUtil.orZero(bill.getPayableAmount()).subtract(NumUtil.orZero(bill.getPaidAmount())),
                 AMOUNT_SCALE);
-    }
-
-    /**
-     * 支付回执通知（微信订阅消息口子；通道未启用时实现内部留痕，不外抛）
-     */
-    private void notifyPatient(PayOrderVO order, String title) {
-        try {
-            var current = UserUtils.getCurrentUser();
-            if (current == null || current.getUserId() == null) {
-                return;
-            }
-            sysMessageService.sendWechatMessage(current.getUserId(), current.getRealName(), "pay_receipt",
-                    "pages/payment/payment",
-                    Map.of("amount", order.getAmount().toPlainString() + "元", "payNo", order.getPayNo()),
-                    title, "您有一笔 " + order.getAmount().toPlainString() + " 元支付已成功（" + order.getPayNo() + "）",
-                    "pay", order.getId());
-        } catch (Exception e) {
-            log.warn("支付回执通知失败 payNo={} err={}", order.getPayNo(), e.getMessage());
-        }
     }
 
     private MiniPayOrderVO toVO(PayOrderVO order, Map<String, String> payParams) {

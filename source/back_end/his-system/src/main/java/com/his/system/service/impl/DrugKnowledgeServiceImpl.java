@@ -79,7 +79,7 @@ public class DrugKnowledgeServiceImpl implements DrugKnowledgeService {
     @Transactional(rollbackFor = Exception.class)
     public DrugInteractionVO interactionUpsert(DrugInteractionUpsertDTO upsertDTO) {
         if (!SEVERITIES.contains(upsertDTO.getSeverity())) {
-            throw new BusinessException("严重度只能是 1-禁忌 或 2-慎用");
+            throw new BusinessException("严重度取值不合法");
         }
         String pairKey = DrugComponentPair.buildKey(upsertDTO.getComponentA(), upsertDTO.getComponentB());
 

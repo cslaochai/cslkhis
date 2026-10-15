@@ -111,4 +111,21 @@ public interface BizSettlementBillMapper extends BaseMapper<BizSettlementBill> {
             """)
     List<BizSettlementBill> selectByBillDate(@Param("beginDate") LocalDate beginDate,
                                              @Param("endDate") LocalDate endDate);
+
+    /**
+     * 收款专用：锁行读取账单（FOR UPDATE）。
+     *
+     * <p>同一账单两个窗口并发收款时，后到的事务阻塞到前一个提交后重新读到已收金额，
+     * 「收款合计 &gt; 尚需缴纳」的校验才真正生效 —— READ COMMITTED 下查询式校验
+     * 两个事务会同时读到同一剩余金额、双双通过，超收就发生了。
+     * 必须在事务内调用（收款 pay 是 @Transactional），单实例多实例语义一致，
+     * 等价于按账单 id 加分布式锁，但少一层 Redis 往返。
+     */
+    @Select("""
+            SELECT *
+            FROM biz_settlement_bill
+            WHERE id = #{id} AND del_flag = 0
+            FOR UPDATE
+            """)
+    BizSettlementBill selectByIdForUpdate(@Param("id") Long id);
 }

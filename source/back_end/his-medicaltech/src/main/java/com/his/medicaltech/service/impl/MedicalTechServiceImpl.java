@@ -5,14 +5,10 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.system.dto.SignCommandDTO;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.EmrSignatureService;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TimeUtil;
-import com.his.system.vo.SignatureVO;
 import com.his.emr.entity.BizInspectionApply;
 import com.his.emr.entity.BizLaboratoryApply;
 import com.his.emr.mapper.BizInspectionApplyMapper;
@@ -37,11 +33,15 @@ import com.his.medicaltech.support.LabAbnormalJudge;
 import com.his.medicaltech.support.LabReferenceRange;
 import com.his.medicaltech.support.LabReferenceRangeResolver;
 import com.his.medicaltech.vo.*;
+import com.his.system.dto.SignCommandDTO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.provider.DeptScopeService;
+import com.his.system.service.EmrSignatureService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
+import com.his.system.vo.SignatureVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -51,7 +51,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -771,22 +770,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         report.setReportStatus(4);
         report.setPublishBy(publishBy);
         report.setPublishTime(LocalDateTime.now());
-        boolean ok = bizReportMapper.updateById(report) > 0;
-        if (ok) {
-            // 订阅消息口子（小程序一期）：报告出具通知。通道未启用/患者未注册时实现内部留痕/跳过，
-            // 发送失败绝不让发布回滚 —— 通知只是「让患者更快知道」。
-            try {
-                sysMessageService.sendWechatToPatient(report.getPatientId(), "report_ready",
-                        "pages/report/report",
-                        Map.of("报告名称", report.getItemName() == null ? "" : report.getItemName()),
-                        "报告出具通知",
-                        "您的报告「" + (report.getItemName() == null ? "" : report.getItemName()) + "」已出具，请查看",
-                        "report", report.getId());
-            } catch (Exception e) {
-                log.warn("报告出具订阅消息发送失败 reportId={} err={}", reportId, e.getMessage());
-            }
-        }
-        return ok;
+        return bizReportMapper.updateById(report) > 0;
     }
 
     // 标本管理

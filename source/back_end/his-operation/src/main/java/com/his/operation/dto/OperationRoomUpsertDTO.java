@@ -1,5 +1,6 @@
 package com.his.operation.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -45,6 +46,7 @@ public class OperationRoomUpsertDTO implements Serializable {
     /**
      * 状态：1-启用 0-停用（空按启用）
      */
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 
     /**

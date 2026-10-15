@@ -1,7 +1,6 @@
 package com.his.pharmacy.dto;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
@@ -11,16 +10,25 @@ import lombok.Data;
 @Data
 public class DrugTraceScanDTO {
 
-    /** 追溯码原文（扫码枪整串） */
+    /**
+     * 追溯码原文（扫码枪整串）
+     */
     @NotBlank(message = "追溯码不能为空")
     private String traceCode;
 
-    /** 场景（1-入库采集 2-发药核销），默认 1 */
+    /**
+     * 场景（1-入库采集 2-发药核销），默认 1
+     */
+    @AllowedValues(values = {"1", "2"}, message = "场景取值不合法")
     private Integer scene = 1;
 
-    /** 发药单ID（scene=2 时必填，用于串码校验） */
+    /**
+     * 发药单ID（scene=2 时必填，用于串码校验）
+     */
     private Long dispensingId;
 
-    /** 人工指定药品ID（码识别不出药品时由窗口选药，采集时按这个药品挂靠） */
+    /**
+     * 人工指定药品ID（码识别不出药品时由窗口选药，采集时按这个药品挂靠）
+     */
     private Long drugId;
 }

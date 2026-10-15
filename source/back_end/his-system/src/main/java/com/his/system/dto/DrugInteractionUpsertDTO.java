@@ -1,5 +1,6 @@
 package com.his.system.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -31,6 +32,7 @@ public class DrugInteractionUpsertDTO {
      * 严重度（1-禁忌 2-慎用）
      */
     @NotNull(message = "请选择严重度")
+    @AllowedValues(values = {"1", "2"}, message = "严重度取值不合法")
     private Integer severity;
 
     /**
@@ -47,6 +49,7 @@ public class DrugInteractionUpsertDTO {
     /**
      * 状态（1-启用 0-停用），为空按启用
      */
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 
     /**

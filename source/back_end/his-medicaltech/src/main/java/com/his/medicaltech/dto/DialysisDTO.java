@@ -76,7 +76,7 @@ public class DialysisDTO {
         private Long id;
 
         @NotNull(message = "目标状态不能为空")
-        @AllowedValues(values = {"1", "2", "3"}, message = "目标状态取值不合法（1-在透 2-暂停 3-退出）")
+        @AllowedValues(values = {"1", "2", "3"}, message = "目标状态取值不合法")
         private Integer status;
 
         /**
@@ -263,7 +263,7 @@ public class DialysisDTO {
          * 时段（1-上午 2-下午 3-夜间）
          */
         @NotNull(message = "时段不能为空")
-        @AllowedValues(values = {"1", "2", "3"}, message = "时段取值不合法（1-上午 2-下午 3-夜间）")
+        @AllowedValues(values = {"1", "2", "3"}, message = "时段取值不合法")
         private Integer timeSlot;
 
         /**
@@ -297,7 +297,7 @@ public class DialysisDTO {
          * 时段（1-上午 2-下午 3-夜间）
          */
         @NotNull(message = "时段不能为空")
-        @AllowedValues(values = {"1", "2", "3"}, message = "时段取值不合法（1-上午 2-下午 3-夜间）")
+        @AllowedValues(values = {"1", "2", "3"}, message = "时段取值不合法")
         private Integer timeSlot;
 
         /**

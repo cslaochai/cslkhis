@@ -1,5 +1,6 @@
 package com.his.system.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -52,6 +53,7 @@ public class BizClinicSourceBatchItemDTO {
     /**
      * 是否专家号：0-否 1-是
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否专家号取值不合法")
     private Integer isExpert;
 
     /**
@@ -62,6 +64,7 @@ public class BizClinicSourceBatchItemDTO {
     /**
      * 是否可预约：0-否 1-是
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否可预约取值不合法")
     private Integer isAppointment;
 
     /**

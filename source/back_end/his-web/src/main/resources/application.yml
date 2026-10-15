@@ -9,7 +9,6 @@ spring:
       - optional:classpath:config/domain/his-medicaltech.yml
       - optional:classpath:config/domain/his-sign.yml
       - optional:classpath:config/domain/his-sms.yml
-      - optional:classpath:config/domain/his-wechat.yml
       - optional:classpath:config/domain/his-followup.yml
       - optional:classpath:config/domain/his-pay.yml
   application:
@@ -51,3 +50,13 @@ springdoc:
 knife4j:
   setting:
     language: zh_cn
+
+# RocketMQ 公共配置：地址与生产组走环境变量，topic/consumer 组代码常量定义在 com.his.common.mq.HisMqTopics
+rocketmq:
+  name-server: ${HIS_ROCKETMQ_NAME_SERVER:}
+  producer:
+    group: ${HIS_ROCKETMQ_PRODUCER_GROUP:HIS_PG_DEFAULT}
+    # 发送超时：业务线程不被外部 broker 拖死
+    send-message-timeout: 3000
+    # 同步刷盘策略下的重试次数
+    retry-times-when-send-failed: 2

@@ -89,27 +89,34 @@
   前端自造统计数字。
 - **`el-dialog` 默认允许点遮罩关闭**：禁止写 `:close-on-click-modal="false"`
   （详情/查看类弹框点弹窗外必须能自动关闭，关不掉很反直觉）。只有表单填写类弹框在用户明确要求防误关时才可豁免，且需在代码注释里写明原因。
-- **主页面只留「查询卡 + 表格卡 + 打开弹框」，新增/修改/详情一律拆到模块目录同级的独立组件**（2026-10-12 起全仓改造，`views/patients/` 除外）：
-  - **命名 = 主视图基名去掉 `View` + 角色**：`DepartmentsView.vue` → `DepartmentsEdit.vue` / `DepartmentsDetail.vue` / `DepartmentsAdd.vue`，与主视图同目录同级。
-    禁止 `Dialog` 后缀，禁止再开 `views/<module>/components/`。一页有多个同类弹框时加业务对象限定：`RxReviewBatchEdit.vue`、`RxReviewTalkEdit.vue`。
-  - **`xxxEdit.vue` 同时承载新增与修改**（后端是同一个 `xxxUpsert`/create+update 时）：`row` 为空走新增、有值走修改，标题与提示跟着变。
-    只有新增表单与修改表单的字段/布局确实不同才另开 `xxxAdd.vue`。
-  - **逻辑跟着弹框走**：表单 state、`rules`、校验、提交调用、成功提示全在子组件内；父页面只 `v-model` 控显隐 + `@saved="loadData"` 刷新。
-    组件契约统一用 `modelValue` prop + `update:modelValue` emit（照 `PatientDetailDialog.vue`，全仓不引入 `defineModel`）。
-  - **详情组件自己按 id 取数**（`props: {modelValue, id}`）；父页面最多再传当前行，用于「打开瞬间不闪白」。
-  - **参照数据的归属**：列表列也要用的字典/树（科室类型、科室树等）由页面加载一次、以 prop 传下去，禁止两个子组件各拉一遍同一份树；
-    只有表单用的下拉候选（如科室负责人）随表单进子组件自加载。
-  - **不拆的例外**：`ElMessageBox.confirm` 式的无表单二次确认，以及 <40 行的纯动作弹框（作废 / 扫码 / 补录）留在页面里 —— 拆出去只多一层 props 传递。
-  - **搬动就是搬动，不是重写**：Tailwind 类、`@click.stop`、`v-perm` 码、原有注释逐字跟着走；只允许顺手删掉本条上面禁的 `:close-on-click-modal="false"`（除非原代码带了豁免原因注释）。
-    拆的过程中禁止改接口入参、禁止改字段名、禁止"顺便补个字段"。
-  - **机械判据 + 浏览器验收**：
-    `node workspace/_check_view_split_gate.mjs` 必须 `GATE PASS`（它只看 `*View/*Dashboard/*Overview.vue` 这些页面文件，
-    抽 `el-dialog`/`el-drawer` 块，含 `el-form-item` 或标题带「详情/查看」的内联弹框即违规；确需留在页面的写进
-    `workspace/_view_split_exemptions.json` 并在页面里给出对应理由）。
-    拆完一个模块跑 `UI_OUT=workspace/_verify_<模块>.json node workspace/_verify_view_split_ui.mjs <模块目录>`
-    （真浏览器逐页点开「新增/编辑/详情/查看」按钮 + 补点一次表格首行，**只点开不提交**）：要求弹框都出现、
-    编辑与详情弹框字段有真实值、控制台 0 报错。判「弹框可见」必须用 `getBoundingClientRect().height > 0`，
-    **不能用 `display!==none`** —— 关闭的弹框节点仍留在 DOM 里，用 display 会选中第一个已关闭的弹框、读到一片空值还判通过。
+- **主页面只留「查询卡 + 表格卡 + 打开弹框」，新增/修改/详情一律拆到模块目录同级的独立组件**（2026-10-12 起全仓改造，
+  `views/patients/` 除外）：
+    - **命名 = 主视图基名去掉 `View` + 角色**：`DepartmentsView.vue` → `DepartmentsEdit.vue` / `DepartmentsDetail.vue` /
+      `DepartmentsAdd.vue`，与主视图同目录同级。
+      禁止 `Dialog` 后缀，禁止再开 `views/<module>/components/`。一页有多个同类弹框时加业务对象限定：
+      `RxReviewBatchEdit.vue`、`RxReviewTalkEdit.vue`。
+    - **`xxxEdit.vue` 同时承载新增与修改**（后端是同一个 `xxxUpsert`/create+update 时）：`row` 为空走新增、有值走修改，标题与提示跟着变。
+      只有新增表单与修改表单的字段/布局确实不同才另开 `xxxAdd.vue`。
+    - **逻辑跟着弹框走**：表单 state、`rules`、校验、提交调用、成功提示全在子组件内；父页面只 `v-model` 控显隐 +
+      `@saved="loadData"` 刷新。
+      组件契约统一用 `modelValue` prop + `update:modelValue` emit（照 `PatientDetailDialog.vue`，全仓不引入
+      `defineModel`）。
+    - **详情组件自己按 id 取数**（`props: {modelValue, id}`）；父页面最多再传当前行，用于「打开瞬间不闪白」。
+    - **参照数据的归属**：列表列也要用的字典/树（科室类型、科室树等）由页面加载一次、以 prop 传下去，禁止两个子组件各拉一遍同一份树；
+      只有表单用的下拉候选（如科室负责人）随表单进子组件自加载。
+    - **不拆的例外**：`ElMessageBox.confirm` 式的无表单二次确认，以及 <40 行的纯动作弹框（作废 / 扫码 / 补录）留在页面里 ——
+      拆出去只多一层 props 传递。
+    - **搬动就是搬动，不是重写**：Tailwind 类、`@click.stop`、`v-perm` 码、原有注释逐字跟着走；只允许顺手删掉本条上面禁的
+      `:close-on-click-modal="false"`（除非原代码带了豁免原因注释）。
+      拆的过程中禁止改接口入参、禁止改字段名、禁止"顺便补个字段"。
+    - **机械判据 + 浏览器验收**：
+      `node workspace/_check_view_split_gate.mjs` 必须 `GATE PASS`（它只看 `*View/*Dashboard/*Overview.vue` 这些页面文件，
+      抽 `el-dialog`/`el-drawer` 块，含 `el-form-item` 或标题带「详情/查看」的内联弹框即违规；确需留在页面的写进
+      `workspace/_view_split_exemptions.json` 并在页面里给出对应理由）。
+      拆完一个模块跑 `UI_OUT=workspace/_verify_<模块>.json node workspace/_verify_view_split_ui.mjs <模块目录>`
+      （真浏览器逐页点开「新增/编辑/详情/查看」按钮 + 补点一次表格首行，**只点开不提交**）：要求弹框都出现、
+      编辑与详情弹框字段有真实值、控制台 0 报错。判「弹框可见」必须用 `getBoundingClientRect().height > 0`，
+      **不能用 `display!==none`** —— 关闭的弹框节点仍留在 DOM 里，用 display 会选中第一个已关闭的弹框、读到一片空值还判通过。
 - **表格行点击开详情时，操作列按钮必须 `@click.stop`**：否则点「编辑/删除」会同时触发行点击弹框（`el-table` 的 row-click
   冒泡自单元格内按钮）。行详情弹框一律只读（`el-form :disabled` + 页脚无确定键），编辑走独立按钮入口。
 - 复用优先级：① `src/components/his/` 下已有骨架与业务组件（`Header` / `Sidebar` / `DashboardLayout` / `PatientSelect` /
@@ -872,10 +879,10 @@
 
 口径一句话：**「谁能拿这个口令登录系统」可入库；「能连上这台机器/这个中间件」不可入库。**
 
-| 类别     | 例子                                                                        | 落点                                            | 入库 |
-|--------|---------------------------------------------------------------------------|-----------------------------------------------|----|
-| 系统登录账号 | `sys_user` 的 480 个账号（`admin` / `shennan` / `13899000001` …，口令统一 `123456`） | `docs/测试账号与凭据.md`                             | ✅  |
-| 环境凭据   | MySQL `xz_feng`、Redis `123456`、Gitea `laochai`、JWT secret、支付私钥、构建工具链口令    | `workspace/环境凭据.md` + `application-dev.yml`   | ❌  |
+| 类别     | 例子                                                                        | 落点                                          | 入库 |
+|--------|---------------------------------------------------------------------------|---------------------------------------------|----|
+| 系统登录账号 | `sys_user` 的 480 个账号（`admin` / `shennan` / `13899000001` …，口令统一 `123456`） | `docs/测试账号与凭据.md`                           | ✅  |
+| 环境凭据   | MySQL `xz_feng`、Redis `123456`、Gitea `laochai`、JWT secret、支付私钥、构建工具链口令    | `workspace/环境凭据.md` + `application-dev.yml` | ❌  |
 
 - **`application.yml` 与 `config/domain/*.yml` 只放占位**：`password: ${HIS_DB_PASSWORD:}` / `${HIS_REDIS_PASSWORD:}` /
   `${ALIPAY_PRIVATE_KEY:}`。
@@ -1179,6 +1186,7 @@
   grep -rn "static final String DICT_" --include=*.java source/back_end  # 只允许 DICT_CACHE_PREFIX（Redis key 前缀，不是字典类型）
   grep -rnE '"(biz|sys)_[a-z]+_[A-Za-z]+Enum"' --include=*.java source/back_end  # 必须 0
   ```
+
 改造脚本：`workspace/_apply_dict_type_const.mjs`（字面量/私有常量 → `DictType`）、
 `workspace/_apply_enum_retarget.mjs` + `workspace/_enum_retarget.json`（假键 → 枚举/真实字典，含新建枚举模板）、
 `workspace/_sweep_dead_dict_dep.mjs`（删死依赖）。
@@ -1195,7 +1203,8 @@
   漏传后行被悄悄填成默认业务值，按该列过滤的查询会漏收/错收，比直接报错更糟。
 - **业务层强控**：去掉默认后，插入若漏传该列 → MySQL 报 `1364 Field 'xxx' doesn't have a default value`（fail loud）。
   配套在 DTO 用 `@NotNull` + `@InEnum`（见 §16）把校验前移，400 就拦住，根本到不了库。
-  注意 upsert 场景：仅「新增必填、且更新时前端也必带」的字段才标 `@NotNull`；更新可省略的字段靠实体/MP 策略保证不被清空（见 §3 的
+  注意 upsert 场景：仅「新增必填、且更新时前端也必带」的字段才标 `@NotNull`；更新可省略的字段靠实体/MP 策略保证不被清空（见 §3
+  的
   `updateStrategy` 约定），不要为堵 DB 默认而误伤正常更新。
 - **create_time / update_time**：原 `DEFAULT CURRENT_TIMESTAMP` 一并去掉——它们由 `BaseEntity` 的
   `@TableField(fill=INSERT/INSERT_UPDATE)` + `MyBatisPlusConfig.metaObjectHandler` 自动填充，不能指望 DB 兜底
@@ -1216,11 +1225,14 @@
   DDL 侧的列声明解析要跳过 `--` 注释行、并认 `ALTER TABLE ... MODIFY/ADD COLUMN` 形态，脚本已含；
   列名里带 `default` 字样（`is_default`、`default_span`）不算 DEFAULT 关键字，判据按 `DEFAULT ` 带空格匹配。
 - **已执行（DDL 源文件）**：全量 DDL 已扒掉非 `del_flag` 的 `NOT NULL DEFAULT`（含时间戳）与全部 `DEFAULT NULL`（含可空列冗余），
-  仅保留 `del_flag` 默认（共 194 处保留）；2026-10-11 补齐另一半：95 处 `del_flag` 声明补上 `NOT NULL`（`workspace/_fix_del_flag_notnull.mjs`）。
+  仅保留 `del_flag` 默认（共 194 处保留）；2026-10-11 补齐另一半：95 处 `del_flag` 声明补上 `NOT NULL`（
+  `workspace/_fix_del_flag_notnull.mjs`）。
 - **已执行（活库 hn_biz_his @ 192.168.88.132:3306）**：增量 SQL 文件
   `docs/03-增量SQL变更/239-去除非del_flag列DEFAULT.sql` 生成并**已 applied**。脚本直读 `information_schema.COLUMNS`
-  （`COLUMN_NAME<>'del_flag' AND COLUMN_DEFAULT IS NOT NULL`）产出 1649 条 `ALTER TABLE ... ALTER COLUMN ... DROP DEFAULT`，
-  逐条执行 OK=1649 / FAIL=0，回查剩余带默认列 = 0。DROP DEFAULT 仅改元数据、不触数据、可逆（回滚按列 `ALTER ... SET DEFAULT 原值`）。
+  （`COLUMN_NAME<>'del_flag' AND COLUMN_DEFAULT IS NOT NULL`）产出 1649 条
+  `ALTER TABLE ... ALTER COLUMN ... DROP DEFAULT`，
+  逐条执行 OK=1649 / FAIL=0，回查剩余带默认列 = 0。DROP DEFAULT 仅改元数据、不触数据、可逆（回滚按列
+  `ALTER ... SET DEFAULT 原值`）。
 - **已执行（活库 del_flag 补 NOT NULL，2026-10-11）**：`docs/03-增量SQL变更/240-del_flag统一为NOT-NULL-DEFAULT-0.sql`
   按 `information_schema` 现读现生成（保留各表原 `COLUMN_TYPE`/`COMMENT`，含 4 张 `tinyint(1)`）产出 97 条
   `ALTER TABLE ... MODIFY COLUMN del_flag tinyint NOT NULL DEFAULT '0'`，执行前实测 `del_flag IS NULL` 行数 = 0，
@@ -1228,8 +1240,10 @@
 - **活库落地后的硬性后续（fail-loud 的代价）**：去掉默认后，任何「insert/全字段 save 时省略该列」会在活库报
   `1364 Field 'xxx' doesn't have a default value`。后端 insert 路径必须真给这些列赋值（或 DTO `@NotNull` 拦在 400）。
   biz_schedule 已验证 service 层全赋值；其余 1649 列所跨表需 rebuild + 冒烟（见 §17 的整 reactor 构建验收口径）。
-  机械判据加一条：`python workspace/_gen_drop_default_sql.py` 回查活库应持续 = 0（防 `_gen_ddl_by_domain.mjs` 重新从库导出又把默认带回来）。
-- **判据只查 `IS_NULLABLE='NO'` 那一半，可空列不会报 1364**（2026-10-12 实测：建 `zz_probe_nullable(id, a int, b int DEFAULT NULL)`，
+  机械判据加一条：`python workspace/_gen_drop_default_sql.py` 回查活库应持续 = 0（防 `_gen_ddl_by_domain.mjs`
+  重新从库导出又把默认带回来）。
+- **判据只查 `IS_NULLABLE='NO'` 那一半，可空列不会报 1364**（2026-10-12 实测：建
+  `zz_probe_nullable(id, a int, b int DEFAULT NULL)`，
   `sql_mode` 含 `STRICT_TRANS_TABLES`，`INSERT INTO zz_probe_nullable(id) VALUES(1)` 省略两个无默认列 → **成功落 NULL**）：
   MySQL 对**可空列**永远有隐式默认 NULL，`DROP DEFAULT` 只是把显式默认去掉，不会让省略变成错误。
   所以「某张表哪些列必须显式给值」的清单 = `IS_NULLABLE='NO' AND COLUMN_DEFAULT IS NULL`（活库实测 4288 列），
@@ -1257,16 +1271,17 @@
   ② N 次请求 = N 次往返 + N 份独立事务，中途别人插进来会读到不一致的状态（批量排班撞号源/撞连续夜班闸就是这么漏的）；
   ③ 进度条/提示只能显示"第几条"，用户以为保存成功，实际少了几条没有任何人知道。
 - **接口形态（唯一写法）**：
-  - DTO：`XxxBatchUpsertDTO` = 批头字段（`@NotNull Long employeeId` 这类"整批共用"的归属）+
-    `@Valid @NotEmpty @Size(max = 50) List<XxxUpsertDTO> items`（**嵌套必须写 `@Valid` 才会级联校验**）。
-    `@Size` 是硬上限（批量排班 31 天 × 100 人这类），超限走 400，不许无界收请求。
-  - Service：`batchUpsert` 里**自调用**已有的单条 `upsert(item)`（同一 bean、同一事务，`this.` 调用不拆事务），
-    条目里与批头冲突的归属一律由批头覆盖（`item.setEmployeeId(batchDTO.getEmployeeId())`）——
-    否则一次请求就能把别人的数据挂到另一个人名下。
-  - 报错必须**带条目归属**再抛：`throw new BusinessException("第 " + (i + 1) + " 本证书（编号 " + item.getCertNo() + "）：" + e.getMessage())`、
-    `医生名 日期：原因`。只抛第一条原始消息 = 用户不知道是哪几条失败，整批重跑又撞已成功的行。
-  - 出参 `XxxBatchResultVO`（`created` / `skipped` / `message`），幂等类"复刻/复制到下一周"用 created/skipped 表达跳过，
-    **不要**为了"能重跑"改成覆盖写。
+    - DTO：`XxxBatchUpsertDTO` = 批头字段（`@NotNull Long employeeId` 这类"整批共用"的归属）+
+      `@Valid @NotEmpty @Size(max = 50) List<XxxUpsertDTO> items`（**嵌套必须写 `@Valid` 才会级联校验**）。
+      `@Size` 是硬上限（批量排班 31 天 × 100 人这类），超限走 400，不许无界收请求。
+    - Service：`batchUpsert` 里**自调用**已有的单条 `upsert(item)`（同一 bean、同一事务，`this.` 调用不拆事务），
+      条目里与批头冲突的归属一律由批头覆盖（`item.setEmployeeId(batchDTO.getEmployeeId())`）——
+      否则一次请求就能把别人的数据挂到另一个人名下。
+    - 报错必须**带条目归属**再抛：
+      `throw new BusinessException("第 " + (i + 1) + " 本证书（编号 " + item.getCertNo() + "）：" + e.getMessage())`、
+      `医生名 日期：原因`。只抛第一条原始消息 = 用户不知道是哪几条失败，整批重跑又撞已成功的行。
+    - 出参 `XxxBatchResultVO`（`created` / `skipped` / `message`），幂等类"复刻/复制到下一周"用 created/skipped 表达跳过，
+      **不要**为了"能重跑"改成覆盖写。
 - **URL 命名**照第 1 节：批量新增/修改 = `xxx/qualificationBatchUpsert`、`/schedule/batchUpsert`、`/schedule/replicate`；
   单条接口保留（另有单人入口在用），批量入口不复用它的事务。
 - **已按此改造的三处**（新页面要批量时照抄，别再自创）：
@@ -1278,7 +1293,8 @@
   判据是**一次动作是否要落多条**。
 - **机械判据**：`node workspace/_scan_frontend_batch_loops.mjs` 必须输出 `total hits = 0`
   （它扫 `source/front/src/**` 与 `source/miniapp/**` 两种形状：① `for`/`while` 循环体（花括号配平，往下看 150 行）里
-  `await 写接口(`，写接口按动词前缀认（`create/update/delete/save/add/remove/upsert/batch/insert/modify/submit/cancel/start/stop/toggle/pay/refund/dispense/generate/replicate`）；
+  `await 写接口(`，写接口按动词前缀认（
+  `create/update/delete/save/add/remove/upsert/batch/insert/modify/submit/cancel/start/stop/toggle/pay/refund/dispense/generate/replicate`）；
   ② `Promise.all(` 配 `.map(` 在其中并发调写接口。`load*/refresh*` 前缀的取数函数已排除，不误报列表刷新）。
   ⚠ 这条判据只抓"循环/并发 + 写接口"的形状，抓不到"前端把一批拆成两次不同接口顺序发"的写法，
   所以新增批量页面仍要人工确认请求数（浏览器验收口径：hook `XMLHttpRequest.open` 记 URL，
@@ -1313,13 +1329,46 @@
   node workspace/_gate_entity_base_match.mjs       # 反向：挂基类的表必须有那 7 列；表有 id 主键却没挂基类 = 漏改
   node workspace/_verify_entity_audit_columns.mjs  # 真打 insert/update 接口，回库核 create_by_id/create_time，跑完零残留
   ```
-- **注释里不要写表名**（§12），本条的落库事实由 `docs/sql/` 与库内 `COMMENT` 表达，Java 侧只留「为什么主键不叫 id 就不能挂基类」这一句 WHY。
+- **注释里不要写表名**（§12），本条的落库事实由 `docs/sql/` 与库内 `COMMENT` 表达，Java 侧只留「为什么主键不叫 id 就不能挂基类」这一句
+  WHY。
 
+## 28. 请求幂等与防重提交（2026-10-15 收款幂等键落地，概念勿再混）
+
+**三个概念正交，一句话钉死**：防重提交管「人别多点」（前端 loading/禁用，可被绕过）；
+请求幂等管「请求别多生效」（服务端 requestId + 永久标记，独立于客户端）；
+分布式锁管「代码别多跑」（互斥，与上两者正交）。防重挡不住重放（所以必须配幂等），
+幂等挡不住并发（所以配行锁），锁管不了重放（锁一释放重放还能再拿再执行）。
+
+- **碰钱的写操作一律接幂等键，用「幂等键模式」不是「锁模式」**：`SET key NX EX ttl`
+  （`IdempotentGuardService.tryAcquire/release`，his-system 提供，跨模块走 service）。
+  **成功不释放**（key 保留到 TTL 过期，同 requestId 重放直接拒绝）；**仅业务失败时释放**
+  （用户修正后可重试）。锁模式（成功也释放）防不住双击重放 —— 锁一释放第二次还能拿到锁再收一遍。
+- **幂等键要放「业务校验之前」**：tryAcquire 失败直接拒绝，根本不进业务。
+  Redis 不可用时 `IdempotentGuardServiceImpl` 已降级放行（记 warn），防重组件故障绝不阻断收款。
+- **校验与开关的归属（2026-10-15 用户口径，勿再写回 service）**：
+  ① 字段必填 = DTO 注解（`@NotBlank` / `@NotNull` / `@NotEmpty`），service 不写
+  `if (dto.getX() == null) throw` 这类判空；
+  ② 业务判断（如"是否启用幂等"）= DTO 上的业务方法（如 `BillPayDTO.idempotentRequested()`），
+  service 只调方法，不自己写 `TextUtil.hasText` 拼逻辑；
+  ③ 长度治理 = DTO getter 统一截断（如 `getRequestId()` 里 `TextUtil.cut(…, 64)`），
+  不加 `@Size`（不 400 误伤）、service 不重复截。
+- **内部 SPI 调用（跨模块直接调 service，不经 Bean Validation）不校验字段，幂等按需开关**：
+  患者端/扫码回调/住院账户等内部调用方不传 requestId → 幂等关闭（防重在上层状态机/乐观锁）。
+  **必须关闭**，否则多个内部调用方先后入账同一账单会拼出同一个 `"billId:null"` key 互相误拦。
+- **并发互斥（两个不同 requestId 同时改同一行）用 DB 行锁 `SELECT ... FOR UPDATE`**（须在事务内），
+  等价于按业务主键加分布式锁但少一层 Redis 往返；不引 Redisson。
+- **机械判据**：service 里 `grep -n "== null\|isEmpty(\|hasText(" ` 命中必须逐条属于
+  §10 第②③类（带注释标注类别）；DTO 里 `grep -n "TextUtil"` 允许（getter 截断/业务方法），
+  service 里 `TextUtil.cut(.*requestId` 应为 0。
 
 ## 本机验证环境与重启约定
 
-- **后端 8080 = `run_8080.cmd` 托管的独立 Java 实例**（classpath 取自原 IDEA 调试进程的 `<各模块 target/classes>`，`com.his.HisApplication --server.port=8080`，进程日志 `run8080.log`，脚本与日志在 agent workspace 根）；**前端 3000 = vite dev**。
+- **后端 8080 = `run_8080.cmd` 托管的独立 Java 实例**（classpath 取自原 IDEA 调试进程的 `<各模块 target/classes>`，
+  `com.his.HisApplication --server.port=8080`，进程日志 `run8080.log`，脚本与日志在 agent workspace 根）；**前端 3000 = vite
+  dev**。
 - **验证新代码可以直接停旧进程、重启 8080 / 3000**（用户已确认无碍），不必另开验证端口；改前端文件 vite 热更新即生效。
-- **重启后端推荐直接复用运行中进程的 classpath**（`Get-CimInstance Win32_Process` 拿 `-classpath`），不要依赖 `his-web/target/his-backend.jar`：该 jar 常被其他工具（如 Qoder 在 8099 起的 `java -jar` 验证实例）锁住，导致 `mvn clean/repackage` 的 rename 失败。
+- **重启后端推荐直接复用运行中进程的 classpath**（`Get-CimInstance Win32_Process` 拿 `-classpath`），不要依赖
+  `his-web/target/his-backend.jar`：该 jar 常被其他工具（如 Qoder 在 8099 起的 `java -jar` 验证实例）锁住，导致
+  `mvn clean/repackage` 的 rename 失败。
 - **8099 端口是其他工具（Qoder）的 jar 验证实例，非本项目常态服务，勿停勿动**；本项目服务只认 8080（后端）+ 3000（前端）。
 - 数据库连接（dev）：`192.168.88.132:3306/hn_biz_his`，`xz_feng / Feng123456!`（pymysql 只读/执行均可）。

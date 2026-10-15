@@ -1,5 +1,6 @@
 package com.his.charge.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -22,6 +23,7 @@ public class YbCatalogUpsertDTO {
      * 目录类型（1-西药/中成药 2-中药饮片 3-医疗服务项目 4-医用耗材）
      */
     @NotNull(message = "目录类型不能为空")
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "目录类型不合法")
     private Integer catalogType;
 
     /**
@@ -54,6 +56,7 @@ public class YbCatalogUpsertDTO {
     /**
      * 甲乙类（1-甲类 2-乙类 3-丙类/自费）
      */
+    @AllowedValues(values = {"1", "2", "3"}, message = "甲乙类不合法")
     private Integer insuranceLevel;
 
     /**
@@ -76,6 +79,7 @@ public class YbCatalogUpsertDTO {
     /**
      * 状态（0-停用 1-启用）
      */
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 
     /**

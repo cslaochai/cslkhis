@@ -1,6 +1,7 @@
 package com.his.system.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -46,5 +47,6 @@ public class BizClinicSourceReplicateDTO {
     /**
      * 岗位类别过滤（空=当前范围内全部岗位）
      */
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7"}, message = "岗位类别不合法")
     private Integer staffType;
 }

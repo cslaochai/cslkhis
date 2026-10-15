@@ -1,5 +1,6 @@
 package com.his.emr.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -70,9 +71,11 @@ public class PathwayUpsertDTO implements Serializable {
         private Integer dayNo;
 
         /**
-         * 项目类型
+         * 项目类型:1-诊疗 2-用药 3-手术操作 4-护理 5-病情评估 6-宣教
          */
         @NotNull(message = "项目类型不能为空")
+        @AllowedValues(values = {"1", "2", "3", "4", "5", "6"},
+                message = "项目类型不合法")
         private Integer itemType;
 
         /**

@@ -1,6 +1,7 @@
 package com.his.system.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -28,6 +29,7 @@ public class StaffScheduleUpsertDTO {
      * 排班单元类型（1-科室 2-病区 3-全院）
      */
     @NotNull(message = "排班单元类型不能为空")
+    @AllowedValues(values = {"1", "2", "3"}, message = "排班单元类型取值不合法")
     private Integer orgType;
 
     /**
@@ -55,16 +57,19 @@ public class StaffScheduleUpsertDTO {
      * 出勤状态（1-上班 2-休息 3-请假 4-培训 5-停班）
      */
     @NotNull(message = "出勤状态不能为空")
+    @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "出勤状态不合法")
     private Integer dutyStatus;
 
     /**
      * 响应形态（1-坐班 2-听班 3-留院值班，空=坐班）
      */
+    @AllowedValues(values = {"1", "2", "3"}, message = "响应形态取值不合法")
     private Integer attendMode;
 
     /**
      * 是否出诊（0-否 1-是，空=否；只有医生岗且非听班才可能为是）
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否出诊取值不合法")
     private Integer clinicFlag;
 
     /**

@@ -25,7 +25,7 @@ public class BedWaitAdmitDTO {
     /**
      * 入院途径：1-门诊 2-急诊 3-转院 4-其他（无证登记时必填）
      */
-    @AllowedValues(values = {"1", "2", "3", "4"}, message = "入院途径取值不合法（应为 1-门诊 2-急诊 3-转院 4-其他）")
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "入院途径取值不合法")
     private Integer admitWay;
 
     /**

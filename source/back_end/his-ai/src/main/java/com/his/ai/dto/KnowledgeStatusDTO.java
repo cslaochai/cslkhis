@@ -1,7 +1,6 @@
 package com.his.ai.dto;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -15,5 +14,6 @@ public class KnowledgeStatusDTO {
     private Long id;
 
     @NotNull(message = "状态不能为空")
+    @AllowedValues(values = {"0", "1"}, message = "状态不合法")
     private Integer status;
 }

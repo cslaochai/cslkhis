@@ -1,5 +1,6 @@
 package com.his.charge.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -15,6 +16,7 @@ public class CashierHandoverDTO {
      * 班次（1-白班 2-夜班 3-其他）。仅作展示标签，不参与统计口径。
      */
     @NotNull(message = "班次不能为空")
+    @AllowedValues(values = {"1", "2", "3"}, message = "班次不合法")
     private Integer shiftType;
 
     /**

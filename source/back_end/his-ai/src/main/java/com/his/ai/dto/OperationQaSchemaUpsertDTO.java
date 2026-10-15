@@ -1,5 +1,6 @@
 package com.his.ai.dto;
 
+import com.his.common.validation.AllowedValues;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
@@ -23,6 +24,7 @@ public class OperationQaSchemaUpsertDTO {
     private String tableDesc;
 
     @Schema(description = "是否启用（1-启用 0-停用）")
+    @AllowedValues(values = {"0", "1"}, message = "是否启用不合法")
     private Integer isEnabled;
 
     @Schema(description = "排序号")

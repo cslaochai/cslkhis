@@ -7,7 +7,7 @@ import lombok.EqualsAndHashCode;
 import java.io.Serializable;
 
 /**
- * 住院输血申请分页查询入参（命名遵循 AGENTS.md：分页查询用 `xxxQueryPageDTO`）。
+ * 住院输血申请分页查询入参
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -66,11 +66,6 @@ public class TransfusionApplyQueryPageDTO extends PageParam implements Serializa
     /**
      * 申请时间下界（含）。
      *
-     * <p><b>刻意收 String 而不是 LocalDateTime</b>：GET 查询参数上的 {@code @DateTimeFormat}
-     * 一旦格式不匹配就抛绑定异常，而全局异常处理会把绑定失败渲染成 500 ——
-     * 用户看到"系统内部错误"，实际只是日期少写了时分秒。
-     * 服务端宽松解析（接受 {@code yyyy-MM-dd} 与 {@code yyyy-MM-dd HH:mm:ss}），
-     * 解析不了就明确报"时间格式不正确"。
      */
     private String applyDateFrom;
 

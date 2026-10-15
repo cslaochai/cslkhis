@@ -22,8 +22,6 @@ public class EmployeeQueryDTO extends PageParam {
 
     /**
      * 主科室ID，关联科室表
-     * <p>默认口径：过滤员工主科室（或配合 {@link #staffType} 过滤岗位所在科室）。
-     * 仅当 {@link #onlyScheduled}=true 时，语义切换为「排班的出诊科室」（见下）。
      */
     private Long deptId;
 
@@ -39,11 +37,6 @@ public class EmployeeQueryDTO extends PageParam {
 
     /**
      * 是否只返回指定区间内有门诊排班的员工（true-是）。
-     * <p>空=保持原口径（全员 / 按主科室全量），所有存量调用方零影响。
-     * <p>true 时按 `biz_clinic_source`（del_flag=0）过滤：区间内该医生存在排班记录才返回，
-     * 用于挂号看板等「行由排班数据驱动」的场景 —— 不再拉全员名册。
-     * 此时 {@link #deptId} 过滤的是<b>排班的出诊科室</b>（cs.dept_id），不是员工主科室；
-     * 不传 deptId 且当前岗位受限时，收口到授权科室内的排班。
      */
     private Boolean onlyScheduled;
 

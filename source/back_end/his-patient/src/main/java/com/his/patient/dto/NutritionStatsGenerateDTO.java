@@ -21,6 +21,6 @@ public class NutritionStatsGenerateDTO {
      * 1-全院一条 2-按有出院/有方案的科室各生成一条
      */
     @NotNull(message = "统计范围不能为空")
-    @AllowedValues(values = {"1", "2"}, message = "统计范围取值不合法（1-全院 2-科室）")
+    @AllowedValues(values = {"1", "2"}, message = "统计范围取值不合法")
     private Integer scopeType;
 }

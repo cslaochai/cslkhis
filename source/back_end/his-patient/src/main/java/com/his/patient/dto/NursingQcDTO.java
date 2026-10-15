@@ -2,6 +2,7 @@ package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.his.common.base.PageParam;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.Data;
@@ -38,6 +39,7 @@ public class NursingQcDTO {
          * 类别
          */
         @NotNull(message = "请选择检查类别")
+        @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "检查类别取值不合法")
         private Integer category;
 
         /**
@@ -93,6 +95,7 @@ public class NursingQcDTO {
         @NotNull(message = "缺少检查单ID")
         private Long id;
         @NotNull(message = "请指定状态（1-草稿 2-已确认）")
+        @AllowedValues(values = {"1", "2"}, message = "检查单状态取值不合法")
         private Integer status;
     }
 
@@ -117,8 +120,10 @@ public class NursingQcDTO {
         /**
          * 类别
          */
+        @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "检查类别取值不合法")
         private Integer category;
 
+        @AllowedValues(values = {"1", "2"}, message = "检查单状态取值不合法")
         private Integer status;
 
         @Pattern(regexp = "^$|^\\d{4}-\\d{2}$", message = "起始月份格式必须为 yyyy-MM")
@@ -149,6 +154,7 @@ public class NursingQcDTO {
 
         private String indicatorCode;
 
+        @AllowedValues(values = {"1", "2"}, message = "上报状态取值不合法")
         private Integer reportStatus;
         /**
          * 统计月份（yyyy-MM）
@@ -250,6 +256,7 @@ public class NursingQcDTO {
          */
         private Long wardId;
         @NotNull(message = "请指定上报状态（1-退回未上报 2-上报）")
+        @AllowedValues(values = {"1", "2"}, message = "上报状态取值不合法")
         private Integer reportStatus;
     }
 }

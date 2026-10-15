@@ -1,6 +1,7 @@
 package com.his.emr.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -32,6 +33,7 @@ public class RxReviewBatchUpsertDTO {
     @NotNull(message = "点评类型不能为空")
     @Min(value = 1, message = "点评类型非法")
     @Max(value = 2, message = "点评类型非法")
+    @AllowedValues(values = {"1", "2"}, message = "点评类型取值不合法")
     private Integer reviewType;
 
     /**

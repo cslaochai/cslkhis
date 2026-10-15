@@ -1,6 +1,7 @@
 package com.his.emr.dto;
 
 import com.his.common.base.PageParam;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -112,6 +113,8 @@ public class SingleDiseaseDTO {
          * 疗效判定：1-治愈 2-好转 3-未愈 4-死亡 5-其他
          */
         @NotNull(message = "疗效判定不能为空")
+        @AllowedValues(values = {"1", "2", "3", "4", "5"},
+                message = "疗效判定不合法")
         private Integer curativeEffect;
         /**
          * 备注

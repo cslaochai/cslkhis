@@ -1,5 +1,6 @@
 package com.his.miniapp.dto;
 
+import com.his.common.validation.AllowedValues;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -18,6 +19,7 @@ public class FaqFeedbackDTO {
     /**
      * 1-有帮助 0-没帮助
      */
+    @AllowedValues(values = {"0", "1"}, message = "反馈标志取值不合法")
     @Schema(description = "1-有帮助 0-没帮助")
     private Integer helpful;
 }

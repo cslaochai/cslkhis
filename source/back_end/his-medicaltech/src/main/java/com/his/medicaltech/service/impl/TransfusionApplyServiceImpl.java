@@ -10,7 +10,6 @@ import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TimeUtil;
 import com.his.medicaltech.dto.*;
 import com.his.medicaltech.entity.BizTransfusionApply;
@@ -35,6 +34,7 @@ import com.his.patient.vo.CodeOptionVO;
 import com.his.patient.vo.WardVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -539,10 +539,10 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
                 throw new BusinessException("本次提交的血袋号「" + bagNo + "」重复");
             }
             if (!BloodTypeEnum.isValidAbo(bag.getBagAbo())) {
-                throw new BusinessException("血袋 " + bagNo + " 的 ABO 血型不合法（应为 A/B/O/AB）");
+                throw new BusinessException("血袋 " + bagNo + " 的 ABO 血型不合法");
             }
             if (!RhTypeEnum.isValidRh(bag.getBagRh())) {
-                throw new BusinessException("血袋 " + bagNo + " 的 Rh 血型不合法（应为 阳/阴）");
+                throw new BusinessException("血袋 " + bagNo + " 的 Rh 血型不合法");
             }
             if (bag.getExpireDate() == null) {
                 throw new BusinessException("血袋 " + bagNo + " 的有效期必填（超期血袋不得输注）");

@@ -1,7 +1,6 @@
 package com.his.system.dto;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.validation.AllowedValues;
 import lombok.Data;
 
 /**
@@ -28,11 +27,13 @@ public class SysRoleUpsertDTO {
     /**
      * 角色类型：0-自定义角色 1-系统角色（系统角色不允许修改类型/编码、不允许删除）
      */
+    @AllowedValues(values = {"0", "1"}, message = "角色类型取值不合法")
     private Integer roleType;
 
     /**
      * 数据权限范围（1-全部数据 2-自定义数据 3-本部门数据 4-本部门及以下 5-仅本人数据）
      */
+    @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "数据权限范围不合法")
     private Integer dataScope;
 
     /**
@@ -43,5 +44,6 @@ public class SysRoleUpsertDTO {
     /**
      * 状态：0-停用 1-启用
      */
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 }

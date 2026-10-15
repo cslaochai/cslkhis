@@ -1,7 +1,6 @@
 package com.his.operation.dto;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -45,6 +44,7 @@ public class DaySurgeryItemUpsertDTO implements Serializable {
     /**
      * 麻醉方式（1-局部麻醉 2-椎管内麻醉 3-全身麻醉 4-神经阻滞 5-其他）
      */
+    @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "麻醉方式取值不合法")
     private Integer anesthesiaType;
 
     /**
@@ -55,14 +55,14 @@ public class DaySurgeryItemUpsertDTO implements Serializable {
     /**
      * 状态（1-启用 0-停用）
      */
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 
     /**
      * 手术分级 1~4
      */
     @NotNull(message = "手术分级不能为空")
-    @Min(value = 1, message = "手术分级只能为 1~4")
-    @Max(value = 4, message = "手术分级只能为 1~4")
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "手术分级取值不合法")
     private Integer operationLevel;
 
     /**

@@ -1,5 +1,6 @@
 package com.his.patient.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -29,5 +30,6 @@ public class OnlineReplyDTO implements Serializable {
     /**
      * 是否建议线下就诊（0-否 1-是）
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否建议线下就诊取值不合法")
     private Integer needVisit;
 }

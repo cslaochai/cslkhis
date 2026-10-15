@@ -1,7 +1,10 @@
 package com.his.charge.dto;
 
+import com.his.common.support.ValidateParams;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -13,7 +16,7 @@ import java.util.List;
  * 账单收款入参：一次提交可以带多笔、多渠道（现金 30 + 余额 50 + 医保个账 20）。
  */
 @Data
-public class BillPayDTO {
+public class BillPayDTO implements ValidateParams {
 
     /**
      * 结算账单ID
@@ -25,7 +28,14 @@ public class BillPayDTO {
      * 流水来源（字典 his_txn_source）：为空按 1-收费台收款。
      * 患者端回调等内部调用方必须显式写自己的来源，否则班结会把自助缴费算到收银员头上。
      */
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7", "8", "9"}, message = "流水来源不合法")
     private Integer sourceType;
+
+    /**
+     * 客户端生成的请求幂等号（防重提交）：同一笔收款意图必须复用同一值，
+     */
+    @NotBlank(message = "缺少请求幂等号：同一笔收款重试必须复用同一值")
+    private String requestId;
 
     /**
      * 明细项集合
@@ -33,6 +43,11 @@ public class BillPayDTO {
     @NotEmpty(message = "缺少收款明细")
     @Valid
     private List<PayItem> items;
+
+    @Override
+    public void validateParams() {
+
+    }
 
     /**
      * 一笔收款：支付方式（字典 his_pay_method）、金额（必须大于 0）、渠道流水号
@@ -44,6 +59,7 @@ public class BillPayDTO {
          * 支付方式（1-现金 2-微信 3-支付宝 4-医保个人账户 5-院内余额 6-银行卡 7-转账）
          */
         @NotNull(message = "缺少支付方式")
+        @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7"}, message = "支付方式不合法")
         private Integer payMethod;
 
         @NotNull(message = "缺少收款金额")

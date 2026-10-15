@@ -9,7 +9,6 @@ import com.his.system.vo.SysMessageVO;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 消息通知服务接口
@@ -71,32 +70,6 @@ public interface SysMessageService extends IService<SysMessage> {
      */
     boolean sendSystemMessage(Long receiverId, String receiverName, String title, String content,
                               String bizType, Long bizId, String severity, String payload, Integer handleStatus);
-
-    /**
-     * 发送微信订阅消息（患者端小程序出站通知）。
-     *
-     * <p>与站内信的区别：收件人是患者账号（receiver_id = 用户的ID），openid 由实现内
-     * 按 receiverUserId 现查用户（调用方不传身份）；发送结果直接体现在 send_status
-     * （1 成功 / 2 失败，原因落 error_msg），通道未启用、未绑 openid 都算「发送失败」留痕，不静默吞掉。
-     *
-     * @param scene    业务场景码（映射 yml {@code wechat.miniapp.templates}）
-     * @param page     点击跳转页面路径，可空
-     * @param data     模板字段（字段名 → 文本值）
-     * @return 是否发送成功
-     */
-    boolean sendWechatMessage(Long receiverUserId, String receiverName, String scene, String page,
-                              Map<String, String> data, String title, String content,
-                              String bizType, Long bizId);
-
-    /**
-     * 发送微信订阅消息给患者（按 patient_id 反查患者账号用户，业务侧免查用户表）。
-     *
-     * <p>与 {@link #sendWechatMessage} 的区别：入参是患者主档 ID 而非用户 ID ——
-     * 报告发布/叫号这类触发点手里只有 patientId。患者未注册账号（无用户行）
-     * 时不落留痕直接返回 false（没有收件人谈不上送达）。
-     */
-    boolean sendWechatToPatient(Long patientId, String scene, String page, Map<String, String> data,
-                                String title, String content, String bizType, Long bizId);
 
     /**
      * 当前收件人的未读消息数（send_status=1，口径与 listPage 一致）。

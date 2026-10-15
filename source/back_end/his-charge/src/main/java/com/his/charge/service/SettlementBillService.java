@@ -11,7 +11,6 @@ import com.his.common.base.PageResult;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 结算账单服务：把一批记账行锁成"这笔该收多少、怎么分"。
@@ -55,6 +54,15 @@ public interface SettlementBillService extends IService<BizSettlementBill> {
      * 按支付流水重算账单的已收/已退与状态（每笔收退款后调用）。
      */
     BizSettlementBill refreshFromTxns(Long billId);
+
+    /**
+     * 收款专用：锁行读取账单（SELECT ... FOR UPDATE），必须在事务内调用。
+     *
+     * <p>消掉「收款合计 &gt; 尚需缴纳」查询式校验的竞态窗口：同一账单并发收款时，
+     * 后到的事务阻塞到前一个提交，重新读到已收金额后再校验，超收才真正拦得住。
+     * 等价于按账单 id 加锁，但走数据库行锁，不引入分布式锁。
+     */
+    BizSettlementBill getByIdForUpdate(Long billId);
 
     /**
      * 某次就诊下还有多少钱没结清（临床门禁的唯一口径：签到、发药、执行问的是这里，

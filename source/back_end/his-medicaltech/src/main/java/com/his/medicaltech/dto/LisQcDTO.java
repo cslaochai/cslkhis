@@ -1,6 +1,7 @@
 package com.his.medicaltech.dto;
 
 import com.his.common.base.PageParam;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -52,6 +53,7 @@ public class LisQcDTO {
         /**
          * 质控水平（1-低值 2-中值 3-高值）
          */
+        @AllowedValues(values = {"1", "2", "3"}, message = "质控水平取值不合法")
         private Integer qcLevel;
 
         /**
@@ -94,6 +96,7 @@ public class LisQcDTO {
         /**
          * 状态（1-启用 0-停用）
          */
+        @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
         private Integer status;
     }
 
@@ -109,8 +112,9 @@ public class LisQcDTO {
          * 状态（0-停用 1-启用）
          */
         @NotNull(message = "状态不能为空")
-        @Min(value = 0, message = "状态取值不合法（0-停用 1-启用）")
-        @Max(value = 1, message = "状态取值不合法（0-停用 1-启用）")
+        @Min(value = 0, message = "状态取值不合法")
+        @Max(value = 1, message = "状态取值不合法")
+        @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
         private Integer status;
     }
 

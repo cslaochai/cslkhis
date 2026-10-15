@@ -55,7 +55,7 @@ public class ReferralDTO {
         /**
          * 转诊方向:1-上转 2-下转（默认 1 上转）
          */
-        @AllowedValues(values = {"1", "2"}, message = "转诊方向取值不合法（1-上转 2-下转）")
+        @AllowedValues(values = {"1", "2"}, message = "转诊方向取值不合法")
         private Integer direction;
 
         /**

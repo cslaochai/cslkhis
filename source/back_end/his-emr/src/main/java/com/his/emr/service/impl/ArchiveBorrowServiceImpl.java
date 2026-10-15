@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.DelFlagEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.emr.dto.ArchiveBorrowApplyDTO;
@@ -25,6 +24,7 @@ import com.his.emr.vo.ArchiveBorrowVO;
 import com.his.emr.vo.MessagePayloadVO;
 import com.his.system.entity.SysMessage;
 import com.his.system.enums.BizTypeEnum;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -77,7 +77,7 @@ public class ArchiveBorrowServiceImpl extends ServiceImpl<BizArchiveBorrowMapper
     @Transactional(rollbackFor = Exception.class)
     public Long apply(ArchiveBorrowApplyDTO dto) {
         if (dto.getBorrowType() != BorrowTypeEnum.BORROW.getCode() && dto.getBorrowType() != BorrowTypeEnum.COPY.getCode()) {
-            throw new BusinessException("类型只能为 1 借阅 / 2 复印");
+            throw new BusinessException("类型取值不合法");
         }
         BizMedicalRecordArchive archive = bizMedicalRecordArchiveMapper.selectById(dto.getArchiveId());
         if (archive == null || archive.getDelFlag() != 0) {

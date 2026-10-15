@@ -57,18 +57,6 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
      */
     private static final int SIGNATURE_MAX = 512 * 1024;
     /**
-     * 与患者关系合法码（字典 his_notice_relation，与病危重通知同一码表）
-     */
-    private static final Set<Integer> RELATIONS = Set.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 99);
-    /**
-     * 超期联系结果合法码（字典 his_leave_contact）
-     */
-    private static final Set<Integer> CONTACT_RESULTS = Set.of(1, 2, 3);
-    /**
-     * 上报对象合法码（字典 his_leave_report）
-     */
-    private static final Set<Integer> REPORT_TOS = Set.of(1, 2, 3);
-    /**
      * 配置缺失时的兜底上限（小时）。宁可保守，也不回落成「无上限」。
      */
     private static final int MAX_HOURS_FALLBACK = 72;
@@ -208,9 +196,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
         leave.setReason(TextUtil.cut(TextUtil.trimToNull(dto.getReason()), REASON_MAX));
         leave.setDestination(TextUtil.cut(TextUtil.trimToNull(dto.getDestination()), DEST_MAX));
         leave.setCompanionName(TextUtil.cut(TextUtil.trimToNull(dto.getCompanionName()), NAME_MAX));
-        if (dto.getCompanionRelation() != null && !RELATIONS.contains(dto.getCompanionRelation())) {
-            throw new BusinessException("随行人与患者的关系取值不合法（1-配偶 2-父母 3-子女 4-兄弟姐妹 5-配偶父母 6-子女配偶 7-祖父母/外祖父母 8-孙子女/外孙子女 9-法定代理人 10-单位/组织负责人 99-其他）");
-        }
+        // 随行人关系码值白名单已由 DTO @AllowedValues 收口（web 入口 400；为空合法=不填）
         leave.setCompanionRelation(dto.getCompanionRelation());
         // 随行人电话：列表 VO 不出联系方式（AGENTS §5）、详情只出脱敏值，前端**无法原样回显明文**，
         // 于是编辑草稿时这一格必然是空的。若照旧强校验，用户点「编辑」什么都不改直接保存会 400
@@ -334,10 +320,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
         }
         assertDeptAccessible(leave.getDeptId());
         // 患方承诺三要素缺一不可 —— 「回去出事责任界定」靠的就是这张签字
-        // D-业务规则：码值合法性（非空已由 DTO @NotNull 收口，这里挡的是选了非法码值的请求）
-        if (!RELATIONS.contains(dto.getConfirmRelation())) {
-            throw new BusinessException("确认人与患者的关系取值不合法（1-配偶 2-父母 3-子女 4-兄弟姐妹 5-配偶父母 6-子女配偶 7-祖父母/外祖父母 8-孙子女/外孙子女 9-法定代理人 10-单位/组织负责人 99-其他；责任界定必填）");
-        }
+        // 确认人关系码值白名单已由 DTO @AllowedValues 收口（web 入口 400；非空由 DTO @NotNull 收口）
         String signature = TextUtil.trimToNull(dto.getConfirmSignature());
         if (!signature.startsWith("data:image/png;base64,")) {
             throw new BusinessException("手写签名必须是画板生成的 PNG 图片");
@@ -426,12 +409,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
         if (!isOverdue(leave)) {
             throw new BusinessException("该单尚未超期（预计返回时间未到），无需超期处置");
         }
-        if (dto.getContactResult() == null || !CONTACT_RESULTS.contains(dto.getContactResult())) {
-            throw new BusinessException("联系结果取值不合法（1-联系上并约定返回 2-联系不上 3-家属/随行人已知晓）");
-        }
-        if (dto.getReportTo() == null || !REPORT_TOS.contains(dto.getReportTo())) {
-            throw new BusinessException("上报对象取值不合法（1-主管医师 2-病区护士长 3-医务科/总值班；联系不上必须升级上报）");
-        }
+        // 联系结果/上报对象码值白名单已由 DTO @AllowedValues 收口（web 入口 400；非空由 DTO @NotNull 收口）
         leave.setOverdueContactResult(dto.getContactResult());
         leave.setOverdueContactNote(TextUtil.cutToNull(dto.getContactNote(), NOTE_MAX));
         leave.setOverdueContactTime(TimeUtil.nowSeconds());

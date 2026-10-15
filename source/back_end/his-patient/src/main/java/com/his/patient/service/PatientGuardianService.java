@@ -76,8 +76,4 @@ public interface PatientGuardianService {
      */
     void bindOpenid(String openid);
 
-    /**
-     * 通道自测：给当前账号发一条测试订阅消息，返回发送结果文案
-     */
-    String testNotify();
 }

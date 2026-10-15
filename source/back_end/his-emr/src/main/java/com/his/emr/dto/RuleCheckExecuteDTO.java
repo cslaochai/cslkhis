@@ -1,5 +1,6 @@
 package com.his.emr.dto;
 
+import com.his.common.validation.AllowedValues;
 import lombok.Data;
 
 /**
@@ -16,6 +17,7 @@ public class RuleCheckExecuteDTO {
     /**
      * 规则类型（1-配伍禁忌 2-检验诊断关联性 3-用药合理性）
      */
+    @AllowedValues(values = {"1", "2", "3"}, message = "规则类型不合法")
     private Integer ruleType;
 
     /**

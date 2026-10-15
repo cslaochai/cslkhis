@@ -1,5 +1,6 @@
 package com.his.system.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -20,6 +21,7 @@ public class StaffPlanRuleUpsertDTO {
      * 排班单元类型（1-科室 2-病区 3-全院）
      */
     @NotNull(message = "排班单元类型不能为空")
+    @AllowedValues(values = {"1", "2", "3"}, message = "排班单元类型取值不合法")
     private Integer orgType;
 
     /**
@@ -36,6 +38,7 @@ public class StaffPlanRuleUpsertDTO {
      * 岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他）
      */
     @NotNull(message = "岗位类别不能为空")
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7"}, message = "岗位类别不合法")
     private Integer staffType;
 
     /**
@@ -66,6 +69,7 @@ public class StaffPlanRuleUpsertDTO {
     /**
      * 状态（0-停用 1-启用，空=启用）
      */
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 
     /**

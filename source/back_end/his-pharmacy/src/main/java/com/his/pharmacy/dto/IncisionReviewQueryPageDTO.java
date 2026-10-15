@@ -13,10 +13,14 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class IncisionReviewQueryPageDTO extends PageParam {
 
-    /** 患者姓名/手术名称模糊 */
+    /**
+     * 患者姓名/手术名称模糊
+     */
     private String keyword;
 
-    /** 点评结论（1合理 2不合理） */
+    /**
+     * 点评结论（1合理 2不合理）
+     */
     @Min(value = 1, message = "点评结论非法")
     @Max(value = 2, message = "点评结论非法")
     private Integer reviewResult;

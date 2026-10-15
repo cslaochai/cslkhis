@@ -1,6 +1,7 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -25,26 +26,31 @@ public class InpatientSummaryUpsertDTO {
     /**
      * 年龄单位（1-岁 2-月 3-天）
      */
+    @AllowedValues(values = {"1", "2", "3"}, message = "年龄单位取值不合法")
     private Integer ageUnit;
 
     /**
      * 入院途径（1-门诊 2-急诊 3-转院 4-其他）
      */
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "入院途径取值不合法")
     private Integer admitWay;
 
     /**
      * 离院方式：1-医嘱离院 2-医嘱转院 3-医嘱转社区 4-非医嘱离院 5-死亡 9-其他
      */
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "9"}, message = "离院方式取值不合法")
     private Integer dischargeWay;
 
     /**
      * 是否抢救（0-否 1-是）
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否抢救取值不合法")
     private Integer isRescue;
 
     /**
      * 是否危重（0-否 1-是）
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否危重取值不合法")
     private Integer isCritical;
 
     /**
@@ -133,6 +139,7 @@ public class InpatientSummaryUpsertDTO {
         /**
          * 诊断类型：1-主要诊断 2-其他诊断
          */
+        @AllowedValues(values = {"1", "2"}, message = "诊断类型取值不合法")
         private Integer diagType;
 
         /**
@@ -149,11 +156,13 @@ public class InpatientSummaryUpsertDTO {
         /**
          * 入院病情：1-有 2-临床未确定 3-情况不明 4-无
          */
+        @AllowedValues(values = {"1", "2", "3", "4"}, message = "入院病情取值不合法")
         private Integer admitCondition;
 
         /**
          * 并发症合并症级别：NONE / CC / MCC
          */
+        @AllowedValues(values = {"NONE", "CC", "MCC"}, message = "并发症合并症级别取值不合法")
         private String ccLevel;
 
         /**
@@ -171,6 +180,7 @@ public class InpatientSummaryUpsertDTO {
         /**
          * 是否主要手术（0-否 1-是）
          */
+        @AllowedValues(values = {"0", "1"}, message = "是否主要手术取值不合法")
         private Integer isMain;
 
         /**
@@ -193,16 +203,19 @@ public class InpatientSummaryUpsertDTO {
         /**
          * 手术级别：1-一级 2-二级 3-三级 4-四级
          */
+        @AllowedValues(values = {"1", "2", "3", "4"}, message = "手术级别取值不合法")
         private Integer operationLevel;
 
         /**
          * 切口等级：0-0类 1-Ⅰ类 2-Ⅱ类 3-Ⅲ类
          */
+        @AllowedValues(values = {"0", "1", "2", "3"}, message = "切口等级取值不合法")
         private Integer incisionLevel;
 
         /**
          * 麻醉方式：1-全麻 2-椎管内 3-神经阻滞 4-局麻 5-其他
          */
+        @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "麻醉方式取值不合法")
         private Integer anesthesiaType;
 
         /**

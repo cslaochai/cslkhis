@@ -1,5 +1,6 @@
 package com.his.emr.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -20,17 +21,20 @@ public class DisputeCaseUpsertDTO implements Serializable {
      * 类型（1-服务投诉 2-医疗纠纷 3-医疗损害争议 4-其他）
      */
     @NotNull(message = "类型不能为空")
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "类型不合法")
     private Integer caseType;
 
     /**
      * 来源（1-来电 2-来访 3-来信 4-政务热线 5-上级交办 6-院内发现 7-其他）
      */
     @NotNull(message = "来源不能为空")
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7"}, message = "来源不合法")
     private Integer sourceType;
 
     /**
      * 等级:1-一般 2-较大 3-重大（默认一般）
      */
+    @AllowedValues(values = {"1", "2", "3"}, message = "等级取值不合法")
     private Integer level;
 
     /**
@@ -61,6 +65,7 @@ public class DisputeCaseUpsertDTO implements Serializable {
     /**
      * 与患者关系（1-本人 2-家属 3-代理人 4-其他）
      */
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "与患者关系不合法")
     private Integer complainantRel;
 
     /**
@@ -92,6 +97,7 @@ public class DisputeCaseUpsertDTO implements Serializable {
     /**
      * 是否需封存病历（0-否 1-是）
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否需封存病历取值不合法")
     private Integer needSeal;
 
     /**

@@ -1,5 +1,6 @@
 package com.his.appoint.dto;
 
+import com.his.common.validation.AllowedValues;
 import lombok.Data;
 
 /**
@@ -14,5 +15,6 @@ public class AppointStatusUpsertDTO {
     /**
      * 挂号状态（1-已挂号 2-已签到 3-已接诊 4-已就诊 5-已退号 6-已过号）
      */
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6"}, message = "挂号状态取值不合法")
     private Integer status;
 }

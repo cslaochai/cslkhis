@@ -1,5 +1,6 @@
 package com.his.system.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -25,5 +26,6 @@ public class WorkbenchRoleWidgetDTO {
      * 1-展示 0-关掉但不删配置行
      */
     @NotNull(message = "显示状态不能为空")
+    @AllowedValues(values = {"0", "1"}, message = "显示状态取值不合法")
     private Integer visible;
 }

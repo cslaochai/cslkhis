@@ -1,5 +1,6 @@
 package com.his.emr.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -23,11 +24,13 @@ public class SurveyAnswerUpsertDTO implements Serializable {
     /**
      * 填报方式:1-患者自填 2-随访员代填 3-现场扫码（默认 2）
      */
+    @AllowedValues(values = {"1", "2", "3"}, message = "填报方式不合法")
     private Integer fillSource;
 
     /**
      * 是否匿名（0-否 1-是）
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否匿名取值不合法")
     private Integer anonymousFlag;
 
     /**

@@ -2,6 +2,7 @@ package com.his.emr.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.his.common.base.PageParam;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -41,6 +42,7 @@ public class InfectionMonitorDTO {
         @NotNull(message = "就诊类型不能为空")
         @Min(value = 1, message = "就诊类型非法")
         @Max(value = 2, message = "就诊类型非法")
+        @AllowedValues(values = {"1", "2"}, message = "就诊类型取值不合法")
         private Integer visitType;
 
         /**
@@ -57,6 +59,7 @@ public class InfectionMonitorDTO {
          * 感染来源（1社区感染/2医院感染）
          */
         @NotNull(message = "感染来源不能为空")
+        @AllowedValues(values = {"1", "2"}, message = "感染来源取值不合法")
         private Integer caseSource;
 
         /**
@@ -110,6 +113,7 @@ public class InfectionMonitorDTO {
         @NotNull(message = "核实结论不能为空")
         @Min(value = 2, message = "核实结论非法")
         @Max(value = 3, message = "核实结论非法")
+        @AllowedValues(values = {"2", "3"}, message = "核实结论取值不合法")
         private Integer auditResult;
 
         private String auditRemark;
@@ -121,7 +125,13 @@ public class InfectionMonitorDTO {
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class CaseQueryPage extends PageParam {
+        /**
+         * 病例状态（1待核实 2已确认 3已排除）
+         */
         private Integer caseStatus;
+        /**
+         * 感染来源（1社区感染/2医院感染）
+         */
         private Integer caseSource;
         private Integer leakFlag;
         /**
@@ -153,6 +163,8 @@ public class InfectionMonitorDTO {
         @NotNull(message = "监测类型不能为空")
         @Min(value = 1, message = "监测类型非法")
         @Max(value = 3, message = "监测类型非法")
+        @AllowedValues(values = {"1", "2", "3"},
+                message = "监测类型不合法")
         private Integer monitorType;
 
         /**
@@ -250,11 +262,11 @@ public class InfectionMonitorDTO {
     @EqualsAndHashCode(callSuper = true)
     public static class MonitorQueryPage extends PageParam {
         /**
-         * 监测类型
+         * 监测类型（1尿管CAUTI/2血管导管CLABSI/3呼吸机VAP）
          */
         private Integer monitorType;
         /**
-         * 状态
+         * 状态（1在管 2已拔管）
          */
         private Integer status;
         /**
@@ -290,6 +302,7 @@ public class InfectionMonitorDTO {
         @NotNull(message = "观察对象不能为空")
         @Min(value = 1, message = "观察对象非法")
         @Max(value = 3, message = "观察对象非法")
+        @AllowedValues(values = {"1", "2", "3"}, message = "观察对象不合法")
         private Integer obsObject;
 
         @NotNull(message = "时机数不能为空")
@@ -316,6 +329,9 @@ public class InfectionMonitorDTO {
          * 监测科室ID
          */
         private Long deptId;
+        /**
+         * 观察对象（1医生/2护士/3工勤其他）
+         */
         private Integer obsObject;
         @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDate obsDateStart;

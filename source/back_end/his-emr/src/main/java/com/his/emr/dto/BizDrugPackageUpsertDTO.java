@@ -1,5 +1,6 @@
 package com.his.emr.dto;
 
+import com.his.common.validation.AllowedValues;
 import lombok.Data;
 
 import java.util.List;
@@ -27,6 +28,7 @@ public class BizDrugPackageUpsertDTO {
     /**
      * 套餐类型（1-药品套餐 2-检查套餐 3-综合套餐）
      */
+    @AllowedValues(values = {"1", "2", "3"}, message = "套餐类型不合法")
     private Integer packageType;
 
     /**

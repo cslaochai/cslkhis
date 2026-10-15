@@ -1,5 +1,6 @@
 package com.his.charge.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -13,6 +14,7 @@ public class YbMapDTO {
      * 院内项目类型（1-药品 2-诊疗项目 3-检验项目 4-耗材）
      */
     @NotNull(message = "项目类型不能为空")
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "院内项目类型不合法")
     private Integer itemType;
 
     /**

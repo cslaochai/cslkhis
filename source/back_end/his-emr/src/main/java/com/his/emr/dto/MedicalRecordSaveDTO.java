@@ -1,5 +1,6 @@
 package com.his.emr.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -248,6 +249,7 @@ public class MedicalRecordSaveDTO {
     /**
      * 操作类型：1-临时保存 2-结诊
      */
+    @AllowedValues(values = {"1", "2"}, message = "操作类型取值不合法")
     private Integer operationType;
 
     /**
@@ -264,6 +266,7 @@ public class MedicalRecordSaveDTO {
         /**
          * 处方类型：1-西药处方 2-中成药处方 3-中药饮片处方
          */
+        @AllowedValues(values = {"1", "2", "3"}, message = "处方类型不合法")
         private Integer prescriptionType;
 
         /**
@@ -285,6 +288,7 @@ public class MedicalRecordSaveDTO {
         /**
          * 中药煎服方式：1-代煎 2-自煎（字典 his_tcm_decoct_flag），处方类型=3 必填
          */
+        @AllowedValues(values = {"1", "2"}, message = "中药煎服方式取值不合法")
         private Integer decoctFlag;
 
         /**
@@ -397,6 +401,7 @@ public class MedicalRecordSaveDTO {
         /**
          * 是否急诊：0-否 1-是
          */
+        @AllowedValues(values = {"0", "1"}, message = "是否急诊取值不合法")
         private Integer isEmergency;
     }
 
@@ -435,11 +440,13 @@ public class MedicalRecordSaveDTO {
         /**
          * 是否空腹：0-否 1-是
          */
+        @AllowedValues(values = {"0", "1"}, message = "是否空腹取值不合法")
         private Integer isFasting;
 
         /**
          * 是否急诊：0-否 1-是
          */
+        @AllowedValues(values = {"0", "1"}, message = "是否急诊取值不合法")
         private Integer isEmergency;
     }
 }

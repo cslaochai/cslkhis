@@ -1,6 +1,7 @@
 package com.his.medicaltech.dto;
 
 import com.his.common.base.PageParam;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -43,6 +44,7 @@ public class PathologyDTO {
         /**
          * 性别（1-男 2-女 9-未知）
          */
+        @AllowedValues(values = {"1", "2", "9"}, message = "性别取值不合法")
         private Integer gender;
 
         /**
@@ -83,6 +85,7 @@ public class PathologyDTO {
         /**
          * 病理检查类型（1-常规石蜡 2-术中冰冻 3-细胞学 4-免疫组化 5-疑难会诊）
          */
+        @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "病理检查类型取值不合法")
         private Integer examType;
 
         /**
@@ -98,6 +101,7 @@ public class PathologyDTO {
         /**
          * 是否冰冻（0-否 1-是）；exam_type=2 时服务端强制置 1
          */
+        @AllowedValues(values = {"0", "1"}, message = "是否冰冻取值不合法")
         private Integer isFrozen;
 
         /**
@@ -130,6 +134,7 @@ public class PathologyDTO {
         /**
          * 病理检查类型（1-常规石蜡 2-术中冰冻 3-细胞学 4-免疫组化 5-疑难会诊）
          */
+        @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "病理检查类型取值不合法")
         private Integer examType;
 
         private Integer status;
@@ -179,6 +184,7 @@ public class PathologyDTO {
          * 1-取材 2-包埋 3-切片
          */
         @NotNull(message = "动作类型不能为空")
+        @AllowedValues(values = {"1", "2", "3"}, message = "蜡块动作取值不合法")
         private Integer action;
     }
 
@@ -213,6 +219,7 @@ public class PathologyDTO {
          * 3-已取材 4-已制片
          */
         @NotNull(message = "目标状态不能为空")
+        @AllowedValues(values = {"3", "4"}, message = "目标状态取值不合法")
         private Integer targetStatus;
     }
 
@@ -318,6 +325,7 @@ public class PathologyDTO {
         /**
          * 性别（1-男 2-女 9-未知）
          */
+        @AllowedValues(values = {"1", "2", "9"}, message = "性别取值不合法")
         private Integer gender;
 
         /**

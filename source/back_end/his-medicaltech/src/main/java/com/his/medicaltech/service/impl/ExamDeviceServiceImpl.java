@@ -331,7 +331,7 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
             throw new BusinessException("最长可占时长(" + d.getMaxSlotMinutes() + ")不得小于号源粒度(" + step + ")");
         }
         if (d.getStatus() != OPEN && d.getStatus() != PAUSED) {
-            throw new BusinessException("设备状态只能是 1-开放预约 或 2-暂停预约");
+            throw new BusinessException("设备状态取值不合法");
         }
         int amS = ExamGrid.toMin(d.getAmStart());
         int amE = ExamGrid.toMin(d.getAmEnd());
@@ -400,7 +400,9 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
         return map;
     }
 
-    /** 科室数据权限：设备科室可空（未绑科室=全院共享，放行） */
+    /**
+     * 科室数据权限：设备科室可空（未绑科室=全院共享，放行）
+     */
     private void assertDeptAccessible(Long deptId) {
         if (deptId != null && !deptScopeService.canAccessDept(deptId)) {
             throw new BusinessException("该设备所属科室不在当前岗位的数据范围内");

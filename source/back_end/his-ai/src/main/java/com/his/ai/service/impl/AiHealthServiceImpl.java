@@ -70,8 +70,6 @@ public class AiHealthServiceImpl implements AiHealthService {
         Map<String, Long> degradedCount = new LinkedHashMap<>();
         Map<String, String> lastFailureReason = new LinkedHashMap<>();
         for (String capability : TRACKED_CAPABILITIES) {
-            // 开关状态与可用状态分开报：true 只代表「配置里允许」，
-            // 是否真能用还要看上面顶层的 ready / notReadyReason。
             features.put(capability, aiConfigProvider.switchedOn(capability));
             timeouts.put(capability, aiConfigProvider.timeoutOf(capability));
             models.put(capability, aiConfigProvider.modelOf(capability, false));

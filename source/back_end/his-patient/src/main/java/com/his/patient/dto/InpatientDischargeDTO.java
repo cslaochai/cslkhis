@@ -34,12 +34,13 @@ public class InpatientDischargeDTO {
      * 离院方式：1-医嘱离院 2-医嘱转院 3-医嘱转社区 4-非医嘱离院 5-死亡 9-其他（必填）
      */
     @NotNull(message = "离院方式不能为空（病案首页必填项）")
-    @AllowedValues(values = {"1", "2", "3", "4", "5", "9"}, message = "离院方式取值不合法（1-医嘱离院 2-医嘱转院 3-医嘱转社区 4-非医嘱离院 5-死亡 9-其他）")
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "9"}, message = "离院方式取值不合法")
     private Integer dischargeWay;
 
     /**
      * 死亡标志（0-否 1-是）
      */
+    @AllowedValues(values = {"0", "1"}, message = "死亡标志取值不合法")
     private Integer deathFlag;
 
     /**

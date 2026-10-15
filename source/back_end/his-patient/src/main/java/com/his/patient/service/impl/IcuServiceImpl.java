@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -20,6 +19,7 @@ import com.his.patient.service.IcuService;
 import com.his.patient.vo.IcuVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -113,10 +113,8 @@ public class IcuServiceImpl extends ServiceImpl<BizIcuStayMapper, BizIcuStay> im
         if (admission.getAdmitTime() != null && dto.getInTime().isBefore(admission.getAdmitTime())) {
             throw new BusinessException("入科时间不能早于入院时间");
         }
+        // 码值白名单已由 DTO @AllowedValues 收口（web 入口 400）
         Integer careLevel = dto.getCareLevel();
-        if (careLevel == null || careLevel < 1 || careLevel > 3) {
-            throw new BusinessException("监护等级不合法");
-        }
         assertGcs(dto.getInGcs());
         IcuVO.BedVO bed = requireIcuBed(dto.getBedId());
         // 数据权限：入科目标病区折算科室判（B 类，越权病区直接拒绝）
@@ -184,11 +182,8 @@ public class IcuServiceImpl extends ServiceImpl<BizIcuStayMapper, BizIcuStay> im
         if (outTime.isBefore(stay.getInTime())) {
             throw new BusinessException("出科时间不能早于入科时间");
         }
+        // 码值白名单已由 DTO @AllowedValues 收口（web 入口 400），这里保留 dest 供后续条件分支使用
         Integer dest = dto.getOutDest();
-        // ③业务规则：码值合法性（"转出去向不能为空"已收口到 DTO @NotNull + @Valid）
-        if (dest == null || dest < 1 || dest > 6) {
-            throw new BusinessException("转出去向不合法");
-        }
         // ①条件必填：只有转院/死亡/自动离院这三种去向才必填转归说明，@NotBlank 会把普通转科挡成 400
         if ((dest == IcuOutDestEnum.TRANSFER_HOSPITAL.getCode()
                 || dest == IcuOutDestEnum.DEATH.getCode()
@@ -439,7 +434,9 @@ public class IcuServiceImpl extends ServiceImpl<BizIcuStayMapper, BizIcuStay> im
         deptScopeService.assertDeptAccessible(bizIcuStayMapper.selectWardDeptId(wardId));
     }
 
-    /** null=不限病区；非空=授权科室折算出的病区集合（空集合一律当配置缺失拒掉，IN () 是语法错误） */
+    /**
+     * null=不限病区；非空=授权科室折算出的病区集合（空集合一律当配置缺失拒掉，IN () 是语法错误）
+     */
     private List<Long> scopedWardIds(Long requestedWardId) {
         if (requestedWardId != null) {
             assertWardAccessible(requestedWardId);

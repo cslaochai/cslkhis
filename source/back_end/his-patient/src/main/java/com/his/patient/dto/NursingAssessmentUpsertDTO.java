@@ -29,7 +29,7 @@ public class NursingAssessmentUpsertDTO {
      * 评估类型（1-压疮Braden 2-跌倒Morse 3-疼痛NRS）
      */
     @NotNull(message = "评估类型不能为空")
-    @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "评估类型取值不合法（1-压疮 Braden 2-跌倒 Morse 3-疼痛 NRS 4-VTE Caprini 5-管路滑脱）")
+    @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "评估类型取值不合法")
     private Integer assessType;
 
     /**

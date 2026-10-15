@@ -1,5 +1,6 @@
 package com.his.patient.dto;
 
+import com.his.common.validation.AllowedValues;
 import lombok.Data;
 
 /**
@@ -18,5 +19,6 @@ public class PatientTagUpsertDTO {
     /**
      * 标签来源：1-手动打标 2-系统自动打标
      */
+    @AllowedValues(values = {"1", "2"}, message = "标签来源取值不合法")
     private Integer sourceType;
 }

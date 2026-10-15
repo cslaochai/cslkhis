@@ -1,5 +1,6 @@
 package com.his.charge.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -42,6 +43,7 @@ public class RefundApplySubmitDTO {
      * 退费类型（字典 {@code his_refund_apply_type}：1-退药 2-退检查 3-退检验 4-退治疗 5-全部退费）
      */
     @NotNull(message = "请选择退费类型")
+    @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "退费类型不合法")
     private Integer refundType;
 
     /**

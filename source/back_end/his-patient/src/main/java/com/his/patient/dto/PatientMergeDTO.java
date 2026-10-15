@@ -1,5 +1,6 @@
 package com.his.patient.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -30,6 +31,7 @@ public class PatientMergeDTO {
      * 匹配置信级别（前端可传，但**服务端会自己重算并以服务端为准**）。
      * <p>留着这个字段只是为了在两边不一致时能发现"前端在撒谎"并记进日志。
      */
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "匹配置信级别取值不合法")
     private Integer matchType;
 
     /**

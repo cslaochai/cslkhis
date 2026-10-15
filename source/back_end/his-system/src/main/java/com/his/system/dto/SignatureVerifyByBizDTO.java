@@ -1,5 +1,6 @@
 package com.his.system.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -13,6 +14,7 @@ public class SignatureVerifyByBizDTO {
      * 签名对象类型
      */
     @NotNull(message = "签名对象类型不能为空")
+    @AllowedValues(values = {"1", "2", "3"}, message = "签名对象类型不合法")
     private Integer bizType;
 
     /**

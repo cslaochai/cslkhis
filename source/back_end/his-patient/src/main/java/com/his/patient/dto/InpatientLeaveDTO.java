@@ -30,10 +30,12 @@ public class InpatientLeaveDTO {
         /**
          * 请假类别（1-临时外出当日往返 2-离院过夜 9-其他）
          */
+        @AllowedValues(values = {"1", "2", "9"}, message = "请假类别取值不合法")
         private Integer leaveType;
         /**
          * 状态（1-待审批 2-已批准 3-已离院 4-已返回 5-已拒绝 6-已取消）
          */
+        @AllowedValues(values = {"1", "2", "3", "4", "5", "6"}, message = "请假状态取值不合法")
         private Integer leaveStatus;
         /**
          * 仅看超期未归（status=3 且 expected_return_time < now，查询时算）
@@ -71,7 +73,7 @@ public class InpatientLeaveDTO {
          * 请假类别（1-临时外出当日往返 2-离院过夜 9-其他）
          */
         @NotNull(message = "请假类别不能为空")
-        @AllowedValues(values = {"1", "2", "9"}, message = "请假类别取值不合法（1-临时外出当日往返 2-离院过夜 9-其他）")
+        @AllowedValues(values = {"1", "2", "9"}, message = "请假类别取值不合法")
         private Integer leaveType;
         /**
          * 请假事由（必填）
@@ -92,6 +94,8 @@ public class InpatientLeaveDTO {
         /**
          * 随行人与患者关系
          */
+        @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "99"},
+                message = "随行人与患者的关系取值不合法")
         private Integer companionRelation;
         /**
          * 随行人电话：<b>刻意不加 @NotNull / @Size(min=1)</b> —— 列表 VO 不出联系方式、
@@ -165,6 +169,8 @@ public class InpatientLeaveDTO {
          * 确认人与患者关系
          */
         @NotNull(message = "确认人与患者的关系不能为空（责任界定必填）")
+        @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "99"},
+                message = "确认人与患者的关系取值不合法")
         private Integer confirmRelation;
         /**
          * 确认人联系电话
@@ -228,12 +234,14 @@ public class InpatientLeaveDTO {
         @NotNull(message = "缺少请假单ID")
         private Long id;
         @NotNull(message = "联系结果不能为空")
+        @AllowedValues(values = {"1", "2", "3"}, message = "联系结果取值不合法")
         private Integer contactResult;
         private String contactNote;
         /**
          * 上报对象（1-主管医师 2-病区护士长 3-医务科）
          */
         @NotNull(message = "上报对象不能为空（联系不上必须升级上报）")
+        @AllowedValues(values = {"1", "2", "3"}, message = "上报对象取值不合法")
         private Integer reportTo;
     }
 

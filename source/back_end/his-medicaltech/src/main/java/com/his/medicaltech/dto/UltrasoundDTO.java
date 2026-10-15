@@ -1,6 +1,7 @@
 package com.his.medicaltech.dto;
 
 import com.his.common.base.PageParam;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -38,6 +39,7 @@ public class UltrasoundDTO {
         /**
          * 性别（1-男 2-女 9-未知）
          */
+        @AllowedValues(values = {"1", "2", "9"}, message = "性别取值不合法")
         private Integer gender;
 
         /**
@@ -78,6 +80,7 @@ public class UltrasoundDTO {
         /**
          * 超声类型（1-腹部 2-心脏 3-妇产 4-血管 5-浅表器官 6-肌骨 7-腔内）
          */
+        @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7"}, message = "超声类型取值不合法")
         private Integer usType;
 
         /**
@@ -117,6 +120,7 @@ public class UltrasoundDTO {
         /**
          * 超声类型（1-腹部 2-心脏 3-妇产 4-血管 5-浅表器官 6-肌骨 7-腔内）
          */
+        @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7"}, message = "超声类型取值不合法")
         private Integer usType;
 
         private Integer status;

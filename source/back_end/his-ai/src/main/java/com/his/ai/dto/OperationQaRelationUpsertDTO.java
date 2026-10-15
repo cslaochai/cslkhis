@@ -1,5 +1,6 @@
 package com.his.ai.dto;
 
+import com.his.common.validation.AllowedValues;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -33,6 +34,7 @@ public class OperationQaRelationUpsertDTO {
 
     @NotNull(message = "关系类型不能为空")
     @Schema(description = "关系类型（1-业务关联 2-维度关联）")
+    @AllowedValues(values = {"1", "2"}, message = "关系类型不合法")
     private Integer relationType;
 
     @NotBlank(message = "关系说明不能为空")
@@ -40,6 +42,7 @@ public class OperationQaRelationUpsertDTO {
     private String description;
 
     @Schema(description = "是否启用（1-启用 0-停用）")
+    @AllowedValues(values = {"0", "1"}, message = "是否启用不合法")
     private Integer isEnabled;
 
     @Schema(description = "排序号")

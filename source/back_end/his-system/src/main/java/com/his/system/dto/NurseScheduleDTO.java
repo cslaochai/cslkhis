@@ -2,6 +2,7 @@ package com.his.system.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.his.common.base.PageParam;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.Data;
@@ -42,6 +43,7 @@ public class NurseScheduleDTO {
         /**
          * 排班单元类型（1-病区 2-门诊科室；空按 1-病区）
          */
+        @AllowedValues(values = {"1", "2"}, message = "排班单元类型取值不合法")
         private Integer unitType;
         /**
          * 排班单元ID（unitType=1 取病区ID，=2 取门诊科室ID）
@@ -63,6 +65,7 @@ public class NurseScheduleDTO {
          * 状态（1-上班 2-休息 3-请假 4-培训 5-停班）
          */
         @NotNull(message = "请选择排班状态（上班/休息/请假/培训/停班）")
+        @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "排班状态不合法")
         private Integer scheduleStatus;
         /**
          * 仅状态=1-上班时必填；非上班由服务端强制置空，不接受前端残留值
@@ -82,6 +85,7 @@ public class NurseScheduleDTO {
         /**
          * 排班单元类型（1-病区 2-门诊科室；空按 1-病区）
          */
+        @AllowedValues(values = {"1", "2"}, message = "排班单元类型取值不合法")
         private Integer unitType;
         /**
          * 排班单元ID（unitType=1 取病区ID，=2 取门诊科室ID）
@@ -188,6 +192,7 @@ public class NurseScheduleDTO {
         /**
          * 排班单元类型（1-病区 2-门诊科室；空按 1-病区）
          */
+        @AllowedValues(values = {"1", "2"}, message = "排班单元类型取值不合法")
         private Integer unitType;
         /**
          * 排班单元ID（unitType=1 取病区ID，=2 取门诊科室ID）

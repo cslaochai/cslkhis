@@ -1,5 +1,6 @@
 package com.his.system.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -33,6 +34,7 @@ public class InsurancePolicyUpsertDTO {
      * 结算方式（2-城镇职工医保 3-城乡居民医保 4-公费医疗）
      */
     @NotNull(message = "结算方式不能为空")
+    @AllowedValues(values = {"2", "3", "4"}, message = "结算方式不合法")
     private Integer settlementType;
 
     /**
@@ -49,6 +51,7 @@ public class InsurancePolicyUpsertDTO {
     /**
      * 状态（0-停用 1-启用）
      */
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 
     /**

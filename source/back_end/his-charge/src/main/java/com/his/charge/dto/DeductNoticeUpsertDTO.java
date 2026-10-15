@@ -1,6 +1,7 @@
 package com.his.charge.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -23,6 +24,7 @@ public class DeductNoticeUpsertDTO {
      * 来源（1-飞检现场发现 2-智能审核/事后复核转来）
      */
     @NotNull(message = "扣款来源不能为空")
+    @AllowedValues(values = {"1", "2"}, message = "扣款来源取值不合法")
     private Integer sourceType;
 
     /**
@@ -38,6 +40,7 @@ public class DeductNoticeUpsertDTO {
     /**
      * 就诊类型（1-门诊 2-住院）
      */
+    @AllowedValues(values = {"1", "2"}, message = "就诊类型不合法")
     private Integer encounterType;
 
     /**

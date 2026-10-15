@@ -1,8 +1,7 @@
 package com.his.medicaltech.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -65,6 +64,7 @@ public class EcgHolterUpsertDTO {
     /**
      * 是否检出房颤（0-否 1-是）
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否检出房颤取值不合法")
     private Integer afibFlag;
 
     /**

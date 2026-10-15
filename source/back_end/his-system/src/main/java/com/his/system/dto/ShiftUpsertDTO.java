@@ -1,5 +1,6 @@
 package com.his.system.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
@@ -50,21 +51,25 @@ public class ShiftUpsertDTO {
     /**
      * 班次类型（1-上午 2-下午 3-全天；空=不联动排班班次）
      */
+    @AllowedValues(values = {"1", "2", "3"}, message = "班次类型取值不合法")
     private Integer scheduleType;
 
     /**
      * 状态（0-停用 1-启用，空=启用）
      */
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 
     /**
      * 适用域（1-门诊排班 2-病区护理；空=1，门诊排班页建的班次不该混进护理册）
      */
+    @AllowedValues(values = {"1", "2"}, message = "适用域取值不合法")
     private Integer useScope;
 
     /**
      * 适用岗位类别（StaffTypeEnum 码值；空=全部岗位通用）
      */
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7"}, message = "岗位类别不合法")
     private Integer applyStaffType;
 
     /**
@@ -72,6 +77,7 @@ public class ShiftUpsertDTO {
      *
      * <p>连续夜班天数上限、班后最短休息这两条规则全靠它判定，建班次时就要说清楚。
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否夜班取值不合法")
     private Integer isNight;
 
     /**

@@ -1,6 +1,7 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -33,6 +34,7 @@ public class IcuStayUpsertDTO {
      * 监护等级（1-特级 2-I级 3-II级）
      */
     @NotNull(message = "监护等级不能为空")
+    @AllowedValues(values = {"1", "2", "3"}, message = "监护等级取值不合法")
     private Integer careLevel;
 
     /**

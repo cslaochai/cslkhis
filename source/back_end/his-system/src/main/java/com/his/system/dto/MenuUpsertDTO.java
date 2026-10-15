@@ -1,7 +1,6 @@
 package com.his.system.dto;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.validation.AllowedValues;
 import lombok.Data;
 
 /**
@@ -33,6 +32,7 @@ public class MenuUpsertDTO {
     /**
      * 菜单类型：1-目录 2-菜单 3-按钮
      */
+    @AllowedValues(values = {"1", "2", "3"}, message = "菜单类型取值不合法")
     private Integer menuType;
 
     /**
@@ -63,20 +63,24 @@ public class MenuUpsertDTO {
     /**
      * 是否外链：0-否 1-是
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否外链取值不合法")
     private Integer isFrame;
 
     /**
      * 是否缓存：0-否 1-是
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否缓存取值不合法")
     private Integer isCache;
 
     /**
      * 是否显示：0-隐藏 1-显示
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否显示取值不合法")
     private Integer isVisible;
 
     /**
      * 状态：0-停用 1-启用
      */
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 }

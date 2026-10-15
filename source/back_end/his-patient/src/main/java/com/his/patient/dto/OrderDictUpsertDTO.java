@@ -1,5 +1,6 @@
 package com.his.patient.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -23,6 +24,7 @@ public class OrderDictUpsertDTO implements Serializable {
      * 字典类型：his_order_route / his_order_freq / his_dose_unit（必填，服务端白名单校验）
      */
     @NotBlank(message = "字典类型不能为空")
+    @AllowedValues(values = {"his_order_route", "his_order_freq", "his_dose_unit"}, message = "字典类型取值不合法")
     private String dictType;
 
     /**
@@ -46,8 +48,8 @@ public class OrderDictUpsertDTO implements Serializable {
     /**
      * 状态：1-启用 0-停用（不传按启用）
      */
-    @Min(value = 0, message = "状态取值不合法（应为 0-停用 1-启用）")
-    @Max(value = 1, message = "状态取值不合法（应为 0-停用 1-启用）")
+    @Min(value = 0, message = "状态取值不合法")
+    @Max(value = 1, message = "状态取值不合法")
     private Integer status;
 
     /**

@@ -13,13 +13,13 @@ AI 辅助（ICD-10 编码、处方审核、病历质控/草拟、检验/报告�
 
 ## 技术栈
 
-| 层   | 技术                                                                                                                                                    |
-|-----|-------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 后端  | Java 21 · Spring Boot 3.2.5 · MyBatis-Plus 3.5.6 · MySQL 8 · Redis · JWT (jjwt) · Knife4j 4.4.0 (OpenAPI) · Hutool · OpenPDF · ZXing · 微信支付 / 支付宝 SDK |
-| 管理端 | Vue 3.5 · Vite 8 · Element Plus · Tailwind CSS 4 · Pinia · Vue Router · Axios                                                                         |
-| 患者端 | 微信小程序（原生）                                                                                                                                             |
-| 部署  | Docker Compose（后端 + Nginx 管理端）                                                                                                                        |
-| 数据库 | 全量 DDL 快照（`docs/01-初始化DDL/`，23 个领域、302 张表）+ 铺底数据（`docs/02-铺底基础数据/`，93 张表 + 汇总导入脚本）+ 增量脚本（`docs/03-增量SQL变更/`，41 个编号）                                   |
+| 层   | 技术                                                                                                                                                                       |
+|-----|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 后端  | Java 21 · Spring Boot 3.2.5 · MyBatis-Plus 3.5.6 · MySQL 8 · Redis · **RocketMQ 5.x** · JWT (jjwt) · Knife4j 4.4.0 (OpenAPI) · Hutool · OpenPDF · ZXing · 微信支付 / 支付宝 SDK |
+| 管理端 | Vue 3.5 · Vite 8 · Element Plus · Tailwind CSS 4 · Pinia · Vue Router · Axios                                                                                            |
+| 患者端 | 微信小程序（原生）                                                                                                                                                                |
+| 部署  | Docker Compose（后端 + Nginx 管理端）                                                                                                                                           |
+| 数据库 | 全量 DDL 快照（`docs/01-初始化DDL/`，23 个领域、302 张表）+ 铺底数据（`docs/02-铺底基础数据/`，93 张表 + 汇总导入脚本）+ 增量脚本（`docs/03-增量SQL变更/`，41 个编号）                                                      |
 
 ## 目录结构
 
@@ -57,7 +57,8 @@ cslk/
 ### 前置要求
 
 - JDK 21+、Maven 3.9+
-- MySQL 8.0+、Redis
+- MySQL 8.0+、Redis 6+
+- **RocketMQ 5.x**
 - Node.js 20+、pnpm
 
 ### 1. 初始化数据库

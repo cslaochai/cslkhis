@@ -1,5 +1,6 @@
 package com.his.miniapp.dto;
 
+import com.his.common.validation.AllowedValues;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -54,11 +55,13 @@ public class FaqUpsertDTO {
     /**
      * 热门（0-否 1-是）
      */
+    @AllowedValues(values = {"0", "1"}, message = "热门标志取值不合法")
     private Integer hotFlag;
 
     /**
      * 状态（0-停用 1-启用）
      */
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 
     /**

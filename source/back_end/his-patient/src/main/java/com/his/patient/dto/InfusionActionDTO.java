@@ -1,6 +1,7 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -37,6 +38,7 @@ public class InfusionActionDTO {
     /**
      * 不良反应：0-无 1-有（结束用）
      */
+    @AllowedValues(values = {"0", "1"}, message = "不良反应取值不合法")
     private Integer adverseFlag;
 
     /**

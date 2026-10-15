@@ -321,7 +321,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
         NursingQcStatusEnum target = NursingQcStatusEnum.fromCode(dto.getStatus());
         // ③业务规则：状态码值合法性（"不能为空"已由 DTO @NotNull 收口，fromCode 只判非法值）
         if (target == null) {
-            throw new BusinessException("状态只能是 1-草稿 或 2-已确认");
+            throw new BusinessException("状态取值不合法");
         }
         NurseQcVO.CheckRow row = requireCheck(dto.getId());
         if (target == NursingQcStatusEnum.CONFIRMED) {
@@ -500,7 +500,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
         NursingQcReportEnum target = NursingQcReportEnum.fromCode(command.getReportStatus());
         // ③业务规则：码值合法性（非空已由 DTO @NotNull 收口）
         if (target == null) {
-            throw new BusinessException("上报状态只能是 1-退回未上报 或 2-已上报");
+            throw new BusinessException("上报状态取值不合法");
         }
         NurseQcVO.Ward ward = command.getWardId() == null ? null : requireVisibleWard(command.getWardId());
         int affected = bizNursingQcIndicatorMapper.updateReportStatus(statMonth, ward == null ? null : ward.getWardId(),

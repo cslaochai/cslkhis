@@ -4,21 +4,12 @@ package com.his.appoint.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.system.api.service.EmrApi;
 import com.his.appoint.dto.*;
 import com.his.appoint.entity.BizAppointInfo;
 import com.his.appoint.entity.BizQueue;
-import com.his.system.entity.BizClinicSource;
-import com.his.system.entity.BizClinicSourceSlot;
-import com.his.appoint.enums.AppointStatusEnum;
-import com.his.appoint.enums.QueueStatusEnum;
-import com.his.appoint.enums.RegistTypeEnum;
-import com.his.appoint.enums.RevisitSourceEnum;
-import com.his.appoint.enums.VisitTypeEnum;
+import com.his.appoint.enums.*;
 import com.his.appoint.mapper.BizAppointInfoMapper;
 import com.his.appoint.mapper.BizQueueMapper;
-import com.his.system.mapper.BizClinicSourceMapper;
-import com.his.system.mapper.BizClinicSourceSlotMapper;
 import com.his.appoint.service.BizAppointService;
 import com.his.appoint.service.BizRevisitFeePolicyService;
 import com.his.appoint.trigger.DayEndSettleTrigger;
@@ -26,20 +17,10 @@ import com.his.appoint.vo.AppointStatusCountVO;
 import com.his.appoint.vo.BizAppointInfoListVO;
 import com.his.appoint.vo.RevisitFeePreviewVO;
 import com.his.appoint.vo.RevisitRecordSelectVO;
-import com.his.system.api.service.ChargeApi;
-import com.his.system.api.vo.BillBriefVO;
-import com.his.system.api.vo.CancelCommandVO;
-import com.his.system.api.vo.RecordBriefVO;
-import com.his.common.base.PageResult;
-import com.his.common.enums.AttendModeEnum;
-import com.his.common.enums.MedicalInsuranceTypeEnum;
 import com.his.charge.config.InsuranceProperties;
-import com.his.common.enums.SettlementModeEnum;
-import com.his.common.enums.StaffDutyStatusEnum;
-import com.his.common.enums.StaffTypeEnum;
+import com.his.common.base.PageResult;
+import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
-import com.his.system.api.vo.RegistChargeCommandVO;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -47,9 +28,20 @@ import com.his.patient.entity.BizPatient;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.service.BizPatientService;
 import com.his.patient.service.PatientGuardianService;
+import com.his.system.api.service.ChargeApi;
+import com.his.system.api.service.EmrApi;
+import com.his.system.api.vo.BillBriefVO;
+import com.his.system.api.vo.CancelCommandVO;
+import com.his.system.api.vo.RecordBriefVO;
+import com.his.system.api.vo.RegistChargeCommandVO;
+import com.his.system.entity.BizClinicSource;
+import com.his.system.entity.BizClinicSourceSlot;
 import com.his.system.entity.BizSchedule;
 import com.his.system.entity.CurrentUser;
+import com.his.system.mapper.BizClinicSourceMapper;
+import com.his.system.mapper.BizClinicSourceSlotMapper;
 import com.his.system.provider.DeptScopeService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.service.ShiftService;
 import com.his.system.service.StaffScheduleService;
 import com.his.system.utils.UserUtils;
@@ -65,11 +57,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * 挂号服务实现
@@ -79,42 +67,25 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizAppointInfo> implements BizAppointService {
 
-    /** 医保联网结算总开关（his.insurance.enabled）：false=不支持医保结算，挂号侧直接拒 */
-    private final InsuranceProperties insuranceProperties;
-
-    private final DeptScopeService deptScopeService;
-
-    private final BizClinicSourceMapper bizScheduleMapper;
-
-    private final BizClinicSourceSlotMapper bizScheduleSlotMapper;
-
-    private final BizQueueMapper bizQueueMapper;
-
-    private final RedisSequenceService redisSequenceService;
-
-    private final BizPatientMapper bizPatientMapper;
-
-    private final PatientGuardianService patientGuardianService;
-
-    private final BizPatientService bizPatientService;
-
-    private final ShiftService shiftService;
-
-    private final StaffScheduleService staffScheduleService;
-
-    private final ObjectProvider<ChargeApi> appointChargeGateway;
-
-    private final ObjectProvider<EmrApi> medicalRecordRefGateway;
-
-    private final BizRevisitFeePolicyService bizRevisitFeePolicyService;
-
-    private final DayEndSettleTrigger dayEndSettleTrigger;
-
-    /**
-     * 分时段挂号截止提前量（分钟）：时段开始前 10 分钟之后不再放号（用户口径 2026-10-14）。
-     * 前端置灰与后端硬校验共用同一口径，改这里必须同步改挂号页两处过滤。
-     */
     private static final int REGIST_CUTOFF_MINUTES = 10;
+    /**
+     * 医保联网结算总开关（his.insurance.enabled）：false=不支持医保结算，挂号侧直接拒
+     */
+    private final InsuranceProperties insuranceProperties;
+    private final DeptScopeService deptScopeService;
+    private final BizClinicSourceMapper bizScheduleMapper;
+    private final BizClinicSourceSlotMapper bizScheduleSlotMapper;
+    private final BizQueueMapper bizQueueMapper;
+    private final RedisSequenceService redisSequenceService;
+    private final BizPatientMapper bizPatientMapper;
+    private final PatientGuardianService patientGuardianService;
+    private final BizPatientService bizPatientService;
+    private final ShiftService shiftService;
+    private final StaffScheduleService staffScheduleService;
+    private final ObjectProvider<ChargeApi> appointChargeGateway;
+    private final ObjectProvider<EmrApi> medicalRecordRefGateway;
+    private final BizRevisitFeePolicyService bizRevisitFeePolicyService;
+    private final DayEndSettleTrigger dayEndSettleTrigger;
 
     private static String visitDatePastReason(BizAppointInfo regist, String action) {
         LocalDate visitDate = regist.getVisitDate();
@@ -127,14 +98,6 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
 
     /**
      * 分时段挂号时间闸（新增/改约共用，后端兜底）：
-     * <ul>
-     *   <li>就诊日早于今天 → 拒绝（历史日期整日不可挂）；</li>
-     *   <li>就诊日=今天 → 时段开始前 {@link #REGIST_CUTOFF_MINUTES} 分钟为截止，
-     *       已过截止即拒绝（12:17 挂 12:10 的号：12:10-10min=12:00 ≤ 12:17 → 拒）。</li>
-     * </ul>
-     * 时段粒度：有段用段开始，无段用班次开始；段开始必然不早于班次开始，段粒度更贴近用户直觉。
-     * startText 格式异常时不拦（历史脏数据/旧 slotTime 路径由 {@code validateSlotTime} 管），
-     * 不把整单挂掉的锅扣在时间闸上。
      */
     private static void assertRegistTimeNotPassed(LocalDate schedDate, String startText, String action) {
         LocalDate today = LocalDate.now();
@@ -160,13 +123,6 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         }
     }
 
-    /**
-     * 「某某状态不允许做某动作」的人话文案。
-     *
-     * <p>为什么不在各处写死一句「当前状态不允许修改」：操作台的人看到这句话不知道该去干什么。
-     * 说清「现在是已就诊」+「为什么不能改」+「该走哪条路」，才是能自解释的错误。
-     * （与前端 {@code AppointmentsView.sourceLockReason} 是同一套口径，两边一起改。）
-     */
     private static String notAllowedReason(Integer registStatus, String action) {
         String label = AppointStatusEnum.getText(registStatus);
         String who = label == null ? "当前状态(" + registStatus + ")" : label;
@@ -175,6 +131,22 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         }
         return who + " 不允许" + action
                 + "（仅「已挂号」可调整/变更号源，「已挂号/已签到」可退号；已接诊/已就诊为诊疗事实，锁死）";
+    }
+
+    /**
+     * 号源原价 = 挂号费 + 诊查费，与出账口径一致（专家号的高低体现在挂号费上，不另列）
+     */
+    private static BigDecimal scheduleFeeTotal(BizClinicSource schedule) {
+        return NumUtil.orZero(schedule.getRegistFee()).add(NumUtil.orZero(schedule.getDiagnosisFee()));
+    }
+
+    /**
+     * 现场扣号是否放宽预约池限制：预约渠道自己就是从池里扣，不涉及放宽；
+     * 现场渠道仅在「就诊日不晚于今天」时放宽——池是给提前日远程预约留的额度，
+     * 到了就诊日还锁着池，现场就会出现「界面显示有余号却挂不上」。
+     */
+    private static boolean isSameDayWalkin(boolean apptChannel, LocalDate visitDate) {
+        return !apptChannel && visitDate != null && !visitDate.isAfter(LocalDate.now());
     }
 
     @Override
@@ -438,10 +410,6 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BizAppointInfo addAppoint(AppointUpsertDTO upsertDTO) {
-        // 复诊收口：来源必须显式传，来源决定「占不占号源」和「按哪条策略收钱」
-        // 顺序很重要：入参本身就是错的（初诊却要关联病历 / 指向不存在的病历 /
-        // 病历不是这个患者的），不该被「已存在挂号记录」这类状态冲突抢先报出来 ——
-        // 那样调用方会对着一个不是原因的错去改。
         boolean revisit = upsertDTO.getVisitType() != null
                 && upsertDTO.getVisitType() == VisitTypeEnum.REVISIT.getCode();
         RecordBriefVO origin = validateRevisit(upsertDTO, revisit);
@@ -460,16 +428,10 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         appointInfo.setPatientId(upsertDTO.getPatientId());
         appointInfo.setScheduleId(upsertDTO.getScheduleId());
         appointInfo.setRevisitRecordId(revisitRecordId);
-        // 挂号渠道（1-窗口 2-自助机 3-网上 4-预约；空默认窗口），决定扣哪池：
-        // 1/2/3 现场可用号不可吃预约池剩余，4 必须从预约池内扣
+        // 码值白名单已由 DTO @AllowedValues 收口（web 入口 400），这里只保留「为空默认窗口 1」的默认值
         Integer registSource = upsertDTO.getRegistSource() == null ? 1 : upsertDTO.getRegistSource();
-        if (registSource < 1 || registSource > 4) {
-            throw new BusinessException("挂号来源不合法（1-窗口 2-自助机 3-网上 4-预约）");
-        }
         appointInfo.setRegistSource(registSource);
         appointInfo.setPatientName(bizPatient.getPatientName());
-        // 本单结算方式由前端选择（1-全自费 2-医保联网）；费别/医保号是患者主档属性，
-        // 查到主档后统一快照（见下方），不直接取入参，避免与主档口径漂移。
         appointInfo.setSettlementType(upsertDTO.getSettlementType());
         appointInfo.setVisitType(upsertDTO.getVisitType());
         appointInfo.setRevisitSource(revisit ? upsertDTO.getRevisitSource() : null);
@@ -823,7 +785,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
      */
     private void validateSlotTime(String slotTime, BizClinicSource schedule) {
         if (slotTime == null || !slotTime.matches("^([01]\\d|2[0-3]):[0-5]\\d$")) {
-            throw new BusinessException("就诊时段格式不合法（HH:mm）");
+            throw new BusinessException("就诊时段格式不合法");
         }
         if (Integer.parseInt(slotTime.substring(3)) % 30 != 0) {
             throw new BusinessException("就诊时段必须为 30 分钟粒度（:00 或 :30）");
@@ -1011,7 +973,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
      * ① <b>价差</b> —— 普通号 ↔ 专家号换过去，已收的金额既不够补差也无需退差，两边台账都不认；
      * ② <b>收入归属</b> —— 记账行的医生快照一经出账不再改写，换医生等于把这笔挂号费记到别人头上；
      * ③ <b>复诊号</b> —— 费用由复诊收费策略按「与原就诊的间隔天数」现算，改期会让免收口径失效
-     *    （免收的号改出策略窗口，等于该收的钱没收，且没有任何地方会报错）。
+     * （免收的号改出策略窗口，等于该收的钱没收，且没有任何地方会报错）。
      *
      * <p>判费用用的是<b>号源原价</b>（挂号费 + 诊查费）而不是账单实收：实收可能已被策略减免，
      * 拿它跟原价比会让「原价相同、都被免收」的两条号源误判成不同价。
@@ -1054,11 +1016,6 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
             throw new BusinessException(billText + "改约只放同费用号源：新号源 ¥" + newFee.toPlainString()
                     + "、原号源 ¥" + oldFee.toPlainString() + "；请退号退费（按原支付渠道退回）后重新挂号");
         }
-    }
-
-    /** 号源原价 = 挂号费 + 诊查费，与出账口径一致（专家号的高低体现在挂号费上，不另列） */
-    private static BigDecimal scheduleFeeTotal(BizClinicSource schedule) {
-        return NumUtil.orZero(schedule.getRegistFee()).add(NumUtil.orZero(schedule.getDiagnosisFee()));
     }
 
     /**
@@ -1229,15 +1186,8 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
     }
 
     /**
-     * 现场扣号是否放宽预约池限制：预约渠道自己就是从池里扣，不涉及放宽；
-     * 现场渠道仅在「就诊日不晚于今天」时放宽——池是给提前日远程预约留的额度，
-     * 到了就诊日还锁着池，现场就会出现「界面显示有余号却挂不上」。
+     * 挂号扣段：预约渠道从段池扣，现场渠道提前日不许吃池剩余、就诊当日放宽（口径见 isSameDayWalkin）
      */
-    private static boolean isSameDayWalkin(boolean apptChannel, LocalDate visitDate) {
-        return !apptChannel && visitDate != null && !visitDate.isAfter(LocalDate.now());
-    }
-
-    /** 挂号扣段：预约渠道从段池扣，现场渠道提前日不许吃池剩余、就诊当日放宽（口径见 isSameDayWalkin） */
     private int deductSlotSource(BizClinicSourceSlot slot, boolean apptChannel, boolean sameDayWalkin) {
         if (apptChannel) {
             return bizScheduleSlotMapper.deductSlotSourceForAppointment(slot.getId());
@@ -1248,7 +1198,9 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         return bizScheduleSlotMapper.deductSlotSourceForWalkin(slot.getId());
     }
 
-    /** 挂号扣主表号源：择池口径必须与 deductSlotSource 一致，否则段与主表汇总对不上 */
+    /**
+     * 挂号扣主表号源：择池口径必须与 deductSlotSource 一致，否则段与主表汇总对不上
+     */
     private int deductScheduleSource(Long scheduleId, boolean apptChannel, boolean sameDayWalkin) {
         if (apptChannel) {
             return bizScheduleMapper.deductScheduleSourceForAppointment(scheduleId);

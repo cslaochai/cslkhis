@@ -1,5 +1,6 @@
 package com.his.emr.dto;
 
+import com.his.common.validation.AllowedValues;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -107,10 +108,12 @@ public class BizPrescriptionDetailUpsertDTO {
     /**
      * 是否需要皮试（0-否 1-是）
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否需要皮试取值不合法")
     private Integer isSkinTest;
 
     /**
      * 明细状态（1-正常 2-已发药 3-已退药）
      */
+    @AllowedValues(values = {"1", "2", "3"}, message = "明细状态不合法")
     private Integer detailStatus;
 }

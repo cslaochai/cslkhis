@@ -3,27 +3,27 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.system.dto.SignCommandDTO;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.ObjectSignStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.EmrSignatureService;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
-import com.his.system.vo.SignatureVO;
 import com.his.patient.dto.CriticalNoticeDTO;
 import com.his.patient.entity.BizCriticalNotice;
 import com.his.patient.enums.NoticeStatusEnum;
 import com.his.patient.mapper.BizCriticalNoticeMapper;
 import com.his.patient.service.CriticalNoticeService;
 import com.his.patient.vo.CriticalNoticeVO;
+import com.his.system.dto.SignCommandDTO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeService;
+import com.his.system.service.EmrSignatureService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
+import com.his.system.vo.SignatureVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -50,14 +50,6 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
      * 手写签名 dataURL 上限 512KB（canvas PNG 正常几十 KB，兜住恶意大串）
      */
     private static final int SIGNATURE_MAX = 512 * 1024;
-    /**
-     * 神志合法码（字典 his_notice_consciousness）
-     */
-    private static final Set<Integer> CONSCIOUSNESS = Set.of(1, 2, 3, 4, 9);
-    /**
-     * 签收人关系合法码（字典 his_notice_relation）
-     */
-    private static final Set<Integer> RELATIONS = Set.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 99);
     private final DeptScopeService deptScopeService;
     private final BizCriticalNoticeMapper bizCriticalNoticeMapper;
     private final RedisSequenceService redisSequenceService;
@@ -135,10 +127,7 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
         if (snapshot.getAdmitTime() != null && notifyTime.isBefore(TimeUtil.toSeconds(snapshot.getAdmitTime()))) {
             throw new BusinessException("告知时间不能早于入院时间");
         }
-        // 保留（类别③）：神志码值必须命中字典取值
-        if (dto.getConsciousnessStatus() == null || !CONSCIOUSNESS.contains(dto.getConsciousnessStatus())) {
-            throw new BusinessException("患者神志取值不合法（1-清醒 2-嗜睡 3-意识模糊 4-昏迷 9-其他）");
-        }
+        // 神志码值白名单已由 DTO @AllowedValues 收口（web 入口 400）
 
         BizCriticalNotice notice;
         boolean isNew = dto.getId() == null;
@@ -260,10 +249,7 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
                     + BizCriticalNotice.statusText(notice.getNoticeStatus()) + "」");
         }
         assertDeptAccessible(notice.getDeptId());
-        // D-业务规则：关系码值合法性（null 只是「没选」的一种，非空与合法性混写一条，整条保留不拆）
-        if (dto.getSignerRelation() == null || !RELATIONS.contains(dto.getSignerRelation())) {
-            throw new BusinessException("签收人与患者的关系取值不合法（1-配偶 2-父母 3-子女 4-兄弟姐妹 5-配偶父母 6-子女配偶 7-祖父母/外祖父母 8-孙子女/外孙子女 9-法定代理人 10-单位/组织负责人 99-其他；法定必填）");
-        }
+        // 关系码值白名单已由 DTO @AllowedValues 收口（web 入口 400；null 也由 DTO @NotNull 挡住）
         String signature = TextUtil.trimToNull(dto.getSignerSignature());
         if (!signature.startsWith("data:image/png;base64,")) {
             throw new BusinessException("手写签名必须是画板生成的 PNG 图片");

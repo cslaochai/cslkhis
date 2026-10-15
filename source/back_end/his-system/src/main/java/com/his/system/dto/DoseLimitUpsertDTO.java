@@ -1,5 +1,6 @@
 package com.his.system.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
@@ -26,6 +27,7 @@ public class DoseLimitUpsertDTO {
      * 剂量单位（，只有 g/mg/ug 三值可比）
      */
     @NotBlank(message = "请选择剂量单位")
+    @AllowedValues(values = {"g", "mg", "ug"}, message = "剂量单位取值不合法")
     private String doseUnit;
 
     /**
@@ -46,6 +48,7 @@ public class DoseLimitUpsertDTO {
     /**
      * 状态（1-启用 0-停用），为空按启用
      */
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 
     /**

@@ -1,5 +1,6 @@
 package com.his.emr.dto;
 
+import com.his.common.validation.AllowedValues;
 import lombok.Data;
 
 /**
@@ -50,6 +51,7 @@ public class BizLaboratoryTemplateUpsertDTO {
     /**
      * 是否急诊：0-否 1-是
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否急诊取值不合法")
     private Integer isEmergency;
 
     /**

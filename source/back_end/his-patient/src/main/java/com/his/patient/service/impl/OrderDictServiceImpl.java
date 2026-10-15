@@ -174,7 +174,7 @@ public class OrderDictServiceImpl extends ServiceImpl<SysOrderDictDataMapper, Sy
 
     private String requireType(String dictType) {
         if (!OrderDictTypes.isManaged(dictType)) {
-            throw new BusinessException("字典类型不合法（仅允许 给药途径 / 用药频次 / 剂量单位）");
+            throw new BusinessException("字典类型不合法");
         }
         return dictType;
     }

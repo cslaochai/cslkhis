@@ -30,21 +30,25 @@ public class DeathRegistrationDTO {
         /**
          * 状态（1-草稿 2-已登记 3-已作废）
          */
+        @AllowedValues(values = {"1", "2", "3"}, message = "登记状态取值不合法")
         private Integer registerStatus;
 
         /**
          * 死亡类型（1-疾病死亡 2-非疾病死亡）
          */
+        @AllowedValues(values = {"1", "2", "3"}, message = "死亡类型取值不合法")
         private Integer deathType;
 
         /**
          * 是否已报公安/司法（0-否 1-是）
          */
+        @AllowedValues(values = {"0", "1"}, message = "是否已报公安取值不合法")
         private Integer policeFlag;
 
         /**
          * 是否存在医疗纠纷/患方异议（0-否 1-是）
          */
+        @AllowedValues(values = {"0", "1"}, message = "是否存在医疗纠纷取值不合法")
         private Integer disputeFlag;
 
         /**
@@ -85,12 +89,13 @@ public class DeathRegistrationDTO {
          * 死亡类型（1-疾病死亡 2-非疾病死亡）
          */
         @NotNull(message = "死亡类型不能为空")
-        @AllowedValues(values = {"1", "2", "3"}, message = "死亡类型取值不合法（1-疾病死亡 2-非疾病死亡 3-死因不明/待核实）")
+        @AllowedValues(values = {"1", "2", "3"}, message = "死亡类型取值不合法")
         private Integer deathType;
 
         /**
          * 是否已报公安/司法（0-否 1-是）
          */
+        @AllowedValues(values = {"0", "1"}, message = "是否已报公安取值不合法")
         private Integer policeFlag;
 
         /**
@@ -112,11 +117,13 @@ public class DeathRegistrationDTO {
         /**
          * 是否由法医出具/检验（0-否 1-是）
          */
+        @AllowedValues(values = {"0", "1"}, message = "是否法医出具取值不合法")
         private Integer forensicFlag;
 
         /**
          * 尸体处理方式（1-殡仪馆接运 2-家属自行处理 3-病理解剖 4-其他）
          */
+        @AllowedValues(values = {"1", "2", "3", "4"}, message = "尸体处理方式取值不合法")
         private Integer bodyDisposal;
 
         /**
@@ -159,6 +166,7 @@ public class DeathRegistrationDTO {
         /**
          * 是否存在医疗纠纷/患方异议（0-否 1-是）
          */
+        @AllowedValues(values = {"0", "1"}, message = "是否存在医疗纠纷取值不合法")
         private Integer disputeFlag;
 
         /**

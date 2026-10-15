@@ -1,5 +1,6 @@
 package com.his.charge.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -17,6 +18,7 @@ public class BillSettleUpsertDTO {
      * 就诊类型（字典 his_encounter_type：1-门诊 2-住院）
      */
     @NotNull(message = "缺少就诊类型")
+    @AllowedValues(values = {"1", "2"}, message = "就诊类型不合法")
     private Integer encounterType;
 
     /**
@@ -34,11 +36,13 @@ public class BillSettleUpsertDTO {
      * 账单类型（字典 his_bill_type：1-挂号费结算 2-门诊诊间结算 3-住院中途结算 4-出院结算）；
      * 为空按就诊类型推（门诊→2，住院→3）
      */
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "账单类型不合法")
     private Integer billType;
 
     /**
      * 结算方式（字典 his_settlement_mode：1-自费 2-医保）；为空按患者有无医保号推
      */
+    @AllowedValues(values = {"1", "2"}, message = "结算方式取值不合法")
     private Integer settlementMode;
 
     /**

@@ -1,8 +1,7 @@
 package com.his.system.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -29,12 +28,14 @@ public class TechAuthUpsertDTO {
      * 授权类别（字典 his_tech_auth_category：1-手术 2-麻醉 3-内镜与介入）
      */
     @NotNull(message = "授权类别不能为空")
+    @AllowedValues(values = {"1", "2", "3"}, message = "授权类别不合法")
     private Integer authCategory;
 
     /**
      * 可独立操作的手术级别上限（1~4）
      */
     @NotNull(message = "授权级别不能为空")
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "授权级别不合法")
     private Integer techLevel;
 
     /**
@@ -45,6 +46,7 @@ public class TechAuthUpsertDTO {
     /**
      * 授权方式（字典 his_tech_auth_type：1-独立授权 2-上级指导下 3-限制授权，默认 1）
      */
+    @AllowedValues(values = {"1", "2", "3"}, message = "授权方式不合法")
     private Integer authType;
 
     /**

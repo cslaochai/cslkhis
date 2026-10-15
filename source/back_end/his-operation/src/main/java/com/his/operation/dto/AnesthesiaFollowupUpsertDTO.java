@@ -1,6 +1,7 @@
 package com.his.operation.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -44,8 +45,7 @@ public class AnesthesiaFollowupUpsertDTO implements Serializable {
     /**
      * 麻醉恢复情况：1-良好 2-一般 3-差（草稿可空，完成必填）
      */
-    @Min(value = 1, message = "恢复情况取值不合法（1-良好 2-一般 3-差）")
-    @Max(value = 3, message = "恢复情况取值不合法（1-良好 2-一般 3-差）")
+    @AllowedValues(values = {"1", "2", "3"}, message = "恢复情况取值不合法")
     private Integer recovery;
 
     /**

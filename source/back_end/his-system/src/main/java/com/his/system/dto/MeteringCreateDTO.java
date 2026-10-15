@@ -21,7 +21,7 @@ public class MeteringCreateDTO implements Serializable {
      * 计量类型（1-强检 2-校准）
      */
     @NotNull(message = "计量类型不能为空")
-    @AllowedValues(values = {"1", "2"}, message = "计量类型取值不合法（1-强检 2-校准）")
+    @AllowedValues(values = {"1", "2"}, message = "计量类型取值不合法")
     private Integer meteringType;
 
     @NotNull(message = "计量日期不能为空")
@@ -35,7 +35,7 @@ public class MeteringCreateDTO implements Serializable {
     /**
      * 计量结果（1-合格 2-不合格）；不填默认按「合格」落库
      */
-    @AllowedValues(values = {"1", "2"}, message = "计量结果取值不合法（1-合格 2-不合格）")
+    @AllowedValues(values = {"1", "2"}, message = "计量结果取值不合法")
     private Integer meteringResult;
 
     private String certNo;

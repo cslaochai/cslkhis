@@ -57,6 +57,7 @@ public class TransfusionCrossmatchDTO implements Serializable {
         /**
          * 血袋 ABO 血型（必填）：A/B/O/AB
          */
+        @AllowedValues(values = {"A", "B", "O", "AB"}, message = "ABO 血型取值不合法")
         private String bagAbo;
 
         /**
@@ -67,7 +68,7 @@ public class TransfusionCrossmatchDTO implements Serializable {
         /**
          * 血液品种（可空 = 与申请单一致；填了就必须与申请单一致，防止"申请血浆发红细胞"）
          */
-        @AllowedValues(values = {"1", "2", "3", "4", "5", "6"}, message = "血液品种取值不合法（1-红细胞悬液 2-血浆 3-血小板 4-冷沉淀 5-全血 6-其他）")
+        @AllowedValues(values = {"1", "2", "3", "4", "5", "6"}, message = "血液品种取值不合法")
         private Integer bloodComponent;
 
         /**
@@ -83,6 +84,7 @@ public class TransfusionCrossmatchDTO implements Serializable {
         /**
          * 血量单位：U / ml / 治疗量
          */
+        @AllowedValues(values = {"U", "ml", "治疗量"}, message = "血量单位取值不合法")
         private String amountUnit;
 
         /**
@@ -116,7 +118,7 @@ public class TransfusionCrossmatchDTO implements Serializable {
          * 配血结论（必填）：1-相合 2-不合
          */
         @NotNull(message = "配血结论不能为空（没有配血结论的血袋等于没配）")
-        @AllowedValues(values = {"1", "2", "3"}, message = "配血结论取值不合法（1-相合 2-不相合 3-可疑凝集）")
+        @AllowedValues(values = {"1", "2", "3"}, message = "配血结论取值不合法")
         private Integer crossmatchResult;
 
         /**

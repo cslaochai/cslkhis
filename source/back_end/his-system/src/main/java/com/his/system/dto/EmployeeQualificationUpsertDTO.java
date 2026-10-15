@@ -1,8 +1,7 @@
 package com.his.system.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -32,6 +31,7 @@ public class EmployeeQualificationUpsertDTO {
      */
     @NotBlank(message = "证书类型不能为空")
     @Size(max = 8, message = "证书类型取值不合法")
+    @AllowedValues(values = {"2", "3", "4", "5", "9"}, message = "证书类型不合法")
     private String certType;
 
     /**

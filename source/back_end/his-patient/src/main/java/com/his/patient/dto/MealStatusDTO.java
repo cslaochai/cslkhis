@@ -1,5 +1,6 @@
 package com.his.patient.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -22,6 +23,7 @@ public class MealStatusDTO {
      * 配餐状态（0-待配餐 1-已配餐 2-已配送 3-已签收 4-已取消）
      */
     @NotNull(message = "目标状态不能为空")
+    @AllowedValues(values = {"0", "1", "2", "3", "4"}, message = "配餐状态取值不合法")
     private Integer deliverStatus;
 
     /**

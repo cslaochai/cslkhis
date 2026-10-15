@@ -1,5 +1,6 @@
 package com.his.operation.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -18,6 +19,7 @@ public class DaySurgeryDischargeDTO implements Serializable {
      * 离院方式（1-按时离院 2-转普通住院 3-非计划再入院）
      */
     @NotNull(message = "离院方式不能为空")
+    @AllowedValues(values = {"1", "2", "3"}, message = "离院方式取值不合法")
     private Integer leaveType;
 
     /**

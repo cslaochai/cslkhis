@@ -22,7 +22,7 @@ public class MaintainCreateDTO implements Serializable {
      * 维保类型（1-保养 2-维修 3-巡检）
      */
     @NotNull(message = "维保类型不能为空")
-    @AllowedValues(values = {"1", "2", "3"}, message = "维保类型取值不合法（1-保养 2-维修 3-巡检）")
+    @AllowedValues(values = {"1", "2", "3"}, message = "维保类型取值不合法")
     private Integer maintainType;
 
     @NotNull(message = "维保日期不能为空")
@@ -44,7 +44,7 @@ public class MaintainCreateDTO implements Serializable {
     /**
      * 维保结果（1-正常 2-异常）；不填默认按「正常」落库
      */
-    @AllowedValues(values = {"1", "2"}, message = "维保结果取值不合法（1-正常 2-异常）")
+    @AllowedValues(values = {"1", "2"}, message = "维保结果取值不合法")
     private Integer maintainResult;
 
     /**

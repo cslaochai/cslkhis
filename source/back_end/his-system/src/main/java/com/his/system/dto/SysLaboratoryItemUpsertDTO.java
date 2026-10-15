@@ -1,5 +1,6 @@
 package com.his.system.dto;
 
+import com.his.common.validation.AllowedValues;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -28,6 +29,7 @@ public class SysLaboratoryItemUpsertDTO {
     /**
      * 项目类型（1-血液检验 2-尿液检验 3-生化检验 4-免疫检验 5-微生物检验 6-其他）
      */
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6"}, message = "项目类型不合法")
     private Integer itemType;
 
     /**
@@ -63,10 +65,12 @@ public class SysLaboratoryItemUpsertDTO {
     /**
      * 是否需要空腹（0-否 1-是）
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否需要空腹取值不合法")
     private Integer isFasting;
 
     /**
      * 状态（0-停用 1-启用）
      */
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 }

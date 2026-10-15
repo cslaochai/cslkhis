@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.MealGenerateDTO;
@@ -26,6 +25,7 @@ import com.his.patient.vo.MealGenerateVO;
 import com.his.patient.vo.MealOrderVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -236,7 +236,7 @@ public class MealOrderServiceImpl extends ServiceImpl<BizMealOrderMapper, BizMea
         Integer target = dto.getDeliverStatus();
         if (target == null || !NutritionRules.isMealStatus(target)
                 || target == MealDeliverStatusEnum.PENDING.getCode()) {
-            throw new BusinessException("目标状态不合法（1-已配餐 2-已配送 3-已签收 4-已取消）");
+            throw new BusinessException("目标状态不合法");
         }
         boolean cancel = Objects.equals(MealDeliverStatusEnum.CANCELED.getCode(), target);
         String cancelReason = TextUtil.cut(TextUtil.trim(dto.getCancelReason()), 500);

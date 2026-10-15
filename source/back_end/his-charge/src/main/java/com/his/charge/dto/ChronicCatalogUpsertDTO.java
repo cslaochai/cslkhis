@@ -1,5 +1,6 @@
 package com.his.charge.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -28,6 +29,7 @@ public class ChronicCatalogUpsertDTO {
      * 类别（1-慢性病 2-特殊病）
      */
     @NotNull(message = "病种类别不能为空")
+    @AllowedValues(values = {"1", "2"}, message = "病种类别不合法")
     private Integer diseaseType;
 
     /**
@@ -43,6 +45,7 @@ public class ChronicCatalogUpsertDTO {
     /**
      * 启用状态（0-停用 1-启用）
      */
+    @AllowedValues(values = {"0", "1"}, message = "启用状态取值不合法")
     private Integer status;
 
     /**

@@ -34,8 +34,6 @@ public class BillQueryPageDTO extends PageParam {
 
     /**
      * 只看还没收齐的账单（1-待支付 / 2-部分支付）：患者端待缴列表用。
-     * 单独一个 billStatus 表达不了"还没付清"这个业务概念（它是两态），
-     * 让每个调用方各自写 IN (1,2) 迟早有人写成 =1，把部分支付的患者漏掉。
      */
     private Boolean unpaidOnly;
 
@@ -51,7 +49,7 @@ public class BillQueryPageDTO extends PageParam {
     private List<Integer> billStatusList;
 
     /**
-     * 账单类型（字典 his_bill_type）
+     * 账单类型（字典 his_bill_type：1-挂号费结算 2-门诊诊间结算 3-住院中途结算 4-出院结算）
      */
     private Integer billType;
 

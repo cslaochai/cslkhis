@@ -1,6 +1,7 @@
 package com.his.patient.dto;
 
 import com.his.common.base.PageParam;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -108,6 +109,7 @@ public class DischargeDrugDTO {
         /**
          * 发药状态（1-待发药 2-已发药）
          */
+        @AllowedValues(values = {"1", "2"}, message = "发药状态取值不合法")
         private Integer dispenseStatus;
     }
 

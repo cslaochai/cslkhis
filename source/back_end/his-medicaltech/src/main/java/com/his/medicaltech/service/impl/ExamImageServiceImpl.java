@@ -189,7 +189,7 @@ public class ExamImageServiceImpl extends ServiceImpl<BizExamImageMapper, BizExa
     private Anchor resolveAnchor(Integer bizType, Long applyId) {
         ReportTypeEnum type = ReportTypeEnum.getByCode(bizType);
         if (type == null) {
-            throw new BusinessException("影像单据类型只能是 1-检查 或 2-检验");
+            throw new BusinessException("影像单据类型取值不合法");
         }
         // C-非 web 入参：私有锚点解析被上传/查询多个入口复用，入参是主键标量而非请求 DTO，Bean Validation 不覆盖，保留
         if (applyId == null) {

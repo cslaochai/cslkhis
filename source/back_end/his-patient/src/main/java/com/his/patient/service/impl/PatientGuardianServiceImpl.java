@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.MedicalInsuranceTypeEnum;
 import com.his.common.enums.UserTypeEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.patient.dto.GuardianBindDTO;
 import com.his.patient.dto.GuardianSendAddCodeDTO;
@@ -24,9 +23,9 @@ import com.his.patient.vo.SmsSendVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysUser;
 import com.his.system.mapper.SysUserMapper;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.service.SmsCodeService;
 import com.his.system.service.SysAuditLogService;
-import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +36,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -53,8 +55,6 @@ public class PatientGuardianServiceImpl extends ServiceImpl<BizPatientGuardianMa
     private final BizPatientService bizPatientService;
 
     private final SysUserMapper sysUserMapper;
-
-    private final SysMessageService sysMessageService;
 
     private final SmsCodeService smsCodeService;
 
@@ -349,20 +349,6 @@ public class PatientGuardianServiceImpl extends ServiceImpl<BizPatientGuardianMa
         sysUserMapper.update(null, new LambdaUpdateWrapper<SysUser>()
                 .eq(SysUser::getId, user.getUserId())
                 .set(SysUser::getOpenid, openid));
-    }
-
-    @Override
-    public String testNotify() {
-        CurrentUser user = requirePatientUser();
-        Map<String, String> data = new HashMap<>();
-        data.put("thing1", "就诊人绑定测试");
-        data.put("character_string2", String.valueOf(System.currentTimeMillis() % 1000000));
-        boolean ok = sysMessageService.sendWechatMessage(
-                user.getUserId(), user.getRealName(), "test",
-                "pages/home/home", data,
-                "患者端通知测试", "这是一条微信订阅消息通道自测消息", "mini_test", user.getUserId());
-        return ok ? "发送成功（详见 sys_message channel=wechat 留痕）"
-                : "发送失败（原因见 sys_message channel=wechat 最新一条 remark：未启用/未配模板/未绑openid 都会落在这里）";
     }
 
     private CurrentUser requirePatientUser() {

@@ -1,6 +1,7 @@
 package com.his.emr.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -23,6 +24,7 @@ public class ArchiveBorrowApplyDTO {
      * 类型（1-借阅 2-复印）
      */
     @NotNull(message = "请选择借阅或复印")
+    @AllowedValues(values = {"1", "2"}, message = "类型取值不合法")
     private Integer borrowType;
 
     /**

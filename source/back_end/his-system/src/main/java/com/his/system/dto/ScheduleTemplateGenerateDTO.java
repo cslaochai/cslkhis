@@ -1,5 +1,6 @@
 package com.his.system.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.Data;
@@ -26,5 +27,6 @@ public class ScheduleTemplateGenerateDTO {
      * 岗位类别过滤（1医生 2护理 3医技 4药学 5收费 6行政其他）：空=全部岗位。
      * 排班员通常按岗位分批生成（先排医生出诊，再排窗口/护理出勤），两类模板规则不同。
      */
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7"}, message = "岗位类别不合法")
     private Integer staffType;
 }

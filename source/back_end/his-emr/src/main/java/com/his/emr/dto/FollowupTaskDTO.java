@@ -1,5 +1,6 @@
 package com.his.emr.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -33,6 +34,7 @@ public class FollowupTaskDTO {
          * 随访类型（1-复诊提醒 2-慢病随访 3-用药指导 4-术后随访）
          */
         @NotNull(message = "随访类型不能为空")
+        @AllowedValues(values = {"1", "2", "3", "4"}, message = "随访类型不合法")
         private Integer followupType;
 
         /**
@@ -71,6 +73,7 @@ public class FollowupTaskDTO {
         /**
          * 随访类型（1-复诊提醒 2-慢病随访 3-用药指导 4-术后随访）
          */
+        @AllowedValues(values = {"1", "2", "3", "4"}, message = "随访类型不合法")
         private Integer followupType;
 
         /**
@@ -110,6 +113,7 @@ public class FollowupTaskDTO {
         /**
          * 本单结算方式（1-全自费 2-医保联网），默认自费
          */
+        @AllowedValues(values = {"1", "2"}, message = "结算方式取值不合法")
         private Integer settlementType;
     }
 }

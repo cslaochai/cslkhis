@@ -18,10 +18,10 @@ import com.his.common.enums.EncounterTypeEnum;
 import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.FeeStatusEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.system.provider.DeptScopeService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -58,7 +58,7 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
             throw new BusinessException("缺少记账内容");
         }
         if (EncounterTypeEnum.fromCode(dto.getEncounterType()) == null) {
-            throw new BusinessException("就诊类型不合法（1-门诊 2-住院）");
+            throw new BusinessException("就诊类型不合法");
         }
         if (FeeSourceTypeEnum.fromCode(dto.getSourceType()) == null) {
             throw new BusinessException("费用来源不合法");

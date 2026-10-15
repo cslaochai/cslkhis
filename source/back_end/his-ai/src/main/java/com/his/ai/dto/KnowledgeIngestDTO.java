@@ -1,5 +1,6 @@
 package com.his.ai.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
@@ -35,6 +36,7 @@ public class KnowledgeIngestDTO {
     /**
      * 来源类型（2-手工录入 3-文件导入），默认 2
      */
+    @AllowedValues(values = {"2", "3"}, message = "来源类型不合法")
     private Integer sourceType;
 
     /**

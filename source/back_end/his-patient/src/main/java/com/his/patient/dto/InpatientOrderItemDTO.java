@@ -1,5 +1,6 @@
 package com.his.patient.dto;
 
+import com.his.common.validation.AllowedValues;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -14,6 +15,7 @@ public class InpatientOrderItemDTO implements Serializable {
     /**
      * 医嘱类别：1-药品 2-检查 3-检验 4-治疗 5-护理 6-手术 7-输血 8-监护 9-其他 10-临床营养（必填）
      */
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"}, message = "医嘱类别取值不合法")
     private Integer orderClass;
 
     /**

@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -20,6 +19,7 @@ import com.his.patient.vo.*;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -191,11 +191,8 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
+        // 措施码白名单已由 DTO @AllowedValues 收口（web 入口 400），解析出的 Measure 供后续规则使用
         VteRules.Measure measure = VteRules.measureOf(dto.getMeasureCode());
-        // 保留（类别③）：措施码必须是字典里的三个码之一（能不能解析成措施是业务规则，不是「是否为空」）
-        if (measure == null) {
-            throw new BusinessException("措施码不合法（BASIC-基础预防 / PHYSICAL-物理预防 / DRUG-药物预防）");
-        }
         Integer status = dto.getExecuteStatus();
         // 禁忌/拒绝必须给理由：否则"未落实"和"有原因未落实"在系统里是一回事，落实率就说不清
         boolean notDone = status == VtePreventStatusEnum.CONTRAINDICATION.getCode() || status == VtePreventStatusEnum.REFUSED.getCode();

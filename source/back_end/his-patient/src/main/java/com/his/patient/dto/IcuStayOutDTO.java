@@ -1,6 +1,7 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -26,6 +27,7 @@ public class IcuStayOutDTO {
      * 转出去向（1-普通病房 2-专科病房 3-手术室 4-转院 5-死亡 6-自动离院）
      */
     @NotNull(message = "转出去向不能为空")
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6"}, message = "转出去向不合法")
     private Integer outDest;
 
     /**

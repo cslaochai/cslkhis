@@ -32,11 +32,13 @@ public class SurveyTemplateUpsertDTO implements Serializable {
      * 适用场景（1-出院随访 2-门诊 3-住院在院 4-体检）
      */
     @NotNull(message = "适用场景不能为空")
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "适用场景不合法")
     private Integer scene;
 
     /**
      * 状态:1-启用 2-停用（默认启用）
      */
+    @AllowedValues(values = {"1", "2"}, message = "状态取值不合法")
     private Integer status;
 
     /**
@@ -70,7 +72,7 @@ public class SurveyTemplateUpsertDTO implements Serializable {
          */
         @NotNull(message = "评价维度不能为空")
         @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7"},
-                message = "评价维度取值不合法（1-挂号便捷 2-医生服务 3-护士服务 4-环境与流程 5-费用透明 6-疗效与安全感 7-总体印象）")
+                message = "评价维度取值不合法")
         private Integer dimension;
 
         /**
@@ -78,7 +80,7 @@ public class SurveyTemplateUpsertDTO implements Serializable {
          */
         @NotNull(message = "题型不能为空")
         @AllowedValues(values = {"1", "2", "3", "4", "5"},
-                message = "题型取值不合法（1-量表 2-单选 3-多选 4-NPS推荐度 5-开放文本）")
+                message = "题型取值不合法")
         private Integer questionType;
 
         @NotBlank(message = "题干不能为空")
@@ -87,6 +89,7 @@ public class SurveyTemplateUpsertDTO implements Serializable {
         /**
          * 是否必答:0-否 1-是（默认必答）
          */
+        @AllowedValues(values = {"0", "1"}, message = "是否必答取值不合法")
         private Integer required;
 
         /**

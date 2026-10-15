@@ -1,6 +1,7 @@
 package com.his.system.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -34,6 +35,7 @@ public class BizClinicSourceBatchUpsertDTO {
      * 岗位类别（1医生 2护理 3医技 4药学 5收费 6行政其他，见 {@code StaffTypeEnum}，整批共用）
      */
     @NotNull(message = "请选择岗位类别")
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7"}, message = "岗位类别不合法")
     private Integer staffType;
 
     /**
@@ -46,6 +48,7 @@ public class BizClinicSourceBatchUpsertDTO {
      * 状态（0-停诊 1-正常，整批共用）
      */
     @NotNull(message = "状态不能为空")
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 
     /**

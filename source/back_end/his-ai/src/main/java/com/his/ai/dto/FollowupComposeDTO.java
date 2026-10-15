@@ -1,5 +1,6 @@
 package com.his.ai.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -19,6 +20,7 @@ public class FollowupComposeDTO {
      * 随访类型（1-复诊提醒 2-慢病随访 3-用药指导 4-术后随访）
      */
     @NotNull(message = "随访类型不能为空")
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "随访类型不合法")
     private Integer followupType;
 
     /**

@@ -1,5 +1,6 @@
 package com.his.system.dto;
 
+import com.his.common.validation.AllowedValues;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -28,6 +29,7 @@ public class SysInspectionItemUpsertDTO {
     /**
      * 项目类型（1-放射检查 2-超声检查 3-心电图 4-内镜检查 5-其他）
      */
+    @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "项目类型不合法")
     private Integer itemType;
 
     /**
@@ -63,15 +65,18 @@ public class SysInspectionItemUpsertDTO {
     /**
      * 是否支持急诊（0-否 1-是）
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否支持急诊取值不合法")
     private Integer isEmergency;
 
     /**
      * 是否需要预约（0-否 1-是）
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否需要预约取值不合法")
     private Integer isAppointment;
 
     /**
      * 状态：0-停用 1-启用
      */
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 }

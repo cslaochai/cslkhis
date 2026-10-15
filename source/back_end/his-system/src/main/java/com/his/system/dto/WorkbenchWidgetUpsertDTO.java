@@ -1,5 +1,6 @@
 package com.his.system.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -31,6 +32,7 @@ public class WorkbenchWidgetUpsertDTO {
      * 归属区域
      */
     @NotBlank(message = "归属区域不能为空")
+    @AllowedValues(values = {"todo", "notice", "entry", "kpi", "domain"}, message = "归属区域不合法")
     private String area;
 
     /**
@@ -60,6 +62,7 @@ public class WorkbenchWidgetUpsertDTO {
      * 状态（1-已上线可挂载 0-注册表先占位）
      */
     @NotNull(message = "状态不能为空")
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 
     /**

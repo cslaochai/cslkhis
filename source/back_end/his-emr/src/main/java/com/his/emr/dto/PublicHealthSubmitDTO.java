@@ -1,5 +1,6 @@
 package com.his.emr.dto;
 
+import com.his.common.validation.AllowedValues;
 import lombok.Data;
 
 /**
@@ -36,6 +37,7 @@ public class PublicHealthSubmitDTO {
     /**
      * 上报类型（1-传染病 2-死因监测 3-慢性病 4-其他）
      */
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "上报类型不合法")
     private Integer reportType;
 
     /**

@@ -10,9 +10,13 @@ import java.util.List;
 @Data
 public class AiSuggestQueryDTO {
 
-    /** 排台目标日期（yyyy-MM-dd，空按今天） */
+    /**
+     * 排台目标日期（yyyy-MM-dd，空按今天）
+     */
     private String date;
 
-    /** 限定手术间 id 集合（空=全部启用手术间） */
+    /**
+     * 限定手术间 id 集合（空=全部启用手术间）
+     */
     private List<Long> roomIds;
 }

@@ -1,5 +1,6 @@
 package com.his.ai.dto;
 
+import com.his.common.validation.AllowedValues;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
@@ -34,6 +35,7 @@ public class LabPlainItemUpsertDTO {
     private String lowText;
 
     @Schema(description = "状态：1-启用 0-停用")
+    @AllowedValues(values = {"0", "1"}, message = "状态不合法")
     private Integer status;
 
     @Schema(description = "排序号，越小越靠前")

@@ -1,8 +1,6 @@
 package com.his.pharmacy.dto;
 
 import com.his.common.base.PageParam;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -14,12 +12,14 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class AntibioticStatsQueryPageDTO extends PageParam {
 
-    /** 统计月份 yyyy-MM */
+    /**
+     * 统计月份 yyyy-MM
+     */
     @Pattern(regexp = "\\d{4}-\\d{2}", message = "统计月份格式应为 yyyy-MM")
     private String statMonth;
 
-    /** 统计范围（1-全院 2-科室） */
-    @Min(value = 1, message = "统计范围非法")
-    @Max(value = 2, message = "统计范围非法")
+    /**
+     * 统计范围（1-全院 2-科室）
+     */
     private Integer scopeType;
 }

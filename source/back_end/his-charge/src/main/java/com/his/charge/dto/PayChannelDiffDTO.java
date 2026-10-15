@@ -1,5 +1,6 @@
 package com.his.charge.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -20,6 +21,7 @@ public class PayChannelDiffDTO {
      * 处理结论：2-长款（渠道有本地无） 3-短款（金额不符待核）
      */
     @NotNull(message = "处理结论不能为空")
+    @AllowedValues(values = {"2", "3"}, message = "处理结论取值不合法")
     private Integer handleType;
 
     /**

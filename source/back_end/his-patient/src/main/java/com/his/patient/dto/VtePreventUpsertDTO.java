@@ -31,6 +31,7 @@ public class VtePreventUpsertDTO {
      * 措施码
      */
     @NotBlank(message = "措施码不能为空")
+    @AllowedValues(values = {"BASIC", "PHYSICAL", "DRUG"}, message = "措施码不合法")
     private String measureCode;
 
     /**
@@ -49,7 +50,7 @@ public class VtePreventUpsertDTO {
      * 落实状态（0-待落实 1-已落实 2-禁忌未用 3-患者拒绝）
      */
     @NotNull(message = "落实状态不能为空")
-    @AllowedValues(values = {"0", "1", "2", "3"}, message = "落实状态取值不合法（0-待落实 1-已落实 2-禁忌未用 3-患者拒绝）")
+    @AllowedValues(values = {"0", "1", "2", "3"}, message = "落实状态取值不合法")
     private Integer executeStatus;
 
     /**

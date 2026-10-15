@@ -9,7 +9,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 医嘱执行队列 / 执行记录查询入参（命名遵循 AGENTS.md：分页查询用 `xxxQueryPageDTO`）。
+ * 医嘱执行队列 / 执行记录查询入参
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

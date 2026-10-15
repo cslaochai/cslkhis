@@ -1,6 +1,7 @@
 package com.his.patient.dto;
 
 import com.his.common.base.PageParam;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -30,6 +31,7 @@ public class CheckupDTO {
         /**
          * 0不限 1男 2女
          */
+        @AllowedValues(values = {"0", "1", "2"}, message = "性别限制取值不合法")
         private Integer genderLimit;
         /**
          * 单价
@@ -57,6 +59,7 @@ public class CheckupDTO {
             /**
              * 1检验 2检查 3一般
              */
+            @AllowedValues(values = {"1", "2", "3"}, message = "项目类型取值不合法")
             private Integer itemType;
             private String refStandard;
             private BigDecimal amount;
@@ -89,6 +92,7 @@ public class CheckupDTO {
         /**
          * 1个人 2团体
          */
+        @AllowedValues(values = {"1", "2"}, message = "人员类型取值不合法")
         private Integer personType;
         @NotNull(message = "套餐不能为空")
         private Long packageId;
@@ -111,6 +115,10 @@ public class CheckupDTO {
          */
         private String keyword;
         private Integer recordStatus;
+        /**
+         * 1个人 2团体
+         */
+        @AllowedValues(values = {"1", "2"}, message = "人员类型取值不合法")
         private Integer personType;
         private LocalDate checkupDate;
     }
@@ -126,6 +134,7 @@ public class CheckupDTO {
         /**
          * 0正常 1异常 2待查
          */
+        @AllowedValues(values = {"0", "1", "2"}, message = "结果异常标志取值不合法")
         private Integer abnormalFlag;
         private String summaryText;
         private String checkerName;

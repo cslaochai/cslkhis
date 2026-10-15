@@ -186,7 +186,7 @@ public class ExamSlotServiceImpl extends ServiceImpl<BizExamSlotMapper, BizExamS
     @Transactional(rollbackFor = Exception.class)
     public void toggle(ExamApptDTO.SlotToggle dto) {
         if (dto.getStatus() == null || (dto.getStatus() != SLOT_LOCKED && dto.getStatus() != SLOT_OPEN)) {
-            throw new BusinessException("号源状态只能是 0-锁号 或 1-正常");
+            throw new BusinessException("号源状态取值不合法");
         }
         BizExamSlot cell = bizExamSlotMapper.selectById(dto.getSlotId());
         if (cell == null) {

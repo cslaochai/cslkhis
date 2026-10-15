@@ -16,9 +16,9 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.AccountOwnerTypeEnum;
 import com.his.common.enums.AccountTxnTypeEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -71,7 +71,7 @@ public class FundAccountServiceImpl extends ServiceImpl<BizFundAccountMapper, Bi
                                       String patientNo, String patientName) {
         AccountOwnerTypeEnum type = AccountOwnerTypeEnum.fromCode(ownerType);
         if (type == null) {
-            throw new BusinessException("账户主体类型不合法（1-患者 2-住院就诊次）");
+            throw new BusinessException("账户主体类型不合法");
         }
         if (ownerId == null || patientId == null) {
             throw new BusinessException("缺少账户主体");

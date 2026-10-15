@@ -5,22 +5,19 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
-import com.his.system.entity.CurrentUser;
-import com.his.system.utils.UserUtils;
-import com.his.system.enums.BizTypeEnum;
 import com.his.system.dto.MessageQueryPageDTO;
-import com.his.system.enums.ChannelEnum;
+import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysMessage;
-import com.his.system.entity.SysUser;
+import com.his.system.enums.BizTypeEnum;
+import com.his.system.enums.ChannelEnum;
 import com.his.system.mapper.SysMessageMapper;
-import com.his.system.mapper.SysUserMapper;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.service.SysMessageService;
 import com.his.system.support.MessagePushService;
+import com.his.system.utils.UserUtils;
 import com.his.system.vo.MessageTypeCountVO;
 import com.his.system.vo.SysMessageVO;
-import com.his.system.service.WechatSubscribeSender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -30,7 +27,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -43,8 +39,6 @@ import java.util.stream.Collectors;
 public class SysMessageServiceImpl extends ServiceImpl<SysMessageMapper, SysMessage> implements SysMessageService {
 
     private final MessagePushService messagePushService;
-    private final WechatSubscribeSender wechatSubscribeSender;
-    private final SysUserMapper sysUserMapper;
     private final RedisSequenceService redisSequenceService;
 
     @Override
@@ -65,7 +59,6 @@ public class SysMessageServiceImpl extends ServiceImpl<SysMessageMapper, SysMess
         message.setContent(content);
         message.setBizType(bizType);
         message.setBizId(bizId);
-        // severity 落库前做一次枚举校验：非法值一律按 info 落，不能让脏码值进排序
         message.setSeverity(BizTypeEnum.isValidSeverity(severity) ? severity : "info");
         message.setPayload(payload);
         message.setHandleStatus(handleStatus);
@@ -74,8 +67,6 @@ public class SysMessageServiceImpl extends ServiceImpl<SysMessageMapper, SysMess
         message.setReadStatus(0); // 未读
         boolean saved = this.save(message);
         if (saved) {
-            // 实时推送（SSE 在线即达）。推送失败绝不能影响消息落库的结果 ——
-            // 消息已经发出去（收件箱可见），推送只是「更快知道」的手段。
             try {
                 messagePushService.pushNewMessage(receiverId, message.getTitle(),
                         message.getBizType(), message.getSeverity(), countUnread(receiverId));
@@ -84,59 +75,6 @@ public class SysMessageServiceImpl extends ServiceImpl<SysMessageMapper, SysMess
             }
         }
         return saved;
-    }
-
-    @Override
-    public boolean sendWechatMessage(Long receiverUserId, String receiverName, String scene, String page,
-                                     Map<String, String> data, String title, String content,
-                                     String bizType, Long bizId) {
-        SysUser receiver = receiverUserId == null ? null : sysUserMapper.selectById(receiverUserId);
-        String openid = receiver == null ? null : receiver.getOpenid();
-
-        SysMessage message = new SysMessage();
-        message.setMessageNo(redisSequenceService.generateMessageNo());
-        message.setChannel(ChannelEnum.WECHAT.getChannel());
-        message.setReceiverId(receiverUserId);
-        message.setReceiverName(receiverName);
-        message.setTitle(title);
-        message.setContent(content);
-        message.setBizType(bizType);
-        message.setBizId(bizId);
-        message.setSeverity("info");
-        message.setReadStatus(0);
-        // 先发送后落库：本渠道没有「落库即送达」的语义，先 send 才能把真实结果写进 send_status；
-        // 反过来先落库再改状态，进程中途挂掉会留下永远停在"已发送"的假成功。
-        String failReason = wechatSubscribeSender.send(openid, scene, page, data);
-        boolean success = failReason == null;
-        message.setSendStatus(success ? 1 : 2);
-        message.setSendTime(LocalDateTime.now());
-        message.setErrorMsg(failReason);
-        try {
-            this.save(message);
-        } catch (Exception e) {
-            // 留痕失败只记日志 —— 消息可能已送达微信，不能让记账问题升级成业务异常
-            log.error("微信订阅消息留痕失败 scene={} receiver={}", scene, receiverUserId, e);
-        }
-        return success;
-    }
-
-    @Override
-    public boolean sendWechatToPatient(Long patientId, String scene, String page, Map<String, String> data,
-                                       String title, String content, String bizType, Long bizId) {
-        if (patientId == null) {
-            return false;
-        }
-        SysUser user = sysUserMapper.selectOne(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysUser>()
-                .eq(SysUser::getPatientId, patientId)
-                .eq(SysUser::getUserType, 3)
-                .last("LIMIT 1"));
-        if (user == null) {
-            // 患者没有小程序账号：没有收件人，谈不上送达，留 debug 日志即可
-            log.debug("sendWechatToPatient：患者 {} 无对应账号，跳过 scene={}", patientId, scene);
-            return false;
-        }
-        return sendWechatMessage(user.getId(), user.getRealName(), scene, page, data,
-                title, content, bizType, bizId);
     }
 
     @Override

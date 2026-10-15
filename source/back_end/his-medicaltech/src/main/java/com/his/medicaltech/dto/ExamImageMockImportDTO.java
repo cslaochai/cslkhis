@@ -1,5 +1,6 @@
 package com.his.medicaltech.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -24,6 +25,7 @@ public class ExamImageMockImportDTO {
     /**
      * 影像模态（1-CT 2-MR 3-DR 4-超声 5-心电 6-内镜 7-其他）
      */
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7"}, message = "影像模态取值不合法")
     private Integer modality;
 
     /**

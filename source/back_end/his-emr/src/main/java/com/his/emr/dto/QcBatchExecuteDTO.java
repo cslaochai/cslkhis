@@ -1,5 +1,6 @@
 package com.his.emr.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 
@@ -14,6 +15,7 @@ public class QcBatchExecuteDTO {
     /**
      * 病历来源（OUTPATIENT / INPATIENT）；为空按门诊病历处理
      */
+    @AllowedValues(values = {"OUTPATIENT", "INPATIENT"}, message = "病历来源取值不合法")
     private String recordSource;
 
     /**
@@ -26,5 +28,7 @@ public class QcBatchExecuteDTO {
     /**
      * 质控类型（0-综合 1-完整性检查 2-规范性检查 3-逻辑性检查 4-AI内涵质控）
      */
+    @AllowedValues(values = {"0", "1", "2", "3", "4"},
+            message = "质控类型不合法")
     private Integer qcType;
 }

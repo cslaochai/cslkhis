@@ -1,5 +1,6 @@
 package com.his.operation.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -36,6 +37,7 @@ public class DaySurgeryArrangeDTO implements Serializable {
      * 实际麻醉方式
      */
     @NotNull(message = "麻醉方式不能为空")
+    @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "麻醉方式取值不合法")
     private Integer anesthesiaType;
 
     /**

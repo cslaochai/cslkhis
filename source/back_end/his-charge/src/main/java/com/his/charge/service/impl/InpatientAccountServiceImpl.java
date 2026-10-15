@@ -3,7 +3,6 @@ package com.his.charge.service.impl;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.system.api.service.PatientApi;
 import com.his.charge.dto.*;
 import com.his.charge.entity.BizAlert;
 import com.his.charge.entity.BizFeeRecord;
@@ -14,20 +13,21 @@ import com.his.charge.mapper.BizAlertMapper;
 import com.his.charge.mapper.BizPaymentTxnMapper;
 import com.his.charge.service.*;
 import com.his.charge.vo.*;
-import com.his.system.api.vo.AdmissionBriefVO;
-import com.his.system.api.vo.PatientBriefVO;
 import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
+import com.his.system.api.service.PatientApi;
+import com.his.system.api.vo.AdmissionBriefVO;
+import com.his.system.api.vo.PatientBriefVO;
 import com.his.system.entity.SysEmployee;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.mapper.SysEmployeeMapper;
 import com.his.system.service.DictCacheService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.service.SysMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -146,7 +146,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
     public List<PrepayVO> savePrepay(PrepayUpsertDTO dto) {
         if (dto.getPrepayType() == null
                 || (dto.getPrepayType() != PREPAY_IN && dto.getPrepayType() != PREPAY_OUT)) {
-            throw new BusinessException("流水类型不合法（应为 1-充值 或 2-退款）");
+            throw new BusinessException("流水类型不合法");
         }
         if (dto.getAmount() == null || dto.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException("金额必须大于 0（退款金额传正数即可，方向由流水类型决定）");

@@ -1,5 +1,6 @@
 package com.his.system.dto;
 
+import com.his.common.validation.AllowedValues;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -28,6 +29,7 @@ public class SysDrugUpsertDTO {
     /**
      * 药品类型：1-西药 2-中成药 3-中药饮片
      */
+    @AllowedValues(values = {"1", "2", "3"}, message = "药品类型取值不合法")
     private Integer drugType;
 
     /**
@@ -103,6 +105,7 @@ public class SysDrugUpsertDTO {
     /**
      * 是否医保药品（0-否 1-是）
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否医保药品取值不合法")
     private Integer isMedicalInsurance;
 
     /**
@@ -123,17 +126,20 @@ public class SysDrugUpsertDTO {
     /**
      * 是否需要皮试（0-否 1-是）
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否需要皮试取值不合法")
     private Integer isSkinTest;
 
     /**
      * 是否冷链药品（0-否 1-是）
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否冷链药品取值不合法")
     private Integer isColdChain;
 
     /**
      * 特殊管理分类：0-普通 1-麻醉药品 2-第一类精神药品 3-第二类精神药品 4-毒性药品
      * （字典 his_drug_special_flag；由药房按最新管制目录维护）
      */
+    @AllowedValues(values = {"0", "1", "2", "3", "4"}, message = "特殊管理分类不合法")
     private Integer specialFlag;
 
     /**
@@ -154,5 +160,6 @@ public class SysDrugUpsertDTO {
     /**
      * 状态：0-停用 1-启用
      */
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 }

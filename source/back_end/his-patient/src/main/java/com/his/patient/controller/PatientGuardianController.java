@@ -83,11 +83,4 @@ public class PatientGuardianController {
         patientGuardianService.bindOpenid(dto.getOpenid());
         return Result.success();
     }
-
-    @PreAuthorize("hasAuthority('patient:edit')")
-    @Operation(summary = "订阅消息通道自测（给当前账号发一条测试消息）")
-    @PostMapping("/testNotify")
-    public Result<String> testNotify() {
-        return Result.success(patientGuardianService.testNotify());
-    }
 }

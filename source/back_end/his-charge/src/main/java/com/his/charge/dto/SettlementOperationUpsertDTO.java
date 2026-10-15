@@ -1,5 +1,6 @@
 package com.his.charge.dto;
 
+import com.his.common.validation.AllowedValues;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -38,11 +39,13 @@ public class SettlementOperationUpsertDTO {
     /**
      * 手术级别：1-4
      */
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "手术级别取值不合法")
     private Integer operLevel;
 
     /**
      * 是否主要手术操作（0-否 1-是）
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否主要手术操作取值不合法")
     private Integer isMain;
 
     /**

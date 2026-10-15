@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.system.api.service.PatientApi;
 import com.his.charge.dto.*;
 import com.his.charge.entity.BizInsuranceSettlement;
 import com.his.charge.entity.BizYbDeductLog;
@@ -16,12 +15,16 @@ import com.his.charge.mapper.BizYbDeductNoticeMapper;
 import com.his.charge.mapper.BizYbInspectionMapper;
 import com.his.charge.service.InsuranceSettlementService;
 import com.his.charge.service.YbDeductNoticeService;
-import com.his.charge.vo.*;
+import com.his.charge.vo.DeductLogVO;
+import com.his.charge.vo.DeductNoticeDetailVO;
+import com.his.charge.vo.DeductNoticeListVO;
+import com.his.charge.vo.DeductSummaryVO;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
-import com.his.system.api.vo.PatientBriefVO;
 import com.his.common.util.TextUtil;
+import com.his.system.api.service.PatientApi;
+import com.his.system.api.vo.PatientBriefVO;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -198,7 +201,7 @@ public class YbDeductNoticeServiceImpl extends ServiceImpl<BizYbDeductNoticeMapp
         }
         Integer result = dto.getAppealResult();
         if (result == null || (result != 1 && result != 2)) {
-            throw new BusinessException("申诉结果只能是 1-成功 或 2-驳回");
+            throw new BusinessException("申诉结果取值不合法");
         }
         String operator = UserUtils.getCurrentUser().getRealName();
         entity.setAppealResult(result);
@@ -241,7 +244,7 @@ public class YbDeductNoticeServiceImpl extends ServiceImpl<BizYbDeductNoticeMapp
                             + " 已超过扣款金额 " + deduct + "，分摊不能超出实扣");
                 }
             }
-            default -> throw new BusinessException("损失承担方式不合法（1-院方 2-科室 3-个人 4-科室+个人共担）");
+            default -> throw new BusinessException("损失承担方式不合法");
         }
         String operator = UserUtils.getCurrentUser().getRealName();
         entity.setLiableDeptId(dto.getLiableDeptId());

@@ -1,5 +1,6 @@
 package com.his.medicaltech.dto;
 
+import com.his.common.validation.AllowedValues;
 import lombok.Data;
 
 /**
@@ -40,6 +41,7 @@ public class LabResultItemSaveDTO {
     /**
      * 异常标志（0-正常 1-偏高 2-偏低 3-异常）
      */
+    @AllowedValues(values = {"0", "1", "2", "3"}, message = "异常标志取值不合法")
     private Integer abnormalFlag;
 
     /**

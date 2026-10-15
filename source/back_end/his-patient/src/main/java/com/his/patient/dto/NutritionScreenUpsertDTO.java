@@ -32,7 +32,7 @@ public class NutritionScreenUpsertDTO {
      * 量表（1-NRS2002 2-PG-SGA 3-MNA）
      */
     @NotNull(message = "筛查量表不能为空")
-    @AllowedValues(values = {"1", "2", "3"}, message = "筛查量表取值不合法（1-NRS2002 2-PG-SGA 3-MNA）")
+    @AllowedValues(values = {"1", "2", "3"}, message = "筛查量表取值不合法")
     private Integer screenType;
 
     /**

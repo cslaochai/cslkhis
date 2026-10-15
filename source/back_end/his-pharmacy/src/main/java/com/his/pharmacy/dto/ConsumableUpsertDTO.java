@@ -1,5 +1,6 @@
 package com.his.pharmacy.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
@@ -27,6 +28,7 @@ public class ConsumableUpsertDTO {
     /**
      * 类别（1-卫生材料 2-注射穿刺 3-医用敷料 4-防护用品 5-其他）
      */
+    @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "耗材类别取值不合法")
     private Integer category;
     /**
      * 规格
@@ -47,6 +49,7 @@ public class ConsumableUpsertDTO {
     /**
      * 是否高值耗材（0-普通 1-高值）
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否高值耗材取值不合法")
     private Integer isHighValue;
     /**
      * 产品级UDI-DI（GS1 (01) 段）
@@ -59,6 +62,7 @@ public class ConsumableUpsertDTO {
     /**
      * 状态（0-停用 1-启用）
      */
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
     /**
      * 备注

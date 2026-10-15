@@ -1,5 +1,6 @@
 package com.his.patient.dto;
 
+import com.his.common.validation.AllowedValues;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -29,8 +30,9 @@ public class InpatientRecordUpsertDTO implements Serializable {
      * 文书类型：1-入院记录 2-首次病程 3-日常病程 4-术前小结 5-手术记录 6-术后首次病程 7-出院记录 8-死亡记录
      */
     @Schema(description = "文书类型：1-入院记录 2-首次病程 3-日常病程 4-术前小结 5-手术记录 6-术后首次病程 7-出院记录 8-死亡记录")
-    @Min(value = 1, message = "文书类型取值不合法（应为 1~10）")
-    @Max(value = 10, message = "文书类型取值不合法（应为 1~10）")
+    @Min(value = 1, message = "文书类型取值不合法")
+    @Max(value = 10, message = "文书类型取值不合法")
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7", "8"}, message = "文书类型取值不合法")
     private Integer recordType;
 
     /**

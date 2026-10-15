@@ -1,5 +1,6 @@
 package com.his.charge.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -16,6 +17,7 @@ public class DeductAppealResultDTO {
      * 申诉结果（1-成功 2-驳回）
      */
     @NotNull(message = "申诉结果不能为空")
+    @AllowedValues(values = {"1", "2"}, message = "申诉结果取值不合法")
     private Integer appealResult;
 
     /**

@@ -1,5 +1,6 @@
 package com.his.ai.dto;
 
+import com.his.common.validation.AllowedValues;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
@@ -27,18 +28,23 @@ public class OperationQaColumnUpsertDTO {
     private String columnDesc;
 
     @Schema(description = "可否用于过滤条件（1-是 0-否）")
+    @AllowedValues(values = {"0", "1"}, message = "可否用于过滤条件不合法")
     private Integer isFilterable;
 
     @Schema(description = "可否用于分组统计（1-是 0-否）")
+    @AllowedValues(values = {"0", "1"}, message = "可否用于分组统计不合法")
     private Integer isGroupable;
 
     @Schema(description = "是否喂给模型（1-启用 0-停用）")
+    @AllowedValues(values = {"0", "1"}, message = "是否喂给模型不合法")
     private Integer isEnabled;
 
     @Schema(description = "敏感类型（0-普通 1-脱敏 2-禁止出库）")
+    @AllowedValues(values = {"0", "1", "2"}, message = "敏感类型不合法")
     private Integer sensitiveType;
 
     @Schema(description = "脱敏方式（phone-手机号 idcard-身份证 email-邮箱 middle-姓名/中间打码）")
+    @AllowedValues(values = {"phone", "idcard", "email", "middle"}, message = "脱敏方式不合法")
     private String maskType;
 
     @Schema(description = "排序号")

@@ -1,5 +1,6 @@
 package com.his.appoint.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -29,6 +30,7 @@ public class RevisitFeePolicyUpsertDTO {
     @NotNull(message = "复诊来源不能为空")
     @Min(value = 0, message = "复诊来源不合法")
     @Max(value = 4, message = "复诊来源不合法")
+    @AllowedValues(values = {"0", "1", "2", "3", "4"}, message = "复诊来源取值不合法")
     private Integer revisitSource;
 
     /**
@@ -36,6 +38,7 @@ public class RevisitFeePolicyUpsertDTO {
      */
     @Min(value = 0, message = "同一医生条件不合法")
     @Max(value = 2, message = "同一医生条件不合法")
+    @AllowedValues(values = {"0", "1", "2"}, message = "同一医生条件取值不合法")
     private Integer sameDoctor;
 
     /**
@@ -43,6 +46,7 @@ public class RevisitFeePolicyUpsertDTO {
      */
     @Min(value = 0, message = "同一科室条件不合法")
     @Max(value = 2, message = "同一科室条件不合法")
+    @AllowedValues(values = {"0", "1", "2"}, message = "同一科室条件取值不合法")
     private Integer sameDept;
 
     /**
@@ -59,6 +63,7 @@ public class RevisitFeePolicyUpsertDTO {
     @NotNull(message = "收费方式不能为空")
     @Min(value = 1, message = "收费方式不合法")
     @Max(value = 3, message = "收费方式不合法")
+    @AllowedValues(values = {"1", "2", "3"}, message = "收费方式取值不合法")
     private Integer chargeMode;
 
     /**
@@ -72,6 +77,7 @@ public class RevisitFeePolicyUpsertDTO {
      */
     @Min(value = 0, message = "状态不合法")
     @Max(value = 1, message = "状态不合法")
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 
     /**

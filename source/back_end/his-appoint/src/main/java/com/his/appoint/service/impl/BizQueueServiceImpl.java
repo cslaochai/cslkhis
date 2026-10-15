@@ -10,37 +10,38 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.appoint.dto.*;
 import com.his.appoint.entity.BizAppointInfo;
 import com.his.appoint.entity.BizQueue;
-import com.his.system.entity.BizClinicSource;
-import com.his.system.mapper.BizClinicSourceMapper;
-import com.his.system.vo.OnDutyStaffVO;
 import com.his.appoint.entity.BizTriageRecord;
 import com.his.appoint.enums.*;
-import com.his.appoint.enums.OpdLogStatusEnum;
-import com.his.appoint.mapper.*;
-import com.his.appoint.service.DoctorStatusCacheService;
+import com.his.appoint.mapper.BizAppointInfoMapper;
+import com.his.appoint.mapper.BizQueueMapper;
+import com.his.appoint.mapper.BizTriageRecordMapper;
+import com.his.appoint.mapper.OpdLogMapper;
 import com.his.appoint.service.BizQueueService;
-import com.his.system.service.BizClinicSourceService;
+import com.his.appoint.service.DoctorStatusCacheService;
 import com.his.appoint.trigger.DayEndSettleTrigger;
 import com.his.appoint.vo.*;
-import com.his.system.api.service.ChargeApi;
 import com.his.common.base.PageResult;
 import com.his.common.enums.BillStatusEnum;
 import com.his.common.enums.MedicalInsuranceTypeEnum;
 import com.his.common.enums.SettlementModeEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.api.vo.BillBriefVO;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.patient.service.BizPatientService;
 import com.his.patient.service.PatientGuardianService;
+import com.his.system.api.service.ChargeApi;
+import com.his.system.api.vo.BillBriefVO;
+import com.his.system.entity.BizClinicSource;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysClinicRoom;
+import com.his.system.mapper.BizClinicSourceMapper;
 import com.his.system.provider.DeptScopeService;
+import com.his.system.service.BizClinicSourceService;
 import com.his.system.service.InsurancePolicyService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.service.SysClinicRoomService;
-import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
+import com.his.system.vo.OnDutyStaffVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Lazy;
@@ -84,8 +85,6 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
     private final BizTriageRecordMapper bizTriageRecordMapper;
 
     private final DayEndSettleTrigger dayEndSettleTrigger;
-
-    private final SysMessageService sysMessageService;
 
     @Lazy
     private final BizClinicSourceService bizScheduleService;
@@ -403,8 +402,6 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
                 .last("ORDER BY IFNULL(triage_level, 4) ASC, sequence_no ASC LIMIT 1");
         BizQueue queue = baseMapper.selectOne(wrapper);
         if (queue == null) {
-            // 区分「我的队真空了」和「我有候诊但取号失败」—— 后者多是并发或数据异常，
-            // 笼统报「没有候诊患者」会让医生以为今天没人挂号。
             Long mineWaiting = baseMapper.selectCount(new LambdaQueryWrapper<BizQueue>()
                     .eq(BizQueue::getDeptId, deptId)
                     .eq(BizQueue::getDoctorId, doctorId)
@@ -417,8 +414,6 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         }
 
         LocalDateTime now = LocalDateTime.now();
-        // CAS 抢占：条件里带 queue_status = 2。医生站与分诊台是两个终端，
-        // 不带状态条件时两边能同时「接诊成功」——同一个患者被两条接诊流程各写一遍病历。
         LambdaUpdateWrapper<BizQueue> grab = new LambdaUpdateWrapper<>();
         grab.eq(BizQueue::getId, queue.getId())
                 .eq(BizQueue::getQueueStatus, QueueStatusEnum.WAITING.getCode())
@@ -435,19 +430,6 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         if (doctorId != null) {
             // 更新医生接诊状态到Redis
             doctorStatusCacheService.startConsulting(doctorId);
-        }
-        // 订阅消息口子（小程序一期）：叫号提醒。通道未启用/患者未注册时实现内部跳过，失败不外抛。
-        try {
-            sysMessageService.sendWechatToPatient(queue.getPatientId(), "queue_called",
-                    "pages/queue/queue",
-                    Map.of("科室", queue.getDeptName() == null ? "" : queue.getDeptName(),
-                            "序号", queue.getSequenceNo() == null ? "" : String.valueOf(queue.getSequenceNo())),
-                    "叫号提醒",
-                    "轮到您就诊了，请前往诊室",
-                    "queue", queue.getId());
-        } catch (Exception e) {
-            // 这里的 log 是父类 ServiceImpl 的 org.apache.ibatis.logging.Log，不支持 {} 占位符
-            log.warn("叫号订阅消息发送失败 queueId=" + queue.getId() + " err=" + e.getMessage());
         }
         return buildCallNextVO(queue, previous, now);
     }
@@ -1119,7 +1101,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         }
         deptScopeService.assertDeptAccessible(queue.getDeptId());
         if (!TriageLevelEnum.isValid(dto.getTriageLevel())) {
-            throw new BusinessException("分诊等级只能是 1~4");
+            throw new BusinessException("分诊等级取值不合法");
         }
         // 已就诊/已过号/已退号的患者再分诊没有意义，反而会把队列上的「当前生效值」改乱。
         Integer status = queue.getQueueStatus();

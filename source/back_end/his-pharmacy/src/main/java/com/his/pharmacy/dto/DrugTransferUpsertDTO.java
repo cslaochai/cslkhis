@@ -16,22 +16,32 @@ import java.util.List;
 @Data
 public class DrugTransferUpsertDTO {
 
-    /** 调拨单ID（null=新建） */
+    /**
+     * 调拨单ID（null=新建）
+     */
     private Long id;
 
-    /** 方向（1-药库下拨药房 2-药房退回药库） */
+    /**
+     * 方向（1-药库下拨药房 2-药房退回药库）
+     */
     @NotNull(message = "调拨方向不能为空")
-    @AllowedValues(values = {"1", "2"}, message = "调拨方向取值不合法（1-药库下拨药房 2-药房退回药库）")
+    @AllowedValues(values = {"1", "2"}, message = "调拨方向取值不合法")
     private Integer transferType;
 
-    /** 事由（必填：事后没人记得为什么搬这批货，就等于没有溯源） */
+    /**
+     * 事由（必填：事后没人记得为什么搬这批货，就等于没有溯源）
+     */
     @NotBlank(message = "调拨事由不能为空")
     private String reason;
 
-    /** 备注（服务端截到列宽 500，入参层不限长度：AGENTS §3） */
+    /**
+     * 备注（服务端截到列宽 500，入参层不限长度：AGENTS §3）
+     */
     private String remark;
 
-    /** 明细项集合 */
+    /**
+     * 明细项集合
+     */
     @NotEmpty(message = "调拨明细不能为空，至少要选一个批次")
     @Valid
     private List<Item> items;
@@ -42,15 +52,21 @@ public class DrugTransferUpsertDTO {
     @Data
     public static class Item {
 
-        /** 发出方库存批次ID */
+        /**
+         * 发出方库存批次ID
+         */
         @NotNull(message = "库存批次不能为空")
         private Long stockId;
 
-        /** 调拨数量（不支持部分数量：发出与接收都按它走） */
+        /**
+         * 调拨数量（不支持部分数量：发出与接收都按它走）
+         */
         @NotNull(message = "调拨数量不能为空")
         private BigDecimal applyQuantity;
 
-        /** 行备注 */
+        /**
+         * 行备注
+         */
         private String remark;
     }
 }

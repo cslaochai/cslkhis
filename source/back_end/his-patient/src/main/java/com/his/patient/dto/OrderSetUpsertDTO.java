@@ -33,13 +33,13 @@ public class OrderSetUpsertDTO implements Serializable {
      * 共享范围：1-个人 2-科室 3-全院（必填，服务端按它决定归属与可见范围）
      */
     @NotNull(message = "共享范围不能为空")
-    @AllowedValues(values = {"1", "2", "3"}, message = "共享范围取值不合法（应为 1-个人 2-科室 3-全院）")
+    @AllowedValues(values = {"1", "2", "3"}, message = "共享范围取值不合法")
     private Integer scope;
 
     /**
      * 默认医嘱类型：1-长期 2-临时（缺省按临时）
      */
-    @AllowedValues(values = {"1", "2"}, message = "医嘱类型取值不合法（应为 1-长期 2-临时）")
+    @AllowedValues(values = {"1", "2"}, message = "医嘱类型取值不合法")
     private Integer orderType;
 
     /**

@@ -21,7 +21,7 @@ public class EmergencyStatusUpsertDTO {
      * 目标状态：2-接诊 3-留观 5-离院 6-死亡（4-转住院走 /emergency/admit，需要真实入院登记）
      */
     @NotNull(message = "状态不能为空")
-    @AllowedValues(values = {"2", "3", "5", "6"}, message = "状态取值不合法（2-接诊 3-留观 5-离院 6-死亡）")
+    @AllowedValues(values = {"2", "3", "5", "6"}, message = "状态取值不合法")
     private Integer status;
 
     /**

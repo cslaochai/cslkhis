@@ -1,14 +1,11 @@
 package com.his.pharmacy.dto;
 
 import com.his.common.base.PageParam;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
-import lombok.EqualsAndHashCode;
+import jakarta.validation.constraints.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 import java.util.List;
@@ -45,8 +42,9 @@ public class CssdDTO {
         /**
          * 灭菌方式:1-高压蒸汽 2-环氧乙烷 3-低温等离子（默认 1）
          */
-        @Min(value = 1, message = "灭菌方式取值不合法（1-高压蒸汽 2-环氧乙烷 3-低温等离子）")
-        @Max(value = 3, message = "灭菌方式取值不合法（1-高压蒸汽 2-环氧乙烷 3-低温等离子）")
+        @Min(value = 1, message = "灭菌方式取值不合法")
+        @Max(value = 3, message = "灭菌方式取值不合法")
+        @AllowedValues(values = {"1", "2", "3"}, message = "灭菌方式取值不合法")
         private Integer sterilizeMethod;
 
         /**
@@ -77,8 +75,9 @@ public class CssdDTO {
         /**
          * 节点结果:1-合格 2-不合格（仅灭菌完成节点生效；不合格自动退回清洗）
          */
-        @Min(value = 1, message = "节点结果取值不合法（1-合格 2-不合格）")
-        @Max(value = 2, message = "节点结果取值不合法（1-合格 2-不合格）")
+        @Min(value = 1, message = "节点结果取值不合法")
+        @Max(value = 2, message = "节点结果取值不合法")
+        @AllowedValues(values = {"1", "2"}, message = "节点结果取值不合法")
         private Integer result;
 
         /**
@@ -137,13 +136,15 @@ public class CssdDTO {
          * 默认灭菌方式:1-高压蒸汽 2-环氧乙烷 3-低温等离子
          */
         @NotNull(message = "默认灭菌方式不能为空")
-        @Min(value = 1, message = "灭菌方式取值不合法（1-高压蒸汽 2-环氧乙烷 3-低温等离子）")
-        @Max(value = 3, message = "灭菌方式取值不合法（1-高压蒸汽 2-环氧乙烷 3-低温等离子）")
+        @Min(value = 1, message = "灭菌方式取值不合法")
+        @Max(value = 3, message = "灭菌方式取值不合法")
+        @AllowedValues(values = {"1", "2", "3"}, message = "灭菌方式取值不合法")
         private Integer sterilizeMethod;
 
         /**
          * 状态:1-启用 0-停用（默认 1）
          */
+        @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
         private Integer status;
 
         /**

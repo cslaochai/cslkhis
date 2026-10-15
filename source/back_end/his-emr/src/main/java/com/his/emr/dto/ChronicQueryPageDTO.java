@@ -19,5 +19,8 @@ public class ChronicQueryPageDTO extends PageParam implements Serializable {
      * 慢病名称或 ICD-10 编码模糊匹配
      */
     private String diseaseKeyword;
+    /**
+     * 认定状态（0-待认定 1-已认定 2-已取消）
+     */
     private Integer confirmStatus;
 }

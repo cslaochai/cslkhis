@@ -1,5 +1,6 @@
 package com.his.emr.dto;
 
+import com.his.common.validation.AllowedValues;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -63,11 +64,13 @@ public class LaboratoryApplyUpsertDTO {
      * 是否空腹（0-否 1-是）
      */
     @Schema(description = "是否空腹（0-否 1-是）")
+    @AllowedValues(values = {"0", "1"}, message = "是否空腹取值不合法")
     private Integer isFasting;
 
     /**
      * 是否急诊（0-否 1-是）
      */
     @Schema(description = "是否加急（0-否 1-是）")
+    @AllowedValues(values = {"0", "1"}, message = "是否急诊取值不合法")
     private Integer isEmergency;
 }

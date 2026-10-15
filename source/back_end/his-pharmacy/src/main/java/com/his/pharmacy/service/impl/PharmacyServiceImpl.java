@@ -7,7 +7,6 @@ import com.his.common.enums.DrugStockChangeTypeEnum;
 import com.his.common.enums.StockRoomEnum;
 import com.his.common.enums.StockStatusEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.pharmacy.dto.BizDrugStockUpsertDTO;
@@ -21,6 +20,7 @@ import com.his.pharmacy.service.DrugStockCacheService;
 import com.his.pharmacy.service.PharmacyService;
 import com.his.pharmacy.vo.BizDrugStockLogVO;
 import com.his.pharmacy.vo.BizDrugStockVO;
+import com.his.system.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -351,7 +351,7 @@ public class PharmacyServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrug
         // 采购收货要改成进药库再下拨，是入库单那一层的改造，不在这里偷偷换默认值。
         Integer room = batchInfo.getStockRoom() == null ? StockRoomEnum.PHARMACY.getCode() : batchInfo.getStockRoom();
         if (StockRoomEnum.fromCode(room) == null) {
-            throw new BusinessException("库存地点只能是 1-药库 / 2-药房");
+            throw new BusinessException("库存地点取值不合法");
         }
 
         // 同批号同库位命中：加量。成本按实际进货金额累加、成本价回算均价（不能用旧成本价重算总额，否则两次进价的差额被抹掉）
@@ -500,7 +500,7 @@ public class PharmacyServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrug
         }
         Integer room = move.getStockRoom();
         if (StockRoomEnum.fromCode(room) == null) {
-            throw new BusinessException("库存地点只能是 1-药库 / 2-药房");
+            throw new BusinessException("库存地点取值不合法");
         }
         BigDecimal costPrice = NumUtil.orZero(move.getCostPrice());
 

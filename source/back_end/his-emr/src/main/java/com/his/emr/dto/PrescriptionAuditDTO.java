@@ -1,5 +1,6 @@
 package com.his.emr.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -22,6 +23,7 @@ public class PrescriptionAuditDTO {
      * 退回原因必填；通过：走原审方签名链，处方置 3-已审方。
      */
     @NotNull(message = "审核结论不能为空（1通过/2退回）")
+    @AllowedValues(values = {"1", "2"}, message = "审核结论取值不合法")
     private Integer auditResult;
 
     /**

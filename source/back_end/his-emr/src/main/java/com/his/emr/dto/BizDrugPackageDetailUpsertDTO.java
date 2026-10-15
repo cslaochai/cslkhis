@@ -1,5 +1,6 @@
 package com.his.emr.dto;
 
+import com.his.common.validation.AllowedValues;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -22,6 +23,7 @@ public class BizDrugPackageDetailUpsertDTO {
     /**
      * 项目类型：1-药品 2-检查项目 3-检验项目
      */
+    @AllowedValues(values = {"1", "2", "3"}, message = "项目类型不合法")
     private Integer itemType;
 
     /**

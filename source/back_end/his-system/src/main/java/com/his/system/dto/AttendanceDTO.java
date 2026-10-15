@@ -1,6 +1,7 @@
 package com.his.system.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -22,6 +23,7 @@ public class AttendanceDTO {
     private LocalDate workDate;
 
     @Schema(description = "实际出勤单元类型（1-科室 2-病区 3-全院）；不填=按排班计划")
+    @AllowedValues(values = {"1", "2", "3"}, message = "实际出勤单元类型不合法")
     private Integer orgType;
 
     @Schema(description = "实际出勤单元ID；不填=按排班计划")
@@ -31,6 +33,7 @@ public class AttendanceDTO {
     private Long shiftId;
 
     @Schema(description = "岗位类别（无计划出勤时必填）")
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7"}, message = "岗位类别不合法")
     private Integer staffType;
 
     @Schema(description = "签到时间（不填=此刻）")
@@ -45,6 +48,7 @@ public class AttendanceDTO {
     private Integer actualMinutes;
 
     @Schema(description = "手工指定的出勤状态（1正常 2迟到 3早退 4缺勤 5替班 6加班 7支援）")
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7"}, message = "出勤状态不合法")
     private Integer attendanceStatus;
 
     @Schema(description = "替了谁的班（employee_id）")

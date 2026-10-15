@@ -1,5 +1,6 @@
 package com.his.pharmacy.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -40,6 +41,7 @@ public class HighValueUseDTO {
     /**
      * 就诊类型（1-门诊 2-住院），空=不挂就诊、不计费
      */
+    @AllowedValues(values = {"1", "2"}, message = "就诊类型取值不合法")
     private Integer visitType;
     /**
      * 门诊挂号ID（visitType=1 必填才有计费锚点）

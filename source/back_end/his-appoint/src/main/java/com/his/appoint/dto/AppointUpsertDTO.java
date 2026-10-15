@@ -29,7 +29,7 @@ public class AppointUpsertDTO {
      * 就诊类型（号别）（1-初诊 2-复诊）
      */
     @NotNull(message = "就诊类型不能为空")
-    @AllowedValues(values = {"1", "2"}, message = "就诊类型只能是1-初诊或2-复诊")
+    @AllowedValues(values = {"1", "2"}, message = "就诊类型取值不合法")
     private Integer visitType;
 
     /**
@@ -37,12 +37,13 @@ public class AppointUpsertDTO {
      * 默认按患者费别带出（费别为医保类且有医保号→2，否则→1），允许本单改自费。
      */
     @NotNull(message = "结算方式不能为空")
-    @AllowedValues(values = {"1", "2"}, message = "结算方式只能是1-全自费或2-医保联网")
+    @AllowedValues(values = {"1", "2"}, message = "结算方式取值不合法")
     private Integer settlementType;
 
     /**
      * 挂号来源（1-窗口挂号 2-自助机挂号 3-网上挂号 4-预约挂号；为空默认窗口 1）
      */
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "挂号来源不合法")
     private Integer registSource;
 
     /**
@@ -72,5 +73,6 @@ public class AppointUpsertDTO {
     /**
      * 复诊来源（1-当日回诊 2-医嘱复诊预约 3-患者自助复诊 4-随访计划复诊）。
      */
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "复诊来源不合法")
     private Integer revisitSource;
 }

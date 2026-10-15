@@ -1,7 +1,6 @@
 package com.his.appoint.dto;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -34,6 +33,7 @@ public class BizEmergencyUpsertDTO {
     /**
      * 性别（1-男 2-女 9-未知）
      */
+    @AllowedValues(values = {"1", "2", "9"}, message = "性别取值不合法")
     private Integer gender;
 
     /**
@@ -43,10 +43,6 @@ public class BizEmergencyUpsertDTO {
 
     /**
      * 身份证号（新患者模式）
-     *
-     * <p>急诊允许三无患者没有身份证，但前端表单**是有这个输入框的** —— 之前 DTO 漏了这个字段，
-     * 前端填的身份证在 {@code register} 里被静默丢掉，患者主档落库后没有身份证，
-     * 结果是 EMPI 的「同身份证 = 重复档案」这条上游防线对急诊建档完全失效。
      */
     private String idCard;
 
@@ -63,16 +59,19 @@ public class BizEmergencyUpsertDTO {
     /**
      * 分诊级别（1-I级濒危 2-II级危重 3-III级急症 4-IV级非急症）
      */
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "分诊级别取值不合法")
     private Integer triageLevel;
 
     /**
      * 区域（红区/黄区/绿区）
      */
+    @AllowedValues(values = {"红区", "黄区", "绿区"}, message = "急诊区域取值不合法")
     private String zone;
 
     /**
      * 绿色通道（胸痛中心/卒中中心/创伤中心/无）
      */
+    @AllowedValues(values = {"胸痛中心", "卒中中心", "创伤中心", "无"}, message = "绿色通道取值不合法")
     private String greenChannel;
 
     /**
@@ -98,7 +97,6 @@ public class BizEmergencyUpsertDTO {
 
     /**
      * 未派单原因（医生留空时选填；服务端会兜底成「当班无在岗医生」并截到 200 字符，
-     * 所以这里<b>不加 @Size</b> —— 入参层 400 会抢在服务端截断之前，把"粘贴了一长段说明"变成请求失败）
      */
     private String unassignedReason;
 
@@ -120,6 +118,7 @@ public class BizEmergencyUpsertDTO {
     /**
      * 急诊状态（1-候诊 2-诊治中 3-留观 4-转住院 5-离院 6-死亡）
      */
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6"}, message = "急诊状态取值不合法")
     private Integer emergencyStatus;
 
     /**

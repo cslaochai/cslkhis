@@ -1,6 +1,7 @@
 package com.his.system.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -28,6 +29,7 @@ public class EmployeePostDTO {
     /**
      * 是否主岗位（= 该员工的主科室）：1-是 0/不传-否。一人最多一条，多勾只认第一条
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否主岗位取值不合法")
     private Integer isPrimary;
 
     /**

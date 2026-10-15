@@ -1,6 +1,7 @@
 package com.his.operation.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -28,8 +29,9 @@ public class PacuLeaveDTO implements Serializable {
      * 出室去向（1-回病房 2-转ICU 3-继续留观）
      */
     @NotNull(message = "出室去向不能为空")
-    @Min(value = 1, message = "出室去向取值不合法（应为 1-回病房 2-转ICU 3-继续留观）")
-    @Max(value = 3, message = "出室去向取值不合法（应为 1-回病房 2-转ICU 3-继续留观）")
+    @Min(value = 1, message = "出室去向取值不合法")
+    @Max(value = 3, message = "出室去向取值不合法")
+    @AllowedValues(values = {"1", "2", "3"}, message = "出室去向取值不合法")
     private Integer disposition;
 
     /**

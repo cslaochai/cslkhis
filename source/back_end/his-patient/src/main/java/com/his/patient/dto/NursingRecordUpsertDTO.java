@@ -26,7 +26,7 @@ public class NursingRecordUpsertDTO implements Serializable {
     /**
      * 文书类型：1-三测单 2-护理记录单 3-生命体征监测
      */
-    @AllowedValues(values = {"1", "2", "3"}, message = "护理文书类型取值不合法（1-三测单 2-护理记录单 3-生命体征监测）")
+    @AllowedValues(values = {"1", "2", "3"}, message = "护理文书类型取值不合法")
     private Integer nursingType;
 
     /**
@@ -37,6 +37,7 @@ public class NursingRecordUpsertDTO implements Serializable {
     /**
      * 班次：1-白班 2-小夜班 3-大夜班
      */
+    @AllowedValues(values = {"1", "2", "3"}, message = "班次取值不合法")
     private Integer shift;
 
     /**
@@ -92,6 +93,7 @@ public class NursingRecordUpsertDTO implements Serializable {
     /**
      * 护理级别：1-特级护理 2-一级护理 3-二级护理 4-三级护理
      */
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "护理级别取值不合法")
     private Integer nursingLevel;
 
     /**

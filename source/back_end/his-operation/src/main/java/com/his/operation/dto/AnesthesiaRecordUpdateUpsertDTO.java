@@ -1,8 +1,7 @@
 package com.his.operation.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -21,6 +20,7 @@ public class AnesthesiaRecordUpdateUpsertDTO implements Serializable {
     /**
      * 麻醉方式（1-全麻 2-椎管内 3-神经阻滞 4-局麻 5-其他）
      */
+    @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "麻醉方式取值不合法")
     private Integer anesthesiaType;
 
     /**
@@ -31,6 +31,7 @@ public class AnesthesiaRecordUpdateUpsertDTO implements Serializable {
     /**
      * 气道管理方式（0-无 1-气管插管 2-喉罩 3-面罩 4-其他）
      */
+    @AllowedValues(values = {"0", "1", "2", "3", "4"}, message = "气道管理方式取值不合法")
     private Integer airwayDevice;
 
     /**
@@ -41,6 +42,7 @@ public class AnesthesiaRecordUpdateUpsertDTO implements Serializable {
     /**
      * 通气方式（1-自主呼吸 2-辅助通气 3-控制通气）
      */
+    @AllowedValues(values = {"1", "2", "3"}, message = "通气方式取值不合法")
     private Integer ventilationMode;
 
     /**
@@ -122,6 +124,7 @@ public class AnesthesiaRecordUpdateUpsertDTO implements Serializable {
     /**
      * 是否发生麻醉不良事件（0-无 1-有）
      */
+    @AllowedValues(values = {"0", "1"}, message = "不良事件标志取值不合法")
     private Integer adverseEventFlag;
 
     /**
@@ -132,13 +135,13 @@ public class AnesthesiaRecordUpdateUpsertDTO implements Serializable {
     /**
      * 麻醉效果（1-满意 2-欠佳 3-失败改麻醉方式）
      */
+    @AllowedValues(values = {"1", "2", "3"}, message = "麻醉效果取值不合法")
     private Integer anesthesiaEffect;
 
     /**
      * 术后去向（1-回病房 2-入PACU 3-入ICU）
      */
-    @Min(value = 1, message = "术后去向取值不合法（应为 1-回病房 2-入PACU 3-入ICU）")
-    @Max(value = 3, message = "术后去向取值不合法（应为 1-回病房 2-入PACU 3-入ICU）")
+    @AllowedValues(values = {"1", "2", "3"}, message = "术后去向取值不合法")
     private Integer postopDisposition;
 
     /**

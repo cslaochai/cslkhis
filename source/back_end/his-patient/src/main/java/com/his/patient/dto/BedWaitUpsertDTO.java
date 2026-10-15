@@ -44,6 +44,7 @@ public class BedWaitUpsertDTO {
     /**
      * 性别字典口径：1-男 2-女 9-未知
      */
+    @AllowedValues(values = {"1", "2", "9"}, message = "性别取值不合法")
     private Integer gender;
 
     /**
@@ -74,23 +75,25 @@ public class BedWaitUpsertDTO {
     /**
      * 需求床型：normal / ICU / VIP，默认 normal
      */
+    @AllowedValues(values = {"normal", "ICU", "VIP"}, message = "需求床型取值不合法")
     private String bedType;
 
     /**
      * 优先级：1-普通 2-急 3-危重，默认 1
      */
-    @AllowedValues(values = {"1", "2", "3"}, message = "优先级取值不合法（应为 1-普通 2-急 3-危重）")
+    @AllowedValues(values = {"1", "2", "3"}, message = "优先级取值不合法")
     private Integer priority;
 
     /**
      * 性别限制：0-不限 1-限男床 2-限女床，默认 0
      */
-    @AllowedValues(values = {"0", "1", "2"}, message = "性别限制取值不合法（应为 0-不限 1-限男床 2-限女床）")
+    @AllowedValues(values = {"0", "1", "2"}, message = "性别限制取值不合法")
     private Integer genderLimit;
 
     /**
      * 隔离需求：0-否 1-是，默认 0
      */
+    @AllowedValues(values = {"0", "1"}, message = "隔离需求取值不合法")
     private Integer isolationFlag;
 
     /**

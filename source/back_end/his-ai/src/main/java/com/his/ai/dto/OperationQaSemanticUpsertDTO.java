@@ -1,5 +1,6 @@
 package com.his.ai.dto;
 
+import com.his.common.validation.AllowedValues;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -32,12 +33,14 @@ public class OperationQaSemanticUpsertDTO {
 
     @NotNull(message = "匹配方式不能为空")
     @Schema(description = "匹配方式（1-包含 2-精确）")
+    @AllowedValues(values = {"1", "2"}, message = "匹配方式不合法")
     private Integer matchMode;
 
     @Schema(description = "优先级（大者先）")
     private Integer priority;
 
     @Schema(description = "是否启用（1-启用 0-停用）")
+    @AllowedValues(values = {"0", "1"}, message = "是否启用不合法")
     private Integer isEnabled;
 
     @Schema(description = "备注")

@@ -1,5 +1,6 @@
 package com.his.operation.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -19,6 +20,7 @@ public class DaySurgeryEvalDTO implements Serializable {
      * 术前评估结论（1-通过 2-不通过）
      */
     @NotNull(message = "评估结论不能为空")
+    @AllowedValues(values = {"1", "2"}, message = "评估结论取值不合法")
     private Integer evalResult;
 
     /**

@@ -1,5 +1,6 @@
 package com.his.emr.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -20,12 +21,16 @@ public class DisputeCloseDTO implements Serializable {
      * 处理途径（1-院内协商 2-医调委调解 3-行政调解 4-司法鉴定 5-诉讼 6-其他）
      */
     @NotNull(message = "处理途径不能为空")
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6"},
+            message = "处理途径不合法")
     private Integer dealType;
 
     /**
      * 责任认定（1-无责 2-轻微责任 3-次要责任 4-主要责任 5-完全责任）
      */
     @NotNull(message = "责任认定不能为空")
+    @AllowedValues(values = {"1", "2", "3", "4", "5"},
+            message = "责任认定不合法")
     private Integer dutyType;
 
     /**

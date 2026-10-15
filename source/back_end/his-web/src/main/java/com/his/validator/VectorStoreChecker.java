@@ -1,4 +1,4 @@
-package com.his.ai.config;
+package com.his.validator;
 
 import com.his.ai.rag.store.VectorStore;
 import lombok.RequiredArgsConstructor;
@@ -9,15 +9,11 @@ import org.springframework.stereotype.Component;
 
 /**
  * 启动阶段向量库探活。
- *
- * <p>向量库只服务 AI 知识库，它连不上时挂号/收费等主业务照常，因此这里**只告警不打断启动**
- * （早期实现是在 bean 构造里直连 Milvus，一台没起来的 Milvus 会让整个应用起不来）。
- * 真正的报错发生在 AI 功能访问向量库的那一刻，由 {@link VectorStore} 实现抛业务异常。
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class VectorStoreStartupChecker implements ApplicationRunner {
+public class VectorStoreChecker implements ApplicationRunner {
 
     private final VectorStore vectorStore;
 

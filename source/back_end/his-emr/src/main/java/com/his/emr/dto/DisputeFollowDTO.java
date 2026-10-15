@@ -1,5 +1,6 @@
 package com.his.emr.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -27,5 +28,6 @@ public class DisputeFollowDTO implements Serializable {
     /**
      * 目标状态:2-调查中 3-处理中（不传=仅记录流水不改变状态）
      */
+    @AllowedValues(values = {"2", "3"}, message = "目标状态取值不合法")
     private Integer toStatus;
 }

@@ -1,7 +1,5 @@
 package com.his.miniapp.dto;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.his.common.base.PageParam;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;

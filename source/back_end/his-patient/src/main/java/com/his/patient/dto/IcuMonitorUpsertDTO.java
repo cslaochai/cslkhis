@@ -1,6 +1,7 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -89,6 +90,7 @@ public class IcuMonitorUpsertDTO {
     /**
      * 呼吸支持（1-鼻导管 2-无创 3-有创 4-脱机）
      */
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "呼吸支持取值不合法")
     private Integer ventMode;
 
     /**
@@ -119,26 +121,31 @@ public class IcuMonitorUpsertDTO {
     /**
      * 人工气道/气管插管 0-无 1-有（0-无 1-有）
      */
+    @AllowedValues(values = {"0", "1"}, message = "人工气道取值不合法")
     private Integer hasAirway;
 
     /**
      * 中心静脉导管 0-无 1-有（0-无 1-有）
      */
+    @AllowedValues(values = {"0", "1"}, message = "中心静脉导管取值不合法")
     private Integer hasCvc;
 
     /**
      * 动脉置管 0-无 1-有（0-无 1-有）
      */
+    @AllowedValues(values = {"0", "1"}, message = "动脉置管取值不合法")
     private Integer hasArterial;
 
     /**
      * 导尿管 0-无 1-有（0-无 1-有）
      */
+    @AllowedValues(values = {"0", "1"}, message = "导尿管取值不合法")
     private Integer hasCatheter;
 
     /**
      * 引流管 0-无 1-有（0-无 1-有）
      */
+    @AllowedValues(values = {"0", "1"}, message = "引流管取值不合法")
     private Integer hasDrain;
 
     /**

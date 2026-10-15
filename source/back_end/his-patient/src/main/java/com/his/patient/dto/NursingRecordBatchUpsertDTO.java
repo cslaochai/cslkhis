@@ -1,6 +1,7 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -25,6 +26,7 @@ public class NursingRecordBatchUpsertDTO {
     /**
      * 班次：1-白班 2-小夜班 3-大夜班（可空）
      */
+    @AllowedValues(values = {"1", "2", "3"}, message = "班次取值不合法")
     private Integer shift;
 
     @NotEmpty(message = "至少要有一行测量数据")

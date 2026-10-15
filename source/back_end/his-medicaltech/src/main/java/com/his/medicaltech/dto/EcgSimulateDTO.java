@@ -1,7 +1,6 @@
 package com.his.medicaltech.dto;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -22,5 +21,6 @@ public class EcgSimulateDTO {
     @NotNull(message = "请选择节律")
     @Min(value = 1, message = "节律取值 1~5")
     @Max(value = 5, message = "节律取值 1~5")
+    @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "节律取值不合法")
     private Integer rhythmCode;
 }

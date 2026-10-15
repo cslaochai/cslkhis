@@ -1,5 +1,6 @@
 package com.his.emr.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -25,6 +26,7 @@ public class RecordQcFlowFinalDTO implements Serializable {
     @NotNull(message = "终审必须定级（1甲级/2乙级/3丙级）")
     @Min(value = 1, message = "定级码值非法")
     @Max(value = 3, message = "定级码值非法")
+    @AllowedValues(values = {"1", "2", "3"}, message = "终审定级不合法")
     private Integer grade;
 
     /**

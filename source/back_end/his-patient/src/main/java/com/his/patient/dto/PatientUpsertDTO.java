@@ -1,5 +1,6 @@
 package com.his.patient.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -29,6 +30,7 @@ public class PatientUpsertDTO {
      * 性别（1-男 2-女 9-未知）
      */
     @NotNull(message = "性别不能为空（1-男 2-女 9-未知）")
+    @AllowedValues(values = {"1", "2", "9"}, message = "性别取值不合法")
     private Integer gender;
     /**
      * 出生日期
@@ -74,6 +76,7 @@ public class PatientUpsertDTO {
     /**
      * 婚姻状况：0-未婚 1-已婚 2-离异 3-丧偶
      */
+    @AllowedValues(values = {"0", "1", "2", "3"}, message = "婚姻状况取值不合法")
     private Integer maritalStatus;
     /**
      * 血型（如：A、B、O、AB）
@@ -99,6 +102,7 @@ public class PatientUpsertDTO {
     /**
      * 卡片类型（1-就诊卡 2-身份证 3-医保卡）
      */
+    @AllowedValues(values = {"1", "2", "3"}, message = "卡片类型取值不合法")
     private Integer cardType;
     /**
      * 证件号码
@@ -131,5 +135,6 @@ public class PatientUpsertDTO {
     /**
      * 状态：0-停用 1-启用
      */
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 }

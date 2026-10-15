@@ -8,7 +8,7 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
- * 住院医嘱分页查询入参（命名遵循 AGENTS.md：分页查询用 `xxxQueryPageDTO`）。
+ * 住院医嘱分页查询入参
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

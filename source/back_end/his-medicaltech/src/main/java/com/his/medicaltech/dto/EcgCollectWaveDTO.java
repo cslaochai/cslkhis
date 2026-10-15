@@ -1,7 +1,6 @@
 package com.his.medicaltech.dto;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -20,6 +19,7 @@ public class EcgCollectWaveDTO {
     /**
      * 心电类型（字典 his_ecg_type：1-常规静息心电图 2-24小时动态心电图）
      */
+    @AllowedValues(values = {"1", "2"}, message = "心电类型取值不合法")
     private Integer ecgType;
 
     /**

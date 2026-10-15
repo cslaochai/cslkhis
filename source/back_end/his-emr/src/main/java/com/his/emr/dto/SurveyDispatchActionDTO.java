@@ -1,5 +1,6 @@
 package com.his.emr.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -18,6 +19,7 @@ public class SurveyDispatchActionDTO implements Serializable {
      * 动作:1-标记已推送 2-标记已拒答
      */
     @NotNull(message = "动作不能为空")
+    @AllowedValues(values = {"1", "2"}, message = "动作不合法：1-标记已推送 2-标记已拒答")
     private Integer action;
 
     /**

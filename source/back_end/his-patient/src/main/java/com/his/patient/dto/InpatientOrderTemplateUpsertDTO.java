@@ -31,7 +31,7 @@ public class InpatientOrderTemplateUpsertDTO implements Serializable {
     /**
      * 默认医嘱类型：1-长期 2-临时（缺省按临时）
      */
-    @AllowedValues(values = {"1", "2"}, message = "医嘱类型取值不合法（应为 1-长期 2-临时）")
+    @AllowedValues(values = {"1", "2"}, message = "医嘱类型取值不合法")
     private Integer orderType;
 
     /**

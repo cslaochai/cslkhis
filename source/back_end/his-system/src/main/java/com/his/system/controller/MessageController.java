@@ -32,7 +32,6 @@ public class MessageController {
     @Operation(summary = "SSE 实时推送连接（新消息即时通知，鉴权走 Authorization 头）")
     @GetMapping(value = "/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter sse() {
-        // 注意：返回值刻意不是 Result —— SSE 响应体是事件流，包 {code,data} 壳会让前端流解析失败
         return sysMessageService.subscribe();
     }
 

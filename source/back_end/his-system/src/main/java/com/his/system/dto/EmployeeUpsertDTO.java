@@ -1,7 +1,6 @@
 package com.his.system.dto;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.Valid;
 import lombok.Data;
 
@@ -33,11 +32,13 @@ public class EmployeeUpsertDTO {
     /**
      * 员工类型：1-医生 2-护士 3-收费员 4-药剂师 5-管理员 6-其他
      */
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6"}, message = "员工类型不合法")
     private Integer empType;
 
     /**
      * 性别（性别字典口径：1-男 2-女 9-未知）
      */
+    @AllowedValues(values = {"1", "2", "9"}, message = "性别取值不合法")
     private Integer gender;
 
     /**
@@ -85,6 +86,7 @@ public class EmployeeUpsertDTO {
     /**
      * 学历（字典 his_education：1博士 2硕士 3本科 4大专 5中专）
      */
+    @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "学历不合法")
     private String education;
 
     /**
@@ -95,6 +97,7 @@ public class EmployeeUpsertDTO {
     /**
      * 是否专家：0-否 1-是
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否专家取值不合法")
     private Integer isExpert;
 
     /**
@@ -105,6 +108,7 @@ public class EmployeeUpsertDTO {
     /**
      * 状态：0-停用 1-启用
      */
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 
     /**

@@ -2,12 +2,11 @@ package com.his.operation.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.common.constant.BizCodeConst;
 import com.his.common.base.PageResult;
+import com.his.common.constant.BizCodeConst;
 import com.his.common.enums.TechAuthCategoryEnum;
 import com.his.common.enums.TechOverrideSourceEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -24,8 +23,9 @@ import com.his.patient.entity.BizPatient;
 import com.his.patient.service.BizPatientService;
 import com.his.system.dto.TechAuthGateDTO;
 import com.his.system.entity.CurrentUser;
-import com.his.system.service.EmployeeTechAuthService;
 import com.his.system.provider.DeptScopeService;
+import com.his.system.service.EmployeeTechAuthService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -150,7 +150,7 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
     public DaySurgeryItemVO itemUpdateStatus(Long id, Integer status) {
         BizDaySurgeryItem entity = requireItem(id);
         if (status == null || (status != 0 && status != 1)) {
-            throw new BusinessException("状态只能为 1（启用）或 0（停用）");
+            throw new BusinessException("状态取值不合法");
         }
         entity.setStatus(status);
         bizDaySurgeryItemMapper.updateById(entity);
@@ -235,7 +235,7 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
         }
         Integer result = dto.getEvalResult();
         if (!Objects.equals(result, BizDaySurgeryApply.EVAL_PASS) && !Objects.equals(result, BizDaySurgeryApply.EVAL_FAIL)) {
-            throw new BusinessException("评估结论只能为 1（通过）或 2（不通过）");
+            throw new BusinessException("评估结论取值不合法");
         }
         entity.setEvalResult(result);
         entity.setEvalBy(operatorUser.getRealName());
@@ -301,7 +301,7 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
         Integer leaveType = dto.getLeaveType();
         if (!Objects.equals(leaveType, BizDaySurgeryApply.LEAVE_NORMAL)
                 && !Objects.equals(leaveType, BizDaySurgeryApply.LEAVE_READMIT)) {
-            throw new BusinessException("离院方式只能为 1（按时离院）或 3（非计划再入院）；转普通住院请走转住院动作");
+            throw new BusinessException("离院方式取值不合法");
         }
         entity.setStatus(BizDaySurgeryApply.STATUS_DISCHARGED);
         entity.setLeaveType(leaveType);

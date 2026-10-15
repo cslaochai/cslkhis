@@ -1,5 +1,6 @@
 package com.his.ai.dto;
 
+import com.his.common.validation.AllowedValues;
 import lombok.Data;
 
 /**
@@ -26,6 +27,7 @@ public class EmergencyTriageDTO {
     /**
      * 性别（1-男 2-女 9-未知）
      */
+    @AllowedValues(values = {"1", "2", "9"}, message = "性别不合法")
     private Integer gender;
 
     /**

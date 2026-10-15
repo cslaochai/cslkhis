@@ -1,5 +1,6 @@
 package com.his.charge.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -34,6 +35,7 @@ public class DeductConfirmDTO {
      * 损失承担方式（1-院方承担 2-科室承担 3-个人承担 4-科室+个人共担）
      */
     @NotNull(message = "损失承担方式不能为空")
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "损失承担方式不合法")
     private Integer lossBearType;
 
     /**

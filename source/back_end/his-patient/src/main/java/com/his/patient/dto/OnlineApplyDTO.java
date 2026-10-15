@@ -1,5 +1,6 @@
 package com.his.patient.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -33,6 +34,7 @@ public class OnlineApplyDTO implements Serializable {
      * 问诊方式（1-图文问诊 2-电话问诊 3-视频问诊）
      */
     @NotNull(message = "问诊方式不能为空")
+    @AllowedValues(values = {"1", "2", "3"}, message = "问诊方式取值不合法")
     private Integer consultType;
 
     /**

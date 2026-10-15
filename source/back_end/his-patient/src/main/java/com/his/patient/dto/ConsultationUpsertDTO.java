@@ -34,7 +34,7 @@ public class ConsultationUpsertDTO implements Serializable {
      * 会诊范围：1-科内 2-科间 3-全院（必填）
      */
     @NotNull(message = "会诊范围不能为空（1-科内 2-科间 3-全院）")
-    @AllowedValues(values = {"1", "2", "3"}, message = "会诊范围取值不合法（应为 1-科内 2-科间 3-全院）")
+    @AllowedValues(values = {"1", "2", "3"}, message = "会诊范围取值不合法")
     private Integer consultType;
 
     /**
@@ -42,12 +42,13 @@ public class ConsultationUpsertDTO implements Serializable {
      * <p>由接口入口钉死（普通会诊页固定 1、营养会诊页固定 2），不接受页面自选 ——
      * 类别决定这单在哪个工作台出现，能被请求体随意改就等于能把会诊藏起来。
      */
-    @AllowedValues(values = {"1", "2", "3", "4"}, message = "会诊类别取值不合法（1-普通科间 2-营养 3-药学 4-其他专科）")
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "会诊类别取值不合法")
     private Integer consultCategory;
 
     /**
      * 是否急会诊：0-普通 1-急会诊（为空按普通）
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否急会诊取值不合法")
     private Integer isUrgent;
 
     /**

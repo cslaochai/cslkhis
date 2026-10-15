@@ -1,5 +1,6 @@
 package com.his.patient.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -43,11 +44,13 @@ public class TeleConsultUpsertDTO implements Serializable {
      * 会诊类型（1-临床会诊 2-远程影像 3-远程心电 4-远程病理 5-其他）
      */
     @NotNull(message = "会诊类型不能为空")
+    @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "会诊类型取值不合法")
     private Integer consultType;
 
     /**
      * 是否急会诊（0-否 1-是）
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否急会诊取值不合法")
     private Integer isUrgent;
 
     /**

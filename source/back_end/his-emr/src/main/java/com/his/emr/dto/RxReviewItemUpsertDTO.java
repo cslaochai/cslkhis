@@ -1,5 +1,6 @@
 package com.his.emr.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -25,6 +26,8 @@ public class RxReviewItemUpsertDTO {
     @NotNull(message = "点评结论不能为空")
     @Min(value = 1, message = "点评结论非法")
     @Max(value = 4, message = "点评结论非法")
+    @AllowedValues(values = {"1", "2", "3", "4"},
+            message = "点评结论不合法")
     private Integer reviewResult;
 
     /**

@@ -1,6 +1,7 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -50,6 +51,7 @@ public class AdmissionOrderUpsertDTO {
     /**
      * 性别（1-男 2-女 9-未知）
      */
+    @AllowedValues(values = {"1", "2", "9"}, message = "性别取值不合法")
     private Integer gender;
 
     /**

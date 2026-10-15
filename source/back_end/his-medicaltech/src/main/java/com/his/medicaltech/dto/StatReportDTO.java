@@ -2,6 +2,7 @@ package com.his.medicaltech.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.his.common.base.PageParam;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -23,11 +24,13 @@ public class StatReportDTO {
          * 报表类型（1-卫统年报 2-出院患者统计月报 3-手术工作量专项报表）
          */
         @NotNull(message = "请选择上报类型")
+        @AllowedValues(values = {"1", "2", "3"}, message = "报表类型取值不合法")
         private Integer reportType;
         /**
          * 期间类型（1-月报 2-年报）
          */
         @NotNull(message = "请选择期间类型")
+        @AllowedValues(values = {"1", "2"}, message = "期间类型取值不合法")
         private Integer periodType;
         /**
          * yyyy-MM（月报）或 yyyy（年报）

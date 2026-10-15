@@ -7,7 +7,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -20,6 +19,7 @@ import com.his.medicaltech.vo.*;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -88,7 +88,7 @@ public class StatReportServiceImpl extends ServiceImpl<BizStatReportMapper, BizS
             throw new BusinessException("当前用户信息不存在");
         }
         if (dto.getPeriodType() == null || (dto.getPeriodType() != 1 && dto.getPeriodType() != 2)) {
-            throw new BusinessException("期间类型只能是 1-月报 或 2-年报");
+            throw new BusinessException("期间类型取值不合法");
         }
         String period = dto.getPeriodValue().trim();
         LocalDate start;

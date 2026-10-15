@@ -128,7 +128,7 @@ public class WorkbenchServiceImpl extends ServiceImpl<SysWorkbenchWidgetMapper, 
     @Override
     public void widgetUpsert(WorkbenchWidgetUpsertDTO upsertDTO) {
         if (!AREAS.contains(upsertDTO.getArea())) {
-            throw new BusinessException("归属区域只能是 todo/notice/entry/kpi/domain");
+            throw new BusinessException("归属区域取值不合法");
         }
         String permission = upsertDTO.getPermission();
         if (TextUtil.hasText(permission) && !permissionExists(permission)) {

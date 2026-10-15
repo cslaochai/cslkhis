@@ -18,21 +18,28 @@ import com.his.charge.vo.BizPaymentTxnVO;
 import com.his.common.base.PageResult;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
+import com.his.common.mq.HisMqPublisher;
+import com.his.common.mq.HisMqTopics;
+import com.his.common.mq.event.ChargeBillPaidEvent;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.pay.service.ChargePayChannelService;
+import com.his.system.service.IdempotentGuardService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -51,11 +58,19 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
     private static final int AMOUNT_SCALE = 2;
 
     /**
+     * 请求幂等防重窗口（分钟）：覆盖「提交 → 收款 → 返回」一次完整操作即可。
+     * 业务失败会释放 key，用户可立即重试；成功路径靠 TTL 自然过期。
+     */
+    private static final int IDEM_TTL_MINUTES = 5;
+
+    /**
      * 无员工上下文（患者端自助、系统任务）时的收银人占位ID：班结会把它单列一栏，不与真人混在一起
      */
     private static final long CASHIER_SYSTEM = 0L;
 
-    /** 渠道流水号列宽：仅用于外部渠道回调报文截断 */
+    /**
+     * 渠道流水号列宽：仅用于外部渠道回调报文截断
+     */
     private static final int W_CHANNEL_TXN_NO = 64;
 
     private final SettlementBillService settlementBillService;
@@ -74,9 +89,13 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
 
     private final RedisSequenceService redisSequenceService;
 
+    private final IdempotentGuardService idempotentGuardService;
+
     private final InsuranceSettlementService insuranceSettlementService;
 
     private final ChargePayChannelService chargePayChannelService;
+
+    private final HisMqPublisher mqPublisher;
 
     private static List<BizPaymentTxnVO> toVOList(List<BizPaymentTxn> txns) {
         List<BizPaymentTxnVO> records = new ArrayList<>(txns.size());
@@ -90,12 +109,31 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public List<BizPaymentTxnVO> pay(BillPayDTO dto) {
-        if (dto.getBillId() == null || CollectionUtils.isEmpty(dto.getItems())) {
-            throw new BusinessException("缺少账单或收款明细");
+    public List<BizPaymentTxnVO> pay(BillPayDTO payDTO) {
+        boolean idemHeld = idempotentGuardService.tryAcquire("pay", payDTO.getBillId() + ":" + payDTO.getRequestId(), Duration.ofMinutes(IDEM_TTL_MINUTES));
+        if (!idemHeld) {
+            throw new BusinessException("请勿重复提交：该笔收款请求已受理，正在处理中");
         }
-        BizSettlementBill bill = requirePayableBill(dto.getBillId());
-        TxnSourceEnum source = TxnSourceEnum.fromCode(dto.getSourceType());
+        try {
+            return doPay(payDTO);
+        } catch (Exception e) {
+            if (idemHeld) {
+                idempotentGuardService.release("pay", payDTO.getBillId() + ":" + payDTO.getRequestId());
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * 收款主体：幂等判重通过后才走到这里。
+     *
+     * <p>锁行读取账单（FOR UPDATE）：同一账单两个窗口并发收款时，后到的事务阻塞到
+     * 前一个提交再重新读到已收金额，下面的「收款合计 &gt; 尚需缴纳」校验才真正拦住超收
+     * （READ COMMITTED 下查询式校验两个事务会同时读到同一剩余、双双通过）。
+     */
+    private List<BizPaymentTxnVO> doPay(BillPayDTO payDTO) {
+        BizSettlementBill bill = requirePayableBill(payDTO.getBillId());
+        TxnSourceEnum source = TxnSourceEnum.fromCode(payDTO.getSourceType());
         if (source == null) {
             source = TxnSourceEnum.CASHIER;
         }
@@ -103,18 +141,13 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
             throw new BusinessException("收款流水的来源不能是退费类");
         }
 
-        // 幂等保护：同一账单 + 同一支付方式 + 相同金额，1分钟内不允许重复提交。
-        // 覆盖所有「本地自行决定」的收款：现金/院内余额/医保个账没有渠道回执，收银员连点两下就是两笔流水，
-        // 而抽屉里只有一张钞 —— 这种账实不符只会在班结时才暴露，必须在写入前拦住。
-        // 唯一排除的是「渠道已实收的回填入账」（channelBacked 且不带来码，见 QrPayServiceImpl.bookBill）：
-        // 那笔钱由渠道证明过，判重把它否掉等于「钱到了却没入账」，比多一笔流水严重得多。
-        for (BillPayDTO.PayItem item : dto.getItems()) {
+        for (BillPayDTO.PayItem item : payDTO.getItems()) {
             PaymentMethodEnum payMethod = PaymentMethodEnum.getByCode(item.getPayMethod());
             boolean channelSettled = payMethod != null && payMethod.channelBacked()
                     && !TextUtil.hasText(item.getAuthCode());
             if (payMethod != null && !channelSettled) {
                 long duplicateCount = this.count(new LambdaQueryWrapper<BizPaymentTxn>()
-                        .eq(BizPaymentTxn::getBillId, dto.getBillId())
+                        .eq(BizPaymentTxn::getBillId, payDTO.getBillId())
                         .eq(BizPaymentTxn::getPayMethod, item.getPayMethod())
                         .eq(BizPaymentTxn::getAmount, NumUtil.scale(item.getAmount(), AMOUNT_SCALE))
                         .ge(BizPaymentTxn::getTxnTime, LocalDateTime.now().minusMinutes(1)));
@@ -127,7 +160,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         BigDecimal remaining = NumUtil.scale(bill.getPayableAmount()
                 .subtract(NumUtil.orZero(bill.getPaidAmount())).add(NumUtil.orZero(bill.getRefundAmount())), AMOUNT_SCALE);
         BigDecimal total = BigDecimal.ZERO;
-        for (BillPayDTO.PayItem item : dto.getItems()) {
+        for (BillPayDTO.PayItem item : payDTO.getItems()) {
             total = total.add(NumUtil.orZero(item.getAmount()));
         }
         total = NumUtil.scale(total, AMOUNT_SCALE);
@@ -136,13 +169,54 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         }
 
         List<BizPaymentTxn> txns = new ArrayList<>();
-        for (BillPayDTO.PayItem item : dto.getItems()) {
+        for (BillPayDTO.PayItem item : payDTO.getItems()) {
             txns.add(chargeOne(bill, item, source));
         }
         settlementBillService.refreshFromTxns(bill.getId());
         log.info("[收款] 账单 {} 收 {} 笔 合计 ¥{}（尚需 ¥{}）来源={}", bill.getBillNo(), txns.size(),
                 total.toPlainString(), remaining.toPlainString(), source.getDesc());
+
+        publishBillPaidEventAfterCommit(bill, txns, total);
+
         return toVOList(txns);
+    }
+
+    /**
+     * 注册事务提交后回调，发送「账单已支付」领域事件。
+     * 若当前没有事务（理论上 pay 一定有 @Transactional），直接发。
+     */
+    private void publishBillPaidEventAfterCommit(BizSettlementBill bill, List<BizPaymentTxn> txns, BigDecimal paidTotal) {
+        List<ChargeBillPaidEvent.PaidTxn> paidTxns = new ArrayList<>(txns.size());
+        for (BizPaymentTxn t : txns) {
+            paidTxns.add(ChargeBillPaidEvent.PaidTxn.builder()
+                    .payMethod(t.getPayMethod())
+                    .amount(t.getAmount())
+                    .channelTxnNo(TextUtil.cut(t.getChannelTxnNo(), 64))
+                    .build());
+        }
+        ChargeBillPaidEvent event = ChargeBillPaidEvent.builder()
+                .billId(bill.getId())
+                .billNo(bill.getBillNo())
+                .patientId(bill.getPatientId())
+                .encounterType(bill.getEncounterType())
+                .paidAmount(paidTotal)
+                .totalAmount(bill.getTotalAmount())
+                .paidTime(LocalDateTime.now())
+                .txns(paidTxns)
+                .build();
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    mqPublisher.send(HisMqTopics.CHARGE_BILL_PAID, "bill_paid", event,
+                            String.valueOf(bill.getId()));
+                }
+            });
+        } else {
+            mqPublisher.send(HisMqTopics.CHARGE_BILL_PAID, "bill_paid", event,
+                    String.valueOf(bill.getId()));
+        }
     }
 
     @Override
@@ -782,10 +856,9 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
     }
 
     private BizSettlementBill requirePayableBill(Long billId) {
-        BizSettlementBill bill = settlementBillService.getById(billId);
-        if (bill == null) {
-            throw new BusinessException("账单不存在");
-        }
+        // FOR UPDATE 锁账单行：并发收款时后到的事务阻塞到前一个提交再重读，
+        // 「收款合计 > 尚需缴纳」的校验才真正生效（等价于按账单加锁，不引入分布式锁）
+        BizSettlementBill bill = settlementBillService.getByIdForUpdate(billId);
         BillStatusEnum status = BillStatusEnum.fromCode(bill.getBillStatus());
         if (status == null || !status.payable()) {
             throw new BusinessException("该账单" + BillStatusEnum.descOf(bill.getBillStatus()) + "，不能收款");

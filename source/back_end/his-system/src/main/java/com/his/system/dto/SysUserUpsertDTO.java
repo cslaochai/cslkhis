@@ -1,5 +1,6 @@
 package com.his.system.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.Valid;
 import lombok.Data;
 
@@ -31,16 +32,19 @@ public class SysUserUpsertDTO {
     /**
      * 用户类型（1-系统用户 2-外部用户）
      */
+    @AllowedValues(values = {"1", "2"}, message = "用户类型取值不合法")
     private Integer userType;
 
     /**
      * 启用状态（his_enable_status：0-禁用 1-启用）
      */
+    @AllowedValues(values = {"0", "1"}, message = "启用状态取值不合法")
     private Integer status;
 
     /**
      * 性别（性别字典口径：1-男 2-女 9-未知）
      */
+    @AllowedValues(values = {"1", "2", "9"}, message = "性别取值不合法")
     private Integer gender;
 
     /**
@@ -81,6 +85,7 @@ public class SysUserUpsertDTO {
     /**
      * 学历（字典 his_education：1博士 2硕士 3本科 4大专 5中专）
      */
+    @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "学历不合法")
     private String education;
 
     /**
@@ -96,6 +101,7 @@ public class SysUserUpsertDTO {
     /**
      * 是否专家：0-否 1-是
      */
+    @AllowedValues(values = {"0", "1"}, message = "是否专家取值不合法")
     private Integer isExpert;
 
     /**

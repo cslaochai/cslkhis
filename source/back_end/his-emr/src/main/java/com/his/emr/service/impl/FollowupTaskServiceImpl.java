@@ -12,9 +12,10 @@ import com.his.appoint.enums.VisitTypeEnum;
 import com.his.appoint.service.BizAppointService;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
-import com.his.common.util.*;
+import com.his.common.util.NumUtil;
+import com.his.common.util.SensitiveMaskUtil;
 import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.emr.dto.FollowupQueryDTO;
 import com.his.emr.dto.FollowupTaskDTO;
 import com.his.emr.entity.BizFollowupTask;
@@ -25,6 +26,7 @@ import com.his.emr.service.SurveyService;
 import com.his.emr.support.FollowupTaskSnapshot;
 import com.his.emr.vo.*;
 import com.his.system.provider.DeptScopeService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -73,11 +75,6 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
      * 满意度评价：随访完成时自动发一张卷（方向单向，评价侧不回依赖本服务，见 FollowupTaskSnapshot）
      */
     private final SurveyService surveyService;
-
-    /**
-     * 患者触达（G-06）：站内信通道常通，微信订阅消息未启用时内部静默降级
-     */
-    private final com.his.system.service.SysMessageService sysMessageService;
 
     private final RedisSequenceService redisSequenceService;
 
@@ -318,25 +315,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         task.setFollowupStatus(FollowupTaskStatusEnum.DOING.getCode());
         task.setExecutorId(executorId == null ? UserUtils.getCurrentUser().getEmployeeId() : executorId);
         task.setExecutorName(TextUtil.hasText(executorName) ? executorName : UserUtils.getCurrentUser().getRealName());
-        boolean updated = this.updateById(task);
-        if (updated) {
-            // 患者触达（G-06）：开始随访即把随访内容推给患者，患者可在小程序「我的随访」反馈。
-            // 发信失败不影响随访推进（旁路），与满意度问卷同一个姿态。
-            try {
-                // 展示口径走枚举 getText；脏码值不回落成某个合法类型名，退回中性文案「随访」
-                String typeText = FollowupTypeEnum.getText(task.getFollowupType());
-                sysMessageService.sendWechatToPatient(task.getPatientId(), "followup_started",
-                        "pages/followup/followup",
-                        Map.of("随访类型", TextUtil.hasText(typeText) ? typeText : "随访"),
-                        "随访通知",
-                        TextUtil.hasText(task.getFollowupContent())
-                                ? task.getFollowupContent() : "您有一份随访计划，请查看详情并反馈近况",
-                        "followup", task.getId());
-            } catch (Exception e) {
-                log.warn("[随访] 任务 {} 患者触达发送失败（不影响随访）：{}", task.getTaskNo(), e.getMessage());
-            }
-        }
-        return updated;
+        return this.updateById(task);
     }
 
     /**

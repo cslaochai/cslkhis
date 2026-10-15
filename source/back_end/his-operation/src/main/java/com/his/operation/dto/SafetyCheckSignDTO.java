@@ -1,5 +1,6 @@
 package com.his.operation.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -23,6 +24,7 @@ public class SafetyCheckSignDTO implements Serializable {
      * 核查时段（必填）：1-麻醉诱导前 2-手术开始前 3-患者离开手术室前
      */
     @NotNull(message = "核查时段不能为空")
+    @AllowedValues(values = {"1", "2", "3"}, message = "核查时段取值不合法")
     private Integer phase;
 
     /**

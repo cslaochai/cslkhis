@@ -21,6 +21,6 @@ public class VteStatsGenerateDTO {
      * 统计范围（1-全院 2-科室）
      */
     @NotNull(message = "统计范围不能为空")
-    @AllowedValues(values = {"1", "2"}, message = "统计范围取值不合法（1-全院 2-科室）")
+    @AllowedValues(values = {"1", "2"}, message = "统计范围取值不合法")
     private Integer scopeType;
 }

@@ -2,6 +2,7 @@ package com.his.emr.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.his.common.base.PageParam;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -31,6 +32,9 @@ public class TreatmentDTO {
          */
         private Long patientId;
         private Long registId;
+        /**
+         * 申请状态（0-待执行 1-已执行 2-已取消）
+         */
         private Integer applyStatus;
         private Long treatmentItemId;
 
@@ -112,7 +116,13 @@ public class TreatmentDTO {
          * 患者ID
          */
         private Long patientId;
+        /**
+         * 执行状态（0-待执行 1-已执行 2-已取消）
+         */
         private Integer execStatus;
+        /**
+         * 计费状态（0-未计费 1-已计费 2-计费失败 3-无需计费）
+         */
         private Integer chargeStatus;
 
         /**
@@ -171,6 +181,7 @@ public class TreatmentDTO {
         /**
          * 0-异常 1-正常，默认 1
          */
+        @AllowedValues(values = {"0", "1"}, message = "打卡结果取值不合法")
         private Integer recordStatus;
 
         private String result;

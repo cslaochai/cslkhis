@@ -32,16 +32,19 @@ public class DeathCertificateDTO {
         /**
          * 状态（1-草稿 2-已审核 3-已开具 4-已作废）
          */
+        @AllowedValues(values = {"1", "2", "3", "4"}, message = "证明状态取值不合法")
         private Integer certStatus;
 
         /**
          * 死因监测上报状态（1-未上报 2-已上报 3-上报失败）
          */
+        @AllowedValues(values = {"1", "2", "3"}, message = "上报状态取值不合法")
         private Integer reportStatus;
 
         /**
          * 死亡地点（1-医院 2-来院途中 3-家中 4-民政管理机构 5-其他机构 9-未指明）
          */
+        @AllowedValues(values = {"1", "2", "3", "4", "5", "9"}, message = "死亡地点取值不合法")
         private Integer deathPlace;
 
         /**
@@ -64,6 +67,7 @@ public class DeathCertificateDTO {
         /**
          * 1-只看已逾上报时限且未上报成功的证明
          */
+        @AllowedValues(values = {"0", "1"}, message = "是否只看逾期待上报取值不合法")
         private Integer overdue;
     }
 
@@ -72,6 +76,10 @@ public class DeathCertificateDTO {
      */
     @Data
     public static class CauseRow {
+        /**
+         * 部分（1-Ⅰ部分死因链 2-Ⅱ部分其他疾病）
+         */
+        @AllowedValues(values = {"1", "2"}, message = "死因链部分取值不合法")
         private Integer part;
 
         @NotNull(message = "死因链行序不能为空")
@@ -115,7 +123,7 @@ public class DeathCertificateDTO {
          * 死亡地点（1-医院 2-来院途中 3-家中 4-民政管理机构 5-其他机构 9-未指明）
          */
         @NotNull(message = "死亡地点不能为空")
-        @AllowedValues(values = {"1", "2", "3", "4", "5", "9"}, message = "死亡地点取值不合法（1-医院 2-来院途中 3-家中 4-民政管理机构 5-其他机构 9-未指明）")
+        @AllowedValues(values = {"1", "2", "3", "4", "5", "9"}, message = "死亡地点取值不合法")
         private Integer deathPlace;
 
         /**
@@ -147,6 +155,7 @@ public class DeathCertificateDTO {
         /**
          * 是否尸检（0-否 1-是）
          */
+        @AllowedValues(values = {"0", "1"}, message = "是否尸检取值不合法")
         private Integer autopsyFlag;
 
         /**

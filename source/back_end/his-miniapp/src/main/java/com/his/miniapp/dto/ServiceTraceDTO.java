@@ -1,5 +1,6 @@
 package com.his.miniapp.dto;
 
+import com.his.common.validation.AllowedValues;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -23,6 +24,7 @@ public class ServiceTraceDTO {
      */
     @NotBlank(message = "eventType不能为空")
     @Size(max = 32, message = "eventType过长")
+    @AllowedValues(values = {"visit", "card", "search", "view", "helpful", "useless", "transfer", "message"}, message = "事件类型取值不合法")
     private String eventType;
 
     /**

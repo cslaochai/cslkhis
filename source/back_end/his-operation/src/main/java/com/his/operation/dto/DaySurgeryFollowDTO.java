@@ -1,5 +1,6 @@
 package com.his.operation.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -21,12 +22,14 @@ public class DaySurgeryFollowDTO implements Serializable {
      * 随访方式（1-电话 2-门诊 3-上门 4-线上）
      */
     @NotNull(message = "随访方式不能为空")
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "随访方式取值不合法")
     private Integer followType;
 
     /**
      * 随访结果（1-无异常 2-有异常已处置 3-有异常再就诊 4-失联）
      */
     @NotNull(message = "随访结果不能为空")
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "随访结果取值不合法")
     private Integer result;
 
     /**

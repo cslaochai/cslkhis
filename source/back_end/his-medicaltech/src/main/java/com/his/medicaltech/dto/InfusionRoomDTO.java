@@ -1,6 +1,7 @@
 package com.his.medicaltech.dto;
 
 import com.his.common.base.PageParam;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -31,6 +32,7 @@ public class InfusionRoomDTO {
         @NotNull(message = "座位状态不能为空")
         @Min(1)
         @Max(3)
+        @AllowedValues(values = {"1", "3"}, message = "座位状态取值不合法")
         private Integer seatStatus;
         /**
          * 备注
@@ -62,6 +64,7 @@ public class InfusionRoomDTO {
          * 是否需要皮试：1-是（建单后先做皮试） 0-否
          */
         @NotNull(message = "是否皮试不能为空")
+        @AllowedValues(values = {"0", "1"}, message = "是否皮试取值不合法")
         private Integer needSkinTest;
         /**
          * 备注
@@ -103,6 +106,7 @@ public class InfusionRoomDTO {
         @NotNull(message = "判读结果不能为空")
         @Min(1)
         @Max(2)
+        @AllowedValues(values = {"1", "2"}, message = "皮试判读结果取值不合法")
         private Integer result;
         /**
          * 备注
@@ -157,6 +161,7 @@ public class InfusionRoomDTO {
         @NotNull(message = "不良反应标志不能为空")
         @Min(0)
         @Max(1)
+        @AllowedValues(values = {"0", "1"}, message = "不良反应标志取值不合法")
         private Integer adverseFlag;
         @Size(max = 500, message = "不良反应描述过长")
         private String adverseDesc;

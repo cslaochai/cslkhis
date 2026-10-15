@@ -1,7 +1,6 @@
 package com.his.ai.dto;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -19,5 +18,6 @@ public class KnowledgeFeedbackDTO {
     @NotNull(message = "反馈不能为空")
     @Min(value = 1, message = "反馈取值不合法")
     @Max(value = 2, message = "反馈取值不合法")
+    @AllowedValues(values = {"1", "2"}, message = "反馈取值不合法")
     private Integer feedback;
 }

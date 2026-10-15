@@ -159,7 +159,6 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         feeRecordService.lockToBill(feeIds, bill.getId());
 
         // 医保清单是账单的产物：有统筹记账才出（全自费/全丙类没有要报给医保的钱）。
-        // 放在这里而不是收费完成后 —— 统筹 split 在出账这一刻就已经定死，晚一步就得再算一遍。
         insuranceSettlementService.generateFromBill(bill, items, insurance.coverageRatio());
 
         // 应缴为 0 的账单不会有收款流水，也就永远不会有人替它跑 refreshFromTxns：
@@ -205,11 +204,11 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
      * 与"出账开出多少"必然是同一个数 —— 住院结算原先逐单调旧试算再汇总，
      * 出账时又算一遍，两边一漂移就是小票和结算单对不上。
      */
-    private Draft draft(BillSettleUpsertDTO dto) {
-        if (EncounterTypeEnum.fromCode(dto.getEncounterType()) == null || dto.getEncounterId() == null) {
+    private Draft draft(BillSettleUpsertDTO upsertDTO) {
+        if (EncounterTypeEnum.fromCode(upsertDTO.getEncounterType()) == null || upsertDTO.getEncounterId() == null) {
             throw new BusinessException("缺少就诊标识，无法结算");
         }
-        List<BizFeeRecord> rows = pickRows(dto);
+        List<BizFeeRecord> rows = pickRows(upsertDTO);
         BigDecimal total = BigDecimal.ZERO;
         for (BizFeeRecord row : rows) {
             total = total.add(NumUtil.orZero(row.getAmount()));
@@ -223,7 +222,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
             throw new BusinessException("本次结算金额为 0，无需出账（免收请改为不记账，而不是记一笔 0 元）");
         }
 
-        BigDecimal discount = NumUtil.scale(dto.getDiscountAmount() == null ? BigDecimal.ZERO : dto.getDiscountAmount(), AMOUNT_SCALE);
+        BigDecimal discount = NumUtil.scale(upsertDTO.getDiscountAmount() == null ? BigDecimal.ZERO : upsertDTO.getDiscountAmount(), AMOUNT_SCALE);
         if (discount.signum() < 0) {
             throw new BusinessException("优惠金额不能为负");
         }
@@ -232,7 +231,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         }
 
         BizFeeRecord first = rows.get(0);
-        PatientInsurance insurance = resolveInsurance(first.getPatientId(), dto.getSettlementMode());
+        PatientInsurance insurance = resolveInsurance(first.getPatientId(), upsertDTO.getSettlementMode());
         List<BizSettlementBillItem> items = buildItems(first, rows, discount, insurance);
 
         BigDecimal pool = sum(items, BizSettlementBillItem::getPoolAmount);
@@ -348,6 +347,15 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
     }
 
     @Override
+    public BizSettlementBill getByIdForUpdate(Long billId) {
+        BizSettlementBill bill = baseMapper.selectByIdForUpdate(billId);
+        if (bill == null) {
+            throw new BusinessException("账单不存在");
+        }
+        return bill;
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public BizSettlementBillVO settleVO(BillSettleUpsertDTO dto) {
         return toVO(settle(dto));
@@ -433,7 +441,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
     @Override
     public PageResult<PendingEncounterVO> pendingEncounterPage(PendingEncounterQueryPageDTO query) {
         if (EncounterTypeEnum.fromCode(query.getEncounterType()) == null) {
-            throw new BusinessException("就诊类型只能是 1-门诊 或 2-住院");
+            throw new BusinessException("就诊类型取值不合法");
         }
         IPage<PendingEncounterVO> page = baseMapper.selectPendingEncounterPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query);
@@ -806,9 +814,6 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         if (!hasInsurance) {
             throw new BusinessException("该患者没有医保号，不能按医保结算");
         }
-        // 参保核验（对齐真实 HIS 联网参保查询）：按医保卡号查医保局端参保状态。
-        // 同时带上患者主档身份证/姓名做防冒名比对：身份证是实名金标准，姓名兜底。
-        // 未参保登记 / 停保 / 身份不符 → 拒医保结算，由收费员改按自费或核对卡号 —— 不静默按政策比例报销
         InsuranceChannelService.InsuredStatus insured = insuranceChannelService.checkInsured(
                 patient.getMedicalInsuranceNo(), patient.getIdCard(), patient.getPatientName());
         if (!insured.isFound()) {

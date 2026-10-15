@@ -52,7 +52,7 @@ public final class InpatientOrderItemRules {
             throw new BusinessException("医嘱类别不能为空：" + item.getItemName());
         }
         if (item.getOrderClass() < ORDER_CLASS_MIN || item.getOrderClass() > ORDER_CLASS_MAX) {
-            throw new BusinessException("医嘱类别不合法（应为 1~10，见「医嘱类别」字典）："
+            throw new BusinessException("医嘱类别不合法："
                     + item.getItemName() + "，当前值 " + item.getOrderClass());
         }
         if (OrderClassEnum.isDrug(item.getOrderClass())) {

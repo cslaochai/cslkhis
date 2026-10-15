@@ -107,12 +107,7 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void upsert(TechAuthUpsertDTO dto) {
-        if (TechAuthCategoryEnum.fromCode(dto.getAuthCategory()) == null) {
-            throw new BusinessException("授权类别不合法（1-手术 2-麻醉 3-内镜与介入）");
-        }
-        if (!TechLevelEnum.isValid(dto.getTechLevel())) {
-            throw new BusinessException("授权级别不合法（只能授 1~4 级）");
-        }
+        // 授权类别/授权级别码值白名单已由 DTO @AllowedValues 收口（web 入口 400；非空由 @NotNull 收口）
         if (dto.getValidUntil() != null && dto.getValidUntil().isBefore(dto.getValidFrom())) {
             throw new BusinessException("有效期至不能早于生效日期");
         }

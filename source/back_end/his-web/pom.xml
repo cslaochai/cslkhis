@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
@@ -21,7 +21,7 @@
             <groupId>com.his</groupId>
             <artifactId>his-common</artifactId>
         </dependency>
-        
+
         <dependency>
             <groupId>com.his</groupId>
             <artifactId>his-system</artifactId>
@@ -73,6 +73,14 @@
         <dependency>
             <groupId>com.his</groupId>
             <artifactId>his-miniapp</artifactId>
+        </dependency>
+        <!--
+            异步消费者集中层：@RocketMQMessageListener 全部在这里。
+            启动类在 com.his 包下，能扫到 com.his.consumer.support 下的监听器。
+        -->
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-consumer</artifactId>
         </dependency>
 
         <!--
