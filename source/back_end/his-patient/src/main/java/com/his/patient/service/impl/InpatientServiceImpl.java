@@ -25,7 +25,6 @@ import com.his.patient.service.AdmissionOrderService;
 import com.his.patient.service.BedCenterService;
 import com.his.patient.service.DeathCertificateService;
 import com.his.patient.service.InpatientService;
-import com.his.patient.support.SettlementGate;
 import com.his.patient.support.SummaryOperationSeq;
 import com.his.patient.vo.*;
 import com.his.system.entity.CurrentUser;
@@ -37,7 +36,6 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -79,13 +77,13 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
 
     private final AdmissionOrderService admissionOrderService;
 
-    private final SettlementGate settlementGate;
+    private final ChargeApi settlementGateway;
 
     private final SysMessageService sysMessageService;
 
     private final DeathCertificateService deathCertificateService;
 
-    private final ObjectProvider<BedCenterService> bedCenterProvider;
+    private final BedCenterService bedCenterService;
 
     private final DictCacheService dictCacheService;
 
@@ -326,10 +324,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
         // 收治 → 等床队列收口（同一事务）。不做这一步，从入出院管理页直接收治的患者
         // 会在床位中心留下一条"还在等床"的幽灵记录，而他的床位已经是占用状态了。
         try {
-            BedCenterService bedCenter = bedCenterProvider.getIfAvailable();
-            if (bedCenter != null) {
-                bedCenter.markAdmittedByPatient(dto.getPatientId(), admission.getAdmissionId(), admitTime);
-            }
+            bedCenterService.markAdmittedByPatient(dto.getPatientId(), admission.getAdmissionId(), admitTime);
         } catch (Exception e) {
             // 队列记账不是入院的条件：人已经住进来了，不能因为记账失败把整笔入院回滚掉
             log.warn("[入院登记] 回填床位排队队列失败 admissionNo={} patientId={}",
@@ -462,20 +457,14 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
         // 出院前必须已结算：一次住院没有结算单就出院，财务侧永远追不到这笔账。
         // 欠费结算也算已结算 —— 拦的是"完全没结算"，不是"没交钱"。
         String settleNote = null;
-        if (settlementGate.available()) {
-            SettlementStateVO state = settlementGate.state(dto.getAdmissionId());
-            if (state == null) {
-                throw new BusinessException("未能确认该住院的结算状态，暂不允许出院（请稍后重试或联系收费处）");
-            }
-            if (!state.isSettled()) {
-                throw new BusinessException("该住院尚未办理住院结算，请先结算（欠费可办理欠费结算）再出院");
-            }
-            settleNote = "出院结算校验：" + state.getText();
-        } else {
-            // 收费模块缺席：放行但必须留痕，绝不能假装校验过
-            settleNote = "出院时未校验住院结算：收费模块未接入（InpatientSettlementGateway 无实现）";
-            log.warn(settleNote + "，admissionId={}", dto.getAdmissionId());
+        SettlementStateVO state = settlementGateway.state(dto.getAdmissionId());
+        if (state == null) {
+            throw new BusinessException("未能确认该住院的结算状态，暂不允许出院（请稍后重试或联系收费处）");
         }
+        if (!state.isSettled()) {
+            throw new BusinessException("该住院尚未办理住院结算，请先结算（欠费可办理欠费结算）再出院");
+        }
+        settleNote = "出院结算校验：" + state.getText();
 
         // 再入院判定必须在把本人置为出院之前做（查询里已排除本人，顺序不影响，但先算更直观）
         boolean readmit31d = bizAdmissionMapper.countReadmitWithin31d(

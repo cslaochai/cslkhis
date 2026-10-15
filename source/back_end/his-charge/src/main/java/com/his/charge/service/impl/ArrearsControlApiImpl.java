@@ -3,9 +3,9 @@ package com.his.charge.service.impl;
 
 import com.his.charge.entity.BizArrearsPolicy;
 import com.his.charge.mapper.BizArrearsPolicyMapper;
-import com.his.charge.service.ArrearsControlGate;
 import com.his.charge.service.InpatientAccountService;
 import com.his.common.util.TextUtil;
+import com.his.system.api.service.ArrearsControlApi;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -16,12 +16,12 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * 欠费管控 Gate 实现（SPI：接口在 his-patient，本类是 his-charge 侧实现）。
+ * 欠费管控 Gate 实现（SPI：接口声明在 his-system.api，本类是 his-charge 侧实现）。
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ArrearsControlGateImpl implements ArrearsControlGate {
+public class ArrearsControlApiImpl implements ArrearsControlApi {
 
     /**
      * 永不拦截的医嘱类别：1-药品 6-手术 7-输血（治疗生命线，与配置无关）

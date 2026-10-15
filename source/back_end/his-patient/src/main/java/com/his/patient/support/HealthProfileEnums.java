@@ -9,7 +9,7 @@ import java.util.Set;
 /**
  * 健康档案六组里**没有字典表**的枚举码值（后端唯一口径）。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class HealthProfileEnums {
 
     /**

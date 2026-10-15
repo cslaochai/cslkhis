@@ -1,4 +1,4 @@
-package com.his.charge.service;
+package com.his.system.api.service;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -7,9 +7,9 @@ import java.io.Serializable;
 import java.util.Set;
 
 /**
- * 住院欠费管控扩展点
+ * 住院欠费管控扩展点（跨模块 SPI：接口声明在公共模块 his-system，实现方为 his-charge）。
  */
-public interface ArrearsControlGate {
+public interface ArrearsControlApi {
 
     /**
      * 新开医嘱前的欠费管控校验（只对「新增」调用；修改/停嘱/取消不拦）。
@@ -19,9 +19,9 @@ public interface ArrearsControlGate {
      */
     CheckResult checkNewOrder(OrderCheck command);
 
-/**
- * 校验入参。
- */
+    /**
+     * 校验入参。
+     */
     @Data
     @NoArgsConstructor
     class OrderCheck implements Serializable {
@@ -42,9 +42,9 @@ public interface ArrearsControlGate {
         }
     }
 
-/**
- * 校验结果。
- */
+    /**
+     * 校验结果。
+     */
     @Data
     class CheckResult implements Serializable {
 

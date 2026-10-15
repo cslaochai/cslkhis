@@ -33,8 +33,7 @@ public class AppointUpsertDTO {
     private Integer visitType;
 
     /**
-     * 本单结算方式（与收费账单 settlement_mode 同口径）：1-全自费 2-医保联网。
-     * 默认按患者费别带出（费别为医保类且有医保号→2，否则→1），允许本单改自费。
+     * 本单结算方式 1-全自费 2-医保联网。
      */
     @NotNull(message = "结算方式不能为空")
     @AllowedValues(values = {"1", "2"}, message = "结算方式取值不合法")

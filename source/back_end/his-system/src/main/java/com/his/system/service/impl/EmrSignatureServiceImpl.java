@@ -29,7 +29,6 @@ import com.his.system.mapper.BizTsaTokenMapper;
 import com.his.system.service.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
@@ -69,9 +68,9 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
 
     private final BizTsaTokenMapper tsaTokenMapper;
 
-    private final ObjectProvider<SignableContentApi> providers;
+    private final List<SignableContentApi> providers;
 
-    private final ObjectProvider<SignCoverageApi> coverageProviders;
+    private final List<SignCoverageApi> coverageProviders;
 
     private static Integer intValue(String s) {
         if (!TextUtil.hasText(s)) {

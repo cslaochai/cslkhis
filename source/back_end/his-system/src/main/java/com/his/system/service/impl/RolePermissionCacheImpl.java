@@ -5,7 +5,6 @@ import com.his.system.mapper.SysUserMapper;
 import com.his.system.service.RolePermissionCache;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -30,9 +29,9 @@ public class RolePermissionCacheImpl implements RolePermissionCache {
     private final SysUserMapper sysUserMapper;
 
     /**
-     * 可选注入:Redis 不可用时(his-system 单独跑、Redis 宕机)降级直查库
+     * Redis 为编译期强依赖（spring-data-redis 自动配置）；运行期 Redis 宕机由下方 try/catch 降级直查库。
      */
-    private final ObjectProvider<StringRedisTemplate> redisProvider;
+    private final StringRedisTemplate redis;
 
     /**
      * 取角色权限码集合:先读缓存,miss 查库并回填。
@@ -43,27 +42,22 @@ public class RolePermissionCacheImpl implements RolePermissionCache {
             return Collections.emptyList();
         }
         String key = KEY_PREFIX + roleCode;
-        StringRedisTemplate redis = redisProvider.getIfAvailable();
-        if (redis != null) {
-            try {
-                String cached = redis.opsForValue().get(key);
-                if (cached != null) {
-                    return cached.isEmpty() ? Collections.emptyList() : Arrays.asList(cached.split(","));
-                }
-            } catch (Exception e) {
-                log.warn("权限缓存读取失败,降级直查库(role={})", roleCode, e);
+        try {
+            String cached = redis.opsForValue().get(key);
+            if (cached != null) {
+                return cached.isEmpty() ? Collections.emptyList() : Arrays.asList(cached.split(","));
             }
+        } catch (Exception e) {
+            log.warn("权限缓存读取失败,降级直查库(role={})", roleCode, e);
         }
 
         List<String> permissions = sysUserMapper.selectPermissionsByRoleCode(roleCode);
         List<String> result = permissions == null ? Collections.emptyList() : permissions;
 
-        if (redis != null) {
-            try {
-                redis.opsForValue().set(key, String.join(",", result), TTL);
-            } catch (Exception e) {
-                log.warn("权限缓存回填失败(role={})", roleCode, e);
-            }
+        try {
+            redis.opsForValue().set(key, String.join(",", result), TTL);
+        } catch (Exception e) {
+            log.warn("权限缓存回填失败(role={})", roleCode, e);
         }
         return result;
     }
@@ -73,10 +67,6 @@ public class RolePermissionCacheImpl implements RolePermissionCache {
      */
     public void invalidate(String roleCode) {
         if (!TextUtil.hasText(roleCode)) {
-            return;
-        }
-        StringRedisTemplate redis = redisProvider.getIfAvailable();
-        if (redis == null) {
             return;
         }
         try {
@@ -91,10 +81,6 @@ public class RolePermissionCacheImpl implements RolePermissionCache {
      * 失效全部角色权限缓存(菜单权限码变更后调用;角色数级,量小 keys 可接受)
      */
     public void invalidateAll() {
-        StringRedisTemplate redis = redisProvider.getIfAvailable();
-        if (redis == null) {
-            return;
-        }
         try {
             Set<String> keys = redis.keys(KEY_PREFIX + "*");
             if (keys != null && !keys.isEmpty()) {

@@ -56,7 +56,7 @@ public class BizAppointController {
     }
 
     /**
-     * 医生站建复诊号（只放来源 1-当日回诊、2-医嘱复诊预约）。
+     * 医生站建复诊号
      */
     @PreAuthorize("hasAuthority('opd:doctorWorkstation:add')")
     @Operation(summary = "医生站建复诊号（当日回诊 / 医嘱复诊预约）")

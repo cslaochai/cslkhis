@@ -40,7 +40,6 @@ import com.his.system.vo.SysPatientTagVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -125,10 +124,10 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
     /**
      * 「今日就诊」提供者（实现在就诊域 his-appoint）。
      *
-     * <p>用 ObjectProvider 而非直接注入：接口定义在本模块、实现放在依赖本模块的就诊域，
-     * 直接注入会形成编译期反向依赖；同时就诊域缺席时这里拿到 null，搜索照常可用（降级不阻断）。
+     * <p>接口在公共模块 his-system、实现由依赖本模块的就诊域注册；
+     * 就诊域为编译期强依赖（his-web 聚合引入），实现缺失直接启动失败。
      */
-    private final ObjectProvider<AppointApi> todayVisitProvider;
+    private final AppointApi todayVisitProvider;
     /**
      * 「要不要看今日就诊」的判定（按当前登录角色的岗位性质）。
      *
@@ -538,12 +537,8 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
      * 患者搜索本身必须照常可用 —— 不能因为就诊域出问题就让全院搜不到人。
      */
     private Map<Long, TodayVisitVO> loadTodayVisits() {
-        AppointApi provider = todayVisitProvider.getIfAvailable();
-        if (provider == null) {
-            return Collections.emptyMap();
-        }
         try {
-            Map<Long, TodayVisitVO> visits = provider.todayVisits();
+            Map<Long, TodayVisitVO> visits = todayVisitProvider.todayVisits();
             return visits != null ? visits : Collections.emptyMap();
         } catch (Exception e) {
             log.warn("今日就诊信息获取失败，本次患者搜索按普通模式返回（不置顶/不标注）：{}", e.getMessage());

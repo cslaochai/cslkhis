@@ -6,9 +6,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.dto.FeeBookDTO;
 import com.his.charge.entity.BizFeeRecord;
-import com.his.charge.service.ArrearsControlGate;
 import com.his.charge.support.FeeCatalogResolver;
 import com.his.common.constant.DictTypeConst;
+import com.his.system.api.service.ArrearsControlApi;
 import com.his.system.dto.SignCommandDTO;
 import com.his.common.enums.*;
 import com.his.common.enums.YesOrNoEnum;
@@ -42,7 +42,6 @@ import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -83,7 +82,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
 
     private final SysMessageService sysMessageService;
 
-    private final ObjectProvider<ArrearsControlGate> arrearsControlGate;
+    private final ArrearsControlApi arrearsControlApi;
 
     private final EmployeeTechAuthService employeeTechAuthService;
 
@@ -127,19 +126,16 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
         }
 
         // G20 欠费管控：策略启用且欠费达停费线时，拦截新增的择期类医嘱（检查/检验/治疗）。
-        // 药品/手术/急救类永不拦截——急救被欠费卡住是医疗事故；修改/停嘱不拦；gate 缺席 fail-open。
+        // 药品/手术/急救类永不拦截——急救被欠费卡住是医疗事故；修改/停嘱不拦（欠费管控为编译期强依赖，his-charge 已引入）。
         if (dto.getId() == null) {
-            ArrearsControlGate gate = arrearsControlGate.getIfAvailable();
-            if (gate != null) {
-                Set<Integer> classes = items.stream()
-                        .map(InpatientOrderItemDTO::getOrderClass)
-                        .filter(Objects::nonNull)
-                        .collect(java.util.stream.Collectors.toSet());
-                ArrearsControlGate.CheckResult check =
-                        gate.checkNewOrder(new ArrearsControlGate.OrderCheck(admission.getAdmissionId(), classes));
-                if (check != null && !check.isAllowed()) {
-                    throw new BusinessException(check.getReason());
-                }
+            Set<Integer> classes = items.stream()
+                    .map(InpatientOrderItemDTO::getOrderClass)
+                    .filter(Objects::nonNull)
+                    .collect(java.util.stream.Collectors.toSet());
+            ArrearsControlApi.CheckResult check =
+                    arrearsControlApi.checkNewOrder(new ArrearsControlApi.OrderCheck(admission.getAdmissionId(), classes));
+            if (check != null && !check.isAllowed()) {
+                throw new BusinessException(check.getReason());
             }
         }
 

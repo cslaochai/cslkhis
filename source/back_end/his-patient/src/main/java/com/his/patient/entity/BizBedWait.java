@@ -1,5 +1,6 @@
 package com.his.patient.entity;
 
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
@@ -10,7 +11,6 @@ import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
@@ -20,14 +20,6 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_bed_wait")
 public class BizBedWait extends BaseEntity {
-    /** 逻辑删除标志（0 未删除 1 已删除） */
-    @TableLogic
-    private Integer delFlag;
-
-    /** 备注 */
-    private String remark;
-
-
 
     /**
      * 等待号（DC + yyyyMMdd + 3位序号）
@@ -196,4 +188,15 @@ public class BizBedWait extends BaseEntity {
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime cancelTime;
+
+    /**
+     * 逻辑删除标志（0 未删除 1 已删除）
+     */
+    @TableLogic
+    private Integer delFlag;
+
+    /**
+     * 备注
+     */
+    private String remark;
 }

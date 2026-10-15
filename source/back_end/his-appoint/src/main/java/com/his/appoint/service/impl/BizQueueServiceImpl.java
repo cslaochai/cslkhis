@@ -43,7 +43,6 @@ import com.his.system.service.SysClinicRoomService;
 import com.his.system.utils.UserUtils;
 import com.his.system.vo.OnDutyStaffVO;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -70,7 +69,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
 
     private final BizAppointInfoMapper bizAppointInfoMapper;
 
-    private final ObjectProvider<ChargeApi> appointChargeGateway;
+    private final ChargeApi appointChargeGateway;
 
     private final InsurancePolicyService insurancePolicyService;
 
@@ -251,9 +250,6 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         if (appoint.getBillId() == null) {
             return true;
         }
-        if (gateway == null) {
-            return false;
-        }
         BillBriefVO bill = gateway.getBill(appoint.getBillId());
         return bill != null && BillStatusEnum.PAID.getCode().equals(bill.getBillStatus());
     }
@@ -266,11 +262,8 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
             throw new BusinessException("挂号记录不存在");
         }
         deptScopeService.assertDeptAccessible(appointInfo.getDeptId());
-        ChargeApi gateway = appointChargeGateway.getIfAvailable();
-        if (appointInfo.getBillId() != null && gateway == null) {
-            throw new BusinessException("收费服务不可用，无法完成签到");
-        }
-        if (!isRegistFeeSettled(gateway, appointInfo)) {
+        // 收费服务为编译期强依赖（his-charge 已引入），实现缺失直接启动失败
+        if (!isRegistFeeSettled(appointChargeGateway, appointInfo)) {
             throw new BusinessException("该患者尚未支付，请先完成缴费");
         }
         LocalDate visitDate = appointInfo.getVisitDate() != null
@@ -1227,13 +1220,12 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
                 .eq(BizAppointInfo::getRegistStatus, AppointStatusEnum.REGISTERED.getCode())
                 .eq(visitDate != null, BizAppointInfo::getVisitDate, visitDate);
         List<BizAppointInfo> appoints = bizAppointInfoMapper.selectList(appointWrapper);
-        ChargeApi gateway = appointChargeGateway.getIfAvailable();
         List<BizQueueListVO> result = new ArrayList<>();
         for (BizAppointInfo appoint : appoints) {
             // 挂号状态「已挂号」只说明还没签到，还得确认钱真的收了 ——
             // 未缴费也能挂号（挂完去收费处），把没交钱的人放进「待签到」会让护士白叫。
             // 免收的号没有账单，属于"没有欠账"，必须照常放进来（旧口径用 isNotNull(charge_id) 把他们整体筛掉了）。
-            if (!isRegistFeeSettled(gateway, appoint)) {
+            if (!isRegistFeeSettled(appointChargeGateway, appoint)) {
                 continue;
             }
             BizQueueListVO vo = new BizQueueListVO();

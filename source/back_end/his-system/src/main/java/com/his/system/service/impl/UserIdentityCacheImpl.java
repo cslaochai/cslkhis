@@ -9,7 +9,6 @@ import com.his.system.service.UserIdentityCache;
 import com.his.system.support.UserIdentityCacheData;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -41,17 +40,13 @@ public class UserIdentityCacheImpl implements UserIdentityCache {
     private final SysUserMapper sysUserMapper;
 
     /**
-     * 可选注入：Redis 不可用时降级直查库（null = 缓存层整体不可用）。
+     * Redis 为编译期强依赖（spring-data-redis 自动配置）；运行期 Redis 宕机由下方 try/catch 降级直查库。
      */
-    private final ObjectProvider<StringRedisTemplate> redisProvider;
+    private final StringRedisTemplate redis;
 
     @Override
     public UserIdentityCacheData get(String username) {
         if (!TextUtil.hasText(username)) {
-            return null;
-        }
-        StringRedisTemplate redis = redisProvider.getIfAvailable();
-        if (redis == null) {
             return null;
         }
         try {
@@ -71,10 +66,6 @@ public class UserIdentityCacheImpl implements UserIdentityCache {
         if (!TextUtil.hasText(username) || data == null) {
             return;
         }
-        StringRedisTemplate redis = redisProvider.getIfAvailable();
-        if (redis == null) {
-            return;
-        }
         try {
             redis.opsForValue().set(KEY_PREFIX + username, objectMapper.writeValueAsString(data), TTL);
         } catch (Exception e) {
@@ -85,10 +76,6 @@ public class UserIdentityCacheImpl implements UserIdentityCache {
     @Override
     public void invalidate(String username) {
         if (!TextUtil.hasText(username)) {
-            return;
-        }
-        StringRedisTemplate redis = redisProvider.getIfAvailable();
-        if (redis == null) {
             return;
         }
         try {
@@ -114,10 +101,6 @@ public class UserIdentityCacheImpl implements UserIdentityCache {
 
     @Override
     public void invalidateAll() {
-        StringRedisTemplate redis = redisProvider.getIfAvailable();
-        if (redis == null) {
-            return;
-        }
         try {
             Set<String> keys = redis.keys(KEY_PREFIX + "*");
             if (keys != null && !keys.isEmpty()) {

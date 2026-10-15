@@ -27,7 +27,6 @@ import com.his.system.provider.DeptScopeService;
 import com.his.system.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,7 +54,7 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
 
     private final SysConfigMapper sysConfigMapper;
 
-    private final ObjectProvider<BedCenterService> bedCenterProvider;
+    private final BedCenterService bedCenterService;
 
     private final DeptScopeService deptScopeService;
 
@@ -144,10 +143,7 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
         bizAdmissionOrderMapper.insert(order);
 
         try {
-            BedCenterService bedCenter = bedCenterProvider.getIfAvailable();
-            if (bedCenter != null) {
-                bedCenter.syncFromOrder(order);
-            }
+            bedCenterService.syncFromOrder(order);
         } catch (Exception e) {
             log.warn("[住院证] 开证后自动进床位队列失败 orderNo={} —— 请到床位服务中心手工登记",
                     order.getOrderNo(), e);
@@ -204,10 +200,7 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
         bizAdmissionOrderMapper.updateById(order);
 
         try {
-            BedCenterService bedCenter = bedCenterProvider.getIfAvailable();
-            if (bedCenter != null) {
-                bedCenter.cancelByOrder(order.getId(), "住院证作废：" + dto.getCancelReason());
-            }
+            bedCenterService.cancelByOrder(order.getId(), "住院证作废：" + dto.getCancelReason());
         } catch (Exception e) {
             log.warn("[住院证] 作废后同步取消床位排队失败 orderNo={}", order.getOrderNo(), e);
         }

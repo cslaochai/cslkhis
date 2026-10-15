@@ -47,7 +47,6 @@ import com.his.system.service.StaffScheduleService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -68,9 +67,6 @@ import java.util.*;
 public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizAppointInfo> implements BizAppointService {
 
     private static final int REGIST_CUTOFF_MINUTES = 10;
-    /**
-     * 医保联网结算总开关（his.insurance.enabled）：false=不支持医保结算，挂号侧直接拒
-     */
     private final InsuranceProperties insuranceProperties;
     private final DeptScopeService deptScopeService;
     private final BizClinicSourceMapper bizScheduleMapper;
@@ -82,8 +78,8 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
     private final BizPatientService bizPatientService;
     private final ShiftService shiftService;
     private final StaffScheduleService staffScheduleService;
-    private final ObjectProvider<ChargeApi> appointChargeGateway;
-    private final ObjectProvider<EmrApi> medicalRecordRefGateway;
+    private final ChargeApi appointChargeGateway;
+    private final EmrApi medicalRecordRefGateway;
     private final BizRevisitFeePolicyService bizRevisitFeePolicyService;
     private final DayEndSettleTrigger dayEndSettleTrigger;
 
@@ -322,9 +318,8 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
 
         // 批量查询账单信息（经 SPI 委派至 his-charge）
         Map<Long, BillBriefVO> billMap = new HashMap<>();
-        ChargeApi gateway = appointChargeGateway.getIfAvailable();
-        if (gateway != null && !billIds.isEmpty()) {
-            billMap = gateway.mapBillsByIds(billIds);
+        if (!billIds.isEmpty()) {
+            billMap = appointChargeGateway.mapBillsByIds(billIds);
         }
 
         // 批量查询队列记录：挂号表本身没有排队号与队列状态，
@@ -410,8 +405,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BizAppointInfo addAppoint(AppointUpsertDTO upsertDTO) {
-        boolean revisit = upsertDTO.getVisitType() != null
-                && upsertDTO.getVisitType() == VisitTypeEnum.REVISIT.getCode();
+        boolean revisit = upsertDTO.getVisitType() != null && upsertDTO.getVisitType() == VisitTypeEnum.REVISIT.getCode();
         RecordBriefVO origin = validateRevisit(upsertDTO, revisit);
         Long revisitRecordId = origin == null ? null : origin.getId();
 
@@ -419,7 +413,6 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         checkIdempotent(upsertDTO, revisit);
 
         BizPatient bizPatient = bizPatientMapper.selectById(upsertDTO.getPatientId());
-        // D类（业务规则）：查库后的关联实体存在性判定，不是字段填没填
         if (bizPatient == null) {
             throw new BusinessException("患者信息为空，请检查后重试");
         }
@@ -428,7 +421,6 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         appointInfo.setPatientId(upsertDTO.getPatientId());
         appointInfo.setScheduleId(upsertDTO.getScheduleId());
         appointInfo.setRevisitRecordId(revisitRecordId);
-        // 码值白名单已由 DTO @AllowedValues 收口（web 入口 400），这里只保留「为空默认窗口 1」的默认值
         Integer registSource = upsertDTO.getRegistSource() == null ? 1 : upsertDTO.getRegistSource();
         appointInfo.setRegistSource(registSource);
         appointInfo.setPatientName(bizPatient.getPatientName());
@@ -516,20 +508,12 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         appointInfo.setGender(patient.getGender());
         appointInfo.setAge(patient.getAge());
         appointInfo.setPhone(patient.getPhone());
-        // 费别快照以本单入参为准：挂号弹窗允许按本单覆盖（主档漏登医保、收费员挂号时直接按医保走这一单），
-        // 改的只是这一单的结算性质，不动患者主档。
-        // 医保号快照仍以患者主档为准 —— 号是敏感主档信息，手误写错会影响该患者全部后续结算，
-        // 要改请去患者管理页；主档无号时入参号已在上一步补登，这里取到的是补登后的值。
         appointInfo.setMedicalInsuranceType(
                 TextUtil.hasText(upsertDTO.getMedicalInsuranceType())
                         ? upsertDTO.getMedicalInsuranceType()
                         : patient.getMedicalInsuranceType());
         appointInfo.setMedicalInsuranceNo(patient.getMedicalInsuranceNo());
 
-        // 医保联网的硬闸统一放在保存时判（入参医保号已在上一步补登主档，这里看的是补登后的最终口径）。
-        // 不能下沉到 DTO 注解：患者列表接口不回明文医保号，主档有号而入参为空是合法请求，
-        // DTO 层 @NotBlank 会误杀这类请求；只有快照出最终值之后才知道「到底有没有号」。
-        // 结算方式=医保(2) 用枚举而非魔法数字，与 charge 侧 SettlementModeEnum 同源
         if (SettlementModeEnum.INSURANCE.getCode().equals(appointInfo.getSettlementType())) {
             // 医保联网结算总开关：关闭时不支持医保结算，挂号侧直接拒（不查任何参保库）
             if (!insuranceProperties.isEnabled()) {
@@ -557,8 +541,6 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
             appointInfo.setDoctorId(schedule.getDoctorId());
             appointInfo.setDoctorName(schedule.getDoctorName());
             appointInfo.setVisitDate(schedule.getScheduleDate());
-            // 号别由号源推导：标了「专家号」→ 专家号(2)，否则普通号(1)。
-            // regist_type 是 NOT NULL 且无默认值，必须后端填充，前端不传此字段。
             appointInfo.setRegistType(registTypeFromSchedule(schedule));
         } else {
             // 当日回诊：不占号源，医生/科室取当前登录人（医生站「建复诊」就是医生本人点的）
@@ -581,9 +563,6 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         this.save(appointInfo);
 
         // 原子扣减号源（按渠道分池：预约渠道必须从池内扣；现场渠道提前日不许占用预约池剩余，
-        // 就诊当日放宽见 isSameDayWalkin；WHERE 条件兜住并发抢号，返回 0 表示对应池已空）
-        // 号源事实在段上：选了段 → 先扣段再扣主表（同事务双写，读路径仍走主表）；
-        // 未选段（历史入口）→ 只扣主表。
         if (schedule != null) {
             boolean appt = registSource == 4;
             // 就诊当日现场可挂走预约池剩余（提前日不许）：池是给远程预约留的额度，
@@ -608,15 +587,11 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         }
 
         // 挂号费记账 + 出账，经 SPI 委派至 his-charge。
-        // 复诊收哪几项费由「复诊收费策略」判定（原来这里写死 waived = revisit，见 sql/121）。
-        // 免收时不记账也不出账（返回 null）：签到门禁认的是「这张号没有未结清的挂号账单」，
-        // 旧模型为了过门禁造 0 元收费单那套已经随收费单一起退役。
         BizRevisitFeePolicyService.RevisitFeeDecision feeDecision = bizRevisitFeePolicyService.decide(
                 buildRevisitFeeContext(revisit, upsertDTO.getRevisitSource(), origin, schedule,
                         appointInfo.getDeptId(), appointInfo.getDoctorId(), appointInfo.getVisitDate()));
 
-        ChargeApi gateway = appointChargeGateway.getIfAvailable();
-        if (gateway != null && !feeDecision.isWaived() && feeDecision.totalFee().compareTo(BigDecimal.ZERO) > 0) {
+        if (!feeDecision.isWaived() && feeDecision.totalFee().compareTo(BigDecimal.ZERO) > 0) {
             RegistChargeCommandVO command = new RegistChargeCommandVO();
             command.setRegistId(appointInfo.getId());
             command.setRegistNo(appointInfo.getRegistNo());
@@ -634,16 +609,12 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
             // 本单结算方式（1-全自费 2-医保联网）：挂号单选什么就透什么，支持医保患者本单改自费
             command.setSettlementMode(appointInfo.getSettlementType());
 
-            BillBriefVO bill = gateway.createRegistCharge(command);
+            BillBriefVO bill = appointChargeGateway.createRegistCharge(command);
             if (bill != null) {
                 appointInfo.setBillId(bill.getBillId());
                 appointInfo.setBillNo(bill.getBillNo());
                 this.updateById(appointInfo);
             }
-        } else if (gateway == null) {
-            // 收费模块缺席：号照挂，但这笔挂号费从来没进过应收，台账上得留一句解释
-            log.warn("收费能力不可用，挂号费未记账（号已挂，请人工补收）：registNo={} 应收 ¥{}",
-                    appointInfo.getRegistNo(), feeDecision.totalFee().toPlainString());
         }
 
         return appointInfo;
@@ -661,11 +632,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
     @Override
     public RevisitFeePreviewVO revisitFeePreview(RevisitFeePreviewDTO previewDTO) {
         boolean noSchedule = RevisitSourceEnum.needsNoSchedule(previewDTO.getRevisitSource());
-        EmrApi refGateway = medicalRecordRefGateway.getIfAvailable();
-        if (refGateway == null) {
-            throw new BusinessException("病历服务不可用，无法关联原病历");
-        }
-        RecordBriefVO origin = refGateway.getRecord(previewDTO.getRevisitRecordId());
+        RecordBriefVO origin = medicalRecordRefGateway.getRecord(previewDTO.getRevisitRecordId());
         if (origin == null) {
             throw new BusinessException("原病历不存在，无法预估复诊费用");
         }
@@ -719,16 +686,15 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
      * 复诊「原病历」候选列表。
      *
      * <p>走 SPI 而不是直接 join 病历表：his-appoint 不依赖 his-emr 的 mapper（依赖方向单向）。
-     * 实现缺失（未引入 his-emr）时返回空集合，让前端下拉显示「暂无就诊记录」而不是 500。
+     * 病历服务为编译期强依赖（his-emr 经启动模块聚合引入），实现缺失直接启动失败。
      */
     @Override
     public List<RevisitRecordSelectVO> revisitRecordSelectList(Long patientId, int limit) {
-        EmrApi refGateway = medicalRecordRefGateway.getIfAvailable();
-        if (refGateway == null || patientId == null) {
+        if (patientId == null) {
             return new ArrayList<>();
         }
         List<RevisitRecordSelectVO> options = new ArrayList<>();
-        for (RecordBriefVO brief : refGateway.listRecentByPatient(patientId, limit)) {
+        for (RecordBriefVO brief : medicalRecordRefGateway.listRecentByPatient(patientId, limit)) {
             RevisitRecordSelectVO option = new RevisitRecordSelectVO();
             option.setId(brief.getId());
             option.setRecordNo(brief.getRecordNo());
@@ -835,11 +801,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         if (upsertDTO.getRevisitRecordId() == null) {
             throw new BusinessException("复诊挂号必须关联原病历（收费策略与间隔天数都按原就诊记录判定）");
         }
-        EmrApi refGateway = medicalRecordRefGateway.getIfAvailable();
-        if (refGateway == null) {
-            throw new BusinessException("病历服务不可用，无法关联原病历");
-        }
-        RecordBriefVO origin = refGateway.getRecord(upsertDTO.getRevisitRecordId());
+        RecordBriefVO origin = medicalRecordRefGateway.getRecord(upsertDTO.getRevisitRecordId());
         if (origin == null) {
             throw new BusinessException("原病历不存在，无法创建复诊挂号");
         }
@@ -875,29 +837,22 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         if (revisit && RevisitSourceEnum.needsNoSchedule(upsertDTO.getRevisitSource())) {
             LambdaQueryWrapper<BizAppointInfo> revisitWrapper = new LambdaQueryWrapper<>();
             revisitWrapper.eq(BizAppointInfo::getRevisitRecordId, upsertDTO.getRevisitRecordId())
-                    .notIn(BizAppointInfo::getRegistStatus,
-                            AppointStatusEnum.OVERDUE.getCode(), AppointStatusEnum.CANCELLED.getCode());
+                    .notIn(BizAppointInfo::getRegistStatus, AppointStatusEnum.OVERDUE.getCode(), AppointStatusEnum.CANCELLED.getCode());
             if (this.count(revisitWrapper) > 0) {
                 throw new BusinessException("该病历已创建过复诊号，不可重复创建");
             }
             return;
         }
         if (upsertDTO.getScheduleId() == null) {
-            // 占号源的挂号（初诊与 2/3/4 类复诊）没选排班时不做判重，
-            // 否则条件会退化成人级全表比对，报出「已在此排班挂号」这种对不上号的原因；
-            // 缺排班由后面的「请选择号源」拦下。
             return;
         }
         LambdaQueryWrapper<BizAppointInfo> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BizAppointInfo::getPatientId, upsertDTO.getPatientId())
                 .eq(BizAppointInfo::getScheduleId, upsertDTO.getScheduleId())
-                // visit_type 必须进判重键：同一排班上午看完初诊、下午接着挂复诊是常态
                 .eq(BizAppointInfo::getVisitType, upsertDTO.getVisitType())
                 .notIn(BizAppointInfo::getRegistStatus, AppointStatusEnum.OVERDUE.getCode(), AppointStatusEnum.CANCELLED.getCode()); // 排除已取消的记录
         if (this.count(wrapper) > 0) {
-            throw new BusinessException(revisit
-                    ? "该患者已在此排班预约过复诊，不可重复预约"
-                    : "该患者已在此排班挂号，不可重复挂号");
+            throw new BusinessException(revisit ? "该患者已在此排班预约过复诊，不可重复预约" : "该患者已在此排班挂号，不可重复挂号");
         }
     }
 
@@ -982,13 +937,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         if (existing.getBillId() == null) {
             return;
         }
-        ChargeApi gateway = appointChargeGateway.getIfAvailable();
-        if (gateway == null) {
-            // 收费能力缺失（未引入 his-charge）时不阻断挂号业务，但要留下痕迹便于排查
-            log.warn("收费能力不可用，跳过改约的收费校验：registId={}", existing.getId());
-            return;
-        }
-        BillBriefVO bill = gateway.getBill(existing.getBillId());
+        BillBriefVO bill = appointChargeGateway.getBill(existing.getBillId());
         BigDecimal paid = bill == null ? BigDecimal.ZERO : NumUtil.orZero(bill.getPaidAmount());
         if (paid.signum() <= 0) {
             return;
@@ -1027,12 +976,6 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         if (registInfo.getBillId() == null) {
             return;
         }
-        ChargeApi gateway = appointChargeGateway.getIfAvailable();
-        if (gateway == null) {
-            log.warn("收费能力不可用，退号未联动账单：registId={}，billId={}",
-                    registInfo.getId(), registInfo.getBillId());
-            return;
-        }
         CancelCommandVO command = new CancelCommandVO();
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
@@ -1041,7 +984,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         command.setBillId(registInfo.getBillId());
         command.setReason(TextUtil.hasText(reason) ? reason : "退号");
         command.setOperator(operatorUser.getRealName());
-        boolean closed = gateway.cancelRegistCharge(command);
+        boolean closed = appointChargeGateway.cancelRegistCharge(command);
         log.info("退号联动账单：registId={}，billId={}，撤销={}",
                 registInfo.getId(), registInfo.getBillId(), closed);
     }

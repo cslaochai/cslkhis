@@ -25,7 +25,6 @@ import com.his.system.vo.WorkbenchWidgetVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,11 +49,11 @@ public class WorkbenchServiceImpl extends ServiceImpl<SysWorkbenchWidgetMapper, 
     private final SysRoleMapper sysRoleMapper;
     private final SysMenuMapper sysMenuMapper;
     /**
-     * 各业务域的取数 bean。用 {@link ObjectProvider} 而不是直接注入 {@code List}：
-     * 一是本模块编译期不认识任何业务域，二是首次取数才解析，避免启动期把各域
-     * Service 连带拉起（注册表里 status=0 的占位卡本来就没有 bean）。
+     * 各业务域的取数 bean：Spring 收集全部实现注入（各域可缺席，缺席即对应卡片不出数）。
+     * 不用 ObjectProvider 的原因：实现由各业务域注册、本模块编译期不认识任何业务域，
+     * List 注入天然容忍零实现（空列表），语义与收集型 ObjectProvider 一致。
      */
-    private final ObjectProvider<WorkbenchMetricService> metricProviders;
+    private final List<WorkbenchMetricService> metricProviders;
 
     private volatile Map<String, WorkbenchMetricService> providerMap;
 

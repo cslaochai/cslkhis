@@ -12,7 +12,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -43,10 +42,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserDetailsServiceImpl userDetailsService;
 
     /**
-     * 按「当前角色」重算权限的来源。用 ObjectProvider 可选注入：
-     * 本过滤器与 RolePermissionProvider 实现同处 his-system；实现不在时过滤器也必须能用。
+     * 按「当前角色」重算权限的来源。接口与实现同处 his-system，编译期强依赖直接注入。
      */
-    private final ObjectProvider<RolePermissionService> rolePermissionProvider;
+    private final RolePermissionService rolePermissionProvider;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -118,12 +116,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * </ul>
      */
     private void applyRolePermissions(CurrentUser currentUser, String currentRole) {
-        RolePermissionService provider = rolePermissionProvider.getIfAvailable();
-        if (provider == null) {
-            return;
-        }
         try {
-            List<String> permissions = provider.permissionsOfRole(currentRole);
+            List<String> permissions = rolePermissionProvider.permissionsOfRole(currentRole);
             currentUser.setPermissions(permissions == null ? Collections.emptyList() : permissions);
         } catch (Exception e) {
             log.error("按角色重算权限失败，本次沿用员工级权限并集（role={}, user={}）—— 注解鉴权结果可能偏宽",
