@@ -5,7 +5,7 @@ import com.his.system.entity.SignSubject;
 import com.his.common.enums.ObjectSignStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
-import com.his.system.api.service.SignableContentApi;
+import com.his.api.service.SignableContentApi;
 import com.his.common.util.TimeUtil;
 import com.his.patient.entity.BizCriticalNotice;
 import com.his.patient.enums.NoticeStatusEnum;

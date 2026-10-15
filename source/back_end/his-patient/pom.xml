@@ -29,5 +29,9 @@
             <groupId>com.his</groupId>
             <artifactId>his-charge</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-api</artifactId>
+        </dependency>
     </dependencies>
 </project>

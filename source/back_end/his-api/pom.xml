@@ -15,9 +15,10 @@
     <packaging>jar</packaging>
     <name>his-api</name>
     <description>API 模块骨架（用途待定：接口契约 / 业务域 / 被依赖层，由后续迭代填充）</description>
-
-    <!--
-        空骨架：仅继承父工程（提供 Boot 依赖管理与 lombok/test 共享依赖）。
-        待用途明确后，再在此声明业务依赖（如 his-common / web / mybatis-plus 等）。
-    -->
+    <dependencies>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-common</artifactId>
+        </dependency>
+    </dependencies>
 </project>
