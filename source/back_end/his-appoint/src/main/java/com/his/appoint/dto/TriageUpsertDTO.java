@@ -100,8 +100,6 @@ public class TriageUpsertDTO {
      * 分诊等级（1-危重 2-急症 3-亚急 4-非急）
      */
     @NotNull(message = "分诊等级不能为空")
-    @Min(value = 1, message = "分诊等级取值不合法")
-    @Max(value = 4, message = "分诊等级取值不合法")
     @AllowedValues(values = {"1", "2", "3", "4"}, message = "分诊等级取值不合法")
     @Schema(description = "分诊等级（1-危重 2-急症 3-亚急 4-非急）")
     private Integer triageLevel;

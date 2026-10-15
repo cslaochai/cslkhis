@@ -1,7 +1,6 @@
 package com.his.system.dto;
 
 import com.his.common.validation.AllowedValues;
-import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -35,8 +34,6 @@ public class ScheduleSlotItemUpsertDTO {
      * 段状态（0-停用 1-正常）：停用段不可再挂，已挂的不受影响
      */
     @NotNull(message = "段状态不能为空")
-    @Min(value = 0, message = "段状态不合法")
-    @Max(value = 1, message = "段状态不合法")
     @AllowedValues(values = {"0", "1"}, message = "段状态取值不合法")
     private Integer status;
 }

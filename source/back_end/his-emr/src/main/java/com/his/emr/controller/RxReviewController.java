@@ -59,7 +59,7 @@ public class RxReviewController {
     @Operation(summary = "点评明细分页（附处方药品明细文本）")
     @PreAuthorize("hasAuthority('pharmacy:rxReview:list')")
     @PostMapping("/itemListPage")
-    public Result<PageResult<RxReviewItemVO>> itemListPage(@Valid @RequestBody RxReviewItemPageDTO query) {
+    public Result<PageResult<RxReviewItemVO>> itemListPage(@Valid @RequestBody RxReviewItemPageQueryDTO query) {
         return Result.success(rxReviewService.itemListPage(query));
     }
 
@@ -89,7 +89,7 @@ public class RxReviewController {
     @Operation(summary = "已公示明细分页（公示页）")
     @PreAuthorize("hasAuthority('pharmacy:rxPublicity:list')")
     @PostMapping("/publicityListPage")
-    public Result<PageResult<RxReviewItemVO>> publicityListPage(@Valid @RequestBody RxReviewItemPageDTO query) {
+    public Result<PageResult<RxReviewItemVO>> publicityListPage(@Valid @RequestBody RxReviewItemPageQueryDTO query) {
         return Result.success(rxReviewService.publicityListPage(query));
     }
 
@@ -142,7 +142,7 @@ public class RxReviewController {
     @Operation(summary = "导出点评明细台账 CSV（BOM，上限 5000 行）")
     @PreAuthorize("hasAuthority('pharmacy:rxReview:export')")
     @PostMapping("/itemExportCsv")
-    public Result<String> itemExportCsv(@Valid @RequestBody RxReviewItemPageDTO query) {
+    public Result<String> itemExportCsv(@Valid @RequestBody RxReviewItemPageQueryDTO query) {
         return Result.success(rxReviewService.itemExportCsv(query));
     }
 }

@@ -31,8 +31,6 @@ public class RxReviewBatchUpsertDTO {
      * 点评类型（1-常规点评 2-专项点评）
      */
     @NotNull(message = "点评类型不能为空")
-    @Min(value = 1, message = "点评类型非法")
-    @Max(value = 2, message = "点评类型非法")
     @AllowedValues(values = {"1", "2"}, message = "点评类型取值不合法")
     private Integer reviewType;
 

@@ -52,7 +52,7 @@ public class TreatmentController {
     @PreAuthorize("hasAuthority('opd:treatmentStation:add')")
     @Operation(summary = "开单/重排疗程（仅在一次卡都没打过时允许重排）")
     @PostMapping("/applyUpsert")
-    public Result<TreatmentVO.ApplyDetailVO> applyUpsert(@Valid @RequestBody TreatmentDTO.ApplyUpsert dto) {
+    public Result<TreatmentVO.ApplyDetailVO> applyUpsert(@Valid @RequestBody TreatmentDTO.ApplyUpsertDTO dto) {
         TreatmentVO.ApplyDetailVO detail = treatmentService.upsertApply(dto);
         return Result.success("疗程已排期：" + detail.getApply().getItemName()
                 + " 共 " + detail.getApply().getTotalTimes() + " 次", detail);

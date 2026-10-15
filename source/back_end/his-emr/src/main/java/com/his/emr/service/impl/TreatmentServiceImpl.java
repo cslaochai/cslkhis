@@ -13,7 +13,6 @@ import com.his.common.enums.EncounterTypeEnum;
 import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.PaymentItemTypeEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -32,6 +31,7 @@ import com.his.emr.vo.TreatmentItemSnapshotVO;
 import com.his.emr.vo.TreatmentVO;
 import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -231,7 +231,7 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
      * 已经开始的疗程只能对未执行的某一次单独改期 —— 已经做掉的那几次是既成事实。
      */
     @Transactional(rollbackFor = Exception.class)
-    public TreatmentVO.ApplyDetailVO upsertApply(TreatmentDTO.ApplyUpsert dto) {
+    public TreatmentVO.ApplyDetailVO upsertApply(TreatmentDTO.ApplyUpsertDTO dto) {
         LocalDate start = dto.getStartDate();
         checkDateWindow(start, "疗程开始日期");
         int totalTimes = NumUtil.orDefault(dto.getTotalTimes(), 1);

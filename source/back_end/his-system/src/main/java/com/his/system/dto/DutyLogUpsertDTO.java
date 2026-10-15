@@ -2,7 +2,9 @@ package com.his.system.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.his.common.validation.AllowedValues;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -30,8 +32,6 @@ public class DutyLogUpsertDTO {
      * 班次 1-白班 2-夜班（1-白班 2-夜班）
      */
     @NotNull(message = "班次不能为空")
-    @Min(value = 1, message = "班次取值不合法")
-    @Max(value = 2, message = "班次取值不合法")
     @AllowedValues(values = {"1", "2"}, message = "班次取值不合法")
     private Integer shiftType;
 
@@ -44,8 +44,6 @@ public class DutyLogUpsertDTO {
      * 记录类型 1-值班事件 2-遗留事项 3-巡查记录（1-值班事件 2-遗留事项 3-巡查记录）
      */
     @NotNull(message = "记录类型不能为空")
-    @Min(value = 1, message = "记录类型取值不合法")
-    @Max(value = 3, message = "记录类型取值不合法")
     @AllowedValues(values = {"1", "2", "3"}, message = "记录类型取值不合法")
     private Integer logType;
 

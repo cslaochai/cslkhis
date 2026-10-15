@@ -2,7 +2,9 @@ package com.his.pharmacy.dto;
 
 import com.his.common.validation.AllowedValues;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.util.List;
@@ -17,8 +19,6 @@ public class DrugInboundCreateDTO {
      * 入库类型（1-采购入库 2-退货入库 3-盘盈入库 4-其他入库）
      */
     @NotNull(message = "入库类型不能为空")
-    @Min(value = 1, message = "入库类型取值不合法")
-    @Max(value = 4, message = "入库类型取值不合法")
     @AllowedValues(values = {"1", "2", "3", "4"}, message = "入库类型取值不合法")
     private Integer inboundType;
 

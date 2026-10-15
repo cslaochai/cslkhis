@@ -1,7 +1,6 @@
 package com.his.system.dto;
 
 import com.his.common.validation.AllowedValues;
-import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -13,8 +12,6 @@ import lombok.Data;
 public class SignConfigUpsertDTO {
 
     @NotNull(message = "签名时间来源不能为空")
-    @Min(value = 1, message = "签名时间来源仅支持 1-本机时钟 2-院内授时 3-第三方 TSA")
-    @Max(value = 3, message = "签名时间来源仅支持 1-本机时钟 2-院内授时 3-第三方 TSA")
     @AllowedValues(values = {"1", "2", "3"}, message = "签名时间来源不合法")
     private Integer timeSource;
 
@@ -23,8 +20,6 @@ public class SignConfigUpsertDTO {
     private Integer certValidDays;
 
     @NotNull(message = "证书自动签发开关不能为空")
-    @Min(value = 0, message = "证书自动签发开关仅支持 0-否 1-是")
-    @Max(value = 1, message = "证书自动签发开关仅支持 0-否 1-是")
     @AllowedValues(values = {"0", "1"}, message = "证书自动签发开关取值不合法")
     private Integer certAutoIssue;
 }

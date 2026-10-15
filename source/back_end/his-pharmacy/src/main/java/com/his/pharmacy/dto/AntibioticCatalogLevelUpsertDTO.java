@@ -1,8 +1,6 @@
 package com.his.pharmacy.dto;
 
 import com.his.common.validation.AllowedValues;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -21,8 +19,6 @@ public class AntibioticCatalogLevelUpsertDTO {
      * 抗菌药物分级（0-非抗菌药物 1-非限制 2-限制 3-特殊使用）
      */
     @NotNull(message = "抗菌药物分级不能为空")
-    @Min(value = 0, message = "分级非法")
-    @Max(value = 3, message = "分级非法")
     @AllowedValues(values = {"0", "1", "2", "3"}, message = "抗菌药物分级取值不合法")
     private Integer antibioticLevel;
 

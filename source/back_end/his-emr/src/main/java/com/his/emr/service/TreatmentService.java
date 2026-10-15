@@ -20,7 +20,7 @@ public interface TreatmentService {
 
     List<TreatmentVO.ItemSelectListVO> itemSelectList(String keyword, Integer limit);
 
-    TreatmentVO.ApplyDetailVO upsertApply(TreatmentDTO.ApplyUpsert dto);
+    TreatmentVO.ApplyDetailVO upsertApply(TreatmentDTO.ApplyUpsertDTO dto);
 
     TreatmentVO.ExecVO rescheduleExec(TreatmentDTO.ExecReschedule dto);
 

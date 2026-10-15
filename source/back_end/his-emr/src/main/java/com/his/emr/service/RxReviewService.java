@@ -35,7 +35,7 @@ public interface RxReviewService {
     /**
      * 点照明细分页（batchId 可空=跨批次；附处方药品明细文本）
      */
-    PageResult<RxReviewItemVO> itemListPage(RxReviewItemPageDTO query);
+    PageResult<RxReviewItemVO> itemListPage(RxReviewItemPageQueryDTO query);
 
     /**
      * 提交单张点评（不合理必填问题码与意见且分组一致；已公示禁改；末张自动完成批次）
@@ -55,7 +55,7 @@ public interface RxReviewService {
     /**
      * 已公示明细分页（公示页只读列表）
      */
-    PageResult<RxReviewItemVO> publicityListPage(RxReviewItemPageDTO query);
+    PageResult<RxReviewItemVO> publicityListPage(RxReviewItemPageQueryDTO query);
 
     /**
      * 公示页医师排名（只统计已公示不合理处方；超常 ≥3 标 needTalk）
@@ -90,5 +90,5 @@ public interface RxReviewService {
     /**
      * 导出点评明细台账 CSV（BOM + 上限 5000 行）
      */
-    String itemExportCsv(RxReviewItemPageDTO query);
+    String itemExportCsv(RxReviewItemPageQueryDTO query);
 }

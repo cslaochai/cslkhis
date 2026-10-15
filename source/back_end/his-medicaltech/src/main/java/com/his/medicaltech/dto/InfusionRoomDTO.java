@@ -15,23 +15,24 @@ public class InfusionRoomDTO {
      * 座位新增/修改
      */
     @Data
-    public static class SeatUpsert {
+    public static class SeatUpsertDTO {
         /**
          * 座位ID（修改时必传）
          */
         private Long id;
+
         @NotBlank(message = "座位号不能为空")
         @Size(max = 32, message = "座位号过长")
         private String seatNo;
+
         @NotBlank(message = "区域不能为空")
         @Size(max = 50, message = "区域过长")
         private String area;
+
         /**
          * 1-空闲 3-停用（占用由入座流程驱动，不接受直接改）
          */
         @NotNull(message = "座位状态不能为空")
-        @Min(1)
-        @Max(3)
         @AllowedValues(values = {"1", "3"}, message = "座位状态取值不合法")
         private Integer seatStatus;
         /**
@@ -45,7 +46,7 @@ public class InfusionRoomDTO {
      * 入座（建输液单 + 占座）
      */
     @Data
-    public static class Admit {
+    public static class AdmitDTO {
         /**
          * 患者ID
          */
@@ -55,9 +56,11 @@ public class InfusionRoomDTO {
          * 来源治疗记录ID（可空）
          */
         private Long treatmentRecordId;
+
         @NotBlank(message = "输注内容摘要不能为空")
         @Size(max = 500, message = "输注内容摘要过长")
         private String drugSummary;
+
         @NotNull(message = "座位不能为空")
         private Long seatId;
         /**
@@ -104,8 +107,6 @@ public class InfusionRoomDTO {
          * 1-阴性 2-阳性
          */
         @NotNull(message = "判读结果不能为空")
-        @Min(1)
-        @Max(2)
         @AllowedValues(values = {"1", "2"}, message = "皮试判读结果取值不合法")
         private Integer result;
         /**
@@ -122,6 +123,7 @@ public class InfusionRoomDTO {
     public static class Start {
         @NotNull(message = "输液单不能为空")
         private Long infusionId;
+
         @NotNull(message = "滴速不能为空")
         @Min(1)
         @Max(200)
@@ -138,6 +140,7 @@ public class InfusionRoomDTO {
         @Min(1)
         @Max(200)
         private Integer dripRate;
+
         @Min(0)
         @Max(5000)
         private Integer remainingVolume;
@@ -159,10 +162,9 @@ public class InfusionRoomDTO {
          * 不良反应：0-无 1-有
          */
         @NotNull(message = "不良反应标志不能为空")
-        @Min(0)
-        @Max(1)
         @AllowedValues(values = {"0", "1"}, message = "不良反应标志取值不合法")
         private Integer adverseFlag;
+
         @Size(max = 500, message = "不良反应描述过长")
         private String adverseDesc;
     }

@@ -2,8 +2,6 @@ package com.his.emr.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.his.common.base.PageParam;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -24,15 +22,11 @@ public class RxReviewTalkQueryPageDTO extends PageParam {
     /**
      * 约谈类型（1~5：1-首次约谈 2-警告约谈 3-限制处方权 4-取消处方权 5-恢复处方权）
      */
-    @Min(value = 1, message = "约谈类型非法")
-    @Max(value = 5, message = "约谈类型非法")
     private Integer talkType;
 
     /**
      * 整改状态（1待整改 2已整改）
      */
-    @Min(value = 1, message = "整改状态非法")
-    @Max(value = 2, message = "整改状态非法")
     private Integer rectifyStatus;
 
     /**

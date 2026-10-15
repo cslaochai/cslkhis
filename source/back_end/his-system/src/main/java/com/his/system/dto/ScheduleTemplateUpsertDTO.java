@@ -61,8 +61,6 @@ public class ScheduleTemplateUpsertDTO {
     /**
      * 单双周（0-每周 1-单周 2-双周；空默认每周）
      */
-    @Min(value = 0, message = "单双周不合法")
-    @Max(value = 2, message = "单双周不合法")
     @AllowedValues(values = {"0", "1", "2"}, message = "单双周取值不合法")
     private Integer weekParity;
 

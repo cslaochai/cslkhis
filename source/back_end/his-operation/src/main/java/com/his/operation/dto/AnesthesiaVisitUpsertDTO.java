@@ -1,8 +1,6 @@
 package com.his.operation.dto;
 
 import com.his.common.validation.AllowedValues;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -29,8 +27,6 @@ public class AnesthesiaVisitUpsertDTO implements Serializable {
     /**
      * ASA 分级（1-Ⅰ 2-Ⅱ 3-Ⅲ 4-Ⅳ 5-Ⅴ）
      */
-    @Min(value = 1, message = "ASA 分级取值不合法")
-    @Max(value = 5, message = "ASA 分级取值不合法")
     @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "ASA 分级取值不合法")
     private Integer asaGrade;
 
@@ -43,8 +39,6 @@ public class AnesthesiaVisitUpsertDTO implements Serializable {
     /**
      * Mallampati 气道分级（1-Ⅰ 2-Ⅱ 3-Ⅲ 4-Ⅳ）
      */
-    @Min(value = 1, message = "Mallampati 分级取值不合法")
-    @Max(value = 4, message = "Mallampati 分级取值不合法")
     @AllowedValues(values = {"1", "2", "3", "4"}, message = "Mallampati 分级取值不合法")
     private Integer mallampati;
 
@@ -93,8 +87,6 @@ public class AnesthesiaVisitUpsertDTO implements Serializable {
     /**
      * 禁食禁饮（0-未禁食 1-已按要求禁食 2-急诊饱胃）
      */
-    @Min(value = 0, message = "禁食禁饮状态取值不合法")
-    @Max(value = 2, message = "禁食禁饮状态取值不合法")
     @AllowedValues(values = {"0", "1", "2"}, message = "禁食禁饮状态取值不合法")
     private Integer npoStatus;
 
@@ -136,8 +128,6 @@ public class AnesthesiaVisitUpsertDTO implements Serializable {
     /**
      * 访视结论：1-可施行麻醉 2-暂缓手术 3-需会诊/进一步评估（完成访视时必填）
      */
-    @Min(value = 1, message = "访视结论取值不合法")
-    @Max(value = 3, message = "访视结论取值不合法")
     @AllowedValues(values = {"1", "2", "3"}, message = "访视结论取值不合法")
     private Integer conclusion;
 

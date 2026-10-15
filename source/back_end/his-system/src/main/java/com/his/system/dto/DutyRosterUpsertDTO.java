@@ -2,8 +2,6 @@ package com.his.system.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.his.common.validation.AllowedValues;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -39,8 +37,6 @@ public class DutyRosterUpsertDTO {
      * 班次（1-白班 2-夜班 00-次日08）
      */
     @NotNull(message = "班次不能为空")
-    @Min(value = 1, message = "班次取值不合法")
-    @Max(value = 2, message = "班次取值不合法")
     @AllowedValues(values = {"1", "2"}, message = "班次取值不合法")
     private Integer shiftType;
 
@@ -48,8 +44,6 @@ public class DutyRosterUpsertDTO {
      * 班内角色（1-主班 2-副班）
      */
     @NotNull(message = "班内角色不能为空")
-    @Min(value = 1, message = "班内角色取值不合法")
-    @Max(value = 2, message = "班内角色取值不合法")
     @AllowedValues(values = {"1", "2"}, message = "班内角色取值不合法")
     private Integer roleType;
 

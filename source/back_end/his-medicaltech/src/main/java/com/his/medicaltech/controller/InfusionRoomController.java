@@ -42,14 +42,14 @@ public class InfusionRoomController {
     @PreAuthorize("hasAuthority('medtech:infusion:add')")
     @Operation(summary = "座位新增/修改（占用中不可改）")
     @PostMapping("/seatUpsert")
-    public Result<InfusionRoomVO.Seat> seatUpsert(@Valid @RequestBody InfusionRoomDTO.SeatUpsert dto) {
+    public Result<InfusionRoomVO.Seat> seatUpsert(@Valid @RequestBody InfusionRoomDTO.SeatUpsertDTO dto) {
         return Result.success(infusionRoomService.seatUpsert(dto));
     }
 
     @PreAuthorize("hasAuthority('medtech:infusion:edit')")
     @Operation(summary = "入座（建输液单 + 占座；needSkinTest=1 先皮试）")
     @PostMapping("/admit")
-    public Result<InfusionRoomVO.Infusion> admit(@Valid @RequestBody InfusionRoomDTO.Admit dto) {
+    public Result<InfusionRoomVO.Infusion> admit(@Valid @RequestBody InfusionRoomDTO.AdmitDTO dto) {
         return Result.success(infusionRoomService.admit(dto));
     }
 

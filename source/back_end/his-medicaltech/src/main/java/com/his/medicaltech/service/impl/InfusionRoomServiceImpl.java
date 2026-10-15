@@ -8,7 +8,6 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.DelFlagEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -27,6 +26,7 @@ import com.his.medicaltech.mapper.BizSkinTestMapper;
 import com.his.medicaltech.service.InfusionRoomService;
 import com.his.medicaltech.vo.InfusionPatientSnapshotVO;
 import com.his.medicaltech.vo.InfusionRoomVO;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -96,7 +96,7 @@ public class InfusionRoomServiceImpl extends ServiceImpl<BizOutpInfusionMapper, 
      * 座位新增/修改（座位号唯一；占用中的座位不允许改状态）
      */
     @Transactional(rollbackFor = Exception.class)
-    public InfusionRoomVO.Seat seatUpsert(InfusionRoomDTO.SeatUpsert dto) {
+    public InfusionRoomVO.Seat seatUpsert(InfusionRoomDTO.SeatUpsertDTO dto) {
         if (dto.getSeatStatus() != null && dto.getSeatStatus() == InfusionSeatStatusEnum.OCCUPIED.getCode()) {
             throw new BusinessException("座位占用由入座流程驱动，不能直接置为占用");
         }
@@ -146,7 +146,7 @@ public class InfusionRoomServiceImpl extends ServiceImpl<BizOutpInfusionMapper, 
      * 入座：建输液单 + 占座。needSkinTest=1 → 待皮试；否则待输注。
      */
     @Transactional(rollbackFor = Exception.class)
-    public InfusionRoomVO.Infusion admit(InfusionRoomDTO.Admit dto) {
+    public InfusionRoomVO.Infusion admit(InfusionRoomDTO.AdmitDTO dto) {
         BizInfusionSeat seat = bizInfusionSeatMapper.selectById(dto.getSeatId());
         if (seat == null || seat.getDelFlag() == DelFlagEnum.DELETED.getCode()) {
             throw new BusinessException("座位不存在");

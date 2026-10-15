@@ -1,8 +1,6 @@
 package com.his.pharmacy.dto;
 
 import com.his.common.validation.AllowedValues;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -28,8 +26,6 @@ public class StocktakeUpsertDTO {
     /**
      * 范围-药品类型（null=全部，1-西药 2-中成药 3-中药饮片）
      */
-    @Min(value = 1, message = "药品类型取值不合法")
-    @Max(value = 3, message = "药品类型取值不合法")
     @AllowedValues(values = {"1", "2", "3"}, message = "药品类型取值不合法")
     private Integer scopeDrugType;
 

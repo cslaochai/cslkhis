@@ -1,8 +1,6 @@
 package com.his.emr.dto;
 
 import com.his.common.validation.AllowedValues;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -24,10 +22,7 @@ public class RxReviewItemUpsertDTO {
      * 点评结论（1-合理 2-不规范处方 3-用药不适宜处方 4-超常处方）
      */
     @NotNull(message = "点评结论不能为空")
-    @Min(value = 1, message = "点评结论非法")
-    @Max(value = 4, message = "点评结论非法")
-    @AllowedValues(values = {"1", "2", "3", "4"},
-            message = "点评结论不合法")
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "点评结论不合法")
     private Integer reviewResult;
 
     /**

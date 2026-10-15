@@ -2,8 +2,6 @@ package com.his.charge.dto;
 
 import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -31,8 +29,6 @@ public class ArrearsPolicyUpsertDTO {
      * 停费管控开关（0-关 1-开）
      */
     @NotNull(message = "停费管控开关不能为空")
-    @Min(value = 0, message = "停费管控开关取值不合法")
-    @Max(value = 1, message = "停费管控开关取值不合法")
     @AllowedValues(values = {"0", "1"}, message = "停费管控开关取值不合法")
     private Integer stopEnabled;
 

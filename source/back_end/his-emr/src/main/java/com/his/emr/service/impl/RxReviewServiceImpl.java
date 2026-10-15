@@ -9,7 +9,6 @@ import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TimeUtil;
 import com.his.emr.dto.*;
 import com.his.emr.entity.*;
@@ -17,6 +16,7 @@ import com.his.emr.enums.*;
 import com.his.emr.mapper.*;
 import com.his.emr.service.RxReviewService;
 import com.his.emr.vo.*;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -219,7 +219,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
     // 公示
 
     @Override
-    public PageResult<RxReviewItemVO> itemListPage(RxReviewItemPageDTO query) {
+    public PageResult<RxReviewItemVO> itemListPage(RxReviewItemPageQueryDTO query) {
         Page<BizRxReviewItem> page = bizRxReviewItemMapper.selectPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), itemWrapper(query));
         if (CollectionUtils.isEmpty(page.getRecords())) {
@@ -232,7 +232,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
     /**
      * 明细查询条件（列表/导出同形）
      */
-    private LambdaQueryWrapper<BizRxReviewItem> itemWrapper(RxReviewItemPageDTO query) {
+    private LambdaQueryWrapper<BizRxReviewItem> itemWrapper(RxReviewItemPageQueryDTO query) {
         LambdaQueryWrapper<BizRxReviewItem> wrapper = new LambdaQueryWrapper<>();
         String prescriptionNo = query.getPrescriptionNo() == null ? null : query.getPrescriptionNo().trim();
         String doctorName = query.getDoctorName() == null ? null : query.getDoctorName().trim();
@@ -384,7 +384,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
     // 约谈
 
     @Override
-    public PageResult<RxReviewItemVO> publicityListPage(RxReviewItemPageDTO query) {
+    public PageResult<RxReviewItemVO> publicityListPage(RxReviewItemPageQueryDTO query) {
         query.setPublicityStatus(PublicityStatusEnum.PUBLISHED.getCode());
         Page<BizRxReviewItem> page = bizRxReviewItemMapper.selectPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), itemWrapper(query));
@@ -583,7 +583,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
     }
 
     @Override
-    public String itemExportCsv(RxReviewItemPageDTO query) {
+    public String itemExportCsv(RxReviewItemPageQueryDTO query) {
         query.forExport(EXPORT_MAX);
         List<RxReviewItemVO> rows = itemListPage(query).getRecords();
         StringBuilder sb = new StringBuilder();

@@ -18,7 +18,6 @@ import java.time.LocalDate;
 public class TreatmentDTO {
 
     // 申请单
-
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class ApplyQuery extends PageParam {
@@ -52,7 +51,7 @@ public class TreatmentDTO {
     }
 
     @Data
-    public static class ApplyUpsert {
+    public static class ApplyUpsertDTO {
         /**
          * 空=新开疗程；非空=改期/改次数（仅未打过任何一次卡时允许）
          */

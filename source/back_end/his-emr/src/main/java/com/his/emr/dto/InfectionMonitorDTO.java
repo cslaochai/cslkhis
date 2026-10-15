@@ -3,7 +3,6 @@ package com.his.emr.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.his.common.base.PageParam;
 import com.his.common.validation.AllowedValues;
-import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -40,8 +39,6 @@ public class InfectionMonitorDTO {
          * 就诊类型（1门诊/2住院）
          */
         @NotNull(message = "就诊类型不能为空")
-        @Min(value = 1, message = "就诊类型非法")
-        @Max(value = 2, message = "就诊类型非法")
         @AllowedValues(values = {"1", "2"}, message = "就诊类型取值不合法")
         private Integer visitType;
 
@@ -111,8 +108,6 @@ public class InfectionMonitorDTO {
          * 核实结论（2确认/3排除）
          */
         @NotNull(message = "核实结论不能为空")
-        @Min(value = 2, message = "核实结论非法")
-        @Max(value = 3, message = "核实结论非法")
         @AllowedValues(values = {"2", "3"}, message = "核实结论取值不合法")
         private Integer auditResult;
 
@@ -161,10 +156,7 @@ public class InfectionMonitorDTO {
          * 监测类型（1尿管CAUTI/2血管导管CLABSI/3呼吸机VAP）
          */
         @NotNull(message = "监测类型不能为空")
-        @Min(value = 1, message = "监测类型非法")
-        @Max(value = 3, message = "监测类型非法")
-        @AllowedValues(values = {"1", "2", "3"},
-                message = "监测类型不合法")
+        @AllowedValues(values = {"1", "2", "3"}, message = "监测类型不合法")
         private Integer monitorType;
 
         /**
@@ -300,8 +292,6 @@ public class InfectionMonitorDTO {
          * 观察对象（1医生/2护士/3工勤其他）
          */
         @NotNull(message = "观察对象不能为空")
-        @Min(value = 1, message = "观察对象非法")
-        @Max(value = 3, message = "观察对象非法")
         @AllowedValues(values = {"1", "2", "3"}, message = "观察对象不合法")
         private Integer obsObject;
 

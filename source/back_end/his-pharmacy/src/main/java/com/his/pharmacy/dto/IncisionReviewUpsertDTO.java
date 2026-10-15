@@ -32,16 +32,12 @@ public class IncisionReviewUpsertDTO {
     /**
      * 是否有预防用药指征（0-无 1-有）
      */
-    @Min(value = 0, message = "指征标志非法")
-    @Max(value = 1, message = "指征标志非法")
     @AllowedValues(values = {"0", "1"}, message = "指征标志取值不合法")
     private Integer indicationFlag = 0;
 
     /**
      * 给药时机（1~6）
      */
-    @Min(value = 1, message = "给药时机非法")
-    @Max(value = 6, message = "给药时机非法")
     @AllowedValues(values = {"1", "2", "3", "4", "5", "6"}, message = "给药时机取值不合法")
     private Integer timingType;
 
@@ -55,8 +51,6 @@ public class IncisionReviewUpsertDTO {
     /**
      * 是否联合用药（0-否 1-是）
      */
-    @Min(value = 0, message = "联合用药标志非法")
-    @Max(value = 1, message = "联合用药标志非法")
     @AllowedValues(values = {"0", "1"}, message = "联合用药标志取值不合法")
     private Integer comboFlag = 0;
 
@@ -68,8 +62,6 @@ public class IncisionReviewUpsertDTO {
     /**
      * 特殊使用级是否有抗菌药物管理工作组会诊同意（0-无 1-有）
      */
-    @Min(value = 0, message = "会诊标志非法")
-    @Max(value = 1, message = "会诊标志非法")
     @AllowedValues(values = {"0", "1"}, message = "会诊标志取值不合法")
     private Integer consultFlag = 0;
 
@@ -77,8 +69,6 @@ public class IncisionReviewUpsertDTO {
      * 点评结论（1-合理 2-不合理）
      */
     @NotNull(message = "点评结论不能为空")
-    @Min(value = 1, message = "点评结论非法")
-    @Max(value = 2, message = "点评结论非法")
     @AllowedValues(values = {"1", "2"}, message = "点评结论取值不合法")
     private Integer reviewResult;
 

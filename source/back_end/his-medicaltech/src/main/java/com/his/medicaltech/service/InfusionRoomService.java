@@ -10,9 +10,9 @@ public interface InfusionRoomService {
 
     List<InfusionRoomVO.Seat> seats();
 
-    InfusionRoomVO.Seat seatUpsert(InfusionRoomDTO.SeatUpsert dto);
+    InfusionRoomVO.Seat seatUpsert(InfusionRoomDTO.SeatUpsertDTO dto);
 
-    InfusionRoomVO.Infusion admit(InfusionRoomDTO.Admit dto);
+    InfusionRoomVO.Infusion admit(InfusionRoomDTO.AdmitDTO dto);
 
     InfusionRoomVO.Infusion skinTest(InfusionRoomDTO.SkinTestCreate dto);
 

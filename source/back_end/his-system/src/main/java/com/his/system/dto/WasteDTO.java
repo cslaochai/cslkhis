@@ -3,8 +3,6 @@ package com.his.system.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.his.common.base.PageParam;
 import com.his.common.validation.AllowedValues;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -30,8 +28,6 @@ public class WasteDTO {
          * 医废类别（1-感染性 2-损伤性 3-病理性 4-药物性 5-化学性）
          */
         @NotNull(message = "医废类别不能为空")
-        @Min(value = 1, message = "医废类别取值不合法")
-        @Max(value = 5, message = "医废类别取值不合法")
         @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "医废类别取值不合法")
         private Integer wasteType;
 

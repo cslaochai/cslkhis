@@ -24,8 +24,6 @@ public class RecordQcFlowFinalDTO implements Serializable {
      * 终审定级（1-甲级 2-乙级 3-丙级）
      */
     @NotNull(message = "终审必须定级（1甲级/2乙级/3丙级）")
-    @Min(value = 1, message = "定级码值非法")
-    @Max(value = 3, message = "定级码值非法")
     @AllowedValues(values = {"1", "2", "3"}, message = "终审定级不合法")
     private Integer grade;
 
