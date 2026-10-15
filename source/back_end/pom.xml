@@ -45,6 +45,7 @@
         <module>his-charge</module>
         <module>his-pay</module>
         <module>his-ai</module>
+        <module>his-api</module>
         <module>his-miniapp</module>
         <module>his-consumer</module>
         <module>his-web</module>
@@ -126,6 +127,11 @@
             <dependency>
                 <groupId>com.his</groupId>
                 <artifactId>his-ai</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.his</groupId>
+                <artifactId>his-api</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
