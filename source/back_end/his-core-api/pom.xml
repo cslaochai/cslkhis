@@ -11,14 +11,14 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>his-domain-api</artifactId>
+    <artifactId>his-core-api</artifactId>
     <packaging>jar</packaging>
     <name>his-api</name>
     <description>API 模块骨架（用途待定：接口契约 / 业务域 / 被依赖层，由后续迭代填充）</description>
     <dependencies>
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-common</artifactId>
+            <artifactId>his-core-common</artifactId>
         </dependency>
     </dependencies>
 </project>

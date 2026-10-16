@@ -1,0 +1,84 @@
+package com.his.operation.dto;
+
+import com.his.common.validation.AllowedValues;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+
+import java.io.Serializable;
+
+/**
+ * PACU Aldrete 评分入参（五项各 0~2 分）。
+ */
+@Data
+public class PacuScoreDTO implements Serializable {
+
+    @NotNull(message = "PACU 记录ID不能为空")
+    private Long pacuId;
+
+    /**
+     * 肌力/活动（0-无 1-两肢可动 2-四肢可动）
+     */
+    @NotNull(message = "请评肌力/活动")
+    @AllowedValues(values = {"0", "1", "2"}, message = "肌力/活动评分取值不合法")
+    private Integer scoreActivity;
+
+    /**
+     * 呼吸：0-需辅助通气 1-呼吸浅/受限 2-深呼吸可咳嗽
+     */
+    @NotNull(message = "请评呼吸")
+    @AllowedValues(values = {"0", "1", "2"}, message = "呼吸评分取值不合法")
+    private Integer scoreRespiration;
+
+    /**
+     * 血压：0-±50mmHg以上波动 1-±20~50 2-±20 以内
+     */
+    @NotNull(message = "请评血压波动")
+    @AllowedValues(values = {"0", "1", "2"}, message = "血压评分取值不合法")
+    private Integer scoreCirculation;
+
+    /**
+     * 意识（0-无反应 1-可唤醒 2-完全清醒）
+     */
+    @NotNull(message = "请评意识")
+    @AllowedValues(values = {"0", "1", "2"}, message = "意识评分取值不合法")
+    private Integer scoreConsciousness;
+
+    /**
+     * 氧合（0-吸氧下<90% 1-吸氧下>90% 2-空气下>92%）
+     */
+    @NotNull(message = "请评氧合")
+    @AllowedValues(values = {"0", "1", "2"}, message = "氧合评分取值不合法")
+    private Integer scoreSpo2;
+
+    /**
+     * 清醒程度（1-完全清醒 2-嗜睡可唤醒 3-未清醒）
+     */
+    @AllowedValues(values = {"1", "2", "3"}, message = "清醒程度取值不合法")
+    private Integer awareness;
+
+    /**
+     * 氧疗方式
+     */
+    private String oxygenTherapy;
+
+    /**
+     * 镇痛方式
+     */
+    private String analgesia;
+
+    /**
+     * 并发症：0-无 1-有（=1 必填说明）
+     */
+    @AllowedValues(values = {"0", "1"}, message = "并发症标志取值不合法")
+    private Integer complicationFlag;
+
+    /**
+     * 并发症经过与处理
+     */
+    private String complicationNote;
+
+    /**
+     * 备注
+     */
+    private String remark;
+}

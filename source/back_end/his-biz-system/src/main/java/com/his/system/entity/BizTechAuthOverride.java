@@ -1,0 +1,111 @@
+package com.his.system.entity;
+
+import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
+import lombok.Data;
+
+import java.time.LocalDateTime;
+
+/**
+ * 急诊越权授权事后登记实体：一行 = 一次「没授权但因为急诊/抢救做了」。
+ */
+@Data
+@EqualsAndHashCode(callSuper = true)
+@TableName("biz_tech_auth_override")
+public class BizTechAuthOverride extends BaseEntity {
+
+    /**
+     * 来源单据类型（字典 his_tech_override_source / TechOverrideSourceEnum：1-手术申请 2-日间手术 3-住院医嘱 4-内镜记录）
+     */
+    private Integer sourceType;
+
+    /**
+     * 来源单据ID
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long sourceId;
+
+    /**
+     * 来源单据号
+     */
+    private String sourceNo;
+
+    /**
+     * 越权操作者（员工ID）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long employeeId;
+
+    /**
+     * 越权操作者姓名
+     */
+    private String employeeName;
+
+    /**
+     * 涉及授权类别（同 his_tech_auth_category）
+     */
+    private Integer authCategory;
+
+    /**
+     * 该操作要求的级别
+     */
+    private Integer requiredLevel;
+
+    /**
+     * 越权者当时的授权级别上限（NULL=完全没有该类别授权）
+     */
+    @TableField(updateStrategy = FieldStrategy.IGNORED)
+    private Integer heldLevel;
+
+    /**
+     * 越权原因（必填：写清为什么等不起）
+     */
+    private String reason;
+
+    /**
+     * 越权发生时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private LocalDateTime occurTime;
+
+    /**
+     * 状态（字典 his_tech_override_status：1-待上级确认 2-已确认）
+     */
+    private Integer overrideStatus;
+
+    /**
+     * 上级确认人（员工ID）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    @TableField(updateStrategy = FieldStrategy.IGNORED)
+    private Long supervisorId;
+
+    /**
+     * 上级确认人姓名
+     */
+    @TableField(updateStrategy = FieldStrategy.IGNORED)
+    private String supervisorName;
+
+    /**
+     * 确认时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @TableField(updateStrategy = FieldStrategy.IGNORED)
+    private LocalDateTime confirmTime;
+
+    /**
+     * 确认意见
+     */
+    @TableField(updateStrategy = FieldStrategy.IGNORED)
+    private String confirmOpinion;
+
+    /**
+     * 备注
+     */
+    @TableField(updateStrategy = FieldStrategy.IGNORED)
+    private String remark;
+}
