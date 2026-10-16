@@ -16,10 +16,14 @@ import java.util.List;
  */
 public interface WorkbenchService {
 
-    /** 当前角色应渲染的卡片清单 + 落点策略 */
+    /**
+     * 当前角色应渲染的卡片清单 + 落点策略
+     */
     WorkbenchConfigVO getConfig();
 
-    /** 当前角色全部卡片的聚合数字（一次返回，逐卡 try-catch） */
+    /**
+     * 当前角色全部卡片的聚合数字（一次返回，逐卡 try-catch）
+     */
     List<WorkbenchDataVO> getData();
 
     PageResult<WorkbenchWidgetVO> widgetListPage(WorkbenchWidgetQueryPageDTO queryDTO);

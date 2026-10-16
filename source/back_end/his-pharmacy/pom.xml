@@ -30,7 +30,7 @@
         <!-- 记账经 ChargeApi（his-api 契约，his-charge 实现），不再直连收费模块 -->
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-api</artifactId>
+            <artifactId>his-domain-api</artifactId>
         </dependency>
     </dependencies>
 </project>

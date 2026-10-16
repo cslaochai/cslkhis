@@ -1,24 +1,18 @@
 package com.his.system.service.impl;
 
-import com.his.system.config.SignProperties;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
-import com.his.system.utils.KeyPairFactory;
 import com.his.common.util.TextUtil;
+import com.his.system.config.SignProperties;
 import com.his.system.dto.*;
 import com.his.system.entity.CurrentUser;
 import com.his.system.service.EmrSignatureService;
 import com.his.system.service.ExternalCaChannelService;
 import com.his.system.service.SignCertService;
 import com.his.system.service.SignatureCenterService;
+import com.his.system.utils.KeyPairFactory;
 import com.his.system.utils.UserUtils;
-import com.his.system.vo.SignCaProbeOutboundVO;
-import com.his.system.vo.SignCaStatusVO;
-import com.his.system.vo.SignCertSelectListVO;
-import com.his.system.vo.SignCertVO;
-import com.his.system.vo.SignOptionVO;
-import com.his.system.vo.SignatureOptionsVO;
-import com.his.system.vo.SignatureVO;
+import com.his.system.vo.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;

@@ -1,6 +1,7 @@
 package com.his.system.service;
 
 import com.his.system.entity.SysDictData;
+
 import java.util.List;
 
 public interface DictCacheService {

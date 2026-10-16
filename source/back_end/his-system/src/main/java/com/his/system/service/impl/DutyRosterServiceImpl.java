@@ -358,7 +358,7 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
      * 登记这条值班的在岗事实 —— 值班不是"写在册子上"，它就是这个人的一段真实出勤。
      */
     private BizSchedule dutyAttendance(LocalDate date, SysEmployee emp, BizShift shift,
-                                            BizDutyPost post, String remark) {
+                                       BizDutyPost post, String remark) {
         StaffScheduleUpsertDTO core = new StaffScheduleUpsertDTO();
         core.setScheduleDate(date);
         boolean hospitalWide = post == null || post.getOrgId() == null

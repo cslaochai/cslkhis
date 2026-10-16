@@ -1,19 +1,15 @@
 package com.his.system.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.his.system.dto.BizClinicSourceBatchUpsertDTO;
-import com.his.system.dto.BizClinicSourceReplicateDTO;
-import com.his.system.dto.OnDutyQueryDTO;
-import com.his.system.dto.ScheduleQueryDTO;
 import com.his.api.dto.ScheduleSelectQueryDTO;
-import com.his.system.dto.ScheduleUpsertDTO;
+import com.his.api.vo.StopImpactItemVO;
+import com.his.common.enums.StaffScheduleSourceEnum;
+import com.his.system.dto.*;
 import com.his.system.entity.BizClinicSource;
 import com.his.system.vo.BizClinicSourceBatchResultVO;
 import com.his.system.vo.OnDutyStaffVO;
 import com.his.system.vo.ScheduleDetailVO;
 import com.his.system.vo.ScheduleSelectListVO;
-import com.his.api.vo.StopImpactItemVO;
-import com.his.common.enums.StaffScheduleSourceEnum;
 
 import java.util.List;
 
@@ -147,6 +143,7 @@ public interface BizClinicSourceService extends IService<BizClinicSource> {
 
     /**
      * 挑一个「当班责任人」——给需要落执行人的单据用（如分诊记录上的当班护士）。
+     *
      * @param deptId      科室ID
      * @param staffType   岗位类别
      * @param preferEmpId 优先取此人（当前操作人的员工ID），可为 null

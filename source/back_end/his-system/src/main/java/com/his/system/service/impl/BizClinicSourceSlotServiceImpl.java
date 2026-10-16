@@ -3,6 +3,12 @@ package com.his.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.enums.EnableStatusEnum;
+import com.his.common.enums.ScheduleStatusEnum;
+import com.his.common.enums.StaffTypeEnum;
+import com.his.common.exception.BusinessException;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.ScheduleSlotItemUpsertDTO;
 import com.his.system.dto.ScheduleSlotUpsertDTO;
 import com.his.system.entity.BizClinicSource;
@@ -10,16 +16,10 @@ import com.his.system.entity.BizClinicSourceSlot;
 import com.his.system.entity.BizClinicSourceSlotTemplate;
 import com.his.system.mapper.BizClinicSourceMapper;
 import com.his.system.mapper.BizClinicSourceSlotMapper;
+import com.his.system.provider.DeptScopeService;
 import com.his.system.service.BizClinicSourceSlotService;
 import com.his.system.service.ClinicSourceLogService;
 import com.his.system.vo.ScheduleSlotVO;
-import com.his.common.enums.EnableStatusEnum;
-import com.his.common.enums.ScheduleStatusEnum;
-import com.his.common.enums.StaffTypeEnum;
-import com.his.common.exception.BusinessException;
-import com.his.common.util.NumUtil;
-import com.his.common.util.TextUtil;
-import com.his.system.provider.DeptScopeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,7 +44,7 @@ public class BizClinicSourceSlotServiceImpl extends ServiceImpl<BizClinicSourceS
 
     @Override
     public List<BizClinicSourceSlot> generateSlots(Long scheduleId, String startTime, String endTime,
-                                               Integer totalSource, Integer appointmentSource) {
+                                                   Integer totalSource, Integer appointmentSource) {
         List<String[]> segs = splitHalfHour(startTime, endTime);
         int n = segs.size();
         int total = totalSource == null ? 0 : totalSource;

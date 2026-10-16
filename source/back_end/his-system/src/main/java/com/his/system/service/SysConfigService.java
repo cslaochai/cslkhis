@@ -1,17 +1,9 @@
 package com.his.system.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.his.system.dto.EmergencyConfigUpsertDTO;
-import com.his.system.dto.HospitalInfoUpsertDTO;
-import com.his.system.dto.InpatientConfigUpsertDTO;
-import com.his.system.dto.LabCriticalConfigUpsertDTO;
-import com.his.system.dto.SignConfigUpsertDTO;
+import com.his.system.dto.*;
 import com.his.system.entity.SysConfig;
-import com.his.system.vo.EmergencyConfigVO;
-import com.his.system.vo.HospitalInfoVO;
-import com.his.system.vo.InpatientConfigVO;
-import com.his.system.vo.LabCriticalConfigVO;
-import com.his.system.vo.SignConfigVO;
+import com.his.system.vo.*;
 
 /**
  * 系统参数配置服务

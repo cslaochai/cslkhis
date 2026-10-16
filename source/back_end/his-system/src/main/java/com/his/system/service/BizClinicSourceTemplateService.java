@@ -1,12 +1,12 @@
 package com.his.system.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.his.common.base.PageResult;
 import com.his.system.dto.ScheduleTemplateQueryPageDTO;
 import com.his.system.dto.ScheduleTemplateUpsertDTO;
 import com.his.system.entity.BizClinicSourceTemplate;
 import com.his.system.vo.ScheduleTemplatePreviewVO;
 import com.his.system.vo.ScheduleTemplateVO;
-import com.his.common.base.PageResult;
 
 import java.util.List;
 

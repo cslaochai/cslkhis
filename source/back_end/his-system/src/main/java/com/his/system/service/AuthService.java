@@ -3,12 +3,7 @@ package com.his.system.service;
 import com.his.system.dto.ChangePasswordDTO;
 import com.his.system.dto.LoginRequestDTO;
 import com.his.system.dto.SwitchPostDTO;
-import com.his.system.vo.LoginVO;
-import com.his.system.vo.PublicKeyVO;
-import com.his.system.vo.UserLoginVO;
-import com.his.system.vo.UserRolesVO;
-import com.his.system.vo.EmployeePostVO;
-import com.his.system.vo.SwitchPostVO;
+import com.his.system.vo.*;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;

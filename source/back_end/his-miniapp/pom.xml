@@ -23,7 +23,7 @@
         </dependency>
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-api</artifactId>
+            <artifactId>his-domain-api</artifactId>
         </dependency>
     </dependencies>
 </project>

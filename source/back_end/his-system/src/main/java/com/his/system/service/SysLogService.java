@@ -2,12 +2,7 @@ package com.his.system.service;
 
 import com.his.common.base.PageResult;
 import com.his.system.dto.LogQueryPageDTO;
-import com.his.system.vo.AuditLogVO;
-import com.his.system.vo.FieldChangeVO;
-import com.his.system.vo.LogStatVO;
-import com.his.system.vo.LoginLogVO;
-import com.his.system.vo.OperLogDetailVO;
-import com.his.system.vo.OperLogListVO;
+import com.his.system.vo.*;
 
 /**
  * 日志审计服务（操作日志操作日志 / 登录日志登录日志 / 审计日志审计日志）。

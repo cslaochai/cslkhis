@@ -1,13 +1,13 @@
 package com.his.system.service.impl;
 
 import com.his.common.util.DateFormats;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysFieldChangeLog;
 import com.his.system.enums.MaskEnum;
 import com.his.system.mapper.SysFieldChangeLogMapper;
 import com.his.system.service.FieldChangeRecorder;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.support.FieldSpec;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -32,25 +32,21 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class FieldChangeRecorderImpl         implements FieldChangeRecorder {
-
-    private final RedisSequenceService redisSequenceService;
+public class FieldChangeRecorderImpl implements FieldChangeRecorder {
 
     /**
      * 单次最多落多少条：防"整对象反射"式误用把表撑爆
      */
     private static final int MAX_ROWS = 60;
-
     /**
      * 值列宽（与表 VARCHAR(500) 对齐）
      */
     private static final int VALUE_MAX = 500;
-
     /**
      * 类 → (属性名 → getter)，反射一次缓存住，别每次保存都 Introspector 一遍
      */
     private static final Map<Class<?>, Map<String, Method>> GETTER_CACHE = new ConcurrentHashMap<>();
-
+    private final RedisSequenceService redisSequenceService;
     private final SysFieldChangeLogMapper sysFieldChangeLogMapper;
 
     private static Object readProperty(Object bean, String name) {

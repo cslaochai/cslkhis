@@ -1,11 +1,7 @@
 package com.his.system.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.system.dto.EquipmentQueryPageDTO;
-import com.his.system.dto.MaintainCreateDTO;
-import com.his.system.dto.MaintainQueryPageDTO;
-import com.his.system.dto.MeteringCreateDTO;
-import com.his.system.dto.MeteringQueryPageDTO;
+import com.his.system.dto.*;
 import com.his.system.vo.EquipmentVO;
 import com.his.system.vo.MaintainVO;
 import com.his.system.vo.MeteringVO;

@@ -9,6 +9,10 @@ public interface SmsCodeService {
 
     public static final String SCENE_ADD = "add";
 
+    SendResult send(String phone, String scene);
+
+    String verify(String phone, String scene, String code);
+
     /**
      * 发码结果。success=false 时 message 为给用户看的失败原因。
      */
@@ -22,8 +26,4 @@ public interface SmsCodeService {
             return new SendResult(false, message, null);
         }
     }
-
-    SendResult send(String phone, String scene);
-
-    String verify(String phone, String scene, String code);
 }

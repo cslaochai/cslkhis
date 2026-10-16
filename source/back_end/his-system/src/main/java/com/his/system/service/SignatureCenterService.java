@@ -4,12 +4,7 @@ import com.his.system.dto.SignCertIssueDTO;
 import com.his.system.dto.SignCertRevokeDTO;
 import com.his.system.dto.SignatureInvalidateDTO;
 import com.his.system.dto.SignatureSignDTO;
-import com.his.system.vo.SignCaProbeOutboundVO;
-import com.his.system.vo.SignCaStatusVO;
-import com.his.system.vo.SignCertSelectListVO;
-import com.his.system.vo.SignCertVO;
-import com.his.system.vo.SignatureOptionsVO;
-import com.his.system.vo.SignatureVO;
+import com.his.system.vo.*;
 
 import java.util.List;
 

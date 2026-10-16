@@ -28,7 +28,7 @@
         <!-- 本模块是 ChargeApi 的实现方（依赖倒置：契约在 his-api） -->
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-api</artifactId>
+            <artifactId>his-domain-api</artifactId>
         </dependency>
         <!-- 支付二维码生成 -->
         <dependency>

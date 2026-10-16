@@ -75,7 +75,6 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
     private static final int DEVICE_OPEN = 1;
     private static final int SLOT_LOCKED = 0;
 
-
     /**
      * 待预约事实：active_flag=1 才有在办预约（唯一索引位）
      */

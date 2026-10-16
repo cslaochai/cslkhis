@@ -205,7 +205,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
      * 号源层不允许自己决定「这个人今天上不上班」，它只能借用已有事实。
      */
     private BizSchedule reuseOrSave(StaffScheduleUpsertDTO dto, BizSchedule schedule,
-                                         BizSchedule exist) {
+                                    BizSchedule exist) {
         if (exist == null || Objects.equals(exist.getId(), dto.getId())) {
             // 目标键上要么没人、要么就是自己（出诊计划换了人/换班 = 键本身在动）：直接落这条事实
             assertTimeFree(schedule);

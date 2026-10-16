@@ -29,7 +29,9 @@ public interface StaffPlanRuleService {
      */
     List<BizStaffPlanRule> listByUnit(Integer orgType, Long orgId, Integer staffType);
 
-    /** 取一条标准（不存在报错）：跨模块调用方要按 id 做权限归属判定。 */
+    /**
+     * 取一条标准（不存在报错）：跨模块调用方要按 id 做权限归属判定。
+     */
     BizStaffPlanRule requireById(Long id);
 
     /**

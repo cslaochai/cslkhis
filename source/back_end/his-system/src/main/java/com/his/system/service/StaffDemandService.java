@@ -48,15 +48,21 @@ public interface StaffDemandService {
     void adjust(LocalDate demandDate, Integer orgType, Long orgId, Integer staffType,
                 Integer requiredCount, String remark);
 
-/**
- * 重算结果：三类派生各多少行，界面上要能看出「重算到底动了什么」
- */
+    /**
+     * 重算结果：三类派生各多少行，界面上要能看出「重算到底动了什么」
+     */
     class DemandRecalcResult {
-        /** 住院护理派生行数 */
+        /**
+         * 住院护理派生行数
+         */
         public int inpatient;
-        /** 门诊护理派生行数 */
+        /**
+         * 门诊护理派生行数
+         */
         public int clinicNurse;
-        /** 门诊医生派生行数 */
+        /**
+         * 门诊医生派生行数
+         */
         public int clinicDoctor;
 
         public int total() {

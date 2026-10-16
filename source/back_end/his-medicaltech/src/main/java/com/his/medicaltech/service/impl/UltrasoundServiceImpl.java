@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -22,6 +21,7 @@ import com.his.medicaltech.vo.UltrasoundVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -41,14 +41,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper, BizUltrasoundRecord> implements UltrasoundService {
 
-
     private final BizUltrasoundRecordMapper bizUltrasoundRecordMapper;
-    private final BizUltrasoundMeasureMapper bizUltrasoundMeasureMapper;
-    private final DictCacheService dictCacheService;
-    private final RedisSequenceService redisSequenceService;
-    private final DeptScopeService deptScopeService;
 
-    // 查询
+    private final BizUltrasoundMeasureMapper bizUltrasoundMeasureMapper;
+
+    private final DictCacheService dictCacheService;
+
+    private final RedisSequenceService redisSequenceService;
+
+    private final DeptScopeService deptScopeService;
 
     public PageResult<UltrasoundVO.ListVO> pageVO(UltrasoundDTO.Query q) {
         // 科室数据权限收口：查询 DTO 无科室筛选字段，一律按岗位可见科室集合过滤

@@ -17,12 +17,12 @@ public interface ClinicSourceLogService {
     /**
      * 记录一条变更留痕。
      *
-     * @param scheduleId  门诊排班ID（批量/复刻按每条落账，必填）
-     * @param type        变更动作
-     * @param amount      变更数量（可空）
-     * @param reason      变更原因（可空；超 200 字符截断）
-     * @param schedule    排班快照（取 日期/科室/医生名；可为 null，删除类调用方务必传——排班随即物理删，
-     *                    不冗余快照列，审计将只剩一条查不到任何上下文的裸 ID）
+     * @param scheduleId 门诊排班ID（批量/复刻按每条落账，必填）
+     * @param type       变更动作
+     * @param amount     变更数量（可空）
+     * @param reason     变更原因（可空；超 200 字符截断）
+     * @param schedule   排班快照（取 日期/科室/医生名；可为 null，删除类调用方务必传——排班随即物理删，
+     *                   不冗余快照列，审计将只剩一条查不到任何上下文的裸 ID）
      */
     Long record(Long scheduleId, ClinicSourceChangeTypeEnum type, Integer amount, String reason, BizClinicSource schedule);
 

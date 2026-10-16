@@ -23,18 +23,17 @@
         </dependency>
         <dependency>
             <groupId>com.his</groupId>
+            <artifactId>his-domain-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
             <artifactId>his-system</artifactId>
         </dependency>
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-emr</artifactId>
+            <artifactId>his-clinical</artifactId>
             <version>1.0.0</version>
             <scope>compile</scope>
-        </dependency>
-        <!-- 记账与报表读结算单均经 ChargeApi（his-api 契约，his-charge 实现），不再直连收费模块 -->
-        <dependency>
-            <groupId>com.his</groupId>
-            <artifactId>his-api</artifactId>
         </dependency>
         <dependency>
             <groupId>com.his</groupId>

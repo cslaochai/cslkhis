@@ -1,9 +1,9 @@
 package com.his.system.service.impl;
 
+import com.his.common.util.TextUtil;
 import com.his.system.config.SignProperties;
 import com.his.system.service.ExternalCaChannelService;
 import com.his.system.utils.SignCryptoUtil;
-import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

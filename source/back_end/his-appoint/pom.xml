@@ -29,7 +29,7 @@
         <!-- 挂号费结算/医保开关经 ChargeApi（his-api 契约，his-charge 实现） -->
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-api</artifactId>
+            <artifactId>his-domain-api</artifactId>
         </dependency>
     </dependencies>
 </project>

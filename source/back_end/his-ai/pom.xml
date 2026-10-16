@@ -35,7 +35,7 @@
         </dependency>
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-emr</artifactId>
+            <artifactId>his-clinical</artifactId>
         </dependency>
         <dependency>
             <groupId>com.his</groupId>
@@ -43,7 +43,7 @@
         </dependency>
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-api</artifactId>
+            <artifactId>his-domain-api</artifactId>
         </dependency>
 
         <!-- 知识库文件导入解析：PDF（pdfbox）+ Word docx（poi-ooxml） -->

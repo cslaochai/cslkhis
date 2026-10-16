@@ -55,11 +55,15 @@ public interface StaffAttendanceService {
      */
     void remove(Long id);
 
-    /** 计划 vs 实际 的行级对照（可按需筛到某个单元/某个人/某类差异）。 */
+    /**
+     * 计划 vs 实际 的行级对照（可按需筛到某个单元/某个人/某类差异）。
+     */
     List<StaffWorktimeVO> comparison(LocalDate startDate, LocalDate endDate, Integer orgType, Long orgId,
                                      Integer staffType, Integer diffType);
 
-    /** 单元 × 日 的执行汇总（计划人数/实到/缺勤/未回填/加班 + 工时差）。 */
+    /**
+     * 单元 × 日 的执行汇总（计划人数/实到/缺勤/未回填/加班 + 工时差）。
+     */
     List<WorktimeSummaryVO> summary(LocalDate startDate, LocalDate endDate, Integer orgType, Long orgId,
                                     Integer staffType);
 
@@ -82,9 +86,13 @@ public interface StaffAttendanceService {
      */
     StaffAttendanceVO myToday();
 
-    /** 自己签到（时间=此刻；没排班则按主科室兜底记为加班）。 */
+    /**
+     * 自己签到（时间=此刻；没排班则按主科室兜底记为加班）。
+     */
     StaffAttendanceVO myCheckIn();
 
-    /** 自己签退（时间=此刻）。 */
+    /**
+     * 自己签退（时间=此刻）。
+     */
     StaffAttendanceVO myCheckOut();
 }

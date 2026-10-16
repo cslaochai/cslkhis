@@ -23,14 +23,20 @@ public interface DrugKnowledgeService {
      */
     DrugInteractionVO interactionUpsert(DrugInteractionUpsertDTO upsertDTO);
 
-    /** 物理删（唯一键不含 del_flag，软删会永久占住这一对成分） */
+    /**
+     * 物理删（唯一键不含 del_flag，软删会永久占住这一对成分）
+     */
     void interactionDeleteById(Long id);
 
     PageResult<DoseLimitVO> doseLimitListPage(DoseLimitQueryPageDTO queryDTO);
 
-    /** 同 interactionUpsert，回读整条 VO */
+    /**
+     * 同 interactionUpsert，回读整条 VO
+     */
     DoseLimitVO doseLimitUpsert(DoseLimitUpsertDTO upsertDTO);
 
-    /** 物理删，同上 */
+    /**
+     * 物理删，同上
+     */
     void doseLimitDeleteById(Long id);
 }

@@ -21,11 +21,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -64,8 +60,8 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
     public List<DepartmentSelectListVO> selectList(DepartmentSelectDTO selectDTO) {
         LambdaQueryWrapper<SysDepartment> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(selectDTO.getDeptName()), SysDepartment::getDeptName, selectDTO.getDeptName())
-                .apply(TextUtil.hasText(selectDTO.getDeptType()), 
-                       "FIND_IN_SET({0}, dept_type) > 0", selectDTO.getDeptType())
+                .apply(TextUtil.hasText(selectDTO.getDeptType()),
+                        "FIND_IN_SET({0}, dept_type) > 0", selectDTO.getDeptType())
                 .orderByAsc(SysDepartment::getSortOrder)
                 // 唯一二级键：排序字段大量并列，缺主键兜底时列表顺序在不同请求间会漂
                 .orderByAsc(SysDepartment::getId);
@@ -134,8 +130,8 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
     private LambdaQueryWrapper<SysDepartment> buildWrapper(DepartmentQueryDTO queryDTO) {
         LambdaQueryWrapper<SysDepartment> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(queryDTO.getDeptName()), SysDepartment::getDeptName, queryDTO.getDeptName())
-                .apply(TextUtil.hasText(queryDTO.getDeptType()), 
-                       "FIND_IN_SET({0}, dept_type) > 0", queryDTO.getDeptType())
+                .apply(TextUtil.hasText(queryDTO.getDeptType()),
+                        "FIND_IN_SET({0}, dept_type) > 0", queryDTO.getDeptType())
                 .orderByAsc(SysDepartment::getSortOrder);
         return wrapper;
     }

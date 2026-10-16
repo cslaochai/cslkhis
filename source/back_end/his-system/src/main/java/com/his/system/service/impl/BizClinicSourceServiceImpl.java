@@ -2,40 +2,28 @@ package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.api.service.AppointApi;
-import com.his.system.dto.BizClinicSourceBatchItemDTO;
-import com.his.system.dto.BizClinicSourceBatchUpsertDTO;
-import com.his.system.dto.BizClinicSourceReplicateDTO;
-import com.his.system.dto.NurseDutyRow;
-import com.his.system.dto.OnDutyQueryDTO;
-import com.his.system.dto.ScheduleQueryDTO;
 import com.his.api.dto.ScheduleSelectQueryDTO;
-import com.his.system.dto.ScheduleUpsertDTO;
-import com.his.system.entity.BizClinicSource;
-import com.his.system.mapper.BizClinicSourceMapper;
-import com.his.system.mapper.BizScheduleMapper;
-import com.his.system.service.BizClinicSourceService;
-import com.his.system.service.BizClinicSourceSlotService;
-import com.his.system.service.ClinicSourceLogService;
-import com.his.system.vo.BizClinicSourceBatchResultVO;
-import com.his.system.vo.OnDutyStaffVO;
-import com.his.system.vo.ScheduleDetailVO;
-import com.his.system.vo.ScheduleSelectListVO;
+import com.his.api.service.AppointApi;
 import com.his.api.vo.StopImpactItemVO;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
 import com.his.common.util.ShiftCoverUtil;
 import com.his.common.util.TextUtil;
-import com.his.system.dto.StaffScheduleUpsertDTO;
-import com.his.system.entity.BizShift;
+import com.his.system.dto.*;
+import com.his.system.entity.BizClinicSource;
 import com.his.system.entity.BizSchedule;
+import com.his.system.entity.BizShift;
 import com.his.system.entity.CurrentUser;
+import com.his.system.mapper.BizClinicSourceMapper;
+import com.his.system.mapper.BizScheduleMapper;
 import com.his.system.provider.DeptScopeService;
-import com.his.system.service.ShiftService;
-import com.his.system.service.StaffScheduleService;
-import com.his.system.service.SysClinicRoomService;
+import com.his.system.service.*;
 import com.his.system.utils.UserUtils;
+import com.his.system.vo.BizClinicSourceBatchResultVO;
+import com.his.system.vo.OnDutyStaffVO;
+import com.his.system.vo.ScheduleDetailVO;
+import com.his.system.vo.ScheduleSelectListVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.dao.DuplicateKeyException;
@@ -45,14 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 挂号服务实现
@@ -61,7 +42,9 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMapper, BizClinicSource> implements BizClinicSourceService {
 
-    /** 复刻的默认后移天数（一周） */
+    /**
+     * 复刻的默认后移天数（一周）
+     */
     private static final int REPLICATE_DEFAULT_OFFSET = 7;
 
     private final DeptScopeService deptScopeService;
@@ -309,7 +292,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
             releaseCoreSchedule(existing.getStaffScheduleId());
             clinicSourceLogService.record(id, ClinicSourceChangeTypeEnum.DELETE, null,
                     existing.getDoctorName() + " " + existing.getScheduleDate() + " "
-                    + existing.getStartTime() + "-" + existing.getEndTime(), existing);
+                            + existing.getStartTime() + "-" + existing.getEndTime(), existing);
         }
         return ok;
     }
@@ -425,7 +408,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
             clinicSourceLogService.record(schedule.getId(),
                     upsertDTO.getId() == null ? ClinicSourceChangeTypeEnum.CREATE : ClinicSourceChangeTypeEnum.UPDATE,
                     null, schedule.getDoctorName() + " " + schedule.getScheduleDate() + " "
-                    + schedule.getStartTime() + "-" + schedule.getEndTime(), schedule);
+                            + schedule.getStartTime() + "-" + schedule.getEndTime(), schedule);
         } catch (DuplicateKeyException e) {
             throw new BusinessException("该医生在此时间段已有排班，时间冲突");
         }
@@ -454,7 +437,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
                 }
                 clinicSourceLogService.record(schedule.getId(), ClinicSourceChangeTypeEnum.CREATE, null,
                         "批量新增：" + item.getDoctorName() + " " + date + " "
-                        + schedule.getStartTime() + "-" + schedule.getEndTime(), schedule);
+                                + schedule.getStartTime() + "-" + schedule.getEndTime(), schedule);
                 created++;
             }
         }
@@ -543,7 +526,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
             }
             clinicSourceLogService.record(copy.getId(), ClinicSourceChangeTypeEnum.REPLICATE, null,
                     "复刻：" + copy.getDoctorName() + " " + targetDate + " "
-                    + copy.getStartTime() + "-" + copy.getEndTime(), copy);
+                            + copy.getStartTime() + "-" + copy.getEndTime(), copy);
             created++;
         }
         BizClinicSourceBatchResultVO vo = new BizClinicSourceBatchResultVO();
@@ -729,7 +712,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
             clinicSourceLogService.record(scheduleId,
                     stopping ? ClinicSourceChangeTypeEnum.STOP : ClinicSourceChangeTypeEnum.ENABLE,
                     null, old.getDoctorName() + " " + old.getScheduleDate()
-                    + "（" + (stopping ? "停诊" : "启用") + "）", old);
+                            + "（" + (stopping ? "停诊" : "启用") + "）", old);
         }
         return ok;
     }
@@ -931,24 +914,6 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
     }
 
     /**
-     * 统一的候选用人在岗行（抹平门诊号源表 / 护理排班表两张源的差异）。
-     */
-    private static class DutyRow {
-        Long scheduleId;
-        Long staffId;
-        String staffName;
-        Integer staffType;
-        Long deptId;
-        String deptName;
-        Long shiftId;
-        String startTime;
-        String endTime;
-        Integer status;
-        Long roomId;
-        String roomName;
-    }
-
-    /**
      * 当前登录人所属科室；取不到返回 null（由调用方决定空结果还是报错）
      */
     private Long currentDeptId() {
@@ -993,5 +958,23 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
             clinicSourceLogService.record(scheduleId, ClinicSourceChangeTypeEnum.ADD_SOURCE, addNum, reason, schedule);
         }
         return ok;
+    }
+
+    /**
+     * 统一的候选用人在岗行（抹平门诊号源表 / 护理排班表两张源的差异）。
+     */
+    private static class DutyRow {
+        Long scheduleId;
+        Long staffId;
+        String staffName;
+        Integer staffType;
+        Long deptId;
+        String deptName;
+        Long shiftId;
+        String startTime;
+        String endTime;
+        Integer status;
+        Long roomId;
+        String roomName;
     }
 }
