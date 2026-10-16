@@ -3,7 +3,7 @@ package com.his.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.enums.EnableStatusEnum;
 import com.his.common.enums.UserTypeEnum;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import com.his.system.entity.SysEmployee;
 import com.his.system.entity.SysUser;
 import com.his.system.mapper.SysEmployeeMapper;

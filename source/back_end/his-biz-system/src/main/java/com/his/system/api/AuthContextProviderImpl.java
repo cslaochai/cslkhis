@@ -13,7 +13,7 @@ public class AuthContextProviderImpl implements AuthContextProvider {
 
     @Override
     public CurrentUser getCurrentUser() {
-        com.his.system.entity.CurrentUser src = UserUtils.getCurrentUser();
+        com.his.common.entity.CurrentUser src = UserUtils.getCurrentUser();
         if (src == null) {
             return null;
         }

@@ -17,7 +17,7 @@ import com.his.system.mapper.BizTsaTokenMapper;
 import com.his.system.mapper.SignConfigMapper;
 import com.his.system.mapper.SysTsaServerMapper;
 import com.his.system.service.EmrSignatureService;
-import com.his.system.service.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.system.service.TsaChannelService;
 import com.his.system.service.TsaService;
 import com.his.system.utils.SignCryptoUtil;

@@ -17,7 +17,7 @@ import com.his.medicaltech.mapper.BizLisEqaSampleMapper;
 import com.his.medicaltech.service.LisEqaService;
 import com.his.medicaltech.support.EqaJudgeEngine;
 import com.his.medicaltech.vo.LisEqaVO;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;

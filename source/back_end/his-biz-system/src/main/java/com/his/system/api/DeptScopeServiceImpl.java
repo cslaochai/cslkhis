@@ -1,15 +1,15 @@
-package com.his.system.service.impl;
+package com.his.system.api;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import com.his.system.entity.SysDepartment;
 import com.his.system.entity.SysRole;
 import com.his.system.mapper.SysDepartmentMapper;
 import com.his.system.mapper.SysEmployeePostMapper;
 import com.his.system.mapper.SysRoleMapper;
-import com.his.system.provider.DeptScopeService;
+import com.his.api.service.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

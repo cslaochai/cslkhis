@@ -26,7 +26,7 @@ import com.his.api.vo.RegistBriefVO;
 import com.his.api.vo.RevisitFeePreviewVO;
 import com.his.api.vo.RevisitRecordSelectVO;
 import com.his.api.vo.TodayVisitVO;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import com.his.api.vo.StopImpactItemVO;
 import lombok.RequiredArgsConstructor;

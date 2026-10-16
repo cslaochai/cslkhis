@@ -33,11 +33,11 @@ import com.his.common.util.TimeUtil;
 import com.his.system.entity.BizClinicSource;
 import com.his.system.entity.BizClinicSourceSlot;
 import com.his.system.entity.BizSchedule;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import com.his.system.mapper.BizClinicSourceMapper;
 import com.his.system.mapper.BizClinicSourceSlotMapper;
-import com.his.system.provider.DeptScopeService;
-import com.his.system.service.RedisSequenceService;
+import com.his.api.service.DeptScopeService;
+import com.his.common.service.RedisSequenceService;
 import com.his.system.service.ShiftService;
 import com.his.system.service.StaffScheduleService;
 import com.his.system.utils.UserUtils;
@@ -65,17 +65,28 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
     private static final int REGIST_CUTOFF_MINUTES = 10;
 
     private final DeptScopeService deptScopeService;
+
     private final BizClinicSourceMapper bizScheduleMapper;
+
     private final BizClinicSourceSlotMapper bizScheduleSlotMapper;
+
     private final QueueMapper queueMapper;
+
     private final RedisSequenceService redisSequenceService;
-    private final PatientProvider patientProvider;
+
     private final ShiftService shiftService;
+
     private final StaffScheduleService staffScheduleService;
-    private final ChargeProvider chargeProvider;
-    private final EmrProvider emrProvider;
+
     private final RevisitFeePolicyService revisitFeePolicyService;
+
     private final DayEndSettleTrigger dayEndSettleTrigger;
+
+    private final PatientProvider patientProvider;
+
+    private final ChargeProvider chargeProvider;
+
+    private final EmrProvider emrProvider;
 
     private static String visitDatePastReason(AppointInfo regist, String action) {
         LocalDate visitDate = regist.getVisitDate();
@@ -313,7 +324,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         // 批量查询账单信息（经 SPI 委派至 his-charge）
         Map<Long, BillBriefVO> billMap = new HashMap<>();
         if (!billIds.isEmpty()) {
-            billMap = appointChargeGateway.mapBillsByIds(billIds);
+            billMap = chargeProvider.mapBillsByIds(billIds);
         }
 
         // 批量查询队列记录：挂号表本身没有排队号与队列状态，
@@ -600,7 +611,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
             // 本单结算方式（1-全自费 2-医保联网）：挂号单选什么就透什么，支持医保患者本单改自费
             command.setSettlementMode(appointInfo.getSettlementType());
 
-            BillBriefVO bill = appointChargeGateway.createRegistCharge(command);
+            BillBriefVO bill = chargeProvider.createRegistCharge(command);
             if (bill != null) {
                 appointInfo.setBillId(bill.getBillId());
                 appointInfo.setBillNo(bill.getBillNo());
@@ -938,7 +949,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         if (existing.getBillId() == null) {
             return;
         }
-        BillBriefVO bill = appointChargeGateway.getBill(existing.getBillId());
+        BillBriefVO bill = chargeProvider.getBill(existing.getBillId());
         BigDecimal paid = bill == null ? BigDecimal.ZERO : NumUtil.orZero(bill.getPaidAmount());
         if (paid.signum() <= 0) {
             return;
@@ -985,7 +996,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         command.setBillId(registInfo.getBillId());
         command.setReason(TextUtil.hasText(reason) ? reason : "退号");
         command.setOperator(operatorUser.getRealName());
-        boolean closed = appointChargeGateway.cancelRegistCharge(command);
+        boolean closed = chargeProvider.cancelRegistCharge(command);
         log.info("退号联动账单：registId={}，billId={}，撤销={}",
                 registInfo.getId(), registInfo.getBillId(), closed);
     }

@@ -7,7 +7,7 @@ import com.his.pharmacy.dto.*;
 import com.his.pharmacy.service.HighValueTraceService;
 import com.his.pharmacy.service.SuppliesService;
 import com.his.pharmacy.vo.*;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

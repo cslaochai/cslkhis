@@ -1,10 +1,10 @@
 package com.his.system.filter;
 
 import com.his.common.util.TextUtil;
-import com.his.system.entity.CurrentUser;
-import com.his.system.provider.RolePermissionService;
+import com.his.common.entity.CurrentUser;
+import com.his.api.service.RolePermissionService;
 import com.his.system.service.impl.UserDetailsServiceImpl;
-import com.his.system.utils.JwtUtils;
+import com.his.common.util.JwtUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

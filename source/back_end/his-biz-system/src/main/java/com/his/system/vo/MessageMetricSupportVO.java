@@ -1,7 +1,7 @@
 package com.his.system.vo;
 
 import com.his.common.util.DateFormats;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import com.his.system.entity.SysMessage;
 import lombok.Data;
 

@@ -20,7 +20,7 @@ import com.his.patient.vo.InpatientOrderTemplateDetailVO;
 import com.his.patient.vo.InpatientOrderTemplateItemVO;
 import com.his.patient.vo.InpatientOrderTemplateListVO;
 import com.his.patient.vo.InpatientOrderTemplateSelectListVO;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

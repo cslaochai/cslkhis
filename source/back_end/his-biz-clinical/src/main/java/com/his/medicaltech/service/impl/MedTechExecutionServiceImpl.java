@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.medicaltech.entity.BizMedTechExecution;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import com.his.medicaltech.mapper.BizMedTechExecutionMapper;
 import com.his.medicaltech.service.MedTechExecutionService;

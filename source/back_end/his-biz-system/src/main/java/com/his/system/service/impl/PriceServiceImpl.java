@@ -11,7 +11,7 @@ import com.his.common.util.TimeUtil;
 import com.his.system.dto.PriceChangeDTO;
 import com.his.system.dto.PriceHistoryQueryPageDTO;
 import com.his.system.dto.PriceQueryPageDTO;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import com.his.system.entity.SysPriceChangeHistory;
 import com.his.system.mapper.PriceMapper;
 import com.his.system.mapper.SysPriceChangeHistoryMapper;

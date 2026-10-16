@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.system.dto.MenuUpsertDTO;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import com.his.system.entity.SysMenu;
 import com.his.system.mapper.SysMenuMapper;
 import com.his.system.service.RolePermissionCache;

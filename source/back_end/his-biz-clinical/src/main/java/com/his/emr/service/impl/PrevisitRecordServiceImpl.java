@@ -14,7 +14,7 @@ import com.his.emr.service.PrevisitRecordService;
 import com.his.api.support.PrevisitQuestionnaireSupport;
 import com.his.api.vo.PrevisitDetailVO;
 import com.his.api.vo.PrevisitQuestionnaireVO;
-import com.his.system.provider.DeptScopeService;
+import com.his.api.service.DeptScopeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;

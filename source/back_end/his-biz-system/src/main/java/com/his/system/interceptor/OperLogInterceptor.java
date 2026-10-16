@@ -1,11 +1,10 @@
 package com.his.system.interceptor;
 
 import com.his.common.util.TextUtil;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import com.his.system.entity.SysOperLog;
 import com.his.system.filter.OperLogCachingFilter;
 import com.his.system.mapper.SysOperLogMapper;
-import com.his.system.support.OperLogExceptionResolver;
 import com.his.system.support.OperLogResultMarker;
 import com.his.system.utils.RequestInfoUtils;
 import com.his.system.utils.UserUtils;

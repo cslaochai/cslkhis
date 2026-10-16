@@ -1,6 +1,6 @@
-package com.his.system.provider;
+package com.his.api.service;
 
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 
 import java.util.Map;
 

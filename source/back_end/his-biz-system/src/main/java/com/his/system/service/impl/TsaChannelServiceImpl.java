@@ -7,7 +7,7 @@ import com.his.system.entity.BizTsaToken;
 import com.his.system.entity.SysTsaServer;
 import com.his.system.mapper.BizTsaTokenMapper;
 import com.his.system.mapper.SysTsaServerMapper;
-import com.his.system.service.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.system.service.TsaChannelService;
 import com.his.system.utils.KeyPairFactory;
 import com.his.system.utils.KeyProtectorUtil;

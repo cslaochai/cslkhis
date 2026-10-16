@@ -32,7 +32,7 @@ import com.his.system.entity.SysEmployee;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.mapper.SysEmployeeMapper;
 import com.his.system.service.DictCacheService;
-import com.his.system.service.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.system.service.SysMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

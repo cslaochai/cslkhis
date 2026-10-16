@@ -1,7 +1,7 @@
-package com.his.system.service.impl;
+package com.his.system.api;
 
 import com.his.common.util.TextUtil;
-import com.his.system.provider.RolePermissionService;
+import com.his.api.service.RolePermissionService;
 import com.his.system.service.RolePermissionCache;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

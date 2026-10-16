@@ -15,7 +15,7 @@ import com.his.system.entity.SysRoleMenu;
 import com.his.system.mapper.SysMenuMapper;
 import com.his.system.mapper.SysRoleMapper;
 import com.his.system.mapper.SysRoleMenuMapper;
-import com.his.system.service.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.system.service.RolePermissionCache;
 import com.his.system.service.SysRoleService;
 import com.his.system.service.UserIdentityCache;

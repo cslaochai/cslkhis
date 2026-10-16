@@ -11,7 +11,7 @@ import com.his.emr.mapper.BizAiDraftDiffMapper;
 import com.his.emr.service.AiDraftDiffService;
 import com.his.emr.support.DraftDiffSupport;
 import com.his.emr.vo.AiDraftDiffListVO;
-import com.his.system.provider.DeptScopeService;
+import com.his.api.service.DeptScopeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;

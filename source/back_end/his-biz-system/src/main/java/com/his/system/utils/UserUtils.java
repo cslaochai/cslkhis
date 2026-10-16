@@ -1,6 +1,6 @@
 package com.his.system.utils;
 
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 

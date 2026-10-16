@@ -16,7 +16,7 @@ import com.his.emr.enums.*;
 import com.his.emr.mapper.*;
 import com.his.emr.service.RxReviewService;
 import com.his.emr.vo.*;
-import com.his.system.service.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

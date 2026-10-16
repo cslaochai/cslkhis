@@ -41,7 +41,7 @@ import com.his.patient.service.PatientGuardianService;
 import com.his.patient.service.PatientIndexService;
 import com.his.patient.support.PatientProfileFields;
 import com.his.patient.support.PatientProfileValidator;
-import com.his.system.service.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;

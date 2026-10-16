@@ -2,12 +2,12 @@ package com.his.system.service.impl;
 
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import com.his.system.entity.SysFieldChangeLog;
 import com.his.system.enums.MaskEnum;
 import com.his.system.mapper.SysFieldChangeLogMapper;
 import com.his.system.service.FieldChangeRecorder;
-import com.his.system.service.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.system.support.FieldSpec;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;

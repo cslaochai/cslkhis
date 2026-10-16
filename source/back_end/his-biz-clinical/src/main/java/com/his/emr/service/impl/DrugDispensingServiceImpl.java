@@ -21,7 +21,7 @@ import com.his.emr.vo.DrugDispensingCountVO;
 import com.his.emr.vo.NarcoticViolationVO;
 import com.his.pharmacy.dto.StockDeductResultDTO;
 import com.his.pharmacy.service.PharmacyService;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import com.his.system.entity.SysDrug;
 import com.his.system.mapper.SysDrugMapper;
 import com.his.system.utils.UserUtils;

@@ -3,7 +3,7 @@ package com.his.patient.support;
 import com.his.common.util.TextUtil;
 import com.his.patient.enums.PatientSearchScopeModeEnum;
 import com.his.system.utils.UserUtils;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;

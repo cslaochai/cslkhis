@@ -26,7 +26,7 @@ import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.pay.service.ChargePayChannelService;
 import com.his.system.service.IdempotentGuardService;
-import com.his.system.service.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

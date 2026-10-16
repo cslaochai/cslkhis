@@ -27,7 +27,7 @@ import com.his.medicaltech.mapper.BizSkinTestMapper;
 import com.his.medicaltech.service.InfusionRoomService;
 import com.his.medicaltech.vo.InfusionPatientSnapshotVO;
 import com.his.medicaltech.vo.InfusionRoomVO;
-import com.his.system.service.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

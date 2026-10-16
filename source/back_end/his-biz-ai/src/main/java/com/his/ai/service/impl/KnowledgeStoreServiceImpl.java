@@ -18,7 +18,7 @@ import com.his.ai.service.KnowledgeStoreService;
 import com.his.ai.vo.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;

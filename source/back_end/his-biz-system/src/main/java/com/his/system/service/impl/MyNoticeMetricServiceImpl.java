@@ -2,9 +2,9 @@ package com.his.system.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import com.his.system.entity.SysMessage;
-import com.his.system.provider.WorkbenchMetricService;
+import com.his.api.service.WorkbenchMetricService;
 import com.his.system.service.MyNoticeMetricService;
 import com.his.system.service.SysMessageService;
 import com.his.system.vo.MessageMetricSupportVO;

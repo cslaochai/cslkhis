@@ -20,7 +20,7 @@ import com.his.medicaltech.enums.ReportStatusEnum;
 import com.his.medicaltech.enums.ReportTypeEnum;
 import com.his.medicaltech.mapper.BizReportMapper;
 import com.his.api.service.PatientProvider;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;

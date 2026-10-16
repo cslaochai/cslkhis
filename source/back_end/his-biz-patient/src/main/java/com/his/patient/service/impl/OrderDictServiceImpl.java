@@ -15,7 +15,7 @@ import com.his.patient.service.OrderDictService;
 import com.his.patient.support.OrderDictTypes;
 import com.his.patient.vo.OrderDictListVO;
 import com.his.patient.vo.OrderDictUsageCountVO;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;

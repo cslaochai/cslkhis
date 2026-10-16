@@ -19,7 +19,7 @@ import com.his.system.entity.SysSignCert;
 import com.his.system.mapper.SignConfigMapper;
 import com.his.system.mapper.SysSignCertMapper;
 import com.his.system.service.ExternalCaChannelService;
-import com.his.system.service.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.system.service.SignCertService;
 import com.his.system.utils.KeyPairFactory;
 import com.his.system.utils.KeyProtectorUtil;

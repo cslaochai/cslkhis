@@ -14,7 +14,7 @@ import com.his.medicaltech.mapper.BizExamSlotMapper;
 import com.his.medicaltech.service.ExamSlotService;
 import com.his.medicaltech.support.ExamGrid;
 import com.his.medicaltech.vo.ExamApptVO;
-import com.his.system.provider.DeptScopeService;
+import com.his.api.service.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

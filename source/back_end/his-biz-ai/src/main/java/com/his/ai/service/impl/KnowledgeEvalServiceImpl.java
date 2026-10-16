@@ -22,7 +22,7 @@ import com.his.ai.vo.KnowledgeEvalRunDetailVO;
 import com.his.ai.vo.KnowledgeEvalRunVO;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

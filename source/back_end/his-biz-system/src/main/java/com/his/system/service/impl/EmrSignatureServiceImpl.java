@@ -3,6 +3,7 @@ package com.his.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.service.RedisSequenceService;
 import com.his.api.service.SignCoverageProvider;
 import com.his.api.service.SignableContentProvider;
 import com.his.api.vo.SignSubject;

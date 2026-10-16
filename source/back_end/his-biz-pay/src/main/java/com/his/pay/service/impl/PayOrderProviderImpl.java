@@ -11,7 +11,7 @@ import com.his.pay.mapper.BizPayOrderMapper;
 import com.his.api.service.AlipayChannelProvider;
 import com.his.api.service.PayOrderProvider;
 import com.his.api.vo.PayOrderVO;
-import com.his.system.service.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

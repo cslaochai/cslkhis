@@ -1,4 +1,4 @@
-package com.his.system.entity;
+package com.his.common.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.his.common.util.TextUtil;

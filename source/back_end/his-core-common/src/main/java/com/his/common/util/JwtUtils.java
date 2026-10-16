@@ -1,4 +1,4 @@
-package com.his.system.utils;
+package com.his.common.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -32,29 +32,13 @@ public class JwtUtils {
     /**
      * 生成JWT Token。
      *
-     * <p><b>所有签发点必须走这一个方法</b>（登录 / 切角色 / 切科室）。原因是「当前角色」和
-     * 「当前科室」都是**会话级选择**，它们只活在这个 token 里：
-     * {@code UserDetailsServiceImpl} 每次都从库里重建 CurrentUser（科室取的是员工的**主科室**），
-     * 所以只要重签 token 时漏带其中一个，用户切过的那一项就会
-     * 在下一次请求里被库里的默认值悄悄覆盖 —— 表现就是「切换了啥都没变」，而且刷新页面
-     * 也救不回来（前端 localStorage 说 A、后端按 B 算，两边各说各话）。
-     *
-     * <p>为什么不把 deptId 也做成「从库里查」：一个员工可以有多个科室
-     * （员工岗位），库里记的那一份只是主科室，用户当场选了哪个只存在于会话中。
-     *
      * @param currentRole 当前岗位角色编码，交给 {@code JwtAuthenticationFilter} 收敛权限用
      * @param deptId      当前科室ID（员工主科室或用户切换后的科室）
      * @param deptName    当前科室名称，随 token 一起带走，避免读侧再查一次库
      */
     public String generateToken(Long userId, String username, String currentRole,
                                 Long deptId, String deptName) {
-        // claims 是 JWT 标准里就有的「动态 JSON 载荷」容器：jjwt 的 claims() 签名要求 Map，
-        // 且标准 claims（iss/sub/exp/iat/nbf/jti）与本系统自定义项大量可选、随签发点增减，
-        // 收成一个 claims 类只会更脆（加一个可选 claim 就得改类 + 改所有读侧）。
-        // 所以这里保留 Map —— 它是 jjwt 的 API 形状，不是我们的数据契约。
         Map<String, Object> claims = new HashMap<>();
-        // 大整数 ID 必须以字符串进 claims：jjwt 解析 JSON 数字时经 Double 会丢精度
-        // （90000000000009099 → 9000000000000009099），toLong 已兼容字符串入参
         claims.put("userId", userId == null ? null : String.valueOf(userId));
         claims.put("username", username);
         claims.put("currentRole", currentRole);

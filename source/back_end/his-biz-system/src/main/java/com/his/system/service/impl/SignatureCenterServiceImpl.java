@@ -5,7 +5,7 @@ import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.system.config.SignProperties;
 import com.his.system.dto.*;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import com.his.system.service.EmrSignatureService;
 import com.his.system.service.ExternalCaChannelService;
 import com.his.system.service.SignCertService;

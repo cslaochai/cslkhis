@@ -6,7 +6,7 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.AdverseAcquiredEnum;
 import com.his.common.enums.DelFlagEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.emr.dto.AdverseEventActionDTO;
@@ -19,7 +19,7 @@ import com.his.emr.mapper.BizAdverseEventMapper;
 import com.his.emr.service.AdverseEventService;
 import com.his.emr.vo.AdverseEventStatsVO;
 import com.his.emr.vo.AdverseEventVO;
-import com.his.system.provider.DeptScopeService;
+import com.his.api.service.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -36,7 +36,9 @@ import java.util.Objects;
 public class AdverseEventServiceImpl extends ServiceImpl<BizAdverseEventMapper, BizAdverseEvent> implements AdverseEventService {
 
     private final BizAdverseEventMapper bizAdverseEventMapper;
+
     private final RedisSequenceService redisSequenceService;
+
     private final DeptScopeService deptScopeService;
 
     private static Long asLong(Object v) {

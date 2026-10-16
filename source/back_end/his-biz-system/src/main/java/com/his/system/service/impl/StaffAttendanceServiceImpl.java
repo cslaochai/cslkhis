@@ -7,7 +7,7 @@ import com.his.system.dto.AttendanceDTO;
 import com.his.system.entity.BizSchedule;
 import com.his.system.entity.BizShift;
 import com.his.system.entity.BizStaffAttendance;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import com.his.system.enums.StaffAttendanceStatusEnum;
 import com.his.system.mapper.BizStaffAttendanceMapper;
 import com.his.system.service.StaffAttendanceService;

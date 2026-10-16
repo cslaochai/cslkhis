@@ -11,7 +11,7 @@ import com.his.emr.entity.*;
 import com.his.emr.mapper.*;
 import com.his.emr.service.OtherTemplateService;
 import com.his.emr.vo.*;
-import com.his.system.entity.CurrentUser;
+import com.his.common.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;

@@ -20,7 +20,7 @@ import com.his.pharmacy.service.DrugStockCacheService;
 import com.his.pharmacy.service.PharmacyService;
 import com.his.pharmacy.vo.BizDrugStockLogVO;
 import com.his.pharmacy.vo.BizDrugStockVO;
-import com.his.system.service.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;

@@ -24,7 +24,7 @@ import com.his.medicaltech.vo.ExamDeviceItemCountRowVO;
 import com.his.medicaltech.vo.ExamEquipmentOptionRowVO;
 import com.his.system.entity.SysInspectionItem;
 import com.his.system.mapper.SysInspectionItemMapper;
-import com.his.system.provider.DeptScopeService;
+import com.his.api.service.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;

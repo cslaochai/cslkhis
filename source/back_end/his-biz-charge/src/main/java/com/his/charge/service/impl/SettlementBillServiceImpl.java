@@ -28,7 +28,7 @@ import com.his.common.util.TextUtil;
 import com.his.api.service.PatientProvider;
 import com.his.api.vo.PatientBriefVO;
 import com.his.system.service.InsurancePolicyService;
-import com.his.system.service.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

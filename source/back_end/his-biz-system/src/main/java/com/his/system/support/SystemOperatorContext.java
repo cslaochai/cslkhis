@@ -1,8 +1,7 @@
 package com.his.system.support;
 
 import com.his.common.enums.UserTypeEnum;
-import com.his.system.entity.CurrentUser;
-import lombok.AccessLevel;
+import com.his.common.entity.CurrentUser;
 import lombok.NoArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
