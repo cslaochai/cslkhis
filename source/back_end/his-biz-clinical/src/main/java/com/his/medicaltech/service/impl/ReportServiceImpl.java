@@ -1,7 +1,7 @@
 package com.his.medicaltech.service.impl;
 
-import com.his.api.service.AppointApi;
-import com.his.api.service.ChargeApi;
+import com.his.api.service.AppointProvider;
+import com.his.api.service.ChargeProvider;
 import com.his.api.vo.BizAppointInfoListVO;
 import com.his.api.vo.BizSettlementBillVO;
 import com.his.medicaltech.service.ReportService;
@@ -10,12 +10,10 @@ import com.his.medicaltech.vo.DrugStatsVO;
 import com.his.medicaltech.vo.MedicalTechStatsVO;
 import com.his.medicaltech.vo.OutpatientStatsVO;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 报表服务实现
@@ -24,12 +22,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ReportServiceImpl implements ReportService {
 
-    private final AppointApi appointApi;
-    private final ChargeApi chargeApi;
+    private final AppointProvider appointProvider;
+    private final ChargeProvider chargeProvider;
 
     @Override
     public OutpatientStatsVO getOutpatientStats(String startDate, String endDate) {
-        List<BizAppointInfoListVO> registList = appointApi.listRegists(startDate, endDate);
+        List<BizAppointInfoListVO> registList = appointProvider.listRegists(startDate, endDate);
 
         long totalCount = registList.size();
         long maleCount = registList.stream().filter(r -> r.getGender() != null && r.getGender() == 1).count();
@@ -46,7 +44,7 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public ChargeStatsVO getChargeStats(String startDate, String endDate) {
         // 四层口径：已支付（bill_status=3）的结算账单，按账务归属日 bill_date 聚合；金额取应收合计
-        List<BizSettlementBillVO> bills = chargeApi.paidBills(startDate, endDate);
+        List<BizSettlementBillVO> bills = chargeProvider.paidBills(startDate, endDate);
 
         BigDecimal totalAmount = bills.stream()
                 .map(b -> b.getPayableAmount() == null ? BigDecimal.ZERO : b.getPayableAmount())

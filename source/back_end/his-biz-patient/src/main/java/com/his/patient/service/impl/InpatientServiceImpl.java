@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.api.service.ChargeApi;
+import com.his.api.service.ChargeProvider;
 import com.his.api.vo.SettlementStateVO;
 import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.AdmitStatusEnum;
@@ -81,7 +81,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
     private final AdmissionOrderService admissionOrderService;
 
     @Lazy
-    private final ChargeApi settlementGateway;
+    private final ChargeProvider settlementGateway;
 
     private final SysMessageService sysMessageService;
 

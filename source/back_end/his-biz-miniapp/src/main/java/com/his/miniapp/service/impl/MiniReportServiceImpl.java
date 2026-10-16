@@ -2,13 +2,13 @@ package com.his.miniapp.service.impl;
 
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.api.service.MedicalTechReportApi;
+import com.his.api.service.MedicalTechReportProvider;
 import com.his.api.vo.BizReportVO;
 import com.his.miniapp.dto.ReportQueryPageDTO;
 import com.his.miniapp.service.MiniReportService;
 import com.his.miniapp.util.MiniappPdfStub;
 import com.his.miniapp.vo.MiniReportPdfVO;
-import com.his.api.service.PatientApi;
+import com.his.api.service.PatientProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,25 +24,25 @@ public class MiniReportServiceImpl implements MiniReportService {
     /** 已发布 */
     private static final Integer PUBLISHED = 4;
 
-    private final MedicalTechReportApi medicalTechReportApi;
-    private final PatientApi patientApi;
+    private final MedicalTechReportProvider medicalTechReportProvider;
+    private final PatientProvider patientProvider;
 
     @Override
     public PageResult<BizReportVO> myReportPage(ReportQueryPageDTO dto) {
-        if (!patientApi.canAccessPatient(dto.getPatientId())) {
+        if (!patientProvider.canAccessPatient(dto.getPatientId())) {
             throw new BusinessException("无权查询该就诊人的报告");
         }
-        return medicalTechReportApi.selectReportPageVO(dto.getPatientId(), dto.getReportType(),
+        return medicalTechReportProvider.selectReportPageVO(dto.getPatientId(), dto.getReportType(),
                 PUBLISHED, dto.getPageNum(), dto.getPageSize());
     }
 
     @Override
     public BizReportVO myReportDetail(Long reportId) {
-        BizReportVO report = medicalTechReportApi.getReportDetailVO(reportId);
+        BizReportVO report = medicalTechReportProvider.getReportDetailVO(reportId);
         if (report == null) {
             return null;
         }
-        if (patientApi.patientScopeViolated(report.getPatientId())) {
+        if (patientProvider.patientScopeViolated(report.getPatientId())) {
             throw new BusinessException("无权查看该报告");
         }
         if (!PUBLISHED.equals(report.getReportStatus())) {
@@ -53,8 +53,8 @@ public class MiniReportServiceImpl implements MiniReportService {
 
     @Override
     public MiniReportPdfVO reportPdf(Long reportId) {
-        BizReportVO report = medicalTechReportApi.getReportDetailVO(reportId);
-        if (report == null || patientApi.patientScopeViolated(report.getPatientId())) {
+        BizReportVO report = medicalTechReportProvider.getReportDetailVO(reportId);
+        if (report == null || patientProvider.patientScopeViolated(report.getPatientId())) {
             return MiniReportPdfVO.deny(403);
         }
         if (!PUBLISHED.equals(report.getReportStatus())) {

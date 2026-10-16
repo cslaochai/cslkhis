@@ -4,7 +4,7 @@ import com.his.ai.dto.PatientFeeExplainDTO;
 import com.his.ai.service.PatientFeeExplainCapability;
 import com.his.ai.vo.FeeCatalogGroupVO;
 import com.his.ai.vo.PatientFeeExplainVO;
-import com.his.api.service.ChargeApi;
+import com.his.api.service.ChargeProvider;
 import com.his.api.vo.BillItemVO;
 import com.his.api.vo.BizSettlementBillVO;
 import com.his.api.vo.InsuranceBriefVO;
@@ -13,7 +13,7 @@ import com.his.common.enums.PaymentItemTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
-import com.his.api.service.PatientApi;
+import com.his.api.service.PatientProvider;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -46,9 +46,9 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
             "以上是本账单的费用构成说明，实际报销以医保经办和收费窗口的解释为准；"
                     + "对某项收费有疑问，可在收费窗口打印明细清单核对。";
 
-    private final ChargeApi chargeApi;
+    private final ChargeProvider chargeProvider;
 
-    private final PatientApi patientApi;
+    private final PatientProvider patientProvider;
 
     // ---------------------------------------------------------------- 规则层
 
@@ -101,17 +101,17 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
             throw new BusinessException("未获取到就诊人身份，请重新登录");
         }
 
-        BizSettlementBillVO bill = chargeApi.getBillDetail(dto.getBillId());
+        BizSettlementBillVO bill = chargeProvider.getBillDetail(dto.getBillId());
         if (bill == null) {
             throw new BusinessException("账单不存在：" + dto.getBillId());
         }
-        if (patientApi.patientScopeViolated(bill.getPatientId())) {
+        if (patientProvider.patientScopeViolated(bill.getPatientId())) {
             throw new BusinessException("账单不存在或无权查看：" + dto.getBillId());
         }
 
-        List<BillItemVO> items = chargeApi.listBillItems(bill.getId());
+        List<BillItemVO> items = chargeProvider.listBillItems(bill.getId());
 
-        InsuranceBriefVO insurance = chargeApi.latestInsurance(bill.getId());
+        InsuranceBriefVO insurance = chargeProvider.latestInsurance(bill.getId());
 
         PatientFeeExplainVO vo = new PatientFeeExplainVO();
         vo.setBillId(bill.getId());

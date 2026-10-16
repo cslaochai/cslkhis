@@ -1,7 +1,7 @@
 package com.his.pharmacy.support;
 
 import com.his.api.dto.FeeBookDTO;
-import com.his.api.service.ChargeApi;
+import com.his.api.service.ChargeProvider;
 import com.his.api.vo.FeeRecordVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,13 +17,13 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class TraceChargeInvoker {
 
-    private final ChargeApi chargeApi;
+    private final ChargeProvider chargeProvider;
 
     /**
      * 一件一笔记账（独立事务，失败不回滚使用登记）
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public FeeRecordVO book(FeeBookDTO dto) {
-        return chargeApi.bookFee(dto);
+        return chargeProvider.bookFee(dto);
     }
 }

@@ -1,0 +1,62 @@
+package com.his.charge.service.impl;
+
+
+import com.his.charge.entity.BizArrearsPolicy;
+import com.his.charge.enums.ArrearsFeeClassEnum;
+import com.his.charge.mapper.BizArrearsPolicyMapper;
+import com.his.charge.service.InpatientAccountService;
+import com.his.api.service.ArrearsControlProvider;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+import java.math.BigDecimal;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+/**
+ * 欠费管控 Gate 实现（SPI：接口声明在 his-system.api，本类是 his-charge 侧实现）。
+ */
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class ArrearsControlProviderImpl implements ArrearsControlProvider {
+
+    /**
+     * 永不拦截的医嘱类别：1-药品 6-手术 7-输血（治疗生命线，与配置无关）
+     */
+    private static final Set<Integer> NEVER_STOP_CLASSES = Set.of(1, 6, 7);
+
+    private final BizArrearsPolicyMapper bizArrearsPolicyMapper;
+
+    private final InpatientAccountService inpatientAccountService;
+
+    @Override
+    public CheckResult checkNewOrder(OrderCheck command) {
+        BizArrearsPolicy policy = bizArrearsPolicyMapper.selectById(1L);
+        if (policy == null || policy.getStopEnabled() == null || policy.getStopEnabled() != 1) {
+            return CheckResult.allow();
+        }
+        if (policy.getStopLine() == null || command == null || command.getAdmissionId() == null) {
+            return CheckResult.allow();
+        }
+        BigDecimal arrears = inpatientAccountService.arrearsView(command.getAdmissionId()).arrearsAmount();
+        if (arrears.compareTo(policy.getStopLine()) < 0) {
+            return CheckResult.allow();
+        }
+
+        Set<Integer> stopClasses = ArrearsFeeClassEnum.parseCodes(policy.getStopClasses());
+        Set<Integer> hit = command.getOrderClasses() == null ? Set.of()
+                : command.getOrderClasses().stream()
+                .filter(c -> !NEVER_STOP_CLASSES.contains(c))
+                .filter(stopClasses::contains)
+                .collect(Collectors.toSet());
+        if (hit.isEmpty()) {
+            return CheckResult.allow();
+        }
+        String classNames = hit.stream().map(ArrearsFeeClassEnum::getTextOrOther).collect(Collectors.joining("、"));
+        return CheckResult.deny(String.format(
+                "该患者已欠费 %.2f 元（停费线 %.2f 元），按院方管控策略暂停「%s」类新开医嘱；药品/手术/急救类不受影响，请通知补缴预交金",
+                arrears, policy.getStopLine(), classNames));
+    }
+}

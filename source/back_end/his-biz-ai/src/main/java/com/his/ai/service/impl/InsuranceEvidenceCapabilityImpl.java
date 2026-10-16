@@ -10,7 +10,7 @@ import com.his.ai.service.InsuranceEvidenceCapability;
 import com.his.ai.vo.InsuranceEvidenceJudgmentVO;
 import com.his.ai.vo.InsuranceEvidencePromptVariablesVO;
 import com.his.ai.vo.InsuranceEvidenceVO;
-import com.his.api.service.ComplianceAuditApi;
+import com.his.api.service.ComplianceAuditProvider;
 import com.his.api.vo.ComplianceAuditDetailVO;
 import com.his.api.vo.ComplianceAuditItemVO;
 import com.his.api.vo.ComplianceEvidenceNarrativeVO;
@@ -56,18 +56,18 @@ public class InsuranceEvidenceCapabilityImpl implements InsuranceEvidenceCapabil
 
     private final AiExecutionService aiExecutionService;
 
-    private final ComplianceAuditApi complianceAuditApi;
+    private final ComplianceAuditProvider complianceAuditProvider;
 
     // ---------------------------------------------------------------- 模型层
 
     @Override
     public InsuranceEvidenceVO execute(InsuranceEvidenceDTO dto) {
-        ComplianceAuditDetailVO detail = complianceAuditApi.getAuditDetail(dto.getAuditId());
+        ComplianceAuditDetailVO detail = complianceAuditProvider.getAuditDetail(dto.getAuditId());
         List<ComplianceAuditItemVO> hits = hitItems(detail);
         if (hits.isEmpty()) {
             throw new BusinessException("该审核没有命中的风险规则，无需证据判定");
         }
-        ComplianceEvidenceNarrativeVO narrative = complianceAuditApi.getAiEvidenceNarrative(dto.getAuditId());
+        ComplianceEvidenceNarrativeVO narrative = complianceAuditProvider.getAiEvidenceNarrative(dto.getAuditId());
 
         InsuranceEvidenceVO vo = new InsuranceEvidenceVO();
         vo.setAuditId(detail.getId());

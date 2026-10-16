@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.api.dto.AppointUpsertDTO;
-import com.his.api.service.AppointApi;
+import com.his.api.service.AppointProvider;
 import com.his.api.vo.BizAppointInfoListVO;
 import com.his.api.vo.RegistBriefVO;
 import com.his.common.enums.AppointSourceEnum;
@@ -69,7 +69,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
             AppointStatusEnum.OVERDUE.getCode(),
             AppointStatusEnum.NO_SHOW.getCode());
     private final DeptScopeService deptScopeService;
-    private final AppointApi appointApi;
+    private final AppointProvider appointProvider;
 
     private final BizFollowupTaskMapper bizFollowupTaskMapper;
 
@@ -454,7 +454,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
             throw new BusinessException("已取消的随访任务不再生成复诊号");
         }
         if (task.getRevisitAppointId() != null) {
-            RegistBriefVO previous = appointApi.findRegist(task.getRevisitAppointId());
+            RegistBriefVO previous = appointProvider.findRegist(task.getRevisitAppointId());
             // 只挡「那张号还有效」：已退号/过号/爽约的号作废了，患者确实还得再约一次，
             // 一刀切拦住会让这个任务永久卡死，只能去库里改数据。
             if (previous != null && !REGENERABLE_APPOINT_STATUS.contains(previous.getRegistStatus())) {
@@ -472,7 +472,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         // 院内人员按计划代约 -> 挂号渠道 4（预约）：扣预约池，不吃当天现场号
         appointDTO.setRegistSource(AppointSourceEnum.APPOINTMENT.getCode());
         appointDTO.setSettlementType(dto.getSettlementType() == null ? 1 : dto.getSettlementType());
-        BizAppointInfoListVO appoint = appointApi.addAppoint(appointDTO);
+        BizAppointInfoListVO appoint = appointProvider.addAppoint(appointDTO);
 
         task.setRevisitRecordId(dto.getRevisitRecordId());
         task.setRevisitAppointId(appoint.getId());

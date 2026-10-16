@@ -1,9 +1,9 @@
 package com.his.miniapp.controller;
 
-import com.his.api.service.EmrPatientApi;
+import com.his.api.service.EmrPatientProvider;
 import com.his.common.base.Result;
 import com.his.api.vo.MyPrescriptionVO;
-import com.his.api.service.PatientApi;
+import com.his.api.service.PatientProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -25,15 +25,15 @@ import java.util.List;
 @PreAuthorize("hasAuthority('PATIENT')")
 public class MiniPrescriptionController {
 
-    private final EmrPatientApi emrPatientApi;
-    private final PatientApi patientApi;
+    private final EmrPatientProvider emrPatientProvider;
+    private final PatientProvider patientProvider;
 
     @Operation(summary = "我的处方（含药味明细，只看自己绑定的就诊人）")
     @GetMapping("/myList")
     public Result<List<MyPrescriptionVO>> myList(@RequestParam Long patientId) {
-        if (!patientApi.canAccessPatient(patientId)) {
+        if (!patientProvider.canAccessPatient(patientId)) {
             return Result.error("无权查询该就诊人的处方");
         }
-        return Result.success(emrPatientApi.myPrescriptions(patientId));
+        return Result.success(emrPatientProvider.myPrescriptions(patientId));
     }
 }

@@ -25,7 +25,7 @@ import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
-import com.his.api.service.PatientApi;
+import com.his.api.service.PatientProvider;
 import com.his.api.vo.PatientBriefVO;
 import com.his.system.service.InsurancePolicyService;
 import com.his.system.service.RedisSequenceService;
@@ -81,7 +81,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
 
     private final BizPaymentTxnMapper bizPaymentTxnMapper;
 
-    private final PatientApi patientApi;
+    private final PatientProvider patientProvider;
 
     private final InsurancePolicyService insurancePolicyService;
 
@@ -795,7 +795,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
      * 结算方式与医保口径：结算方式必须由调用方显式给出，不再按患者有无医保号静默推断。
      */
     private PatientInsurance resolveInsurance(Long patientId, Integer settlementMode) {
-        PatientBriefVO patient = patientId == null ? null : patientApi.findPatient(patientId);
+        PatientBriefVO patient = patientId == null ? null : patientProvider.findPatient(patientId);
         boolean hasInsurance = patient != null && TextUtil.hasText(patient.getMedicalInsuranceNo());
         SettlementModeEnum mode = SettlementModeEnum.getByCode(settlementMode);
         if (mode == null) {

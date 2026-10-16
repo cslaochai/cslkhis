@@ -25,7 +25,7 @@
         <!-- 病历提交即开立项目：检查/检验/处方逐条落记账行，退单前的引用校验也查它 -->
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-system</artifactId>
+            <artifactId>his-biz-system</artifactId>
         </dependency>
         <!-- BI 国考四指标与 DRG 模拟页共用同一分组器（com.his.charge.drgdip.support），随 drg-dip 并入 charge -->
         <dependency>

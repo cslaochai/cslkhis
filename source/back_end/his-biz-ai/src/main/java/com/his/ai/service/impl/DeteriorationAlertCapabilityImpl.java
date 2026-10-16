@@ -12,7 +12,7 @@ import com.his.ai.vo.DeteriorationExplainVO;
 import com.his.ai.vo.DeteriorationScanVO;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
-import com.his.api.service.PatientApi;
+import com.his.api.service.PatientProvider;
 import com.his.api.vo.NursingVitalFactVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,12 +41,12 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
      */
     private static final int ADVICE_MAX = 200;
     private final AiExecutionService aiExecutionService;
-    private final PatientApi patientApi;
+    private final PatientProvider patientProvider;
 
     @Override
     public List<DeteriorationScanVO> wardScan(Long wardId) {
         List<NursingVitalFactVO> vitals =
-                patientApi.latestVitalsByWard(wardId, LocalDateTime.now().minusHours(LOOKBACK_HOURS));
+                patientProvider.latestVitalsByWard(wardId, LocalDateTime.now().minusHours(LOOKBACK_HOURS));
         List<DeteriorationScanVO> result = new ArrayList<>(vitals.size());
         for (NursingVitalFactVO vital : vitals) {
             DeteriorationScanVO row = new DeteriorationScanVO();
@@ -75,7 +75,7 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
     @Override
     public DeteriorationExplainVO explain(Long admissionId) {
         NursingVitalFactVO vital =
-                patientApi.latestVitalByAdmission(admissionId, LocalDateTime.now().minusHours(LOOKBACK_HOURS));
+                patientProvider.latestVitalByAdmission(admissionId, LocalDateTime.now().minusHours(LOOKBACK_HOURS));
 
         DeteriorationExplainVO vo = new DeteriorationExplainVO();
         vo.setAdmissionId(admissionId);

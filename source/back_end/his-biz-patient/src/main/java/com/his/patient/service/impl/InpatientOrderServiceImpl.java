@@ -7,7 +7,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.api.dto.FeeBookDTO;
 import com.his.api.vo.FeeRecordVO;
 import com.his.common.constant.DictTypeConst;
-import com.his.api.service.ArrearsControlApi;
+import com.his.api.service.ArrearsControlProvider;
 import com.his.system.dto.SignCommandDTO;
 import com.his.common.enums.*;
 import com.his.common.enums.YesOrNoEnum;
@@ -18,7 +18,6 @@ import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.system.vo.SignatureVO;
 import com.his.patient.dto.*;
-import com.his.api.dto.*;
 import com.his.patient.entity.*;
 import com.his.common.enums.InpatientOrderStatusEnum;
 import com.his.patient.enums.OrderClassEnum;
@@ -82,7 +81,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
 
     private final SysMessageService sysMessageService;
 
-    private final ArrearsControlApi arrearsControlApi;
+    private final ArrearsControlProvider arrearsControlProvider;
 
     private final EmployeeTechAuthService employeeTechAuthService;
 
@@ -132,8 +131,8 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
                     .map(InpatientOrderItemDTO::getOrderClass)
                     .filter(Objects::nonNull)
                     .collect(java.util.stream.Collectors.toSet());
-            ArrearsControlApi.CheckResult check =
-                    arrearsControlApi.checkNewOrder(new ArrearsControlApi.OrderCheck(admission.getAdmissionId(), classes));
+            ArrearsControlProvider.CheckResult check =
+                    arrearsControlProvider.checkNewOrder(new ArrearsControlProvider.OrderCheck(admission.getAdmissionId(), classes));
             if (check != null && !check.isAllowed()) {
                 throw new BusinessException(check.getReason());
             }

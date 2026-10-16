@@ -3,8 +3,8 @@ package com.his.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.api.service.SignCoverageApi;
-import com.his.api.service.SignableContentApi;
+import com.his.api.service.SignCoverageProvider;
+import com.his.api.service.SignableContentProvider;
 import com.his.api.vo.SignSubject;
 import com.his.common.constant.SystemConfigKeyConst;
 import com.his.common.enums.*;
@@ -68,9 +68,9 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
 
     private final BizTsaTokenMapper tsaTokenMapper;
 
-    private final List<SignableContentApi> providers;
+    private final List<SignableContentProvider> providers;
 
-    private final List<SignCoverageApi> coverageProviders;
+    private final List<SignCoverageProvider> coverageProviders;
 
     private static Integer intValue(String s) {
         if (!TextUtil.hasText(s)) {
@@ -118,7 +118,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
             throw new BusinessException("签名场景取值不合法：" + cmd.getSignScene());
         }
         SignBizTypeEnum bizType = SignBizTypeEnum.parse(cmd.getBizType());
-        SignableContentApi provider = providerOf(cmd.getBizType());
+        SignableContentProvider provider = providerOf(cmd.getBizType());
 
         SignSubject subject = provider.load(cmd.getBizId());
         if (subject == null) {
@@ -273,7 +273,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         boolean contentMatched = false;
         String digestNow = null;
         String objectMissing = null;
-        SignableContentApi provider = findProvider(sig.getBizType());
+        SignableContentProvider provider = findProvider(sig.getBizType());
         if (provider == null) {
             objectMissing = "签名对象类型「" + SignBizTypeEnum.textOf(sig.getBizType())
                     + "」在当前部署里没有内容提供者（可能是模块未加载），无法比对内容";
@@ -396,7 +396,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         LocalDateTime now = TimeUtil.nowSeconds();
         signatureStoreService.updateInvalidate(signId, reason, now, operatorId, operatorName);
 
-        SignableContentApi provider = findProvider(sig.getBizType());
+        SignableContentProvider provider = findProvider(sig.getBizType());
         if (provider != null) {
             try {
                 provider.revokeSignAnchor(sig.getBizId(), signId);
@@ -480,7 +480,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         vo.setBizTypeText(t.getText());
         vo.setBizId(bizId);
 
-        SignableContentApi provider = findProvider(bizType);
+        SignableContentProvider provider = findProvider(bizType);
         if (provider != null) {
             SignSubject s = provider.load(bizId);
             if (s == null) {
@@ -574,8 +574,8 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
 
         // 覆盖率：按业务类型分别统计，分母为 0 时显示"—"（不显示 0%，也不显示 100%）
         List<SignatureSummaryVO.Coverage> coverages = new ArrayList<>();
-        for (SignCoverageApi p : coverageProviders) {
-            SignCoverageApi.SignCoverage c = p.coverage();
+        for (SignCoverageProvider p : coverageProviders) {
+            SignCoverageProvider.SignCoverage c = p.coverage();
             SignatureSummaryVO.Coverage row = new SignatureSummaryVO.Coverage();
             row.setBizType(c.bizType());
             row.setBizTypeText(c.bizTypeText());
@@ -663,8 +663,8 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
                 .orderByAsc(BizEmrSignature::getId));
     }
 
-    private SignableContentApi providerOf(Integer bizType) {
-        SignableContentApi p = findProvider(bizType);
+    private SignableContentProvider providerOf(Integer bizType) {
+        SignableContentProvider p = findProvider(bizType);
         if (p == null) {
             throw new BusinessException("签名对象类型「" + SignBizTypeEnum.textOf(bizType)
                     + "」尚未接入签名能力（未找到内容提供者）；请确认对应业务模块已加载");
@@ -672,12 +672,12 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         return p;
     }
 
-    private SignableContentApi findProvider(Integer bizType) {
+    private SignableContentProvider findProvider(Integer bizType) {
         SignBizTypeEnum t = SignBizTypeEnum.parse(bizType);
         if (t == null) {
             return null;
         }
-        for (SignableContentApi p : providers) {
+        for (SignableContentProvider p : providers) {
             if (p.bizType() == SignBizTypeEnum.INPATIENT_RECORD) {
                 return p;
             }

@@ -3,8 +3,8 @@ package com.his.charge.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.entity.BizFeeRecord;
-import com.his.api.service.EmrApi;
-import com.his.api.service.MedicalTechApi;
+import com.his.api.service.EmrProvider;
+import com.his.api.service.MedicalTechProvider;
 import com.his.charge.entity.BizPaymentTxn;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.mapper.BizPaymentTxnMapper;
@@ -37,9 +37,9 @@ public class SourceAdvanceServiceImpl extends ServiceImpl<BizPaymentTxnMapper, B
 
     private final BizPaymentTxnMapper bizPaymentTxnMapper;
 
-    private final EmrApi emrApi;
+    private final EmrProvider emrProvider;
 
-    private final MedicalTechApi medicalTechApi;
+    private final MedicalTechProvider medicalTechProvider;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -60,18 +60,18 @@ public class SourceAdvanceServiceImpl extends ServiceImpl<BizPaymentTxnMapper, B
             }
             switch (source) {
                 case PRESCRIPTION -> {
-                    emrApi.advancePrescriptionDetail(row.getSourceId(), row.getAmount(), payMethod);
+                    emrProvider.advancePrescriptionDetail(row.getSourceId(), row.getAmount(), payMethod);
                     advanced++;
                 }
                 case EXAM_APPLY -> {
-                    emrApi.advanceInspectionApply(row.getSourceId());
+                    emrProvider.advanceInspectionApply(row.getSourceId());
                     // 执行记录由医技域按申请单幂等创建：收费只负责"钱到了"，不替医技决定怎么开工
-                    medicalTechApi.ensureInspectionRecordFromApply(row.getSourceId());
+                    medicalTechProvider.ensureInspectionRecordFromApply(row.getSourceId());
                     advanced++;
                 }
                 case LAB_APPLY -> {
-                    emrApi.advanceLaboratoryApply(row.getSourceId());
-                    medicalTechApi.ensureLaboratoryRecordFromApply(row.getSourceId());
+                    emrProvider.advanceLaboratoryApply(row.getSourceId());
+                    medicalTechProvider.ensureLaboratoryRecordFromApply(row.getSourceId());
                     advanced++;
                 }
                 default -> {
@@ -108,19 +108,19 @@ public class SourceAdvanceServiceImpl extends ServiceImpl<BizPaymentTxnMapper, B
             }
             switch (source) {
                 case PRESCRIPTION -> {
-                    emrApi.revertPrescriptionDetail(row.getSourceId(), reason);
+                    emrProvider.revertPrescriptionDetail(row.getSourceId(), reason);
                     reverted++;
                 }
                 case EXAM_APPLY -> {
                     // 先让医技把还没开始的执行记录置取消，再把申请单退回未缴费；
                     // 已经做过的检查不靠退费抹平（医技侧自己判断能不能取消）
-                    medicalTechApi.cancelInspectionByApplyId(row.getSourceId(), reason);
-                    emrApi.revertInspectionApply(row.getSourceId());
+                    medicalTechProvider.cancelInspectionByApplyId(row.getSourceId(), reason);
+                    emrProvider.revertInspectionApply(row.getSourceId());
                     reverted++;
                 }
                 case LAB_APPLY -> {
-                    medicalTechApi.cancelLaboratoryByApplyId(row.getSourceId(), reason);
-                    emrApi.revertLaboratoryApply(row.getSourceId());
+                    medicalTechProvider.cancelLaboratoryByApplyId(row.getSourceId(), reason);
+                    emrProvider.revertLaboratoryApply(row.getSourceId());
                     reverted++;
                 }
                 default -> {
@@ -156,7 +156,7 @@ public class SourceAdvanceServiceImpl extends ServiceImpl<BizPaymentTxnMapper, B
             }
             detailIds.add(row.getSourceId());
         }
-        emrApi.assertNoDrugPendingReturn(detailIds, scene);
+        emrProvider.assertNoDrugPendingReturn(detailIds, scene);
     }
 
     /**

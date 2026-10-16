@@ -36,7 +36,7 @@ import com.his.operation.vo.RoomUtilizationVO;
 import com.his.common.enums.InpatientRecordTypeEnum;
 import com.his.api.dto.ClosedLoopRecordDTO;
 import com.his.api.dto.SurgeryOperationDTO;
-import com.his.api.service.PatientApi;
+import com.his.api.service.PatientProvider;
 import com.his.api.vo.AdmissionVO;
 import com.his.api.vo.ClosedLoopRecordVO;
 import com.his.api.vo.PatientMasterVO;
@@ -80,7 +80,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
 
     private final BizOperationApplyMapper bizOperationApplyMapper;
 
-    private final PatientApi patientApi;
+    private final PatientProvider patientProvider;
 
     private final EmployeeTechAuthService employeeTechAuthService;
 
@@ -176,7 +176,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }
-        AdmissionVO admission = patientApi.getAdmission(admissionId);
+        AdmissionVO admission = patientProvider.getAdmission(admissionId);
         if (admission != null) {
             deptScopeService.assertDeptAccessible(admission.getDeptId());
         }
@@ -628,14 +628,14 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        AdmissionVO admission = patientApi.getAdmission(dto.getAdmissionId());
+        AdmissionVO admission = patientProvider.getAdmission(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
         if (!Objects.equals(AdmitStatusEnum.IN_HOSPITAL.getCode(), admission.getAdmitStatus())) {
             throw new BusinessException("该患者当前不是「在院」状态，不能申请手术（已出院的住院不能开手术单）");
         }
-        PatientMasterVO patient = patientApi.getPatient(admission.getPatientId());
+        PatientMasterVO patient = patientProvider.getPatient(admission.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在");
         }
@@ -893,7 +893,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
             throw new BusinessException("实际结束时间必须晚于开始时间");
         }
 
-        AdmissionVO admission = patientApi.getAdmission(entity.getAdmissionId());
+        AdmissionVO admission = patientProvider.getAdmission(entity.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在，无法回写（admissionId=" + entity.getAdmissionId() + "）");
         }
@@ -903,7 +903,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         }
 
         // 归档闸门：已归档的病案首页不能再加手术明细（同"归档后病历不可修改"）
-        if (patientApi.isSummaryArchived(entity.getAdmissionId())) {
+        if (patientProvider.isSummaryArchived(entity.getAdmissionId())) {
             throw new BusinessException("该住院的病案首页已归档，不能再回写手术明细（归档数据不可改）");
         }
 
@@ -936,7 +936,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
                 + "，主刀 " + textOr(entity.getSurgeonName(), "未指定")
                 + "，麻醉方式 " + OperationAnesthesiaMethodEnum.getText(entity.getAnesthesiaType()));
         // 首页明细的重复闸、序号重排、is_surgery 置位都在首页写入方里做（它才是这张表的所有者）
-        SurgeryOperationVO opVo = patientApi.appendSurgeryOperation(op);
+        SurgeryOperationVO opVo = patientProvider.appendSurgeryOperation(op);
 
         // ② 回写手术记录病历（record_type=5）
         ClosedLoopRecordVO record = writeBackRecord(entity, admission, dto, start, end, basis, now);
@@ -1026,7 +1026,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        PatientMasterVO patient = patientApi.getPatient(admission.getPatientId());
+        PatientMasterVO patient = patientProvider.getPatient(admission.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在，无法回写手术记录");
         }
@@ -1082,7 +1082,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         record.setDoctorName(TextUtil.hasText(entity.getSurgeonName())
                 ? entity.getSurgeonName() : operatorUser.getRealName());
         record.setSubmitTime(now);
-        return patientApi.appendClosedLoopRecord(record);
+        return patientProvider.appendClosedLoopRecord(record);
     }
 
     /**
@@ -1228,12 +1228,12 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         if (wardId == null) {
             return null;
         }
-        WardVO ward = patientApi.getWard(wardId);
+        WardVO ward = patientProvider.getWard(wardId);
         return ward == null ? "未知病区(ID=" + wardId + ")" : ward.getWardName();
     }
 
     private String bedNoOf(Long bedId) {
-        return patientApi.getBedNo(bedId);
+        return patientProvider.getBedNo(bedId);
     }
 
     /**

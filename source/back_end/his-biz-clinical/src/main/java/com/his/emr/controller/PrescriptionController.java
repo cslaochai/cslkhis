@@ -9,7 +9,7 @@ import com.his.emr.dto.PrescriptionRationalQueryDTO;
 import com.his.emr.service.PrescriptionService;
 import com.his.emr.vo.BizPrescriptionVO;
 import com.his.emr.vo.PrescriptionRationalVO;
-import com.his.api.service.PatientApi;
+import com.his.api.service.PatientProvider;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,12 +32,12 @@ import java.util.List;
 public class PrescriptionController {
 
     private final PrescriptionService prescriptionService;
-    private final PatientApi patientApi;
+    private final PatientProvider patientProvider;
 
     @Operation(summary = "查询处方列表")
     @GetMapping("/getByPatientId")
     public Result<List<BizPrescriptionVO>> getByPatientId(@Valid PrescriptionQueryDTO queryDTO) {
-        if (patientApi.patientScopeViolated(queryDTO.getPatientId())) {
+        if (patientProvider.patientScopeViolated(queryDTO.getPatientId())) {
             return Result.error("无权查询该就诊人的处方");
         }
         List<BizPrescriptionVO> resultList = prescriptionService.getByPatientId(queryDTO);

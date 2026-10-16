@@ -1,6 +1,6 @@
 package com.his.pay.support;
 
-import com.his.api.service.PayRateLimitApi;
+import com.his.api.service.PayRateLimitProvider;
 import com.his.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class PayRateLimitSupport implements PayRateLimitApi {
+public class PayRateLimitSupport implements PayRateLimitProvider {
 
     /** 节流计数走 Redis（StringRedisTemplate）；故障 fail-open 放行，见类注释 */
     private final StringRedisTemplate stringRedisTemplate;

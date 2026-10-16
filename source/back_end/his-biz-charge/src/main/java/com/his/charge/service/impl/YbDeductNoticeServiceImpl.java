@@ -23,7 +23,7 @@ import com.his.charge.vo.DeductSummaryVO;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.api.service.PatientApi;
+import com.his.api.service.PatientProvider;
 import com.his.api.vo.PatientBriefVO;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
@@ -67,7 +67,7 @@ public class YbDeductNoticeServiceImpl extends ServiceImpl<BizYbDeductNoticeMapp
     private final BizYbDeductLogMapper bizYbDeductLogMapper;
     private final BizYbInspectionMapper bizYbInspectionMapper;
     private final InsuranceSettlementService insuranceSettlementService;
-    private final PatientApi patientApi;
+    private final PatientProvider patientProvider;
     private final RedisSequenceService redisSequenceService;
 
     @Override
@@ -149,7 +149,7 @@ public class YbDeductNoticeServiceImpl extends ServiceImpl<BizYbDeductNoticeMapp
         entity.setEncounterId(dto.getEncounterId());
         entity.setPatientId(dto.getPatientId());
         // 患者姓名/编号以库里的事实为准：前端传的是选择器快照，一旦漏传或传错，扣款单上就是空白
-        PatientBriefVO patient = dto.getPatientId() == null ? null : patientApi.findPatient(dto.getPatientId());
+        PatientBriefVO patient = dto.getPatientId() == null ? null : patientProvider.findPatient(dto.getPatientId());
         if (dto.getPatientId() != null && patient == null) {
             throw new BusinessException("患者不存在或已删除");
         }

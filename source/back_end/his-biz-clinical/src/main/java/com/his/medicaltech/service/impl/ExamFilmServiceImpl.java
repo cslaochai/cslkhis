@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.api.dto.FeeBookDTO;
-import com.his.api.service.ChargeApi;
+import com.his.api.service.ChargeProvider;
 import com.his.api.vo.FeeRecordVO;
 import com.his.common.base.PageResult;
 import com.his.common.constant.DictTypeConst;
@@ -64,7 +64,7 @@ public class ExamFilmServiceImpl extends ServiceImpl<BizExamFilmMapper, BizExamF
     private final BizInspectionApplyMapper bizInspectionApplyMapper;
     private final DictCacheService dictCacheService;
     private final SysAuditLogService sysAuditLogService;
-    private final ChargeApi chargeApi;
+    private final ChargeProvider chargeProvider;
     private final RedisSequenceService redisSequenceService;
 
     // 查询
@@ -208,7 +208,7 @@ public class ExamFilmServiceImpl extends ServiceImpl<BizExamFilmMapper, BizExamF
         dto.setCatalogType(0);
         dto.setRemark(TextUtil.cut("检查胶片 " + film.getFilmNo() + "（记录号 " + film.getRecordNo() + "）", 500));
 
-        FeeRecordVO fee = chargeApi.bookFee(dto);
+        FeeRecordVO fee = chargeProvider.bookFee(dto);
         film.setChargeFlag(1);
         film.setFeeId(fee.getId());
         film.setFeeNo(fee.getFeeNo());

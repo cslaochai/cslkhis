@@ -25,7 +25,7 @@
         </dependency>
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-system</artifactId>
+            <artifactId>his-biz-system</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.rocketmq</groupId>

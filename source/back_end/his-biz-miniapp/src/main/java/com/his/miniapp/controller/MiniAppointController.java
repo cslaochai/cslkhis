@@ -3,7 +3,7 @@ package com.his.miniapp.controller;
 import com.his.api.dto.AppointCancelDTO;
 import com.his.api.dto.AppointQueryDTO;
 import com.his.api.dto.AppointUpsertDTO;
-import com.his.api.service.AppointApi;
+import com.his.api.service.AppointProvider;
 import com.his.api.vo.BizAppointInfoListVO;
 import com.his.api.vo.RegistBriefVO;
 import com.his.common.base.PageResult;
@@ -11,7 +11,7 @@ import com.his.common.base.Result;
 import com.his.common.util.TextUtil;
 import com.his.miniapp.dto.PayRefundDTO;
 import com.his.miniapp.service.MiniPayService;
-import com.his.api.service.PatientApi;
+import com.his.api.service.PatientProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -29,16 +29,16 @@ import org.springframework.web.bind.annotation.*;
 @PreAuthorize("hasAuthority('PATIENT')")
 public class MiniAppointController {
 
-    private final AppointApi appointApi;
+    private final AppointProvider appointProvider;
 
-    private final PatientApi patientApi;
+    private final PatientProvider patientProvider;
 
     private final MiniPayService miniPayService;
 
     @Operation(summary = "患者挂号（新增；预约池扣号）")
     @PostMapping("/upsert")
     public Result<BizAppointInfoListVO> upsert(@RequestBody @Valid AppointUpsertDTO upsertDTO) {
-        if (patientApi.patientScopeViolated(upsertDTO.getPatientId())) {
+        if (patientProvider.patientScopeViolated(upsertDTO.getPatientId())) {
             return Result.error("无权为该就诊人挂号");
         }
         if (upsertDTO.getId() != null) {
@@ -47,7 +47,7 @@ public class MiniAppointController {
         if (upsertDTO.getRegistSource() == null || upsertDTO.getRegistSource() != 4) {
             upsertDTO.setRegistSource(4);
         }
-        BizAppointInfoListVO result = appointApi.addAppoint(upsertDTO);
+        BizAppointInfoListVO result = appointProvider.addAppoint(upsertDTO);
         return Result.success("挂号成功", result);
     }
 
@@ -55,17 +55,17 @@ public class MiniAppointController {
     @GetMapping("/listPage")
     public Result<PageResult<BizAppointInfoListVO>> listPage(@Valid AppointQueryDTO queryDTO) {
         if (queryDTO.getPatientId() != null
-                && !patientApi.canAccessPatient(queryDTO.getPatientId())) {
+                && !patientProvider.canAccessPatient(queryDTO.getPatientId())) {
             return Result.error("无权查询该就诊人的预约");
         }
-        return Result.success(appointApi.listRegistPage(queryDTO));
+        return Result.success(appointProvider.listRegistPage(queryDTO));
     }
 
     @Operation(summary = "挂号详情")
     @GetMapping("/getDetail")
     public Result<BizAppointInfoListVO> getDetail(@Valid AppointQueryDTO queryDTO) {
-        RegistBriefVO regist = appointApi.findRegist(queryDTO.getPatientId());
-        if (regist != null && patientApi.patientScopeViolated(regist.getPatientId())) {
+        RegistBriefVO regist = appointProvider.findRegist(queryDTO.getPatientId());
+        if (regist != null && patientProvider.patientScopeViolated(regist.getPatientId())) {
             return Result.error("无权查看该挂号");
         }
         return Result.success(toVO(regist));
@@ -76,16 +76,16 @@ public class MiniAppointController {
     public Result<Void> cancel(@RequestBody @Valid AppointCancelDTO appointCancelDTO) {
         Long registId = appointCancelDTO.getRegistId();
         // 归属从挂号记录反查，不看前端传的是谁
-        RegistBriefVO regist = appointApi.findRegist(registId);
+        RegistBriefVO regist = appointProvider.findRegist(registId);
         if (regist == null) {
             return Result.error("挂号记录不存在");
         }
-        if (patientApi.patientScopeViolated(regist.getPatientId())) {
+        if (patientProvider.patientScopeViolated(regist.getPatientId())) {
             return Result.error("无权退该挂号");
         }
         String reason = TextUtil.hasText(appointCancelDTO.getReason())
                 ? appointCancelDTO.getReason() : "患者主动退号";
-        boolean success = appointApi.cancelRegist(registId, reason);
+        boolean success = appointProvider.cancelRegist(registId, reason);
         if (!success) {
             return Result.error("退号失败");
         }

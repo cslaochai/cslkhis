@@ -25,7 +25,7 @@ import com.his.emr.mapper.BizClinicalRuleCheckMapper;
 import com.his.emr.mapper.BizMedicalRecordMapper;
 import com.his.emr.mapper.BizPrescriptionDetailMapper;
 import com.his.emr.mapper.BizPrescriptionMapper;
-import com.his.api.service.PatientApi;
+import com.his.api.service.PatientProvider;
 import com.his.api.vo.AllergyFactVO;
 import com.his.api.vo.PatientMasterVO;
 import com.his.system.entity.CurrentUser;
@@ -86,7 +86,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
 
     private final BizMedicalRecordMapper bizMedicalRecordMapper;
 
-    private final PatientApi patientApi;
+    private final PatientProvider patientProvider;
 
     private final SysDrugMapper sysDrugMapper;
 
@@ -349,13 +349,13 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
         }
 
         PatientMasterVO patient = prescription.getPatientId() == null
-                ? null : patientApi.getPatient(prescription.getPatientId());
+                ? null : patientProvider.getPatient(prescription.getPatientId());
         if (patient != null) {
             appendIfMeaningful(builder, patient.getAllergyHistory(), "过敏史");
         }
 
         if (prescription.getPatientId() != null) {
-            List<AllergyFactVO> allergies = patientApi.listAllergies(prescription.getPatientId());
+            List<AllergyFactVO> allergies = patientProvider.listAllergies(prescription.getPatientId());
             for (AllergyFactVO allergy : allergies) {
                 appendIfMeaningful(builder, allergy.getAllergenName(), "过敏原");
             }

@@ -25,7 +25,7 @@ import com.his.medicaltech.mapper.BizLaboratoryRecordMapper;
 import com.his.medicaltech.mapper.BizReportMapper;
 import com.his.medicaltech.support.LabAbnormalJudge;
 import com.his.medicaltech.support.LabCriticalValueRules;
-import com.his.api.service.PatientApi;
+import com.his.api.service.PatientProvider;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -82,7 +82,7 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
 
     private final PatientTextGuard textGuard;
 
-    private final PatientApi patientApi;
+    private final PatientProvider patientProvider;
 
     private static Integer toStatus(Integer flag, boolean unjudged) {
         if (unjudged) {
@@ -170,7 +170,7 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
         if (report == null) {
             throw new BusinessException("报告不存在：" + dto.getReportId());
         }
-        if (patientApi.patientScopeViolated(report.getPatientId())) {
+        if (patientProvider.patientScopeViolated(report.getPatientId())) {
             // 不区分「报告不存在」和「无权查看」，避免被用来探测报告是否存在
             throw new BusinessException("报告不存在或无权查看：" + dto.getReportId());
         }

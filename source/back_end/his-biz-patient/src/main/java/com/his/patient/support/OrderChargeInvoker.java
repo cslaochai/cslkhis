@@ -1,7 +1,7 @@
 package com.his.patient.support;
 
 import com.his.api.dto.FeeBookDTO;
-import com.his.api.service.ChargeApi;
+import com.his.api.service.ChargeProvider;
 import com.his.api.vo.FeeRecordVO;
 import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class OrderChargeInvoker {
 
-    private final ChargeApi chargeApi;
+    private final ChargeProvider chargeProvider;
 
     /**
      * 一次执行记一行（独立事务）
@@ -43,6 +43,6 @@ public class OrderChargeInvoker {
                     dto.getEncounterId(), dto.getSourceNo());
             return null;
         }
-        return chargeApi.bookFee(dto);
+        return chargeProvider.bookFee(dto);
     }
 }

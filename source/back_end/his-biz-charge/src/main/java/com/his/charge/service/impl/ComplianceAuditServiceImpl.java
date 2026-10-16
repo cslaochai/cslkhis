@@ -4,7 +4,7 @@ import com.his.api.vo.*;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.api.service.AppointApi;
+import com.his.api.service.AppointProvider;
 import com.his.charge.config.ComplianceProperties;
 import com.his.charge.dto.*;
 import com.his.charge.entity.*;
@@ -57,7 +57,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
 
     private final BizInsuranceSettlementMapper bizInsuranceSettlementMapper;
 
-    private final AppointApi appointApi;
+    private final AppointProvider appointProvider;
 
     private final SysIcd10Mapper sysIcd10Mapper;
 
@@ -584,7 +584,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         int window = complianceProperties.getReadmitWindowDays();
         LocalDateTime baseline = null;
         if (settlement.getRegistId() != null) {
-            RegistBriefVO regist = appointApi.findRegist(settlement.getRegistId());
+            RegistBriefVO regist = appointProvider.findRegist(settlement.getRegistId());
             if (regist != null && regist.getVisitDate() != null) {
                 baseline = TimeUtil.dayStart(regist.getVisitDate());
             }

@@ -13,7 +13,7 @@
 
     <artifactId>his-biz-charge</artifactId>
     <packaging>jar</packaging>
-    <name>his-charge</name>
+    <name>his-biz-charge</name>
     <description>收费与结算：收费单、收款、发票、退费、医保结算清单、DRG、规则校验、质控、随访、公卫上报、病案归档、医技执行</description>
 
     <dependencies>
@@ -23,7 +23,12 @@
         </dependency>
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-system</artifactId>
+            <artifactId>his-biz-system</artifactId>
+        </dependency>
+        <!-- 支付渠道对接（收费台扫码支付） -->
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-biz-pay</artifactId>
         </dependency>
         <!-- 本模块是 ChargeApi 的实现方（依赖倒置：契约在 his-api） -->
         <dependency>
@@ -36,10 +41,5 @@
             <artifactId>core</artifactId>
         </dependency>
 
-        <!-- 支付渠道对接（收费台扫码支付） -->
-        <dependency>
-            <groupId>com.his</groupId>
-            <artifactId>his-biz-pay</artifactId>
-        </dependency>
     </dependencies>
 </project>

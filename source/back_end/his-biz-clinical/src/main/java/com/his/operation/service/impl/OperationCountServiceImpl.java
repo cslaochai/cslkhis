@@ -25,7 +25,7 @@ import com.his.operation.mapper.BizOperationCountMapper;
 import com.his.operation.service.OperationCountService;
 import com.his.operation.vo.CountItemVO;
 import com.his.operation.vo.OperationCountVO;
-import com.his.api.service.PatientApi;
+import com.his.api.service.PatientProvider;
 import com.his.api.vo.PatientMasterVO;
 import com.his.system.provider.DeptScopeService;
 import com.his.system.service.RedisSequenceService;
@@ -51,7 +51,7 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
     private final RedisSequenceService redisSequenceService;
 
 
-    private final PatientApi patientApi;
+    private final PatientProvider patientProvider;
 
     private final BizOperationCountMapper bizOperationCountMapper;
 
@@ -335,7 +335,7 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
             vo.setOperationStatusText(OperationApplyStatusEnum.getText(apply.getOperationStatus()));
         }
         if (entity.getPatientId() != null) {
-            PatientMasterVO patient = patientApi.getPatient(entity.getPatientId());
+            PatientMasterVO patient = patientProvider.getPatient(entity.getPatientId());
             if (patient != null) {
                 vo.setPatientNo(patient.getPatientNo());
             }

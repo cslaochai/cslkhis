@@ -1,10 +1,10 @@
 package com.his.miniapp.controller;
 
-import com.his.api.service.EmrPatientApi;
+import com.his.api.service.EmrPatientProvider;
 import com.his.common.base.Result;
 import com.his.api.vo.BizFollowupTaskVO;
 import com.his.miniapp.dto.FollowupReplyDTO;
-import com.his.api.service.PatientApi;
+import com.his.api.service.PatientProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -24,27 +24,27 @@ import java.util.List;
 @PreAuthorize("hasAuthority('PATIENT')")
 public class MiniFollowupController {
 
-    private final EmrPatientApi emrPatientApi;
+    private final EmrPatientProvider emrPatientProvider;
 
-    private final PatientApi patientApi;
+    private final PatientProvider patientProvider;
 
     @Operation(summary = "我的随访任务（只含本人名下，按计划时间倒序）")
     @GetMapping("/myList")
     public Result<List<BizFollowupTaskVO>> myList(@RequestParam Long patientId) {
         // 只允许查自己绑定的就诊人 —— 服务端按绑定关系收窄
-        if (!patientApi.canAccessPatient(patientId)) {
+        if (!patientProvider.canAccessPatient(patientId)) {
             return Result.error("无权查询该就诊人的随访任务");
         }
-        return Result.success(emrPatientApi.listForPatient(patientId));
+        return Result.success(emrPatientProvider.listForPatient(patientId));
     }
 
     @Operation(summary = "提交随访反馈（写回任务的患者反馈列）")
     @PostMapping("/reply")
     public Result<Void> reply(@RequestBody @Valid FollowupReplyDTO dto) {
-        if (!patientApi.canAccessPatient(dto.getPatientId())) {
+        if (!patientProvider.canAccessPatient(dto.getPatientId())) {
             return Result.error("无权为该就诊人提交反馈");
         }
-        emrPatientApi.replyFromPatient(dto.getTaskId(), dto.getPatientId(), dto.getReplyText());
+        emrPatientProvider.replyFromPatient(dto.getTaskId(), dto.getPatientId(), dto.getReplyText());
         return Result.success("反馈已提交", null);
     }
 }

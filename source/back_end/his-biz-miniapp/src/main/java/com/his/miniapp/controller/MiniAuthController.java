@@ -5,7 +5,7 @@ import com.his.miniapp.dto.WxLoginDTO;
 import com.his.miniapp.service.MiniAuthService;
 import com.his.miniapp.service.WxLoginChannelService;
 import com.his.miniapp.vo.MiniWxLoginVO;
-import com.his.api.service.PatientApi;
+import com.his.api.service.PatientProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -30,7 +30,7 @@ public class MiniAuthController {
 
     private final WxLoginChannelService wxLoginChannelService;
 
-    private final PatientApi patientApi;
+    private final PatientProvider patientProvider;
 
     @Operation(summary = "微信一键登录（患者端口子，白名单）")
     @PreAuthorize("permitAll()")
@@ -43,7 +43,7 @@ public class MiniAuthController {
     @PostMapping("/bindOpenid")
     public Result<Void> bindOpenid(@RequestBody @Valid WxLoginDTO dto) {
         String openid = wxLoginChannelService.code2Session(dto.getCode());
-        patientApi.bindOpenid(openid);
+        patientProvider.bindOpenid(openid);
         return Result.success("绑定成功", null);
     }
 }

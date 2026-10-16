@@ -13,7 +13,7 @@
 
     <artifactId>his-core-common</artifactId>
     <packaging>jar</packaging>
-    <name>his-common</name>
+    <name>his-core-common</name>
     <description>公共底座：统一响应体、分页、基础实体、枚举、异常处理、序列号服务</description>
 
     <dependencies>

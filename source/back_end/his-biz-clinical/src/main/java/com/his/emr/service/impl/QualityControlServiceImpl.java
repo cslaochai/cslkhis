@@ -8,7 +8,6 @@ import com.his.common.enums.RecordQcTypeEnum;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.util.TextUtil;
 import com.his.emr.dto.QcCandidateQueryPageDTO;
 import com.his.emr.dto.QcExecuteDTO;
 import com.his.emr.dto.QcQueryPageDTO;
@@ -24,7 +23,7 @@ import com.his.emr.vo.QcResultVO;
 import com.his.emr.support.QcRuleEngine;
 import com.his.emr.support.QcSnapshot;
 import com.his.emr.vo.*;
-import com.his.api.service.PatientApi;
+import com.his.api.service.PatientProvider;
 import com.his.api.vo.InpatientRecordVO;
 import com.his.common.enums.InpatientRecordTypeEnum;
 import com.his.system.entity.CurrentUser;
@@ -60,7 +59,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
 
     private final BizMedicalRecordMapper bizMedicalRecordMapper;
 
-    private final PatientApi patientApi;
+    private final PatientProvider patientProvider;
 
     private final QcRuleEngine qcRuleEngine;
 
@@ -114,7 +113,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
             deptScopeService.assertDeptAccessible(record == null ? null : record.getDeptId());
             return;
         }
-        InpatientRecordVO record = patientApi.getInpatientRecord(recordId);
+        InpatientRecordVO record = patientProvider.getInpatientRecord(recordId);
         deptScopeService.assertDeptAccessible(record == null ? null : record.getDeptId());
     }
 
@@ -379,7 +378,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
             deptScopeService.assertDeptAccessible(record.getDeptId());
             return QcSnapshot.ofOutpatient(record);
         }
-        InpatientRecordVO record = patientApi.getInpatientRecord(recordId);
+        InpatientRecordVO record = patientProvider.getInpatientRecord(recordId);
         if (record == null) {
             throw new BusinessException("住院文书不存在或已删除：" + recordId);
         }

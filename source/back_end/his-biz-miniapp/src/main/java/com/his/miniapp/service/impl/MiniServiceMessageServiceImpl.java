@@ -22,8 +22,8 @@ import com.his.miniapp.vo.MiniServiceMessageListVO;
 import com.his.miniapp.vo.MiniServiceDetailVO;
 import com.his.miniapp.vo.MiniServiceLogVO;
 import com.his.api.entity.CurrentUser;
-import com.his.api.service.AuthContextApi;
-import com.his.api.service.SequenceApi;
+import com.his.api.service.AuthContextProvider;
+import com.his.api.service.SequenceProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -54,8 +54,8 @@ public class MiniServiceMessageServiceImpl extends ServiceImpl<MiniServiceMessag
     private final MiniServiceMessageMapper miniServiceMessageMapper;
     private final MiniServiceLogMapper miniServiceLogMapper;
     private final MiniDirectoryService miniDirectoryService;
-    private final SequenceApi sequenceApi;
-    private final AuthContextApi authContextApi;
+    private final SequenceProvider sequenceProvider;
+    private final AuthContextProvider authContextProvider;
 
     private static List<String> patientActions(Integer status) {
         List<String> actions = new ArrayList<>();
@@ -108,7 +108,7 @@ public class MiniServiceMessageServiceImpl extends ServiceImpl<MiniServiceMessag
 
     @Override
     public String submit(ServiceMessageUpsertDTO dto) {
-        CurrentUser user = authContextApi.getCurrentUser();
+        CurrentUser user = authContextProvider.getCurrentUser();
         if (user == null || user.getPatientId() == null) {
             throw new BusinessException("当前账号未绑定就诊人，无法提交留言");
         }
@@ -137,7 +137,7 @@ public class MiniServiceMessageServiceImpl extends ServiceImpl<MiniServiceMessag
 
     @Override
     public PageResult<MiniServiceMessageListVO> myPage(MessagePageDTO dto) {
-        CurrentUser user = authContextApi.getCurrentUser();
+        CurrentUser user = authContextProvider.getCurrentUser();
         if (user == null || user.getUserId() == null) {
             throw new BusinessException("未获取到登录用户");
         }
@@ -191,7 +191,7 @@ public class MiniServiceMessageServiceImpl extends ServiceImpl<MiniServiceMessag
     public void patientAction(ServiceTicketActionDTO dto) {
         BizServiceMessage ticket = requireOwnTicket(dto.getId());
         String action = dto.getAction() == null ? "" : dto.getAction().trim();
-        CurrentUser user = authContextApi.getCurrentUser();
+        CurrentUser user = authContextProvider.getCurrentUser();
         String operator = user == null ? null : user.getUsername();
         String reason = TextUtil.cut(dto.getReason(), 200);
 
@@ -246,7 +246,7 @@ public class MiniServiceMessageServiceImpl extends ServiceImpl<MiniServiceMessag
         if (id == null) {
             throw new BusinessException("工单ID不合法");
         }
-        CurrentUser user = authContextApi.getCurrentUser();
+        CurrentUser user = authContextProvider.getCurrentUser();
         if (user == null || user.getUserId() == null) {
             throw new BusinessException("未获取到登录用户");
         }
@@ -263,7 +263,7 @@ public class MiniServiceMessageServiceImpl extends ServiceImpl<MiniServiceMessag
      */
     private String nextMessageNo() {
         String prefix = "MSG" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = sequenceApi.next("MSG");
+        long seq = sequenceProvider.next("MSG");
         return prefix + String.format("%04d", seq);
     }
 

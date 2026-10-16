@@ -19,7 +19,7 @@ import com.his.medicaltech.entity.BizReport;
 import com.his.medicaltech.enums.ReportStatusEnum;
 import com.his.medicaltech.enums.ReportTypeEnum;
 import com.his.medicaltech.mapper.BizReportMapper;
-import com.his.api.service.PatientApi;
+import com.his.api.service.PatientProvider;
 import com.his.system.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
@@ -59,7 +59,7 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
 
     private final PatientTextGuard textGuard;
 
-    private final PatientApi patientApi;
+    private final PatientProvider patientProvider;
 
     @Override
     public PatientImagingExplainVO execute(PatientImagingExplainDTO dto) {
@@ -72,7 +72,7 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
         if (report == null) {
             throw new BusinessException("报告不存在：" + dto.getReportId());
         }
-        if (patientApi.patientScopeViolated(report.getPatientId())) {
+        if (patientProvider.patientScopeViolated(report.getPatientId())) {
             // 不区分「报告不存在」和「无权查看」，避免被用来探测报告是否存在
             throw new BusinessException("报告不存在或无权查看：" + dto.getReportId());
         }

@@ -3,7 +3,7 @@ package com.his.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.api.dto.ScheduleSelectQueryDTO;
-import com.his.api.service.AppointApi;
+import com.his.api.service.AppointProvider;
 import com.his.api.vo.StopImpactItemVO;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
@@ -61,7 +61,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
 
     private final BizScheduleMapper bizScheduleMapper;
 
-    private final AppointApi appointApi;
+    private final AppointProvider appointProvider;
 
     private final ClinicSourceLogService clinicSourceLogService;
 
@@ -271,8 +271,8 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
                 clinicSourceMapper.updateById(schedule);
             }
         }
-        appointApi.updateQueueRoomBySchedule(schedule.getId(), today, roomId, roomName);
-        appointApi.updateAppointRoomBySchedule(schedule.getId(), today, roomId, roomName);
+        appointProvider.updateQueueRoomBySchedule(schedule.getId(), today, roomId, roomName);
+        appointProvider.updateAppointRoomBySchedule(schedule.getId(), today, roomId, roomName);
     }
 
     @Override
@@ -722,7 +722,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         if (clinicSourceMapper.selectById(scheduleId) == null) {
             throw new BusinessException("排班记录不存在");
         }
-        return appointApi.listRegsBySchedule(scheduleId);
+        return appointProvider.listRegsBySchedule(scheduleId);
     }
 
     @Override
@@ -731,7 +731,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         int ok = 0;
         for (Long id : registIds) {
             try {
-                if (appointApi.cancelRegist(id, cancelReason)) {
+                if (appointProvider.cancelRegist(id, cancelReason)) {
                     ok++;
                 }
             } catch (Exception ignored) {

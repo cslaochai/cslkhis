@@ -19,7 +19,7 @@ import com.his.operation.service.AnesthesiaVisitService;
 import com.his.operation.support.AnesthesiaCalcs;
 import com.his.operation.support.OperationChargeBiller;
 import com.his.operation.vo.*;
-import com.his.api.service.PatientApi;
+import com.his.api.service.PatientProvider;
 import com.his.api.vo.PatientMasterVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeService;
@@ -54,7 +54,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
 
     private final BizOperationChargeItemMapper bizOperationChargeItemMapper;
 
-    private final PatientApi patientApi;
+    private final PatientProvider patientProvider;
 
     private final AnesthesiaVisitService anesthesiaVisitService;
 
@@ -467,7 +467,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         if (patientId == null) {
             return null;
         }
-        PatientMasterVO patient = patientApi.getPatient(patientId);
+        PatientMasterVO patient = patientProvider.getPatient(patientId);
         return patient == null ? null : patient.getPatientNo();
     }
 

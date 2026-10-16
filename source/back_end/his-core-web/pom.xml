@@ -13,7 +13,7 @@
 
     <artifactId>his-core-web</artifactId>
     <packaging>jar</packaging>
-    <name>his-biz-web</name>
+    <name>his-core-web</name>
     <description>启动层：应用入口、Spring/MyBatis-Plus/Security 配置、CORS、静态资源、运行配置</description>
 
     <dependencies>

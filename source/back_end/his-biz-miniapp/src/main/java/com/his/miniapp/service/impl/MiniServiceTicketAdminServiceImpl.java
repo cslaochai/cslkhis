@@ -19,7 +19,7 @@ import com.his.miniapp.vo.MiniServiceDetailVO;
 import com.his.miniapp.vo.MiniServiceLogVO;
 import com.his.miniapp.vo.MiniTicketStatsVO;
 import com.his.api.entity.CurrentUser;
-import com.his.api.service.AuthContextApi;
+import com.his.api.service.AuthContextProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -45,10 +45,10 @@ public class MiniServiceTicketAdminServiceImpl extends ServiceImpl<MiniServiceMe
 
     private final MiniServiceMessageMapper miniServiceMessageMapper;
     private final MiniServiceLogMapper miniServiceLogMapper;
-    private final AuthContextApi authContextApi;
+    private final AuthContextProvider authContextProvider;
 
     private String currentUsername() {
-        CurrentUser user = authContextApi.getCurrentUser();
+        CurrentUser user = authContextProvider.getCurrentUser();
         return user == null ? null : user.getUsername();
     }
 
@@ -150,7 +150,7 @@ public class MiniServiceTicketAdminServiceImpl extends ServiceImpl<MiniServiceMe
     public void handle(TicketHandleUpsertDTO upsertDTO) {
         BizServiceMessage ticket = requireTicket(upsertDTO.getId());
         String action = upsertDTO.getAction() == null ? "" : upsertDTO.getAction().trim();
-        CurrentUser user = authContextApi.getCurrentUser();
+        CurrentUser user = authContextProvider.getCurrentUser();
         String operator = user == null ? null : user.getUsername();
         String operatorName = user == null ? null : user.getRealName();
         String content = TextUtil.cut(upsertDTO.getContent(), LOG_CONTENT_MAX);

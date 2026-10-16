@@ -23,12 +23,11 @@ import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.mapper.BizPatientTagRelationMapper;
 import com.his.patient.service.*;
 import com.his.patient.support.PatientProfileValidator;
-import com.his.api.service.AppointApi;
+import com.his.api.service.AppointProvider;
 import com.his.api.vo.TodayVisitVO;
 import com.his.patient.enums.PatientSearchScopeModeEnum;
 import com.his.patient.support.PatientSearchScopeResolver;
 import com.his.patient.vo.*;
-import com.his.api.vo.*;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysPatientTag;
 import com.his.system.entity.SysUser;
@@ -130,7 +129,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
      * 就诊域为编译期强依赖（his-web 聚合引入），实现缺失直接启动失败。
      */
     @Lazy
-    private final AppointApi todayVisitProvider;
+    private final AppointProvider todayVisitProvider;
     /**
      * 「要不要看今日就诊」的判定（按当前登录角色的岗位性质）。
      *

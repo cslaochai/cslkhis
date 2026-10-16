@@ -4,7 +4,7 @@ import com.his.common.exception.BusinessException;
 import com.his.pay.config.UnionPayProperties;
 import com.his.pay.entity.BizPayOrder;
 import com.his.pay.service.UnionPayChannelService;
-import com.his.api.service.WxPayChannelService;
+import com.his.api.service.WxPayChannelProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -23,7 +23,7 @@ public class UnionPayChannelServiceImpl implements UnionPayChannelService {
     }
 
     @Override
-    public WxPayChannelService.PayUnifiedResult unifiedOrder(BizPayOrder order) {
+    public WxPayChannelProvider.PayUnifiedResult unifiedOrder(BizPayOrder order) {
         if (unionPayProperties.isMockEnabled()) {
             throw new BusinessException(
                     "云闪付支付处于模拟模式（unionpay.mock-enabled=true），无法调用真实支付。" +
@@ -37,11 +37,11 @@ public class UnionPayChannelServiceImpl implements UnionPayChannelService {
 
             // TODO: 云闪付 SDK 接入（需要银联开放平台 appId + merId + 密钥）
             log.warn("[云闪付支付] SDK 完整实现待补");
-            return WxPayChannelService.PayUnifiedResult.fail("云闪付支付暂未完整实现");
+            return WxPayChannelProvider.PayUnifiedResult.fail("云闪付支付暂未完整实现");
 
         } catch (Exception e) {
             log.error("[云闪付支付] 下单失败 payNo={} err={}", order.getPayNo(), e.getMessage(), e);
-            return WxPayChannelService.PayUnifiedResult.fail(e.getMessage());
+            return WxPayChannelProvider.PayUnifiedResult.fail(e.getMessage());
         }
     }
 }

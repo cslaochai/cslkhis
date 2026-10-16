@@ -3,7 +3,7 @@ package com.his.emr.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.his.api.service.AppointApi;
+import com.his.api.service.AppointProvider;
 import com.his.api.vo.RegistBriefVO;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
@@ -32,7 +32,7 @@ public class PrevisitRecordServiceImpl extends ServiceImpl<BizPrevisitRecordMapp
 
     private final BizPrevisitRecordMapper bizPrevisitRecordMapper;
 
-    private final AppointApi appointApi;
+    private final AppointProvider appointProvider;
 
     private final ObjectMapper objectMapper;
 
@@ -50,7 +50,7 @@ public class PrevisitRecordServiceImpl extends ServiceImpl<BizPrevisitRecordMapp
 
     @Override
     public PrevisitDetailVO submit(PrevisitSubmitDTO dto) {
-        RegistBriefVO appointInfo = appointApi.findRegist(dto.getRegistId());
+        RegistBriefVO appointInfo = appointProvider.findRegist(dto.getRegistId());
         if (appointInfo == null) {
             throw new BusinessException("挂号记录不存在");
         }

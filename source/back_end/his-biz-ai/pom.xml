@@ -35,11 +35,11 @@
         
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-system</artifactId>
+            <artifactId>his-biz-system</artifactId>
         </dependency>
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-clinical</artifactId>
+            <artifactId>his-biz-clinical</artifactId>
         </dependency>
 
         <!-- 知识库文件导入解析：PDF（pdfbox）+ Word docx（poi-ooxml） -->

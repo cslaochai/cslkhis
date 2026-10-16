@@ -12,7 +12,7 @@ import com.his.ai.vo.WardHandoverVO;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
-import com.his.api.service.PatientApi;
+import com.his.api.service.PatientProvider;
 import com.his.api.vo.NursingAssessmentVO;
 import com.his.api.vo.WardNursingFactsVO;
 import lombok.RequiredArgsConstructor;
@@ -54,7 +54,7 @@ public class NursingHandoverCapabilityImpl implements NursingHandoverCapability 
 
     private final AiExecutionService aiExecutionService;
 
-    private final PatientApi patientApi;
+    private final PatientProvider patientProvider;
 
     // ---------------------------------------------------------------- 事实文本
 
@@ -77,7 +77,7 @@ public class NursingHandoverCapabilityImpl implements NursingHandoverCapability 
                 end = date.atTime(8, 0);
             }
         }
-        WardNursingFactsVO facts = patientApi.wardShiftFacts(
+        WardNursingFactsVO facts = patientProvider.wardShiftFacts(
                 dto.getWardId(), begin, end, dto.getShift());
 
         WardHandoverVO vo = new WardHandoverVO();
