@@ -11,7 +11,7 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>his-consumer</artifactId>
+    <artifactId>his-core-consumer</artifactId>
     <packaging>jar</packaging>
     <name>his-consumer</name>
     <description>异步消费者集中层：所有 @RocketMQMessageListener 统一收口于此模块，
@@ -21,7 +21,7 @@
     <dependencies>
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-common</artifactId>
+            <artifactId>his-core-common</artifactId>
         </dependency>
         <dependency>
             <groupId>com.his</groupId>

@@ -19,7 +19,7 @@
     <dependencies>
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-common</artifactId>
+            <artifactId>his-core-common</artifactId>
         </dependency>
         <!-- 采购/入库等写接口的操作人必须服务端从登录态取（UserUtils），不信前端传的身份 -->
         <dependency>

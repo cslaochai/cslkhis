@@ -33,7 +33,7 @@
     </properties>
 
     <modules>
-        <module>his-common</module>
+        <module>his-core-common</module>
         <module>his-system</module>
         <module>his-patient</module>
         <module>his-pharmacy</module>
@@ -45,7 +45,7 @@
         <module>his-charge</module>
         <module>his-pay</module>
         <module>his-ai</module>
-        <module>his-domain-api</module>
+        <module>his-core-api</module>
         <module>his-miniapp</module>
         <module>his-consumer</module>
         <module>his-web</module>
@@ -56,7 +56,7 @@
             <!-- ===== 本项目模块 ===== -->
             <dependency>
                 <groupId>com.his</groupId>
-                <artifactId>his-common</artifactId>
+                <artifactId>his-core-common</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -141,7 +141,7 @@
             </dependency>
             <dependency>
                 <groupId>com.his</groupId>
-                <artifactId>his-consumer</artifactId>
+                <artifactId>his-core-consumer</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
