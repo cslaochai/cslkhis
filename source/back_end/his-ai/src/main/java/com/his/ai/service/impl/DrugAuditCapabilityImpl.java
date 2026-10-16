@@ -25,10 +25,9 @@ import com.his.emr.mapper.BizClinicalRuleCheckMapper;
 import com.his.emr.mapper.BizMedicalRecordMapper;
 import com.his.emr.mapper.BizPrescriptionDetailMapper;
 import com.his.emr.mapper.BizPrescriptionMapper;
-import com.his.patient.entity.BizPatient;
-import com.his.patient.entity.BizPatientAllergy;
-import com.his.patient.mapper.BizPatientAllergyMapper;
-import com.his.patient.mapper.BizPatientMapper;
+import com.his.api.service.PatientApi;
+import com.his.api.vo.AllergyFactVO;
+import com.his.api.vo.PatientMasterVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysDrug;
 import com.his.system.mapper.SysDrugMapper;
@@ -87,9 +86,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
 
     private final BizMedicalRecordMapper bizMedicalRecordMapper;
 
-    private final BizPatientMapper bizPatientMapper;
-
-    private final BizPatientAllergyMapper bizPatientAllergyMapper;
+    private final PatientApi patientApi;
 
     private final SysDrugMapper sysDrugMapper;
 
@@ -351,17 +348,15 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
             appendIfMeaningful(builder, record.getAllergyHistory(), "过敏史");
         }
 
-        BizPatient patient = prescription.getPatientId() == null
-                ? null : bizPatientMapper.selectById(prescription.getPatientId());
+        PatientMasterVO patient = prescription.getPatientId() == null
+                ? null : patientApi.getPatient(prescription.getPatientId());
         if (patient != null) {
             appendIfMeaningful(builder, patient.getAllergyHistory(), "过敏史");
         }
 
         if (prescription.getPatientId() != null) {
-            List<BizPatientAllergy> allergies = bizPatientAllergyMapper.selectList(
-                    new LambdaQueryWrapper<BizPatientAllergy>()
-                            .eq(BizPatientAllergy::getPatientId, prescription.getPatientId()));
-            for (BizPatientAllergy allergy : allergies) {
+            List<AllergyFactVO> allergies = patientApi.listAllergies(prescription.getPatientId());
+            for (AllergyFactVO allergy : allergies) {
                 appendIfMeaningful(builder, allergy.getAllergenName(), "过敏原");
             }
         }

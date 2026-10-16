@@ -1,8 +1,8 @@
 package com.his.miniapp.controller;
 
+import com.his.api.service.EmrPatientApi;
 import com.his.common.base.Result;
-import com.his.emr.service.ChronicRecordService;
-import com.his.emr.vo.ChronicMyRecordsVO;
+import com.his.api.vo.ChronicMyRecordsVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -21,11 +21,11 @@ import org.springframework.web.bind.annotation.RestController;
 @PreAuthorize("hasAuthority('PATIENT')")
 public class MiniChronicController {
 
-    private final ChronicRecordService chronicRecordService;
+    private final EmrPatientApi emrPatientApi;
 
     @Operation(summary = "我的慢病档案（含长处方资格）")
     @GetMapping("/myRecords")
     public Result<ChronicMyRecordsVO> myRecords() {
-        return Result.success(chronicRecordService.myRecords());
+        return Result.success(emrPatientApi.myRecords());
     }
 }

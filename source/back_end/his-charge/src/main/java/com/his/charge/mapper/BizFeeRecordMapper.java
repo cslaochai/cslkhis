@@ -2,7 +2,7 @@ package com.his.charge.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.charge.entity.BizFeeRecord;
-import com.his.charge.vo.FeeTypeSumVO;
+import com.his.api.vo.FeeTypeSumVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;

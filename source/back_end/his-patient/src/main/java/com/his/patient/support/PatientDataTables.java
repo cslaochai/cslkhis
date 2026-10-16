@@ -10,7 +10,7 @@ import java.util.Map;
 /**
  * EMPI 统计业务数据量时涉及的源表（标识 → 中文名）
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class PatientDataTables {
 
     public static final Map<String, String> LABELS = build();

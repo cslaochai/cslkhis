@@ -156,7 +156,7 @@ public class PriceServiceImpl extends ServiceImpl<SysPriceChangeHistoryMapper, S
     }
 
     /**
-     * 操作人：员工身份优先（与站内信、签名口径一致）。
+     * 操作人：一律员工ID（与站内信、签名口径一致）。
      * 姓名单一口径取 {@code realName}，不再回落 {@code employeeName}/{@code username} ——
      * 那两个与库里其他操作人字段不是同一口径，回落出来的值事后按人名检索会对不上。
      * 取不到登录态就整段留空：变价历史是留痕，缺操作人能查出来，塞个假名字不行。
@@ -166,8 +166,7 @@ public class PriceServiceImpl extends ServiceImpl<SysPriceChangeHistoryMapper, S
         if (Objects.isNull(currentUser)) {
             return;
         }
-        history.setOperatorId(Objects.nonNull(currentUser.getEmployeeId())
-                ? currentUser.getEmployeeId() : currentUser.getUserId());
+        history.setOperatorId(currentUser.getEmployeeId());
         history.setOperatorName(TextUtil.hasText(currentUser.getRealName()) ? currentUser.getRealName() : null);
     }
 

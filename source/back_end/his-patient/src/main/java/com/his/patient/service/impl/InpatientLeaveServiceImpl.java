@@ -1,6 +1,7 @@
 package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
@@ -260,7 +261,14 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
             leave.setRejectReason(null);
             leave.setDoctorId(me);
             leave.setDoctorName(TextUtil.cut(myName, NAME_MAX));
-            saveLeave(leave, false);
+            // 审批守卫下沉到 WHERE 才原子：读单与落库之间的窗口里状态可能被并发审批/取消改写，
+            // 整行覆盖会冲掉他人结果（读-判-写竞态），rows==0 说明已不是待审批
+            int contentRows = bizInpatientLeaveMapper.update(leave, new LambdaUpdateWrapper<BizInpatientLeave>()
+                    .eq(BizInpatientLeave::getId, leave.getId())
+                    .eq(BizInpatientLeave::getLeaveStatus, LeaveStatusEnum.PENDING.getCode()));
+            if (contentRows == 0) {
+                throw new BusinessException("只有「待审批」的请假单能审批，当前状态已被并发修改（可能刚被他人审批/取消），请刷新后重试");
+            }
             contentSaved = true;
 
             // 批准即电子签名：签名失败随审批事务回滚，不允许「批了但没签名」的中间态
@@ -270,11 +278,8 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
             cmd.setSignScene(SignSceneEnum.LEAVE_APPROVE.getCode());
             cmd.setSignerId(me);
             cmd.setSignerName(myName);
-            CurrentUser user = UserUtils.getCurrentUser();
-            if (user != null) {
-                cmd.setSignerDeptId(user.getDeptId());
-                cmd.setSignerDeptName(user.getDeptName());
-            }
+            cmd.setSignerDeptId(currentUser.getDeptId());
+            cmd.setSignerDeptName(currentUser.getDeptName());
             cmd.setSignerTitle(TextUtil.cutToNull(bizInpatientLeaveMapper.selectEmployeeTitle(me), 50));
             cmd.setClientIp(dto.getClientIp());
             cmd.setRemark("住院请假单审批（" + BizInpatientLeave.typeText(leave.getLeaveType()) + "）");
@@ -300,7 +305,13 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
         }
         leave.setApproveTime(TimeUtil.nowSeconds());
         // contentSaved 分支已写过一次，这里补写状态/时间；幂等无害
-        saveLeave(leave, false);
+        // 终写同样以「仍是待审批」为 WHERE 守卫：签名窗口里被并发改写则整行覆盖会冲掉他人结果，rows==0 兜底
+        int rows = bizInpatientLeaveMapper.update(leave, new LambdaUpdateWrapper<BizInpatientLeave>()
+                .eq(BizInpatientLeave::getId, leave.getId())
+                .eq(BizInpatientLeave::getLeaveStatus, LeaveStatusEnum.PENDING.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("只有「待审批」的请假单能审批，当前状态已被并发修改（可能刚被他人审批/取消），请刷新后重试");
+        }
         if (contentSaved) {
             log.info("住院请假单已批准并电子签名 leaveNo={} signId={}", leave.getLeaveNo(), leave.getSignId());
         }
@@ -343,7 +354,14 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
         leave.setConfirmTime(actualLeave);
         leave.setActualLeaveTime(actualLeave);
         leave.setLeaveStatus(LeaveStatusEnum.LEFT.getCode());
-        saveLeave(leave, false);
+        // 离院守卫下沉到 WHERE 才原子：读单校验与写回之间的窗口里状态可能被并发审批/取消/登记改写，
+        // 整行覆盖会冲掉他人结果（读-判-写竞态），rows==0 说明已不是已批准（未批准不可放人）
+        int rows = bizInpatientLeaveMapper.update(leave, new LambdaUpdateWrapper<BizInpatientLeave>()
+                .eq(BizInpatientLeave::getId, leave.getId())
+                .eq(BizInpatientLeave::getLeaveStatus, LeaveStatusEnum.APPROVED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("只有「已批准」的请假单能登记离院，当前状态已被并发修改（可能刚被他人审批/取消/登记），请刷新后重试（未批准不可放人）");
+        }
     }
 
     @Override

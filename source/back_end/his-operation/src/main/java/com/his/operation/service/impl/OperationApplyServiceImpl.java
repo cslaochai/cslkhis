@@ -1,6 +1,7 @@
 package com.his.operation.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -32,15 +33,15 @@ import com.his.operation.vo.AiSuggestResultVO;
 import com.his.operation.vo.AiSuggestionVO;
 import com.his.operation.vo.RoomUtilizationStatVO;
 import com.his.operation.vo.RoomUtilizationVO;
-import com.his.patient.entity.BizAdmission;
-import com.his.patient.entity.BizInpatientOperation;
-import com.his.patient.entity.BizInpatientRecord;
-import com.his.patient.entity.BizPatient;
-import com.his.patient.enums.InpatientRecordTypeEnum;
-import com.his.patient.service.BizPatientService;
-import com.his.patient.service.InpatientRecordService;
-import com.his.patient.service.InpatientService;
-import com.his.patient.vo.WardVO;
+import com.his.common.enums.InpatientRecordTypeEnum;
+import com.his.api.dto.ClosedLoopRecordDTO;
+import com.his.api.dto.SurgeryOperationDTO;
+import com.his.api.service.PatientApi;
+import com.his.api.vo.AdmissionVO;
+import com.his.api.vo.ClosedLoopRecordVO;
+import com.his.api.vo.PatientMasterVO;
+import com.his.api.vo.SurgeryOperationVO;
+import com.his.api.vo.WardVO;
 import com.his.system.dto.TechAuthGateDTO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
@@ -79,11 +80,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
 
     private final BizOperationApplyMapper bizOperationApplyMapper;
 
-    private final BizPatientService bizPatientService;
-
-    private final InpatientService inpatientService;
-
-    private final InpatientRecordService inpatientRecordService;
+    private final PatientApi patientApi;
 
     private final EmployeeTechAuthService employeeTechAuthService;
 
@@ -179,7 +176,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }
-        BizAdmission admission = inpatientService.getAdmissionById(admissionId);
+        AdmissionVO admission = patientApi.getAdmission(admissionId);
         if (admission != null) {
             deptScopeService.assertDeptAccessible(admission.getDeptId());
         }
@@ -631,19 +628,19 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        BizAdmission admission = inpatientService.getAdmissionById(dto.getAdmissionId());
+        AdmissionVO admission = patientApi.getAdmission(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
         if (!Objects.equals(AdmitStatusEnum.IN_HOSPITAL.getCode(), admission.getAdmitStatus())) {
             throw new BusinessException("该患者当前不是「在院」状态，不能申请手术（已出院的住院不能开手术单）");
         }
-        BizPatient patient = bizPatientService.getById(admission.getPatientId());
+        PatientMasterVO patient = patientApi.getPatient(admission.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在");
         }
 
-        int isMain = dto.getIsMain() == null ? 1 : dto.getIsMain();
+        int isMain = dto.getIsMain();
         boolean create = dto.getId() == null;
 
         BizOperationApply entity;
@@ -706,7 +703,14 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         if (create) {
             bizOperationApplyMapper.insert(entity);
         } else {
-            bizOperationApplyMapper.updateById(entity);
+            int rows = bizOperationApplyMapper.update(entity, new LambdaUpdateWrapper<BizOperationApply>()
+                    .eq(BizOperationApply::getId, entity.getId())
+                    .eq(BizOperationApply::getOperationStatus, OperationApplyStatusEnum.PENDING_SCHEDULE.getCode()));
+            if (rows == 0) {
+                throw new BusinessException("手术单 " + entity.getApplyNo()
+                        + " 当前状态已变化，只有「待排期」可以修改申请内容"
+                        + "（排台后术式已对外承诺，改请先取消或走停手术）");
+            }
         }
         gateTechAuth(entity.getApplyDoctorId(), TechAuthCategoryEnum.SURGERY.getCode(), 1,
                 entity, "手术申请人", null);
@@ -725,7 +729,6 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         }
         LocalDateTime start = TimeUtil.toSeconds(dto.getPlannedStartTime());
         LocalDateTime end = TimeUtil.toSeconds(dto.getPlannedEndTime());
-        // D-业务规则：时间先后关系，DTO 注解无法表达，保留
         if (!end.isAfter(start)) {
             throw new BusinessException("计划结束时间必须晚于开始时间");
         }
@@ -786,7 +789,16 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         entity.setScheduleTime(TimeUtil.nowSeconds());
         entity.setScheduleRemark(dto.getScheduleRemark());
         entity.setOperationStatus(OperationApplyStatusEnum.SCHEDULED.getCode());
-        bizOperationApplyMapper.updateById(entity);
+        int rows = bizOperationApplyMapper.update(entity, new LambdaUpdateWrapper<BizOperationApply>()
+                .eq(BizOperationApply::getId, entity.getId())
+                .notIn(BizOperationApply::getOperationStatus,
+                        OperationApplyStatusEnum.FINISHED.getCode(),
+                        OperationApplyStatusEnum.CANCELLED.getCode(),
+                        OperationApplyStatusEnum.PREOP_CHECKED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("手术单 " + entity.getApplyNo()
+                    + " 当前状态已变为已完成/已取消/已术前核对，不能排台，请刷新后重试");
+        }
         gateTechAuth(dto.getSurgeonId(), TechAuthCategoryEnum.SURGERY.getCode(),
                 entity.getOperationLevel(), entity, "主刀医师", surgeonName);
         if (dto.getAnesthetistId() != null) {
@@ -838,7 +850,14 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         if (TextUtil.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
-        bizOperationApplyMapper.updateById(entity);
+        // 守卫下沉到 WHERE：并发下状态被改离「已排期」时更新命中 0 行，兜底抛错（与上方 Java 校验同义）
+        int rows = bizOperationApplyMapper.update(entity, new LambdaUpdateWrapper<BizOperationApply>()
+                .eq(BizOperationApply::getId, entity.getId())
+                .eq(BizOperationApply::getOperationStatus, OperationApplyStatusEnum.SCHEDULED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("手术单 " + entity.getApplyNo()
+                    + " 当前状态已变化，只有「已排期」可以做术前核对");
+        }
         log.info("术前核对完成 applyNo={} 核对项={} 异常说明={} 核对人={}",
                 entity.getApplyNo(), entity.getPreopCheckItems(),
                 TextUtil.hasText(dto.getPreopNote()) ? dto.getPreopNote() : "无", operatorUser.getRealName());
@@ -874,7 +893,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
             throw new BusinessException("实际结束时间必须晚于开始时间");
         }
 
-        BizAdmission admission = inpatientService.getAdmissionById(entity.getAdmissionId());
+        AdmissionVO admission = patientApi.getAdmission(entity.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在，无法回写（admissionId=" + entity.getAdmissionId() + "）");
         }
@@ -884,21 +903,21 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         }
 
         // 归档闸门：已归档的病案首页不能再加手术明细（同"归档后病历不可修改"）
-        if (inpatientService.isSummaryArchived(entity.getAdmissionId())) {
+        if (patientApi.isSummaryArchived(entity.getAdmissionId())) {
             throw new BusinessException("该住院的病案首页已归档，不能再回写手术明细（归档数据不可改）");
         }
 
         // 器械清点闸门：只要这台手术建过清点单，就必须三轮走完且对得上，
         guardCount(entity);
 
-        // 三方安全核查闸门（P134.2）：同清点的口径 —— 签过就必须签满三轮，
+        // 三方安全核查闸门
         guardSafetyCheck(entity);
 
         LocalDateTime now = TimeUtil.nowSeconds();
         String actualName = dto.getActualOperationName().trim();
         String basis = buildOperationBasis(dto);
 
-        BizInpatientOperation op = new BizInpatientOperation();
+        SurgeryOperationDTO op = new SurgeryOperationDTO();
         op.setAdmissionId(entity.getAdmissionId());
         op.setApplyId(entity.getId());
         op.setIsMain(entity.getIsMain());
@@ -917,10 +936,10 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
                 + "，主刀 " + textOr(entity.getSurgeonName(), "未指定")
                 + "，麻醉方式 " + OperationAnesthesiaMethodEnum.getText(entity.getAnesthesiaType()));
         // 首页明细的重复闸、序号重排、is_surgery 置位都在首页写入方里做（它才是这张表的所有者）
-        op = inpatientService.appendSurgeryOperation(op);
+        SurgeryOperationVO opVo = patientApi.appendSurgeryOperation(op);
 
         // ② 回写手术记录病历（record_type=5）
-        BizInpatientRecord record = writeBackRecord(entity, admission, dto, start, end, basis, now);
+        ClosedLoopRecordVO record = writeBackRecord(entity, admission, dto, start, end, basis, now);
 
         entity.setActualOperationCode(dto.getActualOperationCode());
         entity.setActualOperationName(actualName);
@@ -934,17 +953,25 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         entity.setFinishDoctorId(operatorUser.getEmployeeId());
         entity.setFinishDoctorName(operatorUser.getRealName());
         entity.setFinishTime(now);
-        entity.setOperationId(op.getId());
+        entity.setOperationId(opVo.getId());
         entity.setRecordId(record.getId());
         entity.setOperationStatus(OperationApplyStatusEnum.FINISHED.getCode());
         if (TextUtil.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
-        bizOperationApplyMapper.updateById(entity);
+        // 状态守卫下沉到 WHERE：读-判-写之间并发回写完成/取消会使 Java 侧判断失效，
+        // 重复执行会产生第二份手术记录与第二条首页手术明细
+        int rows = bizOperationApplyMapper.update(entity, new LambdaUpdateWrapper<BizOperationApply>()
+                .eq(BizOperationApply::getId, entity.getId())
+                .eq(BizOperationApply::getOperationStatus, OperationApplyStatusEnum.PREOP_CHECKED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("手术单 " + entity.getApplyNo() + " 状态已变更（可能已被并发登记完成或取消），"
+                    + "未完成术前核对不能登记完成，请刷新后重试");
+        }
 
         log.info("手术完成 applyNo={} 术式={} {}~{} 首页明细ID={} 病历号={} 录入人={}",
                 entity.getApplyNo(), actualName, start.format(DateFormats.DATETIME), end.format(DateFormats.DATETIME),
-                op.getId(), record.getRecordNo(), operatorUser.getRealName());
+                opVo.getId(), record.getRecordNo(), operatorUser.getRealName());
     }
 
     @Override
@@ -972,7 +999,17 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         entity.setCancelDoctorId(operatorUser.getEmployeeId());
         entity.setCancelDoctorName(operatorUser.getRealName());
         entity.setCancelTime(TimeUtil.nowSeconds());
-        bizOperationApplyMapper.updateById(entity);
+        // 守卫下沉到 WHERE：并发下已被取消/完成/术前核对时更新命中 0 行，兜底抛错（与上方 Java 校验同义）
+        int rows = bizOperationApplyMapper.update(entity, new LambdaUpdateWrapper<BizOperationApply>()
+                .eq(BizOperationApply::getId, entity.getId())
+                .notIn(BizOperationApply::getOperationStatus,
+                        OperationApplyStatusEnum.CANCELLED.getCode(),
+                        OperationApplyStatusEnum.FINISHED.getCode(),
+                        OperationApplyStatusEnum.PREOP_CHECKED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("手术单 " + entity.getApplyNo()
+                    + " 当前状态已变为已取消/已完成/已术前核对，不能取消，请刷新后重试");
+        }
         log.info("取消手术 applyNo={} 原因={} 操作人={}",
                 entity.getApplyNo(), dto.getCancelReason(), operatorUser.getRealName());
     }
@@ -981,7 +1018,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
     /**
      * 把这次手术回写成一份住院病历（record_type=5 手术记录，状态直接「已提交」）。
      */
-    private BizInpatientRecord writeBackRecord(BizOperationApply entity, BizAdmission admission,
+    private ClosedLoopRecordVO writeBackRecord(BizOperationApply entity, AdmissionVO admission,
                                                OperationFinishDTO dto,
                                                LocalDateTime start, LocalDateTime end,
                                                String basis, LocalDateTime now) {
@@ -989,7 +1026,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        BizPatient patient = bizPatientService.getById(admission.getPatientId());
+        PatientMasterVO patient = patientApi.getPatient(admission.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在，无法回写手术记录");
         }
@@ -1017,7 +1054,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
                     .append(OperationCheckItems.summaryText(entity.getPreopCheckItems()));
         }
 
-        BizInpatientRecord record = new BizInpatientRecord();
+        ClosedLoopRecordDTO record = new ClosedLoopRecordDTO();
         record.setAdmissionId(admission.getAdmissionId());
         record.setPatientId(admission.getPatientId());
         record.setPatientNo(patient.getPatientNo());
@@ -1045,7 +1082,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         record.setDoctorName(TextUtil.hasText(entity.getSurgeonName())
                 ? entity.getSurgeonName() : operatorUser.getRealName());
         record.setSubmitTime(now);
-        return inpatientRecordService.appendClosedLoopRecord(record);
+        return patientApi.appendClosedLoopRecord(record);
     }
 
     /**
@@ -1191,12 +1228,12 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         if (wardId == null) {
             return null;
         }
-        WardVO ward = inpatientService.getWardById(wardId);
+        WardVO ward = patientApi.getWard(wardId);
         return ward == null ? "未知病区(ID=" + wardId + ")" : ward.getWardName();
     }
 
     private String bedNoOf(Long bedId) {
-        return inpatientService.getBedNoById(bedId);
+        return patientApi.getBedNo(bedId);
     }
 
     /**

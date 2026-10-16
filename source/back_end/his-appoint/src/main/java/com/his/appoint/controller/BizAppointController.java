@@ -1,11 +1,12 @@
 package com.his.appoint.controller;
 
 import com.his.appoint.dto.*;
+import com.his.api.dto.*;
 import com.his.appoint.service.BizAppointService;
 import com.his.appoint.vo.AppointStatusCountVO;
-import com.his.appoint.vo.BizAppointInfoListVO;
-import com.his.appoint.vo.RevisitFeePreviewVO;
-import com.his.appoint.vo.RevisitRecordSelectVO;
+import com.his.api.vo.BizAppointInfoListVO;
+import com.his.api.vo.RevisitFeePreviewVO;
+import com.his.api.vo.RevisitRecordSelectVO;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import io.swagger.v3.oas.annotations.Operation;

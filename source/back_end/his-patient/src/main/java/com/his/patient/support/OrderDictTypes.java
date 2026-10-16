@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * 医嘱基础字典的三类口径（sql/142）：给药途径 / 用药频次 / 剂量单位。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class OrderDictTypes {
 
     /**

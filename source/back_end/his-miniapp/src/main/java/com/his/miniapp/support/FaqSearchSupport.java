@@ -13,7 +13,7 @@ import java.util.Set;
 /**
  * 常见问题检索
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class FaqSearchSupport {
 
     /**

@@ -3,7 +3,7 @@ package com.his.pay.service.impl;
 import com.his.common.util.TextUtil;
 import com.his.pay.entity.BizPayNotifyLog;
 import com.his.pay.mapper.BizPayNotifyLogMapper;
-import com.his.pay.service.PayNotifyLogService;
+import com.his.api.service.PayNotifyLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

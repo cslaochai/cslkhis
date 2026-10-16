@@ -9,7 +9,7 @@ import java.math.RoundingMode;
 /**
  * 中药饮片「克 ↔ 档案单位」换算
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class TcmGramUnits {
 
     /**

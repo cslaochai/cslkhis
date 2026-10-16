@@ -2,6 +2,7 @@ package com.his.medicaltech.dto;
 
 import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -58,6 +59,7 @@ public class EcgTemplateUpsertDTO {
     /**
      * 状态（0-停用 1-启用）
      */
+    @NotNull(message = "状态不能为空（0-停用 1-启用）")
     @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 }

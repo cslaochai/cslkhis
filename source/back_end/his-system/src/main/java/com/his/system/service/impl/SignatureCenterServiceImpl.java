@@ -59,7 +59,7 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
         if (user == null) {
             return null;
         }
-        return user.getEmployeeId() != null ? user.getEmployeeId() : user.getUserId();
+        return user.getEmployeeId();
     }
 
     private static String nameOf(CurrentUser user) {
@@ -117,6 +117,9 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
     @Override
     public SignatureVO sign(SignatureSignDTO dto) {
         CurrentUser user = UserUtils.getCurrentUser();
+        if (user == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         SignCommandDTO cmd = new SignCommandDTO();
         cmd.setBizType(dto.getBizType());
         cmd.setBizId(dto.getBizId());
@@ -129,6 +132,9 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
     @Override
     public SignatureVO invalidate(SignatureInvalidateDTO dto) {
         CurrentUser user = UserUtils.getCurrentUser();
+        if (user == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         return emrSignatureService.invalidate(dto.getSignId(), dto.getReason(), employeeIdOf(user), nameOf(user));
     }
 
@@ -144,12 +150,18 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
     @Override
     public SignCertVO issueCert(SignCertIssueDTO dto) {
         CurrentUser user = UserUtils.getCurrentUser();
+        if (user == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         return signCertService.issue(dto, employeeIdOf(user), nameOf(user));
     }
 
     @Override
     public SignCertVO revokeCert(SignCertRevokeDTO dto) {
         CurrentUser user = UserUtils.getCurrentUser();
+        if (user == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         return signCertService.revoke(dto, employeeIdOf(user), nameOf(user));
     }
 

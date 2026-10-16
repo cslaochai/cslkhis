@@ -1,10 +1,11 @@
 package com.his.charge.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.system.api.service.PatientApi;
+import com.his.api.service.PatientApi;
 import com.his.charge.dto.*;
 import com.his.charge.entity.BizYbChronicCatalog;
 import com.his.charge.entity.BizYbChronicReg;
@@ -14,7 +15,7 @@ import com.his.charge.service.YbChronicService;
 import com.his.charge.vo.ChronicCatalogVO;
 import com.his.charge.vo.ChronicRegListVO;
 import com.his.charge.vo.ChronicRegSummaryVO;
-import com.his.system.api.vo.PatientBriefVO;
+import com.his.api.vo.PatientBriefVO;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.system.service.RedisSequenceService;
@@ -89,7 +90,7 @@ public class YbChronicServiceImpl extends ServiceImpl<BizYbChronicRegMapper, Biz
         boolean creating = dto.getId() == null;
         if (creating) {
             entity = new BizYbChronicCatalog();
-            entity.setStatus(dto.getStatus() == null ? 1 : dto.getStatus());
+            entity.setStatus(dto.getStatus());
         } else {
             entity = requireCatalog(dto.getId());
             if (dto.getStatus() != null) {
@@ -249,7 +250,13 @@ public class YbChronicServiceImpl extends ServiceImpl<BizYbChronicRegMapper, Biz
         entity.setCancelBy(operator);
         entity.setCancelTime(LocalDateTime.now());
         entity.setUpdateBy(operator);
-        bizYbChronicRegMapper.updateById(entity);
+        // 守卫下沉到 WHERE：读-判-写之间并发状态变更会使 Java 侧判断失效
+        int rows = bizYbChronicRegMapper.update(entity, new LambdaUpdateWrapper<BizYbChronicReg>()
+                .eq(BizYbChronicReg::getId, entity.getId())
+                .eq(BizYbChronicReg::getRegStatus, REG_VALID));
+        if (rows == 0) {
+            throw new BusinessException("仅「有效」的备案可注销，已注销/已驳回是终态（状态已被并发变更，请刷新后重试）");
+        }
     }
 
     @Override
@@ -265,7 +272,13 @@ public class YbChronicServiceImpl extends ServiceImpl<BizYbChronicRegMapper, Biz
         entity.setRejectBy(operator);
         entity.setRejectTime(LocalDateTime.now());
         entity.setUpdateBy(operator);
-        bizYbChronicRegMapper.updateById(entity);
+        // 守卫下沉到 WHERE：读-判-写之间并发状态变更会使 Java 侧判断失效
+        int rows = bizYbChronicRegMapper.update(entity, new LambdaUpdateWrapper<BizYbChronicReg>()
+                .eq(BizYbChronicReg::getId, entity.getId())
+                .eq(BizYbChronicReg::getRegStatus, REG_VALID));
+        if (rows == 0) {
+            throw new BusinessException("仅「有效」的备案可驳回，已注销/已驳回是终态（状态已被并发变更，请刷新后重试）");
+        }
     }
 
     /**

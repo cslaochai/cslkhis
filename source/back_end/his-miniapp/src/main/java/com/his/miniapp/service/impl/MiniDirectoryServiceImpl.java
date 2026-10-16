@@ -1,8 +1,8 @@
 package com.his.miniapp.service.impl;
 
-import com.his.system.dto.ScheduleSelectQueryDTO;
-import com.his.system.entity.BizClinicSource;
-import com.his.system.service.BizClinicSourceService;
+import com.his.api.dto.ScheduleSelectQueryDTO;
+import com.his.api.service.ClinicSourceApi;
+import com.his.api.vo.ClinicSourceVO;
 import com.his.common.exception.BusinessException;
 import com.his.miniapp.mapper.MiniDirectoryMapper;
 import com.his.miniapp.service.MiniDirectoryService;
@@ -10,7 +10,7 @@ import com.his.miniapp.vo.MiniDeptSelectListVO;
 import com.his.miniapp.vo.MiniDoctorSelectListVO;
 import com.his.miniapp.vo.MiniScheduleSelectVO;
 import com.his.miniapp.vo.MiniPatientDetailVO;
-import com.his.patient.service.PatientGuardianService;
+import com.his.api.service.PatientApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -22,8 +22,8 @@ import java.util.List;
 public class MiniDirectoryServiceImpl implements MiniDirectoryService {
 
     private final MiniDirectoryMapper miniDirectoryMapper;
-    private final BizClinicSourceService bizScheduleService;
-    private final PatientGuardianService patientGuardianService;
+    private final ClinicSourceApi clinicSourceApi;
+    private final PatientApi patientApi;
 
     @Override
     public List<MiniDeptSelectListVO> openDepartments() {
@@ -37,7 +37,7 @@ public class MiniDirectoryServiceImpl implements MiniDirectoryService {
 
     @Override
     public List<MiniScheduleSelectVO> schedules(ScheduleSelectQueryDTO queryDTO) {
-        List<BizClinicSource> list = bizScheduleService.scheduleSelectListUnbounded(queryDTO);
+        List<ClinicSourceVO> list = clinicSourceApi.scheduleSelectListUnbounded(queryDTO);
         return list.stream().map(detail -> {
             MiniScheduleSelectVO vo = new MiniScheduleSelectVO();
             BeanUtils.copyProperties(detail, vo);
@@ -47,7 +47,7 @@ public class MiniDirectoryServiceImpl implements MiniDirectoryService {
 
     @Override
     public MiniPatientDetailVO patientProfile(Long patientId) {
-        if (!patientGuardianService.canAccessPatient(patientId)) {
+        if (!patientApi.canAccessPatient(patientId)) {
             throw new BusinessException("无权查询该就诊人档案");
         }
         return miniDirectoryMapper.selectPatientById(patientId);

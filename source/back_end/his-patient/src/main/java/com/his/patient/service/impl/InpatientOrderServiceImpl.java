@@ -4,11 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.charge.dto.FeeBookDTO;
-import com.his.charge.entity.BizFeeRecord;
-import com.his.charge.support.FeeCatalogResolver;
+import com.his.api.dto.FeeBookDTO;
+import com.his.api.vo.FeeRecordVO;
 import com.his.common.constant.DictTypeConst;
-import com.his.system.api.service.ArrearsControlApi;
+import com.his.api.service.ArrearsControlApi;
 import com.his.system.dto.SignCommandDTO;
 import com.his.common.enums.*;
 import com.his.common.enums.YesOrNoEnum;
@@ -19,10 +18,11 @@ import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.system.vo.SignatureVO;
 import com.his.patient.dto.*;
+import com.his.api.dto.*;
 import com.his.patient.entity.*;
-import com.his.patient.enums.InpatientOrderStatusEnum;
+import com.his.common.enums.InpatientOrderStatusEnum;
 import com.his.patient.enums.OrderClassEnum;
-import com.his.patient.enums.OrderTypeEnum;
+import com.his.common.enums.OrderTypeEnum;
 import com.his.patient.mapper.*;
 import com.his.patient.service.DietPlanService;
 import com.his.patient.service.InpatientOrderService;
@@ -31,7 +31,7 @@ import com.his.patient.support.OrderChargeInvoker;
 import com.his.patient.vo.InpatientOrderExecVO;
 import com.his.patient.vo.InpatientOrderVO;
 import com.his.patient.vo.InpatientOrderVerifyNotifyPayloadVO;
-import com.his.patient.vo.WardVO;
+import com.his.api.vo.WardVO;
 import com.his.system.dto.TechAuthGateDTO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.enums.BizTypeEnum;
@@ -53,7 +53,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 /**
- * 住院医嘱服务实现（P1：医嘱 → 校对 → 执行 → 计费）。
+ * 住院医嘱服务实现
  */
 @Slf4j
 @Service
@@ -144,7 +144,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
         if (dto.getId() == null
                 && items.stream().anyMatch(i -> Objects.equals(OrderClassEnum.OPERATION.getCode(), i.getOrderClass()))) {
             TechAuthGateDTO authGate = new TechAuthGateDTO();
-            authGate.setEmployeeId(UserUtils.getCurrentUser().getEmployeeId());
+            authGate.setEmployeeId(operatorUser.getEmployeeId());
             authGate.setAuthCategory(TechAuthCategoryEnum.SURGERY.getCode());
             authGate.setRequiredLevel(1);
             authGate.setItemCode(items.stream().map(InpatientOrderItemDTO::getItemCode)
@@ -193,7 +193,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
             throw new BusinessException("计划结束时间不能早于开始时间");
         }
 
-        Long doctorId = currentEmpId();
+        Long doctorId = currentEmpId(operatorUser);
         String doctorName = operatorUser.getRealName();
         int source = dto.getSource() != null ? dto.getSource() : 1;
         int isUrgent = Objects.equals(1, dto.getIsUrgent()) ? 1 : 0;
@@ -336,7 +336,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
         if (order.getDoctorSignId() == null) {
             return;
         }
-        emrSignatureService.invalidate(order.getDoctorSignId(), reason, currentEmpId(), operatorUser.getRealName());
+        emrSignatureService.invalidate(order.getDoctorSignId(), reason, currentEmpId(operatorUser), operatorUser.getRealName());
         order.setDoctorSignId(null);
         order.setDoctorSignedTime(null);
     }
@@ -355,10 +355,10 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
         cmd.setBizType(SignBizTypeEnum.INPATIENT_ORDER.getCode());
         cmd.setBizId(order.getId());
         cmd.setSignScene(scene.getCode());
-        cmd.setSignerId(currentEmpId());
+        cmd.setSignerId(currentEmpId(operatorUser));
         cmd.setSignerName(operatorUser.getRealName());
-        cmd.setSignerDeptId(currentDeptId());
-        cmd.setSignerDeptName(currentDeptName());
+        cmd.setSignerDeptId(currentDeptId(operatorUser));
+        cmd.setSignerDeptName(currentDeptName(operatorUser));
         try {
             SignatureVO sig = emrSignatureService.sign(cmd);
             if (scene == SignSceneEnum.ORDER_VERIFY) {
@@ -386,7 +386,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
         }
 
         LocalDateTime now = TimeUtil.nowSeconds();
-        Long nurseId = currentEmpId();
+        Long nurseId = currentEmpId(operatorUser);
         String nurseName = operatorUser.getRealName();
 
         // 第一遍：全量校验。批量校对要么全成功、要么一条都不改 ——
@@ -575,7 +575,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
         }
 
         LocalDateTime now = TimeUtil.nowSeconds();
-        Long doctorId = currentEmpId();
+        Long doctorId = currentEmpId(operatorUser);
         String doctorName = operatorUser.getRealName();
 
         List<BizInpatientOrder> targets = new ArrayList<>();
@@ -656,7 +656,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
                     + "」，只有「待校对」的医嘱可以作废；已校对的请用「停止」");
         }
 
-        Long doctorId = currentEmpId();
+        Long doctorId = currentEmpId(operatorUser);
         String doctorName = operatorUser.getRealName();
         for (BizInpatientOrder order : targets) {
             order.setOrderStatus(InpatientOrderStatusEnum.CANCELLED.getCode());
@@ -738,25 +738,25 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
     }
 
     // 计划行（按天生成 / 查询补当天）
-
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public int execComplete(OrderExecCompleteDTO dto) {
+    public int execComplete(OrderExecCompleteDTO execCompleteDTO) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        int status = dto.getExecStatus() != null ? dto.getExecStatus() : ExecStatusEnum.EXECUTED.getCode();
-        if (Objects.equals(ExecStatusEnum.SKIPPED.getCode(), status) && !TextUtil.hasText(dto.getExecNote())) {
+        // 不允许兜底成「已执行」：漏传必须报错，否则会静默走进计费分支
+        int status = execCompleteDTO.getExecStatus();
+        if (Objects.equals(ExecStatusEnum.SKIPPED.getCode(), status) && !TextUtil.hasText(execCompleteDTO.getExecNote())) {
             throw new BusinessException("跳过必须写明原因（飞检问的是「这条医嘱为什么没有执行记录」，答「删了」不成立）");
         }
-        List<Long> ids = dto.getExecIds().stream().filter(Objects::nonNull).distinct().toList();
+        List<Long> ids = execCompleteDTO.getExecIds().stream().filter(Objects::nonNull).distinct().toList();
         if (ids.isEmpty()) {
             throw new BusinessException("请选择要处理的执行记录");
         }
 
-        LocalDateTime execTime = TimeUtil.toSeconds(dto.getExecTime() != null ? dto.getExecTime() : LocalDateTime.now());
-        Long nurseId = currentEmpId();
+        LocalDateTime execTime = TimeUtil.toSeconds(execCompleteDTO.getExecTime() != null ? execCompleteDTO.getExecTime() : LocalDateTime.now());
+        Long nurseId = currentEmpId(operatorUser);
         String nurseName = operatorUser.getRealName();
 
         // 第一遍：全量校验（含父医嘱状态）
@@ -793,13 +793,13 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
             exec.setExecTime(execTime);
             exec.setExecNurseId(nurseId);
             exec.setExecNurseName(nurseName);
-            if (TextUtil.hasText(dto.getExecNote())) {
-                exec.setExecNote(dto.getExecNote());
+            if (TextUtil.hasText(execCompleteDTO.getExecNote())) {
+                exec.setExecNote(execCompleteDTO.getExecNote());
             }
 
             if (Objects.equals(ExecStatusEnum.EXECUTED.getCode(), status)) {
                 // 记账走独立事务（OrderChargeInvoker）：记账失败绝不能把"护士已经做过了"一起回滚
-                BizFeeRecord chargeResult = null;
+                FeeRecordVO chargeResult = null;
                 try {
                     chargeResult = orderChargeInvoker.book(buildChargeFee(order, exec, admissionCache));
                 } catch (Exception e) {
@@ -890,7 +890,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
         dto.setSourceType(FeeSourceTypeEnum.INPATIENT_ORDER.getCode());
         dto.setSourceId(exec.getId());
         dto.setSourceNo(order.getOrderNo());
-        dto.setCatalogType(FeeCatalogResolver.byItemType(itemType));
+        dto.setCatalogType(FeeCatalogTypeEnum.byItemType(itemType));
         dto.setRemark("住院" + orderClassDesc(order.getOrderClass()) + "医嘱执行记账（第 "
                 + (exec.getExecSeq() == null ? 1 : exec.getExecSeq()) + " 次，医嘱 " + order.getId() + "）");
         return dto;
@@ -1034,39 +1034,24 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
     }
 
     /**
-     * 医嘱的医生/护士留痕一律用**员工ID**（不是用户的ID），与站内信收件人同一口径
+     * 医嘱的医生/护士留痕一律用**员工ID**（不是用户的ID），与站内信收件人同一口径。
+     * 入参必须是入口处已判空抛错的当前登录人，这里不做任何兜底；员工ID缺失说明当前登录人不是内部员工，直接拒绝。
      */
-    private Long currentEmpId() {
-        try {
-            CurrentUser user = UserUtils.getCurrentUser();
-            if (user == null) {
-                return null;
-            }
-            return user.getEmployeeId() != null ? user.getEmployeeId() : user.getUserId();
-        } catch (Exception e) {
-            // 非请求线程（定时/脚本）取不到上下文
-            return null;
+    private Long currentEmpId(CurrentUser user) {
+        if (user.getEmployeeId() == null) {
+            throw new BusinessException("当前登录人员不是内部员工，无法记录医嘱操作人");
         }
+        return user.getEmployeeId();
     }
 
     /**
      * 签名人的科室快照（人的科室会变，签名行必须记"签的那一刻在哪个科室"）
      */
-    private Long currentDeptId() {
-        try {
-            CurrentUser user = UserUtils.getCurrentUser();
-            return user == null ? null : user.getDeptId();
-        } catch (Exception e) {
-            return null;
-        }
+    private Long currentDeptId(CurrentUser user) {
+        return user.getDeptId();
     }
 
-    private String currentDeptName() {
-        try {
-            CurrentUser user = UserUtils.getCurrentUser();
-            return user == null ? null : user.getDeptName();
-        } catch (Exception e) {
-            return null;
-        }
+    private String currentDeptName(CurrentUser user) {
+        return user.getDeptName();
     }
 }

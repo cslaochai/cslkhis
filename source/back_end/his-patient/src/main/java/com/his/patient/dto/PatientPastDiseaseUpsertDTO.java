@@ -1,5 +1,6 @@
 package com.his.patient.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
@@ -42,6 +43,7 @@ public class PatientPastDiseaseUpsertDTO {
     /**
      * 当前控制情况（已治愈/控制良好/未控制/随访中）
      */
+    @AllowedValues(values = {"已治愈", "控制良好", "未控制", "随访中"}, message = "疾病当前控制情况取值不合法")
     private String currentStatus;
     /**
      * 复发次数

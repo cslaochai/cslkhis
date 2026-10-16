@@ -1,12 +1,14 @@
 package com.his.appoint.controller;
 
 import com.his.appoint.dto.*;
+import com.his.api.dto.*;
 import com.his.appoint.service.BizEmergencyService;
 import com.his.appoint.vo.*;
+import com.his.api.vo.*;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.patient.vo.BedVO;
-import com.his.patient.vo.WardVO;
+import com.his.api.vo.BedVO;
+import com.his.api.vo.WardVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

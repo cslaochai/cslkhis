@@ -27,6 +27,7 @@ import com.his.patient.service.PatientIndexService;
 import com.his.patient.support.PatientDataTables;
 import com.his.patient.support.PatientProfileFields;
 import com.his.patient.vo.*;
+import com.his.api.vo.*;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -247,6 +248,9 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
         }
 
         CurrentUser user = UserUtils.getCurrentUser();
+        if (user == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         LocalDateTime now = TimeUtil.nowSeconds();
 
         // 数据量快照：合并前后"这个档案名下有多少业务数据"必须有纸面记录
@@ -289,8 +293,8 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
         logEntity.setMergedSnapshot(mergedSnapshot);
         logEntity.setDataCount(dataCountJson);
         logEntity.setReason(dto.getReason().trim());
-        logEntity.setOperatorId(user == null ? null : user.getEmployeeId());
-        logEntity.setOperatorName(user == null ? null : user.getEmployeeName());
+        logEntity.setOperatorId(user.getEmployeeId());
+        logEntity.setOperatorName(user.getEmployeeName());
         logEntity.setMergeTime(now);
         logEntity.setLogStatus(1);
         bizPatientMergeLogMapper.insert(logEntity);
@@ -304,6 +308,10 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PatientMergeLogVO revert(PatientMergeRevertDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizPatientMergeLog logEntity = bizPatientMergeLogMapper.selectById(dto.getLogId());
         if (logEntity == null) {
             throw new BusinessException("合并记录不存在");
@@ -334,7 +342,7 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
                 .eq(BizPatient::getId, merged.getId()));
 
         logEntity.setLogStatus(2);
-        logEntity.setRevertBy(UserUtils.getCurrentUser().getRealName());
+        logEntity.setRevertBy(operatorUser.getRealName());
         logEntity.setRevertTime(TimeUtil.nowSeconds());
         logEntity.setRevertReason(dto.getRevertReason().trim());
         bizPatientMergeLogMapper.updateById(logEntity);

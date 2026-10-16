@@ -7,12 +7,14 @@ import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.patient.dto.*;
+import com.his.api.dto.*;
 import com.his.patient.entity.*;
 import com.his.patient.mapper.*;
 import com.his.patient.service.PatientHealthProfileService;
 import com.his.patient.support.HealthProfileEnums;
 import com.his.patient.support.PatientProfileValidator;
 import com.his.patient.vo.*;
+import com.his.api.vo.*;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysDictData;
 import com.his.system.service.DictCacheService;
@@ -193,11 +195,9 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
         // 类型**必填**（表列注释的取值就是药物/食物/其他，没有"未知"档，
         // 替用户编一个「其他」等于替他做了一次临床判断）；严重程度缺失则落「未评估」
         // —— 与主档文本迁移同一口径，说的是实话而不是编一个档位。
-        requireInEnum("过敏类型", dto.getAllergyType(), HealthProfileEnums.ALLERGY_TYPE);
         if (!TextUtil.hasText(dto.getAllergySeverity())) {
             dto.setAllergySeverity(HealthProfileEnums.SEVERITY_UNKNOWN);
         }
-        requireInEnum("过敏严重程度", dto.getAllergySeverity(), HealthProfileEnums.ALLERGY_SEVERITY);
         if (dto.getAllergySymptoms() == null) {
             dto.setAllergySymptoms("");
         }
@@ -251,7 +251,6 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PatientPastDiseaseVO savePastDisease(PatientPastDiseaseUpsertDTO dto) {
-        requireInEnum("控制情况", dto.getCurrentStatus(), HealthProfileEnums.DISEASE_CURRENT_STATUS);
 
         BizPatientPastDisease entity = new BizPatientPastDisease();
         BeanUtils.copyProperties(dto, entity);
@@ -295,8 +294,6 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PatientSurgeryHistoryVO saveSurgeryHistory(PatientSurgeryHistoryUpsertDTO dto) {
-        requireInEnum("手术类型", dto.getSurgeryType(), HealthProfileEnums.SURGERY_TYPE);
-        requireInEnum("恢复情况", dto.getRecoveryStatus(), HealthProfileEnums.RECOVERY_STATUS);
 
         BizPatientSurgeryHistory entity = new BizPatientSurgeryHistory();
         BeanUtils.copyProperties(dto, entity);
@@ -364,9 +361,6 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
             // D-业务规则：跨字段的临床时序约束（停药不能早于开始），DTO 注解无处安放
             throw new BusinessException("停药日期不能早于开始用药日期");
         }
-        requireInEnum("药物类型", dto.getDrugType(), HealthProfileEnums.DRUG_TYPE);
-        requireInEnum("给药途径", dto.getRoute(), HealthProfileEnums.DRUG_ROUTE);
-        requireInEnum("用药状态", dto.getStatus(), HealthProfileEnums.MEDICATION_STATUS);
 
         BizPatientMedicationHistory entity = new BizPatientMedicationHistory();
         BeanUtils.copyProperties(dto, entity);
@@ -666,16 +660,6 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
             be.setUpdateBy(operator);
             // 更新时不带 create_by（null 会被 MP 忽略），避免把它冲掉
             be.setCreateBy(null);
-        }
-    }
-
-    private void requireInEnum(String label, String value, java.util.Set<String> allowed) {
-        if (!TextUtil.hasText(value)) {
-            return;
-        }
-        if (!allowed.contains(value)) {
-            throw new BusinessException(label + "取值不合法：" + value + "（可选："
-                    + String.join("/", allowed) + "）");
         }
     }
 

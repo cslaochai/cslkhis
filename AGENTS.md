@@ -1372,3 +1372,11 @@
   `mvn clean/repackage` 的 rename 失败。
 - **8099 端口是其他工具（Qoder）的 jar 验证实例，非本项目常态服务，勿停勿动**；本项目服务只认 8080（后端）+ 3000（前端）。
 - 数据库连接（dev）：`192.168.88.132:3306/hn_biz_his`，`xz_feng / Feng123456!`（pymysql 只读/执行均可）。
+
+## 码值与枚举口径（强约束，2026-10-15 用户口径）
+
+- **一列一枚举**：同一库表列的码值，全项目只允许一个枚举表达。跨模块使用的放 `his-common/enums`；模块私有状态机放本模块 `enums` 包。禁止在 entity / service / support / DTO 里再定义 `STATUS_X`、`CATALOG_X`、`TYPE_X` 之类并列 int 常量。
+- **业务代码禁止魔法码值**：出现 `case 数字 -> "中文"`、`if (status == 1)` 这类字面量码值即坏味道。展示文案一律走枚举 `getText` / `labelOrUnknown`；码值判断一律用枚举实例或 `XxxEnum.X.getCode()`。
+- **先查后建**：新增码值映射前，先查 `his-common/enums` 与本模块 `enums` 是否已有同口径枚举——有则复用，无则新建枚举。警惕「同名不同口径」的雷（如欠费管控费用大类 vs PaymentItemTypeEnum，码值错位），命名与 javadoc 必须注明口径。
+- **枚举三件套**：落库码值枚举统一提供 `fromCode/getByCode`、`getText`（展示用，脏数据不回落合法文案）、`labelOrUnknown`（异常/审计用，保留原始码值便于排查）。
+- **签名文案例外**：进入被签规范化文本（CanonicalText）的措辞不得随枚举 label 改动而漂移；确有差异须在调用侧注释说明（参见 PrescriptionSignApi.rxStatusText）。

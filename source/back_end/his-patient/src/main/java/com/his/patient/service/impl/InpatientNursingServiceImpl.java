@@ -1,6 +1,7 @@
 package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -14,11 +15,24 @@ import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
+import com.his.api.dto.*;
 import com.his.patient.entity.*;
 import com.his.patient.enums.*;
+import com.his.common.enums.AdmitWayEnum;
+import com.his.common.enums.ConsultScopeEnum;
+import com.his.common.enums.InpatientOrderStatusEnum;
+import com.his.common.enums.InpatientRecordStatusEnum;
+import com.his.common.enums.InpatientRecordTypeEnum;
+import com.his.common.enums.NursingDocTypeEnum;
+import com.his.common.enums.OrderTypeEnum;
+import com.his.common.enums.ReferralStatusEnum;
+import com.his.common.enums.SummaryStatusEnum;
+import com.his.common.enums.TransferStatusEnum;
+import com.his.common.enums.VisitStatusEnum;
 import com.his.patient.mapper.*;
 import com.his.patient.service.InpatientNursingService;
 import com.his.patient.vo.*;
+import com.his.api.vo.*;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
@@ -223,7 +237,15 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         record.setNurseName(operatorUser.getRealName());
 
         try {
-            bizNursingRecordMapper.updateById(record);
+            // 归档守卫必须下沉到 WHERE 才原子：selectById 与 updateById 之间的窗口里并发归档，
+            // Java 侧 isArchived 判断会基于过期状态放行，整行覆盖把归档态冲掉（读-判-写竞态）
+            int rows = bizNursingRecordMapper.update(record, new LambdaUpdateWrapper<BizNursingRecord>()
+                    .eq(BizNursingRecord::getId, record.getId())
+                    .ne(BizNursingRecord::getRecordStatus, InpatientRecordStatusEnum.ARCHIVED.getCode()));
+            if (rows == 0) {
+                throw new BusinessException("护理文书 " + record.getRecordNo()
+                        + " 已归档，不允许修改（归档是单向门）");
+            }
         } catch (DuplicateKeyException e) {
             throw new BusinessException("该测量时点已存在同类型的护理文书，不能改到这个时点上");
         }
@@ -562,25 +584,13 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     }
 
     private void validateScoreRange(int assessType, int score) {
-        String range = switch (assessType) {
-            case 1 -> "Braden 总分应在 6~23";
-            case 2 -> "Morse 总分应在 0~125";
-            case 3 -> "NRS 总分应在 0~10";
-            case 4 -> "Caprini 总分应在 0~58";
-            case 5 -> "管路滑脱总分应在 0~24";
-            // 码值合法性由 DTO 的 @AllowedValues 兜住，走到这里必是 1~5 之一
-            default -> throw new IllegalStateException("评估类型无分档口径：" + assessType);
-        };
-        boolean outOfRange = switch (assessType) {
-            case 1 -> score < 6 || score > 23;
-            case 2 -> score < 0 || score > 125;
-            case 3 -> score < 0 || score > 10;
-            case 4 -> score < 0 || score > 58;
-            case 5 -> score < 0 || score > 24;
-            default -> false;
-        };
-        if (outOfRange) {
-            throw new BusinessException(range + "（当前 " + score + "）");
+        NursingAssessTypeEnum type = NursingAssessTypeEnum.fromCode(assessType);
+        // 码值合法性由 DTO 的 @AllowedValues 兜住，走到这里必是 1~5 之一
+        if (type == null) {
+            throw new IllegalStateException("评估类型无分档口径：" + assessType);
+        }
+        if (!type.scoreInRange(score)) {
+            throw new BusinessException(type.rangeText() + "（当前 " + score + "）");
         }
     }
 

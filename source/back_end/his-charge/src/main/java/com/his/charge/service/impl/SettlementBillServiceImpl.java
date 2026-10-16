@@ -1,5 +1,7 @@
 package com.his.charge.service.impl;
 
+import com.his.api.vo.*;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -16,13 +18,15 @@ import com.his.charge.mapper.BizSettlementBillItemMapper;
 import com.his.charge.mapper.BizSettlementBillMapper;
 import com.his.charge.service.*;
 import com.his.charge.vo.*;
+import com.his.api.vo.PendingBillItemVO;
+import com.his.api.vo.PendingBillVO;
 import com.his.common.base.PageResult;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
-import com.his.system.api.service.PatientApi;
-import com.his.system.api.vo.PatientBriefVO;
+import com.his.api.service.PatientApi;
+import com.his.api.vo.PatientBriefVO;
 import com.his.system.service.InsurancePolicyService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
@@ -51,14 +55,6 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
 
     private static final int AMOUNT_SCALE = 2;
     private static final BigDecimal HUNDRED = new BigDecimal("100");
-
-    /**
-     * 医保目录类别（与记账行同口径）：0-自费 1-甲类 2-乙类 3-丙类
-     */
-    private static final int CATALOG_SELF_PAY = 0;
-    private static final int CATALOG_A = 1;
-    private static final int CATALOG_B = 2;
-    private static final int CATALOG_C = 3;
 
     private static final int W_BILL_NO = 32;
     private static final int W_PATIENT_NO = 32;
@@ -116,7 +112,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         bill.setEncounterType(first.getEncounterType());
         bill.setEncounterId(first.getEncounterId());
         bill.setEncounterNo(TextUtil.cut(first.getEncounterNo(), W_ENCOUNTER_NO));
-        bill.setBillType(resolveBillType(dto.getBillType(), first.getEncounterType()).getCode());
+        bill.setBillType(resolveBillType(dto.getBillType()).getCode());
         bill.setFeeCount(items.size());
         bill.setTotalAmount(total);
         bill.setDiscountAmount(discount);
@@ -671,7 +667,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
             item.setUnit(TextUtil.cut(row.getUnit(), W_UNIT));
             item.setPrice(NumUtil.orZero(row.getPrice()));
             item.setQuantity(NumUtil.orZero(row.getQuantity()));
-            item.setCatalogType(row.getCatalogType() == null ? CATALOG_SELF_PAY : row.getCatalogType());
+            item.setCatalogType(row.getCatalogType() == null ? FeeCatalogTypeEnum.SELF_PAY.getCode() : row.getCatalogType());
             BigDecimal amount = NumUtil.scale(NumUtil.orZero(row.getAmount()), AMOUNT_SCALE);
             item.setAmount(amount);
             item.setDiscountAmount(BigDecimal.ZERO);
@@ -704,11 +700,12 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
             // 先扣自付比例
             BigDecimal selfPayRatio = rule.getSelfPayRatio() == null ? BigDecimal.ZERO : rule.getSelfPayRatio();
             BigDecimal afterSelfPay = amount;
-            if (catalogType == CATALOG_B && selfPayRatio.signum() > 0) {
+            if (FeeCatalogTypeEnum.CLASS_B.getCode().equals(catalogType) && selfPayRatio.signum() > 0) {
                 // 乙类先自付 X%
                 BigDecimal firstSelf = rate(amount, selfPayRatio);
                 afterSelfPay = amount.subtract(firstSelf);
-            } else if (catalogType == CATALOG_C || catalogType == CATALOG_SELF_PAY) {
+            } else if (FeeCatalogTypeEnum.CLASS_C.getCode().equals(catalogType)
+                    || FeeCatalogTypeEnum.SELF_PAY.getCode().equals(catalogType)) {
                 // 丙类/自费全自费
                 return BigDecimal.ZERO;
             }
@@ -735,10 +732,10 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         if (amount.signum() <= 0 || catalogType == null) {
             return BigDecimal.ZERO;
         }
-        if (catalogType == CATALOG_A) {
+        if (FeeCatalogTypeEnum.CLASS_A.getCode().equals(catalogType)) {
             return rate(amount, insurance.coverageRatio());
         }
-        if (catalogType == CATALOG_B) {
+        if (FeeCatalogTypeEnum.CLASS_B.getCode().equals(catalogType)) {
             BigDecimal firstSelf = rate(amount, insurance.selfPayRatio());
             return rate(amount.subtract(firstSelf), insurance.coverageRatio());
         }
@@ -795,14 +792,14 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
     }
 
     /**
-     * 结算方式与医保口径：调用方没指定时按患者有没有医保号推。
+     * 结算方式与医保口径：结算方式必须由调用方显式给出，不再按患者有无医保号静默推断。
      */
     private PatientInsurance resolveInsurance(Long patientId, Integer settlementMode) {
         PatientBriefVO patient = patientId == null ? null : patientApi.findPatient(patientId);
         boolean hasInsurance = patient != null && TextUtil.hasText(patient.getMedicalInsuranceNo());
         SettlementModeEnum mode = SettlementModeEnum.getByCode(settlementMode);
         if (mode == null) {
-            mode = hasInsurance ? SettlementModeEnum.INSURANCE : SettlementModeEnum.SELF_PAY;
+            throw new BusinessException("缺少结算方式");
         }
         if (mode != SettlementModeEnum.INSURANCE) {
             return new PatientInsurance(SettlementModeEnum.SELF_PAY, null, BigDecimal.ZERO, BigDecimal.ZERO);
@@ -836,13 +833,12 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         return new PatientInsurance(SettlementModeEnum.INSURANCE, insuranceType, coverage, selfPay);
     }
 
-    private BillTypeEnum resolveBillType(Integer billType, Integer encounterType) {
+    private BillTypeEnum resolveBillType(Integer billType) {
         BillTypeEnum type = BillTypeEnum.fromCode(billType);
-        if (type != null) {
-            return type;
+        if (type == null) {
+            throw new BusinessException("缺少账单类型");
         }
-        return EncounterTypeEnum.INPATIENT.getCode().equals(encounterType)
-                ? BillTypeEnum.INPATIENT_MID : BillTypeEnum.OUTPATIENT;
+        return type;
     }
 
     private LambdaQueryWrapper<BizSettlementBill> buildWrapper(BillQueryPageDTO query) {

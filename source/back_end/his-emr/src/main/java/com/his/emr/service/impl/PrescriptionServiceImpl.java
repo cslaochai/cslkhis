@@ -1,5 +1,8 @@
 package com.his.emr.service.impl;
 
+
+import com.his.api.vo.MyPrescriptionVO;
+import com.his.api.vo.MyPrescriptionDetailVO;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -20,6 +23,7 @@ import com.his.emr.enums.RxAuditActionEnum;
 import com.his.emr.mapper.*;
 import com.his.emr.service.PrescriptionService;
 import com.his.emr.vo.*;
+import com.his.api.vo.*;
 import com.his.system.dto.DrugRationalGroupDTO;
 import com.his.system.dto.DrugRationalItemDTO;
 import com.his.system.enums.BizTypeEnum;

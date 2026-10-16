@@ -12,10 +12,12 @@ import com.his.common.util.TimeUtil;
 import com.his.patient.dto.ReferralDTO;
 import com.his.patient.entity.BizReferral;
 import com.his.patient.enums.ReferralDirectionEnum;
-import com.his.patient.enums.ReferralStatusEnum;
+import com.his.common.enums.ReferralStatusEnum;
 import com.his.patient.mapper.BizReferralMapper;
 import com.his.patient.service.ReferralService;
 import com.his.patient.vo.*;
+import com.his.api.vo.*;
+import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysConfig;
 import com.his.system.entity.SysMessage;
 import com.his.system.enums.BizTypeEnum;
@@ -76,6 +78,10 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
 
     @Transactional(rollbackFor = Exception.class)
     public ReferralVO create(ReferralDTO.Create dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         int direction = dto.getDirection() == null ? ReferralDirectionEnum.UP.getCode() : dto.getDirection();
         if (!TextUtil.hasText(dto.getToHospital()) && dto.getToDeptId() == null) {
             throw new BusinessException("院际转诊必须填转入医院，院内转诊必须选转入科室");
@@ -99,7 +105,7 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
         r.setReferralStatus(ReferralStatusEnum.PENDING.getCode());
         r.setReferralTime(TimeUtil.nowSeconds());
         r.setRemark(dto.getRemark());
-        r.setCreateBy(UserUtils.getCurrentUser().getRealName());
+        r.setCreateBy(operatorUser.getRealName());
         bizReferralMapper.insert(r);
         // 转诊是跨院动作，协调人是总值班而不是开单科室：登记即让他知道，别等患者家属来问
         notifyDutyOnCreate(r);
@@ -131,6 +137,10 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
 
     @Transactional(rollbackFor = Exception.class)
     public ReferralVO audit(ReferralDTO.Audit dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizReferral r = requireReferral(dto.getReferralId());
         assertReferralAccessible(r.getFromDeptId(), r.getToDeptId());
         if (!Objects.equals(r.getReferralStatus(), ReferralStatusEnum.PENDING.getCode())) {
@@ -140,11 +150,11 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
         if (dto.getToDeptId() != null) {
             r.setToDeptId(dto.getToDeptId());
         }
-        r.setAuditBy(UserUtils.getCurrentUser().getEmployeeId());
-        r.setAuditName(UserUtils.getCurrentUser().getRealName());
+        r.setAuditBy(operatorUser.getEmployeeId());
+        r.setAuditName(operatorUser.getRealName());
         r.setAuditTime(TimeUtil.nowSeconds());
         r.setAuditRemark(dto.getAuditRemark());
-        r.setUpdateBy(UserUtils.getCurrentUser().getRealName());
+        r.setUpdateBy(operatorUser.getRealName());
         r.setUpdateTime(r.getAuditTime());
         bizReferralMapper.updateById(r);
         return toVo(r, loadDeptNames());
@@ -152,6 +162,10 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
 
     @Transactional(rollbackFor = Exception.class)
     public ReferralVO finish(ReferralDTO.Finish dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizReferral r = requireReferral(dto.getReferralId());
         assertReferralAccessible(r.getFromDeptId(), r.getToDeptId());
         if (!Objects.equals(r.getReferralStatus(), ReferralStatusEnum.CONFIRMED.getCode())) {
@@ -160,7 +174,7 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
         r.setReferralStatus(ReferralStatusEnum.FINISHED.getCode());
         r.setFinishTime(TimeUtil.nowSeconds());
         r.setFinishRemark(dto.getFinishRemark());
-        r.setUpdateBy(UserUtils.getCurrentUser().getRealName());
+        r.setUpdateBy(operatorUser.getRealName());
         r.setUpdateTime(r.getFinishTime());
         bizReferralMapper.updateById(r);
         return toVo(r, loadDeptNames());
@@ -168,6 +182,10 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
 
     @Transactional(rollbackFor = Exception.class)
     public ReferralVO cancel(ReferralDTO.Cancel dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizReferral r = requireReferral(dto.getReferralId());
         assertReferralAccessible(r.getFromDeptId(), r.getToDeptId());
         if (Objects.equals(r.getReferralStatus(), ReferralStatusEnum.FINISHED.getCode())) {
@@ -178,7 +196,7 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
         }
         r.setReferralStatus(ReferralStatusEnum.CANCELLED.getCode());
         r.setRemark((r.getRemark() == null ? "" : r.getRemark() + "；") + "取消原因：" + dto.getCancelReason().trim());
-        r.setUpdateBy(UserUtils.getCurrentUser().getRealName());
+        r.setUpdateBy(operatorUser.getRealName());
         r.setUpdateTime(TimeUtil.nowSeconds());
         bizReferralMapper.updateById(r);
         return toVo(r, loadDeptNames());

@@ -1,8 +1,10 @@
 package com.his.charge.service.impl;
 
+import com.his.api.vo.*;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.system.api.service.AppointApi;
+import com.his.api.service.AppointApi;
 import com.his.charge.config.ComplianceProperties;
 import com.his.charge.dto.*;
 import com.his.charge.entity.*;
@@ -16,8 +18,8 @@ import com.his.charge.support.rule.RuleContext;
 import com.his.charge.support.rule.RuleFinding;
 import com.his.charge.support.SettlementEvidence;
 import com.his.charge.vo.*;
-import com.his.system.api.vo.LabResultBriefVO;
-import com.his.system.api.vo.RegistBriefVO;
+import com.his.api.vo.LabResultBriefVO;
+import com.his.api.vo.RegistBriefVO;
 import com.his.common.base.PageResult;
 import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.SysGenderEnum;
@@ -286,7 +288,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
     public List<ComplianceAuditDetailVO> batchAudit(ComplianceBatchAuditDTO dto) {
         Set<Long> unique = new HashSet<>(dto.getSettlementIds());
         List<ComplianceAuditDetailVO> result = new ArrayList<>();
-        Integer type = dto.getAuditType() == null ? 2 : dto.getAuditType();
+        Integer type = dto.getAuditType();
         for (Long id : unique) {
             if (id == null) {
                 continue;

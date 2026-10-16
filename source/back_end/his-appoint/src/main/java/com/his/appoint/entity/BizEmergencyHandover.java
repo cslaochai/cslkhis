@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 
 
 /**
- * 急诊交班单（sql/153）。
+ * 急诊交班单
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

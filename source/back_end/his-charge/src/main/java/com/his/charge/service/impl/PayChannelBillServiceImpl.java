@@ -1,6 +1,7 @@
 package com.his.charge.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.dto.*;
@@ -178,7 +179,14 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
         bill.setMatchedByName(UserUtils.getCurrentUser().getRealName());
         bill.setDiffAmount(BigDecimal.ZERO);
         try {
-            return this.updateById(bill);
+            // 守卫下沉到 WHERE：读-判-写之间并发勾对/差额处理会使 Java 侧 matchStatus 判断失效
+            boolean updated = this.update(bill, new LambdaUpdateWrapper<BizPayChannelBill>()
+                    .eq(BizPayChannelBill::getId, bill.getId())
+                    .eq(BizPayChannelBill::getMatchStatus, 0));
+            if (!updated) {
+                throw new BusinessException("只有待勾对的流水才能勾对（台账状态已被并发变更，请刷新后重试）");
+            }
+            return updated;
         } catch (DuplicateKeyException e) {
             // ux_bill_txn：一笔流水只能被一条台账勾走（并发下另一人先勾了）
             throw new BusinessException("该支付流水已被其他渠道流水勾对：" + txn.getTxnNo());
@@ -202,7 +210,14 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
         bill.setMatchedById(UserUtils.getCurrentUser().getEmployeeId());
         bill.setMatchedByName(UserUtils.getCurrentUser().getRealName());
         bill.setHandleRemark(TextUtil.cut(dto.getHandleRemark(), 490));
-        return this.updateById(bill);
+        // 守卫下沉到 WHERE：读-判-写之间并发勾对/差额处理会使 Java 侧 matchStatus 判断失效
+        boolean updated = this.update(bill, new LambdaUpdateWrapper<BizPayChannelBill>()
+                .eq(BizPayChannelBill::getId, bill.getId())
+                .eq(BizPayChannelBill::getMatchStatus, 0));
+        if (!updated) {
+            throw new BusinessException("该流水已处理，不能重复定性（台账状态已被并发变更，请刷新后重试）");
+        }
+        return updated;
     }
 
     @Override

@@ -5,6 +5,7 @@ import com.his.patient.dto.PatientIndexQueryDTO;
 import com.his.patient.dto.PatientMergeDTO;
 import com.his.patient.dto.PatientMergeRevertDTO;
 import com.his.patient.vo.*;
+import com.his.api.vo.*;
 
 import java.util.List;
 

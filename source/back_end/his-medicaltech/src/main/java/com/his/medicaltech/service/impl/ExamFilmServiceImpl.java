@@ -1,12 +1,13 @@
 package com.his.medicaltech.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.charge.dto.FeeBookDTO;
-import com.his.charge.entity.BizFeeRecord;
-import com.his.charge.service.FeeRecordService;
+import com.his.api.dto.FeeBookDTO;
+import com.his.api.service.ChargeApi;
+import com.his.api.vo.FeeRecordVO;
 import com.his.common.base.PageResult;
 import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.FeeSourceTypeEnum;
@@ -63,7 +64,7 @@ public class ExamFilmServiceImpl extends ServiceImpl<BizExamFilmMapper, BizExamF
     private final BizInspectionApplyMapper bizInspectionApplyMapper;
     private final DictCacheService dictCacheService;
     private final SysAuditLogService sysAuditLogService;
-    private final FeeRecordService feeRecordService;
+    private final ChargeApi chargeApi;
     private final RedisSequenceService redisSequenceService;
 
     // 查询
@@ -146,7 +147,14 @@ public class ExamFilmServiceImpl extends ServiceImpl<BizExamFilmMapper, BizExamF
         if (film.getId() == null) {
             bizExamFilmMapper.insert(film);
         } else {
-            bizExamFilmMapper.updateById(film);
+            // 守卫下沉到 WHERE：与记账/作废并发时，只有未记账且未作废的行能改，防止改掉已入账的胶片
+            int rows = bizExamFilmMapper.update(film, new LambdaUpdateWrapper<BizExamFilm>()
+                    .eq(BizExamFilm::getId, film.getId())
+                    .ne(BizExamFilm::getChargeFlag, 1)
+                    .ne(BizExamFilm::getFilmStatus, FilmStatusEnum.INVALID.getCode()));
+            if (rows == 0) {
+                throw new BusinessException("该胶片已记账或已作废，不能修改（可能刚被并发处理），请刷新");
+            }
         }
         return fillText(toVO(film));
     }
@@ -200,11 +208,18 @@ public class ExamFilmServiceImpl extends ServiceImpl<BizExamFilmMapper, BizExamF
         dto.setCatalogType(0);
         dto.setRemark(TextUtil.cut("检查胶片 " + film.getFilmNo() + "（记录号 " + film.getRecordNo() + "）", 500));
 
-        BizFeeRecord fee = feeRecordService.book(dto);
+        FeeRecordVO fee = chargeApi.bookFee(dto);
         film.setChargeFlag(1);
         film.setFeeId(fee.getId());
         film.setFeeNo(fee.getFeeNo());
-        bizExamFilmMapper.updateById(film);
+        // 守卫下沉到 WHERE：两人同时记账时，只有一方能命中「未记账」行，防止重复记账（记账失败整体回滚）
+        int rows = bizExamFilmMapper.update(film, new LambdaUpdateWrapper<BizExamFilm>()
+                .eq(BizExamFilm::getId, film.getId())
+                .ne(BizExamFilm::getChargeFlag, 1)
+                .ne(BizExamFilm::getFilmStatus, FilmStatusEnum.INVALID.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("该胶片已记账或已作废，不能重复记账（可能刚被并发处理），请刷新");
+        }
 
         sysAuditLogService.record(UserUtils.getCurrentUser().getEmployeeId(), UserUtils.getCurrentUser().getRealName(),
                 "检查胶片", "胶片记账", "biz_exam_film", film.getId(),
@@ -273,7 +288,15 @@ public class ExamFilmServiceImpl extends ServiceImpl<BizExamFilmMapper, BizExamF
         update.setId(film.getId());
         update.setFilmStatus(FilmStatusEnum.INVALID.getCode());
         update.setRemark(TextUtil.cut("作废：" + (TextUtil.hasText(reason) ? reason : "未填写原因"), 500));
-        return bizExamFilmMapper.updateById(update) > 0;
+        // 守卫下沉到 WHERE：与记账/发放并发时，只有未记账且未发放的行能作废，防止作废已入账或已发出的胶片
+        int rows = bizExamFilmMapper.update(update, new LambdaUpdateWrapper<BizExamFilm>()
+                .eq(BizExamFilm::getId, update.getId())
+                .ne(BizExamFilm::getChargeFlag, 1)
+                .ne(BizExamFilm::getFilmStatus, FilmStatusEnum.DELIVERED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("已记账或已发放的胶片不能作废（可能刚被并发处理），请刷新");
+        }
+        return rows > 0;
     }
 
     @Override
@@ -295,7 +318,7 @@ public class ExamFilmServiceImpl extends ServiceImpl<BizExamFilmMapper, BizExamF
         spec.setUnitPrice(dto.getUnitPrice());
         spec.setUnit(TextUtil.hasText(dto.getUnit()) ? TextUtil.cut(dto.getUnit(), 20) : "张");
         spec.setSortOrder(dto.getSortOrder() == null ? 0 : dto.getSortOrder());
-        spec.setStatus(dto.getStatus() == null ? 1 : dto.getStatus());
+        spec.setStatus(dto.getStatus());
         if (dto.getId() == null) {
             long dup = bizFilmSpecMapper.selectCount(new LambdaQueryWrapper<BizFilmSpec>()
                     .eq(BizFilmSpec::getSpecCode, spec.getSpecCode()));

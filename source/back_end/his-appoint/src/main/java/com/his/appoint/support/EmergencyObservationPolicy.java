@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
- * 急诊留观时限（sql/153）。
+ * 急诊留观时限
  */
 @Component
 @RequiredArgsConstructor

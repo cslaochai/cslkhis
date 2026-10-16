@@ -1,20 +1,26 @@
 package com.his.api.service;
 
+import com.his.api.dto.AppointCheckInUpdateDTO;
+import com.his.api.dto.AppointQueryDTO;
+import com.his.api.dto.AppointUpsertDTO;
+import com.his.api.dto.RevisitFeePreviewDTO;
+import com.his.api.vo.BizAppointInfoListVO;
 import com.his.api.vo.DeptRefVO;
+import com.his.api.vo.EmergencyBriefVO;
+import com.his.api.vo.PatientQueueVO;
 import com.his.api.vo.RegistBriefVO;
+import com.his.api.vo.RevisitFeePreviewVO;
+import com.his.api.vo.RevisitRecordSelectVO;
 import com.his.api.vo.TodayVisitVO;
 import com.his.api.vo.StopImpactItemVO;
+import com.his.common.base.PageResult;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
 /**
- * 挂号域对外提供的端口（依赖倒置，实现落在 his-appoint）：
- * 挂号摘要与科室反查、今日就诊、停诊/改诊室级联。
- *
- * <p>号源排班迁到 system 模块后，停诊/改诊室这类跨域动作不得直接依赖 appoint 模块
- * （否则 system → appoint 与 appoint → system 形成循环依赖），统一走本端口。
+ * 挂号域对外提供的端口
  */
 public interface AppointApi {
 
@@ -66,4 +72,67 @@ public interface AppointApi {
      * 排班诊室变更 → 级联更新当日挂号诊室。
      */
     void updateAppointRoomBySchedule(Long scheduleId, LocalDate visitDate, Long roomId, String roomName);
+
+    // ---------- 挂号单读写 ----------
+
+    /**
+     * 患者挂号（预约池扣号 + 收费策略判定 + 判重 + 建挂号费账单，全在提供方口径内）。
+     *
+     * @return 落库后的挂号详情
+     */
+    BizAppointInfoListVO addAppoint(AppointUpsertDTO dto);
+
+    /**
+     * 挂号分页查询（患者端「我的预约」用；归属校验归调用方）
+     */
+    PageResult<BizAppointInfoListVO> listRegistPage(AppointQueryDTO query);
+
+    /**
+     * 按就诊日期区间取挂号明细（报表统计用，闭区间，任一端可空）。
+     */
+    List<BizAppointInfoListVO> listRegists(String startDate, String endDate);
+
+    /**
+     * 查挂号记录归属的就诊人ID；记录不存在返回 {@code null}。
+     * 患者端写操作前的归属校验锚点。
+     */
+    Long patientIdOfRegist(Long registId);
+
+    // ---------- 复诊 ----------
+
+    /**
+     * 复诊费用预估（按复诊收费策略，只读）
+     */
+    RevisitFeePreviewVO revisitFeePreview(RevisitFeePreviewDTO dto);
+
+    /**
+     * 复诊「原病历」候选：按患者取最近若干次真正就诊过的病历
+     */
+    List<RevisitRecordSelectVO> revisitRecordSelectList(Long patientId, int limit);
+
+    // ---------- 队列 ----------
+
+    /**
+     * 患者端「我的排队」：近 3 日挂号 + 队列状态 + 前方等待人数
+     */
+    List<PatientQueueVO> myQueue(Long patientId);
+
+    /**
+     * 按挂号记录签到（签到时创建排队记录）
+     */
+    boolean checkInByRegistId(AppointCheckInUpdateDTO dto);
+
+    // ---------- 医生接诊状态 ----------
+
+    /**
+     * 结诊后清医生接诊状态缓存
+     */
+    void finishConsulting(Long doctorId);
+
+    // ---------- 急诊 ----------
+
+    /**
+     * 急诊记录摘要（AI 分诊建议的事实来源）；不存在返回 {@code null}
+     */
+    EmergencyBriefVO findEmergency(Long emergencyId);
 }

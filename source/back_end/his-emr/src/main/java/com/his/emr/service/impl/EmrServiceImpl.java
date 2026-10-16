@@ -1,5 +1,6 @@
 package com.his.emr.service.impl;
 
+import com.his.api.vo.MyMedicalRecordVO;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.extra.qrcode.QrCodeUtil;
 import cn.hutool.extra.qrcode.QrConfig;
@@ -7,14 +8,13 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.appoint.service.DoctorStatusCacheService;
-import com.his.charge.dto.FeeBookDTO;
-import com.his.charge.entity.BizFeeRecord;
-import com.his.charge.service.FeeRecordService;
-import com.his.charge.support.FeeCatalogResolver;
-import com.his.charge.vo.FeeTypeSumVO;
+import com.his.api.service.AppointApi;
+import com.his.api.dto.FeeBookDTO;
+import com.his.api.service.ChargeApi;
+import com.his.api.vo.FeeRecordVO;
+import com.his.api.vo.FeeTypeSumVO;
 import com.his.common.base.PageResult;
-import com.his.system.api.vo.ExecStatusVO;
+import com.his.api.vo.ExecStatusVO;
 import com.his.system.dto.SignCommandDTO;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
@@ -25,10 +25,10 @@ import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.system.vo.SignatureVO;
-import com.his.system.api.service.MedicalTechApi;
-import com.his.system.api.service.EmrVisitApi;
-import com.his.system.api.vo.AppointBriefVO;
-import com.his.system.api.vo.PatientBriefVO;
+import com.his.api.service.MedicalTechApi;
+import com.his.api.service.EmrVisitApi;
+import com.his.api.vo.AppointBriefVO;
+import com.his.api.vo.PatientBriefVO;
 import com.his.emr.dto.*;
 import com.his.emr.entity.*;
 import com.his.emr.enums.*;
@@ -37,7 +37,8 @@ import com.his.emr.service.AiDraftDiffService;
 import com.his.emr.service.EmrService;
 import com.his.emr.service.QualityControlService;
 import com.his.emr.vo.*;
-import com.his.patient.service.PatientGuardianService;
+import com.his.api.vo.*;
+import com.his.api.service.PatientApi;
 import com.his.pharmacy.service.AntibioticService;
 import com.his.pharmacy.service.PharmacyService;
 import com.his.system.entity.CurrentUser;
@@ -82,9 +83,9 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
 
     private final DeptScopeService deptScopeService;
     private final PharmacyService pharmacyService;
-    private final FeeRecordService feeRecordService;
+    private final ChargeApi chargeApi;
 
-    private final PatientGuardianService patientGuardianService;
+    private final PatientApi patientApi;
 
     private final SysInspectionItemMapper sysInspectionItemMapper;
     private final SysLaboratoryItemMapper sysLaboratoryItemMapper;
@@ -93,7 +94,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
 
     private final EmrSignatureService emrSignatureService;
     private final RedisSequenceService redisSequenceService;
-    private final DoctorStatusCacheService doctorStatusCacheService;
+    private final AppointApi appointApi;
 
     private final BizMedicalRecordArchiveMapper bizMedicalRecordArchiveMapper;
 
@@ -119,7 +120,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     @Override
     public List<BizMedicalRecordVO> getByPatientId(MedicalRecordQueryDTO queryDTO) {
         // 工作站接口，患者 token 同样调得到：不校验就是「改个 patientId 读别人病历」
-        if (patientGuardianService.patientScopeViolated(queryDTO.getPatientId())) {
+        if (patientApi.patientScopeViolated(queryDTO.getPatientId())) {
             throw new BusinessException("无权查询该就诊人的病历");
         }
         LambdaQueryWrapper<BizMedicalRecord> wrapper = new LambdaQueryWrapper<>();
@@ -143,7 +144,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             return new BizMedicalRecordVO();
         }
         BizMedicalRecordVO vo = BeanUtil.copyProperties(one, BizMedicalRecordVO.class);
-        if (patientGuardianService.patientScopeViolated(vo.getPatientId())) {
+        if (patientApi.patientScopeViolated(vo.getPatientId())) {
             throw new BusinessException("无权查看该病历");
         }
         return vo;
@@ -214,7 +215,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         if (record == null) {
             throw new BusinessException("病历不存在");
         }
-        if (patientGuardianService.patientScopeViolated(record.getPatientId())) {
+        if (patientApi.patientScopeViolated(record.getPatientId())) {
             throw new BusinessException("无权查看该病历");
         }
 
@@ -1100,7 +1101,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      */
     private boolean feeBookedExists(Integer sourceType, Long sourceId) {
         try {
-            return feeRecordService.findBookedBySource(sourceType, sourceId, null) != null;
+            return chargeApi.findBookedBySource(sourceType, sourceId, null) != null;
         } catch (Exception e) {
             log.warn("[申请单] 记账行引用校验失败，按「已记账」保守处理，sourceType={} sourceId={}", sourceType, sourceId, e);
             return true;
@@ -1543,7 +1544,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             Long doctorId = emrVisitApi.completeVisit(recordSaveDTO.getRegistId(), recordSaveDTO.getQueueId());
             // 清除医生接诊状态缓存
             if (doctorId != null) {
-                doctorStatusCacheService.finishConsulting(doctorId);
+                appointApi.finishConsulting(doctorId);
             }
 
             //提交病历
@@ -1747,7 +1748,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         if (books.isEmpty()) {
             return;
         }
-        List<BizFeeRecord> booked = feeRecordService.bookBatch(books);
+        List<FeeRecordVO> booked = chargeApi.bookBatch(books);
         if (booked.isEmpty()) {
             // 记不上账不能装作记上了：病历照常提交，但把缺口写进日志，收费台按待结算行兜底
             log.warn("[病历提交] 病历 {} 本次就诊 {} 个项目未能记账，请到收费窗口手工计费",
@@ -1771,7 +1772,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         dto.setDoctorId(record.getDoctorId());
         dto.setDoctorName(record.getDoctorName());
         dto.setItemType(itemType);
-        dto.setCatalogType(FeeCatalogResolver.byItemType(itemType));
+        dto.setCatalogType(FeeCatalogTypeEnum.byItemType(itemType));
         return dto;
     }
 
@@ -1800,7 +1801,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         System.out.println("相对路径: " + relativePath);
 
         // 费用来自 L1 记账行：按项目类型聚合的应收净额，分组求和只由记账层做一次
-        List<FeeTypeSumVO> receivables = feeRecordService.sumNetGroupByItemType(
+        List<FeeTypeSumVO> receivables = chargeApi.sumNetGroupByItemType(
                 EncounterTypeEnum.OUTPATIENT.getCode(), record.getRegistId());
 
         BigDecimal totalAmount = BigDecimal.ZERO;

@@ -165,6 +165,8 @@ const handleEditSubmit = async () => {
       patientId: editForm.value.patientId,
       scheduleId: editForm.value.scheduleId,
       visitType: editForm.value.visitType,
+      // 与改约同理：共用 AppointUpsertDTO，registSource 已必填；改挂号不改来源，传 1-窗口挂号（原默认口径）
+      registSource: 1,
       settlementType: editForm.value.settlementType,
     });
     ElMessage.success('修改成功');

@@ -9,7 +9,7 @@ import java.math.RoundingMode;
 /**
  * 室间质评（EQA）判定引擎
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class EqaJudgeEngine {
 
     public static final int MODE_NONE = 0;

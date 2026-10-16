@@ -5,12 +5,12 @@ import com.his.common.util.TextUtil;
 import com.his.emr.entity.*;
 import com.his.emr.mapper.*;
 import com.his.emr.service.SourcePaidAdvanceService;
-import com.his.system.api.service.EmrApi;
-import com.his.system.api.vo.DeptRefVO;
-import com.his.system.api.vo.MedicalRecordBriefVO;
-import com.his.system.api.vo.PrescriptionBriefVO;
-import com.his.system.api.vo.PrescriptionDetailBriefVO;
-import com.his.system.api.vo.RecordBriefVO;
+import com.his.api.service.EmrApi;
+import com.his.api.vo.DeptRefVO;
+import com.his.api.vo.MedicalRecordBriefVO;
+import com.his.api.vo.PrescriptionBriefVO;
+import com.his.api.vo.PrescriptionDetailBriefVO;
+import com.his.api.vo.RecordBriefVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

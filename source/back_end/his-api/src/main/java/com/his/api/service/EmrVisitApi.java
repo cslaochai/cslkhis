@@ -4,10 +4,7 @@ import com.his.api.vo.AppointBriefVO;
 import com.his.api.vo.PatientBriefVO;
 
 /**
- * 病历-就诊联动端口（跨模块 SPI：接口声明在公共模块 his-system，实现方为 his-appoint）。
- *
- * <p>病历域（his-emr）保存/结诊病历时要读挂号与患者信息、并回写挂号/队列状态。
- * 这些表属就诊域（his-appoint），病历域不得直连其 Mapper，统一走本端口。
+ * 病历-就诊联动端口
  */
 public interface EmrVisitApi {
 

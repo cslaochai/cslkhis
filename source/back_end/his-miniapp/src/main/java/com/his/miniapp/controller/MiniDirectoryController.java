@@ -1,6 +1,6 @@
 package com.his.miniapp.controller;
 
-import com.his.system.dto.ScheduleSelectQueryDTO;
+import com.his.api.dto.ScheduleSelectQueryDTO;
 import com.his.common.base.Result;
 import com.his.miniapp.service.MiniDirectoryService;
 import com.his.miniapp.vo.MiniDeptSelectListVO;

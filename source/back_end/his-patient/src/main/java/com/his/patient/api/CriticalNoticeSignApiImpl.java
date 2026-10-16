@@ -1,7 +1,7 @@
 package com.his.patient.api;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.his.system.entity.SignSubject;
+import com.his.api.vo.SignSubject;
 import com.his.common.enums.ObjectSignStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;

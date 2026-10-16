@@ -3,6 +3,7 @@ package com.his.ai.dto;
 import com.his.common.validation.AllowedValues;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
@@ -40,6 +41,7 @@ public class OperationQaColumnUpsertDTO {
     private Integer isEnabled;
 
     @Schema(description = "敏感类型（0-普通 1-脱敏 2-禁止出库）")
+    @NotNull(message = "请选择敏感类型")
     @AllowedValues(values = {"0", "1", "2"}, message = "敏感类型不合法")
     private Integer sensitiveType;
 

@@ -109,6 +109,10 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long upsert(CriticalNoticeDTO.Upsert dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         CriticalNoticeVO.Base snapshot = bizCriticalNoticeMapper.selectAdmissionBase(dto.getAdmissionId());
         if (snapshot == null) {
             throw new BusinessException("住院记录不存在");
@@ -170,12 +174,12 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
         notice.setDoctorMeasures(TextUtil.cutToNull(dto.getDoctorMeasures(), TEXT_MAX));
         notice.setNotifyTime(notifyTime);
         if (isNew || notice.getDoctorId() == null) {
-            Long me = UserUtils.getCurrentUser().getEmployeeId();
+            Long me = operatorUser.getEmployeeId();
             notice.setDoctorId(me != null ? me : dto.getDoctorId());
             // 保留（类别②）：校验对象是服务端快照/登录上下文带出的医师名，不是入参字段，注解覆盖不到
             notice.setDoctorName(TextUtil.cut(TextUtil.requireTrimmed(
                     TextUtil.hasText(notice.getDoctorName()) ? notice.getDoctorName()
-                            : UserUtils.getCurrentUser().getRealName(), "告知医师不能为空"), NAME_MAX));
+                            : operatorUser.getRealName(), "告知医师不能为空"), NAME_MAX));
         }
         applyWitness(notice, dto.getWitnessDoctorId(), dto.getWitnessDoctorName());
         notice.setRemark(TextUtil.cutToNull(dto.getRemark(), REASON_MAX));
@@ -186,6 +190,10 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void issue(CriticalNoticeDTO.Issue dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizCriticalNotice notice = requireNotice(dto.getId());
         if (!Objects.equals(NoticeStatusEnum.DRAFT.getCode(), notice.getNoticeStatus())) {
             throw new BusinessException("只有「" + BizCriticalNotice.statusText(NoticeStatusEnum.DRAFT.getCode())
@@ -199,8 +207,8 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
         }
 
         // 落款人 = 当前登录职工：法定签名的责任主体不许前端冒充
-        Long me = UserUtils.getCurrentUser().getEmployeeId();
-        String myName = UserUtils.getCurrentUser().getRealName();
+        Long me = operatorUser.getEmployeeId();
+        String myName = operatorUser.getRealName();
         if (me == null || !TextUtil.hasText(myName)) {
             throw new BusinessException("当前登录账号未绑定员工档案，无法以医师身份签发");
         }
@@ -217,11 +225,8 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
         cmd.setSignScene(SignSceneEnum.NOTICE_ISSUE.getCode());
         cmd.setSignerId(me);
         cmd.setSignerName(notice.getDoctorName());
-        CurrentUser user = UserUtils.getCurrentUser();
-        if (user != null) {
-            cmd.setSignerDeptId(user.getDeptId());
-            cmd.setSignerDeptName(user.getDeptName());
-        }
+        cmd.setSignerDeptId(operatorUser.getDeptId());
+        cmd.setSignerDeptName(operatorUser.getDeptName());
         cmd.setSignerTitle(TextUtil.cutToNull(bizCriticalNoticeMapper.selectEmployeeTitle(me), 50));
         cmd.setClientIp(dto.getClientIp());
         cmd.setRemark("病危重通知签发（" + BizCriticalNotice.typeText(notice.getNoticeType()) + "）");

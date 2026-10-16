@@ -2,11 +2,13 @@ package com.his.appoint.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.appoint.dto.*;
+import com.his.api.dto.*;
 import com.his.appoint.entity.BizEmergency;
 import com.his.appoint.vo.*;
+import com.his.api.vo.*;
 import com.his.common.base.PageResult;
-import com.his.patient.vo.BedVO;
-import com.his.patient.vo.WardVO;
+import com.his.api.vo.BedVO;
+import com.his.api.vo.WardVO;
 
 import java.util.List;
 

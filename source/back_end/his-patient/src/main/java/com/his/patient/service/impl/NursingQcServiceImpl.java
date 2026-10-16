@@ -192,6 +192,10 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
     @Override
     @Transactional(rollbackFor = Exception.class)
     public NurseQcVO.SaveResult checkUpsert(NursingQcDTO.CheckUpsertDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         int category = requireCategory(dto.getCategory());
         NurseQcVO.Ward ward = requireWard(dto.getWardId());
         String checkMonth = requireMonth(dto.getCheckMonth(), "检查月份");
@@ -263,7 +267,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
             entity.setId(IdWorker.getId());
             entity.setCheckNo(buildCheckNo(checkMonth, category, ward.getWardId()));
         }
-        NurseQcVO.Inspector inspector = resolveInspector(dto.getInspectorId());
+        NurseQcVO.Inspector inspector = resolveInspector(dto.getInspectorId(), operatorUser);
         entity.setWardId(ward.getWardId());
         entity.setWardName(ward.getWardName());
         entity.setDeptId(ward.getDeptId());
@@ -645,9 +649,9 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
      * 下次编辑回传就被「检查人不存在或已停用」拒掉，这张单从此改不动。写入侧与校验侧必须同一把尺子，
      * 过不了闸就不记检查人（留 NULL），而不是写一个注定非法的值。
      */
-    private NurseQcVO.Inspector resolveInspector(Long inspectorId) {
+    private NurseQcVO.Inspector resolveInspector(Long inspectorId, CurrentUser operatorUser) {
         if (inspectorId == null) {
-            Long currentEmpId = UserUtils.getCurrentUser().getEmployeeId();
+            Long currentEmpId = operatorUser.getEmployeeId();
             return currentEmpId == null ? null : bizNursingQcCheckMapper.selectInspector(currentEmpId);
         }
         NurseQcVO.Inspector inspector = bizNursingQcCheckMapper.selectInspector(inspectorId);

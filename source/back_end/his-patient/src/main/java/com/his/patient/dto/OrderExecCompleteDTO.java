@@ -1,8 +1,10 @@
 package com.his.patient.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -23,9 +25,10 @@ public class OrderExecCompleteDTO implements Serializable {
 
     /**
      * 执行状态（本端点只接受 2-已执行 3-已跳过；1-待执行 4-已退回由其他动作推进）
+     * 必填：不允许为空，更不能在后端兜底成「已执行」——否则漏传会静默触发计费
      */
-    @Min(value = 2, message = "执行结果取值不合法")
-    @Max(value = 3, message = "执行结果取值不合法")
+    @NotNull(message = "请选择执行结果（已执行 / 已跳过）")
+    @AllowedValues(values = { "2", "3"}, message = "执行结果取值不合法")
     private Integer execStatus;
 
     /**

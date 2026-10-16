@@ -2,14 +2,14 @@ package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.system.api.service.AppointApi;
+import com.his.api.service.AppointApi;
 import com.his.system.dto.BizClinicSourceBatchItemDTO;
 import com.his.system.dto.BizClinicSourceBatchUpsertDTO;
 import com.his.system.dto.BizClinicSourceReplicateDTO;
 import com.his.system.dto.NurseDutyRow;
 import com.his.system.dto.OnDutyQueryDTO;
 import com.his.system.dto.ScheduleQueryDTO;
-import com.his.system.dto.ScheduleSelectQueryDTO;
+import com.his.api.dto.ScheduleSelectQueryDTO;
 import com.his.system.dto.ScheduleUpsertDTO;
 import com.his.system.entity.BizClinicSource;
 import com.his.system.mapper.BizClinicSourceMapper;
@@ -21,7 +21,7 @@ import com.his.system.vo.BizClinicSourceBatchResultVO;
 import com.his.system.vo.OnDutyStaffVO;
 import com.his.system.vo.ScheduleDetailVO;
 import com.his.system.vo.ScheduleSelectListVO;
-import com.his.system.vo.StopImpactItemVO;
+import com.his.api.vo.StopImpactItemVO;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
@@ -66,7 +66,6 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
 
     private final DeptScopeService deptScopeService;
 
-
     private final BizClinicSourceSlotService bizScheduleSlotService;
 
     private final SysClinicRoomService sysClinicRoomService;
@@ -82,8 +81,6 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
     private final AppointApi appointApi;
 
     private final ClinicSourceLogService clinicSourceLogService;
-
-
 
     @Override
     public List<BizClinicSource> listPage(ScheduleQueryDTO queryDTO) {

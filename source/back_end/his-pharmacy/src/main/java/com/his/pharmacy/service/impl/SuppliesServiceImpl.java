@@ -72,7 +72,7 @@ public class SuppliesServiceImpl extends ServiceImpl<BizConsumableStockMapper, B
         entity.setId(dto.getId());
         entity.setConsumableCode(dto.getConsumableCode());
         entity.setConsumableName(dto.getConsumableName());
-        entity.setCategory(dto.getCategory() == null ? 5 : dto.getCategory());
+        entity.setCategory(dto.getCategory());
         entity.setSpecification(dto.getSpecification());
         entity.setUnit(dto.getUnit());
         entity.setManufacturer(dto.getManufacturer());

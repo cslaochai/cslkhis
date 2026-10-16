@@ -10,12 +10,29 @@ import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
+import com.his.api.dto.*;
 import com.his.patient.entity.*;
 import com.his.patient.enums.*;
+import com.his.common.enums.AdmitWayEnum;
+import com.his.common.enums.ConsultScopeEnum;
+import com.his.common.enums.InpatientOrderStatusEnum;
+import com.his.common.enums.InpatientRecordStatusEnum;
+import com.his.common.enums.InpatientRecordTypeEnum;
+import com.his.common.enums.NursingDocTypeEnum;
+import com.his.common.enums.OrderTypeEnum;
+import com.his.common.enums.ReferralStatusEnum;
+import com.his.common.enums.SummaryStatusEnum;
+import com.his.common.enums.TransferStatusEnum;
+import com.his.common.enums.VisitStatusEnum;
 import com.his.patient.mapper.*;
 import com.his.patient.service.InpatientRecordService;
 import com.his.patient.support.RecordStructuredFields;
-import com.his.patient.vo.*;
+import com.his.patient.vo.InpatientRecordVO;
+import com.his.patient.vo.InpatientRecordDetailVO;
+import com.his.patient.vo.InpatientRecordLogVO;
+import com.his.patient.vo.RecordQualityStatVO;
+import com.his.api.vo.CodeOptionVO;
+import com.his.api.vo.WardVO;
 import com.his.system.dto.SignCommandDTO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeService;
@@ -644,8 +661,8 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
         cmd.setSignScene(scene.getCode());
         cmd.setSignerId(operatorUser.getEmployeeId());
         cmd.setSignerName(operatorUser.getRealName());
-        cmd.setSignerDeptId(currentDeptId());
-        cmd.setSignerDeptName(currentDeptName());
+        cmd.setSignerDeptId(operatorUser.getDeptId());
+        cmd.setSignerDeptName(operatorUser.getDeptName());
         try {
             return signatureService.sign(cmd);
         } catch (BusinessException e) {
@@ -1039,26 +1056,5 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
 
     private String nextRecordNo() {
         return redisSequenceService.generateInpatientRecordNo();
-    }
-
-    /**
-     * 签名人的科室快照：证书与签名行上都要记"签名当时在哪个科室"（人可能转科）
-     */
-    private Long currentDeptId() {
-        try {
-            CurrentUser user = UserUtils.getCurrentUser();
-            return user == null ? null : user.getDeptId();
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private String currentDeptName() {
-        try {
-            CurrentUser user = UserUtils.getCurrentUser();
-            return user == null ? null : user.getDeptName();
-        } catch (Exception e) {
-            return null;
-        }
     }
 }

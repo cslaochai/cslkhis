@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
  * 运营问数的安全闸门：模型生成的 SQL 必须逐条通过这里的检查才能执行。
  * 白名单集合由调用方按需查库后传入（本类不持有任何内存数据）。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class OperationSqlGuard {
 
     /**

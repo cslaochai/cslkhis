@@ -1,6 +1,7 @@
 package com.his.operation.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
@@ -24,8 +25,8 @@ import com.his.operation.mapper.BizOperationCountMapper;
 import com.his.operation.service.OperationCountService;
 import com.his.operation.vo.CountItemVO;
 import com.his.operation.vo.OperationCountVO;
-import com.his.patient.entity.BizPatient;
-import com.his.patient.service.BizPatientService;
+import com.his.api.service.PatientApi;
+import com.his.api.vo.PatientMasterVO;
 import com.his.system.provider.DeptScopeService;
 import com.his.system.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
@@ -50,7 +51,7 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
     private final RedisSequenceService redisSequenceService;
 
 
-    private final BizPatientService bizPatientService;
+    private final PatientApi patientApi;
 
     private final BizOperationCountMapper bizOperationCountMapper;
 
@@ -254,6 +255,7 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
                 entity.setFinalResult(result);
             }
         }
+        Integer prevPhase = entity.getPhase();
         entity.setPhase(phase);
         if (diff) {
             entity.setDiscrepancyFlag(1);
@@ -268,7 +270,14 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
         if (dto.getRemark() != null) {
             entity.setRemark(dto.getRemark());
         }
-        bizOperationCountMapper.updateById(entity);
+        // 守卫下沉到 WHERE：并发下阶段已被他人推进时更新命中 0 行，兜底抛错（与上方「只能顺序推进一阶段」校验同义，明细回写随事务一并回滚）
+        int rows = bizOperationCountMapper.update(entity, new LambdaUpdateWrapper<BizOperationCount>()
+                .eq(BizOperationCount::getId, entity.getId())
+                .eq(BizOperationCount::getPhase, prevPhase));
+        if (rows == 0) {
+            throw new BusinessException("清点单 " + entity.getCountNo()
+                    + " 阶段已被并发推进，请刷新后按当前阶段重新清点");
+        }
         log.info("手术清点 countNo={} 阶段={} 结果={} 核对人={}{}",
                 entity.getCountNo(), CountPhaseEnum.labelOrUnknown(phase),
                 CountResultEnum.labelOrUnknown(result), nurseName,
@@ -326,7 +335,7 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
             vo.setOperationStatusText(OperationApplyStatusEnum.getText(apply.getOperationStatus()));
         }
         if (entity.getPatientId() != null) {
-            BizPatient patient = bizPatientService.getById(entity.getPatientId());
+            PatientMasterVO patient = patientApi.getPatient(entity.getPatientId());
             if (patient != null) {
                 vo.setPatientNo(patient.getPatientNo());
             }

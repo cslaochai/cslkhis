@@ -9,7 +9,7 @@ import java.util.Set;
 /**
  * 检验结果异常判定（纯函数，无外部依赖）。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class LabAbnormalJudge {
 
     /**

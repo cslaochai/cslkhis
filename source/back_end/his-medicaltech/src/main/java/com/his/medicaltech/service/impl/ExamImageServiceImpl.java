@@ -25,7 +25,7 @@ import com.his.medicaltech.mapper.BizLaboratoryRecordMapper;
 import com.his.medicaltech.mapper.BizReportMapper;
 import com.his.medicaltech.service.ExamImageService;
 import com.his.medicaltech.support.MockExamImageSource;
-import com.his.medicaltech.vo.ExamImageVO;
+import com.his.api.vo.ExamImageVO;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.SysAuditLogService;
 import com.his.system.utils.UserUtils;

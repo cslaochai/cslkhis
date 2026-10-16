@@ -1,6 +1,7 @@
 package com.his.medicaltech.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
@@ -177,7 +178,13 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
             throw new BusinessException("仅「在库」血袋可预留（当前：" + dictCacheService.getDicDataLabel(DictTypeConst.BLOOD_INVENTORY_STATUS, b.getStatus()) + "）");
         }
         b.setStatus(BloodInventoryStatusEnum.RESERVED.getCode());
-        bizBloodInventoryMapper.updateById(b);
+        // 守卫下沉到 WHERE：两配血单并发预留同一袋时，只有一方能命中「在库」状态，防止抢同一袋血
+        int rows = bizBloodInventoryMapper.update(b, new LambdaUpdateWrapper<BizBloodInventory>()
+                .eq(BizBloodInventory::getId, b.getId())
+                .eq(BizBloodInventory::getStatus, BloodInventoryStatusEnum.IN_STOCK.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("仅「在库」血袋可预留（可能刚被他人预留/出库），请刷新后重试");
+        }
         writeLog(b.getBagNo(), BloodStockLogBizTypeEnum.RESERVE.getCode(), BloodInventoryStatusEnum.IN_STOCK.getCode(), BloodInventoryStatusEnum.RESERVED.getCode(), dto.getApplyNo(), null);
     }
 
@@ -188,7 +195,13 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
             throw new BusinessException("仅「已预留」血袋可取消预留（当前：" + dictCacheService.getDicDataLabel(DictTypeConst.BLOOD_INVENTORY_STATUS, b.getStatus()) + "）");
         }
         b.setStatus(BloodInventoryStatusEnum.IN_STOCK.getCode());
-        bizBloodInventoryMapper.updateById(b);
+        // 守卫下沉到 WHERE：与发血/报废并发时，只有仍「已预留」的行能被取消预留
+        int rows = bizBloodInventoryMapper.update(b, new LambdaUpdateWrapper<BizBloodInventory>()
+                .eq(BizBloodInventory::getId, b.getId())
+                .eq(BizBloodInventory::getStatus, BloodInventoryStatusEnum.RESERVED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("仅「已预留」血袋可取消预留（状态可能已变化），请刷新后重试");
+        }
         writeLog(b.getBagNo(), BloodStockLogBizTypeEnum.CANCEL_RESERVE.getCode(), BloodInventoryStatusEnum.RESERVED.getCode(), BloodInventoryStatusEnum.IN_STOCK.getCode(), null, null);
     }
 
@@ -210,7 +223,13 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
         b.setApplyNo(dto.getApplyNo().trim());
         b.setOutboundBy(operatorUser.getRealName());
         b.setOutboundTime(LocalDateTime.now().withNano(0));
-        bizBloodInventoryMapper.updateById(b);
+        // 守卫下沉到 WHERE：与取消预留/报废并发时，只有仍「已预留」的行能发出，防止一袋两发
+        int rows = bizBloodInventoryMapper.update(b, new LambdaUpdateWrapper<BizBloodInventory>()
+                .eq(BizBloodInventory::getId, b.getId())
+                .eq(BizBloodInventory::getStatus, BloodInventoryStatusEnum.RESERVED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("发血前血袋必须「已预留」（状态可能已变化），请刷新后重试");
+        }
         writeLog(b.getBagNo(), BloodStockLogBizTypeEnum.ISSUE.getCode(), BloodInventoryStatusEnum.RESERVED.getCode(), BloodInventoryStatusEnum.ISSUED.getCode(), b.getApplyNo(), null);
     }
 
@@ -232,7 +251,13 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
         b.setStatus(BloodInventoryStatusEnum.SCRAPPED.getCode());
         b.setOutboundBy(operatorUser.getRealName());
         b.setOutboundTime(LocalDateTime.now().withNano(0));
-        bizBloodInventoryMapper.updateById(b);
+        // 守卫下沉到 WHERE：与预留/发血并发时，只有仍「在库/已预留」的行能报废
+        int rows = bizBloodInventoryMapper.update(b, new LambdaUpdateWrapper<BizBloodInventory>()
+                .eq(BizBloodInventory::getId, b.getId())
+                .in(BizBloodInventory::getStatus, BloodInventoryStatusEnum.IN_STOCK.getCode(), BloodInventoryStatusEnum.RESERVED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("仅「在库 / 已预留」血袋可报废（状态可能已变化），请刷新后重试");
+        }
         writeLog(b.getBagNo(), BloodStockLogBizTypeEnum.SCRAP.getCode(), from, BloodInventoryStatusEnum.SCRAPPED.getCode(), null, dto.getReason());
     }
 
@@ -254,7 +279,13 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
         b.setStatus(BloodInventoryStatusEnum.RETURNED.getCode());
         b.setOutboundBy(operatorUser.getRealName());
         b.setOutboundTime(LocalDateTime.now().withNano(0));
-        bizBloodInventoryMapper.updateById(b);
+        // 守卫下沉到 WHERE：与预留/发血并发时，只有仍「在库/已预留」的行能退回
+        int rows = bizBloodInventoryMapper.update(b, new LambdaUpdateWrapper<BizBloodInventory>()
+                .eq(BizBloodInventory::getId, b.getId())
+                .in(BizBloodInventory::getStatus, BloodInventoryStatusEnum.IN_STOCK.getCode(), BloodInventoryStatusEnum.RESERVED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("仅「在库 / 已预留」血袋可退回（状态可能已变化），请刷新后重试");
+        }
         writeLog(b.getBagNo(), BloodStockLogBizTypeEnum.RETURN.getCode(), from, BloodInventoryStatusEnum.RETURNED.getCode(), null, dto.getReason());
     }
 
@@ -323,7 +354,13 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
         c.setStatus(CrossmatchOrderStatusEnum.MATCHED.getCode());
         c.setOperator(operatorUser.getRealName());
         c.setMatchTime(LocalDateTime.now().withNano(0));
-        bizBloodCrossmatchMapper.updateById(c);
+        // 守卫下沉到 WHERE：与作废并发时，只有仍「待配血」的单能执行
+        int rows = bizBloodCrossmatchMapper.update(c, new LambdaUpdateWrapper<BizBloodCrossmatch>()
+                .eq(BizBloodCrossmatch::getId, c.getId())
+                .eq(BizBloodCrossmatch::getStatus, CrossmatchOrderStatusEnum.PENDING.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("仅「待配血」可执行配血（状态可能已变化），请刷新后重试");
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -343,7 +380,13 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
         c.setStatus(CrossmatchOrderStatusEnum.VERIFIED.getCode());
         c.setVerifier(who);
         c.setVerifyTime(LocalDateTime.now().withNano(0));
-        bizBloodCrossmatchMapper.updateById(c);
+        // 守卫下沉到 WHERE：与执行/作废并发时，只有仍「已配血」的单能复核
+        int rows = bizBloodCrossmatchMapper.update(c, new LambdaUpdateWrapper<BizBloodCrossmatch>()
+                .eq(BizBloodCrossmatch::getId, c.getId())
+                .eq(BizBloodCrossmatch::getStatus, CrossmatchOrderStatusEnum.MATCHED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("仅「已配血」可复核（状态可能已变化），请刷新后重试");
+        }
 
         // 相合 → 预留血袋（发血的前置条件）
         if (c.getResult() != null && c.getResult() == CrossmatchResultEnum.MATCHED.getCode()) {
@@ -352,7 +395,13 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
             if (bag != null && bag.getStatus() == BloodInventoryStatusEnum.IN_STOCK.getCode()) {
                 bag.setStatus(BloodInventoryStatusEnum.RESERVED.getCode());
                 bag.setApplyNo(c.getApplyNo());
-                bizBloodInventoryMapper.updateById(bag);
+                // 守卫下沉到 WHERE：自动预留与人工预留并发时，只有一方能命中「在库」状态
+                int reserved = bizBloodInventoryMapper.update(bag, new LambdaUpdateWrapper<BizBloodInventory>()
+                        .eq(BizBloodInventory::getId, bag.getId())
+                        .eq(BizBloodInventory::getStatus, BloodInventoryStatusEnum.IN_STOCK.getCode()));
+                if (reserved == 0) {
+                    throw new BusinessException("血袋刚被他人预留/出库，自动预留失败（配血单 " + c.getMatchNo() + "），请人工确认血袋状态");
+                }
                 writeLog(bag.getBagNo(), BloodStockLogBizTypeEnum.RESERVE.getCode(), BloodInventoryStatusEnum.IN_STOCK.getCode(), BloodInventoryStatusEnum.RESERVED.getCode(), c.getApplyNo(),
                         "配血复核相合自动预留（" + c.getMatchNo() + "）");
             }
@@ -369,7 +418,13 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
             throw new BusinessException("该配血单已作废");
         }
         c.setStatus(CrossmatchOrderStatusEnum.VOIDED.getCode());
-        bizBloodCrossmatchMapper.updateById(c);
+        // 守卫下沉到 WHERE：与复核并发时，已复核（发血依据）或已作废的单不能被作废
+        int rows = bizBloodCrossmatchMapper.update(c, new LambdaUpdateWrapper<BizBloodCrossmatch>()
+                .eq(BizBloodCrossmatch::getId, c.getId())
+                .notIn(BizBloodCrossmatch::getStatus, CrossmatchOrderStatusEnum.VERIFIED.getCode(), CrossmatchOrderStatusEnum.VOIDED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("该配血单已复核或已作废（可能刚被并发处理），不能作废");
+        }
     }
 
     public PageResult<BloodVO.StockLogVO> logPage(BloodDTO.LogQuery q) {

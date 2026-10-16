@@ -14,7 +14,7 @@ import java.util.Set;
 /**
  * 分组规则用的 ICD 码归一（集合表与病案首页两侧比码前的唯一口径）。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class DrgCodes {
 
     /**

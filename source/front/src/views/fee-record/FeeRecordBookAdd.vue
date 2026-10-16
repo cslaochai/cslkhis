@@ -79,6 +79,9 @@ const form = reactive({
   quantity: 1,
   unit: '',
   sourceType: 11,
+  // 此处暂按自费，待接入价表目录类别：手工补记账页的项目名称/单价为手工录入，
+  // 没有价表目录数据可取医保目录类别（FeeBookDTO.catalogType 已必填），先固定 0-自费
+  catalogType: 0,
   remark: '',
 });
 const amount = computed(() => {

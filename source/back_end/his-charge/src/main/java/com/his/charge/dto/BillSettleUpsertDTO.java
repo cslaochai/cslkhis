@@ -36,12 +36,14 @@ public class BillSettleUpsertDTO {
      * 账单类型（字典 his_bill_type：1-挂号费结算 2-门诊诊间结算 3-住院中途结算 4-出院结算）；
      * 为空按就诊类型推（门诊→2，住院→3）
      */
+    @NotNull(message = "请选择账单类型")
     @AllowedValues(values = {"1", "2", "3", "4"}, message = "账单类型不合法")
     private Integer billType;
 
     /**
      * 结算方式（字典 his_settlement_mode：1-自费 2-医保）；为空按患者有无医保号推
      */
+    @NotNull(message = "请选择结算方式")
     @AllowedValues(values = {"1", "2"}, message = "结算方式取值不合法")
     private Integer settlementMode;
 

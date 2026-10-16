@@ -43,8 +43,10 @@ public class CssdDTO {
         private String deptName;
 
         /**
-         * 灭菌方式:1-高压蒸汽 2-环氧乙烷 3-低温等离子（默认 1）
+         * 灭菌方式:1-高压蒸汽 2-环氧乙烷 3-低温等离子
+         * 必填：灭菌方式是消毒安全关键输入，不允许静默兜底成「高压蒸汽」
          */
+        @NotNull(message = "请选择灭菌方式")
         @AllowedValues(values = {"1", "2", "3"}, message = "灭菌方式取值不合法")
         private Integer sterilizeMethod;
 
@@ -75,7 +77,9 @@ public class CssdDTO {
 
         /**
          * 节点结果:1-合格 2-不合格（仅灭菌完成节点生效；不合格自动退回清洗）
+         * 必填：不允许静默兜底成「合格」——漏传会把未经确认的器械包放行
          */
+        @NotNull(message = "请选择节点结果（合格 / 不合格）")
         @AllowedValues(values = {"1", "2"}, message = "节点结果取值不合法")
         private Integer result;
 

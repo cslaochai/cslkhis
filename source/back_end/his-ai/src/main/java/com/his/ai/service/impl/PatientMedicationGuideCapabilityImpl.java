@@ -8,13 +8,14 @@ import com.his.ai.mapper.SysDrugGuideMapper;
 import com.his.ai.service.PatientMedicationGuideCapability;
 import com.his.ai.vo.PatientMedicationGuideVO;
 import com.his.ai.vo.PatientMedicationItemVO;
+import com.his.common.enums.PrescriptionTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizPrescription;
 import com.his.emr.entity.BizPrescriptionDetail;
 import com.his.emr.mapper.BizPrescriptionDetailMapper;
 import com.his.emr.mapper.BizPrescriptionMapper;
-import com.his.patient.service.PatientGuardianService;
+import com.his.api.service.PatientApi;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -75,7 +76,7 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
 
     private final SysDrugGuideMapper sysDrugGuideMapper;
 
-    private final PatientGuardianService patientGuardianService;
+    private final PatientApi patientApi;
 
     /**
      * 单次剂量：优先用法用量原句，其次单次剂量，都没有就直说不知道。
@@ -187,15 +188,8 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
     // ---------------------------------------------------------------- 词典层
 
     private static String prescriptionTypeText(Integer type) {
-        if (type == null) {
-            return "";
-        }
-        return switch (type) {
-            case 1 -> "西药处方";
-            case 2 -> "中成药处方";
-            case 3 -> "中药饮片处方";
-            default -> "";
-        };
+        String text = PrescriptionTypeEnum.getText(type);
+        return text == null ? "" : text;
     }
 
     @Override
@@ -209,7 +203,7 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
         if (prescription == null) {
             throw new BusinessException("处方不存在：" + dto.getPrescriptionId());
         }
-        if (patientGuardianService.patientScopeViolated(prescription.getPatientId())) {
+        if (patientApi.patientScopeViolated(prescription.getPatientId())) {
             // 不区分「不存在」和「无权查看」，避免被用来探测处方是否存在
             throw new BusinessException("处方不存在或无权查看：" + dto.getPrescriptionId());
         }

@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 /**
  * 麻醉随访并发症要点字典（P134.3）+ 恢复情况/状态/轮次文案单点。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class FollowupAdverseItems {
 
     /**

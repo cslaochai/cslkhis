@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 /**
  * 病历文本的标签切分（硬规则层）。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class EmrTextTagSplitter {
 
     /**

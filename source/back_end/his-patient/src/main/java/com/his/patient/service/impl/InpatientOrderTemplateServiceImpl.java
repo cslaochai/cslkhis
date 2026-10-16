@@ -11,7 +11,7 @@ import com.his.patient.dto.InpatientOrderTemplateUpsertDTO;
 import com.his.patient.entity.BizInpatientOrderTemplate;
 import com.his.patient.entity.BizInpatientOrderTemplateItem;
 import com.his.patient.enums.OrderClassEnum;
-import com.his.patient.enums.OrderTypeEnum;
+import com.his.common.enums.OrderTypeEnum;
 import com.his.patient.mapper.BizInpatientOrderTemplateItemMapper;
 import com.his.patient.mapper.BizInpatientOrderTemplateMapper;
 import com.his.patient.service.InpatientOrderTemplateService;
@@ -69,7 +69,8 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
             InpatientOrderItemRules.validate(item);
         }
 
-        Integer orderType = dto.getOrderType() != null ? dto.getOrderType() : OrderTypeEnum.TEMP.getCode();
+        // 必填项由 @NotNull 兜底，业务层不再静默按「临时」处理
+        Integer orderType = dto.getOrderType();
 
         String templateName = dto.getTemplateName().trim();
         if (templateName.length() > 100) {
@@ -92,7 +93,7 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
         if (dto.getId() == null) {
             template.setDoctorId(doctorId);
             template.setDoctorName(operatorUser.getRealName());
-            template.setDeptId(currentDeptId());
+            template.setDeptId(operatorUser.getDeptId());
             bizInpatientOrderTemplateMapper.insert(template);
         } else {
             BizInpatientOrderTemplate owned = requireOwned(dto.getId(), doctorId);
@@ -258,14 +259,5 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
         }
         String trimmed = remark.trim();
         return trimmed.length() > 500 ? trimmed.substring(0, 500) : trimmed;
-    }
-
-    private Long currentDeptId() {
-        try {
-            CurrentUser user = UserUtils.getCurrentUser();
-            return user == null ? null : user.getDeptId();
-        } catch (Exception e) {
-            return null;
-        }
     }
 }

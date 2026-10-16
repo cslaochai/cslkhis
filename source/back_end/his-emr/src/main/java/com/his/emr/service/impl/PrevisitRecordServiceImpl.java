@@ -3,17 +3,17 @@ package com.his.emr.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.his.appoint.entity.BizAppointInfo;
-import com.his.appoint.mapper.BizAppointInfoMapper;
+import com.his.api.service.AppointApi;
+import com.his.api.vo.RegistBriefVO;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.emr.dto.PrevisitSubmitDTO;
+import com.his.api.dto.PrevisitSubmitDTO;
 import com.his.emr.entity.BizPrevisitRecord;
 import com.his.emr.mapper.BizPrevisitRecordMapper;
 import com.his.emr.service.PrevisitRecordService;
-import com.his.emr.support.PrevisitQuestionnaireSupport;
-import com.his.emr.vo.PrevisitDetailVO;
-import com.his.emr.vo.PrevisitQuestionnaireVO;
+import com.his.api.support.PrevisitQuestionnaireSupport;
+import com.his.api.vo.PrevisitDetailVO;
+import com.his.api.vo.PrevisitQuestionnaireVO;
 import com.his.system.provider.DeptScopeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -32,7 +32,7 @@ public class PrevisitRecordServiceImpl extends ServiceImpl<BizPrevisitRecordMapp
 
     private final BizPrevisitRecordMapper bizPrevisitRecordMapper;
 
-    private final BizAppointInfoMapper bizAppointInfoMapper;
+    private final AppointApi appointApi;
 
     private final ObjectMapper objectMapper;
 
@@ -50,7 +50,7 @@ public class PrevisitRecordServiceImpl extends ServiceImpl<BizPrevisitRecordMapp
 
     @Override
     public PrevisitDetailVO submit(PrevisitSubmitDTO dto) {
-        BizAppointInfo appointInfo = bizAppointInfoMapper.selectById(dto.getRegistId());
+        RegistBriefVO appointInfo = appointApi.findRegist(dto.getRegistId());
         if (appointInfo == null) {
             throw new BusinessException("挂号记录不存在");
         }

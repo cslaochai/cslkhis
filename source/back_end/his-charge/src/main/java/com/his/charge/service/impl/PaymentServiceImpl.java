@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.charge.dto.BillPayDTO;
+import com.his.api.dto.BillPayDTO;
 import com.his.charge.dto.BillRefundDTO;
 import com.his.charge.dto.BillVoidDTO;
 import com.his.charge.dto.PaymentTxnQueryPageDTO;
@@ -135,7 +135,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         BizSettlementBill bill = requirePayableBill(payDTO.getBillId());
         TxnSourceEnum source = TxnSourceEnum.fromCode(payDTO.getSourceType());
         if (source == null) {
-            source = TxnSourceEnum.CASHIER;
+            throw new BusinessException("流水来源不合法");
         }
         if (source.refundKind()) {
             throw new BusinessException("收款流水的来源不能是退费类");
@@ -237,7 +237,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         }
         TxnSourceEnum source = TxnSourceEnum.fromCode(dto.getSourceType());
         if (source == null) {
-            source = TxnSourceEnum.DIRECT_REFUND;
+            throw new BusinessException("流水来源不合法");
         }
         if (!source.refundKind()) {
             throw new BusinessException("退费流水的来源必须是退费类（退费申请执行/收费处直退/退号联动/出院结算退差）");

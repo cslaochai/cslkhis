@@ -1,13 +1,13 @@
 package com.his.patient.api;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.his.system.entity.SignSubject;
+import com.his.api.vo.SignSubject;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
-import com.his.system.api.service.SignableContentApi;
+import com.his.api.service.SignableContentApi;
 import com.his.common.util.TimeUtil;
 import com.his.patient.entity.BizInpatientOrder;
-import com.his.patient.enums.InpatientOrderStatusEnum;
+import com.his.common.enums.InpatientOrderStatusEnum;
 import com.his.patient.mapper.BizInpatientOrderMapper;
 import com.his.patient.service.InpatientOrderSignApi;
 import lombok.RequiredArgsConstructor;

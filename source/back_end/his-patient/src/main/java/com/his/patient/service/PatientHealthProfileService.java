@@ -1,8 +1,10 @@
 package com.his.patient.service;
 
 import com.his.patient.dto.*;
+import com.his.api.dto.*;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.vo.*;
+import com.his.api.vo.*;
 
 /**
  * 患者健康档案（六组）业务闭环 —— 唯一的写入口。

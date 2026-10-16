@@ -9,7 +9,7 @@ import java.time.format.ResolverStyle;
 /**
  * 时间格式化 pattern 全库唯一收口点（与 TimeUtil 同族：那边管"归一到秒"，这里管"渲染成什么形状"）。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class DateFormats {
 
     // ==================== 带横杠的可读格式（对外文案、报表、CSV 导出） ====================

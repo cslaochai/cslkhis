@@ -1,6 +1,7 @@
 package com.his.charge.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -22,8 +23,8 @@ import com.his.charge.vo.DeductSummaryVO;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.system.api.service.PatientApi;
-import com.his.system.api.vo.PatientBriefVO;
+import com.his.api.service.PatientApi;
+import com.his.api.vo.PatientBriefVO;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -188,7 +189,13 @@ public class YbDeductNoticeServiceImpl extends ServiceImpl<BizYbDeductNoticeMapp
         entity.setAppealTime(LocalDateTime.now());
         entity.setDeductStatus(YbDeductStatusEnum.APPEALING.getCode());
         entity.setUpdateBy(operator);
-        bizYbDeductNoticeMapper.updateById(entity);
+        // 守卫下沉到 WHERE：读-判-写之间并发状态变更会使 Java 侧判断失效
+        int rows = bizYbDeductNoticeMapper.update(entity, new LambdaUpdateWrapper<BizYbDeductNotice>()
+                .eq(BizYbDeductNotice::getId, entity.getId())
+                .eq(BizYbDeductNotice::getDeductStatus, YbDeductStatusEnum.PENDING_CONFIRM.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("仅「待确认」的扣款通知可发起申诉（状态已被并发变更，请刷新后重试）");
+        }
         writeLog(entity.getId(), ACTION_APPEAL, "提交申诉：" + entity.getAppealReason(), null);
     }
 
@@ -210,7 +217,13 @@ public class YbDeductNoticeServiceImpl extends ServiceImpl<BizYbDeductNoticeMapp
         entity.setAppealResultTime(LocalDateTime.now());
         entity.setDeductStatus(result == 1 ? YbDeductStatusEnum.APPEAL_SUCCESS.getCode() : YbDeductStatusEnum.WAIT_PAY.getCode());
         entity.setUpdateBy(operator);
-        bizYbDeductNoticeMapper.updateById(entity);
+        // 守卫下沉到 WHERE：读-判-写之间并发状态变更会使 Java 侧判断失效
+        int rows = bizYbDeductNoticeMapper.update(entity, new LambdaUpdateWrapper<BizYbDeductNotice>()
+                .eq(BizYbDeductNotice::getId, entity.getId())
+                .eq(BizYbDeductNotice::getDeductStatus, YbDeductStatusEnum.APPEALING.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("仅「申诉中」的扣款通知可录入申诉结果（状态已被并发变更，请刷新后重试）");
+        }
         writeLog(entity.getId(), ACTION_APPEAL_RESULT,
                 (result == 1 ? "医保局回复：申诉成功，扣款撤销" : "医保局回复：申诉驳回，维持扣款待缴")
                         + (TextUtil.hasText(entity.getAppealResultRemark()) ? "（" + entity.getAppealResultRemark() + "）" : ""),
@@ -257,7 +270,14 @@ public class YbDeductNoticeServiceImpl extends ServiceImpl<BizYbDeductNoticeMapp
         entity.setConfirmTime(LocalDateTime.now());
         entity.setDeductStatus(YbDeductStatusEnum.WAIT_PAY.getCode());
         entity.setUpdateBy(operator);
-        bizYbDeductNoticeMapper.updateById(entity);
+        // 守卫下沉到 WHERE：读-判-写之间并发状态变更会使 Java 侧判断失效
+        int rows = bizYbDeductNoticeMapper.update(entity, new LambdaUpdateWrapper<BizYbDeductNotice>()
+                .eq(BizYbDeductNotice::getId, entity.getId())
+                .in(BizYbDeductNotice::getDeductStatus,
+                        YbDeductStatusEnum.PENDING_CONFIRM.getCode(), YbDeductStatusEnum.WAIT_PAY.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("仅「待确认」或「维持扣款待缴」的扣款通知可确认追责（状态已被并发变更，请刷新后重试）");
+        }
         writeLog(entity.getId(), ACTION_CONFIRM, "确认扣款并追责：承担方式 " + entity.getLossBearType()
                 + "，科室 " + deptAmount + " 元 / 个人 " + empAmount + " 元", deduct);
     }
@@ -284,7 +304,13 @@ public class YbDeductNoticeServiceImpl extends ServiceImpl<BizYbDeductNoticeMapp
         entity.setPaybackTime(LocalDateTime.now());
         entity.setDeductStatus(YbDeductStatusEnum.PAID_BACK.getCode());
         entity.setUpdateBy(operator);
-        bizYbDeductNoticeMapper.updateById(entity);
+        // 守卫下沉到 WHERE：读-判-写之间并发状态变更会使 Java 侧判断失效
+        int rows = bizYbDeductNoticeMapper.update(entity, new LambdaUpdateWrapper<BizYbDeductNotice>()
+                .eq(BizYbDeductNotice::getId, entity.getId())
+                .eq(BizYbDeductNotice::getDeductStatus, YbDeductStatusEnum.WAIT_PAY.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("仅「维持扣款待缴」的扣款通知可录入缴回（状态已被并发变更，请刷新后重试）");
+        }
         writeLog(entity.getId(), ACTION_PAYBACK, "财务缴回医保基金：" + entity.getPaidAmount()
                 + " 元，凭证 " + entity.getPaybackVoucher(), entity.getPaidAmount());
     }
@@ -302,7 +328,13 @@ public class YbDeductNoticeServiceImpl extends ServiceImpl<BizYbDeductNoticeMapp
         entity.setCancelTime(LocalDateTime.now());
         entity.setDeductStatus(YbDeductStatusEnum.CANCELLED.getCode());
         entity.setUpdateBy(operator);
-        bizYbDeductNoticeMapper.updateById(entity);
+        // 守卫下沉到 WHERE：读-判-写之间并发状态变更会使 Java 侧判断失效
+        int rows = bizYbDeductNoticeMapper.update(entity, new LambdaUpdateWrapper<BizYbDeductNotice>()
+                .eq(BizYbDeductNotice::getId, entity.getId())
+                .eq(BizYbDeductNotice::getDeductStatus, YbDeductStatusEnum.PENDING_CONFIRM.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("仅「待确认」的扣款通知可作废；已进入申诉或缴回流程的请走对应动作（状态已被并发变更，请刷新后重试）");
+        }
         writeLog(entity.getId(), ACTION_CANCEL, "作废：" + entity.getCancelReason(), null);
     }
 

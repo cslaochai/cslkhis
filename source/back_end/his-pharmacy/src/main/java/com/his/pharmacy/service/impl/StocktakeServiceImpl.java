@@ -12,6 +12,7 @@ import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.*;
 import com.his.pharmacy.entity.BizStocktake;
 import com.his.pharmacy.entity.BizStocktakeItem;
+import com.his.pharmacy.enums.StocktakeDrugTypeEnum;
 import com.his.pharmacy.enums.StocktakePostFlagEnum;
 import com.his.pharmacy.enums.StocktakeStatusEnum;
 import com.his.pharmacy.mapper.BizDrugStockLogMapper;
@@ -78,12 +79,8 @@ public class StocktakeServiceImpl extends ServiceImpl<BizStocktakeMapper, BizSto
         if (drugType == null) {
             return "全部药品";
         }
-        return switch (drugType) {
-            case 1 -> "西药";
-            case 2 -> "中成药";
-            case 3 -> "中药饮片";
-            default -> "其他";
-        };
+        String text = StocktakeDrugTypeEnum.getText(drugType);
+        return text == null ? "其他" : text;
     }
 
     private static String scopeDesc(Integer drugType, String keyword) {

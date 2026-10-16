@@ -15,12 +15,23 @@ import com.his.patient.dto.DietPlanStopDTO;
 import com.his.patient.dto.DietPlanUpsertDTO;
 import com.his.patient.entity.*;
 import com.his.patient.enums.*;
+import com.his.common.enums.AdmitWayEnum;
+import com.his.common.enums.ConsultScopeEnum;
+import com.his.common.enums.InpatientOrderStatusEnum;
+import com.his.common.enums.InpatientRecordStatusEnum;
+import com.his.common.enums.InpatientRecordTypeEnum;
+import com.his.common.enums.NursingDocTypeEnum;
+import com.his.common.enums.OrderTypeEnum;
+import com.his.common.enums.ReferralStatusEnum;
+import com.his.common.enums.SummaryStatusEnum;
+import com.his.common.enums.TransferStatusEnum;
+import com.his.common.enums.VisitStatusEnum;
 import com.his.patient.mapper.*;
 import com.his.patient.service.DietPlanService;
 import com.his.patient.support.NutritionRules;
 import com.his.patient.vo.DietPlanVO;
 import com.his.patient.vo.DietTypeOptionVO;
-import com.his.patient.vo.WardVO;
+import com.his.api.vo.WardVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
@@ -162,7 +173,7 @@ public class DietPlanServiceImpl extends ServiceImpl<BizDietPlanMapper, BizDietP
             // 营养师自己登记的方案不需要"自己接收自己"，直接计为已接收
             row.setConfirmStatus(DietConfirmStatusEnum.DONE.getCode());
             row.setConfirmTime(TimeUtil.nowSeconds());
-            row.setConfirmerId(UserUtils.getCurrentUser().getEmployeeId());
+            row.setConfirmerId(operatorUser.getEmployeeId());
             row.setConfirmerName(operatorUser.getRealName());
         } else {
             row = bizDietPlanMapper.selectById(dto.getId());
@@ -266,7 +277,7 @@ public class DietPlanServiceImpl extends ServiceImpl<BizDietPlanMapper, BizDietP
         for (BizDietPlan row : rows) {
             row.setConfirmStatus(accept ? DietConfirmStatusEnum.DONE.getCode() : DietConfirmStatusEnum.REJECTED.getCode());
             row.setConfirmTime(now);
-            row.setConfirmerId(UserUtils.getCurrentUser().getEmployeeId());
+            row.setConfirmerId(operatorUser.getEmployeeId());
             row.setConfirmerName(operatorUser.getRealName());
             row.setRejectReason(accept ? null : reason);
             bizDietPlanMapper.updateById(row);

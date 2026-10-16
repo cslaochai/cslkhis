@@ -2,7 +2,7 @@ package com.his.patient.support;
 
 import com.his.common.util.TextUtil;
 import com.his.patient.entity.BizInpatientRecord;
-import com.his.patient.enums.InpatientRecordTypeEnum;
+import com.his.common.enums.InpatientRecordTypeEnum;
 import com.his.patient.enums.RecordStructuredGroupEnum;
 
 import java.util.ArrayList;

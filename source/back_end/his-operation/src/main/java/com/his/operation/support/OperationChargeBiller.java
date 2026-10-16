@@ -1,8 +1,8 @@
 package com.his.operation.support;
 
-import com.his.charge.dto.FeeBookDTO;
-import com.his.charge.entity.BizFeeRecord;
-import com.his.charge.support.FeeCatalogResolver;
+import com.his.api.dto.FeeBookDTO;
+import com.his.common.enums.FeeCatalogTypeEnum;
+import com.his.api.vo.FeeRecordVO;
 import com.his.common.enums.EncounterTypeEnum;
 import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.PaymentItemTypeEnum;
@@ -140,9 +140,7 @@ public class OperationChargeBiller {
         }
 
         BigDecimal amount = unitPrice.multiply(quantity).setScale(AMOUNT_SCALE, RoundingMode.HALF_UP);
-
         row.setItemName(price.getItemName());
-        // 治疗项目字典没有单位/规格两列（见 Mapper 注释）：单位兜底成「次」，规格只能是 null
         row.setSpec(null);
         row.setUnit("次");
         row.setQuantity(quantity);
@@ -171,11 +169,6 @@ public class OperationChargeBiller {
         fee.setPatientName(patientName);
         fee.setEncounterType(EncounterTypeEnum.INPATIENT.getCode());
         fee.setEncounterId(admissionId);
-        // 科室留空（已知缺口）：准确的归属应是手术申请单上的手术科室，而麻醉记录与 PACU 单上
-        // 都没有这个快照，兜底成「麻醉科」或患者所在病区都会让科室收入表凭空多出一块。
-        // 补法在开单侧把科室带进来；日结会把它单列成「无科室归属」差异项。
-        // 项目类型一律 7-治疗：麻醉/复苏/监护在费用类型字典里没有专属类目，
-        // 归「治疗」符合字典口径，也不会像自己发明一个 9 那样让收入报表出现无定义类目。
         fee.setItemType(PaymentItemTypeEnum.TREATMENT.getCode());
         fee.setItemCode(itemCode);
         fee.setItemName(row.getItemName());
@@ -184,17 +177,13 @@ public class OperationChargeBiller {
         fee.setPrice(row.getPrice());
         fee.setQuantity(quantity);
         fee.setSourceType(FeeSourceTypeEnum.OPERATION.getCode());
-        // ★ 幂等锚点 = 本次计费的项目台账行（一行 = 一个可计费项目）。
-        //   若直接用文档ID，麻醉记录与 PACU 记录会共用同一个「来源类型+来源ID」空间而互相误判。
         fee.setSourceId(row.getId());
-        // ★ 四核对锚点：这台手术。麻醉费不属于任何一条医嘱，锚到那台手术才答得出「这是哪台手术的钱」；
-        //   来源编号不能留空（该列 NOT NULL 且无默认）。
         fee.setSourceNo(TextUtil.hasText(applyNo) ? applyNo : ("APPLY-" + applyId));
-        fee.setCatalogType(FeeCatalogResolver.byItemType(fee.getItemType()));
+        fee.setCatalogType(FeeCatalogTypeEnum.byItemType(fee.getItemType()));
         fee.setRemark(TextUtil.hasText(remark) ? remark
                 : ("手术麻醉记账（项目 " + itemCode + "，手术申请 " + fee.getSourceNo() + "）"));
 
-        BizFeeRecord booked;
+        FeeRecordVO booked;
         try {
             booked = operationChargeInvoker.book(fee);
         } catch (Exception e) {

@@ -3,9 +3,9 @@ package com.his.emr.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.charge.dto.FeeBookDTO;
-import com.his.charge.entity.BizFeeRecord;
-import com.his.charge.support.FeeCatalogResolver;
+import com.his.api.dto.FeeBookDTO;
+import com.his.common.enums.FeeCatalogTypeEnum;
+import com.his.api.vo.FeeRecordVO;
 import com.his.common.base.PageResult;
 import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.BillingStatusEnum;
@@ -485,10 +485,10 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
         dto.setSourceId(exec.getRecordId());
         dto.setSourceNo(TextUtil.hasText(apply.getApplyNo())
                 ? apply.getApplyNo() : ("EXEC-" + exec.getRecordId()));
-        dto.setCatalogType(FeeCatalogResolver.byItemType(dto.getItemType()));
+        dto.setCatalogType(FeeCatalogTypeEnum.byItemType(dto.getItemType()));
         dto.setRemark("门诊治疗按次计费（" + apply.getItemName() + " 第 " + exec.getExecSeq() + " 次）");
         try {
-            BizFeeRecord booked = chargeInvoker.book(dto);
+            FeeRecordVO booked = chargeInvoker.book(dto);
             if (booked == null) {
                 markCharge(exec, BillingStatusEnum.FAILED.getCode(), null, null, null, "记账入参缺定位信息（挂号/患者快照），本次未计费");
                 return "已打卡，但记账入参不全：本次未计费（见流水上的失败原因）";

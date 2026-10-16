@@ -4619,6 +4619,8 @@ const handleCreateRevisit = async (item) => {
     // 当日回诊（来源 1）：不占号源、不选排班，它是同一次挂号的延续
     await createRevisitRegistration({
       patientId: currentPatient.value.patientId,
+      // 挂号来源（AppointUpsertDTO 已必填）：当日回诊既非自助也非预约，沿用原默认口径「1-窗口挂号」
+      registSource: 1,
       scheduleId: null, // 复诊不需要号源
       settlementType: currentPatient.value.settlementType || 1,
       medicalInsuranceType: currentPatient.value.medicalInsuranceType || '',

@@ -5,6 +5,7 @@ import com.his.ai.constant.AiCapabilityKeys;
 import com.his.ai.dto.AiCallDTO;
 import com.his.ai.dto.LabInterpretExecuteDTO;
 import com.his.ai.dto.LabInterpretLlmOutputDTO;
+import com.his.ai.enums.LabAttentionLevelEnum;
 import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.LabInterpretCapability;
 import com.his.ai.vo.LabInterpretPromptVariablesVO;
@@ -245,11 +246,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
             if (!TextUtil.hasText(raw.getItemName()) && !TextUtil.hasText(raw.getInterpretation())) {
                 continue;
             }
-            String level = raw.getLevel() == null ? "" : switch (raw.getLevel()) {
-                case 3 -> "【尽快处理】";
-                case 2 -> "【关注】";
-                default -> "";
-            };
+            String level = LabAttentionLevelEnum.prefixOf(raw.getLevel());
             points.add(String.format("%s%s：%s", level, TextUtil.blankToDefault(raw.getItemName(), "（未填写）"),
                     TextUtil.cut(raw.getInterpretation(), 120)));
         }

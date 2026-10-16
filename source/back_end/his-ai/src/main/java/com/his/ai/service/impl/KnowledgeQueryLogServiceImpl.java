@@ -47,8 +47,8 @@ public class KnowledgeQueryLogServiceImpl implements KnowledgeQueryLogService {
             log.setFeedback(0);
             CurrentUser user = UserUtils.getCurrentUser();
             if (user != null) {
-                log.setOperatorId(user.getUserId());
-                log.setOperatorName(user.getUsername());
+                log.setOperatorId(user.getEmployeeId());
+                log.setOperatorName(user.getRealName());
             }
             queryLogMapper.insert(log);
         } catch (Exception ex) {

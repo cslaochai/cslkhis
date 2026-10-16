@@ -3,7 +3,7 @@ package com.his.emr.api;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.enums.ObjectSignStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
-import com.his.system.api.service.SignCoverageApi;
+import com.his.api.service.SignCoverageApi;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.mapper.BizMedicalRecordMapper;
 import lombok.RequiredArgsConstructor;

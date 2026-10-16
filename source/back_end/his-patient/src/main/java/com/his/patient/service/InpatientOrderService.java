@@ -2,6 +2,7 @@ package com.his.patient.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.patient.dto.*;
+import com.his.api.dto.*;
 import com.his.patient.vo.InpatientOrderExecVO;
 import com.his.patient.vo.InpatientOrderVO;
 

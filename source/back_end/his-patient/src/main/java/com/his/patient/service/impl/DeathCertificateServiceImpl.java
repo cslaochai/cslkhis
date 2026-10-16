@@ -317,10 +317,10 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
         cert.setRelativeName(TextUtil.cutToNull(dto.getRelativeName(), 50));
         cert.setRelativeRelation(TextUtil.cutToNull(dto.getRelativeRelation(), 20));
         cert.setRelativePhone(TextUtil.cutToNull(dto.getRelativePhone(), 20));
-        cert.setPhysicianId(dto.getPhysicianId() != null ? dto.getPhysicianId() : UserUtils.getCurrentUser().getEmployeeId());
+        cert.setPhysicianId(dto.getPhysicianId() != null ? dto.getPhysicianId() : operatorUser.getEmployeeId());
         // ②非web入口口径：校验对象是「入参姓名 或 当前登录人」的合并值，不是纯 DTO 字段，注解表达不了
         cert.setPhysicianName(TextUtil.cut(TextUtil.requireTrimmed(
-                TextUtil.hasText(dto.getPhysicianName()) ? dto.getPhysicianName() : UserUtils.getCurrentUser().getRealName(),
+                TextUtil.hasText(dto.getPhysicianName()) ? dto.getPhysicianName() : operatorUser.getRealName(),
                 "填表医师不能为空"), 50));
         cert.setFillTime(dto.getFillTime() != null ? TimeUtil.toSeconds(dto.getFillTime()) : (isNew ? TimeUtil.nowSeconds() : cert.getFillTime()));
         cert.setRemark(TextUtil.cutToNull(dto.getRemark(), DIAG_MAX));

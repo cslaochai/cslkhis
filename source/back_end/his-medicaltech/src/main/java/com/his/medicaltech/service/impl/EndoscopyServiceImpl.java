@@ -1,6 +1,7 @@
 package com.his.medicaltech.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
@@ -154,12 +155,6 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         r.setId(null);
         LocalDate visitDate = dto.getVisitDate() != null ? dto.getVisitDate() : LocalDate.now();
         r.setVisitDate(visitDate);
-        if (r.getEndoType() == null) {
-            r.setEndoType(EndoscopyTypeEnum.GASTRO.getCode());
-        }
-        if (r.getAnesthesiaMethod() == null) {
-            r.setAnesthesiaMethod(1);
-        }
         r.setBiopsyFlag(0);
         r.setBiopsyCount(0);
         r.setStatus(InsRecordStatusEnum.REGISTERED.getCode());
@@ -176,7 +171,14 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         }
         BeanUtils.copyProperties(dto, r);
         r.setId(dto.getId());
-        bizEndoscopyRecordMapper.updateById(r);
+        // 守卫下沉到 WHERE：与签到/执行并发时，只有仍「已登记/已签到」的记录能改登记信息，防止把已开始的检查盖回旧状态
+        int rows = bizEndoscopyRecordMapper.update(r, new LambdaUpdateWrapper<BizEndoscopyRecord>()
+                .eq(BizEndoscopyRecord::getId, r.getId())
+                .in(BizEndoscopyRecord::getStatus,
+                        InsRecordStatusEnum.REGISTERED.getCode(), InsRecordStatusEnum.SIGNED_IN.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("已开始检查的记录不可修改登记信息（状态可能已变化），请刷新后重试");
+        }
         return r;
     }
 
@@ -188,7 +190,13 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
             throw new BusinessException("仅「已登记」可签到（当前：" + dictCacheService.getDicDataLabel(DictTypeConst.ENDOUS_STATUS, r.getStatus()) + "）");
         }
         r.setStatus(InsRecordStatusEnum.SIGNED_IN.getCode());
-        bizEndoscopyRecordMapper.updateById(r);
+        // 守卫下沉到 WHERE：并发签到时，只有仍「已登记」的记录能签到
+        int rows = bizEndoscopyRecordMapper.update(r, new LambdaUpdateWrapper<BizEndoscopyRecord>()
+                .eq(BizEndoscopyRecord::getId, r.getId())
+                .eq(BizEndoscopyRecord::getStatus, InsRecordStatusEnum.REGISTERED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("仅「已登记」可签到（状态可能已变化），请刷新后重试");
+        }
     }
 
     /**
@@ -245,7 +253,14 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
             r.setStatus(InsRecordStatusEnum.CHECKING.getCode());
             r.setExecuteTime(LocalDateTime.now().withNano(0));
         }
-        bizEndoscopyRecordMapper.updateById(r);
+        // 守卫下沉到 WHERE：与取消/出报告并发时，只有仍「已签到/检查中」的记录能执行检查，防止覆盖终态
+        int rows = bizEndoscopyRecordMapper.update(r, new LambdaUpdateWrapper<BizEndoscopyRecord>()
+                .eq(BizEndoscopyRecord::getId, r.getId())
+                .in(BizEndoscopyRecord::getStatus,
+                        InsRecordStatusEnum.SIGNED_IN.getCode(), InsRecordStatusEnum.CHECKING.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("请先签到再执行检查（状态可能已变化），请刷新后重试");
+        }
     }
 
     /**
@@ -280,7 +295,14 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         r.setBiopsyPart(dto.getBiopsyPart());
         r.setBiopsyCount(count);
         r.setPathologyOrderNo(order.getOrderNo());
-        bizEndoscopyRecordMapper.updateById(r);
+        // 守卫下沉到 WHERE：重复送检并发时，只有尚未送检（病理号为空）的记录能回填，防止一单两病理
+        int rows = bizEndoscopyRecordMapper.update(r, new LambdaUpdateWrapper<BizEndoscopyRecord>()
+                .eq(BizEndoscopyRecord::getId, r.getId())
+                .and(w -> w.isNull(BizEndoscopyRecord::getPathologyOrderNo)
+                        .or().eq(BizEndoscopyRecord::getPathologyOrderNo, "")));
+        if (rows == 0) {
+            throw new BusinessException("该内镜检查已送检病理（可能刚被并发送检），不可重复送检");
+        }
         return order.getOrderNo();
     }
 
@@ -304,7 +326,13 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         r.setStatus(InsRecordStatusEnum.RESULTED.getCode());
         r.setReportBy(operatorUser.getRealName());
         r.setReportTime(LocalDateTime.now().withNano(0));
-        bizEndoscopyRecordMapper.updateById(r);
+        // 守卫下沉到 WHERE：与审核/取消并发时，只有仍「检查中」的记录能出报告
+        int rows = bizEndoscopyRecordMapper.update(r, new LambdaUpdateWrapper<BizEndoscopyRecord>()
+                .eq(BizEndoscopyRecord::getId, r.getId())
+                .eq(BizEndoscopyRecord::getStatus, InsRecordStatusEnum.CHECKING.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("仅「检查中」的记录可出具报告（状态可能已变化），请刷新后重试");
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -328,7 +356,13 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         if (TextUtil.hasText(dto.getAuditOpinion())) {
             r.setRemark(TextUtil.cut((r.getRemark() == null ? "" : r.getRemark() + " | 审核意见：") + dto.getAuditOpinion(), 480));
         }
-        bizEndoscopyRecordMapper.updateById(r);
+        // 守卫下沉到 WHERE：与发布/退回并发时，只有仍「已出报告」的记录能审核
+        int rows = bizEndoscopyRecordMapper.update(r, new LambdaUpdateWrapper<BizEndoscopyRecord>()
+                .eq(BizEndoscopyRecord::getId, r.getId())
+                .eq(BizEndoscopyRecord::getStatus, InsRecordStatusEnum.RESULTED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("仅「已出报告」可审核（状态可能已变化），请刷新后重试");
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -347,7 +381,13 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         r.setStatus(InsRecordStatusEnum.PUBLISHED.getCode());
         r.setPublishBy(operatorUser.getRealName());
         r.setPublishTime(LocalDateTime.now().withNano(0));
-        bizEndoscopyRecordMapper.updateById(r);
+        // 守卫下沉到 WHERE：与审核/取消并发时，只有仍「已审核」的记录能发布
+        int rows = bizEndoscopyRecordMapper.update(r, new LambdaUpdateWrapper<BizEndoscopyRecord>()
+                .eq(BizEndoscopyRecord::getId, r.getId())
+                .eq(BizEndoscopyRecord::getStatus, InsRecordStatusEnum.REVIEWED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("发布前必须完成审核（状态可能已变化），请刷新后重试");
+        }
     }
 
     // 内部
@@ -364,7 +404,14 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         r.setStatus(InsRecordStatusEnum.CANCELLED.getCode());
         r.setCancelReason(TextUtil.cut(dto.getCancelReason(), 480));
         r.setCancelTime(LocalDateTime.now().withNano(0));
-        bizEndoscopyRecordMapper.updateById(r);
+        // 守卫下沉到 WHERE：与发布/取消并发时，只有未发布且未取消的记录能取消
+        int rows = bizEndoscopyRecordMapper.update(r, new LambdaUpdateWrapper<BizEndoscopyRecord>()
+                .eq(BizEndoscopyRecord::getId, r.getId())
+                .notIn(BizEndoscopyRecord::getStatus,
+                        InsRecordStatusEnum.PUBLISHED.getCode(), InsRecordStatusEnum.CANCELLED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("已发布或已取消的记录不能取消（可能刚被并发处理），请刷新后重试");
+        }
     }
 
     private BizEndoscopyRecord require(Long id) {

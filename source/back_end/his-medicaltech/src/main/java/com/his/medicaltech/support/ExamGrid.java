@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * 号源网格口径单点：设备的开放时段 → 一串等长格子。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class ExamGrid {
 
     /**

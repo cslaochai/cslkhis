@@ -79,6 +79,22 @@ public class RegistBriefVO {
     private LocalDate visitDate;
 
     /**
+     * 患者编号
+     */
+    private String patientNo;
+
+    /**
+     * 挂号状态（1-已挂号 2-已签到 3-已接诊 4-已就诊 5-已退号 6-已过号 7-爽约 8-未就诊）
+     */
+    private Integer registStatus;
+
+    /**
+     * 挂号费结算账单ID（免收时为 NULL）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long billId;
+
+    /**
      * 医保类型
      */
     private String medicalInsuranceType;

@@ -1,6 +1,7 @@
 package com.his.charge.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.dto.BillRefundDTO;
@@ -238,11 +239,18 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
         apply.setApplyStatus(approved
                 ? RefundApplyStatusEnum.AUDIT_PASSED.getCode() : RefundApplyStatusEnum.AUDIT_REJECTED.getCode());
         // 审核人以服务端登录身份为准，DTO 里带的值只作无登录态时的兜底
-        apply.setAuditorId(operatorUser.getEmployeeId() != null ? operatorUser.getEmployeeId() : operatorUser.getUserId());
+        apply.setAuditorId(operatorUser.getEmployeeId());
         apply.setAuditorName(operatorUser.getRealName());
         apply.setAuditTime(LocalDateTime.now());
         apply.setAuditRemark(remark);
-        return this.updateById(apply);
+        // 守卫下沉到 WHERE：读-判-写之间并发状态变更会使 Java 侧判断失效
+        int rows = baseMapper.update(apply, new LambdaUpdateWrapper<BizRefundApply>()
+                .eq(BizRefundApply::getId, apply.getId())
+                .eq(BizRefundApply::getApplyStatus, RefundApplyStatusEnum.PENDING_AUDIT.getCode()));
+        if (rows == 0) {
+            throw new BusinessException(statusError("审核", apply.getApplyStatus()));
+        }
+        return rows > 0;
     }
 
     /**
@@ -271,7 +279,15 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
         apply.setCancelTime(LocalDateTime.now());
         // 先截到列宽再落库：超长会让这句"作废"本身变成 500，用户连申请单都关不掉
         apply.setCancelReason(TextUtil.cut(reason.trim(), W_CANCEL_REASON));
-        return this.updateById(apply);
+        // 守卫下沉到 WHERE：读-判-写之间并发状态变更会使 Java 侧判断失效
+        int rows = baseMapper.update(apply, new LambdaUpdateWrapper<BizRefundApply>()
+                .eq(BizRefundApply::getId, apply.getId())
+                .in(BizRefundApply::getApplyStatus,
+                        RefundApplyStatusEnum.PENDING_AUDIT.getCode(), RefundApplyStatusEnum.AUDIT_PASSED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException(statusError("作废", apply.getApplyStatus()));
+        }
+        return rows > 0;
     }
 
     /**

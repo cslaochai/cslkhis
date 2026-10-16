@@ -15,6 +15,8 @@ import com.his.emr.entity.BizInfectionMonitor;
 import com.his.emr.entity.BizInfectionMonitorDaily;
 import com.his.emr.enums.DeviceMonitorStatusEnum;
 import com.his.emr.enums.InfectionCaseStatusEnum;
+import com.his.emr.enums.InfectionObsObjectEnum;
+import com.his.emr.enums.InfectionSiteEnum;
 import com.his.emr.enums.InfectionSourceEnum;
 import com.his.emr.mapper.BizHandHygieneObsMapper;
 import com.his.emr.mapper.BizInfectionCaseMapper;
@@ -551,27 +553,14 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
 
     private String infectionSiteText(String site) {
         if (!TextUtil.hasText(site)) return null;
-        return switch (site) {
-            case "1" -> "下呼吸道";
-            case "2" -> "泌尿道";
-            case "3" -> "胃肠道";
-            case "4" -> "手术切口";
-            case "5" -> "血流感染";
-            case "6" -> "皮肤软组织";
-            case "7" -> "腹腔内";
-            case "9" -> "其他";
-            default -> "";
-        };
+        String text = InfectionSiteEnum.getText(site);
+        return text == null ? "" : text;
     }
 
     private String obsObjectText(Integer o) {
         if (o == null) return "";
-        return switch (o) {
-            case 1 -> "医生";
-            case 2 -> "护士";
-            case 3 -> "工勤/其他";
-            default -> "";
-        };
+        String text = InfectionObsObjectEnum.getText(o);
+        return text == null ? "" : text;
     }
 
     private InfectionMonitorVO.CaseRow toCaseRow(BizInfectionCase c) {

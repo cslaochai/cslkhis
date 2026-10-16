@@ -82,12 +82,14 @@ public class EndoscopyDTO {
         /**
          * 内镜类型（1-胃镜 2-肠镜 3-支气管镜 4-膀胱镜 5-宫腔镜 6-喉镜 7-ERCP 8-胶囊内镜）
          */
+        @NotNull(message = "内镜类型不能为空")
         @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7", "8"}, message = "内镜类型取值不合法")
         private Integer endoType;
 
         /**
          * 麻醉方式（1-无麻醉 2-表面麻醉 3-静脉麻醉 4-全身麻醉）
          */
+        @NotNull(message = "麻醉方式不能为空")
         @AllowedValues(values = {"1", "2", "3", "4"}, message = "麻醉方式取值不合法")
         private Integer anesthesiaMethod;
 

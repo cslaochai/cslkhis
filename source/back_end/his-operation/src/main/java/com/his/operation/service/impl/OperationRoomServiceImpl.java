@@ -50,7 +50,7 @@ public class OperationRoomServiceImpl extends ServiceImpl<SysOperationRoomMapper
         // 必填归 DTO 注解（roomCode/roomName 带 @NotBlank），这里只留归一化：trim 后的值参与编码/名称唯一性比对与落库
         String code = TextUtil.trim(dto.getRoomCode());
         String name = TextUtil.trim(dto.getRoomName());
-        Integer status = dto.getStatus() == null ? STATUS_ENABLED : dto.getStatus();
+        Integer status = dto.getStatus();
         if (!Objects.equals(STATUS_ENABLED, status) && !Objects.equals(0, status)) {
             throw new BusinessException("状态只允许 1-启用 0-停用，当前=" + status);
         }

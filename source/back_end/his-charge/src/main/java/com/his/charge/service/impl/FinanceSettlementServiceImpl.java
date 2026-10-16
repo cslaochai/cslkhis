@@ -360,7 +360,14 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
         if (existing == null) {
             bizDaySettlementMapper.insert(entity);
         } else {
-            bizDaySettlementMapper.updateById(entity);
+            // 守卫下沉到 WHERE：读-判-写之间并发审核会使 Java 侧「未审核可重算」判断失效
+            int rows = bizDaySettlementMapper.update(entity, new LambdaUpdateWrapper<BizDaySettlement>()
+                    .eq(BizDaySettlement::getId, entity.getId())
+                    .ne(BizDaySettlement::getSettleStatus, 2));
+            if (rows == 0) {
+                throw new BusinessException("该日结单已审核，不可重算（如需更正请走冲正流程）"
+                        + "（状态已被并发变更，请刷新后重试）");
+            }
         }
 
         // 反写凭证链：班结单 → 日结单（并能双向查），同时把状态推进到"已日结"。
@@ -432,7 +439,13 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
         if (dto.getRemark() != null) {
             row.setRemark(dto.getRemark());
         }
-        bizDaySettlementMapper.updateById(row);
+        // 守卫下沉到 WHERE：读-判-写之间并发审核会使 Java 侧「未审核」判断失效
+        int rows = bizDaySettlementMapper.update(row, new LambdaUpdateWrapper<BizDaySettlement>()
+                .eq(BizDaySettlement::getId, row.getId())
+                .ne(BizDaySettlement::getSettleStatus, 2));
+        if (rows == 0) {
+            throw new BusinessException("该日结单已审核，请勿重复审核（状态已被并发变更，请刷新后重试）");
+        }
 
         // 交班单同步置"已审核"，让收费员那边看得出"这个班已经结完、不用再来问"。
         // 按 day_settlement_id 取而不是按日期扫：日期相同但**不属于本单**的班结单

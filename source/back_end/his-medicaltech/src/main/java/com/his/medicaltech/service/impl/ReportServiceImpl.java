@@ -1,13 +1,9 @@
 package com.his.medicaltech.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.his.appoint.entity.BizAppointInfo;
-import com.his.appoint.mapper.BizAppointInfoMapper;
-import com.his.appoint.vo.BizAppointInfoListVO;
-import com.his.charge.entity.BizSettlementBill;
-import com.his.charge.mapper.BizSettlementBillMapper;
-import com.his.charge.vo.BizSettlementBillVO;
-import com.his.common.enums.BillStatusEnum;
+import com.his.api.service.AppointApi;
+import com.his.api.service.ChargeApi;
+import com.his.api.vo.BizAppointInfoListVO;
+import com.his.api.vo.BizSettlementBillVO;
 import com.his.medicaltech.service.ReportService;
 import com.his.medicaltech.vo.ChargeStatsVO;
 import com.his.medicaltech.vo.DrugStatsVO;
@@ -28,15 +24,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ReportServiceImpl implements ReportService {
 
-    private final BizAppointInfoMapper bizAppointInfoMapper;
-    private final BizSettlementBillMapper bizSettlementBillMapper;
+    private final AppointApi appointApi;
+    private final ChargeApi chargeApi;
 
     @Override
     public OutpatientStatsVO getOutpatientStats(String startDate, String endDate) {
-        LambdaQueryWrapper<BizAppointInfo> wrapper = new LambdaQueryWrapper<>();
-        wrapper.ge(startDate != null, BizAppointInfo::getVisitDate, startDate)
-                .le(endDate != null, BizAppointInfo::getVisitDate, endDate);
-        List<BizAppointInfo> registList = bizAppointInfoMapper.selectList(wrapper);
+        List<BizAppointInfoListVO> registList = appointApi.listRegists(startDate, endDate);
 
         long totalCount = registList.size();
         long maleCount = registList.stream().filter(r -> r.getGender() != null && r.getGender() == 1).count();
@@ -46,22 +39,14 @@ public class ReportServiceImpl implements ReportService {
         result.setTotalCount(totalCount);
         result.setMaleCount(maleCount);
         result.setFemaleCount(femaleCount);
-        result.setRegistList(registList.stream().map(entity -> {
-            BizAppointInfoListVO vo = new BizAppointInfoListVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        }).collect(Collectors.toList()));
+        result.setRegistList(registList);
         return result;
     }
 
     @Override
     public ChargeStatsVO getChargeStats(String startDate, String endDate) {
         // 四层口径：已支付（bill_status=3）的结算账单，按账务归属日 bill_date 聚合；金额取应收合计
-        LambdaQueryWrapper<BizSettlementBill> wrapper = new LambdaQueryWrapper<>();
-        wrapper.ge(startDate != null, BizSettlementBill::getBillDate, startDate)
-                .le(endDate != null, BizSettlementBill::getBillDate, endDate)
-                .eq(BizSettlementBill::getBillStatus, BillStatusEnum.PAID.getCode());
-        List<BizSettlementBill> bills = bizSettlementBillMapper.selectList(wrapper);
+        List<BizSettlementBillVO> bills = chargeApi.paidBills(startDate, endDate);
 
         BigDecimal totalAmount = bills.stream()
                 .map(b -> b.getPayableAmount() == null ? BigDecimal.ZERO : b.getPayableAmount())
@@ -70,11 +55,7 @@ public class ReportServiceImpl implements ReportService {
         ChargeStatsVO result = new ChargeStatsVO();
         result.setTotalCount((long) bills.size());
         result.setTotalAmount(totalAmount);
-        result.setBills(bills.stream().map(entity -> {
-            BizSettlementBillVO vo = new BizSettlementBillVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        }).collect(Collectors.toList()));
+        result.setBills(bills);
         return result;
     }
 

@@ -9,7 +9,7 @@ import java.util.List;
 /**
  * 医疗文本关键词匹配（带否定语义保护）。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class EvidenceKeywordMatcher {
 
     /**

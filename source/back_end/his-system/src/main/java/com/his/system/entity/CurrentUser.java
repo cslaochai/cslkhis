@@ -50,9 +50,6 @@ public class CurrentUser implements UserDetails {
     @JsonIgnore
     public Collection<? extends GrantedAuthority> getAuthorities() {
         List<SimpleGrantedAuthority> authorities = new ArrayList<>();
-        // ROLE_ 前缀只给「当前角色」，不是全部角色：
-        // 多角色账号切成收费员之后 hasRole('DOCTOR') 也必须为假，否则"切了角色但权限还是医生的"。
-        // currentRole 为空（未走过滤器，例如登录认证过程中）时退回全部角色。
         if (TextUtil.hasText(currentRole)) {
             authorities.add(new SimpleGrantedAuthority("ROLE_" + currentRole));
         } else if (roles != null) {
@@ -60,13 +57,9 @@ public class CurrentUser implements UserDetails {
                     .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                     .forEach(authorities::add);
         }
-        // 患者账号（用户类型为 3）：注入统一的 PATIENT authority，患者端聚合模块
-        // （his-miniapp，/miniapp/**）按 hasAuthority('PATIENT') 一把抓鉴权。
         if (userType != null && userType == 3) {
             authorities.add(new SimpleGrantedAuthority("PATIENT"));
         }
-        // 权限码本身不带前缀（patient:cdr:list、finance:refund:approve…），
-        // 方法级鉴权写 @PreAuthorize("hasAuthority('patient:cdr:list')")。
         if (permissions != null) {
             permissions.stream()
                     .map(SimpleGrantedAuthority::new)

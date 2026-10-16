@@ -1,5 +1,6 @@
 package com.his.medicaltech.service;
 
+import com.his.api.vo.BizReportVO;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
 import com.his.medicaltech.dto.LabResultSaveDTO;
@@ -8,6 +9,7 @@ import com.his.medicaltech.entity.BizLabResult;
 import com.his.medicaltech.entity.BizLaboratoryRecord;
 import com.his.medicaltech.entity.BizReport;
 import com.his.medicaltech.vo.*;
+import com.his.api.vo.*;
 
 import java.util.List;
 

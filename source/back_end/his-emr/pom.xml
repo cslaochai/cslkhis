@@ -29,14 +29,6 @@
         </dependency>
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-patient</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.his</groupId>
-            <artifactId>his-appoint</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.his</groupId>
             <artifactId>his-pharmacy</artifactId>
         </dependency>
         <dependency>
@@ -51,10 +43,10 @@
             <groupId>com.github.librepdf</groupId>
             <artifactId>openpdf</artifactId>
         </dependency>
-        <!-- 记账（FeeRecordService）、处方/病历证据读取（EmrGateway 实现方在本模块）；本模块依赖它，反向依赖会成环 -->
+        <!-- 记账经 ChargeApi（his-api 契约，his-charge 实现），不再直连收费模块；病历证据读取（EmrGateway 实现方在本模块） -->
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-charge</artifactId>
+            <artifactId>his-api</artifactId>
         </dependency>
     </dependencies>
 </project>

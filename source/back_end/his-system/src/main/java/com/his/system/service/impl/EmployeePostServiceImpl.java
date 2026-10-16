@@ -125,7 +125,7 @@ public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, 
             target = matchPost(posts, roleCode, deptId);
             checkOnDuty(target);
         } catch (BusinessException e) {
-            sysAuditLogService.record(user.getUserId(), user.getUsername(), "认证", "切换岗位",
+            sysAuditLogService.record(user.getEmployeeId(), user.getRealName(), "认证", "切换岗位",
                     "employee", user.getEmployeeId(),
                     from + " → 试图切换 " + roleCode + "/" + deptId, false, e.getMessage());
             throw e;
@@ -143,7 +143,7 @@ public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, 
         vo.setToken(jwtUtils.generateToken(user.getUserId(), user.getUsername(),
                 target.getRoleCode(), target.getDeptId(), target.getDeptName()));
 
-        sysAuditLogService.record(user.getUserId(), user.getUsername(), "认证", "切换岗位",
+        sysAuditLogService.record(user.getEmployeeId(), user.getRealName(), "认证", "切换岗位",
                 "employee", user.getEmployeeId(), from + " → " + label(target), true, null);
         return vo;
     }

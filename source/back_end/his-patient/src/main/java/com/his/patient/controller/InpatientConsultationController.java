@@ -3,6 +3,7 @@ package com.his.patient.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.Result;
 import com.his.patient.dto.*;
+import com.his.api.dto.*;
 import com.his.patient.enums.ConsultCategoryEnum;
 import com.his.patient.service.InpatientConsultationService;
 import com.his.patient.vo.ConsultationVO;

@@ -289,21 +289,13 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
     @Transactional(rollbackFor = Exception.class)
     public IncisionReviewVO incisionReviewUpsert(IncisionReviewUpsertDTO dto) {
         boolean unreasonable = dto.getReviewResult() == BizAntibioticIncisionReview.RESULT_UNREASONABLE;
-        // B 类：问题码与点评意见只在「结论=不合理」时必填，条件必填留在 service
+        List<String> codes = dto.getProblemTypes() == null ? List.of()
+                : dto.getProblemTypes().stream().map(String::trim).filter(TextUtil::hasText).toList();
         if (unreasonable) {
-            if (!TextUtil.hasText(dto.getProblemTypes())) {
-                throw new BusinessException("结论为不合理时必须选择问题码");
-            }
-            List<String> codes = Arrays.stream(dto.getProblemTypes().split(","))
-                    .map(String::trim).filter(TextUtil::hasText).toList();
             if (codes.isEmpty()) {
                 throw new BusinessException("结论为不合理时必须选择问题码");
             }
-            for (String c : codes) {
-                if (!AntibioticProblemTypeEnum.isValid(c)) {
-                    throw new BusinessException("问题码非法：" + c + "（允许 41~48）");
-                }
-            }
+            // 每个问题码合法性由 IncisionReviewUpsertDTO.problemTypes 的 @AllowedValues 在边界校验
             if (!TextUtil.hasText(dto.getReviewOpinion())) {
                 throw new BusinessException("结论为不合理时必须填写点评意见");
             }
@@ -367,7 +359,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
         entity.setComboReason(TextUtil.hasText(dto.getComboReason()) ? dto.getComboReason().trim() : null);
         entity.setConsultFlag(dto.getConsultFlag() == null ? 0 : dto.getConsultFlag());
         entity.setReviewResult(dto.getReviewResult());
-        entity.setProblemTypes(unreasonable ? dto.getProblemTypes().trim() : null);
+        entity.setProblemTypes(unreasonable ? (codes.isEmpty() ? null : String.join(",", codes)) : null);
         entity.setReviewOpinion(TextUtil.hasText(dto.getReviewOpinion()) ? dto.getReviewOpinion().trim() : null);
         entity.setReviewerId(UserUtils.getCurrentUser().getEmployeeId());
         entity.setReviewerName(UserUtils.getCurrentUser().getRealName());

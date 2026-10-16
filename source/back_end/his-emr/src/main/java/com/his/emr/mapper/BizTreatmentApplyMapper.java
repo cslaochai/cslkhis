@@ -12,12 +12,6 @@ public interface BizTreatmentApplyMapper extends BaseMapper<BizTreatmentApply> {
 
     /**
      * 挂号快照读（开单时取患者/科室/医生，作为收费明细的来源依据）。
-     *
-     * <p>用原生 SQL 而不是 his-appoint 的 Mapper：治疗站在 his-emr，跨模块只读一张表，
-     * 引对方实体反而把依赖方向搞乱（与 G21 {@code BizExamDeviceMapper.selectEquipmentOptions} 同口径）。
-     *
-     * <p>科室ID 是**开单科室**：挂号挂在哪科，这笔治疗费就归哪科。
-     * 列名一律按挂号信息的真实字段（该表没有 visit_id）。
      */
     @Select("SELECT a.id AS registId, a.regist_no AS registNo, a.patient_id AS patientId, "
             + "       a.patient_no AS patientNo, a.patient_name AS patientName, "

@@ -1,9 +1,9 @@
 package com.his.pharmacy.support;
 
-import com.his.charge.dto.FeeBookDTO;
-import com.his.charge.entity.BizFeeRecord;
-import com.his.charge.service.FeeRecordService;
-import com.his.charge.support.FeeCatalogResolver;
+import com.his.api.dto.FeeBookDTO;
+import com.his.api.service.ChargeApi;
+import com.his.common.enums.FeeCatalogTypeEnum;
+import com.his.api.vo.FeeRecordVO;
 import com.his.common.enums.EncounterTypeEnum;
 import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.PaymentItemTypeEnum;
@@ -27,7 +27,7 @@ import java.math.BigDecimal;
 @RequiredArgsConstructor
 public class WardDispenseChargeInvoker {
 
-    private final FeeRecordService feeRecordService;
+    private final ChargeApi chargeApi;
 
     private final BizWardDispenseItemMapper bizWardDispenseItemMapper;
 
@@ -35,7 +35,7 @@ public class WardDispenseChargeInvoker {
      * 配药记账（独立事务）
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
-    public BizFeeRecord charge(BizWardDispenseItem item) {
+    public FeeRecordVO charge(BizWardDispenseItem item) {
         if (item.getAdmissionId() == null) {
             log.warn("住院摆药记账缺少 admissionId，记账行无法归属这次住院，本次不记账（摆药明细 {}）", item.getId());
             return null;
@@ -80,12 +80,12 @@ public class WardDispenseChargeInvoker {
         dto.setSourceId(item.getId());
         dto.setSourceNo(TextUtil.hasText(item.getOrderNo())
                 ? item.getOrderNo() : ("DISP-" + item.getId()));
-        dto.setCatalogType(FeeCatalogResolver.byItemType(itemType));
+        dto.setCatalogType(FeeCatalogTypeEnum.byItemType(itemType));
         dto.setRemark("住院摆药配药记账（摆药单 " + item.getDispenseNo()
                 + "，明细 " + item.getId()
                 + (item.getOrderId() == null ? "" : "，医嘱 " + item.getOrderId()) + "）");
 
-        BizFeeRecord row = feeRecordService.book(dto);
+        FeeRecordVO row = chargeApi.bookFee(dto);
         log.info("住院摆药记账成功 dispenseNo={} 明细 {} {} 金额=¥{}",
                 item.getDispenseNo(), item.getId(), row.getFeeNo(), row.getAmount().toPlainString());
         return row;
@@ -95,17 +95,17 @@ public class WardDispenseChargeInvoker {
      * 退药红冲（独立事务）
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
-    public BizFeeRecord refund(BizWardDispenseItem item, String reason) {
+    public FeeRecordVO refund(BizWardDispenseItem item, String reason) {
         String flushReason = TextUtil.hasText(reason)
                 ? reason
                 : ("住院摆药退药冲账（摆药单 " + item.getDispenseNo() + "，明细 " + item.getId() + "）");
-        BizFeeRecord orig = feeRecordService.findBookedBySource(
+        FeeRecordVO orig = chargeApi.findBookedBySource(
                 FeeSourceTypeEnum.DISPENSE.getCode(), item.getId(), null);
         if (orig == null) {
             log.warn("住院摆药退药未找到原记账行（摆药明细 {}），本次没有冲账：这笔药当初就没记上费用", item.getId());
             return null;
         }
-        BizFeeRecord neg = feeRecordService.reverse(orig.getId(), flushReason);
+        FeeRecordVO neg = chargeApi.reverse(orig.getId(), flushReason);
         log.info("住院摆药退药红冲成功 dispenseNo={} 原行 {} → 负行 {} 净冲 ¥{}",
                 item.getDispenseNo(), orig.getFeeNo(), neg.getFeeNo(), neg.getAmount().toPlainString());
         return neg;

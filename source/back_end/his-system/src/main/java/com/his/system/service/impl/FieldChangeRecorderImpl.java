@@ -211,7 +211,7 @@ public class FieldChangeRecorderImpl         implements FieldChangeRecorder {
         // 操作人一律服务端取，不接受调用方传 —— 传进来的可以被伪造，等于没有审计
         CurrentUser user = UserUtils.getCurrentUser();
         if (user != null) {
-            row.setOperatorId(user.getUserId());
+            row.setOperatorId(user.getEmployeeId());
             // 姓名单一口径取 realName：employeeName/username 回落会让同一张表里
             // 不同来源的操作人格式不一致，事后按人名检索会漏
             row.setOperatorName(TextUtil.cut(user.getRealName(), 64));

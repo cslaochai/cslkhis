@@ -1,6 +1,7 @@
 package com.his.medicaltech.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
@@ -285,7 +286,13 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
         update.setId(appt.getId());
         update.setStatus(APPT_ARRIVED);
         update.setArriveTime(LocalDateTime.now().withNano(0));
-        bizExamAppointmentMapper.updateById(update);
+        // 守卫下沉到 WHERE：两端并发签到时，只有仍「已预约」的单能推进到已签到
+        int rows = bizExamAppointmentMapper.update(update, new LambdaUpdateWrapper<BizExamAppointment>()
+                .eq(BizExamAppointment::getId, update.getId())
+                .eq(BizExamAppointment::getStatus, APPT_BOOKED));
+        if (rows == 0) {
+            throw new BusinessException("仅「已预约」可签到（状态可能已变化），请刷新后重试");
+        }
         int moved = examApplyWriterMapper.markArrived(appt.getApplyId(), operatorUser.getRealName());
         if (moved == 0) {
             log.warn("[检查预约] {} 到检时申请单 {} 未停在「已预约」，不覆盖其当前状态",
@@ -306,7 +313,13 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
         update.setId(appt.getId());
         update.setStatus(APPT_FINISHED);
         update.setFinishTime(LocalDateTime.now().withNano(0));
-        bizExamAppointmentMapper.updateById(update);
+        // 守卫下沉到 WHERE：并发完成时，只有仍「已到检」的单能推进到已完成
+        int rows = bizExamAppointmentMapper.update(update, new LambdaUpdateWrapper<BizExamAppointment>()
+                .eq(BizExamAppointment::getId, update.getId())
+                .eq(BizExamAppointment::getStatus, APPT_ARRIVED));
+        if (rows == 0) {
+            throw new BusinessException("请先签到再完成检查（状态可能已变化），请刷新后重试");
+        }
     }
 
     /**
@@ -567,7 +580,13 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
             update.setCancelTime(now);
         }
         update.setCancelReason(TextUtil.cut(reason, 480));
-        bizExamAppointmentMapper.updateById(update);
+        // 守卫下沉到 WHERE：取消/改约/爽约并发时，仅仍「已预约」的单可被终结，防止重复退号把号源减两次
+        int rows = bizExamAppointmentMapper.update(update, new LambdaUpdateWrapper<BizExamAppointment>()
+                .eq(BizExamAppointment::getId, update.getId())
+                .eq(BizExamAppointment::getStatus, APPT_BOOKED));
+        if (rows == 0) {
+            throw new BusinessException("预约单状态已变化（可能刚被取消或判爽约），请刷新后重试");
+        }
         bizExamAppointmentMapper.markInactive(appt.getId());
         int prev = appt.getPrevApplyStatus() == null ? APPLY_PAID : appt.getPrevApplyStatus();
         if (examApplyWriterMapper.revertBooked(appt.getApplyId(), prev, operator) == 0) {

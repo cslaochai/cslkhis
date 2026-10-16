@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.system.dto.MessageQueryPageDTO;
 import com.his.system.entity.CurrentUser;
@@ -88,8 +89,6 @@ public class SysMessageServiceImpl extends ServiceImpl<SysMessageMapper, SysMess
                 .and(TextUtil.hasText(queryDTO.getKeyword()), w -> w
                         .like(SysMessage::getTitle, queryDTO.getKeyword())
                         .or().like(SysMessage::getContent, queryDTO.getKeyword()))
-                // 紧急度置顶 + 发送时间倒序，再补主键做二级键：
-                // 同秒多行顺序不稳定会造成翻页重复/丢行，分页排序必须补唯一键兜底。
                 .last("ORDER BY FIELD(severity, 'urgent', 'warning', 'info'), send_time DESC, message_id DESC");
 
         Page<SysMessage> page = this.page(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
@@ -144,7 +143,10 @@ public class SysMessageServiceImpl extends ServiceImpl<SysMessageMapper, SysMess
     @Override
     public Long currentReceiverId() {
         CurrentUser currentUser = UserUtils.getCurrentUser();
-        return currentUser.getEmployeeId() != null ? currentUser.getEmployeeId() : currentUser.getUserId();
+        if (currentUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        return currentUser.getEmployeeId();
     }
 
     @Override

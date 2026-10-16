@@ -31,7 +31,7 @@ public class MyClinicalTodayMetricServiceImpl implements WorkbenchMetricService,
      */
     @Override
     public Map<String, Object> summary(CurrentUser user) {
-        Long doctorId = user.getEmployeeId() != null ? user.getEmployeeId() : user.getUserId();
+        Long doctorId = user.getEmployeeId();
         WorkbenchDoctorStatsRowVO row = workbenchMetricMapper.doctorStats(doctorId, user.getDeptId());
         return BeanUtil.beanToMap(row);
     }

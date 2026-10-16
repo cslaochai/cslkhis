@@ -710,6 +710,8 @@ const handleSubmit = async () => {
       scheduleId: isSameDayReturn.value ? null : newAppointment.value.scheduleId,
       slotId: isSameDayReturn.value ? null : (newAppointment.value.slotId || undefined),
       visitType: newAppointment.value.visitType,
+      // 挂号来源：本页是挂号窗口/前台导诊的现场挂号，固定「1-窗口挂号」（后端 AppointUpsertDTO 已必填）
+      registSource: 1,
       revisitSource: isRevisit.value ? newAppointment.value.revisitSource : undefined,
       revisitRecordId: isRevisit.value ? newAppointment.value.revisitRecordId : undefined,
       settlementType: newAppointment.value.settlementType,

@@ -119,10 +119,11 @@ public class KnowledgeEvalServiceImpl implements KnowledgeEvalService {
         run.setStatus(STATUS_DONE);
         run.setCaseCount(cases.size());
         CurrentUser user = UserUtils.getCurrentUser();
-        if (user != null) {
-            run.setOperatorId(user.getUserId());
-            run.setOperatorName(user.getUsername());
+        if (user == null) {
+            throw new BusinessException("当前用户信息不存在");
         }
+        run.setOperatorId(user.getEmployeeId());
+        run.setOperatorName(user.getRealName());
         int ragChunkSize = aiProperties.getRag().getChunkSize();
         int ragOverlap = aiProperties.getRag().getChunkOverlap();
         run.setConfigSnapshot("chunkSize=" + ragChunkSize + ",overlap=" + ragOverlap

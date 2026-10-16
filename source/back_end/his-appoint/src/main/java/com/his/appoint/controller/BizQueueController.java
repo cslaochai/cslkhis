@@ -1,8 +1,10 @@
 package com.his.appoint.controller;
 
 import com.his.appoint.dto.*;
+import com.his.api.dto.*;
 import com.his.appoint.service.BizQueueService;
 import com.his.appoint.vo.*;
+import com.his.api.vo.*;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import io.swagger.v3.oas.annotations.Operation;

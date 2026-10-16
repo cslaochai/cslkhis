@@ -182,6 +182,9 @@ const handleConfirmReschedule = async () => {
       scheduleId: rescheduleForm.value.scheduleId,
       slotId: rescheduleForm.value.slotId || undefined,
       visitType: rescheduleForm.value.visitType,
+      // 改约走的是挂号的同一个 DTO（AppointUpsertDTO），registSource 已必填；
+      // 改约不改来源，传「1-窗口挂号」与原默认口径一致（该字段在改约分支后端不落库）
+      registSource: 1,
       settlementType: rescheduleForm.value.settlementType,
     });
     visible.value = false;

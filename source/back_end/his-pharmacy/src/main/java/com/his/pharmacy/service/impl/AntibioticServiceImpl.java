@@ -70,7 +70,6 @@ public class AntibioticServiceImpl extends ServiceImpl<BizAntibioticAliasMapper,
     @Transactional(rollbackFor = Exception.class)
     public AntibioticCatalogVO catalogLevelUpsert(AntibioticCatalogLevelUpsertDTO dto) {
         Integer level = dto.getAntibioticLevel();
-        // B 类：DDD 两项只在纳入目录（level>0）时必填，条件必填不能下沉成 @NotNull
         if (level > 0) {
             if (dto.getDddValue() == null || dto.getDddValue().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new BusinessException("纳入抗菌药物目录必须填写 WHO DDD 值（g/日）");
@@ -79,7 +78,6 @@ public class AntibioticServiceImpl extends ServiceImpl<BizAntibioticAliasMapper,
                 throw new BusinessException("纳入抗菌药物目录必须填写每发药单位含药量（克）—— 发药单位是盒/瓶/支，不是最小制剂单位");
             }
         } else {
-            // 移出目录：DDD 值一并清空，避免"在目录里但算不进指标"的假覆盖
             dto.setDddValue(null);
             dto.setDddUnitGram(null);
         }

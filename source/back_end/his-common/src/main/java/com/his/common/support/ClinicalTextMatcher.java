@@ -10,7 +10,7 @@ import java.util.Set;
 /**
  * 临床文本匹配工具 —— 处理「否定语义」与「空描述」这两件小事。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class ClinicalTextMatcher {
 
     /**

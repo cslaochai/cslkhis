@@ -1,8 +1,8 @@
 package com.his.emr.support;
 
-import com.his.charge.dto.FeeBookDTO;
-import com.his.charge.entity.BizFeeRecord;
-import com.his.charge.service.FeeRecordService;
+import com.his.api.dto.FeeBookDTO;
+import com.his.api.service.ChargeApi;
+import com.his.api.vo.FeeRecordVO;
 import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class TreatmentChargeInvoker {
 
-    private final FeeRecordService feeRecordService;
+    private final ChargeApi chargeApi;
 
     /**
      * 按次记账（独立事务，失败不回滚打卡）
@@ -26,7 +26,7 @@ public class TreatmentChargeInvoker {
      * @return 记账行；{@code null} = 本次未计费
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
-    public BizFeeRecord book(FeeBookDTO dto) {
+    public FeeRecordVO book(FeeBookDTO dto) {
         if (dto.getEncounterId() == null) {
             log.warn("门诊治疗记账缺少挂号ID，无法定位本次就诊的记账行，本次不计费（项目 {}）", dto.getItemCode());
             return null;
@@ -44,6 +44,6 @@ public class TreatmentChargeInvoker {
                     dto.getEncounterId(), dto.getSourceNo());
             return null;
         }
-        return feeRecordService.book(dto);
+        return chargeApi.bookFee(dto);
     }
 }

@@ -24,9 +24,9 @@ import com.his.emr.vo.QcResultVO;
 import com.his.emr.support.QcRuleEngine;
 import com.his.emr.support.QcSnapshot;
 import com.his.emr.vo.*;
-import com.his.patient.entity.BizInpatientRecord;
-import com.his.patient.enums.InpatientRecordTypeEnum;
-import com.his.patient.mapper.BizInpatientRecordMapper;
+import com.his.api.service.PatientApi;
+import com.his.api.vo.InpatientRecordVO;
+import com.his.common.enums.InpatientRecordTypeEnum;
 import com.his.system.entity.CurrentUser;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.provider.DeptScopeService;
@@ -60,7 +60,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
 
     private final BizMedicalRecordMapper bizMedicalRecordMapper;
 
-    private final BizInpatientRecordMapper bizInpatientRecordMapper;
+    private final PatientApi patientApi;
 
     private final QcRuleEngine qcRuleEngine;
 
@@ -114,7 +114,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
             deptScopeService.assertDeptAccessible(record == null ? null : record.getDeptId());
             return;
         }
-        BizInpatientRecord record = bizInpatientRecordMapper.selectById(recordId);
+        InpatientRecordVO record = patientApi.getInpatientRecord(recordId);
         deptScopeService.assertDeptAccessible(record == null ? null : record.getDeptId());
     }
 
@@ -379,7 +379,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
             deptScopeService.assertDeptAccessible(record.getDeptId());
             return QcSnapshot.ofOutpatient(record);
         }
-        BizInpatientRecord record = bizInpatientRecordMapper.selectById(recordId);
+        InpatientRecordVO record = patientApi.getInpatientRecord(recordId);
         if (record == null) {
             throw new BusinessException("住院文书不存在或已删除：" + recordId);
         }

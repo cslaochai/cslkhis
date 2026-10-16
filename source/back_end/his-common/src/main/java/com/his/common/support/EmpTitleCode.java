@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * 员工职称 / 职位的字典码（存在字典数据里，字典类型职称字典 / hospital_position）。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class EmpTitleCode {
 
     /**

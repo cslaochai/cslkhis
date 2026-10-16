@@ -46,7 +46,7 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
 
     @Transactional(rollbackFor = Exception.class)
     public CssdPackVO receive(CssdDTO.Receive dto) {
-        int method = dto.getSterilizeMethod() == null ? 1 : dto.getSterilizeMethod();
+        int method = dto.getSterilizeMethod();
         BizCssdPack p = new BizCssdPack();
         p.setPackNo(TextUtil.hasText(dto.getPackNo()) ? dto.getPackNo().trim() : nextPackNo());
         if (bizCssdPackMapper.selectIdByNoAny(p.getPackNo()) != null) {
@@ -77,7 +77,7 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
             throw new BusinessException("当前状态【" + CssdNodeStatusEnum.getText(from) + "】不允许流转（流程已完结或异常）");
         }
         int target = from + 1;
-        int result = dto.getResult() == null ? CssdCheckResultEnum.OK.getCode() : dto.getResult();
+        int result = dto.getResult();
         String operator = UserUtils.getCurrentUser().getRealName();
 
         if (CssdNodeStatusEnum.STERILIZING.is(target)) {

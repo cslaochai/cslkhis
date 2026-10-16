@@ -2,10 +2,12 @@ package com.his.charge.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.charge.dto.InpatientSettlementUpsertDTO;
-import com.his.charge.dto.PrepayQueryPageDTO;
-import com.his.charge.dto.PrepayUpsertDTO;
+import com.his.api.dto.PrepayQueryPageDTO;
+import com.his.api.dto.PrepayUpsertDTO;
 import com.his.charge.service.InpatientAccountService;
 import com.his.charge.vo.*;
+import com.his.api.vo.PrepayBalanceVO;
+import com.his.api.vo.PrepayVO;
 import com.his.common.base.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -80,7 +82,7 @@ public class InpatientAccountController {
     @Operation(summary = "出院结算试算（L2 账单应缴 + 住院账户余额抵扣/退差/欠费）")
     @GetMapping("/settlement/preview")
     public Result<InpatientSettlementPreviewVO> preview(@RequestParam Long admissionId,
-                                                        @RequestParam(required = false) Integer settleMode) {
+                                                        @RequestParam Integer settleMode) {
         return Result.success(inpatientAccountService.preview(admissionId, settleMode));
     }
 

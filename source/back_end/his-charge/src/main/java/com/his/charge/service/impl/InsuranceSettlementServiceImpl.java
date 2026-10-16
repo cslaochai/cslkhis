@@ -6,19 +6,19 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.charge.entity.*;
-import com.his.system.api.service.AppointApi;
-import com.his.system.api.service.EmrApi;
-import com.his.system.api.service.PatientApi;
+import com.his.api.service.AppointApi;
+import com.his.api.service.EmrApi;
+import com.his.api.service.PatientApi;
 import com.his.charge.enums.InsuranceReportStatusEnum;
 import com.his.charge.enums.InsuranceReportTypeEnum;
 import com.his.charge.mapper.*;
 import com.his.charge.service.InsuranceChannelService;
 import com.his.charge.service.InsuranceSettlementService;
 import com.his.charge.vo.*;
-import com.his.system.api.vo.AdmissionBriefVO;
-import com.his.system.api.vo.MedicalRecordBriefVO;
-import com.his.system.api.vo.PatientBriefVO;
-import com.his.system.api.vo.RegistBriefVO;
+import com.his.api.vo.AdmissionBriefVO;
+import com.his.api.vo.MedicalRecordBriefVO;
+import com.his.api.vo.PatientBriefVO;
+import com.his.api.vo.RegistBriefVO;
 import com.his.common.base.PageResult;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
@@ -392,7 +392,15 @@ public class InsuranceSettlementServiceImpl
         settlement.setPersonalPay(fund.account());
         settlement.setSelfPay(fund.cash());
         settlement.setSettlementStatus(InsuranceSettlementStatusEnum.SETTLED.getCode());
-        this.updateById(settlement);
+        // 守卫下沉到 WHERE：读-判-写之间并发状态变更会使 Java 侧「待结算」判断失效
+        int rows = baseMapper.update(settlement, new LambdaUpdateWrapper<BizInsuranceSettlement>()
+                .eq(BizInsuranceSettlement::getId, settlement.getId())
+                .eq(BizInsuranceSettlement::getSettlementStatus, InsuranceSettlementStatusEnum.PENDING.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("当前状态是「"
+                    + InsuranceSettlementStatusEnum.descOf(settlement.getSettlementStatus()) + "」，不允许重复结算"
+                    + "（状态已被并发变更，请刷新后重试）");
+        }
 
         SettlementResultVO result = new SettlementResultVO();
         result.setSettlementId(settlementId);
@@ -443,7 +451,14 @@ public class InsuranceSettlementServiceImpl
         }
         settlement.setSettlementStatus(InsuranceSettlementStatusEnum.UPLOADED.getCode());
         settlement.setUploadTime(LocalDateTime.now());
-        return this.updateById(settlement);
+        // 守卫下沉到 WHERE：读-判-写之间并发状态变更会使 Java 侧「已结算」判断失效
+        int rows = baseMapper.update(settlement, new LambdaUpdateWrapper<BizInsuranceSettlement>()
+                .eq(BizInsuranceSettlement::getId, settlement.getId())
+                .eq(BizInsuranceSettlement::getSettlementStatus, InsuranceSettlementStatusEnum.SETTLED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("只有已结算的清单才能报盘（清单状态已被并发变更，请刷新后重试）");
+        }
+        return rows > 0;
     }
 
     // 报文台账与日对账
@@ -457,7 +472,14 @@ public class InsuranceSettlementServiceImpl
         }
         sendCancel(settlement, reason);
         settlement.setSettlementStatus(InsuranceSettlementStatusEnum.SETTLED.getCode());
-        this.updateById(settlement);
+        // 守卫下沉到 WHERE：读-判-写之间并发状态变更会使 Java 侧「已上传/已审核」判断失效
+        int rows = baseMapper.update(settlement, new LambdaUpdateWrapper<BizInsuranceSettlement>()
+                .eq(BizInsuranceSettlement::getId, settlement.getId())
+                .in(BizInsuranceSettlement::getSettlementStatus,
+                        InsuranceSettlementStatusEnum.UPLOADED.getCode(), InsuranceSettlementStatusEnum.AUDITED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("只有已上传/已审核的清单才能撤销（清单状态已被并发变更，请刷新后重试）");
+        }
         // updateById 跳过 null 字段：上传时间必须显式清空，否则清单上永远挂着一次已经不成立的上传
         return this.update(new LambdaUpdateWrapper<BizInsuranceSettlement>()
                 .eq(BizInsuranceSettlement::getId, settlement.getId())
@@ -608,7 +630,16 @@ public class InsuranceSettlementServiceImpl
         if (approved) {
             settlement.setSettlementStatus(InsuranceSettlementStatusEnum.AUDITED.getCode());
         }
-        return this.updateById(settlement);
+        // 守卫下沉到 WHERE：读-判-写之间并发状态变更会使 Java 侧「已上传」判断失效
+        int rows = baseMapper.update(settlement, new LambdaUpdateWrapper<BizInsuranceSettlement>()
+                .eq(BizInsuranceSettlement::getId, settlement.getId())
+                .eq(BizInsuranceSettlement::getSettlementStatus, InsuranceSettlementStatusEnum.UPLOADED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("当前状态是「"
+                    + InsuranceSettlementStatusEnum.descOf(settlement.getSettlementStatus()) + "」，只有已上传的清单才能审核"
+                    + "（状态已被并发变更，请刷新后重试）");
+        }
+        return rows > 0;
     }
 
     /**

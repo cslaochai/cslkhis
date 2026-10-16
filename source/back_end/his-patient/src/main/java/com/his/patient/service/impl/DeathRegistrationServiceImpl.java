@@ -10,7 +10,6 @@ import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.DeathRegistrationDTO;
 import com.his.patient.entity.BizDeathRegistration;
-import com.his.patient.enums.DeathRegisterCopyEnum;
 import com.his.patient.enums.DeathRegisterStatusEnum;
 import com.his.patient.enums.DeathTypeEnum;
 import com.his.patient.mapper.BizDeathRegistrationMapper;
@@ -56,23 +55,22 @@ public class DeathRegistrationServiceImpl extends ServiceImpl<BizDeathRegistrati
     }
 
     /**
-     * 领取联次：只留合法码值、去重、按升序，前端多选传法不一也不用担心。
-     * 复数字段（"1,2,3"）@AllowedValues 校验不了（注解只管单值），逐个 split 调枚举判定
+     * 领取联次：去重、按升序归并。前端传数组（List<String>），合法码值由 DTO 字段上的 @AllowedValues 在边界统一校验。
      */
-    private static String normalizeCopies(String copies) {
-        if (!TextUtil.hasText(copies)) {
+    private static String normalizeCopies(List<String> copies) {
+        if (copies == null || copies.isEmpty()) {
             return null;
         }
         java.util.TreeSet<String> set = new java.util.TreeSet<>();
-        for (String part : copies.split(",")) {
-            String v = part.trim();
-            if (v.isEmpty()) {
+        for (String v : copies) {
+            if (v == null) {
                 continue;
             }
-            if (!DeathRegisterCopyEnum.isValid(v)) {
-                throw new BusinessException("联次取值不合法：" + v + "（1-记录联 2-户籍联 3-殡葬联 4-家属联）");
+            String trimmed = v.trim();
+            if (trimmed.isEmpty()) {
+                continue;
             }
-            set.add(v);
+            set.add(trimmed);
         }
         return set.isEmpty() ? null : String.join(",", set);
     }

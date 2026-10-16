@@ -15,6 +15,7 @@ import com.his.patient.enums.CheckupStatusEnum;
 import com.his.patient.mapper.*;
 import com.his.patient.service.CheckupService;
 import com.his.patient.vo.CheckupVO;
+import com.his.system.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -48,6 +49,10 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
 
     @Transactional(rollbackFor = Exception.class)
     public CheckupVO.PackageVO savePackage(CheckupDTO.PackageSave dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         String name = dto.getPackageName().trim();
         Long dupId = sysCheckupPackageMapper.selectIdByNameIncludeDeleted(name);
         if (dupId != null && !Objects.equals(dupId, dto.getId())) {
@@ -63,7 +68,7 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
         } else {
             p = new SysCheckupPackage();
             p.setStatus(dto.getStatus() == null ? 1 : dto.getStatus());
-            p.setCreateBy(UserUtils.getCurrentUser().getUsername());
+            p.setCreateBy(operatorUser.getRealName());
         }
         p.setPackageName(name);
         p.setGenderLimit(dto.getGenderLimit() == null ? 0 : dto.getGenderLimit());
@@ -71,7 +76,7 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
         p.setDescription(dto.getDescription());
         p.setStatus(dto.getStatus() == null ? p.getStatus() : dto.getStatus());
         p.setRemark(dto.getRemark());
-        p.setUpdateBy(UserUtils.getCurrentUser().getUsername());
+        p.setUpdateBy(operatorUser.getRealName());
         if (update) {
             sysCheckupPackageMapper.updateById(p);
         } else {
@@ -83,7 +88,7 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
         for (SysCheckupPackageItem o : old) {
             if (o.getDelFlag() == null || o.getDelFlag() == 0) {
                 o.setDelFlag(1);
-                o.setUpdateBy(UserUtils.getCurrentUser().getUsername());
+                o.setUpdateBy(operatorUser.getRealName());
                 sysCheckupPackageItemMapper.updateById(o);
             }
         }
@@ -97,7 +102,7 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
             it.setAmount(item.getAmount());
             it.setSortOrder(sort++);
             it.setDelFlag(0);
-            it.setCreateBy(UserUtils.getCurrentUser().getUsername());
+            it.setCreateBy(operatorUser.getRealName());
             sysCheckupPackageItemMapper.insert(it);
         }
         return toPackageVo(p);
@@ -127,17 +132,25 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
      */
     @Transactional(rollbackFor = Exception.class)
     public void disablePackage(Long id) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         SysCheckupPackage p = sysCheckupPackageMapper.selectById(id);
         if (p == null || p.getDelFlag() != null && p.getDelFlag() == 1) {
             throw new BusinessException("套餐不存在或已删除");
         }
         p.setStatus(0);
-        p.setUpdateBy(UserUtils.getCurrentUser().getUsername());
+        p.setUpdateBy(operatorUser.getRealName());
         sysCheckupPackageMapper.updateById(p);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public CheckupVO.RecordVO createRecord(CheckupDTO.RecordCreate dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         SysCheckupPackage p = sysCheckupPackageMapper.selectById(dto.getPackageId());
         if (p == null || p.getDelFlag() != null && p.getDelFlag() == 1) {
             throw new BusinessException("套餐不存在或已删除");
@@ -166,7 +179,7 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
         r.setTotalAmount(p.getPrice());
         r.setCheckupDate(dto.getCheckupDate());
         r.setRecordStatus(CheckupStatusEnum.REGISTERED.getCode());
-        r.setCreateBy(UserUtils.getCurrentUser().getUsername());
+        r.setCreateBy(operatorUser.getRealName());
         r.setRemark(dto.getRemark());
         bizCheckupRecordMapper.insert(r);
         // 按套餐项目预生成结果空行
@@ -186,7 +199,7 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
             res.setItemType(item.getItemType());
             res.setRefStandard(item.getRefStandard());
             res.setAbnormalFlag(0);
-            res.setCreateBy(UserUtils.getCurrentUser().getUsername());
+            res.setCreateBy(operatorUser.getRealName());
             bizCheckupResultMapper.insert(res);
         }
         return toRecordVo(r, false);
@@ -219,6 +232,10 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
      */
     @Transactional(rollbackFor = Exception.class)
     public CheckupVO.ResultVO saveResult(CheckupDTO.ResultSave dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizCheckupResult res = bizCheckupResultMapper.selectById(dto.getResultId());
         if (res == null || res.getDelFlag() != null && res.getDelFlag() == 1) {
             throw new BusinessException("结果行不存在或已删除");
@@ -235,11 +252,11 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
         res.setSummaryText(dto.getSummaryText());
         res.setCheckerName(dto.getCheckerName());
         res.setResultTime(TimeUtil.nowSeconds());
-        res.setUpdateBy(UserUtils.getCurrentUser().getUsername());
+        res.setUpdateBy(operatorUser.getRealName());
         bizCheckupResultMapper.updateById(res);
         if (r.getRecordStatus() == CheckupStatusEnum.REGISTERED.getCode()) {
             r.setRecordStatus(CheckupStatusEnum.IN_PROGRESS.getCode());
-            r.setUpdateBy(UserUtils.getCurrentUser().getUsername());
+            r.setUpdateBy(operatorUser.getRealName());
             bizCheckupRecordMapper.updateById(r);
         }
         return toResultVo(res);
@@ -250,6 +267,10 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
      */
     @Transactional(rollbackFor = Exception.class)
     public CheckupVO.RecordVO conclude(CheckupDTO.Conclusion dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizCheckupRecord r = bizCheckupRecordMapper.selectById(dto.getRecordId());
         if (r == null || r.getDelFlag() != null && r.getDelFlag() == 1) {
             throw new BusinessException("体检登记不存在或已删除");
@@ -264,7 +285,7 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
         r.setDoctorName(dto.getDoctorName());
         r.setRecordStatus(CheckupStatusEnum.REPORTED.getCode());
         r.setReportTime(TimeUtil.nowSeconds());
-        r.setUpdateBy(UserUtils.getCurrentUser().getUsername());
+        r.setUpdateBy(operatorUser.getRealName());
         bizCheckupRecordMapper.updateById(r);
         return toRecordVo(r, true);
     }
@@ -274,6 +295,10 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
      */
     @Transactional(rollbackFor = Exception.class)
     public void startCheckup(Long recordId) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizCheckupRecord r = bizCheckupRecordMapper.selectById(recordId);
         if (r == null || r.getDelFlag() != null && r.getDelFlag() == 1) {
             throw new BusinessException("体检登记不存在或已删除");
@@ -282,7 +307,7 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
             throw new BusinessException("只有已登记状态可以开始体检");
         }
         r.setRecordStatus(CheckupStatusEnum.IN_PROGRESS.getCode());
-        r.setUpdateBy(UserUtils.getCurrentUser().getUsername());
+        r.setUpdateBy(operatorUser.getRealName());
         bizCheckupRecordMapper.updateById(r);
     }
 
@@ -293,6 +318,10 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
      */
     @Transactional(rollbackFor = Exception.class)
     public void deleteRecord(Long recordId) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizCheckupRecord r = bizCheckupRecordMapper.selectById(recordId);
         if (r == null || r.getDelFlag() != null && r.getDelFlag() == 1) {
             throw new BusinessException("体检登记不存在或已删除");
@@ -301,7 +330,7 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
             throw new BusinessException("已开始的体检登记不能删除");
         }
         r.setDelFlag(1);
-        r.setUpdateBy(UserUtils.getCurrentUser().getUsername());
+        r.setUpdateBy(operatorUser.getRealName());
         bizCheckupRecordMapper.updateById(r);
     }
 
@@ -391,8 +420,12 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
                     .and(w -> w.isNull(BizCheckupResult::getResultValue)
                             .or().eq(BizCheckupResult::getResultValue, "")));
             if (pending == 0) {
+                CurrentUser operatorUser = UserUtils.getCurrentUser();
+                if (operatorUser == null) {
+                    throw new BusinessException("当前用户信息不存在");
+                }
                 r.setRecordStatus(CheckupStatusEnum.FINISHED.getCode());
-                r.setUpdateBy(UserUtils.getCurrentUser().getUsername());
+                r.setUpdateBy(operatorUser.getRealName());
                 bizCheckupRecordMapper.updateById(r);
             }
         }

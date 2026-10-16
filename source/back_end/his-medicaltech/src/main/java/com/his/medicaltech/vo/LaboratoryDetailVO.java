@@ -1,5 +1,9 @@
 package com.his.medicaltech.vo;
 
+
+import com.his.api.vo.BizLabResultVO;
+import com.his.api.vo.BizReportVO;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
@@ -70,5 +74,5 @@ public class LaboratoryDetailVO {
      * 本申请单已挂的影像帧（按 seq 升序；简化 PACS，sql/137）。
      * 检验也能挂图（显微镜照片、血流图形），口径与检查一致，故同一个区块复用同一组件。
      */
-    private List<com.his.medicaltech.vo.ExamImageVO> images;
+    private List<com.his.api.vo.ExamImageVO> images;
 }

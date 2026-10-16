@@ -1,5 +1,6 @@
 package com.his.emr.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.constant.BizCodeConst;
@@ -111,7 +112,7 @@ public class DisputeServiceImpl extends ServiceImpl<BizDisputeCaseMapper, BizDis
         }
         entity.setCaseType(dto.getCaseType());
         entity.setSourceType(dto.getSourceType());
-        entity.setLevel(dto.getLevel() == null ? 1 : dto.getLevel());
+        entity.setLevel(dto.getLevel());
         entity.setPatientId(dto.getPatientId());
         entity.setAdmissionId(dto.getAdmissionId());
         // 前端指定的归属科室先过数据权限：越权科室直接报错（null=不限，原值透传）
@@ -125,7 +126,7 @@ public class DisputeServiceImpl extends ServiceImpl<BizDisputeCaseMapper, BizDis
         entity.setOccurPlace(TextUtil.cut(dto.getOccurPlace(), 128));
         entity.setContent(TextUtil.cut(dto.getContent(), 1000));
         entity.setDemand(TextUtil.cut(dto.getDemand(), 500));
-        entity.setNeedSeal(dto.getNeedSeal() == null ? 0 : dto.getNeedSeal());
+        entity.setNeedSeal(dto.getNeedSeal());
         entity.setRemark(TextUtil.cut(dto.getRemark(), 512));
         // 患者快照服务端重查，不信任前端传的姓名（改名/改名号都能对上）
         if (dto.getPatientId() != null) {
@@ -138,7 +139,14 @@ public class DisputeServiceImpl extends ServiceImpl<BizDisputeCaseMapper, BizDis
         if (isNew) {
             bizDisputeCaseMapper.insert(entity);
         } else {
-            bizDisputeCaseMapper.updateById(entity);
+            // 修改守卫下沉到 WHERE 才原子：读单校验与写回之间的窗口里状态可能被并发受理/结案改写，
+            // 整行覆盖会把受理结果冲掉甚至把状态拉回待受理（读-判-写竞态），rows==0 说明已不是待受理
+            int rows = bizDisputeCaseMapper.update(entity, new LambdaUpdateWrapper<BizDisputeCase>()
+                    .eq(BizDisputeCase::getId, entity.getId())
+                    .eq(BizDisputeCase::getStatus, DisputeStatusEnum.PENDING.getCode()));
+            if (rows == 0) {
+                throw new BusinessException("仅「待受理」单据允许修改（状态已被并发修改/受理锁定，请刷新后重试）");
+            }
         }
         return requireVo(entity.getId());
     }
@@ -164,7 +172,14 @@ public class DisputeServiceImpl extends ServiceImpl<BizDisputeCaseMapper, BizDis
         if (Objects.equals(entity.getNeedSeal(), 1)) {
             sealIfPossible(entity, operator, "受理");
         }
-        bizDisputeCaseMapper.updateById(entity);
+        // 受理守卫下沉到 WHERE 才原子：读单校验与写回之间的窗口里状态可能被并发受理/结案/撤销改写，
+        // 整行覆盖会冲掉他人结果甚至把终态拉回（读-判-写竞态），rows==0 说明已不是待受理
+        int rows = bizDisputeCaseMapper.update(entity, new LambdaUpdateWrapper<BizDisputeCase>()
+                .eq(BizDisputeCase::getId, entity.getId())
+                .eq(BizDisputeCase::getStatus, DisputeStatusEnum.PENDING.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("仅「待受理」单据可受理（当前状态已被并发修改，可能刚被他人受理/结案/撤销，请刷新后重试）");
+        }
         addFlow(entity.getId(), "受理", DisputeStatusEnum.PENDING.getCode(),
                 DisputeStatusEnum.INVESTIGATING.getCode(), TextUtil.cut(dto.getContent(), 1000), operator);
         return requireVo(entity.getId());
@@ -194,7 +209,15 @@ public class DisputeServiceImpl extends ServiceImpl<BizDisputeCaseMapper, BizDis
         if (!sealed) {
             throw new BusinessException("该患者暂无「已归档」病历，请先完成病案归档再补封");
         }
-        bizDisputeCaseMapper.updateById(entity);
+        // 封存守卫下沉到 WHERE 才原子：读单校验与写回之间的窗口里可能已被并发封存或进入结案/撤销，
+        // 整行覆盖会把终态拉回（读-判-写竞态），rows==0 说明守卫条件已不成立
+        int rows = bizDisputeCaseMapper.update(entity, new LambdaUpdateWrapper<BizDisputeCase>()
+                .eq(BizDisputeCase::getId, entity.getId())
+                .ne(BizDisputeCase::getSealStatus, SealStatusEnum.DONE.getCode())
+                .notIn(BizDisputeCase::getStatus, DisputeStatusEnum.CLOSED.getCode(), DisputeStatusEnum.REVOKED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("封存失败：单据可能已被并发封存，或已结案/撤销（终态不允许再封存），请刷新后重试");
+        }
         addFlow(entity.getId(), "封存病历", entity.getStatus(), entity.getStatus(),
                 "手动补封存，病案ID " + entity.getArchiveId(), operator);
         return requireVo(entity.getId());
@@ -228,7 +251,14 @@ public class DisputeServiceImpl extends ServiceImpl<BizDisputeCaseMapper, BizDis
                 entity.setAcceptBy(operatorUser.getRealName());
                 entity.setAcceptTime(TimeUtil.nowSeconds());
             }
-            bizDisputeCaseMapper.updateById(entity);
+            // 跟踪守卫下沉到 WHERE 才原子：读单与写回之间的窗口里可能已被并发结案/撤销，
+            // 整行覆盖会把终态拉回非终态（读-判-写竞态），rows==0 说明已是终态
+            int rows = bizDisputeCaseMapper.update(entity, new LambdaUpdateWrapper<BizDisputeCase>()
+                    .eq(BizDisputeCase::getId, entity.getId())
+                    .notIn(BizDisputeCase::getStatus, DisputeStatusEnum.CLOSED.getCode(), DisputeStatusEnum.REVOKED.getCode()));
+            if (rows == 0) {
+                throw new BusinessException("已结案/已撤销单据不可再登记处理跟踪（状态被并发修改，请刷新后重试）");
+            }
         }
         String action = TextUtil.cut(dto.getAction(), 64);
         addFlow(entity.getId(), action, from, to, TextUtil.cut(dto.getContent(), 1000), operatorUser.getRealName());
@@ -260,7 +290,14 @@ public class DisputeServiceImpl extends ServiceImpl<BizDisputeCaseMapper, BizDis
         entity.setConclusion(TextUtil.cut(dto.getConclusion(), 1000));
         entity.setCloseBy(operator);
         entity.setCloseTime(TimeUtil.nowSeconds());
-        bizDisputeCaseMapper.updateById(entity);
+        // 结案守卫下沉到 WHERE 才原子：读单校验与写回之间的窗口里状态可能被并发结案/撤销改写，
+        // 整行覆盖会冲掉他人结果（读-判-写竞态），rows==0 说明已不是调查中/处理中
+        int rows = bizDisputeCaseMapper.update(entity, new LambdaUpdateWrapper<BizDisputeCase>()
+                .eq(BizDisputeCase::getId, entity.getId())
+                .in(BizDisputeCase::getStatus, DisputeStatusEnum.INVESTIGATING.getCode(), DisputeStatusEnum.HANDLING.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("仅「调查中 / 处理中」单据可结案（当前状态已被并发修改，可能刚被他人结案/撤销，请刷新后重试）");
+        }
         addFlow(entity.getId(), "结案", from, DisputeStatusEnum.CLOSED.getCode(),
                 TextUtil.cut(dto.getConclusion(), 1000), operator);
         return requireVo(entity.getId());
@@ -286,7 +323,14 @@ public class DisputeServiceImpl extends ServiceImpl<BizDisputeCaseMapper, BizDis
         String operator = operatorUser.getRealName();
         entity.setStatus(DisputeStatusEnum.REVOKED.getCode());
         entity.setRevokeReason(TextUtil.cut(reason, 500));
-        bizDisputeCaseMapper.updateById(entity);
+        // 撤销守卫下沉到 WHERE 才原子：读单与写回之间的窗口里可能已被并发结案/撤销，
+        // 整行覆盖会把他人终态冲掉（读-判-写竞态），rows==0 说明已是终态
+        int rows = bizDisputeCaseMapper.update(entity, new LambdaUpdateWrapper<BizDisputeCase>()
+                .eq(BizDisputeCase::getId, entity.getId())
+                .notIn(BizDisputeCase::getStatus, DisputeStatusEnum.CLOSED.getCode(), DisputeStatusEnum.REVOKED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("已结案/已撤销单据不可再撤销（状态被并发修改，请刷新后重试）");
+        }
         addFlow(entity.getId(), "撤销", from, DisputeStatusEnum.REVOKED.getCode(), TextUtil.cut(reason, 500), operator);
         return requireVo(entity.getId());
     }

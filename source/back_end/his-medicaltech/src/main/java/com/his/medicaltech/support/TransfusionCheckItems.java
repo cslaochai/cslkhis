@@ -10,7 +10,7 @@ import java.util.*;
 /**
  * 输血前双人核对要点（输血安全核查单的可核对部分）。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class TransfusionCheckItems {
 
     /**

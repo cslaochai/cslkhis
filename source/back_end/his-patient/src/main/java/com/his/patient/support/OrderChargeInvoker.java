@@ -1,8 +1,8 @@
 package com.his.patient.support;
 
-import com.his.charge.dto.FeeBookDTO;
-import com.his.charge.entity.BizFeeRecord;
-import com.his.charge.service.FeeRecordService;
+import com.his.api.dto.FeeBookDTO;
+import com.his.api.service.ChargeApi;
+import com.his.api.vo.FeeRecordVO;
 import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,14 +11,14 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 医嘱执行记账调用器 —— 让"记账失败"不会把"医嘱执行"一起拖回滚。
+ * 医嘱执行记账调用器
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class OrderChargeInvoker {
 
-    private final FeeRecordService feeRecordService;
+    private final ChargeApi chargeApi;
 
     /**
      * 一次执行记一行（独立事务）
@@ -26,7 +26,7 @@ public class OrderChargeInvoker {
      * @return 记账行；{@code null} = 本次未记账，**调用方必须留痕说明**
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
-    public BizFeeRecord book(FeeBookDTO dto) {
+    public FeeRecordVO book(FeeBookDTO dto) {
         if (dto.getEncounterId() == null) {
             log.warn("住院医嘱记账缺少入院ID，记账行无法归属这次住院，本次不记账（来源单 {}）", dto.getSourceNo());
             return null;
@@ -43,6 +43,6 @@ public class OrderChargeInvoker {
                     dto.getEncounterId(), dto.getSourceNo());
             return null;
         }
-        return feeRecordService.book(dto);
+        return chargeApi.bookFee(dto);
     }
 }

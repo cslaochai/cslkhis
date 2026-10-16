@@ -1,5 +1,6 @@
 package com.his.operation.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -141,7 +142,7 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
         }
 
         entity.setAsaGrade(dto.getAsaGrade());
-        entity.setAsaEmergency(dto.getAsaEmergency() == null ? 0 : dto.getAsaEmergency());
+        entity.setAsaEmergency(dto.getAsaEmergency());
         entity.setMallampati(dto.getMallampati());
         entity.setMouthOpenCm(dto.getMouthOpenCm());
         entity.setNeckMobility(dto.getNeckMobility());
@@ -170,7 +171,14 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
         if (create) {
             bizAnesthesiaVisitMapper.insert(entity);
         } else {
-            bizAnesthesiaVisitMapper.updateById(entity);
+            // 守卫下沉到 WHERE：并发下访视单已被完成时更新命中 0 行，兜底抛错（与上方「已完成不能再改」校验同义）
+            int rows = bizAnesthesiaVisitMapper.update(entity, new LambdaUpdateWrapper<BizAnesthesiaVisit>()
+                    .eq(BizAnesthesiaVisit::getId, entity.getId())
+                    .ne(BizAnesthesiaVisit::getVisitStatus, 1));
+            if (rows == 0) {
+                throw new BusinessException("访视单 " + entity.getVisitNo()
+                        + " 已被完成（结论已出账），不能再改内容；请重新完成一份访视");
+            }
         }
         log.info("{}麻醉术前访视 visitNo={} applyNo={} ASA={} 困难气道={} 结论={} 访视医师={}",
                 create ? "新建" : "修改", entity.getVisitNo(), apply.getApplyNo(),

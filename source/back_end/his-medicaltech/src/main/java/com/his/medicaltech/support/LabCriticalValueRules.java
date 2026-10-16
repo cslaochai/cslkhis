@@ -12,7 +12,7 @@ import java.util.Optional;
 /**
  * 危急值硬规则（纯代码，绝不由模型判断）。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class LabCriticalValueRules {
 
     private static final List<Rule> RULES = List.of(

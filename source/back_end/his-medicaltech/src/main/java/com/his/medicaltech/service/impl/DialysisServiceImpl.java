@@ -1,6 +1,7 @@
 package com.his.medicaltech.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -222,8 +223,12 @@ public class DialysisServiceImpl extends ServiceImpl<BizDialysisSessionMapper, B
         prescription.setStatus(DialysisPrescriptionStatusEnum.STOPPED.getCode());
         prescription.setEndDate(LocalDate.now());
         prescription.setStopReason(TextUtil.cutToNull(dto.getReason(), REASON_MAX));
-        if (bizDialysisPrescriptionMapper.updateById(prescription) <= 0) {
-            throw new BusinessException("处方停用失败");
+        // 守卫下沉到 WHERE：与修改/自动停用并发时，只有未停用的处方能被停用
+        int rows = bizDialysisPrescriptionMapper.update(prescription, new LambdaUpdateWrapper<BizDialysisPrescription>()
+                .eq(BizDialysisPrescription::getId, prescription.getId())
+                .ne(BizDialysisPrescription::getStatus, DialysisPrescriptionStatusEnum.STOPPED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("处方已停用（可能刚被并发停用），请刷新后重试");
         }
         return prescriptionList(prescription.getArchiveId()).stream()
                 .filter(x -> Objects.equals(x.getId(), prescription.getId()))
@@ -392,8 +397,11 @@ public class DialysisServiceImpl extends ServiceImpl<BizDialysisSessionMapper, B
         session.setMachineNo(machine.getMachineNo());
         session.setRemark(TextUtil.cutToNull(dto.getRemark(), MAX_TEXT));
         try {
-            if (bizDialysisSessionMapper.updateById(session) <= 0) {
-                throw new BusinessException("改期失败");
+            // 守卫下沉到 WHERE：与上机并发时，只有仍「已排班」的单能改期，防止覆盖已上机状态
+            if (bizDialysisSessionMapper.update(session, new LambdaUpdateWrapper<BizDialysisSession>()
+                    .eq(BizDialysisSession::getId, session.getId())
+                    .eq(BizDialysisSession::getStatus, DialysisSessionStatusEnum.SCHEDULED.getCode())) <= 0) {
+                throw new BusinessException("改期失败：治疗单已不是「已排班」状态（可能刚被上机），请刷新后重试");
             }
         } catch (DuplicateKeyException e) {
             throw new BusinessException(slotBusyMessage(dto.getDialysisDate(), slot, machine.getMachineNo()));
@@ -423,8 +431,12 @@ public class DialysisServiceImpl extends ServiceImpl<BizDialysisSessionMapper, B
         session.setOnTime(onTime);
         session.setOnBy(operatorUser.getRealName());
         session.setStatus(DialysisSessionStatusEnum.ON_MACHINE.getCode());
-        if (bizDialysisSessionMapper.updateById(session) <= 0) {
-            throw new BusinessException("上机登记失败");
+        // 守卫下沉到 WHERE：两台操作端并发上机时，只有一方能命中「已排班」状态
+        int rows = bizDialysisSessionMapper.update(session, new LambdaUpdateWrapper<BizDialysisSession>()
+                .eq(BizDialysisSession::getId, session.getId())
+                .eq(BizDialysisSession::getStatus, DialysisSessionStatusEnum.SCHEDULED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("该治疗单不是「已排班」状态，不能上机（可能刚被他人操作），请刷新后重试");
         }
         return sessionGetById(session.getId());
     }
@@ -463,8 +475,12 @@ public class DialysisServiceImpl extends ServiceImpl<BizDialysisSessionMapper, B
         if (TextUtil.hasText(dto.getRemark())) {
             session.setRemark(TextUtil.cut(dto.getRemark().trim(), MAX_TEXT));
         }
-        if (bizDialysisSessionMapper.updateById(session) <= 0) {
-            throw new BusinessException("下机登记失败");
+        // 守卫下沉到 WHERE：与取消/重复下机并发时，只有仍「透析中」的单能下机
+        int rows = bizDialysisSessionMapper.update(session, new LambdaUpdateWrapper<BizDialysisSession>()
+                .eq(BizDialysisSession::getId, session.getId())
+                .eq(BizDialysisSession::getStatus, DialysisSessionStatusEnum.ON_MACHINE.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("该治疗单不是「透析中」状态，不能下机（可能刚被他人操作），请刷新后重试");
         }
         return sessionGetById(session.getId());
     }
@@ -481,8 +497,12 @@ public class DialysisServiceImpl extends ServiceImpl<BizDialysisSessionMapper, B
         }
         session.setAdverseType(dto.getAdverseType());
         session.setAdverseDesc(TextUtil.cutToNull(dto.getAdverseDesc(), REASON_MAX));
-        if (bizDialysisSessionMapper.updateById(session) <= 0) {
-            throw new BusinessException("不良反应登记失败");
+        // 守卫下沉到 WHERE：与下机并发时，只有仍「透析中/已完成」的单能登记不良反应，防止把已下机的单盖回透析中
+        int rows = bizDialysisSessionMapper.update(session, new LambdaUpdateWrapper<BizDialysisSession>()
+                .eq(BizDialysisSession::getId, session.getId())
+                .in(BizDialysisSession::getStatus, DialysisSessionStatusEnum.ON_MACHINE.getCode(), DialysisSessionStatusEnum.DONE.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("只有已上机的治疗单允许登记不良反应（状态可能已变化），请刷新后重试");
         }
         return sessionGetById(session.getId());
     }
@@ -495,8 +515,12 @@ public class DialysisServiceImpl extends ServiceImpl<BizDialysisSessionMapper, B
         }
         session.setStatus(DialysisSessionStatusEnum.CANCELLED.getCode());
         session.setCancelReason(TextUtil.cut(dto.getReason().trim(), REASON_MAX));
-        if (bizDialysisSessionMapper.updateById(session) <= 0) {
-            throw new BusinessException("取消失败");
+        // 守卫下沉到 WHERE：与上机并发时，只有仍「已排班」的单能取消，防止取消已上机的患者
+        int rows = bizDialysisSessionMapper.update(session, new LambdaUpdateWrapper<BizDialysisSession>()
+                .eq(BizDialysisSession::getId, session.getId())
+                .eq(BizDialysisSession::getStatus, DialysisSessionStatusEnum.SCHEDULED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("已上机的治疗单不能取消（可能刚被上机），请刷新后重试");
         }
         return sessionGetById(session.getId());
     }
@@ -543,7 +567,13 @@ public class DialysisServiceImpl extends ServiceImpl<BizDialysisSessionMapper, B
             other.setStatus(DialysisPrescriptionStatusEnum.STOPPED.getCode());
             other.setEndDate(LocalDate.now());
             other.setStopReason("新处方生效，自动停用");
-            bizDialysisPrescriptionMapper.updateById(other);
+            // 守卫下沉到 WHERE：并发新开/停用时，只停用仍「生效中」的行，防止覆盖他人刚停的结果
+            int rows = bizDialysisPrescriptionMapper.update(other, new LambdaUpdateWrapper<BizDialysisPrescription>()
+                    .eq(BizDialysisPrescription::getId, other.getId())
+                    .eq(BizDialysisPrescription::getStatus, DialysisPrescriptionStatusEnum.ACTIVE.getCode()));
+            if (rows == 0) {
+                throw new BusinessException("处方状态已变化，自动停用失败（并发开立/停用），请刷新处方列表");
+            }
         }
     }
 

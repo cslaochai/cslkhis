@@ -5,8 +5,8 @@ import com.his.common.enums.SignSceneEnum;
 import com.his.common.support.CanonicalText;
 import com.his.common.util.NumUtil;
 import com.his.patient.entity.BizInpatientRecord;
-import com.his.system.entity.SignSubject;
-import com.his.system.api.service.SignableContentApi;
+import com.his.api.vo.SignSubject;
+import com.his.api.service.SignableContentApi;
 import com.his.system.utils.SignCryptoUtil;
 
 import java.time.LocalDateTime;

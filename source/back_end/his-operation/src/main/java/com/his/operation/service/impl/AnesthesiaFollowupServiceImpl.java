@@ -1,5 +1,6 @@
 package com.his.operation.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -184,7 +185,14 @@ public class AnesthesiaFollowupServiceImpl extends ServiceImpl<BizAnesthesiaFoll
         if (dto.getId() == null) {
             bizAnesthesiaFollowupMapper.insert(entity);
         } else {
-            bizAnesthesiaFollowupMapper.updateById(entity);
+            // 守卫下沉到 WHERE：并发下随访单已完成时更新命中 0 行，兜底抛错（与 mustGetDraft 的「草稿才可改」校验同义）
+            int rows = bizAnesthesiaFollowupMapper.update(entity, new LambdaUpdateWrapper<BizAnesthesiaFollowup>()
+                    .eq(BizAnesthesiaFollowup::getId, entity.getId())
+                    .eq(BizAnesthesiaFollowup::getFollowupStatus, AnesthesiaFollowupStatusEnum.DRAFT.getCode()));
+            if (rows == 0) {
+                throw new BusinessException("随访单 " + entity.getFollowupNo()
+                        + " 已完成，不能修改（完成即锁死 —— 随访的价值是「当时看到的是什么样」）");
+            }
         }
         log.info("{}麻醉随访 followupNo={} recordNo={} 轮次={} 恢复={} 并发症={} 随访人={}",
                 dto.getId() == null ? "新建" : "修改", entity.getFollowupNo(), entity.getRecordNo(),
@@ -233,7 +241,14 @@ public class AnesthesiaFollowupServiceImpl extends ServiceImpl<BizAnesthesiaFoll
             entity.setFollowupDoctorId(operatorUser.getEmployeeId());
             entity.setFollowupDoctorName(operatorUser.getRealName());
         }
-        bizAnesthesiaFollowupMapper.updateById(entity);
+        // 守卫下沉到 WHERE：并发下随访单已被他人完成时更新命中 0 行，兜底抛错（与 mustGetDraft 的「草稿才可完成」校验同义）
+        int rows = bizAnesthesiaFollowupMapper.update(entity, new LambdaUpdateWrapper<BizAnesthesiaFollowup>()
+                .eq(BizAnesthesiaFollowup::getId, entity.getId())
+                .eq(BizAnesthesiaFollowup::getFollowupStatus, AnesthesiaFollowupStatusEnum.DRAFT.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("随访单 " + entity.getFollowupNo()
+                    + " 已被完成，不能重复完成");
+        }
         log.info("麻醉随访完成 followupNo={} 轮次={} 疼痛={} 恢复={} 完成人={}",
                 entity.getFollowupNo(), entity.getRoundNo(), entity.getPainScore(),
                 FollowupAdverseItems.recoveryText(entity.getRecovery()), operatorUser.getRealName());

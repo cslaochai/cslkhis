@@ -29,7 +29,7 @@ public class PatientGuardianController {
     @Operation(summary = "我的就诊人列表")
     @GetMapping("/myPatients")
     public Result<List<GuardianPatientVO>> myPatients() {
-        return Result.success(patientGuardianService.myPatients());
+        return Result.success(patientGuardianService.getMyPatients());
     }
 
     @PreAuthorize("hasAuthority('patient:edit')")

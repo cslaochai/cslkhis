@@ -3,6 +3,7 @@ package com.his.patient.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.Result;
 import com.his.patient.dto.*;
+import com.his.api.dto.*;
 import com.his.patient.service.InpatientOrderService;
 import com.his.patient.vo.InpatientOrderExecVO;
 import com.his.patient.vo.InpatientOrderVO;
@@ -69,8 +70,8 @@ public class InpatientOrderController {
     @PreAuthorize("hasAuthority('ipd:order:edit')")
     @Operation(summary = "医嘱执行（批量：2-已执行并计费 / 3-已跳过并留原因）")
     @PostMapping("/exec/complete")
-    public Result<Integer> execComplete(@Valid @RequestBody OrderExecCompleteDTO dto) {
-        return Result.success("医嘱执行已记录", inpatientOrderService.execComplete(dto));
+    public Result<Integer> execComplete(@Valid @RequestBody OrderExecCompleteDTO execCompleteDTO) {
+        return Result.success("医嘱执行已记录", inpatientOrderService.execComplete(execCompleteDTO));
     }
 
     @Operation(summary = "执行记录查询（含已执行 / 已跳过，留痕不删除）")

@@ -12,9 +12,9 @@ import com.his.ai.vo.WardHandoverVO;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
-import com.his.patient.service.InpatientNursingService;
-import com.his.patient.vo.NursingAssessmentVO;
-import com.his.patient.vo.WardNursingFactsVO;
+import com.his.api.service.PatientApi;
+import com.his.api.vo.NursingAssessmentVO;
+import com.his.api.vo.WardNursingFactsVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -54,7 +54,7 @@ public class NursingHandoverCapabilityImpl implements NursingHandoverCapability 
 
     private final AiExecutionService aiExecutionService;
 
-    private final InpatientNursingService inpatientNursingService;
+    private final PatientApi patientApi;
 
     // ---------------------------------------------------------------- 事实文本
 
@@ -77,7 +77,7 @@ public class NursingHandoverCapabilityImpl implements NursingHandoverCapability 
                 end = date.atTime(8, 0);
             }
         }
-        WardNursingFactsVO facts = inpatientNursingService.wardShiftFacts(
+        WardNursingFactsVO facts = patientApi.wardShiftFacts(
                 dto.getWardId(), begin, end, dto.getShift());
 
         WardHandoverVO vo = new WardHandoverVO();

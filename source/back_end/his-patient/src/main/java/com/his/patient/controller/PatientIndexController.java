@@ -7,6 +7,7 @@ import com.his.patient.dto.PatientMergeDTO;
 import com.his.patient.dto.PatientMergeRevertDTO;
 import com.his.patient.service.PatientIndexService;
 import com.his.patient.vo.*;
+import com.his.api.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

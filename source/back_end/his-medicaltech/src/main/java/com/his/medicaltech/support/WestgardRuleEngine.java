@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * Westgard 多规则质控判定引擎（LIS 室内质控）
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class WestgardRuleEngine {
 
     public static final int IN_CONTROL = 1;

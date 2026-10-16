@@ -1,26 +1,46 @@
 package com.his.charge.api;
 
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.charge.dto.BillSettleUpsertDTO;
-import com.his.charge.dto.FeeBookDTO;
+import com.his.api.dto.BillPayDTO;
+import com.his.api.dto.FeeBookDTO;
+import com.his.api.dto.PrepayQueryPageDTO;
+import com.his.api.dto.PrepayUpsertDTO;
+import com.his.api.service.ChargeApi;
+import com.his.api.vo.BillBriefVO;
+import com.his.api.vo.BillItemVO;
+import com.his.api.vo.BizSettlementBillVO;
+import com.his.api.vo.CancelCommandVO;
+import com.his.api.vo.FeeRecordVO;
+import com.his.api.vo.FeeTypeSumVO;
+import com.his.api.vo.InsuranceBriefVO;
+import com.his.api.vo.PendingBillVO;
+import com.his.api.vo.PrepayBalanceVO;
+import com.his.api.vo.PrepayVO;
+import com.his.api.vo.RegistChargeCommandVO;
+import com.his.api.vo.SettlementStateVO;
+import com.his.charge.config.InsuranceProperties;
 import com.his.charge.entity.BizFeeRecord;
+import com.his.charge.entity.BizInsuranceSettlement;
 import com.his.charge.entity.BizSettlementBill;
+import com.his.charge.entity.BizSettlementBillItem;
 import com.his.charge.enums.InpatientSettleStatusEnum;
+import com.his.charge.mapper.BizInsuranceSettlementMapper;
+import com.his.charge.mapper.BizSettlementBillItemMapper;
 import com.his.charge.mapper.BizSettlementBillMapper;
 import com.his.charge.service.FeeRecordService;
 import com.his.charge.service.FundAccountService;
+import com.his.charge.service.InpatientAccountService;
 import com.his.charge.service.PaymentService;
 import com.his.charge.service.SettlementBillService;
 import com.his.common.enums.*;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
-import com.his.system.api.service.ChargeApi;
-import com.his.system.api.vo.BillBriefVO;
-import com.his.system.api.vo.CancelCommandVO;
-import com.his.system.api.vo.RegistChargeCommandVO;
-import com.his.system.api.vo.SettlementStateVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,6 +74,46 @@ public class ChargeApiImpl implements ChargeApi {
 
     private final FundAccountService fundAccountService;
 
+    private final InpatientAccountService inpatientAccountService;
+
+    private final InsuranceProperties insuranceProperties;
+
+    private final BizSettlementBillItemMapper bizSettlementBillItemMapper;
+
+    private final BizInsuranceSettlementMapper bizInsuranceSettlementMapper;
+
+    // ---------- L1 记账 ----------
+
+    @Override
+    public FeeRecordVO bookFee(FeeBookDTO dto) {
+        return toFeeVO(feeRecordService.book(dto));
+    }
+
+    @Override
+    public List<FeeRecordVO> bookBatch(List<FeeBookDTO> list) {
+        if (list == null || list.isEmpty()) {
+            return List.of();
+        }
+        return feeRecordService.bookBatch(list).stream().map(ChargeApiImpl::toFeeVO).toList();
+    }
+
+    @Override
+    public FeeRecordVO findBookedBySource(Integer sourceType, Long sourceId, String itemCode) {
+        return toFeeVO(feeRecordService.findBookedBySource(sourceType, sourceId, itemCode));
+    }
+
+    @Override
+    public FeeRecordVO reverse(Long feeId, String reason) {
+        return toFeeVO(feeRecordService.reverse(feeId, reason));
+    }
+
+    @Override
+    public List<FeeTypeSumVO> sumNetGroupByItemType(Integer encounterType, Long encounterId) {
+        return feeRecordService.sumNetGroupByItemType(encounterType, encounterId);
+    }
+
+    // ---------- 账单与收款 ----------
+
     @Override
     public Map<Long, BillBriefVO> mapBillsByIds(Collection<Long> billIds) {
         Map<Long, BillBriefVO> result = new HashMap<>();
@@ -73,6 +133,121 @@ public class ChargeApiImpl implements ChargeApi {
         }
         BizSettlementBill bill = bizSettlementBillMapper.selectById(billId);
         return bill == null ? null : toBrief(bill);
+    }
+
+    @Override
+    public BigDecimal unpaidAmount(Long billId) {
+        if (billId == null) {
+            return null;
+        }
+        BizSettlementBill bill = bizSettlementBillMapper.selectById(billId);
+        if (bill == null) {
+            return null;
+        }
+        return NumUtil.scale(NumUtil.orZero(bill.getPayableAmount()).subtract(NumUtil.orZero(bill.getPaidAmount())), 2);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void payBill(BillPayDTO dto) {
+        paymentService.pay(dto);
+    }
+
+    @Override
+    public List<PendingBillVO> pendingBills(Long patientId) {
+        return settlementBillService.pendingBillViews(patientId);
+    }
+
+    // ---------- 账单读侧（费用解释 / 报表） ----------
+
+    @Override
+    public BizSettlementBillVO getBillDetail(Long billId) {
+        if (billId == null) {
+            return null;
+        }
+        BizSettlementBill bill = bizSettlementBillMapper.selectById(billId);
+        if (bill == null) {
+            return null;
+        }
+        BizSettlementBillVO vo = new BizSettlementBillVO();
+        BeanUtils.copyProperties(bill, vo);
+        return vo;
+    }
+
+    @Override
+    public List<BillItemVO> listBillItems(Long billId) {
+        if (billId == null) {
+            return List.of();
+        }
+        List<BizSettlementBillItem> items = bizSettlementBillItemMapper.selectList(
+                new LambdaQueryWrapper<BizSettlementBillItem>()
+                        .eq(BizSettlementBillItem::getBillId, billId));
+        List<BillItemVO> result = new ArrayList<>(items.size());
+        for (BizSettlementBillItem item : items) {
+            BillItemVO vo = new BillItemVO();
+            BeanUtils.copyProperties(item, vo);
+            result.add(vo);
+        }
+        return result;
+    }
+
+    @Override
+    public InsuranceBriefVO latestInsurance(Long billId) {
+        if (billId == null) {
+            return null;
+        }
+        List<BizInsuranceSettlement> list = bizInsuranceSettlementMapper.selectList(
+                new LambdaQueryWrapper<BizInsuranceSettlement>()
+                        .eq(BizInsuranceSettlement::getBillId, billId)
+                        .orderByDesc(BizInsuranceSettlement::getId)
+                        .last("LIMIT 1"));
+        if (list == null || list.isEmpty()) {
+            return null;
+        }
+        InsuranceBriefVO vo = new InsuranceBriefVO();
+        BeanUtils.copyProperties(list.get(0), vo);
+        return vo;
+    }
+
+    @Override
+    public List<BizSettlementBillVO> paidBills(String startDate, String endDate) {
+        // 四层口径：已支付（bill_status=3）的结算账单，按账务归属日 bill_date 聚合
+        List<BizSettlementBill> bills = bizSettlementBillMapper.selectList(
+                new LambdaQueryWrapper<BizSettlementBill>()
+                        .ge(startDate != null, BizSettlementBill::getBillDate, startDate)
+                        .le(endDate != null, BizSettlementBill::getBillDate, endDate)
+                        .eq(BizSettlementBill::getBillStatus, BillStatusEnum.PAID.getCode()));
+        List<BizSettlementBillVO> result = new ArrayList<>(bills.size());
+        for (BizSettlementBill bill : bills) {
+            BizSettlementBillVO vo = new BizSettlementBillVO();
+            BeanUtils.copyProperties(bill, vo);
+            result.add(vo);
+        }
+        return result;
+    }
+
+    // ---------- 住院预交金 ----------
+
+    @Override
+    public void savePrepay(PrepayUpsertDTO dto) {
+        inpatientAccountService.savePrepay(dto);
+    }
+
+    @Override
+    public PrepayBalanceVO prepayBalance(Long admissionId) {
+        return inpatientAccountService.balance(admissionId);
+    }
+
+    @Override
+    public IPage<PrepayVO> prepayPage(PrepayQueryPageDTO query) {
+        return inpatientAccountService.prepayListPage(query);
+    }
+
+    // ---------- 挂号费联动 ----------
+
+    @Override
+    public boolean insuranceEnabled() {
+        return insuranceProperties.isEnabled();
     }
 
     @Override
@@ -136,6 +311,8 @@ public class ChargeApiImpl implements ChargeApi {
         return closed;
     }
 
+    // ---------- 住院结算状态 ----------
+
     @Override
     public SettlementStateVO state(Long admissionId) {
         SettlementStateVO state = new SettlementStateVO();
@@ -165,6 +342,8 @@ public class ChargeApiImpl implements ChargeApi {
                 + "，预交金余额 " + balance.toPlainString() + " 元）");
         return state;
     }
+
+    // ---------- 内部工具 ----------
 
     /**
      * 是否已付清：应缴为 0 也算付清（预交金全额抵扣后账单应缴就是 0，没有流水但确实结清了）。
@@ -208,5 +387,16 @@ public class ChargeApiImpl implements ChargeApi {
         BigDecimal paid = NumUtil.orZero(bill.getPaidAmount()).subtract(NumUtil.orZero(bill.getRefundAmount()));
         brief.setPaidAmount(paid.signum() < 0 ? BigDecimal.ZERO : paid);
         return brief;
+    }
+
+    private static FeeRecordVO toFeeVO(BizFeeRecord row) {
+        if (row == null) {
+            return null;
+        }
+        FeeRecordVO vo = new FeeRecordVO();
+        vo.setId(row.getId());
+        vo.setFeeNo(row.getFeeNo());
+        vo.setAmount(row.getAmount());
+        return vo;
     }
 }

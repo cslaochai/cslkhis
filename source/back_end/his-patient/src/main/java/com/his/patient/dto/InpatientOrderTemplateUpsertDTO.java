@@ -4,6 +4,7 @@ import com.his.common.validation.AllowedValues;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -29,8 +30,9 @@ public class InpatientOrderTemplateUpsertDTO implements Serializable {
     private String templateName;
 
     /**
-     * 默认医嘱类型：1-长期 2-临时（缺省按临时）
+     * 医嘱类型：1-长期 2-临时（必填，长期/临时决定计费与执行计划，不允许后端兜底）
      */
+    @NotNull(message = "请选择医嘱类型（长期 / 临时）")
     @AllowedValues(values = {"1", "2"}, message = "医嘱类型取值不合法")
     private Integer orderType;
 

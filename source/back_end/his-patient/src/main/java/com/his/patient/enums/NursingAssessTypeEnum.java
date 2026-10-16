@@ -8,18 +8,47 @@ import lombok.Getter;
 @Getter
 public enum NursingAssessTypeEnum {
 
-    PRESSURE_ULCER(1, "压疮评估（Braden）"),
-    FALL(2, "跌倒评估（Morse）"),
-    PAIN(3, "疼痛评估（NRS）"),
-    VTE(4, "VTE血栓评估（Caprini）"),
-    TUBE(5, "管路滑脱评估");
+    PRESSURE_ULCER(1, "压疮评估（Braden）", "Braden", 6, 23),
+    FALL(2, "跌倒评估（Morse）", "Morse", 0, 125),
+    PAIN(3, "疼痛评估（NRS）", "NRS", 0, 10),
+    VTE(4, "VTE血栓评估（Caprini）", "Caprini", 0, 58),
+    TUBE(5, "管路滑脱评估", "管路滑脱", 0, 24);
 
     private final int code;
     private final String label;
+    /**
+     * 量表简称（校验提示用）
+     */
+    private final String scaleName;
+    /**
+     * 总分下限
+     */
+    private final int minScore;
+    /**
+     * 总分上限
+     */
+    private final int maxScore;
 
-    NursingAssessTypeEnum(int code, String label) {
+    NursingAssessTypeEnum(int code, String label, String scaleName, int minScore, int maxScore) {
         this.code = code;
         this.label = label;
+        this.scaleName = scaleName;
+        this.minScore = minScore;
+        this.maxScore = maxScore;
+    }
+
+    /**
+     * 总分是否在量表分档区间内。
+     */
+    public boolean scoreInRange(int score) {
+        return score >= minScore && score <= maxScore;
+    }
+
+    /**
+     * 校验提示文案，如「Braden 总分应在 6~23」。
+     */
+    public String rangeText() {
+        return scaleName + " 总分应在 " + minScore + "~" + maxScore;
     }
 
     public static NursingAssessTypeEnum fromCode(Integer code) {

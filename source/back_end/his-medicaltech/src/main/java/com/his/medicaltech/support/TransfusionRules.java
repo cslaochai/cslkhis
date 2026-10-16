@@ -14,7 +14,7 @@ import java.util.Set;
 /**
  * 输血闭环的临床判定与计算口径：ABO/Rh 相容性、用血量折算、审批闸门、时长文案。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class TransfusionRules {
 
     // 一、用血分级审批折算（sql/93；《医疗机构临床用血管理办法》）

@@ -25,7 +25,7 @@ import java.util.List;
  * 且只能绑<b>本单自己的出码人</b>（由我方库里读出，不是通知报文里的字段），
  * 否则等于给外部报文开了一条伪造身份写账的路。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class SystemOperatorContext {
 
     /**

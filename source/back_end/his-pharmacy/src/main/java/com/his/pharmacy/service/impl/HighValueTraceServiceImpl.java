@@ -2,9 +2,9 @@ package com.his.pharmacy.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.charge.dto.FeeBookDTO;
-import com.his.charge.entity.BizFeeRecord;
-import com.his.charge.support.FeeCatalogResolver;
+import com.his.api.dto.FeeBookDTO;
+import com.his.common.enums.FeeCatalogTypeEnum;
+import com.his.api.vo.FeeRecordVO;
 import com.his.common.base.PageResult;
 import com.his.common.enums.EncounterTypeEnum;
 import com.his.common.enums.FeeSourceTypeEnum;
@@ -372,10 +372,10 @@ public class HighValueTraceServiceImpl extends ServiceImpl<BizConsumableTraceMap
         fee.setSourceId(trace.getId());
         fee.setSourceNo(trace.getTraceNo());
         // 耗材按实价挂账；目录类别走项目类型推定（本系统无院内医保目录表）
-        fee.setCatalogType(FeeCatalogResolver.byItemType(fee.getItemType()));
+        fee.setCatalogType(FeeCatalogTypeEnum.byItemType(fee.getItemType()));
         fee.setRemark("高值耗材使用计费（" + trace.getConsumableName() + " " + trace.getTraceNo() + "）");
         try {
-            BizFeeRecord booked = chargeInvoker.book(fee);
+            FeeRecordVO booked = chargeInvoker.book(fee);
             trace.setChargeStatus(1);
             // fee_no / fee_record_id：四层改造后存的是 L1 记账行的 (fee_no, fee_id)
             trace.setFeeNo(booked.getFeeNo());

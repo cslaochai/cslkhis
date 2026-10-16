@@ -1,6 +1,7 @@
 package com.his.charge.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
@@ -103,6 +104,10 @@ public class PayChannelReconciliationServiceImpl extends ServiceImpl<BizPayChann
         int matchedCount = 0;
         for (BizPayChannelBill bill : pendingBills) {
             BizPaymentTxn txn = findLocalTxn(channel, bill);
+            // 守卫下沉到 WHERE：本批 SELECT（matchStatus=0）到逐条回写之间，其他勾对/差额处理可能已改过这行
+            LambdaUpdateWrapper<BizPayChannelBill> pendingGuard = new LambdaUpdateWrapper<BizPayChannelBill>()
+                    .eq(BizPayChannelBill::getId, bill.getId())
+                    .eq(BizPayChannelBill::getMatchStatus, 0);
             if (txn != null && amountEquals(txn.getAmount(), bill.getAmount())) {
                 bill.setMatchStatus(1);
                 bill.setLocalTxnNo(txn.getTxnNo());
@@ -112,12 +117,18 @@ public class PayChannelReconciliationServiceImpl extends ServiceImpl<BizPayChann
                 bill.setMatchTime(LocalDateTime.now());
                 bill.setMatchedById(UserUtils.getCurrentUser().getEmployeeId());
                 bill.setMatchedByName(UserUtils.getCurrentUser().getRealName());
-                baseMapper.updateById(bill);
+                if (baseMapper.update(bill, pendingGuard) == 0) {
+                    throw new BusinessException("自动勾对期间台账状态被并发变更（渠道流水号 "
+                            + bill.getChannelTradeNo() + "，已非待勾对），请重新执行自动勾对");
+                }
                 matchedCount++;
             } else {
                 bill.setMatchStatus(2); // 长款：渠道有本地无
                 bill.setDiffAmount(bill.getAmount());
-                baseMapper.updateById(bill);
+                if (baseMapper.update(bill, pendingGuard) == 0) {
+                    throw new BusinessException("自动勾对期间台账状态被并发变更（渠道流水号 "
+                            + bill.getChannelTradeNo() + "，已非待勾对），请重新执行自动勾对");
+                }
             }
         }
 

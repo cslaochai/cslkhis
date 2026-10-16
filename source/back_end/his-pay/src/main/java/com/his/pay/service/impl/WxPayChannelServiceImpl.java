@@ -2,8 +2,8 @@ package com.his.pay.service.impl;
 
 import com.his.common.exception.BusinessException;
 import com.his.pay.config.WxPayProperties;
-import com.his.pay.vo.PayOrderVO;
-import com.his.pay.service.WxPayChannelService;
+import com.his.api.vo.PayOrderVO;
+import com.his.api.service.WxPayChannelService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

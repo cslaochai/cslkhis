@@ -142,8 +142,11 @@ public class KnowledgeImportServiceImpl implements KnowledgeImportService {
             task.progress = 0;
             // 操作人随任务带走（commit 在 web 线程，SecurityContext 可用；doCommit 在异步线程拿不到）
             CurrentUser user = UserUtils.getCurrentUser();
-            task.operatorName = user == null ? null : user.getUsername();
-            task.operatorId = user == null ? null : user.getUserId();
+            if (user == null) {
+                throw new BusinessException("当前用户信息不存在");
+            }
+            task.operatorName = user.getRealName();
+            task.operatorId = user.getEmployeeId();
         }
         commitExecutor.execute(() -> doCommit(task));
         return toVo(task);

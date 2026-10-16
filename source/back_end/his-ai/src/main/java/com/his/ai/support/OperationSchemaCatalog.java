@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
  * 本类只负责把查询结果组装成提示词文本（schema / catalog / semantics），以及承载
  * 跨层传递的 record 定义。启动零加载、变更零刷新 —— 配置表即唯一事实来源。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class OperationSchemaCatalog {
 
     /**

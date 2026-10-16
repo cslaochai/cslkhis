@@ -1,15 +1,17 @@
 package com.his.emr.service.impl;
 
+import com.his.api.vo.BizFollowupTaskVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.appoint.dto.AppointUpsertDTO;
-import com.his.appoint.entity.BizAppointInfo;
-import com.his.appoint.enums.AppointSourceEnum;
-import com.his.appoint.enums.AppointStatusEnum;
-import com.his.appoint.enums.RevisitSourceEnum;
-import com.his.appoint.enums.VisitTypeEnum;
-import com.his.appoint.service.BizAppointService;
+import com.his.api.dto.AppointUpsertDTO;
+import com.his.api.service.AppointApi;
+import com.his.api.vo.BizAppointInfoListVO;
+import com.his.api.vo.RegistBriefVO;
+import com.his.common.enums.AppointSourceEnum;
+import com.his.common.enums.AppointStatusEnum;
+import com.his.common.enums.RevisitSourceEnum;
+import com.his.common.enums.VisitTypeEnum;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
@@ -67,7 +69,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
             AppointStatusEnum.OVERDUE.getCode(),
             AppointStatusEnum.NO_SHOW.getCode());
     private final DeptScopeService deptScopeService;
-    private final BizAppointService bizAppointService;
+    private final AppointApi appointApi;
 
     private final BizFollowupTaskMapper bizFollowupTaskMapper;
 
@@ -452,7 +454,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
             throw new BusinessException("已取消的随访任务不再生成复诊号");
         }
         if (task.getRevisitAppointId() != null) {
-            BizAppointInfo previous = bizAppointService.getById(task.getRevisitAppointId());
+            RegistBriefVO previous = appointApi.findRegist(task.getRevisitAppointId());
             // 只挡「那张号还有效」：已退号/过号/爽约的号作废了，患者确实还得再约一次，
             // 一刀切拦住会让这个任务永久卡死，只能去库里改数据。
             if (previous != null && !REGENERABLE_APPOINT_STATUS.contains(previous.getRegistStatus())) {
@@ -470,7 +472,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         // 院内人员按计划代约 -> 挂号渠道 4（预约）：扣预约池，不吃当天现场号
         appointDTO.setRegistSource(AppointSourceEnum.APPOINTMENT.getCode());
         appointDTO.setSettlementType(dto.getSettlementType() == null ? 1 : dto.getSettlementType());
-        BizAppointInfo appoint = bizAppointService.addAppoint(appointDTO);
+        BizAppointInfoListVO appoint = appointApi.addAppoint(appointDTO);
 
         task.setRevisitRecordId(dto.getRevisitRecordId());
         task.setRevisitAppointId(appoint.getId());
@@ -534,11 +536,15 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
 
     private String buildDefaultContent(int type, String diagnosis) {
         String d = TextUtil.hasText(diagnosis) ? diagnosis : "出院诊断待补录";
-        return switch (type) {
-            case 2 -> "慢病随访：请复诊评估「" + d + "」控制情况，遵医嘱规律用药";
-            case 3 -> "用药指导：出院带药用法确认与不良反应随访（" + d + "）";
-            case 4 -> "术后随访：伤口愈合与功能恢复情况随访（" + d + "）";
-            default -> "复诊提醒：出院后请按医嘱复查（" + d + "）";
+        FollowupTypeEnum followupType = FollowupTypeEnum.fromCode(type);
+        if (followupType == null) {
+            return "复诊提醒：出院后请按医嘱复查（" + d + "）";
+        }
+        return switch (followupType) {
+            case CHRONIC -> "慢病随访：请复诊评估「" + d + "」控制情况，遵医嘱规律用药";
+            case MEDICATION_GUIDE -> "用药指导：出院带药用法确认与不良反应随访（" + d + "）";
+            case POST_OPERATION -> "术后随访：伤口愈合与功能恢复情况随访（" + d + "）";
+            case REVISIT_REMIND -> "复诊提醒：出院后请按医嘱复查（" + d + "）";
         };
     }
 

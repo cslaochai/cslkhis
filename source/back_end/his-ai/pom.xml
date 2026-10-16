@@ -35,10 +35,6 @@
         </dependency>
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-patient</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.his</groupId>
             <artifactId>his-emr</artifactId>
         </dependency>
         <dependency>
@@ -47,12 +43,7 @@
         </dependency>
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-appoint</artifactId>
-        </dependency>
-        <!-- 患者端费用解释要读结算单/结算明细/医保结算（com.his.charge.entity|mapper） -->
-        <dependency>
-            <groupId>com.his</groupId>
-            <artifactId>his-charge</artifactId>
+            <artifactId>his-api</artifactId>
         </dependency>
 
         <!-- 知识库文件导入解析：PDF（pdfbox）+ Word docx（poi-ooxml） -->

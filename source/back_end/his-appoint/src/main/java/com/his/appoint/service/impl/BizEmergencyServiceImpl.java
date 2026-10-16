@@ -6,14 +6,17 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.appoint.dto.*;
+import com.his.api.dto.*;
 import com.his.appoint.entity.*;
 import com.his.appoint.enums.*;
+import com.his.common.enums.*;
 import com.his.appoint.mapper.*;
 import com.his.appoint.service.BizEmergencyService;
 import com.his.system.service.BizClinicSourceService;
 import com.his.appoint.support.EmergencyObservationPolicy;
 import com.his.appoint.support.EmergencyWaitPolicy;
 import com.his.appoint.vo.*;
+import com.his.api.vo.*;
 import com.his.common.base.PageResult;
 import com.his.common.enums.EmergencyAssignTypeEnum;
 import com.his.common.enums.EmergencyStatusEnum;
@@ -25,13 +28,12 @@ import com.his.common.support.EmpTitleCode;
 import com.his.common.util.ShiftCoverUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
-import com.his.patient.dto.InpatientAdmitDTO;
-import com.his.patient.entity.BizPatient;
-import com.his.patient.mapper.BizPatientMapper;
-import com.his.patient.service.InpatientService;
-import com.his.patient.support.PatientProfileValidator;
-import com.his.patient.vo.BedVO;
-import com.his.patient.vo.WardVO;
+import com.his.api.dto.InpatientAdmitDTO;
+import com.his.api.dto.EmergencyPatientCreateDTO;
+import com.his.api.service.PatientApi;
+import com.his.api.vo.PatientMasterVO;
+import com.his.api.vo.BedVO;
+import com.his.api.vo.WardVO;
 import com.his.system.entity.*;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.mapper.*;
@@ -72,8 +74,6 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
 
     private final BizAppointInfoMapper bizAppointInfoMapper;
 
-    private final BizPatientMapper bizPatientMapper;
-
     private final EmergencyWaitPolicy waitPolicy;
 
     private final EmergencyObservationPolicy obsPolicy;
@@ -96,7 +96,7 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
 
     private final RedisSequenceService redisSequenceService;
 
-    private final InpatientService inpatientService;
+    private final PatientApi patientApi;
 
     private final BizClinicSourceService bizScheduleService;
 
@@ -192,30 +192,18 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean register(BizEmergencyUpsertDTO upsertDTO) {
-        BizPatient bizPatient;
-        // 新患者模式：patientId为空时，先创建患者记录
+        PatientMasterVO bizPatient;
+        // 新患者模式：patientId为空时，先创建患者记录（取号/身份证补全/写入口校验归患者域）
         if (upsertDTO.getPatientId() == null) {
-            bizPatient = new BizPatient();
-            bizPatient.setPatientNo(redisSequenceService.generatePatientNo());
-            bizPatient.setPatientName(upsertDTO.getPatientName());
-            bizPatient.setGender(upsertDTO.getGender());
-            bizPatient.setAge(upsertDTO.getAge());
-            bizPatient.setPhone(upsertDTO.getPhone());
-            // 身份证：急诊可以没有，但填了就要落库 —— 否则 EMPI 的同证去重拦不住急诊建档
-            bizPatient.setIdCard(upsertDTO.getIdCard());
-            // 有身份证就以它为准补出生日期/年龄（和主档建档同一口径，见 PatientController#fillBirthDateAndAge）
-            LocalDate birthDate = PatientProfileValidator.birthDateOfIdCard(upsertDTO.getIdCard());
-            if (birthDate != null) {
-                bizPatient.setBirthDate(birthDate);
-                bizPatient.setAge(Period.between(birthDate, LocalDate.now()).getYears());
-            }
-            bizPatient.setStatus(YesOrNoEnum.YES.getCode()); // 正常
-            // 急诊建档是第二条写患者基本信息的路径，同样要过写入口校验：
-            // 三无患者允许没有身份证，但姓名和性别不能省（下游性别判断全靠它）
-            PatientProfileValidator.validateForEmergency(bizPatient);
-            bizPatientMapper.insert(bizPatient);
+            EmergencyPatientCreateDTO createDTO = new EmergencyPatientCreateDTO();
+            createDTO.setPatientName(upsertDTO.getPatientName());
+            createDTO.setGender(upsertDTO.getGender());
+            createDTO.setAge(upsertDTO.getAge());
+            createDTO.setPhone(upsertDTO.getPhone());
+            createDTO.setIdCard(upsertDTO.getIdCard());
+            bizPatient = patientApi.createEmergencyPatient(createDTO);
         } else {
-            bizPatient = bizPatientMapper.selectById(upsertDTO.getPatientId());
+            bizPatient = patientApi.getPatient(upsertDTO.getPatientId());
             if (bizPatient == null) {
                 throw new BusinessException("未能找到对应患者信息");
             }
@@ -430,7 +418,7 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
             }
             // 换床（留观中再次提交）：先把旧床还回去，再占新床
             endObservation(emergency);
-            inpatientService.occupyBedForObservation(bed.getBedId(), emergency.getPatientId());
+            patientApi.occupyBedForObservation(bed.getBedId(), emergency.getPatientId());
             emergency.setObservationWardId(bed.getWardId());
             emergency.setObservationBedId(bed.getBedId());
             emergency.setObservationBed(bed.getBedNo());
@@ -449,7 +437,13 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
             claimDoctor(emergency);
             emergency.setDiagnosisTime(LocalDateTime.now());
         }
-        this.updateById(emergency);
+        // 守卫下沉到 WHERE：状态流转仅限「未结束（<4）」记录，并发终态流转时后到者 0 行失败
+        boolean changed = this.update(emergency, new LambdaUpdateWrapper<BizEmergency>()
+                .eq(BizEmergency::getId, emergency.getId())
+                .lt(BizEmergency::getEmergencyStatus, EmergencyStatusEnum.ADMITTED.getCode()));
+        if (!changed) {
+            throw new BusinessException("该急诊记录已结束（转住院/离院/死亡），不能再变更状态");
+        }
         syncAppointAndQueue(emergency, status);
         return true;
     }
@@ -507,24 +501,30 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
         inpatient.setRegistId(appoint == null ? null : appoint.getId());
         inpatient.setRegistNo(appoint == null ? null : appoint.getRegistNo());
         inpatient.setDiagnosis(TextUtil.hasText(admitDTO.getDiagnosis()) ? admitDTO.getDiagnosis() : emergency.getDiagnosis());
-        Long admissionId = inpatientService.admit(inpatient);
+        Long admissionId = patientApi.admit(inpatient);
 
         emergency.setEmergencyStatus(EmergencyStatusEnum.ADMITTED.getCode());
         emergency.setAdmissionId(admissionId);
         emergency.setFinishTime(LocalDateTime.now());
-        this.updateById(emergency);
+        // 守卫下沉到 WHERE：转住院仅限「未结束」记录，并发重复转住院/并发离院时后到者 0 行失败
+        boolean admitted = this.update(emergency, new LambdaUpdateWrapper<BizEmergency>()
+                .eq(BizEmergency::getId, emergency.getId())
+                .lt(BizEmergency::getEmergencyStatus, EmergencyStatusEnum.ADMITTED.getCode()));
+        if (!admitted) {
+            throw new BusinessException("该急诊记录已结束，不能重复转住院");
+        }
         syncAppointAndQueue(emergency, EmergencyStatusEnum.ADMITTED.getCode());
         return admissionId;
     }
 
     @Override
     public List<WardVO> wardSelectList() {
-        return inpatientService.listWards();
+        return patientApi.listWards();
     }
 
     @Override
     public List<BedVO> bedSelectList(Long wardId, Integer bedStatus) {
-        return inpatientService.listBeds(wardId, null, bedStatus);
+        return patientApi.listBeds(wardId, null, bedStatus);
     }
 
     @Override
@@ -546,7 +546,7 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
     private void endObservation(BizEmergency emergency) {
         Integer status = emergency.getEmergencyStatus();
         if (status != null && status == 3 && emergency.getObservationBedId() != null) {
-            inpatientService.releaseBedForObservation(emergency.getObservationBedId(), emergency.getPatientId());
+            patientApi.releaseBedForObservation(emergency.getObservationBedId(), emergency.getPatientId());
             emergency.setObservationEndTime(LocalDateTime.now());
         }
     }
@@ -582,7 +582,19 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
                 queue.setQueueStatus(QueueStatusEnum.COMPLETED.getCode());
                 queue.setEndTime(LocalDateTime.now());
             }
-            bizQueueMapper.updateById(queue);
+            // 守卫下沉到 WHERE：队列仍须为流转前状态（接诊<-候诊中；终态<-候诊/就诊中），
+            // 并发流转时 0 行失败，避免用陈旧快照覆盖（如已离院又被并发写回就诊中）
+            LambdaUpdateWrapper<BizQueue> queueGuard = new LambdaUpdateWrapper<BizQueue>()
+                    .eq(BizQueue::getId, queue.getId());
+            if (status == 2) {
+                queueGuard.eq(BizQueue::getQueueStatus, QueueStatusEnum.WAITING.getCode());
+            } else {
+                queueGuard.in(BizQueue::getQueueStatus,
+                        QueueStatusEnum.WAITING.getCode(), QueueStatusEnum.CONSULTING.getCode());
+            }
+            if (bizQueueMapper.update(queue, queueGuard) == 0) {
+                throw new BusinessException("该队列状态已变更，请刷新后重试");
+            }
         }
         if (status == 2) {
             appointInfo.setRegistStatus(AppointStatusEnum.ACCEPTED.getCode());
@@ -590,10 +602,22 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
                 appointInfo.setDoctorId(emergency.getDoctorId());
                 appointInfo.setDoctorName(emergency.getDoctorName());
             }
-            bizAppointInfoMapper.updateById(appointInfo);
         } else if (status >= 4) {
             appointInfo.setRegistStatus(AppointStatusEnum.COMPLETED.getCode());
-            bizAppointInfoMapper.updateById(appointInfo);
+        }
+        if (status == 2 || status >= 4) {
+            // 守卫下沉到 WHERE：挂号仍须为流转前状态（接诊<-已挂号；终态<-已挂号/已接诊），并发流转时 0 行失败
+            LambdaUpdateWrapper<BizAppointInfo> appointGuard = new LambdaUpdateWrapper<BizAppointInfo>()
+                    .eq(BizAppointInfo::getId, appointInfo.getId());
+            if (status == 2) {
+                appointGuard.eq(BizAppointInfo::getRegistStatus, AppointStatusEnum.REGISTERED.getCode());
+            } else {
+                appointGuard.in(BizAppointInfo::getRegistStatus,
+                        AppointStatusEnum.REGISTERED.getCode(), AppointStatusEnum.ACCEPTED.getCode());
+            }
+            if (bizAppointInfoMapper.update(appointInfo, appointGuard) == 0) {
+                throw new BusinessException("该挂号状态已变更，请刷新后重试");
+            }
         }
     }
 
@@ -893,12 +917,7 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
     }
 
     private String getZoneByLevel(Integer level) {
-        if (level == null) return "绿区";
-        return switch (level) {
-            case 1, 2 -> "红区";
-            case 3 -> "黄区";
-            default -> "绿区";
-        };
+        return EmergencyZoneEnum.zoneText(level);
     }
 
     /**

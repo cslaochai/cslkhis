@@ -22,6 +22,10 @@
             <artifactId>his-common</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-api</artifactId>
+        </dependency>
+        <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
         </dependency>

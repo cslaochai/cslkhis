@@ -19,7 +19,7 @@ public final class MessageMetricSupportVO {
         if (user == null) {
             return null;
         }
-        return user.getEmployeeId() != null ? user.getEmployeeId() : user.getUserId();
+        return user.getEmployeeId();
     }
 
     public static Item of(SysMessage message) {

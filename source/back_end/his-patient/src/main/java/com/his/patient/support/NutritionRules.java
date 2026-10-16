@@ -3,6 +3,17 @@ package com.his.patient.support;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.patient.enums.*;
+import com.his.common.enums.AdmitWayEnum;
+import com.his.common.enums.ConsultScopeEnum;
+import com.his.common.enums.InpatientOrderStatusEnum;
+import com.his.common.enums.InpatientRecordStatusEnum;
+import com.his.common.enums.InpatientRecordTypeEnum;
+import com.his.common.enums.NursingDocTypeEnum;
+import com.his.common.enums.OrderTypeEnum;
+import com.his.common.enums.ReferralStatusEnum;
+import com.his.common.enums.SummaryStatusEnum;
+import com.his.common.enums.TransferStatusEnum;
+import com.his.common.enums.VisitStatusEnum;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -11,7 +22,7 @@ import java.util.*;
 /**
  * 营养膳食口径（sql/168）。前端 lib/nutrition.js 与本类逐字对齐，页面不得另写一份映射。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class NutritionRules {
 
     /**

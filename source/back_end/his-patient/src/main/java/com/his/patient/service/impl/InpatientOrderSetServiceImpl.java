@@ -11,7 +11,7 @@ import com.his.patient.dto.OrderSetUpsertDTO;
 import com.his.patient.entity.BizInpatientOrderTemplate;
 import com.his.patient.entity.BizInpatientOrderTemplateItem;
 import com.his.patient.enums.OrderClassEnum;
-import com.his.patient.enums.OrderTypeEnum;
+import com.his.common.enums.OrderTypeEnum;
 import com.his.patient.enums.TemplateScopeEnum;
 import com.his.patient.mapper.BizInpatientOrderTemplateItemMapper;
 import com.his.patient.mapper.BizInpatientOrderTemplateMapper;
@@ -69,7 +69,8 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
             InpatientOrderItemRules.validate(item);
         }
 
-        Integer orderType = dto.getOrderType() != null ? dto.getOrderType() : OrderTypeEnum.TEMP.getCode();
+        // 必填项由 @NotNull 兜底，业务层不再静默按「临时」处理
+        Integer orderType = dto.getOrderType();
 
         String templateName = dto.getTemplateName().trim();
         if (templateName.length() > 100) {
@@ -77,7 +78,7 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
         }
 
         CurrentUser user = requireUser();
-        Long empId = currentEmpId(user);
+        Long empId = user.getEmployeeId();
         Long deptId = user.getDeptId();
 
         BizInpatientOrderTemplate template = new BizInpatientOrderTemplate();
@@ -89,7 +90,7 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
 
         if (dto.getId() == null) {
             template.setScope(scope);
-            applyOwner(template, scope, empId, deptId);
+            applyOwner(template, scope, deptId);
             assertNameNotDuplicated(templateName, null, scope, empId, deptId);
             bizInpatientOrderTemplateMapper.insert(template);
         } else {
@@ -98,7 +99,9 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
                 throw new BusinessException("组套的共享范围不能修改（要换范围请新建一份）");
             }
             // 归属不随修改漂移：组套属于谁、在哪个科室建的，是当时的事实
-            applyOwner(template, scope, owned.getDoctorId(), owned.getDeptId());
+            template.setDoctorId(owned.getDoctorId());
+            template.setDoctorName(owned.getDoctorName());
+            template.setDeptId(owned.getDeptId());
             assertNameNotDuplicated(templateName, owned.getId(), scope, empId, deptId);
             bizInpatientOrderTemplateMapper.updateById(template);
         }
@@ -214,7 +217,7 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
      * 软删组套会被捞回来（软删行的 scope 也满足条件）。
      */
     private LambdaQueryWrapper<BizInpatientOrderTemplate> visibleWrapper(CurrentUser user) {
-        Long empId = user == null ? null : currentEmpId(user);
+        Long empId = user == null ? null : user.getEmployeeId();
         Long deptId = user == null ? null : user.getDeptId();
         return new LambdaQueryWrapper<BizInpatientOrderTemplate>()
                 .and(w -> {
@@ -251,7 +254,7 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
      */
     private BizInpatientOrderTemplate requireWritable(Long id) {
         BizInpatientOrderTemplate template = requireVisible(id);
-        if (Boolean.FALSE.equals(editable(template, currentUserOrNull()))) {
+        if (Boolean.FALSE.equals(editable(template, requireUser()))) {
             throw new BusinessException("只能修改或删除自己的个人组套、本科室的科室组套，或全院组套");
         }
         return template;
@@ -266,7 +269,7 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
             return false;
         }
         if (Objects.equals(TemplateScopeEnum.PERSONAL.getCode(), scope)) {
-            return Objects.equals(currentEmpId(user), template.getDoctorId());
+            return Objects.equals(user.getEmployeeId(), template.getDoctorId());
         }
         if (Objects.equals(TemplateScopeEnum.DEPT.getCode(), scope)) {
             return template.getDeptId() != null && Objects.equals(user.getDeptId(), template.getDeptId());
@@ -275,16 +278,16 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
     }
 
     /**
-     * 归属一律服务端定：个人→本人，科室→当前科室，全院→不归属任何个人/科室
+     * 创建时归属服务端定：个人→本人，科室→当前科室，全院→不归属任何个人/科室
      */
-    private void applyOwner(BizInpatientOrderTemplate template, Integer scope, Long fallbackEmpId, Long fallbackDeptId) {
+    private void applyOwner(BizInpatientOrderTemplate template, Integer scope, Long fallbackDeptId) {
         if (Objects.equals(TemplateScopeEnum.PERSONAL.getCode(), scope)) {
-            Long empId = fallbackEmpId != null ? fallbackEmpId : currentEmpId(requireUser());
-            if (empId == null) {
+            CurrentUser owner = requireUser();
+            if (owner.getEmployeeId() == null) {
                 throw new BusinessException("未获取到当前登录医生，无法保存个人组套");
             }
-            template.setDoctorId(empId);
-            template.setDoctorName(currentName(requireUser()));
+            template.setDoctorId(owner.getEmployeeId());
+            template.setDoctorName(owner.getEmployeeName());
             // 创建时科室是快照，修改时保持原值（fallbackDeptId 传的就是 owned 的 deptId）
             template.setDeptId(fallbackDeptId);
         } else if (Objects.equals(TemplateScopeEnum.DEPT.getCode(), scope)) {
@@ -358,35 +361,14 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
     }
 
     private CurrentUser requireUser() {
-        CurrentUser user = currentUserOrNull();
+        CurrentUser user = UserUtils.getCurrentUser();
         if (user == null) {
-            throw new BusinessException("未获取到当前登录人");
+            throw new BusinessException("当前用户信息不存在");
         }
         return user;
     }
 
     private CurrentUser currentUserOrNull() {
-        try {
-            return UserUtils.getCurrentUser();
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    /**
-     * 组套归属一律用**员工ID**（不是用户的ID），与医嘱行 doctor_id 同一口径
-     */
-    private Long currentEmpId(CurrentUser user) {
-        return user.getEmployeeId() != null ? user.getEmployeeId() : user.getUserId();
-    }
-
-    private String currentName(CurrentUser user) {
-        if (TextUtil.hasText(user.getEmployeeName())) {
-            return user.getEmployeeName();
-        }
-        if (TextUtil.hasText(user.getRealName())) {
-            return user.getRealName();
-        }
-        return user.getUsername();
+        return UserUtils.getCurrentUser();
     }
 }

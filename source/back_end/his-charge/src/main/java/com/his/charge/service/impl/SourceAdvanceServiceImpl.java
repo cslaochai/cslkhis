@@ -3,8 +3,8 @@ package com.his.charge.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.entity.BizFeeRecord;
-import com.his.system.api.service.EmrApi;
-import com.his.system.api.service.MedicalTechApi;
+import com.his.api.service.EmrApi;
+import com.his.api.service.MedicalTechApi;
 import com.his.charge.entity.BizPaymentTxn;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.mapper.BizPaymentTxnMapper;

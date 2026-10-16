@@ -55,6 +55,7 @@ public class ExamFilmSpecUpsertDTO {
     /**
      * 状态（0-停用 1-启用）
      */
+    @NotNull(message = "状态不能为空（0-停用 1-启用）")
     @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 }

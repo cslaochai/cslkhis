@@ -2,6 +2,7 @@ package com.his.patient.service;
 
 import com.his.common.base.PageResult;
 import com.his.patient.dto.*;
+import com.his.api.dto.*;
 import com.his.patient.vo.IcuVO;
 
 import java.time.LocalDate;

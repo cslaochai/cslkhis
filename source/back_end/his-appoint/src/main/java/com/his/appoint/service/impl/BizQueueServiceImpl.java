@@ -8,10 +8,12 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.appoint.dto.*;
+import com.his.api.dto.*;
 import com.his.appoint.entity.BizAppointInfo;
 import com.his.appoint.entity.BizQueue;
 import com.his.appoint.entity.BizTriageRecord;
 import com.his.appoint.enums.*;
+import com.his.common.enums.*;
 import com.his.appoint.mapper.BizAppointInfoMapper;
 import com.his.appoint.mapper.BizQueueMapper;
 import com.his.appoint.mapper.BizTriageRecordMapper;
@@ -20,6 +22,7 @@ import com.his.appoint.service.BizQueueService;
 import com.his.appoint.service.DoctorStatusCacheService;
 import com.his.appoint.trigger.DayEndSettleTrigger;
 import com.his.appoint.vo.*;
+import com.his.api.vo.*;
 import com.his.common.base.PageResult;
 import com.his.common.enums.BillStatusEnum;
 import com.his.common.enums.MedicalInsuranceTypeEnum;
@@ -27,10 +30,10 @@ import com.his.common.enums.SettlementModeEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.patient.service.BizPatientService;
-import com.his.patient.service.PatientGuardianService;
-import com.his.system.api.service.ChargeApi;
-import com.his.system.api.vo.BillBriefVO;
+import com.his.api.service.PatientApi;
+import com.his.api.vo.PatientMasterVO;
+import com.his.api.service.ChargeApi;
+import com.his.api.vo.BillBriefVO;
 import com.his.system.entity.BizClinicSource;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysClinicRoom;
@@ -61,7 +64,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> implements BizQueueService {
-    private final BizPatientService bizPatientService;
+    private final PatientApi patientApi;
 
     private final BizClinicSourceMapper bizScheduleMapper;
 
@@ -74,8 +77,6 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
     private final InsurancePolicyService insurancePolicyService;
 
     private final DoctorStatusCacheService doctorStatusCacheService;
-
-    private final PatientGuardianService patientGuardianService;
 
     private final SysClinicRoomService sysClinicRoomService;
 
@@ -316,7 +317,13 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         // 更新挂号状态为已签到
         appointInfo.setRegistStatus(AppointStatusEnum.CHECKED_IN.getCode());
         appointInfo.setArriveTime(LocalDateTime.now());
-        bizAppointInfoMapper.updateById(appointInfo);
+        // 守卫下沉到 WHERE：仅「已挂号」可签到，判重计数存在并发窗口，重复签到时后到一笔 0 行失败
+        int checkedIn = bizAppointInfoMapper.update(appointInfo, new LambdaUpdateWrapper<BizAppointInfo>()
+                .eq(BizAppointInfo::getId, appointInfo.getId())
+                .eq(BizAppointInfo::getRegistStatus, AppointStatusEnum.REGISTERED.getCode()));
+        if (checkedIn == 0) {
+            throw new BusinessException("该患者已签到或挂号状态已变更，请刷新后重试");
+        }
         return true;
     }
 
@@ -559,7 +566,13 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
             long minutes = Duration.between(queue.getStartTime(), queue.getEndTime()).toMinutes();
             queue.setWaitDuration((int) minutes);
         }
-        baseMapper.updateById(queue);
+        // 守卫下沉到 WHERE：仅「就诊中」可完成，多窗口/多终端并发完成时后到者 0 行失败
+        int completed = baseMapper.update(queue, new LambdaUpdateWrapper<BizQueue>()
+                .eq(BizQueue::getId, queue.getId())
+                .eq(BizQueue::getQueueStatus, QueueStatusEnum.CONSULTING.getCode()));
+        if (completed == 0) {
+            throw new BusinessException("当前状态不允许完成，请刷新后重试");
+        }
 
         // 清除医生接诊状态
         if (queue.getDoctorId() != null) {
@@ -573,10 +586,10 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
                 registInfo.setRegistStatus(AppointStatusEnum.COMPLETED.getCode()); // 已完成
                 bizAppointInfoMapper.updateById(registInfo);
 
-                bizPatientService.markLastVisit(registInfo.getPatientId(), queue.getEndTime(),
+                patientApi.markLastVisit(registInfo.getPatientId(), queue.getEndTime(),
                         registInfo.getDeptId(), registInfo.getDeptName(),
                         registInfo.getDoctorId(), registInfo.getDoctorName());
-                bizPatientService.markFirstVisit(registInfo.getPatientId(), queue.getEndTime(),
+                patientApi.markFirstVisit(registInfo.getPatientId(), queue.getEndTime(),
                         registInfo.getDeptId(), registInfo.getDeptName(),
                         registInfo.getDoctorId(), registInfo.getDoctorName());
             }
@@ -601,7 +614,14 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         queue.setIsOverdue(1);
         queue.setOverdueTime(LocalDateTime.now());
         queue.setOverdueReason(reason);
-        baseMapper.updateById(queue);
+        // 守卫下沉到 WHERE：仅「候诊中/就诊中」可过号，并发完成/退号等状态变更时 0 行失败
+        int overdue = baseMapper.update(queue, new LambdaUpdateWrapper<BizQueue>()
+                .eq(BizQueue::getId, queue.getId())
+                .in(BizQueue::getQueueStatus,
+                        QueueStatusEnum.WAITING.getCode(), QueueStatusEnum.CONSULTING.getCode()));
+        if (overdue == 0) {
+            throw new BusinessException("当前状态不允许过号处理，请刷新后重试");
+        }
 
         // 同步更新挂号记录状态
         if (queue.getRegistId() != null) {
@@ -762,7 +782,14 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         queue.setCallCount(queue.getCallCount() != null ? queue.getCallCount() + 1 : 1);
         CurrentUser currentUser = UserUtils.getCurrentUser();
         doctorStatusCacheService.startConsulting(currentUser.getEmployeeId());
-        return baseMapper.updateById(queue) > 0;
+        // 守卫下沉到 WHERE：重呼仅限「就诊中」，防并发完成后用陈旧快照把队列写回就诊中
+        int recalled = baseMapper.update(queue, new LambdaUpdateWrapper<BizQueue>()
+                .eq(BizQueue::getId, queue.getId())
+                .eq(BizQueue::getQueueStatus, QueueStatusEnum.CONSULTING.getCode()));
+        if (recalled == 0) {
+            throw new BusinessException("只能重呼就诊中的患者，请刷新后重试");
+        }
+        return true;
     }
 
     @Override
@@ -842,8 +869,13 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         queue.setSequenceNo(headSeq);
         // 同时打上优先队列标记，供大屏与分诊台区分
         queue.setQueueType(QueueTypeEnum.PRIORITY.getCode());
-        if (baseMapper.updateById(queue) <= 0) {
-            throw new BusinessException("复诊插队失败");
+        // 守卫下沉到 WHERE：插队写回仅限「候诊中/已过号」原状态，防并发叫号/完成后用陈旧快照复活队列
+        int rejoined = baseMapper.update(queue, new LambdaUpdateWrapper<BizQueue>()
+                .eq(BizQueue::getId, queue.getId())
+                .in(BizQueue::getQueueStatus,
+                        QueueStatusEnum.WAITING.getCode(), QueueStatusEnum.OVERDUE.getCode()));
+        if (rejoined == 0) {
+            throw new BusinessException("该队列状态已变更，复诊插队失败，请刷新后重试");
         }
         // 把新序号回给前端 —— 护士要知道「现在排第几」，只说"已置为优先"等于没说
         return headSeq;
@@ -1093,9 +1125,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
             throw new BusinessException("排队记录不存在");
         }
         deptScopeService.assertDeptAccessible(queue.getDeptId());
-        if (!TriageLevelEnum.isValid(dto.getTriageLevel())) {
-            throw new BusinessException("分诊等级取值不合法");
-        }
+        // 分诊等级码值由 TriageUpsertDTO.triageLevel 的 @AllowedValues 在边界校验
         // 已就诊/已过号/已退号的患者再分诊没有意义，反而会把队列上的「当前生效值」改乱。
         Integer status = queue.getQueueStatus();
         boolean changeable = status != null
@@ -1173,7 +1203,14 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         queue.setTriageLevel(dto.getTriageLevel());
         queue.setRoomId(roomId);
         queue.setRoomName(roomName);
-        baseMapper.updateById(queue);
+        // 守卫下沉到 WHERE：分诊快照仅回写「候诊中/就诊中」队列，防把并发已结束的队列复活
+        int snapshot = baseMapper.update(queue, new LambdaUpdateWrapper<BizQueue>()
+                .eq(BizQueue::getId, queue.getId())
+                .in(BizQueue::getQueueStatus,
+                        QueueStatusEnum.WAITING.getCode(), QueueStatusEnum.CONSULTING.getCode()));
+        if (snapshot == 0) {
+            throw new BusinessException("该患者本次就诊已结束，不能再分诊，请刷新后重试");
+        }
 
         return toTriageVO(record);
     }
@@ -1482,7 +1519,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
     @Override
     public void checkInByRegist(AppointCheckInUpdateDTO updateDTO) {
         // 分诊台/自助机用的接口，患者 token 也调得到 —— 不校验归属就等于能替别人签到
-        if (patientGuardianService.patientScopeViolated(patientIdOfRegist(updateDTO.getRegistId()))) {
+        if (patientApi.patientScopeViolated(patientIdOfRegist(updateDTO.getRegistId()))) {
             throw new BusinessException("无权为该就诊人签到");
         }
         if (!checkInByRegistId(updateDTO)) {

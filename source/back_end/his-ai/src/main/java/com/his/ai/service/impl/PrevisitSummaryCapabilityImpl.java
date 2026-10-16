@@ -14,7 +14,7 @@ import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.emr.enums.PrevisitSummarySourceEnum;
 import com.his.emr.service.PrevisitRecordService;
-import com.his.emr.vo.PrevisitDetailVO;
+import com.his.api.vo.PrevisitDetailVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

@@ -1,5 +1,6 @@
 package com.his.patient.dto;
 
+import com.his.common.validation.AllowedValues;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -37,6 +38,7 @@ public class PatientMedicationHistoryUpsertDTO {
      * 药物类型（处方药/非处方药/中药/保健品）
      */
     @Schema(description = "药物类型（处方药/非处方药/中药/保健品）")
+    @AllowedValues(values = {"处方药", "非处方药", "中药", "保健品"}, message = "药物类型取值不合法")
     private String drugType;
 
     /**
@@ -55,6 +57,7 @@ public class PatientMedicationHistoryUpsertDTO {
      * 给药途径（口服/注射/外用/吸入等）
      */
     @Schema(description = "给药途径（口服/注射/外用/吸入）")
+    @AllowedValues(values = {"口服", "注射", "外用", "吸入"}, message = "给药途径取值不合法")
     private String route;
 
     /**
@@ -86,6 +89,7 @@ public class PatientMedicationHistoryUpsertDTO {
      * 用药状态（进行中/已停用/已换药/已减量）
      */
     @Schema(description = "用药状态（进行中/已停用/已换药/已减量）")
+    @AllowedValues(values = {"进行中", "已停用", "已换药", "已减量"}, message = "用药状态取值不合法")
     private String status;
 
     /**

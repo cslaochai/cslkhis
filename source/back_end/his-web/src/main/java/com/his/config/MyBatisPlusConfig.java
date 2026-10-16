@@ -50,11 +50,13 @@ public class MyBatisPlusConfig {
                     this.strictInsertFill(metaObject, "updateBy", String.class, currentUser.getEmployeeName());
                     this.strictInsertFill(metaObject, "createById", Long.class, currentUser.getEmployeeId());
                     this.strictInsertFill(metaObject, "updateById", Long.class, currentUser.getEmployeeId());
-                } else {
+                } else if (currentUser.getUserType() == UserTypeEnum.PATIENT.getCode()) {
                     this.strictInsertFill(metaObject, "createBy", String.class, currentUser.getRealName());
                     this.strictInsertFill(metaObject, "updateBy", String.class, currentUser.getRealName());
                     this.strictInsertFill(metaObject, "createById", Long.class, currentUser.getUserId());
                     this.strictInsertFill(metaObject, "updateById", Long.class, currentUser.getUserId());
+                } else {
+                    //todo:待扩展
                 }
             }
 
@@ -68,9 +70,11 @@ public class MyBatisPlusConfig {
                 if (currentUser.getUserType() == UserTypeEnum.INNER.getCode()) {
                     this.strictUpdateFill(metaObject, "updateBy", String.class, currentUser.getEmployeeName());
                     this.strictUpdateFill(metaObject, "updateById", Long.class, currentUser.getEmployeeId());
-                } else {
+                } else if (currentUser.getUserType() == UserTypeEnum.PATIENT.getCode()) {
                     this.strictUpdateFill(metaObject, "updateBy", String.class, currentUser.getRealName());
                     this.strictUpdateFill(metaObject, "updateById", Long.class, currentUser.getUserId());
+                } else {
+                    //todo:待扩展
                 }
             }
         };

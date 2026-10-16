@@ -12,7 +12,7 @@ import java.time.temporal.ChronoUnit;
 /**
  * 时间工具：秒级归一 + 日边界 + 时长（全库唯一收口点）。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class TimeUtil {
 
     /**

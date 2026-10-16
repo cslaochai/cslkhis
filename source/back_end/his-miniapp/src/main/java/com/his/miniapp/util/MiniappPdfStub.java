@@ -14,7 +14,7 @@ import java.util.List;
 /**
  * 报告 PDF 打印（小程序二期·报告原文）。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class MiniappPdfStub {
 
     /**

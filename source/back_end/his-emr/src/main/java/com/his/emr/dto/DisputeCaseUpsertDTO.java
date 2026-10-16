@@ -32,8 +32,9 @@ public class DisputeCaseUpsertDTO implements Serializable {
     private Integer sourceType;
 
     /**
-     * 等级:1-一般 2-较大 3-重大（默认一般）
+     * 等级:1-一般 2-较大 3-重大（必填）
      */
+    @NotNull(message = "等级不能为空")
     @AllowedValues(values = {"1", "2", "3"}, message = "等级取值不合法")
     private Integer level;
 
@@ -95,8 +96,9 @@ public class DisputeCaseUpsertDTO implements Serializable {
     private String demand;
 
     /**
-     * 是否需封存病历（0-否 1-是）
+     * 是否需封存病历（0-否 1-是，必填）
      */
+    @NotNull(message = "是否需封存病历不能为空")
     @AllowedValues(values = {"0", "1"}, message = "是否需封存病历取值不合法")
     private Integer needSeal;
 

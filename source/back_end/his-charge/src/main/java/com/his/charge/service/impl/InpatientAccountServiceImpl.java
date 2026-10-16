@@ -13,6 +13,11 @@ import com.his.charge.mapper.BizAlertMapper;
 import com.his.charge.mapper.BizPaymentTxnMapper;
 import com.his.charge.service.*;
 import com.his.charge.vo.*;
+import com.his.api.dto.BillPayDTO;
+import com.his.api.dto.PrepayQueryPageDTO;
+import com.his.api.dto.PrepayUpsertDTO;
+import com.his.api.vo.PrepayBalanceVO;
+import com.his.api.vo.PrepayVO;
 import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
@@ -20,9 +25,9 @@ import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
-import com.his.system.api.service.PatientApi;
-import com.his.system.api.vo.AdmissionBriefVO;
-import com.his.system.api.vo.PatientBriefVO;
+import com.his.api.service.PatientApi;
+import com.his.api.vo.AdmissionBriefVO;
+import com.his.api.vo.PatientBriefVO;
 import com.his.system.entity.SysEmployee;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.mapper.SysEmployeeMapper;
@@ -154,7 +159,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
         AdmissionBriefVO admission = requireAdmission(dto.getAdmissionId());
         PatientBriefVO patient = patientApi.findPatient(admission.getPatientId());
         PaymentService.PrepaySpec spec = prepaySpec(admission, patient, dto.getAmount(),
-                dto.getPayMethod() == null ? PaymentMethodEnum.CASH.getCode() : dto.getPayMethod(),
+                dto.getPayMethod(),
                 dto.getReceiptNo(), dto.getPrepayType() == PREPAY_IN ? dto.getChannelTxnNo() : null,
                 dto.getPayTime(), dto.getRemark());
 

@@ -1,6 +1,7 @@
 package com.his.charge.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.dto.InvoiceIssueDTO;
@@ -168,7 +169,14 @@ public class InvoiceServiceImpl extends ServiceImpl<BizInvoiceMapper, BizInvoice
         }
         invoice.setInvoiceStatus(InvoiceStatusEnum.PRINTED.getCode());
         invoice.setPrintTime(LocalDateTime.now());
-        return this.updateById(invoice);
+        // 守卫下沉到 WHERE：读-判-写之间并发作废/红冲会使 Java 侧「已开具」判断失效
+        int rows = baseMapper.update(invoice, new LambdaUpdateWrapper<BizInvoice>()
+                .eq(BizInvoice::getId, invoice.getId())
+                .eq(BizInvoice::getInvoiceStatus, InvoiceStatusEnum.ISSUED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("只有「已开具」的票能标记打印（发票状态已被并发变更，请刷新后重试）");
+        }
+        return rows > 0;
     }
 
     @Override
@@ -188,7 +196,13 @@ public class InvoiceServiceImpl extends ServiceImpl<BizInvoiceMapper, BizInvoice
         invoice.setInvoiceStatus(InvoiceStatusEnum.VOIDED.getCode());
         invoice.setVoidTime(LocalDateTime.now());
         invoice.setVoidReason(TextUtil.cut(reason, W_VOID_REASON));
-        this.updateById(invoice);
+        // 守卫下沉到 WHERE：读-判-写之间并发红冲换开会使 Java 侧「未红冲」判断失效
+        int rows = baseMapper.update(invoice, new LambdaUpdateWrapper<BizInvoice>()
+                .eq(BizInvoice::getId, invoice.getId())
+                .ne(BizInvoice::getInvoiceStatus, InvoiceStatusEnum.REVERSED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("该票已红冲换开，不能重复作废（发票状态已被并发变更，请刷新后重试）");
+        }
         log.info("[作废发票] 发票 {} 票面 ¥{} 原因：{}", invoice.getInvoiceNo(),
                 invoice.getTotalAmount().toPlainString(), reason);
         return true;

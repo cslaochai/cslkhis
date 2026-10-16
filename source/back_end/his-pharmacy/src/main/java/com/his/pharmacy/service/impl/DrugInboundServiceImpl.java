@@ -39,8 +39,11 @@ import java.util.Set;
 public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, BizDrugInbound> implements DrugInboundService {
 
     private final BizDrugInboundMapper bizDrugInboundMapper;
+
     private final BizDrugInboundDetailMapper bizDrugInboundDetailMapper;
+
     private final PharmacyService pharmacyService;
+
     private final RedisSequenceService redisSequenceService;
 
     private static String emptyToNull(String s) {

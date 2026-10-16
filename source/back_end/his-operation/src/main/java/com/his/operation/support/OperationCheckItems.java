@@ -14,7 +14,7 @@ import java.util.Set;
 /**
  * 术前核对要点（手术安全核查单的可核对部分）。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class OperationCheckItems {
 
     /**

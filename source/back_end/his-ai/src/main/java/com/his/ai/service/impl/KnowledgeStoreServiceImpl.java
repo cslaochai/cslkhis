@@ -162,11 +162,12 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
             doc.setSourceType(dto.getSourceType());
         }
         Long id = ingest(doc);
-        // 留痕：新建/编辑各落一条快照，操作人取当前登录用户
+        // 留痕：新建/编辑各落一条快照，操作人取当前登录员工
         CurrentUser user = UserUtils.getCurrentUser();
-        recordHistory(doc, changeType,
-                user == null ? null : user.getUsername(),
-                user == null ? null : user.getUserId());
+        if (user == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        recordHistory(doc, changeType, user.getRealName(), user.getEmployeeId());
         return id;
     }
 
@@ -195,9 +196,10 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
         doc.setSourceType(3); // 文件导入
         ingest(doc); // 只保存不建索引，由「重建索引」触发
         CurrentUser user = UserUtils.getCurrentUser();
-        recordHistory(doc, CHANGE_TYPE_CREATE,
-                user == null ? null : user.getUsername(),
-                user == null ? null : user.getUserId());
+        if (user == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        recordHistory(doc, CHANGE_TYPE_CREATE, user.getRealName(), user.getEmployeeId());
         return toListVo(doc);
     }
 
@@ -500,9 +502,10 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
         doc.setContent(h.getContent());
         ingest(doc); // update + 清旧向量 + chunk_count 置 0
         CurrentUser user = UserUtils.getCurrentUser();
-        recordHistory(doc, CHANGE_TYPE_REVERT,
-                user == null ? null : user.getUsername(),
-                user == null ? null : user.getUserId());
+        if (user == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        recordHistory(doc, CHANGE_TYPE_REVERT, user.getRealName(), user.getEmployeeId());
         return doc.getId();
     }
 

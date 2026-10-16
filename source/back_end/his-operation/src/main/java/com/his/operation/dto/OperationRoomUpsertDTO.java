@@ -2,6 +2,7 @@ package com.his.operation.dto;
 
 import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -44,8 +45,9 @@ public class OperationRoomUpsertDTO implements Serializable {
     private Integer sortOrder;
 
     /**
-     * 状态：1-启用 0-停用（空按启用）
+     * 状态：1-启用 0-停用
      */
+    @NotNull(message = "状态不能为空（1-启用 0-停用）")
     @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
 

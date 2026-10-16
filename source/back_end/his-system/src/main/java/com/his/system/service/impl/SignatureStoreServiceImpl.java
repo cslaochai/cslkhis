@@ -7,7 +7,7 @@ import com.his.common.enums.SignSceneEnum;
 import com.his.common.enums.SignStatusEnum;
 import com.his.system.mapper.BizEmrSignatureMapper;
 import com.his.system.mapper.SysSignCertMapper;
-import com.his.system.api.service.SignableContentApi;
+import com.his.api.service.SignableContentApi;
 import com.his.system.service.SignatureStoreService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

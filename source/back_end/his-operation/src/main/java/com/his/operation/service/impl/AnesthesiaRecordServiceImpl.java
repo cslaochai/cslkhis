@@ -1,6 +1,7 @@
 package com.his.operation.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -18,8 +19,8 @@ import com.his.operation.service.AnesthesiaVisitService;
 import com.his.operation.support.AnesthesiaCalcs;
 import com.his.operation.support.OperationChargeBiller;
 import com.his.operation.vo.*;
-import com.his.patient.entity.BizPatient;
-import com.his.patient.service.BizPatientService;
+import com.his.api.service.PatientApi;
+import com.his.api.vo.PatientMasterVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
@@ -53,7 +54,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
 
     private final BizOperationChargeItemMapper bizOperationChargeItemMapper;
 
-    private final BizPatientService bizPatientService;
+    private final PatientApi patientApi;
 
     private final AnesthesiaVisitService anesthesiaVisitService;
 
@@ -201,7 +202,14 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
             throw new BusinessException("已标记发生麻醉不良事件，必须填写经过与处理");
         }
         copyNotNullIgnoring(dto, entity);
-        bizAnesthesiaRecordMapper.updateById(entity);
+        // 守卫下沉到 WHERE：并发下记录已被提交/审核时更新命中 0 行，兜底抛错（与 mustEditable 的「记录中才可改」校验同义）
+        int rows = bizAnesthesiaRecordMapper.update(entity, new LambdaUpdateWrapper<BizAnesthesiaRecord>()
+                .eq(BizAnesthesiaRecord::getId, entity.getId())
+                .eq(BizAnesthesiaRecord::getRecordStatus, AnesthesiaRecordStatusEnum.DRAFT.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("麻醉记录单 " + entity.getRecordNo()
+                    + " 当前状态已变化，已固化的麻醉记录不能再改内容（术后补一条记载属于伪造）");
+        }
     }
 
     @Override
@@ -344,7 +352,14 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
             summary.setFailedItems(summary.getFailedItems() + 1);
         }
         applyChargeResult(entity, summary);
-        bizAnesthesiaRecordMapper.updateById(entity);
+        // 守卫下沉到 WHERE：并发下记录已被提交/审核时更新命中 0 行，兜底抛错（与上方「只有记录中可提交」校验同义）
+        int rows = bizAnesthesiaRecordMapper.update(entity, new LambdaUpdateWrapper<BizAnesthesiaRecord>()
+                .eq(BizAnesthesiaRecord::getId, entity.getId())
+                .eq(BizAnesthesiaRecord::getRecordStatus, AnesthesiaRecordStatusEnum.DRAFT.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("麻醉记录单 " + entity.getRecordNo()
+                    + " 当前状态已变化，只有「记录中」可以提交");
+        }
         log.info("提交麻醉记录 recordNo={} 状态=已提交 计费=成功{}项/失败{}项 金额={} 提交人={}",
                 entity.getRecordNo(), summary.getSuccessItems(), summary.getFailedItems(),
                 summary.getAmount(), operatorUser.getRealName());
@@ -371,7 +386,14 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         if (TextUtil.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
-        bizAnesthesiaRecordMapper.updateById(entity);
+        // 守卫下沉到 WHERE：并发下记录已被审核时更新命中 0 行，兜底抛错（与上方「只有已提交可审核」校验同义）
+        int rows = bizAnesthesiaRecordMapper.update(entity, new LambdaUpdateWrapper<BizAnesthesiaRecord>()
+                .eq(BizAnesthesiaRecord::getId, entity.getId())
+                .eq(BizAnesthesiaRecord::getRecordStatus, AnesthesiaRecordStatusEnum.SUBMITTED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("麻醉记录单 " + entity.getRecordNo()
+                    + " 当前状态已变化，只有「已提交」可以审核");
+        }
         log.info("审核麻醉记录 recordNo={} 审核人={}", entity.getRecordNo(), operatorUser.getRealName());
     }
 
@@ -445,7 +467,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         if (patientId == null) {
             return null;
         }
-        BizPatient patient = bizPatientService.getById(patientId);
+        PatientMasterVO patient = patientApi.getPatient(patientId);
         return patient == null ? null : patient.getPatientNo();
     }
 

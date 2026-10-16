@@ -1,7 +1,9 @@
 package com.his.medicaltech.service.impl;
 
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.appoint.enums.AppointStatusEnum;
+import com.his.api.service.PatientApi;
+import com.his.api.vo.PatientMasterVO;
+import com.his.api.vo.PatientProfileScoreVO;
+import com.his.common.enums.AppointStatusEnum;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
@@ -16,11 +18,7 @@ import com.his.medicaltech.enums.CdrNodeTypeEnum;
 import com.his.medicaltech.mapper.CdrMapper;
 import com.his.medicaltech.service.CdrService;
 import com.his.medicaltech.vo.*;
-import com.his.patient.entity.BizPatient;
-import com.his.patient.enums.VisitStatusEnum;
-import com.his.patient.mapper.BizPatientMapper;
-import com.his.patient.service.PatientIndexService;
-import com.his.patient.support.PatientProfileFields;
+import com.his.common.enums.VisitStatusEnum;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -35,7 +33,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> implements CdrService {
+public class CdrServiceImpl implements CdrService {
 
     private static final String ANCHOR_REGIST = "REGIST";
     private static final String ANCHOR_ADMISSION = "ADMISSION";
@@ -44,9 +42,7 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
 
     private final CdrMapper cdrMapper;
 
-    private final BizPatientMapper bizPatientMapper;
-
-    private final PatientIndexService patientIndexService;
+    private final PatientApi patientApi;
 
 
     /**
@@ -122,7 +118,7 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
     @Override
     public CdrTimelineVO getTimeline(CdrQueryDTO dto) {
         Long pid = dto.getPatientId();
-        BizPatient main = bizPatientMapper.selectById(pid);
+        PatientMasterVO main = patientApi.getPatient(pid);
         if (main == null) {
             throw new BusinessException("患者不存在或已删除");
         }
@@ -485,7 +481,7 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
         return ev;
     }
 
-    private CdrPatientVO toPatient(BizPatient p, List<Long> ids, List<CdrArchiveIdentityRowVO> archiveRows, Long mainPid,
+    private CdrPatientVO toPatient(PatientMasterVO p, List<Long> ids, List<CdrArchiveIdentityRowVO> archiveRows, Long mainPid,
                                    List<CdrProfileRowVO> profileRows) {
         CdrPatientVO vo = new CdrPatientVO();
         vo.setPatientId(p.getId());
@@ -527,10 +523,9 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
                 covered.add(k);
             }
         }
-        PatientProfileFields.ProfileScore score = PatientProfileFields.applyProfileCoverage(
-                PatientProfileFields.score(p), covered);
-        vo.setCompleteRate((int) Math.floor(score.rate()));
-        vo.setMissingFields(score.missingFields());
+        PatientProfileScoreVO score = patientApi.profileScore(p.getId(), covered);
+        vo.setCompleteRate(score.getCompleteRate());
+        vo.setMissingFields(score.getMissingFields());
         return vo;
     }
 
@@ -701,7 +696,7 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
      * EMPI 归并：查询口径统一走 his-patient，不在报表模块里另写一份
      */
     private List<Long> resolveIds(Long pid) {
-        List<Long> ids = patientIndexService.resolvePatientIds(pid);
+        List<Long> ids = patientApi.resolvePatientIds(pid);
         if (ids == null || ids.isEmpty()) {
             return new ArrayList<>(List.of(pid));
         }

@@ -136,7 +136,7 @@ public class PatientGuardianServiceImpl extends ServiceImpl<BizPatientGuardianMa
     }
 
     @Override
-    public List<GuardianPatientVO> myPatients() {
+    public List<GuardianPatientVO> getMyPatients() {
         CurrentUser user = requirePatientUser();
         LambdaQueryWrapper<BizPatientGuardian> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BizPatientGuardian::getUserId, user.getUserId())
@@ -206,9 +206,6 @@ public class PatientGuardianServiceImpl extends ServiceImpl<BizPatientGuardianMa
     public GuardianPatientVO bindPatient(GuardianBindDTO dto) {
         CurrentUser user = requirePatientUser();
         String idCard = normalizeIdCard(dto.getIdCard());
-        if (!GuardianRelationEnum.isValid(dto.getRelation())) {
-            throw new BusinessException("关系码值不正确");
-        }
         BizPatient patient = bizPatientService.selectByIdCard(idCard);
         if (patient == null || !patient.getPatientName().equals(dto.getPatientName().trim())) {
             // 双因子任一不匹配即拒绝，且不区分哪种不匹配 —— 避免拿此接口探测谁建过档
@@ -255,9 +252,6 @@ public class PatientGuardianServiceImpl extends ServiceImpl<BizPatientGuardianMa
     public GuardianPatientVO addPatient(GuardianUpsertDTO dto) {
         CurrentUser user = requirePatientUser();
         String idCard = normalizeIdCard(dto.getIdCard());
-        if (!GuardianRelationEnum.isValid(dto.getRelation())) {
-            throw new BusinessException("关系码值不正确");
-        }
         if (bizPatientService.selectByIdCard(idCard) != null) {
             throw new BusinessException("该身份证已建档，请改用「绑定就诊人」");
         }
@@ -421,7 +415,8 @@ public class PatientGuardianServiceImpl extends ServiceImpl<BizPatientGuardianMa
     }
 
     private void auditGuardian(CurrentUser user, String operation, Long patientId, boolean success, String detail) {
-        sysAuditLogService.record(user.getUserId(), user.getUsername(), "患者端-就诊人", operation,
+        // 操作人本身就是患者账号：操作人ID取账号userId（员工场景才取employeeId），姓名取realName，与患者审计自动填充分支同一口径
+        sysAuditLogService.record(user.getUserId(), user.getRealName(), "患者端-就诊人", operation,
                 "biz_patient", patientId, detail, success, success ? null : detail);
     }
 

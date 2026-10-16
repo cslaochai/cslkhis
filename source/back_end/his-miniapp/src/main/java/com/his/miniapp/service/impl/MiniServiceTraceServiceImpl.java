@@ -6,8 +6,8 @@ import com.his.miniapp.dto.ServiceTraceDTO;
 import com.his.miniapp.entity.SysServiceTrace;
 import com.his.miniapp.mapper.MiniServiceTraceMapper;
 import com.his.miniapp.service.MiniServiceTraceService;
-import com.his.system.entity.CurrentUser;
-import com.his.system.utils.UserUtils;
+import com.his.api.entity.CurrentUser;
+import com.his.api.service.AuthContextApi;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,10 +26,12 @@ public class MiniServiceTraceServiceImpl extends ServiceImpl<MiniServiceTraceMap
 
     private final MiniServiceTraceMapper miniServiceTraceMapper;
 
+    private final AuthContextApi authContextApi;
+
     @Override
     public void record(ServiceTraceDTO dto) {
         try {
-            CurrentUser user = UserUtils.getCurrentUser();
+            CurrentUser user = authContextApi.getCurrentUser();
             SysServiceTrace entity = new SysServiceTrace();
             if (user != null) {
                 entity.setUserId(user.getUserId());

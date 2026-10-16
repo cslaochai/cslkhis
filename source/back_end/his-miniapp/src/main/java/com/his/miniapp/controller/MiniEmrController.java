@@ -1,9 +1,9 @@
 package com.his.miniapp.controller;
 
+import com.his.api.service.EmrPatientApi;
 import com.his.common.base.Result;
-import com.his.emr.service.EmrService;
-import com.his.emr.vo.MyMedicalRecordVO;
-import com.his.patient.service.PatientGuardianService;
+import com.his.api.vo.MyMedicalRecordVO;
+import com.his.api.service.PatientApi;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -25,24 +25,24 @@ import java.util.List;
 @PreAuthorize("hasAuthority('PATIENT')")
 public class MiniEmrController {
 
-    private final EmrService emrService;
-    private final PatientGuardianService patientGuardianService;
+    private final EmrPatientApi emrPatientApi;
+    private final PatientApi patientApi;
 
     @Operation(summary = "我的病历列表（只含已提交/已归档）")
     @GetMapping("/myRecords")
     public Result<List<MyMedicalRecordVO>> myRecords(@RequestParam Long patientId) {
-        if (!patientGuardianService.canAccessPatient(patientId)) {
+        if (!patientApi.canAccessPatient(patientId)) {
             return Result.error("无权查询该就诊人的病历");
         }
-        return Result.success(emrService.myRecords(patientId));
+        return Result.success(emrPatientApi.myRecords(patientId));
     }
 
     @Operation(summary = "病历详情")
     @GetMapping("/myRecordDetail")
     public Result<MyMedicalRecordVO> myRecordDetail(@RequestParam Long patientId, @RequestParam Long recordId) {
-        if (!patientGuardianService.canAccessPatient(patientId)) {
+        if (!patientApi.canAccessPatient(patientId)) {
             return Result.error("无权查询该就诊人的病历");
         }
-        return Result.success(emrService.myRecordDetail(patientId, recordId));
+        return Result.success(emrPatientApi.myRecordDetail(patientId, recordId));
     }
 }

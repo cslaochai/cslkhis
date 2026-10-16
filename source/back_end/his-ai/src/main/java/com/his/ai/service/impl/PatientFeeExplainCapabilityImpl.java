@@ -1,21 +1,19 @@
 package com.his.ai.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.ai.dto.PatientFeeExplainDTO;
 import com.his.ai.service.PatientFeeExplainCapability;
 import com.his.ai.vo.FeeCatalogGroupVO;
 import com.his.ai.vo.PatientFeeExplainVO;
-import com.his.charge.entity.BizInsuranceSettlement;
-import com.his.charge.entity.BizSettlementBill;
-import com.his.charge.entity.BizSettlementBillItem;
-import com.his.charge.mapper.BizInsuranceSettlementMapper;
-import com.his.charge.mapper.BizSettlementBillItemMapper;
-import com.his.charge.mapper.BizSettlementBillMapper;
+import com.his.api.service.ChargeApi;
+import com.his.api.vo.BillItemVO;
+import com.his.api.vo.BizSettlementBillVO;
+import com.his.api.vo.InsuranceBriefVO;
+import com.his.common.enums.FeeCatalogTypeEnum;
 import com.his.common.enums.PaymentItemTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
-import com.his.patient.service.PatientGuardianService;
+import com.his.api.service.PatientApi;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -35,14 +33,6 @@ import java.util.*;
 public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapability {
 
     /**
-     * 目录类别：0-自费 1-甲类 2-乙类 3-丙类
-     */
-    private static final int CATALOG_SELF = 0;
-    private static final int CATALOG_A = 1;
-    private static final int CATALOG_B = 2;
-    private static final int CATALOG_C = 3;
-
-    /**
      * 每个分组最多列出的项目名数量：列太长患者反而不看
      */
     private static final int MAX_ITEM_NAMES = 8;
@@ -56,25 +46,9 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
             "以上是本账单的费用构成说明，实际报销以医保经办和收费窗口的解释为准；"
                     + "对某项收费有疑问，可在收费窗口打印明细清单核对。";
 
-    private final BizSettlementBillMapper bizSettlementBillMapper;
+    private final ChargeApi chargeApi;
 
-    private final BizSettlementBillItemMapper bizSettlementBillItemMapper;
-
-    private final BizInsuranceSettlementMapper bizInsuranceSettlementMapper;
-
-    private final PatientGuardianService patientGuardianService;
-
-    private static String catalogText(Integer catalogType) {
-        if (catalogType == null) {
-            return "自费";
-        }
-        return switch (catalogType) {
-            case CATALOG_A -> "甲类";
-            case CATALOG_B -> "乙类";
-            case CATALOG_C -> "丙类";
-            default -> "自费";
-        };
-    }
+    private final PatientApi patientApi;
 
     // ---------------------------------------------------------------- 规则层
 
@@ -85,14 +59,14 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
      * 乙类先自付多少、甲类报多少，各地各险种不同，写死就是错的。
      */
     private static String ruleText(Integer catalogType) {
-        if (catalogType == null) {
+        FeeCatalogTypeEnum type = FeeCatalogTypeEnum.getByCode(catalogType);
+        if (type == null) {
             return "医保不承担，全额由个人支付";
         }
-        return switch (catalogType) {
-            case CATALOG_A -> "全额纳入医保报销范围";
-            case CATALOG_B -> "个人先负担一部分，剩余部分纳入报销";
-            case CATALOG_C -> "医保不承担，全额由个人支付";
-            default -> "医保不承担，全额由个人支付";
+        return switch (type) {
+            case CLASS_A -> "全额纳入医保报销范围";
+            case CLASS_B -> "个人先负担一部分，剩余部分纳入报销";
+            case CLASS_C, SELF_PAY -> "医保不承担，全额由个人支付";
         };
     }
 
@@ -102,7 +76,7 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
      * 优先用落库的 selfAmount；它为 0 时按「金额 - 统筹 - 个账」倒推 ——
      * 部分场景结算时只写了统筹与个账，selfAmount 留空，此时倒推比显示 0 更接近事实。
      */
-    private static BigDecimal selfPartOf(BizSettlementBillItem item) {
+    private static BigDecimal selfPartOf(BillItemVO item) {
         BigDecimal self = NumUtil.orZero(item.getSelfAmount());
         if (self.compareTo(BigDecimal.ZERO) > 0) {
             return self;
@@ -127,19 +101,17 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
             throw new BusinessException("未获取到就诊人身份，请重新登录");
         }
 
-        BizSettlementBill bill = bizSettlementBillMapper.selectById(dto.getBillId());
+        BizSettlementBillVO bill = chargeApi.getBillDetail(dto.getBillId());
         if (bill == null) {
             throw new BusinessException("账单不存在：" + dto.getBillId());
         }
-        if (patientGuardianService.patientScopeViolated(bill.getPatientId())) {
+        if (patientApi.patientScopeViolated(bill.getPatientId())) {
             throw new BusinessException("账单不存在或无权查看：" + dto.getBillId());
         }
 
-        List<BizSettlementBillItem> items = bizSettlementBillItemMapper.selectList(
-                new LambdaQueryWrapper<BizSettlementBillItem>()
-                        .eq(BizSettlementBillItem::getBillId, bill.getId()));
+        List<BillItemVO> items = chargeApi.listBillItems(bill.getId());
 
-        BizInsuranceSettlement insurance = loadInsurance(bill.getId());
+        InsuranceBriefVO insurance = chargeApi.latestInsurance(bill.getId());
 
         PatientFeeExplainVO vo = new PatientFeeExplainVO();
         vo.setBillId(bill.getId());
@@ -173,44 +145,35 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
         return vo;
     }
 
-    private BizInsuranceSettlement loadInsurance(Long billId) {
-        List<BizInsuranceSettlement> list = bizInsuranceSettlementMapper.selectList(
-                new LambdaQueryWrapper<BizInsuranceSettlement>()
-                        .eq(BizInsuranceSettlement::getBillId, billId)
-                        .orderByDesc(BizInsuranceSettlement::getId)
-                        .last("LIMIT 1"));
-        return list == null || list.isEmpty() ? null : list.get(0);
-    }
-
     // ---------------------------------------------------------------- 工具
 
     /**
      * 按医保目录类别分组 —— 这是「为什么自付这么多」的答案所在。
      */
-    private List<FeeCatalogGroupVO> buildCatalogGroups(List<BizSettlementBillItem> items, BigDecimal total) {
-        Map<Integer, List<BizSettlementBillItem>> byCatalog = new LinkedHashMap<>();
+    private List<FeeCatalogGroupVO> buildCatalogGroups(List<BillItemVO> items, BigDecimal total) {
+        Map<Integer, List<BillItemVO>> byCatalog = new LinkedHashMap<>();
         if (items != null) {
-            for (BizSettlementBillItem item : items) {
+            for (BillItemVO item : items) {
                 // null 目录类别按自费处理：医保目录里查不到的项目，结算时就是按自费走的
-                Integer type = item.getCatalogType() == null ? CATALOG_SELF : item.getCatalogType();
+                Integer type = item.getCatalogType() == null ? FeeCatalogTypeEnum.SELF_PAY.getCode() : item.getCatalogType();
                 byCatalog.computeIfAbsent(type, k -> new ArrayList<>()).add(item);
             }
         }
         List<FeeCatalogGroupVO> groups = new ArrayList<>();
-        for (Map.Entry<Integer, List<BizSettlementBillItem>> entry : byCatalog.entrySet()) {
-            List<BizSettlementBillItem> group = entry.getValue();
+        for (Map.Entry<Integer, List<BillItemVO>> entry : byCatalog.entrySet()) {
+            List<BillItemVO> group = entry.getValue();
             BigDecimal amount = group.stream()
                     .map(item -> NumUtil.orZero(item.getAmount()))
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             FeeCatalogGroupVO vo = new FeeCatalogGroupVO();
             vo.setCatalogType(entry.getKey());
-            vo.setCatalogText(catalogText(entry.getKey()));
+            vo.setCatalogText(FeeCatalogTypeEnum.getText(entry.getKey()));
             vo.setAmount(amount);
             vo.setRatio(ratio(amount, total));
             vo.setRuleText(ruleText(entry.getKey()));
             vo.setItemCount(group.size());
             List<String> names = new ArrayList<>();
-            for (BizSettlementBillItem item : group) {
+            for (BillItemVO item : group) {
                 if (names.size() >= MAX_ITEM_NAMES) {
                     break;
                 }
@@ -225,16 +188,16 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
         return groups;
     }
 
-    private List<PatientFeeExplainVO.FeeItemGroupVO> buildItemGroups(List<BizSettlementBillItem> items) {
-        Map<Integer, List<BizSettlementBillItem>> byType = new LinkedHashMap<>();
+    private List<PatientFeeExplainVO.FeeItemGroupVO> buildItemGroups(List<BillItemVO> items) {
+        Map<Integer, List<BillItemVO>> byType = new LinkedHashMap<>();
         if (items != null) {
-            for (BizSettlementBillItem item : items) {
+            for (BillItemVO item : items) {
                 Integer type = item.getItemType() == null ? 0 : item.getItemType();
                 byType.computeIfAbsent(type, k -> new ArrayList<>()).add(item);
             }
         }
         List<PatientFeeExplainVO.FeeItemGroupVO> groups = new ArrayList<>();
-        for (Map.Entry<Integer, List<BizSettlementBillItem>> entry : byType.entrySet()) {
+        for (Map.Entry<Integer, List<BillItemVO>> entry : byType.entrySet()) {
             BigDecimal amount = entry.getValue().stream()
                     .map(item -> NumUtil.orZero(item.getAmount()))
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -252,11 +215,11 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
     /**
      * 自付金额最高的几项 —— 患者最常提出疑问的就是这几项。
      */
-    private List<PatientFeeExplainVO.FeeTopItemVO> buildTopSelfItems(List<BizSettlementBillItem> items) {
-        List<BizSettlementBillItem> sorted = new ArrayList<>(items == null ? List.of() : items);
+    private List<PatientFeeExplainVO.FeeTopItemVO> buildTopSelfItems(List<BillItemVO> items) {
+        List<BillItemVO> sorted = new ArrayList<>(items == null ? List.of() : items);
         sorted.sort((a, b) -> selfPartOf(b).compareTo(selfPartOf(a)));
         List<PatientFeeExplainVO.FeeTopItemVO> result = new ArrayList<>();
-        for (BizSettlementBillItem item : sorted) {
+        for (BillItemVO item : sorted) {
             if (result.size() >= TOP_SELF_LIMIT) {
                 break;
             }
@@ -266,7 +229,7 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
             PatientFeeExplainVO.FeeTopItemVO vo = new PatientFeeExplainVO.FeeTopItemVO();
             vo.setItemName(item.getItemName());
             vo.setAmount(NumUtil.orZero(item.getAmount()));
-            vo.setCatalogText(catalogText(item.getCatalogType() == null ? CATALOG_SELF : item.getCatalogType()));
+            vo.setCatalogText(FeeCatalogTypeEnum.getText(item.getCatalogType()));
             vo.setSelfAmount(NumUtil.orZero(item.getSelfAmount()));
             result.add(vo);
         }
@@ -282,7 +245,8 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
         BigDecimal selfPayPart = BigDecimal.ZERO;
         for (FeeCatalogGroupVO group : groups) {
             if (group.getCatalogType() != null
-                    && (group.getCatalogType() == CATALOG_SELF || group.getCatalogType() == CATALOG_C)) {
+                    && (FeeCatalogTypeEnum.SELF_PAY.getCode().equals(group.getCatalogType())
+                    || FeeCatalogTypeEnum.CLASS_C.getCode().equals(group.getCatalogType()))) {
                 selfPayPart = selfPayPart.add(NumUtil.orZero(group.getAmount()));
             }
         }

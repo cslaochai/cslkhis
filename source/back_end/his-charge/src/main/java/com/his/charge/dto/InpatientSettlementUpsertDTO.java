@@ -19,6 +19,7 @@ public class InpatientSettlementUpsertDTO {
     /**
      * 结算方式：1-自费 2-医保（不传按患者有无参保号自动判定）
      */
+    @NotNull(message = "请选择结算方式")
     @AllowedValues(values = {"1", "2"}, message = "结算方式取值不合法")
     private Integer settleMode;
 

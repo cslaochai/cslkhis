@@ -175,9 +175,6 @@ public class OperationQaConfigServiceImpl
         if (entity.getIsEnabled() == null) {
             entity.setIsEnabled(1);
         }
-        if (entity.getSensitiveType() == null) {
-            entity.setSensitiveType(0);
-        }
         if (entity.getIsFilterable() == null) {
             entity.setIsFilterable(0);
         }

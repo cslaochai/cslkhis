@@ -16,6 +16,7 @@ import com.his.patient.mapper.BizDischargeDrugMapper;
 import com.his.patient.service.DischargeDrugService;
 import com.his.patient.vo.DischargeDrugSelectListVO;
 import com.his.patient.vo.DischargeDrugVO;
+import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
@@ -43,6 +44,10 @@ public class DischargeDrugServiceImpl extends ServiceImpl<BizDischargeDrugMapper
 
     @Transactional(rollbackFor = Exception.class)
     public DischargeDrugVO upsert(DischargeDrugDTO.Upsert dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizDischargeDrug d;
         if (dto.getId() == null) {
             d = new BizDischargeDrug();
@@ -70,9 +75,9 @@ public class DischargeDrugServiceImpl extends ServiceImpl<BizDischargeDrugMapper
         d.setUsageText(dto.getUsageText());
         d.setDays(dto.getDays());
         d.setRemark(dto.getRemark());
-        d.setCreateBy(UserUtils.getCurrentUser().getRealName());
+        d.setCreateBy(operatorUser.getRealName());
         if (dto.getId() != null) {
-            d.setUpdateBy(UserUtils.getCurrentUser().getRealName());
+            d.setUpdateBy(operatorUser.getRealName());
             d.setUpdateTime(TimeUtil.nowSeconds());
         }
         if (dto.getId() == null) {
@@ -117,6 +122,10 @@ public class DischargeDrugServiceImpl extends ServiceImpl<BizDischargeDrugMapper
      */
     @Transactional(rollbackFor = Exception.class)
     public List<DischargeDrugVO> dispense(DischargeDrugDTO.Dispense dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         // 「请选择要发药的带药单」已收口到 DTO @NotEmpty + Controller @Valid
         List<BizDischargeDrug> list = dto.getIds().stream()
                 .map(bizDischargeDrugMapper::selectById).collect(Collectors.toList());
@@ -130,8 +139,8 @@ public class DischargeDrugServiceImpl extends ServiceImpl<BizDischargeDrugMapper
             assertAdmissionAccessible(d.getAdmissionId());
         }
         LocalDateTime now = TimeUtil.nowSeconds();
-        String who = UserUtils.getCurrentUser().getRealName();
-        Long empId = UserUtils.getCurrentUser().getEmployeeId();
+        String who = operatorUser.getRealName();
+        Long empId = operatorUser.getEmployeeId();
         for (BizDischargeDrug d : list) {
             d.setDispenseStatus(DischargeDrugStatusEnum.DISPENSED.getCode());
             d.setDispenseBy(empId);

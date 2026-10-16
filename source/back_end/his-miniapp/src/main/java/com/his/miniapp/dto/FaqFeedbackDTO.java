@@ -17,8 +17,9 @@ public class FaqFeedbackDTO {
     private Long faqId;
 
     /**
-     * 1-有帮助 0-没帮助
+     * 1-有帮助 0-没帮助（必填，不能靠服务端兜底成「有帮助」）
      */
+    @NotNull(message = "反馈标志不能为空")
     @AllowedValues(values = {"0", "1"}, message = "反馈标志取值不合法")
     @Schema(description = "1-有帮助 0-没帮助")
     private Integer helpful;

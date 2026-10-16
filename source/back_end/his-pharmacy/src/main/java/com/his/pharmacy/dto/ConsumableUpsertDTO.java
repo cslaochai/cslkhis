@@ -2,6 +2,7 @@ package com.his.pharmacy.dto;
 
 import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -27,7 +28,9 @@ public class ConsumableUpsertDTO {
     private String consumableName;
     /**
      * 类别（1-卫生材料 2-注射穿刺 3-医用敷料 4-防护用品 5-其他）
+     * 必填：不允许静默兜底成「其他」
      */
+    @NotNull(message = "请选择耗材类别")
     @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "耗材类别取值不合法")
     private Integer category;
     /**

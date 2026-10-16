@@ -1,8 +1,10 @@
 package com.his.miniapp.service.impl;
 
+
+import com.his.api.vo.BizLabResultVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.system.dto.ScheduleSelectQueryDTO;
+import com.his.api.dto.ScheduleSelectQueryDTO;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.miniapp.entity.BizTriageRule;

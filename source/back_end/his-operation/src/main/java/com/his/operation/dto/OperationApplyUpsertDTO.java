@@ -72,8 +72,9 @@ public class OperationApplyUpsertDTO implements Serializable {
     private Integer isEmergency;
 
     /**
-     * 是否主要手术：0-否 1-是（为空按 1；同一次住院只允许一条主要手术申请）
+     * 是否主要手术：0-否 1-是（必填；同一次住院只允许一条主要手术申请）
      */
+    @NotNull(message = "是否主要手术不能为空")
     @AllowedValues(values = {"0", "1"}, message = "主要手术标志取值不合法")
     private Integer isMain;
 

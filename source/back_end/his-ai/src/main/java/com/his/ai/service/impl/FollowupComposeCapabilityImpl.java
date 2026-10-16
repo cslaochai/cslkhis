@@ -12,7 +12,7 @@ import com.his.ai.vo.FollowupComposeVO;
 import com.his.common.util.TextUtil;
 import com.his.emr.enums.FollowupTypeEnum;
 import com.his.emr.service.ChronicRecordService;
-import com.his.emr.vo.ChronicRecordListVO;
+import com.his.api.vo.ChronicRecordListVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

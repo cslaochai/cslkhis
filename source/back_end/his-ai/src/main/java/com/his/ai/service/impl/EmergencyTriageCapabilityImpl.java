@@ -8,11 +8,11 @@ import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.EmergencyTriageCapability;
 import com.his.ai.vo.EmergencyTriagePromptVariablesVO;
 import com.his.ai.vo.EmergencyTriageResultVO;
-import com.his.appoint.entity.BizEmergency;
-import com.his.appoint.mapper.BizEmergencyMapper;
-import com.his.appoint.support.EmergencyTriageRules;
-import com.his.appoint.support.EmergencyTriageRules.RedFlag;
-import com.his.appoint.support.EmergencyTriageRules.VitalSigns;
+import com.his.api.service.AppointApi;
+import com.his.api.vo.EmergencyBriefVO;
+import com.his.common.support.EmergencyTriageRules;
+import com.his.common.support.EmergencyTriageRules.RedFlag;
+import com.his.common.support.EmergencyTriageRules.VitalSigns;
 import com.his.common.enums.EmergencyTriageLevelEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
@@ -51,7 +51,7 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
 
     private static final String CHANNEL_NONE = "无";
 
-    private final BizEmergencyMapper bizEmergencyMapper;
+    private final AppointApi appointApi;
 
     private final AiExecutionService aiExecutionService;
 
@@ -174,8 +174,8 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
     public EmergencyTriageResultVO suggest(EmergencyTriageDTO dto) {
         long start = System.currentTimeMillis();
 
-        BizEmergency entity = dto.getEmergencyId() == null
-                ? null : bizEmergencyMapper.selectById(dto.getEmergencyId());
+        EmergencyBriefVO entity = dto.getEmergencyId() == null
+                ? null : appointApi.findEmergency(dto.getEmergencyId());
         if (dto.getEmergencyId() != null && entity == null) {
             throw new BusinessException("急诊记录不存在：" + dto.getEmergencyId());
         }

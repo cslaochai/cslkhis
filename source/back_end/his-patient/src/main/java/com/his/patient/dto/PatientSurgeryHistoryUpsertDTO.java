@@ -1,5 +1,6 @@
 package com.his.patient.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -32,6 +33,7 @@ public class PatientSurgeryHistoryUpsertDTO {
     /**
      * 手术类型（如：门诊、住院）
      */
+    @AllowedValues(values = {"择期", "紧急", "急诊"}, message = "手术类型取值不合法")
     private String surgeryType;
     /**
      * 主刀医生
@@ -52,6 +54,7 @@ public class PatientSurgeryHistoryUpsertDTO {
     /**
      * 恢复情况（良好/一般/差/死亡）
      */
+    @AllowedValues(values = {"良好", "一般", "差", "死亡"}, message = "手术恢复情况取值不合法")
     private String recoveryStatus;
     /**
      * 术后并发症

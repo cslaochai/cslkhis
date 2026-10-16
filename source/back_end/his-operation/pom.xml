@@ -25,14 +25,10 @@
             <groupId>com.his</groupId>
             <artifactId>his-system</artifactId>
         </dependency>
+        <!-- 记账经 ChargeApi（his-api 契约，his-charge 实现），不再直连收费模块 -->
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-patient</artifactId>
-        </dependency>
-        <!-- 记账（FeeRecordService） 在 his-charge；本模块依赖它，反向依赖会成环 -->
-        <dependency>
-            <groupId>com.his</groupId>
-            <artifactId>his-charge</artifactId>
+            <artifactId>his-api</artifactId>
         </dependency>
     </dependencies>
 </project>

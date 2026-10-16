@@ -7,6 +7,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * I 类切口预防用药点评入参。
  */
@@ -73,10 +75,10 @@ public class IncisionReviewUpsertDTO {
     private Integer reviewResult;
 
     /**
-     * 问题码（逗号分隔 41~48；结论=2 必填）
+     * 问题码（数组，元素 41~48；结论=2 必填）
      */
-    @Size(max = 200, message = "问题码超长")
-    private String problemTypes;
+    @AllowedValues(values = {"41", "42", "43", "44", "45", "46", "47", "48"}, message = "问题码非法（允许 41~48）")
+    private List<String> problemTypes;
 
     /**
      * 点评意见（结论=2 必填）

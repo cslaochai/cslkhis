@@ -2,6 +2,7 @@ package com.his.patient.service;
 
 import com.his.common.base.PageResult;
 import com.his.patient.dto.*;
+import com.his.api.dto.*;
 import com.his.patient.vo.OnlineConsultVO;
 import com.his.patient.vo.TeleConsultStatVO;
 import com.his.patient.vo.TeleConsultVO;

@@ -111,7 +111,13 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         }
         record.setRecordStatus(InsRecordStatusEnum.SIGNED_IN.getCode());
         record.setCheckInTime(LocalDateTime.now());
-        bizInspectionRecordMapper.updateById(record);
+        // 守卫下沉到 WHERE：并发签到时，只有仍「已登记」的记录能签到
+        int rows = bizInspectionRecordMapper.update(record, new LambdaUpdateWrapper<BizInspectionRecord>()
+                .eq(BizInspectionRecord::getId, record.getId())
+                .eq(BizInspectionRecord::getRecordStatus, InsRecordStatusEnum.REGISTERED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("只有「已登记」的检查能签到（状态可能已变化），请刷新后重试");
+        }
         return getDetailByRecordId(recordId);
     }
 
@@ -157,7 +163,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
             wave.setCreateTime(now);
             wave.setCreateBy(me);
         }
-        wave.setEcgType(ecgType == null ? 1 : ecgType);
+        wave.setEcgType(ecgType);
         wave.setWaveData(waveData);
         wave.setDeviceNo(deviceNo);
         wave.setCollectBy(me);
@@ -171,10 +177,17 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         }
 
         // 采集完成 = 该检查已出结果（心电的「拍片」就是采集波形这一步）
+        // 先取采集时观察到的状态做 WHERE 守卫，防止把已进审核/发布的记录盖回「已出结果」
+        Integer observedStatus = record.getRecordStatus();
         record.setRecordStatus(InsRecordStatusEnum.RESULTED.getCode());
         record.setExecuteTime(now);
         record.setExecuteBy(me);
-        bizInspectionRecordMapper.updateById(record);
+        int rows = bizInspectionRecordMapper.update(record, new LambdaUpdateWrapper<BizInspectionRecord>()
+                .eq(BizInspectionRecord::getId, record.getId())
+                .eq(observedStatus != null, BizInspectionRecord::getRecordStatus, observedStatus));
+        if (rows == 0) {
+            throw new BusinessException("该检查状态已变化（可能已进入报告审核/发布流程），采集结果未生效，请刷新后重试");
+        }
 
         sysAuditLogService.record(UserUtils.getCurrentUser().getEmployeeId(), me,
                 "心电波形", ecgType != null && ecgType == 2 ? "Holter波形采集" : "波形采集", "biz_ecg_waveform", wave.getId(),
@@ -340,7 +353,14 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         report.setReportStatus(ReportStatusEnum.PENDING_REVIEW.getCode());
         report.setRejectReason(null);
         saveOrUpdateReport(report);
-        bizInspectionRecordMapper.updateById(record);
+        // 守卫下沉到 WHERE：重复提交并发时，只有「已出结果且无报告签名」的记录能落签名指针，防止重复签名/重复提交
+        int rows = bizInspectionRecordMapper.update(record, new LambdaUpdateWrapper<BizInspectionRecord>()
+                .eq(BizInspectionRecord::getId, record.getId())
+                .ge(BizInspectionRecord::getRecordStatus, InsRecordStatusEnum.RESULTED.getCode())
+                .isNull(BizInspectionRecord::getReportSignId));
+        if (rows == 0) {
+            throw new BusinessException("本报告已有报告医师签名或状态已变化，不能重复提交；如需修改请由审核医师退回后重写");
+        }
 
         sysAuditLogService.record(employeeId, UserUtils.getCurrentUser().getRealName(),
                 "心电报告", "提交报告待审核", "biz_report", report.getId(),
@@ -372,8 +392,15 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         record.setAuditSignedTime(sign.getSignedTime());
         record.setAuditBy(UserUtils.getCurrentUser().getRealName());
         record.setAuditTime(sign.getSignedTime());
+        // 先取审核时观察到的状态做 WHERE 守卫（在改状态之前取），防止与退回/采集并发互相覆盖
+        Integer observedStatus = record.getRecordStatus();
         record.setRecordStatus(InsRecordStatusEnum.REVIEWED.getCode());
-        bizInspectionRecordMapper.updateById(record);
+        int rows = bizInspectionRecordMapper.update(record, new LambdaUpdateWrapper<BizInspectionRecord>()
+                .eq(BizInspectionRecord::getId, record.getId())
+                .eq(observedStatus != null, BizInspectionRecord::getRecordStatus, observedStatus));
+        if (rows == 0) {
+            throw new BusinessException("该检查状态已变化（可能刚被退回/采集），审核未生效，请刷新后重试");
+        }
 
         report.setReportStatus(ReportStatusEnum.REVIEWED.getCode());
         report.setAuditBy(UserUtils.getCurrentUser().getRealName());
@@ -382,7 +409,13 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         if (TextUtil.hasText(dto.getReason())) {
             report.setRemark(TextUtil.cut("审核意见：" + dto.getReason(), 500));
         }
-        bizReportMapper.updateById(report);
+        // 守卫下沉到 WHERE：双医师同时点审核时，只有一方能命中「待审核」的报告
+        int reportRows = bizReportMapper.update(report, new LambdaUpdateWrapper<BizReport>()
+                .eq(BizReport::getId, report.getId())
+                .eq(BizReport::getReportStatus, ReportStatusEnum.PENDING_REVIEW.getCode()));
+        if (reportRows == 0) {
+            throw new BusinessException("只有「待审核」的报告能审核（可能刚被他人审核），请刷新后重试");
+        }
 
         sysAuditLogService.record(current, UserUtils.getCurrentUser().getRealName(),
                 "心电报告", "审核通过", "biz_report", report.getId(),
@@ -411,7 +444,13 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         report.setReportStatus(ReportStatusEnum.DRAFT.getCode());
         report.setRejectReason(TextUtil.cut(dto.getReason(), 500));
         report.setReportVersion(report.getReportVersion() == null ? 2 : report.getReportVersion() + 1);
-        bizReportMapper.updateById(report);
+        // 守卫下沉到 WHERE：与审核并发时，只有仍「待审核」的报告能退回，防止把已审核的报告盖回草稿并清掉审核签名
+        int rows = bizReportMapper.update(report, new LambdaUpdateWrapper<BizReport>()
+                .eq(BizReport::getId, report.getId())
+                .eq(BizReport::getReportStatus, ReportStatusEnum.PENDING_REVIEW.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("只有「待审核」的报告能退回（可能刚被他人审核），请刷新后重试");
+        }
 
         Long current = UserUtils.getCurrentUser().getEmployeeId();
         sysAuditLogService.record(current, UserUtils.getCurrentUser().getRealName(),
@@ -446,7 +485,13 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         report.setReportStatus(ReportStatusEnum.PUBLISHED.getCode());
         report.setPublishBy(UserUtils.getCurrentUser().getRealName());
         report.setPublishTime(now);
-        bizReportMapper.updateById(report);
+        // 守卫下沉到 WHERE：重复发布并发时，只有仍「已审核」的报告能发布
+        int rows = bizReportMapper.update(report, new LambdaUpdateWrapper<BizReport>()
+                .eq(BizReport::getId, report.getId())
+                .eq(BizReport::getReportStatus, ReportStatusEnum.REVIEWED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("只有「已审核」的报告能发布（可能刚被并发处理），请刷新后重试");
+        }
 
         record.setRecordStatus(InsRecordStatusEnum.PUBLISHED.getCode());
         record.setReportTime(now);
@@ -573,8 +618,8 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         report.setReportContent(dto.getReportContent());
         report.setConclusion(dto.getConclusion());
         report.setSuggestions(TextUtil.cut(dto.getSuggestions(), 1000));
-        report.setPositiveFlag(dto.getPositiveFlag() == null ? 0 : dto.getPositiveFlag());
-        report.setIsCritical(dto.getIsCritical() == null ? 0 : dto.getIsCritical());
+        report.setPositiveFlag(dto.getPositiveFlag());
+        report.setIsCritical(dto.getIsCritical());
     }
 
     private SignatureVO signReport(BizInspectionRecord record, SignSceneEnum scene) {
@@ -748,9 +793,6 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
     public EcgTemplateVO templateUpsert(EcgTemplateUpsertDTO dto) {
         BizEcgTemplate entity = new BizEcgTemplate();
         BeanUtils.copyProperties(dto, entity, "id");
-        if (entity.getStatus() == null) {
-            entity.setStatus(1);
-        }
         if (dto.getId() == null) {
             long dup = bizEcgTemplateMapper.selectCount(new LambdaQueryWrapper<BizEcgTemplate>()
                     .eq(BizEcgTemplate::getTemplateCode, entity.getTemplateCode()));

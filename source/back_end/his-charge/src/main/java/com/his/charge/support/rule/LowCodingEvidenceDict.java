@@ -9,7 +9,7 @@ import java.util.List;
 /**
  * 低编入组的证据字典：检验/检查结果 -> 应有诊断。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class LowCodingEvidenceDict {
 
     /**

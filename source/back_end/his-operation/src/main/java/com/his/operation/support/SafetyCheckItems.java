@@ -16,7 +16,7 @@ import java.util.Set;
 /**
  * 手术安全核查单（三方 × 三时段）的核查项口径
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class SafetyCheckItems {
 
     /**

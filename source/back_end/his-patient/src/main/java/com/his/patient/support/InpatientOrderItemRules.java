@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 /**
  * 住院医嘱明细行的硬规则（开立医嘱与「保存为模板」共用同一份）。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class InpatientOrderItemRules {
 
     /**

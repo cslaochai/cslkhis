@@ -1,5 +1,6 @@
 package com.his.pay.service;
 
+import com.his.api.service.WxPayChannelService;
 import com.his.pay.entity.BizPayOrder;
 
 import java.util.Map;

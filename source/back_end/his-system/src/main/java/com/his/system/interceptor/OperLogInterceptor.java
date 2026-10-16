@@ -224,7 +224,7 @@ public class OperLogInterceptor implements HandlerInterceptor {
             row.setRequestMethod(method.toUpperCase(Locale.ROOT));
             CurrentUser user = UserUtils.getCurrentUser();
             if (user != null) {
-                row.setOperId(user.getUserId());
+                row.setOperId(user.getEmployeeId());
                 row.setOperName(user.getRealName());
                 row.setDeptId(user.getDeptId());
                 row.setDeptName(user.getDeptName());

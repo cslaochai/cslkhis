@@ -14,7 +14,7 @@ import java.util.Map;
 /**
  * 审计输出摘要组装器（G-11 口径）：模型输出 不落原文。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class AiAuditDigestSupport {
 
     /**

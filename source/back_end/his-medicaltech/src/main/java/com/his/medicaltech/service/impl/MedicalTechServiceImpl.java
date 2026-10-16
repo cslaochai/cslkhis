@@ -1,5 +1,8 @@
 package com.his.medicaltech.service.impl;
 
+
+import com.his.api.vo.BizReportVO;
+import com.his.api.vo.BizLabResultVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -33,6 +36,7 @@ import com.his.medicaltech.support.LabAbnormalJudge;
 import com.his.medicaltech.support.LabReferenceRange;
 import com.his.medicaltech.support.LabReferenceRangeResolver;
 import com.his.medicaltech.vo.*;
+import com.his.api.vo.*;
 import com.his.system.dto.SignCommandDTO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.enums.BizTypeEnum;

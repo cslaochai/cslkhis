@@ -5,14 +5,14 @@ import com.his.system.dto.BizClinicSourceBatchUpsertDTO;
 import com.his.system.dto.BizClinicSourceReplicateDTO;
 import com.his.system.dto.OnDutyQueryDTO;
 import com.his.system.dto.ScheduleQueryDTO;
-import com.his.system.dto.ScheduleSelectQueryDTO;
+import com.his.api.dto.ScheduleSelectQueryDTO;
 import com.his.system.dto.ScheduleUpsertDTO;
 import com.his.system.entity.BizClinicSource;
 import com.his.system.vo.BizClinicSourceBatchResultVO;
 import com.his.system.vo.OnDutyStaffVO;
 import com.his.system.vo.ScheduleDetailVO;
 import com.his.system.vo.ScheduleSelectListVO;
-import com.his.system.vo.StopImpactItemVO;
+import com.his.api.vo.StopImpactItemVO;
 import com.his.common.enums.StaffScheduleSourceEnum;
 
 import java.util.List;

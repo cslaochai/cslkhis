@@ -2,8 +2,8 @@ package com.his.patient.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.patient.entity.SysBed;
-import com.his.patient.vo.BedVO;
-import com.his.patient.vo.WardVO;
+import com.his.api.vo.BedVO;
+import com.his.api.vo.WardVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;

@@ -47,5 +47,6 @@ public class GuardianUpsertDTO implements Serializable {
      * 关系码值（字典患者关系字典），必填
      */
     @NotNull(message = "请选择与就诊人的关系")
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "99"}, message = "关系码值不正确")
     private Integer relation;
 }

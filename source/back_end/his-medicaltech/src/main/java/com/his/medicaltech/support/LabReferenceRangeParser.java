@@ -14,7 +14,7 @@ import java.util.regex.Pattern;
 /**
  * 参考区间解析器：把人工维护的自由文本区间解析为 LabReferenceRange。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class LabReferenceRangeParser {
 
     private static final Pattern FIRST_NUMBER = Pattern.compile("[-+]?\\d+(?:\\.\\d+)?");

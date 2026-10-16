@@ -18,14 +18,6 @@ import java.time.LocalDateTime;
 @TableName("biz_day_surgery_apply")
 public class BizDaySurgeryApply extends BaseEntity {
 
-    public static final int STATUS_WAIT_EVAL = 1;
-    public static final int STATUS_EVAL_PASSED = 2;
-    public static final int STATUS_ARRANGED = 3;
-    public static final int STATUS_OBSERVING = 4;
-    public static final int STATUS_DISCHARGED = 5;
-    public static final int STATUS_CANCELED = 6;
-    public static final int STATUS_TRANSFERRED = 7;
-
     /**
      * 术前评估结论：通过
      */

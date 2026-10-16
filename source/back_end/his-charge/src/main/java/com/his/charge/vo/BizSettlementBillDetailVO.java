@@ -1,5 +1,7 @@
 package com.his.charge.vo;
 
+import com.his.api.vo.*;
+
 
 import com.his.charge.entity.BizPaymentTxn;
 import com.his.charge.entity.BizSettlementBillItem;

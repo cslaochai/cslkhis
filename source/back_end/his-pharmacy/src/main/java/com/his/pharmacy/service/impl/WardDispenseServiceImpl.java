@@ -3,7 +3,7 @@ package com.his.pharmacy.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.charge.entity.BizFeeRecord;
+import com.his.api.vo.FeeRecordVO;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.system.service.RedisSequenceService;
@@ -189,7 +189,7 @@ public class WardDispenseServiceImpl extends ServiceImpl<BizWardDispenseItemMapp
                 "wardDispense", item.getId(), item.getDispenseNo(), operatorName);
 
         // ② 计费进 L1 记账行（独立事务，失败不回滚扣库存，但绝不静默当作已计费）
-        BizFeeRecord charge = chargeInvoker.charge(item);
+        FeeRecordVO charge = chargeInvoker.charge(item);
 
         item.setStockBefore(deduct.getQuantityBefore());
         item.setStockAfter(deduct.getQuantityAfter());
@@ -264,7 +264,7 @@ public class WardDispenseServiceImpl extends ServiceImpl<BizWardDispenseItemMapp
                 "wardDispenseReturn", item.getId(), item.getDispenseNo(), operatorName);
 
         // ② 红冲那一笔记账行（独立事务，失败不回滚回库，留 warn 待人工核对账务）
-        BizFeeRecord refund = chargeInvoker.refund(item, dto.getReason());
+        FeeRecordVO refund = chargeInvoker.refund(item, dto.getReason());
 
         // ③ 明细推进 → 4（终态不可逆）
         item.setStatus(BizWardDispenseItem.STATUS_RETURNED);

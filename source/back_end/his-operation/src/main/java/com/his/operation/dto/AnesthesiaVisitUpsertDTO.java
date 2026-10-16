@@ -33,6 +33,7 @@ public class AnesthesiaVisitUpsertDTO implements Serializable {
     /**
      * ASA E（急诊）标志：0-否 1-是
      */
+    @NotNull(message = "ASA 急诊标志不能为空")
     @AllowedValues(values = {"0", "1"}, message = "ASA 急诊标志取值不合法")
     private Integer asaEmergency;
 

@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * 手术麻醉链的纯业务计算口径（Aldrete 总分 / 记账折算 / 失败原因截断 / 时长格式化）。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class AnesthesiaCalcs {
 
     /**

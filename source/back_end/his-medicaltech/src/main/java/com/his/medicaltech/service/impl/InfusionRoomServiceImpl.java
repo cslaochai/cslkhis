@@ -1,6 +1,7 @@
 package com.his.medicaltech.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -176,7 +177,14 @@ public class InfusionRoomServiceImpl extends ServiceImpl<BizOutpInfusionMapper, 
 
         seat.setSeatStatus(InfusionSeatStatusEnum.OCCUPIED.getCode());
         seat.setUpdateBy(inf.getNurseName());
-        bizInfusionSeatMapper.updateById(seat);
+        // 守卫下沉到 WHERE：两人并发入座时，只有一方能命中「未占用」的座位，防止一座两患者
+        int rows = bizInfusionSeatMapper.update(seat, new LambdaUpdateWrapper<BizInfusionSeat>()
+                .eq(BizInfusionSeat::getId, seat.getId())
+                .ne(BizInfusionSeat::getSeatStatus, InfusionSeatStatusEnum.OCCUPIED.getCode())
+                .ne(BizInfusionSeat::getSeatStatus, InfusionSeatStatusEnum.DISABLED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("座位已占用或已停用（可能刚被他人入座），请刷新后重试");
+        }
         return toInfusionVO(inf);
     }
 
@@ -225,7 +233,13 @@ public class InfusionRoomServiceImpl extends ServiceImpl<BizOutpInfusionMapper, 
 
         inf.setSkinTestId(st.getId());
         inf.setUpdateBy(st.getNurseName());
-        bizOutpInfusionMapper.updateById(inf);
+        // 守卫下沉到 WHERE：与开始输注/取消并发时，只有仍「待皮试」的单能挂上皮试单，防止一单两皮试
+        int rows = bizOutpInfusionMapper.update(inf, new LambdaUpdateWrapper<BizOutpInfusion>()
+                .eq(BizOutpInfusion::getId, inf.getId())
+                .eq(BizOutpInfusion::getStatus, InfusionStatusEnum.PENDING_TEST.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("输液单当前状态不需要皮试（状态可能已变化），请刷新后重试");
+        }
         return toInfusionVO(inf);
     }
 
@@ -249,7 +263,13 @@ public class InfusionRoomServiceImpl extends ServiceImpl<BizOutpInfusionMapper, 
         st.setResult(dto.getResult());
         st.setResultTime(TimeUtil.nowSeconds());
         st.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        bizSkinTestMapper.updateById(st);
+        // 守卫下沉到 WHERE：两人同时判读时，只有一方能命中「待判读」，判读结果不可被并发改写
+        int rows = bizSkinTestMapper.update(st, new LambdaUpdateWrapper<BizSkinTest>()
+                .eq(BizSkinTest::getId, st.getId())
+                .eq(BizSkinTest::getResult, SkinTestResultEnum.PENDING.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("皮试已判读（可能刚被他人判读），请刷新后重试");
+        }
 
         // 皮试表不持有输液单外键（输液单持 skinTestId），反查进行中的输液单
         BizOutpInfusion inf = bizOutpInfusionMapper.selectOne(new LambdaQueryWrapper<BizOutpInfusion>()
@@ -263,7 +283,13 @@ public class InfusionRoomServiceImpl extends ServiceImpl<BizOutpInfusionMapper, 
             } else {
                 inf.setStatus(InfusionStatusEnum.WAITING.getCode());
                 inf.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-                bizOutpInfusionMapper.updateById(inf);
+                // 守卫下沉到 WHERE：皮试阴性推进待输注前，输液单必须仍「待皮试」，防止把已取消的单复活
+                int infRows = bizOutpInfusionMapper.update(inf, new LambdaUpdateWrapper<BizOutpInfusion>()
+                        .eq(BizOutpInfusion::getId, inf.getId())
+                        .eq(BizOutpInfusion::getStatus, InfusionStatusEnum.PENDING_TEST.getCode()));
+                if (infRows == 0) {
+                    throw new BusinessException("输液单状态已变化（可能已被取消），判读结果未生效，请刷新后重试");
+                }
             }
         }
         BizOutpInfusion latest = inf == null ? null : bizOutpInfusionMapper.selectById(inf.getId());
@@ -291,7 +317,13 @@ public class InfusionRoomServiceImpl extends ServiceImpl<BizOutpInfusionMapper, 
         inf.setStartTime(TimeUtil.nowSeconds());
         inf.setDripRate(dto.getDripRate());
         inf.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        bizOutpInfusionMapper.updateById(inf);
+        // 守卫下沉到 WHERE：并发点击开始时，只有仍「待输注」的单能进入输注中
+        int rows = bizOutpInfusionMapper.update(inf, new LambdaUpdateWrapper<BizOutpInfusion>()
+                .eq(BizOutpInfusion::getId, inf.getId())
+                .eq(BizOutpInfusion::getStatus, InfusionStatusEnum.WAITING.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("输液单不在待输注状态（可能刚被并发开始），请刷新后重试");
+        }
         return toInfusionVO(inf);
     }
 
@@ -343,7 +375,13 @@ public class InfusionRoomServiceImpl extends ServiceImpl<BizOutpInfusionMapper, 
         inf.setAdverseFlag(dto.getAdverseFlag());
         inf.setAdverseDesc(dto.getAdverseDesc());
         inf.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        bizOutpInfusionMapper.updateById(inf);
+        // 守卫下沉到 WHERE：与取消/重复结束并发时，只有仍「输注中」的单能结束，防止已取消的单被盖回
+        int rows = bizOutpInfusionMapper.update(inf, new LambdaUpdateWrapper<BizOutpInfusion>()
+                .eq(BizOutpInfusion::getId, inf.getId())
+                .eq(BizOutpInfusion::getStatus, InfusionStatusEnum.INFUSING.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("输液单不在输注中（可能刚被结束/取消），请刷新后重试");
+        }
         releaseSeat(inf);
         return toInfusionVO(inf);
     }
@@ -367,7 +405,14 @@ public class InfusionRoomServiceImpl extends ServiceImpl<BizOutpInfusionMapper, 
         inf.setCancelReason(TextUtil.cut(reason, 500));
         inf.setEndTime(TimeUtil.nowSeconds());
         inf.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        bizOutpInfusionMapper.updateById(inf);
+        // 守卫下沉到 WHERE：与结束输注并发时，只有非终态的单能取消，防止取消/结束互相覆盖
+        int rows = bizOutpInfusionMapper.update(inf, new LambdaUpdateWrapper<BizOutpInfusion>()
+                .eq(BizOutpInfusion::getId, inf.getId())
+                .notIn(BizOutpInfusion::getStatus,
+                        InfusionStatusEnum.FINISHED.getCode(), InfusionStatusEnum.CANCELLED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("输液单已终态，不能取消（可能刚被并发处理），请刷新后重试");
+        }
         releaseSeat(inf);
     }
 
@@ -393,7 +438,19 @@ public class InfusionRoomServiceImpl extends ServiceImpl<BizOutpInfusionMapper, 
         if (ongoing == 0 && seat.getSeatStatus() == InfusionSeatStatusEnum.OCCUPIED.getCode()) {
             seat.setSeatStatus(InfusionSeatStatusEnum.FREE.getCode());
             seat.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-            bizInfusionSeatMapper.updateById(seat);
+            // 守卫整体下沉到 WHERE：「无在办输液单」与「座位仍占用」一起原子判定，
+            // 防止先查后写之间另一患者刚入座就被本线程把座位置空（一座两患者）
+            int rows = bizInfusionSeatMapper.update(seat, new LambdaUpdateWrapper<BizInfusionSeat>()
+                    .eq(BizInfusionSeat::getId, seat.getId())
+                    .eq(BizInfusionSeat::getSeatStatus, InfusionSeatStatusEnum.OCCUPIED.getCode())
+                    .notExists("SELECT 1 FROM biz_outp_infusion WHERE seat_id = biz_infusion_seat.id AND del_flag = 0"
+                            + " AND id <> " + inf.getId() + " AND status IN ("
+                            + InfusionStatusEnum.PENDING_TEST.getCode() + ","
+                            + InfusionStatusEnum.WAITING.getCode() + ","
+                            + InfusionStatusEnum.INFUSING.getCode() + ")"));
+            if (rows == 0) {
+                return;
+            }
         }
     }
 

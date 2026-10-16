@@ -39,7 +39,7 @@ public interface PatientGuardianService {
     /**
      * 我的就诊人列表（含关系文案、默认标记）
      */
-    List<GuardianPatientVO> myPatients();
+    List<GuardianPatientVO> getMyPatients();
 
     /**
      * 绑定场景发码：按姓名+身份证定位档案，验证码发往建档预留手机号

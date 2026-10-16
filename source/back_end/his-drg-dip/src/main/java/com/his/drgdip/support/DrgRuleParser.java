@@ -37,7 +37,7 @@ import java.util.regex.Pattern;
  * <p><b>数值变量缺值一律判不命中</b>：首页没有入院体重、年龄单位不是「天」时算不出出生日龄，
  * 此时相关规则不命中，而不是当成 0 去满足 {@code XSRTZ<1000} 这类条件。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class DrgRuleParser {
 
     private static final Pattern IN_PAT = Pattern.compile(

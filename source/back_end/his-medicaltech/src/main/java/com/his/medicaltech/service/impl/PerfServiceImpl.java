@@ -79,7 +79,7 @@ public class PerfServiceImpl extends ServiceImpl<BizPerfResultMapper, BizPerfRes
         c.setOtherCost(NumUtil.orZero(dto.getOtherCost()));
         c.setTotalCost(c.getLaborCost().add(c.getDrugCost()).add(c.getMaterialCost())
                 .add(c.getDepreciation()).add(c.getOtherCost()));
-        c.setCreateBy(UserUtils.getCurrentUser().getUsername());
+        c.setCreateBy(UserUtils.getCurrentUser().getEmployeeName());
         c.setRemark(dto.getRemark());
         bizDeptCostMonthMapper.insert(c);
         return toCostRow(c);
@@ -155,7 +155,7 @@ public class PerfServiceImpl extends ServiceImpl<BizPerfResultMapper, BizPerfRes
             p.setDeptName(info.getDeptName());
             p.setCostMonth(month);
             p.setPerfStatus(2);
-            p.setCreateBy(UserUtils.getCurrentUser().getUsername());
+            p.setCreateBy(UserUtils.getCurrentUser().getEmployeeName());
         }
         p.setRevenue(info.getRevenue());
         p.setDrugRevenue(info.getDrugRevenue());
@@ -166,7 +166,7 @@ public class PerfServiceImpl extends ServiceImpl<BizPerfResultMapper, BizPerfRes
         p.setPerfAmount(perf);
         p.setPerfStatus(2);
         p.setCostId(info.getCostId());
-        p.setUpdateBy(UserUtils.getCurrentUser().getUsername());
+        p.setUpdateBy(UserUtils.getCurrentUser().getEmployeeName());
         if (create) {
             bizPerfResultMapper.insert(p);
         } else {

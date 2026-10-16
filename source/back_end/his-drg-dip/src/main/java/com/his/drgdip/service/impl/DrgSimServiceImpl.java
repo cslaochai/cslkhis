@@ -1,6 +1,7 @@
 package com.his.drgdip.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -19,6 +20,7 @@ import com.his.drgdip.vo.DrgSummaryListRowVO;
 import com.his.drgdip.vo.DrgSummaryRowVO;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -108,7 +110,18 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
         r.setRuleNote(g.ruleNote());
         r.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         if (create) {
-            drgSimMapper.insert(r);
+            try {
+                drgSimMapper.insert(r);
+            } catch (DuplicateKeyException e) {
+                // 并发 upsert 兜底：uk_summary(summary_id, version) 拦截了同键并发插入，
+                // 说明另一事务已建行 —— 改为按 (summary_id, version) 覆盖，与「重跑覆盖」语义一致
+                int rows = drgSimMapper.update(r, new LambdaUpdateWrapper<DrgSimResult>()
+                        .eq(DrgSimResult::getSummaryId, r.getSummaryId())
+                        .eq(DrgSimResult::getVersion, version));
+                if (rows == 0) {
+                    throw e;
+                }
+            }
         } else {
             drgSimMapper.updateById(r);
         }

@@ -10,6 +10,7 @@ import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 死亡登记簿（住院死亡登记簿）入参集合。
@@ -153,9 +154,10 @@ public class DeathRegistrationDTO {
         private String relativePhone;
 
         /**
-         * 家属已领取联次（1-记录联 2-户籍联 3-殡葬联 4-家属联）
+         * 家属已领取联次（1-记录联 2-户籍联 3-殡葬联 4-家属联，数组可多选）
          */
-        private String receivedCopies;
+        @AllowedValues(values = {"1", "2", "3", "4"}, message = "联次取值不合法（1-记录联 2-户籍联 3-殡葬联 4-家属联）")
+        private List<String> receivedCopies;
 
         /**
          * 领取时间

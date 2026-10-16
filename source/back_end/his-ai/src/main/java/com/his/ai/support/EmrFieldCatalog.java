@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 /**
  * 病历字段白名单（P1-3 结构化抽取的反幻觉底座）。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class EmrFieldCatalog {
 
     private static final List<TextField> TEXT_FIELDS = List.of(

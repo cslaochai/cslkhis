@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 /**
  * 工单状态与流转动作的唯一口径（建表见 sql/221）。
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class ServiceTicketStatus {
 
     /**

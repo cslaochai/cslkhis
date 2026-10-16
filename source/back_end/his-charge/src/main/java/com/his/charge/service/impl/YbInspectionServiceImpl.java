@@ -1,6 +1,7 @@
 package com.his.charge.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -133,7 +134,13 @@ public class YbInspectionServiceImpl extends ServiceImpl<BizYbInspectionMapper, 
         entity.setConcludeTime(LocalDateTime.now());
         entity.setConcludeBy(UserUtils.getCurrentUser().getRealName());
         entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        bizYbInspectionMapper.updateById(entity);
+        // 守卫下沉到 WHERE：读-判-写之间并发状态变更会使 Java 侧判断失效
+        int rows = bizYbInspectionMapper.update(entity, new LambdaUpdateWrapper<BizYbInspection>()
+                .eq(BizYbInspection::getId, entity.getId())
+                .eq(BizYbInspection::getStatus, STATUS_RUNNING));
+        if (rows == 0) {
+            throw new BusinessException("仅「进行中」的批次可结项（状态已被并发变更，请刷新后重试）");
+        }
     }
 
     @Override
@@ -153,7 +160,13 @@ public class YbInspectionServiceImpl extends ServiceImpl<BizYbInspectionMapper, 
         entity.setCancelBy(UserUtils.getCurrentUser().getRealName());
         entity.setCancelTime(LocalDateTime.now());
         entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        bizYbInspectionMapper.updateById(entity);
+        // 守卫下沉到 WHERE：读-判-写之间并发状态变更会使 Java 侧判断失效
+        int rows = bizYbInspectionMapper.update(entity, new LambdaUpdateWrapper<BizYbInspection>()
+                .eq(BizYbInspection::getId, entity.getId())
+                .eq(BizYbInspection::getStatus, STATUS_RUNNING));
+        if (rows == 0) {
+            throw new BusinessException("仅「进行中」的批次可作废（状态已被并发变更，请刷新后重试）");
+        }
     }
 
     private BizYbInspection require(Long id) {

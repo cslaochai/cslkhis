@@ -27,6 +27,12 @@
             <artifactId>his-system</artifactId>
         </dependency>
 
+        <!-- 支付/序号/操作人契约（his-api 定义，本模块实现） -->
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-api</artifactId>
+        </dependency>
+
         <!-- 支付二维码生成 -->
         <dependency>
             <groupId>com.google.zxing</groupId>

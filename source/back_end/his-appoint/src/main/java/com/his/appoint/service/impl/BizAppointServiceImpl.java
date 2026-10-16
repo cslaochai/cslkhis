@@ -2,9 +2,11 @@ package com.his.appoint.service.impl;
 
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.appoint.dto.*;
+import com.his.api.dto.*;
 import com.his.appoint.entity.BizAppointInfo;
 import com.his.appoint.entity.BizQueue;
 import com.his.appoint.enums.*;
@@ -14,26 +16,23 @@ import com.his.appoint.service.BizAppointService;
 import com.his.appoint.service.BizRevisitFeePolicyService;
 import com.his.appoint.trigger.DayEndSettleTrigger;
 import com.his.appoint.vo.AppointStatusCountVO;
-import com.his.appoint.vo.BizAppointInfoListVO;
-import com.his.appoint.vo.RevisitFeePreviewVO;
-import com.his.appoint.vo.RevisitRecordSelectVO;
-import com.his.charge.config.InsuranceProperties;
+import com.his.api.vo.BizAppointInfoListVO;
+import com.his.api.vo.RevisitFeePreviewVO;
+import com.his.api.vo.RevisitRecordSelectVO;
 import com.his.common.base.PageResult;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
-import com.his.patient.entity.BizPatient;
-import com.his.patient.mapper.BizPatientMapper;
-import com.his.patient.service.BizPatientService;
-import com.his.patient.service.PatientGuardianService;
-import com.his.system.api.service.ChargeApi;
-import com.his.system.api.service.EmrApi;
-import com.his.system.api.vo.BillBriefVO;
-import com.his.system.api.vo.CancelCommandVO;
-import com.his.system.api.vo.RecordBriefVO;
-import com.his.system.api.vo.RegistChargeCommandVO;
+import com.his.api.service.PatientApi;
+import com.his.api.vo.PatientMasterVO;
+import com.his.api.service.ChargeApi;
+import com.his.api.service.EmrApi;
+import com.his.api.vo.BillBriefVO;
+import com.his.api.vo.CancelCommandVO;
+import com.his.api.vo.RecordBriefVO;
+import com.his.api.vo.RegistChargeCommandVO;
 import com.his.system.entity.BizClinicSource;
 import com.his.system.entity.BizClinicSourceSlot;
 import com.his.system.entity.BizSchedule;
@@ -67,15 +66,13 @@ import java.util.*;
 public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizAppointInfo> implements BizAppointService {
 
     private static final int REGIST_CUTOFF_MINUTES = 10;
-    private final InsuranceProperties insuranceProperties;
+    private final ChargeApi chargeApi;
     private final DeptScopeService deptScopeService;
     private final BizClinicSourceMapper bizScheduleMapper;
     private final BizClinicSourceSlotMapper bizScheduleSlotMapper;
     private final BizQueueMapper bizQueueMapper;
     private final RedisSequenceService redisSequenceService;
-    private final BizPatientMapper bizPatientMapper;
-    private final PatientGuardianService patientGuardianService;
-    private final BizPatientService bizPatientService;
+    private final PatientApi patientApi;
     private final ShiftService shiftService;
     private final StaffScheduleService staffScheduleService;
     private final ChargeApi appointChargeGateway;
@@ -412,7 +409,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         // 幂等性校验：检查是否已存在相同挂号记录
         checkIdempotent(upsertDTO, revisit);
 
-        BizPatient bizPatient = bizPatientMapper.selectById(upsertDTO.getPatientId());
+        PatientMasterVO bizPatient = patientApi.getPatient(upsertDTO.getPatientId());
         if (bizPatient == null) {
             throw new BusinessException("患者信息为空，请检查后重试");
         }
@@ -421,7 +418,8 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         appointInfo.setPatientId(upsertDTO.getPatientId());
         appointInfo.setScheduleId(upsertDTO.getScheduleId());
         appointInfo.setRevisitRecordId(revisitRecordId);
-        Integer registSource = upsertDTO.getRegistSource() == null ? 1 : upsertDTO.getRegistSource();
+        // 必填项由 @NotNull 兜底，业务层不再静默按「窗口挂号」处理
+        Integer registSource = upsertDTO.getRegistSource();
         appointInfo.setRegistSource(registSource);
         appointInfo.setPatientName(bizPatient.getPatientName());
         appointInfo.setSettlementType(upsertDTO.getSettlementType());
@@ -484,23 +482,19 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         }
 
         // 查询患者信息，自动填充挂号记录
-        BizPatient patient = bizPatientMapper.selectById(appointInfo.getPatientId());
+        PatientMasterVO patient = patientApi.getPatient(appointInfo.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在");
         }
 
         // 挂号时若显式传了费别/医保号且主档尚缺（录入新患者未补全等），先补全主档，保证口径单一
-        boolean needUpdate = false;
+        patientApi.fillInsuranceIfAbsent(patient.getId(), upsertDTO.getMedicalInsuranceType(),
+                upsertDTO.getMedicalInsuranceNo());
         if (TextUtil.hasText(upsertDTO.getMedicalInsuranceType()) && !TextUtil.hasText(patient.getMedicalInsuranceType())) {
             patient.setMedicalInsuranceType(upsertDTO.getMedicalInsuranceType());
-            needUpdate = true;
         }
         if (TextUtil.hasText(upsertDTO.getMedicalInsuranceNo()) && !TextUtil.hasText(patient.getMedicalInsuranceNo())) {
             patient.setMedicalInsuranceNo(upsertDTO.getMedicalInsuranceNo());
-            needUpdate = true;
-        }
-        if (needUpdate) {
-            bizPatientMapper.updateById(patient);
         }
 
         appointInfo.setPatientNo(patient.getPatientNo());
@@ -516,7 +510,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
 
         if (SettlementModeEnum.INSURANCE.getCode().equals(appointInfo.getSettlementType())) {
             // 医保联网结算总开关：关闭时不支持医保结算，挂号侧直接拒（不查任何参保库）
-            if (!insuranceProperties.isEnabled()) {
+            if (!chargeApi.insuranceEnabled()) {
                 throw new BusinessException("医保联网结算未启用，请改按全自费结算");
             }
             MedicalInsuranceTypeEnum feeType = MedicalInsuranceTypeEnum.parse(appointInfo.getMedicalInsuranceType());
@@ -684,9 +678,6 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
 
     /**
      * 复诊「原病历」候选列表。
-     *
-     * <p>走 SPI 而不是直接 join 病历表：his-appoint 不依赖 his-emr 的 mapper（依赖方向单向）。
-     * 病历服务为编译期强依赖（his-emr 经启动模块聚合引入），实现缺失直接启动失败。
      */
     @Override
     public List<RevisitRecordSelectVO> revisitRecordSelectList(Long patientId, int limit) {
@@ -878,7 +869,14 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         registInfo.setRegistStatus(AppointStatusEnum.CANCELLED.getCode());
         registInfo.setRefundTime(LocalDateTime.now());
         registInfo.setRefundReason(reason);
-        this.updateById(registInfo);
+        // 守卫下沉到 WHERE：退号仅限「已挂号/已签到」，并发签到/接诊/日终结转时 0 行失败，防整行快照覆盖
+        boolean cancelled = this.update(registInfo, new LambdaUpdateWrapper<BizAppointInfo>()
+                .eq(BizAppointInfo::getId, registInfo.getId())
+                .in(BizAppointInfo::getRegistStatus,
+                        AppointStatusEnum.REGISTERED.getCode(), AppointStatusEnum.CHECKED_IN.getCode()));
+        if (!cancelled) {
+            throw new BusinessException("该挂号状态已变更，不能退号，请刷新后重试");
+        }
 
         // 更新排队状态：退号≠过号，队列同样置「已退号」
         LambdaQueryWrapper<BizQueue> queueWrapper = new LambdaQueryWrapper<>();
@@ -886,7 +884,13 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
         BizQueue queue = bizQueueMapper.selectOne(queueWrapper);
         if (queue != null) {
             queue.setQueueStatus(QueueStatusEnum.CANCELLED.getCode());
-            bizQueueMapper.updateById(queue);
+            // 守卫下沉到 WHERE：队列同步退号仅限「候诊中」，并发叫号/过号时 0 行失败，防陈旧快照复活
+            int queueRows = bizQueueMapper.update(queue, new LambdaUpdateWrapper<BizQueue>()
+                    .eq(BizQueue::getId, queue.getId())
+                    .eq(BizQueue::getQueueStatus, QueueStatusEnum.WAITING.getCode()));
+            if (queueRows == 0) {
+                throw new BusinessException("该队列状态已变更，请刷新后重试");
+            }
         }
 
         // 原子释放号源（按挂号渠道还池：预约渠道退号时预约池已用同步递减；
@@ -1116,8 +1120,14 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
             existing.setVisitType(registInfo.getVisitType());
         }
 
-        boolean saved = this.updateById(existing);
-        if (saved && sourceChanging && registInfo.getSlotId() == null && existing.getSlotId() == null) {
+        // 守卫下沉到 WHERE：变更号源仅限「已挂号」，并发签到/退号时 0 行失败，防陈旧快照把状态写回
+        boolean saved = this.update(existing, new LambdaUpdateWrapper<BizAppointInfo>()
+                .eq(BizAppointInfo::getId, existing.getId())
+                .eq(BizAppointInfo::getRegistStatus, AppointStatusEnum.REGISTERED.getCode()));
+        if (!saved) {
+            throw new BusinessException("该挂号状态已变更，不能调整/变更号源，请刷新后重试");
+        }
+        if (sourceChanging && registInfo.getSlotId() == null && existing.getSlotId() == null) {
             // 新号没段：updateById 跳过 null 字段，段快照必须显式清空（防残留旧段）
             this.update(new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<BizAppointInfo>()
                     .eq(BizAppointInfo::getId, existing.getId())
@@ -1176,14 +1186,23 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
             throw new BusinessException(notAllowedReason(current, "变更状态"));
         }
         regist.setRegistStatus(targetStatus);
-        boolean saved = this.updateById(regist);
+        // 守卫下沉到 WHERE：终态（已就诊/已退号/已过号/爽约/未就诊）不可再变更，并发变更时 0 行失败
+        boolean saved = this.update(regist, new LambdaUpdateWrapper<BizAppointInfo>()
+                .eq(BizAppointInfo::getId, regist.getId())
+                .notIn(BizAppointInfo::getRegistStatus,
+                        AppointStatusEnum.COMPLETED.getCode(), AppointStatusEnum.CANCELLED.getCode(),
+                        AppointStatusEnum.OVERDUE.getCode(), AppointStatusEnum.NO_SHOW.getCode(),
+                        AppointStatusEnum.UNVISITED.getCode()));
+        if (!saved) {
+            throw new BusinessException("该挂号已是终态或状态已变更，不能变更状态，请刷新后重试");
+        }
         // 操作台把状态改成「已就诊」也是结诊事实，与队列结诊（completeQueue）走同一份回写：
         // 漏掉这条路径，从挂号管理里手工完结的挂号永远不会出现在患者的「最近/首次就诊」上。
-        if (saved && targetStatus == AppointStatusEnum.COMPLETED.getCode()) {
-            bizPatientService.markLastVisit(regist.getPatientId(), LocalDateTime.now(),
+        if (targetStatus == AppointStatusEnum.COMPLETED.getCode()) {
+            patientApi.markLastVisit(regist.getPatientId(), LocalDateTime.now(),
                     regist.getDeptId(), regist.getDeptName(),
                     regist.getDoctorId(), regist.getDoctorName());
-            bizPatientService.markFirstVisit(regist.getPatientId(), LocalDateTime.now(),
+            patientApi.markFirstVisit(regist.getPatientId(), LocalDateTime.now(),
                     regist.getDeptId(), regist.getDeptName(),
                     regist.getDoctorId(), regist.getDoctorName());
         }
@@ -1225,7 +1244,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
     @Override
     public RevisitFeePreviewVO revisitFeePreviewScoped(RevisitFeePreviewDTO previewDTO) {
         // 只读、不涉敏，越权由 patientScopeViolated 收口（员工放行、患者只碰自己绑定的就诊人）
-        if (patientGuardianService.patientScopeViolated(previewDTO.getPatientId())) {
+        if (patientApi.patientScopeViolated(previewDTO.getPatientId())) {
             throw new BusinessException("无权查询该就诊人的费用信息");
         }
         return revisitFeePreview(previewDTO);
@@ -1233,7 +1252,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
 
     @Override
     public List<RevisitRecordSelectVO> revisitRecordSelectListScoped(Long patientId) {
-        if (patientGuardianService.patientScopeViolated(patientId)) {
+        if (patientApi.patientScopeViolated(patientId)) {
             throw new BusinessException("无权查询该就诊人的病历");
         }
         return revisitRecordSelectList(patientId, 20);

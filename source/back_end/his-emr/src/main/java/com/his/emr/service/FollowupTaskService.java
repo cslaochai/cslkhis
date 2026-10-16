@@ -5,7 +5,7 @@ import com.his.common.base.PageResult;
 import com.his.emr.dto.FollowupQueryDTO;
 import com.his.emr.dto.FollowupTaskDTO;
 import com.his.emr.entity.BizFollowupTask;
-import com.his.emr.vo.BizFollowupTaskVO;
+import com.his.api.vo.BizFollowupTaskVO;
 import com.his.emr.vo.FollowupStatVO;
 
 import java.util.List;

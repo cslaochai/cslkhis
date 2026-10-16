@@ -10,6 +10,7 @@ import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
+import com.his.api.dto.*;
 import com.his.patient.entity.BizOnlineConsult;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.entity.BizTeleConsult;
@@ -20,6 +21,7 @@ import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.mapper.BizTeleConsultMapper;
 import com.his.patient.service.TeleConsultService;
 import com.his.patient.vo.*;
+import com.his.api.vo.*;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeService;
 import com.his.system.utils.UserUtils;
@@ -451,23 +453,11 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
     }
 
     private String teleStatusName(Integer status) {
-        return switch (status == null ? 0 : status) {
-            case 1 -> "待安排";
-            case 2 -> "已安排";
-            case 3 -> "已完成";
-            case 4 -> "已取消";
-            default -> "未知";
-        };
+        return TeleConsultStatusEnum.labelOrUnknown(status);
     }
 
     private String onlineStatusName(Integer status) {
-        return switch (status == null ? 0 : status) {
-            case 1 -> "待接诊";
-            case 2 -> "接诊中";
-            case 3 -> "已完成";
-            case 4 -> "已退诊";
-            default -> "未知";
-        };
+        return OnlineConsultStatusEnum.labelOrUnknown(status);
     }
 
     private String nextNo(String prefix, String module) {

@@ -1,5 +1,6 @@
 package com.his.patient.dto;
 
+import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
@@ -22,6 +23,7 @@ public class PatientAllergyUpsertDTO {
      * 过敏类型（如：药物、食物、环境）
      */
     @NotBlank(message = "过敏类型不能为空（药物/食物/其他）")
+    @AllowedValues(values = {"药物", "食物", "其他"}, message = "过敏类型取值不合法")
     private String allergyType;
     /**
      * 过敏原名称
@@ -31,6 +33,7 @@ public class PatientAllergyUpsertDTO {
     /**
      * 过敏严重程度（轻度/中度/重度/危及生命）
      */
+    @AllowedValues(values = {"轻度", "中度", "重度", "危及生命", "未评估"}, message = "过敏严重程度取值不合法")
     private String allergySeverity;
     /**
      * 过敏症状描述

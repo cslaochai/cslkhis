@@ -499,7 +499,9 @@ function buildSettleDTO() {
     encounterType: current.value.encounterType,
     encounterId: current.value.encounterId,
     feeIds: selectedFeeIds.value,
-    billType: settleForm.value.billType || undefined,
+    // 账单类型已必填：下拉清空=「自动」时按就诊类型推（门诊→2 门诊诊间结算，住院→3 住院中途结算），
+    // 不再发 undefined（后端会以「请选择账单类型」400）
+    billType: settleForm.value.billType || (Number(current.value.encounterType) === 2 ? 3 : 2),
     settlementMode: settleForm.value.settlementMode,
     discountAmount: Number(settleForm.value.discountAmount || 0),
   };

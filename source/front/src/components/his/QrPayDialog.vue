@@ -346,6 +346,8 @@ async function confirmCash() {
   try {
     await payBill({
       billId: props.billId,
+      // 收银员在本窗口当面收款（收银台 / 挂号窗口现金档），来源固定记「收费台收款」
+      sourceType: 1,
       requestId: requestId.value,
       items: [{payMethod: PAY_METHOD_CASH, amount: cashAmount.value}],
     });

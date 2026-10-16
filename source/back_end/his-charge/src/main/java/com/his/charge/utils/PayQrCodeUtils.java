@@ -14,7 +14,7 @@ import java.util.Base64;
  * 支付二维码工具类
  */
 @Slf4j
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public final class PayQrCodeUtils {
 
     private static final String DATA_URI_PREFIX = "data:image/png;base64,";
