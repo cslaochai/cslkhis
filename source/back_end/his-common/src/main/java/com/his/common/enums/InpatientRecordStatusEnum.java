@@ -3,7 +3,7 @@ package com.his.common.enums;
 import lombok.Getter;
 
 /**
- * 住院病历/护理文书状态枚举（biz_inpatient_record.record_status：1-草稿 2-已提交 3-已归档，归档后禁改）
+ * 住院病历/护理文书状态枚举（1-草稿 2-已提交 3-已归档，归档后禁改）
  */
 @Getter
 public enum InpatientRecordStatusEnum {

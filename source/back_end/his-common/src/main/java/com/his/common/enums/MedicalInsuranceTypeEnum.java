@@ -15,7 +15,7 @@ public enum MedicalInsuranceTypeEnum {
 
     private final String name;
     /**
-     * 对应的医保政策结算类型（费别/险种键，与 sys_insurance_policy.settlement_type 对齐；
+     * 对应的医保政策结算类型（费别/险种键，与医保政策档案里的结算类型对齐；
      * 0 表示暂无对应政策，视为全额自付）
      */
     private final Integer settlementType;

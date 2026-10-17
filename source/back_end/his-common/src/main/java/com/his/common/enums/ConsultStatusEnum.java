@@ -48,9 +48,12 @@ public enum ConsultStatusEnum {
         return fromCode(code) != null;
     }
 
+    /**
+     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，绝不返回 null、不回落合法文案。
+     */
     public static String getText(Integer code) {
         ConsultStatusEnum status = fromCode(code);
-        return status == null ? "未知(" + code + ")" : status.getLabel();
+        return status == null ? "" : status.label;
     }
 
     /**

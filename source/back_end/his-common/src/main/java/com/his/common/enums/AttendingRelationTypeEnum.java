@@ -48,9 +48,12 @@ public enum AttendingRelationTypeEnum {
         return fromCode(code) != null;
     }
 
+    /**
+     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，绝不返回 null、不回落合法文案。
+     */
     public static String getText(Integer code) {
         AttendingRelationTypeEnum type = fromCode(code);
-        return type == null ? "未知(" + code + ")" : type.getLabel();
+        return type == null ? "" : type.label;
     }
 
     /**

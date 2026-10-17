@@ -39,9 +39,12 @@ public enum PrescriptionTypeEnum {
         return fromCode(code) != null;
     }
 
+    /**
+     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，绝不返回 null、不回落合法文案。
+     */
     public static String getText(Integer code) {
         PrescriptionTypeEnum type = fromCode(code);
-        return type == null ? null : type.getLabel();
+        return type == null ? "" : type.label;
     }
 
     /**
