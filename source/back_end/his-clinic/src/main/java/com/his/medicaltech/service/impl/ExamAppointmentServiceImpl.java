@@ -33,7 +33,7 @@ import com.his.common.enums.ExamAppointStatusEnum;
 import com.his.common.enums.ExamDeviceStatusEnum;
 import com.his.common.enums.ExamSlotStatusEnum;
 import com.his.system.mapper.SysInspectionItemMapper;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;

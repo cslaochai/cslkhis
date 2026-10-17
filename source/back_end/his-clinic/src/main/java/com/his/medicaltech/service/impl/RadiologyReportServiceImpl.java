@@ -35,7 +35,7 @@ import com.his.medicaltech.vo.RadioReportDetailVO;
 import com.his.medicaltech.vo.RadioReportListVO;
 import com.his.medicaltech.vo.RadioReportTemplateVO;
 import com.his.common.enums.BizTypeEnum;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.SysAuditLogService;
 import com.his.system.service.SysMessageService;

@@ -7,7 +7,7 @@ import com.his.patient.vo.InpatientRecordVO;
 import com.his.patient.vo.InpatientRecordDetailVO;
 import com.his.patient.vo.InpatientRecordLogVO;
 import com.his.patient.vo.RecordQualityStatVO;
-import com.his.provider.vo.CodeOptionVO;
+import com.his.common.vo.CodeOptionVO;
 
 import java.util.List;
 

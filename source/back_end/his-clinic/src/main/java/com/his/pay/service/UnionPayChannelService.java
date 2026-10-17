@@ -1,6 +1,6 @@
 package com.his.pay.service;
 
-import com.his.provider.service.WxPayChannelProvider;
+import com.his.pay.service.WxPayChannelService;
 import com.his.pay.entity.BizPayOrder;
 
 /**
@@ -8,5 +8,5 @@ import com.his.pay.entity.BizPayOrder;
  */
 public interface UnionPayChannelService {
 
-    WxPayChannelProvider.PayUnifiedResult unifiedOrder(BizPayOrder order);
+    WxPayChannelService.PayUnifiedResult unifiedOrder(BizPayOrder order);
 }

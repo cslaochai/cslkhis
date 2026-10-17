@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.provider.service.PatientProvider;
+import com.his.patient.service.PatientFacadeService;
 import com.his.charge.dto.*;
 import com.his.charge.entity.BizYbChronicCatalog;
 import com.his.charge.entity.BizYbChronicReg;
@@ -18,7 +18,7 @@ import com.his.charge.vo.ChronicRegSummaryVO;
 import com.his.common.enums.EnableStatusEnum;
 import com.his.common.enums.YbChronicDisplayStatusEnum;
 import com.his.common.enums.YbChronicRegStatusEnum;
-import com.his.provider.vo.PatientBriefVO;
+import com.his.patient.vo.PatientBriefVO;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.system.service.RedisSequenceService;
@@ -47,7 +47,7 @@ public class YbChronicServiceImpl extends ServiceImpl<BizYbChronicRegMapper, Biz
 
     private final BizYbChronicRegMapper bizYbChronicRegMapper;
 
-    private final PatientProvider patientProvider;
+    private final PatientFacadeService patientFacadeService;
 
     private final RedisSequenceService redisSequenceService;
 
@@ -179,7 +179,7 @@ public class YbChronicServiceImpl extends ServiceImpl<BizYbChronicRegMapper, Biz
         if (!Objects.equals(EnableStatusEnum.ENABLED.getCode(), catalog.getStatus())) {
             throw new BusinessException("病种「" + catalog.getDiseaseName() + "」已停用，请先启用目录或换病种");
         }
-        PatientBriefVO patient = patientProvider.findPatient(dto.getPatientId());
+        PatientBriefVO patient = patientFacadeService.findPatient(dto.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在或已删除");
         }

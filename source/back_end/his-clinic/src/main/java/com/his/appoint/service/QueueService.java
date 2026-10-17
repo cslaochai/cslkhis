@@ -2,10 +2,10 @@ package com.his.appoint.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.appoint.dto.*;
-import com.his.provider.dto.*;
+import com.his.appoint.dto.AppointCheckInUpdateDTO;
 import com.his.appoint.entity.Queue;
 import com.his.appoint.vo.*;
-import com.his.provider.vo.*;
+import com.his.appoint.vo.PatientQueueVO;
 import com.his.common.base.PageResult;
 
 import java.time.LocalDate;

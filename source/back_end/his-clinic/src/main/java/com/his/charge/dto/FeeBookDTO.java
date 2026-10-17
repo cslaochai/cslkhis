@@ -1,0 +1,161 @@
+package com.his.charge.dto;
+
+import com.his.common.validation.AllowedValues;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.Data;
+
+import java.math.BigDecimal;
+
+/**
+ * 记账入参。
+ */
+@Data
+public class FeeBookDTO {
+
+    /**
+     * 记账行ID：仅"补记一行已红冲费用"这类内部场景使用，HTTP 入口一律为空
+     */
+    private Long id;
+
+    /**
+     * 患者ID
+     */
+    @NotNull(message = "缺少患者")
+    private Long patientId;
+
+    /**
+     * 患者号
+     */
+    @Size(max = 32, message = "患者号不能超过32个字符")
+    private String patientNo;
+
+    /**
+     * 患者姓名
+     */
+    @NotBlank(message = "缺少患者姓名")
+    @Size(max = 50, message = "患者姓名不能超过50个字符")
+    private String patientName;
+
+    /**
+     * 就诊类型（字典 his_encounter_type：1-门诊 2-住院）
+     */
+    @NotNull(message = "缺少就诊类型")
+    @AllowedValues(values = {"1", "2"}, message = "就诊类型不合法")
+    private Integer encounterType;
+
+    /**
+     * 就诊标识：门诊=挂号ID，住院=入院ID
+     */
+    @NotNull(message = "缺少就诊标识")
+    private Long encounterId;
+
+    /**
+     * 就诊标识单号
+     */
+    @Size(max = 32, message = "就诊单号不能超过32个字符")
+    private String encounterNo;
+
+    /**
+     * 费用归属科室（收入统计口径）。允许为空：取不到就是"无科室归属"，
+     * 由日结单列成差异项，比回填成任意科室诚实。
+     */
+    private Long deptId;
+
+    /**
+     * 科室名称
+     */
+    @Size(max = 100, message = "科室名称不能超过100个字符")
+    private String deptName;
+
+    /**
+     * 开单/执行人员工ID
+     */
+    private Long doctorId;
+
+    /**
+     * 开单人姓名
+     */
+    @Size(max = 50, message = "医生姓名不能超过50个字符")
+    private String doctorName;
+
+    /**
+     * 项目类型（1-挂号费 2-西药 3-中成药 4-中药饮片 5-检查 6-检验 7-治疗 8-耗材）
+     */
+    @NotNull(message = "缺少项目类型")
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7", "8"}, message = "项目类型不合法")
+    private Integer itemType;
+
+    /**
+     * 项目/药品编码
+     */
+    @Size(max = 32, message = "项目编码不能超过32个字符")
+    private String itemCode;
+
+    /**
+     * 项目名称
+     */
+    @NotBlank(message = "缺少项目名称")
+    @Size(max = 200, message = "项目名称不能超过200个字符")
+    private String itemName;
+
+    /**
+     * 规格
+     */
+    @Size(max = 100, message = "规格不能超过100个字符")
+    private String specification;
+
+    /**
+     * 单位
+     */
+    @Size(max = 20, message = "单位不能超过20个字符")
+    private String unit;
+
+    /**
+     * 单价
+     */
+    @NotNull(message = "缺少单价")
+    @DecimalMin(value = "0", message = "单价不能为负")
+    private BigDecimal price;
+
+    /**
+     * 数量：必须为正，冲减走红冲接口而不是传负数
+     */
+    @NotNull(message = "缺少数量")
+    @DecimalMin(value = "0", message = "数量不能为负")
+    private BigDecimal quantity;
+
+    /**
+     * 费用来源单据（字典 his_fee_source_type）
+     */
+    @NotNull(message = "缺少费用来源")
+    @AllowedValues(values = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"}, message = "费用来源不合法")
+    private Integer sourceType;
+
+    /**
+     * 来源单据ID：记账幂等靠 sourceType + sourceId + itemCode 判重，
+     * 同一张处方重复执行不能记两次费用。
+     */
+    private Long sourceId;
+
+    /**
+     * 来源单据号
+     */
+    @Size(max = 64, message = "来源单号不能超过64个字符")
+    private String sourceNo;
+
+    /**
+     * 医保目录类别（0-自费 1-甲类 2-乙类 3-丙类），决定结算层的报销分摊；必填，不允许缺省按自费
+     */
+    @NotNull(message = "请选择医保目录类别")
+    @AllowedValues(values = {"0", "1", "2", "3"}, message = "医保目录类别不合法")
+    private Integer catalogType;
+
+    /**
+     * 备注
+     */
+    @Size(max = 500, message = "备注不能超过500个字符")
+    private String remark;
+}

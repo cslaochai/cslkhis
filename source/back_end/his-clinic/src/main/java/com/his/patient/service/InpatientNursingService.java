@@ -3,7 +3,10 @@ package com.his.patient.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.patient.dto.*;
 import com.his.patient.vo.*;
-import com.his.provider.vo.*;
+import com.his.common.vo.CodeOptionVO;
+import com.his.patient.vo.NursingAssessmentVO;
+import com.his.patient.vo.NursingVitalFactVO;
+import com.his.patient.vo.WardNursingFactsVO;
 
 import java.time.LocalDateTime;
 import java.util.List;

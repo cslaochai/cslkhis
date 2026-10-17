@@ -19,7 +19,7 @@ import com.his.patient.vo.DeptCountRowVO;
 import com.his.patient.vo.NutritionOverviewVO;
 import com.his.patient.vo.NutritionStatsVO;
 import com.his.common.entity.CurrentUser;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

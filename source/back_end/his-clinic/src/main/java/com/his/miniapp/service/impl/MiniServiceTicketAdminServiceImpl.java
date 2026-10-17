@@ -1,5 +1,6 @@
 package com.his.miniapp.service.impl;
 
+import com.his.system.utils.UserUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
@@ -22,7 +23,6 @@ import com.his.miniapp.vo.MiniServiceDetailVO;
 import com.his.miniapp.vo.MiniServiceLogVO;
 import com.his.miniapp.vo.MiniTicketStatsVO;
 import com.his.common.entity.CurrentUser;
-import com.his.provider.service.AuthContextProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -49,10 +49,9 @@ public class MiniServiceTicketAdminServiceImpl extends ServiceImpl<MiniServiceMe
 
     private final MiniServiceMessageMapper miniServiceMessageMapper;
     private final MiniServiceLogMapper miniServiceLogMapper;
-    private final AuthContextProvider authContextProvider;
 
     private String currentUsername() {
-        CurrentUser user = authContextProvider.getCurrentUser();
+        CurrentUser user = UserUtils.getCurrentUser();
         return user == null ? null : user.getUsername();
     }
 
@@ -154,7 +153,7 @@ public class MiniServiceTicketAdminServiceImpl extends ServiceImpl<MiniServiceMe
     public void handle(TicketHandleUpsertDTO upsertDTO) {
         BizServiceMessage ticket = requireTicket(upsertDTO.getId());
         String action = upsertDTO.getAction() == null ? "" : upsertDTO.getAction().trim();
-        CurrentUser user = authContextProvider.getCurrentUser();
+        CurrentUser user = UserUtils.getCurrentUser();
         String operator = user == null ? null : user.getUsername();
         String operatorName = user == null ? null : user.getRealName();
         String content = TextUtil.cut(upsertDTO.getContent(), LOG_CONTENT_MAX);

@@ -21,7 +21,7 @@ import com.his.system.entity.SysConfig;
 import com.his.system.entity.SysMessage;
 import com.his.common.enums.BizTypeEnum;
 import com.his.system.mapper.SysConfigMapper;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.DutyRosterService;
 import com.his.system.service.RedisSequenceService;

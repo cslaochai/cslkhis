@@ -5,14 +5,21 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.provider.dto.AppointCancelDTO;
-import com.his.provider.dto.AppointQueryDTO;
-import com.his.provider.dto.AppointUpsertDTO;
-import com.his.provider.dto.RevisitFeePreviewDTO;
-import com.his.provider.service.ChargeProvider;
-import com.his.provider.service.EmrProvider;
-import com.his.provider.service.PatientProvider;
-import com.his.provider.vo.*;
+import com.his.appoint.dto.AppointCancelDTO;
+import com.his.appoint.dto.AppointQueryDTO;
+import com.his.appoint.dto.AppointUpsertDTO;
+import com.his.appoint.dto.RevisitFeePreviewDTO;
+import com.his.charge.service.ChargeFacadeService;
+import com.his.emr.service.EmrFacadeService;
+import com.his.patient.service.PatientFacadeService;
+import com.his.appoint.vo.BizAppointInfoListVO;
+import com.his.appoint.vo.RevisitFeePreviewVO;
+import com.his.appoint.vo.RevisitRecordSelectVO;
+import com.his.charge.vo.BillBriefVO;
+import com.his.charge.vo.CancelCommandVO;
+import com.his.charge.vo.RegistChargeCommandVO;
+import com.his.emr.vo.RecordBriefVO;
+import com.his.patient.vo.PatientMasterVO;
 import com.his.appoint.dto.AppointBoardQueryDTO;
 import com.his.appoint.entity.AppointInfo;
 import com.his.appoint.entity.Queue;
@@ -36,7 +43,7 @@ import com.his.system.entity.BizSchedule;
 import com.his.common.entity.CurrentUser;
 import com.his.system.mapper.BizClinicSourceMapper;
 import com.his.system.mapper.BizClinicSourceSlotMapper;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.service.ShiftService;
 import com.his.system.service.StaffScheduleService;
@@ -82,11 +89,11 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
 
     private final DayEndSettleTrigger dayEndSettleTrigger;
 
-    private final PatientProvider patientProvider;
+    private final PatientFacadeService patientFacadeService;
 
-    private final ChargeProvider chargeProvider;
+    private final ChargeFacadeService chargeFacadeService;
 
-    private final EmrProvider emrProvider;
+    private final EmrFacadeService emrFacadeService;
 
     private static String visitDatePastReason(AppointInfo regist, String action) {
         LocalDate visitDate = regist.getVisitDate();
@@ -324,7 +331,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         // 批量查询账单信息（经 SPI 委派至 his-charge）
         Map<Long, BillBriefVO> billMap = new HashMap<>();
         if (!billIds.isEmpty()) {
-            billMap = chargeProvider.mapBillsByIds(billIds);
+            billMap = chargeFacadeService.mapBillsByIds(billIds);
         }
 
         // 批量查询队列记录：挂号表本身没有排队号与队列状态，
@@ -417,7 +424,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         // 幂等性校验：检查是否已存在相同挂号记录
         checkIdempotent(upsertDTO, revisit);
 
-        PatientMasterVO bizPatient = patientProvider.getPatient(upsertDTO.getPatientId());
+        PatientMasterVO bizPatient = patientFacadeService.getPatient(upsertDTO.getPatientId());
         if (bizPatient == null) {
             throw new BusinessException("患者信息为空，请检查后重试");
         }
@@ -490,13 +497,13 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         }
 
         // 查询患者信息，自动填充挂号记录
-        PatientMasterVO patient = patientProvider.getPatient(appointInfo.getPatientId());
+        PatientMasterVO patient = patientFacadeService.getPatient(appointInfo.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在");
         }
 
         // 挂号时若显式传了费别/医保号且主档尚缺（录入新患者未补全等），先补全主档，保证口径单一
-        patientProvider.fillInsuranceIfAbsent(patient.getId(), upsertDTO.getMedicalInsuranceType(),
+        patientFacadeService.fillInsuranceIfAbsent(patient.getId(), upsertDTO.getMedicalInsuranceType(),
                 upsertDTO.getMedicalInsuranceNo());
         if (TextUtil.hasText(upsertDTO.getMedicalInsuranceType()) && !TextUtil.hasText(patient.getMedicalInsuranceType())) {
             patient.setMedicalInsuranceType(upsertDTO.getMedicalInsuranceType());
@@ -518,7 +525,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
 
         if (SettlementModeEnum.INSURANCE.getCode().equals(appointInfo.getSettlementType())) {
             // 医保联网结算总开关：关闭时不支持医保结算，挂号侧直接拒（不查任何参保库）
-            if (!chargeProvider.insuranceEnabled()) {
+            if (!chargeFacadeService.insuranceEnabled()) {
                 throw new BusinessException("医保联网结算未启用，请改按全自费结算");
             }
             MedicalInsuranceTypeEnum feeType = MedicalInsuranceTypeEnum.fromCode(appointInfo.getMedicalInsuranceType());
@@ -611,7 +618,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
             // 本单结算方式（1-全自费 2-医保联网）：挂号单选什么就透什么，支持医保患者本单改自费
             command.setSettlementMode(appointInfo.getSettlementType());
 
-            BillBriefVO bill = chargeProvider.createRegistCharge(command);
+            BillBriefVO bill = chargeFacadeService.createRegistCharge(command);
             if (bill != null) {
                 appointInfo.setBillId(bill.getBillId());
                 appointInfo.setBillNo(bill.getBillNo());
@@ -634,7 +641,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
     @Override
     public RevisitFeePreviewVO revisitFeePreview(RevisitFeePreviewDTO previewDTO) {
         boolean noSchedule = RevisitSourceEnum.needsNoSchedule(previewDTO.getRevisitSource());
-        RecordBriefVO origin = emrProvider.getRecord(previewDTO.getRevisitRecordId());
+        RecordBriefVO origin = emrFacadeService.getRecord(previewDTO.getRevisitRecordId());
         if (origin == null) {
             throw new BusinessException("原病历不存在，无法预估复诊费用");
         }
@@ -693,7 +700,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
             return new ArrayList<>();
         }
         List<RevisitRecordSelectVO> options = new ArrayList<>();
-        for (RecordBriefVO brief : emrProvider.listRecentByPatient(patientId, limit)) {
+        for (RecordBriefVO brief : emrFacadeService.listRecentByPatient(patientId, limit)) {
             RevisitRecordSelectVO option = new RevisitRecordSelectVO();
             option.setId(brief.getId());
             option.setRecordNo(brief.getRecordNo());
@@ -800,7 +807,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         if (upsertDTO.getRevisitRecordId() == null) {
             throw new BusinessException("复诊挂号必须关联原病历（收费策略与间隔天数都按原就诊记录判定）");
         }
-        RecordBriefVO origin = emrProvider.getRecord(upsertDTO.getRevisitRecordId());
+        RecordBriefVO origin = emrFacadeService.getRecord(upsertDTO.getRevisitRecordId());
         if (origin == null) {
             throw new BusinessException("原病历不存在，无法创建复诊挂号");
         }
@@ -949,7 +956,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         if (existing.getBillId() == null) {
             return;
         }
-        BillBriefVO bill = chargeProvider.getBill(existing.getBillId());
+        BillBriefVO bill = chargeFacadeService.getBill(existing.getBillId());
         BigDecimal paid = bill == null ? BigDecimal.ZERO : NumUtil.orZero(bill.getPaidAmount());
         if (paid.signum() <= 0) {
             return;
@@ -996,7 +1003,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         command.setBillId(registInfo.getBillId());
         command.setReason(TextUtil.hasText(reason) ? reason : "退号");
         command.setOperator(operatorUser.getRealName());
-        boolean closed = chargeProvider.cancelRegistCharge(command);
+        boolean closed = chargeFacadeService.cancelRegistCharge(command);
         log.info("退号联动账单：registId={}，billId={}，撤销={}",
                 registInfo.getId(), registInfo.getBillId(), closed);
     }
@@ -1207,10 +1214,10 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         // 操作台把状态改成「已就诊」也是结诊事实，与队列结诊（completeQueue）走同一份回写：
         // 漏掉这条路径，从挂号管理里手工完结的挂号永远不会出现在患者的「最近/首次就诊」上。
         if (targetStatus == AppointStatusEnum.COMPLETED.getCode()) {
-            patientProvider.markLastVisit(regist.getPatientId(), LocalDateTime.now(),
+            patientFacadeService.markLastVisit(regist.getPatientId(), LocalDateTime.now(),
                     regist.getDeptId(), regist.getDeptName(),
                     regist.getDoctorId(), regist.getDoctorName());
-            patientProvider.markFirstVisit(regist.getPatientId(), LocalDateTime.now(),
+            patientFacadeService.markFirstVisit(regist.getPatientId(), LocalDateTime.now(),
                     regist.getDeptId(), regist.getDeptName(),
                     regist.getDoctorId(), regist.getDoctorName());
         }
@@ -1252,7 +1259,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
     @Override
     public RevisitFeePreviewVO revisitFeePreviewScoped(RevisitFeePreviewDTO previewDTO) {
         // 只读、不涉敏，越权由 patientScopeViolated 收口（员工放行、患者只碰自己绑定的就诊人）
-        if (patientProvider.patientScopeViolated(previewDTO.getPatientId())) {
+        if (patientFacadeService.patientScopeViolated(previewDTO.getPatientId())) {
             throw new BusinessException("无权查询该就诊人的费用信息");
         }
         return revisitFeePreview(previewDTO);
@@ -1260,7 +1267,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
 
     @Override
     public List<RevisitRecordSelectVO> revisitRecordSelectListScoped(Long patientId) {
-        if (patientProvider.patientScopeViolated(patientId)) {
+        if (patientFacadeService.patientScopeViolated(patientId)) {
             throw new BusinessException("无权查询该就诊人的病历");
         }
         return revisitRecordSelectList(patientId, 20);

@@ -1,7 +1,7 @@
 package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.provider.service.SignableContentProvider;
+import com.his.system.service.SignableContentService;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.enums.SignStatusEnum;
 import com.his.system.entity.BizEmrSignature;
@@ -27,7 +27,7 @@ public class SignatureStoreServiceImpl extends ServiceImpl<BizEmrSignatureMapper
     private final SysSignCertMapper sysSignCertMapper;
 
     @Transactional(rollbackFor = Exception.class)
-    public void insertAndAnchor(BizEmrSignature entity, SignableContentProvider provider, SignSceneEnum scene,
+    public void insertAndAnchor(BizEmrSignature entity, SignableContentService provider, SignSceneEnum scene,
                                 SysSignCert cert) {
         bizEmrSignatureMapper.insert(entity);
         provider.applySignAnchor(entity.getBizId(), scene, entity.getId(), entity.getSignedTime());

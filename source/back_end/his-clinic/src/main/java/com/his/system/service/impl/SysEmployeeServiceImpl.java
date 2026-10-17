@@ -11,7 +11,7 @@ import com.his.system.dto.EmployeeQueryDTO;
 import com.his.system.dto.EmployeeUpsertDTO;
 import com.his.system.entity.SysEmployee;
 import com.his.system.mapper.SysEmployeeMapper;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.EmployeePostService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.service.SysEmployeeService;

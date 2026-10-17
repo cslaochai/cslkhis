@@ -1,13 +1,13 @@
 package com.his.emr.service.impl;
 
-import com.his.provider.vo.BizFollowupTaskVO;
+import com.his.emr.vo.BizFollowupTaskVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.provider.dto.AppointUpsertDTO;
-import com.his.provider.service.AppointProvider;
-import com.his.provider.vo.BizAppointInfoListVO;
-import com.his.provider.vo.RegistBriefVO;
+import com.his.appoint.dto.AppointUpsertDTO;
+import com.his.appoint.service.AppointFacadeService;
+import com.his.appoint.vo.BizAppointInfoListVO;
+import com.his.appoint.vo.RegistBriefVO;
 import com.his.common.enums.*;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
@@ -23,7 +23,7 @@ import com.his.emr.service.FollowupTaskService;
 import com.his.emr.service.SurveyService;
 import com.his.emr.support.FollowupTaskSnapshot;
 import com.his.emr.vo.*;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -65,7 +65,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
             AppointStatusEnum.OVERDUE.getCode(),
             AppointStatusEnum.NO_SHOW.getCode());
     private final DeptScopeService deptScopeService;
-    private final AppointProvider appointProvider;
+    private final AppointFacadeService appointFacadeService;
 
     private final BizFollowupTaskMapper bizFollowupTaskMapper;
 
@@ -450,7 +450,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
             throw new BusinessException("已取消的随访任务不再生成复诊号");
         }
         if (task.getRevisitAppointId() != null) {
-            RegistBriefVO previous = appointProvider.findRegist(task.getRevisitAppointId());
+            RegistBriefVO previous = appointFacadeService.findRegist(task.getRevisitAppointId());
             // 只挡「那张号还有效」：已退号/过号/爽约的号作废了，患者确实还得再约一次，
             // 一刀切拦住会让这个任务永久卡死，只能去库里改数据。
             if (previous != null && !REGENERABLE_APPOINT_STATUS.contains(previous.getRegistStatus())) {
@@ -468,7 +468,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         // 院内人员按计划代约 -> 挂号渠道 4（预约）：扣预约池，不吃当天现场号
         appointDTO.setRegistSource(AppointSourceEnum.APPOINTMENT.getCode());
         appointDTO.setSettlementType(dto.getSettlementType() == null ? 1 : dto.getSettlementType());
-        BizAppointInfoListVO appoint = appointProvider.addAppoint(appointDTO);
+        BizAppointInfoListVO appoint = appointFacadeService.addAppoint(appointDTO);
 
         task.setRevisitRecordId(dto.getRevisitRecordId());
         task.setRevisitAppointId(appoint.getId());

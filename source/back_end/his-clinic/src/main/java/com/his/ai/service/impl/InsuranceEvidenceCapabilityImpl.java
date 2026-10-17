@@ -10,10 +10,10 @@ import com.his.ai.service.InsuranceEvidenceCapability;
 import com.his.ai.vo.InsuranceEvidenceJudgmentVO;
 import com.his.ai.vo.InsuranceEvidencePromptVariablesVO;
 import com.his.ai.vo.InsuranceEvidenceVO;
-import com.his.provider.service.ComplianceAuditProvider;
-import com.his.provider.vo.ComplianceAuditDetailVO;
-import com.his.provider.vo.ComplianceAuditItemVO;
-import com.his.provider.vo.ComplianceEvidenceNarrativeVO;
+import com.his.charge.service.ComplianceAuditService;
+import com.his.charge.vo.ComplianceAuditDetailVO;
+import com.his.charge.vo.ComplianceAuditItemVO;
+import com.his.charge.vo.ComplianceEvidenceNarrativeVO;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.common.enums.AiBizTypeEnum;
@@ -55,18 +55,18 @@ public class InsuranceEvidenceCapabilityImpl implements InsuranceEvidenceCapabil
 
     private final AiExecutionService aiExecutionService;
 
-    private final ComplianceAuditProvider complianceAuditProvider;
+    private final ComplianceAuditService complianceAuditService;
 
     // ---------------------------------------------------------------- 模型层
 
     @Override
     public InsuranceEvidenceVO execute(InsuranceEvidenceDTO dto) {
-        ComplianceAuditDetailVO detail = complianceAuditProvider.getAuditDetail(dto.getAuditId());
+        ComplianceAuditDetailVO detail = complianceAuditService.getAuditDetail(dto.getAuditId());
         List<ComplianceAuditItemVO> hits = hitItems(detail);
         if (hits.isEmpty()) {
             throw new BusinessException("该审核没有命中的风险规则，无需证据判定");
         }
-        ComplianceEvidenceNarrativeVO narrative = complianceAuditProvider.getAiEvidenceNarrative(dto.getAuditId());
+        ComplianceEvidenceNarrativeVO narrative = complianceAuditService.getAiEvidenceNarrative(dto.getAuditId());
 
         InsuranceEvidenceVO vo = new InsuranceEvidenceVO();
         vo.setAuditId(detail.getId());

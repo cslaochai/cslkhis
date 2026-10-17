@@ -2,7 +2,7 @@ package com.his.system.filter;
 
 import com.his.common.util.TextUtil;
 import com.his.common.entity.CurrentUser;
-import com.his.provider.service.RolePermissionService;
+import com.his.system.service.RolePermissionService;
 import com.his.system.service.impl.UserDetailsServiceImpl;
 import com.his.common.util.JwtUtils;
 import jakarta.servlet.FilterChain;
@@ -44,7 +44,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     /**
      * 按「当前角色」重算权限的来源。接口与实现同处 his-system，编译期强依赖直接注入。
      */
-    private final RolePermissionService rolePermissionProvider;
+    private final RolePermissionService rolePermissionService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -117,7 +117,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      */
     private void applyRolePermissions(CurrentUser currentUser, String currentRole) {
         try {
-            List<String> permissions = rolePermissionProvider.permissionsOfRole(currentRole);
+            List<String> permissions = rolePermissionService.permissionsOfRole(currentRole);
             currentUser.setPermissions(permissions == null ? Collections.emptyList() : permissions);
         } catch (Exception e) {
             log.error("按角色重算权限失败，本次沿用员工级权限并集（role={}, user={}）—— 注解鉴权结果可能偏宽",

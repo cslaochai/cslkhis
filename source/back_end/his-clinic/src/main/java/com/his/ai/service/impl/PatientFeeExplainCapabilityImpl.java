@@ -4,16 +4,16 @@ import com.his.ai.dto.PatientFeeExplainDTO;
 import com.his.ai.service.PatientFeeExplainCapability;
 import com.his.ai.vo.FeeCatalogGroupVO;
 import com.his.ai.vo.PatientFeeExplainVO;
-import com.his.provider.service.ChargeProvider;
-import com.his.provider.vo.BillItemVO;
-import com.his.provider.vo.BizSettlementBillVO;
-import com.his.provider.vo.InsuranceBriefVO;
+import com.his.charge.service.ChargeFacadeService;
+import com.his.charge.vo.BillItemVO;
+import com.his.charge.vo.BizSettlementBillVO;
+import com.his.charge.vo.InsuranceBriefVO;
 import com.his.common.enums.FeeCatalogTypeEnum;
 import com.his.common.enums.PaymentItemTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
-import com.his.provider.service.PatientProvider;
+import com.his.patient.service.PatientFacadeService;
 import com.his.common.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -46,9 +46,9 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
             "以上是本账单的费用构成说明，实际报销以医保经办和收费窗口的解释为准；"
                     + "对某项收费有疑问，可在收费窗口打印明细清单核对。";
 
-    private final ChargeProvider chargeProvider;
+    private final ChargeFacadeService chargeFacadeService;
 
-    private final PatientProvider patientProvider;
+    private final PatientFacadeService patientFacadeService;
 
     // ---------------------------------------------------------------- 规则层
 
@@ -101,17 +101,17 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
             throw new BusinessException("未获取到就诊人身份，请重新登录");
         }
 
-        BizSettlementBillVO bill = chargeProvider.getBillDetail(dto.getBillId());
+        BizSettlementBillVO bill = chargeFacadeService.getBillDetail(dto.getBillId());
         if (bill == null) {
             throw new BusinessException("账单不存在：" + dto.getBillId());
         }
-        if (patientProvider.patientScopeViolated(bill.getPatientId())) {
+        if (patientFacadeService.patientScopeViolated(bill.getPatientId())) {
             throw new BusinessException("账单不存在或无权查看：" + dto.getBillId());
         }
 
-        List<BillItemVO> items = chargeProvider.listBillItems(bill.getId());
+        List<BillItemVO> items = chargeFacadeService.listBillItems(bill.getId());
 
-        InsuranceBriefVO insurance = chargeProvider.latestInsurance(bill.getId());
+        InsuranceBriefVO insurance = chargeFacadeService.latestInsurance(bill.getId());
 
         PatientFeeExplainVO vo = new PatientFeeExplainVO();
         vo.setBillId(bill.getId());

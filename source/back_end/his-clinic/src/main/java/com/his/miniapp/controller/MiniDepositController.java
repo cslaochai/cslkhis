@@ -1,9 +1,9 @@
 package com.his.miniapp.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.provider.dto.PrepayQueryPageDTO;
-import com.his.provider.vo.PrepayBalanceVO;
-import com.his.provider.vo.PrepayVO;
+import com.his.charge.dto.PrepayQueryPageDTO;
+import com.his.charge.vo.PrepayBalanceVO;
+import com.his.charge.vo.PrepayVO;
 import com.his.common.base.Result;
 import com.his.miniapp.service.MiniDepositService;
 import com.his.miniapp.vo.MiniAdmiSelectListVO;

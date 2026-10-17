@@ -1,13 +1,13 @@
 package com.his.charge.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.his.provider.dto.FeeBookDTO;
+import com.his.charge.dto.FeeBookDTO;
 import com.his.charge.dto.FeeRecordQueryPageDTO;
 import com.his.charge.dto.FeeReverseDTO;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.vo.BizFeeRecordDetailVO;
 import com.his.charge.vo.BizFeeRecordVO;
-import com.his.provider.vo.FeeTypeSumVO;
+import com.his.charge.vo.FeeTypeSumVO;
 import com.his.common.base.PageResult;
 
 import java.math.BigDecimal;

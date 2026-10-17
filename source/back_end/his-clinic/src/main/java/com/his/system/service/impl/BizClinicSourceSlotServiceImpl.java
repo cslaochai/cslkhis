@@ -16,7 +16,7 @@ import com.his.system.entity.BizClinicSourceSlot;
 import com.his.system.entity.BizClinicSourceSlotTemplate;
 import com.his.system.mapper.BizClinicSourceMapper;
 import com.his.system.mapper.BizClinicSourceSlotMapper;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.BizClinicSourceSlotService;
 import com.his.system.service.ClinicSourceLogService;
 import com.his.system.vo.ScheduleSlotVO;

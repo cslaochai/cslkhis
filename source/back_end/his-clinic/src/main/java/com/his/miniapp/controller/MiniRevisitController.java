@@ -1,16 +1,16 @@
 package com.his.miniapp.controller;
 
-import com.his.provider.dto.AppointUpsertDTO;
-import com.his.provider.dto.RevisitFeePreviewDTO;
-import com.his.provider.service.AppointProvider;
-import com.his.provider.vo.BizAppointInfoListVO;
-import com.his.provider.vo.RevisitFeePreviewVO;
-import com.his.provider.vo.RevisitRecordSelectVO;
+import com.his.appoint.dto.AppointUpsertDTO;
+import com.his.appoint.dto.RevisitFeePreviewDTO;
+import com.his.appoint.service.AppointFacadeService;
+import com.his.appoint.vo.BizAppointInfoListVO;
+import com.his.appoint.vo.RevisitFeePreviewVO;
+import com.his.appoint.vo.RevisitRecordSelectVO;
 import com.his.common.base.Result;
 import com.his.common.enums.AppointSourceEnum;
 import com.his.common.enums.RevisitSourceEnum;
 import com.his.common.enums.VisitTypeEnum;
-import com.his.provider.service.PatientProvider;
+import com.his.patient.service.PatientFacadeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -29,35 +29,35 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MiniRevisitController {
 
-    private final AppointProvider appointProvider;
-    private final PatientProvider patientProvider;
+    private final AppointFacadeService appointFacadeService;
+    private final PatientFacadeService patientFacadeService;
 
     @PreAuthorize("hasAuthority('PATIENT')")
     @Operation(summary = "复诊原病历候选（按就诊日倒序，只含真正看过病的记录）")
     @GetMapping("/recordSelectList")
     public Result<List<RevisitRecordSelectVO>> recordSelectList(@RequestParam Long patientId) {
-        if (!patientProvider.canAccessPatient(patientId)) {
+        if (!patientFacadeService.canAccessPatient(patientId)) {
             return Result.error("无权查询该就诊人的病历");
         }
-        return Result.success(appointProvider.revisitRecordSelectList(patientId, 20));
+        return Result.success(appointFacadeService.revisitRecordSelectList(patientId, 20));
     }
 
     @PreAuthorize("hasAuthority('PATIENT')")
     @Operation(summary = "复诊费用预估（按复诊收费策略，只读）")
     @PostMapping("/feePreview")
     public Result<RevisitFeePreviewVO> feePreview(@RequestBody @Valid RevisitFeePreviewDTO previewDTO) {
-        if (!patientProvider.canAccessPatient(previewDTO.getPatientId())) {
+        if (!patientFacadeService.canAccessPatient(previewDTO.getPatientId())) {
             return Result.error("无权查询该就诊人的费用");
         }
         previewDTO.setRevisitSource(RevisitSourceEnum.PATIENT_SELF.getCode());
-        return Result.success(appointProvider.revisitFeePreview(previewDTO));
+        return Result.success(appointFacadeService.revisitFeePreview(previewDTO));
     }
 
     @PreAuthorize("hasAuthority('PATIENT')")
     @Operation(summary = "自助复诊预约（占号源，收免费按策略判定）")
     @PostMapping("/upsert")
     public Result<BizAppointInfoListVO> upsert(@RequestBody @Valid AppointUpsertDTO upsertDTO) {
-        if (!patientProvider.canAccessPatient(upsertDTO.getPatientId())) {
+        if (!patientFacadeService.canAccessPatient(upsertDTO.getPatientId())) {
             return Result.error("无权为该就诊人预约");
         }
         upsertDTO.setId(null);
@@ -65,7 +65,7 @@ public class MiniRevisitController {
         upsertDTO.setRevisitSource(RevisitSourceEnum.PATIENT_SELF.getCode());
         // 线上只从排班的预约池扣号，传别的等于网上抢现场号
         upsertDTO.setRegistSource(AppointSourceEnum.APPOINTMENT.getCode());
-        BizAppointInfoListVO result = appointProvider.addAppoint(upsertDTO);
+        BizAppointInfoListVO result = appointFacadeService.addAppoint(upsertDTO);
         return Result.success("复诊预约成功", result);
     }
 }

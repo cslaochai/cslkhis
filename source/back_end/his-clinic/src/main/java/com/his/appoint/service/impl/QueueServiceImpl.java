@@ -8,7 +8,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.appoint.dto.*;
-import com.his.provider.dto.*;
+import com.his.appoint.dto.AppointCheckInUpdateDTO;
 import com.his.appoint.entity.AppointInfo;
 import com.his.appoint.entity.Queue;
 import com.his.appoint.entity.TriageRecord;
@@ -21,7 +21,8 @@ import com.his.appoint.service.QueueService;
 import com.his.appoint.service.DoctorStatusCacheService;
 import com.his.appoint.trigger.DayEndSettleTrigger;
 import com.his.appoint.vo.*;
-import com.his.provider.vo.*;
+import com.his.appoint.vo.PatientQueueVO;
+import com.his.charge.vo.BillBriefVO;
 import com.his.common.base.PageResult;
 import com.his.common.enums.BillStatusEnum;
 import com.his.common.enums.MedicalInsuranceTypeEnum;
@@ -29,14 +30,14 @@ import com.his.common.enums.SettlementModeEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.provider.service.PatientProvider;
-import com.his.provider.service.ChargeProvider;
-import com.his.provider.vo.BillBriefVO;
+import com.his.patient.service.PatientFacadeService;
+import com.his.charge.service.ChargeFacadeService;
+import com.his.charge.vo.BillBriefVO;
 import com.his.system.entity.BizClinicSource;
 import com.his.common.entity.CurrentUser;
 import com.his.system.entity.SysClinicRoom;
 import com.his.system.mapper.BizClinicSourceMapper;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.BizClinicSourceService;
 import com.his.system.service.InsurancePolicyService;
 import com.his.system.service.RedisSequenceService;
@@ -62,7 +63,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements QueueService {
-    private final PatientProvider patientProvider;
+    private final PatientFacadeService patientFacadeService;
 
     private final BizClinicSourceMapper bizScheduleMapper;
 
@@ -70,7 +71,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
 
     private final AppointInfoMapper appointInfoMapper;
 
-    private final ChargeProvider appointChargeGateway;
+    private final ChargeFacadeService chargeFacadeService;
 
     private final InsurancePolicyService insurancePolicyService;
 
@@ -245,7 +246,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
         return appointInfo == null ? null : appointInfo.getPatientId();
     }
 
-    private boolean isRegistFeeSettled(ChargeProvider gateway, AppointInfo appoint) {
+    private boolean isRegistFeeSettled(ChargeFacadeService gateway, AppointInfo appoint) {
         if (appoint.getBillId() == null) {
             return true;
         }
@@ -262,7 +263,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
         }
         deptScopeService.assertDeptAccessible(appointInfo.getDeptId());
         // 收费服务为编译期强依赖（his-charge 已引入），实现缺失直接启动失败
-        if (!isRegistFeeSettled(appointChargeGateway, appointInfo)) {
+        if (!isRegistFeeSettled(chargeFacadeService, appointInfo)) {
             throw new BusinessException("该患者尚未支付，请先完成缴费");
         }
         LocalDate visitDate = appointInfo.getVisitDate() != null
@@ -584,10 +585,10 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
                 registInfo.setRegistStatus(AppointStatusEnum.COMPLETED.getCode()); // 已完成
                 appointInfoMapper.updateById(registInfo);
 
-                patientProvider.markLastVisit(registInfo.getPatientId(), queue.getEndTime(),
+                patientFacadeService.markLastVisit(registInfo.getPatientId(), queue.getEndTime(),
                         registInfo.getDeptId(), registInfo.getDeptName(),
                         registInfo.getDoctorId(), registInfo.getDoctorName());
-                patientProvider.markFirstVisit(registInfo.getPatientId(), queue.getEndTime(),
+                patientFacadeService.markFirstVisit(registInfo.getPatientId(), queue.getEndTime(),
                         registInfo.getDeptId(), registInfo.getDeptName(),
                         registInfo.getDoctorId(), registInfo.getDoctorName());
             }
@@ -1260,7 +1261,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
             // 挂号状态「已挂号」只说明还没签到，还得确认钱真的收了 ——
             // 未缴费也能挂号（挂完去收费处），把没交钱的人放进「待签到」会让护士白叫。
             // 免收的号没有账单，属于"没有欠账"，必须照常放进来（旧口径用 isNotNull(charge_id) 把他们整体筛掉了）。
-            if (!isRegistFeeSettled(appointChargeGateway, appoint)) {
+            if (!isRegistFeeSettled(chargeFacadeService, appoint)) {
                 continue;
             }
             BizQueueListVO vo = new BizQueueListVO();
@@ -1517,7 +1518,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
     @Override
     public void checkInByRegist(AppointCheckInUpdateDTO updateDTO) {
         // 分诊台/自助机用的接口，患者 token 也调得到 —— 不校验归属就等于能替别人签到
-        if (patientProvider.patientScopeViolated(patientIdOfRegist(updateDTO.getRegistId()))) {
+        if (patientFacadeService.patientScopeViolated(patientIdOfRegist(updateDTO.getRegistId()))) {
             throw new BusinessException("无权为该就诊人签到");
         }
         if (!checkInByRegistId(updateDTO)) {

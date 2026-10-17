@@ -24,7 +24,7 @@ import com.his.patient.vo.DeathCertReportPayloadVO;
 import com.his.patient.vo.DeathCertificateVO;
 import com.his.common.entity.CurrentUser;
 import com.his.common.enums.BizTypeEnum;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;

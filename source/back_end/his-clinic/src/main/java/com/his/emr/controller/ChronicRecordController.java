@@ -6,7 +6,7 @@ import com.his.emr.dto.ChronicCancelDTO;
 import com.his.emr.dto.ChronicQueryPageDTO;
 import com.his.emr.dto.ChronicUpsertDTO;
 import com.his.emr.service.ChronicRecordService;
-import com.his.provider.vo.ChronicRecordListVO;
+import com.his.emr.vo.ChronicRecordListVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

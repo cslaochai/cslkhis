@@ -1,8 +1,8 @@
 package com.his.medicaltech.service.impl;
 
 
-import com.his.provider.vo.BizReportVO;
-import com.his.provider.vo.BizLabResultVO;
+import com.his.medicaltech.vo.BizReportVO;
+import com.his.medicaltech.vo.BizLabResultVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -40,7 +40,7 @@ import com.his.medicaltech.vo.*;
 import com.his.system.dto.SignCommandDTO;
 import com.his.common.entity.CurrentUser;
 import com.his.common.enums.BizTypeEnum;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.EmrSignatureService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.service.SysMessageService;

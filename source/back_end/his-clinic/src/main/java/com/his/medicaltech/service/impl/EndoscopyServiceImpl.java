@@ -25,7 +25,7 @@ import com.his.medicaltech.service.PathologyService;
 import com.his.medicaltech.vo.EndoscopyVO;
 import com.his.system.dto.TechAuthGateDTO;
 import com.his.common.entity.CurrentUser;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.EmployeeTechAuthService;
 import com.his.system.utils.UserUtils;

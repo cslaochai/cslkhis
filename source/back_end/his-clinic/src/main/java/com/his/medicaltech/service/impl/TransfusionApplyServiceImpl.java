@@ -22,15 +22,15 @@ import com.his.medicaltech.support.TransfusionCheckItems;
 import com.his.medicaltech.support.TransfusionRules;
 import com.his.medicaltech.vo.TransfusionApplyVO;
 import com.his.medicaltech.vo.TransfusionBagVO;
-import com.his.provider.dto.ClosedLoopRecordDTO;
-import com.his.provider.service.PatientProvider;
-import com.his.provider.vo.AdmissionVO;
-import com.his.provider.vo.ClosedLoopRecordVO;
-import com.his.provider.vo.CodeOptionVO;
-import com.his.provider.vo.PatientMasterVO;
-import com.his.provider.vo.WardVO;
+import com.his.patient.dto.ClosedLoopRecordDTO;
+import com.his.patient.service.PatientFacadeService;
+import com.his.patient.vo.AdmissionVO;
+import com.his.patient.vo.ClosedLoopRecordVO;
+import com.his.common.vo.CodeOptionVO;
+import com.his.patient.vo.PatientMasterVO;
+import com.his.patient.vo.WardVO;
 import com.his.common.entity.CurrentUser;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -60,7 +60,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
 
     private final BizTransfusionApproveMapper bizTransfusionApproveMapper;
 
-    private final PatientProvider patientProvider;
+    private final PatientFacadeService patientFacadeService;
 
     private final RedisSequenceService redisSequenceService;
 
@@ -206,14 +206,14 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
                     + "）；大量用血请走大量输血审批流程");
         }
 
-        AdmissionVO admission = patientProvider.getAdmission(dto.getAdmissionId());
+        AdmissionVO admission = patientFacadeService.getAdmission(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
         if (!Objects.equals(AdmitStatusEnum.IN_HOSPITAL.getCode(), admission.getAdmitStatus())) {
             throw new BusinessException("该患者当前不是「在院」状态，不能申请输血（已出院的住院不能开输血单）");
         }
-        PatientMasterVO patient = patientProvider.getPatient(admission.getPatientId());
+        PatientMasterVO patient = patientFacadeService.getPatient(admission.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在");
         }
@@ -503,7 +503,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
                     + (entity.getAmountMl() == null ? "待折算" : entity.getAmountMl() + "ml")
                     + "，属「" + TransfusionApproveLevelEnum.getLabel(entity.getApproveLevel()) + "」审核签发范围）");
         }
-        AdmissionVO admission = patientProvider.getAdmission(entity.getAdmissionId());
+        AdmissionVO admission = patientFacadeService.getAdmission(entity.getAdmissionId());
         if (admission == null || !Objects.equals(AdmitStatusEnum.IN_HOSPITAL.getCode(), admission.getAdmitStatus())) {
             throw new BusinessException("该患者已不在院，不能再配血（已出院的住院不能继续用血流程）");
         }
@@ -686,7 +686,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
                     + TransfusionApproveStatusEnum.getLabelOrUnknown(entity.getApproveStatus())
                     + "」，未通过审批不能发血");
         }
-        AdmissionVO admission = patientProvider.getAdmission(entity.getAdmissionId());
+        AdmissionVO admission = patientFacadeService.getAdmission(entity.getAdmissionId());
         if (admission == null || !Objects.equals(AdmitStatusEnum.IN_HOSPITAL.getCode(), admission.getAdmitStatus())) {
             throw new BusinessException("该患者已不在院，不能发血");
         }
@@ -740,7 +740,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
                     + "。这 6 项少核任何一项，双人核对就不成立");
         }
 
-        AdmissionVO admission = patientProvider.getAdmission(entity.getAdmissionId());
+        AdmissionVO admission = patientFacadeService.getAdmission(entity.getAdmissionId());
         if (admission == null || !Objects.equals(AdmitStatusEnum.IN_HOSPITAL.getCode(), admission.getAdmitStatus())) {
             throw new BusinessException("该患者已不在院，不能开始输注");
         }
@@ -804,7 +804,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
             throw new BusinessException("实际输注量必须大于 0（输完了却不知道输了多少，记录等于没写）");
         }
 
-        AdmissionVO admission = patientProvider.getAdmission(entity.getAdmissionId());
+        AdmissionVO admission = patientFacadeService.getAdmission(entity.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在，无法回写（admissionId=" + entity.getAdmissionId() + "）");
         }
@@ -814,7 +814,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         }
 
         // 归档闸门：已归档的病案首页不能再改
-        if (patientProvider.isSummaryArchived(entity.getAdmissionId())) {
+        if (patientFacadeService.isSummaryArchived(entity.getAdmissionId())) {
             throw new BusinessException("该住院的病案首页已归档，不能再回写输血记录（归档数据不可改）");
         }
 
@@ -823,7 +823,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         // 回写输血记录病历
         ClosedLoopRecordVO record = writeBackRecord(entity, admission, dto, end, now);
 
-        patientProvider.markSummaryTransfused(entity.getAdmissionId());
+        patientFacadeService.markSummaryTransfused(entity.getAdmissionId());
 
         entity.setInfusionEndTime(end);
         entity.setActualAmount(dto.getActualAmount());
@@ -918,7 +918,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        PatientMasterVO patient = patientProvider.getPatient(admission.getPatientId());
+        PatientMasterVO patient = patientFacadeService.getPatient(admission.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在，无法回写输血记录");
         }
@@ -1022,7 +1022,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
                 ? entity.getApplyDoctorName() : operatorUser.getRealName());
         record.setSubmitTime(now);
         // 病历号取号与落库归病历文书的写入方（输血侧只负责把这次输血写成文书内容）
-        return patientProvider.appendClosedLoopRecord(record);
+        return patientFacadeService.appendClosedLoopRecord(record);
     }
 
     /**
@@ -1192,7 +1192,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         if (wardId == null) {
             return null;
         }
-        WardVO ward = patientProvider.getWard(wardId);
+        WardVO ward = patientFacadeService.getWard(wardId);
         return ward == null ? "未知病区(ID=" + wardId + ")" : ward.getWardName();
     }
 
@@ -1200,7 +1200,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         if (bedId == null) {
             return null;
         }
-        return patientProvider.getBedNo(bedId);
+        return patientFacadeService.getBedNo(bedId);
     }
 
     /**

@@ -1,13 +1,13 @@
 package com.his.system.controller;
 
 
-import com.his.provider.dto.ScheduleSelectQueryDTO;
+import com.his.system.dto.ScheduleSelectQueryDTO;
 import com.his.system.dto.*;
 import com.his.system.service.BizClinicSourceService;
 import com.his.system.service.BizClinicSourceSlotService;
 import com.his.system.service.ClinicSourceLogService;
 import com.his.system.vo.*;
-import com.his.provider.vo.StopImpactItemVO;
+import com.his.appoint.vo.StopImpactItemVO;
 import com.his.common.base.Result;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import io.swagger.v3.oas.annotations.Operation;

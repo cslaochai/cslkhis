@@ -23,7 +23,7 @@ import com.his.patient.service.BedCenterService;
 import com.his.patient.vo.AdmissionOrderVO;
 import com.his.system.entity.SysConfig;
 import com.his.system.mapper.SysConfigMapper;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

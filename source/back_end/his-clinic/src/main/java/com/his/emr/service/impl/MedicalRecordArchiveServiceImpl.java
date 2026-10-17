@@ -17,7 +17,7 @@ import com.his.emr.vo.MedicalRecordArchiveCountVO;
 import com.his.emr.vo.MessagePayloadVO;
 import com.his.system.entity.SysMessage;
 import com.his.common.enums.BizTypeEnum;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.SysMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

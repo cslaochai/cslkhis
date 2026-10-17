@@ -8,7 +8,7 @@ import com.his.patient.dto.DietPlanUpsertDTO;
 import com.his.patient.entity.BizInpatientOrder;
 import com.his.patient.vo.DietPlanVO;
 import com.his.patient.vo.DietTypeOptionVO;
-import com.his.provider.vo.WardVO;
+import com.his.patient.vo.WardVO;
 
 import java.time.LocalDateTime;
 import java.util.List;

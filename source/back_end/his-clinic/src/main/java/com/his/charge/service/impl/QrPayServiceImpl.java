@@ -1,6 +1,6 @@
 package com.his.charge.service.impl;
 
-import com.his.provider.dto.BillPayDTO;
+import com.his.charge.dto.BillPayDTO;
 import com.his.charge.dto.QrPayCreateDTO;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.service.PaymentService;
@@ -20,12 +20,12 @@ import com.his.common.util.TextUtil;
 import com.his.common.enums.PayNotifyResultEnum;
 import com.his.common.enums.PayNotifySceneEnum;
 import com.his.common.enums.PayOrderBizTypeEnum;
-import com.his.provider.service.AlipayChannelProvider;
-import com.his.provider.service.PayNotifyLogProvider;
-import com.his.provider.service.PayOrderProvider;
-import com.his.provider.service.WxPayChannelProvider;
-import com.his.pay.support.PayRateLimitSupport;
-import com.his.provider.vo.PayOrderVO;
+import com.his.pay.service.AlipayChannelService;
+import com.his.pay.service.PayNotifyLogService;
+import com.his.pay.service.PayOrderService;
+import com.his.pay.service.WxPayChannelService;
+import com.his.pay.service.PayRateLimitService;
+import com.his.pay.vo.PayOrderVO;
 import com.his.system.support.SystemOperatorContext;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -85,7 +85,7 @@ public class QrPayServiceImpl implements QrPayService {
 
     /**
      * 出码间隔闸（同一张账单两次「必须重出码」的最小间隔）、收银员配额闸、查单节流闸，
-     * Redis 口径与 fail-open 策略统一收口在 {@link PayRateLimitSupport}，本类只定阈值与 key。
+     * Redis 口径与 fail-open 策略统一收口在 {@link PayRateLimitService}，本类只定阈值与 key。
      */
     private static final String ISSUE_GATE_KEY_PREFIX = "his:pay:qr:issue:";
     private static final String ISSUE_QUOTA_KEY_PREFIX = "his:pay:qr:quota:";
@@ -95,15 +95,15 @@ public class QrPayServiceImpl implements QrPayService {
 
     private final PaymentService paymentService;
 
-    private final PayOrderProvider payOrderProvider;
+    private final PayOrderService payOrderService;
 
-    private final AlipayChannelProvider alipayChannelProvider;
+    private final AlipayChannelService alipayChannelService;
 
-    private final WxPayChannelProvider wxPayChannelProvider;
+    private final WxPayChannelService wxPayChannelService;
 
-    private final PayNotifyLogProvider payNotifyLogProvider;
+    private final PayNotifyLogService payNotifyLogService;
 
-    private final PayRateLimitSupport payRateLimitSupport;
+    private final PayRateLimitService payRateLimitService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -123,10 +123,10 @@ public class QrPayServiceImpl implements QrPayService {
         // 闸1 间隔：命中时只有「原码还能接着用」才放行，且一律本地重画、绝不出网。
         // 为什么不干脆放行建新单：建新单会先把患者手上那张还没扫完的码关掉 —— 换渠道/金额变化的干扰
         // 比多一次请求贵得多，那种情况直接拒绝、让收银员等几秒更安全。
-        Long retryAfter = payRateLimitSupport.intervalRetryAfter(
+        Long retryAfter = payRateLimitService.intervalRetryAfter(
                 ISSUE_GATE_KEY_PREFIX + bill.getId(), QR_ISSUE_INTERVAL_SECONDS);
         if (retryAfter != null) {
-            PayOrderVO reusable = payOrderProvider.reusablePending(
+            PayOrderVO reusable = payOrderService.reusablePending(
                     PayOrderBizTypeEnum.OUTPATIENT_PAY.getCode(), bill.getId(), dto.getChannel(), unpaid);
             if (reusable == null) {
                 throw new BusinessException("出码过于频繁，请 " + retryAfter + " 秒后再试");
@@ -139,13 +139,13 @@ public class QrPayServiceImpl implements QrPayService {
         }
 
         // 闸2 人员配额：按收银员封顶次数，账单维度的间隔闸管不到「换个账单继续刷」
-        payRateLimitSupport.assertQuota(ISSUE_QUOTA_KEY_PREFIX + UserUtils.getCurrentUser().getEmployeeId(),
+        payRateLimitService.assertQuota(ISSUE_QUOTA_KEY_PREFIX + UserUtils.getCurrentUser().getEmployeeId(),
                 QR_ISSUE_QUOTA_PER_WINDOW, QR_ISSUE_QUOTA_WINDOW_SECONDS, "出码");
 
-        // 本次没真把码出来就得把间隔闸的窗口退回去（见 PayRateLimitSupport.release）：
+        // 本次没真把码出来就得把间隔闸的窗口退回去（见 PayRateLimitServiceImpl.release）：
         // 建单、出码、画图任一步失败都不能让收银员对着「过于频繁」的提示干等 20 秒，那是在替他掩盖真故障
         try {
-            PayOrderProvider.CreateResult created = payOrderProvider.createPending(new PayOrderProvider.CreateSpec(
+            PayOrderService.CreateResult created = payOrderService.createPending(new PayOrderService.CreateSpec(
                     PayOrderBizTypeEnum.OUTPATIENT_PAY.getCode(), bill.getId(),
                     bill.getPatientId(), bill.getPatientName(), unpaid, dto.getChannel(),
                     "收费台扫码收款 账单 " + bill.getBillNo()));
@@ -154,7 +154,7 @@ public class QrPayServiceImpl implements QrPayService {
             // 复用命中的单：码串在渠道侧本来就还是那一句话，取回缓存本地画图，不再打渠道
             String qrCode = created.reused() ? recallQrCode(order) : null;
             if (!TextUtil.hasText(qrCode)) {
-                WxPayChannelProvider.PayUnifiedResult unified = precreateOfChannel(order);
+                WxPayChannelService.PayUnifiedResult unified = precreateOfChannel(order);
                 if (unified.errMsg() != null) {
                     throw new BusinessException(unified.errMsg());
                 }
@@ -163,7 +163,7 @@ public class QrPayServiceImpl implements QrPayService {
 
             return toCreateVO(order, qrCode);
         } catch (RuntimeException e) {
-            payRateLimitSupport.release(ISSUE_GATE_KEY_PREFIX + bill.getId());
+            payRateLimitService.release(ISSUE_GATE_KEY_PREFIX + bill.getId());
             throw e;
         }
     }
@@ -171,24 +171,24 @@ public class QrPayServiceImpl implements QrPayService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public QrPayResultVO queryResult(String payNo) {
-        PayOrderVO order = payOrderProvider.getByPayNo(payNo);
+        PayOrderVO order = payOrderService.getByPayNo(payNo);
         if (order == null) {
             throw new BusinessException("支付单不存在：" + payNo);
         }
         if (Objects.equals(order.getPayStatus(), PayOrderStatusEnum.PENDING.getCode())) {
             // 闸3 查单节流：轮询间隔由前端决定（页面多开时是成倍放大），但渠道侧状态不会秒级变，
             // 同一张单 5 秒内问第二次纯属重复。被节流就只看本地状态 —— 钱真到了通知会把它翻过来。
-            if (payRateLimitSupport.allowsChannelQuery(
+            if (payRateLimitService.allowsChannelQuery(
                     CHANNEL_QUERY_KEY_PREFIX + payNo, CHANNEL_QUERY_INTERVAL_SECONDS)) {
                 settleFromChannel(order);
-                order = payOrderProvider.getByPayNo(payNo);
+                order = payOrderService.getByPayNo(payNo);
             }
         }
         if (Objects.equals(order.getPayStatus(), PayOrderStatusEnum.PENDING.getCode())) {
             // 过期未付由服务端关单（含渠道关单），前端据此渲染「已过期 + 刷新」；
             // 并发付款的钱优先，关不动就按最新状态返回
-            payOrderProvider.closeExpiredIfPending(payNo);
-            order = payOrderProvider.getByPayNo(payNo);
+            payOrderService.closeExpiredIfPending(payNo);
+            order = payOrderService.getByPayNo(payNo);
         }
         return toResultVO(order);
     }
@@ -196,12 +196,12 @@ public class QrPayServiceImpl implements QrPayService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void close(String payNo) {
-        payOrderProvider.closePending(payNo);
+        payOrderService.closePending(payNo);
     }
 
     @Override
     public void mockMarkPaid(String payNo) {
-        PayOrderVO order = payOrderProvider.getByPayNo(payNo);
+        PayOrderVO order = payOrderService.getByPayNo(payNo);
         if (order == null) {
             throw new BusinessException("支付单不存在：" + payNo);
         }
@@ -211,7 +211,7 @@ public class QrPayServiceImpl implements QrPayService {
         }
         // 金额取支付单自己的应缴额：模拟的是「患者照单全付」，要模拟少付就得改传参，
         // 而那条路径该由真渠道或退费流程覆盖，不在这里开口子
-        alipayChannelProvider.markMockPaid(payNo, order.getAmount());
+        alipayChannelService.markMockPaid(payNo, order.getAmount());
     }
 
     @Override
@@ -223,7 +223,7 @@ public class QrPayServiceImpl implements QrPayService {
         String payNo = params == null ? null : params.get("out_trade_no");
 
         // 闸1 身份：签名由支付宝私钥产出，改一个字节签名就断；再认 app_id，别人的应用签得再对也不是本应用的收款
-        if (!alipayChannelProvider.verifyNotify(params)) {
+        if (!alipayChannelService.verifyNotify(params)) {
             log.warn("[支付宝回调·收费侧] 验签未通过，不入账 payNo={}", payNo);
             recordChargeNotify(PayNotifyResultEnum.SIGN_INVALID, NOTIFY_RETRY, false,
                     "验签未通过（签名或 app_id 不符）", rawNotify);
@@ -231,7 +231,7 @@ public class QrPayServiceImpl implements QrPayService {
         }
         // 「未付款」的通知（用户取消、交易超时关闭）是合法通知：确认收到即可，
         // 回 failure 会让支付宝对一条永远不会变成已付款的通知重试整天
-        if (!alipayChannelProvider.isPaidStatus(params.get("trade_status"))) {
+        if (!alipayChannelService.isPaidStatus(params.get("trade_status"))) {
             log.info("[支付宝回调·收费侧] 交易未处于已付款状态 payNo={} tradeStatus={}", payNo, params.get("trade_status"));
             recordChargeNotify(PayNotifyResultEnum.NOT_PAID, NOTIFY_ACK, true,
                     "交易状态未达实收：" + TextUtil.trimToEmpty(params.get("trade_status")), rawNotify);
@@ -239,7 +239,7 @@ public class QrPayServiceImpl implements QrPayService {
         }
 
         // 闸2 归属：单号必须是我方生成的，且通知渠道与本单登记的渠道一致
-        PayOrderVO order = payOrderProvider.getByPayNo(payNo);
+        PayOrderVO order = payOrderService.getByPayNo(payNo);
         if (order == null) {
             log.error("[支付宝回调·收费侧] 通知里的支付单不存在，疑似跨系统串单 payNo={} tradeNo={}", payNo, params.get("trade_no"));
             recordChargeNotify(PayNotifyResultEnum.ORDER_MISSING, NOTIFY_RETRY, true,
@@ -275,7 +275,7 @@ public class QrPayServiceImpl implements QrPayService {
         SystemOperatorContext.bindEmployee(order.getCashierId(), TextUtil.trimToEmpty(order.getCashierName()));
         try {
             // 闸4 幂等翻转 + 金额逐字比对在支付单服务里，与患者端回调共用同一套口径
-            PayOrderVO paid = payOrderProvider.confirmPaid(payNo, PayChannelEnum.ALIPAY.getCode(),
+            PayOrderVO paid = payOrderService.confirmPaid(payNo, PayChannelEnum.ALIPAY.getCode(),
                     notifyAmount, params.get("trade_no"));
             if (paid == null) {
                 log.info("[支付宝回调·收费侧] 支付单已入账，重复通知直接应答 payNo={}", payNo);
@@ -304,7 +304,7 @@ public class QrPayServiceImpl implements QrPayService {
      */
     private void recordChargeNotify(PayNotifyResultEnum result, String ackBody, boolean signVerified,
                                     String errorMsg, Map<String, String> params) {
-        payNotifyLogProvider.recordNotify(PayNotifyLogProvider.NotifyRecord.ofAlipay(
+        payNotifyLogService.recordNotify(PayNotifyLogService.NotifyRecord.ofAlipay(
                 PayNotifySceneEnum.CASHIER_QR, result, ackBody, signVerified, errorMsg, params));
     }
 
@@ -312,7 +312,7 @@ public class QrPayServiceImpl implements QrPayService {
     public String confirmByWxNotify(String body) {
         log.error("[微信回调·收费侧] 微信通知通道未接通（Native 出码与 V3 验签解密均未实现），本次通知不受理");
         // 微信 V3 是加密报文，解密前取不出任何字段，原文整体留痕（这也是将来接真实现时唯一的排查素材来源）
-        payNotifyLogProvider.recordNotify(PayNotifyLogProvider.NotifyRecord.ofRawText(
+        payNotifyLogService.recordNotify(PayNotifyLogService.NotifyRecord.ofRawText(
                 PayNotifySceneEnum.CASHIER_QR, PayNotifyResultEnum.REJECTED, NOTIFY_RETRY,
                 PayChannelEnum.WECHAT.getCode(), false, "微信通知通道未接通，不受理", body));
         return NOTIFY_RETRY;
@@ -328,11 +328,11 @@ public class QrPayServiceImpl implements QrPayService {
         }
         // 查单是网络调用，留在本事务里是为了让「翻转 + 记账」保持原子：
         // 拆成两段就会出现「支付单已置已支付、账单却没记收款」的永久漏账
-        AlipayChannelProvider.TradeState state = alipayChannelProvider.queryTrade(order.getPayNo());
-        if (state == null || !alipayChannelProvider.isPaidStatus(state.tradeStatus())) {
+        AlipayChannelService.TradeState state = alipayChannelService.queryTrade(order.getPayNo());
+        if (state == null || !alipayChannelService.isPaidStatus(state.tradeStatus())) {
             return;
         }
-        PayOrderVO paid = payOrderProvider.confirmPaid(order.getPayNo(), PayChannelEnum.ALIPAY.getCode(),
+        PayOrderVO paid = payOrderService.confirmPaid(order.getPayNo(), PayChannelEnum.ALIPAY.getCode(),
                 state.totalAmount(), state.tradeNo());
         if (paid != null) {
             bookBill(paid);
@@ -381,12 +381,12 @@ public class QrPayServiceImpl implements QrPayService {
                 order.getPayNo(), bill.getId(), amount.toPlainString());
     }
 
-    private WxPayChannelProvider.PayUnifiedResult precreateOfChannel(PayOrderVO order) {
+    private WxPayChannelService.PayUnifiedResult precreateOfChannel(PayOrderVO order) {
         if (Objects.equals(order.getChannel(), PayChannelEnum.ALIPAY.getCode())) {
-            return alipayChannelProvider.precreate(order);
+            return alipayChannelService.precreate(order);
         }
         if (Objects.equals(order.getChannel(), PayChannelEnum.WECHAT.getCode())) {
-            return wxPayChannelProvider.nativePrecreate(order);
+            return wxPayChannelService.nativePrecreate(order);
         }
         throw new BusinessException("该渠道暂不支持出码收款：" + PayChannelEnum.getLabelOrUnknown(order.getChannel()));
     }
@@ -396,7 +396,7 @@ public class QrPayServiceImpl implements QrPayService {
      */
     private String recallQrCode(PayOrderVO order) {
         if (Objects.equals(order.getChannel(), PayChannelEnum.ALIPAY.getCode())) {
-            return alipayChannelProvider.recallQrCode(order.getPayNo());
+            return alipayChannelService.recallQrCode(order.getPayNo());
         }
         return null;
     }

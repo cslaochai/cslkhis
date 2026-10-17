@@ -4,7 +4,7 @@ import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.common.enums.QcRecordSourceEnum;
-import com.his.provider.vo.InpatientRecordVO;
+import com.his.patient.vo.InpatientRecordBriefVO;
 import com.his.common.enums.InpatientRecordTypeEnum;
 import lombok.Data;
 
@@ -129,7 +129,7 @@ public class QcSnapshot {
     /**
      * 住院文书快照
      */
-    public static QcSnapshot ofInpatient(InpatientRecordVO r) {
+    public static QcSnapshot ofInpatient(InpatientRecordBriefVO r) {
         QcSnapshot s = new QcSnapshot();
         s.source = QcRecordSourceEnum.INPATIENT;
         s.recordId = r.getId();

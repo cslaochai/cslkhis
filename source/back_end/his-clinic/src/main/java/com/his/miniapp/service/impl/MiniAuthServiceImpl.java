@@ -7,7 +7,7 @@ import com.his.miniapp.service.MiniAuthService;
 import com.his.miniapp.service.WxLoginChannelService;
 import com.his.miniapp.vo.MiniUserRowVO;
 import com.his.miniapp.vo.MiniWxLoginVO;
-import com.his.provider.service.JwtProvider;
+import com.his.common.util.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,7 +20,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class MiniAuthServiceImpl implements MiniAuthService {
 
-    private final JwtProvider jwtProvider;
+    private final JwtUtils jwtUtils;
 
     private final WxLoginChannelService wxLoginChannelService;
 
@@ -46,7 +46,7 @@ public class MiniAuthServiceImpl implements MiniAuthService {
         String realName = user.getRealName() == null ? username : user.getRealName();
         Long patientId = user.getPatientId();
 
-        String token = jwtProvider.generateToken(userId, username, "PATIENT", null, null);
+        String token = jwtUtils.generateToken(userId, username, "PATIENT", null, null);
         vo.setBound(true);
         vo.setToken(token);
         vo.setUserId(userId);

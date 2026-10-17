@@ -1,8 +1,8 @@
 package com.his.medicaltech.service.impl;
 
-import com.his.provider.service.PatientProvider;
-import com.his.provider.vo.PatientMasterVO;
-import com.his.provider.vo.PatientProfileScoreVO;
+import com.his.patient.service.PatientFacadeService;
+import com.his.patient.vo.PatientMasterVO;
+import com.his.patient.vo.PatientProfileScoreVO;
 import com.his.common.enums.AppointStatusEnum;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.SysGenderEnum;
@@ -42,7 +42,7 @@ public class CdrServiceImpl implements CdrService {
 
     private final CdrMapper cdrMapper;
 
-    private final PatientProvider patientProvider;
+    private final PatientFacadeService patientFacadeService;
 
 
     /**
@@ -118,7 +118,7 @@ public class CdrServiceImpl implements CdrService {
     @Override
     public CdrTimelineVO getTimeline(CdrQueryDTO dto) {
         Long pid = dto.getPatientId();
-        PatientMasterVO main = patientProvider.getPatient(pid);
+        PatientMasterVO main = patientFacadeService.getPatient(pid);
         if (main == null) {
             throw new BusinessException("患者不存在或已删除");
         }
@@ -523,7 +523,7 @@ public class CdrServiceImpl implements CdrService {
                 covered.add(k);
             }
         }
-        PatientProfileScoreVO score = patientProvider.profileScore(p.getId(), covered);
+        PatientProfileScoreVO score = patientFacadeService.profileScore(p.getId(), covered);
         vo.setCompleteRate(score.getCompleteRate());
         vo.setMissingFields(score.getMissingFields());
         return vo;
@@ -696,7 +696,7 @@ public class CdrServiceImpl implements CdrService {
      * EMPI 归并：查询口径统一走 his-patient，不在报表模块里另写一份
      */
     private List<Long> resolveIds(Long pid) {
-        List<Long> ids = patientProvider.resolvePatientIds(pid);
+        List<Long> ids = patientFacadeService.resolvePatientIds(pid);
         if (ids == null || ids.isEmpty()) {
             return new ArrayList<>(List.of(pid));
         }

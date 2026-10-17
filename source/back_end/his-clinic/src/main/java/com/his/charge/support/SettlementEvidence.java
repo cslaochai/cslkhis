@@ -1,7 +1,14 @@
 package com.his.charge.support;
 
 
-import com.his.provider.vo.*;
+import com.his.appoint.vo.RegistBriefVO;
+import com.his.emr.vo.MedicalRecordBriefVO;
+import com.his.emr.vo.PrescriptionBriefVO;
+import com.his.emr.vo.PrescriptionDetailBriefVO;
+import com.his.medicaltech.vo.InspectionRecordBriefVO;
+import com.his.medicaltech.vo.LabResultBriefVO;
+import com.his.medicaltech.vo.LaboratoryRecordBriefVO;
+import com.his.patient.vo.PatientBriefVO;
 import com.his.charge.entity.BizInsuranceSettlement;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.entity.BizSettlementBillItem;

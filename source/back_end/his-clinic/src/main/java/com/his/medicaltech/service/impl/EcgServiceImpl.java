@@ -27,7 +27,7 @@ import com.his.medicaltech.vo.EcgDetailVO;
 import com.his.medicaltech.vo.EcgListVO;
 import com.his.medicaltech.vo.EcgTemplateVO;
 import com.his.common.enums.BizTypeEnum;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.SysAuditLogService;
 import com.his.system.service.SysMessageService;

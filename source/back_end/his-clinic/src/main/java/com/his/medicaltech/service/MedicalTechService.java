@@ -1,6 +1,6 @@
 package com.his.medicaltech.service;
 
-import com.his.provider.vo.BizReportVO;
+import com.his.medicaltech.vo.BizReportVO;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
 import com.his.medicaltech.dto.LabResultSaveDTO;

@@ -1,6 +1,6 @@
 package com.his.charge.vo;
 
-import com.his.provider.vo.*;
+
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;

@@ -25,9 +25,9 @@ import com.his.operation.mapper.BizOperationCountMapper;
 import com.his.operation.service.OperationCountService;
 import com.his.operation.vo.CountItemVO;
 import com.his.operation.vo.OperationCountVO;
-import com.his.provider.service.PatientProvider;
-import com.his.provider.vo.PatientMasterVO;
-import com.his.provider.service.DeptScopeService;
+import com.his.patient.service.PatientFacadeService;
+import com.his.patient.vo.PatientMasterVO;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -51,7 +51,7 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
     private final RedisSequenceService redisSequenceService;
 
 
-    private final PatientProvider patientProvider;
+    private final PatientFacadeService patientFacadeService;
 
     private final BizOperationCountMapper bizOperationCountMapper;
 
@@ -335,7 +335,7 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
             vo.setOperationStatusText(OperationApplyStatusEnum.getLabel(apply.getOperationStatus()));
         }
         if (entity.getPatientId() != null) {
-            PatientMasterVO patient = patientProvider.getPatient(entity.getPatientId());
+            PatientMasterVO patient = patientFacadeService.getPatient(entity.getPatientId());
             if (patient != null) {
                 vo.setPatientNo(patient.getPatientNo());
             }

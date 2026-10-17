@@ -1,6 +1,6 @@
 package com.his.charge.controller;
 
-import com.his.provider.dto.FeeBookDTO;
+import com.his.charge.dto.FeeBookDTO;
 import com.his.charge.dto.FeeRecordQueryPageDTO;
 import com.his.charge.dto.FeeReverseDTO;
 import com.his.charge.service.FeeRecordService;

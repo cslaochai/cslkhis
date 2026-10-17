@@ -1,5 +1,6 @@
 package com.his.miniapp.service.impl;
 
+import com.his.system.utils.UserUtils;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.miniapp.dto.MessagePageDTO;
@@ -7,7 +8,6 @@ import com.his.miniapp.mapper.MiniMessageMapper;
 import com.his.miniapp.service.MiniMessageService;
 import com.his.miniapp.vo.MiniMessageListVO;
 import com.his.common.entity.CurrentUser;
-import com.his.provider.service.AuthContextProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -19,11 +19,9 @@ public class MiniMessageServiceImpl implements MiniMessageService {
 
     private final MiniMessageMapper miniMessageMapper;
 
-    private final AuthContextProvider authContextProvider;
-
     @Override
     public PageResult<MiniMessageListVO> myPage(MessagePageDTO dto) {
-        CurrentUser operatorUser = authContextProvider.getCurrentUser();
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
@@ -37,7 +35,7 @@ public class MiniMessageServiceImpl implements MiniMessageService {
 
     @Override
     public long unreadCount() {
-        CurrentUser operatorUser = authContextProvider.getCurrentUser();
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
@@ -46,7 +44,7 @@ public class MiniMessageServiceImpl implements MiniMessageService {
 
     @Override
     public int markRead(List<Long> messageIds) {
-        CurrentUser operatorUser = authContextProvider.getCurrentUser();
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }

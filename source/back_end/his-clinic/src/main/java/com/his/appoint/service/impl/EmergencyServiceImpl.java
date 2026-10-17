@@ -26,16 +26,16 @@ import com.his.common.support.EmpTitleCode;
 import com.his.common.util.ShiftCoverUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
-import com.his.provider.dto.InpatientAdmitDTO;
-import com.his.provider.dto.EmergencyPatientCreateDTO;
-import com.his.provider.service.PatientProvider;
-import com.his.provider.vo.PatientMasterVO;
-import com.his.provider.vo.BedVO;
-import com.his.provider.vo.WardVO;
+import com.his.patient.dto.InpatientAdmitDTO;
+import com.his.patient.dto.EmergencyPatientCreateDTO;
+import com.his.patient.service.PatientFacadeService;
+import com.his.patient.vo.PatientMasterVO;
+import com.his.patient.vo.BedVO;
+import com.his.patient.vo.WardVO;
 import com.his.system.entity.*;
 import com.his.common.enums.BizTypeEnum;
 import com.his.system.mapper.*;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.common.constant.SystemConfigKeyConst;
 import com.his.system.service.DutyRosterService;
 import com.his.system.service.SysMessageService;
@@ -94,7 +94,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
 
     private final RedisSequenceService redisSequenceService;
 
-    private final PatientProvider patientProvider;
+    private final PatientFacadeService patientFacadeService;
 
     private final BizClinicSourceService bizScheduleService;
 
@@ -199,9 +199,9 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
             createDTO.setAge(upsertDTO.getAge());
             createDTO.setPhone(upsertDTO.getPhone());
             createDTO.setIdCard(upsertDTO.getIdCard());
-            bizPatient = patientProvider.createEmergencyPatient(createDTO);
+            bizPatient = patientFacadeService.createEmergencyPatient(createDTO);
         } else {
-            bizPatient = patientProvider.getPatient(upsertDTO.getPatientId());
+            bizPatient = patientFacadeService.getPatient(upsertDTO.getPatientId());
             if (bizPatient == null) {
                 throw new BusinessException("未能找到对应患者信息");
             }
@@ -416,7 +416,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
             }
             // 换床（留观中再次提交）：先把旧床还回去，再占新床
             endObservation(emergency);
-            patientProvider.occupyBedForObservation(bed.getBedId(), emergency.getPatientId());
+            patientFacadeService.occupyBedForObservation(bed.getBedId(), emergency.getPatientId());
             emergency.setObservationWardId(bed.getWardId());
             emergency.setObservationBedId(bed.getBedId());
             emergency.setObservationBed(bed.getBedNo());
@@ -499,7 +499,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
         inpatient.setRegistId(appoint == null ? null : appoint.getId());
         inpatient.setRegistNo(appoint == null ? null : appoint.getRegistNo());
         inpatient.setDiagnosis(TextUtil.hasText(admitDTO.getDiagnosis()) ? admitDTO.getDiagnosis() : emergency.getDiagnosis());
-        Long admissionId = patientProvider.admit(inpatient);
+        Long admissionId = patientFacadeService.admit(inpatient);
 
         emergency.setEmergencyStatus(EmergencyStatusEnum.ADMITTED.getCode());
         emergency.setAdmissionId(admissionId);
@@ -517,12 +517,12 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
 
     @Override
     public List<WardVO> wardSelectList() {
-        return patientProvider.listWards();
+        return patientFacadeService.listWards();
     }
 
     @Override
     public List<BedVO> bedSelectList(Long wardId, Integer bedStatus) {
-        return patientProvider.listBeds(wardId, null, bedStatus);
+        return patientFacadeService.listBeds(wardId, null, bedStatus);
     }
 
     @Override
@@ -544,7 +544,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
     private void endObservation(Emergency emergency) {
         Integer status = emergency.getEmergencyStatus();
         if (status != null && status == 3 && emergency.getObservationBedId() != null) {
-            patientProvider.releaseBedForObservation(emergency.getObservationBedId(), emergency.getPatientId());
+            patientFacadeService.releaseBedForObservation(emergency.getObservationBedId(), emergency.getPatientId());
             emergency.setObservationEndTime(LocalDateTime.now());
         }
     }

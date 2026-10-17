@@ -19,7 +19,7 @@ import com.his.pharmacy.mapper.BizCssdTraceMapper;
 import com.his.pharmacy.service.CssdService;
 import com.his.pharmacy.vo.CssdPackVO;
 import com.his.pharmacy.vo.CssdTraceVO;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;

@@ -19,7 +19,7 @@ import com.his.emr.mapper.BizAdverseEventMapper;
 import com.his.emr.service.AdverseEventService;
 import com.his.emr.vo.AdverseEventStatsVO;
 import com.his.emr.vo.AdverseEventVO;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

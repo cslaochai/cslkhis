@@ -34,20 +34,20 @@ import com.his.operation.vo.AiSuggestionVO;
 import com.his.operation.vo.RoomUtilizationStatVO;
 import com.his.operation.vo.RoomUtilizationVO;
 import com.his.common.enums.InpatientRecordTypeEnum;
-import com.his.provider.dto.ClosedLoopRecordDTO;
-import com.his.provider.dto.SurgeryOperationDTO;
-import com.his.provider.service.PatientProvider;
-import com.his.provider.vo.AdmissionVO;
-import com.his.provider.vo.ClosedLoopRecordVO;
-import com.his.provider.vo.PatientMasterVO;
-import com.his.provider.vo.SurgeryOperationVO;
-import com.his.provider.vo.WardVO;
+import com.his.patient.dto.ClosedLoopRecordDTO;
+import com.his.operation.dto.SurgeryOperationDTO;
+import com.his.patient.service.PatientFacadeService;
+import com.his.patient.vo.AdmissionVO;
+import com.his.patient.vo.ClosedLoopRecordVO;
+import com.his.patient.vo.PatientMasterVO;
+import com.his.operation.vo.SurgeryOperationVO;
+import com.his.patient.vo.WardVO;
 import com.his.system.dto.TechAuthGateDTO;
 import com.his.common.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.EmployeeTechAuthService;
 import com.his.system.utils.UserUtils;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -80,7 +80,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
 
     private final BizOperationApplyMapper bizOperationApplyMapper;
 
-    private final PatientProvider patientProvider;
+    private final PatientFacadeService patientFacadeService;
 
     private final EmployeeTechAuthService employeeTechAuthService;
 
@@ -176,7 +176,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }
-        AdmissionVO admission = patientProvider.getAdmission(admissionId);
+        AdmissionVO admission = patientFacadeService.getAdmission(admissionId);
         if (admission != null) {
             deptScopeService.assertDeptAccessible(admission.getDeptId());
         }
@@ -628,14 +628,14 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        AdmissionVO admission = patientProvider.getAdmission(dto.getAdmissionId());
+        AdmissionVO admission = patientFacadeService.getAdmission(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
         if (!Objects.equals(AdmitStatusEnum.IN_HOSPITAL.getCode(), admission.getAdmitStatus())) {
             throw new BusinessException("该患者当前不是「在院」状态，不能申请手术（已出院的住院不能开手术单）");
         }
-        PatientMasterVO patient = patientProvider.getPatient(admission.getPatientId());
+        PatientMasterVO patient = patientFacadeService.getPatient(admission.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在");
         }
@@ -893,7 +893,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
             throw new BusinessException("实际结束时间必须晚于开始时间");
         }
 
-        AdmissionVO admission = patientProvider.getAdmission(entity.getAdmissionId());
+        AdmissionVO admission = patientFacadeService.getAdmission(entity.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在，无法回写（admissionId=" + entity.getAdmissionId() + "）");
         }
@@ -903,7 +903,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         }
 
         // 归档闸门：已归档的病案首页不能再加手术明细（同"归档后病历不可修改"）
-        if (patientProvider.isSummaryArchived(entity.getAdmissionId())) {
+        if (patientFacadeService.isSummaryArchived(entity.getAdmissionId())) {
             throw new BusinessException("该住院的病案首页已归档，不能再回写手术明细（归档数据不可改）");
         }
 
@@ -936,7 +936,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
                 + "，主刀 " + textOr(entity.getSurgeonName(), "未指定")
                 + "，麻醉方式 " + OperationAnesthesiaMethodEnum.getLabel(entity.getAnesthesiaType()));
         // 首页明细的重复闸、序号重排、is_surgery 置位都在首页写入方里做（它才是这张表的所有者）
-        SurgeryOperationVO opVo = patientProvider.appendSurgeryOperation(op);
+        SurgeryOperationVO opVo = patientFacadeService.appendSurgeryOperation(op);
 
         // ② 回写手术记录病历（record_type=5）
         ClosedLoopRecordVO record = writeBackRecord(entity, admission, dto, start, end, basis, now);
@@ -1026,7 +1026,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        PatientMasterVO patient = patientProvider.getPatient(admission.getPatientId());
+        PatientMasterVO patient = patientFacadeService.getPatient(admission.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在，无法回写手术记录");
         }
@@ -1082,7 +1082,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         record.setDoctorName(TextUtil.hasText(entity.getSurgeonName())
                 ? entity.getSurgeonName() : operatorUser.getRealName());
         record.setSubmitTime(now);
-        return patientProvider.appendClosedLoopRecord(record);
+        return patientFacadeService.appendClosedLoopRecord(record);
     }
 
     /**
@@ -1228,12 +1228,12 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         if (wardId == null) {
             return null;
         }
-        WardVO ward = patientProvider.getWard(wardId);
+        WardVO ward = patientFacadeService.getWard(wardId);
         return ward == null ? "未知病区(ID=" + wardId + ")" : ward.getWardName();
     }
 
     private String bedNoOf(Long bedId) {
-        return patientProvider.getBedNo(bedId);
+        return patientFacadeService.getBedNo(bedId);
     }
 
     /**

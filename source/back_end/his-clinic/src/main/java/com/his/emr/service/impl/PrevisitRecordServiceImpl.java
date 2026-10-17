@@ -3,18 +3,18 @@ package com.his.emr.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.his.provider.service.AppointProvider;
-import com.his.provider.vo.RegistBriefVO;
+import com.his.appoint.service.AppointFacadeService;
+import com.his.appoint.vo.RegistBriefVO;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.provider.dto.PrevisitSubmitDTO;
+import com.his.emr.dto.PrevisitSubmitDTO;
 import com.his.emr.entity.BizPrevisitRecord;
 import com.his.emr.mapper.BizPrevisitRecordMapper;
 import com.his.emr.service.PrevisitRecordService;
-import com.his.provider.support.PrevisitQuestionnaireSupport;
-import com.his.provider.vo.PrevisitDetailVO;
-import com.his.provider.vo.PrevisitQuestionnaireVO;
-import com.his.provider.service.DeptScopeService;
+import com.his.emr.support.PrevisitQuestionnaireSupport;
+import com.his.emr.vo.PrevisitDetailVO;
+import com.his.emr.vo.PrevisitQuestionnaireVO;
+import com.his.system.service.DeptScopeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -32,7 +32,7 @@ public class PrevisitRecordServiceImpl extends ServiceImpl<BizPrevisitRecordMapp
 
     private final BizPrevisitRecordMapper bizPrevisitRecordMapper;
 
-    private final AppointProvider appointProvider;
+    private final AppointFacadeService appointFacadeService;
 
     private final ObjectMapper objectMapper;
 
@@ -50,7 +50,7 @@ public class PrevisitRecordServiceImpl extends ServiceImpl<BizPrevisitRecordMapp
 
     @Override
     public PrevisitDetailVO submit(PrevisitSubmitDTO dto) {
-        RegistBriefVO appointInfo = appointProvider.findRegist(dto.getRegistId());
+        RegistBriefVO appointInfo = appointFacadeService.findRegist(dto.getRegistId());
         if (appointInfo == null) {
             throw new BusinessException("挂号记录不存在");
         }

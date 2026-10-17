@@ -1,6 +1,6 @@
 package com.his.medicaltech.vo;
 
-import com.his.provider.vo.BizSettlementBillVO;
+import com.his.charge.vo.BizSettlementBillVO;
 import lombok.Data;
 
 import java.math.BigDecimal;

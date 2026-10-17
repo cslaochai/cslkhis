@@ -17,7 +17,7 @@ import com.his.emr.entity.BizPrescription;
 import com.his.emr.entity.BizPrescriptionDetail;
 import com.his.emr.mapper.BizPrescriptionDetailMapper;
 import com.his.emr.mapper.BizPrescriptionMapper;
-import com.his.provider.service.PatientProvider;
+import com.his.patient.service.PatientFacadeService;
 import com.his.common.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -64,7 +64,7 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
 
     private final SysDrugGuideMapper sysDrugGuideMapper;
 
-    private final PatientProvider patientProvider;
+    private final PatientFacadeService patientFacadeService;
 
     /**
      * 单次剂量：优先用法用量原句，其次单次剂量，都没有就直说不知道。
@@ -186,7 +186,7 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
         if (prescription == null) {
             throw new BusinessException("处方不存在：" + dto.getPrescriptionId());
         }
-        if (patientProvider.patientScopeViolated(prescription.getPatientId())) {
+        if (patientFacadeService.patientScopeViolated(prescription.getPatientId())) {
             // 不区分「不存在」和「无权查看」，避免被用来探测处方是否存在
             throw new BusinessException("处方不存在或无权查看：" + dto.getPrescriptionId());
         }

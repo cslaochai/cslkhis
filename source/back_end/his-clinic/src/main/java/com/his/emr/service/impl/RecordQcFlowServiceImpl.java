@@ -22,7 +22,7 @@ import com.his.emr.mapper.BizRecordQcFlowMapper;
 import com.his.emr.service.RecordQcFlowService;
 import com.his.emr.vo.RecordQcFlowActionVO;
 import com.his.emr.vo.RecordQcFlowVO;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -10,6 +10,7 @@ import com.his.common.enums.MedicalInsuranceTypeEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.enums.PatientMergeStatusEnum;
+import com.his.common.enums.QueueStatusEnum;
 import com.his.system.service.RedisSequenceService;
 import com.his.common.util.SensitiveMaskUtil;
 import com.his.common.util.TextUtil;
@@ -23,8 +24,9 @@ import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.mapper.BizPatientTagRelationMapper;
 import com.his.patient.service.*;
 import com.his.patient.support.PatientProfileValidator;
-import com.his.provider.service.AppointProvider;
-import com.his.provider.vo.TodayVisitVO;
+import com.his.appoint.entity.Queue;
+import com.his.appoint.mapper.QueueMapper;
+import com.his.appoint.vo.TodayVisitVO;
 import com.his.common.enums.PatientSearchScopeModeEnum;
 import com.his.patient.support.PatientSearchScopeResolver;
 import com.his.patient.vo.*;
@@ -129,7 +131,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
      * 就诊域为编译期强依赖（his-web 聚合引入），实现缺失直接启动失败。
      */
     @Lazy
-    private final AppointProvider todayVisitProvider;
+    private final QueueMapper queueMapper;
     /**
      * 「要不要看今日就诊」的判定（按当前登录角色的岗位性质）。
      *
@@ -540,12 +542,62 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
      */
     private Map<Long, TodayVisitVO> loadTodayVisits() {
         try {
-            Map<Long, TodayVisitVO> visits = todayVisitProvider.todayVisits();
+            Map<Long, TodayVisitVO> visits = todayVisits();
             return visits != null ? visits : Collections.emptyMap();
         } catch (Exception e) {
             log.warn("今日就诊信息获取失败，本次患者搜索按普通模式返回（不置顶/不标注）：{}", e.getMessage());
             return Collections.emptyMap();
         }
+    }
+
+    private Map<Long, TodayVisitVO> todayVisits() {
+        LambdaQueryWrapper<Queue> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Queue::getVisitDate, LocalDate.now())
+                .in(Queue::getQueueStatus,
+                        QueueStatusEnum.WAITING.getCode(),
+                        QueueStatusEnum.CONSULTING.getCode(),
+                        QueueStatusEnum.COMPLETED.getCode())
+                .orderByDesc(Queue::getArriveTime);
+        List<Queue> list = queueMapper.selectList(wrapper);
+        if (list == null || list.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        CurrentUser currentUser = UserUtils.getCurrentUser();
+        Long myEmpId = currentUser != null ? currentUser.getEmployeeId() : null;
+        Long myDeptId = currentUser != null ? currentUser.getDeptId() : null;
+
+        Map<Long, TodayVisitVO> result = new HashMap<>();
+        for (Queue q : list) {
+            if (q.getPatientId() == null) {
+                continue;
+            }
+            TodayVisitVO visit = toTodayVisit(q, myEmpId, myDeptId);
+            TodayVisitVO exist = result.get(q.getPatientId());
+            if (exist == null) {
+                result.put(q.getPatientId(), visit);
+                continue;
+            }
+            if (Boolean.TRUE.equals(visit.getMine()) && !Boolean.TRUE.equals(exist.getMine())) {
+                result.put(q.getPatientId(), visit);
+            }
+        }
+        return result;
+    }
+
+    private TodayVisitVO toTodayVisit(Queue q, Long myEmpId, Long myDeptId) {
+        TodayVisitVO visit = new TodayVisitVO();
+        visit.setPatientId(q.getPatientId());
+        visit.setStatus(q.getQueueStatus());
+        QueueStatusEnum status = q.getQueueStatus() == null
+                ? null : QueueStatusEnum.fromCode(q.getQueueStatus());
+        visit.setStatusText(status != null ? status.getLabel() : "状态(" + q.getQueueStatus() + ")");
+        visit.setDeptName(q.getDeptName());
+        visit.setDoctorName(q.getDoctorName());
+        visit.setQueueNo(q.getSequenceNo() != null ? q.getSequenceNo() + " 号" : null);
+        visit.setMine((myEmpId != null && myEmpId.equals(q.getDoctorId()))
+                || (myDeptId != null && myDeptId.equals(q.getDeptId())));
+        return visit;
     }
 
     /**

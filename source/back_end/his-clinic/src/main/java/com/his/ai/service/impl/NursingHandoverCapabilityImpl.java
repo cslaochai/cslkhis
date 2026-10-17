@@ -12,9 +12,9 @@ import com.his.ai.vo.WardHandoverVO;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
-import com.his.provider.service.PatientProvider;
-import com.his.provider.vo.NursingAssessmentVO;
-import com.his.provider.vo.WardNursingFactsVO;
+import com.his.patient.service.PatientFacadeService;
+import com.his.patient.vo.NursingAssessmentVO;
+import com.his.patient.vo.WardNursingFactsVO;
 import com.his.common.enums.NursingHandoverSourceEnum;
 import com.his.common.enums.AiBizTypeEnum;
 import com.his.common.enums.NursingAssessRiskLevelEnum;
@@ -50,7 +50,7 @@ public class NursingHandoverCapabilityImpl implements NursingHandoverCapability 
 
     private final AiExecutionService aiExecutionService;
 
-    private final PatientProvider patientProvider;
+    private final PatientFacadeService patientFacadeService;
 
     // ---------------------------------------------------------------- 事实文本
 
@@ -73,7 +73,7 @@ public class NursingHandoverCapabilityImpl implements NursingHandoverCapability 
                 end = date.atTime(8, 0);
             }
         }
-        WardNursingFactsVO facts = patientProvider.wardShiftFacts(
+        WardNursingFactsVO facts = patientFacadeService.wardShiftFacts(
                 dto.getWardId(), begin, end, dto.getShift());
 
         WardHandoverVO vo = new WardHandoverVO();

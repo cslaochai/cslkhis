@@ -6,7 +6,7 @@ import com.his.medicaltech.service.HospitalTodayMetricService;
 import com.his.medicaltech.vo.WorkbenchHospitalAlertRowVO;
 import com.his.medicaltech.vo.WorkbenchHospitalCoreRowVO;
 import com.his.common.entity.CurrentUser;
-import com.his.provider.service.WorkbenchMetricService;
+import com.his.system.service.WorkbenchMetricService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

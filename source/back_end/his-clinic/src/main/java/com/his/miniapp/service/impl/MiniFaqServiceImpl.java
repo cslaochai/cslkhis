@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.provider.service.SequenceProvider;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.miniapp.dto.FaqPageQueryDTO;
@@ -35,7 +35,7 @@ public class MiniFaqServiceImpl extends ServiceImpl<MiniFaqMapper, SysFaq> imple
     private static final int MAX_HOT_LIMIT = 20;
 
     private final MiniFaqMapper miniFaqMapper;
-    private final SequenceProvider sequenceProvider;
+    private final RedisSequenceService redisSequenceService;
 
     private static MiniFaqListVO toAdminVO(SysFaq faq) {
         MiniFaqListVO vo = new MiniFaqListVO();
@@ -245,7 +245,7 @@ public class MiniFaqServiceImpl extends ServiceImpl<MiniFaqMapper, SysFaq> imple
      */
     private String nextFaqNo() {
         return "FAQ" + LocalDate.now().format(DateFormats.COMPACT_DATE)
-                + String.format("%04d", sequenceProvider.next("FAQ"));
+                + String.format("%04d", redisSequenceService.next("FAQ"));
     }
 
     private List<SysFaq> enabledFaqs() {

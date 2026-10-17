@@ -1,8 +1,8 @@
 package com.his.patient.support;
 
-import com.his.provider.dto.FeeBookDTO;
-import com.his.provider.service.ChargeProvider;
-import com.his.provider.vo.FeeRecordVO;
+import com.his.charge.dto.FeeBookDTO;
+import com.his.charge.service.ChargeFacadeService;
+import com.his.charge.vo.FeeRecordVO;
 import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class OrderChargeInvoker {
 
-    private final ChargeProvider chargeProvider;
+    private final ChargeFacadeService chargeFacadeService;
 
     /**
      * 一次执行记一行（独立事务）
@@ -43,6 +43,6 @@ public class OrderChargeInvoker {
                     dto.getEncounterId(), dto.getSourceNo());
             return null;
         }
-        return chargeProvider.bookFee(dto);
+        return chargeFacadeService.bookFee(dto);
     }
 }

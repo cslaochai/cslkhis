@@ -1,6 +1,6 @@
 package com.his.system.service;
 
-import com.his.provider.service.WorkbenchMetricService;
+import com.his.system.service.WorkbenchMetricService;
 
 /**
  * 工作台卡片 myTodo 的取数提供方：我当前未办结的站内信（待办型）。

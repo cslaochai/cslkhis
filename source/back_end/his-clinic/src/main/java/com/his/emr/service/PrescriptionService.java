@@ -7,7 +7,7 @@ import com.his.emr.entity.BizInspectionApply;
 import com.his.emr.entity.BizLaboratoryApply;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.vo.BizPrescriptionVO;
-import com.his.provider.vo.MyPrescriptionVO;
+import com.his.emr.vo.MyPrescriptionVO;
 import com.his.emr.vo.PrescriptionRationalVO;
 
 import java.util.List;

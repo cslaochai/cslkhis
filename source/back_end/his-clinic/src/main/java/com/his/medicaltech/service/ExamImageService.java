@@ -2,7 +2,7 @@ package com.his.medicaltech.service;
 
 import com.his.medicaltech.dto.ExamImageMockImportDTO;
 import com.his.medicaltech.dto.ExamImageUploadDTO;
-import com.his.provider.vo.ExamImageVO;
+import com.his.medicaltech.vo.ExamImageVO;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;

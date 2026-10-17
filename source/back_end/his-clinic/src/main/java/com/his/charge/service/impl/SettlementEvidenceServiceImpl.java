@@ -2,21 +2,21 @@ package com.his.charge.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.charge.entity.BizInsuranceSettlement;
-import com.his.provider.service.AppointProvider;
-import com.his.provider.service.EmrProvider;
-import com.his.provider.service.MedicalTechProvider;
-import com.his.provider.service.PatientProvider;
+import com.his.appoint.service.AppointFacadeService;
+import com.his.emr.service.EmrFacadeService;
+import com.his.medicaltech.service.MedicalTechFacadeService;
+import com.his.patient.service.PatientFacadeService;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.mapper.BizInsuranceSettlementMapper;
 import com.his.charge.mapper.BizSettlementBillItemMapper;
 import com.his.charge.mapper.BizSettlementBillMapper;
 import com.his.charge.service.SettlementEvidenceService;
 import com.his.charge.support.SettlementEvidence;
-import com.his.provider.vo.LaboratoryRecordBriefVO;
-import com.his.provider.vo.MedicalRecordBriefVO;
-import com.his.provider.vo.PatientBriefVO;
-import com.his.provider.vo.PrescriptionBriefVO;
-import com.his.provider.vo.RegistBriefVO;
+import com.his.medicaltech.vo.LaboratoryRecordBriefVO;
+import com.his.emr.vo.MedicalRecordBriefVO;
+import com.his.patient.vo.PatientBriefVO;
+import com.his.emr.vo.PrescriptionBriefVO;
+import com.his.appoint.vo.RegistBriefVO;
 import com.his.common.enums.BillStatusEnum;
 import com.his.common.enums.EncounterTypeEnum;
 import lombok.RequiredArgsConstructor;
@@ -36,13 +36,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SettlementEvidenceServiceImpl implements SettlementEvidenceService {
 
-    private final AppointProvider appointProvider;
+    private final AppointFacadeService appointFacadeService;
 
-    private final PatientProvider patientProvider;
+    private final PatientFacadeService patientFacadeService;
 
-    private final MedicalTechProvider medicalTechProvider;
+    private final MedicalTechFacadeService medicalTechFacadeService;
 
-    private final EmrProvider emrProvider;
+    private final EmrFacadeService emrFacadeService;
 
     private final BizSettlementBillMapper bizSettlementBillMapper;
 
@@ -68,7 +68,7 @@ public class SettlementEvidenceServiceImpl implements SettlementEvidenceService 
 
         // 1. 挂号（锚点）
         Long registId = settlement.getRegistId();
-        RegistBriefVO regist = registId == null ? null : appointProvider.findRegist(registId);
+        RegistBriefVO regist = registId == null ? null : appointFacadeService.findRegist(registId);
         ev.setRegist(regist);
         if (registId == null) {
             ev.markMissing("清单未关联挂号ID，无法定位就诊依据");
@@ -79,16 +79,16 @@ public class SettlementEvidenceServiceImpl implements SettlementEvidenceService 
         // 2. 患者
         Long patientId = settlement.getPatientId() != null ? settlement.getPatientId()
                 : (regist != null ? regist.getPatientId() : null);
-        PatientBriefVO patient = patientId == null ? null : patientProvider.findPatient(patientId);
+        PatientBriefVO patient = patientId == null ? null : patientFacadeService.findPatient(patientId);
         ev.setPatient(patient);
         if (patient == null) {
             ev.markMissing("患者档案缺失，性别/年龄类规则无法判定");
         }
 
         // 3. 病历：优先按 registId；历史数据 registId 为空时落 patientId 最近一条
-        MedicalRecordBriefVO record = registId == null ? null : emrProvider.findLatestMedicalRecordByRegist(registId);
+        MedicalRecordBriefVO record = registId == null ? null : emrFacadeService.findLatestMedicalRecordByRegist(registId);
         if (record == null && patientId != null) {
-            record = emrProvider.findLatestMedicalRecordByPatient(patientId);
+            record = emrFacadeService.findLatestMedicalRecordByPatient(patientId);
             if (record != null) {
                 ev.markMissing("本次就诊无病历，已回落到患者最近一次病历，诊断一致性规则结论需人工复核");
             }
@@ -109,27 +109,27 @@ public class SettlementEvidenceServiceImpl implements SettlementEvidenceService 
 
         // 5. 处方（按 registId，回落 patientId）
         List<PrescriptionBriefVO> prescriptions = registId == null
-                ? List.of() : emrProvider.listPrescriptionsByRegist(registId);
+                ? List.of() : emrFacadeService.listPrescriptionsByRegist(registId);
         if (prescriptions.isEmpty()) {
-            prescriptions = emrProvider.listPrescriptionsByPatient(patientId);
+            prescriptions = emrFacadeService.listPrescriptionsByPatient(patientId);
         }
         ev.setPrescriptions(prescriptions);
         if (!prescriptions.isEmpty()) {
-            ev.setPrescriptionDetails(emrProvider.listPrescriptionDetails(
+            ev.setPrescriptionDetails(emrFacadeService.listPrescriptionDetails(
                     prescriptions.stream().map(PrescriptionBriefVO::getId).toList()));
         }
 
         // 6. 检验：表里没有 regist_id，只能按 patientId + 就诊日期定位
         LocalDate visitDate = regist != null ? regist.getVisitDate() : null;
-        List<LaboratoryRecordBriefVO> labs = medicalTechProvider.listLaboratoryRecords(patientId, visitDate);
+        List<LaboratoryRecordBriefVO> labs = medicalTechFacadeService.listLaboratoryRecords(patientId, visitDate);
         ev.setLabRecords(labs);
-        ev.setLabResults(medicalTechProvider.listLabResults(patientId, visitDate));
+        ev.setLabResults(medicalTechFacadeService.listLabResults(patientId, visitDate));
         if (!labs.isEmpty() && visitDate == null) {
             ev.markMissing("检验记录只能按患者聚合（无就诊日期），可能含其他次就诊数据");
         }
 
         // 7. 检查：同样按 patientId + 就诊日期
-        ev.setInspections(medicalTechProvider.listInspections(patientId, visitDate));
+        ev.setInspections(medicalTechFacadeService.listInspections(patientId, visitDate));
 
         return ev;
     }

@@ -1,5 +1,6 @@
 package com.his.miniapp.service.impl;
 
+import com.his.system.utils.UserUtils;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.util.TextUtil;
 import com.his.miniapp.dto.ServiceTraceDTO;
@@ -7,7 +8,6 @@ import com.his.miniapp.entity.SysServiceTrace;
 import com.his.miniapp.mapper.MiniServiceTraceMapper;
 import com.his.miniapp.service.MiniServiceTraceService;
 import com.his.common.entity.CurrentUser;
-import com.his.provider.service.AuthContextProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,12 +26,10 @@ public class MiniServiceTraceServiceImpl extends ServiceImpl<MiniServiceTraceMap
 
     private final MiniServiceTraceMapper miniServiceTraceMapper;
 
-    private final AuthContextProvider authContextProvider;
-
     @Override
     public void record(ServiceTraceDTO dto) {
         try {
-            CurrentUser user = authContextProvider.getCurrentUser();
+            CurrentUser user = UserUtils.getCurrentUser();
             SysServiceTrace entity = new SysServiceTrace();
             if (user != null) {
                 entity.setUserId(user.getUserId());

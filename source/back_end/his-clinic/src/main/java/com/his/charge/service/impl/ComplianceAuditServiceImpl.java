@@ -1,10 +1,17 @@
 package com.his.charge.service.impl;
 
-import com.his.provider.vo.*;
+import com.his.appoint.vo.RegistBriefVO;
+import com.his.charge.vo.ComplianceAuditDetailVO;
+import com.his.charge.vo.ComplianceAuditItemVO;
+import com.his.charge.vo.ComplianceAuditVO;
+import com.his.charge.vo.ComplianceEvidenceNarrativeVO;
+import com.his.charge.vo.SettlementDiagnosisVO;
+import com.his.charge.vo.SettlementOperationVO;
+import com.his.medicaltech.vo.LabResultBriefVO;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.provider.service.AppointProvider;
+import com.his.appoint.service.AppointFacadeService;
 import com.his.charge.config.ComplianceProperties;
 import com.his.charge.dto.*;
 import com.his.charge.entity.*;
@@ -18,8 +25,8 @@ import com.his.charge.support.rule.RuleContext;
 import com.his.charge.support.rule.RuleFinding;
 import com.his.charge.support.SettlementEvidence;
 import com.his.charge.vo.*;
-import com.his.provider.vo.LabResultBriefVO;
-import com.his.provider.vo.RegistBriefVO;
+import com.his.medicaltech.vo.LabResultBriefVO;
+import com.his.appoint.vo.RegistBriefVO;
 import com.his.common.base.PageResult;
 import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.SysGenderEnum;
@@ -57,7 +64,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
 
     private final BizInsuranceSettlementMapper bizInsuranceSettlementMapper;
 
-    private final AppointProvider appointProvider;
+    private final AppointFacadeService appointFacadeService;
 
     private final SysIcd10Mapper sysIcd10Mapper;
 
@@ -584,7 +591,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         int window = complianceProperties.getReadmitWindowDays();
         LocalDateTime baseline = null;
         if (settlement.getRegistId() != null) {
-            RegistBriefVO regist = appointProvider.findRegist(settlement.getRegistId());
+            RegistBriefVO regist = appointFacadeService.findRegist(settlement.getRegistId());
             if (regist != null && regist.getVisitDate() != null) {
                 baseline = TimeUtil.dayStart(regist.getVisitDate());
             }

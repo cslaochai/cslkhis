@@ -26,7 +26,7 @@ import com.his.emr.service.InfectionMonitorService;
 import com.his.emr.vo.DeptSnapshotVO;
 import com.his.emr.vo.InfectionMonitorVO;
 import com.his.emr.vo.PatientSnapshotVO;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;

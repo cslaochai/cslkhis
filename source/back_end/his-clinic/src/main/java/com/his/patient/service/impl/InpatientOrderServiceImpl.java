@@ -4,10 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.provider.dto.FeeBookDTO;
-import com.his.provider.vo.FeeRecordVO;
+import com.his.charge.dto.FeeBookDTO;
+import com.his.charge.vo.FeeRecordVO;
 import com.his.common.constant.DictTypeConst;
-import com.his.provider.service.ArrearsControlProvider;
+import com.his.charge.service.ArrearsControlGateService;
 import com.his.system.dto.SignCommandDTO;
 import com.his.common.enums.*;
 import com.his.common.enums.YesOrNoEnum;
@@ -30,11 +30,11 @@ import com.his.patient.support.OrderChargeInvoker;
 import com.his.patient.vo.InpatientOrderExecVO;
 import com.his.patient.vo.InpatientOrderVO;
 import com.his.patient.vo.InpatientOrderVerifyNotifyPayloadVO;
-import com.his.provider.vo.WardVO;
+import com.his.patient.vo.WardVO;
 import com.his.system.dto.TechAuthGateDTO;
 import com.his.common.entity.CurrentUser;
 import com.his.common.enums.BizTypeEnum;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.EmployeeTechAuthService;
 import com.his.system.service.SysMessageService;
@@ -81,7 +81,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
 
     private final SysMessageService sysMessageService;
 
-    private final ArrearsControlProvider arrearsControlProvider;
+    private final ArrearsControlGateService arrearsControlService;
 
     private final EmployeeTechAuthService employeeTechAuthService;
 
@@ -131,8 +131,8 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
                     .map(InpatientOrderItemDTO::getOrderClass)
                     .filter(Objects::nonNull)
                     .collect(java.util.stream.Collectors.toSet());
-            ArrearsControlProvider.CheckResult check =
-                    arrearsControlProvider.checkNewOrder(new ArrearsControlProvider.OrderCheck(admission.getAdmissionId(), classes));
+            ArrearsControlGateService.CheckResult check =
+                    arrearsControlService.checkNewOrder(new ArrearsControlGateService.OrderCheck(admission.getAdmissionId(), classes));
             if (check != null && !check.isAllowed()) {
                 throw new BusinessException(check.getReason());
             }

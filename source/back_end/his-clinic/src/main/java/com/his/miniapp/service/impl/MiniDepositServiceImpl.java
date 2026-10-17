@@ -1,16 +1,16 @@
 package com.his.miniapp.service.impl;
 
+import com.his.system.utils.UserUtils;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.provider.dto.PrepayQueryPageDTO;
-import com.his.provider.service.ChargeProvider;
-import com.his.provider.vo.PrepayBalanceVO;
-import com.his.provider.vo.PrepayVO;
+import com.his.charge.dto.PrepayQueryPageDTO;
+import com.his.charge.service.ChargeFacadeService;
+import com.his.charge.vo.PrepayBalanceVO;
+import com.his.charge.vo.PrepayVO;
 import com.his.common.exception.BusinessException;
 import com.his.miniapp.mapper.MiniAdmissionMapper;
 import com.his.miniapp.service.MiniDepositService;
 import com.his.miniapp.vo.MiniAdmiSelectListVO;
-import com.his.provider.service.AuthContextProvider;
-import com.his.provider.service.PatientProvider;
+import com.his.patient.service.PatientFacadeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,13 +22,12 @@ import java.util.Objects;
 public class MiniDepositServiceImpl implements MiniDepositService {
 
     private final MiniAdmissionMapper miniAdmissionMapper;
-    private final ChargeProvider chargeProvider;
-    private final PatientProvider patientProvider;
-    private final AuthContextProvider authContextProvider;
+    private final ChargeFacadeService chargeFacadeService;
+    private final PatientFacadeService patientFacadeService;
 
     @Override
     public List<MiniAdmiSelectListVO> myAdmissions(Long patientId) {
-        if (!patientProvider.canAccessPatient(patientId)) {
+        if (!patientFacadeService.canAccessPatient(patientId)) {
             throw new BusinessException("无权查询该就诊人的住院记录");
         }
         return miniAdmissionMapper.selectByPatientId(patientId);
@@ -37,20 +36,20 @@ public class MiniDepositServiceImpl implements MiniDepositService {
     @Override
     public PrepayBalanceVO balance(Long admissionId) {
         requireOwnAdmission(admissionId);
-        return chargeProvider.prepayBalance(admissionId);
+        return chargeFacadeService.prepayBalance(admissionId);
     }
 
     @Override
     public IPage<PrepayVO> prepayListPage(PrepayQueryPageDTO query) {
         requireOwnAdmission(query.getAdmissionId());
-        return chargeProvider.prepayPage(query);
+        return chargeFacadeService.prepayPage(query);
     }
 
     private void requireOwnAdmission(Long admissionId) {
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }
-        Long patientId = authContextProvider.getCurrentUser().getPatientId();
+        Long patientId = UserUtils.getCurrentUser().getPatientId();
         // 归属从住院记录反查，不看前端传的是谁
         List<MiniAdmiSelectListVO> mine = miniAdmissionMapper.selectByPatientId(patientId);
         String target = String.valueOf(admissionId);
@@ -58,7 +57,7 @@ public class MiniDepositServiceImpl implements MiniDepositService {
         if (!own) {
             throw new BusinessException("无权操作该住院记录的押金");
         }
-        patientProvider.canAccessPatient(patientId);
+        patientFacadeService.canAccessPatient(patientId);
     }
 
 }

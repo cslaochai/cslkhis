@@ -23,11 +23,11 @@ import com.his.operation.mapper.BizDaySurgeryFollowMapper;
 import com.his.operation.mapper.BizDaySurgeryItemMapper;
 import com.his.operation.service.DaySurgeryService;
 import com.his.operation.vo.*;
-import com.his.provider.service.PatientProvider;
-import com.his.provider.vo.PatientMasterVO;
+import com.his.patient.service.PatientFacadeService;
+import com.his.patient.vo.PatientMasterVO;
 import com.his.system.dto.TechAuthGateDTO;
 import com.his.common.entity.CurrentUser;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.EmployeeTechAuthService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
@@ -58,7 +58,7 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
 
     private final BizDaySurgeryFollowMapper bizDaySurgeryFollowMapper;
 
-    private final PatientProvider patientProvider;
+    private final PatientFacadeService patientFacadeService;
 
     private final RedisSequenceService redisSequenceService;
 
@@ -588,7 +588,7 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
     }
 
     private PatientMasterVO requirePatient(Long patientId) {
-        PatientMasterVO patient = patientProvider.getPatient(patientId);
+        PatientMasterVO patient = patientFacadeService.getPatient(patientId);
         if (patient == null || !Objects.equals(patient.getDelFlag(), 0)) {
             throw new BusinessException("患者不存在或已删除");
         }

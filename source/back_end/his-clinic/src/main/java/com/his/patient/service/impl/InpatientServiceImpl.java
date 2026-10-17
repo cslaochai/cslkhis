@@ -6,38 +6,46 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.provider.service.ChargeProvider;
-import com.his.provider.vo.SettlementStateVO;
+import com.his.charge.entity.BizSettlementBill;
+import com.his.charge.mapper.BizFundAccountTxnMapper;
+import com.his.charge.mapper.BizSettlementBillMapper;
+import com.his.charge.vo.SettlementStateVO;
 import com.his.common.constant.DictTypeConst;
+import com.his.common.enums.AdmissionOrderStatusEnum;
 import com.his.common.enums.AdmitStatusEnum;
+import com.his.common.enums.BedAllocateStatusEnum;
+import com.his.common.enums.BedWaitStatusEnum;
+import com.his.common.enums.BillStatusEnum;
+import com.his.common.enums.BillTypeEnum;
+import com.his.common.enums.EncounterTypeEnum;
+import com.his.common.enums.InpatientSettleStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.system.service.RedisSequenceService;
+import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
-import com.his.provider.dto.*;
+import com.his.patient.dto.InpatientAdmitDTO;
 import com.his.patient.entity.*;
 import com.his.common.enums.BedStatusEnum;
 import com.his.common.enums.DischargeWayEnum;
 import com.his.common.enums.SummaryStatusEnum;
 import com.his.common.enums.VisitStatusEnum;
 import com.his.patient.mapper.*;
-import com.his.patient.service.AdmissionOrderService;
-import com.his.patient.service.BedCenterService;
 import com.his.patient.service.DeathCertificateService;
 import com.his.patient.service.InpatientService;
 import com.his.patient.support.SummaryOperationSeq;
 import com.his.patient.vo.*;
-import com.his.provider.vo.*;
+import com.his.patient.vo.BedVO;
+import com.his.patient.vo.WardVO;
 import com.his.common.entity.CurrentUser;
 import com.his.common.enums.BizTypeEnum;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -78,16 +86,19 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
 
     private final BizVisitMapper bizVisitMapper;
 
-    private final AdmissionOrderService admissionOrderService;
+    private final BizAdmissionOrderMapper bizAdmissionOrderMapper;
 
-    @Lazy
-    private final ChargeProvider settlementGateway;
+    private final BizBedWaitMapper bizBedWaitMapper;
+
+    private final BedCenterMapper bedCenterMapper;
+
+    private final BizSettlementBillMapper bizSettlementBillMapper;
+
+    private final BizFundAccountTxnMapper bizFundAccountTxnMapper;
 
     private final SysMessageService sysMessageService;
 
     private final DeathCertificateService deathCertificateService;
-
-    private final BedCenterService bedCenterService;
 
     private final DictCacheService dictCacheService;
 
@@ -234,7 +245,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
         // 无证 = 直接入院（急诊 / 转院 / 其他），入院途径必须由调用方显式给出。
         BizAdmissionOrder order = null;
         if (dto.getAdmissionOrderId() != null) {
-            order = admissionOrderService.requireAdmittable(dto.getAdmissionOrderId());
+            order = requireAdmittable(dto.getAdmissionOrderId());
             if (!Objects.equals(order.getPatientId(), dto.getPatientId())) {
                 throw new BusinessException("住院证与所选患者不一致（证上患者：" + order.getPatientName() + "）");
             }
@@ -319,7 +330,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
         // 收治回填必须放在最后：入院记录真的落库了，才把证置为已收治。
         // 顺序反了会出现"证说已收治、但入院记录不存在"的孤儿状态。
         if (order != null) {
-            admissionOrderService.markAdmitted(order, admission.getAdmissionId(), deptId, admitTime);
+            markAdmitted(order, admission.getAdmissionId(), deptId, admitTime);
             // 收治完成 → 站内信通知开证医生（admit，通知型）：医生开完证患者在办理，
             // 收进哪个病区哪张床医生必须知道。通知失败不回滚收治（try/catch，事务边界在业务动作）。
             notifyAdmitted(order, patient, ward, bed, admission.getAdmissionNo());
@@ -328,7 +339,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
         // 收治 → 等床队列收口（同一事务）。不做这一步，从入出院管理页直接收治的患者
         // 会在床位中心留下一条"还在等床"的幽灵记录，而他的床位已经是占用状态了。
         try {
-            bedCenterService.markAdmittedByPatient(dto.getPatientId(), admission.getAdmissionId(), admitTime);
+            markAdmittedByPatient(dto.getPatientId(), admission.getAdmissionId(), admitTime);
         } catch (Exception e) {
             // 队列记账不是入院的条件：人已经住进来了，不能因为记账失败把整笔入院回滚掉
             log.warn("[入院登记] 回填床位排队队列失败 admissionNo={} patientId={}",
@@ -461,7 +472,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
         // 出院前必须已结算：一次住院没有结算单就出院，财务侧永远追不到这笔账。
         // 欠费结算也算已结算 —— 拦的是"完全没结算"，不是"没交钱"。
         String settleNote = null;
-        SettlementStateVO state = settlementGateway.state(dto.getAdmissionId());
+        SettlementStateVO state = settlementState(dto.getAdmissionId());
         if (state == null) {
             throw new BusinessException("未能确认该住院的结算状态，暂不允许出院（请稍后重试或联系收费处）");
         }
@@ -671,7 +682,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
         vo.setInHospitalCount(bizAdmissionMapper.selectCount(inHospitalWrapper));
         vo.setTodayAdmitted(bizAdmissionMapper.countTodayAdmitted(scopeDeptIds));
         vo.setTodayDischarged(bizAdmissionMapper.countTodayDischarged(scopeDeptIds));
-        vo.setPendingAdmissionOrderCount(admissionOrderService.countPending());
+        vo.setPendingAdmissionOrderCount(bizAdmissionOrderMapper.countPending(deptScopeService.scopedDeptIds(null)));
 
         long total = sysBedMapper.selectCount(null);
         long free = sysBedMapper.countByStatus(BedStatusEnum.FREE.getCode());
@@ -1179,5 +1190,130 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
             upd.setIsTransfusion(1);
             bizInpatientSummaryMapper.updateById(upd);
         }
+    }
+
+    // ---------- 收治 / 结算状态 ----------
+
+    private BizAdmissionOrder requireAdmittable(Long orderId) {
+        if (orderId == null) {
+            throw new BusinessException("住院证ID不能为空");
+        }
+        BizAdmissionOrder order = bizAdmissionOrderMapper.selectById(orderId);
+        if (order == null) {
+            throw new BusinessException("住院证不存在");
+        }
+        if (!Objects.equals(AdmissionOrderStatusEnum.PENDING.getCode(), order.getOrderStatus())) {
+            throw new BusinessException("住院证当前状态为「"
+                    + AdmissionOrderStatusEnum.getLabelOrUnknown(order.getOrderStatus()) + "」，不能收治");
+        }
+        if (order.getValidUntil() != null && order.getValidUntil().isBefore(TimeUtil.nowSeconds())) {
+            throw new BusinessException("住院证已于 " + order.getValidUntil() + " 过期，不能再收治，请重新开证");
+        }
+        return order;
+    }
+
+    private void markAdmitted(BizAdmissionOrder order, Long admissionId, Long admitDeptId, LocalDateTime admitTime) {
+        // 重新取一次并再判状态：并发下两个入院处同时点"收治"时，靠这里的乐观判断挡住第二个人
+        BizAdmissionOrder latest = bizAdmissionOrderMapper.selectById(order.getId());
+        if (latest == null) {
+            throw new BusinessException("住院证不存在");
+        }
+        if (!Objects.equals(AdmissionOrderStatusEnum.PENDING.getCode(), latest.getOrderStatus())) {
+            throw new BusinessException("住院证已被收治或作废，不能重复收治");
+        }
+        latest.setOrderStatus(AdmissionOrderStatusEnum.ADMITTED.getCode());
+        latest.setAdmissionId(admissionId);
+        latest.setAdmitTime(admitTime);
+        latest.setAdmitDeptId(admitDeptId);
+        bizAdmissionOrderMapper.updateById(latest);
+        log.info("住院证已收治 orderNo={} admissionId={} admitDeptId={}",
+                latest.getOrderNo(), admissionId, admitDeptId);
+    }
+
+    private void markAdmittedByPatient(Long patientId, Long admissionId, LocalDateTime admitTime) {
+        if (patientId == null || admissionId == null) {
+            return;
+        }
+        List<BizBedWait> rows = bizBedWaitMapper.selectList(new LambdaQueryWrapper<BizBedWait>()
+                .eq(BizBedWait::getDelFlag, 0)
+                .eq(BizBedWait::getPatientId, patientId)
+                .in(BizBedWait::getWaitStatus, BedWaitStatusEnum.PENDING.getCode(), BedWaitStatusEnum.ARRANGED.getCode()));
+        if (rows.isEmpty()) {
+            return;
+        }
+        LocalDateTime time = TimeUtil.toSeconds(admitTime == null ? LocalDateTime.now() : admitTime);
+        for (BizBedWait w : rows) {
+            BizBedWait upd = new BizBedWait();
+            upd.setId(w.getId());
+            upd.setWaitStatus(BedWaitStatusEnum.ADMITTED.getCode());
+            upd.setAdmissionId(admissionId);
+            upd.setAdmitTime(time);
+            bizBedWaitMapper.updateById(upd);
+
+            LambdaUpdateWrapper<BizBedAllocate> allocUpd = new LambdaUpdateWrapper<>();
+            allocUpd.eq(BizBedAllocate::getWaitId, w.getId())
+                    .eq(BizBedAllocate::getAllocStatus, BedAllocateStatusEnum.RESERVED.getCode())
+                    .set(BizBedAllocate::getAllocStatus, BedAllocateStatusEnum.ADMITTED.getCode())
+                    .set(BizBedAllocate::getAdmissionId, admissionId);
+            bedCenterMapper.update(null, allocUpd);
+        }
+        log.info("入院回填队列：patientId={} 收治={} 条，admissionId={}", patientId, rows.size(), admissionId);
+    }
+
+    private SettlementStateVO settlementState(Long admissionId) {
+        SettlementStateVO state = new SettlementStateVO();
+        if (admissionId == null) {
+            state.setText("入院ID为空，无法校验结算状态");
+            return state;
+        }
+
+        BizSettlementBill discharge = latestDischargeBill(admissionId);
+        BigDecimal balance = NumUtil.orZero(bizFundAccountTxnMapper.sumAdmissionBalance(admissionId));
+        if (discharge == null) {
+            // 未结算也要把预交金余额带回去：前台靠这句话判断"是没钱结、还是压根没办结算"
+            state.setSettled(false);
+            state.setArrearsAmount(BigDecimal.ZERO);
+            state.setText("尚未办理住院结算（预交金余额 " + balance.toPlainString() + " 元）");
+            return state;
+        }
+
+        boolean paidOff = isPaidOff(discharge);
+        state.setSettled(true);
+        state.setSettlementNo(discharge.getBillNo());
+        state.setArrearsAmount(paidOff ? BigDecimal.ZERO : NumUtil.orZero(discharge.getPayableAmount()).subtract(NumUtil.orZero(discharge.getPaidAmount())));
+        // settle_status 是旧表字段语义，四层后由账单状态推导：1-已结清 2-欠费
+        state.setSettleStatus(paidOff ? InpatientSettleStatusEnum.CLEARED.getCode() : InpatientSettleStatusEnum.ARREARS.getCode());
+        state.setText("已结算（" + (paidOff ? "已结清" : "欠费 " + state.getArrearsAmount().toPlainString() + " 元")
+                + "，账单号 " + discharge.getBillNo() + "，" + BillStatusEnum.getLabel(discharge.getBillStatus())
+                + "，预交金余额 " + balance.toPlainString() + " 元）");
+        return state;
+    }
+
+    private BizSettlementBill latestDischargeBill(Long admissionId) {
+        if (admissionId == null) {
+            return null;
+        }
+        BizSettlementBill latest = null;
+        for (BizSettlementBill bill : bizSettlementBillMapper.selectList(new LambdaQueryWrapper<BizSettlementBill>()
+                .eq(BizSettlementBill::getEncounterType, EncounterTypeEnum.INPATIENT.getCode())
+                .eq(BizSettlementBill::getEncounterId, admissionId)
+                .orderByDesc(BizSettlementBill::getId))) {
+            // 中途结算与门诊账单都不算出院结算；作废的那张是"这次结算撤销了、要重结"，也不算
+            if (!BillTypeEnum.DISCHARGE.getCode().equals(bill.getBillType())
+                    || BillStatusEnum.VOIDED.getCode().equals(bill.getBillStatus())) {
+                continue;
+            }
+            if (latest == null || bill.getId() > latest.getId()) {
+                latest = bill;
+            }
+        }
+        return latest;
+    }
+
+    /**
+     * 是否已付清：应缴为 0 也算付清（预交金全额抵扣后账单应缴就是 0，没有流水但确实结清了）。
+     */
+    private boolean isPaidOff(BizSettlementBill bill) {
+        return NumUtil.orZero(bill.getPayableAmount()).subtract(NumUtil.orZero(bill.getPaidAmount())).compareTo(BigDecimal.ZERO) <= 0;
     }
 }

@@ -1,10 +1,10 @@
 package com.his.charge.controller;
 
-import com.his.provider.vo.*;
+import com.his.charge.vo.BizSettlementBillVO;
 
 
 import com.his.charge.dto.*;
-import com.his.provider.dto.BillPayDTO;
+import com.his.charge.dto.BillPayDTO;
 import com.his.charge.service.PaymentService;
 import com.his.charge.service.SettlementBillService;
 import com.his.charge.vo.*;

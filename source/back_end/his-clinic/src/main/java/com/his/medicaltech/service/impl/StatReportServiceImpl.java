@@ -17,7 +17,7 @@ import com.his.medicaltech.mapper.StatReportAggMapper;
 import com.his.medicaltech.service.StatReportService;
 import com.his.medicaltech.vo.*;
 import com.his.common.entity.CurrentUser;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;

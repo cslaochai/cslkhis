@@ -20,7 +20,7 @@ import com.his.emr.service.DisputeService;
 import com.his.emr.service.MedicalRecordArchiveService;
 import com.his.emr.vo.*;
 import com.his.common.entity.CurrentUser;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

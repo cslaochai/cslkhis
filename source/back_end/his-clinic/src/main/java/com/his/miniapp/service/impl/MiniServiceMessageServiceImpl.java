@@ -1,5 +1,6 @@
 package com.his.miniapp.service.impl;
 
+import com.his.system.utils.UserUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
@@ -26,8 +27,7 @@ import com.his.miniapp.vo.MiniServiceMessageListVO;
 import com.his.miniapp.vo.MiniServiceDetailVO;
 import com.his.miniapp.vo.MiniServiceLogVO;
 import com.his.common.entity.CurrentUser;
-import com.his.provider.service.AuthContextProvider;
-import com.his.provider.service.SequenceProvider;
+import com.his.system.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -59,8 +59,7 @@ public class MiniServiceMessageServiceImpl extends ServiceImpl<MiniServiceMessag
     private final MiniServiceMessageMapper miniServiceMessageMapper;
     private final MiniServiceLogMapper miniServiceLogMapper;
     private final MiniDirectoryService miniDirectoryService;
-    private final SequenceProvider sequenceProvider;
-    private final AuthContextProvider authContextProvider;
+    private final RedisSequenceService redisSequenceService;
 
     private static List<String> patientActions(Integer status) {
         List<String> actions = new ArrayList<>();
@@ -113,7 +112,7 @@ public class MiniServiceMessageServiceImpl extends ServiceImpl<MiniServiceMessag
 
     @Override
     public String submit(ServiceMessageUpsertDTO dto) {
-        CurrentUser user = authContextProvider.getCurrentUser();
+        CurrentUser user = UserUtils.getCurrentUser();
         if (user == null || user.getPatientId() == null) {
             throw new BusinessException("当前账号未绑定就诊人，无法提交留言");
         }
@@ -142,7 +141,7 @@ public class MiniServiceMessageServiceImpl extends ServiceImpl<MiniServiceMessag
 
     @Override
     public PageResult<MiniServiceMessageListVO> myPage(MessagePageDTO dto) {
-        CurrentUser user = authContextProvider.getCurrentUser();
+        CurrentUser user = UserUtils.getCurrentUser();
         if (user == null || user.getUserId() == null) {
             throw new BusinessException("未获取到登录用户");
         }
@@ -196,7 +195,7 @@ public class MiniServiceMessageServiceImpl extends ServiceImpl<MiniServiceMessag
     public void patientAction(ServiceTicketActionDTO dto) {
         BizServiceMessage ticket = requireOwnTicket(dto.getId());
         String action = dto.getAction() == null ? "" : dto.getAction().trim();
-        CurrentUser user = authContextProvider.getCurrentUser();
+        CurrentUser user = UserUtils.getCurrentUser();
         String operator = user == null ? null : user.getUsername();
         String reason = TextUtil.cut(dto.getReason(), 200);
 
@@ -253,7 +252,7 @@ public class MiniServiceMessageServiceImpl extends ServiceImpl<MiniServiceMessag
         if (id == null) {
             throw new BusinessException("工单ID不合法");
         }
-        CurrentUser user = authContextProvider.getCurrentUser();
+        CurrentUser user = UserUtils.getCurrentUser();
         if (user == null || user.getUserId() == null) {
             throw new BusinessException("未获取到登录用户");
         }
@@ -270,7 +269,7 @@ public class MiniServiceMessageServiceImpl extends ServiceImpl<MiniServiceMessag
      */
     private String nextMessageNo() {
         String prefix = "MSG" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = sequenceProvider.next("MSG");
+        long seq = redisSequenceService.next("MSG");
         return prefix + String.format("%04d", seq);
     }
 

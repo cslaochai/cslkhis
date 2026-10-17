@@ -1,7 +1,7 @@
 package com.his.miniapp.service;
 
 import com.his.common.base.PageResult;
-import com.his.provider.vo.BizReportVO;
+import com.his.medicaltech.vo.BizReportVO;
 import com.his.miniapp.dto.ReportQueryPageDTO;
 import com.his.miniapp.vo.MiniReportPdfVO;
 

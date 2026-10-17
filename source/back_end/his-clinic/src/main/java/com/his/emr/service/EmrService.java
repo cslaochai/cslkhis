@@ -1,6 +1,6 @@
 package com.his.emr.service;
 
-import com.his.provider.vo.MyMedicalRecordVO;
+import com.his.emr.vo.MyMedicalRecordVO;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
 import com.his.emr.dto.*;

@@ -1,6 +1,6 @@
 package com.his.charge.vo;
 
-import com.his.provider.vo.*;
+
 
 
 import com.his.charge.entity.BizPaymentTxn;

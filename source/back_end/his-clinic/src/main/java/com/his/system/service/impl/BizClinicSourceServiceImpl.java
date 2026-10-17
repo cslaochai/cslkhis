@@ -2,9 +2,12 @@ package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.provider.dto.ScheduleSelectQueryDTO;
-import com.his.provider.service.AppointProvider;
-import com.his.provider.vo.StopImpactItemVO;
+import com.his.system.dto.ScheduleSelectQueryDTO;
+import com.his.appoint.entity.AppointInfo;
+import com.his.appoint.mapper.AppointInfoMapper;
+import com.his.appoint.mapper.QueueMapper;
+import com.his.appoint.service.AppointService;
+import com.his.appoint.vo.StopImpactItemVO;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
@@ -17,7 +20,7 @@ import com.his.system.entity.BizShift;
 import com.his.common.entity.CurrentUser;
 import com.his.system.mapper.BizClinicSourceMapper;
 import com.his.system.mapper.BizScheduleMapper;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.*;
 import com.his.system.utils.UserUtils;
 import com.his.system.vo.BizClinicSourceBatchResultVO;
@@ -61,7 +64,11 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
 
     private final BizScheduleMapper bizScheduleMapper;
 
-    private final AppointProvider appointProvider;
+    private final QueueMapper queueMapper;
+
+    private final AppointInfoMapper appointInfoMapper;
+
+    private final AppointService appointService;
 
     private final ClinicSourceLogService clinicSourceLogService;
 
@@ -271,8 +278,8 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
                 clinicSourceMapper.updateById(schedule);
             }
         }
-        appointProvider.updateQueueRoomBySchedule(schedule.getId(), today, roomId, roomName);
-        appointProvider.updateAppointRoomBySchedule(schedule.getId(), today, roomId, roomName);
+        queueMapper.updateRoomBySchedule(schedule.getId(), today, roomId, roomName);
+        appointInfoMapper.updateRoomBySchedule(schedule.getId(), today, roomId, roomName);
     }
 
     @Override
@@ -722,7 +729,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         if (clinicSourceMapper.selectById(scheduleId) == null) {
             throw new BusinessException("排班记录不存在");
         }
-        return appointProvider.listRegsBySchedule(scheduleId);
+        return listRegsBySchedule(scheduleId);
     }
 
     @Override
@@ -731,7 +738,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         int ok = 0;
         for (Long id : registIds) {
             try {
-                if (appointProvider.cancelRegist(id, cancelReason)) {
+                if (appointService.cancelRegist(id, cancelReason)) {
                     ok++;
                 }
             } catch (Exception ignored) {
@@ -745,6 +752,31 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
                 + (ok < registIds.size()
                 ? "（失败多为：已缴费需先到收费处退费；或已接诊/已就诊——诊疗已发生，号源锁死）"
                 : "");
+    }
+
+    private List<StopImpactItemVO> listRegsBySchedule(Long scheduleId) {
+        if (scheduleId == null) {
+            return List.of();
+        }
+        List<AppointInfo> regs = appointInfoMapper.selectList(
+                new LambdaQueryWrapper<AppointInfo>()
+                        .eq(AppointInfo::getScheduleId, scheduleId)
+                        .notIn(AppointInfo::getRegistStatus,
+                                AppointStatusEnum.CANCELLED.getCode(), AppointStatusEnum.OVERDUE.getCode())
+                        .orderByAsc(AppointInfo::getRegistStatus)
+                        .orderByAsc(AppointInfo::getSlotTime));
+        return regs.stream().map(r -> {
+            StopImpactItemVO vo = new StopImpactItemVO();
+            vo.setRegistId(r.getId());
+            vo.setPatientId(r.getPatientId());
+            vo.setPatientName(r.getPatientName());
+            vo.setPatientNo(r.getPatientNo());
+            vo.setPhone(r.getPhone());
+            vo.setRegistSource(r.getRegistSource());
+            vo.setRegistStatus(r.getRegistStatus());
+            vo.setSlotTime(r.getSlotTime());
+            return vo;
+        }).toList();
     }
 
     // 今日在岗（排班的下游出口）

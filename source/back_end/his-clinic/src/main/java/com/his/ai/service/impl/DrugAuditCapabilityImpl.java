@@ -31,9 +31,9 @@ import com.his.emr.mapper.BizClinicalRuleCheckMapper;
 import com.his.emr.mapper.BizMedicalRecordMapper;
 import com.his.emr.mapper.BizPrescriptionDetailMapper;
 import com.his.emr.mapper.BizPrescriptionMapper;
-import com.his.provider.service.PatientProvider;
-import com.his.provider.vo.AllergyFactVO;
-import com.his.provider.vo.PatientMasterVO;
+import com.his.patient.service.PatientFacadeService;
+import com.his.patient.vo.AllergyFactVO;
+import com.his.patient.vo.PatientMasterVO;
 import com.his.common.entity.CurrentUser;
 import com.his.system.entity.SysDrug;
 import com.his.system.mapper.SysDrugMapper;
@@ -74,7 +74,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
 
     private final BizMedicalRecordMapper bizMedicalRecordMapper;
 
-    private final PatientProvider patientProvider;
+    private final PatientFacadeService patientFacadeService;
 
     private final SysDrugMapper sysDrugMapper;
 
@@ -337,13 +337,13 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
         }
 
         PatientMasterVO patient = prescription.getPatientId() == null
-                ? null : patientProvider.getPatient(prescription.getPatientId());
+                ? null : patientFacadeService.getPatient(prescription.getPatientId());
         if (patient != null) {
             appendIfMeaningful(builder, patient.getAllergyHistory(), "过敏史");
         }
 
         if (prescription.getPatientId() != null) {
-            List<AllergyFactVO> allergies = patientProvider.listAllergies(prescription.getPatientId());
+            List<AllergyFactVO> allergies = patientFacadeService.listAllergies(prescription.getPatientId());
             for (AllergyFactVO allergy : allergies) {
                 appendIfMeaningful(builder, allergy.getAllergenName(), "过敏原");
             }

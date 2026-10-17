@@ -19,7 +19,7 @@ import com.his.medicaltech.mapper.BizUltrasoundRecordMapper;
 import com.his.medicaltech.service.UltrasoundService;
 import com.his.medicaltech.vo.UltrasoundVO;
 import com.his.common.entity.CurrentUser;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;

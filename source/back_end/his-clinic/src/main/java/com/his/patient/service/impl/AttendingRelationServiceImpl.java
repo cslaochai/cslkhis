@@ -21,7 +21,7 @@ import com.his.system.entity.SysDepartment;
 import com.his.system.entity.SysEmployee;
 import com.his.system.mapper.SysDepartmentMapper;
 import com.his.system.mapper.SysEmployeeMapper;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

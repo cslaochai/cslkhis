@@ -18,10 +18,10 @@ import com.his.operation.service.AnesthesiaVisitService;
 import com.his.operation.support.AnesthesiaCalcs;
 import com.his.operation.support.OperationChargeBiller;
 import com.his.operation.vo.*;
-import com.his.provider.service.PatientProvider;
-import com.his.provider.vo.PatientMasterVO;
+import com.his.patient.service.PatientFacadeService;
+import com.his.patient.vo.PatientMasterVO;
 import com.his.common.entity.CurrentUser;
-import com.his.provider.service.DeptScopeService;
+import com.his.system.service.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import com.his.system.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
@@ -54,7 +54,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
 
     private final BizOperationChargeItemMapper bizOperationChargeItemMapper;
 
-    private final PatientProvider patientProvider;
+    private final PatientFacadeService patientFacadeService;
 
     private final AnesthesiaVisitService anesthesiaVisitService;
 
@@ -464,7 +464,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         if (patientId == null) {
             return null;
         }
-        PatientMasterVO patient = patientProvider.getPatient(patientId);
+        PatientMasterVO patient = patientFacadeService.getPatient(patientId);
         return patient == null ? null : patient.getPatientNo();
     }
 

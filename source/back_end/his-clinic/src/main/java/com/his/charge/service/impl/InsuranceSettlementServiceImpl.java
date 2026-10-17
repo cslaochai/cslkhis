@@ -6,19 +6,20 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.charge.entity.*;
-import com.his.provider.service.AppointProvider;
-import com.his.provider.service.EmrProvider;
-import com.his.provider.service.PatientProvider;
+import com.his.appoint.entity.AppointInfo;
+import com.his.appoint.mapper.AppointInfoMapper;
+import com.his.emr.service.EmrFacadeService;
+import com.his.patient.service.PatientFacadeService;
 import com.his.common.enums.InsuranceReportStatusEnum;
 import com.his.common.enums.InsuranceReportTypeEnum;
 import com.his.charge.mapper.*;
 import com.his.charge.service.InsuranceChannelService;
 import com.his.charge.service.InsuranceSettlementService;
 import com.his.charge.vo.*;
-import com.his.provider.vo.AdmissionBriefVO;
-import com.his.provider.vo.MedicalRecordBriefVO;
-import com.his.provider.vo.PatientBriefVO;
-import com.his.provider.vo.RegistBriefVO;
+import com.his.patient.vo.AdmissionBriefVO;
+import com.his.emr.vo.MedicalRecordBriefVO;
+import com.his.patient.vo.PatientBriefVO;
+import com.his.appoint.vo.RegistBriefVO;
 import com.his.common.base.PageResult;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
@@ -54,8 +55,8 @@ public class InsuranceSettlementServiceImpl
     private static final int AMOUNT_SCALE = 2;
     private static final BigDecimal HUNDRED = new BigDecimal("100");
 
-    private final PatientProvider patientProvider;
-    private final AppointProvider appointProvider;
+    private final PatientFacadeService patientFacadeService;
+    private final AppointInfoMapper appointInfoMapper;
     private final BizSettlementBillMapper bizSettlementBillMapper;
     private final BizSettlementBillItemMapper bizSettlementBillItemMapper;
     private final BizPaymentTxnMapper bizPaymentTxnMapper;
@@ -64,7 +65,7 @@ public class InsuranceSettlementServiceImpl
     private final InsuranceChannelService insuranceChannelService;
     private final RedisSequenceService redisSequenceService;
     private final ObjectMapper objectMapper;
-    private final EmrProvider emrProvider;
+    private final EmrFacadeService emrFacadeService;
 
     // 查询
 
@@ -106,7 +107,7 @@ public class InsuranceSettlementServiceImpl
 
         // 1. 患者档案补齐性别/年龄/证号/医保号（清单只是快照，允许有空）
         PatientBriefVO patient = settlement.getPatientId() == null ? null
-                : patientProvider.findPatient(settlement.getPatientId());
+                : patientFacadeService.findPatient(settlement.getPatientId());
         if (patient != null) {
             if (!TextUtil.hasText(vo.getPatientName())) {
                 vo.setPatientName(patient.getPatientName());
@@ -131,7 +132,7 @@ public class InsuranceSettlementServiceImpl
 
         // 2. 挂号（门诊）/入院（住院）：科室、医生、就诊日期
         RegistBriefVO regist = settlement.getRegistId() == null ? null
-                : appointProvider.findRegist(settlement.getRegistId());
+                : findRegist(settlement.getRegistId());
         if (regist != null) {
             vo.setRegistNo(regist.getRegistNo());
             if (vo.getVisitDate() == null) {
@@ -154,7 +155,7 @@ public class InsuranceSettlementServiceImpl
             }
         } else if (EncounterTypeEnum.INPATIENT.getCode().equals(settlement.getEncounterType())
                 && settlement.getEncounterId() != null) {
-            AdmissionBriefVO admission = patientProvider.findAdmission(settlement.getEncounterId());
+            AdmissionBriefVO admission = patientFacadeService.findAdmission(settlement.getEncounterId());
             if (admission != null) {
                 vo.setAdmissionNo(admission.getAdmissionNo());
                 vo.setVisitDate(admission.getAdmitTime() == null ? null : admission.getAdmitTime().toLocalDate());
@@ -251,7 +252,7 @@ public class InsuranceSettlementServiceImpl
         Long registId = EncounterTypeEnum.OUTPATIENT.getCode().equals(bill.getEncounterType())
                 ? bill.getEncounterId() : null;
         settlement.setRegistId(registId);
-        RegistBriefVO regist = registId == null ? null : appointProvider.findRegist(registId);
+        RegistBriefVO regist = registId == null ? null : findRegist(registId);
         settlement.setDeptId(regist != null ? regist.getDeptId() : firstDeptId(items));
         settlement.setDeptName(regist != null ? regist.getDeptName() : firstDeptName(items));
         settlement.setDoctorId(regist == null ? null : regist.getDoctorId());
@@ -260,7 +261,7 @@ public class InsuranceSettlementServiceImpl
         settlement.setSettlementType(bill.getSettlementMode());
         settlement.setInsuranceType(bill.getInsuranceType());
         settlement.setCoverageRatio(coverageRatio);
-        fillPatientIdentity(settlement, bill.getPatientId() == null ? null : patientProvider.findPatient(bill.getPatientId()));
+        fillPatientIdentity(settlement, bill.getPatientId() == null ? null : patientFacadeService.findPatient(bill.getPatientId()));
         fillDiagnosis(settlement);
 
         BigDecimal net = NumUtil.scale(NumUtil.orZero(bill.getTotalAmount()).subtract(NumUtil.orZero(bill.getDiscountAmount())), AMOUNT_SCALE);
@@ -742,7 +743,7 @@ public class InsuranceSettlementServiceImpl
         if (settlement.getRegistId() == null) {
             return;
         }
-        MedicalRecordBriefVO record = emrProvider.findLatestMedicalRecordByRegist(settlement.getRegistId());
+        MedicalRecordBriefVO record = emrFacadeService.findLatestMedicalRecordByRegist(settlement.getRegistId());
         if (record == null) {
             return;
         }
@@ -886,7 +887,7 @@ public class InsuranceSettlementServiceImpl
     }
 
     private MedicalRecordBriefVO latestMedicalRecord(Long patientId) {
-        return emrProvider.findLatestMedicalRecordByPatient(patientId);
+        return emrFacadeService.findLatestMedicalRecordByPatient(patientId);
     }
 
     private Long firstDeptId(List<BizSettlementBillItem> items) {
@@ -957,5 +958,37 @@ public class InsuranceSettlementServiceImpl
      * 清单三个数 + 总费用的现算结果：total = pool + account + cash（仅在账单已付清时成立）
      */
     private record FundSplit(BigDecimal total, BigDecimal pool, BigDecimal account, BigDecimal cash) {
+    }
+
+    private RegistBriefVO findRegist(Long registId) {
+        if (registId == null) {
+            return null;
+        }
+        return toBrief(appointInfoMapper.selectById(registId));
+    }
+
+    private RegistBriefVO toBrief(AppointInfo e) {
+        if (e == null) {
+            return null;
+        }
+        RegistBriefVO brief = new RegistBriefVO();
+        brief.setId(e.getId());
+        brief.setRegistNo(e.getRegistNo());
+        brief.setPatientId(e.getPatientId());
+        brief.setPatientName(e.getPatientName());
+        brief.setGender(e.getGender());
+        brief.setAge(e.getAge());
+        brief.setDeptId(e.getDeptId());
+        brief.setDeptName(e.getDeptName());
+        brief.setDoctorId(e.getDoctorId());
+        brief.setDoctorName(e.getDoctorName());
+        brief.setVisitType(e.getVisitType());
+        brief.setVisitDate(e.getVisitDate());
+        brief.setPatientNo(e.getPatientNo());
+        brief.setRegistStatus(e.getRegistStatus());
+        brief.setBillId(e.getBillId());
+        brief.setMedicalInsuranceType(e.getMedicalInsuranceType());
+        brief.setMedicalInsuranceNo(e.getMedicalInsuranceNo());
+        return brief;
     }
 }

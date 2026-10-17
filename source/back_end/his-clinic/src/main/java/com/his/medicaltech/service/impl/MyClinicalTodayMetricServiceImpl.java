@@ -5,7 +5,7 @@ import com.his.medicaltech.mapper.WorkbenchMetricMapper;
 import com.his.medicaltech.service.MyClinicalTodayMetricService;
 import com.his.medicaltech.vo.WorkbenchDoctorStatsRowVO;
 import com.his.common.entity.CurrentUser;
-import com.his.provider.service.WorkbenchMetricService;
+import com.his.system.service.WorkbenchMetricService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

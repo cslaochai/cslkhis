@@ -1,10 +1,10 @@
 package com.his.miniapp.controller;
 
-import com.his.provider.service.EmrPatientProvider;
+import com.his.emr.service.EmrPatientFacadeService;
 import com.his.common.base.Result;
-import com.his.provider.vo.BizFollowupTaskVO;
+import com.his.emr.vo.BizFollowupTaskVO;
 import com.his.miniapp.dto.FollowupReplyDTO;
-import com.his.provider.service.PatientProvider;
+import com.his.patient.service.PatientFacadeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -24,27 +24,27 @@ import java.util.List;
 @PreAuthorize("hasAuthority('PATIENT')")
 public class MiniFollowupController {
 
-    private final EmrPatientProvider emrPatientProvider;
+    private final EmrPatientFacadeService emrPatientFacadeService;
 
-    private final PatientProvider patientProvider;
+    private final PatientFacadeService patientFacadeService;
 
     @Operation(summary = "我的随访任务（只含本人名下，按计划时间倒序）")
     @GetMapping("/myList")
     public Result<List<BizFollowupTaskVO>> myList(@RequestParam Long patientId) {
         // 只允许查自己绑定的就诊人 —— 服务端按绑定关系收窄
-        if (!patientProvider.canAccessPatient(patientId)) {
+        if (!patientFacadeService.canAccessPatient(patientId)) {
             return Result.error("无权查询该就诊人的随访任务");
         }
-        return Result.success(emrPatientProvider.listForPatient(patientId));
+        return Result.success(emrPatientFacadeService.listForPatient(patientId));
     }
 
     @Operation(summary = "提交随访反馈（写回任务的患者反馈列）")
     @PostMapping("/reply")
     public Result<Void> reply(@RequestBody @Valid FollowupReplyDTO dto) {
-        if (!patientProvider.canAccessPatient(dto.getPatientId())) {
+        if (!patientFacadeService.canAccessPatient(dto.getPatientId())) {
             return Result.error("无权为该就诊人提交反馈");
         }
-        emrPatientProvider.replyFromPatient(dto.getTaskId(), dto.getPatientId(), dto.getReplyText());
+        emrPatientFacadeService.replyFromPatient(dto.getTaskId(), dto.getPatientId(), dto.getReplyText());
         return Result.success("反馈已提交", null);
     }
 }

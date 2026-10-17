@@ -1,9 +1,9 @@
 package com.his.pharmacy.support;
 
-import com.his.provider.dto.FeeBookDTO;
-import com.his.provider.service.ChargeProvider;
+import com.his.charge.dto.FeeBookDTO;
+import com.his.charge.service.ChargeFacadeService;
 import com.his.common.enums.FeeCatalogTypeEnum;
-import com.his.provider.vo.FeeRecordVO;
+import com.his.charge.vo.FeeRecordVO;
 import com.his.common.enums.EncounterTypeEnum;
 import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.PaymentItemTypeEnum;
@@ -27,7 +27,7 @@ import java.math.BigDecimal;
 @RequiredArgsConstructor
 public class WardDispenseChargeInvoker {
 
-    private final ChargeProvider chargeProvider;
+    private final ChargeFacadeService chargeFacadeService;
 
     private final BizWardDispenseItemMapper bizWardDispenseItemMapper;
 
@@ -85,7 +85,7 @@ public class WardDispenseChargeInvoker {
                 + "，明细 " + item.getId()
                 + (item.getOrderId() == null ? "" : "，医嘱 " + item.getOrderId()) + "）");
 
-        FeeRecordVO row = chargeProvider.bookFee(dto);
+        FeeRecordVO row = chargeFacadeService.bookFee(dto);
         log.info("住院摆药记账成功 dispenseNo={} 明细 {} {} 金额=¥{}",
                 item.getDispenseNo(), item.getId(), row.getFeeNo(), row.getAmount().toPlainString());
         return row;
@@ -99,13 +99,13 @@ public class WardDispenseChargeInvoker {
         String flushReason = TextUtil.hasText(reason)
                 ? reason
                 : ("住院摆药退药冲账（摆药单 " + item.getDispenseNo() + "，明细 " + item.getId() + "）");
-        FeeRecordVO orig = chargeProvider.findBookedBySource(
+        FeeRecordVO orig = chargeFacadeService.findBookedBySource(
                 FeeSourceTypeEnum.DISPENSE.getCode(), item.getId(), null);
         if (orig == null) {
             log.warn("住院摆药退药未找到原记账行（摆药明细 {}），本次没有冲账：这笔药当初就没记上费用", item.getId());
             return null;
         }
-        FeeRecordVO neg = chargeProvider.reverse(orig.getId(), flushReason);
+        FeeRecordVO neg = chargeFacadeService.reverse(orig.getId(), flushReason);
         log.info("住院摆药退药红冲成功 dispenseNo={} 原行 {} → 负行 {} 净冲 ¥{}",
                 item.getDispenseNo(), orig.getFeeNo(), neg.getFeeNo(), neg.getAmount().toPlainString());
         return neg;

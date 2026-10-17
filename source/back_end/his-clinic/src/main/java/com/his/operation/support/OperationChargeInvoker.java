@@ -1,8 +1,8 @@
 package com.his.operation.support;
 
-import com.his.provider.dto.FeeBookDTO;
-import com.his.provider.service.ChargeProvider;
-import com.his.provider.vo.FeeRecordVO;
+import com.his.charge.dto.FeeBookDTO;
+import com.his.charge.service.ChargeFacadeService;
+import com.his.charge.vo.FeeRecordVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -17,10 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class OperationChargeInvoker {
 
-    private final ChargeProvider chargeProvider;
+    private final ChargeFacadeService chargeFacadeService;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public FeeRecordVO book(FeeBookDTO dto) {
-        return chargeProvider.bookFee(dto);
+        return chargeFacadeService.bookFee(dto);
     }
 }

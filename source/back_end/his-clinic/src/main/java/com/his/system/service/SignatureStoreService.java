@@ -1,6 +1,6 @@
 package com.his.system.service;
 
-import com.his.provider.service.SignableContentProvider;
+import com.his.system.service.SignableContentService;
 import com.his.common.enums.SignSceneEnum;
 import com.his.system.entity.BizEmrSignature;
 import com.his.system.entity.SysSignCert;
@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  */
 public interface SignatureStoreService {
 
-    void insertAndAnchor(BizEmrSignature entity, SignableContentProvider provider, SignSceneEnum scene, SysSignCert cert);
+    void insertAndAnchor(BizEmrSignature entity, SignableContentService provider, SignSceneEnum scene, SysSignCert cert);
 
     void updateVerifyResult(Long signId, Integer verifyStatus, LocalDateTime verifyTime);
 

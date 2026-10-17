@@ -1,9 +1,9 @@
 package com.his.medicaltech.service.impl;
 
-import com.his.provider.service.AppointProvider;
-import com.his.provider.service.ChargeProvider;
-import com.his.provider.vo.BizAppointInfoListVO;
-import com.his.provider.vo.BizSettlementBillVO;
+import com.his.appoint.service.AppointFacadeService;
+import com.his.charge.service.ChargeFacadeService;
+import com.his.appoint.vo.BizAppointInfoListVO;
+import com.his.charge.vo.BizSettlementBillVO;
 import com.his.medicaltech.service.ReportService;
 import com.his.medicaltech.vo.ChargeStatsVO;
 import com.his.medicaltech.vo.DrugStatsVO;
@@ -22,12 +22,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ReportServiceImpl implements ReportService {
 
-    private final AppointProvider appointProvider;
-    private final ChargeProvider chargeProvider;
+    private final AppointFacadeService appointFacadeService;
+    private final ChargeFacadeService chargeFacadeService;
 
     @Override
     public OutpatientStatsVO getOutpatientStats(String startDate, String endDate) {
-        List<BizAppointInfoListVO> registList = appointProvider.listRegists(startDate, endDate);
+        List<BizAppointInfoListVO> registList = appointFacadeService.listRegists(startDate, endDate);
 
         long totalCount = registList.size();
         long maleCount = registList.stream().filter(r -> r.getGender() != null && r.getGender() == 1).count();
@@ -44,7 +44,7 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public ChargeStatsVO getChargeStats(String startDate, String endDate) {
         // 四层口径：已支付（bill_status=3）的结算账单，按账务归属日 bill_date 聚合；金额取应收合计
-        List<BizSettlementBillVO> bills = chargeProvider.paidBills(startDate, endDate);
+        List<BizSettlementBillVO> bills = chargeFacadeService.paidBills(startDate, endDate);
 
         BigDecimal totalAmount = bills.stream()
                 .map(b -> b.getPayableAmount() == null ? BigDecimal.ZERO : b.getPayableAmount())
