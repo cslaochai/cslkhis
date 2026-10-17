@@ -33,18 +33,9 @@
     </properties>
 
     <modules>
-        <module>his-core-api</module>
-        <module>his-core-common</module>
-        <module>his-biz-system</module>
-        <module>his-biz-patient</module>
-        <module>his-biz-appoint</module>
-        <module>his-biz-clinical</module>
-        <module>his-biz-charge</module>
-        <module>his-biz-pay</module>
-        <module>his-biz-ai</module>
-        <module>his-biz-miniapp</module>
-        <module>his-biz-consumer</module>
-        <module>his-core-web</module>
+        <module>his-common</module>
+        <module>his-bis-clinic</module>
+        <module>his-web</module>
     </modules>
 
     <dependencyManagement>
@@ -52,57 +43,12 @@
             <!-- ===== 本项目模块 ===== -->
             <dependency>
                 <groupId>com.his</groupId>
-                <artifactId>his-core-common</artifactId>
+                <artifactId>his-common</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.his</groupId>
-                <artifactId>his-biz-system</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.his</groupId>
-                <artifactId>his-biz-patient</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.his</groupId>
-                <artifactId>his-biz-appoint</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.his</groupId>
-                <artifactId>his-biz-clinical</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.his</groupId>
-                <artifactId>his-biz-charge</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.his</groupId>
-                <artifactId>his-biz-ai</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.his</groupId>
-                <artifactId>his-core-api</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.his</groupId>
-                <artifactId>his-biz-miniapp</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.his</groupId>
-                <artifactId>his-biz-consumer</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.his</groupId>
-                <artifactId>his-biz-pay</artifactId>
+                <artifactId>his-bis-clinic</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
