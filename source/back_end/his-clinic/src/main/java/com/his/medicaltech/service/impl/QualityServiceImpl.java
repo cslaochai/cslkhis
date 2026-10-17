@@ -7,7 +7,7 @@ import com.his.common.util.TextUtil;
 import com.his.medicaltech.dto.QualityIssueQueryPageDTO;
 import com.his.common.enums.QualityDimension;
 import com.his.common.enums.QualityRule;
-import com.his.common.enums.QualitySeverity;
+import com.his.common.enums.ClinicalRuleErrorLevelEnum;
 import com.his.medicaltech.mapper.QualityMapper;
 import com.his.medicaltech.service.QualityService;
 import com.his.medicaltech.vo.*;
@@ -102,7 +102,7 @@ public class QualityServiceImpl implements QualityService {
         summary.setDirtyRuleCount((int) allRules.stream().filter(r -> Boolean.TRUE.equals(r.getHasIssue())).count());
         summary.setEmptyRuleCount((int) allRules.stream().filter(r -> Boolean.TRUE.equals(r.getEmpty())).count());
         summary.setHighIssueCount(allRules.stream()
-                .filter(r -> r.getSeverity() != null && r.getSeverity() == QualitySeverity.HIGH.getLevel())
+                .filter(r -> r.getSeverity() != null && r.getSeverity() == ClinicalRuleErrorLevelEnum.BLOCK.getCode())
                 .mapToLong(r -> r.getIssueCount() == null ? 0 : r.getIssueCount())
                 .sum());
 
@@ -266,8 +266,8 @@ public class QualityServiceImpl implements QualityService {
         v.setRuleName(rule.getName());
         v.setDimension(rule.getDimension().name());
         v.setDimensionText(rule.getDimension().getText());
-        v.setSeverity(rule.getSeverity().getLevel());
-        v.setSeverityText(rule.getSeverity().getText());
+        v.setSeverity(rule.getSeverity().getCode());
+        v.setSeverityText(ClinicalRuleErrorLevelEnum.getText(rule.getSeverity().getCode()));
         v.setSuggestion(rule.getSuggestion());
         v.setCheckedTotal(checked);
         if (!TextUtil.hasText(v.getTableName())) {
@@ -298,8 +298,8 @@ public class QualityServiceImpl implements QualityService {
         vo.setRuleName(r.getName());
         vo.setDimension(r.getDimension().name());
         vo.setDimensionText(r.getDimension().getText());
-        vo.setSeverity(r.getSeverity().getLevel());
-        vo.setSeverityText(r.getSeverity().getText());
+        vo.setSeverity(r.getSeverity().getCode());
+        vo.setSeverityText(ClinicalRuleErrorLevelEnum.getText(r.getSeverity().getCode()));
         vo.setTableName(r.getTableName());
         vo.setCheckedDesc(r.getCheckedDesc());
         vo.setSuggestion(r.getSuggestion());

@@ -12,14 +12,14 @@ import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.CssdDTO;
 import com.his.pharmacy.entity.BizCssdPack;
 import com.his.pharmacy.entity.BizCssdTrace;
-import com.his.common.enums.CssdCheckResultEnum;
+import com.his.common.enums.QualifiedResultEnum;
 import com.his.common.enums.CssdNodeStatusEnum;
 import com.his.pharmacy.mapper.BizCssdPackMapper;
 import com.his.pharmacy.mapper.BizCssdTraceMapper;
 import com.his.pharmacy.service.CssdService;
 import com.his.pharmacy.vo.CssdPackVO;
 import com.his.pharmacy.vo.CssdTraceVO;
-import com.his.api.service.DeptScopeService;
+import com.his.provider.service.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -64,7 +64,7 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
         p.setCreateBy(UserUtils.getCurrentUser().getRealName());
         bizCssdPackMapper.insert(p);
 
-        insertTrace(p, CssdNodeStatusEnum.RECEIVED.getCode(), dto.getRemark(), null, null, CssdCheckResultEnum.OK.getCode(),
+        insertTrace(p, CssdNodeStatusEnum.RECEIVED.getCode(), dto.getRemark(), null, null, QualifiedResultEnum.OK.getCode(),
                 UserUtils.getCurrentUser().getRealName());
         return toVo(p, loadTraces(p.getId()));
     }
@@ -108,7 +108,7 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
         bizCssdPackMapper.updateById(p);
 
         // 灭菌完成判不合格 → 包退回清洗（重新打包灭菌），追溯节点如实记录不合格
-        if (CssdNodeStatusEnum.STORED.is(target) && CssdCheckResultEnum.NG.is(result)) {
+        if (CssdNodeStatusEnum.STORED.is(target) && QualifiedResultEnum.NG.is(result)) {
             p.setStatus(CssdNodeStatusEnum.WASHING.getCode());
             p.setLastNodeTime(TimeUtil.nowSeconds());
             bizCssdPackMapper.updateById(p);
@@ -217,7 +217,7 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
         vo.setSterilizerNo(t.getSterilizerNo());
         vo.setBatchNo(t.getBatchNo());
         vo.setResult(t.getResult());
-        vo.setResultText(CssdCheckResultEnum.getText(t.getResult()));
+        vo.setResultText(QualifiedResultEnum.getText(t.getResult()));
         vo.setRemark(t.getRemark());
         return vo;
     }

@@ -1,8 +1,8 @@
 package com.his.miniapp.service.impl;
 
-import com.his.api.dto.ScheduleSelectQueryDTO;
-import com.his.api.service.ClinicSourceProvider;
-import com.his.api.vo.ClinicSourceVO;
+import com.his.provider.dto.ScheduleSelectQueryDTO;
+import com.his.provider.service.ClinicSourceProvider;
+import com.his.provider.vo.ClinicSourceVO;
 import com.his.common.exception.BusinessException;
 import com.his.miniapp.mapper.MiniDirectoryMapper;
 import com.his.miniapp.service.MiniDirectoryService;
@@ -10,7 +10,7 @@ import com.his.miniapp.vo.MiniDeptSelectListVO;
 import com.his.miniapp.vo.MiniDoctorSelectListVO;
 import com.his.miniapp.vo.MiniScheduleSelectVO;
 import com.his.miniapp.vo.MiniPatientDetailVO;
-import com.his.api.service.PatientProvider;
+import com.his.provider.service.PatientProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;

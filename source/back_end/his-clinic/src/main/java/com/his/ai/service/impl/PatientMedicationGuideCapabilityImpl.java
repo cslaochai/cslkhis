@@ -17,7 +17,7 @@ import com.his.emr.entity.BizPrescription;
 import com.his.emr.entity.BizPrescriptionDetail;
 import com.his.emr.mapper.BizPrescriptionDetailMapper;
 import com.his.emr.mapper.BizPrescriptionMapper;
-import com.his.api.service.PatientProvider;
+import com.his.provider.service.PatientProvider;
 import com.his.common.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;

@@ -14,7 +14,7 @@ import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.common.enums.PrevisitSummarySourceEnum;
 import com.his.emr.service.PrevisitRecordService;
-import com.his.api.vo.PrevisitDetailVO;
+import com.his.provider.vo.PrevisitDetailVO;
 import com.his.common.enums.AiExpressionSourceEnum;
 import com.his.common.enums.AiBizTypeEnum;
 import lombok.RequiredArgsConstructor;

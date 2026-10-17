@@ -1,7 +1,7 @@
 package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.api.service.SignableContentProvider;
+import com.his.provider.service.SignableContentProvider;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.enums.SignStatusEnum;
 import com.his.system.entity.BizEmrSignature;

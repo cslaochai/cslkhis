@@ -5,7 +5,7 @@ import com.his.miniapp.dto.WxLoginDTO;
 import com.his.miniapp.service.MiniAuthService;
 import com.his.miniapp.service.WxLoginChannelService;
 import com.his.miniapp.vo.MiniWxLoginVO;
-import com.his.api.service.PatientProvider;
+import com.his.provider.service.PatientProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

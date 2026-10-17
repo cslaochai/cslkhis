@@ -20,11 +20,11 @@ import com.his.emr.vo.QcResultVO;
 import com.his.emr.support.QcRuleEngine;
 import com.his.emr.support.QcSnapshot;
 import com.his.emr.vo.*;
-import com.his.api.service.PatientProvider;
-import com.his.api.vo.InpatientRecordVO;
+import com.his.provider.service.PatientProvider;
+import com.his.provider.vo.InpatientRecordVO;
 import com.his.common.entity.CurrentUser;
 import com.his.common.enums.BizTypeEnum;
-import com.his.api.service.DeptScopeService;
+import com.his.provider.service.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
@@ -36,7 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import com.his.emr.enums.QcRuleEnum;
+import com.his.common.enums.QcRuleEnum;
 
 /**
  * 病案质控服务实现

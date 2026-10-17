@@ -1,12 +1,12 @@
 package com.his.emr.api;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.his.api.vo.SignSubject;
+import com.his.provider.vo.SignSubject;
 import com.his.common.enums.ApplyStatusEnum;
 import com.his.common.enums.ObjectSignStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
-import com.his.api.service.SignableContentProvider;
+import com.his.provider.service.SignableContentProvider;
 import com.his.common.util.TimeUtil;
 import com.his.emr.entity.BizLaboratoryApply;
 import com.his.emr.mapper.BizLaboratoryApplyMapper;

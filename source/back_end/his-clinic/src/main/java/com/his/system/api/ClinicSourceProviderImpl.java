@@ -1,8 +1,8 @@
 package com.his.system.api;
 
-import com.his.api.dto.ScheduleSelectQueryDTO;
-import com.his.api.service.ClinicSourceProvider;
-import com.his.api.vo.ClinicSourceVO;
+import com.his.provider.dto.ScheduleSelectQueryDTO;
+import com.his.provider.service.ClinicSourceProvider;
+import com.his.provider.vo.ClinicSourceVO;
 import com.his.system.service.BizClinicSourceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;

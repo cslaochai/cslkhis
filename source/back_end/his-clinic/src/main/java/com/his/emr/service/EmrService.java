@@ -1,6 +1,6 @@
 package com.his.emr.service;
 
-import com.his.api.vo.MyMedicalRecordVO;
+import com.his.provider.vo.MyMedicalRecordVO;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
 import com.his.emr.dto.*;
@@ -9,7 +9,6 @@ import com.his.emr.entity.BizLaboratoryApply;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.entity.BizPrescription;
 import com.his.emr.vo.*;
-import com.his.api.vo.*;
 
 import java.util.List;
 

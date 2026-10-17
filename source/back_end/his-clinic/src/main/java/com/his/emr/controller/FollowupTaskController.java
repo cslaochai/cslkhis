@@ -4,7 +4,7 @@ import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.emr.dto.*;
 import com.his.emr.service.FollowupTaskService;
-import com.his.api.vo.BizFollowupTaskVO;
+import com.his.provider.vo.BizFollowupTaskVO;
 import com.his.emr.vo.FollowupStatVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

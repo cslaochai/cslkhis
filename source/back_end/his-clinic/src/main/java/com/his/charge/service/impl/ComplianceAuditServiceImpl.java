@@ -1,10 +1,10 @@
 package com.his.charge.service.impl;
 
-import com.his.api.vo.*;
+import com.his.provider.vo.*;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.api.service.AppointProvider;
+import com.his.provider.service.AppointProvider;
 import com.his.charge.config.ComplianceProperties;
 import com.his.charge.dto.*;
 import com.his.charge.entity.*;
@@ -18,8 +18,8 @@ import com.his.charge.support.rule.RuleContext;
 import com.his.charge.support.rule.RuleFinding;
 import com.his.charge.support.SettlementEvidence;
 import com.his.charge.vo.*;
-import com.his.api.vo.LabResultBriefVO;
-import com.his.api.vo.RegistBriefVO;
+import com.his.provider.vo.LabResultBriefVO;
+import com.his.provider.vo.RegistBriefVO;
 import com.his.common.base.PageResult;
 import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.SysGenderEnum;

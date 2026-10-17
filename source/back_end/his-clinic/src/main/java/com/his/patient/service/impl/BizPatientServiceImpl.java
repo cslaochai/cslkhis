@@ -23,8 +23,8 @@ import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.mapper.BizPatientTagRelationMapper;
 import com.his.patient.service.*;
 import com.his.patient.support.PatientProfileValidator;
-import com.his.api.service.AppointProvider;
-import com.his.api.vo.TodayVisitVO;
+import com.his.provider.service.AppointProvider;
+import com.his.provider.vo.TodayVisitVO;
 import com.his.common.enums.PatientSearchScopeModeEnum;
 import com.his.patient.support.PatientSearchScopeResolver;
 import com.his.patient.vo.*;
@@ -51,7 +51,6 @@ import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
-import com.his.common.enums.*;
 
 /**
  * 患者服务实现

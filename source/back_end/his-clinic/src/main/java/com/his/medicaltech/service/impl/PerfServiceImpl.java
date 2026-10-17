@@ -16,7 +16,7 @@ import com.his.medicaltech.mapper.PerfMapper;
 import com.his.medicaltech.service.PerfService;
 import com.his.medicaltech.vo.PerfDeptRevenueRowVO;
 import com.his.medicaltech.vo.PerfVO;
-import com.his.api.service.DeptScopeService;
+import com.his.provider.service.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

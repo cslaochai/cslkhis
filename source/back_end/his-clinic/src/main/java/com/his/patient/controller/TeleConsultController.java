@@ -3,7 +3,6 @@ package com.his.patient.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.patient.dto.*;
-import com.his.api.dto.*;
 import com.his.patient.service.TeleConsultService;
 import com.his.patient.vo.OnlineConsultVO;
 import com.his.patient.vo.TeleConsultStatVO;

@@ -144,7 +144,7 @@ CREATE TABLE `biz_equipment_maintain`
     `cost`               decimal(12, 2) COMMENT '费用（元）',
     `fault_desc`         varchar(500) COMMENT '故障描述',
     `handle_result`      varchar(500) COMMENT '处理结果',
-    `maintain_result`    tinyint     NOT NULL COMMENT '维保结果（1-正常 2-异常）',
+    `maintain_result`    tinyint     NOT NULL COMMENT '维保结果（0-异常 1-正常）',
     `handler_name`       varchar(50) COMMENT '维保人',
     `create_by`          varchar(64) NOT NULL COMMENT '创建人',
     `create_by_id`       bigint COMMENT '创建人ID',

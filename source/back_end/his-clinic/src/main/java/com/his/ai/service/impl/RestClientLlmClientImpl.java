@@ -9,7 +9,7 @@ import com.his.ai.dto.AiChatRequestDTO;
 import com.his.ai.dto.LlmResultDTO;
 import com.his.ai.dto.OpenAiChatRequestDTO;
 import com.his.ai.dto.OpenAiChatResponseDTO;
-import com.his.ai.exception.LlmException;
+import com.his.common.exception.LlmException;
 import com.his.ai.service.LlmClient;
 import com.his.ai.service.RestClientLlmClient;
 import com.his.common.util.TextUtil;

@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.regex.Pattern;
-import com.his.emr.enums.QcRuleEnum;
+import com.his.common.enums.QcRuleEnum;
 
 /**
  * 病历形式质控规则引擎。

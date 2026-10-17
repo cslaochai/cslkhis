@@ -191,7 +191,7 @@ CREATE TABLE `biz_survey_template`
     `template_no`   varchar(32)  NOT NULL COMMENT '模板编号',
     `template_name` varchar(128) NOT NULL COMMENT '问卷名称',
     `scene`         tinyint      NOT NULL COMMENT '适用场景（1-出院随访 2-门诊 3-住院在院 4-体检）',
-    `status`        tinyint      NOT NULL COMMENT '状态（1-启用 2-停用）',
+    `status`        tinyint      NOT NULL COMMENT '状态（1-启用 0-停用）',
     `description`   varchar(500) COMMENT '说明（调查目的、口径、上报去向）',
     `create_by`     varchar(64)  NOT NULL COMMENT '创建人',
     `create_by_id`  bigint COMMENT '创建人ID',

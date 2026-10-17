@@ -15,7 +15,7 @@ import com.his.emr.entity.BizSurveyDispatch;
 import com.his.emr.entity.BizSurveyItem;
 import com.his.emr.entity.BizSurveyTemplate;
 import com.his.common.enums.SurveyQuestionTypeEnum;
-import com.his.common.enums.SurveyTemplateStatusEnum;
+import com.his.common.enums.EnableStatusEnum;
 import com.his.emr.mapper.BizSurveyDispatchMapper;
 import com.his.emr.mapper.BizSurveyItemMapper;
 import com.his.emr.mapper.BizSurveyTemplateMapper;
@@ -78,7 +78,7 @@ public class SurveyTemplateServiceImpl extends ServiceImpl<BizSurveyTemplateMapp
     @Override
     public List<SurveyTemplateSelectListVO> selectEnabled(Integer scene) {
         List<BizSurveyTemplate> list = bizSurveyTemplateMapper.selectList(new LambdaQueryWrapper<BizSurveyTemplate>()
-                .eq(BizSurveyTemplate::getStatus, SurveyTemplateStatusEnum.ENABLED.getCode())
+                .eq(BizSurveyTemplate::getStatus, EnableStatusEnum.ENABLED.getCode())
                 .eq(scene != null, BizSurveyTemplate::getScene, scene)
                 .orderByDesc(BizSurveyTemplate::getId));
         return list.stream().map(t -> {
@@ -117,7 +117,7 @@ public class SurveyTemplateServiceImpl extends ServiceImpl<BizSurveyTemplateMapp
         if (isNew) {
             template = new BizSurveyTemplate();
             template.setTemplateNo(nextNo());
-            template.setStatus(dto.getStatus() == null ? SurveyTemplateStatusEnum.ENABLED.getCode() : dto.getStatus());
+            template.setStatus(dto.getStatus() == null ? EnableStatusEnum.ENABLED.getCode() : dto.getStatus());
         } else {
             template = requireTemplate(dto.getId());
             if (dto.getStatus() != null) {
@@ -161,7 +161,7 @@ public class SurveyTemplateServiceImpl extends ServiceImpl<BizSurveyTemplateMapp
     @Override
     public SurveyTemplateVO findEnabledForScene(Integer scene) {
         BizSurveyTemplate template = bizSurveyTemplateMapper.selectOne(new LambdaQueryWrapper<BizSurveyTemplate>()
-                .eq(BizSurveyTemplate::getStatus, SurveyTemplateStatusEnum.ENABLED.getCode())
+                .eq(BizSurveyTemplate::getStatus, EnableStatusEnum.ENABLED.getCode())
                 .eq(BizSurveyTemplate::getScene, scene)
                 .orderByDesc(BizSurveyTemplate::getId)
                 .last("LIMIT 1"));

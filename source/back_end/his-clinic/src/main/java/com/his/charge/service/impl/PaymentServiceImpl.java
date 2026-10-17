@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.api.dto.BillPayDTO;
+import com.his.provider.dto.BillPayDTO;
 import com.his.charge.dto.BillRefundDTO;
 import com.his.charge.dto.BillVoidDTO;
 import com.his.charge.dto.PaymentTxnQueryPageDTO;

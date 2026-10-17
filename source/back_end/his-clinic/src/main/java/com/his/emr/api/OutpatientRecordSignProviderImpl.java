@@ -1,11 +1,11 @@
 package com.his.emr.api;
 
-import com.his.api.vo.SignSubject;
+import com.his.provider.vo.SignSubject;
 import com.his.common.enums.ObjectSignStatusEnum;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
-import com.his.api.service.SignableContentProvider;
+import com.his.provider.service.SignableContentProvider;
 import com.his.common.util.TimeUtil;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.mapper.BizMedicalRecordMapper;

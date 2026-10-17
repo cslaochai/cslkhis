@@ -2,9 +2,8 @@ package com.his.patient.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.patient.dto.*;
-import com.his.api.dto.*;
 import com.his.patient.vo.*;
-import com.his.api.vo.*;
+import com.his.provider.vo.*;
 
 import java.time.LocalDateTime;
 import java.util.List;

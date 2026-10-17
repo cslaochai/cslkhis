@@ -10,9 +10,9 @@ import com.his.system.dto.*;
 import com.his.system.entity.BizEquipmentMaintain;
 import com.his.system.entity.BizEquipmentMetering;
 import com.his.system.entity.SysEquipment;
-import com.his.common.enums.MaintainResultEnum;
+import com.his.common.enums.TreatmentRecordStatusEnum;
 import com.his.common.enums.MaintainTypeEnum;
-import com.his.common.enums.MeteringResultEnum;
+import com.his.common.enums.QualifiedResultEnum;
 import com.his.common.enums.MeteringTypeEnum;
 import com.his.system.mapper.BizEquipmentMaintainMapper;
 import com.his.system.mapper.BizEquipmentMeteringMapper;
@@ -114,7 +114,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         m.setFaultDesc(TextUtil.trim(dto.getFaultDesc()));
         m.setHandleResult(TextUtil.trim(dto.getHandleResult()));
         m.setMaintainResult(dto.getMaintainResult() == null
-                ? MaintainResultEnum.NORMAL.getCode() : dto.getMaintainResult());
+                ? TreatmentRecordStatusEnum.NORMAL.getCode() : dto.getMaintainResult());
         m.setHandlerName(TextUtil.hasText(dto.getHandlerName()) ? dto.getHandlerName().trim()
                 : UserUtils.getCurrentUser().getRealName());
         m.setCreateBy(UserUtils.getCurrentUser().getRealName());
@@ -180,7 +180,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         m.setMeteringDate(dto.getMeteringDate());
         m.setValidUntil(dto.getValidUntil());
         m.setMeteringResult(dto.getMeteringResult() == null
-                ? MeteringResultEnum.QUALIFIED.getCode() : dto.getMeteringResult());
+                ? QualifiedResultEnum.OK.getCode() : dto.getMeteringResult());
         m.setCertNo(TextUtil.trim(dto.getCertNo()));
         m.setAgency(TextUtil.trim(dto.getAgency()));
         m.setCreateBy(UserUtils.getCurrentUser().getRealName());
@@ -260,7 +260,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         vo.setFaultDesc(m.getFaultDesc());
         vo.setHandleResult(m.getHandleResult());
         vo.setMaintainResult(m.getMaintainResult());
-        vo.setMaintainResultText(MaintainResultEnum.getText(m.getMaintainResult()));
+        vo.setMaintainResultText(TreatmentRecordStatusEnum.getText(m.getMaintainResult()));
         vo.setHandlerName(m.getHandlerName());
         vo.setCreateBy(m.getCreateBy());
         vo.setCreateTime(m.getCreateTime());
@@ -279,7 +279,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         vo.setValidUntil(m.getValidUntil());
         vo.setExpired(m.getValidUntil() != null && m.getValidUntil().isBefore(LocalDate.now()));
         vo.setMeteringResult(m.getMeteringResult());
-        vo.setMeteringResultText(MeteringResultEnum.getText(m.getMeteringResult()));
+        vo.setMeteringResultText(QualifiedResultEnum.getText(m.getMeteringResult()));
         vo.setCertNo(m.getCertNo());
         vo.setAgency(m.getAgency());
         vo.setCreateBy(m.getCreateBy());

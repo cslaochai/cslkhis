@@ -1,6 +1,6 @@
 package com.his.system.service;
 
-import com.his.api.service.WorkbenchMetricService;
+import com.his.provider.service.WorkbenchMetricService;
 
 /**
  * 工作台卡片 myNotice 的取数提供方：我未读的通知型站内信。

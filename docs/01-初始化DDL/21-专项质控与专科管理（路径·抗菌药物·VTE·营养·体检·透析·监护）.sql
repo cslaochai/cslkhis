@@ -139,7 +139,7 @@ CREATE TABLE `biz_clinical_rule_check`
     `rule_name`    varchar(100) NOT NULL COMMENT '规则名称',
     `rule_content` varchar(500) COMMENT '规则内容',
     `check_result` tinyint      NOT NULL COMMENT '校验结果（0-不通过 1-通过）',
-    `error_level`  tinyint COMMENT '错误级别（1-警告 2-错误 3-严重）',
+    `error_level`  tinyint COMMENT '错误级别（1-提示 2-警告 3-严重）',
     `error_detail` varchar(1000) COMMENT '错误详情',
     `suggestion`   varchar(500) COMMENT '处理建议',
     `check_status` tinyint      NOT NULL COMMENT '处理状态（1-待处理 2-已处理 3-已忽略）',

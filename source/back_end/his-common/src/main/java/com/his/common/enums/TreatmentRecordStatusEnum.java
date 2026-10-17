@@ -3,7 +3,7 @@ package com.his.common.enums;
 import lombok.Getter;
 
 /**
- * 治疗记录状态枚举
+ * 执行/维保结果状态枚举（0-异常 1-正常），全仓「正常 / 异常」这一档结果判定的唯一口径
  */
 @Getter
 public enum TreatmentRecordStatusEnum {
@@ -27,11 +27,18 @@ public enum TreatmentRecordStatusEnum {
     }
 
     /**
-     * 码值不在枚举内（脏数据）返回 null，由调用侧决定兜底文案，不能回落到合法文案。
+     * 码值是否合法（入参校验用；null 不合法）
+     */
+    public static boolean isValid(Integer code) {
+        return code != null && fromCode(code) != null;
+    }
+
+    /**
+     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」。
      */
     public static String getText(Integer code) {
         TreatmentRecordStatusEnum item = code == null ? null : fromCode(code);
-        return item == null ? null : item.label;
+        return item == null ? "" : item.label;
     }
 
     /**

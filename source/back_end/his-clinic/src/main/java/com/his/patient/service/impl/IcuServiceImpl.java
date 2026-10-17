@@ -18,7 +18,7 @@ import com.his.patient.mapper.BizIcuStayMapper;
 import com.his.patient.service.IcuService;
 import com.his.patient.vo.IcuVO;
 import com.his.common.entity.CurrentUser;
-import com.his.api.service.DeptScopeService;
+import com.his.provider.service.DeptScopeService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;

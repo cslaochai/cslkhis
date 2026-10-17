@@ -3,7 +3,7 @@ package com.his.common.enums;
 import lombok.Getter;
 
 /**
- * 校验结果枚举
+ * 校验/评估结论枚举（0-不通过 1-通过），全仓「通过 / 不通过」这一档判定的唯一口径
  */
 @Getter
 public enum CheckResultEnum {
@@ -27,11 +27,18 @@ public enum CheckResultEnum {
     }
 
     /**
-     * 码值不在枚举内（脏数据）返回 null，由调用侧决定兜底文案，不能回落到合法文案。
+     * 码值是否合法（入参校验用；null 不合法）
+     */
+    public static boolean isValid(Integer code) {
+        return code != null && fromCode(code) != null;
+    }
+
+    /**
+     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」。
      */
     public static String getText(Integer code) {
         CheckResultEnum item = code == null ? null : fromCode(code);
-        return item == null ? null : item.label;
+        return item == null ? "" : item.label;
     }
 
     /**

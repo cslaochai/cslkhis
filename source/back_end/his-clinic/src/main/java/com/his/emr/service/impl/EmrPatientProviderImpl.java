@@ -1,13 +1,13 @@
 package com.his.emr.service.impl;
 
-import com.his.api.dto.PrevisitSubmitDTO;
-import com.his.api.service.EmrPatientProvider;
-import com.his.api.vo.BizFollowupTaskVO;
-import com.his.api.vo.ChronicMyRecordsVO;
-import com.his.api.vo.MyMedicalRecordVO;
-import com.his.api.vo.MyPrescriptionVO;
-import com.his.api.vo.PrevisitDetailVO;
-import com.his.api.vo.PrevisitQuestionnaireVO;
+import com.his.provider.dto.PrevisitSubmitDTO;
+import com.his.provider.service.EmrPatientProvider;
+import com.his.provider.vo.BizFollowupTaskVO;
+import com.his.provider.vo.ChronicMyRecordsVO;
+import com.his.provider.vo.MyMedicalRecordVO;
+import com.his.provider.vo.MyPrescriptionVO;
+import com.his.provider.vo.PrevisitDetailVO;
+import com.his.provider.vo.PrevisitQuestionnaireVO;
 import com.his.emr.service.ChronicRecordService;
 import com.his.emr.service.EmrService;
 import com.his.emr.service.FollowupTaskService;

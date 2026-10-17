@@ -19,7 +19,7 @@ import com.his.emr.mapper.BizInfectiousReportMapper;
 import com.his.emr.mapper.SysInfectiousDiseaseMapper;
 import com.his.emr.service.InfectiousReportService;
 import com.his.emr.vo.*;
-import com.his.api.service.DeptScopeService;
+import com.his.provider.service.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

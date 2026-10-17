@@ -2,7 +2,7 @@ package com.his.ai.support;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.his.ai.exception.LlmException;
+import com.his.common.exception.LlmException;
 import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

@@ -1,10 +1,10 @@
 package com.his.medicaltech.api;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.his.api.vo.SignSubject;
+import com.his.provider.vo.SignSubject;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
-import com.his.api.service.SignableContentProvider;
+import com.his.provider.service.SignableContentProvider;
 import com.his.common.util.TimeUtil;
 import com.his.medicaltech.entity.BizInspectionRecord;
 import com.his.common.enums.InsRecordStatusEnum;

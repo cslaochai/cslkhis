@@ -1,17 +1,17 @@
 package com.his.miniapp.controller;
 
-import com.his.api.dto.AppointCancelDTO;
-import com.his.api.dto.AppointQueryDTO;
-import com.his.api.dto.AppointUpsertDTO;
-import com.his.api.service.AppointProvider;
-import com.his.api.vo.BizAppointInfoListVO;
-import com.his.api.vo.RegistBriefVO;
+import com.his.provider.dto.AppointCancelDTO;
+import com.his.provider.dto.AppointQueryDTO;
+import com.his.provider.dto.AppointUpsertDTO;
+import com.his.provider.service.AppointProvider;
+import com.his.provider.vo.BizAppointInfoListVO;
+import com.his.provider.vo.RegistBriefVO;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.common.util.TextUtil;
 import com.his.miniapp.dto.PayRefundDTO;
 import com.his.miniapp.service.MiniPayService;
-import com.his.api.service.PatientProvider;
+import com.his.provider.service.PatientProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

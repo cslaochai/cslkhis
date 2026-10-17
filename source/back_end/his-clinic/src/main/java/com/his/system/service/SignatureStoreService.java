@@ -1,6 +1,6 @@
 package com.his.system.service;
 
-import com.his.api.service.SignableContentProvider;
+import com.his.provider.service.SignableContentProvider;
 import com.his.common.enums.SignSceneEnum;
 import com.his.system.entity.BizEmrSignature;
 import com.his.system.entity.SysSignCert;

@@ -1,8 +1,8 @@
 package com.his.emr.service.impl;
 
 
-import com.his.api.vo.MyPrescriptionVO;
-import com.his.api.vo.MyPrescriptionDetailVO;
+import com.his.provider.vo.MyPrescriptionVO;
+import com.his.provider.vo.MyPrescriptionDetailVO;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;

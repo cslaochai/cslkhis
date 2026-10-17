@@ -5,7 +5,7 @@ import com.his.common.base.Result;
 import com.his.medicaltech.dto.*;
 import com.his.medicaltech.service.TransfusionApplyService;
 import com.his.medicaltech.vo.TransfusionApplyVO;
-import com.his.api.vo.CodeOptionVO;
+import com.his.provider.vo.CodeOptionVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

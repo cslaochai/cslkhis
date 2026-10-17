@@ -21,7 +21,7 @@ import com.his.operation.support.OperationChargeBiller;
 import com.his.operation.vo.OperationChargeSummaryVO;
 import com.his.operation.vo.PacuRecordVO;
 import com.his.system.service.RedisSequenceService;
-import com.his.api.service.DeptScopeService;
+import com.his.provider.service.DeptScopeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

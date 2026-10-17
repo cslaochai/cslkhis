@@ -18,7 +18,7 @@ import com.his.pharmacy.mapper.BizConsumableStockMapper;
 import com.his.pharmacy.mapper.SysConsumableMapper;
 import com.his.pharmacy.service.SuppliesService;
 import com.his.pharmacy.vo.*;
-import com.his.api.service.DeptScopeService;
+import com.his.provider.service.DeptScopeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;

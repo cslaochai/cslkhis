@@ -76,7 +76,7 @@
         <el-table-column label="术前评估" width="100">
           <template #default="{ row }">
             <el-tag v-if="row.evalResult === 1" size="small" type="success">通过</el-tag>
-            <el-tag v-else-if="row.evalResult === 2" size="small" type="danger">不通过</el-tag>
+            <el-tag v-else-if="row.evalResult === 0" size="small" type="danger">不通过</el-tag>
             <span v-else>—</span>
           </template>
         </el-table-column>

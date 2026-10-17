@@ -2,7 +2,7 @@ package com.his.emr.vo;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.his.emr.enums.QcRuleEnum;
+import com.his.common.enums.QcRuleEnum;
 import lombok.Data;
 
 /**

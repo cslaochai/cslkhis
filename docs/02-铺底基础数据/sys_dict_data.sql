@@ -3079,11 +3079,11 @@ VALUES ('891000000000000597', 'his_rule_check_result', '通过', '1', 2, NULL, N
         '1', '1');
 INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
                            create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('891000000000000598', 'his_rule_error_level', '警告', '1', 1, NULL, NULL, 0, 1, 'admin', 'admin', 0, NULL, 1,
+VALUES ('891000000000000598', 'his_rule_error_level', '提示', '1', 1, NULL, NULL, 0, 1, 'admin', 'admin', 0, NULL, 1,
         '1', '1');
 INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
                            create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('891000000000000599', 'his_rule_error_level', '错误', '2', 2, NULL, NULL, 0, 1, 'admin', 'admin', 0, NULL, 1,
+VALUES ('891000000000000599', 'his_rule_error_level', '警告', '2', 2, NULL, NULL, 0, 1, 'admin', 'admin', 0, NULL, 1,
         '1', '1');
 INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
                            create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
@@ -5612,7 +5612,7 @@ VALUES ('892000000000000551', 'his_day_surgery_eval_result', '通过', '1', 1, N
         NULL, 1, '1', '1');
 INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
                            create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('892000000000000552', 'his_day_surgery_eval_result', '不通过', '2', 2, NULL, NULL, 0, 1, 'admin', 'admin', 0,
+VALUES ('892000000000000552', 'his_day_surgery_eval_result', '不通过', '0', 2, NULL, NULL, 0, 1, 'admin', 'admin', 0,
         NULL, 1, '1', '1');
 INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
                            create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
@@ -6129,7 +6129,7 @@ VALUES ('895000000000000181', 'his_survey_tpl_status', '启用', '1', 1, NULL, N
         '1', '1');
 INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
                            create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)
-VALUES ('895000000000000182', 'his_survey_tpl_status', '停用', '2', 2, NULL, NULL, 0, 1, 'admin', 'admin', 0, NULL, 1,
+VALUES ('895000000000000182', 'his_survey_tpl_status', '停用', '0', 2, NULL, NULL, 0, 1, 'admin', 'admin', 0, NULL, 1,
         '1', '1');
 INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort, dict_class, list_class, is_default, status,
                            create_by, update_by, del_flag, remark, dict_source, create_by_id, update_by_id)

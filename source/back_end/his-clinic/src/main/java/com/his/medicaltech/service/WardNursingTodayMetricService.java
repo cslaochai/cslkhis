@@ -1,6 +1,6 @@
 package com.his.medicaltech.service;
 
-import com.his.api.service.WorkbenchMetricService;
+import com.his.provider.service.WorkbenchMetricService;
 
 /**
  * 工作台卡片 wardNursingToday 的取数提供方：病区今日概况（在院/床位/今日入出/待执行）。

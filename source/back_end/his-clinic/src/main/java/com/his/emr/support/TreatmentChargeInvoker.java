@@ -1,8 +1,8 @@
 package com.his.emr.support;
 
-import com.his.api.dto.FeeBookDTO;
-import com.his.api.service.ChargeProvider;
-import com.his.api.vo.FeeRecordVO;
+import com.his.provider.dto.FeeBookDTO;
+import com.his.provider.service.ChargeProvider;
+import com.his.provider.vo.FeeRecordVO;
 import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

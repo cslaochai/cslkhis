@@ -9,7 +9,7 @@ import com.his.emr.dto.PrescriptionRationalQueryDTO;
 import com.his.emr.service.PrescriptionService;
 import com.his.emr.vo.BizPrescriptionVO;
 import com.his.emr.vo.PrescriptionRationalVO;
-import com.his.api.service.PatientProvider;
+import com.his.provider.service.PatientProvider;
 import com.his.common.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import io.swagger.v3.oas.annotations.Operation;

@@ -3,7 +3,7 @@ package com.his.common.enums;
 import lombok.Getter;
 
 /**
- * 删除标志枚举
+ * 登录账号类型
  */
 @Getter
 public enum UserTypeEnum {

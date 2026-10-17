@@ -1,12 +1,12 @@
 package com.his.miniapp.controller;
 
-import com.his.api.service.AppointProvider;
+import com.his.provider.service.AppointProvider;
 import com.his.common.base.Result;
-import com.his.api.dto.PrevisitSubmitDTO;
-import com.his.api.service.EmrPatientProvider;
-import com.his.api.vo.PrevisitDetailVO;
-import com.his.api.vo.PrevisitQuestionnaireVO;
-import com.his.api.service.PatientProvider;
+import com.his.provider.dto.PrevisitSubmitDTO;
+import com.his.provider.service.EmrPatientProvider;
+import com.his.provider.vo.PrevisitDetailVO;
+import com.his.provider.vo.PrevisitQuestionnaireVO;
+import com.his.provider.service.PatientProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

@@ -2,7 +2,7 @@ package com.his.system.filter;
 
 import com.his.common.util.TextUtil;
 import com.his.common.entity.CurrentUser;
-import com.his.api.service.RolePermissionService;
+import com.his.provider.service.RolePermissionService;
 import com.his.system.service.impl.UserDetailsServiceImpl;
 import com.his.common.util.JwtUtils;
 import jakarta.servlet.FilterChain;

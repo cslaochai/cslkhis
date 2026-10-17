@@ -24,7 +24,7 @@ import com.his.patient.support.NutritionRules;
 import com.his.patient.vo.MealGenerateVO;
 import com.his.patient.vo.MealOrderVO;
 import com.his.common.entity.CurrentUser;
-import com.his.api.service.DeptScopeService;
+import com.his.provider.service.DeptScopeService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;

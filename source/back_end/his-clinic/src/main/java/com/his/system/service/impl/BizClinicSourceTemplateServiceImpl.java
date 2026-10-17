@@ -19,7 +19,7 @@ import com.his.system.entity.BizShift;
 import com.his.system.mapper.BizClinicSourceMapper;
 import com.his.system.mapper.BizClinicSourceSlotTemplateMapper;
 import com.his.system.mapper.BizClinicSourceTemplateMapper;
-import com.his.api.service.DeptScopeService;
+import com.his.provider.service.DeptScopeService;
 import com.his.system.service.BizClinicSourceService;
 import com.his.system.service.BizClinicSourceSlotService;
 import com.his.system.service.BizClinicSourceTemplateService;

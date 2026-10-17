@@ -2,9 +2,9 @@ package com.his.charge.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.api.dto.PrepayQueryPageDTO;
+import com.his.provider.dto.PrepayQueryPageDTO;
 import com.his.charge.entity.BizPaymentTxn;
-import com.his.api.vo.PrepayVO;
+import com.his.provider.vo.PrepayVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;

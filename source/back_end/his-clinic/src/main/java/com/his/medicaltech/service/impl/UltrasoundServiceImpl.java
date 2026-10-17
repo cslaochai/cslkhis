@@ -13,13 +13,13 @@ import com.his.medicaltech.dto.UltrasoundDTO;
 import com.his.medicaltech.entity.BizUltrasoundMeasure;
 import com.his.medicaltech.entity.BizUltrasoundRecord;
 import com.his.common.enums.InsRecordStatusEnum;
-import com.his.common.enums.UltrasoundAbnormalFlagEnum;
+import com.his.common.enums.LabAbnormalFlagEnum;
 import com.his.medicaltech.mapper.BizUltrasoundMeasureMapper;
 import com.his.medicaltech.mapper.BizUltrasoundRecordMapper;
 import com.his.medicaltech.service.UltrasoundService;
 import com.his.medicaltech.vo.UltrasoundVO;
 import com.his.common.entity.CurrentUser;
-import com.his.api.service.DeptScopeService;
+import com.his.provider.service.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
@@ -358,11 +358,11 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
      */
     private Integer judgeAbnormal(String value, String range) {
         if (!TextUtil.hasText(value) || !TextUtil.hasText(range)) {
-            return UltrasoundAbnormalFlagEnum.NORMAL.getCode();
+            return LabAbnormalFlagEnum.NORMAL.getCode();
         }
         BigDecimal v = toNum(value);
         if (v == null) {
-            return UltrasoundAbnormalFlagEnum.NORMAL.getCode();
+            return LabAbnormalFlagEnum.NORMAL.getCode();
         }
         String rr = range.replaceAll("\\s", "").replace('～', '-').replace('~', '-');
         BigDecimal min = null;
@@ -384,18 +384,18 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
                 min = toNum(rr.substring(1));
             }
         } catch (Exception ignore) {
-            return UltrasoundAbnormalFlagEnum.NORMAL.getCode();
+            return LabAbnormalFlagEnum.NORMAL.getCode();
         }
         if (min == null && max == null) {
-            return UltrasoundAbnormalFlagEnum.NORMAL.getCode();
+            return LabAbnormalFlagEnum.NORMAL.getCode();
         }
         if (max != null && v.compareTo(max) > 0) {
-            return UltrasoundAbnormalFlagEnum.HIGH.getCode();
+            return LabAbnormalFlagEnum.HIGH.getCode();
         }
         if (min != null && v.compareTo(min) < 0) {
-            return UltrasoundAbnormalFlagEnum.LOW.getCode();
+            return LabAbnormalFlagEnum.LOW.getCode();
         }
-        return UltrasoundAbnormalFlagEnum.NORMAL.getCode();
+        return LabAbnormalFlagEnum.NORMAL.getCode();
     }
 
     private String abnormalText(BizUltrasoundMeasure m) {
@@ -405,10 +405,10 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         if (!TextUtil.hasText(m.getReferenceRange()) || toNum(m.getMeasureValue()) == null) {
             return "未判定";
         }
-        if (UltrasoundAbnormalFlagEnum.HIGH.is(m.getAbnormalFlag())) {
+        if (LabAbnormalFlagEnum.HIGH.is(m.getAbnormalFlag())) {
             return "偏高";
         }
-        if (UltrasoundAbnormalFlagEnum.LOW.is(m.getAbnormalFlag())) {
+        if (LabAbnormalFlagEnum.LOW.is(m.getAbnormalFlag())) {
             return "偏低";
         }
         return "正常";

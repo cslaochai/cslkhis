@@ -18,7 +18,7 @@ import com.his.pharmacy.mapper.BizAntibioticAliasMapper;
 import com.his.pharmacy.mapper.BizAntibioticAuthMapper;
 import com.his.pharmacy.service.AntibioticService;
 import com.his.pharmacy.vo.*;
-import com.his.api.service.DeptScopeService;
+import com.his.provider.service.DeptScopeService;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;

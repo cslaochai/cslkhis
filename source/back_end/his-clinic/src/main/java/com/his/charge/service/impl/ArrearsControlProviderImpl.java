@@ -5,7 +5,7 @@ import com.his.charge.entity.BizArrearsPolicy;
 import com.his.common.enums.ArrearsFeeClassEnum;
 import com.his.charge.mapper.BizArrearsPolicyMapper;
 import com.his.charge.service.InpatientAccountService;
-import com.his.api.service.ArrearsControlProvider;
+import com.his.provider.service.ArrearsControlProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

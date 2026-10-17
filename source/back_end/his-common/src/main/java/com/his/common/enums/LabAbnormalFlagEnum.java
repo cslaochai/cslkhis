@@ -6,7 +6,8 @@ import lombok.Getter;
  * 检验结果异常标志枚举（0-正常 1-偏高 2-偏低 3-异常）。
  * <p>
  * 3-异常 用于定性结果不符（分不清高低）；「未判定」没有独立码值，读取层必须靠判定留痕区分，
- * 否则会把「不知道」显示成 0-正常。与超声测量值、患者端解读状态两处码值是不同列的不同口径。
+ * 否则会把「不知道」显示成 0-正常。超声测量值列与本列同码同义，共用本枚举；
+ * 患者端解读状态是另一套码值，不许指过来。
  */
 @Getter
 public enum LabAbnormalFlagEnum {
@@ -60,5 +61,12 @@ public enum LabAbnormalFlagEnum {
             return item.label;
         }
         return code == null ? "未知" : "未知(" + code + ")";
+    }
+
+    /**
+     * Integer 码值判定：null 安全，语义同 == 比较 int 常量
+     */
+    public boolean is(Integer code) {
+        return code != null && code == this.code;
     }
 }

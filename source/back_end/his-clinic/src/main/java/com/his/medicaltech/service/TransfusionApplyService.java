@@ -3,7 +3,7 @@ package com.his.medicaltech.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.medicaltech.dto.*;
 import com.his.medicaltech.vo.TransfusionApplyVO;
-import com.his.api.vo.CodeOptionVO;
+import com.his.provider.vo.CodeOptionVO;
 
 import java.util.List;
 

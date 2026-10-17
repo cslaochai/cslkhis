@@ -1,9 +1,9 @@
 package com.his.medicaltech.service.impl;
 
-import com.his.api.service.AppointProvider;
-import com.his.api.service.ChargeProvider;
-import com.his.api.vo.BizAppointInfoListVO;
-import com.his.api.vo.BizSettlementBillVO;
+import com.his.provider.service.AppointProvider;
+import com.his.provider.service.ChargeProvider;
+import com.his.provider.vo.BizAppointInfoListVO;
+import com.his.provider.vo.BizSettlementBillVO;
 import com.his.medicaltech.service.ReportService;
 import com.his.medicaltech.vo.ChargeStatsVO;
 import com.his.medicaltech.vo.DrugStatsVO;

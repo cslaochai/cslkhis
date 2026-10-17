@@ -1,6 +1,6 @@
 package com.his.system.api;
 
-import com.his.api.service.SequenceProvider;
+import com.his.provider.service.SequenceProvider;
 import com.his.system.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

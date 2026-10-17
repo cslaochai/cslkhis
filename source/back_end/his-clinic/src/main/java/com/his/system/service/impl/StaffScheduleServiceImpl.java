@@ -14,7 +14,7 @@ import com.his.system.dto.StaffScheduleSwapDTO;
 import com.his.system.dto.StaffScheduleUpsertDTO;
 import com.his.system.entity.*;
 import com.his.system.mapper.*;
-import com.his.api.service.DeptScopeService;
+import com.his.provider.service.DeptScopeService;
 import com.his.system.service.ScheduleChangeLogService;
 import com.his.system.service.ShiftService;
 import com.his.system.service.StaffPlanRuleService;

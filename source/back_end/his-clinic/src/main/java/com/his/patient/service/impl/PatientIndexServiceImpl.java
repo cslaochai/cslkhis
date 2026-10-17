@@ -8,9 +8,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.his.common.base.PageResult;
+import com.his.common.entity.CurrentUser;
+import com.his.common.enums.PatientMatchLevelEnum;
+import com.his.common.enums.PatientMergeStatusEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.PatientIndexQueryDTO;
@@ -18,17 +20,17 @@ import com.his.patient.dto.PatientMergeDTO;
 import com.his.patient.dto.PatientMergeRevertDTO;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.entity.BizPatientMergeLog;
-import com.his.patient.enums.PatientMatchLevelEnum;
-import com.his.common.enums.PatientMergeStatusEnum;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.mapper.BizPatientMergeLogMapper;
 import com.his.patient.mapper.PatientIndexMapper;
 import com.his.patient.service.PatientIndexService;
 import com.his.patient.support.PatientDataTables;
+import com.his.patient.support.PatientMatchRules;
 import com.his.patient.support.PatientProfileFields;
 import com.his.patient.vo.*;
-import com.his.common.entity.CurrentUser;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
+import io.netty.util.internal.StringUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -142,7 +144,7 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
                 if (grouped.contains(p.getId())) {
                     continue;
                 }
-                String key = PatientMatchLevelEnum.groupKey(level, p);
+                String key = PatientMatchRules.groupKey(level, p);
                 if (key == null) {
                     continue;
                 }
@@ -157,15 +159,15 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
                 BizPatient head = members.get(0);
                 Integer real = null;
                 for (int i = 1; i < members.size(); i++) {
-                    real = PatientMatchLevelEnum.stronger(real, PatientMatchLevelEnum.match(head, members.get(i)));
+                    real = PatientMatchRules.stronger(real, PatientMatchRules.match(head, members.get(i)));
                 }
                 PatientDuplicateGroupVO g = new PatientDuplicateGroupVO();
                 g.setMatchLevel(real);
-                g.setMatchLevelText(PatientMatchLevelEnum.text(real));
-                g.setMatchEvidence(PatientMatchLevelEnum.matchSnapshot(real, head, members.get(1)));
+                g.setMatchLevelText(PatientMatchLevelEnum.getLabel(real, StringUtil.EMPTY_STRING));
+                g.setMatchEvidence(PatientMatchRules.matchSnapshot(real, head, members.get(1)));
                 g.setGroupKey(e.getKey());
-                g.setStrong(PatientMatchLevelEnum.isStrong(real));
-                g.setMinReasonLength(PatientMatchLevelEnum.minReasonLength(real));
+                g.setStrong(PatientMatchRules.isStrong(real));
+                g.setMinReasonLength(PatientMatchRules.minReasonLength(real));
                 g.setTip(tipOf(real));
                 g.setMembers(enrich(members));
                 // 数据多的排前面：合并时应以"有业务数据的那份"为主档
@@ -233,17 +235,15 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
         }
 
         // 服务端自己定级，不采信前端传的值
-        Integer level = PatientMatchLevelEnum.match(master, merged);
+        Integer level = PatientMatchRules.match(master, merged);
         if (dto.getMatchType() != null && !Objects.equals(dto.getMatchType(), level)) {
             log.warn("合并时前端传来的匹配级别与服务端判定不一致，以服务端为准。前端={} 服务端={} master={} merged={}",
                     dto.getMatchType(), level, master.getPatientNo(), merged.getPatientNo());
         }
-        int minLen = PatientMatchLevelEnum.minReasonLength(level);
-        // B-条件必填：合并理由的最小字数由服务端判级现算（minReasonLength(level)），阈值不在入参里，
-        // DTO 注解无法表达，保留
+        int minLen = PatientMatchRules.minReasonLength(level);
         if (!TextUtil.hasText(dto.getReason()) || dto.getReason().trim().length() < minLen) {
             throw new BusinessException("合并理由至少 " + minLen + " 个字（当前级别："
-                    + PatientMatchLevelEnum.text(level) + "）。级别越弱，越要写清是谁、依据什么核实的");
+                    + PatientMatchLevelEnum.getLabel(level) + "）。级别越弱，越要写清是谁、依据什么核实的");
         }
 
         CurrentUser user = UserUtils.getCurrentUser();
@@ -287,7 +287,7 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
         logEntity.setMergedNo(merged.getPatientNo());
         logEntity.setMergedName(merged.getPatientName());
         logEntity.setMatchType(level);
-        logEntity.setMatchSnapshot(PatientMatchLevelEnum.matchSnapshot(level, master, merged));
+        logEntity.setMatchSnapshot(PatientMatchRules.matchSnapshot(level, master, merged));
         logEntity.setMasterSnapshot(masterSnapshot);
         logEntity.setMergedSnapshot(mergedSnapshot);
         logEntity.setDataCount(dataCountJson);
@@ -300,7 +300,7 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
 
         log.info("患者档案合并 master={}({}) 合并 merged={}({}) 级别={} 补全字段={} 操作人={}",
                 master.getPatientNo(), master.getId(), merged.getPatientNo(), merged.getId(),
-                PatientMatchLevelEnum.text(level), filledFields, logEntity.getOperatorName());
+                PatientMatchLevelEnum.getLabel(level), filledFields, logEntity.getOperatorName());
         return toLogVO(logEntity, true);
     }
 
@@ -579,7 +579,7 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
     private PatientMergeLogVO toLogVO(BizPatientMergeLog e, boolean computeCanRevert) {
         PatientMergeLogVO vo = new PatientMergeLogVO();
         BeanUtils.copyProperties(e, vo);
-        vo.setMatchTypeText(PatientMatchLevelEnum.text(e.getMatchType()));
+        vo.setMatchTypeText(PatientMatchLevelEnum.getLabel(e.getMatchType()));
         vo.setLogStatusText(Objects.equals(e.getLogStatus(), 1) ? "已合并" : "已撤销");
         if (computeCanRevert) {
             fillCanRevert(e, vo);
@@ -633,9 +633,9 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
                 PatientMatchLevelEnum.NAME_PHONE.getCode(), PatientMatchLevelEnum.MANUAL.getCode()}) {
             PatientMatchLevelSelectListVO item = new PatientMatchLevelSelectListVO();
             item.setCode(code);
-            item.setText(PatientMatchLevelEnum.text(code));
-            item.setStrong(PatientMatchLevelEnum.isStrong(code));
-            item.setMinReasonLength(PatientMatchLevelEnum.minReasonLength(code));
+            item.setText(PatientMatchLevelEnum.getLabel(code));
+            item.setStrong(PatientMatchRules.isStrong(code));
+            item.setMinReasonLength(PatientMatchRules.minReasonLength(code));
             levels.add(item);
         }
         PatientIndexDictVO vo = new PatientIndexDictVO();

@@ -22,7 +22,7 @@ import com.his.emr.mapper.BizPrescriptionMapper;
 import com.his.emr.mapper.NarcoticRegisterMapper;
 import com.his.emr.service.NarcoticControlService;
 import com.his.emr.vo.*;
-import com.his.api.service.DeptScopeService;
+import com.his.provider.service.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

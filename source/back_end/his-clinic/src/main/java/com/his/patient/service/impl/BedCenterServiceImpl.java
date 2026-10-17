@@ -12,7 +12,7 @@ import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
-import com.his.api.dto.*;
+import com.his.provider.dto.*;
 import com.his.patient.entity.*;
 import com.his.patient.mapper.*;
 import com.his.patient.service.BedCenterService;

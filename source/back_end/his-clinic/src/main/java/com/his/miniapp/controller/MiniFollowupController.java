@@ -1,10 +1,10 @@
 package com.his.miniapp.controller;
 
-import com.his.api.service.EmrPatientProvider;
+import com.his.provider.service.EmrPatientProvider;
 import com.his.common.base.Result;
-import com.his.api.vo.BizFollowupTaskVO;
+import com.his.provider.vo.BizFollowupTaskVO;
 import com.his.miniapp.dto.FollowupReplyDTO;
-import com.his.api.service.PatientProvider;
+import com.his.provider.service.PatientProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

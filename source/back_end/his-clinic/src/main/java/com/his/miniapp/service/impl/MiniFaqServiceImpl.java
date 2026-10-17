@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.api.service.SequenceProvider;
+import com.his.provider.service.SequenceProvider;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.miniapp.dto.FaqPageQueryDTO;

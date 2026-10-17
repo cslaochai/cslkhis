@@ -1,8 +1,8 @@
 package com.his.medicaltech.vo;
 
 
-import com.his.api.vo.ExamImageVO;
-import com.his.api.vo.BizReportVO;
+import com.his.provider.vo.ExamImageVO;
+import com.his.provider.vo.BizReportVO;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;

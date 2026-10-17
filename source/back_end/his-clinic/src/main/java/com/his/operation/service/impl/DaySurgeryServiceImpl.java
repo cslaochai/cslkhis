@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.constant.BizCodeConst;
-import com.his.common.enums.DaySurgeryEvalResultEnum;
+import com.his.common.enums.CheckResultEnum;
 import com.his.common.enums.DaySurgeryLeaveTypeEnum;
 import com.his.common.enums.TechAuthCategoryEnum;
 import com.his.common.enums.TechOverrideSourceEnum;
@@ -23,11 +23,11 @@ import com.his.operation.mapper.BizDaySurgeryFollowMapper;
 import com.his.operation.mapper.BizDaySurgeryItemMapper;
 import com.his.operation.service.DaySurgeryService;
 import com.his.operation.vo.*;
-import com.his.api.service.PatientProvider;
-import com.his.api.vo.PatientMasterVO;
+import com.his.provider.service.PatientProvider;
+import com.his.provider.vo.PatientMasterVO;
 import com.his.system.dto.TechAuthGateDTO;
 import com.his.common.entity.CurrentUser;
-import com.his.api.service.DeptScopeService;
+import com.his.provider.service.DeptScopeService;
 import com.his.system.service.EmployeeTechAuthService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
@@ -244,7 +244,7 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
             throw new BusinessException("仅「待评估」的登记单可做术前评估（当前：" + statusName(entity.getStatus()) + "）");
         }
         Integer result = dto.getEvalResult();
-        if (!Objects.equals(result, DaySurgeryEvalResultEnum.PASS.getCode()) && !Objects.equals(result, DaySurgeryEvalResultEnum.FAIL.getCode())) {
+        if (!Objects.equals(result, CheckResultEnum.PASS.getCode()) && !Objects.equals(result, CheckResultEnum.FAIL.getCode())) {
             throw new BusinessException("评估结论取值不合法");
         }
         entity.setEvalResult(result);
@@ -252,7 +252,7 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
         entity.setEvalTime(TimeUtil.nowSeconds());
         entity.setEvalRemark(TextUtil.cut(dto.getEvalRemark(), 500));
         // 不通过仍留在「待评估」可重评；通过才推进到「评估通过」（安排手术的前置条件）
-        entity.setStatus(Objects.equals(result, DaySurgeryEvalResultEnum.PASS.getCode())
+        entity.setStatus(Objects.equals(result, CheckResultEnum.PASS.getCode())
                 ? DaySurgeryStatusEnum.EVAL_PASSED.getCode() : DaySurgeryStatusEnum.WAIT_EVAL.getCode());
         // 守卫下沉到 WHERE：并发下登记单已被他人评估时更新命中 0 行，兜底抛错（与上方「仅待评估可评估」校验同义）
         int rows = bizDaySurgeryApplyMapper.update(entity, new LambdaUpdateWrapper<BizDaySurgeryApply>()

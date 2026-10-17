@@ -35,7 +35,7 @@ import com.his.common.enums.BizTypeEnum;
 import com.his.system.mapper.SysConfigMapper;
 import com.his.system.mapper.SysEmployeeMapper;
 import com.his.system.mapper.SysUserMapper;
-import com.his.api.service.DeptScopeService;
+import com.his.provider.service.DeptScopeService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;

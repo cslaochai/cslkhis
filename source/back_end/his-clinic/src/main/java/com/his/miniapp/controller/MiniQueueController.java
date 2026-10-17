@@ -1,10 +1,10 @@
 package com.his.miniapp.controller;
 
-import com.his.api.dto.AppointCheckInUpdateDTO;
-import com.his.api.service.AppointProvider;
-import com.his.api.vo.PatientQueueVO;
+import com.his.provider.dto.AppointCheckInUpdateDTO;
+import com.his.provider.service.AppointProvider;
+import com.his.provider.vo.PatientQueueVO;
 import com.his.common.base.Result;
-import com.his.api.service.PatientProvider;
+import com.his.provider.service.PatientProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

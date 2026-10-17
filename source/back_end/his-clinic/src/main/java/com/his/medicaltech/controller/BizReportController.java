@@ -5,7 +5,7 @@ import com.his.common.base.Result;
 import com.his.medicaltech.dto.ReportPublishDTO;
 import com.his.medicaltech.dto.ReportRecordQueryDTO;
 import com.his.medicaltech.service.MedicalTechService;
-import com.his.api.vo.BizReportVO;
+import com.his.provider.vo.BizReportVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

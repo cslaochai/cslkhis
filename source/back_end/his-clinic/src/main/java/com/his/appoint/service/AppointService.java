@@ -2,12 +2,12 @@ package com.his.appoint.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.appoint.dto.*;
-import com.his.api.dto.*;
+import com.his.provider.dto.*;
 import com.his.appoint.entity.AppointInfo;
 import com.his.appoint.vo.AppointStatusCountVO;
-import com.his.api.vo.BizAppointInfoListVO;
-import com.his.api.vo.RevisitFeePreviewVO;
-import com.his.api.vo.RevisitRecordSelectVO;
+import com.his.provider.vo.BizAppointInfoListVO;
+import com.his.provider.vo.RevisitFeePreviewVO;
+import com.his.provider.vo.RevisitRecordSelectVO;
 import com.his.common.base.PageResult;
 
 import java.util.List;

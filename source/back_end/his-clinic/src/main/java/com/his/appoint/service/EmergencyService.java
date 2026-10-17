@@ -5,8 +5,8 @@ import com.his.appoint.dto.*;
 import com.his.appoint.entity.Emergency;
 import com.his.appoint.vo.*;
 import com.his.common.base.PageResult;
-import com.his.api.vo.BedVO;
-import com.his.api.vo.WardVO;
+import com.his.provider.vo.BedVO;
+import com.his.provider.vo.WardVO;
 
 import java.util.List;
 

@@ -16,7 +16,7 @@ import com.his.system.mapper.SysMenuMapper;
 import com.his.system.mapper.SysRoleMapper;
 import com.his.system.mapper.SysWorkbenchRoleMapper;
 import com.his.system.mapper.SysWorkbenchWidgetMapper;
-import com.his.api.service.WorkbenchMetricService;
+import com.his.provider.service.WorkbenchMetricService;
 import com.his.system.service.WorkbenchService;
 import com.his.system.utils.UserUtils;
 import com.his.system.vo.WorkbenchConfigVO;

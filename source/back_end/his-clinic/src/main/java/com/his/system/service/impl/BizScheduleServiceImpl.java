@@ -17,7 +17,7 @@ import com.his.system.dto.StaffScheduleUpsertDTO;
 import com.his.system.entity.BizSchedule;
 import com.his.system.entity.BizStaffPlanRule;
 import com.his.system.mapper.BizScheduleMapper;
-import com.his.api.service.DeptScopeService;
+import com.his.provider.service.DeptScopeService;
 import com.his.system.service.BizScheduleService;
 import com.his.system.service.StaffPlanRuleService;
 import com.his.system.service.StaffScheduleService;

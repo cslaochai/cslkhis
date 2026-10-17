@@ -1,8 +1,8 @@
 package com.his.operation.support;
 
-import com.his.api.dto.FeeBookDTO;
+import com.his.provider.dto.FeeBookDTO;
 import com.his.common.enums.FeeCatalogTypeEnum;
-import com.his.api.vo.FeeRecordVO;
+import com.his.provider.vo.FeeRecordVO;
 import com.his.common.enums.EncounterTypeEnum;
 import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.PaymentItemTypeEnum;

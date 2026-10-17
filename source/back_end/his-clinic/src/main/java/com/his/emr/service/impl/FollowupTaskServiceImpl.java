@@ -1,13 +1,13 @@
 package com.his.emr.service.impl;
 
-import com.his.api.vo.BizFollowupTaskVO;
+import com.his.provider.vo.BizFollowupTaskVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.api.dto.AppointUpsertDTO;
-import com.his.api.service.AppointProvider;
-import com.his.api.vo.BizAppointInfoListVO;
-import com.his.api.vo.RegistBriefVO;
+import com.his.provider.dto.AppointUpsertDTO;
+import com.his.provider.service.AppointProvider;
+import com.his.provider.vo.BizAppointInfoListVO;
+import com.his.provider.vo.RegistBriefVO;
 import com.his.common.enums.*;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
@@ -23,7 +23,7 @@ import com.his.emr.service.FollowupTaskService;
 import com.his.emr.service.SurveyService;
 import com.his.emr.support.FollowupTaskSnapshot;
 import com.his.emr.vo.*;
-import com.his.api.service.DeptScopeService;
+import com.his.provider.service.DeptScopeService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;

@@ -23,7 +23,7 @@ import com.his.operation.support.FollowupAdverseItems;
 import com.his.operation.vo.AnesthesiaFollowupVO;
 import com.his.operation.vo.OperationApplyVO;
 import com.his.common.entity.CurrentUser;
-import com.his.api.service.DeptScopeService;
+import com.his.provider.service.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import com.his.system.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;

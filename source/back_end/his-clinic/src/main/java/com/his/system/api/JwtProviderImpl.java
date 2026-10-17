@@ -1,6 +1,6 @@
 package com.his.system.api;
 
-import com.his.api.service.JwtProvider;
+import com.his.provider.service.JwtProvider;
 import com.his.common.util.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

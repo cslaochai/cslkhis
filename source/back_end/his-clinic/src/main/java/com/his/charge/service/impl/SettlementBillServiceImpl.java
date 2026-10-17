@@ -1,6 +1,6 @@
 package com.his.charge.service.impl;
 
-import com.his.api.vo.*;
+import com.his.provider.vo.*;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -18,15 +18,15 @@ import com.his.charge.mapper.BizSettlementBillItemMapper;
 import com.his.charge.mapper.BizSettlementBillMapper;
 import com.his.charge.service.*;
 import com.his.charge.vo.*;
-import com.his.api.vo.PendingBillItemVO;
-import com.his.api.vo.PendingBillVO;
+import com.his.provider.vo.PendingBillItemVO;
+import com.his.provider.vo.PendingBillVO;
 import com.his.common.base.PageResult;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
-import com.his.api.service.PatientProvider;
-import com.his.api.vo.PatientBriefVO;
+import com.his.provider.service.PatientProvider;
+import com.his.provider.vo.PatientBriefVO;
 import com.his.system.service.InsurancePolicyService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;

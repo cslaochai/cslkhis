@@ -3,7 +3,7 @@ package com.his.ai.support;
 import com.his.common.enums.DeteriorationAlertLevelEnum;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
-import com.his.api.vo.NursingVitalFactVO;
+import com.his.provider.vo.NursingVitalFactVO;
 import lombok.Getter;
 import lombok.Setter;
 

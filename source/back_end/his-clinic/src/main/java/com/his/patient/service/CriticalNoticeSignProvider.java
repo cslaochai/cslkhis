@@ -1,9 +1,9 @@
 package com.his.patient.service;
 
-import com.his.api.vo.SignSubject;
+import com.his.provider.vo.SignSubject;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
-import com.his.api.service.SignableContentProvider;
+import com.his.provider.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
 import com.his.patient.entity.BizCriticalNotice;
 

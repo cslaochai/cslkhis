@@ -25,7 +25,7 @@ import com.his.system.dto.SignCommandDTO;
 import com.his.common.entity.CurrentUser;
 import com.his.system.entity.SysConfig;
 import com.his.system.mapper.SysConfigMapper;
-import com.his.api.service.DeptScopeService;
+import com.his.provider.service.DeptScopeService;
 import com.his.system.service.EmrSignatureService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;

@@ -16,7 +16,7 @@ import com.his.system.entity.SysWard;
 import com.his.system.mapper.BizDutyPostMapper;
 import com.his.system.mapper.SysDepartmentMapper;
 import com.his.system.mapper.SysWardMapper;
-import com.his.api.service.DeptScopeService;
+import com.his.provider.service.DeptScopeService;
 import com.his.system.service.DutyPostService;
 import com.his.system.service.ShiftService;
 import com.his.system.vo.DutyPostSelectListVO;

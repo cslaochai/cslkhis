@@ -4,7 +4,7 @@ import com.his.common.exception.BusinessException;
 import com.his.pay.config.UnionPayProperties;
 import com.his.pay.entity.BizPayOrder;
 import com.his.pay.service.UnionPayChannelService;
-import com.his.api.service.WxPayChannelProvider;
+import com.his.provider.service.WxPayChannelProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

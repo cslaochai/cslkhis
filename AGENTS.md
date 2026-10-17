@@ -869,9 +869,9 @@
   `PatientTagSourceEnum` / `CdrNursingLevelEnum` / `CdrOrderClassEnum`），删完全仓枚举 394→ 371，零引用 0。
 - **为什么删**：码值文案的唯一价值是被读侧调用。没人调用的枚举是纯噪音——它会让人误以为
   「这个码值已经有口径了」，真要用时从枚举里抄的label 也没人验证过。**枚举不是文档，是代码。**
-- **⚠️ 注意重名坑**：`his-common` 的 `AbnormalFlagEnum` 与 `his-medicaltech` 的
-  `UltrasoundAbnormalFlagEnum` 码值重叠，grep 引用时必须用 `\b<完整类名>\b` 全字匹配，
-  别用前缀/子串匹配（`AbnormalFlag` 会同时命中两个，导致删错）。
+- **⚠️ 重名子串坑（2026-10-17 收口超声副本时又踩）**：`LabAbnormalFlagEnum` 与 `UltrasoundAbnormalFlagEnum`
+  这类名字互为子串，`AbnormalFlag` 会同时命中两个，删/改必须用 `\b<完整类名>\b` 全字匹配，别用前缀/子串匹配。
+  两列的库内注释实测同码（`0-正常 1-偏高 2-偏低 3-异常`），按「一列一枚举」超声副本已删除并指回 `LabAbnormalFlagEnum`。
 - 机械判据：全仓枚举文件逐个做上述零引用统计，**结果必须为空**。
   删完必须 `mvn -o -DskipTests clean install` 兜底（增量编译对删除类不可靠）。
 
@@ -1380,3 +1380,27 @@
 - **先查后建**：新增码值映射前，先查 `his-common/enums` 与本模块 `enums` 是否已有同口径枚举——有则复用，无则新建枚举。警惕「同名不同口径」的雷（如欠费管控费用大类 vs PaymentItemTypeEnum，码值错位），命名与 javadoc 必须注明口径。
 - **枚举三件套**：落库码值枚举统一提供 `fromCode/getByCode`、`getText`（展示用，脏数据不回落合法文案）、`labelOrUnknown`（异常/审计用，保留原始码值便于排查）。
 - **签名文案例外**：进入被签规范化文本（CanonicalText）的措辞不得随枚举 label 改动而漂移；确有差异须在调用侧注释说明（参见 PrescriptionSignApi.rxStatusText）。
+
+### 全局含义的权威枚举（2026-10-17 定案，同一含义全仓只许这一个）
+
+| 含义 | 权威枚举与码值 | 已删除的副本 |
+|---|---|---|
+| 启用/停用 | `EnableStatusEnum` 0-禁用 1-启用 | `OperationRoomStatusEnum`、`SurveyTemplateStatusEnum` |
+| 正常/异常（结果判定） | `TreatmentRecordStatusEnum` 0-异常 1-正常 | `MaintainResultEnum` |
+| 通过/不通过 | `CheckResultEnum` 0-不通过 1-通过 | `DaySurgeryEvalResultEnum` |
+| 合格/不合格 | `QualifiedResultEnum` 1-合格 2-不合格 | `CssdCheckResultEnum`、`MeteringResultEnum` |
+| 错误级别 | `ClinicalRuleErrorLevelEnum` 1-提示 2-警告 3-严重 | `QualitySeverity` |
+| 是否删除 | `DelFlagEnum` 0-正常 1-已删除 | 禁止再造 |
+| 男/女 | `SysGenderEnum` 1-男 2-女 9-未知 | 禁止再造 |
+| 是/否 | `YesOrNoEnum` 1-是 0-否 | 禁止再造 |
+
+- **`0-异常 1-正常` 与 `0-正常 1-异常` 是两个方向，不许为一句话去并**：`sys_oper_log.status`、审计日志的
+  「0-成功 1-失败」沿用各自列注释与字典孪生（`his_oper_status`），它不是结果判定列，不指 `TreatmentRecordStatusEnum`。
+  并反了会把这个列的历史行整体洗成相反含义。
+- **改名/合并必须同步三处**：Java 枚举、宿主列 `COMMENT`（`docs/01-初始化DDL` 源文件）、字典行
+  （`docs/02-铺底基础数据/sys_dict_data.sql` + `sql/xxx` 字典段）。库里同码值的旧行先数一遍再动，
+  实测 `biz_survey_template.status`、`biz_equipment_maintain.maintain_result`、`biz_day_surgery_apply.eval_result`
+  三列当时都没有落在被废弃档位（2）上的行，所以增量只改注释与字典。
+- **机械判据**：`node workspace/_check_enum_zero_ref.mjs` 必须 `zero-reference = 0`（合并后旧枚举必须真删干净）；
+  `grep -rnE '"(1-正常 2-异常|1-通过 2-不通过|1-警告 2-错误|1-启用 2-停用)"' --include=*.java source/back_end`、
+  `grep -rn "维保结果（1-正常\|术前评估结论（1-通过\|错误级别（1-警告\|状态（1-启用 2-停用）" docs` 都必须为 0。

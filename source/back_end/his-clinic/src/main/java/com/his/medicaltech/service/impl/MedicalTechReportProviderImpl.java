@@ -1,7 +1,7 @@
 package com.his.medicaltech.service.impl;
 
-import com.his.api.service.MedicalTechReportProvider;
-import com.his.api.vo.BizReportVO;
+import com.his.provider.service.MedicalTechReportProvider;
+import com.his.provider.vo.BizReportVO;
 import com.his.common.base.PageResult;
 import com.his.medicaltech.service.MedicalTechService;
 import lombok.RequiredArgsConstructor;

@@ -7,7 +7,7 @@ import com.his.miniapp.service.MiniAuthService;
 import com.his.miniapp.service.WxLoginChannelService;
 import com.his.miniapp.vo.MiniUserRowVO;
 import com.his.miniapp.vo.MiniWxLoginVO;
-import com.his.api.service.JwtProvider;
+import com.his.provider.service.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

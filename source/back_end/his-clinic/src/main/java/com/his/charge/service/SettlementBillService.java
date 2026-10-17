@@ -1,6 +1,6 @@
 package com.his.charge.service;
 
-import com.his.api.vo.*;
+import com.his.provider.vo.*;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.charge.dto.BillQueryPageDTO;
@@ -9,7 +9,7 @@ import com.his.charge.dto.BillVoidDTO;
 import com.his.charge.dto.PendingEncounterQueryPageDTO;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.vo.*;
-import com.his.api.vo.PendingBillVO;
+import com.his.provider.vo.PendingBillVO;
 import com.his.common.base.PageResult;
 
 import java.math.BigDecimal;

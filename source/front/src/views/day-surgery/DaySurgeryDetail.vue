@@ -16,7 +16,7 @@
         </el-descriptions-item>
         <el-descriptions-item label="术前评估">
           <el-tag v-if="detail.evalResult === 1" size="small" type="success">通过</el-tag>
-          <el-tag v-else-if="detail.evalResult === 2" size="small" type="danger">不通过</el-tag>
+          <el-tag v-else-if="detail.evalResult === 0" size="small" type="danger">不通过</el-tag>
           <span v-else>—</span>
         </el-descriptions-item>
         <el-descriptions-item label="麻醉方式">{{ anesText(detail.anesthesiaType) }}</el-descriptions-item>

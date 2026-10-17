@@ -3,7 +3,6 @@ package com.his.patient.dto;
 import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-import com.his.patient.enums.PatientMatchLevelEnum;
 
 /**
  * 患者档案合并入参（P5.1 EMPI）
@@ -24,7 +23,7 @@ public class PatientMergeDTO {
     private Long mergedId;
 
     /**
-     * 合并理由（必填；级别不同要求的长度不同，见 PatientMatchLevelEnum.minReasonLength）
+     * 合并理由（必填；级别不同要求的长度不同，见 PatientMatchRules.minReasonLength）
      */
     private String reason;
 

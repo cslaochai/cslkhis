@@ -717,7 +717,7 @@ const removeTemplate = async (row) => {
  * 没有"只改状态"的接口，所以先读回题目再原样提交 —— 少带一题就等于把卷子改短了。
  */
 const toggleTemplateStatus = async (row) => {
-  const next = Number(row.status) === 1 ? 2 : 1;
+  const next = Number(row.status) === 1 ? 0 : 1;
   try {
     const d = await getTemplateDetail(row.id);
     

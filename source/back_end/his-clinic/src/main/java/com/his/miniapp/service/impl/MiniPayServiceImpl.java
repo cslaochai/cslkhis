@@ -1,10 +1,10 @@
 package com.his.miniapp.service.impl;
 
-import com.his.api.service.AppointProvider;
-import com.his.api.vo.RegistBriefVO;
-import com.his.api.dto.BillPayDTO;
-import com.his.api.dto.PrepayUpsertDTO;
-import com.his.api.service.ChargeProvider;
+import com.his.provider.service.AppointProvider;
+import com.his.provider.vo.RegistBriefVO;
+import com.his.provider.dto.BillPayDTO;
+import com.his.provider.dto.PrepayUpsertDTO;
+import com.his.provider.service.ChargeProvider;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
@@ -19,14 +19,14 @@ import com.his.miniapp.vo.MiniPendingBillListVO;
 import com.his.common.enums.PayNotifyResultEnum;
 import com.his.common.enums.PayNotifySceneEnum;
 import com.his.common.enums.PayOrderBizTypeEnum;
-import com.his.api.service.AlipayChannelProvider;
-import com.his.api.service.PayNotifyLogProvider;
-import com.his.api.service.PayOrderProvider;
-import com.his.api.service.WxPayChannelProvider;
-import com.his.api.service.AuthContextProvider;
-import com.his.api.service.OperatorContextProvider;
-import com.his.api.service.PayRateLimitProvider;
-import com.his.api.vo.PayOrderVO;
+import com.his.provider.service.AlipayChannelProvider;
+import com.his.provider.service.PayNotifyLogProvider;
+import com.his.provider.service.PayOrderProvider;
+import com.his.provider.service.WxPayChannelProvider;
+import com.his.provider.service.AuthContextProvider;
+import com.his.provider.service.OperatorContextProvider;
+import com.his.provider.service.PayRateLimitProvider;
+import com.his.provider.vo.PayOrderVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -154,7 +154,7 @@ public class MiniPayServiceImpl implements MiniPayService {
      * <p>入参保持全限定名：它是收费域的账本形状，出参是患者端自己维护的展示契约，
      * 两边字段同形但归属不同模块，各改各的。
      */
-    private List<MiniPendingBillItemVO> toPendingBillItems(List<com.his.api.vo.PendingBillItemVO> details) {
+    private List<MiniPendingBillItemVO> toPendingBillItems(List<com.his.provider.vo.PendingBillItemVO> details) {
         if (details == null) {
             return List.of();
         }

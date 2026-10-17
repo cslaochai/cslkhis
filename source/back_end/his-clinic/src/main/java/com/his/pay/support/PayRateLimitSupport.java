@@ -1,6 +1,6 @@
 package com.his.pay.support;
 
-import com.his.api.service.PayRateLimitProvider;
+import com.his.provider.service.PayRateLimitProvider;
 import com.his.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

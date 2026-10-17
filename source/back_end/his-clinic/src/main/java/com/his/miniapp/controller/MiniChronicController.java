@@ -1,8 +1,8 @@
 package com.his.miniapp.controller;
 
-import com.his.api.service.EmrPatientProvider;
+import com.his.provider.service.EmrPatientProvider;
 import com.his.common.base.Result;
-import com.his.api.vo.ChronicMyRecordsVO;
+import com.his.provider.vo.ChronicMyRecordsVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

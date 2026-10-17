@@ -1,6 +1,6 @@
 package com.his.pay.service;
 
-import com.his.api.service.WxPayChannelProvider;
+import com.his.provider.service.WxPayChannelProvider;
 import com.his.pay.entity.BizPayOrder;
 
 /**

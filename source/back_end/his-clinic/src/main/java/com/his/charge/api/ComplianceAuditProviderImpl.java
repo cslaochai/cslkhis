@@ -1,8 +1,8 @@
 package com.his.charge.api;
 
-import com.his.api.service.ComplianceAuditProvider;
-import com.his.api.vo.ComplianceAuditDetailVO;
-import com.his.api.vo.ComplianceEvidenceNarrativeVO;
+import com.his.provider.service.ComplianceAuditProvider;
+import com.his.provider.vo.ComplianceAuditDetailVO;
+import com.his.provider.vo.ComplianceEvidenceNarrativeVO;
 import com.his.charge.service.ComplianceAuditService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

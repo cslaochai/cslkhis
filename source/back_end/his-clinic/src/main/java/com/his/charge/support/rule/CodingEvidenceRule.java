@@ -9,10 +9,10 @@ import com.his.charge.entity.BizSettlementDiagnosis;
 import com.his.charge.entity.BizSettlementOperation;
 import com.his.common.enums.RuleCatalogEnum;
 import com.his.common.util.TextUtil;
-import com.his.api.vo.InspectionRecordBriefVO;
-import com.his.api.vo.LabResultBriefVO;
-import com.his.api.vo.LaboratoryRecordBriefVO;
-import com.his.api.vo.MedicalRecordBriefVO;
+import com.his.provider.vo.InspectionRecordBriefVO;
+import com.his.provider.vo.LabResultBriefVO;
+import com.his.provider.vo.LaboratoryRecordBriefVO;
+import com.his.provider.vo.MedicalRecordBriefVO;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 

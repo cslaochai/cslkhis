@@ -26,7 +26,7 @@
       <el-form-item label="维保结果" required>
         <el-radio-group v-model="form.maintainResult">
           <el-radio :value="1">正常</el-radio>
-          <el-radio :value="2">异常</el-radio>
+          <el-radio :value="0">异常</el-radio>
         </el-radio-group>
       </el-form-item>
       <el-form-item label="维保人">

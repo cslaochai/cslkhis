@@ -562,7 +562,7 @@ CREATE TABLE `biz_day_surgery_apply`
     `doctor_name`           varchar(64) COMMENT '手术医生姓名',
     `plan_surgery_date`     date        NOT NULL COMMENT '计划手术日期',
     `status`                tinyint     NOT NULL COMMENT '状态（1-待评估 2-评估通过 3-已安排 4-术后观察 5-已出院 6-已取消 7-已转住院）',
-    `eval_result`           tinyint COMMENT '术前评估结论（1-通过 2-不通过）',
+    `eval_result`           tinyint COMMENT '术前评估结论（0-不通过 1-通过）',
     `eval_by`               varchar(64) COMMENT '评估人',
     `eval_time`             datetime COMMENT '评估时间',
     `eval_remark`           varchar(500) COMMENT '评估意见/禁忌筛查结果',

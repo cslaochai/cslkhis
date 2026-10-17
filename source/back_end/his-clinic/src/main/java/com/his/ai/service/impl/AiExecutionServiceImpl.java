@@ -7,7 +7,7 @@ import com.his.ai.dto.AiMessageDTO;
 import com.his.ai.dto.LlmResultDTO;
 import com.his.ai.entity.SysAiCallLog;
 import com.his.common.enums.AiCallStatusEnum;
-import com.his.ai.exception.LlmException;
+import com.his.common.exception.LlmException;
 import com.his.ai.service.AiAuditService;
 import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.LlmClient;

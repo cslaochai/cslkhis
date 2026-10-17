@@ -6,8 +6,8 @@ import com.his.miniapp.dto.MessagePageDTO;
 import com.his.miniapp.mapper.MiniMessageMapper;
 import com.his.miniapp.service.MiniMessageService;
 import com.his.miniapp.vo.MiniMessageListVO;
-import com.his.api.entity.CurrentUser;
-import com.his.api.service.AuthContextProvider;
+import com.his.common.entity.CurrentUser;
+import com.his.provider.service.AuthContextProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

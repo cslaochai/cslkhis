@@ -1,7 +1,7 @@
 package com.his.charge.support;
 
 
-import com.his.api.vo.*;
+import com.his.provider.vo.*;
 import com.his.charge.entity.BizInsuranceSettlement;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.entity.BizSettlementBillItem;

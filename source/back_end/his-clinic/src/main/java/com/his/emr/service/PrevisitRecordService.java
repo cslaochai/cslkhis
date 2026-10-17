@@ -1,8 +1,8 @@
 package com.his.emr.service;
 
-import com.his.api.dto.PrevisitSubmitDTO;
-import com.his.api.vo.PrevisitDetailVO;
-import com.his.api.vo.PrevisitQuestionnaireVO;
+import com.his.provider.dto.PrevisitSubmitDTO;
+import com.his.provider.vo.PrevisitDetailVO;
+import com.his.provider.vo.PrevisitQuestionnaireVO;
 
 /**
  * 预问诊服务（G-05）

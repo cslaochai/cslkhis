@@ -1,7 +1,7 @@
 package com.his.medicaltech.vo;
 
 
-import com.his.api.vo.ExamImageVO;
+import com.his.provider.vo.ExamImageVO;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;

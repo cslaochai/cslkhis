@@ -1,6 +1,6 @@
 package com.his.system.api;
 
-import com.his.api.service.OperatorContextProvider;
+import com.his.provider.service.OperatorContextProvider;
 import com.his.system.support.SystemOperatorContext;
 import org.springframework.stereotype.Service;
 

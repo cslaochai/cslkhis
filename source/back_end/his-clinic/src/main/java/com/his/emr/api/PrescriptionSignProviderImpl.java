@@ -2,11 +2,11 @@ package com.his.emr.api;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.his.api.vo.SignSubject;
+import com.his.provider.vo.SignSubject;
 import com.his.common.enums.PrescriptionStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
-import com.his.api.service.SignableContentProvider;
+import com.his.provider.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;

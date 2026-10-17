@@ -2,7 +2,7 @@ package com.his.operation.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.common.enums.OperationRoomStatusEnum;
+import com.his.common.enums.EnableStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.operation.dto.OperationRoomUpsertDTO;
@@ -38,7 +38,7 @@ public class OperationRoomServiceImpl extends ServiceImpl<SysOperationRoomMapper
     @Override
     public List<OperationRoomVO> selectEnabled() {
         return sysOperationRoomMapper.selectList(new LambdaQueryWrapper<SysOperationRoom>()
-                        .eq(SysOperationRoom::getStatus, OperationRoomStatusEnum.ENABLED.getCode())
+                        .eq(SysOperationRoom::getStatus, EnableStatusEnum.ENABLED.getCode())
                         .orderByAsc(SysOperationRoom::getSortOrder)
                         .orderByAsc(SysOperationRoom::getRoomCode))
                 .stream().map(this::toVO).toList();
@@ -50,7 +50,7 @@ public class OperationRoomServiceImpl extends ServiceImpl<SysOperationRoomMapper
         String code = TextUtil.trim(dto.getRoomCode());
         String name = TextUtil.trim(dto.getRoomName());
         Integer status = dto.getStatus();
-        if (!Objects.equals(OperationRoomStatusEnum.ENABLED.getCode(), status) && !Objects.equals(OperationRoomStatusEnum.DISABLED.getCode(), status)) {
+        if (!Objects.equals(EnableStatusEnum.ENABLED.getCode(), status) && !Objects.equals(EnableStatusEnum.DISABLED.getCode(), status)) {
             throw new BusinessException("状态只允许 1-启用 0-停用，当前=" + status);
         }
 
@@ -119,7 +119,7 @@ public class OperationRoomServiceImpl extends ServiceImpl<SysOperationRoomMapper
         vo.setLocation(entity.getLocation());
         vo.setSortOrder(entity.getSortOrder());
         vo.setStatus(entity.getStatus());
-        vo.setStatusText(Objects.equals(OperationRoomStatusEnum.ENABLED.getCode(), entity.getStatus()) ? "启用" : "停用");
+        vo.setStatusText(EnableStatusEnum.getText(entity.getStatus()));
         vo.setRemark(entity.getRemark());
         return vo;
     }

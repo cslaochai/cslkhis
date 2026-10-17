@@ -4,7 +4,7 @@ import com.his.common.base.Result;
 import com.his.medicaltech.dto.ExamImageMockImportDTO;
 import com.his.medicaltech.dto.ExamImageUploadDTO;
 import com.his.medicaltech.service.ExamImageService;
-import com.his.api.vo.ExamImageVO;
+import com.his.provider.vo.ExamImageVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
