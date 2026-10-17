@@ -465,8 +465,8 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
         }
         if (!Objects.equals(required, emp.getEmpType())) {
             throw new BusinessException("点位「" + post.getPostName() + "」要求"
-                    + StaffTypeEnum.getText(required) + "岗，而「" + emp.getEmpName() + "」是"
-                    + StaffTypeEnum.getText(emp.getEmpType()) + "岗，排上去这个位没人能顶");
+                    + StaffTypeEnum.getLabel(required) + "岗，而「" + emp.getEmpName() + "」是"
+                    + StaffTypeEnum.getLabel(emp.getEmpType()) + "岗，排上去这个位没人能顶");
         }
     }
 
@@ -542,7 +542,7 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
         vo.setShiftType(r.getShiftType());
         vo.setShiftTypeText(shiftText(r.getShiftType()));
         vo.setRoleType(r.getRoleType());
-        vo.setRoleTypeText(DutyRoleTypeEnum.getText(r.getRoleType()));
+        vo.setRoleTypeText(DutyRoleTypeEnum.getLabel(r.getRoleType()));
         vo.setStartTime(r.getStartTime());
         vo.setEndTime(r.getEndTime());
         vo.setSubstituted(substituted ? 1 : 0);
@@ -569,17 +569,17 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
         vo.setPostId(r.getPostId());
         vo.setPostName(post == null ? null : post.getPostName());
         vo.setDutyScope(post == null ? null : post.getDutyScope());
-        vo.setDutyScopeText(post == null ? null : DutyScopeEnum.getText(post.getDutyScope()));
+        vo.setDutyScopeText(post == null ? null : DutyScopeEnum.getLabel(post.getDutyScope()));
         vo.setDutyLevel(post == null ? null : post.getDutyLevel());
-        vo.setDutyLevelText(post == null ? null : DutyLevelEnum.getText(post.getDutyLevel()));
+        vo.setDutyLevelText(post == null ? null : DutyLevelEnum.getLabel(post.getDutyLevel()));
         vo.setAttendMode(post == null ? null : post.getAttendMode());
-        vo.setAttendModeText(post == null ? null : AttendModeEnum.getText(post.getAttendMode()));
+        vo.setAttendModeText(post == null ? null : AttendModeEnum.getLabel(post.getAttendMode()));
         vo.setOrgType(post == null ? null : post.getOrgType());
         vo.setOrgId(post == null ? null : post.getOrgId());
         vo.setShiftType(r.getShiftType());
         vo.setShiftTypeText(shiftText(r.getShiftType()));
         vo.setRoleType(r.getRoleType());
-        vo.setRoleTypeText(DutyRoleTypeEnum.getText(r.getRoleType()));
+        vo.setRoleTypeText(DutyRoleTypeEnum.getLabel(r.getRoleType()));
         vo.setEmployeeId(r.getEmployeeId());
         vo.setEmployeeName(r.getEmployeeName());
         vo.setDeptId(r.getDeptId());

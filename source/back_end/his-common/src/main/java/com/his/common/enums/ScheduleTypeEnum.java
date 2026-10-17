@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 班别枚举（班次字典上的「属于哪个时段」，门诊号源侧按它归类与展示）
@@ -25,32 +26,31 @@ public enum ScheduleTypeEnum {
         this.label = label;
     }
 
-    public static ScheduleTypeEnum fromCode(int code) {
-        for (ScheduleTypeEnum type : values()) {
-            if (type.code == code) return type;
+    public static ScheduleTypeEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (ScheduleTypeEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
         }
         return null;
     }
 
-    public static String getText(Integer code) {
-        ScheduleTypeEnum type = code == null ? null : fromCode(code);
-        return type == null ? null : type.getLabel();
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        ScheduleTypeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
     }
 
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        ScheduleTypeEnum item = code == null ? null : fromCode(code);
+    public static String getLabel(Integer code, String defaultValue) {
+        ScheduleTypeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        ScheduleTypeEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
-    }
-
-    /**
-     * 报错文案用的白名单串（新增档位时不用再手改三处提示语）
-     */
-    public static String whitelistText() {
-        return java.util.Arrays.stream(values())
-                .map(t -> t.code + "-" + t.label)
-                .collect(java.util.stream.Collectors.joining(" "));
     }
 }

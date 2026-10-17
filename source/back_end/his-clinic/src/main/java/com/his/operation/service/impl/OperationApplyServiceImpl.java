@@ -667,7 +667,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
             deptScopeService.assertDeptAccessible(entity.getApplyDeptId());
             if (!Objects.equals(OperationApplyStatusEnum.PENDING_SCHEDULE.getCode(), entity.getOperationStatus())) {
                 throw new BusinessException("手术单 " + entity.getApplyNo() + " 当前状态为「"
-                        + OperationApplyStatusEnum.labelOrUnknown(entity.getOperationStatus())
+                        + OperationApplyStatusEnum.getLabelOrUnknown(entity.getOperationStatus())
                         + "」，只有「待排期」可以修改申请内容（排台后术式已对外承诺，改请先取消或走停手术）");
             }
             if (!Objects.equals(entity.getAdmissionId(), dto.getAdmissionId())) {
@@ -825,7 +825,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         }
         if (!Objects.equals(OperationApplyStatusEnum.SCHEDULED.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo() + " 当前状态为「"
-                    + OperationApplyStatusEnum.labelOrUnknown(entity.getOperationStatus())
+                    + OperationApplyStatusEnum.getLabelOrUnknown(entity.getOperationStatus())
                     + "」，只有「已排期」可以做术前核对");
         }
 
@@ -883,7 +883,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         }
         if (!Objects.equals(OperationApplyStatusEnum.PREOP_CHECKED.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo() + " 当前状态为「"
-                    + OperationApplyStatusEnum.labelOrUnknown(entity.getOperationStatus())
+                    + OperationApplyStatusEnum.getLabelOrUnknown(entity.getOperationStatus())
                     + "」，未完成术前核对不能登记完成（术后补一条核对记录属于伪造，必须先把核对做完）");
         }
 
@@ -934,7 +934,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         op.setOperationBasis(basis);
         op.setRemark("系统回写：手术申请单号 " + entity.getApplyNo()
                 + "，主刀 " + textOr(entity.getSurgeonName(), "未指定")
-                + "，麻醉方式 " + OperationAnesthesiaMethodEnum.getText(entity.getAnesthesiaType()));
+                + "，麻醉方式 " + OperationAnesthesiaMethodEnum.getLabel(entity.getAnesthesiaType()));
         // 首页明细的重复闸、序号重排、is_surgery 置位都在首页写入方里做（它才是这张表的所有者）
         SurgeryOperationVO opVo = patientProvider.appendSurgeryOperation(op);
 
@@ -1074,7 +1074,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         record.setCourseNote(course.toString());
         record.setRemark("系统回写：手术申请单号 " + entity.getApplyNo()
                 + "，主刀 " + textOr(entity.getSurgeonName(), "未指定")
-                + "，麻醉方式 " + OperationAnesthesiaMethodEnum.getText(entity.getAnesthesiaType())
+                + "，麻醉方式 " + OperationAnesthesiaMethodEnum.getLabel(entity.getAnesthesiaType())
                 + "，手术级别 " + dictCacheService.getDicDataLabel(DictTypeConst.OPERATION_LEVEL, entity.getOperationLevel())
                 + "，切口等级 " + dictCacheService.getDicDataLabel(DictTypeConst.INCISION_LEVEL, entity.getIncisionLevel()));
         record.setRecordStatus(RecordStatusEnum.SUBMITTED.getCode());
@@ -1132,14 +1132,14 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
     }
 
     private void decorate(OperationApplyVO vo) {
-        vo.setOperationStatusText(OperationApplyStatusEnum.getText(vo.getOperationStatus()));
+        vo.setOperationStatusText(OperationApplyStatusEnum.getLabel(vo.getOperationStatus()));
         vo.setOperationLevelText(dictCacheService.getDicDataLabel(DictTypeConst.OPERATION_LEVEL, vo.getOperationLevel()));
         vo.setIncisionLevelText(dictCacheService.getDicDataLabel(DictTypeConst.INCISION_LEVEL, vo.getIncisionLevel()));
-        vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getAnesthesiaType()));
-        vo.setIsEmergencyText(YesOrNoEnum.getText(vo.getIsEmergency()));
+        vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getLabel(vo.getAnesthesiaType()));
+        vo.setIsEmergencyText(YesOrNoEnum.getLabel(vo.getIsEmergency()));
         vo.setIsMainText(vo.getIsMain() == null ? "—" : (vo.getIsMain() == 1 ? "主要手术" : "次要手术"));
-        vo.setGenderText(SysGenderEnum.getText(vo.getGender()));
-        vo.setAdmitStatusText(AdmitStatusEnum.getText(vo.getAdmitStatus()));
+        vo.setGenderText(SysGenderEnum.getLabel(vo.getGender()));
+        vo.setAdmitStatusText(AdmitStatusEnum.getLabel(vo.getAdmitStatus()));
         vo.setPreopCheckItemsText(OperationCheckItems.summaryText(vo.getPreopCheckItems()));
         vo.setCheckItemOptions(checkItems());
 

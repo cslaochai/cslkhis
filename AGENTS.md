@@ -384,9 +384,11 @@
   （`com.his.emr.appoint.pathway.dto` 这类三层包是违规）。
 - **参照实现 = 任一模块**（全仓 16 个业务模块已按此形态收口），新代码照它落位。
 - **允许的分层目录（名字逐字用）**：
-  `controller` `entity` `dto` `vo` `mapper` `service`（实现类进 `service/impl`）`enums` `support` `config` `constant`
+  `controller` `entity` `dto` `vo` `mapper` `service`（实现类进 `service/impl`）`support` `config` `constant`
   `util`。
-  **一个模块每层只有一个目录**，分层目录之外不留任何技术角色包（见第 11 节黑名单）。
+  **一个模块每层只有一个目录**，分层目录之外不留任何技术角色包（见第 11 节）。
+  **`enums` 不是模块的分层目录**：全仓枚举唯一落点 `his-common/src/main/java/com/his/common/enums`，
+  模块里禁止再开 `com.his.<模块>.enums`（见第 13 节「枚举唯一落点」）。
 - **service 一律「接口 + Impl」**：`XxxService` 接口在 `service/`，`XxxServiceImpl` 在 `service/impl/`，
   没有第三种形态 —— 既不允许只有具体类的 `XxxService`，也不允许找不到同名接口的 `XxxImpl`
   （跨模块 SPI 反转产生的 `XxxGatewayImpl/XxxProviderImpl` 是待拆除项，见第 11 节）。
@@ -601,14 +603,14 @@
   禁止 `private static final int RS_DRAFT = 1;` 这类「常量壳」（一个含义一组 int），
   禁止 `entity.setXxx(2)`、`Objects.equals(1, e.getXxx())`、`.eq(BizXxx::getXxx, 0)` 这类裸数字。
   `@Select` / mapper XML 里的 SQL 文本数字除外（那是 SQL，不是 Java 码值）。
-- **按业务含义切枚举，不按表切**：同一个含义全仓**只能有一个枚举**，多个模块要用就放
-  `his-common/enums`；同名字段在不同表里表达不同含义时是两个不同枚举，各自带业务主语
+- **按业务含义切枚举，不按表切**：同一个含义全仓**只能有一个枚举**，且**无论几个模块用都放
+  `his-common/enums`**（见第 13 节「枚举唯一落点」）；同名字段在不同表里表达不同含义时是两个不同枚举，各自带业务主语
   （`BedWaitStatusEnum` / `BedAllocateStatusEnum`，不是一个 `StatusEnum` 通吃）。
   **禁止**按表名造 `BizXxxStatusEnum`，**禁止**无主语的 `StatusEnum`/`TypeEnum`/`ResultEnum`。
 - **撞上两个同义枚举时，留「拿码值做业务判断」的那个当主**，不是留名字更贴切的：
   只做展示的副本通常只有一两个调用点，而做状态机的副本的码值**已经写进库里**（改它等于改数据口径）。
-  合并前先逐字核对码值与文案（`getText` 口径按上一条：脏值出空串，展示侧原来靠「未知状态」占位的档位在合并后变空串，
-  属预期的口径纠正）。公共兜底档（如 `UNKNOWN(0)`）**不是业务码值**：`isValid`/`getText` 都要把它排除，
+  合并前先逐字核对码值与文案（`getLabel` 口径按上一条：脏值出空串，展示侧原来靠「未知状态」占位的档位在合并后变空串，
+  属预期的口径纠正）。公共兜底档（如 `UNKNOWN(0)`）**不是业务码值**：`isValid`/`getLabel` 都要把它排除，
   否则 `isValid(0)` 为真 = 允许往一个库里从不存在的档位写。
   实例（2026-10-07）：`EmergencyStatusEnum`（his-common，20 处调用点，appoint 拿它流转状态）
   vs `CdrEmergencyStatusEnum`（his-medicaltech，1 处展示调用点）→ 删后者、CDR 两处改指前者，
@@ -616,7 +618,7 @@
 - **同一列的码值散在「support 类的 `static final int` 常量组 + 一个私有 `levelText` switch」时，那是同一个反模式的两半，
   必须一次收掉**：常量壳（§13 末尾判据：是不是「某一列能取的值」）和码值→文案 switch 都建在**列的外面**，
   于是「新增一个级别」要改常量、改 switch、改区域推导、改时限表四处，而改枚举只需一处。
-  做法：新建枚举带 `getCode/isValid/getText/labelOrUnknown` + 把**业务推导**（红黄绿区、优先级、超时时限）
+  做法：新建枚举带 `getCode/isValid/getLabel/getLabelOrUnknown` + 把**业务推导**（红黄绿区、优先级、超时时限）
   留在 support 类里调枚举；support 类只删常量与文案方法，计算逻辑不动（属 §13「含临床判定/计算口径」例外）。
   **注意别把两个不同的域合并成一个枚举**：码值形状相同（都是 1-4）但含义由不同列表达时是两个枚举
   （`EmergencyTriageLevelEnum` 急诊 I~IV 级濒危/危重/急症/非急症 vs `TriageLevelEnum` 门诊 危重/急症/亚急/非急），
@@ -629,47 +631,144 @@
   `switch` / `Map` / `getOrDefault` + `未知(code)` 兜底，**无论它叫什么名字**
   （`XxxLabels` / `XxxText` / `XxxTexts` / `XxxItems` / `XxxRules`，还是 service impl 里的一段内联 `switch`、
   实体上的一个 `getXxxText` 方法），都属于反模式 —— 映射逻辑必须下沉到**枚举**或**字典**，
-  调用侧只调 `枚举.getText(...)`（展示）或 `DictCacheService.getDicDataLabel(dictType, code)`（字典项）。
+  调用侧只调 `枚举.getLabel(...)`（展示）或 `DictCacheService.getDicDataLabel(dictType, code)`（字典项）。
   **严禁存在任何「集中式文案壳类」**（`QcTexts` / `XxxLabels` / `XxxTexts` 这类一层包装）：壳类的每个方法
   只是把调用转发给枚举，多一层没有信息量，只会让「码值→文案唯一出口」变成两个地方
   （2026-10-05 已全量删除 12 个壳类，禁止再建——哪怕它自称「唯一映射处」）。
   唯一例外：含**临床判定 / 计算口径**（如 Aldrete 评分、相容性判定、记账折算、时长格式化、
   手术安全核查项注册表）的 `support` 类可保留业务计算逻辑，但**不得承载码值→文案映射**
-  （文案方法一律删掉、调用点直接走枚举 getText），且里面不得再写 `未知(code)` 兜底。
+  （文案方法一律删掉、调用点直接走枚举 getLabel），且里面不得再写 `未知(code)` 兜底。
 - **枚举还是字典（落点选取口径）**：按"是否稳定、后端是否拿码值做逻辑判断"决定落点 ——
   ① **变化小、后端要用码值做判断**（状态机流转、权限/分支、计算口径）的封闭集合 → **枚举**
-  （全仓通用放 `his-common/enums`，否则放所属模块 `enums`）；
+  （唯一落点 `his-common/enums`，见下一节「枚举唯一落点」）；
   ② **变化大、由操作员在后台字典维护**（机构自定的类型 / 项目 / 选项）的 → **字典**，走
   `DictCacheService.getDicDataLabel(dictType, code)`，不进 Java 枚举；
   ③ 既有的"集中式大字典"壳类（`QcTexts` / `CdrStatusTexts` / `XxxLabels` 等）**已于 2026-10-05 全部删除**：
   每个方法下沉到对应枚举（或字典）后删类，调用点直接调枚举方法。**禁止再建任何壳类。**
-- **双方法口径**：每个枚举提供两个静态翻译方法，语义严格区分（**展示口径的标准方法名是 `getText`**，
-  2026-10-05 由 `labelOf` 全局更名而来，别再写 `labelOf`）：
-    - `getText(Integer|String)`——**展示用**：合法码值→`label`；`null` 或不在枚举内（脏数据）一律返回
-      空串 `""`（个别枚举可显式声明缺省文案，如 `SysGenderEnum.getText` 性别 null→「未知」，必须在 javadoc 写明），
-      不回落到某个合法文案、也不暴露「未知(n)」。**绝不返回 null**（返回 null 会把 NPE 风险甩给调用方，
-      而返回 `""` 是界面最安全的「无此文案」）。
-    - `labelOrUnknown(Integer)`——**异常 / 审计 / 合规用**：`null` 或不在枚举内返回「未知(n)」
+- **枚举唯一落点 = `his-common/src/main/java/com/his/common/enums`，禁止散落（2026-10-17 用户口径）**：
+  模块里**不许**再开 `com.his.<模块>.enums` 包，哪怕只有一个枚举、哪怕它只服务本模块的状态机。
+  理由不是"整洁"，是**重复建**：同一个含义（启用停用 / 逻辑删除 / 性别 / 合格不合格）在 A 模块建了一份、
+  B 模块的人搜不到自己包外有什么，于是又建一份 `XxxStatusEnum`，两份码值相同、文案漂移，
+  而"一列一枚举"的判据只看名字根本查不出这种重复。收口到一处后，**新建前 grep 一个目录就是全量清单**。
+  ⚠ 这条与 §9「允许的分层目录」原有表述冲突，已按本条改写：`enums` **不再是模块的分层目录**。
+  ⚠ 唯一落点也让"枚举不许反向依赖模块"变成硬约束：`his-common` 的 pom **不依赖** `his-clinic`，
+  所以在 common 里 import 任何 `com.his.<模块>.*` 的类（含 `support`）会**编译期直接失败**——
+  枚举只能引用 common 内部的东西；要把某模块的判定逻辑带进来，就把那段逻辑一起上提到 common，
+  或者把枚举的字段收成本枚举自持的数据，**不要为了绕开这个限制把枚举留在模块里**。
+  机械判据：
+  ```bash
+  find source/back_end -type d -name enums -not -path "*/target/*" -not -path "*/his-common/*"   # 必须为空
+  find source/back_end -name "*Enum.java" -not -path "*/target/*" -not -path "*/his-common/src/main/java/com/his/common/enums/*" | wc -l   # 必须为 0
+  ```
+- **三方法口径**：每个枚举提供三个静态翻译方法，语义严格区分（**展示口径的标准方法名是 `getLabel`**，
+  2026-10-17 由 `getText` 全局更名而来；`getText` / `labelOf` / `textOf` / `descOf` / `whitelistText` 已全部作废，别再写）：
+    - `getLabel(Integer|String)`——**展示用**：合法码值→`label`；`null` 或不在枚举内（脏数据）一律返回
+      `org.apache.commons.lang3.StringUtils.EMPTY`（个别枚举可显式声明缺省文案，如 `SysGenderEnum.getLabel`
+      性别 null→「未知」、麻醉/输血状态 null→「—」、`EmergencyTriageLevelEnum` null→「未定级」，
+      必须在 javadoc 写明；实测 32 个枚举走这一档），不回落到某个合法文案、也不暴露「未知(n)」。
+      **绝不返回 null**（返回 null 会把 NPE 风险甩给调用方，而返回空串是界面最安全的「无此文案」）。
+      **空串只写 `StringUtils.EMPTY`（lang3），禁止 netty 的 `StringUtil.EMPTY_STRING`** ——
+      它靠传递依赖活着，`his-common` 的 pom 一改就编译失败，且和 lang3 那份是同一个字面量的两个副本。
+    - `getLabel(Integer|String code, String defaultValue)`——**调用方自带缺省文案用**：`null` 或脏码值返回传入的
+      `defaultValue`。它存在的理由是取代「先 `getLabel` 再判空换文案」的二次兜底和
+      `getTextOrOther` 这类第四种方法名（实例：`ArrearsFeeClassEnum.getLabel(code, "其他")`）。
+      ⚠ 形参名全仓一律写成 `defaultValue`（沿用首个模板的拼写，实测 374 处完全一致）：
+      这不是建议，是判据 —— 判据按这个名字 grep，改成 `defaultValue` 的那一个枚举会从验收清单里漏掉。
+    - `getLabelOrUnknown(Integer)`——**异常 / 审计 / 合规用**：`null` 或不在枚举内返回「未知(n)」
       （`null` 本身渲染成「未知」），**保留原始码值**以便排查脏数据。业务异常消息、审计日志、
       合规报表里需要让人看到「到底是哪个脏值」时才用，绝不用它喂前端展示。
-    - 机械判据：`grep -rn "未知(" --include=*.java` 命中的，必须只是 `labelOrUnknown` / 少数显式声明
-      缺省文案的 `getText`（如 SysGenderEnum）的方法体、或显式 `Objects.toString(xxxEnum.getText(...), "未知(n)")`
-      这类手写等价物，以及 `DictCacheService` 内部翻译与纯注释；纯展示路径、service 内联 `switch`、
+    - **报错文案不枚举「合法取值清单」**：`throw new BusinessException("责任范围只允许 " + DutyScopeEnum.whitelistText())`
+      这类「把全量 label 拼进提示」的写法已整体删除（21 处），一律改成「xx取值不合法」。
+      理由：拼出来的清单跟着枚举增删漂移，而操作员看到 `1-普通 2-专家` 也照样不知道该选哪个 ——
+      下拉里就有正确答案，报错只需要说清「哪个字段错了」。
+    - 机械判据：`grep -rn "未知(" --include=*.java` 命中的，必须只是 `getLabelOrUnknown` / 少数显式声明
+      缺省文案的 `getLabel`（如 SysGenderEnum）的方法体、或显式 `Objects.toString(xxxEnum.getLabel(...), "未知(n)")`
+      这类手写等价物，以及 `DictCacheService` 内部翻译、mapper `@Select` SQL 文本与纯注释；纯展示路径、service 内联 `switch`、
       任何 `XxxLabels`/`XxxTexts` 壳类里出现「未知(code)」即违规。
+      收口判据：`node workspace/_check_enum_label_api_gate.mjs` 必须 `GATE PASS`。它查四条（按脚本实际实现描述，
+      别当成「枚举 API 全查了」—— 覆盖面就到这四条）：
+      A `String getText|labelOrUnknown|descOf|textOf|whitelistText(` 的定义 —— 枚举文件里出现即违规，
+        非豁免类里出现也违规（豁免名单只有 §14 那 6 个注册表）；
+      B 旧方法的调用 —— `.labelOrUnknown(` 等四个歧义名全局禁，`getText(` 只按「枚举类名接收者 /
+        `ENUM.CONST.getText` / 链式 `).getText(`」查（否则会误报 VO 与 pdfbox 的同名方法）；
+      C **空壳检测** —— `public static String getLabelOrUnknown(`/`getLabel(` 的方法体必须真的查枚举
+        （含 `fromCode(|getLabel(|valueOf(|values()`），否则报「任何码值都返回未知」；
+      D `未知(" +` 这种保留脏码值的写法只允许出现在名字以 `LabelOrUnknown` 结尾的方法里
+        （跳过 `mapper/` 目录与豁免名单，注释行不计）。
+      ⚠ 它**不查**：字段名是否还叫 `text`、`fromCode` 之外的查找入口别名、`getLabel` 是否缺重载。
+      这三项用三条 grep 自查（2026-10-17 实测：前两条 0 命中，第三条恰好 1 个文件）：
+      ```bash
+      grep -rn "private final String text" --include=*Enum.java source/back_end | grep -v /target/        # 必须 0
+      grep -rnE "getByCode|\bofCode\(|static \w+ parse\(" --include=*Enum.java source/back_end | grep -v /target/   # 必须 0
+      # 有单码 getLabel 却缺 (code, defaultValue) 重载的枚举：
+      grep -rl "public static String getLabel(" source/back_end/his-common/src/main/java/com/his/common/enums \
+        | xargs grep -L "String defaultValue"
+      ```
+      第三条现测唯一命中 `OperationSafetyCheckItemEnum` —— 它是**复合键**枚举，签名是
+      `getLabel(int phase, Integer code)` / `getLabelOrUnknown(int phase, Integer code)`（手术安全核查项按
+      「阶段 × 码值」才唯一），单码重载对它没有意义，属**刻意豁免**，不是漏改。
+      （`workspace/_scan_old_text_api.mjs` 只汇总旧方法的定义与调用残留，不能替代上面三条。）
     - 迁移进度（2026-10-05 全量收口完成）：12 个文案壳类全部删除 ——
       emr `QcTexts`、report `CdrStatusTexts`、patient `BedCenterLabels`/`InpatientLabels`/
       `InpatientTransferLabels`/`InpatientOrderLabels`/`InpatientRecordLabels`/`ConsultationLabels`、
       operation `AnesthesiaLabels`（改名 `AnesthesiaCalcs`，只剩纯计算）、`OperationApplyLabels`、
       charge `InpatientAccountLabels`、medicaltech `TransfusionLabels`（改名 `TransfusionRules`）、
-      system `CodeText`；全仓 220 个枚举的 `labelOf` 已更名为 `getText` 并补 `isValid`；
+      system `CodeText`；全仓枚举的 `labelOf` 已更名为 `getText` 并补 `isValid`；
       service 层内联码值 switch（SysLog 四处、PayChannel、床位匹配级别、医技执行状态）已下沉枚举。
       验收判据：`grep -rnE "class \w+(Labels|Texts)" --include=*.java source/back_end` 结果为 0。
+    - 迁移进度（2026-10-17 `getText`→`getLabel` 全量更名完成）：**407** 个枚举（全部在 `his-common/enums`），
+      **375** 个提供静态 `getLabel`（其中 **374** 个带 `(code, defaultValue)` 重载）、**345** 个提供
+      `getLabelOrUnknown`、**396** 个用 `fromCode` 作查找入口。连带三件事一并做完：
+      ① 13 个枚举的展示字段名 `text` → `label`（实例 getter 随之变成 `@Getter` 生成的 `getLabel()`，
+      与静态 `getLabel(Integer)` 靠参数个数区分，是合法重载）；
+      ② 9 个枚举的非规范查找名 `parse`/`getByCode`/`ofCode` → `fromCode`；
+      ③ 39 个枚举的 `textOf`/`descOf`/`whitelistText`/`getTextOrOther` 并成上述三方法，
+      调用点（含 21 处「只允许 xxx」报错）改扁平文案。
+      剩余 **33 个枚举无任何展示 API**（`DelFlagEnum` / `ChannelEnum` / `QcRuleEnum` / `VisitTypeEnum` 等，
+      纯码值集合，没有任何调用点需要翻译文案）—— 属正常，不补方法（补了就是 §18 的零引用死代码另一副面孔）。
 - **文案差异不产生新枚举**：码值相同、中文叫法不同时**复用枚举**（文案以枚举 `label` 为唯一来源），
-  不同模块若确有不可调和的措辞差异，差异放在调用侧局部常量 / 方法，且仍调枚举 `getText` 做兜底；
+  不同模块若确有不可调和的措辞差异，差异放在调用侧局部常量 / 方法，且仍调枚举 `getLabel` 做兜底
+  （要自带缺省文案就用 `getLabel(code, "其他")`，不要在调用侧再写判空）；
   不许为一句话的措辞复制出一个枚举，也不许为改文案去动公共枚举的 `label`。
-- **枚举的唯一模板**（`@Getter` + `code`/`label` + `fromCode` + `getText` + `labelOrUnknown`）：
-  新建与改造到的枚举一律照此写；`getText` 必返回 `""`（或显式声明的缺省文案）、不得返回 null，
-  异常路径统一走 `labelOrUnknown`。
+- **枚举的唯一模板**（`@Getter` + `code`/`label` + `fromCode` + `getLabel` + `getLabel(code, defaultValue)` +
+  `getLabelOrUnknown`，`isValid` 只在有调用点时补，见 §16 末尾），参照 `his-common/enums/PatientMatchLevelEnum`：
+  ```java
+  @Getter
+  public enum XxxEnum {
+      A(1, "甲"), B(2, "乙");
+      private final int code;
+      private final String label;
+      XxxEnum(int code, String label) { this.code = code; this.label = label; }
+
+      public static XxxEnum fromCode(Integer code) {
+          if (null == code) { return null; }
+          for (XxxEnum item : values()) {
+              if (item.code == code) { return item; }
+          }
+          return null;
+      }
+      /** 返回label值 */
+      public static String getLabel(Integer code) {
+          XxxEnum item = fromCode(code);
+          return item == null ? StringUtils.EMPTY : item.label;
+      }
+      /** 返回label值 */
+      public static String getLabel(Integer code, String defaultValue) {
+          XxxEnum item = fromCode(code);
+          return item == null ? defaultValue : item.label;
+      }
+      public static String getLabelOrUnknown(Integer code) {
+          XxxEnum item = fromCode(code);
+          return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
+      }
+      // 仅在注册表/service 真拿它卡码值时才写（现有 253 个定义只有 7 处调用）
+      public static boolean isValid(Integer code) { return fromCode(code) != null; }
+  }
+  ```
+  新建与改造到的枚举一律照此写；`getLabel` 必返回 `StringUtils.EMPTY`（或显式声明的缺省文案）、不得返回 null，
+  异常路径统一走 `getLabelOrUnknown`。字符串码值枚举（血型、渠道 key）把形参换成 `String`，
+  比较写 `code.equals(item.code)` —— `item.code == code` 只在字段是原始 `int` 时才成立，
+  对 `Integer` 字段是比引用，>127 的码值恒不等（这是本条模板唯一一处不能照抄的地方）。
 - **0/1 三兄弟按列注释的含义选，不按字段名前缀选**：`是否 xxx` → `YesOrNoEnum`（YES=1 是 / NO=0 否），
   启用停用 → `EnableStatusEnum`，删除标志 → `DelFlagEnum`。
 - **技术阈值不是码值**，继续用 `static final int`：列宽（`W_*`、`*_MAX_LENGTH`）、小数位（`*_SCALE`）、
@@ -679,23 +778,31 @@
   Java 码值与库注释不一致时以 Java 现有值为准（改码值=改数据口径，属于独立的、要单独拍板的一步），
   并把冲突单独列出来修，不许在枚举化顺手「修正」。
 - **字典权威在 Java 枚举**（重申 §7）：新增/调整码值必须同步 `sql/xxx` 的字典段，两侧同码同义。
-    - **labelOrUnknown 必须真的查枚举**（2026-10-06 实锤过一批系统 bug）：批量补方法时最容易写出
+    - **getLabelOrUnknown 必须真的查枚举**（2026-10-06 实锤过一批系统 bug）：批量补方法时最容易写出
       ```java
-      public static String labelOrUnknown(Integer code) {
+      public static String getLabelOrUnknown(Integer code) {
           return code == null ? "未知" : "未知(" + code + ")";   // ← 任何合法码值都返回「未知」
       }
       ```
-      这种**空壳实现**：`getText` 是对的，`labelOrUnknown` 却对任何码值都输出「未知(n)」，
+      这种**空壳实现**：`getLabel` 是对的，`getLabelOrUnknown` 却对任何码值都输出「未知(n)」，
       编译不报错、单测也测不出来（只要没有"合法码值应输出 label"的断言）。
       **判据**：方法体里必须能看到它查了枚举（`XxxEnum item = fromCode(code)` + `item.label`）。
       修法：`return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;`
       2026-10-06 全仓扫出 **49 个这类空壳**（report 41 个 `Cdr*` + charge 3 + common 2
       （`PaymentMethodEnum` / `SettlementModeEnum`）+ emr 1（`QcDimensionEnum`）+ `PaymentItemTypeEnum`
         + `StatReportTypeEnum`（"未知类型"变体）），已全部修复。
-          **注意判据别写太死**：合法实现可能用 `item.label` / `item.getLabel()` / `item.desc` /
-          `item.text`（Lombok getter，变量名也可能是 `status`/`source`/`e` 而不是 `item`）——
+          **注意判据别写太死**：合法实现可能用 `item.label` / `item.getLabel()` / `item.desc`
+          （Lombok getter，变量名也可能是 `status`/`source`/`e` 而不是 `item`）——
           判据要认「**方法体最终返回了枚举实例的文案字段**」，别只匹配一种写法，否则会误报成 bug。
+          （2026-10-17 之后 `text` 这一档已从枚举里消失：13 个用 `text` 做展示字段的枚举并成了 `label`，
+          所以判据只需认 `label` / `getLabel()` / `desc` 三种。）
 - 机械判据：
+  `node workspace/_check_enum_label_api_gate.mjs` 必须 `GATE PASS`（只查上文 A/B/C/D 四条：旧文案方法的
+  定义与调用、`getLabel`/`getLabelOrUnknown` 空壳、「未知(码值)」的归属；**不查**字段名与查找入口名）；
+  `grep -rnE "\.(getText|labelOrUnknown|textOf|descOf|whitelistText)\(" --include=*.java source/back_end`
+  只允许命中三类同名无关调用：§14 的 support 注册表（`EmrFieldCatalog.getText` / `LabAbnormalJudge.getText` /
+  `*CheckItems.labelOrUnknown`）、pdfbox 取文本（`DocumentParser` 的 `p.getText()`）、
+  VO 自己的实例 getter（如 `SettlementStateVO.getText`）；出现枚举接收者即违规；
   `grep -rn "static final int" --include=*.java source/back_end` 里只剩技术阈值常量（逐条核对，业务码值为 0）；
   `grep -rnE "set[A-Z]\w*\(\s*[0-9]+\s*\)|Objects\.equals\(\s*[0-9]+," --include=*.java source/back_end` 结果为 0。
 
@@ -703,8 +810,8 @@
 
 - **禁止** `private static final Map<Integer, String> XXX_TYPE = Map.of(1, "保养", 2, "维修", 3, "巡检");`
   这类把码值+文案写进 `Map` 常量的写法。它和 `XxxLabels` 壳类是同一个错误的两种皮：
-  映射逻辑写在了枚举外面，编译期不校验、IDE 跳不过去、也没有 `isValid` 可供校验注解调用。
-  **所有「某一列的码值 → 文案」必须是一个枚举**，调用侧写 `XxxEnum.getText(code)`。
+  映射逻辑写在了枚举外面，编译期不校验、IDE 跳不过去、也拿不到 `fromCode`/`isValid` 这类可调用入口。
+  **所有「某一列的码值 → 文案」必须是一个枚举**，调用侧写 `XxxEnum.getLabel(code)`。
 - 一句话判据：**看到 `Map<Integer, String>` / `Map.of(1,"…")` 里装的是码值和中文，就是违规**，
   立刻改成枚举。（真·非码值用途的 Map 常量不受此限：查表缓存、ID→对象的合并结果、`Map.of()` 空集合等。）
 - 迁移进度（2026-10-06 全量收口完成）：全仓 11 处 `static final Map<Integer,String>` 已全部处置——
@@ -714,8 +821,11 @@
   `biz_settlement_bill_item.item_type` 落库分布逐字一致）、operation 1（麻醉收费项）。
   **保留 4 处**：`TransfusionCheckItems` / `OperationCheckItems` / `SafetyCheckItems` /
   `FollowupAdverseItems` 是 `support` 里的**注册表**（核查项集合 + 勾稽逻辑），
-  按 §13 例外条款保留（不是单纯码值映射），但 `text()` 脏值兜底已改成 `""` + 补 `labelOrUnknown`。
-  验收判据：`grep -rn "static final Map<Integer, String>" --include=*.java source/back_end` 只剩上述注册表。
+  按 §13 例外条款保留（不是单纯码值映射）；它们的 `text()` / `labelOrUnknown()` 只是**注册表自己的对外名**
+  （2026-10-17 后内部已逐字委托给枚举 `getLabel` / `getLabelOrUnknown`，脏值兜底是 `StringUtils.EMPTY`），
+  属 `_check_enum_label_api_gate.mjs` 的 EXEMPT 名单 —— **不要**据此在枚举里再造 `text()`。
+  验收判据：`grep -rn "static final Map<Integer, String>" --include=*.java source/back_end` 结果为 **0**
+  （上述注册表现在用 `all()` / `itemsOf(phase)` 现拼 `LinkedHashMap`，数据源在枚举，Map 只是投影给前端勾框）。
 
 ## 15. 分页 DTO 必须继承 PageParam，且必须是独立顶层类
 
@@ -791,33 +901,42 @@
   ② 绕过 Controller 直接调 service（内部复用、定时任务）时校验失效；
   ③ 每个 Service 重复一遍，`GlobalExceptionHandler` 的 `MethodArgumentNotValidException`
   分支已经有了，统一走它错误码和文案才一致。
-- **用法**：
-    - 码值**区间连续**（如 1/2/3/4）→ 用 `@Min(1) @Max(3)`（jakarta.validation 自带，本仓已有 206 处在用）。
-    - 码值**不连续或来自枚举/字典** → 用 `@InEnum(XxxEnum.class)`（`his-common/validation/InEnum`），
-      反射调枚举的 `isValid(code)`。**这正是 §13 强制每个枚举提供 `isValid` 的原因** ——
-      枚举模板的 `isValid` 不再只是自测用，它是校验注解的落点。
-    - **为什么不能一律用 @Min/@Max`（实测数据，别凭感觉）**：全库 377 个带 int code 的枚举里，
-    **9 个码值不连续**，`@Min(min) @Max(max)` 会把这些码值全放行：
+- **用法**（2026-10-17 按活代码校正：`his-common/validation` 里现在只有 `@AllowedValues` +
+  `AllowedValuesValidator`，**`@InEnum` / `InEnumValidator` 已不存在**，照旧写 `@InEnum(XxxEnum.class)` 直接编译失败）：
+    - 码值**区间连续**（如 1/2/3/4）→ 用 `@Min(1) @Max(3)`（jakarta.validation 自带）。
+    - 码值**不连续或来自枚举/字典** → 用 `@AllowedValues(values = {"1", "2", "9"}, message = "性别不合法")`
+      （`his-common/validation/AllowedValues`，现测 258 个文件在用）。校验器把 `values` 收成一个
+      `Set<String>`、对任意标量走 `String.valueOf(item)`，所以**码值要逐个字面列出来**，
+      它不反射枚举、也没有 `Type.TEXT` 这一档（字符串码值同样写 `values = {"A","B","O","AB"}`）。
+      附带能力：`separator`（默认 `,`）让一个逗号分隔串逐元素校验、空串/null **放行**（必填交给 `@NotNull`/`@NotBlank`）。
+    - ⚠ **代价要说清**：字面 `values` 是枚举码值的**第二份副本**，枚举加一个码值时这里会漏改 ——
+      正是本节开头批判 service 手写 `containsKey` 的那条「两处副本」毛病的另一种皮。
+      当前没有任何机械判据能查出「`@AllowedValues` 的清单与枚举码值不一致」，所以**改枚举必顺手改注解**。
+    - **为什么不能一律用 @Min/@Max**（实测数据，别凭感觉）：全库带 int code 的枚举里有**码值不连续**的，
+    `@Min(min) @Max(max)` 会把这些不存在的码全放行：
     `DeathPlaceEnum`/`DischargeWayEnum` 是 `1,2,3,4,5,9`（9 是"未指明/其他"的保留码，
     6/7/8 根本不存在，@Min(1)@Max(9) 会放过 6/7/8）；`SysGenderEnum`/`InpatientLeaveTypeEnum` 是 `1,2,9`；
     `TcmDecoctStatusEnum` 是 `1,2,3,9`；`EndoscopyTypeEnum` 是 `1,2,7`；`OpdLogStatusEnum` 是 `0,1,8`；
     `GuardianRelationEnum` 是 `1..16,99`；`QcSeverityEnum` 有重复的 0。
-    这类集合**只能靠枚举 `isValid` 卡**。所以判断口径是：
-      **先看枚举码值连不连续，连续用 @Min/@Max，不连续用 @InEnum。**
-    - `@InEnum` 的 `null` 一律放行（是否必填交给 `@NotNull`），只管"填了之后合不合法"。
-    - 字符串码值枚举（血型、输血反应类型）用 `@InEnum(value = XxxEnum.class, type = InEnum.Type.TEXT)`。
+    这类集合**只能把合法码值逐个列进 `@AllowedValues`**。所以判断口径是：
+      **先看枚举码值连不连续，连续用 @Min/@Max，不连续用 @AllowedValues。**
 - **Service 层只保留跨字段业务规则**（"下次维保日期不能早于本次维保日期"、"有效期至不能早于计量日期"），
   这类规则确实没法用注解表达，留在 service 是对的；**单字段码值合法性一律上注解**。
-- 迁移进度（2026-10-06 全量收口完成）：`@InEnum` + `InEnumValidator` 建于 `his-common/validation`；
-  共迁走 **40+ 处** service 手写 `containsKey` / `Set.of().contains()` 码值校验，落到 DTO 字段注解
-  （equipment 4、emr 2、patient 18、medicaltech 6、pharmacy 7、其余零散），
-  码值连续的用 `@Min/@Max`、不连续的用 `@InEnum`；顺带给 **19 个已有枚举补 `isValid`**（`@InEnum` 的落点，
-  patient 模块枚举本来就齐、缺的只是 `isValid`）。
+- 迁移进度（2026-10-06 全量收口完成）：共迁走 **40+ 处** service 手写 `containsKey` / `Set.of().contains()` 码值校验，
+  落到 DTO 字段注解（equipment 4、emr 2、patient 18、medicaltech 6、pharmacy 7、其余零散），
+  码值连续的用 `@Min/@Max`、不连续的用当时的 `@InEnum`（**现已统一为 `@AllowedValues`**）；
+  顺带给 **19 个已有枚举补 `isValid`**。
   **保留在 service 的三类是对的，不要再往注解上搬**：① 跨字段业务规则（"下次维保日期不能早于本次维保日期"）；
   ② 后台字典维护的集合（`his_notice_consciousness` 等 7 处，属"字典"不进 Java 枚举）；
   ③ service 内部派生值校验（不是 HTTP 入参，挂 DTO 注解无效，删了就真失去兜底）。
   验收判据：`grep -rn "取值不合法" --include=*.java source/back_end` 只允许出现在 DTO 注解参数与
   `@Schema(description=...)` 里，不允许出现在 service impl 的方法体里。
+- ⚠️ **`isValid` 的现有理由已经不是「给校验注解当落点」**（2026-10-17 实测：`public static boolean isValid`
+  定义了 **253** 个，全仓 `XxxEnum.isValid(...)` 调用只有 **7** 处 —— 4 个 `support` 注册表 +
+  `BizScheduleServiceImpl`/`DrugKnowledgeServiceImpl` 各一处业务码值判断）。
+  `@AllowedValues` 不吃枚举，所以 §13 模板里那句「`isValid` 是校验注解的落点」已失效。
+  **本轮不动它**（253 个方法批量删除是独立的、要逐条判「是否算零引用死代码」的一步，且 §18 的判据只管枚举文件不管方法），
+  但新写枚举时 `isValid` 只在**真有调用点**（注册表校验码值、service 拿码值做分支）时才补，不要为凑模板空写一个。
 
 ## 17. 不自造时间截断工具方法：DATETIME(0) 的精度由库保证（签名/哈希场景才截秒）
 
@@ -1115,9 +1234,10 @@
   所以 `NumUtil.plain(null)` 返回 `null`；展示与报错文案要 `"0"` 的写 `plain(orZero(v))`。
   为什么必须 `stripTrailingZeros().toPlainString()`：`1E+2` 的 `toString()` 带 `E`，
   同一数量从除法来和从字面量来会得到两个不同字符串，而它已经是历史签名的一部分。
-- **纯转发的私有文案壳直接删，调用点写枚举**：`private static String statusText(Integer s){ return XxxEnum.getText(s); }`
-  这种一层包装（含 `status == null ? "未知" : XxxEnum.labelOrUnknown(s)` —— `labelOrUnknown` 自己就管 null→「未知」）
-  属第 13 节「集中式文案壳」的同族，内联成 `XxxEnum.getText(...)` / `labelOrUnknown(...)`。
+- **纯转发的私有文案壳直接删，调用点写枚举**：`private static String statusText(Integer s){ return XxxEnum.getLabel(s); }`
+  这种一层包装（含 `status == null ? "未知" : XxxEnum.getLabelOrUnknown(s)` —— `getLabelOrUnknown` 自己就管 null→「未知」）
+  属第 13 节「集中式文案壳」的同族，内联成 `XxxEnum.getLabel(...)` / `getLabelOrUnknown(...)`；
+  调用方本来就想给个自己的缺省文案时，写 `XxxEnum.getLabel(s, "—")`，不要再加第三层壳。
   **例外**：喂给规范化签名（`CanonicalText`）的 `statusText` 是哈希输入，改动=历史签名全部校验不上，不许动。
 - **含业务语义的不算副本，留在原地**：文件格式转义（PDF 的 `safe`/`escape`）、
   数字转文本的临床判据、按列名/动作拼提示语的私有方法 —— 它们不是「洗一个通用类型」。
@@ -1151,28 +1271,34 @@
   并成一个 `TimeUtil` 方法等于替所有人选一种容错度 + 把「格式错」从 `DateTimeParseException`(500)
   或 `BusinessException`(400 中文) 里改成另一种，是行为变更，必须先定口径再动，**不许照上面的脚本套路批量替换**。
 
-## 24. 字典类型编码只有一个来源：`com.his.common.constant.DictType`（2026-10-07 全仓收口 202 处引用 / 79 个键）
+## 24. 字典类型编码只有一个来源：`com.his.common.constant.DictTypeConst`（2026-10-07 全仓收口，约 200 处引用）
 
-- **调用点禁止写字典类型字面量**，一律 `dictCacheService.getDicDataLabel(DictType.XXX, code)` /
-  `getDictDataByType(DictType.XXX)`。私有 `private static final String DICT_XXX = "his_xxx";`（全仓曾有 37 个）也算散落，删掉。
+- **调用点禁止写字典类型字面量**，一律 `dictCacheService.getDicDataLabel(DictTypeConst.XXX, code)` /
+  `getDictDataByType(DictTypeConst.XXX)`。私有 `private static final String DICT_XXX = "his_xxx";`（全仓曾有 37 个）也算散落，删掉。
+  ⚠ 本类原名 `DictType`，在 2b6ef15c「常量类 `*Const` 收口」这一批改名里变成了 `DictTypeConst`，
+  旧文档与本文件早期段落里的 `DictType.XXX` 一律按 `DictTypeConst.XXX` 读，照旧写 `DictType.` 编译不过。
 - **常量名 = 编码去掉 `his_`/`sys_` 前缀后大写**（`his_prepay_type` → `PREPAY_TYPE`），机械可逆，
-  所以「按名字就能 grep 到字典」，不需要第二张对照表。`DictType.java` **由脚本生成、不许手写**：
-  `node workspace/_gen_dict_type_class.mjs` 扫代码里的 `DictType.X` 引用反查库内字典类型，
-  常量名冲突或库里不存在该类型时**直接抛错**（手写就会漂成假事实）。
-- **只收代码真用到的**（现在 79 个）：库里另有 406 个类型是后台字典页给操作员自取的，**不许抄进来** ——
+  所以「按名字就能 grep 到字典」，不需要第二张对照表。
+  ⚠ 原本的生成器 `workspace/_gen_dict_type_class.mjs`（扫代码里的 `DictType.X` 引用反查库内字典类型、
+  撞名或库里没这个类型就抛错）**已随 `workspace/` 丢失**（该目录 gitignore，不在版本里）。
+  现在这个类是手写的，所以「手写就会漂成假事实」这一格改由静态门禁兜住：
+  `node workspace/_check_dict_type_gate.mjs` 会查出「引用了 `DictTypeConst.NAME` 但类里没声明」
+  与「两个常量名指向同一个编码」。**新增常量的正确顺序**仍是先在库里确认 `dict_type` 真存在，
+  再照编码手写常量（名字按上面口径机械推出），最后跑门禁。
+- **只收代码真用到的**（现测 78 个）：库里另有 406 个类型是后台字典页给操作员自取的，**不许抄进来** ——
   抄了就是用副本冒充全量，改库时没人同步这里，反而制造第二个真相。
 - **写错键名不会报错，这是它最危险的地方**：`getDicDataLabel` 取不到行返回 **空串**（不抛异常、不返回 null），
   现象是那一片 `xxxText` 字段整列空白，与「这个码值本来就没文案」一模一样；编译、启动、接口全绿。
-  所以口径是：**取不到一律空串**（与枚举 `getText` 同口径，见 §13），要保留脏码值排查是枚举 `labelOrUnknown` 的事。
+  所以口径是：**取不到一律空串**（与枚举 `getLabel` 同口径，见 §13），要保留脏码值排查是枚举 `getLabelOrUnknown` 的事。
 - **`biz_<模块>_<某Enum>` 这种形状的键名本身就是 bug 证据**（表名前缀 + `Enum` 后缀，字典编码从不长这样）。
-  本次实锤来源：一次「枚举治理」提交把 `XxxEnum.getText(code)` 批量替换成
+  本次实锤来源：一次「枚举治理」提交把 `XxxEnum.getLabel(code)`（当时叫 `getText`）批量替换成
   `getDicDataLabel("biz_<模块>_<XxxEnum>", code)`，而**这些字典类型从未被创建**，码值→文案全变空白。
   处置结论（35 个残留假键，逐键拿库内列注释与字典行核对后定）：**8 个**指回真实字典类型、
   **20 个**走新建枚举、**7 个**复用既有枚举（3 个 0/1 标志 → `YesOrNoEnum`，`cdrRegistStatus` →
   `AppointStatusEnum`，`cdrEmergencyStatus` → `EmergencyStatusEnum`，`opdLogStatus` → 从 git 恢复被误删的
   `OpdLogStatusEnum`）。
 - **遇到陌生键名按这个顺序判，不许猜**：① `SELECT DISTINCT dict_type FROM sys_dict_data` 查有没有这个类型；
-  ② 有 → 用 `DictType` 常量，并核对字典行的码值/文案与宿主列注释**逐字一致**（不一致就是两套口径）；
+  ② 有 → 用 `DictTypeConst` 常量，并核对字典行的码值/文案与宿主列注释**逐字一致**（不一致就是两套口径）；
   ③ 没有 → 按 §13 选落点：后端拿码值做分支/集合封闭 → **枚举**（先找现有的复用，同含义全仓只许有一个），
   纯展示但形状固定 → 枚举；确属操作员维护的才补字典并同步 `sql/xxx` 字典段；
   ④ 新建枚举的码值**一律取宿主列注释原文**，不凭业务直觉补码值。
@@ -1180,16 +1306,20 @@
   留着就是 §22 说的「注入了但没人用」，而 `@RequiredArgsConstructor` 类里漏 `final` 的依赖会在第一次调用时 NPE。
 - 机械判据：
   ```bash
-  node workspace/_check_dict_type_gate.mjs          # 必须 PASS
+  node workspace/_check_dict_type_gate.mjs          # 必须 GATE PASS（含下面四条 + 引用未声明 + 编码重名）
+  ```
+  脚本没到位时的等价手工四条（门禁本身就是这四条 + 两条静态补查，2026-10-17 实测全 0）：
+  ```bash
   grep -rn "getDicDataLabel(\"" --include=*.java source/back_end      # 必须 0
   grep -rn "getDictDataByType(\"" --include=*.java source/back_end    # 必须 0（DictCacheServiceImpl 内的 sys:dict: 前缀除外）
   grep -rn "static final String DICT_" --include=*.java source/back_end  # 只允许 DICT_CACHE_PREFIX（Redis key 前缀，不是字典类型）
   grep -rnE '"(biz|sys)_[a-z]+_[A-Za-z]+Enum"' --include=*.java source/back_end  # 必须 0
   ```
 
-改造脚本：`workspace/_apply_dict_type_const.mjs`（字面量/私有常量 → `DictType`）、
-`workspace/_apply_enum_retarget.mjs` + `workspace/_enum_retarget.json`（假键 → 枚举/真实字典，含新建枚举模板）、
-`workspace/_sweep_dead_dict_dep.mjs`（删死依赖）。
+改造脚本（一次性，2026-10-07 已跑完）：~~`_apply_dict_type_const.mjs`（字面量/私有常量 → `DictType`）、
+`_apply_enum_retarget.mjs` + `_enum_retarget.json`（假键 → 枚举/真实字典，含新建枚举模板）、
+`_sweep_dead_dict_dep.mjs`（删死依赖）~~ **三个脚本已随 `workspace/`（gitignore）丢失，不可重跑**；
+它们是一次性改造，结论已落在代码里，重复执行不需要 —— 要防的是回归，靠上面的门禁。
 
 ## 25. NOT NULL 列一律禁止 DEFAULT 默认值（del_flag 除外，业务层强控）
 
@@ -1202,7 +1332,7 @@
   而多数默认值是**合法业务值**（如 `org_type DEFAULT '1'` 科室、`duty_status DEFAULT '1'` 上班、`status DEFAULT '1'` 启用），
   漏传后行被悄悄填成默认业务值，按该列过滤的查询会漏收/错收，比直接报错更糟。
 - **业务层强控**：去掉默认后，插入若漏传该列 → MySQL 报 `1364 Field 'xxx' doesn't have a default value`（fail loud）。
-  配套在 DTO 用 `@NotNull` + `@InEnum`（见 §16）把校验前移，400 就拦住，根本到不了库。
+  配套在 DTO 用 `@NotNull` + `@AllowedValues`（见 §16）把校验前移，400 就拦住，根本到不了库。
   注意 upsert 场景：仅「新增必填、且更新时前端也必带」的字段才标 `@NotNull`；更新可省略的字段靠实体/MP 策略保证不被清空（见 §3
   的
   `updateStrategy` 约定），不要为堵 DB 默认而误伤正常更新。
@@ -1375,10 +1505,14 @@
 
 ## 码值与枚举口径（强约束，2026-10-15 用户口径）
 
-- **一列一枚举**：同一库表列的码值，全项目只允许一个枚举表达。跨模块使用的放 `his-common/enums`；模块私有状态机放本模块 `enums` 包。禁止在 entity / service / support / DTO 里再定义 `STATUS_X`、`CATALOG_X`、`TYPE_X` 之类并列 int 常量。
-- **业务代码禁止魔法码值**：出现 `case 数字 -> "中文"`、`if (status == 1)` 这类字面量码值即坏味道。展示文案一律走枚举 `getText` / `labelOrUnknown`；码值判断一律用枚举实例或 `XxxEnum.X.getCode()`。
-- **先查后建**：新增码值映射前，先查 `his-common/enums` 与本模块 `enums` 是否已有同口径枚举——有则复用，无则新建枚举。警惕「同名不同口径」的雷（如欠费管控费用大类 vs PaymentItemTypeEnum，码值错位），命名与 javadoc 必须注明口径。
-- **枚举三件套**：落库码值枚举统一提供 `fromCode/getByCode`、`getText`（展示用，脏数据不回落合法文案）、`labelOrUnknown`（异常/审计用，保留原始码值便于排查）。
+- **一列一枚举**：同一库表列的码值，全项目只允许一个枚举表达。**枚举一律放 `his-common/enums`（唯一落点，见第 13 节）**，
+  模块私有状态机也不许放本模块 `enums` 包。禁止在 entity / service / support / DTO 里再定义 `STATUS_X`、`CATALOG_X`、`TYPE_X` 之类并列 int 常量。
+- **业务代码禁止魔法码值**：出现 `case 数字 -> "中文"`、`if (status == 1)` 这类字面量码值即坏味道。展示文案一律走枚举 `getLabel` / `getLabelOrUnknown`；码值判断一律用枚举实例或 `XxxEnum.X.getCode()`。
+- **先查后建**：新增码值映射前，先查 `his-common/enums`（全仓枚举都在那，一个目录就是全量清单）是否已有同口径枚举——有则复用，无则新建枚举。警惕「同名不同口径」的雷（如欠费管控费用大类 vs PaymentItemTypeEnum，码值错位），命名与 javadoc 必须注明口径。
+- **枚举三件套**：落库码值枚举统一提供 `fromCode`（查找入口，禁止再造 `parse`/`getByCode`/`ofCode`）、
+  `getLabel`（展示用，脏数据出 `StringUtils.EMPTY`，不回落合法文案）、
+  `getLabelOrUnknown`（异常/审计用，保留原始码值便于排查）；调用方自带缺省文案再补 `getLabel(code, defaultValue)` 重载。
+  完整模板见 §13「枚举的唯一模板」，机械判据 `node workspace/_check_enum_label_api_gate.mjs` → `GATE PASS`。
 - **签名文案例外**：进入被签规范化文本（CanonicalText）的措辞不得随枚举 label 改动而漂移；确有差异须在调用侧注释说明（参见 PrescriptionSignApi.rxStatusText）。
 
 ### 全局含义的权威枚举（2026-10-17 定案，同一含义全仓只许这一个）

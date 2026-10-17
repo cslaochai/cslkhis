@@ -153,7 +153,7 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
             return null;
         }
         String raw = frequency.trim();
-        String hit = DrugFrequencyEnum.getText(raw);
+        String hit = DrugFrequencyEnum.getLabel(raw);
         if (TextUtil.hasText(hit)) {
             return hit;
         }
@@ -205,7 +205,7 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
         vo.setVisitDate(prescription.getVisitDate());
         vo.setDeptName(prescription.getDeptName());
         vo.setDoctorName(prescription.getDoctorName());
-        vo.setPrescriptionTypeText(PrescriptionTypeEnum.getText(prescription.getPrescriptionType()));
+        vo.setPrescriptionTypeText(PrescriptionTypeEnum.getLabel(prescription.getPrescriptionType()));
         vo.setDispensed(Objects.equals(PrescriptionStatusEnum.DISPENSED.getCode(), prescription.getPrescriptionStatus()));
 
         boolean herb = Objects.equals(PrescriptionTypeEnum.TCM.getCode(), prescription.getPrescriptionType());

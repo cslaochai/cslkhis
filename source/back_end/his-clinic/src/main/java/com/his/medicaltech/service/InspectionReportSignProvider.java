@@ -16,11 +16,11 @@ public interface InspectionReportSignProvider extends SignableContentProvider {
     /**
      * 检查记录状态文案（签名规范化文本用，脏值必须暴露原码值）。
      *
-     * <p>走 {@link InsRecordStatusEnum#labelOrUnknown(Integer)}：签名要能看出签的是哪个版本的码值，
+     * <p>走 {@link InsRecordStatusEnum#getLabelOrUnknown(Integer)}：签名要能看出签的是哪个版本的码值，
      * 脏值不能悄悄变成「已登记」这类合法值 —— 签错一份报告的责任是落在这行文本上的。
      */
     public static String statusText(Integer status) {
-        return status == null ? "—" : InsRecordStatusEnum.labelOrUnknown(status);
+        return status == null ? "—" : InsRecordStatusEnum.getLabelOrUnknown(status);
     }
 
     /**

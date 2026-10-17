@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * Rh 血型枚举
@@ -25,31 +26,6 @@ public enum RhTypeEnum {
     RhTypeEnum(int code, String label) {
         this.code = code;
         this.label = label;
-    }
-
-    public static RhTypeEnum fromCode(int code) {
-        for (RhTypeEnum item : values()) {
-            if (item.code == code) return item;
-        }
-        return null;
-    }
-
-    // ── 输血链的 Rh 用中文单字存（阳 / 阴），不用 +/-：避免与「阴性/阳性」混用两套写法 ──
-
-    /**
-     * 码值不在枚举内（脏数据）返回空串，不回落到合法文案。
-     */
-    public static String getText(Integer code) {
-        RhTypeEnum item = code == null ? null : fromCode(code);
-        return item == null ? "" : item.label;
-    }
-
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」）。
-     */
-    public static String labelOrUnknown(Integer code) {
-        RhTypeEnum item = code == null ? null : fromCode(code);
-        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 
     /**
@@ -87,5 +63,33 @@ public enum RhTypeEnum {
             return "Rh(-)";
         }
         return RH_POSITIVE.equals(s) ? "Rh(+)" : "";
+    }
+
+    public static RhTypeEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (RhTypeEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        RhTypeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        RhTypeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        RhTypeEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

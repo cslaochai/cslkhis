@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 病理单状态枚举（码值口径 = 病理申请单状态列的库内注释）。
@@ -25,18 +26,6 @@ public enum PathologyStatusEnum {
         this.label = label;
     }
 
-    public static PathologyStatusEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (PathologyStatusEnum e : values()) {
-            if (e.code == code) {
-                return e;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
@@ -45,25 +34,37 @@ public enum PathologyStatusEnum {
     }
 
     /**
-     * 展示用：null 或不在枚举内返回空串（不把「未知」渲染给用户看）
-     */
-    public static String getText(Integer code) {
-        PathologyStatusEnum e = fromCode(code);
-        return e == null ? "" : e.getLabel();
-    }
-
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        PathologyStatusEnum item = code == null ? null : fromCode(code);
-        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
-    }
-
-    /**
      * Integer 码值判定：null 安全，语义同 == 比较 int 常量
      */
     public boolean is(Integer code) {
         return code != null && code == this.code;
+    }
+
+    public static PathologyStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (PathologyStatusEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        PathologyStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        PathologyStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        PathologyStatusEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

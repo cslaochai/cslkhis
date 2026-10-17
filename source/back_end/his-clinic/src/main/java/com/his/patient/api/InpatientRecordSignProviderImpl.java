@@ -46,7 +46,7 @@ public class InpatientRecordSignProviderImpl implements SignableContentProvider,
                 r.getDeptId(),
                 r.getDeptName(),
                 r.getRecordStatus(),
-                SummaryStatusEnum.getText(r.getRecordStatus()),
+                SummaryStatusEnum.getLabel(r.getRecordStatus()),
                 InpatientRecordSignProvider.canonical(r));
     }
 

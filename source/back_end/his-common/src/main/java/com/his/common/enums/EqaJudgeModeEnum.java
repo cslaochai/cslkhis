@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 室间质评判定口径枚举（0-无法判定 1-SDI 2-允许总误差 3-可接受范围）
@@ -21,13 +22,6 @@ public enum EqaJudgeModeEnum {
         this.label = label;
     }
 
-    public static EqaJudgeModeEnum fromCode(int code) {
-        for (EqaJudgeModeEnum mode : values()) {
-            if (mode.code == code) return mode;
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（入参校验用；null 不合法）
      */
@@ -35,22 +29,31 @@ public enum EqaJudgeModeEnum {
         return code != null && fromCode(code) != null;
     }
 
-    /**
-     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」。
-     */
-    public static String getText(Integer code) {
-        EqaJudgeModeEnum mode = code == null ? null : fromCode(code);
-        return mode == null ? "" : mode.label;
+    public static EqaJudgeModeEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (EqaJudgeModeEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
     }
 
-    /**
-     * 异常 / 审计用码值 → 文案。脏值保留原始码值，绝不喂前端展示。
-     */
-    public static String labelOrUnknown(Integer code) {
-        EqaJudgeModeEnum mode = code == null ? null : fromCode(code);
-        if (mode != null) {
-            return mode.label;
-        }
-        return code == null ? "未知" : "未知(" + code + ")";
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        EqaJudgeModeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        EqaJudgeModeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        EqaJudgeModeEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

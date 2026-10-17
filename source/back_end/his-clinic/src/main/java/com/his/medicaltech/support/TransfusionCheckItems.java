@@ -28,14 +28,14 @@ public final class TransfusionCheckItems {
      * 核对项文案（<b>展示用</b>）。null 给「—」；非法码值返回空串，不伪装成某一项。
      */
     public static String text(Integer code) {
-        return TransfusionCheckItemEnum.getText(code);
+        return TransfusionCheckItemEnum.getLabel(code);
     }
 
     /**
      * 核对项文案（<b>异常 / 审计用</b>）：非法码值返回「未知(n)」，保留原值便于排查。
      */
     public static String labelOrUnknown(Integer code) {
-        return TransfusionCheckItemEnum.labelOrUnknown(code);
+        return TransfusionCheckItemEnum.getLabelOrUnknown(code);
     }
 
     public static boolean isValid(Integer code) {

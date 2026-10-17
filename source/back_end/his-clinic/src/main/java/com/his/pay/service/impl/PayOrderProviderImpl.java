@@ -48,7 +48,7 @@ public class PayOrderProviderImpl implements PayOrderProvider {
             throw new BusinessException("支付单缺少业务归属（业务类型/业务单ID）");
         }
         if (PayChannelEnum.payMethodOf(spec.channel()) == null) {
-            throw new BusinessException("支付渠道不合法：" + PayChannelEnum.labelOrUnknown(spec.channel()));
+            throw new BusinessException("支付渠道不合法：" + PayChannelEnum.getLabelOrUnknown(spec.channel()));
         }
         if (spec.amount() == null) {
             throw new BusinessException("缺少支付金额");
@@ -85,7 +85,7 @@ public class PayOrderProviderImpl implements PayOrderProvider {
         order.setRemark(spec.remark());
         bizPayOrderMapper.insert(order);
         log.info("[支付单] 新建 payNo={} 业务 {}#{} 渠道={} 金额={}", order.getPayNo(),
-                spec.bizType(), spec.bizId(), PayChannelEnum.getText(spec.channel()), amount.toPlainString());
+                spec.bizType(), spec.bizId(), PayChannelEnum.getLabel(spec.channel()), amount.toPlainString());
         return new CreateResult(toVO(order), false);
     }
 
@@ -140,7 +140,7 @@ public class PayOrderProviderImpl implements PayOrderProvider {
         }
         if (!Objects.equals(order.getChannel(), channel)) {
             throw new BusinessException("支付单渠道与通知渠道不符，拒入账：" + payNo
-                    + "（本单 " + PayChannelEnum.labelOrUnknown(order.getChannel()) + "）");
+                    + "（本单 " + PayChannelEnum.getLabelOrUnknown(order.getChannel()) + "）");
         }
         if (Objects.equals(order.getPayStatus(), PayOrderStatusEnum.PAID.getCode())) {
             // 已入过账：重复通知/并发到达都走这里，调用方据此跳过推进（幂等出口）
@@ -161,7 +161,7 @@ public class PayOrderProviderImpl implements PayOrderProvider {
                 return null;
             }
             throw new BusinessException("支付单状态不可推进（当前 "
-                    + PayOrderStatusEnum.labelOrUnknown(latest == null ? null : latest.getPayStatus()) + "）：" + payNo);
+                    + PayOrderStatusEnum.getLabelOrUnknown(latest == null ? null : latest.getPayStatus()) + "）：" + payNo);
         }
         order.setPayStatus(PayOrderStatusEnum.PAID.getCode());
         order.setOutTradeNo(channelTxnNo);
@@ -234,7 +234,7 @@ public class PayOrderProviderImpl implements PayOrderProvider {
                 return;
             }
             throw new BusinessException("支付单不是已支付状态，无法登记退款：" + payNo
-                    + "（当前 " + PayOrderStatusEnum.labelOrUnknown(latest == null ? null : latest.getPayStatus()) + "）");
+                    + "（当前 " + PayOrderStatusEnum.getLabelOrUnknown(latest == null ? null : latest.getPayStatus()) + "）");
         }
         log.info("[支付单] 登记退款 payNo={} 原因={}", payNo, reason);
     }

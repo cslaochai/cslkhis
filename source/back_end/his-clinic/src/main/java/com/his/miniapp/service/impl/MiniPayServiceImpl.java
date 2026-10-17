@@ -171,7 +171,7 @@ public class MiniPayServiceImpl implements MiniPayService {
             vo.setAccountAmount(item.getAccountAmount());
             vo.setSelfAmount(item.getSelfAmount());
             vo.setCatalogType(item.getCatalogType());
-            vo.setCatalogTypeText(FeeCatalogTypeEnum.getText(item.getCatalogType()));
+            vo.setCatalogTypeText(FeeCatalogTypeEnum.getLabel(item.getCatalogType()));
             return vo;
         }).toList();
     }
@@ -223,9 +223,9 @@ public class MiniPayServiceImpl implements MiniPayService {
         }
         if (!Objects.equals(order.getChannel(), PayChannelEnum.ALIPAY.getCode())) {
             log.error("[支付宝回调] 支付单渠道不是支付宝，拒入账 payNo={} orderChannel={}",
-                    payNo, PayChannelEnum.labelOrUnknown(order.getChannel()));
+                    payNo, PayChannelEnum.getLabelOrUnknown(order.getChannel()));
             recordAlipayNotify(PayNotifyResultEnum.CHANNEL_MISMATCH, NOTIFY_RETRY, true,
-                    "支付单渠道不是支付宝：" + PayChannelEnum.labelOrUnknown(order.getChannel()), rawNotify);
+                    "支付单渠道不是支付宝：" + PayChannelEnum.getLabelOrUnknown(order.getChannel()), rawNotify);
             return NOTIFY_RETRY;
         }
 
@@ -293,7 +293,7 @@ public class MiniPayServiceImpl implements MiniPayService {
         }
         if (!Objects.equals(order.getChannel(), PayChannelEnum.ALIPAY.getCode())) {
             throw new BusinessException("该渠道暂不支持主动查单，请稍后刷新支付状态："
-                    + PayChannelEnum.labelOrUnknown(order.getChannel()));
+                    + PayChannelEnum.getLabelOrUnknown(order.getChannel()));
         }
         if (Objects.equals(order.getPayStatus(), PayOrderStatusEnum.PAID.getCode())) {
             return toVO(order, null);
@@ -339,7 +339,7 @@ public class MiniPayServiceImpl implements MiniPayService {
         } else if (Objects.equals(bizType, PayOrderBizTypeEnum.INPATIENT_DEPOSIT.getCode())) {
             rechargeDeposit(order);
         } else {
-            throw new BusinessException("未知业务类型：" + PayOrderBizTypeEnum.labelOrUnknown(bizType));
+            throw new BusinessException("未知业务类型：" + PayOrderBizTypeEnum.getLabelOrUnknown(bizType));
         }
     }
 
@@ -370,7 +370,7 @@ public class MiniPayServiceImpl implements MiniPayService {
         if (Objects.equals(order.getChannel(), PayChannelEnum.ALIPAY.getCode())) {
             return alipayChannelProvider.unifiedOrder(order);
         }
-        throw new BusinessException("不支持的支付渠道：" + PayChannelEnum.labelOrUnknown(order.getChannel()));
+        throw new BusinessException("不支持的支付渠道：" + PayChannelEnum.getLabelOrUnknown(order.getChannel()));
     }
 
     private BigDecimal resolveAmount(PayUpsertDTO dto) {
@@ -414,7 +414,7 @@ public class MiniPayServiceImpl implements MiniPayService {
         item.setPayMethod(payMethod.getCode());
         item.setAmount(unpaid);
         item.setChannelTxnNo(order.getOutTradeNo());
-        item.setRemark(scene + "：患者端" + PayChannelEnum.getText(order.getChannel()) + "支付 支付单 " + order.getPayNo());
+        item.setRemark(scene + "：患者端" + PayChannelEnum.getLabel(order.getChannel()) + "支付 支付单 " + order.getPayNo());
         dto.setItems(List.of(item));
         chargeProvider.payBill(dto);
         log.info("[患者端支付] {}已入账账单 payNo={} billId={} 渠道={} amount=￥{}",
@@ -437,7 +437,7 @@ public class MiniPayServiceImpl implements MiniPayService {
         prepay.setPayMethod(payMethod.getCode());
         prepay.setChannelTxnNo(order.getOutTradeNo());
         prepay.setPayTime(order.getPayTime());
-        prepay.setRemark("患者端" + PayChannelEnum.getText(order.getChannel()) + "充值（支付单 " + order.getPayNo() + "）");
+        prepay.setRemark("患者端" + PayChannelEnum.getLabel(order.getChannel()) + "充值（支付单 " + order.getPayNo() + "）");
         chargeProvider.savePrepay(prepay);
         log.info("[患者端支付] 住院押金入账 payNo={} admissionId={} 渠道={} amount=￥{}",
                 order.getPayNo(), order.getBizId(), payMethod.getDesc(), order.getAmount().toPlainString());
@@ -450,7 +450,7 @@ public class MiniPayServiceImpl implements MiniPayService {
     private PaymentMethodEnum payMethodOfChannel(Integer channel) {
         PaymentMethodEnum payMethod = PayChannelEnum.payMethodOf(channel);
         if (payMethod == null) {
-            throw new BusinessException("支付渠道无法映射收款方式，不入账：" + PayChannelEnum.labelOrUnknown(channel));
+            throw new BusinessException("支付渠道无法映射收款方式，不入账：" + PayChannelEnum.getLabelOrUnknown(channel));
         }
         return payMethod;
     }

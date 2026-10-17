@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 诊断编码预测项来源枚举（LLM-模型推荐 RULE-规则降级）。
@@ -23,18 +24,6 @@ public enum Icd10PredictSourceEnum {
         this.label = label;
     }
 
-    public static Icd10PredictSourceEnum fromCode(String code) {
-        if (code == null) {
-            return null;
-        }
-        for (Icd10PredictSourceEnum item : values()) {
-            if (item.code.equals(code)) {
-                return item;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 与空串不合法）
      */
@@ -42,22 +31,31 @@ public enum Icd10PredictSourceEnum {
         return code != null && !code.isEmpty() && fromCode(code) != null;
     }
 
-    /**
-     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案。
-     */
-    public static String getText(String code) {
-        Icd10PredictSourceEnum item = fromCode(code);
-        return item == null ? "" : item.label;
+    public static Icd10PredictSourceEnum fromCode(String code) {
+        if (null == code) {
+            return null;
+        }
+        for (Icd10PredictSourceEnum item : values()) {
+            if (code.equals(item.code)) {
+                return item;
+            }
+        }
+        return null;
     }
 
-    /**
-     * 异常 / 审计用码值 → 文案。脏值保留原始码值，绝不喂前端展示。
-     */
-    public static String labelOrUnknown(String code) {
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(String code) {
         Icd10PredictSourceEnum item = fromCode(code);
-        if (item != null) {
-            return item.label;
-        }
-        return code == null ? "未知" : "未知(" + code + ")";
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(String code, String defaultValue) {
+        Icd10PredictSourceEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(String code) {
+        Icd10PredictSourceEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

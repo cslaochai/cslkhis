@@ -25,7 +25,7 @@ public enum RefundMethodEnum {
      * 现金走柜面点钞、余额退回患者院内账户，都不算"原路退回"。
      */
     public static RefundMethodEnum ofPayMethod(Integer payMethodCode) {
-        PaymentMethodEnum payMethod = PaymentMethodEnum.getByCode(payMethodCode);
+        PaymentMethodEnum payMethod = PaymentMethodEnum.fromCode(payMethodCode);
         if (payMethod == null) {
             return CASH;
         }
@@ -42,7 +42,7 @@ public enum RefundMethodEnum {
      * 医保走报盘撤销、现金与院内余额走柜面/账户，同理都不该把请求发给渠道。
      */
     public static boolean viaChannel(Integer payMethodCode) {
-        PaymentMethodEnum payMethod = PaymentMethodEnum.getByCode(payMethodCode);
+        PaymentMethodEnum payMethod = PaymentMethodEnum.fromCode(payMethodCode);
         return payMethod != null && payMethod.channelBacked();
     }
 

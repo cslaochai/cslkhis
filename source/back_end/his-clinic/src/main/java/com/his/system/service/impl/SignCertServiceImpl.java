@@ -164,7 +164,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
             try {
                 sysSignCertMapper.insert(cert);
                 log.info("签发签名证书 certNo={} empId={} 有效期至={} 方式={}",
-                        cert.getCertNo(), empId, to, mode.getText());
+                        cert.getCertNo(), empId, to, mode.getLabel());
                 return cert;
             } catch (DuplicateKeyException e) {
                 if (attempt == 3) {
@@ -360,9 +360,9 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         vo.setKeyFingerprint(c.getKeyFingerprint());
         vo.setKeyFingerprintGroups(SignCryptoUtil.fingerprintGroups(c.getKeyFingerprint()));
         vo.setIssuedMode(c.getIssuedMode());
-        vo.setIssuedModeText(CertIssuedModeEnum.textOf(c.getIssuedMode()));
+        vo.setIssuedModeText(CertIssuedModeEnum.getLabel(c.getIssuedMode()));
         vo.setCertStatus(c.getCertStatus());
-        vo.setCertStatusText(CertStatusEnum.textOf(c.getCertStatus()));
+        vo.setCertStatusText(CertStatusEnum.getLabel(c.getCertStatus()));
         vo.setValidFrom(c.getValidFrom());
         vo.setValidTo(c.getValidTo());
         vo.setRevokeReason(c.getRevokeReason());

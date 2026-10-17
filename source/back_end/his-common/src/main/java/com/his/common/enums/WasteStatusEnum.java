@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 医疗废物状态枚举。
@@ -20,32 +21,9 @@ public enum WasteStatusEnum {
         this.label = label;
     }
 
-    public static WasteStatusEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (WasteStatusEnum e : values()) {
-            if (e.code == code) {
-                return e;
-            }
-        }
-        return null;
-    }
-
     /** 码值是否合法（写入侧校验用；null 不合法） */
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
-    }
-
-    public static String getText(Integer code) {
-        WasteStatusEnum e = fromCode(code);
-        return e == null ? "未知(" + code + ")" : e.getLabel();
-    }
-
-    /** 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。 */
-    public static String labelOrUnknown(Integer code) {
-        WasteStatusEnum item = code == null ? null : fromCode(code);
-        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 
     /**
@@ -53,5 +31,33 @@ public enum WasteStatusEnum {
      */
     public boolean is(Integer code) {
         return code != null && code == this.code;
+    }
+
+    public static WasteStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (WasteStatusEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        WasteStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        WasteStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        WasteStatusEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

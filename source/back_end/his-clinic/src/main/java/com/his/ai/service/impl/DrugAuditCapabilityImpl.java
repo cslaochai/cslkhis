@@ -217,7 +217,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
         String source = AiBasisSourceEnum.HARD_RULE.getCode().equals(finding.getSource()) ? "[规则]" : "[AI]";
         int level = finding.getErrorLevel() == null
                 ? ClinicalRuleErrorLevelEnum.HINT.getCode() : finding.getErrorLevel();
-        return source + "[" + ClinicalRuleErrorLevelEnum.getText(level) + "]";
+        return source + "[" + ClinicalRuleErrorLevelEnum.getLabel(level) + "]";
     }
 
     private static List<DrugAuditFindingVO> dedupeAndSort(List<DrugAuditFindingVO> findings) {
@@ -371,7 +371,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
     private Optional<DrugAuditLlmOutputDTO> callModel(BizPrescription prescription, DrugAuditContextDTO context,
                                                       List<DrugAuditFindingVO> hardRuleFindings) {
         DrugAuditPromptVariablesVO variables = new DrugAuditPromptVariablesVO();
-        variables.setGender(SysGenderEnum.getText(context.gender()));
+        variables.setGender(SysGenderEnum.getLabel(context.gender()));
         variables.setAge(context.age() == null ? "（未填写）" : context.age() + "岁");
         variables.setAllergyHistory(TextUtil.hasText(context.allergyText())
                 ? context.allergyText() : "（无已知过敏史记录）");

@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 医疗技术授权类别枚举
@@ -29,18 +30,6 @@ public enum TechAuthCategoryEnum {
         this.label = label;
     }
 
-    public static TechAuthCategoryEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (TechAuthCategoryEnum category : values()) {
-            if (category.code == code) {
-                return category;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
@@ -48,16 +37,31 @@ public enum TechAuthCategoryEnum {
         return fromCode(code) != null;
     }
 
-    public static String getText(Integer code) {
-        TechAuthCategoryEnum category = fromCode(code);
-        return category == null ? "未知(" + code + ")" : category.getLabel();
+    public static TechAuthCategoryEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (TechAuthCategoryEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
     }
 
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        TechAuthCategoryEnum item = code == null ? null : fromCode(code);
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        TechAuthCategoryEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        TechAuthCategoryEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        TechAuthCategoryEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

@@ -265,7 +265,7 @@ public class DrugTransferServiceImpl extends ServiceImpl<BizDrugTransferMapper, 
         DrugTransferStatusEnum status = DrugTransferStatusEnum.fromCode(head.getStatus());
         if (status != DrugTransferStatusEnum.PENDING_OUT && status != DrugTransferStatusEnum.CANCELLED) {
             throw new BusinessException("只有「待发出」或「已作废」的调拨单可以删除（当前："
-                    + DrugTransferStatusEnum.getText(head.getStatus()) + "）；已发出请先完成接收，"
+                    + DrugTransferStatusEnum.getLabel(head.getStatus()) + "）；已发出请先完成接收，"
                     + "已完成是留档凭证不能抹");
         }
         bizDrugTransferItemMapper.purgeByTransferId(head.getId());
@@ -300,7 +300,7 @@ public class DrugTransferServiceImpl extends ServiceImpl<BizDrugTransferMapper, 
                 throw new BusinessException("库存批次不存在或已被删除（批次#" + row.getStockId() + "）");
             }
             if (!Objects.equals(batch.getStockRoom(), type.getFromRoom().getCode())) {
-                throw new BusinessException(batchLabel(batch) + " 实际在「" + StockRoomEnum.getText(batch.getStockRoom())
+                throw new BusinessException(batchLabel(batch) + " 实际在「" + StockRoomEnum.getLabel(batch.getStockRoom())
                         + "」，与本单方向「" + type.getLabel() + "」的发出库位不符，请重新选择批次");
             }
             BigDecimal quantity = NumUtil.scale(row.getApplyQuantity(), 2);
@@ -374,22 +374,22 @@ public class DrugTransferServiceImpl extends ServiceImpl<BizDrugTransferMapper, 
         String hint = Objects.equals(head.getStatus(), DrugTransferStatusEnum.PENDING_IN.getCode())
                 ? "；货已在途，只能继续接收，要收回来请开一张反向调拨单" : "";
         throw new BusinessException("当前状态不能" + action + "（现在："
-                + DrugTransferStatusEnum.getText(head.getStatus()) + "）" + hint);
+                + DrugTransferStatusEnum.getLabel(head.getStatus()) + "）" + hint);
     }
 
     /**
      * 方向、单号、批次、数量都写进流水备注：只写「调拨」两字，事后对着流水想不起来搬的是什么
      */
     private String transferLabel(BizDrugTransfer head, BizDrugTransferItem item, String stage) {
-        return DrugTransferTypeEnum.getText(head.getTransferType()) + stage + "：" + head.getTransferNo()
+        return DrugTransferTypeEnum.getLabel(head.getTransferType()) + stage + "：" + head.getTransferNo()
                 + " " + item.getDrugName() + " 批号" + item.getBatchNo()
                 + " 数量" + NumUtil.plain(NumUtil.orZero(item.getApplyQuantity())) + "；事由：" + head.getReason();
     }
 
     private void fillText(DrugTransferVO vo) {
-        vo.setTransferTypeText(DrugTransferTypeEnum.getText(vo.getTransferType()));
-        vo.setFromRoomText(StockRoomEnum.getText(vo.getFromRoom()));
-        vo.setToRoomText(StockRoomEnum.getText(vo.getToRoom()));
-        vo.setStatusText(DrugTransferStatusEnum.getText(vo.getStatus()));
+        vo.setTransferTypeText(DrugTransferTypeEnum.getLabel(vo.getTransferType()));
+        vo.setFromRoomText(StockRoomEnum.getLabel(vo.getFromRoom()));
+        vo.setToRoomText(StockRoomEnum.getLabel(vo.getToRoom()));
+        vo.setStatusText(DrugTransferStatusEnum.getLabel(vo.getStatus()));
     }
 }

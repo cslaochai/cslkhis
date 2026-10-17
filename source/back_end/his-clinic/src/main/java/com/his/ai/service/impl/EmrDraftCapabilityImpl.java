@@ -186,7 +186,7 @@ public class EmrDraftCapabilityImpl implements EmrDraftCapability {
 
     private Optional<EmrDraftLlmOutputDTO> callModel(EmrDraftDTO dto, DraftInput input) {
         EmrDraftPromptVariablesVO variables = new EmrDraftPromptVariablesVO();
-        variables.setGender(SysGenderEnum.getText(input.gender()));
+        variables.setGender(SysGenderEnum.getLabel(input.gender()));
         variables.setAge(input.age() == null ? "（未填写）" : input.age() + "岁");
         variables.setChiefComplaint(TextUtil.blankToDefault(input.chiefComplaint(), "（未填写）"));
         variables.setPresentIllness(TextUtil.blankToDefault(input.presentIllness(), "（未填写）"));

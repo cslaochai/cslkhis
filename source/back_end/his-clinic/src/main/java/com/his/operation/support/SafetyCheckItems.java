@@ -26,7 +26,7 @@ public final class SafetyCheckItems {
         if (phase == null) {
             return "—";
         }
-        return OperationSafetyPhaseEnum.getText(phase);
+        return OperationSafetyPhaseEnum.getLabel(phase);
     }
 
     public static boolean isValidPhase(Integer phase) {
@@ -115,7 +115,7 @@ public final class SafetyCheckItems {
         List<String> missing = new ArrayList<>();
         for (Integer req : requiredOf(phase)) {
             if (codes == null || !codes.contains(req)) {
-                missing.add(OperationSafetyCheckItemEnum.getText(phase, req));
+                missing.add(OperationSafetyCheckItemEnum.getLabel(phase, req));
             }
         }
         return missing;

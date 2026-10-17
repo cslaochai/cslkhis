@@ -2,6 +2,7 @@ package com.his.common.enums;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 申请状态枚举（适用于检验/检查申请单）。
@@ -58,39 +59,31 @@ public enum ApplyStatusEnum {
      */
     private final String label;
 
-    /**
-     * 根据状态码获取对应的枚举实例
-     *
-     * @param code 状态码
-     * @return 对应的枚举实例，若未匹配则返回 UNKNOWN
-     */
-    public static ApplyStatusEnum fromCode(int code) {
-        for (ApplyStatusEnum status : values()) {
-            if (status.code == code) {
-                return status;
+    public static ApplyStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (ApplyStatusEnum item : values()) {
+            if (item.code == code) {
+                return item;
             }
         }
-        return UNKNOWN;
+        return null;
     }
 
-    /**
-     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」。
-     * 0（UNKNOWN 占位）同样按「无文案」渲染。
-     */
-    public static String getText(Integer code) {
-        ApplyStatusEnum status = code == null ? null : fromCode(code);
-        return status == null || status == UNKNOWN ? "" : status.label;
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        ApplyStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
     }
 
-    /**
-     * 异常 / 审计 / 合规用码值 → 文案。null 或不在枚举内返回「未知(n)」，保留原始码值便于排查
-     * （fromCode 对脏值返回 UNKNOWN 占位，这里还原为「未知(原始码)」而不是「未知状态」）。
-     */
-    public static String labelOrUnknown(Integer code) {
-        ApplyStatusEnum status = code == null ? null : fromCode(code);
-        if (status == null || status == UNKNOWN) {
-            return code == null ? "未知" : "未知(" + code + ")";
-        }
-        return status.label;
+    public static String getLabel(Integer code, String defaultValue) {
+        ApplyStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        ApplyStatusEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

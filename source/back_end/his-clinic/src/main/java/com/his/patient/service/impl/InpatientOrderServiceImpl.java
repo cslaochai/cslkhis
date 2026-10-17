@@ -90,7 +90,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
     private final DeptScopeService deptScopeService;
 
     private static String orderClassDesc(Integer orderClass) {
-        String text = OrderClassEnum.getText(orderClass);
+        String text = OrderClassEnum.getLabel(orderClass);
         return "—".equals(text) ? "" : text;
     }
 
@@ -246,7 +246,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
         }
 
         log.info("开立医嘱 admissionId={} 组套={} 类型={} 条数={} 医嘱号={} 医生={}",
-                admission.getAdmissionId(), orderGroup, OrderTypeEnum.getText(dto.getOrderType()),
+                admission.getAdmissionId(), orderGroup, OrderTypeEnum.getLabel(dto.getOrderType()),
                 orderNos.size(), orderNos, doctorName);
         return orderGroup;
     }
@@ -274,7 +274,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
         }
         if (!Objects.equals(InpatientOrderStatusEnum.PENDING_VERIFY.getCode(), order.getOrderStatus())) {
             throw new BusinessException("医嘱 " + order.getOrderNo() + " 当前状态为「"
-                    + InpatientOrderStatusEnum.labelOrUnknown(order.getOrderStatus())
+                    + InpatientOrderStatusEnum.getLabelOrUnknown(order.getOrderStatus())
                     + "」，只有「待校对」的医嘱可以修改；已校对的请先停止后重新开立");
         }
         List<InpatientOrderItemDTO> items = dto.getItems();
@@ -398,7 +398,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
             }
             if (!Objects.equals(InpatientOrderStatusEnum.PENDING_VERIFY.getCode(), order.getOrderStatus())) {
                 throw new BusinessException("医嘱 " + order.getOrderNo() + " 当前状态为「"
-                        + InpatientOrderStatusEnum.labelOrUnknown(order.getOrderStatus()) + "」，不能重复校对");
+                        + InpatientOrderStatusEnum.getLabelOrUnknown(order.getOrderStatus()) + "」，不能重复校对");
             }
             orders.add(order);
         }
@@ -569,7 +569,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
         if (!Objects.equals(InpatientOrderStatusEnum.VERIFIED.getCode(), target.getOrderStatus())
                 && !Objects.equals(InpatientOrderStatusEnum.EXECUTING.getCode(), target.getOrderStatus())) {
             throw new BusinessException("医嘱 " + target.getOrderNo() + " 当前状态为「"
-                    + InpatientOrderStatusEnum.labelOrUnknown(target.getOrderStatus())
+                    + InpatientOrderStatusEnum.getLabelOrUnknown(target.getOrderStatus())
                     + "」，只有「已校对 / 执行中」的医嘱可以停止；「待校对」的请改用作废");
         }
 
@@ -637,21 +637,21 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
             for (BizInpatientOrder o : targets) {
                 if (!Objects.equals(InpatientOrderStatusEnum.PENDING_VERIFY.getCode(), o.getOrderStatus())) {
                     throw new BusinessException("组套 " + target.getOrderGroup() + " 内的医嘱 " + o.getOrderNo()
-                            + " 已是「" + InpatientOrderStatusEnum.labelOrUnknown(o.getOrderStatus())
+                            + " 已是「" + InpatientOrderStatusEnum.getLabelOrUnknown(o.getOrderStatus())
                             + "」，不能整组作废；已校对的医嘱请用「停止」");
                 }
             }
         } else {
             if (!Objects.equals(InpatientOrderStatusEnum.PENDING_VERIFY.getCode(), target.getOrderStatus())) {
                 throw new BusinessException("医嘱 " + target.getOrderNo() + " 当前状态为「"
-                        + InpatientOrderStatusEnum.labelOrUnknown(target.getOrderStatus())
+                        + InpatientOrderStatusEnum.getLabelOrUnknown(target.getOrderStatus())
                         + "」，只有「待校对」的医嘱可以作废；已校对的请用「停止」");
             }
             targets = List.of(target);
         }
         if (targets.isEmpty()) {
             throw new BusinessException("医嘱 " + target.getOrderNo() + " 当前状态为「"
-                    + InpatientOrderStatusEnum.labelOrUnknown(target.getOrderStatus())
+                    + InpatientOrderStatusEnum.getLabelOrUnknown(target.getOrderStatus())
                     + "」，只有「待校对」的医嘱可以作废；已校对的请用「停止」");
         }
 
@@ -779,7 +779,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
             if (!Objects.equals(InpatientOrderStatusEnum.VERIFIED.getCode(), order.getOrderStatus())
                     && !Objects.equals(InpatientOrderStatusEnum.EXECUTING.getCode(), order.getOrderStatus())) {
                 throw new BusinessException("医嘱 " + order.getOrderNo() + " 当前状态为「"
-                        + InpatientOrderStatusEnum.labelOrUnknown(order.getOrderStatus()) + "」，不能执行");
+                        + InpatientOrderStatusEnum.getLabelOrUnknown(order.getOrderStatus()) + "」，不能执行");
             }
             rows.add(exec);
             orderById.put(exec.getId(), order);
@@ -981,11 +981,11 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
     // 编号 / 当前用户 / 时间
 
     private void decorateOrder(InpatientOrderVO vo) {
-        vo.setOrderTypeText(OrderTypeEnum.getText(vo.getOrderType()));
-        vo.setOrderClassText(OrderClassEnum.getText(vo.getOrderClass()));
-        vo.setOrderStatusText(InpatientOrderStatusEnum.getText(vo.getOrderStatus()));
+        vo.setOrderTypeText(OrderTypeEnum.getLabel(vo.getOrderType()));
+        vo.setOrderClassText(OrderClassEnum.getLabel(vo.getOrderClass()));
+        vo.setOrderStatusText(InpatientOrderStatusEnum.getLabel(vo.getOrderStatus()));
         vo.setSourceText(dictCacheService.getDicDataLabel(DictTypeConst.INPATIENT_ORDER_SOURCE, vo.getSource()));
-        vo.setIsUrgentText(YesOrNoEnum.getText(vo.getIsUrgent()));
+        vo.setIsUrgentText(YesOrNoEnum.getLabel(vo.getIsUrgent()));
 
         boolean pendingVerify = Objects.equals(InpatientOrderStatusEnum.PENDING_VERIFY.getCode(), vo.getOrderStatus());
         vo.setCanVerify(pendingVerify);
@@ -1016,9 +1016,9 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
     }
 
     private void decorateExec(InpatientOrderExecVO vo) {
-        vo.setOrderTypeText(OrderTypeEnum.getText(vo.getOrderType()));
-        vo.setOrderClassText(OrderClassEnum.getText(vo.getOrderClass()));
-        vo.setOrderStatusText(InpatientOrderStatusEnum.getText(vo.getOrderStatus()));
+        vo.setOrderTypeText(OrderTypeEnum.getLabel(vo.getOrderType()));
+        vo.setOrderClassText(OrderClassEnum.getLabel(vo.getOrderClass()));
+        vo.setOrderStatusText(InpatientOrderStatusEnum.getLabel(vo.getOrderStatus()));
         vo.setExecStatusText(dictCacheService.getDicDataLabel(DictTypeConst.ORDER_EXEC_STATUS, vo.getExecStatus()));
         vo.setCharged(vo.getFeeRecordId() != null);
         vo.setInfusion(InpatientInfusionServiceImpl.isInfusionRoute(vo.getRoute()));

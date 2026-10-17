@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 门诊排班变更类型枚举（sql/261，字典 his_clinic_source_change_type）。
@@ -58,19 +59,24 @@ public enum ClinicSourceChangeTypeEnum {
     }
 
     public static ClinicSourceChangeTypeEnum fromCode(Integer code) {
-        if (code == null) {
+        if (null == code) {
             return null;
         }
-        for (ClinicSourceChangeTypeEnum type : values()) {
-            if (type.code == code) {
-                return type;
+        for (ClinicSourceChangeTypeEnum item : values()) {
+            if (item.code == code) {
+                return item;
             }
         }
         return null;
     }
 
-    public static String getText(Integer code) {
-        ClinicSourceChangeTypeEnum type = fromCode(code);
-        return type == null ? "未知(" + code + ")" : type.getLabel();
+    public static String getLabel(Integer code) {
+        ClinicSourceChangeTypeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        ClinicSourceChangeTypeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
     }
 }

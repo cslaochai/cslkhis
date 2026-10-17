@@ -71,23 +71,23 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
         SignatureOptionsVO vo = new SignatureOptionsVO();
         List<SignOptionVO> bizTypes = new ArrayList<>();
         for (SignBizTypeEnum t : SignBizTypeEnum.values()) {
-            bizTypes.add(opt(t.getCode(), t.getText()));
+            bizTypes.add(opt(t.getCode(), t.getLabel()));
         }
         List<SignOptionVO> scenes = new ArrayList<>();
         for (SignSceneEnum s : SignSceneEnum.values()) {
-            scenes.add(opt(s.getCode(), s.getText()));
+            scenes.add(opt(s.getCode(), s.getLabel()));
         }
         List<SignOptionVO> signStatuses = new ArrayList<>();
         for (SignStatusEnum s : SignStatusEnum.values()) {
-            signStatuses.add(opt(s.getCode(), s.getText()));
+            signStatuses.add(opt(s.getCode(), s.getLabel()));
         }
         List<SignOptionVO> verifyStatuses = new ArrayList<>();
         for (SignVerifyStatusEnum s : SignVerifyStatusEnum.values()) {
-            verifyStatuses.add(opt(s.getCode(), s.getText()));
+            verifyStatuses.add(opt(s.getCode(), s.getLabel()));
         }
         List<SignOptionVO> timeSources = new ArrayList<>();
         for (TimeSourceEnum t : TimeSourceEnum.values()) {
-            timeSources.add(opt(t.getCode(), t.getText()));
+            timeSources.add(opt(t.getCode(), t.getLabel()));
         }
         vo.setBizTypes(bizTypes);
         vo.setScenes(scenes);
@@ -97,11 +97,11 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
 
         List<SignOptionVO> certStatuses = new ArrayList<>();
         for (CertStatusEnum s : CertStatusEnum.values()) {
-            certStatuses.add(opt(s.getCode(), s.getText()));
+            certStatuses.add(opt(s.getCode(), s.getLabel()));
         }
         List<SignOptionVO> issuedModes = new ArrayList<>();
         for (CertIssuedModeEnum m : CertIssuedModeEnum.values()) {
-            issuedModes.add(opt(m.getCode(), m.getText()));
+            issuedModes.add(opt(m.getCode(), m.getLabel()));
         }
         vo.setCertStatuses(certStatuses);
         vo.setIssuedModes(issuedModes);

@@ -1,5 +1,7 @@
 package com.his.common.enums;
 
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * 签名对象类型。
  */
@@ -56,42 +58,43 @@ public enum SignBizTypeEnum {
     INPATIENT_LEAVE(10, "住院请假单");
 
     private final int code;
-    private final String text;
+    private final String label;
 
-    SignBizTypeEnum(int code, String text) {
+    SignBizTypeEnum(int code, String label) {
         this.code = code;
-        this.text = text;
-    }
-
-    public static SignBizTypeEnum parse(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (SignBizTypeEnum t : values()) {
-            if (t.code == code) {
-                return t;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * 码值 → 文案。**未知码值原样渲染成未知(n)，不回落成某个合法值** ——
-     * 回落会把"库里有个我们不认识的类型"伪装成正常数据。
-     */
-    public static String textOf(Integer code) {
-        SignBizTypeEnum t = parse(code);
-        if (t != null) {
-            return t.text;
-        }
-        return code == null ? "—" : "未知(" + code + ")";
+        this.label = label;
     }
 
     public int getCode() {
         return code;
     }
 
-    public String getText() {
-        return text;
+    public String getLabel() {
+        return label;
+    }
+
+    public static SignBizTypeEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (SignBizTypeEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    public static String getLabel(Integer code) {
+        if (null == code) {
+            return "—";
+        }
+        SignBizTypeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        SignBizTypeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
     }
 }

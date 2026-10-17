@@ -287,7 +287,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
         vo.setRecordId(record.getId());
         vo.setRecordNo(record.getRecordNo());
         vo.setPatientName(record.getPatientName());
-        vo.setGenderText(SysGenderEnum.getText(record.getGender()));
+        vo.setGenderText(SysGenderEnum.getLabel(record.getGender()));
         vo.setAge(record.getAge());
         vo.setLaboratoryItemName(record.getLaboratoryItemName());
         vo.setReportTime(record.getExecuteTime());
@@ -482,7 +482,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
                                                          List<LabItemOverviewVO> items,
                                                          List<LabTrendVO> trends) {
         LabInterpretPromptVariablesVO variables = new LabInterpretPromptVariablesVO();
-        variables.setGender(SysGenderEnum.getText(record.getGender()));
+        variables.setGender(SysGenderEnum.getLabel(record.getGender()));
         variables.setAge(record.getAge() == null ? "（未填写）" : record.getAge() + "岁");
         variables.setItemName(TextUtil.blankToDefault(record.getLaboratoryItemName(), "（未填写）"));
         variables.setDiagnosis(TextUtil.blankToDefault(record.getDiagnosis(), "（未填写）"));

@@ -1,5 +1,7 @@
 package com.his.common.enums;
 
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * 记录状态枚举类
  */
@@ -22,48 +24,8 @@ public enum LabRecordStatusEnum {
         this.description = description;
     }
 
-    /**
-     * 根据状态码获取对应的枚举实例
-     *
-     * @param code 状态码
-     * @return 对应的枚举实例，若未找到则返回 null
-     */
-    public static LabRecordStatusEnum getByCode(int code) {
-        for (LabRecordStatusEnum status : LabRecordStatusEnum.values()) {
-            if (status.code == code) {
-                return status;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Integer 入口（null 安全，与 {@link #getByCode(int)} 同义）
-     */
-    public static LabRecordStatusEnum fromCode(Integer code) {
-        return code == null ? null : getByCode(code);
-    }
-
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
-    }
-
-    /**
-     * 展示用码值 → 文案。null / 越界码值返回空串 ——
-     * 检验的码表与检查**不是同一套**（这里 2=已采样、3=已接收，检查的 2=已签到），
-     * 措辞差异由调用侧按语境处理，不改这里的 description。
-     */
-    public static String getText(Integer code) {
-        LabRecordStatusEnum item = fromCode(code);
-        return item == null ? "" : item.description;
-    }
-
-    /**
-     * 异常 / 审计用：null 或越界码值返回「未知(n)」（null 本身渲染成「未知」）。
-     */
-    public static String labelOrUnknown(Integer code) {
-        LabRecordStatusEnum item = fromCode(code);
-        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.description;
     }
 
     public int getCode() {
@@ -72,5 +34,33 @@ public enum LabRecordStatusEnum {
 
     public String getDescription() {
         return description;
+    }
+
+    public static LabRecordStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (LabRecordStatusEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        LabRecordStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.description;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        LabRecordStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.description;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        LabRecordStatusEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.description;
     }
 }

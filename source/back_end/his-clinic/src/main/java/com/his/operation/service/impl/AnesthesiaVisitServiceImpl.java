@@ -183,9 +183,9 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
         }
         log.info("{}麻醉术前访视 visitNo={} applyNo={} ASA={} 困难气道={} 结论={} 访视医师={}",
                 create ? "新建" : "修改", entity.getVisitNo(), apply.getApplyNo(),
-                AsaGradeEnum.labelOrUnknown(entity.getAsaGrade()),
+                AsaGradeEnum.getLabelOrUnknown(entity.getAsaGrade()),
                 Objects.equals(YesOrNoEnum.YES.getCode(), entity.getDifficultAirway()) ? "是" : "否",
-                VisitConclusionEnum.labelOrUnknown(entity.getConclusion()), operatorUser.getRealName());
+                VisitConclusionEnum.getLabelOrUnknown(entity.getConclusion()), operatorUser.getRealName());
         return entity.getVisitNo();
     }
 
@@ -203,7 +203,7 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
         assertApplyAccessible(entity.getApplyId());
         // B-条件必填：结论非「可施行麻醉」时才要求说明，跨字段条件，DTO 注解无法表达，保留
         if (!Objects.equals(1, dto.getConclusion()) && !TextUtil.hasText(dto.getConclusionNote())) {
-            throw new BusinessException("结论为「" + VisitConclusionEnum.labelOrUnknown(dto.getConclusion())
+            throw new BusinessException("结论为「" + VisitConclusionEnum.getLabelOrUnknown(dto.getConclusion())
                     + "」时必须填写结论说明（为什么不能按计划麻醉）");
         }
         if (Integer.valueOf(1).equals(entity.getDifficultAirway()) && !TextUtil.hasText(entity.getBackupPlan())) {
@@ -217,7 +217,7 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
         entity.setVisitTime(TimeUtil.nowSeconds());
         bizAnesthesiaVisitMapper.updateById(entity);
         log.info("完成麻醉术前访视 visitNo={} 结论={}（{}）访视医师={}",
-                entity.getVisitNo(), VisitConclusionEnum.labelOrUnknown(dto.getConclusion()),
+                entity.getVisitNo(), VisitConclusionEnum.getLabelOrUnknown(dto.getConclusion()),
                 TextUtil.hasText(dto.getConclusionNote()) ? dto.getConclusionNote() : "无补充说明", operatorUser.getRealName());
     }
 
@@ -249,18 +249,18 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
     }
 
     private void decorate(AnesthesiaVisitVO vo) {
-        vo.setAsaText(AsaGradeEnum.getText(vo.getAsaGrade()));
+        vo.setAsaText(AsaGradeEnum.getLabel(vo.getAsaGrade()));
         vo.setAsaFullText(AnesthesiaCalcs.asaFullText(vo.getAsaGrade(), vo.getAsaEmergency()));
-        vo.setMallampatiText(MallampatiGradeEnum.getText(vo.getMallampati()));
-        vo.setNeckMobilityText(NeckMobilityEnum.getText(vo.getNeckMobility()));
-        vo.setNpoText(NpoStatusEnum.getText(vo.getNpoStatus()));
-        vo.setConclusionText(VisitConclusionEnum.getText(vo.getConclusion()));
-        vo.setVisitStatusText(AnesthesiaVisitStatusEnum.getText(vo.getVisitStatus()));
+        vo.setMallampatiText(MallampatiGradeEnum.getLabel(vo.getMallampati()));
+        vo.setNeckMobilityText(NeckMobilityEnum.getLabel(vo.getNeckMobility()));
+        vo.setNpoText(NpoStatusEnum.getLabel(vo.getNpoStatus()));
+        vo.setConclusionText(VisitConclusionEnum.getLabel(vo.getConclusion()));
+        vo.setVisitStatusText(AnesthesiaVisitStatusEnum.getLabel(vo.getVisitStatus()));
         vo.setDifficultAirwayText(Objects.equals(YesOrNoEnum.YES.getCode(), vo.getDifficultAirway()) ? "是"
                 : Objects.equals(YesOrNoEnum.NO.getCode(), vo.getDifficultAirway()) ? "否" : "");
-        vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getAnesthesiaType()));
-        vo.setEmergencyText(YesOrNoEnum.getText(vo.getIsEmergency()));
-        vo.setOperationStatusText(OperationApplyStatusEnum.getText(vo.getOperationStatus()));
+        vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getLabel(vo.getAnesthesiaType()));
+        vo.setEmergencyText(YesOrNoEnum.getLabel(vo.getIsEmergency()));
+        vo.setOperationStatusText(OperationApplyStatusEnum.getLabel(vo.getOperationStatus()));
         vo.setBmi(bmi(vo.getHeightCm(), vo.getWeightKg()));
 
         boolean draft = !Integer.valueOf(1).equals(vo.getVisitStatus());
@@ -275,7 +275,7 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
         } else if (draft) {
             warn = "草稿状态：尚未给出访视结论，不能作为开立麻醉记录的依据";
         } else if (!Integer.valueOf(1).equals(vo.getConclusion())) {
-            warn = "访视结论为「" + VisitConclusionEnum.getText(vo.getConclusion()) + "」，不可据此开立麻醉记录";
+            warn = "访视结论为「" + VisitConclusionEnum.getLabel(vo.getConclusion()) + "」，不可据此开立麻醉记录";
         } else if (Integer.valueOf(2).equals(vo.getNpoStatus())) {
             warn = "急诊饱胃：返流误吸高危，诱导方式需另行评估";
         }
@@ -311,7 +311,7 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
         // B-条件必填：ASA≥4 时才要求风险评估，跨字段条件，DTO 注解无法表达，保留
         if (dto.getAsaGrade() != null && dto.getAsaGrade() >= 4
                 && !TextUtil.hasText(dto.getRiskAssessment())) {
-            throw new BusinessException("ASA " + AsaGradeEnum.labelOrUnknown(dto.getAsaGrade())
+            throw new BusinessException("ASA " + AsaGradeEnum.getLabelOrUnknown(dto.getAsaGrade())
                     + " 必须填写风险评估（这一级意味着围术期风险显著，不能空着）");
         }
     }

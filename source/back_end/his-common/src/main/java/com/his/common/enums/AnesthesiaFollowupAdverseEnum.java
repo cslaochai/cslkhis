@@ -4,6 +4,7 @@ import lombok.Getter;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 麻醉随访并发症要点
@@ -29,36 +30,8 @@ public enum AnesthesiaFollowupAdverseEnum {
         this.label = label;
     }
 
-    public static AnesthesiaFollowupAdverseEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (AnesthesiaFollowupAdverseEnum e : values()) {
-            if (e.code == code) {
-                return e;
-            }
-        }
-        return null;
-    }
-
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
-    }
-
-    public static String getText(Integer code) {
-        if (code == null) {
-            return "";
-        }
-        AnesthesiaFollowupAdverseEnum e = fromCode(code);
-        return e != null ? e.label : "";
-    }
-
-    public static String labelOrUnknown(Integer code) {
-        if (code == null) {
-            return "未知";
-        }
-        AnesthesiaFollowupAdverseEnum e = fromCode(code);
-        return e != null ? e.label : "未知(" + code + ")";
     }
 
     public static Map<Integer, String> all() {
@@ -67,5 +40,33 @@ public enum AnesthesiaFollowupAdverseEnum {
             m.put(e.code, e.label);
         }
         return m;
+    }
+
+    public static AnesthesiaFollowupAdverseEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (AnesthesiaFollowupAdverseEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        AnesthesiaFollowupAdverseEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        AnesthesiaFollowupAdverseEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        AnesthesiaFollowupAdverseEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

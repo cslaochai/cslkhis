@@ -4,6 +4,7 @@ import lombok.Getter;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 患者档案关键字段（P5.1 EMPI / P5.3 数据质量共用）。
@@ -35,36 +36,8 @@ public enum PatientProfileFieldEnum {
         this.label = label;
     }
 
-    public static PatientProfileFieldEnum fromCode(String code) {
-        if (code == null) {
-            return null;
-        }
-        for (PatientProfileFieldEnum e : values()) {
-            if (e.code.equals(code)) {
-                return e;
-            }
-        }
-        return null;
-    }
-
     public static boolean isValid(String code) {
         return fromCode(code) != null;
-    }
-
-    public static String getText(String code) {
-        if (code == null) {
-            return "";
-        }
-        PatientProfileFieldEnum e = fromCode(code);
-        return e != null ? e.label : "";
-    }
-
-    public static String labelOrUnknown(String code) {
-        if (code == null) {
-            return "未知";
-        }
-        PatientProfileFieldEnum e = fromCode(code);
-        return e != null ? e.label : "未知(" + code + ")";
     }
 
     /** 全部关键字段（码→中文名），顺序即展示顺序 */
@@ -74,5 +47,33 @@ public enum PatientProfileFieldEnum {
             m.put(e.code, e.label);
         }
         return m;
+    }
+
+    public static PatientProfileFieldEnum fromCode(String code) {
+        if (null == code) {
+            return null;
+        }
+        for (PatientProfileFieldEnum item : values()) {
+            if (code.equals(item.code)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(String code) {
+        PatientProfileFieldEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(String code, String defaultValue) {
+        PatientProfileFieldEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(String code) {
+        PatientProfileFieldEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

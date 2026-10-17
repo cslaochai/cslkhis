@@ -101,7 +101,7 @@ public class ClinicSourceLogServiceImpl extends ServiceImpl<BizClinicSourceLogMa
             vo.setId(row.getId());
             vo.setScheduleId(row.getScheduleId());
             vo.setActionType(row.getActionType());
-            vo.setActionTypeText(ClinicSourceChangeTypeEnum.getText(row.getActionType()));
+            vo.setActionTypeText(ClinicSourceChangeTypeEnum.getLabel(row.getActionType()));
             vo.setAmount(row.getAmount());
             vo.setReason(row.getReason());
             vo.setOccurTime(row.getOccurTime());

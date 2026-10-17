@@ -46,7 +46,7 @@ public class InpatientOrderSignProviderImpl implements SignableContentProvider, 
                 o.getDeptId(),
                 o.getDeptName(),
                 o.getOrderStatus(),
-                InpatientOrderStatusEnum.getText(o.getOrderStatus()),
+                InpatientOrderStatusEnum.getLabel(o.getOrderStatus()),
                 InpatientOrderSignProvider.canonical(o));
     }
 
@@ -75,7 +75,7 @@ public class InpatientOrderSignProviderImpl implements SignableContentProvider, 
             return null;
         }
         // 其它场景（提交/归档/补签）对医嘱没有意义
-        return "医嘱只支持「开立签名」与「校对签名」两种场景，当前场景「" + scene.getText() + "」不适用";
+        return "医嘱只支持「开立签名」与「校对签名」两种场景，当前场景「" + scene.getLabel() + "」不适用";
     }
 
     @Override

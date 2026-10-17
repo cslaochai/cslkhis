@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 知识文档向量索引重建任务状态枚举（1-进行中 2-完成 3-失败）。
@@ -22,13 +23,6 @@ public enum KnowledgeIndexRebuildStatusEnum {
         this.label = label;
     }
 
-    public static KnowledgeIndexRebuildStatusEnum fromCode(int code) {
-        for (KnowledgeIndexRebuildStatusEnum item : values()) {
-            if (item.code == code) return item;
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（入参校验用；null 不合法）
      */
@@ -36,22 +30,31 @@ public enum KnowledgeIndexRebuildStatusEnum {
         return code != null && fromCode(code) != null;
     }
 
-    /**
-     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」。
-     */
-    public static String getText(Integer code) {
-        KnowledgeIndexRebuildStatusEnum item = code == null ? null : fromCode(code);
-        return item == null ? "" : item.label;
+    public static KnowledgeIndexRebuildStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (KnowledgeIndexRebuildStatusEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
     }
 
-    /**
-     * 异常 / 审计用码值 → 文案。脏值保留原始码值，绝不喂前端展示。
-     */
-    public static String labelOrUnknown(Integer code) {
-        KnowledgeIndexRebuildStatusEnum item = code == null ? null : fromCode(code);
-        if (item != null) {
-            return item.label;
-        }
-        return code == null ? "未知" : "未知(" + code + ")";
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        KnowledgeIndexRebuildStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        KnowledgeIndexRebuildStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        KnowledgeIndexRebuildStatusEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

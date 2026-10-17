@@ -442,7 +442,7 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
         try {
             return emrSignatureService.sign(cmd);
         } catch (BusinessException e) {
-            throw new BusinessException("检查报告 " + record.getRecordNo() + " " + scene.getText()
+            throw new BusinessException("检查报告 " + record.getRecordNo() + " " + scene.getLabel()
                     + "失败：" + e.getMessage());
         }
     }

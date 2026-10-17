@@ -35,7 +35,7 @@ public class PayRefundServiceImpl implements PayRefundService {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             return RefundReceipt.fail("退款金额必须大于 0，当前 " + amount);
         }
-        PaymentMethodEnum payMethod = PaymentMethodEnum.getByCode(request.payMethod());
+        PaymentMethodEnum payMethod = PaymentMethodEnum.fromCode(request.payMethod());
         boolean channelBacked = payMethod != null && payMethod.channelBacked();
         if (!channelBacked) {
             // 走到这里说明调用方绕过了 RefundMethodEnum.viaChannel：现金/余额/医保不该出现在商户平台。

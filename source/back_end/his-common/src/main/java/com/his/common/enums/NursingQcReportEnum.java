@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 护理质量台账上报状态枚举（sql/168，落在护理质控指标台账的上报状态列）
@@ -25,18 +26,6 @@ public enum NursingQcReportEnum {
         this.label = label;
     }
 
-    public static NursingQcReportEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (NursingQcReportEnum e : values()) {
-            if (e.code == code) {
-                return e;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
@@ -44,16 +33,31 @@ public enum NursingQcReportEnum {
         return fromCode(code) != null;
     }
 
-    public static String getText(Integer code) {
-        NursingQcReportEnum e = fromCode(code);
-        return e == null ? "未知(" + code + ")" : e.getLabel();
+    public static NursingQcReportEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (NursingQcReportEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
     }
 
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        NursingQcReportEnum item = code == null ? null : fromCode(code);
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        NursingQcReportEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        NursingQcReportEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        NursingQcReportEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

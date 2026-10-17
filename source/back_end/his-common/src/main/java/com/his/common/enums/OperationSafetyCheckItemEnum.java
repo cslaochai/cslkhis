@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -66,14 +67,15 @@ public enum OperationSafetyCheckItemEnum {
         return fromCode(phase, code) != null;
     }
 
-    public static String getText(int phase, Integer code) {
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(int phase, Integer code) {
         OperationSafetyCheckItemEnum e = fromCode(phase, code);
-        return e != null ? e.label : "";
+        return e == null ? StringUtils.EMPTY : e.label;
     }
 
-    public static String labelOrUnknown(int phase, Integer code) {
+    public static String getLabelOrUnknown(int phase, Integer code) {
         OperationSafetyCheckItemEnum e = fromCode(phase, code);
-        return e != null ? e.label : "未知(" + code + ")";
+        return e == null ? (code == null ? "未知" : "未知(" + code + ")") : e.label;
     }
 
     /** 某时段的必核项码值（缺任意一项拒收） */

@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 出勤状态枚举（sql/200，字典 his_duty_status）
@@ -37,36 +38,11 @@ public enum StaffDutyStatusEnum {
         this.label = label;
     }
 
-    public static StaffDutyStatusEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (StaffDutyStatusEnum status : values()) {
-            if (status.code == code) {
-                return status;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
-    }
-
-    public static String getText(Integer code) {
-        StaffDutyStatusEnum status = fromCode(code);
-        return status == null ? "未知(" + code + ")" : status.getLabel();
-    }
-
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        StaffDutyStatusEnum item = code == null ? null : fromCode(code);
-        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 
     /**
@@ -76,11 +52,31 @@ public enum StaffDutyStatusEnum {
         return code != null && code == WORK.code;
     }
 
-    public static String whitelistText() {
-        StringBuilder sb = new StringBuilder();
-        for (StaffDutyStatusEnum status : values()) {
-            sb.append(sb.length() == 0 ? "" : " / ").append(status.code).append("-").append(status.label);
+    public static StaffDutyStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
         }
-        return sb.toString();
+        for (StaffDutyStatusEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        StaffDutyStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        StaffDutyStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        StaffDutyStatusEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

@@ -154,7 +154,7 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
         assertCountAccessible(entity);
         if (entity.getPhase() > CountPhaseEnum.NONE.getCode()) {
             throw new BusinessException("清点单 " + entity.getCountNo() + " 已进入「"
-                    + CountPhaseEnum.labelOrUnknown(entity.getPhase())
+                    + CountPhaseEnum.getLabelOrUnknown(entity.getPhase())
                     + "」，不能再追加明细 —— 新加的那一行的术前基线是后补的，比对没有意义");
         }
         BizOperationCountItem item = new BizOperationCountItem();
@@ -178,8 +178,8 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
         Integer phase = dto.getPhase();
         if (!Objects.equals(entity.getPhase() + 1, phase)) {
             throw new BusinessException("清点单 " + entity.getCountNo() + " 当前处于「"
-                    + CountPhaseEnum.labelOrUnknown(entity.getPhase()) + "」，只能登记「"
-                    + CountPhaseEnum.labelOrUnknown(entity.getPhase() + 1)
+                    + CountPhaseEnum.getLabelOrUnknown(entity.getPhase()) + "」，只能登记「"
+                    + CountPhaseEnum.getLabelOrUnknown(entity.getPhase() + 1)
                     + "」（三阶段必须按顺序推进，跳过 = 关体后才第一次数，那就晚了）");
         }
         List<BizOperationCountItem> items = bizOperationCountItemMapper.selectByCount(entity.getId());
@@ -279,8 +279,8 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
                     + " 阶段已被并发推进，请刷新后按当前阶段重新清点");
         }
         log.info("手术清点 countNo={} 阶段={} 结果={} 核对人={}{}",
-                entity.getCountNo(), CountPhaseEnum.labelOrUnknown(phase),
-                CountResultEnum.labelOrUnknown(result), nurseName,
+                entity.getCountNo(), CountPhaseEnum.getLabelOrUnknown(phase),
+                CountResultEnum.getLabelOrUnknown(result), nurseName,
                 diff ? " 差异：" + String.join("；", diffs) : "");
     }
 
@@ -332,7 +332,7 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
             vo.setSurgeonName(apply.getSurgeonName());
             vo.setPlannedStartTime(apply.getPlannedStartTime());
             vo.setOperationStatus(apply.getOperationStatus());
-            vo.setOperationStatusText(OperationApplyStatusEnum.getText(apply.getOperationStatus()));
+            vo.setOperationStatusText(OperationApplyStatusEnum.getLabel(apply.getOperationStatus()));
         }
         if (entity.getPatientId() != null) {
             PatientMasterVO patient = patientProvider.getPatient(entity.getPatientId());
@@ -341,11 +341,11 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
             }
         }
 
-        vo.setPhaseText(CountPhaseEnum.getText(entity.getPhase()));
-        vo.setStatusText(CountStatusEnum.getText(entity.getStatus()));
-        vo.setBeforeResultText(CountResultEnum.getText(entity.getBeforeResult()));
-        vo.setClosureResultText(CountResultEnum.getText(entity.getClosureResult()));
-        vo.setFinalResultText(CountResultEnum.getText(entity.getFinalResult()));
+        vo.setPhaseText(CountPhaseEnum.getLabel(entity.getPhase()));
+        vo.setStatusText(CountStatusEnum.getLabel(entity.getStatus()));
+        vo.setBeforeResultText(CountResultEnum.getLabel(entity.getBeforeResult()));
+        vo.setClosureResultText(CountResultEnum.getLabel(entity.getClosureResult()));
+        vo.setFinalResultText(CountResultEnum.getLabel(entity.getFinalResult()));
 
         List<BizOperationCountItem> items = bizOperationCountItemMapper.selectByCount(entity.getId());
         List<CountItemVO> vos = new ArrayList<>();
@@ -355,7 +355,7 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
         for (BizOperationCountItem item : items) {
             CountItemVO itemVo = new CountItemVO();
             BeanUtils.copyProperties(item, itemVo);
-            itemVo.setItemCategoryText(CountItemCategoryEnum.getText(item.getItemCategory()));
+            itemVo.setItemCategoryText(CountItemCategoryEnum.getLabel(item.getItemCategory()));
             // ★ 判定基准是术前基线，不是上一段（连续两次都少一块纱布时，"与上段一致"会显示通过）
             if (item.getBeforeQty() != null && item.getFinalQty() != null) {
                 itemVo.setConsistent(Objects.equals(item.getBeforeQty(), item.getFinalQty()));
@@ -383,7 +383,7 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
         if (Integer.valueOf(1).equals(entity.getDiscrepancyFlag())) {
             warn = "存在清点差异（已锁住手术完成登记）：" + textOr(entity.getDiffNote(), "未填写说明");
         } else if (entity.getStatus() == CountStatusEnum.RUNNING.getCode()) {
-            warn = "清点尚未走完三轮（下一步：" + CountPhaseEnum.getText(entity.getPhase() + 1) + "）";
+            warn = "清点尚未走完三轮（下一步：" + CountPhaseEnum.getLabel(entity.getPhase() + 1) + "）";
         }
         vo.setWarningText(warn);
         return vo;

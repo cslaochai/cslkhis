@@ -165,7 +165,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
 
         List<NurseScheduleVO.Nurse> nurses = bizScheduleMapper.selectNurses(ward.getDeptId(), null, NURSE_LIMIT);
         List<NurseScheduleVO.Cell> cells = selectCells(ward, start, end);
-        cells.forEach(c -> c.setScheduleStatusText(StaffDutyStatusEnum.getText(c.getScheduleStatus())));
+        cells.forEach(c -> c.setScheduleStatusText(StaffDutyStatusEnum.getLabel(c.getScheduleStatus())));
         List<NurseScheduleVO.ShiftOption> shifts = bizScheduleMapper.selectNursingShifts();
         shifts.forEach(s -> s.setNight(isNightShift(s.getStartTime())));
 
@@ -197,7 +197,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         List<NurseScheduleVO.Row> records = bizScheduleMapper.selectSchedulePage(page, TextUtil.trimToNull(query.getKeyword()),
                 query.getWardId(), deptId, query.getScheduleStatus(), query.getStartDate(), query.getEndDate(), deptIds);
         for (NurseScheduleVO.Row row : records) {
-            row.setScheduleStatusText(StaffDutyStatusEnum.getText(row.getScheduleStatus()));
+            row.setScheduleStatusText(StaffDutyStatusEnum.getLabel(row.getScheduleStatus()));
         }
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -208,7 +208,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         NurseScheduleVO.Ward ward = requireUnit(dto.getUnitType(), dto.getWardId());
         StaffDutyStatusEnum status = StaffDutyStatusEnum.fromCode(dto.getScheduleStatus());
         if (status == null) {
-            throw new BusinessException("排班状态只允许 " + StaffDutyStatusEnum.whitelistText());
+            throw new BusinessException("排班状态取值不合法");
         }
         NurseScheduleVO.Nurse nurse = bizScheduleMapper.selectNurse(dto.getEmployeeId());
         if (nurse == null) {
@@ -684,7 +684,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
                         && c.getShiftId() != null) {
                     out.add(personWarning(1, "SHIFT_ON_NON_WORK", c.getScheduleDate(), null,
                             employeeId, nurseName, "「" + nurseName + "」" + c.getScheduleDate()
-                                    + " 状态是" + StaffDutyStatusEnum.getText(c.getScheduleStatus())
+                                    + " 状态是" + StaffDutyStatusEnum.getLabel(c.getScheduleStatus())
                                     + "却仍挂着「" + c.getShiftName() + "」，请重新点格修正"));
                 }
             }

@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 医嘱类别枚举
@@ -27,7 +28,17 @@ public enum OrderClassEnum {
         this.label = label;
     }
 
-    public static OrderClassEnum fromCode(int code) {
+    /**
+     * 是否为「药品」类别（药品才受用药安全 CDSS 约束、才要求剂量 / 途径齐全）
+     */
+    public static boolean isDrug(Integer code) {
+        return code != null && code == DRUG.code;
+    }
+
+    public static OrderClassEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
         for (OrderClassEnum item : values()) {
             if (item.code == code) {
                 return item;
@@ -36,27 +47,19 @@ public enum OrderClassEnum {
         return null;
     }
 
-    /**
-     * 是否为「药品」类别（药品才受用药安全 CDSS 约束、才要求剂量 / 途径齐全）
-     */
-    public static boolean isDrug(Integer code) {
-        return code != null && code == DRUG.code;
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        OrderClassEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
     }
 
-    /**
-     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」——
-     * 脏数据应由数据治理流程修复，而非界面伪装。
-     */
-    public static String getText(Integer code) {
-        OrderClassEnum item = code == null ? null : fromCode(code);
-        return item == null ? "" : item.label;
+    public static String getLabel(Integer code, String defaultValue) {
+        OrderClassEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
     }
-    /**
-     * 异常 / 审计 / 合规用码值 → 文案。null 或不在枚举内返回「未知(n)」，
-     * 用于业务异常消息或审计日志，保留原始码值以便排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        OrderClassEnum item = code == null ? null : fromCode(code);
+
+    public static String getLabelOrUnknown(Integer code) {
+        OrderClassEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

@@ -113,7 +113,7 @@ public class QualityServiceImpl implements QualityService {
                     .collect(Collectors.toList());
             QualityDimensionVO dv = new QualityDimensionVO();
             dv.setDimension(d.name());
-            dv.setDimensionText(d.getText());
+            dv.setDimensionText(d.getLabel());
             dv.setDescription(d.getDescription());
             dv.setRuleCount(rules.size());
             dv.setRules(rules);
@@ -137,7 +137,7 @@ public class QualityServiceImpl implements QualityService {
 
     @Override
     public List<QualityRuleVO> getRuleList(String dimension) {
-        if (TextUtil.hasText(dimension) && QualityDimension.parse(dimension) == null) {
+        if (TextUtil.hasText(dimension) && QualityDimension.fromCode(dimension) == null) {
             throw new BusinessException("未知的数据质量维度：" + dimension);
         }
         Map<String, QualityRuleTotalVO> totals = loadTotals();
@@ -145,7 +145,7 @@ public class QualityServiceImpl implements QualityService {
         if (!TextUtil.hasText(dimension)) {
             return list;
         }
-        QualityDimension d = QualityDimension.parse(dimension);
+        QualityDimension d = QualityDimension.fromCode(dimension);
         return list.stream().filter(r -> d.name().equals(r.getDimension())).collect(Collectors.toList());
     }
 
@@ -155,7 +155,7 @@ public class QualityServiceImpl implements QualityService {
         for (QualityDimension d : QualityDimension.values()) {
             QualityDimensionSelectListVO item = new QualityDimensionSelectListVO();
             item.setCode(d.name());
-            item.setText(d.getText());
+            item.setText(d.getLabel());
             item.setDescription(d.getDescription());
             item.setRuleCount((int) Arrays.stream(QualityRule.values()).filter(r -> r.getDimension() == d).count());
             list.add(item);
@@ -169,13 +169,13 @@ public class QualityServiceImpl implements QualityService {
         QualityRule only = null;
         QualityDimension dim = null;
         if (TextUtil.hasText(dto.getRuleCode())) {
-            only = QualityRule.parse(dto.getRuleCode());
+            only = QualityRule.fromCode(dto.getRuleCode());
             if (only == null) {
                 throw new BusinessException("未知的数据质量规则：" + dto.getRuleCode());
             }
         }
         if (TextUtil.hasText(dto.getDimension())) {
-            dim = QualityDimension.parse(dto.getDimension());
+            dim = QualityDimension.fromCode(dto.getDimension());
             if (dim == null) {
                 throw new BusinessException("未知的数据质量维度：" + dto.getDimension());
             }
@@ -234,7 +234,7 @@ public class QualityServiceImpl implements QualityService {
             }
         }
         for (String code : map.keySet()) {
-            if (QualityRule.parse(code) == null) {
+            if (QualityRule.fromCode(code) == null) {
                 throw new BusinessException("分母查询返回了未定义的规则码：" + code);
             }
         }
@@ -265,9 +265,9 @@ public class QualityServiceImpl implements QualityService {
         v.setRuleCode(rule.getCode());
         v.setRuleName(rule.getName());
         v.setDimension(rule.getDimension().name());
-        v.setDimensionText(rule.getDimension().getText());
+        v.setDimensionText(rule.getDimension().getLabel());
         v.setSeverity(rule.getSeverity().getCode());
-        v.setSeverityText(ClinicalRuleErrorLevelEnum.getText(rule.getSeverity().getCode()));
+        v.setSeverityText(ClinicalRuleErrorLevelEnum.getLabel(rule.getSeverity().getCode()));
         v.setSuggestion(rule.getSuggestion());
         v.setCheckedTotal(checked);
         if (!TextUtil.hasText(v.getTableName())) {
@@ -297,9 +297,9 @@ public class QualityServiceImpl implements QualityService {
         vo.setRuleCode(r.getCode());
         vo.setRuleName(r.getName());
         vo.setDimension(r.getDimension().name());
-        vo.setDimensionText(r.getDimension().getText());
+        vo.setDimensionText(r.getDimension().getLabel());
         vo.setSeverity(r.getSeverity().getCode());
-        vo.setSeverityText(ClinicalRuleErrorLevelEnum.getText(r.getSeverity().getCode()));
+        vo.setSeverityText(ClinicalRuleErrorLevelEnum.getLabel(r.getSeverity().getCode()));
         vo.setTableName(r.getTableName());
         vo.setCheckedDesc(r.getCheckedDesc());
         vo.setSuggestion(r.getSuggestion());

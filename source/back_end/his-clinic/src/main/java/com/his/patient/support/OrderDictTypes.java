@@ -31,7 +31,7 @@ public final class OrderDictTypes {
      * 不回落到看似合法的类型名，也不暴露「未知(type)」—— 界面只说"没有文案"，脏值交由数据治理发现。
      */
     public static String text(String dictType) {
-        return OrderDictTypeEnum.getText(dictType);
+        return OrderDictTypeEnum.getLabel(dictType);
     }
 
     /**
@@ -39,7 +39,7 @@ public final class OrderDictTypes {
      * 绝不用于前端展示。
      */
     public static String labelOrUnknown(String dictType) {
-        return OrderDictTypeEnum.labelOrUnknown(dictType);
+        return OrderDictTypeEnum.getLabelOrUnknown(dictType);
     }
 
     /**

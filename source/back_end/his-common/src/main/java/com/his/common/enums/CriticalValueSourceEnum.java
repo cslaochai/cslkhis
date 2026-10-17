@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 危急值触发来源枚举（RULE-规则自动识别）。
@@ -21,18 +22,6 @@ public enum CriticalValueSourceEnum {
         this.label = label;
     }
 
-    public static CriticalValueSourceEnum fromCode(String code) {
-        if (code == null) {
-            return null;
-        }
-        for (CriticalValueSourceEnum item : values()) {
-            if (item.code.equals(code)) {
-                return item;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 与空串不合法）
      */
@@ -40,22 +29,31 @@ public enum CriticalValueSourceEnum {
         return code != null && !code.isEmpty() && fromCode(code) != null;
     }
 
-    /**
-     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案。
-     */
-    public static String getText(String code) {
-        CriticalValueSourceEnum item = fromCode(code);
-        return item == null ? "" : item.label;
+    public static CriticalValueSourceEnum fromCode(String code) {
+        if (null == code) {
+            return null;
+        }
+        for (CriticalValueSourceEnum item : values()) {
+            if (code.equals(item.code)) {
+                return item;
+            }
+        }
+        return null;
     }
 
-    /**
-     * 异常 / 审计用码值 → 文案。脏值保留原始码值，绝不喂前端展示。
-     */
-    public static String labelOrUnknown(String code) {
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(String code) {
         CriticalValueSourceEnum item = fromCode(code);
-        if (item != null) {
-            return item.label;
-        }
-        return code == null ? "未知" : "未知(" + code + ")";
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(String code, String defaultValue) {
+        CriticalValueSourceEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(String code) {
+        CriticalValueSourceEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

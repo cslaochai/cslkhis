@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 药品库存地点枚举（sql/154）
@@ -25,18 +26,6 @@ public enum StockRoomEnum {
         this.label = label;
     }
 
-    public static StockRoomEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (StockRoomEnum room : values()) {
-            if (room.code == code) {
-                return room;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
@@ -44,16 +33,31 @@ public enum StockRoomEnum {
         return fromCode(code) != null;
     }
 
-    public static String getText(Integer code) {
-        StockRoomEnum room = fromCode(code);
-        return room == null ? "未知(" + code + ")" : room.getLabel();
+    public static StockRoomEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (StockRoomEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
     }
 
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        StockRoomEnum item = code == null ? null : fromCode(code);
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        StockRoomEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        StockRoomEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        StockRoomEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

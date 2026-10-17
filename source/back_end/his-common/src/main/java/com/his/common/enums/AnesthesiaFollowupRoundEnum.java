@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 麻醉随访轮次（1-术后即刻 2-术后24h 3-术后48h；其余轮次按「第N轮·追加随访」兜底）。
@@ -21,12 +22,12 @@ public enum AnesthesiaFollowupRoundEnum {
     }
 
     public static AnesthesiaFollowupRoundEnum fromCode(Integer code) {
-        if (code == null) {
+        if (null == code) {
             return null;
         }
-        for (AnesthesiaFollowupRoundEnum e : values()) {
-            if (e.code == code) {
-                return e;
+        for (AnesthesiaFollowupRoundEnum item : values()) {
+            if (item.code == code) {
+                return item;
             }
         }
         return null;
@@ -37,21 +38,26 @@ public enum AnesthesiaFollowupRoundEnum {
     }
 
     /**
-     * 码值→展示文案。1~3 取 label；超出枚举的轮次按「第N轮·追加随访」兜底（与原 roundText 一致）。
+     * 返回label值
      */
-    public static String getText(Integer roundNo) {
-        if (roundNo == null) {
-            return "—";
-        }
-        AnesthesiaFollowupRoundEnum e = fromCode(roundNo);
-        return e != null ? e.label : "第" + roundNo + "轮·追加随访";
+    public static String getLabel(Integer code, String defaultValue) {
+        AnesthesiaFollowupRoundEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
     }
 
-    public static String labelOrUnknown(Integer roundNo) {
-        if (roundNo == null) {
-            return "未知";
+    /**
+     * 返回label值。1~3 取 label；超出枚举的轮次是「追加随访」这一真实档位，按「第N轮·追加随访」渲染。
+     */
+    public static String getLabel(Integer code) {
+        if (null == code) {
+            return "—";
         }
-        AnesthesiaFollowupRoundEnum e = fromCode(roundNo);
-        return e != null ? e.label : "未知(" + roundNo + ")";
+        AnesthesiaFollowupRoundEnum item = fromCode(code);
+        return item == null ? "第" + code + "轮·追加随访" : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        AnesthesiaFollowupRoundEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

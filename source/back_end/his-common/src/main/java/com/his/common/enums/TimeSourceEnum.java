@@ -1,5 +1,7 @@
 package com.his.common.enums;
 
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * 签名时刻的时间来源。
  */
@@ -10,39 +12,19 @@ public enum TimeSourceEnum {
     TSA(3, "第三方可信时间戳");
 
     private final int code;
-    private final String text;
+    private final String label;
 
-    TimeSourceEnum(int code, String text) {
+    TimeSourceEnum(int code, String label) {
         this.code = code;
-        this.text = text;
-    }
-
-    public static TimeSourceEnum parse(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (TimeSourceEnum t : values()) {
-            if (t.code == code) {
-                return t;
-            }
-        }
-        return null;
-    }
-
-    public static String textOf(Integer code) {
-        TimeSourceEnum t = parse(code);
-        if (t != null) {
-            return t.text;
-        }
-        return code == null ? "—" : "未知(" + code + ")";
+        this.label = label;
     }
 
     public int getCode() {
         return code;
     }
 
-    public String getText() {
-        return text;
+    public String getLabel() {
+        return label;
     }
 
     /**
@@ -50,5 +32,30 @@ public enum TimeSourceEnum {
      */
     public boolean trusted() {
         return this == HOSPITAL_NTP || this == TSA;
+    }
+
+    public static TimeSourceEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (TimeSourceEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    public static String getLabel(Integer code) {
+        if (null == code) {
+            return "—";
+        }
+        TimeSourceEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        TimeSourceEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
     }
 }

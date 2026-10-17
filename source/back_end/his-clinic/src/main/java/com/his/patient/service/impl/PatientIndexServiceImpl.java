@@ -30,7 +30,6 @@ import com.his.patient.support.PatientProfileFields;
 import com.his.patient.vo.*;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
-import io.netty.util.internal.StringUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -39,6 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 患者主索引服务实现（P5.1 EMPI）
@@ -113,7 +113,7 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
         vo.setId(p.getId());
         vo.setPatientNo(p.getPatientNo());
         vo.setPatientName(p.getPatientName());
-        vo.setGenderText(SysGenderEnum.getText(p.getGender()));
+        vo.setGenderText(SysGenderEnum.getLabel(p.getGender()));
         vo.setIdCard(p.getIdCard());
         vo.setPhone(p.getPhone());
         vo.setMergeStatus(p.getMergeStatus());
@@ -163,7 +163,7 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
                 }
                 PatientDuplicateGroupVO g = new PatientDuplicateGroupVO();
                 g.setMatchLevel(real);
-                g.setMatchLevelText(PatientMatchLevelEnum.getLabel(real, StringUtil.EMPTY_STRING));
+                g.setMatchLevelText(PatientMatchLevelEnum.getLabel(real, StringUtils.EMPTY));
                 g.setMatchEvidence(PatientMatchRules.matchSnapshot(real, head, members.get(1)));
                 g.setGroupKey(e.getKey());
                 g.setStrong(PatientMatchRules.isStrong(real));
@@ -427,7 +427,7 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
         for (BizPatient p : patients) {
             PatientIndexVO vo = new PatientIndexVO();
             BeanUtils.copyProperties(p, vo);
-            vo.setGenderText(SysGenderEnum.getText(p.getGender()));
+            vo.setGenderText(SysGenderEnum.getLabel(p.getGender()));
 
             PatientProfileFields.ProfileScore sc = PatientProfileFields.score(p);
             vo.setCompleteCount(sc.completeCount());

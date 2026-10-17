@@ -1,7 +1,7 @@
 package com.his.common.enums;
 
-import io.netty.util.internal.StringUtil;
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 患者重复档案例档案匹配分级（P5.1 EMPI）
@@ -62,6 +62,6 @@ public enum PatientMatchLevelEnum {
      */
     public static String getLabel(Integer code) {
         PatientMatchLevelEnum item = fromCode(code);
-        return item == null ? StringUtil.EMPTY_STRING : item.label;
+        return item == null ? StringUtils.EMPTY : item.label;
     }
 }

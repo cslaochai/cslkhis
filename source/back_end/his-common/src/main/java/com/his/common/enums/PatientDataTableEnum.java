@@ -4,6 +4,7 @@ import lombok.Getter;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * EMPI 统计业务数据量涉及的源表（标识 → 中文名）。
@@ -30,39 +31,8 @@ public enum PatientDataTableEnum {
         this.label = label;
     }
 
-    public static PatientDataTableEnum fromCode(String code) {
-        if (code == null) {
-            return null;
-        }
-        for (PatientDataTableEnum e : values()) {
-            if (e.code.equals(code)) {
-                return e;
-            }
-        }
-        return null;
-    }
-
     public static boolean isValid(String code) {
         return fromCode(code) != null;
-    }
-
-    public static String getText(String code) {
-        if (code == null) {
-            return "";
-        }
-        PatientDataTableEnum e = fromCode(code);
-        return e != null ? e.label : "";
-    }
-
-    /**
-     * 码值→异常 / 审计文案：未知标识原样报出「未知(key)」，便于排查（绝不用于前端展示）。
-     */
-    public static String labelOrUnknown(String code) {
-        if (code == null) {
-            return "未知";
-        }
-        PatientDataTableEnum e = fromCode(code);
-        return e != null ? e.label : "未知(" + code + ")";
     }
 
     public static Map<String, String> all() {
@@ -71,5 +41,33 @@ public enum PatientDataTableEnum {
             m.put(e.code, e.label);
         }
         return m;
+    }
+
+    public static PatientDataTableEnum fromCode(String code) {
+        if (null == code) {
+            return null;
+        }
+        for (PatientDataTableEnum item : values()) {
+            if (code.equals(item.code)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(String code) {
+        PatientDataTableEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(String code, String defaultValue) {
+        PatientDataTableEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(String code) {
+        PatientDataTableEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

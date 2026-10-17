@@ -4,6 +4,7 @@ import lombok.Getter;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 患者档案分组覆盖键（同时有两份存储的字段：过敏史 / 既往病史 / 联系人）。
@@ -23,36 +24,8 @@ public enum PatientProfileCoverageEnum {
         this.label = label;
     }
 
-    public static PatientProfileCoverageEnum fromCode(String code) {
-        if (code == null) {
-            return null;
-        }
-        for (PatientProfileCoverageEnum e : values()) {
-            if (e.code.equals(code)) {
-                return e;
-            }
-        }
-        return null;
-    }
-
     public static boolean isValid(String code) {
         return fromCode(code) != null;
-    }
-
-    public static String getText(String code) {
-        if (code == null) {
-            return "";
-        }
-        PatientProfileCoverageEnum e = fromCode(code);
-        return e != null ? e.label : "";
-    }
-
-    public static String labelOrUnknown(String code) {
-        if (code == null) {
-            return "未知";
-        }
-        PatientProfileCoverageEnum e = fromCode(code);
-        return e != null ? e.label : "未知(" + code + ")";
     }
 
     public static Map<String, String> all() {
@@ -61,5 +34,33 @@ public enum PatientProfileCoverageEnum {
             m.put(e.code, e.label);
         }
         return m;
+    }
+
+    public static PatientProfileCoverageEnum fromCode(String code) {
+        if (null == code) {
+            return null;
+        }
+        for (PatientProfileCoverageEnum item : values()) {
+            if (code.equals(item.code)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(String code) {
+        PatientProfileCoverageEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(String code, String defaultValue) {
+        PatientProfileCoverageEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(String code) {
+        PatientProfileCoverageEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

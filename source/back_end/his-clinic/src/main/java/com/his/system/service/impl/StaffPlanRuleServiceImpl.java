@@ -92,13 +92,13 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
             StaffPlanRuleVO vo = new StaffPlanRuleVO();
             vo.setId(row.getId());
             vo.setOrgType(row.getOrgType());
-            vo.setOrgTypeText(OrgUnitTypeEnum.getText(row.getOrgType()));
+            vo.setOrgTypeText(OrgUnitTypeEnum.getLabel(row.getOrgType()));
             vo.setOrgId(row.getOrgId());
             vo.setOrgName(unitNameOf(row.getOrgType(), row.getOrgId()));
             vo.setShiftId(row.getShiftId());
             vo.setShiftName(shiftNameOf(row.getShiftId(), shift));
             vo.setStaffType(row.getStaffType());
-            vo.setStaffTypeName(StaffTypeEnum.getText(row.getStaffType()));
+            vo.setStaffTypeName(StaffTypeEnum.getLabel(row.getStaffType()));
             vo.setMinStaff(row.getMinStaff());
             vo.setMaxStaff(row.getMaxStaff());
             vo.setMaxWeekHours(row.getMaxWeekHours());
@@ -128,7 +128,7 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
         rule.setRemark(dto.getRemark());
 
         if (OrgUnitTypeEnum.fromCode(rule.getOrgType()) == null) {
-            throw new BusinessException("排班单元类型只允许 " + OrgUnitTypeEnum.whitelistText());
+            throw new BusinessException("排班单元类型取值不合法");
         }
         StaffTypeEnum.assertValid(rule.getStaffType());
         if (rule.getMinStaff() < 0 || rule.getMaxStaff() < 0) {
@@ -195,7 +195,7 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
         long actual = countOnDuty(orgType, orgId, staffType, date, rule);
         String unitText = unitNameOf(orgType, orgId);
         String shiftText = shiftNameOf(rule.getShiftId(), null);
-        String postText = StaffTypeEnum.getText(staffType);
+        String postText = StaffTypeEnum.getLabel(staffType);
         if (enforceMin && rule.getMinStaff() != null && rule.getMinStaff() > 0 && actual < rule.getMinStaff()) {
             throw new BusinessException("「" + unitText + "」" + date + " " + shiftText + " 的"
                     + postText + "最低需在岗 " + rule.getMinStaff() + " 人，现在只剩 " + actual
@@ -434,11 +434,11 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
         }
         // D-业务规则：非空与取值合法性（0 是全院占位值）混写在一个条件里，且仅当单元类型非全院才必填，DTO 注解无法表达，保留
         if (orgId == null || orgId == 0L) {
-            throw new BusinessException("请选择" + OrgUnitTypeEnum.getText(orgType));
+            throw new BusinessException("请选择" + OrgUnitTypeEnum.getLabel(orgType));
         }
         String name = unitNameOf(orgType, orgId);
         if (name == null) {
-            throw new BusinessException(OrgUnitTypeEnum.getText(orgType) + "不存在或已停用");
+            throw new BusinessException(OrgUnitTypeEnum.getLabel(orgType) + "不存在或已停用");
         }
         return name;
     }

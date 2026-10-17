@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 感染监测观察对象（1-医生 2-护士 3-工勤/其他）。
@@ -23,7 +24,7 @@ public enum InfectionObsObjectEnum {
     }
 
     public static InfectionObsObjectEnum fromCode(Integer code) {
-        if (code == null) {
+        if (null == code) {
             return null;
         }
         for (InfectionObsObjectEnum item : values()) {
@@ -34,11 +35,13 @@ public enum InfectionObsObjectEnum {
         return null;
     }
 
-    /**
-     * 展示用码值 → 文案。脏数据返回 null，由调用侧决定兜底，不回落到合法文案。
-     */
-    public static String getText(Integer code) {
+    public static String getLabel(Integer code) {
         InfectionObsObjectEnum item = fromCode(code);
-        return item == null ? null : item.label;
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        InfectionObsObjectEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
     }
 }

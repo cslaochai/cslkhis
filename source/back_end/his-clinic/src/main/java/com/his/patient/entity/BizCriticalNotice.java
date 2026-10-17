@@ -198,13 +198,13 @@ public class BizCriticalNotice extends BaseEntity {
         if (status == null) {
             return "—";
         }
-        return NoticeStatusEnum.getText(status);
+        return NoticeStatusEnum.getLabel(status);
     }
 
     public static String typeText(Integer type) {
         if (type == null) {
             return "—";
         }
-        return NoticeTypeEnum.getText(type);
+        return NoticeTypeEnum.getLabel(type);
     }
 }

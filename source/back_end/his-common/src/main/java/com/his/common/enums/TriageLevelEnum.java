@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 门诊分诊等级（区别于急诊 I~IV 级）。
@@ -21,38 +22,35 @@ public enum TriageLevelEnum {
         this.desc = desc;
     }
 
-    public static TriageLevelEnum parse(Integer code) {
-        if (code == null) {
+    public static boolean isValid(Integer code) {
+        return fromCode(code) != null;
+    }
+
+    public static TriageLevelEnum fromCode(Integer code) {
+        if (null == code) {
             return null;
         }
         for (TriageLevelEnum item : values()) {
-            if (item.code.equals(code)) {
+            if (code.equals(item.code)) {
                 return item;
             }
         }
         return null;
     }
 
-    public static boolean isValid(Integer code) {
-        return parse(code) != null;
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        TriageLevelEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.desc;
     }
 
-    /**
-     * 码值→展示文案。null 或不在枚举内（脏数据）返回空串 ""，绝不返回 null、不回落合法文案。
-     */
-    public static String getText(Integer code) {
-        TriageLevelEnum item = parse(code);
-        return item != null ? item.desc : "";
+    public static String getLabel(Integer code, String defaultValue) {
+        TriageLevelEnum item = fromCode(code);
+        return item == null ? defaultValue : item.desc;
     }
 
-    /**
-     * 码值→异常/审计文案。null 或不在枚举内返回「未知(n)」，保留原始码值以便排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        if (code == null) {
-            return "未知";
-        }
-        TriageLevelEnum item = parse(code);
-        return item != null ? item.desc : "未知(" + code + ")";
+    public static String getLabelOrUnknown(Integer code) {
+        TriageLevelEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.desc;
     }
 }

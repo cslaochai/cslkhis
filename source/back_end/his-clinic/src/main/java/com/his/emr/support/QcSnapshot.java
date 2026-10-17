@@ -218,6 +218,6 @@ public class QcSnapshot {
         if (source == QcRecordSourceEnum.OUTPATIENT) {
             return "门诊病历";
         }
-        return recordType == null ? "住院文书" : InpatientRecordTypeEnum.getText(recordType);
+        return recordType == null ? "住院文书" : InpatientRecordTypeEnum.getLabel(recordType);
     }
 }

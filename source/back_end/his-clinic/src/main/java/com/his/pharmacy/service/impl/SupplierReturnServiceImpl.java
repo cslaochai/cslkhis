@@ -78,7 +78,7 @@ public class SupplierReturnServiceImpl extends ServiceImpl<BizDrugSupplierReturn
         }
         fillText(vo);
         List<SupplierReturnItemVO> items = bizDrugSupplierReturnItemMapper.selectByReturnId(id);
-        items.forEach(i -> i.setStockRoomText(StockRoomEnum.getText(i.getStockRoom())));
+        items.forEach(i -> i.setStockRoomText(StockRoomEnum.getLabel(i.getStockRoom())));
         vo.setItems(items);
         List<BizDrugStockLogVO> logs = bizDrugStockLogMapper.selectBySource(DrugStockSourceTypeEnum.SUPPLIER_RETURN.getCode(), id);
         logs.forEach(BizDrugStockLogVO::fillTexts);
@@ -209,7 +209,7 @@ public class SupplierReturnServiceImpl extends ServiceImpl<BizDrugSupplierReturn
         SupplierReturnStatusEnum status = SupplierReturnStatusEnum.fromCode(head.getStatus());
         if (status != SupplierReturnStatusEnum.PENDING && status != SupplierReturnStatusEnum.CANCELLED) {
             throw new BusinessException("只有「待退货」或「已作废」的退货单可以删除（当前："
-                    + SupplierReturnStatusEnum.getText(head.getStatus()) + "）；已退货药已出库，是留档凭证不能抹");
+                    + SupplierReturnStatusEnum.getLabel(head.getStatus()) + "）；已退货药已出库，是留档凭证不能抹");
         }
         bizDrugSupplierReturnItemMapper.purgeByReturnId(head.getId());
         if (bizDrugSupplierReturnMapper.purgeById(head.getId()) != 1) {
@@ -306,10 +306,10 @@ public class SupplierReturnServiceImpl extends ServiceImpl<BizDrugSupplierReturn
         String hint = Objects.equals(head.getStatus(), SupplierReturnStatusEnum.DONE.getCode())
                 ? "；药已出库，只能按正常采购入库把货补回来" : "";
         throw new BusinessException("当前状态不能" + action + "（现在："
-                + SupplierReturnStatusEnum.getText(head.getStatus()) + "）" + hint);
+                + SupplierReturnStatusEnum.getLabel(head.getStatus()) + "）" + hint);
     }
 
     private void fillText(SupplierReturnVO vo) {
-        vo.setStatusText(SupplierReturnStatusEnum.getText(vo.getStatus()));
+        vo.setStatusText(SupplierReturnStatusEnum.getLabel(vo.getStatus()));
     }
 }

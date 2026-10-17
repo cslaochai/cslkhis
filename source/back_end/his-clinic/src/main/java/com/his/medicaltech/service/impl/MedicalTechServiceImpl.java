@@ -281,7 +281,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         if (record.getRecordStatus() != null
                 && record.getRecordStatus() >= InsRecordStatusEnum.RESULTED.getCode()) {
             throw new BusinessException("该检查已是「"
-                    + InsRecordStatusEnum.getByCode(record.getRecordStatus()).getDesc()
+                    + InsRecordStatusEnum.fromCode(record.getRecordStatus()).getDesc()
                     + "」，不要重复提交拍片完成");
         }
         record.setExecuteTime(LocalDateTime.now());
@@ -699,7 +699,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         try {
             return emrSignatureService.sign(cmd);
         } catch (BusinessException e) {
-            throw new BusinessException(bizLabel + " " + bizNo + " " + scene.getText() + "失败：" + e.getMessage());
+            throw new BusinessException(bizLabel + " " + bizNo + " " + scene.getLabel() + "失败：" + e.getMessage());
         }
     }
 
@@ -1036,7 +1036,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         if (record.getRecordStatus() != null
                 && record.getRecordStatus() >= InsRecordStatusEnum.CHECKING.getCode()) {
             throw new BusinessException("检查记录 " + record.getRecordNo() + " 已开始执行（"
-                    + InsRecordStatusEnum.getByCode(record.getRecordStatus()).getDesc()
+                    + InsRecordStatusEnum.fromCode(record.getRecordStatus()).getDesc()
                     + "），不允许退费；如确需取消请走检查作废流程");
         }
         this.update(new LambdaUpdateWrapper<BizInspectionRecord>()
@@ -1068,7 +1068,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         if (record.getRecordStatus() != null
                 && record.getRecordStatus() >= LabRecordStatusEnum.SAMPLED.getCode()) {
             throw new BusinessException("检验记录 " + record.getRecordNo() + " 已开始执行（"
-                    + LabRecordStatusEnum.getByCode(record.getRecordStatus()).getDescription()
+                    + LabRecordStatusEnum.fromCode(record.getRecordStatus()).getDescription()
                     + "），不允许退费；如确需取消请走检验作废流程");
         }
         bizLaboratoryRecordMapper.update(null, new LambdaUpdateWrapper<BizLaboratoryRecord>()

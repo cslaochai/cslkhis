@@ -83,7 +83,7 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
      * 状态不对时的统一文案：把当前状态名字打出来，否则用户只知道"不允许"、不知道下一步该点哪。
      */
     private static String statusError(String action, Integer applyStatus) {
-        RefundApplyStatusEnum current = RefundApplyStatusEnum.getByCode(applyStatus);
+        RefundApplyStatusEnum current = RefundApplyStatusEnum.fromCode(applyStatus);
         return "当前状态是「" + (current == null ? applyStatus : current.getDesc()) + "」，不允许" + action
                 + "（审核只认待审核、执行只认审核通过、作废只认待审核或审核通过）";
     }

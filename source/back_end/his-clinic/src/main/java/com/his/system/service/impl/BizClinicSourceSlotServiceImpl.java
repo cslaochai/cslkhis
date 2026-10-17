@@ -211,7 +211,7 @@ public class BizClinicSourceSlotServiceImpl extends ServiceImpl<BizClinicSourceS
         // 段号源只对医生出诊班有意义：出勤岗没有号源池，与加号同一道闸
         if (!StaffTypeEnum.hasSource(schedule.getStaffType())) {
             throw new BusinessException("只有医生出诊排班能调整号源："
-                    + StaffTypeEnum.getText(schedule.getStaffType()) + "岗位是出勤排班，不对外放号");
+                    + StaffTypeEnum.getLabel(schedule.getStaffType()) + "岗位是出勤排班，不对外放号");
         }
 
         Map<Long, BizClinicSourceSlot> byId = new HashMap<>();

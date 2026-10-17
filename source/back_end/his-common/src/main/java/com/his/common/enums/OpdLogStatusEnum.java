@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 门诊日志的「就诊状态」——用户的筛选口径，不等于队列状态。
@@ -81,43 +82,11 @@ public enum OpdLogStatusEnum {
         };
     }
 
-    public static OpdLogStatusEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (OpdLogStatusEnum status : values()) {
-            if (status.code == code) {
-                return status;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
-    }
-
-    /**
-     * 码值→展示文案。null 或不在枚举内（脏数据）返回空串 ""，绝不返回 null、不回落合法文案
-     * （脏数据行由前端依据 {@code queueStatus}/logStatus 原值渲染「未知(n)」）。
-     */
-    public static String getText(Integer code) {
-        OpdLogStatusEnum status = fromCode(code);
-        return status != null ? status.label : "";
-    }
-
-    /**
-     * 码值→异常/审计文案。null 或不在枚举内返回「未知(n)」，保留原始码值以便排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        if (code == null) {
-            return "未知";
-        }
-        OpdLogStatusEnum status = fromCode(code);
-        return status != null ? status.label : "未知(" + code + ")";
     }
 
     /**
@@ -137,5 +106,33 @@ public enum OpdLogStatusEnum {
 
     public static Set<Integer> allCodes() {
         return Arrays.stream(values()).map(OpdLogStatusEnum::getCode).collect(Collectors.toSet());
+    }
+
+    public static OpdLogStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (OpdLogStatusEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        OpdLogStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        OpdLogStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        OpdLogStatusEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

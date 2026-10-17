@@ -32,7 +32,7 @@ public class InpatientRecordSignCoverageProviderImpl implements SignCoverageProv
                 .eq(BizInpatientRecord::getSignStatus, ObjectSignStatusEnum.INVALIDATED.getCode()));
         long pending = bizInpatientRecordMapper.selectCount(new LambdaQueryWrapper<BizInpatientRecord>()
                 .eq(BizInpatientRecord::getSignStatus, ObjectSignStatusEnum.UNSIGNED.getCode()));
-        return new SignCoverage(SignBizTypeEnum.INPATIENT_RECORD.getCode(), SignBizTypeEnum.INPATIENT_RECORD.getText(),
+        return new SignCoverage(SignBizTypeEnum.INPATIENT_RECORD.getCode(), SignBizTypeEnum.INPATIENT_RECORD.getLabel(),
                 total, signed, pending, invalidated);
     }
 }

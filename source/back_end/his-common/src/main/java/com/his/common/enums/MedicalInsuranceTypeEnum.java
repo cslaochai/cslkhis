@@ -34,7 +34,7 @@ public enum MedicalInsuranceTypeEnum {
      * @param patientInsuranceType 患者档案中的费别原文
      * @return 归一后的枚举；空串或无法识别返回 null（调用方按无医保/自费处理）
      */
-    public static MedicalInsuranceTypeEnum parse(String patientInsuranceType) {
+    public static MedicalInsuranceTypeEnum fromCode(String patientInsuranceType) {
         if (patientInsuranceType == null || patientInsuranceType.trim().isEmpty()) {
             return null;
         }

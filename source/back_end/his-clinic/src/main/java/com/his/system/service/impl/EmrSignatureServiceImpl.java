@@ -114,16 +114,16 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
     @Override
     public SignatureVO sign(SignCommandDTO cmd) {
         validateCommand(cmd);
-        SignSceneEnum scene = SignSceneEnum.parse(cmd.getSignScene());
+        SignSceneEnum scene = SignSceneEnum.fromCode(cmd.getSignScene());
         if (scene == null) {
             throw new BusinessException("签名场景取值不合法：" + cmd.getSignScene());
         }
-        SignBizTypeEnum bizType = SignBizTypeEnum.parse(cmd.getBizType());
+        SignBizTypeEnum bizType = SignBizTypeEnum.fromCode(cmd.getBizType());
         SignableContentProvider provider = providerOf(cmd.getBizType());
 
         SignSubject subject = provider.load(cmd.getBizId());
         if (subject == null) {
-            throw new BusinessException("签名对象不存在（" + bizType.getText() + " id=" + cmd.getBizId() + "）");
+            throw new BusinessException("签名对象不存在（" + bizType.getLabel() + " id=" + cmd.getBizId() + "）");
         }
         String block = provider.blockReason(subject, scene);
         if (TextUtil.hasText(block)) {
@@ -139,7 +139,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
             try {
                 signatureStoreService.insertAndAnchor(entity, provider, scene, cert);
                 log.info("签名成功 signNo={} {} id={} 场景={} 签名人={} 证书={} 摘要={}",
-                        entity.getSignNo(), bizType.getText(), subject.bizId(), scene.getText(),
+                        entity.getSignNo(), bizType.getLabel(), subject.bizId(), scene.getLabel(),
                         entity.getSignerName(), entity.getCertNo(), shortDigest(entity.getContentDigest()));
                 return toVO(entity, true);
             } catch (DuplicateKeyException e) {
@@ -232,21 +232,21 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         vo.setSignId(sig.getId());
         vo.setSignNo(sig.getSignNo());
         vo.setBizType(sig.getBizType());
-        vo.setBizTypeText(SignBizTypeEnum.textOf(sig.getBizType()));
+        vo.setBizTypeText(SignBizTypeEnum.getLabel(sig.getBizType()));
         vo.setBizId(sig.getBizId());
         vo.setBizNo(sig.getBizNo());
         vo.setPatientName(sig.getPatientName());
         vo.setSignScene(sig.getSignScene());
-        vo.setSignSceneText(SignSceneEnum.textOf(sig.getSignScene()));
+        vo.setSignSceneText(SignSceneEnum.getLabel(sig.getSignScene()));
         vo.setChainNo(sig.getChainNo());
         vo.setSignerName(sig.getSignerName());
         vo.setSignerDeptName(sig.getSignerDeptName());
         vo.setCertNo(sig.getCertNo());
         vo.setSignedTime(sig.getSignedTime());
         vo.setTimeSource(sig.getTimeSource());
-        vo.setTimeSourceText(TimeSourceEnum.textOf(sig.getTimeSource()));
+        vo.setTimeSourceText(TimeSourceEnum.getLabel(sig.getTimeSource()));
         vo.setSignStatus(sig.getSignStatus());
-        vo.setSignStatusText(SignStatusEnum.textOf(sig.getSignStatus()));
+        vo.setSignStatusText(SignStatusEnum.getLabel(sig.getSignStatus()));
         vo.setDigestAtSign(sig.getContentDigest());
         vo.setCheckedAt(TimeUtil.nowSeconds());
 
@@ -276,7 +276,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         String objectMissing = null;
         SignableContentProvider provider = findProvider(sig.getBizType());
         if (provider == null) {
-            objectMissing = "签名对象类型「" + SignBizTypeEnum.textOf(sig.getBizType())
+            objectMissing = "签名对象类型「" + SignBizTypeEnum.getLabel(sig.getBizType())
                     + "」在当前部署里没有内容提供者（可能是模块未加载），无法比对内容";
         } else {
             SignSubject now = provider.load(sig.getBizId());
@@ -409,7 +409,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
             }
         }
         log.info("作废签名 signNo={} 对象={}:{} 原因={} 操作人={}",
-                sig.getSignNo(), SignBizTypeEnum.textOf(sig.getBizType()), sig.getBizId(), reason, operatorName);
+                sig.getSignNo(), SignBizTypeEnum.getLabel(sig.getBizType()), sig.getBizId(), reason, operatorName);
 
         BizEmrSignature after = bizEmrSignatureMapper.selectById(signId);
         return toVO(after, true);
@@ -472,20 +472,20 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
 
     @Override
     public ObjectSignatureVO objectStatus(Integer bizType, Long bizId) {
-        SignBizTypeEnum t = SignBizTypeEnum.parse(bizType);
+        SignBizTypeEnum t = SignBizTypeEnum.fromCode(bizType);
         if (t == null) {
             throw new BusinessException("未知的签名对象类型：" + bizType);
         }
         ObjectSignatureVO vo = new ObjectSignatureVO();
         vo.setBizType(bizType);
-        vo.setBizTypeText(t.getText());
+        vo.setBizTypeText(t.getLabel());
         vo.setBizId(bizId);
 
         SignableContentProvider provider = findProvider(bizType);
         if (provider != null) {
             SignSubject s = provider.load(bizId);
             if (s == null) {
-                throw new BusinessException("签名对象不存在（" + t.getText() + " id=" + bizId + "）");
+                throw new BusinessException("签名对象不存在（" + t.getLabel() + " id=" + bizId + "）");
             }
             vo.setBizNo(s.bizNo());
             vo.setPatientName(s.patientName());
@@ -505,16 +505,16 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
             vo.setCurrentSignNo(current.getSignNo());
             vo.setLastSignedTime(current.getSignedTime());
             vo.setObjectSignStatus(ObjectSignStatusEnum.SIGNED.getCode());
-            vo.setObjectSignStatusText(ObjectSignStatusEnum.SIGNED.getText());
+            vo.setObjectSignStatusText(ObjectSignStatusEnum.SIGNED.getLabel());
         } else {
             BizEmrSignature last = bizEmrSignatureMapper.selectLastByBiz(bizType, bizId);
             if (last != null && Objects.equals(SignStatusEnum.INVALID.getCode(), last.getSignStatus())) {
                 vo.setLastSignedTime(last.getSignedTime());
                 vo.setObjectSignStatus(ObjectSignStatusEnum.INVALIDATED.getCode());
-                vo.setObjectSignStatusText(ObjectSignStatusEnum.INVALIDATED.getText());
+                vo.setObjectSignStatusText(ObjectSignStatusEnum.INVALIDATED.getLabel());
             } else {
                 vo.setObjectSignStatus(ObjectSignStatusEnum.UNSIGNED.getCode());
-                vo.setObjectSignStatusText(ObjectSignStatusEnum.UNSIGNED.getText());
+                vo.setObjectSignStatusText(ObjectSignStatusEnum.UNSIGNED.getLabel());
             }
         }
         vo.setChain(listByBiz(bizType, bizId));
@@ -563,7 +563,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
             if (tb.length() > 0) {
                 tb.append(" / ");
             }
-            tb.append(SignBizTypeEnum.textOf(t));
+            tb.append(SignBizTypeEnum.getLabel(t));
         }
         vo.setBizTypeTexts(tb.length() == 0 ? "—" : tb.toString());
 
@@ -595,12 +595,12 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         vo.setTsaName(tsaChannelService.readyName());
         vo.setTsaTokenCount(tsaTokenMapper.selectCount(null));
 
-        TimeSourceEnum ts = TimeSourceEnum.parse(effectiveTimeSource());
+        TimeSourceEnum ts = TimeSourceEnum.fromCode(effectiveTimeSource());
         if (ts != null && ts == TimeSourceEnum.TSA) {
             vo.setTimeSourceNote("签名时间来源：可信时间戳（" + (vo.getTsaName() == null ? "TSA" : vo.getTsaName())
                     + " —— 本地内置信任根：令牌结构真实、可对抗本机时钟篡改；非外部 CA/TSA，不对外声称法律效力）");
         } else if (ts != null && ts.trusted()) {
-            vo.setTimeSourceNote("签名时间来源：" + ts.getText());
+            vo.setTimeSourceNote("签名时间来源：" + ts.getLabel());
         } else {
             vo.setTimeSourceNote("签名时间来源：本机时钟（**未接入第三方可信时间戳 TSA**，签名时刻不具备对抗系统时间篡改的效力）");
         }
@@ -617,7 +617,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
     @Override
     public int effectiveTimeSource() {
         Integer cfg = intValue(signConfigMapper.selectValue(SystemConfigKeyConst.SIGN_TIME_SOURCE));
-        TimeSourceEnum ts = TimeSourceEnum.parse(cfg != null ? cfg : signProperties.getTimeSource());
+        TimeSourceEnum ts = TimeSourceEnum.fromCode(cfg != null ? cfg : signProperties.getTimeSource());
         if (ts == null) {
             ts = TimeSourceEnum.LOCAL;
         }
@@ -648,7 +648,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         if (cmd.getBizId() == null) {
             throw new BusinessException("签名对象ID不能为空");
         }
-        if (SignBizTypeEnum.parse(cmd.getBizType()) == null) {
+        if (SignBizTypeEnum.fromCode(cmd.getBizType()) == null) {
             throw new BusinessException("未知的签名对象类型：" + cmd.getBizType());
         }
         if (cmd.getSignerId() == null) {
@@ -667,14 +667,14 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
     private SignableContentProvider providerOf(Integer bizType) {
         SignableContentProvider p = findProvider(bizType);
         if (p == null) {
-            throw new BusinessException("签名对象类型「" + SignBizTypeEnum.textOf(bizType)
+            throw new BusinessException("签名对象类型「" + SignBizTypeEnum.getLabel(bizType)
                     + "」尚未接入签名能力（未找到内容提供者）；请确认对应业务模块已加载");
         }
         return p;
     }
 
     private SignableContentProvider findProvider(Integer bizType) {
-        SignBizTypeEnum t = SignBizTypeEnum.parse(bizType);
+        SignBizTypeEnum t = SignBizTypeEnum.fromCode(bizType);
         if (t == null) {
             return null;
         }
@@ -710,14 +710,14 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         vo.setId(s.getId());
         vo.setSignNo(s.getSignNo());
         vo.setBizType(s.getBizType());
-        vo.setBizTypeText(SignBizTypeEnum.textOf(s.getBizType()));
+        vo.setBizTypeText(SignBizTypeEnum.getLabel(s.getBizType()));
         vo.setBizId(s.getBizId());
         vo.setBizNo(s.getBizNo());
         vo.setPatientId(s.getPatientId());
         vo.setPatientName(s.getPatientName());
         vo.setDeptName(s.getDeptName());
         vo.setSignScene(s.getSignScene());
-        vo.setSignSceneText(SignSceneEnum.textOf(s.getSignScene()));
+        vo.setSignSceneText(SignSceneEnum.getLabel(s.getSignScene()));
         vo.setChainNo(s.getChainNo());
         vo.setPrevSignId(s.getPrevSignId());
         vo.setSignerId(s.getSignerId());
@@ -732,15 +732,15 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         vo.setContentDigestShort(shortDigest(s.getContentDigest()));
         vo.setSignedTime(s.getSignedTime());
         vo.setTimeSource(s.getTimeSource());
-        vo.setTimeSourceText(TimeSourceEnum.textOf(s.getTimeSource()));
+        vo.setTimeSourceText(TimeSourceEnum.getLabel(s.getTimeSource()));
         vo.setTsaSerial(s.getTsaSerial());
         vo.setTsaTime(s.getTsaTime());
-        TimeSourceEnum ts = TimeSourceEnum.parse(s.getTimeSource());
+        TimeSourceEnum ts = TimeSourceEnum.fromCode(s.getTimeSource());
         vo.setTimeSourceNote(ts != null && ts.trusted() ? null : "不具备可信时间戳效力（系统时间可由本机修改）");
         vo.setSignStatus(s.getSignStatus());
-        vo.setSignStatusText(SignStatusEnum.textOf(s.getSignStatus()));
+        vo.setSignStatusText(SignStatusEnum.getLabel(s.getSignStatus()));
         vo.setVerifyStatus(s.getVerifyStatus());
-        vo.setVerifyStatusText(SignVerifyStatusEnum.textOf(s.getVerifyStatus()));
+        vo.setVerifyStatusText(SignVerifyStatusEnum.getLabel(s.getVerifyStatus()));
         vo.setVerifyTime(s.getVerifyTime());
         vo.setVerifyCount(s.getVerifyCount());
         vo.setInvalidReason(s.getInvalidReason());

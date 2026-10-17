@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 住院请假类别枚举
@@ -20,13 +21,6 @@ public enum InpatientLeaveTypeEnum {
         this.label = label;
     }
 
-    public static InpatientLeaveTypeEnum fromCode(int code) {
-        for (InpatientLeaveTypeEnum item : values()) {
-            if (item.code == code) return item;
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
@@ -34,17 +28,31 @@ public enum InpatientLeaveTypeEnum {
         return code != null && fromCode(code) != null;
     }
 
-    /**
-     * 码值不在枚举内（脏数据）返回 null，由调用侧决定兜底文案。
-     */
-    public static String getText(Integer code) {
-        InpatientLeaveTypeEnum item = code == null ? null : fromCode(code);
-        return item == null ? null : item.label;
+    public static InpatientLeaveTypeEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (InpatientLeaveTypeEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
     }
 
-    /** 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。 */
-    public static String labelOrUnknown(Integer code) {
-        InpatientLeaveTypeEnum item = code == null ? null : fromCode(code);
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        InpatientLeaveTypeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        InpatientLeaveTypeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        InpatientLeaveTypeEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

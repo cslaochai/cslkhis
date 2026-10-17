@@ -99,7 +99,7 @@ public class MiniServiceTicketAdminServiceImpl extends ServiceImpl<MiniServiceMe
             vo.setCategoryCode(row.getCategoryCode());
             vo.setContent(row.getContent());
             vo.setStatus(row.getStatus());
-            vo.setStatusText(ServiceTicketStatusEnum.getText(row.getStatus()));
+            vo.setStatusText(ServiceTicketStatusEnum.getLabel(row.getStatus()));
             vo.setAcceptByName(row.getAcceptByName());
             vo.setReplyCount(row.getReplyCount());
             vo.setHandleResult(row.getHandleResult());
@@ -137,7 +137,7 @@ public class MiniServiceTicketAdminServiceImpl extends ServiceImpl<MiniServiceMe
         vo.setCategoryCode(ticket.getCategoryCode());
         vo.setContent(ticket.getContent());
         vo.setStatus(ticket.getStatus());
-        vo.setStatusText(ServiceTicketStatusEnum.getText(ticket.getStatus()));
+        vo.setStatusText(ServiceTicketStatusEnum.getLabel(ticket.getStatus()));
         vo.setPriority(ticket.getPriority());
         vo.setAcceptByName(ticket.getAcceptByName());
         vo.setCloseReason(ticket.getCloseReason());
@@ -163,7 +163,7 @@ public class MiniServiceTicketAdminServiceImpl extends ServiceImpl<MiniServiceMe
             case "accept" -> {
                 if (!Objects.equals(ticket.getStatus(), ServiceTicketStatusEnum.WAIT_ACCEPT.getCode())) {
                     throw new BusinessException("只有待受理的工单能受理，当前状态："
-                            + ServiceTicketStatusEnum.labelOrUnknown(ticket.getStatus()));
+                            + ServiceTicketStatusEnum.getLabelOrUnknown(ticket.getStatus()));
                 }
                 ticket.setStatus(ServiceTicketStatusEnum.HANDLING.getCode());
                 ticket.setAcceptBy(operator);
@@ -204,7 +204,7 @@ public class MiniServiceTicketAdminServiceImpl extends ServiceImpl<MiniServiceMe
                 }
                 if (!Objects.equals(ticket.getStatus(), ServiceTicketStatusEnum.HANDLING.getCode())) {
                     throw new BusinessException("只有处理中的工单能办结，当前状态："
-                            + ServiceTicketStatusEnum.labelOrUnknown(ticket.getStatus()));
+                            + ServiceTicketStatusEnum.getLabelOrUnknown(ticket.getStatus()));
                 }
                 ticket.setStatus(ServiceTicketStatusEnum.FINISHED.getCode());
                 ticket.setHandleResult(content);
@@ -278,7 +278,7 @@ public class MiniServiceTicketAdminServiceImpl extends ServiceImpl<MiniServiceMe
         for (BizServiceTicketLog row : rows) {
             MiniServiceLogVO vo = new MiniServiceLogVO();
             vo.setAction(row.getAction());
-            vo.setActionText(ServiceTicketActionEnum.getText(row.getAction()));
+            vo.setActionText(ServiceTicketActionEnum.getLabel(row.getAction()));
             vo.setContent(row.getContent());
             vo.setOperatorType(row.getOperatorType());
             vo.setOperatorName(row.getOperatorName());

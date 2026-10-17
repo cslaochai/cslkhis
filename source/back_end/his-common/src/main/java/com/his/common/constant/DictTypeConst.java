@@ -318,11 +318,6 @@ public interface DictTypeConst {
     public static final String QC_RESULT = "his_qc_result";
 
     /**
-     * 质控状态
-     */
-    public static final String QC_STATUS = "his_qc_status";
-
-    /**
      * 转诊方向
      */
     public static final String REFERRAL_DIRECTION = "his_referral_direction";

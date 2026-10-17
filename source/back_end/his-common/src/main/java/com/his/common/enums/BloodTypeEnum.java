@@ -2,6 +2,7 @@ package com.his.common.enums;
 
 import com.his.common.util.TextUtil;
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * ABO 血型枚举
@@ -20,29 +21,6 @@ public enum BloodTypeEnum {
     BloodTypeEnum(int code, String label) {
         this.code = code;
         this.label = label;
-    }
-
-    public static BloodTypeEnum fromCode(int code) {
-        for (BloodTypeEnum item : values()) {
-            if (item.code == code) return item;
-        }
-        return null;
-    }
-
-    /**
-     * 码值不在枚举内（脏数据）返回 null，由调用侧决定兜底文案，不能回落到合法文案。
-     */
-    public static String getText(Integer code) {
-        BloodTypeEnum item = code == null ? null : fromCode(code);
-        return item == null ? "" : item.label;
-    }
-
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」）。
-     */
-    public static String labelOrUnknown(Integer code) {
-        BloodTypeEnum item = code == null ? null : fromCode(code);
-        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 
     // ── 输血链的 ABO 血型是**字符串码**（A / B / O / AB），与上面的字典码不是同一列 ──
@@ -83,5 +61,33 @@ public enum BloodTypeEnum {
     public static String getAboText(String abo) {
         BloodTypeEnum item = fromAbo(abo);
         return item == null ? "" : item.label;
+    }
+
+    public static BloodTypeEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (BloodTypeEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        BloodTypeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        BloodTypeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        BloodTypeEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 排班单元类型枚举（sql/200，字典 his_org_unit_type）
@@ -29,36 +30,11 @@ public enum OrgUnitTypeEnum {
         this.label = label;
     }
 
-    public static OrgUnitTypeEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (OrgUnitTypeEnum type : values()) {
-            if (type.code == code) {
-                return type;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
-    }
-
-    public static String getText(Integer code) {
-        OrgUnitTypeEnum type = fromCode(code);
-        return type == null ? "未知(" + code + ")" : type.getLabel();
-    }
-
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        OrgUnitTypeEnum item = code == null ? null : fromCode(code);
-        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 
     /**
@@ -68,11 +44,31 @@ public enum OrgUnitTypeEnum {
         return code == null || code != HOSPITAL.code;
     }
 
-    public static String whitelistText() {
-        StringBuilder sb = new StringBuilder();
-        for (OrgUnitTypeEnum type : values()) {
-            sb.append(sb.length() == 0 ? "" : " / ").append(type.code).append("-").append(type.label);
+    public static OrgUnitTypeEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
         }
-        return sb.toString();
+        for (OrgUnitTypeEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        OrgUnitTypeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        OrgUnitTypeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        OrgUnitTypeEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

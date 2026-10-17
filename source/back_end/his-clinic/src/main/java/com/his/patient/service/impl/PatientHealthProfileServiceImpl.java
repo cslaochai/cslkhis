@@ -7,12 +7,7 @@ import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.AllergySeverityEnum;
 import com.his.common.enums.AllergyTypeEnum;
 import com.his.common.enums.IsAliveEnum;
-import com.his.common.enums.MedicationHistoryDrugTypeEnum;
-import com.his.common.enums.MedicationHistoryRouteEnum;
 import com.his.common.enums.MedicationHistoryStatusEnum;
-import com.his.common.enums.PastDiseaseCurrentStatusEnum;
-import com.his.common.enums.SurgeryHistoryTypeEnum;
-import com.his.common.enums.SurgeryRecoveryStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.patient.dto.*;
@@ -198,19 +193,10 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
     @Transactional(rollbackFor = Exception.class)
     public PatientAllergyVO saveAllergy(PatientAllergyUpsertDTO dto) {
         // allergy_type / allergy_severity / allergy_symptoms 三列都是 NOT NULL：
-        // 少拦一个，用户"没选类型"就会拿到 500「系统内部错误」而不是可读提示。
-        // 类型**必填**（表列注释的取值就是药物/食物/其他，没有"未知"档，
-        // 替用户编一个「其他」等于替他做了一次临床判断）；严重程度缺失则落「未评估」
-        // —— 与主档文本迁移同一口径，说的是实话而不是编一个档位。
-        // 这几组的词表就是枚举本身（码值即中文文案），所以校验只认枚举 isValid：
-        // 注解侧的白名单只能把词表再抄一遍，抄了就会漂移。
-        if (!AllergyTypeEnum.isValid(dto.getAllergyType())) {
-            // D-业务规则：单字段码值合法性
-            throw new BusinessException("过敏类型不合法：" + dto.getAllergyType());
-        }
-        if (TextUtil.hasText(dto.getAllergySeverity()) && !AllergySeverityEnum.isValid(dto.getAllergySeverity())) {
-            throw new BusinessException("过敏严重程度不合法：" + dto.getAllergySeverity());
-        }
+        // 少兜一个，用户"没选严重程度"就会拿到 500「系统内部错误」而不是可读提示。
+        // 词表校验（必填 + 合法取值）已在 DTO 上由 @NotBlank/@AllowedValues 拦成 400，
+        // service 不再用枚举 isValid 抄第二遍——同一份白名单写两处必然漂移。
+        // 严重程度缺失则落「未评估」：与主档文本迁移同一口径，说的是实话而不是编一个档位。
         if (!TextUtil.hasText(dto.getAllergySeverity())) {
             dto.setAllergySeverity(AllergySeverityEnum.UNASSESSED.getCode());
         }
@@ -267,11 +253,6 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PatientPastDiseaseVO savePastDisease(PatientPastDiseaseUpsertDTO dto) {
-        // D-业务规则：单字段码值合法性（词表唯一来源是枚举）
-        if (TextUtil.hasText(dto.getCurrentStatus()) && !PastDiseaseCurrentStatusEnum.isValid(dto.getCurrentStatus())) {
-            throw new BusinessException("当前控制情况不合法：" + dto.getCurrentStatus());
-        }
-
         BizPatientPastDisease entity = new BizPatientPastDisease();
         BeanUtils.copyProperties(dto, entity);
         Long patientId = resolvePatientId(dto.getId(), dto.getPatientId(),
@@ -314,14 +295,6 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PatientSurgeryHistoryVO saveSurgeryHistory(PatientSurgeryHistoryUpsertDTO dto) {
-        // D-业务规则：单字段码值合法性（词表唯一来源是枚举）
-        if (TextUtil.hasText(dto.getSurgeryType()) && !SurgeryHistoryTypeEnum.isValid(dto.getSurgeryType())) {
-            throw new BusinessException("手术类型不合法：" + dto.getSurgeryType());
-        }
-        if (TextUtil.hasText(dto.getRecoveryStatus()) && !SurgeryRecoveryStatusEnum.isValid(dto.getRecoveryStatus())) {
-            throw new BusinessException("手术恢复情况不合法：" + dto.getRecoveryStatus());
-        }
-
         BizPatientSurgeryHistory entity = new BizPatientSurgeryHistory();
         BeanUtils.copyProperties(dto, entity);
         entity.setPatientId(resolvePatientId(dto.getId(), dto.getPatientId(),
@@ -387,17 +360,6 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
         if (dto.getEndDate() != null && dto.getEndDate().isBefore(dto.getStartDate())) {
             // D-业务规则：跨字段的临床时序约束（停药不能早于开始），DTO 注解无处安放
             throw new BusinessException("停药日期不能早于开始用药日期");
-        }
-
-        // D-业务规则：单字段码值合法性（词表唯一来源是枚举）
-        if (TextUtil.hasText(dto.getDrugType()) && !MedicationHistoryDrugTypeEnum.isValid(dto.getDrugType())) {
-            throw new BusinessException("药物类型不合法：" + dto.getDrugType());
-        }
-        if (TextUtil.hasText(dto.getRoute()) && !MedicationHistoryRouteEnum.isValid(dto.getRoute())) {
-            throw new BusinessException("给药途径不合法：" + dto.getRoute());
-        }
-        if (TextUtil.hasText(dto.getStatus()) && !MedicationHistoryStatusEnum.isValid(dto.getStatus())) {
-            throw new BusinessException("用药状态不合法：" + dto.getStatus());
         }
 
         BizPatientMedicationHistory entity = new BizPatientMedicationHistory();

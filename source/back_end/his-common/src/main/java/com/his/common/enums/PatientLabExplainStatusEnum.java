@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 患者端检验报告解读的单项状态（暴露在 PatientLabItemPlainVO.status，前端按此渲染箭头与文案）。
@@ -22,38 +23,38 @@ public enum PatientLabExplainStatusEnum {
         this.desc = desc;
     }
 
-    public static PatientLabExplainStatusEnum getByCode(Integer code) {
-        if (code == null) {
+    /**
+     * 码值是否合法（写入侧校验用；null 不合法）
+     */
+    public static boolean isValid(Integer code) {
+        return fromCode(code) != null;
+    }
+
+    public static PatientLabExplainStatusEnum fromCode(Integer code) {
+        if (null == code) {
             return null;
         }
-        for (PatientLabExplainStatusEnum e : values()) {
-            if (e.getCode().equals(code)) {
-                return e;
+        for (PatientLabExplainStatusEnum item : values()) {
+            if (code.equals(item.code)) {
+                return item;
             }
         }
         return null;
     }
 
-    /**
-     * 码值是否合法（写入侧校验用；null 不合法）
-     */
-    public static boolean isValid(Integer code) {
-        return getByCode(code) != null;
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        PatientLabExplainStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.desc;
     }
 
-    /**
-     * 展示用：null 或不在枚举内返回空串（不把「未知」渲染给用户看）
-     */
-    public static String getText(Integer code) {
-        PatientLabExplainStatusEnum item = getByCode(code);
-        return item == null ? "" : item.getDesc();
+    public static String getLabel(Integer code, String defaultValue) {
+        PatientLabExplainStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.desc;
     }
 
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」，保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        PatientLabExplainStatusEnum item = getByCode(code);
-        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.getDesc();
+    public static String getLabelOrUnknown(Integer code) {
+        PatientLabExplainStatusEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.desc;
     }
 }

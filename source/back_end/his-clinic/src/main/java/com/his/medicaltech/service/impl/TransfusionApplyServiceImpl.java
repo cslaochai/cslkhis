@@ -253,7 +253,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
             oldAmountMl = entity.getAmountMl();
             if (!Objects.equals(TransfusionStatusEnum.PENDING_CROSSMATCH.getCode(), entity.getTransfusionStatus())) {
                 throw new BusinessException("输血单 " + entity.getApplyNo() + " 当前状态为「"
-                        + TransfusionStatusEnum.labelOrUnknown(entity.getTransfusionStatus())
+                        + TransfusionStatusEnum.getLabelOrUnknown(entity.getTransfusionStatus())
                         + "」，只有「待配血」可以修改申请内容（已配血后血袋已定型，改请先取消）");
             }
             if (!Objects.equals(entity.getAdmissionId(), dto.getAdmissionId())) {
@@ -274,7 +274,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         if (bizTransfusionApplyMapper.countUnfinishedSameComponent(dto.getAdmissionId(), dto.getBloodComponent(),
                 entity.getId()) > 0) {
             throw new BusinessException("该住院已有一条未完成的「"
-                    + BloodComponentEnum.labelOrUnknown(dto.getBloodComponent())
+                    + BloodComponentEnum.getLabelOrUnknown(dto.getBloodComponent())
                     + "」用血申请，请先完成或取消后再发起（同一种血申请两次属于重复）");
         }
 
@@ -355,7 +355,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         log.info("{}输血申请 applyNo={} admissionId={} 血型={} 品种={} 袋数={} 紧急={} 申请人={}",
                 create ? "发起" : "修改", entity.getApplyNo(), entity.getAdmissionId(),
                 TransfusionRules.bloodTypeText(abo, rh),
-                BloodComponentEnum.getText(entity.getBloodComponent()),
+                BloodComponentEnum.getLabel(entity.getBloodComponent()),
                 entity.getBagCount(), entity.getIsEmergency(), operatorUser.getRealName());
         return entity.getApplyNo();
     }
@@ -372,7 +372,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         if (!Objects.equals(TransfusionApproveStatusEnum.PENDING.getCode(), status)
                 && !Objects.equals(TransfusionApproveStatusEnum.MAKEUP_PENDING.getCode(), status)) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 的审批状态为「"
-                    + TransfusionApproveStatusEnum.labelOrUnknown(status)
+                    + TransfusionApproveStatusEnum.getLabelOrUnknown(status)
                     + "」，只有「待审批」或「急诊待补审」可以提交审批结论");
         }
         if (dto.getApproveResult() == 2 && !TextUtil.hasText(dto.getOpinion())) {
@@ -431,7 +431,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
             TransfusionApplyVO.ApproveRecord row = new TransfusionApplyVO.ApproveRecord();
             row.setId(r.getId());
             row.setApproveLevel(r.getApproveLevel());
-            row.setApproveLevelText(TransfusionApproveLevelEnum.getText(r.getApproveLevel()));
+            row.setApproveLevelText(TransfusionApproveLevelEnum.getLabel(r.getApproveLevel()));
             row.setApproveResult(r.getApproveResult());
             row.setApproveResultText(Objects.equals(1, r.getApproveResult()) ? "通过" : "驳回");
             row.setApproverId(r.getApproverId());
@@ -470,7 +470,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         for (int level = 1; level <= 3; level++) {
             TransfusionApplyVO.LevelCount lc = new TransfusionApplyVO.LevelCount();
             lc.setApproveLevel(level);
-            lc.setApproveLevelText(TransfusionApproveLevelEnum.getText(level));
+            lc.setApproveLevelText(TransfusionApproveLevelEnum.getLabel(level));
             lc.setCount(bizTransfusionApplyMapper.selectCount(
                     new LambdaQueryWrapper<BizTransfusionApply>()
                             .eq(BizTransfusionApply::getApproveStatus, TransfusionApproveStatusEnum.APPROVED.getCode())
@@ -492,16 +492,16 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         BizTransfusionApply entity = mustGet(dto.getApplyId());
         if (!Objects.equals(TransfusionStatusEnum.PENDING_CROSSMATCH.getCode(), entity.getTransfusionStatus())) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 当前状态为「"
-                    + TransfusionStatusEnum.labelOrUnknown(entity.getTransfusionStatus())
+                    + TransfusionStatusEnum.getLabelOrUnknown(entity.getTransfusionStatus())
                     + "」，只有「待配血」可以录入配血结果");
         }
         // 用血分级审批闸门（sql/93）：已通过才放行；急诊补审中可以先配（事后必须补办手续）
         if (!TransfusionRules.approveGateOpen(entity.getApproveStatus(), entity.getIsEmergency())) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 的用血审批为「"
-                    + TransfusionApproveStatusEnum.labelOrUnknown(entity.getApproveStatus())
+                    + TransfusionApproveStatusEnum.getLabelOrUnknown(entity.getApproveStatus())
                     + "」，未通过审批不能配血（申请量 "
                     + (entity.getAmountMl() == null ? "待折算" : entity.getAmountMl() + "ml")
-                    + "，属「" + TransfusionApproveLevelEnum.getText(entity.getApproveLevel()) + "」审核签发范围）");
+                    + "，属「" + TransfusionApproveLevelEnum.getLabel(entity.getApproveLevel()) + "」审核签发范围）");
         }
         AdmissionVO admission = patientProvider.getAdmission(entity.getAdmissionId());
         if (admission == null || !Objects.equals(AdmitStatusEnum.IN_HOSPITAL.getCode(), admission.getAdmitStatus())) {
@@ -544,8 +544,8 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
             if (bag.getBloodComponent() != null
                     && !Objects.equals(entity.getBloodComponent(), bag.getBloodComponent())) {
                 throw new BusinessException("血袋 " + bagNo + " 的血液品种（"
-                        + BloodComponentEnum.labelOrUnknown(bag.getBloodComponent())
-                        + "）与申请单（" + BloodComponentEnum.labelOrUnknown(entity.getBloodComponent())
+                        + BloodComponentEnum.getLabelOrUnknown(bag.getBloodComponent())
+                        + "）与申请单（" + BloodComponentEnum.getLabelOrUnknown(entity.getBloodComponent())
                         + "）不一致，不允许发不同品种的血");
             }
             if (bizTransfusionBagMapper.countByBagNo(bagNo, entity.getId()) > 0) {
@@ -672,18 +672,18 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         }
         if (!Objects.equals(TransfusionStatusEnum.CROSSMATCHED.getCode(), entity.getTransfusionStatus())) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 当前状态为「"
-                    + TransfusionStatusEnum.labelOrUnknown(entity.getTransfusionStatus())
+                    + TransfusionStatusEnum.getLabelOrUnknown(entity.getTransfusionStatus())
                     + "」，只有「已配血」可以发血");
         }
         if (!Objects.equals(TransfusionCrossmatchStatusEnum.ALL_MATCHED.getCode(), entity.getCrossmatchStatus())) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 的配血状态为「"
-                    + TransfusionCrossmatchStatusEnum.labelOrUnknown(entity.getCrossmatchStatus())
+                    + TransfusionCrossmatchStatusEnum.getLabelOrUnknown(entity.getCrossmatchStatus())
                     + "」，不允许发血（必须全部相合且配齐）");
         }
         // 用血分级审批闸门（sql/93）第二道：配血口放行过急诊补审的单子，发血口同样要拦常规未批
         if (!TransfusionRules.approveGateOpen(entity.getApproveStatus(), entity.getIsEmergency())) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 的用血审批为「"
-                    + TransfusionApproveStatusEnum.labelOrUnknown(entity.getApproveStatus())
+                    + TransfusionApproveStatusEnum.getLabelOrUnknown(entity.getApproveStatus())
                     + "」，未通过审批不能发血");
         }
         AdmissionVO admission = patientProvider.getAdmission(entity.getAdmissionId());
@@ -719,7 +719,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         BizTransfusionApply entity = mustGet(dto.getApplyId());
         if (!Objects.equals(TransfusionStatusEnum.ISSUED.getCode(), entity.getTransfusionStatus())) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 当前状态为「"
-                    + TransfusionStatusEnum.labelOrUnknown(entity.getTransfusionStatus())
+                    + TransfusionStatusEnum.getLabelOrUnknown(entity.getTransfusionStatus())
                     + "」，只有「已发血」可以开始输注"
                     + (Objects.equals(TransfusionStatusEnum.CROSSMATCHED.getCode(), entity.getTransfusionStatus())
                     ? "（血还没发出来，输注的是什么无从追溯）" : ""));
@@ -792,7 +792,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         }
         if (!Objects.equals(TransfusionStatusEnum.INFUSING.getCode(), entity.getTransfusionStatus())) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 当前状态为「"
-                    + TransfusionStatusEnum.labelOrUnknown(entity.getTransfusionStatus())
+                    + TransfusionStatusEnum.getLabelOrUnknown(entity.getTransfusionStatus())
                     + "」，未开始输注不能登记完成");
         }
         LocalDateTime end = TimeUtil.toSeconds(dto.getInfusionEndTime());
@@ -858,7 +858,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         BizTransfusionApply entity = mustGet(dto.getApplyId());
         if (!Objects.equals(TransfusionStatusEnum.FINISHED.getCode(), entity.getTransfusionStatus())) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 当前状态为「"
-                    + TransfusionStatusEnum.labelOrUnknown(entity.getTransfusionStatus())
+                    + TransfusionStatusEnum.getLabelOrUnknown(entity.getTransfusionStatus())
                     + "」，只有「已完成」的输血单可以补报输血反应"
                     + "（这样不会为了记反应而把已完成的单改回输注中 —— 那是改历史）");
         }
@@ -926,7 +926,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
 
         StringBuilder course = new StringBuilder();
         course.append("输血成分：")
-                .append(BloodComponentEnum.labelOrUnknown(entity.getBloodComponent()));
+                .append(BloodComponentEnum.getLabelOrUnknown(entity.getBloodComponent()));
         if (TextUtil.hasText(entity.getComponentSpec())) {
             course.append("（").append(entity.getComponentSpec()).append("）");
         }
@@ -1007,7 +1007,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         record.setTreatmentPlan(plan.toString());
         // remark 承载"输血成分与量"这个结构化要素（同时保留来源单号，便于倒查）
         record.setRemark("系统回写：输血申请单号 " + entity.getApplyNo()
-                + "，输血成分 " + BloodComponentEnum.getText(entity.getBloodComponent())
+                + "，输血成分 " + BloodComponentEnum.getLabel(entity.getBloodComponent())
                 + "，共 " + bags.size() + " 袋"
                 + (entity.getPlannedAmount() == null ? "" :
                 "，申请总量 " + entity.getPlannedAmount()
@@ -1029,16 +1029,16 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
      * @param withBags 是否加载血袋明细（详情接口 true、列表 false —— 列表逐行查血袋就是 N+1）
      */
     private void decorate(TransfusionApplyVO vo, boolean withBags) {
-        vo.setTransfusionStatusText(TransfusionStatusEnum.getText(vo.getTransfusionStatus()));
-        vo.setCrossmatchStatusText(TransfusionCrossmatchStatusEnum.getText(vo.getCrossmatchStatus()));
-        vo.setBloodComponentText(BloodComponentEnum.getText(vo.getBloodComponent()));
+        vo.setTransfusionStatusText(TransfusionStatusEnum.getLabel(vo.getTransfusionStatus()));
+        vo.setCrossmatchStatusText(TransfusionCrossmatchStatusEnum.getLabel(vo.getCrossmatchStatus()));
+        vo.setBloodComponentText(BloodComponentEnum.getLabel(vo.getBloodComponent()));
         vo.setBloodTypeText(TransfusionRules.bloodTypeText(vo.getPatientAbo(), vo.getPatientRh()));
         vo.setIsEmergencyText(vo.getIsEmergency() == null ? "—" : (vo.getIsEmergency() == 1 ? "紧急" : "常规"));
-        vo.setGenderText(SysGenderEnum.getText(vo.getGender()));
-        vo.setAdmitStatusText(AdmitStatusEnum.getText(vo.getAdmitStatus()));
+        vo.setGenderText(SysGenderEnum.getLabel(vo.getGender()));
+        vo.setAdmitStatusText(AdmitStatusEnum.getLabel(vo.getAdmitStatus()));
         vo.setHasReactionText(Objects.equals(1, vo.getHasReaction()) ? "有反应（已上报）" : "未上报反应");
-        vo.setApproveStatusText(TransfusionApproveStatusEnum.getText(vo.getApproveStatus()));
-        vo.setApproveLevelText(TransfusionApproveLevelEnum.getText(vo.getApproveLevel()));
+        vo.setApproveStatusText(TransfusionApproveStatusEnum.getLabel(vo.getApproveStatus()));
+        vo.setApproveLevelText(TransfusionApproveLevelEnum.getLabel(vo.getApproveLevel()));
         vo.setCheckItemsText(TransfusionCheckItems.summaryText(vo.getCheckItems()));
         vo.setCheckItemOptions(checkItems());
         vo.setReactionTypeOptions(TransfusionReactionTypeEnum.options());
@@ -1123,7 +1123,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         vo.setBagRh(b.getBagRh());
         vo.setBloodTypeText(TransfusionRules.bloodTypeText(b.getBagAbo(), b.getBagRh()));
         vo.setBloodComponent(b.getBloodComponent());
-        vo.setBloodComponentText(BloodComponentEnum.getText(b.getBloodComponent()));
+        vo.setBloodComponentText(BloodComponentEnum.getLabel(b.getBloodComponent()));
         vo.setSpec(b.getSpec());
         vo.setAmount(b.getAmount());
         vo.setAmountUnit(b.getAmountUnit());
@@ -1135,11 +1135,11 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         vo.setCrossmatchMain(b.getCrossmatchMain());
         vo.setCrossmatchSide(b.getCrossmatchSide());
         vo.setCrossmatchResult(b.getCrossmatchResult());
-        vo.setCrossmatchResultText(CrossmatchResultEnum.getText(b.getCrossmatchResult()));
+        vo.setCrossmatchResultText(CrossmatchResultEnum.getLabel(b.getCrossmatchResult()));
         vo.setCrossmatchTime(b.getCrossmatchTime());
         vo.setCrossmatchDoctorName(b.getCrossmatchDoctorName());
         vo.setBagStatus(b.getBagStatus());
-        vo.setBagStatusText(BloodBagStatusEnum.getText(b.getBagStatus()));
+        vo.setBagStatusText(BloodBagStatusEnum.getLabel(b.getBagStatus()));
         vo.setIssueTime(b.getIssueTime());
         vo.setRemark(b.getRemark());
         return vo;

@@ -1,5 +1,7 @@
 package com.his.common.enums;
 
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * 规则判定结果 —— 刻意是三态，不是布尔。
  */
@@ -29,51 +31,8 @@ public enum AuditResultStateEnum {
         this.label = label;
     }
 
-    /**
-     * 按 code 取枚举项（模板方法名，全仓统一用 fromCode）。
-     */
-    public static AuditResultStateEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (AuditResultStateEnum state : values()) {
-            if (state.code == code) {
-                return state;
-            }
-        }
-        return null;
-    }
-
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
-    }
-
-    /**
-     * 按 code 取中文标签 —— <b>读取侧必须走这里，不要自己拼</b>。
-     *
-     * <p>两条硬约束：</p>
-     * <ol>
-     *   <li>code=3 必须渲染成「不适用」，不能渲染成「通过」；</li>
-     *   <li>未知 code 返回<b>空串</b>，不能兜底成「通过」——
-     *       否则将来新增一种状态时，读取侧会静默把它当成通过。</li>
-     * </ol>
-     *
-     * <p>null（未评估）渲染成「未评估」而不是「不适用」：前者是"还没看"，后者是"看了，不适用"。
-     */
-    public static String getText(Integer code) {
-        if (code == null) {
-            return "未评估";
-        }
-        AuditResultStateEnum state = fromCode(code);
-        return state == null ? "" : state.label;
-    }
-
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        AuditResultStateEnum item = fromCode(code);
-        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 
     /**
@@ -90,5 +49,36 @@ public enum AuditResultStateEnum {
 
     public String getLabel() {
         return label;
+    }
+
+    public static AuditResultStateEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (AuditResultStateEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        if (null == code) {
+            return "未评估";
+        }
+        AuditResultStateEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        AuditResultStateEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        AuditResultStateEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

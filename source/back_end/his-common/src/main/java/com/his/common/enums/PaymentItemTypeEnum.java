@@ -1,5 +1,7 @@
 package com.his.common.enums;
 
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * 付款项目类型枚举
  */
@@ -23,45 +25,11 @@ public enum PaymentItemTypeEnum {
     }
 
     /**
-     * 根据 code 获取对应的枚举对象
-     *
-     * @param code 类型编码
-     * @return 对应的枚举对象，未找到返回 null
-     */
-    public static PaymentItemTypeEnum getByCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (PaymentItemTypeEnum typeEnum : values()) {
-            if (typeEnum.getCode().equals(code)) {
-                return typeEnum;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」。
-     */
-    public static String getText(Integer code) {
-        PaymentItemTypeEnum item = getByCode(code);
-        return item == null ? "" : item.desc;
-    }
-
-    /**
-     * 异常 / 审计 / 合规用码值 → 文案。null 或不在枚举内返回「未知(n)」，保留原始码值以便排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        PaymentItemTypeEnum item = getByCode(code);
-        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.desc;
-    }
-
-    /**
      * 码值是否合法（写入侧校验用；null 不合法）。
      * 结算账单明细的项目类型落库码值 1-8 全在本枚举内（2026-10-06 核实）。
      */
     public static boolean isValid(Integer code) {
-        return getByCode(code) != null;
+        return fromCode(code) != null;
     }
 
     public Integer getCode() {
@@ -70,5 +38,33 @@ public enum PaymentItemTypeEnum {
 
     public String getDesc() {
         return desc;
+    }
+
+    public static PaymentItemTypeEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (PaymentItemTypeEnum item : values()) {
+            if (code.equals(item.code)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        PaymentItemTypeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.desc;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        PaymentItemTypeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.desc;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        PaymentItemTypeEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.desc;
     }
 }

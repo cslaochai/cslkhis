@@ -32,7 +32,7 @@ public final class OperationCheckItems {
         if (code == null) {
             return "—";
         }
-        return OperationPreCheckItemEnum.getText(code);
+        return OperationPreCheckItemEnum.getLabel(code);
     }
 
     public static boolean isValid(Integer code) {

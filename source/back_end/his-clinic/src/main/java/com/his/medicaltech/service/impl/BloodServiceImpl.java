@@ -484,7 +484,7 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
     }
 
     private String logTypeText(Integer t) {
-        return BloodStockLogBizTypeEnum.labelOrUnknown(t);
+        return BloodStockLogBizTypeEnum.getLabelOrUnknown(t);
     }
 
     private BizBloodInventory requireBag(Long id) {

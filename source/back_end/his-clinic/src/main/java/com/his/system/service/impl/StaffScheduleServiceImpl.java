@@ -226,13 +226,13 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         // 这个键已经排成休息或听班，再挂一条出诊/值守就是同一时刻两种在岗状态
         if (!Objects.equals(exist.getDutyStatus(), schedule.getDutyStatus())) {
             throw new BusinessException("「" + exist.getEmployeeName() + "」在 " + exist.getScheduleDate()
-                    + " 的这个班已经排成" + StaffDutyStatusEnum.getText(exist.getDutyStatus())
-                    + "，不能同时排成" + StaffDutyStatusEnum.getText(schedule.getDutyStatus())
+                    + " 的这个班已经排成" + StaffDutyStatusEnum.getLabel(exist.getDutyStatus())
+                    + "，不能同时排成" + StaffDutyStatusEnum.getLabel(schedule.getDutyStatus())
                     + "；出诊与值守都认这条排班，要改请到「全院排班」里改它");
         }
         if (!AttendModeEnum.releasesSource(exist.getAttendMode())) {
             throw new BusinessException("「" + exist.getEmployeeName() + "」在 " + exist.getScheduleDate()
-                    + " 是" + AttendModeEnum.getText(exist.getAttendMode())
+                    + " 是" + AttendModeEnum.getLabel(exist.getAttendMode())
                     + "，人不在院，排不出诊也接不了值守；要在岗请先改这条排班的响应形态");
         }
         return exist;
@@ -266,7 +266,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         }
         OrgUnitTypeEnum unitType = OrgUnitTypeEnum.fromCode(orgType);
         if (unitType == null) {
-            throw new BusinessException("排班单元类型只允许 " + OrgUnitTypeEnum.whitelistText());
+            throw new BusinessException("排班单元类型取值不合法");
         }
         Long unitId = unitType == OrgUnitTypeEnum.HOSPITAL ? ID_NONE : orgId;
         baseMapper.purgeByDay(unitType.getCode(), unitId, employeeId, date, null);
@@ -288,10 +288,10 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
 
         StaffDutyStatusEnum status = StaffDutyStatusEnum.fromCode(schedule.getDutyStatus());
         if (status == null) {
-            throw new BusinessException("出勤状态只允许 " + StaffDutyStatusEnum.whitelistText());
+            throw new BusinessException("出勤状态取值不合法");
         }
         if (AttendModeEnum.fromCode(schedule.getAttendMode()) == null) {
-            throw new BusinessException("响应形态只允许 " + AttendModeEnum.whitelistText());
+            throw new BusinessException("响应形态取值不合法");
         }
         applyUnit(schedule, dto.getOrgType(), dto.getOrgId());
         applyEmployee(schedule, dto.getEmployeeId(), dto.getEmployeePostId());
@@ -420,7 +420,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
     public int copyRange(StaffScheduleCopyDTO dto) {
         OrgUnitTypeEnum unitType = OrgUnitTypeEnum.fromCode(dto.getOrgType());
         if (unitType == null) {
-            throw new BusinessException("排班单元类型只允许 " + OrgUnitTypeEnum.whitelistText());
+            throw new BusinessException("排班单元类型取值不合法");
         }
         if (dto.getFromStartDate().isAfter(dto.getFromEndDate())) {
             throw new BusinessException("来源区间开始日不能晚于结束日");
@@ -525,7 +525,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         vo.setEmployeeId(row.getEmployeeId());
         vo.setEmployeeName(row.getEmployeeName());
         vo.setStaffType(row.getStaffType());
-        vo.setStaffTypeName(StaffTypeEnum.getText(row.getStaffType()));
+        vo.setStaffTypeName(StaffTypeEnum.getLabel(row.getStaffType()));
         vo.setOrgId(row.getOrgId());
         vo.setOrgName(row.getOrgName());
         vo.setDeptId(row.getDeptId());
@@ -535,7 +535,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         vo.setStartTime(row.getStartTime());
         vo.setEndTime(row.getEndTime());
         vo.setAttendMode(row.getAttendMode());
-        vo.setAttendModeText(AttendModeEnum.getText(row.getAttendMode()));
+        vo.setAttendModeText(AttendModeEnum.getLabel(row.getAttendMode()));
         return vo;
     }
 
@@ -622,7 +622,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
     private void applyUnit(BizSchedule schedule, Integer orgType, Long orgId) {
         OrgUnitTypeEnum unitType = OrgUnitTypeEnum.fromCode(orgType);
         if (unitType == null) {
-            throw new BusinessException("排班单元类型只允许 " + OrgUnitTypeEnum.whitelistText());
+            throw new BusinessException("排班单元类型取值不合法");
         }
         schedule.setOrgType(unitType.getCode());
         if (unitType == OrgUnitTypeEnum.HOSPITAL) {
@@ -773,8 +773,8 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         }
         if (shift.getApplyStaffType() != null && !Objects.equals(shift.getApplyStaffType(), staffType)) {
             throw new BusinessException("班次「" + shift.getShiftName() + "」是"
-                    + StaffTypeEnum.getText(shift.getApplyStaffType()) + "用的班次，"
-                    + employeeName + "当前的岗位类别是" + StaffTypeEnum.getText(staffType) + "，排不进这个班");
+                    + StaffTypeEnum.getLabel(shift.getApplyStaffType()) + "用的班次，"
+                    + employeeName + "当前的岗位类别是" + StaffTypeEnum.getLabel(staffType) + "，排不进这个班");
         }
         return shift;
     }
@@ -833,7 +833,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
                     + " 已排休息/请假，先删掉那条记录才能排上班");
         }
         throw new BusinessException("「" + schedule.getEmployeeName() + "」在 " + schedule.getScheduleDate()
-                + " 已经排了班，改成" + StaffDutyStatusEnum.getText(schedule.getDutyStatus())
+                + " 已经排了班，改成" + StaffDutyStatusEnum.getLabel(schedule.getDutyStatus())
                 + "要先删掉那条排班（他的号源也得跟着停）");
     }
 
@@ -958,7 +958,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         vo.setWeekDay(row.getWeekDay());
         vo.setWeekDayText(weekDayText(row.getWeekDay()));
         vo.setOrgType(row.getOrgType());
-        vo.setOrgTypeText(OrgUnitTypeEnum.getText(row.getOrgType()));
+        vo.setOrgTypeText(OrgUnitTypeEnum.getLabel(row.getOrgType()));
         vo.setOrgId(row.getOrgId());
         vo.setOrgName(row.getOrgName());
         vo.setDeptId(row.getDeptId());
@@ -968,22 +968,22 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         vo.setEmployeeName(row.getEmployeeName());
         vo.setEmployeePostId(row.getEmployeePostId());
         vo.setStaffType(row.getStaffType());
-        vo.setStaffTypeName(StaffTypeEnum.getText(row.getStaffType()));
+        vo.setStaffTypeName(StaffTypeEnum.getLabel(row.getStaffType()));
         vo.setShiftId(row.getShiftId());
         vo.setShiftName(shift == null ? null : shift.getShiftName());
         vo.setStartTime(row.getStartTime());
         vo.setEndTime(row.getEndTime());
         vo.setCrossDay(isCrossDay(row.getStartTime(), row.getEndTime()));
         vo.setDutyStatus(row.getDutyStatus());
-        vo.setDutyStatusText(StaffDutyStatusEnum.getText(row.getDutyStatus()));
+        vo.setDutyStatusText(StaffDutyStatusEnum.getLabel(row.getDutyStatus()));
         vo.setAttendMode(row.getAttendMode());
-        vo.setAttendModeText(AttendModeEnum.getText(row.getAttendMode()));
+        vo.setAttendModeText(AttendModeEnum.getLabel(row.getAttendMode()));
         vo.setClinicFlag(row.getClinicFlag());
         vo.setWorkMinutes(row.getWorkMinutes());
         vo.setWorkHours(row.getWorkMinutes() == null ? null
                 : String.format("%.1f", row.getWorkMinutes() / 60.0));
         vo.setScheduleSource(row.getScheduleSource());
-        vo.setScheduleSourceText(StaffScheduleSourceEnum.getText(row.getScheduleSource()));
+        vo.setScheduleSourceText(StaffScheduleSourceEnum.getLabel(row.getScheduleSource()));
         vo.setTemplateId(row.getTemplateId());
         vo.setRemark(row.getRemark());
         return vo;
@@ -995,7 +995,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
 
     private String shiftLabelOf(BizSchedule schedule) {
         if (schedule.getShiftId() == null || schedule.getShiftId() == ID_NONE) {
-            return StaffDutyStatusEnum.getText(schedule.getDutyStatus());
+            return StaffDutyStatusEnum.getLabel(schedule.getDutyStatus());
         }
         String name = shiftNameOf(schedule.getShiftId());
         return name == null ? "未命名班次" : name;

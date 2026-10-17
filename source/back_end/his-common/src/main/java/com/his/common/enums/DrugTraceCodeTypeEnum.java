@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 药品追溯码码制枚举（1-GS1 2-中国药品追溯码20位 3-其他/未识别）。
@@ -20,8 +21,13 @@ public enum DrugTraceCodeTypeEnum {
         this.label = label;
     }
 
+    /** 码值是否合法（写入侧校验用；null 不合法） */
+    public static boolean isValid(Integer code) {
+        return fromCode(code) != null;
+    }
+
     public static DrugTraceCodeTypeEnum fromCode(Integer code) {
-        if (code == null) {
+        if (null == code) {
             return null;
         }
         for (DrugTraceCodeTypeEnum item : values()) {
@@ -32,27 +38,19 @@ public enum DrugTraceCodeTypeEnum {
         return null;
     }
 
-    /** 码值是否合法（写入侧校验用；null 不合法） */
-    public static boolean isValid(Integer code) {
-        return fromCode(code) != null;
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        DrugTraceCodeTypeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
     }
 
-    /**
-     * 码值→展示文案。null 或不在枚举内（脏数据）返回空串 ""，绝不返回 null、不回落合法文案。
-     */
-    public static String getText(Integer code) {
+    public static String getLabel(Integer code, String defaultValue) {
         DrugTraceCodeTypeEnum item = fromCode(code);
-        return item != null ? item.label : "";
+        return item == null ? defaultValue : item.label;
     }
 
-    /**
-     * 码值→异常/审计文案。null 或不在枚举内返回「未知(n)」，保留原始码值以便排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        if (code == null) {
-            return "未知";
-        }
+    public static String getLabelOrUnknown(Integer code) {
         DrugTraceCodeTypeEnum item = fromCode(code);
-        return item != null ? item.label : "未知(" + code + ")";
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 盘点明细过账标记枚举（码值口径 = 盘点明细过账标记字段的列注释）。
@@ -20,8 +21,13 @@ public enum StocktakePostFlagEnum {
         this.label = label;
     }
 
+    /** 码值是否合法（写入侧校验用；null 不合法） */
+    public static boolean isValid(Integer code) {
+        return fromCode(code) != null;
+    }
+
     public static StocktakePostFlagEnum fromCode(Integer code) {
-        if (code == null) {
+        if (null == code) {
             return null;
         }
         for (StocktakePostFlagEnum item : values()) {
@@ -32,19 +38,18 @@ public enum StocktakePostFlagEnum {
         return null;
     }
 
-    /** 码值是否合法（写入侧校验用；null 不合法） */
-    public static boolean isValid(Integer code) {
-        return fromCode(code) != null;
-    }
-
-    /** 展示用：null 或脏值返回空串（不把「未知」渲染给用户看） */
-    public static String getText(Integer code) {
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
         StocktakePostFlagEnum item = fromCode(code);
-        return item == null ? "" : item.getLabel();
+        return item == null ? StringUtils.EMPTY : item.label;
     }
 
-    /** 异常 / 审计用：null 或不在枚举内返回「未知(n)」，保留原始码值便于排查脏数据。 */
-    public static String labelOrUnknown(Integer code) {
+    public static String getLabel(Integer code, String defaultValue) {
+        StocktakePostFlagEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
         StocktakePostFlagEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }

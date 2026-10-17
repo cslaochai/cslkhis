@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 膳食方案接收状态枚举
@@ -20,7 +21,10 @@ public enum DietConfirmStatusEnum {
         this.label = label;
     }
 
-    public static DietConfirmStatusEnum fromCode(int code) {
+    public static DietConfirmStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
         for (DietConfirmStatusEnum item : values()) {
             if (item.code == code) {
                 return item;
@@ -29,18 +33,19 @@ public enum DietConfirmStatusEnum {
         return null;
     }
 
-    /**
-     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」——
-     * 脏数据应由数据治理流程修复，而非界面伪装。
-     */
-    public static String getText(Integer code) {
-        DietConfirmStatusEnum item = code == null ? null : fromCode(code);
-        return item == null ? "" : item.label;
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        DietConfirmStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
     }
 
-    /** 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。 */
-    public static String labelOrUnknown(Integer code) {
-        DietConfirmStatusEnum item = code == null ? null : fromCode(code);
+    public static String getLabel(Integer code, String defaultValue) {
+        DietConfirmStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        DietConfirmStatusEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

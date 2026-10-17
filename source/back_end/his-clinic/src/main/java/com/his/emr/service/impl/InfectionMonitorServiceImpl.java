@@ -155,7 +155,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
 
         BizInfectionCase exists = requireCase(dto.getId());
         if (exists.getCaseStatus() != InfectionCaseStatusEnum.PENDING.getCode()) {
-            throw new BusinessException(InfectionCaseStatusEnum.labelOrUnknown(exists.getCaseStatus()) + "的病例不能修改（核实结论错了请建新卡订正，留痕不覆盖）");
+            throw new BusinessException(InfectionCaseStatusEnum.getLabelOrUnknown(exists.getCaseStatus()) + "的病例不能修改（核实结论错了请建新卡订正，留痕不覆盖）");
         }
         fillCase(exists, dto, patient, exists.getReportBy(), exists.getReportName());
         if (Integer.valueOf(1).equals(dto.getLeakFlag())) {
@@ -171,7 +171,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
     public void caseAudit(InfectionMonitorDTO.CaseAudit dto) {
         BizInfectionCase c = requireCase(dto.getId());
         if (c.getCaseStatus() != InfectionCaseStatusEnum.PENDING.getCode()) {
-            throw new BusinessException(InfectionCaseStatusEnum.labelOrUnknown(c.getCaseStatus()) + "的病例不能核实（仅待核实可审）");
+            throw new BusinessException(InfectionCaseStatusEnum.getLabelOrUnknown(c.getCaseStatus()) + "的病例不能核实（仅待核实可审）");
         }
         c.setCaseStatus(dto.getAuditResult());
         c.setAuditName(UserUtils.getCurrentUser().getRealName());
@@ -544,7 +544,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
     }
 
     private String statusText(Integer s) {
-        return InfectionCaseStatusEnum.getText(s);
+        return InfectionCaseStatusEnum.getLabel(s);
     }
 
     private String monitorTypeText(Integer t) {
@@ -553,13 +553,13 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
 
     private String infectionSiteText(String site) {
         if (!TextUtil.hasText(site)) return null;
-        String text = InfectionSiteEnum.getText(site);
+        String text = InfectionSiteEnum.getLabel(site);
         return text == null ? "" : text;
     }
 
     private String obsObjectText(Integer o) {
         if (o == null) return "";
-        String text = InfectionObsObjectEnum.getText(o);
+        String text = InfectionObsObjectEnum.getLabel(o);
         return text == null ? "" : text;
     }
 

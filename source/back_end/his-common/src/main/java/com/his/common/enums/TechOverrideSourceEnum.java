@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 技术越权登记的来源单据类型
@@ -33,18 +34,6 @@ public enum TechOverrideSourceEnum {
         this.label = label;
     }
 
-    public static TechOverrideSourceEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (TechOverrideSourceEnum source : values()) {
-            if (source.code == code) {
-                return source;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
@@ -52,16 +41,31 @@ public enum TechOverrideSourceEnum {
         return fromCode(code) != null;
     }
 
-    public static String getText(Integer code) {
-        TechOverrideSourceEnum source = fromCode(code);
-        return source == null ? "未知(" + code + ")" : source.getLabel();
+    public static TechOverrideSourceEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (TechOverrideSourceEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
     }
 
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        TechOverrideSourceEnum item = code == null ? null : fromCode(code);
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        TechOverrideSourceEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        TechOverrideSourceEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        TechOverrideSourceEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

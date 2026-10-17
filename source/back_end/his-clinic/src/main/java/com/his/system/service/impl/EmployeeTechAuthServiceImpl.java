@@ -118,8 +118,8 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
         if (!create) {
             if (!Objects.equals(TechAuthStatusEnum.PENDING.getCode(), entity.getAuthStatus()) && !Objects.equals(TechAuthStatusEnum.REJECTED.getCode(), entity.getAuthStatus())) {
                 throw new BusinessException(emp.getEmpName() + " 的「"
-                        + TechAuthCategoryEnum.getText(entity.getAuthCategory()) + "」授权当前为「"
-                        + TechAuthStatusEnum.getText(entity.getAuthStatus())
+                        + TechAuthCategoryEnum.getLabel(entity.getAuthCategory()) + "」授权当前为「"
+                        + TechAuthStatusEnum.getLabel(entity.getAuthStatus())
                         + "」，已生效的授权不允许改字段（需要变级别或换有效期请先收回，再重新授权一条 —— 台账必须保留当时授到几级）");
             }
             // 授权不允许改挂到另一个人名下：id 来自前端，归属只认库里原值
@@ -131,14 +131,14 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
         // 同一人同类别同期只能有一条：两条「已授权」并存时闸门取哪条不确定
         if (hasSamePeriod(dto.getEmployeeId(), dto.getAuthCategory(), dto.getValidFrom(), dto.getId())) {
             throw new BusinessException(emp.getEmpName() + " 在 " + dto.getValidFrom() + " 已有一条「"
-                    + TechAuthCategoryEnum.getText(dto.getAuthCategory()) + "」授权记录，同一天同类别只能授一条"
+                    + TechAuthCategoryEnum.getLabel(dto.getAuthCategory()) + "」授权记录，同一天同类别只能授一条"
                     + "（要调整请先收回原记录）");
         }
         SysEmployeeTechAuth granted = findEffective(dto.getEmployeeId(), dto.getAuthCategory(), dto.getValidFrom());
         if (granted != null && (create || !Objects.equals(granted.getId(), dto.getId()))) {
             throw new BusinessException(emp.getEmpName() + " 的「"
-                    + TechAuthCategoryEnum.getText(dto.getAuthCategory()) + "」已有一条生效中的授权（上限"
-                    + TechLevelEnum.getText(granted.getTechLevel()) + "，有效期至 "
+                    + TechAuthCategoryEnum.getLabel(dto.getAuthCategory()) + "」已有一条生效中的授权（上限"
+                    + TechLevelEnum.getLabel(granted.getTechLevel()) + "，有效期至 "
                     + (granted.getValidUntil() == null ? "长期" : granted.getValidUntil())
                     + "），不能并存第二条；如需变更级别请先收回");
         }
@@ -166,8 +166,8 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
         }
         log.info("{}技术授权 emp={} {} 上限={} {}~{}",
                 create ? "登记" : "修改", emp.getEmpName(),
-                TechAuthCategoryEnum.getText(dto.getAuthCategory()),
-                TechLevelEnum.getText(dto.getTechLevel()), dto.getValidFrom(), dto.getValidUntil());
+                TechAuthCategoryEnum.getLabel(dto.getAuthCategory()),
+                TechLevelEnum.getLabel(dto.getTechLevel()), dto.getValidFrom(), dto.getValidUntil());
     }
 
     @Override
@@ -175,7 +175,7 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
     public void approve(TechAuthApproveDTO dto) {
         SysEmployeeTechAuth entity = mustGet(dto.getId());
         if (!Objects.equals(TechAuthStatusEnum.PENDING.getCode(), entity.getAuthStatus())) {
-            throw new BusinessException("该授权记录当前为「" + TechAuthStatusEnum.getText(entity.getAuthStatus())
+            throw new BusinessException("该授权记录当前为「" + TechAuthStatusEnum.getLabel(entity.getAuthStatus())
                     + "」，只有「待审批」可以审批");
         }
         entity.setAuthStatus(Boolean.TRUE.equals(dto.getApproved()) ? TechAuthStatusEnum.GRANTED.getCode() : TechAuthStatusEnum.REJECTED.getCode());
@@ -186,7 +186,7 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
         // 审批即生效：原记录若授到更晚日期，收回旧的一律由人工做，这里不自动覆盖
         sysEmployeeTechAuthMapper.updateById(entity);
         log.info("技术授权审批 id={} 结论={} 审批人={}", entity.getId(),
-                TechAuthStatusEnum.getText(entity.getAuthStatus()), entity.getApproverName());
+                TechAuthStatusEnum.getLabel(entity.getAuthStatus()), entity.getApproverName());
     }
 
     // 三、准入闸
@@ -197,7 +197,7 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
         SysEmployeeTechAuth entity = mustGet(dto.getId());
         if (!Objects.equals(TechAuthStatusEnum.GRANTED.getCode(), entity.getAuthStatus())) {
             throw new BusinessException("只有「已授权」的记录可以收回，当前为「"
-                    + TechAuthStatusEnum.getText(entity.getAuthStatus()) + "」");
+                    + TechAuthStatusEnum.getLabel(entity.getAuthStatus()) + "」");
         }
         entity.setAuthStatus(TechAuthStatusEnum.REVOKED.getCode());
         entity.setRevokeBy(UserUtils.getCurrentUser().getRealName());
@@ -205,7 +205,7 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
         entity.setRevokeReason(TextUtil.cutToNull(dto.getRevokeReason(), REASON_MAX));
         sysEmployeeTechAuthMapper.updateById(entity);
         log.info("技术授权收回 id={} emp={} {} 原因={}", entity.getId(), entity.getEmployeeName(),
-                TechAuthCategoryEnum.getText(entity.getAuthCategory()), entity.getRevokeReason());
+                TechAuthCategoryEnum.getLabel(entity.getAuthCategory()), entity.getRevokeReason());
     }
 
     @Override
@@ -242,7 +242,7 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
         TechAuthCheckVO vo = new TechAuthCheckVO();
         vo.setEmployeeId(employeeId);
         vo.setAuthCategory(authCategory);
-        vo.setAuthCategoryText(TechAuthCategoryEnum.getText(authCategory));
+        vo.setAuthCategoryText(TechAuthCategoryEnum.getLabel(authCategory));
         vo.setRequiredLevel(requiredLevel);
         vo.setAuthorized(false);
         vo.setPassed(false);
@@ -264,21 +264,21 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
 
         SysEmployeeTechAuth held = findEffective(employeeId, authCategory, operateDate);
         if (held == null) {
-            vo.setMessage(emp.getEmpName() + " 没有「" + TechAuthCategoryEnum.getText(authCategory)
-                    + "」类在有效期内的技术授权，不能开展" + TechLevelEnum.getText(requiredLevel)
+            vo.setMessage(emp.getEmpName() + " 没有「" + TechAuthCategoryEnum.getLabel(authCategory)
+                    + "」类在有效期内的技术授权，不能开展" + TechLevelEnum.getLabel(requiredLevel)
                     + "操作（《医疗机构手术分级管理办法》要求授权到医师本人）");
             return vo;
         }
         vo.setHeldLevel(held.getTechLevel());
         if (requiredLevel != null && held.getTechLevel() < requiredLevel) {
-            vo.setMessage(emp.getEmpName() + " 的「" + TechAuthCategoryEnum.getText(authCategory)
-                    + "」授权上限为" + TechLevelEnum.getText(held.getTechLevel())
-                    + "，低于本次要求的" + TechLevelEnum.getText(requiredLevel) + "，不能开展");
+            vo.setMessage(emp.getEmpName() + " 的「" + TechAuthCategoryEnum.getLabel(authCategory)
+                    + "」授权上限为" + TechLevelEnum.getLabel(held.getTechLevel())
+                    + "，低于本次要求的" + TechLevelEnum.getLabel(requiredLevel) + "，不能开展");
             return vo;
         }
         if (TextUtil.hasText(held.getItemScope()) && TextUtil.hasText(itemCode)
                 && !scopeContains(held.getItemScope(), itemCode)) {
-            vo.setMessage(emp.getEmpName() + " 的「" + TechAuthCategoryEnum.getText(authCategory)
+            vo.setMessage(emp.getEmpName() + " 的「" + TechAuthCategoryEnum.getLabel(authCategory)
                     + "」为限制授权，仅限术式【" + held.getItemScope() + "】，不含本次的 " + itemCode);
             return vo;
         }
@@ -326,9 +326,9 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
         check.setPassed(true);
         check.setOverrideId(override.getId());
         log.warn("急诊越权放行：emp={} {} 要求={} 现有={} 单据={} 登记ID={}",
-                check.getEmployeeName(), TechAuthCategoryEnum.getText(gate.getAuthCategory()),
-                TechLevelEnum.getText(gate.getRequiredLevel()), TechLevelEnum.getText(check.getHeldLevel()),
-                TechOverrideSourceEnum.getText(gate.getSourceType()), override.getId());
+                check.getEmployeeName(), TechAuthCategoryEnum.getLabel(gate.getAuthCategory()),
+                TechLevelEnum.getLabel(gate.getRequiredLevel()), TechLevelEnum.getLabel(check.getHeldLevel()),
+                TechOverrideSourceEnum.getLabel(gate.getSourceType()), override.getId());
         return check;
     }
 
@@ -437,9 +437,9 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
         vo.setDeptName(entity.getDeptName());
         vo.setTitle(entity.getTitle());
         vo.setAuthCategory(entity.getAuthCategory());
-        vo.setAuthCategoryText(TechAuthCategoryEnum.getText(entity.getAuthCategory()));
+        vo.setAuthCategoryText(TechAuthCategoryEnum.getLabel(entity.getAuthCategory()));
         vo.setTechLevel(entity.getTechLevel());
-        vo.setTechLevelText(TechLevelEnum.getText(entity.getTechLevel()));
+        vo.setTechLevelText(TechLevelEnum.getLabel(entity.getTechLevel()));
         vo.setItemScope(entity.getItemScope());
         vo.setAuthType(entity.getAuthType());
         vo.setAuthTypeText(authTypeText(entity.getAuthType()));
@@ -448,7 +448,7 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
         vo.setValidUntil(entity.getValidUntil());
         vo.setIndefinite(entity.getValidUntil() == null);
         vo.setAuthStatus(entity.getAuthStatus());
-        vo.setAuthStatusText(TechAuthStatusEnum.getText(entity.getAuthStatus()));
+        vo.setAuthStatusText(TechAuthStatusEnum.getLabel(entity.getAuthStatus()));
         LocalDate today = LocalDate.now();
         vo.setEffective(Objects.equals(TechAuthStatusEnum.GRANTED.getCode(), entity.getAuthStatus())
                 && !entity.getValidFrom().isAfter(today)
@@ -473,17 +473,17 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
         TechAuthOverrideVO vo = new TechAuthOverrideVO();
         vo.setId(entity.getId());
         vo.setSourceType(entity.getSourceType());
-        vo.setSourceTypeText(TechOverrideSourceEnum.getText(entity.getSourceType()));
+        vo.setSourceTypeText(TechOverrideSourceEnum.getLabel(entity.getSourceType()));
         vo.setSourceId(entity.getSourceId());
         vo.setSourceNo(entity.getSourceNo());
         vo.setEmployeeId(entity.getEmployeeId());
         vo.setEmployeeName(entity.getEmployeeName());
         vo.setAuthCategory(entity.getAuthCategory());
-        vo.setAuthCategoryText(TechAuthCategoryEnum.getText(entity.getAuthCategory()));
+        vo.setAuthCategoryText(TechAuthCategoryEnum.getLabel(entity.getAuthCategory()));
         vo.setRequiredLevel(entity.getRequiredLevel());
-        vo.setRequiredLevelText(TechLevelEnum.getText(entity.getRequiredLevel()));
+        vo.setRequiredLevelText(TechLevelEnum.getLabel(entity.getRequiredLevel()));
         vo.setHeldLevel(entity.getHeldLevel());
-        vo.setHeldLevelText(entity.getHeldLevel() == null ? "无该类别授权" : TechLevelEnum.getText(entity.getHeldLevel()));
+        vo.setHeldLevelText(entity.getHeldLevel() == null ? "无该类别授权" : TechLevelEnum.getLabel(entity.getHeldLevel()));
         vo.setReason(entity.getReason());
         vo.setOccurTime(entity.getOccurTime());
         vo.setOverrideStatus(entity.getOverrideStatus());

@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 转科类型枚举
@@ -21,7 +22,17 @@ public enum TransferTypeEnum {
         this.label = label;
     }
 
-    public static TransferTypeEnum fromCode(int code) {
+    /**
+     * 码值是否合法（写入侧校验用；null 不合法）
+     */
+    public static boolean isValid(Integer code) {
+        return code != null && fromCode(code) != null;
+    }
+
+    public static TransferTypeEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
         for (TransferTypeEnum item : values()) {
             if (item.code == code) {
                 return item;
@@ -30,28 +41,19 @@ public enum TransferTypeEnum {
         return null;
     }
 
-    /**
-     * 码值是否合法（写入侧校验用；null 不合法）
-     */
-    public static boolean isValid(Integer code) {
-        return code != null && fromCode(code) != null;
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        TransferTypeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
     }
 
-    /**
-     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」——
-     * 脏数据应由数据治理流程修复，而非界面伪装。
-     */
-    public static String getText(Integer code) {
-        TransferTypeEnum item = code == null ? null : fromCode(code);
-        return item == null ? "" : item.label;
+    public static String getLabel(Integer code, String defaultValue) {
+        TransferTypeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
     }
 
-    /**
-     * 异常 / 审计 / 合规用码值 → 文案。null 或不在枚举内返回「未知(n)」，
-     * 用于业务异常消息或审计日志，保留原始码值以便排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        TransferTypeEnum item = code == null ? null : fromCode(code);
+    public static String getLabelOrUnknown(Integer code) {
+        TransferTypeEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

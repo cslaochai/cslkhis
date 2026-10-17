@@ -54,7 +54,7 @@ public class ArrearsControlProviderImpl implements ArrearsControlProvider {
         if (hit.isEmpty()) {
             return CheckResult.allow();
         }
-        String classNames = hit.stream().map(ArrearsFeeClassEnum::getTextOrOther).collect(Collectors.joining("、"));
+        String classNames = hit.stream().map(c -> ArrearsFeeClassEnum.getLabel(c, "其他")).collect(Collectors.joining("、"));
         return CheckResult.deny(String.format(
                 "该患者已欠费 %.2f 元（停费线 %.2f 元），按院方管控策略暂停「%s」类新开医嘱；药品/手术/急救类不受影响，请通知补缴预交金",
                 arrears, policy.getStopLine(), classNames));

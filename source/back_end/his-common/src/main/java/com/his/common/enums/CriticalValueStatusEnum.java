@@ -1,5 +1,7 @@
 package com.his.common.enums;
 
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * 危急值状态枚举
  */
@@ -18,36 +20,11 @@ public enum CriticalValueStatusEnum {
         this.description = description;
     }
 
-    public static CriticalValueStatusEnum getByCode(int code) {
-        for (CriticalValueStatusEnum status : CriticalValueStatusEnum.values()) {
-            if (status.code == code) {
-                return status;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
     public static boolean isValid(Integer code) {
-        return code != null && getByCode(code) != null;
-    }
-
-    /**
-     * 展示用：null 或不在枚举内返回空串（不把「未知」渲染给用户看）
-     */
-    public static String getText(Integer code) {
-        CriticalValueStatusEnum item = code == null ? null : getByCode(code);
-        return item == null ? "" : item.description;
-    }
-
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        CriticalValueStatusEnum item = code == null ? null : getByCode(code);
-        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.description;
+        return code != null && fromCode(code) != null;
     }
 
     public int getCode() {
@@ -56,5 +33,33 @@ public enum CriticalValueStatusEnum {
 
     public String getDescription() {
         return description;
+    }
+
+    public static CriticalValueStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (CriticalValueStatusEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        CriticalValueStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.description;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        CriticalValueStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.description;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        CriticalValueStatusEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.description;
     }
 }

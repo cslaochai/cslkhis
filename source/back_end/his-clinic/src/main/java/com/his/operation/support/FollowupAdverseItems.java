@@ -89,7 +89,7 @@ public final class FollowupAdverseItems {
             return null;
         }
         return parse(raw).stream()
-                .map(code -> AnesthesiaFollowupAdverseEnum.getText(code))
+                .map(code -> AnesthesiaFollowupAdverseEnum.getLabel(code))
                 .collect(Collectors.joining("、"));
     }
 
@@ -97,7 +97,7 @@ public final class FollowupAdverseItems {
      * 随访轮次建议文案
      */
     public static String roundText(Integer roundNo) {
-        return AnesthesiaFollowupRoundEnum.getText(roundNo);
+        return AnesthesiaFollowupRoundEnum.getLabel(roundNo);
     }
 
     public static List<Integer> codes() {

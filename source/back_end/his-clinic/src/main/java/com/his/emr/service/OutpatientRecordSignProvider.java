@@ -16,7 +16,7 @@ public interface OutpatientRecordSignProvider extends SignableContentProvider {
      * 门诊病历状态文案（与前端 1草稿/2已提交/3已归档/4已作废一致）；未知码值不回落
      */
     static String recordStatusText(Integer status) {
-        return status == null ? "—" : RecordStatusEnum.labelOrUnknown(status);
+        return status == null ? "—" : RecordStatusEnum.getLabelOrUnknown(status);
     }
 
     /**

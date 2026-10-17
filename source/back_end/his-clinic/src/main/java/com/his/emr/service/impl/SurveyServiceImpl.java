@@ -171,7 +171,7 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
         if (Objects.equals(dto.getAction(), 1)) {
             if (!Objects.equals(entity.getDispatchStatus(), SurveyDispatchStatusEnum.PENDING_PUSH.getCode())) {
                 throw new BusinessException("仅「待推送」的发放单可标记已推送（当前："
-                        + SurveyDispatchStatusEnum.getText(entity.getDispatchStatus()) + "）");
+                        + SurveyDispatchStatusEnum.getLabel(entity.getDispatchStatus()) + "）");
             }
             entity.setDispatchStatus(SurveyDispatchStatusEnum.PUSHED.getCode());
             entity.setPushTime(TimeUtil.nowSeconds());
@@ -182,7 +182,7 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
             if (!Objects.equals(entity.getDispatchStatus(), SurveyDispatchStatusEnum.PENDING_PUSH.getCode())
                     && !Objects.equals(entity.getDispatchStatus(), SurveyDispatchStatusEnum.PUSHED.getCode())) {
                 throw new BusinessException("仅未回收的发放单可标记拒答（当前："
-                        + SurveyDispatchStatusEnum.getText(entity.getDispatchStatus()) + "）");
+                        + SurveyDispatchStatusEnum.getLabel(entity.getDispatchStatus()) + "）");
             }
             entity.setDispatchStatus(SurveyDispatchStatusEnum.REFUSED.getCode());
         } else {
@@ -393,7 +393,7 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
         for (SurveyDimensionStatVO row : bizSurveyAnswerMapper.statByDimension(templateId, from, to, scope)) {
             int k = NumUtil.orZero(row.getDimension());
             SurveyStatItemVO item = new SurveyStatItemVO(String.valueOf(k),
-                    SurveyDimensionEnum.getText(k), NumUtil.orZero(row.getCnt()));
+                    SurveyDimensionEnum.getLabel(k), NumUtil.orZero(row.getCnt()));
             item.setAvgScore(row.getAvgScore());
             byDimension.add(item);
         }
@@ -413,7 +413,7 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
             int k = NumUtil.orZero(row.getK());
             long total = NumUtil.orZero(row.getTotal());
             SurveyStatItemVO item = new SurveyStatItemVO(String.valueOf(k),
-                    SurveyChannelEnum.getText(k), total);
+                    SurveyChannelEnum.getLabel(k), total);
             item.setRate(rate(NumUtil.orZero(row.getRecycled()), total));
             byChannel.add(item);
         }
@@ -629,8 +629,8 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
                 worstKey = entry.getKey();
             }
         }
-        // 落进纠纷投诉单正文（可追责的书面记录），脏码值要用 labelOrUnknown 保留原始码值便于排查
-        return worstKey == null ? null : SurveyDimensionEnum.labelOrUnknown(worstKey) + " " + worstAvg + " 分";
+        // 落进纠纷投诉单正文（可追责的书面记录），脏码值要用 getLabelOrUnknown 保留原始码值便于排查
+        return worstKey == null ? null : SurveyDimensionEnum.getLabelOrUnknown(worstKey) + " " + worstAvg + " 分";
     }
 
     private BizSurveyAnswerItem toAnswerItem(Long answerId, Long templateId, SurveyAnswerItemVO src) {

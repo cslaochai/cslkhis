@@ -223,7 +223,7 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
         assertTransferAccessible(entity);
         if (!Objects.equals(TransferStatusEnum.PENDING.getCode(), entity.getTransferStatus())) {
             throw new BusinessException("该转科申请当前状态为「"
-                    + TransferStatusEnum.labelOrUnknown(entity.getTransferStatus())
+                    + TransferStatusEnum.getLabelOrUnknown(entity.getTransferStatus())
                     + "」，只有「待接收」可以接收");
         }
 
@@ -312,7 +312,7 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
         assertTransferAccessible(entity);
         if (!Objects.equals(TransferStatusEnum.PENDING.getCode(), entity.getTransferStatus())) {
             throw new BusinessException("该转科申请当前状态为「"
-                    + TransferStatusEnum.labelOrUnknown(entity.getTransferStatus())
+                    + TransferStatusEnum.getLabelOrUnknown(entity.getTransferStatus())
                     + "」，只有「待接收」可以取消；已接收的转科要转回去，请再发起一次转科");
         }
         entity.setTransferStatus(TransferStatusEnum.CANCELLED.getCode());
@@ -351,7 +351,7 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
         if (!left.isEmpty()) {
             sb.append("；仍有 ").append(left.size()).append(" 条长期医嘱未停（状态：");
             sb.append(left.stream()
-                    .map(o -> o.getOrderNo() + "/" + InpatientOrderStatusEnum.labelOrUnknown(o.getOrderStatus()))
+                    .map(o -> o.getOrderNo() + "/" + InpatientOrderStatusEnum.getLabelOrUnknown(o.getOrderStatus()))
                     .collect(Collectors.joining("、")));
             sb.append("），需由原科室医生处理");
         }
@@ -378,7 +378,7 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
     private void checkTargetBed(SysBed bed, Long toDeptId, Long toWardId) {
         if (!Objects.equals(BedStatusEnum.FREE.getCode(), bed.getBedStatus())) {
             throw new BusinessException("转入床位「" + bed.getBedNo() + "」当前不可用（"
-                    + BedStatusEnum.labelOrUnknown(bed.getBedStatus()) + "）");
+                    + BedStatusEnum.getLabelOrUnknown(bed.getBedStatus()) + "）");
         }
         if (!Objects.equals(bed.getDeptId(), toDeptId)) {
             throw new BusinessException("转入床位「" + bed.getBedNo() + "」不属于目标科室");
@@ -498,7 +498,7 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
         body.append("转入：").append(TextUtil.blankToDefault(entity.getToDeptName(), "—"))
                 .append(" ").append(TextUtil.blankToDefault(entity.getToWardName(), "—"))
                 .append(" ").append(TextUtil.blankToDefault(entity.getToBedNo(), "—")).append("床\n");
-        body.append("转科类型：").append(TransferTypeEnum.getText(entity.getTransferType()))
+        body.append("转科类型：").append(TransferTypeEnum.getLabel(entity.getTransferType()))
                 .append("；发起时已住院 ").append(entity.getHospitalDays() == null ? "—" : entity.getHospitalDays()).append(" 天\n");
         body.append("医嘱处置：").append(TextUtil.blankToDefault(orderRemark, "—"));
         record.setCourseNote(body.toString());
@@ -595,8 +595,8 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
     private InpatientTransferVO toVO(BizInpatientTransfer e, String recordNo, Integer admitStatus) {
         InpatientTransferVO vo = new InpatientTransferVO();
         BeanUtils.copyProperties(e, vo);
-        vo.setTransferTypeText(TransferTypeEnum.getText(e.getTransferType()));
-        vo.setTransferStatusText(TransferStatusEnum.getText(e.getTransferStatus()));
+        vo.setTransferTypeText(TransferTypeEnum.getLabel(e.getTransferType()));
+        vo.setTransferStatusText(TransferStatusEnum.getLabel(e.getTransferStatus()));
         vo.setRecordNo(recordNo);
 
         boolean pending = Objects.equals(TransferStatusEnum.PENDING.getCode(), e.getTransferStatus());

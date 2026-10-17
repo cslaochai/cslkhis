@@ -38,7 +38,7 @@ public enum RefundTypeEnum {
         this.itemTypes = itemTypes;
     }
 
-    public static RefundTypeEnum getByCode(Integer code) {
+    public static RefundTypeEnum fromCode(Integer code) {
         if (code == null) {
             return null;
         }
@@ -54,7 +54,7 @@ public enum RefundTypeEnum {
      * 判断退费类型码是否受支持（Controller/Service 入参校验用，避免各写一份 switch）。
      */
     public static boolean supported(Integer code) {
-        return getByCode(code) != null;
+        return fromCode(code) != null;
     }
 
     /**

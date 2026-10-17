@@ -62,13 +62,13 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
             vo.setPostCode(row.getPostCode());
             vo.setPostName(row.getPostName());
             vo.setDutyScope(row.getDutyScope());
-            vo.setDutyScopeText(DutyScopeEnum.getText(row.getDutyScope()));
+            vo.setDutyScopeText(DutyScopeEnum.getLabel(row.getDutyScope()));
             vo.setRoleType(row.getRoleType());
-            vo.setRoleTypeText(DutyRoleTypeEnum.getText(row.getRoleType()));
+            vo.setRoleTypeText(DutyRoleTypeEnum.getLabel(row.getRoleType()));
             vo.setDutyLevel(row.getDutyLevel());
-            vo.setDutyLevelText(DutyLevelEnum.getText(row.getDutyLevel()));
+            vo.setDutyLevelText(DutyLevelEnum.getLabel(row.getDutyLevel()));
             vo.setAttendMode(row.getAttendMode());
-            vo.setAttendModeText(AttendModeEnum.getText(row.getAttendMode()));
+            vo.setAttendModeText(AttendModeEnum.getLabel(row.getAttendMode()));
             vo.setShiftId(row.getShiftId());
             vo.setShiftName(shift == null ? null : shift.getShiftName());
             vo.setStartTime(shift == null ? null : shift.getStartTime());
@@ -103,24 +103,24 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
             vo.setPostCode(row.getPostCode());
             vo.setPostName(row.getPostName());
             vo.setDutyScope(row.getDutyScope());
-            vo.setDutyScopeText(DutyScopeEnum.getText(row.getDutyScope()));
+            vo.setDutyScopeText(DutyScopeEnum.getLabel(row.getDutyScope()));
             vo.setOrgType(row.getOrgType());
-            vo.setOrgTypeText(OrgUnitTypeEnum.getText(row.getOrgType()));
+            vo.setOrgTypeText(OrgUnitTypeEnum.getLabel(row.getOrgType()));
             vo.setOrgId(row.getOrgId());
             vo.setOrgName(row.getOrgId() == null || row.getOrgId() == 0L
                     ? OrgUnitTypeEnum.HOSPITAL.getLabel() : unitNameOf(row.getOrgType(), row.getOrgId()));
             vo.setRoleType(row.getRoleType());
-            vo.setRoleTypeText(DutyRoleTypeEnum.getText(row.getRoleType()));
+            vo.setRoleTypeText(DutyRoleTypeEnum.getLabel(row.getRoleType()));
             vo.setDutyLevel(row.getDutyLevel());
-            vo.setDutyLevelText(DutyLevelEnum.getText(row.getDutyLevel()));
+            vo.setDutyLevelText(DutyLevelEnum.getLabel(row.getDutyLevel()));
             vo.setAttendMode(row.getAttendMode());
-            vo.setAttendModeText(AttendModeEnum.getText(row.getAttendMode()));
+            vo.setAttendModeText(AttendModeEnum.getLabel(row.getAttendMode()));
             vo.setShiftId(row.getShiftId());
             vo.setShiftName(shift == null ? null : shift.getShiftName());
             vo.setStartTime(shift == null ? null : shift.getStartTime());
             vo.setEndTime(shift == null ? null : shift.getEndTime());
             vo.setRequiredStaffType(row.getRequiredStaffType());
-            vo.setRequiredStaffTypeName(StaffTypeEnum.getText(row.getRequiredStaffType()));
+            vo.setRequiredStaffTypeName(StaffTypeEnum.getLabel(row.getRequiredStaffType()));
             vo.setPhone(row.getPhone());
             vo.setSortNo(row.getSortNo());
             vo.setStatus(row.getStatus());
@@ -150,13 +150,13 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
         post.setRemark(dto.getRemark());
 
         if (DutyScopeEnum.fromCode(post.getDutyScope()) == null) {
-            throw new BusinessException("责任范围只允许 " + DutyScopeEnum.whitelistText());
+            throw new BusinessException("责任范围取值不合法");
         }
         if (OrgUnitTypeEnum.fromCode(post.getOrgType()) == null) {
-            throw new BusinessException("排班单元类型只允许 " + OrgUnitTypeEnum.whitelistText());
+            throw new BusinessException("排班单元类型取值不合法");
         }
         if (DutyRoleTypeEnum.fromCode(post.getRoleType()) == null) {
-            throw new BusinessException("班内角色只允许 " + DutyRoleTypeEnum.whitelistText());
+            throw new BusinessException("班内角色取值不合法");
         }
         // 层级与响应形态（sql/202）：
         //  - 层级缺省按责任范围推：临床科室点位默认一线（住院医师驻守），其余默认为「不适用」；
@@ -164,7 +164,7 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
         //  让调用方少传两个字段，但不允许推完还是个非法值 —— 推错了比不推更麻烦。
         applyDutyLevel(post);
         if (post.getRequiredStaffType() != null && StaffTypeEnum.fromCode(post.getRequiredStaffType()) == null) {
-            throw new BusinessException("应到岗位类别只允许 " + StaffTypeEnum.whitelistText());
+            throw new BusinessException("应到岗位类别取值不合法");
         }
         // 点位必须挂在一个真实启用且配了时限的班次上，否则「今天几点到几点归他」无从回答
         BizShift shift = shiftService.getById(post.getShiftId());
@@ -208,7 +208,7 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
                     ? DutyLevelEnum.FIRST.getCode() : DutyLevelEnum.NONE.getCode());
         }
         if (DutyLevelEnum.fromCode(post.getDutyLevel()) == null) {
-            throw new BusinessException("值班层级只允许 " + DutyLevelEnum.whitelistText());
+            throw new BusinessException("值班层级取值不合法");
         }
         if (DutyScopeEnum.CLINICAL.getCode() == post.getDutyScope()
                 && DutyLevelEnum.NONE.getCode() == post.getDutyLevel()) {
@@ -222,7 +222,7 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
                     ? AttendModeEnum.ON_CALL.getCode() : AttendModeEnum.IN_HOSPITAL.getCode());
         }
         if (AttendModeEnum.fromCode(post.getAttendMode()) == null) {
-            throw new BusinessException("响应形态只允许 " + AttendModeEnum.whitelistText());
+            throw new BusinessException("响应形态取值不合法");
         }
     }
 
@@ -233,7 +233,7 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
         }
         // D-业务规则：非空与取值合法性（0 是全院占位值）混写在一个条件里，且仅当单元类型非全院才必填，DTO 注解无法表达，保留
         if (post.getOrgId() == null || post.getOrgId() == 0L) {
-            throw new BusinessException("请选择值守点位所属的" + OrgUnitTypeEnum.getText(post.getOrgType()));
+            throw new BusinessException("请选择值守点位所属的" + OrgUnitTypeEnum.getLabel(post.getOrgType()));
         }
         if (OrgUnitTypeEnum.WARD.getCode() == post.getOrgType()) {
             SysWard ward = sysWardMapper.selectById(post.getOrgId());

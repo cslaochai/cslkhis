@@ -1,5 +1,7 @@
 package com.his.common.enums;
 
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * 发票状态（字典 his_invoice_status，落在发票的发票状态列）。
  */
@@ -18,28 +20,11 @@ public enum InvoiceStatusEnum {
         this.desc = desc;
     }
 
-    public static InvoiceStatusEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (InvoiceStatusEnum item : values()) {
-            if (item.code.equals(code)) {
-                return item;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
-    }
-
-    public static String descOf(Integer code) {
-        InvoiceStatusEnum item = fromCode(code);
-        return item == null ? "未知状态" : item.desc;
     }
 
     public Integer getCode() {
@@ -55,5 +40,27 @@ public enum InvoiceStatusEnum {
      */
     public boolean live() {
         return this == ISSUED || this == PRINTED;
+    }
+
+    public static InvoiceStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (InvoiceStatusEnum item : values()) {
+            if (code.equals(item.code)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    public static String getLabel(Integer code) {
+        InvoiceStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.desc;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        InvoiceStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.desc;
     }
 }

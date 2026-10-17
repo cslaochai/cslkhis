@@ -1,8 +1,12 @@
 package com.his.common.enums;
 
+import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * 质控问题严重度。
  */
+@Getter
 public enum QcSeverityEnum {
 
     /**
@@ -34,37 +38,45 @@ public enum QcSeverityEnum {
 
     private final int code;
 
-    private final String text;
+    private final String label;
 
     private final int deduct;
 
-    QcSeverityEnum(int code, String text, int deduct) {
+    QcSeverityEnum(int code, String label, int deduct) {
         this.code = code;
-        this.text = text;
+        this.label = label;
         this.deduct = deduct;
     }
 
-    public static String textOf(Integer code) {
-        if (code == null) {
+    public static QcSeverityEnum fromCode(Integer code) {
+        if (null == code) {
             return null;
         }
-        for (QcSeverityEnum severity : values()) {
-            if (severity.code == code) {
-                return severity.text;
+        for (QcSeverityEnum item : values()) {
+            if (item.code == code) {
+                return item;
             }
         }
-        return "未知(" + code + ")";
+        return null;
     }
 
-    public int getCode() {
-        return code;
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        QcSeverityEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
     }
 
-    public String getText() {
-        return text;
+    public static String getLabel(Integer code, String defaultValue) {
+        QcSeverityEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
     }
 
-    public int getDeduct() {
-        return deduct;
+    public static String getLabelOrUnknown(Integer code) {
+        QcSeverityEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
+    }
+
+    public static boolean isValid(Integer code) {
+        return code != null && fromCode(code) != null;
     }
 }

@@ -1,5 +1,7 @@
 package com.his.common.enums;
 
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * 资金账户主体（字典 his_account_owner_type，落在资金账户的主体类型列）。
  */
@@ -16,28 +18,11 @@ public enum AccountOwnerTypeEnum {
         this.desc = desc;
     }
 
-    public static AccountOwnerTypeEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (AccountOwnerTypeEnum item : values()) {
-            if (item.code.equals(code)) {
-                return item;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
-    }
-
-    public static String descOf(Integer code) {
-        AccountOwnerTypeEnum item = fromCode(code);
-        return item == null ? "未知主体" : item.desc;
     }
 
     public Integer getCode() {
@@ -46,5 +31,27 @@ public enum AccountOwnerTypeEnum {
 
     public String getDesc() {
         return desc;
+    }
+
+    public static AccountOwnerTypeEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (AccountOwnerTypeEnum item : values()) {
+            if (code.equals(item.code)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    public static String getLabel(Integer code) {
+        AccountOwnerTypeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.desc;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        AccountOwnerTypeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.desc;
     }
 }

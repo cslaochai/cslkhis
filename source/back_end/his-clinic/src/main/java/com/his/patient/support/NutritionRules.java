@@ -173,7 +173,7 @@ public final class NutritionRules {
         if (list.isEmpty()) {
             return "不订餐";
         }
-        return list.stream().map(MealTypeEnum::getText).reduce((a, b) -> a + "、" + b).orElse("-");
+        return list.stream().map(MealTypeEnum::getLabel).reduce((a, b) -> a + "、" + b).orElse("-");
     }
 
     /**

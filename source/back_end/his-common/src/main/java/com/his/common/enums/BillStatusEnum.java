@@ -1,5 +1,7 @@
 package com.his.common.enums;
 
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * 结算账单状态（字典 his_bill_status，落在结算账单的账单状态列）。
  */
@@ -19,35 +21,11 @@ public enum BillStatusEnum {
         this.desc = desc;
     }
 
-    public static BillStatusEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (BillStatusEnum item : values()) {
-            if (item.code.equals(code)) {
-                return item;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
-    }
-
-    public static String descOf(Integer code) {
-        BillStatusEnum item = fromCode(code);
-        return item == null ? "未知状态" : item.desc;
-    }
-
-    /**
-     * 文案出口（与项目枚举约定一致；委托 {@link #descOf}）
-     */
-    public static String getText(Integer code) {
-        return descOf(code);
     }
 
     public Integer getCode() {
@@ -63,5 +41,27 @@ public enum BillStatusEnum {
      */
     public boolean payable() {
         return this == UNPAID || this == PARTIAL_PAID;
+    }
+
+    public static BillStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (BillStatusEnum item : values()) {
+            if (code.equals(item.code)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    public static String getLabel(Integer code) {
+        BillStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.desc;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        BillStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.desc;
     }
 }

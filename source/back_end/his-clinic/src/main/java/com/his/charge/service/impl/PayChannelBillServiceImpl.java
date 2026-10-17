@@ -160,8 +160,8 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
                     + txn.getTxnStatus() + "），已冲正流水不能作为勾对目标");
         }
         if (!bill.getChannel().equals(txn.getPayMethod())) {
-            throw new BusinessException("渠道不一致：流水是「" + PaymentMethodEnum.labelOrUnknown(bill.getChannel())
-                    + "」，支付流水渠道是「" + PaymentMethodEnum.labelOrUnknown(txn.getPayMethod()) + "」");
+            throw new BusinessException("渠道不一致：流水是「" + PaymentMethodEnum.getLabelOrUnknown(bill.getChannel())
+                    + "」，支付流水渠道是「" + PaymentMethodEnum.getLabelOrUnknown(txn.getPayMethod()) + "」");
         }
         BigDecimal remote = NumUtil.orZero(bill.getAmount());
         BigDecimal local = NumUtil.orZero(txn.getAmount());
@@ -244,7 +244,7 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
         for (Integer channel : CHANNELS) {
             PayChannelSummaryVO.Row row = new PayChannelSummaryVO.Row();
             row.setChannel(channel);
-            row.setChannelText(PaymentMethodEnum.labelOrUnknown(channel));
+            row.setChannelText(PaymentMethodEnum.getLabelOrUnknown(channel));
 
             List<BizPaymentTxn> locals = localByChannel.getOrDefault(channel, List.of());
             row.setLocalCount((long) locals.size());
@@ -301,7 +301,7 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
             PayChannelCandidateVO vo = new PayChannelCandidateVO();
             vo.setTxnNo(txn.getTxnNo());
             vo.setDirection(txn.getDirection());
-            vo.setDirectionText(PayDirectionEnum.descOf(txn.getDirection()));
+            vo.setDirectionText(PayDirectionEnum.getLabel(txn.getDirection()));
             vo.setBillNo(txn.getBillNo());
             vo.setPatientName(txn.getPatientName());
             vo.setAmount(txn.getAmount());

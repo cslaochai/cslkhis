@@ -69,7 +69,7 @@ public class PayChannelReconciliationServiceImpl extends ServiceImpl<BizPayChann
             } else if (Objects.equals(channel, PayChannelEnum.ALIPAY.getCode())) {
                 bills = fetchAlipayBill(billDate);
             } else {
-                throw new BusinessException("不支持的对账渠道：" + PayChannelEnum.labelOrUnknown(channel));
+                throw new BusinessException("不支持的对账渠道：" + PayChannelEnum.getLabelOrUnknown(channel));
             }
         } catch (BusinessException e) {
             throw e;

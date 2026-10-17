@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 处方类型（处方主表的处方类型列）
@@ -20,18 +21,6 @@ public enum PrescriptionTypeEnum {
         this.label = label;
     }
 
-    public static PrescriptionTypeEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (PrescriptionTypeEnum type : values()) {
-            if (type.code == code) {
-                return type;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
@@ -39,19 +28,31 @@ public enum PrescriptionTypeEnum {
         return fromCode(code) != null;
     }
 
-    /**
-     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，绝不返回 null、不回落合法文案。
-     */
-    public static String getText(Integer code) {
-        PrescriptionTypeEnum type = fromCode(code);
-        return type == null ? "" : type.label;
+    public static PrescriptionTypeEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (PrescriptionTypeEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
     }
 
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        PrescriptionTypeEnum item = code == null ? null : fromCode(code);
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        PrescriptionTypeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        PrescriptionTypeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        PrescriptionTypeEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

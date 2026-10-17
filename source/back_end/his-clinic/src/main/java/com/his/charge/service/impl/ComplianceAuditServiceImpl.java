@@ -545,13 +545,13 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         if (hitCount == 0) {
             return "未发现违规，但有 " + naCount + " 条规则因缺少依据未能评估（见「不适用」明细），结论不完整，请补齐数据后复查。";
         }
-        String level = RuleCatalogEnum.riskLabel(maxHitRisk);
+        String level = RuleCatalogEnum.getRiskLabelOrUnknown(maxHitRisk);
         String tail = naCount == 0 ? "" : "；另有 " + naCount + " 条规则未评估，结论不完整。";
         return "命中 " + hitCount + " 条风险规则，最高风险等级「" + level + "」，风险分 " + riskScore + tail;
     }
 
     private void fillAuditText(ComplianceAuditVO vo) {
-        vo.setRiskLevelText(RuleCatalogEnum.riskLabel(vo.getRiskLevel()));
+        vo.setRiskLevelText(RuleCatalogEnum.getRiskLabelOrUnknown(vo.getRiskLevel()));
         vo.setAuditTypeText(dictCacheService.getDicDataLabel(DictTypeConst.COMPLIANCE_AUDIT_TYPE, vo.getAuditType()));
     }
 
@@ -643,14 +643,14 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
                 : (entity.getDiagType() == 1 ? "主要诊断" : "其他诊断"));
         vo.setAdmitConditionText(dictCacheService.getDicDataLabel(DictTypeConst.ADMIT_CONDITION, entity.getAdmitCondition()));
         // 三态中文一律走 getText，禁止在这里拼「通过」
-        vo.setEvidenceStatusText(AuditResultStateEnum.getText(entity.getEvidenceStatus()));
+        vo.setEvidenceStatusText(AuditResultStateEnum.getLabel(entity.getEvidenceStatus()));
         return vo;
     }
 
     private SettlementOperationVO toOperationVO(BizSettlementOperation entity) {
         SettlementOperationVO vo = new SettlementOperationVO();
         BeanUtils.copyProperties(entity, vo);
-        vo.setEvidenceStatusText(AuditResultStateEnum.getText(entity.getEvidenceStatus()));
+        vo.setEvidenceStatusText(AuditResultStateEnum.getLabel(entity.getEvidenceStatus()));
         return vo;
     }
 
@@ -658,8 +658,8 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         ComplianceAuditItemVO vo = new ComplianceAuditItemVO();
         BeanUtils.copyProperties(entity, vo);
         vo.setRuleGroupText(RuleCatalogEnum.groupLabel(entity.getRuleGroup()));
-        vo.setResultText(AuditResultStateEnum.getText(entity.getResult()));
-        vo.setRiskLevelText(RuleCatalogEnum.riskLabel(entity.getRiskLevel()));
+        vo.setResultText(AuditResultStateEnum.getLabel(entity.getResult()));
+        vo.setRiskLevelText(RuleCatalogEnum.getRiskLabelOrUnknown(entity.getRiskLevel()));
         return vo;
     }
 

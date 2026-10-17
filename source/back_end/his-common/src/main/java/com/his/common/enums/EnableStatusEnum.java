@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 启用状态枚举
@@ -19,32 +20,31 @@ public enum EnableStatusEnum {
         this.label = label;
     }
 
-    public static EnableStatusEnum fromCode(int code) {
-        for (EnableStatusEnum status : values()) {
-            if (status.code == code) return status;
+    public static EnableStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (EnableStatusEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
         }
         return null;
     }
 
-    /**
-     * 码值→展示文案。null 或不在枚举内（脏数据）返回空串 ""，绝不返回 null、不回落合法文案。
-     */
-    public static String getText(Integer code) {
-        if (code == null) {
-            return "";
-        }
-        EnableStatusEnum status = fromCode(code);
-        return status != null ? status.label : "";
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        EnableStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
     }
 
-    /**
-     * 码值→异常/审计文案。null 或不在枚举内返回「未知(n)」，保留原始码值以便排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        if (code == null) {
-            return "未知";
-        }
-        EnableStatusEnum status = fromCode(code);
-        return status != null ? status.label : "未知(" + code + ")";
+    public static String getLabel(Integer code, String defaultValue) {
+        EnableStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        EnableStatusEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

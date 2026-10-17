@@ -380,7 +380,7 @@ public class InsuranceSettlementServiceImpl
         BizInsuranceSettlement settlement = requireSettlement(settlementId);
         if (!InsuranceSettlementStatusEnum.PENDING.getCode().equals(settlement.getSettlementStatus())) {
             throw new BusinessException("当前状态是「"
-                    + InsuranceSettlementStatusEnum.descOf(settlement.getSettlementStatus()) + "」，不允许重复结算");
+                    + InsuranceSettlementStatusEnum.getLabel(settlement.getSettlementStatus()) + "」，不允许重复结算");
         }
         FundSplit fund = computeFund(settlement);
         // 费用分类每次结算重算：账单行才是分类的事实来源，清单上的数只是快照
@@ -398,7 +398,7 @@ public class InsuranceSettlementServiceImpl
                 .eq(BizInsuranceSettlement::getSettlementStatus, InsuranceSettlementStatusEnum.PENDING.getCode()));
         if (rows == 0) {
             throw new BusinessException("当前状态是「"
-                    + InsuranceSettlementStatusEnum.descOf(settlement.getSettlementStatus()) + "」，不允许重复结算"
+                    + InsuranceSettlementStatusEnum.getLabel(settlement.getSettlementStatus()) + "」，不允许重复结算"
                     + "（状态已被并发变更，请刷新后重试）");
         }
 
@@ -426,7 +426,7 @@ public class InsuranceSettlementServiceImpl
         BizInsuranceSettlement settlement = requireSettlement(settlementId);
         if (!InsuranceSettlementStatusEnum.SETTLED.getCode().equals(settlement.getSettlementStatus())) {
             throw new BusinessException("当前状态是「"
-                    + InsuranceSettlementStatusEnum.descOf(settlement.getSettlementStatus()) + "」，只有已结算的清单才能报盘");
+                    + InsuranceSettlementStatusEnum.getLabel(settlement.getSettlementStatus()) + "」，只有已结算的清单才能报盘");
         }
         BizSettlementBill bill = bizSettlementBillMapper.selectById(settlement.getBillId());
         if (bill == null) {
@@ -622,7 +622,7 @@ public class InsuranceSettlementServiceImpl
         BizInsuranceSettlement settlement = requireSettlement(settlementId);
         if (!InsuranceSettlementStatusEnum.UPLOADED.getCode().equals(settlement.getSettlementStatus())) {
             throw new BusinessException("当前状态是「"
-                    + InsuranceSettlementStatusEnum.descOf(settlement.getSettlementStatus()) + "」，只有已上传的清单才能审核");
+                    + InsuranceSettlementStatusEnum.getLabel(settlement.getSettlementStatus()) + "」，只有已上传的清单才能审核");
         }
         settlement.setAuditStatus(approved ? 1 : 2);
         settlement.setAuditTime(LocalDateTime.now());
@@ -636,7 +636,7 @@ public class InsuranceSettlementServiceImpl
                 .eq(BizInsuranceSettlement::getSettlementStatus, InsuranceSettlementStatusEnum.UPLOADED.getCode()));
         if (rows == 0) {
             throw new BusinessException("当前状态是「"
-                    + InsuranceSettlementStatusEnum.descOf(settlement.getSettlementStatus()) + "」，只有已上传的清单才能审核"
+                    + InsuranceSettlementStatusEnum.getLabel(settlement.getSettlementStatus()) + "」，只有已上传的清单才能审核"
                     + "（状态已被并发变更，请刷新后重试）");
         }
         return rows > 0;
@@ -691,7 +691,7 @@ public class InsuranceSettlementServiceImpl
     private void fillCategoryAmounts(BizInsuranceSettlement settlement, List<BizSettlementBillItem> items) {
         Map<PaymentItemTypeEnum, BigDecimal> buckets = new EnumMap<>(PaymentItemTypeEnum.class);
         for (BizSettlementBillItem item : items == null ? List.<BizSettlementBillItem>of() : items) {
-            PaymentItemTypeEnum type = PaymentItemTypeEnum.getByCode(item.getItemType());
+            PaymentItemTypeEnum type = PaymentItemTypeEnum.fromCode(item.getItemType());
             if (type == null) {
                 type = PaymentItemTypeEnum.TREATMENT;
             }
@@ -769,7 +769,7 @@ public class InsuranceSettlementServiceImpl
 
         InsuranceUploadPayloadVO.Visit visit = new InsuranceUploadPayloadVO.Visit();
         visit.setBillNo(bill.getBillNo());
-        visit.setEncounterType(EncounterTypeEnum.descOf(bill.getEncounterType()));
+        visit.setEncounterType(EncounterTypeEnum.getLabel(bill.getEncounterType()));
         visit.setVisitType(s.getVisitType());
         visit.setDeptName(s.getDeptName());
         visit.setDoctorName(s.getDoctorName());
@@ -905,7 +905,7 @@ public class InsuranceSettlementServiceImpl
     }
 
     private String itemTypeText(Integer itemType) {
-        PaymentItemTypeEnum type = PaymentItemTypeEnum.getByCode(itemType);
+        PaymentItemTypeEnum type = PaymentItemTypeEnum.fromCode(itemType);
         return type == null ? null : type.getDesc();
     }
 

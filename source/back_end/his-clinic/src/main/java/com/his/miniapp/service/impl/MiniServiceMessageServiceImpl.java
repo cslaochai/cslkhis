@@ -84,7 +84,7 @@ public class MiniServiceMessageServiceImpl extends ServiceImpl<MiniServiceMessag
         vo.setCategoryCode(entity.getCategoryCode());
         vo.setContent(entity.getContent());
         vo.setStatus(entity.getStatus());
-        vo.setStatusText(ServiceTicketStatusEnum.getText(entity.getStatus()));
+        vo.setStatusText(ServiceTicketStatusEnum.getLabel(entity.getStatus()));
         vo.setAcceptByName(entity.getAcceptByName());
         vo.setReplyCount(entity.getReplyCount());
         vo.setHandleResult(entity.getHandleResult());
@@ -102,7 +102,7 @@ public class MiniServiceMessageServiceImpl extends ServiceImpl<MiniServiceMessag
         vo.setCategoryCode(entity.getCategoryCode());
         vo.setContent(entity.getContent());
         vo.setStatus(entity.getStatus());
-        vo.setStatusText(ServiceTicketStatusEnum.getText(entity.getStatus()));
+        vo.setStatusText(ServiceTicketStatusEnum.getLabel(entity.getStatus()));
         vo.setPriority(entity.getPriority());
         vo.setAcceptByName(entity.getAcceptByName());
         vo.setCloseReason(entity.getCloseReason());
@@ -319,7 +319,7 @@ public class MiniServiceMessageServiceImpl extends ServiceImpl<MiniServiceMessag
         for (BizServiceTicketLog row : rows) {
             MiniServiceLogVO vo = new MiniServiceLogVO();
             vo.setAction(row.getAction());
-            vo.setActionText(ServiceTicketActionEnum.getText(row.getAction()));
+            vo.setActionText(ServiceTicketActionEnum.getLabel(row.getAction()));
             vo.setContent(row.getContent());
             vo.setOperatorType(row.getOperatorType());
             vo.setOperatorName(Objects.equals(row.getOperatorType(), ServiceTicketOperatorTypeEnum.PATIENT.getCode())

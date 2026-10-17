@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 抗菌药物处方权授权状态枚举（有效 / 暂停 / 取消）。
@@ -20,13 +21,6 @@ public enum AntibioticAuthStatusEnum {
         this.label = label;
     }
 
-    public static AntibioticAuthStatusEnum fromCode(int code) {
-        for (AntibioticAuthStatusEnum item : values()) {
-            if (item.code == code) return item;
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（入参校验用；null 不合法）
      */
@@ -34,22 +28,31 @@ public enum AntibioticAuthStatusEnum {
         return code != null && fromCode(code) != null;
     }
 
-    /**
-     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」。
-     */
-    public static String getText(Integer code) {
-        AntibioticAuthStatusEnum item = code == null ? null : fromCode(code);
-        return item == null ? "" : item.label;
+    public static AntibioticAuthStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (AntibioticAuthStatusEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
     }
 
-    /**
-     * 异常 / 审计用码值 → 文案。脏值保留原始码值，绝不喂前端展示。
-     */
-    public static String labelOrUnknown(Integer code) {
-        AntibioticAuthStatusEnum item = code == null ? null : fromCode(code);
-        if (item != null) {
-            return item.label;
-        }
-        return code == null ? "未知" : "未知(" + code + ")";
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        AntibioticAuthStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        AntibioticAuthStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        AntibioticAuthStatusEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

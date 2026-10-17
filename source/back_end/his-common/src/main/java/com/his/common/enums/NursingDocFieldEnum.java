@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 护理文书字段中文名枚举（变更日志 fieldLabel 用，码值 = 文书表的列名）。
@@ -34,30 +35,32 @@ public enum NursingDocFieldEnum {
     }
 
     public static NursingDocFieldEnum fromCode(String code) {
-        if (code == null) {
+        if (null == code) {
             return null;
         }
         for (NursingDocFieldEnum item : values()) {
-            if (item.code.equals(code)) return item;
+            if (code.equals(item.code)) {
+                return item;
+            }
         }
         return null;
     }
 
-    /**
-     * 字段列名 → 中文文案（展示口径）。null →「—」；不在枚举内的列名<b>原样返回，不猜</b>（见类注释）。
-     */
-    public static String getText(String code) {
-        if (code == null) {
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(String code) {
+        if (null == code) {
             return "—";
         }
         NursingDocFieldEnum item = fromCode(code);
-        return item == null ? code : item.label;
+        return item == null ? StringUtils.EMPTY : item.label;
     }
 
-    /**
-     * 异常 / 审计用列名 → 文案。null →「未知」，不在枚举内返回「未知(列名)」，保留原始值以便排查。
-     */
-    public static String labelOrUnknown(String code) {
+    public static String getLabel(String code, String defaultValue) {
+        NursingDocFieldEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(String code) {
         NursingDocFieldEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }

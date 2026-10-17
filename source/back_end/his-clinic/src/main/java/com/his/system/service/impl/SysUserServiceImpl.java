@@ -71,8 +71,8 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     private static final List<FieldSpec> USER_FIELDS = FieldSpec.list(
             FieldSpec.of("userName", "登录账号"),
             FieldSpec.of("realName", "姓名"),
-            FieldSpec.render("userType", "用户类型", v -> UserTypeEnum.getText((Integer) v)),
-            FieldSpec.render("status", "状态", v -> EnableStatusEnum.getText((Integer) v))
+            FieldSpec.render("userType", "用户类型", v -> UserTypeEnum.getLabel((Integer) v)),
+            FieldSpec.render("status", "状态", v -> EnableStatusEnum.getLabel((Integer) v))
     );
 
     private final PasswordEncoder passwordEncoder;

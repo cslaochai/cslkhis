@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 药品调拨方向枚举（药品调拨单的调拨方向列，sql/154）
@@ -29,18 +30,6 @@ public enum DrugTransferTypeEnum {
         this.toRoom = toRoom;
     }
 
-    public static DrugTransferTypeEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (DrugTransferTypeEnum type : values()) {
-            if (type.code == code) {
-                return type;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
@@ -48,16 +37,31 @@ public enum DrugTransferTypeEnum {
         return fromCode(code) != null;
     }
 
-    public static String getText(Integer code) {
-        DrugTransferTypeEnum type = fromCode(code);
-        return type == null ? "未知(" + code + ")" : type.getLabel();
+    public static DrugTransferTypeEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (DrugTransferTypeEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
     }
 
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        DrugTransferTypeEnum item = code == null ? null : fromCode(code);
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        DrugTransferTypeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        DrugTransferTypeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        DrugTransferTypeEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

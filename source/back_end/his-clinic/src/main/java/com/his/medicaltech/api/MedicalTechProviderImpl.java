@@ -207,9 +207,9 @@ public class MedicalTechProviderImpl implements MedicalTechProvider {
         if (status == null) {
             return "已缴费待执行";
         }
-        InsRecordStatusEnum e = InsRecordStatusEnum.getByCode(status);
+        InsRecordStatusEnum e = InsRecordStatusEnum.fromCode(status);
         if (e == null) {
-            return InsRecordStatusEnum.labelOrUnknown(status);
+            return InsRecordStatusEnum.getLabelOrUnknown(status);
         }
         return switch (e) {
             case REGISTERED -> "已缴费待执行";
@@ -232,9 +232,9 @@ public class MedicalTechProviderImpl implements MedicalTechProvider {
         if (status == null) {
             return "已缴费待执行";
         }
-        LabRecordStatusEnum e = LabRecordStatusEnum.getByCode(status);
+        LabRecordStatusEnum e = LabRecordStatusEnum.fromCode(status);
         if (e == null) {
-            return LabRecordStatusEnum.labelOrUnknown(status);
+            return LabRecordStatusEnum.getLabelOrUnknown(status);
         }
         return switch (e) {
             case REGISTERED -> "已缴费待执行";

@@ -73,9 +73,9 @@ public class DietPlanServiceImpl extends ServiceImpl<BizDietPlanMapper, BizDietP
             vo.setCode(d.code());
             vo.setName(d.name());
             vo.setCategory(d.category());
-            vo.setCategoryText(DietCategoryEnum.getText(d.category()));
+            vo.setCategoryText(DietCategoryEnum.getLabel(d.category()));
             vo.setRoute(d.route());
-            vo.setRouteText(DietRouteEnum.getText(d.route()));
+            vo.setRouteText(DietRouteEnum.getLabel(d.route()));
             vo.setNeedsMeal(NutritionRules.needsMealDelivery(d.route()));
             vo.setCalorieTarget(d.calorie());
             vo.setProteinTarget(d.protein());
@@ -251,7 +251,7 @@ public class DietPlanServiceImpl extends ServiceImpl<BizDietPlanMapper, BizDietP
             }
             if (!Objects.equals(PlanStatusEnum.RUNNING.getCode(), row.getPlanStatus())) {
                 throw new BusinessException("方案 " + row.getDietNo() + " 已"
-                        + PlanStatusEnum.labelOrUnknown(row.getPlanStatus()) + "，不能再接收或退回");
+                        + PlanStatusEnum.getLabelOrUnknown(row.getPlanStatus()) + "，不能再接收或退回");
             }
             if (Objects.equals(DietConfirmStatusEnum.DONE.getCode(), row.getConfirmStatus())) {
                 throw new BusinessException("方案 " + row.getDietNo() + " 已接收，无需重复操作");
@@ -284,7 +284,7 @@ public class DietPlanServiceImpl extends ServiceImpl<BizDietPlanMapper, BizDietP
         }
         if (!Objects.equals(PlanStatusEnum.RUNNING.getCode(), row.getPlanStatus())) {
             throw new BusinessException("方案 " + row.getDietNo() + " 当前为「"
-                    + PlanStatusEnum.labelOrUnknown(row.getPlanStatus()) + "」，不需要再停止");
+                    + PlanStatusEnum.getLabelOrUnknown(row.getPlanStatus()) + "」，不需要再停止");
         }
         LocalDateTime stopTime = TimeUtil.toSeconds(dto.getStopTime() == null ? LocalDateTime.now() : dto.getStopTime());
         applyStop(row, stopTime, TextUtil.trim(dto.getReason()));

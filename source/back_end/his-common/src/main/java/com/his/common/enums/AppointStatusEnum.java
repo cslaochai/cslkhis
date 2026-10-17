@@ -2,6 +2,7 @@ package com.his.common.enums;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 预约/就诊状态枚举 —— 挂号信息的挂号状态的唯一权威码值。
@@ -71,50 +72,10 @@ public enum AppointStatusEnum {
     private final String label;
 
     /**
-     * 根据状态码获取对应的枚举实例
-     *
-     * @param code 状态码
-     * @return 对应的枚举实例，若未匹配则返回 UNKNOWN
-     */
-    public static AppointStatusEnum fromCode(Integer code) {
-        if (code == null) {
-            return UNKNOWN;
-        }
-        for (AppointStatusEnum status : values()) {
-            if (status.code == code) {
-                return status;
-            }
-        }
-        // 未匹配到有效状态码时，返回 UNKNOWN 而不是 null，增强系统健壮性
-        return UNKNOWN;
-    }
-
-    /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
-    }
-
-    /**
-     * 文案；不在枚举内返回 null（与 fromCode 的 UNKNOWN 兜底分开，别把脏值说成「未知状态」以外的东西）
-     */
-    public static String getText(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (AppointStatusEnum status : values()) {
-            if (status.code == code) return status.label;
-        }
-        return null;
-    }
-
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        AppointStatusEnum item = code == null ? null : fromCode(code);
-        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 
     /**
@@ -151,5 +112,33 @@ public enum AppointStatusEnum {
      */
     public boolean isFallback() {
         return this == UNKNOWN;
+    }
+
+    public static AppointStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (AppointStatusEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        AppointStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        AppointStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        AppointStatusEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

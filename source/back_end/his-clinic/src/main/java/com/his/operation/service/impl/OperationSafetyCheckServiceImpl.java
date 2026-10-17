@@ -199,7 +199,7 @@ public class OperationSafetyCheckServiceImpl extends ServiceImpl<BizOperationSaf
         }
         if (!inFlow) {
             card.setCanSign(false);
-            card.setCannotSignReason("手术当前状态为「" + OperationApplyStatusEnum.labelOrUnknown(status)
+            card.setCannotSignReason("手术当前状态为「" + OperationApplyStatusEnum.getLabelOrUnknown(status)
                     + "」，只有在途手术可以签核查");
             return;
         }

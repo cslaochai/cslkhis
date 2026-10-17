@@ -331,7 +331,7 @@ public class EmrExtractCapabilityImpl implements EmrExtractCapability {
         }
 
         EmrExtractPromptVariablesVO variables = new EmrExtractPromptVariablesVO();
-        variables.setGender(SysGenderEnum.getText(gender));
+        variables.setGender(SysGenderEnum.getLabel(gender));
         variables.setAge(age == null ? "（未填写）" : age + "岁");
         variables.setFieldCatalog(EmrFieldCatalog.writableFieldPrompt());
         variables.setRawText(promptText);

@@ -59,7 +59,7 @@ public class WasteServiceImpl extends ServiceImpl<BizMedicalWasteMapper, BizMedi
     public WasteVO handover(WasteDTO.Handover dto) {
         BizMedicalWaste w = requireWaste(dto.getId());
         if (!WasteStatusEnum.REGISTERED.is(w.getStatus())) {
-            throw new BusinessException("只有已登记的医废可以交接（当前：" + WasteStatusEnum.getText(w.getStatus()) + "）");
+            throw new BusinessException("只有已登记的医废可以交接（当前：" + WasteStatusEnum.getLabel(w.getStatus()) + "）");
         }
         w.setStatus(WasteStatusEnum.HANDED_OVER.getCode());
         w.setHandoverName(dto.getHandoverName().trim());
@@ -74,7 +74,7 @@ public class WasteServiceImpl extends ServiceImpl<BizMedicalWasteMapper, BizMedi
     public WasteVO dispose(WasteDTO.Dispose dto) {
         BizMedicalWaste w = requireWaste(dto.getId());
         if (!WasteStatusEnum.HANDED_OVER.is(w.getStatus())) {
-            throw new BusinessException("只有已交接的医废可以确认处置（当前：" + WasteStatusEnum.getText(w.getStatus()) + "）");
+            throw new BusinessException("只有已交接的医废可以确认处置（当前：" + WasteStatusEnum.getLabel(w.getStatus()) + "）");
         }
         w.setStatus(WasteStatusEnum.DISPOSED.getCode());
         w.setDisposalCompany(dto.getDisposalCompany().trim());
@@ -152,7 +152,7 @@ public class WasteServiceImpl extends ServiceImpl<BizMedicalWasteMapper, BizMedi
         vo.setCollectTime(w.getCollectTime());
         vo.setCollectorName(w.getCollectorName());
         vo.setStatus(w.getStatus());
-        vo.setStatusText(WasteStatusEnum.getText(w.getStatus()));
+        vo.setStatusText(WasteStatusEnum.getLabel(w.getStatus()));
         vo.setHandoverName(w.getHandoverName());
         vo.setHandoverTime(w.getHandoverTime());
         vo.setDisposalCompany(w.getDisposalCompany());

@@ -1,7 +1,5 @@
 package com.his.common.enums;
 
-import com.his.emr.support.QcSnapshot;
-
 /**
  * 规则的适用范围。
  */
@@ -13,7 +11,7 @@ public enum QcScopeEnum {
     OUTPATIENT("仅门诊病历"),
 
     /**
-     * 门诊病历 + 住院入院记录（record_type=1）。
+     * 门诊病历 + 住院入院记录
      * 这两者是文书家族里唯一承载"主诉/现病史/既往史/过敏史/诊疗计划"结构化要素的载体。
      */
     OUTPATIENT_AND_ENTRY("门诊病历与住院入院记录"),
@@ -34,13 +32,13 @@ public enum QcScopeEnum {
      */
     ALL("全部门诊与住院文书");
 
-    private final String text;
+    private final String label;
 
-    QcScopeEnum(String text) {
-        this.text = text;
+    QcScopeEnum(String label) {
+        this.label = label;
     }
 
-    public String getText() {
-        return text;
+    public String getLabel() {
+        return label;
     }
 }

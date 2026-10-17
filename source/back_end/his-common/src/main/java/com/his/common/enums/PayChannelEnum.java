@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 支付渠道（患者端支付单与收费台扫码共用的渠道编号）。
@@ -20,42 +21,11 @@ public enum PayChannelEnum {
         this.label = label;
     }
 
-    public static PayChannelEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (PayChannelEnum item : values()) {
-            if (item.code.equals(code)) {
-                return item;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（入参校验用；null 不合法）
      */
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
-    }
-
-    /**
-     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」。
-     */
-    public static String getText(Integer code) {
-        PayChannelEnum item = fromCode(code);
-        return item == null ? "" : item.label;
-    }
-
-    /**
-     * 异常 / 审计用码值 → 文案。脏值保留原始码值，绝不喂前端展示。
-     */
-    public static String labelOrUnknown(Integer code) {
-        PayChannelEnum item = fromCode(code);
-        if (item == null) {
-            return code == null ? "未知" : "未知(" + code + ")";
-        }
-        return item.label;
     }
 
     /**
@@ -74,5 +44,33 @@ public enum PayChannelEnum {
             case ALIPAY -> PaymentMethodEnum.ALIPAY;
             case UNIONPAY -> PaymentMethodEnum.BANK;
         };
+    }
+
+    public static PayChannelEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (PayChannelEnum item : values()) {
+            if (code.equals(item.code)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        PayChannelEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        PayChannelEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        PayChannelEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

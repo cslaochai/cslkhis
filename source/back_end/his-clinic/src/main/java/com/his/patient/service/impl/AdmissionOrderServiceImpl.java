@@ -220,7 +220,7 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
         if (!Objects.equals(AdmissionOrderStatusEnum.PENDING.getCode(), order.getOrderStatus())) {
             // 已收治 / 已作废都要说清是哪种，别只说一句"状态不对"
             throw new BusinessException("住院证当前状态为「"
-                    + AdmissionOrderStatusEnum.labelOrUnknown(order.getOrderStatus()) + "」，不能收治");
+                    + AdmissionOrderStatusEnum.getLabelOrUnknown(order.getOrderStatus()) + "」，不能收治");
         }
         if (order.getValidUntil() != null && order.getValidUntil().isBefore(TimeUtil.nowSeconds())) {
             throw new BusinessException("住院证已于 " + order.getValidUntil() + " 过期，不能再收治，请重新开证");
@@ -254,8 +254,8 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
      * 补充展示态：文案、是否过期、是否调过科。
      */
     private void decorate(AdmissionOrderVO vo) {
-        vo.setGenderText(SysGenderEnum.getText(vo.getGender()));
-        vo.setOrderStatusText(AdmissionOrderStatusEnum.getText(vo.getOrderStatus()));
+        vo.setGenderText(SysGenderEnum.getLabel(vo.getGender()));
+        vo.setOrderStatusText(AdmissionOrderStatusEnum.getLabel(vo.getOrderStatus()));
 
         boolean pending = Objects.equals(AdmissionOrderStatusEnum.PENDING.getCode(), vo.getOrderStatus());
         boolean expired = pending && vo.getValidUntil() != null

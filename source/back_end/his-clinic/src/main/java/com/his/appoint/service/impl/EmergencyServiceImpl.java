@@ -808,7 +808,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
             return 0;
         }
 
-        String levelText = EmergencyTriageLevelEnum.getText(emergency.getTriageLevel());
+        String levelText = EmergencyTriageLevelEnum.getLabel(emergency.getTriageLevel());
         String title = "急诊候诊超时：" + emergency.getPatientName() + "（" + levelText + "）";
         String content = String.format(
                 "急诊 %s 已候诊 %s，应接诊时限 %s 分钟（分诊 %s，就诊科室 %s）。请立即接诊；"
@@ -965,9 +965,9 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
         vo.setGender(entity.getGender());
         vo.setAge(entity.getAge());
         vo.setTriageLevel(entity.getTriageLevel());
-        vo.setTriageLevelText(EmergencyTriageLevelEnum.getText(entity.getTriageLevel()));
+        vo.setTriageLevelText(EmergencyTriageLevelEnum.getLabel(entity.getTriageLevel()));
         vo.setEmergencyStatus(entity.getEmergencyStatus());
-        vo.setEmergencyStatusText(EmergencyStatusEnum.getText(entity.getEmergencyStatus()));
+        vo.setEmergencyStatusText(EmergencyStatusEnum.getLabel(entity.getEmergencyStatus()));
         vo.setDeptName(entity.getDeptName());
         vo.setChiefComplaint(entity.getChiefComplaint());
         vo.setDiagnosis(entity.getDiagnosis());
@@ -1297,8 +1297,8 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
 
     private EmergencyHandoverItemVO toItemVO(EmergencyHandoverItem item) {
         EmergencyHandoverItemVO vo = BeanUtil.copyProperties(item, EmergencyHandoverItemVO.class);
-        vo.setTriageLevelText(EmergencyTriageLevelEnum.getText(item.getTriageLevel()));
-        vo.setEmergencyStatusText(EmergencyStatusEnum.getText(item.getEmergencyStatus()));
+        vo.setTriageLevelText(EmergencyTriageLevelEnum.getLabel(item.getTriageLevel()));
+        vo.setEmergencyStatusText(EmergencyStatusEnum.getLabel(item.getEmergencyStatus()));
         vo.setOverdueText(EmergencyWaitPolicy.overdueText(item.getOverdueLevel() == null ? 0 : item.getOverdueLevel()));
         return vo;
     }

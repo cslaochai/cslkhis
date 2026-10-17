@@ -1,5 +1,7 @@
 package com.his.common.enums;
 
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * 被签对象（病历/医嘱）行上的签名锚点状态。
  */
@@ -10,38 +12,43 @@ public enum ObjectSignStatusEnum {
     INVALIDATED(2, "签名已失效");
 
     private final int code;
-    private final String text;
+    private final String label;
 
-    ObjectSignStatusEnum(int code, String text) {
+    ObjectSignStatusEnum(int code, String label) {
         this.code = code;
-        this.text = text;
-    }
-
-    public static ObjectSignStatusEnum parse(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (ObjectSignStatusEnum s : values()) {
-            if (s.code == code) {
-                return s;
-            }
-        }
-        return null;
-    }
-
-    public static String textOf(Integer code) {
-        ObjectSignStatusEnum s = parse(code);
-        if (s != null) {
-            return s.text;
-        }
-        return code == null ? "—" : "未知(" + code + ")";
+        this.label = label;
     }
 
     public int getCode() {
         return code;
     }
 
-    public String getText() {
-        return text;
+    public String getLabel() {
+        return label;
+    }
+
+    public static ObjectSignStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (ObjectSignStatusEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    public static String getLabel(Integer code) {
+        if (null == code) {
+            return "—";
+        }
+        ObjectSignStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        ObjectSignStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
     }
 }

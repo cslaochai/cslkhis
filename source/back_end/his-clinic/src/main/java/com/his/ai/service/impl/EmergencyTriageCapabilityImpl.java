@@ -189,14 +189,14 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
         vo.setPatientName(entity == null ? null : entity.getPatientName());
         Integer gender = dto.getGender() != null ? dto.getGender() : (entity == null ? null : entity.getGender());
         Integer age = dto.getAge() != null ? dto.getAge() : (entity == null ? null : entity.getAge());
-        vo.setGenderText(SysGenderEnum.getText(gender));
+        vo.setGenderText(SysGenderEnum.getLabel(gender));
         vo.setAge(age);
         vo.setChiefComplaint(chiefComplaint);
         vo.setVitalSignsText(vitals.describe());
         vo.setVitalSignsMissing(vitals.isEmpty());
 
         vo.setCurrentLevel(entity == null ? null : entity.getTriageLevel());
-        vo.setCurrentLevelText(EmergencyTriageLevelEnum.getText(vo.getCurrentLevel()));
+        vo.setCurrentLevelText(EmergencyTriageLevelEnum.getLabel(vo.getCurrentLevel()));
         vo.setCurrentZone(entity == null ? null : entity.getZone());
         vo.setCurrentGreenChannel(entity == null ? null : entity.getGreenChannel());
 
@@ -205,7 +205,7 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
         flags.addAll(EmergencyTriageRules.evaluateChiefComplaint(chiefComplaint));
         Integer hardLevel = EmergencyTriageRules.hardLevelOf(flags);
         vo.setHardLevel(hardLevel);
-        vo.setHardLevelText(hardLevel == null ? "未命中红旗征象" : EmergencyTriageLevelEnum.getText(hardLevel));
+        vo.setHardLevelText(hardLevel == null ? "未命中红旗征象" : EmergencyTriageLevelEnum.getLabel(hardLevel));
         vo.setRedFlags(limit(flags.stream().map(RedFlag::label).toList(), MAX_RED_FLAGS));
 
         String channelByKeyword = EmergencyTriageRules.detectGreenChannel(chiefComplaint);
@@ -244,7 +244,7 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
         // 合并（只升不降）
         Integer suggested = minLevel(hardLevel, llmLevel, vo.getCurrentLevel());
         vo.setSuggestedLevel(suggested);
-        vo.setSuggestedLevelText(EmergencyTriageLevelEnum.getText(suggested));
+        vo.setSuggestedLevelText(EmergencyTriageLevelEnum.getLabel(suggested));
         vo.setSuggestedZone(EmergencyTriageRules.zoneOf(suggested));
         vo.setSuggestedGreenChannel(pickChannel(channelByKeyword, llmChannel, vo.getCurrentGreenChannel()));
         vo.setLevelBasis(resolveBasis(hardLevel, llmLevel, vo.getCurrentLevel(), suggested));

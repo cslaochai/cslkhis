@@ -54,7 +54,7 @@ public class InpatientLeaveSignProviderImpl implements SignableContentProvider, 
     @Override
     public String blockReason(SignSubject subject, SignSceneEnum scene) {
         if (scene != SignSceneEnum.LEAVE_APPROVE) {
-            return "住院请假单只支持「请假审批签名」场景，当前场景「" + scene.getText() + "」不适用";
+            return "住院请假单只支持「请假审批签名」场景，当前场景「" + scene.getLabel() + "」不适用";
         }
         BizInpatientLeave l = bizInpatientLeaveMapper.selectById(subject.bizId());
         if (l == null) {

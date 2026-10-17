@@ -4,6 +4,7 @@ import lombok.Getter;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 护理质量指标枚举（sql/168）
@@ -67,31 +68,6 @@ public enum NursingIndicatorEnum {
         this.adverseEventType = adverseEventType;
     }
 
-    public static NursingIndicatorEnum fromCode(String code) {
-        if (code == null) {
-            return null;
-        }
-        for (NursingIndicatorEnum e : values()) {
-            if (e.code.equals(code)) {
-                return e;
-            }
-        }
-        return null;
-    }
-
-    public static String getText(String code) {
-        NursingIndicatorEnum e = fromCode(code);
-        return e == null ? "未知(" + code + ")" : e.label;
-    }
-
-    public static String whitelistText() {
-        StringBuilder sb = new StringBuilder();
-        for (NursingIndicatorEnum e : values()) {
-            sb.append(sb.length() == 0 ? "" : " / ").append(e.code).append("-").append(e.label);
-        }
-        return sb.toString();
-    }
-
     /**
      * 按本指标口径算指标值：分子 / 分母 × multiplier，保留两位。
      *
@@ -118,5 +94,27 @@ public enum NursingIndicatorEnum {
      */
     public boolean higherIsBetter() {
         return multiplier == 100;
+    }
+
+    public static NursingIndicatorEnum fromCode(String code) {
+        if (null == code) {
+            return null;
+        }
+        for (NursingIndicatorEnum item : values()) {
+            if (code.equals(item.code)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    public static String getLabel(String code) {
+        NursingIndicatorEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(String code, String defaultValue) {
+        NursingIndicatorEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
     }
 }

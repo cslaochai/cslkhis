@@ -25,7 +25,7 @@ public final class AnesthesiaCalcs {
      * 文案来源唯一出口 {@link AsaGradeEnum#getText}；是否急诊的判定用 {@link YesOrNoEnum}。
      */
     public static String asaFullText(Integer grade, Integer emergency) {
-        String base = AsaGradeEnum.getText(grade);
+        String base = AsaGradeEnum.getLabel(grade);
         if (Integer.valueOf(YesOrNoEnum.YES.getCode()).equals(emergency)) {
             return base + " E（急诊）";
         }

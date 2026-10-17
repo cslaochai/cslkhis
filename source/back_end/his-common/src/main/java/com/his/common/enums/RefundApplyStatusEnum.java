@@ -19,7 +19,7 @@ public enum RefundApplyStatusEnum {
         this.desc = desc;
     }
 
-    public static RefundApplyStatusEnum getByCode(Integer code) {
+    public static RefundApplyStatusEnum fromCode(Integer code) {
         if (code == null) {
             return null;
         }

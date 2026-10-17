@@ -76,7 +76,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
      */
     private final List<FieldSpec> PATIENT_FIELDS = FieldSpec.list(
             FieldSpec.of("patientName", "姓名"),
-            FieldSpec.render("gender", "性别", v -> SysGenderEnum.getText((Integer) v)),
+            FieldSpec.render("gender", "性别", v -> SysGenderEnum.getLabel((Integer) v)),
             FieldSpec.of("birthDate", "出生日期"),
             FieldSpec.masked("idCard", "身份证号", MaskEnum.ID_CARD),
             FieldSpec.masked("phone", "联系电话", MaskEnum.PHONE),
@@ -94,7 +94,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
             FieldSpec.masked("medicalInsuranceNo", "医保卡号", MaskEnum.BANK_NO),
             FieldSpec.render("cardType", "证件类型", v -> dictText(DictTypeConst.CARD_TYPE, v)),
             FieldSpec.masked("cardNo", "证件号码", MaskEnum.BANK_NO),
-            FieldSpec.render("status", "状态", v -> EnableStatusEnum.getText((Integer) v))
+            FieldSpec.render("status", "状态", v -> EnableStatusEnum.getLabel((Integer) v))
     );
     private final RedisSequenceService redisSequenceService;
     private final BizPatientTagRelationMapper bizPatientTagRelationMapper;

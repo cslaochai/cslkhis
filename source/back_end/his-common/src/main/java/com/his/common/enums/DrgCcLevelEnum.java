@@ -2,6 +2,7 @@ package com.his.common.enums;
 
 import com.his.common.util.TextUtil;
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * CC/MCC 级别（码值口径 = 并发症合并症目录的级别列：MCC-严重并发症合并症 CC-并发症合并症 NONE-无）。
@@ -23,39 +24,11 @@ public enum DrgCcLevelEnum {
         this.label = label;
     }
 
-    public static DrgCcLevelEnum fromCode(String code) {
-        if (!TextUtil.hasText(code)) {
-            return null;
-        }
-        for (DrgCcLevelEnum item : values()) {
-            if (item.code.equalsIgnoreCase(code.trim())) {
-                return item;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（NONE/CC/MCC；NONE 是目录里的「不分级」档，入组侧一律当无并发症处理）
      */
     public static boolean isValid(String code) {
         return fromCode(code) != null;
-    }
-
-    /**
-     * 展示用：脏值出空串
-     */
-    public static String getText(String code) {
-        DrgCcLevelEnum item = fromCode(code);
-        return item == null ? "" : item.label;
-    }
-
-    /**
-     * 排查用：保留原始码值
-     */
-    public static String labelOrUnknown(String code) {
-        DrgCcLevelEnum item = fromCode(code);
-        return item == null ? "未知(" + code + ")" : item.label;
     }
 
     /**
@@ -69,5 +42,33 @@ public enum DrgCcLevelEnum {
             return a;
         }
         return a.ordinal() >= b.ordinal() ? a : b;
+    }
+
+    public static DrgCcLevelEnum fromCode(String code) {
+        if (null == code) {
+            return null;
+        }
+        for (DrgCcLevelEnum item : values()) {
+            if (code.equals(item.code)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(String code) {
+        DrgCcLevelEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(String code, String defaultValue) {
+        DrgCcLevelEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(String code) {
+        DrgCcLevelEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

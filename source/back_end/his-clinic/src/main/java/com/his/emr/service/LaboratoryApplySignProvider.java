@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 public interface LaboratoryApplySignProvider extends SignableContentProvider {
 
     static String statusText(Integer status) {
-        return status == null ? "—" : ApplyStatusEnum.labelOrUnknown(status);
+        return status == null ? "—" : ApplyStatusEnum.getLabelOrUnknown(status);
     }
 
     /**

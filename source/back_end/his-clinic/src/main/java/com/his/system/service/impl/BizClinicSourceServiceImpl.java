@@ -185,9 +185,9 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         BizSchedule core = staffScheduleService.ensureForClinic(dto, source);
         if (submittedStaffType != null && !Objects.equals(submittedStaffType, core.getStaffType())) {
             throw new BusinessException("「" + core.getEmployeeName() + "」在"
-                    + OrgUnitTypeEnum.getText(core.getOrgType()) + "「" + core.getDeptName()
-                    + "」的岗位类别是" + StaffTypeEnum.getText(core.getStaffType())
-                    + "，不是" + StaffTypeEnum.getText(submittedStaffType) + "：请先修正这个人的岗位配置，排班表不接受手填类别");
+                    + OrgUnitTypeEnum.getLabel(core.getOrgType()) + "「" + core.getDeptName()
+                    + "」的岗位类别是" + StaffTypeEnum.getLabel(core.getStaffType())
+                    + "，不是" + StaffTypeEnum.getLabel(submittedStaffType) + "：请先修正这个人的岗位配置，排班表不接受手填类别");
         }
         schedule.setStaffScheduleId(core.getId());
         schedule.setWeekDay(core.getWeekDay());
@@ -316,7 +316,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         StaffTypeEnum.assertValid(schedule.getStaffType());
         if (!StaffTypeEnum.isDoctor(schedule.getStaffType())) {
             throw new BusinessException("门诊号源只排医生：「" + schedule.getDoctorName() + "」的岗位类别是「"
-                    + StaffTypeEnum.getText(schedule.getStaffType())
+                    + StaffTypeEnum.getLabel(schedule.getStaffType())
                     + "」，他的出勤请到「岗位出勤」登记（这里承接医生出诊与号源，"
                     + "排进来不会挂号源和诊室；若他确实是出诊医生，请先到员工档案修正岗位）");
         }
@@ -445,7 +445,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         vo.setCreated(created);
         vo.setSkipped(0);
         vo.setMessage("成功创建 " + created + " 条排班（" + items.size() + " 位"
-                + StaffTypeEnum.getText(batchDTO.getStaffType()) + "人员 × " + batchDTO.getScheduleDates().size() + " 天）");
+                + StaffTypeEnum.getLabel(batchDTO.getStaffType()) + "人员 × " + batchDTO.getScheduleDates().size() + " 天）");
         return vo;
     }
 
@@ -616,7 +616,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         vo.setDoctorId(entity.getDoctorId());
         vo.setDoctorName(entity.getDoctorName());
         vo.setStaffType(entity.getStaffType());
-        vo.setStaffTypeName(StaffTypeEnum.getText(entity.getStaffType()));
+        vo.setStaffTypeName(StaffTypeEnum.getLabel(entity.getStaffType()));
         vo.setScheduleDate(entity.getScheduleDate());
         vo.setStartTime(entity.getStartTime());
         vo.setEndTime(entity.getEndTime());
@@ -683,7 +683,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
     public boolean updateConsultStatus(Long scheduleId, Integer consultStatus) {
         // 值域在服务端收口：码值只允许 0/1/2，越界值（如 99）不能落库
         if (ConsultStatusEnum.fromCode(consultStatus) == null) {
-            throw new BusinessException("就诊状态只允许 " + ConsultStatusEnum.whitelistText());
+            throw new BusinessException("就诊状态取值不合法");
         }
         BizClinicSource schedule = clinicSourceMapper.selectById(scheduleId);
         if (schedule == null) {
@@ -896,7 +896,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         vo.setStaffId(r.staffId);
         vo.setStaffName(r.staffName);
         vo.setStaffType(r.staffType);
-        vo.setStaffTypeName(StaffTypeEnum.getText(r.staffType));
+        vo.setStaffTypeName(StaffTypeEnum.getLabel(r.staffType));
         vo.setDeptId(r.deptId);
         vo.setDeptName(r.deptName);
         vo.setShiftId(r.shiftId);
@@ -940,7 +940,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         // 加号是给医生出诊班加号源：出勤岗压根没有号源池，加了也挂不出去
         if (!StaffTypeEnum.hasSource(schedule.getStaffType())) {
             throw new BusinessException("只有医生出诊排班能加号："
-                    + StaffTypeEnum.getText(schedule.getStaffType()) + "岗位是出勤排班，不对外放号");
+                    + StaffTypeEnum.getLabel(schedule.getStaffType()) + "岗位是出勤排班，不对外放号");
         }
         int added = schedule.getAddedSource() == null ? 0 : schedule.getAddedSource();
         String stamp = LocalDate.now() + " 加号" + addNum + "（" + reason + "）";

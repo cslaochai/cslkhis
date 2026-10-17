@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 药品库存流水变动类型枚举（药品库存流水的变动类型列）
@@ -31,18 +32,6 @@ public enum DrugStockChangeTypeEnum {
         this.sign = sign;
     }
 
-    public static DrugStockChangeTypeEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (DrugStockChangeTypeEnum type : values()) {
-            if (type.code == code) {
-                return type;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
@@ -50,23 +39,38 @@ public enum DrugStockChangeTypeEnum {
         return fromCode(code) != null;
     }
 
-    public static String getText(Integer code) {
-        DrugStockChangeTypeEnum type = fromCode(code);
-        return type == null ? "未知(" + code + ")" : type.getLabel();
-    }
-
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        DrugStockChangeTypeEnum item = code == null ? null : fromCode(code);
-        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
-    }
-
     /**
      * 本类型是不是出库（落流水时 change_quantity 取负）
      */
     public boolean outbound() {
         return sign < 0;
+    }
+
+    public static DrugStockChangeTypeEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (DrugStockChangeTypeEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        DrugStockChangeTypeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        DrugStockChangeTypeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        DrugStockChangeTypeEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

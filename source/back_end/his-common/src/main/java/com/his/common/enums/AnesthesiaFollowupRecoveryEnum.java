@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 麻醉随访恢复情况（1-良好 2-一般 3-差）。
@@ -20,35 +21,35 @@ public enum AnesthesiaFollowupRecoveryEnum {
         this.label = label;
     }
 
+    public static boolean isValid(Integer code) {
+        return fromCode(code) != null;
+    }
+
     public static AnesthesiaFollowupRecoveryEnum fromCode(Integer code) {
-        if (code == null) {
+        if (null == code) {
             return null;
         }
-        for (AnesthesiaFollowupRecoveryEnum e : values()) {
-            if (e.code == code) {
-                return e;
+        for (AnesthesiaFollowupRecoveryEnum item : values()) {
+            if (item.code == code) {
+                return item;
             }
         }
         return null;
     }
 
-    public static boolean isValid(Integer code) {
-        return fromCode(code) != null;
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        AnesthesiaFollowupRecoveryEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
     }
 
-    public static String getText(Integer code) {
-        if (code == null) {
-            return "";
-        }
-        AnesthesiaFollowupRecoveryEnum e = fromCode(code);
-        return e != null ? e.label : "";
+    public static String getLabel(Integer code, String defaultValue) {
+        AnesthesiaFollowupRecoveryEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
     }
 
-    public static String labelOrUnknown(Integer code) {
-        if (code == null) {
-            return "未知";
-        }
-        AnesthesiaFollowupRecoveryEnum e = fromCode(code);
-        return e != null ? e.label : "未知(" + code + ")";
+    public static String getLabelOrUnknown(Integer code) {
+        AnesthesiaFollowupRecoveryEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

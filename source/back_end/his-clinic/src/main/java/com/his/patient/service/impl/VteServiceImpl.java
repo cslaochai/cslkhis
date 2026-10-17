@@ -617,11 +617,11 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
         vo.setMeasureCode(r.getMeasureCode());
         vo.setMeasureCodeText(VteRules.measureCodeText(r.getMeasureCode()));
         vo.setMeasureType(r.getMeasureType());
-        vo.setMeasureTypeText(VteMeasureTypeEnum.getText(r.getMeasureType()));
+        vo.setMeasureTypeText(VteMeasureTypeEnum.getLabel(r.getMeasureType()));
         vo.setMeasureName(r.getMeasureName());
         vo.setPlanDate(r.getPlanDate());
         vo.setExecuteStatus(r.getExecuteStatus());
-        vo.setExecuteStatusText(VtePreventStatusEnum.getText(r.getExecuteStatus()));
+        vo.setExecuteStatusText(VtePreventStatusEnum.getLabel(r.getExecuteStatus()));
         vo.setExecuteTime(r.getExecuteTime());
         vo.setExecutorName(r.getExecutorName());
         vo.setReason(r.getReason());
@@ -640,9 +640,9 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
         vo.setDeptName(r.getDeptName());
         vo.setWardName(r.getWardName());
         vo.setEventType(r.getEventType());
-        vo.setEventTypeText(VteEventTypeEnum.getText(r.getEventType()));
+        vo.setEventTypeText(VteEventTypeEnum.getLabel(r.getEventType()));
         vo.setOnsetType(r.getOnsetType());
-        vo.setOnsetTypeText(VteOnsetEnum.getText(r.getOnsetType()));
+        vo.setOnsetTypeText(VteOnsetEnum.getLabel(r.getOnsetType()));
         vo.setDiagnoseDate(r.getDiagnoseDate());
         vo.setDiagnosisBasis(r.getDiagnosisBasis());
         vo.setDiagnosisBasisText(dictCacheService.getDicDataLabel(DictTypeConst.VTE_BASIS, r.getDiagnosisBasis()));

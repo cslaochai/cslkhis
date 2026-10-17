@@ -1,5 +1,7 @@
 package com.his.common.enums;
 
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * 资金账户流水类型（字典 his_account_txn_type，落在资金账户流水的流水类型列）。
  */
@@ -20,28 +22,11 @@ public enum AccountTxnTypeEnum {
         this.desc = desc;
     }
 
-    public static AccountTxnTypeEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (AccountTxnTypeEnum item : values()) {
-            if (item.code.equals(code)) {
-                return item;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
-    }
-
-    public static String descOf(Integer code) {
-        AccountTxnTypeEnum item = fromCode(code);
-        return item == null ? "未知类型" : item.desc;
     }
 
     public Integer getCode() {
@@ -58,5 +43,27 @@ public enum AccountTxnTypeEnum {
      */
     public boolean debit() {
         return this == BALANCE_PAY || this == PREPAY_REFUND;
+    }
+
+    public static AccountTxnTypeEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (AccountTxnTypeEnum item : values()) {
+            if (code.equals(item.code)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    public static String getLabel(Integer code) {
+        AccountTxnTypeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.desc;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        AccountTxnTypeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.desc;
     }
 }

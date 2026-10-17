@@ -169,16 +169,15 @@ public class ShiftServiceImpl extends ServiceImpl<BizShiftMapper, BizShift> impl
             throw new BusinessException("班次「" + shift.getShiftName() + "」不适用于本科室");
         }
         if (shift.getScheduleType() == null || ScheduleTypeEnum.fromCode(shift.getScheduleType()) == null) {
-            throw new BusinessException("班次「" + shift.getShiftName() + "」未配置班别（"
-                    + ScheduleTypeEnum.whitelistText() + "），请先到班次字典补全");
+            throw new BusinessException("班次「" + shift.getShiftName() + "」未配置班别，请先到班次字典补全");
         }
         // 岗位适用：班次没配适用岗位=全院通用；配了就只能排给该类别的岗位
         // （「夜诊听班」这类值守班次配 1-医生，收费员选中它排班就是排一个没人出的班）
         if (staffType != null && shift.getApplyStaffType() != null
                 && !shift.getApplyStaffType().equals(staffType)) {
             throw new BusinessException("班次「" + shift.getShiftName() + "」是"
-                    + StaffTypeEnum.getText(shift.getApplyStaffType()) + "适用的班次，不能排给"
-                    + StaffTypeEnum.getText(staffType) + "岗位");
+                    + StaffTypeEnum.getLabel(shift.getApplyStaffType()) + "适用的班次，不能排给"
+                    + StaffTypeEnum.getLabel(staffType) + "岗位");
         }
         return shift;
     }
@@ -196,12 +195,12 @@ public class ShiftServiceImpl extends ServiceImpl<BizShiftMapper, BizShift> impl
         }
         // 2) 班次类型只允许已知码值
         if (shift.getScheduleType() != null && ScheduleTypeEnum.fromCode(shift.getScheduleType()) == null) {
-            return "班次类型只允许 " + ScheduleTypeEnum.whitelistText();
+            return "班次类型取值不合法";
         }
         // 3) 适用域：只认已知码值，空=门诊排班（护理班次由病区护理排班页维护）
         //    必须先定册再判跨零点——闸门是按册放行的
         if (shift.getUseScope() != null && ShiftUseScopeEnum.fromCode(shift.getUseScope()) == null) {
-            return "适用域只允许 " + ShiftUseScopeEnum.whitelistText();
+            return "适用域取值不合法";
         }
         if (shift.getUseScope() == null) {
             shift.setUseScope(ShiftUseScopeEnum.OUTPATIENT.getCode());

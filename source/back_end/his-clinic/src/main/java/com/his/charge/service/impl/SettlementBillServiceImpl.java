@@ -549,7 +549,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
      */
     @Override
     public List<RefundableLineVO> refundableLines(Long billId, Integer refundType) {
-        RefundTypeEnum type = RefundTypeEnum.getByCode(refundType);
+        RefundTypeEnum type = RefundTypeEnum.fromCode(refundType);
         if (type == null) {
             throw new BusinessException("不支持的退费类型：" + refundType);
         }
@@ -581,7 +581,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
             RefundableLineVO line = new RefundableLineVO();
             line.setFeeRecordId(row.getId());
             line.setItemType(row.getItemType());
-            PaymentItemTypeEnum itemType = PaymentItemTypeEnum.getByCode(row.getItemType());
+            PaymentItemTypeEnum itemType = PaymentItemTypeEnum.fromCode(row.getItemType());
             line.setItemTypeText(itemType == null ? String.valueOf(row.getItemType()) : itemType.getDesc());
             line.setItemCode(row.getItemCode());
             line.setItemName(row.getItemName());
@@ -797,7 +797,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
     private PatientInsurance resolveInsurance(Long patientId, Integer settlementMode) {
         PatientBriefVO patient = patientId == null ? null : patientProvider.findPatient(patientId);
         boolean hasInsurance = patient != null && TextUtil.hasText(patient.getMedicalInsuranceNo());
-        SettlementModeEnum mode = SettlementModeEnum.getByCode(settlementMode);
+        SettlementModeEnum mode = SettlementModeEnum.fromCode(settlementMode);
         if (mode == null) {
             throw new BusinessException("缺少结算方式");
         }
@@ -820,7 +820,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
             throw new BusinessException("该参保人当前停保（参保状态异常），不能按医保结算，请改按自费结算");
         }
         String insuranceType = patient.getMedicalInsuranceType();
-        MedicalInsuranceTypeEnum typeEnum = MedicalInsuranceTypeEnum.parse(insuranceType);
+        MedicalInsuranceTypeEnum typeEnum = MedicalInsuranceTypeEnum.fromCode(insuranceType);
         Integer settlementType = typeEnum == null ? null : typeEnum.getSettlementType();
         BigDecimal coverage = BigDecimal.ZERO;
         BigDecimal selfPay = BigDecimal.ZERO;

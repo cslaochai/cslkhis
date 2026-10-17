@@ -1,5 +1,7 @@
 package com.his.common.enums;
 
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * 资金方向（字典 his_pay_direction，落在支付资金流水的方向列、
  */
@@ -16,28 +18,11 @@ public enum PayDirectionEnum {
         this.desc = desc;
     }
 
-    public static PayDirectionEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (PayDirectionEnum item : values()) {
-            if (item.code.equals(code)) {
-                return item;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
-    }
-
-    public static String descOf(Integer code) {
-        PayDirectionEnum item = fromCode(code);
-        return item == null ? "未知方向" : item.desc;
     }
 
     public Integer getCode() {
@@ -53,5 +38,27 @@ public enum PayDirectionEnum {
      */
     public int sign() {
         return this == CHARGE ? 1 : -1;
+    }
+
+    public static PayDirectionEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (PayDirectionEnum item : values()) {
+            if (code.equals(item.code)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    public static String getLabel(Integer code) {
+        PayDirectionEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.desc;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        PayDirectionEnum item = fromCode(code);
+        return item == null ? defaultValue : item.desc;
     }
 }

@@ -54,7 +54,7 @@ public class LaboratoryApplySignProviderImpl implements SignableContentProvider,
     @Override
     public String blockReason(SignSubject subject, SignSceneEnum scene) {
         if (scene != SignSceneEnum.APPLY_CREATE) {
-            return "检验申请单只支持「申请开立签名」场景，当前场景「" + scene.getText() + "」不适用";
+            return "检验申请单只支持「申请开立签名」场景，当前场景「" + scene.getLabel() + "」不适用";
         }
         BizLaboratoryApply a = bizLaboratoryApplyMapper.selectById(subject.bizId());
         if (a == null) {

@@ -545,7 +545,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
     }
 
     private String statusName(Integer status) {
-        String label = FollowupTaskStatusEnum.getText(status);
+        String label = FollowupTaskStatusEnum.getLabel(status);
         return label == null ? "未知" : label;
     }
 }

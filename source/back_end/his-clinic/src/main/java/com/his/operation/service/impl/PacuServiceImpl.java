@@ -229,7 +229,7 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
         bizAnesthesiaPacuMapper.updateById(entity);
         log.info("出PACU pacuNo={} Aldrete={} 去向={} 计费=成功{}项/失败{}项 金额={}",
                 entity.getPacuNo(), entity.getAldreteTotal(),
-                PacuDispositionEnum.getText(dto.getDisposition()),
+                PacuDispositionEnum.getLabel(dto.getDisposition()),
                 summary.getSuccessItems(), summary.getFailedItems(), summary.getAmount());
         return summary;
     }
@@ -310,7 +310,7 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
         BizAnesthesiaPacu entity = mustGet(pacuId);
         if (!Objects.equals(PacuStatusEnum.IN.getCode(), entity.getStatus())) {
             throw new BusinessException("PACU 复苏单 " + entity.getPacuNo() + " 当前状态为「"
-                    + PacuStatusEnum.labelOrUnknown(entity.getStatus()) + "」，只有「在室观察」可以评分/出室");
+                    + PacuStatusEnum.getLabelOrUnknown(entity.getStatus()) + "」，只有「在室观察」可以评分/出室");
         }
         return entity;
     }
@@ -328,11 +328,11 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
     }
 
     private void decorate(PacuRecordVO vo) {
-        vo.setStatusText(PacuStatusEnum.getText(vo.getStatus()));
-        vo.setAwarenessText(AwarenessLevelEnum.getText(vo.getAwareness()));
-        vo.setDispositionText(PacuDispositionEnum.getText(vo.getDisposition()));
-        vo.setChargeStatusText(AnesthesiaChargeStatusEnum.getText(vo.getChargeStatus()));
-        vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getAnesthesiaType()));
+        vo.setStatusText(PacuStatusEnum.getLabel(vo.getStatus()));
+        vo.setAwarenessText(AwarenessLevelEnum.getLabel(vo.getAwareness()));
+        vo.setDispositionText(PacuDispositionEnum.getLabel(vo.getDisposition()));
+        vo.setChargeStatusText(AnesthesiaChargeStatusEnum.getLabel(vo.getChargeStatus()));
+        vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getLabel(vo.getAnesthesiaType()));
 
         boolean inRoom = Objects.equals(PacuStatusEnum.IN.getCode(), vo.getStatus());
         Long stay = TimeUtil.elapsedMinutes(vo.getEnterTime(), vo.getLeaveTime() == null ? LocalDateTime.now() : vo.getLeaveTime());

@@ -122,7 +122,7 @@ public class PrescriptionSignProviderImpl implements SignableContentProvider, Pr
             }
             return null;
         }
-        return "处方只支持「开方签名」与「审方签名」两种场景，当前场景「" + scene.getText() + "」不适用";
+        return "处方只支持「开方签名」与「审方签名」两种场景，当前场景「" + scene.getLabel() + "」不适用";
     }
 
     @Override

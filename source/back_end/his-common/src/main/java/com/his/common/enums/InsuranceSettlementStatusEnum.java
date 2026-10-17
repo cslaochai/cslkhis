@@ -1,5 +1,7 @@
 package com.his.common.enums;
 
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * 医保结算清单状态（字典 his_ins_settlement_status，落在医保结算清单的结算状态列）。
  */
@@ -19,28 +21,11 @@ public enum InsuranceSettlementStatusEnum {
         this.desc = desc;
     }
 
-    public static InsuranceSettlementStatusEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (InsuranceSettlementStatusEnum item : values()) {
-            if (item.code.equals(code)) {
-                return item;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
-    }
-
-    public static String descOf(Integer code) {
-        InsuranceSettlementStatusEnum item = fromCode(code);
-        return item == null ? "未知状态" : item.desc;
     }
 
     public Integer getCode() {
@@ -56,5 +41,27 @@ public enum InsuranceSettlementStatusEnum {
      */
     public boolean uploaded() {
         return this == UPLOADED || this == AUDITED;
+    }
+
+    public static InsuranceSettlementStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (InsuranceSettlementStatusEnum item : values()) {
+            if (code.equals(item.code)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    public static String getLabel(Integer code) {
+        InsuranceSettlementStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.desc;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        InsuranceSettlementStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.desc;
     }
 }

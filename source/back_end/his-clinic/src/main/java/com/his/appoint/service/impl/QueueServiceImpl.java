@@ -218,7 +218,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
      */
     private BizQueueListVO toListVO(Queue queue) {
         BizQueueListVO vo = BeanUtil.copyProperties(queue, BizQueueListVO.class);
-        vo.setTriageLevelText(TriageLevelEnum.getText(queue.getTriageLevel()));
+        vo.setTriageLevelText(TriageLevelEnum.getLabel(queue.getTriageLevel()));
         AppointInfo registInfo = queue.getRegistId() != null
                 ? appointInfoMapper.selectById(queue.getRegistId()) : null;
         if (registInfo != null) {
@@ -457,7 +457,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
             if (!criticals.isEmpty()) {
                 Queue critical = criticals.get(0);
                 throw new BusinessException("队列中有危重患者 " + critical.getPatientName()
-                        + "（" + TriageLevelEnum.labelOrUnknown(critical.getTriageLevel()) + " · " + critical.getQueueNo()
+                        + "（" + TriageLevelEnum.getLabelOrUnknown(critical.getTriageLevel()) + " · " + critical.getQueueNo()
                         + "）尚未接诊，请先处置危重患者");
             }
         }
@@ -671,7 +671,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
         } else {
             // 医保联网：先按费别解析出政策险种键（职工2/居民3/公费4）；
             // 自费、商业保险或无法识别的费别没有统筹政策，比例按 0 处理（全额自付）。
-            MedicalInsuranceTypeEnum typeEnum = MedicalInsuranceTypeEnum.parse(dto.getMedicalInsuranceType());
+            MedicalInsuranceTypeEnum typeEnum = MedicalInsuranceTypeEnum.fromCode(dto.getMedicalInsuranceType());
             Integer policyKey = typeEnum != null && typeEnum.isPoolCovered()
                     ? typeEnum.getSettlementType() : null;
             BigDecimal coverageRatio = policyKey == null
@@ -1112,7 +1112,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
      * 就诊状态文案由后端给，避免前端各写一份映射。
      */
     private void fillLogStatus(OpdLogListVO vo) {
-        vo.setLogStatusLabel(OpdLogStatusEnum.getText(vo.getLogStatus()));
+        vo.setLogStatusLabel(OpdLogStatusEnum.getLabel(vo.getLogStatus()));
     }
 
     @Override
@@ -1243,7 +1243,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
 
     private TriageRecordVO toTriageVO(TriageRecord record) {
         TriageRecordVO vo = BeanUtil.copyProperties(record, TriageRecordVO.class);
-        vo.setTriageLevelText(TriageLevelEnum.getText(record.getTriageLevel()));
+        vo.setTriageLevelText(TriageLevelEnum.getLabel(record.getTriageLevel()));
         return vo;
     }
 
@@ -1327,7 +1327,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
                 vo.setCheckedIn(true);
                 vo.setQueueId(queue.getId());
                 vo.setQueueStatus(queue.getQueueStatus());
-                vo.setQueueStatusText(QueueStatusEnum.getText(queue.getQueueStatus()));
+                vo.setQueueStatusText(QueueStatusEnum.getLabel(queue.getQueueStatus()));
                 vo.setSequenceNo(queue.getSequenceNo());
                 vo.setRoomName(queue.getRoomName());
                 vo.setArriveTime(queue.getArriveTime());

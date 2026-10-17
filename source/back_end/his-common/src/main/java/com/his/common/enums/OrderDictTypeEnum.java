@@ -5,6 +5,7 @@ import lombok.Getter;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 医嘱基础字典的三类口径（sql/142）：给药途径 / 用药频次 / 剂量单位。
@@ -26,40 +27,9 @@ public enum OrderDictTypeEnum {
         this.orderColumn = orderColumn;
     }
 
-    public static OrderDictTypeEnum fromCode(String type) {
-        if (type == null) {
-            return null;
-        }
-        for (OrderDictTypeEnum e : values()) {
-            if (e.type.equals(type)) {
-                return e;
-            }
-        }
-        return null;
-    }
-
     /** 是否为受管的医嘱字典类型 */
     public static boolean isManaged(String type) {
         return fromCode(type) != null;
-    }
-
-    public static String getText(String type) {
-        if (type == null) {
-            return "—";
-        }
-        OrderDictTypeEnum e = fromCode(type);
-        return e != null ? e.name : "";
-    }
-
-    /**
-     * 码值→异常 / 审计文案：不在三类之内返回「未知(type)」，保留原始值便于排查（绝不用于前端展示）。
-     */
-    public static String labelOrUnknown(String type) {
-        if (type == null) {
-            return "未知";
-        }
-        OrderDictTypeEnum e = fromCode(type);
-        return e != null ? e.name : "未知(" + type + ")";
     }
 
     /** 医嘱表里对应的列名（只可能是三列之一，调用方不可传外部输入） */
@@ -74,5 +44,33 @@ public enum OrderDictTypeEnum {
             m.put(e.type, e.name);
         }
         return m;
+    }
+
+    public static OrderDictTypeEnum fromCode(String code) {
+        if (null == code) {
+            return null;
+        }
+        for (OrderDictTypeEnum item : values()) {
+            if (code.equals(item.type)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(String code) {
+        OrderDictTypeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.name;
+    }
+
+    public static String getLabel(String code, String defaultValue) {
+        OrderDictTypeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.name;
+    }
+
+    public static String getLabelOrUnknown(String code) {
+        OrderDictTypeEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.name;
     }
 }

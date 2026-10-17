@@ -128,12 +128,12 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
 
         InpatientOrderTemplateDetailVO vo = new InpatientOrderTemplateDetailVO();
         BeanUtils.copyProperties(template, vo);
-        vo.setOrderTypeText(OrderTypeEnum.getText(template.getOrderType()));
+        vo.setOrderTypeText(OrderTypeEnum.getLabel(template.getOrderType()));
         List<InpatientOrderTemplateItemVO> itemVOs = new ArrayList<>(items.size());
         for (BizInpatientOrderTemplateItem item : items) {
             InpatientOrderTemplateItemVO itemVO = new InpatientOrderTemplateItemVO();
             BeanUtils.copyProperties(item, itemVO);
-            itemVO.setOrderClassText(OrderClassEnum.getText(item.getOrderClass()));
+            itemVO.setOrderClassText(OrderClassEnum.getLabel(item.getOrderClass()));
             itemVOs.add(itemVO);
         }
         vo.setItems(itemVOs);
@@ -159,7 +159,7 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
                 .convert(entity -> {
                     InpatientOrderTemplateListVO vo = new InpatientOrderTemplateListVO();
                     BeanUtils.copyProperties(entity, vo);
-                    vo.setOrderTypeText(OrderTypeEnum.getText(entity.getOrderType()));
+                    vo.setOrderTypeText(OrderTypeEnum.getLabel(entity.getOrderType()));
                     return vo;
                 });
     }
@@ -180,7 +180,7 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
         for (BizInpatientOrderTemplate entity : list) {
             InpatientOrderTemplateSelectListVO vo = new InpatientOrderTemplateSelectListVO();
             BeanUtils.copyProperties(entity, vo);
-            vo.setOrderTypeText(OrderTypeEnum.getText(entity.getOrderType()));
+            vo.setOrderTypeText(OrderTypeEnum.getLabel(entity.getOrderType()));
             vos.add(vo);
         }
         return vos;

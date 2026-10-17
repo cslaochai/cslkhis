@@ -79,7 +79,7 @@ public class StocktakeServiceImpl extends ServiceImpl<BizStocktakeMapper, BizSto
         if (drugType == null) {
             return "全部药品";
         }
-        String text = StocktakeDrugTypeEnum.getText(drugType);
+        String text = StocktakeDrugTypeEnum.getLabel(drugType);
         return text == null ? "其他" : text;
     }
 
@@ -106,7 +106,7 @@ public class StocktakeServiceImpl extends ServiceImpl<BizStocktakeMapper, BizSto
                 new Page<>(query.getPageNum(), query.getPageSize()),
                 TextUtil.trimToNull(query.getStocktakeNo()), TextUtil.trimToNull(query.getStocktakeTitle()),
                 query.getStatus(), TextUtil.trimToNull(query.getDateStart()), TextUtil.trimToNull(query.getDateEnd()));
-        page.getRecords().forEach(v -> v.setStatusText(StocktakeStatusEnum.getText(v.getStatus())));
+        page.getRecords().forEach(v -> v.setStatusText(StocktakeStatusEnum.getLabel(v.getStatus())));
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
     }
 
@@ -116,7 +116,7 @@ public class StocktakeServiceImpl extends ServiceImpl<BizStocktakeMapper, BizSto
         if (vo == null) {
             throw new BusinessException("盘点单不存在或已删除");
         }
-        vo.setStatusText(StocktakeStatusEnum.getText(vo.getStatus()));
+        vo.setStatusText(StocktakeStatusEnum.getLabel(vo.getStatus()));
         List<StocktakeItemVO> items = bizStocktakeItemMapper.selectByStocktakeId(id);
         items.forEach(i -> i.setDiffTypeText(diffText(i.getCountedQuantity(), i.getDiffQuantity())));
         vo.setItems(items);
@@ -312,7 +312,7 @@ public class StocktakeServiceImpl extends ServiceImpl<BizStocktakeMapper, BizSto
     public void deleteById(Long id) {
         BizStocktake head = lock(id);
         if (!Objects.equals(head.getStatus(), StocktakeStatusEnum.COUNTING.getCode())) {
-            throw new BusinessException("只有「盘点中」的盘点单可以删除（当前：" + StocktakeStatusEnum.labelOrUnknown(head.getStatus())
+            throw new BusinessException("只有「盘点中」的盘点单可以删除（当前：" + StocktakeStatusEnum.getLabelOrUnknown(head.getStatus())
                     + "）；待复核请复核人退回，已过账/已关单是留档凭证不能抹");
         }
         bizStocktakeItemMapper.purgeByStocktakeId(head.getId());
@@ -387,7 +387,7 @@ public class StocktakeServiceImpl extends ServiceImpl<BizStocktakeMapper, BizSto
 
     private void requireStatus(BizStocktake head, int expected, String action) {
         if (!Objects.equals(head.getStatus(), expected)) {
-            throw new BusinessException("当前状态不能" + action + "（现在：" + StocktakeStatusEnum.labelOrUnknown(head.getStatus()) + "）");
+            throw new BusinessException("当前状态不能" + action + "（现在：" + StocktakeStatusEnum.getLabelOrUnknown(head.getStatus()) + "）");
         }
     }
 

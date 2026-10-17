@@ -1,5 +1,7 @@
 package com.his.common.enums;
 
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * 医保扣款状态码
  */
@@ -44,45 +46,8 @@ public enum YbDeductStatusEnum {
         this.label = label;
     }
 
-    /**
-     * 按 code 取枚举项（模板方法名，全仓统一用 fromCode）。
-     */
-    public static YbDeductStatusEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (YbDeductStatusEnum e : values()) {
-            if (e.code == code) {
-                return e;
-            }
-        }
-        return null;
-    }
-
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
-    }
-
-    /**
-     * 按 code 取中文标签 —— 读取侧展示文案。
-     *
-     * <p>null 渲染成「—」；未知 code 返回<b>空串</b>，不伪装成某一项
-     * （否则将来新增一种状态时读取侧会静默把它当成某个合法态）。
-     */
-    public static String getText(Integer code) {
-        if (code == null) {
-            return "—";
-        }
-        YbDeductStatusEnum e = fromCode(code);
-        return e == null ? "" : e.label;
-    }
-
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        YbDeductStatusEnum item = fromCode(code);
-        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 
     /**
@@ -98,5 +63,36 @@ public enum YbDeductStatusEnum {
 
     public String getLabel() {
         return label;
+    }
+
+    public static YbDeductStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (YbDeductStatusEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        if (null == code) {
+            return "—";
+        }
+        YbDeductStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        YbDeductStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        YbDeductStatusEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

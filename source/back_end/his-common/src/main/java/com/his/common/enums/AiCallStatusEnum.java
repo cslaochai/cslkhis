@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * AI 调用状态。区分「超时」与「失败」是因为排查方向完全不同：
@@ -42,8 +43,12 @@ public enum AiCallStatusEnum {
         this.label = label;
     }
 
+    public static boolean isValid(Integer code) {
+        return fromCode(code) != null;
+    }
+
     public static AiCallStatusEnum fromCode(Integer code) {
-        if (code == null) {
+        if (null == code) {
             return null;
         }
         for (AiCallStatusEnum item : values()) {
@@ -54,23 +59,18 @@ public enum AiCallStatusEnum {
         return null;
     }
 
-    public static boolean isValid(Integer code) {
-        return fromCode(code) != null;
-    }
-
-    /**
-     * 展示用码值 → 文案。null / 越界码值返回空串 ——
-     * 审计列表里一条历史脏数据不该把整页渲染成「未知」，空串更安全。
-     */
-    public static String getText(Integer code) {
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
         AiCallStatusEnum item = fromCode(code);
-        return item == null ? "" : item.label;
+        return item == null ? StringUtils.EMPTY : item.label;
     }
 
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
+    public static String getLabel(Integer code, String defaultValue) {
+        AiCallStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
         AiCallStatusEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }

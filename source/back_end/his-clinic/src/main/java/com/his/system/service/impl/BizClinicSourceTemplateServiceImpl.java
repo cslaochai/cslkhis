@@ -187,7 +187,7 @@ public class BizClinicSourceTemplateServiceImpl extends ServiceImpl<BizClinicSou
         vo.setDoctorId(t.getDoctorId());
         vo.setDoctorName(t.getDoctorName());
         vo.setStaffType(t.getStaffType());
-        vo.setStaffTypeName(StaffTypeEnum.getText(t.getStaffType()));
+        vo.setStaffTypeName(StaffTypeEnum.getLabel(t.getStaffType()));
         vo.setWeekDay(t.getWeekDay());
         vo.setWeekParity(t.getWeekParity());
         vo.setValidFrom(t.getValidFrom() != null ? t.getValidFrom().toString() : null);
@@ -447,7 +447,7 @@ public class BizClinicSourceTemplateServiceImpl extends ServiceImpl<BizClinicSou
         if (templates.isEmpty()) {
             return staffType == null
                     ? "没有启用的排班模板，请先在「排班模板」中配置"
-                    : "没有启用的「" + StaffTypeEnum.getText(staffType) + "」岗位排班模板";
+                    : "没有启用的「" + StaffTypeEnum.getLabel(staffType) + "」岗位排班模板";
         }
         List<BizClinicSource> existing = loadWeekSchedules(monday, sunday);
         Map<Long, BizShift> shiftMap = loadShifts(templates);
@@ -578,7 +578,7 @@ public class BizClinicSourceTemplateServiceImpl extends ServiceImpl<BizClinicSou
             LocalDate date = monday.plusDays(tpl.getWeekDay() - 1);
             BizShift shift = shiftOf(shiftMap, tpl);
             String desc = weekDayName(tpl.getWeekDay()) + " " + (shift == null ? "未配班次" : shift.getShiftName()) + " "
-                    + "[" + StaffTypeEnum.getText(tpl.getStaffType()) + "] " + tpl.getDoctorName() + " "
+                    + "[" + StaffTypeEnum.getLabel(tpl.getStaffType()) + "] " + tpl.getDoctorName() + " "
                     + (shift == null ? tpl.getStartTime() + "-" + tpl.getEndTime() : shift.getStartTime() + "-" + shift.getEndTime())
                     + " " + tpl.getTotalSource() + " 号"
                     + (tpl.getRoomName() != null ? " " + tpl.getRoomName() : "");
@@ -721,7 +721,7 @@ public class BizClinicSourceTemplateServiceImpl extends ServiceImpl<BizClinicSou
                 .eq(BizClinicSourceTemplate::getShiftId, template.getShiftId())
                 .ne(template.getId() != null, BizClinicSourceTemplate::getId, template.getId());
         if (bizScheduleTemplateMapper.selectCount(wrapper) > 0) {
-            throw new BusinessException("该" + StaffTypeEnum.getText(template.getStaffType())
+            throw new BusinessException("该" + StaffTypeEnum.getLabel(template.getStaffType())
                     + "在此星期已排过同一班次");
         }
     }

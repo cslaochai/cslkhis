@@ -79,7 +79,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
         }
         // 文案差异：本报表把「合理」显示为「合理处方」，其余沿用枚举 label，兜底走枚举 getText
         return Objects.equals(RxReviewResultEnum.REASONABLE.getCode(), result)
-                ? "合理处方" : RxReviewResultEnum.getText(result);
+                ? "合理处方" : RxReviewResultEnum.getLabel(result);
     }
 
     private static String csv(String v) {

@@ -207,7 +207,7 @@ public class QrPayServiceImpl implements QrPayService {
         }
         if (!Objects.equals(order.getChannel(), PayChannelEnum.ALIPAY.getCode())) {
             throw new BusinessException("仅支付宝出码支持模拟收款，当前渠道："
-                    + PayChannelEnum.labelOrUnknown(order.getChannel()));
+                    + PayChannelEnum.getLabelOrUnknown(order.getChannel()));
         }
         // 金额取支付单自己的应缴额：模拟的是「患者照单全付」，要模拟少付就得改传参，
         // 而那条路径该由真渠道或退费流程覆盖，不在这里开口子
@@ -249,9 +249,9 @@ public class QrPayServiceImpl implements QrPayService {
         if (!Objects.equals(order.getChannel(), PayChannelEnum.ALIPAY.getCode())) {
             // 支付宝通知了一张登记为别的渠道的单：配错回调地址或报文串单，绝不能用支付宝的钱去销微信的账
             log.error("[支付宝回调·收费侧] 支付单渠道不是支付宝，拒入账 payNo={} orderChannel={}",
-                    payNo, PayChannelEnum.labelOrUnknown(order.getChannel()));
+                    payNo, PayChannelEnum.getLabelOrUnknown(order.getChannel()));
             recordChargeNotify(PayNotifyResultEnum.CHANNEL_MISMATCH, NOTIFY_RETRY, true,
-                    "支付单渠道不是支付宝：" + PayChannelEnum.labelOrUnknown(order.getChannel()), rawNotify);
+                    "支付单渠道不是支付宝：" + PayChannelEnum.getLabelOrUnknown(order.getChannel()), rawNotify);
             return NOTIFY_RETRY;
         }
 
@@ -324,7 +324,7 @@ public class QrPayServiceImpl implements QrPayService {
     private void settleFromChannel(PayOrderVO order) {
         if (!Objects.equals(order.getChannel(), PayChannelEnum.ALIPAY.getCode())) {
             throw new BusinessException("该渠道暂不支持主动查单，请等待渠道回调："
-                    + PayChannelEnum.labelOrUnknown(order.getChannel()));
+                    + PayChannelEnum.getLabelOrUnknown(order.getChannel()));
         }
         // 查单是网络调用，留在本事务里是为了让「翻转 + 记账」保持原子：
         // 拆成两段就会出现「支付单已置已支付、账单却没记收款」的永久漏账
@@ -358,7 +358,7 @@ public class QrPayServiceImpl implements QrPayService {
         if (payMethod == null) {
             // 兜成现金等于把渠道收的钱塞进抽屉，当天清点必然多出一笔说不清的差额
             throw new BusinessException("渠道无对应收款方式，不入账："
-                    + PayChannelEnum.labelOrUnknown(order.getChannel()));
+                    + PayChannelEnum.getLabelOrUnknown(order.getChannel()));
         }
         BigDecimal amount = unpaidOf(bill).min(order.getAmount());
         if (amount.signum() <= 0) {
@@ -388,7 +388,7 @@ public class QrPayServiceImpl implements QrPayService {
         if (Objects.equals(order.getChannel(), PayChannelEnum.WECHAT.getCode())) {
             return wxPayChannelProvider.nativePrecreate(order);
         }
-        throw new BusinessException("该渠道暂不支持出码收款：" + PayChannelEnum.labelOrUnknown(order.getChannel()));
+        throw new BusinessException("该渠道暂不支持出码收款：" + PayChannelEnum.getLabelOrUnknown(order.getChannel()));
     }
 
     /**

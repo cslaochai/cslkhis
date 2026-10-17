@@ -151,7 +151,7 @@ public enum QualityRule {
     /**
      * 未知规则码返回 null（调用方需显式报"未知规则(xxx)"，不做静默回落）
      */
-    public static QualityRule parse(String code) {
+    public static QualityRule fromCode(String code) {
         if (!TextUtil.hasText(code)) {
             return null;
         }

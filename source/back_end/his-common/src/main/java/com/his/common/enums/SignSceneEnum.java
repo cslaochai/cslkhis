@@ -1,5 +1,7 @@
 package com.his.common.enums;
 
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * 签名场景：说明"这一次签名是因为什么业务动作产生的"。
  */
@@ -71,38 +73,43 @@ public enum SignSceneEnum {
     LEAVE_APPROVE(13, "请假审批签名");
 
     private final int code;
-    private final String text;
+    private final String label;
 
-    SignSceneEnum(int code, String text) {
+    SignSceneEnum(int code, String label) {
         this.code = code;
-        this.text = text;
-    }
-
-    public static SignSceneEnum parse(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (SignSceneEnum s : values()) {
-            if (s.code == code) {
-                return s;
-            }
-        }
-        return null;
-    }
-
-    public static String textOf(Integer code) {
-        SignSceneEnum s = parse(code);
-        if (s != null) {
-            return s.text;
-        }
-        return code == null ? "—" : "未知(" + code + ")";
+        this.label = label;
     }
 
     public int getCode() {
         return code;
     }
 
-    public String getText() {
-        return text;
+    public String getLabel() {
+        return label;
+    }
+
+    public static SignSceneEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (SignSceneEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    public static String getLabel(Integer code) {
+        if (null == code) {
+            return "—";
+        }
+        SignSceneEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        SignSceneEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
     }
 }

@@ -126,7 +126,7 @@ public class InsuranceUploadPayloadVO implements Serializable {
         private String billNo;
 
         /**
-         * 就诊类型（人读文案，由 {@code EncounterTypeEnum#descOf} 转好再入报文）
+         * 就诊类型（人读文案，由 {@code EncounterTypeEnum#getLabel} 转好再入报文）
          */
         private String encounterType;
 

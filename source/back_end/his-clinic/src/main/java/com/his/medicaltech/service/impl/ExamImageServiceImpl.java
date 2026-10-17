@@ -187,7 +187,7 @@ public class ExamImageServiceImpl extends ServiceImpl<BizExamImageMapper, BizExa
     }
 
     private Anchor resolveAnchor(Integer bizType, Long applyId) {
-        ReportTypeEnum type = ReportTypeEnum.getByCode(bizType);
+        ReportTypeEnum type = ReportTypeEnum.fromCode(bizType);
         if (type == null) {
             throw new BusinessException("影像单据类型取值不合法");
         }
@@ -321,7 +321,7 @@ public class ExamImageServiceImpl extends ServiceImpl<BizExamImageMapper, BizExa
         BeanUtils.copyProperties(row, vo);
         vo.setModalityText(row.getModality() == null ? null
                 : dictCacheService.getDicDataLabel(DictTypeConst.EXAM_DEVICE_TYPE, row.getModality()));
-        vo.setSourceText(ExamImageSourceEnum.getText(row.getSource()));
+        vo.setSourceText(ExamImageSourceEnum.getLabel(row.getSource()));
         return vo;
     }
 

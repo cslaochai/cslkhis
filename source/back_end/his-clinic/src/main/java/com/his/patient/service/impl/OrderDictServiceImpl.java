@@ -56,7 +56,7 @@ public class OrderDictServiceImpl extends ServiceImpl<SysOrderDictDataMapper, Sy
                     OrderDictListVO vo = new OrderDictListVO();
                     BeanUtils.copyProperties(entity, vo);
                     vo.setDictTypeText(OrderDictTypes.text(entity.getDictType()));
-                    vo.setStatusText(EnableStatusEnum.getText(entity.getStatus()));
+                    vo.setStatusText(EnableStatusEnum.getLabel(entity.getStatus()));
                     vo.setBuiltIn(Objects.equals(1, entity.getDictSource()));
                     Long cnt = usage.get(entity.getDictValue());
                     vo.setUsageCount(cnt == null ? 0L : cnt);
@@ -78,7 +78,7 @@ public class OrderDictServiceImpl extends ServiceImpl<SysOrderDictDataMapper, Sy
             OrderDictListVO vo = new OrderDictListVO();
             BeanUtils.copyProperties(entity, vo);
             vo.setDictTypeText(OrderDictTypes.text(entity.getDictType()));
-            vo.setStatusText(EnableStatusEnum.getText(entity.getStatus()));
+            vo.setStatusText(EnableStatusEnum.getLabel(entity.getStatus()));
             vo.setBuiltIn(Objects.equals(1, entity.getDictSource()));
             Long cnt = usage.get(entity.getDictValue());
             vo.setUsageCount(cnt == null ? 0L : cnt);

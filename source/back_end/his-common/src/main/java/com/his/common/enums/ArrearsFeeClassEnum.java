@@ -5,6 +5,7 @@ import lombok.Getter;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 欠费管控的「费用大类」口径（1-药品 2-检查 3-检验 4-治疗 5-护理 6-手术 7-输血 8-监护）。
@@ -33,26 +34,6 @@ public enum ArrearsFeeClassEnum {
         this.label = label;
     }
 
-    public static ArrearsFeeClassEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (ArrearsFeeClassEnum item : values()) {
-            if (item.code == code) {
-                return item;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * 展示用码值 → 文案。脏数据返回 null，由调用侧决定兜底，不回落到合法文案。
-     */
-    public static String getText(Integer code) {
-        ArrearsFeeClassEnum item = fromCode(code);
-        return item == null ? null : item.label;
-    }
-
     /**
      * 解析逗号分隔的码值串（如 "2,3,4"）为码值集合；忽略空白片段与非数字片段；
      * 串为空时回落到默认停费口径：检查、检验、治疗。
@@ -68,11 +49,25 @@ public enum ArrearsFeeClassEnum {
                 .collect(Collectors.toSet());
     }
 
-    /**
-     * 展示用码值 → 文案，未知/脏码值兜底为「其他」（欠费拦截提示等场景）。
-     */
-    public static String getTextOrOther(Integer code) {
-        String text = getText(code);
-        return text == null ? "其他" : text;
+    public static ArrearsFeeClassEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (ArrearsFeeClassEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    public static String getLabel(Integer code) {
+        ArrearsFeeClassEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        ArrearsFeeClassEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
     }
 }

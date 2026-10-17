@@ -54,7 +54,7 @@ public class CriticalNoticeSignProviderImpl implements SignableContentProvider, 
     @Override
     public String blockReason(SignSubject subject, SignSceneEnum scene) {
         if (scene != SignSceneEnum.NOTICE_ISSUE && scene != SignSceneEnum.NOTICE_MAKEUP) {
-            return "病危重通知只支持「告知签发签名/告知补签」场景，当前场景「" + scene.getText() + "」不适用";
+            return "病危重通知只支持「告知签发签名/告知补签」场景，当前场景「" + scene.getLabel() + "」不适用";
         }
         BizCriticalNotice n = bizCriticalNoticeMapper.selectById(subject.bizId());
         if (n == null) {

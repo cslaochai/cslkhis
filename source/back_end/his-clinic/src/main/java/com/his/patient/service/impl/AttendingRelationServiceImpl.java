@@ -99,7 +99,7 @@ public class AttendingRelationServiceImpl
         Integer relationType = dto.getRelationType() == null
                 ? AttendingRelationTypeEnum.ATTENDING.getCode() : dto.getRelationType();
         if (AttendingRelationTypeEnum.fromCode(relationType) == null) {
-            throw new BusinessException("关系类型只允许 " + AttendingRelationTypeEnum.whitelistText());
+            throw new BusinessException("关系类型取值不合法");
         }
         LocalDateTime effective = parseTime(dto.getEffectiveTime());
 
@@ -196,9 +196,9 @@ public class AttendingRelationServiceImpl
             vo.setWardId(row.getWardId());
             vo.setBedId(row.getBedId());
             vo.setRelationType(row.getRelationType());
-            vo.setRelationTypeText(AttendingRelationTypeEnum.getText(row.getRelationType()));
+            vo.setRelationTypeText(AttendingRelationTypeEnum.getLabel(row.getRelationType()));
             vo.setStatus(row.getStatus());
-            vo.setStatusText(AttendingRelationStatusEnum.getText(row.getStatus()));
+            vo.setStatusText(AttendingRelationStatusEnum.getLabel(row.getStatus()));
             vo.setEffectiveTime(row.getEffectiveTime());
             vo.setExpireTime(row.getExpireTime());
             vo.setRemark(row.getRemark());

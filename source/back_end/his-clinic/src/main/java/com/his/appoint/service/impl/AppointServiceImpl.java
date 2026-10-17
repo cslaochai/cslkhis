@@ -125,7 +125,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
     }
 
     private static String notAllowedReason(Integer registStatus, String action) {
-        String label = AppointStatusEnum.getText(registStatus);
+        String label = AppointStatusEnum.getLabel(registStatus);
         String who = label == null ? "当前状态(" + registStatus + ")" : label;
         if (AppointStatusEnum.isFinal(registStatus)) {
             return who + " 不允许" + action + "：诊疗已结束，号源属过去（或已作废），不可再变更";
@@ -447,7 +447,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
             }
             if (!StaffTypeEnum.isDoctor(schedule.getStaffType())) {
                 throw new BusinessException("只能挂医生出诊号源：该排班是「"
-                        + StaffTypeEnum.getText(schedule.getStaffType()) + "」岗位出勤，不对外放号");
+                        + StaffTypeEnum.getLabel(schedule.getStaffType()) + "」岗位出勤，不对外放号");
             }
             if (schedule.getStaffScheduleId() != null) {
                 BizSchedule core = staffScheduleService.getById(schedule.getStaffScheduleId());
@@ -455,8 +455,8 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
                     throw new BusinessException(core == null
                             ? "该号源对应的岗位排班已不存在，请到「全院排班」重新排班后再挂号"
                             : "「" + core.getEmployeeName() + "」在 " + core.getScheduleDate() + " 的排班是"
-                            + StaffDutyStatusEnum.getText(core.getDutyStatus()) + "·"
-                            + AttendModeEnum.getText(core.getAttendMode()) + "，不出诊、不对外放号");
+                            + StaffDutyStatusEnum.getLabel(core.getDutyStatus()) + "·"
+                            + AttendModeEnum.getLabel(core.getAttendMode()) + "，不出诊、不对外放号");
                 }
             }
             if (schedule.getAvailableSource() <= 0) {
@@ -521,7 +521,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
             if (!chargeProvider.insuranceEnabled()) {
                 throw new BusinessException("医保联网结算未启用，请改按全自费结算");
             }
-            MedicalInsuranceTypeEnum feeType = MedicalInsuranceTypeEnum.parse(appointInfo.getMedicalInsuranceType());
+            MedicalInsuranceTypeEnum feeType = MedicalInsuranceTypeEnum.fromCode(appointInfo.getMedicalInsuranceType());
             if (feeType == null || !feeType.isPoolCovered()) {
                 throw new BusinessException("患者费别为「"
                         + TextUtil.blankToDefault(appointInfo.getMedicalInsuranceType(), "未设置")

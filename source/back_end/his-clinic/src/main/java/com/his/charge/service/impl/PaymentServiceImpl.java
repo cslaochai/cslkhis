@@ -142,7 +142,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         }
 
         for (BillPayDTO.PayItem item : payDTO.getItems()) {
-            PaymentMethodEnum payMethod = PaymentMethodEnum.getByCode(item.getPayMethod());
+            PaymentMethodEnum payMethod = PaymentMethodEnum.fromCode(item.getPayMethod());
             boolean channelSettled = payMethod != null && payMethod.channelBacked()
                     && !TextUtil.hasText(item.getAuthCode());
             if (payMethod != null && !channelSettled) {
@@ -400,7 +400,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
     @Transactional(rollbackFor = Exception.class)
     public BizPaymentTxn prepayDeposit(PrepaySpec spec) {
         BigDecimal amount = requirePrepayAmount(spec);
-        PaymentMethodEnum payMethod = PaymentMethodEnum.getByCode(spec.payMethod());
+        PaymentMethodEnum payMethod = PaymentMethodEnum.fromCode(spec.payMethod());
         if (payMethod == null) {
             throw new BusinessException("支付方式不合法");
         }
@@ -586,7 +586,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
      * 一笔收款 = 一行流水。渠道类先定好流水号，渠道号由它派生（对账时两边勾得上）。
      */
     private BizPaymentTxn chargeOne(BizSettlementBill bill, BillPayDTO.PayItem item, TxnSourceEnum source) {
-        PaymentMethodEnum payMethod = PaymentMethodEnum.getByCode(item.getPayMethod());
+        PaymentMethodEnum payMethod = PaymentMethodEnum.fromCode(item.getPayMethod());
         if (payMethod == null) {
             throw new BusinessException("支付方式不合法");
         }
@@ -733,7 +733,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
 
     private BizPaymentTxn refundOne(BizSettlementBill bill, BizPaymentTxn orig, BigDecimal amount,
                                     TxnSourceEnum source, BillRefundDTO dto) {
-        PaymentMethodEnum payMethod = PaymentMethodEnum.getByCode(orig.getPayMethod());
+        PaymentMethodEnum payMethod = PaymentMethodEnum.fromCode(orig.getPayMethod());
         if (payMethod == null) {
             throw new BusinessException("原收款流水的支付方式无法识别，不能退费");
         }
@@ -861,7 +861,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         BizSettlementBill bill = settlementBillService.getByIdForUpdate(billId);
         BillStatusEnum status = BillStatusEnum.fromCode(bill.getBillStatus());
         if (status == null || !status.payable()) {
-            throw new BusinessException("该账单" + BillStatusEnum.descOf(bill.getBillStatus()) + "，不能收款");
+            throw new BusinessException("该账单" + BillStatusEnum.getLabel(bill.getBillStatus()) + "，不能收款");
         }
         return bill;
     }

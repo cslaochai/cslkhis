@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 输血前双人核对要点（输血安全核查单的可核对部分）。
@@ -32,42 +33,8 @@ public enum TransfusionCheckItemEnum {
         this.required = required;
     }
 
-    public static TransfusionCheckItemEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (TransfusionCheckItemEnum e : values()) {
-            if (e.code == code) {
-                return e;
-            }
-        }
-        return null;
-    }
-
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
-    }
-
-    /**
-     * 码值→展示文案。null 给「—」；非法码值返回空串，不伪装成某一项。
-     */
-    public static String getText(Integer code) {
-        if (code == null) {
-            return "—";
-        }
-        TransfusionCheckItemEnum e = fromCode(code);
-        return e != null ? e.label : "";
-    }
-
-    /**
-     * 码值→异常 / 审计文案：非法码值返回「未知(n)」，保留原值便于排查。
-     */
-    public static String labelOrUnknown(Integer code) {
-        if (code == null) {
-            return "未知";
-        }
-        TransfusionCheckItemEnum e = fromCode(code);
-        return e != null ? e.label : "未知(" + code + ")";
     }
 
     /**
@@ -92,5 +59,36 @@ public enum TransfusionCheckItemEnum {
             m.put(e.code, e.label);
         }
         return m;
+    }
+
+    public static TransfusionCheckItemEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (TransfusionCheckItemEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        if (null == code) {
+            return "—";
+        }
+        TransfusionCheckItemEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        TransfusionCheckItemEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        TransfusionCheckItemEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

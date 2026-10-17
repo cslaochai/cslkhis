@@ -2,6 +2,7 @@ package com.his.common.enums;
 
 import com.his.common.util.TextUtil;
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 药品库存流水来源单据类型枚举（字符串码值）。
@@ -30,40 +31,36 @@ public enum DrugStockSourceTypeEnum {
         this.label = label;
     }
 
+    /** 码值是否合法（写入侧校验用；null 与空串都不合法） */
+    public static boolean isValid(String code) {
+        return fromCode(code) != null;
+    }
+
     public static DrugStockSourceTypeEnum fromCode(String code) {
-        if (!TextUtil.hasText(code)) {
+        if (null == code) {
             return null;
         }
-        String trimmed = code.trim();
         for (DrugStockSourceTypeEnum item : values()) {
-            if (item.code.equals(trimmed)) {
+            if (code.equals(item.code)) {
                 return item;
             }
         }
         return null;
     }
 
-    /** 码值是否合法（写入侧校验用；null 与空串都不合法） */
-    public static boolean isValid(String code) {
-        return fromCode(code) != null;
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(String code) {
+        DrugStockSourceTypeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
     }
 
-    /**
-     * 码值→展示文案。null 或不在枚举内（脏数据）返回空串 ""，绝不返回 null、不回落合法文案。
-     */
-    public static String getText(String code) {
+    public static String getLabel(String code, String defaultValue) {
         DrugStockSourceTypeEnum item = fromCode(code);
-        return item != null ? item.label : "";
+        return item == null ? defaultValue : item.label;
     }
 
-    /**
-     * 码值→异常/审计文案。null 或不在枚举内返回「未知(n)」，保留原始码值以便排查脏数据。
-     */
-    public static String labelOrUnknown(String code) {
+    public static String getLabelOrUnknown(String code) {
         DrugStockSourceTypeEnum item = fromCode(code);
-        if (item != null) {
-            return item.label;
-        }
-        return !TextUtil.hasText(code) ? "未知" : "未知(" + code + ")";
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

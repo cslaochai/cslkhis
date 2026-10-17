@@ -151,7 +151,7 @@ public enum QcRuleEnum {
     /**
      * 按编码取规则，取不到即返 null（调用方负责报错，不做静默兜底）
      */
-    public static QcRuleEnum ofCode(String code) {
+    public static QcRuleEnum fromCode(String code) {
         if (!TextUtil.hasText(code)) {
             return null;
         }

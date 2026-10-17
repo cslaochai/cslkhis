@@ -20,11 +20,11 @@ public interface LaboratoryReportSignProvider extends SignableContentProvider {
     /**
      * 检验记录状态文案（签名规范化文本用，脏值必须暴露原码值）。
      *
-     * <p>走 {@link LabRecordStatusEnum#labelOrUnknown(Integer)}：签名要能看出签的是哪个版本的码值，
+     * <p>走 {@link LabRecordStatusEnum#getLabelOrUnknown(Integer)}：签名要能看出签的是哪个版本的码值，
      * 脏值不能悄悄变成「已登记」这类合法值。
      */
     public static String statusText(Integer status) {
-        return status == null ? "—" : LabRecordStatusEnum.labelOrUnknown(status);
+        return status == null ? "—" : LabRecordStatusEnum.getLabelOrUnknown(status);
     }
 
     /**

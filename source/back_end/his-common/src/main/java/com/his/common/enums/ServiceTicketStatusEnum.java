@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 服务工单状态（0-待受理 1-处理中 2-已办结 3-已关闭）。
@@ -39,36 +40,11 @@ public enum ServiceTicketStatusEnum {
         this.label = label;
     }
 
-    public static ServiceTicketStatusEnum fromCode(int code) {
-        for (ServiceTicketStatusEnum item : values()) {
-            if (item.code == code) {
-                return item;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
     public static boolean isValid(Integer code) {
         return code != null && fromCode(code) != null;
-    }
-
-    /**
-     * 展示用：null 或不在枚举内（脏数据）一律返回空串，不回落到「待受理」这种合法文案。
-     */
-    public static String getText(Integer code) {
-        ServiceTicketStatusEnum item = code == null ? null : fromCode(code);
-        return item == null ? "" : item.label;
-    }
-
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        ServiceTicketStatusEnum item = code == null ? null : fromCode(code);
-        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 
     /**
@@ -97,5 +73,33 @@ public enum ServiceTicketStatusEnum {
      */
     public static boolean canConfirm(Integer code) {
         return code != null && code == FINISHED.code;
+    }
+
+    public static ServiceTicketStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (ServiceTicketStatusEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        ServiceTicketStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        ServiceTicketStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        ServiceTicketStatusEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

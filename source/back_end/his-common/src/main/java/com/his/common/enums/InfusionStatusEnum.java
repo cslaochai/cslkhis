@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 门诊输液单状态枚举
@@ -22,13 +23,6 @@ public enum InfusionStatusEnum {
         this.label = label;
     }
 
-    public static InfusionStatusEnum fromCode(int code) {
-        for (InfusionStatusEnum item : values()) {
-            if (item.code == code) return item;
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
@@ -36,19 +30,31 @@ public enum InfusionStatusEnum {
         return code != null && fromCode(code) != null;
     }
 
-    /**
-     * 展示用：null 或不在枚举内返回空串（不把「未知」渲染给用户看）
-     */
-    public static String getText(Integer code) {
-        InfusionStatusEnum item = code == null ? null : fromCode(code);
-        return item == null ? "" : item.label;
+    public static InfusionStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (InfusionStatusEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
     }
 
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        InfusionStatusEnum item = code == null ? null : fromCode(code);
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        InfusionStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        InfusionStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        InfusionStatusEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

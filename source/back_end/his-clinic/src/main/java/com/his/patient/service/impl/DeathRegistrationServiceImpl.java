@@ -148,7 +148,7 @@ public class DeathRegistrationServiceImpl extends ServiceImpl<BizDeathRegistrati
                 throw new BusinessException("死亡登记不允许改挂到另一次住院");
             }
             if (!Objects.equals(register.getRegisterStatus(), DeathRegisterStatusEnum.DRAFT.getCode())) {
-                throw new BusinessException(DeathRegisterStatusEnum.labelOrUnknown(register.getRegisterStatus()) + "的登记不能修改，只能作废后重登");
+                throw new BusinessException(DeathRegisterStatusEnum.getLabelOrUnknown(register.getRegisterStatus()) + "的登记不能修改，只能作废后重登");
             }
             if (bizDeathRegistrationMapper.countActiveByAdmission(dto.getAdmissionId(), register.getId()) > 0) {
                 throw new BusinessException("该次住院已有另一条死亡登记");
@@ -197,7 +197,7 @@ public class DeathRegistrationServiceImpl extends ServiceImpl<BizDeathRegistrati
         BizDeathRegistration register = requireRegister(dto.getId());
         deptScopeService.assertDeptAccessible(register.getDeathDeptId());
         if (!Objects.equals(register.getRegisterStatus(), DeathRegisterStatusEnum.DRAFT.getCode())) {
-            throw new BusinessException("只有草稿登记可确认（当前：" + DeathRegisterStatusEnum.labelOrUnknown(register.getRegisterStatus()) + "）");
+            throw new BusinessException("只有草稿登记可确认（当前：" + DeathRegisterStatusEnum.getLabelOrUnknown(register.getRegisterStatus()) + "）");
         }
         if (register.getDeathType() != null && register.getDeathType() != DeathTypeEnum.DISEASE.getCode()
                 && !Objects.equals(register.getPoliceFlag(), YesOrNoEnum.YES.getCode())) {

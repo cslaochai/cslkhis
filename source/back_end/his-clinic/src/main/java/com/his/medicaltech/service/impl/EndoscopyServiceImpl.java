@@ -140,7 +140,7 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         vo.setStatusText(dictCacheService.getDicDataLabel(DictTypeConst.ENDOUS_STATUS, vo.getStatus()));
         vo.setEndoTypeText(dictCacheService.getDicDataLabel(DictTypeConst.ENDOSCOPY_TYPE, vo.getEndoType()));
         vo.setAnesthesiaMethodText(dictCacheService.getDicDataLabel(DictTypeConst.ENDOSCOPY_ANESTHESIA, vo.getAnesthesiaMethod()));
-        vo.setHpResultText(EndoscopyHpResultEnum.getText(vo.getHpResult()));
+        vo.setHpResultText(EndoscopyHpResultEnum.getLabel(vo.getHpResult()));
     }
 
     @Transactional(rollbackFor = Exception.class)

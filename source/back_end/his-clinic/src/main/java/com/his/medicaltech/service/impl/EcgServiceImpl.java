@@ -638,7 +638,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         try {
             return emrSignatureService.sign(cmd);
         } catch (BusinessException e) {
-            throw new BusinessException("心电报告 " + record.getRecordNo() + " " + scene.getText()
+            throw new BusinessException("心电报告 " + record.getRecordNo() + " " + scene.getLabel()
                     + "失败：" + e.getMessage());
         }
     }

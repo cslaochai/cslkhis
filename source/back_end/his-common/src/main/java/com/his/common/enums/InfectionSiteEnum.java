@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 感染部位字典（感染监测用，字符串码值）。
@@ -26,22 +27,24 @@ public enum InfectionSiteEnum {
     }
 
     public static InfectionSiteEnum fromCode(String code) {
-        if (code == null) {
+        if (null == code) {
             return null;
         }
         for (InfectionSiteEnum item : values()) {
-            if (item.code.equals(code)) {
+            if (code.equals(item.code)) {
                 return item;
             }
         }
         return null;
     }
 
-    /**
-     * 展示用码值 → 文案。脏数据返回 null，由调用侧决定兜底，不回落到合法文案。
-     */
-    public static String getText(String code) {
+    public static String getLabel(String code) {
         InfectionSiteEnum item = fromCode(code);
-        return item == null ? null : item.label;
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(String code, String defaultValue) {
+        InfectionSiteEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
     }
 }

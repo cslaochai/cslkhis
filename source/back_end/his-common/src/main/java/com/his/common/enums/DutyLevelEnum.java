@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 值班层级枚举（sql/202，字典 his_duty_level）
@@ -33,36 +34,11 @@ public enum DutyLevelEnum {
         this.label = label;
     }
 
-    public static DutyLevelEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (DutyLevelEnum level : values()) {
-            if (level.code == code) {
-                return level;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
-    }
-
-    public static String getText(Integer code) {
-        DutyLevelEnum level = fromCode(code);
-        return level == null ? "未知(" + code + ")" : level.getLabel();
-    }
-
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        DutyLevelEnum item = code == null ? null : fromCode(code);
-        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 
     /**
@@ -73,11 +49,31 @@ public enum DutyLevelEnum {
         return code != null && code != NONE.code;
     }
 
-    public static String whitelistText() {
-        StringBuilder sb = new StringBuilder();
-        for (DutyLevelEnum level : values()) {
-            sb.append(sb.length() == 0 ? "" : " / ").append(level.code).append("-").append(level.label);
+    public static DutyLevelEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
         }
-        return sb.toString();
+        for (DutyLevelEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        DutyLevelEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        DutyLevelEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        DutyLevelEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

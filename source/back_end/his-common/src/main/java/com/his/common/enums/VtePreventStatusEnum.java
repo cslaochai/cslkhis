@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * VTE 预防措施落实状态枚举
@@ -21,7 +22,17 @@ public enum VtePreventStatusEnum {
         this.label = label;
     }
 
-    public static VtePreventStatusEnum fromCode(int code) {
+    /**
+     * 码值是否合法（写入侧校验用；null 不合法）
+     */
+    public static boolean isValid(Integer code) {
+        return code != null && fromCode(code) != null;
+    }
+
+    public static VtePreventStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
         for (VtePreventStatusEnum item : values()) {
             if (item.code == code) {
                 return item;
@@ -30,26 +41,19 @@ public enum VtePreventStatusEnum {
         return null;
     }
 
-    /**
-     * 码值是否合法（写入侧校验用；null 不合法）
-     */
-    public static boolean isValid(Integer code) {
-        return code != null && fromCode(code) != null;
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        VtePreventStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
     }
 
-    /**
-     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」。
-     */
-    public static String getText(Integer code) {
-        VtePreventStatusEnum item = code == null ? null : fromCode(code);
-        return item == null ? "" : item.label;
+    public static String getLabel(Integer code, String defaultValue) {
+        VtePreventStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
     }
 
-    /**
-     * 异常 / 审计 / 合规用码值 → 文案。null 或不在枚举内返回「未知(n)」，保留原始码值便于排查。
-     */
-    public static String labelOrUnknown(Integer code) {
-        VtePreventStatusEnum item = code == null ? null : fromCode(code);
+    public static String getLabelOrUnknown(Integer code) {
+        VtePreventStatusEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

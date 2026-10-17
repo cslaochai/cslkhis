@@ -2,6 +2,7 @@ package com.his.common.enums;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 急诊分诊级别（I~IV 级）—— 分诊级别列的唯一权威码值，数字越小越优先。
@@ -41,10 +42,21 @@ public enum EmergencyTriageLevelEnum {
     private final String label;
 
     /**
-     * 码值 → 枚举实例；null 或不在 1-4 内返回 null（不兜底成某个合法档位）
+     * 码值是否合法（写入侧校验用；null 不合法）
      */
+    public static boolean isValid(Integer code) {
+        return fromCode(code) != null;
+    }
+
+    /**
+     * 是否属于「红区」级别（I/II 级）—— 优先级判断的唯一出口，别处不要再各写一遍 {@code <= 2}。
+     */
+    public static boolean isRedZone(Integer code) {
+        return code != null && (code == CRITICAL.code || code == SEVERE.code);
+    }
+
     public static EmergencyTriageLevelEnum fromCode(Integer code) {
-        if (code == null) {
+        if (null == code) {
             return null;
         }
         for (EmergencyTriageLevelEnum item : values()) {
@@ -55,39 +67,22 @@ public enum EmergencyTriageLevelEnum {
         return null;
     }
 
-    /**
-     * 码值是否合法（写入侧校验用；null 不合法）
-     */
-    public static boolean isValid(Integer code) {
-        return fromCode(code) != null;
-    }
-
-    /**
-     * 码值→展示文案。null → 「未定级」（见类注释），脏值 → 空串 ""，绝不返回 null。
-     */
-    public static String getText(Integer code) {
-        if (code == null) {
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        if (null == code) {
             return "未定级";
         }
         EmergencyTriageLevelEnum item = fromCode(code);
-        return item == null ? "" : item.label;
+        return item == null ? StringUtils.EMPTY : item.label;
     }
 
-    /**
-     * 异常 / 审计用：null 返回「未知」，脏值返回「未知(n)」，保留原始码值便于排查。
-     */
-    public static String labelOrUnknown(Integer code) {
+    public static String getLabel(Integer code, String defaultValue) {
         EmergencyTriageLevelEnum item = fromCode(code);
-        if (item != null) {
-            return item.label;
-        }
-        return code == null ? "未知" : "未知(" + code + ")";
+        return item == null ? defaultValue : item.label;
     }
 
-    /**
-     * 是否属于「红区」级别（I/II 级）—— 优先级判断的唯一出口，别处不要再各写一遍 {@code <= 2}。
-     */
-    public static boolean isRedZone(Integer code) {
-        return code != null && (code == CRITICAL.code || code == SEVERE.code);
+    public static String getLabelOrUnknown(Integer code) {
+        EmergencyTriageLevelEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

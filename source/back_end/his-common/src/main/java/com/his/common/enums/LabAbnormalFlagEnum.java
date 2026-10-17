@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 检验结果异常标志枚举（0-正常 1-偏高 2-偏低 3-异常）。
@@ -25,8 +26,22 @@ public enum LabAbnormalFlagEnum {
         this.label = label;
     }
 
+    /**
+     * 码值是否合法（写入侧校验用；null 不合法）
+     */
+    public static boolean isValid(Integer code) {
+        return fromCode(code) != null;
+    }
+
+    /**
+     * Integer 码值判定：null 安全，语义同 == 比较 int 常量
+     */
+    public boolean is(Integer code) {
+        return code != null && code == this.code;
+    }
+
     public static LabAbnormalFlagEnum fromCode(Integer code) {
-        if (code == null) {
+        if (null == code) {
             return null;
         }
         for (LabAbnormalFlagEnum item : values()) {
@@ -37,36 +52,19 @@ public enum LabAbnormalFlagEnum {
         return null;
     }
 
-    /**
-     * 码值是否合法（写入侧校验用；null 不合法）
-     */
-    public static boolean isValid(Integer code) {
-        return fromCode(code) != null;
-    }
-
-    /**
-     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」。
-     */
-    public static String getText(Integer code) {
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
         LabAbnormalFlagEnum item = fromCode(code);
-        return item == null ? "" : item.label;
+        return item == null ? StringUtils.EMPTY : item.label;
     }
 
-    /**
-     * 异常 / 审计用码值 → 文案。脏值保留原始码值，绝不喂前端展示。
-     */
-    public static String labelOrUnknown(Integer code) {
+    public static String getLabel(Integer code, String defaultValue) {
         LabAbnormalFlagEnum item = fromCode(code);
-        if (item != null) {
-            return item.label;
-        }
-        return code == null ? "未知" : "未知(" + code + ")";
+        return item == null ? defaultValue : item.label;
     }
 
-    /**
-     * Integer 码值判定：null 安全，语义同 == 比较 int 常量
-     */
-    public boolean is(Integer code) {
-        return code != null && code == this.code;
+    public static String getLabelOrUnknown(Integer code) {
+        LabAbnormalFlagEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

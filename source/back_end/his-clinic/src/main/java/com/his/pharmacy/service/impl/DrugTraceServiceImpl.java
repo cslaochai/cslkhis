@@ -464,7 +464,7 @@ public class DrugTraceServiceImpl extends ServiceImpl<BizDrugTraceMapper, BizDru
             return "药品「" + vo.getDrugName() + "」已停用，不能采集";
         }
         if (vo.isExists()) {
-            return "该追溯码已采集过（" + DrugTraceStatusEnum.labelOrUnknown(vo.getExistStatus()) + "），同一码不允许重复采集";
+            return "该追溯码已采集过（" + DrugTraceStatusEnum.getLabelOrUnknown(vo.getExistStatus()) + "），同一码不允许重复采集";
         }
         if (vo.getBatches() == null || vo.getBatches().isEmpty()) {
             return "该药品暂无库存批次，请先入库再采集";

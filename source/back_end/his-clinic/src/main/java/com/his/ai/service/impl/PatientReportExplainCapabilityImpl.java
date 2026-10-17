@@ -226,7 +226,7 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
             boolean unjudged = LabAbnormalJudge.isUnjudged(result.getJudgeNote());
             Integer status = toStatus(result.getAbnormalFlag(), unjudged);
             item.setStatus(status);
-            item.setStatusText(PatientLabExplainStatusEnum.getText(status));
+            item.setStatusText(PatientLabExplainStatusEnum.getLabel(status));
             item.setArrow(PatientLabExplainStatusEnum.HIGH.getCode().equals(status) ? "↑"
                     : PatientLabExplainStatusEnum.LOW.getCode().equals(status) ? "↓" : "");
 

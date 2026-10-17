@@ -123,7 +123,7 @@ public enum RuleCatalogEnum {
     /**
      * 风险等级中文，未知值不兜底成「安全」
      */
-    public static String riskLabel(Integer level) {
+    public static String getRiskLabelOrUnknown(Integer level) {
         if (level == null) {
             return "未评估";
         }

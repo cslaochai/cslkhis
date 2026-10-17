@@ -436,7 +436,7 @@ public class InfectiousReportServiceImpl extends ServiceImpl<BizInfectiousReport
     }
 
     private String classText(Integer c) {
-        return InfectiousClassEnum.getText(c);
+        return InfectiousClassEnum.getLabel(c);
     }
 
     private String statusText(Integer s) {
@@ -444,6 +444,6 @@ public class InfectiousReportServiceImpl extends ServiceImpl<BizInfectiousReport
         if (Objects.equals(InfectiousReportStatusEnum.AUDITED.getCode(), s)) {
             return "已审核";
         }
-        return InfectiousReportStatusEnum.getText(s);
+        return InfectiousReportStatusEnum.getLabel(s);
     }
 }

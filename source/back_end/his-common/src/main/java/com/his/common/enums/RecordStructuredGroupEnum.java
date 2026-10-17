@@ -4,6 +4,7 @@ import lombok.Getter;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 住院病历结构化要素分组（病史 / 生命体征 / 体格检查 / 诊疗过程与结论 / 会诊 / 转科 / 手术 / 输血）。
@@ -28,36 +29,8 @@ public enum RecordStructuredGroupEnum {
         this.label = label;
     }
 
-    public static RecordStructuredGroupEnum fromCode(String code) {
-        if (code == null) {
-            return null;
-        }
-        for (RecordStructuredGroupEnum e : values()) {
-            if (e.code.equals(code)) {
-                return e;
-            }
-        }
-        return null;
-    }
-
     public static boolean isValid(String code) {
         return fromCode(code) != null;
-    }
-
-    public static String getText(String code) {
-        if (code == null) {
-            return "";
-        }
-        RecordStructuredGroupEnum e = fromCode(code);
-        return e != null ? e.label : "";
-    }
-
-    public static String labelOrUnknown(String code) {
-        if (code == null) {
-            return "未知";
-        }
-        RecordStructuredGroupEnum e = fromCode(code);
-        return e != null ? e.label : "未知(" + code + ")";
     }
 
     /** 全部分组（码→文案），供前端渲染要素字典 */
@@ -67,5 +40,33 @@ public enum RecordStructuredGroupEnum {
             m.put(e.code, e.label);
         }
         return m;
+    }
+
+    public static RecordStructuredGroupEnum fromCode(String code) {
+        if (null == code) {
+            return null;
+        }
+        for (RecordStructuredGroupEnum item : values()) {
+            if (code.equals(item.code)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(String code) {
+        RecordStructuredGroupEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(String code, String defaultValue) {
+        RecordStructuredGroupEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(String code) {
+        RecordStructuredGroupEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

@@ -1,5 +1,7 @@
 package com.his.common.enums;
 
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * 费用来源单据（字典 his_fee_source_type，落在费用记账流水的来源单据类型列）。
  */
@@ -26,28 +28,11 @@ public enum FeeSourceTypeEnum {
         this.desc = desc;
     }
 
-    public static FeeSourceTypeEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (FeeSourceTypeEnum item : values()) {
-            if (item.code.equals(code)) {
-                return item;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
-    }
-
-    public static String descOf(Integer code) {
-        FeeSourceTypeEnum item = fromCode(code);
-        return item == null ? "未知来源" : item.desc;
     }
 
     public Integer getCode() {
@@ -56,5 +41,27 @@ public enum FeeSourceTypeEnum {
 
     public String getDesc() {
         return desc;
+    }
+
+    public static FeeSourceTypeEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (FeeSourceTypeEnum item : values()) {
+            if (code.equals(item.code)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    public static String getLabel(Integer code) {
+        FeeSourceTypeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.desc;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        FeeSourceTypeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.desc;
     }
 }

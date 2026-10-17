@@ -4,6 +4,7 @@ import lombok.Getter;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 用药频次白话化词典（qd→每天 1 次 …）。
@@ -34,29 +35,8 @@ public enum DrugFrequencyEnum {
         this.label = label;
     }
 
-    /**
-     * 频次缩写大小写不敏感（库里实测混着 qd / QD）。
-     */
-    public static DrugFrequencyEnum fromCode(String code) {
-        if (code == null) {
-            return null;
-        }
-        String key = code.trim().toLowerCase();
-        for (DrugFrequencyEnum e : values()) {
-            if (e.code.equals(key)) {
-                return e;
-            }
-        }
-        return null;
-    }
-
     public static boolean isValid(String code) {
         return fromCode(code) != null;
-    }
-
-    public static String getText(String code) {
-        DrugFrequencyEnum e = fromCode(code);
-        return e != null ? e.label : null;
     }
 
     public static Map<String, String> all() {
@@ -65,5 +45,27 @@ public enum DrugFrequencyEnum {
             m.put(e.code, e.label);
         }
         return m;
+    }
+
+    public static DrugFrequencyEnum fromCode(String code) {
+        if (null == code) {
+            return null;
+        }
+        for (DrugFrequencyEnum item : values()) {
+            if (code.equals(item.code)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    public static String getLabel(String code) {
+        DrugFrequencyEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(String code, String defaultValue) {
+        DrugFrequencyEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
     }
 }

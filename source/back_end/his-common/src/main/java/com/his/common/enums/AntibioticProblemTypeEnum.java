@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 抗菌药物切口Review问题类型枚举（字符串码 41~48）。
@@ -25,39 +26,36 @@ public enum AntibioticProblemTypeEnum {
         this.label = label;
     }
 
+    /** 码值是否合法（写入侧校验用；null 不合法） */
+    public static boolean isValid(String code) {
+        return fromCode(code) != null;
+    }
+
     public static AntibioticProblemTypeEnum fromCode(String code) {
-        if (code == null) {
+        if (null == code) {
             return null;
         }
         for (AntibioticProblemTypeEnum item : values()) {
-            if (item.code.equals(code)) {
+            if (code.equals(item.code)) {
                 return item;
             }
         }
         return null;
     }
 
-    /**
-     * 码值→展示文案。null 或不在枚举内（脏数据）返回空串 ""，绝不返回 null、不回落合法文案。
-     */
-    public static String getText(String code) {
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(String code) {
         AntibioticProblemTypeEnum item = fromCode(code);
-        return item != null ? item.label : "";
+        return item == null ? StringUtils.EMPTY : item.label;
     }
 
-    /** 码值是否合法（写入侧校验用；null 不合法） */
-    public static boolean isValid(String code) {
-        return fromCode(code) != null;
+    public static String getLabel(String code, String defaultValue) {
+        AntibioticProblemTypeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
     }
 
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」，保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(String code) {
-        if (code == null) {
-            return "未知";
-        }
+    public static String getLabelOrUnknown(String code) {
         AntibioticProblemTypeEnum item = fromCode(code);
-        return item != null ? item.label : "未知(" + code + ")";
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

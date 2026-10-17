@@ -34,7 +34,7 @@ public class AiAuditQueryServiceImpl extends ServiceImpl<SysAiCallLogMapper, Sys
     private static AiAuditLogVO toVO(SysAiCallLog entity) {
         AiAuditLogVO vo = new AiAuditLogVO();
         BeanUtils.copyProperties(entity, vo);
-        vo.setStatusText(AiCallStatusEnum.getText(entity.getStatus()));
+        vo.setStatusText(AiCallStatusEnum.getLabel(entity.getStatus()));
         return vo;
     }
 

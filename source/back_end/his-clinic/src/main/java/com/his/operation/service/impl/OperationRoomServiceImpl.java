@@ -119,7 +119,7 @@ public class OperationRoomServiceImpl extends ServiceImpl<SysOperationRoomMapper
         vo.setLocation(entity.getLocation());
         vo.setSortOrder(entity.getSortOrder());
         vo.setStatus(entity.getStatus());
-        vo.setStatusText(EnableStatusEnum.getText(entity.getStatus()));
+        vo.setStatusText(EnableStatusEnum.getLabel(entity.getStatus()));
         vo.setRemark(entity.getRemark());
         return vo;
     }

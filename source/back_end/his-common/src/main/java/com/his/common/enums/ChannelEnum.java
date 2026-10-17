@@ -20,7 +20,7 @@ public enum ChannelEnum {
         this.desc = desc;
     }
 
-    public static ChannelEnum getByCode(Integer code) {
+    public static ChannelEnum fromCode(Integer code) {
         if (code == null) {
             return null;
         }

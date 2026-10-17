@@ -299,6 +299,6 @@ public class DutyLogServiceImpl extends ServiceImpl<BizDutyLogMapper, BizDutyLog
         if (s == null) {
             return "-";
         }
-        return DutyLogStatusEnum.getText(s);
+        return DutyLogStatusEnum.getLabel(s);
     }
 }

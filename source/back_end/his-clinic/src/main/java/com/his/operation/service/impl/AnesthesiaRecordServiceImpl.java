@@ -149,7 +149,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
             // 已经明确下了"暂缓/需会诊"结论的，连急诊也不允许越过 ——
             // 让急诊绕过一条明写着的禁忌，比让急诊绕过"还没写"，危险得多。
             throw new BusinessException("该手术的麻醉术前访视结论为「"
-                    + VisitConclusionEnum.labelOrUnknown(existingVisit.getConclusion())
+                    + VisitConclusionEnum.getLabelOrUnknown(existingVisit.getConclusion())
                     + "」，不能开立麻醉记录");
         } else {
             visitId = existingVisit.getId();
@@ -165,7 +165,6 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         entity.setGender(apply.getGender());
         entity.setAge(apply.getAge());
         entity.setVisitId(visitId);
-        // 麻醉方式：优先取本次传入（允许临时改方式），再用申请单登记值
         entity.setAnesthesiaType(dto.getAnesthesiaType() != null
                 ? dto.getAnesthesiaType() : apply.getAnesthesiaType());
         entity.setAsaGrade(dto.getAsaGrade() != null
@@ -176,8 +175,6 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         entity.setEnterRoomTime(TimeUtil.toSeconds(dto.getEnterRoomTime() == null ? TimeUtil.nowSeconds() : dto.getEnterRoomTime()));
         entity.setRecordStatus(AnesthesiaRecordStatusEnum.DRAFT.getCode());
         entity.setChargeStatus(AnesthesiaChargeStatusEnum.PENDING.getCode());
-        // 「急诊超前麻醉」的状态靠 visit_id 为空来表达，不额外加一列：
-        // 加列就会出现"visit_id 有值但 pending=1"这种自相矛盾的行
         if (TextUtil.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
@@ -185,7 +182,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
 
         log.info("开立麻醉记录 recordNo={} applyNo={} 麻醉方式={} 急诊={} 访视ID={} 待补访视={} 开立人={}",
                 entity.getRecordNo(), apply.getApplyNo(),
-                OperationAnesthesiaMethodEnum.labelOrUnknown(entity.getAnesthesiaType()),
+                OperationAnesthesiaMethodEnum.getLabelOrUnknown(entity.getAnesthesiaType()),
                 emergency, visitId, visitPending, operatorUser.getRealName());
         return entity.getRecordNo();
     }
@@ -292,8 +289,8 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         for (BizAnesthesiaMed m : list) {
             AnesthesiaMedVO vo = new AnesthesiaMedVO();
             BeanUtils.copyProperties(m, vo);
-            vo.setMedPhaseText(AnesthesiaMedPhaseEnum.getText(m.getMedPhase()));
-            vo.setRouteText(AnesthesiaMedRouteEnum.getText(m.getRoute()));
+            vo.setMedPhaseText(AnesthesiaMedPhaseEnum.getLabel(m.getMedPhase()));
+            vo.setRouteText(AnesthesiaMedRouteEnum.getLabel(m.getRoute()));
             vo.setDoseText(m.getDose() == null ? null
                     : m.getDose().stripTrailingZeros().toPlainString()
                     + (TextUtil.hasText(m.getUnit()) ? " " + m.getUnit() : ""));
@@ -315,7 +312,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         assertRecordAccessible(entity);
         if (!Integer.valueOf(AnesthesiaRecordStatusEnum.DRAFT.getCode()).equals(entity.getRecordStatus())) {
             throw new BusinessException("麻醉记录单 " + entity.getRecordNo() + " 当前状态为「"
-                    + AnesthesiaRecordStatusEnum.labelOrUnknown(entity.getRecordStatus()) + "」，只有「记录中」可以提交");
+                    + AnesthesiaRecordStatusEnum.getLabelOrUnknown(entity.getRecordStatus()) + "」，只有「记录中」可以提交");
         }
         if (entity.getAnesthesiaType() == null) {
             throw new BusinessException("未登记麻醉方式，不能提交（不知道做的是什么麻醉）");
@@ -377,7 +374,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         assertRecordAccessible(entity);
         if (!Integer.valueOf(AnesthesiaRecordStatusEnum.SUBMITTED.getCode()).equals(entity.getRecordStatus())) {
             throw new BusinessException("麻醉记录单 " + entity.getRecordNo() + " 当前状态为「"
-                    + AnesthesiaRecordStatusEnum.labelOrUnknown(entity.getRecordStatus()) + "」，只有「已提交」可以审核");
+                    + AnesthesiaRecordStatusEnum.getLabelOrUnknown(entity.getRecordStatus()) + "」，只有「已提交」可以审核");
         }
         entity.setRecordStatus(AnesthesiaRecordStatusEnum.AUDITED.getCode());
         entity.setAuditDoctorId(operatorUser.getEmployeeId());
@@ -439,8 +436,8 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         for (BizOperationChargeItem row : bizOperationChargeItemMapper.selectByApply(applyId)) {
             OperationChargeItemVO vo = new OperationChargeItemVO();
             BeanUtils.copyProperties(row, vo);
-            vo.setChargeStatusText(AnesthesiaChargeStatusEnum.getText(row.getChargeStatus()));
-            vo.setSourceTypeText(ChargeSourceEnum.getText(row.getSourceType()));
+            vo.setChargeStatusText(AnesthesiaChargeStatusEnum.getLabel(row.getChargeStatus()));
+            vo.setSourceTypeText(ChargeSourceEnum.getLabel(row.getSourceType()));
             vos.add(vo);
         }
         return vos;
@@ -501,7 +498,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         BizAnesthesiaRecord entity = mustGet(recordId);
         if (!Integer.valueOf(AnesthesiaRecordStatusEnum.DRAFT.getCode()).equals(entity.getRecordStatus())) {
             throw new BusinessException("麻醉记录单 " + entity.getRecordNo() + " 当前状态为「"
-                    + AnesthesiaRecordStatusEnum.labelOrUnknown(entity.getRecordStatus())
+                    + AnesthesiaRecordStatusEnum.getLabelOrUnknown(entity.getRecordStatus())
                     + "」，已固化的麻醉记录不能再改内容（术后补一条记载属于伪造）");
         }
         return entity;
@@ -587,18 +584,18 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
     }
 
     private void decorate(AnesthesiaRecordVO vo) {
-        vo.setRecordStatusText(AnesthesiaRecordStatusEnum.getText(vo.getRecordStatus()));
-        vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getAnesthesiaType()));
-        vo.setApplyAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getApplyAnesthesiaType()));
-        vo.setAsaText(AsaGradeEnum.getText(vo.getAsaGrade()));
-        vo.setAirwayDeviceText(AirwayDeviceEnum.getText(vo.getAirwayDevice()));
-        vo.setVentilationText(VentilationModeEnum.getText(vo.getVentilationMode()));
-        vo.setEffectText(AnesthesiaEffectEnum.getText(vo.getAnesthesiaEffect()));
-        vo.setDispositionText(PostopDispositionEnum.getText(vo.getPostopDisposition()));
-        vo.setChargeStatusText(AnesthesiaChargeStatusEnum.getText(vo.getChargeStatus()));
-        vo.setVisitConclusionText(VisitConclusionEnum.getText(vo.getVisitConclusion()));
-        vo.setEmergencyText(YesOrNoEnum.getText(vo.getIsEmergency()));
-        vo.setOperationStatusText(OperationApplyStatusEnum.getText(vo.getOperationStatus()));
+        vo.setRecordStatusText(AnesthesiaRecordStatusEnum.getLabel(vo.getRecordStatus()));
+        vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getLabel(vo.getAnesthesiaType()));
+        vo.setApplyAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getLabel(vo.getApplyAnesthesiaType()));
+        vo.setAsaText(AsaGradeEnum.getLabel(vo.getAsaGrade()));
+        vo.setAirwayDeviceText(AirwayDeviceEnum.getLabel(vo.getAirwayDevice()));
+        vo.setVentilationText(VentilationModeEnum.getLabel(vo.getVentilationMode()));
+        vo.setEffectText(AnesthesiaEffectEnum.getLabel(vo.getAnesthesiaEffect()));
+        vo.setDispositionText(PostopDispositionEnum.getLabel(vo.getPostopDisposition()));
+        vo.setChargeStatusText(AnesthesiaChargeStatusEnum.getLabel(vo.getChargeStatus()));
+        vo.setVisitConclusionText(VisitConclusionEnum.getLabel(vo.getVisitConclusion()));
+        vo.setEmergencyText(YesOrNoEnum.getLabel(vo.getIsEmergency()));
+        vo.setOperationStatusText(OperationApplyStatusEnum.getLabel(vo.getOperationStatus()));
 
         Long anesthesiaMinutes = TimeUtil.elapsedMinutes(vo.getAnesthesiaStartTime(), vo.getAnesthesiaEndTime());
         vo.setAnesthesiaMinutes(anesthesiaMinutes);

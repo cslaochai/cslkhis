@@ -181,7 +181,7 @@ public final class TransfusionRules {
         List<String> reasons = new ArrayList<>();
         if (!isAboCompatible(component, patientAbo, bagAbo)) {
             reasons.add("ABO 不相容（受血者 " + patientAbo + " 型不可接受 " + bagAbo + " 型"
-                    + BloodComponentEnum.getText(component) + "）");
+                    + BloodComponentEnum.getLabel(component) + "）");
         }
         if (!isRhCompatible(patientRh, bagRh)) {
             reasons.add("Rh 不相容（受血者 Rh " + patientRh + " 性不可接受 Rh " + bagRh + " 性血袋）");

@@ -445,7 +445,7 @@ public class PatientGuardianServiceImpl extends ServiceImpl<BizPatientGuardianMa
         vo.setPhone(maskPhone(p.getPhone()));
         vo.setIdCard(maskIdCard(p.getIdCard()));
         vo.setRelation(relation);
-        vo.setRelationText(GuardianRelationEnum.getText(relation));
+        vo.setRelationText(GuardianRelationEnum.getLabel(relation));
         vo.setIsDefault(isDefault == null ? 0 : isDefault);
         vo.setSelf(self);
         return vo;

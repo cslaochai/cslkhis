@@ -600,7 +600,7 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
     }
 
     private String statusName(Integer status) {
-        return DaySurgeryStatusEnum.labelOrUnknown(status);
+        return DaySurgeryStatusEnum.getLabelOrUnknown(status);
     }
 
     private String nextApplyNo() {

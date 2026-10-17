@@ -77,7 +77,7 @@ public class ScheduleChangeLogServiceImpl extends ServiceImpl<BizClinicSourceCha
             vo.setId(row.getId());
             vo.setStaffScheduleId(row.getStaffScheduleId());
             vo.setActionType(row.getActionType());
-            vo.setActionTypeText(ScheduleChangeTypeEnum.getText(row.getActionType()));
+            vo.setActionTypeText(ScheduleChangeTypeEnum.getLabel(row.getActionType()));
             vo.setFromEmployeeId(row.getFromEmployeeId());
             vo.setToEmployeeId(row.getToEmployeeId());
             SysEmployee from = employees.get(row.getFromEmployeeId());

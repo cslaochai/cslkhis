@@ -177,13 +177,13 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
             InpatientDetailVO.SummaryInfo si = new InpatientDetailVO.SummaryInfo();
             BeanUtils.copyProperties(summary, si);
             vo.setSummary(si);
-            vo.setSummaryStatusText(SummaryStatusEnum.getText(summary.getSummaryStatus()));
+            vo.setSummaryStatusText(SummaryStatusEnum.getLabel(summary.getSummaryStatus()));
             if (info.getInpatientDays() == null) {
                 info.setInpatientDays(summary.getInpatientDays());
             }
         } else {
             // 未生成首页不是「正常」，要如实说
-            vo.setSummaryStatusText(SummaryStatusEnum.getText(null));
+            vo.setSummaryStatusText(SummaryStatusEnum.getLabel(null));
         }
 
         List<InpatientDetailVO.DiagnosisInfo> diagnoses = new ArrayList<>();
@@ -271,7 +271,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
         boolean reservedForSelf = Objects.equals(BedStatusEnum.LOCKED.getCode(), bed.getBedStatus())
                 && Objects.equals(dto.getPatientId(), bed.getPatientId());
         if (!Objects.equals(BedStatusEnum.FREE.getCode(), bed.getBedStatus()) && !reservedForSelf) {
-            throw new BusinessException("床位当前不可用（" + BedStatusEnum.labelOrUnknown(bed.getBedStatus()) + "），请选择空闲床位");
+            throw new BusinessException("床位当前不可用（" + BedStatusEnum.getLabelOrUnknown(bed.getBedStatus()) + "），请选择空闲床位");
         }
 
         WardVO ward = sysBedMapper.selectWardById(dto.getWardId());
@@ -398,7 +398,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
             throw new BusinessException("目标床位不存在");
         }
         if (!Objects.equals(BedStatusEnum.FREE.getCode(), newBed.getBedStatus())) {
-            throw new BusinessException("目标床位当前不可用（" + BedStatusEnum.labelOrUnknown(newBed.getBedStatus()) + "）");
+            throw new BusinessException("目标床位当前不可用（" + BedStatusEnum.getLabelOrUnknown(newBed.getBedStatus()) + "）");
         }
         if (!Objects.equals(newBed.getDeptId(), admission.getDeptId())) {
             throw new BusinessException("只能在本病区内换床；跨科室请走转科流程");
@@ -698,7 +698,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
     public List<BedVO> listBeds(Long wardId, Long deptId, Integer bedStatus) {
         List<BedVO> beds = sysBedMapper.selectBedList(wardId, deptId, bedStatus);
         for (BedVO b : beds) {
-            b.setBedStatusText(BedStatusEnum.getText(b.getBedStatus()));
+            b.setBedStatusText(BedStatusEnum.getLabel(b.getBedStatus()));
         }
         return beds;
     }
@@ -736,7 +736,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
 
         List<BedMapVO.BedCard> beds = bedMapMapper.selectBedCards(deptId, wardId);
         for (BedMapVO.BedCard bed : beds) {
-            bed.setBedStatusText(BedStatusEnum.getText(bed.getBedStatus()));
+            bed.setBedStatusText(BedStatusEnum.getLabel(bed.getBedStatus()));
             bed.setNursingLevelText(bed.getNursingLevel() == null
                     ? "未评估" : dictCacheService.getDicDataLabel(DictTypeConst.NURSING_LEVEL, bed.getNursingLevel()));
         }
@@ -842,7 +842,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
             throw new BusinessException("床位不存在");
         }
         if (!Objects.equals(BedStatusEnum.FREE.getCode(), bed.getBedStatus())) {
-            throw new BusinessException("床位当前不可用（" + BedStatusEnum.labelOrUnknown(bed.getBedStatus()) + "），请选择空闲床位");
+            throw new BusinessException("床位当前不可用（" + BedStatusEnum.getLabelOrUnknown(bed.getBedStatus()) + "），请选择空闲床位");
         }
         occupyBed(bed, patientId, bed.getWardId());
     }

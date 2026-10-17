@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 就诊人关系枚举 —— 与字典患者关系字典码值逐字一致
@@ -39,23 +40,30 @@ public enum GuardianRelationEnum {
     }
 
     public static GuardianRelationEnum fromCode(Integer code) {
-        if (code == null) {
+        if (null == code) {
             return null;
         }
-        for (GuardianRelationEnum r : values()) {
-            if (r.code == code) return r;
+        for (GuardianRelationEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
         }
         return null;
     }
 
-    public static String getText(Integer code) {
-        GuardianRelationEnum r = fromCode(code);
-        return r == null ? OTHER.label : r.label;
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        GuardianRelationEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
     }
 
-    /** 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。 */
-    public static String labelOrUnknown(Integer code) {
-        GuardianRelationEnum item = code == null ? null : fromCode(code);
+    public static String getLabel(Integer code, String defaultValue) {
+        GuardianRelationEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        GuardianRelationEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

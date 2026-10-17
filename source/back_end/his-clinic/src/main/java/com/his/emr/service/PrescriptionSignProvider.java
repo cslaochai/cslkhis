@@ -15,7 +15,7 @@ public interface PrescriptionSignProvider extends SignableContentProvider {
      * 处方状态文案（1-草稿 2-已提交 3-已审核 4-已发药 5-已取消 6-已退药）；**未知码值不回落**。
      *
      * <p>签名正文措辞与 {@link PrescriptionStatusEnum} label 有差异（2「已提交」/3「已审核」/5「已取消」），
-     * 属调用侧局部差异，按 §13 保留；枚举外的码值统一走枚举 {@code labelOrUnknown} 兜底。
+     * 属调用侧局部差异，按 §13 保留；枚举外的码值统一走枚举 {@code getLabelOrUnknown} 兜底。
      */
     static String rxStatusText(Integer status) {
         if (status == null) {
@@ -28,7 +28,7 @@ public interface PrescriptionSignProvider extends SignableContentProvider {
             case 4 -> "已发药";
             case 5 -> "已取消";
             case 6 -> "已退药";
-            default -> PrescriptionStatusEnum.labelOrUnknown(status);
+            default -> PrescriptionStatusEnum.getLabelOrUnknown(status);
         };
     }
 

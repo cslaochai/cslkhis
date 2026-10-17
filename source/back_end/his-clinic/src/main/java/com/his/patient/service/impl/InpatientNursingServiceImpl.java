@@ -183,7 +183,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         writeActionLog(record, "创建");
         log.info("录入护理文书 recordNo={} admissionId={} type={} 护士={} 时点={}",
                 record.getRecordNo(), record.getAdmissionId(),
-                NursingDocTypeEnum.getText(record.getNursingType()),
+                NursingDocTypeEnum.getLabel(record.getNursingType()),
                 record.getNurseName(), record.getMeasureTime());
         return toVO(record);
     }
@@ -264,7 +264,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
                     || dto.getRespiration() != null || dto.getSystolicPressure() != null
                     || dto.getDiastolicPressure() != null || dto.getSpo2() != null;
             if (!any) {
-                throw new BusinessException(NursingDocTypeEnum.labelOrUnknown(type)
+                throw new BusinessException(NursingDocTypeEnum.getLabelOrUnknown(type)
                         + "至少要录一个体征值（体温/脉搏/呼吸/血压/血氧任选其一）");
             }
         }
@@ -379,9 +379,9 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     @Override
     public List<CodeOptionVO> typeOptions() {
         List<CodeOptionVO> list = new ArrayList<>();
-        list.add(new CodeOptionVO(NursingDocTypeEnum.TEMP.getCode(), NursingDocTypeEnum.getText(NursingDocTypeEnum.TEMP.getCode())));
-        list.add(new CodeOptionVO(NursingDocTypeEnum.NOTE.getCode(), NursingDocTypeEnum.getText(NursingDocTypeEnum.NOTE.getCode())));
-        list.add(new CodeOptionVO(NursingDocTypeEnum.VITAL.getCode(), NursingDocTypeEnum.getText(NursingDocTypeEnum.VITAL.getCode())));
+        list.add(new CodeOptionVO(NursingDocTypeEnum.TEMP.getCode(), NursingDocTypeEnum.getLabel(NursingDocTypeEnum.TEMP.getCode())));
+        list.add(new CodeOptionVO(NursingDocTypeEnum.NOTE.getCode(), NursingDocTypeEnum.getLabel(NursingDocTypeEnum.NOTE.getCode())));
+        list.add(new CodeOptionVO(NursingDocTypeEnum.VITAL.getCode(), NursingDocTypeEnum.getLabel(NursingDocTypeEnum.VITAL.getCode())));
         return list;
     }
 
@@ -594,7 +594,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         vo.setBedNo(row.getBedNo());
         vo.setAssessType(row.getAssessType());
         vo.setAssessType(row.getAssessType());
-        vo.setAssessTypeText(NursingAssessTypeEnum.getText(row.getAssessType()));
+        vo.setAssessTypeText(NursingAssessTypeEnum.getLabel(row.getAssessType()));
         vo.setTotalScore(row.getTotalScore());
         vo.setRiskLevel(row.getRiskLevel());
         vo.setRiskLevelText(dictCacheService.getDicDataLabel(DictTypeConst.ASSESS_RISK_LEVEL, row.getRiskLevel()));
@@ -830,7 +830,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         vo.setWardName(r.getWardName());
         vo.setBedNo(r.getBedNo());
         vo.setNursingType(r.getNursingType());
-        vo.setNursingTypeText(NursingDocTypeEnum.getText(r.getNursingType()));
+        vo.setNursingTypeText(NursingDocTypeEnum.getLabel(r.getNursingType()));
         vo.setMeasureTime(r.getMeasureTime());
         vo.setMeasureDate(r.getMeasureTime() == null ? null : r.getMeasureTime().toLocalDate().format(DateFormats.DATE));
         vo.setMeasureClock(r.getMeasureTime() == null ? null : r.getMeasureTime().format(DateFormats.TIME_MINUTE));
@@ -854,7 +854,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         vo.setNurseId(r.getNurseId());
         vo.setNurseName(r.getNurseName());
         vo.setRecordStatus(r.getRecordStatus());
-        vo.setRecordStatusText(SummaryStatusEnum.getText(r.getRecordStatus()));
+        vo.setRecordStatusText(SummaryStatusEnum.getLabel(r.getRecordStatus()));
         vo.setCanEdit(!InpatientRecordStatusEnum.isArchived(r.getRecordStatus()));
         vo.setRemark(r.getRemark());
         return vo;

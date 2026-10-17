@@ -13,31 +13,31 @@ public enum QualityDimension {
     UNIQUENESS("唯一性", "本该唯一的不唯一 —— 重复档案、重复文书、重复结果行"),
     VALIDITY("有效性", "记了但不可信 —— 码值越界、格式非法、日期倒挂、金额非法");
 
-    private final String text;
+    private final String label;
     private final String description;
 
-    QualityDimension(String text, String description) {
-        this.text = text;
+    QualityDimension(String label, String description) {
+        this.label = label;
         this.description = description;
     }
 
     /**
      * 未知维度码返回 null，由调用方决定如何显式报错，不做静默回落
      */
-    public static QualityDimension parse(String code) {
+    public static QualityDimension fromCode(String code) {
         if (!TextUtil.hasText(code)) {
             return null;
         }
         for (QualityDimension d : values()) {
-            if (d.name().equalsIgnoreCase(code.trim()) || d.text.equals(code.trim())) {
+            if (d.name().equalsIgnoreCase(code.trim()) || d.label.equals(code.trim())) {
                 return d;
             }
         }
         return null;
     }
 
-    public String getText() {
-        return text;
+    public String getLabel() {
+        return label;
     }
 
     public String getDescription() {

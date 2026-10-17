@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 角色数据权限范围枚举（1-全部数据 2-自定义数据 3-本部门数据 4-本部门及以下 5-仅本人数据）
@@ -22,13 +23,6 @@ public enum DataScopeEnum {
         this.label = label;
     }
 
-    public static DataScopeEnum fromCode(int code) {
-        for (DataScopeEnum scope : values()) {
-            if (scope.code == code) return scope;
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（入参校验用；null 不合法）
      */
@@ -36,22 +30,31 @@ public enum DataScopeEnum {
         return code != null && fromCode(code) != null;
     }
 
-    /**
-     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」。
-     */
-    public static String getText(Integer code) {
-        DataScopeEnum scope = code == null ? null : fromCode(code);
-        return scope == null ? "" : scope.label;
+    public static DataScopeEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (DataScopeEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
     }
 
-    /**
-     * 异常 / 审计用码值 → 文案。脏值保留原始码值，绝不喂前端展示。
-     */
-    public static String labelOrUnknown(Integer code) {
-        DataScopeEnum scope = code == null ? null : fromCode(code);
-        if (scope != null) {
-            return scope.label;
-        }
-        return code == null ? "未知" : "未知(" + code + ")";
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        DataScopeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        DataScopeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        DataScopeEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

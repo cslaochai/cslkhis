@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 护理评估单类型枚举
@@ -51,35 +52,35 @@ public enum NursingAssessTypeEnum {
         return scaleName + " 总分应在 " + minScore + "~" + maxScore;
     }
 
-    public static NursingAssessTypeEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (NursingAssessTypeEnum item : values()) {
-            if (item.code == code) return item;
-        }
-        return null;
-    }
-
     /** 码值是否合法（写入侧校验用；null 不合法） */
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
     }
 
-    /**
-     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」——
-     * 脏数据应由数据治理流程修复，而非界面伪装。
-     */
-    public static String getText(Integer code) {
-        NursingAssessTypeEnum item = fromCode(code);
-        return item == null ? "" : item.label;
+    public static NursingAssessTypeEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (NursingAssessTypeEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
     }
 
-    /**
-     * 异常 / 审计 / 合规用码值 → 文案。null 或不在枚举内返回「未知(n)」，
-     * 用于业务异常消息或审计日志，保留原始码值以便排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        NursingAssessTypeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        NursingAssessTypeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
         NursingAssessTypeEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }

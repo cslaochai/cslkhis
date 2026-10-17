@@ -92,7 +92,7 @@ public class LaboratoryReportSignProviderImpl implements SignableContentProvider
             return null;
         }
         return "检验报告只支持「报告签名」与「报告审核签名」两种场景，当前场景「"
-                + scene.getText() + "」不适用";
+                + scene.getLabel() + "」不适用";
     }
 
     @Override

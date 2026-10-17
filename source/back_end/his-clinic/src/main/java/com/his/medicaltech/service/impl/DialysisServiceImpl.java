@@ -64,7 +64,7 @@ public class DialysisServiceImpl extends ServiceImpl<BizDialysisSessionMapper, B
     // 档案
 
     private static String slotText(int slot) {
-        String label = DialysisTimeSlotEnum.getText(slot);
+        String label = DialysisTimeSlotEnum.getLabel(slot);
         return label == null ? DialysisTimeSlotEnum.MORNING.getLabel() : label;
     }
 

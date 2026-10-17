@@ -74,7 +74,7 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
         BizCssdPack p = requirePack(dto.getPackId());
         int from = p.getStatus();
         if (from < CssdNodeStatusEnum.RECEIVED.getCode() || from >= CssdNodeStatusEnum.ISSUED.getCode()) {
-            throw new BusinessException("当前状态【" + CssdNodeStatusEnum.getText(from) + "】不允许流转（流程已完结或异常）");
+            throw new BusinessException("当前状态【" + CssdNodeStatusEnum.getLabel(from) + "】不允许流转（流程已完结或异常）");
         }
         int target = from + 1;
         int result = dto.getResult();
@@ -195,7 +195,7 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
         vo.setSterilizeMethod(p.getSterilizeMethod());
         vo.setSterilizeMethodText(dictCacheService.getDicDataLabel(DictTypeConst.CSSD_STERIL_METHOD, p.getSterilizeMethod()));
         vo.setStatus(p.getStatus());
-        vo.setStatusText(CssdNodeStatusEnum.getText(p.getStatus()));
+        vo.setStatusText(CssdNodeStatusEnum.getLabel(p.getStatus()));
         vo.setSterilizerNo(p.getSterilizerNo());
         vo.setBatchNo(p.getBatchNo());
         vo.setLastNodeTime(p.getLastNodeTime());
@@ -211,13 +211,13 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
         vo.setPackId(t.getPackId());
         vo.setPackNo(t.getPackNo());
         vo.setNodeType(t.getNodeType());
-        vo.setNodeTypeText(CssdNodeStatusEnum.actionLabelOf(t.getNodeType()));
+        vo.setNodeTypeText(CssdNodeStatusEnum.getActionLabelOrUnknown(t.getNodeType()));
         vo.setNodeTime(t.getNodeTime());
         vo.setOperatorName(t.getOperatorName());
         vo.setSterilizerNo(t.getSterilizerNo());
         vo.setBatchNo(t.getBatchNo());
         vo.setResult(t.getResult());
-        vo.setResultText(QualifiedResultEnum.getText(t.getResult()));
+        vo.setResultText(QualifiedResultEnum.getLabel(t.getResult()));
         vo.setRemark(t.getRemark());
         return vo;
     }

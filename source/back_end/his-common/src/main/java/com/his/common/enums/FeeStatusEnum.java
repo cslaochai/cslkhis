@@ -1,5 +1,7 @@
 package com.his.common.enums;
 
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * 费用记账状态（字典 his_fee_status，落在费用记账流水的记账状态列）。
  */
@@ -30,28 +32,11 @@ public enum FeeStatusEnum {
         this.desc = desc;
     }
 
-    public static FeeStatusEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (FeeStatusEnum item : values()) {
-            if (item.code.equals(code)) {
-                return item;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
-    }
-
-    public static String descOf(Integer code) {
-        FeeStatusEnum item = fromCode(code);
-        return item == null ? "未知状态" : item.desc;
     }
 
     public Integer getCode() {
@@ -60,5 +45,27 @@ public enum FeeStatusEnum {
 
     public String getDesc() {
         return desc;
+    }
+
+    public static FeeStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (FeeStatusEnum item : values()) {
+            if (code.equals(item.code)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    public static String getLabel(Integer code) {
+        FeeStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.desc;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        FeeStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.desc;
     }
 }

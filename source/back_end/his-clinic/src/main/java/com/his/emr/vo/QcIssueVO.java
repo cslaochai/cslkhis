@@ -95,9 +95,9 @@ public class QcIssueVO {
         issue.ruleCode = rule.getCode();
         issue.ruleName = rule.getName();
         issue.dimension = rule.getDimension().getCode();
-        issue.dimensionText = rule.getDimension().getText();
+        issue.dimensionText = rule.getDimension().getLabel();
         issue.severity = rule.getSeverity().getCode();
-        issue.severityText = rule.getSeverity().getText();
+        issue.severityText = rule.getSeverity().getLabel();
         issue.deduct = rule.getSeverity().getDeduct();
         issue.fieldName = rule.getFieldName();
         issue.errorDetail = errorDetail;

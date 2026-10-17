@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 出诊计划的就诊状态枚举（这个班次此刻接不接患者，与停诊状态不是一件事）
@@ -29,18 +30,6 @@ public enum ConsultStatusEnum {
         this.label = label;
     }
 
-    public static ConsultStatusEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (ConsultStatusEnum status : values()) {
-            if (status.code == code) {
-                return status;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
@@ -48,27 +37,31 @@ public enum ConsultStatusEnum {
         return fromCode(code) != null;
     }
 
-    /**
-     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，绝不返回 null、不回落合法文案。
-     */
-    public static String getText(Integer code) {
-        ConsultStatusEnum status = fromCode(code);
-        return status == null ? "" : status.label;
-    }
-
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        ConsultStatusEnum item = code == null ? null : fromCode(code);
-        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
-    }
-
-    public static String whitelistText() {
-        StringBuilder sb = new StringBuilder();
-        for (ConsultStatusEnum status : values()) {
-            sb.append(sb.length() == 0 ? "" : " / ").append(status.code).append("-").append(status.label);
+    public static ConsultStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
         }
-        return sb.toString();
+        for (ConsultStatusEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        ConsultStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        ConsultStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        ConsultStatusEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

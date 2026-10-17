@@ -4,6 +4,7 @@ import lombok.Getter;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 血液品种枚举（输血申请单 / 血袋的品种列，1~6）。
@@ -26,43 +27,11 @@ public enum BloodComponentEnum {
         this.label = label;
     }
 
-    public static BloodComponentEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (BloodComponentEnum item : values()) {
-            if (item.code == code) {
-                return item;
-            }
-        }
-        return null;
-    }
-
     /**
      * 码值是否合法（写入侧校验用；null 不合法）
      */
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
-    }
-
-    /**
-     * 展示用码值 → 文案。null 返回「—」（未填写的输血单显示占位，不是数据错误）；
-     * 脏值（越界码值）返回空串，不回落到某个合法品种。
-     */
-    public static String getText(Integer code) {
-        if (code == null) {
-            return "—";
-        }
-        BloodComponentEnum item = fromCode(code);
-        return item == null ? "" : item.label;
-    }
-
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        BloodComponentEnum item = fromCode(code);
-        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 
     /**
@@ -95,5 +64,36 @@ public enum BloodComponentEnum {
      */
     public boolean is(Integer code) {
         return code != null && code == this.code;
+    }
+
+    public static BloodComponentEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (BloodComponentEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        if (null == code) {
+            return "—";
+        }
+        BloodComponentEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        BloodComponentEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        BloodComponentEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

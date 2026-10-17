@@ -132,7 +132,7 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
         for (BizInpatientOrderTemplateItem item : items) {
             InpatientOrderTemplateItemVO itemVO = new InpatientOrderTemplateItemVO();
             BeanUtils.copyProperties(item, itemVO);
-            itemVO.setOrderClassText(OrderClassEnum.getText(item.getOrderClass()));
+            itemVO.setOrderClassText(OrderClassEnum.getLabel(item.getOrderClass()));
             itemVOs.add(itemVO);
         }
         vo.setItems(itemVOs);
@@ -183,8 +183,8 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
         for (BizInpatientOrderTemplate entity : list) {
             OrderSetSelectListVO vo = new OrderSetSelectListVO();
             BeanUtils.copyProperties(entity, vo);
-            vo.setScopeText(TemplateScopeEnum.getText(entity.getScope()));
-            vo.setOrderTypeText(OrderTypeEnum.getText(entity.getOrderType()));
+            vo.setScopeText(TemplateScopeEnum.getLabel(entity.getScope()));
+            vo.setOrderTypeText(OrderTypeEnum.getLabel(entity.getOrderType()));
             if (entity.getDeptId() != null) {
                 try {
                     vo.setDeptName(bizInpatientOrderTemplateMapper.selectDeptName(entity.getDeptId()));
@@ -326,8 +326,8 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
 
     private void fill(OrderSetListVO vo, BizInpatientOrderTemplate entity) {
         BeanUtils.copyProperties(entity, vo);
-        vo.setScopeText(TemplateScopeEnum.getText(entity.getScope()));
-        vo.setOrderTypeText(OrderTypeEnum.getText(entity.getOrderType()));
+        vo.setScopeText(TemplateScopeEnum.getLabel(entity.getScope()));
+        vo.setOrderTypeText(OrderTypeEnum.getLabel(entity.getOrderType()));
         vo.setEditable(editable(entity, currentUserOrNull()));
     }
 

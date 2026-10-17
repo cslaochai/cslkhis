@@ -115,7 +115,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         if (status == null) {
             return "未知";
         }
-        CriticalValueStatusEnum e = CriticalValueStatusEnum.getByCode(status);
+        CriticalValueStatusEnum e = CriticalValueStatusEnum.fromCode(status);
         return e != null ? e.getDescription() : "未知";
     }
 
@@ -234,7 +234,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
             String content = String.format(
                     "患者 %s（%s）的检验项目「%s」出现危急值：%s。请立即查看并处置，处置时限 %d 分钟。危急值号 %s。",
                     entity.getPatientName(),
-                    SysGenderEnum.getText(entity.getGender()),
+                    SysGenderEnum.getLabel(entity.getGender()),
                     entity.getItemName(),
                     entity.getCriticalDesc(),
                     deadlineMinutes(),
@@ -671,9 +671,9 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
     private BizCriticalValueVO toVO(BizCriticalValue entity) {
         BizCriticalValueVO vo = new BizCriticalValueVO();
         BeanUtils.copyProperties(entity, vo);
-        vo.setGenderText(SysGenderEnum.getText(entity.getGender()));
+        vo.setGenderText(SysGenderEnum.getLabel(entity.getGender()));
         vo.setStatusText(statusText(entity.getStatus()));
-        vo.setCriticalTypeText(CriticalTypeEnum.getText(entity.getCriticalType()));
+        vo.setCriticalTypeText(CriticalTypeEnum.getLabel(entity.getCriticalType()));
         vo.setResultText(buildResultText(entity));
         vo.setOverdue(isOverdue(entity));
         return vo;

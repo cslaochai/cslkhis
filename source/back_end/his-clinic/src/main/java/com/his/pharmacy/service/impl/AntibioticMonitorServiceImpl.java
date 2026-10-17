@@ -500,7 +500,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
         return Arrays.stream(codes.split(","))
                 .map(String::trim)
                 .filter(TextUtil::hasText)
-                .map(AntibioticProblemTypeEnum::getText)
+                .map(AntibioticProblemTypeEnum::getLabel)
                 .filter(TextUtil::hasText)
                 .reduce((a, b) -> a + "、" + b).orElse(null);
     }

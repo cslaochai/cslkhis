@@ -100,7 +100,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
                 .filter(r -> r.getQualifiedNum() != null && r.getCheckedNum() != null
                         && r.getQualifiedNum() < r.getCheckedNum())
                 .count();
-        return "本轮" + NursingQcCategoryEnum.getText(category) + "抽查 " + sampleCount + " 例，合格 "
+        return "本轮" + NursingQcCategoryEnum.getLabel(category) + "抽查 " + sampleCount + " 例，合格 "
                 + qualifiedCount + " 例，合格率 " + qualifiedRate.toPlainString() + "%，得分率 "
                 + scoreRate.toPlainString() + "%；重点问题 " + badItems + " 项";
     }
@@ -202,7 +202,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
         NurseQcVO.CheckRow existing = bizNursingQcCheckMapper.selectCheckByUk(ward.getWardId(), checkMonth, category);
         if (existing != null && NursingQcStatusEnum.CONFIRMED.getCode() == NumUtil.orDefault(existing.getStatus(), 1)) {
             throw new BusinessException("「" + ward.getWardName() + "」" + checkMonth + " 的"
-                    + NursingQcCategoryEnum.getText(category) + "检查单已确认，请先退回草稿再修改");
+                    + NursingQcCategoryEnum.getLabel(category) + "检查单已确认，请先退回草稿再修改");
         }
 
         Map<Long, NurseQcVO.ItemDef> catalog = new LinkedHashMap<>();
@@ -218,7 +218,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
             NurseQcVO.ItemDef def = catalog.get(input.getItemId());
             if (def == null) {
                 throw new BusinessException("检查项目不存在、已停用或不属于「"
-                        + NursingQcCategoryEnum.getText(category) + "」类别，请刷新后重选");
+                        + NursingQcCategoryEnum.getLabel(category) + "」类别，请刷新后重选");
             }
             if (!used.add(def.getItemId())) {
                 throw new BusinessException("「" + def.getItemName() + "」重复录入，同一项目一行只能记一次");
@@ -312,7 +312,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
         result.setTotalScore(totalScore);
         result.setScoreRate(scoreRate);
         result.setStatus(entity.getStatus());
-        result.setStatusText(NursingQcStatusEnum.getText(entity.getStatus()));
+        result.setStatusText(NursingQcStatusEnum.getLabel(entity.getStatus()));
         result.setMessage((existing == null ? "检查单已创建：" : "检查单已更新：") + entity.getCheckNo()
                 + "（抽查 " + sampleCount + " 例，合格率 " + qualifiedRate.toPlainString() + "%）"
                 + "；台账需在" + checkMonth + "重算后更新");
@@ -560,7 +560,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
             numerator = BigDecimal.valueOf(NumUtil.orDefault(check.getQualifiedCount(), 0));
             denominator = BigDecimal.valueOf(NumUtil.orDefault(check.getSampleCount(), 0));
             remark = "来源：检查单 " + check.getCheckNo() + "（类别 " + check.getCategory()
-                    + "、" + NursingQcStatusEnum.getText(check.getStatus()) + "）由明细求和";
+                    + "、" + NursingQcStatusEnum.getLabel(check.getStatus()) + "）由明细求和";
         } else {
             int count = bizNursingQcIndicatorMapper.selectEventCount(ward.getWardId(), monthStart, statEnd,
                     e.getAdverseEventType(),
@@ -664,7 +664,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
     private int requireCategory(Integer category) {
         NursingQcCategoryEnum e = NursingQcCategoryEnum.fromCode(category);
         if (e == null) {
-            throw new BusinessException("检查类别非法（" + NursingQcCategoryEnum.whitelistText() + "）");
+            throw new BusinessException("检查类别取值不合法");
         }
         return e.getCode();
     }
@@ -672,18 +672,18 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
     private NursingIndicatorEnum requireIndicator(String code) {
         NursingIndicatorEnum e = NursingIndicatorEnum.fromCode(TextUtil.trimToNull(code));
         if (e == null) {
-            throw new BusinessException("统计指标非法（" + NursingIndicatorEnum.whitelistText() + "）");
+            throw new BusinessException("统计指标取值不合法");
         }
         return e;
     }
 
     private void fillItemDefText(NurseQcVO.ItemDef item) {
-        item.setCategoryName(NursingQcCategoryEnum.getText(item.getCategory()));
+        item.setCategoryName(NursingQcCategoryEnum.getLabel(item.getCategory()));
     }
 
     private void fillCheckText(NurseQcVO.CheckRow row) {
-        row.setCategoryName(NursingQcCategoryEnum.getText(row.getCategory()));
-        row.setStatusText(NursingQcStatusEnum.getText(row.getStatus()));
+        row.setCategoryName(NursingQcCategoryEnum.getLabel(row.getCategory()));
+        row.setStatusText(NursingQcStatusEnum.getLabel(row.getStatus()));
     }
 
     private void fillLedgerText(NurseQcVO.LedgerRow row) {
@@ -695,7 +695,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
             row.setReachedFlag(reachedFlag(e, row.getRateValue(), row.getTargetValue()));
         }
         row.setReachedText(reachedText(row.getReachedFlag()));
-        row.setReportStatusText(NursingQcReportEnum.getText(row.getReportStatus()));
+        row.setReportStatusText(NursingQcReportEnum.getLabel(row.getReportStatus()));
     }
 
     private void fillKpiText(NurseQcVO.Kpi kpi) {

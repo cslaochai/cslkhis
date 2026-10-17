@@ -102,7 +102,7 @@ public class AlipayChannelProviderImpl implements AlipayChannelProvider {
             com.alibaba.fastjson.JSONObject bizContent = new com.alibaba.fastjson.JSONObject();
             bizContent.put("out_trade_no", order.getPayNo());
             bizContent.put("total_amount", NumUtil.plain(order.getAmount()));
-            bizContent.put("subject", PayOrderBizTypeEnum.getText(order.getBizType()));
+            bizContent.put("subject", PayOrderBizTypeEnum.getLabel(order.getBizType()));
             bizContent.put("product_code", "QUICK_MSECURITY_PAY");
             request.setBizContent(bizContent.toString());
             // 不传这个参数，支付宝根本不知道该往哪推支付结果（配置里的 notify-url 只是本端记录，
@@ -147,7 +147,7 @@ public class AlipayChannelProviderImpl implements AlipayChannelProvider {
             JSONObject bizContent = new JSONObject();
             bizContent.put("out_trade_no", order.getPayNo());
             bizContent.put("total_amount", NumUtil.plain(order.getAmount()));
-            bizContent.put("subject", PayOrderBizTypeEnum.getText(order.getBizType()));
+            bizContent.put("subject", PayOrderBizTypeEnum.getLabel(order.getBizType()));
             bizContent.put("timeout_express", PayOrderProvider.PAY_ORDER_EXPIRE_MINUTES + "m");
             request.setBizContent(bizContent.toString());
             // 主扫是收费台出的码，钱到账后要记在账单上，所以推给收费侧的回调地址，不是患者端那个

@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 计量类型枚举。
@@ -19,32 +20,36 @@ public enum MeteringTypeEnum {
         this.label = label;
     }
 
-    public static MeteringTypeEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (MeteringTypeEnum e : values()) {
-            if (e.code == code) {
-                return e;
-            }
-        }
-        return null;
-    }
-
     /** 码值是否合法（写入侧校验用；null 不合法） */
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
     }
 
-    /** 展示用：null 或脏值返回空串 */
-    public static String getText(Integer code) {
-        MeteringTypeEnum e = fromCode(code);
-        return e == null ? "" : e.getLabel();
+    public static MeteringTypeEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (MeteringTypeEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
     }
 
-    /** 异常 / 审计用：null 或不在枚举内返回「未知(n)」 */
-    public static String labelOrUnknown(Integer code) {
-        MeteringTypeEnum e = fromCode(code);
-        return e == null ? (code == null ? "未知" : "未知(" + code + ")") : e.label;
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        MeteringTypeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        MeteringTypeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        MeteringTypeEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

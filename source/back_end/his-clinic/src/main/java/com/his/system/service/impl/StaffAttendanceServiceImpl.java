@@ -362,7 +362,7 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
     private StaffAttendanceVO toVO(BizStaffAttendance row, String message) {
         StaffAttendanceVO vo = new StaffAttendanceVO();
         BeanUtils.copyProperties(row, vo);
-        vo.setAttendanceStatusText(StaffAttendanceStatusEnum.getText(row.getAttendanceStatus()));
+        vo.setAttendanceStatusText(StaffAttendanceStatusEnum.getLabel(row.getAttendanceStatus()));
         vo.setMessage(message);
         return vo;
     }

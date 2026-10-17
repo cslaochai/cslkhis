@@ -161,7 +161,7 @@ public class CdrServiceImpl implements CdrService {
             node.setAnchorNo(str(v.getVisitNo()));
             node.setStartTime(fmt(v.getStartTime()));
             node.setEndTime(fmt(v.getEndTime()));
-            node.setStatusText(VisitStatusEnum.getText(v.getVisitStatus()));
+            node.setStatusText(VisitStatusEnum.getLabel(v.getVisitStatus()));
             node.setTotalAmount(v.getTotalAmount());
             node.setTitle(node.getNodeTypeText());
 
@@ -215,7 +215,7 @@ public class CdrServiceImpl implements CdrService {
             node.setStartTime(fmt(start));
             node.setDeptName(str(r.getDeptName()));
             node.setOperatorName(str(r.getDoctorName()));
-            node.setStatusText(AppointStatusEnum.getText(r.getRegistStatus()));
+            node.setStatusText(AppointStatusEnum.getLabel(r.getRegistStatus()));
             node.setTitle(composeTitle(node.getNodeTypeText(), node.getDeptName(), node.getOperatorName()));
             node.setSubtitle("该挂号未被就诊次收录");
             node.setFromShadow(isShadow(r.getOwnerPid(), pid));
@@ -236,7 +236,7 @@ public class CdrServiceImpl implements CdrService {
             node.setStartTime(fmt(admit));
             node.setEndTime(fmt(dis));
             node.setDeptName(str(a.getDeptName()));
-            node.setStatusText(AdmitStatusEnum.getText(a.getAdmitStatus()));
+            node.setStatusText(AdmitStatusEnum.getLabel(a.getAdmitStatus()));
             String ward = str(a.getWardName());
             String bed = str(a.getBedNo());
             node.setSubtitle(TextUtil.hasText(ward) || TextUtil.hasText(bed)
@@ -265,8 +265,8 @@ public class CdrServiceImpl implements CdrService {
             node.setEndTime(fmt(e.getFinishTime()));
             node.setDeptName(str(e.getDeptName()));
             node.setOperatorName(str(e.getDoctorName()));
-            node.setStatusText(EmergencyStatusEnum.getText(e.getEmergencyStatus()));
-            String triage = EmergencyTriageLevelEnum.getText(e.getTriageLevel());
+            node.setStatusText(EmergencyStatusEnum.getLabel(e.getEmergencyStatus()));
+            String triage = EmergencyTriageLevelEnum.getLabel(e.getTriageLevel());
             String zone = str(e.getZone());
             node.setSubtitle(TextUtil.hasText(triage) || TextUtil.hasText(zone)
                     ? ((triage == null ? "" : triage) + " " + (zone == null ? "" : zone)).trim() : null);
@@ -436,9 +436,9 @@ public class CdrServiceImpl implements CdrService {
         for (CdrEventTypeEnum t : CdrEventTypeEnum.values()) {
             CdrEventTypeSelectListVO item = new CdrEventTypeSelectListVO();
             item.setCode(t.getCode());
-            item.setText(t.getText());
+            item.setText(t.getLabel());
             item.setNodeType(t.getNodeType() == null ? null : t.getNodeType().getCode());
-            item.setNodeTypeText(t.getNodeType() == null ? null : t.getNodeType().getText());
+            item.setNodeTypeText(t.getNodeType() == null ? null : t.getNodeType().getLabel());
             item.setSecondaryLabel(t.getSecondaryLabel());
             list.add(item);
         }
@@ -447,10 +447,10 @@ public class CdrServiceImpl implements CdrService {
 
     private CdrEventVO toEvent(CdrEventRowVO r, Long mainPid, Map<String, String> archiveNo) {
         String etype = str(r.getEtype());
-        CdrEventTypeEnum type = CdrEventTypeEnum.parse(etype);
+        CdrEventTypeEnum type = CdrEventTypeEnum.fromCode(etype);
         CdrEventVO ev = new CdrEventVO();
         ev.setEventType(etype);
-        ev.setEventTypeText(type == null ? "未知事件(" + etype + ")" : type.getText());
+        ev.setEventTypeText(type == null ? "未知事件(" + etype + ")" : type.getLabel());
         ev.setSourceTable(str(r.getSrcTable()));
         ev.setSourceId(r.getSrcId());
         ev.setEventTime(fmt(r.getEtime()));
@@ -487,7 +487,7 @@ public class CdrServiceImpl implements CdrService {
         vo.setPatientId(p.getId());
         vo.setPatientNo(p.getPatientNo());
         vo.setPatientName(p.getPatientName());
-        vo.setGenderText(SysGenderEnum.getText(p.getGender()));
+        vo.setGenderText(SysGenderEnum.getLabel(p.getGender()));
         vo.setAge(p.getAge());
         vo.setBirthDate(p.getBirthDate() == null ? null : p.getBirthDate().format(DateFormats.DATE));
         vo.setIdCard(p.getIdCard());
@@ -664,8 +664,8 @@ public class CdrServiceImpl implements CdrService {
         CdrVisitNodeVO node = new CdrVisitNodeVO();
         node.setNodeKey(key);
         node.setNodeType(type.getCode());
-        node.setNodeTypeText(type.getText());
-        node.setTitle(type.getText());
+        node.setNodeTypeText(type.getLabel());
+        node.setTitle(type.getLabel());
         node.setFromShadow(false);
         return node;
     }

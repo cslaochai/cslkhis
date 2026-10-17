@@ -29,17 +29,17 @@ public enum CdrNodeTypeEnum {
     PATIENT("PATIENT", "跨就诊");
 
     private final String code;
-    private final String text;
+    private final String label;
 
-    CdrNodeTypeEnum(String code, String text) {
+    CdrNodeTypeEnum(String code, String label) {
         this.code = code;
-        this.text = text;
+        this.label = label;
     }
 
     /**
      * 未知码值时原样报出，不回落成合法值（否则看页面的人以为数据没问题）
      */
-    public static CdrNodeTypeEnum parse(String code) {
+    public static CdrNodeTypeEnum fromCode(String code) {
         for (CdrNodeTypeEnum t : values()) {
             if (t.code.equals(code)) {
                 return t;
@@ -52,7 +52,7 @@ public enum CdrNodeTypeEnum {
         return code;
     }
 
-    public String getText() {
-        return text;
+    public String getLabel() {
+        return label;
     }
 }

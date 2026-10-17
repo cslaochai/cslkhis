@@ -79,7 +79,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         if (qcType == null || qcType == 0) {
             return 0;
         }
-        if (QcDimensionEnum.ofCode(qcType) == null) {
+        if (QcDimensionEnum.fromCode(qcType) == null) {
             throw new BusinessException("不支持的质控类型：" + qcType
                     + "（可选 0-综合 1-完整性 2-规范性 3-逻辑性；AI 内涵质控请调用 /ai/emrQc 接口）");
         }
@@ -105,7 +105,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
 
     /** 质控单/问题明细本身无科室列：按 record_source + record_id 反查病历归属科室后校验 */
     private void assertRecordDeptAccessible(String recordSource, Long recordId) {
-        if (QcRecordSourceEnum.parse(recordSource) == QcRecordSourceEnum.OUTPATIENT) {
+        if (QcRecordSourceEnum.fromCode(recordSource) == QcRecordSourceEnum.OUTPATIENT) {
             BizMedicalRecord record = bizMedicalRecordMapper.selectById(recordId);
             deptScopeService.assertDeptAccessible(record == null ? null : record.getDeptId());
             return;
@@ -163,7 +163,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         for (QcDimensionEnum dimension : QcDimensionEnum.values()) {
             QcOverviewVO.DimensionStat stat = new QcOverviewVO.DimensionStat();
             stat.setDimension(dimension.getCode());
-            stat.setDimensionText(dimension.getText());
+            stat.setDimensionText(dimension.getLabel());
             QcRuleMetricVO hit = statByDimension.get(dimension.getCode());
             stat.setIssueCount(hit == null || hit.getHitCount() == null ? 0 : hit.getHitCount());
             stat.setDeductTotal(hit == null || hit.getDeductTotal() == null ? 0 : hit.getDeductTotal());
@@ -179,7 +179,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
      */
     @Override
     public List<QcRuleMetricVO> listRuleMetric(Integer dimension) {
-        QcDimensionEnum only = dimension == null ? null : QcDimensionEnum.ofCode(dimension);
+        QcDimensionEnum only = dimension == null ? null : QcDimensionEnum.fromCode(dimension);
         if (dimension != null && only == null) {
             throw new BusinessException("未知的质控维度：" + dimension + "（可选 1-完整性 2-规范性 3-逻辑性）");
         }
@@ -195,11 +195,11 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
             vo.setRuleCode(rule.getCode());
             vo.setRuleName(rule.getName());
             vo.setDimension(rule.getDimension().getCode());
-            vo.setDimensionText(rule.getDimension().getText());
+            vo.setDimensionText(rule.getDimension().getLabel());
             vo.setSeverity(rule.getSeverity().getCode());
-            vo.setSeverityText(rule.getSeverity().getText());
+            vo.setSeverityText(rule.getSeverity().getLabel());
             vo.setDeduct(rule.getSeverity().getDeduct());
-            vo.setScopeText(rule.getScope().getText());
+            vo.setScopeText(rule.getScope().getLabel());
             vo.setBasis(rule.getBasis());
             QcRuleMetricVO hit = statByRule.get(rule.getCode());
             long hitCount = hit == null || hit.getHitCount() == null ? 0L : hit.getHitCount();
@@ -218,7 +218,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
     // 执行质控
     @Override
     public PageResult<QcCandidateVO> listCandidatePage(QcCandidateQueryPageDTO query) {
-        QcRecordSourceEnum source = QcRecordSourceEnum.parse(query.getRecordSource());
+        QcRecordSourceEnum source = QcRecordSourceEnum.fromCode(query.getRecordSource());
         Page<QcCandidateVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<Long> scope = deptScopeService.scopedDeptIds(null);
         var result = source == QcRecordSourceEnum.OUTPATIENT
@@ -235,7 +235,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         for (QcDimensionEnum dimension : QcDimensionEnum.values()) {
             QcDimensionSelectListVO item = new QcDimensionSelectListVO();
             item.setCode(dimension.getCode());
-            item.setText(dimension.getText());
+            item.setText(dimension.getLabel());
             item.setDescription(dimension.getDescription());
             list.add(item);
         }
@@ -249,7 +249,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         for (int code : new int[]{0, 1, 2, 3, 4}) {
             QcTypeSelectListVO item = new QcTypeSelectListVO();
             item.setCode(code);
-            item.setText(RecordQcTypeEnum.getText(code));
+            item.setText(RecordQcTypeEnum.getLabel(code));
             list.add(item);
         }
         return list;
@@ -267,7 +267,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        QcSnapshot snapshot = loadSnapshot(QcRecordSourceEnum.parse(dto.getRecordSource()), dto.getRecordId());
+        QcSnapshot snapshot = loadSnapshot(QcRecordSourceEnum.fromCode(dto.getRecordSource()), dto.getRecordId());
         QcResultVO result = qcRuleEngine.inspect(snapshot, qcType);
 
         String operator = operatorUser.getRealName();
@@ -352,9 +352,9 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
             throw new BusinessException("质控单不存在：" + qcId);
         }
         assertRecordDeptAccessible(qc.getRecordSource(), qc.getRecordId());
-        if (qc.getQcStatus() == null || qc.getQcStatus() != 1) {
+        if (qc.getQcStatus() == null || qc.getQcStatus() != RuleCheckStatusEnum.PENDING.getCode()) {
             throw new BusinessException("只有「待处理」的质控单可以处理，当前状态："
-                    + dictCacheService.getDicDataLabel(DictTypeConst.QC_STATUS, qc.getQcStatus()));
+                    + RuleCheckStatusEnum.getLabelOrUnknown(qc.getQcStatus()));
         }
         qc.setQcStatus(ignore ? RuleCheckStatusEnum.IGNORED.getCode() : RuleCheckStatusEnum.HANDLED.getCode());
         qc.setRemark(remark);
@@ -387,21 +387,21 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
      * 列表行补中文。未知码值由各枚举 {@code getText} 渲染成空串，不回落合法值。
      */
     private void enrich(BizQualityControlVO vo) {
-        vo.setRecordSourceText(QcRecordSourceEnum.getText(vo.getRecordSource()));
-        vo.setQcTypeText(RecordQcTypeEnum.getText(vo.getQcType()));
-        vo.setQcStatusText(dictCacheService.getDicDataLabel(DictTypeConst.QC_STATUS, vo.getQcStatus()));
+        vo.setRecordSourceText(QcRecordSourceEnum.getLabel(vo.getRecordSource()));
+        vo.setQcTypeText(RecordQcTypeEnum.getLabel(vo.getQcType()));
+        vo.setQcStatusText(RuleCheckStatusEnum.getLabel(vo.getQcStatus()));
         vo.setQcResultText(dictCacheService.getDicDataLabel(DictTypeConst.QC_RESULT, vo.getQcResult()));
-        vo.setRecordStatusText(RecordStatusEnum.getText(vo.getRecordStatus()));
-        vo.setRecordTypeText(vo.getRecordType() == null ? null : InpatientRecordTypeEnum.getText(vo.getRecordType()));
-        vo.setSeverityMaxText(vo.getSeverityMax() == null ? null : QcSeverityEnum.textOf(vo.getSeverityMax()));
+        vo.setRecordStatusText(RecordStatusEnum.getLabel(vo.getRecordStatus()));
+        vo.setRecordTypeText(vo.getRecordType() == null ? null : InpatientRecordTypeEnum.getLabel(vo.getRecordType()));
+        vo.setSeverityMaxText(vo.getSeverityMax() == null ? null : QcSeverityEnum.getLabel(vo.getSeverityMax()));
         vo.setGradeText(grade(vo.getScore(), vo.getSeverityMax()));
     }
 
     private void enrich(QcCandidateVO vo) {
-        vo.setRecordSourceText(QcRecordSourceEnum.getText(vo.getRecordSource()));
-        vo.setGenderText(SysGenderEnum.getText(vo.getGender()));
-        vo.setRecordTypeText(vo.getRecordType() == null ? null : InpatientRecordTypeEnum.getText(vo.getRecordType()));
-        vo.setRecordStatusText(RecordStatusEnum.getText(vo.getRecordStatus()));
+        vo.setRecordSourceText(QcRecordSourceEnum.getLabel(vo.getRecordSource()));
+        vo.setGenderText(SysGenderEnum.getLabel(vo.getGender()));
+        vo.setRecordTypeText(vo.getRecordType() == null ? null : InpatientRecordTypeEnum.getLabel(vo.getRecordType()));
+        vo.setRecordStatusText(RecordStatusEnum.getLabel(vo.getRecordStatus()));
         vo.setLastGrade(grade(vo.getLastScore(), vo.getLastSeverityMax()));
         vo.setQced(vo.getLastQcId() != null);
     }
@@ -415,9 +415,9 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
             return new ArrayList<>();
         }
         for (QcIssueVO issue : issues) {
-            issue.setDimensionText(QcDimensionEnum.getText(issue.getDimension()));
-            issue.setSeverityText(QcSeverityEnum.textOf(issue.getSeverity()));
-            QcRuleEnum rule = QcRuleEnum.ofCode(issue.getRuleCode());
+            issue.setDimensionText(QcDimensionEnum.getLabel(issue.getDimension()));
+            issue.setSeverityText(QcSeverityEnum.getLabel(issue.getSeverity()));
+            QcRuleEnum rule = QcRuleEnum.fromCode(issue.getRuleCode());
             issue.setBasis(rule == null ? null : rule.getBasis());
         }
         return issues;

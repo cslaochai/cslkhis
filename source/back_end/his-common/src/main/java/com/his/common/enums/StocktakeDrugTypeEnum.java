@@ -1,6 +1,7 @@
 package com.his.common.enums;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 盘点范围的药品类别口径（1-西药 2-中成药 3-中药饮片）。
@@ -24,7 +25,7 @@ public enum StocktakeDrugTypeEnum {
     }
 
     public static StocktakeDrugTypeEnum fromCode(Integer code) {
-        if (code == null) {
+        if (null == code) {
             return null;
         }
         for (StocktakeDrugTypeEnum item : values()) {
@@ -35,11 +36,13 @@ public enum StocktakeDrugTypeEnum {
         return null;
     }
 
-    /**
-     * 展示用码值 → 文案。脏数据返回 null，由调用侧决定兜底，不回落到合法文案。
-     */
-    public static String getText(Integer code) {
+    public static String getLabel(Integer code) {
         StocktakeDrugTypeEnum item = fromCode(code);
-        return item == null ? null : item.label;
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        StocktakeDrugTypeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
     }
 }

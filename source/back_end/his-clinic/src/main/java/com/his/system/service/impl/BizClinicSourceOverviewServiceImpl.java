@@ -2,6 +2,7 @@ package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.DutyShiftTypeEnum;
+import com.his.common.enums.StaffTypeEnum;
 import com.his.system.entity.BizClinicSource;
 import com.his.system.mapper.BizClinicSourceMapper;
 import com.his.system.service.BizClinicSourceOverviewService;
@@ -17,7 +18,6 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import com.his.common.enums.*;
 
 /**
  * 排班周总览实现：跨模块只读 his-system 的 service（事实层 / 人力标准 / 总值班），
@@ -87,7 +87,7 @@ public class BizClinicSourceOverviewServiceImpl extends ServiceImpl<BizClinicSou
             vo.setOrgId(row.getOrgId());
             vo.setOrgName(row.getOrgName());
             vo.setShiftName(row.getShiftName());
-            vo.setStaffTypeName(com.his.common.enums.StaffTypeEnum.getText(row.getStaffType()));
+            vo.setStaffTypeName(StaffTypeEnum.getLabel(row.getStaffType()));
             vo.setMinStaff(row.getMinStaff());
             vo.setActualCount(row.getActualCount());
             vo.setShortfall(row.getShortfall());

@@ -286,7 +286,7 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
                 throw new BusinessException("死亡证明不允许改挂到另一次住院");
             }
             if (!editable(cert.getCertStatus())) {
-                throw new BusinessException(DeathCertStatusEnum.labelOrUnknown(cert.getCertStatus()) + "的证明不能修改，改错请作废后重开");
+                throw new BusinessException(DeathCertStatusEnum.getLabelOrUnknown(cert.getCertStatus()) + "的证明不能修改，改错请作废后重开");
             }
             if (bizDeathCertificateMapper.countActiveByAdmission(dto.getAdmissionId(), cert.getId()) > 0) {
                 throw new BusinessException("该次住院已有另一张死亡证明");
@@ -360,7 +360,7 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
         BizDeathCertificate cert = requireCert(dto.getId());
         deptScopeService.assertDeptAccessible(cert.getDeathDeptId());
         if (!Objects.equals(cert.getCertStatus(), DeathCertStatusEnum.DRAFT.getCode())) {
-            throw new BusinessException("只有草稿状态的证明可以提交审核（当前：" + DeathCertStatusEnum.labelOrUnknown(cert.getCertStatus()) + "）");
+            throw new BusinessException("只有草稿状态的证明可以提交审核（当前：" + DeathCertStatusEnum.getLabelOrUnknown(cert.getCertStatus()) + "）");
         }
         cert.setReviewerId(operatorUser.getEmployeeId());
         cert.setReviewerName(operatorUser.getRealName());
@@ -379,7 +379,7 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
         BizDeathCertificate cert = requireCert(dto.getId());
         deptScopeService.assertDeptAccessible(cert.getDeathDeptId());
         if (!Objects.equals(cert.getCertStatus(), DeathCertStatusEnum.AUDITED.getCode())) {
-            throw new BusinessException("只有「已审核」的证明可以签发（当前：" + DeathCertStatusEnum.labelOrUnknown(cert.getCertStatus()) + "）");
+            throw new BusinessException("只有「已审核」的证明可以签发（当前：" + DeathCertStatusEnum.getLabelOrUnknown(cert.getCertStatus()) + "）");
         }
         DeathCertificateVO.DischargeSnapshot discharge = bizDeathCertificateMapper.selectDeathDischarge(cert.getAdmissionId());
         if (discharge == null) {
@@ -444,7 +444,7 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
         BizDeathCertificate orig = requireCert(origCertId);
         deptScopeService.assertDeptAccessible(orig.getDeathDeptId());
         if (!Objects.equals(orig.getCertStatus(), DeathCertStatusEnum.VOIDED.getCode())) {
-            throw new BusinessException("只有已作废的证明才能重开（当前：" + DeathCertStatusEnum.labelOrUnknown(orig.getCertStatus()) + "）");
+            throw new BusinessException("只有已作废的证明才能重开（当前：" + DeathCertStatusEnum.getLabelOrUnknown(orig.getCertStatus()) + "）");
         }
         if (bizDeathCertificateMapper.countActiveByAdmission(orig.getAdmissionId(), null) > 0) {
             throw new BusinessException("该次住院已有新的有效证明，请直接修改它");
@@ -512,7 +512,7 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
         BizDeathCertificate cert = requireCert(dto.getId());
         deptScopeService.assertDeptAccessible(cert.getDeathDeptId());
         if (!Objects.equals(cert.getCertStatus(), DeathCertStatusEnum.ISSUED.getCode())) {
-            throw new BusinessException("只有「已开具」的证明才打印（" + DeathCertStatusEnum.labelOrUnknown(cert.getCertStatus()) + "的表样不能作为凭证）");
+            throw new BusinessException("只有「已开具」的证明才打印（" + DeathCertStatusEnum.getLabelOrUnknown(cert.getCertStatus()) + "的表样不能作为凭证）");
         }
         cert.setPrinterName(operatorUser.getRealName());
         cert.setPrintCount((cert.getPrintCount() == null ? 0 : cert.getPrintCount()) + 1);
@@ -530,7 +530,7 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
         BizDeathCertificate cert = requireCert(id);
         deptScopeService.assertDeptAccessible(cert.getDeathDeptId());
         if (!Objects.equals(cert.getCertStatus(), DeathCertStatusEnum.ISSUED.getCode())) {
-            throw new BusinessException("未签发的证明不能上报（当前：" + DeathCertStatusEnum.labelOrUnknown(cert.getCertStatus()) + "）");
+            throw new BusinessException("未签发的证明不能上报（当前：" + DeathCertStatusEnum.getLabelOrUnknown(cert.getCertStatus()) + "）");
         }
         if (Objects.equals(cert.getReportStatus(), DeathCertReportEnum.DONE.getCode())) {
             throw new BusinessException("该证明已上报，报文已冻结（订正请作废重开后再报）");

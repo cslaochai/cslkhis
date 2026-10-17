@@ -299,7 +299,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
             throw new BusinessException("床位不存在");
         }
         if (!Objects.equals(BedStatusEnum.FREE.getCode(), bed.getBedStatus())) {
-            throw new BusinessException("床位当前不可用（" + BedStatusEnum.labelOrUnknown(bed.getBedStatus()) + "），请选择空闲床位");
+            throw new BusinessException("床位当前不可用（" + BedStatusEnum.getLabelOrUnknown(bed.getBedStatus()) + "），请选择空闲床位");
         }
         if (bed.getPatientId() != null) {
             throw new BusinessException("床位仍挂着其他患者，不能安排");
@@ -522,7 +522,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
         BizBedWait wait = requireWait(dto.getWaitId());
         if (!Objects.equals(BedWaitStatusEnum.ARRANGED.getCode(), wait.getWaitStatus())) {
             throw new BusinessException("只有「已安排床位」的排队记录可以退回队列（当前："
-                    + BedWaitStatusEnum.labelOrUnknown(wait.getWaitStatus()) + "）");
+                    + BedWaitStatusEnum.getLabelOrUnknown(wait.getWaitStatus()) + "）");
         }
         String reason = TextUtil.hasText(dto.getReason()) ? dto.getReason() : "床位中心退回队列";
         doRelease(wait, reason, BedAllocateStatusEnum.RELEASED.getCode());
@@ -562,7 +562,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
         BizBedWait wait = requireWait(dto.getWaitId());
         if (!Objects.equals(BedWaitStatusEnum.ARRANGED.getCode(), wait.getWaitStatus())) {
             throw new BusinessException("只有「已安排床位」的排队记录可以办理入院（当前："
-                    + BedWaitStatusEnum.labelOrUnknown(wait.getWaitStatus()) + "）");
+                    + BedWaitStatusEnum.getLabelOrUnknown(wait.getWaitStatus()) + "）");
         }
         if (wait.getAssignedBedId() == null || wait.getAssignedWardId() == null) {
             throw new BusinessException("该排队记录没有已安排的床位，请先在床位池安排床位");
@@ -668,7 +668,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
         BizBedWait wait = requireWait(waitId);
         if (Objects.equals(BedWaitStatusEnum.ADMITTED.getCode(), wait.getWaitStatus()) || Objects.equals(BedWaitStatusEnum.CANCELLED.getCode(), wait.getWaitStatus())) {
             throw new BusinessException("该排队记录已结束（"
-                    + BedWaitStatusEnum.labelOrUnknown(wait.getWaitStatus()) + "），不需要再匹配床位");
+                    + BedWaitStatusEnum.getLabelOrUnknown(wait.getWaitStatus()) + "），不需要再匹配床位");
         }
         String need = TextUtil.blankToDefault(wait.getBedType(), "normal");
         List<BedMatchVO> candidates = bedCenterMapper.selectMatchableBeds();
@@ -695,7 +695,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
             b.setMatchLevel(grade.getCode());
             b.setMatchLevelText(grade.getLabel());
             b.setMatchScore(score);
-            b.setBedTypeText(BedTypeEnum.getText(b.getBedType()));
+            b.setBedTypeText(BedTypeEnum.getLabel(b.getBedType()));
             b.setExpectWardMatched(expectMatched);
             b.setGenderHint(wait.getGenderLimit() != null && !Objects.equals(0, wait.getGenderLimit()));
             b.setIsolationHint(Objects.equals(1, wait.getIsolationFlag()));
@@ -727,8 +727,8 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
         List<BedPoolVO.BedRow> rows = bedCenterMapper.selectBedPool(deptId, wardId, bedStatus, bedType,
                 keyword, offset, query.getPageSize());
         for (BedPoolVO.BedRow row : rows) {
-            row.setBedStatusText(BedStatusEnum.getText(row.getBedStatus()));
-            row.setBedTypeText(BedTypeEnum.getText(row.getBedType()));
+            row.setBedStatusText(BedStatusEnum.getLabel(row.getBedStatus()));
+            row.setBedTypeText(BedTypeEnum.getLabel(row.getBedType()));
         }
         vo.setRows(rows);
         return vo;
@@ -779,14 +779,14 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
 
         List<BedMapVO.BedCard> beds = bedMapMapper.selectBedCards(deptId, wardId);
         for (BedMapVO.BedCard bed : beds) {
-            bed.setBedStatusText(BedStatusEnum.getText(bed.getBedStatus()));
+            bed.setBedStatusText(BedStatusEnum.getLabel(bed.getBedStatus()));
             // 预留去向：锁定床必须说得出"留给谁、多急"。否则护士站看到的就是一张
             // 点开什么都没有的死床，床位中心也没法在图上直接放人。
             if (bed.getReservedPriority() != null) {
-                bed.setReservedPriorityText(BedPriorityEnum.getText(bed.getReservedPriority()));
+                bed.setReservedPriorityText(BedPriorityEnum.getLabel(bed.getReservedPriority()));
             }
             if (bed.getAllocType() != null) {
-                bed.setAllocTypeText(BedAllocTypeEnum.getText(bed.getAllocType()));
+                bed.setAllocTypeText(BedAllocTypeEnum.getLabel(bed.getAllocType()));
             }
             // 动作可用性一律服务端算：前端不自判状态机，避免"页面说能点、接口说不行"
             Integer st = bed.getBedStatus();
@@ -1018,11 +1018,11 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
     private BedWaitVO decorate(BizBedWait wait, List<Long> waitingIds) {
         BedWaitVO vo = new BedWaitVO();
         BeanUtils.copyProperties(wait, vo);
-        vo.setGenderText(SysGenderEnum.getText(wait.getGender()));
-        vo.setBedTypeText(BedTypeEnum.getText(wait.getBedType()));
-        vo.setPriorityText(BedPriorityEnum.getText(wait.getPriority()));
-        vo.setGenderLimitText(BedGenderLimitEnum.getText(wait.getGenderLimit()));
-        vo.setWaitStatusText(BedWaitStatusEnum.getText(wait.getWaitStatus()));
+        vo.setGenderText(SysGenderEnum.getLabel(wait.getGender()));
+        vo.setBedTypeText(BedTypeEnum.getLabel(wait.getBedType()));
+        vo.setPriorityText(BedPriorityEnum.getLabel(wait.getPriority()));
+        vo.setGenderLimitText(BedGenderLimitEnum.getLabel(wait.getGenderLimit()));
+        vo.setWaitStatusText(BedWaitStatusEnum.getLabel(wait.getWaitStatus()));
 
         long hours = TimeUtil.elapsedHours(wait.getRegisterTime(), LocalDateTime.now());
         vo.setWaitHours(hours);

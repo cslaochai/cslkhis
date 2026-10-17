@@ -5,6 +5,7 @@ import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 输血反应类型枚举（受控集合：禁止自由文本，否则「发热」与「发热反应」统计不到一起）。
@@ -37,36 +38,6 @@ public enum TransfusionReactionTypeEnum {
         return fromCode(type) != null;
     }
 
-    public static TransfusionReactionTypeEnum fromCode(String code) {
-        if (!TextUtil.hasText(code)) {
-            return null;
-        }
-        String trimmed = code.trim();
-        for (TransfusionReactionTypeEnum item : values()) {
-            if (item.code.equals(trimmed)) {
-                return item;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * 展示用码值 → 文案。null / 空白 / 词表外一律返回空串 ——
-     * 输血反应类型是临床上报口径，把看不懂的值说成「其他」等于把没核实的反应记成了别的反应。
-     */
-    public static String getText(String code) {
-        TransfusionReactionTypeEnum item = fromCode(code);
-        return item == null ? "" : item.label;
-    }
-
-    /**
-     * 异常 / 审计用：null 或词表外返回「未知(n)」（null 本身渲染成「未知」），保留原始值便于排查。
-     */
-    public static String labelOrUnknown(String code) {
-        TransfusionReactionTypeEnum item = fromCode(code);
-        return item == null ? (!TextUtil.hasText(code) ? "未知" : "未知(" + code + ")") : item.label;
-    }
-
     /**
      * 下拉候选（词表顺序即上报频次顺序）
      */
@@ -76,5 +47,33 @@ public enum TransfusionReactionTypeEnum {
             list.add(item.code);
         }
         return list;
+    }
+
+    public static TransfusionReactionTypeEnum fromCode(String code) {
+        if (null == code) {
+            return null;
+        }
+        for (TransfusionReactionTypeEnum item : values()) {
+            if (code.equals(item.code)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(String code) {
+        TransfusionReactionTypeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(String code, String defaultValue) {
+        TransfusionReactionTypeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(String code) {
+        TransfusionReactionTypeEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

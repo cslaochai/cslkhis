@@ -770,7 +770,7 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
         void add(Integer paymentMethod, BigDecimal value, int cnt) {
             amount = amount.add(value);
             count += cnt;
-            PaymentMethodEnum method = paymentMethod == null ? null : PaymentMethodEnum.getByCode(paymentMethod);
+            PaymentMethodEnum method = paymentMethod == null ? null : PaymentMethodEnum.fromCode(paymentMethod);
             if (method == null) {
                 unknownPay = unknownPay.add(value);
                 return;

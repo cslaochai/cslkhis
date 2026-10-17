@@ -133,7 +133,7 @@ public class RecordQcFlowServiceImpl extends ServiceImpl<BizRecordQcFlowMapper, 
     public void resubmit(RecordQcFlowOpinionDTO dto) {
         BizRecordQcFlow flow = lockAndCheck(dto.getFlowId());
         if (flow.getFlowStatus() != RecordQcFlowStatusEnum.REWORKING.getCode()) {
-            throw new BusinessException("当前状态（" + RecordQcFlowStatusEnum.labelOrUnknown(flow.getFlowStatus())
+            throw new BusinessException("当前状态（" + RecordQcFlowStatusEnum.getLabelOrUnknown(flow.getFlowStatus())
                     + "）不是整改中，无需整改提交");
         }
 
@@ -151,7 +151,7 @@ public class RecordQcFlowServiceImpl extends ServiceImpl<BizRecordQcFlowMapper, 
         BizRecordQcFlow flow = lockAndCheck(dto.getFlowId());
         requireReviewStage(flow);
         if (flow.getCurrentLevel() != RecordQcLevelEnum.MEDAFFAIRS.getCode()) {
-            throw new BusinessException("当前停留级（" + RecordQcLevelEnum.labelOrUnknown(flow.getCurrentLevel())
+            throw new BusinessException("当前停留级（" + RecordQcLevelEnum.getLabelOrUnknown(flow.getCurrentLevel())
                     + "）不是医务处，不能终审");
         }
 
@@ -244,7 +244,7 @@ public class RecordQcFlowServiceImpl extends ServiceImpl<BizRecordQcFlowMapper, 
     private void requireReviewStage(BizRecordQcFlow flow) {
         int s = flow.getFlowStatus();
         if (s != RecordQcFlowStatusEnum.DEPT_PENDING.getCode() && s != RecordQcFlowStatusEnum.ARCHIVE_PENDING.getCode() && s != RecordQcFlowStatusEnum.MEDAFFAIRS_PENDING.getCode()) {
-            throw new BusinessException("当前状态（" + RecordQcFlowStatusEnum.labelOrUnknown(s) + "）不允许该操作");
+            throw new BusinessException("当前状态（" + RecordQcFlowStatusEnum.getLabelOrUnknown(s) + "）不允许该操作");
         }
     }
 
@@ -286,8 +286,8 @@ public class RecordQcFlowServiceImpl extends ServiceImpl<BizRecordQcFlowMapper, 
         vo.setOperatorId(a.getOperatorId());
         vo.setOperatorName(a.getOperatorName());
         vo.setActionTime(a.getActionTime());
-        vo.setLevelText(RecordQcLevelEnum.getText(a.getLevel()));
-        vo.setActionText(RecordQcActionEnum.getText(a.getAction()));
+        vo.setLevelText(RecordQcLevelEnum.getLabel(a.getLevel()));
+        vo.setActionText(RecordQcActionEnum.getLabel(a.getAction()));
         return vo;
     }
 
@@ -295,11 +295,11 @@ public class RecordQcFlowServiceImpl extends ServiceImpl<BizRecordQcFlowMapper, 
         if (vo == null) {
             return null;
         }
-        vo.setFlowStatusText(RecordQcFlowStatusEnum.getText(vo.getFlowStatus()));
-        vo.setCurrentLevelText(RecordQcLevelEnum.getText(vo.getCurrentLevel()));
-        vo.setReturnLevelText(RecordQcLevelEnum.getText(vo.getReturnLevel()));
-        vo.setGradeText(RecordQcGradeEnum.getText(vo.getGrade()));
-        vo.setRecordSourceText(QcRecordSourceEnum.getText(vo.getRecordSource()));
+        vo.setFlowStatusText(RecordQcFlowStatusEnum.getLabel(vo.getFlowStatus()));
+        vo.setCurrentLevelText(RecordQcLevelEnum.getLabel(vo.getCurrentLevel()));
+        vo.setReturnLevelText(RecordQcLevelEnum.getLabel(vo.getReturnLevel()));
+        vo.setGradeText(RecordQcGradeEnum.getLabel(vo.getGrade()));
+        vo.setRecordSourceText(QcRecordSourceEnum.getLabel(vo.getRecordSource()));
         return vo;
     }
 }

@@ -240,7 +240,7 @@ public class EmrQcCapabilityImpl         implements EmrQcCapability {
 
     private Optional<EmrQcLlmOutputDTO> callModel(BizMedicalRecord record) {
         EmrQcPromptVariablesVO variables = new EmrQcPromptVariablesVO();
-        variables.setGender(SysGenderEnum.getText(record.getGender()));
+        variables.setGender(SysGenderEnum.getLabel(record.getGender()));
         variables.setAge(record.getAge() == null ? "（未填写）" : record.getAge() + "岁");
         variables.setChiefComplaint(TextUtil.blankToDefault(record.getChiefComplaint(), "（未填写）"));
         variables.setPresentIllness(TextUtil.blankToDefault(record.getPresentIllness(), "（未填写）"));

@@ -81,7 +81,7 @@ public class TsaServiceImpl extends ServiceImpl<SysTsaServerMapper, SysTsaServer
         vo.setConfigTimeSource(cfg);
         int effective = emrSignatureService.effectiveTimeSource();
         vo.setEffectiveTimeSource(effective);
-        vo.setEffectiveTimeSourceText(TimeSourceEnum.textOf(effective));
+        vo.setEffectiveTimeSourceText(TimeSourceEnum.getLabel(effective));
 
         vo.setTokenCount(bizTsaTokenMapper.selectCount(null));
         BizTsaToken last = bizTsaTokenMapper.selectOne(new LambdaQueryWrapper<BizTsaToken>()

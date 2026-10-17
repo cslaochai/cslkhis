@@ -2,6 +2,7 @@ package com.his.common.enums;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 中药代煎单状态
@@ -33,35 +34,35 @@ public enum TcmDecoctStatusEnum {
     private final Integer code;
     private final String label;
 
+    public static boolean isValid(Integer code) {
+        return fromCode(code) != null;
+    }
+
     public static TcmDecoctStatusEnum fromCode(Integer code) {
-        if (code == null) {
+        if (null == code) {
             return null;
         }
         for (TcmDecoctStatusEnum item : values()) {
-            if (item.code.equals(code)) {
+            if (code.equals(item.code)) {
                 return item;
             }
         }
         return null;
     }
 
-    public static boolean isValid(Integer code) {
-        return fromCode(code) != null;
-    }
-
-    /**
-     * 展示用码值 → 文案。null / 越界码值返回空串（绝不返回 null，也不回落成某个合法状态）。
-     */
-    public static String getText(Integer code) {
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
         TcmDecoctStatusEnum item = fromCode(code);
-        return item == null ? "" : item.label;
+        return item == null ? StringUtils.EMPTY : item.label;
     }
 
-    /**
-     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
-        TcmDecoctStatusEnum item = code == null ? null : fromCode(code);
+    public static String getLabel(Integer code, String defaultValue) {
+        TcmDecoctStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        TcmDecoctStatusEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

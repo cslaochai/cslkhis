@@ -119,7 +119,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
         // 文案由后端给：前端判码值就会有第二套口径（支付方式码值前端就抄错过一次，把 4 当银行卡）
         for (PrepayVO vo : raw.getRecords()) {
             vo.setPrepayTypeText(dictCacheService.getDicDataLabel(DictTypeConst.PREPAY_TYPE, vo.getPrepayType()));
-            vo.setPayMethodText(PaymentMethodEnum.getText(vo.getPayMethod()));
+            vo.setPayMethodText(PaymentMethodEnum.getLabel(vo.getPayMethod()));
         }
         return raw;
     }
@@ -352,7 +352,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
         vo.setArrearsAmount(arrearsAmount);
         vo.setSettled(discharge != null);
         vo.setSettlementNo(discharge != null ? discharge.getBillNo() : null);
-        vo.setSettleStatusText(InpatientSettleStatusEnum.getText(settleStatus));
+        vo.setSettleStatusText(InpatientSettleStatusEnum.getLabel(settleStatus));
         vo.setHintText(arrears
                 ? "住院费用已发生 " + total.toPlainString() + " 元，已收 " + state.collected().toPlainString()
                 + " 元（住院账户余额 " + balance.toPlainString() + " 元），欠费 "
@@ -559,7 +559,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
         vo.setAmount(t.getAmount());
         vo.setBalanceAfter(balanceAfter);
         vo.setPayMethod(t.getPayMethod());
-        vo.setPayMethodText(PaymentMethodEnum.getText(t.getPayMethod()));
+        vo.setPayMethodText(PaymentMethodEnum.getLabel(t.getPayMethod()));
         vo.setReceiptNo(t.getReceiptNo());
         vo.setPayTime(t.getTxnTime());
         vo.setOperatorId(t.getCashierId());
@@ -580,7 +580,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
         DailyBillItemVO item = new DailyBillItemVO();
         item.setFeeNo(row.getFeeNo());
         item.setItemType(row.getItemType());
-        item.setItemTypeName(PaymentItemTypeEnum.getText(row.getItemType()));
+        item.setItemTypeName(PaymentItemTypeEnum.getLabel(row.getItemType()));
         item.setItemCode(row.getItemCode());
         item.setItemName(row.getItemName());
         item.setSpecification(row.getSpecification());
@@ -618,9 +618,9 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
         vo.setRefundAmount(NumUtil.scale(refund, SCALE));
         vo.setArrearsAmount(NumUtil.scale(arrears, SCALE));
         vo.setSettleStatus(arrears.signum() > 0 ? InpatientSettleStatusEnum.ARREARS.getCode() : InpatientSettleStatusEnum.CLEARED.getCode());
-        vo.setSettleStatusText(InpatientSettleStatusEnum.getText(vo.getSettleStatus()));
+        vo.setSettleStatusText(InpatientSettleStatusEnum.getLabel(vo.getSettleStatus()));
         vo.setSettleMode(bill.getSettlementMode());
-        vo.setSettleModeText(SettlementModeEnum.getText(bill.getSettlementMode()));
+        vo.setSettleModeText(SettlementModeEnum.getLabel(bill.getSettlementMode()));
         vo.setInsuranceType(bill.getInsuranceType());
         vo.setSettleTime(bill.getBillTime());
         vo.setSettleBy(bill.getBillById());

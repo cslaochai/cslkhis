@@ -451,11 +451,11 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
     }
 
     private String teleStatusName(Integer status) {
-        return TeleConsultStatusEnum.labelOrUnknown(status);
+        return TeleConsultStatusEnum.getLabelOrUnknown(status);
     }
 
     private String onlineStatusName(Integer status) {
-        return OnlineConsultStatusEnum.labelOrUnknown(status);
+        return OnlineConsultStatusEnum.getLabelOrUnknown(status);
     }
 
     private String nextNo(String prefix, String module) {

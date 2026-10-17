@@ -165,7 +165,7 @@ public class InvoiceServiceImpl extends ServiceImpl<BizInvoiceMapper, BizInvoice
         BizInvoice invoice = requireInvoice(invoiceId);
         if (InvoiceStatusEnum.fromCode(invoice.getInvoiceStatus()) != InvoiceStatusEnum.ISSUED) {
             throw new BusinessException("只有「已开具」的票能标记打印，当前是「"
-                    + InvoiceStatusEnum.descOf(invoice.getInvoiceStatus()) + "」");
+                    + InvoiceStatusEnum.getLabel(invoice.getInvoiceStatus()) + "」");
         }
         invoice.setInvoiceStatus(InvoiceStatusEnum.PRINTED.getCode());
         invoice.setPrintTime(LocalDateTime.now());

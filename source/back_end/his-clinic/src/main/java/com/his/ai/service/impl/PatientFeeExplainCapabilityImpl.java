@@ -59,7 +59,7 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
      * 乙类先自付多少、甲类报多少，各地各险种不同，写死就是错的。
      */
     private static String ruleText(Integer catalogType) {
-        FeeCatalogTypeEnum type = FeeCatalogTypeEnum.getByCode(catalogType);
+        FeeCatalogTypeEnum type = FeeCatalogTypeEnum.fromCode(catalogType);
         if (type == null) {
             return "医保不承担，全额由个人支付";
         }
@@ -167,7 +167,7 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             FeeCatalogGroupVO vo = new FeeCatalogGroupVO();
             vo.setCatalogType(entry.getKey());
-            vo.setCatalogText(FeeCatalogTypeEnum.getText(entry.getKey()));
+            vo.setCatalogText(FeeCatalogTypeEnum.getLabel(entry.getKey()));
             vo.setAmount(amount);
             vo.setRatio(ratio(amount, total));
             vo.setRuleText(ruleText(entry.getKey()));
@@ -203,7 +203,7 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             PatientFeeExplainVO.FeeItemGroupVO vo = new PatientFeeExplainVO.FeeItemGroupVO();
             vo.setItemType(entry.getKey());
-            vo.setItemTypeText(PaymentItemTypeEnum.getText(entry.getKey()));
+            vo.setItemTypeText(PaymentItemTypeEnum.getLabel(entry.getKey()));
             vo.setAmount(amount);
             vo.setItemCount(entry.getValue().size());
             groups.add(vo);
@@ -229,7 +229,7 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
             PatientFeeExplainVO.FeeTopItemVO vo = new PatientFeeExplainVO.FeeTopItemVO();
             vo.setItemName(item.getItemName());
             vo.setAmount(NumUtil.orZero(item.getAmount()));
-            vo.setCatalogText(FeeCatalogTypeEnum.getText(item.getCatalogType()));
+            vo.setCatalogText(FeeCatalogTypeEnum.getLabel(item.getCatalogType()));
             vo.setSelfAmount(NumUtil.orZero(item.getSelfAmount()));
             result.add(vo);
         }

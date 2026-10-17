@@ -98,7 +98,7 @@ public final class LabAbnormalJudge {
      * @param judgeNote 判定留痕，可为 null（历史数据没有留痕）
      */
     public static String getText(Integer flag, String judgeNote) {
-        return isUnjudged(judgeNote) ? "未判定" : LabAbnormalFlagEnum.getText(flag);
+        return isUnjudged(judgeNote) ? "未判定" : LabAbnormalFlagEnum.getLabel(flag);
     }
 
     /**

@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 术前核对要点（手术安全核查单的可核对部分）。
@@ -30,43 +31,9 @@ public enum OperationPreCheckItemEnum {
         this.required = required;
     }
 
-    public static OperationPreCheckItemEnum fromCode(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        for (OperationPreCheckItemEnum e : values()) {
-            if (e.code == code) {
-                return e;
-            }
-        }
-        return null;
-    }
-
     /** 码值是否合法（写入侧校验用；null 不合法） */
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
-    }
-
-    /**
-     * 码值→展示文案。null 或不在枚举内（脏数据）返回空串 {@code ""}，绝不返回 null、不回落合法文案。
-     */
-    public static String getText(Integer code) {
-        if (code == null) {
-            return "";
-        }
-        OperationPreCheckItemEnum e = fromCode(code);
-        return e != null ? e.label : "";
-    }
-
-    /**
-     * 码值→异常 / 审计文案。null 返回「未知」，脏值返回「未知(n)」保留原始码值。
-     */
-    public static String labelOrUnknown(Integer code) {
-        if (code == null) {
-            return "未知";
-        }
-        OperationPreCheckItemEnum e = fromCode(code);
-        return e != null ? e.label : "未知(" + code + ")";
     }
 
     /** 必核项码值（1~4 缺任意一项不允许进入「术前核对完成」） */
@@ -87,5 +54,33 @@ public enum OperationPreCheckItemEnum {
             m.put(e.code, e.label);
         }
         return m;
+    }
+
+    public static OperationPreCheckItemEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (OperationPreCheckItemEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        OperationPreCheckItemEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        OperationPreCheckItemEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        OperationPreCheckItemEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

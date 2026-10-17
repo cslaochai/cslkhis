@@ -189,13 +189,13 @@ public class QcRuleEngine {
             if (!codes.add(rule.getCode())) {
                 throw new IllegalStateException("[病案质控] 规则编码重复：" + rule.getCode());
             }
-            if (QcRuleEnum.ofCode(rule.getCode()) != rule) {
+            if (QcRuleEnum.fromCode(rule.getCode()) != rule) {
                 throw new IllegalStateException("[病案质控] 规则编码无法反查：" + rule.getCode());
             }
         }
         for (QcDimensionEnum dimension : QcDimensionEnum.values()) {
             if (counts.getOrDefault(dimension, 0) == 0) {
-                throw new IllegalStateException("[病案质控] 维度 " + dimension.getText() + " 没有任何规则");
+                throw new IllegalStateException("[病案质控] 维度 " + dimension.getLabel() + " 没有任何规则");
             }
         }
         log.info("[病案质控] 规则引擎就绪：{} 条规则，维度分布 {}",
@@ -210,7 +210,7 @@ public class QcRuleEngine {
      * @return 质控结论（含问题明细）
      */
     public QcResultVO inspect(QcSnapshot snapshot, Integer qcType) {
-        QcDimensionEnum only = QcDimensionEnum.ofCode(qcType);
+        QcDimensionEnum only = QcDimensionEnum.fromCode(qcType);
         List<QcIssueVO> issues = new ArrayList<>();
         Set<Integer> dimensions = new LinkedHashSet<>();
 

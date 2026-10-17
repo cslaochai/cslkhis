@@ -2,6 +2,7 @@ package com.his.common.enums;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 急诊状态枚举 —— 急诊就诊状态的唯一权威码值（1-6）。
@@ -56,24 +57,6 @@ public enum EmergencyStatusEnum {
     private final String label;
 
     /**
-     * 根据状态码获取对应的枚举实例
-     *
-     * @param code 状态码
-     * @return 对应的枚举实例，若未匹配则返回 UNKNOWN
-     */
-    public static EmergencyStatusEnum fromCode(Integer code) {
-        if (code == null) {
-            return UNKNOWN;
-        }
-        for (EmergencyStatusEnum status : values()) {
-            if (status.code == code) {
-                return status;
-            }
-        }
-        return UNKNOWN;
-    }
-
-    /**
      * 码值是否合法（写入侧校验用；null 与解析兜底档 UNKNOWN 都不合法）
      */
     public static boolean isValid(Integer code) {
@@ -81,22 +64,31 @@ public enum EmergencyStatusEnum {
         return item != UNKNOWN;
     }
 
-    /**
-     * 码值→展示文案。null 或不在业务码值内（含脏值 0）返回空串 ""，绝不返回 null、不回落合法文案。
-     */
-    public static String getText(Integer code) {
-        EmergencyStatusEnum item = fromCode(code);
-        return item == UNKNOWN ? "" : item.label;
+    public static EmergencyStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (EmergencyStatusEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
     }
 
-    /**
-     * 异常 / 审计用：null 或不在业务码值内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
-     */
-    public static String labelOrUnknown(Integer code) {
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
         EmergencyStatusEnum item = fromCode(code);
-        if (item != UNKNOWN) {
-            return item.label;
-        }
-        return code == null ? "未知" : "未知(" + code + ")";
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        EmergencyStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        EmergencyStatusEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

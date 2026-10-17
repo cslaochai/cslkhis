@@ -247,7 +247,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     private MyMedicalRecordVO toMyRecordVO(BizMedicalRecord record) {
         MyMedicalRecordVO vo = new MyMedicalRecordVO();
         BeanUtils.copyProperties(record, vo);
-        vo.setRecordStatusText(RecordStatusEnum.getText(record.getRecordStatus()));
+        vo.setRecordStatusText(RecordStatusEnum.getLabel(record.getRecordStatus()));
         return vo;
     }
 
@@ -815,7 +815,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     private void requireApplyEditable(String applyNo, Integer applyStatus) {
         if (!Objects.equals(ApplyStatusEnum.SUBMITTED.getCode(), applyStatus)) {
             throw new BusinessException("申请单 " + applyNo + " 当前状态为「"
-                    + ApplyStatusEnum.labelOrUnknown(applyStatus) + "」，不允许修改；已缴费请先走退费流程");
+                    + ApplyStatusEnum.getLabelOrUnknown(applyStatus) + "」，不允许修改；已缴费请先走退费流程");
         }
     }
 
@@ -1110,7 +1110,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      * 项目类型码 → 引导单上的费用名（字典 his_charge_item_type，权威在 PaymentItemTypeEnum）。
      */
     private String feeItemTypeName(Integer itemType) {
-        PaymentItemTypeEnum typeEnum = PaymentItemTypeEnum.getByCode(itemType);
+        PaymentItemTypeEnum typeEnum = PaymentItemTypeEnum.fromCode(itemType);
         return (typeEnum == null ? "其他" : typeEnum.getDesc()) + "费";
     }
 
