@@ -1,0 +1,631 @@
+package com.his.charge.service.impl;
+
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.charge.dto.*;
+import com.his.charge.entity.BizAlert;
+import com.his.charge.entity.BizFeeRecord;
+import com.his.charge.entity.BizPaymentTxn;
+import com.his.charge.entity.BizSettlementBill;
+import com.his.common.enums.InpatientSettleStatusEnum;
+import com.his.charge.mapper.BizAlertMapper;
+import com.his.charge.mapper.BizPaymentTxnMapper;
+import com.his.charge.service.*;
+import com.his.charge.vo.*;
+import com.his.api.dto.BillPayDTO;
+import com.his.api.dto.PrepayQueryPageDTO;
+import com.his.api.dto.PrepayUpsertDTO;
+import com.his.api.vo.PrepayBalanceVO;
+import com.his.api.vo.PrepayVO;
+import com.his.common.constant.DictTypeConst;
+import com.his.common.enums.*;
+import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
+import com.his.api.service.PatientProvider;
+import com.his.api.vo.AdmissionBriefVO;
+import com.his.api.vo.PatientBriefVO;
+import com.his.system.entity.SysEmployee;
+import com.his.common.enums.BizTypeEnum;
+import com.his.system.mapper.SysEmployeeMapper;
+import com.his.system.service.DictCacheService;
+import com.his.system.service.RedisSequenceService;
+import com.his.system.service.SysMessageService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
+/**
+ * 住院账务服务实现（P3，四层口径）。
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, BizAlert> implements InpatientAccountService {
+    /**
+     * 金额统一两位小数（元）
+     */
+    private static final int SCALE = 2;
+    /**
+     * 欠费告警类型标识：预警记录的分类标签（该标签由多个模块各自写入自由文本，
+     * 全仓没有任何码值→文案映射读它，它只作为去重查询的匹配键，故不建枚举）
+     */
+    private static final String ALERT_ARREARS = "ARREARS";
+    private final BizPaymentTxnMapper bizPaymentTxnMapper;
+    private final BizAlertMapper bizAlertMapper;
+    private final RedisSequenceService redisSequenceService;
+    private final PatientProvider patientProvider;
+    private final PaymentService paymentService;
+    private final FundAccountService fundAccountService;
+    private final FeeRecordService feeRecordService;
+    private final SettlementBillService settlementBillService;
+    private final SysMessageService sysMessageService;
+    private final SysEmployeeMapper sysEmployeeMapper;
+    private final DictCacheService dictCacheService;
+
+    // 预交金（L3 资金流水 + 住院资金账户）
+
+    /**
+     * 结算结论：把"应缴、账户、抵扣、退、欠"几段话说清。前端不许自己拼（拼出来就是第三套口径）。
+     */
+    private static String conclusion(BigDecimal payable, BigDecimal balance, BigDecimal used,
+                                     BigDecimal refund, BigDecimal arrears) {
+        String head = "应缴 " + payable.toPlainString() + " 元，住院账户 " + balance.toPlainString()
+                + " 元（本次抵扣 " + used.toPlainString() + " 元）";
+        if (arrears.signum() > 0) {
+            return head + "，结算后欠费 " + arrears.toPlainString() + " 元，未付清不能办理出院";
+        }
+        if (refund.signum() > 0) {
+            return head + "，结算后应退 " + refund.toPlainString() + " 元（已转入患者院内余额）";
+        }
+        return head + "，已结清";
+    }
+
+    private static boolean outOfRange(String day, String beginDate, String endDate) {
+        if (TextUtil.hasText(beginDate) && day.compareTo(beginDate) < 0) {
+            return true;
+        }
+        return TextUtil.hasText(endDate) && day.compareTo(endDate) > 0;
+    }
+
+    private static String dayOf(LocalDateTime time) {
+        return time == null ? null : time.toLocalDate().format(DateFormats.DATE);
+    }
+
+    // 日清单（L1 记账行按天汇总）
+
+    // 出院结算（L2 出账单 + L3 余额抵扣/退差）
+
+    /**
+     * DATETIME(0) 是四舍五入不是截断：落库又要比较的时间统一截到秒
+     */
+    @Override
+    public IPage<PrepayVO> prepayListPage(PrepayQueryPageDTO query) {
+        Page<PrepayVO> page = new Page<>(query.getPageNum(), query.getPageSize());
+        IPage<PrepayVO> raw = bizPaymentTxnMapper.selectPrepayPage(page, query);
+        // 文案由后端给：前端判码值就会有第二套口径（支付方式码值前端就抄错过一次，把 4 当银行卡）
+        for (PrepayVO vo : raw.getRecords()) {
+            vo.setPrepayTypeText(dictCacheService.getDicDataLabel(DictTypeConst.PREPAY_TYPE, vo.getPrepayType()));
+            vo.setPayMethodText(PaymentMethodEnum.getText(vo.getPayMethod()));
+        }
+        return raw;
+    }
+
+    // 账务概览（欠费提示）
+
+    @Override
+    public PrepayBalanceVO balance(Long admissionId) {
+        AdmissionBriefVO admission = requireAdmission(admissionId);
+        PatientBriefVO patient = patientProvider.findPatient(admission.getPatientId());
+        PrepayBalanceVO vo = new PrepayBalanceVO();
+        vo.setAdmissionId(admission.getAdmissionId());
+        vo.setPatientName(patient != null ? patient.getPatientName() : null);
+        vo.setRechargeTotal(NumUtil.scale(bizPaymentTxnMapper.sumPrepayRecharge(admission.getAdmissionId()), SCALE));
+        vo.setRefundTotal(NumUtil.scale(bizPaymentTxnMapper.sumPrepayRefunded(admission.getAdmissionId()), SCALE));
+        // 余额取资金账户：那才是"还能用、还能退多少"（已扣掉中途结算的余额抵扣与出院退差）。
+        // 它不等于净预交流水，两者相等只发生在没抵扣过的住院上
+        vo.setBalance(NumUtil.scale(fundAccountService.admissionBalance(admission.getAdmissionId()), SCALE));
+        vo.setFlowCount(Math.toIntExact(bizPaymentTxnMapper.countPrepay(admission.getAdmissionId())));
+        return vo;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public List<PrepayVO> savePrepay(PrepayUpsertDTO dto) {
+        if (dto.getPrepayType() == null
+                || (!PayDirectionEnum.CHARGE.getCode().equals(dto.getPrepayType())
+                && !PayDirectionEnum.REFUND.getCode().equals(dto.getPrepayType()))) {
+            throw new BusinessException("流水类型不合法");
+        }
+        if (dto.getAmount() == null || dto.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("金额必须大于 0（退款金额传正数即可，方向由流水类型决定）");
+        }
+        AdmissionBriefVO admission = requireAdmission(dto.getAdmissionId());
+        PatientBriefVO patient = patientProvider.findPatient(admission.getPatientId());
+        PaymentService.PrepaySpec spec = prepaySpec(admission, patient, dto.getAmount(),
+                dto.getPayMethod(),
+                dto.getReceiptNo(),
+                PayDirectionEnum.CHARGE.getCode().equals(dto.getPrepayType()) ? dto.getChannelTxnNo() : null,
+                dto.getPayTime(), dto.getRemark());
+
+        // 钱的事实与账户额度在 L3 同一事务里落；本类只做"入院 → 患者身份"这一层翻译
+        List<BizPaymentTxn> txns = PayDirectionEnum.CHARGE.getCode().equals(dto.getPrepayType())
+                ? List.of(paymentService.prepayDeposit(spec))
+                : paymentService.prepayRefund(spec);
+
+        BigDecimal after = NumUtil.scale(fundAccountService.admissionBalance(admission.getAdmissionId()), SCALE);
+        List<PrepayVO> rows = new ArrayList<>();
+        for (BizPaymentTxn txn : txns) {
+            rows.add(toPrepayVO(txn, after));
+        }
+        log.info("住院预交金：入院ID={} 类型={} 金额={} 落库 {} 笔 余额={}",
+                admission.getAdmissionId(), dto.getPrepayType(), dto.getAmount(), rows.size(), after);
+        return rows;
+    }
+
+    // 私有方法
+
+    @Override
+    public DailyBillVO dailyBill(Long admissionId, String beginDate, String endDate) {
+        AdmissionBriefVO admission = requireAdmission(admissionId);
+        PatientBriefVO patient = patientProvider.findPatient(admission.getPatientId());
+        List<BizFeeRecord> rows = feeRecordService.listNetByEncounter(
+                EncounterTypeEnum.INPATIENT.getCode(), admission.getAdmissionId());
+
+        // TreeMap：清单按天正序排。日清单表达的是"这次住院花了什么钱"，
+        // 结算只是把账结掉，不该让清单在结算后变空（结算完查不到费用是最典型的一线投诉），
+        // 所以这里读全部净额行、不按结算状态筛
+        Map<String, List<DailyBillItemVO>> byDay = new TreeMap<>();
+        BigDecimal total = BigDecimal.ZERO;
+        int itemCount = 0;
+        for (BizFeeRecord row : rows) {
+            String day = dayOf(row.getBookTime());
+            if (day == null || outOfRange(day, beginDate, endDate)) {
+                continue;
+            }
+            DailyBillItemVO item = toItemVO(row);
+            byDay.computeIfAbsent(day, k -> new ArrayList<>()).add(item);
+            total = total.add(item.getAmount());
+            itemCount++;
+        }
+
+        List<DailyBillDayVO> days = new ArrayList<>();
+        for (Map.Entry<String, List<DailyBillItemVO>> e : byDay.entrySet()) {
+            DailyBillDayVO dayVO = new DailyBillDayVO();
+            dayVO.setDate(e.getKey());
+            dayVO.setItems(e.getValue());
+            dayVO.setDayTotal(NumUtil.scale(e.getValue().stream()
+                    .map(DailyBillItemVO::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add), SCALE));
+            days.add(dayVO);
+        }
+
+        DailyBillVO vo = new DailyBillVO();
+        vo.setAdmissionId(admission.getAdmissionId());
+        vo.setAdmissionNo(admission.getAdmissionNo());
+        vo.setPatientName(patient != null ? patient.getPatientName() : null);
+        vo.setBeginDate(days.isEmpty() ? null : days.get(0).getDate());
+        vo.setEndDate(days.isEmpty() ? null : days.get(days.size() - 1).getDate());
+        vo.setTotalAmount(NumUtil.scale(total, SCALE));
+        vo.setItemCount(itemCount);
+        vo.setDays(days);
+        return vo;
+    }
+
+    @Override
+    public InpatientSettlementPreviewVO preview(Long admissionId, Integer settleMode) {
+        AdmissionBriefVO admission = requireAdmission(admissionId);
+        PatientBriefVO patient = patientProvider.findPatient(admission.getPatientId());
+        assertNotSettled(admission.getAdmissionId());
+
+        BillPreviewVO draft = settlementBillService.previewSettlement(settleDraft(admission, settleMode));
+        BigDecimal payable = NumUtil.scale(draft.getPayableAmount(), SCALE);
+        BigDecimal balance = NumUtil.scale(fundAccountService.admissionBalance(admission.getAdmissionId()), SCALE);
+        BigDecimal used = payable.min(balance);
+        BigDecimal refund = NumUtil.scale(balance.subtract(used), SCALE);
+        BigDecimal arrears = NumUtil.scale(payable.subtract(used), SCALE);
+
+        InpatientSettlementPreviewVO vo = new InpatientSettlementPreviewVO();
+        vo.setAdmissionId(admission.getAdmissionId());
+        vo.setPatientName(patient != null ? patient.getPatientName() : null);
+        vo.setFeeCount(draft.getFeeCount());
+        // 展示行就是草稿挑中的那批待结算记账行；钱一律以试算结果为准，这里不再自己加总一遍
+        vo.setFeeRows(toItems(feeRecordService.listPending(
+                EncounterTypeEnum.INPATIENT.getCode(), admission.getAdmissionId())));
+        vo.setTotalAmount(NumUtil.scale(draft.getTotalAmount(), SCALE));
+        vo.setDiscountAmount(NumUtil.scale(draft.getDiscountAmount(), SCALE));
+        vo.setPoolAmount(NumUtil.scale(draft.getPoolAmount(), SCALE));
+        vo.setAccountAmount(NumUtil.scale(draft.getAccountAmount(), SCALE));
+        vo.setSelfAmount(NumUtil.scale(draft.getSelfAmount(), SCALE));
+        vo.setPayableAmount(payable);
+        vo.setPrepayBalance(balance);
+        vo.setBalanceUsed(NumUtil.scale(used, SCALE));
+        vo.setRefundAmount(refund);
+        vo.setArrearsAmount(arrears);
+        vo.setSettleMode(draft.getSettlementMode());
+        vo.setSettleModeText(draft.getSettlementModeText());
+        vo.setInsuranceType(draft.getInsuranceType());
+        vo.setWillArrears(arrears.signum() > 0);
+        vo.setConclusionText(conclusion(payable, balance, used, refund, arrears));
+        return vo;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public InpatientSettlementVO settle(InpatientSettlementUpsertDTO dto) {
+        // 试算里已经做了"已结算不能再结"与"没有待结算费用"的校验，这里复用，不复制一份规则
+        InpatientSettlementPreviewVO preview = preview(dto.getAdmissionId(), dto.getSettleMode());
+        AdmissionBriefVO admission = requireAdmission(dto.getAdmissionId());
+        PatientBriefVO patient = patientProvider.findPatient(admission.getPatientId());
+
+        BizSettlementBill bill = settlementBillService.settle(settleDraft(admission, dto.getSettleMode()));
+        BigDecimal payable = NumUtil.scale(NumUtil.orZero(bill.getPayableAmount()), SCALE);
+        BigDecimal balance = NumUtil.scale(preview.getPrepayBalance(), SCALE);
+
+        // 先用住院账户里的钱抵（一笔余额支付流水：钱从这次住院的账户进账单）。
+        // 抵不完的部分留在账单上成为欠费 —— 出院门禁读的就是这个未付清差额
+        BigDecimal used = payable.min(balance);
+        if (used.signum() > 0) {
+            paymentService.pay(balanceDeduction(bill, used));
+        }
+        // 抵完还剩的钱转进患者的院内余额账户：它离开这次住院但没离开医院，
+        // 所以既不是收入也不该进收银员的点钞数（患者要取现，再从余额走一次柜面退款）
+        BigDecimal refund = NumUtil.scale(balance.subtract(used), SCALE);
+        if (refund.signum() > 0) {
+            paymentService.dischargeRemainder(prepaySpec(admission, patient, refund, null, null, null, null,
+                    "出院结算退差（账单 " + bill.getBillNo() + "）"));
+        }
+
+        BizSettlementBill settled = settlementBillService.getById(bill.getId());
+        BigDecimal arrears = NumUtil.scale(NumUtil.orZero(settled.getPayableAmount()).subtract(NumUtil.orZero(settled.getPaidAmount())), SCALE);
+        if (arrears.signum() > 0) {
+            writeArrearsAlert(admission, patient, payable, balance, arrears);
+        }
+
+        log.info("住院结算：入院ID={} 账单={} 应收={} 统筹={} 应缴={} 抵扣={} 退差={} 欠费={}",
+                admission.getAdmissionId(), settled.getBillNo(), settled.getTotalAmount(),
+                settled.getPoolAmount(), payable, used, refund, arrears);
+        return toSettlementVO(settled, used, refund, arrears);
+    }
+
+    @Override
+    public InpatientSettlementVO settlementDetail(Long admissionId) {
+        BizSettlementBill bill = settlementBillService.latestDischargeBill(admissionId);
+        if (bill == null) {
+            return null;
+        }
+        // 抵扣额按流水现算：账单 paid_amount 里可能还混着柜面补的现金，两个数不能互相代替
+        BigDecimal used = NumUtil.scale(bizPaymentTxnMapper.sumBalanceDeductByBill(bill.getId()), SCALE);
+        BigDecimal refund = NumUtil.scale(bizPaymentTxnMapper.sumDischargeDiff(bill.getEncounterId()), SCALE);
+        BigDecimal arrears = NumUtil.scale(NumUtil.orZero(bill.getPayableAmount()).subtract(NumUtil.orZero(bill.getPaidAmount())), SCALE);
+        return toSettlementVO(bill, used, refund, arrears);
+    }
+
+    @Override
+    public ArrearsView arrearsView(Long admissionId) {
+        Integer inpatient = EncounterTypeEnum.INPATIENT.getCode();
+        BigDecimal total = NumUtil.scale(feeRecordService.sumNetAmount(inpatient, admissionId), SCALE);
+        BigDecimal balance = NumUtil.scale(fundAccountService.admissionBalance(admissionId), SCALE);
+        // 已收 = 净预交（充值 − 柜面退款）+ 在账单上直接收的钱。后者必须排除余额抵扣：
+        // 那笔钱就是预交金，再算一遍等于同一笔钱计两次，欠 800 的人会被显示成不欠
+        BigDecimal collected = NumUtil.scale(NumUtil.orZero(bizPaymentTxnMapper.sumPrepayNet(admissionId))
+                .add(NumUtil.orZero(bizPaymentTxnMapper.sumDirectChargedByEncounter(inpatient, admissionId))), SCALE);
+        return new ArrearsView(total, collected, balance, NumUtil.scale(total.subtract(collected).max(BigDecimal.ZERO), SCALE));
+    }
+
+    @Override
+    public InpatientAccountSummaryVO summary(Long admissionId) {
+        AdmissionBriefVO admission = requireAdmission(admissionId);
+        PatientBriefVO patient = patientProvider.findPatient(admission.getPatientId());
+
+        ArrearsView state = arrearsView(admission.getAdmissionId());
+        BigDecimal total = state.chargedNet();
+        BigDecimal balance = state.prepayBalance();
+        BigDecimal arrearsAmount = state.arrearsAmount();
+        boolean arrears = arrearsAmount.signum() > 0;
+
+        BizSettlementBill discharge = settlementBillService.latestDischargeBill(admission.getAdmissionId());
+        Integer settleStatus = discharge == null ? null
+                : (NumUtil.orZero(discharge.getPayableAmount()).subtract(NumUtil.orZero(discharge.getPaidAmount())).signum() > 0
+                ? InpatientSettleStatusEnum.ARREARS.getCode() : InpatientSettleStatusEnum.CLEARED.getCode());
+
+        InpatientAccountSummaryVO vo = new InpatientAccountSummaryVO();
+        vo.setAdmissionId(admission.getAdmissionId());
+        vo.setAdmissionNo(admission.getAdmissionNo());
+        vo.setPatientName(patient != null ? patient.getPatientName() : null);
+        vo.setPrepayBalance(balance);
+        vo.setTotalAmount(total);
+        vo.setArrears(arrears);
+        vo.setArrearsAmount(arrearsAmount);
+        vo.setSettled(discharge != null);
+        vo.setSettlementNo(discharge != null ? discharge.getBillNo() : null);
+        vo.setSettleStatusText(InpatientSettleStatusEnum.getText(settleStatus));
+        vo.setHintText(arrears
+                ? "住院费用已发生 " + total.toPlainString() + " 元，已收 " + state.collected().toPlainString()
+                + " 元（住院账户余额 " + balance.toPlainString() + " 元），欠费 "
+                + arrearsAmount.toPlainString() + " 元（仅提示，不阻断诊疗，急救优先）"
+                : null);
+
+        // 欠费留痕：同一个入院一天只记一条，避免每次打开页面刷一串告警
+        vo.setAlertWritten(arrears
+                && writeArrearsAlertDaily(admission, patient, total, balance, arrearsAmount));
+        return vo;
+    }
+
+    /**
+     * 出院结算的 L2 入参：该就诊下全部待结算记账行、账单类型固定为出院结算。
+     *
+     * <p>试算与出账共用它，两边算出的应缴必然是同一个数（同一份草稿）。
+     * 医保类型不在这里传：由 L2 按患者参保号推，两处各判一次就会漂。
+     */
+    private BillSettleUpsertDTO settleDraft(AdmissionBriefVO admission, Integer settleMode) {
+        BillSettleUpsertDTO dto = new BillSettleUpsertDTO();
+        dto.setEncounterType(EncounterTypeEnum.INPATIENT.getCode());
+        dto.setEncounterId(admission.getAdmissionId());
+        dto.setBillType(BillTypeEnum.DISCHARGE.getCode());
+        dto.setSettlementMode(settleMode);
+        dto.setRemark("出院结算");
+        return dto;
+    }
+
+    /**
+     * 已结算过的住院不许再结一次（要重结先作废原账单）：否则同一笔钱能结算两遍。
+     */
+    private void assertNotSettled(Long admissionId) {
+        BizSettlementBill exist = settlementBillService.latestDischargeBill(admissionId);
+        if (exist != null) {
+            throw new BusinessException("该住院已办理出院结算（账单号 " + exist.getBillNo()
+                    + "），如需重新结算请先作废原账单");
+        }
+    }
+
+    /**
+     * 出院结算的余额抵扣：一笔院内余额收款，账户主体是<b>这次住院</b>（不是患者）。
+     *
+     * <p>source_type=8-账户余额抵扣让它在班结/日结里与真金白银分开看 ——
+     * 这笔钱早就进过抽屉了，再点一遍就多出预交金那一块。
+     */
+    private BillPayDTO balanceDeduction(BizSettlementBill bill, BigDecimal amount) {
+        BillPayDTO.PayItem item = new BillPayDTO.PayItem();
+        item.setPayMethod(PaymentMethodEnum.BALANCE.getCode());
+        item.setAmount(amount);
+        item.setOwnerId(bill.getEncounterId());
+        item.setRemark("出院结算余额抵扣");
+
+        BillPayDTO dto = new BillPayDTO();
+        dto.setBillId(bill.getId());
+        dto.setSourceType(TxnSourceEnum.ACCOUNT_BALANCE.getCode());
+        dto.setItems(List.of(item));
+        return dto;
+    }
+
+    /**
+     * 预交金入参：L3 不认识"入院"这个临床概念，它只登记"这笔钱挂在哪个主体上"，
+     * 所以患者身份必须由这里翻译成快照传下去。
+     *
+     * <p>{@code channelTxnNo} 只有充值侧会传（小程序回调带回渠道交易号）；退款的原路
+     * 由 {@code PaymentService} 顺着原流水取，不接受调用方指定。
+     */
+    private PaymentService.PrepaySpec prepaySpec(AdmissionBriefVO admission, PatientBriefVO patient, BigDecimal amount,
+                                                 Integer payMethod, String receiptNo, String channelTxnNo,
+                                                 LocalDateTime txnTime, String remark) {
+        return new PaymentService.PrepaySpec(admission.getAdmissionId(), admission.getPatientId(),
+                patient != null ? patient.getPatientNo() : null,
+                patient != null ? patient.getPatientName() : null,
+                NumUtil.scale(amount, SCALE), payMethod, receiptNo, channelTxnNo, txnTime, remark);
+    }
+
+    private AdmissionBriefVO requireAdmission(Long admissionId) {
+        // C-非 web 入参：私有兜底被多个入口与内部流程共用（含 dto.getAdmissionId() 派生值），Bean Validation 不覆盖，保留
+        if (admissionId == null) {
+            throw new BusinessException("入院ID不能为空");
+        }
+        AdmissionBriefVO admission = patientProvider.findAdmission(admissionId);
+        if (admission == null) {
+            throw new BusinessException("入院记录不存在");
+        }
+        return admission;
+    }
+
+    /**
+     * 欠费告警（结算产生欠费时写，每次结算最多一条）
+     */
+    private void writeArrearsAlert(AdmissionBriefVO admission, PatientBriefVO patient,
+                                   BigDecimal payable, BigDecimal balance, BigDecimal arrears) {
+        BizAlert alert = new BizAlert();
+        alert.setAlertNo(nextAlertNo());
+        alert.setAlertType(ALERT_ARREARS);
+        alert.setAlertContent("住院结算欠费：" + (patient != null ? patient.getPatientName() : "患者")
+                + "（住院号 " + admission.getAdmissionNo() + "）应缴 " + payable.toPlainString()
+                + " 元，住院账户余额 " + balance.toPlainString() + " 元，欠费 " + arrears.toPlainString() + " 元");
+        alert.setAlertStatus(0);
+        alert.setNotifyUserId(admission.getAdmitDoctorId());
+        alert.setNotifyTime(TimeUtil.nowSeconds());
+        alert.setRemark("admissionId=" + admission.getAdmissionId());
+        bizAlertMapper.insert(alert);
+        notifyArrears(admission, patient, "出院结算", payable, balance, arrears);
+    }
+
+    /**
+     * 欠费告警（每日一条：医生站/护士站每次打开都会查概览，不去重会刷屏）
+     */
+    private boolean writeArrearsAlertDaily(AdmissionBriefVO admission, PatientBriefVO patient,
+                                           BigDecimal total, BigDecimal balance, BigDecimal arrears) {
+        LocalDateTime since = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
+        long exists = bizAlertMapper.countRecent(ALERT_ARREARS, "admissionId=" + admission.getAdmissionId(), since);
+        if (exists > 0) {
+            return false;
+        }
+        BizAlert alert = new BizAlert();
+        alert.setAlertNo(nextAlertNo());
+        alert.setAlertType(ALERT_ARREARS);
+        alert.setAlertContent("住院欠费提醒：" + (patient != null ? patient.getPatientName() : "患者")
+                + "（住院号 " + admission.getAdmissionNo() + "）已发生费用 " + total.toPlainString()
+                + " 元，住院账户余额 " + balance.toPlainString() + " 元，欠费 " + arrears.toPlainString()
+                + " 元（仅提示，不阻断诊疗）");
+        alert.setAlertStatus(0);
+        alert.setNotifyUserId(admission.getAdmitDoctorId());
+        alert.setNotifyTime(TimeUtil.nowSeconds());
+        alert.setRemark("admissionId=" + admission.getAdmissionId());
+        bizAlertMapper.insert(alert);
+        notifyArrears(admission, patient, "在院余额预警", total, balance, arrears);
+        return true;
+    }
+
+    /**
+     * arrears 发送方：欠费告警落库后 → 站内信同步通知主管医生（admission.admit_doctor_id）。
+     *
+     * <p>跟着预警记录的去重节奏走：调用点保证「结算欠费每次结算最多一条、
+     * 在院预警每日最多一条」，站内信不再单独去重，避免两套节奏对不齐。
+     * 通知型（handle_status=null）：欠费不阻断诊疗（本类铁律），医生知晓即可。
+     * 发送失败只记日志，不影响结算/预警主流程。
+     */
+    private void notifyArrears(AdmissionBriefVO admission, PatientBriefVO patient, String scene,
+                               BigDecimal totalAmount, BigDecimal balance, BigDecimal arrears) {
+        Long doctorId = admission.getAdmitDoctorId();
+        if (doctorId == null) {
+            return;
+        }
+        try {
+            SysEmployee doctor = sysEmployeeMapper.selectById(doctorId);
+            String doctorName = doctor != null && TextUtil.hasText(doctor.getEmpName())
+                    ? doctor.getEmpName() : "站内用户";
+            String patientName = patient != null && TextUtil.hasText(patient.getPatientName())
+                    ? patient.getPatientName() : "患者";
+            String content = String.format(
+                    "患者 %s（住院号 %s）%s欠费 %s 元：应付 %s 元，住院账户余额 %s 元。欠费仅提示、不阻断诊疗，请关注催缴或补缴预交金。",
+                    patientName, admission.getAdmissionNo(), scene,
+                    arrears.toPlainString(), totalAmount.toPlainString(), balance.toPlainString());
+            ArrearsNoticePayloadVO payloadVO = new ArrearsNoticePayloadVO();
+            payloadVO.setPatientName(patientName);
+            payloadVO.setAdmissionNo(admission.getAdmissionNo());
+            // 金额用字符串形态：站内信要落库留档，也可能被第三方推送转发，
+            // 数字形态会在下游 JSON 解析里被重新解释成浮点，欠多少钱会变形
+            payloadVO.setArrears(arrears.toPlainString());
+            payloadVO.setBalance(balance.toPlainString());
+            payloadVO.setScene(scene);
+            String payload = cn.hutool.json.JSONUtil.toJsonStr(payloadVO);
+            sysMessageService.sendSystemMessage(doctorId, doctorName,
+                    "欠费提醒：" + patientName, content,
+                    BizTypeEnum.ARREARS.getType(), admission.getAdmissionId(), "warning", payload, null);
+        } catch (Exception ex) {
+            log.warn("[欠费提醒] 站内信发送失败 admissionNo={} admitDoctorId={}",
+                    admission.getAdmissionNo(), doctorId, ex);
+        }
+    }
+
+    /**
+     * 欠费告警号：BJ + 日期 + 4 位 Redis 自增序号。
+     * <p><b>走 Redis 原子自增</b>：不依赖库里行数，删告警记录也不会撞唯一键。
+     */
+    private String nextAlertNo() {
+        String prefix = "BJ" + LocalDate.now().format(DateFormats.COMPACT_DATE);
+        long seq = redisSequenceService.next("ALERT");
+        return prefix + String.format("%04d", seq);
+    }
+
+    /**
+     * 支付流水 → 预交金流水出参：单号就用流水编号（不再有第二套 YJ 单号），
+     * 方向由 {@code direction} 换算成对外的 1/2。
+     *
+     * <p>{@code balanceAfter} 是<b>本次操作完成后</b>的账户余额：柜面退款按 FIFO 可能摊成多笔，
+     * 逐笔中间快照要去配对的账户流水里捞，而列表页要的是"这批退完还剩多少"。
+     */
+    private PrepayVO toPrepayVO(BizPaymentTxn t, BigDecimal balanceAfter) {
+        Integer prepayType = PayDirectionEnum.CHARGE.getCode().equals(t.getDirection())
+                ? PayDirectionEnum.CHARGE.getCode() : PayDirectionEnum.REFUND.getCode();
+        PrepayVO vo = new PrepayVO();
+        vo.setId(t.getId());
+        vo.setPrepayNo(t.getTxnNo());
+        vo.setAdmissionId(t.getEncounterId());
+        vo.setPatientId(t.getPatientId());
+        vo.setPatientNo(t.getPatientNo());
+        vo.setPatientName(t.getPatientName());
+        vo.setPrepayType(prepayType);
+        vo.setPrepayTypeText(dictCacheService.getDicDataLabel(DictTypeConst.PREPAY_TYPE, prepayType));
+        vo.setAmount(t.getAmount());
+        vo.setBalanceAfter(balanceAfter);
+        vo.setPayMethod(t.getPayMethod());
+        vo.setPayMethodText(PaymentMethodEnum.getText(t.getPayMethod()));
+        vo.setReceiptNo(t.getReceiptNo());
+        vo.setPayTime(t.getTxnTime());
+        vo.setOperatorId(t.getCashierId());
+        vo.setOperatorName(t.getCashierName());
+        vo.setRemark(t.getRemark());
+        return vo;
+    }
+
+    private List<DailyBillItemVO> toItems(List<BizFeeRecord> rows) {
+        List<DailyBillItemVO> items = new ArrayList<>();
+        for (BizFeeRecord row : rows) {
+            items.add(toItemVO(row));
+        }
+        return items;
+    }
+
+    private DailyBillItemVO toItemVO(BizFeeRecord row) {
+        DailyBillItemVO item = new DailyBillItemVO();
+        item.setFeeNo(row.getFeeNo());
+        item.setItemType(row.getItemType());
+        item.setItemTypeName(PaymentItemTypeEnum.getText(row.getItemType()));
+        item.setItemCode(row.getItemCode());
+        item.setItemName(row.getItemName());
+        item.setSpecification(row.getSpecification());
+        item.setUnit(row.getUnit());
+        item.setQuantity(row.getQuantity());
+        item.setPrice(row.getPrice());
+        // 记账行金额本身就是净额：红冲另写一行负数、不改原行，所以这里不做任何减法
+        item.setAmount(NumUtil.scale(row.getAmount(), SCALE));
+        item.setOccurTime(row.getBookTime() == null ? null : row.getBookTime().format(DateFormats.DATETIME));
+        item.setSourceNo(row.getSourceNo());
+        return item;
+    }
+
+    /**
+     * L2 出院账单 + 两笔资金事实 → 结算单出参：没有"结算单表"，每个数都能指回账单列或流水。
+     */
+    private InpatientSettlementVO toSettlementVO(BizSettlementBill bill, BigDecimal balanceUsed,
+                                                 BigDecimal refund, BigDecimal arrears) {
+        InpatientSettlementVO vo = new InpatientSettlementVO();
+        vo.setId(bill.getId());
+        vo.setSettlementNo(bill.getBillNo());
+        vo.setAdmissionId(bill.getEncounterId());
+        vo.setPatientId(bill.getPatientId());
+        vo.setPatientNo(bill.getPatientNo());
+        vo.setPatientName(bill.getPatientName());
+        vo.setFeeCount(bill.getFeeCount());
+        vo.setTotalAmount(NumUtil.scale(NumUtil.orZero(bill.getTotalAmount()), SCALE));
+        vo.setDiscountAmount(NumUtil.scale(NumUtil.orZero(bill.getDiscountAmount()), SCALE));
+        vo.setPoolAmount(NumUtil.scale(NumUtil.orZero(bill.getPoolAmount()), SCALE));
+        vo.setAccountAmount(NumUtil.scale(NumUtil.orZero(bill.getAccountAmount()), SCALE));
+        vo.setSelfAmount(NumUtil.scale(NumUtil.orZero(bill.getSelfAmount()), SCALE));
+        vo.setPayableAmount(NumUtil.scale(NumUtil.orZero(bill.getPayableAmount()), SCALE));
+        vo.setPaidAmount(NumUtil.scale(NumUtil.orZero(bill.getPaidAmount()), SCALE));
+        vo.setBalanceUsed(NumUtil.scale(balanceUsed, SCALE));
+        vo.setRefundAmount(NumUtil.scale(refund, SCALE));
+        vo.setArrearsAmount(NumUtil.scale(arrears, SCALE));
+        vo.setSettleStatus(arrears.signum() > 0 ? InpatientSettleStatusEnum.ARREARS.getCode() : InpatientSettleStatusEnum.CLEARED.getCode());
+        vo.setSettleStatusText(InpatientSettleStatusEnum.getText(vo.getSettleStatus()));
+        vo.setSettleMode(bill.getSettlementMode());
+        vo.setSettleModeText(SettlementModeEnum.getText(bill.getSettlementMode()));
+        vo.setInsuranceType(bill.getInsuranceType());
+        vo.setSettleTime(bill.getBillTime());
+        vo.setSettleBy(bill.getBillById());
+        vo.setSettleByName(bill.getBillByName());
+        vo.setRemark(bill.getRemark());
+        return vo;
+    }
+}

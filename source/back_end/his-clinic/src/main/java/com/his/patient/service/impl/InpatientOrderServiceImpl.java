@@ -1,0 +1,1056 @@
+package com.his.patient.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.api.dto.FeeBookDTO;
+import com.his.api.vo.FeeRecordVO;
+import com.his.common.constant.DictTypeConst;
+import com.his.api.service.ArrearsControlProvider;
+import com.his.system.dto.SignCommandDTO;
+import com.his.common.enums.*;
+import com.his.common.enums.YesOrNoEnum;
+import com.his.common.exception.BusinessException;
+import com.his.system.service.EmrSignatureService;
+import com.his.system.service.RedisSequenceService;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
+import com.his.system.vo.SignatureVO;
+import com.his.patient.dto.*;
+import com.his.patient.entity.*;
+import com.his.common.enums.InpatientOrderStatusEnum;
+import com.his.common.enums.OrderClassEnum;
+import com.his.common.enums.OrderTypeEnum;
+import com.his.patient.mapper.*;
+import com.his.patient.service.DietPlanService;
+import com.his.patient.service.InpatientOrderService;
+import com.his.patient.support.InpatientOrderItemRules;
+import com.his.patient.support.OrderChargeInvoker;
+import com.his.patient.vo.InpatientOrderExecVO;
+import com.his.patient.vo.InpatientOrderVO;
+import com.his.patient.vo.InpatientOrderVerifyNotifyPayloadVO;
+import com.his.api.vo.WardVO;
+import com.his.system.dto.TechAuthGateDTO;
+import com.his.common.entity.CurrentUser;
+import com.his.common.enums.BizTypeEnum;
+import com.his.api.service.DeptScopeService;
+import com.his.system.service.DictCacheService;
+import com.his.system.service.EmployeeTechAuthService;
+import com.his.system.service.SysMessageService;
+import com.his.system.utils.UserUtils;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
+
+/**
+ * 住院医嘱服务实现
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapper, BizInpatientOrder> implements InpatientOrderService {
+
+    private static final int BACKFILL_LIMIT = 500;
+
+    private final RedisSequenceService redisSequenceService;
+
+    private final BizInpatientOrderMapper bizInpatientOrderMapper;
+
+    private final BizInpatientOrderExecMapper bizInpatientOrderExecMapper;
+
+    private final BizAdmissionMapper bizAdmissionMapper;
+
+    private final BizPatientMapper bizPatientMapper;
+
+    private final SysBedMapper sysBedMapper;
+
+    private final OrderChargeInvoker orderChargeInvoker;
+
+    private final DietPlanService dietPlanService;
+
+    private final EmrSignatureService emrSignatureService;
+
+    private final SysMessageService sysMessageService;
+
+    private final ArrearsControlProvider arrearsControlProvider;
+
+    private final EmployeeTechAuthService employeeTechAuthService;
+
+    private final DictCacheService dictCacheService;
+
+    private final DeptScopeService deptScopeService;
+
+    private static String orderClassDesc(Integer orderClass) {
+        String text = OrderClassEnum.getText(orderClass);
+        return "—".equals(text) ? "" : text;
+    }
+
+    private static String appendNote(String origin, String extra) {
+        if (!TextUtil.hasText(origin)) {
+            return extra;
+        }
+        return origin + "；" + extra;
+    }
+
+    /**
+     * 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入）
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String save(InpatientOrderUpsertDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        List<InpatientOrderItemDTO> items = dto.getItems();
+        for (InpatientOrderItemDTO item : items) {
+            InpatientOrderItemRules.validate(item);
+        }
+
+        BizAdmission admission = bizAdmissionMapper.selectById(dto.getAdmissionId());
+        if (admission == null) {
+            throw new BusinessException("入院记录不存在");
+        }
+        if (!Objects.equals(AdmitStatusEnum.IN_HOSPITAL.getCode(), admission.getAdmitStatus())) {
+            throw new BusinessException("该患者已出院，不能再开立医嘱");
+        }
+
+        // G20 欠费管控：策略启用且欠费达停费线时，拦截新增的择期类医嘱（检查/检验/治疗）。
+        // 药品/手术/急救类永不拦截——急救被欠费卡住是医疗事故；修改/停嘱不拦（欠费管控为编译期强依赖，his-charge 已引入）。
+        if (dto.getId() == null) {
+            Set<Integer> classes = items.stream()
+                    .map(InpatientOrderItemDTO::getOrderClass)
+                    .filter(Objects::nonNull)
+                    .collect(java.util.stream.Collectors.toSet());
+            ArrearsControlProvider.CheckResult check =
+                    arrearsControlProvider.checkNewOrder(new ArrearsControlProvider.OrderCheck(admission.getAdmissionId(), classes));
+            if (check != null && !check.isAllowed()) {
+                throw new BusinessException(check.getReason());
+            }
+        }
+
+        LocalDateTime now = TimeUtil.nowSeconds();
+
+        if (dto.getId() == null
+                && items.stream().anyMatch(i -> Objects.equals(OrderClassEnum.OPERATION.getCode(), i.getOrderClass()))) {
+            TechAuthGateDTO authGate = new TechAuthGateDTO();
+            authGate.setEmployeeId(operatorUser.getEmployeeId());
+            authGate.setAuthCategory(TechAuthCategoryEnum.SURGERY.getCode());
+            authGate.setRequiredLevel(1);
+            authGate.setItemCode(items.stream().map(InpatientOrderItemDTO::getItemCode)
+                    .filter(TextUtil::hasText).findFirst().orElse(null));
+            authGate.setEmergency(false);
+            employeeTechAuthService.gate(authGate);
+        }
+
+        // 修改：仅「待校对」的单条医嘱，且不允许改动整组共享字段
+        if (dto.getId() != null) {
+            return updateOne(dto, admission, now);
+        }
+
+        // 新增
+        BizPatient patient = bizPatientMapper.selectById(admission.getPatientId());
+        if (patient == null) {
+            throw new BusinessException("患者不存在");
+        }
+
+        // 归属快照：医嘱行上写下的必须是"开立当时的事实"（患者可能改床、转科，医嘱不该跟着变）
+        Long deptId = admission.getDeptId();
+        String deptName = null;
+        String wardName = null;
+        if (admission.getWardId() != null) {
+            WardVO ward = sysBedMapper.selectWardById(admission.getWardId());
+            if (ward != null) {
+                wardName = ward.getWardName();
+                deptName = ward.getDeptName();
+                if (deptId == null) {
+                    deptId = ward.getDeptId();
+                }
+            }
+        }
+        String bedNo = null;
+        if (admission.getBedId() != null) {
+            SysBed bed = sysBedMapper.selectById(admission.getBedId());
+            if (bed != null) {
+                bedNo = bed.getBedNo();
+            }
+        }
+
+        String orderGroup = TextUtil.hasText(dto.getOrderGroup()) ? dto.getOrderGroup() : nextOrderGroup();
+        LocalDateTime startTime = TimeUtil.toSeconds(dto.getStartTime() != null ? dto.getStartTime() : now);
+        LocalDateTime planEndTime = TimeUtil.toSeconds(dto.getPlanEndTime());
+        if (planEndTime != null && planEndTime.isBefore(startTime)) {
+            throw new BusinessException("计划结束时间不能早于开始时间");
+        }
+
+        Long doctorId = currentEmpId(operatorUser);
+        String doctorName = operatorUser.getRealName();
+        int source = dto.getSource() != null ? dto.getSource() : 1;
+        int isUrgent = Objects.equals(1, dto.getIsUrgent()) ? 1 : 0;
+
+        List<String> orderNos = new ArrayList<>(items.size());
+        for (InpatientOrderItemDTO item : items) {
+            BizInpatientOrder order = new BizInpatientOrder();
+            order.setOrderNo(nextOrderNo());
+            order.setAdmissionId(admission.getAdmissionId());
+            order.setPatientId(admission.getPatientId());
+            order.setPatientNo(patient.getPatientNo());
+            order.setPatientName(patient.getPatientName());
+            order.setDeptId(deptId);
+            order.setDeptName(deptName);
+            order.setWardId(admission.getWardId());
+            order.setWardName(wardName);
+            order.setBedNo(bedNo);
+            order.setOrderType(dto.getOrderType());
+            order.setOrderGroup(orderGroup);
+
+            order.setOrderClass(item.getOrderClass());
+            order.setItemCode(item.getItemCode());
+            order.setItemName(item.getItemName());
+            order.setSpec(item.getSpec());
+            order.setUnit(item.getUnit());
+            order.setDosage(item.getDosage());
+            order.setDosageUnit(item.getDosageUnit());
+            order.setRoute(item.getRoute());
+            order.setFrequency(item.getFrequency());
+            BigDecimal qty = item.getQuantity() != null ? item.getQuantity() : BigDecimal.ONE;
+            BigDecimal price = item.getPrice() != null ? item.getPrice() : BigDecimal.ZERO;
+            order.setQuantity(qty);
+            order.setPrice(price);
+            order.setAmount(qty.multiply(price).setScale(2, RoundingMode.HALF_UP));
+
+            order.setStartTime(startTime);
+            order.setPlanEndTime(planEndTime);
+            order.setOrderTime(now);
+            order.setDoctorId(doctorId);
+            order.setDoctorName(doctorName);
+            // 新开医嘱一律「待校对」：护士没核对过之前，它不进执行队列
+            order.setOrderStatus(InpatientOrderStatusEnum.PENDING_VERIFY.getCode());
+            order.setIsUrgent(isUrgent);
+            order.setSource(source);
+            order.setRemark(dto.getRemark());
+            bizInpatientOrderMapper.insert(order);
+            // 开立即签：签名的内容取自**库里的医嘱行**，所以必须 insert 之后再签。
+            // 签名失败直接抛，整个开立事务回滚 —— 不留下"医嘱在、签名没签上"的缺口。
+            signOrder(order, SignSceneEnum.ORDER_CREATE, "医嘱开立");
+            orderNos.add(order.getOrderNo());
+        }
+
+        log.info("开立医嘱 admissionId={} 组套={} 类型={} 条数={} 医嘱号={} 医生={}",
+                admission.getAdmissionId(), orderGroup, OrderTypeEnum.getText(dto.getOrderType()),
+                orderNos.size(), orderNos, doctorName);
+        return orderGroup;
+    }
+
+    // 护士校对
+
+    /**
+     * 修改一条「待校对」的医嘱。
+     *
+     * <p>刻意**不允许改动整组共享字段**（医嘱类型 / 开始时间 / 加急标志）：这几项是同组套
+     * 「同起同停」的物理载体，允许单条改动，同一组套内就会出现两种开始时间，那条规则当场名存实亡。
+     * 需要变更就走「停止原组套 → 重新开立」。
+     */
+    private String updateOne(InpatientOrderUpsertDTO dto, BizAdmission admission, LocalDateTime now) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        BizInpatientOrder order = bizInpatientOrderMapper.selectById(dto.getId());
+        if (order == null) {
+            throw new BusinessException("医嘱不存在");
+        }
+        if (!Objects.equals(order.getAdmissionId(), admission.getAdmissionId())) {
+            throw new BusinessException("该医嘱不属于本次住院，不能修改");
+        }
+        if (!Objects.equals(InpatientOrderStatusEnum.PENDING_VERIFY.getCode(), order.getOrderStatus())) {
+            throw new BusinessException("医嘱 " + order.getOrderNo() + " 当前状态为「"
+                    + InpatientOrderStatusEnum.labelOrUnknown(order.getOrderStatus())
+                    + "」，只有「待校对」的医嘱可以修改；已校对的请先停止后重新开立");
+        }
+        List<InpatientOrderItemDTO> items = dto.getItems();
+        if (items.size() != 1) {
+            throw new BusinessException("修改医嘱一次只能改一条项目（当前 " + items.size() + " 条）");
+        }
+        if (dto.getOrderType() != null && !Objects.equals(dto.getOrderType(), order.getOrderType())) {
+            throw new BusinessException("修改医嘱不能改变医嘱类型（同一组套必须同起同停）；如需变更请停止原组套后重新开立");
+        }
+        if (dto.getStartTime() != null && !TimeUtil.toSeconds(dto.getStartTime()).equals(order.getStartTime())) {
+            throw new BusinessException("修改医嘱不能改变开始时间（同一组套必须同起同停）；如需变更请停止原组套后重新开立");
+        }
+        if (dto.getIsUrgent() != null
+                && !Objects.equals(Objects.equals(1, dto.getIsUrgent()) ? 1 : 0, order.getIsUrgent())) {
+            throw new BusinessException("修改医嘱不能改变加急标志（同一组套必须一致）");
+        }
+
+        InpatientOrderItemDTO item = items.get(0);
+        order.setOrderClass(item.getOrderClass());
+        order.setItemCode(item.getItemCode());
+        order.setItemName(item.getItemName());
+        order.setSpec(item.getSpec());
+        order.setUnit(item.getUnit());
+        order.setDosage(item.getDosage());
+        order.setDosageUnit(item.getDosageUnit());
+        order.setRoute(item.getRoute());
+        order.setFrequency(item.getFrequency());
+        BigDecimal qty = item.getQuantity() != null ? item.getQuantity() : BigDecimal.ONE;
+        BigDecimal price = item.getPrice() != null ? item.getPrice() : BigDecimal.ZERO;
+        order.setQuantity(qty);
+        order.setPrice(price);
+        order.setAmount(qty.multiply(price).setScale(2, RoundingMode.HALF_UP));
+        if (dto.getPlanEndTime() != null) {
+            order.setPlanEndTime(TimeUtil.toSeconds(dto.getPlanEndTime()));
+        }
+        if (dto.getRemark() != null) {
+            order.setRemark(dto.getRemark());
+        }
+        bizInpatientOrderMapper.updateById(order);
+        // 内容变了 → 原来那份开立签名绑的是旧内容，已经失效。
+        // 正确处理是「作废旧签名 + 按新内容重签」，而不是留着一条验不过的签名让人猜。
+        // 作废会把医嘱行上的 doctor_sign_id 清空，于是紧接着的重签不会被 blockReason 拦住。
+        invalidateDoctorSignIfAny(order, "医嘱内容被修改（" + operatorUser.getRealName() + "），原开立签名对新内容已失效");
+        signOrder(order, SignSceneEnum.ORDER_CREATE, "医嘱修改后重签");
+
+        log.info("修改医嘱 orderNo={} 组套={} 项目={}", order.getOrderNo(), order.getOrderGroup(), order.getItemName());
+        return order.getOrderGroup();
+    }
+
+    /**
+     * 作废该医嘱上的开立签名（没有就什么也不做）；不吞异常
+     */
+    private void invalidateDoctorSignIfAny(BizInpatientOrder order, String reason) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        if (order.getDoctorSignId() == null) {
+            return;
+        }
+        emrSignatureService.invalidate(order.getDoctorSignId(), reason, currentEmpId(operatorUser), operatorUser.getRealName());
+        order.setDoctorSignId(null);
+        order.setDoctorSignedTime(null);
+    }
+
+    // 停止 / 作废
+
+    /**
+     * 给一条医嘱签名；失败直接抛（不吞），由调用方的业务事务整体回滚
+     */
+    private void signOrder(BizInpatientOrder order, SignSceneEnum scene, String actionLabel) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        SignCommandDTO cmd = new SignCommandDTO();
+        cmd.setBizType(SignBizTypeEnum.INPATIENT_ORDER.getCode());
+        cmd.setBizId(order.getId());
+        cmd.setSignScene(scene.getCode());
+        cmd.setSignerId(currentEmpId(operatorUser));
+        cmd.setSignerName(operatorUser.getRealName());
+        cmd.setSignerDeptId(currentDeptId(operatorUser));
+        cmd.setSignerDeptName(currentDeptName(operatorUser));
+        try {
+            SignatureVO sig = emrSignatureService.sign(cmd);
+            if (scene == SignSceneEnum.ORDER_VERIFY) {
+                order.setNurseSignId(sig.getId());
+                order.setNurseSignedTime(sig.getSignedTime());
+            } else {
+                order.setDoctorSignId(sig.getId());
+                order.setDoctorSignedTime(sig.getSignedTime());
+            }
+        } catch (BusinessException e) {
+            throw new BusinessException(actionLabel + "失败（医嘱 " + order.getOrderNo() + "）：" + e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int verify(InpatientOrderVerifyDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        List<Long> ids = dto.getOrderIds().stream().filter(Objects::nonNull).distinct().toList();
+        if (ids.isEmpty()) {
+            throw new BusinessException("请选择要校对的医嘱");
+        }
+
+        LocalDateTime now = TimeUtil.nowSeconds();
+        Long nurseId = currentEmpId(operatorUser);
+        String nurseName = operatorUser.getRealName();
+
+        // 第一遍：全量校验。批量校对要么全成功、要么一条都不改 ——
+        // 部分成功会让护士不知道哪些生效了，进而重复点或漏点（漏点就是医嘱漏执行）。
+        List<BizInpatientOrder> orders = new ArrayList<>(ids.size());
+        for (Long id : ids) {
+            BizInpatientOrder order = bizInpatientOrderMapper.selectById(id);
+            if (order == null) {
+                throw new BusinessException("医嘱不存在（ID=" + id + "）");
+            }
+            if (!Objects.equals(InpatientOrderStatusEnum.PENDING_VERIFY.getCode(), order.getOrderStatus())) {
+                throw new BusinessException("医嘱 " + order.getOrderNo() + " 当前状态为「"
+                        + InpatientOrderStatusEnum.labelOrUnknown(order.getOrderStatus()) + "」，不能重复校对");
+            }
+            orders.add(order);
+        }
+
+        for (BizInpatientOrder order : orders) {
+            order.setOrderStatus(InpatientOrderStatusEnum.VERIFIED.getCode());
+            order.setVerifyNurseId(nurseId);
+            order.setVerifyNurseName(nurseName);
+            order.setVerifyTime(now);
+            bizInpatientOrderMapper.updateById(order);
+            // 校对即签：先落库（签名服务读库放行判断），再签校对名。
+            // 这条签名的内容里会带上开立签名的摘要 —— 护士校对之后医生再改医嘱，
+            // 第二环验签会当场断掉，医嘱上的"双签"才不是摆设。
+            signOrder(order, SignSceneEnum.ORDER_VERIFY, "医嘱校对");
+            ensurePlanForToday(order, now);
+            // 临床营养医嘱校对通过 → 同事务派生膳食方案。
+            // 校对是"护士确认这条医嘱真实存在"的唯一时点，未校对的医嘱不该出现在营养科工作台上；
+            // 派生后方案表就是订餐与执行率的唯一事实来源，不再回头解析医嘱正文。
+            if (Objects.equals(OrderClassEnum.NUTRITION.getCode(), order.getOrderClass())) {
+                dietPlanService.deriveFromOrder(order);
+            }
+        }
+        log.info("医嘱校对完成 条数={} 护士={} 医嘱号={}", orders.size(), nurseName,
+                orders.stream().map(BizInpatientOrder::getOrderNo).toList());
+        notifyVerified(orders, nurseName);
+        return orders.size();
+    }
+
+    /**
+     * inpat-order 发送方：校对完成 → 站内信通知开嘱医生。
+     *
+     * <p><b>通知型（handle_status=null）</b>：校对完成不需要医生动作，医嘱进入执行队列
+     * 即闭环（已读即闭环）。按「开嘱医生 + 住院」分组合并成一条，避免批量校对刷屏；
+     * 组内含急嘱时整组升 warning，否则 info。发送失败只记日志，不影响校对事务。
+     */
+    private void notifyVerified(List<BizInpatientOrder> orders, String nurseName) {
+        try {
+            Map<String, List<BizInpatientOrder>> groups = new LinkedHashMap<>();
+            for (BizInpatientOrder order : orders) {
+                if (order.getDoctorId() == null) {
+                    continue;
+                }
+                groups.computeIfAbsent(order.getDoctorId() + "-" + order.getAdmissionId(),
+                        k -> new ArrayList<>()).add(order);
+            }
+            for (List<BizInpatientOrder> group : groups.values()) {
+                BizInpatientOrder first = group.get(0);
+                boolean hasUrgent = group.stream().anyMatch(o -> Objects.equals(1, o.getIsUrgent()));
+                String orderNosText = group.size() <= 3
+                        ? group.stream().map(BizInpatientOrder::getOrderNo).reduce((a, b) -> a + "、" + b).orElse("")
+                        : group.stream().limit(3).map(BizInpatientOrder::getOrderNo).reduce((a, b) -> a + "、" + b).orElse("")
+                        + " 等 " + group.size() + " 条";
+                String content = String.format("您为患者 %s（%s）开立的医嘱 %s 已由护士 %s 校对完成，进入执行队列。",
+                        first.getPatientName(),
+                        first.getBedNo() == null ? "在院" : first.getBedNo() + "床",
+                        orderNosText, nurseName);
+                InpatientOrderVerifyNotifyPayloadVO notifyPayload = new InpatientOrderVerifyNotifyPayloadVO();
+                notifyPayload.setPatientName(first.getPatientName());
+                notifyPayload.setBedNo(first.getBedNo());
+                notifyPayload.setOrderNo(first.getOrderNo());
+                notifyPayload.setCount(group.size());
+                notifyPayload.setVerifyNurse(nurseName);
+                String payload = cn.hutool.json.JSONUtil.toJsonStr(notifyPayload);
+                sysMessageService.sendSystemMessage(first.getDoctorId(), first.getDoctorName(),
+                        "住院医嘱提醒：" + (hasUrgent ? "急嘱已校对" : "医嘱已校对") + " " + group.size() + " 条",
+                        content, BizTypeEnum.INPAT_ORDER.getType(), first.getId(),
+                        hasUrgent ? "warning" : "info", payload, null);
+            }
+        } catch (Exception ex) {
+            log.warn("[医嘱校对] 校对完成通知发送失败 护士={} 条数={}", nurseName, orders.size(), ex);
+        }
+    }
+
+    /**
+     * 批量停止某次住院的长期医嘱（转科用）。
+     *
+     * <p>与 {@link #stop} 共用同一套校验与写库逻辑（直接调本类方法，不另写一份），
+     * 但在两处刻意收窄：
+     * <ol>
+     *   <li><b>只挑「已校对 / 执行中」的长期医嘱</b>：临时医嘱本就有始有终，转科不改变已执行的事实；
+     *       「待校对」的按铁律只能由原科室医生作废，这里跳过并留给调用方回报。</li>
+     *   <li><b>同组套只停一次</b>：{@code stop} 内部会展开整组，重复调用第二次会撞上
+     *       "已停止不能重复停止" —— 所以先按 orderGroup 去重。</li>
+     * </ol>
+     *
+     * <p>刻意**不抛异常**：转科不能被某条医嘱卡住（并发停止、脏状态都可能发生）。
+     * 被跳过的医嘱由调用方再查一次现状后写进转科单说明 —— 静默跳过才是真问题。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int stopLongOrders(Long admissionId, String reason) {
+        // C-非 web 入参：InpatientTransferServiceImpl 转科流程 service 间直调（传实体派生值），Bean Validation 不覆盖，保留
+        if (admissionId == null) {
+            throw new BusinessException("入院ID不能为空");
+        }
+        // C-非 web 入参：同上，标量参数非 DTO 字段，注解无处挂载，内部调用不过绑定层，保留
+        if (!TextUtil.hasText(reason)) {
+            throw new BusinessException("停止原因不能为空（停止是一个医疗决定，必须有人负责）");
+        }
+        List<BizInpatientOrder> longs = bizInpatientOrderMapper.selectList(new LambdaQueryWrapper<BizInpatientOrder>()
+                .eq(BizInpatientOrder::getAdmissionId, admissionId)
+                .eq(BizInpatientOrder::getOrderType, OrderTypeEnum.LONG.getCode())
+                .in(BizInpatientOrder::getOrderStatus, InpatientOrderStatusEnum.VERIFIED.getCode(), InpatientOrderStatusEnum.EXECUTING.getCode())
+                .orderByAsc(BizInpatientOrder::getOrderTime)
+                .orderByAsc(BizInpatientOrder::getId));
+        if (longs.isEmpty()) {
+            return 0;
+        }
+
+        Set<String> handledGroups = new HashSet<>();
+        int affected = 0;
+        int failed = 0;
+        for (BizInpatientOrder order : longs) {
+            if (TextUtil.hasText(order.getOrderGroup())) {
+                if (!handledGroups.add(order.getOrderGroup())) {
+                    continue;
+                }
+            }
+            InpatientOrderStopDTO dto = new InpatientOrderStopDTO();
+            dto.setOrderId(order.getId());
+            dto.setStopReason(reason);
+            try {
+                // 直接调本类方法：复用同一套校验与写库逻辑（规则只有一份）。
+                // 因为不走代理，这里的异常不会把外层事务标记成 rollback-only。
+                affected += stop(dto);
+            } catch (Exception e) {
+                failed++;
+                log.warn("批量停医嘱失败 orderNo={} 状态={} 原因={}",
+                        order.getOrderNo(), order.getOrderStatus(), e.getMessage());
+            }
+        }
+        log.info("批量停止长期医嘱 admissionId={} 受影响 {} 条，失败 {} 条，原因={}",
+                admissionId, affected, failed, reason);
+        return affected;
+    }
+
+    // 查询
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int stop(InpatientOrderStopDTO dto) {
+        // C-非 web 入参：除 Controller 外还被本类 stopLongOrders 内部 new DTO 直接调用，注解校验只在 web 绑定跑，内部路径必须留闸，保留
+        if (dto.getOrderId() == null) {
+            throw new BusinessException("医嘱ID不能为空");
+        }
+        // C-非 web 入参：同上，stopLongOrders 传入的内部 reason 不经 Bean Validation，保留
+        if (!TextUtil.hasText(dto.getStopReason())) {
+            throw new BusinessException("停止原因不能为空（停止是一个医疗决定，必须有人负责）");
+        }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        BizInpatientOrder target = bizInpatientOrderMapper.selectById(dto.getOrderId());
+        if (target == null) {
+            throw new BusinessException("医嘱不存在");
+        }
+        if (Objects.equals(InpatientOrderStatusEnum.STOPPED.getCode(), target.getOrderStatus())) {
+            throw new BusinessException("医嘱 " + target.getOrderNo() + " 已停止，不能重复停止");
+        }
+        if (Objects.equals(InpatientOrderStatusEnum.CANCELLED.getCode(), target.getOrderStatus())) {
+            throw new BusinessException("医嘱 " + target.getOrderNo() + " 已作废，无需停止");
+        }
+        if (Objects.equals(InpatientOrderStatusEnum.FINISHED.getCode(), target.getOrderStatus())) {
+            throw new BusinessException("医嘱 " + target.getOrderNo() + " 已完成，不能停止");
+        }
+        // 待校对(1) 请走作废：停止的语义是"后续不再做"，而待校对的医嘱还没进入执行阶段
+        if (!Objects.equals(InpatientOrderStatusEnum.VERIFIED.getCode(), target.getOrderStatus())
+                && !Objects.equals(InpatientOrderStatusEnum.EXECUTING.getCode(), target.getOrderStatus())) {
+            throw new BusinessException("医嘱 " + target.getOrderNo() + " 当前状态为「"
+                    + InpatientOrderStatusEnum.labelOrUnknown(target.getOrderStatus())
+                    + "」，只有「已校对 / 执行中」的医嘱可以停止；「待校对」的请改用作废");
+        }
+
+        LocalDateTime now = TimeUtil.nowSeconds();
+        Long doctorId = currentEmpId(operatorUser);
+        String doctorName = operatorUser.getRealName();
+
+        List<BizInpatientOrder> targets = new ArrayList<>();
+        if (TextUtil.hasText(target.getOrderGroup())) {
+            // 同组套同起同停：不允许"一组药停一半"
+            targets = bizInpatientOrderMapper.selectList(new LambdaQueryWrapper<BizInpatientOrder>()
+                    .eq(BizInpatientOrder::getAdmissionId, target.getAdmissionId())
+                    .eq(BizInpatientOrder::getOrderGroup, target.getOrderGroup())
+                    .in(BizInpatientOrder::getOrderStatus, InpatientOrderStatusEnum.PENDING_VERIFY.getCode(), InpatientOrderStatusEnum.VERIFIED.getCode(), InpatientOrderStatusEnum.EXECUTING.getCode()));
+        }
+        if (targets.isEmpty()) {
+            targets = List.of(target);
+        }
+
+        int stopped = 0;
+        int cancelled = 0;
+        for (BizInpatientOrder order : targets) {
+            if (Objects.equals(InpatientOrderStatusEnum.PENDING_VERIFY.getCode(), order.getOrderStatus())) {
+                // 组内还没被护士看到的成员：按作废处理（作废只允许发生在待校对）
+                order.setOrderStatus(InpatientOrderStatusEnum.CANCELLED.getCode());
+                cancelled++;
+            } else {
+                order.setOrderStatus(InpatientOrderStatusEnum.STOPPED.getCode());
+                order.setStopTime(now);
+                stopped++;
+            }
+            order.setStopDoctorId(doctorId);
+            order.setStopDoctorName(doctorName);
+            order.setStopReason(dto.getStopReason());
+            bizInpatientOrderMapper.updateById(order);
+            // 刻意不动执行行：停止只影响后续，未执行的计划仍如实留在"待执行"，
+            // 队列查询用 order_status IN (2,3) 把它们排除。改成"已退回"等于编造事实。
+            syncDietPlanOnStopOrCancel(order, now, dto.getStopReason());
+        }
+        log.info("停止医嘱 orderNo={} 组套={} 停止 {} 条 / 作废 {} 条 原因={} 操作人={}",
+                target.getOrderNo(), target.getOrderGroup(), stopped, cancelled, dto.getStopReason(), doctorName);
+        return targets.size();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void cancel(InpatientOrderCancelDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        BizInpatientOrder target = bizInpatientOrderMapper.selectById(dto.getOrderId());
+        if (target == null) {
+            throw new BusinessException("医嘱不存在");
+        }
+
+        List<BizInpatientOrder> targets;
+        if (TextUtil.hasText(target.getOrderGroup())) {
+            // 组套是一个「开立单元」：开错就是整组开错，所以整组作废。
+            // 但组内只要有一条已经进到校对之后，就不允许整组抹掉 —— 那是停止的地盘。
+            targets = bizInpatientOrderMapper.selectList(new LambdaQueryWrapper<BizInpatientOrder>()
+                    .eq(BizInpatientOrder::getAdmissionId, target.getAdmissionId())
+                    .eq(BizInpatientOrder::getOrderGroup, target.getOrderGroup())
+                    .in(BizInpatientOrder::getOrderStatus, InpatientOrderStatusEnum.PENDING_VERIFY.getCode(), InpatientOrderStatusEnum.VERIFIED.getCode(), InpatientOrderStatusEnum.EXECUTING.getCode(), InpatientOrderStatusEnum.FINISHED.getCode()));
+            for (BizInpatientOrder o : targets) {
+                if (!Objects.equals(InpatientOrderStatusEnum.PENDING_VERIFY.getCode(), o.getOrderStatus())) {
+                    throw new BusinessException("组套 " + target.getOrderGroup() + " 内的医嘱 " + o.getOrderNo()
+                            + " 已是「" + InpatientOrderStatusEnum.labelOrUnknown(o.getOrderStatus())
+                            + "」，不能整组作废；已校对的医嘱请用「停止」");
+                }
+            }
+        } else {
+            if (!Objects.equals(InpatientOrderStatusEnum.PENDING_VERIFY.getCode(), target.getOrderStatus())) {
+                throw new BusinessException("医嘱 " + target.getOrderNo() + " 当前状态为「"
+                        + InpatientOrderStatusEnum.labelOrUnknown(target.getOrderStatus())
+                        + "」，只有「待校对」的医嘱可以作废；已校对的请用「停止」");
+            }
+            targets = List.of(target);
+        }
+        if (targets.isEmpty()) {
+            throw new BusinessException("医嘱 " + target.getOrderNo() + " 当前状态为「"
+                    + InpatientOrderStatusEnum.labelOrUnknown(target.getOrderStatus())
+                    + "」，只有「待校对」的医嘱可以作废；已校对的请用「停止」");
+        }
+
+        Long doctorId = currentEmpId(operatorUser);
+        String doctorName = operatorUser.getRealName();
+        for (BizInpatientOrder order : targets) {
+            order.setOrderStatus(InpatientOrderStatusEnum.CANCELLED.getCode());
+            order.setStopDoctorId(doctorId);
+            order.setStopDoctorName(doctorName);
+            order.setStopReason(dto.getCancelReason());
+            bizInpatientOrderMapper.updateById(order);
+            syncDietPlanOnStopOrCancel(order, TimeUtil.nowSeconds(), dto.getCancelReason());
+        }
+        log.info("作废医嘱 组套={} 条数={} 原因={} 操作人={}",
+                target.getOrderGroup(), targets.size(), dto.getCancelReason(), doctorName);
+    }
+
+    /**
+     * 临床营养医嘱（orderClass=10）停止/作废 → 膳食方案同步停/废（sql/168）。
+     *
+     * <p>没有这一步的后果是"医嘱停了、食堂还在送饭"：订餐是从方案表批量生成的，
+     * 方案不与医嘱同生死，执行率与餐费都会对不上真实医疗行为。
+     * <p>方案不存在时静默返回（这条医嘱可能从未被校对过，本来就没有方案）。
+     */
+    private void syncDietPlanOnStopOrCancel(BizInpatientOrder order, LocalDateTime when, String reason) {
+        if (!Objects.equals(OrderClassEnum.NUTRITION.getCode(), order.getOrderClass())) {
+            return;
+        }
+        if (Objects.equals(InpatientOrderStatusEnum.CANCELLED.getCode(), order.getOrderStatus())) {
+            dietPlanService.cancelFromOrder(order.getId());
+        } else {
+            dietPlanService.stopFromOrder(order.getId(), when, reason);
+        }
+    }
+
+    @Override
+    public IPage<InpatientOrderVO> listPage(InpatientOrderQueryPageDTO query) {
+        // 科室收口：无条件覆盖前端可能伪造的 scopeDeptIds（不传=看全院，是越权）
+        query.setScopeDeptIds(readScopeDeptIds());
+        Page<InpatientOrderVO> page = new Page<>(query.getPageNum(), query.getPageSize());
+        IPage<InpatientOrderVO> result = bizInpatientOrderMapper.selectOrderPage(page, query);
+        result.getRecords().forEach(this::decorateOrder);
+        return result;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public IPage<InpatientOrderExecVO> execPendingList(OrderExecQueryPageDTO query) {
+        query.setScopeDeptIds(readScopeDeptIds());
+        backfillTodayPlans(query.getAdmissionId(), query.getPatientId());
+        Page<InpatientOrderExecVO> page = new Page<>(query.getPageNum(), query.getPageSize());
+        IPage<InpatientOrderExecVO> result = bizInpatientOrderExecMapper.selectPendingPage(page, query);
+        result.getRecords().forEach(this::decorateExec);
+        return result;
+    }
+
+    // 执行
+
+    @Override
+    public IPage<InpatientOrderExecVO> execList(OrderExecQueryPageDTO query) {
+        query.setScopeDeptIds(readScopeDeptIds());
+        Page<InpatientOrderExecVO> page = new Page<>(query.getPageNum(), query.getPageSize());
+        IPage<InpatientOrderExecVO> result = bizInpatientOrderExecMapper.selectExecPage(page, query);
+        result.getRecords().forEach(this::decorateExec);
+        return result;
+    }
+
+    @Override
+    public long countPendingVerify(Long admissionId) {
+        return bizInpatientOrderMapper.countPendingVerify(admissionId, readScopeDeptIds());
+    }
+
+    @Override
+    public long countPendingExec(Long admissionId) {
+        return bizInpatientOrderExecMapper.countPendingByAdmission(admissionId, readScopeDeptIds());
+    }
+
+    /**
+     * 读侧科室数据权限集合：受限岗位返回授权科室集合（按患者当前科室过滤）；全院角色返回 null=不收口。
+     */
+    private List<Long> readScopeDeptIds() {
+        return deptScopeService.isScoped() ? List.copyOf(deptScopeService.allowedDeptIds()) : null;
+    }
+
+    // 计划行（按天生成 / 查询补当天）
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int execComplete(OrderExecCompleteDTO execCompleteDTO) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        // 不允许兜底成「已执行」：漏传必须报错，否则会静默走进计费分支
+        int status = execCompleteDTO.getExecStatus();
+        if (Objects.equals(ExecStatusEnum.SKIPPED.getCode(), status) && !TextUtil.hasText(execCompleteDTO.getExecNote())) {
+            throw new BusinessException("跳过必须写明原因（飞检问的是「这条医嘱为什么没有执行记录」，答「删了」不成立）");
+        }
+        List<Long> ids = execCompleteDTO.getExecIds().stream().filter(Objects::nonNull).distinct().toList();
+        if (ids.isEmpty()) {
+            throw new BusinessException("请选择要处理的执行记录");
+        }
+
+        LocalDateTime execTime = TimeUtil.toSeconds(execCompleteDTO.getExecTime() != null ? execCompleteDTO.getExecTime() : LocalDateTime.now());
+        Long nurseId = currentEmpId(operatorUser);
+        String nurseName = operatorUser.getRealName();
+
+        // 第一遍：全量校验（含父医嘱状态）
+        List<BizInpatientOrderExec> rows = new ArrayList<>(ids.size());
+        Map<Long, BizInpatientOrder> orderById = new HashMap<>();
+        Map<Long, BizAdmission> admissionCache = new HashMap<>();
+        for (Long id : ids) {
+            BizInpatientOrderExec exec = bizInpatientOrderExecMapper.selectById(id);
+            if (exec == null) {
+                throw new BusinessException("执行记录不存在（ID=" + id + "）");
+            }
+            if (!Objects.equals(ExecStatusEnum.PENDING.getCode(), exec.getExecStatus())) {
+                throw new BusinessException("该执行记录已是「"
+                        + dictCacheService.getDicDataLabel(DictTypeConst.ORDER_EXEC_STATUS, exec.getExecStatus()) + "」，不能重复处理");
+            }
+            BizInpatientOrder order = bizInpatientOrderMapper.selectById(exec.getOrderId());
+            if (order == null) {
+                throw new BusinessException("执行记录（ID=" + id + "）对应的医嘱不存在");
+            }
+            // ★ 铁律：未校对不可执行。已停止/已作废同样不许执行 —— 只说"状态不对"不够，要说清是哪种。
+            if (!Objects.equals(InpatientOrderStatusEnum.VERIFIED.getCode(), order.getOrderStatus())
+                    && !Objects.equals(InpatientOrderStatusEnum.EXECUTING.getCode(), order.getOrderStatus())) {
+                throw new BusinessException("医嘱 " + order.getOrderNo() + " 当前状态为「"
+                        + InpatientOrderStatusEnum.labelOrUnknown(order.getOrderStatus()) + "」，不能执行");
+            }
+            rows.add(exec);
+            orderById.put(exec.getId(), order);
+        }
+
+        int processed = 0;
+        for (BizInpatientOrderExec exec : rows) {
+            BizInpatientOrder order = orderById.get(exec.getId());
+            exec.setExecStatus(status);
+            exec.setExecTime(execTime);
+            exec.setExecNurseId(nurseId);
+            exec.setExecNurseName(nurseName);
+            if (TextUtil.hasText(execCompleteDTO.getExecNote())) {
+                exec.setExecNote(execCompleteDTO.getExecNote());
+            }
+
+            if (Objects.equals(ExecStatusEnum.EXECUTED.getCode(), status)) {
+                // 记账走独立事务（OrderChargeInvoker）：记账失败绝不能把"护士已经做过了"一起回滚
+                FeeRecordVO chargeResult = null;
+                try {
+                    chargeResult = orderChargeInvoker.book(buildChargeFee(order, exec, admissionCache));
+                } catch (Exception e) {
+                    log.error("医嘱 {} 第 {} 次执行计费失败（执行记录仍会照常更新）",
+                            order.getOrderNo(), exec.getExecSeq(), e);
+                }
+                if (chargeResult != null) {
+                    // 存的就是 L1 记账行的 (id, feeNo)
+                    exec.setFeeRecordId(chargeResult.getId());
+                    exec.setFeeNo(chargeResult.getFeeNo());
+                } else {
+                    // 「未记账」必须让护士站看得见：只写日志等于让账少收没人知道
+                    exec.setExecNote(appendNote(exec.getExecNote(), "未记账：记账入参不全或记账失败"));
+                    log.warn("医嘱 {} 第 {} 次执行未记账（记账行ID为空），已写入执行备注",
+                            order.getOrderNo(), exec.getExecSeq());
+                }
+                // 父医嘱状态推进：临时执行一次即完结；长期首次执行转「执行中」
+                if (Objects.equals(OrderTypeEnum.TEMP.getCode(), order.getOrderType())) {
+                    order.setOrderStatus(InpatientOrderStatusEnum.FINISHED.getCode());
+                } else if (Objects.equals(InpatientOrderStatusEnum.VERIFIED.getCode(), order.getOrderStatus())) {
+                    order.setOrderStatus(InpatientOrderStatusEnum.EXECUTING.getCode());
+                }
+                bizInpatientOrderMapper.updateById(order);
+            } else {
+                // 跳过：不计费。临时医嘱仍停在「已校对」—— 这次没做不等于做完了，
+                // 系统不替临床把"没做"记成"完成"；这条医嘱需要医生重新开立或停止。
+                if (Objects.equals(OrderTypeEnum.TEMP.getCode(), order.getOrderType())) {
+                    log.warn("临时医嘱 {} 第 {} 次被跳过，该医嘱仍为「已校对」且今日已无待执行计划，需医生处理",
+                            order.getOrderNo(), exec.getExecSeq());
+                }
+            }
+
+            bizInpatientOrderExecMapper.updateById(exec);
+            processed++;
+        }
+        log.info("医嘱执行处理完成 条数={} 结果={} 护士={}", processed,
+                dictCacheService.getDicDataLabel(DictTypeConst.ORDER_EXEC_STATUS, status), nurseName);
+        return processed;
+    }
+
+    /**
+     * 一次执行 = 一笔记账行，全部快照由医嘱与执行记录带过去，记账侧不回查医嘱。
+     *
+     * <p>三条口径：
+     * <ol>
+     *   <li><b>幂等锚点来源ID = 本次执行记录ID</b>，不是医嘱ID：长期医嘱一条要执行几十次，
+     *       每次都是一笔真实费用，按医嘱ID判重会把第二次起的执行当成「重复记账」跳过 = 静默少收钱。
+     *       医嘱这条边由来源编号（医嘱号）与备注里的医嘱ID 表达，四核对照样能追回原医嘱。</li>
+     *   <li><b>科室取开立科室快照</b>：转科后开的医嘱算新科室；病区/床位是执行时的物理位置，不是钱的归属。</li>
+     *   <li><b>金额按单价 × 数量现算</b>：医嘱上的金额快照只用来核对，不一致时以现算为准并 warn，
+     *       因为单价快照才是应收的依据。</li>
+     * </ol>
+     */
+    private FeeBookDTO buildChargeFee(BizInpatientOrder order,
+                                      BizInpatientOrderExec exec,
+                                      Map<Long, BizAdmission> admissionCache) {
+        FeeBookDTO dto = new FeeBookDTO();
+        dto.setPatientId(order.getPatientId());
+        dto.setPatientNo(order.getPatientNo());
+        dto.setPatientName(order.getPatientName());
+        dto.setEncounterType(EncounterTypeEnum.INPATIENT.getCode());
+        dto.setEncounterId(order.getAdmissionId());
+        BizAdmission admission = admissionCache.computeIfAbsent(order.getAdmissionId(),
+                id -> bizAdmissionMapper.selectById(id));
+        if (admission != null) {
+            dto.setEncounterNo(admission.getAdmissionNo());
+        }
+        dto.setDeptId(order.getDeptId());
+        dto.setDeptName(order.getDeptName());
+        dto.setDoctorId(order.getDoctorId());
+        dto.setDoctorName(order.getDoctorName());
+        int itemType = InpatientOrderItemRules.chargeItemTypeOf(order.getOrderClass());
+        BigDecimal quantity = order.getQuantity() == null ? BigDecimal.ONE : order.getQuantity();
+        BigDecimal price = order.getPrice() == null ? BigDecimal.ZERO : order.getPrice();
+        BigDecimal computed = price.multiply(quantity);
+        if (order.getAmount() != null && order.getAmount().compareTo(computed) != 0) {
+            log.warn("医嘱 {} 第 {} 次执行：金额快照 ¥{} 与 单价×数量 ¥{} 不一致，按后者记账（请核对开立时的价格快照）",
+                    order.getOrderNo(), exec.getExecSeq(),
+                    order.getAmount().toPlainString(), computed.toPlainString());
+        }
+        dto.setItemType(itemType);
+        dto.setItemCode(TextUtil.hasText(order.getItemCode()) ? order.getItemCode() : order.getOrderNo());
+        dto.setItemName(order.getItemName());
+        dto.setSpecification(order.getSpec());
+        dto.setUnit(order.getUnit());
+        dto.setPrice(price);
+        dto.setQuantity(quantity);
+        dto.setSourceType(FeeSourceTypeEnum.INPATIENT_ORDER.getCode());
+        dto.setSourceId(exec.getId());
+        dto.setSourceNo(order.getOrderNo());
+        dto.setCatalogType(FeeCatalogTypeEnum.byItemType(itemType));
+        dto.setRemark("住院" + orderClassDesc(order.getOrderClass()) + "医嘱执行记账（第 "
+                + (exec.getExecSeq() == null ? 1 : exec.getExecSeq()) + " 次，医嘱 " + order.getId() + "）");
+        return dto;
+    }
+
+    /**
+     * 补当天计划行 —— 本项目刻意<b>不引入定时任务</b>。
+     */
+    private void backfillTodayPlans(Long admissionId, Long patientId) {
+        LocalDateTime now = TimeUtil.nowSeconds();
+        List<BizInpatientOrder> actives = bizInpatientOrderMapper.selectList(new LambdaQueryWrapper<BizInpatientOrder>()
+                .eq(BizInpatientOrder::getOrderType, OrderTypeEnum.LONG.getCode())
+                .in(BizInpatientOrder::getOrderStatus, InpatientOrderStatusEnum.VERIFIED.getCode(), InpatientOrderStatusEnum.EXECUTING.getCode())
+                .eq(admissionId != null, BizInpatientOrder::getAdmissionId, admissionId)
+                .eq(patientId != null, BizInpatientOrder::getPatientId, patientId)
+                .le(BizInpatientOrder::getStartTime, now)
+                .and(w -> w.isNull(BizInpatientOrder::getPlanEndTime)
+                        .or().gt(BizInpatientOrder::getPlanEndTime, now))
+                .last("LIMIT " + BACKFILL_LIMIT));
+        if (actives.isEmpty()) {
+            return;
+        }
+        int created = 0;
+        for (BizInpatientOrder order : actives) {
+            if (ensurePlanForToday(order, now)) {
+                created++;
+            }
+        }
+        if (created > 0) {
+            log.info("补生成当天医嘱计划 条数={}（admissionId={} patientId={}）", created, admissionId, patientId);
+        }
+    }
+
+    // 展示态
+
+    /**
+     * 幂等地生成「今天」的计划行。
+     *
+     * @return 是否真的新建了一行
+     */
+    private boolean ensurePlanForToday(BizInpatientOrder order, LocalDateTime now) {
+        LocalDate today = now.toLocalDate();
+        if (order.getStartTime() != null && order.getStartTime().toLocalDate().isAfter(today)) {
+            // 明天才开始：今天不该有这次执行
+            return false;
+        }
+        if (order.getPlanEndTime() != null && !order.getPlanEndTime().isAfter(now)) {
+            return false;
+        }
+        if (bizInpatientOrderExecMapper.countByOrderAndDate(order.getId(), today) > 0) {
+            return false;
+        }
+        BizInpatientOrderExec exec = new BizInpatientOrderExec();
+        exec.setOrderId(order.getId());
+        exec.setAdmissionId(order.getAdmissionId());
+        exec.setPatientId(order.getPatientId());
+        exec.setExecSeq((int) bizInpatientOrderExecMapper.countByOrder(order.getId()) + 1);
+        exec.setPlanDate(today);
+        exec.setPlanTime(planTimeOf(order, now));
+        exec.setExecStatus(ExecStatusEnum.PENDING.getCode());
+        try {
+            bizInpatientOrderExecMapper.insert(exec);
+            return true;
+        } catch (DuplicateKeyException e) {
+            // 并发下唯一索引 uk_ioe_order_plan_date 兜底：别的线程刚补过，不算失败
+            log.debug("医嘱 {} 今日计划行已存在（唯一索引拦下）", order.getOrderNo());
+            return false;
+        }
+    }
+
+    /**
+     * 计划执行时间。
+     * <p>刻意<b>不做 max(候选, now)</b>：把过期的计划时间"顺延"到当前时刻，
+     * 队列就再也看不出"这条本该 08:00 做、现在 14:00 还没做"。宁可让队列显示过期时刻，
+     * 也不要抹掉这条信息。
+     */
+    private LocalDateTime planTimeOf(BizInpatientOrder order, LocalDateTime now) {
+        LocalDateTime start = order.getStartTime();
+        if (start == null) {
+            return now;
+        }
+        if (start.toLocalDate().equals(now.toLocalDate())) {
+            return start;
+        }
+        // 跨天续用的长期医嘱：沿用原时刻，让队列按护士熟悉的班次时点排序
+        return now.toLocalDate().atTime(start.toLocalTime());
+    }
+
+    // 编号 / 当前用户 / 时间
+
+    private void decorateOrder(InpatientOrderVO vo) {
+        vo.setOrderTypeText(OrderTypeEnum.getText(vo.getOrderType()));
+        vo.setOrderClassText(OrderClassEnum.getText(vo.getOrderClass()));
+        vo.setOrderStatusText(InpatientOrderStatusEnum.getText(vo.getOrderStatus()));
+        vo.setSourceText(dictCacheService.getDicDataLabel(DictTypeConst.INPATIENT_ORDER_SOURCE, vo.getSource()));
+        vo.setIsUrgentText(YesOrNoEnum.getText(vo.getIsUrgent()));
+
+        boolean pendingVerify = Objects.equals(InpatientOrderStatusEnum.PENDING_VERIFY.getCode(), vo.getOrderStatus());
+        vo.setCanVerify(pendingVerify);
+        vo.setCanCancel(pendingVerify);
+        // 修改与作废同窗口：只有「待校对」能改（一改就作废旧签名重签，护士校对过之后再改等于篡改已核对内容）
+        vo.setCanEdit(pendingVerify);
+        vo.setCanStop(Objects.equals(InpatientOrderStatusEnum.VERIFIED.getCode(), vo.getOrderStatus())
+                || Objects.equals(InpatientOrderStatusEnum.EXECUTING.getCode(), vo.getOrderStatus()));
+
+        // 签名情况：三态分开说，不合并成"已签名/未签名"两个值 ——
+        // "只签了开立名"在管理上是待办（护士还没核对），
+        // 与"开立名都没签"（历史数据 / 开立时签名失败）是两件事。
+        boolean doctorSigned = vo.getDoctorSignId() != null;
+        boolean nurseSigned = vo.getNurseSignId() != null;
+        vo.setDoctorSigned(doctorSigned);
+        vo.setNurseSigned(nurseSigned);
+        vo.setSignStatusText(doctorSigned && nurseSigned ? "双签完成"
+                : doctorSigned ? "已开立签名（待校对签名）"
+                : nurseSigned ? "仅校对签名（缺开立签名，需排查）"
+                : "未签名");
+
+        if (vo.getTodayExecCount() == null) {
+            vo.setTodayExecCount(0);
+        }
+        if (vo.getPendingExecCount() == null) {
+            vo.setPendingExecCount(0);
+        }
+    }
+
+    private void decorateExec(InpatientOrderExecVO vo) {
+        vo.setOrderTypeText(OrderTypeEnum.getText(vo.getOrderType()));
+        vo.setOrderClassText(OrderClassEnum.getText(vo.getOrderClass()));
+        vo.setOrderStatusText(InpatientOrderStatusEnum.getText(vo.getOrderStatus()));
+        vo.setExecStatusText(dictCacheService.getDicDataLabel(DictTypeConst.ORDER_EXEC_STATUS, vo.getExecStatus()));
+        vo.setCharged(vo.getFeeRecordId() != null);
+        vo.setInfusion(InpatientInfusionServiceImpl.isInfusionRoute(vo.getRoute()));
+    }
+
+    private String nextOrderNo() {
+        return redisSequenceService.generateInpatientOrderNo();
+    }
+
+    private String nextOrderGroup() {
+        return redisSequenceService.generateOrderGroupNo();
+    }
+
+    /**
+     * 医嘱的医生/护士留痕一律用**员工ID**（不是用户的ID），与站内信收件人同一口径。
+     * 入参必须是入口处已判空抛错的当前登录人，这里不做任何兜底；员工ID缺失说明当前登录人不是内部员工，直接拒绝。
+     */
+    private Long currentEmpId(CurrentUser user) {
+        if (user.getEmployeeId() == null) {
+            throw new BusinessException("当前登录人员不是内部员工，无法记录医嘱操作人");
+        }
+        return user.getEmployeeId();
+    }
+
+    /**
+     * 签名人的科室快照（人的科室会变，签名行必须记"签的那一刻在哪个科室"）
+     */
+    private Long currentDeptId(CurrentUser user) {
+        return user.getDeptId();
+    }
+
+    private String currentDeptName(CurrentUser user) {
+        return user.getDeptName();
+    }
+}

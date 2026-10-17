@@ -1,0 +1,299 @@
+package com.his.ai.service.impl;
+
+import com.his.ai.constant.AiCapabilityKeys;
+import com.his.ai.dto.AiCallDTO;
+import com.his.ai.dto.EmergencyTriageDTO;
+import com.his.ai.dto.EmergencyTriageLlmOutputDTO;
+import com.his.ai.service.AiExecutionService;
+import com.his.ai.service.EmergencyTriageCapability;
+import com.his.ai.vo.EmergencyTriagePromptVariablesVO;
+import com.his.ai.vo.EmergencyTriageResultVO;
+import com.his.api.service.AppointProvider;
+import com.his.api.vo.EmergencyBriefVO;
+import com.his.common.support.EmergencyTriageRules;
+import com.his.common.support.EmergencyTriageRules.RedFlag;
+import com.his.common.support.EmergencyTriageRules.VitalSigns;
+import com.his.common.enums.EmergencyTriageLevelEnum;
+import com.his.common.enums.SysGenderEnum;
+import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
+import com.his.common.enums.AiBizTypeEnum;
+import com.his.common.enums.AiBasisSourceEnum;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+
+/**
+ * 急诊智能分诊建议能力（P1-2）—— 本模块风险等级最高的一项。
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability {
+
+    private static final String TEMPLATE_NAME = "emergency-triage";
+
+    private static final int MAX_ACTIONS = 6;
+
+    private static final int MAX_RED_FLAGS = 8;
+
+    private static final int OUTPUT_TOKEN_LIMIT = 1536;
+
+    private static final String CHANNEL_NONE = "无";
+
+    private final AppointProvider appointProvider;
+
+    private final AiExecutionService aiExecutionService;
+
+    /**
+     * 级别合并：取最严重（数值最小）的一个。
+     * <p>
+     * 这是「只升不降」的唯一实现点。任何一个非空来源只要比人工已选更严重，
+     * 建议值就会更严重；没有任何来源比人工已选更严重时，建议值就等于人工已选值，
+     * 也就是「不建议改动」。
+     */
+    private static Integer minLevel(Integer... levels) {
+        Integer result = null;
+        for (Integer level : levels) {
+            if (level == null) {
+                continue;
+            }
+            result = result == null ? level : Math.min(result, level);
+        }
+        return result;
+    }
+
+    private static String resolveBasis(Integer hardLevel, Integer llmLevel,
+                                       Integer currentLevel, Integer suggested) {
+        if (suggested == null) {
+            return AiBasisSourceEnum.NONE.getCode();
+        }
+        // 硬规则优先标源：同样的级别由确定性和概率同时给出时，说成「规则判定」更准确
+        if (hardLevel != null && suggested.equals(hardLevel)) {
+            return AiBasisSourceEnum.HARD_RULE.getCode();
+        }
+        if (llmLevel != null && suggested.equals(llmLevel)) {
+            return AiBasisSourceEnum.LLM.getCode();
+        }
+        if (currentLevel != null && suggested.equals(currentLevel)) {
+            return AiBasisSourceEnum.MANUAL.getCode();
+        }
+        return AiBasisSourceEnum.NONE.getCode();
+    }
+
+    /**
+     * 绿色通道合并：只认非「无」的值，因此永远不会把已确定的通道降回「无」。
+     */
+    private static String pickChannel(String keywordChannel, String llmChannel, String currentChannel) {
+        if (TextUtil.hasText(keywordChannel) && !CHANNEL_NONE.equals(keywordChannel)) {
+            return keywordChannel;
+        }
+        if (TextUtil.hasText(llmChannel) && !CHANNEL_NONE.equals(llmChannel)) {
+            return llmChannel;
+        }
+        if (TextUtil.hasText(currentChannel) && !CHANNEL_NONE.equals(currentChannel)) {
+            return currentChannel;
+        }
+        return CHANNEL_NONE;
+    }
+
+    private static Integer clampLevel(Integer level) {
+        if (level == null) {
+            return null;
+        }
+        return Math.max(EmergencyTriageLevelEnum.CRITICAL.getCode(),
+                Math.min(EmergencyTriageLevelEnum.NON_URGENT.getCode(), level));
+    }
+
+    private static String buildRuleReasoning(EmergencyTriageResultVO vo, List<RedFlag> flags) {
+        if (flags.isEmpty()) {
+            return String.format("未命中生命体征红旗征象，主诉关键词未识别到绿色通道。当前按人工分级 %s 处置，系统不提出变更建议。",
+                    vo.getCurrentLevelText());
+        }
+        StringBuilder builder = new StringBuilder("命中确定性红旗征象：");
+        builder.append(String.join("；", flags.stream().map(RedFlag::label).toList()));
+        builder.append("。系统建议级别不低于 ").append(vo.getHardLevelText()).append('。');
+        return builder.toString();
+    }
+
+    private static String buildTip(EmergencyTriageResultVO vo) {
+        if (Boolean.TRUE.equals(vo.getUpgradeRecommended())) {
+            return String.format("系统建议将分诊级别由「%s」升级为「%s」，请结合患者实际情况确认。"
+                            + "本建议不会自动修改你已选择的分级。",
+                    vo.getCurrentLevelText(), vo.getSuggestedLevelText());
+        }
+        if (vo.getCurrentLevel() == null) {
+            return String.format("该系统建议级别为「%s」，请确认后写入分诊级别。本建议不落库。",
+                    vo.getSuggestedLevelText());
+        }
+        return String.format("系统未发现需要变更分级的依据，维持「%s」。本建议不落库。",
+                vo.getCurrentLevelText());
+    }
+
+    private static List<String> nonBlank(List<String> values) {
+        if (values == null) {
+            return List.of();
+        }
+        List<String> result = new ArrayList<>();
+        for (String value : values) {
+            if (TextUtil.hasText(value)) {
+                result.add(TextUtil.cut(value.trim(), 120));
+            }
+        }
+        return result;
+    }
+
+    private static List<String> concat(List<String> first, List<String> second) {
+        List<String> result = new ArrayList<>(first);
+        result.addAll(second);
+        return result;
+    }
+
+    private static List<String> dedupe(List<String> values) {
+        Set<String> unique = new LinkedHashSet<>(values);
+        return new ArrayList<>(unique);
+    }
+
+    private static List<String> limit(List<String> values, int max) {
+        if (values == null || values.size() <= max) {
+            return values == null ? new ArrayList<>() : new ArrayList<>(values);
+        }
+        return new ArrayList<>(values.subList(0, max));
+    }
+
+    public EmergencyTriageResultVO suggest(EmergencyTriageDTO dto) {
+        long start = System.currentTimeMillis();
+
+        EmergencyBriefVO entity = dto.getEmergencyId() == null
+                ? null : appointProvider.findEmergency(dto.getEmergencyId());
+        if (dto.getEmergencyId() != null && entity == null) {
+            throw new BusinessException("急诊记录不存在：" + dto.getEmergencyId());
+        }
+
+        String chiefComplaint = TextUtil.hasText(dto.getChiefComplaint())
+                ? dto.getChiefComplaint() : (entity == null ? null : entity.getChiefComplaint());
+        String rawVitalSigns = TextUtil.hasText(dto.getVitalSigns())
+                ? dto.getVitalSigns() : (entity == null ? null : entity.getVitalSigns());
+        // B-条件必填：主诉与生命体征各自都可空（试算只填其一、或只靠库中值补齐），二者至少其一才成立，DTO 注解无法表达，保留
+        if (!TextUtil.hasText(chiefComplaint) && !TextUtil.hasText(rawVitalSigns)) {
+            throw new BusinessException("主诉与生命体征至少需要提供一项，否则无法给出分诊建议");
+        }
+
+        VitalSigns vitals = EmergencyTriageRules.parse(rawVitalSigns);
+
+        EmergencyTriageResultVO vo = new EmergencyTriageResultVO();
+        vo.setEmergencyId(entity == null ? null : entity.getId());
+        vo.setEmergencyNo(entity == null ? null : entity.getEmergencyNo());
+        vo.setPatientName(entity == null ? null : entity.getPatientName());
+        Integer gender = dto.getGender() != null ? dto.getGender() : (entity == null ? null : entity.getGender());
+        Integer age = dto.getAge() != null ? dto.getAge() : (entity == null ? null : entity.getAge());
+        vo.setGenderText(SysGenderEnum.getText(gender));
+        vo.setAge(age);
+        vo.setChiefComplaint(chiefComplaint);
+        vo.setVitalSignsText(vitals.describe());
+        vo.setVitalSignsMissing(vitals.isEmpty());
+
+        vo.setCurrentLevel(entity == null ? null : entity.getTriageLevel());
+        vo.setCurrentLevelText(EmergencyTriageLevelEnum.getText(vo.getCurrentLevel()));
+        vo.setCurrentZone(entity == null ? null : entity.getZone());
+        vo.setCurrentGreenChannel(entity == null ? null : entity.getGreenChannel());
+
+        // 硬规则层
+        List<RedFlag> flags = new ArrayList<>(EmergencyTriageRules.evaluate(vitals));
+        flags.addAll(EmergencyTriageRules.evaluateChiefComplaint(chiefComplaint));
+        Integer hardLevel = EmergencyTriageRules.hardLevelOf(flags);
+        vo.setHardLevel(hardLevel);
+        vo.setHardLevelText(hardLevel == null ? "未命中红旗征象" : EmergencyTriageLevelEnum.getText(hardLevel));
+        vo.setRedFlags(limit(flags.stream().map(RedFlag::label).toList(), MAX_RED_FLAGS));
+
+        String channelByKeyword = EmergencyTriageRules.detectGreenChannel(chiefComplaint);
+
+        // 模型层
+        boolean useModel = !Boolean.FALSE.equals(dto.getUseModel());
+        Integer llmLevel = null;
+        String llmChannel = null;
+        String llmReasoning = null;
+        List<String> llmActions = new ArrayList<>();
+        List<String> llmRedFlags = new ArrayList<>();
+
+        if (useModel) {
+            Optional<EmergencyTriageLlmOutputDTO> output = callModel(vo, vitals, flags, channelByKeyword);
+            if (output.isPresent()) {
+                EmergencyTriageLlmOutputDTO value = output.get();
+                llmLevel = clampLevel(value.getSuggestLevel());
+                if (EmergencyTriageRules.isValidChannel(value.getSuggestGreenChannel())) {
+                    llmChannel = value.getSuggestGreenChannel().trim();
+                }
+                llmReasoning = TextUtil.cut(value.getReasoning(), 400);
+                llmActions = limit(nonBlank(value.getRecommendActions()), MAX_ACTIONS);
+                llmRedFlags = limit(nonBlank(value.getRedFlags()), MAX_RED_FLAGS);
+                // 模型报出的红旗只做补充展示，不参与级别计算 —— 级别计算必须可复现
+                vo.setRedFlags(dedupe(concat(vo.getRedFlags(), llmRedFlags)));
+            } else {
+                vo.setDegraded(true);
+                vo.setDegradeReason(aiExecutionService.degradeReasonOf(AiCapabilityKeys.EMERGENCY_TRIAGE)
+                        + "；本次仅返回生命体征硬规则的判定结果");
+            }
+        } else {
+            vo.setDegraded(true);
+            vo.setDegradeReason("调用方指定不调用模型，本次仅返回生命体征硬规则的判定结果");
+        }
+
+        // 合并（只升不降）
+        Integer suggested = minLevel(hardLevel, llmLevel, vo.getCurrentLevel());
+        vo.setSuggestedLevel(suggested);
+        vo.setSuggestedLevelText(EmergencyTriageLevelEnum.getText(suggested));
+        vo.setSuggestedZone(EmergencyTriageRules.zoneOf(suggested));
+        vo.setSuggestedGreenChannel(pickChannel(channelByKeyword, llmChannel, vo.getCurrentGreenChannel()));
+        vo.setLevelBasis(resolveBasis(hardLevel, llmLevel, vo.getCurrentLevel(), suggested));
+        vo.setUpgradeRecommended(vo.getCurrentLevel() != null && suggested != null
+                && suggested < vo.getCurrentLevel());
+
+        List<String> actions = new ArrayList<>();
+        for (RedFlag flag : flags) {
+            if (TextUtil.hasText(flag.action())) {
+                actions.add(flag.action());
+            }
+        }
+        actions.addAll(EmergencyTriageRules.channelActions(vo.getSuggestedGreenChannel()));
+        actions.addAll(llmActions);
+        vo.setRecommendActions(limit(dedupe(actions), MAX_ACTIONS));
+
+        vo.setReasoning(TextUtil.hasText(llmReasoning) ? llmReasoning : buildRuleReasoning(vo, flags));
+        vo.setTip(buildTip(vo));
+
+        vo.setLatencyMs(System.currentTimeMillis() - start);
+        return vo;
+    }
+
+    private Optional<EmergencyTriageLlmOutputDTO> callModel(EmergencyTriageResultVO vo,
+                                                            VitalSigns vitals,
+                                                            List<RedFlag> flags,
+                                                            String channelByKeyword) {
+        EmergencyTriagePromptVariablesVO variables = new EmergencyTriagePromptVariablesVO();
+        variables.setGender(vo.getGenderText());
+        variables.setAge(vo.getAge() == null ? "（未填写）" : vo.getAge() + "岁");
+        variables.setChiefComplaint(TextUtil.blankToDefault(vo.getChiefComplaint(), "（未填写）"));
+        variables.setVitalSigns(vitals.describe());
+        variables.setCurrentLevel(vo.getCurrentLevelText());
+        variables.setHardLevel(vo.getHardLevelText());
+        variables.setHardRedFlags(flags.isEmpty()
+                ? "（无）"
+                : String.join("\n", flags.stream().map(flag -> "- " + flag.label()).toList()));
+        variables.setKeywordChannel(channelByKeyword);
+
+        AiCallDTO call = AiCallDTO.builder()
+                .capabilityKey(AiCapabilityKeys.EMERGENCY_TRIAGE)
+                .templateName(TEMPLATE_NAME)
+                .variables(variables)
+                .bizType(AiBizTypeEnum.EMERGENCY.getCode())
+                .bizId(vo.getEmergencyId())
+                .inputDigest(TextUtil.blankToDefault(vo.getChiefComplaint(), "（未填写）") + " | " + vitals.describe())
+                .maxTokens(OUTPUT_TOKEN_LIMIT)
+                .build();
+
+        return aiExecutionService.call(call, EmergencyTriageLlmOutputDTO.class);
+    }
+}

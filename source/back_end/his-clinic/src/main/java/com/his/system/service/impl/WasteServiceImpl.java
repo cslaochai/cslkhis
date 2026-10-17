@@ -1,0 +1,164 @@
+package com.his.system.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.constant.DictTypeConst;
+import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
+import com.his.system.dto.WasteDTO;
+import com.his.system.entity.BizMedicalWaste;
+import com.his.common.enums.WasteStatusEnum;
+import com.his.system.mapper.BizMedicalWasteMapper;
+import com.his.system.service.DictCacheService;
+import com.his.system.service.WasteService;
+import com.his.system.utils.UserUtils;
+import com.his.system.vo.WasteVO;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.Objects;
+
+/**
+ * 医疗废物登记服务。
+ */
+@Service
+@RequiredArgsConstructor
+public class WasteServiceImpl extends ServiceImpl<BizMedicalWasteMapper, BizMedicalWaste> implements WasteService {
+
+    private final BizMedicalWasteMapper bizMedicalWasteMapper;
+
+    private final DictCacheService dictCacheService;
+
+    @Transactional(rollbackFor = Exception.class)
+    public WasteVO create(WasteDTO.Create dto) {
+        if (dto.getDeptId() == null && !TextUtil.hasText(dto.getDeptName())) {
+            throw new BusinessException("产生科室不能为空");
+        }
+        BizMedicalWaste w = new BizMedicalWaste();
+        w.setWasteNo(nextWasteNo());
+        w.setWasteType(dto.getWasteType());
+        w.setWeightKg(dto.getWeightKg());
+        w.setDeptId(dto.getDeptId());
+        w.setDeptName(TextUtil.trim(dto.getDeptName()));
+        w.setCollectTime(TimeUtil.toSeconds(dto.getCollectTime()));
+        w.setCollectorName(TextUtil.hasText(dto.getCollectorName()) ? dto.getCollectorName().trim()
+                : UserUtils.getCurrentUser().getRealName());
+        w.setStatus(WasteStatusEnum.REGISTERED.getCode());
+        w.setCreateBy(UserUtils.getCurrentUser().getRealName());
+        bizMedicalWasteMapper.insert(w);
+        return toVo(w);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public WasteVO handover(WasteDTO.Handover dto) {
+        BizMedicalWaste w = requireWaste(dto.getId());
+        if (!WasteStatusEnum.REGISTERED.is(w.getStatus())) {
+            throw new BusinessException("只有已登记的医废可以交接（当前：" + WasteStatusEnum.getText(w.getStatus()) + "）");
+        }
+        w.setStatus(WasteStatusEnum.HANDED_OVER.getCode());
+        w.setHandoverName(dto.getHandoverName().trim());
+        w.setHandoverTime(TimeUtil.nowSeconds());
+        w.setUpdateBy(UserUtils.getCurrentUser().getRealName());
+        w.setUpdateTime(w.getHandoverTime());
+        bizMedicalWasteMapper.updateById(w);
+        return toVo(w);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public WasteVO dispose(WasteDTO.Dispose dto) {
+        BizMedicalWaste w = requireWaste(dto.getId());
+        if (!WasteStatusEnum.HANDED_OVER.is(w.getStatus())) {
+            throw new BusinessException("只有已交接的医废可以确认处置（当前：" + WasteStatusEnum.getText(w.getStatus()) + "）");
+        }
+        w.setStatus(WasteStatusEnum.DISPOSED.getCode());
+        w.setDisposalCompany(dto.getDisposalCompany().trim());
+        w.setDisposalTime(TimeUtil.nowSeconds());
+        w.setUpdateBy(UserUtils.getCurrentUser().getRealName());
+        w.setUpdateTime(w.getDisposalTime());
+        bizMedicalWasteMapper.updateById(w);
+        return toVo(w);
+    }
+
+    // 私有
+
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteById(Long id) {
+        BizMedicalWaste w = requireWaste(id);
+        if (!WasteStatusEnum.REGISTERED.is(w.getStatus())) {
+            throw new BusinessException("已交接/已处置的医废记录不可删除（交接单是对外凭证）");
+        }
+        bizMedicalWasteMapper.deleteById(id);
+    }
+
+    public IPage<WasteVO> listPage(WasteDTO.QueryPage q) {
+        String kw = TextUtil.trim(q.getKeyword());
+        LocalDate begin = q.getCollectDateBegin();
+        LocalDate end = q.getCollectDateEnd();
+        LambdaQueryWrapper<BizMedicalWaste> w = new LambdaQueryWrapper<BizMedicalWaste>()
+                .eq(q.getWasteType() != null, BizMedicalWaste::getWasteType, q.getWasteType())
+                .eq(q.getStatus() != null, BizMedicalWaste::getStatus, q.getStatus())
+                .and(TextUtil.hasText(kw), x -> x
+                        .like(BizMedicalWaste::getWasteNo, kw)
+                        .or().like(BizMedicalWaste::getDeptName, kw))
+                .ge(begin != null, BizMedicalWaste::getCollectTime, TimeUtil.dayStart(begin))
+                // 日期边界铁律：按日期过滤必须补全天边界，否则当天时点全被滤掉
+                .le(end != null, BizMedicalWaste::getCollectTime, TimeUtil.dayEnd(end))
+                .orderByDesc(BizMedicalWaste::getCollectTime)
+                .orderByDesc(BizMedicalWaste::getId);
+        return bizMedicalWasteMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w)
+                .convert(this::toVo);
+    }
+
+    private BizMedicalWaste requireWaste(Long id) {
+        BizMedicalWaste w = bizMedicalWasteMapper.selectById(id);
+        if (w == null || Objects.equals(w.getDelFlag(), 1)) {
+            throw new BusinessException("医废登记不存在（id=" + id + "）");
+        }
+        return w;
+    }
+
+    /**
+     * 交接单号自动生成：MW + yyyyMMdd + 顺延序号（查重含软删行，防唯一键冲突）
+     */
+    private String nextWasteNo() {
+
+        String date = LocalDate.now().format(DateFormats.COMPACT_DATE);
+        long seq = 1;
+        for (int i = 0; i < 20; i++) {
+            String no = "MW" + date + String.format("%03d", seq);
+            if (bizMedicalWasteMapper.selectIdByNoAny(no) == null) {
+                return no;
+            }
+            seq++;
+        }
+        throw new BusinessException("医废交接单号生成失败，请稍后重试");
+    }
+
+    private WasteVO toVo(BizMedicalWaste w) {
+        WasteVO vo = new WasteVO();
+        vo.setId(w.getId());
+        vo.setWasteNo(w.getWasteNo());
+        vo.setWasteType(w.getWasteType());
+        vo.setWasteTypeText(dictCacheService.getDicDataLabel(DictTypeConst.WASTE_TYPE, w.getWasteType()));
+        vo.setWeightKg(w.getWeightKg());
+        vo.setDeptId(w.getDeptId());
+        vo.setDeptName(w.getDeptName());
+        vo.setCollectTime(w.getCollectTime());
+        vo.setCollectorName(w.getCollectorName());
+        vo.setStatus(w.getStatus());
+        vo.setStatusText(WasteStatusEnum.getText(w.getStatus()));
+        vo.setHandoverName(w.getHandoverName());
+        vo.setHandoverTime(w.getHandoverTime());
+        vo.setDisposalCompany(w.getDisposalCompany());
+        vo.setDisposalTime(w.getDisposalTime());
+        vo.setCreateBy(w.getCreateBy());
+        vo.setCreateTime(w.getCreateTime());
+        return vo;
+    }
+}

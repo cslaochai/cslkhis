@@ -1,0 +1,322 @@
+package com.his.operation.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.enums.AnesthesiaVisitStatusEnum;
+import com.his.common.enums.YesOrNoEnum;
+import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
+import com.his.operation.dto.AnesthesiaVisitFinishDTO;
+import com.his.operation.dto.AnesthesiaVisitQueryPageDTO;
+import com.his.operation.dto.AnesthesiaVisitUpsertDTO;
+import com.his.operation.entity.BizAnesthesiaVisit;
+import com.his.operation.entity.BizOperationApply;
+import com.his.common.enums.MallampatiGradeEnum;
+import com.his.common.enums.NeckMobilityEnum;
+import com.his.common.enums.NpoStatusEnum;
+import com.his.operation.mapper.BizAnesthesiaVisitMapper;
+import com.his.operation.mapper.BizOperationApplyMapper;
+import com.his.operation.service.AnesthesiaVisitService;
+import com.his.operation.support.AnesthesiaCalcs;
+import com.his.operation.vo.AnesthesiaVisitVO;
+import com.his.common.entity.CurrentUser;
+import com.his.api.service.DeptScopeService;
+import com.his.system.utils.UserUtils;
+import com.his.system.service.RedisSequenceService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Objects;
+import com.his.common.enums.*;
+
+/**
+ * 麻醉术前访视服务实现
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMapper, BizAnesthesiaVisit> implements AnesthesiaVisitService {
+
+    private final RedisSequenceService redisSequenceService;
+
+    private final BizAnesthesiaVisitMapper bizAnesthesiaVisitMapper;
+
+    private final BizOperationApplyMapper bizOperationApplyMapper;
+
+    private final DeptScopeService deptScopeService;
+
+    @Override
+    public IPage<AnesthesiaVisitVO> listPage(AnesthesiaVisitQueryPageDTO query) {
+        IPage<AnesthesiaVisitVO> page = bizAnesthesiaVisitMapper.selectVisitPage(
+                new Page<>(query.getPageNum(), query.getPageSize()), query, deptScopeService.scopedDeptIds(null));
+        page.getRecords().forEach(this::decorate);
+        return page;
+    }
+
+    @Override
+    public AnesthesiaVisitVO getDetailById(Long visitId) {
+        BizAnesthesiaVisit entity = bizAnesthesiaVisitMapper.selectById(visitId);
+        if (entity == null) {
+            throw new BusinessException("麻醉术前访视单不存在");
+        }
+        assertApplyAccessible(entity.getApplyId());
+        AnesthesiaVisitVO vo = bizAnesthesiaVisitMapper.selectVOById(visitId);
+        if (vo == null) {
+            throw new BusinessException("麻醉术前访视单不存在");
+        }
+        decorate(vo);
+        return vo;
+    }
+
+    @Override
+    public AnesthesiaVisitVO getByApply(Long applyId) {
+        // C-非 web 入参：除 Controller 标量参数外还被 AnesthesiaRecordServiceImpl 直接调用（传库里申请单ID），Bean Validation 不覆盖，保留
+        if (applyId == null) {
+            throw new BusinessException("手术申请单ID不能为空");
+        }
+        assertApplyAccessible(applyId);
+        AnesthesiaVisitVO vo = bizAnesthesiaVisitMapper.selectVOByApply(applyId);
+        if (vo != null) {
+            decorate(vo);
+        }
+        return vo;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String save(AnesthesiaVisitUpsertDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        validateHighRisk(dto);
+
+        BizOperationApply apply = bizOperationApplyMapper.selectById(dto.getApplyId());
+        if (apply == null) {
+            throw new BusinessException("手术申请单不存在");
+        }
+        if (Integer.valueOf(OperationApplyStatusEnum.CANCELLED.getCode()).equals(apply.getOperationStatus())) {
+            throw new BusinessException("手术单 " + apply.getApplyNo() + " 已取消，不需要再访视");
+        }
+        deptScopeService.assertDeptAccessible(apply.getApplyDeptId());
+
+        boolean create = dto.getId() == null;
+        BizAnesthesiaVisit entity;
+        if (create) {
+            if (bizAnesthesiaVisitMapper.countByApply(dto.getApplyId()) > 0) {
+                throw new BusinessException("该手术已有术前访视单，不能重复建档（一台手术一份评估，重复会打架）");
+            }
+            entity = new BizAnesthesiaVisit();
+            entity.setApplyId(apply.getId());
+            entity.setApplyNo(apply.getApplyNo());
+            entity.setAdmissionId(apply.getAdmissionId());
+            entity.setPatientId(apply.getPatientId());
+            entity.setPatientName(apply.getPatientName());
+            entity.setGender(apply.getGender());
+            entity.setAge(apply.getAge());
+            entity.setDiagnosis(apply.getPreopDiagnosis());
+            entity.setPlannedOperationCode(apply.getPlannedOperationCode());
+            entity.setPlannedOperationName(apply.getPlannedOperationName());
+            entity.setOperationLevel(apply.getOperationLevel());
+            entity.setAnesthesiaType(apply.getAnesthesiaType());
+            entity.setIsEmergency(apply.getIsEmergency() == null ? 0 : apply.getIsEmergency());
+            entity.setVisitNo(nextVisitNo());
+            entity.setVisitStatus(0);
+            entity.setVisitDoctorId(operatorUser.getEmployeeId());
+            entity.setVisitDoctorName(operatorUser.getRealName());
+        } else {
+            entity = bizAnesthesiaVisitMapper.selectById(dto.getId());
+            if (entity == null) {
+                throw new BusinessException("麻醉术前访视单不存在");
+            }
+            if (Integer.valueOf(1).equals(entity.getVisitStatus())) {
+                throw new BusinessException("访视单 " + entity.getVisitNo()
+                        + " 已完成（结论已出账），不能再改内容；请重新完成一份访视");
+            }
+        }
+
+        entity.setAsaGrade(dto.getAsaGrade());
+        entity.setAsaEmergency(dto.getAsaEmergency());
+        entity.setMallampati(dto.getMallampati());
+        entity.setMouthOpenCm(dto.getMouthOpenCm());
+        entity.setNeckMobility(dto.getNeckMobility());
+        entity.setDifficultAirway(dto.getDifficultAirway() == null ? 0 : dto.getDifficultAirway());
+        entity.setAirwayNote(dto.getAirwayNote());
+        entity.setPastAnesthesiaHistory(dto.getPastAnesthesiaHistory());
+        entity.setAllergyHistory(dto.getAllergyHistory());
+        entity.setMedicationHistory(dto.getMedicationHistory());
+        entity.setSmokeDrink(dto.getSmokeDrink());
+        entity.setNpoStatus(dto.getNpoStatus());
+        entity.setHeightCm(dto.getHeightCm());
+        entity.setWeightKg(dto.getWeightKg());
+        entity.setExamSummary(dto.getExamSummary());
+        entity.setAnesthesiaPlan(dto.getAnesthesiaPlan());
+        entity.setMonitoringPlan(dto.getMonitoringPlan());
+        entity.setRiskAssessment(dto.getRiskAssessment());
+        entity.setBackupPlan(dto.getBackupPlan());
+        entity.setConclusion(dto.getConclusion());
+        entity.setConclusionNote(dto.getConclusionNote());
+        if (dto.getRemark() != null) {
+            entity.setRemark(dto.getRemark());
+        }
+        entity.setVisitDoctorId(operatorUser.getEmployeeId());
+        entity.setVisitDoctorName(operatorUser.getRealName());
+
+        if (create) {
+            bizAnesthesiaVisitMapper.insert(entity);
+        } else {
+            // 守卫下沉到 WHERE：并发下访视单已被完成时更新命中 0 行，兜底抛错（与上方「已完成不能再改」校验同义）
+            int rows = bizAnesthesiaVisitMapper.update(entity, new LambdaUpdateWrapper<BizAnesthesiaVisit>()
+                    .eq(BizAnesthesiaVisit::getId, entity.getId())
+                    .ne(BizAnesthesiaVisit::getVisitStatus, 1));
+            if (rows == 0) {
+                throw new BusinessException("访视单 " + entity.getVisitNo()
+                        + " 已被完成（结论已出账），不能再改内容；请重新完成一份访视");
+            }
+        }
+        log.info("{}麻醉术前访视 visitNo={} applyNo={} ASA={} 困难气道={} 结论={} 访视医师={}",
+                create ? "新建" : "修改", entity.getVisitNo(), apply.getApplyNo(),
+                AsaGradeEnum.labelOrUnknown(entity.getAsaGrade()),
+                Objects.equals(YesOrNoEnum.YES.getCode(), entity.getDifficultAirway()) ? "是" : "否",
+                VisitConclusionEnum.labelOrUnknown(entity.getConclusion()), operatorUser.getRealName());
+        return entity.getVisitNo();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void finish(AnesthesiaVisitFinishDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        BizAnesthesiaVisit entity = bizAnesthesiaVisitMapper.selectById(dto.getVisitId());
+        if (entity == null) {
+            throw new BusinessException("麻醉术前访视单不存在");
+        }
+        assertApplyAccessible(entity.getApplyId());
+        // B-条件必填：结论非「可施行麻醉」时才要求说明，跨字段条件，DTO 注解无法表达，保留
+        if (!Objects.equals(1, dto.getConclusion()) && !TextUtil.hasText(dto.getConclusionNote())) {
+            throw new BusinessException("结论为「" + VisitConclusionEnum.labelOrUnknown(dto.getConclusion())
+                    + "」时必须填写结论说明（为什么不能按计划麻醉）");
+        }
+        if (Integer.valueOf(1).equals(entity.getDifficultAirway()) && !TextUtil.hasText(entity.getBackupPlan())) {
+            throw new BusinessException("已标记预计困难气道，必须先填写备选方案才能完成访视");
+        }
+        entity.setConclusion(dto.getConclusion());
+        entity.setConclusionNote(dto.getConclusionNote());
+        entity.setVisitStatus(1);
+        entity.setVisitDoctorId(operatorUser.getEmployeeId());
+        entity.setVisitDoctorName(operatorUser.getRealName());
+        entity.setVisitTime(TimeUtil.nowSeconds());
+        bizAnesthesiaVisitMapper.updateById(entity);
+        log.info("完成麻醉术前访视 visitNo={} 结论={}（{}）访视医师={}",
+                entity.getVisitNo(), VisitConclusionEnum.labelOrUnknown(dto.getConclusion()),
+                TextUtil.hasText(dto.getConclusionNote()) ? dto.getConclusionNote() : "无补充说明", operatorUser.getRealName());
+    }
+
+    @Override
+    public boolean hasApprovedVisit(Long applyId) {
+        if (applyId == null) {
+            return false;
+        }
+        AnesthesiaVisitVO vo = bizAnesthesiaVisitMapper.selectVOByApply(applyId);
+        return vo != null
+                && Integer.valueOf(1).equals(vo.getVisitStatus())
+                && Integer.valueOf(VisitConclusionEnum.OK.getCode()).equals(vo.getConclusion());
+    }
+
+    @Override
+    public long countFinishedWithoutVisit() {
+        return bizAnesthesiaVisitMapper.countFinishedWithoutVisit(deptScopeService.scopedDeptIds(null));
+    }
+
+    /** 访视单无科室列，归属科室取关联手术申请单的申请科室 */
+    private void assertApplyAccessible(Long applyId) {
+        if (applyId == null) {
+            return;
+        }
+        BizOperationApply apply = bizOperationApplyMapper.selectById(applyId);
+        if (apply != null) {
+            deptScopeService.assertDeptAccessible(apply.getApplyDeptId());
+        }
+    }
+
+    private void decorate(AnesthesiaVisitVO vo) {
+        vo.setAsaText(AsaGradeEnum.getText(vo.getAsaGrade()));
+        vo.setAsaFullText(AnesthesiaCalcs.asaFullText(vo.getAsaGrade(), vo.getAsaEmergency()));
+        vo.setMallampatiText(MallampatiGradeEnum.getText(vo.getMallampati()));
+        vo.setNeckMobilityText(NeckMobilityEnum.getText(vo.getNeckMobility()));
+        vo.setNpoText(NpoStatusEnum.getText(vo.getNpoStatus()));
+        vo.setConclusionText(VisitConclusionEnum.getText(vo.getConclusion()));
+        vo.setVisitStatusText(AnesthesiaVisitStatusEnum.getText(vo.getVisitStatus()));
+        vo.setDifficultAirwayText(Objects.equals(YesOrNoEnum.YES.getCode(), vo.getDifficultAirway()) ? "是"
+                : Objects.equals(YesOrNoEnum.NO.getCode(), vo.getDifficultAirway()) ? "否" : "");
+        vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getAnesthesiaType()));
+        vo.setEmergencyText(YesOrNoEnum.getText(vo.getIsEmergency()));
+        vo.setOperationStatusText(OperationApplyStatusEnum.getText(vo.getOperationStatus()));
+        vo.setBmi(bmi(vo.getHeightCm(), vo.getWeightKg()));
+
+        boolean draft = !Integer.valueOf(1).equals(vo.getVisitStatus());
+        vo.setCanEdit(draft);
+        vo.setCanFinish(true);
+        vo.setCanOpenRecord(Integer.valueOf(1).equals(vo.getVisitStatus())
+                && Integer.valueOf(VisitConclusionEnum.OK.getCode()).equals(vo.getConclusion()));
+
+        String warn = null;
+        if (Integer.valueOf(1).equals(vo.getDifficultAirway()) && !TextUtil.hasText(vo.getBackupPlan())) {
+            warn = "已标记预计困难气道，但未填写备选方案";
+        } else if (draft) {
+            warn = "草稿状态：尚未给出访视结论，不能作为开立麻醉记录的依据";
+        } else if (!Integer.valueOf(1).equals(vo.getConclusion())) {
+            warn = "访视结论为「" + VisitConclusionEnum.getText(vo.getConclusion()) + "」，不可据此开立麻醉记录";
+        } else if (Integer.valueOf(2).equals(vo.getNpoStatus())) {
+            warn = "急诊饱胃：返流误吸高危，诱导方式需另行评估";
+        }
+        vo.setWarningText(warn);
+    }
+
+    /**
+     * BMI（任一项缺失返回 null —— 缺一项就"算不出来"，不编一个数）
+     */
+    private BigDecimal bmi(BigDecimal heightCm, BigDecimal weightKg) {
+        if (heightCm == null || weightKg == null) {
+            return null;
+        }
+        double h = heightCm.doubleValue() / 100d;
+        if (h <= 0) {
+            return null;
+        }
+        return weightKg.divide(BigDecimal.valueOf(h * h), 1, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * 高风险访视的必填校验。
+     *
+     * <p>只卡两件事：困难气道要有备选方案、ASA Ⅳ/Ⅴ 要写风险说明。
+     * 其余字段一律允许空 —— 术前访视最怕的是"为了过校验把每一项都勾成'正常'"，
+     * 少校验一点比催生假数据好。
+     */
+    private void validateHighRisk(AnesthesiaVisitUpsertDTO dto) {
+        // B-条件必填：标记困难气道时才要求备选方案，跨字段条件，DTO 注解无法表达，保留
+        if (Integer.valueOf(1).equals(dto.getDifficultAirway()) && !TextUtil.hasText(dto.getBackupPlan())) {
+            throw new BusinessException("已标记预计困难气道，必须填写备选方案（备用气道工具/清醒插管/转局麻等）");
+        }
+        // B-条件必填：ASA≥4 时才要求风险评估，跨字段条件，DTO 注解无法表达，保留
+        if (dto.getAsaGrade() != null && dto.getAsaGrade() >= 4
+                && !TextUtil.hasText(dto.getRiskAssessment())) {
+            throw new BusinessException("ASA " + AsaGradeEnum.labelOrUnknown(dto.getAsaGrade())
+                    + " 必须填写风险评估（这一级意味着围术期风险显著，不能空着）");
+        }
+    }
+
+    private String nextVisitNo() {
+        return redisSequenceService.generateAnesthesiaVisitNo();
+    }
+}
