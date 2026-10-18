@@ -28,7 +28,6 @@ import com.his.system.utils.UserUtils;
 import com.his.system.vo.DutyOfficerVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -83,7 +82,6 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
     /**
      * 收治复写入院主流程：不重写一套 admit，否则两条入口各推进一步就会打架
      */
-    @Lazy
     private final InpatientService inpatientService;
     /**
      * 全院当天谁负责：跨科调配与等床超时的兜底收口人（sql/169）
