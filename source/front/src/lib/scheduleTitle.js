@@ -19,12 +19,3 @@ export const getTitleTagClass = (titleMap, value) => {
     return 'bg-blue-50 text-blue-600 ring-blue-200';
   return 'bg-slate-50 text-slate-500 ring-slate-200';
 };
-
-/** 专家号软联动：员工档案 isExpert 优先，职称≥副主任医师兜底；专家费带出档案 expertPrice。只给默认值，开关仍可手工改 */
-export const expertDefaultOf = (titleMap, emp) => {
-  if (!emp)
-    return null;
-  const label = getTitleLabel(titleMap, emp.title || '');
-  const on = emp.isExpert === 1 || label.includes('副主任') || label.startsWith('主任') ? 1 : 0;
-  return {isExpert: on, expertFee: on === 1 ? Number(emp.expertPrice) || 0 : 0};
-};

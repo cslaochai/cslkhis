@@ -37,6 +37,7 @@ import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
+import com.his.common.support.PediatricSurchargePolicy;
 import com.his.system.entity.BizClinicSource;
 import com.his.system.entity.BizClinicSourceSlot;
 import com.his.system.entity.BizSchedule;
@@ -585,9 +586,11 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         }
 
         // 挂号费记账 + 出账，经 SPI 委派至 his-charge。
+        // patientBirthDate 取主档出生日期（可能为 null → 儿童加收不生效，见 buildRevisitFeeContext）
         RevisitFeePolicyService.RevisitFeeDecision feeDecision = revisitFeePolicyService.decide(
                 buildRevisitFeeContext(revisit, upsertDTO.getRevisitSource(), origin, schedule,
-                        appointInfo.getDeptId(), appointInfo.getDoctorId(), appointInfo.getVisitDate()));
+                        appointInfo.getDeptId(), appointInfo.getDoctorId(), appointInfo.getVisitDate(),
+                        patient.getBirthDate()));
 
         if (!feeDecision.isWaived() && feeDecision.totalFee().compareTo(BigDecimal.ZERO) > 0) {
             RegistChargeCommandVO command = new RegistChargeCommandVO();
@@ -667,9 +670,15 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
             vo.setDoctorName(schedule.getDoctorName());
         }
 
+        // 🔑 儿童加收要读主档出生日期，与 addAppoint 取同一份数据 ——
+        //   预估和实收一旦各写一份判定，患者在小程序上确认了一个数、到窗口被告知另一个数，
+        //   是本项目反复踩过的坑（见 revisitFeePreview 的方法注释）。取不到主档按 null 传，
+        //   与实收同样表现成「不加收」，不会一边加一边不加。
+        PatientMasterVO previewPatient = patientFacadeService.getPatient(previewDTO.getPatientId());
         RevisitFeePolicyService.RevisitFeeDecision decision = revisitFeePolicyService.decide(
                 buildRevisitFeeContext(true, previewDTO.getRevisitSource(), origin, schedule,
-                        vo.getDeptId(), vo.getDoctorId(), vo.getVisitDate()));
+                        vo.getDeptId(), vo.getDoctorId(), vo.getVisitDate(),
+                        previewPatient == null ? null : previewPatient.getBirthDate()));
         vo.setRegistFee(decision.getRegistFee());
         vo.setDiagnosisFee(decision.getDiagnosisFee());
         vo.setTotalFee(decision.totalFee());
@@ -677,6 +686,9 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         vo.setChargeMode(decision.getChargeMode());
         vo.setPolicyName(decision.getPolicyName());
         vo.setReason(decision.getReason());
+        vo.setBaseDiagnosisFee(decision.getBaseDiagnosisFee());
+        vo.setChildSurcharged(decision.isChildSurcharged());
+        vo.setChildSurchargeAmount(decision.getChildSurchargeAmount());
         return vo;
     }
 
@@ -713,13 +725,20 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
      */
     private RevisitFeePolicyService.RevisitFeeContext buildRevisitFeeContext(
             boolean revisit, Integer revisitSource, RecordBriefVO origin,
-            BizClinicSource schedule, Long targetDeptId, Long targetDoctorId, LocalDate targetVisitDate) {
+            BizClinicSource schedule, Long targetDeptId, Long targetDoctorId, LocalDate targetVisitDate,
+            LocalDate patientBirthDate) {
         RevisitFeePolicyService.RevisitFeeContext context = new RevisitFeePolicyService.RevisitFeeContext();
         context.setRevisitSource(revisit ? revisitSource : null);
         context.setRegistFee(schedule == null || schedule.getRegistFee() == null
                 ? BigDecimal.ZERO : schedule.getRegistFee());
         context.setDiagnosisFee(schedule == null || schedule.getDiagnosisFee() == null
                 ? BigDecimal.ZERO : schedule.getDiagnosisFee());
+        // 🔑 儿童加收 30% 的两个判定输入（湘医保发〔2025〕58号附件1 计价说明）：
+        //   birthDate 判是否六周岁以内；缺失则不加收（判不出来不猜，多收会被稽核抓）
+        //   visitDate 取「拟就诊日」而非今天 —— 预约可提前数周，一个今天 6 岁半的孩子
+        //   预约到两周后就诊时已满 7 周岁，按挂号日算会多收
+        context.setBirthDate(patientBirthDate);
+        context.setVisitDate(targetVisitDate);
         if (!revisit || origin == null) {
             return context;
         }

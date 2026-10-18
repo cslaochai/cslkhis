@@ -2,25 +2,17 @@
   <!-- 新增排班（批量：医生多选 × 日期区间）与修改排班（单条）是两个弹窗。
        以前一个弹窗靠 v-if="isEdit" 分叉，两套排版挤在一起，改一边就碰坏另一边。 -->
   <el-dialog v-model="visible" destroy-on-close title="新增排班" width="980px">
-    <el-form :model="formData" label-position="left">
-      <div class="grid grid-cols-3 gap-4">
+    <el-form :model="formData" label-position="left" label-width="96px">
+      <div class="grid grid-cols-2 gap-4">
         <el-form-item label="科室" required>
           <el-select v-model="formData.deptId" class="w-full" filterable placeholder="输入科室名称搜索"
                      @change="handleDeptChange">
             <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id"/>
           </el-select>
         </el-form-item>
-        <!-- 岗位类别：排班对象不再只有医生（sql/195）。
-             只有「医生」才配号源/诊室/门诊诊查费，换岗位要把人一起重选（不同岗位是不同的人）。 -->
-        <el-form-item label="岗位类别" required>
-          <el-select v-model="formData.staffType" class="w-full" data-testid="form-staff-type"
-                     @change="handleStaffTypeChange">
-            <el-option v-for="o in STAFF_TYPE_DOCTOR_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item :label="`${staffTypeText(formData.staffType)}人员`" required>
+        <el-form-item label="医生人员" required>
           <el-select v-model="formData.doctorIds" :disabled="!formData.deptId" :max-collapse-tags="1"
-                     :placeholder="`选择${staffTypeText(formData.staffType)}人员（可多选，一次排完）`" class="w-full"
+                     placeholder="选择医生（可多选，一次排完）" class="w-full"
                      collapse-tags collapse-tags-tooltip
                      data-testid="form-doctor" multiple @change="ensureDoctorRows">
             <el-option v-for="e in employees" :key="e.id" :label="`${e.empName} - ${getTitleLabel(titleMap, e.title)}`"
@@ -28,9 +20,6 @@
           </el-select>
         </el-form-item>
       </div>
-      <p v-if="!staffTypeHasSource(formData.staffType)" class="-mt-2 mb-3 text-xs text-slate-500">
-        {{ staffTypeText(formData.staffType) }}岗位是<b>出勤排班</b>：只排「谁哪天哪个班次在岗」，不放号、不需要诊室、不计门诊诊查费。
-      </p>
       <div class="grid grid-cols-2 gap-4">
         <el-form-item data-testid="form-date-range" label="排班日期" required>
           <el-date-picker
@@ -53,49 +42,45 @@
           </el-select>
         </el-form-item>
       </div>
-      <div class="mb-3 -mt-1 text-xs text-slate-500">
-        {{ batchPlanDesc }} · 时间段 {{ formTimeRange || '待选班次' }}（不可手填：统计按班次口径出，需要的时段先到「班次字典」建一条）
-      </div>
 
-      <!-- 默认值：只用来给「新加进来的人」补一行，以及一键覆盖已有行。
-           号源/费用/预约是「人员 × 班次」级的值，不该整批共用一个数 —— 见下方逐人表格。
-           只对医生岗有意义：出勤岗没有号源与费用，整块不显示（免得填了被后端清零还以为存上了）。 -->
       <div v-if="staffTypeHasSource(formData.staffType)"
            class="mb-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-        <div class="mb-2 flex items-center justify-between">
-          <span class="text-sm font-medium text-slate-700">默认值（新加入的人员按此补一行）</span>
+        <div class="grid gap-x-3 gap-y-3"
+             style="grid-template-columns: minmax(0,0.7fr) minmax(0,1.1fr) minmax(0,0.7fr) auto minmax(0,0.7fr)">
+          <div class="flex items-center gap-1.5">
+            <span class="shrink-0 text-sm text-slate-600">号源数</span>
+            <el-input-number v-model="formData.totalSource" :max="999" :min="1" size="small" class="min-w-0 flex-1"
+                             controls-position="right"/>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="shrink-0 text-sm text-slate-600">挂号级别</span>
+            <el-select v-model="formData.diagnosisTier" size="small" class="min-w-0 flex-1" data-testid="form-diagnosis-tier"
+                       @change="onTierChange(formData, formData.diagnosisTier)">
+              <el-option v-for="t in DIAGNOSIS_TIER_LIST" :key="t.value" :label="t.label" :value="t.value"/>
+            </el-select>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="shrink-0 text-sm text-slate-600">挂号费(元)</span>
+            <el-input-number v-model="formData.diagnosisFee" :min="0" :precision="2" size="small" class="min-w-0 flex-1"
+                             controls-position="right"/>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-sm text-slate-600">支持预约</span>
+            <el-switch v-model="formData.isAppointment" :active-value="1" :inactive-value="0" size="small"/>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="shrink-0 text-sm text-slate-600">预约号</span>
+            <el-input-number v-model="formData.appointmentSource" :max="formData.totalSource" :min="0" size="small"
+                             :disabled="formData.isAppointment !== 1"
+                             class="min-w-0 flex-1" controls-position="right"/>
+          </div>
+        </div>
+        <div class="mb-1 mt-2 flex items-center justify-between">
+          <span class="text-sm font-medium text-slate-700"></span>
           <el-button :disabled="!(formData.doctorIds || []).length" data-testid="apply-defaults" size="small"
                      @click="applyDefaultsToAllRows">应用到全部人员
           </el-button>
         </div>
-        <div class="grid grid-cols-6 gap-3">
-          <el-form-item label="号源数量">
-            <el-input-number v-model="formData.totalSource" :max="999" :min="1" class="!w-full"
-                             controls-position="right"/>
-          </el-form-item>
-          <el-form-item label="门诊诊查费(元)">
-            <el-input-number v-model="formData.diagnosisFee" :min="0" :precision="2" class="!w-full"
-                             controls-position="right"/>
-            <div class="text-xs text-slate-500 mt-1">
-              湘医保发〔2025〕58号：挂号费已废止并入门诊诊查费。长沙市基准价 9 元，知名专家加收 61 元（合计 70 元）。
-            </div>
-          </el-form-item>
-          <el-form-item label="专家号">
-            <el-switch v-model="formData.isExpert" :active-value="1" :inactive-value="0"/>
-          </el-form-item>
-          <el-form-item v-if="formData.isExpert === 1" label="专家费(元)">
-            <el-input-number v-model="formData.expertFee" :min="0" :precision="2" class="!w-full"
-                             controls-position="right"/>
-          </el-form-item>
-          <el-form-item label="开放预约">
-            <el-switch v-model="formData.isAppointment" :active-value="1" :inactive-value="0"/>
-          </el-form-item>
-          <el-form-item v-if="formData.isAppointment === 1" label="预约号源">
-            <el-input-number v-model="formData.appointmentSource" :max="formData.totalSource" :min="0"
-                             class="!w-full" controls-position="right"/>
-          </el-form-item>
-        </div>
-        <p class="text-xs text-slate-400">预约号源 = 划给网上预约的专用号，现场窗口不可占用；0 = 不划池</p>
       </div>
 
       <!-- 医生 × 排班参数：一人一行。诊室必须一人一间（排队号前缀按诊室生成、大屏按诊室导诊，
@@ -105,7 +90,7 @@
         <div class="mb-1 text-sm font-medium text-slate-700">
           {{
             staffTypeHasSource(formData.staffType)
-                ? '人员 × 排班参数（一人一行，诊室不够就留空，提交前会拦）'
+                ? '人员 × 排班'
                 : `本次将为以下 ${(formData.doctorIds || []).length} 位${staffTypeText(formData.staffType)}人员建立出勤排班`
           }}
         </div>
@@ -132,31 +117,27 @@
                                size="small"/>
             </template>
           </el-table-column>
-          <el-table-column v-if="staffTypeHasSource(formData.staffType)" label="门诊诊查费" width="120">
+          <el-table-column v-if="staffTypeHasSource(formData.staffType)" label="挂号费" width="110">
             <template #default="{ row }">
               <el-input-number v-model="row.room.diagnosisFee" :controls="false" :min="0" :precision="2"
                                class="!w-full"
                                size="small"/>
             </template>
           </el-table-column>
-          <el-table-column v-if="staffTypeHasSource(formData.staffType)" align="center" label="专家号" width="80">
+          <el-table-column v-if="staffTypeHasSource(formData.staffType)" label="挂号级别" width="140">
             <template #default="{ row }">
-              <el-switch v-model="row.room.isExpert" :active-value="1" :inactive-value="0" size="small"/>
+              <el-select v-model="row.room.diagnosisTier" size="small" class="!w-full"
+                         @change="onTierChange(row.room, row.room.diagnosisTier)">
+                <el-option v-for="t in DIAGNOSIS_TIER_LIST" :key="t.value" :label="t.label" :value="t.value"/>
+              </el-select>
             </template>
           </el-table-column>
-          <el-table-column v-if="staffTypeHasSource(formData.staffType)" label="专家费" width="100">
-            <template #default="{ row }">
-              <el-input-number v-model="row.room.expertFee" :controls="false" :disabled="row.room.isExpert !== 1"
-                               :min="0" :precision="2"
-                               class="!w-full" size="small"/>
-            </template>
-          </el-table-column>
-          <el-table-column v-if="staffTypeHasSource(formData.staffType)" align="center" label="开放预约" width="90">
+          <el-table-column v-if="staffTypeHasSource(formData.staffType)" align="center" label="支持预约" width="90">
             <template #default="{ row }">
               <el-switch v-model="row.room.isAppointment" :active-value="1" :inactive-value="0" size="small"/>
             </template>
           </el-table-column>
-          <el-table-column v-if="staffTypeHasSource(formData.staffType)" label="预约号源" min-width="100">
+          <el-table-column v-if="staffTypeHasSource(formData.staffType)" label="预约号" min-width="100">
             <template #default="{ row }">
               <el-input-number v-model="row.room.appointmentSource" :controls="false"
                                :disabled="row.room.isAppointment !== 1"
@@ -188,9 +169,10 @@ import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {createScheduleBatch, getShiftSelectList} from '@/api/appoint';
 import {getClinicRoomListAll, getEmployeeList} from '@/api/system';
-import {SHIFT_SCOPE_OUTPATIENT, STAFF_TYPE_DOCTOR, STAFF_TYPE_DOCTOR_OPTIONS, staffTypeHasSource, staffTypeText} from '@/lib/scheduleShift';
+import {SHIFT_SCOPE_OUTPATIENT, STAFF_TYPE_DOCTOR, staffTypeHasSource, staffTypeText} from '@/lib/scheduleShift';
 import {batchDays, fmtISO} from '@/lib/scheduleDate';
-import {expertDefaultOf, getTitleLabel} from '@/lib/scheduleTitle';
+import {getTitleLabel} from '@/lib/scheduleTitle';
+import {DIAGNOSIS_TIER_LIST, tierAmount, tierDefaultOf} from '@/lib/diagnosisTier';
 
 /**
  * 新增排班（批量：人员多选 × 日期区间，人 × 日一次请求）。
@@ -202,7 +184,7 @@ import {expertDefaultOf, getTitleLabel} from '@/lib/scheduleTitle';
  */
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
-  // 打开时预填：面板空格子点「加排班」带进来的 科室/人员/日期；从「新增排班」按钮打开时只带岗位类别
+  // 打开时预填：面板空格子点「加排班」带进来的 科室/人员/日期
   seed: {type: Object, default: null},
   departments: {type: Array, default: () => []},
   titleMap: {type: Object, default: () => ({})},
@@ -278,13 +260,10 @@ const resetForm = (seed = {}) => {
     doctorId: seed.doctorId ?? null,
     doctorName: seed.doctorName ?? '',
     /**
-     * 岗位类别（sql/195）：排班对象不再只有医生。
-     * 只有 1-医生 才配号源/诊室/门诊诊查费/预约池；其余岗位是纯出勤排班
-     * （提交时这些字段由后端一律清零，界面同样不显示，免得填了被静默丢弃还以为存上了）。
+     * 岗位类别写死为医生：本弹窗只排医生号源班，不再提供岗位切换
+     * （其余岗位是纯出勤排班，走别处）。提交一律带 STAFF_TYPE_DOCTOR。
      */
-    // 默认落在面板当前看的岗位（seed 给）：排班员切到「护理」再点新增，想排的就是护理班；
-    // seed 没给时兜底成医生（与 lib/scheduleShift 的 STAFF_TYPE_DOCTOR 同一口径）
-    staffType: seed.staffType ?? STAFF_TYPE_DOCTOR,
+    staffType: STAFF_TYPE_DOCTOR,
     /** 批量排班：新增时可多选医生（同科室多位医生一次排完）；编辑时长度恒为 1 */
     doctorIds: seed.doctorIds ? [...seed.doctorIds] : [],
     /**
@@ -305,7 +284,8 @@ const resetForm = (seed = {}) => {
     // 已挂数：只给修改弹窗当号源下限用（总数不能小于已挂），提交时后端不认它
     usedSource: 0,
     registFee: 0,
-    diagnosisFee: 0,
+    diagnosisFee: 9,
+    diagnosisTier: 1,
     isExpert: 0,
     expertFee: 0,
     isAppointment: 0,
@@ -318,11 +298,25 @@ const doctorRowDefaults = () => ({
   totalSource: formData.value.totalSource,
   registFee: formData.value.registFee,
   diagnosisFee: formData.value.diagnosisFee,
+  diagnosisTier: formData.value.diagnosisTier,
   isExpert: formData.value.isExpert,
   expertFee: formData.value.expertFee,
   isAppointment: formData.value.isAppointment,
   appointmentSource: formData.value.appointmentSource,
 });
+/**
+ * 档位切换 → 同步带出政策全额 + 展示用的专家标记。
+ * isExpert/expertFee 只留作兼容旧数据展示（后端已标 @Deprecated，不参与计价），
+ * 所以专家费一律置 0，避免再出现「医生站显示加收 61、实收按 70 走」这种双口径。
+ */
+const onTierChange = (target, tier) => {
+  const amount = tierAmount(tier);
+  if (target.diagnosisFee !== amount) {
+    target.diagnosisFee = amount;
+  }
+  target.isExpert = Number(tier) >= 2 ? 1 : 0;
+  target.expertFee = 0;
+};
 /**
  * 批量排班（多医生）：每位医生一行排班参数，其中诊室必须一人一间。
  * 为什么不共用一间：排队号前缀按诊室编号生成、大屏按诊室导诊，两位医生同一时段挤一间 = 患者跑错房间。
@@ -346,9 +340,12 @@ const ensureDoctorRows = () => {
       continue;
     }
     const row = doctorRowDefaults();
-    // 新医生行的专家开关/专家费按该医生档案带出，而不是沿用顶部默认值
-    const dft = expertDefaultOf(props.titleMap, employees.value.find((e) => String(e.id) === String(id)));
+    // 新医生行的档位/诊查费按该医生职称带出，而不是沿用顶部默认值。
+    // 副主任医师 → 22 元、主任医师 → 31 元（原来两者都被算成专家号 70 元）
+    const dft = tierDefaultOf(employees.value.find((e) => String(e.id) === String(id)));
     if (dft) {
+      row.diagnosisTier = dft.diagnosisTier;
+      row.diagnosisFee = dft.diagnosisFee;
       row.isExpert = dft.isExpert;
       row.expertFee = dft.expertFee;
     }
@@ -469,7 +466,7 @@ watch(visible, (open) => {
   const seed = props.seed || {};
   resetForm(seed);
   shiftDictId.value = null;
-  // 人员候选按当前岗位类别拉：切到「护理」再点新增，下拉里就该是护士，不是上一次留下的医生
+  // 人员候选按科室拉取（岗位写死医生）
   if (seed.deptId) {
     loadEmployees(seed.deptId, formData.value.staffType);
     loadClinicRooms(seed.deptId);
@@ -495,20 +492,6 @@ const handleDeptChange = (deptId) => {
   loadShiftDict(deptId);
   loadEmployees(deptId, formData.value.staffType);
   loadClinicRooms(deptId);
-};
-/**
- * 换岗位类别：换的是「规则链」，所以人必须重选（原来选的医生在收费岗视图里根本不该出现），
- * 诊室/号源/费用这些只对医生有意义的值也一起回到默认。
- */
-const handleStaffTypeChange = () => {
-  formData.value.doctorId = null;
-  formData.value.doctorName = '';
-  formData.value.doctorIds = [];
-  formData.value.doctorRows = {};
-  formData.value.roomId = null;
-  formData.value.roomName = '';
-  if (formData.value.deptId)
-    loadEmployees(Number(formData.value.deptId), formData.value.staffType);
 };
 
 const handleSubmit = async () => {
@@ -564,8 +547,9 @@ const handleSubmit = async () => {
       totalSource: row.totalSource,
       registFee: row.registFee,
       diagnosisFee: row.diagnosisFee,
+      diagnosisTier: row.diagnosisTier ?? formData.value.diagnosisTier ?? 1,
       isExpert: row.isExpert,
-      expertFee: row.isExpert === 1 ? row.expertFee : 0,
+      expertFee: 0,
       isAppointment: row.isAppointment,
       appointmentSource: row.isAppointment === 1 ? Math.min(row.appointmentSource, row.totalSource) : 0,
     };
@@ -594,6 +578,7 @@ const handleSubmit = async () => {
         totalSource: p.totalSource,
         registFee: p.registFee,
         diagnosisFee: p.diagnosisFee,
+        diagnosisTier: p.diagnosisTier,
         isExpert: p.isExpert,
         expertFee: p.expertFee,
         isAppointment: p.isAppointment,

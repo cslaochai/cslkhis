@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.enums.ClinicDiagnosisTierEnum;
 import com.his.common.enums.ScheduleStatusEnum;
 import com.his.common.enums.StaffScheduleSourceEnum;
 import com.his.common.enums.StaffTypeEnum;
@@ -167,6 +168,11 @@ public class BizClinicSourceTemplateServiceImpl extends ServiceImpl<BizClinicSou
         t.setRoomName(dto.getRoomName());
         t.setRegistFee(dto.getRegistFee());
         t.setDiagnosisFee(dto.getDiagnosisFee());
+        if (ClinicDiagnosisTierEnum.ofCode(dto.getDiagnosisTier()) == null) {
+            t.setDiagnosisTier(ClinicDiagnosisTierEnum.GENERAL.getCode());
+        } else {
+            t.setDiagnosisTier(dto.getDiagnosisTier());
+        }
         t.setIsExpert(dto.getIsExpert());
         t.setExpertFee(dto.getExpertFee());
         t.setIsAppointment(dto.getIsAppointment());
@@ -200,6 +206,7 @@ public class BizClinicSourceTemplateServiceImpl extends ServiceImpl<BizClinicSou
         vo.setRoomName(t.getRoomName());
         vo.setRegistFee(t.getRegistFee());
         vo.setDiagnosisFee(t.getDiagnosisFee());
+        vo.setDiagnosisTier(t.getDiagnosisTier());
         vo.setIsExpert(t.getIsExpert());
         vo.setExpertFee(t.getExpertFee());
         vo.setIsAppointment(t.getIsAppointment());
@@ -269,6 +276,7 @@ public class BizClinicSourceTemplateServiceImpl extends ServiceImpl<BizClinicSou
         template.setExpertFee(BigDecimal.ZERO);
         template.setRegistFee(BigDecimal.ZERO);
         template.setDiagnosisFee(BigDecimal.ZERO);
+        template.setDiagnosisTier(ClinicDiagnosisTierEnum.GENERAL.getCode());
         template.setRoomId(null);
         template.setRoomName(null);
     }
@@ -680,6 +688,7 @@ public class BizClinicSourceTemplateServiceImpl extends ServiceImpl<BizClinicSou
         s.setRoomName(tpl.getRoomName());
         s.setRegistFee(tpl.getRegistFee());
         s.setDiagnosisFee(tpl.getDiagnosisFee());
+        s.setDiagnosisTier(tpl.getDiagnosisTier());
         s.setIsExpert(tpl.getIsExpert());
         s.setExpertFee(tpl.getExpertFee());
         s.setIsAppointment(tpl.getIsAppointment());

@@ -125,6 +125,11 @@ public class ScheduleTemplateVO {
     private BigDecimal diagnosisFee;
 
     /**
+     * 门诊诊查费职级加收档位（1普通 2副主任医师 3主任医师 4知名专家）
+     */
+    private Integer diagnosisTier;
+
+    /**
      * 是否专家（0-否 1-是）
      */
     private Integer isExpert;

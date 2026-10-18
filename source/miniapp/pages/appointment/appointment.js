@@ -12,22 +12,26 @@ function isBookable(s) {
 }
 
 /** startTime 在不同排班来源下可能是 HH:mm 或 HH:mm:ss，统一截到分 */
+// 诊查费职级加收档位，与后端 ClinicDiagnosisTierEnum 一一对应（湘医保发〔2025〕58号附件1）
+const TIER_TEXT = { 1: '', 2: '副主任医师', 3: '主任医师', 4: '知名专家' }
+
 function hhmm(t) {
   return t ? String(t).slice(0, 5) : ''
 }
 
 function fee(s) {
-  const regist = Number(s.registFee || 0)
+  // 🔑 只读诊查费：湘医保发〔2025〕58号（长沙市医保局同文，2026-01-01 执行）已废止挂号费，
+  //   合并为门诊诊查费；知名专家档的加收价已经并进号源 diagnosis_fee（9 + 61 = 70），
+  //   expert_fee 是 272 之前遗留的独立加收列，再加一次等于向患者多显示 2 元。
+  //   口径必须与后端 AppointServiceImpl.scheduleFeeTotal 一致，否则小程序显示价比窗口实收高。
   const diagnosis = Number(s.diagnosisFee || 0)
-  const expert = s.isExpert === 1 ? Number(s.expertFee || 0) : 0
-  const total = regist + diagnosis + expert
   // wxml 里不能调 toFixed，金额一律在 js 侧格式化成文本
   return {
-    regist: regist.toFixed(2),
     diagnosis: diagnosis.toFixed(2),
-    expert: expert.toFixed(2),
-    hasExpert: expert > 0,
-    total: total.toFixed(2)
+    total: diagnosis.toFixed(2),
+    // 档位标签：让患者看到 ¥31.00 时知道这是主任医师档，不是普通号被加价。
+    // 只给数字不说明来源，是门诊价格投诉最常见的起点。
+    tierText: TIER_TEXT[Number(s.diagnosisTier || 1)] || ''
   }
 }
 

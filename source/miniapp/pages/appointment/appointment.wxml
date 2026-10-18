@@ -148,16 +148,8 @@
 
     <view class="card fee-card" wx:if="{{selectedSchedule}}">
       <view class="fee-row">
-        <text class="fee-name">挂号费</text>
-        <text class="fee-num">¥{{selectedSchedule.fee.regist}}</text>
-      </view>
-      <view class="fee-row">
-        <text class="fee-name">诊查费</text>
+        <text class="fee-name">门诊诊查费{{selectedSchedule.fee.tierText ? '（' + selectedSchedule.fee.tierText + '）' : ''}}</text>
         <text class="fee-num">¥{{selectedSchedule.fee.diagnosis}}</text>
-      </view>
-      <view class="fee-row" wx:if="{{selectedSchedule.fee.hasExpert}}">
-        <text class="fee-name">专家费</text>
-        <text class="fee-num">¥{{selectedSchedule.fee.expert}}</text>
       </view>
       <view class="fee-row total">
         <text class="fee-name">合计</text>

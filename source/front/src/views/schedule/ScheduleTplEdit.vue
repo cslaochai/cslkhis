@@ -75,18 +75,14 @@
           </el-form-item>
           <el-form-item label="门诊诊查费(元)">
             <el-input-number v-model="tplFormData.diagnosisFee" :min="0" :precision="2" class="w-full"/>
-            <p class="mt-1 text-xs text-slate-400">挂号费已按湘医保发〔2025〕58号废止，并入门诊诊查费（长沙基准价 9 元）</p>
-          </el-form-item>
-          <el-form-item label="诊疗费(元)">
-            <el-input-number v-model="tplFormData.diagnosisFee" :min="0" :precision="2" class="w-full"/>
           </el-form-item>
         </div>
         <div class="grid grid-cols-3 gap-4">
-          <el-form-item label="专家号">
-            <el-switch v-model="tplFormData.isExpert" :active-value="1" :inactive-value="0"/>
-          </el-form-item>
-          <el-form-item v-if="tplFormData.isExpert === 1" label="专家费(元)">
-            <el-input-number v-model="tplFormData.expertFee" :min="0" :precision="2" class="w-full"/>
+          <el-form-item label="诊查费档位">
+            <el-select v-model="tplFormData.diagnosisTier" class="w-full" data-testid="tpl-diagnosis-tier"
+                       @change="onTierChange(tplFormData, tplFormData.diagnosisTier)">
+              <el-option v-for="t in DIAGNOSIS_TIER_LIST" :key="t.value" :label="t.label" :value="t.value"/>
+            </el-select>
           </el-form-item>
         </div>
         <div class="grid grid-cols-3 gap-4">
@@ -171,7 +167,8 @@ import {ElMessage} from 'element-plus';
 import {getShiftSelectList, saveScheduleTemplate} from '@/api/appoint';
 import {getClinicRoomListAll, getEmployeeList} from '@/api/system';
 import {SHIFT_SCOPE_OUTPATIENT, STAFF_TYPE_DOCTOR, STAFF_TYPE_DOCTOR_OPTIONS, staffTypeHasSource, staffTypeText} from '@/lib/scheduleShift';
-import {expertDefaultOf, getTitleLabel} from '@/lib/scheduleTitle';
+import {getTitleLabel} from '@/lib/scheduleTitle';
+import {DIAGNOSIS_TIER_LIST, tierAmount, tierDefaultOf} from '@/lib/diagnosisTier';
 
 /**
  * 排班模板「新增 / 编辑」共用一个组件：后端是同一个 saveScheduleTemplate 入口，
@@ -205,7 +202,7 @@ const resetTplForm = () => {
     id: null, deptId: null, deptName: '', doctorId: null, doctorName: '', staffType: STAFF_TYPE_DOCTOR,
     weekDay: 1, weekParity: 0, validFrom: '', validUntil: '',
     shiftId: null, startTime: '', endTime: '', totalSource: 20,
-    roomId: null, roomName: '', registFee: 0, diagnosisFee: 0, isExpert: 0, expertFee: 0,
+    roomId: null, roomName: '', registFee: 0, diagnosisFee: 9, diagnosisTier: 1, isExpert: 0, expertFee: 0,
     isAppointment: 1, appointmentSource: 0, status: 1, remark: '', slots: null,
   };
 };
@@ -370,13 +367,27 @@ const tplSlotExpected = computed(() => ({
 const tplSlotMismatch = computed(() => tplSlotSum.value.total !== tplSlotExpected.value.total
     || tplSlotSum.value.appt !== tplSlotExpected.value.appt);
 
-/** 模板换医生 = 换人重新定默认：专家开关/专家费按新医生档案重新带出（仍可手工改） */
+/**
+ * 模板换医生 = 换人重新定默认：档位/诊查费按新医生职称带出（仍可手工改）。
+ * 副主任医师 → 22 元、主任医师 → 31 元；知名专家（70）只对主任开放且不自动选，名单制认定。
+ */
 const handleTplDoctorChange = (id) => {
-  const dft = expertDefaultOf(props.titleMap, employees.value.find((e) => String(e.id) === String(id)));
+  const dft = tierDefaultOf(employees.value.find((e) => String(e.id) === String(id)));
   if (dft) {
+    tplFormData.value.diagnosisTier = dft.diagnosisTier;
+    tplFormData.value.diagnosisFee = dft.diagnosisFee;
     tplFormData.value.isExpert = dft.isExpert;
     tplFormData.value.expertFee = dft.expertFee;
   }
+};
+/** 档位切换 → 同步带出政策全额；专家费一律 0（加收已并入门诊诊查费，不再单列） */
+const onTierChange = (target, tier) => {
+  const amount = tierAmount(tier);
+  if (target.diagnosisFee !== amount) {
+    target.diagnosisFee = amount;
+  }
+  target.isExpert = Number(tier) >= 2 ? 1 : 0;
+  target.expertFee = 0;
 };
 /**
  * 模板换岗位类别：换的是「规则链」——医生岗配号源/诊室/门诊诊查费，其余岗位是纯出勤。
@@ -423,8 +434,9 @@ const fillForm = (row) => {
     roomName: row.roomName || '',
     registFee: row.registFee || 0,
     diagnosisFee: row.diagnosisFee || 0,
+    diagnosisTier: row.diagnosisTier || 1,
     isExpert: row.isExpert || 0,
-    expertFee: row.expertFee || 0,
+    expertFee: 0,
     isAppointment: row.isAppointment || 0,
     appointmentSource: row.appointmentSource || 0,
     status: row.status,

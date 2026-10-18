@@ -76,4 +76,22 @@ public class RevisitFeePreviewVO {
      * 判定说明
      */
     private String reason;
+
+    /**
+     * 号源原价（儿童加收前）
+     *
+     * <p>前端要显示「原价 ¥70 → 含儿童加收 ¥91」时用它。别拿 diagnosisFee 反推原价 ——
+     * 那是加收后的数，反推不出。
+     */
+    private BigDecimal baseDiagnosisFee;
+
+    /**
+     * 本次是否适用儿童加收 30%（湘医保发〔2025〕58号附件1 计价说明）
+     */
+    private boolean childSurcharged;
+
+    /**
+     * 儿童加收额（原价 × 30%）；未加收时为 0
+     */
+    private BigDecimal childSurchargeAmount;
 }

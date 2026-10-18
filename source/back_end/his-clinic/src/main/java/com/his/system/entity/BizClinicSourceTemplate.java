@@ -124,17 +124,33 @@ public class BizClinicSourceTemplate extends BaseEntity {
      * 门诊诊查费（医保编码 011102020010000）。
      *
      * <p>湘医保发〔2025〕58号：支付分类=丙类，医保不报、100% 自付，不进职工门诊统筹。
+     *
+     * <p>🔑 价格快照含职级加收：普通 9 / 副主任 22 / 主任 31 / 知名专家 70。
      */
     private BigDecimal diagnosisFee;
 
     /**
-     * 是否专家号（0-否 1-是）
+     * 门诊诊查费职级加收档位（1普通 2副主任医师 3主任医师 4知名专家）。
+     *
+     * <p>对应 {@link com.his.common.enums.ClinicDiagnosisTierEnum}。模板按档位带出价格默认值，
+     * 生成实际号源时一并落库（价格以生成当时为准，模板后续改档不影响已生成的号源）。
      */
+    private Integer diagnosisTier;
+
+    /**
+     * 是否专家号（0-否 1-是）
+     *
+     * @deprecated 定价已由 {@link #diagnosisTier} + {@link #diagnosisFee} 承担，本列仅留作展示标记。
+     */
+    @Deprecated
     private Integer isExpert;
 
     /**
      * 专家号费用
+     *
+     * @deprecated 58号文后已废止独立专家费，加收并入门诊诊查费。本列恒为 0，不参与计价。
      */
+    @Deprecated
     private BigDecimal expertFee;
 
     /**

@@ -9,6 +9,7 @@ import com.his.common.base.PageResult;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 /**
  * 复诊收费策略服务：既是配置页的 CRUD 出口，也是「复诊号收多少钱」的唯一判定入口。
@@ -75,6 +76,15 @@ public interface RevisitFeePolicyService extends IService<RevisitFeePolicy> {
          * 排班上的门诊诊查费原价（医保编码 011102020010000）
          */
         private BigDecimal diagnosisFee;
+        /**
+         * 患者出生日期：儿童加收 30% 的判定输入（湘医保发〔2025〕58号附件1）。
+         * null = 档案缺出生日期 → 不加收（判不出来不猜，见 PediatricSurchargePolicy）。
+         */
+        private LocalDate birthDate;
+        /**
+         * 就诊日：儿童年龄按这天算，不按挂号当天（预约可提前数周）。
+         */
+        private LocalDate visitDate;
     }
 
 /**
@@ -113,6 +123,19 @@ public interface RevisitFeePolicyService extends IService<RevisitFeePolicy> {
          * 判定说明（写进收费单备注，医保/审计追问时的依据）
          */
         private String reason;
+        /**
+         * 本次是否适用了儿童加收 30%（前端据此显示「含儿童加收」提示）。
+         */
+        private boolean childSurcharged;
+        /**
+         * 儿童加收额（base × 30%）。未加收时为 0。
+         */
+        private BigDecimal childSurchargeAmount = BigDecimal.ZERO;
+        /**
+         * 号源原价（加收前）。前端要显示「原价 ¥70 → 含加收 ¥91」时用它，
+         * 别让前端拿 diagnosisFee 反推（那是加收后的数，反推不出原价）。
+         */
+        private BigDecimal baseDiagnosisFee = BigDecimal.ZERO;
 
         public BigDecimal totalFee() {
             return diagnosisFee;

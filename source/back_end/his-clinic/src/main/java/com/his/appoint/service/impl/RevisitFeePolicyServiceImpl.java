@@ -15,6 +15,7 @@ import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
+import com.his.common.support.PediatricSurchargePolicy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -37,13 +38,31 @@ public class RevisitFeePolicyServiceImpl extends ServiceImpl<RevisitFeePolicyMap
         RevisitFeeDecision decision = new RevisitFeeDecision();
         // 🔑 只读诊查费：湘医保发〔2025〕58号已废止挂号费合并进门诊诊查费，门诊现在只有一项费用。
         // context.registFee 保留字段仅作历史兼容（恒 0），不参与判定。
-        BigDecimal diagnosisFee = NumUtil.orZero(context == null ? null : context.getDiagnosisFee());
+        BigDecimal baseFee = NumUtil.orZero(context == null ? null : context.getDiagnosisFee());
         decision.setRegistFee(BigDecimal.ZERO);
+        decision.setBaseDiagnosisFee(baseFee);
+
+        // 🔑 顺序：先按儿童政策算出应收价，再让复诊减免策略去减。
+        //   反过来（先减免再加收）会让「免收的复诊号」因为是儿童反而多收 30% —— 减免是对
+        //   「这项服务」的免收，不是对「基础价」的免收，加收项属于同一项服务，理应一起免。
+        //   政策依据见 PediatricSurchargePolicy（湘医保发〔2025〕58号附件1 + 省局解读第4期第6问）。
+        boolean child = context != null
+                && PediatricSurchargePolicy.isChild(context.getBirthDate(), context.getVisitDate());
+        BigDecimal diagnosisFee = child
+                ? baseFee.add(PediatricSurchargePolicy.surchargeOf(baseFee))
+                : baseFee;
+        decision.setChildSurcharged(child);
+        decision.setChildSurchargeAmount(child
+                ? PediatricSurchargePolicy.surchargeOf(baseFee) : BigDecimal.ZERO);
         decision.setDiagnosisFee(diagnosisFee);
         decision.setChargeMode(RevisitChargeModeEnum.FULL.getCode());
         decision.setWaived(diagnosisFee.compareTo(BigDecimal.ZERO) <= 0);
         if (decision.isWaived()) {
             decision.setReason("号源原价为 0，免收");
+        }
+        if (child) {
+            decision.setReason(appendReason(decision.getReason(),
+                    PediatricSurchargePolicy.reasonText(context.getBirthDate(), context.getVisitDate())));
         }
 
         if (context == null) {
@@ -64,16 +83,37 @@ public class RevisitFeePolicyServiceImpl extends ServiceImpl<RevisitFeePolicyMap
             //   是本轮整改里最容易踩的静默坑（患者投诉 + 结算口径追溯都很难解释）。
             //   依据：湘医保发〔2025〕58号废止挂号费，挂号费职能已并入门诊诊查费。
             decision.setDiagnosisFee(BigDecimal.ZERO);
-            decision.setReason("复诊收费策略「" + policy.getPolicyName() + "」免收：门诊诊查费"
-                    + "（原「免挂号费」口径，挂号费已按湘医保发〔2025〕58号废止并入诊查费）");
+            // 免收把儿童加收一并免掉，但加收依据要留在备注里：否则事后看到「按儿童价却没收」
+            // 会以为是漏收，而不是策略免收。
+            decision.setReason(appendReason(decision.getReason(),
+                    "复诊收费策略「" + policy.getPolicyName() + "」免收：门诊诊查费"
+                            + "（原「免挂号费」口径，挂号费已按湘医保发〔2025〕58号废止并入诊查费）"));
         } else if (mode == RevisitChargeModeEnum.FREE_ALL.getCode()) {
             decision.setDiagnosisFee(BigDecimal.ZERO);
-            decision.setReason("复诊收费策略「" + policy.getPolicyName() + "」免收：门诊诊查费");
+            decision.setReason(appendReason(decision.getReason(),
+                    "复诊收费策略「" + policy.getPolicyName() + "」免收：门诊诊查费"));
         } else {
-            decision.setReason("复诊收费策略「" + policy.getPolicyName() + "」：全额收费");
+            decision.setReason(appendReason(decision.getReason(),
+                    "复诊收费策略「" + policy.getPolicyName() + "」：全额收费"));
         }
+        // 免收后 childSurchargeAmount 仍保留实算值：它是「本该加收多少」的凭据，
+        // 与 diagnosisFee（实收0）分开存，审计要能核对减免幅度对不对。
         decision.setWaived(decision.getDiagnosisFee().compareTo(BigDecimal.ZERO) <= 0);
         return decision;
+    }
+
+    /**
+     * 拼接收费单备注：多处判定理由（原价0免收 / 儿童加收 / 复诊策略）可能同时成立，
+     * 后写的不能覆盖先写的 —— 备注是事后追溯「这笔为什么是这个数」的唯一出处，丢了就查不回来。
+     */
+    private static String appendReason(String base, String extra) {
+        if (!TextUtil.hasText(base)) {
+            return extra;
+        }
+        if (!TextUtil.hasText(extra)) {
+            return base;
+        }
+        return base + "；" + extra;
     }
 
     /**

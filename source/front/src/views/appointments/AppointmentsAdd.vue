@@ -198,7 +198,11 @@
             </span>
           </div>
           <div v-if="revisitPreview && !revisitPreviewLoading" class="mt-1 text-xs text-slate-500">
-            门诊诊查费 ¥{{ Number(revisitPreview.diagnosisFee || 0).toFixed(2) }} ·
+            门诊诊查费 ¥{{ Number(revisitPreview.diagnosisFee || 0).toFixed(2) }}<template
+              v-if="revisitPreview.childSurcharged">
+              <span class="text-amber-600">（原价 ¥{{ Number(revisitPreview.baseDiagnosisFee || 0).toFixed(2) }}，含儿童加收
+                ¥{{ Number(revisitPreview.childSurchargeAmount || 0).toFixed(2) }}）</span>
+            </template> ·
             {{ revisitPreview.policyName ? `命中策略「${revisitPreview.policyName}」` : '未命中策略，按全额收费' }}
           </div>
           <p v-if="revisitPreview?.reason && !revisitPreviewLoading" class="mt-1 text-xs text-slate-400">

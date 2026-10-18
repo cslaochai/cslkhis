@@ -161,7 +161,7 @@
                     <!-- 「加排班」悬停才浮现（opacity 切换 + 绝对定位，格子尺寸零变化）；已过日期整格只读，按钮直接不渲染 -->
                     <button v-if="d >= todayStr" v-perm="'outpatient:schedule:add'"
                             :data-testid="`panel-add-${row.doctorId}-${d}`"
-                            class="absolute right-1 top-0.5 z-20 rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium leading-4 text-blue-600 opacity-0 transition-opacity duration-150 group-hover/cell:opacity-100 hover:bg-blue-100"
+                            class="absolute right-1 top-0.5 z-20 cursor-pointer rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium leading-4 text-blue-600 opacity-0 transition-opacity duration-150 group-hover/cell:opacity-100 hover:bg-blue-100"
                             title="为该医生该日补班"
                             @click="handlePanelCellAdd(row, d)">加排班
                     </button>
@@ -199,24 +199,25 @@
                             </template>
                           </p>
                         </div>
-                        <!-- 操作行：修改/停/加 独占一行。高度常驻预留（opacity 切换），悬停不会撑动卡片。日期已过 → 整条不渲染（服务端同口径拒绝） -->
+                        <!-- 操作行：详情/停/加 独占一行。高度常驻预留（opacity 切换），悬停不会撑动卡片。日期已过 → 整条不渲染（服务端同口径拒绝）。
+                             按真实 HIS：已发布排班本体不可原地改，点格子只进只读详情；停诊、加号分别走右侧独立按钮 -->
                         <div v-if="s.status === 1 && d >= todayStr"
                              class="mt-1 flex h-5 items-center justify-end gap-1.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
                           <button v-perm="'outpatient:schedule:edit'" :data-testid="`panel-edit-${row.doctorId}-${d}`"
-                                  class="text-xs leading-4 text-blue-600"
-                                  title="修改排班"
-                                  @click.stop="handlePanelCellEdit(s)">修改
+                                  class="cursor-pointer text-xs leading-4 text-blue-600"
+                                  title="查看排班详情"
+                                  @click.stop="handlePanelCellEdit(s)">详情
                           </button>
                           <span class="text-slate-200">|</span>
                           <button v-perm="'outpatient:schedule:delete'"
                                   :title="staffTypeHasSource(s.staffType) ? '快捷停诊' : '停用该班次'"
-                                  class="text-xs leading-4 text-red-500"
+                                  class="cursor-pointer text-xs leading-4 text-red-500"
                                   @click.stop="handleToggleStatus(s)">停
                           </button>
                           <!-- 加号只给医生出诊班：出勤岗没有号源池（后端同样拒绝），按钮直接不渲染 -->
                           <template v-if="staffTypeHasSource(s.staffType)">
                             <span class="text-slate-200">|</span>
-                            <button v-perm="'outpatient:schedule:edit'" class="text-xs leading-4 text-blue-600"
+                            <button v-perm="'outpatient:schedule:edit'" class="cursor-pointer text-xs leading-4 text-blue-600"
                                     title="专家加号"
                                     @click.stop="handleAddSource(s)">加
                             </button>
@@ -558,10 +559,8 @@
     />
     <ScheduleEdit
         v-model="editVisible"
-        :departments="departments"
         :row="editingSchedule"
-        :title-map="titleMap"
-        @saved="loadPanel"
+        @stop="onDetailStop"
     />
 
     <!-- 新增/编辑排班模板弹窗 -->
@@ -675,6 +674,33 @@
                    @click="handleConfirmGenerate">确认生成
         </el-button>
         <el-button @click="previewVisible = false">取消</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 专家加号：数量与原因合到一个弹框（原先两次 prompt 前后脱节），原因写入排班留痕 -->
+    <el-dialog v-model="addSourceVisible" destroy-on-close title="专家加号" width="460px">
+      <el-form label-position="left" label-width="84px">
+        <el-form-item v-if="addSourceRow" label="班次">
+          <span class="text-sm text-slate-700">
+            {{ addSourceRow.doctorName }} · {{ addSourceRow.scheduleDate }} · {{ shiftText(addSourceRow) }}
+          </span>
+        </el-form-item>
+        <el-form-item v-if="addSourceRow" label="当前号源">
+          <span class="text-sm text-slate-600">
+            总 {{ addSourceRow.totalSource }} · 剩余 {{ addSourceRow.availableSource }}
+          </span>
+        </el-form-item>
+        <el-form-item label="加号数量" required>
+          <el-input-number v-model="addSourceForm.num" :min="1" :max="50" class="!w-full" controls-position="right"/>
+        </el-form-item>
+        <el-form-item label="加号原因" required>
+          <el-input v-model="addSourceForm.reason" type="textarea" :rows="3" maxlength="100" show-word-limit
+                    placeholder="必填，写入排班变更留痕"/>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button :loading="addSourceLoading" type="primary" @click="handleAddSourceSubmit">加号</el-button>
+        <el-button @click="addSourceVisible = false">取消</el-button>
       </template>
     </el-dialog>
   </div>
@@ -1393,7 +1419,7 @@ const handlePanelCellAdd = (row, date) => {
   };
   dialogVisible.value = true;
 };
-/** 点已有格子：进编辑弹窗（可改号源/停诊/删除） */
+/** 点已有格子：进只读排班详情（不可原地改；停诊、加号走独立按钮） */
 const handlePanelCellEdit = (row) => {
   handleEdit(row);
 };
@@ -1468,6 +1494,12 @@ const handleAdd = () => {
 const handleEdit = (row) => {
   editingSchedule.value = row;
   editVisible.value = true;
+};
+/** 详情弹窗里发起停诊：关闭详情，复用格子「停」的影响名单→退号闭环 */
+const onDetailStop = () => {
+  editVisible.value = false;
+  if (editingSchedule.value)
+    handleToggleStatus(editingSchedule.value);
 };
 const handleDelete = async (row) => {
   try {
@@ -1557,23 +1589,38 @@ const handleStopOnly = async () => {
   }
 };
 // ========== 加号 ==========
-const handleAddSource = async (row) => {
+// 数量与原因在同一个弹框里填（原先两次 ElMessageBox.prompt 前后脱节）
+const addSourceVisible = ref(false);
+const addSourceLoading = ref(false);
+const addSourceRow = ref(null);
+const addSourceForm = ref({num: 1, reason: ''});
+/** 点格子上的「加」：打开加号弹框，不在这里直接提交 */
+const handleAddSource = (row) => {
+  addSourceRow.value = row;
+  addSourceForm.value = {num: 1, reason: ''};
+  addSourceVisible.value = true;
+};
+const handleAddSourceSubmit = async () => {
+  const num = Math.min(50, Math.max(1, parseInt(addSourceForm.value.num, 10)));
+  if (!Number.isFinite(num) || num < 1) {
+    ElMessage.warning('请输入 1-50 的加号数量');
+    return;
+  }
+  const reason = (addSourceForm.value.reason || '').trim();
+  if (!reason) {
+    ElMessage.warning('请填写加号原因（写入排班留痕）');
+    return;
+  }
+  addSourceLoading.value = true;
   try {
-    const {value} = await ElMessageBox.prompt(`为 ${row.doctorName} ${row.scheduleDate} ${shiftText(row)} 加号（当前总号源 ${row.totalSource}，剩余 ${row.availableSource}），原因将留痕`, '专家加号', {
-      confirmButtonText: '加号', cancelButtonText: '取消',
-      inputPattern: /^[1-9]\d*$/, inputErrorMessage: '请输入正整数',
-      inputPlaceholder: '加号数量（1-50）',
-    });
-    const num = Math.min(50, Math.max(1, parseInt(value)));
-    const reason = await ElMessageBox.prompt('加号原因（必填，写入排班留痕）', '加号原因', {
-      confirmButtonText: '确定', cancelButtonText: '取消',
-      inputPattern: /^.+$/, inputErrorMessage: '原因不能为空',
-    });
-    await addScheduleSource(row.id, num, reason.value);
+    await addScheduleSource(addSourceRow.value.id, num, reason);
     ElMessage.success(`已加号 ${num} 个`);
+    addSourceVisible.value = false;
     loadPanel();
   } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+
+  } finally {
+    addSourceLoading.value = false;
   }
 };
 const loadTitleDict = async () => {

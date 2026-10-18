@@ -51,6 +51,12 @@ public class BizClinicSourceBatchItemDTO {
     private BigDecimal diagnosisFee;
 
     /**
+     * 门诊诊查费职级加收档位：1普通 2副主任医师 3主任医师 4知名专家
+     */
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "诊查费职级档位取值不合法")
+    private Integer diagnosisTier;
+
+    /**
      * 是否专家号：0-否 1-是
      */
     @AllowedValues(values = {"0", "1"}, message = "是否专家号取值不合法")

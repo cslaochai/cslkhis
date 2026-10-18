@@ -42,8 +42,7 @@ export const isRegistPaid = (r) => [2, 3].includes(Number(r?.billStatus));
  * 合并为门诊诊查费，挂号单现在只出这一项。口径必须与后端 AppointServiceImpl.scheduleFeeTotal 一致，
  * 否则改约比价会拿一个比实际多收的钱去判「该不该补差价」。
  */
-export const scheduleFeeCents = (s) => Math.round((Number(s?.diagnosisFee) || 0) * 100)
-    + Math.round((Number(s?.diagnosisFee) || 0) * 100);
+export const scheduleFeeCents = (s) => Math.round((Number(s?.diagnosisFee) || 0) * 100);
 
 /**
  * 已收费号改约的候选判定（与后端 assertPaidRescheduleSamePrice 同一口径）：

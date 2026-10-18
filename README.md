@@ -153,6 +153,81 @@ docker compose -f docker/docker-compose.yml up -d --build
 
 影像与导诊单 PDF 写入容器内 `/app/uploads`，compose 已挂载到宿主 `docker/uploads`，重建容器不丢文件。
 
+## 部署架构
+
+### 部署架构总览
+
+单台内网生产服务器承载全部业务与 CI/CD 工具链：业务应用（管理端 + 后端）容器化部署，研发工具链以服务方式运行，
+Nginx 作为统一网关入口。
+
+```mermaid
+flowchart TB
+    subgraph L0["接入层 · 统一网关"]
+        USR["浏览器 / 院内客户端"] --> NGX["Nginx 反向代理 :80"]
+    end
+
+    subgraph L1["业务应用层 · Docker Compose"]
+        NGX --> FRONT["his-front 管理端<br/>Vue 3 + Nginx"]
+        FRONT -- "/api" --> BACK["his-backend 后端<br/>Java 21 + Spring Boot 3.2.5"]
+    end
+
+    subgraph L2["CI/CD 与中间件（服务托管）"]
+        GIT["Gitea :3000<br/>代码仓库"]
+        JENK["Jenkins :8080<br/>CI 流水线"]
+        SONAR["SonarQube :9000<br/>代码质量校验"]
+        NACOS["Nacos :8848<br/>注册 / 配置中心"]
+        MQ["RocketMQ :9876<br/>消息队列"]
+    end
+
+    subgraph L3["数据与基础设施层"]
+        MYSQL["MySQL :3306<br/>HIS 主数据库"]
+        REDIS["Redis :6379<br/>缓存"]
+        MILVUS["Milvus :19530<br/>向量数据库"]
+        PG["PostgreSQL :5432<br/>工具链数据支撑"]
+    end
+
+    subgraph L4["可观测层"]
+        PROM["Prometheus :9090<br/>指标采集"]
+        GRAFANA["Grafana :3001<br/>可视化看板"]
+        LOKI["Loki + Promtail<br/>日志收集与检索"]
+    end
+
+    BACK --> MYSQL & REDIS & MQ & NACOS & MILVUS
+    JENK --> GIT
+    JENK --> SONAR
+    JENK -. "构建镜像并发布" .-> BACK
+    LOKI -. "采集容器日志" .-> BACK
+    PROM --> GRAFANA
+    LOKI --> GRAFANA
+```
+
+关键调用链：
+
+1. 用户 → Nginx 统一网关 → 管理端 → `/api` → 后端服务；
+2. 后端 → MySQL / Redis / RocketMQ / Nacos / Milvus（数据、缓存、消息、配置、向量检索）；
+3. 开发提交 Gitea → Jenkins 流水线（拉取代码 → Maven 打包 → SonarQube 扫描 → 构建镜像 → 容器编排发布）；
+4. Promtail 采集容器日志 → Loki → Grafana；Prometheus → Grafana（指标看板）。
+
+### K8s 化概念映射
+
+将当前单机部署的组件对应到 Kubernetes 标准对象，便于演进到容器集群：
+
+```mermaid
+flowchart LR
+    NGX["Nginx 反向代理"] --> INGRESS["Ingress Controller<br/>按域名 / 路径路由"]
+    FRONT["his-front"] --> DEPF["Deployment + Service<br/>ConfigMap（Nginx 配置）"]
+    BACK["his-backend"] --> DEPB["Deployment + Service<br/>ConfigMap / Secret（连接与密钥）"]
+    MYSQL["MySQL / Redis"] --> STSD["StatefulSet + PVC<br/>数据持久化"]
+    MILVUS["Milvus"] --> STSM["StatefulSet<br/>standalone + etcd + minio"]
+    NACOS["Nacos / RocketMQ"] --> STSN["StatefulSet<br/>Headless Service 集群"]
+    GIT["Gitea / Jenkins / SonarQube"] --> DEPT["Deployment + PVC + Ingress<br/>数据 / 工作区持久化"]
+    IMG["构建产物"] --> REG["镜像仓库<br/>Registry / Harbor"]
+    OBS["Prometheus / Grafana / Loki"] --> HELM["Helm Charts<br/>kube-prometheus-stack / loki-stack"]
+```
+
+上 K8s 时发布链路仅需调整最后两步：Jenkins 流水线由「构建镜像 → 容器编排发布」改为「构建镜像 → 推送镜像仓库」+
+`kubectl set image`（或 Helm upgrade），前面 拉取代码 → Maven 打包 → SonarQube 扫描 环节完全不变。
+
 ## 架构要点
 
 ### 模块化单体（3 个 Maven 模块）

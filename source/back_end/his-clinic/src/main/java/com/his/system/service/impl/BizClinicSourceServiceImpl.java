@@ -171,6 +171,11 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         schedule.setIsExpert(NumUtil.orZero(schedule.getIsExpert()));
         schedule.setRegistFee(NumUtil.orZero(schedule.getRegistFee()));
         schedule.setDiagnosisFee(NumUtil.orZero(schedule.getDiagnosisFee()));
+        // 🔑 档位为空时兜底普通档（9 元），不留 null：出账与医保对账都要读这一列，
+        //    null 会让「这号适用哪档加收」在报表里变成空白，追责时说不清。
+        if (ClinicDiagnosisTierEnum.ofCode(schedule.getDiagnosisTier()) == null) {
+            schedule.setDiagnosisTier(ClinicDiagnosisTierEnum.GENERAL.getCode());
+        }
         schedule.setExpertFee(NumUtil.orZero(schedule.getExpertFee()));
     }
 
@@ -347,6 +352,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         schedule.setExpertFee(BigDecimal.ZERO);
         schedule.setRegistFee(BigDecimal.ZERO);
         schedule.setDiagnosisFee(BigDecimal.ZERO);
+        schedule.setDiagnosisTier(ClinicDiagnosisTierEnum.GENERAL.getCode());
         schedule.setRoomId(null);
         schedule.setRoomName(null);
     }
@@ -474,6 +480,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         schedule.setTotalSource(item.getTotalSource());
         schedule.setRegistFee(item.getRegistFee());
         schedule.setDiagnosisFee(item.getDiagnosisFee());
+        schedule.setDiagnosisTier(item.getDiagnosisTier());
         schedule.setIsExpert(item.getIsExpert());
         schedule.setExpertFee(item.getExpertFee());
         schedule.setIsAppointment(item.getIsAppointment());
@@ -564,6 +571,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         copy.setTotalSource(source.getTotalSource());
         copy.setRegistFee(source.getRegistFee());
         copy.setDiagnosisFee(source.getDiagnosisFee());
+        copy.setDiagnosisTier(source.getDiagnosisTier());
         copy.setIsExpert(source.getIsExpert());
         copy.setExpertFee(source.getExpertFee());
         copy.setIsAppointment(source.getIsAppointment());
@@ -602,6 +610,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         entity.setTotalSource(upsertDTO.getTotalSource());
         entity.setRegistFee(upsertDTO.getRegistFee());
         entity.setDiagnosisFee(upsertDTO.getDiagnosisFee());
+        entity.setDiagnosisTier(upsertDTO.getDiagnosisTier());
         entity.setRoomId(upsertDTO.getRoomId());
         entity.setRoomName(upsertDTO.getRoomName());
         entity.setIsExpert(upsertDTO.getIsExpert());
@@ -633,6 +642,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         vo.setAvailableSource(entity.getAvailableSource());
         vo.setRegistFee(entity.getRegistFee());
         vo.setDiagnosisFee(entity.getDiagnosisFee());
+        vo.setDiagnosisTier(entity.getDiagnosisTier());
         vo.setIsExpert(entity.getIsExpert());
         vo.setExpertFee(entity.getExpertFee());
         vo.setIsAppointment(entity.getIsAppointment());

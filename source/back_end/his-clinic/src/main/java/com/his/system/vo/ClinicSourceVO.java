@@ -50,7 +50,12 @@ public class ClinicSourceVO implements Serializable {
     private BigDecimal diagnosisFee;
 
     /**
-     * 专家号（0-否 1-是）
+     * 门诊诊查费职级加收档位（1普通 2副主任医师 3主任医师 4知名专家）
+     */
+    private Integer diagnosisTier;
+
+    /**
+     * 专家号（0-否 1-是），仅作展示标记
      */
     private Integer isExpert;
 
