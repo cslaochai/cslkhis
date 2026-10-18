@@ -884,8 +884,8 @@ CREATE TABLE `biz_appoint_info`
     UNIQUE KEY `uk_regist_no` (`regist_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='挂号信息';
 
--- biz_compliance_audit_item  医保合规审核明细
-CREATE TABLE `biz_compliance_audit_item`
+-- biz_yb_compliance_audit_item  医保合规审核明细
+CREATE TABLE `biz_yb_compliance_audit_item`
 (
     `id`           bigint       NOT NULL COMMENT '主键ID',
     `audit_id`     bigint       NOT NULL COMMENT '审核ID',
@@ -1282,7 +1282,7 @@ ALTER TABLE `biz_exam_appointment`
 ALTER TABLE `biz_exam_appointment`
     ADD CONSTRAINT `fk_biz_exam_appointment_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_exam_appointment`
-    ADD CONSTRAINT `fk_biz_exam_appointment_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_compliance_audit_item` (`id`);
+    ADD CONSTRAINT `fk_biz_exam_appointment_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_yb_compliance_audit_item` (`id`);
 ALTER TABLE `biz_exam_appointment`
     ADD CONSTRAINT `fk_biz_exam_appointment_device_id` FOREIGN KEY (`device_id`) REFERENCES `biz_exam_device` (`id`);
 ALTER TABLE `biz_exam_appointment`
@@ -1354,7 +1354,7 @@ ALTER TABLE `biz_inspection_template`
 ALTER TABLE `biz_medicaltech_execution`
     ADD CONSTRAINT `fk_biz_medicaltech_execution_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
 ALTER TABLE `biz_medicaltech_execution`
-    ADD CONSTRAINT `fk_biz_medicaltech_execution_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_compliance_audit_item` (`id`);
+    ADD CONSTRAINT `fk_biz_medicaltech_execution_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_yb_compliance_audit_item` (`id`);
 ALTER TABLE `biz_medicaltech_execution`
     ADD CONSTRAINT `fk_biz_medicaltech_execution_executor_id` FOREIGN KEY (`executor_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_medicaltech_execution`

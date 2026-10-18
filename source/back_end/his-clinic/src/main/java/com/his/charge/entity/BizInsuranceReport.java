@@ -19,7 +19,7 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("biz_insurance_report")
+@TableName("biz_yb_report")
 public class BizInsuranceReport extends BaseEntity {
 
 

@@ -137,7 +137,7 @@ const pagination = reactive({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0})
 // 两卡式列表页：表格只设最大高度，超高内部滚动（口径参照 views/system/user/UserView.vue）
 const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight();
 // 结算方式口径：字典 his_medical_insurance_type_code（2-城镇职工医保 3-城乡居民医保 4-公费医疗）
-// 注意：sys_insurance_policy 列注释只写了「2-城镇职工医保 3-城乡居民医保」，
+// 注意：biz_yb_policy 列注释只写了「2-城镇职工医保 3-城乡居民医保」，
 // 但真实数据里存在 4-公费医疗（政策 id=6，统筹 100%）。以字典 + 数据为准，不按残缺注释渲染。
 const settlementTypeOptions = ref([]);
 const STATUS_OPTIONS = [

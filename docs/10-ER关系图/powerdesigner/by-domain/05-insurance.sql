@@ -236,8 +236,8 @@ CREATE TABLE `biz_yb_inspection`
     UNIQUE KEY `uk_inspect_no` (`inspect_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='医保飞检批次';
 
--- sys_insurance_policy  医保政策配置
-CREATE TABLE `sys_insurance_policy`
+-- biz_yb_policy  医保政策配置
+CREATE TABLE `biz_yb_policy`
 (
     `id`              bigint        NOT NULL COMMENT '主键ID',
     `policy_name`     varchar(100)  NOT NULL COMMENT '政策名称',
@@ -256,8 +256,8 @@ CREATE TABLE `sys_insurance_policy`
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='医保政策配置';
 
--- biz_insurance_catalog_rule  医保目录报销规则
-CREATE TABLE `biz_insurance_catalog_rule`
+-- biz_yb_catalog_rule  医保目录报销规则
+CREATE TABLE `biz_yb_catalog_rule`
 (
     `id`             bigint         NOT NULL COMMENT '主键（雪花）',
     `rule_no`        varchar(32)    NOT NULL COMMENT '规则编号',
@@ -288,8 +288,8 @@ CREATE TABLE `biz_insurance_catalog_rule`
     UNIQUE KEY `uk_item_catalog_encounter` (`item_code`, `catalog_type`, `encounter_type`, `insurance_type`, `effective_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='医保目录报销规则';
 
--- biz_insurance_settlement  医保结算清单
-CREATE TABLE `biz_insurance_settlement`
+-- biz_yb_settlement  医保结算清单
+CREATE TABLE `biz_yb_settlement`
 (
     `id`                   bigint         NOT NULL COMMENT '主键ID',
     `settlement_no`        varchar(32)    NOT NULL COMMENT '结算清单号',
@@ -347,8 +347,8 @@ CREATE TABLE `biz_insurance_settlement`
     UNIQUE KEY `uk_isb_bill` (`bill_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='医保结算清单';
 
--- biz_settlement_diagnosis  结算清单诊断明细
-CREATE TABLE `biz_settlement_diagnosis`
+-- biz_yb_settlement_diagnosis  结算清单诊断明细
+CREATE TABLE `biz_yb_settlement_diagnosis`
 (
     `id`              bigint      NOT NULL COMMENT '主键ID',
     `settlement_id`   bigint      NOT NULL COMMENT '结算清单ID',
@@ -371,8 +371,8 @@ CREATE TABLE `biz_settlement_diagnosis`
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='结算清单诊断明细';
 
--- biz_settlement_operation  结算清单手术明细
-CREATE TABLE `biz_settlement_operation`
+-- biz_yb_settlement_operation  结算清单手术明细
+CREATE TABLE `biz_yb_settlement_operation`
 (
     `id`              bigint      NOT NULL COMMENT '主键ID',
     `settlement_id`   bigint      NOT NULL COMMENT '结算清单ID',
@@ -395,8 +395,8 @@ CREATE TABLE `biz_settlement_operation`
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='结算清单手术明细';
 
--- biz_insurance_report  医保报盘报文台账
-CREATE TABLE `biz_insurance_report`
+-- biz_yb_report  医保报盘报文台账
+CREATE TABLE `biz_yb_report`
 (
     `id`            bigint      NOT NULL COMMENT '主键（雪花）',
     `settlement_id` bigint      NOT NULL COMMENT '医保结算清单ID',
@@ -429,8 +429,8 @@ CREATE TABLE `biz_insurance_report`
     UNIQUE KEY `uk_trade_no` (`trade_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='医保报盘报文台账';
 
--- biz_compliance_audit  医保合规审核单
-CREATE TABLE `biz_compliance_audit`
+-- biz_yb_compliance_audit  医保合规审核单
+CREATE TABLE `biz_yb_compliance_audit`
 (
     `id`            bigint      NOT NULL COMMENT '主键ID',
     `audit_no`      varchar(32) NOT NULL COMMENT '审核单号',
@@ -462,8 +462,8 @@ CREATE TABLE `biz_compliance_audit`
     UNIQUE KEY `uk_ca_audit_no` (`audit_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='医保合规审核单';
 
--- biz_compliance_audit_item  医保合规审核明细
-CREATE TABLE `biz_compliance_audit_item`
+-- biz_yb_compliance_audit_item  医保合规审核明细
+CREATE TABLE `biz_yb_compliance_audit_item`
 (
     `id`           bigint       NOT NULL COMMENT '主键ID',
     `audit_id`     bigint       NOT NULL COMMENT '审核ID',
@@ -707,28 +707,28 @@ CREATE TABLE `sys_employee`
     UNIQUE KEY `uk_emp_code` (`emp_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='员工';
 -- ---------------- 参照关系（E-R 连线） ----------------
-ALTER TABLE `biz_compliance_audit`
-    ADD CONSTRAINT `fk_biz_compliance_audit_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_insurance_settlement` (`id`);
-ALTER TABLE `biz_compliance_audit`
-    ADD CONSTRAINT `fk_biz_compliance_audit_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
-ALTER TABLE `biz_compliance_audit_item`
-    ADD CONSTRAINT `fk_biz_compliance_audit_item_audit_id` FOREIGN KEY (`audit_id`) REFERENCES `biz_compliance_audit` (`id`);
-ALTER TABLE `biz_insurance_report`
-    ADD CONSTRAINT `fk_biz_insurance_report_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_insurance_settlement` (`id`);
-ALTER TABLE `biz_insurance_settlement`
-    ADD CONSTRAINT `fk_biz_insurance_settlement_bill_id` FOREIGN KEY (`bill_id`) REFERENCES `biz_settlement_bill` (`id`);
-ALTER TABLE `biz_insurance_settlement`
-    ADD CONSTRAINT `fk_biz_insurance_settlement_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_insurance_settlement`
-    ADD CONSTRAINT `fk_biz_insurance_settlement_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
-ALTER TABLE `biz_insurance_settlement`
-    ADD CONSTRAINT `fk_biz_insurance_settlement_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_insurance_settlement`
-    ADD CONSTRAINT `fk_biz_insurance_settlement_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_settlement_diagnosis`
-    ADD CONSTRAINT `fk_biz_settlement_diagnosis_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_insurance_settlement` (`id`);
-ALTER TABLE `biz_settlement_operation`
-    ADD CONSTRAINT `fk_biz_settlement_operation_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_insurance_settlement` (`id`);
+ALTER TABLE `biz_yb_compliance_audit`
+    ADD CONSTRAINT `fk_biz_yb_compliance_audit_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_yb_settlement` (`id`);
+ALTER TABLE `biz_yb_compliance_audit`
+    ADD CONSTRAINT `fk_biz_yb_compliance_audit_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
+ALTER TABLE `biz_yb_compliance_audit_item`
+    ADD CONSTRAINT `fk_biz_yb_compliance_audit_item_audit_id` FOREIGN KEY (`audit_id`) REFERENCES `biz_yb_compliance_audit` (`id`);
+ALTER TABLE `biz_yb_report`
+    ADD CONSTRAINT `fk_biz_yb_report_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_yb_settlement` (`id`);
+ALTER TABLE `biz_yb_settlement`
+    ADD CONSTRAINT `fk_biz_yb_settlement_bill_id` FOREIGN KEY (`bill_id`) REFERENCES `biz_settlement_bill` (`id`);
+ALTER TABLE `biz_yb_settlement`
+    ADD CONSTRAINT `fk_biz_yb_settlement_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_yb_settlement`
+    ADD CONSTRAINT `fk_biz_yb_settlement_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
+ALTER TABLE `biz_yb_settlement`
+    ADD CONSTRAINT `fk_biz_yb_settlement_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_yb_settlement`
+    ADD CONSTRAINT `fk_biz_yb_settlement_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_yb_settlement_diagnosis`
+    ADD CONSTRAINT `fk_biz_yb_settlement_diagnosis_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_yb_settlement` (`id`);
+ALTER TABLE `biz_yb_settlement_operation`
+    ADD CONSTRAINT `fk_biz_yb_settlement_operation_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_yb_settlement` (`id`);
 ALTER TABLE `biz_yb_chronic_reg`
     ADD CONSTRAINT `fk_biz_yb_chronic_reg_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
 ALTER TABLE `biz_yb_chronic_reg`
@@ -744,7 +744,7 @@ ALTER TABLE `biz_yb_deduct_log`
 ALTER TABLE `biz_yb_deduct_notice`
     ADD CONSTRAINT `fk_biz_yb_deduct_notice_inspection_id` FOREIGN KEY (`inspection_id`) REFERENCES `biz_yb_inspection` (`id`);
 ALTER TABLE `biz_yb_deduct_notice`
-    ADD CONSTRAINT `fk_biz_yb_deduct_notice_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_insurance_settlement` (`id`);
+    ADD CONSTRAINT `fk_biz_yb_deduct_notice_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_yb_settlement` (`id`);
 ALTER TABLE `biz_yb_deduct_notice`
     ADD CONSTRAINT `fk_biz_yb_deduct_notice_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
 ALTER TABLE `biz_yb_deduct_notice`

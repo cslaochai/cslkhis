@@ -405,10 +405,10 @@ erDiagram
     bigint id "主键（雪花ID）"
     varchar inspect_no "批次号"
   }
-  sys_insurance_policy["医保政策配置 · sys_insurance_policy"] {
+  biz_yb_policy["医保政策配置 · biz_yb_policy"] {
     bigint id "主键ID"
   }
-  biz_insurance_catalog_rule["医保目录报销规则 · biz_insurance_catalog_rule"] {
+  biz_yb_catalog_rule["医保目录报销规则 · biz_yb_catalog_rule"] {
     bigint id "主键（雪花）"
     varchar rule_no "规则编号"
     varchar item_code "项目编码"
@@ -417,7 +417,7 @@ erDiagram
     varchar insurance_type "医保类型（职工/居民/公费等；NULL=通用规则，所有医保类型共用）"
     date effective_date "生效日期（含）"
   }
-  biz_insurance_settlement["医保结算清单 · biz_insurance_settlement"] {
+  biz_yb_settlement["医保结算清单 · biz_yb_settlement"] {
     bigint id "主键ID"
     varchar settlement_no "结算清单号"
     bigint bill_id "结算账单ID"
@@ -426,26 +426,26 @@ erDiagram
     bigint dept_id "科室ID"
     bigint doctor_id "医生ID"
   }
-  biz_settlement_diagnosis["结算清单诊断明细 · biz_settlement_diagnosis"] {
+  biz_yb_settlement_diagnosis["结算清单诊断明细 · biz_yb_settlement_diagnosis"] {
     bigint id "主键ID"
     bigint settlement_id "结算清单ID"
   }
-  biz_settlement_operation["结算清单手术明细 · biz_settlement_operation"] {
+  biz_yb_settlement_operation["结算清单手术明细 · biz_yb_settlement_operation"] {
     bigint id "主键ID"
     bigint settlement_id "结算清单ID"
   }
-  biz_insurance_report["医保报盘报文台账 · biz_insurance_report"] {
+  biz_yb_report["医保报盘报文台账 · biz_yb_report"] {
     bigint id "主键（雪花）"
     bigint settlement_id "医保结算清单ID"
     varchar trade_no "HIS 侧流水号"
   }
-  biz_compliance_audit["医保合规审核单 · biz_compliance_audit"] {
+  biz_yb_compliance_audit["医保合规审核单 · biz_yb_compliance_audit"] {
     bigint id "主键ID"
     varchar audit_no "审核单号"
     bigint settlement_id "结算清单ID"
     bigint regist_id "就诊锚点"
   }
-  biz_compliance_audit_item["医保合规审核明细 · biz_compliance_audit_item"] {
+  biz_yb_compliance_audit_item["医保合规审核明细 · biz_yb_compliance_audit_item"] {
     bigint id "主键ID"
     bigint audit_id "审核ID"
   }
@@ -464,17 +464,17 @@ erDiagram
   sys_employee["员工 · sys_employee"] {
     bigint id "主键ID"
   }
-  biz_insurance_settlement ||--|{ biz_compliance_audit : "settlement_id"
-  biz_appoint_info ||--o{ biz_compliance_audit : "regist_id"
-  biz_compliance_audit ||--|{ biz_compliance_audit_item : "audit_id"
-  biz_insurance_settlement ||--|{ biz_insurance_report : "settlement_id"
-  biz_settlement_bill ||--|{ biz_insurance_settlement : "bill_id"
-  biz_patient ||--|{ biz_insurance_settlement : "patient_id"
-  biz_appoint_info ||--o{ biz_insurance_settlement : "regist_id"
-  sys_department ||--o{ biz_insurance_settlement : "dept_id"
-  sys_employee ||--o{ biz_insurance_settlement : "doctor_id"
-  biz_insurance_settlement ||--|{ biz_settlement_diagnosis : "settlement_id"
-  biz_insurance_settlement ||--|{ biz_settlement_operation : "settlement_id"
+  biz_yb_settlement ||--|{ biz_yb_compliance_audit : "settlement_id"
+  biz_appoint_info ||--o{ biz_yb_compliance_audit : "regist_id"
+  biz_yb_compliance_audit ||--|{ biz_yb_compliance_audit_item : "audit_id"
+  biz_yb_settlement ||--|{ biz_yb_report : "settlement_id"
+  biz_settlement_bill ||--|{ biz_yb_settlement : "bill_id"
+  biz_patient ||--|{ biz_yb_settlement : "patient_id"
+  biz_appoint_info ||--o{ biz_yb_settlement : "regist_id"
+  sys_department ||--o{ biz_yb_settlement : "dept_id"
+  sys_employee ||--o{ biz_yb_settlement : "doctor_id"
+  biz_yb_settlement ||--|{ biz_yb_settlement_diagnosis : "settlement_id"
+  biz_yb_settlement ||--|{ biz_yb_settlement_operation : "settlement_id"
   biz_patient ||--|{ biz_yb_chronic_reg : "patient_id"
   biz_yb_chronic_catalog ||--|{ biz_yb_chronic_reg : "catalog_id"
   sys_department ||--o{ biz_yb_chronic_reg : "certify_dept_id"
@@ -482,7 +482,7 @@ erDiagram
   sys_employee ||--o{ biz_yb_chronic_reg : "register_emp_id"
   biz_yb_deduct_notice ||--|{ biz_yb_deduct_log : "notice_id"
   biz_yb_inspection ||--o{ biz_yb_deduct_notice : "inspection_id"
-  biz_insurance_settlement ||--o{ biz_yb_deduct_notice : "settlement_id"
+  biz_yb_settlement ||--o{ biz_yb_deduct_notice : "settlement_id"
   biz_patient ||--o{ biz_yb_deduct_notice : "patient_id"
   sys_department ||--o{ biz_yb_deduct_notice : "dept_id"
   sys_department ||--o{ biz_yb_deduct_notice : "liable_dept_id"
@@ -1667,7 +1667,7 @@ erDiagram
   biz_appoint_info["挂号信息 · biz_appoint_info"] {
     bigint id "主键ID"
   }
-  biz_compliance_audit_item["医保合规审核明细 · biz_compliance_audit_item"] {
+  biz_yb_compliance_audit_item["医保合规审核明细 · biz_yb_compliance_audit_item"] {
     bigint id "主键ID"
   }
   biz_emr_signature["电子签名证据 · biz_emr_signature"] {
@@ -1717,8 +1717,8 @@ erDiagram
   sys_laboratory_item ||--|{ biz_laboratory_template : "laboratory_item_id"
   biz_lis_eqa_plan ||--|{ biz_lis_eqa_compare : "plan_id"
   biz_lis_eqa_plan ||--|{ biz_lis_eqa_sample : "plan_id"
-  biz_compliance_audit_item ||--o{ biz_lis_eqa_sample : "item_id"
-  biz_compliance_audit_item ||--o{ biz_lis_qc_plan : "item_id"
+  biz_yb_compliance_audit_item ||--o{ biz_lis_eqa_sample : "item_id"
+  biz_yb_compliance_audit_item ||--o{ biz_lis_qc_plan : "item_id"
   biz_lis_qc_plan ||--|{ biz_lis_qc_record : "plan_id"
 ```
 
@@ -1881,7 +1881,7 @@ erDiagram
   biz_appoint_info["挂号信息 · biz_appoint_info"] {
     bigint id "主键ID"
   }
-  biz_compliance_audit_item["医保合规审核明细 · biz_compliance_audit_item"] {
+  biz_yb_compliance_audit_item["医保合规审核明细 · biz_yb_compliance_audit_item"] {
     bigint id "主键ID"
   }
   biz_emr_signature["电子签名证据 · biz_emr_signature"] {
@@ -1922,7 +1922,7 @@ erDiagram
   biz_patient ||--|{ biz_exam_appointment : "patient_id"
   sys_department ||--o{ biz_exam_appointment : "apply_dept_id"
   sys_employee ||--o{ biz_exam_appointment : "doctor_id"
-  biz_compliance_audit_item ||--o{ biz_exam_appointment : "item_id"
+  biz_yb_compliance_audit_item ||--o{ biz_exam_appointment : "item_id"
   biz_exam_device ||--|{ biz_exam_appointment : "device_id"
   sys_department ||--o{ biz_exam_appointment : "exam_dept_id"
   sys_equipment ||--o{ biz_exam_device : "equipment_id"
@@ -1958,7 +1958,7 @@ erDiagram
   sys_employee ||--|{ biz_inspection_template : "doctor_id"
   sys_inspection_item ||--|{ biz_inspection_template : "inspection_item_id"
   biz_patient ||--|{ biz_medicaltech_execution : "patient_id"
-  biz_compliance_audit_item ||--o{ biz_medicaltech_execution : "item_id"
+  biz_yb_compliance_audit_item ||--o{ biz_medicaltech_execution : "item_id"
   sys_employee ||--o{ biz_medicaltech_execution : "executor_id"
   sys_employee ||--o{ biz_medicaltech_execution : "reviewer_id"
   biz_pathology_order ||--|{ biz_pathology_block : "order_id"

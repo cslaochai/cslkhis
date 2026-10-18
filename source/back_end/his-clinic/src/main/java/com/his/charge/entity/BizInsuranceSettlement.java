@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("biz_insurance_settlement")
+@TableName("biz_yb_settlement")
 public class BizInsuranceSettlement extends BaseEntity {
 
     /**

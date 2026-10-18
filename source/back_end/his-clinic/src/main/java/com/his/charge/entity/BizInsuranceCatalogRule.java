@@ -14,7 +14,7 @@ import java.time.LocalDate;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("biz_insurance_catalog_rule")
+@TableName("biz_yb_catalog_rule")
 public class BizInsuranceCatalogRule extends BaseEntity implements Serializable {
 
     private static final long serialVersionUID = 1L;

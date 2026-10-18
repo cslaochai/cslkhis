@@ -478,8 +478,8 @@ CREATE TABLE `biz_appoint_info`
     UNIQUE KEY `uk_regist_no` (`regist_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='挂号信息';
 
--- biz_compliance_audit_item  医保合规审核明细
-CREATE TABLE `biz_compliance_audit_item`
+-- biz_yb_compliance_audit_item  医保合规审核明细
+CREATE TABLE `biz_yb_compliance_audit_item`
 (
     `id`           bigint       NOT NULL COMMENT '主键ID',
     `audit_id`     bigint       NOT NULL COMMENT '审核ID',
@@ -879,8 +879,8 @@ ALTER TABLE `biz_lis_eqa_compare`
 ALTER TABLE `biz_lis_eqa_sample`
     ADD CONSTRAINT `fk_biz_lis_eqa_sample_plan_id` FOREIGN KEY (`plan_id`) REFERENCES `biz_lis_eqa_plan` (`id`);
 ALTER TABLE `biz_lis_eqa_sample`
-    ADD CONSTRAINT `fk_biz_lis_eqa_sample_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_compliance_audit_item` (`id`);
+    ADD CONSTRAINT `fk_biz_lis_eqa_sample_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_yb_compliance_audit_item` (`id`);
 ALTER TABLE `biz_lis_qc_plan`
-    ADD CONSTRAINT `fk_biz_lis_qc_plan_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_compliance_audit_item` (`id`);
+    ADD CONSTRAINT `fk_biz_lis_qc_plan_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_yb_compliance_audit_item` (`id`);
 ALTER TABLE `biz_lis_qc_record`
     ADD CONSTRAINT `fk_biz_lis_qc_record_plan_id` FOREIGN KEY (`plan_id`) REFERENCES `biz_lis_qc_plan` (`id`);

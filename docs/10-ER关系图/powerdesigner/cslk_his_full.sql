@@ -1175,8 +1175,8 @@ CREATE TABLE `biz_clinical_rule_check` (
   UNIQUE KEY `uk_check_no` (`check_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='临床规则校验记录';
 
--- biz_compliance_audit  医保合规审核单
-CREATE TABLE `biz_compliance_audit` (
+-- biz_yb_compliance_audit  医保合规审核单
+CREATE TABLE `biz_yb_compliance_audit` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `audit_no` varchar(32) NOT NULL COMMENT '审核单号',
   `settlement_id` bigint NOT NULL COMMENT '结算清单ID',
@@ -1207,8 +1207,8 @@ CREATE TABLE `biz_compliance_audit` (
   UNIQUE KEY `uk_ca_audit_no` (`audit_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='医保合规审核单';
 
--- biz_compliance_audit_item  医保合规审核明细
-CREATE TABLE `biz_compliance_audit_item` (
+-- biz_yb_compliance_audit_item  医保合规审核明细
+CREATE TABLE `biz_yb_compliance_audit_item` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `audit_id` bigint NOT NULL COMMENT '审核ID',
   `rule_code` varchar(16) NOT NULL COMMENT '规则编码',
@@ -4354,8 +4354,8 @@ CREATE TABLE `biz_inspection_template` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='检查申请模板';
 
--- biz_insurance_catalog_rule  医保目录报销规则
-CREATE TABLE `biz_insurance_catalog_rule` (
+-- biz_yb_catalog_rule  医保目录报销规则
+CREATE TABLE `biz_yb_catalog_rule` (
   `id` bigint NOT NULL COMMENT '主键（雪花）',
   `rule_no` varchar(32) NOT NULL COMMENT '规则编号',
   `item_code` varchar(32) NOT NULL COMMENT '项目编码',
@@ -4385,8 +4385,8 @@ CREATE TABLE `biz_insurance_catalog_rule` (
   UNIQUE KEY `uk_item_catalog_encounter` (`item_code`, `catalog_type`, `encounter_type`, `insurance_type`, `effective_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='医保目录报销规则';
 
--- biz_insurance_report  医保报盘报文台账
-CREATE TABLE `biz_insurance_report` (
+-- biz_yb_report  医保报盘报文台账
+CREATE TABLE `biz_yb_report` (
   `id` bigint NOT NULL COMMENT '主键（雪花）',
   `settlement_id` bigint NOT NULL COMMENT '医保结算清单ID',
   `settlement_no` varchar(64) COMMENT '结算清单号',
@@ -4418,8 +4418,8 @@ CREATE TABLE `biz_insurance_report` (
   UNIQUE KEY `uk_trade_no` (`trade_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='医保报盘报文台账';
 
--- biz_insurance_settlement  医保结算清单
-CREATE TABLE `biz_insurance_settlement` (
+-- biz_yb_settlement  医保结算清单
+CREATE TABLE `biz_yb_settlement` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `settlement_no` varchar(32) NOT NULL COMMENT '结算清单号',
   `bill_id` bigint NOT NULL COMMENT '结算账单ID',
@@ -7245,8 +7245,8 @@ CREATE TABLE `biz_settlement_bill_item` (
   UNIQUE KEY `uk_bill_fee` (`bill_id`, `fee_record_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='结算账单行';
 
--- biz_settlement_diagnosis  结算清单诊断明细
-CREATE TABLE `biz_settlement_diagnosis` (
+-- biz_yb_settlement_diagnosis  结算清单诊断明细
+CREATE TABLE `biz_yb_settlement_diagnosis` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `settlement_id` bigint NOT NULL COMMENT '结算清单ID',
   `seq_no` int NOT NULL COMMENT '序号',
@@ -7268,8 +7268,8 @@ CREATE TABLE `biz_settlement_diagnosis` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='结算清单诊断明细';
 
--- biz_settlement_operation  结算清单手术明细
-CREATE TABLE `biz_settlement_operation` (
+-- biz_yb_settlement_operation  结算清单手术明细
+CREATE TABLE `biz_yb_settlement_operation` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `settlement_id` bigint NOT NULL COMMENT '结算清单ID',
   `seq_no` int NOT NULL COMMENT '序号',
@@ -9474,8 +9474,8 @@ CREATE TABLE `sys_inspection_item` (
   UNIQUE KEY `uk_item_code` (`item_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='检查项目字典';
 
--- sys_insurance_policy  医保政策配置
-CREATE TABLE `sys_insurance_policy` (
+-- biz_yb_policy  医保政策配置
+CREATE TABLE `biz_yb_policy` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `policy_name` varchar(100) NOT NULL COMMENT '政策名称',
   `insurance_type` varchar(50) NOT NULL COMMENT '医保类型',
@@ -10137,17 +10137,17 @@ ALTER TABLE `sys_laboratory_item` ADD CONSTRAINT `fk_sys_laboratory_item_dept_id
 ALTER TABLE `sys_laboratory_item_detail` ADD CONSTRAINT `fk_sys_laboratory_item_detail_laboratory_item_id` FOREIGN KEY (`laboratory_item_id`) REFERENCES `sys_laboratory_item` (`id`);
 ALTER TABLE `sys_price_change_history` ADD CONSTRAINT `fk_sys_price_change_history_operator_id` FOREIGN KEY (`operator_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `sys_treatment_item` ADD CONSTRAINT `fk_sys_treatment_item_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_compliance_audit` ADD CONSTRAINT `fk_biz_compliance_audit_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_insurance_settlement` (`id`);
-ALTER TABLE `biz_compliance_audit` ADD CONSTRAINT `fk_biz_compliance_audit_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
-ALTER TABLE `biz_compliance_audit_item` ADD CONSTRAINT `fk_biz_compliance_audit_item_audit_id` FOREIGN KEY (`audit_id`) REFERENCES `biz_compliance_audit` (`id`);
-ALTER TABLE `biz_insurance_report` ADD CONSTRAINT `fk_biz_insurance_report_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_insurance_settlement` (`id`);
-ALTER TABLE `biz_insurance_settlement` ADD CONSTRAINT `fk_biz_insurance_settlement_bill_id` FOREIGN KEY (`bill_id`) REFERENCES `biz_settlement_bill` (`id`);
-ALTER TABLE `biz_insurance_settlement` ADD CONSTRAINT `fk_biz_insurance_settlement_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_insurance_settlement` ADD CONSTRAINT `fk_biz_insurance_settlement_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
-ALTER TABLE `biz_insurance_settlement` ADD CONSTRAINT `fk_biz_insurance_settlement_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
-ALTER TABLE `biz_insurance_settlement` ADD CONSTRAINT `fk_biz_insurance_settlement_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_settlement_diagnosis` ADD CONSTRAINT `fk_biz_settlement_diagnosis_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_insurance_settlement` (`id`);
-ALTER TABLE `biz_settlement_operation` ADD CONSTRAINT `fk_biz_settlement_operation_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_insurance_settlement` (`id`);
+ALTER TABLE `biz_yb_compliance_audit` ADD CONSTRAINT `fk_biz_yb_compliance_audit_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_yb_settlement` (`id`);
+ALTER TABLE `biz_yb_compliance_audit` ADD CONSTRAINT `fk_biz_yb_compliance_audit_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
+ALTER TABLE `biz_yb_compliance_audit_item` ADD CONSTRAINT `fk_biz_yb_compliance_audit_item_audit_id` FOREIGN KEY (`audit_id`) REFERENCES `biz_yb_compliance_audit` (`id`);
+ALTER TABLE `biz_yb_report` ADD CONSTRAINT `fk_biz_yb_report_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_yb_settlement` (`id`);
+ALTER TABLE `biz_yb_settlement` ADD CONSTRAINT `fk_biz_yb_settlement_bill_id` FOREIGN KEY (`bill_id`) REFERENCES `biz_settlement_bill` (`id`);
+ALTER TABLE `biz_yb_settlement` ADD CONSTRAINT `fk_biz_yb_settlement_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
+ALTER TABLE `biz_yb_settlement` ADD CONSTRAINT `fk_biz_yb_settlement_regist_id` FOREIGN KEY (`regist_id`) REFERENCES `biz_appoint_info` (`id`);
+ALTER TABLE `biz_yb_settlement` ADD CONSTRAINT `fk_biz_yb_settlement_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
+ALTER TABLE `biz_yb_settlement` ADD CONSTRAINT `fk_biz_yb_settlement_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
+ALTER TABLE `biz_yb_settlement_diagnosis` ADD CONSTRAINT `fk_biz_yb_settlement_diagnosis_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_yb_settlement` (`id`);
+ALTER TABLE `biz_yb_settlement_operation` ADD CONSTRAINT `fk_biz_yb_settlement_operation_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_yb_settlement` (`id`);
 ALTER TABLE `biz_yb_chronic_reg` ADD CONSTRAINT `fk_biz_yb_chronic_reg_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
 ALTER TABLE `biz_yb_chronic_reg` ADD CONSTRAINT `fk_biz_yb_chronic_reg_catalog_id` FOREIGN KEY (`catalog_id`) REFERENCES `biz_yb_chronic_catalog` (`id`);
 ALTER TABLE `biz_yb_chronic_reg` ADD CONSTRAINT `fk_biz_yb_chronic_reg_certify_dept_id` FOREIGN KEY (`certify_dept_id`) REFERENCES `sys_department` (`id`);
@@ -10155,7 +10155,7 @@ ALTER TABLE `biz_yb_chronic_reg` ADD CONSTRAINT `fk_biz_yb_chronic_reg_register_
 ALTER TABLE `biz_yb_chronic_reg` ADD CONSTRAINT `fk_biz_yb_chronic_reg_register_emp_id` FOREIGN KEY (`register_emp_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_yb_deduct_log` ADD CONSTRAINT `fk_biz_yb_deduct_log_notice_id` FOREIGN KEY (`notice_id`) REFERENCES `biz_yb_deduct_notice` (`id`);
 ALTER TABLE `biz_yb_deduct_notice` ADD CONSTRAINT `fk_biz_yb_deduct_notice_inspection_id` FOREIGN KEY (`inspection_id`) REFERENCES `biz_yb_inspection` (`id`);
-ALTER TABLE `biz_yb_deduct_notice` ADD CONSTRAINT `fk_biz_yb_deduct_notice_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_insurance_settlement` (`id`);
+ALTER TABLE `biz_yb_deduct_notice` ADD CONSTRAINT `fk_biz_yb_deduct_notice_settlement_id` FOREIGN KEY (`settlement_id`) REFERENCES `biz_yb_settlement` (`id`);
 ALTER TABLE `biz_yb_deduct_notice` ADD CONSTRAINT `fk_biz_yb_deduct_notice_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
 ALTER TABLE `biz_yb_deduct_notice` ADD CONSTRAINT `fk_biz_yb_deduct_notice_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
 ALTER TABLE `biz_yb_deduct_notice` ADD CONSTRAINT `fk_biz_yb_deduct_notice_liable_dept_id` FOREIGN KEY (`liable_dept_id`) REFERENCES `sys_department` (`id`);
@@ -10481,8 +10481,8 @@ ALTER TABLE `biz_laboratory_template` ADD CONSTRAINT `fk_biz_laboratory_template
 ALTER TABLE `biz_laboratory_template` ADD CONSTRAINT `fk_biz_laboratory_template_laboratory_item_id` FOREIGN KEY (`laboratory_item_id`) REFERENCES `sys_laboratory_item` (`id`);
 ALTER TABLE `biz_lis_eqa_compare` ADD CONSTRAINT `fk_biz_lis_eqa_compare_plan_id` FOREIGN KEY (`plan_id`) REFERENCES `biz_lis_eqa_plan` (`id`);
 ALTER TABLE `biz_lis_eqa_sample` ADD CONSTRAINT `fk_biz_lis_eqa_sample_plan_id` FOREIGN KEY (`plan_id`) REFERENCES `biz_lis_eqa_plan` (`id`);
-ALTER TABLE `biz_lis_eqa_sample` ADD CONSTRAINT `fk_biz_lis_eqa_sample_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_compliance_audit_item` (`id`);
-ALTER TABLE `biz_lis_qc_plan` ADD CONSTRAINT `fk_biz_lis_qc_plan_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_compliance_audit_item` (`id`);
+ALTER TABLE `biz_lis_eqa_sample` ADD CONSTRAINT `fk_biz_lis_eqa_sample_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_yb_compliance_audit_item` (`id`);
+ALTER TABLE `biz_lis_qc_plan` ADD CONSTRAINT `fk_biz_lis_qc_plan_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_yb_compliance_audit_item` (`id`);
 ALTER TABLE `biz_lis_qc_record` ADD CONSTRAINT `fk_biz_lis_qc_record_plan_id` FOREIGN KEY (`plan_id`) REFERENCES `biz_lis_qc_plan` (`id`);
 ALTER TABLE `biz_ecg_holter` ADD CONSTRAINT `fk_biz_ecg_holter_record_id` FOREIGN KEY (`record_id`) REFERENCES `biz_inspection_record` (`id`);
 ALTER TABLE `biz_ecg_holter` ADD CONSTRAINT `fk_biz_ecg_holter_waveform_id` FOREIGN KEY (`waveform_id`) REFERENCES `biz_ecg_waveform` (`id`);
@@ -10498,7 +10498,7 @@ ALTER TABLE `biz_exam_appointment` ADD CONSTRAINT `fk_biz_exam_appointment_apply
 ALTER TABLE `biz_exam_appointment` ADD CONSTRAINT `fk_biz_exam_appointment_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
 ALTER TABLE `biz_exam_appointment` ADD CONSTRAINT `fk_biz_exam_appointment_apply_dept_id` FOREIGN KEY (`apply_dept_id`) REFERENCES `sys_department` (`id`);
 ALTER TABLE `biz_exam_appointment` ADD CONSTRAINT `fk_biz_exam_appointment_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
-ALTER TABLE `biz_exam_appointment` ADD CONSTRAINT `fk_biz_exam_appointment_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_compliance_audit_item` (`id`);
+ALTER TABLE `biz_exam_appointment` ADD CONSTRAINT `fk_biz_exam_appointment_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_yb_compliance_audit_item` (`id`);
 ALTER TABLE `biz_exam_appointment` ADD CONSTRAINT `fk_biz_exam_appointment_device_id` FOREIGN KEY (`device_id`) REFERENCES `biz_exam_device` (`id`);
 ALTER TABLE `biz_exam_appointment` ADD CONSTRAINT `fk_biz_exam_appointment_exam_dept_id` FOREIGN KEY (`exam_dept_id`) REFERENCES `sys_department` (`id`);
 ALTER TABLE `biz_exam_device` ADD CONSTRAINT `fk_biz_exam_device_equipment_id` FOREIGN KEY (`equipment_id`) REFERENCES `sys_equipment` (`id`);
@@ -10534,7 +10534,7 @@ ALTER TABLE `biz_inspection_record` ADD CONSTRAINT `fk_biz_inspection_record_aud
 ALTER TABLE `biz_inspection_template` ADD CONSTRAINT `fk_biz_inspection_template_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_inspection_template` ADD CONSTRAINT `fk_biz_inspection_template_inspection_item_id` FOREIGN KEY (`inspection_item_id`) REFERENCES `sys_inspection_item` (`id`);
 ALTER TABLE `biz_medicaltech_execution` ADD CONSTRAINT `fk_biz_medicaltech_execution_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `biz_patient` (`id`);
-ALTER TABLE `biz_medicaltech_execution` ADD CONSTRAINT `fk_biz_medicaltech_execution_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_compliance_audit_item` (`id`);
+ALTER TABLE `biz_medicaltech_execution` ADD CONSTRAINT `fk_biz_medicaltech_execution_item_id` FOREIGN KEY (`item_id`) REFERENCES `biz_yb_compliance_audit_item` (`id`);
 ALTER TABLE `biz_medicaltech_execution` ADD CONSTRAINT `fk_biz_medicaltech_execution_executor_id` FOREIGN KEY (`executor_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_medicaltech_execution` ADD CONSTRAINT `fk_biz_medicaltech_execution_reviewer_id` FOREIGN KEY (`reviewer_id`) REFERENCES `sys_employee` (`id`);
 ALTER TABLE `biz_pathology_block` ADD CONSTRAINT `fk_biz_pathology_block_order_id` FOREIGN KEY (`order_id`) REFERENCES `biz_pathology_order` (`id`);

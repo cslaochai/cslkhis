@@ -103,14 +103,14 @@ public interface CdrMapper {
                AND s.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'insuranceSettlement', 'biz_insurance_settlement', s.id, 'REGIST', s.regist_id,
+            SELECT 'insuranceSettlement', 'biz_yb_settlement', s.id, 'REGIST', s.regist_id,
                    COALESCE(s.upload_time, s.audit_time, s.create_time),
                    CONCAT('医保结算单 ', s.settlement_no),
                    CONCAT('总额 ', COALESCE(s.total_amount, 0), '，医保支付 ', COALESCE(s.insurance_pay, 0),
                           '，个人自付 ', COALESCE(s.personal_pay, 0)),
                    s.dept_name, s.doctor_name, s.settlement_status, CAST(NULL AS SIGNED), s.total_amount,
                    CAST(s.patient_id AS CHAR)
-              FROM biz_insurance_settlement s
+              FROM biz_yb_settlement s
              WHERE s.del_flag = 0
                AND s.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             

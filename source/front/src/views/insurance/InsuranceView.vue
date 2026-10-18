@@ -1044,7 +1044,7 @@ const handleCurrentChange = (page) => {
 };
 // ==================== G7 医保报盘（上传→回执→撤销→对账） ====================
 // 发送位置：清单「已结算」后点『报盘上传』→ POST /charge/settlement/upload →
-// 后端组 2304 报文落台账(biz_insurance_report) → InsuranceGateway.send()（当前 Mock，
+// 后端组 2304 报文落台账(biz_yb_report) → InsuranceGateway.send()（当前 Mock，
 // 正式环境替换为医保前置机实现）→ 回执成功清单转「已上传」。报文全文在「报文」抽屉里可查。
 const acting = ref(false);
 const handleSettle = async (row) => {

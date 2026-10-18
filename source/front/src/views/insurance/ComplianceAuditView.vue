@@ -84,7 +84,7 @@
  * 医保合规审核台账（菜单 1012 / 路由 /compliance-audit，菜单化见 sql/165）
  *
  * 「医保结算清单」页里已经能挂单执行自查，但跑完的审核记录**没有地方回看**：
- * biz_compliance_audit 4 条主表、biz_compliance_audit_item 72 行规则明细，全在库里躺着。
+ * biz_yb_compliance_audit 4 条主表、biz_yb_compliance_audit_item 72 行规则明细，全在库里躺着。
  * 台账是「医保局来查时我能拿出什么东西」的答案，缺了这个入口等于自查自嗨。
  *
  * 三条不妥协的展示纪律：

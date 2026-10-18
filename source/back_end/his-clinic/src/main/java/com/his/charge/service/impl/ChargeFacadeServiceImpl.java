@@ -261,8 +261,10 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
             books.add(buildBook(command, "挂号费", "GHF", registFee, FeeCatalogTypeEnum.SELF_PAY.getCode()));
         }
         if (diagnosisFee.signum() > 0) {
-            // 诊查费按甲类：医保按报销比例全额纳入统筹
-            books.add(buildBook(command, "诊查费", "ZCF", diagnosisFee, FeeCatalogTypeEnum.CLASS_A.getCode()));
+            // 诊查费按丙类（湘医保发〔2025〕58号）：门诊诊查费医保不报、100% 自付，
+            // 不进职工门诊统筹。甲类行在 computePoolFromRule 里只能压 pool_ratio，
+            // 没有「先自付 100%」这一档，表达不了丙类。
+            books.add(buildBook(command, "诊查费", "ZCF", diagnosisFee, FeeCatalogTypeEnum.CLASS_C.getCode()));
         }
         if (books.isEmpty()) {
             // 两项都是 0 却按"未免收"进来：同样是零应收，处理方式与免收一致，别硬出空账单

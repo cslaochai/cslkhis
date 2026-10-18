@@ -12,7 +12,7 @@ import java.math.BigDecimal;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("sys_insurance_policy")
+@TableName("biz_yb_policy")
 public class SysInsurancePolicy extends BaseEntity {
 
     /**

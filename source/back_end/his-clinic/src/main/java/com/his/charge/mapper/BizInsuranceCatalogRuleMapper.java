@@ -20,7 +20,7 @@ public interface BizInsuranceCatalogRuleMapper extends BaseMapper<BizInsuranceCa
      * <p>生效日期区间：effective_date <= 结算日 AND (expire_date IS NULL OR expire_date >= 结算日)。
      * insurance_type 传 NULL 时匹配通用规则（insurance_type IS NULL）。
      */
-    @Select("SELECT * FROM biz_insurance_catalog_rule " +
+    @Select("SELECT * FROM biz_yb_catalog_rule " +
             " WHERE del_flag = 0 AND status = 1 " +
             "   AND item_code = #{itemCode} " +
             "   AND catalog_type = #{catalogType} " +
@@ -40,7 +40,7 @@ public interface BizInsuranceCatalogRuleMapper extends BaseMapper<BizInsuranceCa
      * 批量查某次结算涉及的所有项目的有效规则（一次查出，避免 N+1）。
      */
     @Select("<script>" +
-            "SELECT * FROM biz_insurance_catalog_rule " +
+            "SELECT * FROM biz_yb_catalog_rule " +
             " WHERE del_flag = 0 AND status = 1 " +
             "   AND encounter_type = #{encounterType} " +
             "   AND (insurance_type = #{insuranceType} OR (insurance_type IS NULL AND #{insuranceType} IS NULL)) " +

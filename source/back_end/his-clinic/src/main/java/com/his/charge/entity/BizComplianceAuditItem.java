@@ -14,7 +14,7 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("biz_compliance_audit_item")
+@TableName("biz_yb_compliance_audit_item")
 public class BizComplianceAuditItem extends BaseEntity {
 
 
