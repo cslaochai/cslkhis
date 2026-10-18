@@ -27,6 +27,17 @@ export const SHIFT_TYPE_OPTIONS = [
   { label: '其他', value: 3 },
 ]
 
+/**
+ * 按当前钟点推默认班次：08:00-17:59 白班(1)，18:00-次日07:59 夜班(2)。
+ *
+ * 班次只是展示标签（统计区间是「上次交班 → 现在」滚动窗口），默认值纯粹是
+ * 省掉手选这一步；边界模糊的地带（如 17:55 交班）用户自己改，不猜。
+ */
+export function defaultShiftType() {
+  const h = new Date().getHours()
+  return h >= 8 && h < 18 ? 1 : 2
+}
+
 export function shiftTypeText(value) {
   if (value === null || value === undefined || value === '') return '—'
   const hit = SHIFT_TYPE_OPTIONS.find(o => o.value === Number(value))

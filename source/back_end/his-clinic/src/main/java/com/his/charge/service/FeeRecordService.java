@@ -11,6 +11,7 @@ import com.his.charge.vo.FeeTypeSumVO;
 import com.his.common.base.PageResult;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -69,6 +70,18 @@ public interface FeeRecordService extends IService<BizFeeRecord> {
     BizFeeRecord reverseForRefund(Long feeId, String reason);
 
     /**
+     * 退费流程专用的<b>数量级部分</b>红冲：允许冲「3-已结算」的行，只冲指定数量。
+     *
+     * <p>与 {@link #reversePartial} 的门禁差异同 {@link #reverseForRefund}：红冲的 HTTP 口子
+     * 谁都能调，若它也允许冲已结算行，就会出现"账上冲了费用、钱却没退"的挂账。
+     * <b>本方法必须与退款流水在同一事务内调用</b>，调用方只有 {@code PaymentService}。
+     *
+     * @param quantity 本次冲减的数量（正数，不得超过本行剩余可冲额）
+     * @return 本次写出的负行
+     */
+    BizFeeRecord reversePartialForRefund(Long feeId, BigDecimal quantity, String reason);
+
+    /**
      * 某次就诊未结算的记账行（结算台选行用）
      */
     List<BizFeeRecord> listPending(Integer encounterType, Long encounterId);
@@ -123,9 +136,23 @@ public interface FeeRecordService extends IService<BizFeeRecord> {
     int releaseFromBill(List<Long> feeIds);
 
     /**
-     * 本账单名下的记账行（含红冲负行），撤销账单时按这张清单逐行冲减
+     * 本账单名下的<b>正数</b>记账行（红冲负行的 {@code bill_id} 是 NULL，不在这里）。
+     *
+     * <p>负行为什么不挂账单：红冲发生在应收层，与"一行只进一张账单"无关；挂了反而会让
+     * 账单行数、合计都把负行算进去。要算"某行还被冲剩多少"见 {@link #listReversalsByOrigIds}。
      */
     List<BizFeeRecord> listByBill(Long billId);
+
+    /**
+     * 若干原行名下的红冲负行（按 {@code orig_fee_id} 反查）。
+     *
+     * <p>负行 {@code bill_id} 为 NULL，{@link #listByBill} 看不到它们，"这行还剩多少可退"
+     * 必须按原行 ID 反查 —— 数量级部分退（共 5 盒退 2 盒）的剩余数量/剩余金额全靠这个方法。
+     *
+     * @param origIds 原行ID集合；为空返回空列表
+     * @return 负行清单（数量、金额均为负值），按ID升序
+     */
+    List<BizFeeRecord> listReversalsByOrigIds(Collection<Long> origIds);
 
     /**
      * 按来源单据找回记账行：临床侧"退药/作废要冲哪一笔账"的入口。

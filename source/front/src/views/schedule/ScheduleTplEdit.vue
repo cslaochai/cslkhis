@@ -73,8 +73,9 @@
           <el-form-item label="号源数量" required>
             <el-input-number v-model="tplFormData.totalSource" :max="999" :min="1" class="w-full"/>
           </el-form-item>
-          <el-form-item label="挂号费(元)">
-            <el-input-number v-model="tplFormData.registFee" :min="0" :precision="2" class="w-full"/>
+          <el-form-item label="门诊诊查费(元)">
+            <el-input-number v-model="tplFormData.diagnosisFee" :min="0" :precision="2" class="w-full"/>
+            <p class="mt-1 text-xs text-slate-400">挂号费已按湘医保发〔2025〕58号废止，并入门诊诊查费（长沙基准价 9 元）</p>
           </el-form-item>
           <el-form-item label="诊疗费(元)">
             <el-input-number v-model="tplFormData.diagnosisFee" :min="0" :precision="2" class="w-full"/>
@@ -145,7 +146,7 @@
       </template>
       <p v-else class="mb-3 text-xs text-slate-500">
         「{{ staffTypeText(tplFormData.staffType) }}」是<b>出勤模板</b>：生成出来的是出勤排班，
-        不放号、不需要诊室、不计挂号费——这几项由后端一律置空。
+        不放号、不需要诊室、不计门诊诊查费——这几项由后端一律置空。
       </p>
       <el-form-item label="状态">
         <el-radio-group v-model="tplFormData.status">
@@ -378,7 +379,7 @@ const handleTplDoctorChange = (id) => {
   }
 };
 /**
- * 模板换岗位类别：换的是「规则链」——医生岗配号源/诊室/挂号费，其余岗位是纯出勤。
+ * 模板换岗位类别：换的是「规则链」——医生岗配号源/诊室/门诊诊查费，其余岗位是纯出勤。
  * 所以换岗位要把人一起清掉重新选：原来选的医生在「收费」岗位视图里根本不该出现。
  */
 const handleTplStaffTypeChange = () => {

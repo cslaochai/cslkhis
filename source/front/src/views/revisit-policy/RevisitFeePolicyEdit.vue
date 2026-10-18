@@ -3,7 +3,7 @@
              width="560px">
     <el-form label-width="120px">
       <el-form-item label="策略名称" required>
-        <el-input v-model="form.policyName" placeholder="如：同医生 7 日内复诊免挂号费"/>
+        <el-input v-model="form.policyName" placeholder="如：同医生 7 日内复诊免门诊诊查费"/>
       </el-form-item>
       <el-form-item label="适用来源" required>
         <el-select v-model="form.revisitSource" class="w-full" placeholder="请选择">

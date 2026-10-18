@@ -57,7 +57,7 @@
           <el-option
               v-for="s in scheduleOptions"
               :key="s.id"
-              :label="`${s.doctorName} | ${s.roomName || '诊室待定'} | ${s.startTime}-${s.endTime} | 余号:${s.availableSource} | 挂号费:¥${s.registFee}`"
+              :label="`${s.doctorName} | ${s.roomName || '诊室待定'} | ${s.startTime}-${s.endTime} | 余号:${s.availableSource} | 诊查费:¥${s.diagnosisFee}`"
               :value="s.id"
           />
         </el-select>
@@ -82,7 +82,7 @@
           </span>
         </div>
         <div v-if="preview && !previewLoading" class="mt-1 text-xs text-slate-500">
-          挂号费 ¥{{ Number(preview.registFee || 0).toFixed(2) }} ·
+          门诊诊查费 ¥{{ Number(preview.diagnosisFee || 0).toFixed(2) }} ·
           诊查费 ¥{{ Number(preview.diagnosisFee || 0).toFixed(2) }} ·
           {{ preview.policyName ? `命中策略「${preview.policyName}」` : '未命中策略，按全额收费' }}
         </div>

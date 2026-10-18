@@ -79,9 +79,11 @@ export const CHECK_APPLY_STATUS = [
     {label: '已取消', value: 6},
 ]
 
-// 收费项目类型
+// 收费项目类型（PaymentItemTypeEnum，码值与后端一一对应）
+// 码值 1 用「门诊诊查费」：湘医保发〔2025〕58号已废止挂号费并入门诊诊查费，
+// 码值本身不变（已落库），只改展示文案。
 export const PAYMENT_ITEM_TYPE = [
-    {label: '挂号费', value: 1},
+    {label: '门诊诊查费', value: 1},
     {label: '西药', value: 2},
     {label: '中成药', value: 3},
     {label: '中药饮片', value: 4},
@@ -91,14 +93,9 @@ export const PAYMENT_ITEM_TYPE = [
 ]
 
 // 收费类型
-export const CHARGE_TYPE_LIST = [
-    {label: '挂号费', value: 1},
-    {label: '药品费', value: 2},
-    {label: '检查费', value: 3},
-    {label: '检验费', value: 4},
-    {label: '治疗费', value: 5},
-    {label: '综合收费', value: 6},
-]
+// 注：原 CHARGE_TYPE_LIST（挂号费/药品费/检查费/...）零引用已删。
+// 它的「收费类型」口径与 CDR 的 CdrChargeTypeEnum 不是一回事，留着只会让人误用。
+// 账单归类统一走上面的 PAYMENT_ITEM_TYPE（与后端 PaymentItemTypeEnum 对齐）。
 
 // 支付方式
 export const PAYMENT_METHOD_LIST = [

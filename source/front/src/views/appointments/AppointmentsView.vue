@@ -311,7 +311,7 @@
                           <button v-if="deskViewMode === 'week'"
                                   class="shrink-0 cursor-pointer rounded border border-slate-200 bg-white px-1 text-xs leading-4 text-slate-600 hover:bg-slate-50"
                                   data-testid="desk-cell-avail"
-                                  title="查看这位医生当天的每个班次：时段 / 余号 / 挂号费"
+                                  title="查看这位医生当天的每个班次：时段 / 余号 / 门诊诊查费"
                                   @click.stop="openCellDialog(col.date, row.key)">余号</button>
                           <button
                               v-if="!isCellTimePassed(col, row.key) && deskAvail(deskCell(col.key, row.key).schedules) > 0"
@@ -613,7 +613,7 @@
                       :schedule="editRow ? (deskScheduleMap[editRow.scheduleId] || null) : null"
                       @saved="reloadListAndStats"/>
 
-    <!-- 挂号费收费：默认现金档（窗口当场点钞记流水），切扫码收款即出一张聚合码（一码多平台） -->
+    <!-- 门诊诊查费收费：默认现金档（窗口当场点钞记流水），切扫码收款即出一张聚合码（一码多平台） -->
     <QrPayDialog v-model="showPaymentDialog" allow-cash :amount="paymentInfo.amount" :bill-id="paymentInfo.billId"
                  :bill-no="paymentInfo.billNo" :patient-name="paymentInfo.patientName" @paid="onPaid"/>
   </div>
@@ -871,7 +871,7 @@ const handleShowPayment = async (row) => {
 };
 /** 收款落账（现金与扫码同一路：一笔流水 → 账单状态由后端现算）：入口与角标都跟着账单事实走，看板必须一起刷 */
 const onPaid = () => {
-  ElMessage.success('挂号费已入账');
+  ElMessage.success('门诊诊查费已入账');
   reloadListAndStats();
   loadDesk();
 };
@@ -1946,7 +1946,7 @@ const canApplyRefund = (r) => !!r?.billId
 /** 锁死原因文案：挂到卡片 title 上，别让用户点了没反应还不知道为什么 */
 const sourceLockReason = (r) => {
   if (isVisitDatePast(r)) {
-    return `就诊日 ${String(r?.visitDate || '').slice(0, 10)} 已过，不能退号或改约，患者未到诊需退挂号费的，请到「挂号记录」里发起退费申请`;
+    return `就诊日 ${String(r?.visitDate || '').slice(0, 10)} 已过，不能退号或改约，患者未到诊需退费的，请到「挂号记录」里发起退费申请`;
   }
   if (Number(r?.registStatus) === 1 && isRegistPaid(r)) {
     return isRevisitRegist(r)

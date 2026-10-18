@@ -5,6 +5,11 @@ export function getRefundApplyList(params) {
   return request.post('/charge/refund/listPage', params)
 }
 
+// 退费候选行：某张账单按退费类型还能退的记账行（含剩余数量与来源单号）
+export function getRefundableLines(billId, refundType) {
+  return request.get('/charge/refund/refundableLines', { params: { billId, refundType } })
+}
+
 // 获取退费申请详情
 export function getRefundApplyDetail(id) {
   return request.get('/charge/refund/getById', { params: { id } })

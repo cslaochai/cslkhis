@@ -2,13 +2,6 @@
   <div class="space-y-6">
     <!-- 页头 -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h1 class="text-xl font-semibold text-slate-900">住院账务（预交金 / 日清单 / 结算）</h1>
-        <p class="mt-1 text-sm text-slate-500">
-          余额是住院资金账户的净额（充值进账、抵扣与退差出账）；日清单按记账行净额（含红冲）汇总；结算按四层出账：应收 → 账单 →
-          账户抵扣 → 退差/欠费。欠费只提示、不阻断。
-        </p>
-      </div>
       <div class="flex items-center gap-3">
         <el-select
             v-model="admissionId"

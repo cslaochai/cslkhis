@@ -867,7 +867,7 @@ const billStatusMap = {
 };
 // 付款项目类型（PaymentItemTypeEnum，1-8）
 const itemTypeMap = {
-  1: '挂号费',
+  1: '门诊诊查费',
   2: '西药',
   3: '中成药',
   4: '中药饮片',

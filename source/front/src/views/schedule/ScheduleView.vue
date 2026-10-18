@@ -358,9 +358,9 @@
                 </template>
               </el-table-column>
               <el-table-column label="诊室" min-width="110" prop="roomName"/>
-              <el-table-column align="right" label="挂号费" min-width="90">
+              <el-table-column align="right" label="门诊诊查费" min-width="90">
                 <template #default="{ row }">
-                  <span v-if="staffTypeHasSource(row.staffType)">¥{{ row.registFee || 0 }}</span>
+                  <span v-if="staffTypeHasSource(row.staffType)">¥{{ row.diagnosisFee || 0 }}</span>
                   <span v-else class="text-xs text-slate-300">—</span>
                 </template>
               </el-table-column>

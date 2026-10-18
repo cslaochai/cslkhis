@@ -55,6 +55,37 @@ public interface BizCashierSettlementMapper extends BaseMapper<BizCashierSettlem
     CountAmountVO sumRefundBySettlement(@Param("settlementId") Long settlementId);
 
     /**
+     * 交班前试算：某收费员「尚未认领」的收款流水按支付方式汇总（不落库的预览）。
+     *
+     * <p>行集与 {@code PaymentServiceImpl.claimForShift} 逐字对齐 —— 同一收费员、
+     * 成功、未认领、{@code txn_time <= asOf}。改一边必须改另一边，否则预览的账和
+     * 真正交班的账是两套数，收费员点完钞反而更困惑。
+     *
+     * @param asOf 试算时刻（= 前端打开弹框的服务端时间，交班时会用新的 now 再算一次）
+     */
+    @Select("SELECT pay_method AS paymentMethod, COUNT(*) AS cnt, " +
+            "       COALESCE(SUM(amount), 0) AS amount " +
+            " FROM biz_payment_txn " +
+            " WHERE del_flag = 0 AND txn_status = 1 AND direction = 1 " +
+            "   AND cashier_id = #{cashierId} AND cashier_settlement_id IS NULL " +
+            "   AND txn_time <= #{asOf} " +
+            " GROUP BY pay_method")
+    List<PaymentMethodSumVO> sumUnclaimedPaidByCashier(@Param("cashierId") Long cashierId,
+                                                      @Param("asOf") LocalDateTime asOf);
+
+    /**
+     * 交班前试算：某收费员「尚未认领」的退费流水（不落库的预览）。
+     * 行集口径同 {@link #sumUnclaimedPaidByCashier}。
+     */
+    @Select("SELECT COUNT(*) AS cnt, COALESCE(SUM(ABS(amount)), 0) AS amount " +
+            " FROM biz_payment_txn " +
+            " WHERE del_flag = 0 AND txn_status = 1 AND direction = 2 " +
+            "   AND cashier_id = #{cashierId} AND cashier_settlement_id IS NULL " +
+            "   AND txn_time <= #{asOf}")
+    CountAmountVO sumUnclaimedRefundByCashier(@Param("cashierId") Long cashierId,
+                                              @Param("asOf") LocalDateTime asOf);
+
+    /**
      * 本班认领账单的开票 / 作废张数。
      *
      * <p>口径是"票跟着账单走"：{@code invoice.bill_id ∈} 本班<b>成功收款</b>涉及的账单，

@@ -20,7 +20,7 @@ export const DICT_TYPE = {
     ENCOUNTER_TYPE: 'his_encounter_type',        // 就诊类型（1门诊 2住院）≠ 初复诊 visit_type
     FEE_STATUS: 'his_fee_status',                // 记账行状态（1待结算 2已锁定 3已结算 4已红冲）
     FEE_SOURCE_TYPE: 'his_fee_source_type',      // 费用来源单据类型（1挂号 2处方 … 12其他）
-    BILL_TYPE: 'his_bill_type',                  // 账单类型（1挂号费 2门诊诊间 3住院中途 4出院）
+    BILL_TYPE: 'his_bill_type',                  // 账单类型（1挂号/门诊诊查 2门诊诊间 3住院中途 4出院）
     BILL_STATUS: 'his_bill_status',              // 账单状态（1待支付 2部分支付 3已支付 4已作废 5已退费）
     PAY_DIRECTION: 'his_pay_direction',          // 资金方向（1收款 2退款），流水金额带符号
     PAY_TXN_STATUS: 'his_pay_txn_status',        // 流水状态（1成功 2已冲正）

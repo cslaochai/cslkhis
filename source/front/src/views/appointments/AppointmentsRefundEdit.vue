@@ -22,7 +22,7 @@
           }}（实付扣掉已退部分），可改小做部分退费</p>
       </el-form-item>
       <el-form-item label="退费原因" required>
-        <el-input v-model="refundForm.refundReason" :rows="3" placeholder="如：患者当日未到诊，申请退还挂号费"
+        <el-input v-model="refundForm.refundReason" :rows="3" placeholder="如：患者当日未到诊，申请退还门诊诊查费"
                   type="textarea"/>
       </el-form-item>
     </el-form>

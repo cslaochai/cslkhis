@@ -7,8 +7,8 @@ import org.springframework.stereotype.Component;
 /**
  * 医保结算与联网通道配置（his.insurance.*）。
  * <ul>
- *   <li>enabled：医保联网结算总开关。false = 不支持医保结算，挂号/结算直接拒医保改自费，不查任何参保库；</li>
- *   <li>channel：联网通道（mock 查 HIS 本地参保台账镜像 / remote 调医保结算经办平台）。</li>
+ *   <li>enabled：医保联网结算总开关。false = 不支持医保结算，结算时直接按自费原价走，不查医保；</li>
+ *   <li>channel：联网通道。参保状态只认 remote（医保结算经办平台），mock 通道永远查不到参保。</li>
  * </ul>
  */
 @Data
@@ -17,8 +17,8 @@ import org.springframework.stereotype.Component;
 public class InsuranceProperties {
 
     /**
-     * 医保联网结算总开关：true=支持医保结算（按 channel.mode 查 MIS 或本地镜像台账）；
-     * false=不支持医保结算，挂号/结算直接拒医保改自费，不查任何参保库
+     * 医保联网结算总开关：true=支持医保结算（按 channel.mode 远程查参保）；
+     * false=不支持医保结算，结算时按自费原价走，不查医保
      */
     private boolean enabled = true;
 
@@ -31,9 +31,9 @@ public class InsuranceProperties {
     public static class Channel {
 
         /**
-         * 通道实现：remote=调医保结算经办平台（MIS）；mock=查 HIS 本地参保台账镜像
+         * 通道实现：remote=调医保结算经办平台（参保核验的唯一来源）；mock=报文/对账联调，查不到参保
          */
-        private String mode = "mock";
+        private String mode = "remote";
 
         /**
          * 医保结算经办平台根地址（remote 模式）

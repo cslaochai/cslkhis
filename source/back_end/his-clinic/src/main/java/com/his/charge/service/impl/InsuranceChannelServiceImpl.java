@@ -5,11 +5,9 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.charge.entity.BizInsuranceReport;
-import com.his.charge.entity.BizInsuredPerson;
 import com.his.common.enums.InsuranceReportStatusEnum;
 import com.his.common.enums.InsuranceReportTypeEnum;
 import com.his.charge.mapper.BizInsuranceReportMapper;
-import com.his.charge.mapper.BizInsuredPersonMapper;
 import com.his.charge.service.InsuranceChannelService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
@@ -34,7 +32,6 @@ import java.util.Map;
 public class InsuranceChannelServiceImpl extends ServiceImpl<BizInsuranceReportMapper, BizInsuranceReport> implements InsuranceChannelService {
 
     private final BizInsuranceReportMapper bizInsuranceReportMapper;
-    private final BizInsuredPersonMapper bizInsuredPersonMapper;
     private final ObjectMapper objectMapper;
 
     /**
@@ -100,36 +97,21 @@ public class InsuranceChannelServiceImpl extends ServiceImpl<BizInsuranceReportM
     }
 
     /**
-     * 参保核验（mock）：查 HIS 本地参保台账（医保局参保库的院内镜像）。
-     * 真实环境 = 调医保前置机 2201/2202 人员参保信息查询；台账内容靠参保变更同步维护。
-     * <p>防冒名：台账命中后比对患者主档身份证（金标准）/姓名，不一致判「身份不符」拒医保。
+     * 参保核验（mock 通道）：<b>永远查不到参保</b>。
+     *
+     * <p>参保状态只有一个权威来源 = 医保结算经办平台（{@code remote} 通道）。
+     * 院内不再维护参保台账镜像：停保、销户、异地参保这些变化只有医保局知道，
+     * 镜像表迟早与医保局漂移，拿它判"能不能报销"必然与清算对不上。
+     *
+     * <p>mock 通道只用于本地没有医保平台时的报文/对账联调，没有平台就查不到人，
+     * 于是这里的口径是"查无此人"—— 结算侧据此按自费原价收，不拦单（见
+     * {@code SettlementBillServiceImpl#resolveInsurance}）。
      */
     public InsuredStatus checkInsured(String insuranceNo, String idCard, String name) {
-        if (!TextUtil.hasText(insuranceNo)) {
-            return new InsuredStatus(false, false, null, null, "医保卡号为空");
-        }
-        BizInsuredPerson person = bizInsuredPersonMapper.selectOne(new LambdaQueryWrapper<BizInsuredPerson>()
-                .eq(BizInsuredPerson::getInsuranceNo, insuranceNo)
-                .last("LIMIT 1"));
-        log.info("参保核验: insuranceNo={} idCard={} name={} found={} status={}", insuranceNo,
-                idCard, name, person != null, person == null ? null : person.getPersonStatus());
-        if (person == null) {
-            return new InsuredStatus(false, false, null, null,
-                    "参保库查无此卡号（" + insuranceNo + "），未参保登记");
-        }
-        // 防冒名：主档有身份证比身份证（金标准），主档无身份证退姓名兜底
-        if (TextUtil.hasText(idCard)) {
-            if (!idCard.equals(person.getIdCard())) {
-                return new InsuredStatus(false, false, null, null,
-                        "参保人身份与患者档案不符（身份证不一致），请核对医保卡号或改按自费结算");
-            }
-        } else if (TextUtil.hasText(name) && !name.equals(person.getName())) {
-            return new InsuredStatus(false, false, null, null,
-                    "参保人身份与患者档案不符（姓名不一致），请核对医保卡号或改按自费结算");
-        }
-        boolean active = Integer.valueOf(1).equals(person.getPersonStatus());
-        return new InsuredStatus(true, active, person.getInsuranceType(), person.getName(),
-                active ? null : "参保状态为停保（" + insuranceNo + "）");
+        log.info("参保核验(mock 通道，无医保平台可查)：insuranceNo={} idCard={} name={} → 查无参保，按自费原价",
+                insuranceNo, idCard, name);
+        return new InsuredStatus(false, false, null, null,
+                "mock 通道未接医保平台，无法核验参保状态");
     }
 
     private Receipt fail(String errMsg, String replyTime, OutboundMessage message) {

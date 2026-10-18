@@ -28,6 +28,18 @@ public class QrPayCreateVO {
     private BigDecimal amount;
 
     /**
+     * 账单号（核对基准：出码目标是哪张单，以服务端按 billId 查到的事实为准。
+     * 前端必须用本字段覆盖列表行旧值显示——传错 billId 时账单号当场对不上）
+     */
+    private String billNo;
+
+    /**
+     * 患者姓名（核对基准：同上。防「列表行与出码目标错位」的静默事故——
+     * 收银员盯着 A 患者的信息、手里是 B 患者的码，全靠这一字段暴露）
+     */
+    private String patientName;
+
+    /**
      * 二维码图片（data:image/png;base64,...）
      */
     private String qrImage;

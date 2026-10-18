@@ -1089,7 +1089,7 @@
                                            @click="handleViewInspectionReport(item)">
                                   查看报告
                                 </el-button>
-                                <!-- 批次E/E6：结果已回 → 一键建复诊（关联本次病历，免挂号费） -->
+                                <!-- 批次E/E6：结果已回 → 一键建复诊（关联本次病历，免门诊诊查费） -->
                                 <el-button v-if="canCreateRevisit(item)" link size="small" type="warning"
                                            @click="handleCreateRevisit(item)">
                                   建复诊
@@ -1257,7 +1257,7 @@
                                            @click="handleViewLaboratoryReport(item)">
                                   查看报告
                                 </el-button>
-                                <!-- 批次E/E6：结果已回 → 一键建复诊（关联本次病历，免挂号费） -->
+                                <!-- 批次E/E6：结果已回 → 一键建复诊（关联本次病历，免门诊诊查费） -->
                                 <el-button v-if="canCreateRevisit(item)" link size="small" type="warning"
                                            @click="handleCreateRevisit(item)">
                                   建复诊
@@ -4586,7 +4586,7 @@ const handleComplete = async () => {
 };
 // ========== 建复诊（批次E/E6）==========
 // 位置：检查/检验「结果」条目的操作里 —— 报告回来 → 一键建复诊 → 直接接诊。
-// 复诊免挂号费（后端 waived：收费单金额 0 且直接置「已收费」，否则签不了到），
+// 复诊免门诊诊查费（后端 waived：收费单金额 0 且直接置「已收费」，否则签不了到），
 // 并带上 **原病历ID** 做关联 —— 只建立引用关系，原病历一律不改。
 const canCreateRevisit = (item) => !!item?.execRecordId && !!recordForm.id && !!currentPatient.value;
 /**
@@ -4629,7 +4629,7 @@ const handleCreateRevisit = async (item) => {
       revisitSource: REVISIT_SOURCE.SAME_DAY_RETURN,
       revisitRecordId: recordForm.id, // 关联原病历（后端校验归属）
     });
-    ElMessage.success('复诊号已创建（免挂号费），签到后即可接诊');
+    ElMessage.success('复诊号已创建（免门诊诊查费），签到后即可接诊');
     loadData();
   } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
     

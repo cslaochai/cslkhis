@@ -304,7 +304,8 @@
       </el-tab-pane>
     </el-tabs>
 
-    <!-- 交班 / 执行日结 / 交班单详情 / 日结单详情已拆到同目录兄弟组件，页面只管开关与递参 -->
+    <!-- 执行日结 / 交班单详情 / 日结单详情拆到同目录兄弟组件；交班弹层已提为共用组件
+         （components/his/FinanceHandoverAdd.vue，收费台复用同一个），页面只管开关与递参 -->
     <FinanceHandoverAdd v-model="handoverVisible" @saved="onHandoverSaved"/>
     <FinanceDayRunAdd v-model="runVisible" @saved="onRunSaved"/>
     <FinanceCashierDetail v-model="cashierDetailVisible" :id="cashierDetailRow?.id" :row="cashierDetailRow"/>
@@ -338,7 +339,7 @@ import {
 } from '@/lib/financeSettlement';
 import {formatMoney} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
-import FinanceHandoverAdd from './FinanceHandoverAdd.vue';
+import FinanceHandoverAdd from '@/components/his/FinanceHandoverAdd.vue';
 import FinanceDayRunAdd from './FinanceDayRunAdd.vue';
 import FinanceCashierDetail from './FinanceCashierDetail.vue';
 import FinanceDayDetail from './FinanceDayDetail.vue';

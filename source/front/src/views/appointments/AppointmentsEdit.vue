@@ -40,7 +40,7 @@
           <el-option
               v-for="s in editOptions"
               :key="s.id"
-              :label="`${s.doctorName} | ${s.startTime}-${s.endTime} | 余号:${s.availableSource} | 挂号费:¥${s.registFee}`"
+              :label="`${s.doctorName} | ${s.startTime}-${s.endTime} | 余号:${s.availableSource} | 诊查费:¥${s.diagnosisFee}`"
               :value="s.id ?? s.doctorName"
           />
         </el-select>

@@ -160,8 +160,7 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
         // 滚动区间：起点 = 上次交班时刻。首次交班回落到当日 00:00:00。
         // ⚠ 它只是凭证上的时间说明与"不足 1 秒"闸门的依据，**不决定本班的行集**
         //   （行集由下面的归集指针定义，见 claimForShift 的注释）。
-        LocalDateTime lastEnd = bizCashierSettlementMapper.selectLastPeriodEnd(cashierId);
-        LocalDateTime periodBegin = lastEnd != null ? lastEnd : TimeUtil.dayStart(LocalDate.now());
+        LocalDateTime periodBegin = resolvePeriodBegin(cashierId);
         if (!periodEnd.isAfter(periodBegin)) {
             throw new BusinessException("距上次交班（" + periodBegin + "）不足 1 秒，无需重复交班");
         }
@@ -178,6 +177,7 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
         entity.setPeriodEnd(periodEnd);
         entity.setSettleStatus(1);
         entity.setRemark(dto.getRemark());
+        initEmptyAggregates(entity);
         bizCashierSettlementMapper.insert(entity);
 
         // 归集指针：把"这个班认领了哪些流水"登记下来。金额不参与统计，
@@ -233,6 +233,75 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
         entity.setDiffReason(dto.getDiffReason());
         bizCashierSettlementMapper.updateById(entity);
         return toCashierVO(entity);
+    }
+
+    /**
+     * 滚动区间起点 = 上次交班时刻；首次交班（查不到记录）回落到当日 00:00:00。
+     *
+     * <p>{@link #handover} 与 {@link #handoverPreview} 共用 —— 区间口径只准有一个定义：
+     * 预览的起点若与落单漂移，收费员在弹框里对的账就不是待交的账。
+     */
+    private LocalDateTime resolvePeriodBegin(Long cashierId) {
+        LocalDateTime lastEnd = bizCashierSettlementMapper.selectLastPeriodEnd(cashierId);
+        return lastEnd != null ? lastEnd : TimeUtil.dayStart(LocalDate.now());
+    }
+
+    @Override
+    public CashierHandoverPreviewVO handoverPreview() {
+        Long cashierId = UserUtils.getCurrentUser().getEmployeeId();
+        if (cashierId == null) {
+            throw new BusinessException("无法识别当前收费员工号，无法试算");
+        }
+        LocalDateTime asOf = TimeUtil.nowSeconds();
+        LocalDateTime periodBegin = resolvePeriodBegin(cashierId);
+
+        // 行集与 handover 落单那一刻逐字对齐：同一收费员、成功、未认领、txn_time <= asOf
+        // （Mapper 注释已互引 claimForShift）。预览与落单之间只差"确认"这一个动作。
+        List<PaymentMethodSumVO> payRows = bizCashierSettlementMapper.sumUnclaimedPaidByCashier(cashierId, asOf);
+        PayBuckets buckets = new PayBuckets();
+        for (PaymentMethodSumVO row : payRows) {
+            buckets.add(row.getPaymentMethod(), NumUtil.orZero(row.getAmount()), cntOf(row.getCnt()));
+        }
+        CountAmountVO refundRow = bizCashierSettlementMapper.sumUnclaimedRefundByCashier(cashierId, asOf);
+
+        CashierHandoverPreviewVO vo = new CashierHandoverPreviewVO();
+        vo.setPeriodBegin(periodBegin);
+        vo.setPeriodEnd(asOf);
+        vo.setChargeCount(buckets.count);
+        vo.setChargeAmount(buckets.amount.setScale(SCALE, RoundingMode.HALF_UP));
+        vo.setRefundCount(cntOf(refundRow.getCnt()));
+        vo.setRefundAmount(NumUtil.orZero(refundRow.getAmount()).setScale(SCALE, RoundingMode.HALF_UP));
+        vo.setCashAmount(buckets.cash.setScale(SCALE, RoundingMode.HALF_UP));
+        return vo;
+    }
+
+    /**
+     * 「先立空单」时给聚合列赋初值 0。
+     *
+     * <p>AGENTS.md §25：非 {@code del_flag} 的 NOT NULL 列禁 DEFAULT，insert 路径必须真赋值——
+     * 漏传不是被兜底成合法值，而是 MySQL 1364 fail loud。MP 的 NOT_NULL 策略会把 null 字段
+     * 整个从 INSERT 列清单里跳过，所以空单期的聚合列不显式赋 0，撞上的就是
+     * {@code Field 'charge_count' doesn't have a default value}（不是 NPE，别顺着脸找空指针）。
+     *
+     * <p>金额列随后由指针落定后的现算回写覆盖；{@code poolAmount} 恒 0（统筹只在院级日结单，
+     * 见实体注释）。本方法只服务 insert——update 走 NOT_NULL 策略跳过 null 的常规路径，
+     * 不会把这里写过的 0 再刷回审核后的行。
+     */
+    private static void initEmptyAggregates(BizCashierSettlement entity) {
+        entity.setChargeCount(0);
+        entity.setChargeAmount(BigDecimal.ZERO);
+        entity.setRefundCount(0);
+        entity.setRefundAmount(BigDecimal.ZERO);
+        entity.setNetAmount(BigDecimal.ZERO);
+        entity.setCashAmount(BigDecimal.ZERO);
+        entity.setWechatAmount(BigDecimal.ZERO);
+        entity.setAlipayAmount(BigDecimal.ZERO);
+        entity.setInsuranceAmount(BigDecimal.ZERO);
+        entity.setBalanceAmount(BigDecimal.ZERO);
+        entity.setUnknownPayAmount(BigDecimal.ZERO);
+        entity.setPoolAmount(BigDecimal.ZERO);
+        entity.setInvoiceCount(0);
+        entity.setInvoiceVoidCount(0);
     }
 
     @Override

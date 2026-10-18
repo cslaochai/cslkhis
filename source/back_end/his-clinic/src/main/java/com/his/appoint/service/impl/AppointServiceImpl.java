@@ -142,10 +142,15 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
     }
 
     /**
-     * 号源原价 = 挂号费 + 诊查费，与出账口径一致（专家号的高低体现在挂号费上，不另列）
+     * 号源原价 = 门诊诊查费，与出账口径严格一致。
+     *
+     * <p>为什么不再加挂号费：湘医保发〔2025〕58号（长沙市医保局同文，2026-01-01 执行）已废止
+     * 「挂号费」等项目，合并为门诊诊查费。号源的 {@code registFee} 保留字段仅为历史数据兼容，
+     * 恒为 0，不再参与计价 —— 这里若还加它，总额与实际出账（只出 ZCF 一行）就对不上，
+     * 退号/改约比价会拿一个比实际多收的钱去判。
      */
     private static BigDecimal scheduleFeeTotal(BizClinicSource schedule) {
-        return NumUtil.orZero(schedule.getRegistFee()).add(NumUtil.orZero(schedule.getDiagnosisFee()));
+        return NumUtil.orZero(schedule.getDiagnosisFee());
     }
 
     /**
@@ -522,22 +527,6 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
                         ? upsertDTO.getMedicalInsuranceType()
                         : patient.getMedicalInsuranceType());
         appointInfo.setMedicalInsuranceNo(patient.getMedicalInsuranceNo());
-
-        if (SettlementModeEnum.INSURANCE.getCode().equals(appointInfo.getSettlementType())) {
-            // 医保联网结算总开关：关闭时不支持医保结算，挂号侧直接拒（不查任何参保库）
-            if (!chargeFacadeService.insuranceEnabled()) {
-                throw new BusinessException("医保联网结算未启用，请改按全自费结算");
-            }
-            MedicalInsuranceTypeEnum feeType = MedicalInsuranceTypeEnum.fromCode(appointInfo.getMedicalInsuranceType());
-            if (feeType == null || !feeType.isPoolCovered()) {
-                throw new BusinessException("患者费别为「"
-                        + TextUtil.blankToDefault(appointInfo.getMedicalInsuranceType(), "未设置")
-                        + "」，不在医保统筹范围，不能联网结算，请改为全自费");
-            }
-            if (!TextUtil.hasText(appointInfo.getMedicalInsuranceNo())) {
-                throw new BusinessException("医保联网结算需要医保卡号：患者主档未登记，请先补全后再提交");
-            }
-        }
 
         // 生成挂号单号
         String appointNo = redisSequenceService.generateAppointNo();

@@ -37,6 +37,18 @@ public class FinanceSettlementController {
     }
 
     /**
+     * 交班前试算：当前收费员「上次交班 → 现在」的系统账（不落库、不认领流水）。
+     * 给交班弹框点钞前对账用 —— 系统现金是多少，提交前就摆平差异，
+     * 而不是确认被拒后从报错里猜。口径同 handover。
+     */
+    @PreAuthorize("hasAuthority('finance:settlement:edit')")
+    @Operation(summary = "交班前试算（系统现金预览，不落库）")
+    @GetMapping("/handoverPreview")
+    public Result<CashierHandoverPreviewVO> handoverPreview() {
+        return Result.success(financeSettlementService.handoverPreview());
+    }
+
+    /**
      * 分页查询收费员交班单（班结）。
      * 用于财务班结日结页的班结列表 tab 按时间、收费员检索。
      */

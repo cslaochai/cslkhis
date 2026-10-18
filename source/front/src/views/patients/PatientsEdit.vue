@@ -209,7 +209,7 @@ const validate = () => {
   if (!f.patientName) return '请输入患者姓名';
   if (!isPatientGenderCollected(f.gender)) return '请选择性别（确实没问到请选「未知」；历史脏值 0 请顺手修正）';
   if (!f.idCard) return '请输入身份证号';
-  if (!isIdCardFormatLegal(f.idCard)) return '身份证号格式不正确：应为 18 位（末位可为 X）';
+  if (!isIdCardFormatLegal(f.idCard)) return '身份证号格式不正确';
   if (isAdd.value) {
     // 出生日期单独判：校验位对了不代表日期存在（19990230 这种），提示要指到点子上
     if (!isIdCardBirthDateLegal(f.idCard)) return '身份证号中的出生日期不存在，请核对';

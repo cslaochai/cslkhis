@@ -113,12 +113,17 @@ public class BizClinicSourceTemplate extends BaseEntity {
     private String roomName;
 
     /**
-     * 挂号费
+     * 挂号费。
+     *
+     * <p><b>已废止</b>：湘医保发〔2025〕58号（长沙市医保局同文，2026-01-01 执行）废止挂号费，
+     * 合并为门诊诊查费。本字段仅保留作历史兼容，整改后恒为 0，计价与出账都不读它。
      */
     private BigDecimal registFee;
 
     /**
-     * 诊查费
+     * 门诊诊查费（医保编码 011102020010000）。
+     *
+     * <p>湘医保发〔2025〕58号：支付分类=丙类，医保不报、100% 自付，不进职工门诊统筹。
      */
     private BigDecimal diagnosisFee;
 

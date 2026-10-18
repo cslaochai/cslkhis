@@ -43,6 +43,21 @@
           detail?.refundReason || '—'
         }}</span>
       </div>
+      <!-- 圈选的明细行：退了哪几行、各退多少数量。空 = 旧的「类型 + 金额」申请单 -->
+      <div v-if="detail?.items && detail.items.length > 0" data-testid="refund-detail-items">
+        <div class="mb-1 text-sm font-medium">退费明细行（{{ detail.items.length }}）</div>
+        <el-table :data="detail.items" border size="small">
+          <el-table-column label="项目" min-width="140" prop="itemName" show-overflow-tooltip/>
+          <el-table-column class-name="font-mono text-xs" label="来源单号" min-width="130" prop="sourceNo"
+                           show-overflow-tooltip>
+            <template #default="{ row }">{{ row.sourceNo || '—' }}</template>
+          </el-table-column>
+          <el-table-column align="right" label="退费数量" min-width="90" prop="refundQuantity"/>
+          <el-table-column align="right" label="退费金额" min-width="90">
+            <template #default="{ row }">¥{{ formatMoney(row.refundAmount) }}</template>
+          </el-table-column>
+        </el-table>
+      </div>
       <div v-if="detail?.auditRemark" class="rounded-lg border border-slate-200 p-3">
         <span class="text-slate-400">审核意见：</span><span class="text-slate-700">{{ detail.auditRemark }}</span>
       </div>

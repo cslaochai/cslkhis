@@ -16,14 +16,20 @@ public interface InsuranceChannelService {
     List<RemoteSettlement> queryDayBill(LocalDate billDate);
 
     /**
-     * 参保核验：按医保卡号查医保局端参保状态（对齐真实 HIS 的联网参保查询）。
-     * <p>入参同时带患者主档的身份证/姓名用于防冒名：
+     * 参保核验：向医保局端查参保状态（对齐真实 HIS 的联网参保查询）。
+     *
+     * <p>只在<b>结算那一刻</b>调用一次 —— 挂号不查、登记不查，避免患者还没走到付费环节
+     * 就被参保状态挡住。新增挂号只登记，缴不缴得起、报不报得了，付款时才见分晓。
+     *
+     * <p>实名核验口径：入参同时带患者主档的身份证/姓名用于防冒名。
      * <ul>
-     *   <li>主档有身份证 → 身份证是实名金标准，remote 通道改按身份证查参保（查无即未参保）；
-     *       mock 通道按卡号查台账后比对身份证，不一致判「身份不符」拒医保。</li>
-     *   <li>主档无身份证 → 按卡号查参保，命中后比对姓名，不一致判「身份不符」拒医保。</li>
+     *   <li>主档有身份证 → 身份证是实名金标准，按身份证查参保（查无即未参保）；</li>
+     *   <li>主档无身份证 → 按卡号查参保，命中后比对姓名，不一致判「身份不符」。</li>
      * </ul>
-     * 未参保登记 / 停保 / 身份不符 / 平台不可用 → found=false 或 active=false，结算前据此拒医保结算。
+     * mock 通道没有医保平台可查，恒返回「查无参保」。
+     *
+     * <p>查无参保 / 停保 / 身份不符 / 平台不可用 → found=false 或 active=false，
+     * 结算侧据此<b>静默按自费原价收</b>，不拦单（见 SettlementBillServiceImpl#resolveInsurance）。
      */
     InsuredStatus checkInsured(String insuranceNo, String idCard, String name);
 

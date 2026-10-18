@@ -4,7 +4,10 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.charge.dto.RefundApplySubmitDTO;
 import com.his.charge.entity.BizRefundApply;
 import com.his.charge.vo.BizRefundApplyVO;
+import com.his.charge.vo.RefundableLineVO;
 import com.his.common.base.PageResult;
+
+import java.util.List;
 
 /**
  * 退费申请服务接口
@@ -47,4 +50,12 @@ public interface RefundApplyService extends IService<BizRefundApply> {
      * 执行退费
      */
     boolean executeRefund(Long applyId, String refundBy);
+
+    /**
+     * 退费候选行：某张账单按退费类型还能退的记账行（含剩余数量与来源单号）。
+     *
+     * <p>口径与 {@code SettlementBillService#refundableLines} 一致，这里只是给退费申请
+     * 域开一个 HTTP 出口：发起申请前按处方号/申请单号圈选、按行改退费数量。
+     */
+    List<RefundableLineVO> refundableLines(Long billId, Integer refundType);
 }

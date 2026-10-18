@@ -46,6 +46,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 支付资金流水实现
@@ -244,24 +245,29 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         }
 
         List<BizSettlementBillItem> items = bizSettlementBillItemMapper.selectByBill(bill.getId());
-        List<Long> feeIds = resolveRefundFeeIds(items, dto.getFeeIds());
+        List<BillRefundDTO.RefundLine> refundLines = resolveRefundLines(items, dto);
         // 没点名记账行 = 整单全退；点了名但要退的行数正好等于账单全部行，也算整单
-        boolean wholeBill = CollectionUtils.isEmpty(dto.getFeeIds()) || feeIds.size() >= items.size();
+        boolean wholeBill = (CollectionUtils.isEmpty(dto.getFeeIds()) && CollectionUtils.isEmpty(dto.getLines()))
+                || refundLines.size() >= items.size();
         // 医保门禁必须放在动钱之前：清单已报盘时医保侧只有整单冲正（2305），部分退要当场拒绝
         insuranceSettlementService.assertBillRefundable(bill.getId(), wholeBill);
         // 药品闸门同样在动钱之前：药已发到患者手里、钱先退了，退费流程不会替药师把药收回架
-        if (!CollectionUtils.isEmpty(feeIds)) {
-            sourceAdvanceService.assertDrugReturnedForRefund(feeRecordService.listByIds(feeIds), "退费");
+        if (!refundLines.isEmpty()) {
+            sourceAdvanceService.assertDrugReturnedForRefund(feeRecordService.listByIds(
+                    refundLines.stream().map(BillRefundDTO.RefundLine::getFeeId).collect(Collectors.toList())), "退费");
         }
 
         Map<Long, BizSettlementBillItem> itemByFee = itemByFeeId(items);
         BigDecimal refundTotal = BigDecimal.ZERO;
         BigDecimal paidPart = BigDecimal.ZERO;
-        for (Long feeId : feeIds) {
-            BizFeeRecord neg = feeRecordService.reverseForRefund(feeId, dto.getReason());
+        for (BillRefundDTO.RefundLine line : refundLines) {
+            // 数量为空 = 整行退；给了数量 = 数量级部分退（共 5 盒退 2 盒，金额由 doReverse 末笔倒挤）
+            BizFeeRecord neg = line.getQuantity() == null
+                    ? feeRecordService.reverseForRefund(line.getFeeId(), dto.getReason())
+                    : feeRecordService.reversePartialForRefund(line.getFeeId(), line.getQuantity(), dto.getReason());
             BigDecimal gross = NumUtil.orZero(neg.getAmount()).abs();
             refundTotal = refundTotal.add(gross);
-            paidPart = paidPart.add(patientShare(itemByFee.get(feeId), gross));
+            paidPart = paidPart.add(patientShare(itemByFee.get(line.getFeeId()), gross));
         }
         refundTotal = NumUtil.scale(refundTotal, AMOUNT_SCALE);
         paidPart = NumUtil.scale(paidPart, AMOUNT_SCALE);
@@ -288,7 +294,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
             insuranceSettlementService.resetByBill(bill.getId(), dto.getReason());
         }
         log.info("[退费] 账单 {} 红冲记账行 {} 条，冲减费用 ¥{}（患者实付 ¥{}）分 {} 笔原路退回，来源={} 原因：{}",
-                bill.getBillNo(), feeIds.size(), refundTotal.toPlainString(), paidPart.toPlainString(),
+                bill.getBillNo(), refundLines.size(), refundTotal.toPlainString(), paidPart.toPlainString(),
                 refunds.size(), source.getDesc(), dto.getReason());
         return toVOList(refunds);
     }
@@ -836,23 +842,46 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         return NumUtil.scale(gross.subtract(discount).subtract(pool), AMOUNT_SCALE);
     }
 
-    private List<Long> resolveRefundFeeIds(List<BizSettlementBillItem> items, List<Long> feeIds) {
+    /**
+     * 退费行解析：行级明细（{@code lines}，可带数量）优先，旧 {@code feeIds}（整行）次之，都空 = 整单全退。
+     *
+     * <p>每行都必须属于本账单："退别家的账"这种错，解析时拦下来比红冲写完再发现便宜。
+     */
+    private List<BillRefundDTO.RefundLine> resolveRefundLines(List<BizSettlementBillItem> items, BillRefundDTO dto) {
         List<Long> allowed = new ArrayList<>();
         for (BizSettlementBillItem item : items) {
             allowed.add(item.getFeeRecordId());
         }
-        if (CollectionUtils.isEmpty(feeIds)) {
+        if (CollectionUtils.isEmpty(dto.getLines()) && CollectionUtils.isEmpty(dto.getFeeIds())) {
             if (allowed.isEmpty()) {
                 throw new BusinessException("该账单没有账单行，无法退费");
             }
-            return allowed;
+            return allowed.stream().map(id -> refundLineOf(id, null)).collect(Collectors.toList());
         }
-        for (Long feeId : feeIds) {
+        List<BillRefundDTO.RefundLine> lines = new ArrayList<>();
+        if (!CollectionUtils.isEmpty(dto.getLines())) {
+            for (BillRefundDTO.RefundLine line : dto.getLines()) {
+                if (!allowed.contains(line.getFeeId())) {
+                    throw new BusinessException("记账行 " + line.getFeeId() + " 不属于该账单，不能退");
+                }
+                lines.add(line);
+            }
+            return lines;
+        }
+        for (Long feeId : dto.getFeeIds()) {
             if (!allowed.contains(feeId)) {
                 throw new BusinessException("记账行 " + feeId + " 不属于该账单，不能退");
             }
+            lines.add(refundLineOf(feeId, null));
         }
-        return feeIds;
+        return lines;
+    }
+
+    private static BillRefundDTO.RefundLine refundLineOf(Long feeId, BigDecimal quantity) {
+        BillRefundDTO.RefundLine line = new BillRefundDTO.RefundLine();
+        line.setFeeId(feeId);
+        line.setQuantity(quantity);
+        return line;
     }
 
     private BizSettlementBill requirePayableBill(Long billId) {

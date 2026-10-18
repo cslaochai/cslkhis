@@ -21,7 +21,6 @@ import com.his.charge.vo.PrepayBalanceVO;
 import com.his.charge.vo.PrepayVO;
 import com.his.charge.vo.RegistChargeCommandVO;
 import com.his.charge.vo.SettlementStateVO;
-import com.his.charge.config.InsuranceProperties;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.entity.BizInsuranceSettlement;
 import com.his.charge.entity.BizSettlementBill;
@@ -66,8 +65,6 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
     private final FundAccountService fundAccountService;
 
     private final InpatientAccountService inpatientAccountService;
-
-    private final InsuranceProperties insuranceProperties;
 
     private final BizSettlementBillItemMapper bizSettlementBillItemMapper;
 
@@ -237,11 +234,6 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
     // ---------- 挂号费联动 ----------
 
     @Override
-    public boolean insuranceEnabled() {
-        return insuranceProperties.isEnabled();
-    }
-
-    @Override
     @Transactional(rollbackFor = Exception.class)
     public BillBriefVO createRegistCharge(RegistChargeCommandVO command) {
         if (command == null || command.getRegistId() == null) {
@@ -253,21 +245,22 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
             return null;
         }
 
-        BigDecimal registFee = NumUtil.orZero(command.getRegistFee());
         BigDecimal diagnosisFee = NumUtil.orZero(command.getDiagnosisFee());
-        List<FeeBookDTO> books = new ArrayList<>(2);
-        if (registFee.signum() > 0) {
-            // 挂号费按自费目录类别记账：不参与统筹分摊（与旧口径一致）
-            books.add(buildBook(command, "挂号费", "GHF", registFee, FeeCatalogTypeEnum.SELF_PAY.getCode()));
-        }
+        List<FeeBookDTO> books = new ArrayList<>(1);
         if (diagnosisFee.signum() > 0) {
-            // 诊查费按丙类（湘医保发〔2025〕58号）：门诊诊查费医保不报、100% 自付，
-            // 不进职工门诊统筹。甲类行在 computePoolFromRule 里只能压 pool_ratio，
-            // 没有「先自付 100%」这一档，表达不了丙类。
-            books.add(buildBook(command, "诊查费", "ZCF", diagnosisFee, FeeCatalogTypeEnum.CLASS_C.getCode()));
+            // 门诊只出「门诊诊查费」一行（ZCF，编码 011102020010000）。
+            //
+            // 🔑 为什么没有「挂号费」这一行：湘医保发〔2025〕58号（长沙市医保局同文，2026-01-01 执行）
+            // 已废止挂号费等 71 个价格项目，合并为门诊诊查费。继续出 GHF 行 = 多收患者的钱，
+            // 医保稽核与明码标价核查都会抓。command.registFee 保留字段只是历史兼容，不再参与出账。
+            //
+            // 诊查费按丙类：湘医保发〔2025〕58号 支付分类=丙类，医保不报、100% 自付，
+            // 不进职工门诊统筹。甲类行只能压 pool_ratio、没有「先自付 100%」档，
+            // 丙类才能表达全自费（规则表 ICR202610180001：self_pay_ratio=100 / pool_ratio=0）
+            books.add(buildBook(command, "门诊诊查费", "ZCF", diagnosisFee, FeeCatalogTypeEnum.CLASS_C.getCode()));
         }
         if (books.isEmpty()) {
-            // 两项都是 0 却按"未免收"进来：同样是零应收，处理方式与免收一致，别硬出空账单
+            // 诊查费为 0 却按"未免收"进来：零应收，处理方式与免收一致，别硬出空账单
             return null;
         }
         List<BizFeeRecord> rows = feeRecordService.bookBatch(books);

@@ -4,6 +4,7 @@ package com.his.charge.controller;
 import com.his.charge.dto.*;
 import com.his.charge.service.RefundApplyService;
 import com.his.charge.vo.BizRefundApplyVO;
+import com.his.charge.vo.RefundableLineVO;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,6 +13,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 退费申请控制器：退费单据的发起、审核、作废与执行入口。本层只是红冲前置审批单，不承载资金事实。
@@ -61,6 +64,17 @@ public class RefundApplyController {
     @PostMapping("/applyRefund")
     public Result<BizRefundApplyVO> applyRefund(@Valid @RequestBody RefundApplySubmitDTO submitDTO) {
         return Result.success("提交成功", refundApplyService.submitRefundApply(submitDTO));
+    }
+
+    /**
+     * 退费候选行：某张账单按退费类型还能退的记账行（含剩余数量与来源单号）。
+     * 用于「发起退费申请」弹框勾选要退的行——按处方号/申请单号圈定范围，改每行退费数量。
+     */
+    @PreAuthorize("hasAuthority('finance:refund:add')")
+    @Operation(summary = "退费候选行（按账单 + 退费类型）")
+    @GetMapping("/refundableLines")
+    public Result<List<RefundableLineVO>> refundableLines(@RequestParam Long billId, @RequestParam Integer refundType) {
+        return Result.success(refundApplyService.refundableLines(billId, refundType));
     }
 
     /**

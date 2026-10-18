@@ -6,26 +6,15 @@ import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.service.PaymentService;
 import com.his.charge.service.QrPayService;
 import com.his.charge.service.SettlementBillService;
-import com.his.common.util.PayQrCodeUtils;
 import com.his.charge.vo.QrPayCreateVO;
 import com.his.charge.vo.QrPayResultVO;
-import com.his.common.enums.BillStatusEnum;
-import com.his.common.enums.PayChannelEnum;
-import com.his.common.enums.PayOrderBizTypeEnum;
-import com.his.common.enums.PayOrderStatusEnum;
-import com.his.common.enums.PaymentMethodEnum;
-import com.his.common.enums.TxnSourceEnum;
+import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
+import com.his.common.util.PayQrCodeUtils;
 import com.his.common.util.TextUtil;
-import com.his.common.enums.PayNotifyResultEnum;
-import com.his.common.enums.PayNotifySceneEnum;
-import com.his.pay.service.AlipayChannelService;
-import com.his.pay.service.PayNotifyLogService;
-import com.his.pay.service.PayOrderService;
-import com.his.pay.service.WxPayChannelService;
-import com.his.pay.service.PayRateLimitService;
+import com.his.pay.service.*;
 import com.his.pay.support.AggregatedQrSupport;
 import com.his.pay.support.PayQrCodeCache;
 import com.his.pay.vo.PayOrderVO;
@@ -106,18 +95,22 @@ public class QrPayServiceImpl implements QrPayService {
 
     private final PayRateLimitService payRateLimitService;
 
-    /** 码串缓存（按支付单号，聚合码一张单一个号，天然一对一） */
+    /**
+     * 码串缓存（按支付单号，聚合码一张单一个号，天然一对一）
+     */
     private final PayQrCodeCache payQrCodeCache;
 
-    /** 聚合支付码支撑：拼网关 URL、模拟模式下的收款登记与查单 */
+    /**
+     * 聚合支付码支撑：拼网关 URL、模拟模式下的收款登记与查单
+     */
     private final AggregatedQrSupport aggregatedQrSupport;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public QrPayCreateVO create(QrPayCreateDTO dto) {
-        BizSettlementBill bill = settlementBillService.getById(dto.getBillId());
+    public QrPayCreateVO create(QrPayCreateDTO qrPayCreateDTO) {
+        BizSettlementBill bill = settlementBillService.getById(qrPayCreateDTO.getBillId());
         if (bill == null) {
-            throw new BusinessException("结算账单不存在：" + dto.getBillId());
+            throw new BusinessException("结算账单不存在：" + qrPayCreateDTO.getBillId());
         }
         if (Objects.equals(bill.getBillStatus(), BillStatusEnum.VOIDED.getCode())) {
             throw new BusinessException("账单已作废，不能收款：" + bill.getBillNo());
@@ -136,7 +129,7 @@ public class QrPayServiceImpl implements QrPayService {
         if (reusable != null) {
             String cachedQrCode = payQrCodeCache.get(reusable.getPayNo());
             if (TextUtil.hasText(cachedQrCode)) {
-                return toCreateVO(reusable, cachedQrCode);
+                return toCreateVO(bill, reusable, cachedQrCode);
             }
         }
 
@@ -169,7 +162,7 @@ public class QrPayServiceImpl implements QrPayService {
                 payQrCodeCache.put(order.getPayNo(), qrCode);
             }
 
-            return toCreateVO(order, qrCode);
+            return toCreateVO(bill, order, qrCode);
         } catch (RuntimeException e) {
             payRateLimitService.release(gateKey);
             throw e;
@@ -211,8 +204,7 @@ public class QrPayServiceImpl implements QrPayService {
         }
         if (Objects.equals(order.getPayStatus(), PayOrderStatusEnum.PENDING.getCode())) {
             // 闸3 查单节流：同一张单 5 秒内问第二次纯属重复。被节流就只看本地状态
-            if (payRateLimitService.allowsChannelQuery(
-                    CHANNEL_QUERY_KEY_PREFIX + payNo, CHANNEL_QUERY_INTERVAL_SECONDS)) {
+            if (payRateLimitService.allowsChannelQuery(CHANNEL_QUERY_KEY_PREFIX + payNo, CHANNEL_QUERY_INTERVAL_SECONDS)) {
                 settleFromChannel(order);
                 order = payOrderService.getByPayNo(payNo);
             }
@@ -435,16 +427,25 @@ public class QrPayServiceImpl implements QrPayService {
 
     /**
      * 出码应答：码串本地画成图片。画图是本机 CPU 的活，复用路径到此为止，不再出网。
+     *
+     * <p>billNo/patientName 是核对基准：前端弹层头部必须改用这两个返回值渲染，
+     * 不许继续显示列表行的 props 旧值——否则前端传错 billId 时，
+     * 界面显示 A 患者、手里是 B 患者的码，全程静默。
      */
-    private QrPayCreateVO toCreateVO(PayOrderVO order, String qrCode) {
+    private QrPayCreateVO toCreateVO(BizSettlementBill bill, PayOrderVO order, String qrCode) {
         String qrImage = PayQrCodeUtils.generateDataUri(qrCode, QR_SIZE);
         if (!TextUtil.hasText(qrImage)) {
             throw new BusinessException("二维码生成失败，请重试");
         }
+        log.info("[扫码收款] 出码 payNo={} 账单={} 患者={} 应缴={} 操作人={}",
+                order.getPayNo(), bill.getBillNo(), bill.getPatientName(),
+                order.getAmount().toPlainString(), UserUtils.getCurrentUser().getRealName());
         QrPayCreateVO vo = new QrPayCreateVO();
         vo.setPayNo(order.getPayNo());
         vo.setChannel(order.getChannel());
         vo.setAmount(order.getAmount());
+        vo.setBillNo(bill.getBillNo());
+        vo.setPatientName(bill.getPatientName());
         vo.setPayStatus(order.getPayStatus());
         vo.setQrImage(qrImage);
         vo.setExpireTime(order.getExpireTime());

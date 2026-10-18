@@ -6,7 +6,7 @@ import com.his.patient.vo.AttendingRelationVO;
 import java.util.List;
 
 /**
- * 住院管床关系服务（sql/202）。
+ * 住院管床关系服务
  */
 public interface AttendingRelationService {
 

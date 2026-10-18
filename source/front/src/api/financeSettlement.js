@@ -11,6 +11,14 @@ export function handover(data) {
   return request.post('/settlement/handover', data)
 }
 
+/**
+ * 交班前试算：当前收费员「上次交班 → 现在」的系统账（不落库、不认领流水）。
+ * 给交班弹框点钞前对账用 —— 系统现金是多少，提交前就摆平差异。
+ */
+export function handoverPreview() {
+  return request.get('/settlement/handoverPreview')
+}
+
 /** 交班单分页 */
 export function cashierListPage(data) {
   return request.post('/settlement/cashierListPage', data)

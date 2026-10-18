@@ -4,10 +4,14 @@ import org.apache.commons.lang3.StringUtils;
 
 /**
  * 付款项目类型枚举
+ *
+ * <p>注意：这里是<b>项目分类</b>（把账单明细按大类归口），不是价格项目名称。
+ * 码值 1 的文案用「门诊诊查费」而不是「挂号费」：湘医保发〔2025〕58号已废止挂号费合并入门诊诊查费，
+ * 患者在费用清单里看到「挂号费」会以为还在按废止项目收费。码值 1 本身不变（已落库）。
  */
 public enum PaymentItemTypeEnum {
 
-    REGISTRATION_FEE(1, "挂号费"),
+    REGISTRATION_FEE(1, "门诊诊查费"),
     WESTERN_MEDICINE(2, "西药"),
     CHINESE_PATENT_MEDICINE(3, "中成药"),
     CHINESE_HERBAL_MEDICINE(4, "中药饮片"),

@@ -105,11 +105,6 @@
             <el-input v-else v-model="newAppointment.medicalInsuranceNo" placeholder="请输入医保卡号"/>
           </el-form-item>
         </div>
-        <!-- 费别不在统筹范围却选了联网：按必填校验错误的样式提示（EP danger 红，一眼看出这单提交不过去） -->
-        <p v-if="Number(newAppointment.settlementType) === 2 && !isAppointmentInsuranceFee"
-           class="appt-settle-conflict m-0 text-xs text-[var(--el-color-danger)]">
-          该患者费别为「{{ newAppointment.medicalInsuranceType || '未设置' }}」，不在医保统筹范围，不能联网结算，请改为全自费
-        </p>
       </div>
 
       <div class="appt-block">
@@ -167,7 +162,7 @@
                          :value="d.id ?? d.deptName"/>
             </el-select>
           </el-form-item>
-          <!-- 号源信息多，单独整行：医生 | 诊室 | 时段 | 余号 | 挂号费，半栏放不下 -->
+          <!-- 号源信息多，单独整行：医生 | 诊室 | 时段 | 余号 | 门诊诊查费，半栏放不出 -->
           <el-form-item label="选择号源" required>
             <el-select v-model="newAppointment.scheduleId" :disabled="!availableSchedules.length"
                        :placeholder="schedulePlaceholder"
@@ -175,7 +170,7 @@
               <el-option
                   v-for="s in availableSchedules"
                   :key="s.id"
-                  :label="`${s.doctorName} | ${s.roomName || '诊室待定'} | ${s.startTime}-${s.endTime} | 余号:${s.availableSource} | 挂号费:¥${s.registFee}`"
+                  :label="`${s.doctorName} | ${s.roomName || '诊室待定'} | ${s.startTime}-${s.endTime} | 余号:${s.availableSource} | 诊查费:¥${s.diagnosisFee}`"
                   :value="s.id ?? s.doctorName"
               />
             </el-select>
@@ -203,8 +198,7 @@
             </span>
           </div>
           <div v-if="revisitPreview && !revisitPreviewLoading" class="mt-1 text-xs text-slate-500">
-            挂号费 ¥{{ Number(revisitPreview.registFee || 0).toFixed(2) }} ·
-            诊查费 ¥{{ Number(revisitPreview.diagnosisFee || 0).toFixed(2) }} ·
+            门诊诊查费 ¥{{ Number(revisitPreview.diagnosisFee || 0).toFixed(2) }} ·
             {{ revisitPreview.policyName ? `命中策略「${revisitPreview.policyName}」` : '未命中策略，按全额收费' }}
           </div>
           <p v-if="revisitPreview?.reason && !revisitPreviewLoading" class="mt-1 text-xs text-slate-400">
@@ -536,7 +530,7 @@ const validateNewPatientForm = () => {
     return false;
   }
   if (!isPatientGenderCollected(newPatientForm.value.gender)) {
-    ElMessage.warning('请选择性别（确实没问到请选「未知」）');
+    ElMessage.warning('请选择性别');
     return false;
   }
   if (!newPatientForm.value.idCard) {
@@ -544,7 +538,7 @@ const validateNewPatientForm = () => {
     return false;
   }
   if (!isIdCardFormatLegal(newPatientForm.value.idCard)) {
-    ElMessage.warning('身份证号格式不正确：应为 18 位（末位可为 X）');
+    ElMessage.warning('身份证号格式不正确');
     return false;
   }
   // 出生日期单独判：校验位对了不代表日期存在（19990230 这种），提示要指到点子上
@@ -669,30 +663,13 @@ const handleSubmit = async () => {
       }
     }
   }
-  // ④ 结算方式：联网必须费别在统筹范围且有医保卡号 —— 这是提交时的统一闸，两个 tab 同口径
-  //（已有患者选人时已从详情接口补齐主档真值；录入新患者看建档表单）。后端保存时还有同口径硬闸兜底。
-  if (Number(newAppointment.value.settlementType) === 2) {
-    if (!isAppointmentInsuranceFee.value) {
-      ElMessage.warning('该患者费别不在医保统筹范围，不能联网结算，请改为全自费');
-      return;
-    }
-    const insuranceNo = addMode.value === 'new'
-        ? newPatientForm.value.medicalInsuranceNo
-        : newAppointment.value.medicalInsuranceNo;
-    if (!insuranceNo) {
-      ElMessage.warning('医保联网结算需要医保卡号：患者主档未登记，请在「费用信息」补全后再提交');
-      return;
-    }
-  }
+  // ④ 结算方式这里**不校验参保**：登记时只记录「本单打算怎么结」。
+  // 能不能报销由付款那一刻后端远程查医保平台决定，查不到参保就按自费原价收，不拦挂号。
+  // 保留费别/医保卡号的填写是为了建档数据完整（医生后续要用），不是挂号门槛。
   addSubmitLoading.value = true;
   try {
     let patientId = newAppointment.value.patientId;
     let patientName = newAppointment.value.patientName;
-    // ④ 录入新患者：先建档拿 ID，再挂号 —— 一次点击完成两步。
-    // 顺序不能反：挂号接口的 patientId 是 @NotNull，必须先有患者主键。
-    // 这不等于数据库事务级原子（页面层两次调用）：若建档成功而挂号失败（如号源被抢空），
-    // 患者档案会留下 —— 这里刻意**不**回滚，改个号源再点一次即可，不用重填身份证；
-    // 患者主档本身也是独立有效的资产（患者管理页单独建档同样是常态）。
     if (addMode.value === 'new') {
       const created = await createPatient(newPatientForm.value);
       const np = created.data;
@@ -727,7 +704,7 @@ const handleSubmit = async () => {
     // 免收：后端不记账不出账（billId 为 null），直接提示不弹窗
     if (!data.billId) {
       ElMessage.success(isSameDayReturn.value
-          ? '当日回诊免收挂号费，患者可直接签到就诊'
+          ? '当日回诊免收门诊诊查费，患者可直接签到就诊'
           : '该号按收费策略免收，无需缴费，患者可直接签到');
       emit('saved');
       resetForm();

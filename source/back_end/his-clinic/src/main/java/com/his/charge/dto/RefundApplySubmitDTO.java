@@ -1,11 +1,13 @@
 package com.his.charge.dto;
 
 import com.his.common.validation.AllowedValues;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * 提交退费申请入参
@@ -53,10 +55,20 @@ public class RefundApplySubmitDTO {
     private String refundReason;
 
     /**
-     * 退费金额，单位：元（必须等于该类型下若干<b>整条</b>账单行金额之和，服务端校验）
+     * 退费金额，单位：元。带了 {@link #items} 时服务端按行快照汇总覆盖此值（前端传来的只作展示）；
+     * 没带 items 的旧路径必须等于若干<b>整条</b>账单行金额之和，服务端校验。
      */
     @NotNull(message = "请填写退费金额")
     private BigDecimal refundAmount;
+
+    /**
+     * 退费明细行（勾选 + 每行退费数量）；为空 = 旧的「类型 + 金额」整行凑单路径。
+     *
+     * <p>前端按账单 + 退费类型拉候选行（{@code /charge/refund/refundableLines}）后勾选，
+     * {@code refundQuantity} 留空 = 该行整行退。
+     */
+    @Valid
+    private List<RefundApplyItemDTO> items;
 
     /**
      * 申请人

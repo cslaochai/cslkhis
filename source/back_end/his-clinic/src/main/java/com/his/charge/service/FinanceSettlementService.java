@@ -24,6 +24,16 @@ public interface FinanceSettlementService {
     CashierSettlementVO handover(CashierHandoverDTO dto);
 
     /**
+     * 交班前试算：当前收费员「上次交班 → 现在」的系统账，不落库、不认领流水。
+     *
+     * <p>给收费台交班弹框用 —— 点钞之前先看到本班系统现金是多少，差异在提交前
+     * 就摆平，而不是确认被拒后从报错里猜。区间与行集口径同 {@link #handover}。
+     *
+     * @return 试算结果（含系统现金 cashAmount）
+     */
+    CashierHandoverPreviewVO handoverPreview();
+
+    /**
      * 交班单分页
      */
     PageResult<CashierSettlementVO> cashierPage(CashierSettlementPageQueryDTO dto);

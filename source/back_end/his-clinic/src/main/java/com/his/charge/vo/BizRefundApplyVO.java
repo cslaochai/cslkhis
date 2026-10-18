@@ -3,10 +3,12 @@ package com.his.charge.vo;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.charge.entity.BizRefundApplyItem;
 import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 退费申请出参
@@ -170,6 +172,11 @@ public class BizRefundApplyVO {
      * 医保报盘是否随本次退费撤销（1-已发 2305）
      */
     private Integer flowInsuranceCancelled;
+
+    /**
+     * 退费明细行（圈选结果：退了哪几行、各退多少数量）；为空 = 旧的「类型 + 金额」申请单
+     */
+    private List<BizRefundApplyItem> items;
 
     /**
      * 创建人

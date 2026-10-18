@@ -13,6 +13,11 @@
         />
         <el-button :icon="Search" data-testid="cash-search" type="primary" @click="handleSearch">查询</el-button>
         <el-button :icon="Refresh" @click="handleReset">重置</el-button>
+        <!-- 交班快捷入口：弹层与「财务日结」页同一个（components/his/FinanceHandoverAdd.vue），
+             收费员不用离开收费台就能给本班结账；权限 finance:settlement:edit（收费员/医保结算员/管理员） -->
+        <el-button v-perm="'finance:settlement:edit'" :icon="Wallet" class="ml-auto" data-testid="cash-handover-btn"
+                   @click="handoverVisible = true">办理交班
+        </el-button>
       </div>
     </el-card>
 
@@ -335,6 +340,11 @@
          金额取账单尚需缴，页面不改数。多渠道拆笔（余额+医保）由退费/台账侧的账单详情承接 -->
     <QrPayDialog v-model="qrPayDialog" allow-cash :amount="qrPayBill?.unpaidAmount" :bill-id="qrPayBill?.id"
                  :bill-no="qrPayBill?.billNo" :patient-name="qrPayBill?.patientName" @paid="onPaid"/>
+
+    <!-- ============ 交班（班结） ============ -->
+    <!-- 与「财务日结」页同一个弹层：给本班收款流水定格 + 现金差异闸；
+         cashierId 取登录态，前端传不进别人的，页面只开开关，无需刷新（本页数据不随班次变动） -->
+    <FinanceHandoverAdd v-model="handoverVisible"/>
   </div>
 </template>
 
@@ -356,7 +366,7 @@
  *    unpaidAmount 由后端算，前端不再减一遍。
  */
 import {computed, onMounted, ref} from 'vue';
-import {Coin, Document, Refresh, Search} from '@element-plus/icons-vue';
+import {Coin, Document, Refresh, Search, Wallet} from '@element-plus/icons-vue';
 import {ElMessage} from 'element-plus';
 import {
   getBillListPage,
@@ -367,6 +377,7 @@ import {
 } from '@/api/settlementBill';
 import {issueInvoice} from '@/api/invoice';
 import QrPayDialog from '@/components/his/QrPayDialog.vue';
+import FinanceHandoverAdd from '@/components/his/FinanceHandoverAdd.vue';
 import {DICT_TYPE, loadDictDataMap} from '@/lib/dict-cache';
 import {dictLabelText, formatMoney} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
@@ -551,6 +562,9 @@ async function runSettle() {
 // ==================== 收款（L3：与预约收费同一弹层，默认现金档） ====================
 const qrPayDialog = ref(false);
 const qrPayBill = ref(null);
+
+// ==================== 交班（班结）：与财务日结页共用弹层，收费台只开开关 ====================
+const handoverVisible = ref(false);
 
 function openPay(bill) {
   // 出账后直接拉起时，settle 响应可能不带患者名，兜底取当前就诊的，避免弹层闪「—」

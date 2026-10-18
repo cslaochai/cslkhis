@@ -6,7 +6,8 @@
         <!-- 静音开关只给扫码档：现金是收银员自己按下的，不存在「没注意到」 -->
         <el-tooltip v-if="!isCash" :content="muted ? '已静音：收款成功不播报' : '收款成功会语音播报金额'"
                     placement="bottom">
-          <button :data-muted="String(muted)" class="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-[#1269B5]"
+          <button :data-muted="String(muted)"
+                  class="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-[#1269B5]"
                   data-testid="qrpay-mute-toggle" type="button" @click="toggleMute">
             <el-icon>
               <MuteNotification v-if="muted"/>
@@ -20,15 +21,15 @@
       <div class="rounded-lg bg-slate-50 px-3 py-2 text-sm">
         <div class="flex justify-between">
           <span class="text-slate-500">账单号</span>
-          <span class="font-mono">{{ billNo || '—' }}</span>
+          <span class="font-mono">{{ displayBillNo }}</span>
         </div>
         <div class="flex justify-between">
           <span class="text-slate-500">患者</span>
-          <span>{{ patientName || '—' }}</span>
+          <span>{{ displayPatientName }}</span>
         </div>
         <div class="flex justify-between">
           <span class="text-slate-500">本单金额</span>
-          <b class="text-red-600">{{ moneyText(amount) }}</b>
+          <b class="text-red-600">{{ moneyText(displayAmount) }}</b>
         </div>
       </div>
 
@@ -218,6 +219,8 @@ const error = ref('');
 const pollError = ref('');
 const muted = ref(localStorage.getItem(MUTE_KEY) === '1');
 const billDetail = ref(null);
+/** 出码返回的身份事实（服务端按 billId 查到的账单号/患者/金额），是头部显示的核对基准 */
+const billing = ref(null);
 const detailLoading = ref(false);
 /** 过期时刻在本地时钟上的落点（由服务端口径的剩余时长锚定） */
 const countdownDeadline = ref(0);
@@ -236,6 +239,9 @@ const dialogTitle = computed(() => (props.allowCash ? '收费' : '扫码收款')
 const cashAmount = computed(() => Number(summary.value.unpaidAmount ?? props.amount) || 0);
 const feeItems = computed(() => billDetail.value?.items || []);
 const summary = computed(() => billDetail.value || {});
+const displayBillNo = computed(() => billing.value?.billNo || props.billNo || '—');
+const displayPatientName = computed(() => billing.value?.patientName || props.patientName || '—');
+const displayAmount = computed(() => billing.value?.amount ?? props.amount ?? 0);
 const remainMs = computed(() => Math.max(0, countdownDeadline.value - nowTick.value));
 const qrExpired = computed(() => !isPaid.value && !!qrImage.value
     && (isClosed.value || (countdownDeadline.value > 0 && remainMs.value <= 0)));
@@ -353,6 +359,12 @@ async function generate(force = false) {
     payNo.value = data.payNo || '';
     qrImage.value = data.qrImage;
     payStatus.value = data.payStatus ?? null;
+    // 头部改按出码返回值渲染：账单号/患者/金额是服务端事实，不再是列表行快照
+    billing.value = {
+      billNo: data.billNo,
+      patientName: data.patientName,
+      amount: data.amount,
+    };
     anchorCountdown(data.expireTime, data.serverTime);
     startTick();
     startPoll();
@@ -407,6 +419,8 @@ function resetQrState() {
   qrImage.value = '';
   payStatus.value = null;
   countdownDeadline.value = 0;
+  // 出码事实一并清掉：切现金/关弹层后头部回落 props，避免拿已作废的码的事实继续显示
+  billing.value = null;
 }
 
 /** 现金入账：记一笔现金流水，账单是否付清由后端按流水现算 */

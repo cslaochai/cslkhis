@@ -11,7 +11,7 @@
           </el-select>
         </el-form-item>
         <!-- 岗位类别：排班对象不再只有医生（sql/195）。
-             只有「医生」才配号源/诊室/挂号费，换岗位要把人一起重选（不同岗位是不同的人）。 -->
+             只有「医生」才配号源/诊室/门诊诊查费，换岗位要把人一起重选（不同岗位是不同的人）。 -->
         <el-form-item label="岗位类别" required>
           <el-select v-model="formData.staffType" class="w-full" data-testid="form-staff-type"
                      @change="handleStaffTypeChange">
@@ -29,7 +29,7 @@
         </el-form-item>
       </div>
       <p v-if="!staffTypeHasSource(formData.staffType)" class="-mt-2 mb-3 text-xs text-slate-500">
-        {{ staffTypeText(formData.staffType) }}岗位是<b>出勤排班</b>：只排「谁哪天哪个班次在岗」，不放号、不需要诊室、不计挂号费。
+        {{ staffTypeText(formData.staffType) }}岗位是<b>出勤排班</b>：只排「谁哪天哪个班次在岗」，不放号、不需要诊室、不计门诊诊查费。
       </p>
       <div class="grid grid-cols-2 gap-4">
         <el-form-item data-testid="form-date-range" label="排班日期" required>
@@ -73,13 +73,12 @@
             <el-input-number v-model="formData.totalSource" :max="999" :min="1" class="!w-full"
                              controls-position="right"/>
           </el-form-item>
-          <el-form-item label="挂号费(元)">
-            <el-input-number v-model="formData.registFee" :min="0" :precision="2" class="!w-full"
-                             controls-position="right"/>
-          </el-form-item>
-          <el-form-item label="诊疗费(元)">
+          <el-form-item label="门诊诊查费(元)">
             <el-input-number v-model="formData.diagnosisFee" :min="0" :precision="2" class="!w-full"
                              controls-position="right"/>
+            <div class="text-xs text-slate-500 mt-1">
+              湘医保发〔2025〕58号：挂号费已废止并入门诊诊查费。长沙市基准价 9 元，知名专家加收 61 元（合计 70 元）。
+            </div>
           </el-form-item>
           <el-form-item label="专家号">
             <el-switch v-model="formData.isExpert" :active-value="1" :inactive-value="0"/>
@@ -133,13 +132,7 @@
                                size="small"/>
             </template>
           </el-table-column>
-          <el-table-column v-if="staffTypeHasSource(formData.staffType)" label="挂号费" width="100">
-            <template #default="{ row }">
-              <el-input-number v-model="row.room.registFee" :controls="false" :min="0" :precision="2" class="!w-full"
-                               size="small"/>
-            </template>
-          </el-table-column>
-          <el-table-column v-if="staffTypeHasSource(formData.staffType)" label="诊疗费" width="100">
+          <el-table-column v-if="staffTypeHasSource(formData.staffType)" label="门诊诊查费" width="120">
             <template #default="{ row }">
               <el-input-number v-model="row.room.diagnosisFee" :controls="false" :min="0" :precision="2"
                                class="!w-full"
@@ -286,7 +279,7 @@ const resetForm = (seed = {}) => {
     doctorName: seed.doctorName ?? '',
     /**
      * 岗位类别（sql/195）：排班对象不再只有医生。
-     * 只有 1-医生 才配号源/诊室/挂号费/预约池；其余岗位是纯出勤排班
+     * 只有 1-医生 才配号源/诊室/门诊诊查费/预约池；其余岗位是纯出勤排班
      * （提交时这些字段由后端一律清零，界面同样不显示，免得填了被静默丢弃还以为存上了）。
      */
     // 默认落在面板当前看的岗位（seed 给）：排班员切到「护理」再点新增，想排的就是护理班；

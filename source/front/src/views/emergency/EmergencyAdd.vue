@@ -441,7 +441,7 @@ const handleAddSubmit = async () => {
     }
     // 性别必选（含「未知」）：急诊同样有性别专属判断（妊娠、前列腺等）
     if (!isPatientGenderCollected(addForm.value.gender)) {
-      ElMessage.warning('请选择性别（确实没问到请选「未知」）');
+      ElMessage.warning('请选择性别');
       return;
     }
     // 三无患者允许没有手机号/身份证；但填了就必须合法
@@ -450,7 +450,7 @@ const handleAddSubmit = async () => {
       return;
     }
     if (addForm.value.idCard && !isIdCardFormatLegal(addForm.value.idCard)) {
-      ElMessage.warning('身份证号格式不正确：应为 18 位（末位可为 X）');
+      ElMessage.warning('身份证号格式不正确');
       return;
     }
   }

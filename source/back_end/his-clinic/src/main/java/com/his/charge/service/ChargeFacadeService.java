@@ -148,12 +148,6 @@ public interface ChargeFacadeService {
     // ---------- 挂号费联动 ----------
 
     /**
-     * 医保联网结算总开关（his.insurance.enabled）：
-     * false = 不支持医保结算，挂号/结算侧直接拒医保改自费，不查任何参保库。
-     */
-    boolean insuranceEnabled();
-
-    /**
      * 挂号费结算：记账（挂号费 + 诊查费）并立即出账。
      *
      * @return 已落库的账单简要信息；<b>免收时返回 null</b>（没有应收，也就没有账单）

@@ -100,7 +100,7 @@ const rescheduleSlotLoading = ref(false);
 /**
  * 已收费的号只留「同医生 + 同费用」的候选（与后端闸同一口径）：
  * 医生这一维在取数时就按 doctorId 收口（见 loadRescheduleSchedules），费用在前端比。
- * 原价取当前号源的挂号费 + 诊查费；拿不到原价（历史号源已被删）时不比费用，交给后端判。
+ * 原价取当前号源的门诊诊查费（挂号费已按湘医保发〔2025〕58号废止并入）；拿不到原价（历史号源已被删）时不比费用，交给后端判。
  */
 const origFeeCents = computed(() => (props.schedule ? scheduleFeeCents(props.schedule) : null));
 const rescheduleOptions = computed(() => rescheduleSchedules.value

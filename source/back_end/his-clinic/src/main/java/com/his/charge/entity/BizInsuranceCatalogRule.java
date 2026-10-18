@@ -45,7 +45,11 @@ public class BizInsuranceCatalogRule extends BaseEntity implements Serializable 
     private Integer encounterType;
 
     /**
-     * 医保类型（职工/居民/公费等；NULL=通用规则，所有医保类型共用）
+     * 医保类型（<b>患者主档 medical_insurance_type 原文</b>：城镇职工医保 / 城乡居民医保 / 公费医疗；
+     * NULL=通用规则，所有医保类型共用）。
+     *
+     * <p>⚠️ 必须存主档原文，不存 MedicalInsuranceTypeEnum 归一后的枚举名：
+     * 结算时 {@code resolveInsurance} 传给 mapper 的就是主档原文，两边不同源就永远匹配不上。
      */
     private String insuranceType;
 

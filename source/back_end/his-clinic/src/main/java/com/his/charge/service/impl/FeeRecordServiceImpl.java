@@ -34,6 +34,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
@@ -152,6 +153,21 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BizFeeRecord reversePartialForRefund(Long feeId, BigDecimal quantity, String reason) {
+        BizFeeRecord orig = requireReversible(feeId, true);
+        BigDecimal left = remainingQuantity(orig);
+        if (quantity == null || quantity.signum() <= 0) {
+            throw new BusinessException("退费数量必须大于 0");
+        }
+        if (quantity.compareTo(left) > 0) {
+            throw new BusinessException("本行剩余可退 " + left.stripTrailingZeros().toPlainString()
+                    + "，不能退 " + quantity.stripTrailingZeros().toPlainString());
+        }
+        return doReverse(orig, quantity, reason);
+    }
+
+    @Override
     public List<BizFeeRecord> listPending(Integer encounterType, Long encounterId) {
         return this.list(new LambdaQueryWrapper<BizFeeRecord>()
                 .eq(BizFeeRecord::getEncounterType, encounterType)
@@ -233,6 +249,17 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
         }
         return this.list(new LambdaQueryWrapper<BizFeeRecord>()
                 .eq(BizFeeRecord::getBillId, billId)
+                .orderByAsc(BizFeeRecord::getId));
+    }
+
+    @Override
+    public List<BizFeeRecord> listReversalsByOrigIds(Collection<Long> origIds) {
+        if (origIds == null || origIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        // 负行 bill_id 为 NULL（红冲不挂账单），只能按 orig_fee_id 反查
+        return this.list(new LambdaQueryWrapper<BizFeeRecord>()
+                .in(BizFeeRecord::getOrigFeeId, origIds)
                 .orderByAsc(BizFeeRecord::getId));
     }
 

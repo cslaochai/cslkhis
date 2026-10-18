@@ -35,8 +35,14 @@ export const isAllDept = (v) => v === ALL_DEPT || v == null || v === '';
  */
 export const isRegistPaid = (r) => [2, 3].includes(Number(r?.billStatus));
 
-/** 号源原价 = 挂号费 + 诊查费，单位「分」（与后端出账口径一致；用分比避免浮点误差） */
-export const scheduleFeeCents = (s) => Math.round((Number(s?.registFee) || 0) * 100)
+/**
+ * 号源原价，单位「分」（用分比避免浮点误差）。
+ *
+ * 只读诊查费：湘医保发〔2025〕58号（长沙市医保局同文，2026-01-01 执行）已废止挂号费，
+ * 合并为门诊诊查费，挂号单现在只出这一项。口径必须与后端 AppointServiceImpl.scheduleFeeTotal 一致，
+ * 否则改约比价会拿一个比实际多收的钱去判「该不该补差价」。
+ */
+export const scheduleFeeCents = (s) => Math.round((Number(s?.diagnosisFee) || 0) * 100)
     + Math.round((Number(s?.diagnosisFee) || 0) * 100);
 
 /**

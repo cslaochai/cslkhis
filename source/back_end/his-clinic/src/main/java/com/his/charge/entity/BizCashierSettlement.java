@@ -124,6 +124,16 @@ public class BizCashierSettlement extends BaseEntity {
     private BigDecimal unknownPayAmount;
 
     /**
+     * 医保统筹额。
+     *
+     * <p><b>恒 0 的 DDL 遗留列</b>：统筹是医保局后付给医院的钱，收银员不经手，它只在院级日结单
+     * （{@code biz_day_settlement.pool_amount}，按 {@code biz_settlement_bill} 现算）出现。
+     * 本列存在的唯一原因是 DDL 上是 {@code NOT NULL} 无默认值（AGENTS.md §25：禁 DEFAULT），
+     * 「先立空单再回写」的 insert 路径必须真给它赋值，否则 MySQL 报 1364。
+     */
+    private BigDecimal poolAmount;
+
+    /**
      * 本时段开票张数（票跟着账单走：本时段收款流水涉及的账单所开的票）
      */
     private Integer invoiceCount;

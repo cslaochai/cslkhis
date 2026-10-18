@@ -28,9 +28,9 @@
             <span class="text-xs text-slate-400"> / {{ row.totalSource }}</span>
           </template>
         </el-table-column>
-        <el-table-column align="right" label="挂号费" width="120">
+        <el-table-column align="right" label="门诊诊查费" width="120">
           <template #default="{ row }">
-            <span class="text-sm text-slate-700">¥{{ row.registFee || 0 }}</span>
+            <span class="text-sm text-slate-700">¥{{ row.diagnosisFee || 0 }}</span>
           </template>
         </el-table-column>
         <el-table-column label="专家" width="100">

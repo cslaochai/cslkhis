@@ -47,6 +47,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * 结算账单实现
@@ -58,6 +59,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         implements SettlementBillService {
 
     private static final int AMOUNT_SCALE = 2;
+    private static final int QTY_SCALE = 2;
     private static final BigDecimal HUNDRED = new BigDecimal("100");
 
     private static final int W_BILL_NO = 32;
@@ -545,11 +547,13 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
     }
 
     /**
-     * 退费候选：账单下某一类（{@code refundType}）还能<b>整条</b>退的记账行，按出账顺序返回。
+     * 退费候选：账单下某一类（{@code refundType}）还能退的记账行，按出账顺序返回。
      *
      * <p>口径与 {@code PaymentServiceImpl.refund} 逐字一致，否则窗口说"能退"、收费处点执行才发现退不动：
      * 候选 = 本账单名下的正数行 - 已 4-已红冲的行 - 剩余净额 ≤ 0 的行，再按退费类型的项目类型圈范围。
-     * 剩余净额要减掉名下<b>还没退场</b>的红冲负行（部分退过的行只剩一半可退）。
+     * 剩余净额/剩余数量都要减掉名下<b>还没退场</b>的红冲负行（部分退过的行只剩一半可退）。
+     *
+     * <p>{@code quantity} 是<b>剩余可退数量</b>而不是原数量：数量级部分退（5 盒退 2 盒）靠它兜底。
      */
     @Override
     public List<RefundableLineVO> refundableLines(Long billId, Integer refundType) {
@@ -564,11 +568,14 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         if (CollectionUtils.isEmpty(rows)) {
             return new ArrayList<>();
         }
+        // 负行的 bill_id 是 NULL（红冲发生在应收层、不挂账单），listByBill 看不到它们：
+        // "部分退过的行还剩多少"必须按原行 ID 反查负行来算，否则 5 盒退 2 盒后仍显示可退 5 盒
         Map<Long, BigDecimal> reversedByOrig = new HashMap<>();
-        for (BizFeeRecord row : rows) {
-            if (row.getOrigFeeId() != null) {
-                reversedByOrig.merge(row.getOrigFeeId(), NumUtil.orZero(row.getAmount()), BigDecimal::add);
-            }
+        Map<Long, BigDecimal> reversedQtyByOrig = new HashMap<>();
+        for (BizFeeRecord neg : feeRecordService.listReversalsByOrigIds(
+                rows.stream().map(BizFeeRecord::getId).collect(Collectors.toList()))) {
+            reversedByOrig.merge(neg.getOrigFeeId(), NumUtil.orZero(neg.getAmount()), BigDecimal::add);
+            reversedQtyByOrig.merge(neg.getOrigFeeId(), NumUtil.orZero(neg.getQuantity()), BigDecimal::add);
         }
         List<RefundableLineVO> result = new ArrayList<>();
         for (BizFeeRecord row : rows) {
@@ -592,8 +599,11 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
             line.setSpecification(row.getSpecification());
             line.setUnit(row.getUnit());
             line.setPrice(row.getPrice());
-            line.setQuantity(row.getQuantity());
+            // 负行数量为负，原数量 + Σ负行数量 = 真实剩余可退数量（部分退过的行不能还按原数量让人填）
+            line.setQuantity(NumUtil.scale(NumUtil.orZero(row.getQuantity()).add(NumUtil.orZero(reversedQtyByOrig.get(row.getId()))), QTY_SCALE));
             line.setAmount(remaining);
+            line.setSourceType(row.getSourceType());
+            line.setSourceNo(row.getSourceNo());
             result.add(line);
         }
         return result;
@@ -650,8 +660,10 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
             List<BizInsuranceCatalogRule> rules = bizInsuranceCatalogRuleMapper.selectBatchRules(
                     itemCodes, first.getEncounterType(), insurance.type(), settleDate);
             for (BizInsuranceCatalogRule rule : rules) {
-                // 同一项目可能有多条规则（不同 catalog_type），只取第一条（优先级最高）
-                ruleByItem.putIfAbsent(rule.getItemCode(), rule);
+                // 键必须是「项目编码 + 费别」成对：同一项目可能同时配了甲类和乙类规则，
+                // 只按 item_code 存会把先到的那条（另一费别的待遇）套到本行上 → 多报/少报统筹。
+                // putIfAbsent 保留 mapper 排序里的第一条（精确险种 > 通用 > priority 升序）。
+                ruleByItem.putIfAbsent(ruleKey(rule.getItemCode(), rule.getCatalogType()), rule);
             }
         }
 
@@ -676,9 +688,10 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
             item.setAmount(amount);
             item.setDiscountAmount(BigDecimal.ZERO);
 
-            // 按规则表逐条算 pool/account/self
+            // 按规则表逐条算 pool/account/self；规则按「项目编码 + 本行费别」成对取，
+            // 没配到这一对的（漏配/只配了另一费别）才回落到 byItemType 硬推定
             BizInsuranceCatalogRule rule = TextUtil.hasText(row.getItemCode())
-                    ? ruleByItem.get(row.getItemCode()) : null;
+                    ? ruleByItem.get(ruleKey(row.getItemCode(), item.getCatalogType())) : null;
             BigDecimal pool = insurance.covered() ? computePoolFromRule(amount, item.getCatalogType(), rule, insurance) : BigDecimal.ZERO;
             item.setPoolAmount(pool);
             // 个账是"刷参保人卡扣的额度"，是一笔真实收款（pay_method=4），不是账单层的分摊：
@@ -692,7 +705,22 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
     }
 
     /**
+     * 规则取用键：项目编码 + 费别。
+     *
+     * <p>费别必须进键，否则同一项目配了甲、乙两条规则时会串（拿乙类待遇报甲类行）。
+     * 分隔符用 {@code ::}：项目编码是业务自定短码，不含冒号，不会撞。
+     */
+    private String ruleKey(String itemCode, Integer catalogType) {
+        return itemCode + "::" + catalogType;
+    }
+
+    /**
      * 按规则表算统筹：优先用规则的 self_pay_ratio/pool_ratio，没有规则时退回到整单比例。
+     *
+     * <p>起付线/封顶线都只在「本行可报基数」上生效，不跨行、也不跨结算单累计 ——
+     * 跨单累计需要年度累计台账，现有表结构承载不了（deductible/ceiling 是行级配置，不是累计器）。
+     * 真要按年度限额控，得先有累计台账；在那之前，超限的行按规则比例照算，
+     * 由医保局端兜总量，不在院内单行里做假累计。
      */
     private BigDecimal computePoolFromRule(BigDecimal amount, Integer catalogType,
                                            BizInsuranceCatalogRule rule, PatientInsurance insurance) {
@@ -713,10 +741,21 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
                 // 丙类/自费全自费
                 return BigDecimal.ZERO;
             }
-            // 再套封顶线
+            // 再扣起付线：行级起付（本次就诊该行先自付的部分），0 = 无起付线。
+            // 湖南职工门诊是「每次起付 + 年度累计不超过」的组合（湘医保发〔2023〕22号），
+            // 年度累计那半截需要跨单台账，这里只落「单行起付」这一半能落的。
+            BigDecimal deductible = rule.getDeductible();
+            if (deductible != null && deductible.compareTo(BigDecimal.ZERO) > 0
+                    && afterSelfPay.compareTo(deductible) > 0) {
+                afterSelfPay = afterSelfPay.subtract(deductible);
+            }
+            // 再套封顶线：超出的**部分**不报，不是整行清零。
+            // 原来写 afterSelfPay = BigDecimal.ZERO：一行金额 1000、封顶 900，本行能报 900 却报 0，
+            // 少报统筹 —— 少报不会被医保局飞检抓，多报才会，但算错的数迟早要有人去核。
             BigDecimal ceiling = rule.getCeiling();
-            if (ceiling != null && ceiling.compareTo(BigDecimal.ZERO) > 0 && amount.compareTo(ceiling) > 0) {
-                afterSelfPay = BigDecimal.ZERO; // 超过封顶线的部分全自费
+            if (ceiling != null && ceiling.compareTo(BigDecimal.ZERO) > 0
+                    && afterSelfPay.compareTo(ceiling) > 0) {
+                afterSelfPay = ceiling;
             }
             // 最后按统筹比例报
             BigDecimal poolRatio = rule.getPoolRatio();
@@ -797,10 +836,16 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
 
     /**
      * 结算方式与医保口径：结算方式必须由调用方显式给出，不再按患者有无医保号静默推断。
+     *
+     * <p><b>参保只在付款这一刻查一次</b>：调医保平台查得到参保且状态正常 → 走统筹减免；
+     * 查不到（未参保/停保/平台不通）→ 静默按自费原价出账，不拦单、不提示。
+     *
+     * <p>为什么不拦：参保状态在挂号那一刻根本无从得知（患者可能卡号填错、可能刚参保、
+     * 医保专线可能正在抖）。在挂号侧拦，代价是患者挂了号却缴不了费；而医保是否成立
+     * 本来就只有付款时才知道该问谁。真正需要卡住的是「平台说查无此人却仍按医保报」，
+     * 那是数据问题，不是流程问题。
      */
     private PatientInsurance resolveInsurance(Long patientId, Integer settlementMode) {
-        PatientBriefVO patient = patientId == null ? null : patientFacadeService.findPatient(patientId);
-        boolean hasInsurance = patient != null && TextUtil.hasText(patient.getMedicalInsuranceNo());
         SettlementModeEnum mode = SettlementModeEnum.fromCode(settlementMode);
         if (mode == null) {
             throw new BusinessException("缺少结算方式");
@@ -808,20 +853,30 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         if (mode != SettlementModeEnum.INSURANCE) {
             return new PatientInsurance(SettlementModeEnum.SELF_PAY, null, BigDecimal.ZERO, BigDecimal.ZERO);
         }
-        // 医保联网结算总开关：关闭时不支持医保结算，不查 MIS/镜像库任何参保数据，直接拒改自费
+        // 医保联网结算总开关：关闭时不支持医保结算，不查医保，直接按自费原价走
         if (!insuranceProperties.isEnabled()) {
-            throw new BusinessException("医保联网结算功能未启用，请改按全自费结算");
+            log.info("[结算] 医保联网结算未启用，本单按自费原价：patientId={}", patientId);
+            return new PatientInsurance(SettlementModeEnum.SELF_PAY, null, BigDecimal.ZERO, BigDecimal.ZERO);
         }
+        PatientBriefVO patient = patientId == null ? null : patientFacadeService.findPatient(patientId);
+        boolean hasInsurance = patient != null && TextUtil.hasText(patient.getMedicalInsuranceNo());
         if (!hasInsurance) {
-            throw new BusinessException("该患者没有医保号，不能按医保结算");
+            // 主档没有医保号就没有可查的凭据，等同于查无参保：按原价，不拦单
+            log.info("[结算] 患者无医保号，本单按自费原价：patientId={}", patientId);
+            return new PatientInsurance(SettlementModeEnum.SELF_PAY, null, BigDecimal.ZERO, BigDecimal.ZERO);
         }
         InsuranceChannelService.InsuredStatus insured = insuranceChannelService.checkInsured(
                 patient.getMedicalInsuranceNo(), patient.getIdCard(), patient.getPatientName());
         if (!insured.isFound()) {
-            throw new BusinessException("该医保卡号未参保登记，不能按医保结算，请核对医保卡号或改按自费结算");
+            // 未参保登记 / 身份不符 / 平台不可用：都是「这单按原价收」，不抛异常挡住收费
+            log.info("[结算] 参保核验未通过（{}），本单按自费原价：insuranceNo={} patientId={}",
+                    insured.getErrMsg(), patient.getMedicalInsuranceNo(), patientId);
+            return new PatientInsurance(SettlementModeEnum.SELF_PAY, null, BigDecimal.ZERO, BigDecimal.ZERO);
         }
         if (!insured.isActive()) {
-            throw new BusinessException("该参保人当前停保（参保状态异常），不能按医保结算，请改按自费结算");
+            log.info("[结算] 参保状态为停保（{}），本单按自费原价：patientId={}",
+                    insured.getErrMsg(), patientId);
+            return new PatientInsurance(SettlementModeEnum.SELF_PAY, null, BigDecimal.ZERO, BigDecimal.ZERO);
         }
         String insuranceType = patient.getMedicalInsuranceType();
         MedicalInsuranceTypeEnum typeEnum = MedicalInsuranceTypeEnum.fromCode(insuranceType);

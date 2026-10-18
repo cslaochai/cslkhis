@@ -65,11 +65,14 @@ public interface RevisitFeePolicyService extends IService<RevisitFeePolicy> {
          */
         private Long daysSinceOrigin;
         /**
-         * 排班上的挂号费原价
+         * 排班上的挂号费原价。
+         *
+         * <p><b>已废止</b>：湘医保发〔2025〕58号（长沙市医保局同文，2026-01-01 执行）废止挂号费，
+         * 合并为门诊诊查费。保留字段仅为历史数据兼容，恒为 0，判定逻辑不读它。
          */
         private BigDecimal registFee;
         /**
-         * 排班上的诊查费原价
+         * 排班上的门诊诊查费原价（医保编码 011102020010000）
          */
         private BigDecimal diagnosisFee;
     }
@@ -80,11 +83,13 @@ public interface RevisitFeePolicyService extends IService<RevisitFeePolicy> {
     @Data
     class RevisitFeeDecision {
         /**
-         * 应收挂号费（已按策略减免）
+         * 应收挂号费（已按策略减免）。
+         *
+         * <p><b>已废止</b>：挂号费按湘医保发〔2025〕58号并入门诊诊查费，本轮整改后恒为 0。
          */
         private BigDecimal registFee = BigDecimal.ZERO;
         /**
-         * 应收诊查费（已按策略减免）
+         * 应收门诊诊查费（已按策略减免）
          */
         private BigDecimal diagnosisFee = BigDecimal.ZERO;
         /**
@@ -92,7 +97,8 @@ public interface RevisitFeePolicyService extends IService<RevisitFeePolicy> {
          */
         private boolean waived;
         /**
-         * 命中的收费方式（1-全额 2-免挂号费 3-全免）；未命中策略为 1
+         * 命中的收费方式（1-全额 2-原「免挂号费」 3-全免）；未命中策略为 1。
+         * 挂号费废止后，2 与 3 实际等价（都免掉门诊唯一费用），2 是历史码值不做废以免改存量数据。
          */
         private Integer chargeMode;
         /**
@@ -109,7 +115,7 @@ public interface RevisitFeePolicyService extends IService<RevisitFeePolicy> {
         private String reason;
 
         public BigDecimal totalFee() {
-            return registFee.add(diagnosisFee);
+            return diagnosisFee;
         }
     }
 }

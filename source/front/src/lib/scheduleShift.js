@@ -61,7 +61,7 @@ export const shiftScopeText = (code) => {
  *   · 「人在哪个科室是什么岗位」由 sys_employee_post(人 × 科室 × 角色) 派生，
  *     员工档案上的 emp_type 与岗位表不一致，挑人一律不用它。
  *
- * 号源分水岭：只有 1-医生 的排班有号源/诊室/挂号费，其余岗位是纯出勤排班。
+ * 号源分水岭：只有 1-医生 的排班有号源/诊室/门诊诊查费，其余岗位是纯出勤排班。
  * 判定一律走 staffTypeHasSource()，别在页面里写 === 1 这种裸比较。
  */
 export const STAFF_TYPE_DOCTOR = 1
@@ -82,14 +82,14 @@ export const STAFF_TYPE_OPTIONS = [
  * 门诊排班（号源管理）专用：只有医生。
  *
  * 为什么必须跟 STAFF_TYPE_OPTIONS 分开：biz_clinic_source 是<b>门诊号源表</b>，
- * 落的是医生的出诊计划（号源/诊室/挂号费都挂在上面），非医生的出勤事实属于「岗位出勤」
+ * 落的是医生的出诊计划（号源/诊室/门诊诊查费都挂在上面），非医生的出勤事实属于「岗位出勤」
  * （biz_schedule 底座）。以前这里允许选护士/收费/医技，等于把出勤排班塞进号源表，
  * 于是号源被清零、诊室被清空 —— 号源表和出勤实为两种东西。
  * 后端写入口已硬拒非医生，这里同步收口，别让用户选了又被拒。
  */
 export const STAFF_TYPE_DOCTOR_OPTIONS = [{ label: '医生', value: 1 }]
 
-/** 该岗位的排班是否承载号源（决定号源/诊室/挂号费/预约池/加号这些表单块显不显示） */
+/** 该岗位的排班是否承载号源（决定号源/诊室/门诊诊查费/预约池/加号这些表单块显不显示） */
 export const staffTypeHasSource = (code) => Number(code) === STAFF_TYPE_DOCTOR
 
 export const staffTypeText = (code) => {

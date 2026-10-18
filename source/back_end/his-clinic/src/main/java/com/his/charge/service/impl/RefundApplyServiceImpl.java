@@ -5,11 +5,14 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.dto.BillRefundDTO;
+import com.his.charge.dto.RefundApplyItemDTO;
 import com.his.charge.dto.RefundApplySubmitDTO;
 import com.his.charge.entity.BizPaymentTxn;
 import com.his.charge.entity.BizRefundApply;
+import com.his.charge.entity.BizRefundApplyItem;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.mapper.BizPaymentTxnMapper;
+import com.his.charge.mapper.BizRefundApplyItemMapper;
 import com.his.charge.mapper.BizRefundApplyMapper;
 import com.his.charge.service.*;
 import com.his.charge.vo.BizRefundApplyVO;
@@ -19,8 +22,9 @@ import com.his.common.enums.BillStatusEnum;
 import com.his.common.enums.RefundApplyStatusEnum;
 import com.his.common.enums.TxnSourceEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
+import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
+import com.his.system.service.RedisSequenceService;
 import com.his.common.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +50,10 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
      * cancel_reason 列宽
      */
     private static final int W_CANCEL_REASON = 200;
+    /**
+     * item_name 列宽（明细行快照）
+     */
+    private static final int W_ITEM_NAME = 200;
     private static final int AMOUNT_SCALE = 2;
 
     /**
@@ -66,6 +74,10 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
     private final FeeRecordService feeRecordService;
     private final SourceAdvanceService sourceAdvanceService;
     private final RedisSequenceService redisSequenceService;
+    /**
+     * 申请明细行（圈选结果）：发起时落、执行时读、详情出参带
+     */
+    private final BizRefundApplyItemMapper bizRefundApplyItemMapper;
 
     private static String describeLines(List<RefundableLineVO> lines) {
         return lines.stream()
@@ -117,6 +129,7 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
 
     /**
      * 申请单 + 它执行出去的退款流水（执行过才有）。逐行查会打成 N+1，一次 in 捞回来再分组。
+     * 明细行（圈选结果）同口径：一次 in 捞回，列表与详情都带。
      */
     private List<BizRefundApplyVO> toVOList(List<BizRefundApply> applies) {
         List<BizRefundApplyVO> result = new ArrayList<>();
@@ -129,9 +142,17 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
         for (BizPaymentTxn txn : txns) {
             refunds.computeIfAbsent(txn.getApplyId(), k -> new ArrayList<>()).add(txn);
         }
+        Map<Long, List<BizRefundApplyItem>> itemMap = new HashMap<>();
+        List<BizRefundApplyItem> itemRows = bizRefundApplyItemMapper.selectList(new LambdaQueryWrapper<BizRefundApplyItem>()
+                .in(BizRefundApplyItem::getApplyId, applies.stream().map(BizRefundApply::getId).collect(Collectors.toList()))
+                .orderByAsc(BizRefundApplyItem::getId));
+        for (BizRefundApplyItem row : itemRows) {
+            itemMap.computeIfAbsent(row.getApplyId(), k -> new ArrayList<>()).add(row);
+        }
         for (BizRefundApply apply : applies) {
             BizRefundApplyVO vo = new BizRefundApplyVO();
             BeanUtils.copyProperties(apply, vo);
+            vo.setItems(itemMap.get(apply.getId()));
             List<BizPaymentTxn> rows = refunds.get(apply.getId());
             if (!CollectionUtils.isEmpty(rows)) {
                 BizPaymentTxn first = rows.get(0);
@@ -189,9 +210,64 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
         if (apply.getRefundAmount().compareTo(refundable) > 0) {
             throw new BusinessException("退费金额不能超过当前可退金额 ¥" + refundable.toPlainString());
         }
-        // 金额还得**落得到明细边界**（一张 ¥10+¥20 的账单申请退 ¥15 是退不动的：只能整行退）。
-        // 这一句必须放在发起时：等收费处点执行才发现，改金额的口子只剩「作废后重发」。
-        List<RefundableLineVO> targets = pickRefundTargets(lines, apply.getRefundAmount());
+
+        // 两条路径：
+        // ① 带了明细行（新）= 按来源单据圈选：退哪张处方的哪几味药、各退几盒都定格在申请单上，
+        //    金额按行快照汇总（前端传来的金额只作展示，以服务端算的为准）；
+        // ② 没带明细行（旧）= 金额必须落得到整行边界，执行时按金额贪心凑行。
+        List<BizRefundApplyItem> applyItems = new ArrayList<>();
+        List<RefundableLineVO> targets;
+        if (!CollectionUtils.isEmpty(submitDTO.getItems())) {
+            Map<Long, RefundableLineVO> lineByFee = new HashMap<>();
+            for (RefundableLineVO line : lines) {
+                lineByFee.put(line.getFeeRecordId(), line);
+            }
+            // 同一行勾两次 = 执行时对同一笔记账行冲两次，第二笔必被剩余量拦下，
+            // 但那是执行期才炸；发起时就按行去重，报错也说清楚。
+            Set<Long> seen = new HashSet<>();
+            for (RefundApplyItemDTO item : submitDTO.getItems()) {
+                if (!seen.add(item.getFeeRecordId())) {
+                    throw new BusinessException("同一记账行勾选了多次（feeRecordId=" + item.getFeeRecordId() + "），请合并成一行");
+                }
+            }
+            BigDecimal total = BigDecimal.ZERO;
+            for (RefundApplyItemDTO item : submitDTO.getItems()) {
+                RefundableLineVO line = lineByFee.get(item.getFeeRecordId());
+                if (line == null) {
+                    throw new BusinessException("记账行 " + item.getFeeRecordId()
+                            + " 不在本账单该退费类型的可退清单内（可能已退完或类型不符），可退明细：" + describeLines(lines));
+                }
+                // 没给数量 = 整行退；给了就按剩余量兜底（共 5 盒不能退 6 盒）
+                BigDecimal qty = item.getRefundQuantity() == null ? line.getQuantity() : item.getRefundQuantity();
+                if (qty.signum() <= 0) {
+                    throw new BusinessException("「" + line.getItemName() + "」退费数量必须大于 0");
+                }
+                if (qty.compareTo(line.getQuantity()) > 0) {
+                    throw new BusinessException("「" + line.getItemName() + "」剩余可退 "
+                            + line.getQuantity().stripTrailingZeros().toPlainString()
+                            + "，不能退 " + qty.stripTrailingZeros().toPlainString());
+                }
+                BigDecimal amount = qty.compareTo(line.getQuantity()) >= 0
+                        ? line.getAmount()
+                        : NumUtil.scale(NumUtil.orZero(line.getPrice()).multiply(qty), AMOUNT_SCALE);
+                total = total.add(amount);
+                BizRefundApplyItem row = new BizRefundApplyItem();
+                row.setFeeRecordId(line.getFeeRecordId());
+                row.setRefundQuantity(qty);
+                row.setRefundAmount(amount);
+                row.setItemName(TextUtil.cut(line.getItemName(), W_ITEM_NAME));
+                row.setSourceNo(line.getSourceNo());
+                applyItems.add(row);
+            }
+            apply.setRefundAmount(NumUtil.scale(total, AMOUNT_SCALE));
+            targets = submitDTO.getItems().stream()
+                    .map(item -> lineByFee.get(item.getFeeRecordId()))
+                    .collect(Collectors.toList());
+        } else {
+            // 金额还得**落得到明细边界**（一张 ¥10+¥20 的账单申请退 ¥15 是退不动的：只能整行退）。
+            // 这一句必须放在发起时：等收费处点执行才发现，改金额的口子只剩「作废后重发」。
+            targets = pickRefundTargets(lines, apply.getRefundAmount());
+        }
         // 药品闸门同理由放在发起时：患者人还在窗口，这时候让他先去办退药最省事。
         // 执行时 PaymentService.refund 还会再挡一次（申请通过到执行之间药可能才被发出去）。
         sourceAdvanceService.assertDrugReturnedForRefund(
@@ -219,8 +295,14 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
         // 申请人以服务端登录身份为准，前端传什么都不采信（避免冒名提交）
         apply.setApplyBy(operatorUser.getRealName());
         this.save(apply);
+        // 明细行回填 applyId 后落库：审批单上能看到"退了哪几行、各退多少"，执行时也按它退
+        for (BizRefundApplyItem row : applyItems) {
+            row.setApplyId(apply.getId());
+            bizRefundApplyItemMapper.insert(row);
+        }
         BizRefundApplyVO vo = new BizRefundApplyVO();
         BeanUtils.copyProperties(apply, vo);
+        vo.setItems(applyItems);
         return vo;
     }
 
@@ -302,6 +384,11 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
      * <b>操作人当日</b>的日结/班结里，已经结掉的过去日不受影响（标准 HIS 的"冲当期"口径）。
      */
     @Override
+    public List<RefundableLineVO> refundableLines(Long billId, Integer refundType) {
+        return settlementBillService.refundableLines(billId, refundType);
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean executeRefund(Long applyId, String refundBy) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
@@ -316,21 +403,43 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
             throw new BusinessException("该申请没有关联原结算账单，无法退费（请驳回后由收费处按账单重新发起）");
         }
 
-        List<RefundableLineVO> lines = settlementBillService.refundableLines(apply.getBillId(), apply.getRefundType());
-        List<RefundableLineVO> targets = pickRefundTargets(lines, apply.getRefundAmount());
+        // 明细行圈选的申请单：按发起时定格的行与数量退。执行前若又被别的退费冲过，
+        // reversePartialForRefund 会按当时剩余量当场拒（报错带剩余量），不会静默多退。
+        // 没有明细行的存量申请单：回退旧的「金额贪心凑整行」，行为不变。
+        List<BizRefundApplyItem> applyItems = bizRefundApplyItemMapper.selectList(new LambdaQueryWrapper<BizRefundApplyItem>()
+                .eq(BizRefundApplyItem::getApplyId, apply.getId())
+                .orderByAsc(BizRefundApplyItem::getId));
 
         BillRefundDTO dto = new BillRefundDTO();
         dto.setBillId(apply.getBillId());
-        dto.setFeeIds(targets.stream().map(RefundableLineVO::getFeeRecordId).collect(Collectors.toList()));
         dto.setReason(TextUtil.cut("退费申请 " + apply.getRefundApplyNo() + "：" + apply.getRefundReason(), 500));
         dto.setSourceType(TxnSourceEnum.REFUND_APPLY.getCode());
         dto.setApplyId(apply.getId());
         dto.setApplyNo(apply.getRefundApplyNo());
+        BigDecimal actualRefund;
+        if (!applyItems.isEmpty()) {
+            List<BillRefundDTO.RefundLine> refundLines = new ArrayList<>(applyItems.size());
+            for (BizRefundApplyItem item : applyItems) {
+                BillRefundDTO.RefundLine line = new BillRefundDTO.RefundLine();
+                line.setFeeId(item.getFeeRecordId());
+                line.setQuantity(item.getRefundQuantity());
+                refundLines.add(line);
+            }
+            dto.setLines(refundLines);
+            actualRefund = applyItems.stream()
+                    .map(BizRefundApplyItem::getRefundAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        } else {
+            List<RefundableLineVO> candidates = settlementBillService.refundableLines(apply.getBillId(), apply.getRefundType());
+            List<RefundableLineVO> targets = pickRefundTargets(candidates, apply.getRefundAmount());
+            dto.setFeeIds(targets.stream().map(RefundableLineVO::getFeeRecordId).collect(Collectors.toList()));
+            actualRefund = sumAmount(targets);
+        }
         paymentService.refund(dto);
 
         apply.setApplyStatus(RefundApplyStatusEnum.REFUNDED.getCode());
         // 实退以选中的记账行为准（发起之后可能又有别的退费执行过，前缀和会重新算）
-        apply.setRefundAmount(sumAmount(targets).setScale(AMOUNT_SCALE, RoundingMode.HALF_UP));
+        apply.setRefundAmount(NumUtil.scale(actualRefund, AMOUNT_SCALE));
         apply.setRefundBy(operatorUser.getRealName());
         apply.setRefundTime(LocalDateTime.now());
         return this.updateById(apply);

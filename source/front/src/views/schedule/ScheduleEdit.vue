@@ -62,11 +62,9 @@
             <p v-if="formData.usedSource" class="mt-1 text-xs text-slate-400">已挂 {{ formData.usedSource }}
               个，总数不能小于它</p>
           </el-form-item>
-          <el-form-item label="挂号费(元)">
-            <el-input-number v-model="formData.registFee" :min="0" :precision="2" class="w-full"/>
-          </el-form-item>
-          <el-form-item label="诊疗费(元)">
+          <el-form-item label="门诊诊查费(元)">
             <el-input-number v-model="formData.diagnosisFee" :min="0" :precision="2" class="w-full"/>
+            <p class="mt-1 text-xs text-slate-400">挂号费已按湘医保发〔2025〕58号废止，并入门诊诊查费（长沙基准价 9 元）</p>
           </el-form-item>
         </div>
         <div class="grid grid-cols-3 gap-4">
