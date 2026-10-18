@@ -23,6 +23,7 @@ public class VteMeasureOptionVO {
      */
     private String measureName;
 
+    /** 措施说明 */
     private String desc;
 
     /**

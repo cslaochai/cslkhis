@@ -25,6 +25,10 @@ public interface BizScheduleService extends IService<BizSchedule> {
      */
     List<NurseScheduleVO.Ward> unitSelectList(String keyword);
 
+    /**
+     * 在册护士候选下拉：取指定排班单元（病区/门诊科室）所属科室的护士与护师，支持按姓名模糊搜。
+     * 供排班选人环节按需取数（单元先由单元候选定下来，人和单元是成对查询的）。
+     */
     List<NurseScheduleVO.Nurse> nurseSelectList(Integer unitType, Long unitId, String keyword);
 
     /**
@@ -69,6 +73,10 @@ public interface BizScheduleService extends IService<BizSchedule> {
      */
     List<NurseScheduleVO.Rule> ruleList(Long wardId);
 
+    /**
+     * 单元维度的人力配置标准（病区与有护理编制的门诊科室共用，含停用行）。
+     * 用于病区护理排班页「人力配置标准」标签页的列表与保存后重拉。
+     */
     List<NurseScheduleVO.Rule> ruleList(Integer unitType, Long unitId);
 
     /**

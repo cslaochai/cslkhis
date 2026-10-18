@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 @Data
 public class OperationQaSchemaListVO {
 
+    /** 数据表配置记录ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
@@ -46,6 +47,7 @@ public class OperationQaSchemaListVO {
      */
     private String remark;
 
+    /** 创建时间 */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 }

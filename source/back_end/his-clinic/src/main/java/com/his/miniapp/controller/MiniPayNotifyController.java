@@ -31,12 +31,20 @@ public class MiniPayNotifyController {
 
     private final MiniPayService miniPayService;
 
+    /**
+     * 支付宝支付结果通知：校验表单参数后把对应支付单落账。
+     * 由支付宝服务器在患者完成付款后异步推送，不是患者端页面的主动请求；验签或落账失败时返回非成功文本让渠道重试。
+     */
     @Operation(summary = "支付宝支付回调（支付宝服务器推送支付结果）")
     @PostMapping("/alipay")
     public String alipayNotify(@RequestParam Map<String, String> params) {
         return miniPayService.confirmByAlipayNotify(params);
     }
 
+    /**
+     * 微信支付结果通知：解密报文取出商户单号后把对应支付单落账。
+     * 由微信服务器在患者完成付款后异步推送，不是患者端页面的主动请求；处理不成功时返回失败让渠道按策略重发。
+     */
     @Operation(summary = "微信支付回调（微信服务器推送支付结果）")
     @PostMapping("/wx")
     public String wxNotify(@RequestBody String body) {

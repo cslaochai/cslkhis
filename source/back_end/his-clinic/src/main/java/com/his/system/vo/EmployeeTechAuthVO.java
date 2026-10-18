@@ -52,6 +52,7 @@ public class EmployeeTechAuthVO {
      */
     private Integer authCategory;
 
+    /** 授权类别文案（由枚举 label 渲染） */
     private String authCategoryText;
 
     /**
@@ -59,6 +60,7 @@ public class EmployeeTechAuthVO {
      */
     private Integer techLevel;
 
+    /** 手术级别文案（由枚举 label 渲染） */
     private String techLevelText;
 
     /**
@@ -71,6 +73,7 @@ public class EmployeeTechAuthVO {
      */
     private Integer authType;
 
+    /** 授权方式文案（由枚举 label 渲染） */
     private String authTypeText;
 
     /**

@@ -33,6 +33,7 @@ public class EquipmentVO {
      * 设备类别
      */
     private Integer category;
+    /** 设备类别文案（由字典渲染） */
     private String categoryText;
 
     /**
@@ -83,6 +84,7 @@ public class EquipmentVO {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate lastMaintainDate;
 
+    /** 下次维保日期 */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate nextMaintainDate;
 

@@ -31,6 +31,10 @@ public class RxFlowController {
 
     private final RxFlowService rxFlowService;
 
+    /**
+     * 创建流转单：把一张已开好的处方流转到院外取药机构，生成待取的流转凭据。
+     * 供医生站处方走院外取药口子时的开单环节写入。
+     */
     @Operation(summary = "创建流转单（处方 → 院外机构）")
     @PostMapping("/upsert")
     @PreAuthorize("hasAuthority('opd:doctorWorkstation:edit')")
@@ -38,6 +42,10 @@ public class RxFlowController {
         return Result.success(rxFlowService.createFlow(dto));
     }
 
+    /**
+     * 取药完成回写：流转单从待取置为已取药，终态不可逆。
+     * 供院外取药口子患者完成取药后的状态回写。
+     */
     @Operation(summary = "取药完成回写（外联口子打印：1→2）")
     @PostMapping("/finish")
     public Result<Void> finish(@RequestBody @Valid RxFlowActionDTO dto) {
@@ -45,6 +53,10 @@ public class RxFlowController {
         return Result.success(null);
     }
 
+    /**
+     * 取消流转：未取药的流转单置为已取消，终态不可逆。
+     * 供处方作废或患者改回院内取药时撤销流转的环节。
+     */
     @Operation(summary = "取消流转（1→3）")
     @PostMapping("/cancel")
     @PreAuthorize("hasAuthority('opd:doctorWorkstation:edit')")
@@ -53,6 +65,10 @@ public class RxFlowController {
         return Result.success(null);
     }
 
+    /**
+     * 流转单分页：按患者、处方与流转状态收口。
+     * 供流转台账核对院外取药进度、追查哪些处方还挂在外面时取数。
+     */
     @Operation(summary = "流转单分页")
     @PostMapping("/listPage")
     public Result<PageResult<RxFlowListVO>> listPage(@Valid @RequestBody RxFlowPageQueryDTO dto) {

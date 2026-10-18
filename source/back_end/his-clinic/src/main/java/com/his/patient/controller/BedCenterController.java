@@ -25,6 +25,10 @@ public class BedCenterController {
 
     private final BedCenterService bedCenterService;
 
+    /**
+     * 等床队列分页，排序由服务端钉死为优先级降序、同级按登记先后。
+     * 用于床位管理页「等床队列」页签的查询卡与表格。
+     */
     @Operation(summary = "等床队列分页（危重优先，同级按登记先后）")
     @GetMapping("/queue/listPage")
     @PreAuthorize("hasAuthority('ipd:bedCenter:list')")
@@ -32,6 +36,10 @@ public class BedCenterController {
         return Result.success(bedCenterService.queuePage(query));
     }
 
+    /**
+     * 取一条排队记录的完整信息（含已安排床位快照与来源住院证）。
+     * 用于等床队列页签的行详情弹框。
+     */
     @Operation(summary = "等床队列详情")
     @GetMapping("/queue/getDetailById")
     @PreAuthorize("hasAuthority('ipd:bedCenter:list')")
@@ -39,6 +47,10 @@ public class BedCenterController {
         return Result.success(bedCenterService.queueDetail(waitId));
     }
 
+    /**
+     * 登记新的等床排队或修改已有排队的需求与优先级。
+     * 用于等床队列页签「登记/修改排队」弹框保存。
+     */
     @Operation(summary = "登记/修改床位排队")
     @PostMapping("/queue/upsert")
     @PreAuthorize("hasAuthority('ipd:bedCenter:add')")
@@ -46,6 +58,10 @@ public class BedCenterController {
         return Result.success("排队登记成功", String.valueOf(bedCenterService.upsertWait(dto)));
     }
 
+    /**
+     * 把排队患者落到指定床位并即刻锁定该床，支持跨科调配。
+     * 用于等床队列页签「安排床位」选床后的提交。
+     */
     @Operation(summary = "安排床位（含跨科调配，床位即刻锁定）")
     @PostMapping("/queue/assignBed")
     @PreAuthorize("hasAuthority('ipd:bedCenter:assign')")
@@ -54,6 +70,10 @@ public class BedCenterController {
         return Result.success("床位已预留：该床已锁定并挂上患者，等待办理入院", null);
     }
 
+    /**
+     * 把已预留床位退回等床队列并释放锁定的床位。
+     * 用于等床队列页签上「已安排床位但尚未收治」记录的退回动作。
+     */
     @Operation(summary = "退回队列（释放已锁定的床位）")
     @PostMapping("/queue/releaseBed")
     @PreAuthorize("hasAuthority('ipd:bedCenter:release')")
@@ -62,6 +82,10 @@ public class BedCenterController {
         return Result.success("已退回队列：床位已释放", null);
     }
 
+    /**
+     * 撤销患者的等床排队，已预留床位的同步释放。
+     * 用于等床队列页签的取消排队动作（患者暂不住院、转院等）。
+     */
     @Operation(summary = "取消排队（已安排床位的一并释放）")
     @PostMapping("/queue/cancel")
     @PreAuthorize("hasAuthority('ipd:bedCenter:cancel')")
@@ -70,6 +94,10 @@ public class BedCenterController {
         return Result.success("排队已取消", null);
     }
 
+    /**
+     * 以已安排好的床位为凭办理入院登记，床位由锁定转为占用。
+     * 用于床位管理页「办理入院」弹框提交。
+     */
     @Operation(summary = "按已安排床位办理入院登记")
     @PostMapping("/queue/admit")
     @PreAuthorize("hasAuthority('ipd:bedCenter:admit')")
@@ -77,6 +105,10 @@ public class BedCenterController {
         return Result.success("入院登记成功：床位已转为占用", bedCenterService.admit(dto));
     }
 
+    /**
+     * 汇总等待分布、平均等待时长与床位现状。
+     * 用于床位管理页顶部的队列概览区。
+     */
     @Operation(summary = "队列概览（等待分布/平均等待/床位现状）")
     @GetMapping("/queue/stats")
     @PreAuthorize("hasAuthority('ipd:bedCenter:list')")
@@ -84,6 +116,10 @@ public class BedCenterController {
         return Result.success(bedCenterService.queueStats());
     }
 
+    /**
+     * 取当前等待中的人数。
+     * 用于床位管理页队列入口的等待人数角标提醒。
+     */
     @Operation(summary = "等待中人数（角标）")
     @GetMapping("/queue/countWaiting")
     @PreAuthorize("hasAuthority('ipd:bedCenter:list')")
@@ -91,6 +127,10 @@ public class BedCenterController {
         return Result.success(String.valueOf(bedCenterService.countWaiting()));
     }
 
+    /**
+     * 为一条排队记录算出可用床位候选及其匹配档位，只给候选不代替现场决策。
+     * 用于「安排床位」弹窗的智能匹配模式列出可选床。
+     */
     @Operation(summary = "床位智能匹配（给候选不给最优解，决定由现场做）")
     @GetMapping("/pool/match")
     @PreAuthorize("hasAuthority('ipd:bedCenter:list')")
@@ -98,6 +138,10 @@ public class BedCenterController {
         return Result.success(bedCenterService.matchBeds(waitId));
     }
 
+    /**
+     * 分页查全院床位及其占用者与预留去向。
+     * 用于床位管理页「全院床位」页签的查询表格，也用于安排床位时按空闲过滤选床。
+     */
     @Operation(summary = "全院床位池（含占用者与预留去向）")
     @GetMapping("/pool/listPage")
     @PreAuthorize("hasAuthority('ipd:bedCenter:list')")
@@ -117,6 +161,10 @@ public class BedCenterController {
         return Result.success(bedCenterService.bedMap(query));
     }
 
+    /**
+     * 汇总全院床位数量、使用率并按科室排行。
+     * 用于「全院床位」页签顶部的床位总数/空闲/占用/锁定/维修汇总卡。
+     */
     @Operation(summary = "全院床位总览与科室排行")
     @GetMapping("/overview")
     @PreAuthorize("hasAuthority('ipd:bedCenter:list')")

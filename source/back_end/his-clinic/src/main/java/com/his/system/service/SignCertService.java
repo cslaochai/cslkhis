@@ -27,10 +27,22 @@ public interface SignCertService {
      */
     SignCertVO issue(SignCertIssueDTO dto, Long operatorId, String operatorName);
 
+    /**
+     * 吊销证书：必须写明理由，只改状态不删行——历史签名仍要靠它的公钥验通。
+     * 用于「签名证书」签表格行上的吊销动作。
+     */
     SignCertVO revoke(SignCertRevokeDTO dto, Long operatorId, String operatorName);
 
+    /**
+     * 单张证书详情：含公钥 PEM 与指纹，可核对持有人、算法与有效期。
+     * 用于「签名证书」签点开一张证书后的详情弹框。
+     */
     SignCertVO getById(Long id);
 
+    /**
+     * 证书台账分页：按持有人、证书状态、算法与有效期等条件筛选。
+     * 用于签名中心「签名证书」签的查询卡表格。
+     */
     IPage<SignCertVO> listPage(SignCertPageQueryDTO query);
 
     /**
@@ -48,6 +60,10 @@ public interface SignCertService {
      */
     long countByStatus(Integer certStatus);
 
+    /**
+     * 自动签发的证书张数：即签名时按需补发的那一批，非人工签发。
+     * 用于签名概览卡片区，衡量证书是人工铺底还是靠按需签发兜住。
+     */
     long countAutoIssued();
 
     /**

@@ -152,8 +152,6 @@ public class BizAdmissionOrder extends BaseEntity {
      */
     private String medicalInsuranceNo;
 
-    // 状态机
-
     /**
      * 状态（1-待收治 2-已收治 3-已作废 4-已过期）
      */

@@ -16,31 +16,42 @@ public class LogStatVO {
      * 操作日志总量
      */
     private Long operTotal;
+    /** 操作日志今日条数 */
     private Long operToday;
+    /** 操作日志今日失败条数（执行结果为失败的请求） */
     private Long operFailToday;
+    /** 操作日志近 7 天条数 */
     private Long oper7d;
 
     /**
      * 登录日志总量
      */
     private Long loginTotal;
+    /** 登录日志今日条数 */
     private Long loginToday;
+    /** 登录日志今日失败次数（口令爆破与异地登录排查入口） */
     private Long loginFailToday;
+    /** 登录日志近 7 天条数 */
     private Long login7d;
 
     /**
      * 审计日志总量
      */
     private Long auditTotal;
+    /** 审计日志今日条数 */
     private Long auditToday;
+    /** 审计日志今日失败条数（审计动作未执行成功的记录） */
     private Long auditFailToday;
+    /** 审计日志近 7 天条数 */
     private Long audit7d;
 
     /**
      * 字段级变更总量（sql/159 的第四本账）
      */
     private Long fieldChangeTotal;
+    /** 字段级变更今日条数 */
     private Long fieldChangeToday;
+    /** 字段级变更近 7 天条数 */
     private Long fieldChange7d;
 
     /**

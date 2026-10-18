@@ -16,6 +16,10 @@ public interface MedTechExecutionService extends IService<BizMedTechExecution> {
     PageResult<BizMedTechExecution> listPage(Long patientId, Integer applyType,
                                              Integer executionStatus, int pageNum, int pageSize);
 
+    /**
+     * 待执行分页（出参为渲染行）：按患者、申请类型与执行状态筛出医技执行单。
+     * 供医技科室接单环节筛出本人待办检查、检验执行任务时取数。
+     */
     PageResult<BizMedTechExecutionVO> listPageVO(Long patientId, Integer applyType,
                                                  Integer executionStatus, int pageNum, int pageSize);
 

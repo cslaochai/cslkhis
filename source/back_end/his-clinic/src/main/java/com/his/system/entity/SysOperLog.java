@@ -13,7 +13,7 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
- * 操作日志（操作日志，建表见 sql/10，查看页见 sql/158）。
+ * 操作日志
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

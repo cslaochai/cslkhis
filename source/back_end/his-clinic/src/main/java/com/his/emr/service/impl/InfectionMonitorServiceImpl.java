@@ -1,11 +1,12 @@
 package com.his.emr.service.impl;
 
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.constant.DictTypeConst;
-import com.his.common.enums.YesOrNoEnum;
+import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.emr.dto.InfectionMonitorDTO;
@@ -13,11 +14,6 @@ import com.his.emr.entity.BizHandHygieneObs;
 import com.his.emr.entity.BizInfectionCase;
 import com.his.emr.entity.BizInfectionMonitor;
 import com.his.emr.entity.BizInfectionMonitorDaily;
-import com.his.common.enums.DeviceMonitorStatusEnum;
-import com.his.common.enums.InfectionCaseStatusEnum;
-import com.his.common.enums.InfectionObsObjectEnum;
-import com.his.common.enums.InfectionSiteEnum;
-import com.his.common.enums.InfectionSourceEnum;
 import com.his.emr.mapper.BizHandHygieneObsMapper;
 import com.his.emr.mapper.BizInfectionCaseMapper;
 import com.his.emr.mapper.BizInfectionMonitorDailyMapper;
@@ -28,6 +24,7 @@ import com.his.emr.vo.InfectionMonitorVO;
 import com.his.emr.vo.PatientSnapshotVO;
 import com.his.system.service.DeptScopeService;
 import com.his.system.service.DictCacheService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,7 +41,7 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class InfectionMonitorServiceImpl implements InfectionMonitorService {
+public class InfectionMonitorServiceImpl extends ServiceImpl<BizInfectionMonitorMapper, BizInfectionMonitor> implements InfectionMonitorService {
     private final BizInfectionCaseMapper bizInfectionCaseMapper;
 
     private final BizInfectionMonitorMapper bizInfectionMonitorMapper;

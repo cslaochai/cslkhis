@@ -56,6 +56,7 @@ public class DutyOfficerVO {
      */
     private Integer shiftType;
 
+    /** 班次文案（由枚举 label 渲染） */
     private String shiftTypeText;
 
     /**
@@ -63,6 +64,7 @@ public class DutyOfficerVO {
      */
     private Integer roleType;
 
+    /** 班内角色文案（由枚举 label 渲染） */
     private String roleTypeText;
 
     /**

@@ -65,6 +65,10 @@ public interface StaffDemandService {
          */
         public int clinicDoctor;
 
+        /**
+         * 本次重算写入的需求行合计（三类派生相加）。
+         * 用于重算完成后给出「一共动了多少条」的总量口径；0 表示这段窗口内一条派生需求都没算出来。
+         */
         public int total() {
             return inpatient + clinicNurse + clinicDoctor;
         }

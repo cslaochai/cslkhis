@@ -26,6 +26,10 @@ public class AiEmergencyController {
 
     private final EmergencyTriageCapability emergencyTriageCapability;
 
+    /**
+     * 按主诉与生命体征给出急诊分诊级别、分区与绿色通道建议，只升不降且不写库。
+     * 用于急诊分诊登记的「AI 分诊建议」卡片，级别仍由护士确认后手工设置。
+     */
     @Operation(summary = "急诊分诊建议（只升不降，仅供护士确认）")
     @PostMapping("/suggest")
     public Result<EmergencyTriageResultVO> suggest(@Valid @RequestBody EmergencyTriageDTO dto) {

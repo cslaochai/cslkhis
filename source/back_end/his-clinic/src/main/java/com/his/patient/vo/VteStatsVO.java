@@ -29,6 +29,7 @@ public class VteStatsVO {
      */
     private Integer scopeType;
 
+    /** 统计范围文案 */
     private String scopeTypeText;
 
     /**
@@ -97,6 +98,7 @@ public class VteStatsVO {
      */
     private BigDecimal assessRateTarget;
 
+    /** 预防落实率目标（%） */
     private BigDecimal preventRateTarget;
 
     /**

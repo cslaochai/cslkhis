@@ -12,21 +12,27 @@ import java.util.List;
 @Schema(description = "白话词典覆盖率自检")
 public class LabPlainCoverageVO {
 
+    /** 出现过的检验项目名总数（去重） */
     @Schema(description = "库内出现过的检验项目名总数（去重）")
     private Integer totalItemName;
 
+    /** 词典已收录的项目数 */
     @Schema(description = "词典已收录数")
     private Integer coveredCount;
 
+    /** 词典未收录的项目数 */
     @Schema(description = "未收录数")
     private Integer missingCount;
 
+    /** 收录覆盖率（百分数，0~100） */
     @Schema(description = "覆盖率（0~100，整数）")
     private Integer coverageRate;
 
+    /** 词典现有分组清单 */
     @Schema(description = "词典现有分组清单（给筛选下拉用）")
     private List<String> groupNames;
 
+    /** 未收录项目清单，按出现次数倒序 */
     @Schema(description = "未收录清单，按出现次数倒序——先补高频的")
     private List<MissingItemVO> missingList;
 

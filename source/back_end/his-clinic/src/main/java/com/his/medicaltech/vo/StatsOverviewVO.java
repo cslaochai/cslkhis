@@ -94,6 +94,7 @@ public class StatsOverviewVO {
     private List<CodeCountAmountRow> revPayDist;
     /** 期间退费额与笔数（旧收费单 is_refund=1） */
     private BigDecimal revRefundAmount;
+    /** 期间退费笔数 */
     private Long revRefundCount;
 
     // 药事
@@ -102,7 +103,9 @@ public class StatsOverviewVO {
     private Long phPrescCount;
     /** 门诊/急诊/住院处方数（按开单主体 prescription_source，不按类型1/2/3分支） */
     private Long phPrescOutpatient;
+    /** 急诊开单主体的处方数 */
     private Long phPrescEmergency;
+    /** 住院开单主体的处方数 */
     private Long phPrescInpatient;
     /** 处方类型构成（西药/中成药/中药饮片） */
     private List<CodeCountAmountRow> phPrescTypeDist;

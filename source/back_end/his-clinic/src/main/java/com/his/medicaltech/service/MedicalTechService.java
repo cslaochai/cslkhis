@@ -22,6 +22,10 @@ public interface MedicalTechService extends IService<BizInspectionRecord> {
      */
     PageResult<BizInspectionRecord> selectInspectionRecordPage(Long patientId, Long inspectionDeptId, int pageNum, int pageSize);
 
+    /**
+     * 检查记录分页（出参为渲染行）：按患者与执行科室筛出检查记录。
+     * 用于检查工作站的检查记录查询表格。
+     */
     PageResult<BizInspectionRecordVO> selectInspectionRecordPageVO(Long patientId, Long inspectionDeptId, int pageNum, int pageSize);
 
     /**
@@ -29,6 +33,10 @@ public interface MedicalTechService extends IService<BizInspectionRecord> {
      */
     List<BizInspectionRecord> selectInspectionRecordList(Long patientId, Long inspectionDeptId);
 
+    /**
+     * 按患者取全量检查记录（出参为渲染行，不翻页）。
+     * 供需要一次看全某患者历次检查的环节取数，如开单前核对该患者已有的检查项目。
+     */
     List<BizInspectionRecordVO> selectInspectionRecordListVO(Long patientId, Long inspectionDeptId);
 
     /**
@@ -83,6 +91,10 @@ public interface MedicalTechService extends IService<BizInspectionRecord> {
      */
     PageResult<BizLaboratoryRecord> selectLaboratoryRecordPage(Long patientId, Long laboratoryDeptId, int pageNum, int pageSize);
 
+    /**
+     * 检验记录分页（出参为渲染行）：按患者与检验科室筛出检验记录。
+     * 用于检验工作站的检验记录查询表格。
+     */
     PageResult<BizLaboratoryRecordVO> selectLaboratoryRecordPageVO(Long patientId, Long laboratoryDeptId, int pageNum, int pageSize);
 
     /**
@@ -90,6 +102,10 @@ public interface MedicalTechService extends IService<BizInspectionRecord> {
      */
     List<BizLaboratoryRecord> selectLaboratoryRecordList(Long patientId, Long laboratoryDeptId);
 
+    /**
+     * 按患者取全量检验记录（出参为渲染行，不翻页）。
+     * 供医生工作站从检验申请单反查对应检验记录、再打开结果报告的环节取数。
+     */
     List<BizLaboratoryRecordVO> selectLaboratoryRecordListVO(Long patientId, Long laboratoryDeptId);
 
     /**
@@ -97,6 +113,10 @@ public interface MedicalTechService extends IService<BizInspectionRecord> {
      */
     LaboratoryDetailVO getLaboratoryDetail(Long recordId);
 
+    /**
+     * 整单保存检验结果：把项目结果集连同诊断意见与建议落到检验记录，异常标志与危急值由服务端按参考区间判定。
+     * 用于检验工作站的「录入结果」提交。
+     */
     boolean saveResult(LabResultSaveDTO labResultSaveDTO);
 
     /**
@@ -121,6 +141,10 @@ public interface MedicalTechService extends IService<BizInspectionRecord> {
     PageResult<BizReport> selectReportPage(Long patientId, Integer reportType, Integer reportStatus,
                                            int pageNum, int pageSize);
 
+    /**
+     * 报告分页（出参为渲染行）：按患者、报告类型与报告状态检索。
+     * 用于报告查询表格，也供患者端「我的报告」列表取数（患者端只查已发布状态）。
+     */
     PageResult<BizReportVO> selectReportPageVO(Long patientId, Integer reportType, Integer reportStatus,
                                                int pageNum, int pageSize);
 
@@ -147,6 +171,10 @@ public interface MedicalTechService extends IService<BizInspectionRecord> {
     PageResult<BizLaboratoryRecord> selectSpecimenPage(Long patientId, Integer recordStatus,
                                                        String keyword, int pageNum, int pageSize);
 
+    /**
+     * 标本分页（出参为渲染行）：按患者、单据状态与关键字检索处于采集-接收链路上的标本。
+     * 用于标本管理页的标本查询表格。
+     */
     PageResult<BizLaboratoryRecordVO> selectSpecimenPageVO(Long patientId, Integer recordStatus,
                                                            String keyword, int pageNum, int pageSize);
 

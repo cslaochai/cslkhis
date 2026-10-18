@@ -16,6 +16,7 @@ public class Icd10SelectListDTO {
     @Schema(description = "检索关键词，匹配编码或名称；为空则按排序返回")
     private String keyword;
 
+    /** 返回条数上限（下拉搜索时使用） */
     @Schema(description = "返回条数上限，默认 20")
     private Integer limit;
 }

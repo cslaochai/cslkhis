@@ -309,7 +309,7 @@
             <el-table-column label="出账时间" prop="billTime" width="160"/>
             <el-table-column fixed="right" label="操作" width="90">
               <template #default="{ row }">
-                <!-- 收费员动线只留一个口：未收齐点「收款」→ 复用预约收费弹层（默认现金，切支付宝/微信出码）；
+                <!-- 收费员动线只留一个口：未收齐点「收款」→ 复用预约收费弹层（默认现金，切扫码收款即出聚合码）；
                      已结清给「出票」（L4）。退费/作废走退费管理与账单台账页，不在收费台铺开 -->
                 <el-button v-if="Number(row.unpaidAmount) > 0" data-testid="cash-btn-pay" link type="primary"
                            @click="openPay(row)">收款
@@ -331,7 +331,7 @@
     </el-dialog>
 
     <!-- ============ 收款 ============ -->
-    <!-- 与预约收费同一弹层：默认现金档（窗口当场点钞记流水），切支付宝/微信即出对应渠道的码；
+    <!-- 与预约收费同一弹层：默认现金档（窗口当场点钞记流水），切扫码收款即出一张聚合码（一码多平台）；
          金额取账单尚需缴，页面不改数。多渠道拆笔（余额+医保）由退费/台账侧的账单详情承接 -->
     <QrPayDialog v-model="qrPayDialog" allow-cash :amount="qrPayBill?.unpaidAmount" :bill-id="qrPayBill?.id"
                  :bill-no="qrPayBill?.billNo" :patient-name="qrPayBill?.patientName" @paid="onPaid"/>
@@ -343,7 +343,7 @@
  * 收费结算窗口（四层：L1 记账 → L2 结算 → L3 支付 → L4 票据）
  *
  * 页面只走一条链，每一步都只碰自己那一层：
- *   待收费就诊榜 →（选记账行）出账单 → 收款（默认现金，可切支付宝/微信出码）→ 出票
+ *   待收费就诊榜 →（选记账行）出账单 → 收款（默认现金，可切扫码收款出聚合码）→ 出票
  *
  * 三条前端必须守住的口径：
  * 1. **应收金额不由本页传入**：settle 只提交「哪些记账行 + 优惠多少 + 结算方式」，

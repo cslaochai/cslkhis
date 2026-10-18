@@ -50,6 +50,7 @@ public class BedMapVO {
      */
     private List<WardOption> wardOptions;
 
+    /** 床位卡片列表（一床一张卡） */
     private List<BedCard> beds;
 
     /**

@@ -64,6 +64,7 @@ public class MessagePushService {
 
     /**
      * 广播一条 data 帧（JSON）到该收件人的全部在线连接。
+     * 用于登录后顶栏消息流的实时提醒：新消息摘要与未读数更新都由这里下发。
      * 单连接失败只摘除该连接，不影响其他连接与其他收件人。
      */
     public void push(Long receiverId, Object data) {

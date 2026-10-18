@@ -10,6 +10,7 @@ import lombok.Data;
 @Data
 public class OperationQaColumnListVO {
 
+    /** 数据列配置记录ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 

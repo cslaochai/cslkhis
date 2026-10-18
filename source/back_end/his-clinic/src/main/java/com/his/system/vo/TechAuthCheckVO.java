@@ -20,9 +20,11 @@ public class TechAuthCheckVO {
      */
     private boolean passed;
 
+    /** 被判定员工ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long employeeId;
 
+    /** 员工姓名 */
     private String employeeName;
 
     /**
@@ -30,6 +32,7 @@ public class TechAuthCheckVO {
      */
     private Integer authCategory;
 
+    /** 授权类别文案（由枚举 label 渲染） */
     private String authCategoryText;
 
     /**

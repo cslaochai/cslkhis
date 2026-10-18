@@ -14,26 +14,70 @@ public interface PatientHealthProfileService {
      */
     PatientHealthProfileVO getProfile(Long patientId);
 
+    /**
+     * 保存过敏史一条（带 id 修改、不带 id 新增）：并同步主档过敏文本投影。
+     * 用于「健康档案」编辑页过敏史组的明细行保存。
+     */
     PatientAllergyVO saveAllergy(PatientAllergyUpsertDTO dto);
 
+    /**
+     * 删除过敏史一条：删后重算主档过敏文本投影。
+     * 用于「健康档案」编辑页过敏史组明细行的删除。
+     */
     void deleteAllergy(Long id);
 
+    /**
+     * 保存既往疾病一条（带 id 修改、不带 id 新增）：并同步主档疾病文本投影。
+     * 用于「健康档案」编辑页既往疾病组的明细行保存。
+     */
     PatientPastDiseaseVO savePastDisease(PatientPastDiseaseUpsertDTO dto);
 
+    /**
+     * 删除既往疾病一条：删后重算主档疾病文本投影。
+     * 用于「健康档案」编辑页既往疾病组明细行的删除。
+     */
     void deletePastDisease(Long id);
 
+    /**
+     * 保存手术史一条（带 id 修改、不带 id 新增）。
+     * 用于「健康档案」编辑页手术史组的明细行保存。
+     */
     PatientSurgeryHistoryVO saveSurgeryHistory(PatientSurgeryHistoryUpsertDTO dto);
 
+    /**
+     * 删除手术史一条。
+     * 用于「健康档案」编辑页手术史组明细行的删除。
+     */
     void deleteSurgeryHistory(Long id);
 
+    /**
+     * 保存家族史一条（带 id 修改、不带 id 新增）。
+     * 用于「健康档案」编辑页家族史组的明细行保存。
+     */
     PatientFamilyHistoryVO saveFamilyHistory(PatientFamilyHistoryUpsertDTO dto);
 
+    /**
+     * 删除家族史一条。
+     * 用于「健康档案」编辑页家族史组明细行的删除。
+     */
     void deleteFamilyHistory(Long id);
 
+    /**
+     * 保存用药史一条（带 id 修改、不带 id 新增）。
+     * 用于「健康档案」编辑页用药史组的明细行保存。
+     */
     PatientMedicationHistoryVO saveMedication(PatientMedicationHistoryUpsertDTO dto);
 
+    /**
+     * 删除用药史一条。
+     * 用于「健康档案」编辑页用药史组明细行的删除。
+     */
     void deleteMedication(Long id);
 
+    /**
+     * 保存联系人一条（带 id 修改、不带 id 新增）：并同步主档联系人文本投影。
+     * 用于「健康档案」编辑页联系人组的明细行保存。
+     */
     PatientContactVO saveContact(PatientContactUpsertDTO dto);
 
     /**
@@ -41,6 +85,10 @@ public interface PatientHealthProfileService {
      */
     PatientContactVO getContact(Long contactId);
 
+    /**
+     * 删除联系人一条：删后重算主档联系人文本投影。
+     * 用于「健康档案」编辑页联系人组明细行的删除。
+     */
     void deleteContact(Long id);
 
     /**

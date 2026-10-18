@@ -13,6 +13,7 @@ import java.util.List;
 @Data
 public class RxReviewTalkVO {
 
+    /** 约谈记录ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 

@@ -1,11 +1,12 @@
 package com.his.charge.service.impl;
 
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.entity.BizArrearsPolicy;
-import com.his.common.enums.ArrearsFeeClassEnum;
 import com.his.charge.mapper.BizArrearsPolicyMapper;
-import com.his.charge.service.InpatientAccountService;
 import com.his.charge.service.ArrearsControlGateService;
+import com.his.charge.service.InpatientAccountService;
+import com.his.common.enums.ArrearsFeeClassEnum;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -20,7 +21,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ArrearsControlGateServiceImpl implements ArrearsControlGateService {
+public class ArrearsControlGateServiceImpl extends ServiceImpl<BizArrearsPolicyMapper, BizArrearsPolicy> implements ArrearsControlGateService {
 
     /**
      * 永不拦截的医嘱类别：1-药品 6-手术 7-输血（治疗生命线，与配置无关）

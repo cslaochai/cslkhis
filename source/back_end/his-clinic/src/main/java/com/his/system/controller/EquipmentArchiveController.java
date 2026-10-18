@@ -24,6 +24,10 @@ public class EquipmentArchiveController {
 
     private final EquipmentService equipmentService;
 
+    /**
+     * 设备台账分页：按名称、编号、科室、维保与计量到期情况筛选。
+     * 用于「设备管理」页查询卡与台账表格。
+     */
     @Operation(summary = "设备台账分页")
     @PostMapping("/listPage")
     public Result<PageResult<EquipmentVO>> listPage(@Valid @RequestBody EquipmentPageQueryDTO dto) {
@@ -32,6 +36,10 @@ public class EquipmentArchiveController {
                 page.getRecords()));
     }
 
+    /**
+     * 设备档案详情：带最近维保记录与最近计量记录。
+     * 用于「设备管理」详情面板展示，以及维保/计量记录删除后回读重算结果。
+     */
     @Operation(summary = "设备详情（含最近维保/计量记录）")
     @GetMapping("/getDetailById")
     public Result<EquipmentVO> getDetailById(@RequestParam Long equipmentId) {

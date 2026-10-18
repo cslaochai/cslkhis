@@ -12,6 +12,7 @@ import java.io.Serializable;
 @Data
 public class OrderSetSelectListVO implements Serializable {
 
+    /** 主键ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
@@ -25,6 +26,7 @@ public class OrderSetSelectListVO implements Serializable {
      */
     private Integer scope;
 
+    /** 适用范围文案 */
     private String scopeText;
 
     /**
@@ -32,6 +34,7 @@ public class OrderSetSelectListVO implements Serializable {
      */
     private Integer orderType;
 
+    /** 医嘱类型文案 */
     private String orderTypeText;
 
     /**

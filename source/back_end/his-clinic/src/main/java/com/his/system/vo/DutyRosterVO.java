@@ -145,9 +145,11 @@ public class DutyRosterVO {
      */
     private Integer substituted;
 
+    /** 实际值班人ID：已换班取顶班人，未换班取原排班人 */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long actualEmpId;
 
+    /** 实际值班人姓名：口径同上，列表展示「此刻谁在班」用这一列 */
     private String actualEmpName;
 
     /**

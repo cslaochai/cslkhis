@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 药品管理控制器
+ * 药品管理控制器：药品主数据的分页维护与各岗位选药的下拉取数入口。
  */
 @Tag(name = "药品管理")
 @RestController
@@ -29,6 +29,10 @@ public class DrugController {
 
     private final SysDrugService sysDrugService;
 
+    /**
+     * 按名称、类别等条件分页查询药品目录。
+     * 用于药品字典维护环节的列表取数；开方、入库等岗位选药走下拉接口，不用这份分页。
+     */
     @Operation(summary = "分页查询药品列表")
     @PostMapping("/listPage")
     public Result<PageResult<SysDrugVO>> listPage(@Valid @RequestBody SysDrugPageQueryDTO queryDTO) {
@@ -46,12 +50,20 @@ public class DrugController {
         return Result.success(sysDrugService.selectList(queryDTO));
     }
 
+    /**
+     * 按药品主键取单条药品主数据（规格、单位、剂量、价格等）。
+     * 供药品维护环节的表单回显，以及只拿到药品标识就要补齐本品属性的节点使用。
+     */
     @Operation(summary = "获取药品详情")
     @GetMapping("/getById")
     public Result<SysDrugVO> getInfo(@RequestParam Long drugId) {
         return Result.success(sysDrugService.getInfo(drugId));
     }
 
+    /**
+     * 新增或修改药品，传主键即改、不传即建。
+     * 用于药品字典维护环节写入主数据；药房库存与采购都只认这里维护出来的药品。
+     */
     @PreAuthorize("hasAuthority('pharmacy:stock:add')")
     @Operation(summary = "新增或修改药品")
     @PostMapping("/drugUpsert")
@@ -60,6 +72,10 @@ public class DrugController {
         return Result.success("操作成功", null);
     }
 
+    /**
+     * 按药品主键删除药品。
+     * 用于药品字典维护环节下架不再使用的药；已被处方、库存或采购引用过的药品不应当从这里删。
+     */
     @PreAuthorize("hasAuthority('pharmacy:stock:delete')")
     @Operation(summary = "删除药品")
     @DeleteMapping("/deleteById")

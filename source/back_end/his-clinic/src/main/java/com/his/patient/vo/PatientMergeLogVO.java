@@ -54,6 +54,7 @@ public class PatientMergeLogVO {
      * 匹配置信级别(强)（1-身份证号相同 2-姓名+性别+出生日期相同 3-姓名+手机号相同 4-人工判定）
      */
     private Integer matchType;
+    /** 匹配置信级别文案 */
     private String matchTypeText;
     /**
      * 命中依据的字段值快照
@@ -95,6 +96,7 @@ public class PatientMergeLogVO {
      * 状态（1-已合并 2-已撤销）
      */
     private Integer logStatus;
+    /** 日志状态文案 */
     private String logStatusText;
     /**
      * 撤销人

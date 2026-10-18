@@ -14,6 +14,7 @@ import java.io.Serializable;
 @Schema(name = "ShiftSelectListVO", description = "班次下拉出参")
 public class ShiftSelectListVO implements Serializable {
 
+    /** 班次ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 

@@ -1,6 +1,8 @@
 package com.his.pay.service.impl;
 
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.PayChannelEnum;
 import com.his.common.enums.PayOrderStatusEnum;
 import com.his.common.exception.BusinessException;
@@ -10,6 +12,7 @@ import com.his.pay.entity.BizPayOrder;
 import com.his.pay.mapper.BizPayOrderMapper;
 import com.his.pay.service.AlipayChannelService;
 import com.his.pay.service.PayOrderService;
+import com.his.pay.support.PayQrCodeCache;
 import com.his.pay.vo.PayOrderVO;
 import com.his.system.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +31,7 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class PayOrderServiceImpl implements PayOrderService {
+public class PayOrderServiceImpl extends ServiceImpl<BizPayOrderMapper, BizPayOrder> implements PayOrderService {
 
     private static final int AMOUNT_SCALE = 2;
     private static final int REMARK_MAX_LENGTH = 500;
@@ -40,6 +43,28 @@ public class PayOrderServiceImpl implements PayOrderService {
 
     private final AlipayChannelService alipayChannelService;
 
+    private final PayQrCodeCache payQrCodeCache;
+
+    /**
+     * 「算不算同一张码」的唯一判据：建单复用与出码节流都走这里，不许在调用方各抄一份。
+     */
+    private static boolean isReusable(BizPayOrder valid, Integer channel, BigDecimal amount) {
+        // 必须显式判「待支付」：按渠道取单之后，取回来的可能是这张已入账的凭证，
+        // 把它当"可复用的码"返回给调用方就等于让界面重画一张早已付过的码
+        return Objects.equals(valid.getPayStatus(), PayOrderStatusEnum.PENDING.getCode())
+                && !isExpired(valid)
+                && Objects.equals(valid.getChannel(), channel)
+                && valid.getAmount().compareTo(amount) == 0;
+    }
+    /**
+     * 待支付单是否已过期。过期时刻由服务端现算（创建时间 + 有效期），不落列：
+     * 库里存一份派生时间只会多出「时间到了列还没刷」的漂移窗口，创建时间才是唯一事实。
+     */
+    private static boolean isExpired(BizPayOrder order) {
+        return order.getCreateTime() != null
+                && !order.getCreateTime().plusMinutes(PayOrderService.PAY_ORDER_EXPIRE_MINUTES).isAfter(LocalDateTime.now());
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CreateResult createPending(CreateSpec spec) {
@@ -47,7 +72,9 @@ public class PayOrderServiceImpl implements PayOrderService {
         if (spec == null || spec.bizType() == null || spec.bizId() == null) {
             throw new BusinessException("支付单缺少业务归属（业务类型/业务单ID）");
         }
-        if (PayChannelEnum.payMethodOf(spec.channel()) == null) {
+        // 渠道为 null 表示「聚合码」收款：一张码不绑定渠道，渠道在支付时由网关识别确定；
+        // 非 null 必须是合法渠道（小程序等指定渠道的链路）
+        if (spec.channel() != null && PayChannelEnum.payMethodOf(spec.channel()) == null) {
             throw new BusinessException("支付渠道不合法：" + PayChannelEnum.getLabelOrUnknown(spec.channel()));
         }
         if (spec.amount() == null) {
@@ -58,19 +85,24 @@ public class PayOrderServiceImpl implements PayOrderService {
             throw new BusinessException("支付金额必须大于 0");
         }
 
-        BizPayOrder valid = selectLastValid(spec.bizType(), spec.bizId());
-        if (valid != null) {
-            if (Objects.equals(valid.getPayStatus(), PayOrderStatusEnum.PAID.getCode())) {
-                throw new BusinessException("该业务单已收款（支付单 " + valid.getPayNo() + "），请勿重复收取");
-            }
+        BizPayOrder latest = selectLastValid(spec.bizType(), spec.bizId());
+        if (latest != null && Objects.equals(latest.getPayStatus(), PayOrderStatusEnum.PAID.getCode())) {
+            throw new BusinessException("该业务单已收款（支付单 " + latest.getPayNo() + "），请勿重复收取");
+        }
+        // 只按「同一渠道形态」找可复用的码：聚合单（channel=null）只与聚合单比对，
+        // 小程序等指定渠道的单只与同渠道比对 —— 两边互不抢复用，也不会把对方的码当成自己的。
+        // 聚合码本身一张码多平台可扫，不存在「换渠道要重出」的问题，切档走的是同一张单。
+        // 多张码并存的重复收款风险由付款侧兜住：钱从哪张进来，confirmPaid 后其余几张立刻作废。
+        BizPayOrder sameChannel = selectLastValidOfChannel(spec.bizType(), spec.bizId(), spec.channel());
+        if (sameChannel != null) {
             // 同渠道同金额且码未过期：复用原单号，渠道会幂等返回同一张码，不再产生第二张可付的码。
             // 过期不复用：旧码的倒计时已走完，复用等于让新码一出生就显示过期，必须关掉重出。
-            if (isReusable(valid, spec.channel(), amount)) {
-                return new CreateResult(toVO(valid), true);
+            if (isReusable(sameChannel, spec.channel(), amount)) {
+                return new CreateResult(toVO(sameChannel), true);
             }
-            // 换了渠道、金额变了（窗口期间账被收过一部分）或原码已过期：旧码必须作废再出新码，
-            // 否则两张码同时有效，患者扫哪张都可能付，而本地只认最后一张
-            doClose(valid);
+            // 同渠道但金额变了（窗口期间账被收过一部分）或原码已过期：这张旧码必须作废，
+            // 否则同一个号能出两张码，患者扫哪张都可能付，而本地只认最后一张
+            doClose(sameChannel);
         }
 
         BizPayOrder order = new BizPayOrder();
@@ -97,7 +129,7 @@ public class PayOrderServiceImpl implements PayOrderService {
         if (amount == null) {
             throw new BusinessException("缺少支付金额");
         }
-        BizPayOrder valid = selectLastValid(bizType, bizId);
+        BizPayOrder valid = selectLastValidOfChannel(bizType, bizId, channel);
         if (valid == null || !isReusable(valid, channel, NumUtil.scale(amount, AMOUNT_SCALE))) {
             return null;
         }
@@ -117,12 +149,38 @@ public class PayOrderServiceImpl implements PayOrderService {
     }
 
     /**
-     * 「算不算同一张码」的唯一判据：建单复用与出码节流都走这里，不许在调用方各抄一份。
+     * 该业务单上还活着的待支付单（取最新一条），没有返回 null。
+     *
+     * <p>只查待支付：已付/已关闭的单不是「一张还能扫的码」，拿它去复用就是把作废凭证重新摆到患者面前。
+     *
+     * <p><b>渠道为 null = 聚合码单</b>：聚合码不绑定渠道，复用只能按「本账单的聚合待支付单」匹配，
+     * 所以用 {@code IS NULL}；指定渠道的链路（小程序）传具体渠道码走 {@code =} 分支。
+     * 两种单靠 channel 列天然隔离，互不抢复用。
      */
-    private static boolean isReusable(BizPayOrder valid, Integer channel, BigDecimal amount) {
-        return !isExpired(valid)
-                && Objects.equals(valid.getChannel(), channel)
-                && valid.getAmount().compareTo(amount) == 0;
+    private BizPayOrder selectLastValidOfChannel(Integer bizType, Long bizId, Integer channel) {
+        LambdaQueryWrapper<BizPayOrder> wrapper = new LambdaQueryWrapper<BizPayOrder>()
+                .eq(BizPayOrder::getBizType, bizType)
+                .eq(BizPayOrder::getBizId, bizId)
+                .eq(BizPayOrder::getPayStatus, PayOrderStatusEnum.PENDING.getCode())
+                .orderByDesc(BizPayOrder::getId)
+                .last("LIMIT 1");
+        if (channel == null) {
+            wrapper.isNull(BizPayOrder::getChannel);
+        } else {
+            wrapper.eq(BizPayOrder::getChannel, channel);
+        }
+        return bizPayOrderMapper.selectOne(wrapper);
+    }
+
+    /**
+     * 该业务单所有渠道上还活着的待支付单（切现金、关弹层时用）。
+     */
+    private List<BizPayOrder> selectPendingOfBiz(Integer bizType, Long bizId) {
+        return bizPayOrderMapper.selectList(new LambdaQueryWrapper<BizPayOrder>()
+                .eq(BizPayOrder::getBizType, bizType)
+                .eq(BizPayOrder::getBizId, bizId)
+                .eq(BizPayOrder::getPayStatus, PayOrderStatusEnum.PENDING.getCode())
+                .orderByDesc(BizPayOrder::getId));
     }
 
     @Override
@@ -138,7 +196,9 @@ public class PayOrderServiceImpl implements PayOrderService {
         if (order == null) {
             throw new BusinessException("支付单不存在：" + payNo);
         }
-        if (!Objects.equals(order.getChannel(), channel)) {
+        // 聚合码单在出码时渠道为 null，支付时由网关决定实际渠道；
+        // 只有「已明确登记过渠道」的单才做渠道一致性校验，避免把聚合单的首次入账拒掉
+        if (order.getChannel() != null && !Objects.equals(order.getChannel(), channel)) {
             throw new BusinessException("支付单渠道与通知渠道不符，拒入账：" + payNo
                     + "（本单 " + PayChannelEnum.getLabelOrUnknown(order.getChannel()) + "）");
         }
@@ -153,7 +213,7 @@ public class PayOrderServiceImpl implements PayOrderService {
         }
 
         LocalDateTime payTime = LocalDateTime.now();
-        if (bizPayOrderMapper.markPaidIfPending(payNo, channelTxnNo, payTime) == 0) {
+        if (bizPayOrderMapper.markPaidIfPending(payNo, channel, channelTxnNo, payTime) == 0) {
             // 条件更新没改成行 = 状态在这一次读之后被人改走了，重读按最新状态判，不猜
             BizPayOrder latest = bizPayOrderMapper.selectByPayNo(payNo);
             if (latest != null && Objects.equals(latest.getPayStatus(), PayOrderStatusEnum.PAID.getCode())) {
@@ -164,10 +224,15 @@ public class PayOrderServiceImpl implements PayOrderService {
                     + PayOrderStatusEnum.getLabelOrUnknown(latest == null ? null : latest.getPayStatus()) + "）：" + payNo);
         }
         order.setPayStatus(PayOrderStatusEnum.PAID.getCode());
+        // 聚合码单出码时渠道为 null，这里把实际渠道落定（微信/支付宝/云闪付由网关识别后回填）
+        order.setChannel(channel);
         order.setOutTradeNo(channelTxnNo);
         order.setPayTime(payTime);
         log.info("[支付单] 确认实收 payNo={} 渠道交易号={} 金额={}",
                 payNo, channelTxnNo, order.getAmount().toPlainString());
+        // 一张账单可能同时挂着聚合码与小程序侧指定渠道的码，钱从哪张进来，其余几张必须立刻作废：
+        // 留着的每一张都是「同一笔账还能再付一次」的入口，而本地只会把多付的那笔记成长款
+        closeOtherPendingOfBiz(order.getBizType(), order.getBizId(), payNo);
         return toVO(order);
     }
 
@@ -179,6 +244,34 @@ public class PayOrderServiceImpl implements PayOrderService {
             throw new BusinessException("支付单不存在：" + payNo);
         }
         doClose(order);
+    }
+
+    @Override
+    public List<PayOrderVO> listPendingByBiz(Integer bizType, Long bizId) {
+        if (bizType == null || bizId == null) {
+            throw new BusinessException("支付单缺少业务归属（业务类型/业务单ID）");
+        }
+        return selectPendingOfBiz(bizType, bizId).stream().map(this::toVO).toList();
+    }
+
+    @Override
+    public void closePendingByBiz(Integer bizType, Long bizId) {
+        if (bizType == null || bizId == null) {
+            throw new BusinessException("支付单缺少业务归属（业务类型/业务单ID）");
+        }
+        // 有意不套事务：每张单的关闭本身是带状态条件的原子 UPDATE，一张失败不该把已关掉的那几张滚回去。
+        // 「已收款」这种情况必须立刻抛给界面（见下），否则收银员收完现金才发现钱早从微信进来了
+        for (BizPayOrder order : selectPendingOfBiz(bizType, bizId)) {
+            try {
+                doClose(order);
+            } catch (BusinessException e) {
+                // 钱已经进来的那张：不能悄悄跳过，让界面明确提示「该账已通过渠道完成」
+                throw e;
+            } catch (RuntimeException e) {
+                // 其余失败（渠道关单超时之类）不阻断后续：本地单已置关闭，渠道侧那张由过期关单兜底
+                log.warn("[支付单] 按业务单关闭待支付单失败 payNo={} err={}", order.getPayNo(), e.getMessage());
+            }
+        }
     }
 
     @Override
@@ -195,6 +288,7 @@ public class PayOrderServiceImpl implements PayOrderService {
             return;
         }
         log.info("[支付单] 过期关单 payNo={}", payNo);
+        payQrCodeCache.evict(payNo);
         if (Objects.equals(order.getChannel(), PayChannelEnum.ALIPAY.getCode())) {
             alipayChannelService.closeTrade(order.getPayNo());
         }
@@ -240,12 +334,25 @@ public class PayOrderServiceImpl implements PayOrderService {
     }
 
     /**
-     * 待支付单是否已过期。过期时刻由服务端现算（创建时间 + 有效期），不落列：
-     * 库里存一份派生时间只会多出「时间到了列还没刷」的漂移窗口，创建时间才是唯一事实。
+     * 作废同一业务单上其它渠道的待支付码（保留刚入账的那一张）。
+     *
+     * <p>失败只留 warn 绝不外抛：此刻钱已经在渠道侧收到了，本地唯一正确的动作是把这笔账记上；
+     * 因为「另一张码关不掉」而回滚入账，等于把已经发生的收款从账上抹掉，比留一张待人工清理的活码严重得多。
      */
-    private static boolean isExpired(BizPayOrder order) {
-        return order.getCreateTime() != null
-                && !order.getCreateTime().plusMinutes(PayOrderService.PAY_ORDER_EXPIRE_MINUTES).isAfter(LocalDateTime.now());
+    private void closeOtherPendingOfBiz(Integer bizType, Long bizId, String keepPayNo) {
+        for (BizPayOrder other : selectPendingOfBiz(bizType, bizId)) {
+            if (Objects.equals(other.getPayNo(), keepPayNo)) {
+                continue;
+            }
+            try {
+                doClose(other);
+                log.info("[支付单] 收款后作废同账单其它渠道的码 payNo={} channel={}",
+                        other.getPayNo(), PayChannelEnum.getLabelOrUnknown(other.getChannel()));
+            } catch (RuntimeException e) {
+                log.warn("[支付单] 收款后关闭其它渠道待支付单失败 payNo={} keep={} err={}",
+                        other.getPayNo(), keepPayNo, e.getMessage());
+            }
+        }
     }
 
     private void doClose(BizPayOrder order) {
@@ -264,6 +371,9 @@ public class PayOrderServiceImpl implements PayOrderService {
             return;
         }
         log.info("[支付单] 关闭 payNo={}", order.getPayNo());
+        // 码串缓存跟着单一起作废：留着它，下次出码会读到「这张码还在」而重画一张渠道侧早已关掉的码，
+        // 患者扫出来只会看到「交易已关闭」，收银员却以为码是新出的
+        payQrCodeCache.evict(order.getPayNo());
         if (Objects.equals(order.getChannel(), PayChannelEnum.ALIPAY.getCode())) {
             alipayChannelService.closeTrade(order.getPayNo());
         }

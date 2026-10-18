@@ -12,11 +12,14 @@ import java.io.Serializable;
 @Data
 public class PatientSnapshotVO implements Serializable {
 
+    /** 患者ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
+    /** 患者编号 */
     private String patientNo;
 
+    /** 患者姓名 */
     private String patientName;
 
     /**
@@ -29,6 +32,7 @@ public class PatientSnapshotVO implements Serializable {
      */
     private Integer age;
 
+    /** 手机号码 */
     private String phone;
 
     /**
@@ -37,5 +41,6 @@ public class PatientSnapshotVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
+    /** 最近就诊科室名称 */
     private String deptName;
 }

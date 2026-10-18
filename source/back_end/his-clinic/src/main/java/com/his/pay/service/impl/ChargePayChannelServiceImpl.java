@@ -42,6 +42,9 @@ public class ChargePayChannelServiceImpl implements ChargePayChannelService {
                     "如需启用支付，请在 application-dev.yml 中将 pay.channel.enabled 改为 true。"
             );
         }
+        if (Objects.equals(channel, PayChannelEnum.ALIPAY.getCode())) {
+            assertAlipayEnabled("付款码支付");
+        }
 
         try {
             if (Objects.equals(channel, PayChannelEnum.WECHAT.getCode())) {
@@ -70,6 +73,9 @@ public class ChargePayChannelServiceImpl implements ChargePayChannelService {
                     "收费台支付渠道已关闭（pay.channel.enabled=false），无法调用退款。" +
                     "如需启用退款，请在 application-dev.yml 中将 pay.channel.enabled 改为 true。"
             );
+        }
+        if (Objects.equals(channel, PayChannelEnum.ALIPAY.getCode())) {
+            assertAlipayEnabled("退款");
         }
 
         try {
@@ -145,5 +151,17 @@ public class ChargePayChannelServiceImpl implements ChargePayChannelService {
             return "***";
         }
         return authCode.substring(0, 3) + "****" + authCode.substring(authCode.length() - 3);
+    }
+
+    /**
+     * 支付宝直连开关：关闭后既不能收款也不能退款，避免在渠道已停用时还去调 SDK。
+     */
+    private void assertAlipayEnabled(String action) {
+        if (!alipayProperties.isEnabled()) {
+            throw new IllegalStateException(
+                    "支付宝支付未启用（alipay.enabled=false），无法" + action +
+                    "。如需启用，请在 gitignored 的 application-dev.yml 中将 alipay.enabled 改为 true。"
+            );
+        }
     }
 }

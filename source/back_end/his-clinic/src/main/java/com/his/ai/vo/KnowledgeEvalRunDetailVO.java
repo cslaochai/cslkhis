@@ -10,6 +10,7 @@ import lombok.Data;
 @Data
 public class KnowledgeEvalRunDetailVO {
 
+    /** 运行明细记录ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
@@ -17,6 +18,7 @@ public class KnowledgeEvalRunDetailVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long caseId;
 
+    /** 用例问题文本 */
     private String question;
 
     /** 期望命中文档标题（分号分隔） */

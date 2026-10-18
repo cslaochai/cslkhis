@@ -14,9 +14,8 @@ import org.springframework.stereotype.Component;
 public class SignProperties {
 
     /**
-     * 主口令。**生产必须用环境变量 {@code HIS_SIGN_SECRET} 覆盖**。
-     * 留默认值的理由：本仓库连数据库口令都是明文配置，这里再要求"必须配环境变量"只会导致
-     * 本地跑不起来；但类注释与页面都要说清"这个默认值不是安全配置"。
+     * 签名主口令（派生私钥存储密钥的输入）。随环境变：dev 在 application-dev.yml 内联真值，
+     * 生产由环境变量 HIS_SIGN_SECRET 注入；未配置时证书签发与可信时间入口直接拒绝。
      */
     private String masterSecret;
 

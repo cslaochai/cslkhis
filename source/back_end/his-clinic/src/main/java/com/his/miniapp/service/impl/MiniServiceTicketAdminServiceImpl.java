@@ -1,9 +1,10 @@
 package com.his.miniapp.service.impl;
 
-import com.his.system.utils.UserUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.entity.CurrentUser;
 import com.his.common.enums.ServiceTicketActionEnum;
 import com.his.common.enums.ServiceTicketOperatorTypeEnum;
 import com.his.common.enums.ServiceTicketStatusEnum;
@@ -15,14 +16,14 @@ import com.his.miniapp.dto.TicketHandleUpsertDTO;
 import com.his.miniapp.dto.TicketPageQueryDTO;
 import com.his.miniapp.entity.BizServiceMessage;
 import com.his.miniapp.entity.BizServiceTicketLog;
-import com.his.miniapp.mapper.MiniServiceMessageMapper;
 import com.his.miniapp.mapper.MiniServiceLogMapper;
+import com.his.miniapp.mapper.MiniServiceMessageMapper;
 import com.his.miniapp.service.MiniServiceTicketAdminService;
-import com.his.miniapp.vo.MiniServiceMessageListVO;
 import com.his.miniapp.vo.MiniServiceDetailVO;
 import com.his.miniapp.vo.MiniServiceLogVO;
+import com.his.miniapp.vo.MiniServiceMessageListVO;
 import com.his.miniapp.vo.MiniTicketStatsVO;
-import com.his.common.entity.CurrentUser;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -87,11 +88,9 @@ public class MiniServiceTicketAdminServiceImpl extends ServiceImpl<MiniServiceMe
                 .orderByDesc(BizServiceMessage::getCreateTime)
                 .orderByDesc(BizServiceMessage::getId);
 
-        long total = miniServiceMessageMapper.selectCount(w);
-        List<BizServiceMessage> rows = miniServiceMessageMapper.selectList(
-                w.last("LIMIT " + (pageNum - 1) * pageSize + ", " + pageSize));
+        Page<BizServiceMessage> paged = page(new Page<>(pageNum, pageSize), w);
         List<MiniServiceMessageListVO> records = new ArrayList<>();
-        for (BizServiceMessage row : rows) {
+        for (BizServiceMessage row : paged.getRecords()) {
             MiniServiceMessageListVO vo = new MiniServiceMessageListVO();
             vo.setId(row.getId());
             vo.setMessageNo(row.getMessageNo());
@@ -105,8 +104,7 @@ public class MiniServiceTicketAdminServiceImpl extends ServiceImpl<MiniServiceMe
             vo.setCreateTime(row.getCreateTime() == null ? "" : row.getCreateTime().format(DateFormats.DATETIME));
             records.add(vo);
         }
-        long pages = (total + pageSize - 1) / pageSize;
-        return PageResult.of(total, pageNum, pageSize, pages, records);
+        return PageResult.of(paged.getTotal(), pageNum, pageSize, paged.getPages(), records);
     }
 
     @Override

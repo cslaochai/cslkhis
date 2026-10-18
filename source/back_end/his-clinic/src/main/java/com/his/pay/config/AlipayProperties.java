@@ -38,12 +38,18 @@ public class AlipayProperties {
     private String notifyUrl;
 
     /**
-     * 收费台出码（主扫）的回调地址，对应 yml: alipay.notify-url-cashier。
+     * 收费台主扫的专用回调地址，对应 yml: alipay.notify-url-cashier。
+     *
+     * <p><b>当前无消费方</b>：收费台出的是聚合支付码，不再走支付宝原生 Native 下单，
+     * 这个专供主扫的 notifyUrl 没有地方可传（患者端走 {@link #notifyUrl}）。
+     * 保留配置项是给真实聚合网关落地后按需启用 —— 别误以为改了它就会生效。
      */
     private String notifyUrlCashier;
 
     /**
-     * 是否走模拟支付。对应 yml: alipay.mock-enabled。
+     * 是否启用支付宝直连支付：true=调支付宝 SDK 发起交易；false=渠道关闭，发起入口直接拒绝。
+     * 已发生交易的查单、关单与回调验签不受此开关影响 —— 关掉开关不能让已经收进来的钱无处入账。
+     * 对应 yml: alipay.enabled。
      */
-    private boolean mockEnabled = true;
+    private boolean enabled = false;
 }

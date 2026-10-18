@@ -27,6 +27,10 @@ public class MiniQueueController {
     private final AppointFacadeService appointFacadeService;
     private final PatientFacadeService patientFacadeService;
 
+    /**
+     * 我的排队：就诊人近三日挂号的候诊位次与前方等待人数，只允许查绑定关系内的就诊人。
+     * 用于小程序「排队叫号」页的候诊进度展示。
+     */
     @Operation(summary = "我的排队（近3日挂号 + 位次 + 前方等待人数）")
     @GetMapping("/myQueue")
     public Result<List<PatientQueueVO>> myQueue(@RequestParam Long patientId) {
@@ -37,6 +41,10 @@ public class MiniQueueController {
         return Result.success(appointFacadeService.myQueue(patientId));
     }
 
+    /**
+     * 到院签到：为指定挂号登记到院，进入候诊队列等待叫号；归属从挂号记录反查后再校验。
+     * 用于小程序「排队叫号」页患者到院后的签到动作。
+     */
     @Operation(summary = "到院签到")
     @PostMapping("/myCheckIn")
     public Result<Void> myCheckIn(@RequestBody @Valid AppointCheckInUpdateDTO updateDTO) {

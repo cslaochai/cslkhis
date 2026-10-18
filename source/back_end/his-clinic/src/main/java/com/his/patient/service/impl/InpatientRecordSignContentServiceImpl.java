@@ -1,16 +1,18 @@
 package com.his.patient.service.impl;
 
-import com.his.common.util.NumUtil;
-import com.his.common.support.CanonicalText;
+
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
+import com.his.common.enums.SummaryStatusEnum;
+import com.his.common.support.CanonicalText;
+import com.his.common.util.NumUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.entity.BizInpatientRecord;
-import com.his.common.enums.SummaryStatusEnum;
 import com.his.patient.mapper.BizInpatientRecordMapper;
-import com.his.system.vo.SignSubject;
 import com.his.system.service.SignableContentService;
+import com.his.system.vo.SignSubject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -24,9 +26,50 @@ import java.util.Objects;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class InpatientRecordSignContentServiceImpl implements SignableContentService {
+public class InpatientRecordSignContentServiceImpl extends ServiceImpl<BizInpatientRecordMapper, BizInpatientRecord> implements SignableContentService {
 
     private final BizInpatientRecordMapper bizInpatientRecordMapper;
+
+    private static String canonical(BizInpatientRecord r) {
+        return CanonicalText.create("INPATIENT_RECORD")
+                .put("recordNo", r.getRecordNo())
+                .put("admissionId", r.getAdmissionId())
+                .put("patientId", r.getPatientId())
+                .put("patientNo", r.getPatientNo())
+                .put("recordType", r.getRecordType())
+                .put("recordTitle", r.getRecordTitle())
+                .put("recordTime", r.getRecordTime())
+                .put("chiefComplaint", r.getChiefComplaint())
+                .put("presentIllness", r.getPresentIllness())
+                .put("pastHistory", r.getPastHistory())
+                .put("personalHistory", r.getPersonalHistory())
+                .put("familyHistory", r.getFamilyHistory())
+                .put("allergyHistory", r.getAllergyHistory())
+                .put("temperature", NumUtil.plain(r.getTemperature()))
+                .put("pulse", r.getPulse())
+                .put("respiration", r.getRespiration())
+                .put("systolicPressure", r.getSystolicPressure())
+                .put("diastolicPressure", r.getDiastolicPressure())
+                .put("height", NumUtil.plain(r.getHeight()))
+                .put("weight", NumUtil.plain(r.getWeight()))
+                .put("generalCondition", r.getGeneralCondition())
+                .put("skinMucosa", r.getSkinMucosa())
+                .put("headNeck", r.getHeadNeck())
+                .put("chestLung", r.getChestLung())
+                .put("heart", r.getHeart())
+                .put("abdomen", r.getAbdomen())
+                .put("spineLimbs", r.getSpineLimbs())
+                .put("nervousSystem", r.getNervousSystem())
+                .put("specialistExam", r.getSpecialistExam())
+                .put("auxiliaryExam", r.getAuxiliaryExam())
+                .put("diagnosisName", r.getDiagnosisName())
+                .put("diagnosisCode", r.getDiagnosisCode())
+                .put("treatmentPlan", r.getTreatmentPlan())
+                .put("courseNote", r.getCourseNote())
+                .put("doctorId", r.getDoctorId())
+                .put("doctorName", r.getDoctorName())
+                .build();
+    }
 
     @Override
     public SignBizTypeEnum bizType() {
@@ -95,47 +138,6 @@ public class InpatientRecordSignContentServiceImpl implements SignableContentSer
         patch.setId(bizId);
         patch.setSignStatus(2);
         bizInpatientRecordMapper.updateById(patch);
-    }
-
-    private static String canonical(BizInpatientRecord r) {
-        return CanonicalText.create("INPATIENT_RECORD")
-                .put("recordNo", r.getRecordNo())
-                .put("admissionId", r.getAdmissionId())
-                .put("patientId", r.getPatientId())
-                .put("patientNo", r.getPatientNo())
-                .put("recordType", r.getRecordType())
-                .put("recordTitle", r.getRecordTitle())
-                .put("recordTime", r.getRecordTime())
-                .put("chiefComplaint", r.getChiefComplaint())
-                .put("presentIllness", r.getPresentIllness())
-                .put("pastHistory", r.getPastHistory())
-                .put("personalHistory", r.getPersonalHistory())
-                .put("familyHistory", r.getFamilyHistory())
-                .put("allergyHistory", r.getAllergyHistory())
-                .put("temperature", NumUtil.plain(r.getTemperature()))
-                .put("pulse", r.getPulse())
-                .put("respiration", r.getRespiration())
-                .put("systolicPressure", r.getSystolicPressure())
-                .put("diastolicPressure", r.getDiastolicPressure())
-                .put("height", NumUtil.plain(r.getHeight()))
-                .put("weight", NumUtil.plain(r.getWeight()))
-                .put("generalCondition", r.getGeneralCondition())
-                .put("skinMucosa", r.getSkinMucosa())
-                .put("headNeck", r.getHeadNeck())
-                .put("chestLung", r.getChestLung())
-                .put("heart", r.getHeart())
-                .put("abdomen", r.getAbdomen())
-                .put("spineLimbs", r.getSpineLimbs())
-                .put("nervousSystem", r.getNervousSystem())
-                .put("specialistExam", r.getSpecialistExam())
-                .put("auxiliaryExam", r.getAuxiliaryExam())
-                .put("diagnosisName", r.getDiagnosisName())
-                .put("diagnosisCode", r.getDiagnosisCode())
-                .put("treatmentPlan", r.getTreatmentPlan())
-                .put("courseNote", r.getCourseNote())
-                .put("doctorId", r.getDoctorId())
-                .put("doctorName", r.getDoctorName())
-                .build();
     }
 
 }

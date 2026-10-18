@@ -25,6 +25,10 @@ public class AiInsuranceController {
 
     private final InsuranceEvidenceCapability insuranceEvidenceCapability;
 
+    /**
+     * 对一条合规审核记录的命中项逐条判定证据支持、证据反驳还是证据不足，只读计算不改规则结论。
+     * 用于医保合规审核详情弹框提示人工复核；模型未产出判定时前端必须显示警示而非「无风险」。
+     */
     @Operation(summary = "对一条合规审核记录做证据判定（supported/refuted/insufficient，提示人工复核）")
     @PreAuthorize("hasAuthority('finance:complianceAudit:list')")
     @PostMapping("/evidence")

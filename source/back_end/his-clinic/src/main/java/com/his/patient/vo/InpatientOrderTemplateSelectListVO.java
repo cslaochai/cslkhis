@@ -28,6 +28,7 @@ public class InpatientOrderTemplateSelectListVO implements Serializable {
      */
     private Integer orderType;
 
+    /** 医嘱类型文案 */
     private String orderTypeText;
 
     /**

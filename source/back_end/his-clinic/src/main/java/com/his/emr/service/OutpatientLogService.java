@@ -10,8 +10,16 @@ import com.his.emr.vo.OutpatientLogStatsVO;
  */
 public interface OutpatientLogService {
 
+    /**
+     * 门诊日志分页：按就诊时间、科室、医生与报状态筛就诊行，并标出诊断命中法定传染病目录的应报行。
+     * 用于「门诊日志」台账页查询卡与表格；出参手机号只给脱敏列。
+     */
     PageResult<OutpatientLogListVO> listPage(OutpatientLogQueryDTO query);
 
+    /**
+     * 门诊日志统计条：就诊总数、发热就诊数、应报数、已报数与未报数，与分页同一套筛选口径。
+     * 用于「门诊日志」台账页表格上方的统计区。
+     */
     OutpatientLogStatsVO stats(OutpatientLogQueryDTO query);
 
     /**

@@ -34,6 +34,7 @@ public class VteMeasureStateVO {
      */
     private Integer measureType;
 
+    /** 措施类别文案 */
     private String measureTypeText;
 
     /**
@@ -41,6 +42,7 @@ public class VteMeasureStateVO {
      */
     private Integer executeStatus;
 
+    /** 落实状态文案 */
     private String executeStatusText;
 
     /**

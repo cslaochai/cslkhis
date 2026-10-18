@@ -2,20 +2,48 @@ package com.his.system.service;
 
 import java.time.LocalDateTime;
 
+/** 可信时间戳通道：病历签名授时与令牌验真的时间来源出口，当前实现为院内本地内置 TSA（演示信任根）。 */
 public interface TsaChannelService {
 
     public static final String TSA_CODE = "LOCAL";
 
+    /**
+     * 通道展示名称：就绪时取服务配置的名称，未就绪回内置缺省名。
+     * 用于签名中心时间戳来源区块的名称展示。
+     */
     String name();
 
+    /**
+     * 通道是否可用（服务配置存在且启用、签发密钥可解出）；不可用时签名时间降级为本机时钟。
+     * 用于签名中心状态卡与签名写入前决定时间来源。
+     */
     boolean available();
 
+    /**
+     * 就绪时才给出通道名称，未就绪返回 null（页面按「未接入」展示）。
+     * 用于签名中心状态卡区分「已接入」与「未接入」两种文案。
+     */
     String readyName();
 
+    /**
+     * 对内容摘要盖一枚可信时间戳：签发令牌并落台账，序列号冲突自动重试。
+     * 用于病历文书签名保存时确定签名时间来源（时间来源配为可信时间戳才走到这里）。
+     *
+     * @param digestHex 被盖时间戳的内容摘要（SHA-256 十六进制小写）
+     * @return 序列号 / TSA 授时时刻 / 令牌值；返回 {@code null} = 无可用 TSA，调用方降级本机时钟
+     */
     Stamp stamp(String digestHex);
 
+    /**
+     * 校验一枚令牌是否由本通道签发，且与摘要、授时时刻逐字对得上（异常一律按校验失败处理）。
+     * 用于签名中心的令牌验真与病历签名记录的验签环节。
+     */
     boolean verifyToken(String serial, String digestHex, LocalDateTime tsaTime, String tokenValue);
 
+    /**
+     * 失效通道内部的服务配置与密钥缓存，下一次调用重新读取。
+     * 用于 TSA 运维启停或配置变更后让操作即时生效。
+     */
     void invalidate();
 
     /**

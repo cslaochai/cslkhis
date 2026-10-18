@@ -13,6 +13,10 @@ import com.his.system.vo.DrugInteractionVO;
  */
 public interface DrugKnowledgeService {
 
+    /**
+     * 药物相互作用分页：按成分对、严重度、启停状态筛选。
+     * 用于合理用药知识库页「药物相互作用」标签页的表格与查询卡。
+     */
     PageResult<DrugInteractionVO> interactionListPage(DrugInteractionPageQueryDTO queryDTO);
 
     /**
@@ -28,6 +32,10 @@ public interface DrugKnowledgeService {
      */
     void interactionDeleteById(Long id);
 
+    /**
+     * 剂量上限分页：按成分、药品关键字与启停状态筛选。
+     * 用于合理用药知识库页「剂量上限」标签页的表格与查询卡。
+     */
     PageResult<DoseLimitVO> doseLimitListPage(DoseLimitPageQueryDTO queryDTO);
 
     /**

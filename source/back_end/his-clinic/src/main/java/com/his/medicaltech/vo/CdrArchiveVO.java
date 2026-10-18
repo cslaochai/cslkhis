@@ -25,9 +25,11 @@ public class CdrArchiveVO {
     @Schema(description = "姓名")
     private String patientName;
 
+    /** 并入主档时间 */
     @Schema(description = "并入主档时间")
     private String mergeTime;
 
+    /** 该影子档案贡献的事件数 */
     @Schema(description = "该档案贡献的事件数")
     private Integer eventCount;
 }

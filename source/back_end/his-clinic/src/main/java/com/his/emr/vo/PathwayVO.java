@@ -84,5 +84,6 @@ public class PathwayVO implements Serializable {
      */
     private String remark;
 
+    /** 路径步骤（按日编排，仅详情回填） */
     private List<PathwayStepVO> steps;
 }

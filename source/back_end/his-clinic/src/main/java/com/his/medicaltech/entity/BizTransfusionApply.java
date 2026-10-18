@@ -400,8 +400,6 @@ public class BizTransfusionApply extends BaseEntity {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long recordId;
 
-    // 状态
-
     /**
      * 状态（0-待配血 1-已配血 2-已发血 3-输注中 4-已完成 5-已取消）
      */

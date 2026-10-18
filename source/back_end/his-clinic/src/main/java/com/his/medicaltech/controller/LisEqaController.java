@@ -13,7 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * LIS 室间质评（EQA）接口（URL 前缀 /medicaltech/lisEqa）
+ * LIS 室间质评（EQA）控制器：质评批次、盲样台账、结果上报、成绩判定与不合格整改的接口入口。
  */
 @Tag(name = "LIS室间质评EQA")
 @RestController
@@ -32,6 +32,10 @@ public class LisEqaController {
         return Result.success(lisEqaService.planPage(query));
     }
 
+    /**
+     * 新增或修改室间质评批次（组织方、项目、上报截止与成绩回报日）。
+     * 用于室间质评页「质评批次」标签的批次登记与调整。
+     */
     @PreAuthorize("hasAuthority('medtech:lisEqa:add')")
     @Operation(summary = "质评批次新增/修改")
     @PostMapping("/planUpsert")
@@ -40,6 +44,10 @@ public class LisEqaController {
         return Result.success("质评批次 " + planNo + " 已保存", planNo);
     }
 
+    /**
+     * 归档质评批次并结案；仍有未闭环的不合格整改时不允许归档。
+     * 用于室间质评页批次成绩判定完成后的归档动作。
+     */
     @PreAuthorize("hasAuthority('medtech:lisEqa:edit')")
     @Operation(summary = "质评批次归档（不合格项必须整改并复核完）")
     @PostMapping("/planArchive")
@@ -57,6 +65,10 @@ public class LisEqaController {
         return Result.success(lisEqaService.samplePage(query));
     }
 
+    /**
+     * 按样品序号 × 检验项目 × 仪器批量生成盲样台账，已登记的组合不重复生成。
+     * 用于室间质评页收到组织方盲样后的一次性批量登记。
+     */
     @PreAuthorize("hasAuthority('medtech:lisEqa:add')")
     @Operation(summary = "批量生成盲样台账（样品序号 × 项目 × 仪器）")
     @PostMapping("/sampleGenerate")
@@ -65,6 +77,10 @@ public class LisEqaController {
         return Result.success(n == 0 ? "所选组合已全部登记，无新增" : "已新增 " + n + " 条盲样台账", n);
     }
 
+    /**
+     * 登记或修改单条盲样台账。
+     * 用于室间质评页「盲样台账」标签的补录与纠正。
+     */
     @PreAuthorize("hasAuthority('medtech:lisEqa:add')")
     @Operation(summary = "盲样登记新增/修改")
     @PostMapping("/sampleUpsert")
@@ -73,6 +89,10 @@ public class LisEqaController {
         return Result.success("盲样 " + sampleNo + " 已登记", sampleNo);
     }
 
+    /**
+     * 删除盲样台账，仅限尚未上报的盲样。
+     * 用于室间质评页盲样登记录错后的撤销。
+     */
     @PreAuthorize("hasAuthority('medtech:lisEqa:delete')")
     @Operation(summary = "删除盲样台账（未上报才能删，物理删）")
     @DeleteMapping("/sampleDeleteById")
@@ -90,6 +110,10 @@ public class LisEqaController {
         return Result.success("检测结果已录入", lisEqaService.test(dto));
     }
 
+    /**
+     * 向组织方上报本室盲样检测结果；超过上报截止只标记逾期、不拦截。
+     * 用于室间质评页盲样检测完成后的上报环节。
+     */
     @PreAuthorize("hasAuthority('medtech:lisEqa:edit')")
     @Operation(summary = "向组织方上报结果（逾期会记 flag，不拦截）")
     @PostMapping("/sampleReport")
@@ -97,6 +121,10 @@ public class LisEqaController {
         return Result.success(lisEqaService.report(dto), null);
     }
 
+    /**
+     * 回报组织方下发的靶值、组 SD 与 TEa，由服务端判定 PT 得分与是否合格。
+     * 用于室间质评页「成绩回报与判定」标签的录入判定。
+     */
     @PreAuthorize("hasAuthority('medtech:lisEqa:edit')")
     @Operation(summary = "成绩回报（靶值/SD/TEa）并服务端判定")
     @PostMapping("/returnScore")
@@ -125,6 +153,10 @@ public class LisEqaController {
         return Result.success("已整改，待第二人复核", null);
     }
 
+    /**
+     * 复核不合格项的整改，复核人不得是整改人本人，通过后该不合格项闭环。
+     * 用于室间质评页「成绩回报与判定」标签里的整改复核。
+     */
     @PreAuthorize("hasAuthority('medtech:lisEqa:edit')")
     @Operation(summary = "整改复核（复核人不得是整改人本人）")
     @PostMapping("/rectifyReview")

@@ -1,6 +1,7 @@
 package com.his.patient.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.patient.entity.BizBedAllocate;
 import com.his.patient.vo.BedMatchVO;
 import com.his.patient.vo.BedOverviewVO;
@@ -63,39 +64,13 @@ public interface BedCenterMapper extends BaseMapper<BizBedAllocate> {
               AND (#{keyword} IS NULL OR b.bed_no LIKE CONCAT('%', #{keyword}, '%')
                    OR p.patient_name LIKE CONCAT('%', #{keyword}, '%'))
             ORDER BY b.dept_id, b.ward_id, LENGTH(b.bed_no), b.bed_no
-            LIMIT #{offset}, #{size}
             """)
-    List<BedPoolVO.BedRow> selectBedPool(@Param("deptId") Long deptId,
-                                         @Param("wardId") Long wardId,
-                                         @Param("bedStatus") Integer bedStatus,
-                                         @Param("bedType") String bedType,
-                                         @Param("keyword") String keyword,
-                                         @Param("offset") long offset,
-                                         @Param("size") long size);
-
-    /**
-     * 床位池分页版（游标用 IPage 时 MP 自己在上面套 count，这里只提供取数）
-     */
-    @Select("""
-            SELECT COUNT(*) FROM sys_bed b
-                     LEFT JOIN biz_admission a ON a.admission_id = (
-                          SELECT a2.admission_id FROM biz_admission a2
-                           WHERE a2.bed_id = b.bed_id AND a2.del_flag = 0 AND a2.admit_status = 1
-                           ORDER BY (a2.patient_id = b.patient_id) DESC, a2.admit_time DESC, a2.admission_id DESC LIMIT 1)
-                     LEFT JOIN biz_patient p ON p.id = a.patient_id AND p.del_flag = 0
-            WHERE b.del_flag = 0
-              AND (#{deptId} IS NULL OR b.dept_id = #{deptId})
-              AND (#{wardId} IS NULL OR b.ward_id = #{wardId})
-              AND (#{bedStatus} IS NULL OR b.bed_status = #{bedStatus})
-              AND (#{bedType} IS NULL OR b.bed_type = #{bedType})
-              AND (#{keyword} IS NULL OR b.bed_no LIKE CONCAT('%', #{keyword}, '%')
-                   OR p.patient_name LIKE CONCAT('%', #{keyword}, '%'))
-            """)
-    long countBedPool(@Param("deptId") Long deptId,
-                      @Param("wardId") Long wardId,
-                      @Param("bedStatus") Integer bedStatus,
-                      @Param("bedType") String bedType,
-                      @Param("keyword") String keyword);
+    IPage<BedPoolVO.BedRow> selectBedPool(IPage<BedPoolVO.BedRow> page,
+                                          @Param("deptId") Long deptId,
+                                          @Param("wardId") Long wardId,
+                                          @Param("bedStatus") Integer bedStatus,
+                                          @Param("bedType") String bedType,
+                                          @Param("keyword") String keyword);
 
     /**
      * 全院床位总览：各状态床数实时 COUNT。

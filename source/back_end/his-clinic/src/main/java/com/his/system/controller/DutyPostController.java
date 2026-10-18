@@ -27,6 +27,10 @@ public class DutyPostController {
 
     private final DutyPostService dutyPostService;
 
+    /**
+     * 点位下拉候选：按值守范围与归属组织过滤出可用的值守点位。
+     * 用于总值班排班登记弹框选「排的是哪个位」。
+     */
     @Operation(summary = "点位下拉（只要求登录；值班排班页取数）")
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/selectList")
@@ -36,6 +40,10 @@ public class DutyPostController {
         return Result.success(dutyPostService.selectListVO(dutyScope, orgType, orgId));
     }
 
+    /**
+     * 值守点位分页：按名称、值守范围、归属组织筛选已定义的点位。
+     * 用于「值守点位」页查询卡与台账表格。
+     */
     @Operation(summary = "分页查询点位")
     @PreAuthorize("hasAuthority('org:duty:list')")
     @PostMapping("/listPage")
@@ -43,6 +51,10 @@ public class DutyPostController {
         return Result.success(dutyPostService.pageVO(queryDTO));
     }
 
+    /**
+     * 登记或修改值守点位：点位必须挂在启用班次上，编码全局唯一。
+     * 用于「值守点位」页新增/编辑弹框保存。
+     */
     @Operation(summary = "新增/修改点位（必须挂在启用班次上，编码全局唯一）")
     @PreAuthorize("hasAuthority('org:duty:edit')")
     @PostMapping("/dutyPostUpsert")
@@ -51,6 +63,10 @@ public class DutyPostController {
         return Result.success(upsertDTO.getId() == null ? "新增成功" : "修改成功", id);
     }
 
+    /**
+     * 删除值守点位：已被排班占用的点位由服务层拦下，不允许删位留空班。
+     * 用于「值守点位」页操作列删除。
+     */
     @Operation(summary = "删除点位（物理删）")
     @PreAuthorize("hasAuthority('org:duty:delete')")
     @DeleteMapping("/deleteById")

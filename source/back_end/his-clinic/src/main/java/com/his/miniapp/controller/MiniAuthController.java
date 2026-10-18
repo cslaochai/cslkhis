@@ -32,6 +32,10 @@ public class MiniAuthController {
 
     private final PatientFacadeService patientFacadeService;
 
+    /**
+     * 微信一键登录：用小程序授权码换取患者登录态。
+     * 微信授权登录流程的入口，当前未随账密登录一同上线，供该流程启用时接入。
+     */
     @Operation(summary = "微信一键登录（患者端口子，白名单）")
     @PreAuthorize("permitAll()")
     @PostMapping("/wxLogin")
@@ -39,6 +43,10 @@ public class MiniAuthController {
         return Result.success(miniAuthService.wxLogin(dto));
     }
 
+    /**
+     * 绑定微信 openid：用授权码换取 openid 并挂到当前登录账号的就诊人上。
+     * 用于小程序「我的」页进入时静默绑定，为订阅消息推送准备发送目标。
+     */
     @Operation(summary = "绑定当前账号微信openid")
     @PostMapping("/bindOpenid")
     public Result<Void> bindOpenid(@RequestBody @Valid WxLoginDTO dto) {

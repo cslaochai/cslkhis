@@ -57,6 +57,7 @@ public class SysWard {
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
+    /** 病区ID */
     @TableId(value = "ward_id", type = IdType.ASSIGN_ID)
     @JsonSerialize(using = ToStringSerializer.class)
     private Long wardId;

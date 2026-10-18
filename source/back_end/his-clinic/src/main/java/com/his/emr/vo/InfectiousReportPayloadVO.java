@@ -26,10 +26,13 @@ public class InfectiousReportPayloadVO implements Serializable {
      */
     private String orgName;
 
+    /** 患者段 */
     private Patient patient;
 
+    /** 病种段 */
     private Disease disease;
 
+    /** 就诊段 */
     private Visit visit;
 
     /**

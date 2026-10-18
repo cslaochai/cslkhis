@@ -24,6 +24,7 @@ public class IntakeOutputSummaryVO {
      */
     private String patientName;
 
+    /** 起始日期 */
     private String beginDate;
 
     /**
@@ -31,6 +32,7 @@ public class IntakeOutputSummaryVO {
      */
     private String endDate;
 
+    /** 参与复算的护理记录条数 */
     private Integer recordCount;
 
     /**

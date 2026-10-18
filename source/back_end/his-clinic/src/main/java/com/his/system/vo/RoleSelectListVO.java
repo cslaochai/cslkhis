@@ -14,6 +14,7 @@ import java.io.Serializable;
 @Schema(name = "RoleSelectListVO", description = "角色下拉出参")
 public class RoleSelectListVO implements Serializable {
 
+    /** 角色ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 

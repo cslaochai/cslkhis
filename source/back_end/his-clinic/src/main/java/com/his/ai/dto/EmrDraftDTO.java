@@ -30,9 +30,11 @@ public class EmrDraftDTO {
     @Schema(description = "主诉（必填，空则直接拒绝草拟，不调用模型）")
     private String chiefComplaint;
 
+    /** 现病史 */
     @Schema(description = "现病史（医生已写的部分，可空）")
     private String presentIllness;
 
+    /** 既往史 */
     @Schema(description = "既往史")
     private String pastHistory;
 
@@ -48,39 +50,49 @@ public class EmrDraftDTO {
     @Schema(description = "呼吸")
     private String respiration;
 
+    /** 收缩压（mmHg） */
     @Schema(description = "收缩压")
     private String systolicPressure;
 
+    /** 舒张压（mmHg） */
     @Schema(description = "舒张压")
     private String diastolicPressure;
 
     @Schema(description = "体格检查-一般情况")
     private String generalCondition;
 
+    /** 皮肤黏膜 */
     @Schema(description = "体格检查-皮肤黏膜")
     private String skinMucosa;
 
+    /** 头颈部 */
     @Schema(description = "体格检查-头颈部")
     private String headNeck;
 
     @Schema(description = "体格检查-胸肺部")
     private String chestLung;
 
+    /** 心脏 */
     @Schema(description = "体格检查-心脏")
     private String heart;
 
+    /** 腹部 */
     @Schema(description = "体格检查-腹部")
     private String abdomen;
 
+    /** 脊柱四肢 */
     @Schema(description = "体格检查-脊柱四肢")
     private String spineLimbs;
 
+    /** 神经系统 */
     @Schema(description = "体格检查-神经系统")
     private String nervousSystem;
 
+    /** 专科检查 */
     @Schema(description = "专科检查")
     private String specialistExam;
 
+    /** 辅助检查 */
     @Schema(description = "辅助检查")
     private String auxiliaryExam;
 }

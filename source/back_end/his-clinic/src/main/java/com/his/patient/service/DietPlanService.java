@@ -29,8 +29,16 @@ public interface DietPlanService {
      */
     List<WardVO> wardOptions();
 
+    /**
+     * 膳食方案分页：按患者、病区、饮食类别与给食途径、方案及接收状态、生效日期区间筛，数据范围按岗位科室收口。
+     * 用于「膳食医嘱执行」页查询卡。
+     */
     PageResult<DietPlanVO> planListPage(DietPlanPageQueryDTO query);
 
+    /**
+     * 一次住院名下的全部膳食方案。
+     * 供按住院次回看饮食执行情况、订餐与停餐前核对在用方案的环节取数。
+     */
     List<DietPlanVO> planListByAdmission(Long admissionId);
 
     /**

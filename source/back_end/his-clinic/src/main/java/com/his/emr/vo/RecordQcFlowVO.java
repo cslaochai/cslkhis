@@ -117,8 +117,12 @@ public class RecordQcFlowVO {
 
     // 文案（后端算好，前端零映射）
     private String flowStatusText;
+    /** 当前停留级文案（由枚举 label 渲染） */
     private String currentLevelText;
+    /** 最近一次退回发生级文案（由枚举 label 渲染） */
     private String returnLevelText;
+    /** 终审定级文案（由枚举 label 渲染） */
     private String gradeText;
+    /** 病历来源文案（由枚举 label 渲染） */
     private String recordSourceText;
 }

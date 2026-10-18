@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @Data
 public class KnowledgeEvalRunVO {
 
+    /** 评测运行记录ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
@@ -38,10 +39,13 @@ public class KnowledgeEvalRunVO {
     /** 状态（2-完成 3-失败） */
     private Integer status;
 
+    /** 失败原因（仅状态为失败时有值） */
     private String errorMsg;
 
+    /** 发起评测的操作人姓名 */
     private String operatorName;
 
+    /** 创建时间 */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 }

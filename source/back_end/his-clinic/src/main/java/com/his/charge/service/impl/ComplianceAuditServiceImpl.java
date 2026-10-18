@@ -1,43 +1,36 @@
 package com.his.charge.service.impl;
 
-import com.his.appoint.vo.RegistBriefVO;
-import com.his.charge.vo.ComplianceAuditDetailVO;
-import com.his.charge.vo.ComplianceAuditItemVO;
-import com.his.charge.vo.ComplianceAuditVO;
-import com.his.charge.vo.ComplianceEvidenceNarrativeVO;
-import com.his.charge.vo.SettlementDiagnosisVO;
-import com.his.charge.vo.SettlementOperationVO;
-import com.his.medicaltech.vo.LabResultBriefVO;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.appoint.service.AppointFacadeService;
+import com.his.appoint.vo.RegistBriefVO;
 import com.his.charge.config.ComplianceProperties;
 import com.his.charge.dto.*;
 import com.his.charge.entity.*;
-import com.his.common.enums.AuditResultStateEnum;
-import com.his.common.enums.RuleCatalogEnum;
 import com.his.charge.mapper.*;
 import com.his.charge.service.ComplianceAuditService;
 import com.his.charge.service.SettlementEvidenceService;
+import com.his.charge.support.SettlementEvidence;
 import com.his.charge.support.rule.ComplianceRule;
 import com.his.charge.support.rule.RuleContext;
 import com.his.charge.support.rule.RuleFinding;
-import com.his.charge.support.SettlementEvidence;
 import com.his.charge.vo.*;
-import com.his.medicaltech.vo.LabResultBriefVO;
-import com.his.appoint.vo.RegistBriefVO;
 import com.his.common.base.PageResult;
 import com.his.common.constant.DictTypeConst;
+import com.his.common.entity.CurrentUser;
+import com.his.common.enums.AuditResultStateEnum;
+import com.his.common.enums.RuleCatalogEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
-import com.his.common.entity.CurrentUser;
+import com.his.medicaltech.vo.LabResultBriefVO;
 import com.his.system.entity.SysIcd10;
 import com.his.system.mapper.SysIcd10Mapper;
 import com.his.system.service.DictCacheService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -56,7 +49,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ComplianceAuditServiceImpl implements ComplianceAuditService {
+public class ComplianceAuditServiceImpl extends ServiceImpl<BizComplianceAuditMapper, BizComplianceAudit> implements ComplianceAuditService {
 
     private final DictCacheService dictCacheService;
 

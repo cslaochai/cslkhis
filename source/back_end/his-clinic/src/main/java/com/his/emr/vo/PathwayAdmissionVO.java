@@ -18,6 +18,7 @@ public class PathwayAdmissionVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
 
+    /** 入院单号 */
     private String admissionNo;
 
     /**

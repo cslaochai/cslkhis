@@ -11,8 +11,10 @@ import java.util.List;
 @Data
 public class ScheduleTemplatePreviewVO {
 
+    /** 预览周期的起始日（yyyy-MM-dd，目标周的周一） */
     private String weekStart;
 
+    /** 预览周期的结束日（yyyy-MM-dd，目标周的周日） */
     private String weekEnd;
 
     /**

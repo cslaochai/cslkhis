@@ -1,12 +1,10 @@
 package com.his.system.service.impl;
 
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.system.service.RedisSequenceService;
-import com.his.system.service.SignCoverageService;
-import com.his.system.service.SignableContentService;
-import com.his.system.vo.SignSubject;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.constant.SystemConfigKeyConst;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
@@ -24,10 +22,7 @@ import com.his.system.mapper.SignConfigMapper;
 import com.his.system.mapper.SysSignCertMapper;
 import com.his.system.service.*;
 import com.his.system.utils.SignCryptoUtil;
-import com.his.system.vo.ObjectSignatureVO;
-import com.his.system.vo.SignVerifyVO;
-import com.his.system.vo.SignatureSummaryVO;
-import com.his.system.vo.SignatureVO;
+import com.his.system.vo.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -46,7 +41,7 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class EmrSignatureServiceImpl implements EmrSignatureService {
+public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, BizEmrSignature> implements EmrSignatureService {
 
     private static final String SIGN_NO_PREFIX = "SIG";
     private static final int MAX_RETRY = 3;

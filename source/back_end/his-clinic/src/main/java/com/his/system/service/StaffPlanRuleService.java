@@ -15,6 +15,10 @@ import java.util.List;
  */
 public interface StaffPlanRuleService {
 
+    /**
+     * 人力标准分页：按排班单元、班次、岗位类别筛出已配置的标准行。
+     * 用于「人力配置标准」页的查询卡与表格，也是该页改删操作的取数入口。
+     */
     PageResult<StaffPlanRuleVO> pageVO(StaffPlanRulePageQueryDTO dto);
 
     /**

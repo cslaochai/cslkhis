@@ -1,5 +1,7 @@
 package com.his.pay.service.impl;
 
+
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.util.TextUtil;
 import com.his.pay.entity.BizPayNotifyLog;
 import com.his.pay.mapper.BizPayNotifyLogMapper;
@@ -16,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class PayNotifyLogServiceImpl implements PayNotifyLogService {
+public class PayNotifyLogServiceImpl extends ServiceImpl<BizPayNotifyLogMapper, BizPayNotifyLog> implements PayNotifyLogService {
 
     private static final int PAY_NO_MAX_LENGTH = 32;
     private static final int TRADE_NO_MAX_LENGTH = 64;

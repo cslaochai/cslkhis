@@ -15,6 +15,7 @@ public class AntibioticCatalogVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
+    /** 药品编码 */
     private String drugCode;
 
     /** 药品名称 */
@@ -22,6 +23,7 @@ public class AntibioticCatalogVO {
 
     private String genericName;
 
+    /** 规格 */
     private String specification;
 
     private String dosageForm;

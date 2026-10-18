@@ -13,8 +13,10 @@ import java.math.BigDecimal;
 public class RegistChargeCommandVO {
     private Long registId;
     private String registNo;
+    /** 患者ID */
     private Long patientId;
     private String patientNo;
+    /** 患者姓名 */
     private String patientName;
     private Long deptId;
     private String deptName;

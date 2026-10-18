@@ -18,6 +18,10 @@ public interface DutyPostService {
      */
     List<DutyPostSelectListVO> selectListVO(Integer dutyScope, Integer orgType, Long orgId);
 
+    /**
+     * 点位分页：按责任范围、单元类型与点位状态筛选，数据范围按岗位科室收口。
+     * 用于「值守点位」页的表格与查询卡。
+     */
     PageResult<DutyPostVO> pageVO(DutyPostPageQueryDTO dto);
 
     /**

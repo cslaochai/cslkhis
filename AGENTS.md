@@ -335,6 +335,18 @@ public enum XxxEnum {
   当上限（现有：`RxReviewServiceImpl.itemExportCsv`、`SysLogServiceImpl.exportCsv`）。⚠ `pageNum/pageSize` 是原始 `int`
   ，直接读字段拿不到夹取，必须走 getter。
 - ⚠ `Integer`→`int` 迁移会让兜底代码编译失败且**增量编译掩盖**（实测第 6 轮才炸）：分页 DTO 改造一律以 `clean install` 为准。
+- **分页只走 MyBatis-Plus，禁手搓 `selectCount` + `last("LIMIT offset,size")`**：
+    - 单体查询（单 `BaseMapper` 宿主）：`Page<Entity> paged = page(new Page<>(pageNum, pageSize), wrapper);`
+      （impl 必须挂 `ServiceImpl<Mapper, Entity>`），出参取 `paged.getTotal()/getPages()/getRecords()`。
+    - 自定义 SQL：Mapper 方法首参用 `com.baomidou.mybatisplus.core.metadata.IPage<T>`，SQL 里**不写 `LIMIT`**、不传
+      `offset/size`，`PaginationInnerInterceptor` 自动套 count + limit。首参是 IPage 才会被拦截，返回 `IPage<T>` 或
+      `List<T>` 均可。
+    - 手写 `countXxx` 与分页查询同源时直接删；`.last("LIMIT 1")` 只用于 `selectOne` 取单行，不在此列。
+    - 判据：`grep -rnE 'last\("LIMIT " *\+ *\(.*\* ?(size|pageSize)' --include=*.java source/back_end` 为 0
+      （拼接偏移量的分页；`LIMIT 1`、固定上限不受影响）。
+- **`XxxServiceImpl` 必须 `extends ServiceImpl<XxxMapper, Xxx>`，接口 `XxxService` 不 `extends IService<T>`**：
+  impl 才有 `page/saveBatch/lambdaQuery` 等基类能力；接口保持业务方法，避免 entity 随 `IService` 公开方法漏进 Controller
+  契约（§4.2）。多 mapper 的聚合门面（`XxxFacadeServiceImpl`）无单一宿主，可不挂。
 - **码值范围校验走 Bean Validation，禁 service 手写 containsKey 抛异常**（两处副本必漂移 + 绕过 Controller 时失效 + 每个
   service 重复一遍）：
     - 码值区间连续 → `@Min(1) @Max(3)`；
@@ -548,14 +560,58 @@ public enum XxxEnum {
 - **尚未收口的一族（下一步，不是豁免）**：私有「日期文本→LocalDate」解析 9 处（parseDate/parseDateTime 四种子口径互不等价），并成
   TimeUtil 方法 = 替所有人选容错度，**必须先定口径再动，不许批量替换**。
 
-## 14. 注释规范：不写表名，删掉 AI 味
+## 14. 注释规范：契约注释必写，AI 味注释禁写
+
+### 14.1 三层契约注释（controller / service 接口 / entity / dto / vo 必写）
+
+- **类头 JavaDoc = 「这是什么」**：一句话点明类在业务里的角色，主语必须是真实身份。
+    - Controller：`/** 床位分配控制器：等床队列登记、跨科调配与退回的接口入口。 */`
+    - Service 接口：`/** 床位中心服务：等床队列与全院床位状态的业务收口。 */`
+    - entity：`/** 患者档案：一名患者一行，就诊身份的事实来源。 */`
+    - DTO：`/** 床位分配入参：把等床队列中的患者落到指定床位。 */`
+    - VO：`/** 等床队列列表行：护士站床位表格的出参。 */`
+- **方法 JavaDoc = 「干什么」+「用在哪个业务场景」，两句缺一不可**（Controller 与 Service 接口方法逐个写）：
+    - 场景写**页面 / 流程 / 触发时机**，例如 `用于住院护士站「床位中心」查询卡`、`收银台收款确认后写流水时调用`。
+    - **禁写代码调用方**（`调用方：XxxController#method`、URL、行号）——调用链一变整行过期，是腐烂注释。
+    - **拿不准就降级**：`src/api/*.js` 有封装函数但 `views/**` 没有页面 import（半接线）→ 写业务流程节点，不写页面名。
+    - 参数/返回值有非显然口径（可空语义、单位、时区、码值来源、幂等键）才补 `@param`/`@return`；显然的不写。
+- **entity / DTO / VO 每个字段一句「是什么」**：码值字段带码值含义（`状态（1-在职 2-已失效）`，去 `his-common/enums` 核宿主枚举，
+  查不到就只写语义、不许猜码值）、金额字段带单位、时间字段区分口径（计划/实际/登记）。挂 `BaseEntity` 的 7 个公共列不重复写（见 §16）。
+- **`xxxText` / `xxxLabel` 这类码值→文案镜像字段**只写「××文案（由枚举 label 渲染）」，**不复述码值清单**——清单归枚举，抄进字段注释就是第二份真相。
+- **注释只答「是什么 / 干什么 / 用在哪」，不答「怎么实现」**：步骤解说（`// 1.校验 2.落库`）依旧禁。
+
+### 14.2 一份注释只写一次
+
+- **接口写、实现不写**：`XxxServiceImpl` 实现 `XxxService` 时，方法注释全留接口，Impl 的 `@Override` 方法**不挂
+  JavaDoc**（两份必然漂移）。Impl 里只留「为什么这么写」的 WHY 行内注释。
+- 覆写父类/接口的 `@Override` 一律不重抄注释。
+- Controller 方法注释与 Service 方法注释**不算重复**：一个讲页面入口，一个讲能力本身，各写各的场景。
+
+### 14.3 仍然禁止的 AI 味
 
 - **注释禁表名/库结构线索**（`biz_xxx`/`sys_xxx`、列名、SQL 片段、information_schema 口径）。`@TableName`/`@Select`
   代码本身里的表名不算。结构归属 DDL 与 `docs/sql/`。判据：`grep -E "(//|\*+ ).*\b(biz|sys)_[a-z_]{3,}" --include=*.java` 为
   0。
-- **AI 味注释全删**：复述型（「xxx 服务实现类」「构造器注入」）、步骤解说（`// 1.校验 2.落库`）、生成体头（@author/@since 模板、
-  `// =====` 分隔线）、占位（TODO/FIXME/「后续可扩展」）。**删注释只删注释，不顺带改代码**。
-- **该留的注释 = WHY**：删掉后下一个读者会做出「错误但看起来合理」的改动才留——隐藏约束、幂等/并发口径、为什么物理删、workaround。
+- **复述型壳**（「xxx 服务实现类」「构造器注入」「get/set 方法」）、**生成体头**（@author/@since 模板、`// =====`
+  分隔线）、**占位**（TODO/FIXME/「后续可扩展」）。**删注释只删注释，不顺带改代码**。
+- **零信息量注释**：`/** 获取列表 */ List<X> listPage()`——重写为 §14.1 的「干什么 + 场景」两句，不许留壳。
+
+### 14.4 该留的 WHY 注释
+
+删掉后下一个读者会做出「错误但看起来合理」的改动才留——隐藏约束、幂等/并发口径、为什么物理删、workaround。WHY 与 §14.1
+的场景注释可以同一段共存，WHY 排在场景之后。
+
+### 14.5 机械判据
+
+```bash
+node workspace/_check_comment_coverage.mjs            # 五层缺口汇总，必须 GATE PASS
+node workspace/_check_comment_coverage.mjs CTRL --detail   # 只看某一层（CTRL/SVC/ENT/DTO/VO）
+node workspace/_build_field_glossary.mjs              # 重建字段名词典（存量注释里抽，供全仓措辞一致）
+grep -E "(//|\*+ ).*\b(biz|sys)_[a-z_]{3,}" --include=*.java -rn source/back_end   # 注释里的表名，必须 0
+```
+
+- 门禁**不查 Impl**（§14.2：注释在接口上），只查 controller / service 接口 / entity / dto / vo 的类头、方法头、字段头。
+- `forbidden` 计数含表名线索、TODO、@author/@since、`调用方：X#method` 四种腐烂写法。
 
 ## 15. 数据库默认值铁律（§25 全量落地）
 

@@ -1,5 +1,6 @@
 package com.his.miniapp.mapper;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.miniapp.vo.MiniMessageListVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -37,14 +38,8 @@ public interface MiniMessageMapper {
             FROM sys_message
             WHERE receiver_id = #{userId}
             ORDER BY send_time IS NULL ASC, send_time DESC, message_id DESC
-            LIMIT #{offset}, #{size}
             """)
-    List<MiniMessageListVO> selectMyMessages(@Param("userId") Long userId,
-                                             @Param("offset") int offset,
-                                             @Param("size") int size);
-
-    @Select("SELECT COUNT(*) FROM sys_message WHERE receiver_id = #{userId}")
-    long countMyMessages(@Param("userId") Long userId);
+    IPage<MiniMessageListVO> selectMyMessages(IPage<MiniMessageListVO> page, @Param("userId") Long userId);
 
     @Select("SELECT COUNT(*) FROM sys_message WHERE receiver_id = #{userId} AND read_status = 0")
     long countUnread(@Param("userId") Long userId);

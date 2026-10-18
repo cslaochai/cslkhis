@@ -1,29 +1,14 @@
+# 支付渠道配置：这里只放两环境同值的开关；凭据与网关地址随环境变，落 profile 文件
+# alipay.enabled 两环境不同（dev 启用、pro 默认关闭），按分层规则在 profile 里各声明一次
 wxpay:
   mock-enabled: true
-  app-id: ${WX_PAY_APP_ID:}
-  mch-id: ${WX_PAY_MCH_ID:}
-  api-v3-key: ${WX_PAY_API_V3_KEY:}
-  cert-serial-no: ${WX_PAY_CERT_SERIAL_NO:}
-  private-key-path: ${WX_PAY_PRIVATE_KEY_PATH:}
-  notify-url: ${WX_PAY_NOTIFY_URL:https://your-domain.com/api/pay/notify/wx}
-
-alipay:
-  mock-enabled: true
-  app-id: ${ALIPAY_APP_ID:}
-  private-key: ${ALIPAY_PRIVATE_KEY:}
-  alipay-public-key: ${ALIPAY_PUBLIC_KEY:}
-  gateway-url: ${ALIPAY_GATEWAY:http://openapi-sandbox.dl.alipaydev.com/gateway.do}
-  notify-url: ${ALIPAY_NOTIFY_URL:}
-  notify-url-cashier: ${ALIPAY_NOTIFY_URL_CASHIER:}
 
 unionpay:
   mock-enabled: true
-  app-id: ${UNIONPAY_APP_ID:}
-  mer-id: ${UNIONPAY_MER_ID:}
-  private-key: ${UNIONPAY_PRIVATE_KEY:}
-  public-key: ${UNIONPAY_PUBLIC_KEY:}
-  gateway-url: ${UNIONPAY_GATEWAY:https://gateway.95516.com}
 
 pay:
   channel:
     enabled: true
+  aggregated:
+    qr-base-url: https://pay.hospital.com/qr/
+    mock-enabled: true

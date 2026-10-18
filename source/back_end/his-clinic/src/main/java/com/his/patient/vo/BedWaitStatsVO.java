@@ -12,7 +12,9 @@ public class BedWaitStatsVO {
      * 等待中：普通 / 急 / 危重
      */
     private long waitingNormal;
+    /** 等待中：急 */
     private long waitingUrgent;
+    /** 等待中：危重 */
     private long waitingCritical;
     /**
      * 等待中合计
@@ -57,11 +59,13 @@ public class BedWaitStatsVO {
     // 床位侧
 
     private long totalBeds;
+    /** 空闲床位数 */
     private long freeBeds;
     /**
      * 已被预留（锁定）的床位
      */
     private long lockedBeds;
+    /** 占用床位数 */
     private long occupiedBeds;
 
     /**

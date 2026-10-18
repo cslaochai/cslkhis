@@ -7,10 +7,21 @@ import com.his.system.vo.EmployeeVO;
 
 import java.util.List;
 
+/** 员工档案服务：医护员工名册的查询、维护与岗位联动（角色×科室）的业务收口。 */
 public interface SysEmployeeService {
 
+    /**
+     * 员工档案分页：按姓名、员工类型筛选，科室条件按当前岗位的数据范围收口，敏感字段脱敏后输出。
+     * 用于「员工管理」页查询卡与名册表格。
+     */
     PageResult<EmployeeVO> listPage(EmployeeQueryDTO queryDTO);
 
+    /**
+     * 员工下拉候选：一次取全量不分页，结果按主键升序（与排班记录里存的员工标识同一套顺序）。
+     * 用于排班面板名册与手术、麻醉、预约、值班、转诊等页面选「哪位员工」的下拉。
+     *
+     * @param queryDTO onlyScheduled=true 时口径切为「区间内已排班的人」，科室条件改按排班的出诊科室过滤
+     */
     List<EmployeeVO> selectList(EmployeeQueryDTO queryDTO);
 
     /**
@@ -24,5 +35,9 @@ public interface SysEmployeeService {
      */
     String upsert(EmployeeUpsertDTO upsertDTO);
 
+    /**
+     * 删除员工档案，并连带清空该员工的全部岗位（角色×科室）配置。
+     * 用于「员工管理」页操作列的删除动作。
+     */
     void delete(Long id);
 }

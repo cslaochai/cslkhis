@@ -51,14 +51,9 @@ CREATE TABLE `sys_login_log` (
   `login_status` tinyint COMMENT '登录状态（0-成功 1-失败）',
   `msg` varchar(200) COMMENT '提示消息',
   `login_time` datetime COMMENT '登录时间',
-  `create_by` varchar(64) NOT NULL COMMENT '创建人',
-  `create_by_id` bigint COMMENT '创建人ID',
   `create_time` datetime NOT NULL COMMENT '创建时间',
-  `update_by` varchar(64) NOT NULL COMMENT '更新人',
-  `update_by_id` bigint COMMENT '更新人ID',
   `update_time` datetime NOT NULL COMMENT '更新时间',
   `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
-  `remark` varchar(500) COMMENT '备注',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='登录日志';
 

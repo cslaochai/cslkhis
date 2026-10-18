@@ -51,12 +51,12 @@ public class PayChannelReconciliationServiceImpl extends ServiceImpl<BizPayChann
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int importChannelBill(Integer channel, LocalDate billDate) {
-        if (alipayProperties.isMockEnabled() && Objects.equals(channel, PayChannelEnum.ALIPAY.getCode())) {
-            // 模拟模式下渠道侧根本没有这笔交易，账单文件永远拉不到；此时放过去只会在 SDK 那一步炸成 500，
+        if (!alipayProperties.isEnabled() && Objects.equals(channel, PayChannelEnum.ALIPAY.getCode())) {
+            // 渠道关闭时根本发不出支付宝请求，此时放过去只会在 SDK 那一步炸成 500，
             // 现象与「医院系统坏了」一样，而真因是配置没打开
             throw new BusinessException(
-                    "支付宝对账需要渠道侧的真实账单（当前 alipay.mock-enabled=true），" +
-                            "请在 gitignored 的 application-dev.yml 中配置支付宝凭据并将 mock-enabled 改为 false。"
+                    "支付宝支付未启用（alipay.enabled=false），无法拉取渠道账单对账。" +
+                            "请在 gitignored 的 application-dev.yml 中将 alipay.enabled 改为 true 并配置凭据。"
             );
         }
 

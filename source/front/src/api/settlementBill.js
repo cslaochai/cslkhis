@@ -66,11 +66,12 @@ export function listItemsByPatient(patientId) {
 
 // ==================== 扫码收款（主扫：医院出码，患者扫） ====================
 //
-// 一张码只属于一个渠道（支付宝的收款码微信扫不开），所以先选渠道再生成码。
-// 收款事实不靠前端点按钮：页面轮询 queryResult，后端拿渠道查单兜底入账，
-// 回调只是加速 —— 公网回调断了也照样收得到钱。
+// 出的是「聚合支付码」：一张码微信、支付宝、云闪付都能扫，渠道在患者支付那一刻
+// 由医院聚合网关识别运行环境后确定，所以出码接口只传账单、不传渠道。
+// 收费台因此只有「现金 / 扫码收款」两档，不再有支付宝/微信切换。
+// 收款事实不靠前端点按钮：页面轮询 queryResult，后端查单兜底入账，回调只是加速。
 
-// 出码：按账单当前尚需缴建支付单，返回 data:image/png;base64 的码图
+// 出码：按账单当前尚需缴建支付单，返回 data:image/png;base64 的码图（data 只需 billId）
 export function createQrPay(data) {
     return request.post('/charge/qrPay/create', data)
 }
@@ -83,4 +84,10 @@ export function queryQrPayResult(data) {
 // 关闭支付单（患者放弃付款/换渠道出码时必须关，否则旧码仍可被扫出付款）
 export function closeQrPay(data) {
     return request.post('/charge/qrPay/close', data)
+}
+
+// 关掉这张账单的待支付码：切到现金或关掉弹层时调。
+// 现金已经进抽屉还留着能扫的码，患者扫完就是同一笔账收两次
+export function closeQrPayByBill(data) {
+    return request.post('/charge/qrPay/closeByBill', data)
 }

@@ -1,16 +1,18 @@
 package com.his.patient.service.impl;
 
-import com.his.common.util.NumUtil;
-import com.his.common.support.CanonicalText;
+
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.his.system.vo.SignSubject;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.enums.InpatientOrderStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
-import com.his.system.service.SignableContentService;
+import com.his.common.support.CanonicalText;
+import com.his.common.util.NumUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.entity.BizInpatientOrder;
-import com.his.common.enums.InpatientOrderStatusEnum;
 import com.his.patient.mapper.BizInpatientOrderMapper;
+import com.his.system.service.SignableContentService;
+import com.his.system.vo.SignSubject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -24,9 +26,39 @@ import java.util.Objects;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class InpatientOrderSignContentServiceImpl implements SignableContentService {
+public class InpatientOrderSignContentServiceImpl extends ServiceImpl<BizInpatientOrderMapper, BizInpatientOrder> implements SignableContentService {
 
     private final BizInpatientOrderMapper bizInpatientOrderMapper;
+
+    private static String canonical(BizInpatientOrder o) {
+        return CanonicalText.create("INPATIENT_ORDER")
+                .put("orderNo", o.getOrderNo())
+                .put("admissionId", o.getAdmissionId())
+                .put("patientId", o.getPatientId())
+                .put("patientNo", o.getPatientNo())
+                .put("orderType", o.getOrderType())
+                .put("orderGroup", o.getOrderGroup())
+                .put("orderClass", o.getOrderClass())
+                .put("itemCode", o.getItemCode())
+                .put("itemName", o.getItemName())
+                .put("spec", o.getSpec())
+                .put("unit", o.getUnit())
+                .put("dosage", NumUtil.plain(o.getDosage()))
+                .put("dosageUnit", o.getDosageUnit())
+                .put("route", o.getRoute())
+                .put("frequency", o.getFrequency())
+                .put("quantity", NumUtil.plain(o.getQuantity()))
+                .put("price", NumUtil.plain(o.getPrice()))
+                .put("amount", NumUtil.plain(o.getAmount()))
+                .put("startTime", o.getStartTime())
+                .put("planEndTime", o.getPlanEndTime())
+                .put("orderTime", o.getOrderTime())
+                .put("doctorId", o.getDoctorId())
+                .put("doctorName", o.getDoctorName())
+                .put("isUrgent", o.getIsUrgent())
+                .put("source", o.getSource())
+                .build();
+    }
 
     @Override
     public SignBizTypeEnum bizType() {
@@ -117,36 +149,6 @@ public class InpatientOrderSignContentServiceImpl implements SignableContentServ
                     .set(BizInpatientOrder::getNurseSignedTime, null));
             log.info("已清除医嘱校对签名指针 orderNo={} signId={}", o.getOrderNo(), signId);
         }
-    }
-
-    private static String canonical(BizInpatientOrder o) {
-        return CanonicalText.create("INPATIENT_ORDER")
-                .put("orderNo", o.getOrderNo())
-                .put("admissionId", o.getAdmissionId())
-                .put("patientId", o.getPatientId())
-                .put("patientNo", o.getPatientNo())
-                .put("orderType", o.getOrderType())
-                .put("orderGroup", o.getOrderGroup())
-                .put("orderClass", o.getOrderClass())
-                .put("itemCode", o.getItemCode())
-                .put("itemName", o.getItemName())
-                .put("spec", o.getSpec())
-                .put("unit", o.getUnit())
-                .put("dosage", NumUtil.plain(o.getDosage()))
-                .put("dosageUnit", o.getDosageUnit())
-                .put("route", o.getRoute())
-                .put("frequency", o.getFrequency())
-                .put("quantity", NumUtil.plain(o.getQuantity()))
-                .put("price", NumUtil.plain(o.getPrice()))
-                .put("amount", NumUtil.plain(o.getAmount()))
-                .put("startTime", o.getStartTime())
-                .put("planEndTime", o.getPlanEndTime())
-                .put("orderTime", o.getOrderTime())
-                .put("doctorId", o.getDoctorId())
-                .put("doctorName", o.getDoctorName())
-                .put("isUrgent", o.getIsUrgent())
-                .put("source", o.getSource())
-                .build();
     }
 
 }

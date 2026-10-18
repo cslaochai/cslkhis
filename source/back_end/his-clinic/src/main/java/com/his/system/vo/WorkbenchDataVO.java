@@ -20,5 +20,6 @@ public class WorkbenchDataVO {
      */
     private Map<String, Object> data;
 
+    /** 该卡取数失败的说明（成功时为 null，前端见error渲染「—」） */
     private String error;
 }

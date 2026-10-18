@@ -113,9 +113,13 @@ public class PatientDetailVO {
      * **不要**把本接口当编辑回显用：需要明文回填表单的走 {@code /patient/getById}。
      */
     private String idCardMasked;
+    /** 手机号（脱敏展示） */
     private String phoneMasked;
+    /** 紧急联系电话（脱敏展示） */
     private String contactPhoneMasked;
+    /** 就诊卡号（脱敏展示） */
     private String cardNoMasked;
+    /** 医保卡号（脱敏展示） */
     private String medicalInsuranceNoMasked;
     /**
      * 账户余额，单位：元

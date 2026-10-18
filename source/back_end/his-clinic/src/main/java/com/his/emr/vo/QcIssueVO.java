@@ -17,16 +17,21 @@ public class QcIssueVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
+    /** 所属质控单ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long qcId;
 
+    /** 质控单号 */
     private String qcNo;
 
+    /** 病历来源（OUTPATIENT-门诊病历 INPATIENT-住院文书） */
     private String recordSource;
 
+    /** 被质控病历ID（随来源指向门诊病历或住院文书） */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long recordId;
 
+    /** 患者ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 

@@ -31,18 +31,24 @@ public class DrugRationalHitVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long knowledgeId;
 
+    /** 成分关键字A */
     private String componentA;
 
+    /** 成分关键字B */
     private String componentB;
 
+    /** 甲方药品ID：处方里命中成分A的那条药品 */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long drugIdA;
 
+    /** 甲方药品名称 */
     private String drugNameA;
 
+    /** 乙方药品ID：相互作用对侧命中的药品；剂量类命中为空 */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long drugIdB;
 
+    /** 乙方药品名称 */
     private String drugNameB;
 
     /**

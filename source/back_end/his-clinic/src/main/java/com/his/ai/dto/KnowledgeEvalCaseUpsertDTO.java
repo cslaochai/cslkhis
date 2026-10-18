@@ -24,5 +24,6 @@ public class KnowledgeEvalCaseUpsertDTO {
     /** 期望命中文档标题，分号分隔（展示用，可随选择自动带出） */
     private String expectedDocTitles;
 
+    /** 备注 */
     private String remark;
 }

@@ -21,8 +21,10 @@ public class BedMatchVO {
      */
     private String bedNo;
 
+    /** 床位类型（normal-普通 ICU-重症 VIP-特需） */
     private String bedType;
 
+    /** 床位类型文案 */
     private String bedTypeText;
 
     /**
@@ -52,6 +54,7 @@ public class BedMatchVO {
      */
     private Integer matchLevel;
 
+    /** 匹配档位文案 */
     private String matchLevelText;
 
     /**

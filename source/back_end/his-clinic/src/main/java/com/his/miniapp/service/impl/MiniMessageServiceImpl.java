@@ -1,13 +1,15 @@
 package com.his.miniapp.service.impl;
 
-import com.his.system.utils.UserUtils;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
+import com.his.common.entity.CurrentUser;
 import com.his.common.exception.BusinessException;
 import com.his.miniapp.dto.MessagePageDTO;
 import com.his.miniapp.mapper.MiniMessageMapper;
 import com.his.miniapp.service.MiniMessageService;
 import com.his.miniapp.vo.MiniMessageListVO;
-import com.his.common.entity.CurrentUser;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -28,9 +30,8 @@ public class MiniMessageServiceImpl implements MiniMessageService {
         Long userId = operatorUser.getUserId();
         int size = dto.getPageSize();
         int current = dto.getPageNum();
-        List<MiniMessageListVO> records = miniMessageMapper.selectMyMessages(userId, (current - 1) * size, size);
-        long total = miniMessageMapper.countMyMessages(userId);
-        return PageResult.of(total, current, size, (total + size - 1) / size, records);
+        IPage<MiniMessageListVO> paged = miniMessageMapper.selectMyMessages(new Page<>(current, size), userId);
+        return PageResult.of(paged.getTotal(), current, size, paged.getPages(), paged.getRecords());
     }
 
     @Override

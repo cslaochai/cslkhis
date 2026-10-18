@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 医技管理 - 检验控制器
+ * 检验管理控制器：检验记录检索与接收标本、结果录入、报告审核流转的接口入口。
  */
 @Tag(name = "医技管理")
 @RestController
@@ -31,6 +31,10 @@ public class BizLaboratoryController {
 
     private final MedicalTechService medicalTechService;
 
+    /**
+     * 检验记录分页：按患者或检验科室筛出检验记录行。
+     * 用于检验工作站的检验记录查询表格，也用于住院医嘱工作区的检验记录页签。
+     */
     @Operation(summary = "分页查询检验记录列表")
     @PostMapping("/listPage")
     public Result<PageResult<BizLaboratoryRecordVO>> laboratoryListPage(@Valid @RequestBody LaboratoryRecordQueryDTO queryDTO) {
@@ -39,6 +43,10 @@ public class BizLaboratoryController {
                 queryDTO.getPageNum(), queryDTO.getPageSize()));
     }
 
+    /**
+     * 检验记录全量列表（不分页）：按患者或检验科室一次取齐历次检验记录。
+     * 用于医生工作站从检验申请单反查执行记录（申请单没带执行记录号时按患者翻全量再匹配）。
+     */
     @Operation(summary = "查询检验记录列表（不分页）")
     @PostMapping("/list")
     public Result<List<BizLaboratoryRecordVO>> laboratoryList(@Valid @RequestBody LaboratoryRecordQueryDTO queryDTO) {
@@ -55,6 +63,10 @@ public class BizLaboratoryController {
         return Result.success(medicalTechService.getLaboratoryDetail(recordId));
     }
 
+    /**
+     * 接收标本：登记接收人与接收时刻，检验记录推进到已接收。
+     * 用于检验工作站列表行的「接收标本」按钮，是标本进入实验室的落账动作。
+     */
     @Operation(summary = "接收标本")
     @PostMapping("/receive")
     public Result<Void> receiveSpecimen(@Valid @RequestBody LaboratoryReceiveDTO receiveDTO) {
@@ -62,6 +74,10 @@ public class BizLaboratoryController {
         return success ? Result.success("接收成功", null) : Result.error("接收失败");
     }
 
+    /**
+     * 录入检验结果：整单落到各项目结果值与诊断意见、建议，异常标志与危急值由服务端按参考区间判定。
+     * 用于检验工作站「结果录入」弹框提交。
+     */
     @Operation(summary = "录入检验结果")
     @PostMapping("/inputResult")
     public Result<Void> inputLabResult(@Valid @RequestBody LabResultSaveDTO labResultSaveDTO) {
@@ -70,6 +86,10 @@ public class BizLaboratoryController {
     }
 
 
+    /**
+     * 审核检验报告：审核人签名后记录发布，并向开单医生推送结果通知。
+     * 用于检验工作站「审核」弹框提交，是检验流程出报告的最后一道。
+     */
     @Operation(summary = "审核检验报告")
     @PostMapping("/audit")
     public Result<Void> auditLaboratory(@Valid @RequestBody LaboratoryAuditDTO auditDTO) {

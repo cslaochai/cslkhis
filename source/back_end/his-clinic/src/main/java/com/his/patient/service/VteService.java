@@ -36,6 +36,10 @@ public interface VteService {
      */
     VtePreventVO preventUpsert(VtePreventUpsertDTO dto);
 
+    /**
+     * 删除一条预防措施记录。
+     * 用于「VTE 风险防控」页落实记录行的删除。
+     */
     int preventDeleteById(Long id);
 
     /**
@@ -48,6 +52,10 @@ public interface VteService {
      */
     PageResult<VteEventVO> eventListPage(VteEventPageQueryDTO query);
 
+    /**
+     * 某次住院登记的全部 VTE 事件。
+     * 供院内监测按患者维度追溯本次住院的不良事件明细。
+     */
     List<VteEventVO> eventListByAdmission(Long admissionId);
 
     /**
@@ -55,6 +63,10 @@ public interface VteService {
      */
     VteEventVO eventUpsert(VteEventUpsertDTO dto);
 
+    /**
+     * 删除一条 VTE 事件登记。
+     * 供院内监测事件台账的误登记录清理。
+     */
     int eventDeleteById(Long id);
 
     /**
@@ -67,6 +79,10 @@ public interface VteService {
      */
     List<VteStatsVO> generateStats(VteStatsGenerateDTO dto);
 
+    /**
+     * 已生成的月度防控指标快照分页。
+     * 用于「VTE 院内监测」页的指标台账表格与报数取数。
+     */
     PageResult<VteStatsVO> statsListPage(VteStatsPageQueryDTO query);
 
     /**

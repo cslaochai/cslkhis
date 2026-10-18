@@ -57,6 +57,7 @@ public class BedWaitVO {
      */
     private Integer gender;
 
+    /** 性别文案 */
     private String genderText;
 
     /**
@@ -91,6 +92,7 @@ public class BedWaitVO {
      */
     private String bedType;
 
+    /** 需求床型文案 */
     private String bedTypeText;
 
     /**
@@ -98,6 +100,7 @@ public class BedWaitVO {
      */
     private Integer priority;
 
+    /** 优先级文案 */
     private String priorityText;
 
     /**
@@ -105,6 +108,7 @@ public class BedWaitVO {
      */
     private Integer genderLimit;
 
+    /** 性别限制文案 */
     private String genderLimitText;
 
     /**
@@ -128,6 +132,7 @@ public class BedWaitVO {
      */
     private Integer waitStatus;
 
+    /** 等床状态文案 */
     private String waitStatusText;
 
     /**
@@ -211,6 +216,7 @@ public class BedWaitVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
 
+    /** 住院号 */
     private String admissionNo;
 
     /**

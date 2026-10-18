@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 员工管理控制器
+ * 员工档案控制器：员工名册查询与档案维护的接口入口；身份（角色×科室）由岗位配置写入，本域只维护人的基本事实。
  */
 @Tag(name = "员工管理")
 @RestController
@@ -27,24 +27,40 @@ public class EmployeeController {
 
     private final SysEmployeeService sysEmployeeService;
 
+    /**
+     * 员工档案分页：按姓名、工号、科室、在职状态筛选。
+     * 用于「员工管理」页查询卡与名册表格。
+     */
     @Operation(summary = "分页查询员工列表")
     @GetMapping("/listPage")
     public Result<PageResult<EmployeeVO>> listPage(@Valid EmployeeQueryDTO queryDTO) {
         return Result.success(sysEmployeeService.listPage(queryDTO));
     }
 
+    /**
+     * 员工下拉候选：一次取回可用名册，不分页。
+     * 用于排班、手术、预约、值班、转诊等页面选「哪位员工」的下拉。
+     */
     @Operation(summary = "分页查询员工列表")
     @GetMapping("/selectList")
     public Result<List<EmployeeVO>> selectList(@Valid EmployeeQueryDTO queryDTO) {
         return Result.success(sysEmployeeService.selectList(queryDTO));
     }
 
+    /**
+     * 单条员工档案详情：字段明文回显，供表单回填后整对象提交。
+     * 用于「员工管理」编辑弹框回显与医生档案页取数。
+     */
     @Operation(summary = "获取员工详情")
     @GetMapping("/getById")
     public Result<EmployeeVO> getInfo(@RequestParam Long id) {
         return Result.success(sysEmployeeService.getInfo(id));
     }
 
+    /**
+     * 新增或修改员工档案：主岗位科室快照随岗位配置一并归一。
+     * 用于「员工管理」页新增/编辑弹框保存。
+     */
     @Operation(summary = "新增或修改员工")
     @PreAuthorize("hasAuthority('org:employee:add')")
     @PostMapping("/employeeUpsert")
@@ -52,6 +68,10 @@ public class EmployeeController {
         return Result.success(sysEmployeeService.upsert(upsertDTO), null);
     }
 
+    /**
+     * 删除员工档案。
+     * 用于「员工管理」页操作列删除。
+     */
     @Operation(summary = "删除员工")
     @PreAuthorize("hasAuthority('org:employee:delete')")
     @DeleteMapping("/deleteById")

@@ -21,5 +21,6 @@ public class DeptCountRowVO {
      */
     private String deptName;
 
+    /** 出院患者例数 */
     private Integer patientCount;
 }

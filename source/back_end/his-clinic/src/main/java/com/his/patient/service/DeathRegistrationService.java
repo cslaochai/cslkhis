@@ -11,6 +11,10 @@ import java.util.List;
  */
 public interface DeathRegistrationService {
 
+    /**
+     * 死亡登记簿分页：按患者关键字、登记状态、死亡类型、是否报公安、是否纠纷与死亡日期区间筛。
+     * 用于「死亡证明与登记」页的死亡登记查询卡。
+     */
     PageResult<DeathRegisterVO.Row> listPage(DeathRegistrationDTO.PageQuery query);
 
     /**

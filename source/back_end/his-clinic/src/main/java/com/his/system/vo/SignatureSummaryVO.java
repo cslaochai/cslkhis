@@ -51,8 +51,11 @@ public class SignatureSummaryVO {
      */
     private String bizTypeTexts;
 
+    /** 数字证书总数（含已吊销） */
     private Long certTotal;
+    /** 有效证书数 */
     private Long certActive;
+    /** 已吊销证书数 */
     private Long certRevoked;
 
     /**
@@ -75,6 +78,7 @@ public class SignatureSummaryVO {
      */
     private List<Coverage> coverages;
 
+    /** 全院最近一次签名时刻 */
     private LocalDateTime lastSignTime;
 
     /**

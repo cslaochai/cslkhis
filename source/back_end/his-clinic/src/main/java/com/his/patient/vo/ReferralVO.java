@@ -48,6 +48,7 @@ public class ReferralVO {
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
+    /** 住院号 */
     private String admissionNo;
 
     /**
@@ -55,6 +56,7 @@ public class ReferralVO {
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long fromDeptId;
+    /** 转出科室名称 */
     private String fromDeptName;
 
     /**
@@ -62,6 +64,7 @@ public class ReferralVO {
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long toDeptId;
+    /** 转入科室名称 */
     private String toDeptName;
     /**
      * 转入医院

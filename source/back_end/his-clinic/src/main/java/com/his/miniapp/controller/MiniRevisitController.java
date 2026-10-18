@@ -32,6 +32,10 @@ public class MiniRevisitController {
     private final AppointFacadeService appointFacadeService;
     private final PatientFacadeService patientFacadeService;
 
+    /**
+     * 复诊原病历候选：就诊人确实看过病的门诊记录，按就诊日倒序截取前若干条。
+     * 用于小程序「复诊预约」页选择「按哪次就诊复诊」的候选列表。
+     */
     @PreAuthorize("hasAuthority('PATIENT')")
     @Operation(summary = "复诊原病历候选（按就诊日倒序，只含真正看过病的记录）")
     @GetMapping("/recordSelectList")
@@ -42,6 +46,10 @@ public class MiniRevisitController {
         return Result.success(appointFacadeService.revisitRecordSelectList(patientId, 20));
     }
 
+    /**
+     * 复诊费用预估：按复诊收费策略算出本次该不该收、收多少，只读不落单。
+     * 用于小程序「复诊预约」页提交前的费用提示，与实收走同一判定以保证预览和到院一致。
+     */
     @PreAuthorize("hasAuthority('PATIENT')")
     @Operation(summary = "复诊费用预估（按复诊收费策略，只读）")
     @PostMapping("/feePreview")
@@ -53,6 +61,10 @@ public class MiniRevisitController {
         return Result.success(appointFacadeService.revisitFeePreview(previewDTO));
     }
 
+    /**
+     * 自助复诊预约：选定号源后占号生成复诊挂号，就诊类型与复诊来源由服务端定死为患者自助。
+     * 用于小程序「复诊预约」页确认提交，线上只从排班的预约池扣号。
+     */
     @PreAuthorize("hasAuthority('PATIENT')")
     @Operation(summary = "自助复诊预约（占号源，收免费按策略判定）")
     @PostMapping("/upsert")

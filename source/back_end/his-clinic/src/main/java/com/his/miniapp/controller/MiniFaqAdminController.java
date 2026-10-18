@@ -25,6 +25,10 @@ public class MiniFaqAdminController {
 
     private final MiniFaqService miniFaqService;
 
+    /**
+     * 常见问题分页：院内维护视角，停用条目同样在列。
+     * 用于院内「患者常见问题」管理页的列表查询卡。
+     */
     @Operation(summary = "常见问题列表（含停用）")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('patient:faq:list')")
@@ -32,6 +36,10 @@ public class MiniFaqAdminController {
         return Result.success(miniFaqService.adminPage(pageQueryDTO));
     }
 
+    /**
+     * 常见问题单条详情：取一条问答的完整正文，供编辑前载入。
+     * 用于院内「患者常见问题」页编辑弹框的表单回显。
+     */
     @Operation(summary = "常见问题详情")
     @GetMapping("/getById")
     @PreAuthorize("hasAuthority('patient:faq:list')")
@@ -39,6 +47,10 @@ public class MiniFaqAdminController {
         return Result.success(miniFaqService.adminGetById(faqId));
     }
 
+    /**
+     * 常见问题新增或修改：带 ID 走更新、不带 ID 走新建。
+     * 用于院内「患者常见问题」页新增与编辑弹框的保存动作。
+     */
     @Operation(summary = "新增或修改常见问题")
     @PostMapping("/upsert")
     @PreAuthorize("hasAuthority('patient:faq:upsert')")
@@ -46,6 +58,10 @@ public class MiniFaqAdminController {
         return Result.success(miniFaqService.adminUpsert(upsertDTO));
     }
 
+    /**
+     * 常见问题删除：按 ID 移除一条问答。
+     * 用于院内「患者常见问题」页列表行的删除操作。
+     */
     @Operation(summary = "删除常见问题")
     @PostMapping("/deleteById")
     @PreAuthorize("hasAuthority('patient:faq:delete')")

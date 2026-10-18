@@ -26,6 +26,10 @@ public class AiEmrQcController {
 
     private final EmrQcCapability emrQcCapability;
 
+    /**
+     * 审查一份病历的内涵质量：必填项走规则，缺陷描述与整改建议由大模型补充，可选择落成质控记录。
+     * 用于病案质控环节对单份病历出内涵审查结论，入参只收病历主键由服务端回读原文。
+     */
     @PreAuthorize("hasAuthority('qc:recordQc:edit')")
     @Operation(summary = "执行病历内涵质控（必填项规则 + 大模型内涵审查，可写入 biz_quality_control）")
     @PostMapping("/execute")

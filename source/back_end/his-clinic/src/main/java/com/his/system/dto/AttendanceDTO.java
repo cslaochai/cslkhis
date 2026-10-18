@@ -54,6 +54,7 @@ public class AttendanceDTO {
     @Schema(description = "替了谁的班（employee_id）")
     private Long substituteFor;
 
+    /** 备注 */
     @Schema(description = "备注（写清为什么会差这么多）")
     private String remark;
 }

@@ -57,6 +57,7 @@ public class PatientQueueVO implements Serializable {
      */
     private String slotStart;
 
+    /** 就诊时段结束快照 HH:mm */
     private String slotEnd;
 
     /**

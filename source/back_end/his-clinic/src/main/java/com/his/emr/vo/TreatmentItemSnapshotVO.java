@@ -13,11 +13,14 @@ import java.math.BigDecimal;
 @Data
 public class TreatmentItemSnapshotVO implements Serializable {
 
+    /** 诊疗项目ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long itemId;
 
+    /** 项目编码 */
     private String itemCode;
 
+    /** 项目名称 */
     private String itemName;
 
     /**
@@ -25,6 +28,7 @@ public class TreatmentItemSnapshotVO implements Serializable {
      */
     private Integer itemType;
 
+    /** 治疗价格（元） */
     private BigDecimal price;
 
     /**
@@ -32,6 +36,7 @@ public class TreatmentItemSnapshotVO implements Serializable {
      */
     private Integer duration;
 
+    /** 使用方法 */
     private String usageMethod;
 
     /**
@@ -45,5 +50,6 @@ public class TreatmentItemSnapshotVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long execDeptId;
 
+    /** 执行科室名称（科室查不到时为空） */
     private String execDeptName;
 }

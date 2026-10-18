@@ -1,8 +1,13 @@
 package com.his.patient.service.impl;
 
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.entity.CurrentUser;
+import com.his.common.enums.OrderClassEnum;
+import com.his.common.enums.OrderTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.patient.dto.InpatientOrderItemDTO;
@@ -10,8 +15,6 @@ import com.his.patient.dto.InpatientOrderTemplatePageQueryDTO;
 import com.his.patient.dto.InpatientOrderTemplateUpsertDTO;
 import com.his.patient.entity.BizInpatientOrderTemplate;
 import com.his.patient.entity.BizInpatientOrderTemplateItem;
-import com.his.common.enums.OrderClassEnum;
-import com.his.common.enums.OrderTypeEnum;
 import com.his.patient.mapper.BizInpatientOrderTemplateItemMapper;
 import com.his.patient.mapper.BizInpatientOrderTemplateMapper;
 import com.his.patient.service.InpatientOrderTemplateService;
@@ -20,7 +23,6 @@ import com.his.patient.vo.InpatientOrderTemplateDetailVO;
 import com.his.patient.vo.InpatientOrderTemplateItemVO;
 import com.his.patient.vo.InpatientOrderTemplateListVO;
 import com.his.patient.vo.InpatientOrderTemplateSelectListVO;
-import com.his.common.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +41,7 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplateService {
+public class InpatientOrderTemplateServiceImpl extends ServiceImpl<BizInpatientOrderTemplateMapper, BizInpatientOrderTemplate> implements InpatientOrderTemplateService {
 
     /**
      * 下拉候选上限：开立弹窗要一屏能扫完，真正的翻找走「模板管理」分页。

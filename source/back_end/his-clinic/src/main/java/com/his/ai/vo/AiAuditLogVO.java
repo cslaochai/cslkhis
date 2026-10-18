@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @Schema(description = "AI 调用审计记录")
 public class AiAuditLogVO {
 
+    /** 审计记录ID */
     @Schema(description = "记录ID")
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
@@ -85,6 +86,7 @@ public class AiAuditLogVO {
     @Schema(description = "耗时（毫秒）")
     private Integer latencyMs;
 
+    /** 调用状态（1-成功 2-失败 3-超时 4-降级 5-熔断） */
     @Schema(description = "状态码")
     private Integer status;
 

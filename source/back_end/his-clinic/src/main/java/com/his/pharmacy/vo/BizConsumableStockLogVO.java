@@ -54,6 +54,7 @@ public class BizConsumableStockLogVO {
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long consumableId;
+    /** 耗材名称 */
     private String consumableName;
     /**
      * 批号

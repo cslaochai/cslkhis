@@ -22,9 +22,11 @@ public class Icd10PredictDTO {
     @Schema(description = "主诉")
     private String chiefComplaint;
 
+    /** 现病史 */
     @Schema(description = "现病史")
     private String presentIllness;
 
+    /** 专科检查 */
     @Schema(description = "专科检查")
     private String specialistExam;
 

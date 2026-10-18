@@ -15,13 +15,17 @@ import java.util.List;
 @Data
 public class OrderCheckVO implements Serializable {
 
+    /** 本次住院是否有在径的路径入径记录（false 时其余字段全为空） */
     private Boolean enrolled;
 
+    /** 入径记录ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long enrollId;
 
+    /** 路径名称 */
     private String pathwayName;
 
+    /** 入径时快照的路径版本号 */
     private String version;
 
     /**
@@ -29,6 +33,7 @@ public class OrderCheckVO implements Serializable {
      */
     private Integer dayNo;
 
+    /** 路径总日数 */
     private Integer totalDays;
 
     /**

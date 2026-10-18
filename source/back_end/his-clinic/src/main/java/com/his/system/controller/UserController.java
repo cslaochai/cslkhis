@@ -16,7 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 用户管理控制器
+ * 用户管理控制器：系统账号的分页维护、详情回显与登录口令重置入口。
  */
 @Tag(name = "用户管理")
 @RestController
@@ -27,12 +27,20 @@ public class UserController {
 
     private final SysUserService sysUserService;
 
+    /**
+     * 按用户名、科室、状态等条件分页查询系统账号。
+     * 用于系统管理「用户管理」页的账号表格，以及部门页按用户名搜人指派负责人时的候选取数。
+     */
     @Operation(summary = "分页查询用户列表")
     @PostMapping("/listPage")
     public Result<PageResult<SysUserListVO>> listPage(@Valid @RequestBody SysUserPageQueryDTO queryDTO) {
         return Result.success(sysUserService.queryUserPage(queryDTO));
     }
 
+    /**
+     * 按账号主键取单条账号信息，敏感字段按原文返回。
+     * 只服务用户管理的编辑弹框回填——表单是整对象提交，回显成打码值会把真号写坏；纯展示走本人档案接口。
+     */
     @Operation(summary = "获取用户详情")
     @GetMapping("/getById")
     public Result<UserDetailVO> getById(@RequestParam Long id) {
@@ -53,6 +61,10 @@ public class UserController {
         return Result.success(sysUserService.getSelfProfile());
     }
 
+    /**
+     * 新增或修改系统账号，传主键即改、不传即建。
+     * 用于系统管理「用户管理」页的新增与编辑弹框保存；管理员账号的用户名与状态、患者及其他类型账号都不允许从这里改。
+     */
     @PreAuthorize("hasAuthority('system:user:add')")
     @Operation(summary = "新增或修改用户")
     @PostMapping("/userUpsert")
@@ -61,6 +73,10 @@ public class UserController {
         return Result.success();
     }
 
+    /**
+     * 按账号主键删除系统账号。
+     * 用于「用户管理」页账号行的删除确认。
+     */
     @PreAuthorize("hasAuthority('system:user:delete')")
     @Operation(summary = "删除用户")
     @DeleteMapping("/deleteById")
@@ -69,6 +85,10 @@ public class UserController {
         return Result.success();
     }
 
+    /**
+     * 把指定账号的登录口令重置为初始口令，并记一条「重置过」的审计（不记新口令）。
+     * 用于「用户管理」页行内的重置密码动作；患者与其他类型账号走自助找回，不允许从这里重置。
+     */
     @PreAuthorize("hasAuthority('system:user:edit')")
     @Operation(summary = "重置密码")
     @PostMapping("/resetPassword")

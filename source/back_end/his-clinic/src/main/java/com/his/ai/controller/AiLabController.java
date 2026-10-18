@@ -26,6 +26,10 @@ public class AiLabController {
 
     private final LabInterpretCapability labInterpretCapability;
 
+    /**
+     * 解读一份检验报告：异常项、危急值与升降趋势由代码判定，组合异常时才由模型做连贯解读。
+     * 用于检验结果详情弹框发起智能解读，勾选后结论与建议可写回检验记录。
+     */
     @PreAuthorize("hasAuthority('medtech:laboratoryWorkstation:edit')")
     @Operation(summary = "检验结果解读（异常项 + 趋势 + 结论草稿）")
     @PostMapping("/execute")

@@ -59,7 +59,6 @@ public class SysLoginLogServiceImpl extends ServiceImpl<SysLoginLogMapper, SysLo
             row.setLoginStatus(success ? 0 : 1);
             row.setMsg(TextUtil.cut(msg, 200));
             row.setLoginTime(LocalDateTime.now());
-            row.setCreateBy(TextUtil.cut(userName, 64));
             sysLoginLogMapper.insert(row);
         } catch (Exception e) {
             log.error("登录日志写入失败 userName={} success={}", userName, success, e);

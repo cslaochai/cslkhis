@@ -1,11 +1,13 @@
 package com.his.patient.service.impl;
 
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.ObjectSignStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
-import com.his.system.service.SignCoverageService;
 import com.his.patient.entity.BizInpatientRecord;
 import com.his.patient.mapper.BizInpatientRecordMapper;
+import com.his.system.service.SignCoverageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -14,7 +16,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @RequiredArgsConstructor
-public class InpatientRecordSignCoverageServiceImpl implements SignCoverageService {
+public class InpatientRecordSignCoverageServiceImpl extends ServiceImpl<BizInpatientRecordMapper, BizInpatientRecord> implements SignCoverageService {
 
     private final BizInpatientRecordMapper bizInpatientRecordMapper;
 

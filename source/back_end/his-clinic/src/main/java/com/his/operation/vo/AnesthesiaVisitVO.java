@@ -35,6 +35,7 @@ public class AnesthesiaVisitVO extends BizAnesthesiaVisit {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private java.time.LocalDateTime plannedStartTime;
 
+    /** 手术间 */
     private String operationRoom;
 
     /**

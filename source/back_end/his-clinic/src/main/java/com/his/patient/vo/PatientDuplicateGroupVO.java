@@ -14,6 +14,7 @@ public class PatientDuplicateGroupVO {
      * 组的匹配级别：1-身份证相同 2-姓名+性别+生日 3-姓名+手机号 4-仅同名
      */
     private Integer matchLevel;
+    /** 匹配级别文案 */
     private String matchLevelText;
     /**
      * 命中依据快照，如 "id_card=430726199102122257"

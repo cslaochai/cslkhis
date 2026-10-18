@@ -1,19 +1,21 @@
 package com.his.system.service.impl;
 
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.constant.DictTypeConst;
+import com.his.common.enums.MaintainTypeEnum;
+import com.his.common.enums.MeteringTypeEnum;
+import com.his.common.enums.QualifiedResultEnum;
+import com.his.common.enums.TreatmentRecordStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.system.dto.*;
 import com.his.system.entity.BizEquipmentMaintain;
 import com.his.system.entity.BizEquipmentMetering;
 import com.his.system.entity.SysEquipment;
-import com.his.common.enums.TreatmentRecordStatusEnum;
-import com.his.common.enums.MaintainTypeEnum;
-import com.his.common.enums.QualifiedResultEnum;
-import com.his.common.enums.MeteringTypeEnum;
 import com.his.system.mapper.BizEquipmentMaintainMapper;
 import com.his.system.mapper.BizEquipmentMeteringMapper;
 import com.his.system.mapper.SysEquipmentMapper;
@@ -38,7 +40,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-public class EquipmentServiceImpl implements EquipmentService {
+public class EquipmentServiceImpl extends ServiceImpl<SysEquipmentMapper, SysEquipment> implements EquipmentService {
     private final SysEquipmentMapper sysEquipmentMapper;
 
     private final BizEquipmentMaintainMapper bizEquipmentMaintainMapper;

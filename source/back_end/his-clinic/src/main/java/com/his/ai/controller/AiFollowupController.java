@@ -25,6 +25,10 @@ public class AiFollowupController {
 
     private final FollowupComposeCapability followupComposeCapability;
 
+    /**
+     * 按患者与随访类型拟一段随访话术初稿，模型不可用时回落该类型模板并标记降级。
+     * 用于随访任务与电话随访编辑弹框的「AI 拟话术」，医护核对改完才随任务下发。
+     */
     @Operation(summary = "AI 拟随访话术（医生终审后才可下发）")
     @PostMapping("/compose")
     @PreAuthorize("hasAuthority('inpatient:followup:add')")

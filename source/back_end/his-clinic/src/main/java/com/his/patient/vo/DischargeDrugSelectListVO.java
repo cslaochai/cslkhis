@@ -15,20 +15,27 @@ import java.math.BigDecimal;
 @Schema(name = "DischargeDrugSelectListVO", description = "出院带药下拉出参")
 public class DischargeDrugSelectListVO implements Serializable {
 
+    /** 主键ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
+    /** 药品ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long drugId;
 
+    /** 药品名称 */
     private String drugName;
 
+    /** 规格 */
     private String spec;
 
+    /** 单次剂量 */
     private String dosage;
 
+    /** 单位 */
     private String unit;
 
+    /** 发药数量 */
     private BigDecimal quantity;
 
     /**
@@ -41,5 +48,6 @@ public class DischargeDrugSelectListVO implements Serializable {
      */
     private Integer dispenseStatus;
 
+    /** 发药状态文案 */
     private String dispenseStatusText;
 }

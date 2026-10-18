@@ -67,5 +67,6 @@ public class RecordQcFlowActionVO {
 
     // 文案
     private String levelText;
+    /** 动作文案（由枚举 label 渲染） */
     private String actionText;
 }

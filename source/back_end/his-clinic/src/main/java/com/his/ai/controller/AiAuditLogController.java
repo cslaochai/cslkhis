@@ -27,6 +27,10 @@ public class AiAuditLogController {
 
     private final AiAuditQueryService aiAuditQueryService;
 
+    /**
+     * 分页查询 AI 能力调用审计，可按能力、状态、业务单据与操作人收窄。
+     * 用于系统管理「日志中心」的 AI 审计签页排查模型调用耗时与降级熔断原因。
+     */
     @Operation(summary = "分页查询 AI 调用审计（可追溯模型、提示词版本、耗时与降级原因）")
     @PostMapping("/listPage")
     public Result<PageResult<AiAuditLogVO>> listPage(@Valid @RequestBody AiAuditLogPageQueryDTO pageQueryDTO) {

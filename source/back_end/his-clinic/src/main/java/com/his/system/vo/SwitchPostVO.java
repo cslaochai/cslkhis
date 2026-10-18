@@ -18,8 +18,10 @@ public class SwitchPostVO {
      */
     private String token;
 
+    /** 当前角色编码 */
     private String currentRole;
 
+    /** 角色名称 */
     private String roleName;
 
     /**

@@ -12,6 +12,7 @@ import lombok.Data;
 @Schema(name = "FaqFeedbackDTO", description = "常见问题有用反馈")
 public class FaqFeedbackDTO {
 
+    /** 关联常见问题ID */
     @NotNull(message = "faqId不能为空")
     @Schema(description = "常见问题ID")
     private Long faqId;

@@ -78,6 +78,7 @@ public class VtePreventVO {
      */
     private Integer riskLevel;
 
+    /** 风险等级中文 */
     private String riskLevelText;
 
     /**
@@ -85,6 +86,7 @@ public class VtePreventVO {
      */
     private String measureCode;
 
+    /** 措施码文案 */
     private String measureCodeText;
 
     /**
@@ -92,6 +94,7 @@ public class VtePreventVO {
      */
     private Integer measureType;
 
+    /** 措施类别文案 */
     private String measureTypeText;
 
     /**
@@ -110,6 +113,7 @@ public class VtePreventVO {
      */
     private Integer executeStatus;
 
+    /** 落实状态文案 */
     private String executeStatusText;
 
     /**

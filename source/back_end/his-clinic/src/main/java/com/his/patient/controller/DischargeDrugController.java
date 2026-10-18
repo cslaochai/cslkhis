@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 出院带药控制器。
+ * 出院带药控制器：出院带药单开具修改与药房发药的接口入口。
  */
 @Tag(name = "出院带药")
 @RestController
@@ -27,6 +27,10 @@ public class DischargeDrugController {
 
     private final DischargeDrugService dischargeDrugService;
 
+    /**
+     * 开具或修改出院带药单：仅待发药状态可改。
+     * 用于「出院带药」页新增与修改弹框提交。
+     */
     @PreAuthorize("hasAuthority('inpatient:dischargeDrug:add')")
     @Operation(summary = "开带药单 / 修改（仅待发药可改）")
     @PostMapping("/upsert")
@@ -34,6 +38,10 @@ public class DischargeDrugController {
         return Result.success("带药单已保存", dischargeDrugService.upsert(dto));
     }
 
+    /**
+     * 带药单分页：按患者、药品与发药状态筛。
+     * 用于「出院带药」页查询卡。
+     */
     @Operation(summary = "分页查询带药单")
     @PostMapping("/listPage")
     public Result<PageResult<DischargeDrugVO>> listPage(@Valid @RequestBody DischargeDrugDTO.PageQuery dto) {
@@ -42,6 +50,10 @@ public class DischargeDrugController {
                 page.getRecords()));
     }
 
+    /**
+     * 列出某次住院的全部带药单。
+     * 供出院结算与发药前按患者核对带药清单时取数。
+     */
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "按入院次列全部带药单")
     @GetMapping("/selectList")
@@ -49,12 +61,20 @@ public class DischargeDrugController {
         return Result.success(dischargeDrugService.listByAdmission(admissionId));
     }
 
+    /**
+     * 单条带药单详情：用法用量与发药结果。
+     * 供发药与核对环节按单据回看明细。
+     */
     @Operation(summary = "带药单详情")
     @GetMapping("/getDetailById")
     public Result<DischargeDrugVO> getDetailById(@RequestParam Long id) {
         return Result.success(dischargeDrugService.getDetailById(id));
     }
 
+    /**
+     * 批量发药：药房岗一次性把勾选的带药单推进为已发药，状态单向不可回退。
+     * 用于「出院带药」页的批量发药。
+     */
     @PreAuthorize("hasAuthority('inpatient:dischargeDrug:edit')")
     @Operation(summary = "批量发药（药房岗，单向）")
     @PostMapping("/dispense")
@@ -62,6 +82,10 @@ public class DischargeDrugController {
         return Result.success("发药完成", dischargeDrugService.dispense(dto));
     }
 
+    /**
+     * 删除带药单：仅待发药可删。
+     * 用于「出院带药」页行内删除。
+     */
     @PreAuthorize("hasAuthority('inpatient:dischargeDrug:delete')")
     @Operation(summary = "删除带药单（仅待发药）")
     @PostMapping("/deleteById")

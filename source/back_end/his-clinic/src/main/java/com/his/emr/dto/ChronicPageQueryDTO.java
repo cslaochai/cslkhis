@@ -12,7 +12,9 @@ import java.io.Serializable;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class ChronicPageQueryDTO extends PageParam implements Serializable {
+    /** 患者ID */
     private Long patientId;
+    /** 患者姓名 */
     private String patientName;
     private String recordNo;
     /**

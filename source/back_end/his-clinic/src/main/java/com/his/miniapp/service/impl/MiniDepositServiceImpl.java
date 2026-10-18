@@ -40,9 +40,9 @@ public class MiniDepositServiceImpl implements MiniDepositService {
     }
 
     @Override
-    public IPage<PrepayVO> prepayListPage(PrepayPageQueryDTO query) {
-        requireOwnAdmission(query.getAdmissionId());
-        return chargeFacadeService.prepayPage(query);
+    public IPage<PrepayVO> prepayListPage(PrepayPageQueryDTO queryDTO) {
+        requireOwnAdmission(queryDTO.getAdmissionId());
+        return chargeFacadeService.prepayPage(queryDTO);
     }
 
     private void requireOwnAdmission(Long admissionId) {

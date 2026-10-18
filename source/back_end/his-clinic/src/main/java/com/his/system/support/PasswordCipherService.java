@@ -41,7 +41,7 @@ public class PasswordCipherService {
      */
     private static final String C1_PREFIX = "04";
     /**
-     * C1(64B,无04前缀) + C3(32B) = 96 字节；最短明文 1 字节
+     * C1 段 64 字节（不含 04 前缀）+ C3 段 32 字节 = 96 字节；最短明文 1 字节
      */
     private static final int MIN_CIPHER_HEX_LEN = 2 * (96 + 1);
     /**
@@ -65,9 +65,8 @@ public class PasswordCipherService {
     private volatile String keyId;
 
     /**
-     * 密钥构造
-     *
-     * @return
+     * 现生成一对 SM2 密钥，返回「私钥十六进制 + 未压缩公钥点十六进制」。
+     * 只在环境里没配私钥的兜底场合用到（单实例开发），产出的密钥重启即失效。
      */
     private static String[] generateKeyPair() {
         ECDomainParameters domain = sm2Domain();
@@ -89,17 +88,29 @@ public class PasswordCipherService {
         return pointToHex(q);
     }
 
+    /**
+     * 椭圆曲线点 → 未压缩公钥点文本（04 前缀 + X + Y，两段各补零到 64 位十六进制）。
+     * 对外发布公钥、给前端 sm-crypto 做加密入参时都必须是这个形状。
+     */
     private static String pointToHex(ECPoint point) {
         return C1_PREFIX
                 + leftPad64(point.getAffineXCoord().toBigInteger().toString(16))
                 + leftPad64(point.getAffineYCoord().toBigInteger().toString(16));
     }
 
+    /**
+     * SM2 推荐曲线的域参数（曲线、基点、阶、协因子）。
+     * 生成密钥对与由私钥推导公钥共用同一套曲线，两边不一致会解不出明文。
+     */
     private static ECDomainParameters sm2Domain() {
         X9ECParameters params = GMNamedCurves.getByName("sm2p256v1");
         return new ECDomainParameters(params.getCurve(), params.getG(), params.getN(), params.getH());
     }
 
+    /**
+     * 坐标文本左侧补零到 64 位十六进制（定长 32 字节），已够长则原样返回。
+     * 拼未压缩公钥点时用：坐标高位是 0 时十六进制会短一位，长度不齐前端解密就失败。
+     */
     private static String leftPad64(String hex) {
         if (hex.length() >= 64) {
             return hex;
@@ -107,6 +118,11 @@ public class PasswordCipherService {
         return "0".repeat(64 - hex.length()) + hex;
     }
 
+    /**
+     * 装配期定下本次会话用的密钥对：配了私钥就按它推导（或直接用配置的）公钥，没配则临时生成一对并告警；
+     * 同时算出公钥指纹供前端判断要不要重拉公钥。
+     * 服务启动时执行一次，登录页取公钥与登录时的口令解密都依赖它先就绪。
+     */
     @PostConstruct
     public void init() {
         String prv = TextUtil.trimToNull(passwordCryptoProperties.getPrivateKey());

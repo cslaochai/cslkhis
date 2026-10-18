@@ -27,6 +27,7 @@ public class OperLogDetailVO {
      * 业务类型（0-其他 1-新增 2-修改 3-删除 4-授权 5-导出 6-导入 7-清空）
      */
     private Integer businessType;
+    /** 业务类型文案（由字典渲染） */
     private String businessTypeText;
     /**
      * 方法名称

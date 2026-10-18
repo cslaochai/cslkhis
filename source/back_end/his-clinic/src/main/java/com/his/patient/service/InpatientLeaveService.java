@@ -11,14 +11,34 @@ import java.util.List;
  */
 public interface InpatientLeaveService {
 
+    /**
+     * 请假台账分页：按患者、请假类型与状态、科室、申请日期区间筛；只看超期未归时超期由服务端现算，库里不落超期状态。
+     * 用于「患者请假离院」页查询卡。
+     */
     PageResult<InpatientLeaveVO.Row> listPage(InpatientLeaveDTO.PageQuery query);
 
+    /**
+     * 单张请假单详情：含承诺书签署证据摘要与当前可用动作标记，联系电话已脱敏。
+     * 用于「患者请假离院」页详情弹框，以及编辑回显、离院登记与打印前的取数。
+     */
     InpatientLeaveVO.Detail getDetailById(Long id);
 
+    /**
+     * 开单底稿：按住院记录带出患者快照与在途请假单张数，快照由服务端重查不采信前端传入。
+     * 用于新建请假申请时填充表单抬头。
+     */
     InpatientLeaveVO.Base base(Long admissionId);
 
+    /**
+     * 在院患者候选及其在途请假状态，支持关键字过滤与条数上限。
+     * 用于「患者请假离院」页顶部的在院患者横幅。
+     */
     List<InpatientLeaveVO.Inpatient> inpatients(String keyword, Integer limit);
 
+    /**
+     * 请假业务计数：待审批、已批准待离院、在院外、超期未归、今日返回。
+     * 用于「患者请假离院」页顶部统计卡。
+     */
     InpatientLeaveVO.Stats stats();
 
     /**

@@ -14,6 +14,7 @@ import java.io.Serializable;
 @Schema(name = "SignCertSelectListVO", description = "签名证书下拉出参")
 public class SignCertSelectListVO implements Serializable {
 
+    /** 证书ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
@@ -22,9 +23,11 @@ public class SignCertSelectListVO implements Serializable {
      */
     private String certNo;
 
+    /** 签名人员工ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long empId;
 
+    /** 员工姓名 */
     private String empName;
 
     /**
@@ -32,5 +35,6 @@ public class SignCertSelectListVO implements Serializable {
      */
     private Integer certStatus;
 
+    /** 证书状态文案（由枚举 label 渲染） */
     private String certStatusText;
 }

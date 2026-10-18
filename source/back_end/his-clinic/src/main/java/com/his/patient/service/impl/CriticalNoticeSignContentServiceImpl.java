@@ -1,6 +1,8 @@
 package com.his.patient.service.impl;
 
+
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.NoticeStatusEnum;
 import com.his.common.enums.ObjectSignStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
@@ -24,7 +26,7 @@ import java.util.Objects;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class CriticalNoticeSignContentServiceImpl implements SignableContentService {
+public class CriticalNoticeSignContentServiceImpl extends ServiceImpl<BizCriticalNoticeMapper, BizCriticalNotice> implements SignableContentService {
 
     private final BizCriticalNoticeMapper bizCriticalNoticeMapper;
 

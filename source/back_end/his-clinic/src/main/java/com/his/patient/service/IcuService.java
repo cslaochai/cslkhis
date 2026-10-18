@@ -12,8 +12,16 @@ import java.util.List;
  */
 public interface IcuService {
 
+    /**
+     * 入出科台账分页：按记录单号、患者姓名、病区、监护等级、在科状态与入科日期区间筛。
+     * 用于「ICU 专科监护」页入出科台账查询卡。
+     */
     PageResult<IcuVO.StayVO> stayListPage(IcuStayPageQueryDTO query);
 
+    /**
+     * 单条入科记录详情：患者与床位快照、监护等级与入出科时间。
+     * 用于「ICU 专科监护」页入科详情弹框回显。
+     */
     IcuVO.StayVO stayGetById(Long id);
 
     /**
@@ -36,6 +44,10 @@ public interface IcuService {
      */
     List<IcuVO.BedVO> bedBoard(Long wardId);
 
+    /**
+     * 床边监护记录分页：按入科记录与监护日期区间筛。
+     * 用于「ICU 专科监护」页监护记录页签的查询卡。
+     */
     PageResult<IcuVO.MonitorVO> monitorListPage(IcuMonitorPageQueryDTO query);
 
     /**
@@ -48,5 +60,11 @@ public interface IcuService {
      */
     IcuVO.MonitorVO monitorUpsert(IcuMonitorUpsertDTO dto);
 
+    /**
+     * ICU 科室指标：统计窗口内的床位使用率、人均监护记录、带管与呼吸机分布及漏记预警。
+     * 用于「ICU 专科监护」页科室指标页签。
+     *
+     * @param lagHours 漏记判定的超时阈值（小时）
+     */
     IcuVO.StatsVO stats(LocalDate startDate, LocalDate endDate, Integer lagHours);
 }

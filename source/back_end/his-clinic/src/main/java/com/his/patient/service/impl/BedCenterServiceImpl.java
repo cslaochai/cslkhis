@@ -6,23 +6,21 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.constant.SystemConfigKeyConst;
+import com.his.common.entity.CurrentUser;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
-import com.his.patient.dto.InpatientAdmitDTO;
 import com.his.patient.entity.*;
 import com.his.patient.mapper.*;
 import com.his.patient.service.BedCenterService;
 import com.his.patient.service.InpatientService;
 import com.his.patient.vo.*;
-import com.his.common.entity.CurrentUser;
 import com.his.system.entity.SysConfig;
-import com.his.common.enums.BizTypeEnum;
 import com.his.system.mapper.SysConfigMapper;
 import com.his.system.service.DutyRosterService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
 import com.his.system.vo.DutyOfficerVO;
@@ -48,7 +46,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWait> implements BedCenterService {
 
-    private final RedisSequenceService redisSequenceService;
     /**
      * 等待超时的最长天数；缺失或非法一律回落 7 天（不回落成"永不超时"）
      */
@@ -61,6 +58,8 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
      * 等床多久没安排就找总值班（系统参数：duty.coord.bed_wait_hours，缺失/非法回落 24）
      */
     private static final int DUTY_BED_WAIT_HOURS_FALLBACK = 24;
+
+    private final RedisSequenceService redisSequenceService;
 
     private final BizBedWaitMapper bizBedWaitMapper;
 
@@ -92,7 +91,6 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
 
 
     // 等床队列
-
     private static int indexOf(List<Long> ids, Long id) {
         if (ids == null || ids.isEmpty() || id == null) {
             return 0;
@@ -719,15 +717,15 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
         String bedType = TextUtil.hasText(query.getBedType()) ? query.getBedType() : null;
         String keyword = TextUtil.hasText(query.getKeyword()) ? query.getKeyword().trim() : null;
 
-        BedPoolVO vo = new BedPoolVO();
-        vo.setTotal(bedCenterMapper.countBedPool(deptId, wardId, bedStatus, bedType, keyword));
-        long offset = (query.getPageNum() - 1L) * query.getPageSize();
-        List<BedPoolVO.BedRow> rows = bedCenterMapper.selectBedPool(deptId, wardId, bedStatus, bedType,
-                keyword, offset, query.getPageSize());
+        IPage<BedPoolVO.BedRow> paged = bedCenterMapper.selectBedPool(
+                new Page<>(query.getPageNum(), query.getPageSize()), deptId, wardId, bedStatus, bedType, keyword);
+        List<BedPoolVO.BedRow> rows = paged.getRecords();
         for (BedPoolVO.BedRow row : rows) {
             row.setBedStatusText(BedStatusEnum.getLabel(row.getBedStatus()));
             row.setBedTypeText(BedTypeEnum.getLabel(row.getBedType()));
         }
+        BedPoolVO vo = new BedPoolVO();
+        vo.setTotal(paged.getTotal());
         vo.setRows(rows);
         return vo;
     }

@@ -23,6 +23,10 @@ public class MiniChronicController {
 
     private final EmrPatientFacadeService emrPatientFacadeService;
 
+    /**
+     * 我的慢病档案：汇总本人名下的慢病病种记录与长处方开具资格。
+     * 用于小程序「我的慢病档案」页取数。
+     */
     @Operation(summary = "我的慢病档案（含长处方资格）")
     @GetMapping("/myRecords")
     public Result<ChronicMyRecordsVO> myRecords() {

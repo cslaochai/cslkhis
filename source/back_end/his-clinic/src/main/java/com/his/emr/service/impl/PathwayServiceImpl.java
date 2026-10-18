@@ -1,10 +1,14 @@
 package com.his.emr.service.impl;
 
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.entity.CurrentUser;
+import com.his.common.enums.PathwayEnrollStatusEnum;
+import com.his.common.enums.PathwayStatusEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.emr.dto.*;
@@ -12,16 +16,14 @@ import com.his.emr.entity.BizPathway;
 import com.his.emr.entity.BizPathwayEnroll;
 import com.his.emr.entity.BizPathwayStep;
 import com.his.emr.entity.BizPathwayVariance;
-import com.his.common.enums.PathwayEnrollStatusEnum;
-import com.his.common.enums.PathwayStatusEnum;
 import com.his.emr.mapper.BizPathwayEnrollMapper;
 import com.his.emr.mapper.BizPathwayMapper;
 import com.his.emr.mapper.BizPathwayStepMapper;
 import com.his.emr.mapper.BizPathwayVarianceMapper;
 import com.his.emr.service.PathwayService;
 import com.his.emr.vo.*;
-import com.his.common.entity.CurrentUser;
 import com.his.system.service.DeptScopeService;
+import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,7 +45,7 @@ import java.util.Set;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class PathwayServiceImpl implements PathwayService {
+public class PathwayServiceImpl extends ServiceImpl<BizPathwayMapper, BizPathway> implements PathwayService {
     /**
      * 原因类文本统一截 200（列宽 255，留余量，超长会把业务失败升级成 Data too long 500）
      */

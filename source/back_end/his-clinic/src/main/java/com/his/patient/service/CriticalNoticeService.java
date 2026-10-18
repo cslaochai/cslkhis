@@ -11,6 +11,10 @@ import java.util.List;
  */
 public interface CriticalNoticeService {
 
+    /**
+     * 通知台账分页：按患者关键字、通知类别、状态、科室与开单日期区间筛。
+     * 用于「病危重通知」页查询卡。
+     */
     PageResult<CriticalNoticeVO.Row> listPage(CriticalNoticeDTO.PageQuery query);
 
     /**
@@ -28,8 +32,16 @@ public interface CriticalNoticeService {
      */
     List<CriticalNoticeVO.Inpatient> inpatients(String keyword, Integer limit);
 
+    /**
+     * 医师候选清单：在职且具备医生角色的员工。
+     * 用于通知填写弹框选告知医师与见证医师。
+     */
     List<CriticalNoticeVO.DoctorOption> doctorOptions();
 
+    /**
+     * 通知各状态计数汇总。
+     * 用于「病危重通知」页顶部统计卡。
+     */
     CriticalNoticeVO.Stats stats();
 
     /**

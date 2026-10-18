@@ -15,22 +15,28 @@ import java.util.List;
 @Schema(description = "患者端用药说明")
 public class PatientMedicationGuideVO {
 
+    /** 处方ID */
     @Schema(description = "处方ID")
     @JsonSerialize(using = ToStringSerializer.class)
     private Long prescriptionId;
 
+    /** 处方号 */
     @Schema(description = "处方号")
     private String prescriptionNo;
 
+    /** 就诊日期 */
     @Schema(description = "就诊日期")
     private LocalDate visitDate;
 
+    /** 开方科室名称 */
     @Schema(description = "开方科室")
     private String deptName;
 
+    /** 开方医生姓名 */
     @Schema(description = "开方医生")
     private String doctorName;
 
+    /** 处方类型文案（由枚举 label 渲染） */
     @Schema(description = "处方类型文本")
     private String prescriptionTypeText;
 
@@ -43,6 +49,7 @@ public class PatientMedicationGuideVO {
     @Schema(description = "是否已发药")
     private boolean dispensed;
 
+    /** 药品明细列表 */
     @Schema(description = "药品明细")
     private List<PatientMedicationItemVO> items;
 

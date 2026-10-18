@@ -25,6 +25,10 @@ public class EquipmentMeteringController {
 
     private final EquipmentService equipmentService;
 
+    /**
+     * 计量记录分页：按设备与计量日期区间筛选强检/校准历史。
+     * 供计量到期核查与设备强检台账批量核对时取数。
+     */
     @Operation(summary = "计量记录分页")
     @PostMapping("/listPage")
     public Result<PageResult<MeteringVO>> listPage(@Valid @RequestBody MeteringPageQueryDTO dto) {
@@ -33,6 +37,10 @@ public class EquipmentMeteringController {
                 page.getRecords()));
     }
 
+    /**
+     * 登记一次强检/校准：写入有效期截止日，过期后台账该设备标记为到期未检。
+     * 用于「设备管理」页计量登记弹框保存。
+     */
     @PreAuthorize("hasAuthority('asset:equipment:add')")
     @Operation(summary = "计量登记")
     @PostMapping("/create")
@@ -40,6 +48,10 @@ public class EquipmentMeteringController {
         return Result.success("计量登记成功", equipmentService.meteringCreate(dto));
     }
 
+    /**
+     * 删除录错的计量记录。
+     * 用于「设备管理」设备详情里计量记录行的删除。
+     */
     @PreAuthorize("hasAuthority('asset:equipment:delete')")
     @Operation(summary = "计量记录删除（录错可删）")
     @DeleteMapping("/deleteById")

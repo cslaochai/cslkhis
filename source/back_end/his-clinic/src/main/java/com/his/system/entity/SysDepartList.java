@@ -19,6 +19,7 @@ public class SysDepartList {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
+    /** 科室编码（唯一） */
     private String deptCode;
     /**
      * 科室名称

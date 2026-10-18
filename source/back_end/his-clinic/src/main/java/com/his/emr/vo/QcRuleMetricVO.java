@@ -13,6 +13,7 @@ public class QcRuleMetricVO {
      */
     private String ruleCode;
 
+    /** 规则名称 */
     private String ruleName;
 
     /**
@@ -20,6 +21,7 @@ public class QcRuleMetricVO {
      */
     private Integer dimension;
 
+    /** 维度文案（由枚举 label 渲染） */
     private String dimensionText;
 
     /**
@@ -27,6 +29,7 @@ public class QcRuleMetricVO {
      */
     private Integer severity;
 
+    /** 严重度文案（由枚举 label 渲染） */
     private String severityText;
 
     /**

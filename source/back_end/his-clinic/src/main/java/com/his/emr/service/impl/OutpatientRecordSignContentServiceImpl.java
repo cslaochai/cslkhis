@@ -1,15 +1,17 @@
 package com.his.emr.service.impl;
 
-import com.his.common.support.CanonicalText;
-import com.his.system.vo.SignSubject;
+
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.ObjectSignStatusEnum;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
-import com.his.system.service.SignableContentService;
+import com.his.common.support.CanonicalText;
 import com.his.common.util.TimeUtil;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.mapper.BizMedicalRecordMapper;
+import com.his.system.service.SignableContentService;
+import com.his.system.vo.SignSubject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -23,9 +25,53 @@ import java.util.Objects;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class OutpatientRecordSignContentServiceImpl implements SignableContentService {
+public class OutpatientRecordSignContentServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedicalRecord> implements SignableContentService {
 
     private final BizMedicalRecordMapper bizMedicalRecordMapper;
+
+    private static String recordStatusText(Integer status) {
+        return status == null ? "—" : RecordStatusEnum.getLabelOrUnknown(status);
+    }
+
+    private static String canonical(BizMedicalRecord r) {
+        return CanonicalText.create("OUTPATIENT_RECORD")
+                .put("recordNo", r.getRecordNo())
+                .put("patientId", r.getPatientId())
+                .put("patientNo", r.getPatientNo())
+                .put("registId", r.getRegistId())
+                .put("registNo", r.getRegistNo())
+                .put("visitDate", r.getVisitDate())
+                .put("visitType", r.getVisitType())
+                .put("deptId", r.getDeptId())
+                .put("doctorId", r.getDoctorId())
+                .put("doctorName", r.getDoctorName())
+                .put("chiefComplaint", r.getChiefComplaint())
+                .put("presentIllness", r.getPresentIllness())
+                .put("pastHistory", r.getPastHistory())
+                .put("personalHistory", r.getPersonalHistory())
+                .put("familyHistory", r.getFamilyHistory())
+                .put("allergyHistory", r.getAllergyHistory())
+                .put("temperature", r.getTemperature())
+                .put("pulse", r.getPulse())
+                .put("respiration", r.getRespiration())
+                .put("systolicPressure", r.getSystolicPressure())
+                .put("diastolicPressure", r.getDiastolicPressure())
+                .put("generalCondition", r.getGeneralCondition())
+                .put("skinMucosa", r.getSkinMucosa())
+                .put("headNeck", r.getHeadNeck())
+                .put("chestLung", r.getChestLung())
+                .put("heart", r.getHeart())
+                .put("abdomen", r.getAbdomen())
+                .put("spineLimbs", r.getSpineLimbs())
+                .put("nervousSystem", r.getNervousSystem())
+                .put("specialistExam", r.getSpecialistExam())
+                .put("auxiliaryExam", r.getAuxiliaryExam())
+                .put("diagnosis", r.getDiagnosis())
+                .put("diagnosisCode", r.getDiagnosisCode())
+                .put("diagnosisName", r.getDiagnosisName())
+                .put("treatmentPlan", r.getTreatmentPlan())
+                .build();
+    }
 
     @Override
     public SignBizTypeEnum bizType() {
@@ -91,50 +137,6 @@ public class OutpatientRecordSignContentServiceImpl implements SignableContentSe
         patch.setId(bizId);
         patch.setSignStatus(ObjectSignStatusEnum.INVALIDATED.getCode());
         bizMedicalRecordMapper.updateById(patch);
-    }
-
-    private static String recordStatusText(Integer status) {
-        return status == null ? "—" : RecordStatusEnum.getLabelOrUnknown(status);
-    }
-
-    private static String canonical(BizMedicalRecord r) {
-        return CanonicalText.create("OUTPATIENT_RECORD")
-                .put("recordNo", r.getRecordNo())
-                .put("patientId", r.getPatientId())
-                .put("patientNo", r.getPatientNo())
-                .put("registId", r.getRegistId())
-                .put("registNo", r.getRegistNo())
-                .put("visitDate", r.getVisitDate())
-                .put("visitType", r.getVisitType())
-                .put("deptId", r.getDeptId())
-                .put("doctorId", r.getDoctorId())
-                .put("doctorName", r.getDoctorName())
-                .put("chiefComplaint", r.getChiefComplaint())
-                .put("presentIllness", r.getPresentIllness())
-                .put("pastHistory", r.getPastHistory())
-                .put("personalHistory", r.getPersonalHistory())
-                .put("familyHistory", r.getFamilyHistory())
-                .put("allergyHistory", r.getAllergyHistory())
-                .put("temperature", r.getTemperature())
-                .put("pulse", r.getPulse())
-                .put("respiration", r.getRespiration())
-                .put("systolicPressure", r.getSystolicPressure())
-                .put("diastolicPressure", r.getDiastolicPressure())
-                .put("generalCondition", r.getGeneralCondition())
-                .put("skinMucosa", r.getSkinMucosa())
-                .put("headNeck", r.getHeadNeck())
-                .put("chestLung", r.getChestLung())
-                .put("heart", r.getHeart())
-                .put("abdomen", r.getAbdomen())
-                .put("spineLimbs", r.getSpineLimbs())
-                .put("nervousSystem", r.getNervousSystem())
-                .put("specialistExam", r.getSpecialistExam())
-                .put("auxiliaryExam", r.getAuxiliaryExam())
-                .put("diagnosis", r.getDiagnosis())
-                .put("diagnosisCode", r.getDiagnosisCode())
-                .put("diagnosisName", r.getDiagnosisName())
-                .put("treatmentPlan", r.getTreatmentPlan())
-                .build();
     }
 
 }

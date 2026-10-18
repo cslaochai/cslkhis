@@ -28,6 +28,10 @@ public class ExamFilmController {
 
     private final ExamFilmService examFilmService;
 
+    /**
+     * 胶片用量台账分页，可按患者、记录、状态过滤。
+     * 用于医技检查胶片量方页的查询卡。
+     */
     @Operation(summary = "胶片用量分页列表")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('medtech:examFilm:list')")
@@ -35,6 +39,10 @@ public class ExamFilmController {
         return Result.success(examFilmService.listPage(query));
     }
 
+    /**
+     * 取单次检查名下登记的全部胶片。
+     * 供检查记录详情侧回勾胶片用量时取数。
+     */
     @Operation(summary = "某一次检查的全部胶片")
     @GetMapping("/listByRecordId")
     @PreAuthorize("hasAuthority('medtech:examFilm:list')")
@@ -42,6 +50,10 @@ public class ExamFilmController {
         return Result.success(examFilmService.listByRecordId(recordId));
     }
 
+    /**
+     * 按日期区间汇总胶片张数、金额与已记账金额。
+     * 用于胶片量方页顶部统计卡。
+     */
     @Operation(summary = "胶片用量汇总（张数 / 金额 / 已记账金额）")
     @GetMapping("/stats")
     @PreAuthorize("hasAuthority('medtech:examFilm:list')")
@@ -50,6 +62,10 @@ public class ExamFilmController {
         return Result.success(examFilmService.stats(startDate, endDate));
     }
 
+    /**
+     * 给一次检查登记胶片规格与张数，金额由服务端按单价现算不收前端值。
+     * 用于胶片量方页「登记胶片用量」弹框保存。
+     */
     @Operation(summary = "登记胶片用量（金额服务端按 单价×张数 现算）")
     @PostMapping("/upsert")
     @PreAuthorize("hasAuthority('medtech:examFilm:add')")
@@ -57,6 +73,10 @@ public class ExamFilmController {
         return Result.success("胶片用量已登记", examFilmService.upsert(dto));
     }
 
+    /**
+     * 为该条胶片生成记账行，幂等：同行重复点击不会记两次。
+     * 用于胶片量方页行内记账动作，记账后患者可在收费台结算。
+     */
     @Operation(summary = "生成记账（调收费模块，幂等；同一行重复点不会记两次）")
     @PostMapping("/charge")
     @PreAuthorize("hasAuthority('medtech:examFilm:charge')")
@@ -64,6 +84,10 @@ public class ExamFilmController {
         return Result.success("已生成记账，患者可在收费台结算", examFilmService.charge(filmId));
     }
 
+    /**
+     * 胶片出片后推进状态并留打印时间。
+     * 用于胶片量方页行内打印动作。
+     */
     @Operation(summary = "标记已打印")
     @PostMapping("/markPrinted")
     @PreAuthorize("hasAuthority('medtech:examFilm:deliver')")
@@ -71,6 +95,10 @@ public class ExamFilmController {
         return Result.success("已标记打印", examFilmService.markPrinted(filmId));
     }
 
+    /**
+     * 登记胶片已交予患者或病区，发放环节闭环。
+     * 用于胶片量方页行内发放动作。
+     */
     @Operation(summary = "标记已发放（交给患者/病区）")
     @PostMapping("/deliver")
     @PreAuthorize("hasAuthority('medtech:examFilm:deliver')")
@@ -78,6 +106,10 @@ public class ExamFilmController {
         return Result.success("已标记发放", examFilmService.deliver(filmId));
     }
 
+    /**
+     * 作废误登记的胶片行并留原因痕迹；已记账的不允许作废，那笔钱走红冲链路。
+     * 用于胶片量方页行内作废动作。
+     */
     @Operation(summary = "作废胶片（已记账的不允许作废，那笔钱要走红冲）")
     @DeleteMapping("/deleteById")
     @PreAuthorize("hasAuthority('medtech:examFilm:delete')")
@@ -96,6 +128,10 @@ public class ExamFilmController {
         return Result.success(examFilmService.specSelectList());
     }
 
+    /**
+     * 新建或修改胶片规格及其单价。
+     * 用于胶片量方页「胶片规格价目」弹框保存。
+     */
     @Operation(summary = "新增/修改胶片规格价目")
     @PostMapping("/specUpsert")
     @PreAuthorize("hasAuthority('medtech:examFilm:add')")
@@ -103,6 +139,10 @@ public class ExamFilmController {
         return Result.success("规格已保存", examFilmService.upsertSpec(dto));
     }
 
+    /**
+     * 删除胶片规格价目；被用量行引用过的规格服务端拒绝删除。
+     * 用于胶片量方页价目弹框内的规格删除动作。
+     */
     @Operation(summary = "删除胶片规格（已被引用过的不能删，只能停用）")
     @DeleteMapping("/specDeleteById")
     @PreAuthorize("hasAuthority('medtech:examFilm:add')")

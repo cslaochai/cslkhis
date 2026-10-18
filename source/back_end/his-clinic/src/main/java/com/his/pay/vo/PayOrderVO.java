@@ -23,8 +23,10 @@ public class PayOrderVO {
 
     private Long bizId;
 
+    /** 患者ID */
     private Long patientId;
 
+    /** 患者姓名 */
     private String patientName;
 
     private BigDecimal amount;

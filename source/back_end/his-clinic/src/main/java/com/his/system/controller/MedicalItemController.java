@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * 检查检验项目管理控制器：检查项目、检验项目及检验项目组合条目的维护与取数入口。
+ */
 @Tag(name = "检查检验项目管理")
 @RestController
 @RequestMapping("/system/medical-item")
@@ -46,12 +49,20 @@ public class MedicalItemController {
         return Result.success(medicalItemService.inspectionSelectList(keyword, limit));
     }
 
+    /**
+     * 单个检查项目详情。
+     * 用于「检查项目」页修改弹框的回显取数。
+     */
     @Operation(summary = "获取检查项目详情")
     @GetMapping("/inspection/getById")
     public Result<SysInspectionItemVO> getInspectionItem(@RequestParam Long id) {
         return Result.success(medicalItemService.getInspectionItem(id));
     }
 
+    /**
+     * 新增或修改检查项目：入参带主键走修改，不带走新增。
+     * 用于「检查项目」页新增/修改弹框保存。
+     */
     @PreAuthorize("hasAuthority('medtech:inspectionItems:add')")
     @Operation(summary = "新增或修改检查项目")
     @PostMapping("/inspectionUpsert")
@@ -60,6 +71,10 @@ public class MedicalItemController {
         return Result.success("操作成功", null);
     }
 
+    /**
+     * 删除检查项目。
+     * 用于「检查项目」页列表行的删除操作。
+     */
     @PreAuthorize("hasAuthority('medtech:inspectionItems:delete')")
     @Operation(summary = "删除检查项目")
     @DeleteMapping("/inspection/deleteById")
@@ -89,12 +104,20 @@ public class MedicalItemController {
         return Result.success(medicalItemService.laboratorySelectList(keyword, limit));
     }
 
+    /**
+     * 单个检验项目详情。
+     * 用于「检验项目」页修改弹框的回显取数。
+     */
     @Operation(summary = "获取检验项目详情")
     @GetMapping("/laboratory/getById")
     public Result<SysLaboratoryItemVO> getLaboratoryItem(@RequestParam Long id) {
         return Result.success(medicalItemService.getLaboratoryItem(id));
     }
 
+    /**
+     * 新增或修改检验项目：入参带主键走修改，不带走新增。
+     * 用于「检验项目」页新增/修改弹框保存。
+     */
     @PreAuthorize("hasAuthority('medtech:inspectionItems:add')")
     @Operation(summary = "新增或修改检验项目")
     @PostMapping("/laboratoryUpsert")
@@ -103,6 +126,10 @@ public class MedicalItemController {
         return Result.success("操作成功", null);
     }
 
+    /**
+     * 删除检验项目。
+     * 用于「检验项目」页列表行的删除操作。
+     */
     @PreAuthorize("hasAuthority('medtech:inspectionItems:delete')")
     @Operation(summary = "删除检验项目")
     @DeleteMapping("/laboratory/deleteById")
@@ -119,6 +146,10 @@ public class MedicalItemController {
         return Result.success(medicalItemService.laboratoryDetailList(laboratoryItemId));
     }
 
+    /**
+     * 新增或修改检验项目的一条组合条目：入参带主键走修改，不带走新增。
+     * 用于「检验项目」页明细配置弹框里的条目编辑保存。
+     */
     @PreAuthorize("hasAuthority('medtech:inspectionItems:add')")
     @Operation(summary = "新增或修改检验项目明细")
     @PostMapping("/laboratory/detailUpsert")
@@ -127,6 +158,10 @@ public class MedicalItemController {
         return Result.success("操作成功", null);
     }
 
+    /**
+     * 删除检验项目的一条组合条目。
+     * 用于「检验项目」页明细配置弹框删除某个组合条目。
+     */
     @PreAuthorize("hasAuthority('medtech:inspectionItems:delete')")
     @Operation(summary = "删除检验项目明细")
     @DeleteMapping("/laboratory/detail/deleteById")

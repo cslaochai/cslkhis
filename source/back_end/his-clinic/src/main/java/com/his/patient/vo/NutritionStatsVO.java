@@ -29,6 +29,7 @@ public class NutritionStatsVO {
      */
     private Integer scopeType;
 
+    /** 统计范围文案 */
     private String scopeTypeText;
 
     /**
@@ -87,8 +88,10 @@ public class NutritionStatsVO {
      */
     private Integer consultCount;
 
+    /** 按时限完成营养会诊的单数 */
     private Integer consultOnTimeCount;
 
+    /** 营养会诊按时率（%） */
     private BigDecimal consultOnTimeRate;
 
     /**
@@ -116,10 +119,13 @@ public class NutritionStatsVO {
      */
     private BigDecimal screenRateTarget;
 
+    /** 膳食方案确认率目标（%） */
     private BigDecimal dietConfirmRateTarget;
 
+    /** 营养会诊按时率目标（%） */
     private BigDecimal consultOnTimeRateTarget;
 
+    /** 订餐签收率目标（%） */
     private BigDecimal mealSignRateTarget;
 
     /**

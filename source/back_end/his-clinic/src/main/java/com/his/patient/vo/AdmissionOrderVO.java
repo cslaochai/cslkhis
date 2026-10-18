@@ -44,6 +44,9 @@ public class AdmissionOrderVO {
      */
     private Integer gender;
 
+    /**
+     * 性别文案
+     */
     private String genderText;
     /**
      * 年龄
@@ -137,13 +140,14 @@ public class AdmissionOrderVO {
      */
     private String medicalInsuranceNo;
 
-    // 状态
-
     /**
      * 状态（1-待收治 2-已收治 3-已作废 4-已过期）
      */
     private Integer orderStatus;
 
+    /**
+     * 医嘱状态文案
+     */
     private String orderStatusText;
 
     /**

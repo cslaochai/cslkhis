@@ -88,5 +88,6 @@ public class DrugInteractionVO {
      */
     private Integer drugHitsA;
 
+    /** 成分B 在本院药品字典里能命中多少条药品，口径同上 */
     private Integer drugHitsB;
 }

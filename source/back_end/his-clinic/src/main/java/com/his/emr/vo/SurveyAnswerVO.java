@@ -39,6 +39,7 @@ public class SurveyAnswerVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long templateId;
 
+    /** 模板名称 */
     private String templateName;
 
     /**
@@ -78,6 +79,7 @@ public class SurveyAnswerVO implements Serializable {
      */
     private BigDecimal avgScore;
 
+    /** 百分制得分（由李克特均分换算：(均分-1)/4×100） */
     private BigDecimal score100;
 
     /**

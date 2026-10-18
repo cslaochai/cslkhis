@@ -24,6 +24,7 @@ public class EmployeePostVO {
      */
     private String roleCode;
 
+    /** 角色名称 */
     private String roleName;
 
     /**
@@ -32,6 +33,7 @@ public class EmployeePostVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
+    /** 科室编码（唯一） */
     private String deptCode;
 
     /**

@@ -1,14 +1,11 @@
 package com.his.miniapp.service.impl;
 
-import com.his.system.utils.UserUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.enums.ServiceTicketActionEnum;
-import com.his.common.enums.ServiceTicketOperatorTypeEnum;
-import com.his.common.enums.ServiceTicketPriorityEnum;
-import com.his.common.enums.ServiceTicketStatusEnum;
-import com.his.common.enums.YesOrNoEnum;
+import com.his.common.entity.CurrentUser;
+import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
@@ -18,16 +15,16 @@ import com.his.miniapp.dto.ServiceTicketActionDTO;
 import com.his.miniapp.dto.ServiceTicketAppendDTO;
 import com.his.miniapp.entity.BizServiceMessage;
 import com.his.miniapp.entity.BizServiceTicketLog;
-import com.his.miniapp.mapper.MiniServiceMessageMapper;
 import com.his.miniapp.mapper.MiniServiceLogMapper;
+import com.his.miniapp.mapper.MiniServiceMessageMapper;
 import com.his.miniapp.service.MiniDirectoryService;
 import com.his.miniapp.service.MiniServiceMessageService;
 import com.his.miniapp.vo.MiniPatientDetailVO;
-import com.his.miniapp.vo.MiniServiceMessageListVO;
 import com.his.miniapp.vo.MiniServiceDetailVO;
 import com.his.miniapp.vo.MiniServiceLogVO;
-import com.his.common.entity.CurrentUser;
+import com.his.miniapp.vo.MiniServiceMessageListVO;
 import com.his.system.service.RedisSequenceService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -151,13 +148,12 @@ public class MiniServiceMessageServiceImpl extends ServiceImpl<MiniServiceMessag
                 .eq(BizServiceMessage::getUserId, user.getUserId())
                 .orderByDesc(BizServiceMessage::getCreateTime)
                 .orderByDesc(BizServiceMessage::getId);
-        long total = miniServiceMessageMapper.selectCount(wrapper);
-        List<BizServiceMessage> rows = miniServiceMessageMapper.selectList(wrapper.last("LIMIT " + (current - 1) * size + ", " + size));
+        Page<BizServiceMessage> paged = page(new Page<>(current, size), wrapper);
         List<MiniServiceMessageListVO> records = new ArrayList<>();
-        for (BizServiceMessage row : rows) {
+        for (BizServiceMessage row : paged.getRecords()) {
             records.add(toVO(row));
         }
-        return PageResult.of(total, current, size, (total + size - 1) / size, records);
+        return PageResult.of(paged.getTotal(), current, size, paged.getPages(), records);
     }
 
     @Override

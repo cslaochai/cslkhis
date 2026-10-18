@@ -9,6 +9,7 @@ import lombok.Data;
 @Data
 public class HospitalInfoUpsertDTO {
 
+    /** 手术医院 */
     @NotBlank(message = "医院名称不能为空")
     private String hospitalName;
 

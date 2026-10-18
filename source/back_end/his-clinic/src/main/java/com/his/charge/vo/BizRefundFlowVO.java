@@ -22,6 +22,7 @@ public class BizRefundFlowVO {
      */
     private String refundNo;
 
+    /** 旧收费单ID（历史票遗留，四层新票为空） */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long chargeId;
 

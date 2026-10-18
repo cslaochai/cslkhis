@@ -32,15 +32,19 @@ public class DrugTraceScanVO {
     /** 药品ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long drugId;
+    /** 药品编码 */
     private String drugCode;
     /** 药品名称 */
     private String drugName;
     private String genericName;
+    /** 规格 */
     private String specification;
     private String dosageForm;
     /** 单位 */
     private String unit;
+    /** 生产厂家 */
     private String manufacturer;
+    /** 批准文号 */
     private String approvalNumber;
     /** 是否要求扫码采集（麻精/集采/医保谈判） */
     private Integer isTraceRequired;
@@ -60,6 +64,7 @@ public class DrugTraceScanVO {
     // 发药核销场景：发药单快照
     @JsonSerialize(using = ToStringSerializer.class)
     private Long dispensingId;
+    /** 发药单号 */
     private String dispensingNo;
     @JsonSerialize(using = ToStringSerializer.class)
     private Long dispensingDrugId;

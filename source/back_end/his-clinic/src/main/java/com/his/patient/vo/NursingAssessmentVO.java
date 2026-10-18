@@ -67,6 +67,7 @@ public class NursingAssessmentVO {
      * 风险等级（1-低风险 2-中风险 3-高风险 4-极高风险）
      */
     private Integer riskLevel;
+    /** 风险等级中文 */
     private String riskLevelText;
 
     /**

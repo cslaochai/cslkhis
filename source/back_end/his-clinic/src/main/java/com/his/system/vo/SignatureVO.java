@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 @Data
 public class SignatureVO {
 
+    /** 签名记录ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
@@ -24,6 +25,7 @@ public class SignatureVO {
      * 签名对象类型
      */
     private Integer bizType;
+    /** 签名对象类型文案（由枚举 label 渲染） */
     private String bizTypeText;
 
     /**
@@ -56,6 +58,7 @@ public class SignatureVO {
      * 签名场景
      */
     private Integer signScene;
+    /** 签名场景文案（由枚举 label 渲染） */
     private String signSceneText;
     /**
      * 同对象第几次签名
@@ -126,6 +129,7 @@ public class SignatureVO {
      * 时间来源（1-本机时钟 2-院内授时服务器 3-第三方TSA）
      */
     private Integer timeSource;
+    /** 时间来源文案（由枚举 label 渲染） */
     private String timeSourceText;
 
     /**
@@ -147,12 +151,14 @@ public class SignatureVO {
      * 签名状态（1-有效 2-已作废）
      */
     private Integer signStatus;
+    /** 签名状态文案（由枚举 label 渲染） */
     private String signStatusText;
 
     /**
      * 最近一次验签结果（0-未校验 1-通过 2-失败）
      */
     private Integer verifyStatus;
+    /** 验签结果文案（由枚举 label 渲染） */
     private String verifyStatusText;
     /**
      * 最近一次验签时间

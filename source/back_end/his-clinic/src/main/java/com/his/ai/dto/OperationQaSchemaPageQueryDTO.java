@@ -13,6 +13,7 @@ import lombok.EqualsAndHashCode;
 @Schema(description = "运营问数数据表配置分页查询入参")
 public class OperationQaSchemaPageQueryDTO extends PageParam {
 
+    /** 数据表名 */
     @Schema(description = "表名模糊搜索")
     private String tableName;
 

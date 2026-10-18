@@ -1,32 +1,48 @@
 package com.his.system.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.his.common.base.BaseEntity;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
- * 登录日志（登录日志，建表见 sql/10，查看页见 sql/158）。
+ * 登录日志
+ * <p>
+ * 只追加的流水表，不继承 {@code BaseEntity}：主体是 {@code userName}/{@code userId} 两列，
+ * 「创建人/更新人/备注」对它没有归属意义（见 sql/266）。保留的 createTime/updateTime 是
+ * 框架自动填充，delFlag 供逻辑删除过滤。
  */
 @Data
-@EqualsAndHashCode(callSuper = true)
 @TableName("sys_login_log")
-public class SysLoginLog extends BaseEntity {
+public class SysLoginLog {
+
+    /** 主键ID */
+    @TableId(type = IdType.ASSIGN_ID)
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long id;
+
+    /** 创建时间（框架自动填充，值与 loginTime 相同） */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createTime;
+
+    /** 更新时间（本表只追加，恒等于 createTime） */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updateTime;
+
     /** 逻辑删除标志（0 未删除 1 已删除） */
     @TableLogic
     private Integer delFlag;
-
-    /** 备注 */
-    private String remark;
-
-
 
     /**
      * 用户名（登录名，失败时也能留下"谁在被试"）

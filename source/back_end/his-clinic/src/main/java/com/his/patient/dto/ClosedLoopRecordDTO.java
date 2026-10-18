@@ -13,14 +13,17 @@ public class ClosedLoopRecordDTO {
 
     private Long admissionId;
 
+    /** 患者ID */
     private Long patientId;
 
     private String patientNo;
 
+    /** 患者姓名 */
     private String patientName;
 
     private Integer gender;
 
+    /** 年龄 */
     private Integer age;
 
     private Integer ageUnit;
@@ -29,8 +32,10 @@ public class ClosedLoopRecordDTO {
 
     private String deptName;
 
+    /** 病区ID */
     private Long wardId;
 
+    /** 病区名称 */
     private String wardName;
 
     private String bedNo;
@@ -50,6 +55,7 @@ public class ClosedLoopRecordDTO {
 
     private String treatmentPlan;
 
+    /** 备注 */
     private String remark;
 
     /**
@@ -61,5 +67,6 @@ public class ClosedLoopRecordDTO {
 
     private String doctorName;
 
+    /** 提交时间 */
     private LocalDateTime submitTime;
 }

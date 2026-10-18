@@ -11,6 +11,7 @@ import java.time.LocalDate;
 @Data
 public class MealGenerateVO {
 
+    /** 就餐日期 */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate mealDate;
 

@@ -13,26 +13,35 @@ import java.time.LocalDateTime;
 @Data
 public class RegistSnapshotVO implements Serializable {
 
+    /** 挂号ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long registId;
 
+    /** 挂号单号 */
     private String registNo;
 
+    /** 患者ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
+    /** 患者编号 */
     private String patientNo;
 
+    /** 患者姓名 */
     private String patientName;
 
+    /** 就诊科室ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
+    /** 就诊科室名称 */
     private String deptName;
 
+    /** 接诊医生ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long doctorId;
 
+    /** 接诊医生姓名 */
     private String doctorName;
 
     /**

@@ -23,10 +23,19 @@ public class OpdLogStatsVO {
      */
     private Long waitCheckIn;
 
+    /**
+     * 候诊中（队列已签到入队、尚未叫号）
+     */
     private Long waiting;
 
+    /**
+     * 就诊中（医生已开始接诊、还没结诊）
+     */
     private Long consulting;
 
+    /**
+     * 已就诊（本次接诊已完成）
+     */
     private Long completed;
 
     /**
@@ -34,6 +43,9 @@ public class OpdLogStatsVO {
      */
     private Long cancelled;
 
+    /**
+     * 已过号：叫了号患者没来（与 unvisited 区分，本项是「被叫到过」）
+     */
     private Long overdue;
 
     /**

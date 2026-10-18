@@ -10,6 +10,7 @@ import lombok.Data;
 @Data
 public class KnowledgeSourceVO {
 
+    /** 被引用的知识文档ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long docId;
 

@@ -14,6 +14,7 @@ import java.time.LocalDate;
 @Data
 public class MeteringCreateDTO implements Serializable {
 
+    /** 设备ID */
     @NotNull(message = "设备ID不能为空")
     private Long equipmentId;
 
@@ -24,6 +25,7 @@ public class MeteringCreateDTO implements Serializable {
     @AllowedValues(values = {"1", "2"}, message = "计量类型取值不合法")
     private Integer meteringType;
 
+    /** 计量日期 */
     @NotNull(message = "计量日期不能为空")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate meteringDate;
@@ -40,5 +42,6 @@ public class MeteringCreateDTO implements Serializable {
 
     private String certNo;
 
+    /** 检定/校准机构 */
     private String agency;
 }

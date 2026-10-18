@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @Data
 public class WasteVO {
 
+    /** 医废登记ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
@@ -26,6 +27,7 @@ public class WasteVO {
      * 医废类别（1-感染性 2-损伤性 3-病理性 4-药物性 5-化学性）
      */
     private Integer wasteType;
+    /** 医废类别文案（由字典渲染） */
     private String wasteTypeText;
 
     /**
@@ -54,6 +56,7 @@ public class WasteVO {
      */
     private String collectorName;
 
+    /** 状态（1-已登记 2-已交接 3-已处置） */
     private Integer status;
     /**
      * 状态文本

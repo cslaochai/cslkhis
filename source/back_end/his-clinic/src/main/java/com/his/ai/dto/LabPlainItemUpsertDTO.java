@@ -41,6 +41,7 @@ public class LabPlainItemUpsertDTO {
     @Schema(description = "排序号，越小越靠前")
     private Integer sortOrder;
 
+    /** 备注 */
     @Schema(description = "备注")
     private String remark;
 }

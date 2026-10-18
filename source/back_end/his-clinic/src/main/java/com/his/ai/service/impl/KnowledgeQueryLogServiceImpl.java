@@ -1,16 +1,18 @@
 package com.his.ai.service.impl;
 
+
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.ai.dto.KnowledgeQueryLogPageQueryDTO;
 import com.his.ai.entity.SysKnowledgeQueryLog;
 import com.his.ai.mapper.SysKnowledgeQueryLogMapper;
 import com.his.ai.service.KnowledgeQueryLogService;
 import com.his.ai.vo.KnowledgeQueryLogVO;
+import com.his.common.entity.CurrentUser;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.common.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,9 +27,11 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class KnowledgeQueryLogServiceImpl implements KnowledgeQueryLogService {
+public class KnowledgeQueryLogServiceImpl extends ServiceImpl<SysKnowledgeQueryLogMapper, SysKnowledgeQueryLog> implements KnowledgeQueryLogService {
 
-    /** 命中文档标题列表最多记录 5 个 */
+    /**
+     * 命中文档标题列表最多记录 5 个
+     */
     private static final int HIT_DOCS_MAX = 5;
 
     private final SysKnowledgeQueryLogMapper queryLogMapper;

@@ -25,9 +25,11 @@ public class Icd10PredictResultVO {
     @Schema(description = "降级原因，未降级时为空")
     private String degradeReason;
 
+    /** 本次下发给模型的候选编码数 */
     @Schema(description = "本次下发给模型的候选编码数量")
     private int candidateCount;
 
+    /** 推荐结果列表，按置信度降序 */
     @Schema(description = "推荐结果，按置信度降序")
     private List<Icd10PredictItemVO> predictions = new ArrayList<>();
 

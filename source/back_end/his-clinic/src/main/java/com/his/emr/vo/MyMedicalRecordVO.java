@@ -14,6 +14,8 @@ import java.time.LocalDateTime;
 @Data
 public class MyMedicalRecordVO {
 
+    /** 病历ID */
+    /** 病历ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
@@ -58,6 +60,8 @@ public class MyMedicalRecordVO {
      */
     private Integer recordStatus;
 
+    /** 病历状态文案（由枚举 label 渲染） */
+    /** 病历状态文案（由枚举 label 渲染） */
     private String recordStatusText;
 
     // 以下仅详情返回

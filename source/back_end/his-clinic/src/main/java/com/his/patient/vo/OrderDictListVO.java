@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @Data
 public class OrderDictListVO implements Serializable {
 
+    /** 主键ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
@@ -22,6 +23,7 @@ public class OrderDictListVO implements Serializable {
      */
     private String dictType;
 
+    /** 字典类型文案 */
     private String dictTypeText;
 
     /**
@@ -39,6 +41,7 @@ public class OrderDictListVO implements Serializable {
      */
     private Integer dictSort;
 
+    /** 状态（1-启用 0-停用） */
     private Integer status;
 
     /**

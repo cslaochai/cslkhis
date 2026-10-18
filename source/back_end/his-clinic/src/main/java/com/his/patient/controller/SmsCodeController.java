@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 小程序端短信验证码控制器。
+ * 小程序端短信验证码控制器：注册场景验证码下发的对外接口入口。
  */
 @Tag(name = "短信验证码")
 @RestController
@@ -28,6 +28,12 @@ public class SmsCodeController {
 
     private final SmsCodeService smsCodeService;
 
+    /**
+     * 向指定手机号下发注册场景的短信验证码，未登录即可调用。
+     * 用于患者端小程序注册页的「获取验证码」；发送未成功时按业务错误返回。
+     *
+     * @return 发送结果，联调模式下回带验证码便于免真机验证，正式通道下恒为空
+     */
     @Operation(summary = "发送注册验证码")
     @PostMapping("/sendCode")
     public Result<SmsSendVO> sendCode(@RequestBody @Valid SmsCodeSendDTO dto) {

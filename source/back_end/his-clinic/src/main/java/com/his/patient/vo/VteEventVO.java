@@ -62,6 +62,7 @@ public class VteEventVO {
      */
     private Integer eventType;
 
+    /** 事件类型文案 */
     private String eventTypeText;
 
     /**
@@ -69,6 +70,7 @@ public class VteEventVO {
      */
     private Integer onsetType;
 
+    /** 发生时机文案 */
     private String onsetTypeText;
 
     /**
@@ -82,6 +84,7 @@ public class VteEventVO {
      */
     private Integer diagnosisBasis;
 
+    /** 诊断依据文案 */
     private String diagnosisBasisText;
 
     /**
@@ -94,6 +97,7 @@ public class VteEventVO {
      */
     private Integer outcome;
 
+    /** 转归文案 */
     private String outcomeText;
 
     /**

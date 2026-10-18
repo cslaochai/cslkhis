@@ -25,6 +25,7 @@ public class MyPrescriptionDetailVO {
      */
     private String dosageForm;
 
+    /** 数量（单位见下方 unit 字段） */
     private BigDecimal quantity;
 
     /**
@@ -37,8 +38,10 @@ public class MyPrescriptionDetailVO {
      */
     private String singleDosage;
 
+    /** 用药频次 */
     private String frequency;
 
+    /** 用药途径 */
     private String route;
 
     /**

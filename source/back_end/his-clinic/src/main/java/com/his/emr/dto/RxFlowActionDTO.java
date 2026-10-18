@@ -8,6 +8,7 @@ import lombok.Data;
  */
 @Data
 public class RxFlowActionDTO {
+    /** 流转单ID */
     @NotNull(message = "流转单ID不能为空")
     private Long flowId;
     private String reason;

@@ -51,17 +51,20 @@ public class BizConsumableStockVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long consumableId;
     private String consumableCode;
+    /** 耗材名称 */
     private String consumableName;
     /**
      * 类别
      */
     private Integer category;
+    /** 规格 */
     private String specification;
     /**
      * 单位
      */
     private String unit;
     private BigDecimal retailPrice;
+    /** 生产厂家 */
     private String manufacturer;
     /**
      * 批号

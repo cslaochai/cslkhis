@@ -15,7 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 医技执行管理控制器
+ * 医技执行控制器：检查与检验申请执行单的接单、完成、审核这条执行链的接口入口。
  */
 @Tag(name = "医技执行管理")
 @RestController
@@ -26,6 +26,10 @@ public class MedTechExecutionController {
 
     private final MedTechExecutionService medTechExecutionService;
 
+    /**
+     * 按患者、申请类型与执行状态分页查询医技执行单。
+     * 供医技科室筛选本人待办执行任务时取数。
+     */
     @Operation(summary = "分页查询待执行列表")
     @PostMapping("/listPage")
     public Result<PageResult<BizMedTechExecutionVO>> listPage(@Valid @RequestBody ExecutionPageQueryDTO queryDTO) {
@@ -33,6 +37,10 @@ public class MedTechExecutionController {
                 queryDTO.getExecutionStatus(), queryDTO.getPageNum(), queryDTO.getPageSize()));
     }
 
+    /**
+     * 把执行单从待执行置为执行中，并落执行人与执行时刻。
+     * 用于医技人员开始实施检查或检验时的接单动作。
+     */
     @PreAuthorize("hasAuthority('medtech:laboratoryWorkstation:edit')")
     @Operation(summary = "开始执行")
     @PostMapping("/startExecution")
@@ -41,6 +49,10 @@ public class MedTechExecutionController {
         return success ? Result.success("开始执行", null) : Result.error("操作失败");
     }
 
+    /**
+     * 把执行中的执行单置为已完成，并落完成时刻。
+     * 用于检查或检验操作做完后的收尾登记。
+     */
     @PreAuthorize("hasAuthority('medtech:laboratoryWorkstation:edit')")
     @Operation(summary = "完成执行")
     @PostMapping("/completeExecution")
@@ -49,6 +61,10 @@ public class MedTechExecutionController {
         return success ? Result.success("执行完成", null) : Result.error("操作失败");
     }
 
+    /**
+     * 审核已完成的执行单，审核人取当前登录人并落审核时刻。
+     * 用于执行链最后一步的第二人确认。
+     */
     @PreAuthorize("hasAuthority('medtech:laboratoryWorkstation:edit')")
     @Operation(summary = "审核执行")
     @PostMapping("/reviewExecution")

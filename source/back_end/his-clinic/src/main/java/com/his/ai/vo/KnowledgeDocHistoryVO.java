@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 @Data
 public class KnowledgeDocHistoryVO {
 
+    /** 历史版本记录ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
@@ -20,14 +21,19 @@ public class KnowledgeDocHistoryVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long docId;
 
+    /** 文档标题（历史快照） */
     private String title;
 
+    /** 文档分类 */
     private String category;
 
+    /** 来源类型（1-内置示例 2-手工录入 3-文件导入） */
     private Integer sourceType;
 
+    /** 版本号 */
     private String version;
 
+    /** 来源名称（诊疗指南/论坛/院内制度等） */
     private String sourceName;
 
     /** 内容快照 */

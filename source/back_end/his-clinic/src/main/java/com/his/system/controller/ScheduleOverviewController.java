@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 
+/**
+ * 排班总览控制器：一周排班事实的只读聚合查询接口入口。
+ */
 @Tag(name = "排班总览")
 @RestController
 @RequestMapping("/schedule")
@@ -23,6 +26,10 @@ public class ScheduleOverviewController {
 
     private final BizClinicSourceOverviewService bizScheduleOverviewService;
 
+    /**
+     * 排班周总览：把门诊号源、在岗人次、人力缺口、每日总值班按周聚合成一份只读数据。
+     * 用于「排班总览」驾驶舱页面按周查看，切换周时重新取数。
+     */
     @PreAuthorize("hasAuthority('schedule:overview:list')")
     @Operation(summary = "排班周总览（门诊号源/在岗/缺口/总值班一屏聚合，只读）")
     @GetMapping("/overviewWeek")

@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/** 门诊号源排班控制器：排班维护、号源时段、停诊加号与变更留痕的接口入口。 */
 @Tag(name = "门诊号源排班")
 @RestController
 @RequestMapping("/schedule")
@@ -32,6 +33,10 @@ public class BizClinicSourceController {
 
     private final ClinicSourceLogService clinicSourceLogService;
 
+    /**
+     * 新增或修改一条门诊排班（医生×日期×班次）。
+     * 用于门诊排班页「新增/修改排班」弹框保存。
+     */
     @PreAuthorize("hasAuthority('outpatient:schedule:add')")
     @Operation(summary = "新增或修改排班")
     @PostMapping("/scheduleUpsert")
@@ -40,6 +45,10 @@ public class BizClinicSourceController {
         return Result.success();
     }
 
+    /**
+     * 批量排班登记：一次请求内把「人×日×班次」展开逐条落库，失败整体回滚。
+     * 用于门诊排班页批量新增排班弹框保存。
+     */
     @PreAuthorize("hasAuthority('outpatient:schedule:add')")
     @Operation(summary = "批量新增排班（人×日 展开与落库在单事务内完成）")
     @PostMapping("/batchUpsert")
@@ -47,6 +56,10 @@ public class BizClinicSourceController {
         return Result.success(bizScheduleService.batchUpsert(batchDTO));
     }
 
+    /**
+     * 复刻排班：把源区间内的正常排班整体后移若干天生成新排班。
+     * 用于门诊排班页「复刻排班」面板，目标区间已存在的班次跳过不覆盖。
+     */
     @PreAuthorize("hasAuthority('outpatient:schedule:add')")
     @Operation(summary = "复刻排班（把源区间内正常排班整体后移若干天）")
     @PostMapping("/replicate")
@@ -54,6 +67,10 @@ public class BizClinicSourceController {
         return Result.success(bizScheduleService.replicate(dto));
     }
 
+    /**
+     * 删除一条排班。
+     * 用于门诊排班页排班行的删除操作。
+     */
     @PreAuthorize("hasAuthority('outpatient:schedule:delete')")
     @Operation(summary = "删除排班")
     @DeleteMapping("/deleteById")
@@ -62,12 +79,20 @@ public class BizClinicSourceController {
         return success ? Result.success() : Result.error("删除失败");
     }
 
+    /**
+     * 按科室、日期、医生等条件查询门诊排班明细。
+     * 用于门诊排班页周视图取数与挂号管理页的日历、排班列表。
+     */
     @Operation(summary = "查询排班列表")
     @PostMapping("/list")
     public Result<List<ScheduleDetailVO>> scheduleList(@Valid @RequestBody ScheduleQueryDTO queryDTO) {
         return Result.success(bizScheduleService.listDetail(queryDTO));
     }
 
+    /**
+     * 可挂号源下拉：只出当日有余号的排班。
+     * 用于挂号管理页新增/修改/改约弹框的班次的号源选择；院内公共参照数据，只要求登录。
+     */
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "查询可挂号源（下拉取数，只要求登录）")
     @PostMapping("/selectList")
@@ -75,12 +100,20 @@ public class BizClinicSourceController {
         return Result.success(bizScheduleService.selectListVO(scheduleQueryDTO));
     }
 
+    /**
+     * 查询当前登录用户所在科室今日的排班。
+     * 供当日在岗总览环节取数，科室侧查看今天谁出诊时使用。
+     */
     @Operation(summary = "查询今日本科室排班")
     @GetMapping("/today")
     public Result<List<ScheduleDetailVO>> todaySchedule() {
         return Result.success(bizScheduleService.todayScheduleOfCurrentDept());
     }
 
+    /**
+     * 回写排班的就诊进度状态。
+     * 供医生就诊流转环节回写状态（如标记患者已就诊）时调用。
+     */
     @PreAuthorize("hasAuthority('outpatient:schedule:edit')")
     @Operation(summary = "更新就诊状态")
     @PostMapping("/updateConsultStatus")
@@ -89,6 +122,10 @@ public class BizClinicSourceController {
         return success ? Result.success() : Result.error("更新失败");
     }
 
+    /**
+     * 将排班置为停诊或启用，只迁移状态、不动班次其余内容。
+     * 用于门诊排班页排班行的停诊/启用开关。
+     */
     @PreAuthorize("hasAuthority('outpatient:schedule:edit')")
     @Operation(summary = "停诊/启用（只更新状态列）")
     @PostMapping("/updateStatus")
@@ -97,12 +134,20 @@ public class BizClinicSourceController {
         return success ? Result.success() : Result.error("更新失败");
     }
 
+    /**
+     * 查询该班次已挂号患者名单，作为停诊的影响范围。
+     * 用于门诊排班页执行停诊前的影响确认展示。
+     */
     @Operation(summary = "停诊影响名单（该班次在挂患者）")
     @GetMapping("/stopImpact")
     public Result<List<StopImpactItemVO>> stopImpact(@RequestParam Long scheduleId) {
         return Result.success(bizScheduleService.stopImpact(scheduleId));
     }
 
+    /**
+     * 批量退掉停诊班次下的患者挂号。
+     * 用于门诊排班页停诊动作中确认影响名单后的批量退号环节。
+     */
     @PreAuthorize("hasAuthority('outpatient:schedule:delete')")
     @Operation(summary = "停诊批量退号")
     @PostMapping("/batchCancel")
@@ -123,18 +168,30 @@ public class BizClinicSourceController {
         return Result.success(bizScheduleService.onDuty(queryDTO));
     }
 
+    /**
+     * 查询单条排班的半小时档号源时段。
+     * 用于挂号管理页新增挂号弹框的选段，以及排班编辑弹框的时段编辑取数。
+     */
     @Operation(summary = "查询排班时间片段（半小时一档，挂号选段用）")
     @GetMapping("/slotList")
     public Result<List<ScheduleSlotVO>> slotList(@RequestParam Long scheduleId) {
         return Result.success(bizScheduleSlotService.listVOByScheduleId(scheduleId));
     }
 
+    /**
+     * 一次批量拉取多条排班的号源时段，输出「医生×半小时段」矩阵行。
+     * 用于挂号管理页日视图看板的整屏取数。
+     */
     @Operation(summary = "批量查询排班时间片段（日视图看板「医生 × 半小时段」一次拉全）")
     @PostMapping("/slotListBatch")
     public Result<List<ScheduleSlotVO>> slotListBatch(@Valid @RequestBody ScheduleSlotBatchQueryDTO dto) {
         return Result.success(bizScheduleSlotService.listVOByScheduleIds(dto.getScheduleIds()));
     }
 
+    /**
+     * 为班次加号：号源总数与剩余号同步增加并登记变更留痕。
+     * 用于门诊排班页排班行的加号弹框保存。
+     */
     @PreAuthorize("hasAuthority('outpatient:schedule:add')")
     @Operation(summary = "加号（号源总数/剩余同步增加并留痕）")
     @PostMapping("/addSource")
@@ -143,6 +200,10 @@ public class BizClinicSourceController {
         return success ? Result.success() : Result.error("加号失败");
     }
 
+    /**
+     * 保存班次段级号源配置（每段号源/预约池/停用），各段合计回写排班主行并登记留痕。
+     * 用于门诊排班编辑弹框的号源时段编辑表保存。
+     */
     @PreAuthorize("hasAuthority('outpatient:schedule:add')")
     @Operation(summary = "段级号源编辑（每段号源/预约池/停用状态，Σ段写回主表并留痕）")
     @PostMapping("/slotUpsert")
@@ -151,6 +212,10 @@ public class BizClinicSourceController {
         return Result.success();
     }
 
+    /**
+     * 门诊排班变更留痕分页：谁在何时对哪个班次做了什么、为什么。
+     * 用于门诊排班页变更记录页签的审计查询。
+     */
     @PreAuthorize("hasAuthority('outpatient:schedule:list')")
     @Operation(summary = "门诊排班变更留痕分页（审计：谁在何时对哪个班次做了什么、为什么）")
     @PostMapping("/logPage")

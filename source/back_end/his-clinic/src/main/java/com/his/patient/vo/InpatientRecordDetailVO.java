@@ -265,8 +265,6 @@ public class InpatientRecordDetailVO implements Serializable {
      */
     private String courseNote;
 
-    // 状态与结构化率
-
     /**
      * 文书状态（1-草稿 2-已提交 3-已归档）
      */

@@ -31,6 +31,7 @@ public class MealOrderVO implements Serializable {
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
+    /** 住院号 */
     private String admissionNo;
 
     /**
@@ -118,7 +119,9 @@ public class MealOrderVO implements Serializable {
      */
     private String nextStatusText;
 
+    /** 是否可推进配送状态（1-是 0-否，已签收后为 0） */
     private Integer canAdvance;
+    /** 是否可退订（1-是 0-否，待配餐/已配餐/已配送时可退） */
     private Integer canCancel;
 
     /**

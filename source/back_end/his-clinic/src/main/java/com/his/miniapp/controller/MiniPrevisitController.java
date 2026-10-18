@@ -30,12 +30,20 @@ public class MiniPrevisitController {
 
     private final PatientFacadeService patientFacadeService;
 
+    /**
+     * 预问诊量表：下发主症状、通用问题与主症状追问组组成的题目结构。
+     * 用于小程序「预问诊」页进入时渲染待填问卷。
+     */
     @Operation(summary = "预问诊量表（主症状 + 通用问 + 主症状追问组）")
     @GetMapping("/questionnaire")
     public Result<PrevisitQuestionnaireVO> questionnaire() {
         return Result.success(emrPatientFacadeService.questionnaire());
     }
 
+    /**
+     * 提交预问诊问卷：按挂号维度保存本次填写内容，重复提交覆盖更新；归属从挂号记录反查后再校验。
+     * 用于小程序「预问诊」页填完问卷后的提交动作，医生接诊前可读到该结果。
+     */
     @Operation(summary = "提交问卷（按挂号 upsert，重复提交覆盖更新）")
     @PostMapping("/submit")
     public Result<PrevisitDetailVO> submit(@RequestBody @Valid PrevisitSubmitDTO dto) {
@@ -50,6 +58,10 @@ public class MiniPrevisitController {
         return Result.success("提交成功", emrPatientFacadeService.submit(dto));
     }
 
+    /**
+     * 按挂号查已提交的问卷：取该次挂号填写过的预问诊内容，未填时为空。
+     * 用于小程序「预问诊」页进入时与量表并行拉取，把已填内容回显以便修改。
+     */
     @Operation(summary = "按挂号查已提交的问卷（回显）")
     @GetMapping("/getByRegist")
     public Result<PrevisitDetailVO> getByRegist(@RequestParam Long registId) {

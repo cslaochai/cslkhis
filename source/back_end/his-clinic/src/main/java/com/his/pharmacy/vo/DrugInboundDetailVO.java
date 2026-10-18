@@ -42,6 +42,7 @@ public class DrugInboundDetailVO {
 
     private String batchNo;
 
+    /** 生产日期 */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate productionDate;
 

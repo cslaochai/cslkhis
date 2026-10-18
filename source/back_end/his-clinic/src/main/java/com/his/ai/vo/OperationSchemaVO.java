@@ -10,9 +10,11 @@ import lombok.Data;
 @Schema(description = "可查询数据域")
 public class OperationSchemaVO {
 
+    /** 数据表名 */
     @Schema(description = "表名")
     private String tableName;
 
+    /** 数据域用途说明 */
     @Schema(description = "用途说明")
     private String description;
 }

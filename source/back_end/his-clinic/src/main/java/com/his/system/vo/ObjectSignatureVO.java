@@ -18,6 +18,7 @@ public class ObjectSignatureVO {
      */
     private Integer bizType;
 
+    /** 业务类型文案（由枚举 label 渲染） */
     private String bizTypeText;
 
     /**
@@ -26,6 +27,7 @@ public class ObjectSignatureVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long bizId;
 
+    /** 被签对象的单号（病历号/申请单号等，随业务类型而定） */
     private String bizNo;
     /**
      * 患者姓名
@@ -37,6 +39,7 @@ public class ObjectSignatureVO {
      */
     private Integer objectSignStatus;
 
+    /** 锚点状态文案（由枚举 label 渲染） */
     private String objectSignStatusText;
 
     /**
@@ -44,6 +47,7 @@ public class ObjectSignatureVO {
      */
     private Integer bizStatus;
 
+    /** 业务状态文案（按业务类型取各自枚举的 label 渲染） */
     private String bizStatusText;
 
     /**
@@ -52,6 +56,7 @@ public class ObjectSignatureVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long currentSignId;
 
+    /** 当前有效签名编号 */
     private String currentSignNo;
 
     /**

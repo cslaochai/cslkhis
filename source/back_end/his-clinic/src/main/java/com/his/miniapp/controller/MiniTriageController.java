@@ -25,6 +25,10 @@ public class MiniTriageController {
 
     private final MiniTriageService miniTriageService;
 
+    /**
+     * 按主诉推荐科室：拿症状描述做规则匹配给出候选科室，急症科室排在最前。
+     * 用于小程序「智能导诊」页患者填写主诉后的推荐结果。
+     */
     @Operation(summary = "按主诉推荐科室（规则匹配，急症置顶）")
     @PostMapping("/recommend")
     @PreAuthorize("hasAuthority('PATIENT')")
@@ -32,6 +36,10 @@ public class MiniTriageController {
         return Result.success(miniTriageService.recommend(dto.getDescription()));
     }
 
+    /**
+     * 常见症状快捷标签：高频主诉词清单，供一键填入代替手工输入。
+     * 用于小程序「智能导诊」页输入框下方的快捷选择。
+     */
     @Operation(summary = "常见症状快捷标签")
     @GetMapping("/hotSymptoms")
     @PreAuthorize("hasAuthority('PATIENT')")

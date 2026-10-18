@@ -16,6 +16,7 @@ public class OperationQaSemanticPageQueryDTO extends PageParam {
     @Schema(description = "语义词模糊搜索")
     private String term;
 
+    /** 数据表名 */
     @Schema(description = "命中表")
     private String tableName;
 

@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 @Data
 public class MaintainVO {
 
+    /** 维保记录ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
@@ -37,6 +38,7 @@ public class MaintainVO {
      * 维保类型（1-保养 2-维修 3-巡检）
      */
     private Integer maintainType;
+    /** 维保类型文案（由枚举 label 渲染） */
     private String maintainTypeText;
 
     /**
@@ -68,6 +70,7 @@ public class MaintainVO {
      * 维保结果（1-正常 2-异常）
      */
     private Integer maintainResult;
+    /** 维保结果文案（由枚举 label 渲染） */
     private String maintainResultText;
 
     /**

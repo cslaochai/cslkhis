@@ -16,6 +16,7 @@ import java.util.List;
 @Data
 public class MyPrescriptionVO {
 
+    /** 处方ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
@@ -45,6 +46,7 @@ public class MyPrescriptionVO {
      */
     private Integer prescriptionType;
 
+    /** 处方类型文案（由枚举 label 渲染） */
     private String prescriptionTypeText;
 
     /**
@@ -82,6 +84,7 @@ public class MyPrescriptionVO {
      */
     private Integer paymentStatus;
 
+    /** 缴费状态文案（由枚举 label 渲染） */
     private String paymentStatusText;
 
     /**
@@ -90,5 +93,6 @@ public class MyPrescriptionVO {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime dispenseTime;
 
+    /** 处方药味明细 */
     private List<MyPrescriptionDetailVO> details;
 }

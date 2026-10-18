@@ -32,11 +32,15 @@ public class SysKnowledgeEvalCase {
     /** 逻辑删除（0-正常 1-删除） */
     private Integer delFlag;
 
+    /** 创建人 */
     private Long createBy;
 
+    /** 创建时间 */
     private LocalDateTime createTime;
 
+    /** 更新人 */
     private Long updateBy;
 
+    /** 更新时间 */
     private LocalDateTime updateTime;
 }

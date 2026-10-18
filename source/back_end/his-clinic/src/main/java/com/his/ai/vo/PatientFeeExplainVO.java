@@ -16,55 +16,72 @@ import java.util.List;
 @Schema(description = "患者端费用解释结果")
 public class PatientFeeExplainVO {
 
+    /** 账单ID */
     @Schema(description = "账单ID（字符串）")
     @JsonSerialize(using = ToStringSerializer.class)
     private Long billId;
 
+    /** 账单号 */
     @Schema(description = "账单号")
     private String billNo;
 
+    /** 患者姓名 */
     @Schema(description = "就诊人姓名")
     private String patientName;
 
+    /** 账单日期 */
     @Schema(description = "账单日期")
     private LocalDate billDate;
 
+    /** 账单总金额（元） */
     @Schema(description = "账单总金额")
     private BigDecimal totalAmount;
 
+    /** 医保统筹支付金额（元） */
     @Schema(description = "医保统筹支付")
     private BigDecimal poolAmount;
 
+    /** 医保个人账户支付金额（元） */
     @Schema(description = "个人账户支付")
     private BigDecimal accountAmount;
 
+    /** 个人自付金额（元，现金/线上支付等真实收款） */
     @Schema(description = "个人自付（现金/微信等）")
     private BigDecimal selfAmount;
 
+    /** 医保类型；自费结算时为 null */
     @Schema(description = "医保类型（城镇职工医保…）；自费结算时为 null")
     private String insuranceType;
 
+    /** 统筹报销比例（百分数）；自费结算时为 null */
     @Schema(description = "统筹报销比例（%）；自费结算时为 null")
     private BigDecimal coverageRatio;
 
+    /** 自付占总费用比例（百分数，保留 1 位） */
     @Schema(description = "自付占总费用比例（百分数，保留 1 位）")
     private BigDecimal selfRatio;
 
+    /** 按医保目录类别的分组汇总 */
     @Schema(description = "按医保目录类别的分组汇总（自付多少的答案在这里）")
     private List<FeeCatalogGroupVO> catalogGroups;
 
+    /** 按项目类型的分组汇总 */
     @Schema(description = "按项目类型的分组汇总（药品/检查/检验/治疗…）")
     private List<FeeItemGroupVO> itemGroups;
 
+    /** 自付金额最高的前几项明细 */
     @Schema(description = "自付金额最高的前几项（患者最容易对这几项有疑问）")
     private List<FeeTopItemVO> topSelfItems;
 
+    /** 核心结论文案：解释自付为什么这么多 */
     @Schema(description = "核心结论：为什么自付这么多（规则生成）")
     private String reasonText;
 
+    /** 一句话总结 */
     @Schema(description = "一句话总结（规则拼接：总额/统筹/自付/占比最高的目录类别）")
     private String summary;
 
+    /** 固定免责与引导文案 */
     @Schema(description = "固定提示：以窗口/医保经办解释为准")
     private String advice;
 

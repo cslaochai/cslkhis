@@ -28,6 +28,10 @@ public class MiniFollowupController {
 
     private final PatientFacadeService patientFacadeService;
 
+    /**
+     * 我的随访任务：就诊人名下待执行与已完成的随访，按计划时间倒序。
+     * 用于小程序「我的随访」页的任务清单。
+     */
     @Operation(summary = "我的随访任务（只含本人名下，按计划时间倒序）")
     @GetMapping("/myList")
     public Result<List<BizFollowupTaskVO>> myList(@RequestParam Long patientId) {
@@ -38,6 +42,10 @@ public class MiniFollowupController {
         return Result.success(emrPatientFacadeService.listForPatient(patientId));
     }
 
+    /**
+     * 提交随访反馈：把患者填写的回答写回对应随访任务，供随访人员复核。
+     * 用于小程序「我的随访」页某条任务的反馈填写。
+     */
     @Operation(summary = "提交随访反馈（写回任务的患者反馈列）")
     @PostMapping("/reply")
     public Result<Void> reply(@RequestBody @Valid FollowupReplyDTO dto) {

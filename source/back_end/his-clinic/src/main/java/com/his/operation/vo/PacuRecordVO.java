@@ -26,9 +26,11 @@ public class PacuRecordVO extends BizAnesthesiaPacu {
 
     private String anesthesiaTypeText;
 
+    /** 麻醉结束时间（停药） */
     @com.fasterxml.jackson.annotation.JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private java.time.LocalDateTime anesthesiaEndTime;
 
+    /** 手术间 */
     private String operationRoom;
 
     private String plannedOperationName;

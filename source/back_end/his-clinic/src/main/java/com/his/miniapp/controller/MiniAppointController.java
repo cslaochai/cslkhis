@@ -35,6 +35,10 @@ public class MiniAppointController {
 
     private final MiniPayService miniPayService;
 
+    /**
+     * 患者线上挂号：新建挂号记录并从预约池扣号，不支持改号。
+     * 用于小程序「预约挂号」页选好号源后确认提交。
+     */
     @Operation(summary = "患者挂号（新增；预约池扣号）")
     @PostMapping("/upsert")
     public Result<BizAppointInfoListVO> upsert(@RequestBody @Valid AppointUpsertDTO upsertDTO) {
@@ -51,6 +55,10 @@ public class MiniAppointController {
         return Result.success("挂号成功", result);
     }
 
+    /**
+     * 我的预约分页：按登录态绑定关系收窄的挂号列表。
+     * 用于小程序「我的预约」页列表与「首页」近期预约卡片取数。
+     */
     @Operation(summary = "我的预约（分页，按绑定关系校验）")
     @GetMapping("/listPage")
     public Result<PageResult<BizAppointInfoListVO>> listPage(@Valid AppointQueryDTO queryDTO) {
@@ -61,6 +69,10 @@ public class MiniAppointController {
         return Result.success(appointFacadeService.listRegistPage(queryDTO));
     }
 
+    /**
+     * 单条挂号详情：按就诊人取其当前挂号记录，越权即拒。
+     * 供挂号成功页回显与退号、签到、预问诊等后续动作前的归属核对；小程序暂无独立详情页直接调用。
+     */
     @Operation(summary = "挂号详情")
     @GetMapping("/getDetail")
     public Result<BizAppointInfoListVO> getDetail(@Valid AppointQueryDTO queryDTO) {
@@ -71,6 +83,10 @@ public class MiniAppointController {
         return Result.success(toVO(regist));
     }
 
+    /**
+     * 患者退号：取消挂号记录并把已支付的挂号费原路退回，归属从挂号记录反查。
+     * 用于小程序「我的预约」页的退号操作。
+     */
     @Operation(summary = "退号（联动已支付挂号费原路退回）")
     @PostMapping("/cancel")
     public Result<Void> cancel(@RequestBody @Valid AppointCancelDTO appointCancelDTO) {

@@ -14,7 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 退费申请控制器
+ * 退费申请控制器：退费单据的发起、审核、作废与执行入口。本层只是红冲前置审批单，不承载资金事实。
  */
 @Tag(name = "退费申请")
 @RestController
@@ -25,6 +25,10 @@ public class RefundApplyController {
 
     private final RefundApplyService refundApplyService;
 
+    /**
+     * 退费申请分页：出参带退款方式与到账信息，一眼看出这笔钱退没退、怎么退的。
+     * 用于「退费管理」台账查询卡，按患者、申请状态或单号关键字筛查待办与已办申请。
+     */
     @Operation(summary = "分页查询退费申请")
     @PostMapping("/listPage")
     public Result<PageResult<BizRefundApplyVO>> listPage(@Valid @RequestBody RefundPageQueryDTO queryDTO) {
@@ -38,12 +42,20 @@ public class RefundApplyController {
                 result.getPages(), result.getRecords()));
     }
 
+    /**
+     * 单条退费申请的取数：申请金额、原账单与执行后的退款去向一并回显。
+     * 用于「退费管理」台账行点开的只读详情弹框。
+     */
     @Operation(summary = "获取退费申请详情")
     @GetMapping("/getById")
     public Result<BizRefundApplyVO> getById(@RequestParam Long id) {
         return Result.success(refundApplyService.getRefundApplyDetail(id));
     }
 
+    /**
+     * 提交退费申请：登记一张待审核单据，不动账单也不动钱。
+     * 用于「退费管理」页的新增申请，以及挂号页对已收费用发起的「申请退费」弹框；发起人与审核人必须是两个人。
+     */
     @PreAuthorize("hasAuthority('finance:refund:add')")
     @Operation(summary = "提交退费申请")
     @PostMapping("/applyRefund")
@@ -79,6 +91,10 @@ public class RefundApplyController {
         return success ? Result.success("已作废", null) : Result.error("作废失败");
     }
 
+    /**
+     * 执行退费：把一张审核通过的申请落成真实退款，记账行红冲与原路退钱在同一步里一次做完。
+     * 用于「退费管理」台账上收费员对已通过申请点的执行动作，是审批链路通向资金层的唯一出口。
+     */
     @PreAuthorize("hasAuthority('finance:refund:edit')")
     @Operation(summary = "执行退费")
     @PostMapping("/executeRefund")

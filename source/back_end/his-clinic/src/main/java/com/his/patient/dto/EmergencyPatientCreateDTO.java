@@ -8,10 +8,12 @@ import lombok.Data;
 @Data
 public class EmergencyPatientCreateDTO {
 
+    /** 患者姓名 */
     private String patientName;
 
     private Integer gender;
 
+    /** 年龄 */
     private Integer age;
 
     private String phone;

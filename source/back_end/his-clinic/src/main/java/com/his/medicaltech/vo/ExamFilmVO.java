@@ -88,6 +88,7 @@ public class ExamFilmVO {
      */
     private Integer modality;
 
+    /** 影像模态文案（由字典渲染） */
     private String modalityText;
 
     /**
@@ -131,6 +132,7 @@ public class ExamFilmVO {
      */
     private Integer filmStatus;
 
+    /** 胶片状态文案（由字典渲染） */
     private String filmStatusText;
 
     /**

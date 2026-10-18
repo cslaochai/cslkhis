@@ -30,6 +30,7 @@ public class DietPlanVO implements Serializable {
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
+    /** 住院号 */
     private String admissionNo;
 
     /**

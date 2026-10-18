@@ -1,7 +1,7 @@
 <template>
-  <el-dialog v-model="visible" destroy-on-close :title="isAdd ? '新增患者' : '编辑患者'" width="800px">
-    <el-form :model="form" label-position="left">
-      <h4 class="mb-2 text-sm font-medium text-slate-700">基本信息</h4>
+  <el-dialog v-model="visible" destroy-on-close :title="isAdd ? '新增患者' : '编辑患者'" width="880px">
+    <el-form :model="form" class="patient-edit-form" label-position="left" label-width="90px">
+      <h4 class="form-section-title">基本信息</h4>
       <div class="grid grid-cols-3 gap-4">
         <el-form-item label="姓名" required>
           <el-input v-model="form.patientName" placeholder="请输入患者姓名"/>
@@ -25,7 +25,7 @@
         </el-form-item>
       </div>
 
-      <h4 class="mb-2 mt-4 text-sm font-medium text-slate-700">联系人信息</h4>
+      <h4 class="form-section-title mt-4">联系人信息</h4>
       <div class="grid grid-cols-3 gap-4">
         <el-form-item label="联系人姓名">
           <el-input v-model="form.contactName" placeholder="请输入联系人姓名"/>
@@ -43,7 +43,7 @@
         </el-form-item>
       </div>
 
-      <h4 class="mb-2 mt-4 text-sm font-medium text-slate-700">其他信息</h4>
+      <h4 class="form-section-title mt-4">其他信息</h4>
       <div class="grid grid-cols-3 gap-4">
         <el-form-item label="血型">
           <el-select v-model="form.bloodType" class="w-full" clearable placeholder="选择血型">
@@ -77,7 +77,7 @@
         <el-input v-model="form.address" placeholder="请输入家庭住址"/>
       </el-form-item>
 
-      <h4 class="mb-2 mt-4 text-sm font-medium text-slate-700">参保信息</h4>
+      <h4 class="form-section-title mt-4">参保信息</h4>
       <div class="grid grid-cols-2 gap-4">
         <el-form-item label="费别" required>
           <el-select v-model="form.medicalInsuranceType" class="w-full" filterable

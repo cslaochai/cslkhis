@@ -35,6 +35,7 @@ public class InpatientOrderTemplateItemVO implements Serializable {
      */
     private Integer orderClass;
 
+    /** 医嘱类别文案 */
     private String orderClassText;
 
     /**

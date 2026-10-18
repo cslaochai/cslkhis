@@ -19,6 +19,7 @@ public class AiPromptTemplateUpsertDTO {
     @Schema(description = "提示词内容")
     private String content;
 
+    /** 备注 */
     @Schema(description = "备注（本次改了什么）")
     private String remark;
 }

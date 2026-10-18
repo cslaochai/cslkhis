@@ -23,9 +23,12 @@ public class ArchiveSyncCandidateVO implements Serializable {
      */
     private String recordNo;
 
+    /** 患者姓名 */
     private String patientName;
 
+    /** 科室名称 */
     private String deptName;
 
+    /** 诊断 */
     private String diagnosis;
 }

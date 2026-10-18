@@ -29,6 +29,7 @@ public class MiniScheduleSelectVO implements Serializable {
 
     private String doctorName;
 
+    /** 排班日期 */
     private LocalDate scheduleDate;
 
     private String startTime;

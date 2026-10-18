@@ -12,8 +12,10 @@ import java.io.Serializable;
 @Data
 public class DeptSnapshotVO implements Serializable {
 
+    /** 科室ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
+    /** 科室名称 */
     private String deptName;
 }

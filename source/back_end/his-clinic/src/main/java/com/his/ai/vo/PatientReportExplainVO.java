@@ -15,19 +15,24 @@ import java.util.List;
 @Schema(description = "患者端报告解读结果")
 public class PatientReportExplainVO {
 
+    /** 报告ID */
     @Schema(description = "报告ID（字符串，避免前端 Number 丢精度）")
     @JsonSerialize(using = ToStringSerializer.class)
     private Long reportId;
 
+    /** 报告单号 */
     @Schema(description = "报告单号")
     private String reportNo;
 
+    /** 检验项目名称（报告大项，如「血常规」） */
     @Schema(description = "检验项目（大项，如「血常规」）")
     private String itemName;
 
+    /** 报告发布时间 */
     @Schema(description = "报告发布时间")
     private LocalDateTime reportTime;
 
+    /** 一句话总览 */
     @Schema(description = "一句话总览，如「共 8 项，其中 2 项不在参考范围内」")
     private String summary;
 
@@ -40,18 +45,23 @@ public class PatientReportExplainVO {
     @Schema(description = "危急值提示；无危急值时为 null")
     private String criticalAlert;
 
+    /** 逐项解读列表 */
     @Schema(description = "逐项解读")
     private List<PatientLabItemPlainVO> items;
 
+    /** 结果总项数 */
     @Schema(description = "结果总项数")
     private Integer itemCount;
 
+    /** 超出参考范围的项数（不含未判定） */
     @Schema(description = "不在参考范围内的项数（不含未判定）")
     private Integer abnormalCount;
 
+    /** 未能自动判定的项数（既不计异常也不计正常） */
     @Schema(description = "未能自动判定的项数（参考区间不可用，既不是异常也不是正常）")
     private Integer unjudgedCount;
 
+    /** 固定免责与引导文案 */
     @Schema(description = "固定免责与引导提示")
     private String advice;
 
@@ -62,9 +72,11 @@ public class PatientReportExplainVO {
     @Schema(description = "表达层来源：rule-规则文案 model-模型润色")
     private String source;
 
+    /** 是否处于降级态（模型未参与，事实与白话照常返回） */
     @Schema(description = "是否处于降级态（模型未参与，事实与白话照常返回）")
     private Boolean degraded;
 
+    /** 降级原因，未降级时为空 */
     @Schema(description = "降级原因（密钥未配置 / 熔断中 / 调用失败）")
     private String degradeReason;
 }

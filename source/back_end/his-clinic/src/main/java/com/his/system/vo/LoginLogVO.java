@@ -55,6 +55,7 @@ public class LoginLogVO {
      * 登录状态（0-成功 1-失败）
      */
     private Integer loginStatus;
+    /** 登录状态文案（由字典渲染） */
     private String loginStatusText;
 
     /**

@@ -14,9 +14,11 @@ public class QualityRuleTotalVO {
     @Schema(description = "规则编码")
     private String ruleCode;
 
+    /** 检查总数（分母） */
     @Schema(description = "检查总数（分母）")
     private Long checkedTotal;
 
+    /** 命中问题的条数（分子） */
     @Schema(description = "问题数（分子）")
     private Long hitTotal;
 }

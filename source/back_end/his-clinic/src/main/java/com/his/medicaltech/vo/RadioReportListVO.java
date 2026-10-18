@@ -23,9 +23,15 @@ public class RadioReportListVO {
      */
     private String recordNo;
 
+    /**
+     * 检查申请ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long applyId;
 
+    /**
+     * 检查申请单号
+     */
     private String applyNo;
 
     /**
@@ -54,6 +60,9 @@ public class RadioReportListVO {
      */
     private Integer age;
 
+    /**
+     * 检查项目编码
+     */
     private String itemCode;
 
     /**
@@ -61,6 +70,7 @@ public class RadioReportListVO {
      */
     private String itemName;
 
+    /** 检查部位 */
     private String bodyPart;
 
     /**
@@ -68,6 +78,9 @@ public class RadioReportListVO {
      */
     private Integer recordStatus;
 
+    /**
+     * 检查记录状态文案（由字典渲染）
+     */
     private String recordStatusText;
 
     /**
@@ -100,6 +113,9 @@ public class RadioReportListVO {
      */
     private Integer reportStatus;
 
+    /**
+     * 报告状态文案（由字典渲染，未写报告时给"未写报告"）
+     */
     private String reportStatusText;
 
     /**
@@ -112,6 +128,9 @@ public class RadioReportListVO {
      */
     private Integer positiveFlag;
 
+    /**
+     * 阴阳性文案（由字典渲染）
+     */
     private String positiveFlagText;
 
     /**

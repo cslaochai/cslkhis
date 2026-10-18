@@ -30,6 +30,7 @@ public class BizDispensing extends BaseEntity {
 
 
 
+    /** 发药单号 */
     private String dispensingNo;
 
     /** 处方ID */
@@ -51,12 +52,14 @@ public class BizDispensing extends BaseEntity {
     private String doctorName;
     /** 合计金额 */
     private BigDecimal totalAmount;
+    /** 药品数量 */
     private Integer drugCount;
     private Integer dispensingStatus;
     private String auditBy;
     /** 审核时间 */
     private LocalDateTime auditTime;
     private String dispenseBy;
+    /** 发药时间 */
     private LocalDateTime dispenseTime;
     private String pickUpBy;
     private LocalDateTime pickUpTime;

@@ -13,18 +13,23 @@ import java.util.List;
 @Schema(description = "病历文本结构化抽取结果")
 public class EmrExtractResultVO {
 
+    /** 抽出的字段列表（按原文标签切分来源的排在前面） */
     @Schema(description = "抽出的字段（按病历字段顺序排列，来源为按原文标签切分的排在前面）")
     private List<EmrExtractFieldVO> fields = new ArrayList<>();
 
+    /** 抽出字段数 */
     @Schema(description = "抽出的字段数")
     private int fieldCount;
 
+    /** 被丢弃的条目数 */
     @Schema(description = "被丢弃的条目数（证据在原文中查不到 / 字段不在白名单内 / 取值非法）")
     private int rejectedCount;
 
+    /** 丢弃原因清单（最多 5 条） */
     @Schema(description = "丢弃原因（最多 5 条，便于判断是模型在编还是原文本身有问题）")
     private List<String> rejectedNotes = new ArrayList<>();
 
+    /** 输入是否因超长被截断 */
     @Schema(description = "输入是否因超长被截断")
     private boolean truncated;
 

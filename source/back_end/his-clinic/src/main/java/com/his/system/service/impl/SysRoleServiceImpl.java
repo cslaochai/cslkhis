@@ -1,13 +1,15 @@
 package com.his.system.service.impl;
 
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.system.dto.RoleMenuUpsertDTO;
-import com.his.system.dto.SysRoleQueryDTO;
 import com.his.system.dto.SysRolePageQueryDTO;
+import com.his.system.dto.SysRoleQueryDTO;
 import com.his.system.dto.SysRoleUpsertDTO;
 import com.his.system.entity.SysMenu;
 import com.his.system.entity.SysRole;
@@ -30,7 +32,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class SysRoleServiceImpl implements SysRoleService {
+public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> implements SysRoleService {
 
     /**
      * 内置系统管理员角色编码。它承载的是管理端自身的入口权限，所以刻意不允许把菜单清空。

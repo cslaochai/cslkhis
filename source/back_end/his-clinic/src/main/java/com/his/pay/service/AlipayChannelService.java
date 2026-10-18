@@ -13,28 +13,6 @@ public interface AlipayChannelService {
     WxPayChannelService.PayUnifiedResult unifiedOrder(PayOrderVO order);
 
     /**
-     * 主扫下单（面对面二维码）：生成一张只能用支付宝扫的收款码，扫开即是支付宝收银台。
-     *
-     * <p>与 {@link #unifiedOrder} 的区别是产品码不同、由谁发起扫码不同：本方法是<b>医院出码、患者扫</b>，
-     * 码内容（{@code payParams} 里的 {@code qrCode}）是支付宝的收款链接，不是网页地址，
-     * 因此<b>微信扫不开它</b> —— 一码只能属于一个渠道，界面必须先选渠道再生成码。
-     *
-     * <p>同一张支付单重复调用是安全的：支付宝按商户订单号幂等返回同一张码，不会重复占款。
-     *
-     * @return {@code payParams.qrCode}=待渲染成图片的码串；失败时 {@code errMsg} 非空
-     */
-    WxPayChannelService.PayUnifiedResult precreate(PayOrderVO order);
-
-    /**
-     * 取回这张单已出过的码串，没有（没出过、或已过期被清）返回 null。
-     *
-     * <p>存在的理由就是别把「同一张码」问渠道两遍：码串在有效期内对同一商户订单号恒定不变，
-     * 出过一次就该按单号留在缓存里，收银员点刷新、前端重连、页面重开都只该本地重画。
-     * 缓存活着而支付单还待支付，说明渠道侧那笔预下单也还活着（两侧有效期同口径）。
-     */
-    String recallQrCode(String payNo);
-
-    /**
      * 关闭渠道侧交易（患者放弃付款、收银员换渠道出码时必须调）。
      *
      * <p>不关就等于把「一个订单号可以付一次」的额度一直悬在渠道侧：患者事后拿旧码扫出来照样能付，
@@ -63,17 +41,6 @@ public interface AlipayChannelService {
      * 不让字面量散进业务模块（业务侧只问「算不算收到」）。
      */
     boolean isPaidStatus(String tradeStatus);
-
-    /**
-     * 模拟收款：替患者在模拟渠道把这单付掉。
-     *
-     * <p>只有渠道处于模拟模式时允许调用，真模式调用直接拒绝 —— 这个动作的产出是「渠道说钱到了」，
-     * 拿它去推进真实收款等于凭空造账。模拟出来的交易号带 {@code SIMU-} 前缀，
-     * 与商户平台真实流水号同位存放，因此勾对链路照跑，但谁都看得出它不是资金核对依据。
-     *
-     * @param amount 模拟实收金额，按「患者照单全付」传入，查单时原样回吐给入账闸门比对
-     */
-    void markMockPaid(String payNo, BigDecimal amount);
 
     /**
      * 渠道侧交易状态快照。

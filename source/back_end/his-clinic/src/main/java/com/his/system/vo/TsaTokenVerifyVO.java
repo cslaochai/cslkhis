@@ -48,5 +48,6 @@ public class TsaTokenVerifyVO {
      */
     private String failReason;
 
+    /** 本次复验的服务端时刻 */
     private LocalDateTime verifyTime;
 }

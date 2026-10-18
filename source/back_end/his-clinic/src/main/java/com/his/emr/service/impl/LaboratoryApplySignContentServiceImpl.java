@@ -1,17 +1,19 @@
 package com.his.emr.service.impl;
 
-import com.his.common.util.NumUtil;
-import com.his.common.support.CanonicalText;
+
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.his.system.vo.SignSubject;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.ApplyStatusEnum;
 import com.his.common.enums.ObjectSignStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
-import com.his.system.service.SignableContentService;
+import com.his.common.support.CanonicalText;
+import com.his.common.util.NumUtil;
 import com.his.common.util.TimeUtil;
 import com.his.emr.entity.BizLaboratoryApply;
 import com.his.emr.mapper.BizLaboratoryApplyMapper;
+import com.his.system.service.SignableContentService;
+import com.his.system.vo.SignSubject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -25,9 +27,42 @@ import java.util.Objects;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class LaboratoryApplySignContentServiceImpl implements SignableContentService {
+public class LaboratoryApplySignContentServiceImpl extends ServiceImpl<BizLaboratoryApplyMapper, BizLaboratoryApply> implements SignableContentService {
 
     private final BizLaboratoryApplyMapper bizLaboratoryApplyMapper;
+
+    private static String statusText(Integer status) {
+        return status == null ? "—" : ApplyStatusEnum.getLabelOrUnknown(status);
+    }
+
+    private static String canonical(BizLaboratoryApply a) {
+        return CanonicalText.create("LABORATORY_APPLY")
+                .put("applyNo", a.getApplyNo())
+                .put("patientId", a.getPatientId())
+                .put("patientNo", a.getPatientNo())
+                .put("patientName", a.getPatientName())
+                .put("gender", a.getGender())
+                .put("age", a.getAge())
+                .put("registId", a.getRegistId())
+                .put("visitDate", a.getVisitDate())
+                .put("deptId", a.getDeptId())
+                .put("deptName", a.getDeptName())
+                .put("doctorId", a.getDoctorId())
+                .put("doctorName", a.getDoctorName())
+                .put("laboratoryItemId", a.getLaboratoryItemId())
+                .put("laboratoryItemCode", a.getLaboratoryItemCode())
+                .put("laboratoryItemName", a.getLaboratoryItemName())
+                .put("laboratoryDeptId", a.getLaboratoryDeptId())
+                .put("laboratoryDeptName", a.getLaboratoryDeptName())
+                .put("specimenType", a.getSpecimenType())
+                .put("laboratoryPurpose", a.getLaboratoryPurpose())
+                .put("clinicalDiagnosis", a.getClinicalDiagnosis())
+                .put("diseaseSummary", a.getDiseaseSummary())
+                .put("isFasting", a.getIsFasting())
+                .put("isEmergency", a.getIsEmergency())
+                .put("price", NumUtil.plain(a.getPrice()))
+                .build();
+    }
 
     @Override
     public SignBizTypeEnum bizType() {
@@ -92,39 +127,6 @@ public class LaboratoryApplySignContentServiceImpl implements SignableContentSer
                 .set(BizLaboratoryApply::getSignStatus, ObjectSignStatusEnum.INVALIDATED.getCode())
                 .set(BizLaboratoryApply::getSignId, null));
         log.info("检验申请单签名已作废回写 applyNo={} signId={}", a.getApplyNo(), signId);
-    }
-
-    private static String statusText(Integer status) {
-        return status == null ? "—" : ApplyStatusEnum.getLabelOrUnknown(status);
-    }
-
-    private static String canonical(BizLaboratoryApply a) {
-        return CanonicalText.create("LABORATORY_APPLY")
-                .put("applyNo", a.getApplyNo())
-                .put("patientId", a.getPatientId())
-                .put("patientNo", a.getPatientNo())
-                .put("patientName", a.getPatientName())
-                .put("gender", a.getGender())
-                .put("age", a.getAge())
-                .put("registId", a.getRegistId())
-                .put("visitDate", a.getVisitDate())
-                .put("deptId", a.getDeptId())
-                .put("deptName", a.getDeptName())
-                .put("doctorId", a.getDoctorId())
-                .put("doctorName", a.getDoctorName())
-                .put("laboratoryItemId", a.getLaboratoryItemId())
-                .put("laboratoryItemCode", a.getLaboratoryItemCode())
-                .put("laboratoryItemName", a.getLaboratoryItemName())
-                .put("laboratoryDeptId", a.getLaboratoryDeptId())
-                .put("laboratoryDeptName", a.getLaboratoryDeptName())
-                .put("specimenType", a.getSpecimenType())
-                .put("laboratoryPurpose", a.getLaboratoryPurpose())
-                .put("clinicalDiagnosis", a.getClinicalDiagnosis())
-                .put("diseaseSummary", a.getDiseaseSummary())
-                .put("isFasting", a.getIsFasting())
-                .put("isEmergency", a.getIsEmergency())
-                .put("price", NumUtil.plain(a.getPrice()))
-                .build();
     }
 
 }

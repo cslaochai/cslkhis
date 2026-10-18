@@ -10,6 +10,7 @@ public class MiniReportPdfVO {
 
     private Integer denyStatus;
 
+    /** 原始文件名 */
     private String fileName;
 
     private byte[] content;

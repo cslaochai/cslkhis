@@ -15,6 +15,10 @@ public interface TeleConsultService {
 
     PageResult<TeleConsultVO> teleListPage(TeleConsultPageQueryDTO dto);
 
+    /**
+     * 远程会诊单详情：含申请、安排与会诊意见全量字段。
+     * 用于会诊详情弹框展示，也作申请/修改表单的回显数据源。
+     */
     TeleConsultVO teleGetDetailById(Long id);
 
     /**
@@ -46,6 +50,10 @@ public interface TeleConsultService {
 
     PageResult<OnlineConsultVO> onlineListPage(OnlinePageQueryDTO dto);
 
+    /**
+     * 线上问诊单详情：含患者诉求、接诊人与回复内容。
+     * 用于问诊详情弹框展示。
+     */
     OnlineConsultVO onlineGetDetailById(Long id);
 
     /**

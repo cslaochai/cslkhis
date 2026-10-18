@@ -8,7 +8,9 @@ import lombok.Data;
 @Data
 public class ClosedLoopRecordVO {
 
+    /** 主键ID */
     private Long id;
 
+    /** 文书编号 */
     private String recordNo;
 }

@@ -12,6 +12,7 @@ import java.io.Serializable;
 @Data
 public class DischargePendingFollowupVO implements Serializable {
 
+    /** 出院记录ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long dischargeId;
 

@@ -16,14 +16,18 @@ import java.time.LocalDate;
 @Schema(name = "ScheduleSelectListVO", description = "排班下拉出参")
 public class ScheduleSelectListVO implements Serializable {
 
+    /** 排班（号源）ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
+    /** 排班人员ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long doctorId;
 
+    /** 排班人员姓名 */
     private String doctorName;
 
+    /** 排班日期 */
     private LocalDate scheduleDate;
 
     /**
@@ -31,8 +35,10 @@ public class ScheduleSelectListVO implements Serializable {
      */
     private Integer scheduleType;
 
+    /** 时段开始时间（如 08:00） */
     private String startTime;
 
+    /** 时段结束时间（如 12:00） */
     private String endTime;
 
     /**

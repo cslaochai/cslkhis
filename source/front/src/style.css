@@ -490,6 +490,38 @@ body {
     font-weight: 500;
 }
 
+/* ---------- 弹框内的表单分组标题（蓝竖条 + 加粗字） ----------
+   与 PatientDetailDialog / Header 的分组标题同范式。
+   el-dialog teleport 到 body，组件 <style scoped> 的 :deep 编译成 [data-v-x] 后
+   在 body 下没有祖先命中会静默失效，所以这类弹框内样式一律写全局。 */
+.form-section-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #33546E;
+}
+
+.form-section-title::before {
+    content: '';
+    flex: none;
+    width: 4px;
+    height: 14px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, var(--his-primary), var(--his-teal));
+}
+
+/* ---------- 弹框表单固定 label 宽 ----------
+   label-position="left" 时 EP 把 label-width 写成行内 width，标签不够宽就溢出压输入框，
+   补 white-space: normal 让长标签在固定宽度内换行。 */
+.patient-edit-form .el-form-item__label {
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.4;
+}
+
 /* ---------- 菜单/抽屉/消息 ---------- */
 .el-drawer__header {
     color: #134B77;

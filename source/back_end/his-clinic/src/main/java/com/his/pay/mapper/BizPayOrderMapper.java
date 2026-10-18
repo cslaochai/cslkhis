@@ -24,10 +24,11 @@ public interface BizPayOrderMapper extends BaseMapper<BizPayOrder> {
      */
     @Update("""
             UPDATE biz_pay_order
-               SET pay_status = 1, out_trade_no = #{channelTxnNo}, pay_time = #{payTime}, update_time = #{payTime}
+               SET pay_status = 1, channel = #{channel}, out_trade_no = #{channelTxnNo}, pay_time = #{payTime}, update_time = #{payTime}
              WHERE pay_no = #{payNo} AND pay_status = 0 AND del_flag = 0
             """)
     int markPaidIfPending(@Param("payNo") String payNo,
+                          @Param("channel") Integer channel,
                           @Param("channelTxnNo") String channelTxnNo,
                           @Param("payTime") LocalDateTime payTime);
 

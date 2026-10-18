@@ -20,6 +20,7 @@ public class VteRiskListVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
 
+    /** 住院号 */
     private String admissionNo;
 
     /**
@@ -97,15 +98,20 @@ public class VteRiskListVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long assessmentId;
 
+    /** Caprini 评分 */
     private Integer capriniScore;
 
+    /** 风险等级（1-低 2-中 3-高 4-极高） */
     private Integer riskLevel;
 
+    /** 风险等级中文 */
     private String riskLevelText;
 
+    /** 评估时间 */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime assessTime;
 
+    /** 评估护士姓名 */
     private String assessNurseName;
 
     /**
@@ -113,6 +119,7 @@ public class VteRiskListVO {
      */
     private List<String> recommendCodes;
 
+    /** 推荐措施文案 */
     private String recommendText;
 
     /**
@@ -135,8 +142,10 @@ public class VteRiskListVO {
      */
     private Integer preventStatus;
 
+    /** 落实状态文案 */
     private String preventStatusText;
 
+    /** 最近一次预防措施执行时间 */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime latestExecuteTime;
 }

@@ -94,6 +94,7 @@ public class NutritionScreenVO implements Serializable {
      * 量表（1-NRS2002 2-PG-SGA 3-MNA）
      */
     private Integer screenType;
+    /** 量表文案 */
     private String screenTypeText;
 
     /**
@@ -135,12 +136,14 @@ public class NutritionScreenVO implements Serializable {
      * 判定：0-无营养风险 1-有营养风险
      */
     private Integer riskFlag;
+    /** 判定文案 */
     private String riskFlagText;
 
     /**
      * 筛查时机（1-入院48小时内 2-病情变化复筛 3-术后复筛 4-定期复筛）
      */
     private Integer screenSource;
+    /** 筛查时机文案 */
     private String screenSourceText;
 
     /**

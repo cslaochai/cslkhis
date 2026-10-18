@@ -14,6 +14,7 @@ import java.io.Serializable;
 @EqualsAndHashCode(callSuper = true)
 public class MaintainPageQueryDTO extends PageParam implements Serializable {
 
+    /** 设备ID */
     @NotNull(message = "设备ID不能为空")
     private Long equipmentId;
 

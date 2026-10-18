@@ -4,8 +4,7 @@ his:
     enabled: true
     provider: openai-compatible
     base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
-    # 模型访问密钥属敏感项：此处留空，dev 文件覆盖为内联真值，生产用 HIS_AI_API_KEY 注入。
-    api-key: ${HIS_AI_API_KEY:}
+    # 模型访问密钥随环境变，不在这里声明：dev 落内联真值，生产用环境变量 HIS_AI_API_KEY 注入
     model: deepseek-v4.1-flash
     model-lite: deepseek-v4.1-flash
     # 全局超时（毫秒）
@@ -96,11 +95,9 @@ his:
       operation_qa: deepseek-v4.1-flash
       # 文书类走主模型（现病史草拟要叙事能力；将来换更强模型只改这里）
       emr_draft: deepseek-v4.1-flash
-    # 语音识别（ASR）：与 chat 端点同域但模型隔离，密钥未单独配则回落 ai.api-key
+    # 语音识别（ASR）：与 chat 端点同域但模型隔离；不单独配密钥则取 his.ai.api-key
     asr:
       model: qwen3-asr-flash
-      # 与 ai.api-key 同源：dev 文件内联一份 / 生产用 HIS_AI_API_KEY 注入
-      api-key: ${HIS_AI_API_KEY:}
       max-audio-mb: 15
 
     rag:
@@ -109,13 +106,11 @@ his:
       top-k: 4
       auto-seed: true
       corpus-paths: rag-corpus
-      # 向量库：milvus-持久化（重启不丢）/ memory-进程内存（重启靠 doc 全文重建）
+      # 向量库实现两环境同形，声明一次；连接地址与令牌随环境变，落 profile 文件
       vector-store: milvus
       milvus:
-        uri: ${HIS_MILVUS_URL:}
-        token: ${HIS_MILVUS_TOKEN:}
         collection-name: his_knowledge_chunk
         vector-dim: 1024
       embed-base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
-      embed-api-key: ${ai.api-key:}
+      # 不单独配 embedding 密钥则取 his.ai.api-key
       embed-model: text-embedding-v3

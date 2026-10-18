@@ -102,6 +102,7 @@ public class ExamImageVO {
      */
     private Integer source;
 
+    /** 来源文案（由枚举 label 渲染） */
     private String sourceText;
 
     /**

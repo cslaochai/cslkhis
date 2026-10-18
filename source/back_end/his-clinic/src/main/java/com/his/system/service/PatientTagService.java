@@ -10,6 +10,9 @@ import com.his.system.vo.SysPatientTagVO;
 
 import java.util.List;
 
+/**
+ * 患者标签服务：标签字典的维护与取数收口，供标签管理页与各处选标签场景共用。
+ */
 public interface PatientTagService extends IService<SysPatientTag> {
 
     /**

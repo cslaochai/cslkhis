@@ -10,6 +10,7 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class RxFlowPageQueryDTO extends PageParam {
+    /** 患者ID */
     private Long patientId;
     private Long prescriptionId;
 

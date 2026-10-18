@@ -13,13 +13,17 @@ import java.time.LocalDateTime;
 @Data
 public class KnowledgeDocVO {
 
+    /** 文档ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
+    /** 文档标题 */
     private String title;
 
+    /** 文档分类 */
     private String category;
 
+    /** 来源类型（1-内置示例 2-手工录入 3-文件导入） */
     private Integer sourceType;
 
     /**
@@ -32,12 +36,16 @@ public class KnowledgeDocVO {
      */
     private String sourceName;
 
+    /** 文档原文 */
     private String content;
 
+    /** 切块数量 */
     private Integer chunkCount;
 
+    /** 状态（0-正常 1-停用） */
     private Integer status;
 
+    /** 创建时间 */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 }

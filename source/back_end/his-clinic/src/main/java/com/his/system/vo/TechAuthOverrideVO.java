@@ -24,6 +24,7 @@ public class TechAuthOverrideVO {
      */
     private Integer sourceType;
 
+    /** 来源单据类型文案（由枚举 label 渲染） */
     private String sourceTypeText;
 
     /**
@@ -53,6 +54,7 @@ public class TechAuthOverrideVO {
      */
     private Integer authCategory;
 
+    /** 授权类别文案（由枚举 label 渲染） */
     private String authCategoryText;
 
     /**
@@ -60,6 +62,7 @@ public class TechAuthOverrideVO {
      */
     private Integer requiredLevel;
 
+    /** 要求级别文案（由枚举 label 渲染） */
     private String requiredLevelText;
 
     /**
@@ -67,6 +70,7 @@ public class TechAuthOverrideVO {
      */
     private Integer heldLevel;
 
+    /** 当时授权级别文案（由枚举 label 渲染） */
     private String heldLevelText;
 
     /**
@@ -85,6 +89,7 @@ public class TechAuthOverrideVO {
      */
     private Integer overrideStatus;
 
+    /** 确认状态文案（由枚举 label 渲染） */
     private String overrideStatusText;
 
     /**

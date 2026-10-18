@@ -21,6 +21,10 @@ import java.util.List;
  */
 public interface StaffScheduleService extends IService<BizSchedule> {
 
+    /**
+     * 排班事实分页：按日期区间、排班单元、岗位类别、出勤状态与姓名/工号关键词筛出排班行。
+     * 用于「全院岗位排班」页的查询卡与表格，也是该行改删与变更留痕的取数入口。
+     */
     PageResult<StaffScheduleVO> pageVO(StaffSchedulePageQueryDTO dto);
 
     /**

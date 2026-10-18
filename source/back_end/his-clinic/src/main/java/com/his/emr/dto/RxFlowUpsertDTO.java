@@ -19,5 +19,6 @@ public class RxFlowUpsertDTO {
      */
     @AllowedValues(values = {"1", "2", "3"}, message = "机构类型不合法")
     private Integer orgType;
+    /** 备注 */
     private String remark;
 }

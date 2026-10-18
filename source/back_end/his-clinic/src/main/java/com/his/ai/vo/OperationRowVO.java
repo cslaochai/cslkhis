@@ -13,6 +13,7 @@ import java.util.List;
 @Schema(description = "问数结果行，cells 与 columns 按下标一一对应")
 public class OperationRowVO {
 
+    /** 各列取值，与列定义按下标一一对应 */
     @Schema(description = "各列取值，日期已格式化为文本")
     private List<Object> cells = new ArrayList<>();
 }

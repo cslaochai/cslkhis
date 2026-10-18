@@ -14,7 +14,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SignOptionVO {
 
+    /** 选项码值 */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
+    /** 选项展示文案 */
     private String text;
 }

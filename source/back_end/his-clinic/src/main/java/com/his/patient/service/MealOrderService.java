@@ -14,8 +14,16 @@ import java.util.List;
  */
 public interface MealOrderService {
 
+    /**
+     * 订餐明细分页：按餐期或日期区间、病区、住院次、餐次、饮食类别与配餐状态筛，数据范围按岗位科室收口。
+     * 用于「订餐配送」页查询卡。
+     */
     PageResult<MealOrderVO> mealListPage(MealOrderPageQueryDTO query);
 
+    /**
+     * 一条膳食方案已生成的餐单行。
+     * 供按方案追查配送进度、停餐或作废前核对未配送行的环节取数。
+     */
     List<MealOrderVO> mealListByPlan(Long dietPlanId);
 
     /**

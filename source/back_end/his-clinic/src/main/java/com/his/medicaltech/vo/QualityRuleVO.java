@@ -16,6 +16,7 @@ public class QualityRuleVO {
     @Schema(description = "规则编码")
     private String ruleCode;
 
+    /** 规则名称 */
     @Schema(description = "规则名称")
     private String ruleName;
 
@@ -23,27 +24,35 @@ public class QualityRuleVO {
     @Schema(description = "维度码")
     private String dimension;
 
+    /** 维度名称文案（由枚举 label 渲染） */
     @Schema(description = "维度名称")
     private String dimensionText;
 
+    /** 严重度（1-提示 2-警告 3-严重；3-严重只由确定性硬规则给出） */
     @Schema(description = "严重度（1-提示 2-警告 3-严重）")
     private Integer severity;
 
+    /** 严重度文案（由枚举 label 渲染） */
     @Schema(description = "严重度文案")
     private String severityText;
 
+    /** 数据表名 */
     @Schema(description = "检查对象表")
     private String tableName;
 
+    /** 分母口径说明（这条规则在什么范围里查） */
     @Schema(description = "分母说明（在什么范围里查）")
     private String checkedDesc;
 
+    /** 整改建议 */
     @Schema(description = "整改建议")
     private String suggestion;
 
+    /** 规则依据 */
     @Schema(description = "依据")
     private String basis;
 
+    /** 检查总数（分母） */
     @Schema(description = "检查总数（分母）")
     private Long checkedTotal;
 
@@ -51,12 +60,15 @@ public class QualityRuleVO {
     @Schema(description = "问题数（分子）")
     private Long issueCount;
 
+    /** 合规率 %（=（分母-问题数）/分母，一位小数） */
     @Schema(description = "合规率 %（= (分母-问题数)/分母，一位小数）")
     private BigDecimal passRate;
 
+    /** 分母为 0（规则未生效，前端口径上要显式告警） */
     @Schema(description = "分母为 0（规则未生效，前端口径上要显式告警）")
     private Boolean empty;
 
+    /** 本次检查是否查出问题 */
     @Schema(description = "本次检查是否有问题")
     private Boolean hasIssue;
 }

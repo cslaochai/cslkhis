@@ -24,6 +24,10 @@ public class MedicalWasteController {
 
     private final WasteService wasteService;
 
+    /**
+     * 医废登记：为科室产生的一批医疗废物建一条交接单，落「已登记」态。
+     * 用于医废管理页查询卡右侧「医废登记」弹框提交。
+     */
     @PreAuthorize("hasAuthority('asset:waste:add')")
     @Operation(summary = "医废登记")
     @PostMapping("/create")
@@ -31,6 +35,10 @@ public class MedicalWasteController {
         return Result.success("医废登记成功", wasteService.create(dto));
     }
 
+    /**
+     * 医废交接：登记交接人，状态由已登记推进到已交接，此后不可逆。
+     * 用于医废管理页行内「交接」弹框确认。
+     */
     @PreAuthorize("hasAuthority('asset:waste:edit')")
     @Operation(summary = "医废交接（1→2）")
     @PostMapping("/handover")
@@ -38,6 +46,10 @@ public class MedicalWasteController {
         return Result.success("交接成功", wasteService.handover(dto));
     }
 
+    /**
+     * 处置确认：登记处置公司，状态推进到已处置，闭环结束。
+     * 用于医废管理页行内「处置确认」弹框。
+     */
     @PreAuthorize("hasAuthority('asset:waste:edit')")
     @Operation(summary = "处置确认（2→3）")
     @PostMapping("/dispose")
@@ -45,6 +57,10 @@ public class MedicalWasteController {
         return Result.success("处置确认成功", wasteService.dispose(dto));
     }
 
+    /**
+     * 删除医废登记：仅未交接的登记可删，已交接的单子是与处置公司的对外凭证。
+     * 用于医废管理页「已登记」行的删除操作。
+     */
     @PreAuthorize("hasAuthority('asset:waste:delete')")
     @Operation(summary = "医废登记删除（仅已登记状态可删）")
     @DeleteMapping("/deleteById")
@@ -53,6 +69,10 @@ public class MedicalWasteController {
         return Result.success("删除成功", null);
     }
 
+    /**
+     * 医废登记分页查询：按关键字、医废类别、状态与收集日期区间收口。
+     * 用于医废管理页查询卡与表格列表。
+     */
     @Operation(summary = "医废登记分页查询")
     @PostMapping("/listPage")
     public Result<PageResult<WasteVO>> listPage(@Valid @RequestBody WasteDTO.PageQuery dto) {

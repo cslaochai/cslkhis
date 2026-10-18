@@ -18,6 +18,7 @@ public class PatientRegisterVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
+    /** 用户ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long userId;
 

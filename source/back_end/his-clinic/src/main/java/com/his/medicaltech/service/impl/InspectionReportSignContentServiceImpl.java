@@ -1,16 +1,18 @@
 package com.his.medicaltech.service.impl;
 
-import com.his.common.util.NumUtil;
-import com.his.common.support.CanonicalText;
+
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.his.system.vo.SignSubject;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.enums.InsRecordStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
-import com.his.system.service.SignableContentService;
+import com.his.common.support.CanonicalText;
+import com.his.common.util.NumUtil;
 import com.his.common.util.TimeUtil;
 import com.his.medicaltech.entity.BizInspectionRecord;
-import com.his.common.enums.InsRecordStatusEnum;
 import com.his.medicaltech.mapper.BizInspectionRecordMapper;
+import com.his.system.service.SignableContentService;
+import com.his.system.vo.SignSubject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -24,9 +26,39 @@ import java.util.Objects;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class InspectionReportSignContentServiceImpl implements SignableContentService {
+public class InspectionReportSignContentServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizInspectionRecord> implements SignableContentService {
 
     private final BizInspectionRecordMapper bizInspectionRecordMapper;
+
+    private static String statusText(Integer status) {
+        return status == null ? "—" : InsRecordStatusEnum.getLabelOrUnknown(status);
+    }
+
+    private static String canonical(BizInspectionRecord r) {
+        return CanonicalText.create("INSPECTION_REPORT")
+                .put("recordNo", r.getRecordNo())
+                .put("applyId", r.getApplyId())
+                .put("applyNo", r.getApplyNo())
+                .put("patientId", r.getPatientId())
+                .put("patientNo", r.getPatientNo())
+                .put("visitDate", r.getVisitDate())
+                .put("applyDeptId", r.getApplyDeptId())
+                .put("applyDeptName", r.getApplyDeptName())
+                .put("applyDoctorId", r.getApplyDoctorId())
+                .put("applyDoctorName", r.getApplyDoctorName())
+                .put("inspectionItemId", r.getInspectionItemId())
+                .put("inspectionItemCode", r.getInspectionItemCode())
+                .put("inspectionItemName", r.getInspectionItemName())
+                .put("inspectionDeptId", r.getInspectionDeptId())
+                .put("inspectionDeptName", r.getInspectionDeptName())
+                .put("bodyPart", r.getBodyPart())
+                .put("inspectionPurpose", r.getInspectionPurpose())
+                .put("clinicalDiagnosis", r.getClinicalDiagnosis())
+                .put("price", NumUtil.plain(r.getPrice()))
+                .put("resultDescription", r.getResultDescription())
+                .put("resultConclusion", r.getResultConclusion())
+                .build();
+    }
 
     @Override
     public SignBizTypeEnum bizType() {
@@ -128,37 +160,6 @@ public class InspectionReportSignContentServiceImpl implements SignableContentSe
                     .set(BizInspectionRecord::getAuditSignedTime, null));
             log.info("已清除检查报告审核签名指针 recordNo={} signId={}", r.getRecordNo(), signId);
         }
-    }
-
-
-    private static String statusText(Integer status) {
-        return status == null ? "—" : InsRecordStatusEnum.getLabelOrUnknown(status);
-    }
-
-    private static String canonical(BizInspectionRecord r) {
-        return CanonicalText.create("INSPECTION_REPORT")
-                .put("recordNo", r.getRecordNo())
-                .put("applyId", r.getApplyId())
-                .put("applyNo", r.getApplyNo())
-                .put("patientId", r.getPatientId())
-                .put("patientNo", r.getPatientNo())
-                .put("visitDate", r.getVisitDate())
-                .put("applyDeptId", r.getApplyDeptId())
-                .put("applyDeptName", r.getApplyDeptName())
-                .put("applyDoctorId", r.getApplyDoctorId())
-                .put("applyDoctorName", r.getApplyDoctorName())
-                .put("inspectionItemId", r.getInspectionItemId())
-                .put("inspectionItemCode", r.getInspectionItemCode())
-                .put("inspectionItemName", r.getInspectionItemName())
-                .put("inspectionDeptId", r.getInspectionDeptId())
-                .put("inspectionDeptName", r.getInspectionDeptName())
-                .put("bodyPart", r.getBodyPart())
-                .put("inspectionPurpose", r.getInspectionPurpose())
-                .put("clinicalDiagnosis", r.getClinicalDiagnosis())
-                .put("price", NumUtil.plain(r.getPrice()))
-                .put("resultDescription", r.getResultDescription())
-                .put("resultConclusion", r.getResultConclusion())
-                .build();
     }
 
 }

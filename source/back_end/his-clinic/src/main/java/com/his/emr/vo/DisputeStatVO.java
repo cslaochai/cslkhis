@@ -17,14 +17,19 @@ public class DisputeStatVO implements Serializable {
      */
     private Long total;
 
+    /** 待受理条数（纠纷状态 1-待受理） */
     private Long pendingCount;
 
+    /** 调查中条数（纠纷状态 2-调查中） */
     private Long investigatingCount;
 
+    /** 处理中条数（纠纷状态 3-处理中） */
     private Long handlingCount;
 
+    /** 已结案条数（纠纷状态 4-已结案） */
     private Long closedCount;
 
+    /** 已撤销条数（纠纷状态 5-已撤销） */
     private Long revokedCount;
 
     /**

@@ -72,12 +72,14 @@ public class SignCertVO {
      * 签发方式（1-人工签发 2-系统自动签发）
      */
     private Integer issuedMode;
+    /** 签发方式文案（由枚举 label 渲染） */
     private String issuedModeText;
 
     /**
      * 证书状态（1-有效 2-已吊销）
      */
     private Integer certStatus;
+    /** 证书状态文案（由枚举 label 渲染） */
     private String certStatusText;
 
     /**
@@ -126,5 +128,6 @@ public class SignCertVO {
      */
     private Boolean canRevoke;
 
+    /** 操作提示文案：证书已吊销或已过有效期时说明后续动作，正常证书为空 */
     private String actionHint;
 }

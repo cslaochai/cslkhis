@@ -13,14 +13,17 @@ import lombok.Data;
 @TableName("sys_drug")
 public class SysDrugGuide extends BaseEntity {
 
+    /** 药品编码 */
     private String drugCode;
 
     private String drugName;
 
+    /** 规格 */
     private String specification;
 
     private String dosageForm;
 
+    /** 单位 */
     private String unit;
 
     /**

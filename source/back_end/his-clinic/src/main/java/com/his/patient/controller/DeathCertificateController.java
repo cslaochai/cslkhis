@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 死亡证明与死亡登记
+ * 死亡证明与死亡登记控制器：死亡离院后的开证、审核、签发、上报与死亡登记簿确认的接口入口。
  */
 @Tag(name = "死亡证明与死亡登记")
 @RestController
@@ -31,6 +31,10 @@ public class DeathCertificateController {
 
     // 死亡证明
 
+    /**
+     * 证明台账分页：含上报状态，可按逾期筛只看逾期未报。
+     * 用于「死亡证明与登记」页证明台账查询卡。
+     */
     @PreAuthorize("hasAuthority('ipd:deathCertificate:list')")
     @Operation(summary = "证明台账分页（含上报台账，overdue=1 只看逾期未报）")
     @PostMapping("/cert/listPage")
@@ -38,6 +42,10 @@ public class DeathCertificateController {
         return Result.success(deathCertificateService.listPage(dto));
     }
 
+    /**
+     * 待开证榜分页：已办死亡离院但名下还没有有效证明的欠账名单。
+     * 用于「死亡证明与登记」页待开证榜，从这里点「开证」发起新证明。
+     */
     @PreAuthorize("hasAuthority('ipd:deathCertificate:list')")
     @Operation(summary = "待开证榜（已办死亡离院但无有效证明，欠账榜）")
     @PostMapping("/cert/pendingListPage")
@@ -45,6 +53,10 @@ public class DeathCertificateController {
         return Result.success(deathCertificateService.pendingListPage(dto));
     }
 
+    /**
+     * 单张证明详情：一般项目明文加死因链与上报报文，作为编辑回显的取数口。
+     * 用于「死亡证明与登记」页证明修改弹框。
+     */
     @PreAuthorize("hasAuthority('ipd:deathCertificate:list')")
     @Operation(summary = "证明详情＝编辑回显（一般项目明文 + 死因链 + 上报报文）")
     @GetMapping("/cert/getDetailById")
@@ -52,6 +64,10 @@ public class DeathCertificateController {
         return Result.success(deathCertificateService.getDetailById(id));
     }
 
+    /**
+     * 开证底稿：按住院次带出死者快照与死亡离院时点。
+     * 用于待开证榜点「开证」时初始化新证明表单。
+     */
     @PreAuthorize("hasAuthority('ipd:deathCertificate:list')")
     @Operation(summary = "开证底稿（按住院带出死者快照与死亡离院时间）")
     @GetMapping("/cert/admissionBase")
@@ -59,6 +75,10 @@ public class DeathCertificateController {
         return Result.success(deathCertificateService.admissionBase(admissionId));
     }
 
+    /**
+     * 死亡证明与登记的欠账统计：证明四态、上报三态、待开证与待登记欠账。
+     * 用于「死亡证明与登记」页顶部统计卡。
+     */
     @PreAuthorize("hasAuthority('ipd:deathCertificate:list')")
     @Operation(summary = "统计卡（四态 + 上报三态 + 待开证/待登记欠账）")
     @GetMapping("/cert/stats")
@@ -66,6 +86,12 @@ public class DeathCertificateController {
         return Result.success(deathCertificateService.stats());
     }
 
+    /**
+     * 保存证明：新建草稿或修改草稿、已审核态，死因链整体替换。
+     * 用于「死亡证明与登记」页新增与修改证明弹框提交。
+     *
+     * @return 证明主键的文本形式，供前端回查时避开长整型精度丢失
+     */
     @PreAuthorize("hasAuthority('ipd:deathCertificate:add')")
     @Operation(summary = "填写/修改证明（草稿与已审核可改；死因链整体替换，根本死因服务端按链尾校验）")
     @PostMapping("/cert/upsert")
@@ -74,6 +100,10 @@ public class DeathCertificateController {
         return Result.success("证明已保存", String.valueOf(deathCertificateService.upsert(dto)));
     }
 
+    /**
+     * 审核证明：草稿推进到已审核。
+     * 用于「死亡证明与登记」页证明台账的审核操作。
+     */
     @PreAuthorize("hasAuthority('ipd:deathCertificate:edit')")
     @Operation(summary = "审核（草稿→已审核）")
     @PostMapping("/cert/audit")
@@ -82,6 +112,10 @@ public class DeathCertificateController {
         return Result.success("审核通过", null);
     }
 
+    /**
+     * 签发证明：已审核推进到已开具。
+     * 用于「死亡证明与登记」页证明台账的签发操作。
+     */
     @PreAuthorize("hasAuthority('ipd:deathCertificate:edit')")
     @Operation(summary = "签发（已审核→已开具；须该住院已办死亡离院且死亡时间与出院同一时点）")
     @PostMapping("/cert/issue")
@@ -90,6 +124,10 @@ public class DeathCertificateController {
         return Result.success("已签发", null);
     }
 
+    /**
+     * 作废证明并留下原因，作废后内容不再可改。
+     * 用于「死亡证明与登记」页证明台账的作废操作。
+     */
     @PreAuthorize("hasAuthority('ipd:deathCertificate:edit')")
     @Operation(summary = "作废（必填原因，内容不再可改）")
     @PostMapping("/cert/voidById")
@@ -98,6 +136,12 @@ public class DeathCertificateController {
         return Result.success("已作废", null);
     }
 
+    /**
+     * 按被作废的原证复制出一份新草稿并回指原证。
+     * 用于「死亡证明与登记」页作废证明的重开操作。
+     *
+     * @return 新草稿主键的文本形式
+     */
     @PreAuthorize("hasAuthority('ipd:deathCertificate:edit')")
     @Operation(summary = "重开（按被作废原证复制新草稿，orig_cert_id 指向原证）")
     @PostMapping("/cert/reissue")
@@ -105,6 +149,10 @@ public class DeathCertificateController {
         return Result.success("已按原证生成新草稿", String.valueOf(deathCertificateService.reissue(origCertId)));
     }
 
+    /**
+     * 记一次四联打印：打印一次计数一次，只有已开具状态可打。
+     * 用于「死亡证明与登记」页证明打印后的回执登记。
+     */
     @PreAuthorize("hasAuthority('ipd:deathCertificate:print')")
     @Operation(summary = "四联打印回执（打印一次计数一次，只有已开具能打印）")
     @PostMapping("/cert/print")
@@ -113,6 +161,12 @@ public class DeathCertificateController {
         return Result.success("已记录打印", null);
     }
 
+    /**
+     * 死因监测上报：组装标准报文落库并回写上报状态。
+     * 用于「死亡证明与登记」页逾期未报清单的手工上报，真实对接时同一节点改走上报通道。
+     *
+     * @return 上报报文编号
+     */
     @PreAuthorize("hasAuthority('ipd:deathCertificate:report')")
     @Operation(summary = "死因监测上报（组装标准报文落库；真实对接时此点替换为上报客户端）")
     @PostMapping("/cert/report")
@@ -120,6 +174,10 @@ public class DeathCertificateController {
         return Result.success("上报完成", deathCertificateService.report(id));
     }
 
+    /**
+     * 逾期催报：对超期未上报的证明下发提醒并返回发送条数，按天幂等。
+     * 用于定时催报之外，在「死亡证明与登记」页手工补跑。
+     */
     @PreAuthorize("hasAuthority('ipd:deathCertificate:report')")
     @Operation(summary = "逾期催报（定时+手工补跑双路径，按天幂等；返回发送条数）")
     @PostMapping("/cert/notifyOverdue")
@@ -129,6 +187,10 @@ public class DeathCertificateController {
 
     // 死亡登记
 
+    /**
+     * 死亡登记簿分页。
+     * 用于「死亡证明与登记」页死亡登记查询卡。
+     */
     @PreAuthorize("hasAuthority('ipd:deathCertificate:list')")
     @Operation(summary = "死亡登记簿分页")
     @PostMapping("/register/listPage")
@@ -136,6 +198,10 @@ public class DeathCertificateController {
         return Result.success(deathRegistrationService.listPage(dto));
     }
 
+    /**
+     * 单条死亡登记详情，作编辑回显取数。
+     * 用于「死亡证明与登记」页登记修改与详情弹框。
+     */
     @PreAuthorize("hasAuthority('ipd:deathCertificate:list')")
     @Operation(summary = "登记详情＝编辑回显")
     @GetMapping("/register/getDetailById")
@@ -143,6 +209,10 @@ public class DeathCertificateController {
         return Result.success(deathRegistrationService.getDetailById(id));
     }
 
+    /**
+     * 登记底稿：按住院次带出死者与该名下有效证明摘要。
+     * 用于发起新登记时把证明结论带进登记表单。
+     */
     @PreAuthorize("hasAuthority('ipd:deathCertificate:list')")
     @Operation(summary = "登记底稿（按住院带出死者与有效证明摘要）")
     @GetMapping("/register/base")
@@ -150,6 +220,10 @@ public class DeathCertificateController {
         return Result.success(deathRegistrationService.base(admissionId));
     }
 
+    /**
+     * 可登记候选：已办死亡离院的住院，按关键字与条数上限收口。
+     * 用于新增登记弹框里选住院次。
+     */
     @PreAuthorize("hasAuthority('ipd:deathCertificate:list')")
     @Operation(summary = "可登记候选（已办死亡离院的住院）")
     @GetMapping("/register/admissions")
@@ -158,6 +232,12 @@ public class DeathCertificateController {
         return Result.success(deathRegistrationService.admissionCandidates(keyword, limit));
     }
 
+    /**
+     * 保存登记：新建或修改草稿，已登记状态只能作废后重登。
+     * 用于「死亡证明与登记」页登记新增与修改弹框提交。
+     *
+     * @return 登记主键的文本形式
+     */
     @PreAuthorize("hasAuthority('ipd:deathRegister:add')")
     @Operation(summary = "填写/修改登记（草稿可改；已登记只能作废重登）")
     @PostMapping("/register/upsert")
@@ -165,6 +245,10 @@ public class DeathCertificateController {
         return Result.success("登记已保存", String.valueOf(deathRegistrationService.upsert(dto)));
     }
 
+    /**
+     * 确认登记：非疾病死亡或死因不明的必须先报公安，未报则拒绝。
+     * 用于「死亡证明与登记」页登记台账的确认操作。
+     */
     @PreAuthorize("hasAuthority('ipd:deathRegister:edit')")
     @Operation(summary = "确认登记（非疾病死亡/死因不明必须已报公安，否则拒绝）")
     @PostMapping("/register/confirm")
@@ -173,6 +257,10 @@ public class DeathCertificateController {
         return Result.success("已登记", null);
     }
 
+    /**
+     * 作废登记并留下原因，作废后可重新登记。
+     * 用于「死亡证明与登记」页登记台账的作废操作。
+     */
     @PreAuthorize("hasAuthority('ipd:deathRegister:edit')")
     @Operation(summary = "登记作废（必填原因，作废后可重登）")
     @PostMapping("/register/voidById")

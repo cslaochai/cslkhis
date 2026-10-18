@@ -23,6 +23,10 @@ public class PrevisitController {
 
     private final PrevisitRecordService previsitRecordService;
 
+    /**
+     * 按挂号取预问诊报告：患者小程序填的病史问卷与 AI 凝摘要，没填过则数据为空。
+     * 用于医生工作站接诊时展示的预问诊报告卡，只读参考不改写病历。
+     */
     @Operation(summary = "按挂号取预问诊报告（无则返回空 data）")
     @GetMapping("/getByRegist")
     @PreAuthorize("hasAuthority('opd:doctorWorkstation:list')")

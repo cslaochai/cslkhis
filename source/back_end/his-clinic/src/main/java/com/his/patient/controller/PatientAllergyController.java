@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 患者过敏史控制器
+ * 患者过敏史控制器：过敏原记录的读取、登记与删除入口，是健康档案六组分写之一。
  */
 @Tag(name = "患者过敏史")
 @RestController
@@ -26,12 +26,20 @@ public class PatientAllergyController {
 
     private final PatientHealthProfileService patientHealthProfileService;
 
+    /**
+     * 按患者取现行有效的过敏史条目。
+     * 供只需读过敏这一组的取数场景；档案页展示走健康档案聚合接口，不经过这里。
+     */
     @Operation(summary = "查询患者的过敏史列表")
     @PostMapping("/list")
     public Result<List<PatientAllergyVO>> list(@Valid @RequestBody PatientHistoryQueryDTO queryDTO) {
         return Result.success(patientHealthProfileService.getProfile(queryDTO.getPatientId()).getAllergies());
     }
 
+    /**
+     * 新增或修改一条过敏史（过敏原、严重程度、反应表现）。
+     * 用于健康档案页过敏史分组的新增/修改弹框保存。
+     */
     @PreAuthorize("hasAuthority('patient:profile:add')")
     @Operation(summary = "新增或修改过敏史")
     @PostMapping("/allergyUpsert")
@@ -39,6 +47,10 @@ public class PatientAllergyController {
         return Result.success(patientHealthProfileService.saveAllergy(allergyUpsertDTO));
     }
 
+    /**
+     * 按 id 删除一条过敏史。
+     * 用于健康档案页过敏史分组行操作「删除」的二次确认之后。
+     */
     @PreAuthorize("hasAuthority('patient:profile:delete')")
     @Operation(summary = "根据ID删除过敏史")
     @DeleteMapping("/deleteById")

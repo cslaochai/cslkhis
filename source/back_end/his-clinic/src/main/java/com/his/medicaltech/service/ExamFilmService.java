@@ -58,7 +58,15 @@ public interface ExamFilmService {
 
     List<FilmSpecSelectListVO> specSelectList();
 
+    /**
+     * 新增或修改胶片规格价目，单价是登记用量时算金额的依据。
+     * 用于胶片量方与发放页的规格价目弹框保存。
+     */
     FilmSpecSelectListVO upsertSpec(ExamFilmSpecUpsertDTO dto);
 
+    /**
+     * 删除胶片规格；已被用量行引用过的规格不许删，只能停用，返回 false 表示规格不存在或已删。
+     * 用于规格价目弹框清理错录的规格。
+     */
     boolean deleteSpec(Long id);
 }

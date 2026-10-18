@@ -8,16 +8,22 @@ import lombok.Data;
 @Data
 public class AdmissionVO {
 
+    /** 入院ID */
     private Long admissionId;
 
+    /** 住院号 */
     private String admissionNo;
 
+    /** 患者ID */
     private Long patientId;
 
+    /** 就诊科室ID */
     private Long deptId;
 
+    /** 病区ID */
     private Long wardId;
 
+    /** 床位ID */
     private Long bedId;
 
     /**

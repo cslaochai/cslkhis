@@ -33,7 +33,7 @@ public class AiProperties {
     private String baseUrl = "";
 
     /**
-     * 访问密钥。yml 里写成 {@code ${HIS_AI_API_KEY:}}，即只从环境变量取，不落库、不进仓库。
+     * 访问密钥。随环境变，只在 profile 文件里给：dev 内联真值，生产由 {@code HIS_AI_API_KEY} 注入。
      */
     private String apiKey = "";
 

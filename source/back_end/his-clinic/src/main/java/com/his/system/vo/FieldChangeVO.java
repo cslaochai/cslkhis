@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 @Data
 public class FieldChangeVO {
 
+    /** 字段级修改日志ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
@@ -21,6 +22,7 @@ public class FieldChangeVO {
      */
     private String bizType;
 
+    /** 对象类型文案（由 bizType 翻译出的展示名） */
     private String bizTypeText;
 
     /**
@@ -63,6 +65,7 @@ public class FieldChangeVO {
      */
     private String changeType;
 
+    /** 变更类型文案（由 changeType 翻译出的展示名） */
     private String changeTypeText;
 
     /**

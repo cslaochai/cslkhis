@@ -31,6 +31,7 @@ public class EcgTemplateVO {
      */
     private Integer ecgType;
 
+    /** 适用心电类型文案（由字典渲染） */
     private String ecgTypeText;
 
     /**

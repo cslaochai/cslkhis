@@ -14,12 +14,15 @@ import java.util.List;
 @Schema(description = "健康档案分组")
 public class CdrProfileGroupVO {
 
+    /** 档案分组标识（过敏史/既往史/手术史/家族史/用药史/联系人六类） */
     @Schema(description = "分组标识：allergy/pastDisease/surgery/family/medication/contact")
     private String key;
 
+    /** 分组中文名 */
     @Schema(description = "分组中文名")
     private String label;
 
+    /** 该分组的条目数 */
     @Schema(description = "条数")
     private Integer count;
 

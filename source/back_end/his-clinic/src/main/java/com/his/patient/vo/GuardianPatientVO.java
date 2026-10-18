@@ -40,6 +40,7 @@ public class GuardianPatientVO implements Serializable {
      */
     private Integer age;
 
+    /** 出生日期 */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate birthDate;
 
@@ -58,6 +59,7 @@ public class GuardianPatientVO implements Serializable {
      */
     private Integer relation;
 
+    /** 与患者关系文案 */
     private String relationText;
 
     /**

@@ -25,5 +25,6 @@ public class DrugRationalGroupVO {
      */
     private String blockMessage;
 
+    /** 本组全部命中明细：相互作用与剂量超限逐条列出，无命中时为空列表 */
     private List<DrugRationalHitVO> hits;
 }

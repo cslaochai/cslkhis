@@ -1,8 +1,10 @@
 package com.his.ai.service.impl;
 
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.ai.dto.AiPromptTemplatePageQueryDTO;
 import com.his.ai.dto.AiPromptTemplateUpsertDTO;
 import com.his.ai.entity.SysAiPromptTemplate;
@@ -22,7 +24,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class AiPromptTemplateServiceImpl implements AiPromptTemplateService {
+public class AiPromptTemplateServiceImpl extends ServiceImpl<SysAiPromptTemplateMapper, SysAiPromptTemplate> implements AiPromptTemplateService {
 
     private final SysAiPromptTemplateMapper promptTemplateMapper;
     private final PromptTemplate promptTemplate;

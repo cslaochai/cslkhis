@@ -26,6 +26,10 @@ public class AiDraftDiffController {
 
     private final AiDraftDiffService aiDraftDiffService;
 
+    /**
+     * 草稿留痕分页：按患者、医生、是否被修改筛出 AI 草拟与医生终稿的比对记录。
+     * 用于系统日志页的「AI病历草拟」页签追溯 AI 参与度。
+     */
     @Operation(summary = "草稿留痕分页（AI 管理台）")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('ai:admin:list')")

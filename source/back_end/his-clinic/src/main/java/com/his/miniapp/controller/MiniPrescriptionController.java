@@ -28,6 +28,10 @@ public class MiniPrescriptionController {
     private final EmrPatientFacadeService emrPatientFacadeService;
     private final PatientFacadeService patientFacadeService;
 
+    /**
+     * 我的处方：就诊人已开出的处方及其药味明细，只允许查绑定关系内的就诊人。
+     * 用于小程序「处方取药」页的处方清单与取药核对。
+     */
     @Operation(summary = "我的处方（含药味明细，只看自己绑定的就诊人）")
     @GetMapping("/myList")
     public Result<List<MyPrescriptionVO>> myList(@RequestParam Long patientId) {

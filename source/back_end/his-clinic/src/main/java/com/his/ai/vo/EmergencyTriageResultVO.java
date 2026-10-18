@@ -23,6 +23,7 @@ public class EmergencyTriageResultVO {
      */
     private String degradeReason;
 
+    /** 急诊记录ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long emergencyId;
 

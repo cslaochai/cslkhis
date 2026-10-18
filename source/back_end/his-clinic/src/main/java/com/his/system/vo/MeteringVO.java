@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @Data
 public class MeteringVO {
 
+    /** 计量记录ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
@@ -36,6 +37,7 @@ public class MeteringVO {
      * 计量类型（1-强检 2-校准）
      */
     private Integer meteringType;
+    /** 计量类型文案（由枚举 label 渲染） */
     private String meteringTypeText;
 
     /**
@@ -59,6 +61,7 @@ public class MeteringVO {
      * 计量结果（1-合格 2-不合格）
      */
     private Integer meteringResult;
+    /** 计量结果文案（由枚举 label 渲染） */
     private String meteringResultText;
 
     /**

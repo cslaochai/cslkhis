@@ -29,8 +29,10 @@ public class BizDispensingDetail extends BaseEntity {
 
     @JsonSerialize(using = ToStringSerializer.class)
     private Long dispensingId;
+    /** 发药单号 */
     private String dispensingNo;
 
+    /** 处方明细ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long prescriptionDetailId;
 

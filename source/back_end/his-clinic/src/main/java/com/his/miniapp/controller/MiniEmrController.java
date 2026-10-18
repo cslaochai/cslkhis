@@ -28,6 +28,10 @@ public class MiniEmrController {
     private final EmrPatientFacadeService emrPatientFacadeService;
     private final PatientFacadeService patientFacadeService;
 
+    /**
+     * 我的病历列表：就诊人已提交或已归档的门诊病历，按就诊时间倒序。
+     * 用于小程序「门诊病历」页的病历清单。
+     */
     @Operation(summary = "我的病历列表（只含已提交/已归档）")
     @GetMapping("/myRecords")
     public Result<List<MyMedicalRecordVO>> myRecords(@RequestParam Long patientId) {
@@ -37,6 +41,10 @@ public class MiniEmrController {
         return Result.success(emrPatientFacadeService.myRecords(patientId));
     }
 
+    /**
+     * 病历详情：按病历 ID 取单份门诊病历全文，越权即拒。
+     * 用于小程序「门诊病历」页点开某条病历后的正文展示。
+     */
     @Operation(summary = "病历详情")
     @GetMapping("/myRecordDetail")
     public Result<MyMedicalRecordVO> myRecordDetail(@RequestParam Long patientId, @RequestParam Long recordId) {

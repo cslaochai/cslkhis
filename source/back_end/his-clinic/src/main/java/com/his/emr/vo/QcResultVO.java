@@ -13,26 +13,36 @@ import java.util.List;
 @Data
 public class QcResultVO {
 
+    /** 病历来源（OUTPATIENT-门诊病历 INPATIENT-住院文书） */
     private String recordSource;
 
+    /** 被质控病历ID（随来源指向门诊病历或住院文书） */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long recordId;
 
+    /** 病历号 */
     private String recordNo;
 
+    /** 患者ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
+    /** 患者姓名 */
     private String patientName;
 
+    /** 病历归属科室名称 */
     private String deptName;
 
+    /** 住院文书类型；门诊病历为 null */
     private Integer recordType;
 
+    /** 文书类型文案（由枚举 label 渲染） */
     private String recordTypeText;
 
+    /** 本次命中问题条数 */
     private int issueCount;
 
+    /** 质控得分（100 分制，按问题严重度扣分） */
     private int score;
 
     /**
@@ -65,5 +75,6 @@ public class QcResultVO {
      */
     private List<Integer> dimensions = new ArrayList<>();
 
+    /** 本次命中的问题明细（含规则依据与原文证据） */
     private List<QcIssueVO> issues = new ArrayList<>();
 }

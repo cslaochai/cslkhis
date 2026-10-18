@@ -13,15 +13,18 @@ import java.time.LocalDateTime;
 public class QcCandidateVO {
 
     /**
-     * OUTPATIENT / INPATIENT
+     * 病历来源（OUTPATIENT-门诊病历 INPATIENT-住院文书）
      */
     private String recordSource;
 
+    /** 病历来源文案（由枚举 label 渲染） */
     private String recordSourceText;
 
+    /** 病历ID（随来源指向门诊病历或住院文书） */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long recordId;
 
+    /** 病历号 */
     private String recordNo;
 
     /**
@@ -45,6 +48,7 @@ public class QcCandidateVO {
      */
     private Integer gender;
 
+    /** 性别文案（由枚举 label 渲染） */
     private String genderText;
 
     /**
@@ -67,6 +71,7 @@ public class QcCandidateVO {
      */
     private Integer recordType;
 
+    /** 文书类型文案（由枚举 label 渲染） */
     private String recordTypeText;
 
     /**
@@ -74,6 +79,7 @@ public class QcCandidateVO {
      */
     private Integer recordStatus;
 
+    /** 文书状态文案（由枚举 label 渲染） */
     private String recordStatusText;
 
     /**
@@ -87,10 +93,13 @@ public class QcCandidateVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long lastQcId;
 
+    /** 最近一次质控编号；从未质控为 null */
     private String lastQcNo;
 
+    /** 最近一次质控时间 */
     private LocalDateTime lastQcTime;
 
+    /** 最近一次质控得分（100 分制；旧版质控未评分为 null） */
     private Integer lastScore;
 
     /**
@@ -98,8 +107,10 @@ public class QcCandidateVO {
      */
     private Integer lastSeverityMax;
 
+    /** 最近一次质控等级（甲/乙/丙，命中否决项必为丙；无得分时为 null） */
     private String lastGrade;
 
+    /** 最近一次质控结果（0-不通过 1-通过） */
     private Integer lastResult;
 
     /**

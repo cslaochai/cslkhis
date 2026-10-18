@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 医生工作站
+ * 检查申请控制器：医生工作站开检查单与申请单维护的接口入口。
  */
 @Tag(name = "检查申请")
 @RestController
@@ -39,6 +39,10 @@ public class DoctorInsController {
         return Result.success(emrService.listInspectionApplies(queryDTO.getRegistId()));
     }
 
+    /**
+     * 检查开单：挂到本次挂号上，选好项目与检查目的后直接落成申请单。
+     * 用于医生工作站检查开单弹框确认时提交，不等病历保存。
+     */
     @PreAuthorize("hasAuthority('opd:doctorWorkstation:add')")
     @Operation(summary = "检查开单（开单即落库）")
     @PostMapping("/applyUpsert")
@@ -46,6 +50,10 @@ public class DoctorInsController {
         return Result.success(emrService.upsertInspectionApply(dto));
     }
 
+    /**
+     * 撤销检查申请单：钱没交、医技那边也没留下执行记录时才允许删。
+     * 用于医生工作站本次就诊的检查列表行删除，开错项目时收回。
+     */
     @PreAuthorize("hasAuthority('opd:doctorWorkstation:delete')")
     @Operation(summary = "删除检查申请单（仅未缴费且无执行记录）")
     @DeleteMapping("/deleteById")

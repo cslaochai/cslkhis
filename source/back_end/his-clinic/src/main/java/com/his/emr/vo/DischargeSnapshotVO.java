@@ -13,17 +13,22 @@ import java.time.LocalDateTime;
 @Data
 public class DischargeSnapshotVO implements Serializable {
 
+    /** 出院记录ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long dischargeId;
 
+    /** 出院记录号 */
     private String dischargeNo;
 
+    /** 入院ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
 
+    /** 患者ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
+    /** 出院时间 */
     private LocalDateTime dischargeTime;
 
     /**
@@ -31,14 +36,19 @@ public class DischargeSnapshotVO implements Serializable {
      */
     private String diagnosis;
 
+    /** 科室ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
+    /** 科室名称 */
     private String deptName;
 
+    /** 患者编号 */
     private String patientNo;
 
+    /** 患者姓名 */
     private String patientName;
 
+    /** 手机号码 */
     private String phone;
 }

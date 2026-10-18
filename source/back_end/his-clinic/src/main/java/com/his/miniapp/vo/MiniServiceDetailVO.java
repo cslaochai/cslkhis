@@ -23,6 +23,7 @@ public class MiniServiceDetailVO {
 
     private String messageNo;
 
+    /** 患者姓名 */
     private String patientName;
 
     private String contactPhone;
@@ -33,6 +34,7 @@ public class MiniServiceDetailVO {
 
     private Integer status;
 
+    /** 状态文本 */
     private String statusText;
 
     private Integer priority;
@@ -43,6 +45,7 @@ public class MiniServiceDetailVO {
 
     private String handleResult;
 
+    /** 创建时间 */
     private String createTime;
 
     /**

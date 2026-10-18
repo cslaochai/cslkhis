@@ -28,6 +28,10 @@ public interface NutritionStatsService {
      */
     List<NutritionStatsVO> generateStats(NutritionStatsGenerateDTO dto);
 
+    /**
+     * 月度膳食指标快照分页。
+     * 用于「营养指标监测」页的已生成指标表格。
+     */
     PageResult<NutritionStatsVO> statsListPage(NutritionStatsPageQueryDTO query);
 
     /**

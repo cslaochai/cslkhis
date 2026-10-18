@@ -26,6 +26,10 @@ public class AiDrugAuditController {
 
     private final DrugAuditCapability drugAuditCapability;
 
+    /**
+     * 审核一张已落库处方：先跑院内硬规则，再由大模型补长尾合理性判断，可选择把结论写成规则核查记录。
+     * 用于处方审核环节出具结论；只按处方主键由服务端回查明细，不接受前端直传处方内容。
+     */
     @PreAuthorize("hasAuthority('pharmacy:prescriptionAudit:edit')")
     @Operation(summary = "执行处方审核（硬规则 + 大模型长尾，可写入 biz_clinical_rule_check）")
     @PostMapping("/execute")

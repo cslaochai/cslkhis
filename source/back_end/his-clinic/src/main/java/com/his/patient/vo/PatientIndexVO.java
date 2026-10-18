@@ -14,6 +14,7 @@ import java.util.List;
 @Data
 public class PatientIndexVO {
 
+    /** 主键ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
@@ -33,14 +34,19 @@ public class PatientIndexVO {
      * 性别文案
      */
     private String genderText;
+    /** 出生日期 */
     private LocalDate birthDate;
     /**
      * 年龄
      */
     private Integer age;
+    /** 身份证号 */
     private String idCard;
+    /** 联系电话 */
     private String phone;
+    /** 家庭住址 */
     private String address;
+    /** 医保类型（自费/城镇职工医保/城乡居民医保/公费医疗/商业医疗保险） */
     private String medicalInsuranceType;
     /**
      * 血型
@@ -58,11 +64,13 @@ public class PatientIndexVO {
      * 0-正常 1-已并入主档（本档案失效，只在追溯时可见）
      */
     private Integer mergeStatus;
+    /** 并入主档的时刻 */
     private LocalDateTime mergeTime;
     /**
      * 自己是影子时，主档的患者号/姓名（便于一眼看出被并到谁名下）
      */
     private String masterNo;
+    /** 主档姓名 */
     private String masterName;
     /**
      * 自己是主档时，名下影子档案数量
@@ -75,7 +83,9 @@ public class PatientIndexVO {
 
     // 档案完整度（关键字段，不含 photo/balance 这类无关字段）
     private Integer completeCount;
+    /** 关键字段总数 */
     private Integer totalFieldCount;
+    /** 档案完整度（%） */
     private Double completeRate;
     /**
      * 缺失关键字段的中文名列表（不达标要能定位到字段）
@@ -84,6 +94,7 @@ public class PatientIndexVO {
 
     // 关联业务数据量
     private List<DataCountItem> dataCounts;
+    /** 关联业务数据总量 */
     private Integer totalDataCount;
 
     /**

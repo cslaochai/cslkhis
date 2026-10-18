@@ -32,6 +32,7 @@ public class LabInterpretResultVO {
      */
     private String source;
 
+    /** 检验记录ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long recordId;
 

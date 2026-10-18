@@ -15,6 +15,7 @@ public class MiniWxLoginVO {
 
     private String username;
 
+    /** 真实姓名 */
     private String realName;
 
     /**

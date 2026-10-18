@@ -20,6 +20,7 @@ public class OperationQaSemanticUpsertDTO {
     @Schema(description = "语义词/短语（问题文本包含即命中）")
     private String term;
 
+    /** 数据表名 */
     @NotBlank(message = "命中表不能为空")
     @Schema(description = "命中表")
     private String tableName;
@@ -43,6 +44,7 @@ public class OperationQaSemanticUpsertDTO {
     @AllowedValues(values = {"0", "1"}, message = "是否启用不合法")
     private Integer isEnabled;
 
+    /** 备注 */
     @Schema(description = "备注")
     private String remark;
 }

@@ -13,9 +13,11 @@ import java.time.LocalDate;
 @Data
 public class StaffScheduleVO {
 
+    /** 排班记录ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
+    /** 排班日期 */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate scheduleDate;
 
@@ -29,31 +31,44 @@ public class StaffScheduleVO {
      */
     private String weekDayText;
 
+    /** 排班单元类型（1-科室 2-病区 3-全院） */
     private Integer orgType;
+    /** 排班单元类型文案（由枚举 label 渲染） */
     private String orgTypeText;
 
+    /** 排班单元ID（全院级为 0） */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long orgId;
 
+    /** 排班单元名称 */
     private String orgName;
 
+    /** 科室ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
+    /** 科室名称 */
     private String deptName;
 
+    /** 员工ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long employeeId;
 
+    /** 工号 */
     private String empCode;
+    /** 员工姓名 */
     private String employeeName;
 
+    /** 所依据的岗位（角色 × 科室） */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long employeePostId;
 
+    /** 岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他 7-护工） */
     private Integer staffType;
+    /** 岗位类别文案（由枚举 label 渲染） */
     private String staffTypeName;
 
+    /** 班次ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long shiftId;
 
@@ -62,7 +77,9 @@ public class StaffScheduleVO {
      */
     private String shiftName;
 
+    /** 开始时间 HH:mm（班次快照） */
     private String startTime;
+    /** 结束时间 HH:mm（班次快照，早于开始时间属次日） */
     private String endTime;
 
     /**
@@ -70,10 +87,14 @@ public class StaffScheduleVO {
      */
     private Boolean crossDay;
 
+    /** 出勤状态（1-上班 2-休息 3-请假 4-培训 5-停班） */
     private Integer dutyStatus;
+    /** 出勤状态文案（由枚举 label 渲染） */
     private String dutyStatusText;
 
+    /** 响应形态（1-坐班 2-听班 3-留院值班） */
     private Integer attendMode;
+    /** 响应形态文案（由枚举 label 渲染） */
     private String attendModeText;
 
     /**
@@ -81,6 +102,7 @@ public class StaffScheduleVO {
      */
     private Integer clinicFlag;
 
+    /** 工时（分钟） */
     private Integer workMinutes;
 
     /**
@@ -88,11 +110,15 @@ public class StaffScheduleVO {
      */
     private String workHours;
 
+    /** 排班来源（1-手工 2-模板 3-复制周期 4-换班） */
     private Integer scheduleSource;
+    /** 排班来源文案（由枚举 label 渲染） */
     private String scheduleSourceText;
 
+    /** 来源排班周模板ID（非模板生成时为空） */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long templateId;
 
+    /** 备注 */
     private String remark;
 }

@@ -16,6 +16,7 @@ import java.io.Serializable;
 @AllArgsConstructor
 public class DisputeStatItemVO implements Serializable {
 
+    /** 分组键（按状态/类型统计时是码值，按科室统计时是科室ID的文本） */
     private String key;
 
     /**
@@ -29,5 +30,6 @@ public class DisputeStatItemVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
+    /** 该分组条数 */
     private Long count;
 }

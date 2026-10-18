@@ -4,9 +4,8 @@ his:
     # 医保联网结算总开关：true=支持医保结算（按 channel.mode 查 MIS 或本地镜像台账）；
     # false=不支持医保结算，挂号/结算直接拒医保改自费，不查任何参保库
     enabled: true
+    # 通道实现（mode）与平台地址（base-url）随环境变，落 profile 文件；这里只管超时
     channel:
-      mode: remote
-      base-url: http://localhost:8090/mss
       connect-timeout-ms: 5000
       read-timeout-ms: 15000
     compliance:

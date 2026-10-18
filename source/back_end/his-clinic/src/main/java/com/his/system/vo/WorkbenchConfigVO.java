@@ -10,6 +10,7 @@ import java.util.List;
 @Data
 public class WorkbenchConfigVO {
 
+    /** 当前登录角色的编码 */
     private String roleCode;
 
     /**
@@ -17,5 +18,6 @@ public class WorkbenchConfigVO {
      */
     private Integer landingScope;
 
+    /** 该角色要渲染的卡片集合（按展示顺序） */
     private List<WorkbenchWidgetVO> widgets;
 }

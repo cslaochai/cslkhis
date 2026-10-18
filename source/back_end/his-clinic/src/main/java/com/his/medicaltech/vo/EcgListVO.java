@@ -13,14 +13,18 @@ import java.time.LocalDateTime;
 @Data
 public class EcgListVO {
 
+    /** 检查/检验记录ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long recordId;
 
+    /** 检查记录号 */
     private String recordNo;
 
+    /** 检查申请ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long applyId;
 
+    /** 检查申请单号 */
     private String applyNo;
 
     /**
@@ -49,6 +53,7 @@ public class EcgListVO {
      */
     private Integer age;
 
+    /** 检查项目编码 */
     private String itemCode;
 
     /**
@@ -56,6 +61,7 @@ public class EcgListVO {
      */
     private String itemName;
 
+    /** 检查部位 */
     private String bodyPart;
 
     /**
@@ -63,8 +69,10 @@ public class EcgListVO {
      */
     private Integer recordStatus;
 
+    /** 检查记录状态文案（由字典渲染） */
     private String recordStatusText;
 
+    /** 申请科室 */
     private String applyDeptName;
 
     /**
@@ -72,6 +80,7 @@ public class EcgListVO {
      */
     private String applyDoctorName;
 
+    /** 临床诊断 */
     private String clinicalDiagnosis;
 
     /**
@@ -89,10 +98,13 @@ public class EcgListVO {
      */
     private Integer ecgType;
 
+    /** 心电类型文案（由字典渲染） */
     private String ecgTypeText;
 
+    /** 采集人 */
     private String collectBy;
 
+    /** 采集时间 */
     private LocalDateTime collectTime;
 
     /**
@@ -106,16 +118,22 @@ public class EcgListVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long holterId;
 
+    /** 开始佩戴时间 */
     private LocalDateTime wearStartTime;
 
+    /** 结束佩戴时间 */
     private LocalDateTime wearEndTime;
 
+    /** 总心搏数（24h 正常约 8~14 万） */
     private Integer totalBeats;
 
+    /** 平均心率（次/分） */
     private Integer avgHr;
 
+    /** 最快心率（次/分） */
     private Integer maxHr;
 
+    /** 最慢心率（次/分） */
     private Integer minHr;
 
     /**
@@ -123,10 +141,13 @@ public class EcgListVO {
      */
     private Integer afibFlag;
 
+    /** 室性早搏总数 */
     private Integer pvcCount;
 
+    /** 室上性早搏总数 */
     private Integer svcCount;
 
+    /** 最长停搏时长（ms；>2000 为临床关注点） */
     private Integer longestPauseMs;
 
     // 报告侧（reportId == null = 待书写）
@@ -134,6 +155,7 @@ public class EcgListVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long reportId;
 
+    /** 报告编号 */
     private String reportNo;
 
     /**
@@ -141,6 +163,7 @@ public class EcgListVO {
      */
     private Integer reportStatus;
 
+    /** 报告状态文案（由字典渲染，未写报告时给"未写报告"） */
     private String reportStatusText;
 
     /**
@@ -148,6 +171,7 @@ public class EcgListVO {
      */
     private Integer positiveFlag;
 
+    /** 阴阳性文案（由字典渲染） */
     private String positiveFlagText;
 
     /**
@@ -155,10 +179,13 @@ public class EcgListVO {
      */
     private Integer isCritical;
 
+    /** 报告书写人 */
     private String writeBy;
 
+    /** 报告书写时间 */
     private LocalDateTime writeTime;
 
+    /** 审核人（初审） */
     private String auditBy;
 
     /**
@@ -166,8 +193,10 @@ public class EcgListVO {
      */
     private LocalDateTime auditTime;
 
+    /** 发布人 */
     private String publishBy;
 
+    /** 发布时间 */
     private LocalDateTime publishTime;
 
     /**
@@ -175,6 +204,7 @@ public class EcgListVO {
      */
     private Integer reportVersion;
 
+    /** 退回原因（审核不通过时必填） */
     private String rejectReason;
 
     /**

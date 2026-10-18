@@ -13,12 +13,15 @@ import java.math.BigDecimal;
 @Data
 public class InpatientSummarySnapshotVO implements Serializable {
 
+    /** 入院ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
 
+    /** 患者ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
+    /** 患者姓名 */
     private String patientName;
 
     /**
@@ -26,6 +29,7 @@ public class InpatientSummarySnapshotVO implements Serializable {
      */
     private String mainDiagnosisCode;
 
+    /** 主要诊断名称（与 mainDiagnosisCode 同一诊断） */
     private String mainDiagnosisName;
 
     /**

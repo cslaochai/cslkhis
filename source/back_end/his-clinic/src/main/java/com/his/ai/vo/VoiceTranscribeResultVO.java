@@ -10,15 +10,19 @@ import lombok.Data;
 @Schema(description = "语音口述转写结果")
 public class VoiceTranscribeResultVO {
 
+    /** 转写文本（医生可编辑） */
     @Schema(description = "转写文本（医生可编辑，编辑后自行喂病历草拟）")
     private String text;
 
+    /** 音频时长（秒，仅作展示） */
     @Schema(description = "音频时长（秒，向上取整；仅作展示，不参与任何判定）")
     private Integer durationSeconds;
 
+    /** 实际使用的语音识别模型 */
     @Schema(description = "实际使用的 ASR 模型")
     private String model;
 
+    /** 转写耗时（毫秒） */
     @Schema(description = "转写耗时（毫秒）")
     private Integer elapsedMs;
 }

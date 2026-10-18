@@ -64,6 +64,7 @@ public class UdiScanVO {
      * 单位
      */
     private String unit;
+    /** 生产厂家 */
     private String manufacturer;
     /**
      * 注册证号

@@ -48,6 +48,7 @@ public class OperationQaRelationUpsertDTO {
     @Schema(description = "排序号")
     private Integer sortOrder;
 
+    /** 备注 */
     @Schema(description = "备注")
     private String remark;
 }

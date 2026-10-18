@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 单病种质控
+ * 单病种质控控制器：病种目录维护、病例纳入、质控判级与上报打标的接口入口。
  */
 @Tag(name = "单病种质控")
 @RestController
@@ -35,6 +35,10 @@ public class SingleDiseaseController {
         return Result.success(singleDiseaseService.diseaseList());
     }
 
+    /**
+     * 维护单病种纳入目录：新增与修改共用一个入口，病种编码全表唯一，ICD-10 前缀决定自动纳入的匹配范围。
+     * 用于「单病种质控」页「病种目录」页签的新增/修改弹框保存。
+     */
     @PreAuthorize("hasAuthority('qc:singleDisease:add')")
     @Operation(summary = "病种目录新增/修改（编码唯一）")
     @PostMapping("/diseaseUpsert")
@@ -42,6 +46,10 @@ public class SingleDiseaseController {
         return Result.success(singleDiseaseService.diseaseUpsert(dto));
     }
 
+    /**
+     * 从目录中移除病种，已纳入病例的病种拒绝删除。
+     * 用于「病种目录」页签操作列的删除。
+     */
     @PreAuthorize("hasAuthority('qc:singleDisease:add')")
     @Operation(summary = "病种目录删除（已纳入病例的病种拒绝删除；物理删）")
     @PostMapping("/diseaseDelete/{id}")
@@ -59,6 +67,10 @@ public class SingleDiseaseController {
         return Result.success(singleDiseaseService.enroll(dto));
     }
 
+    /**
+     * 自动扫描纳入：按病种配置的 ICD-10 前缀扫出院首页批量入册，返回扫描、纳入与跳过计数；出院日期区间可空表示扫全部已出院首页。
+     * 用于「病种目录」页签的自动扫描，可对单个病种反复执行以补漏。
+     */
     @PreAuthorize("hasAuthority('qc:singleDisease:edit')")
     @Operation(summary = "自动扫描纳入（按 ICD 前缀扫出院首页，返回扫描/纳入/跳过计数）")
     @PostMapping("/autoEnroll")
@@ -75,6 +87,10 @@ public class SingleDiseaseController {
         return Result.success(singleDiseaseService.qc(dto));
     }
 
+    /**
+     * 给病例打上完成上报标记，质控通过的才允许上报，上报后判级不可再改。
+     * 用于「病例列表」页签操作列的上报确认，满足上级单病种数据报送要求。
+     */
     @PreAuthorize("hasAuthority('qc:singleDisease:edit')")
     @Operation(summary = "上报打标（质控通过才可上报）")
     @PostMapping("/report/{id}")
@@ -91,6 +107,10 @@ public class SingleDiseaseController {
         return Result.success(singleDiseaseService.casePage(query));
     }
 
+    /**
+     * 病种级质控指标：治愈率、死亡率、平均住院日、平均费用由服务端从已纳入病例复算。
+     * 用于「单病种质控」页「病种指标」页签，页面打开与病例增改后一同刷新。
+     */
     @PreAuthorize("hasAuthority('qc:singleDisease:list')")
     @Operation(summary = "病种指标（治愈率/死亡率/平均住院日/平均费用，服务端复算）")
     @GetMapping("/metrics")

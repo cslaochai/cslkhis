@@ -9,6 +9,7 @@ import lombok.Data;
 @Data
 public class BedWaitOperateDTO {
 
+    /** 来源等床记录ID */
     @NotNull(message = "排队记录不能为空")
     private Long waitId;
 

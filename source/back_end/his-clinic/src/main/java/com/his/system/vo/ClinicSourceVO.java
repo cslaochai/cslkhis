@@ -15,20 +15,28 @@ import java.time.LocalDate;
 @Data
 public class ClinicSourceVO implements Serializable {
 
+    /** 门诊排班（号源）ID */
     private Long id;
 
+    /** 科室ID */
     private Long deptId;
 
+    /** 科室名称 */
     private String deptName;
 
+    /** 出诊医生ID */
     private Long doctorId;
 
+    /** 出诊医生姓名 */
     private String doctorName;
 
+    /** 排班日期 */
     private LocalDate scheduleDate;
 
+    /** 时段开始时间（如 08:00） */
     private String startTime;
 
+    /** 时段结束时间（如 12:00） */
     private String endTime;
 
     /**

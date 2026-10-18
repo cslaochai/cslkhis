@@ -10,6 +10,7 @@ import lombok.Data;
 @Data
 public class OperationQaRelationListVO {
 
+    /** 表间关系配置记录ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 

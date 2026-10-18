@@ -15,6 +15,7 @@ import java.time.LocalDate;
 @Data
 public class MaintainCreateDTO implements Serializable {
 
+    /** 设备ID */
     @NotNull(message = "设备ID不能为空")
     private Long equipmentId;
 
@@ -25,13 +26,16 @@ public class MaintainCreateDTO implements Serializable {
     @AllowedValues(values = {"1", "2", "3"}, message = "维保类型取值不合法")
     private Integer maintainType;
 
+    /** 维保日期 */
     @NotNull(message = "维保日期不能为空")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate maintainDate;
 
+    /** 下次维保日期 */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate nextMaintainDate;
 
+    /** 费用（元） */
     private BigDecimal cost;
 
     /**

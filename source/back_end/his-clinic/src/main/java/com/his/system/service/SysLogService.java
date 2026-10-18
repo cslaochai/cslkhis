@@ -5,18 +5,38 @@ import com.his.system.dto.LogPageQueryDTO;
 import com.his.system.vo.*;
 
 /**
- * 日志审计服务（操作日志操作日志 / 登录日志登录日志 / 审计日志审计日志）。
+ * 日志审计服务：操作、登录、审计、字段变更四本账的查询、统计与导出收口。
  */
 public interface SysLogService {
 
+    /**
+     * 操作日志分页：按操作人、模块、时间等条件筛选，只记写动作，读接口不入库。
+     * 用于系统管理「日志审计」页的「操作日志」页签表格。
+     */
     PageResult<OperLogListVO> operLogListPage(LogPageQueryDTO query);
 
+    /**
+     * 单条操作日志的完整现场：请求参数与返回内容，凭据类字段已打码。
+     * 用于「操作日志」页签行内「详情」弹框，追查一次写操作到底提交了什么。
+     */
     OperLogDetailVO operLogDetail(Long id);
 
+    /**
+     * 登录日志分页：成功与失败同表，靠登录状态区分。
+     * 用于「日志审计」页的「登录日志」页签，排查账号被爆破或异常登录。
+     */
     PageResult<LoginLogVO> loginLogListPage(LogPageQueryDTO query);
 
+    /**
+     * 审计日志分页：按模块、操作、对象等条件筛选业务侧显式写入的「谁对哪个对象做了什么」。
+     * 用于「日志审计」页的「审计日志」页签。
+     */
     PageResult<AuditLogVO> auditLogListPage(LogPageQueryDTO query);
 
+    /**
+     * 单条审计日志的完整内容，含业务侧写入的详情文本与失败原因。
+     * 用于「审计日志」页签行内「详情」弹框。
+     */
     AuditLogVO auditLogDetail(Long id);
 
     /**
@@ -37,6 +57,10 @@ public interface SysLogService {
      */
     java.util.List<FieldChangeVO> fieldChangeBatch(String batchNo);
 
+    /**
+     * 汇总操作、登录、审计、字段变更四本账的量，并给出近 24 小时口令爆破嫌疑账号。
+     * 用于「日志审计」页顶部的统计卡与安全提醒条。
+     */
     LogStatVO stat();
 
     /**

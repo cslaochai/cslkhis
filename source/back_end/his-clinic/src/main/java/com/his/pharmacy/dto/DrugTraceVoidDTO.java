@@ -10,6 +10,7 @@ import lombok.Data;
 @Data
 public class DrugTraceVoidDTO {
 
+    /** 台账ID */
     @NotNull(message = "追溯码记录ID不能为空")
     private Long traceId;
 

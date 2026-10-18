@@ -12,10 +12,13 @@ import java.util.List;
 @Data
 public class WorkbenchRoleConfigVO {
 
+    /** 角色ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long roleId;
 
+    /** 角色编码 */
     private String roleCode;
+    /** 角色名称 */
     private String roleName;
 
     /**
@@ -23,5 +26,6 @@ public class WorkbenchRoleConfigVO {
      */
     private Integer landingScope;
 
+    /** 该角色已配置的工作台卡片列表 */
     private List<WorkbenchWidgetVO> widgets;
 }

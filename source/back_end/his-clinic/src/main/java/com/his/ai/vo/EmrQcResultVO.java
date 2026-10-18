@@ -27,6 +27,7 @@ public class EmrQcResultVO {
     @Schema(description = "降级原因，未降级时为空")
     private String degradeReason;
 
+    /** 是否合格（存在否决级问题即不合格） */
     @Schema(description = "是否合格：存在 severity=3 的问题即不合格")
     private boolean pass;
 
@@ -36,6 +37,7 @@ public class EmrQcResultVO {
     @Schema(description = "问题总数")
     private int issueCount;
 
+    /** 最高严重程度（0-无 1-提示 2-重要 3-否决），无问题时为 0 */
     @Schema(description = "最高严重程度，无问题时为 0")
     private int maxSeverity;
 
@@ -45,13 +47,16 @@ public class EmrQcResultVO {
     @Schema(description = "整体评价")
     private String summary;
 
+    /** 问题列表，按严重程度降序 */
     @Schema(description = "问题列表，按严重程度降序")
     private List<EmrQcIssueVO> issues = new ArrayList<>();
 
+    /** 质控记录ID，未落库时为空 */
     @Schema(description = "写入 biz_quality_control 的记录ID，未落库时为空")
     @JsonSerialize(using = ToStringSerializer.class)
     private Long qcId;
 
+    /** 质控单号，未落库时为空 */
     @Schema(description = "质控单号，未落库时为空")
     private String qcNo;
 

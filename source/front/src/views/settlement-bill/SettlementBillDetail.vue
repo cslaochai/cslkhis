@@ -1,5 +1,5 @@
 <template>
-  <el-dialog v-model="visible" title="账单详情（行快照 + 收/退流水）" width="860px">
+  <el-dialog v-model="visible" title="账单详情" width="860px">
     <div v-loading="detailLoading">
       <template v-if="detail">
         <el-descriptions :column="3" border size="small">

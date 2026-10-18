@@ -14,6 +14,7 @@ import lombok.EqualsAndHashCode;
 @Schema(description = "运营问数数据列配置分页查询入参")
 public class OperationQaColumnPageQueryDTO extends PageParam {
 
+    /** 数据表名 */
     @NotBlank(message = "数据表名不能为空")
     @Schema(description = "数据表名")
     private String tableName;

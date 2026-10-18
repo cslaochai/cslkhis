@@ -8,7 +8,9 @@ import lombok.Data;
 @Data
 public class LabCriticalConfigVO {
 
+    /** 危急值处理时限（分钟）：超时未签收逐级催办 */
     private Integer criticalValueDeadlineMinutes;
 
+    /** 危急值无人接收时的兜底接收人（用户名或员工ID），为空表示不兜底 */
     private String criticalValueFallbackReceiver;
 }

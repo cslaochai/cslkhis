@@ -44,6 +44,7 @@ public class AnesthesiaRecordVO extends BizAnesthesiaRecord {
 
     private String actualOperationName;
 
+    /** 手术间 */
     private String operationRoom;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

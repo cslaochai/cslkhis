@@ -10,6 +10,7 @@ import lombok.Data;
 @Data
 public class OutpatientLogListVO {
 
+    /** 门诊病历ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long recordId;
 
@@ -60,6 +61,7 @@ public class OutpatientLogListVO {
      */
     private String phone;
 
+    /** 脱敏手机号（列表展示用，明文列已置 null） */
     private String phoneMasked;
 
     /**
@@ -107,6 +109,7 @@ public class OutpatientLogListVO {
      */
     private Boolean reported;
 
+    /** 已报的传染病报告卡编号（未报卡为空） */
     private String reportNo;
 
     /**

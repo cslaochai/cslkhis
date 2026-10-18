@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 @Data
 public class FeeReverseDTO {
 
+    /** 记账流水ID */
     @NotNull(message = "缺少记账行")
     private Long feeId;
 

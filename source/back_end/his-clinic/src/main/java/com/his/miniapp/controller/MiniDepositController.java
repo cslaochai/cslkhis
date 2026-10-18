@@ -28,18 +28,30 @@ public class MiniDepositController {
 
     private final MiniDepositService miniDepositService;
 
+    /**
+     * 我的住院记录：列出就诊人名下可查押金的入院单候选。
+     * 用于小程序「住院押金」页顶部的入院单选择。
+     */
     @Operation(summary = "我的住院记录（押金页选择入院单用）")
     @GetMapping("/myAdmissions")
     public Result<List<MiniAdmiSelectListVO>> myAdmissions(@RequestParam Long patientId) {
         return Result.success(miniDepositService.myAdmissions(patientId));
     }
 
+    /**
+     * 押金余额：按入院单汇总充值合计、退款合计与当前余额（元）。
+     * 用于小程序「住院押金」页选定入院单后的余额卡，也是充值金额输入的下限参照。
+     */
     @Operation(summary = "押金余额（充值合计/退款合计/余额）")
     @GetMapping("/balance")
     public Result<PrepayBalanceVO> balance(@RequestParam Long admissionId) {
         return Result.success(miniDepositService.balance(admissionId));
     }
 
+    /**
+     * 押金流水分页：按入院单逐笔列出预交金的收支记录。
+     * 用于小程序「住院押金」页的流水列表。
+     */
     @Operation(summary = "押金流水分页")
     @PostMapping("/listPage")
     public Result<IPage<PrepayVO>> listPage(@Valid @RequestBody PrepayPageQueryDTO query) {

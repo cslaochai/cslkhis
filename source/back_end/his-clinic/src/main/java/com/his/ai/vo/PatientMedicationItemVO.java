@@ -12,15 +12,19 @@ import java.util.List;
 @Schema(description = "患者端用药说明-单药")
 public class PatientMedicationItemVO {
 
+    /** 药品名称 */
     @Schema(description = "药品名称")
     private String drugName;
 
+    /** 规格 */
     @Schema(description = "规格")
     private String specification;
 
+    /** 剂型 */
     @Schema(description = "剂型")
     private String dosageForm;
 
+    /** 发药数量文本（含单位） */
     @Schema(description = "发药数量（含单位）")
     private String quantityText;
 

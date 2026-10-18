@@ -16,6 +16,7 @@ public class OperationQaColumnUpsertDTO {
     @Schema(description = "主键（空=新增 有值=修改）")
     private Long id;
 
+    /** 数据表名 */
     @NotBlank(message = "数据表名不能为空")
     @Schema(description = "数据表名")
     private String tableName;
@@ -45,6 +46,7 @@ public class OperationQaColumnUpsertDTO {
     @AllowedValues(values = {"0", "1", "2"}, message = "敏感类型不合法")
     private Integer sensitiveType;
 
+    /** 脱敏方式（phone-手机号 idcard-身份证 email-邮箱 middle-姓名/中间打码） */
     @Schema(description = "脱敏方式（phone-手机号 idcard-身份证 email-邮箱 middle-姓名/中间打码）")
     @AllowedValues(values = {"phone", "idcard", "email", "middle"}, message = "脱敏方式不合法")
     private String maskType;
@@ -52,6 +54,7 @@ public class OperationQaColumnUpsertDTO {
     @Schema(description = "排序号")
     private Integer sortOrder;
 
+    /** 备注 */
     @Schema(description = "备注")
     private String remark;
 }

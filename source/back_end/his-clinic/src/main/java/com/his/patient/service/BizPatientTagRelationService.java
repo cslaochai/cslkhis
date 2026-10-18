@@ -10,6 +10,9 @@ import com.his.system.vo.SysPatientTagVO;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 患者标签关联服务：患者与标签绑定关系的写入，以及按患者、按标签双向取数的收口。
+ */
 public interface BizPatientTagRelationService extends IService<BizPatientTagRelation> {
 
     /**

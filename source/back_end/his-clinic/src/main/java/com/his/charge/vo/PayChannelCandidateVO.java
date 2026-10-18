@@ -18,6 +18,7 @@ public class PayChannelCandidateVO {
 
     private String billNo;
 
+    /** 患者姓名 */
     private String patientName;
 
     private BigDecimal amount;

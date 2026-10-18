@@ -25,6 +25,10 @@ public class EquipmentMaintainController {
 
     private final EquipmentService equipmentService;
 
+    /**
+     * 维保记录分页：按设备与维保日期区间筛选历史保养。
+     * 供设备维保台账批量核查保养是否漏做时取数。
+     */
     @Operation(summary = "维保记录分页")
     @PostMapping("/listPage")
     public Result<PageResult<MaintainVO>> listPage(@Valid @RequestBody MaintainPageQueryDTO dto) {
@@ -33,6 +37,10 @@ public class EquipmentMaintainController {
                 page.getRecords()));
     }
 
+    /**
+     * 登记一次设备维保：成功后回写档案「最近维保日期」，下次维保日期据此推算。
+     * 用于「设备管理」页维保登记弹框保存。
+     */
     @PreAuthorize("hasAuthority('asset:equipment:add')")
     @Operation(summary = "维保登记")
     @PostMapping("/create")
@@ -40,6 +48,10 @@ public class EquipmentMaintainController {
         return Result.success("维保登记成功", equipmentService.maintainCreate(dto));
     }
 
+    /**
+     * 删除录错的维保记录：按剩余记录重算档案的最近维保日期。
+     * 用于「设备管理」设备详情里维保记录行的删除。
+     */
     @PreAuthorize("hasAuthority('asset:equipment:delete')")
     @Operation(summary = "维保记录删除（录错可删，删除后重算档案最近维保日期）")
     @DeleteMapping("/deleteById")

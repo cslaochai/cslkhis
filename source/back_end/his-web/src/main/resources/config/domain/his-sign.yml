@@ -1,8 +1,8 @@
 # 电子签名配置
 his:
   sign:
-    # 签名主密钥属敏感项：此处留空，dev 文件覆盖为内联真值，生产用 HIS_SIGN_SECRET 注入。
-    master-secret: ${HIS_SIGN_SECRET:}
+    # 主口令随环境变，不在这里声明：dev 落内联真值，生产用环境变量 HIS_SIGN_SECRET 注入；
+    # 缺失时签发入口直接拒绝（见 KeyProtectorUtil）
     # PBKDF2 迭代次数（新证书使用；老证书用自己行里存的值，调大不会让老证书解不开）
     iterations: 120000
     # 证书默认有效期（天）

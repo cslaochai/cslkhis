@@ -22,6 +22,7 @@ public class OnDutyStaffVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long staffId;
 
+    /** 在岗人员姓名（排班快照带出） */
     private String staffName;
 
     /**
@@ -51,6 +52,7 @@ public class OnDutyStaffVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long shiftId;
 
+    /** 标准班次名称 */
     private String shiftName;
 
     /**

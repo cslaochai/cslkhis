@@ -15,6 +15,10 @@ public interface PathwayService {
 
     PageResult<PathwayVO> listPage(PathwayPageQueryDTO dto);
 
+    /**
+     * 单张路径模板详情：连阶段与步骤明细一起返回，步骤顺序即入径时的快照顺序。
+     * 用于「临床路径」页「路径模板」页签的详情弹框与编辑弹框打开时的表单回显。
+     */
     PathwayVO getDetailById(Long id);
 
     /**
@@ -41,6 +45,10 @@ public interface PathwayService {
 
     PageResult<PathwayEnrollVO> enrollListPage(EnrollPageQueryDTO dto);
 
+    /**
+     * 入径详情：模板快照、当前路径日、步骤完成进度与名下变异台账一次给全。
+     * 用于「临床路径」页「在径管理」页签行点开的入径详情，完成与退径都在这一屏发起。
+     */
     PathwayEnrollVO enrollGetDetailById(Long id);
 
     /**
@@ -58,6 +66,10 @@ public interface PathwayService {
      */
     PathwayEnrollVO varianceUpsert(VarianceUpsertDTO dto);
 
+    /**
+     * 完成入径：在径转已完成并记完成日期与完成人，名下有变异记录不挡完成。
+     * 用于入径详情里路径按疗程走完时的完成操作。
+     */
     PathwayEnrollVO finishEnroll(EnrollActionDTO dto);
 
     /**

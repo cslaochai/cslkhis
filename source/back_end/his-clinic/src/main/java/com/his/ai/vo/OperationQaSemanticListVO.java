@@ -10,6 +10,7 @@ import lombok.Data;
 @Data
 public class OperationQaSemanticListVO {
 
+    /** 语义映射配置记录ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 

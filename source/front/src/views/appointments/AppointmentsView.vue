@@ -367,7 +367,7 @@
                             </p>
                             <!-- 收款入口只认账单欠款事实（1-待支付 2-部分支付）：免收/已收齐/账单作废都不是「没收款」。
                                  放退号前面：先办钱再谈退号，收银动线如此。
-                                 一个「收费」口进去选档（现金/支付宝/微信），做成两个按钮等于让收银员先猜客户掏什么 -->
+                                 一个「收费」口进去选档（现金/扫码收款），做成两个按钮等于让收银员先猜客户掏什么 -->
                             <div v-if="canCollectFee(r) || canCancelRegist(r)" class="mt-1 flex justify-end gap-1">
                               <button v-if="canCollectFee(r)"
                                       class="cursor-pointer rounded border border-emerald-200 bg-white px-2 py-0.5 text-xs font-medium text-emerald-600 hover:bg-emerald-50"
@@ -613,7 +613,7 @@
                       :schedule="editRow ? (deskScheduleMap[editRow.scheduleId] || null) : null"
                       @saved="reloadListAndStats"/>
 
-    <!-- 挂号费收费：默认现金档（窗口当场点钞记流水），切支付宝/微信即出对应渠道的码 -->
+    <!-- 挂号费收费：默认现金档（窗口当场点钞记流水），切扫码收款即出一张聚合码（一码多平台） -->
     <QrPayDialog v-model="showPaymentDialog" allow-cash :amount="paymentInfo.amount" :bill-id="paymentInfo.billId"
                  :bill-no="paymentInfo.billNo" :patient-name="paymentInfo.patientName" @paid="onPaid"/>
   </div>

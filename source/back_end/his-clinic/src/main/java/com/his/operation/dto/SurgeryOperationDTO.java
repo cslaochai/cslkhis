@@ -37,5 +37,6 @@ public class SurgeryOperationDTO {
 
     private String operationBasis;
 
+    /** 备注 */
     private String remark;
 }

@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @Data
 public class DoseLimitVO {
 
+    /** 知识条目ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
@@ -42,6 +43,7 @@ public class DoseLimitVO {
      */
     private String note;
 
+    /** 状态（1-启用 0-停用） */
     private Integer status;
 
     /**

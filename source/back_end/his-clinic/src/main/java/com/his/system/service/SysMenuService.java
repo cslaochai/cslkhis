@@ -5,6 +5,7 @@ import com.his.system.vo.MenuVO;
 
 import java.util.List;
 
+/** 菜单服务：菜单树取数、当前岗位可见范围解析与菜单节点维护的业务收口。 */
 public interface SysMenuService {
 
     /**
@@ -15,6 +16,10 @@ public interface SysMenuService {
      */
     List<MenuVO> tree();
 
+    /**
+     * 单个菜单节点详情（名称、路由、图标、排序、按钮权限码等完整字段）。
+     * 用于菜单管理页修改弹框的回显取数。
+     */
     MenuVO getInfo(Long menuId);
 
     /**
@@ -29,5 +34,9 @@ public interface SysMenuService {
      */
     String upsert(MenuUpsertDTO upsertDTO);
 
+    /**
+     * 删除菜单节点：名下还有子节点时拒绝删除，删除后全量失效角色权限与账号身份缓存。
+     * 用于菜单管理页树表格行的删除操作。
+     */
     void delete(Long menuId);
 }

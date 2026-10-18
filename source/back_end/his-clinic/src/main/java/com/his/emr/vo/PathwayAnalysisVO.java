@@ -17,9 +17,13 @@ public class PathwayAnalysisVO implements Serializable {
      * 汇总（当前筛选范围内）
      */
     private Long enrollCount;
+    /** 完成（出径）例数（入径状态 2-已完成） */
     private Long finishCount;
+    /** 退径例数（入径状态 3-已退径） */
     private Long abortCount;
+    /** 变异登记累计条数（各入径记录上的变异次数求和） */
     private Long varianceCount;
+    /** 完成率（百分比，1 位小数；入径例数为 0 时为 null） */
     private Double finishRate;
 
     /**

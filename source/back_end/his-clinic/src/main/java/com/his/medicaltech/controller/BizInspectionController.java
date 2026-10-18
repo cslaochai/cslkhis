@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 检查管理控制器
+ * 检查管理控制器：检查记录检索与技师侧签到、执行、报告审核流转的接口入口。
  */
 @Tag(name = "检查管理")
 @RestController
@@ -30,6 +30,10 @@ public class BizInspectionController {
 
     private final MedicalTechService medicalTechService;
 
+    /**
+     * 检查记录分页：按患者或检查科室筛出检查记录行。
+     * 用于检查工作站的检查记录查询表格，也用于住院医嘱工作区的检查记录页签与胶片量方发放页按患者检索候选记录。
+     */
     @Operation(summary = "分页查询检查记录列表")
     @PostMapping("/listPage")
     public Result<PageResult<BizInspectionRecordVO>> inspectionListPage(@Valid @RequestBody InspectionRecordQueryDTO queryDTO) {
@@ -38,6 +42,10 @@ public class BizInspectionController {
                 queryDTO.getPageNum(), queryDTO.getPageSize()));
     }
 
+    /**
+     * 检查记录全量列表（不分页）：按患者或检查科室筛出该患者历次检查记录。
+     * 供需要一次看全一名患者检查情况的环节取数，如开单前核对该患者已有的检查项目。
+     */
     @Operation(summary = "查询检查记录列表（不分页）")
     @PostMapping("/list")
     public Result<List<BizInspectionRecordVO>> inspectionList(@Valid @RequestBody InspectionRecordQueryDTO queryDTO) {
@@ -56,6 +64,10 @@ public class BizInspectionController {
         return Result.success(medicalTechService.getInspectionDetail(recordId));
     }
 
+    /**
+     * 检查签到：登记患者到检时刻，把检查记录推进到已签到。
+     * 用于检查工作站列表行的「签到」按钮（检查技师岗）。
+     */
     @Operation(summary = "检查签到")
     @PostMapping("/checkIn")
     public Result<Void> checkIn(@RequestParam Long recordId) {
@@ -63,6 +75,10 @@ public class BizInspectionController {
         return success ? Result.success("签到成功", null) : Result.error("签到失败");
     }
 
+    /**
+     * 开始检查：把检查记录推进到检查中，标记技师已上机。
+     * 用于检查工作站列表行的「开始检查」按钮。
+     */
     @Operation(summary = "开始检查")
     @PostMapping("/start")
     public Result<Void> startInspection(@RequestParam Long recordId) {
@@ -70,6 +86,10 @@ public class BizInspectionController {
         return success ? Result.success("开始检查", null) : Result.error("操作失败");
     }
 
+    /**
+     * 执行检查：落到检查所见、诊断结论与建议，记录推进到已出结果并生成检查报告。
+     * 用于检查工作站「检查结果录入」弹框提交；放射与心电项目在这里被拒绝，各走自己的工作站。
+     */
     @Operation(summary = "执行检查")
     @PostMapping("/execute")
     public Result<Void> executeInspection(@Valid @RequestBody InspectionExecuteDTO executeDTO) {
@@ -94,6 +114,10 @@ public class BizInspectionController {
                 : Result.error("操作失败");
     }
 
+    /**
+     * 审核检查报告：审核人签名并把记录与关联报告推进到已审核、已发布。
+     * 用于检查工作站「审核检查报告」弹框提交，是检查流程出报告的最后一道。
+     */
     @Operation(summary = "审核检查报告")
     @PostMapping("/audit")
     public Result<Void> auditInspection(@Valid @RequestBody InspectionAuditDTO auditDTO) {

@@ -13,6 +13,7 @@ import java.time.LocalDate;
 @Data
 public class StaffDemandGapVO {
 
+    /** 缺口测算日期 */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate demandDate;
 
@@ -21,11 +22,14 @@ public class StaffDemandGapVO {
      */
     private Integer orgType;
 
+    /** 排班单元类型文案（由枚举 label 渲染） */
     private String orgTypeText;
 
+    /** 排班单元ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long orgId;
 
+    /** 排班单元名称 */
     private String orgName;
 
     /**
@@ -33,6 +37,7 @@ public class StaffDemandGapVO {
      */
     private Integer staffType;
 
+    /** 岗位类别文案（由枚举 label 渲染） */
     private String staffTypeText;
 
     /**
@@ -55,6 +60,7 @@ public class StaffDemandGapVO {
      */
     private Integer demandSource;
 
+    /** 需求来源文案（由枚举 label 渲染） */
     private String demandSourceText;
 
     /**
