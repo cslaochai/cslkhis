@@ -45,7 +45,6 @@ import com.his.system.service.SysClinicRoomService;
 import com.his.system.utils.UserUtils;
 import com.his.system.vo.OnDutyStaffVO;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -85,7 +84,6 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
 
     private final DayEndSettleTrigger dayEndSettleTrigger;
 
-    @Lazy
     private final BizClinicSourceService bizScheduleService;
 
     private final DeptScopeService deptScopeService;

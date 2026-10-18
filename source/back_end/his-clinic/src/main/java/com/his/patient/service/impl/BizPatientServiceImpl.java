@@ -41,7 +41,6 @@ import com.his.system.utils.UserUtils;
 import com.his.system.vo.SysPatientTagVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.beans.BeanUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -130,7 +129,6 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
      * <p>接口在公共模块 his-system、实现由依赖本模块的就诊域注册；
      * 就诊域为编译期强依赖（his-web 聚合引入），实现缺失直接启动失败。
      */
-    @Lazy
     private final QueueMapper queueMapper;
     /**
      * 「要不要看今日就诊」的判定（按当前登录角色的岗位性质）。
