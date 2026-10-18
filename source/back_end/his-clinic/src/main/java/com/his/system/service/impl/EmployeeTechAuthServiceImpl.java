@@ -56,7 +56,7 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
     // 一、台账查询
 
     @Override
-    public PageResult<EmployeeTechAuthVO> listPage(TechAuthQueryPageDTO query) {
+    public PageResult<EmployeeTechAuthVO> listPage(TechAuthPageQueryDTO query) {
         LambdaQueryWrapper<SysEmployeeTechAuth> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(query.getEmployeeName()), SysEmployeeTechAuth::getEmployeeName, TextUtil.trimToNull(query.getEmployeeName()))
                 .eq(query.getEmployeeId() != null, SysEmployeeTechAuth::getEmployeeId, query.getEmployeeId())
@@ -335,7 +335,7 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
     // 五、内部工具
 
     @Override
-    public PageResult<TechAuthOverrideVO> overrideListPage(TechAuthOverrideQueryPageDTO query) {
+    public PageResult<TechAuthOverrideVO> overrideListPage(TechAuthOverridePageQueryDTO query) {
         LambdaQueryWrapper<BizTechAuthOverride> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(query.getEmployeeName()), BizTechAuthOverride::getEmployeeName, TextUtil.trimToNull(query.getEmployeeName()))
                 .eq(query.getAuthCategory() != null, BizTechAuthOverride::getAuthCategory, query.getAuthCategory())

@@ -129,7 +129,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
     }
 
     @Override
-    public IPage<InpatientVO> listPage(InpatientQueryPageDTO query) {
+    public IPage<InpatientVO> listPage(InpatientPageQueryDTO query) {
         // 科室数据权限收口（M6）：scopeDeptIds 是服务端专用字段，先清掉前端可能伪造的值再按登录态填充。
         // 传了 deptId → 越权直接拒绝；没传且受限 → 收敛到授权科室集合（不再是"不传=看全院"）。
         query.setScopeDeptIds(null);
@@ -155,7 +155,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
     }
 
     @Override
-    public IPage<InpatientVO> listMyDeptPage(InpatientQueryPageDTO query) {
+    public IPage<InpatientVO> listMyDeptPage(InpatientPageQueryDTO query) {
         CurrentUser user = UserUtils.getCurrentUser();
         Long deptId = user == null ? null : user.getDeptId();
         if (deptId == null) {

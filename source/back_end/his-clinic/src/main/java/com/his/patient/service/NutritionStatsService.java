@@ -2,7 +2,7 @@ package com.his.patient.service;
 
 import com.his.common.base.PageResult;
 import com.his.patient.dto.NutritionStatsGenerateDTO;
-import com.his.patient.dto.NutritionStatsQueryPageDTO;
+import com.his.patient.dto.NutritionStatsPageQueryDTO;
 import com.his.patient.vo.NutritionOverviewVO;
 import com.his.patient.vo.NutritionStatsVO;
 
@@ -28,10 +28,10 @@ public interface NutritionStatsService {
      */
     List<NutritionStatsVO> generateStats(NutritionStatsGenerateDTO dto);
 
-    PageResult<NutritionStatsVO> statsListPage(NutritionStatsQueryPageDTO query);
+    PageResult<NutritionStatsVO> statsListPage(NutritionStatsPageQueryDTO query);
 
     /**
      * 导出 CSV（BOM，上限 5000 行）
      */
-    String statsExportCsv(NutritionStatsQueryPageDTO query);
+    String statsExportCsv(NutritionStatsPageQueryDTO query);
 }

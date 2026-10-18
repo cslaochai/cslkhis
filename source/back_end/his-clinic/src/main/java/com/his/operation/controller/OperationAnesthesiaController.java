@@ -32,7 +32,7 @@ public class OperationAnesthesiaController {
 
     @Operation(summary = "术前访视分页（住院/手术/结论/关键字）")
     @GetMapping("/visitListPage")
-    public Result<IPage<AnesthesiaVisitVO>> visitListPage(@Valid AnesthesiaVisitQueryPageDTO query) {
+    public Result<IPage<AnesthesiaVisitVO>> visitListPage(@Valid AnesthesiaVisitPageQueryDTO query) {
         return Result.success(anesthesiaVisitService.listPage(query));
     }
 
@@ -73,7 +73,7 @@ public class OperationAnesthesiaController {
 
     @Operation(summary = "麻醉记录单分页（住院/手术/麻醉医师/状态/关键字/未计费）")
     @GetMapping("/recordListPage")
-    public Result<IPage<AnesthesiaRecordVO>> recordListPage(@Valid AnesthesiaRecordQueryPageDTO query) {
+    public Result<IPage<AnesthesiaRecordVO>> recordListPage(@Valid AnesthesiaRecordPageQueryDTO query) {
         return Result.success(anesthesiaRecordService.listPage(query));
     }
 

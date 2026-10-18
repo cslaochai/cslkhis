@@ -4,7 +4,7 @@ import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.pharmacy.dto.BizDrugStockUpsertDTO;
 import com.his.pharmacy.dto.DrugStockChangeDTO;
-import com.his.pharmacy.dto.DrugStockLogQueryPageDTO;
+import com.his.pharmacy.dto.DrugStockLogPageQueryDTO;
 import com.his.pharmacy.dto.DrugStockQueryDTO;
 import com.his.pharmacy.service.PharmacyService;
 import com.his.pharmacy.vo.BizDrugStockLogVO;
@@ -91,7 +91,7 @@ public class PharmacyController {
 
     @Operation(summary = "分页查询库存出入库流水")
     @PostMapping("/stockLogListPage")
-    public Result<PageResult<BizDrugStockLogVO>> stockLogListPage(@Valid @RequestBody DrugStockLogQueryPageDTO queryDTO) {
+    public Result<PageResult<BizDrugStockLogVO>> stockLogListPage(@Valid @RequestBody DrugStockLogPageQueryDTO queryDTO) {
         return Result.success(pharmacyService.selectStockLogPage(
                 queryDTO.getDrugName(), queryDTO.getChangeType(), queryDTO.getPageNum(), queryDTO.getPageSize()));
     }

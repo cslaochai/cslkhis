@@ -2,7 +2,7 @@ package com.his.patient.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.patient.dto.InpatientRecordQueryPageDTO;
+import com.his.patient.dto.InpatientRecordPageQueryDTO;
 import com.his.patient.entity.BizInpatientRecord;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -42,7 +42,7 @@ public interface BizInpatientRecordMapper extends BaseMapper<BizInpatientRecord>
             </script>
             """)
     IPage<BizInpatientRecord> selectRecordPage(IPage<BizInpatientRecord> page,
-                                               @Param("q") InpatientRecordQueryPageDTO query);
+                                               @Param("q") InpatientRecordPageQueryDTO query);
 
     /**
      * 某次住院的全部文书（结构化率统计用，不分页）

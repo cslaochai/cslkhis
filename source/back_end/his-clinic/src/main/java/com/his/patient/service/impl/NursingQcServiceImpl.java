@@ -161,7 +161,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
     // 台账行构建（口径 a/b/c/d 的 Java 侧唯一实现）
 
     @Override
-    public PageResult<NurseQcVO.CheckRow> checkListPage(NursingQcDTO.CheckQueryPageDTO query) {
+    public PageResult<NurseQcVO.CheckRow> checkListPage(NursingQcDTO.CheckPageQueryDTO query) {
         IPage<NurseQcVO.CheckRow> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<NurseQcVO.CheckRow> records = bizNursingQcCheckMapper.selectCheckPage(page, TextUtil.trimToNull(query.getKeyword()),
                 query.getWardId(), deptScopeService.resolveDeptId(query.getDeptId()), query.getCategory(), query.getStatus(),
@@ -359,7 +359,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
     }
 
     @Override
-    public PageResult<NurseQcVO.LedgerRow> ledgerListPage(NursingQcDTO.LedgerQueryPageDTO query) {
+    public PageResult<NurseQcVO.LedgerRow> ledgerListPage(NursingQcDTO.LedgerPageQueryDTO query) {
         IPage<NurseQcVO.LedgerRow> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<NurseQcVO.LedgerRow> records = bizNursingQcIndicatorMapper.selectLedgerPage(page, TextUtil.trimToNull(query.getKeyword()),
                 query.getWardId(), deptScopeService.resolveDeptId(query.getDeptId()), TextUtil.trimToNull(query.getIndicatorCode()),

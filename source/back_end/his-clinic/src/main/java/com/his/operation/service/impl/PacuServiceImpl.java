@@ -52,7 +52,7 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
     private final DeptScopeService deptScopeService;
 
     @Override
-    public IPage<PacuRecordVO> listPage(PacuQueryPageDTO query) {
+    public IPage<PacuRecordVO> listPage(PacuPageQueryDTO query) {
         IPage<PacuRecordVO> page = bizAnesthesiaPacuMapper.selectPacuPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query, deptScopeService.scopedDeptIds(null));
         page.getRecords().forEach(this::decorate);

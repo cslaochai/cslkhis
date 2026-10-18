@@ -3,7 +3,7 @@ package com.his.emr.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.emr.dto.MedicalRecordQueryDTO;
-import com.his.emr.dto.MedicalRecordQueryPageDTO;
+import com.his.emr.dto.MedicalRecordPageQueryDTO;
 import com.his.emr.service.EmrService;
 import com.his.emr.vo.BizMedicalRecordVO;
 import com.his.emr.vo.EmrRecordDetailVO;
@@ -42,7 +42,7 @@ public class EmrController {
 
     @Operation(summary = "分页查询病历列表")
     @GetMapping("/listPage")
-    public Result<PageResult<BizMedicalRecordVO>> listPage(@Valid MedicalRecordQueryPageDTO queryDTO) {
+    public Result<PageResult<BizMedicalRecordVO>> listPage(@Valid MedicalRecordPageQueryDTO queryDTO) {
         return Result.success(emrService.listPage(queryDTO));
     }
 

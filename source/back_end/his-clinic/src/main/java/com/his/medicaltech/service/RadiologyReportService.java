@@ -2,7 +2,7 @@ package com.his.medicaltech.service;
 
 import com.his.common.base.PageResult;
 import com.his.medicaltech.dto.RadioReportAuditDTO;
-import com.his.medicaltech.dto.RadioReportQueryPageDTO;
+import com.his.medicaltech.dto.RadioReportPageQueryDTO;
 import com.his.medicaltech.dto.RadioReportUpsertDTO;
 import com.his.medicaltech.dto.RadioTemplateUpsertDTO;
 import com.his.medicaltech.vo.RadioReportDetailVO;
@@ -19,7 +19,7 @@ public interface RadiologyReportService {
     /**
      * 工作台分页列表（检查记录 LEFT JOIN 报告）
      */
-    PageResult<RadioReportListVO> listPage(RadioReportQueryPageDTO query);
+    PageResult<RadioReportListVO> listPage(RadioReportPageQueryDTO query);
 
     /**
      * 按检查记录取详情（还没写报告时也能取，images 有值、报告字段为 null）

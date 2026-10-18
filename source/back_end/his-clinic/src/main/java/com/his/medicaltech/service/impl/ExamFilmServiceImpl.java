@@ -18,7 +18,7 @@ import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizInspectionApply;
 import com.his.emr.mapper.BizInspectionApplyMapper;
-import com.his.medicaltech.dto.ExamFilmQueryPageDTO;
+import com.his.medicaltech.dto.ExamFilmPageQueryDTO;
 import com.his.medicaltech.dto.ExamFilmSpecUpsertDTO;
 import com.his.medicaltech.dto.ExamFilmUpsertDTO;
 import com.his.medicaltech.entity.BizExamFilm;
@@ -70,7 +70,7 @@ public class ExamFilmServiceImpl extends ServiceImpl<BizExamFilmMapper, BizExamF
     // 查询
 
     @Override
-    public PageResult<ExamFilmVO> listPage(ExamFilmQueryPageDTO query) {
+    public PageResult<ExamFilmVO> listPage(ExamFilmPageQueryDTO query) {
         IPage<ExamFilmVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<ExamFilmVO> list = bizExamFilmMapper.selectFilmPage(page,
                 TextUtil.trim(query.getKeyword()), query.getRecordId(), query.getFilmStatus(),

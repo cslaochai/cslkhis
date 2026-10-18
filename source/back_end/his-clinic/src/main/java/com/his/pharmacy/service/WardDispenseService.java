@@ -3,7 +3,7 @@ package com.his.pharmacy.service;
 import com.his.common.base.PageResult;
 import com.his.pharmacy.dto.WardDispenseActionDTO;
 import com.his.pharmacy.dto.WardDispenseGenerateDTO;
-import com.his.pharmacy.dto.WardDispenseQueryPageDTO;
+import com.his.pharmacy.dto.WardDispensePageQueryDTO;
 import com.his.pharmacy.vo.WardDispenseCandidateVO;
 import com.his.pharmacy.vo.WardDispenseStatsVO;
 import com.his.pharmacy.vo.WardDispenseVO;
@@ -31,7 +31,7 @@ public interface WardDispenseService {
     /**
      * 摆药单分页
      */
-    PageResult<WardDispenseVO> listPage(WardDispenseQueryPageDTO dto);
+    PageResult<WardDispenseVO> listPage(WardDispensePageQueryDTO dto);
 
     /**
      * 详情（主单 + 明细）

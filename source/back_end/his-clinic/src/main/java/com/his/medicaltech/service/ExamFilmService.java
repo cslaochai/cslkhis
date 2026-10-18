@@ -1,7 +1,7 @@
 package com.his.medicaltech.service;
 
 import com.his.common.base.PageResult;
-import com.his.medicaltech.dto.ExamFilmQueryPageDTO;
+import com.his.medicaltech.dto.ExamFilmPageQueryDTO;
 import com.his.medicaltech.dto.ExamFilmSpecUpsertDTO;
 import com.his.medicaltech.dto.ExamFilmUpsertDTO;
 import com.his.medicaltech.vo.ExamFilmVO;
@@ -17,7 +17,7 @@ public interface ExamFilmService {
     /**
      * 分页列表
      */
-    PageResult<ExamFilmVO> listPage(ExamFilmQueryPageDTO query);
+    PageResult<ExamFilmVO> listPage(ExamFilmPageQueryDTO query);
 
     /**
      * 按检查记录取该次检查的全部胶片

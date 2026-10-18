@@ -1,7 +1,7 @@
 package com.his.patient.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.patient.dto.OrderDictQueryPageDTO;
+import com.his.patient.dto.OrderDictPageQueryDTO;
 import com.his.patient.dto.OrderDictUpsertDTO;
 import com.his.patient.vo.OrderDictListVO;
 
@@ -15,7 +15,7 @@ public interface OrderDictService {
     /**
      * 字典分页（管理页按类型分 Tab）
      */
-    IPage<OrderDictListVO> listPage(OrderDictQueryPageDTO query);
+    IPage<OrderDictListVO> listPage(OrderDictPageQueryDTO query);
 
     /**
      * 启用的字典项（下拉用，按排序升序；与前端字典缓存同一份数据）

@@ -78,14 +78,14 @@ public class SettlementBillController {
     @Operation(summary = "收费台首屏：按就诊汇总的待收费榜（待出账应收 + 未收齐账单差额）")
     @PreAuthorize("hasAuthority('finance:cashier:list')")
     @PostMapping("/pendingListPage")
-    public Result<PageResult<PendingEncounterVO>> pendingListPage(@Valid @RequestBody PendingEncounterQueryPageDTO query) {
+    public Result<PageResult<PendingEncounterVO>> pendingListPage(@Valid @RequestBody PendingEncounterPageQueryDTO query) {
         return Result.success(settlementBillService.pendingEncounterPage(query));
     }
 
     @Operation(summary = "分页查询结算账单")
     @PreAuthorize("hasAuthority('finance:bill:list')")
     @PostMapping("/listPage")
-    public Result<PageResult<BizSettlementBillVO>> listPage(@Valid @RequestBody BillQueryPageDTO query) {
+    public Result<PageResult<BizSettlementBillVO>> listPage(@Valid @RequestBody BillPageQueryDTO query) {
         return Result.success(settlementBillService.selectPage(query));
     }
 

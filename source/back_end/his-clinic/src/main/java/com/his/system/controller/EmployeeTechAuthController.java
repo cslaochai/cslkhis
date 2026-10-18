@@ -29,7 +29,7 @@ public class EmployeeTechAuthController {
     @Operation(summary = "分页查询授权台账")
     @PreAuthorize("hasAuthority('org:techAuth:list')")
     @PostMapping("/listPage")
-    public Result<PageResult<EmployeeTechAuthVO>> listPage(@Valid @RequestBody TechAuthQueryPageDTO query) {
+    public Result<PageResult<EmployeeTechAuthVO>> listPage(@Valid @RequestBody TechAuthPageQueryDTO query) {
         return Result.success(employeeTechAuthService.listPage(query));
     }
 
@@ -89,7 +89,7 @@ public class EmployeeTechAuthController {
     @Operation(summary = "分页查询急诊越权登记")
     @PreAuthorize("hasAuthority('org:techAuth:list')")
     @PostMapping("/overrideListPage")
-    public Result<PageResult<TechAuthOverrideVO>> overrideListPage(@Valid @RequestBody TechAuthOverrideQueryPageDTO query) {
+    public Result<PageResult<TechAuthOverrideVO>> overrideListPage(@Valid @RequestBody TechAuthOverridePageQueryDTO query) {
         return Result.success(employeeTechAuthService.overrideListPage(query));
     }
 

@@ -2,7 +2,7 @@ package com.his.system.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.system.dto.ShiftQueryPageDTO;
+import com.his.system.dto.ShiftPageQueryDTO;
 import com.his.system.dto.ShiftUpsertDTO;
 import com.his.system.service.ShiftService;
 import com.his.system.vo.ShiftSelectListVO;
@@ -39,7 +39,7 @@ public class ShiftController {
     @PreAuthorize("hasAuthority('staff:schedule:list')")
     @Operation(summary = "班次分页查询（关键词=名称模糊；排序 start_time + id 二级键）")
     @PostMapping("/listPage")
-    public Result<PageResult<ShiftVO>> listPage(@Valid @RequestBody ShiftQueryPageDTO dto) {
+    public Result<PageResult<ShiftVO>> listPage(@Valid @RequestBody ShiftPageQueryDTO dto) {
         return Result.success(shiftService.pageVO(dto));
     }
 

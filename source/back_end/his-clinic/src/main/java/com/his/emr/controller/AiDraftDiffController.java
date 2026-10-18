@@ -2,7 +2,7 @@ package com.his.emr.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.emr.dto.AiDraftDiffQueryPageDTO;
+import com.his.emr.dto.AiDraftDiffPageQueryDTO;
 import com.his.emr.service.AiDraftDiffService;
 import com.his.emr.vo.AiDraftDiffListVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,7 +29,7 @@ public class AiDraftDiffController {
     @Operation(summary = "草稿留痕分页（AI 管理台）")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('ai:admin:list')")
-    public Result<PageResult<AiDraftDiffListVO>> listPage(@Valid @RequestBody AiDraftDiffQueryPageDTO queryDTO) {
+    public Result<PageResult<AiDraftDiffListVO>> listPage(@Valid @RequestBody AiDraftDiffPageQueryDTO queryDTO) {
         return Result.success(aiDraftDiffService.listPage(queryDTO));
     }
 }

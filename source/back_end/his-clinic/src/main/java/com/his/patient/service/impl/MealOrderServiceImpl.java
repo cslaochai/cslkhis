@@ -9,7 +9,7 @@ import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.MealGenerateDTO;
-import com.his.patient.dto.MealOrderQueryPageDTO;
+import com.his.patient.dto.MealOrderPageQueryDTO;
 import com.his.patient.dto.MealStatusDTO;
 import com.his.patient.entity.BizDietPlan;
 import com.his.patient.entity.BizMealOrder;
@@ -52,7 +52,7 @@ public class MealOrderServiceImpl extends ServiceImpl<BizMealOrderMapper, BizMea
     // 批量生成
 
     @Override
-    public PageResult<MealOrderVO> mealListPage(MealOrderQueryPageDTO query) {
+    public PageResult<MealOrderVO> mealListPage(MealOrderPageQueryDTO query) {
         query.setKeyword(TextUtil.trim(query.getKeyword()));
         query.setDietCode(TextUtil.trim(query.getDietCode()));
         Set<Long> allowed = deptScopeService.allowedDeptIds();

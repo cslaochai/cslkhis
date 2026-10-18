@@ -119,7 +119,7 @@ public class InfectionMonitorDTO {
      */
     @Data
     @EqualsAndHashCode(callSuper = true)
-    public static class CaseQueryPage extends PageParam {
+    public static class CasePageQuery extends PageParam {
         /**
          * 病例状态（1待核实 2已确认 3已排除）
          */
@@ -252,7 +252,7 @@ public class InfectionMonitorDTO {
      */
     @Data
     @EqualsAndHashCode(callSuper = true)
-    public static class MonitorQueryPage extends PageParam {
+    public static class MonitorPageQuery extends PageParam {
         /**
          * 监测类型（1尿管CAUTI/2血管导管CLABSI/3呼吸机VAP）
          */
@@ -314,7 +314,7 @@ public class InfectionMonitorDTO {
      */
     @Data
     @EqualsAndHashCode(callSuper = true)
-    public static class HandObsQueryPage extends PageParam {
+    public static class HandObsPageQuery extends PageParam {
         /**
          * 监测科室ID
          */

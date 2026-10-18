@@ -2,7 +2,7 @@ package com.his.emr.service;
 
 import com.his.common.base.PageResult;
 import com.his.emr.dto.AmpouleReturnDTO;
-import com.his.emr.dto.NarcoticRegisterQueryPageDTO;
+import com.his.emr.dto.NarcoticRegisterPageQueryDTO;
 import com.his.emr.entity.BizDrugDispensing;
 import com.his.emr.vo.BizNarcoticRegisterVO;
 import com.his.emr.vo.NarcoticPrecheckVO;
@@ -102,7 +102,7 @@ public interface NarcoticControlService {
     /**
      * 专册分页查询
      */
-    PageResult<BizNarcoticRegisterVO> listPage(NarcoticRegisterQueryPageDTO query);
+    PageResult<BizNarcoticRegisterVO> listPage(NarcoticRegisterPageQueryDTO query);
 
     /**
      * 专册三态计数（总登记数 / 待回收空安瓿 / 已回收）

@@ -1,7 +1,7 @@
 package com.his.pharmacy.service;
 
 import com.his.common.base.PageResult;
-import com.his.pharmacy.dto.SupplierQueryPageDTO;
+import com.his.pharmacy.dto.SupplierPageQueryDTO;
 import com.his.pharmacy.dto.SupplierUpsertDTO;
 import com.his.pharmacy.vo.SysSupplierSelectListVO;
 import com.his.pharmacy.vo.SysSupplierVO;
@@ -14,7 +14,7 @@ import java.util.List;
 public interface SupplierService {
 
     /** 分页查询 */
-    PageResult<SysSupplierVO> page(SupplierQueryPageDTO queryDTO);
+    PageResult<SysSupplierVO> page(SupplierPageQueryDTO queryDTO);
 
     /** 下拉选择（只返回启用中的供应商） */
     List<SysSupplierSelectListVO> selectList();

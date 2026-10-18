@@ -10,7 +10,7 @@ import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.emr.dto.AdverseEventActionDTO;
-import com.his.emr.dto.AdverseEventQueryPageDTO;
+import com.his.emr.dto.AdverseEventPageQueryDTO;
 import com.his.emr.dto.AdverseEventUpsertDTO;
 import com.his.emr.entity.BizAdverseEvent;
 import com.his.common.enums.AdverseEventStatusEnum;
@@ -52,7 +52,7 @@ public class AdverseEventServiceImpl extends ServiceImpl<BizAdverseEventMapper, 
     }
 
     @Override
-    public PageResult<AdverseEventVO> page(AdverseEventQueryPageDTO q) {
+    public PageResult<AdverseEventVO> page(AdverseEventPageQueryDTO q) {
         Page<AdverseEventVO> page = bizAdverseEventMapper.selectEventPage(
                 new Page<>(q.getPageNum(), q.getPageSize()),
                 q.getEventNo(), q.getEventType(), q.getEventLevel(), q.getStatus(),

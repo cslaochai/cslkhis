@@ -7,7 +7,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.system.dto.InsurancePolicyQueryPageDTO;
+import com.his.system.dto.InsurancePolicyPageQueryDTO;
 import com.his.system.dto.InsurancePolicyUpsertDTO;
 import com.his.system.entity.SysInsurancePolicy;
 import com.his.system.mapper.SysInsurancePolicyMapper;
@@ -31,7 +31,7 @@ public class InsurancePolicyServiceImpl extends ServiceImpl<SysInsurancePolicyMa
         implements InsurancePolicyService {
 
     @Override
-    public PageResult<InsurancePolicyVO> queryPolicyPage(InsurancePolicyQueryPageDTO queryDTO) {
+    public PageResult<InsurancePolicyVO> queryPolicyPage(InsurancePolicyPageQueryDTO queryDTO) {
         LambdaQueryWrapper<SysInsurancePolicy> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(queryDTO.getPolicyName()),
                         SysInsurancePolicy::getPolicyName, queryDTO.getPolicyName())

@@ -298,7 +298,7 @@ public class StatReportServiceImpl extends ServiceImpl<BizStatReportMapper, BizS
         return toRow(r);
     }
 
-    public IPage<StatReportVO.Row> listPage(StatReportDTO.QueryPage dto) {
+    public IPage<StatReportVO.Row> listPage(StatReportDTO.PageQuery dto) {
         // 科室数据权限收口：列表按岗位可见科室集合过滤
         List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizStatReport> qw = new LambdaQueryWrapper<BizStatReport>()

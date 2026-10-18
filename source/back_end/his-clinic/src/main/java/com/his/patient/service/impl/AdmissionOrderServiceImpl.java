@@ -10,7 +10,7 @@ import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.AdmissionOrderCancelDTO;
-import com.his.patient.dto.AdmissionOrderQueryPageDTO;
+import com.his.patient.dto.AdmissionOrderPageQueryDTO;
 import com.his.patient.dto.AdmissionOrderUpsertDTO;
 import com.his.patient.entity.BizAdmissionOrder;
 import com.his.patient.entity.BizPatient;
@@ -156,7 +156,7 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
     }
 
     @Override
-    public IPage<AdmissionOrderVO> listPage(AdmissionOrderQueryPageDTO query) {
+    public IPage<AdmissionOrderVO> listPage(AdmissionOrderPageQueryDTO query) {
         Page<AdmissionOrderVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<Long> deptIds = deptScopeService.scopedDeptIds(query.getApplyDeptId());
         IPage<AdmissionOrderVO> result = bizAdmissionOrderMapper.selectOrderPage(page, query, deptIds);

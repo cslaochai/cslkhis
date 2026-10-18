@@ -14,7 +14,7 @@ import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TimeUtil;
-import com.his.pharmacy.dto.ConsumableTraceQueryPageDTO;
+import com.his.pharmacy.dto.ConsumableTracePageQueryDTO;
 import com.his.pharmacy.dto.HighValueUseDTO;
 import com.his.pharmacy.entity.BizConsumableStock;
 import com.his.pharmacy.entity.BizConsumableStockLog;
@@ -208,7 +208,7 @@ public class HighValueTraceServiceImpl extends ServiceImpl<BizConsumableTraceMap
     // 私有
 
     @Override
-    public PageResult<BizConsumableTraceVO> selectTracePage(ConsumableTraceQueryPageDTO q) {
+    public PageResult<BizConsumableTraceVO> selectTracePage(ConsumableTracePageQueryDTO q) {
         Page<BizConsumableTraceVO> page = bizConsumableTraceMapper.selectTracePage(
                 new Page<>(q.getPageNum(), q.getPageSize()),
                 blankToNull(q.getKeyword()), q.getConsumableId(), q.getPatientId(),

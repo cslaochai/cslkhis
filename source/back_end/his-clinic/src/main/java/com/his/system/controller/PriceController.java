@@ -3,8 +3,8 @@ package com.his.system.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.system.dto.PriceChangeDTO;
-import com.his.system.dto.PriceHistoryQueryPageDTO;
-import com.his.system.dto.PriceQueryPageDTO;
+import com.his.system.dto.PriceHistoryPageQueryDTO;
+import com.his.system.dto.PricePageQueryDTO;
 import com.his.system.service.PriceService;
 import com.his.system.vo.PriceChangeHistoryVO;
 import com.his.system.vo.PriceItemVO;
@@ -29,7 +29,7 @@ public class PriceController {
 
     @Operation(summary = "分页查询价格（按项目类型）")
     @PostMapping("/listPage")
-    public Result<PageResult<PriceItemVO>> listPage(@Valid @RequestBody PriceQueryPageDTO queryDTO) {
+    public Result<PageResult<PriceItemVO>> listPage(@Valid @RequestBody PricePageQueryDTO queryDTO) {
         return Result.success(priceService.listPage(queryDTO));
     }
 
@@ -42,7 +42,7 @@ public class PriceController {
 
     @Operation(summary = "分页查询调价历史")
     @PostMapping("/historyListPage")
-    public Result<PageResult<PriceChangeHistoryVO>> historyListPage(@Valid @RequestBody PriceHistoryQueryPageDTO queryDTO) {
+    public Result<PageResult<PriceChangeHistoryVO>> historyListPage(@Valid @RequestBody PriceHistoryPageQueryDTO queryDTO) {
         return Result.success(priceService.historyListPage(queryDTO));
     }
 

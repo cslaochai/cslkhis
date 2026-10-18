@@ -13,7 +13,7 @@ import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.StockDeductResultDTO;
 import com.his.pharmacy.dto.WardDispenseActionDTO;
 import com.his.pharmacy.dto.WardDispenseGenerateDTO;
-import com.his.pharmacy.dto.WardDispenseQueryPageDTO;
+import com.his.pharmacy.dto.WardDispensePageQueryDTO;
 import com.his.pharmacy.entity.BizWardDispense;
 import com.his.pharmacy.entity.BizWardDispenseItem;
 import com.his.pharmacy.mapper.BizWardDispenseItemMapper;
@@ -151,7 +151,7 @@ public class WardDispenseServiceImpl extends ServiceImpl<BizWardDispenseItemMapp
     }
 
     @Override
-    public PageResult<WardDispenseVO> listPage(WardDispenseQueryPageDTO dto) {
+    public PageResult<WardDispenseVO> listPage(WardDispensePageQueryDTO dto) {
         Page<WardDispenseVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         List<Long> wardIds = scopedWardIds(dto.getWardId());
         List<WardDispenseVO> records = bizWardDispenseMapper.selectDispensePage(

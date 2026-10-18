@@ -4,10 +4,10 @@ import com.his.charge.vo.BizSettlementBillVO;
 import com.his.charge.vo.PendingBillVO;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.his.charge.dto.BillQueryPageDTO;
+import com.his.charge.dto.BillPageQueryDTO;
 import com.his.charge.dto.BillSettleUpsertDTO;
 import com.his.charge.dto.BillVoidDTO;
-import com.his.charge.dto.PendingEncounterQueryPageDTO;
+import com.his.charge.dto.PendingEncounterPageQueryDTO;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.vo.*;
 import com.his.charge.vo.PendingBillVO;
@@ -94,7 +94,7 @@ public interface SettlementBillService extends IService<BizSettlementBill> {
      */
     BizSettlementBill latestDischargeBill(Long admissionId);
 
-    PageResult<BizSettlementBillVO> selectPage(BillQueryPageDTO query);
+    PageResult<BizSettlementBillVO> selectPage(BillPageQueryDTO query);
 
     /**
      * 患者端待缴账单列表（含逐条明细）：该患者的未付清账单（1-待支付 / 2-部分支付）按出账倒序。
@@ -112,7 +112,7 @@ public interface SettlementBillService extends IService<BizSettlementBill> {
      * <p>旧收费台列的是「收费单」，于是窗口只能看见已经开出来的单，看不见
      * 「医生开了病历、还没人结算」的那一批 —— 那一半活儿在四层里恰恰是最先要干的。
      */
-    PageResult<PendingEncounterVO> pendingEncounterPage(PendingEncounterQueryPageDTO query);
+    PageResult<PendingEncounterVO> pendingEncounterPage(PendingEncounterPageQueryDTO query);
 
     BizSettlementBillDetailVO getDetailById(Long billId);
 

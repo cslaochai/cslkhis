@@ -8,7 +8,7 @@ import com.his.common.exception.BusinessException;
 import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
-import com.his.patient.dto.NutritionScreenQueryPageDTO;
+import com.his.patient.dto.NutritionScreenPageQueryDTO;
 import com.his.patient.dto.NutritionScreenUpsertDTO;
 import com.his.patient.entity.BizAdmission;
 import com.his.patient.entity.BizNutritionScreen;
@@ -50,7 +50,7 @@ public class NutritionScreenServiceImpl extends ServiceImpl<BizNutritionScreenMa
     private final NutritionStatMapper nutritionStatMapper;
 
     @Override
-    public PageResult<NutritionScreenVO> screenListPage(NutritionScreenQueryPageDTO query) {
+    public PageResult<NutritionScreenVO> screenListPage(NutritionScreenPageQueryDTO query) {
         query.setKeyword(TextUtil.trim(query.getKeyword()));
         applyDeptScope(query);
         Page<NutritionScreenVO> page = new Page<>(query.getPageNum(), query.getPageSize());
@@ -190,7 +190,7 @@ public class NutritionScreenServiceImpl extends ServiceImpl<BizNutritionScreenMa
      * 科室数据权限收口：受限岗位只看得到授权科室的筛查（营养师 data_scope=1 全院，不受限）；
      * 空集合＝岗位未绑定任何科室，按配置缺失拒绝
      */
-    private void applyDeptScope(NutritionScreenQueryPageDTO query) {
+    private void applyDeptScope(NutritionScreenPageQueryDTO query) {
         Set<Long> allowed = deptScopeService.allowedDeptIds();
         if (allowed != null) {
             if (allowed.isEmpty()) {

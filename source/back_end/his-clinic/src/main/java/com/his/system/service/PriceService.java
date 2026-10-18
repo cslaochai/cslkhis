@@ -2,8 +2,8 @@ package com.his.system.service;
 
 import com.his.common.base.PageResult;
 import com.his.system.dto.PriceChangeDTO;
-import com.his.system.dto.PriceHistoryQueryPageDTO;
-import com.his.system.dto.PriceQueryPageDTO;
+import com.his.system.dto.PriceHistoryPageQueryDTO;
+import com.his.system.dto.PricePageQueryDTO;
 import com.his.system.vo.PriceChangeHistoryVO;
 import com.his.system.vo.PriceItemVO;
 
@@ -15,7 +15,7 @@ public interface PriceService {
     /**
      * 按项目类型分页查询价格
      */
-    PageResult<PriceItemVO> listPage(PriceQueryPageDTO queryDTO);
+    PageResult<PriceItemVO> listPage(PricePageQueryDTO queryDTO);
 
     /**
      * 调价：更新对应价表 + 写调价留痕，返回调价后的项目
@@ -25,7 +25,7 @@ public interface PriceService {
     /**
      * 分页查询调价历史
      */
-    PageResult<PriceChangeHistoryVO> historyListPage(PriceHistoryQueryPageDTO queryDTO);
+    PageResult<PriceChangeHistoryVO> historyListPage(PriceHistoryPageQueryDTO queryDTO);
 
     /**
      * 5 张价表的总条数

@@ -51,7 +51,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
     }
 
     @Override
-    public PageResult<DrugInboundVO> page(DrugInboundQueryPageDTO queryDTO) {
+    public PageResult<DrugInboundVO> page(DrugInboundPageQueryDTO queryDTO) {
         Page<DrugInboundVO> page = bizDrugInboundMapper.selectInboundPage(
                 new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()),
                 emptyToNull(queryDTO.getInboundNo()),

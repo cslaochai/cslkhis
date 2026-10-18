@@ -29,7 +29,7 @@ public class RxReviewController {
     @Operation(summary = "点评批次分页")
     @PreAuthorize("hasAuthority('pharmacy:rxReview:list')")
     @PostMapping("/batchListPage")
-    public Result<PageResult<RxReviewBatchVO>> batchListPage(@Valid @RequestBody RxReviewBatchQueryPageDTO query) {
+    public Result<PageResult<RxReviewBatchVO>> batchListPage(@Valid @RequestBody RxReviewBatchPageQueryDTO query) {
         return Result.success(rxReviewService.batchListPage(query));
     }
 
@@ -112,7 +112,7 @@ public class RxReviewController {
     @Operation(summary = "约谈记录分页")
     @PreAuthorize("hasAuthority('pharmacy:rxReview:list')")
     @PostMapping("/talkListPage")
-    public Result<PageResult<RxReviewTalkVO>> talkListPage(@Valid @RequestBody RxReviewTalkQueryPageDTO query) {
+    public Result<PageResult<RxReviewTalkVO>> talkListPage(@Valid @RequestBody RxReviewTalkPageQueryDTO query) {
         return Result.success(rxReviewService.talkListPage(query));
     }
 

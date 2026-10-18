@@ -2,7 +2,7 @@ package com.his.charge.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.charge.dto.InpatientSettlementUpsertDTO;
-import com.his.charge.dto.PrepayQueryPageDTO;
+import com.his.charge.dto.PrepayPageQueryDTO;
 import com.his.charge.dto.PrepayUpsertDTO;
 import com.his.charge.service.InpatientAccountService;
 import com.his.charge.vo.*;
@@ -51,7 +51,7 @@ public class InpatientAccountController {
     @PreAuthorize(VIEW)
     @Operation(summary = "预交金流水分页（按收退时间倒序）")
     @GetMapping("/prepay/listPage")
-    public Result<IPage<PrepayVO>> prepayListPage(@Valid PrepayQueryPageDTO query) {
+    public Result<IPage<PrepayVO>> prepayListPage(@Valid PrepayPageQueryDTO query) {
         return Result.success(inpatientAccountService.prepayListPage(query));
     }
 

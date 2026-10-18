@@ -31,7 +31,7 @@ public class OperationApplyController {
 
     @Operation(summary = "手术申请分页（状态/术式/主刀/手术间/日期范围/关键字）")
     @GetMapping("/listPage")
-    public Result<IPage<OperationApplyVO>> listPage(@Valid OperationApplyQueryPageDTO query) {
+    public Result<IPage<OperationApplyVO>> listPage(@Valid OperationApplyPageQueryDTO query) {
         return Result.success(operationApplyService.listPage(query));
     }
 

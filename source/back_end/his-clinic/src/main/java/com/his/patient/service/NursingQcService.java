@@ -17,7 +17,7 @@ public interface NursingQcService {
 
     List<NurseQcVO.ItemDef> itemSelectList(Integer category);
 
-    PageResult<NurseQcVO.CheckRow> checkListPage(NursingQcDTO.CheckQueryPageDTO query);
+    PageResult<NurseQcVO.CheckRow> checkListPage(NursingQcDTO.CheckPageQueryDTO query);
 
     NurseQcVO.CheckDetail getDetailById(Long id);
 
@@ -27,7 +27,7 @@ public interface NursingQcService {
 
     void checkDeleteById(Long id);
 
-    PageResult<NurseQcVO.LedgerRow> ledgerListPage(NursingQcDTO.LedgerQueryPageDTO query);
+    PageResult<NurseQcVO.LedgerRow> ledgerListPage(NursingQcDTO.LedgerPageQueryDTO query);
 
     List<NurseQcVO.Kpi> monthMetrics(NursingQcDTO.MonthQueryDTO query);
 

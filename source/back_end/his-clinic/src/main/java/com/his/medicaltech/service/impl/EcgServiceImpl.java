@@ -7,31 +7,21 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.constant.DictTypeConst;
-import com.his.system.dto.SignCommandDTO;
-import com.his.common.enums.SignBizTypeEnum;
-import com.his.common.enums.SignSceneEnum;
+import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.EmrSignatureService;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
-import com.his.system.vo.SignatureVO;
 import com.his.medicaltech.dto.*;
 import com.his.medicaltech.entity.*;
-import com.his.common.enums.InsRecordStatusEnum;
-import com.his.common.enums.ReportStatusEnum;
-import com.his.common.enums.ReportTypeEnum;
 import com.his.medicaltech.mapper.*;
 import com.his.medicaltech.service.EcgService;
 import com.his.medicaltech.support.EcgWaveSimulator;
 import com.his.medicaltech.vo.EcgDetailVO;
 import com.his.medicaltech.vo.EcgListVO;
 import com.his.medicaltech.vo.EcgTemplateVO;
-import com.his.common.enums.BizTypeEnum;
-import com.his.system.service.DeptScopeService;
-import com.his.system.service.DictCacheService;
-import com.his.system.service.SysAuditLogService;
-import com.his.system.service.SysMessageService;
+import com.his.system.dto.SignCommandDTO;
+import com.his.system.service.*;
 import com.his.system.utils.UserUtils;
+import com.his.system.vo.SignatureVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -81,12 +71,13 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
     // 查询
 
     @Override
-    public PageResult<EcgListVO> listPage(EcgQueryPageDTO query) {
+    public PageResult<EcgListVO> listPage(EcgPageQueryDTO query) {
         IPage<EcgListVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<EcgListVO> list = ecgMapper.selectWorkbenchPage(page,
                 deptScopeService.scopedDeptIds(null),
                 TextUtil.trim(query.getKeyword()), query.getCollectPending(), query.getOnlyUnwritten(),
-                query.getReportStatus(), TextUtil.trim(query.getStartDate()), TextUtil.trim(query.getEndDate()));
+                query.getReportStatus(), TextUtil.trim(query.getStartDate()), TextUtil.trim(query.getEndDate()),
+                ReportTypeEnum.INSPECTION.getCode());
         fillText(list);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), list);
     }
@@ -518,7 +509,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         if (recordId == null) {
             throw new BusinessException("缺少检查记录ID");
         }
-        EcgListVO row = ecgMapper.selectWorkbenchByRecordId(recordId);
+        EcgListVO row = ecgMapper.selectWorkbenchByRecordId(recordId, ReportTypeEnum.INSPECTION.getCode());
         if (row == null) {
             throw new BusinessException("检查记录不存在、已删除，或不是心电项目（不在心电工作站受理范围）");
         }

@@ -2,7 +2,7 @@ package com.his.patient.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.patient.dto.ConsultationQueryPageDTO;
+import com.his.patient.dto.ConsultationPageQueryDTO;
 import com.his.patient.entity.BizConsultation;
 import com.his.patient.vo.ConsultationVO;
 import org.apache.ibatis.annotations.Mapper;
@@ -63,7 +63,7 @@ public interface BizConsultationMapper extends BaseMapper<BizConsultation> {
             </script>
             """)
     IPage<ConsultationVO> selectConsultationPage(IPage<ConsultationVO> page,
-                                                 @Param("q") ConsultationQueryPageDTO query,
+                                                 @Param("q") ConsultationPageQueryDTO query,
                                                  @Param("deptIds") List<Long> deptIds);
 
     /**

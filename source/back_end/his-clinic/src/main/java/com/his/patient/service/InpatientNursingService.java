@@ -31,7 +31,7 @@ public interface InpatientNursingService {
     /**
      * 护理文书分页
      */
-    IPage<NursingRecordVO> listPage(NursingRecordQueryPageDTO query);
+    IPage<NursingRecordVO> listPage(NursingRecordPageQueryDTO query);
 
     /**
      * 三测单数据（按测量时间升序给全，前端据此自动画曲线）
@@ -65,7 +65,7 @@ public interface InpatientNursingService {
     /**
      * 护理评估单分页
      */
-    IPage<NursingAssessmentVO> assessmentListPage(NursingAssessmentQueryPageDTO query);
+    IPage<NursingAssessmentVO> assessmentListPage(NursingAssessmentPageQueryDTO query);
 
     /**
      * 专项评估透视：每类量表最新一条（1-Braden 2-Morse 3-NRS 4-Caprini 5-管路滑脱），

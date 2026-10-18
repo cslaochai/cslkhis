@@ -27,7 +27,7 @@ public class MedicalItemController {
 
     @Operation(summary = "查询检查项目列表")
     @PostMapping("/inspectionListPage")
-    public Result<PageResult<SysInspectionItemVO>> inspectionListPage(@Valid @RequestBody SysInspectionItemQueryPageDTO queryDTO) {
+    public Result<PageResult<SysInspectionItemVO>> inspectionListPage(@Valid @RequestBody SysInspectionItemPageQueryDTO queryDTO) {
         return Result.success(medicalItemService.inspectionListPage(queryDTO));
     }
 
@@ -72,7 +72,7 @@ public class MedicalItemController {
 
     @Operation(summary = "查询检验项目列表")
     @PostMapping("/laboratoryListPage")
-    public Result<PageResult<SysLaboratoryItemVO>> laboratoryListPage(@Valid @RequestBody SysLaboratoryItemQueryPageDTO queryDTO) {
+    public Result<PageResult<SysLaboratoryItemVO>> laboratoryListPage(@Valid @RequestBody SysLaboratoryItemPageQueryDTO queryDTO) {
         return Result.success(medicalItemService.laboratoryListPage(queryDTO));
     }
 

@@ -19,14 +19,14 @@ public interface InpatientService {
     /**
      * 住院列表分页（在院 / 已出院）
      */
-    IPage<InpatientVO> listPage(InpatientQueryPageDTO query);
+    IPage<InpatientVO> listPage(InpatientPageQueryDTO query);
 
     /**
      * 当前登录员工所在科室的住院列表分页（医生站/护士站左栏工作列表）。
      * <p>deptId 一律服务端取 {@code UserUtils.getCurrentUser()}，**不接收前端传的科室**：
      * 医生站的数据边界是本科室（跨科患者走会诊邀请），让前端传 deptId 等于全院数据对任何登录者敞开。
      */
-    IPage<InpatientVO> listMyDeptPage(InpatientQueryPageDTO query);
+    IPage<InpatientVO> listMyDeptPage(InpatientPageQueryDTO query);
 
     /**
      * 住院详情（入院信息 + 病案首页 + 诊断明细 + 手术明细）

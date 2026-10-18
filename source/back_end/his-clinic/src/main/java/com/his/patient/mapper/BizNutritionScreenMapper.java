@@ -3,7 +3,7 @@ package com.his.patient.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.patient.dto.NutritionScreenQueryPageDTO;
+import com.his.patient.dto.NutritionScreenPageQueryDTO;
 import com.his.patient.entity.BizNutritionScreen;
 import com.his.patient.vo.NutritionScreenVO;
 import org.apache.ibatis.annotations.Mapper;
@@ -67,7 +67,7 @@ public interface BizNutritionScreenMapper extends BaseMapper<BizNutritionScreen>
              </script>
             """)
     IPage<NutritionScreenVO> selectScreenPage(Page<NutritionScreenVO> page,
-                                              @Param("q") NutritionScreenQueryPageDTO query);
+                                              @Param("q") NutritionScreenPageQueryDTO query);
 
     /**
      * 某次住院的筛查历史（膳食方案弹框里看"这个人的筛查轨迹"）

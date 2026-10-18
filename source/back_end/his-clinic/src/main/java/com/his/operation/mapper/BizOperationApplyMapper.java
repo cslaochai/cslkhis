@@ -2,7 +2,7 @@ package com.his.operation.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.operation.dto.OperationApplyQueryPageDTO;
+import com.his.operation.dto.OperationApplyPageQueryDTO;
 import com.his.operation.entity.BizOperationApply;
 import com.his.operation.vo.OperationApplyVO;
 import com.his.operation.vo.RoomUtilizationStatVO;
@@ -70,7 +70,7 @@ public interface BizOperationApplyMapper extends BaseMapper<BizOperationApply> {
             </script>
             """)
     IPage<OperationApplyVO> selectApplyPage(IPage<OperationApplyVO> page,
-                                            @Param("q") OperationApplyQueryPageDTO query,
+                                            @Param("q") OperationApplyPageQueryDTO query,
                                             @Param("deptIds") List<Long> deptIds);
 
     /**

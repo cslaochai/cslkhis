@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 病危重通知 Mapper（sql/161）。
+ * 病危重通知 Mapper
  */
 @Mapper
 public interface BizCriticalNoticeMapper extends BaseMapper<BizCriticalNotice> {

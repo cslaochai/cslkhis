@@ -11,7 +11,7 @@ import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.DietConfirmDTO;
-import com.his.patient.dto.DietPlanQueryPageDTO;
+import com.his.patient.dto.DietPlanPageQueryDTO;
 import com.his.patient.dto.DietPlanStopDTO;
 import com.his.patient.dto.DietPlanUpsertDTO;
 import com.his.patient.entity.*;
@@ -95,7 +95,7 @@ public class DietPlanServiceImpl extends ServiceImpl<BizDietPlanMapper, BizDietP
     }
 
     @Override
-    public PageResult<DietPlanVO> planListPage(DietPlanQueryPageDTO query) {
+    public PageResult<DietPlanVO> planListPage(DietPlanPageQueryDTO query) {
         query.setKeyword(TextUtil.trim(query.getKeyword()));
         query.setDietCode(TextUtil.trim(query.getDietCode()));
         applyDeptScope(query);
@@ -438,7 +438,7 @@ public class DietPlanServiceImpl extends ServiceImpl<BizDietPlanMapper, BizDietP
         }
     }
 
-    private void applyDeptScope(DietPlanQueryPageDTO query) {
+    private void applyDeptScope(DietPlanPageQueryDTO query) {
         Set<Long> allowed = deptScopeService.allowedDeptIds();
         if (allowed != null) {
             query.setScopeDeptIds(new ArrayList<>(allowed));

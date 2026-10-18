@@ -1,5 +1,6 @@
 package com.his.charge.entity;
 
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
@@ -8,7 +9,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
@@ -18,13 +18,6 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_settlement_bill_item")
 public class BizSettlementBillItem extends BaseEntity {
-    /** 逻辑删除标志（0 未删除 1 已删除） */
-    @TableLogic
-    private Integer delFlag;
-
-    /** 备注 */
-    private String remark;
-
 
 
     /**
@@ -136,4 +129,14 @@ public class BizSettlementBillItem extends BaseEntity {
      * 医保目录类别（0-自费 1-甲类 2-乙类 3-丙类），抄自记账行，决定本行 split
      */
     private Integer catalogType;
+    /**
+     * 逻辑删除标志（0 未删除 1 已删除）
+     */
+    @TableLogic
+    private Integer delFlag;
+
+    /**
+     * 备注
+     */
+    private String remark;
 }

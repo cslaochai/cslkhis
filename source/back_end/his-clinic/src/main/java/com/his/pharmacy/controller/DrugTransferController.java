@@ -3,7 +3,7 @@ package com.his.pharmacy.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.pharmacy.dto.DrugTransferActionDTO;
-import com.his.pharmacy.dto.DrugTransferQueryPageDTO;
+import com.his.pharmacy.dto.DrugTransferPageQueryDTO;
 import com.his.pharmacy.dto.DrugTransferUpsertDTO;
 import com.his.pharmacy.service.DrugTransferService;
 import com.his.pharmacy.vo.DrugTransferVO;
@@ -28,7 +28,7 @@ public class DrugTransferController {
     @Operation(summary = "调拨单分页")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('pharmacy:drugTransfer:list')")
-    public Result<PageResult<DrugTransferVO>> listPage(@Valid @RequestBody DrugTransferQueryPageDTO query) {
+    public Result<PageResult<DrugTransferVO>> listPage(@Valid @RequestBody DrugTransferPageQueryDTO query) {
         return Result.success(drugTransferService.listPage(query));
     }
 

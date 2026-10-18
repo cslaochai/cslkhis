@@ -27,7 +27,7 @@ public class InpatientConsultationController {
 
     @Operation(summary = "会诊分页（unfinishedOnly=1 只看未完成；toDeptId 用会诊科室工作台过滤）")
     @GetMapping("/listPage")
-    public Result<IPage<ConsultationVO>> listPage(@Valid ConsultationQueryPageDTO query) {
+    public Result<IPage<ConsultationVO>> listPage(@Valid ConsultationPageQueryDTO query) {
         return Result.success(inpatientConsultationService.listPage(query));
     }
 

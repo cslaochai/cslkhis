@@ -15,7 +15,7 @@ import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.system.config.SignProperties;
 import com.his.system.dto.SignCommandDTO;
-import com.his.system.dto.SignatureQueryPageDTO;
+import com.his.system.dto.SignaturePageQueryDTO;
 import com.his.system.entity.BizEmrSignature;
 import com.his.system.entity.SysSignCert;
 import com.his.system.mapper.BizEmrSignatureMapper;
@@ -427,7 +427,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
     // 私有辅助
 
     @Override
-    public IPage<SignatureVO> listPage(SignatureQueryPageDTO q) {
+    public IPage<SignatureVO> listPage(SignaturePageQueryDTO q) {
         LambdaQueryWrapper<BizEmrSignature> w = new LambdaQueryWrapper<>();
         w.eq(q.getBizType() != null, BizEmrSignature::getBizType, q.getBizType());
         w.eq(q.getBizId() != null, BizEmrSignature::getBizId, q.getBizId());

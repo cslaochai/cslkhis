@@ -2,7 +2,7 @@ package com.his.patient.service;
 
 import com.his.common.base.PageResult;
 import com.his.patient.dto.MealGenerateDTO;
-import com.his.patient.dto.MealOrderQueryPageDTO;
+import com.his.patient.dto.MealOrderPageQueryDTO;
 import com.his.patient.dto.MealStatusDTO;
 import com.his.patient.vo.MealGenerateVO;
 import com.his.patient.vo.MealOrderVO;
@@ -14,7 +14,7 @@ import java.util.List;
  */
 public interface MealOrderService {
 
-    PageResult<MealOrderVO> mealListPage(MealOrderQueryPageDTO query);
+    PageResult<MealOrderVO> mealListPage(MealOrderPageQueryDTO query);
 
     List<MealOrderVO> mealListByPlan(Long dietPlanId);
 

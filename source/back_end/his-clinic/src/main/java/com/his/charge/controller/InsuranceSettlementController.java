@@ -4,7 +4,7 @@ package com.his.charge.controller;
 import com.his.charge.dto.CancelUploadDTO;
 import com.his.charge.dto.ReconcileQueryDTO;
 import com.his.charge.dto.SettlementAuditDTO;
-import com.his.charge.dto.SettlementQueryPageDTO;
+import com.his.charge.dto.SettlementPageQueryDTO;
 import com.his.charge.service.InsuranceSettlementService;
 import com.his.charge.vo.*;
 import com.his.common.base.PageResult;
@@ -30,7 +30,7 @@ public class InsuranceSettlementController {
     @PreAuthorize("hasAuthority('finance:insurance:list')")
     @Operation(summary = "分页查询结算清单")
     @GetMapping("/listPage")
-    public Result<PageResult<BizInsuranceSettlementVO>> listPage(@Valid SettlementQueryPageDTO queryDTO) {
+    public Result<PageResult<BizInsuranceSettlementVO>> listPage(@Valid SettlementPageQueryDTO queryDTO) {
         return Result.success(insuranceSettlementService.selectSettlementPage(queryDTO.getPatientId(),
                 queryDTO.getPatientName(), queryDTO.getSettlementStatus(), queryDTO.getPageNum(), queryDTO.getPageSize()));
     }

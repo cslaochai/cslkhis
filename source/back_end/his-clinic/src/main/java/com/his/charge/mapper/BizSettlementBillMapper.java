@@ -2,7 +2,7 @@ package com.his.charge.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.charge.dto.PendingEncounterQueryPageDTO;
+import com.his.charge.dto.PendingEncounterPageQueryDTO;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.vo.PendingEncounterVO;
 import org.apache.ibatis.annotations.Mapper;
@@ -98,7 +98,7 @@ public interface BizSettlementBillMapper extends BaseMapper<BizSettlementBill> {
             </script>
             """)
     IPage<PendingEncounterVO> selectPendingEncounterPage(IPage<PendingEncounterVO> page,
-                                                         @Param("q") PendingEncounterQueryPageDTO query);
+                                                         @Param("q") PendingEncounterPageQueryDTO query);
 
     /**
      * 日结区间内的账单（含作废，作废也要出现在差异说明里）。

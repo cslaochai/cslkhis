@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.Result;
 import com.his.patient.dto.InpatientTransferAcceptDTO;
 import com.his.patient.dto.InpatientTransferCancelDTO;
-import com.his.patient.dto.InpatientTransferQueryPageDTO;
+import com.his.patient.dto.InpatientTransferPageQueryDTO;
 import com.his.patient.dto.InpatientTransferUpsertDTO;
 import com.his.patient.service.InpatientTransferService;
 import com.his.patient.vo.InpatientTransferVO;
@@ -31,7 +31,7 @@ public class InpatientTransferController {
 
     @Operation(summary = "转科记录分页（toDeptId 用于转入科室工作台过滤）")
     @GetMapping("/listPage")
-    public Result<IPage<InpatientTransferVO>> listPage(@Valid InpatientTransferQueryPageDTO query) {
+    public Result<IPage<InpatientTransferVO>> listPage(@Valid InpatientTransferPageQueryDTO query) {
         return Result.success(inpatientTransferService.listPage(query));
     }
 

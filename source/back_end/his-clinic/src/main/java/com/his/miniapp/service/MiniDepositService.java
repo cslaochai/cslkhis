@@ -1,7 +1,7 @@
 package com.his.miniapp.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.charge.dto.PrepayQueryPageDTO;
+import com.his.charge.dto.PrepayPageQueryDTO;
 import com.his.charge.vo.PrepayBalanceVO;
 import com.his.charge.vo.PrepayVO;
 import com.his.miniapp.vo.MiniAdmiSelectListVO;
@@ -17,5 +17,5 @@ public interface MiniDepositService {
 
     PrepayBalanceVO balance(Long admissionId);
 
-    IPage<PrepayVO> prepayListPage(PrepayQueryPageDTO query);
+    IPage<PrepayVO> prepayListPage(PrepayPageQueryDTO query);
 }

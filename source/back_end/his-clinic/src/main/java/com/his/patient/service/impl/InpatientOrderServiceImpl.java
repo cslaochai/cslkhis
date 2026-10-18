@@ -688,7 +688,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
     }
 
     @Override
-    public IPage<InpatientOrderVO> listPage(InpatientOrderQueryPageDTO query) {
+    public IPage<InpatientOrderVO> listPage(InpatientOrderPageQueryDTO query) {
         // 科室收口：无条件覆盖前端可能伪造的 scopeDeptIds（不传=看全院，是越权）
         query.setScopeDeptIds(readScopeDeptIds());
         Page<InpatientOrderVO> page = new Page<>(query.getPageNum(), query.getPageSize());
@@ -699,7 +699,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public IPage<InpatientOrderExecVO> execPendingList(OrderExecQueryPageDTO query) {
+    public IPage<InpatientOrderExecVO> execPendingList(OrderExecPageQueryDTO query) {
         query.setScopeDeptIds(readScopeDeptIds());
         backfillTodayPlans(query.getAdmissionId(), query.getPatientId());
         Page<InpatientOrderExecVO> page = new Page<>(query.getPageNum(), query.getPageSize());
@@ -711,7 +711,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
     // 执行
 
     @Override
-    public IPage<InpatientOrderExecVO> execList(OrderExecQueryPageDTO query) {
+    public IPage<InpatientOrderExecVO> execList(OrderExecPageQueryDTO query) {
         query.setScopeDeptIds(readScopeDeptIds());
         Page<InpatientOrderExecVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         IPage<InpatientOrderExecVO> result = bizInpatientOrderExecMapper.selectExecPage(page, query);

@@ -15,7 +15,7 @@ public interface RxReviewService {
     /**
      * 批次分页
      */
-    PageResult<RxReviewBatchVO> batchListPage(RxReviewBatchQueryPageDTO query);
+    PageResult<RxReviewBatchVO> batchListPage(RxReviewBatchPageQueryDTO query);
 
     /**
      * 新建批次（抽样生成明细）或修改批次名称/专项主题/备注；返回批次 VO
@@ -70,7 +70,7 @@ public interface RxReviewService {
     /**
      * 约谈分页
      */
-    PageResult<RxReviewTalkVO> talkListPage(RxReviewTalkQueryPageDTO query);
+    PageResult<RxReviewTalkVO> talkListPage(RxReviewTalkPageQueryDTO query);
 
     /**
      * 约谈新增/修改（关联明细须同医师且为不合理处方；医师已确认禁改）

@@ -29,7 +29,7 @@ public class MedicalItemServiceImpl implements MedicalItemService {
     private final SysLaboratoryItemDetailMapper sysLaboratoryItemDetailMapper;
 
     @Override
-    public PageResult<SysInspectionItemVO> inspectionListPage(SysInspectionItemQueryPageDTO queryDTO) {
+    public PageResult<SysInspectionItemVO> inspectionListPage(SysInspectionItemPageQueryDTO queryDTO) {
         LambdaQueryWrapper<SysInspectionItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(queryDTO.getKeyword()), SysInspectionItem::getItemName, queryDTO.getKeyword())
                 .eq(queryDTO.getItemType() != null, SysInspectionItem::getItemType, queryDTO.getItemType())
@@ -86,7 +86,7 @@ public class MedicalItemServiceImpl implements MedicalItemService {
     }
 
     @Override
-    public PageResult<SysLaboratoryItemVO> laboratoryListPage(SysLaboratoryItemQueryPageDTO queryDTO) {
+    public PageResult<SysLaboratoryItemVO> laboratoryListPage(SysLaboratoryItemPageQueryDTO queryDTO) {
         LambdaQueryWrapper<SysLaboratoryItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(queryDTO.getKeyword()), SysLaboratoryItem::getItemName, queryDTO.getKeyword())
                 .eq(queryDTO.getItemType() != null, SysLaboratoryItem::getItemType, queryDTO.getItemType())

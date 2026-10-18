@@ -1,9 +1,9 @@
 package com.his.system.service;
 
 import com.his.common.base.PageResult;
-import com.his.system.dto.DoseLimitQueryPageDTO;
+import com.his.system.dto.DoseLimitPageQueryDTO;
 import com.his.system.dto.DoseLimitUpsertDTO;
-import com.his.system.dto.DrugInteractionQueryPageDTO;
+import com.his.system.dto.DrugInteractionPageQueryDTO;
 import com.his.system.dto.DrugInteractionUpsertDTO;
 import com.his.system.vo.DoseLimitVO;
 import com.his.system.vo.DrugInteractionVO;
@@ -13,7 +13,7 @@ import com.his.system.vo.DrugInteractionVO;
  */
 public interface DrugKnowledgeService {
 
-    PageResult<DrugInteractionVO> interactionListPage(DrugInteractionQueryPageDTO queryDTO);
+    PageResult<DrugInteractionVO> interactionListPage(DrugInteractionPageQueryDTO queryDTO);
 
     /**
      * 新增/修改（id 为空=新增），回读整条 VO 返回
@@ -28,7 +28,7 @@ public interface DrugKnowledgeService {
      */
     void interactionDeleteById(Long id);
 
-    PageResult<DoseLimitVO> doseLimitListPage(DoseLimitQueryPageDTO queryDTO);
+    PageResult<DoseLimitVO> doseLimitListPage(DoseLimitPageQueryDTO queryDTO);
 
     /**
      * 同 interactionUpsert，回读整条 VO

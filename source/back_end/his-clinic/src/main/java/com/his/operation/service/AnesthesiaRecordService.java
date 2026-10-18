@@ -11,7 +11,7 @@ import java.util.List;
  */
 public interface AnesthesiaRecordService {
 
-    IPage<AnesthesiaRecordVO> listPage(AnesthesiaRecordQueryPageDTO query);
+    IPage<AnesthesiaRecordVO> listPage(AnesthesiaRecordPageQueryDTO query);
 
     AnesthesiaRecordVO getDetailById(Long recordId);
 

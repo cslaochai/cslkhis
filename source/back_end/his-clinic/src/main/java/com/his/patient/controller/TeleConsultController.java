@@ -30,7 +30,7 @@ public class TeleConsultController {
     @PreAuthorize("hasAuthority('ipd:teleconsult:list')")
     @Operation(summary = "远程会诊分页")
     @PostMapping("/teleListPage")
-    public Result<PageResult<TeleConsultVO>> teleListPage(@Valid @RequestBody TeleConsultQueryPageDTO dto) {
+    public Result<PageResult<TeleConsultVO>> teleListPage(@Valid @RequestBody TeleConsultPageQueryDTO dto) {
         return Result.success(teleConsultService.teleListPage(dto));
     }
 
@@ -82,7 +82,7 @@ public class TeleConsultController {
     @PreAuthorize("hasAuthority('ipd:teleconsult:list')")
     @Operation(summary = "线上问诊分页")
     @PostMapping("/onlineListPage")
-    public Result<PageResult<OnlineConsultVO>> onlineListPage(@Valid @RequestBody OnlineQueryPageDTO dto) {
+    public Result<PageResult<OnlineConsultVO>> onlineListPage(@Valid @RequestBody OnlinePageQueryDTO dto) {
         return Result.success(teleConsultService.onlineListPage(dto));
     }
 

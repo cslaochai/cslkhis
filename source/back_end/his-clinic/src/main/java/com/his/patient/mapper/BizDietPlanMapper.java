@@ -3,7 +3,7 @@ package com.his.patient.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.patient.dto.DietPlanQueryPageDTO;
+import com.his.patient.dto.DietPlanPageQueryDTO;
 import com.his.patient.entity.BizDietPlan;
 import com.his.patient.vo.DietPlanVO;
 import org.apache.ibatis.annotations.Delete;
@@ -69,7 +69,7 @@ public interface BizDietPlanMapper extends BaseMapper<BizDietPlan> {
              ORDER BY v.confirm_status ASC, v.start_time DESC, v.id DESC
              </script>
             """)
-    IPage<DietPlanVO> selectPlanPage(Page<DietPlanVO> page, @Param("q") DietPlanQueryPageDTO query);
+    IPage<DietPlanVO> selectPlanPage(Page<DietPlanVO> page, @Param("q") DietPlanPageQueryDTO query);
 
     /**
      * 某次住院的方案（含已停止/作废，营养科看历史）

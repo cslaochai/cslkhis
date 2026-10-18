@@ -9,7 +9,7 @@ import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
-import com.his.system.dto.LogQueryPageDTO;
+import com.his.system.dto.LogPageQueryDTO;
 import com.his.system.entity.SysAuditLog;
 import com.his.system.entity.SysFieldChangeLog;
 import com.his.system.entity.SysLoginLog;
@@ -66,7 +66,7 @@ public class SysLogServiceImpl implements SysLogService {
      * 日期区间：入参只到天，上界必须补到 23:59:59 ——
      * 直接拿日期字符串比大小会把当天全部时点滤掉（G12 已踩）。
      */
-    private static <T> void applyRange(LambdaQueryWrapper<T> wrapper, LogQueryPageDTO q,
+    private static <T> void applyRange(LambdaQueryWrapper<T> wrapper, LogPageQueryDTO q,
                                        com.baomidou.mybatisplus.core.toolkit.support.SFunction<T, ?> column) {
         if (TextUtil.hasText(q.getBeginTime())) {
             wrapper.ge(column, parseDay(q.getBeginTime(), LocalTime.MIN));
@@ -137,7 +137,7 @@ public class SysLogServiceImpl implements SysLogService {
     // 统计
 
     @Override
-    public PageResult<OperLogListVO> operLogListPage(LogQueryPageDTO query) {
+    public PageResult<OperLogListVO> operLogListPage(LogPageQueryDTO query) {
         String operator = TextUtil.trimToNull(query.getOperator());
         String module = TextUtil.trimToNull(query.getModule());
         String keyword = TextUtil.trimToNull(query.getKeyword());
@@ -193,7 +193,7 @@ public class SysLogServiceImpl implements SysLogService {
     // 导出
 
     @Override
-    public PageResult<LoginLogVO> loginLogListPage(LogQueryPageDTO query) {
+    public PageResult<LoginLogVO> loginLogListPage(LogPageQueryDTO query) {
         String operator = TextUtil.trimToNull(query.getOperator());
         String keyword = TextUtil.trimToNull(query.getKeyword());
         LambdaQueryWrapper<SysLoginLog> wrapper = new LambdaQueryWrapper<>();
@@ -214,7 +214,7 @@ public class SysLogServiceImpl implements SysLogService {
     }
 
     @Override
-    public PageResult<AuditLogVO> auditLogListPage(LogQueryPageDTO query) {
+    public PageResult<AuditLogVO> auditLogListPage(LogPageQueryDTO query) {
         String operator = TextUtil.trimToNull(query.getOperator());
         String module = TextUtil.trimToNull(query.getModule());
         String operation = TextUtil.trimToNull(query.getOperation());
@@ -257,7 +257,7 @@ public class SysLogServiceImpl implements SysLogService {
     }
 
     @Override
-    public PageResult<FieldChangeVO> fieldChangeListPage(LogQueryPageDTO query) {
+    public PageResult<FieldChangeVO> fieldChangeListPage(LogPageQueryDTO query) {
         String bizType = TextUtil.trimToNull(query.getTargetType());
         String bizId = TextUtil.trimToNull(query.getTargetId());
         String field = TextUtil.trimToNull(query.getFieldName());
@@ -373,7 +373,7 @@ public class SysLogServiceImpl implements SysLogService {
     }
 
     @Override
-    public String exportCsv(LogQueryPageDTO query) {
+    public String exportCsv(LogPageQueryDTO query) {
         int type = query.getLogType() == null ? 1 : query.getLogType();
         query.forExport(EXPORT_MAX);
         StringBuilder sb = new StringBuilder();

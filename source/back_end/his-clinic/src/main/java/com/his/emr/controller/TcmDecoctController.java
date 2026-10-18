@@ -5,7 +5,7 @@ import com.his.common.base.Result;
 import com.his.emr.dto.TcmDecoctAdvanceDTO;
 import com.his.emr.dto.TcmDecoctCancelDTO;
 import com.his.emr.dto.TcmDecoctIdDTO;
-import com.his.emr.dto.TcmDecoctQueryPageDTO;
+import com.his.emr.dto.TcmDecoctPageQueryDTO;
 import com.his.emr.service.TcmDecoctService;
 import com.his.emr.vo.TcmDecoctCountVO;
 import com.his.emr.vo.TcmDecoctDetailVO;
@@ -31,7 +31,7 @@ public class TcmDecoctController {
     @Operation(summary = "代煎台账分页")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('pharmacy:tcmDecoct:list')")
-    public Result<PageResult<TcmDecoctVO>> listPage(@Valid @RequestBody TcmDecoctQueryPageDTO query) {
+    public Result<PageResult<TcmDecoctVO>> listPage(@Valid @RequestBody TcmDecoctPageQueryDTO query) {
         return Result.success(tcmDecoctService.listPage(query));
     }
 

@@ -141,7 +141,7 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
     }
 
     // 排班维护
-    public PageResult<DutyRosterVO> listPage(DutyRosterQueryPageDTO q) {
+    public PageResult<DutyRosterVO> listPage(DutyRosterPageQueryDTO q) {
         LocalDate begin = q.getBeginDate() != null ? q.getBeginDate() : LocalDate.now().minusDays(DEFAULT_BACK_DAYS);
         LocalDate end = q.getEndDate() != null ? q.getEndDate() : LocalDate.now().plusDays(DEFAULT_FORWARD_DAYS);
         LambdaQueryWrapper<BizDutyRoster> w = new LambdaQueryWrapper<>();

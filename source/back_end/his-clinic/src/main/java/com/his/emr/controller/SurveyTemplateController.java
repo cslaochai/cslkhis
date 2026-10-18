@@ -2,7 +2,7 @@ package com.his.emr.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.emr.dto.SurveyTemplateQueryPageDTO;
+import com.his.emr.dto.SurveyTemplatePageQueryDTO;
 import com.his.emr.dto.SurveyTemplateUpsertDTO;
 import com.his.emr.service.SurveyTemplateService;
 import com.his.emr.vo.SurveyTemplateSelectListVO;
@@ -30,7 +30,7 @@ public class SurveyTemplateController {
     @PreAuthorize("hasAuthority('qc:survey:list')")
     @Operation(summary = "问卷模板分页")
     @PostMapping("/listPage")
-    public Result<PageResult<SurveyTemplateVO>> listPage(@Valid @RequestBody SurveyTemplateQueryPageDTO dto) {
+    public Result<PageResult<SurveyTemplateVO>> listPage(@Valid @RequestBody SurveyTemplatePageQueryDTO dto) {
         return Result.success(surveyTemplateService.listPage(dto));
     }
 

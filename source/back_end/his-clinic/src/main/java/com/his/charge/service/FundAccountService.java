@@ -1,8 +1,8 @@
 package com.his.charge.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.his.charge.dto.FundAccountQueryPageDTO;
-import com.his.charge.dto.FundTxnQueryPageDTO;
+import com.his.charge.dto.FundAccountPageQueryDTO;
+import com.his.charge.dto.FundTxnPageQueryDTO;
 import com.his.charge.entity.BizFundAccount;
 import com.his.charge.entity.BizFundAccountTxn;
 import com.his.charge.vo.FundAccountListVO;
@@ -36,12 +36,12 @@ public interface FundAccountService extends IService<BizFundAccount> {
     /**
      * 账户台账分页（门诊余额 / 住院预交金）
      */
-    PageResult<FundAccountListVO> accountListPage(FundAccountQueryPageDTO query);
+    PageResult<FundAccountListVO> accountListPage(FundAccountPageQueryDTO query);
 
     /**
      * 账户流水分页（按账户或按患者跨账户）
      */
-    PageResult<FundAccountTxnListVO> txnListPage(FundTxnQueryPageDTO query);
+    PageResult<FundAccountTxnListVO> txnListPage(FundTxnPageQueryDTO query);
 
     /**
      * 某账户的流水（账户详情弹框一次给全）

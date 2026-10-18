@@ -3,7 +3,7 @@ package com.his.pharmacy.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.pharmacy.dto.SupplierReturnActionDTO;
-import com.his.pharmacy.dto.SupplierReturnQueryPageDTO;
+import com.his.pharmacy.dto.SupplierReturnPageQueryDTO;
 import com.his.pharmacy.dto.SupplierReturnUpsertDTO;
 import com.his.pharmacy.service.SupplierReturnService;
 import com.his.pharmacy.vo.SupplierReturnVO;
@@ -28,7 +28,7 @@ public class SupplierReturnController {
     @Operation(summary = "退货单分页")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('pharmacy:supplierReturn:list')")
-    public Result<PageResult<SupplierReturnVO>> listPage(@Valid @RequestBody SupplierReturnQueryPageDTO query) {
+    public Result<PageResult<SupplierReturnVO>> listPage(@Valid @RequestBody SupplierReturnPageQueryDTO query) {
         return Result.success(supplierReturnService.listPage(query));
     }
 

@@ -7,7 +7,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.system.dto.MessageQueryPageDTO;
+import com.his.system.dto.MessagePageQueryDTO;
 import com.his.common.entity.CurrentUser;
 import com.his.system.entity.SysMessage;
 import com.his.common.enums.BizTypeEnum;
@@ -79,7 +79,7 @@ public class SysMessageServiceImpl extends ServiceImpl<SysMessageMapper, SysMess
     }
 
     @Override
-    public PageResult<SysMessageVO> queryMessagePage(MessageQueryPageDTO queryDTO) {
+    public PageResult<SysMessageVO> queryMessagePage(MessagePageQueryDTO queryDTO) {
         LambdaQueryWrapper<SysMessage> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysMessage::getReceiverId, currentReceiverId())
                 .eq(SysMessage::getSendStatus, 1)

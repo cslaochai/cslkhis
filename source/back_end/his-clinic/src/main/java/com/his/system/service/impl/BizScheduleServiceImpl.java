@@ -190,7 +190,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
     }
 
     @Override
-    public PageResult<NurseScheduleVO.Row> listPage(NurseScheduleDTO.QueryPage query) {
+    public PageResult<NurseScheduleVO.Row> listPage(NurseScheduleDTO.PageQuery query) {
         IPage<NurseScheduleVO.Row> page = new Page<>(query.getPageNum(), query.getPageSize());
         Long deptId = deptScopeService.resolveDeptId(query.getDeptId());
         List<Long> deptIds = scopedDeptIds(query.getDeptId());

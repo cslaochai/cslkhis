@@ -11,10 +11,10 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.config.InsuranceProperties;
-import com.his.charge.dto.BillQueryPageDTO;
+import com.his.charge.dto.BillPageQueryDTO;
 import com.his.charge.dto.BillSettleUpsertDTO;
 import com.his.charge.dto.BillVoidDTO;
-import com.his.charge.dto.PendingEncounterQueryPageDTO;
+import com.his.charge.dto.PendingEncounterPageQueryDTO;
 import com.his.charge.entity.*;
 import com.his.charge.mapper.BizInsuranceCatalogRuleMapper;
 import com.his.charge.mapper.BizPaymentTxnMapper;
@@ -418,7 +418,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
     }
 
     @Override
-    public PageResult<BizSettlementBillVO> selectPage(BillQueryPageDTO query) {
+    public PageResult<BizSettlementBillVO> selectPage(BillPageQueryDTO query) {
         Page<BizSettlementBill> page = this.page(new Page<>(query.getPageNum(), query.getPageSize()),
                 buildWrapper(query));
         List<BizSettlementBillVO> records = new ArrayList<>();
@@ -439,7 +439,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
     }
 
     @Override
-    public PageResult<PendingEncounterVO> pendingEncounterPage(PendingEncounterQueryPageDTO query) {
+    public PageResult<PendingEncounterVO> pendingEncounterPage(PendingEncounterPageQueryDTO query) {
         if (EncounterTypeEnum.fromCode(query.getEncounterType()) == null) {
             throw new BusinessException("就诊类型取值不合法");
         }
@@ -845,7 +845,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         return type;
     }
 
-    private LambdaQueryWrapper<BizSettlementBill> buildWrapper(BillQueryPageDTO query) {
+    private LambdaQueryWrapper<BizSettlementBill> buildWrapper(BillPageQueryDTO query) {
         String keyword = query.getKeyword();
         return new LambdaQueryWrapper<BizSettlementBill>()
                 .eq(query.getEncounterType() != null, BizSettlementBill::getEncounterType, query.getEncounterType())

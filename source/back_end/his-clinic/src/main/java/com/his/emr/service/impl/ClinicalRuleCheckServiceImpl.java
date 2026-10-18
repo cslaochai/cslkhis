@@ -7,7 +7,7 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.CheckResultEnum;
 import com.his.common.exception.BusinessException;
 import com.his.system.service.RedisSequenceService;
-import com.his.emr.dto.RuleCheckQueryPageDTO;
+import com.his.emr.dto.RuleCheckPageQueryDTO;
 import com.his.emr.entity.BizClinicalRuleCheck;
 import com.his.common.enums.RuleCheckStatusEnum;
 import com.his.emr.mapper.BizClinicalRuleCheckMapper;
@@ -32,14 +32,14 @@ public class ClinicalRuleCheckServiceImpl extends ServiceImpl<BizClinicalRuleChe
     private final RedisSequenceService redisSequenceService;
 
     @Override
-    public PageResult<BizClinicalRuleCheckVO> listPage(RuleCheckQueryPageDTO queryPageDTO) {
+    public PageResult<BizClinicalRuleCheckVO> listPage(RuleCheckPageQueryDTO pageQueryDTO) {
         LambdaQueryWrapper<BizClinicalRuleCheck> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(queryPageDTO.getPatientId() != null, BizClinicalRuleCheck::getPatientId, queryPageDTO.getPatientId())
-                .eq(queryPageDTO.getRuleType() != null, BizClinicalRuleCheck::getRuleType, queryPageDTO.getRuleType())
-                .eq(queryPageDTO.getCheckStatus() != null, BizClinicalRuleCheck::getCheckStatus, queryPageDTO.getCheckStatus())
+        wrapper.eq(pageQueryDTO.getPatientId() != null, BizClinicalRuleCheck::getPatientId, pageQueryDTO.getPatientId())
+                .eq(pageQueryDTO.getRuleType() != null, BizClinicalRuleCheck::getRuleType, pageQueryDTO.getRuleType())
+                .eq(pageQueryDTO.getCheckStatus() != null, BizClinicalRuleCheck::getCheckStatus, pageQueryDTO.getCheckStatus())
                 .orderByDesc(BizClinicalRuleCheck::getCreateTime);
 
-        Page<BizClinicalRuleCheck> page = this.page(new Page<>(queryPageDTO.getPageNum(), queryPageDTO.getPageSize()), wrapper);
+        Page<BizClinicalRuleCheck> page = this.page(new Page<>(pageQueryDTO.getPageNum(), pageQueryDTO.getPageSize()), wrapper);
         List<BizClinicalRuleCheckVO> voList = page.getRecords().stream()
                 .map(this::toVo).collect(Collectors.toList());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), voList);

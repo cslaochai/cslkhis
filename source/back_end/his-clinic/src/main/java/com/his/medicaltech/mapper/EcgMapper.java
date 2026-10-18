@@ -7,7 +7,6 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
-import com.his.common.enums.*;
 
 /**
  * 心电工作台查询（裸 SQL，sql/173）。
@@ -47,7 +46,7 @@ public interface EcgMapper {
               LEFT JOIN biz_ecg_holter h
                 ON h.record_id = rec.id AND h.del_flag = 0
               LEFT JOIN biz_report r
-                ON r.record_id = rec.id AND r.del_flag = 0 AND r.report_type = ${@com.his.medicaltech.enums.ReportTypeEnum@INSPECTION.getCode()}
+                ON r.record_id = rec.id AND r.del_flag = 0 AND r.report_type = #{reportType}
              WHERE rec.del_flag = 0
                AND rec.record_status NOT IN (7)
                <if test="deptIds != null"> AND rec.inspection_dept_id IN
@@ -78,7 +77,8 @@ public interface EcgMapper {
                                         @Param("onlyUnwritten") Boolean onlyUnwritten,
                                         @Param("reportStatus") Integer reportStatus,
                                         @Param("startDate") String startDate,
-                                        @Param("endDate") String endDate);
+                                        @Param("endDate") String endDate,
+                                        @Param("reportType") Integer reportType);
 
     /**
      * 按检查记录 ID 取工作台行（详情/写报告前定位用）。
@@ -108,8 +108,9 @@ public interface EcgMapper {
               LEFT JOIN biz_ecg_holter h
                 ON h.record_id = rec.id AND h.del_flag = 0
               LEFT JOIN biz_report r
-                ON r.record_id = rec.id AND r.del_flag = 0 AND r.report_type = ${@com.his.medicaltech.enums.ReportTypeEnum@INSPECTION.getCode()}
+                ON r.record_id = rec.id AND r.del_flag = 0 AND r.report_type = #{reportType}
              WHERE rec.del_flag = 0 AND rec.id = #{recordId}
             """)
-    EcgListVO selectWorkbenchByRecordId(@Param("recordId") Long recordId);
+    EcgListVO selectWorkbenchByRecordId(@Param("recordId") Long recordId,
+                                        @Param("reportType") Integer reportType);
 }

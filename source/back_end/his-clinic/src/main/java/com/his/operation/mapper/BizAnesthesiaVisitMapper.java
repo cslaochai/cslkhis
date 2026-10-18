@@ -2,7 +2,7 @@ package com.his.operation.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.operation.dto.AnesthesiaVisitQueryPageDTO;
+import com.his.operation.dto.AnesthesiaVisitPageQueryDTO;
 import com.his.operation.entity.BizAnesthesiaVisit;
 import com.his.operation.vo.AnesthesiaVisitVO;
 import org.apache.ibatis.annotations.Mapper;
@@ -53,7 +53,7 @@ public interface BizAnesthesiaVisitMapper extends BaseMapper<BizAnesthesiaVisit>
             </script>
             """)
     IPage<AnesthesiaVisitVO> selectVisitPage(IPage<AnesthesiaVisitVO> page,
-                                             @Param("q") AnesthesiaVisitQueryPageDTO query,
+                                             @Param("q") AnesthesiaVisitPageQueryDTO query,
                                              @Param("deptIds") List<Long> deptIds);
 
     @Select(PROJECTION + " WHERE v.del_flag = 0 AND v.id = #{visitId}")

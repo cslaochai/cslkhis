@@ -3,7 +3,7 @@ package com.his.emr.service;
 import com.his.common.base.PageResult;
 import com.his.emr.dto.ArchiveBorrowApplyDTO;
 import com.his.emr.dto.ArchiveBorrowAuditDTO;
-import com.his.emr.dto.ArchiveBorrowQueryPageDTO;
+import com.his.emr.dto.ArchiveBorrowPageQueryDTO;
 import com.his.emr.vo.ArchiveBorrowStatsVO;
 import com.his.emr.vo.ArchiveBorrowVO;
 
@@ -15,7 +15,7 @@ public interface ArchiveBorrowService {
     /**
      * 分页查询
      */
-    PageResult<ArchiveBorrowVO> page(ArchiveBorrowQueryPageDTO query);
+    PageResult<ArchiveBorrowVO> page(ArchiveBorrowPageQueryDTO query);
 
     /**
      * 详情

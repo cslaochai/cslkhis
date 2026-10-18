@@ -2,7 +2,7 @@ package com.his.patient.service;
 
 import com.his.common.base.PageResult;
 import com.his.patient.dto.DietConfirmDTO;
-import com.his.patient.dto.DietPlanQueryPageDTO;
+import com.his.patient.dto.DietPlanPageQueryDTO;
 import com.his.patient.dto.DietPlanStopDTO;
 import com.his.patient.dto.DietPlanUpsertDTO;
 import com.his.patient.entity.BizInpatientOrder;
@@ -29,7 +29,7 @@ public interface DietPlanService {
      */
     List<WardVO> wardOptions();
 
-    PageResult<DietPlanVO> planListPage(DietPlanQueryPageDTO query);
+    PageResult<DietPlanVO> planListPage(DietPlanPageQueryDTO query);
 
     List<DietPlanVO> planListByAdmission(Long admissionId);
 

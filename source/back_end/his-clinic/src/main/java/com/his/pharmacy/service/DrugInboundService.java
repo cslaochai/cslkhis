@@ -4,7 +4,7 @@ import com.his.common.base.PageResult;
 import com.his.pharmacy.dto.DrugInboundCancelDTO;
 import com.his.pharmacy.dto.DrugInboundCreateDTO;
 import com.his.pharmacy.dto.DrugInboundIdDTO;
-import com.his.pharmacy.dto.DrugInboundQueryPageDTO;
+import com.his.pharmacy.dto.DrugInboundPageQueryDTO;
 import com.his.pharmacy.vo.DrugInboundVO;
 
 /**
@@ -13,7 +13,7 @@ import com.his.pharmacy.vo.DrugInboundVO;
 public interface DrugInboundService {
 
     /** 分页查询 */
-    PageResult<DrugInboundVO> page(DrugInboundQueryPageDTO queryDTO);
+    PageResult<DrugInboundVO> page(DrugInboundPageQueryDTO queryDTO);
 
     /** 详情（含明细） */
     DrugInboundVO getDetailById(Long inboundId);

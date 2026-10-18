@@ -3,7 +3,7 @@ package com.his.charge.controller;
 
 import com.his.charge.dto.YbAutoMatchDTO;
 import com.his.charge.dto.YbMapDTO;
-import com.his.charge.dto.YbMappingQueryPageDTO;
+import com.his.charge.dto.YbMappingPageQueryDTO;
 import com.his.charge.service.YbMappingService;
 import com.his.charge.vo.YbAutoMatchResultVO;
 import com.his.charge.vo.YbMappingListVO;
@@ -33,7 +33,7 @@ public class YbMappingController {
     @PreAuthorize("hasAuthority('finance:insuranceMapping:list')")
     @Operation(summary = "对照工作台分页（itemType 必填；未对照行医保字段为 null）")
     @GetMapping("/listPage")
-    public Result<PageResult<YbMappingListVO>> listPage(@Valid YbMappingQueryPageDTO queryDTO) {
+    public Result<PageResult<YbMappingListVO>> listPage(@Valid YbMappingPageQueryDTO queryDTO) {
         return Result.success(ybMappingService.listPage(queryDTO));
     }
 

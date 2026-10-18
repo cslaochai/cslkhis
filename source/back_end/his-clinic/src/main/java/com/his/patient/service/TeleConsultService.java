@@ -13,7 +13,7 @@ public interface TeleConsultService {
 
     // 远程会诊
 
-    PageResult<TeleConsultVO> teleListPage(TeleConsultQueryPageDTO dto);
+    PageResult<TeleConsultVO> teleListPage(TeleConsultPageQueryDTO dto);
 
     TeleConsultVO teleGetDetailById(Long id);
 
@@ -44,7 +44,7 @@ public interface TeleConsultService {
 
     // 线上问诊
 
-    PageResult<OnlineConsultVO> onlineListPage(OnlineQueryPageDTO dto);
+    PageResult<OnlineConsultVO> onlineListPage(OnlinePageQueryDTO dto);
 
     OnlineConsultVO onlineGetDetailById(Long id);
 

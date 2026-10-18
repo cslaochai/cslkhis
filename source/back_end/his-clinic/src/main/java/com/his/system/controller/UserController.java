@@ -3,7 +3,7 @@ package com.his.system.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.system.dto.SysUserPasswordUpsertDTO;
-import com.his.system.dto.SysUserQueryPageDTO;
+import com.his.system.dto.SysUserPageQueryDTO;
 import com.his.system.dto.SysUserUpsertDTO;
 import com.his.system.service.SysUserService;
 import com.his.system.vo.SysUserListVO;
@@ -29,7 +29,7 @@ public class UserController {
 
     @Operation(summary = "分页查询用户列表")
     @PostMapping("/listPage")
-    public Result<PageResult<SysUserListVO>> listPage(@Valid @RequestBody SysUserQueryPageDTO queryDTO) {
+    public Result<PageResult<SysUserListVO>> listPage(@Valid @RequestBody SysUserPageQueryDTO queryDTO) {
         return Result.success(sysUserService.queryUserPage(queryDTO));
     }
 

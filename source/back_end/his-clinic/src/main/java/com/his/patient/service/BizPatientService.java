@@ -2,7 +2,7 @@ package com.his.patient.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
-import com.his.patient.dto.PatientQueryPageDTO;
+import com.his.patient.dto.PatientPageQueryDTO;
 import com.his.patient.dto.PatientRegisterDTO;
 import com.his.patient.dto.PatientSearchScopeDTO;
 import com.his.patient.dto.PatientUpsertDTO;
@@ -67,7 +67,7 @@ public interface BizPatientService extends IService<BizPatient> {
     /**
      * 患者分页（出参已是 VO）：标签与挂号次数批量回填、今日就诊置顶与标注、列表脱敏都在这里一处完成。
      */
-    PageResult<PatientVO> queryPatientPage(PatientQueryPageDTO queryDTO);
+    PageResult<PatientVO> queryPatientPage(PatientPageQueryDTO queryDTO);
 
     /**
      * 按主键取患者出参。<b>编辑回显口径，敏感字段保持明文</b>：表单是「回填 → 整对象回写」，

@@ -30,7 +30,7 @@ public interface PrescriptionService extends IService<BizMedicalRecord> {
     /**
      * 处方分页查询（含明细与签名锚点）；审方工作台默认只看未审方（{@code unauditedOnly}）
      */
-    PageResult<BizPrescriptionVO> listPage(PrescriptionQueryPageDTO query);
+    PageResult<BizPrescriptionVO> listPage(PrescriptionPageQueryDTO query);
 
     /**
      * 处方审核（审方药师签名 + 状态置「已审核」）。

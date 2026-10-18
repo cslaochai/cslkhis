@@ -72,7 +72,7 @@ public class DisputeServiceImpl extends ServiceImpl<BizDisputeCaseMapper, BizDis
     // 结案 / 撤销 / 删除
 
     @Override
-    public PageResult<DisputeCaseVO> listPage(DisputeQueryPageDTO dto) {
+    public PageResult<DisputeCaseVO> listPage(DisputePageQueryDTO dto) {
         Page<DisputeCaseVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         List<DisputeCaseVO> records = bizDisputeCaseMapper.selectCasePage(page, TextUtil.trimToNull(dto.getKeyword()),
                 dto.getCaseType(), dto.getStatus(), dto.getLevel(), deptScopeService.scopedDeptIds(dto.getDeptId()),

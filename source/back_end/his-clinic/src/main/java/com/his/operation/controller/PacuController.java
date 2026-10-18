@@ -27,7 +27,7 @@ public class PacuController {
 
     @Operation(summary = "PACU 复苏记录分页（住院/手术/麻醉记录/在室状态/关键字）")
     @GetMapping("/listPage")
-    public Result<IPage<PacuRecordVO>> listPage(@Valid PacuQueryPageDTO query) {
+    public Result<IPage<PacuRecordVO>> listPage(@Valid PacuPageQueryDTO query) {
         return Result.success(pacuService.listPage(query));
     }
 

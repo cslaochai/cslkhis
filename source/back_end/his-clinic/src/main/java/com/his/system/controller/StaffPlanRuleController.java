@@ -2,7 +2,7 @@ package com.his.system.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.system.dto.StaffPlanRuleQueryPageDTO;
+import com.his.system.dto.StaffPlanRulePageQueryDTO;
 import com.his.system.dto.StaffPlanRuleUpsertDTO;
 import com.his.system.service.StaffPlanRuleService;
 import com.his.system.vo.StaffPlanRuleVO;
@@ -29,7 +29,7 @@ public class StaffPlanRuleController {
     @Operation(summary = "分页查询人力标准")
     @PreAuthorize("hasAuthority('staff:planRule:list')")
     @PostMapping("/listPage")
-    public Result<PageResult<StaffPlanRuleVO>> listPage(@Valid @RequestBody StaffPlanRuleQueryPageDTO queryDTO) {
+    public Result<PageResult<StaffPlanRuleVO>> listPage(@Valid @RequestBody StaffPlanRulePageQueryDTO queryDTO) {
         return Result.success(staffPlanRuleService.pageVO(queryDTO));
     }
 

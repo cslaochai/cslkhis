@@ -3,7 +3,7 @@ package com.his.system.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.system.dto.DutyLogHandoverDTO;
-import com.his.system.dto.DutyLogQueryPageDTO;
+import com.his.system.dto.DutyLogPageQueryDTO;
 import com.his.system.dto.DutyLogUpsertDTO;
 import com.his.system.service.DutyLogService;
 import com.his.system.vo.DutyLogVO;
@@ -30,7 +30,7 @@ public class DutyLogController {
     @Operation(summary = "分页查询值班日志")
     @PreAuthorize("hasAuthority('org:duty:list')")
     @PostMapping("/listPage")
-    public Result<PageResult<DutyLogVO>> listPage(@Valid @RequestBody DutyLogQueryPageDTO queryDTO) {
+    public Result<PageResult<DutyLogVO>> listPage(@Valid @RequestBody DutyLogPageQueryDTO queryDTO) {
         return Result.success(dutyLogService.listPage(queryDTO));
     }
 

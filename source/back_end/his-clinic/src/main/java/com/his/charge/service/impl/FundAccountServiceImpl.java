@@ -3,8 +3,8 @@ package com.his.charge.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.charge.dto.FundAccountQueryPageDTO;
-import com.his.charge.dto.FundTxnQueryPageDTO;
+import com.his.charge.dto.FundAccountPageQueryDTO;
+import com.his.charge.dto.FundTxnPageQueryDTO;
 import com.his.charge.entity.BizFundAccount;
 import com.his.charge.entity.BizFundAccountTxn;
 import com.his.charge.mapper.BizFundAccountMapper;
@@ -119,7 +119,7 @@ public class FundAccountServiceImpl extends ServiceImpl<BizFundAccountMapper, Bi
     }
 
     @Override
-    public PageResult<FundAccountListVO> accountListPage(FundAccountQueryPageDTO query) {
+    public PageResult<FundAccountListVO> accountListPage(FundAccountPageQueryDTO query) {
         LambdaQueryWrapper<BizFundAccount> wrapper = new LambdaQueryWrapper<BizFundAccount>()
                 .eq(query.getOwnerType() != null, BizFundAccount::getOwnerType, query.getOwnerType())
                 .eq(query.getAccountStatus() != null, BizFundAccount::getAccountStatus, query.getAccountStatus())
@@ -141,7 +141,7 @@ public class FundAccountServiceImpl extends ServiceImpl<BizFundAccountMapper, Bi
     }
 
     @Override
-    public PageResult<FundAccountTxnListVO> txnListPage(FundTxnQueryPageDTO query) {
+    public PageResult<FundAccountTxnListVO> txnListPage(FundTxnPageQueryDTO query) {
         LambdaQueryWrapper<BizFundAccountTxn> wrapper = new LambdaQueryWrapper<BizFundAccountTxn>()
                 .eq(query.getAccountId() != null, BizFundAccountTxn::getAccountId, query.getAccountId())
                 .eq(query.getPatientId() != null, BizFundAccountTxn::getPatientId, query.getPatientId())

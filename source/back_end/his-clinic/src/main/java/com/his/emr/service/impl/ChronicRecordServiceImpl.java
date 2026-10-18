@@ -8,7 +8,7 @@ import com.his.common.exception.BusinessException;
 import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.emr.dto.ChronicCancelDTO;
-import com.his.emr.dto.ChronicQueryPageDTO;
+import com.his.emr.dto.ChronicPageQueryDTO;
 import com.his.emr.dto.ChronicUpsertDTO;
 import com.his.emr.entity.BizChronicRecord;
 import com.his.common.enums.ChronicConfirmStatusEnum;
@@ -82,7 +82,7 @@ public class ChronicRecordServiceImpl extends ServiceImpl<BizChronicRecordMapper
     }
 
     @Override
-    public PageResult<ChronicRecordListVO> listPage(ChronicQueryPageDTO dto) {
+    public PageResult<ChronicRecordListVO> listPage(ChronicPageQueryDTO dto) {
         List<Long> scope = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizChronicRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.in(scope != null, BizChronicRecord::getDeptId, scope);

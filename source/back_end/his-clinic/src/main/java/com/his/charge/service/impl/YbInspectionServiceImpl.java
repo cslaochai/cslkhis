@@ -7,7 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.dto.YbCancelDTO;
 import com.his.charge.dto.YbInspectConcludeDTO;
-import com.his.charge.dto.YbInspectionQueryPageDTO;
+import com.his.charge.dto.YbInspectionPageQueryDTO;
 import com.his.charge.dto.YbInspectionUpsertDTO;
 import com.his.charge.entity.BizYbDeductNotice;
 import com.his.charge.entity.BizYbInspection;
@@ -47,7 +47,7 @@ public class YbInspectionServiceImpl extends ServiceImpl<BizYbInspectionMapper, 
     private final RedisSequenceService redisSequenceService;
 
     @Override
-    public PageResult<YbInspectionListVO> listPage(YbInspectionQueryPageDTO queryDTO) {
+    public PageResult<YbInspectionListVO> listPage(YbInspectionPageQueryDTO queryDTO) {
         LambdaQueryWrapper<BizYbInspection> wrapper = new LambdaQueryWrapper<BizYbInspection>()
                 .eq(queryDTO.getInspectType() != null, BizYbInspection::getInspectType, queryDTO.getInspectType())
                 .eq(queryDTO.getStatus() != null, BizYbInspection::getStatus, queryDTO.getStatus())

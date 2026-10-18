@@ -2,7 +2,7 @@ package com.his.charge.controller;
 
 
 import com.his.charge.dto.InvoiceIssueDTO;
-import com.his.charge.dto.InvoiceQueryPageDTO;
+import com.his.charge.dto.InvoicePageQueryDTO;
 import com.his.charge.dto.InvoiceVoidDTO;
 import com.his.charge.service.InvoiceService;
 import com.his.charge.vo.BizInvoiceVO;
@@ -29,7 +29,7 @@ public class InvoiceController {
     @Operation(summary = "分页查询发票")
     @PreAuthorize("hasAuthority('finance:invoice:list')")
     @PostMapping("/listPage")
-    public Result<PageResult<BizInvoiceVO>> listPage(@Valid @RequestBody InvoiceQueryPageDTO queryDTO) {
+    public Result<PageResult<BizInvoiceVO>> listPage(@Valid @RequestBody InvoicePageQueryDTO queryDTO) {
         return Result.success(invoiceService.selectInvoicePage(queryDTO.getPatientId(), queryDTO.getBillId(),
                 queryDTO.getInvoiceStatus(), queryDTO.getKeyword(), queryDTO.getPageNum(), queryDTO.getPageSize()));
     }

@@ -19,12 +19,12 @@ public interface VteService {
     /**
      * 风险名单（默认只给中高危；风险来自每次住院最新一条 Caprini 评估）
      */
-    PageResult<VteRiskListVO> riskListPage(VteRiskQueryPageDTO query);
+    PageResult<VteRiskListVO> riskListPage(VteRiskPageQueryDTO query);
 
     /**
      * 预防措施记录分页
      */
-    PageResult<VtePreventVO> preventListPage(VtePreventQueryPageDTO query);
+    PageResult<VtePreventVO> preventListPage(VtePreventPageQueryDTO query);
 
     /**
      * 某次住院的措施记录（按措施类别排序）
@@ -46,7 +46,7 @@ public interface VteService {
     /**
      * VTE 事件分页
      */
-    PageResult<VteEventVO> eventListPage(VteEventQueryPageDTO query);
+    PageResult<VteEventVO> eventListPage(VteEventPageQueryDTO query);
 
     List<VteEventVO> eventListByAdmission(Long admissionId);
 
@@ -67,10 +67,10 @@ public interface VteService {
      */
     List<VteStatsVO> generateStats(VteStatsGenerateDTO dto);
 
-    PageResult<VteStatsVO> statsListPage(VteStatsQueryPageDTO query);
+    PageResult<VteStatsVO> statsListPage(VteStatsPageQueryDTO query);
 
     /**
      * 导出 CSV（BOM，上限 5000 行）
      */
-    String statsExportCsv(VteStatsQueryPageDTO query);
+    String statsExportCsv(VteStatsPageQueryDTO query);
 }

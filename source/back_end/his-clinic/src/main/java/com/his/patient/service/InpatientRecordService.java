@@ -31,7 +31,7 @@ public interface InpatientRecordService {
     /**
      * 文书分页（列表行不带长文本）
      */
-    IPage<InpatientRecordVO> listPage(InpatientRecordQueryPageDTO query);
+    IPage<InpatientRecordVO> listPage(InpatientRecordPageQueryDTO query);
 
     /**
      * 提交（批量；草稿 → 已提交，记录 submitTime 与书写医生）
@@ -50,7 +50,7 @@ public interface InpatientRecordService {
     /**
      * 修改日志分页（可按单据查，也可按入院查"这次住院所有文书的修改轨迹"）
      */
-    IPage<InpatientRecordLogVO> logPage(InpatientRecordLogQueryPageDTO query);
+    IPage<InpatientRecordLogVO> logPage(InpatientRecordLogPageQueryDTO query);
 
     /**
      * 某份文书的全部修改日志（按时间升序，不分页）

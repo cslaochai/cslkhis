@@ -3,7 +3,7 @@ package com.his.emr.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.emr.dto.InfectiousReportDTO;
-import com.his.emr.dto.InfectiousReportQueryPageDTO;
+import com.his.emr.dto.InfectiousReportPageQueryDTO;
 import com.his.emr.service.InfectiousReportService;
 import com.his.emr.vo.InfectiousReportVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,7 +29,7 @@ public class InfectiousReportController {
 
     @Operation(summary = "报卡分页")
     @PostMapping("/listPage")
-    public Result<PageResult<InfectiousReportVO.Row>> listPage(@Valid @RequestBody InfectiousReportQueryPageDTO dto) {
+    public Result<PageResult<InfectiousReportVO.Row>> listPage(@Valid @RequestBody InfectiousReportPageQueryDTO dto) {
         return Result.success(infectiousReportService.page(dto));
     }
 

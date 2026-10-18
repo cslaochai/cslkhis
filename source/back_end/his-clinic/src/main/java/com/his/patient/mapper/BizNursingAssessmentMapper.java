@@ -3,7 +3,7 @@ package com.his.patient.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.patient.dto.NursingAssessmentQueryPageDTO;
+import com.his.patient.dto.NursingAssessmentPageQueryDTO;
 import com.his.patient.entity.BizNursingAssessment;
 import com.his.patient.vo.NursingAssessmentVO;
 import org.apache.ibatis.annotations.Mapper;
@@ -39,7 +39,7 @@ public interface BizNursingAssessmentMapper extends BaseMapper<BizNursingAssessm
             </script>
             """)
     IPage<NursingAssessmentVO> selectAssessPage(Page<NursingAssessmentVO> page,
-                                                @Param("q") NursingAssessmentQueryPageDTO query);
+                                                @Param("q") NursingAssessmentPageQueryDTO query);
 
     /**
      * 专项透视：该入院记录下**每类量表最新一条**（五类 1~5 各取 assess_time 最大行）。

@@ -2,7 +2,7 @@ package com.his.medicaltech.service;
 
 import com.his.common.base.PageResult;
 import com.his.medicaltech.dto.CriticalValueHandleDTO;
-import com.his.medicaltech.dto.CriticalValueQueryPageDTO;
+import com.his.medicaltech.dto.CriticalValuePageQueryDTO;
 import com.his.medicaltech.dto.CriticalValueReceiveDTO;
 import com.his.medicaltech.entity.BizLabResult;
 import com.his.medicaltech.entity.BizLaboratoryRecord;
@@ -28,7 +28,7 @@ public interface CriticalValueService {
     /**
      * 分页查询危急值
      */
-    PageResult<BizCriticalValueVO> listPage(CriticalValueQueryPageDTO dto);
+    PageResult<BizCriticalValueVO> listPage(CriticalValuePageQueryDTO dto);
 
     /**
      * 按ID获取危急值详情

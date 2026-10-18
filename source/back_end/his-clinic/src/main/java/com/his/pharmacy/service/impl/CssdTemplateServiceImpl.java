@@ -55,7 +55,7 @@ public class CssdTemplateServiceImpl extends ServiceImpl<BizCssdPackTemplateMapp
                 }).toList();
     }
 
-    public IPage<CssdPackTemplateVO> listPage(CssdDTO.TemplateQueryPage q) {
+    public IPage<CssdPackTemplateVO> listPage(CssdDTO.TemplatePageQuery q) {
         String kw = TextUtil.trim(q.getKeyword());
         LambdaQueryWrapper<BizCssdPackTemplate> w = new LambdaQueryWrapper<BizCssdPackTemplate>()
                 .eq(BizCssdPackTemplate::getDelFlag, 0)

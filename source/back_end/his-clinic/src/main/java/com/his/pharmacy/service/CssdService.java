@@ -10,7 +10,7 @@ public interface CssdService {
 
     CssdPackVO advance(CssdDTO.Advance dto);
 
-    IPage<CssdPackVO> listPage(CssdDTO.QueryPage q);
+    IPage<CssdPackVO> listPage(CssdDTO.PageQuery q);
 
     CssdPackVO getDetailById(Long packId);
 }

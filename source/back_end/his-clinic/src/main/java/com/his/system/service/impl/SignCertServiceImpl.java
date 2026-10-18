@@ -13,7 +13,7 @@ import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.system.config.SignProperties;
 import com.his.system.dto.SignCertIssueDTO;
-import com.his.system.dto.SignCertQueryPageDTO;
+import com.his.system.dto.SignCertPageQueryDTO;
 import com.his.system.dto.SignCertRevokeDTO;
 import com.his.system.entity.SysSignCert;
 import com.his.system.mapper.SignConfigMapper;
@@ -240,7 +240,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
     }
 
     @Override
-    public IPage<SignCertVO> listPage(SignCertQueryPageDTO query) {
+    public IPage<SignCertVO> listPage(SignCertPageQueryDTO query) {
         LambdaQueryWrapper<SysSignCert> w = new LambdaQueryWrapper<>();
         w.eq(query.getEmpId() != null, SysSignCert::getEmpId, query.getEmpId());
         w.eq(query.getCertStatus() != null, SysSignCert::getCertStatus, query.getCertStatus());

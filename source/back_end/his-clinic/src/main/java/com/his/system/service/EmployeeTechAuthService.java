@@ -17,7 +17,7 @@ public interface EmployeeTechAuthService {
 
     // 台账
 
-    PageResult<EmployeeTechAuthVO> listPage(TechAuthQueryPageDTO query);
+    PageResult<EmployeeTechAuthVO> listPage(TechAuthPageQueryDTO query);
 
     EmployeeTechAuthVO getById(Long id);
 
@@ -59,7 +59,7 @@ public interface EmployeeTechAuthService {
 
     // 越权登记
 
-    PageResult<TechAuthOverrideVO> overrideListPage(TechAuthOverrideQueryPageDTO query);
+    PageResult<TechAuthOverrideVO> overrideListPage(TechAuthOverridePageQueryDTO query);
 
     void confirmOverride(TechAuthOverrideConfirmDTO dto);
 }

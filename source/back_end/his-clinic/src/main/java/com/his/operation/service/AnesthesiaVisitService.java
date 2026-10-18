@@ -2,7 +2,7 @@ package com.his.operation.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.operation.dto.AnesthesiaVisitFinishDTO;
-import com.his.operation.dto.AnesthesiaVisitQueryPageDTO;
+import com.his.operation.dto.AnesthesiaVisitPageQueryDTO;
 import com.his.operation.dto.AnesthesiaVisitUpsertDTO;
 import com.his.operation.vo.AnesthesiaVisitVO;
 
@@ -11,7 +11,7 @@ import com.his.operation.vo.AnesthesiaVisitVO;
  */
 public interface AnesthesiaVisitService {
 
-    IPage<AnesthesiaVisitVO> listPage(AnesthesiaVisitQueryPageDTO query);
+    IPage<AnesthesiaVisitVO> listPage(AnesthesiaVisitPageQueryDTO query);
 
     AnesthesiaVisitVO getDetailById(Long visitId);
 

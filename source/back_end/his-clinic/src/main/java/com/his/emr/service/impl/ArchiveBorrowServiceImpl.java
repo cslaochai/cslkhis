@@ -10,7 +10,7 @@ import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.emr.dto.ArchiveBorrowApplyDTO;
 import com.his.emr.dto.ArchiveBorrowAuditDTO;
-import com.his.emr.dto.ArchiveBorrowQueryPageDTO;
+import com.his.emr.dto.ArchiveBorrowPageQueryDTO;
 import com.his.emr.entity.BizArchiveBorrow;
 import com.his.emr.entity.BizMedicalRecordArchive;
 import com.his.common.enums.ArchiveStatusEnum;
@@ -52,7 +52,7 @@ public class ArchiveBorrowServiceImpl extends ServiceImpl<BizArchiveBorrowMapper
     private final SysMessageService sysMessageService;
 
     @Override
-    public PageResult<ArchiveBorrowVO> page(ArchiveBorrowQueryPageDTO q) {
+    public PageResult<ArchiveBorrowVO> page(ArchiveBorrowPageQueryDTO q) {
         Page<ArchiveBorrowVO> page = bizArchiveBorrowMapper.selectBorrowPage(
                 new Page<>(q.getPageNum(), q.getPageSize()),
                 q.getBorrowNo(), q.getBorrowType(), q.getStatus(), q.getKeyword());

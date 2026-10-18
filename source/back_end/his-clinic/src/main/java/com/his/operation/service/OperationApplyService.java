@@ -17,7 +17,7 @@ public interface OperationApplyService {
     /**
      * 手术申请分页
      */
-    IPage<OperationApplyVO> listPage(OperationApplyQueryPageDTO query);
+    IPage<OperationApplyVO> listPage(OperationApplyPageQueryDTO query);
 
     /**
      * 手术申请详情

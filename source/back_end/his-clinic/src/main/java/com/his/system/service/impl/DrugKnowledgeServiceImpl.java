@@ -7,9 +7,9 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.DrugInteractionSeverityEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.system.dto.DoseLimitQueryPageDTO;
+import com.his.system.dto.DoseLimitPageQueryDTO;
 import com.his.system.dto.DoseLimitUpsertDTO;
-import com.his.system.dto.DrugInteractionQueryPageDTO;
+import com.his.system.dto.DrugInteractionPageQueryDTO;
 import com.his.system.dto.DrugInteractionUpsertDTO;
 import com.his.system.entity.SysDrugDoseLimit;
 import com.his.system.entity.SysDrugInteraction;
@@ -51,7 +51,7 @@ public class DrugKnowledgeServiceImpl implements DrugKnowledgeService {
     private final SysDrugMapper sysDrugMapper;
 
     @Override
-    public PageResult<DrugInteractionVO> interactionListPage(DrugInteractionQueryPageDTO queryDTO) {
+    public PageResult<DrugInteractionVO> interactionListPage(DrugInteractionPageQueryDTO queryDTO) {
         LambdaQueryWrapper<SysDrugInteraction> wrapper = new LambdaQueryWrapper<>();
         if (TextUtil.hasText(queryDTO.getComponent())) {
             String kw = queryDTO.getComponent().trim();
@@ -150,7 +150,7 @@ public class DrugKnowledgeServiceImpl implements DrugKnowledgeService {
     }
 
     @Override
-    public PageResult<DoseLimitVO> doseLimitListPage(DoseLimitQueryPageDTO queryDTO) {
+    public PageResult<DoseLimitVO> doseLimitListPage(DoseLimitPageQueryDTO queryDTO) {
         LambdaQueryWrapper<SysDrugDoseLimit> wrapper = new LambdaQueryWrapper<>();
         if (TextUtil.hasText(queryDTO.getComponent())) {
             wrapper.like(SysDrugDoseLimit::getComponent, queryDTO.getComponent().trim());

@@ -2,9 +2,9 @@ package com.his.emr.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
-import com.his.emr.dto.QcCandidateQueryPageDTO;
+import com.his.emr.dto.QcCandidatePageQueryDTO;
 import com.his.emr.dto.QcExecuteDTO;
-import com.his.emr.dto.QcQueryPageDTO;
+import com.his.emr.dto.QcPageQueryDTO;
 import com.his.emr.entity.BizQualityControl;
 import com.his.emr.vo.QcIssueVO;
 import com.his.emr.vo.*;
@@ -19,7 +19,7 @@ public interface QualityControlService extends IService<BizQualityControl> {
     /**
      * 质控单分页
      */
-    PageResult<BizQualityControlVO> selectQcPage(QcQueryPageDTO query);
+    PageResult<BizQualityControlVO> selectQcPage(QcPageQueryDTO query);
 
     /**
      * 质控单详情（含问题明细）
@@ -59,7 +59,7 @@ public interface QualityControlService extends IService<BizQualityControl> {
     /**
      * 待质控病历候选分页
      */
-    PageResult<QcCandidateVO> listCandidatePage(QcCandidateQueryPageDTO query);
+    PageResult<QcCandidateVO> listCandidatePage(QcCandidatePageQueryDTO query);
 
     /**
      * 维度字典

@@ -28,7 +28,7 @@ public class BedCenterController {
     @Operation(summary = "等床队列分页（危重优先，同级按登记先后）")
     @GetMapping("/queue/listPage")
     @PreAuthorize("hasAuthority('ipd:bedCenter:list')")
-    public Result<IPage<BedWaitVO>> queueListPage(@Valid BedWaitQueryPageDTO query) {
+    public Result<IPage<BedWaitVO>> queueListPage(@Valid BedWaitPageQueryDTO query) {
         return Result.success(bedCenterService.queuePage(query));
     }
 
@@ -101,7 +101,7 @@ public class BedCenterController {
     @Operation(summary = "全院床位池（含占用者与预留去向）")
     @GetMapping("/pool/listPage")
     @PreAuthorize("hasAuthority('ipd:bedCenter:list')")
-    public Result<BedPoolVO> bedPool(@Valid BedPoolQueryPageDTO query) {
+    public Result<BedPoolVO> bedPool(@Valid BedPoolPageQueryDTO query) {
         return Result.success(bedCenterService.bedPool(query));
     }
 

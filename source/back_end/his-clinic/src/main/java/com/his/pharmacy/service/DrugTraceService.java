@@ -3,7 +3,7 @@ package com.his.pharmacy.service;
 import com.his.common.base.PageResult;
 import com.his.pharmacy.dto.DrugTraceCollectDTO;
 import com.his.pharmacy.dto.DrugTraceDispenseDTO;
-import com.his.pharmacy.dto.DrugTraceQueryPageDTO;
+import com.his.pharmacy.dto.DrugTracePageQueryDTO;
 import com.his.pharmacy.dto.DrugTraceScanDTO;
 import com.his.pharmacy.dto.DrugTraceUploadDTO;
 import com.his.pharmacy.dto.DrugTraceVoidDTO;
@@ -33,7 +33,7 @@ public interface DrugTraceService {
     DrugTraceUploadResultVO upload(DrugTraceUploadDTO dto, String operatorName);
 
     /** 台账分页 */
-    PageResult<DrugTraceVO> page(DrugTraceQueryPageDTO queryDTO);
+    PageResult<DrugTraceVO> page(DrugTracePageQueryDTO queryDTO);
 
     /** 台账详情 */
     DrugTraceVO getDetailById(Long id);

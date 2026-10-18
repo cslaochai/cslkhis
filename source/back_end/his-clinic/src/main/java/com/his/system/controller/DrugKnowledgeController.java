@@ -2,9 +2,9 @@ package com.his.system.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.system.dto.DoseLimitQueryPageDTO;
+import com.his.system.dto.DoseLimitPageQueryDTO;
 import com.his.system.dto.DoseLimitUpsertDTO;
-import com.his.system.dto.DrugInteractionQueryPageDTO;
+import com.his.system.dto.DrugInteractionPageQueryDTO;
 import com.his.system.dto.DrugInteractionUpsertDTO;
 import com.his.system.service.DrugKnowledgeService;
 import com.his.system.vo.DoseLimitVO;
@@ -30,7 +30,7 @@ public class DrugKnowledgeController {
     @Operation(summary = "分页查询药物相互作用")
     @PreAuthorize("hasAuthority('system:drugKnowledge:list')")
     @PostMapping("/interactionListPage")
-    public Result<PageResult<DrugInteractionVO>> interactionListPage(@Valid @RequestBody DrugInteractionQueryPageDTO queryDTO) {
+    public Result<PageResult<DrugInteractionVO>> interactionListPage(@Valid @RequestBody DrugInteractionPageQueryDTO queryDTO) {
         return Result.success(drugKnowledgeService.interactionListPage(queryDTO));
     }
 
@@ -52,7 +52,7 @@ public class DrugKnowledgeController {
     @Operation(summary = "分页查询剂量上限")
     @PreAuthorize("hasAuthority('system:drugKnowledge:list')")
     @PostMapping("/doseListPage")
-    public Result<PageResult<DoseLimitVO>> doseListPage(@Valid @RequestBody DoseLimitQueryPageDTO queryDTO) {
+    public Result<PageResult<DoseLimitVO>> doseListPage(@Valid @RequestBody DoseLimitPageQueryDTO queryDTO) {
         return Result.success(drugKnowledgeService.doseLimitListPage(queryDTO));
     }
 

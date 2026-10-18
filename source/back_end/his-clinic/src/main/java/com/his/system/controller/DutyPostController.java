@@ -2,7 +2,7 @@ package com.his.system.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.system.dto.DutyPostQueryPageDTO;
+import com.his.system.dto.DutyPostPageQueryDTO;
 import com.his.system.dto.DutyPostUpsertDTO;
 import com.his.system.service.DutyPostService;
 import com.his.system.vo.DutyPostSelectListVO;
@@ -39,7 +39,7 @@ public class DutyPostController {
     @Operation(summary = "分页查询点位")
     @PreAuthorize("hasAuthority('org:duty:list')")
     @PostMapping("/listPage")
-    public Result<PageResult<DutyPostVO>> listPage(@Valid @RequestBody DutyPostQueryPageDTO queryDTO) {
+    public Result<PageResult<DutyPostVO>> listPage(@Valid @RequestBody DutyPostPageQueryDTO queryDTO) {
         return Result.success(dutyPostService.pageVO(queryDTO));
     }
 

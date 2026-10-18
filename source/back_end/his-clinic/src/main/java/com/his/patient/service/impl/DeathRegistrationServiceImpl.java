@@ -82,7 +82,7 @@ public class DeathRegistrationServiceImpl extends ServiceImpl<BizDeathRegistrati
     }
 
     @Override
-    public PageResult<DeathRegisterVO.Row> listPage(DeathRegistrationDTO.QueryPage query) {
+    public PageResult<DeathRegisterVO.Row> listPage(DeathRegistrationDTO.PageQuery query) {
         Page<DeathRegisterVO.Row> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         List<DeathRegisterVO.Row> records = bizDeathRegistrationMapper.selectRegisterPage(page, TextUtil.trimToNull(query.getKeyword()),

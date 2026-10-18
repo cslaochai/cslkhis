@@ -1,7 +1,7 @@
 package com.his.ai.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.ai.dto.KnowledgeQueryLogQueryPageDTO;
+import com.his.ai.dto.KnowledgeQueryLogPageQueryDTO;
 import com.his.ai.entity.SysKnowledgeQueryLog;
 import com.his.ai.vo.KnowledgeQueryLogVO;
 
@@ -19,7 +19,7 @@ public interface KnowledgeQueryLogService {
     /**
      * 分页查询（按提问时间倒序）。
      */
-    IPage<KnowledgeQueryLogVO> listPage(KnowledgeQueryLogQueryPageDTO dto);
+    IPage<KnowledgeQueryLogVO> listPage(KnowledgeQueryLogPageQueryDTO dto);
 
     /**
      * 提交/覆盖反馈（1-有用 2-无用）。

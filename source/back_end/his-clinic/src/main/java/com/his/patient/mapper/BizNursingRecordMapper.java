@@ -2,7 +2,7 @@ package com.his.patient.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.patient.dto.NursingRecordQueryPageDTO;
+import com.his.patient.dto.NursingRecordPageQueryDTO;
 import com.his.patient.entity.BizNursingRecord;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -39,7 +39,7 @@ public interface BizNursingRecordMapper extends BaseMapper<BizNursingRecord> {
             </script>
             """)
     IPage<BizNursingRecord> selectNursingPage(IPage<BizNursingRecord> page,
-                                              @Param("q") NursingRecordQueryPageDTO query);
+                                              @Param("q") NursingRecordPageQueryDTO query);
 
     /**
      * 某时间段的记录（三测单用：按测量时间升序，一次取全，不走分页 —— 曲线不能断页）

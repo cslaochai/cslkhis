@@ -14,7 +14,7 @@ import com.his.common.exception.BusinessException;
 import com.his.common.util.SensitiveMaskUtil;
 import com.his.common.util.TextUtil;
 import com.his.system.dto.SysUserPasswordUpsertDTO;
-import com.his.system.dto.SysUserQueryPageDTO;
+import com.his.system.dto.SysUserPageQueryDTO;
 import com.his.system.dto.SysUserUpsertDTO;
 import com.his.common.entity.CurrentUser;
 import com.his.system.entity.SysEmployee;
@@ -94,7 +94,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     // 或者把停用的人重新启用，本质就是一次授权变更，正是审计要点名的"重要安全事件"。
 
     @Override
-    public PageResult<SysUserListVO> queryUserPage(SysUserQueryPageDTO queryDTO) {
+    public PageResult<SysUserListVO> queryUserPage(SysUserPageQueryDTO queryDTO) {
         PageResult<SysUser> result = selectUserPage(
                 queryDTO.getUserName(), queryDTO.getDeptId(), queryDTO.getStatus(),
                 queryDTO.getPageNum(), queryDTO.getPageSize());

@@ -1,7 +1,7 @@
 package com.his.charge.service;
 
 
-import com.his.charge.dto.YbCatalogQueryPageDTO;
+import com.his.charge.dto.YbCatalogPageQueryDTO;
 import com.his.charge.dto.YbCatalogUpsertDTO;
 import com.his.charge.vo.BizYbCatalogVO;
 import com.his.charge.vo.YbImportResultVO;
@@ -17,7 +17,7 @@ public interface YbCatalogService {
     /**
      * 分页查询（编码/名称模糊，类型/状态筛选；对照候选弹窗复用本接口）
      */
-    PageResult<BizYbCatalogVO> listPage(YbCatalogQueryPageDTO queryDTO);
+    PageResult<BizYbCatalogVO> listPage(YbCatalogPageQueryDTO queryDTO);
 
     /**
      * 新增/修改（yb_code 全局唯一；id 空=新增）

@@ -2,7 +2,7 @@ package com.his.charge.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.charge.dto.RefundFlowQueryPageDTO;
+import com.his.charge.dto.RefundFlowPageQueryDTO;
 import com.his.charge.entity.BizPaymentTxn;
 import com.his.charge.entity.BizSettlementBillItem;
 import com.his.charge.mapper.BizPaymentTxnMapper;
@@ -34,7 +34,7 @@ public class RefundFlowServiceImpl implements RefundFlowService {
     private final BizSettlementBillItemMapper bizSettlementBillItemMapper;
 
     @Override
-    public PageResult<BizRefundFlowVO> selectFlowPage(RefundFlowQueryPageDTO query) {
+    public PageResult<BizRefundFlowVO> selectFlowPage(RefundFlowPageQueryDTO query) {
         LambdaQueryWrapper<BizPaymentTxn> wrapper = new LambdaQueryWrapper<BizPaymentTxn>()
                 .eq(BizPaymentTxn::getDirection, 2)
                 .eq(BizPaymentTxn::getTxnStatus, 1)

@@ -16,12 +16,6 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_settlement_diagnosis")
 public class BizSettlementDiagnosis extends BaseEntity {
-    /** 逻辑删除标志（0 未删除 1 已删除） */
-    @TableLogic
-    private Integer delFlag;
-
-    /** 备注 */
-    private String remark;
 
 
 
@@ -72,4 +66,10 @@ public class BizSettlementDiagnosis extends BaseEntity {
      * 依据核对说明（"不适用"的原因必须写在这里，不允许空着冒充通过）
      */
     private String evidenceNote;
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
 }

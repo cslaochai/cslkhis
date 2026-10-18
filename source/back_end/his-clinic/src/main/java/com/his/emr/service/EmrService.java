@@ -32,7 +32,7 @@ public interface EmrService extends IService<BizMedicalRecord> {
     /**
      * 分页查询病历列表
      */
-    PageResult<BizMedicalRecordVO> listPage(MedicalRecordQueryPageDTO queryDTO);
+    PageResult<BizMedicalRecordVO> listPage(MedicalRecordPageQueryDTO queryDTO);
 
     /**
      * 获取病历详情（含处方、检查申请、检验申请）

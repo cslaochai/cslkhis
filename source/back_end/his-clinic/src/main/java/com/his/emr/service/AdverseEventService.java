@@ -2,7 +2,7 @@ package com.his.emr.service;
 
 import com.his.common.base.PageResult;
 import com.his.emr.dto.AdverseEventActionDTO;
-import com.his.emr.dto.AdverseEventQueryPageDTO;
+import com.his.emr.dto.AdverseEventPageQueryDTO;
 import com.his.emr.dto.AdverseEventUpsertDTO;
 import com.his.emr.vo.AdverseEventStatsVO;
 import com.his.emr.vo.AdverseEventVO;
@@ -15,7 +15,7 @@ public interface AdverseEventService {
     /**
      * 分页查询
      */
-    PageResult<AdverseEventVO> page(AdverseEventQueryPageDTO queryDTO);
+    PageResult<AdverseEventVO> page(AdverseEventPageQueryDTO queryDTO);
 
     /**
      * 详情

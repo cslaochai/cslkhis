@@ -1,8 +1,8 @@
 package com.his.charge.controller;
 
 
-import com.his.charge.dto.FundAccountQueryPageDTO;
-import com.his.charge.dto.FundTxnQueryPageDTO;
+import com.his.charge.dto.FundAccountPageQueryDTO;
+import com.his.charge.dto.FundTxnPageQueryDTO;
 import com.his.charge.service.FundAccountService;
 import com.his.charge.vo.FundAccountListVO;
 import com.his.charge.vo.FundAccountTxnListVO;
@@ -31,14 +31,14 @@ public class FundAccountController {
     @Operation(summary = "分页查询资金账户（门诊余额 / 住院预交金）")
     @PreAuthorize("hasAuthority('finance:fundAccount:list')")
     @PostMapping("/listPage")
-    public Result<PageResult<FundAccountListVO>> listPage(@Valid @RequestBody FundAccountQueryPageDTO query) {
+    public Result<PageResult<FundAccountListVO>> listPage(@Valid @RequestBody FundAccountPageQueryDTO query) {
         return Result.success(fundAccountService.accountListPage(query));
     }
 
     @Operation(summary = "分页查询账户流水（按账户或按患者跨账户）")
     @PreAuthorize("hasAuthority('finance:fundAccount:list')")
     @PostMapping("/txnListPage")
-    public Result<PageResult<FundAccountTxnListVO>> txnListPage(@Valid @RequestBody FundTxnQueryPageDTO query) {
+    public Result<PageResult<FundAccountTxnListVO>> txnListPage(@Valid @RequestBody FundTxnPageQueryDTO query) {
         return Result.success(fundAccountService.txnListPage(query));
     }
 

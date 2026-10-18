@@ -32,7 +32,7 @@ public class EcgController {
     @Operation(summary = "工作台分页列表（检查记录 + 波形/测量/Holter/报告，未采集未书写的也在）")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('medtech:ecg:list')")
-    public Result<PageResult<EcgListVO>> listPage(@Valid @RequestBody EcgQueryPageDTO query) {
+    public Result<PageResult<EcgListVO>> listPage(@Valid @RequestBody EcgPageQueryDTO query) {
         return Result.success(ecgService.listPage(query));
     }
 

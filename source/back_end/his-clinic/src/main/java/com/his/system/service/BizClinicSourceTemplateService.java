@@ -2,7 +2,7 @@ package com.his.system.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
-import com.his.system.dto.ScheduleTemplateQueryPageDTO;
+import com.his.system.dto.ScheduleTemplatePageQueryDTO;
 import com.his.system.dto.ScheduleTemplateUpsertDTO;
 import com.his.system.entity.BizClinicSourceTemplate;
 import com.his.system.vo.ScheduleTemplatePreviewVO;
@@ -35,7 +35,7 @@ public interface BizClinicSourceTemplateService extends IService<BizClinicSource
     /**
      * 模板分页出参：关键词对科室/医生/诊室/备注模糊，排序按 星期几+开始时间+id 二级键。
      */
-    PageResult<ScheduleTemplateVO> pageVO(ScheduleTemplateQueryPageDTO dto);
+    PageResult<ScheduleTemplateVO> pageVO(ScheduleTemplatePageQueryDTO dto);
 
     /**
      * 新增/修改模板（入参即前端表单）：落库失败按新增/修改分别报错。

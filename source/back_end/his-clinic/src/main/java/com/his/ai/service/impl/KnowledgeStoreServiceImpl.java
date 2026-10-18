@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.ai.config.AiProperties;
-import com.his.ai.dto.KnowledgeDocQueryPageDTO;
+import com.his.ai.dto.KnowledgeDocPageQueryDTO;
 import com.his.ai.dto.KnowledgeIngestDTO;
 import com.his.ai.entity.SysKnowledgeDoc;
 import com.his.ai.entity.SysKnowledgeDocHistory;
@@ -220,7 +220,7 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
     }
 
     @Override
-    public IPage<KnowledgeDocListVO> listPage(KnowledgeDocQueryPageDTO dto) {
+    public IPage<KnowledgeDocListVO> listPage(KnowledgeDocPageQueryDTO dto) {
         Page<SysKnowledgeDoc> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         QueryWrapper<SysKnowledgeDoc> w = new QueryWrapper<>();
         if (TextUtil.hasText(dto.getTitle())) {

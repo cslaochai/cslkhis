@@ -3,7 +3,7 @@ package com.his.emr.service;
 import com.his.common.base.PageResult;
 import com.his.emr.dto.CodeTaskAssignUpsertDTO;
 import com.his.emr.dto.CodeTaskAuditDTO;
-import com.his.emr.dto.CodeTaskQueryPageDTO;
+import com.his.emr.dto.CodeTaskPageQueryDTO;
 import com.his.emr.dto.CodeTaskSubmitDTO;
 import com.his.emr.vo.ArchiveCodeTaskStatsVO;
 import com.his.emr.vo.ArchiveCodeTaskVO;
@@ -16,7 +16,7 @@ public interface ArchiveCodeTaskService {
     /**
      * 分页查询
      */
-    PageResult<ArchiveCodeTaskVO> page(CodeTaskQueryPageDTO query);
+    PageResult<ArchiveCodeTaskVO> page(CodeTaskPageQueryDTO query);
 
     /**
      * 详情

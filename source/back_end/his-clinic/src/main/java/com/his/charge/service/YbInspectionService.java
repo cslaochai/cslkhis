@@ -3,7 +3,7 @@ package com.his.charge.service;
 
 import com.his.charge.dto.YbCancelDTO;
 import com.his.charge.dto.YbInspectConcludeDTO;
-import com.his.charge.dto.YbInspectionQueryPageDTO;
+import com.his.charge.dto.YbInspectionPageQueryDTO;
 import com.his.charge.dto.YbInspectionUpsertDTO;
 import com.his.charge.vo.YbInspectionListVO;
 import com.his.common.base.PageResult;
@@ -18,7 +18,7 @@ public interface YbInspectionService {
     /**
      * 分页查询（附名下扣款单数与金额合计）
      */
-    PageResult<YbInspectionListVO> listPage(YbInspectionQueryPageDTO queryDTO);
+    PageResult<YbInspectionListVO> listPage(YbInspectionPageQueryDTO queryDTO);
 
     /**
      * 详情

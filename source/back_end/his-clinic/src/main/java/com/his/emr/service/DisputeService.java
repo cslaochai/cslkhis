@@ -13,7 +13,7 @@ public interface DisputeService {
     /**
      * 分页（keyword/caseType/status/level/deptId/openOnly/登记日期区间）
      */
-    PageResult<DisputeCaseVO> listPage(DisputeQueryPageDTO dto);
+    PageResult<DisputeCaseVO> listPage(DisputePageQueryDTO dto);
 
     /**
      * 详情（主单 + 处理跟踪台账 + 按钮可用性 + 受理天数）

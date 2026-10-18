@@ -2,7 +2,7 @@ package com.his.charge.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.charge.dto.FeeBookDTO;
-import com.his.charge.dto.FeeRecordQueryPageDTO;
+import com.his.charge.dto.FeeRecordPageQueryDTO;
 import com.his.charge.dto.FeeReverseDTO;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.vo.BizFeeRecordDetailVO;
@@ -137,7 +137,7 @@ public interface FeeRecordService extends IService<BizFeeRecord> {
      */
     BizFeeRecord findBookedBySource(Integer sourceType, Long sourceId, String itemCode);
 
-    PageResult<BizFeeRecordVO> selectPage(FeeRecordQueryPageDTO query);
+    PageResult<BizFeeRecordVO> selectPage(FeeRecordPageQueryDTO query);
 
     BizFeeRecordDetailVO getDetailById(Long id);
 }

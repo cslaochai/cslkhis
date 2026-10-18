@@ -15,7 +15,7 @@ import com.his.common.util.TextUtil;
 import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TimeUtil;
 import com.his.medicaltech.dto.CriticalValueHandleDTO;
-import com.his.medicaltech.dto.CriticalValueQueryPageDTO;
+import com.his.medicaltech.dto.CriticalValuePageQueryDTO;
 import com.his.medicaltech.dto.CriticalValueReceiveDTO;
 import com.his.medicaltech.entity.BizCriticalValue;
 import com.his.medicaltech.entity.BizLabResult;
@@ -315,7 +315,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
     }
 
     @Override
-    public PageResult<BizCriticalValueVO> listPage(CriticalValueQueryPageDTO dto) {
+    public PageResult<BizCriticalValueVO> listPage(CriticalValuePageQueryDTO dto) {
         List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizCriticalValue> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(dto.getPatientId() != null, BizCriticalValue::getPatientId, dto.getPatientId())

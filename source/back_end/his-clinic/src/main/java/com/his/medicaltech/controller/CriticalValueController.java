@@ -3,7 +3,7 @@ package com.his.medicaltech.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.medicaltech.dto.CriticalValueHandleDTO;
-import com.his.medicaltech.dto.CriticalValueQueryPageDTO;
+import com.his.medicaltech.dto.CriticalValuePageQueryDTO;
 import com.his.medicaltech.dto.CriticalValueReceiveDTO;
 import com.his.medicaltech.service.CriticalValueService;
 import com.his.medicaltech.vo.BizCriticalValueVO;
@@ -29,7 +29,7 @@ public class CriticalValueController {
 
     @Operation(summary = "分页查询危急值")
     @PostMapping("/listPage")
-    public Result<PageResult<BizCriticalValueVO>> listPage(@Valid @RequestBody CriticalValueQueryPageDTO queryDTO) {
+    public Result<PageResult<BizCriticalValueVO>> listPage(@Valid @RequestBody CriticalValuePageQueryDTO queryDTO) {
         return Result.success(criticalValueService.listPage(queryDTO));
     }
 

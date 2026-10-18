@@ -1,7 +1,7 @@
 package com.his.patient.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.patient.dto.OrderSetQueryPageDTO;
+import com.his.patient.dto.OrderSetPageQueryDTO;
 import com.his.patient.dto.OrderSetUpsertDTO;
 import com.his.patient.vo.OrderSetDetailVO;
 import com.his.patient.vo.OrderSetListVO;
@@ -27,7 +27,7 @@ public interface InpatientOrderSetService {
     /**
      * 组套分页（管理页，只落在可见集内）
      */
-    IPage<OrderSetListVO> listPage(OrderSetQueryPageDTO query);
+    IPage<OrderSetListVO> listPage(OrderSetPageQueryDTO query);
 
     /**
      * 组套下拉候选（开立弹窗「套用组套」，可见集全量，有上限）

@@ -1,12 +1,12 @@
 package com.his.ai.controller;
 
-import com.his.ai.dto.OperationQaColumnQueryPageDTO;
+import com.his.ai.dto.OperationQaColumnPageQueryDTO;
 import com.his.ai.dto.OperationQaColumnUpsertDTO;
-import com.his.ai.dto.OperationQaRelationQueryPageDTO;
+import com.his.ai.dto.OperationQaRelationPageQueryDTO;
 import com.his.ai.dto.OperationQaRelationUpsertDTO;
-import com.his.ai.dto.OperationQaSchemaQueryPageDTO;
+import com.his.ai.dto.OperationQaSchemaPageQueryDTO;
 import com.his.ai.dto.OperationQaSchemaUpsertDTO;
-import com.his.ai.dto.OperationQaSemanticQueryPageDTO;
+import com.his.ai.dto.OperationQaSemanticPageQueryDTO;
 import com.his.ai.dto.OperationQaSemanticUpsertDTO;
 import com.his.ai.service.OperationQaConfigService;
 import com.his.ai.vo.OperationQaColumnListVO;
@@ -40,7 +40,7 @@ public class AiOperationQaConfigController {
     @PreAuthorize("hasAuthority('ai:operationQa:config')")
     @Operation(summary = "数据表配置分页查询")
     @PostMapping("/schemaListPage")
-    public Result<PageResult<OperationQaSchemaListVO>> schemaListPage(@RequestBody @Valid OperationQaSchemaQueryPageDTO dto) {
+    public Result<PageResult<OperationQaSchemaListVO>> schemaListPage(@RequestBody @Valid OperationQaSchemaPageQueryDTO dto) {
         return Result.success(operationQaConfigService.listSchemaPage(dto));
     }
 
@@ -63,7 +63,7 @@ public class AiOperationQaConfigController {
     @PreAuthorize("hasAuthority('ai:operationQa:config')")
     @Operation(summary = "数据列配置分页查询（按表）")
     @PostMapping("/columnListPage")
-    public Result<PageResult<OperationQaColumnListVO>> columnListPage(@RequestBody @Valid OperationQaColumnQueryPageDTO dto) {
+    public Result<PageResult<OperationQaColumnListVO>> columnListPage(@RequestBody @Valid OperationQaColumnPageQueryDTO dto) {
         return Result.success(operationQaConfigService.listColumnPage(dto));
     }
 
@@ -86,7 +86,7 @@ public class AiOperationQaConfigController {
     @PreAuthorize("hasAuthority('ai:operationQa:config')")
     @Operation(summary = "语义映射分页查询")
     @PostMapping("/semanticListPage")
-    public Result<PageResult<OperationQaSemanticListVO>> semanticListPage(@RequestBody @Valid OperationQaSemanticQueryPageDTO dto) {
+    public Result<PageResult<OperationQaSemanticListVO>> semanticListPage(@RequestBody @Valid OperationQaSemanticPageQueryDTO dto) {
         return Result.success(operationQaConfigService.listSemanticPage(dto));
     }
 
@@ -109,7 +109,7 @@ public class AiOperationQaConfigController {
     @PreAuthorize("hasAuthority('ai:operationQa:config')")
     @Operation(summary = "表间关系配置分页查询")
     @PostMapping("/relationListPage")
-    public Result<PageResult<OperationQaRelationListVO>> relationListPage(@RequestBody @Valid OperationQaRelationQueryPageDTO dto) {
+    public Result<PageResult<OperationQaRelationListVO>> relationListPage(@RequestBody @Valid OperationQaRelationPageQueryDTO dto) {
         return Result.success(operationQaConfigService.listRelationPage(dto));
     }
 

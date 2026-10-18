@@ -98,7 +98,7 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
     // 中高危名单
 
     @Override
-    public PageResult<VteRiskListVO> riskListPage(VteRiskQueryPageDTO query) {
+    public PageResult<VteRiskListVO> riskListPage(VteRiskPageQueryDTO query) {
         if (query.getOnlyHighRisk() == null) {
             query.setOnlyHighRisk(Boolean.TRUE); // 名单页默认只看中高危——低危患者不需要占护士的视线
         }
@@ -151,7 +151,7 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
     // 预防措施
 
     @Override
-    public PageResult<VtePreventVO> preventListPage(VtePreventQueryPageDTO query) {
+    public PageResult<VtePreventVO> preventListPage(VtePreventPageQueryDTO query) {
         String kw = query.getKeyword() == null ? null : query.getKeyword().trim();
         query.setKeyword(kw);
         Page<VtePreventVO> page = new Page<>(query.getPageNum(), query.getPageSize());
@@ -295,7 +295,7 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
     // VTE 事件
 
     @Override
-    public PageResult<VteEventVO> eventListPage(VteEventQueryPageDTO query) {
+    public PageResult<VteEventVO> eventListPage(VteEventPageQueryDTO query) {
         String kw = query.getKeyword() == null ? null : query.getKeyword().trim();
         query.setKeyword(kw);
         Page<VteEventVO> page = new Page<>(query.getPageNum(), query.getPageSize());
@@ -439,7 +439,7 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
     }
 
     @Override
-    public PageResult<VteStatsVO> statsListPage(VteStatsQueryPageDTO query) {
+    public PageResult<VteStatsVO> statsListPage(VteStatsPageQueryDTO query) {
         LambdaQueryWrapper<BizVteStats> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(TextUtil.hasText(query.getStatMonth()), BizVteStats::getStatMonth, query.getStatMonth())
                 .eq(query.getScopeType() != null, BizVteStats::getScopeType, query.getScopeType())
@@ -456,7 +456,7 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
     }
 
     @Override
-    public String statsExportCsv(VteStatsQueryPageDTO query) {
+    public String statsExportCsv(VteStatsPageQueryDTO query) {
         LambdaQueryWrapper<BizVteStats> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(TextUtil.hasText(query.getStatMonth()), BizVteStats::getStatMonth, query.getStatMonth())
                 .eq(query.getScopeType() != null, BizVteStats::getScopeType, query.getScopeType())

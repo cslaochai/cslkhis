@@ -11,7 +11,7 @@ import java.util.List;
  */
 public interface CriticalNoticeService {
 
-    PageResult<CriticalNoticeVO.Row> listPage(CriticalNoticeDTO.QueryPage query);
+    PageResult<CriticalNoticeVO.Row> listPage(CriticalNoticeDTO.PageQuery query);
 
     /**
      * 详情＝签收/打印数据源（敏感列已脱敏，含签名证据摘要）

@@ -3,7 +3,7 @@ package com.his.patient.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.patient.dto.VtePreventQueryPageDTO;
+import com.his.patient.dto.VtePreventPageQueryDTO;
 import com.his.patient.entity.BizVtePrevent;
 import com.his.patient.vo.VteMeasureStateVO;
 import com.his.patient.vo.VtePreventVO;
@@ -51,7 +51,7 @@ public interface BizVtePreventMapper extends BaseMapper<BizVtePrevent> {
             </script>
             """)
     IPage<VtePreventVO> selectPreventPage(Page<VtePreventVO> page,
-                                          @Param("q") VtePreventQueryPageDTO query,
+                                          @Param("q") VtePreventPageQueryDTO query,
                                           @Param("deptIds") List<Long> deptIds);
 
     /**
@@ -131,7 +131,7 @@ public interface BizVtePreventMapper extends BaseMapper<BizVtePrevent> {
             </script>
             """)
     IPage<VteRiskListVO> selectRiskPage(Page<VteRiskListVO> page,
-                                        @Param("q") com.his.patient.dto.VteRiskQueryPageDTO query,
+                                        @Param("q") com.his.patient.dto.VteRiskPageQueryDTO query,
                                         @Param("deptIds") List<Long> deptIds);
 
     /**

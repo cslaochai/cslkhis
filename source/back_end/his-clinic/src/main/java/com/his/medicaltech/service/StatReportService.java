@@ -12,7 +12,7 @@ public interface StatReportService {
 
     StatReportVO.Row voidReport(Long id, String reason);
 
-    IPage<StatReportVO.Row> listPage(StatReportDTO.QueryPage dto);
+    IPage<StatReportVO.Row> listPage(StatReportDTO.PageQuery dto);
 
     StatReportVO.Detail getDetailById(Long id);
 }

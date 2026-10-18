@@ -98,7 +98,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
     }
 
     @Override
-    public PageResult<InfectionMonitorVO.CaseRow> casePage(InfectionMonitorDTO.CaseQueryPage q) {
+    public PageResult<InfectionMonitorVO.CaseRow> casePage(InfectionMonitorDTO.CasePageQuery q) {
         List<Long> scope = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizInfectionCase> w = new LambdaQueryWrapper<BizInfectionCase>()
                 .in(scope != null, BizInfectionCase::getDeptId, scope)
@@ -219,7 +219,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
     }
 
     @Override
-    public PageResult<InfectionMonitorVO.MonitorRow> monitorPage(InfectionMonitorDTO.MonitorQueryPage q) {
+    public PageResult<InfectionMonitorVO.MonitorRow> monitorPage(InfectionMonitorDTO.MonitorPageQuery q) {
         List<Long> scope = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizInfectionMonitor> w = new LambdaQueryWrapper<BizInfectionMonitor>()
                 .in(scope != null, BizInfectionMonitor::getDeptId, scope)
@@ -438,7 +438,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
     }
 
     @Override
-    public PageResult<InfectionMonitorVO.HandObsRow> handObsPage(InfectionMonitorDTO.HandObsQueryPage q) {
+    public PageResult<InfectionMonitorVO.HandObsRow> handObsPage(InfectionMonitorDTO.HandObsPageQuery q) {
         List<Long> scope = deptScopeService.scopedDeptIds(q.getDeptId());
         LambdaQueryWrapper<BizHandHygieneObs> w = new LambdaQueryWrapper<BizHandHygieneObs>()
                 .in(scope != null, BizHandHygieneObs::getDeptId, scope)

@@ -3,7 +3,7 @@ package com.his.patient.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.patient.dto.NutritionStatsQueryPageDTO;
+import com.his.patient.dto.NutritionStatsPageQueryDTO;
 import com.his.patient.entity.BizNutritionStats;
 import com.his.patient.vo.NutritionStatsVO;
 import org.apache.ibatis.annotations.Mapper;
@@ -31,7 +31,7 @@ public interface BizNutritionStatsMapper extends BaseMapper<BizNutritionStats> {
             </script>
             """)
     IPage<NutritionStatsVO> selectStatsPage(Page<NutritionStatsVO> page,
-                                            @Param("q") NutritionStatsQueryPageDTO query);
+                                            @Param("q") NutritionStatsPageQueryDTO query);
 
     /**
      * 导出用（不分页，上限由服务层控制）
@@ -49,7 +49,7 @@ public interface BizNutritionStatsMapper extends BaseMapper<BizNutritionStats> {
              LIMIT 5000
             </script>
             """)
-    List<NutritionStatsVO> selectStatsForExport(@Param("q") NutritionStatsQueryPageDTO query);
+    List<NutritionStatsVO> selectStatsForExport(@Param("q") NutritionStatsPageQueryDTO query);
 
     /**
      * 某月某范围的已有快照行（覆盖式 upsert 前定位用）

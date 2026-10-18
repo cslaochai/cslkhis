@@ -52,7 +52,7 @@ public class YbChronicServiceImpl extends ServiceImpl<BizYbChronicRegMapper, Biz
     private final RedisSequenceService redisSequenceService;
 
     @Override
-    public PageResult<ChronicCatalogVO> catalogListPage(ChronicCatalogQueryPageDTO queryDTO) {
+    public PageResult<ChronicCatalogVO> catalogListPage(ChronicCatalogPageQueryDTO queryDTO) {
         IPage<BizYbChronicCatalog> page = bizYbChronicCatalogMapper.selectPage(
                 new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), catalogWrapper(queryDTO));
         List<ChronicCatalogVO> voList = page.getRecords().stream().map(this::toCatalogVO).toList();
@@ -61,7 +61,7 @@ public class YbChronicServiceImpl extends ServiceImpl<BizYbChronicRegMapper, Biz
 
     @Override
     public List<ChronicCatalogVO> selectCatalogList() {
-        ChronicCatalogQueryPageDTO query = new ChronicCatalogQueryPageDTO();
+        ChronicCatalogPageQueryDTO query = new ChronicCatalogPageQueryDTO();
         query.setStatus(1);
         return bizYbChronicCatalogMapper.selectList(catalogWrapper(query)).stream().map(this::toCatalogVO).toList();
     }
@@ -117,7 +117,7 @@ public class YbChronicServiceImpl extends ServiceImpl<BizYbChronicRegMapper, Biz
     }
 
     @Override
-    public PageResult<ChronicRegListVO> regListPage(ChronicRegQueryPageDTO queryDTO) {
+    public PageResult<ChronicRegListVO> regListPage(ChronicRegPageQueryDTO queryDTO) {
         LocalDate today = LocalDate.now();
         LambdaQueryWrapper<BizYbChronicReg> wrapper = new LambdaQueryWrapper<BizYbChronicReg>()
                 .eq(queryDTO.getRegStatus() != null, BizYbChronicReg::getRegStatus, queryDTO.getRegStatus())
@@ -338,7 +338,7 @@ public class YbChronicServiceImpl extends ServiceImpl<BizYbChronicRegMapper, Biz
         return entity;
     }
 
-    private LambdaQueryWrapper<BizYbChronicCatalog> catalogWrapper(ChronicCatalogQueryPageDTO queryDTO) {
+    private LambdaQueryWrapper<BizYbChronicCatalog> catalogWrapper(ChronicCatalogPageQueryDTO queryDTO) {
         return new LambdaQueryWrapper<BizYbChronicCatalog>()
                 .eq(queryDTO.getDiseaseType() != null, BizYbChronicCatalog::getDiseaseType, queryDTO.getDiseaseType())
                 .eq(queryDTO.getStatus() != null, BizYbChronicCatalog::getStatus, queryDTO.getStatus())

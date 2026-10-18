@@ -1,7 +1,7 @@
 package com.his.appoint.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.his.appoint.dto.RevisitFeePolicyQueryPageDTO;
+import com.his.appoint.dto.RevisitFeePolicyPageQueryDTO;
 import com.his.appoint.dto.RevisitFeePolicyUpsertDTO;
 import com.his.appoint.entity.RevisitFeePolicy;
 import com.his.appoint.vo.RevisitFeePolicyVO;
@@ -26,7 +26,7 @@ public interface RevisitFeePolicyService extends IService<RevisitFeePolicy> {
     /**
      * 配置页：分页查询
      */
-    PageResult<RevisitFeePolicyVO> listPage(RevisitFeePolicyQueryPageDTO queryDTO);
+    PageResult<RevisitFeePolicyVO> listPage(RevisitFeePolicyPageQueryDTO queryDTO);
 
     /**
      * 配置页：单条详情（不改名 getById —— 会和 IService 的 getById 撞签名）

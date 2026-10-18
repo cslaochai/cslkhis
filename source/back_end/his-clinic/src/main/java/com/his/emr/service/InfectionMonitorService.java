@@ -13,7 +13,7 @@ public interface InfectionMonitorService {
 
     InfectionMonitorVO.CaseStats caseStats();
 
-    PageResult<InfectionMonitorVO.CaseRow> casePage(InfectionMonitorDTO.CaseQueryPage q);
+    PageResult<InfectionMonitorVO.CaseRow> casePage(InfectionMonitorDTO.CasePageQuery q);
 
     InfectionMonitorVO.CaseRow caseGetDetailById(Long id);
 
@@ -23,7 +23,7 @@ public interface InfectionMonitorService {
 
     // 目标性监测
 
-    PageResult<InfectionMonitorVO.MonitorRow> monitorPage(InfectionMonitorDTO.MonitorQueryPage q);
+    PageResult<InfectionMonitorVO.MonitorRow> monitorPage(InfectionMonitorDTO.MonitorPageQuery q);
 
     InfectionMonitorVO.MonitorRow monitorGetDetailById(Long id);
 
@@ -41,7 +41,7 @@ public interface InfectionMonitorService {
 
     // 手卫生依从性
 
-    PageResult<InfectionMonitorVO.HandObsRow> handObsPage(InfectionMonitorDTO.HandObsQueryPage q);
+    PageResult<InfectionMonitorVO.HandObsRow> handObsPage(InfectionMonitorDTO.HandObsPageQuery q);
 
     Long handObsAdd(InfectionMonitorDTO.HandObsAdd dto);
 

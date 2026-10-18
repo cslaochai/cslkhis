@@ -3,7 +3,7 @@ package com.his.emr.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.emr.dto.PublicHealthAuditDTO;
-import com.his.emr.dto.PublicHealthQueryPageDTO;
+import com.his.emr.dto.PublicHealthPageQueryDTO;
 import com.his.emr.dto.PublicHealthSubmitDTO;
 import com.his.emr.service.PublicHealthReportService;
 import com.his.emr.vo.BizPublicHealthReportVO;
@@ -28,7 +28,7 @@ public class PublicHealthReportController {
 
     @Operation(summary = "分页查询上报记录")
     @PostMapping("/listPage")
-    public Result<PageResult<BizPublicHealthReportVO>> listPage(@Valid @RequestBody PublicHealthQueryPageDTO queryDTO) {
+    public Result<PageResult<BizPublicHealthReportVO>> listPage(@Valid @RequestBody PublicHealthPageQueryDTO queryDTO) {
         return Result.success(publicHealthReportService.selectReportPage(
                 queryDTO.getPatientId(),
                 queryDTO.getReportType(),

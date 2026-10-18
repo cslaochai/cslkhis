@@ -67,7 +67,7 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
     // 答卷
 
     @Override
-    public PageResult<SurveyDispatchVO> dispatchListPage(SurveyDispatchQueryPageDTO dto) {
+    public PageResult<SurveyDispatchVO> dispatchListPage(SurveyDispatchPageQueryDTO dto) {
         Page<SurveyDispatchVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         List<SurveyDispatchVO> records = bizSurveyDispatchMapper.selectDispatchPage(page,
                 TextUtil.trimToNull(dto.getKeyword()), dto.getPatientId(), dto.getSourceType(),
@@ -194,7 +194,7 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
     }
 
     @Override
-    public PageResult<SurveyAnswerVO> answerListPage(SurveyAnswerQueryPageDTO dto) {
+    public PageResult<SurveyAnswerVO> answerListPage(SurveyAnswerPageQueryDTO dto) {
         Page<SurveyAnswerVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         List<SurveyAnswerVO> records = bizSurveyAnswerMapper.selectAnswerPage(page,
                 TextUtil.trimToNull(dto.getKeyword()), dto.getPatientId(), dto.getTemplateId(), dto.getScene(),

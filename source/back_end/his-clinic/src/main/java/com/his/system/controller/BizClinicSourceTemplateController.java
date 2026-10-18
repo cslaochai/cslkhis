@@ -1,7 +1,7 @@
 package com.his.system.controller;
 
 import com.his.system.dto.ScheduleTemplateGenerateDTO;
-import com.his.system.dto.ScheduleTemplateQueryPageDTO;
+import com.his.system.dto.ScheduleTemplatePageQueryDTO;
 import com.his.system.dto.ScheduleTemplateUpsertDTO;
 import com.his.system.service.BizClinicSourceTemplateService;
 import com.his.system.vo.ScheduleTemplatePreviewVO;
@@ -37,7 +37,7 @@ public class BizClinicSourceTemplateController {
 
     @Operation(summary = "模板分页查询（关键词=科室/医生/诊室/备注模糊；排序 星期几+班次+开始时间+id 二级键）")
     @PostMapping("/listPage")
-    public Result<PageResult<ScheduleTemplateVO>> listPage(@Valid @RequestBody ScheduleTemplateQueryPageDTO dto) {
+    public Result<PageResult<ScheduleTemplateVO>> listPage(@Valid @RequestBody ScheduleTemplatePageQueryDTO dto) {
         return Result.success(bizScheduleTemplateService.pageVO(dto));
     }
 

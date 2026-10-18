@@ -106,7 +106,7 @@ public class PathwayServiceImpl implements PathwayService {
     // 入径 / 变异 / 终态
 
     @Override
-    public PageResult<PathwayVO> listPage(PathwayQueryPageDTO dto) {
+    public PageResult<PathwayVO> listPage(PathwayPageQueryDTO dto) {
         Page<PathwayVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         // mapper 返回 List 时结果只在返回值里，page.getRecords() 不会被 MP 回填
         List<PathwayVO> records = bizPathwayMapper.selectPathwayPage(page, TextUtil.trimToNull(dto.getKeyword()),
@@ -229,7 +229,7 @@ public class PathwayServiceImpl implements PathwayService {
     }
 
     @Override
-    public PageResult<PathwayEnrollVO> enrollListPage(EnrollQueryPageDTO dto) {
+    public PageResult<PathwayEnrollVO> enrollListPage(EnrollPageQueryDTO dto) {
         Page<PathwayEnrollVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         List<PathwayEnrollVO> records = bizPathwayEnrollMapper.selectEnrollPage(page, dto.getPathwayId(),
                 dto.getDeptId(), dto.getStatus(), dto.getEnrollDate(), TextUtil.trimToNull(dto.getPatientName()));

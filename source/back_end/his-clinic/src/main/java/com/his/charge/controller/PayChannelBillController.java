@@ -33,7 +33,7 @@ public class PayChannelBillController {
      */
     @PreAuthorize("hasAuthority('finance:payChannel:list')")
     @GetMapping("/listPage")
-    public Result<PageResult<PayChannelBillVO>> listPage(@Valid PayChannelQueryPageDTO query) {
+    public Result<PageResult<PayChannelBillVO>> listPage(@Valid PayChannelPageQueryDTO query) {
         return Result.success(service.selectPage(query));
     }
 

@@ -1,7 +1,7 @@
 package com.his.charge.controller;
 
 import com.his.charge.dto.FeeBookDTO;
-import com.his.charge.dto.FeeRecordQueryPageDTO;
+import com.his.charge.dto.FeeRecordPageQueryDTO;
 import com.his.charge.dto.FeeReverseDTO;
 import com.his.charge.service.FeeRecordService;
 import com.his.charge.vo.BizFeeRecordDetailVO;
@@ -29,7 +29,7 @@ public class FeeRecordController {
     @Operation(summary = "分页查询记账行")
     @PreAuthorize("hasAuthority('finance:feeRecord:list')")
     @PostMapping("/listPage")
-    public Result<PageResult<BizFeeRecordVO>> listPage(@Valid @RequestBody FeeRecordQueryPageDTO query) {
+    public Result<PageResult<BizFeeRecordVO>> listPage(@Valid @RequestBody FeeRecordPageQueryDTO query) {
         return Result.success(feeRecordService.selectPage(query));
     }
 

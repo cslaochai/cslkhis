@@ -14,12 +14,12 @@ public interface DeathCertificateService {
     /**
      * 证明台账分页（含上报台账，按 reportStatus/overdue 收口）
      */
-    PageResult<DeathCertificateVO.Row> listPage(DeathCertificateDTO.QueryPage query);
+    PageResult<DeathCertificateVO.Row> listPage(DeathCertificateDTO.PageQuery query);
 
     /**
      * 待开证榜：已办死亡离院但没有有效证明的住院（欠账榜，不硬拦出院）
      */
-    PageResult<DeathCertificateVO.PendingRow> pendingListPage(DeathCertificateDTO.QueryPage query);
+    PageResult<DeathCertificateVO.PendingRow> pendingListPage(DeathCertificateDTO.PageQuery query);
 
     /**
      * 详情＝编辑回显（一般项目明文 + 死因链 + 上报报文）

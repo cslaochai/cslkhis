@@ -4,7 +4,7 @@ import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.pharmacy.dto.PurchaseInboundDTO;
 import com.his.pharmacy.dto.PurchaseOrderAuditDTO;
-import com.his.pharmacy.dto.PurchaseOrderQueryPageDTO;
+import com.his.pharmacy.dto.PurchaseOrderPageQueryDTO;
 import com.his.pharmacy.dto.PurchaseOrderUpsertDTO;
 import com.his.pharmacy.service.PurchaseOrderService;
 import com.his.pharmacy.vo.DrugInboundVO;
@@ -30,7 +30,7 @@ public class PurchaseOrderController {
 
     @Operation(summary = "分页查询采购订单")
     @PostMapping("/listPage")
-    public Result<PageResult<PurchaseOrderVO>> listPage(@Valid @RequestBody PurchaseOrderQueryPageDTO queryDTO) {
+    public Result<PageResult<PurchaseOrderVO>> listPage(@Valid @RequestBody PurchaseOrderPageQueryDTO queryDTO) {
         return Result.success(purchaseOrderService.page(queryDTO));
     }
 

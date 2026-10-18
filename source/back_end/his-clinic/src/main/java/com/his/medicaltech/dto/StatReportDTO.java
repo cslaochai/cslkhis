@@ -52,7 +52,7 @@ public class StatReportDTO {
      */
     @Data
     @EqualsAndHashCode(callSuper = true)
-    public static class QueryPage extends PageParam {
+    public static class PageQuery extends PageParam {
         /**
          * 上报单号/标题模糊
          */

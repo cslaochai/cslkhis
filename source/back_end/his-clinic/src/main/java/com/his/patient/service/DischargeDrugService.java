@@ -11,7 +11,7 @@ public interface DischargeDrugService {
 
     DischargeDrugVO upsert(DischargeDrugDTO.Upsert dto);
 
-    IPage<DischargeDrugVO> listPage(DischargeDrugDTO.QueryPage q);
+    IPage<DischargeDrugVO> listPage(DischargeDrugDTO.PageQuery q);
 
     List<DischargeDrugSelectListVO> listByAdmission(Long admissionId);
 

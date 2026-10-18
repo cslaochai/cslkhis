@@ -7,7 +7,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.EnableStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.patient.dto.OrderDictQueryPageDTO;
+import com.his.patient.dto.OrderDictPageQueryDTO;
 import com.his.patient.dto.OrderDictUpsertDTO;
 import com.his.patient.entity.SysOrderDictData;
 import com.his.patient.mapper.SysOrderDictDataMapper;
@@ -38,7 +38,7 @@ public class OrderDictServiceImpl extends ServiceImpl<SysOrderDictDataMapper, Sy
     private final DictCacheService dictCacheService;
 
     @Override
-    public IPage<OrderDictListVO> listPage(OrderDictQueryPageDTO query) {
+    public IPage<OrderDictListVO> listPage(OrderDictPageQueryDTO query) {
         String dictType = requireType(query.getDictType());
         String keyword = TextUtil.hasText(query.getKeyword()) ? query.getKeyword().trim() : null;
         LambdaQueryWrapper<SysOrderDictData> wrapper = new LambdaQueryWrapper<SysOrderDictData>()

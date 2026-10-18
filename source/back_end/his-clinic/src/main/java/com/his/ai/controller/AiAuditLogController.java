@@ -1,6 +1,6 @@
 package com.his.ai.controller;
 
-import com.his.ai.dto.AiAuditLogQueryPageDTO;
+import com.his.ai.dto.AiAuditLogPageQueryDTO;
 import com.his.ai.service.AiAuditQueryService;
 import com.his.ai.vo.AiAuditLogVO;
 import com.his.common.base.PageResult;
@@ -29,7 +29,7 @@ public class AiAuditLogController {
 
     @Operation(summary = "分页查询 AI 调用审计（可追溯模型、提示词版本、耗时与降级原因）")
     @PostMapping("/listPage")
-    public Result<PageResult<AiAuditLogVO>> listPage(@Valid @RequestBody AiAuditLogQueryPageDTO queryPageDTO) {
-        return Result.success(aiAuditQueryService.listPage(queryPageDTO));
+    public Result<PageResult<AiAuditLogVO>> listPage(@Valid @RequestBody AiAuditLogPageQueryDTO pageQueryDTO) {
+        return Result.success(aiAuditQueryService.listPage(pageQueryDTO));
     }
 }

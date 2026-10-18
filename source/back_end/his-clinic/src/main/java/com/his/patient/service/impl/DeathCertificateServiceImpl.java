@@ -195,7 +195,7 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
     // 内部
 
     @Override
-    public PageResult<DeathCertificateVO.Row> listPage(DeathCertificateDTO.QueryPage query) {
+    public PageResult<DeathCertificateVO.Row> listPage(DeathCertificateDTO.PageQuery query) {
         Page<DeathCertificateVO.Row> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<Long> deptIds = deptScopeService.scopedDeptIds(query.getDeathDeptId());
         List<DeathCertificateVO.Row> records = bizDeathCertificateMapper.selectCertPage(page, TextUtil.trimToNull(query.getKeyword()),
@@ -206,7 +206,7 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
     }
 
     @Override
-    public PageResult<DeathCertificateVO.PendingRow> pendingListPage(DeathCertificateDTO.QueryPage query) {
+    public PageResult<DeathCertificateVO.PendingRow> pendingListPage(DeathCertificateDTO.PageQuery query) {
         Page<DeathCertificateVO.PendingRow> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         List<DeathCertificateVO.PendingRow> records = bizDeathCertificateMapper.selectPendingPage(page,

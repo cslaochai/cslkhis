@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.util.TextUtil;
-import com.his.emr.dto.AiDraftDiffQueryPageDTO;
+import com.his.emr.dto.AiDraftDiffPageQueryDTO;
 import com.his.emr.entity.BizAiDraftDiff;
 import com.his.emr.mapper.BizAiDraftDiffMapper;
 import com.his.emr.service.AiDraftDiffService;
@@ -58,7 +58,7 @@ public class AiDraftDiffServiceImpl extends ServiceImpl<BizAiDraftDiffMapper, Bi
     }
 
     @Override
-    public PageResult<AiDraftDiffListVO> listPage(AiDraftDiffQueryPageDTO dto) {
+    public PageResult<AiDraftDiffListVO> listPage(AiDraftDiffPageQueryDTO dto) {
         List<Long> scope = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizAiDraftDiff> wrapper = new LambdaQueryWrapper<>();
         wrapper.in(scope != null, BizAiDraftDiff::getDeptId, scope)

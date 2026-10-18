@@ -1,7 +1,7 @@
 package com.his.system.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.system.dto.TsaTokenQueryPageDTO;
+import com.his.system.dto.TsaTokenPageQueryDTO;
 import com.his.system.vo.TsaStatusVO;
 import com.his.system.vo.TsaTokenVO;
 import com.his.system.vo.TsaTokenVerifyVO;
@@ -19,7 +19,7 @@ public interface TsaService {
     /**
      * 令牌台账分页（只增不改的签发流水）
      */
-    IPage<TsaTokenVO> listPage(TsaTokenQueryPageDTO query);
+    IPage<TsaTokenVO> listPage(TsaTokenPageQueryDTO query);
 
     /**
      * 启停本地 TSA 服务（G6b）。

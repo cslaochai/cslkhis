@@ -16,7 +16,7 @@ public interface BedCenterService {
     /**
      * 等床队列分页（排序服务端钉死）
      */
-    IPage<BedWaitVO> queuePage(BedWaitQueryPageDTO query);
+    IPage<BedWaitVO> queuePage(BedWaitPageQueryDTO query);
 
     /**
      * 队列条目详情
@@ -68,7 +68,7 @@ public interface BedCenterService {
     /**
      * 全院床位池（分页，含占用者与预留去向）
      */
-    BedPoolVO bedPool(BedPoolQueryPageDTO query);
+    BedPoolVO bedPool(BedPoolPageQueryDTO query);
 
     /**
      * 床位调配图（一床一卡，可按科室/病区收窄）。
@@ -79,7 +79,7 @@ public interface BedCenterService {
      * （canReserve / canRelease / canAdmit）一并算好交给前端。
      *
      * <p><b>为什么必须选科室</b>：全院 1000+ 张床一屏画不开，画出来也没人看。
-     * 不传 deptId 时落到第一个有床科室，全院总量走 {@link #bedPool(BedPoolQueryPageDTO)} 与
+     * 不传 deptId 时落到第一个有床科室，全院总量走 {@link #bedPool(BedPoolPageQueryDTO)} 与
      * {@link #overview()}，职责不重叠。
      */
     BedMapVO bedMap(BedMapQueryDTO query);

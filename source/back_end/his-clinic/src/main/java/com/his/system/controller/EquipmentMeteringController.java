@@ -3,7 +3,7 @@ package com.his.system.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.system.dto.MeteringCreateDTO;
-import com.his.system.dto.MeteringQueryPageDTO;
+import com.his.system.dto.MeteringPageQueryDTO;
 import com.his.system.service.EquipmentService;
 import com.his.system.vo.MeteringVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,7 +27,7 @@ public class EquipmentMeteringController {
 
     @Operation(summary = "计量记录分页")
     @PostMapping("/listPage")
-    public Result<PageResult<MeteringVO>> listPage(@Valid @RequestBody MeteringQueryPageDTO dto) {
+    public Result<PageResult<MeteringVO>> listPage(@Valid @RequestBody MeteringPageQueryDTO dto) {
         var page = equipmentService.meteringListPage(dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));

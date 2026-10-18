@@ -26,7 +26,7 @@ public interface FinanceSettlementService {
     /**
      * 交班单分页
      */
-    PageResult<CashierSettlementVO> cashierPage(CashierSettlementQueryPageDTO dto);
+    PageResult<CashierSettlementVO> cashierPage(CashierSettlementPageQueryDTO dto);
 
     /**
      * 交班单详情
@@ -48,7 +48,7 @@ public interface FinanceSettlementService {
     /**
      * 日结单分页
      */
-    PageResult<DaySettlementVO> dayPage(DaySettlementQueryPageDTO dto);
+    PageResult<DaySettlementVO> dayPage(DaySettlementPageQueryDTO dto);
 
     /**
      * 日结单详情（日结单 + 当日班结单 + 三级对账 + 科室收入）

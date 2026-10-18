@@ -68,7 +68,7 @@ public class RecordQcFlowController {
 
     @Operation(summary = "流转单分页")
     @PostMapping("/listPage")
-    public Result<PageResult<RecordQcFlowVO>> listPage(@Valid @RequestBody RecordQcFlowQueryPageDTO queryDTO) {
+    public Result<PageResult<RecordQcFlowVO>> listPage(@Valid @RequestBody RecordQcFlowPageQueryDTO queryDTO) {
         return Result.success(recordQcFlowService.page(queryDTO));
     }
 

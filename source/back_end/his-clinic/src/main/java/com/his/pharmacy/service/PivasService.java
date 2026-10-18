@@ -4,7 +4,7 @@ import com.his.common.base.PageResult;
 import com.his.pharmacy.dto.PivasActionDTO;
 import com.his.pharmacy.dto.PivasAuditDTO;
 import com.his.pharmacy.dto.PivasGenerateDTO;
-import com.his.pharmacy.dto.PivasQueryPageDTO;
+import com.his.pharmacy.dto.PivasPageQueryDTO;
 import com.his.pharmacy.vo.PivasCandidateVO;
 import com.his.pharmacy.vo.PivasStatsVO;
 import com.his.pharmacy.vo.PivasVO;
@@ -30,7 +30,7 @@ public interface PivasService {
     /**
      * 主单分页
      */
-    PageResult<PivasVO> listPage(PivasQueryPageDTO dto);
+    PageResult<PivasVO> listPage(PivasPageQueryDTO dto);
 
     /**
      * 主单详情（含明细）

@@ -3,7 +3,7 @@ package com.his.patient.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.patient.dto.VteEventQueryPageDTO;
+import com.his.patient.dto.VteEventPageQueryDTO;
 import com.his.patient.entity.BizVteEvent;
 import com.his.patient.vo.VteEventVO;
 import org.apache.ibatis.annotations.Mapper;
@@ -42,7 +42,7 @@ public interface BizVteEventMapper extends BaseMapper<BizVteEvent> {
              ORDER BY e.diagnose_date DESC, e.id DESC
             </script>
             """)
-    IPage<VteEventVO> selectEventPage(Page<VteEventVO> page, @Param("q") VteEventQueryPageDTO query,
+    IPage<VteEventVO> selectEventPage(Page<VteEventVO> page, @Param("q") VteEventPageQueryDTO query,
                                       @Param("deptIds") List<Long> deptIds);
 
     @Select("""

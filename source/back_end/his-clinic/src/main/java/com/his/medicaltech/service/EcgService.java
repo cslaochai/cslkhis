@@ -13,7 +13,7 @@ import java.util.List;
  */
 public interface EcgService {
 
-    PageResult<EcgListVO> listPage(EcgQueryPageDTO query);
+    PageResult<EcgListVO> listPage(EcgPageQueryDTO query);
 
     EcgDetailVO getDetailByRecordId(Long recordId);
 

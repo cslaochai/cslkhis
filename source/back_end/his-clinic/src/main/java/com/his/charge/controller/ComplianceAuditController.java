@@ -1,7 +1,7 @@
 package com.his.charge.controller;
 
 
-import com.his.charge.dto.ComplianceAuditQueryPageDTO;
+import com.his.charge.dto.ComplianceAuditPageQueryDTO;
 import com.his.charge.dto.ComplianceBatchAuditDTO;
 import com.his.charge.dto.SettlementCodingUpsertDTO;
 import com.his.charge.service.ComplianceAuditService;
@@ -71,7 +71,7 @@ public class ComplianceAuditController {
     @Operation(summary = "分页查询合规审核记录（菜单 1012 /compliance-audit 台账入口）")
     @PreAuthorize("hasAuthority('finance:complianceAudit:list')")
     @GetMapping("/listPage")
-    public Result<PageResult<ComplianceAuditVO>> listPage(@Valid ComplianceAuditQueryPageDTO queryDTO) {
+    public Result<PageResult<ComplianceAuditVO>> listPage(@Valid ComplianceAuditPageQueryDTO queryDTO) {
         return Result.success(complianceAuditService.selectAuditPage(queryDTO));
     }
 

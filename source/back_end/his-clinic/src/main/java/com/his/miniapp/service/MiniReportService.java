@@ -2,7 +2,7 @@ package com.his.miniapp.service;
 
 import com.his.common.base.PageResult;
 import com.his.medicaltech.vo.BizReportVO;
-import com.his.miniapp.dto.ReportQueryPageDTO;
+import com.his.miniapp.dto.ReportPageQueryDTO;
 import com.his.miniapp.vo.MiniReportPdfVO;
 
 /**
@@ -13,7 +13,7 @@ public interface MiniReportService {
     /**
      * 我的报告分页
      */
-    PageResult<BizReportVO> myReportPage(ReportQueryPageDTO dto);
+    PageResult<BizReportVO> myReportPage(ReportPageQueryDTO dto);
 
     /**
      * 报告详情（含影像帧）；报告不存在时返回 null

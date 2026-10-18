@@ -167,7 +167,7 @@ public class RecordQcFlowServiceImpl extends ServiceImpl<BizRecordQcFlowMapper, 
     }
 
     @Override
-    public PageResult<RecordQcFlowVO> page(RecordQcFlowQueryPageDTO q) {
+    public PageResult<RecordQcFlowVO> page(RecordQcFlowPageQueryDTO q) {
         Page<RecordQcFlowVO> page = bizRecordQcFlowMapper.selectFlowPage(
                 new Page<>(q.getPageNum(), q.getPageSize()),
                 q.getFlowNo(), q.getFlowStatus(), q.getCurrentLevel(), q.getRecordSource(),

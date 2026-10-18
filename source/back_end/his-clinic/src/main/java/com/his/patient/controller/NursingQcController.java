@@ -51,7 +51,7 @@ public class NursingQcController {
     @Operation(summary = "检查单分页（病区 × 月 × 类别）")
     @PostMapping("/checkListPage")
     public Result<PageResult<NurseQcVO.CheckRow>> checkListPage(
-            @Valid @RequestBody NursingQcDTO.CheckQueryPageDTO dto) {
+            @Valid @RequestBody NursingQcDTO.CheckPageQueryDTO dto) {
         return Result.success(nursingQcService.checkListPage(dto));
     }
 
@@ -109,7 +109,7 @@ public class NursingQcController {
     @Operation(summary = "指标台账分页（每行都带分子分母与来源备注）")
     @PostMapping("/ledgerListPage")
     public Result<PageResult<NurseQcVO.LedgerRow>> ledgerListPage(
-            @Valid @RequestBody NursingQcDTO.LedgerQueryPageDTO dto) {
+            @Valid @RequestBody NursingQcDTO.LedgerPageQueryDTO dto) {
         return Result.success(nursingQcService.ledgerListPage(dto));
     }
 

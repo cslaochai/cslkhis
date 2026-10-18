@@ -29,7 +29,7 @@ public class TransfusionApplyController {
 
     @Operation(summary = "输血申请分页（状态/配血状态/品种/血型/反应/日期范围/关键字）")
     @GetMapping("/listPage")
-    public Result<IPage<TransfusionApplyVO>> listPage(@Valid TransfusionApplyQueryPageDTO query) {
+    public Result<IPage<TransfusionApplyVO>> listPage(@Valid TransfusionApplyPageQueryDTO query) {
         return Result.success(transfusionApplyService.listPage(query));
     }
 

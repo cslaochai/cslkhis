@@ -10,7 +10,7 @@ import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.operation.dto.AnesthesiaVisitFinishDTO;
-import com.his.operation.dto.AnesthesiaVisitQueryPageDTO;
+import com.his.operation.dto.AnesthesiaVisitPageQueryDTO;
 import com.his.operation.dto.AnesthesiaVisitUpsertDTO;
 import com.his.operation.entity.BizAnesthesiaVisit;
 import com.his.operation.entity.BizOperationApply;
@@ -53,7 +53,7 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
     private final DeptScopeService deptScopeService;
 
     @Override
-    public IPage<AnesthesiaVisitVO> listPage(AnesthesiaVisitQueryPageDTO query) {
+    public IPage<AnesthesiaVisitVO> listPage(AnesthesiaVisitPageQueryDTO query) {
         IPage<AnesthesiaVisitVO> page = bizAnesthesiaVisitMapper.selectVisitPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query, deptScopeService.scopedDeptIds(null));
         page.getRecords().forEach(this::decorate);

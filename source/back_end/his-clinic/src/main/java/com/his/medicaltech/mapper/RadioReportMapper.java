@@ -5,7 +5,6 @@ import com.his.medicaltech.vo.RadioReportListVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
-import com.his.common.enums.*;
 
 /**
  * 放射诊断工作台查询（裸 SQL，sql/138）。
@@ -36,7 +35,7 @@ public interface RadioReportMapper {
               JOIN sys_inspection_item i
                 ON i.item_code = rec.inspection_item_code AND i.del_flag = 0 AND i.item_type = 1
               LEFT JOIN biz_report r
-                ON r.record_id = rec.id AND r.del_flag = 0 AND r.report_type = ${@com.his.medicaltech.enums.ReportTypeEnum@INSPECTION.getCode()}
+                ON r.record_id = rec.id AND r.del_flag = 0 AND r.report_type = #{reportType}
              WHERE rec.del_flag = 0
                AND rec.record_status IN (4, 5, 6)
                <if test="deptIds != null"> AND rec.inspection_dept_id IN
@@ -63,7 +62,8 @@ public interface RadioReportMapper {
                                                           @Param("positiveFlag") Integer positiveFlag,
                                                           @Param("onlyUnwritten") Boolean onlyUnwritten,
                                                           @Param("startDate") String startDate,
-                                                          @Param("endDate") String endDate);
+                                                          @Param("endDate") String endDate,
+                                                          @Param("reportType") Integer reportType);
 
     /**
      * 查项目是不是放射（检查项目字典的项目类型，1=放射）。
@@ -80,30 +80,6 @@ public interface RadioReportMapper {
              LIMIT 1
             """)
     Integer selectItemTypeByCode(@Param("itemCode") String itemCode);
-
-    /**
-     * 按检查记录 ID 取工作台行（详情/写报告前定位用）。
-     */
-    @Select("""
-            SELECT rec.id AS record_id, rec.record_no, rec.apply_id, rec.apply_no,
-                   rec.patient_id, rec.patient_no, rec.patient_name, rec.gender, rec.age,
-                   rec.inspection_item_code AS item_code, rec.inspection_item_name AS item_name,
-                   rec.body_part, rec.record_status,
-                   rec.apply_dept_name, rec.apply_doctor_name, rec.clinical_diagnosis,
-                   rec.report_sign_id, rec.audit_sign_id,
-                   r.id AS report_id, r.report_no, r.report_status, r.exam_method,
-                   r.positive_flag, r.is_critical, r.write_by, r.write_time,
-                   r.audit_by, r.audit_time, r.publish_by, r.publish_time,
-                   r.film_count, r.report_version, r.reject_reason,
-                   rec.create_time
-              FROM biz_inspection_record rec
-              JOIN sys_inspection_item i
-                ON i.item_code = rec.inspection_item_code AND i.del_flag = 0 AND i.item_type = 1
-              LEFT JOIN biz_report r
-                ON r.record_id = rec.id AND r.del_flag = 0 AND r.report_type = ${@com.his.medicaltech.enums.ReportTypeEnum@INSPECTION.getCode()}
-             WHERE rec.del_flag = 0 AND rec.id = #{recordId}
-            """)
-    RadioReportListVO selectWorkbenchByRecordId(@Param("recordId") Long recordId);
 
     /**
      * 本次检查已登记的胶片张数（写报告时展示「已打几张片」；统计口径以检查胶片用量为准）。

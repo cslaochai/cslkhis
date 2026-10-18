@@ -11,7 +11,7 @@ import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.emr.dto.CodeTaskAssignUpsertDTO;
 import com.his.emr.dto.CodeTaskAuditDTO;
-import com.his.emr.dto.CodeTaskQueryPageDTO;
+import com.his.emr.dto.CodeTaskPageQueryDTO;
 import com.his.emr.dto.CodeTaskSubmitDTO;
 import com.his.emr.entity.BizArchiveCodeTask;
 import com.his.common.enums.CodeTaskStatusEnum;
@@ -45,7 +45,7 @@ public class ArchiveCodeTaskServiceImpl extends ServiceImpl<BizArchiveCodeTaskMa
     private final SysMessageService sysMessageService;
 
     @Override
-    public PageResult<ArchiveCodeTaskVO> page(CodeTaskQueryPageDTO q) {
+    public PageResult<ArchiveCodeTaskVO> page(CodeTaskPageQueryDTO q) {
         Page<ArchiveCodeTaskVO> page = bizArchiveCodeTaskMapper.selectTaskPage(
                 new Page<>(q.getPageNum(), q.getPageSize()),
                 q.getTaskNo(), q.getStatus(), q.getCoderId(), q.getKeyword());

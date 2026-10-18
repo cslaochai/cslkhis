@@ -2,7 +2,7 @@ package com.his.medicaltech.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.medicaltech.dto.ExecutionQueryPageDTO;
+import com.his.medicaltech.dto.ExecutionPageQueryDTO;
 import com.his.medicaltech.dto.ExecutionReviewDTO;
 import com.his.medicaltech.dto.ExecutionStartDTO;
 import com.his.medicaltech.service.MedTechExecutionService;
@@ -28,7 +28,7 @@ public class MedTechExecutionController {
 
     @Operation(summary = "分页查询待执行列表")
     @PostMapping("/listPage")
-    public Result<PageResult<BizMedTechExecutionVO>> listPage(@Valid @RequestBody ExecutionQueryPageDTO queryDTO) {
+    public Result<PageResult<BizMedTechExecutionVO>> listPage(@Valid @RequestBody ExecutionPageQueryDTO queryDTO) {
         return Result.success(medTechExecutionService.listPageVO(queryDTO.getPatientId(), queryDTO.getApplyType(),
                 queryDTO.getExecutionStatus(), queryDTO.getPageNum(), queryDTO.getPageSize()));
     }

@@ -20,12 +20,6 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_fund_account_txn")
 public class BizFundAccountTxn extends BaseEntity {
-    /** 逻辑删除标志（0 未删除 1 已删除） */
-    @TableLogic
-    private Integer delFlag;
-
-    /** 备注 */
-    private String remark;
 
 
 
@@ -127,4 +121,10 @@ public class BizFundAccountTxn extends BaseEntity {
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long origTxnId;
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
 }

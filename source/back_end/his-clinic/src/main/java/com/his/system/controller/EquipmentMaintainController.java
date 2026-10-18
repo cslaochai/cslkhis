@@ -3,7 +3,7 @@ package com.his.system.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.system.dto.MaintainCreateDTO;
-import com.his.system.dto.MaintainQueryPageDTO;
+import com.his.system.dto.MaintainPageQueryDTO;
 import com.his.system.service.EquipmentService;
 import com.his.system.vo.MaintainVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,7 +27,7 @@ public class EquipmentMaintainController {
 
     @Operation(summary = "维保记录分页")
     @PostMapping("/listPage")
-    public Result<PageResult<MaintainVO>> listPage(@Valid @RequestBody MaintainQueryPageDTO dto) {
+    public Result<PageResult<MaintainVO>> listPage(@Valid @RequestBody MaintainPageQueryDTO dto) {
         var page = equipmentService.maintainListPage(dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));

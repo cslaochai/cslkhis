@@ -32,7 +32,7 @@ public class IcuController {
     @PreAuthorize("hasAuthority('ipd:icu:list')")
     @Operation(summary = "入出科台账分页")
     @PostMapping("/stay/listPage")
-    public Result<PageResult<IcuVO.StayVO>> stayListPage(@Valid @RequestBody IcuStayQueryPageDTO dto) {
+    public Result<PageResult<IcuVO.StayVO>> stayListPage(@Valid @RequestBody IcuStayPageQueryDTO dto) {
         return Result.success(icuService.stayListPage(dto));
     }
 
@@ -77,7 +77,7 @@ public class IcuController {
     @PreAuthorize("hasAuthority('ipd:icu:list')")
     @Operation(summary = "监护记录分页")
     @PostMapping("/monitor/listPage")
-    public Result<PageResult<IcuVO.MonitorVO>> monitorListPage(@Valid @RequestBody IcuMonitorQueryPageDTO dto) {
+    public Result<PageResult<IcuVO.MonitorVO>> monitorListPage(@Valid @RequestBody IcuMonitorPageQueryDTO dto) {
         return Result.success(icuService.monitorListPage(dto));
     }
 

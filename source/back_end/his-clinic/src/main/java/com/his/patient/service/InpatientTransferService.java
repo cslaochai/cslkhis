@@ -3,7 +3,7 @@ package com.his.patient.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.patient.dto.InpatientTransferAcceptDTO;
 import com.his.patient.dto.InpatientTransferCancelDTO;
-import com.his.patient.dto.InpatientTransferQueryPageDTO;
+import com.his.patient.dto.InpatientTransferPageQueryDTO;
 import com.his.patient.dto.InpatientTransferUpsertDTO;
 import com.his.patient.vo.InpatientTransferVO;
 
@@ -17,7 +17,7 @@ public interface InpatientTransferService {
     /**
      * 转科记录分页
      */
-    IPage<InpatientTransferVO> listPage(InpatientTransferQueryPageDTO query);
+    IPage<InpatientTransferVO> listPage(InpatientTransferPageQueryDTO query);
 
     /**
      * 转科详情

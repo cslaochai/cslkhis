@@ -4,7 +4,7 @@ import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.pharmacy.dto.DrugInboundCancelDTO;
 import com.his.pharmacy.dto.DrugInboundIdDTO;
-import com.his.pharmacy.dto.DrugInboundQueryPageDTO;
+import com.his.pharmacy.dto.DrugInboundPageQueryDTO;
 import com.his.pharmacy.service.DrugInboundService;
 import com.his.pharmacy.vo.DrugInboundVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,7 +28,7 @@ public class DrugInboundController {
 
     @Operation(summary = "分页查询入库单")
     @PostMapping("/listPage")
-    public Result<PageResult<DrugInboundVO>> listPage(@Valid @RequestBody DrugInboundQueryPageDTO queryDTO) {
+    public Result<PageResult<DrugInboundVO>> listPage(@Valid @RequestBody DrugInboundPageQueryDTO queryDTO) {
         return Result.success(drugInboundService.page(queryDTO));
     }
 

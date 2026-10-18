@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
 import com.his.emr.dto.TcmDecoctAdvanceDTO;
 import com.his.emr.dto.TcmDecoctCancelDTO;
-import com.his.emr.dto.TcmDecoctQueryPageDTO;
+import com.his.emr.dto.TcmDecoctPageQueryDTO;
 import com.his.emr.entity.BizTcmDecoct;
 import com.his.emr.vo.TcmDecoctCountVO;
 import com.his.emr.vo.TcmDecoctDetailVO;
@@ -18,7 +18,7 @@ public interface TcmDecoctService extends IService<BizTcmDecoct> {
     /**
      * 台账分页
      */
-    PageResult<TcmDecoctVO> listPage(TcmDecoctQueryPageDTO query);
+    PageResult<TcmDecoctVO> listPage(TcmDecoctPageQueryDTO query);
 
     /**
      * 详情（含逐味明细）

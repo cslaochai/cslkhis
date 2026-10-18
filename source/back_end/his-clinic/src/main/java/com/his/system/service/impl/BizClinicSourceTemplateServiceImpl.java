@@ -9,7 +9,7 @@ import com.his.common.enums.StaffScheduleSourceEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.system.dto.ScheduleTemplateQueryPageDTO;
+import com.his.system.dto.ScheduleTemplatePageQueryDTO;
 import com.his.system.dto.ScheduleTemplateSlotItemDTO;
 import com.his.system.dto.ScheduleTemplateUpsertDTO;
 import com.his.system.entity.BizClinicSource;
@@ -105,7 +105,7 @@ public class BizClinicSourceTemplateServiceImpl extends ServiceImpl<BizClinicSou
     }
 
     @Override
-    public PageResult<ScheduleTemplateVO> pageVO(ScheduleTemplateQueryPageDTO dto) {
+    public PageResult<ScheduleTemplateVO> pageVO(ScheduleTemplatePageQueryDTO dto) {
         LambdaQueryWrapper<BizClinicSourceTemplate> wrapper = new LambdaQueryWrapper<>();
         List<Long> scoped = deptScopeService.scopedDeptIds(dto.getDeptId());
         wrapper.in(scoped != null, BizClinicSourceTemplate::getDeptId, scoped)

@@ -29,7 +29,7 @@ public class YbDeductNoticeController {
     @PreAuthorize("hasAuthority('finance:insuranceDeduct:list')")
     @Operation(summary = "扣款通知分页（附超期展示态）")
     @GetMapping("/listPage")
-    public Result<PageResult<DeductNoticeListVO>> listPage(@Valid DeductNoticeQueryPageDTO queryDTO) {
+    public Result<PageResult<DeductNoticeListVO>> listPage(@Valid DeductNoticePageQueryDTO queryDTO) {
         return Result.success(ybDeductNoticeService.listPage(queryDTO));
     }
 

@@ -116,7 +116,7 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
     }
 
     @Override
-    public PageResult<BizPrescriptionVO> listPage(PrescriptionQueryPageDTO query) {
+    public PageResult<BizPrescriptionVO> listPage(PrescriptionPageQueryDTO query) {
         LambdaQueryWrapper<BizPrescription> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(query.getPrescriptionStatus() != null, BizPrescription::getPrescriptionStatus, query.getPrescriptionStatus())
                 .eq(query.getDoctorId() != null, BizPrescription::getDoctorId, query.getDoctorId())

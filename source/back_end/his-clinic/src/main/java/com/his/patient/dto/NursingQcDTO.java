@@ -104,7 +104,7 @@ public class NursingQcDTO {
      */
     @Data
     @EqualsAndHashCode(callSuper = true)
-    public static class CheckQueryPageDTO extends PageParam {
+    public static class CheckPageQueryDTO extends PageParam {
         /**
          * 关键字
          */
@@ -138,7 +138,7 @@ public class NursingQcDTO {
      */
     @Data
     @EqualsAndHashCode(callSuper = true)
-    public static class LedgerQueryPageDTO extends PageParam {
+    public static class LedgerPageQueryDTO extends PageParam {
         /**
          * 关键字
          */

@@ -388,7 +388,7 @@ public class DrugTraceServiceImpl extends ServiceImpl<BizDrugTraceMapper, BizDru
     }
 
     @Override
-    public PageResult<DrugTraceVO> page(DrugTraceQueryPageDTO q) {
+    public PageResult<DrugTraceVO> page(DrugTracePageQueryDTO q) {
         Page<DrugTraceVO> page = bizDrugTraceMapper.selectTracePage(
                 new Page<>(q.getPageNum(), q.getPageSize()),
                 blankToNull(q.getKeyword()), q.getDrugId(), q.getStockId(), q.getStatus(),

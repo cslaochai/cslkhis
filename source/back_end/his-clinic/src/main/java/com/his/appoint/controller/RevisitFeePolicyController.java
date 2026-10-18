@@ -1,6 +1,6 @@
 package com.his.appoint.controller;
 
-import com.his.appoint.dto.RevisitFeePolicyQueryPageDTO;
+import com.his.appoint.dto.RevisitFeePolicyPageQueryDTO;
 import com.his.appoint.dto.RevisitFeePolicyUpsertDTO;
 import com.his.appoint.service.RevisitFeePolicyService;
 import com.his.appoint.vo.RevisitFeePolicyVO;
@@ -27,7 +27,7 @@ public class RevisitFeePolicyController {
     @PreAuthorize("hasAuthority('opd:revisitPolicy:list')")
     @Operation(summary = "分页查询复诊收费策略")
     @PostMapping("/listPage")
-    public Result<PageResult<RevisitFeePolicyVO>> listPage(@Valid @RequestBody RevisitFeePolicyQueryPageDTO queryDTO) {
+    public Result<PageResult<RevisitFeePolicyVO>> listPage(@Valid @RequestBody RevisitFeePolicyPageQueryDTO queryDTO) {
         return Result.success(revisitFeePolicyService.listPage(queryDTO));
     }
 

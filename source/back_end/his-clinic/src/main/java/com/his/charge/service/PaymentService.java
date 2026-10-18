@@ -3,7 +3,7 @@ package com.his.charge.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.charge.dto.BillPayDTO;
 import com.his.charge.dto.BillRefundDTO;
-import com.his.charge.dto.PaymentTxnQueryPageDTO;
+import com.his.charge.dto.PaymentTxnPageQueryDTO;
 import com.his.charge.entity.BizPaymentTxn;
 import com.his.charge.vo.BizPaymentTxnVO;
 import com.his.common.base.PageResult;
@@ -48,7 +48,7 @@ public interface PaymentService extends IService<BizPaymentTxn> {
      */
     boolean closeBill(Long billId, String reason, Integer sourceType);
 
-    PageResult<BizPaymentTxnVO> selectPage(PaymentTxnQueryPageDTO query);
+    PageResult<BizPaymentTxnVO> selectPage(PaymentTxnPageQueryDTO query);
 
     /**
      * 某张账单的全部收/退流水（详情与对账回显）

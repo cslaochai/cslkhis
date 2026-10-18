@@ -15,7 +15,7 @@ public interface DaySurgeryService {
 
     // 准入目录
 
-    PageResult<DaySurgeryItemVO> itemListPage(DaySurgeryItemQueryPageDTO dto);
+    PageResult<DaySurgeryItemVO> itemListPage(DaySurgeryItemPageQueryDTO dto);
 
     /**
      * 启用中的术式下拉（预约用；停用术式不可新预约）
@@ -31,7 +31,7 @@ public interface DaySurgeryService {
 
     // 登记单
 
-    PageResult<DaySurgeryApplyVO> listPage(DaySurgeryQueryPageDTO dto);
+    PageResult<DaySurgeryApplyVO> listPage(DaySurgeryPageQueryDTO dto);
 
     DaySurgeryApplyVO getDetailById(Long id);
 

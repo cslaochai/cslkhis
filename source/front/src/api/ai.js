@@ -14,12 +14,12 @@ import request from './request'
 
 // AI 运行时状态（只读配置快照，不产生模型调用费用）
 export function getAiHealthCheck() {
-  return request.get('/ai/healthCheck')
+    return request.get('/ai/healthCheck')
 }
 
 // 刷新 AI 配置与 ICD 码表缓存
 export function refreshAiConfig() {
-  return request.post('/ai/configRefresh')
+    return request.post('/ai/configRefresh')
 }
 
 // ========== ICD-10 智能编码 ==========
@@ -28,12 +28,12 @@ export function refreshAiConfig() {
 // params: { recordId?, patientId?, chiefComplaint?, presentIllness?, specialistExam?, diagnosis?, topN? }
 // 说明：传 recordId 由服务端回查病历；也可直接传文本（用于未保存的草稿实时推荐）
 export function predictIcd10(params) {
-  return request.post('/ai/icd10/predict', params)
+    return request.post('/ai/icd10/predict', params)
 }
 
 // 检索 ICD-10 编码下拉选项（纯字典查询，不调用模型）
 export function selectIcd10List(params) {
-  return request.post('/ai/icd10/selectList', params)
+    return request.post('/ai/icd10/selectList', params)
 }
 
 // ========== 处方合理性审核 ==========
@@ -41,7 +41,7 @@ export function selectIcd10List(params) {
 // 执行处方审核
 // params: { prescriptionId, saveResult? }  saveResult=false 时只审核不落库
 export function executeDrugAudit(params) {
-  return request.post('/ai/drugAudit/execute', params)
+    return request.post('/ai/drugAudit/execute', params)
 }
 
 // ========== 病历内涵质控 ==========
@@ -49,7 +49,7 @@ export function executeDrugAudit(params) {
 // 执行病历内涵质控
 // params: { recordId, saveResult? }
 export function executeEmrQc(params) {
-  return request.post('/ai/emrQc/execute', params)
+    return request.post('/ai/emrQc/execute', params)
 }
 
 // ========== 调用审计 ==========
@@ -57,7 +57,7 @@ export function executeEmrQc(params) {
 // 分页查询 AI 调用审计
 // params: { pageNum, pageSize, capabilityKey?, status?, bizType?, bizId?, operator?, startDate?, endDate? }
 export function getAiAuditLogPage(params) {
-  return request.post('/ai/auditLog/listPage', params)
+    return request.post('/ai/auditLog/listPage', params)
 }
 
 // ========== 检验结果智能解读 ==========
@@ -74,7 +74,7 @@ export function getAiAuditLogPage(params) {
 // overwriteConclusion 默认 false：结论是草稿，需要显式开启才会写回
 // biz_laboratory_record.diagnosis / suggestions（会覆盖检验科已填内容）。
 export function executeLabInterpret(params) {
-  return request.post('/ai/labInterpret/execute', params)
+    return request.post('/ai/labInterpret/execute', params)
 }
 
 // ========== 急诊智能分诊 ==========
@@ -87,7 +87,7 @@ export function executeLabInterpret(params) {
 //   2. 不写库 —— 该接口没有写回端点，级别必须由人确认后手工设置；
 //   3. levelBasis 说明建议来自哪里：HARD_RULE（确定性红旗征象）/ MANUAL（维持人工值）/ MODEL。
 export function suggestEmergencyTriage(params) {
-  return request.post('/ai/emergencyTriage/suggest', params)
+    return request.post('/ai/emergencyTriage/suggest', params)
 }
 
 // ========== 病历文本结构化抽取 / 草拟 ==========
@@ -103,7 +103,7 @@ export function suggestEmergencyTriage(params) {
 //   3. rejectedCount > 0 说明有内容被判为「原文里找不到依据 / 字段不可写」而丢弃，
 //      界面必须显示出来 —— 否则医生会以为原文里只有这些内容。
 export function extractEmrText(params) {
-  return request.post('/ai/emrText/extract', params)
+    return request.post('/ai/emrText/extract', params)
 }
 
 // 病历草拟：只生成现病史草稿，不生成诊断与处理意见
@@ -112,7 +112,7 @@ export function extractEmrText(params) {
 // data.degraded=true 时 presentIllness 为空 —— 现病史没有「纯规则」版本可写，
 // 界面不要拿模板文字糊弄医生，如实说「没有草稿可给」。
 export function draftEmrText(params) {
-  return request.post('/ai/emrText/draft', params)
+    return request.post('/ai/emrText/draft', params)
 }
 
 // ========== 语音口述转写（G-14，P5，医生工作站） ==========
@@ -122,15 +122,15 @@ export function draftEmrText(params) {
 // 返回 { text, durationSeconds, model, elapsedMs }；无 degraded 语义 —— 失败就是失败。
 // 转写原文不落库，审计只落音频元数据 digest。
 export function transcribeVoice(formData) {
-  // request.js 实例默认 Content-Type: application/json，axios 1.x 对「FormData + JSON 头」
-  // 会走 formDataToJSON 把文件序列化成 JSON 体，后端直接 MultipartException ——
-  // 请求级显式声明 multipart，axios 才会让浏览器自己带 boundary 发原始表单。
-  // silent：转写失败的提示在医生工作站按「失败必须可见」自行处理（含更具体的兜底文案），
-  // 拦截器不再重复弹。
-  return request.post('/ai/emrText/transcribe', formData, {
-    silent: true,
-    headers: {'Content-Type': 'multipart/form-data'}
-  })
+    // request.js 实例默认 Content-Type: application/json，axios 1.x 对「FormData + JSON 头」
+    // 会走 formDataToJSON 把文件序列化成 JSON 体，后端直接 MultipartException ——
+    // 请求级显式声明 multipart，axios 才会让浏览器自己带 boundary 发原始表单。
+    // silent：转写失败的提示在医生工作站按「失败必须可见」自行处理（含更具体的兜底文案），
+    // 拦截器不再重复弹。
+    return request.post('/ai/emrText/transcribe', formData, {
+        silent: true,
+        headers: {'Content-Type': 'multipart/form-data'}
+    })
 }
 
 // ========== AI 运营问数（NL2SQL） ==========
@@ -143,12 +143,12 @@ export function transcribeVoice(formData) {
 //   2. data.sql 是实际执行的 SELECT，界面要能展开查看（透明可查）；
 //   3. 行数据 cells 与 columns 按下标对应，渲染前要按列拼成对象。
 export function askOperationQa(params) {
-  return request.post('/ai/operationQa/ask', params)
+    return request.post('/ai/operationQa/ask', params)
 }
 
 // 可查询的数据域（白名单表清单，纯配置展示，不调用模型）
 export function getOperationSchema() {
-  return request.get('/ai/operationQa/schema')
+    return request.get('/ai/operationQa/schema')
 }
 
 // ========== 知识库问答（RAG） ==========
@@ -157,7 +157,7 @@ export function getOperationSchema() {
 // params: { question }
 // data.degraded=true 时 answer 来自检索原文片段（模型未参与），degradeReason 必须展示。
 export function askKnowledge(params) {
-  return request.post('/ai/knowledge/ask', params)
+    return request.post('/ai/knowledge/ask', params)
 }
 
 // ========== 知识库管理（ai:knowledge:manage，AI 管理台维护签页） ==========
@@ -166,109 +166,109 @@ export function askKnowledge(params) {
 // params: { id?, title, category?, content, sourceType?, version?, sourceName? }
 //   id: 修改时必传（雪花ID字符串）；sourceType: 2-手工录入 3-文件导入；version: 版本号（如 v1.0）；sourceName: 内容来源（诊疗指南/论坛等）
 export function ingestKnowledgeDoc(params) {
-  return request.post('/ai/knowledge/ingest', params)
+    return request.post('/ai/knowledge/ingest', params)
 }
 
 // 上传知识文件（自动解析；只保存不建索引；支持 pdf/docx/txt/md，≤20MB）
 // formData: { file, title?, category?, version?, sourceName? }  data 为 KnowledgeDocListVO（含 id / chunkCount，不含原文）
 export function uploadKnowledgeFile(formData) {
-  // 与 transcribeVoice 同口径：请求级显式声明 multipart，axios 才会让浏览器自己带 boundary 发原始表单
-  return request.post('/ai/knowledge/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+    // 与 transcribeVoice 同口径：请求级显式声明 multipart，axios 才会让浏览器自己带 boundary 发原始表单
+    return request.post('/ai/knowledge/upload', formData, {headers: {'Content-Type': 'multipart/form-data'}})
 }
 
 // 批量上传知识文件（异步解析，返回导入任务列表；支持多文件，≤20MB/个）
 // formData: { files: File[] }  data 为 KnowledgeImportTaskVO[]（初始状态均为解析中）
 export function submitKnowledgeImport(formData) {
-  return request.post('/ai/knowledge/import/submit', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+    return request.post('/ai/knowledge/import/submit', formData, {headers: {'Content-Type': 'multipart/form-data'}})
 }
 
 // 查询导入任务状态（轮询解析/保存进度）
 // params: { ids: string[] }  data 为 KnowledgeImportTaskVO[]
 export function getKnowledgeImportList(params) {
-  return request.post('/ai/knowledge/import/list', params)
+    return request.post('/ai/knowledge/import/list', params)
 }
 
 // 确认导入任务入库（预览解析文本后补充元数据；只保存不建索引，索引由「重建索引」触发）
 // params: { id, title, category?, version?, sourceName? }  id 全程字符串
 export function commitKnowledgeImport(params) {
-  return request.post('/ai/knowledge/import/commit', params)
+    return request.post('/ai/knowledge/import/commit', params)
 }
 
 // 取消导入任务（仅解析中 / 待确认可取消）
 // params: { id }  id 全程字符串
 export function cancelKnowledgeImport(params) {
-  return request.post('/ai/knowledge/import/cancel', params)
+    return request.post('/ai/knowledge/import/cancel', params)
 }
 
 // 知识文档分页列表
 // params: { pageNum, pageSize, title?, category? }
 export function getKnowledgeDocPage(params) {
-  return request.post('/ai/knowledge/listPage', params)
+    return request.post('/ai/knowledge/listPage', params)
 }
 
 // 知识文档详情（含原文）
 // params: { id }  id 全程字符串
 export function getKnowledgeDocById(params) {
-  return request.post('/ai/knowledge/getById', params)
+    return request.post('/ai/knowledge/getById', params)
 }
 
 // 删除知识文档（同步删除切块与索引；历史版本保留）
 // params: { id }  id 全程字符串
 export function deleteKnowledgeDocById(params) {
-  return request.post('/ai/knowledge/deleteById', params)
+    return request.post('/ai/knowledge/deleteById', params)
 }
 
 // 提交单文档重建索引任务（异步，返回任务 ID 供轮询进度）
 // params: { id }  id 全程字符串；data 为任务 ID（字符串）
 export function submitRebuildKnowledgeDoc(params) {
-  return request.post('/ai/knowledge/rebuildById', params)
+    return request.post('/ai/knowledge/rebuildById', params)
 }
 
 // 查询重建索引任务进度
 // params: { taskId }  data 为 KnowledgeRebuildTaskVO（status 1-进行中 2-完成 3-失败）
 export function getKnowledgeRebuildProgress(params) {
-  return request.post('/ai/knowledge/rebuildProgress', params)
+    return request.post('/ai/knowledge/rebuildProgress', params)
 }
 
 // 切块预览（按当前切块参数计算，不落库不灌向量）
 // params: { content }  data 为 KnowledgeChunkPreviewVO（chunkCount / totalChars / chunks 每块前 200 字）
 export function previewKnowledgeChunks(params) {
-  return request.post('/ai/knowledge/previewChunks', params)
+    return request.post('/ai/knowledge/previewChunks', params)
 }
 
 // 停用/启用知识文档
 // params: { id, status }  status: 0-正常 1-停用
 export function updateKnowledgeDocStatus(params) {
-  return request.post('/ai/knowledge/updateStatus', params)
+    return request.post('/ai/knowledge/updateStatus', params)
 }
 
 // 知识文档历史版本列表（按操作时间倒序）
 // params: { id }  id 为文档 ID；data 为 KnowledgeDocHistoryVO[]
 export function listKnowledgeDocHistory(params) {
-  return request.post('/ai/knowledge/history/list', params)
+    return request.post('/ai/knowledge/history/list', params)
 }
 
 // 回退到指定历史版本（快照写回当前文档并清旧向量，需重建索引）
 // params: { id }  id 为历史版本 ID；data 为文档 ID
 export function revertKnowledgeDocHistory(params) {
-  return request.post('/ai/knowledge/history/revert', params)
+    return request.post('/ai/knowledge/history/revert', params)
 }
 
 // 问答观测日志分页（按提问时间倒序）
 // params: { pageNum, pageSize, question?, degraded?, feedback? }  degraded: 0-正常 1-降级；feedback: 0-未反馈 1-有用 2-无用
 export function listKnowledgeQueryLog(params) {
-  return request.post('/ai/knowledge/queryLog/listPage', params)
+    return request.post('/ai/knowledge/queryLog/listPage', params)
 }
 
 // 问答观测反馈（1-有用 2-无用，重复提交覆盖）
 // params: { id, feedback }
 export function feedbackKnowledgeQueryLog(params) {
-  return request.post('/ai/knowledge/queryLog/feedback', params)
+    return request.post('/ai/knowledge/queryLog/feedback', params)
 }
 
 // 全量重建向量索引（灾难恢复用，正常流程不再暴露入口）
 export function rebuildKnowledgeIndex() {
-  return request.post('/ai/knowledge/rebuild')
+    return request.post('/ai/knowledge/rebuild')
 }
 
 // ========== 知识库离线评测（评测集 + recall@k / MRR） ==========
@@ -276,42 +276,42 @@ export function rebuildKnowledgeIndex() {
 // 评测用例分页
 // params: { pageNum, pageSize, question? }  data 为 IPage<KnowledgeEvalCaseVO>
 export function listKnowledgeEvalCase(params) {
-  return request.post('/ai/knowledge/evalCase/listPage', params)
+    return request.post('/ai/knowledge/evalCase/listPage', params)
 }
 
 // 新增/修改评测用例（id 为空新增，非空修改）
 // params: { id?, question, expectedDocIds, expectedDocTitles?, remark? }  expectedDocIds 为分号分隔的文档ID
 export function upsertKnowledgeEvalCase(params) {
-  return request.post('/ai/knowledge/evalCase/upsert', params)
+    return request.post('/ai/knowledge/evalCase/upsert', params)
 }
 
 // 删除评测用例（软删）
 // params: { id }
 export function deleteKnowledgeEvalCase(params) {
-  return request.post('/ai/knowledge/evalCase/deleteById', params)
+    return request.post('/ai/knowledge/evalCase/deleteById', params)
 }
 
 // 运行离线评测（同步，对全部用例检索算 recall@k / MRR）
 // data 为 KnowledgeEvalRunVO（status 2-完成 3-失败）
 export function runKnowledgeEval() {
-  return request.post('/ai/knowledge/eval/run')
+    return request.post('/ai/knowledge/eval/run')
 }
 
 // 评测运行历史分页（按运行时间倒序，用于回归对比）
 // params: { pageNum, pageSize }
 export function listKnowledgeEvalRun(params) {
-  return request.post('/ai/knowledge/eval/runListPage', params)
+    return request.post('/ai/knowledge/eval/runListPage', params)
 }
 
 // 评测运行明细（每用例一条）
 // params: { id }  id 为运行ID
 export function getKnowledgeEvalRunDetail(params) {
-  return request.post('/ai/knowledge/eval/runDetail', params)
+    return request.post('/ai/knowledge/eval/runDetail', params)
 }
 
 // 灌入内置示例语料（仅库为空时生效，返回灌入条数）
 export function seedKnowledgeCorpus() {
-  return request.post('/ai/knowledge/seed')
+    return request.post('/ai/knowledge/seed')
 }
 
 // ========== 随访话术草拟（G-06，医护端） ==========
@@ -320,7 +320,7 @@ export function seedKnowledgeCorpus() {
 // params: { patientId, followupType, diagnosis? }
 // data.degraded=true 时 content 来自类型模板（模型不可用或文案越界被硬闸拦下），degradeReason 必须展示。
 export function composeFollowup(params) {
-  return request.post('/ai/followup/compose', params)
+    return request.post('/ai/followup/compose', params)
 }
 
 // ========== AI 病历草拟记录（G-10，日志中心） ==========
@@ -329,7 +329,7 @@ export function composeFollowup(params) {
 // params: { pageNum, pageSize, patientName?, doctorName?, changed? }
 // row.diffJson 是分段数组 JSON：[{type:0|1|2, text}]，0-相同 1-删 2-增；渲染用模板插值，禁止 v-html。
 export function listDraftDiffPage(params) {
-  return request.post('/emr/draftDiff/listPage', params)
+    return request.post('/emr/draftDiff/listPage', params)
 }
 
 // ========== 医保审核证据判定（G-07，P3） ==========
@@ -339,7 +339,7 @@ export function listDraftDiffPage(params) {
 // data.degraded=true 表示模型未产出判定（judgments 为空），规则自身的判定依据与整改建议照常在页面上，
 // 前端必须展示警示，禁止把「无判定」渲染成「无风险」。
 export function judgeInsuranceEvidence(params) {
-  return request.post('/ai/insurance/evidence', params)
+    return request.post('/ai/insurance/evidence', params)
 }
 
 // ========== 危重预警（G-12，P4，护士工作站/床位管理共用） ==========
@@ -349,7 +349,7 @@ export function judgeInsuranceEvidence(params) {
 // data: [{ admissionId, patientName, bedNo, measureTime, items, totalScore, alertLevel, alertText }]
 // alertLevel: 0-无 1-关注 2-高危；评分口径单点在后端评分规则里，前端不要复算。
 export function scanWardDeterioration(params) {
-  return request.get('/ai/deterioration/wardScan', { params })
+    return request.get('/ai/deterioration/wardScan', {params})
 }
 
 // 单患者预警解释：仅 alertLevel≥1 的患者才调模型给观察建议；advice 是建议不是医嘱
@@ -357,7 +357,7 @@ export function scanWardDeterioration(params) {
 // data.degraded=true 时 advice 为空 —— 没有建议就如实说没有，界面警示条必显，
 // 禁止拿模板文字糊弄护士。
 export function explainDeterioration(params) {
-  return request.get('/ai/deterioration/explain', { params })
+    return request.get('/ai/deterioration/explain', {params})
 }
 
 // ========== AI 护理交接班（G-13，P4，护士工作站） ==========
@@ -367,105 +367,102 @@ export function explainDeterioration(params) {
 // data.source: 1-模型 2-规则模板；source=2 或 degraded=true 时警示必显。
 // 产物不写库 —— 护士确认后的正文由护士自己贴进交接班记录。
 export function composeNursingHandover(params) {
-  return request.post('/ai/nursingHandover/compose', params)
+    return request.post('/ai/nursingHandover/compose', params)
 }
 
 // ========== 运营问数配置（ai:operationQa:config，AI 管理台「问数配置」签页） ==========
 // 数据表（schema）配置：白名单表 + 用途说明 + 启用状态；运行时快照从这些表加载
 // params: { pageNum, pageSize, tableName?, isEnabled? }  data 为 PageResult<OperationQaSchemaListVO>
 export function getOperationQaSchemaPage(params) {
-  return request.post('/ai/operationQa/config/schemaListPage', params)
+    return request.post('/ai/operationQa/config/schemaListPage', params)
 }
 
 // 新增/修改数据表配置（id 空=新增 有值=修改）
 export function upsertOperationQaSchema(params) {
-  return request.post('/ai/operationQa/config/schemaUpsert', params)
+    return request.post('/ai/operationQa/config/schemaUpsert', params)
 }
 
 // 删除数据表配置（级联删该表列配置）
 export function deleteOperationQaSchema(id) {
-  return request.delete('/ai/operationQa/config/schemaDeleteById', { params: { id } })
+    return request.delete('/ai/operationQa/config/schemaDeleteById', {params: {id}})
 }
 
 // 数据列配置分页（按表查）
 // params: { pageNum, pageSize, tableName, isEnabled? }
 export function getOperationQaColumnPage(params) {
-  return request.post('/ai/operationQa/config/columnListPage', params)
+    return request.post('/ai/operationQa/config/columnListPage', params)
 }
 
 // 新增/修改数据列配置
 export function upsertOperationQaColumn(params) {
-  return request.post('/ai/operationQa/config/columnUpsert', params)
+    return request.post('/ai/operationQa/config/columnUpsert', params)
 }
 
 // 删除数据列配置
 export function deleteOperationQaColumn(id) {
-  return request.delete('/ai/operationQa/config/columnDeleteById', { params: { id } })
+    return request.delete('/ai/operationQa/config/columnDeleteById', {params: {id}})
 }
 
 // 语义映射分页（业务口径：语义词 → 表/列 + 权威口径，注入模型 prompt）
 // params: { pageNum, pageSize, term?, tableName?, isEnabled? }
 export function getOperationQaSemanticPage(params) {
-  return request.post('/ai/operationQa/config/semanticListPage', params)
+    return request.post('/ai/operationQa/config/semanticListPage', params)
 }
 
 // 新增/修改语义映射
 export function upsertOperationQaSemantic(params) {
-  return request.post('/ai/operationQa/config/semanticUpsert', params)
+    return request.post('/ai/operationQa/config/semanticUpsert', params)
 }
 
 // 删除语义映射
 export function deleteOperationQaSemantic(id) {
-  return request.delete('/ai/operationQa/config/semanticDeleteById', { params: { id } })
+    return request.delete('/ai/operationQa/config/semanticDeleteById', {params: {id}})
 }
 
 // 表间关系分页（join 图谱：源表.源列 → 目标表.目标列，注入模型 prompt 的权威 JOIN 键）
 // params: { pageNum, pageSize, sourceTable?, targetTable?, relationType?, isEnabled? }
 export function getOperationQaRelationPage(params) {
-  return request.post('/ai/operationQa/config/relationListPage', params)
+    return request.post('/ai/operationQa/config/relationListPage', params)
 }
 
 // 新增/修改表间关系
 export function upsertOperationQaRelation(params) {
-  return request.post('/ai/operationQa/config/relationUpsert', params)
+    return request.post('/ai/operationQa/config/relationUpsert', params)
 }
 
 // 删除表间关系
 export function deleteOperationQaRelation(id) {
-  return request.delete('/ai/operationQa/config/relationDeleteById', { params: { id } })
+    return request.delete('/ai/operationQa/config/relationDeleteById', {params: {id}})
 }
 
 // 启用表下拉选项（配置弹框选表用）
 export function getOperationQaSchemaSelectList() {
-  return request.get('/ai/operationQa/config/schemaSelectList')
+    return request.get('/ai/operationQa/config/schemaSelectList')
 }
 
 // 指定表的启用字段下拉选项（关系/语义配置弹框选列用）
 export function getOperationQaColumnSelectList(tableName) {
-  return request.get('/ai/operationQa/config/columnSelectList', { params: { tableName } })
+    return request.get('/ai/operationQa/config/columnSelectList', {params: {tableName}})
 }
 
 // 重写刷新：扫描当前库全表结构，一次性覆盖表/列配置（表结构同步唯一入口）
 export function rewriteOperationQaSchema() {
-  return request.post('/ai/operationQa/config/rewriteSchema')
+    return request.post('/ai/operationQa/config/rewriteSchema')
 }
 
 // ========== 提示词管理 ==========
 export function listPromptTemplates(params) {
-  return request.get('/ai/promptTemplate/listPage', { params })
+    return request.get('/ai/promptTemplate/listPage', {params})
 }
-export function getPromptTemplate(name) {
-  return request.get('/ai/promptTemplate/getByName', { params: { name } })
-}
+
 export function upsertPromptTemplate(data) {
-  return request.post('/ai/promptTemplate/upsert', data)
+    return request.post('/ai/promptTemplate/upsert', data)
 }
+
 export function activatePromptTemplate(id) {
-  return request.post('/ai/promptTemplate/activate', null, { params: { id } })
+    return request.post('/ai/promptTemplate/activate', null, {params: {id}})
 }
-export function listAvailablePromptNames() {
-  return request.get('/ai/promptTemplate/availableNames')
-}
+
 export function listPromptHistory(code) {
-  return request.get('/ai/promptTemplate/history', { params: { code } })
+    return request.get('/ai/promptTemplate/history', {params: {code}})
 }

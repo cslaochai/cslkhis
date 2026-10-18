@@ -3,22 +3,18 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.enums.AdmitStatusEnum;
-import com.his.common.enums.ObjectSignStatusEnum;
-import com.his.common.enums.SignBizTypeEnum;
-import com.his.common.enums.SignSceneEnum;
+import com.his.common.entity.CurrentUser;
+import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.CriticalNoticeDTO;
 import com.his.patient.entity.BizCriticalNotice;
-import com.his.common.enums.NoticeStatusEnum;
 import com.his.patient.mapper.BizCriticalNoticeMapper;
 import com.his.patient.service.CriticalNoticeService;
 import com.his.patient.vo.CriticalNoticeVO;
 import com.his.system.dto.SignCommandDTO;
-import com.his.common.entity.CurrentUser;
 import com.his.system.service.DeptScopeService;
 import com.his.system.service.EmrSignatureService;
 import com.his.system.service.RedisSequenceService;
@@ -35,7 +31,7 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * 病危重通知服务实现（sql/161）。
+ * 病危重通知服务实现
  */
 @Slf4j
 @Service
@@ -50,17 +46,16 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
      * 手写签名 dataURL 上限 512KB（canvas PNG 正常几十 KB，兜住恶意大串）
      */
     private static final int SIGNATURE_MAX = 512 * 1024;
-    private final DeptScopeService deptScopeService;
-    private final BizCriticalNoticeMapper bizCriticalNoticeMapper;
     private final RedisSequenceService redisSequenceService;
+
+    private final DeptScopeService deptScopeService;
+
+    private final BizCriticalNoticeMapper bizCriticalNoticeMapper;
+
     private final EmrSignatureService emrSignatureService;
 
-    // 查询
-
-    // 填写 / 签发 / 签收 / 作废 / 打印
-
     @Override
-    public PageResult<CriticalNoticeVO.Row> listPage(CriticalNoticeDTO.QueryPage query) {
+    public PageResult<CriticalNoticeVO.Row> listPage(CriticalNoticeDTO.PageQuery query) {
         Page<CriticalNoticeVO.Row> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<Long> deptIds = scopedDeptIds(query.getDeptId());
         List<CriticalNoticeVO.Row> records = bizCriticalNoticeMapper.selectNoticePage(page,
@@ -77,8 +72,6 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
         }
         return detail;
     }
-
-    // 内部
 
     @Override
     public CriticalNoticeVO.Base base(Long admissionId) {
@@ -131,8 +124,8 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
         if (snapshot.getAdmitTime() != null && notifyTime.isBefore(TimeUtil.toSeconds(snapshot.getAdmitTime()))) {
             throw new BusinessException("告知时间不能早于入院时间");
         }
-        // 神志码值白名单已由 DTO @AllowedValues 收口（web 入口 400）
 
+        // 神志码值白名单已由 DTO @AllowedValues 收口（web 入口 400）
         BizCriticalNotice notice;
         boolean isNew = dto.getId() == null;
         if (isNew) {
@@ -148,7 +141,7 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
                 throw new BusinessException("通知单不允许改挂到另一次住院");
             }
             if (!Objects.equals(NoticeStatusEnum.DRAFT.getCode(), notice.getNoticeStatus())) {
-                throw new BusinessException(BizCriticalNotice.statusText(notice.getNoticeStatus())
+                throw new BusinessException(NoticeStatusEnum.getLabel(notice.getNoticeStatus(), "—")
                         + "的通知单不能修改；已签发要改先在「签名中心」作废签名并走作废重开");
             }
             requireUnsigned(notice);
@@ -196,8 +189,8 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
         }
         BizCriticalNotice notice = requireNotice(dto.getId());
         if (!Objects.equals(NoticeStatusEnum.DRAFT.getCode(), notice.getNoticeStatus())) {
-            throw new BusinessException("只有「" + BizCriticalNotice.statusText(NoticeStatusEnum.DRAFT.getCode())
-                    + "」的通知单能签发，当前为「" + BizCriticalNotice.statusText(notice.getNoticeStatus()) + "」");
+            throw new BusinessException("只有「" + NoticeStatusEnum.getLabel(NoticeStatusEnum.DRAFT.getCode(), "—")
+                    + "」的通知单能签发，当前为「" + NoticeStatusEnum.getLabel(notice.getNoticeStatus(), "—") + "」");
         }
         requireUnsigned(notice);
         assertDeptAccessible(notice.getDeptId());
@@ -229,7 +222,7 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
         cmd.setSignerDeptName(operatorUser.getDeptName());
         cmd.setSignerTitle(TextUtil.cutToNull(bizCriticalNoticeMapper.selectEmployeeTitle(me), 50));
         cmd.setClientIp(dto.getClientIp());
-        cmd.setRemark("病危重通知签发（" + BizCriticalNotice.typeText(notice.getNoticeType()) + "）");
+        cmd.setRemark("病危重通知签发（" + NoticeTypeEnum.getLabel(notice.getNoticeType()) + "）");
         try {
             SignatureVO sig = emrSignatureService.sign(cmd);
             // 锚点三件套必须在这里一起写：provider 的 applySignAnchor 已把 sign_status 置 1，
@@ -251,7 +244,7 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
         BizCriticalNotice notice = requireNotice(dto.getId());
         if (!Objects.equals(NoticeStatusEnum.ISSUED.getCode(), notice.getNoticeStatus())) {
             throw new BusinessException("只有「已签发」等待签收的通知单能签收，当前为「"
-                    + BizCriticalNotice.statusText(notice.getNoticeStatus()) + "」");
+                    + NoticeStatusEnum.getLabel(notice.getNoticeStatus(), "—") + "」");
         }
         assertDeptAccessible(notice.getDeptId());
         // 关系码值白名单已由 DTO @AllowedValues 收口（web 入口 400；null 也由 DTO @NotNull 挡住）

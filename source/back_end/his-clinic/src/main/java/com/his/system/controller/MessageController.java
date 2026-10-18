@@ -2,7 +2,7 @@ package com.his.system.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.system.dto.MessageQueryPageDTO;
+import com.his.system.dto.MessagePageQueryDTO;
 import com.his.system.service.SysMessageService;
 import com.his.system.vo.MessageTypeCountVO;
 import com.his.system.vo.SysMessageVO;
@@ -43,7 +43,7 @@ public class MessageController {
 
     @Operation(summary = "查询消息列表")
     @GetMapping("/listPage")
-    public Result<PageResult<SysMessageVO>> listPage(@Valid MessageQueryPageDTO queryDTO) {
+    public Result<PageResult<SysMessageVO>> listPage(@Valid MessagePageQueryDTO queryDTO) {
         return Result.success(sysMessageService.queryMessagePage(queryDTO));
     }
 

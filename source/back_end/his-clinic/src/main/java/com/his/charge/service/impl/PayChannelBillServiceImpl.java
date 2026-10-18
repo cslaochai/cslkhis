@@ -65,7 +65,7 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
     }
 
     @Override
-    public PageResult<PayChannelBillVO> selectPage(PayChannelQueryPageDTO query) {
+    public PageResult<PayChannelBillVO> selectPage(PayChannelPageQueryDTO query) {
         LambdaQueryWrapper<BizPayChannelBill> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(query.getChannel() != null, BizPayChannelBill::getChannel, query.getChannel())
                 .eq(query.getMatchStatus() != null, BizPayChannelBill::getMatchStatus, query.getMatchStatus())

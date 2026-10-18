@@ -4,17 +4,18 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.entity.CurrentUser;
+import com.his.common.enums.AnesthesiaFollowupStatusEnum;
 import com.his.common.enums.AnesthesiaRecordStatusEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
-import com.his.operation.dto.AnesthesiaFollowupQueryPageDTO;
+import com.his.operation.dto.AnesthesiaFollowupPageQueryDTO;
 import com.his.operation.dto.AnesthesiaFollowupUpsertDTO;
 import com.his.operation.entity.BizAnesthesiaFollowup;
 import com.his.operation.entity.BizAnesthesiaRecord;
 import com.his.operation.entity.BizOperationApply;
-import com.his.common.enums.AnesthesiaFollowupStatusEnum;
 import com.his.operation.mapper.BizAnesthesiaFollowupMapper;
 import com.his.operation.mapper.BizAnesthesiaRecordMapper;
 import com.his.operation.mapper.BizOperationApplyMapper;
@@ -22,10 +23,9 @@ import com.his.operation.service.AnesthesiaFollowupService;
 import com.his.operation.support.FollowupAdverseItems;
 import com.his.operation.vo.AnesthesiaFollowupVO;
 import com.his.operation.vo.OperationApplyVO;
-import com.his.common.entity.CurrentUser;
 import com.his.system.service.DeptScopeService;
-import com.his.system.utils.UserUtils;
 import com.his.system.service.RedisSequenceService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -58,7 +58,7 @@ public class AnesthesiaFollowupServiceImpl extends ServiceImpl<BizAnesthesiaFoll
      * 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)）
      */
     @Override
-    public IPage<AnesthesiaFollowupVO> listPage(AnesthesiaFollowupQueryPageDTO query) {
+    public IPage<AnesthesiaFollowupVO> listPage(AnesthesiaFollowupPageQueryDTO query) {
         IPage<AnesthesiaFollowupVO> page = bizAnesthesiaFollowupMapper.selectFollowupPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query, deptScopeService.scopedDeptIds(null));
         page.getRecords().forEach(this::decorate);
@@ -290,7 +290,9 @@ public class AnesthesiaFollowupServiceImpl extends ServiceImpl<BizAnesthesiaFoll
         }
     }
 
-    /** 随访单无科室列，归属科室取关联手术申请单的申请科室 */
+    /**
+     * 随访单无科室列，归属科室取关联手术申请单的申请科室
+     */
     private void assertApplyAccessible(Long applyId) {
         if (applyId == null) {
             return;
@@ -320,7 +322,7 @@ public class AnesthesiaFollowupServiceImpl extends ServiceImpl<BizAnesthesiaFoll
     private void decorate(AnesthesiaFollowupVO vo) {
         vo.setGenderText(SysGenderEnum.getLabel(vo.getGender()));
         vo.setRecoveryText(FollowupAdverseItems.recoveryText(vo.getRecovery()));
-        vo.setFollowupStatusText(FollowupAdverseItems.statusText(vo.getFollowupStatus()));
+        vo.setFollowupStatusText(AnesthesiaFollowupStatusEnum.getLabel(vo.getFollowupStatus(), "—"));
         vo.setRoundText(FollowupAdverseItems.roundText(vo.getRoundNo()));
         try {
             vo.setAdverseItemsText(FollowupAdverseItems.summaryText(vo.getAdverseItems()));

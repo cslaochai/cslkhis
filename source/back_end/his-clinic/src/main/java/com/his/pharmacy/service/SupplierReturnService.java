@@ -2,7 +2,7 @@ package com.his.pharmacy.service;
 
 import com.his.common.base.PageResult;
 import com.his.pharmacy.dto.SupplierReturnActionDTO;
-import com.his.pharmacy.dto.SupplierReturnQueryPageDTO;
+import com.his.pharmacy.dto.SupplierReturnPageQueryDTO;
 import com.his.pharmacy.dto.SupplierReturnUpsertDTO;
 import com.his.pharmacy.vo.SupplierReturnVO;
 
@@ -11,7 +11,7 @@ import com.his.pharmacy.vo.SupplierReturnVO;
  */
 public interface SupplierReturnService {
 
-    PageResult<SupplierReturnVO> listPage(SupplierReturnQueryPageDTO query);
+    PageResult<SupplierReturnVO> listPage(SupplierReturnPageQueryDTO query);
 
     /** 详情（含明细与退货出库流水） */
     SupplierReturnVO getDetailById(Long id);

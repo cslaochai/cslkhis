@@ -27,7 +27,7 @@ public class InpatientOrderController {
 
     @Operation(summary = "医嘱分页（医生站 / 护士站共用；pendingVerifyOnly=1 只看待校对）")
     @GetMapping("/listPage")
-    public Result<IPage<InpatientOrderVO>> listPage(@Valid InpatientOrderQueryPageDTO query) {
+    public Result<IPage<InpatientOrderVO>> listPage(@Valid InpatientOrderPageQueryDTO query) {
         return Result.success(inpatientOrderService.listPage(query));
     }
 
@@ -62,7 +62,7 @@ public class InpatientOrderController {
 
     @Operation(summary = "护士待执行队列（加急优先、按计划时间升序；会补当天长期医嘱计划）")
     @GetMapping("/execPendingList")
-    public Result<IPage<InpatientOrderExecVO>> execPendingList(@Valid OrderExecQueryPageDTO query) {
+    public Result<IPage<InpatientOrderExecVO>> execPendingList(@Valid OrderExecPageQueryDTO query) {
         return Result.success(inpatientOrderService.execPendingList(query));
     }
 
@@ -75,7 +75,7 @@ public class InpatientOrderController {
 
     @Operation(summary = "执行记录查询（含已执行 / 已跳过，留痕不删除）")
     @GetMapping("/execList")
-    public Result<IPage<InpatientOrderExecVO>> execList(@Valid OrderExecQueryPageDTO query) {
+    public Result<IPage<InpatientOrderExecVO>> execList(@Valid OrderExecPageQueryDTO query) {
         return Result.success(inpatientOrderService.execList(query));
     }
 

@@ -2,7 +2,7 @@ package com.his.charge.controller;
 
 
 import com.his.charge.dto.YbCatalogImportDTO;
-import com.his.charge.dto.YbCatalogQueryPageDTO;
+import com.his.charge.dto.YbCatalogPageQueryDTO;
 import com.his.charge.dto.YbCatalogUpsertDTO;
 import com.his.charge.service.YbCatalogService;
 import com.his.charge.vo.BizYbCatalogVO;
@@ -30,7 +30,7 @@ public class YbCatalogController {
     @PreAuthorize("hasAuthority('finance:insuranceMapping:list')")
     @Operation(summary = "目录分页（对照候选弹窗复用本接口）")
     @GetMapping("/listPage")
-    public Result<PageResult<BizYbCatalogVO>> listPage(@Valid YbCatalogQueryPageDTO queryDTO) {
+    public Result<PageResult<BizYbCatalogVO>> listPage(@Valid YbCatalogPageQueryDTO queryDTO) {
         return Result.success(ybCatalogService.listPage(queryDTO));
     }
 

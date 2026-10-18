@@ -2,7 +2,7 @@ package com.his.emr.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
-import com.his.emr.dto.RuleCheckQueryPageDTO;
+import com.his.emr.dto.RuleCheckPageQueryDTO;
 import com.his.emr.entity.BizClinicalRuleCheck;
 import com.his.emr.vo.BizClinicalRuleCheckVO;
 
@@ -14,7 +14,7 @@ public interface ClinicalRuleCheckService extends IService<BizClinicalRuleCheck>
     /**
      * 查询校验记录列表
      */
-    PageResult<BizClinicalRuleCheckVO> listPage(RuleCheckQueryPageDTO queryPageDTO);
+    PageResult<BizClinicalRuleCheckVO> listPage(RuleCheckPageQueryDTO pageQueryDTO);
 
     /**
      * 获取校验详情

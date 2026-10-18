@@ -8,7 +8,7 @@ import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.NutritionStatsGenerateDTO;
-import com.his.patient.dto.NutritionStatsQueryPageDTO;
+import com.his.patient.dto.NutritionStatsPageQueryDTO;
 import com.his.patient.entity.BizNutritionStats;
 import com.his.common.enums.StatsScopeEnum;
 import com.his.patient.mapper.BizNutritionStatsMapper;
@@ -114,7 +114,7 @@ public class NutritionStatsServiceImpl extends ServiceImpl<BizNutritionStatsMapp
     }
 
     @Override
-    public PageResult<NutritionStatsVO> statsListPage(NutritionStatsQueryPageDTO query) {
+    public PageResult<NutritionStatsVO> statsListPage(NutritionStatsPageQueryDTO query) {
         Page<NutritionStatsVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         Page<NutritionStatsVO> result = (Page<NutritionStatsVO>) bizNutritionStatsMapper.selectStatsPage(page, query);
         result.getRecords().forEach(this::applyTargets);
@@ -123,7 +123,7 @@ public class NutritionStatsServiceImpl extends ServiceImpl<BizNutritionStatsMapp
     }
 
     @Override
-    public String statsExportCsv(NutritionStatsQueryPageDTO query) {
+    public String statsExportCsv(NutritionStatsPageQueryDTO query) {
         List<NutritionStatsVO> rows = bizNutritionStatsMapper.selectStatsForExport(query);
         StringBuilder sb = new StringBuilder(1024);
         sb.append('\uFEFF'); // BOM：Excel 打开中文不乱码

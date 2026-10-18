@@ -13,7 +13,7 @@ import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.emr.dto.TcmDecoctAdvanceDTO;
 import com.his.emr.dto.TcmDecoctCancelDTO;
-import com.his.emr.dto.TcmDecoctQueryPageDTO;
+import com.his.emr.dto.TcmDecoctPageQueryDTO;
 import com.his.emr.entity.BizPrescription;
 import com.his.emr.entity.BizPrescriptionDetail;
 import com.his.emr.entity.BizTcmDecoct;
@@ -63,7 +63,7 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
     private final SysAuditLogService sysAuditLogService;
 
     @Override
-    public PageResult<TcmDecoctVO> listPage(TcmDecoctQueryPageDTO query) {
+    public PageResult<TcmDecoctVO> listPage(TcmDecoctPageQueryDTO query) {
         Page<BizTcmDecoct> page = baseMapper.selectDecoctPage(
                 new Page<>(query.getPageNum(), query.getPageSize()),
                 query.getDecoctStatus(), TextUtil.hasText(query.getKeyword()) ? query.getKeyword().trim() : null);

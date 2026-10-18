@@ -180,7 +180,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     }
 
     @Override
-    public PageResult<BizMedicalRecordVO> listPage(MedicalRecordQueryPageDTO queryDTO) {
+    public PageResult<BizMedicalRecordVO> listPage(MedicalRecordPageQueryDTO queryDTO) {
         LambdaQueryWrapper<BizMedicalRecord> wrapper = new LambdaQueryWrapper<>();
         // 科室数据权限收口（M6）：先越权校验显式 deptId，再按授权科室集合收敛（不传时不再等于看全院）。
         Long scopedDeptId = deptScopeService.resolveDeptId(queryDTO.getDeptId());

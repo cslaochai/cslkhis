@@ -2,7 +2,7 @@ package com.his.system.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
-import com.his.system.dto.MessageQueryPageDTO;
+import com.his.system.dto.MessagePageQueryDTO;
 import com.his.system.entity.SysMessage;
 import com.his.system.vo.MessageTypeCountVO;
 import com.his.system.vo.SysMessageVO;
@@ -18,7 +18,7 @@ public interface SysMessageService extends IService<SysMessage> {
     /**
      * 当前登录人的收件箱分页（收件人由实现内取当前登录人，调用方不传身份）。
      */
-    PageResult<SysMessageVO> queryMessagePage(MessageQueryPageDTO queryDTO);
+    PageResult<SysMessageVO> queryMessagePage(MessagePageQueryDTO queryDTO);
 
     /**
      * 为当前登录人建立实时推送连接。

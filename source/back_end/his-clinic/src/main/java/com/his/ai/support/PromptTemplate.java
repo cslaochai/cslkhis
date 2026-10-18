@@ -2,16 +2,13 @@ package com.his.ai.support;
 
 import com.his.ai.entity.SysAiPromptTemplate;
 import com.his.ai.mapper.SysAiPromptTemplateMapper;
+import com.his.common.enums.YesOrNoEnum;
 import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -102,7 +99,7 @@ public class PromptTemplate {
         SysAiPromptTemplate dbRow = promptTemplateMapper.selectOne(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysAiPromptTemplate>()
                         .eq(SysAiPromptTemplate::getTemplateCode, name)
-                        .eq(SysAiPromptTemplate::getIsActive, 1)
+                        .eq(SysAiPromptTemplate::getIsActive, YesOrNoEnum.YES.getCode())
                         .last("LIMIT 1"));
         if (dbRow == null || !TextUtil.hasText(dbRow.getContent())) {
             throw new IllegalStateException("提示词模板未配置：" + name + "，请在「RAG知识库 → 提示词管理」中维护");

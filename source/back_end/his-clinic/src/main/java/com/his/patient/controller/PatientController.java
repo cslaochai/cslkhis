@@ -2,7 +2,7 @@ package com.his.patient.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.patient.dto.PatientQueryPageDTO;
+import com.his.patient.dto.PatientPageQueryDTO;
 import com.his.patient.dto.PatientRegisterDTO;
 import com.his.patient.dto.PatientUpsertDTO;
 import com.his.patient.service.BizPatientService;
@@ -30,7 +30,7 @@ public class PatientController {
 
     @Operation(summary = "分页查询患者列表")
     @PostMapping("/listPage")
-    public Result<PageResult<PatientVO>> listPage(@Valid @RequestBody PatientQueryPageDTO queryDTO) {
+    public Result<PageResult<PatientVO>> listPage(@Valid @RequestBody PatientPageQueryDTO queryDTO) {
         return Result.success(bizPatientService.queryPatientPage(queryDTO));
     }
 

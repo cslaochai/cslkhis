@@ -2,7 +2,7 @@ package com.his.system.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.system.dto.SignCertIssueDTO;
-import com.his.system.dto.SignCertQueryPageDTO;
+import com.his.system.dto.SignCertPageQueryDTO;
 import com.his.system.dto.SignCertRevokeDTO;
 import com.his.system.entity.SysSignCert;
 import com.his.system.vo.SignCertVO;
@@ -31,7 +31,7 @@ public interface SignCertService {
 
     SignCertVO getById(Long id);
 
-    IPage<SignCertVO> listPage(SignCertQueryPageDTO query);
+    IPage<SignCertVO> listPage(SignCertPageQueryDTO query);
 
     /**
      * 下拉：按员工姓名/证书号模糊查有效证书

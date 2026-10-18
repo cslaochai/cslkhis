@@ -3,7 +3,7 @@ package com.his.ai.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.ai.dto.KnowledgeQueryLogQueryPageDTO;
+import com.his.ai.dto.KnowledgeQueryLogPageQueryDTO;
 import com.his.ai.entity.SysKnowledgeQueryLog;
 import com.his.ai.mapper.SysKnowledgeQueryLogMapper;
 import com.his.ai.service.KnowledgeQueryLogService;
@@ -58,7 +58,7 @@ public class KnowledgeQueryLogServiceImpl implements KnowledgeQueryLogService {
     }
 
     @Override
-    public IPage<KnowledgeQueryLogVO> listPage(KnowledgeQueryLogQueryPageDTO dto) {
+    public IPage<KnowledgeQueryLogVO> listPage(KnowledgeQueryLogPageQueryDTO dto) {
         QueryWrapper<SysKnowledgeQueryLog> qw = new QueryWrapper<>();
         qw.orderByDesc("create_time");
         if (TextUtil.hasText(dto.getQuestion())) {

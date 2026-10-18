@@ -8,7 +8,7 @@ public interface ReferralService {
 
     ReferralVO create(ReferralDTO.Create dto);
 
-    IPage<ReferralVO> listPage(ReferralDTO.QueryPage q);
+    IPage<ReferralVO> listPage(ReferralDTO.PageQuery q);
 
     ReferralVO getDetailById(Long referralId);
 

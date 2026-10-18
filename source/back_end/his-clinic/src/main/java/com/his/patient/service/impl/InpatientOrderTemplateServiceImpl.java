@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.patient.dto.InpatientOrderItemDTO;
-import com.his.patient.dto.InpatientOrderTemplateQueryPageDTO;
+import com.his.patient.dto.InpatientOrderTemplatePageQueryDTO;
 import com.his.patient.dto.InpatientOrderTemplateUpsertDTO;
 import com.his.patient.entity.BizInpatientOrderTemplate;
 import com.his.patient.entity.BizInpatientOrderTemplateItem;
@@ -141,7 +141,7 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
     }
 
     @Override
-    public IPage<InpatientOrderTemplateListVO> listPage(InpatientOrderTemplateQueryPageDTO query) {
+    public IPage<InpatientOrderTemplateListVO> listPage(InpatientOrderTemplatePageQueryDTO query) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");

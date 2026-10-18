@@ -1,7 +1,7 @@
 package com.his.charge.service;
 
 
-import com.his.charge.dto.ComplianceAuditQueryPageDTO;
+import com.his.charge.dto.ComplianceAuditPageQueryDTO;
 import com.his.charge.dto.ComplianceBatchAuditDTO;
 import com.his.charge.dto.SettlementCodingUpsertDTO;
 import com.his.charge.vo.ComplianceAuditDetailVO;
@@ -45,7 +45,7 @@ public interface ComplianceAuditService {
     /**
      * 分页查询审核记录
      */
-    PageResult<ComplianceAuditVO> selectAuditPage(ComplianceAuditQueryPageDTO queryDTO);
+    PageResult<ComplianceAuditVO> selectAuditPage(ComplianceAuditPageQueryDTO queryDTO);
 
     /**
      * 查询审核详情（含全部规则判定明细）

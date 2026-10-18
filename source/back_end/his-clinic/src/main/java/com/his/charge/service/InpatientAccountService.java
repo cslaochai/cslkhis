@@ -2,7 +2,7 @@ package com.his.charge.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.charge.dto.InpatientSettlementUpsertDTO;
-import com.his.charge.dto.PrepayQueryPageDTO;
+import com.his.charge.dto.PrepayPageQueryDTO;
 import com.his.charge.dto.PrepayUpsertDTO;
 import com.his.charge.vo.*;
 import com.his.charge.vo.PrepayBalanceVO;
@@ -19,7 +19,7 @@ public interface InpatientAccountService {
     /**
      * 预交金流水分页（按收退时间倒序；充值正、退款负）
      */
-    IPage<PrepayVO> prepayListPage(PrepayQueryPageDTO query);
+    IPage<PrepayVO> prepayListPage(PrepayPageQueryDTO query);
 
     /**
      * 预交金账户（充值合计 / 柜面退款合计 / 当前余额 / 流水笔数）

@@ -2,7 +2,7 @@ package com.his.charge.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.charge.dto.PrepayQueryPageDTO;
+import com.his.charge.dto.PrepayPageQueryDTO;
 import com.his.charge.entity.BizPaymentTxn;
 import com.his.charge.vo.PrepayVO;
 import org.apache.ibatis.annotations.Mapper;
@@ -107,7 +107,7 @@ public interface BizPaymentTxnMapper extends BaseMapper<BizPaymentTxn> {
                    OR (#{q.prepayType} = 2 AND t.direction = 2))
             ORDER BY t.txn_time DESC, t.id DESC
             """)
-    IPage<PrepayVO> selectPrepayPage(IPage<PrepayVO> page, @Param("q") PrepayQueryPageDTO query);
+    IPage<PrepayVO> selectPrepayPage(IPage<PrepayVO> page, @Param("q") PrepayPageQueryDTO query);
 
     /**
      * 本次住院的预交金净额（充值 − 柜面退款，SQL 侧带符号 SUM；不含账单收退款）

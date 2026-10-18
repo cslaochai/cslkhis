@@ -2,7 +2,7 @@ package com.his.patient.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.patient.dto.InpatientOrderQueryPageDTO;
+import com.his.patient.dto.InpatientOrderPageQueryDTO;
 import com.his.patient.entity.BizInpatientOrder;
 import com.his.patient.vo.InpatientOrderVO;
 import org.apache.ibatis.annotations.Mapper;
@@ -54,7 +54,7 @@ public interface BizInpatientOrderMapper extends BaseMapper<BizInpatientOrder> {
             ORDER BY o.order_status ASC, o.order_time DESC, o.id DESC
             </script>
             """)
-    IPage<InpatientOrderVO> selectOrderPage(IPage<InpatientOrderVO> page, @Param("q") InpatientOrderQueryPageDTO query);
+    IPage<InpatientOrderVO> selectOrderPage(IPage<InpatientOrderVO> page, @Param("q") InpatientOrderPageQueryDTO query);
 
     /**
      * 在院患者的有效医嘱条数（长期未停 + 临时未完成），医生站/护士站首页卡片用

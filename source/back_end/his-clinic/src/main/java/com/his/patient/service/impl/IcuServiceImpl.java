@@ -69,7 +69,7 @@ public class IcuServiceImpl extends ServiceImpl<BizIcuStayMapper, BizIcuStay> im
     }
 
     @Override
-    public PageResult<IcuVO.StayVO> stayListPage(IcuStayQueryPageDTO query) {
+    public PageResult<IcuVO.StayVO> stayListPage(IcuStayPageQueryDTO query) {
         Page<IcuVO.StayVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<Long> wardIds = scopedWardIds(query.getWardId());
         List<IcuVO.StayVO> records = bizIcuStayMapper.selectStayPage(page,
@@ -213,7 +213,7 @@ public class IcuServiceImpl extends ServiceImpl<BizIcuStayMapper, BizIcuStay> im
     }
 
     @Override
-    public PageResult<IcuVO.MonitorVO> monitorListPage(IcuMonitorQueryPageDTO query) {
+    public PageResult<IcuVO.MonitorVO> monitorListPage(IcuMonitorPageQueryDTO query) {
         Page<IcuVO.MonitorVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         if (query.getStayId() != null) {
             assertWardAccessible(requireStay(query.getStayId()).getWardId());

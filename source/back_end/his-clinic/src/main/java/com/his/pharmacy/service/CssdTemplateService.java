@@ -12,7 +12,7 @@ public interface CssdTemplateService {
 
     List<CssdPackTemplateSelectListVO> selectList();
 
-    IPage<CssdPackTemplateVO> listPage(CssdDTO.TemplateQueryPage q);
+    IPage<CssdPackTemplateVO> listPage(CssdDTO.TemplatePageQuery q);
 
     CssdPackTemplateVO getDetailById(Long templateId);
 

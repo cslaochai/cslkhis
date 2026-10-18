@@ -5,7 +5,7 @@ import com.his.common.base.Result;
 import com.his.pharmacy.dto.PivasActionDTO;
 import com.his.pharmacy.dto.PivasAuditDTO;
 import com.his.pharmacy.dto.PivasGenerateDTO;
-import com.his.pharmacy.dto.PivasQueryPageDTO;
+import com.his.pharmacy.dto.PivasPageQueryDTO;
 import com.his.pharmacy.service.PivasService;
 import com.his.pharmacy.vo.PivasCandidateVO;
 import com.his.pharmacy.vo.PivasStatsVO;
@@ -52,7 +52,7 @@ public class PivasController {
     @PreAuthorize("hasAuthority('pharmacy:pivas:list')")
     @Operation(summary = "静配单分页")
     @PostMapping("/listPage")
-    public Result<PageResult<PivasVO>> listPage(@Valid @RequestBody PivasQueryPageDTO dto) {
+    public Result<PageResult<PivasVO>> listPage(@Valid @RequestBody PivasPageQueryDTO dto) {
         return Result.success(pivasService.listPage(dto));
     }
 

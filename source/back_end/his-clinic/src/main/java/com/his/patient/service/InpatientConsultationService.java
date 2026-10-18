@@ -12,7 +12,7 @@ public interface InpatientConsultationService {
     /**
      * 会诊分页
      */
-    IPage<ConsultationVO> listPage(ConsultationQueryPageDTO query);
+    IPage<ConsultationVO> listPage(ConsultationPageQueryDTO query);
 
     /**
      * 会诊详情

@@ -1,7 +1,7 @@
 package com.his.charge.controller;
 
 
-import com.his.charge.dto.PaymentTxnQueryPageDTO;
+import com.his.charge.dto.PaymentTxnPageQueryDTO;
 import com.his.charge.service.PaymentService;
 import com.his.charge.vo.BizPaymentTxnVO;
 import com.his.common.base.PageResult;
@@ -29,7 +29,7 @@ public class PaymentTxnController {
     @Operation(summary = "分页查询支付流水")
     @PreAuthorize("hasAuthority('finance:payTxn:list')")
     @PostMapping("/listPage")
-    public Result<PageResult<BizPaymentTxnVO>> listPage(@Valid @RequestBody PaymentTxnQueryPageDTO query) {
+    public Result<PageResult<BizPaymentTxnVO>> listPage(@Valid @RequestBody PaymentTxnPageQueryDTO query) {
         return Result.success(paymentService.selectPage(query));
     }
 

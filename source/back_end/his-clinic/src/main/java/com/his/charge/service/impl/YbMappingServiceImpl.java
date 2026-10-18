@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.dto.YbAutoMatchDTO;
 import com.his.charge.dto.YbMapDTO;
-import com.his.charge.dto.YbMappingQueryPageDTO;
+import com.his.charge.dto.YbMappingPageQueryDTO;
 import com.his.charge.entity.BizYbCatalog;
 import com.his.charge.entity.BizYbMapping;
 import com.his.charge.mapper.BizYbCatalogMapper;
@@ -37,7 +37,7 @@ public class YbMappingServiceImpl extends ServiceImpl<BizYbMappingMapper, BizYbM
     private final BizYbCatalogMapper bizYbCatalogMapper;
 
     @Override
-    public PageResult<YbMappingListVO> listPage(YbMappingQueryPageDTO queryDTO) {
+    public PageResult<YbMappingListVO> listPage(YbMappingPageQueryDTO queryDTO) {
         IPage<YbMappingListVO> page = new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize());
         page = switch (queryDTO.getItemType() == null ? 0 : queryDTO.getItemType()) {
             case 1 -> bizYbMappingMapper.selectDrugPage(page, queryDTO);

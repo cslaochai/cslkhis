@@ -4,7 +4,7 @@ import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.emr.dto.RuleCheckExecuteDTO;
 import com.his.emr.dto.RuleCheckHandleDTO;
-import com.his.emr.dto.RuleCheckQueryPageDTO;
+import com.his.emr.dto.RuleCheckPageQueryDTO;
 import com.his.emr.service.ClinicalRuleCheckService;
 import com.his.emr.vo.BizClinicalRuleCheckVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,7 +28,7 @@ public class ClinicalRuleCheckController {
 
     @Operation(summary = "分页查询校验记录")
     @PostMapping("/listPage")
-    public Result<PageResult<BizClinicalRuleCheckVO>> listPage(@Valid @RequestBody RuleCheckQueryPageDTO queryDTO) {
+    public Result<PageResult<BizClinicalRuleCheckVO>> listPage(@Valid @RequestBody RuleCheckPageQueryDTO queryDTO) {
         return Result.success(clinicalRuleCheckService.listPage(queryDTO));
     }
 

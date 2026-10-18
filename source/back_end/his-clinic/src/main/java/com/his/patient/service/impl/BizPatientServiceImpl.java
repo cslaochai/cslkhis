@@ -14,7 +14,7 @@ import com.his.common.enums.QueueStatusEnum;
 import com.his.system.service.RedisSequenceService;
 import com.his.common.util.SensitiveMaskUtil;
 import com.his.common.util.TextUtil;
-import com.his.patient.dto.PatientQueryPageDTO;
+import com.his.patient.dto.PatientPageQueryDTO;
 import com.his.patient.dto.PatientRegisterDTO;
 import com.his.patient.dto.PatientSearchScopeDTO;
 import com.his.patient.dto.PatientUpsertDTO;
@@ -371,7 +371,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
     }
 
     @Override
-    public PageResult<PatientVO> queryPatientPage(PatientQueryPageDTO queryDTO) {
+    public PageResult<PatientVO> queryPatientPage(PatientPageQueryDTO queryDTO) {
         // 如果有标签过滤，先查询有该标签的患者ID列表
         List<Long> tagPatientIds = null;
         if (queryDTO.getTagId() != null) {

@@ -55,7 +55,7 @@ public class MedicalWasteController {
 
     @Operation(summary = "医废登记分页查询")
     @PostMapping("/listPage")
-    public Result<PageResult<WasteVO>> listPage(@Valid @RequestBody WasteDTO.QueryPage dto) {
+    public Result<PageResult<WasteVO>> listPage(@Valid @RequestBody WasteDTO.PageQuery dto) {
         var page = wasteService.listPage(dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));

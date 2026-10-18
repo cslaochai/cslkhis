@@ -7,7 +7,7 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.system.dto.DutyPostQueryPageDTO;
+import com.his.system.dto.DutyPostPageQueryDTO;
 import com.his.system.dto.DutyPostUpsertDTO;
 import com.his.system.entity.BizDutyPost;
 import com.his.system.entity.BizShift;
@@ -81,7 +81,7 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
     }
 
     @Override
-    public PageResult<DutyPostVO> pageVO(DutyPostQueryPageDTO dto) {
+    public PageResult<DutyPostVO> pageVO(DutyPostPageQueryDTO dto) {
         LambdaQueryWrapper<BizDutyPost> wrapper = scoped(new LambdaQueryWrapper<BizDutyPost>()
                 .eq(dto.getDutyScope() != null, BizDutyPost::getDutyScope, dto.getDutyScope())
                 .eq(dto.getOrgType() != null, BizDutyPost::getOrgType, dto.getOrgType())

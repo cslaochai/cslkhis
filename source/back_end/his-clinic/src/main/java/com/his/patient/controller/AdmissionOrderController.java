@@ -3,7 +3,7 @@ package com.his.patient.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.Result;
 import com.his.patient.dto.AdmissionOrderCancelDTO;
-import com.his.patient.dto.AdmissionOrderQueryPageDTO;
+import com.his.patient.dto.AdmissionOrderPageQueryDTO;
 import com.his.patient.dto.AdmissionOrderUpsertDTO;
 import com.his.patient.service.AdmissionOrderService;
 import com.his.patient.vo.AdmissionOrderVO;
@@ -36,7 +36,7 @@ public class AdmissionOrderController {
 
     @Operation(summary = "住院证分页（住院处待收治看板）")
     @GetMapping("/listPage")
-    public Result<IPage<AdmissionOrderVO>> listPage(@Valid AdmissionOrderQueryPageDTO query) {
+    public Result<IPage<AdmissionOrderVO>> listPage(@Valid AdmissionOrderPageQueryDTO query) {
         return Result.success(admissionOrderService.listPage(query));
     }
 

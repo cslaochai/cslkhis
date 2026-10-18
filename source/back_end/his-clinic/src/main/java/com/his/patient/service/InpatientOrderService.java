@@ -52,12 +52,12 @@ public interface InpatientOrderService {
     /**
      * 医嘱分页（医生站 / 护士站共用）
      */
-    IPage<InpatientOrderVO> listPage(InpatientOrderQueryPageDTO query);
+    IPage<InpatientOrderVO> listPage(InpatientOrderPageQueryDTO query);
 
     /**
      * 护士待执行队列（按 plan_time 升序；查询时会补当天的长期医嘱计划）
      */
-    IPage<InpatientOrderExecVO> execPendingList(OrderExecQueryPageDTO query);
+    IPage<InpatientOrderExecVO> execPendingList(OrderExecPageQueryDTO query);
 
     /**
      * 医嘱执行（批量）：已执行要计费，已跳过不计费但必须写原因
@@ -69,7 +69,7 @@ public interface InpatientOrderService {
     /**
      * 执行记录查询（含已执行 / 已跳过）
      */
-    IPage<InpatientOrderExecVO> execList(OrderExecQueryPageDTO query);
+    IPage<InpatientOrderExecVO> execList(OrderExecPageQueryDTO query);
 
     /**
      * 待校对医嘱数（护士站卡片）

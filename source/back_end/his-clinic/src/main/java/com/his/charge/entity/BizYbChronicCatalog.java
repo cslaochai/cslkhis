@@ -14,12 +14,6 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_yb_chronic_catalog")
 public class BizYbChronicCatalog extends BaseEntity {
-    /** 逻辑删除标志（0 未删除 1 已删除） */
-    @TableLogic
-    private Integer delFlag;
-
-    /** 备注 */
-    private String remark;
 
 
 
@@ -52,4 +46,14 @@ public class BizYbChronicCatalog extends BaseEntity {
      * 启用状态（1-启用 0-停用）
      */
     private Integer status;
+    /**
+     * 逻辑删除标志（0 未删除 1 已删除）
+     */
+    @TableLogic
+    private Integer delFlag;
+
+    /**
+     * 备注
+     */
+    private String remark;
 }

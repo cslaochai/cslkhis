@@ -4,7 +4,7 @@ import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.emr.dto.CodeTaskAssignUpsertDTO;
 import com.his.emr.dto.CodeTaskAuditDTO;
-import com.his.emr.dto.CodeTaskQueryPageDTO;
+import com.his.emr.dto.CodeTaskPageQueryDTO;
 import com.his.emr.dto.CodeTaskSubmitDTO;
 import com.his.emr.service.ArchiveCodeTaskService;
 import com.his.emr.vo.ArchiveCodeTaskStatsVO;
@@ -30,7 +30,7 @@ public class CodeTaskController {
 
     @Operation(summary = "分页查询编码任务")
     @PostMapping("/listPage")
-    public Result<PageResult<ArchiveCodeTaskVO>> listPage(@Valid @RequestBody CodeTaskQueryPageDTO queryDTO) {
+    public Result<PageResult<ArchiveCodeTaskVO>> listPage(@Valid @RequestBody CodeTaskPageQueryDTO queryDTO) {
         return Result.success(archiveCodeTaskService.page(queryDTO));
     }
 

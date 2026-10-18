@@ -2,10 +2,10 @@ package com.his.pharmacy.service;
 
 import com.his.common.base.PageResult;
 import com.his.pharmacy.dto.AntibioticAliasUpsertDTO;
-import com.his.pharmacy.dto.AntibioticAuthQueryPageDTO;
+import com.his.pharmacy.dto.AntibioticAuthPageQueryDTO;
 import com.his.pharmacy.dto.AntibioticAuthUpsertDTO;
 import com.his.pharmacy.dto.AntibioticCatalogLevelUpsertDTO;
-import com.his.pharmacy.dto.AntibioticCatalogQueryPageDTO;
+import com.his.pharmacy.dto.AntibioticCatalogPageQueryDTO;
 import com.his.pharmacy.vo.AntibioticAliasVO;
 import com.his.pharmacy.vo.AntibioticAuthCheckVO;
 import com.his.pharmacy.vo.AntibioticAuthVO;
@@ -21,7 +21,7 @@ import java.util.List;
 public interface AntibioticService {
 
     /** 分级目录分页 */
-    PageResult<AntibioticCatalogVO> catalogListPage(AntibioticCatalogQueryPageDTO query);
+    PageResult<AntibioticCatalogVO> catalogListPage(AntibioticCatalogPageQueryDTO query);
 
     /** 维护药品分级与 DDD 值 */
     AntibioticCatalogVO catalogLevelUpsert(AntibioticCatalogLevelUpsertDTO dto);
@@ -42,7 +42,7 @@ public interface AntibioticService {
     List<AntibioticDoctorSelectListVO> doctorSelectList(String keyword);
 
     /** 处方权授权分页 */
-    PageResult<AntibioticAuthVO> authListPage(AntibioticAuthQueryPageDTO query);
+    PageResult<AntibioticAuthVO> authListPage(AntibioticAuthPageQueryDTO query);
 
     /** 授权新增/修改 */
     AntibioticAuthVO authUpsert(AntibioticAuthUpsertDTO dto);

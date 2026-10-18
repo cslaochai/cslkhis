@@ -9,7 +9,7 @@ import com.his.common.exception.BusinessException;
 import com.his.system.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
-import com.his.emr.dto.SurveyTemplateQueryPageDTO;
+import com.his.emr.dto.SurveyTemplatePageQueryDTO;
 import com.his.emr.dto.SurveyTemplateUpsertDTO;
 import com.his.emr.entity.BizSurveyDispatch;
 import com.his.emr.entity.BizSurveyItem;
@@ -50,7 +50,7 @@ public class SurveyTemplateServiceImpl extends ServiceImpl<BizSurveyTemplateMapp
     private final RedisSequenceService redisSequenceService;
 
     @Override
-    public PageResult<SurveyTemplateVO> listPage(SurveyTemplateQueryPageDTO dto) {
+    public PageResult<SurveyTemplateVO> listPage(SurveyTemplatePageQueryDTO dto) {
         LambdaQueryWrapper<BizSurveyTemplate> wrapper = new LambdaQueryWrapper<>();
         String keyword = TextUtil.trimToNull(dto.getKeyword());
         wrapper.and(keyword != null, w -> w.like(BizSurveyTemplate::getTemplateName, keyword)

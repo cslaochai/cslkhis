@@ -2,7 +2,7 @@ package com.his.emr.service;
 
 import com.his.common.base.PageResult;
 import com.his.emr.dto.RxFlowActionDTO;
-import com.his.emr.dto.RxFlowQueryPageDTO;
+import com.his.emr.dto.RxFlowPageQueryDTO;
 import com.his.emr.dto.RxFlowUpsertDTO;
 import com.his.emr.vo.RxFlowListVO;
 
@@ -29,5 +29,5 @@ public interface RxFlowService {
     /**
      * 流转单分页
      */
-    PageResult<RxFlowListVO> listPage(RxFlowQueryPageDTO dto);
+    PageResult<RxFlowListVO> listPage(RxFlowPageQueryDTO dto);
 }

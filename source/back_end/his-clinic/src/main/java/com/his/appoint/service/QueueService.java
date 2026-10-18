@@ -127,12 +127,12 @@ public interface QueueService extends IService<Queue> {
      * 是跨科室的查询分析口径；筛选条件（科室/状态/关键词/日期…）全部下推到 SQL，
      * 不做「取一页再在内存里过滤」——那样翻页结果会静默变少。
      */
-    PageResult<OpdLogListVO> listPage(OpdLogQueryPageDTO queryDTO);
+    PageResult<OpdLogListVO> listPage(OpdLogPageQueryDTO queryDTO);
 
     /**
      * 门诊日志统计条，与 {@link #listPage} 共用同一套筛选条件。
      */
-    OpdLogStatsVO opdLogStats(OpdLogQueryPageDTO queryDTO);
+    OpdLogStatsVO opdLogStats(OpdLogPageQueryDTO queryDTO);
 
     /**
      * 保存门诊分诊：写一条分诊记录（只增不改）+ 回写队列上的当前生效值。

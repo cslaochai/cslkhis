@@ -9,8 +9,8 @@ import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.system.dto.PriceChangeDTO;
-import com.his.system.dto.PriceHistoryQueryPageDTO;
-import com.his.system.dto.PriceQueryPageDTO;
+import com.his.system.dto.PriceHistoryPageQueryDTO;
+import com.his.system.dto.PricePageQueryDTO;
 import com.his.common.entity.CurrentUser;
 import com.his.system.entity.SysPriceChangeHistory;
 import com.his.system.mapper.PriceMapper;
@@ -47,7 +47,7 @@ public class PriceServiceImpl extends ServiceImpl<SysPriceChangeHistoryMapper, S
     private final SysPriceChangeHistoryMapper sysPriceChangeHistoryMapper;
 
     @Override
-    public PageResult<PriceItemVO> listPage(PriceQueryPageDTO queryDTO) {
+    public PageResult<PriceItemVO> listPage(PricePageQueryDTO queryDTO) {
         String itemType = normalizeType(queryDTO.getItemType());
         Page<PriceItemVO> page = new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize());
         IPage<PriceItemVO> result = switch (itemType) {
@@ -105,7 +105,7 @@ public class PriceServiceImpl extends ServiceImpl<SysPriceChangeHistoryMapper, S
     }
 
     @Override
-    public PageResult<PriceChangeHistoryVO> historyListPage(PriceHistoryQueryPageDTO queryDTO) {
+    public PageResult<PriceChangeHistoryVO> historyListPage(PriceHistoryPageQueryDTO queryDTO) {
         LambdaQueryWrapper<SysPriceChangeHistory> wrapper = new LambdaQueryWrapper<>();
         if (TextUtil.hasText(queryDTO.getItemType())) {
             wrapper.eq(SysPriceChangeHistory::getItemType, normalizeType(queryDTO.getItemType()));

@@ -2,7 +2,7 @@ package com.his.system.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.system.dto.InsurancePolicyQueryPageDTO;
+import com.his.system.dto.InsurancePolicyPageQueryDTO;
 import com.his.system.dto.InsurancePolicyUpsertDTO;
 import com.his.system.service.InsurancePolicyService;
 import com.his.system.vo.InsurancePolicyVO;
@@ -27,7 +27,7 @@ public class InsurancePolicyController {
 
     @Operation(summary = "分页查询医保政策")
     @PostMapping("/listPage")
-    public Result<PageResult<InsurancePolicyVO>> listPage(@Valid @RequestBody InsurancePolicyQueryPageDTO queryDTO) {
+    public Result<PageResult<InsurancePolicyVO>> listPage(@Valid @RequestBody InsurancePolicyPageQueryDTO queryDTO) {
         return Result.success(insurancePolicyService.queryPolicyPage(queryDTO));
     }
 

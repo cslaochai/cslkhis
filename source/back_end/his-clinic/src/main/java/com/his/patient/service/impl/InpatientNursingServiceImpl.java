@@ -308,7 +308,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     // G14-1 体温单批量录入
 
     @Override
-    public IPage<NursingRecordVO> listPage(NursingRecordQueryPageDTO query) {
+    public IPage<NursingRecordVO> listPage(NursingRecordPageQueryDTO query) {
         // 科室数据权限收口（M6）：护理文书归属科室（dept_id），受限角色只看授权科室的文书。
         // scopeDeptIds 是服务端专用字段，先清掉前端可能伪造的值。
         query.setScopeDeptIds(deptScopeService.isScoped()
@@ -516,7 +516,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     }
 
     @Override
-    public IPage<NursingAssessmentVO> assessmentListPage(NursingAssessmentQueryPageDTO query) {
+    public IPage<NursingAssessmentVO> assessmentListPage(NursingAssessmentPageQueryDTO query) {
         // 保留（类别③）：查询守卫「评估单不做全院裸捞」是范围约束，两个条件任一满足即可，
         // 查询 DTO 禁止挂必填注解
         if (query.getAdmissionId() == null && query.getWardId() == null) {

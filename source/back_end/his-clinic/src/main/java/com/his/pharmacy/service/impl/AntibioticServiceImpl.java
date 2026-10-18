@@ -54,7 +54,7 @@ public class AntibioticServiceImpl extends ServiceImpl<BizAntibioticAliasMapper,
     private final DeptScopeService deptScopeService;
 
     @Override
-    public PageResult<AntibioticCatalogVO> catalogListPage(AntibioticCatalogQueryPageDTO query) {
+    public PageResult<AntibioticCatalogVO> catalogListPage(AntibioticCatalogPageQueryDTO query) {
         String keyword = query.getKeyword() == null ? null : query.getKeyword().trim();
         Page<AntibioticCatalogVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<AntibioticCatalogVO> list = antibioticCatalogMapper.selectCatalogPage(page, keyword, query.getLevelFilter());
@@ -164,7 +164,7 @@ public class AntibioticServiceImpl extends ServiceImpl<BizAntibioticAliasMapper,
     // 处方权授权
 
     @Override
-    public PageResult<AntibioticAuthVO> authListPage(AntibioticAuthQueryPageDTO query) {
+    public PageResult<AntibioticAuthVO> authListPage(AntibioticAuthPageQueryDTO query) {
         String keyword = query.getKeyword() == null ? null : query.getKeyword().trim();
         List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizAntibioticAuth> wrapper = new LambdaQueryWrapper<>();

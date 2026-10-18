@@ -2,7 +2,7 @@ package com.his.operation.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.Result;
-import com.his.operation.dto.AnesthesiaFollowupQueryPageDTO;
+import com.his.operation.dto.AnesthesiaFollowupPageQueryDTO;
 import com.his.operation.dto.AnesthesiaFollowupUpsertDTO;
 import com.his.operation.service.AnesthesiaFollowupService;
 import com.his.operation.vo.AnesthesiaFollowupVO;
@@ -30,7 +30,7 @@ public class AnesthesiaFollowupController {
     @PreAuthorize("hasAuthority('ipd:anesthesia:list')")
     @Operation(summary = "随访分页（麻醉记录/住院/状态/关键字）")
     @GetMapping("/listPage")
-    public Result<IPage<AnesthesiaFollowupVO>> listPage(@Valid AnesthesiaFollowupQueryPageDTO query) {
+    public Result<IPage<AnesthesiaFollowupVO>> listPage(@Valid AnesthesiaFollowupPageQueryDTO query) {
         return Result.success(anesthesiaFollowupService.listPage(query));
     }
 

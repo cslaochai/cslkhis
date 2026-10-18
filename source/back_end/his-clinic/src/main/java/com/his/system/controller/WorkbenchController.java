@@ -3,7 +3,7 @@ package com.his.system.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.system.dto.WorkbenchRoleConfigUpsertDTO;
-import com.his.system.dto.WorkbenchWidgetQueryPageDTO;
+import com.his.system.dto.WorkbenchWidgetPageQueryDTO;
 import com.his.system.dto.WorkbenchWidgetUpsertDTO;
 import com.his.system.service.WorkbenchService;
 import com.his.system.vo.WorkbenchConfigVO;
@@ -47,7 +47,7 @@ public class WorkbenchController {
     @Operation(summary = "卡片注册表分页查询")
     @PreAuthorize("hasAuthority('system:workbench:config')")
     @PostMapping("/widget/listPage")
-    public Result<PageResult<WorkbenchWidgetVO>> widgetListPage(@Valid @RequestBody WorkbenchWidgetQueryPageDTO queryDTO) {
+    public Result<PageResult<WorkbenchWidgetVO>> widgetListPage(@Valid @RequestBody WorkbenchWidgetPageQueryDTO queryDTO) {
         return Result.success(workbenchService.widgetListPage(queryDTO));
     }
 

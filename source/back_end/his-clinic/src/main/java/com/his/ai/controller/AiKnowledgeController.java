@@ -2,8 +2,8 @@ package com.his.ai.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.ai.dto.KnowledgeAskDTO;
-import com.his.ai.dto.KnowledgeDocQueryPageDTO;
-import com.his.ai.dto.KnowledgeEvalCaseQueryPageDTO;
+import com.his.ai.dto.KnowledgeDocPageQueryDTO;
+import com.his.ai.dto.KnowledgeEvalCasePageQueryDTO;
 import com.his.ai.dto.KnowledgeEvalCaseUpsertDTO;
 import com.his.ai.dto.KnowledgeFeedbackDTO;
 import com.his.ai.dto.KnowledgeIdDTO;
@@ -11,7 +11,7 @@ import com.his.ai.dto.KnowledgeImportCommitDTO;
 import com.his.ai.dto.KnowledgeImportQueryDTO;
 import com.his.ai.dto.KnowledgeIngestDTO;
 import com.his.ai.dto.KnowledgePreviewDTO;
-import com.his.ai.dto.KnowledgeQueryLogQueryPageDTO;
+import com.his.ai.dto.KnowledgeQueryLogPageQueryDTO;
 import com.his.ai.dto.KnowledgeStatusDTO;
 import com.his.ai.dto.KnowledgeTaskIdDTO;
 import com.his.ai.service.KnowledgeEvalService;
@@ -121,7 +121,7 @@ public class AiKnowledgeController {
     @PreAuthorize("hasAuthority('ai:knowledge:manage')")
     @PostMapping("/listPage")
     @Operation(summary = "知识文档分页列表")
-    public Result<IPage<KnowledgeDocListVO>> listPage(@Valid @RequestBody KnowledgeDocQueryPageDTO dto) {
+    public Result<IPage<KnowledgeDocListVO>> listPage(@Valid @RequestBody KnowledgeDocPageQueryDTO dto) {
         return Result.success(knowledgeStoreService.listPage(dto));
     }
 
@@ -186,7 +186,7 @@ public class AiKnowledgeController {
     @PreAuthorize("hasAuthority('ai:knowledge:manage')")
     @PostMapping("/queryLog/listPage")
     @Operation(summary = "问答观测日志分页（按提问时间倒序；degraded 0-正常 1-降级，feedback 0-未反馈 1-有用 2-无用）")
-    public Result<IPage<KnowledgeQueryLogVO>> queryLogListPage(@Valid @RequestBody KnowledgeQueryLogQueryPageDTO dto) {
+    public Result<IPage<KnowledgeQueryLogVO>> queryLogListPage(@Valid @RequestBody KnowledgeQueryLogPageQueryDTO dto) {
         return Result.success(knowledgeQueryLogService.listPage(dto));
     }
 
@@ -201,7 +201,7 @@ public class AiKnowledgeController {
     @PreAuthorize("hasAuthority('ai:knowledge:manage')")
     @PostMapping("/evalCase/listPage")
     @Operation(summary = "评测用例分页")
-    public Result<IPage<KnowledgeEvalCaseVO>> evalCaseListPage(@Valid @RequestBody KnowledgeEvalCaseQueryPageDTO dto) {
+    public Result<IPage<KnowledgeEvalCaseVO>> evalCaseListPage(@Valid @RequestBody KnowledgeEvalCasePageQueryDTO dto) {
         return Result.success(knowledgeEvalService.listCasePage(dto));
     }
 
@@ -230,7 +230,7 @@ public class AiKnowledgeController {
     @PreAuthorize("hasAuthority('ai:knowledge:manage')")
     @PostMapping("/eval/runListPage")
     @Operation(summary = "评测运行历史分页（按运行时间倒序，用于回归对比）")
-    public Result<IPage<KnowledgeEvalRunVO>> evalRunListPage(@Valid @RequestBody KnowledgeEvalCaseQueryPageDTO dto) {
+    public Result<IPage<KnowledgeEvalRunVO>> evalRunListPage(@Valid @RequestBody KnowledgeEvalCasePageQueryDTO dto) {
         return Result.success(knowledgeEvalService.listRunPage(dto));
     }
 

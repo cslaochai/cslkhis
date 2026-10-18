@@ -8,7 +8,7 @@ import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
-import com.his.system.dto.ShiftQueryPageDTO;
+import com.his.system.dto.ShiftPageQueryDTO;
 import com.his.system.dto.ShiftUpsertDTO;
 import com.his.system.entity.BizShift;
 import com.his.system.mapper.BizShiftMapper;
@@ -51,7 +51,7 @@ public class ShiftServiceImpl extends ServiceImpl<BizShiftMapper, BizShift> impl
     }
 
     @Override
-    public PageResult<ShiftVO> pageVO(ShiftQueryPageDTO dto) {
+    public PageResult<ShiftVO> pageVO(ShiftPageQueryDTO dto) {
         LambdaQueryWrapper<BizShift> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(dto.getKeyword()), BizShift::getShiftName, dto.getKeyword())
                 .eq(dto.getStatus() != null, BizShift::getStatus, dto.getStatus())

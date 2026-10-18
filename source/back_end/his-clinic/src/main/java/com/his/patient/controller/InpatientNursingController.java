@@ -30,7 +30,7 @@ public class InpatientNursingController {
 
     @Operation(summary = "护理文书分页（按测量时间升序）")
     @GetMapping("/listPage")
-    public Result<IPage<NursingRecordVO>> listPage(@Valid NursingRecordQueryPageDTO query) {
+    public Result<IPage<NursingRecordVO>> listPage(@Valid NursingRecordPageQueryDTO query) {
         return Result.success(inpatientNursingService.listPage(query));
     }
 
@@ -80,7 +80,7 @@ public class InpatientNursingController {
 
     @Operation(summary = "护理评估单分页（必须按入院ID或病区查询）")
     @GetMapping("/assessment/listPage")
-    public Result<IPage<NursingAssessmentVO>> assessmentListPage(@Valid NursingAssessmentQueryPageDTO query) {
+    public Result<IPage<NursingAssessmentVO>> assessmentListPage(@Valid NursingAssessmentPageQueryDTO query) {
         return Result.success(inpatientNursingService.assessmentListPage(query));
     }
 

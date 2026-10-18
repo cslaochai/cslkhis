@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.pharmacy.dto.SupplierQueryPageDTO;
+import com.his.pharmacy.dto.SupplierPageQueryDTO;
 import com.his.pharmacy.dto.SupplierUpsertDTO;
 import com.his.pharmacy.entity.SysSupplier;
 import com.his.pharmacy.mapper.SysSupplierMapper;
@@ -29,7 +29,7 @@ public class SupplierServiceImpl extends ServiceImpl<SysSupplierMapper, SysSuppl
     private final SysSupplierMapper sysSupplierMapper;
 
     @Override
-    public PageResult<SysSupplierVO> page(SupplierQueryPageDTO queryDTO) {
+    public PageResult<SysSupplierVO> page(SupplierPageQueryDTO queryDTO) {
         Page<SysSupplierVO> page = sysSupplierMapper.selectSupplierPage(
                 new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()),
                 queryDTO.getKeyword(), queryDTO.getStatus());

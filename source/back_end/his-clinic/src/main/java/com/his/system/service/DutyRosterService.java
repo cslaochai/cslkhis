@@ -1,7 +1,7 @@
 package com.his.system.service;
 
 import com.his.common.base.PageResult;
-import com.his.system.dto.DutyRosterQueryPageDTO;
+import com.his.system.dto.DutyRosterPageQueryDTO;
 import com.his.system.dto.DutyRosterUpsertDTO;
 import com.his.system.dto.DutySubstituteDTO;
 import com.his.system.vo.DutyOfficerVO;
@@ -23,7 +23,7 @@ public interface DutyRosterService {
 
     List<DutyRosterVO> todayList();
 
-    PageResult<DutyRosterVO> listPage(DutyRosterQueryPageDTO q);
+    PageResult<DutyRosterVO> listPage(DutyRosterPageQueryDTO q);
 
     Long upsert(DutyRosterUpsertDTO dto);
 

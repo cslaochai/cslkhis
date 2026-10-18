@@ -2,7 +2,7 @@ package com.his.medicaltech.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.medicaltech.dto.ExamFilmQueryPageDTO;
+import com.his.medicaltech.dto.ExamFilmPageQueryDTO;
 import com.his.medicaltech.dto.ExamFilmSpecUpsertDTO;
 import com.his.medicaltech.dto.ExamFilmUpsertDTO;
 import com.his.medicaltech.service.ExamFilmService;
@@ -31,7 +31,7 @@ public class ExamFilmController {
     @Operation(summary = "胶片用量分页列表")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('medtech:examFilm:list')")
-    public Result<PageResult<ExamFilmVO>> listPage(@Valid @RequestBody ExamFilmQueryPageDTO query) {
+    public Result<PageResult<ExamFilmVO>> listPage(@Valid @RequestBody ExamFilmPageQueryDTO query) {
         return Result.success(examFilmService.listPage(query));
     }
 

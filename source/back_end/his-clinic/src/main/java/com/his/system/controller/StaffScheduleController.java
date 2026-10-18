@@ -3,7 +3,7 @@ package com.his.system.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.system.dto.StaffScheduleCopyDTO;
-import com.his.system.dto.StaffScheduleQueryPageDTO;
+import com.his.system.dto.StaffSchedulePageQueryDTO;
 import com.his.system.dto.StaffScheduleSwapDTO;
 import com.his.system.dto.StaffScheduleUpsertDTO;
 import com.his.system.service.ScheduleChangeLogService;
@@ -35,7 +35,7 @@ public class StaffScheduleController {
     @Operation(summary = "分页查询排班（日期区间 + 单元 + 岗位类别 + 出勤状态 + 姓名/工号关键词）")
     @PreAuthorize("hasAuthority('staff:schedule:list')")
     @PostMapping("/listPage")
-    public Result<PageResult<StaffScheduleVO>> listPage(@Valid @RequestBody StaffScheduleQueryPageDTO queryDTO) {
+    public Result<PageResult<StaffScheduleVO>> listPage(@Valid @RequestBody StaffSchedulePageQueryDTO queryDTO) {
         return Result.success(staffScheduleService.pageVO(queryDTO));
     }
 

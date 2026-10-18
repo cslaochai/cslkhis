@@ -2,7 +2,7 @@ package com.his.medicaltech.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.medicaltech.dto.QualityIssueQueryPageDTO;
+import com.his.medicaltech.dto.QualityIssuePageQueryDTO;
 import com.his.medicaltech.service.QualityService;
 import com.his.medicaltech.vo.QualityDimensionSelectListVO;
 import com.his.medicaltech.vo.QualityIssueVO;
@@ -51,7 +51,7 @@ public class QualityController {
 
     @Operation(summary = "问题清单（分页，可定位到具体记录）")
     @GetMapping("/listIssuePage")
-    public Result<PageResult<QualityIssueVO>> listIssuePage(@Valid QualityIssueQueryPageDTO dto) {
+    public Result<PageResult<QualityIssueVO>> listIssuePage(@Valid QualityIssuePageQueryDTO dto) {
         return Result.success(qualityService.listIssuePage(dto));
     }
 }

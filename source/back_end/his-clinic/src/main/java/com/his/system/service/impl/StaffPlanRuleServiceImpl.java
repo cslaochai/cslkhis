@@ -10,7 +10,7 @@ import com.his.common.enums.StaffDutyStatusEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.system.dto.StaffPlanRuleQueryPageDTO;
+import com.his.system.dto.StaffPlanRulePageQueryDTO;
 import com.his.system.dto.StaffPlanRuleUpsertDTO;
 import com.his.system.entity.*;
 import com.his.system.mapper.BizScheduleMapper;
@@ -75,7 +75,7 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
     }
 
     @Override
-    public PageResult<StaffPlanRuleVO> pageVO(StaffPlanRuleQueryPageDTO dto) {
+    public PageResult<StaffPlanRuleVO> pageVO(StaffPlanRulePageQueryDTO dto) {
         LambdaQueryWrapper<BizStaffPlanRule> wrapper = new LambdaQueryWrapper<BizStaffPlanRule>()
                 .eq(dto.getOrgType() != null, BizStaffPlanRule::getOrgType, dto.getOrgType())
                 .eq(dto.getOrgId() != null, BizStaffPlanRule::getOrgId, dto.getOrgId())

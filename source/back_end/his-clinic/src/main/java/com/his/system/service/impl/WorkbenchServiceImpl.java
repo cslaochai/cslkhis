@@ -9,7 +9,7 @@ import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.system.dto.WorkbenchRoleConfigUpsertDTO;
 import com.his.system.dto.WorkbenchRoleWidgetDTO;
-import com.his.system.dto.WorkbenchWidgetQueryPageDTO;
+import com.his.system.dto.WorkbenchWidgetPageQueryDTO;
 import com.his.system.dto.WorkbenchWidgetUpsertDTO;
 import com.his.system.entity.*;
 import com.his.system.mapper.SysMenuMapper;
@@ -108,7 +108,7 @@ public class WorkbenchServiceImpl extends ServiceImpl<SysWorkbenchWidgetMapper, 
     }
 
     @Override
-    public PageResult<WorkbenchWidgetVO> widgetListPage(WorkbenchWidgetQueryPageDTO queryDTO) {
+    public PageResult<WorkbenchWidgetVO> widgetListPage(WorkbenchWidgetPageQueryDTO queryDTO) {
         String keyword = queryDTO.getKeyword();
         LambdaQueryWrapper<SysWorkbenchWidget> wrapper = new LambdaQueryWrapper<>();
         wrapper.and(TextUtil.hasText(keyword), w -> w

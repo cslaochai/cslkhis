@@ -6,10 +6,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.constant.SystemConfigKeyConst;
-import com.his.common.enums.AdmitStatusEnum;
-import com.his.common.enums.ObjectSignStatusEnum;
-import com.his.common.enums.SignBizTypeEnum;
-import com.his.common.enums.SignSceneEnum;
+import com.his.common.entity.CurrentUser;
+import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
@@ -17,12 +15,10 @@ import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.InpatientLeaveDTO;
 import com.his.patient.entity.BizInpatientLeave;
-import com.his.common.enums.LeaveStatusEnum;
 import com.his.patient.mapper.BizInpatientLeaveMapper;
 import com.his.patient.service.InpatientLeaveService;
 import com.his.patient.vo.InpatientLeaveVO;
 import com.his.system.dto.SignCommandDTO;
-import com.his.common.entity.CurrentUser;
 import com.his.system.entity.SysConfig;
 import com.his.system.mapper.SysConfigMapper;
 import com.his.system.service.DeptScopeService;
@@ -80,7 +76,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
     // 填写 / 审批 / 离院 / 销假 / 取消 / 超期处置 / 打印
 
     @Override
-    public PageResult<InpatientLeaveVO.Row> listPage(InpatientLeaveDTO.QueryPage query) {
+    public PageResult<InpatientLeaveVO.Row> listPage(InpatientLeaveDTO.PageQuery query) {
         Page<InpatientLeaveVO.Row> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<Long> deptIds = scopedDeptIds(query.getDeptId());
         List<InpatientLeaveVO.Row> records = bizInpatientLeaveMapper.selectLeavePage(page,
@@ -162,7 +158,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
             if (!actives.isEmpty()) {
                 BizInpatientLeave active = actives.get(0);
                 throw new BusinessException("该患者已有一张进行中的请假单（" + active.getLeaveNo() + "，"
-                        + BizInpatientLeave.statusText(active.getLeaveStatus()) + "），销假/取消后才能再申请");
+                        + LeaveStatusEnum.getLabel(active.getLeaveStatus(), "—") + "），销假/取消后才能再申请");
             }
             leave = new BizInpatientLeave();
             leave.setLeaveNo(redisSequenceService.generateInpatientLeaveNo());
@@ -176,7 +172,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
                 throw new BusinessException("请假单不允许改挂到另一次住院");
             }
             if (!Objects.equals(LeaveStatusEnum.PENDING.getCode(), leave.getLeaveStatus())) {
-                throw new BusinessException(BizInpatientLeave.statusText(leave.getLeaveStatus())
+                throw new BusinessException(LeaveStatusEnum.getLabel(leave.getLeaveStatus(), "—")
                         + "的请假单不能修改；已批准的单如患方不再外出，请走「取消」");
             }
         }
@@ -230,7 +226,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
         BizInpatientLeave leave = requireLeave(dto.getId());
         if (!Objects.equals(LeaveStatusEnum.PENDING.getCode(), leave.getLeaveStatus())) {
             throw new BusinessException("只有「待审批」的请假单能审批，当前为「"
-                    + BizInpatientLeave.statusText(leave.getLeaveStatus()) + "」");
+                    + LeaveStatusEnum.getLabel(leave.getLeaveStatus(), "—") + "」");
         }
         // 审批必须患者在院：人已出院再批一张外出单是编造医疗行为
         InpatientLeaveVO.Base snapshot = bizInpatientLeaveMapper.selectAdmissionBase(leave.getAdmissionId());
@@ -282,7 +278,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
             cmd.setSignerDeptName(currentUser.getDeptName());
             cmd.setSignerTitle(TextUtil.cutToNull(bizInpatientLeaveMapper.selectEmployeeTitle(me), 50));
             cmd.setClientIp(dto.getClientIp());
-            cmd.setRemark("住院请假单审批（" + BizInpatientLeave.typeText(leave.getLeaveType()) + "）");
+            cmd.setRemark("住院请假单审批（" + InpatientLeaveTypeEnum.getLabel(leave.getLeaveType(), "—") + "）");
             try {
                 SignatureVO sig = emrSignatureService.sign(cmd);
                 // 锚点三件套必须在这里一起写：provider 的 applySignAnchor 已把 sign_status 置 1，
@@ -323,7 +319,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
         BizInpatientLeave leave = requireLeave(dto.getId());
         if (!Objects.equals(LeaveStatusEnum.APPROVED.getCode(), leave.getLeaveStatus())) {
             throw new BusinessException("只有「已批准」的请假单能登记离院，当前为「"
-                    + BizInpatientLeave.statusText(leave.getLeaveStatus()) + "」（未批准不可放人）");
+                    + LeaveStatusEnum.getLabel(leave.getLeaveStatus(), "—") + "」（未批准不可放人）");
         }
         InpatientLeaveVO.Base snapshot = bizInpatientLeaveMapper.selectAdmissionBase(leave.getAdmissionId());
         if (snapshot == null || !Objects.equals(snapshot.getAdmitStatus(), AdmitStatusEnum.IN_HOSPITAL.getCode())) {
@@ -374,7 +370,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
         BizInpatientLeave leave = requireLeave(dto.getId());
         if (!Objects.equals(LeaveStatusEnum.LEFT.getCode(), leave.getLeaveStatus())) {
             throw new BusinessException("只有「已离院」的请假单能销假，当前为「"
-                    + BizInpatientLeave.statusText(leave.getLeaveStatus()) + "」");
+                    + LeaveStatusEnum.getLabel(leave.getLeaveStatus(), "—") + "」");
         }
         assertDeptAccessible(leave.getDeptId());
         LocalDateTime now = TimeUtil.nowSeconds();
@@ -402,7 +398,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
         if (!Objects.equals(LeaveStatusEnum.PENDING.getCode(), leave.getLeaveStatus())
                 && !Objects.equals(LeaveStatusEnum.APPROVED.getCode(), leave.getLeaveStatus())) {
             throw new BusinessException("只有「待审批/已批准」的请假单能取消，当前为「"
-                    + BizInpatientLeave.statusText(leave.getLeaveStatus()) + "」");
+                    + LeaveStatusEnum.getLabel(leave.getLeaveStatus(), "—") + "」");
         }
         assertDeptAccessible(leave.getDeptId());
         leave.setLeaveStatus(LeaveStatusEnum.CANCELLED.getCode());
@@ -422,7 +418,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
         BizInpatientLeave leave = requireLeave(dto.getId());
         if (!Objects.equals(LeaveStatusEnum.LEFT.getCode(), leave.getLeaveStatus())) {
             throw new BusinessException("只有「已离院」的请假单记录超期处置，当前为「"
-                    + BizInpatientLeave.statusText(leave.getLeaveStatus()) + "」");
+                    + LeaveStatusEnum.getLabel(leave.getLeaveStatus(), "—") + "」");
         }
         if (!isOverdue(leave)) {
             throw new BusinessException("该单尚未超期（预计返回时间未到），无需超期处置");

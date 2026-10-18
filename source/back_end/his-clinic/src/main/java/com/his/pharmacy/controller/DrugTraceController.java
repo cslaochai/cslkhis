@@ -82,7 +82,7 @@ public class DrugTraceController {
 
     @Operation(summary = "追溯码台账分页")
     @PostMapping("/listPage")
-    public Result<PageResult<DrugTraceVO>> listPage(@Valid @RequestBody DrugTraceQueryPageDTO queryDTO) {
+    public Result<PageResult<DrugTraceVO>> listPage(@Valid @RequestBody DrugTracePageQueryDTO queryDTO) {
         return Result.success(drugTraceService.page(queryDTO));
     }
 

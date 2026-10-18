@@ -1,7 +1,7 @@
 package com.his.patient.service;
 
 import com.his.common.base.PageResult;
-import com.his.patient.dto.NutritionScreenQueryPageDTO;
+import com.his.patient.dto.NutritionScreenPageQueryDTO;
 import com.his.patient.dto.NutritionScreenUpsertDTO;
 import com.his.patient.vo.NutritionScreenVO;
 
@@ -12,7 +12,7 @@ import java.util.List;
  */
 public interface NutritionScreenService {
 
-    PageResult<NutritionScreenVO> screenListPage(NutritionScreenQueryPageDTO query);
+    PageResult<NutritionScreenVO> screenListPage(NutritionScreenPageQueryDTO query);
 
     List<NutritionScreenVO> screenListByAdmission(Long admissionId);
 

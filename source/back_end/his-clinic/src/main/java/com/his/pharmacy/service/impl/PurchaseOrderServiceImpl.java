@@ -56,7 +56,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
     }
 
     @Override
-    public PageResult<PurchaseOrderVO> page(PurchaseOrderQueryPageDTO queryDTO) {
+    public PageResult<PurchaseOrderVO> page(PurchaseOrderPageQueryDTO queryDTO) {
         Page<PurchaseOrderVO> page = bizPurchaseOrderMapper.selectOrderPage(
                 new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()),
                 emptyToNull(queryDTO.getOrderNo()),

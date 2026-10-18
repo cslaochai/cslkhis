@@ -3,8 +3,8 @@ package com.his.pharmacy.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.pharmacy.dto.AntibioticStatsGenerateDTO;
-import com.his.pharmacy.dto.AntibioticStatsQueryPageDTO;
-import com.his.pharmacy.dto.IncisionReviewQueryPageDTO;
+import com.his.pharmacy.dto.AntibioticStatsPageQueryDTO;
+import com.his.pharmacy.dto.IncisionReviewPageQueryDTO;
 import com.his.pharmacy.dto.IncisionReviewUpsertDTO;
 import com.his.pharmacy.service.AntibioticMonitorService;
 import com.his.pharmacy.vo.AntibioticStatsVO;
@@ -33,7 +33,7 @@ public class AntibioticMonitorController {
     @Operation(summary = "已生成的监测指标分页")
     @PreAuthorize("hasAuthority('pharmacy:antibiotic:monitor')")
     @PostMapping("/statsListPage")
-    public Result<PageResult<AntibioticStatsVO>> statsListPage(@Valid @RequestBody AntibioticStatsQueryPageDTO query) {
+    public Result<PageResult<AntibioticStatsVO>> statsListPage(@Valid @RequestBody AntibioticStatsPageQueryDTO query) {
         return Result.success(antibioticMonitorService.listPage(query));
     }
 
@@ -54,7 +54,7 @@ public class AntibioticMonitorController {
     @Operation(summary = "导出监测指标 CSV（BOM，上限 5000 行）")
     @PreAuthorize("hasAuthority('pharmacy:antibiotic:statExport')")
     @PostMapping("/statsExportCsv")
-    public Result<String> statsExportCsv(@Valid @RequestBody AntibioticStatsQueryPageDTO query) {
+    public Result<String> statsExportCsv(@Valid @RequestBody AntibioticStatsPageQueryDTO query) {
         return Result.success(antibioticMonitorService.statsExportCsv(query));
     }
 
@@ -68,7 +68,7 @@ public class AntibioticMonitorController {
     @Operation(summary = "I 类切口点评记录分页")
     @PreAuthorize("hasAuthority('pharmacy:antibiotic:incision')")
     @PostMapping("/incisionReviewListPage")
-    public Result<PageResult<IncisionReviewVO>> incisionReviewListPage(@Valid @RequestBody IncisionReviewQueryPageDTO query) {
+    public Result<PageResult<IncisionReviewVO>> incisionReviewListPage(@Valid @RequestBody IncisionReviewPageQueryDTO query) {
         return Result.success(antibioticMonitorService.incisionReviewListPage(query));
     }
 

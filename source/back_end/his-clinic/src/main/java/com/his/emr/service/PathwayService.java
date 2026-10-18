@@ -13,7 +13,7 @@ public interface PathwayService {
 
     // 模板
 
-    PageResult<PathwayVO> listPage(PathwayQueryPageDTO dto);
+    PageResult<PathwayVO> listPage(PathwayPageQueryDTO dto);
 
     PathwayVO getDetailById(Long id);
 
@@ -39,7 +39,7 @@ public interface PathwayService {
 
     // 入径 / 变异 / 终态
 
-    PageResult<PathwayEnrollVO> enrollListPage(EnrollQueryPageDTO dto);
+    PageResult<PathwayEnrollVO> enrollListPage(EnrollPageQueryDTO dto);
 
     PathwayEnrollVO enrollGetDetailById(Long id);
 

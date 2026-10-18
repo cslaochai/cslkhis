@@ -2,7 +2,7 @@ package com.his.patient.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.Result;
-import com.his.patient.dto.OrderDictQueryPageDTO;
+import com.his.patient.dto.OrderDictPageQueryDTO;
 import com.his.patient.dto.OrderDictUpsertDTO;
 import com.his.patient.service.OrderDictService;
 import com.his.patient.vo.OrderDictListVO;
@@ -29,7 +29,7 @@ public class OrderDictController {
     @PreAuthorize("hasAuthority('ipd:orderDict:list')")
     @Operation(summary = "字典分页（管理页按 途径 / 频次 / 剂量单位 分 Tab）")
     @GetMapping("/listPage")
-    public Result<IPage<OrderDictListVO>> listPage(@Valid OrderDictQueryPageDTO query) {
+    public Result<IPage<OrderDictListVO>> listPage(@Valid OrderDictPageQueryDTO query) {
         return Result.success(orderDictService.listPage(query));
     }
 

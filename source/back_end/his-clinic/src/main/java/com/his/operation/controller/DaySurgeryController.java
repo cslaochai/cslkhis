@@ -32,7 +32,7 @@ public class DaySurgeryController {
     @PreAuthorize("hasAuthority('ipd:daySurgery:list')")
     @Operation(summary = "准入目录分页")
     @PostMapping("/itemListPage")
-    public Result<PageResult<DaySurgeryItemVO>> itemListPage(@Valid @RequestBody DaySurgeryItemQueryPageDTO dto) {
+    public Result<PageResult<DaySurgeryItemVO>> itemListPage(@Valid @RequestBody DaySurgeryItemPageQueryDTO dto) {
         return Result.success(daySurgeryService.itemListPage(dto));
     }
 
@@ -62,7 +62,7 @@ public class DaySurgeryController {
     @PreAuthorize("hasAuthority('ipd:daySurgery:list')")
     @Operation(summary = "日间手术登记单分页")
     @PostMapping("/listPage")
-    public Result<PageResult<DaySurgeryApplyVO>> listPage(@Valid @RequestBody DaySurgeryQueryPageDTO dto) {
+    public Result<PageResult<DaySurgeryApplyVO>> listPage(@Valid @RequestBody DaySurgeryPageQueryDTO dto) {
         return Result.success(daySurgeryService.listPage(dto));
     }
 

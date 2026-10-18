@@ -1089,7 +1089,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
     }
 
     @Override
-    public PageResult<OpdLogListVO> listPage(OpdLogQueryPageDTO queryDTO) {
+    public PageResult<OpdLogListVO> listPage(OpdLogPageQueryDTO queryDTO) {
         dayEndSettleTrigger.ensureSettledUpToYesterday();
         Page<OpdLogListVO> page = new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize());
         IPage<OpdLogListVO> result = opdLogMapper.selectOpdLogPage(page, queryDTO);
@@ -1101,7 +1101,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
     }
 
     @Override
-    public OpdLogStatsVO opdLogStats(OpdLogQueryPageDTO queryDTO) {
+    public OpdLogStatsVO opdLogStats(OpdLogPageQueryDTO queryDTO) {
         OpdLogStatsVO stats = opdLogMapper.selectOpdLogStats(queryDTO);
         if (stats == null) {
             return new OpdLogStatsVO();

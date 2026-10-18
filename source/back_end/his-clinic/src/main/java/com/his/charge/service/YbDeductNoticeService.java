@@ -15,7 +15,7 @@ public interface YbDeductNoticeService {
     /**
      * 分页查询（附超期展示态）
      */
-    PageResult<DeductNoticeListVO> listPage(DeductNoticeQueryPageDTO queryDTO);
+    PageResult<DeductNoticeListVO> listPage(DeductNoticePageQueryDTO queryDTO);
 
     /**
      * 详情（含全过程留痕，正序）

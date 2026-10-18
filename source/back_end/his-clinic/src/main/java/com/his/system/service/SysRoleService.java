@@ -3,7 +3,7 @@ package com.his.system.service;
 import com.his.common.base.PageResult;
 import com.his.system.dto.RoleMenuUpsertDTO;
 import com.his.system.dto.SysRoleQueryDTO;
-import com.his.system.dto.SysRoleQueryPageDTO;
+import com.his.system.dto.SysRolePageQueryDTO;
 import com.his.system.dto.SysRoleUpsertDTO;
 import com.his.system.vo.RoleSelectListVO;
 import com.his.system.vo.RoleVO;
@@ -12,7 +12,7 @@ import java.util.List;
 
 public interface SysRoleService {
 
-    PageResult<RoleVO> listPage(SysRoleQueryPageDTO queryDTO);
+    PageResult<RoleVO> listPage(SysRolePageQueryDTO queryDTO);
 
     List<RoleSelectListVO> selectList(SysRoleQueryDTO queryDTO);
 

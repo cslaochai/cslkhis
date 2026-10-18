@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.patient.dto.InpatientOrderItemDTO;
-import com.his.patient.dto.OrderSetQueryPageDTO;
+import com.his.patient.dto.OrderSetPageQueryDTO;
 import com.his.patient.dto.OrderSetUpsertDTO;
 import com.his.patient.entity.BizInpatientOrderTemplate;
 import com.his.patient.entity.BizInpatientOrderTemplateItem;
@@ -140,7 +140,7 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
     }
 
     @Override
-    public IPage<OrderSetListVO> listPage(OrderSetQueryPageDTO query) {
+    public IPage<OrderSetListVO> listPage(OrderSetPageQueryDTO query) {
         CurrentUser user = currentUserOrNull();
         String keyword = TextUtil.hasText(query.getKeyword()) ? query.getKeyword().trim() : null;
         LambdaQueryWrapper<BizInpatientOrderTemplate> wrapper = visibleWrapper(user)

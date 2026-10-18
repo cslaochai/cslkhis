@@ -11,7 +11,7 @@ import java.util.List;
  */
 public interface DeathRegistrationService {
 
-    PageResult<DeathRegisterVO.Row> listPage(DeathRegistrationDTO.QueryPage query);
+    PageResult<DeathRegisterVO.Row> listPage(DeathRegistrationDTO.PageQuery query);
 
     /**
      * 详情＝编辑回显（办理人电话明文）

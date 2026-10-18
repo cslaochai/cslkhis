@@ -377,7 +377,7 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
     }
 
     @Override
-    public IPage<InpatientRecordVO> listPage(InpatientRecordQueryPageDTO query) {
+    public IPage<InpatientRecordVO> listPage(InpatientRecordPageQueryDTO query) {
         // 科室数据权限收口（M6）：文书归属科室（dept_id），受限角色只看授权科室的文书。
         // scopeDeptIds 是服务端专用字段，先清掉前端可能伪造的值。
         query.setScopeDeptIds(deptScopeService.isScoped()
@@ -677,7 +677,7 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
     }
 
     @Override
-    public IPage<InpatientRecordLogVO> logPage(InpatientRecordLogQueryPageDTO query) {
+    public IPage<InpatientRecordLogVO> logPage(InpatientRecordLogPageQueryDTO query) {
         LambdaQueryWrapper<BizInpatientRecordLog> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(query.getDocType() != null, BizInpatientRecordLog::getDocType, query.getDocType());
         wrapper.eq(query.getRecordId() != null, BizInpatientRecordLog::getRecordId, query.getRecordId());

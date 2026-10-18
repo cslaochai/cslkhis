@@ -2,8 +2,8 @@ package com.his.emr.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.emr.dto.QcCandidateQueryPageDTO;
-import com.his.emr.dto.QcQueryPageDTO;
+import com.his.emr.dto.QcCandidatePageQueryDTO;
+import com.his.emr.dto.QcPageQueryDTO;
 import com.his.emr.entity.BizQualityControl;
 import com.his.emr.vo.QcIssueVO;
 import com.his.emr.vo.BizQualityControlVO;
@@ -81,7 +81,7 @@ public interface BizQualityControlMapper extends BaseMapper<BizQualityControl> {
                 <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
             ORDER BY q.qc_time DESC, q.id DESC
             """)
-    IPage<BizQualityControlVO> selectQcPage(IPage<BizQualityControlVO> page, @Param("q") QcQueryPageDTO query,
+    IPage<BizQualityControlVO> selectQcPage(IPage<BizQualityControlVO> page, @Param("q") QcPageQueryDTO query,
                                             @Param("deptIds") List<Long> deptIds);
 
     /**
@@ -121,7 +121,7 @@ public interface BizQualityControlMapper extends BaseMapper<BizQualityControl> {
             </script>
             """)
     IPage<QcCandidateVO> selectOutpatientCandidatePage(IPage<QcCandidateVO> page,
-                                                       @Param("q") QcCandidateQueryPageDTO query,
+                                                       @Param("q") QcCandidatePageQueryDTO query,
                                                        @Param("deptIds") List<Long> deptIds);
 
     /**
@@ -152,7 +152,7 @@ public interface BizQualityControlMapper extends BaseMapper<BizQualityControl> {
             </script>
             """)
     IPage<QcCandidateVO> selectInpatientCandidatePage(IPage<QcCandidateVO> page,
-                                                      @Param("q") QcCandidateQueryPageDTO query,
+                                                      @Param("q") QcCandidatePageQueryDTO query,
                                                       @Param("deptIds") List<Long> deptIds);
 
     /**

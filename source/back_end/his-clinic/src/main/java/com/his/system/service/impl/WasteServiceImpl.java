@@ -96,7 +96,7 @@ public class WasteServiceImpl extends ServiceImpl<BizMedicalWasteMapper, BizMedi
         bizMedicalWasteMapper.deleteById(id);
     }
 
-    public IPage<WasteVO> listPage(WasteDTO.QueryPage q) {
+    public IPage<WasteVO> listPage(WasteDTO.PageQuery q) {
         String kw = TextUtil.trim(q.getKeyword());
         LocalDate begin = q.getCollectDateBegin();
         LocalDate end = q.getCollectDateEnd();

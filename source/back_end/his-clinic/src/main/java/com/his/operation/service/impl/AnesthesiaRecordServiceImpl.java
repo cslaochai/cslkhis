@@ -67,7 +67,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
     }
 
     @Override
-    public IPage<AnesthesiaRecordVO> listPage(AnesthesiaRecordQueryPageDTO query) {
+    public IPage<AnesthesiaRecordVO> listPage(AnesthesiaRecordPageQueryDTO query) {
         IPage<AnesthesiaRecordVO> page = bizAnesthesiaRecordMapper.selectRecordPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query, deptScopeService.scopedDeptIds(null));
         page.getRecords().forEach(this::decorate);

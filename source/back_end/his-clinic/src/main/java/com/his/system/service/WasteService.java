@@ -14,5 +14,5 @@ public interface WasteService {
 
     void deleteById(Long id);
 
-    IPage<WasteVO> listPage(WasteDTO.QueryPage q);
+    IPage<WasteVO> listPage(WasteDTO.PageQuery q);
 }

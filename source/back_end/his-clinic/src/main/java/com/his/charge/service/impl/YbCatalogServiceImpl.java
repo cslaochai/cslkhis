@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.charge.dto.YbCatalogQueryPageDTO;
+import com.his.charge.dto.YbCatalogPageQueryDTO;
 import com.his.charge.dto.YbCatalogUpsertDTO;
 import com.his.charge.entity.BizYbCatalog;
 import com.his.charge.mapper.BizYbCatalogMapper;
@@ -35,7 +35,7 @@ public class YbCatalogServiceImpl extends ServiceImpl<BizYbCatalogMapper, BizYbC
     private final BizYbCatalogMapper bizYbCatalogMapper;
 
     @Override
-    public PageResult<BizYbCatalogVO> listPage(YbCatalogQueryPageDTO queryDTO) {
+    public PageResult<BizYbCatalogVO> listPage(YbCatalogPageQueryDTO queryDTO) {
         LambdaQueryWrapper<BizYbCatalog> wrapper = new LambdaQueryWrapper<BizYbCatalog>()
                 .eq(queryDTO.getCatalogType() != null, BizYbCatalog::getCatalogType, queryDTO.getCatalogType())
                 .eq(queryDTO.getStatus() != null, BizYbCatalog::getStatus, queryDTO.getStatus())

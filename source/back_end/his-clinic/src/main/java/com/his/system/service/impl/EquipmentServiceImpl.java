@@ -47,7 +47,7 @@ public class EquipmentServiceImpl implements EquipmentService {
 
     private final DictCacheService dictCacheService;
 
-    public IPage<EquipmentVO> listPage(EquipmentQueryPageDTO q) {
+    public IPage<EquipmentVO> listPage(EquipmentPageQueryDTO q) {
         String kw = TextUtil.trim(q.getKeyword());
         LambdaQueryWrapper<SysEquipment> w = new LambdaQueryWrapper<SysEquipment>()
                 .eq(q.getCategory() != null, SysEquipment::getCategory, q.getCategory())
@@ -82,7 +82,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         return vo;
     }
 
-    public IPage<MaintainVO> maintainListPage(MaintainQueryPageDTO q) {
+    public IPage<MaintainVO> maintainListPage(MaintainPageQueryDTO q) {
         requireEquipment(q.getEquipmentId());
         LambdaQueryWrapper<BizEquipmentMaintain> w = new LambdaQueryWrapper<BizEquipmentMaintain>()
                 .eq(BizEquipmentMaintain::getEquipmentId, q.getEquipmentId())
@@ -152,7 +152,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         }
     }
 
-    public IPage<MeteringVO> meteringListPage(MeteringQueryPageDTO q) {
+    public IPage<MeteringVO> meteringListPage(MeteringPageQueryDTO q) {
         requireEquipment(q.getEquipmentId());
         LambdaQueryWrapper<BizEquipmentMetering> w = new LambdaQueryWrapper<BizEquipmentMetering>()
                 .eq(BizEquipmentMetering::getEquipmentId, q.getEquipmentId())

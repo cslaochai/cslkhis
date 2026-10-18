@@ -66,14 +66,14 @@ public class QueueController {
 
     @Operation(summary = "门诊日志分页（跨科室，筛选条件下推）")
     @GetMapping("/opdLogListPage")
-    public Result<PageResult<OpdLogListVO>> listPage(@Valid OpdLogQueryPageDTO queryPageDTO) {
-        return Result.success(queueService.listPage(queryPageDTO));
+    public Result<PageResult<OpdLogListVO>> listPage(@Valid OpdLogPageQueryDTO pageQueryDTO) {
+        return Result.success(queueService.listPage(pageQueryDTO));
     }
 
     @Operation(summary = "门诊日志统计条（与分页同一套筛选条件）")
     @GetMapping("/opdLogStats")
-    public Result<OpdLogStatsVO> opdLogStats(@Valid OpdLogQueryPageDTO queryPageDTO) {
-        return Result.success(queueService.opdLogStats(queryPageDTO));
+    public Result<OpdLogStatsVO> opdLogStats(@Valid OpdLogPageQueryDTO pageQueryDTO) {
+        return Result.success(queueService.opdLogStats(pageQueryDTO));
     }
 
     @Operation(summary = "队列统计")

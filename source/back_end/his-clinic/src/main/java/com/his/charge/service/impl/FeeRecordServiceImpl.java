@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.dto.FeeBookDTO;
-import com.his.charge.dto.FeeRecordQueryPageDTO;
+import com.his.charge.dto.FeeRecordPageQueryDTO;
 import com.his.charge.dto.FeeReverseDTO;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.mapper.BizFeeRecordMapper;
@@ -252,7 +252,7 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
     }
 
     @Override
-    public PageResult<BizFeeRecordVO> selectPage(FeeRecordQueryPageDTO query) {
+    public PageResult<BizFeeRecordVO> selectPage(FeeRecordPageQueryDTO query) {
         List<Long> deptIds = deptScopeService.scopedDeptIds(query.getDeptId());
         Page<BizFeeRecord> page = this.page(new Page<>(query.getPageNum(), query.getPageSize()), buildWrapper(query, deptIds));
         List<BizFeeRecordVO> records = new ArrayList<>();
@@ -466,7 +466,7 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
         return ids;
     }
 
-    private LambdaQueryWrapper<BizFeeRecord> buildWrapper(FeeRecordQueryPageDTO query, List<Long> deptIds) {
+    private LambdaQueryWrapper<BizFeeRecord> buildWrapper(FeeRecordPageQueryDTO query, List<Long> deptIds) {
         String keyword = query.getKeyword();
         return new LambdaQueryWrapper<BizFeeRecord>()
                 .eq(query.getEncounterType() != null, BizFeeRecord::getEncounterType, query.getEncounterType())

@@ -2,7 +2,7 @@ package com.his.operation.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.operation.dto.PacuQueryPageDTO;
+import com.his.operation.dto.PacuPageQueryDTO;
 import com.his.operation.entity.BizAnesthesiaPacu;
 import com.his.operation.vo.PacuRecordVO;
 import org.apache.ibatis.annotations.Mapper;
@@ -51,7 +51,7 @@ public interface BizAnesthesiaPacuMapper extends BaseMapper<BizAnesthesiaPacu> {
             ORDER BY FIELD(u.status, 0, 1), u.enter_time DESC, u.id DESC
             </script>
             """)
-    IPage<PacuRecordVO> selectPacuPage(IPage<PacuRecordVO> page, @Param("q") PacuQueryPageDTO query,
+    IPage<PacuRecordVO> selectPacuPage(IPage<PacuRecordVO> page, @Param("q") PacuPageQueryDTO query,
                                        @Param("deptIds") List<Long> deptIds);
 
     @Select(PROJECTION + " WHERE u.del_flag = 0 AND u.id = #{pacuId}")

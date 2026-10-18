@@ -4,7 +4,7 @@ import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
-import com.his.medicaltech.dto.QualityIssueQueryPageDTO;
+import com.his.medicaltech.dto.QualityIssuePageQueryDTO;
 import com.his.common.enums.QualityDimension;
 import com.his.common.enums.QualityRule;
 import com.his.common.enums.ClinicalRuleErrorLevelEnum;
@@ -165,7 +165,7 @@ public class QualityServiceImpl implements QualityService {
 
     // 内部
     @Override
-    public PageResult<QualityIssueVO> listIssuePage(QualityIssueQueryPageDTO dto) {
+    public PageResult<QualityIssueVO> listIssuePage(QualityIssuePageQueryDTO dto) {
         QualityRule only = null;
         QualityDimension dim = null;
         if (TextUtil.hasText(dto.getRuleCode())) {

@@ -3,7 +3,7 @@ package com.his.patient.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.patient.dto.MealOrderQueryPageDTO;
+import com.his.patient.dto.MealOrderPageQueryDTO;
 import com.his.patient.entity.BizMealOrder;
 import com.his.patient.vo.MealOrderVO;
 import org.apache.ibatis.annotations.Delete;
@@ -75,7 +75,7 @@ public interface BizMealOrderMapper extends BaseMapper<BizMealOrder> {
              ORDER BY m.meal_date DESC, m.meal_type ASC, m.ward_id ASC, m.id DESC
              </script>
             """)
-    IPage<MealOrderVO> selectMealPage(Page<MealOrderVO> page, @Param("q") MealOrderQueryPageDTO query);
+    IPage<MealOrderVO> selectMealPage(Page<MealOrderVO> page, @Param("q") MealOrderPageQueryDTO query);
 
     /**
      * 某膳食方案名下的餐行（方案详情看"这个人订了哪些餐"）

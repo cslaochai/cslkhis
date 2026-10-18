@@ -1,7 +1,7 @@
 package com.his.system.service;
 
 import com.his.common.base.PageResult;
-import com.his.system.dto.StaffPlanRuleQueryPageDTO;
+import com.his.system.dto.StaffPlanRulePageQueryDTO;
 import com.his.system.dto.StaffPlanRuleUpsertDTO;
 import com.his.system.entity.BizStaffPlanRule;
 import com.his.system.vo.StaffPlanRuleVO;
@@ -15,7 +15,7 @@ import java.util.List;
  */
 public interface StaffPlanRuleService {
 
-    PageResult<StaffPlanRuleVO> pageVO(StaffPlanRuleQueryPageDTO dto);
+    PageResult<StaffPlanRuleVO> pageVO(StaffPlanRulePageQueryDTO dto);
 
     /**
      * 新增/修改标准（同单元 × 同班次 × 同岗位类别只允许一条）。

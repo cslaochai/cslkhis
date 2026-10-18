@@ -9,7 +9,7 @@ import com.his.common.exception.BusinessException;
 import com.his.common.util.ShiftCoverUtil;
 import com.his.common.util.TextUtil;
 import com.his.system.dto.StaffScheduleCopyDTO;
-import com.his.system.dto.StaffScheduleQueryPageDTO;
+import com.his.system.dto.StaffSchedulePageQueryDTO;
 import com.his.system.dto.StaffScheduleSwapDTO;
 import com.his.system.dto.StaffScheduleUpsertDTO;
 import com.his.system.entity.*;
@@ -83,7 +83,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
     }
 
     @Override
-    public PageResult<StaffScheduleVO> pageVO(StaffScheduleQueryPageDTO dto) {
+    public PageResult<StaffScheduleVO> pageVO(StaffSchedulePageQueryDTO dto) {
         LambdaQueryWrapper<BizSchedule> wrapper = scoped(new LambdaQueryWrapper<BizSchedule>()
                 .ge(dto.getStartDate() != null, BizSchedule::getScheduleDate, dto.getStartDate())
                 .le(dto.getEndDate() != null, BizSchedule::getScheduleDate, dto.getEndDate())

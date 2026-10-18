@@ -11,7 +11,7 @@ import java.util.List;
  */
 public interface InpatientLeaveService {
 
-    PageResult<InpatientLeaveVO.Row> listPage(InpatientLeaveDTO.QueryPage query);
+    PageResult<InpatientLeaveVO.Row> listPage(InpatientLeaveDTO.PageQuery query);
 
     InpatientLeaveVO.Detail getDetailById(Long id);
 

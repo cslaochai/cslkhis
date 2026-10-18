@@ -4,7 +4,7 @@ import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.system.dto.RoleMenuUpsertDTO;
 import com.his.system.dto.SysRoleQueryDTO;
-import com.his.system.dto.SysRoleQueryPageDTO;
+import com.his.system.dto.SysRolePageQueryDTO;
 import com.his.system.dto.SysRoleUpsertDTO;
 import com.his.system.service.SysRoleService;
 import com.his.system.vo.RoleSelectListVO;
@@ -32,7 +32,7 @@ public class RoleController {
 
     @Operation(summary = "查询角色列表")
     @PostMapping("/listPage")
-    public Result<PageResult<RoleVO>> listPage(@Valid @RequestBody SysRoleQueryPageDTO queryDTO) {
+    public Result<PageResult<RoleVO>> listPage(@Valid @RequestBody SysRolePageQueryDTO queryDTO) {
         return Result.success(sysRoleService.listPage(queryDTO));
     }
 

@@ -144,7 +144,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
     }
 
     @Override
-    public IPage<OperationApplyVO> listPage(OperationApplyQueryPageDTO query) {
+    public IPage<OperationApplyVO> listPage(OperationApplyPageQueryDTO query) {
         query.setPlannedDateFrom(normalizeFrom(query.getPlannedDateFrom()));
         query.setPlannedDateTo(normalizeTo(query.getPlannedDateTo()));
         IPage<OperationApplyVO> page = bizOperationApplyMapper.selectApplyPage(

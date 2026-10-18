@@ -21,12 +21,6 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_payment_txn")
 public class BizPaymentTxn extends BaseEntity {
-    /** 逻辑删除标志（0 未删除 1 已删除） */
-    @TableLogic
-    private Integer delFlag;
-
-    /** 备注 */
-    private String remark;
 
 
 
@@ -170,4 +164,10 @@ public class BizPaymentTxn extends BaseEntity {
      * 不复用 {@code channelTxnNo} —— 那一列专门记渠道交易号，勾的是渠道账单。
      */
     private String receiptNo;
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
 }

@@ -17,7 +17,7 @@ public interface SurveyService {
     /**
      * 发放/回收分页（科室范围按登录岗位强制收口，手机号出参脱敏）
      */
-    PageResult<SurveyDispatchVO> dispatchListPage(SurveyDispatchQueryPageDTO dto);
+    PageResult<SurveyDispatchVO> dispatchListPage(SurveyDispatchPageQueryDTO dto);
 
     /**
      * 发放单详情（外呼要拨号，这条给明文手机号）
@@ -53,7 +53,7 @@ public interface SurveyService {
     /**
      * 答卷分页
      */
-    PageResult<SurveyAnswerVO> answerListPage(SurveyAnswerQueryPageDTO dto);
+    PageResult<SurveyAnswerVO> answerListPage(SurveyAnswerPageQueryDTO dto);
 
     /**
      * 答卷详情（含逐题答案）

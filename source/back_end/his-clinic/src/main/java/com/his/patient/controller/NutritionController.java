@@ -46,7 +46,7 @@ public class NutritionController {
     @Operation(summary = "筛查评定分页（dueOnly=1 只看到期未复筛）")
     @PreAuthorize("hasAuthority('ipd:nutrition:screen')")
     @PostMapping("/screenListPage")
-    public Result<PageResult<NutritionScreenVO>> screenListPage(@Valid @RequestBody NutritionScreenQueryPageDTO query) {
+    public Result<PageResult<NutritionScreenVO>> screenListPage(@Valid @RequestBody NutritionScreenPageQueryDTO query) {
         return Result.success(nutritionScreenService.screenListPage(query));
     }
 
@@ -76,7 +76,7 @@ public class NutritionController {
     @Operation(summary = "营养会诊分页（只给 consultCategory=2，不接受前端改类别）")
     @PreAuthorize("hasAuthority('ipd:nutrition:consult')")
     @PostMapping("/consultListPage")
-    public Result<PageResult<ConsultationVO>> consultListPage(@Valid @RequestBody ConsultationQueryPageDTO query) {
+    public Result<PageResult<ConsultationVO>> consultListPage(@Valid @RequestBody ConsultationPageQueryDTO query) {
         query.setConsultCategory(ConsultCategoryEnum.NUTRITION.getCode());
         IPage<ConsultationVO> page = inpatientConsultationService.listPage(query);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
@@ -142,14 +142,14 @@ public class NutritionController {
     @Operation(summary = "已生成的营养指标分页")
     @PreAuthorize("hasAuthority('ipd:nutrition:stats')")
     @PostMapping("/statsListPage")
-    public Result<PageResult<NutritionStatsVO>> statsListPage(@Valid @RequestBody NutritionStatsQueryPageDTO query) {
+    public Result<PageResult<NutritionStatsVO>> statsListPage(@Valid @RequestBody NutritionStatsPageQueryDTO query) {
         return Result.success(nutritionStatsService.statsListPage(query));
     }
 
     @Operation(summary = "导出营养指标 CSV（BOM，上限 5000 行）")
     @PreAuthorize("hasAuthority('ipd:nutrition:statExport')")
     @PostMapping("/statsExportCsv")
-    public Result<String> statsExportCsv(@Valid @RequestBody NutritionStatsQueryPageDTO query) {
+    public Result<String> statsExportCsv(@Valid @RequestBody NutritionStatsPageQueryDTO query) {
         return Result.success(nutritionStatsService.statsExportCsv(query));
     }
 }

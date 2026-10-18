@@ -7,7 +7,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.dto.BillPayDTO;
 import com.his.charge.dto.BillRefundDTO;
 import com.his.charge.dto.BillVoidDTO;
-import com.his.charge.dto.PaymentTxnQueryPageDTO;
+import com.his.charge.dto.PaymentTxnPageQueryDTO;
 import com.his.charge.entity.*;
 import com.his.common.enums.InsuranceCancelFlagEnum;
 import com.his.charge.mapper.BizFundAccountTxnMapper;
@@ -357,7 +357,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
     // 住院预交金：bill_id 为空的收/退流水 + 住院资金账户（sql/140）
 
     @Override
-    public PageResult<BizPaymentTxnVO> selectPage(PaymentTxnQueryPageDTO query) {
+    public PageResult<BizPaymentTxnVO> selectPage(PaymentTxnPageQueryDTO query) {
         Page<BizPaymentTxn> page = this.page(new Page<>(query.getPageNum(), query.getPageSize()), buildWrapper(query));
         List<BizPaymentTxnVO> records = new ArrayList<>();
         for (BizPaymentTxn txn : page.getRecords()) {
@@ -871,7 +871,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         return employeeId == null ? CASHIER_SYSTEM : employeeId;
     }
 
-    private LambdaQueryWrapper<BizPaymentTxn> buildWrapper(PaymentTxnQueryPageDTO query) {
+    private LambdaQueryWrapper<BizPaymentTxn> buildWrapper(PaymentTxnPageQueryDTO query) {
         String keyword = query.getKeyword();
         return new LambdaQueryWrapper<BizPaymentTxn>()
                 .eq(query.getBillId() != null, BizPaymentTxn::getBillId, query.getBillId())

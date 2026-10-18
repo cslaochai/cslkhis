@@ -8,7 +8,7 @@ import com.his.common.exception.BusinessException;
 import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.emr.dto.RxFlowActionDTO;
-import com.his.emr.dto.RxFlowQueryPageDTO;
+import com.his.emr.dto.RxFlowPageQueryDTO;
 import com.his.emr.dto.RxFlowUpsertDTO;
 import com.his.emr.entity.BizPrescription;
 import com.his.emr.entity.BizRxFlow;
@@ -93,7 +93,7 @@ public class RxFlowServiceImpl extends ServiceImpl<BizRxFlowMapper, BizRxFlow> i
     }
 
     @Override
-    public PageResult<RxFlowListVO> listPage(RxFlowQueryPageDTO dto) {
+    public PageResult<RxFlowListVO> listPage(RxFlowPageQueryDTO dto) {
         LambdaQueryWrapper<BizRxFlow> wrapper = new LambdaQueryWrapper<>();
         if (dto.getPatientId() != null) {
             wrapper.eq(BizRxFlow::getPatientId, dto.getPatientId());

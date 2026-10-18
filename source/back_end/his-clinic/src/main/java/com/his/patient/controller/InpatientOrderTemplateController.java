@@ -2,7 +2,7 @@ package com.his.patient.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.Result;
-import com.his.patient.dto.InpatientOrderTemplateQueryPageDTO;
+import com.his.patient.dto.InpatientOrderTemplatePageQueryDTO;
 import com.his.patient.dto.InpatientOrderTemplateUpsertDTO;
 import com.his.patient.service.InpatientOrderTemplateService;
 import com.his.patient.vo.InpatientOrderTemplateDetailVO;
@@ -38,7 +38,7 @@ public class InpatientOrderTemplateController {
     @PreAuthorize("hasAuthority('ipd:order:list')")
     @Operation(summary = "模板分页（模板管理弹窗）")
     @GetMapping("/listPage")
-    public Result<IPage<InpatientOrderTemplateListVO>> listPage(@Valid InpatientOrderTemplateQueryPageDTO query) {
+    public Result<IPage<InpatientOrderTemplateListVO>> listPage(@Valid InpatientOrderTemplatePageQueryDTO query) {
         return Result.success(inpatientOrderTemplateService.listPage(query));
     }
 

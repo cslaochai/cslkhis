@@ -1,7 +1,7 @@
 package com.his.emr.service;
 
 import com.his.common.base.PageResult;
-import com.his.emr.dto.AiDraftDiffQueryPageDTO;
+import com.his.emr.dto.AiDraftDiffPageQueryDTO;
 import com.his.emr.vo.AiDraftDiffListVO;
 
 /**
@@ -22,5 +22,5 @@ public interface AiDraftDiffService {
     /**
      * 分页（AI 管理台「草稿留痕」签页）
      */
-    PageResult<AiDraftDiffListVO> listPage(AiDraftDiffQueryPageDTO dto);
+    PageResult<AiDraftDiffListVO> listPage(AiDraftDiffPageQueryDTO dto);
 }

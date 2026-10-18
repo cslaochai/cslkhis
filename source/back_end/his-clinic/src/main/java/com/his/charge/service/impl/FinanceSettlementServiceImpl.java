@@ -236,7 +236,7 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
     }
 
     @Override
-    public PageResult<CashierSettlementVO> cashierPage(CashierSettlementQueryPageDTO dto) {
+    public PageResult<CashierSettlementVO> cashierPage(CashierSettlementPageQueryDTO dto) {
         LambdaQueryWrapper<BizCashierSettlement> w = new LambdaQueryWrapper<>();
         w.eq(dto.getCashierId() != null, BizCashierSettlement::getCashierId, dto.getCashierId())
                 .eq(dto.getSettleStatus() != null, BizCashierSettlement::getSettleStatus, dto.getSettleStatus())
@@ -374,7 +374,7 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
     }
 
     @Override
-    public PageResult<DaySettlementVO> dayPage(DaySettlementQueryPageDTO dto) {
+    public PageResult<DaySettlementVO> dayPage(DaySettlementPageQueryDTO dto) {
         LambdaQueryWrapper<BizDaySettlement> w = new LambdaQueryWrapper<>();
         w.eq(dto.getReconcileStatus() != null, BizDaySettlement::getReconcileStatus, dto.getReconcileStatus())
                 .eq(dto.getSettleStatus() != null, BizDaySettlement::getSettleStatus, dto.getSettleStatus())

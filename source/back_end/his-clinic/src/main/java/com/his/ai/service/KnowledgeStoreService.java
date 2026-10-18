@@ -1,7 +1,7 @@
 package com.his.ai.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.ai.dto.KnowledgeDocQueryPageDTO;
+import com.his.ai.dto.KnowledgeDocPageQueryDTO;
 import com.his.ai.dto.KnowledgeIngestDTO;
 import com.his.ai.entity.SysKnowledgeDoc;
 import com.his.ai.vo.KnowledgeChunkPreviewVO;
@@ -52,7 +52,7 @@ public interface KnowledgeStoreService {
     /**
      * 分页列表。
      */
-    IPage<KnowledgeDocListVO> listPage(KnowledgeDocQueryPageDTO dto);
+    IPage<KnowledgeDocListVO> listPage(KnowledgeDocPageQueryDTO dto);
 
     /**
      * 详情（含原文）。

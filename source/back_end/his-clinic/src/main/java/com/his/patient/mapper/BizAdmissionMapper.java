@@ -2,7 +2,7 @@ package com.his.patient.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.patient.dto.InpatientQueryPageDTO;
+import com.his.patient.dto.InpatientPageQueryDTO;
 import com.his.patient.entity.BizAdmission;
 import com.his.patient.vo.InpatientDetailVO;
 import com.his.patient.vo.InpatientVO;
@@ -74,7 +74,7 @@ public interface BizAdmissionMapper extends BaseMapper<BizAdmission> {
             ORDER BY a.admit_status DESC, a.admit_time DESC
             </script>
             """)
-    IPage<InpatientVO> selectInpatientPage(IPage<InpatientVO> page, @Param("q") InpatientQueryPageDTO query);
+    IPage<InpatientVO> selectInpatientPage(IPage<InpatientVO> page, @Param("q") InpatientPageQueryDTO query);
 
     /**
      * 今日入院数（scopeDeptIds 非空时按科室数据权限集合收敛，M6）

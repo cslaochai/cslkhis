@@ -1257,7 +1257,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
     }
 
     @Override
-    public PageResult<EmergencyHandoverVO> handoverListPage(EmergencyHandoverQueryPageDTO queryDTO) {
+    public PageResult<EmergencyHandoverVO> handoverListPage(EmergencyHandoverPageQueryDTO queryDTO) {
         LambdaQueryWrapper<EmergencyHandover> wrapper = new LambdaQueryWrapper<>();
         List<Long> scoped = deptScopeService.scopedDeptIds(queryDTO.getDeptId());
         wrapper.in(scoped != null, EmergencyHandover::getDeptId, scoped)

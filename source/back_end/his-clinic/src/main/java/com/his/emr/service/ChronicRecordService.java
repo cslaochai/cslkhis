@@ -2,7 +2,7 @@ package com.his.emr.service;
 
 import com.his.common.base.PageResult;
 import com.his.emr.dto.ChronicCancelDTO;
-import com.his.emr.dto.ChronicQueryPageDTO;
+import com.his.emr.dto.ChronicPageQueryDTO;
 import com.his.emr.dto.ChronicUpsertDTO;
 import com.his.emr.vo.ChronicMyRecordsVO;
 import com.his.emr.vo.ChronicRecordListVO;
@@ -27,7 +27,7 @@ public interface ChronicRecordService {
     /**
      * 慢病档案分页（医生站）
      */
-    PageResult<ChronicRecordListVO> listPage(ChronicQueryPageDTO dto);
+    PageResult<ChronicRecordListVO> listPage(ChronicPageQueryDTO dto);
 
     /**
      * 患者的有效慢病档案（长处方资格判定用）

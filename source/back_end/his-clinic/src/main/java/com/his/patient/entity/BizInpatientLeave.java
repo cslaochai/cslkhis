@@ -1,14 +1,12 @@
 package com.his.patient.entity;
 
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.his.common.base.BaseEntity;
-import com.his.common.enums.InpatientLeaveTypeEnum;
-import com.his.common.enums.LeaveStatusEnum;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
@@ -18,13 +16,16 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_inpatient_leave")
 public class BizInpatientLeave extends BaseEntity {
-    /** 逻辑删除标志（0 未删除 1 已删除） */
+    /**
+     * 逻辑删除标志（0 未删除 1 已删除）
+     */
     @TableLogic
     private Integer delFlag;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
-
 
 
     /**
@@ -241,18 +242,4 @@ public class BizInpatientLeave extends BaseEntity {
      * 签名时刻
      */
     private LocalDateTime signedTime;
-
-    public static String statusText(Integer status) {
-        if (status == null) {
-            return "—";
-        }
-        return LeaveStatusEnum.getLabel(status);
-    }
-
-    public static String typeText(Integer type) {
-        if (type == null) {
-            return "—";
-        }
-        return InpatientLeaveTypeEnum.getLabel(type);
-    }
 }

@@ -131,7 +131,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
      * 时间统一截到秒：库表是 DATETIME(0)，写进去会被四舍五入，不截会导致"写进去的 ≠ 读回来的"
      */
     @Override
-    public IPage<BedWaitVO> queuePage(BedWaitQueryPageDTO query) {
+    public IPage<BedWaitVO> queuePage(BedWaitPageQueryDTO query) {
         LambdaQueryWrapper<BizBedWait> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BizBedWait::getDelFlag, 0)
                 .eq(query.getWaitStatus() != null, BizBedWait::getWaitStatus, query.getWaitStatus())
@@ -711,7 +711,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
     }
 
     @Override
-    public BedPoolVO bedPool(BedPoolQueryPageDTO query) {
+    public BedPoolVO bedPool(BedPoolPageQueryDTO query) {
         Long deptId = query.getDeptId();
         Long wardId = query.getWardId();
         // 三元表达式两边必须是同一个包装类型：写成 `? BedStatusEnum.FREE.getCode() : query.getBedStatus()` 时

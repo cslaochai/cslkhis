@@ -29,7 +29,7 @@ public class QualityControlController {
 
     @Operation(summary = "质控单分页（可按来源/类型/状态/结果/关键词过滤）")
     @PostMapping("/listPage")
-    public Result<PageResult<BizQualityControlVO>> listPage(@Valid @RequestBody QcQueryPageDTO queryDTO) {
+    public Result<PageResult<BizQualityControlVO>> listPage(@Valid @RequestBody QcPageQueryDTO queryDTO) {
         return Result.success(qualityControlService.selectQcPage(queryDTO));
     }
 
@@ -59,7 +59,7 @@ public class QualityControlController {
 
     @Operation(summary = "待质控病历候选分页（先选来源：OUTPATIENT / INPATIENT）")
     @GetMapping("/listCandidatePage")
-    public Result<PageResult<QcCandidateVO>> listCandidatePage(@Valid QcCandidateQueryPageDTO queryDTO) {
+    public Result<PageResult<QcCandidateVO>> listCandidatePage(@Valid QcCandidatePageQueryDTO queryDTO) {
         return Result.success(qualityControlService.listCandidatePage(queryDTO));
     }
 

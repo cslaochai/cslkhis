@@ -2,7 +2,7 @@ package com.his.emr.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.emr.dto.ArchiveQueryPageDTO;
+import com.his.emr.dto.ArchivePageQueryDTO;
 import com.his.emr.service.MedicalRecordArchiveService;
 import com.his.emr.vo.BizMedicalRecordArchiveVO;
 import com.his.emr.vo.MedicalRecordArchiveCountVO;
@@ -27,7 +27,7 @@ public class MedicalRecordArchiveController {
 
     @Operation(summary = "分页查询归档记录")
     @PostMapping("/listPage")
-    public Result<PageResult<BizMedicalRecordArchiveVO>> listPage(@Valid @RequestBody ArchiveQueryPageDTO queryDTO) {
+    public Result<PageResult<BizMedicalRecordArchiveVO>> listPage(@Valid @RequestBody ArchivePageQueryDTO queryDTO) {
         return Result.success(medicalRecordArchiveService.selectArchivePage(queryDTO.getPatientId(), queryDTO.getArchiveStatus(),
                 queryDTO.getKeyword(), queryDTO.getPageNum(), queryDTO.getPageSize()));
     }

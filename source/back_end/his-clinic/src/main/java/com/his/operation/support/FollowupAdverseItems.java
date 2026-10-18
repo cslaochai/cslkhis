@@ -1,17 +1,12 @@
 package com.his.operation.support;
 
-import com.his.common.util.TextUtil;
 import com.his.common.enums.AnesthesiaFollowupAdverseEnum;
 import com.his.common.enums.AnesthesiaFollowupRecoveryEnum;
 import com.his.common.enums.AnesthesiaFollowupRoundEnum;
-import com.his.common.enums.AnesthesiaFollowupStatusEnum;
+import com.his.common.util.TextUtil;
 import lombok.NoArgsConstructor;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -28,17 +23,6 @@ public final class FollowupAdverseItems {
             return "—";
         }
         AnesthesiaFollowupRecoveryEnum e = AnesthesiaFollowupRecoveryEnum.fromCode(recovery);
-        return e != null ? e.getLabel() : "";
-    }
-
-    /**
-     * 状态：0-草稿 1-已完成
-     */
-    public static String statusText(Integer status) {
-        if (status == null) {
-            return "—";
-        }
-        AnesthesiaFollowupStatusEnum e = AnesthesiaFollowupStatusEnum.fromCode(status);
         return e != null ? e.getLabel() : "";
     }
 

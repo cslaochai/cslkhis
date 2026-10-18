@@ -45,14 +45,14 @@ public class InpatientController {
     @PreAuthorize(READ_OR_SETTLEMENT)
     @Operation(summary = "住院列表分页（在院/已出院）")
     @GetMapping("/listPage")
-    public Result<IPage<InpatientVO>> listPage(@Valid InpatientQueryPageDTO query) {
+    public Result<IPage<InpatientVO>> listPage(@Valid InpatientPageQueryDTO query) {
         return Result.success(inpatientService.listPage(query));
     }
 
     @Operation(summary = "本科室住院列表分页（医生站/护士站左栏，科室由服务端按登录态强制过滤）")
     @GetMapping("/listMyDeptPage")
     @PreAuthorize("isAuthenticated()")
-    public Result<IPage<InpatientVO>> listMyDeptPage(@Valid InpatientQueryPageDTO query) {
+    public Result<IPage<InpatientVO>> listMyDeptPage(@Valid InpatientPageQueryDTO query) {
         return Result.success(inpatientService.listMyDeptPage(query));
     }
 

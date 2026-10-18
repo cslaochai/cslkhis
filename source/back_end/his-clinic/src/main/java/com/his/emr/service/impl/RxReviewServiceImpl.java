@@ -93,7 +93,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
     }
 
     @Override
-    public PageResult<RxReviewBatchVO> batchListPage(RxReviewBatchQueryPageDTO query) {
+    public PageResult<RxReviewBatchVO> batchListPage(RxReviewBatchPageQueryDTO query) {
         LambdaQueryWrapper<BizRxReviewBatch> wrapper = new LambdaQueryWrapper<>();
         String keyword = query.getKeyword() == null ? null : query.getKeyword().trim();
         wrapper.and(TextUtil.hasText(keyword), w -> w
@@ -437,7 +437,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
     }
 
     @Override
-    public PageResult<RxReviewTalkVO> talkListPage(RxReviewTalkQueryPageDTO query) {
+    public PageResult<RxReviewTalkVO> talkListPage(RxReviewTalkPageQueryDTO query) {
         LambdaQueryWrapper<BizRxDoctorTalk> wrapper = new LambdaQueryWrapper<>();
         String keyword = query.getKeyword() == null ? null : query.getKeyword().trim();
         wrapper.and(TextUtil.hasText(keyword), w -> w

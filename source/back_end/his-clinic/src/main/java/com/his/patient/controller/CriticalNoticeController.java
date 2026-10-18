@@ -29,7 +29,7 @@ public class CriticalNoticeController {
     @PreAuthorize("hasAuthority('ipd:criticalNotice:list')")
     @Operation(summary = "通知台账分页")
     @PostMapping("/listPage")
-    public Result<PageResult<CriticalNoticeVO.Row>> listPage(@Valid @RequestBody CriticalNoticeDTO.QueryPage dto) {
+    public Result<PageResult<CriticalNoticeVO.Row>> listPage(@Valid @RequestBody CriticalNoticeDTO.PageQuery dto) {
         return Result.success(criticalNoticeService.listPage(dto));
     }
 

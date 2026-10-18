@@ -2,7 +2,7 @@ package com.his.pharmacy.service;
 
 import com.his.common.base.PageResult;
 import com.his.pharmacy.dto.DrugTransferActionDTO;
-import com.his.pharmacy.dto.DrugTransferQueryPageDTO;
+import com.his.pharmacy.dto.DrugTransferPageQueryDTO;
 import com.his.pharmacy.dto.DrugTransferUpsertDTO;
 import com.his.pharmacy.vo.DrugTransferVO;
 
@@ -11,7 +11,7 @@ import com.his.pharmacy.vo.DrugTransferVO;
  */
 public interface DrugTransferService {
 
-    PageResult<DrugTransferVO> listPage(DrugTransferQueryPageDTO query);
+    PageResult<DrugTransferVO> listPage(DrugTransferPageQueryDTO query);
 
     /** 详情（含明细与本单落下的两行流水） */
     DrugTransferVO getDetailById(Long id);

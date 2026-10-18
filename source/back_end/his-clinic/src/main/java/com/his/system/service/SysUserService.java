@@ -3,7 +3,7 @@ package com.his.system.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
 import com.his.system.dto.SysUserPasswordUpsertDTO;
-import com.his.system.dto.SysUserQueryPageDTO;
+import com.his.system.dto.SysUserPageQueryDTO;
 import com.his.system.dto.SysUserUpsertDTO;
 import com.his.system.entity.SysUser;
 import com.his.system.vo.RoleNameVO;
@@ -20,7 +20,7 @@ public interface SysUserService extends IService<SysUser> {
     /**
      * 用户管理分页（出参已是 VO）
      */
-    PageResult<SysUserListVO> queryUserPage(SysUserQueryPageDTO queryDTO);
+    PageResult<SysUserListVO> queryUserPage(SysUserPageQueryDTO queryDTO);
 
     /**
      * 新增或修改用户：管理员与患者/其他类型账号的闸门、字段级留痕都在这里。

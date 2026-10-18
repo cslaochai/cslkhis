@@ -11,7 +11,7 @@ import java.util.List;
  */
 public interface MedicalItemService {
 
-    PageResult<SysInspectionItemVO> inspectionListPage(SysInspectionItemQueryPageDTO queryDTO);
+    PageResult<SysInspectionItemVO> inspectionListPage(SysInspectionItemPageQueryDTO queryDTO);
 
     List<SysInspectionItemSelectListVO> inspectionSelectList(String keyword, Integer limit);
 
@@ -21,7 +21,7 @@ public interface MedicalItemService {
 
     void deleteInspectionItem(Long id);
 
-    PageResult<SysLaboratoryItemVO> laboratoryListPage(SysLaboratoryItemQueryPageDTO queryDTO);
+    PageResult<SysLaboratoryItemVO> laboratoryListPage(SysLaboratoryItemPageQueryDTO queryDTO);
 
     List<SysLaboratoryItemSelectListVO> laboratorySelectList(String keyword, Integer limit);
 

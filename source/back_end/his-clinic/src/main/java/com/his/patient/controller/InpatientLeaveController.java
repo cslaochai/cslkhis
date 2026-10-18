@@ -29,7 +29,7 @@ public class InpatientLeaveController {
     @PreAuthorize("hasAuthority('ipd:leave:list')")
     @Operation(summary = "请假台账分页（overdueOnly=true 只看超期未归，超期是查询时算的展示态）")
     @PostMapping("/listPage")
-    public Result<PageResult<InpatientLeaveVO.Row>> listPage(@Valid @RequestBody InpatientLeaveDTO.QueryPage dto) {
+    public Result<PageResult<InpatientLeaveVO.Row>> listPage(@Valid @RequestBody InpatientLeaveDTO.PageQuery dto) {
         return Result.success(inpatientLeaveService.listPage(dto));
     }
 

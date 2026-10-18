@@ -1,7 +1,7 @@
 package com.his.system.service;
 
 import com.his.common.base.PageResult;
-import com.his.system.dto.DutyPostQueryPageDTO;
+import com.his.system.dto.DutyPostPageQueryDTO;
 import com.his.system.dto.DutyPostUpsertDTO;
 import com.his.system.vo.DutyPostSelectListVO;
 import com.his.system.vo.DutyPostVO;
@@ -18,7 +18,7 @@ public interface DutyPostService {
      */
     List<DutyPostSelectListVO> selectListVO(Integer dutyScope, Integer orgType, Long orgId);
 
-    PageResult<DutyPostVO> pageVO(DutyPostQueryPageDTO dto);
+    PageResult<DutyPostVO> pageVO(DutyPostPageQueryDTO dto);
 
     /**
      * 新增/修改点位。点位编码全局唯一（同码重建会撞键），班次必须存在且启用。

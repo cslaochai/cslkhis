@@ -477,7 +477,7 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
     }
 
     @Override
-    public IPage<ConsultationVO> listPage(ConsultationQueryPageDTO query) {
+    public IPage<ConsultationVO> listPage(ConsultationPageQueryDTO query) {
         Page<ConsultationVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         Long reqDeptId = query.getFromDeptId() != null ? query.getFromDeptId() : query.getToDeptId();
         List<Long> deptIds = deptScopeService.scopedDeptIds(reqDeptId);

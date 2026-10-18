@@ -2,7 +2,7 @@ package com.his.patient.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.patient.dto.AdmissionOrderQueryPageDTO;
+import com.his.patient.dto.AdmissionOrderPageQueryDTO;
 import com.his.patient.entity.BizAdmissionOrder;
 import com.his.patient.vo.AdmissionOrderVO;
 import org.apache.ibatis.annotations.Mapper;
@@ -81,7 +81,7 @@ public interface BizAdmissionOrderMapper extends BaseMapper<BizAdmissionOrder> {
             </script>
             """)
     IPage<AdmissionOrderVO> selectOrderPage(IPage<AdmissionOrderVO> page,
-                                            @Param("q") AdmissionOrderQueryPageDTO query,
+                                            @Param("q") AdmissionOrderPageQueryDTO query,
                                             @Param("deptIds") List<Long> deptIds);
 
     /**

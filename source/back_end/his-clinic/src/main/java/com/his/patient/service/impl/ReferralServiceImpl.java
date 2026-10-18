@@ -111,7 +111,7 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
         return toVo(r, loadDeptNames());
     }
 
-    public IPage<ReferralVO> listPage(ReferralDTO.QueryPage q) {
+    public IPage<ReferralVO> listPage(ReferralDTO.PageQuery q) {
         LambdaQueryWrapper<BizReferral> w = new LambdaQueryWrapper<BizReferral>()
                 .eq(q.getPatientId() != null, BizReferral::getPatientId, q.getPatientId())
                 .eq(q.getDirection() != null, BizReferral::getDirection, q.getDirection())

@@ -315,7 +315,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
     }
 
     @Override
-    public PageResult<ComplianceAuditVO> selectAuditPage(ComplianceAuditQueryPageDTO queryDTO) {
+    public PageResult<ComplianceAuditVO> selectAuditPage(ComplianceAuditPageQueryDTO queryDTO) {
         LambdaQueryWrapper<BizComplianceAudit> wrapper = new LambdaQueryWrapper<BizComplianceAudit>()
                 .eq(queryDTO.getSettlementId() != null, BizComplianceAudit::getSettlementId,
                         queryDTO.getSettlementId())

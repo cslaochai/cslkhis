@@ -12,7 +12,7 @@ import java.util.List;
  */
 public interface IcuService {
 
-    PageResult<IcuVO.StayVO> stayListPage(IcuStayQueryPageDTO query);
+    PageResult<IcuVO.StayVO> stayListPage(IcuStayPageQueryDTO query);
 
     IcuVO.StayVO stayGetById(Long id);
 
@@ -36,7 +36,7 @@ public interface IcuService {
      */
     List<IcuVO.BedVO> bedBoard(Long wardId);
 
-    PageResult<IcuVO.MonitorVO> monitorListPage(IcuMonitorQueryPageDTO query);
+    PageResult<IcuVO.MonitorVO> monitorListPage(IcuMonitorPageQueryDTO query);
 
     /**
      * 单患者监护趋势（hours 为空=全部，按时间正序）

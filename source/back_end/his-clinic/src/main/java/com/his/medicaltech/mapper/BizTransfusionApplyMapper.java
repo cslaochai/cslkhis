@@ -2,7 +2,7 @@ package com.his.medicaltech.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.medicaltech.dto.TransfusionApplyQueryPageDTO;
+import com.his.medicaltech.dto.TransfusionApplyPageQueryDTO;
 import com.his.medicaltech.entity.BizTransfusionApply;
 import com.his.medicaltech.vo.TransfusionApplyVO;
 import org.apache.ibatis.annotations.Mapper;
@@ -63,7 +63,7 @@ public interface BizTransfusionApplyMapper extends BaseMapper<BizTransfusionAppl
             </script>
             """)
     IPage<TransfusionApplyVO> selectApplyPage(IPage<TransfusionApplyVO> page,
-                                              @Param("q") TransfusionApplyQueryPageDTO query,
+                                              @Param("q") TransfusionApplyPageQueryDTO query,
                                               @Param("deptIds") List<Long> deptIds);
 
     /**

@@ -10,7 +10,7 @@ import com.his.common.enums.TimeSourceEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
-import com.his.system.dto.TsaTokenQueryPageDTO;
+import com.his.system.dto.TsaTokenPageQueryDTO;
 import com.his.system.entity.BizTsaToken;
 import com.his.system.entity.SysTsaServer;
 import com.his.system.mapper.BizTsaTokenMapper;
@@ -108,7 +108,7 @@ public class TsaServiceImpl extends ServiceImpl<SysTsaServerMapper, SysTsaServer
     }
 
     @Override
-    public IPage<TsaTokenVO> listPage(TsaTokenQueryPageDTO query) {
+    public IPage<TsaTokenVO> listPage(TsaTokenPageQueryDTO query) {
         LambdaQueryWrapper<BizTsaToken> w = new LambdaQueryWrapper<>();
         if (TextUtil.hasText(query.getSerial())) {
             w.eq(BizTsaToken::getSerial, query.getSerial().trim());

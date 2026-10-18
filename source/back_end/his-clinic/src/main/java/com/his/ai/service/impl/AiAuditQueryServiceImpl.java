@@ -3,7 +3,7 @@ package com.his.ai.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.ai.dto.AiAuditLogQueryPageDTO;
+import com.his.ai.dto.AiAuditLogPageQueryDTO;
 import com.his.ai.entity.SysAiCallLog;
 import com.his.common.enums.AiCallStatusEnum;
 import com.his.ai.mapper.SysAiCallLogMapper;
@@ -70,7 +70,7 @@ public class AiAuditQueryServiceImpl extends ServiceImpl<SysAiCallLogMapper, Sys
         }
     }
 
-    public PageResult<AiAuditLogVO> listPage(AiAuditLogQueryPageDTO dto) {
+    public PageResult<AiAuditLogVO> listPage(AiAuditLogPageQueryDTO dto) {
         LambdaQueryWrapper<SysAiCallLog> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(TextUtil.hasText(dto.getCapabilityKey()), SysAiCallLog::getCapabilityKey, dto.getCapabilityKey())
                 .eq(dto.getStatus() != null, SysAiCallLog::getStatus, dto.getStatus())

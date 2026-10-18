@@ -17,7 +17,7 @@ public interface YbChronicService {
     /**
      * 病种目录分页
      */
-    PageResult<ChronicCatalogVO> catalogListPage(ChronicCatalogQueryPageDTO queryDTO);
+    PageResult<ChronicCatalogVO> catalogListPage(ChronicCatalogPageQueryDTO queryDTO);
 
     /**
      * 启用中的病种目录（备案表单的下拉候选）
@@ -37,7 +37,7 @@ public interface YbChronicService {
     /**
      * 备案台账分页（附展示态：有效/已过期/已注销/已驳回）
      */
-    PageResult<ChronicRegListVO> regListPage(ChronicRegQueryPageDTO queryDTO);
+    PageResult<ChronicRegListVO> regListPage(ChronicRegPageQueryDTO queryDTO);
 
     /**
      * 备案详情

@@ -10,7 +10,7 @@ import com.his.operation.vo.PacuRecordVO;
  */
 public interface PacuService {
 
-    IPage<PacuRecordVO> listPage(PacuQueryPageDTO query);
+    IPage<PacuRecordVO> listPage(PacuPageQueryDTO query);
 
     PacuRecordVO getDetailById(Long pacuId);
 

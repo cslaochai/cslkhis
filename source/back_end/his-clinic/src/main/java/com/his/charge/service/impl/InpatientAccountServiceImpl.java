@@ -14,7 +14,7 @@ import com.his.charge.mapper.BizPaymentTxnMapper;
 import com.his.charge.service.*;
 import com.his.charge.vo.*;
 import com.his.charge.dto.BillPayDTO;
-import com.his.charge.dto.PrepayQueryPageDTO;
+import com.his.charge.dto.PrepayPageQueryDTO;
 import com.his.charge.dto.PrepayUpsertDTO;
 import com.his.charge.vo.PrepayBalanceVO;
 import com.his.charge.vo.PrepayVO;
@@ -113,7 +113,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
      * DATETIME(0) 是四舍五入不是截断：落库又要比较的时间统一截到秒
      */
     @Override
-    public IPage<PrepayVO> prepayListPage(PrepayQueryPageDTO query) {
+    public IPage<PrepayVO> prepayListPage(PrepayPageQueryDTO query) {
         Page<PrepayVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         IPage<PrepayVO> raw = bizPaymentTxnMapper.selectPrepayPage(page, query);
         // 文案由后端给：前端判码值就会有第二套口径（支付方式码值前端就抄错过一次，把 4 当银行卡）

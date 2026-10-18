@@ -13,7 +13,7 @@ import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.PivasActionDTO;
 import com.his.pharmacy.dto.PivasAuditDTO;
 import com.his.pharmacy.dto.PivasGenerateDTO;
-import com.his.pharmacy.dto.PivasQueryPageDTO;
+import com.his.pharmacy.dto.PivasPageQueryDTO;
 import com.his.pharmacy.entity.BizPivasBatch;
 import com.his.pharmacy.entity.BizPivasItem;
 import com.his.pharmacy.mapper.BizPivasBatchMapper;
@@ -150,7 +150,7 @@ public class PivasServiceImpl extends ServiceImpl<BizPivasItemMapper, BizPivasIt
     }
 
     @Override
-    public PageResult<PivasVO> listPage(PivasQueryPageDTO dto) {
+    public PageResult<PivasVO> listPage(PivasPageQueryDTO dto) {
         Page<PivasVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         // mapper 返回 List 时结果只在返回值里，page.getRecords() 不会被 MP 回填
         List<Long> wardIds = scopedWardIds(dto.getWardId());

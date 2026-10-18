@@ -4,7 +4,7 @@ import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.pharmacy.dto.WardDispenseActionDTO;
 import com.his.pharmacy.dto.WardDispenseGenerateDTO;
-import com.his.pharmacy.dto.WardDispenseQueryPageDTO;
+import com.his.pharmacy.dto.WardDispensePageQueryDTO;
 import com.his.pharmacy.service.WardDispenseService;
 import com.his.pharmacy.vo.WardDispenseCandidateVO;
 import com.his.pharmacy.vo.WardDispenseStatsVO;
@@ -50,7 +50,7 @@ public class WardDispenseController {
 
     @Operation(summary = "摆药单分页")
     @PostMapping("/listPage")
-    public Result<PageResult<WardDispenseVO>> listPage(@Valid @RequestBody WardDispenseQueryPageDTO dto) {
+    public Result<PageResult<WardDispenseVO>> listPage(@Valid @RequestBody WardDispensePageQueryDTO dto) {
         return Result.success(wardDispenseService.listPage(dto));
     }
 

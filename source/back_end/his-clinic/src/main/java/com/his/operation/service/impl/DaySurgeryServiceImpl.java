@@ -91,7 +91,7 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
     }
 
     @Override
-    public PageResult<DaySurgeryItemVO> itemListPage(DaySurgeryItemQueryPageDTO dto) {
+    public PageResult<DaySurgeryItemVO> itemListPage(DaySurgeryItemPageQueryDTO dto) {
         Page<DaySurgeryItemVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         List<DaySurgeryItemVO> records = bizDaySurgeryItemMapper.selectItemPage(page, TextUtil.trimToNull(dto.getKeyword()),
                 deptScopeService.scopedDeptIds(dto.getDeptId()), dto.getEnabledOnly());
@@ -162,7 +162,7 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
     }
 
     @Override
-    public PageResult<DaySurgeryApplyVO> listPage(DaySurgeryQueryPageDTO dto) {
+    public PageResult<DaySurgeryApplyVO> listPage(DaySurgeryPageQueryDTO dto) {
         Page<DaySurgeryApplyVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         List<DaySurgeryApplyVO> records = bizDaySurgeryApplyMapper.selectApplyPage(page, TextUtil.trimToNull(dto.getKeyword()),
                 dto.getStatus(), dto.getItemId(), deptScopeService.scopedDeptIds(dto.getDeptId()), dto.getOpenOnly(), dto.getOverdueOnly(),

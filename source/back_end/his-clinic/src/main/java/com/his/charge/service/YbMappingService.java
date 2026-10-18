@@ -3,7 +3,7 @@ package com.his.charge.service;
 
 import com.his.charge.dto.YbAutoMatchDTO;
 import com.his.charge.dto.YbMapDTO;
-import com.his.charge.dto.YbMappingQueryPageDTO;
+import com.his.charge.dto.YbMappingPageQueryDTO;
 import com.his.charge.vo.YbAutoMatchResultVO;
 import com.his.charge.vo.YbMappingListVO;
 import com.his.charge.vo.YbMappingStatsVO;
@@ -19,7 +19,7 @@ public interface YbMappingService {
     /**
      * 对照工作台分页（itemType 必填；未对照行 mapping 字段为 null）
      */
-    PageResult<YbMappingListVO> listPage(YbMappingQueryPageDTO queryDTO);
+    PageResult<YbMappingListVO> listPage(YbMappingPageQueryDTO queryDTO);
 
     /**
      * 各类型对照率

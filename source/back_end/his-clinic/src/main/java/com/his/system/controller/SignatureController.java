@@ -35,7 +35,7 @@ public class SignatureController {
 
     @Operation(summary = "签名记录分页（可按对象类型/场景/签名人/状态/验签结果/时间过滤）")
     @GetMapping("/emr/signature/listPage")
-    public Result<PageResult<SignatureVO>> listPage(@Valid SignatureQueryPageDTO query) {
+    public Result<PageResult<SignatureVO>> listPage(@Valid SignaturePageQueryDTO query) {
         var page = emrSignatureService.listPage(query);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(),
                 page.getPages(), page.getRecords()));
@@ -107,7 +107,7 @@ public class SignatureController {
 
     @Operation(summary = "时间戳令牌台账分页（只增不改的签发流水，可按序列号精确查）")
     @GetMapping("/emr/tsa/tokenListPage")
-    public Result<PageResult<TsaTokenVO>> tsaTokenListPage(@Valid TsaTokenQueryPageDTO query) {
+    public Result<PageResult<TsaTokenVO>> tsaTokenListPage(@Valid TsaTokenPageQueryDTO query) {
         var page = tsaService.listPage(query);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(),
                 page.getPages(), page.getRecords()));
@@ -150,7 +150,7 @@ public class SignatureController {
     // 证书
     @Operation(summary = "签名证书分页")
     @GetMapping("/emr/signCert/listPage")
-    public Result<PageResult<SignCertVO>> certListPage(@Valid SignCertQueryPageDTO query) {
+    public Result<PageResult<SignCertVO>> certListPage(@Valid SignCertPageQueryDTO query) {
         var page = signCertService.listPage(query);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(),
                 page.getPages(), page.getRecords()));

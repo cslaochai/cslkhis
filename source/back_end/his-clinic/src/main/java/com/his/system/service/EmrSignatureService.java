@@ -2,7 +2,7 @@ package com.his.system.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.system.dto.SignCommandDTO;
-import com.his.system.dto.SignatureQueryPageDTO;
+import com.his.system.dto.SignaturePageQueryDTO;
 import com.his.system.vo.ObjectSignatureVO;
 import com.his.system.vo.SignVerifyVO;
 import com.his.system.vo.SignatureSummaryVO;
@@ -15,7 +15,7 @@ import java.util.List;
  */
 public interface EmrSignatureService {
 
-    IPage<SignatureVO> listPage(SignatureQueryPageDTO query);
+    IPage<SignatureVO> listPage(SignaturePageQueryDTO query);
 
     /**
      * 签名（业务动作自动触发，或管理员补签）

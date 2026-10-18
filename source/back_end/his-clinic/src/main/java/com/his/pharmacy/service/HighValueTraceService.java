@@ -1,7 +1,7 @@
 package com.his.pharmacy.service;
 
 import com.his.common.base.PageResult;
-import com.his.pharmacy.dto.ConsumableTraceQueryPageDTO;
+import com.his.pharmacy.dto.ConsumableTracePageQueryDTO;
 import com.his.pharmacy.dto.HighValueUseDTO;
 import com.his.pharmacy.vo.BizConsumableTraceVO;
 import com.his.pharmacy.vo.ConsumableTraceDetailVO;
@@ -25,7 +25,7 @@ public interface HighValueTraceService {
     /**
      * 溯源台账分页（正/反向追溯）
      */
-    PageResult<BizConsumableTraceVO> selectTracePage(ConsumableTraceQueryPageDTO queryDTO);
+    PageResult<BizConsumableTraceVO> selectTracePage(ConsumableTracePageQueryDTO queryDTO);
 
     /**
      * 溯源详情（字典→入库批次→使用患者→计费全链）

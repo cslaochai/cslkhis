@@ -11,7 +11,7 @@ import com.his.common.enums.DutyShiftTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.system.dto.DutyLogHandoverDTO;
-import com.his.system.dto.DutyLogQueryPageDTO;
+import com.his.system.dto.DutyLogPageQueryDTO;
 import com.his.system.dto.DutyLogUpsertDTO;
 import com.his.system.entity.BizDutyLog;
 import com.his.system.entity.SysEmployee;
@@ -55,7 +55,7 @@ public class DutyLogServiceImpl extends ServiceImpl<BizDutyLogMapper, BizDutyLog
 
     // 查询
 
-    public PageResult<DutyLogVO> listPage(DutyLogQueryPageDTO q) {
+    public PageResult<DutyLogVO> listPage(DutyLogPageQueryDTO q) {
         LocalDate begin = q.getBeginDate() != null ? q.getBeginDate() : LocalDate.now().minusDays(DEFAULT_BACK_DAYS);
         LocalDate end = q.getEndDate() != null ? q.getEndDate() : LocalDate.now();
         LambdaQueryWrapper<BizDutyLog> w = new LambdaQueryWrapper<>();

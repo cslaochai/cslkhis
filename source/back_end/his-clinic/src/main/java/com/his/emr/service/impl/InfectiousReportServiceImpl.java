@@ -10,7 +10,7 @@ import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.emr.dto.InfectiousReportDTO;
-import com.his.emr.dto.InfectiousReportQueryPageDTO;
+import com.his.emr.dto.InfectiousReportPageQueryDTO;
 import com.his.emr.entity.BizInfectiousReport;
 import com.his.emr.entity.SysInfectiousDisease;
 import com.his.common.enums.InfectiousClassEnum;
@@ -49,7 +49,7 @@ public class InfectiousReportServiceImpl extends ServiceImpl<BizInfectiousReport
     // 查询
 
     @Override
-    public PageResult<InfectiousReportVO.Row> page(InfectiousReportQueryPageDTO q) {
+    public PageResult<InfectiousReportVO.Row> page(InfectiousReportPageQueryDTO q) {
         List<Long> scope = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizInfectiousReport> w = new LambdaQueryWrapper<BizInfectiousReport>()
                 .in(scope != null, BizInfectiousReport::getVisitDeptId, scope)

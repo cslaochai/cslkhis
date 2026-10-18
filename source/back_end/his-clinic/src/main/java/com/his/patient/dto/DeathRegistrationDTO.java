@@ -22,7 +22,7 @@ public class DeathRegistrationDTO {
      */
     @Data
     @EqualsAndHashCode(callSuper = true)
-    public static class QueryPage extends PageParam {
+    public static class PageQuery extends PageParam {
         /**
          * 登记号 / 死者姓名关键字
          */

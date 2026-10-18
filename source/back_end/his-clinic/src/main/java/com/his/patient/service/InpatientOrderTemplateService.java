@@ -1,7 +1,7 @@
 package com.his.patient.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.patient.dto.InpatientOrderTemplateQueryPageDTO;
+import com.his.patient.dto.InpatientOrderTemplatePageQueryDTO;
 import com.his.patient.dto.InpatientOrderTemplateUpsertDTO;
 import com.his.patient.vo.InpatientOrderTemplateDetailVO;
 import com.his.patient.vo.InpatientOrderTemplateListVO;
@@ -27,7 +27,7 @@ public interface InpatientOrderTemplateService {
     /**
      * 当前医生的模板分页（模板管理弹窗）
      */
-    IPage<InpatientOrderTemplateListVO> listPage(InpatientOrderTemplateQueryPageDTO query);
+    IPage<InpatientOrderTemplateListVO> listPage(InpatientOrderTemplatePageQueryDTO query);
 
     /**
      * 当前医生的模板下拉候选（开立弹窗，按创建时间倒序，有上限）

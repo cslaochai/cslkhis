@@ -119,7 +119,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
     }
 
     @Override
-    public IPage<TransfusionApplyVO> listPage(TransfusionApplyQueryPageDTO query) {
+    public IPage<TransfusionApplyVO> listPage(TransfusionApplyPageQueryDTO query) {
         query.setApplyDateFrom(normalizeFrom(query.getApplyDateFrom()));
         query.setApplyDateTo(normalizeTo(query.getApplyDateTo()));
         query.setPatientAbo(BloodTypeEnum.normalizeAbo(query.getPatientAbo()));

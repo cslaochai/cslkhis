@@ -15,7 +15,7 @@ import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.DrugTransferActionDTO;
-import com.his.pharmacy.dto.DrugTransferQueryPageDTO;
+import com.his.pharmacy.dto.DrugTransferPageQueryDTO;
 import com.his.pharmacy.dto.DrugTransferUpsertDTO;
 import com.his.pharmacy.dto.StockBatchMoveDTO;
 import com.his.pharmacy.entity.BizDrugStock;
@@ -69,7 +69,7 @@ public class DrugTransferServiceImpl extends ServiceImpl<BizDrugTransferMapper, 
     }
 
     @Override
-    public PageResult<DrugTransferVO> listPage(DrugTransferQueryPageDTO query) {
+    public PageResult<DrugTransferVO> listPage(DrugTransferPageQueryDTO query) {
         Page<DrugTransferVO> page = bizDrugTransferMapper.selectTransferPage(
                 new Page<>(query.getPageNum(), query.getPageSize()),
                 TextUtil.trimToNull(query.getTransferNo()), query.getTransferType(), query.getStatus(),

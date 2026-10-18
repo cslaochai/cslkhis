@@ -104,7 +104,7 @@ public class CssdDTO {
      */
     @Data
     @EqualsAndHashCode(callSuper = true)
-    public static class QueryPage extends PageParam implements Serializable {
+    public static class PageQuery extends PageParam implements Serializable {
 
         /**
          * 关键词：条码/名称/科室模糊
@@ -190,7 +190,7 @@ public class CssdDTO {
      */
     @Data
     @EqualsAndHashCode(callSuper = true)
-    public static class TemplateQueryPage extends PageParam implements Serializable {
+    public static class TemplatePageQuery extends PageParam implements Serializable {
 
         /**
          * 关键词：包编码/名称模糊

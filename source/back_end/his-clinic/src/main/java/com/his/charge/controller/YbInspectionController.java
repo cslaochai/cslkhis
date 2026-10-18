@@ -3,7 +3,7 @@ package com.his.charge.controller;
 
 import com.his.charge.dto.YbCancelDTO;
 import com.his.charge.dto.YbInspectConcludeDTO;
-import com.his.charge.dto.YbInspectionQueryPageDTO;
+import com.his.charge.dto.YbInspectionPageQueryDTO;
 import com.his.charge.dto.YbInspectionUpsertDTO;
 import com.his.charge.service.YbInspectionService;
 import com.his.charge.vo.YbInspectionListVO;
@@ -32,7 +32,7 @@ public class YbInspectionController {
     @PreAuthorize("hasAuthority('finance:insuranceDeduct:list')")
     @Operation(summary = "批次分页（附名下扣款单数与金额）")
     @GetMapping("/listPage")
-    public Result<PageResult<YbInspectionListVO>> listPage(@Valid YbInspectionQueryPageDTO queryDTO) {
+    public Result<PageResult<YbInspectionListVO>> listPage(@Valid YbInspectionPageQueryDTO queryDTO) {
         return Result.success(ybInspectionService.listPage(queryDTO));
     }
 

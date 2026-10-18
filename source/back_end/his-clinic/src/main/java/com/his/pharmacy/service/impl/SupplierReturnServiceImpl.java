@@ -15,7 +15,7 @@ import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.StockBatchMoveDTO;
 import com.his.pharmacy.dto.SupplierReturnActionDTO;
-import com.his.pharmacy.dto.SupplierReturnQueryPageDTO;
+import com.his.pharmacy.dto.SupplierReturnPageQueryDTO;
 import com.his.pharmacy.dto.SupplierReturnUpsertDTO;
 import com.his.pharmacy.entity.BizDrugSupplierReturn;
 import com.his.pharmacy.entity.BizDrugSupplierReturnItem;
@@ -61,7 +61,7 @@ public class SupplierReturnServiceImpl extends ServiceImpl<BizDrugSupplierReturn
     }
 
     @Override
-    public PageResult<SupplierReturnVO> listPage(SupplierReturnQueryPageDTO query) {
+    public PageResult<SupplierReturnVO> listPage(SupplierReturnPageQueryDTO query) {
         Page<SupplierReturnVO> page = bizDrugSupplierReturnMapper.selectReturnPage(
                 new Page<>(query.getPageNum(), query.getPageSize()),
                 TextUtil.trimToNull(query.getReturnNo()), query.getSupplierId(), query.getStatus(),

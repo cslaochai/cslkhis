@@ -1,12 +1,12 @@
 package com.his.ai.service;
 
-import com.his.ai.dto.OperationQaColumnQueryPageDTO;
+import com.his.ai.dto.OperationQaColumnPageQueryDTO;
 import com.his.ai.dto.OperationQaColumnUpsertDTO;
-import com.his.ai.dto.OperationQaRelationQueryPageDTO;
+import com.his.ai.dto.OperationQaRelationPageQueryDTO;
 import com.his.ai.dto.OperationQaRelationUpsertDTO;
-import com.his.ai.dto.OperationQaSchemaQueryPageDTO;
+import com.his.ai.dto.OperationQaSchemaPageQueryDTO;
 import com.his.ai.dto.OperationQaSchemaUpsertDTO;
-import com.his.ai.dto.OperationQaSemanticQueryPageDTO;
+import com.his.ai.dto.OperationQaSemanticPageQueryDTO;
 import com.his.ai.dto.OperationQaSemanticUpsertDTO;
 import com.his.ai.support.OperationSchemaCatalog;
 import com.his.ai.vo.OperationQaColumnListVO;
@@ -34,7 +34,7 @@ public interface OperationQaConfigService {
     /**
      * 数据表配置分页查询
      */
-    PageResult<OperationQaSchemaListVO> listSchemaPage(OperationQaSchemaQueryPageDTO dto);
+    PageResult<OperationQaSchemaListVO> listSchemaPage(OperationQaSchemaPageQueryDTO dto);
 
     /**
      * 数据表配置新增/修改
@@ -49,7 +49,7 @@ public interface OperationQaConfigService {
     /**
      * 数据列配置分页查询（按表）
      */
-    PageResult<OperationQaColumnListVO> listColumnPage(OperationQaColumnQueryPageDTO dto);
+    PageResult<OperationQaColumnListVO> listColumnPage(OperationQaColumnPageQueryDTO dto);
 
     /**
      * 数据列配置新增/修改
@@ -64,7 +64,7 @@ public interface OperationQaConfigService {
     /**
      * 语义映射分页查询
      */
-    PageResult<OperationQaSemanticListVO> listSemanticPage(OperationQaSemanticQueryPageDTO dto);
+    PageResult<OperationQaSemanticListVO> listSemanticPage(OperationQaSemanticPageQueryDTO dto);
 
     /**
      * 语义映射新增/修改
@@ -79,7 +79,7 @@ public interface OperationQaConfigService {
     /**
      * 表间关系配置分页查询
      */
-    PageResult<OperationQaRelationListVO> listRelationPage(OperationQaRelationQueryPageDTO dto);
+    PageResult<OperationQaRelationListVO> listRelationPage(OperationQaRelationPageQueryDTO dto);
 
     /**
      * 表间关系配置新增/修改

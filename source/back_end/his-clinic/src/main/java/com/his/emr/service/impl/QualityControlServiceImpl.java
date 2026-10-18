@@ -6,9 +6,9 @@ import com.his.common.base.PageResult;
 import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
-import com.his.emr.dto.QcCandidateQueryPageDTO;
+import com.his.emr.dto.QcCandidatePageQueryDTO;
 import com.his.emr.dto.QcExecuteDTO;
-import com.his.emr.dto.QcQueryPageDTO;
+import com.his.emr.dto.QcPageQueryDTO;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.entity.BizQualityControl;
 import com.his.emr.mapper.BizMedicalRecordMapper;
@@ -115,7 +115,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
     }
 
     @Override
-    public PageResult<BizQualityControlVO> selectQcPage(QcQueryPageDTO query) {
+    public PageResult<BizQualityControlVO> selectQcPage(QcPageQueryDTO query) {
         Page<BizQualityControlVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         var result = baseMapper.selectQcPage(page, query, deptScopeService.scopedDeptIds(null));
         result.getRecords().forEach(this::enrich);
@@ -217,7 +217,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
 
     // 执行质控
     @Override
-    public PageResult<QcCandidateVO> listCandidatePage(QcCandidateQueryPageDTO query) {
+    public PageResult<QcCandidateVO> listCandidatePage(QcCandidatePageQueryDTO query) {
         QcRecordSourceEnum source = QcRecordSourceEnum.fromCode(query.getRecordSource());
         Page<QcCandidateVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<Long> scope = deptScopeService.scopedDeptIds(null);

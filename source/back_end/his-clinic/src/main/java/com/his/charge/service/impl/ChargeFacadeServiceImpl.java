@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.charge.dto.BillSettleUpsertDTO;
 import com.his.charge.dto.BillPayDTO;
 import com.his.charge.dto.FeeBookDTO;
-import com.his.charge.dto.PrepayQueryPageDTO;
+import com.his.charge.dto.PrepayPageQueryDTO;
 import com.his.charge.dto.PrepayUpsertDTO;
 import com.his.charge.service.ChargeFacadeService;
 import com.his.charge.vo.BillBriefVO;
@@ -230,7 +230,7 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
     }
 
     @Override
-    public IPage<PrepayVO> prepayPage(PrepayQueryPageDTO query) {
+    public IPage<PrepayVO> prepayPage(PrepayPageQueryDTO query) {
         return inpatientAccountService.prepayListPage(query);
     }
 

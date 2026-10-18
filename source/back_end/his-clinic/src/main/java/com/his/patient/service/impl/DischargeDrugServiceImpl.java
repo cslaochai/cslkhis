@@ -88,7 +88,7 @@ public class DischargeDrugServiceImpl extends ServiceImpl<BizDischargeDrugMapper
         return toVo(d);
     }
 
-    public IPage<DischargeDrugVO> listPage(DischargeDrugDTO.QueryPage q) {
+    public IPage<DischargeDrugVO> listPage(DischargeDrugDTO.PageQuery q) {
         IPage<BizDischargeDrug> page = bizDischargeDrugMapper.selectScopedPage(
                 new Page<>(q.getPageNum(), q.getPageSize()),
                 q.getAdmissionId(), q.getPatientId(),

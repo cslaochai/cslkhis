@@ -12,7 +12,7 @@ import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.InpatientTransferAcceptDTO;
 import com.his.patient.dto.InpatientTransferCancelDTO;
-import com.his.patient.dto.InpatientTransferQueryPageDTO;
+import com.his.patient.dto.InpatientTransferPageQueryDTO;
 import com.his.patient.dto.InpatientTransferUpsertDTO;
 import com.his.patient.entity.*;
 import com.his.patient.mapper.*;
@@ -69,7 +69,7 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
     // 查询
 
     @Override
-    public IPage<InpatientTransferVO> listPage(InpatientTransferQueryPageDTO query) {
+    public IPage<InpatientTransferVO> listPage(InpatientTransferPageQueryDTO query) {
         Long reqDeptId = query.getFromDeptId() != null ? query.getFromDeptId() : query.getToDeptId();
         List<Long> deptIds = deptScopeService.scopedDeptIds(reqDeptId);
         IPage<BizInpatientTransfer> page = bizInpatientTransferMapper.selectTransferPage(

@@ -2,7 +2,7 @@ package com.his.pharmacy.service;
 
 import com.his.common.base.PageResult;
 import com.his.pharmacy.dto.PurchaseOrderAuditDTO;
-import com.his.pharmacy.dto.PurchaseOrderQueryPageDTO;
+import com.his.pharmacy.dto.PurchaseOrderPageQueryDTO;
 import com.his.pharmacy.dto.PurchaseOrderUpsertDTO;
 import com.his.pharmacy.vo.DrugInboundVO;
 import com.his.pharmacy.vo.PurchaseOrderVO;
@@ -13,7 +13,7 @@ import com.his.pharmacy.vo.PurchaseOrderVO;
 public interface PurchaseOrderService {
 
     /** 分页查询 */
-    PageResult<PurchaseOrderVO> page(PurchaseOrderQueryPageDTO queryDTO);
+    PageResult<PurchaseOrderVO> page(PurchaseOrderPageQueryDTO queryDTO);
 
     /** 详情（含明细） */
     PurchaseOrderVO getDetailById(Long orderId);

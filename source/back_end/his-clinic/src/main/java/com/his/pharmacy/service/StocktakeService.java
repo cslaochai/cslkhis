@@ -4,7 +4,7 @@ import com.his.common.base.PageResult;
 import com.his.pharmacy.dto.StocktakeAuditDTO;
 import com.his.pharmacy.dto.StocktakeCountUpsertDTO;
 import com.his.pharmacy.dto.StocktakeIdDTO;
-import com.his.pharmacy.dto.StocktakeQueryPageDTO;
+import com.his.pharmacy.dto.StocktakePageQueryDTO;
 import com.his.pharmacy.dto.StocktakeUpsertDTO;
 import com.his.pharmacy.vo.StocktakeVO;
 
@@ -13,7 +13,7 @@ import com.his.pharmacy.vo.StocktakeVO;
  */
 public interface StocktakeService {
 
-    PageResult<StocktakeVO> listPage(StocktakeQueryPageDTO query);
+    PageResult<StocktakeVO> listPage(StocktakePageQueryDTO query);
 
     /** 详情（含明细与本次过账流水） */
     StocktakeVO getDetailById(Long id);

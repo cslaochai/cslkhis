@@ -126,7 +126,7 @@ public class EmergencyController {
     @Operation(summary = "交班台账分页")
     @PostMapping("/handoverListPage")
     @PreAuthorize("hasAuthority('opd:emergency:list')")
-    public Result<PageResult<EmergencyHandoverVO>> handoverListPage(@Valid @RequestBody EmergencyHandoverQueryPageDTO queryDTO) {
+    public Result<PageResult<EmergencyHandoverVO>> handoverListPage(@Valid @RequestBody EmergencyHandoverPageQueryDTO queryDTO) {
         return Result.success(emergencyService.handoverListPage(queryDTO));
     }
 

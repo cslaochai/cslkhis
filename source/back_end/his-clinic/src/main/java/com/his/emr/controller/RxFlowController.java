@@ -3,7 +3,7 @@ package com.his.emr.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.emr.dto.RxFlowActionDTO;
-import com.his.emr.dto.RxFlowQueryPageDTO;
+import com.his.emr.dto.RxFlowPageQueryDTO;
 import com.his.emr.dto.RxFlowUpsertDTO;
 import com.his.emr.service.RxFlowService;
 import com.his.emr.vo.RxFlowListVO;
@@ -55,7 +55,7 @@ public class RxFlowController {
 
     @Operation(summary = "流转单分页")
     @PostMapping("/listPage")
-    public Result<PageResult<RxFlowListVO>> listPage(@Valid @RequestBody RxFlowQueryPageDTO dto) {
+    public Result<PageResult<RxFlowListVO>> listPage(@Valid @RequestBody RxFlowPageQueryDTO dto) {
         return Result.success(rxFlowService.listPage(dto));
     }
 }

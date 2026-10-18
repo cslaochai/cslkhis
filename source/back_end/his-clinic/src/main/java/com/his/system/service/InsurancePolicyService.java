@@ -2,7 +2,7 @@ package com.his.system.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
-import com.his.system.dto.InsurancePolicyQueryPageDTO;
+import com.his.system.dto.InsurancePolicyPageQueryDTO;
 import com.his.system.dto.InsurancePolicyUpsertDTO;
 import com.his.system.entity.SysInsurancePolicy;
 import com.his.system.vo.InsurancePolicyVO;
@@ -17,7 +17,7 @@ public interface InsurancePolicyService extends IService<SysInsurancePolicy> {
     /**
      * 医保政策分页查询
      */
-    PageResult<InsurancePolicyVO> queryPolicyPage(InsurancePolicyQueryPageDTO queryDTO);
+    PageResult<InsurancePolicyVO> queryPolicyPage(InsurancePolicyPageQueryDTO queryDTO);
 
     /**
      * 医保政策详情，不存在时抛业务异常

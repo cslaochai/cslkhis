@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.ai.config.AiProperties;
-import com.his.ai.dto.KnowledgeEvalCaseQueryPageDTO;
+import com.his.ai.dto.KnowledgeEvalCasePageQueryDTO;
 import com.his.ai.dto.KnowledgeEvalCaseUpsertDTO;
 import com.his.ai.entity.SysKnowledgeEvalCase;
 import com.his.ai.entity.SysKnowledgeEvalRun;
@@ -91,7 +91,7 @@ public class KnowledgeEvalServiceImpl implements KnowledgeEvalService {
     }
 
     @Override
-    public IPage<KnowledgeEvalCaseVO> listCasePage(KnowledgeEvalCaseQueryPageDTO dto) {
+    public IPage<KnowledgeEvalCaseVO> listCasePage(KnowledgeEvalCasePageQueryDTO dto) {
         QueryWrapper<SysKnowledgeEvalCase> qw = new QueryWrapper<>();
         qw.eq("del_flag", 0).orderByDesc("create_time");
         if (TextUtil.hasText(dto.getQuestion())) {
@@ -190,7 +190,7 @@ public class KnowledgeEvalServiceImpl implements KnowledgeEvalService {
     }
 
     @Override
-    public IPage<KnowledgeEvalRunVO> listRunPage(KnowledgeEvalCaseQueryPageDTO dto) {
+    public IPage<KnowledgeEvalRunVO> listRunPage(KnowledgeEvalCasePageQueryDTO dto) {
         QueryWrapper<SysKnowledgeEvalRun> qw = new QueryWrapper<>();
         qw.orderByDesc("create_time");
         IPage<SysKnowledgeEvalRun> page = evalRunMapper.selectPage(

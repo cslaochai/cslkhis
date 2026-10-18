@@ -2,7 +2,7 @@ package com.his.system.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
-import com.his.system.dto.ShiftQueryPageDTO;
+import com.his.system.dto.ShiftPageQueryDTO;
 import com.his.system.dto.ShiftUpsertDTO;
 import com.his.system.entity.BizShift;
 import com.his.system.vo.ShiftSelectListVO;
@@ -32,7 +32,7 @@ public interface ShiftService extends IService<BizShift> {
     /**
      * 班次分页出参：关键词=名称模糊，排序 开始时间 + id 二级键。
      */
-    PageResult<ShiftVO> pageVO(ShiftQueryPageDTO dto);
+    PageResult<ShiftVO> pageVO(ShiftPageQueryDTO dto);
 
     /**
      * 新增/修改班次（入参即前端表单）：校验不通过按服务层文案抛业务异常。

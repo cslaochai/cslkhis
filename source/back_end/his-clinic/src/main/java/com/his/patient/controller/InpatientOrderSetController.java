@@ -2,7 +2,7 @@ package com.his.patient.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.Result;
-import com.his.patient.dto.OrderSetQueryPageDTO;
+import com.his.patient.dto.OrderSetPageQueryDTO;
 import com.his.patient.dto.OrderSetUpsertDTO;
 import com.his.patient.service.InpatientOrderSetService;
 import com.his.patient.vo.OrderSetDetailVO;
@@ -38,7 +38,7 @@ public class InpatientOrderSetController {
     @PreAuthorize("hasAuthority('ipd:orderSet:list')")
     @Operation(summary = "组套分页（管理页，落在可见集内）")
     @GetMapping("/listPage")
-    public Result<IPage<OrderSetListVO>> listPage(@Valid OrderSetQueryPageDTO query) {
+    public Result<IPage<OrderSetListVO>> listPage(@Valid OrderSetPageQueryDTO query) {
         return Result.success(inpatientOrderSetService.listPage(query));
     }
 

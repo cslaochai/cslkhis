@@ -3,7 +3,7 @@ package com.his.emr.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.emr.dto.AdverseEventActionDTO;
-import com.his.emr.dto.AdverseEventQueryPageDTO;
+import com.his.emr.dto.AdverseEventPageQueryDTO;
 import com.his.emr.dto.AdverseEventUpsertDTO;
 import com.his.emr.service.AdverseEventService;
 import com.his.emr.vo.AdverseEventStatsVO;
@@ -29,7 +29,7 @@ public class AdverseEventController {
 
     @Operation(summary = "分页查询不良事件")
     @PostMapping("/listPage")
-    public Result<PageResult<AdverseEventVO>> listPage(@Valid @RequestBody AdverseEventQueryPageDTO queryDTO) {
+    public Result<PageResult<AdverseEventVO>> listPage(@Valid @RequestBody AdverseEventPageQueryDTO queryDTO) {
         return Result.success(adverseEventService.page(queryDTO));
     }
 

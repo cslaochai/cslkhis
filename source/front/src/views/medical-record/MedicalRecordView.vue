@@ -297,7 +297,7 @@ const searchForm = ref({
   /**
    * 就诊日期区间（原为单个 `visitDate`）。2026-09-23 随 601 下线一并把口径统一成区间：
    * 单日只是区间的退化情形，而 `visitDateStart/End` 能覆盖「跨几天找一份病历」的真实用法。
-   * 两者后端 DTO 都支持，二选一即可（见 MedicalRecordQueryPageDTO）。
+   * 两者后端 DTO 都支持，二选一即可（见 MedicalRecordPageQueryDTO）。
    */
   visitDateRange: [],
 });

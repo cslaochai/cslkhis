@@ -62,7 +62,7 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
     }
 
     @Override
-    public PageResult<TeleConsultVO> teleListPage(TeleConsultQueryPageDTO dto) {
+    public PageResult<TeleConsultVO> teleListPage(TeleConsultPageQueryDTO dto) {
         Page<TeleConsultVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         List<Long> deptIds = deptScopeService.scopedDeptIds(dto.getApplyDeptId());
         List<TeleConsultVO> records = bizTeleConsultMapper.selectTelePage(page, TextUtil.trimToNull(dto.getKeyword()),
@@ -216,7 +216,7 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
     }
 
     @Override
-    public PageResult<OnlineConsultVO> onlineListPage(OnlineQueryPageDTO dto) {
+    public PageResult<OnlineConsultVO> onlineListPage(OnlinePageQueryDTO dto) {
         Page<OnlineConsultVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         List<Long> deptIds = deptScopeService.scopedDeptIds(dto.getDeptId());
         List<OnlineConsultVO> records = bizOnlineConsultMapper.selectOnlinePage(page, TextUtil.trimToNull(dto.getKeyword()),

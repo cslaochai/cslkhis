@@ -7,7 +7,7 @@ import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.system.dto.RoleMenuUpsertDTO;
 import com.his.system.dto.SysRoleQueryDTO;
-import com.his.system.dto.SysRoleQueryPageDTO;
+import com.his.system.dto.SysRolePageQueryDTO;
 import com.his.system.dto.SysRoleUpsertDTO;
 import com.his.system.entity.SysMenu;
 import com.his.system.entity.SysRole;
@@ -45,7 +45,7 @@ public class SysRoleServiceImpl implements SysRoleService {
     private final UserIdentityCache userIdentityCache;
 
     @Override
-    public PageResult<RoleVO> listPage(SysRoleQueryPageDTO queryDTO) {
+    public PageResult<RoleVO> listPage(SysRolePageQueryDTO queryDTO) {
         LambdaQueryWrapper<SysRole> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(queryDTO.getRoleName()), SysRole::getRoleName, queryDTO.getRoleName())
                 .eq(queryDTO.getStatus() != null, SysRole::getStatus, queryDTO.getStatus())

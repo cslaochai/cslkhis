@@ -3,7 +3,7 @@ package com.his.emr.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.emr.dto.AmpouleReturnDTO;
-import com.his.emr.dto.NarcoticRegisterQueryPageDTO;
+import com.his.emr.dto.NarcoticRegisterPageQueryDTO;
 import com.his.emr.service.NarcoticControlService;
 import com.his.emr.vo.BizNarcoticRegisterVO;
 import com.his.emr.vo.NarcoticPrecheckVO;
@@ -32,7 +32,7 @@ public class NarcoticRegisterController {
 
     @Operation(summary = "麻精药品专册分页查询")
     @PostMapping("/listPage")
-    public Result<PageResult<BizNarcoticRegisterVO>> listPage(@Valid @RequestBody NarcoticRegisterQueryPageDTO query) {
+    public Result<PageResult<BizNarcoticRegisterVO>> listPage(@Valid @RequestBody NarcoticRegisterPageQueryDTO query) {
         return Result.success(narcoticControlService.listPage(query));
     }
 

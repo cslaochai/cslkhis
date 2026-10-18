@@ -55,7 +55,7 @@ public class YbDeductNoticeServiceImpl extends ServiceImpl<BizYbDeductNoticeMapp
     private final RedisSequenceService redisSequenceService;
 
     @Override
-    public PageResult<DeductNoticeListVO> listPage(DeductNoticeQueryPageDTO queryDTO) {
+    public PageResult<DeductNoticeListVO> listPage(DeductNoticePageQueryDTO queryDTO) {
         LocalDate today = LocalDate.now();
         LambdaQueryWrapper<BizYbDeductNotice> wrapper = new LambdaQueryWrapper<BizYbDeductNotice>()
                 .eq(queryDTO.getDeductStatus() != null, BizYbDeductNotice::getDeductStatus, queryDTO.getDeductStatus())

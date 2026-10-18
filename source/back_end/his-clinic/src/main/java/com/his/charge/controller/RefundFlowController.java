@@ -1,7 +1,7 @@
 package com.his.charge.controller;
 
 
-import com.his.charge.dto.RefundFlowQueryPageDTO;
+import com.his.charge.dto.RefundFlowPageQueryDTO;
 import com.his.charge.service.RefundFlowService;
 import com.his.charge.vo.BizRefundFlowDetailVO;
 import com.his.charge.vo.BizRefundFlowVO;
@@ -28,7 +28,7 @@ public class RefundFlowController {
     @Operation(summary = "分页查询退费流水")
     @PreAuthorize("hasAuthority('finance:refundFlow:list')")
     @PostMapping("/listPage")
-    public Result<PageResult<BizRefundFlowVO>> listPage(@Valid @RequestBody RefundFlowQueryPageDTO query) {
+    public Result<PageResult<BizRefundFlowVO>> listPage(@Valid @RequestBody RefundFlowPageQueryDTO query) {
         PageResult<BizRefundFlowVO> result = refundFlowService.selectFlowPage(query);
         return Result.success(PageResult.of(result.getTotal(), result.getPageNum(), result.getPageSize(),
                 result.getPages(), result.getRecords()));

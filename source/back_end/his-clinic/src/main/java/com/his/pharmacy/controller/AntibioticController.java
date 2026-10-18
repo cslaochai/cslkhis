@@ -29,7 +29,7 @@ public class AntibioticController {
     @Operation(summary = "分级目录分页")
     @PreAuthorize("hasAuthority('pharmacy:antibiotic:catalog')")
     @PostMapping("/catalogListPage")
-    public Result<PageResult<AntibioticCatalogVO>> catalogListPage(@Valid @RequestBody AntibioticCatalogQueryPageDTO query) {
+    public Result<PageResult<AntibioticCatalogVO>> catalogListPage(@Valid @RequestBody AntibioticCatalogPageQueryDTO query) {
         return Result.success(antibioticService.catalogListPage(query));
     }
 
@@ -80,7 +80,7 @@ public class AntibioticController {
     @Operation(summary = "处方权授权分页")
     @PreAuthorize("hasAuthority('pharmacy:antibiotic:catalog')")
     @PostMapping("/authListPage")
-    public Result<PageResult<AntibioticAuthVO>> authListPage(@Valid @RequestBody AntibioticAuthQueryPageDTO query) {
+    public Result<PageResult<AntibioticAuthVO>> authListPage(@Valid @RequestBody AntibioticAuthPageQueryDTO query) {
         return Result.success(antibioticService.authListPage(query));
     }
 

@@ -2,7 +2,7 @@ package com.his.patient.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.patient.dto.InpatientTransferQueryPageDTO;
+import com.his.patient.dto.InpatientTransferPageQueryDTO;
 import com.his.patient.entity.BizInpatientTransfer;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -41,7 +41,7 @@ public interface BizInpatientTransferMapper extends BaseMapper<BizInpatientTrans
             </script>
             """)
     IPage<BizInpatientTransfer> selectTransferPage(IPage<BizInpatientTransfer> page,
-                                                   @Param("q") InpatientTransferQueryPageDTO query,
+                                                   @Param("q") InpatientTransferPageQueryDTO query,
                                                    @Param("deptIds") List<Long> deptIds);
 
     /**

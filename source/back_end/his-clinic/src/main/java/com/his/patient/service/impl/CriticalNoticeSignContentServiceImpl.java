@@ -1,16 +1,16 @@
 package com.his.patient.service.impl;
 
-import com.his.common.support.CanonicalText;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.his.system.vo.SignSubject;
+import com.his.common.enums.NoticeStatusEnum;
 import com.his.common.enums.ObjectSignStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
-import com.his.system.service.SignableContentService;
+import com.his.common.support.CanonicalText;
 import com.his.common.util.TimeUtil;
 import com.his.patient.entity.BizCriticalNotice;
-import com.his.common.enums.NoticeStatusEnum;
 import com.his.patient.mapper.BizCriticalNoticeMapper;
+import com.his.system.service.SignableContentService;
+import com.his.system.vo.SignSubject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -27,6 +27,34 @@ import java.util.Objects;
 public class CriticalNoticeSignContentServiceImpl implements SignableContentService {
 
     private final BizCriticalNoticeMapper bizCriticalNoticeMapper;
+
+    private static String canonical(BizCriticalNotice n) {
+        return CanonicalText.create("CRITICAL_NOTICE")
+                .put("noticeNo", n.getNoticeNo())
+                .put("admissionId", n.getAdmissionId())
+                .put("admissionNo", n.getAdmissionNo())
+                .put("patientId", n.getPatientId())
+                .put("patientNo", n.getPatientNo())
+                .put("patientName", n.getPatientName())
+                .put("gender", n.getGender())
+                .put("age", n.getAge())
+                .put("deptId", n.getDeptId())
+                .put("deptName", n.getDeptName())
+                .put("wardName", n.getWardName())
+                .put("bedNo", n.getBedNo())
+                .put("noticeType", n.getNoticeType())
+                .put("consciousnessStatus", n.getConsciousnessStatus())
+                .put("clinicalDiagnosis", n.getClinicalDiagnosis())
+                .put("conditionDesc", n.getConditionDesc())
+                .put("warningMatters", n.getWarningMatters())
+                .put("doctorMeasures", n.getDoctorMeasures())
+                .put("notifyTime", n.getNotifyTime())
+                .put("doctorId", n.getDoctorId())
+                .put("doctorName", n.getDoctorName())
+                .put("witnessDoctorId", n.getWitnessDoctorId())
+                .put("witnessDoctorName", n.getWitnessDoctorName())
+                .build();
+    }
 
     @Override
     public SignBizTypeEnum bizType() {
@@ -47,7 +75,7 @@ public class CriticalNoticeSignContentServiceImpl implements SignableContentServ
                 n.getDeptId(),
                 n.getDeptName(),
                 n.getNoticeStatus(),
-                BizCriticalNotice.statusText(n.getNoticeStatus()),
+                NoticeStatusEnum.getLabel(n.getNoticeStatus(), "—"),
                 canonical(n));
     }
 
@@ -97,34 +125,6 @@ public class CriticalNoticeSignContentServiceImpl implements SignableContentServ
                 .set(BizCriticalNotice::getSignStatus, ObjectSignStatusEnum.INVALIDATED.getCode())
                 .set(BizCriticalNotice::getSignId, null));
         log.info("病危重通知签名已作废回写 noticeNo={} signId={}", n.getNoticeNo(), signId);
-    }
-
-    private static String canonical(BizCriticalNotice n) {
-        return CanonicalText.create("CRITICAL_NOTICE")
-                .put("noticeNo", n.getNoticeNo())
-                .put("admissionId", n.getAdmissionId())
-                .put("admissionNo", n.getAdmissionNo())
-                .put("patientId", n.getPatientId())
-                .put("patientNo", n.getPatientNo())
-                .put("patientName", n.getPatientName())
-                .put("gender", n.getGender())
-                .put("age", n.getAge())
-                .put("deptId", n.getDeptId())
-                .put("deptName", n.getDeptName())
-                .put("wardName", n.getWardName())
-                .put("bedNo", n.getBedNo())
-                .put("noticeType", n.getNoticeType())
-                .put("consciousnessStatus", n.getConsciousnessStatus())
-                .put("clinicalDiagnosis", n.getClinicalDiagnosis())
-                .put("conditionDesc", n.getConditionDesc())
-                .put("warningMatters", n.getWarningMatters())
-                .put("doctorMeasures", n.getDoctorMeasures())
-                .put("notifyTime", n.getNotifyTime())
-                .put("doctorId", n.getDoctorId())
-                .put("doctorName", n.getDoctorName())
-                .put("witnessDoctorId", n.getWitnessDoctorId())
-                .put("witnessDoctorName", n.getWitnessDoctorName())
-                .build();
     }
 
 }

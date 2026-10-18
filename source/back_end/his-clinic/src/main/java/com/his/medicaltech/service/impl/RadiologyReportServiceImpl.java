@@ -7,24 +7,16 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.constant.DictTypeConst;
-import com.his.system.dto.SignCommandDTO;
-import com.his.common.enums.SignBizTypeEnum;
-import com.his.common.enums.SignSceneEnum;
+import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.EmrSignatureService;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
-import com.his.system.vo.SignatureVO;
 import com.his.medicaltech.dto.RadioReportAuditDTO;
-import com.his.medicaltech.dto.RadioReportQueryPageDTO;
+import com.his.medicaltech.dto.RadioReportPageQueryDTO;
 import com.his.medicaltech.dto.RadioReportUpsertDTO;
 import com.his.medicaltech.dto.RadioTemplateUpsertDTO;
 import com.his.medicaltech.entity.BizInspectionRecord;
 import com.his.medicaltech.entity.BizRadioReportTemplate;
 import com.his.medicaltech.entity.BizReport;
-import com.his.common.enums.InsRecordStatusEnum;
-import com.his.common.enums.ReportStatusEnum;
-import com.his.common.enums.ReportTypeEnum;
 import com.his.medicaltech.mapper.BizInspectionRecordMapper;
 import com.his.medicaltech.mapper.BizRadioReportTemplateMapper;
 import com.his.medicaltech.mapper.BizReportMapper;
@@ -34,12 +26,10 @@ import com.his.medicaltech.service.RadiologyReportService;
 import com.his.medicaltech.vo.RadioReportDetailVO;
 import com.his.medicaltech.vo.RadioReportListVO;
 import com.his.medicaltech.vo.RadioReportTemplateVO;
-import com.his.common.enums.BizTypeEnum;
-import com.his.system.service.DeptScopeService;
-import com.his.system.service.DictCacheService;
-import com.his.system.service.SysAuditLogService;
-import com.his.system.service.SysMessageService;
+import com.his.system.dto.SignCommandDTO;
+import com.his.system.service.*;
 import com.his.system.utils.UserUtils;
+import com.his.system.vo.SignatureVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -73,12 +63,13 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
     // 查询
 
     @Override
-    public PageResult<RadioReportListVO> listPage(RadioReportQueryPageDTO query) {
+    public PageResult<RadioReportListVO> listPage(RadioReportPageQueryDTO query) {
         IPage<RadioReportListVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<RadioReportListVO> list = radioReportMapper.selectWorkbenchPage(page,
                 deptScopeService.scopedDeptIds(null),
                 TextUtil.trim(query.getKeyword()), query.getReportStatus(), query.getPositiveFlag(),
-                query.getOnlyUnwritten(), TextUtil.trim(query.getStartDate()), TextUtil.trim(query.getEndDate()));
+                query.getOnlyUnwritten(), TextUtil.trim(query.getStartDate()), TextUtil.trim(query.getEndDate()),
+                ReportTypeEnum.INSPECTION.getCode());
         fillText(list);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), list);
     }

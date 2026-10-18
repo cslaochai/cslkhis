@@ -3,7 +3,7 @@ package com.his.appoint.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.appoint.dto.RevisitFeePolicyQueryPageDTO;
+import com.his.appoint.dto.RevisitFeePolicyPageQueryDTO;
 import com.his.appoint.dto.RevisitFeePolicyUpsertDTO;
 import com.his.appoint.entity.RevisitFeePolicy;
 import com.his.common.enums.RevisitChargeModeEnum;
@@ -124,7 +124,7 @@ public class RevisitFeePolicyServiceImpl extends ServiceImpl<RevisitFeePolicyMap
     }
 
     @Override
-    public PageResult<RevisitFeePolicyVO> listPage(RevisitFeePolicyQueryPageDTO queryDTO) {
+    public PageResult<RevisitFeePolicyVO> listPage(RevisitFeePolicyPageQueryDTO queryDTO) {
         LambdaQueryWrapper<RevisitFeePolicy> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(queryDTO.getPolicyName()),
                         RevisitFeePolicy::getPolicyName, queryDTO.getPolicyName())

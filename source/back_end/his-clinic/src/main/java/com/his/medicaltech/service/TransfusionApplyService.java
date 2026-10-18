@@ -15,7 +15,7 @@ public interface TransfusionApplyService {
     /**
      * 输血申请分页
      */
-    IPage<TransfusionApplyVO> listPage(TransfusionApplyQueryPageDTO query);
+    IPage<TransfusionApplyVO> listPage(TransfusionApplyPageQueryDTO query);
 
     /**
      * 输血申请详情（含血袋明细）

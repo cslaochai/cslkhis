@@ -1,14 +1,12 @@
 package com.his.patient.entity;
 
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.his.common.base.BaseEntity;
-import com.his.common.enums.NoticeStatusEnum;
-import com.his.common.enums.NoticeTypeEnum;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
@@ -18,14 +16,6 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_critical_notice")
 public class BizCriticalNotice extends BaseEntity {
-    /** 逻辑删除标志（0 未删除 1 已删除） */
-    @TableLogic
-    private Integer delFlag;
-
-    /** 备注 */
-    private String remark;
-
-
 
     /**
      * 单号（BT+yyyyMMdd+4位）
@@ -194,17 +184,15 @@ public class BizCriticalNotice extends BaseEntity {
      */
     private LocalDateTime signedTime;
 
-    public static String statusText(Integer status) {
-        if (status == null) {
-            return "—";
-        }
-        return NoticeStatusEnum.getLabel(status);
-    }
+    /**
+     * 逻辑删除标志（0 未删除 1 已删除）
+     */
+    @TableLogic
+    private Integer delFlag;
 
-    public static String typeText(Integer type) {
-        if (type == null) {
-            return "—";
-        }
-        return NoticeTypeEnum.getLabel(type);
-    }
+    /**
+     * 备注
+     */
+    private String remark;
+
 }

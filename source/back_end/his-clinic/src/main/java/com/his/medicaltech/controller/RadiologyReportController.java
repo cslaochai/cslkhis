@@ -3,7 +3,7 @@ package com.his.medicaltech.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.medicaltech.dto.RadioReportAuditDTO;
-import com.his.medicaltech.dto.RadioReportQueryPageDTO;
+import com.his.medicaltech.dto.RadioReportPageQueryDTO;
 import com.his.medicaltech.dto.RadioReportUpsertDTO;
 import com.his.medicaltech.service.RadiologyReportService;
 import com.his.medicaltech.vo.RadioReportDetailVO;
@@ -29,7 +29,7 @@ public class RadiologyReportController {
     @Operation(summary = "报告工作台分页列表（检查记录 + 其报告，未写报告的也在）")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('medtech:radioDiagnosis:list')")
-    public Result<PageResult<RadioReportListVO>> listPage(@Valid @RequestBody RadioReportQueryPageDTO query) {
+    public Result<PageResult<RadioReportListVO>> listPage(@Valid @RequestBody RadioReportPageQueryDTO query) {
         return Result.success(radiologyReportService.listPage(query));
     }
 

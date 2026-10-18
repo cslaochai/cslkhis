@@ -119,7 +119,7 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
 
     // 私有
 
-    public IPage<CssdPackVO> listPage(CssdDTO.QueryPage q) {
+    public IPage<CssdPackVO> listPage(CssdDTO.PageQuery q) {
         String kw = TextUtil.trim(q.getKeyword());
         LambdaQueryWrapper<BizCssdPack> w = new LambdaQueryWrapper<BizCssdPack>()
                 .eq(q.getStatus() != null, BizCssdPack::getStatus, q.getStatus())

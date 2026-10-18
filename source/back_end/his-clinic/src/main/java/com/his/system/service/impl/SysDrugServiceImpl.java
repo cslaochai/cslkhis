@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.util.TextUtil;
-import com.his.system.dto.SysDrugQueryPageDTO;
+import com.his.system.dto.SysDrugPageQueryDTO;
 import com.his.system.dto.SysDrugSelectDTO;
 import com.his.system.dto.SysDrugUpsertDTO;
 import com.his.system.entity.SysDrug;
@@ -27,7 +27,7 @@ public class SysDrugServiceImpl extends ServiceImpl<SysDrugMapper, SysDrug> impl
     private final SysDrugMapper sysDrugMapper;
 
     @Override
-    public PageResult<SysDrugVO> listPage(SysDrugQueryPageDTO queryDTO) {
+    public PageResult<SysDrugVO> listPage(SysDrugPageQueryDTO queryDTO) {
         LambdaQueryWrapper<SysDrug> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(queryDTO.getDrugName()), SysDrug::getDrugName, queryDTO.getDrugName())
                 .eq(queryDTO.getDrugType() != null, SysDrug::getDrugType, queryDTO.getDrugType())

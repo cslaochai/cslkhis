@@ -85,7 +85,7 @@ public class ReferralDTO {
      */
     @Data
     @EqualsAndHashCode(callSuper = true)
-    public static class QueryPage extends PageParam implements Serializable {
+    public static class PageQuery extends PageParam implements Serializable {
 
         /**
          * 患者ID

@@ -30,7 +30,7 @@ public class SurveyController {
     @PreAuthorize("hasAuthority('qc:survey:list')")
     @Operation(summary = "发放/回收台账分页（手机号出参脱敏）")
     @PostMapping("/dispatch/listPage")
-    public Result<PageResult<SurveyDispatchVO>> dispatchListPage(@Valid @RequestBody SurveyDispatchQueryPageDTO dto) {
+    public Result<PageResult<SurveyDispatchVO>> dispatchListPage(@Valid @RequestBody SurveyDispatchPageQueryDTO dto) {
         return Result.success(surveyService.dispatchListPage(dto));
     }
 
@@ -60,7 +60,7 @@ public class SurveyController {
     @PreAuthorize("hasAuthority('qc:survey:list')")
     @Operation(summary = "答卷分页")
     @PostMapping("/answer/listPage")
-    public Result<PageResult<SurveyAnswerVO>> answerListPage(@Valid @RequestBody SurveyAnswerQueryPageDTO dto) {
+    public Result<PageResult<SurveyAnswerVO>> answerListPage(@Valid @RequestBody SurveyAnswerPageQueryDTO dto) {
         return Result.success(surveyService.answerListPage(dto));
     }
 

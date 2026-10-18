@@ -11,8 +11,8 @@ import com.his.system.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.pharmacy.dto.AntibioticStatsGenerateDTO;
-import com.his.pharmacy.dto.AntibioticStatsQueryPageDTO;
-import com.his.pharmacy.dto.IncisionReviewQueryPageDTO;
+import com.his.pharmacy.dto.AntibioticStatsPageQueryDTO;
+import com.his.pharmacy.dto.IncisionReviewPageQueryDTO;
 import com.his.pharmacy.dto.IncisionReviewUpsertDTO;
 import com.his.pharmacy.entity.BizAntibioticIncisionReview;
 import com.his.pharmacy.entity.BizAntibioticStats;
@@ -71,7 +71,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
     private final DeptScopeService deptScopeService;
 
     @Override
-    public PageResult<AntibioticStatsVO> listPage(AntibioticStatsQueryPageDTO query) {
+    public PageResult<AntibioticStatsVO> listPage(AntibioticStatsPageQueryDTO query) {
         List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizAntibioticStats> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(TextUtil.hasText(query.getStatMonth()), BizAntibioticStats::getStatMonth, query.getStatMonth())
@@ -144,7 +144,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
     }
 
     @Override
-    public String statsExportCsv(AntibioticStatsQueryPageDTO query) {
+    public String statsExportCsv(AntibioticStatsPageQueryDTO query) {
         List<Long> deptIds = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizAntibioticStats> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(TextUtil.hasText(query.getStatMonth()), BizAntibioticStats::getStatMonth, query.getStatMonth())
@@ -270,7 +270,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
     }
 
     @Override
-    public PageResult<IncisionReviewVO> incisionReviewListPage(IncisionReviewQueryPageDTO query) {
+    public PageResult<IncisionReviewVO> incisionReviewListPage(IncisionReviewPageQueryDTO query) {
         String keyword = query.getKeyword() == null ? null : query.getKeyword().trim();
         LambdaQueryWrapper<BizAntibioticIncisionReview> wrapper = new LambdaQueryWrapper<>();
         wrapper.and(TextUtil.hasText(keyword), w -> w

@@ -2,7 +2,7 @@ package com.his.system.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.system.dto.SysDrugQueryPageDTO;
+import com.his.system.dto.SysDrugPageQueryDTO;
 import com.his.system.dto.SysDrugSelectDTO;
 import com.his.system.dto.SysDrugUpsertDTO;
 import com.his.system.service.SysDrugService;
@@ -31,7 +31,7 @@ public class DrugController {
 
     @Operation(summary = "分页查询药品列表")
     @PostMapping("/listPage")
-    public Result<PageResult<SysDrugVO>> listPage(@Valid @RequestBody SysDrugQueryPageDTO queryDTO) {
+    public Result<PageResult<SysDrugVO>> listPage(@Valid @RequestBody SysDrugPageQueryDTO queryDTO) {
         return Result.success(sysDrugService.listPage(queryDTO));
     }
 

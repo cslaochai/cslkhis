@@ -2,7 +2,7 @@ package com.his.system.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.system.dto.LogQueryPageDTO;
+import com.his.system.dto.LogPageQueryDTO;
 import com.his.system.service.SysLogService;
 import com.his.system.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,7 +28,7 @@ public class SysLogController {
     @Operation(summary = "操作日志分页")
     @PreAuthorize("hasAuthority('system:log:list')")
     @PostMapping("/operLogListPage")
-    public Result<PageResult<OperLogListVO>> operLogListPage(@Valid @RequestBody LogQueryPageDTO query) {
+    public Result<PageResult<OperLogListVO>> operLogListPage(@Valid @RequestBody LogPageQueryDTO query) {
         return Result.success(sysLogService.operLogListPage(query));
     }
 
@@ -42,14 +42,14 @@ public class SysLogController {
     @Operation(summary = "登录日志分页（成功失败同表，靠 loginStatus 区分）")
     @PreAuthorize("hasAuthority('system:log:list')")
     @PostMapping("/loginLogListPage")
-    public Result<PageResult<LoginLogVO>> loginLogListPage(@Valid @RequestBody LogQueryPageDTO query) {
+    public Result<PageResult<LoginLogVO>> loginLogListPage(@Valid @RequestBody LogPageQueryDTO query) {
         return Result.success(sysLogService.loginLogListPage(query));
     }
 
     @Operation(summary = "审计日志分页")
     @PreAuthorize("hasAuthority('system:log:list')")
     @PostMapping("/auditLogListPage")
-    public Result<PageResult<AuditLogVO>> auditLogListPage(@Valid @RequestBody LogQueryPageDTO query) {
+    public Result<PageResult<AuditLogVO>> auditLogListPage(@Valid @RequestBody LogPageQueryDTO query) {
         return Result.success(sysLogService.auditLogListPage(query));
     }
 
@@ -63,7 +63,7 @@ public class SysLogController {
     @Operation(summary = "字段级修改日志分页（哪个字段从什么值改成了什么值）")
     @PreAuthorize("hasAuthority('system:log:list')")
     @PostMapping("/fieldChangeListPage")
-    public Result<PageResult<FieldChangeVO>> fieldChangeListPage(@Valid @RequestBody LogQueryPageDTO query) {
+    public Result<PageResult<FieldChangeVO>> fieldChangeListPage(@Valid @RequestBody LogPageQueryDTO query) {
         return Result.success(sysLogService.fieldChangeListPage(query));
     }
 
@@ -84,7 +84,7 @@ public class SysLogController {
     @Operation(summary = "导出 CSV（logType 1-操作 2-登录 3-审计 4-字段变更，最多 5000 行）")
     @PreAuthorize("hasAuthority('system:log:export')")
     @PostMapping("/exportCsv")
-    public Result<String> exportCsv(@Valid @RequestBody LogQueryPageDTO query) {
+    public Result<String> exportCsv(@Valid @RequestBody LogPageQueryDTO query) {
         return Result.success(sysLogService.exportCsv(query));
     }
 }

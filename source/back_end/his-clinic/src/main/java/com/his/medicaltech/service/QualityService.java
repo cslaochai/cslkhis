@@ -1,7 +1,7 @@
 package com.his.medicaltech.service;
 
 import com.his.common.base.PageResult;
-import com.his.medicaltech.dto.QualityIssueQueryPageDTO;
+import com.his.medicaltech.dto.QualityIssuePageQueryDTO;
 import com.his.medicaltech.vo.QualityDimensionSelectListVO;
 import com.his.medicaltech.vo.QualityIssueVO;
 import com.his.medicaltech.vo.QualityRuleVO;
@@ -32,5 +32,5 @@ public interface QualityService {
     /**
      * 问题清单（分页，可按维度 / 规则 / 严重度 / 关键字过滤）
      */
-    PageResult<QualityIssueVO> listIssuePage(QualityIssueQueryPageDTO dto);
+    PageResult<QualityIssueVO> listIssuePage(QualityIssuePageQueryDTO dto);
 }

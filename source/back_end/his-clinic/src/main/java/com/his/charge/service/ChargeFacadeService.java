@@ -3,7 +3,7 @@ package com.his.charge.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.charge.dto.BillPayDTO;
 import com.his.charge.dto.FeeBookDTO;
-import com.his.charge.dto.PrepayQueryPageDTO;
+import com.his.charge.dto.PrepayPageQueryDTO;
 import com.his.charge.dto.PrepayUpsertDTO;
 import com.his.charge.vo.BillBriefVO;
 import com.his.charge.vo.BillItemVO;
@@ -143,7 +143,7 @@ public interface ChargeFacadeService {
     /**
      * 预交金流水分页。
      */
-    IPage<PrepayVO> prepayPage(PrepayQueryPageDTO query);
+    IPage<PrepayVO> prepayPage(PrepayPageQueryDTO query);
 
     // ---------- 挂号费联动 ----------
 

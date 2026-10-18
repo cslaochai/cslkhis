@@ -2,7 +2,7 @@ package com.his.charge.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.charge.dto.YbMappingQueryPageDTO;
+import com.his.charge.dto.YbMappingPageQueryDTO;
 import com.his.charge.entity.BizYbMapping;
 import com.his.charge.vo.YbMappingListVO;
 import com.his.charge.vo.YbMappingStatsVO;
@@ -48,7 +48,7 @@ public interface BizYbMappingMapper extends BaseMapper<BizYbMapping> {
               AND (#{q.itemStatus} IS NULL OR d.status = #{q.itemStatus})
             ORDER BY IF(m.id IS NULL, 0, 1), d.drug_code
             """)
-    IPage<YbMappingListVO> selectDrugPage(IPage<YbMappingListVO> page, @Param("q") YbMappingQueryPageDTO q);
+    IPage<YbMappingListVO> selectDrugPage(IPage<YbMappingListVO> page, @Param("q") YbMappingPageQueryDTO q);
 
     @Select("""
             SELECT m.id AS mapping_id, 2 AS item_type, t.id AS item_id,
@@ -70,7 +70,7 @@ public interface BizYbMappingMapper extends BaseMapper<BizYbMapping> {
               AND (#{q.itemStatus} IS NULL OR t.status = #{q.itemStatus})
             ORDER BY IF(m.id IS NULL, 0, 1), t.item_code
             """)
-    IPage<YbMappingListVO> selectTreatmentPage(IPage<YbMappingListVO> page, @Param("q") YbMappingQueryPageDTO q);
+    IPage<YbMappingListVO> selectTreatmentPage(IPage<YbMappingListVO> page, @Param("q") YbMappingPageQueryDTO q);
 
     @Select("""
             SELECT m.id AS mapping_id, 3 AS item_type, l.id AS item_id,
@@ -92,7 +92,7 @@ public interface BizYbMappingMapper extends BaseMapper<BizYbMapping> {
               AND (#{q.itemStatus} IS NULL OR l.status = #{q.itemStatus})
             ORDER BY IF(m.id IS NULL, 0, 1), l.item_code
             """)
-    IPage<YbMappingListVO> selectLaboratoryPage(IPage<YbMappingListVO> page, @Param("q") YbMappingQueryPageDTO q);
+    IPage<YbMappingListVO> selectLaboratoryPage(IPage<YbMappingListVO> page, @Param("q") YbMappingPageQueryDTO q);
 
     @Select("""
             SELECT m.id AS mapping_id, 4 AS item_type, s.id AS item_id,
@@ -114,7 +114,7 @@ public interface BizYbMappingMapper extends BaseMapper<BizYbMapping> {
               AND (#{q.itemStatus} IS NULL OR s.status = #{q.itemStatus})
             ORDER BY IF(m.id IS NULL, 0, 1), s.consumable_code
             """)
-    IPage<YbMappingListVO> selectConsumablePage(IPage<YbMappingListVO> page, @Param("q") YbMappingQueryPageDTO q);
+    IPage<YbMappingListVO> selectConsumablePage(IPage<YbMappingListVO> page, @Param("q") YbMappingPageQueryDTO q);
 
     // 统计 / 自动对照
 

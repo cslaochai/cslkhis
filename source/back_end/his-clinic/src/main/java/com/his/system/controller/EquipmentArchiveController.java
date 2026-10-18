@@ -2,7 +2,7 @@ package com.his.system.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.system.dto.EquipmentQueryPageDTO;
+import com.his.system.dto.EquipmentPageQueryDTO;
 import com.his.system.service.EquipmentService;
 import com.his.system.vo.EquipmentVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,7 +26,7 @@ public class EquipmentArchiveController {
 
     @Operation(summary = "设备台账分页")
     @PostMapping("/listPage")
-    public Result<PageResult<EquipmentVO>> listPage(@Valid @RequestBody EquipmentQueryPageDTO dto) {
+    public Result<PageResult<EquipmentVO>> listPage(@Valid @RequestBody EquipmentPageQueryDTO dto) {
         var page = equipmentService.listPage(dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));

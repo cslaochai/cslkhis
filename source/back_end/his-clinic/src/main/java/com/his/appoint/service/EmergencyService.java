@@ -90,7 +90,7 @@ public interface EmergencyService extends IService<Emergency> {
     /**
      * 交班台账分页（凭证，不含明细）
      */
-    PageResult<EmergencyHandoverVO> handoverListPage(EmergencyHandoverQueryPageDTO queryDTO);
+    PageResult<EmergencyHandoverVO> handoverListPage(EmergencyHandoverPageQueryDTO queryDTO);
 
     /**
      * 交班台账单张凭证（抬头 + 逐条明细）

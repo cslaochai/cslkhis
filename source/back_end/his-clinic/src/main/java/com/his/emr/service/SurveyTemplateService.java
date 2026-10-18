@@ -1,7 +1,7 @@
 package com.his.emr.service;
 
 import com.his.common.base.PageResult;
-import com.his.emr.dto.SurveyTemplateQueryPageDTO;
+import com.his.emr.dto.SurveyTemplatePageQueryDTO;
 import com.his.emr.dto.SurveyTemplateUpsertDTO;
 import com.his.emr.vo.SurveyTemplateSelectListVO;
 import com.his.emr.vo.SurveyTemplateVO;
@@ -16,7 +16,7 @@ public interface SurveyTemplateService {
     /**
      * 分页（keyword/scene/status）
      */
-    PageResult<SurveyTemplateVO> listPage(SurveyTemplateQueryPageDTO dto);
+    PageResult<SurveyTemplateVO> listPage(SurveyTemplatePageQueryDTO dto);
 
     /**
      * 下拉：启用中的卷（scene 可空=全部）

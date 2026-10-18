@@ -37,7 +37,7 @@ public class InfectionMonitorController {
     @Operation(summary = "病例分页")
     @PostMapping("/case/listPage")
     public Result<PageResult<InfectionMonitorVO.CaseRow>> caseListPage(
-            @Valid @RequestBody InfectionMonitorDTO.CaseQueryPage dto) {
+            @Valid @RequestBody InfectionMonitorDTO.CasePageQuery dto) {
         return Result.success(infectionMonitorService.casePage(dto));
     }
 
@@ -68,7 +68,7 @@ public class InfectionMonitorController {
     @Operation(summary = "监测分页")
     @PostMapping("/monitor/listPage")
     public Result<PageResult<InfectionMonitorVO.MonitorRow>> monitorListPage(
-            @Valid @RequestBody InfectionMonitorDTO.MonitorQueryPage dto) {
+            @Valid @RequestBody InfectionMonitorDTO.MonitorPageQuery dto) {
         return Result.success(infectionMonitorService.monitorPage(dto));
     }
 
@@ -128,7 +128,7 @@ public class InfectionMonitorController {
     @Operation(summary = "观察记录分页")
     @PostMapping("/handObs/listPage")
     public Result<PageResult<InfectionMonitorVO.HandObsRow>> handObsListPage(
-            @Valid @RequestBody InfectionMonitorDTO.HandObsQueryPage dto) {
+            @Valid @RequestBody InfectionMonitorDTO.HandObsPageQuery dto) {
         return Result.success(infectionMonitorService.handObsPage(dto));
     }
 

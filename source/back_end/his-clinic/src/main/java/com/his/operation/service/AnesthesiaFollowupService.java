@@ -1,7 +1,7 @@
 package com.his.operation.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.operation.dto.AnesthesiaFollowupQueryPageDTO;
+import com.his.operation.dto.AnesthesiaFollowupPageQueryDTO;
 import com.his.operation.dto.AnesthesiaFollowupUpsertDTO;
 import com.his.operation.vo.AnesthesiaFollowupVO;
 import com.his.operation.vo.OperationApplyVO;
@@ -16,7 +16,7 @@ public interface AnesthesiaFollowupService {
     /**
      * 随访分页
      */
-    IPage<AnesthesiaFollowupVO> listPage(AnesthesiaFollowupQueryPageDTO query);
+    IPage<AnesthesiaFollowupVO> listPage(AnesthesiaFollowupPageQueryDTO query);
 
     /**
      * 随访详情（含并发症字典）

@@ -27,7 +27,7 @@ public class DisputeController {
     @PreAuthorize("hasAuthority('qc:dispute:list')")
     @Operation(summary = "纠纷/投诉分页")
     @PostMapping("/listPage")
-    public Result<PageResult<DisputeCaseVO>> listPage(@Valid @RequestBody DisputeQueryPageDTO dto) {
+    public Result<PageResult<DisputeCaseVO>> listPage(@Valid @RequestBody DisputePageQueryDTO dto) {
         return Result.success(disputeService.listPage(dto));
     }
 

@@ -2,7 +2,7 @@ package com.his.system.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.system.dto.DutyRosterQueryPageDTO;
+import com.his.system.dto.DutyRosterPageQueryDTO;
 import com.his.system.dto.DutyRosterUpsertDTO;
 import com.his.system.dto.DutySubstituteDTO;
 import com.his.system.service.DutyRosterService;
@@ -45,7 +45,7 @@ public class DutyRosterController {
     @Operation(summary = "分页查询总值班排班")
     @PreAuthorize("hasAuthority('org:duty:list')")
     @PostMapping("/listPage")
-    public Result<PageResult<DutyRosterVO>> listPage(@Valid @RequestBody DutyRosterQueryPageDTO queryDTO) {
+    public Result<PageResult<DutyRosterVO>> listPage(@Valid @RequestBody DutyRosterPageQueryDTO queryDTO) {
         return Result.success(dutyRosterService.listPage(queryDTO));
     }
 

@@ -1,7 +1,7 @@
 package com.his.miniapp.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.charge.dto.PrepayQueryPageDTO;
+import com.his.charge.dto.PrepayPageQueryDTO;
 import com.his.charge.vo.PrepayBalanceVO;
 import com.his.charge.vo.PrepayVO;
 import com.his.common.base.Result;
@@ -42,7 +42,7 @@ public class MiniDepositController {
 
     @Operation(summary = "押金流水分页")
     @PostMapping("/listPage")
-    public Result<IPage<PrepayVO>> listPage(@Valid @RequestBody PrepayQueryPageDTO query) {
+    public Result<IPage<PrepayVO>> listPage(@Valid @RequestBody PrepayPageQueryDTO query) {
         return Result.success(miniDepositService.prepayListPage(query));
     }
 }

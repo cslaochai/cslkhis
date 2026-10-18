@@ -2,7 +2,7 @@ package com.his.patient.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.patient.dto.AdmissionOrderCancelDTO;
-import com.his.patient.dto.AdmissionOrderQueryPageDTO;
+import com.his.patient.dto.AdmissionOrderPageQueryDTO;
 import com.his.patient.dto.AdmissionOrderUpsertDTO;
 import com.his.patient.entity.BizAdmissionOrder;
 import com.his.patient.vo.AdmissionOrderVO;
@@ -22,7 +22,7 @@ public interface AdmissionOrderService {
     /**
      * 住院证分页（住院处待收治看板 / 按患者反查）
      */
-    IPage<AdmissionOrderVO> listPage(AdmissionOrderQueryPageDTO query);
+    IPage<AdmissionOrderVO> listPage(AdmissionOrderPageQueryDTO query);
 
     /**
      * 住院证详情

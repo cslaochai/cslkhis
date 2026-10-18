@@ -39,7 +39,7 @@ public class FinanceSettlementController {
     @Operation(summary = "交班单分页查询")
     @PostMapping("/cashierListPage")
     public Result<PageResult<CashierSettlementVO>> cashierListPage(
-            @Valid @RequestBody CashierSettlementQueryPageDTO queryDTO) {
+            @Valid @RequestBody CashierSettlementPageQueryDTO queryDTO) {
         return Result.success(financeSettlementService.cashierPage(queryDTO));
     }
 
@@ -67,7 +67,7 @@ public class FinanceSettlementController {
     @Operation(summary = "日结单分页查询")
     @PostMapping("/dayListPage")
     public Result<PageResult<DaySettlementVO>> dayListPage(
-            @Valid @RequestBody DaySettlementQueryPageDTO queryDTO) {
+            @Valid @RequestBody DaySettlementPageQueryDTO queryDTO) {
         return Result.success(financeSettlementService.dayPage(queryDTO));
     }
 

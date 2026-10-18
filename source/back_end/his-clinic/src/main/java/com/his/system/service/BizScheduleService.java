@@ -35,7 +35,7 @@ public interface BizScheduleService extends IService<BizSchedule> {
     /**
      * 排班台账分页（跨病区回看，数据范围按科室收口）
      */
-    PageResult<NurseScheduleVO.Row> listPage(NurseScheduleDTO.QueryPage query);
+    PageResult<NurseScheduleVO.Row> listPage(NurseScheduleDTO.PageQuery query);
 
     /**
      * 点格排班/改格（一人一天一条，撞唯一键即覆盖原走向）。

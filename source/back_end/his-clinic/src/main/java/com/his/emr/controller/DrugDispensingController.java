@@ -7,7 +7,7 @@ import com.his.emr.dto.DrugReturnDTO;
 import com.his.emr.service.DrugDispensingService;
 import com.his.emr.vo.BizDrugDispensingVO;
 import com.his.emr.vo.DrugDispensingCountVO;
-import com.his.pharmacy.dto.DispensingQueryPageDTO;
+import com.his.pharmacy.dto.DispensingPageQueryDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -29,7 +29,7 @@ public class DrugDispensingController {
 
     @Operation(summary = "分页查询发药明细")
     @PostMapping("/listPage")
-    public Result<PageResult<BizDrugDispensingVO>> listPage(@Valid @RequestBody DispensingQueryPageDTO queryDTO) {
+    public Result<PageResult<BizDrugDispensingVO>> listPage(@Valid @RequestBody DispensingPageQueryDTO queryDTO) {
         PageResult<BizDrugDispensingVO> result = drugDispensingService.selectDispensingPage(
                 queryDTO.getPatientId(), queryDTO.getPatientName(), queryDTO.getPrescriptionNo(),
                 queryDTO.getDispensingStatus(), queryDTO.getPageNum(), queryDTO.getPageSize());

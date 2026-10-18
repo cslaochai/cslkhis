@@ -2,7 +2,7 @@ package com.his.pharmacy.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.pharmacy.dto.SupplierQueryPageDTO;
+import com.his.pharmacy.dto.SupplierPageQueryDTO;
 import com.his.pharmacy.dto.SupplierUpsertDTO;
 import com.his.pharmacy.service.SupplierService;
 import com.his.pharmacy.vo.SysSupplierSelectListVO;
@@ -30,7 +30,7 @@ public class SupplierController {
 
     @Operation(summary = "分页查询供应商")
     @PostMapping("/listPage")
-    public Result<PageResult<SysSupplierVO>> listPage(@Valid @RequestBody SupplierQueryPageDTO queryDTO) {
+    public Result<PageResult<SysSupplierVO>> listPage(@Valid @RequestBody SupplierPageQueryDTO queryDTO) {
         return Result.success(supplierService.page(queryDTO));
     }
 

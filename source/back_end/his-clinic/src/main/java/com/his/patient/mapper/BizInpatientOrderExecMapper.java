@@ -2,7 +2,7 @@ package com.his.patient.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.patient.dto.OrderExecQueryPageDTO;
+import com.his.patient.dto.OrderExecPageQueryDTO;
 import com.his.patient.entity.BizInpatientOrderExec;
 import com.his.patient.vo.InpatientOrderExecVO;
 import org.apache.ibatis.annotations.Mapper;
@@ -46,7 +46,7 @@ public interface BizInpatientOrderExecMapper extends BaseMapper<BizInpatientOrde
             ORDER BY o.is_urgent DESC, e.plan_time ASC, e.id ASC
             </script>
             """)
-    IPage<InpatientOrderExecVO> selectPendingPage(IPage<InpatientOrderExecVO> page, @Param("q") OrderExecQueryPageDTO query);
+    IPage<InpatientOrderExecVO> selectPendingPage(IPage<InpatientOrderExecVO> page, @Param("q") OrderExecPageQueryDTO query);
 
     /**
      * 执行记录查询（含已执行 / 已跳过 / 已退回）
@@ -76,7 +76,7 @@ public interface BizInpatientOrderExecMapper extends BaseMapper<BizInpatientOrde
             ORDER BY e.plan_time DESC, e.id DESC
             </script>
             """)
-    IPage<InpatientOrderExecVO> selectExecPage(IPage<InpatientOrderExecVO> page, @Param("q") OrderExecQueryPageDTO query);
+    IPage<InpatientOrderExecVO> selectExecPage(IPage<InpatientOrderExecVO> page, @Param("q") OrderExecPageQueryDTO query);
 
     /**
      * 该医嘱累计已生成多少次计划（用于 exec_seq）

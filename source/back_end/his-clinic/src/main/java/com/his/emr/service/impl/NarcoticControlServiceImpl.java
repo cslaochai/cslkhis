@@ -11,7 +11,7 @@ import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.emr.dto.AmpouleReturnDTO;
-import com.his.emr.dto.NarcoticRegisterQueryPageDTO;
+import com.his.emr.dto.NarcoticRegisterPageQueryDTO;
 import com.his.emr.entity.BizDrugDispensing;
 import com.his.emr.entity.BizNarcoticRegister;
 import com.his.emr.entity.BizPrescription;
@@ -603,7 +603,7 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
     // 辅助
 
     @Override
-    public PageResult<BizNarcoticRegisterVO> listPage(NarcoticRegisterQueryPageDTO query) {
+    public PageResult<BizNarcoticRegisterVO> listPage(NarcoticRegisterPageQueryDTO query) {
         // 专册按开单科室收口（登记行的 dept_id 即处方开单科室）；发药/回收写链路属药房跨科室操作，不在此收口
         List<Long> scope = deptScopeService.scopedDeptIds(null);
         LambdaQueryWrapper<BizNarcoticRegister> wrapper = new LambdaQueryWrapper<>();

@@ -5,7 +5,7 @@ import com.his.common.enums.ReportStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.medicaltech.service.MedicalTechService;
 import com.his.medicaltech.vo.BizReportVO;
-import com.his.miniapp.dto.ReportQueryPageDTO;
+import com.his.miniapp.dto.ReportPageQueryDTO;
 import com.his.miniapp.service.MiniReportService;
 import com.his.miniapp.util.MiniappPdfStub;
 import com.his.miniapp.vo.MiniReportPdfVO;
@@ -26,7 +26,7 @@ public class MiniReportServiceImpl implements MiniReportService {
     private final PatientFacadeService patientFacadeService;
 
     @Override
-    public PageResult<BizReportVO> myReportPage(ReportQueryPageDTO dto) {
+    public PageResult<BizReportVO> myReportPage(ReportPageQueryDTO dto) {
         if (!patientFacadeService.canAccessPatient(dto.getPatientId())) {
             throw new BusinessException("无权查询该就诊人的报告");
         }

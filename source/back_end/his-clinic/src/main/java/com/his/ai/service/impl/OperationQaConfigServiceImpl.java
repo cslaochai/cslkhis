@@ -3,13 +3,13 @@ package com.his.ai.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.ai.dto.OperationQaColumnQueryPageDTO;
+import com.his.ai.dto.OperationQaColumnPageQueryDTO;
 import com.his.ai.dto.OperationQaColumnUpsertDTO;
-import com.his.ai.dto.OperationQaRelationQueryPageDTO;
+import com.his.ai.dto.OperationQaRelationPageQueryDTO;
 import com.his.ai.dto.OperationQaRelationUpsertDTO;
-import com.his.ai.dto.OperationQaSchemaQueryPageDTO;
+import com.his.ai.dto.OperationQaSchemaPageQueryDTO;
 import com.his.ai.dto.OperationQaSchemaUpsertDTO;
-import com.his.ai.dto.OperationQaSemanticQueryPageDTO;
+import com.his.ai.dto.OperationQaSemanticPageQueryDTO;
 import com.his.ai.dto.OperationQaSemanticUpsertDTO;
 import com.his.ai.entity.SysAiQaColumn;
 import com.his.ai.entity.SysAiQaRelation;
@@ -74,7 +74,7 @@ public class OperationQaConfigServiceImpl
     // ---------------- schema（表级） ----------------
 
     @Override
-    public PageResult<OperationQaSchemaListVO> listSchemaPage(OperationQaSchemaQueryPageDTO dto) {
+    public PageResult<OperationQaSchemaListVO> listSchemaPage(OperationQaSchemaPageQueryDTO dto) {
         LambdaQueryWrapper<SysAiQaSchema> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(dto.getTableName()), SysAiQaSchema::getTableName, dto.getTableName())
                 .eq(dto.getIsEnabled() != null, SysAiQaSchema::getIsEnabled, dto.getIsEnabled())
@@ -135,7 +135,7 @@ public class OperationQaConfigServiceImpl
     // ---------------- column（列级） ----------------
 
     @Override
-    public PageResult<OperationQaColumnListVO> listColumnPage(OperationQaColumnQueryPageDTO dto) {
+    public PageResult<OperationQaColumnListVO> listColumnPage(OperationQaColumnPageQueryDTO dto) {
         LambdaQueryWrapper<SysAiQaColumn> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysAiQaColumn::getTableName, dto.getTableName().trim())
                 .eq(dto.getIsEnabled() != null, SysAiQaColumn::getIsEnabled, dto.getIsEnabled())
@@ -204,7 +204,7 @@ public class OperationQaConfigServiceImpl
     // ---------------- semantic（语义映射） ----------------
 
     @Override
-    public PageResult<OperationQaSemanticListVO> listSemanticPage(OperationQaSemanticQueryPageDTO dto) {
+    public PageResult<OperationQaSemanticListVO> listSemanticPage(OperationQaSemanticPageQueryDTO dto) {
         LambdaQueryWrapper<SysAiQaSemantic> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(dto.getTerm()), SysAiQaSemantic::getTerm, dto.getTerm())
                 .eq(TextUtil.hasText(dto.getTableName()), SysAiQaSemantic::getTableName, dto.getTableName())
@@ -270,7 +270,7 @@ public class OperationQaConfigServiceImpl
     // ---------------- relation（表间关系/join 图谱） ----------------
 
     @Override
-    public PageResult<OperationQaRelationListVO> listRelationPage(OperationQaRelationQueryPageDTO dto) {
+    public PageResult<OperationQaRelationListVO> listRelationPage(OperationQaRelationPageQueryDTO dto) {
         LambdaQueryWrapper<SysAiQaRelation> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(dto.getSourceTable()), SysAiQaRelation::getSourceTable, dto.getSourceTable())
                 .like(TextUtil.hasText(dto.getTargetTable()), SysAiQaRelation::getTargetTable, dto.getTargetTable())

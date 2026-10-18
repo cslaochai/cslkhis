@@ -1,7 +1,7 @@
 package com.his.system.service;
 
 import com.his.common.base.PageResult;
-import com.his.system.dto.LogQueryPageDTO;
+import com.his.system.dto.LogPageQueryDTO;
 import com.his.system.vo.*;
 
 /**
@@ -9,13 +9,13 @@ import com.his.system.vo.*;
  */
 public interface SysLogService {
 
-    PageResult<OperLogListVO> operLogListPage(LogQueryPageDTO query);
+    PageResult<OperLogListVO> operLogListPage(LogPageQueryDTO query);
 
     OperLogDetailVO operLogDetail(Long id);
 
-    PageResult<LoginLogVO> loginLogListPage(LogQueryPageDTO query);
+    PageResult<LoginLogVO> loginLogListPage(LogPageQueryDTO query);
 
-    PageResult<AuditLogVO> auditLogListPage(LogQueryPageDTO query);
+    PageResult<AuditLogVO> auditLogListPage(LogPageQueryDTO query);
 
     AuditLogVO auditLogDetail(Long id);
 
@@ -24,10 +24,10 @@ public interface SysLogService {
      *
      * <p>第四本账：前三本回答"谁调了接口 / 谁登录了 / 谁对哪个对象做了什么"，
      * 这本回答"哪个字段从什么值改成了什么值"。
-     * 入参复用 {@link LogQueryPageDTO}：targetType 传对象类型、targetId 传对象ID、
+     * 入参复用 {@link LogPageQueryDTO}：targetType 传对象类型、targetId 传对象ID、
      * keyword 匹配对象名/字段中文名/新旧值。
      */
-    PageResult<FieldChangeVO> fieldChangeListPage(LogQueryPageDTO query);
+    PageResult<FieldChangeVO> fieldChangeListPage(LogPageQueryDTO query);
 
     /**
      * 按批次号取同一次保存的全部字段变更。
@@ -43,5 +43,5 @@ public interface SysLogService {
      * 导出 CSV（当前筛选条件下的记录，最多 5000 行）。
      * 返回的是文件文本，前端转 Blob 下载 —— 不落服务器磁盘，不留临时文件。
      */
-    String exportCsv(LogQueryPageDTO query);
+    String exportCsv(LogPageQueryDTO query);
 }

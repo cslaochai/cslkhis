@@ -18,7 +18,7 @@ public interface PayChannelBillService {
     /**
      * 分页查询渠道流水台账
      */
-    PageResult<PayChannelBillVO> selectPage(PayChannelQueryPageDTO query);
+    PageResult<PayChannelBillVO> selectPage(PayChannelPageQueryDTO query);
 
     /**
      * 拉取渠道账单（当前为控制台打印）并落台账（幂等）

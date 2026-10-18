@@ -380,7 +380,7 @@ const pagination = ref({
   pageSize: DEFAULT_PAGE_SIZE,
   total: 0,
 });
-/** 组装后端 MedicalRecordQueryPageDTO 入参：条件必须下推，前端不再切片 */
+/** 组装后端 MedicalRecordPageQueryDTO 入参：条件必须下推，前端不再切片 */
 const buildQuery = () => {
   const query = {
     pageNum: pagination.value.pageNum,

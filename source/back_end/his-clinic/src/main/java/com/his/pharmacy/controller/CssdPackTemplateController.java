@@ -37,7 +37,7 @@ public class CssdPackTemplateController {
 
     @Operation(summary = "模板分页查询")
     @PostMapping("/listPage")
-    public Result<PageResult<CssdPackTemplateVO>> listPage(@Valid @RequestBody CssdDTO.TemplateQueryPage dto) {
+    public Result<PageResult<CssdPackTemplateVO>> listPage(@Valid @RequestBody CssdDTO.TemplatePageQuery dto) {
         var page = cssdTemplateService.listPage(dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));

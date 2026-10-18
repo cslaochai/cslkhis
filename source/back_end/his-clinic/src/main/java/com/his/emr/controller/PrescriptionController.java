@@ -4,7 +4,7 @@ import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.emr.dto.PrescriptionAuditDTO;
 import com.his.emr.dto.PrescriptionQueryDTO;
-import com.his.emr.dto.PrescriptionQueryPageDTO;
+import com.his.emr.dto.PrescriptionPageQueryDTO;
 import com.his.emr.dto.PrescriptionRationalQueryDTO;
 import com.his.emr.service.PrescriptionService;
 import com.his.emr.vo.BizPrescriptionVO;
@@ -46,7 +46,7 @@ public class PrescriptionController {
 
     @Operation(summary = "处方分页查询（审方工作台；unauditedOnly=true 只看未审方）")
     @GetMapping("/listPage")
-    public Result<PageResult<BizPrescriptionVO>> listPage(@Valid PrescriptionQueryPageDTO query) {
+    public Result<PageResult<BizPrescriptionVO>> listPage(@Valid PrescriptionPageQueryDTO query) {
         return Result.success(prescriptionService.listPage(query));
     }
 

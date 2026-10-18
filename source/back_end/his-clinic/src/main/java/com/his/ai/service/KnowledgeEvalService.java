@@ -1,7 +1,7 @@
 package com.his.ai.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.ai.dto.KnowledgeEvalCaseQueryPageDTO;
+import com.his.ai.dto.KnowledgeEvalCasePageQueryDTO;
 import com.his.ai.dto.KnowledgeEvalCaseUpsertDTO;
 import com.his.ai.vo.KnowledgeEvalCaseVO;
 import com.his.ai.vo.KnowledgeEvalRunDetailVO;
@@ -28,7 +28,7 @@ public interface KnowledgeEvalService {
     /**
      * 评测用例分页。
      */
-    IPage<KnowledgeEvalCaseVO> listCasePage(KnowledgeEvalCaseQueryPageDTO dto);
+    IPage<KnowledgeEvalCaseVO> listCasePage(KnowledgeEvalCasePageQueryDTO dto);
 
     /**
      * 运行评测：对全部未删用例逐条检索，计算 recall@k / MRR，落运行汇总 + 明细。
@@ -38,7 +38,7 @@ public interface KnowledgeEvalService {
     /**
      * 运行历史分页（按运行时间倒序）。
      */
-    IPage<KnowledgeEvalRunVO> listRunPage(KnowledgeEvalCaseQueryPageDTO dto);
+    IPage<KnowledgeEvalRunVO> listRunPage(KnowledgeEvalCasePageQueryDTO dto);
 
     /**
      * 某次运行的明细列表。

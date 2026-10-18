@@ -47,7 +47,7 @@ public class DietController {
     @Operation(summary = "膳食方案分页（待接收的排前面）")
     @PreAuthorize("hasAuthority('ipd:diet:plan')")
     @PostMapping("/planListPage")
-    public Result<PageResult<DietPlanVO>> planListPage(@Valid @RequestBody DietPlanQueryPageDTO query) {
+    public Result<PageResult<DietPlanVO>> planListPage(@Valid @RequestBody DietPlanPageQueryDTO query) {
         return Result.success(dietPlanService.planListPage(query));
     }
 
@@ -91,7 +91,7 @@ public class DietController {
     @Operation(summary = "订餐明细分页（按日期/病区/餐次/状态）")
     @PreAuthorize("hasAuthority('ipd:meal:list')")
     @PostMapping("/mealListPage")
-    public Result<PageResult<MealOrderVO>> mealListPage(@Valid @RequestBody MealOrderQueryPageDTO query) {
+    public Result<PageResult<MealOrderVO>> mealListPage(@Valid @RequestBody MealOrderPageQueryDTO query) {
         return Result.success(mealOrderService.mealListPage(query));
     }
 

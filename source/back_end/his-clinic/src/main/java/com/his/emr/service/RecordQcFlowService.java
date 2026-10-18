@@ -40,7 +40,7 @@ public interface RecordQcFlowService {
     /**
      * 分页
      */
-    PageResult<RecordQcFlowVO> page(RecordQcFlowQueryPageDTO q);
+    PageResult<RecordQcFlowVO> page(RecordQcFlowPageQueryDTO q);
 
     /**
      * 详情（不含时间线）

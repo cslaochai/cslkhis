@@ -4,7 +4,7 @@ import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.emr.dto.ArchiveBorrowApplyDTO;
 import com.his.emr.dto.ArchiveBorrowAuditDTO;
-import com.his.emr.dto.ArchiveBorrowQueryPageDTO;
+import com.his.emr.dto.ArchiveBorrowPageQueryDTO;
 import com.his.emr.service.ArchiveBorrowService;
 import com.his.emr.vo.ArchiveBorrowStatsVO;
 import com.his.emr.vo.ArchiveBorrowVO;
@@ -29,7 +29,7 @@ public class ArchiveBorrowController {
 
     @Operation(summary = "分页查询借阅/复印单")
     @PostMapping("/listPage")
-    public Result<PageResult<ArchiveBorrowVO>> listPage(@Valid @RequestBody ArchiveBorrowQueryPageDTO queryDTO) {
+    public Result<PageResult<ArchiveBorrowVO>> listPage(@Valid @RequestBody ArchiveBorrowPageQueryDTO queryDTO) {
         return Result.success(archiveBorrowService.page(queryDTO));
     }
 

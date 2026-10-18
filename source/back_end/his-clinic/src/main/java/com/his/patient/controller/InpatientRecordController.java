@@ -32,7 +32,7 @@ public class InpatientRecordController {
 
     @Operation(summary = "病历文书分页（列表行不带长文本，只给摘要与结构化率）")
     @GetMapping("/listPage")
-    public Result<IPage<InpatientRecordVO>> listPage(@Valid InpatientRecordQueryPageDTO query) {
+    public Result<IPage<InpatientRecordVO>> listPage(@Valid InpatientRecordPageQueryDTO query) {
         return Result.success(inpatientRecordService.listPage(query));
     }
 
@@ -65,7 +65,7 @@ public class InpatientRecordController {
 
     @Operation(summary = "修改日志分页（可按单据查，也可按 admissionId 查本次住院全部文书的修改轨迹）")
     @GetMapping("/logs")
-    public Result<IPage<InpatientRecordLogVO>> logs(@Valid InpatientRecordLogQueryPageDTO query) {
+    public Result<IPage<InpatientRecordLogVO>> logs(@Valid InpatientRecordLogPageQueryDTO query) {
         return Result.success(inpatientRecordService.logPage(query));
     }
 

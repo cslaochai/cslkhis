@@ -26,7 +26,7 @@ public class StocktakeController {
     @Operation(summary = "盘点单分页")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('pharmacy:stocktake:list')")
-    public Result<PageResult<StocktakeVO>> listPage(@Valid @RequestBody StocktakeQueryPageDTO query) {
+    public Result<PageResult<StocktakeVO>> listPage(@Valid @RequestBody StocktakePageQueryDTO query) {
         return Result.success(stocktakeService.listPage(query));
     }
 

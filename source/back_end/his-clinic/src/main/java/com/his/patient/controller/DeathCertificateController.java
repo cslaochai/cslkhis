@@ -34,14 +34,14 @@ public class DeathCertificateController {
     @PreAuthorize("hasAuthority('ipd:deathCertificate:list')")
     @Operation(summary = "证明台账分页（含上报台账，overdue=1 只看逾期未报）")
     @PostMapping("/cert/listPage")
-    public Result<PageResult<DeathCertificateVO.Row>> certListPage(@Valid @RequestBody DeathCertificateDTO.QueryPage dto) {
+    public Result<PageResult<DeathCertificateVO.Row>> certListPage(@Valid @RequestBody DeathCertificateDTO.PageQuery dto) {
         return Result.success(deathCertificateService.listPage(dto));
     }
 
     @PreAuthorize("hasAuthority('ipd:deathCertificate:list')")
     @Operation(summary = "待开证榜（已办死亡离院但无有效证明，欠账榜）")
     @PostMapping("/cert/pendingListPage")
-    public Result<PageResult<DeathCertificateVO.PendingRow>> pendingListPage(@Valid @RequestBody DeathCertificateDTO.QueryPage dto) {
+    public Result<PageResult<DeathCertificateVO.PendingRow>> pendingListPage(@Valid @RequestBody DeathCertificateDTO.PageQuery dto) {
         return Result.success(deathCertificateService.pendingListPage(dto));
     }
 
@@ -132,7 +132,7 @@ public class DeathCertificateController {
     @PreAuthorize("hasAuthority('ipd:deathCertificate:list')")
     @Operation(summary = "死亡登记簿分页")
     @PostMapping("/register/listPage")
-    public Result<PageResult<DeathRegisterVO.Row>> registerListPage(@Valid @RequestBody DeathRegistrationDTO.QueryPage dto) {
+    public Result<PageResult<DeathRegisterVO.Row>> registerListPage(@Valid @RequestBody DeathRegistrationDTO.PageQuery dto) {
         return Result.success(deathRegistrationService.listPage(dto));
     }
 

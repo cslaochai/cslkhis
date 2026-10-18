@@ -31,7 +31,7 @@ public class YbChronicController {
     @PreAuthorize("hasAuthority('finance:insuranceChronic:list')")
     @Operation(summary = "病种目录分页")
     @GetMapping("/catalogListPage")
-    public Result<PageResult<ChronicCatalogVO>> catalogListPage(@Valid ChronicCatalogQueryPageDTO queryDTO) {
+    public Result<PageResult<ChronicCatalogVO>> catalogListPage(@Valid ChronicCatalogPageQueryDTO queryDTO) {
         return Result.success(ybChronicService.catalogListPage(queryDTO));
     }
 
@@ -60,7 +60,7 @@ public class YbChronicController {
     @PreAuthorize("hasAuthority('finance:insuranceChronic:list')")
     @Operation(summary = "备案台账分页（展示态含已过期）")
     @GetMapping("/regListPage")
-    public Result<PageResult<ChronicRegListVO>> regListPage(@Valid ChronicRegQueryPageDTO queryDTO) {
+    public Result<PageResult<ChronicRegListVO>> regListPage(@Valid ChronicRegPageQueryDTO queryDTO) {
         return Result.success(ybChronicService.regListPage(queryDTO));
     }
 

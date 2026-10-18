@@ -22,7 +22,7 @@ public class CriticalNoticeDTO {
      */
     @Data
     @EqualsAndHashCode(callSuper = true)
-    public static class QueryPage extends PageParam {
+    public static class PageQuery extends PageParam {
         /**
          * 关键字
          */

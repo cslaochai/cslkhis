@@ -2,7 +2,7 @@ package com.his.miniapp.service.impl;
 
 import com.his.system.utils.UserUtils;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.charge.dto.PrepayQueryPageDTO;
+import com.his.charge.dto.PrepayPageQueryDTO;
 import com.his.charge.service.ChargeFacadeService;
 import com.his.charge.vo.PrepayBalanceVO;
 import com.his.charge.vo.PrepayVO;
@@ -40,7 +40,7 @@ public class MiniDepositServiceImpl implements MiniDepositService {
     }
 
     @Override
-    public IPage<PrepayVO> prepayListPage(PrepayQueryPageDTO query) {
+    public IPage<PrepayVO> prepayListPage(PrepayPageQueryDTO query) {
         requireOwnAdmission(query.getAdmissionId());
         return chargeFacadeService.prepayPage(query);
     }

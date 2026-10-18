@@ -8,17 +8,17 @@ import com.his.system.vo.MeteringVO;
 
 public interface EquipmentService {
 
-    IPage<EquipmentVO> listPage(EquipmentQueryPageDTO q);
+    IPage<EquipmentVO> listPage(EquipmentPageQueryDTO q);
 
     EquipmentVO getDetailById(Long equipmentId);
 
-    IPage<MaintainVO> maintainListPage(MaintainQueryPageDTO q);
+    IPage<MaintainVO> maintainListPage(MaintainPageQueryDTO q);
 
     MaintainVO maintainCreate(MaintainCreateDTO dto);
 
     void maintainDelete(Long id);
 
-    IPage<MeteringVO> meteringListPage(MeteringQueryPageDTO q);
+    IPage<MeteringVO> meteringListPage(MeteringPageQueryDTO q);
 
     MeteringVO meteringCreate(MeteringCreateDTO dto);
 

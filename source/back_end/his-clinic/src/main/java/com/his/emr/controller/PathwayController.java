@@ -28,7 +28,7 @@ public class PathwayController {
     @PreAuthorize("hasAuthority('qc:clinicalPath:list')")
     @Operation(summary = "模板分页")
     @PostMapping("/listPage")
-    public Result<PageResult<PathwayVO>> listPage(@Valid @RequestBody PathwayQueryPageDTO dto) {
+    public Result<PageResult<PathwayVO>> listPage(@Valid @RequestBody PathwayPageQueryDTO dto) {
         return Result.success(pathwayService.listPage(dto));
     }
 
@@ -72,7 +72,7 @@ public class PathwayController {
     @PreAuthorize("hasAuthority('qc:clinicalPath:list')")
     @Operation(summary = "入径台账分页")
     @PostMapping("/enrollListPage")
-    public Result<PageResult<PathwayEnrollVO>> enrollListPage(@Valid @RequestBody EnrollQueryPageDTO dto) {
+    public Result<PageResult<PathwayEnrollVO>> enrollListPage(@Valid @RequestBody EnrollPageQueryDTO dto) {
         return Result.success(pathwayService.enrollListPage(dto));
     }
 

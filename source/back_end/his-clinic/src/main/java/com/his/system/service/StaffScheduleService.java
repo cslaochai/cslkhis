@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
 import com.his.common.enums.StaffScheduleSourceEnum;
 import com.his.system.dto.StaffScheduleCopyDTO;
-import com.his.system.dto.StaffScheduleQueryPageDTO;
+import com.his.system.dto.StaffSchedulePageQueryDTO;
 import com.his.system.dto.StaffScheduleSwapDTO;
 import com.his.system.dto.StaffScheduleUpsertDTO;
 import com.his.system.entity.BizSchedule;
@@ -21,7 +21,7 @@ import java.util.List;
  */
 public interface StaffScheduleService extends IService<BizSchedule> {
 
-    PageResult<StaffScheduleVO> pageVO(StaffScheduleQueryPageDTO dto);
+    PageResult<StaffScheduleVO> pageVO(StaffSchedulePageQueryDTO dto);
 
     /**
      * 新增/修改一条排班。返回带出的提示文案（如超出人力上限），null=无提示。

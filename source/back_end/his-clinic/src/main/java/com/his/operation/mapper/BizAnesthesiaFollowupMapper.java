@@ -2,7 +2,7 @@ package com.his.operation.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.operation.dto.AnesthesiaFollowupQueryPageDTO;
+import com.his.operation.dto.AnesthesiaFollowupPageQueryDTO;
 import com.his.operation.entity.BizAnesthesiaFollowup;
 import com.his.operation.vo.AnesthesiaFollowupVO;
 import org.apache.ibatis.annotations.Mapper;
@@ -45,7 +45,7 @@ public interface BizAnesthesiaFollowupMapper extends BaseMapper<BizAnesthesiaFol
             </script>
             """)
     IPage<AnesthesiaFollowupVO> selectFollowupPage(IPage<AnesthesiaFollowupVO> page,
-                                                   @Param("q") AnesthesiaFollowupQueryPageDTO query,
+                                                   @Param("q") AnesthesiaFollowupPageQueryDTO query,
                                                    @Param("deptIds") List<Long> deptIds);
 
     /**

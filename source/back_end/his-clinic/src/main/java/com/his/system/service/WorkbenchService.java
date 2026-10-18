@@ -2,7 +2,7 @@ package com.his.system.service;
 
 import com.his.common.base.PageResult;
 import com.his.system.dto.WorkbenchRoleConfigUpsertDTO;
-import com.his.system.dto.WorkbenchWidgetQueryPageDTO;
+import com.his.system.dto.WorkbenchWidgetPageQueryDTO;
 import com.his.system.dto.WorkbenchWidgetUpsertDTO;
 import com.his.system.vo.WorkbenchConfigVO;
 import com.his.system.vo.WorkbenchDataVO;
@@ -26,7 +26,7 @@ public interface WorkbenchService {
      */
     List<WorkbenchDataVO> getData();
 
-    PageResult<WorkbenchWidgetVO> widgetListPage(WorkbenchWidgetQueryPageDTO queryDTO);
+    PageResult<WorkbenchWidgetVO> widgetListPage(WorkbenchWidgetPageQueryDTO queryDTO);
 
     void widgetUpsert(WorkbenchWidgetUpsertDTO upsertDTO);
 
