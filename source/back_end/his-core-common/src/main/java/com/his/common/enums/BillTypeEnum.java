@@ -1,0 +1,59 @@
+package com.his.common.enums;
+
+import org.apache.commons.lang3.StringUtils;
+
+/**
+ * 结算账单类型（字典 his_bill_type，落在结算账单的账单类型列）。
+ */
+public enum BillTypeEnum {
+
+    REGISTRATION(1, "挂号费结算"),
+    OUTPATIENT(2, "门诊诊间结算"),
+    INPATIENT_MID(3, "住院中途结算"),
+    DISCHARGE(4, "出院结算");
+
+    private final Integer code;
+    private final String desc;
+
+    BillTypeEnum(Integer code, String desc) {
+        this.code = code;
+        this.desc = desc;
+    }
+
+    /**
+     * 码值是否合法（写入侧校验用；null 不合法）
+     */
+    public static boolean isValid(Integer code) {
+        return fromCode(code) != null;
+    }
+
+    public Integer getCode() {
+        return code;
+    }
+
+    public String getDesc() {
+        return desc;
+    }
+
+    public static BillTypeEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (BillTypeEnum item : values()) {
+            if (code.equals(item.code)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    public static String getLabel(Integer code) {
+        BillTypeEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.desc;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        BillTypeEnum item = fromCode(code);
+        return item == null ? defaultValue : item.desc;
+    }
+}

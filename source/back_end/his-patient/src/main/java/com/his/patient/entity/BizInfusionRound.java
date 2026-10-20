@@ -1,0 +1,74 @@
+package com.his.patient.entity;
+
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
+import lombok.Data;
+
+import java.time.LocalDateTime;
+
+/**
+ * 输液巡视记录（G14 输液执行闭环）。
+ */
+@Data
+@EqualsAndHashCode(callSuper = true)
+@TableName("biz_infusion_round")
+public class BizInfusionRound extends BaseEntity {
+
+    /**
+     * 执行行ID（医嘱执行记录的ID）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long execId;
+
+    /**
+     * 医嘱ID（冗余）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long orderId;
+
+    /**
+     * 入院ID（冗余）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long admissionId;
+
+    /**
+     * 巡视时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime roundTime;
+
+    /**
+     * 滴速（滴/分）
+     */
+    private Integer dripRate;
+
+    /**
+     * 余量（ml）
+     */
+    private Integer remainingVolume;
+
+    /**
+     * 巡视护士ID（员工ID）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long roundNurseId;
+
+    /**
+     * 巡视护士姓名
+     */
+    private String roundNurseName;
+
+    /**
+     * 删除标志（0-正常 1-删除）
+     */
+    private Integer delFlag;
+    /**
+     * 备注
+     */
+    private String remark;
+}

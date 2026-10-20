@@ -1,0 +1,281 @@
+package com.his.operation.support;
+
+import com.his.charge.dto.FeeBookDTO;
+import com.his.common.enums.FeeCatalogTypeEnum;
+import com.his.charge.vo.FeeRecordVO;
+import com.his.common.enums.EncounterTypeEnum;
+import com.his.common.enums.FeeSourceTypeEnum;
+import com.his.common.enums.PaymentItemTypeEnum;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
+import com.his.operation.entity.BizAnesthesiaPacu;
+import com.his.operation.entity.BizAnesthesiaRecord;
+import com.his.operation.entity.BizOperationChargeItem;
+import com.his.common.enums.AirwayDeviceEnum;
+import com.his.common.enums.AnesthesiaChargeStatusEnum;
+import com.his.common.enums.ChargeSourceEnum;
+import com.his.common.enums.OperationAnesthesiaMethodEnum;
+import com.his.operation.mapper.BizOperationChargeItemMapper;
+import com.his.operation.vo.OperationChargeSummaryVO;
+import com.his.operation.vo.TreatmentItemPriceVO;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.List;
+
+/**
+ * 手术麻醉计费：把"麻醉/复苏做了什么"翻译成"这几项该收多少钱"，并把每一项的落地结果留痕。
+ */
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class OperationChargeBiller {
+
+    private static final int AMOUNT_SCALE = 2;
+
+    private static final String ITEM_MONITOR = "AN006";
+    private static final String ITEM_INTUBATION = "AN007";
+    private static final String ITEM_PACU = "AN008";
+
+    private final BizOperationChargeItemMapper bizOperationChargeItemMapper;
+
+    private final OperationChargeInvoker operationChargeInvoker;
+
+    /**
+     * 按麻醉记录单计费（麻醉费 + 麻醉监护 + 气管插管）。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public OperationChargeSummaryVO billRecord(BizAnesthesiaRecord record, String patientNo) {
+        OperationChargeSummaryVO summary = new OperationChargeSummaryVO();
+        if (record == null || record.getId() == null) {
+            summary.getMessages().add("麻醉记录单不存在，无法计费");
+            return summary;
+        }
+
+        String basis = "麻醉记录 " + record.getRecordNo();
+
+        // ① 麻醉费：方式 → 项目。方式没登记就不能收费（不知道做的是什么麻醉）
+        OperationAnesthesiaMethodEnum method = OperationAnesthesiaMethodEnum.fromCode(record.getAnesthesiaType());
+        if (method == null) {
+            fail(summary, record, null, "未登记麻醉方式，无法确定麻醉费项目", basis, record.getRecordNo());
+        } else {
+            billOne(summary, record.getAdmissionId(), record.getPatientId(), patientNo, record.getPatientName(),
+                    record.getApplyId(), record.getApplyNo(), ChargeSourceEnum.RECORD.getCode(), record.getId(), record.getRecordNo(),
+                    method.getChargeItemCode(), BigDecimal.ONE, basis + " 麻醉费");
+        }
+
+        // ② 麻醉监护（按小时）
+        Long minutes = TimeUtil.elapsedMinutes(record.getAnesthesiaStartTime(), record.getAnesthesiaEndTime());
+        if (minutes == null) {
+            minutes = TimeUtil.elapsedMinutes(record.getOperationStartTime(), record.getOperationEndTime());
+        }
+        if (minutes == null) {
+            fail(summary, record, ITEM_MONITOR, "无麻醉/手术起止时间，算不出监护时长", basis, record.getRecordNo());
+        } else {
+            billOne(summary, record.getAdmissionId(), record.getPatientId(), patientNo, record.getPatientName(),
+                    record.getApplyId(), record.getApplyNo(), ChargeSourceEnum.RECORD.getCode(), record.getId(), record.getRecordNo(),
+                    ITEM_MONITOR, AnesthesiaCalcs.billHours(minutes),
+                    basis + " 麻醉监护 " + AnesthesiaCalcs.durationText(minutes));
+        }
+
+        // ③ 气管插管（只有 flag 明确是插管才收；不确定（null）不收也不报错）
+        if (Integer.valueOf(AirwayDeviceEnum.ENDOTRACHEAL_TUBE.getCode()).equals(record.getAirwayDevice())) {
+            billOne(summary, record.getAdmissionId(), record.getPatientId(), patientNo, record.getPatientName(),
+                    record.getApplyId(), record.getApplyNo(), ChargeSourceEnum.RECORD.getCode(), record.getId(), record.getRecordNo(),
+                    ITEM_INTUBATION, BigDecimal.ONE, basis + " 气管插管");
+        }
+        return summary;
+    }
+
+    /**
+     * 按 PACU 停留计费（麻醉后监测治疗，按小时）。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public OperationChargeSummaryVO billPacu(BizAnesthesiaPacu pacu) {
+        OperationChargeSummaryVO summary = new OperationChargeSummaryVO();
+        if (pacu == null || pacu.getId() == null) {
+            summary.getMessages().add("PACU 记录不存在，无法计费");
+            return summary;
+        }
+        Long minutes = TimeUtil.elapsedMinutes(pacu.getEnterTime(), pacu.getLeaveTime());
+        if (minutes == null) {
+            failPacu(summary, pacu, "PACU 尚未登记入室/出室时间，算不出复苏时长");
+            return summary;
+        }
+        billOne(summary, pacu.getAdmissionId(), pacu.getPatientId(), null, pacu.getPatientName(),
+                pacu.getApplyId(), null, ChargeSourceEnum.PACU.getCode(), pacu.getId(), pacu.getPacuNo(),
+                ITEM_PACU, AnesthesiaCalcs.billHours(minutes),
+                "PACU 复苏 " + pacu.getPacuNo() + " " + AnesthesiaCalcs.durationText(minutes));
+        return summary;
+    }
+
+    private void billOne(OperationChargeSummaryVO summary, Long admissionId, Long patientId, String patientNo,
+                         String patientName, Long applyId, String applyNo,
+                         int sourceType, Long sourceId, String sourceNo,
+                         String itemCode, BigDecimal quantity, String remark) {
+        summary.setTotalItems(summary.getTotalItems() + 1);
+
+        BizOperationChargeItem row = upsert(admissionId, patientId, patientNo, patientName,
+                applyId, applyNo, sourceType, sourceId, sourceNo, itemCode);
+        if (row == null) {
+            // 已经成功计过费的同一项 → 幂等跳过，不再向收费明细里钉第二笔
+            summary.getMessages().add(itemCode + " 此前已计费，本次跳过（同一来源同一项目只收一次）");
+            return;
+        }
+
+        TreatmentItemPriceVO price = bizOperationChargeItemMapper.selectTreatmentItem(itemCode);
+        if (price == null) {
+            markFail(summary, row, "价目表中不存在可用项目 " + itemCode + "（未取到单价，不计费）", itemCode);
+            return;
+        }
+        BigDecimal unitPrice = price.getPrice() == null ? BigDecimal.ZERO : price.getPrice();
+        if (unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            markFail(summary, row, "项目 " + itemCode + " 单价为 " + unitPrice + "，按'金额不明即不计费'不落账", itemCode);
+            return;
+        }
+
+        BigDecimal amount = unitPrice.multiply(quantity).setScale(AMOUNT_SCALE, RoundingMode.HALF_UP);
+        row.setItemName(price.getItemName());
+        row.setSpec(null);
+        row.setUnit("次");
+        row.setQuantity(quantity);
+        row.setPrice(unitPrice);
+        row.setAmount(amount);
+        row.setRemark(remark);
+
+        if (admissionId == null) {
+            markFail(summary, row, "缺少入院ID，这笔费用无法归属这次住院，本次不计费", itemCode);
+            return;
+        }
+        // 没有手术锚点的麻醉费用 = 一笔说不清来源的账，宁可先不记
+        if (!TextUtil.hasText(applyNo) && applyId == null) {
+            markFail(summary, row, "缺少手术申请单，本次不计费", itemCode);
+            return;
+        }
+        if (patientId == null || !TextUtil.hasText(patientName)) {
+            markFail(summary, row, "缺少患者快照，这笔费用落不到人，本次不计费", itemCode);
+            return;
+        }
+
+        // 一个计费项目 = 一条记账行，落库即「1-待结算」，等出院结算时被锁进账单
+        FeeBookDTO fee = new FeeBookDTO();
+        fee.setPatientId(patientId);
+        fee.setPatientNo(patientNo);
+        fee.setPatientName(patientName);
+        fee.setEncounterType(EncounterTypeEnum.INPATIENT.getCode());
+        fee.setEncounterId(admissionId);
+        fee.setItemType(PaymentItemTypeEnum.TREATMENT.getCode());
+        fee.setItemCode(itemCode);
+        fee.setItemName(row.getItemName());
+        fee.setSpecification(row.getSpec());
+        fee.setUnit(row.getUnit());
+        fee.setPrice(row.getPrice());
+        fee.setQuantity(quantity);
+        fee.setSourceType(FeeSourceTypeEnum.OPERATION.getCode());
+        fee.setSourceId(row.getId());
+        fee.setSourceNo(TextUtil.hasText(applyNo) ? applyNo : ("APPLY-" + applyId));
+        fee.setCatalogType(FeeCatalogTypeEnum.byItemType(fee.getItemType()));
+        fee.setRemark(TextUtil.hasText(remark) ? remark
+                : ("手术麻醉记账（项目 " + itemCode + "，手术申请 " + fee.getSourceNo() + "）"));
+
+        FeeRecordVO booked;
+        try {
+            booked = operationChargeInvoker.book(fee);
+        } catch (Exception e) {
+            markFail(summary, row, "记账异常：" + e.getMessage(), itemCode);
+            return;
+        }
+
+        row.setChargeStatus(AnesthesiaChargeStatusEnum.DONE.getCode());
+        // fee_record_id / fee_no：L1 记账行的指针（sql/141 之前是 charge_id + charge_detail_id 两列同值）；
+        // 补计/红冲要按它找回那一行，不留旧行号的悬空值。
+        row.setFeeRecordId(booked.getId());
+        row.setFeeNo(booked.getFeeNo());
+        row.setFailReason(null);
+        bizOperationChargeItemMapper.updateById(row);
+
+        summary.setSuccessItems(summary.getSuccessItems() + 1);
+        summary.setAmount(summary.getAmount().add(NumUtil.orZero(booked.getAmount())));
+        summary.setFeeNo(booked.getFeeNo());
+        summary.getMessages().add(String.format("%s「%s」× %s = %s 元 → %s",
+                itemCode, row.getItemName(), quantity.stripTrailingZeros().toPlainString(),
+                amount.stripTrailingZeros().toPlainString(), booked.getFeeNo()));
+    }
+
+    /**
+     * 取/建幂等记账行。
+     *
+     * <p>已标记为"已计费"的行<b>直接不再处理</b>（返回 null 让调用方跳过）——
+     * 这就是"点两次收费只收一次"的实现处，比在 Controller 上加一个开关可靠。
+     *
+     * @return 可继续处理的记账行；返回 {@code null} 表示该项此前已计费成功，本次跳过
+     */
+    private BizOperationChargeItem upsert(Long admissionId, Long patientId, String patientNo, String patientName,
+                                          Long applyId, String applyNo, int sourceType, Long sourceId,
+                                          String sourceNo, String itemCode) {
+        List<BizOperationChargeItem> existing = bizOperationChargeItemMapper.selectBySource(sourceType, sourceId).stream()
+                .filter(r -> itemCode.equals(r.getItemCode()))
+                .toList();
+        if (!existing.isEmpty()) {
+            BizOperationChargeItem row = existing.get(0);
+            if (Integer.valueOf(AnesthesiaChargeStatusEnum.DONE.getCode()).equals(row.getChargeStatus())) {
+                return null;
+            }
+            return row;
+        }
+        BizOperationChargeItem row = new BizOperationChargeItem();
+        row.setApplyId(applyId);
+        row.setApplyNo(applyNo);
+        row.setAdmissionId(admissionId);
+        row.setPatientId(patientId);
+        row.setPatientNo(patientNo);
+        row.setPatientName(patientName);
+        row.setSourceType(sourceType);
+        row.setSourceId(sourceId);
+        row.setSourceNo(sourceNo);
+        row.setItemCode(itemCode);
+        row.setItemType(7);
+        row.setChargeStatus(AnesthesiaChargeStatusEnum.PENDING.getCode());
+        bizOperationChargeItemMapper.insert(row);
+        return row;
+    }
+
+    // 工具
+
+    private void markFail(OperationChargeSummaryVO summary, BizOperationChargeItem row, String reason, String itemCode) {
+        summary.setFailedItems(summary.getFailedItems() + 1);
+        summary.getMessages().add(itemCode + " 计费失败：" + reason);
+        if (row != null) {
+            row.setChargeStatus(AnesthesiaChargeStatusEnum.FAILED.getCode());
+            // ★ 截到列宽：失败原因里带着原始 SQL 异常文本，超长会把这次 update 打成
+            //   Data too long → "记账失败"升级成 500，反而看不到失败原因了
+            row.setFailReason(AnesthesiaCalcs.clipReason(reason));
+            bizOperationChargeItemMapper.updateById(row);
+        }
+        log.warn("手术麻醉计费失败：{}", reason);
+    }
+
+    /**
+     * 连"该收哪个项目"都定不下来的失败：这种项目<b>没有记账行可落</b>
+     * （没有 item_code 就没法命中幂等唯一键），所以只在汇总里留一条失败说明。
+     */
+    private void fail(OperationChargeSummaryVO summary, BizAnesthesiaRecord record, String itemCode,
+                      String reason, String basis, String recordNo) {
+        summary.setTotalItems(summary.getTotalItems() + 1);
+        summary.setFailedItems(summary.getFailedItems() + 1);
+        summary.getMessages().add((itemCode == null ? "麻醉费" : itemCode) + " 计费失败：" + reason);
+        log.warn("{}：{}", basis, reason);
+    }
+
+    private void failPacu(OperationChargeSummaryVO summary, BizAnesthesiaPacu pacu, String reason) {
+        summary.setTotalItems(summary.getTotalItems() + 1);
+        summary.setFailedItems(summary.getFailedItems() + 1);
+        summary.getMessages().add("AN008 计费失败：" + reason);
+        log.warn("PACU {}：{}", pacu.getPacuNo(), reason);
+    }
+}

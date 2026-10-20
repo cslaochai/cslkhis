@@ -1,0 +1,198 @@
+package com.his.medicaltech.controller;
+
+import com.his.common.base.PageResult;
+import com.his.common.base.Result;
+import com.his.medicaltech.dto.*;
+import com.his.medicaltech.service.EcgService;
+import com.his.medicaltech.vo.EcgDetailVO;
+import com.his.medicaltech.vo.EcgListVO;
+import com.his.medicaltech.vo.EcgTemplateVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+/**
+ * 心电工作站控制器：签到、波形采集、测量与 Holter 分析、报告书写审核发布及模板维护的接口入口。
+ */
+@Tag(name = "心电工作站")
+@RestController
+@RequestMapping("/medicaltech/ecg")
+@RequiredArgsConstructor
+public class EcgController {
+
+    private final EcgService ecgService;
+
+    // 工作台
+
+    @Operation(summary = "工作台分页列表（检查记录 + 波形/测量/Holter/报告，未采集未书写的也在）")
+    @PostMapping("/listPage")
+    @PreAuthorize("hasAuthority('medtech:ecg:list')")
+    public Result<PageResult<EcgListVO>> listPage(@Valid @RequestBody EcgPageQueryDTO query) {
+        return Result.success(ecgService.listPage(query));
+    }
+
+    /**
+     * 按检查记录取心电详情：一次带回波形、测量参数、Holter 分析与报告，还没采集时也能取到记录本体。
+     * 用于心电工作站列表行打开采集弹框与报告书写弹框时的数据源。
+     */
+    @Operation(summary = "按检查记录取详情（含波形 JSON，还没采集时也能取）")
+    @GetMapping("/getDetailByRecordId")
+    @PreAuthorize("hasAuthority('medtech:ecg:list')")
+    public Result<EcgDetailVO> getDetailByRecordId(@RequestParam Long recordId) {
+        return Result.success(ecgService.getDetailByRecordId(recordId));
+    }
+
+    // 采集（技师岗）
+
+    @Operation(summary = "签到（已登记 → 已签到；心电检查的排队叫号入口）")
+    @PostMapping("/checkIn")
+    @PreAuthorize("hasAuthority('medtech:ecg:collect')")
+    public Result<EcgDetailVO> checkIn(@RequestParam Long recordId) {
+        return Result.success("已签到", ecgService.checkIn(recordId));
+    }
+
+    /**
+     * 接收仪器推送的 12 导联波形并入库，同时把检查记录推进到已出结果。
+     * 用于心电采集环节的设备直连回写，是报告书写的前置事实来源。
+     */
+    @Operation(summary = "波形采集（设备推送路径）：waveData JSON 落库并置记录为已出结果")
+    @PostMapping("/collectWave")
+    @PreAuthorize("hasAuthority('medtech:ecg:collect')")
+    public Result<EcgDetailVO> collectWave(@Valid @RequestBody EcgCollectWaveDTO dto) {
+        return Result.success("波形已入库", ecgService.collectWave(dto));
+    }
+
+    /**
+     * 由服务端按指定节律合成 12 导联波形入库，效果与设备推送一致。
+     * 用于心电工作站采集弹框在没有真机联调时补出波形（联调与演示路径）。
+     */
+    @Operation(summary = "模拟采集（联调/演示路径）：服务端按节律合成 12 导联波形")
+    @PostMapping("/simulateWave")
+    @PreAuthorize("hasAuthority('medtech:ecg:collect')")
+    public Result<EcgDetailVO> simulateWave(@Valid @RequestBody EcgSimulateDTO dto) {
+        return Result.success("波形已入库", ecgService.simulateWave(dto));
+    }
+
+    // 书写（医师岗）
+
+    @Operation(summary = "保存测量参数（心率/PR/QRS/QT/电轴等，upsert）")
+    @PostMapping("/saveMeasure")
+    @PreAuthorize("hasAuthority('medtech:ecg:write')")
+    public Result<EcgDetailVO> saveMeasure(@Valid @RequestBody EcgMeasureUpsertDTO dto) {
+        return Result.success("测量参数已保存", ecgService.saveMeasure(dto));
+    }
+
+    /**
+     * 保存动态心电分析结果：心搏统计、心律失常事件与小时心率，重复保存覆盖原分析。
+     * 用于心电报告书写弹框的 Holter 分析区；动态心电类型必须有这份分析才允许提交审核。
+     */
+    @Operation(summary = "保存 Holter 分析（心搏统计/心律失常事件/小时心率，upsert）")
+    @PostMapping("/saveHolter")
+    @PreAuthorize("hasAuthority('medtech:ecg:write')")
+    public Result<EcgDetailVO> saveHolter(@Valid @RequestBody EcgHolterUpsertDTO dto) {
+        return Result.success("Holter 分析已保存", ecgService.saveHolter(dto));
+    }
+
+    /**
+     * 保存报告草稿：只落描述与结论，不推进报告状态、不签名。
+     * 用于心电报告书写弹框的暂存，医师可多次保存继续改。
+     */
+    @Operation(summary = "保存报告草稿")
+    @PostMapping("/saveDraft")
+    @PreAuthorize("hasAuthority('medtech:ecg:write')")
+    public Result<EcgDetailVO> saveDraft(@Valid @RequestBody EcgReportUpsertDTO dto) {
+        return Result.success("草稿已保存", ecgService.saveDraft(dto));
+    }
+
+    /**
+     * 把报告提交进审核队列，并同步完成报告医师签名。
+     * 用于心电报告书写弹框的提交动作：没有波形不允许提交，动态心电还必须先有 Holter 分析。
+     */
+    @Operation(summary = "提交报告待审核（前置：已有波形；Holter 还需已分析；同时完成报告医师签名）")
+    @PostMapping("/submit")
+    @PreAuthorize("hasAuthority('medtech:ecg:write')")
+    public Result<EcgDetailVO> submit(@Valid @RequestBody EcgReportUpsertDTO dto) {
+        return Result.success("已提交审核", ecgService.submit(dto));
+    }
+
+    /**
+     * 审核通过待审报告，并同步完成审核医师签名；书写人审自己的报告由服务端拒绝。
+     * 用于心电工作站待审核栏的审核弹框确认动作。
+     */
+    @Operation(summary = "审核通过（不能自审；同时完成审核医师签名）")
+    @PostMapping("/audit")
+    @PreAuthorize("hasAuthority('medtech:ecg:audit')")
+    public Result<EcgDetailVO> audit(@Valid @RequestBody EcgAuditDTO dto) {
+        return Result.success("审核通过", ecgService.audit(dto));
+    }
+
+    /**
+     * 把待审报告退回书写人重写：原因必填，报告退回草稿态并清掉两侧签名。
+     * 用于心电工作站待审核栏审核弹框的退回动作。
+     */
+    @Operation(summary = "退回重写（原因必填，报告回到草稿并清签名）")
+    @PostMapping("/reject")
+    @PreAuthorize("hasAuthority('medtech:ecg:audit')")
+    public Result<EcgDetailVO> reject(@Valid @RequestBody EcgAuditDTO dto) {
+        return Result.success("已退回，报告回到草稿", ecgService.reject(dto));
+    }
+
+    /**
+     * 发布已审核的报告并通知开单医师，发布后报告对申请方可见。
+     * 用于心电工作站已审核栏的行内发布动作；未走完审核的报告发布不了。
+     */
+    @Operation(summary = "发布报告（只有已审核的能发布，发布后推送申请医师）")
+    @PostMapping("/publish")
+    @PreAuthorize("hasAuthority('medtech:ecg:publish')")
+    public Result<EcgDetailVO> publish(@RequestParam Long reportId) {
+        return Result.success("报告已发布", ecgService.publish(reportId));
+    }
+
+    // 报告模板
+
+    @Operation(summary = "模板下拉（书写弹框用；按心电类型过滤，通用模板任何类型都能选）")
+    @GetMapping("/template/selectList")
+    @PreAuthorize("hasAuthority('medtech:ecg:list')")
+    public Result<List<EcgTemplateVO>> templateSelectList(@RequestParam(required = false) Integer ecgType) {
+        return Result.success(ecgService.templateSelectList(ecgType));
+    }
+
+    /**
+     * 心电报告模板全量清单：含已停用的模板，供维护视角核对。
+     * 用于报告模板维护环节摊开模板与停用情况。
+     */
+    @Operation(summary = "模板列表（维护用，含停用）")
+    @GetMapping("/template/list")
+    @PreAuthorize("hasAuthority('medtech:ecg:tplEdit')")
+    public Result<List<EcgTemplateVO>> templateList() {
+        return Result.success(ecgService.templateList());
+    }
+
+    /**
+     * 新增或修改心电报告模板：同一入口按有无主键分支，模板编码不得重复。
+     * 用于报告模板维护环节沉淀常用描述与结论，供书写时套用。
+     */
+    @Operation(summary = "新增/修改模板")
+    @PostMapping("/template/upsert")
+    @PreAuthorize("hasAuthority('medtech:ecg:tplEdit')")
+    public Result<EcgTemplateVO> templateUpsert(@Valid @RequestBody EcgTemplateUpsertDTO dto) {
+        return Result.success("已保存", ecgService.templateUpsert(dto));
+    }
+
+    /**
+     * 删除心电报告模板：本表删除走物理删，软删行会占住唯一模板编码，让同编码模板再也建不出来。
+     * 用于报告模板维护环节清理错建或废弃的模板。
+     */
+    @Operation(summary = "删除模板（物理删：uk_ecg_tpl_code 不含 del_flag，软删会让同编码再也建不出来）")
+    @DeleteMapping("/template/deleteById")
+    @PreAuthorize("hasAuthority('medtech:ecg:tplEdit')")
+    public Result<Void> templateDeleteById(@RequestParam Long id) {
+        boolean ok = ecgService.templateDeleteById(id);
+        return ok ? Result.success("已删除", null) : Result.error("模板不存在或已被删除");
+    }
+}

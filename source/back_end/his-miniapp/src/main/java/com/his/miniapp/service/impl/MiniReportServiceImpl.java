@@ -1,0 +1,68 @@
+package com.his.miniapp.service.impl;
+
+import com.his.common.base.PageResult;
+import com.his.common.enums.ReportStatusEnum;
+import com.his.common.exception.BusinessException;
+import com.his.medicaltech.service.MedicalTechService;
+import com.his.medicaltech.vo.BizReportVO;
+import com.his.miniapp.dto.ReportPageQueryDTO;
+import com.his.miniapp.service.MiniReportService;
+import com.his.miniapp.util.MiniappPdfStub;
+import com.his.miniapp.vo.MiniReportPdfVO;
+import com.his.patient.service.PatientFacadeService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+/**
+ * 患者端报告读取（二期）。
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class MiniReportServiceImpl implements MiniReportService {
+
+    private final MedicalTechService medicalTechService;
+    private final PatientFacadeService patientFacadeService;
+
+    @Override
+    public PageResult<BizReportVO> myReportPage(ReportPageQueryDTO dto) {
+        if (!patientFacadeService.canAccessPatient(dto.getPatientId())) {
+            throw new BusinessException("无权查询该就诊人的报告");
+        }
+        return medicalTechService.selectReportPageVO(dto.getPatientId(), dto.getReportType(),
+                ReportStatusEnum.PUBLISHED.getCode(), dto.getPageNum(), dto.getPageSize());
+    }
+
+    @Override
+    public BizReportVO myReportDetail(Long reportId) {
+        BizReportVO report = medicalTechService.getReportDetailVO(reportId);
+        if (report == null) {
+            return null;
+        }
+        if (patientFacadeService.patientScopeViolated(report.getPatientId())) {
+            throw new BusinessException("无权查看该报告");
+        }
+        if (!ReportStatusEnum.PUBLISHED.getCode().equals(report.getReportStatus())) {
+            throw new BusinessException("报告尚未发布");
+        }
+        return report;
+    }
+
+    @Override
+    public MiniReportPdfVO reportPdf(Long reportId) {
+        BizReportVO report = medicalTechService.getReportDetailVO(reportId);
+        if (report == null || patientFacadeService.patientScopeViolated(report.getPatientId())) {
+            return MiniReportPdfVO.deny(403);
+        }
+        if (!ReportStatusEnum.PUBLISHED.getCode().equals(report.getReportStatus())) {
+            return MiniReportPdfVO.deny(400);
+        }
+        log.info("[报告PDF口子] ===== 打印生成报告 PDF ===== reportNo={} patientId={}",
+                report.getReportNo(), report.getPatientId());
+        byte[] pdf = MiniappPdfStub.reportPdf(report.getReportNo(), report.getPatientName(),
+                report.getItemName(), report.getApplyDeptName(), report.getApplyDoctorName(),
+                report.getPublishTime());
+        return MiniReportPdfVO.of(report.getReportNo() + ".pdf", pdf);
+    }
+}

@@ -1,0 +1,25 @@
+package com.his.miniapp.dto;
+
+import com.his.common.validation.AllowedValues;
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+
+/**
+ * 患者对工单的动作：撤单 / 确认解决 / 重开。
+ */
+@Data
+@Schema(description = "患者工单动作入参")
+public class ServiceTicketActionDTO {
+
+    @NotNull(message = "工单ID不能为空")
+    @Schema(description = "工单ID")
+    private Long id;
+
+    @AllowedValues(values = {"cancel", "confirm", "reopen"}, message = "工单动作取值不合法")
+    @Schema(description = "动作：cancel-撤单 confirm-确认解决 reopen-不满意重开", example = "cancel")
+    private String action;
+
+    @Schema(description = "原因（撤单/重开时填写）")
+    private String reason;
+}

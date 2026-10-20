@@ -1,0 +1,91 @@
+package com.his.ai.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.ai.dto.AiAuditLogPageQueryDTO;
+import com.his.ai.entity.SysAiCallLog;
+import com.his.common.enums.AiCallStatusEnum;
+import com.his.ai.mapper.SysAiCallLogMapper;
+import com.his.ai.service.AiAuditQueryService;
+import com.his.ai.vo.AiAuditLogVO;
+import com.his.common.base.PageResult;
+import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * AI 调用审计查询。
+ */
+@Service
+@RequiredArgsConstructor
+public class AiAuditQueryServiceImpl extends ServiceImpl<SysAiCallLogMapper, SysAiCallLog> implements AiAuditQueryService {
+
+    private final SysAiCallLogMapper sysAiCallLogMapper;
+
+    private static AiAuditLogVO toVO(SysAiCallLog entity) {
+        AiAuditLogVO vo = new AiAuditLogVO();
+        BeanUtils.copyProperties(entity, vo);
+        vo.setStatusText(AiCallStatusEnum.getLabel(entity.getStatus()));
+        return vo;
+    }
+
+    /**
+     * 取当日 00:00:00；入参为空时返回 null。
+     * <p>
+     * <b>这里踩过一个坑</b>：MyBatis-Plus 的 {@code ge(condition, column, value)} 会
+     * <b>先求值 value 再判断 condition</b>，所以 {@code ge(hasText(date), ..., startOfDay(date))}
+     * 在 date 为 null 时依然会执行 startOfDay(null) 并抛异常 ——
+     * 空条件查询直接变成 500。凡是这种「带 condition 的查询方法」，参数构造函数必须自己判空。
+     */
+    private static LocalDateTime startOfDay(String date) {
+        if (!TextUtil.hasText(date)) {
+            return null;
+        }
+        return TimeUtil.dayStart(parseDate(date));
+    }
+
+    private static LocalDateTime endOfDay(String date) {
+        if (!TextUtil.hasText(date)) {
+            return null;
+        }
+        return TimeUtil.dayEnd(parseDate(date));
+    }
+
+    private static LocalDate parseDate(String date) {
+        try {
+            return LocalDate.parse(date.trim());
+        } catch (Exception ex) {
+            // 非空但格式不对时明确报错，不要静默兜底成「今天」——
+            // 那会让使用者以为筛选生效了，实际查的却是另一段时间的数据，比报错更糟。
+            throw new BusinessException("日期格式不正确，应为 yyyy-MM-dd：" + date);
+        }
+    }
+
+    public PageResult<AiAuditLogVO> listPage(AiAuditLogPageQueryDTO dto) {
+        LambdaQueryWrapper<SysAiCallLog> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(TextUtil.hasText(dto.getCapabilityKey()), SysAiCallLog::getCapabilityKey, dto.getCapabilityKey())
+                .eq(dto.getStatus() != null, SysAiCallLog::getStatus, dto.getStatus())
+                .eq(TextUtil.hasText(dto.getBizType()), SysAiCallLog::getBizType, dto.getBizType())
+                .eq(dto.getBizId() != null, SysAiCallLog::getBizId, dto.getBizId())
+                .like(TextUtil.hasText(dto.getOperator()), SysAiCallLog::getOperator, dto.getOperator())
+                .ge(TextUtil.hasText(dto.getStartDate()), SysAiCallLog::getCreateTime, startOfDay(dto.getStartDate()))
+                .le(TextUtil.hasText(dto.getEndDate()), SysAiCallLog::getCreateTime, endOfDay(dto.getEndDate()))
+                .orderByDesc(SysAiCallLog::getCreateTime);
+
+        Page<SysAiCallLog> page = sysAiCallLogMapper.selectPage(
+                new Page<>(dto.getPageNum(), dto.getPageSize()), wrapper);
+
+        List<AiAuditLogVO> records = page.getRecords().stream().map(AiAuditQueryServiceImpl::toVO)
+                .collect(Collectors.toList());
+        return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
+    }
+}

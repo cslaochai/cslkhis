@@ -1,0 +1,198 @@
+package com.his.charge.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.charge.dto.YbCancelDTO;
+import com.his.charge.dto.YbInspectConcludeDTO;
+import com.his.charge.dto.YbInspectionPageQueryDTO;
+import com.his.charge.dto.YbInspectionUpsertDTO;
+import com.his.charge.entity.BizYbDeductNotice;
+import com.his.charge.entity.BizYbInspection;
+import com.his.charge.mapper.BizYbDeductNoticeMapper;
+import com.his.charge.mapper.BizYbInspectionMapper;
+import com.his.charge.service.YbInspectionService;
+import com.his.charge.vo.YbInspectionDeductCountVO;
+import com.his.charge.vo.YbInspectionListVO;
+import com.his.common.base.PageResult;
+import com.his.common.enums.YbInspectionStatusEnum;
+import com.his.common.exception.BusinessException;
+import com.his.system.service.RedisSequenceService;
+import com.his.common.util.TextUtil;
+import com.his.system.utils.UserUtils;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+/**
+ * 飞检批次服务实现。
+ */
+@Service
+@RequiredArgsConstructor
+public class YbInspectionServiceImpl extends ServiceImpl<BizYbInspectionMapper, BizYbInspection> implements YbInspectionService {
+
+    private final BizYbInspectionMapper bizYbInspectionMapper;
+    private final BizYbDeductNoticeMapper bizYbDeductNoticeMapper;
+    private final RedisSequenceService redisSequenceService;
+
+    @Override
+    public PageResult<YbInspectionListVO> listPage(YbInspectionPageQueryDTO queryDTO) {
+        LambdaQueryWrapper<BizYbInspection> wrapper = new LambdaQueryWrapper<BizYbInspection>()
+                .eq(queryDTO.getInspectType() != null, BizYbInspection::getInspectType, queryDTO.getInspectType())
+                .eq(queryDTO.getStatus() != null, BizYbInspection::getStatus, queryDTO.getStatus())
+                .and(TextUtil.hasText(queryDTO.getKeyword()), w -> w
+                        .like(BizYbInspection::getInspectNo, queryDTO.getKeyword())
+                        .or().like(BizYbInspection::getFundOrg, queryDTO.getKeyword())
+                        .or().like(BizYbInspection::getInspectTeam, queryDTO.getKeyword())
+                        .or().like(BizYbInspection::getOurReceiver, queryDTO.getKeyword()))
+                .orderByAsc(BizYbInspection::getStatus)
+                .orderByDesc(BizYbInspection::getInspectDate);
+        IPage<BizYbInspection> page = bizYbInspectionMapper.selectPage(
+                new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
+        List<YbInspectionListVO> voList = page.getRecords().stream().map(this::toVO).toList();
+        fillDeductCount(voList);
+        return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), voList);
+    }
+
+    @Override
+    public YbInspectionListVO getById(Long id) {
+        BizYbInspection entity = require(id);
+        YbInspectionListVO vo = toVO(entity);
+        fillDeductCount(List.of(vo));
+        return vo;
+    }
+
+    @Override
+    public List<YbInspectionListVO> selectRunningList() {
+        return bizYbInspectionMapper.selectList(new LambdaQueryWrapper<BizYbInspection>()
+                        .eq(BizYbInspection::getStatus, YbInspectionStatusEnum.RUNNING.getCode())
+                        .orderByDesc(BizYbInspection::getInspectDate))
+                .stream().map(this::toVO).toList();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public YbInspectionListVO upsert(YbInspectionUpsertDTO dto) {
+        if (dto.getInspectEndDate().isBefore(dto.getInspectStartDate())) {
+            throw new BusinessException("审核目标期间止不能早于起");
+        }
+        BizYbInspection entity;
+        boolean creating = dto.getId() == null;
+        if (creating) {
+            entity = new BizYbInspection();
+            entity.setInspectNo(redisSequenceService.generateYbInspectNo());
+            entity.setStatus(YbInspectionStatusEnum.RUNNING.getCode());
+        } else {
+            entity = require(dto.getId());
+            // 已结项的批次是留档事实，已作废的是废单，都不再接受内容修改
+            if (!Objects.equals(YbInspectionStatusEnum.RUNNING.getCode(), entity.getStatus())) {
+                throw new BusinessException("仅「进行中」的批次可修改，已结项/已作废的单据内容不可再改");
+            }
+        }
+        entity.setInspectType(dto.getInspectType());
+        entity.setFundOrg(TextUtil.cut(dto.getFundOrg(), 100));
+        entity.setInspectStartDate(dto.getInspectStartDate());
+        entity.setInspectEndDate(dto.getInspectEndDate());
+        entity.setInspectDate(dto.getInspectDate());
+        entity.setInspectTeam(TextUtil.cut(dto.getInspectTeam(), 200));
+        entity.setOurReceiver(TextUtil.cut(dto.getOurReceiver(), 64));
+        entity.setRemark(TextUtil.cut(dto.getRemark(), 500));
+        entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
+        if (creating) {
+            bizYbInspectionMapper.insert(entity);
+        } else {
+            bizYbInspectionMapper.updateById(entity);
+        }
+        return toVO(entity);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void conclude(YbInspectConcludeDTO dto) {
+        BizYbInspection entity = require(dto.getId());
+        if (!Objects.equals(YbInspectionStatusEnum.RUNNING.getCode(), entity.getStatus())) {
+            throw new BusinessException("仅「进行中」的批次可结项");
+        }
+        entity.setStatus(YbInspectionStatusEnum.CONCLUDED.getCode());
+        entity.setConclusion(TextUtil.cut(dto.getConclusion(), 1000));
+        entity.setConcludeTime(LocalDateTime.now());
+        entity.setConcludeBy(UserUtils.getCurrentUser().getRealName());
+        entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
+        // 守卫下沉到 WHERE：读-判-写之间并发状态变更会使 Java 侧判断失效
+        int rows = bizYbInspectionMapper.update(entity, new LambdaUpdateWrapper<BizYbInspection>()
+                .eq(BizYbInspection::getId, entity.getId())
+                .eq(BizYbInspection::getStatus, YbInspectionStatusEnum.RUNNING.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("仅「进行中」的批次可结项（状态已被并发变更，请刷新后重试）");
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void cancel(YbCancelDTO dto) {
+        BizYbInspection entity = require(dto.getId());
+        if (!Objects.equals(YbInspectionStatusEnum.RUNNING.getCode(), entity.getStatus())) {
+            throw new BusinessException("仅「进行中」的批次可作废");
+        }
+        Long related = bizYbDeductNoticeMapper.selectCount(new LambdaQueryWrapper<BizYbDeductNotice>()
+                .eq(BizYbDeductNotice::getInspectionId, entity.getId()));
+        if (related != null && related > 0) {
+            throw new BusinessException("该批次名下已有 " + related + " 张扣款通知，问题已入账不能作废，请先处理扣款单");
+        }
+        entity.setStatus(YbInspectionStatusEnum.CANCELLED.getCode());
+        entity.setCancelReason(TextUtil.cut(dto.getReason(), 500));
+        entity.setCancelBy(UserUtils.getCurrentUser().getRealName());
+        entity.setCancelTime(LocalDateTime.now());
+        entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
+        // 守卫下沉到 WHERE：读-判-写之间并发状态变更会使 Java 侧判断失效
+        int rows = bizYbInspectionMapper.update(entity, new LambdaUpdateWrapper<BizYbInspection>()
+                .eq(BizYbInspection::getId, entity.getId())
+                .eq(BizYbInspection::getStatus, YbInspectionStatusEnum.RUNNING.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("仅「进行中」的批次可作废（状态已被并发变更，请刷新后重试）");
+        }
+    }
+
+    private BizYbInspection require(Long id) {
+        BizYbInspection entity = id == null ? null : bizYbInspectionMapper.selectById(id);
+        if (entity == null) {
+            throw new BusinessException("飞检批次不存在或已删除");
+        }
+        return entity;
+    }
+
+    /**
+     * 名下扣款单数与金额：一张聚合 SQL 捞回本页批次，避免逐行 count 打爆连接
+     */
+    private void fillDeductCount(List<YbInspectionListVO> voList) {
+        if (voList.isEmpty()) {
+            return;
+        }
+        List<Long> ids = voList.stream().map(YbInspectionListVO::getId).toList();
+        Map<Long, YbInspectionDeductCountVO> counted = bizYbDeductNoticeMapper.countByInspectionIds(ids).stream()
+                .collect(Collectors.toMap(YbInspectionDeductCountVO::getInspectionId, Function.identity(), (a, b) -> a));
+        for (YbInspectionListVO vo : voList) {
+            YbInspectionDeductCountVO hit = counted.get(vo.getId());
+            vo.setDeductCount(hit == null ? 0 : hit.getDeductCount());
+            vo.setDeductAmountSum(hit == null || hit.getDeductAmountSum() == null
+                    ? BigDecimal.ZERO : hit.getDeductAmountSum());
+        }
+    }
+
+    private YbInspectionListVO toVO(BizYbInspection entity) {
+        YbInspectionListVO vo = new YbInspectionListVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
+    }
+}

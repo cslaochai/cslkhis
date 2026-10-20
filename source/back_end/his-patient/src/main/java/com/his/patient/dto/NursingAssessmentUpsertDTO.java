@@ -1,0 +1,58 @@
+package com.his.patient.dto;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.AllowedValues;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+
+import java.time.LocalDateTime;
+
+/**
+ * 护理评估单录入 DTO。
+ */
+@Data
+public class NursingAssessmentUpsertDTO {
+
+    /**
+     * 主键ID
+     */
+    private Long id;
+
+    /**
+     * 入院ID
+     */
+    @NotNull(message = "入院ID不能为空")
+    private Long admissionId;
+
+    /**
+     * 评估类型（1-压疮Braden 2-跌倒Morse 3-疼痛NRS）
+     */
+    @NotNull(message = "评估类型不能为空")
+    @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "评估类型取值不合法")
+    private Integer assessType;
+
+    /**
+     * 前端算的合计（后端对 items 求和复算，不一致即拒绝）
+     */
+    @NotNull(message = "总分不能为空")
+    private Integer totalScore;
+
+    /**
+     * 评分明细 JSON（数组字符串）
+     */
+    @NotBlank(message = "评分明细不能为空（总分必须能从明细推导）")
+    private String itemsJson;
+
+    /**
+     * 评估时间
+     */
+    @NotNull(message = "评估时间不能为空")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime assessTime;
+
+    /**
+     * 备注
+     */
+    private String remark;
+}

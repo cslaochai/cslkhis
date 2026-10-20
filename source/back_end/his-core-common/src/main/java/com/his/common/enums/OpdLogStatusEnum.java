@@ -1,0 +1,138 @@
+package com.his.common.enums;
+
+import lombok.Getter;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
+
+/**
+ * 门诊日志的「就诊状态」——用户的筛选口径，不等于队列状态。
+ */
+@Getter
+public enum OpdLogStatusEnum {
+
+    UNPAID(0, "未缴费"),
+    WAIT_CHECK_IN(1, "待签到"),
+    WAITING(QueueStatusEnum.WAITING.getCode(), "候诊中"),
+    CONSULTING(QueueStatusEnum.CONSULTING.getCode(), "就诊中"),
+    COMPLETED(QueueStatusEnum.COMPLETED.getCode(), "已就诊"),
+    CANCELLED(QueueStatusEnum.CANCELLED.getCode(), "已退号"),
+    OVERDUE(QueueStatusEnum.OVERDUE.getCode(), "已过号"),
+    /**
+     * 未就诊：到院签到过，但当天没被接诊（日终结转收的口）。
+     * 码与 {@link QueueStatusEnum#EXPIRED}（已失效）相同 —— 队列行的「已失效」
+     * 在就诊状态口径里就是「这个人没看上」。
+     */
+    UNVISITED(QueueStatusEnum.EXPIRED.getCode(), "未就诊"),
+    /**
+     * 爽约：挂了号但当天没到院（没有队列行）
+     */
+    NO_SHOW(8, "爽约");
+
+    private final int code;
+    private final String label;
+
+    OpdLogStatusEnum(int code, String label) {
+        this.code = code;
+        this.label = label;
+    }
+
+    /**
+     * 由队列状态推导就诊状态。
+     *
+     * <p>队列状态不在枚举内（如历史脏数据 1）返回 null，交给前端显示未知。
+     */
+    public static OpdLogStatusEnum ofQueueStatus(Integer queueStatus) {
+        if (queueStatus == null) {
+            return null;
+        }
+        if (queueStatus == QueueStatusEnum.EXPIRED.getCode()) {
+            return UNVISITED;
+        }
+        for (OpdLogStatusEnum status : values()) {
+            if (status != UNVISITED && status != NO_SHOW
+                    && status != UNPAID && status != WAIT_CHECK_IN
+                    && status.code == queueStatus) {
+                return status;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 由挂号状态推导就诊状态（仅在「没有队列行」时使用）
+     */
+    public static OpdLogStatusEnum ofRegistStatus(Integer registStatus) {
+        if (registStatus == null) {
+            return null;
+        }
+        return switch (registStatus) {
+            case 1 -> null;                 // 已挂号：还要看有没有收费单，由 SQL 判
+            case 2 -> WAIT_CHECK_IN;        // 已签到却没队列行：脏数据，按「待签到」显示最接近事实
+            case 3 -> CONSULTING;
+            case 4 -> COMPLETED;
+            case 5 -> CANCELLED;
+            case 6 -> OVERDUE;
+            case 7 -> NO_SHOW;
+            case 8 -> UNVISITED;
+            default -> null;
+        };
+    }
+
+    /**
+     * 码值是否合法（写入侧校验用；null 不合法）
+     */
+    public static boolean isValid(Integer code) {
+        return fromCode(code) != null;
+    }
+
+    /**
+     * 入队后的状态码，用于拼 SQL 的 {@code queue_status IN (...)}。
+     *
+     * <p>包含 7（已失效）；不含 8（爽约没有队列行）。
+     */
+    public static List<Integer> queuedCodes() {
+        return List.of(
+                QueueStatusEnum.WAITING.getCode(),
+                QueueStatusEnum.CONSULTING.getCode(),
+                QueueStatusEnum.COMPLETED.getCode(),
+                QueueStatusEnum.CANCELLED.getCode(),
+                QueueStatusEnum.OVERDUE.getCode(),
+                QueueStatusEnum.EXPIRED.getCode());
+    }
+
+    public static Set<Integer> allCodes() {
+        return Arrays.stream(values()).map(OpdLogStatusEnum::getCode).collect(Collectors.toSet());
+    }
+
+    public static OpdLogStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (OpdLogStatusEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        OpdLogStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        OpdLogStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        OpdLogStatusEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
+    }
+}

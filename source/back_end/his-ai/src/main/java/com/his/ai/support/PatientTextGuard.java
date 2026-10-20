@@ -1,0 +1,100 @@
+package com.his.ai.support;
+
+import com.his.common.util.TextUtil;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.regex.Pattern;
+
+/**
+ * 患者可见文案的硬闸。
+ */
+@Slf4j
+@Component
+public class PatientTextGuard {
+
+    /**
+     * 诊断性词汇：出现即认定越界。
+     * 「贫血」「糖尿病」这类病名本身不是禁用词（词典里「空腹血糖偏高需要复查」是正当科普），
+     * 真正要拦的是<b>把结论落到这个人身上</b>的表述。
+     */
+    private static final List<Pattern> DIAGNOSIS = List.of(
+            Pattern.compile("确诊"),
+            Pattern.compile("诊断[为是]"),
+            Pattern.compile("你(可能|应该|估计)?(得|患|是)[了有]?[\\u4e00-\\u9fa5]{0,6}(病|炎|癌|症|瘤)"),
+            Pattern.compile("您(可能|应该|估计)?(得|患|是)[了有]?[\\u4e00-\\u9fa5]{0,6}(病|炎|癌|症|瘤)"),
+            Pattern.compile("患有|患病|罹患")
+    );
+
+    /**
+     * 用药性词汇：任何涉及「怎么吃药」的表述。
+     */
+    private static final List<Pattern> MEDICATION = List.of(
+            Pattern.compile("服用|口服|含服|外用|注射|输液|静滴|肌肉注射"),
+            Pattern.compile("剂量|用量|每次\\d|一日\\d|一天\\d|每日\\d"),
+            Pattern.compile("建议[你您]?(吃|用|买|服)"),
+            Pattern.compile("开[一点一]?[药方]"),
+            Pattern.compile("\\d+(\\.\\d+)?\\s*(mg|g|ml|ug|iu|片|粒|支|袋|瓶)", Pattern.CASE_INSENSITIVE)
+    );
+
+    /**
+     * 绝对化表述：医疗科普里不存在「一定」。
+     */
+    private static final List<Pattern> ABSOLUTE = List.of(
+            Pattern.compile("一定[会是要]"),
+            Pattern.compile("必须|肯定会|百分之百"),
+            Pattern.compile("不用[看去]医生|无需就[诊医]|不用管")
+    );
+
+    /**
+     * 检查一段患者可见文案是否安全。
+     *
+     * @param text 待检文案（来自模型输出）
+     * @return true-可展示；false-越界，调用方必须回落到规则文案
+     */
+    public boolean isSafe(String text) {
+        if (!TextUtil.hasText(text)) {
+            return false;
+        }
+        return firstHit(text) == null;
+    }
+
+    /**
+     * 过闸：安全则返回原文，越界返回 null（调用方回落到规则文案）。
+     *
+     * @param text   待检文案
+     * @param source 来源标记，只用于日志定位（如 capabilityKey）
+     */
+    public String guard(String text, String source) {
+        if (!TextUtil.hasText(text)) {
+            return null;
+        }
+        Pattern hit = firstHit(text);
+        if (hit == null) {
+            return text.trim();
+        }
+        // 留痕但不抛出：文案丢弃不是故障，是闸门生效。抛异常会让整个能力降级，反而丢了规则层事实。
+        log.warn("[AI-患者文案闸] 拦截越界文案 source={} pattern={} text={}", source, hit.pattern(), text);
+        return null;
+    }
+
+    private Pattern firstHit(String text) {
+        for (Pattern pattern : DIAGNOSIS) {
+            if (pattern.matcher(text).find()) {
+                return pattern;
+            }
+        }
+        for (Pattern pattern : MEDICATION) {
+            if (pattern.matcher(text).find()) {
+                return pattern;
+            }
+        }
+        for (Pattern pattern : ABSOLUTE) {
+            if (pattern.matcher(text).find()) {
+                return pattern;
+            }
+        }
+        return null;
+    }
+}

@@ -1,0 +1,85 @@
+package com.his.system.entity;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import lombok.Data;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.baomidou.mybatisplus.annotation.TableField;
+
+/**
+ * 病区主数据（只读参照：排班要把病区名称与所属科室落成快照，不参与写入）。
+ */
+@Data
+@TableName("sys_ward")
+public class SysWard {
+    /**
+     * 创建人
+     */
+    @TableField(fill = FieldFill.INSERT)
+    private String createBy;
+
+    /**
+     * 创建人 ID（登录用户 id）
+     */
+    @TableField(fill = FieldFill.INSERT)
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long createById;
+
+    /**
+     * 更新人 ID（登录用户 id）
+     */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long updateById;
+
+    /**
+     * 创建时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createTime;
+
+    /**
+     * 更新人
+     */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private String updateBy;
+
+    /**
+     * 更新时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updateTime;
+
+    /** 病区ID */
+    @TableId(value = "ward_id", type = IdType.ASSIGN_ID)
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long wardId;
+
+    /**
+     * 病区编码
+     */
+    private String wardCode;
+
+    /**
+     * 病区名称
+     */
+    private String wardName;
+
+    /**
+     * 所属科室ID
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long deptId;
+
+    /**
+     * 状态（0-停用 1-正常）
+     */
+    private Integer status;
+}

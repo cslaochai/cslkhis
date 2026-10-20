@@ -1,0 +1,72 @@
+package com.his.pharmacy.entity;
+
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
+
+/**
+ * 药品供应商退货单（药离开医院，sql/154 三级链的③级）
+ */
+@Data
+@EqualsAndHashCode(callSuper = true)
+@TableName("biz_drug_supplier_return")
+public class BizDrugSupplierReturn extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
+    /** 退货单号 */
+    private String returnNo;
+
+    /** 供应商ID（供应商主档主键） */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long supplierId;
+
+    /** 供应商名称 */
+    private String supplierName;
+
+    /** 退货原因（近效期 / 质量问题 / 冷链断链 / 采购让价退货…，必填） */
+    private String returnReason;
+
+    /** 原入库单号/采购单号（人工填的溯源线索，可空） */
+    private String srcRefNo;
+
+    /** 状态（1-待退货 2-已退货 3-已作废，SupplierReturnStatusEnum） */
+    private Integer status;
+
+    /** 批次数 */
+    private Integer totalItems;
+
+    /** 退货合计数量 */
+    private BigDecimal totalQuantity;
+
+    /** 退货合计金额（Σ数量×批次成本价） */
+    private BigDecimal totalAmount;
+
+    /** 退货经办人 */
+    private String returnBy;
+
+    /** 退货时间 */
+    private LocalDateTime returnTime;
+
+    /** 作废操作人 */
+    private String cancelBy;
+
+    /** 作废时间 */
+    private LocalDateTime cancelTime;
+
+    /** 作废原因 */
+    private String cancelReason;
+}

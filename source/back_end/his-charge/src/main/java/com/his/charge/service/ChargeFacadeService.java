@@ -1,0 +1,177 @@
+package com.his.charge.service;
+
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.his.charge.dto.BillPayDTO;
+import com.his.charge.dto.FeeBookDTO;
+import com.his.charge.dto.PrepayPageQueryDTO;
+import com.his.charge.dto.PrepayUpsertDTO;
+import com.his.charge.vo.BillBriefVO;
+import com.his.charge.vo.BillItemVO;
+import com.his.charge.vo.BizSettlementBillVO;
+import com.his.charge.vo.CancelCommandVO;
+import com.his.charge.vo.FeeRecordVO;
+import com.his.charge.vo.FeeTypeSumVO;
+import com.his.charge.vo.InsuranceBriefVO;
+import com.his.charge.vo.PendingBillVO;
+import com.his.charge.vo.PrepayBalanceVO;
+import com.his.charge.vo.PrepayVO;
+import com.his.charge.vo.RegistChargeCommandVO;
+import com.his.charge.vo.SettlementStateVO;
+
+import java.math.BigDecimal;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 收费域对外提供的端口（依赖倒置，实现落在 his-charge）：
+ * 记账/红冲、账单查询与收款、待缴账单、预交金、挂号费结算/退号联动、住院结算状态。
+ *
+ * <p>事务口径：除特别注明外，本端口方法<b>加入调用方事务</b>；
+ * 需要"记账失败不拖垮主流程"的调用方自己用 {@code REQUIRES_NEW} 包一层。
+ */
+public interface ChargeFacadeService {
+
+    // ---------- L1 记账（应收唯一来源） ----------
+
+    /**
+     * 记一笔费用（幂等）：同一来源单据 + 同一项目已记过有效费用时返回既有行，不重复记。
+     *
+     * @return 记账行投影；不存在"半失败"状态
+     */
+    FeeRecordVO bookFee(FeeBookDTO dto);
+
+    /**
+     * 批量记账（一次开单多个项目）。整批同事务：要么全记上，要么一条都不记。
+     */
+    List<FeeRecordVO> bookBatch(List<FeeBookDTO> list);
+
+    /**
+     * 按来源单据找回记账行：临床侧"退药/作废要冲哪一笔账"的入口。
+     *
+     * @return 找不到返回 {@code null}（来源单没记过账 —— 调用方自己决定是报错还是留痕）
+     */
+    FeeRecordVO findBookedBySource(Integer sourceType, Long sourceId, String itemCode);
+
+    /**
+     * 整行红冲：写一条等额负行，并把原行与本行一起置 4-已红冲。
+     *
+     * @return 本次写出的负行
+     */
+    FeeRecordVO reverse(Long feeId, String reason);
+
+    /**
+     * 某次就诊按项目类型聚合的应收净额（不问结算状态）：
+     * 引导单与科室报表要的是"这次就诊发生了多少钱、花在哪"。
+     */
+    List<FeeTypeSumVO> sumNetGroupByItemType(Integer encounterType, Long encounterId);
+
+    // ---------- 账单与收款 ----------
+
+    /**
+     * 批量查询账单简要信息（挂号看板装配缴费状态用，禁止在循环里单条查）。
+     *
+     * @param billIds 账单ID集合
+     * @return billId -> 简要信息
+     */
+    Map<Long, BillBriefVO> mapBillsByIds(Collection<Long> billIds);
+
+    /**
+     * 查询单张账单简要信息
+     *
+     * @return 不存在时返回 null
+     */
+    BillBriefVO getBill(Long billId);
+
+    /**
+     * 账单剩余应缴（应缴 − 已缴，两位小数）。
+     *
+     * @return 账单不存在时返回 {@code null}；无应缴返回 0
+     */
+    BigDecimal unpaidAmount(Long billId);
+
+    /**
+     * 账单收款（与院内收费台同一入口）：金额以账单剩余应缴为准的校验在实现内。
+     */
+    void payBill(BillPayDTO dto);
+
+    /**
+     * 患者某人的待缴账单（账单头 + 摊行明细）。
+     */
+    List<PendingBillVO> pendingBills(Long patientId);
+
+    // ---------- 账单读侧（费用解释 / 报表） ----------
+
+    /**
+     * 账单完整详情（台账出参口径）。
+     *
+     * @return 不存在时返回 {@code null}
+     */
+    BizSettlementBillVO getBillDetail(Long billId);
+
+    /**
+     * 账单明细行（费用解释等场景按目录类别/项目类型自行聚合）。
+     */
+    List<BillItemVO> listBillItems(Long billId);
+
+    /**
+     * 该账单最近一次医保结算简要。
+     *
+     * @return 未走医保结算时返回 {@code null}
+     */
+    InsuranceBriefVO latestInsurance(Long billId);
+
+    /**
+     * 账务归属日区间内、已支付状态的结算账单（四层口径报表用）。
+     *
+     * @param startDate 账务归属日起（yyyy-MM-dd，可空）；endDate 账务归属日止（可空）
+     */
+    List<BizSettlementBillVO> paidBills(String startDate, String endDate);
+
+    // ---------- 住院预交金 ----------
+
+    /**
+     * 预交金充值/退款（患者端自助充值与柜面同入口、同一套流水）。
+     */
+    void savePrepay(PrepayUpsertDTO dto);
+
+    /**
+     * 住院预交金余额（充值/退款合计与现算余额）。
+     */
+    PrepayBalanceVO prepayBalance(Long admissionId);
+
+    /**
+     * 预交金流水分页。
+     */
+    IPage<PrepayVO> prepayPage(PrepayPageQueryDTO query);
+
+    // ---------- 挂号费联动 ----------
+
+    /**
+     * 挂号费结算：记账（挂号费 + 诊查费）并立即出账。
+     *
+     * @return 已落库的账单简要信息；<b>免收时返回 null</b>（没有应收，也就没有账单）
+     */
+    BillBriefVO createRegistCharge(RegistChargeCommandVO command);
+
+    /**
+     * 挂号作废时联动处理账单 —— <b>退号不退钱是本系统里最容易漏掉的一环</b>。
+     *
+     * <p>口径：整单撤销 = 收进来的钱按原收款流水逐路退回 + 本账单的记账行全额红冲 + 账单作废，
+     * 三件事必须在<b>同一个事务</b>里。只置挂号状态不处理钱，会留下「已退号 + 账单仍是已支付」
+     * 的对账缺口；反过来只退钱不冲应收，收费台上就永远挂着这张收不到的账。
+     *
+     * @return true=本次确实撤销；false=没有账单或账单早已关闭（幂等跳过）
+     */
+    boolean cancelRegistCharge(CancelCommandVO command);
+
+    // ---------- 住院结算状态 ----------
+
+    /**
+     * 查询某次住院的结算状态。
+     *
+     * @param admissionId 入院ID
+     * @return 结算状态；没有任何结算单时返回 {@code settled=false} 的状态对象
+     */
+    SettlementStateVO state(Long admissionId);
+}

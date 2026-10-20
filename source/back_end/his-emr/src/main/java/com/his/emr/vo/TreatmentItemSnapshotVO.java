@@ -1,0 +1,55 @@
+package com.his.emr.vo;
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import lombok.Data;
+
+import java.io.Serializable;
+import java.math.BigDecimal;
+
+/**
+ * 治疗项目快照（项目本身 + 能解析出来的执行科室名）。
+ */
+@Data
+public class TreatmentItemSnapshotVO implements Serializable {
+
+    /** 诊疗项目ID */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long itemId;
+
+    /** 项目编码 */
+    private String itemCode;
+
+    /** 项目名称 */
+    private String itemName;
+
+    /**
+     * 项目类型
+     */
+    private Integer itemType;
+
+    /** 治疗价格（元） */
+    private BigDecimal price;
+
+    /**
+     * 疗程时长（分钟/天，按项目类型含义不同）
+     */
+    private Integer duration;
+
+    /** 使用方法 */
+    private String usageMethod;
+
+    /**
+     * 启用状态（1-启用 0-停用）
+     */
+    private Integer status;
+
+    /**
+     * 执行科室ID（字典里的孤儿引用可能查不到科室名）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long execDeptId;
+
+    /** 执行科室名称（科室查不到时为空） */
+    private String execDeptName;
+}

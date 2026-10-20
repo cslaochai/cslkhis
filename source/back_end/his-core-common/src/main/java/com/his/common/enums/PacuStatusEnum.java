@@ -1,0 +1,58 @@
+package com.his.common.enums;
+
+import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
+
+/**
+ * PACU 复苏单状态（0-在室观察 1-已出室）。
+ */
+@Getter
+public enum PacuStatusEnum {
+
+    IN(0, "在室观察"),
+    OUT(1, "已出室");
+
+    private final int code;
+    private final String label;
+
+    PacuStatusEnum(int code, String label) {
+        this.code = code;
+        this.label = label;
+    }
+
+    /** 码值是否合法（写入侧校验用；null 不合法） */
+    public static boolean isValid(Integer code) {
+        return fromCode(code) != null;
+    }
+
+    public static PacuStatusEnum fromCode(Integer code) {
+        if (null == code) {
+            return null;
+        }
+        for (PacuStatusEnum item : values()) {
+            if (item.code == code) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
+    public static String getLabel(Integer code) {
+        if (null == code) {
+            return "—";
+        }
+        PacuStatusEnum item = fromCode(code);
+        return item == null ? StringUtils.EMPTY : item.label;
+    }
+
+    public static String getLabel(Integer code, String defaultValue) {
+        PacuStatusEnum item = fromCode(code);
+        return item == null ? defaultValue : item.label;
+    }
+
+    public static String getLabelOrUnknown(Integer code) {
+        PacuStatusEnum item = fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
+    }
+}

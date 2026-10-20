@@ -1,0 +1,26 @@
+package com.his.miniapp.dto;
+
+import com.his.common.base.PageParam;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+/**
+ * 常见问题查询（关键词 + 分类）。
+ */
+@Data
+@EqualsAndHashCode(callSuper = true)
+@Schema(name = "FaqSearchDTO", description = "常见问题查询")
+public class FaqPageQueryDTO extends PageParam {
+
+    /**
+     * 搜索关键词（口语提问即可，后端切词后匹配）
+     */
+    private String keyword;
+
+    /**
+     * 分类编码（空 = 全部）
+     */
+    private String categoryCode;
+
+}

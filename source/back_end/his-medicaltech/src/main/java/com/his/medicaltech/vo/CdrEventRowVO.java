@@ -1,0 +1,88 @@
+package com.his.medicaltech.vo;
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import lombok.Data;
+
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+/**
+ * CDR 时间轴事件行（CdrMapper#EVENT_SQL 一行）。
+ */
+@Data
+public class CdrEventRowVO implements Serializable {
+
+    /**
+     * 事件类型码（outpatientRecord/prescription/laboratoryApply/... 见 CdrEventTypeEnum）
+     */
+    private String etype;
+
+    /**
+     * 来源表名（追溯用：这条事件是从哪张表来的）
+     */
+    private String srcTable;
+
+    /**
+     * 来源记录主键（字符串，避免前端丢精度）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long srcId;
+
+    /**
+     * 锚点类型：REGIST-挂号 / ADMISSION-住院 / EMERGENCY-急诊 / PATIENT-患者级
+     */
+    private String anchorType;
+
+    /**
+     * 锚点ID（归属不到就诊次时为空，此事件会被单列到"未能归属"区）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long anchorId;
+
+    /**
+     * 事件时间（各分支已 COALESCE 兜底，不为 null 除非源数据本身全空）
+     */
+    private LocalDateTime etime;
+
+    /**
+     * 标题
+     */
+    private String title;
+
+    /**
+     * 摘要（SQL 里已拼好"主诉 / 诊断 / 标本"这类短摘要）
+     */
+    private String summary;
+
+    /**
+     * 科室名称（部分分支无此列，为 null）
+     */
+    private String deptName;
+
+    /**
+     * 操作人/医生（部分分支无此列，为 null）
+     */
+    private String operatorName;
+
+    /**
+     * 状态码（各分支语义不同，翻译口径统一走 {@code CdrEventTypeEnum}）
+     */
+    private Integer statusCode;
+
+    /**
+     * 副码（文书类型/医嘱类别/诊断类型…，各分支语义不同）
+     */
+    private Integer secondaryCode;
+
+    /**
+     * 金额（可为null；语义标签由服务层按事件类型给，见 amountLabel）
+     */
+    private BigDecimal amount;
+
+    /**
+     * 数据归属档案ID（EMPI 归并后可能不是主档，故用字符串比对）
+     */
+    private String ownerPid;
+}

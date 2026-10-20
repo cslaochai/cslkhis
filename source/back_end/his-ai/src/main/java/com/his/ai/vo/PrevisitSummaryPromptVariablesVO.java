@@ -1,0 +1,26 @@
+package com.his.ai.vo;
+
+import com.his.ai.support.PromptVariables;
+import lombok.Data;
+
+/**
+ * 预问诊小结提示词变量。
+ */
+@Data
+public class PrevisitSummaryPromptVariablesVO implements PromptVariables {
+
+    /**
+     * 主症状，未填时为「未填写」
+     */
+    private String mainSymptom;
+
+    /**
+     * 问答明细（label：value 逐行），无则「无」
+     */
+    private String answersText;
+
+    /**
+     * 补充描述，无则「无」
+     */
+    private String freeText;
+}

@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.his.appoint.mapper.OpdLogMapper">
+
+    <sql id="logBase">
+        FROM biz_appoint_info r
+        LEFT JOIN biz_queue q ON q.id = (
+        SELECT MAX(q2.id) FROM biz_queue q2 WHERE q2.regist_id = r.id AND q2.del_flag = 0
+        )
+        WHERE r.del_flag = 0
+    </sql>
+
+    <sql id="logStatusExpr">
+        CASE
+        WHEN q.id IS NOT NULL AND q.queue_status IN (2, 3, 4, 5, 6) THEN q.queue_status
+        WHEN q.id IS NOT NULL AND q.queue_status = 7 THEN 7
+        WHEN q.id IS NOT NULL THEN NULL
+        WHEN r.regist_status = 8 THEN 7
+        WHEN r.regist_status = 7 THEN 8
+        WHEN r.regist_status = 6 THEN 6
+        WHEN r.regist_status = 5 THEN 5
+        WHEN r.regist_status = 4 THEN 4
+        WHEN r.regist_status = 3 THEN 3
+        WHEN r.regist_status = 2 THEN 1
+        WHEN r.regist_status = 1 THEN (CASE WHEN r.charge_id IS NULL THEN 0 ELSE 1 END)
+        ELSE NULL
+        END
+    </sql>
+
+    <!-- 常规筛选（不含就诊状态——那一条要筛派生值，见 logStatusWhere） -->
+    <sql id="logCommonWhere">
+        <if test="q.startDate != null and q.startDate != ''">
+            AND r.visit_date &gt;= #{q.startDate}
+        </if>
+        <if test="q.endDate != null and q.endDate != ''">
+            AND r.visit_date &lt;= #{q.endDate}
+        </if>
+        <if test="q.deptId != null or (q.deptIds != null and q.deptIds.size() &gt; 0)">
+            AND r.dept_id IN (
+            <if test="q.deptId != null">#{q.deptId}</if>
+            <if test="q.deptId != null and q.deptIds != null and q.deptIds.size() &gt; 0">,</if>
+            <foreach collection="q.deptIds" item="d" separator=",">#{d}</foreach>
+            )
+        </if>
+        <if test="q.doctorId != null">
+            AND r.doctor_id = #{q.doctorId}
+        </if>
+        <if test="q.registType != null">
+            AND r.regist_type = #{q.registType}
+        </if>
+        <if test="q.settlementType != null">
+            AND r.settlement_type = #{q.settlementType}
+        </if>
+        <if test="q.revisitType != null">
+            AND r.visit_type = #{q.revisitType}
+        </if>
+        <if test="q.keyword != null and q.keyword != ''">
+            AND (r.patient_name LIKE CONCAT('%', #{q.keyword}, '%')
+            OR r.regist_no LIKE CONCAT('%', #{q.keyword}, '%')
+            OR r.patient_no LIKE CONCAT('%', #{q.keyword}, '%')
+            OR q.queue_no LIKE CONCAT('%', #{q.keyword}, '%')
+            OR r.medical_insurance_no LIKE CONCAT('%', #{q.keyword}, '%'))
+        </if>
+    </sql>
+
+    <sql id="logStatusWhere">
+        <if test="q.statusCodes != null and q.statusCodes.size() &gt; 0">
+            WHERE t.log_status IN (
+            <foreach collection="q.statusCodes" item="c" separator=",">#{c}</foreach>
+            )
+        </if>
+    </sql>
+
+    <select id="selectOpdLogPage" resultType="com.his.appoint.vo.OpdLogListVO">
+        SELECT t.* FROM (
+        SELECT
+        r.id AS regist_id,
+        r.regist_no, r.visit_date, r.regist_time, r.regist_status,
+        (r.charge_id IS NOT NULL) AS charged,
+        r.patient_id, r.patient_no, r.patient_name, r.gender, r.age,
+        r.dept_id, r.dept_name, r.room_id, r.room_name, r.doctor_id, r.doctor_name,
+        r.regist_type, r.regist_source, r.slot_time,
+        r.settlement_type, r.medical_insurance_type,
+        <!-- 列名对齐用别名：出参字段仍是 revisitType，取值列是 visit_type（同语义两列只认这列） -->
+        r.visit_type AS revisit_type,
+        q.id AS queue_id, q.queue_no, q.queue_status, q.queue_type,
+        q.sequence_no, q.call_count, q.call_time,
+        q.arrive_time, q.start_time, q.end_time,
+        q.is_overdue, q.overdue_time, q.overdue_reason,
+        TIMESTAMPDIFF(MINUTE, q.arrive_time, q.start_time) AS wait_minutes,
+        TIMESTAMPDIFF(MINUTE, q.start_time, q.end_time) AS visit_minutes,
+        <include refid="logStatusExpr"/> AS log_status
+        <include refid="logBase"/>
+        <include refid="logCommonWhere"/>
+        ) t
+        <include refid="logStatusWhere"/>
+        ORDER BY t.visit_date DESC, t.arrive_time DESC, t.regist_time DESC
+    </select>
+
+    <select id="selectOpdLogStats" resultType="com.his.appoint.vo.OpdLogStatsVO">
+        SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN t.log_status = 0 THEN 1 ELSE 0 END) AS unpaid,
+        SUM(CASE WHEN t.log_status = 1 THEN 1 ELSE 0 END) AS wait_check_in,
+        SUM(CASE WHEN t.log_status = 2 THEN 1 ELSE 0 END) AS waiting,
+        SUM(CASE WHEN t.log_status = 3 THEN 1 ELSE 0 END) AS consulting,
+        SUM(CASE WHEN t.log_status = 4 THEN 1 ELSE 0 END) AS completed,
+        SUM(CASE WHEN t.log_status = 5 THEN 1 ELSE 0 END) AS cancelled,
+        SUM(CASE WHEN t.log_status = 6 THEN 1 ELSE 0 END) AS overdue,
+        SUM(CASE WHEN t.log_status = 7 THEN 1 ELSE 0 END) AS unvisited,
+        SUM(CASE WHEN t.log_status = 8 THEN 1 ELSE 0 END) AS no_show,
+        SUM(CASE WHEN t.log_status IS NULL THEN 1 ELSE 0 END) AS unrecognized,
+        ROUND(AVG(CASE WHEN TIMESTAMPDIFF(MINUTE, t.arrive_time, t.start_time) BETWEEN 0 AND 720
+        THEN TIMESTAMPDIFF(MINUTE, t.arrive_time, t.start_time) END)) AS avg_wait_minutes,
+        ROUND(AVG(CASE WHEN TIMESTAMPDIFF(MINUTE, t.start_time, t.end_time) BETWEEN 1 AND 720
+        THEN TIMESTAMPDIFF(MINUTE, t.start_time, t.end_time) END)) AS avg_visit_minutes
+        FROM (
+        SELECT
+        <include refid="logStatusExpr"/> AS log_status,
+        q.arrive_time, q.start_time, q.end_time
+        <include refid="logBase"/>
+        <include refid="logCommonWhere"/>
+        ) t
+        <include refid="logStatusWhere"/>
+    </select>
+
+</mapper>

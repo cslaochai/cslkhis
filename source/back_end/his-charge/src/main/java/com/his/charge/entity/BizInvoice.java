@@ -1,0 +1,107 @@
+package com.his.charge.entity;
+
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.EqualsAndHashCode;
+import lombok.Data;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+/**
+ * 发票实体（L4 票据）。
+ */
+@Data
+@EqualsAndHashCode(callSuper = true)
+@TableName("biz_invoice")
+public class BizInvoice extends BaseEntity {
+
+    /**
+     * 发票号
+     */
+    private String invoiceNo;
+    /**
+     * 发票类型（1-普通发票 2-电子发票 3-数电发票）
+     */
+    private Integer invoiceType;
+
+    /**
+     * 旧收费单ID（历史票遗留，四层新票为空）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long chargeId;
+    /**
+     * 收费单号
+     */
+    private String chargeNo;
+
+    /**
+     * 结算账单ID（L4：票据与对账层对齐到 L2 账单）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long billId;
+    /**
+     * 结算账单号
+     */
+    private String billNo;
+
+    /**
+     * 红冲链：本票冲销的原发票ID（换开时新票指向作废票）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long origInvoiceId;
+
+    /**
+     * 患者ID
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long patientId;
+    /**
+     * 患者号
+     */
+    private String patientNo;
+    /**
+     * 患者姓名
+     */
+    private String patientName;
+
+    /**
+     * 发票金额
+     */
+    private BigDecimal totalAmount;
+    /**
+     * 发票状态（1-已开具 2-已打印 3-已作废 4-已红冲换开）
+     */
+    private Integer invoiceStatus;
+    /**
+     * 开票时间
+     */
+    private LocalDateTime invoiceTime;
+    /**
+     * 打印时间
+     */
+    private LocalDateTime printTime;
+    /**
+     * 作废时间
+     */
+    private LocalDateTime voidTime;
+    /**
+     * 作废原因
+     */
+    private String voidReason;
+    /**
+     * 电子发票地址
+     */
+    private String electronicUrl;
+
+    /**
+     * 删除标志（0-正常 1-删除）
+     */
+    private Integer delFlag;
+    /**
+     * 备注
+     */
+    private String remark;
+}

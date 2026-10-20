@@ -1,0 +1,69 @@
+package com.his.pharmacy.entity;
+
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
+
+/**
+ * 发药信息实体
+ */
+@Data
+@EqualsAndHashCode(callSuper = true)
+@TableName("biz_dispensing")
+public class BizDispensing extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
+
+    /** 发药单号 */
+    private String dispensingNo;
+
+    /** 处方ID */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long prescriptionId;
+
+    /** 处方号 */
+    private String prescriptionNo;
+
+    /** 患者ID */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long patientId;
+    /** 患者编号 */
+    private String patientNo;
+    /** 患者姓名 */
+    private String patientName;
+    private Integer prescriptionType;
+    /** 医生姓名 */
+    private String doctorName;
+    /** 合计金额 */
+    private BigDecimal totalAmount;
+    /** 药品数量 */
+    private Integer drugCount;
+    private Integer dispensingStatus;
+    private String auditBy;
+    /** 审核时间 */
+    private LocalDateTime auditTime;
+    private String dispenseBy;
+    /** 发药时间 */
+    private LocalDateTime dispenseTime;
+    private String pickUpBy;
+    private LocalDateTime pickUpTime;
+
+    @TableField(exist = false)
+    private List<BizDispensingDetail> details;
+}
