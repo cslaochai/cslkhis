@@ -9,30 +9,12 @@ import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.ShiftCoverUtil;
 import com.his.common.util.TextUtil;
-import com.his.system.dto.StaffCheckRow;
-import com.his.system.dto.StaffScheduleCheckDTO;
-import com.his.system.dto.StaffScheduleCopyDTO;
-import com.his.system.dto.StaffSchedulePageQueryDTO;
-import com.his.system.dto.StaffSchedulePendingQueryDTO;
-import com.his.system.dto.StaffScheduleRejectDTO;
-import com.his.system.dto.StaffScheduleSwapDTO;
-import com.his.system.dto.StaffScheduleUpsertDTO;
-import com.his.system.dto.StaffScheduleWeekActionDTO;
-import com.his.system.dto.StaffScheduleWorkloadDTO;
+import com.his.system.dto.*;
 import com.his.system.entity.*;
 import com.his.system.mapper.*;
-import com.his.system.service.DeptScopeService;
-import com.his.system.service.ScheduleChangeLogService;
-import com.his.system.service.ShiftService;
-import com.his.system.service.StaffPlanRuleService;
-import com.his.system.service.StaffScheduleService;
+import com.his.system.service.*;
 import com.his.system.utils.UserUtils;
-import com.his.system.vo.StaffCheckVO;
-import com.his.system.vo.StaffScheduleVO;
-import com.his.system.vo.StaffTypeDayWorkingVO;
-import com.his.system.vo.StaffWorkingGroupVO;
-import com.his.system.vo.StaffWorkloadVO;
-import com.his.system.vo.UnitDayWorkingVO;
+import com.his.system.vo.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,8 +24,8 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.WeekFields;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -64,10 +46,19 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
      */
     private static final int DAYS_OF_WEEK = 7;
     private static final String[] WEEK_DAY_TEXTS = {"周一", "周二", "周三", "周四", "周五", "周六", "周日"};
-    /** 系统管理员角色码：全院岗位排班审核的全局豁免者 */
+    /**
+     * 系统管理员角色码：全院岗位排班审核的全局豁免者
+     */
     private static final String ROLE_ADMIN = "10012";
-    /** 签到时间展示格式 */
+    /**
+     * 签到时间展示格式
+     */
     private static final DateTimeFormatter ATTENDANCE_TIME_FMT = DateTimeFormatter.ofPattern("HH:mm:ss");
+    /**
+     * 急诊科室单元ID（19580047 急危重症中心 + 19580048 急诊内科 / 49 急诊外科 / 51 急诊儿科）。
+     * 急诊值班资质校验与固定医师占比统计的科室口径收口处。
+     */
+    private static final Set<Long> ER_DEPT_IDS = Set.of(19580047L, 19580048L, 19580049L, 19580051L);
     private final DeptScopeService deptScopeService;
     private final SysEmployeeMapper sysEmployeeMapper;
     private final SysEmployeePostMapper sysEmployeePostMapper;
@@ -140,6 +131,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
                     + schedule.getScheduleDate() + " 已经排过「" + shiftLabelOf(schedule) + "」，不要重复排同一个班");
         }
         assertTimeFree(schedule);
+        assertQualified(schedule);
         // 改之前长什么样要先记住：人力标准的下限只在「这次操作让某个班少了一个人」时才拦，
         // 新增和「改成上班」是往里加人，越加越多，拿下限去卡等于让排班员排不出第一版。
         BizSchedule before = dto.getId() == null ? null : getById(dto.getId());
@@ -156,6 +148,39 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
     private String reviewEmployee(BizSchedule schedule) {
         return staffPlanRuleService.reviewEmployee(schedule.getId(), schedule.getEmployeeId(),
                 schedule.getOrgType(), schedule.getOrgId(), schedule.getStaffType(), schedule.getScheduleDate());
+    }
+
+    /**
+     * 值班资质底线校验（《医疗质量安全核心制度要点》国卫医发〔2018〕8号）：
+     * 非本机构注册执业人员不得单独值班。
+     * <p>落地口径：急诊科室单元 + 医生岗位 + <b>夜班班次</b>（夜间单人值班风险最高）时，
+     * 值班人 is_registered=0 拦截；NULL（未登记）放行 —— 档案未维护不卡死排班，
+     * 数据维护见「20261020_急诊资质字段」增量 SQL。
+     * <p>放在保存（草稿）阶段而非审核阶段：排班员在急诊排班时就该知道谁没资质，
+     * 而不是等审核发布时才发现。
+     */
+    private void assertQualified(BizSchedule schedule) {
+        if (schedule.getOrgType() == null
+                || !Objects.equals(schedule.getOrgType(), OrgUnitTypeEnum.DEPT.getCode())) {
+            return;
+        }
+        if (!ER_DEPT_IDS.contains(schedule.getOrgId())) {
+            return;
+        }
+        if (!Objects.equals(schedule.getStaffType(), StaffTypeEnum.DOCTOR.getCode())) {
+            return;
+        }
+        BizShift shift = schedule.getShiftId() == null ? null : shiftService.getById(schedule.getShiftId());
+        if (shift == null || !Objects.equals(shift.getIsNight(), 1)) {
+            return;
+        }
+        SysEmployee emp = schedule.getEmployeeId() == null ? null
+                : sysEmployeeMapper.selectById(schedule.getEmployeeId());
+        if (emp == null || emp.getIsRegistered() == null || Objects.equals(emp.getIsRegistered(), 1)) {
+            return;
+        }
+        throw new BusinessException("「" + emp.getEmpName() + "」未标记本机构注册执业（is_registered=0），"
+                + "不得单独值急诊夜班。请在员工档案维护注册执业标记后再排。");
     }
 
     /**
@@ -620,6 +645,46 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
             vos.add(toOnDutyVO(row, shifts.get(row.getShiftId())));
         }
         return vos;
+    }
+
+    /**
+     * 急诊固定医师占比（评审口径：固定急诊医师 ≥ 在岗急诊医师 75%，卫医政发〔2009〕50号）。
+     * 按急诊内科/外科/儿科分别统计当天已发布（2/4）在岗医生中 is_fixed=1 的占比；
+     * 急危重症中心为虚父级，不单列。未维护 is_fixed（NULL）的员工不计入固定数 ——
+     * 档案维护越全，口径越接近真实。
+     */
+    @Override
+    public List<ErFixedRatioVO> erFixedRatio(LocalDate date) {
+        LocalDate day = date == null ? LocalDate.now() : date;
+        List<ErFixedRatioVO> result = new ArrayList<>();
+        for (Long deptId : ER_DEPT_IDS) {
+            if (Objects.equals(deptId, 19580047L)) {
+                continue;
+            }
+            List<BizSchedule> rows = list(new LambdaQueryWrapper<BizSchedule>()
+                    .eq(BizSchedule::getScheduleDate, day)
+                    .eq(BizSchedule::getDeptId, deptId)
+                    .eq(BizSchedule::getStaffType, StaffTypeEnum.DOCTOR.getCode())
+                    .eq(BizSchedule::getDutyStatus, StaffDutyStatusEnum.WORK.getCode())
+                    .in(BizSchedule::getPublishStatus,
+                            PublishStatusEnum.PUBLISHED.getCode(), PublishStatusEnum.CHANGED.getCode()));
+            Set<Long> empIds = rows.stream().map(BizSchedule::getEmployeeId)
+                    .filter(Objects::nonNull).collect(Collectors.toSet());
+            Map<Long, Integer> fixedFlags = empIds.isEmpty() ? Collections.emptyMap()
+                    : sysEmployeeMapper.selectBatchIds(empIds).stream()
+                    .filter(e -> e.getIsFixed() != null)
+                    .collect(Collectors.toMap(SysEmployee::getId, SysEmployee::getIsFixed, (a, b) -> a));
+            long fixed = fixedFlags.values().stream().filter(v -> Objects.equals(v, 1)).count();
+            ErFixedRatioVO vo = new ErFixedRatioVO();
+            vo.setDeptId(deptId);
+            vo.setDeptName(rows.isEmpty() ? null : rows.get(0).getDeptName());
+            vo.setOnDutyDoctors(empIds.size());
+            vo.setFixedDoctors((int) fixed);
+            vo.setFixedRatio(empIds.isEmpty() ? null
+                    : BigDecimal.valueOf(fixed).divide(BigDecimal.valueOf(empIds.size()), 4, RoundingMode.HALF_UP));
+            result.add(vo);
+        }
+        return result;
     }
 
     /**
@@ -1551,7 +1616,9 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         return options;
     }
 
-    /** 病区所属科室名（一次批量查，避免 N+1） */
+    /**
+     * 病区所属科室名（一次批量查，避免 N+1）
+     */
     private Map<Long, String> deptNameMapOf(List<SysWard> wards) {
         Set<Long> deptIds = new HashSet<>();
         for (SysWard ward : wards) {
@@ -1586,7 +1653,9 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         }
     }
 
-    /** 取一行排班并校验数据范围（跨科室操作一律挡） */
+    /**
+     * 取一行排班并校验数据范围（跨科室操作一律挡）
+     */
     private BizSchedule requireScheduleRow(Long id) {
         if (id == null) {
             throw new BusinessException("缺少排班行ID");
@@ -1606,7 +1675,9 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         updateById(update);
     }
 
-    /** 把任意一天归到所在周的周一 */
+    /**
+     * 把任意一天归到所在周的周一
+     */
     private LocalDate mondayOf(LocalDate date) {
         if (date == null) {
             date = LocalDate.now();
@@ -1614,7 +1685,9 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         return date.minusDays(date.getDayOfWeek().getValue() - 1);
     }
 
-    /** 单元类型 + 单元ID → 归属科室ID（orgType=3 全院级无归属科室，返回 null） */
+    /**
+     * 单元类型 + 单元ID → 归属科室ID（orgType=3 全院级无归属科室，返回 null）
+     */
     private Long resolveDeptId(Integer orgType, Long orgId) {
         if (orgType == null) {
             return null;

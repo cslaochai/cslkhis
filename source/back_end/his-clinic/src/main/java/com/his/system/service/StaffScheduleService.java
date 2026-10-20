@@ -15,6 +15,7 @@ import com.his.system.dto.StaffScheduleWorkloadDTO;
 import com.his.system.entity.BizSchedule;
 import com.his.system.vo.StaffCheckVO;
 import com.his.system.vo.StaffScheduleVO;
+import com.his.system.vo.ErFixedRatioVO;
 import com.his.system.vo.StaffTypeDayWorkingVO;
 import com.his.system.vo.StaffWorkloadVO;
 import com.his.system.vo.UnitDayWorkingVO;
@@ -124,6 +125,12 @@ public interface StaffScheduleService extends IService<BizSchedule> {
      * 只读、无数据范围限制 —— 全院登录职工均可查看当天的急诊值班表。
      */
     List<StaffScheduleVO> erDutyPublic(LocalDate date);
+
+    /**
+     * 急诊固定医师占比（评审口径：固定急诊医师 ≥ 在岗急诊医师 75%）。
+     * 按急诊内科/外科/儿科分别统计：当日已发布（2/4）在岗医生中，档案标记固定（is_fixed=1）的占比。
+     */
+    List<ErFixedRatioVO> erFixedRatio(LocalDate date);
 
     /**
      * 某天的排班行（下游按实体取号源派生所需的字段，不重复查一次班次）。

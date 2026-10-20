@@ -17,6 +17,7 @@ import com.his.system.service.StaffScheduleService;
 import com.his.system.vo.ScheduleChangeLogVO;
 import com.his.system.vo.StaffCheckVO;
 import com.his.system.vo.StaffScheduleVO;
+import com.his.system.vo.ErFixedRatioVO;
 import com.his.system.vo.StaffWorkloadVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -122,6 +123,17 @@ public class StaffScheduleController {
     @GetMapping("/erDutyPublic")
     public Result<List<StaffScheduleVO>> erDutyPublic(@RequestParam(required = false) LocalDate date) {
         return Result.success(staffScheduleService.erDutyPublic(date == null ? LocalDate.now() : date));
+    }
+
+    /**
+     * 急诊固定医师占比（评审口径：固定急诊医师 ≥ 在岗 75%，卫医政发〔2009〕50号）。
+     * 按急诊内科/外科/儿科返回：当日发布在岗医师数、其中固定医师数、占比。
+     */
+    @Operation(summary = "急诊固定医师占比（评审口径：固定≥在岗75%）")
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/erFixedRatio")
+    public Result<List<ErFixedRatioVO>> erFixedRatio(@RequestParam(required = false) LocalDate date) {
+        return Result.success(staffScheduleService.erFixedRatio(date == null ? LocalDate.now() : date));
     }
 
     /**
