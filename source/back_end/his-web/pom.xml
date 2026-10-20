@@ -19,13 +19,75 @@
     <dependencies>
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-common</artifactId>
+            <artifactId>his-core-common</artifactId>
         </dependency>
-
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-clinic</artifactId>
+            <artifactId>his-core-spi</artifactId>
         </dependency>
+
+        <!-- 业务模块 -->
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-system</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-sign</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-schedule</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-patient</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-pay</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-charge</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-pharmacy</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-drgdip</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-appoint</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-emr</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-medicaltech</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-ai</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-miniapp</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-operation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-consumer</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
