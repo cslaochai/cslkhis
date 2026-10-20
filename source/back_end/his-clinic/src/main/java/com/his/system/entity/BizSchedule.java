@@ -107,6 +107,11 @@ public class BizSchedule extends BaseEntity {
     private Integer dutyStatus;
 
     /**
+     * 发布态（0-草稿 1-待审核 2-已发布 3-调班中 4-已变更）；仅已发布/已变更 才计在岗/展示
+     */
+    private Integer publishStatus;
+
+    /**
      * 响应形态（1-坐班 2-听班 3-留院值班）
      */
     private Integer attendMode;

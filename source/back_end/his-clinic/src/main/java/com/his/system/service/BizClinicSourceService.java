@@ -99,6 +99,31 @@ public interface BizClinicSourceService extends IService<BizClinicSource> {
      */
     boolean updateSchedule(BizClinicSource schedule);
 
+    // ===== G-15 发布态流转（提交→审核→发布 / 调班 / 撤回）=====
+    /** 提交审核：草稿 → 待审核 */
+    void submit(Long id);
+
+    /** 审核发布：待审核 → 已发布，并生成号源 */
+    void auditPublish(Long id);
+
+    /** 撤回：任意态 → 草稿，并清理号源 */
+    void recall(Long id);
+
+    /** 进入调班：已发布/已变更 → 调班中（锁定编辑，号源暂冻结） */
+    void adjustStart(Long id);
+
+    /**
+     * 整周提交审核：区间内本科室草稿(0) → 待审核(1)，返回迁移条数；已发布/待审核/调班中行不动。
+     * 逐条走单条提交逻辑并记留痕，单事务。
+     */
+    int submitWeek(ScheduleQueryDTO query);
+
+    /**
+     * 整周审核发布：区间内本科室待审核(1) → 已发布(2)，逐条补号段并同步出勤事实，返回迁移条数；
+     * 草稿/调班中行不动。单事务。
+     */
+    int auditWeek(ScheduleQueryDTO query);
+
     /**
      * 删除排班
      */

@@ -39,7 +39,7 @@
         改成「病区护理排班」后，这条班次就只会出现在护理排班页，门诊排班下拉里再也选不到它。</p>
     </el-form>
     <template #footer>
-      <el-button v-perm="'outpatient:schedule:edit'" :loading="shiftEditSaving" type="primary"
+      <el-button v-perm="'shift:dict:edit'" :loading="shiftEditSaving" type="primary"
                  @click="handleShiftEditSubmit">确定
       </el-button>
       <el-button @click="visible = false">取消</el-button>

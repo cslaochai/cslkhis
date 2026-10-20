@@ -8,7 +8,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 /**
- * 差异归因 → 编制校准建议（对应视图 v_staff_calibration_advice）。
+ * 差异归因 → 编制校准建议（聚合内联于 BizStaffAttendanceMapper.xml 的 adviceAgg）。
  */
 @Data
 @Schema(description = "编制校准建议")

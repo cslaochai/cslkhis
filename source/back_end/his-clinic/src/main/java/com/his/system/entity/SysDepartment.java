@@ -77,6 +77,24 @@ public class SysDepartment extends BaseEntity {
     private Long deptLeaderId;
 
     /**
+     * 门诊排班审核人（sys_employee.id），审本科室门诊排班；与行政负责人解耦
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long outpatientAuditorId;
+
+    /**
+     * 护理排班审核人（sys_employee.id），审本科室护理排班；与行政负责人解耦
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long nursingAuditorId;
+
+    /**
+     * 全院岗位排班审核人（sys_employee.id），审本科室全院岗位排班；与行政负责人解耦
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long scheduleAuditorId;
+
+    /**
      * 是否开诊（0-否 1-是）
      */
     private Integer isOpen;

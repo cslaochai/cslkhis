@@ -20,6 +20,9 @@
       <el-button v-perm="PERM_ADD" :icon="CopyDocument" data-testid="ns-copy-week" type="success" @click="doCopyWeek">
         复制上周
       </el-button>
+      <el-button v-perm="PERM_ADD" :icon="Plus" data-testid="ns-batch-open" type="primary" plain @click="openBatch">
+        批量铺班
+      </el-button>
       <span class="ml-auto text-sm text-slate-500" data-testid="ns-week-range">
         {{ weekStart }} ~ {{ weekEnd }}
         <template v-if="matrix"> · {{ matrix.deptName }}</template>
@@ -34,6 +37,34 @@
             <span class="font-medium text-slate-700">在岗人力对照</span>
             <el-tag v-perm="PERM_ADD" effect="plain" size="small" type="info">有排班权限</el-tag>
             <el-tag v-if="!hasPerm(PERM_ADD)" effect="plain" size="small" type="warning">只读（无排班权限）</el-tag>
+          </div>
+
+          <!-- 操作提示 + 图例：第一次进页面也能看懂格子怎么用、每个颜色代表什么 -->
+          <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500"
+               data-testid="ns-legend">
+            <span v-if="canAdd" class="font-medium text-slate-600">点击空格子（+）为该护士当天排班</span>
+            <span v-else>当前为只读，仅查看排班</span>
+            <span class="flex items-center gap-1"><i class="legend-swatch" style="background:#1269B5"></i>色块=班次</span>
+            <span class="flex items-center gap-1"><i class="legend-swatch" style="background:#e2e8f0"></i>灰块=休息/请假/培训/停排</span>
+            <span class="flex items-center gap-1"><i class="legend-swatch legend-mark"></i>角标=发布状态（草稿/待审核/已发布…）</span>
+          </div>
+
+          <!-- 本周发布：整周提交审核 / 整周审核发布。计数来自矩阵 publishSummary，按钮按草稿/待审核是否为 0 禁用 -->
+          <div class="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
+               data-testid="ns-publish-bar">
+            <span class="font-medium text-slate-700">本周发布</span>
+            <el-tag v-if="pubSummary.draft" size="small" type="info" data-testid="ns-pub-draft">草稿 {{ pubSummary.draft }}</el-tag>
+            <el-tag v-if="pubSummary.pending" size="small" type="warning" data-testid="ns-pub-pending">待审核 {{ pubSummary.pending }}</el-tag>
+            <el-tag v-if="pubSummary.published" size="small" type="success" data-testid="ns-pub-published">已发布 {{ pubSummary.published }}</el-tag>
+            <el-tag v-if="pubSummary.adjusting" size="small" type="danger" data-testid="ns-pub-adjusting">调班中 {{ pubSummary.adjusting }}</el-tag>
+            <el-tag v-if="pubSummary.changed" size="small" type="primary" data-testid="ns-pub-changed">已变更 {{ pubSummary.changed }}</el-tag>
+            <span v-if="!pubSummary.total" class="text-xs text-slate-400">本周还没有排班，先点格子或复制上周</span>
+            <div class="ml-auto flex items-center gap-2">
+              <el-button v-perm="PERM_ADD" size="small" type="warning" :disabled="!pubSummary.draft"
+                         data-testid="ns-submit-week" @click="doSubmitWeek">整周提交审核</el-button>
+              <el-button v-perm="PERM_AUDIT" size="small" type="success" :disabled="!pubSummary.pending"
+                         data-testid="ns-audit-week" @click="doAuditWeek">整周审核发布</el-button>
+            </div>
           </div>
 
           <!-- 本周护理需求：排班的分母。只显示后端算好的三个数，前端不算需求也不判阈值 -->
@@ -106,13 +137,13 @@
               </template>
             </el-table-column>
             <el-table-column v-for="(d, i) in (matrix?.days || [])" :key="d" :label="dayHead(d)" align="center"
-                             min-width="104">
+                             min-width="92">
               <template #header>
                 <span :class="d === today ? 'font-semibold text-blue-700' : ''">{{ dayHead(d) }}</span>
               </template>
               <template #default="{ row }">
-                <div :class="{ 'is-today': d === today }" class="cell-box" data-testid="ns-cell"
-                     @click="openCell(row, d)">
+                <div :class="['cell-box', { 'is-today': d === today, 'is-readonly': !canAdd }]"
+                     data-testid="ns-cell" @click="openCell(row, d)">
                   <template v-if="row.dayCells[i]">
                     <span v-if="row.dayCells[i].scheduleStatus === 1"
                           :style="{ background: shiftColor(row.dayCells[i].shiftId) }"
@@ -123,12 +154,34 @@
                         (row.dayCells[i].scheduleStatusText || '—').slice(0, 2)
                       }}</span>
                     <p v-if="row.dayCells[i].scheduleStatus === 1" class="cell-time">{{ row.dayCells[i].startTime }}</p>
+                    <!-- 发布态角标：一格就是一行排班，文案直接吃后端 publishStatusText（前端不抄第二份码表）。
+                         草稿/待审核/调班中都不计在岗，所以这个标记是「这天到底算不算人」的唯一线索 -->
+                    <span v-if="row.dayCells[i].publishStatusText"
+                          :class="`publish-mark is-${publishStatusTagType(row.dayCells[i].publishStatus)}`"
+                          :data-testid="`nurse-cell-publish-${row.dayCells[i].id}`"
+                          :title="`发布态：${row.dayCells[i].publishStatusText}（点格子可提交/审核/调班）`">{{
+                        row.dayCells[i].publishStatusText
+                      }}</span>
+                    <!-- 兼派公共工位角标：病区班次照排，仅标注当天另派到的公共位（独立派岗表） -->
+                    <span v-if="stationOf(row.employeeId, d)" class="station-mark"
+                          :data-testid="`nurse-cell-station-${row.employeeId}-${d}`"
+                          :title="`兼派公共工位：${stationOf(row.employeeId, d).stationName}`">
+                      {{ stationOf(row.employeeId, d).stationName }}
+                    </span>
                   </template>
+                  <!-- 空格子：有权限时用淡色 + 号暗示「点这里排班」，只读仍显示占位符 -->
+                  <el-icon v-else-if="canAdd" class="cell-plus" :size="11" data-testid="ns-cell-add"><Plus/></el-icon>
                   <span v-else class="text-slate-300">—</span>
                 </div>
               </template>
             </el-table-column>
           </el-table>
+
+          <!-- 空周引导：本周一行都没排时，告诉用户从哪下手（点格 / 复制上周），避免对着满屏「—」无从开始 -->
+          <div v-if="canAdd && weekEmpty" class="mt-3 rounded-md border border-dashed border-blue-200 bg-blue-50 px-4 py-3 text-sm text-slate-600"
+               data-testid="ns-empty-week">
+            本周还没有排班：点击格子为护士逐个安排班次，或点上方「复制上周」把上周班次整套带过来再微调。
+          </div>
 
           <!-- 底部人力对照：每班每天在岗人数 / 应配下限，缺口标红（数字全部来自后端 staffing） -->
           <div v-if="staffingRows.length" class="mt-3 overflow-x-auto">
@@ -309,9 +362,34 @@
             <el-table-column align="center" label="来源" width="90">
               <template #default="{ row }">{{ Number(row.scheduleSource) === 2 ? '复制上周' : '人工' }}</template>
             </el-table-column>
-            <el-table-column label="备注" min-width="160" prop="remark" show-overflow-tooltip/>
-            <el-table-column align="center" fixed="right" label="操作" width="80">
+            <el-table-column align="center" label="发布态" width="90">
               <template #default="{ row }">
+                <el-tag :data-testid="`nurse-publish-tag-${row.id}`"
+                        :type="publishStatusTagType(row.publishStatus)" effect="plain" size="small">
+                  {{ row.publishStatusText || '—' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="备注" min-width="160" prop="remark" show-overflow-tooltip/>
+            <el-table-column align="center" fixed="right" label="操作" width="300">
+              <template #default="{ row }">
+                <!-- 发布态流转（G-15）：按钮出现与否 = 当前态 × 权限码，判定全在 lib/nurseSchedule -->
+                <el-button v-if="canSubmitPublish(row)" v-perm="PERM_ADD"
+                           :data-testid="`nurse-publish-submit-${row.id}`" link size="small" type="primary"
+                           @click.stop="runPublishAction('submit', row)">提交审核
+                </el-button>
+                <el-button v-if="canAuditPublish(row)" v-perm="PERM_AUDIT"
+                           :data-testid="`nurse-publish-audit-${row.id}`" link size="small" type="success"
+                           @click.stop="runPublishAction('audit', row)">审核发布
+                </el-button>
+                <el-button v-if="canAdjustPublish(row)" v-perm="PERM_EDIT"
+                           :data-testid="`nurse-publish-adjust-${row.id}`" link size="small" type="warning"
+                           @click.stop="runPublishAction('adjust', row)">进入调班
+                </el-button>
+                <el-button v-if="canRecallPublish(row)" v-perm="PERM_EDIT"
+                           :data-testid="`nurse-publish-recall-${row.id}`" link size="small" type="info"
+                           @click.stop="runPublishAction('recall', row)">撤回
+                </el-button>
                 <el-button v-perm="PERM_DELETE" data-testid="ns-ledger-del" link size="small" type="danger"
                            @click.stop="removeCell(row)">删除
                 </el-button>
@@ -323,6 +401,49 @@
                          layout="total, prev, pager, next, sizes, jumper"
                          @current-change="(v: number) => { ledger.pageNum = v; loadLedger() }"
                          @size-change="(v: number) => { ledger.pageSize = v; ledger.pageNum = 1; loadLedger() }"/>
+        </div>
+      </el-tab-pane>
+
+      <!-- ============ 审批记录（提交/审核发布/撤回/调班/改格/删格/整周流转留痕，只写不删） ============ -->
+      <el-tab-pane label="审批记录" lazy name="logs">
+        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div class="filter-row mb-3 flex flex-wrap items-center gap-3">
+            <el-input v-model="logQuery.nurseName" class="!w-44" clearable data-testid="ns-log-kw"
+                      placeholder="护士姓名" @clear="searchLogs" @keyup.enter="searchLogs"/>
+            <el-date-picker v-model="logQuery.dateRange" class="!w-64" end-placeholder="结束日期"
+                            start-placeholder="开始日期" type="daterange" value-format="YYYY-MM-DD"
+                            @change="searchLogs"/>
+            <el-button :icon="Search" type="primary" @click="searchLogs">查询</el-button>
+            <span class="text-xs text-slate-400">谁在何时对哪位护士哪天做了提交/发布/撤回/调班/改格，以及新旧班次与原因，全程留痕只写不删</span>
+          </div>
+          <el-table v-loading="logLoading" :data="logRows" :max-height="matrixTableHeight" border
+                    data-testid="ns-log-table">
+            <el-table-column label="发生时间" prop="occurTime" width="160"/>
+            <el-table-column label="操作人" prop="createBy" width="100"/>
+            <el-table-column align="center" label="动作" width="100">
+              <template #default="{ row }">
+                <el-tag effect="plain" size="small">{{ row.actionTypeText }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="护士" prop="nurseName" width="100"/>
+            <el-table-column align="center" label="日期" prop="scheduleDate" width="110"/>
+            <el-table-column label="单元" prop="orgName" width="130" show-overflow-tooltip/>
+            <el-table-column label="变更前" prop="fromSnapshot" width="130" show-overflow-tooltip>
+              <template #default="{ row }">{{ row.fromSnapshot || '—' }}</template>
+            </el-table-column>
+            <el-table-column label="变更后" prop="toSnapshot" width="130" show-overflow-tooltip>
+              <template #default="{ row }">{{ row.toSnapshot || '—' }}</template>
+            </el-table-column>
+            <el-table-column align="center" label="数量" prop="amount" width="70">
+              <template #default="{ row }">{{ row.amount ?? '—' }}</template>
+            </el-table-column>
+            <el-table-column label="原因/说明" prop="reason" min-width="180" show-overflow-tooltip/>
+          </el-table>
+          <el-pagination :current-page="logQuery.pageNum" :page-size="logQuery.pageSize" :page-sizes="PAGE_SIZES"
+                         :total="logTotal" background class="mt-3 justify-end"
+                         layout="total, prev, pager, next, sizes, jumper"
+                         @current-change="(v: number) => { logQuery.pageNum = v; loadLogs() }"
+                         @size-change="(v: number) => { logQuery.pageSize = v; logQuery.pageNum = 1; loadLogs() }"/>
         </div>
       </el-tab-pane>
 
@@ -376,9 +497,57 @@
       </el-tab-pane>
     </el-tabs>
 
-    <!-- 点格排班弹窗：表单与保存在 NurseScheduleCellEdit -->
+    <!-- 点格排班弹窗：表单与保存在 NurseScheduleCellEdit；发布态动作回传本页执行 -->
     <NurseScheduleCellEdit v-model="cellVisible" :row="cellRow" :shifts="shifts" :status-options="statusOptions"
-                           :unit-type="unitType" @delete="removeCell" @saved="loadMatrix"/>
+                           :unit-type="unitType" :station-options="stationOptions"
+                           :source-org-name="matrix?.deptName || ''"
+                           @delete="removeCell" @saved="loadMatrix"
+                           @transition="onCellTransition"/>
+
+    <!-- 批量铺班弹框：共用「状态+班次」× 勾选日期 × 多选护士，只填空缺格、已排的不覆盖 -->
+    <el-dialog v-model="batchVisible" destroy-on-close title="批量铺班" width="620px" data-testid="ns-batch-dialog">
+      <el-form label-position="top" @submit.prevent>
+        <el-form-item label="排班状态" required>
+          <el-radio-group v-model="batchForm.scheduleStatus" data-testid="ns-batch-status" @change="onBatchStatusChange">
+            <el-radio v-for="o in statusOptions" :key="o.value" :value="o.value">{{ o.label }}</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item :required="batchForm.scheduleStatus === 1" label="班次（仅「上班」需要）">
+          <el-select v-model="batchForm.shiftId" :disabled="batchForm.scheduleStatus !== 1" :fit-input-width="false"
+                     class="w-full" data-testid="ns-batch-shift" placeholder="选择护理班次">
+            <el-option v-for="s in shifts" :key="s.shiftId"
+                       :label="`${s.shiftName} ${s.startTime}~${s.endTime}`" :value="String(s.shiftId)"/>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="铺到哪几天（勾选本周日期，只填空格、已排的跳过不覆盖）" required>
+          <el-checkbox-group v-model="batchForm.dates" data-testid="ns-batch-dates" class="flex flex-wrap gap-x-4 gap-y-2">
+            <el-checkbox v-for="(d, i) in (matrix?.days || [])" :key="d" :value="d">
+              {{ dayHead(d) }}
+            </el-checkbox>
+          </el-checkbox-group>
+        </el-form-item>
+        <el-form-item label="铺给哪些护士（多选）" required>
+          <div class="mb-1 flex gap-2 text-xs">
+            <el-button link type="primary" size="small" @click="batchSelectAllNurses">全选</el-button>
+            <el-button link type="info" size="small" @click="batchForm.employeeIds = []">清空</el-button>
+          </div>
+          <el-select v-model="batchForm.employeeIds" multiple filterable collapse-tags collapse-tags-tooltip
+                     class="w-full" data-testid="ns-batch-nurses" placeholder="勾选要统一铺班的护士">
+            <el-option v-for="n in (matrix?.nurses || [])" :key="n.employeeId"
+                       :label="`${n.nurseName}（${n.empCode}）`" :value="String(n.employeeId)"/>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="备注（统一说明，可空）">
+          <el-input v-model="batchForm.remark" :rows="2" maxlength="500" type="textarea" show-word-limit/>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button :loading="batchSaving" data-testid="ns-batch-submit" type="primary" @click="submitBatch">
+          开始铺班
+        </el-button>
+        <el-button @click="batchVisible = false">取消</el-button>
+      </template>
+    </el-dialog>
 
     <!-- 人力标准弹窗：表单与保存在 NurseScheduleRuleEdit（新增+编辑合并） -->
     <NurseScheduleRuleEdit v-model="ruleVisible" :row="ruleRow" :shifts="shifts" :ward-id="wardId"
@@ -395,6 +564,9 @@ import {computed, onMounted, onUnmounted, reactive, ref, watch} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {ArrowLeft, CopyDocument, Plus, Refresh, Search} from '@element-plus/icons-vue';
 import {
+  adjustStartNurseSchedule,
+  auditPublishNurseSchedule,
+  batchUpsertNurseSchedule,
   checkNurseSchedule,
   copyNurseScheduleWeek,
   deleteNurseScheduleCell,
@@ -403,15 +575,31 @@ import {
   getNurseScheduleRuleList,
   getNurseUnitSelectList,
   getNurseWeekMatrix,
+  listNurseScheduleLogPage,
   listNurseSchedulePage,
+  recallNurseSchedule,
+  submitNurseSchedule,
+  submitWeekNurseSchedule,
+  auditWeekNurseSchedule,
 } from '@/api/nurseSchedule';
 import {getStaffDemandGapList, recalcStaffDemand} from '@/api/staffDemand';
 import {getAttendanceAdvice, getAttendanceSummary} from '@/api/staffAttendance';
+import {getOpdAssignPage, getOpdStationSelectList} from '@/api/opdStation';
 import {DICT_TYPE, loadDictDataList} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {hasPerm} from '@/lib/perm';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
-import {PERM_ADD, PERM_EDIT, PERM_DELETE} from '@/lib/nurseSchedule';
+import {publishStatusTagType} from '@/lib/publishStatus';
+import {
+  canAdjustPublish,
+  canAuditPublish,
+  canRecallPublish,
+  canSubmitPublish,
+  PERM_ADD,
+  PERM_AUDIT,
+  PERM_EDIT,
+  PERM_DELETE,
+} from '@/lib/nurseSchedule';
 // 拆分出的弹框组件
 import NurseScheduleCellEdit from './NurseScheduleCellEdit.vue';
 import NurseScheduleRuleEdit from './NurseScheduleRuleEdit.vue';
@@ -489,12 +677,40 @@ const loadMatrix = async () => {
       wardId: wardId.value,
       weekStart: weekStart.value
     });
-    
+
     matrix.value = res.data;
+    await loadStationAssignments();
   } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
     
   } finally {
     matrixLoading.value = false;
+  }
+};
+// ---------------- 兼派公共工位（独立派岗表，仅角标回显，不并入出勤底座） ----------------
+const stationOptions = ref([]);
+const stationMap = ref({});
+const stationKey = (employeeId, date) => `${String(employeeId)}|${date}`;
+const stationOf = (employeeId, date) => stationMap.value[stationKey(employeeId, date)] || null;
+const loadStationAssignments = async () => {
+  if (!stationOptions.value.length) {
+    try {
+      const sRes = await getOpdStationSelectList({});
+      stationOptions.value = sRes.data || [];
+    } catch {
+      stationOptions.value = [];
+    }
+  }
+  stationMap.value = {};
+  try {
+    const res = await getOpdAssignPage({
+      startDate: weekStart.value, endDate: weekEnd.value, pageNum: 1, pageSize: 300,
+    });
+    (res.data?.records || []).forEach((r) => {
+      if (Number(r.status) !== 1) return;
+      stationMap.value[stationKey(r.employeeId, r.assignDate)] = r;
+    });
+  } catch {
+    stationMap.value = {};
   }
 };
 // ---------------- 本周护理需求缺口（sql/212，排班的分母） ----------------
@@ -589,6 +805,13 @@ const matrixRows = computed(() => (matrix.value?.nurses || []).map((n) => ({
   ...n,
   dayCells: (matrix.value?.days || []).map((d) => cellOf(n.employeeId, d) || null),
 })));
+/** 是否有排班写权限：决定格子显示 + 号、可否点开编辑，只读态不诱导点击 */
+const canAdd = computed(() => hasPerm(PERM_ADD));
+/** 本周是否一行排班都没有：用于空周引导条（已加载、有在册护士，但格子全空） */
+const weekEmpty = computed(() =>
+  !!matrix.value && (matrix.value.nurses || []).length > 0 &&
+  matrixRows.value.every((r) => !r.dayCells.some(Boolean))
+);
 /** 底部人力对照：班次（含「病区合计」shiftId=0）× 7 天 */
 const staffingRows = computed(() => {
   const st = matrix.value?.staffing || [];
@@ -638,6 +861,8 @@ watch(activeTab, (t) => {
     loadRules();
   if (t === 'check' && !checkResult.value)
     runCheck();
+  if (t === 'logs' && !logRows.value.length)
+    loadLogs();
 });
 // ---------------- 点格排班（表单与保存在 NurseScheduleCellEdit） ----------------
 const cellVisible = ref(false);
@@ -648,6 +873,7 @@ const openCell = (nurse, date) => {
     return;
   }
   const cell = cellOf(nurse.employeeId, date);
+  const st = stationOf(nurse.employeeId, date);
   cellRow.value = {
     wardId: wardId.value,
     employeeId: String(nurse.employeeId),
@@ -655,9 +881,15 @@ const openCell = (nurse, date) => {
     nurseName: nurse.nurseName,
     scheduleDate: date,
     scheduleStatus: cell?.scheduleStatus ?? 2,
+    // 兼派公共工位回显：已派岗则带上工位与派岗记录ID，清空时据此撤销
+    stationId: st ? String(st.stationId) : null,
+    assignId: st ? String(st.id) : null,
     // 班次停用后不在矩阵册子里了 → 回显不出来就当没选，提交才不会撞「班次不属于护理册」
     shiftId: cell?.shiftId && shifts.value.some((s) => String(s.shiftId) === String(cell.shiftId)) ? String(cell.shiftId) : null,
     remark: cell?.remark || '',
+    // 发布态只读带上：弹框据此决定「提交审核/审核发布/进入调班/撤回」出不出现在footer
+    publishStatus: cell?.publishStatus ?? null,
+    publishStatusText: cell?.publishStatusText || '',
   };
   cellVisible.value = true;
 };
@@ -675,6 +907,77 @@ const removeCell = async (cell) => {
   cellVisible.value = false;
   await loadMatrix();
 };
+// ---------------- 发布态流转（G-15：草稿→待审核→已发布→调班中→已变更，任意态可撤回） ----------------
+/**
+ * 四个动作的单一执行口：台账表格与点格弹框都走这里，权限与状态的门槛在按钮的 v-if / v-perm 上，
+ * 这里只管「调哪个接口 + 刷哪份数」。按钮出现与否的判定全在 lib/nurseSchedule，两处共用一份。
+ */
+const PUBLISH_ACTIONS = {
+  submit: {api: submitNurseSchedule, success: '已提交审核'},
+  audit: {api: auditPublishNurseSchedule, success: '已发布'},
+  adjust: {api: adjustStartNurseSchedule, success: '已进入调班'},
+  recall: {api: recallNurseSchedule, success: '已撤回'},
+};
+const runPublishAction = async (action, cell) => {
+  const cfg = PUBLISH_ACTIONS[action];
+  if (!cfg || !cell?.id)
+    return;
+  // 撤回只提示不拦人，但它是唯一会「悄悄把人从在岗里摘掉」的动作，必须确认
+  if (action === 'recall') {
+    try {
+      await ElMessageBox.confirm(`撤回 ${cell.nurseName || ''} ${cell.scheduleDate || ''} 的排班会把它退回草稿：撤回后这条排班不再计入在岗，本周需求对照会立刻少一个人。确定撤回？`, '撤回排班', {type: 'warning'});
+    } catch {
+      return;
+    }
+  }
+  try {
+    const res = await cfg.api(cell.id);
+    ElMessage.success(res.message || cfg.success);
+  } catch {
+    /* 错误已由全局拦截器统一提示，无需在此弹窗 */
+  }
+  cellVisible.value = false;
+  await loadMatrix();
+  // 台账已经拉过数就得跟着刷，否则停在旧态的按钮会让人对着同一行连点两次
+  if (ledgerRows.value.length)
+    await loadLedger();
+};
+/** 弹框只回传意图（action + 装配好的格子），请求与刷新统一在本页 */
+const onCellTransition = ({action, row}) => runPublishAction(action, row);
+
+// ---------------- 整周批量发布（草稿整周提交 / 待审核整周发布，单格微调仍走上面的逐条流转） ----------------
+const EMPTY_SUMMARY = {draft: 0, pending: 0, published: 0, adjusting: 0, changed: 0, total: 0};
+const pubSummary = computed(() => matrix.value?.publishSummary || EMPTY_SUMMARY);
+const weekPayload = () => ({unitType: unitType.value, wardId: wardId.value, weekStart: weekStart.value});
+const doSubmitWeek = async () => {
+  try {
+    await ElMessageBox.confirm(`把本周 ${pubSummary.value.draft} 条草稿一次性提交审核；提交后仍是待审核，审核发布后才计在岗。确定提交？`, '整周提交审核', {type: 'warning'});
+  } catch {
+    return;
+  }
+  try {
+    const res = await submitWeekNurseSchedule(weekPayload());
+    ElMessage.success(res.message || '已提交审核');
+    await reloadAll();
+  } catch {
+    /* 错误已由全局拦截器统一提示 */
+  }
+};
+const doAuditWeek = async () => {
+  try {
+    await ElMessageBox.confirm(`把本周 ${pubSummary.value.pending} 条待审核一次性审核发布；发布后立即计入在岗。确定发布？`, '整周审核发布', {type: 'warning'});
+  } catch {
+    return;
+  }
+  try {
+    const res = await auditWeekNurseSchedule(weekPayload());
+    ElMessage.success(res.message || '已发布');
+    await reloadAll();
+  } catch {
+    /* 错误已由全局拦截器统一提示 */
+  }
+};
+
 // ---------------- 复制上周 ----------------
 const doCopyWeek = async () => {
   const source = addDays(weekStart.value, -7);
@@ -693,6 +996,88 @@ const doCopyWeek = async () => {
   ElMessage.success(res.message || `已复制 ${res.data?.copiedCount ?? 0} 格`);
   await loadMatrix();
 };
+// ---------------- 批量铺班（共用状态/班次 × 勾选日期 × 多选护士，只填空缺格） ----------------
+const batchVisible = ref(false);
+const batchSaving = ref(false);
+const batchForm = reactive({scheduleStatus: 1, shiftId: null, dates: [], employeeIds: [], remark: ''});
+const openBatch = () => {
+  batchForm.scheduleStatus = 1;
+  batchForm.shiftId = null;
+  batchForm.dates = [...(matrix.value?.days || [])];
+  batchForm.employeeIds = [];
+  batchForm.remark = '';
+  batchVisible.value = true;
+};
+const onBatchStatusChange = (v) => {
+  if (Number(v) !== 1)
+    batchForm.shiftId = null;
+};
+const batchSelectAllNurses = () => {
+  batchForm.employeeIds = (matrix.value?.nurses || []).map((n) => String(n.employeeId));
+};
+const submitBatch = async () => {
+  if (Number(batchForm.scheduleStatus) === 1 && !batchForm.shiftId) {
+    ElMessage.warning('排「上班」必须选班次');
+    return;
+  }
+  if (!batchForm.dates.length) {
+    ElMessage.warning('请勾选要铺到的日期');
+    return;
+  }
+  if (!batchForm.employeeIds.length) {
+    ElMessage.warning('请勾选要铺班的护士');
+    return;
+  }
+  batchSaving.value = true;
+  try {
+    const res = await batchUpsertNurseSchedule({
+      unitType: unitType.value,
+      wardId: wardId.value,
+      scheduleStatus: batchForm.scheduleStatus,
+      shiftId: Number(batchForm.scheduleStatus) === 1 ? batchForm.shiftId : null,
+      scheduleDates: batchForm.dates,
+      items: batchForm.employeeIds.map((id) => ({employeeId: Number(id)})),
+      remark: batchForm.remark || undefined,
+    });
+    ElMessage.success(res.data?.message || res.message || '批量铺班完成');
+    batchVisible.value = false;
+    await loadMatrix();
+  } catch {
+    /* 错误已由全局拦截器统一提示 */
+  } finally {
+    batchSaving.value = false;
+  }
+};
+
+// ---------------- 审批记录（提交/审核发布/撤回/调班/改格/删格/整周流转留痕，只写不删） ----------------
+const logQuery = reactive({nurseName: '', dateRange: null, pageNum: 1, pageSize: DEFAULT_PAGE_SIZE});
+const logRows = ref([]);
+const logTotal = ref(0);
+const logLoading = ref(false);
+const loadLogs = async () => {
+  logLoading.value = true;
+  try {
+    const res = await listNurseScheduleLogPage({
+      deptId: matrix.value?.deptId || undefined,
+      nurseName: logQuery.nurseName || undefined,
+      startDate: logQuery.dateRange?.[0] || undefined,
+      endDate: logQuery.dateRange?.[1] || undefined,
+      pageNum: logQuery.pageNum,
+      pageSize: logQuery.pageSize,
+    });
+    logRows.value = res.data?.records || [];
+    logTotal.value = Number(res.data?.total || 0);
+  } catch {
+    /* 错误已由全局拦截器统一提示 */
+  } finally {
+    logLoading.value = false;
+  }
+};
+const searchLogs = () => {
+  logQuery.pageNum = 1;
+  loadLogs();
+};
+
 // ---------------- 规则校验（区间） ----------------
 const checkQuery = reactive({startDate: weekStart.value, endDate: weekEnd.value});
 const checkResult = ref(null);
@@ -825,6 +1210,8 @@ const reloadAll = () => {
     loadWorkload();
   if (activeTab.value === 'check')
     runCheck();
+  if (activeTab.value === 'logs')
+    loadLogs();
 };
 watch(wardId, async () => {
   checkQuery.startDate = weekStart.value;
@@ -846,6 +1233,10 @@ watch(wardId, async () => {
     loadLedger();
   else
     ledgerRows.value = [];
+  if (activeTab.value === 'logs')
+    loadLogs();
+  else
+    logRows.value = [];
   if (activeTab.value === 'check')
     runCheck();
   else
@@ -905,12 +1296,12 @@ onUnmounted(() => window.removeEventListener('resize', calcHeight));
 
 /* 矩阵格子：整格可点，班次用色块 + 上班时间；状态（休/假/培/停）用灰块 */
 .cell-box {
-  min-height: 46px;
+  min-height: 36px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 1px;
   cursor: pointer;
   border-radius: 4px;
   transition: background 0.15s;
@@ -922,6 +1313,46 @@ onUnmounted(() => window.removeEventListener('resize', calcHeight));
 
 .cell-box.is-today {
   background: #f0f9ff;
+}
+
+/* 只读态：不诱导点击，光标默认、hover 不变色 */
+.cell-box.is-readonly {
+  cursor: default;
+}
+
+.cell-box.is-readonly:hover {
+  background: transparent;
+}
+
+/* 空格子的 + 号：淡色小巧，hover 格子时加深变蓝，明确「可点」。
+   el-icon 容器固定尺寸，内部 svg 跟随，避免裸 SVG 被 flex 拉伸撑满格子 */
+.cell-plus {
+  width: 11px;
+  height: 11px;
+  color: #d8dee6;
+  transition: color 0.15s;
+}
+
+.cell-plus svg {
+  width: 11px;
+  height: 11px;
+}
+
+.cell-box:hover .cell-plus {
+  color: #3b82f6;
+}
+
+/* 图例小色块 */
+.legend-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.legend-swatch.legend-mark {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
 }
 
 .shift-chip {
@@ -946,6 +1377,53 @@ onUnmounted(() => window.removeEventListener('resize', calcHeight));
 .cell-time {
   font-size: 11px;
   color: #94a3b8;
+}
+
+/* 发布态角标：格子只有 104px 宽，用比班次更小的字号；颜色跟 el-tag 同一套码值口径（lib/publishStatus） */
+.publish-mark {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  line-height: 14px;
+  white-space: nowrap;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.publish-mark.is-warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.publish-mark.is-success {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.publish-mark.is-danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.publish-mark.is-primary {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+/* 兼派公共工位角标：与发布态角标并列，青色底以示区别；长工位名省略，全称看悬浮 title */
+.station-mark {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  line-height: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: #cffafe;
+  color: #155e75;
 }
 
 /* 人力对照表：负数缺口标红，合计行加粗（数字来自后端，不前端自算） */

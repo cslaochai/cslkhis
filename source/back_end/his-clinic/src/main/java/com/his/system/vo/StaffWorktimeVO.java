@@ -10,7 +10,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * 计划 vs 实际 的行级对照结果（对应视图 v_staff_worktime）。
+ * 计划 vs 实际 的行级对照结果（聚合内联于 BizStaffAttendanceMapper.xml 的 worktimeBase）。
  */
 @Data
 @Schema(description = "计划 vs 实际对照行")

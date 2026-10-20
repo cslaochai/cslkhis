@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.EnableStatusEnum;
 import com.his.common.enums.OrgUnitTypeEnum;
+import com.his.common.enums.PublishStatusEnum;
 import com.his.common.enums.StaffDutyStatusEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
@@ -421,7 +422,10 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
                 .eq(BizSchedule::getOrgId, orgId == null ? 0L : orgId)
                 .eq(BizSchedule::getStaffType, staffType)
                 .eq(BizSchedule::getScheduleDate, date)
-                .eq(BizSchedule::getDutyStatus, StaffDutyStatusEnum.WORK.getCode());
+                .eq(BizSchedule::getDutyStatus, StaffDutyStatusEnum.WORK.getCode())
+                // 编制下限卡的是「真正生效的在岗人数」：草稿没发布就不算有人接班
+                .in(BizSchedule::getPublishStatus,
+                        PublishStatusEnum.PUBLISHED.getCode(), PublishStatusEnum.CHANGED.getCode());
         if (rule.getShiftId() != null && rule.getShiftId() != SHIFT_ANY) {
             wrapper.eq(BizSchedule::getShiftId, rule.getShiftId());
         }

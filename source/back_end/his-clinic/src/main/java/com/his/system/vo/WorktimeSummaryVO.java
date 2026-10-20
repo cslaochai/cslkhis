@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * 单元 × 日 的执行汇总（对应视图 v_staff_worktime_summary）。
+ * 单元 × 日 的执行汇总（聚合内联于 BizStaffAttendanceMapper.xml 的 summaryAgg）。
  */
 @Data
 @Schema(description = "单元 × 日 执行汇总")

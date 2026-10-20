@@ -1,9 +1,13 @@
 package com.his.system.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.system.dto.NurseScheduleDTO;
+import com.his.system.dto.NurseScheduleLogQueryDTO;
 import com.his.system.service.BizScheduleService;
+import com.his.system.service.NurseScheduleLogService;
+import com.his.system.vo.NurseScheduleLogVO;
 import com.his.system.vo.NurseScheduleVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,6 +28,8 @@ import java.util.List;
 public class BizScheduleController {
 
     private final BizScheduleService bizScheduleService;
+
+    private final NurseScheduleLogService nurseScheduleLogService;
 
     /**
      * 病区候选下拉，可按关键词过滤。
@@ -116,6 +122,83 @@ public class BizScheduleController {
     }
 
     /**
+     * 提交审核：草稿 → 待审核。排班人排完后提交，等审核人发布。
+     */
+    @PreAuthorize("hasAuthority('nursing:schedule:add')")
+    @Operation(summary = "提交审核（草稿→待审核）")
+    @PostMapping("/submit")
+    public Result<Void> submit(@RequestParam Long id) {
+        bizScheduleService.submit(id);
+        return Result.success("已提交审核", null);
+    }
+
+    /**
+     * 审核发布：待审核 → 已发布。审核通过后该排班才正式生效、计入在岗。
+     */
+    @PreAuthorize("hasAuthority('nursing:schedule:audit')")
+    @Operation(summary = "审核发布（待审核→已发布，此后才计在岗）")
+    @PostMapping("/auditPublish")
+    public Result<Void> auditPublish(@RequestParam Long id) {
+        bizScheduleService.auditPublish(id);
+        return Result.success("已发布", null);
+    }
+
+    /**
+     * 整周提交审核：本周本病区/科室的草稿一次性 → 待审核（整周批量，不碰已发布/调班中行）。
+     */
+    @PreAuthorize("hasAuthority('nursing:schedule:add')")
+    @Operation(summary = "整周提交审核（本周草稿→待审核）")
+    @PostMapping("/submitWeek")
+    public Result<Integer> submitWeek(@RequestBody @Valid NurseScheduleDTO.MatrixQuery dto) {
+        int moved = bizScheduleService.submitWeek(dto);
+        return Result.success("已提交审核 " + moved + " 条", moved);
+    }
+
+    /**
+     * 整周审核发布：本周待审核一次性 → 已发布，此后计入在岗（整周批量，不碰草稿/调班中行）。
+     */
+    @PreAuthorize("hasAuthority('nursing:schedule:audit')")
+    @Operation(summary = "整周审核发布（本周待审核→已发布，此后计在岗）")
+    @PostMapping("/auditWeek")
+    public Result<Integer> auditWeek(@RequestBody @Valid NurseScheduleDTO.MatrixQuery dto) {
+        int moved = bizScheduleService.auditWeek(dto);
+        return Result.success("已发布 " + moved + " 条", moved);
+    }
+
+    /**
+     * 撤回：任意态 → 草稿。撤回后不计在岗。
+     */
+    @PreAuthorize("hasAuthority('nursing:schedule:edit')")
+    @Operation(summary = "撤回（任意态→草稿，不计在岗）")
+    @PostMapping("/recall")
+    public Result<Void> recall(@RequestParam Long id) {
+        bizScheduleService.recall(id);
+        return Result.success("已撤回", null);
+    }
+
+    /**
+     * 进入调班：已发布/已变更 → 调班中（锁定）。改完保存自动转「已变更」直接生效。
+     */
+    @PreAuthorize("hasAuthority('nursing:schedule:edit')")
+    @Operation(summary = "进入调班（已发布/已变更→调班中，锁定）")
+    @PostMapping("/adjustStart")
+    public Result<Void> adjustStart(@RequestParam Long id) {
+        bizScheduleService.adjustStart(id);
+        return Result.success("已进入调班", null);
+    }
+
+    /**
+     * 批量铺班：共用「状态+班次」× 选中日期 × 多选护士笛卡尔展开，只填空缺格、已排的跳过不覆盖，单事务。
+     * 用于病区护理排班页「批量铺班」弹框提交；前端禁止循环调用单格接口。
+     */
+    @PreAuthorize("hasAuthority('nursing:schedule:add')")
+    @Operation(summary = "批量铺班（共用状态/班次×选中日×多选护士，只填空缺格不覆盖）")
+    @PostMapping("/batchUpsert")
+    public Result<NurseScheduleVO.BatchResult> batchUpsert(@Valid @RequestBody NurseScheduleDTO.BatchUpsert dto) {
+        return Result.success("批量铺班完成", bizScheduleService.batchUpsert(dto));
+    }
+
+    /**
      * 把上周排班复制到目标周，只填空缺格、已排的不覆盖。
      * 用于病区护理排班页周矩阵的「复制上周」动作。
      */
@@ -136,6 +219,17 @@ public class BizScheduleController {
     @DeleteMapping("/deleteById")
     public Result<NurseScheduleVO.DeleteResult> deleteById(@RequestParam Long id) {
         return Result.success("已删除", bizScheduleService.deleteById(id));
+    }
+
+    /**
+     * 护理排班审批与变更留痕分页：谁在何时对哪位护士哪天做了提交/发布/撤回/调班/改格/删格、为什么。
+     * 用于护理排班页「审批记录」查看入口的审计查询。
+     */
+    @PreAuthorize("hasAuthority('nursing:schedule:list')")
+    @Operation(summary = "护理排班审批与变更留痕分页（审计：谁在何时对哪位护士哪天做了什么、为什么）")
+    @PostMapping("/logPage")
+    public Result<IPage<NurseScheduleLogVO>> logPage(@Valid @RequestBody NurseScheduleLogQueryDTO queryDTO) {
+        return Result.success(nurseScheduleLogService.pageByQuery(queryDTO));
     }
 
     /**

@@ -141,6 +141,16 @@ public class DutyRosterVO {
     private Integer status;
 
     /**
+     * 发布态（0-草稿 1-待审核 2-已发布 3-调班中 4-已变更）；仅已发布/已变更才对外展示
+     */
+    private Integer publishStatus;
+
+    /**
+     * 发布态文案（展示用，脏码值出空串）
+     */
+    private String publishStatusText;
+
+    /**
      * 是否已被临时换班
      */
     private Integer substituted;

@@ -86,7 +86,7 @@ const routes = [
                 path: 'nurse-schedule',
                 name: 'NurseSchedule',
                 component: () => import('@/views/nurse/NurseScheduleView.vue'),
-                meta: {title: '病区护理排班'}
+                meta: {title: '护理排班'}
             },
             {
                 path: 'nursing-qc',
@@ -590,10 +590,28 @@ const routes = [
             },
             {path: 'schedule', name: 'Schedule', component: () => import('@/views/schedule/ScheduleView.vue')},
             {
+                path: 'shift-dict',
+                name: 'ShiftDict',
+                component: () => import('@/views/schedule/ShiftDictView.vue'),
+                meta: {title: '班次字典'}
+            },
+            {
                 path: 'staff-schedule',
                 name: 'StaffSchedule',
                 component: () => import('@/views/schedule/StaffScheduleView.vue'),
-                meta: {title: '全院岗位排班'}
+                meta: {title: '员工排班'}
+            },
+            {
+                path: 'schedule-approve',
+                name: 'ScheduleApprove',
+                component: () => import('@/views/schedule/ScheduleApproveView.vue'),
+                meta: {title: '排班审批中心'}
+            },
+            {
+                path: 'er-duty',
+                name: 'ErDuty',
+                component: () => import('@/views/schedule/ErDutyView.vue'),
+                meta: {title: '急诊值班'}
             },
             {
                 path: 'schedule-overview',
@@ -606,6 +624,12 @@ const routes = [
                 name: 'StaffPlanRule',
                 component: () => import('@/views/schedule/StaffPlanRuleView.vue'),
                 meta: {title: '人力配置标准'}
+            },
+            {
+                path: 'opd-station',
+                name: 'OpdStation',
+                component: () => import('@/views/schedule/OpdStationView.vue'),
+                meta: {title: '门诊工位派岗'}
             },
             {
                 path: 'perf',
@@ -647,7 +671,7 @@ const routes = [
                 path: 'duty-roster',
                 name: 'DutyRoster',
                 component: () => import('@/views/duty/DutyRosterView.vue'),
-                meta: {title: '总值班排班'}
+                meta: {title: '全院总值班'}
             },
             {
                 path: 'duty-log',
@@ -659,7 +683,7 @@ const routes = [
                 path: 'duty-post',
                 name: 'DutyPost',
                 component: () => import('@/views/duty/DutyPostView.vue'),
-                meta: {title: '值守点位'}
+                meta: {title: '值班点位配置'}
             },
             {
                 path: 'departments',

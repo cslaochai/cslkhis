@@ -110,6 +110,39 @@ public class DepartmentVO {
     private String deptLeaderName;
 
     /**
+     * 门诊排班审核人ID（sys_employee.id）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long outpatientAuditorId;
+
+    /**
+     * 门诊排班审核人姓名（冗余）
+     */
+    private String outpatientAuditorName;
+
+    /**
+     * 护理排班审核人ID（sys_employee.id）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long nursingAuditorId;
+
+    /**
+     * 护理排班审核人姓名（冗余）
+     */
+    private String nursingAuditorName;
+
+    /**
+     * 全院岗位排班审核人ID（sys_employee.id）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long scheduleAuditorId;
+
+    /**
+     * 全院岗位排班审核人姓名（冗余）
+     */
+    private String scheduleAuditorName;
+
+    /**
      * 是否开放：0-否 1-是
      */
     private Integer isOpen;

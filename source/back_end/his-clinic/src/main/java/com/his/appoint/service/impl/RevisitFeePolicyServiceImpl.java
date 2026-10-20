@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.appoint.dto.RevisitFeePolicyPageQueryDTO;
 import com.his.appoint.dto.RevisitFeePolicyUpsertDTO;
 import com.his.appoint.entity.RevisitFeePolicy;
+import com.his.common.enums.ClinicDiagnosisTierEnum;
 import com.his.common.enums.RevisitChargeModeEnum;
 import com.his.common.enums.RevisitFeeConditionEnum;
 import com.his.appoint.mapper.RevisitFeePolicyMapper;
@@ -55,6 +56,23 @@ public class RevisitFeePolicyServiceImpl extends ServiceImpl<RevisitFeePolicyMap
         decision.setChildSurchargeAmount(child
                 ? PediatricSurchargePolicy.surchargeOf(baseFee) : BigDecimal.ZERO);
         decision.setDiagnosisFee(diagnosisFee);
+        // 🔑 拆 base + 加收项（湘医保发〔2025〕58号价表结构：主项目 + 加收项子码）：
+        //   普通档只出主项门诊诊查费(011102020010000)，副主任/主任/知名专家在主项之上加收对应子码(001/002/003)。
+        //   base = 普通档全额(9)；加收 = 本档加收额(13/22/61)；儿童加收 30% 对两行各自乘，
+        //   保证 base + 加收 = 儿童总价（与 decision.diagnosisFee 完全一致，不破坏历史金额口径）。
+        ClinicDiagnosisTierEnum tier = ClinicDiagnosisTierEnum.ofCode(
+                context == null ? null : context.getDiagnosisTier());
+        BigDecimal baseUnit = new BigDecimal(ClinicDiagnosisTierEnum.GENERAL.getAmount());
+        BigDecimal surchargeUnit = (tier != null && tier != ClinicDiagnosisTierEnum.GENERAL
+                && tier.getSurcharge() != null) ? new BigDecimal(tier.getSurcharge()) : BigDecimal.ZERO;
+        // 主项目恒为普通门诊(011102020010000)=9；加收项=本档加收额(13/22/61)。两行各自乘儿童系数。
+        // 变量名 mainItemFee 区别于上文 baseFee（号源快照总价，含加收），避免同一方法内重复声明。
+        BigDecimal mainItemFee = child ? baseUnit.add(PediatricSurchargePolicy.surchargeOf(baseUnit)) : baseUnit;
+        BigDecimal surchargeFee = child
+                ? surchargeUnit.add(PediatricSurchargePolicy.surchargeOf(surchargeUnit)) : surchargeUnit;
+        decision.setDiagnosisTier(context == null ? null : context.getDiagnosisTier());
+        decision.setBaseFee(mainItemFee);
+        decision.setSurchargeFee(surchargeFee);
         decision.setChargeMode(RevisitChargeModeEnum.FULL.getCode());
         decision.setWaived(diagnosisFee.compareTo(BigDecimal.ZERO) <= 0);
         if (decision.isWaived()) {

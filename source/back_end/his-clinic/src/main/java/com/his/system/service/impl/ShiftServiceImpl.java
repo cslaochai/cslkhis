@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -128,7 +129,9 @@ public class ShiftServiceImpl extends ServiceImpl<BizShiftMapper, BizShift> impl
     @Override
     public Map<Long, BizShift> mapByIds(Collection<Long> ids) {
         if (ids == null || ids.isEmpty()) {
-            return Map.of();
+            // 必须用 Collections.emptyMap()：Map.of() 的 get(null) 直接抛 NPE，
+            // 而调用方普遍拿「行上的班次ID（可为空）」来取，空表 + 空键就整页 500。
+            return Collections.emptyMap();
         }
         // listByIds 会自动过滤逻辑删行：班次被删过 → 这里就没有该 id，调用方按"未分类"渲染，不猜
         return listByIds(ids).stream().collect(Collectors.toMap(BizShift::getId, s -> s));

@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.Result;
 import com.his.patient.dto.*;
 import com.his.patient.dto.InpatientAdmitDTO;
+import com.his.patient.service.AttendingRelationService;
+import com.his.patient.service.ChargeNurseRelationService;
 import com.his.patient.service.InpatientService;
 import com.his.patient.vo.*;
 import com.his.patient.vo.BedVO;
@@ -41,6 +43,8 @@ public class InpatientController {
     private static final String READ_OR_SETTLEMENT = "hasAnyAuthority(" + READERS + ", 'ipd:settlement:list')";
 
     private final InpatientService inpatientService;
+    private final AttendingRelationService attendingRelationService;
+    private final ChargeNurseRelationService chargeNurseRelationService;
 
     /**
      * 住院患者分页：按在院/已出院状态与科室、病区、主管医师、关键字过滤。
@@ -168,5 +172,97 @@ public class InpatientController {
     @PostMapping("/summary/save")
     public Result<InpatientDetailVO> saveSummary(@RequestBody @Valid InpatientSummaryUpsertDTO dto) {
         return Result.success("病案首页已保存", inpatientService.saveSummary(dto));
+    }
+
+    // ==================== 主管医生管床关系（biz_attending_relation） ====================
+
+    /**
+     * 某次住院的管床关系列表（默认只列有效，可传 status=0 看已结束的历史交接）。
+     * 用于住院详情「主管医生」区的现管医生与交接留痕。
+     */
+    @PreAuthorize(READ)
+    @Operation(summary = "管床关系列表（主管/主诊组长/协作）")
+    @GetMapping("/attending/list")
+    public Result<List<AttendingRelationVO>> attendingList(@RequestParam Long admissionId,
+                                                            @RequestParam(required = false) Integer status) {
+        return Result.success(attendingRelationService.listByAdmission(admissionId, status));
+    }
+
+    /**
+     * 建立/转交管床关系：主管、主诊组长这类唯一负责关系，重新指派时旧记录自动置失效留痕，
+     * 不删行。仅在院可操作，已出院关系作为病案凭证不再改动。
+     */
+    @PreAuthorize("hasAuthority('ipd:inpatient:edit')")
+    @Operation(summary = "建立/转交管床关系（主管/主诊组长/协作）")
+    @PostMapping("/attending/bind")
+    public Result<String> attendingBind(@RequestBody @Valid AttendingBindDTO dto) {
+        return Result.success("管床关系已保存", String.valueOf(attendingRelationService.bind(dto)));
+    }
+
+    /**
+     * 结束一段管床关系（置失效并写失效时间，保留行留痕）。
+     */
+    @PreAuthorize("hasAuthority('ipd:inpatient:edit')")
+    @Operation(summary = "结束管床关系（置失效留痕）")
+    @PostMapping("/attending/end")
+    public Result<Void> attendingEnd(@RequestParam Long id) {
+        attendingRelationService.endById(id);
+        return Result.success("管床关系已结束", null);
+    }
+
+    /**
+     * 误建关系的物理删除（唯一键不含删除标志，软删会占住键位导致无法重建）。
+     */
+    @PreAuthorize("hasAuthority('ipd:inpatient:edit')")
+    @Operation(summary = "删除误建管床关系（物理删）")
+    @DeleteMapping("/attending/delete")
+    public Result<Void> attendingDelete(@RequestParam Long id) {
+        attendingRelationService.deleteById(id);
+        return Result.success("已删除", null);
+    }
+
+    // ==================== 责任护士关系（biz_charge_nurse_relation） ====================
+
+    /**
+     * 某次住院的责任护士关系列表（默认只列有效，status=0 看历史交接）。
+     */
+    @PreAuthorize(READ)
+    @Operation(summary = "责任护士关系列表")
+    @GetMapping("/nurse/list")
+    public Result<List<ChargeNurseRelationVO>> nurseList(@RequestParam Long admissionId,
+                                                          @RequestParam(required = false) Integer status) {
+        return Result.success(chargeNurseRelationService.listByAdmission(admissionId, status));
+    }
+
+    /**
+     * 建立/转交责任护士：一次住院一名有效主责，重新指派时旧记录置失效留痕。
+     */
+    @PreAuthorize("hasAuthority('ipd:inpatient:edit')")
+    @Operation(summary = "建立/转交责任护士")
+    @PostMapping("/nurse/bind")
+    public Result<String> nurseBind(@RequestBody @Valid ChargeNurseBindDTO dto) {
+        return Result.success("责任护士已保存", String.valueOf(chargeNurseRelationService.bind(dto)));
+    }
+
+    /**
+     * 结束责任护士关系（置失效留痕）。
+     */
+    @PreAuthorize("hasAuthority('ipd:inpatient:edit')")
+    @Operation(summary = "结束责任护士关系（置失效留痕）")
+    @PostMapping("/nurse/end")
+    public Result<Void> nurseEnd(@RequestParam Long id) {
+        chargeNurseRelationService.endById(id);
+        return Result.success("责任护士关系已结束", null);
+    }
+
+    /**
+     * 删除误建责任护士关系（物理删）。
+     */
+    @PreAuthorize("hasAuthority('ipd:inpatient:edit')")
+    @Operation(summary = "删除误建责任护士关系（物理删）")
+    @DeleteMapping("/nurse/delete")
+    public Result<Void> nurseDelete(@RequestParam Long id) {
+        chargeNurseRelationService.deleteById(id);
+        return Result.success("已删除", null);
     }
 }

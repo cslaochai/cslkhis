@@ -50,3 +50,71 @@ export function getStaffOnDuty(params) {
 export function getScheduleChangeLogList(staffScheduleId) {
   return request.get('/system/staffSchedule/changeLogList', { params: { staffScheduleId } })
 }
+
+/** 变更记录全局分页（台账：跨排班单元回看，按发生时间/动作/值班人筛） */
+export function getScheduleChangeLogPage(data) {
+  return request.post('/system/staffSchedule/changeLogPage', data)
+}
+
+/** 区间规则校验（连续夜班/连续上班/单周工时/班次冲突/人力缺口与富余） */
+export function checkStaffSchedule(data) {
+  return request.post('/system/staffSchedule/check', data)
+}
+
+/** 月度工时统计（一人一行，含整段未排班的人） */
+export function getStaffWorkload(data) {
+  return request.post('/system/staffSchedule/monthWorkload', data)
+}
+
+/** 排班单元候选（科室/病区/全院）：页面按单元过滤、整周提交审核时选单元 */
+export function getStaffScheduleUnitSelectList(params) {
+  return request.get('/system/staffSchedule/unitSelectList', { params })
+}
+
+// ========== 发布态流转（排班保存只到草稿，审核发布后才计在岗） ==========
+// 入参 id = 一行排班的主键（后端已 ToStringSerializer 字符串化）
+
+// 提交审核：草稿 → 待审核（排班人自己提交，仍要审核发布才生效）
+export function submitStaffSchedule(id) {
+  return request.post('/system/staffSchedule/submit', null, { params: { id } })
+}
+
+// 审核发布：待审核 → 已发布（此后才计入在岗）；须命中科室指定的全院岗位排班审核人
+export function auditPublishStaffSchedule(id) {
+  return request.post('/system/staffSchedule/auditPublish', null, { params: { id } })
+}
+
+// 驳回：待审核 → 草稿（附驳回原因，写进变更留痕）
+export function rejectStaffSchedule(data) {
+  return request.post('/system/staffSchedule/reject', data)
+}
+
+// 撤回：任意态 → 草稿（撤回后立刻不计在岗）
+export function recallStaffSchedule(id) {
+  return request.post('/system/staffSchedule/recall', null, { params: { id } })
+}
+
+// 进入调班：已发布/已变更 → 调班中（锁定，改完保存自动转「已变更」）
+export function adjustStartStaffSchedule(id) {
+  return request.post('/system/staffSchedule/adjustStart', null, { params: { id } })
+}
+
+// 整周提交审核：本单元整周草稿 → 待审核（入参 { orgType, orgId, weekStart }）
+export function submitWeekStaffSchedule(data) {
+  return request.post('/system/staffSchedule/submitWeek', data)
+}
+
+// 整周审核发布：本单元整周待审核 → 已发布（入参 { orgType, orgId, weekStart }）
+export function auditWeekStaffSchedule(data) {
+  return request.post('/system/staffSchedule/auditWeek', data)
+}
+
+// 待我审批聚合：当前登录人作为指定审核人的待审核排班（入参 { orgType, orgId, pageNum, pageSize }）
+export function getStaffSchedulePendingApproval(data) {
+  return request.post('/system/staffSchedule/pendingApproval', data)
+}
+
+// 急诊值班公开视图：急诊内科/外科/儿科当天已发布的医生值班表（全院可查，入参 date=YYYY-MM-DD）
+export function getErDutyPublic(date) {
+  return request.get('/system/staffSchedule/erDutyPublic', {params: {date}})
+}

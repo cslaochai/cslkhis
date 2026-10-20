@@ -1,11 +1,15 @@
 package com.his.system.service;
 
 import com.his.common.base.PageResult;
+import com.his.system.dto.DutyCheckDTO;
 import com.his.system.dto.DutyRosterPageQueryDTO;
 import com.his.system.dto.DutyRosterUpsertDTO;
 import com.his.system.dto.DutySubstituteDTO;
+import com.his.system.dto.DutyWorkloadDTO;
+import com.his.system.vo.DutyCheckVO;
 import com.his.system.vo.DutyOfficerVO;
 import com.his.system.vo.DutyRosterVO;
+import com.his.system.vo.DutyWorkloadVO;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -49,6 +53,13 @@ public interface DutyRosterService {
     List<DutyRosterVO> todayList();
 
     /**
+     * 指定科室当日白班值班医生（仅已发布/生效、换班后取实际值班人），供「此刻在岗医生」聚合并入。
+     * 按值班点位所属科室（orgType=1 科室、orgId=deptId、临床责任范围）匹配，只取白班；
+     * 不走全院总值班口径，也不含夜班。门诊结束后据此仍能找到替本科室兜底的值班医生。
+     */
+    List<DutyRosterVO> listDeptDayOnDuty(Long deptId, LocalDate date);
+
+    /**
      * 排班分页：日期区间缺省给前后各一段窗口，可按班次、值班角色、值班人、点位或责任范围筛。
      * 用于「总值班排班」页的排班表格；科室医师的一线/二线/三线值班靠责任范围过滤从全院总值班里分离出来。
      */
@@ -56,9 +67,9 @@ public interface DutyRosterService {
 
     /**
      * 登记或修改排班：同一天 + 同班次 + 同角色重复提交即覆盖原值班人。
-     * 排班页的新增/修改弹框保存时调用。
+     * 排班页的新增/修改弹框保存时调用，回读整行供页面直接刷新（主键字符串化，长 id 不丢精度）。
      */
-    Long upsert(DutyRosterUpsertDTO dto);
+    DutyRosterVO upsert(DutyRosterUpsertDTO dto);
 
     /**
      * 临时换班：只记换班人与原因，原排班人保留在记录里。
@@ -77,4 +88,27 @@ public interface DutyRosterService {
      * 排班页行删除按钮。
      */
     void deleteById(Long id);
+
+    // ===== G-15 发布态流转（提交→审核→发布 / 调班 / 撤回）=====
+    /** 提交审核：草稿 → 待审核 */
+    void submit(Long id);
+
+    /** 审核发布：待审核 → 已发布（此后才进「今日值班表/此刻谁负责」） */
+    void auditPublish(Long id);
+
+    /** 撤回：任意态 → 草稿（不再对外展示） */
+    void recall(Long id);
+
+    /** 进入调班：已发布/已变更 → 调班中（锁定，改完保存转已变更） */
+    void adjustStart(Long id);
+
+    /**
+     * 月度值班工时：一人一行，按实际值班人（换班后按顶替人）归并，白班/夜班/主班/副班次数与总时长。
+     */
+    DutyWorkloadVO monthWorkload(DutyWorkloadDTO dto);
+
+    /**
+     * 区间规则校验：连续值班 / 值班频次 / 主班漏排。只列明细不阻断保存。
+     */
+    DutyCheckVO check(DutyCheckDTO dto);
 }

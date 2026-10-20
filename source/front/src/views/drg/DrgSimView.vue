@@ -7,7 +7,8 @@
         <el-option label="chs-drg-2.0" value="chs-drg-2.0"/>
         <el-option label="3.0" value="3.0"/>
       </el-select>
-      <el-tag v-if="version === 'chs-drg-2.0'" type="warning" size="small">2.0 官方数据尚未接入，模拟将判为未入组（QY）</el-tag>
+      <el-tag v-if="version === 'chs-drg-2.0'" type="warning" size="small">2.0 官方数据尚未接入，模拟将判为未入组（QY）
+      </el-tag>
     </div>
 
     <!-- 汇总卡 -->
@@ -127,7 +128,8 @@
 
     <!-- 组表 -->
     <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm">
-      <p class="text-sm font-medium mb-3">DRG 细分组目录（{{ version || '3.0' }} 官方方案；权重与支付标准由统筹区医保局下发，未下发处显示 —）</p>
+      <p class="text-sm font-medium mb-3">DRG 细分组目录（{{ version || '3.0' }} 官方方案；权重与支付标准由统筹区医保局下发，未下发处显示
+        —）</p>
       <el-table :data="groups" border data-testid="drg-group-table" max-height="280" stripe>
         <el-table-column label="组编码" prop="drgCode" width="90"/>
         <el-table-column label="组名称" min-width="240" prop="drgName" show-overflow-tooltip/>
@@ -149,12 +151,6 @@
 </template>
 
 <script setup>
-/**
- * DRG-DIP 分组模拟（G23，菜单 907，挂报表统计；目录 1200 于 sql/188 由「报表与审计」更名）
- *
- * 院内简化模拟器：主诊断 ICD 类目 + 是否手术 → 组表 biz_drg_group（CHS-DRG 1.1 模拟种子）。
- * 首页主诊断编码为空时在弹窗里补录 ICD（走 sys_icd10 检索接口），再跑模拟；每首页一条结果重跑覆盖。
- */
 import {onMounted, reactive, ref} from 'vue';
 import {ElMessage} from 'element-plus';
 import {Refresh, Search, VideoPlay} from '@element-plus/icons-vue';
@@ -209,8 +205,8 @@ const runBatch = async () => {
     await drgSimulateBatch({version: version.value});
     ElMessage.success('批量模拟完成（主诊断编码为空的行已跳过）');
     loadSummary();
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   } finally {
     batchLoading.value = false;
   }

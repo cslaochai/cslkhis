@@ -106,6 +106,11 @@ public class BizDutyRoster extends BaseEntity {
     private Integer status;
 
     /**
+     * 发布态（0-草稿 1-待审核 2-已发布 3-调班中 4-已变更）；仅已发布/已变更 才进总值班展示
+     */
+    private Integer publishStatus;
+
+    /**
      * 临时换班后的实际值班人
      */
     @JsonSerialize(using = ToStringSerializer.class)

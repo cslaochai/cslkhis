@@ -45,6 +45,9 @@
 
       <div v-if="staffTypeHasSource(formData.staffType)"
            class="mb-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <div class="mb-2 flex items-center justify-between">
+          <span class="text-sm font-medium text-slate-700">默认值</span>
+        </div>
         <div class="grid gap-x-3 gap-y-3"
              style="grid-template-columns: minmax(0,0.7fr) minmax(0,1.1fr) minmax(0,0.7fr) auto minmax(0,0.7fr)">
           <div class="flex items-center gap-1.5">
@@ -528,7 +531,7 @@ const handleSubmit = async () => {
   }
   // 班次是时间段的唯一入口：没选班次就没有时间窗（服务端 resolveForScheduling 同样拦）
   if (!formData.value.shiftId) {
-    ElMessage.warning('请选择班次：时间段由班次带出，需要的时段在「班次字典」里先建一条');
+    ElMessage.warning('请选择班次');
     return;
   }
   const dept = props.departments.find((d) => d.id === formData.value.deptId);

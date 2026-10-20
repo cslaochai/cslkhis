@@ -15,16 +15,23 @@ import com.his.system.mapper.*;
 import com.his.system.service.DutyRosterService;
 import com.his.system.service.ShiftService;
 import com.his.system.service.StaffScheduleService;
+import com.his.system.vo.DutyCheckVO;
 import com.his.system.vo.DutyOfficerVO;
 import com.his.system.vo.DutyRosterVO;
+import com.his.system.vo.DutyWorkloadVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 全院总值班排班服务。
@@ -130,6 +137,9 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
     private List<DutyRosterVO> listOf(LocalDate date, Boolean adminOnly) {
         List<BizDutyRoster> rows = bizDutyRosterMapper.selectList(new LambdaQueryWrapper<BizDutyRoster>()
                 .eq(BizDutyRoster::getDutyDate, date)
+                // 对外展示只认生效态：草稿/待审核/调班中的值守不进今日值班表
+                .in(BizDutyRoster::getPublishStatus,
+                        PublishStatusEnum.PUBLISHED.getCode(), PublishStatusEnum.CHANGED.getCode())
                 .orderByAsc(BizDutyRoster::getShiftType)
                 .orderByAsc(BizDutyRoster::getRoleType)
                 .orderByAsc(BizDutyRoster::getId));
@@ -137,6 +147,35 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
             List<Long> adminIds = adminPostIds();
             rows = rows.stream().filter(r -> r.getPostId() == null || adminIds.contains(r.getPostId())).toList();
         }
+        return toRosterVOs(rows);
+    }
+
+    @Override
+    public List<DutyRosterVO> listDeptDayOnDuty(Long deptId, LocalDate date) {
+        if (deptId == null || date == null) {
+            return List.of();
+        }
+        // 先取本科室启用的临床值班点位（orgType=1 科室、orgId=deptId、责任范围=6 临床），再按点位收白班排班
+        List<Long> postIds = bizDutyPostMapper.selectList(new LambdaQueryWrapper<BizDutyPost>()
+                        .select(BizDutyPost::getId)
+                        .eq(BizDutyPost::getStatus, 1)
+                        .eq(BizDutyPost::getOrgType, 1)
+                        .eq(BizDutyPost::getOrgId, deptId)
+                        .eq(BizDutyPost::getDutyScope, 6))
+                .stream().map(BizDutyPost::getId).toList();
+        if (postIds.isEmpty()) {
+            return List.of();
+        }
+        List<BizDutyRoster> rows = bizDutyRosterMapper.selectList(new LambdaQueryWrapper<BizDutyRoster>()
+                .eq(BizDutyRoster::getDutyDate, date)
+                .eq(BizDutyRoster::getShiftType, DutyShiftTypeEnum.DAY.getCode())
+                .eq(BizDutyRoster::getStatus, 1)
+                // 只认生效且已发布/已变更：草稿/待审核/调班中的值守不对外
+                .in(BizDutyRoster::getPublishStatus,
+                        PublishStatusEnum.PUBLISHED.getCode(), PublishStatusEnum.CHANGED.getCode())
+                .in(BizDutyRoster::getPostId, postIds)
+                .orderByAsc(BizDutyRoster::getRoleType)
+                .orderByAsc(BizDutyRoster::getId));
         return toRosterVOs(rows);
     }
 
@@ -209,7 +248,7 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public Long upsert(DutyRosterUpsertDTO dto) {
+    public DutyRosterVO upsert(DutyRosterUpsertDTO dto) {
         DutyShiftTypeEnum shiftType = DutyShiftTypeEnum.fromCode(dto.getShiftType());
         DutyRoleTypeEnum roleType = DutyRoleTypeEnum.fromCode(dto.getRoleType());
         SysEmployee emp = requireOnDutyEmployee(dto.getEmployeeId());
@@ -229,6 +268,9 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
         BizDutyRoster row = pickAny(dto.getDutyDate(), post, shiftCode, roleCode);
         boolean insert = row == null;
         Long boundFactId = insert ? null : row.getStaffScheduleId();
+        // 发布态归属：新增落草稿（要提交+审核发布才生效）；改单时原本生效的直接转已变更
+        Integer oldPublish = insert ? null : row.getPublishStatus();
+        Integer newPublish = nextPublishStatus(insert, oldPublish);
         if (insert) {
             row = new BizDutyRoster();
             row.setDutyDate(dto.getDutyDate());
@@ -247,9 +289,10 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
         row.setStartTime(shift != null ? shift.getStartTime() : TextUtil.trimToNull(dto.getStartTime()));
         row.setEndTime(shift != null ? shift.getEndTime() : TextUtil.trimToNull(dto.getEndTime()));
         row.setStatus(enabled ? EnableStatusEnum.ENABLED.getCode() : EnableStatusEnum.DISABLED.getCode());
+        row.setPublishStatus(newPublish);
         row.setRemark(dto.getRemark());
         row.setStaffScheduleId(enabled && shift != null
-                ? dutyAttendance(dto.getDutyDate(), emp, shift, post, dto.getRemark()).getId()
+                ? dutyAttendance(dto.getDutyDate(), emp, shift, post, dto.getRemark(), newPublish).getId()
                 : null);
 
         saveRow(row, insert);
@@ -259,7 +302,7 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
         log.info("值班排班{} date={} post={} shift={} role={} emp={}", insert ? "登记" : "修改",
                 row.getDutyDate(), post == null ? "-" : post.getPostName(),
                 row.getShiftType(), row.getRoleType(), row.getEmployeeName());
-        return row.getId();
+        return toRosterVO(row, post);
     }
 
     /**
@@ -320,6 +363,57 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
         }
     }
 
+    // ===== G-15 发布态流转（提交→审核→发布 / 调班 / 撤回）=====
+
+    @Transactional(rollbackFor = Exception.class)
+    public void submit(Long id) {
+        BizDutyRoster row = requireRow(id);
+        if (!PublishStatusEnum.DRAFT.getCode().equals(row.getPublishStatus())) {
+            throw new BusinessException("只有草稿状态的值守排班可以提交审核");
+        }
+        updatePublishStatus(id, PublishStatusEnum.PENDING.getCode(), row);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void auditPublish(Long id) {
+        BizDutyRoster row = requireRow(id);
+        if (!PublishStatusEnum.PENDING.getCode().equals(row.getPublishStatus())) {
+            throw new BusinessException("只有待审核状态的值守排班可以审核发布");
+        }
+        updatePublishStatus(id, PublishStatusEnum.PUBLISHED.getCode(), row);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void recall(Long id) {
+        // 任意态可撤回回草稿：撤回后「此刻谁负责」解析不到它（展示只认 publish_status IN (2,4)）
+        updatePublishStatus(id, PublishStatusEnum.DRAFT.getCode(), requireRow(id));
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void adjustStart(Long id) {
+        BizDutyRoster row = requireRow(id);
+        if (!PublishStatusEnum.isEffective(row.getPublishStatus())) {
+            throw new BusinessException("只有已发布/已变更的值守排班可以进入调班");
+        }
+        updatePublishStatus(id, PublishStatusEnum.ADJUSTING.getCode(), row);
+    }
+
+    /**
+     * 发布态迁移：排班行与它绑定的在岗事实一起动 ——
+     * 只改一半会出现「值守已发布、这个人却不计在岗」（或反之）。
+     */
+    private void updatePublishStatus(Long id, Integer publishStatus, BizDutyRoster row) {
+        bizDutyRosterMapper.update(null, new LambdaUpdateWrapper<BizDutyRoster>()
+                .eq(BizDutyRoster::getId, id)
+                .set(BizDutyRoster::getPublishStatus, publishStatus));
+        if (row.getStaffScheduleId() != null) {
+            BizSchedule fact = new BizSchedule();
+            fact.setId(row.getStaffScheduleId());
+            fact.setPublishStatus(publishStatus);
+            staffScheduleService.updateById(fact);
+        }
+    }
+
     // 内部
 
     private BizDutyRoster requireRow(Long id) {
@@ -351,6 +445,7 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
                 .set(BizDutyRoster::getStartTime, row.getStartTime())
                 .set(BizDutyRoster::getEndTime, row.getEndTime())
                 .set(BizDutyRoster::getStatus, row.getStatus())
+                .set(BizDutyRoster::getPublishStatus, row.getPublishStatus())
                 .set(BizDutyRoster::getRemark, row.getRemark()));
     }
 
@@ -358,7 +453,7 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
      * 登记这条值班的在岗事实 —— 值班不是"写在册子上"，它就是这个人的一段真实出勤。
      */
     private BizSchedule dutyAttendance(LocalDate date, SysEmployee emp, BizShift shift,
-                                       BizDutyPost post, String remark) {
+                                       BizDutyPost post, String remark, Integer publishStatus) {
         StaffScheduleUpsertDTO core = new StaffScheduleUpsertDTO();
         core.setScheduleDate(date);
         boolean hospitalWide = post == null || post.getOrgId() == null
@@ -377,7 +472,26 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
                 ? post.getAttendMode() : AttendModeEnum.IN_HOSPITAL.getCode());
         core.setClinicFlag(YesOrNoEnum.NO.getCode());
         core.setRemark(remark);
+        // 在岗事实跟随值守行的发布态：未发布的值守不该算进在岗
+        core.setPublishStatus(publishStatus);
         return staffScheduleService.ensureAttendance(core, StaffScheduleSourceEnum.MANUAL);
+    }
+
+    /**
+     * 保存/改单时的发布态归属：null=新增落草稿；原本生效的（含调班中）转已变更；草稿/待审核保持原态。
+     */
+    private Integer nextPublishStatus(boolean insert, Integer oldPublish) {
+        if (insert) {
+            return PublishStatusEnum.DRAFT.getCode();
+        }
+        if (oldPublish == null) {
+            // 存量行（加列前就有）视为已发布：别把历史值守一夜之间打成草稿
+            return PublishStatusEnum.PUBLISHED.getCode();
+        }
+        if (PublishStatusEnum.ADJUSTING.getCode().equals(oldPublish) || PublishStatusEnum.isEffective(oldPublish)) {
+            return PublishStatusEnum.CHANGED.getCode();
+        }
+        return oldPublish;
     }
 
     /**
@@ -496,6 +610,9 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
                 .eq(BizDutyRoster::getShiftType, shift)
                 .eq(BizDutyRoster::getRoleType, role)
                 .eq(BizDutyRoster::getStatus, 1)
+                // 只有已发布/已变更的值守才算数：草稿/待审核/调班中不得对外宣示「此刻谁负责」
+                .in(BizDutyRoster::getPublishStatus,
+                        PublishStatusEnum.PUBLISHED.getCode(), PublishStatusEnum.CHANGED.getCode())
                 .and(x -> {
                     x.isNull(BizDutyRoster::getPostId);
                     if (!adminIds.isEmpty()) {
@@ -588,6 +705,8 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
         vo.setStartTime(r.getStartTime());
         vo.setEndTime(r.getEndTime());
         vo.setStatus(r.getStatus());
+        vo.setPublishStatus(r.getPublishStatus());
+        vo.setPublishStatusText(PublishStatusEnum.getLabel(r.getPublishStatus()));
         vo.setSubstituted(substituted ? 1 : 0);
         vo.setActualEmpId(substituted ? r.getSubstituteEmpId() : r.getEmployeeId());
         vo.setActualEmpName(substituted ? r.getSubstituteEmpName() : r.getEmployeeName());
@@ -646,5 +765,150 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
     private String roleText(Integer roleType) {
         DutyRoleTypeEnum role = DutyRoleTypeEnum.fromCode(roleType);
         return role == null ? DutyRoleTypeEnum.SECONDARY.getLabel() : role.getLabel();
+    }
+
+    // ==================== 值班增强：月度工时 / 区间规则校验 ====================
+
+    @Override
+    public DutyWorkloadVO monthWorkload(DutyWorkloadDTO dto) {
+        YearMonth ym = parseMonth(dto.getMonth());
+        LocalDate start = ym.atDay(1);
+        LocalDate end = ym.atEndOfMonth();
+        List<DutyWorkloadVO.Row> rows = baseMapper.selectDutyWorkload(dto.getPostId(), start, end);
+        String postName = null;
+        if (dto.getPostId() != null) {
+            BizDutyPost post = bizDutyPostMapper.selectById(dto.getPostId());
+            postName = post == null ? null : post.getPostName();
+        }
+        int totalDuties = 0;
+        BigDecimal totalHours = BigDecimal.ZERO;
+        for (DutyWorkloadVO.Row r : rows) {
+            totalDuties += nvl(r.getDayCount()) + nvl(r.getNightCount());
+            totalHours = totalHours.add(r.getTotalHours() == null ? BigDecimal.ZERO : r.getTotalHours());
+        }
+        DutyWorkloadVO result = new DutyWorkloadVO();
+        result.setMonth(ym.toString());
+        result.setPostId(dto.getPostId());
+        result.setPostName(postName);
+        result.setDutyCount(rows.size());
+        result.setTotalDuties(totalDuties);
+        result.setTotalHours(totalHours.setScale(1, RoundingMode.HALF_UP));
+        result.setRows(rows);
+        return result;
+    }
+
+    @Override
+    public DutyCheckVO check(DutyCheckDTO dto) {
+        LocalDate start = dto.getStartDate();
+        LocalDate end = dto.getEndDate();
+        if (end.isBefore(start)) {
+            throw new BusinessException("结束日期不能早于开始日期");
+        }
+        List<DutyCheckRow> rows = baseMapper.selectDutyRows(dto.getPostId(), start, end);
+        List<DutyCheckVO.Warning> warnings = new ArrayList<>();
+        // 连续值班：同一实际值班人相邻自然日都有班（含白班接夜班）
+        Map<Long, List<DutyCheckRow>> byPerson = rows.stream()
+                .collect(Collectors.groupingBy(DutyCheckRow::getEmployeeId, LinkedHashMap::new, Collectors.toList()));
+        for (Map.Entry<Long, List<DutyCheckRow>> entry : byPerson.entrySet()) {
+            List<DutyCheckRow> personRows = entry.getValue();
+            TreeSet<LocalDate> days = personRows.stream()
+                    .map(DutyCheckRow::getDutyDate).collect(Collectors.toCollection(TreeSet::new));
+            LocalDate prev = null;
+            for (LocalDate d : days) {
+                if (prev != null && d.equals(prev.plusDays(1))) {
+                    DutyCheckRow row = personRows.stream().filter(r -> d.equals(r.getDutyDate()))
+                            .findFirst().orElse(personRows.get(0));
+                    warnings.add(dutyWarn(1, "DUTY_STREAK", "连续值班", row.getDutyDate(), row.getShiftType(),
+                            row.getPostId(), row.getPostName(), row.getEmployeeId(), row.getEmployeeName(),
+                            null, null,
+                            row.getEmployeeName() + " 于 " + prev + " 与 " + d + " 连续两天值班"));
+                }
+                prev = d;
+            }
+            // 值班频次：默认月上限 10 天，按区间天数折算（区间越长越接近全月口径）
+            long daysInRange = ChronoUnit.DAYS.between(start, end) + 1;
+            int maxDuty = Math.max(3, (int) Math.round(10.0 * daysInRange / 30.0));
+            if (days.size() > maxDuty) {
+                DutyCheckRow row = personRows.get(0);
+                warnings.add(dutyWarn(1, "DUTY_FREQ", "值班频次超限", null, null,
+                        row.getPostId(), row.getPostName(), row.getEmployeeId(), row.getEmployeeName(),
+                        days.size(), maxDuty,
+                        row.getEmployeeName() + " 区间内值班 " + days.size() + " 天（折算月上限 " + maxDuty + " 天）"));
+            }
+        }
+        // 主班漏排：点位×日×班次 主班空缺但有副班 → 提示（副班顶值符合业务，不阻断）
+        Set<String> shiftKeys = new HashSet<>();
+        Set<String> primaryKeys = new HashSet<>();
+        for (DutyCheckRow row : rows) {
+            String key = keyOf(row.getPostId(), row.getDutyDate(), row.getShiftType());
+            shiftKeys.add(key);
+            if (Objects.equals(DutyRoleTypeEnum.PRIMARY.getCode(), row.getRoleType())) {
+                primaryKeys.add(key);
+            }
+        }
+        for (DutyCheckRow row : rows) {
+            String key = keyOf(row.getPostId(), row.getDutyDate(), row.getShiftType());
+            if (!primaryKeys.contains(key) && Objects.equals(DutyRoleTypeEnum.SECONDARY.getCode(), row.getRoleType())) {
+                warnings.add(dutyWarn(2, "MAIN_GAP", "主班漏排", row.getDutyDate(), row.getShiftType(),
+                        row.getPostId(), row.getPostName(), row.getEmployeeId(), row.getEmployeeName(),
+                        null, null,
+                        row.getPostName() + " " + row.getDutyDate() + " " + shiftText(row.getShiftType())
+                                + " 主班空缺，由 " + row.getEmployeeName() + " 副班顶值"));
+            }
+        }
+        DutyCheckVO vo = new DutyCheckVO();
+        vo.setStartDate(start.toString());
+        vo.setEndDate(end.toString());
+        vo.setPostId(dto.getPostId());
+        int alertCount = 0;
+        int hintCount = 0;
+        for (DutyCheckVO.Warning w : warnings) {
+            if (w.getLevel() != null && w.getLevel() == 1) {
+                alertCount++;
+            } else if (w.getLevel() != null && w.getLevel() == 2) {
+                hintCount++;
+            }
+        }
+        vo.setAlertCount(alertCount);
+        vo.setHintCount(hintCount);
+        vo.setWarnings(warnings);
+        return vo;
+    }
+
+    private DutyCheckVO.Warning dutyWarn(int level, String type, String typeText, LocalDate date,
+                                         Integer shiftType, Long postId, String postName,
+                                         Long employeeId, String employeeName,
+                                         Integer actual, Integer required, String message) {
+        DutyCheckVO.Warning w = new DutyCheckVO.Warning();
+        w.setLevel(level);
+        w.setType(type);
+        w.setTypeText(typeText);
+        w.setDutyDate(date == null ? null : date.toString());
+        w.setShiftType(shiftType);
+        w.setShiftTypeText(shiftType == null ? null : shiftText(shiftType));
+        w.setPostId(postId);
+        w.setPostName(postName);
+        w.setEmployeeId(employeeId);
+        w.setEmployeeName(employeeName);
+        w.setActual(actual);
+        w.setRequired(required);
+        w.setMessage(message);
+        return w;
+    }
+
+    private String keyOf(Long postId, LocalDate date, Integer shiftType) {
+        return postId + ":" + date + ":" + shiftType;
+    }
+
+    private YearMonth parseMonth(String month) {
+        try {
+            return YearMonth.parse(month);
+        } catch (Exception e) {
+            throw new BusinessException("月份格式应为 yyyy-MM，例如 2026-10");
+        }
+    }
+
+    private int nvl(Integer v) {
+        return v == null ? 0 : v;
     }
 }

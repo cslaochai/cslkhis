@@ -8,6 +8,7 @@ import com.his.common.enums.ClinicDiagnosisTierEnum;
 import com.his.common.enums.ScheduleStatusEnum;
 import com.his.common.enums.StaffScheduleSourceEnum;
 import com.his.common.enums.StaffTypeEnum;
+import com.his.common.enums.PublishStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.system.dto.ScheduleTemplatePageQueryDTO;
@@ -507,7 +508,9 @@ public class BizClinicSourceTemplateServiceImpl extends ServiceImpl<BizClinicSou
             }
             bizScheduleMapper.insert(s);
             try {
-                if (StaffTypeEnum.hasSource(s.getStaffType())) {
+                // 模板生成的排班默认草稿态，不在此出号；审核发布后由 auditPublish 补齐号段
+                if (StaffTypeEnum.hasSource(s.getStaffType())
+                        && PublishStatusEnum.isEffective(s.getPublishStatus())) {
                     generateSlotsForSchedule(s, tpl.getId());
                 }
             } catch (Exception e) {

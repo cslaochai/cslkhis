@@ -17,6 +17,8 @@ import com.his.system.dto.*;
 import com.his.system.entity.BizClinicSource;
 import com.his.system.entity.BizSchedule;
 import com.his.system.entity.BizShift;
+import com.his.system.entity.SysDepartment;
+import com.his.system.mapper.SysDepartmentMapper;
 import com.his.common.entity.CurrentUser;
 import com.his.system.mapper.BizClinicSourceMapper;
 import com.his.system.mapper.BizScheduleMapper;
@@ -24,6 +26,7 @@ import com.his.system.service.DeptScopeService;
 import com.his.system.service.*;
 import com.his.system.utils.UserUtils;
 import com.his.system.vo.BizClinicSourceBatchResultVO;
+import com.his.system.vo.DutyRosterVO;
 import com.his.system.vo.OnDutyStaffVO;
 import com.his.system.vo.ScheduleDetailVO;
 import com.his.system.vo.ScheduleSelectListVO;
@@ -71,6 +74,16 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
     private final AppointService appointService;
 
     private final ClinicSourceLogService clinicSourceLogService;
+
+    /** 值班白班并入「此刻在岗医生」聚合：门诊结束后仍能找到科室兜底值班人 */
+    private final DutyRosterService dutyRosterService;
+
+    /** 科室主档：取科室指定的门诊/护理排班审核人 */
+    private final SysDepartmentMapper sysDepartmentMapper;
+
+    /** 全局豁免审核角色：系统管理员、门诊办（不绑科室也能审） */
+    private static final String ROLE_ADMIN = "10012";
+    private static final String ROLE_OUTPATIENT_OFFICE = "10035";
 
     @Override
     public List<BizClinicSource> listPage(ScheduleQueryDTO queryDTO) {
@@ -124,6 +137,8 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
                         BizClinicSource::getDoctorId, scheduleQueryDTO.getDoctorId())
                 .gt(BizClinicSource::getAvailableSource, 0)
                 .eq(BizClinicSource::getStatus, ScheduleStatusEnum.NORMAL.getCode())
+                .in(BizClinicSource::getPublishStatus,
+                        PublishStatusEnum.PUBLISHED.getCode(), PublishStatusEnum.CHANGED.getCode())
                 .orderByAsc(BizClinicSource::getStartTime);
         return wrapper;
     }
@@ -133,6 +148,9 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
     public boolean addSchedule(BizClinicSource schedule) {
         applyShift(schedule);
         assertNotPast(schedule.getScheduleDate(), "新增排班");
+        // 新增号源一律草稿态（出号逻辑在 initNewScheduleRow 之后；这里提前给 bindCoreSchedule 读，
+        // 让派生的出勤事实跟号源行同一个发布态）
+        schedule.setPublishStatus(PublishStatusEnum.DRAFT.getCode());
         bindCoreSchedule(schedule, StaffScheduleSourceEnum.MANUAL);
         applyStaffType(schedule);
         checkRoomRequired(schedule);
@@ -140,7 +158,9 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
 
         initNewScheduleRow(schedule);
         boolean ok = clinicSourceMapper.insert(schedule) > 0;
-        if (ok && StaffTypeEnum.hasSource(schedule.getStaffType())) {
+        // 仅生效态（已发布/已变更）才出号：新保存的号源默认草稿，审核发布后才会 generateSlots
+        if (ok && StaffTypeEnum.hasSource(schedule.getStaffType())
+                && PublishStatusEnum.isEffective(schedule.getPublishStatus())) {
             bizScheduleSlotService.generateSlots(schedule.getId(), schedule.getStartTime(), schedule.getEndTime(),
                     schedule.getTotalSource(), schedule.getAppointmentSource());
         }
@@ -168,10 +188,13 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         if (schedule.getStatus() == null) {
             schedule.setStatus(ScheduleStatusEnum.NORMAL.getCode());
         }
+        // 新建号源行一律草稿态：排班写完不算生效，要经「提交→审核发布」才出号。
+        // 模板批量生成、批量新增、复刻都走这里，保证三条入口初态一致。
+        schedule.setPublishStatus(PublishStatusEnum.DRAFT.getCode());
         schedule.setIsExpert(NumUtil.orZero(schedule.getIsExpert()));
         schedule.setRegistFee(NumUtil.orZero(schedule.getRegistFee()));
         schedule.setDiagnosisFee(NumUtil.orZero(schedule.getDiagnosisFee()));
-        // 🔑 档位为空时兜底普通档（9 元），不留 null：出账与医保对账都要读这一列，
+        // 档位为空时兜底普通档（9 元），不留 null：出账与医保对账都要读这一列，
         //    null 会让「这号适用哪档加收」在报表里变成空白，追责时说不清。
         if (ClinicDiagnosisTierEnum.ofCode(schedule.getDiagnosisTier()) == null) {
             schedule.setDiagnosisTier(ClinicDiagnosisTierEnum.GENERAL.getCode());
@@ -194,6 +217,8 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         dto.setAttendMode(AttendModeEnum.ON_SITE.getCode());
         dto.setClinicFlag(YesOrNoEnum.YES.getCode());
         dto.setRemark(schedule.getRemark());
+        // 出勤事实跟随号源行的发布态：草稿/待审核的出诊不该算进在岗（在岗聚合只统计 publish_status IN (2,4)）
+        dto.setPublishStatus(schedule.getPublishStatus());
         BizSchedule core = staffScheduleService.ensureForClinic(dto, source);
         if (submittedStaffType != null && !Objects.equals(submittedStaffType, core.getStaffType())) {
             throw new BusinessException("「" + core.getEmployeeName() + "」在"
@@ -238,6 +263,13 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
             throw new BusinessException("该排班已有 " + existing.getUsedSource() + " 条挂号记录，不能变更岗位类别");
         }
         applyShift(schedule);
+        // 发布态流转（必须排在 bindCoreSchedule 之前：派生的出勤事实跟随号源行的发布态）
+        // 草稿/待审核改单保持原态（不出号）；已发布/已变更或调班中改单 = 完成调班 → 已变更（直接生效、重新出号，不二次审核）
+        Integer oldPublish = existing.getPublishStatus();
+        Integer newPublish = PublishStatusEnum.ADJUSTING.getCode().equals(oldPublish)
+                || PublishStatusEnum.isEffective(oldPublish)
+                ? PublishStatusEnum.CHANGED.getCode() : oldPublish;
+        schedule.setPublishStatus(newPublish);
         bindCoreSchedule(schedule, StaffScheduleSourceEnum.MANUAL);
         applyStaffType(schedule);
         checkRoomRequired(schedule);
@@ -250,9 +282,12 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         }
         boolean roomChanged = !Objects.equals(existing.getRoomId(), schedule.getRoomId())
                 || !Objects.equals(existing.getRoomName(), schedule.getRoomName());
+
         boolean ok = clinicSourceMapper.updateById(schedule) > 0;
         if (ok) {
-            if (StaffTypeEnum.hasSource(schedule.getStaffType())) {
+            // 仅生效态出号/保留号；非生效态（草稿/待审核/调班中）清掉任何残留号段，避免患者侧漏出
+            if (StaffTypeEnum.hasSource(schedule.getStaffType())
+                    && PublishStatusEnum.isEffective(newPublish)) {
                 bizScheduleSlotService.regenerateForSchedule(schedule, schedule.getTotalSource(), schedule.getAppointmentSource());
             } else {
                 bizScheduleSlotService.physicalDeleteByScheduleId(schedule.getId());
@@ -649,6 +684,8 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         vo.setAppointmentSource(entity.getAppointmentSource());
         vo.setUsedAppointmentSource(entity.getUsedAppointmentSource());
         vo.setStatus(entity.getStatus());
+        vo.setPublishStatus(entity.getPublishStatus());
+        vo.setPublishStatusText(PublishStatusEnum.getLabel(entity.getPublishStatus()));
         vo.setConsultStatus(entity.getConsultStatus());
         vo.setRoomId(entity.getRoomId());
         vo.setRoomName(entity.getRoomName());
@@ -692,6 +729,8 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
                 .eq(BizClinicSource::getScheduleDate, LocalDate.now())
                 .eq(BizClinicSource::getStaffType, StaffTypeEnum.DOCTOR.getCode())
                 .eq(BizClinicSource::getStatus, ScheduleStatusEnum.NORMAL.getCode())
+                .in(BizClinicSource::getPublishStatus,
+                        PublishStatusEnum.PUBLISHED.getCode(), PublishStatusEnum.CHANGED.getCode())
                 .orderByAsc(BizClinicSource::getStartTime);
         return clinicSourceMapper.selectList(wrapper);
     }
@@ -789,6 +828,175 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         }).toList();
     }
 
+    // ===== G-15 发布态流转（提交→审核→发布 / 调班 / 撤回）=====
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void submit(Long id) {
+        BizClinicSource existing = clinicSourceMapper.selectById(id);
+        if (existing == null) {
+            throw new BusinessException("排班记录不存在");
+        }
+        assertNotPast(existing.getScheduleDate(), "提交审核");
+        doSubmit(existing);
+    }
+
+    /** 草稿 → 待审核（单条与整周提交共用） */
+    private void doSubmit(BizClinicSource existing) {
+        if (!PublishStatusEnum.DRAFT.getCode().equals(existing.getPublishStatus())) {
+            throw new BusinessException("只有草稿状态的排班可以提交审核");
+        }
+        BizClinicSource update = new BizClinicSource();
+        update.setId(existing.getId());
+        update.setPublishStatus(PublishStatusEnum.PENDING.getCode());
+        clinicSourceMapper.updateById(update);
+        clinicSourceLogService.record(existing.getId(), ClinicSourceChangeTypeEnum.SUBMIT, null,
+                existing.getDoctorName() + " " + existing.getScheduleDate() + " 提交审核", existing);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int submitWeek(ScheduleQueryDTO query) {
+        LocalDate today = LocalDate.now();
+        List<BizClinicSource> drafts = listPage(query).stream()
+                .filter(s -> PublishStatusEnum.DRAFT.getCode().equals(s.getPublishStatus()))
+                // 历史班次跳过（不整批回滚），与单条 assertNotPast 同口径
+                .filter(s -> s.getScheduleDate() != null && !s.getScheduleDate().isBefore(today))
+                .toList();
+        if (drafts.isEmpty()) {
+            throw new BusinessException("区间内没有待提交的草稿排班（待审核/已发布/历史班次不会提交）");
+        }
+        for (BizClinicSource s : drafts) {
+            doSubmit(s);
+        }
+        return drafts.size();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void auditPublish(Long id) {
+        BizClinicSource existing = clinicSourceMapper.selectById(id);
+        if (existing == null) {
+            throw new BusinessException("排班记录不存在");
+        }
+        assertNotPast(existing.getScheduleDate(), "审核发布");
+        doAudit(existing);
+    }
+
+    /** 待审核 → 已发布（单条与整周发布共用）：补号段 + 同步出勤事实 + 留痕 */
+    private void doAudit(BizClinicSource existing) {
+        if (!PublishStatusEnum.PENDING.getCode().equals(existing.getPublishStatus())) {
+            throw new BusinessException("只有待审核状态的排班可以审核发布");
+        }
+        assertOutpatientAuditor(existing);
+        BizClinicSource update = new BizClinicSource();
+        update.setId(existing.getId());
+        update.setPublishStatus(PublishStatusEnum.PUBLISHED.getCode());
+        clinicSourceMapper.updateById(update);
+        // 审核发布后正式出号（仅医生号源；草稿期间不生成号段，这里一次性补齐）
+        if (StaffTypeEnum.hasSource(existing.getStaffType())) {
+            bizScheduleSlotService.regenerateForSchedule(existing, existing.getTotalSource(), existing.getAppointmentSource());
+        }
+        // 派生出勤事实同步生效：不然号源已发布、这个人却不计在岗
+        syncCoreSchedulePublish(existing.getStaffScheduleId(), PublishStatusEnum.PUBLISHED.getCode());
+        clinicSourceLogService.record(existing.getId(), ClinicSourceChangeTypeEnum.PUBLISH, null,
+                existing.getDoctorName() + " " + existing.getScheduleDate() + " 审核发布", existing);
+    }
+
+    /**
+     * 门诊排班审核人校验：系统管理员(10012)、门诊办(10035)全局豁免；
+     * 其余当前登录人必须是该班所属科室在科室主档指定的门诊审核人(outpatient_auditor_id)。
+     */
+    private void assertOutpatientAuditor(BizClinicSource schedule) {
+        CurrentUser user = UserUtils.getCurrentUser();
+        if (user == null) {
+            throw new BusinessException("未登录或登录已过期，请重新登录");
+        }
+        String role = user.getCurrentRole();
+        if (ROLE_ADMIN.equals(role) || ROLE_OUTPATIENT_OFFICE.equals(role)) {
+            return;
+        }
+        SysDepartment dept = schedule.getDeptId() == null ? null : sysDepartmentMapper.selectById(schedule.getDeptId());
+        if (dept == null || dept.getOutpatientAuditorId() == null
+                || !dept.getOutpatientAuditorId().equals(user.getEmployeeId())) {
+            throw new BusinessException("您不是本科室指定的门诊排班审核人，无权审核发布");
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int auditWeek(ScheduleQueryDTO query) {
+        LocalDate today = LocalDate.now();
+        List<BizClinicSource> pendings = listPage(query).stream()
+                .filter(s -> PublishStatusEnum.PENDING.getCode().equals(s.getPublishStatus()))
+                // 历史班次跳过（不整批回滚），与单条 assertNotPast 同口径
+                .filter(s -> s.getScheduleDate() != null && !s.getScheduleDate().isBefore(today))
+                .toList();
+        if (pendings.isEmpty()) {
+            throw new BusinessException("区间内没有待审核的排班（草稿需先提交，已发布/历史班次不会重复发布）");
+        }
+        for (BizClinicSource s : pendings) {
+            doAudit(s);
+        }
+        return pendings.size();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void recall(Long id) {
+        BizClinicSource existing = clinicSourceMapper.selectById(id);
+        if (existing == null) {
+            throw new BusinessException("排班记录不存在");
+        }
+        assertNotPast(existing.getScheduleDate(), "撤回");
+        // 任意态可撤回回草稿，并清掉已生成号源（撤回即不生效、不出号）
+        BizClinicSource update = new BizClinicSource();
+        update.setId(id);
+        update.setPublishStatus(PublishStatusEnum.DRAFT.getCode());
+        clinicSourceMapper.updateById(update);
+        if (StaffTypeEnum.hasSource(existing.getStaffType())) {
+            bizScheduleSlotService.physicalDeleteByScheduleId(id);
+        }
+        // 撤回后号源不生效，派生的出勤事实同步回草稿（在岗聚合要一起撤掉）
+        syncCoreSchedulePublish(existing.getStaffScheduleId(), PublishStatusEnum.DRAFT.getCode());
+        clinicSourceLogService.record(id, ClinicSourceChangeTypeEnum.RECALL, null,
+                existing.getDoctorName() + " " + existing.getScheduleDate() + " 撤回", existing);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void adjustStart(Long id) {
+        BizClinicSource existing = clinicSourceMapper.selectById(id);
+        if (existing == null) {
+            throw new BusinessException("排班记录不存在");
+        }
+        assertNotPast(existing.getScheduleDate(), "进入调班");
+        if (!PublishStatusEnum.isEffective(existing.getPublishStatus())) {
+            throw new BusinessException("只有已发布/已变更的排班可以进入调班");
+        }
+        // 进入调班中：锁定编辑，号源因 publishStatus 不在 (已发布/已变更) 自动冻结，患者侧不可约
+        BizClinicSource update = new BizClinicSource();
+        update.setId(id);
+        update.setPublishStatus(PublishStatusEnum.ADJUSTING.getCode());
+        clinicSourceMapper.updateById(update);
+        clinicSourceLogService.record(id, ClinicSourceChangeTypeEnum.ADJUST, null,
+                existing.getDoctorName() + " " + existing.getScheduleDate() + " 进入调班", existing);
+    }
+
+    /**
+     * 把号源行的发布态同步到它派生的那条出勤事实（biz_schedule）。
+     * 号源与出勤是两行，发布/撤回必须两边一起动，否则会出现「号源已发布、人却不计在岗」。
+     */
+    private void syncCoreSchedulePublish(Long staffScheduleId, Integer publishStatus) {
+        if (staffScheduleId == null) {
+            return;
+        }
+        BizSchedule update = new BizSchedule();
+        update.setId(staffScheduleId);
+        update.setPublishStatus(publishStatus);
+        staffScheduleService.updateById(update);
+    }
+
     // 今日在岗（排班的下游出口）
 
     @Override
@@ -853,6 +1061,8 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         wrapper.eq(BizClinicSource::getDeptId, deptId)
                 .eq(BizClinicSource::getScheduleDate, date)
                 .eq(BizClinicSource::getStatus, ScheduleStatusEnum.NORMAL.getCode())
+                .in(BizClinicSource::getPublishStatus,
+                        PublishStatusEnum.PUBLISHED.getCode(), PublishStatusEnum.CHANGED.getCode())
                 .isNotNull(BizClinicSource::getDoctorId);
         if (staffType != null) {
             wrapper.eq(BizClinicSource::getStaffType, staffType);
@@ -913,15 +1123,20 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
      * 合并门诊号源表与护理排班表，得到某科室当日全部候选用人在岗记录。
      */
     private List<DutyRow> collectDutyRows(Long deptId, LocalDate date, Integer staffType) {
-        List<DutyRow> rows = loadDaySchedule(deptId, date, staffType);
+        List<DutyRow> rows = new ArrayList<>(loadDaySchedule(deptId, date, staffType));
+        boolean doctorScope = staffType == null || staffType == StaffTypeEnum.DOCTOR.getCode();
         boolean includeNurse = staffType == null || staffType == StaffTypeEnum.NURSE.getCode();
+        // 医生口径：再并入本科室当日白班值班医生——门诊结束后仍能找到替科室兜底的值班人
+        if (doctorScope) {
+            mergeDeptDuty(rows, deptId, date);
+        }
         if (!includeNurse) {
             return rows;
         }
         LinkedHashMap<Long, DutyRow> byEmp = new LinkedHashMap<>();
         for (DutyRow r : rows) {
             if (r.staffId != null) {
-                byEmp.putIfAbsent(r.staffId, r);
+                byEmp.putIfAbsent(r.staffId, r); // 门诊号源优先，已有的人（含值班）不覆盖
             }
         }
         for (DutyRow n : loadNurseDaySchedule(deptId, date)) {
@@ -930,6 +1145,44 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
             }
         }
         return new ArrayList<>(byEmp.values());
+    }
+
+    /**
+     * 把本科室当日白班值班医生并入候选集；门诊号源已有的人不重复加，值班来源异常不阻断在岗解析。
+     */
+    private void mergeDeptDuty(List<DutyRow> rows, Long deptId, LocalDate date) {
+        List<DutyRosterVO> duties;
+        try {
+            duties = dutyRosterService.listDeptDayOnDuty(deptId, date);
+        } catch (Exception e) {
+            return;
+        }
+        Set<Long> exist = new HashSet<>();
+        for (DutyRow r : rows) {
+            if (r.staffId != null) {
+                exist.add(r.staffId);
+            }
+        }
+        for (DutyRosterVO d : duties) {
+            Long empId = d.getActualEmpId() != null ? d.getActualEmpId() : d.getEmployeeId();
+            String name = d.getActualEmpName() != null ? d.getActualEmpName() : d.getEmployeeName();
+            if (empId == null || exist.contains(empId)) {
+                continue;
+            }
+            exist.add(empId);
+            DutyRow r = new DutyRow();
+            r.scheduleId = d.getId();
+            r.staffId = empId;
+            r.staffName = name;
+            r.staffType = StaffTypeEnum.DOCTOR.getCode();
+            r.deptId = d.getDeptId();
+            r.deptName = d.getDeptName();
+            r.shiftId = null;
+            r.startTime = d.getStartTime();
+            r.endTime = d.getEndTime();
+            r.status = 1;
+            rows.add(r);
+        }
     }
 
     private OnDutyStaffVO toOnDutyVO(DutyRow r, LocalTime moment) {

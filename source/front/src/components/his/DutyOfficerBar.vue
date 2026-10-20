@@ -26,7 +26,7 @@
         </template>
         <span class="duty-hint">
           {{ duty && duty.emptyReason ? duty.emptyReason : '当日总值班未排班，全院应急协调当前无人接手' }}
-          —— 请在「组织与资源 → 总值班排班」登记
+          —— 请在「排班值守中心 → 全院总值班」登记
         </span>
       </el-alert>
     </template>

@@ -77,7 +77,7 @@ public interface BizClinicSourceMapper extends BaseMapper<BizClinicSource> {
             + "IFNULL(SUM(total_source), 0) AS totalSource, IFNULL(SUM(used_source), 0) AS usedSource, "
             + "SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS stoppedCount "
             + "FROM biz_clinic_source "
-            + "WHERE del_flag = 0 AND schedule_date BETWEEN #{begin} AND #{end} "
+            + "WHERE del_flag = 0 AND publish_status IN (2, 4) AND schedule_date BETWEEN #{begin} AND #{end} "
             + "GROUP BY schedule_date")
     List<OverviewClinicDayVO> summaryByDay(@Param("begin") LocalDate begin, @Param("end") LocalDate end);
 }

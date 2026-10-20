@@ -91,7 +91,7 @@ public class InfectiousReportServiceImpl extends ServiceImpl<BizInfectiousReport
     }
 
     @Override
-    public List<InfectiousReportVO.DiseaseSelectListVO> diseaseSelectList(String keyword) {
+    public List<InfectiousReportVO.DiseaseSelectListVO> selectList(String keyword) {
         LambdaQueryWrapper<SysInfectiousDisease> w = new LambdaQueryWrapper<SysInfectiousDisease>()
                 .eq(SysInfectiousDisease::getStatus, 1)
                 .eq(SysInfectiousDisease::getDelFlag, 0)

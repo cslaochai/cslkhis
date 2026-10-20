@@ -3,13 +3,16 @@ package com.his.system.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.system.dto.NurseDutyRow;
+import com.his.system.dto.StaffCheckRow;
 import com.his.system.vo.NurseScheduleVO;
+import com.his.system.vo.StaffWorkloadVO;
 import com.his.system.vo.StaffWorkingGroupVO;
 import com.his.system.entity.BizSchedule;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -30,7 +33,8 @@ public interface BizScheduleMapper extends BaseMapper<BizSchedule> {
             + "NULLIF(shift_id, 0) AS shift_id, start_time, end_time, duty_status AS schedule_status "
             + "FROM biz_schedule "
             + "WHERE del_flag = 0 AND staff_type IN (2, 7) "
-            + "AND dept_id = #{deptId} AND schedule_date = #{date} AND duty_status = 1")
+            + "AND dept_id = #{deptId} AND schedule_date = #{date} AND duty_status = 1 "
+            + "AND publish_status IN (2, 4)")
     List<NurseDutyRow> listOnDuty(@Param("deptId") Long deptId, @Param("date") LocalDate date);
 
     /**
@@ -187,7 +191,8 @@ public interface BizScheduleMapper extends BaseMapper<BizSchedule> {
                    DATE_FORMAT(s.schedule_date, '%Y-%m-%d') AS scheduleDate,
                    s.week_day AS weekDay, NULLIF(s.shift_id, 0) AS shiftId, f.shift_name AS shiftName,
                    s.start_time AS startTime, s.end_time AS endTime, s.work_minutes AS workMinutes,
-                   s.duty_status AS scheduleStatus, s.schedule_source AS scheduleSource, s.remark
+                   s.duty_status AS scheduleStatus, s.publish_status AS publishStatus,
+                   s.schedule_source AS scheduleSource, s.remark
               FROM biz_schedule s
               LEFT JOIN biz_shift f ON f.id = s.shift_id
              WHERE s.del_flag = 0 AND s.staff_type IN (2, 7)
@@ -265,7 +270,8 @@ public interface BizScheduleMapper extends BaseMapper<BizSchedule> {
                    l.employee_id AS employeeId, l.emp_code AS empCode, l.employee_name AS nurseName,
                    e.title AS nurseTitle, NULLIF(l.shift_id, 0) AS shiftId, f.shift_name AS shiftName,
                    l.start_time AS startTime, l.end_time AS endTime, l.work_minutes AS workMinutes,
-                   l.duty_status AS scheduleStatus, l.schedule_source AS scheduleSource, l.remark
+                   l.duty_status AS scheduleStatus, l.publish_status AS publishStatus,
+                   l.schedule_source AS scheduleSource, l.remark
               FROM biz_schedule l
               LEFT JOIN biz_shift f ON f.id = l.shift_id
               LEFT JOIN sys_employee e ON e.id = l.employee_id
@@ -336,8 +342,142 @@ public interface BizScheduleMapper extends BaseMapper<BizSchedule> {
     @Select("SELECT schedule_date AS scheduleDate, org_type AS orgType, org_id AS orgId, "
             + "MAX(org_name) AS orgName, shift_id AS shiftId, staff_type AS staffType, COUNT(*) AS cnt "
             + "FROM biz_schedule "
-            + "WHERE del_flag = 0 AND duty_status = 1 AND schedule_date BETWEEN #{begin} AND #{end} "
+            + "WHERE del_flag = 0 AND duty_status = 1 AND publish_status IN (2, 4) "
+            + "AND schedule_date BETWEEN #{begin} AND #{end} "
             + "GROUP BY schedule_date, org_type, org_id, shift_id, staff_type")
     List<StaffWorkingGroupVO> groupWorkingByUnitShift(@Param("begin") LocalDate begin,
                                                       @Param("end") LocalDate end);
+
+    /**
+     * 整周批量迁移发布态：只搬「本单元 + 本周 + 指定原态」的行，不碰已发布/已变更/调班中。
+     * 整周提交（草稿0→待审核1）与整周审核发布（待审核1→已发布2）共用这一条 UPDATE。
+     *
+     * @return 实际迁移行数
+     */
+    @Update("UPDATE biz_schedule SET publish_status = #{toStatus} "
+            + "WHERE del_flag = 0 AND staff_type IN (2, 7) "
+            + "AND org_type = #{orgType} AND org_id = #{orgId} "
+            + "AND schedule_date BETWEEN #{startDate} AND #{endDate} "
+            + "AND publish_status = #{fromStatus}")
+    int updateWeekPublishStatus(@Param("orgType") Integer orgType, @Param("orgId") Long orgId,
+                                @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate,
+                                @Param("fromStatus") Integer fromStatus, @Param("toStatus") Integer toStatus);
+
+    /**
+     * 整周批量迁移发布态（全区岗位通用版）：与 {@link #updateWeekPublishStatus} 的唯一区别是
+     * 不过滤 staff_type，覆盖医生/护理/医技/药学/收费/行政等全部岗位类别。
+     * 用于「全院岗位排班」整周提交/整周审核发布。
+     *
+     * @return 实际迁移行数
+     */
+    @Update("UPDATE biz_schedule SET publish_status = #{toStatus} "
+            + "WHERE del_flag = 0 "
+            + "AND org_type = #{orgType} AND org_id = #{orgId} "
+            + "AND schedule_date BETWEEN #{startDate} AND #{endDate} "
+            + "AND publish_status = #{fromStatus}")
+    int updateWeekPublishStatusAll(@Param("orgType") Integer orgType, @Param("orgId") Long orgId,
+                                   @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate,
+                                   @Param("fromStatus") Integer fromStatus, @Param("toStatus") Integer toStatus);
+
+    /**
+     * 区间内全部排班行（全区岗位通用，含班次夜班标记）：
+     * 员工排班页「规则校验」一次捞齐，避免按人按日逐条查询。
+     */
+    @Select("""
+            <script>
+            SELECT s.id, s.schedule_date AS scheduleDate, s.org_type AS orgType, s.org_id AS orgId,
+                   s.org_name AS orgName, s.employee_id AS employeeId, s.emp_code AS empCode,
+                   s.employee_name AS employeeName, s.staff_type AS staffType,
+                   NULLIF(s.shift_id, 0) AS shiftId, f.shift_name AS shiftName,
+                   s.start_time AS startTime, s.end_time AS endTime, s.work_minutes AS workMinutes,
+                   s.duty_status AS dutyStatus, s.publish_status AS publishStatus,
+                   IFNULL(f.is_night, 0) AS isNight
+              FROM biz_schedule s
+              LEFT JOIN biz_shift f ON f.id = s.shift_id
+             WHERE s.del_flag = 0
+            <if test="orgType != null"> AND s.org_type = #{orgType}</if>
+            <if test="orgId != null"> AND s.org_id = #{orgId}</if>
+            <if test="staffType != null"> AND s.staff_type = #{staffType}</if>
+               AND s.schedule_date BETWEEN #{startDate} AND #{endDate}
+             ORDER BY s.employee_id, s.schedule_date, s.start_time, s.id
+            </script>
+            """)
+    List<StaffCheckRow> selectStaffCheckRows(@Param("orgType") Integer orgType,
+                                             @Param("orgId") Long orgId,
+                                             @Param("staffType") Integer staffType,
+                                             @Param("startDate") LocalDate startDate,
+                                             @Param("endDate") LocalDate endDate);
+
+    /**
+     * 月度工时（全区岗位通用）：一人一行，含未排班补齐前的已写天数。
+     * 与护理版 selectWorkload 的区别：不限护理序列，可加岗位类别过滤。
+     */
+    @Select("""
+            <script>
+            SELECT t.employee_id AS employeeId, MAX(t.emp_code) AS empCode, MAX(t.employee_name) AS employeeName,
+                   MAX(t.staff_type) AS staffType,
+                   SUM(t.is_work) AS workDays,
+                   SUM(t.is_rest) AS restDays,
+                   SUM(t.is_leave) AS leaveDays,
+                   SUM(t.is_training) AS trainingDays,
+                   SUM(t.is_suspended) AS suspendedDays,
+                   SUM(t.is_night) AS nightDays,
+                   SUM(t.minutes) AS workMinutes,
+                   ROUND(SUM(t.minutes) / 60, 1) AS workHours,
+                   COUNT(*) AS writtenDays
+              FROM (
+                SELECT employee_id, MAX(emp_code) AS emp_code, MAX(employee_name) AS employee_name,
+                       MAX(staff_type) AS staff_type, schedule_date,
+                       MAX(CASE WHEN duty_status = 1 THEN 1 ELSE 0 END) AS is_work,
+                       MAX(CASE WHEN duty_status = 2 THEN 1 ELSE 0 END) AS is_rest,
+                       MAX(CASE WHEN duty_status = 3 THEN 1 ELSE 0 END) AS is_leave,
+                       MAX(CASE WHEN duty_status = 4 THEN 1 ELSE 0 END) AS is_training,
+                       MAX(CASE WHEN duty_status = 5 THEN 1 ELSE 0 END) AS is_suspended,
+                       MAX(CASE WHEN duty_status = 1 AND (start_time &lt; '08:00' OR start_time &gt;= '16:00')
+                                THEN 1 ELSE 0 END) AS is_night,
+                       COALESCE(SUM(CASE WHEN duty_status = 1 THEN work_minutes ELSE 0 END), 0) AS minutes
+                  FROM biz_schedule
+                 WHERE del_flag = 0
+                <if test="orgType != null"> AND org_type = #{orgType}</if>
+                <if test="orgId != null"> AND org_id = #{orgId}</if>
+                <if test="staffType != null"> AND staff_type = #{staffType}</if>
+                   AND schedule_date BETWEEN #{startDate} AND #{endDate}
+                 GROUP BY employee_id, schedule_date
+              ) t
+             GROUP BY t.employee_id
+             ORDER BY MAX(t.emp_code), t.employee_id
+            </script>
+            """)
+    List<StaffWorkloadVO.Workload> selectStaffWorkload(@Param("orgType") Integer orgType,
+                                                       @Param("orgId") Long orgId,
+                                                       @Param("staffType") Integer staffType,
+                                                       @Param("startDate") LocalDate startDate,
+                                                       @Param("endDate") LocalDate endDate);
+
+    /**
+     * 排班单元在册人员（用于月度工时补齐「整月未排」的人）：
+     * 科室口径按 dept_id 取，病区口径按病区所属科室取；全院口径人太多不在本接口处理。
+     * 岗位类别按员工岗位角色上的 staff_type 过滤。
+     */
+    @Select("""
+            <script>
+            SELECT e.id AS employeeId, e.emp_code AS empCode, e.emp_name AS employeeName,
+                   MAX(r.staff_type) AS staffType
+              FROM sys_employee e
+              JOIN sys_employee_post p ON p.employee_id = e.id
+              JOIN sys_role r ON r.id = p.role_id
+             WHERE e.del_flag = 0 AND e.status = 1
+               AND r.del_flag = 0 AND r.status = 1
+               AND (
+                 ( #{orgType} = 1 AND e.dept_id = #{orgId} )
+                 OR ( #{orgType} = 2 AND e.dept_id = (SELECT dept_id FROM sys_ward WHERE ward_id = #{orgId} AND status = 1) )
+               )
+            <if test="staffType != null"> AND r.staff_type = #{staffType}</if>
+             GROUP BY e.id, e.emp_code, e.emp_name
+             ORDER BY e.emp_code, e.id
+            </script>
+            """)
+    List<StaffWorkloadVO.Workload> selectUnitStaff(@Param("orgType") Integer orgType,
+                                                   @Param("orgId") Long orgId,
+                                                   @Param("staffType") Integer staffType);
 }

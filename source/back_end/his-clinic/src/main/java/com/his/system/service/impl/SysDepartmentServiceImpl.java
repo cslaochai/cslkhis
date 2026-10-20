@@ -174,12 +174,19 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
         }
         DepartmentVO vo = new DepartmentVO();
         BeanUtils.copyProperties(dept, vo);
-        // 填充负责人姓名
-        if (dept.getDeptLeaderId() != null) {
-            SysEmployee emp = sysEmployeeMapper.selectById(dept.getDeptLeaderId());
-            if (emp != null) {
-                vo.setDeptLeaderName(emp.getEmpName());
-            }
+        // 三个人员字段（负责人/门诊审核人/护理审核人）批量一次查名，避免 N+1
+        Set<Long> empIds = new HashSet<>();
+        if (dept.getDeptLeaderId() != null) empIds.add(dept.getDeptLeaderId());
+        if (dept.getOutpatientAuditorId() != null) empIds.add(dept.getOutpatientAuditorId());
+        if (dept.getNursingAuditorId() != null) empIds.add(dept.getNursingAuditorId());
+        if (dept.getScheduleAuditorId() != null) empIds.add(dept.getScheduleAuditorId());
+        if (!empIds.isEmpty()) {
+            Map<Long, String> nameMap = sysEmployeeMapper.selectBatchIds(empIds).stream()
+                    .collect(Collectors.toMap(SysEmployee::getId, SysEmployee::getEmpName, (a, b) -> a));
+            if (dept.getDeptLeaderId() != null) vo.setDeptLeaderName(nameMap.get(dept.getDeptLeaderId()));
+            if (dept.getOutpatientAuditorId() != null) vo.setOutpatientAuditorName(nameMap.get(dept.getOutpatientAuditorId()));
+            if (dept.getNursingAuditorId() != null) vo.setNursingAuditorName(nameMap.get(dept.getNursingAuditorId()));
+            if (dept.getScheduleAuditorId() != null) vo.setScheduleAuditorName(nameMap.get(dept.getScheduleAuditorId()));
         }
         return vo;
     }

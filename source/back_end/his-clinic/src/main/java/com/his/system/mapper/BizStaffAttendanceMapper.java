@@ -76,18 +76,10 @@ public interface BizStaffAttendanceMapper extends BaseMapper<BizStaffAttendance>
     BizShift selectShift(@Param("shiftId") Long shiftId);
 
 
-    @Select("""
-            <script>
-            SELECT * FROM v_staff_worktime
-            WHERE work_date BETWEEN #{startDate} AND #{endDate}
-              <if test="orgType != null">AND org_type = #{orgType}</if>
-              <if test="orgId != null">AND org_id = #{orgId}</if>
-              <if test="staffType != null">AND staff_type = #{staffType}</if>
-              <if test="employeeId != null">AND employee_id = #{employeeId}</if>
-              <if test="diffType != null">AND diff_type = #{diffType}</if>
-            ORDER BY work_date, org_type, org_id, employee_id
-            </script>
-            """)
+    /**
+     * 行级对照（计划 vs 实际）。聚合逻辑见 mapper/BizStaffAttendanceMapper.xml 的 worktimeBase，
+     * 原库视图 v_staff_worktime 已退役（视图依赖旧表 biz_staff_schedule，表改名后失效）。
+     */
     List<StaffWorktimeVO> selectComparison(@Param("startDate") LocalDate startDate,
                                            @Param("endDate") LocalDate endDate,
                                            @Param("orgType") Integer orgType,
@@ -96,32 +88,20 @@ public interface BizStaffAttendanceMapper extends BaseMapper<BizStaffAttendance>
                                            @Param("employeeId") Long employeeId,
                                            @Param("diffType") Integer diffType);
 
-    @Select("""
-            <script>
-            SELECT * FROM v_staff_worktime_summary
-            WHERE work_date BETWEEN #{startDate} AND #{endDate}
-              <if test="orgType != null">AND org_type = #{orgType}</if>
-              <if test="orgId != null">AND org_id = #{orgId}</if>
-              <if test="staffType != null">AND staff_type = #{staffType}</if>
-            ORDER BY work_date, org_type, org_id
-            </script>
-            """)
+    /**
+     * 单元 × 日 执行汇总。聚合逻辑见 mapper/BizStaffAttendanceMapper.xml 的 summaryAgg，
+     * 原库视图 v_staff_worktime_summary 已退役。
+     */
     List<WorktimeSummaryVO> selectSummary(@Param("startDate") LocalDate startDate,
                                           @Param("endDate") LocalDate endDate,
                                           @Param("orgType") Integer orgType,
                                           @Param("orgId") Long orgId,
                                           @Param("staffType") Integer staffType);
 
-    @Select("""
-            <script>
-            SELECT * FROM v_staff_calibration_advice
-            WHERE 1 = 1
-              <if test="orgType != null">AND org_type = #{orgType}</if>
-              <if test="orgId != null">AND org_id = #{orgId}</if>
-              <if test="staffType != null">AND staff_type = #{staffType}</if>
-            ORDER BY FIELD(advice_type, 1, 3, 4, 2), unrecorded_head_days DESC
-            </script>
-            """)
+    /**
+     * 编制校准建议（近 14 天）。聚合逻辑见 mapper/BizStaffAttendanceMapper.xml 的 adviceAgg，
+     * 原库视图 v_staff_calibration_advice 已退役。
+     */
     List<CalibrationAdviceVO> selectAdvice(@Param("orgType") Integer orgType,
                                            @Param("orgId") Long orgId,
                                            @Param("staffType") Integer staffType);

@@ -84,10 +84,4 @@ public enum ClinicDiagnosisTierEnum {
         }
         return null;
     }
-
-    /** 展示用文案；未知码值回落成码值本身（前端字典缺失时不至于空白） */
-    public static String textOf(Integer code) {
-        ClinicDiagnosisTierEnum e = ofCode(code);
-        return e == null ? String.valueOf(code) : e.label;
-    }
 }

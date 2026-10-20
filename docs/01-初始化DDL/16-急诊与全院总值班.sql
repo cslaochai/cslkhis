@@ -146,6 +146,7 @@ CREATE TABLE `biz_duty_roster`
     `start_time`          varchar(5) COMMENT '班次开始时间（HH:mm）',
     `end_time`            varchar(5) COMMENT '班次结束时间（HH:mm）',
     `status`              tinyint     NOT NULL COMMENT '状态（1-有效 0-停用）',
+    `publish_status`      tinyint     NOT NULL COMMENT '发布态（0-草稿 1-待审核 2-已发布 3-调班中 4-已变更）',
     `substitute_emp_id`   bigint COMMENT '临时换班后的实际值班人',
     `substitute_emp_name` varchar(50) COMMENT '换班后实际值班人姓名（快照）',
     `substitute_time`     datetime COMMENT '换班时间',

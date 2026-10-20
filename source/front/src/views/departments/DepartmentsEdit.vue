@@ -58,6 +58,34 @@
           </el-radio-group>
         </el-form-item>
       </div>
+      <div class="grid grid-cols-2 gap-4">
+        <el-form-item label="门诊审核人">
+          <el-select v-model="formData.outpatientAuditorId" :fit-input-width="false" class="w-full" clearable
+                     filterable
+                     placeholder="审本科室门诊排班的指定人">
+            <el-option v-for="e in employeeList" :key="e.id"
+                       :label="`${e.empName}（${e.title || '无职称'}）`" :value="e.id"/>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="护理审核人">
+          <el-select v-model="formData.nursingAuditorId" :fit-input-width="false" class="w-full" clearable
+                     filterable
+                     placeholder="审本科室护理排班的指定人">
+            <el-option v-for="e in employeeList" :key="e.id"
+                       :label="`${e.empName}（${e.title || '无职称'}）`" :value="e.id"/>
+          </el-select>
+        </el-form-item>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <el-form-item label="排班审核人">
+          <el-select v-model="formData.scheduleAuditorId" :fit-input-width="false" class="w-full" clearable
+                     filterable
+                     placeholder="审本科室全院岗位排班的指定人">
+            <el-option v-for="e in employeeList" :key="e.id"
+                       :label="`${e.empName}（${e.title || '无职称'}）`" :value="e.id"/>
+          </el-select>
+        </el-form-item>
+      </div>
       <el-form-item label="科室简介">
         <el-input v-model="formData.deptDesc" :rows="3" placeholder="请输入科室简介" type="textarea"/>
       </el-form-item>
@@ -106,6 +134,9 @@ const formData = reactive({
   location: '',
   contactPhone: '',
   deptLeaderId: null,
+  outpatientAuditorId: null,
+  nursingAuditorId: null,
+  scheduleAuditorId: null,
   deptDesc: '',
   status: 1,
 });
@@ -134,6 +165,9 @@ const resetForm = () => {
   formData.location = '';
   formData.contactPhone = '';
   formData.deptLeaderId = null;
+  formData.outpatientAuditorId = null;
+  formData.nursingAuditorId = null;
+  formData.scheduleAuditorId = null;
   formData.deptDesc = '';
   formData.status = 1;
 };

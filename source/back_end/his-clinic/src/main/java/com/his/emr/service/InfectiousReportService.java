@@ -28,7 +28,7 @@ public interface InfectiousReportService {
      * 法定传染病病种下拉：只出启用目录项，按甲乙丙类别与编码排序，单次最多 50 条。
      * 用于填卡弹框选病种，选中项带报卡时限与 ICD 编码供表单回显。
      */
-    List<InfectiousReportVO.DiseaseSelectListVO> diseaseSelectList(String keyword);
+    List<InfectiousReportVO.DiseaseSelectListVO> selectList(String keyword);
 
     /**
      * 报卡统计：待审核/已审核/已直报/已退报四态计数，加超时未报、今日新增与甲类在办，科室数据范围随登录岗位收口。

@@ -47,6 +47,49 @@ export function copyNurseScheduleWeek(data) {
   return request.post('/nursing/schedule/copyWeek', data)
 }
 
+// 批量铺班：共用「状态+班次」× 选中日期 × 多选护士，只填空缺格、已排的跳过不覆盖
+export function batchUpsertNurseSchedule(data) {
+  return request.post('/nursing/schedule/batchUpsert', data)
+}
+
+// 审批与变更留痕分页（审计：谁在何时对哪位护士哪天做了提交/发布/撤回/调班/改格）
+export function listNurseScheduleLogPage(data) {
+  return request.post('/nursing/schedule/logPage', data)
+}
+
+// ========== 发布态流转（G-15：排班保存只到草稿，审核发布后才计在岗） ==========
+// 入参 id = 一行排班的主键（矩阵 Cell.id / 台账 Row.id，后端已 ToStringSerializer 字符串化）
+
+// 提交审核：草稿 → 待审核（排班人自己提交，仍要审核发布才生效）
+export function submitNurseSchedule(id) {
+  return request.post('/nursing/schedule/submit', null, { params: { id } })
+}
+
+// 审核发布：待审核 → 已发布（此后才计入在岗 / 需求层 / 全院视图）
+export function auditPublishNurseSchedule(id) {
+  return request.post('/nursing/schedule/auditPublish', null, { params: { id } })
+}
+
+// 撤回：任意态 → 草稿（撤回后立刻不计在岗，二次确认由调用方把关）
+export function recallNurseSchedule(id) {
+  return request.post('/nursing/schedule/recall', null, { params: { id } })
+}
+
+// 进入调班：已发布/已变更 → 调班中（锁定，改完保存自动转「已变更」）
+export function adjustStartNurseSchedule(id) {
+  return request.post('/nursing/schedule/adjustStart', null, { params: { id } })
+}
+
+// 整周提交审核：本周草稿 → 待审核（入参 { unitType, wardId, weekStart }）
+export function submitWeekNurseSchedule(data) {
+  return request.post('/nursing/schedule/submitWeek', data)
+}
+
+// 整周审核发布：本周待审核 → 已发布（此后计在岗；入参 { unitType, wardId, weekStart }）
+export function auditWeekNurseSchedule(data) {
+  return request.post('/nursing/schedule/auditWeek', data)
+}
+
 // ========== 规则校验 / 工时 / 台账 ==========
 
 // 区间规则校验（告警明细，不阻断保存）

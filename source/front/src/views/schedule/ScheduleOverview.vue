@@ -1,95 +1,233 @@
 <template>
-  <div class="w-full" data-testid="schedule-overview">
-    <!-- 周切换工具行 -->
-    <div class="mb-3 flex flex-wrap items-center gap-3">
+  <div
+      class="flex flex-col"
+      data-testid="schedule-overview"
+      style="height: var(--his-page-h); min-height: 420px;"
+  >
+    <!-- 查询行：周期切换 + 矩阵切片条件（接口只按周取数，这三个条件切的是本周已返回的矩阵行） -->
+    <div class="mb-3 flex shrink-0 flex-wrap items-center gap-3">
       <el-button-group>
         <el-button data-testid="btn-prev-week" @click="shiftWeek(-7)">上一周</el-button>
         <el-button data-testid="btn-this-week" @click="shiftWeek(0)">本周</el-button>
         <el-button data-testid="btn-next-week" @click="shiftWeek(7)">下一周</el-button>
       </el-button-group>
       <span class="text-sm font-medium text-slate-600" data-testid="week-label">{{ weekLabel }}</span>
+      <el-select v-model="orgTypeFilter" :fit-input-width="false" class="!w-36" clearable
+                 data-testid="filter-org-type" placeholder="全部单元类型">
+        <el-option v-for="o in ORG_UNIT_TYPE_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
+      </el-select>
+      <el-input v-model="orgKeyword" :prefix-icon="Search" class="!w-52" clearable
+                data-testid="filter-org-name" placeholder="搜索单元名称"/>
+      <el-switch v-model="onlyShortfall" active-text="只看有缺口" data-testid="filter-only-shortfall"/>
+      <span class="ml-auto text-xs text-slate-400" data-testid="matrix-row-count">
+        当前显示 {{ matrixRows.length }} / {{ allMatrixRows.length }} 个单元
+      </span>
     </div>
 
-    <!-- 岗位卡片行：本周出勤人次（事实层 biz_staff_schedule 聚合） -->
-    <div class="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6" data-testid="staff-type-cards">
-      <div v-for="card in staffTypeCards" :key="card.staffType"
-           class="rounded-md border border-slate-200 bg-white px-4 py-2 text-center">
+    <!-- 指标卡行：本周有出勤的岗位才上图；全 0 的岗位不占位置。右侧三张是全院层面的警示/汇总 -->
+    <div class="mb-3 grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6" data-testid="staff-type-cards">
+      <div v-for="card in activeStaffCards" :key="card.staffType"
+           class="rounded-md border border-slate-200 bg-white px-3 py-2 text-center">
         <p :data-testid="`card-staff-type-${card.staffType}`" class="text-xl font-semibold text-slate-800">{{
             card.total
           }}</p>
-        <p class="text-xs text-slate-400">{{ card.label }} · 本周出勤人次</p>
+        <p class="text-xs text-slate-500">{{ card.label }}</p>
+        <p class="text-[10px] text-slate-400">本周出勤人次</p>
+      </div>
+
+      <!-- 人力缺口：实际在岗低于配置标准的累计缺员 -->
+      <div
+          :class="['rounded-md border px-3 py-2 text-center', weekShortfallTotal > 0 ? 'border-red-200 bg-red-50' : 'border-slate-200 bg-white']"
+          data-testid="card-shortfall">
+        <p :class="weekShortfallTotal > 0 ? 'text-xl font-semibold text-red-600' : 'text-xl font-semibold text-slate-800'">
+          {{ weekShortfallTotal }}
+        </p>
+        <p class="text-xs text-slate-500">人力缺口（人）</p>
+        <p class="text-[10px] text-slate-400">{{ weekShortfallCells }} 个单元·日缺员</p>
+      </div>
+
+      <!-- 门诊出诊：号源是另一套度量，单独成卡，不与在岗人次并列 -->
+      <div class="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-center"
+           data-testid="card-clinic">
+        <p class="text-xl font-semibold text-emerald-700">
+          {{ clinicWeek.used }}<span class="text-sm font-normal text-emerald-600/70"> / {{ clinicWeek.total }}</span>
+        </p>
+        <p class="text-xs text-emerald-700/80">已挂 / 总号源</p>
+        <p class="text-[10px] text-emerald-600/70">
+          {{ clinicWeek.shiftCount }} 个出诊班 · {{ clinicWeek.pct == null ? '无号源' : `利用率 ${clinicWeek.pct}%` }}
+        </p>
+      </div>
+
+      <!-- 停诊班次 -->
+      <div
+          :class="['rounded-md border px-3 py-2 text-center', clinicWeek.stopped > 0 ? 'border-red-200 bg-red-50' : 'border-slate-200 bg-white']"
+          data-testid="card-stopped">
+        <p :class="clinicWeek.stopped > 0 ? 'text-xl font-semibold text-red-600' : 'text-xl font-semibold text-slate-800'">
+          {{ clinicWeek.stopped }}
+        </p>
+        <p class="text-xs text-slate-500">停诊班次</p>
+        <p class="text-[10px] text-slate-400">点击出诊计划查看明细</p>
       </div>
     </div>
 
-    <!-- 单元 × 日期 矩阵：出勤人次 + 缺口红角标 + 门诊号源行 -->
-    <div class="mb-4 overflow-x-auto rounded-md border border-slate-200 bg-white" data-testid="unit-matrix">
-      <table class="w-full min-w-[880px] border-collapse text-sm">
-        <thead>
-        <tr class="bg-slate-50 text-slate-500">
-          <th class="px-3 py-2 text-left font-medium">单元</th>
-          <th v-for="d in days" :key="d.date" :class="{ 'bg-blue-50 text-blue-600': d.date === todayStr }"
-              class="px-2 py-2 text-center font-medium">
-            {{ d.label }}<br/><span class="text-xs font-normal">{{ d.date.slice(5) }}</span>
-          </th>
-          <th class="px-3 py-2 text-center font-medium">周合计</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr v-for="row in matrixRows" :key="row.key" class="border-t border-slate-100 hover:bg-slate-50/60">
-          <td class="px-3 py-2 text-slate-700">
-            {{ row.orgName }}
-            <span class="ml-1 text-xs text-slate-400">{{ orgTypeLabel(row.orgType) }}</span>
-          </td>
-          <td v-for="d in days" :key="d.date" :class="{ 'bg-blue-50/50': d.date === todayStr }"
-              class="px-2 py-2 text-center">
-            <template v-if="row.cells[d.date] !== undefined">
-                <span class="relative inline-block">
-                  <span :class="row.cells[d.date] > 0 ? 'text-slate-700' : 'text-slate-300'">{{
-                      row.cells[d.date]
-                    }}</span>
-                  <span v-if="row.shortfalls[d.date]"
-                        :title="row.shortfallTitles[d.date]"
-                        class="absolute -right-3 -top-1.5 rounded-full bg-red-500 px-1 text-[10px] leading-3 text-white">{{ row.shortfalls[d.date] }}</span>
-                </span>
-            </template>
-            <span v-else class="text-slate-200">—</span>
-          </td>
-          <td class="px-3 py-2 text-center font-medium text-slate-700">{{ row.weekTotal }}</td>
-        </tr>
-        <!-- 门诊号源行：已挂/总号源，停诊班次红点 -->
-        <tr class="border-t border-slate-100 bg-emerald-50/30 hover:bg-emerald-50/50" data-testid="clinic-row">
-          <td class="px-3 py-2 text-emerald-700">门诊号源 <span class="ml-1 text-xs text-emerald-500/70">出诊计划</span>
-          </td>
-          <td v-for="d in days" :key="d.date" :class="{ 'bg-emerald-50/60': d.date === todayStr }"
-              class="px-2 py-2 text-center">
-            <template v-if="clinicByDay[d.date]">
-                <span class="relative inline-block">
-                  <span class="text-emerald-700">{{ clinicByDay[d.date].used }}/{{ clinicByDay[d.date].total }}</span>
-                  <span v-if="clinicByDay[d.date].stoppedCount > 0"
-                        :title="`停诊 ${clinicByDay[d.date].stoppedCount} 个班次`"
-                        class="absolute -right-3 -top-1.5 rounded-full bg-red-500 px-1 text-[10px] leading-3 text-white">{{
-                      clinicByDay[d.date].stoppedCount
-                    }}</span>
-                </span>
-            </template>
-            <span v-else class="text-slate-200">—</span>
-          </td>
-          <td class="px-3 py-2 text-center font-medium text-emerald-700">
-            {{ clinicWeekTotal.used }}/{{ clinicWeekTotal.total }}
-          </td>
-        </tr>
-        </tbody>
-      </table>
-    </div>
+    <!-- 两类事实分视图：科室在岗（人次）与门诊出诊（号源）量纲不同，真实 HIS 也从不混在一张矩阵里 -->
+    <el-tabs v-model="activeTab" class="min-h-0 flex-1" data-testid="overview-tabs">
+      <!-- 视图一：排班单元 × 日期 在岗人次矩阵，点格子看当日排班名单 -->
+      <el-tab-pane label="科室在岗" name="unit" class="min-h-0">
+        <div class="flex min-h-0 flex-1 flex-col rounded-md border border-slate-200 bg-white" data-testid="unit-matrix">
+          <div class="flex shrink-0 items-center justify-between px-3 pt-2">
+            <h3 class="text-sm font-semibold text-slate-700">排班单元 × 日期在岗人次</h3>
+            <span class="text-xs text-slate-400">点格子看该单元当日排班名单；红格 = 当日缺员</span>
+          </div>
+          <div v-loading="loading" class="min-h-0 flex-1 overflow-auto overscroll-contain px-3 pb-2">
+            <table class="w-full min-w-[880px] border-collapse text-sm">
+              <thead>
+              <tr class="text-slate-500">
+                <th class="sticky left-0 top-0 z-20 bg-slate-50 px-3 py-2 text-left font-medium">单元</th>
+                <th v-for="d in days" :key="d.date"
+                    :class="{ 'bg-blue-50 text-blue-600': d.date === todayStr }"
+                    class="sticky top-0 z-10 bg-slate-50 px-2 py-2 text-center font-medium">
+                  {{ d.label }}<br/><span class="text-xs font-normal">{{ d.date.slice(5) }}</span>
+                </th>
+                <th class="sticky right-0 top-0 z-20 bg-slate-50 px-3 py-2 text-center font-medium">周合计(人次)</th>
+              </tr>
+              </thead>
+              <tbody>
+              <tr v-for="row in matrixRows" :key="row.key" class="border-t border-slate-100">
+                <td class="sticky left-0 z-10 border-r border-slate-100 bg-white px-3 py-1.5 text-slate-700">
+                  {{ row.orgName }}
+                  <span class="ml-1 text-xs text-slate-400">{{ orgUnitTypeText(row.orgType) }}</span>
+                </td>
+                <td v-for="d in days" :key="d.date"
+                    :class="['px-1 py-1 text-center', { 'bg-blue-50/50': d.date === todayStr }]">
+                  <button :data-testid="`matrix-cell-${row.orgId}-${d.date}`"
+                          :class="['relative inline-flex min-w-9 cursor-pointer items-center justify-center rounded px-1.5 py-1 transition hover:bg-blue-100', cellTextClass(row, d.date)]"
+                          type="button"
+                          @click="openCellDetail(row, d.date)">
+                    <span>{{ row.cells[d.date] ?? 0 }}</span>
+                    <span v-if="row.shortfalls[d.date]"
+                          :title="row.shortfallTitles[d.date]"
+                          class="absolute -right-2 -top-1 rounded-full bg-red-500 px-1 text-[10px] leading-3 text-white">{{
+                        row.shortfalls[d.date]
+                      }}</span>
+                  </button>
+                </td>
+                <td class="sticky right-0 z-10 border-l border-slate-100 bg-white px-3 py-1.5 text-center font-medium text-slate-700">
+                  {{ row.weekTotal }}
+                </td>
+              </tr>
+              <tr v-if="!matrixRows.length && !loading">
+                <td :colspan="days.length + 2" class="px-3 py-8 text-center text-sm text-slate-400"
+                    data-testid="matrix-empty">
+                  没有符合条件的排班单元
+                </td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </el-tab-pane>
 
-    <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-      <!-- 人力缺口明细 -->
+      <!-- 视图二：门诊出诊计划（号源）全院按日聚合；按科室/医生明细请到门诊排班页 -->
+      <el-tab-pane label="门诊出诊计划" name="clinic" class="min-h-0">
+        <div class="flex min-h-0 flex-1 flex-col rounded-md border border-slate-200 bg-white" data-testid="clinic-panel">
+          <div class="flex shrink-0 flex-wrap items-center justify-between gap-2 px-3 pt-2">
+            <h3 class="text-sm font-semibold text-slate-700">门诊出诊计划 · 号源（全院按日汇总）</h3>
+            <span class="text-xs text-slate-400">按科室 / 医生的出诊与号源明细见「门诊排班」页</span>
+          </div>
+          <div v-loading="loading" class="min-h-0 flex-1 overflow-auto overscroll-contain px-3 pb-2 pt-2">
+            <table class="w-full min-w-[880px] border-collapse text-sm">
+              <thead>
+              <tr class="text-slate-500">
+                <th class="sticky left-0 top-0 z-20 bg-emerald-50 px-3 py-2 text-left font-medium">项目</th>
+                <th v-for="d in days" :key="d.date"
+                    :class="{ 'bg-blue-50 text-blue-600': d.date === todayStr }"
+                    class="sticky top-0 z-10 bg-emerald-50/60 px-2 py-2 text-center font-medium">
+                  {{ d.label }}<br/><span class="text-xs font-normal">{{ d.date.slice(5) }}</span>
+                </th>
+                <th class="sticky right-0 top-0 z-20 bg-emerald-50/60 px-3 py-2 text-center font-medium">周合计</th>
+              </tr>
+              </thead>
+              <tbody>
+              <!-- 出诊班次数 -->
+              <tr class="border-t border-slate-100">
+                <td class="sticky left-0 z-10 border-r border-slate-100 bg-emerald-50/40 px-3 py-1.5 text-slate-700">出诊班次</td>
+                <td v-for="d in days" :key="d.date" class="px-2 py-1.5 text-center">
+                  <span v-if="clinicByDay[d.date]" class="text-slate-700">{{ clinicByDay[d.date].shiftCount }}</span>
+                  <span v-else class="text-slate-200">—</span>
+                </td>
+                <td class="sticky right-0 z-10 border-l border-slate-100 bg-emerald-50/40 px-3 py-1.5 text-center font-medium text-slate-700">
+                  {{ clinicWeek.shiftCount }}
+                </td>
+              </tr>
+              <!-- 已挂 / 总号源 -->
+              <tr class="border-t border-slate-100" data-testid="clinic-row">
+                <td class="sticky left-0 z-10 border-r border-slate-100 bg-emerald-50/40 px-3 py-1.5 text-emerald-700">已挂 / 总号源</td>
+                <td v-for="d in days" :key="d.date" class="px-2 py-1.5 text-center">
+                  <template v-if="clinicByDay[d.date]">
+                    <span class="relative inline-block">
+                      <span class="text-emerald-700">{{ clinicByDay[d.date].used }}/{{ clinicByDay[d.date].total }}</span>
+                      <span v-if="clinicByDay[d.date].stoppedCount > 0"
+                            :title="`停诊 ${clinicByDay[d.date].stoppedCount} 个班次`"
+                            class="absolute -right-3 -top-1.5 rounded-full bg-red-500 px-1 text-[10px] leading-3 text-white">{{
+                          clinicByDay[d.date].stoppedCount
+                        }}</span>
+                    </span>
+                  </template>
+                  <span v-else class="text-slate-200">—</span>
+                </td>
+                <td class="sticky right-0 z-10 border-l border-slate-100 bg-emerald-50/40 px-3 py-1.5 text-center font-medium text-emerald-700">
+                  {{ clinicWeek.used }}/{{ clinicWeek.total }}
+                </td>
+              </tr>
+              <!-- 号源利用率 -->
+              <tr class="border-t border-slate-100">
+                <td class="sticky left-0 z-10 border-r border-slate-100 bg-emerald-50/40 px-3 py-1.5 text-slate-700">号源利用率</td>
+                <td v-for="d in days" :key="d.date" class="px-2 py-1.5 text-center">
+                  <div v-if="clinicByDay[d.date] && clinicByDay[d.date].total > 0" class="mx-auto flex w-20 flex-col items-center gap-0.5">
+                    <el-progress :percentage="clinicPct(clinicByDay[d.date])" :stroke-width="5" :show-text="false"
+                                 :color="clinicPctColor(clinicPct(clinicByDay[d.date]))" class="!w-full"/>
+                    <span class="text-[11px] text-slate-500">{{ clinicPct(clinicByDay[d.date]) }}%</span>
+                  </div>
+                  <span v-else class="text-slate-200">—</span>
+                </td>
+                <td class="sticky right-0 z-10 border-l border-slate-100 bg-emerald-50/40 px-3 py-1.5 text-center font-medium text-slate-700">
+                  {{ clinicWeek.pct == null ? '—' : clinicWeek.pct + '%' }}
+                </td>
+              </tr>
+              <!-- 停诊班次 -->
+              <tr class="border-t border-slate-100">
+                <td class="sticky left-0 z-10 border-r border-slate-100 bg-emerald-50/40 px-3 py-1.5 text-slate-700">停诊班次</td>
+                <td v-for="d in days" :key="d.date" class="px-2 py-1.5 text-center">
+                  <span v-if="clinicByDay[d.date] && clinicByDay[d.date].stoppedCount > 0"
+                        class="font-semibold text-red-600">{{ clinicByDay[d.date].stoppedCount }}</span>
+                  <span v-else class="text-slate-200">—</span>
+                </td>
+                <td class="sticky right-0 z-10 border-l border-slate-100 bg-emerald-50/40 px-3 py-1.5 text-center font-medium"
+                    :class="clinicWeek.stopped > 0 ? 'text-red-600' : 'text-slate-700'">
+                  {{ clinicWeek.stopped }}
+                </td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </el-tab-pane>
+    </el-tabs>
+
+    <div class="mt-3 grid shrink-0 grid-cols-1 gap-4 xl:grid-cols-2">
+      <!-- 人力缺口明细：整行可点，点开看该单元当日排班名单（缺口就缺在名单里的哪个班） -->
       <div class="rounded-md border border-slate-200 bg-white p-3" data-testid="shortfall-panel">
         <div class="mb-2 flex items-center justify-between">
-          <h3 class="text-sm font-semibold text-slate-700">人力缺口（实际在岗低于配置标准）</h3>
+          <h3 class="text-sm font-semibold text-slate-700">
+            人力缺口（实际在岗低于配置标准）
+            <span v-if="weekShortfallTotal > 0" class="ml-1 text-xs font-normal text-red-600">共缺 {{ weekShortfallTotal }} 人</span>
+          </h3>
           <span class="text-xs text-slate-400" data-testid="shortfall-count">共 {{ shortfalls.length }} 条</span>
         </div>
-        <el-table :data="shortfalls" empty-text="本周无缺口" max-height="360" size="small">
+        <el-table :data="shortfalls" :row-class-name="shortfallRowClass" empty-text="本周无缺口" max-height="260"
+                  size="small"
+                  @row-click="openShortfallDetail">
           <el-table-column label="日期" prop="scheduleDate" width="100"/>
           <el-table-column label="单元" min-width="130" prop="orgName" show-overflow-tooltip/>
           <el-table-column label="班次" min-width="90" prop="shiftName" show-overflow-tooltip/>
@@ -108,9 +246,10 @@
       <!-- 总值班解析 -->
       <div class="rounded-md border border-slate-200 bg-white p-3" data-testid="duty-panel">
         <div class="mb-2 flex items-center justify-between">
-          <span class="text-xs text-slate-400">只解析全院行政位；科室医师值班见总值班排班页</span>
+          <h3 class="text-sm font-semibold text-slate-700">全院总值班</h3>
+          <span class="text-xs text-slate-400">只解析全院行政位；科室医师值班见全院总值班页</span>
         </div>
-        <el-table :data="dutyRows" max-height="360" size="small">
+        <el-table :data="dutyRows" max-height="260" size="small">
           <el-table-column label="日期" prop="dateLabel" width="110"/>
           <el-table-column label="白班" min-width="140">
             <template #default="{ row }">
@@ -127,23 +266,44 @@
         </el-table>
       </div>
     </div>
+
+    <!-- 点矩阵格子 / 缺口明细行 打开的当日排班名单 -->
+    <ScheduleOverviewCellDetail
+        v-model="cellVisible"
+        :date="cellQuery?.date"
+        :org-id="cellQuery?.orgId"
+        :org-name="cellQuery?.orgName"
+        :org-type="cellQuery?.orgType"
+        :shortfalls="shortfalls"
+    />
   </div>
 </template>
 
 <script setup>
 import {computed, onMounted, ref} from 'vue'
+import {Search} from '@element-plus/icons-vue'
 import {getScheduleOverviewWeek} from '@/api/staffSchedule'
+import {STAFF_TYPE_OPTIONS} from '@/lib/scheduleShift'
+import {ORG_UNIT_TYPE_OPTIONS, orgUnitTypeText} from '@/lib/staffSchedule'
+import ScheduleOverviewCellDetail from './ScheduleOverviewCellDetail.vue'
 
-/** 岗位类别文案（与 StaffTypeEnum 同码：1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他） */
-const STAFF_TYPE_LABELS = {1: '医生', 2: '护理', 3: '医技', 4: '药学', 5: '收费', 6: '行政'}
-const ORG_TYPE_LABELS = {1: '科室', 2: '病区', 3: '全院'}
 const WEEK_LABELS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
 
 const beginDate = ref('')
 const overview = ref(null)
 const loading = ref(false)
 
-const todayStr = new Date().toISOString().slice(0, 10)
+/** 视图切换：科室在岗（人次）与门诊出诊（号源）是两套度量，分开看 */
+const activeTab = ref('unit')
+
+/** 矩阵切片条件：单元类型 / 单元名称关键词 / 只看有缺口 */
+const orgTypeFilter = ref('')
+const orgKeyword = ref('')
+const onlyShortfall = ref(false)
+
+/** 当前点开名单的格子：一个排班单元在某一天的出勤情况 */
+const cellVisible = ref(false)
+const cellQuery = ref(null)
 
 function fmtISO(d) {
   const y = d.getFullYear()
@@ -151,6 +311,9 @@ function fmtISO(d) {
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
 }
+
+/** 本周今天落在哪一天：矩阵高亮列用（必须本地时区，UTC 会让早上八点前高亮昨天） */
+const todayStr = fmtISO(new Date())
 
 function mondayOf(d) {
   const copy = new Date(d)
@@ -181,22 +344,31 @@ const staffTypeCards = computed(() => {
   for (const row of overview.value?.staffTypeDays || []) {
     totals[row.staffType] = (totals[row.staffType] || 0) + (row.workingCount || 0)
   }
-  return Object.keys(STAFF_TYPE_LABELS).map((t) => ({
-    staffType: Number(t),
-    label: STAFF_TYPE_LABELS[t],
-    total: totals[t] || 0,
+  return STAFF_TYPE_OPTIONS.map((o) => ({
+    staffType: o.value,
+    label: o.label,
+    total: totals[o.value] || 0,
   }))
 })
 
-/** 缺口明细（人力面板直接渲染，矩阵红角标按它分桶） */
+/** 本周有出勤的岗位才上图：全 0 的岗位卡不占视觉 */
+const activeStaffCards = computed(() => staffTypeCards.value.filter((c) => c.total > 0))
+
+/** 缺口明细（人力面板直接渲染，矩阵红角标与单元格弹框都按它取） */
 const shortfalls = computed(() => overview.value?.shortfalls || [])
 
-/** 缺口按 (org, date) 分桶：矩阵红角标用 */
+/** 本周累计缺员人数与缺员单元·日数（指标卡用） */
+const weekShortfallTotal = computed(() =>
+    shortfalls.value.reduce((sum, s) => sum + (s.shortfall || 0), 0))
+const weekShortfallCells = computed(() =>
+    new Set(shortfalls.value.map((s) => `${s.orgType}|${s.orgId}|${s.scheduleDate}`)).size)
+
+/** 缺口按 (单元, 日期) 分桶：矩阵红角标与「只看有缺口」用 */
 const shortfallByOrgDay = computed(() => {
   const map = new Map()
   for (const s of shortfalls.value) {
     const key = `${s.orgType}|${s.orgId}`
-    if (!map.has(key)) map.set(key, {cells: {}, titles: {}})
+    if (!map.has(key)) map.set(key, {cells: {}, titles: {}, total: 0})
     const bucket = map.get(key)
     bucket.cells[s.scheduleDate] = (bucket.cells[s.scheduleDate] || 0) + (s.shortfall || 0)
     bucket.titles[s.scheduleDate] = [
@@ -204,11 +376,12 @@ const shortfallByOrgDay = computed(() => {
       `${s.shiftName} · ${s.staffTypeName}`,
       `应到 ${s.minStaff} 实到 ${s.actualCount}，缺 ${s.shortfall} 人`,
     ].join('；')
+    bucket.total += s.shortfall || 0
   }
   return map
 })
 
-const matrixRows = computed(() => {
+const allMatrixRows = computed(() => {
   const rows = new Map()
   for (const cell of overview.value?.unitDays || []) {
     const key = `${cell.orgType}|${cell.orgId}`
@@ -227,17 +400,39 @@ const matrixRows = computed(() => {
     row.weekTotal += cell.workingCount || 0
   }
   const shortfall = shortfallByOrgDay.value
-  return Array.from(rows.values()).map((row) => ({
-    ...row,
-    shortfalls: shortfall.get(row.key)?.cells || {},
-    shortfallTitles: shortfall.get(row.key)?.titles || {},
-  }))
+  return Array.from(rows.values()).map((row) => {
+    const bucket = shortfall.get(row.key)
+    return {
+      ...row,
+      shortfalls: bucket?.cells || {},
+      shortfallTitles: bucket?.titles || {},
+      shortfallTotal: bucket?.total || 0,
+    }
+  })
 })
+
+const matrixRows = computed(() => {
+  const kw = orgKeyword.value.trim()
+  return allMatrixRows.value.filter((row) => {
+    if (orgTypeFilter.value && row.orgType !== orgTypeFilter.value) return false
+    if (kw && !String(row.orgName || '').includes(kw)) return false
+    if (onlyShortfall.value && row.shortfallTotal <= 0) return false
+    return true
+  })
+})
+
+/** 矩阵格子文字色：当日缺员 → 红；有人次 → 深灰；空班 → 浅灰 */
+function cellTextClass(row, date) {
+  const count = row.cells[date] ?? 0
+  if (row.shortfalls[date]) return 'bg-red-50 font-semibold text-red-700'
+  return count > 0 ? 'text-slate-700' : 'text-slate-300'
+}
 
 const clinicByDay = computed(() => {
   const map = {}
   for (const c of overview.value?.clinicDays || []) {
     map[c.scheduleDate] = {
+      shiftCount: Number(c.shiftCount || 0),
       total: Number(c.totalSource || 0),
       used: Number(c.usedSource || 0),
       stoppedCount: Number(c.stoppedCount || 0),
@@ -246,14 +441,33 @@ const clinicByDay = computed(() => {
   return map
 })
 
-const clinicWeekTotal = computed(() => {
+/** 单日号源利用率（%），无总号源返回 null */
+function clinicPct(c) {
+  if (!c || !c.total) return null
+  return Math.round((c.used / c.total) * 100)
+}
+
+/** 利用率配色：高占用绿、过半蓝、偏低琥珀、空灰 */
+function clinicPctColor(pct) {
+  if (pct == null) return '#94a3b8'
+  if (pct >= 80) return '#10b981'
+  if (pct >= 50) return '#3b82f6'
+  return '#f59e0b'
+}
+
+const clinicWeek = computed(() => {
+  let shiftCount = 0
   let total = 0
   let used = 0
+  let stopped = 0
   for (const c of Object.values(clinicByDay.value)) {
+    shiftCount += c.shiftCount
     total += c.total
     used += c.used
+    stopped += c.stoppedCount
   }
-  return {total, used}
+  const pct = total > 0 ? Math.round((used / total) * 100) : null
+  return {shiftCount, total, used, stopped, pct}
 })
 
 const dutyRows = computed(() => {
@@ -269,8 +483,26 @@ const dutyRows = computed(() => {
   }))
 })
 
-function orgTypeLabel(code) {
-  return ORG_TYPE_LABELS[code] || ''
+/**
+ * 打开某个单元某天的排班名单。
+ * 用于排班总览矩阵格子：值班长核对「今天这个科到底排了谁」时点格子下钻，不跳页。
+ */
+function openCellDetail(row, date) {
+  cellQuery.value = {orgType: row.orgType, orgId: row.orgId, orgName: row.orgName, date}
+  cellVisible.value = true
+}
+
+/**
+ * 从人力缺口明细打开同一份名单。
+ * 用于排班总览缺口面板：看到缺口行后直接点进去查是谁没排上。
+ */
+function openShortfallDetail(row) {
+  if (!row?.orgType) return
+  openCellDetail(row, row.scheduleDate)
+}
+
+function shortfallRowClass() {
+  return 'cursor-pointer'
 }
 
 function shiftWeek(offset) {
@@ -300,3 +532,23 @@ async function load() {
 
 onMounted(load)
 </script>
+
+<style scoped>
+/* 缺口明细整行点开名单，光标提示可点；表头不参与（表头没有行数据） */
+:deep(.cursor-pointer) {
+  cursor: pointer;
+}
+
+/* el-tabs 插入后补齐高度链：nav 固定、内容区 flex-1，矩阵才能在面板内部滚动而不是把底部面板挤出 */
+:deep(.el-tabs) {
+  display: flex;
+  flex-direction: column;
+}
+:deep(.el-tabs__content) {
+  flex: 1;
+  min-height: 0;
+}
+:deep(.el-tab-pane) {
+  height: 100%;
+}
+</style>

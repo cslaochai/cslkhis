@@ -24,7 +24,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/schedule")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyAuthority('opd:appointments:list', 'opd:emergency:list', 'outpatient:schedule:list')")
 public class BizClinicSourceController {
 
     private final BizClinicSourceService bizScheduleService;
@@ -43,6 +42,76 @@ public class BizClinicSourceController {
     public Result<Void> scheduleUpsert(@Valid @RequestBody ScheduleUpsertDTO upsertDTO) {
         bizScheduleService.scheduleUpsert(upsertDTO);
         return Result.success();
+    }
+
+    /**
+     * 提交审核：草稿 → 待审核。
+     * 排班人完成排班后提交，进入待审核队列等审核人发布。
+     */
+    @PreAuthorize("hasAuthority('outpatient:schedule:add')")
+    @Operation(summary = "提交审核（草稿→待审核）")
+    @PostMapping("/submit")
+    public Result<Void> submit(@RequestParam Long scheduleId) {
+        bizScheduleService.submit(scheduleId);
+        return Result.success();
+    }
+
+    /**
+     * 审核发布：待审核 → 已发布，并生成号源。
+     * 审核人审核通过后此排班才正式生效、对外出号。
+     */
+    @PreAuthorize("hasAuthority('outpatient:schedule:audit')")
+    @Operation(summary = "审核发布（待审核→已发布，并出号）")
+    @PostMapping("/auditPublish")
+    public Result<Void> auditPublish(@RequestParam Long scheduleId) {
+        bizScheduleService.auditPublish(scheduleId);
+        return Result.success();
+    }
+
+    /**
+     * 撤回：任意态 → 草稿，并清理已生成的号源。
+     * 审核前反悔、或发布后需大改时可用。
+     */
+    @PreAuthorize("hasAuthority('outpatient:schedule:edit')")
+    @Operation(summary = "撤回（任意态→草稿，撤号）")
+    @PostMapping("/recall")
+    public Result<Void> recall(@RequestParam Long scheduleId) {
+        bizScheduleService.recall(scheduleId);
+        return Result.success();
+    }
+
+    /**
+     * 进入调班：已发布/已变更 → 调班中（锁定编辑，号源暂冻结）。
+     * 改完保存后自动转为「已变更」直接生效（不二次审核）。
+     */
+    @PreAuthorize("hasAuthority('outpatient:schedule:edit')")
+    @Operation(summary = "进入调班（已发布/已变更→调班中，锁定）")
+    @PostMapping("/adjustStart")
+    public Result<Void> adjustStart(@RequestParam Long scheduleId) {
+        bizScheduleService.adjustStart(scheduleId);
+        return Result.success();
+    }
+
+    /**
+     * 整周提交审核：把查询区间内本科室的草稿班一次提交为待审核，返回提交条数。
+     * 已待审核/已发布/调班中行不动，逐条记留痕，单事务。
+     */
+    @PreAuthorize("hasAuthority('outpatient:schedule:add')")
+    @Operation(summary = "整周提交审核（区间内草稿→待审核）")
+    @PostMapping("/submitWeek")
+    public Result<Integer> submitWeek(@Valid @RequestBody ScheduleQueryDTO queryDTO) {
+        return Result.success(bizScheduleService.submitWeek(queryDTO));
+    }
+
+    /**
+     * 整周审核发布：把查询区间内本科室的待审核班一次发布，逐条补号段并同步出勤事实，返回发布条数。
+     * 草稿/调班中行不动，单事务。
+     */
+    @PreAuthorize("hasAuthority('outpatient:schedule:audit')")
+    @Operation(summary = "整周审核发布（区间内待审核→已发布并出号）")
+    @PostMapping("/auditWeek")
+    public Result<Integer> auditWeek(@Valid @RequestBody ScheduleQueryDTO queryDTO) {
+        return Result.success(bizScheduleService.auditWeek(queryDTO));
     }
 
     /**
@@ -83,6 +152,7 @@ public class BizClinicSourceController {
      * 按科室、日期、医生等条件查询门诊排班明细。
      * 用于门诊排班页周视图取数与挂号管理页的日历、排班列表。
      */
+    @PreAuthorize("hasAnyAuthority('opd:appointments:list', 'opd:emergency:list', 'outpatient:schedule:list')")
     @Operation(summary = "查询排班列表")
     @PostMapping("/list")
     public Result<List<ScheduleDetailVO>> scheduleList(@Valid @RequestBody ScheduleQueryDTO queryDTO) {
@@ -104,6 +174,7 @@ public class BizClinicSourceController {
      * 查询当前登录用户所在科室今日的排班。
      * 供当日在岗总览环节取数，科室侧查看今天谁出诊时使用。
      */
+    @PreAuthorize("hasAnyAuthority('opd:appointments:list', 'opd:emergency:list', 'outpatient:schedule:list')")
     @Operation(summary = "查询今日本科室排班")
     @GetMapping("/today")
     public Result<List<ScheduleDetailVO>> todaySchedule() {
@@ -138,6 +209,7 @@ public class BizClinicSourceController {
      * 查询该班次已挂号患者名单，作为停诊的影响范围。
      * 用于门诊排班页执行停诊前的影响确认展示。
      */
+    @PreAuthorize("hasAnyAuthority('opd:appointments:list', 'opd:emergency:list', 'outpatient:schedule:list')")
     @Operation(summary = "停诊影响名单（该班次在挂患者）")
     @GetMapping("/stopImpact")
     public Result<List<StopImpactItemVO>> stopImpact(@RequestParam Long scheduleId) {
@@ -172,6 +244,7 @@ public class BizClinicSourceController {
      * 查询单条排班的半小时档号源时段。
      * 用于挂号管理页新增挂号弹框的选段，以及排班编辑弹框的时段编辑取数。
      */
+    @PreAuthorize("hasAnyAuthority('opd:appointments:list', 'opd:emergency:list', 'outpatient:schedule:list')")
     @Operation(summary = "查询排班时间片段（半小时一档，挂号选段用）")
     @GetMapping("/slotList")
     public Result<List<ScheduleSlotVO>> slotList(@RequestParam Long scheduleId) {
@@ -182,6 +255,7 @@ public class BizClinicSourceController {
      * 一次批量拉取多条排班的号源时段，输出「医生×半小时段」矩阵行。
      * 用于挂号管理页日视图看板的整屏取数。
      */
+    @PreAuthorize("hasAnyAuthority('opd:appointments:list', 'opd:emergency:list', 'outpatient:schedule:list')")
     @Operation(summary = "批量查询排班时间片段（日视图看板「医生 × 半小时段」一次拉全）")
     @PostMapping("/slotListBatch")
     public Result<List<ScheduleSlotVO>> slotListBatch(@Valid @RequestBody ScheduleSlotBatchQueryDTO dto) {

@@ -90,12 +90,6 @@
                        @change="handlePanelDeptChange">
               <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id"/>
             </el-select>
-            <span class="text-base font-medium text-slate-700">岗位</span>
-            <el-select v-model="panelStaffType" :fit-input-width="false" class="!w-32"
-                       data-testid="panel-staff-type" popper-class="schedule-filter-popper"
-                       @change="handlePanelStaffTypeChange">
-              <el-option v-for="o in STAFF_TYPE_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
-            </el-select>
             <span class="text-base font-medium text-slate-700">人员</span>
             <el-select v-model="panelDoctorKey" :fit-input-width="false" class="!w-52" clearable
                        data-testid="panel-doctor"
@@ -124,6 +118,16 @@
               <el-button v-perm="'outpatient:schedule:add'" :loading="replicateLoading" type="success"
                          @click="handleReplicateNextWeek">
                 复刻到 {{ replicateTargetLabel }}
+              </el-button>
+              <el-button v-perm="'outpatient:schedule:add'" :loading="weekActionLoading"
+                         :disabled="!weekDraftCount" data-testid="week-submit"
+                         title="把当前显示周内本科室草稿一次性提交为待审核（已发布/待审核的不动）"
+                         @click="handleSubmitWeek">整周提交审核<template v-if="weekDraftCount">（{{ weekDraftCount }}）</template>
+              </el-button>
+              <el-button v-perm="'outpatient:schedule:audit'" :loading="weekActionLoading" type="success"
+                         :disabled="!weekPendingCount" data-testid="week-audit"
+                         title="把当前显示周内本科室待审核一次性审核发布并出号（草稿需先提交）"
+                         @click="handleAuditWeek">整周审核发布<template v-if="weekPendingCount">（{{ weekPendingCount }}）</template>
               </el-button>
               <el-button v-perm="'outpatient:schedule:add'" :icon="Plus" type="primary"
                          @click="handleAdd">新增排班</el-button>
@@ -173,17 +177,26 @@
                                     : 'border-slate-200 bg-white ' + shiftColor(s)]"
                            :data-testid="`panel-cell-${row.doctorId}-${d}`"
                            :title="cellTooltip(s)">
-                        <!-- 第一行：班次名居左，label「已挂」+ 已挂/总号源 紧靠右（值加粗） -->
-                        <div class="flex items-baseline justify-between">
-                          <span :class="s.status === 0 ? '' : 'font-medium text-slate-700'"
-                                class="text-sm">{{ shiftText(s) }}</span>
+                        <!-- 第一行：班次名 + 发布态标签居左，label「已挂」+ 已挂/总号源 紧靠右（值加粗） -->
+                        <div class="flex items-center justify-between gap-2">
+                          <span class="flex min-w-0 items-center gap-1.5">
+                            <span :class="s.status === 0 ? '' : 'font-medium text-slate-700'"
+                                  class="text-sm">{{ shiftText(s) }}</span>
+                            <!-- 发布态（G-15）：文案唯一来源 = 后端 publishStatusText，前端不抄中文 -->
+                            <el-tag v-if="s.publishStatus != null" :data-testid="`publish-tag-${s.id}`"
+                                    :type="publishStatusTagType(s.publishStatus)"
+                                    class="!px-1.5 !align-middle shrink-0"
+                                    effect="plain"
+                                    size="small">{{ s.publishStatusText }}
+                            </el-tag>
+                          </span>
                           <!-- 只有医生岗有号源：出勤岗这一格显示「在岗」，不显示永远为 0 的 已挂/总 -->
-                          <span v-if="s.status !== 0 && staffTypeHasSource(s.staffType)" class="text-xs text-slate-600">已挂 <span
+                          <span v-if="s.status !== 0 && staffTypeHasSource(s.staffType)" class="text-xs text-slate-600 shrink-0">已挂 <span
                               class="text-base font-bold text-slate-900">{{ usedOf(s) }}/{{
                               s.totalSource
                             }}</span></span>
-                          <span v-else-if="s.status !== 0" class="text-xs font-medium text-emerald-600">在岗</span>
-                          <span v-else class="text-sm">停用</span>
+                          <span v-else-if="s.status !== 0" class="text-xs font-medium text-emerald-600 shrink-0">在岗</span>
+                          <span v-else class="text-sm shrink-0">停用</span>
                         </div>
                         <div class="mt-0.5 text-xs leading-4 text-slate-600">
                           <p class="truncate">
@@ -199,27 +212,60 @@
                             </template>
                           </p>
                         </div>
-                        <!-- 操作行：详情/停/加 独占一行。高度常驻预留（opacity 切换），悬停不会撑动卡片。日期已过 → 整条不渲染（服务端同口径拒绝）。
-                             按真实 HIS：已发布排班本体不可原地改，点格子只进只读详情；停诊、加号分别走右侧独立按钮 -->
+                        <!-- 操作行：详情/停/加 与 发布流转（提交审核/审核发布/进入调班/撤回）同一行，鼠标移到卡片上才浮现（hover），
+                             默认透明不占位跳动（高度由 flex 预留）。日期已过 → 整条不渲染（服务端同口径拒绝） -->
                         <div v-if="s.status === 1 && d >= todayStr"
-                             class="mt-1 flex h-5 items-center justify-end gap-1.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                             class="mt-2.5 flex flex-wrap items-center justify-end gap-x-2 gap-y-0.5 leading-5 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
                           <button v-perm="'outpatient:schedule:edit'" :data-testid="`panel-edit-${row.doctorId}-${d}`"
-                                  class="cursor-pointer text-xs leading-4 text-blue-600"
+                                  class="cursor-pointer text-[13px] text-blue-600"
                                   title="查看排班详情"
                                   @click.stop="handlePanelCellEdit(s)">详情
                           </button>
-                          <span class="text-slate-200">|</span>
-                          <button v-perm="'outpatient:schedule:delete'"
-                                  :title="staffTypeHasSource(s.staffType) ? '快捷停诊' : '停用该班次'"
-                                  class="cursor-pointer text-xs leading-4 text-red-500"
-                                  @click.stop="handleToggleStatus(s)">停
-                          </button>
-                          <!-- 加号只给医生出诊班：出勤岗没有号源池（后端同样拒绝），按钮直接不渲染 -->
-                          <template v-if="staffTypeHasSource(s.staffType)">
+                          <!-- 调班中(PUBLISH_ADJUSTING)：停、加属变更动作，连同它们紧邻的分隔竖线一起隐藏，只留详情与撤回 -->
+                          <template v-if="s.publishStatus !== PUBLISH_ADJUSTING">
                             <span class="text-slate-200">|</span>
-                            <button v-perm="'outpatient:schedule:edit'" class="cursor-pointer text-xs leading-4 text-blue-600"
-                                    title="专家加号"
-                                    @click.stop="handleAddSource(s)">加
+                            <button v-perm="'outpatient:schedule:delete'"
+                                    :title="staffTypeHasSource(s.staffType) ? '快捷停诊' : '停用该班次'"
+                                    class="cursor-pointer text-[13px] text-red-500"
+                                    @click.stop="handleToggleStatus(s)">停
+                            </button>
+                            <!-- 加号只给医生出诊班：出勤岗没有号源池（后端同样拒绝），按钮直接不渲染 -->
+                            <template v-if="staffTypeHasSource(s.staffType)">
+                              <span class="text-slate-200">|</span>
+                              <button v-perm="'outpatient:schedule:edit'" class="cursor-pointer text-[13px] text-blue-600"
+                                      title="专家加号"
+                                      @click.stop="handleAddSource(s)">加
+                              </button>
+                            </template>
+                          </template>
+                          <!-- 发布流转（G-15）：状态互斥，当前态动作 + 撤回；调班中只剩撤回 -->
+                          <template v-if="s.publishStatus != null">
+                            <span class="text-slate-200">|</span>
+                            <button v-if="s.publishStatus === PUBLISH_DRAFT" v-perm="'outpatient:schedule:add'"
+                                    :data-testid="`publish-submit-${s.id}`"
+                                    class="cursor-pointer text-[13px] font-medium text-blue-600"
+                                    title="提交审核（草稿→待审核）"
+                                    @click.stop="handlePublishSubmit(s)">提交审核
+                            </button>
+                            <button v-else-if="s.publishStatus === PUBLISH_PENDING" v-perm="'outpatient:schedule:audit'"
+                                    :data-testid="`publish-audit-${s.id}`"
+                                    class="cursor-pointer text-[13px] font-medium text-emerald-600"
+                                    title="审核发布（待审核→已发布，同时对外出号）"
+                                    @click.stop="handleAuditPublish(s)">审核发布
+                            </button>
+                            <button v-else-if="isPublishEffective(s.publishStatus)" v-perm="'outpatient:schedule:edit'"
+                                    :data-testid="`publish-adjust-${s.id}`"
+                                    class="cursor-pointer text-[13px] font-medium text-sky-600"
+                                    title="进入调班（已发布/已变更→调班中，号源暂冻结）"
+                                    @click.stop="handleAdjustStart(s)">进入调班
+                            </button>
+                            <!-- 调班中动作按钮已不渲染，撤回前这条分隔竖线一并隐藏，避免出现孤立竖线 -->
+                            <span v-if="s.publishStatus !== PUBLISH_ADJUSTING" class="text-slate-200">|</span>
+                            <button v-perm="'outpatient:schedule:edit'"
+                                    :data-testid="`publish-recall-${s.id}`"
+                                    class="cursor-pointer text-[13px] text-slate-400 hover:text-red-500"
+                                    title="撤回（任意态→草稿，已发布的号源会一并撤下）"
+                                    @click.stop="handleRecallPublish(s)">撤回
                             </button>
                           </template>
                         </div>
@@ -278,10 +324,6 @@
                        placeholder="全部科室" @change="handleTplSearch">
               <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id"/>
             </el-select>
-            <el-select v-model="tplSearchForm.staffType" class="!w-32" clearable data-testid="tpl-staff-type"
-                       placeholder="全部岗位" @change="handleTplSearch">
-              <el-option v-for="o in STAFF_TYPE_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
-            </el-select>
             <el-select v-model="tplSearchForm.weekDay" class="!w-36" clearable data-testid="tpl-weekday"
                        placeholder="全部星期" @change="handleTplSearch">
               <el-option v-for="(label, day) in weekDayMap" :key="day" :label="label" :value="Number(day)"/>
@@ -306,13 +348,6 @@
             <el-table v-loading="tplLoading" :data="templates" :height="tplTableHeight" border data-testid="tpl-table"
                       stripe style="width: 100%">
               <el-table-column label="科室" min-width="110" prop="deptName"/>
-              <el-table-column align="center" label="岗位" width="80">
-                <template #default="{ row }">
-                  <el-tag :type="staffTypeHasSource(row.staffType) ? 'primary' : 'info'" size="small">
-                    {{ staffTypeText(row.staffType) || '—' }}
-                  </el-tag>
-                </template>
-              </el-table-column>
               <el-table-column label="人员" min-width="100" prop="doctorName"/>
               <el-table-column align="center" label="星期几" min-width="90">
                 <template #default="{ row }">
@@ -416,73 +451,6 @@
         </div>
       </el-tab-pane>
 
-      <!-- 班次字典维护：查询/分页/新增；已有班次编辑仅改名（时间/科室/类型由系统铺底，界面不可改） -->
-      <el-tab-pane label="班次字典" name="shifts">
-        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <div class="filter-row mb-3 flex flex-wrap items-center gap-3">
-            <el-input v-model="shiftKeyword" class="!w-56" clearable data-testid="shift-keyword"
-                      placeholder="按班次名称搜索" @clear="handleShiftSearch" @keyup.enter="handleShiftSearch"/>
-            <el-select v-model="shiftUseScope" :fit-input-width="false" class="!w-44" clearable
-                       data-testid="shift-scope-filter"
-                       placeholder="适用域" @change="handleShiftSearch">
-              <el-option v-for="o in SHIFT_SCOPE_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
-            </el-select>
-            <el-button :icon="Search" data-testid="shift-search-btn" type="primary" @click="handleShiftSearch">查询
-            </el-button>
-            <el-button v-perm="'outpatient:schedule:add'" :icon="Plus" data-testid="shift-add-btn" type="success"
-                       @click="handleShiftAdd">新增字典
-            </el-button>
-          </div>
-          <el-table v-loading="shiftLoading" :data="shifts" border data-testid="shift-dict-table" style="width: 100%">
-            <el-table-column label="班次名称" min-width="150" prop="shiftName"/>
-            <el-table-column align="center" label="适用域" width="120">
-              <template #default="{ row }">
-                <el-tag :type="Number(row.useScope) === 2 ? 'success' : 'info'" data-testid="shift-scope-tag"
-                        size="small">{{ SHIFT_SCOPE_TEXT[Number(row.useScope ?? 1)] || '—' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column align="center" label="起止时间" width="130">
-              <template #default="{ row }">
-                <span class="font-mono text-xs text-slate-600">{{ row.startTime }} ~ {{ row.endTime }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column align="center" label="时长" width="80">
-              <template #default="{ row }">{{ row.durationMinutes }}分</template>
-            </el-table-column>
-            <el-table-column label="适用科室" min-width="120">
-              <template #default="{ row }">{{ shiftDeptName(row.deptId) }}</template>
-            </el-table-column>
-            <el-table-column align="center" label="班次类型" width="90">
-              <template #default="{ row }">{{
-                  row.scheduleType ? (shiftLabel[row.scheduleType] || '—') : '—'
-                }}
-              </template>
-            </el-table-column>
-            <el-table-column align="center" label="状态" width="80">
-              <template #default="{ row }">
-                <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">{{
-                    row.status === 1 ? '启用' : '停用'
-                  }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column align="center" fixed="right" label="操作" width="80">
-              <template #default="{ row }">
-                <el-button v-perm="'outpatient:schedule:edit'" data-testid="shift-edit-btn" link type="primary"
-                           @click="handleShiftEdit(row)">编辑
-                </el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <el-pagination :current-page="shiftPagination.pageNum" :page-size="shiftPagination.pageSize"
-                         :page-sizes="PAGE_SIZES"
-                         :total="shiftPagination.total" background
-                         class="mt-3 justify-end" layout="total, prev, pager, next, sizes"
-                         @current-change="handleShiftPageChange" @size-change="handleShiftSizeChange"/>
-        </div>
-      </el-tab-pane>
-
       <!-- 变更记录：门诊排班审计（谁在何时对哪个班次做了什么、为什么），停诊/加号/退号/段编辑全落账 -->
       <el-tab-pane label="变更记录" name="logs">
         <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -493,7 +461,7 @@
               <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id"/>
             </el-select>
             <span class="text-base font-medium text-slate-700">排班日期</span>
-            <el-date-picker v-model="logDateRange" data-testid="log-date-range" :value-format="'yyyy-MM-dd'"
+            <el-date-picker v-model="logDateRange" data-testid="log-date-range" :value-format="'YYYY-MM-DD'"
                             end-placeholder="结束日期" range-separator="~" start-placeholder="开始日期"
                             type="daterange" class="!w-64"/>
             <span class="text-base font-medium text-slate-700">动作</span>
@@ -532,21 +500,6 @@
         </div>
       </el-tab-pane>
     </el-tabs>
-
-    <!-- 班次编辑弹窗：展示完整详情，仅名称可改（时间/科室/类型/状态只读） -->
-    <ScheduleShiftEdit
-        v-model="shiftEditVisible"
-        :departments="departments"
-        :row="shiftEditRow"
-        @saved="loadShifts"
-    />
-
-    <!-- 新增班次弹窗：完整建条（防重/时间校验在后端 shiftUpsert） -->
-    <ScheduleDictAdd
-        v-model="shiftAddVisible"
-        :departments="departments"
-        @saved="handleShiftSearch"
-    />
 
     <!-- 新增排班（批量：人员多选 × 日期区间）与修改排班（单条）拆成两个组件：
          以前一个弹窗靠 v-if="isEdit" 分叉，两套排版挤在一起，改一边就碰坏另一边。 -->
@@ -720,10 +673,15 @@ import {
   getOnDutyStaff,
   getScheduleList,
   getScheduleTemplateListPage,
-  getShiftListPage,
   getStopImpact,
   previewScheduleTemplate,
   replicateSchedule,
+  scheduleAdjustStart,
+  scheduleAuditPublish,
+  scheduleAuditWeek,
+  scheduleRecall,
+  scheduleSubmit,
+  scheduleSubmitWeek,
   updateScheduleStatus,
   updateScheduleTemplateStatus
 } from '@/api/appoint';
@@ -731,20 +689,16 @@ import {getDepartmentSelectList, getEmployeeList, getUserInfo} from '@/api/syste
 import {DICT_TYPE, loadDictDataList} from '@/lib/dict-cache';
 import {
   SCHEDULE_TYPE_TEXT,
-  SHIFT_SCOPE_OPTIONS,
-  SHIFT_SCOPE_TEXT,
   STAFF_TYPE_DOCTOR,
-  STAFF_TYPE_OPTIONS,
   staffTypeHasSource,
   staffTypeText
 } from '@/lib/scheduleShift';
+import {PUBLISH_ADJUSTING, PUBLISH_DRAFT, PUBLISH_PENDING, isPublishEffective, publishStatusTagType} from '@/lib/publishStatus';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {fmtISO} from '@/lib/scheduleDate';
 import {getTitleLabel, getTitleTagClass} from '@/lib/scheduleTitle';
 import ScheduleAdd from './ScheduleAdd.vue';
-import ScheduleDictAdd from './ScheduleDictAdd.vue';
 import ScheduleEdit from './ScheduleEdit.vue';
-import ScheduleShiftEdit from './ScheduleShiftEdit.vue';
 import ScheduleTplEdit from './ScheduleTplEdit.vue';
 
 const departments = ref([]);
@@ -762,7 +716,6 @@ const weekParityMap = {0: '每周', 1: '单周', 2: '双周'};
 const tplSearchForm = ref({
   keyword: '',
   deptId: null,
-  staffType: null,
   weekDay: null,
   status: null,
 });
@@ -775,7 +728,8 @@ const loadTemplates = async () => {
       pageSize: tplPagination.value.pageSize,
       keyword: tplSearchForm.value.keyword || undefined,
       deptId: tplSearchForm.value.deptId || undefined,
-      staffType: tplSearchForm.value.staffType ?? undefined,
+      // 模板集固定只取医生岗：本页模板生成的是出诊计划，出勤岗模板不归这里管
+      staffType: STAFF_TYPE_DOCTOR,
       weekDay: tplSearchForm.value.weekDay || undefined,
       status: tplSearchForm.value.status ?? undefined,
     });
@@ -792,7 +746,7 @@ const handleTplSearch = () => {
   loadTemplates();
 };
 const handleTplReset = () => {
-  tplSearchForm.value = {keyword: '', deptId: null, staffType: null, weekDay: null, status: null};
+  tplSearchForm.value = {keyword: '', deptId: null, weekDay: null, status: null};
   tplPagination.value.pageNum = 1;
   loadTemplates();
 };
@@ -860,9 +814,8 @@ const handleGenerateFromTemplate = async () => {
   previewLoading.value = true;
   previewVisible.value = true;
   try {
-    // 生成/预览跟着面板的岗位类别走：排班员是「先排下周医生出诊，再排下周窗口人力」，
-    // 一次只处理一个岗位的模板（后端同样按 staffType 过滤模板集）
-    const res = await previewScheduleTemplate(GENERATE_TARGET_WEEK_OFFSET, panelDeptId.value, panelStaffType.value);
+    // 生成的是下周医生出诊计划：模板集与目标周由后端按医生岗收口，科室跟随面板筛选
+    const res = await previewScheduleTemplate(GENERATE_TARGET_WEEK_OFFSET, panelDeptId.value, panelStaffType);
     previewData.value = res.data || {};
   } catch (error) {
     
@@ -874,7 +827,7 @@ const handleGenerateFromTemplate = async () => {
 const handleConfirmGenerate = async () => {
   generateLoading.value = true;
   try {
-    const res = await generateScheduleFromTemplate(GENERATE_TARGET_WEEK_OFFSET, panelDeptId.value, panelStaffType.value);
+    const res = await generateScheduleFromTemplate(GENERATE_TARGET_WEEK_OFFSET, panelDeptId.value, panelStaffType);
     ElMessage.success(res.message || '生成完成');
     previewVisible.value = false;
     loadPanel();
@@ -889,66 +842,10 @@ const handleConfirmGenerate = async () => {
 // 表单状态、班次字典候选与提交校验都在 ScheduleAdd / ScheduleEdit 组件里，页面只控显隐 + 传打开时的数据。
 const dialogVisible = ref(false);
 const editVisible = ref(false);
-/** 新增弹窗的预填：工具栏「新增」只带岗位类别，点面板空格子时多带科室/医生/日期 */
+/** 新增弹窗的预填：工具栏「新增」为空壳，点面板空格子时才带科室/医生/日期 */
 const addSeed = ref(null);
 /** 修改弹窗的行数据 */
 const editingSchedule = ref(null);
-// ========== 班次字典维护（查询/分页/新增/编辑） ==========
-// 已有班次的编辑只开放改名（时间/科室/类型是铺底口径，界面不可改）；
-// 新增是完整建条（名称/起止时间/科室/类型），复用后端 shiftUpsert 的校验。
-const shifts = ref([]);
-const shiftLoading = ref(false);
-const shiftKeyword = ref('');
-// 适用域筛选：不选就是两册混列（护理班次在这里能看见、但不进门诊排班下拉）
-const shiftUseScope = ref(null);
-const shiftPagination = ref({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0});
-const loadShifts = async () => {
-  shiftLoading.value = true;
-  try {
-    const res = await getShiftListPage({
-      pageNum: shiftPagination.value.pageNum,
-      pageSize: shiftPagination.value.pageSize,
-      keyword: shiftKeyword.value || undefined,
-      useScope: shiftUseScope.value ?? undefined,
-    });
-    shifts.value = res.data?.records || [];
-    shiftPagination.value.total = res.data?.total || 0;
-  } catch (error) {
-    console.error('加载班次字典失败:', error);
-  } finally {
-    shiftLoading.value = false;
-  }
-};
-const handleShiftSearch = () => {
-  shiftPagination.value.pageNum = 1;
-  loadShifts();
-};
-const handleShiftPageChange = (val) => {
-  shiftPagination.value.pageNum = val;
-  loadShifts();
-};
-const handleShiftSizeChange = (val) => {
-  shiftPagination.value.pageSize = val;
-  shiftPagination.value.pageNum = 1;
-  loadShifts();
-};
-const shiftDeptName = (deptId) => {
-  if (!deptId)
-    return '全院通用';
-  const hit = departments.value.find((d) => String(d.id) === String(deptId));
-  return hit?.deptName || `科室${deptId}`;
-};
-// ---------- 班次「编辑已有」与「新增建条」：表单与提交在 ScheduleShiftEdit / ScheduleDictAdd 组件里 ----------
-const shiftEditVisible = ref(false);
-const shiftEditRow = ref(null);
-const handleShiftEdit = (row) => {
-  shiftEditRow.value = row;
-  shiftEditVisible.value = true;
-};
-const shiftAddVisible = ref(false);
-const handleShiftAdd = () => {
-  shiftAddVisible.value = true;
-};
 // ---------- 变更记录（门诊排班审计）：停诊/启用/加号/批量退号/段级编辑/新增/修改/删除/复刻全落账 ----------
 const LOG_ACTION_TYPES = [
   {value: 1, label: '新增排班'},
@@ -1048,11 +945,12 @@ const activeView = ref('panel');
 const panelDeptId = ref(null);
 const panelDoctorId = ref(null);
 /**
- * 面板的岗位类别（sql/195）：默认落在「医生」——排班面板的主活是排出诊班，
- * 但它同时也是窗口/护理人力的排班入口，切到别的岗位就换一套名册与班次。
- * 置空 = 全部岗位混列（只在排查数据时用，日常不用：号源列在出勤岗上一串 0 没有意义）。
+ * 面板固定只看医生岗：本页排的是「出诊计划」（号源、诊室、门诊诊查费都挂在医生班次上），
+ * 号源表也只允许医生落班。护理/医技/收费等纯出勤排班在「员工排班」页，那边按单元排。
+ * 因此这里不给岗位切换入口——以前能切到护理看，但新增/模板弹窗仍只提交医生，
+ * 切过去只能看不能排，是个死路。
  */
-const panelStaffType = ref(STAFF_TYPE_DOCTOR);
+const panelStaffType = STAFF_TYPE_DOCTOR;
 /**
  * 选中的"科室+医生"组合键（`deptId_doctorId`）。
  * 不能只存 doctorId：同一个 doctor_id 会横跨多个科室（实测 2098255864065458177 同时排在
@@ -1093,7 +991,7 @@ const loadOnDuty = async () => {
     onDutyLoading.value = false;
   }
 };
-/** 在岗名单按岗位分组：医生一组、护理一组……顺序跟 STAFF_TYPE_OPTIONS 一致 */
+/** 在岗名单按岗位分组：医生一组、护理一组……按岗位类别码值升序 */
 const onDutyGroups = computed(() => {
   const map = new Map();
   for (const s of onDutyList.value) {
@@ -1136,6 +1034,11 @@ const usedOf = (s) => (s.totalSource || 0) - (s.availableSource || 0);
  * 未选医生时 panelSchedules 直接复用这一份（只发一次请求）；选了医生才多发一次。
  */
 const panelAllSchedules = ref([]);
+/** 整周流转 loading（提交/发布共用，避免连点） */
+const weekActionLoading = ref(false);
+/** 当前显示周内待提交草稿数 / 待审核数（整周按钮角标；口径 = 当前科室 × 面板所在周全量） */
+const weekDraftCount = computed(() => panelAllSchedules.value.filter((s) => s.publishStatus === PUBLISH_DRAFT).length);
+const weekPendingCount = computed(() => panelAllSchedules.value.filter((s) => s.publishStatus === PUBLISH_PENDING).length);
 /** 本周排班总览：六张置顶卡片（随上周/下周切换联动，口径 = 当前科室筛选 × 面板所在周） */
 const panelStats = computed(() => {
   const list = panelAllSchedules.value;
@@ -1263,12 +1166,12 @@ const mondayOfPanel = (offset) => {
  */
 let rosterDeptKey = null;
 const loadPanelRoster = async () => {
-  // 缓存键要带上岗位类别：换岗位就是换一拨人，沿用旧名册会让「护理」视图里站着一堆医生
-  const key = `${panelStaffType.value}_${panelDeptId.value ?? '__ALL__'}`;
+  // 缓存键按科室即可：名册只跟科室有关（岗位恒医生），翻周不重复请求
+  const key = String(panelDeptId.value ?? '__ALL__');
   if (rosterDeptKey === key)
     return;
   try {
-    const params = {staffType: panelStaffType.value};
+    const params = {staffType: STAFF_TYPE_DOCTOR};
     if (panelDeptId.value)
       params.deptId = panelDeptId.value;
     const res = await getEmployeeList(params);
@@ -1299,7 +1202,7 @@ const loadPanel = async () => {
       days.push(fmtISO(d));
     }
     panelDays.value = days;
-    const params = {startDate: days[0], endDate: days[6], staffType: panelStaffType.value};
+    const params = {startDate: days[0], endDate: days[6], staffType: panelStaffType};
     if (panelDeptId.value)
       params.deptId = panelDeptId.value;
     // 统计与医生筛选解耦：先拉不带医生条件的全量（统计卡用）；选了医生再拉一份精简集（表格用），
@@ -1309,7 +1212,7 @@ const loadPanel = async () => {
     if (panelDoctorId.value != null) {
       const filtered = await getScheduleList({
         ...params,
-        staffType: panelStaffType.value,
+        staffType: panelStaffType,
         doctorId: panelDoctorId.value
       });
       panelSchedules.value = filtered.data?.records || filtered.data || [];
@@ -1380,12 +1283,6 @@ const handlePanelDoctorChange = () => {
   panelDoctorId.value = hit ? hit.doctorId : null;
   loadPanel();
 };
-/** 换岗位类别 = 换一拨人与一套排班：人员筛选要一起清掉（旧医生不在新岗位的名册里） */
-const handlePanelStaffTypeChange = () => {
-  panelDoctorKey.value = null;
-  panelDoctorId.value = null;
-  loadPanel();
-};
 const handlePanelWeekShift = (delta) => {
   panelWeekOffset.value += delta;
   loadPanel();
@@ -1408,7 +1305,6 @@ const hasShift = (row) => panelSchedules.value.some(s => String(s.doctorId) === 
 /** 点空格子：预填科室/医生/日期，直接进新增弹窗 */
 const handlePanelCellAdd = (row, date) => {
   addSeed.value = {
-    staffType: panelStaffType.value,
     deptId: row.deptId,
     deptName: row.deptName,
     doctorId: row.doctorId,
@@ -1422,6 +1318,122 @@ const handlePanelCellAdd = (row, date) => {
 /** 点已有格子：进只读排班详情（不可原地改；停诊、加号走独立按钮） */
 const handlePanelCellEdit = (row) => {
   handleEdit(row);
+};
+// ========== 发布态流转（G-15）：提交/审核/调班/撤回 ==========
+// 四个动作都是「单条状态迁移」，一次点击一次请求；成功后统一重载面板，
+// 让 publishStatusText 与号源数从后端真相回来（前端不自己算状态）。
+const publishActionLabel = (s) => `${s?.doctorName || ''} ${s?.scheduleDate || ''} ${shiftText(s)}`.trim();
+/** 整周流转入参：当前显示周起止 + 当前科室 + 岗位（与 loadPanel 查询同口径） */
+const weekPayload = () => ({
+  deptId: panelDeptId.value ?? undefined,
+  staffType: panelStaffType,
+  startDate: panelDays.value[0],
+  endDate: panelDays.value[6],
+});
+/** 整周提交审核：当前显示周内本科室草稿一次性提交为待审核（已待审核/已发布/调班中行不动） */
+const handleSubmitWeek = async () => {
+  if (!weekDraftCount.value) {
+    ElMessage.warning('当前周没有待提交的草稿排班');
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(
+        `将把 ${panelDays.value[0]} ~ ${panelDays.value[6]} 的 ${weekDraftCount.value} 条草稿排班一次性提交审核，是否继续？`,
+        '整周提交审核', {confirmButtonText: '提交审核', cancelButtonText: '取消', type: 'info'});
+  } catch {
+    return;
+  }
+  weekActionLoading.value = true;
+  try {
+    const res = await scheduleSubmitWeek(weekPayload());
+    ElMessage.success(`已提交审核 ${res.data ?? weekDraftCount.value} 条`);
+    loadPanel();
+  } catch (error) /* 错误已由全局拦截器统一提示 */ {
+  } finally {
+    weekActionLoading.value = false;
+  }
+};
+/** 整周审核发布：当前显示周内本科室待审核一次性发布并出号（草稿需先提交，已发布的不动） */
+const handleAuditWeek = async () => {
+  if (!weekPendingCount.value) {
+    ElMessage.warning('当前周没有待审核的排班');
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(
+        `将把 ${panelDays.value[0]} ~ ${panelDays.value[6]} 的 ${weekPendingCount.value} 条待审核排班一次性审核发布，发布后正式对外出号，是否继续？`,
+        '整周审核发布', {confirmButtonText: '审核发布', cancelButtonText: '取消', type: 'warning'});
+  } catch {
+    return;
+  }
+  weekActionLoading.value = true;
+  try {
+    const res = await scheduleAuditWeek(weekPayload());
+    ElMessage.success(`已审核发布 ${res.data ?? weekPendingCount.value} 条，已正式出号`);
+    loadPanel();
+  } catch (error) /* 错误已由全局拦截器统一提示 */ {
+  } finally {
+    weekActionLoading.value = false;
+  }
+};
+/** 提交审核：草稿→待审核，等审核人发布 */
+const handlePublishSubmit = async (row) => {
+  try {
+    await scheduleSubmit(row.id);
+    ElMessage.success('已提交审核');
+    loadPanel();
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+
+  }
+};
+/** 审核发布：待审核→已发布，同时对外出号（号源生成在后端） */
+const handleAuditPublish = async (row) => {
+  try {
+    await scheduleAuditPublish(row.id);
+    ElMessage.success(`已审核发布：${publishActionLabel(row)}`);
+    loadPanel();
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+
+  }
+};
+/** 进入调班：已发布/已变更→调班中，号源暂冻结；改完保存后端自动转「已变更」 */
+const handleAdjustStart = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+        `将 ${publishActionLabel(row)} 进入调班：暂停接受新预约，已挂号患者不受影响；改完保存即自动重新出号（无需二次审核）。是否继续？`,
+        '进入调班',
+        {confirmButtonText: '进入调班', cancelButtonText: '取消', type: 'info'});
+  } catch {
+    return;
+  }
+  try {
+    await scheduleAdjustStart(row.id);
+    ElMessage.success('已进入调班，号源暂冻结，改完保存即可');
+    loadPanel();
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+
+  }
+};
+/** 撤回：任意态→草稿。已发布的号源会一并撤下，患者侧立刻不可约，必须先确认 */
+const handleRecallPublish = async (row) => {
+  const eff = isPublishEffective(row.publishStatus);
+  try {
+    await ElMessageBox.confirm(
+        eff
+            ? `撤回 ${publishActionLabel(row)} 将退回草稿，该班已发布的号源会一并撤下，患者将无法预约。是否继续？`
+            : `确认撤回 ${publishActionLabel(row)}？撤回后该排班退回草稿，需重新提交审核才生效。`,
+        '撤回排班',
+        {confirmButtonText: '撤回', cancelButtonText: '取消', type: 'warning'});
+  } catch {
+    return;
+  }
+  try {
+    await scheduleRecall(row.id);
+    ElMessage.success('已撤回至草稿');
+    loadPanel();
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+
+  }
 };
 /** 复刻固定后移一周，前后端同一口径 */
 const REPLICATE_OFFSET_DAYS = 7;
@@ -1454,11 +1466,11 @@ const handleReplicateNextWeek = async () => {
   }
   replicateLoading.value = true;
   try {
-    // 整周复刻只发一次请求：源区间、后移天数、岗位与科室筛选交给后端，
+    // 整周复刻只发一次请求：源区间、后移天数、科室筛选交给后端，
     // 跳过（日期已过/时段已被占）与落库在同一事务里由它算。
     const res = await replicateSchedule({
       deptId: panelDeptId.value ?? undefined,
-      staffType: panelStaffType.value ?? undefined,
+      staffType: STAFF_TYPE_DOCTOR,
       startDate: panelDays.value[0],
       endDate: panelDays.value[6],
       dayOffset: REPLICATE_OFFSET_DAYS,
@@ -1487,8 +1499,8 @@ const loadDepartments = async () => {
 };
 // ========== 新增/修改排班弹窗的打开入口（表单逻辑在 ScheduleAdd / ScheduleEdit 组件里） ==========
 const handleAdd = () => {
-  // 默认落在面板当前看的岗位：排班员切到「护理」再点新增，想排的就是护理班
-  addSeed.value = {staffType: panelStaffType.value};
+  // 工具栏「新增」不带任何预填：弹窗自己按医生岗拉科室与人员候选
+  addSeed.value = {};
   dialogVisible.value = true;
 };
 const handleEdit = (row) => {
@@ -1684,7 +1696,6 @@ onMounted(() => {
   });
   loadTitleDict();
   loadTemplates();
-  loadShifts();
   nextTick(calcPanelTableHeight);
 });
 onUnmounted(() => {
@@ -1694,7 +1705,7 @@ onUnmounted(() => {
 
 <style scoped>
 /* 表格线条加深一档：默认 --el-table-border-color #ebeef5 在投影/低对比屏上几乎看不见。
-   只作用于本页三个表（排班面板/排班模板/班次字典），slate-300 = #cbd5e1 */
+   只作用于本页两个表（排班面板/排班模板；班次字典已拆为独立页面 ShiftDictView），slate-300 = #cbd5e1 */
 :deep(.el-table) {
   --el-table-border-color: #cbd5e1;
 }

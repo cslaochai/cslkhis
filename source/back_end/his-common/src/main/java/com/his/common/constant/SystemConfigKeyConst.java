@@ -116,4 +116,26 @@ public interface SystemConfigKeyConst {
      * DRG 结算默认启用的分组方案版本
      */
     public static final String DRG_DEFAULT_VERSION = "drg.default_version";
+
+    // ===== 医保按病种付费（DRG / DIP 结算切换） =====
+
+    /**
+     * 住院结算主付费方式：DRG / DIP 二选一（一主一备，按统筹区选定后切换）
+     */
+    public static final String MEDPAY_MODE = "medpay.mode";
+
+    /**
+     * DIP 结算默认启用的病种库版本（与 biz_dip_disease.version 对应）
+     */
+    public static final String DIP_DEFAULT_VERSION = "dip.default_version";
+
+    /**
+     * DIP 结算点值（元/分值，统筹区公布）；未配置时结算金额与盈亏不计算，保持 NULL
+     */
+    public static final String DIP_POINT_VALUE = "dip.point_value";
+
+    /**
+     * DRG 结算费率（元/权重，统筹区公布）；未配置时 DRG 结算金额与盈亏不计算，保持 NULL
+     */
+    public static final String DRG_RATE = "drg.rate";
 }

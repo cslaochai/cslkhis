@@ -180,9 +180,14 @@ public class BizClinicSource extends BaseEntity {
     private Integer addedSource;
 
     /**
-     * 状态（0-停诊 1-正常 2-已满 3-已过期）
+     * 状态（0-停诊 1-正常 2-已满 3-已过期）—— 号源可用性，与发布态是两回事
      */
     private Integer status;
+
+    /**
+     * 发布态（0-草稿 1-待审核 2-已发布 3-调班中 4-已变更）；仅已发布/已变更 才出号
+     */
+    private Integer publishStatus;
 
     /**
      * 就诊状态（0-待开始 1-接诊中 2-暂停）

@@ -334,7 +334,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
             registIds.add(appoint.getId());
         }
 
-        // 批量查询账单信息（经 SPI 委派至 his-charge）
+        // 批量查询账单信息
         Map<Long, BillBriefVO> billMap = new HashMap<>();
         if (!billIds.isEmpty()) {
             billMap = chargeFacadeService.mapBillsByIds(billIds);
@@ -585,8 +585,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
             }
         }
 
-        // 挂号费记账 + 出账，经 SPI 委派至 his-charge。
-        // patientBirthDate 取主档出生日期（可能为 null → 儿童加收不生效，见 buildRevisitFeeContext）
+        // 挂号费记账 + 出账
         RevisitFeePolicyService.RevisitFeeDecision feeDecision = revisitFeePolicyService.decide(
                 buildRevisitFeeContext(revisit, upsertDTO.getRevisitSource(), origin, schedule,
                         appointInfo.getDeptId(), appointInfo.getDoctorId(), appointInfo.getVisitDate(),
@@ -604,7 +603,9 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
             command.setDoctorId(appointInfo.getDoctorId());
             command.setDoctorName(appointInfo.getDoctorName());
             command.setRegistFee(feeDecision.getRegistFee());
-            command.setDiagnosisFee(feeDecision.getDiagnosisFee());
+            command.setDiagnosisTier(feeDecision.getDiagnosisTier());
+            command.setBaseFee(feeDecision.getBaseFee());
+            command.setSurchargeFee(feeDecision.getSurchargeFee());
             command.setWaived(feeDecision.isWaived());
             command.setWaiveReason(feeDecision.getReason());
             // 本单结算方式（1-全自费 2-医保联网）：挂号单选什么就透什么，支持医保患者本单改自费
@@ -733,6 +734,9 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
                 ? BigDecimal.ZERO : schedule.getRegistFee());
         context.setDiagnosisFee(schedule == null || schedule.getDiagnosisFee() == null
                 ? BigDecimal.ZERO : schedule.getDiagnosisFee());
+        // 🔑 职级加收档位：决定主项门诊诊查费之上是否出加收子项、出哪一档（011102020010001/2/3）。
+        //   普通档(null/1)只出主项；专家档出主项 + 加收两行。
+        context.setDiagnosisTier(schedule == null ? null : schedule.getDiagnosisTier());
         // 🔑 儿童加收 30% 的两个判定输入（湘医保发〔2025〕58号附件1 计价说明）：
         //   birthDate 判是否六周岁以内；缺失则不加收（判不出来不猜，多收会被稽核抓）
         //   visitDate 取「拟就诊日」而非今天 —— 预约可提前数周，一个今天 6 岁半的孩子

@@ -43,6 +43,40 @@ export function deleteDutyRoster(id) {
   return request.delete('/system/dutyRoster/deleteById', { params: { id } })
 }
 
+/* ==================== 发布态流转（G-15） ==================== */
+
+/** 提交审核：草稿 → 待审核（待审核仍不对外展示） */
+export function dutyRosterSubmit(id) {
+  return request.post('/system/dutyRoster/submit', null, { params: { id } })
+}
+
+/** 审核发布：待审核 → 已发布（此后才进今日值班表与此刻谁负责） */
+export function dutyRosterAuditPublish(id) {
+  return request.post('/system/dutyRoster/auditPublish', null, { params: { id } })
+}
+
+/** 撤回：任意态 → 草稿（撤回后「此刻谁负责」解析不到这一行） */
+export function dutyRosterRecall(id) {
+  return request.post('/system/dutyRoster/recall', null, { params: { id } })
+}
+
+/** 进入调班：已发布/已变更 → 调班中（锁定，改完保存自动转已变更） */
+export function dutyRosterAdjustStart(id) {
+  return request.post('/system/dutyRoster/adjustStart', null, { params: { id } })
+}
+
+/* ==================== 统计与校验（统计校验页签） ==================== */
+
+/** 月度值班工时：一人一行，白班/夜班/主班/副班次数与总时长（按实际值班人归并） */
+export function getDutyWorkload(data) {
+  return request.post('/system/dutyRoster/monthWorkload', data)
+}
+
+/** 区间规则校验：连续值班 / 值班频次 / 主班漏排 */
+export function checkDutyRoster(data) {
+  return request.post('/system/dutyRoster/check', data)
+}
+
 /* ==================== 值班日志 / 交班本（sql/170） ==================== */
 
 /** 分页查询值班日志 */

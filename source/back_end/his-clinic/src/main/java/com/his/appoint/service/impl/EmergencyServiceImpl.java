@@ -11,7 +11,7 @@ import com.his.appoint.entity.Queue;
 import com.his.common.enums.*;
 import com.his.appoint.mapper.*;
 import com.his.appoint.service.EmergencyService;
-import com.his.system.service.BizClinicSourceService;
+import com.his.system.service.StaffScheduleService;
 import com.his.appoint.support.EmergencyObservationPolicy;
 import com.his.appoint.support.EmergencyWaitPolicy;
 import com.his.appoint.vo.*;
@@ -41,6 +41,7 @@ import com.his.system.service.DutyRosterService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
 import com.his.system.vo.DutyOfficerVO;
+import com.his.system.vo.StaffScheduleVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -96,7 +97,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
 
     private final PatientFacadeService patientFacadeService;
 
-    private final BizClinicSourceService bizScheduleService;
+    private final StaffScheduleService staffScheduleService;
 
     private final SysMessageService sysMessageService;
 
@@ -327,7 +328,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
             emergency.setAssignType(EmergencyAssignTypeEnum.MANUAL.getCode());
             return;
         }
-        BizClinicSource onDuty = pickOnDutySchedule(emergency.getDeptId());
+        ErDuty onDuty = pickOnDutySchedule(emergency.getDeptId());
         if (onDuty != null) {
             emergency.setAssignType(EmergencyAssignTypeEnum.AUTO_BY_SCHEDULE.getCode());
             emergency.setDoctorId(onDuty.getDoctorId());
@@ -343,39 +344,53 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
     }
 
     /**
-     * 当前时刻在岗的排班。交接班时段两班重叠，取「最近开班的那一班」= 接班医生，
+     * 当前时刻在岗的急诊医生排班。交接班时段两班重叠，取「最近开班的那一班」= 接班医生，
      * 否则凌晨入院的急诊会被派给已经下班的白班医生。
      */
-    private BizClinicSource pickOnDutySchedule(Long deptId) {
-        List<BizClinicSource> onDuty = onDutySchedules(deptId);
+    private ErDuty pickOnDutySchedule(Long deptId) {
+        List<ErDuty> onDuty = onDutySchedules(deptId);
         return onDuty.stream()
                 .max(Comparator.comparing(s -> ShiftCoverUtil.parseShiftTime(s.getStartTime())))
                 .orElse(null);
     }
 
     /**
-     * 该科室此刻在岗（有医生）的当日排班；deptId 为空或时间不可解析一律排除
+     * 急诊当班医生（此刻在岗）。数据源是<b>岗位排班底座</b> biz_schedule 的急诊科室单元
+     * （org_type=1 + 急诊科 id），不再是门诊号源排班：急诊的「谁在岗」是值班/出勤语义，
+     * 跨零点夜班归开始日，{@link StaffScheduleService#onDutyAt} 已按「昨天+今天」两日捞行并
+     * 用 {@link ShiftCoverUtil#covers} 判覆盖（凌晨 01:00 能命中「昨天 22:00 开班」的夜班行）。
+     * 听班（待命响应、呼叫到岗）不算在岗接诊医生，一律过滤。
      */
-    private List<BizClinicSource> onDutySchedules(Long deptId) {
+    private List<ErDuty> onDutyErSchedules(Long deptId) {
         if (deptId == null) {
             return List.of();
         }
-        LocalTime now = LocalTime.now();
-        List<BizClinicSource> onDuty = new ArrayList<>();
-        for (BizClinicSource s : bizScheduleService.getTodaySchedule(deptId)) {
-            if (s.getDoctorId() == null) {
-                continue;
-            }
-            LocalTime start = ShiftCoverUtil.parseShiftTime(s.getStartTime());
-            LocalTime end = ShiftCoverUtil.parseShiftTime(s.getEndTime());
-            if (start == null || end == null) {
-                continue;
-            }
-            if (ShiftCoverUtil.covers(now, start, end)) {
-                onDuty.add(s);
-            }
-        }
-        return onDuty;
+        // 计划在岗（岗位排班 onDutyAt 已带签到标记）
+        List<StaffScheduleVO> plans = staffScheduleService
+                .onDutyAt(LocalDateTime.now(), OrgUnitTypeEnum.DEPT.getCode(),
+                        deptId, StaffTypeEnum.DOCTOR.getCode())
+                .stream()
+                .filter(v -> !Objects.equals(v.getAttendMode(), AttendModeEnum.ON_CALL.getCode()))
+                .collect(Collectors.toList());
+        // 「当班医生 = 计划命中 + 已签到」：有实际到岗（签到）就用实际，无人签到则回退计划，
+        // 保证未启用打卡的环境急诊接诊仍能取到当班医生。
+        List<StaffScheduleVO> actual = plans.stream()
+                .filter(v -> Boolean.TRUE.equals(v.getActualOnDuty()))
+                .collect(Collectors.toList());
+        List<StaffScheduleVO> source = actual.isEmpty() ? plans : actual;
+        return source.stream()
+                .map(v -> new ErDuty(v.getEmployeeId(), v.getEmployeeName(), v.getShiftId(),
+                        v.getStartTime(), v.getEndTime()))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 该科室此刻在岗（有医生）的急诊排班；deptId 为空一律排除。
+     * 消费点只读 {@link ErDuty} 的 doctorId/doctorName/shiftId/startTime/endTime，
+     * 字段命名与旧门诊排班数据源对齐，调用处无需感知来源切换。
+     */
+    private List<ErDuty> onDutySchedules(Long deptId) {
+        return onDutyErSchedules(deptId);
     }
 
     /**
@@ -999,7 +1014,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
                         .eq(SysEmployee::getStatus, 1))
                 .forEach(emp -> employees.putIfAbsent(emp.getId(), emp));
         Set<Long> onDutyIds = new LinkedHashSet<>();
-        for (BizClinicSource schedule : onDutySchedules(scopeDeptId)) {
+        for (ErDuty schedule : onDutySchedules(scopeDeptId)) {
             Long doctorId = schedule.getDoctorId();
             // 排班医生未必挂本科室（跨科支援），下拉里要有他，否则"在岗"是假信息
             employees.computeIfAbsent(doctorId, id -> sysEmployeeMapper.selectById(id));
@@ -1483,19 +1498,13 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
      * 交出人此刻所在班次名（台账上"白班交的班"要能看出来）；查不到就留空，不编
      */
     private String currentShiftName(Long deptId, Long empId) {
-        LocalTime now = LocalTime.now();
-        for (BizClinicSource schedule : bizScheduleService.getTodaySchedule(deptId)) {
+        for (ErDuty schedule : onDutySchedules(deptId)) {
             if (!Objects.equals(schedule.getDoctorId(), empId) || schedule.getShiftId() == null) {
                 continue;
             }
-            LocalTime start = ShiftCoverUtil.parseShiftTime(schedule.getStartTime());
-            LocalTime end = ShiftCoverUtil.parseShiftTime(schedule.getEndTime());
-            if (start == null || end == null) {
-                continue;
-            }
-            if (ShiftCoverUtil.covers(now, start, end)) {
-                BizShift shift = bizShiftMapper.selectById(schedule.getShiftId());
-                return shift == null ? null : shift.getShiftName();
+            BizShift shift = bizShiftMapper.selectById(schedule.getShiftId());
+            if (shift != null) {
+                return shift.getShiftName();
             }
         }
         return null;
@@ -1518,6 +1527,48 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
         }
         String trimmed = text.trim();
         return trimmed.length() <= max ? trimmed : trimmed.substring(0, max);
+    }
+
+    /**
+     * 急诊当班医生快照（由岗位排班在岗行映射而来）。
+     *
+     * <p>字段命名刻意对齐旧「门诊号源排班」消费点的 getter（getDoctorId/getDoctorName/
+     * getShiftId/getStartTime/getEndTime），让急诊各消费点无需感知数据源切换。
+     */
+    private static class ErDuty {
+        private final Long doctorId;
+        private final String doctorName;
+        private final Long shiftId;
+        private final String startTime;
+        private final String endTime;
+
+        private ErDuty(Long doctorId, String doctorName, Long shiftId, String startTime, String endTime) {
+            this.doctorId = doctorId;
+            this.doctorName = doctorName;
+            this.shiftId = shiftId;
+            this.startTime = startTime;
+            this.endTime = endTime;
+        }
+
+        public Long getDoctorId() {
+            return doctorId;
+        }
+
+        public String getDoctorName() {
+            return doctorName;
+        }
+
+        public Long getShiftId() {
+            return shiftId;
+        }
+
+        public String getStartTime() {
+            return startTime;
+        }
+
+        public String getEndTime() {
+            return endTime;
+        }
     }
 
     /**

@@ -32,7 +32,35 @@ public enum ScheduleChangeTypeEnum {
     /**
      * 出诊变更：改诊室/时段/班别等出诊属性
      */
-    CLINIC_CHANGE(6, "出诊变更");
+    CLINIC_CHANGE(6, "出诊变更"),
+    /**
+     * 提交审核：草稿 → 待审核
+     */
+    SUBMIT(7, "提交审核"),
+    /**
+     * 审核发布：待审核 → 已发布
+     */
+    PUBLISH(8, "审核发布"),
+    /**
+     * 驳回：待审核 → 草稿（附原因）
+     */
+    REJECT(9, "驳回"),
+    /**
+     * 整周提交：本单元整周草稿 → 待审核
+     */
+    SUBMIT_WEEK(10, "整周提交"),
+    /**
+     * 整周审核发布：本单元整周待审核 → 已发布
+     */
+    PUBLISH_WEEK(11, "整周审核发布"),
+    /**
+     * 撤回：任意态 → 草稿
+     */
+    RECALL(12, "撤回"),
+    /**
+     * 进入调班：已发布/已变更 → 调班中
+     */
+    ADJUST(13, "进入调班");
 
     private final int code;
     private final String label;

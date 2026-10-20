@@ -4,14 +4,21 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.entity.CurrentUser;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.ShiftCoverUtil;
 import com.his.common.util.TextUtil;
+import com.his.system.dto.StaffCheckRow;
+import com.his.system.dto.StaffScheduleCheckDTO;
 import com.his.system.dto.StaffScheduleCopyDTO;
 import com.his.system.dto.StaffSchedulePageQueryDTO;
+import com.his.system.dto.StaffSchedulePendingQueryDTO;
+import com.his.system.dto.StaffScheduleRejectDTO;
 import com.his.system.dto.StaffScheduleSwapDTO;
 import com.his.system.dto.StaffScheduleUpsertDTO;
+import com.his.system.dto.StaffScheduleWeekActionDTO;
+import com.his.system.dto.StaffScheduleWorkloadDTO;
 import com.his.system.entity.*;
 import com.his.system.mapper.*;
 import com.his.system.service.DeptScopeService;
@@ -19,18 +26,27 @@ import com.his.system.service.ScheduleChangeLogService;
 import com.his.system.service.ShiftService;
 import com.his.system.service.StaffPlanRuleService;
 import com.his.system.service.StaffScheduleService;
+import com.his.system.utils.UserUtils;
+import com.his.system.vo.StaffCheckVO;
 import com.his.system.vo.StaffScheduleVO;
 import com.his.system.vo.StaffTypeDayWorkingVO;
 import com.his.system.vo.StaffWorkingGroupVO;
+import com.his.system.vo.StaffWorkloadVO;
 import com.his.system.vo.UnitDayWorkingVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.YearMonth;
+import java.time.temporal.WeekFields;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 全院岗位排班服务实现 —— 排班事实的唯一写入口。
@@ -48,6 +64,10 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
      */
     private static final int DAYS_OF_WEEK = 7;
     private static final String[] WEEK_DAY_TEXTS = {"周一", "周二", "周三", "周四", "周五", "周六", "周日"};
+    /** 系统管理员角色码：全院岗位排班审核的全局豁免者 */
+    private static final String ROLE_ADMIN = "10012";
+    /** 签到时间展示格式 */
+    private static final DateTimeFormatter ATTENDANCE_TIME_FMT = DateTimeFormatter.ofPattern("HH:mm:ss");
     private final DeptScopeService deptScopeService;
     private final SysEmployeeMapper sysEmployeeMapper;
     private final SysEmployeePostMapper sysEmployeePostMapper;
@@ -57,6 +77,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
     private final ShiftService shiftService;
     private final StaffPlanRuleService staffPlanRuleService;
     private final ScheduleChangeLogService scheduleChangeLogService;
+    private final BizStaffAttendanceMapper staffAttendanceMapper;
 
     private static String tipJoin(String... tips) {
         StringBuilder sb = new StringBuilder();
@@ -145,6 +166,11 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
      */
     private boolean headcountDrops(BizSchedule before, BizSchedule now) {
         if (before == null || !StaffDutyStatusEnum.isWorking(before.getDutyStatus())) {
+            return false;
+        }
+        // 草稿/待审核的行本来就不计进在岗（countOnDuty 只认生效态），改它不构成减员，
+        // 否则排班员连自己没发布的第一版都改不动
+        if (!PublishStatusEnum.isEffective(before.getPublishStatus())) {
             return false;
         }
         if (!StaffDutyStatusEnum.isWorking(now.getDutyStatus())) {
@@ -284,6 +310,9 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         schedule.setAttendMode(dto.getAttendMode() == null ? AttendModeEnum.ON_SITE.getCode() : dto.getAttendMode());
         schedule.setClinicFlag(dto.getClinicFlag() == null ? YesOrNoEnum.NO.getCode() : dto.getClinicFlag());
         schedule.setScheduleSource(source.getCode());
+        // 发布态一律在这里定，不留给库默认值：调用方显式带入的用带入值，
+        // 没带的按「新行=草稿、改单按原态迁移」算，否则审核闸会被静默绕过。
+        schedule.setPublishStatus(resolvePublishStatus(dto.getId(), dto.getPublishStatus()));
         schedule.setRemark(dto.getRemark());
 
         StaffDutyStatusEnum status = StaffDutyStatusEnum.fromCode(schedule.getDutyStatus());
@@ -297,6 +326,29 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         applyEmployee(schedule, dto.getEmployeeId(), dto.getEmployeePostId());
         applyShift(schedule, dto.getShiftId(), status);
         return schedule;
+    }
+
+    /**
+     * 排班事实的发布态归属：调用方带入的用带入值（出诊派生跟号源行、值守派生跟值守行），
+     * 没带入的按「新行落草稿、改单按原态迁移」定 —— 已发布/已变更/调班中的行被改过就是已变更，
+     * 草稿与待审核改完仍是原态（没发布过的东西不存在「变更」）。
+     *
+     * <p>这里必须给出值而不是留 null：本列 NOT NULL 且无库默认值，漏列会让整条 INSERT 报 1364。
+     */
+    private Integer resolvePublishStatus(Long id, Integer submitted) {
+        if (submitted != null) {
+            return submitted;
+        }
+        BizSchedule exist = id == null ? null : getById(id);
+        if (exist == null) {
+            return PublishStatusEnum.DRAFT.getCode();
+        }
+        Integer old = exist.getPublishStatus();
+        if (old == null || PublishStatusEnum.ADJUSTING.getCode().equals(old)
+                || PublishStatusEnum.isEffective(old)) {
+            return PublishStatusEnum.CHANGED.getCode();
+        }
+        return old;
     }
 
     private BizSchedule sameShiftRow(BizSchedule schedule) {
@@ -477,6 +529,8 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
             copy.setClinicFlag(source.getClinicFlag());
             copy.setWorkMinutes(source.getWorkMinutes());
             copy.setScheduleSource(StaffScheduleSourceEnum.COPY.getCode());
+            // 复制出来的是新的一周，一律草稿：复制不能替审核人把没审过的排班直接发布
+            copy.setPublishStatus(PublishStatusEnum.DRAFT.getCode());
             copy.setRemark(source.getRemark());
             if (countDayConflict(copy) > 0) {
                 // 目标周这天这个人已经是休息/请假了，复制不能把请好的假改成上班
@@ -500,16 +554,69 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         List<BizSchedule> rows = list(new LambdaQueryWrapper<BizSchedule>()
                 .in(BizSchedule::getScheduleDate, Arrays.asList(today.minusDays(1), today))
                 .eq(BizSchedule::getDutyStatus, StaffDutyStatusEnum.WORK.getCode())
+                // 只有发布生效的排班才算「此刻在岗」：草稿/待审核/调班中不能对外宣示有人在班
+                .in(BizSchedule::getPublishStatus,
+                        PublishStatusEnum.PUBLISHED.getCode(), PublishStatusEnum.CHANGED.getCode())
                 .eq(orgType != null, BizSchedule::getOrgType, orgType)
                 .eq(orgId != null, BizSchedule::getOrgId, orgId)
                 .eq(staffType != null, BizSchedule::getStaffType, staffType)
                 .orderByAsc(BizSchedule::getStartTime).orderByAsc(BizSchedule::getId));
         Map<Long, BizShift> shifts = shiftService.mapByIds(shiftIdsOf(rows));
+        // 计划命中后，再关联实际出勤的签到时间：行业实践「当班 = 计划 + 签到」。
+        // 无打卡数据的环境（check_in 全空）依然返回计划在岗 —— 兼容，不让急诊接诊取不到人。
+        List<BizSchedule> inDuty = new ArrayList<>();
+        for (BizSchedule row : rows) {
+            if (ShiftCoverUtil.covers(now, row.getStartTime(), row.getEndTime())) {
+                inDuty.add(row);
+            }
+        }
+        Map<Long, LocalDateTime> checkedIn = attendanceCheckInMap(inDuty);
+        List<StaffScheduleVO> vos = new ArrayList<>();
+        for (BizSchedule row : inDuty) {
+            StaffScheduleVO vo = toOnDutyVO(row, shifts.get(row.getShiftId()));
+            LocalDateTime ci = checkedIn.get(row.getId());
+            vo.setCheckInTime(ci == null ? null : ci.format(ATTENDANCE_TIME_FMT));
+            vo.setActualOnDuty(ci != null);
+            vos.add(vo);
+        }
+        return vos;
+    }
+
+    /**
+     * 按排班行ID批量取签到时间（biz_staff_attendance.check_in，NULL=未签到）。
+     * 同一条排班行的出勤记录只有一行（uk_attend 唯一），重复时取最早签到。
+     */
+    private Map<Long, LocalDateTime> attendanceCheckInMap(List<BizSchedule> rows) {
+        if (rows == null || rows.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<Long> ids = rows.stream().map(BizSchedule::getId).collect(Collectors.toList());
+        return staffAttendanceMapper.selectList(new LambdaQueryWrapper<BizStaffAttendance>()
+                        .in(BizStaffAttendance::getStaffScheduleId, ids)
+                        .select(BizStaffAttendance::getStaffScheduleId, BizStaffAttendance::getCheckIn))
+                .stream()
+                .filter(a -> a.getCheckIn() != null)
+                .collect(Collectors.toMap(BizStaffAttendance::getStaffScheduleId, BizStaffAttendance::getCheckIn,
+                        (a, b) -> a.isBefore(b) ? a : b));
+    }
+
+    /**
+     * 急诊值班公开视图：急诊内科/外科/儿科当天已发布（2/4）的医生出勤行，按班次开始时间排序。
+     * 只读、不按数据范围收口 —— 值班表全院公开是核心制度要求；接口层 isAuthenticated 即可。
+     */
+    @Override
+    public List<StaffScheduleVO> erDutyPublic(LocalDate date) {
+        List<BizSchedule> rows = list(new LambdaQueryWrapper<BizSchedule>()
+                .eq(BizSchedule::getScheduleDate, date)
+                .in(BizSchedule::getDeptId, List.of(19580048L, 19580049L, 19580051L))
+                .eq(BizSchedule::getStaffType, StaffTypeEnum.DOCTOR.getCode())
+                .eq(BizSchedule::getDutyStatus, StaffDutyStatusEnum.WORK.getCode())
+                .in(BizSchedule::getPublishStatus,
+                        PublishStatusEnum.PUBLISHED.getCode(), PublishStatusEnum.CHANGED.getCode())
+                .orderByAsc(BizSchedule::getStartTime).orderByAsc(BizSchedule::getId));
+        Map<Long, BizShift> shifts = shiftService.mapByIds(shiftIdsOf(rows));
         List<StaffScheduleVO> vos = new ArrayList<>();
         for (BizSchedule row : rows) {
-            if (!ShiftCoverUtil.covers(now, row.getStartTime(), row.getEndTime())) {
-                continue;
-            }
             vos.add(toOnDutyVO(row, shifts.get(row.getShiftId())));
         }
         return vos;
@@ -985,6 +1092,8 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         vo.setScheduleSource(row.getScheduleSource());
         vo.setScheduleSourceText(StaffScheduleSourceEnum.getLabel(row.getScheduleSource()));
         vo.setTemplateId(row.getTemplateId());
+        vo.setPublishStatus(row.getPublishStatus());
+        vo.setPublishStatusText(PublishStatusEnum.getLabel(row.getPublishStatus()));
         vo.setRemark(row.getRemark());
         return vo;
     }
@@ -1015,5 +1124,563 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
      * 一条排班摊开后的时间段
      */
     private record TimeRange(LocalDateTime from, LocalDateTime to) {
+    }
+
+    // ==================== 员工排班增强：区间规则校验 / 月度工时（全区岗位通用） ====================
+
+    @Override
+    public StaffCheckVO check(StaffScheduleCheckDTO dto) {
+        LocalDate start = dto.getStartDate();
+        LocalDate end = dto.getEndDate();
+        if (end.isBefore(start)) {
+            throw new BusinessException("结束日期不能早于开始日期");
+        }
+        List<StaffCheckRow> rows = baseMapper.selectStaffCheckRows(
+                dto.getOrgType(), dto.getOrgId(), dto.getStaffType(), start, end);
+        // 规则只在「单单元」口径下才有配置可比（跨单元汇总没有标准可对）
+        List<BizStaffPlanRule> rules = dto.getOrgType() != null && dto.getOrgId() != null
+                ? staffPlanRuleService.listByUnit(dto.getOrgType(), dto.getOrgId(), dto.getStaffType())
+                : List.of();
+        List<StaffCheckVO.Warning> warnings = new ArrayList<>();
+        shiftOnNonWorkWarnings(rows, warnings);
+        personWarnings(rows, rules, warnings);
+        staffingWarnings(rows, rules, start, end, warnings);
+        StaffCheckVO vo = new StaffCheckVO();
+        vo.setStartDate(start.toString());
+        vo.setEndDate(end.toString());
+        vo.setOrgType(dto.getOrgType());
+        vo.setOrgId(dto.getOrgId());
+        vo.setOrgName(rows.isEmpty() ? null : rows.get(0).getOrgName());
+        vo.setStaffType(dto.getStaffType());
+        vo.setAlertCount(countLevel(warnings, 1));
+        vo.setHintCount(countLevel(warnings, 2));
+        vo.setWarnings(warnings);
+        return vo;
+    }
+
+    /**
+     * 班次冲突：休息/请假/培训/停班仍挂班次，直接算告警。
+     */
+    private void shiftOnNonWorkWarnings(List<StaffCheckRow> rows, List<StaffCheckVO.Warning> warnings) {
+        for (StaffCheckRow row : rows) {
+            if (row.getShiftId() != null && !isWorkStatus(row.getDutyStatus())) {
+                warnings.add(warn(1, "SHIFT_ON_NON_WORK", "班次冲突", row.getScheduleDate(),
+                        row.getShiftId(), row.getShiftName(), row.getEmployeeId(), row.getEmployeeName(),
+                        row.getStaffType(), null, null,
+                        row.getEmployeeName() + " 当天为" + StaffDutyStatusEnum.getLabel(row.getDutyStatus())
+                                + "，仍挂了班次「" + row.getShiftName() + "」"));
+            }
+        }
+    }
+
+    /**
+     * 人维度：连续夜班 / 连续上班 / 单周工时（规则配置来自人力标准行，未配置的规则不判）。
+     */
+    private void personWarnings(List<StaffCheckRow> rows, List<BizStaffPlanRule> rules,
+                                List<StaffCheckVO.Warning> warnings) {
+        Map<Long, List<StaffCheckRow>> byPerson = rows.stream()
+                .collect(Collectors.groupingBy(StaffCheckRow::getEmployeeId, LinkedHashMap::new, Collectors.toList()));
+        for (Map.Entry<Long, List<StaffCheckRow>> entry : byPerson.entrySet()) {
+            List<StaffCheckRow> personRows = entry.getValue();
+            personRows.sort(Comparator.comparing(StaffCheckRow::getScheduleDate));
+            BizStaffPlanRule rule = personRuleOf(rules, personRows.get(0).getStaffType());
+            int nightStreak = 0;
+            int workStreak = 0;
+            for (StaffCheckRow row : personRows) {
+                if (isWorkStatus(row.getDutyStatus()) && Integer.valueOf(1).equals(row.getIsNight())) {
+                    nightStreak++;
+                } else {
+                    nightStreak = 0;
+                }
+                workStreak = isWorkStatus(row.getDutyStatus()) ? workStreak + 1 : 0;
+                if (rule == null) {
+                    continue;
+                }
+                if (nvl(rule.getMaxConsecutiveNightDays()) > 0 && nightStreak > rule.getMaxConsecutiveNightDays()) {
+                    warnings.add(warn(1, "NIGHT_STREAK", "连续夜班超限", row.getScheduleDate(),
+                            row.getShiftId(), row.getShiftName(), row.getEmployeeId(), row.getEmployeeName(),
+                            row.getStaffType(), nightStreak, rule.getMaxConsecutiveNightDays(),
+                            row.getEmployeeName() + " 已连续 " + nightStreak + " 天夜班（上限 "
+                                    + rule.getMaxConsecutiveNightDays() + " 天）"));
+                }
+                if (nvl(rule.getMaxConsecutiveWorkDays()) > 0 && workStreak > rule.getMaxConsecutiveWorkDays()) {
+                    warnings.add(warn(1, "WORK_STREAK", "连续上班超限", row.getScheduleDate(),
+                            row.getShiftId(), row.getShiftName(), row.getEmployeeId(), row.getEmployeeName(),
+                            row.getStaffType(), workStreak, rule.getMaxConsecutiveWorkDays(),
+                            row.getEmployeeName() + " 已连续 " + workStreak + " 天上班（上限 "
+                                    + rule.getMaxConsecutiveWorkDays() + " 天）"));
+                }
+            }
+            if (rule != null && rule.getMaxWeekHours() != null && rule.getMaxWeekHours().signum() > 0) {
+                Map<YearWeek, Integer> weekMinutes = new HashMap<>();
+                Map<YearWeek, StaffCheckRow> firstOfWeek = new HashMap<>();
+                for (StaffCheckRow row : personRows) {
+                    if (!isWorkStatus(row.getDutyStatus())) {
+                        continue;
+                    }
+                    YearWeek key = YearWeek.of(row.getScheduleDate());
+                    weekMinutes.merge(key, nvl(row.getWorkMinutes()), Integer::sum);
+                    firstOfWeek.putIfAbsent(key, row);
+                }
+                int maxMinutes = rule.getMaxWeekHours().movePointRight(2).intValue();
+                for (Map.Entry<YearWeek, Integer> e : weekMinutes.entrySet()) {
+                    if (e.getValue() > maxMinutes) {
+                        StaffCheckRow row = firstOfWeek.get(e.getKey());
+                        warnings.add(warn(1, "WEEK_HOURS", "单周工时超限", row.getScheduleDate(),
+                                row.getShiftId(), row.getShiftName(), row.getEmployeeId(), row.getEmployeeName(),
+                                row.getStaffType(), e.getValue() / 60, maxMinutes / 60,
+                                row.getEmployeeName() + " 第" + e.getKey().week() + "周工时 "
+                                        + String.format("%.1f", e.getValue() / 60.0) + " 小时（上限 "
+                                        + rule.getMaxWeekHours() + " 小时）"));
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 单元维度：人力缺口（低于最低在岗）与人力富余（高于最高在岗），按生效行（已发布/已变更）统计。
+     */
+    private void staffingWarnings(List<StaffCheckRow> rows, List<BizStaffPlanRule> rules,
+                                  LocalDate start, LocalDate end, List<StaffCheckVO.Warning> warnings) {
+        Map<String, Integer> countByKey = new HashMap<>();
+        for (StaffCheckRow row : rows) {
+            if (!isWorkStatus(row.getDutyStatus()) || !isPublished(row.getPublishStatus())) {
+                continue;
+            }
+            String key = keyOf(row.getOrgType(), row.getOrgId(), row.getScheduleDate(),
+                    row.getShiftId() == null ? 0L : row.getShiftId(), row.getStaffType());
+            countByKey.merge(key, 1, Integer::sum);
+        }
+        for (BizStaffPlanRule rule : rules) {
+            if (rule.getStatus() == null || rule.getStatus() != 1) {
+                continue;
+            }
+            long ruleShift = rule.getShiftId() == null ? 0L : rule.getShiftId();
+            String shiftLabel = ruleShift == 0L ? "全部班次" : shiftNameOf(rule.getShiftId());
+            for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+                String key = keyOf(rule.getOrgType(), rule.getOrgId(), d, ruleShift, rule.getStaffType());
+                int actual = countByKey.getOrDefault(key, 0);
+                if (nvl(rule.getMinStaff()) > 0 && actual < rule.getMinStaff()) {
+                    warnings.add(warn(1, "STAFF_GAP", "人力缺口", d,
+                            rule.getShiftId(), shiftLabel, null, null, rule.getStaffType(),
+                            actual, rule.getMinStaff(),
+                            unitLabel(rule) + " " + d + " " + StaffTypeEnum.getLabel(rule.getStaffType())
+                                    + " 在岗 " + actual + " 人，低于最低 " + rule.getMinStaff() + " 人"));
+                }
+                if (nvl(rule.getMaxStaff()) > 0 && actual > rule.getMaxStaff()) {
+                    warnings.add(warn(2, "STAFF_OVER", "人力富余", d,
+                            rule.getShiftId(), shiftLabel, null, null, rule.getStaffType(),
+                            actual, rule.getMaxStaff(),
+                            unitLabel(rule) + " " + d + " " + StaffTypeEnum.getLabel(rule.getStaffType())
+                                    + " 在岗 " + actual + " 人，超过最高 " + rule.getMaxStaff() + " 人"));
+                }
+            }
+        }
+    }
+
+    /**
+     * 取该岗位类别下用于人维度校验的规则行：优先「全部班次」（shift_id=0）行，否则任取一条。
+     */
+    private BizStaffPlanRule personRuleOf(List<BizStaffPlanRule> rules, Integer staffType) {
+        BizStaffPlanRule fallback = null;
+        for (BizStaffPlanRule r : rules) {
+            if (r.getStatus() == null || r.getStatus() != 1) {
+                continue;
+            }
+            if (staffType != null && !Integer.valueOf(staffType).equals(r.getStaffType())) {
+                continue;
+            }
+            long shift = r.getShiftId() == null ? 0L : r.getShiftId();
+            if (shift == 0L) {
+                return r;
+            }
+            if (fallback == null) {
+                fallback = r;
+            }
+        }
+        return fallback;
+    }
+
+    private String keyOf(Integer orgType, Long orgId, LocalDate date, long shiftId, Integer staffType) {
+        return orgType + ":" + orgId + ":" + date + ":" + shiftId + ":" + staffType;
+    }
+
+    private String unitLabel(BizStaffPlanRule rule) {
+        if (rule.getOrgName() != null && !rule.getOrgName().isBlank()) {
+            return rule.getOrgName();
+        }
+        return "单元(" + rule.getOrgType() + "-" + rule.getOrgId() + ")";
+    }
+
+    private StaffCheckVO.Warning warn(int level, String type, String typeText, LocalDate date,
+                                      Long shiftId, String shiftName, Long employeeId, String employeeName,
+                                      Integer staffType, Integer actual, Integer required, String message) {
+        StaffCheckVO.Warning w = new StaffCheckVO.Warning();
+        w.setLevel(level);
+        w.setType(type);
+        w.setTypeText(typeText);
+        w.setScheduleDate(date == null ? null : date.toString());
+        w.setShiftId(shiftId);
+        w.setShiftName(shiftName);
+        w.setEmployeeId(employeeId);
+        w.setEmployeeName(employeeName);
+        w.setStaffType(staffType);
+        w.setStaffTypeName(StaffTypeEnum.getLabel(staffType));
+        w.setActual(actual);
+        w.setRequired(required);
+        w.setMessage(message);
+        return w;
+    }
+
+    private int countLevel(List<StaffCheckVO.Warning> warnings, int level) {
+        int n = 0;
+        for (StaffCheckVO.Warning w : warnings) {
+            if (w.getLevel() != null && w.getLevel() == level) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    @Override
+    public StaffWorkloadVO monthWorkload(StaffScheduleWorkloadDTO dto) {
+        YearMonth ym = parseMonth(dto.getMonth());
+        LocalDate start = ym.atDay(1);
+        LocalDate end = ym.atEndOfMonth();
+        int days = ym.lengthOfMonth();
+        Map<Long, StaffWorkloadVO.Workload> byEmployee = new LinkedHashMap<>();
+        for (StaffWorkloadVO.Workload w : baseMapper.selectStaffWorkload(
+                dto.getOrgType(), dto.getOrgId(), dto.getStaffType(), start, end)) {
+            byEmployee.put(w.getEmployeeId(), w);
+        }
+        // 在册补齐「整月未排」的人：科室/病区口径按单元在册人员补；全院口径人太多，按单元筛更合理，不做全局补齐
+        if (dto.getOrgType() != null && dto.getOrgId() != null && dto.getOrgType() != OrgUnitTypeEnum.HOSPITAL.getCode()) {
+            for (StaffWorkloadVO.Workload w : baseMapper.selectUnitStaff(
+                    dto.getOrgType(), dto.getOrgId(), dto.getStaffType())) {
+                byEmployee.putIfAbsent(w.getEmployeeId(), w);
+            }
+        }
+        List<StaffWorkloadVO.Workload> rows = new ArrayList<>(byEmployee.values());
+        int totalWorkDays = 0;
+        int totalNightDays = 0;
+        BigDecimal totalHours = BigDecimal.ZERO;
+        for (StaffWorkloadVO.Workload w : rows) {
+            zeroFill(w);
+            w.setMissingDays(Math.max(0, days - nvl(w.getWrittenDays())));
+            totalWorkDays += nvl(w.getWorkDays());
+            totalNightDays += nvl(w.getNightDays());
+            totalHours = totalHours.add(w.getWorkHours() == null ? BigDecimal.ZERO : w.getWorkHours());
+        }
+        rows.sort(Comparator.comparing(StaffWorkloadVO.Workload::getEmpCode,
+                Comparator.nullsLast(Comparator.naturalOrder())));
+        StaffWorkloadVO result = new StaffWorkloadVO();
+        result.setMonth(ym.toString());
+        result.setOrgType(dto.getOrgType());
+        result.setOrgId(dto.getOrgId());
+        result.setStaffType(dto.getStaffType());
+        result.setStaffCount(rows.size());
+        result.setTotalWorkDays(totalWorkDays);
+        result.setTotalNightDays(totalNightDays);
+        result.setTotalWorkHours(totalHours.setScale(1, RoundingMode.HALF_UP));
+        result.setRows(rows);
+        return result;
+    }
+
+    private void zeroFill(StaffWorkloadVO.Workload w) {
+        w.setWorkDays(nvl(w.getWorkDays()));
+        w.setRestDays(nvl(w.getRestDays()));
+        w.setLeaveDays(nvl(w.getLeaveDays()));
+        w.setTrainingDays(nvl(w.getTrainingDays()));
+        w.setSuspendedDays(nvl(w.getSuspendedDays()));
+        w.setNightDays(nvl(w.getNightDays()));
+        w.setWorkMinutes(nvl(w.getWorkMinutes()));
+        if (w.getWorkHours() == null) {
+            w.setWorkHours(BigDecimal.ZERO.setScale(1, RoundingMode.HALF_UP));
+        }
+        if (w.getWrittenDays() == null) {
+            w.setWrittenDays(0);
+        }
+        w.setStaffTypeName(StaffTypeEnum.getLabel(w.getStaffType()));
+    }
+
+    private int nvl(Integer v) {
+        return v == null ? 0 : v;
+    }
+
+    private YearMonth parseMonth(String month) {
+        try {
+            return YearMonth.parse(month);
+        } catch (Exception e) {
+            throw new BusinessException("月份格式应为 yyyy-MM，例如 2026-10");
+        }
+    }
+
+    private boolean isWorkStatus(Integer dutyStatus) {
+        return dutyStatus != null && dutyStatus == 1;
+    }
+
+    private boolean isPublished(Integer publishStatus) {
+        return publishStatus != null && (publishStatus == 2 || publishStatus == 4);
+    }
+
+    // ===== 发布态流转（全院岗位排班：提交 → 审核发布 / 驳回 / 撤回 / 调班）=====
+    // 审核动作必须命中科室主档指定的全院岗位排班审核人（系统管理员豁免；orgType=3 全院级仅管理员）。
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void submit(Long id) {
+        BizSchedule row = requireScheduleRow(id);
+        if (!PublishStatusEnum.DRAFT.getCode().equals(row.getPublishStatus())) {
+            throw new BusinessException("只有草稿状态的排班可以提交审核");
+        }
+        updatePublishStatus(id, PublishStatusEnum.PENDING.getCode());
+        scheduleChangeLogService.record(id, ScheduleChangeTypeEnum.SUBMIT, null, null, null, null, null,
+                "草稿 → 待审核");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void auditPublish(Long id) {
+        BizSchedule row = requireScheduleRow(id);
+        if (!PublishStatusEnum.PENDING.getCode().equals(row.getPublishStatus())) {
+            throw new BusinessException("只有待审核状态的排班可以审核发布");
+        }
+        assertScheduleAuditor(row.getDeptId());
+        updatePublishStatus(id, PublishStatusEnum.PUBLISHED.getCode());
+        scheduleChangeLogService.record(id, ScheduleChangeTypeEnum.PUBLISH, null, null, null, null, null,
+                "待审核 → 已发布");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void reject(StaffScheduleRejectDTO dto) {
+        BizSchedule row = requireScheduleRow(dto.getId());
+        if (!PublishStatusEnum.PENDING.getCode().equals(row.getPublishStatus())) {
+            throw new BusinessException("只有待审核状态的排班可以驳回");
+        }
+        assertScheduleAuditor(row.getDeptId());
+        updatePublishStatus(dto.getId(), PublishStatusEnum.DRAFT.getCode());
+        String reason = (dto.getReason() == null || dto.getReason().isBlank()) ? "" : "：" + dto.getReason();
+        scheduleChangeLogService.record(dto.getId(), ScheduleChangeTypeEnum.REJECT, null, null, null, null, null,
+                "待审核 → 草稿" + reason);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void recall(Long id) {
+        BizSchedule row = requireScheduleRow(id);
+        String from = PublishStatusEnum.getLabel(row.getPublishStatus());
+        updatePublishStatus(id, PublishStatusEnum.DRAFT.getCode());
+        scheduleChangeLogService.record(id, ScheduleChangeTypeEnum.RECALL, null, null, null, null, null,
+                from + " → 草稿");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void adjustStart(Long id) {
+        BizSchedule row = requireScheduleRow(id);
+        if (!PublishStatusEnum.isEffective(row.getPublishStatus())) {
+            throw new BusinessException("只有已发布/已变更的排班可以进入调班");
+        }
+        updatePublishStatus(id, PublishStatusEnum.ADJUSTING.getCode());
+        scheduleChangeLogService.record(id, ScheduleChangeTypeEnum.ADJUST, null, null, null, null, null,
+                PublishStatusEnum.getLabel(row.getPublishStatus()) + " → 调班中");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int submitWeek(StaffScheduleWeekActionDTO dto) {
+        LocalDate start = mondayOf(dto.getWeekStart());
+        LocalDate end = start.plusDays(6);
+        int moved = baseMapper.updateWeekPublishStatusAll(dto.getOrgType(), dto.getOrgId(), start, end,
+                PublishStatusEnum.DRAFT.getCode(), PublishStatusEnum.PENDING.getCode());
+        if (moved == 0) {
+            throw new BusinessException("本周没有待提交的草稿排班（已发布/待审核的不会重复提交）");
+        }
+        scheduleChangeLogService.record(null, ScheduleChangeTypeEnum.SUBMIT_WEEK, null, null, null, null, moved,
+                weekRangeText(start, end));
+        return moved;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int auditWeek(StaffScheduleWeekActionDTO dto) {
+        Long deptId = resolveDeptId(dto.getOrgType(), dto.getOrgId());
+        assertScheduleAuditor(deptId);
+        LocalDate start = mondayOf(dto.getWeekStart());
+        LocalDate end = start.plusDays(6);
+        int moved = baseMapper.updateWeekPublishStatusAll(dto.getOrgType(), dto.getOrgId(), start, end,
+                PublishStatusEnum.PENDING.getCode(), PublishStatusEnum.PUBLISHED.getCode());
+        if (moved == 0) {
+            throw new BusinessException("本周没有待审核的排班（草稿需先提交，已发布的不会重复发布）");
+        }
+        scheduleChangeLogService.record(null, ScheduleChangeTypeEnum.PUBLISH_WEEK, null, null, null, null, moved,
+                weekRangeText(start, end));
+        return moved;
+    }
+
+    @Override
+    public List<StaffScheduleVO.UnitOption> unitSelectList(Integer orgType) {
+        List<StaffScheduleVO.UnitOption> options = new ArrayList<>();
+        boolean all = orgType == null;
+        if (all || OrgUnitTypeEnum.HOSPITAL.getCode() == orgType) {
+            options.add(new StaffScheduleVO.UnitOption(0L, "全院", null));
+        }
+        if (all || OrgUnitTypeEnum.DEPT.getCode() == orgType) {
+            List<SysDepartment> depts = sysDepartmentMapper.selectList(new LambdaQueryWrapper<SysDepartment>()
+                    .eq(SysDepartment::getDelFlag, 0)
+                    .eq(SysDepartment::getStatus, 1)
+                    .orderByAsc(SysDepartment::getSortOrder)
+                    .orderByAsc(SysDepartment::getId));
+            for (SysDepartment dept : depts) {
+                options.add(new StaffScheduleVO.UnitOption(dept.getId(), dept.getDeptName(), null));
+            }
+        }
+        if (all || OrgUnitTypeEnum.WARD.getCode() == orgType) {
+            List<SysWard> wards = sysWardMapper.selectList(new LambdaQueryWrapper<SysWard>()
+                    .eq(SysWard::getStatus, 1)
+                    .orderByAsc(SysWard::getWardCode)
+                    .orderByAsc(SysWard::getWardId));
+            Map<Long, String> deptNames = deptNameMapOf(wards);
+            for (SysWard ward : wards) {
+                options.add(new StaffScheduleVO.UnitOption(ward.getWardId(), ward.getWardName(),
+                        deptNames.get(ward.getDeptId())));
+            }
+        }
+        return options;
+    }
+
+    /** 病区所属科室名（一次批量查，避免 N+1） */
+    private Map<Long, String> deptNameMapOf(List<SysWard> wards) {
+        Set<Long> deptIds = new HashSet<>();
+        for (SysWard ward : wards) {
+            if (ward.getDeptId() != null) {
+                deptIds.add(ward.getDeptId());
+            }
+        }
+        if (deptIds.isEmpty()) {
+            return Map.of();
+        }
+        return sysDepartmentMapper.selectBatchIds(deptIds).stream()
+                .collect(Collectors.toMap(SysDepartment::getId, SysDepartment::getDeptName, (a, b) -> a));
+    }
+
+    /**
+     * 全院岗位排班审核人校验：系统管理员(10012)全局豁免；
+     * 其余当前登录人必须是该科室在科室主档指定的全院岗位排班审核人(schedule_auditor_id)。
+     * orgType=3（全院级）没有归属科室（deptId=null），仅系统管理员可审核发布。
+     */
+    private void assertScheduleAuditor(Long deptId) {
+        CurrentUser user = UserUtils.getCurrentUser();
+        if (user == null) {
+            throw new BusinessException("未登录或登录已过期，请重新登录");
+        }
+        if (ROLE_ADMIN.equals(user.getCurrentRole())) {
+            return;
+        }
+        SysDepartment dept = deptId == null ? null : sysDepartmentMapper.selectById(deptId);
+        if (dept == null || dept.getScheduleAuditorId() == null
+                || !dept.getScheduleAuditorId().equals(user.getEmployeeId())) {
+            throw new BusinessException("您不是本科室指定的全院岗位排班审核人，无权审核发布");
+        }
+    }
+
+    /** 取一行排班并校验数据范围（跨科室操作一律挡） */
+    private BizSchedule requireScheduleRow(Long id) {
+        if (id == null) {
+            throw new BusinessException("缺少排班行ID");
+        }
+        BizSchedule row = getById(id);
+        if (row == null) {
+            throw new BusinessException("排班行不存在或已删除");
+        }
+        deptScopeService.assertDeptAccessible(row.getDeptId());
+        return row;
+    }
+
+    private void updatePublishStatus(Long id, Integer publishStatus) {
+        BizSchedule update = new BizSchedule();
+        update.setId(id);
+        update.setPublishStatus(publishStatus);
+        updateById(update);
+    }
+
+    /** 把任意一天归到所在周的周一 */
+    private LocalDate mondayOf(LocalDate date) {
+        if (date == null) {
+            date = LocalDate.now();
+        }
+        return date.minusDays(date.getDayOfWeek().getValue() - 1);
+    }
+
+    /** 单元类型 + 单元ID → 归属科室ID（orgType=3 全院级无归属科室，返回 null） */
+    private Long resolveDeptId(Integer orgType, Long orgId) {
+        if (orgType == null) {
+            return null;
+        }
+        if (OrgUnitTypeEnum.HOSPITAL.getCode() == orgType) {
+            return null;
+        }
+        if (OrgUnitTypeEnum.DEPT.getCode() == orgType) {
+            return orgId;
+        }
+        if (OrgUnitTypeEnum.WARD.getCode() == orgType) {
+            if (orgId == null) {
+                return null;
+            }
+            SysWard ward = sysWardMapper.selectById(orgId);
+            return ward == null ? null : ward.getDeptId();
+        }
+        return null;
+    }
+
+    private String weekRangeText(LocalDate start, LocalDate end) {
+        return start + " ～ " + end;
+    }
+
+    @Override
+    public PageResult<StaffScheduleVO> pendingApprovalPage(StaffSchedulePendingQueryDTO dto) {
+        CurrentUser user = UserUtils.getCurrentUser();
+        if (user == null) {
+            throw new BusinessException("未登录或登录已过期，请重新登录");
+        }
+        boolean admin = ROLE_ADMIN.equals(user.getCurrentRole());
+        Set<Long> deptIds = null;
+        if (!admin) {
+            List<SysDepartment> depts = sysDepartmentMapper.selectList(new LambdaQueryWrapper<SysDepartment>()
+                    .eq(SysDepartment::getScheduleAuditorId, user.getEmployeeId())
+                    .eq(SysDepartment::getDelFlag, 0));
+            deptIds = depts.stream().map(SysDepartment::getId).collect(Collectors.toSet());
+            if (deptIds.isEmpty()) {
+                return PageResult.of(0, dto.getPageNum(), dto.getPageSize(), 0, List.of());
+            }
+        }
+        LambdaQueryWrapper<BizSchedule> wrapper = new LambdaQueryWrapper<BizSchedule>()
+                .eq(BizSchedule::getPublishStatus, PublishStatusEnum.PENDING.getCode())
+                .eq(dto.getOrgType() != null, BizSchedule::getOrgType, dto.getOrgType())
+                .eq(dto.getOrgId() != null, BizSchedule::getOrgId, dto.getOrgId());
+        if (!admin) {
+            // 普通审核人只看本科室主档指定的那几个科室/病区（dept_id 命中），全院级行(dept_id=null)排除
+            wrapper.in(BizSchedule::getDeptId, deptIds);
+        }
+        wrapper.orderByAsc(BizSchedule::getOrgType).orderByAsc(BizSchedule::getScheduleDate)
+                .orderByAsc(BizSchedule::getStartTime).orderByAsc(BizSchedule::getId);
+        Page<BizSchedule> page = this.page(new Page<>(dto.getPageNum(), dto.getPageSize()), wrapper);
+        Map<Long, BizShift> shifts = shiftService.mapByIds(shiftIdsOf(page.getRecords()));
+        List<StaffScheduleVO> vos = new ArrayList<>(page.getRecords().size());
+        for (BizSchedule row : page.getRecords()) {
+            vos.add(toVO(row, shifts.get(row.getShiftId())));
+        }
+        return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), vos);
+    }
+
+    /**
+     * ISO 周键（周工时按周聚合用）
+     */
+    private record YearWeek(int year, int week) {
+        static YearWeek of(LocalDate date) {
+            return new YearWeek(date.getYear(), date.get(WeekFields.ISO.weekOfWeekBasedYear()));
+        }
     }
 }

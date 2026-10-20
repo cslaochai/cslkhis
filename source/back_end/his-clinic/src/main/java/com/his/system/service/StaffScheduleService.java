@@ -3,13 +3,20 @@ package com.his.system.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
 import com.his.common.enums.StaffScheduleSourceEnum;
+import com.his.system.dto.StaffScheduleCheckDTO;
 import com.his.system.dto.StaffScheduleCopyDTO;
 import com.his.system.dto.StaffSchedulePageQueryDTO;
 import com.his.system.dto.StaffScheduleSwapDTO;
 import com.his.system.dto.StaffScheduleUpsertDTO;
+import com.his.system.dto.StaffScheduleRejectDTO;
+import com.his.system.dto.StaffScheduleWeekActionDTO;
+import com.his.system.dto.StaffSchedulePendingQueryDTO;
+import com.his.system.dto.StaffScheduleWorkloadDTO;
 import com.his.system.entity.BizSchedule;
+import com.his.system.vo.StaffCheckVO;
 import com.his.system.vo.StaffScheduleVO;
 import com.his.system.vo.StaffTypeDayWorkingVO;
+import com.his.system.vo.StaffWorkloadVO;
 import com.his.system.vo.UnitDayWorkingVO;
 
 import java.time.LocalDate;
@@ -112,6 +119,13 @@ public interface StaffScheduleService extends IService<BizSchedule> {
     List<StaffScheduleVO> onDutyAt(LocalDateTime at, Integer orgType, Long orgId, Integer staffType);
 
     /**
+     * 急诊值班公开视图（满足核心制度「值班表全院公开」）：按日期返回急诊内科/外科/儿科
+     * 三个科室已发布（publish_status ∈ 2,4）的医生出勤行，按班次开始时间排序。
+     * 只读、无数据范围限制 —— 全院登录职工均可查看当天的急诊值班表。
+     */
+    List<StaffScheduleVO> erDutyPublic(LocalDate date);
+
+    /**
      * 某天的排班行（下游按实体取号源派生所需的字段，不重复查一次班次）。
      */
     List<BizSchedule> listDay(LocalDate date, Integer orgType, Long orgId, Integer staffType);
@@ -130,4 +144,70 @@ public interface StaffScheduleService extends IService<BizSchedule> {
      * 岗位类别 × 日期的在岗人次（总览卡片）。
      */
     List<StaffTypeDayWorkingVO> listStaffTypeDayWorking(LocalDate begin, LocalDate end);
+
+    /**
+     * 区间规则校验（全区岗位通用）：连续夜班 / 连续上班 / 单周工时 / 班次冲突 / 人力缺口与富余。
+     * 只列告警明细不阻断保存，排班员自查用。
+     */
+    StaffCheckVO check(StaffScheduleCheckDTO dto);
+
+    /**
+     * 月度工时统计（全区岗位通用）：一人一行，含整段未排班的人（科室/病区口径补齐）。
+     */
+    StaffWorkloadVO monthWorkload(StaffScheduleWorkloadDTO dto);
+
+    // ===== 发布态流转：提交 → 审核发布 / 驳回 / 撤回 / 调班 =====
+    // 审核动作必须命中科室主档指定的全院岗位排班审核人（系统管理员豁免；orgType=3 全院级仅管理员）。
+
+    /**
+     * 提交审核：草稿(0) → 待审核(1)。任何有排班录入权限的人都能提交。
+     */
+    void submit(Long id);
+
+    /**
+     * 审核发布：待审核(1) → 已发布(2)。当前登录人须为本科室指定审核人，否则驳回。
+     */
+    void auditPublish(Long id);
+
+    /**
+     * 驳回：待审核(1) → 草稿(0)，并写入驳回原因留痕。
+     */
+    void reject(StaffScheduleRejectDTO dto);
+
+    /**
+     * 撤回：任意态 → 草稿(0)（撤回后不计在岗）。
+     */
+    void recall(Long id);
+
+    /**
+     * 进入调班：已发布/已变更(2/4) → 调班中(3)。
+     */
+    void adjustStart(Long id);
+
+    /**
+     * 整周提交：本单元整周（周一～周日）草稿 → 待审核。
+     *
+     * @return 实际迁移行数（为 0 抛异常，提示本周没有待提交的草稿）
+     */
+    int submitWeek(StaffScheduleWeekActionDTO dto);
+
+    /**
+     * 整周审核发布：本单元整周（周一～周日）待审核 → 已发布，需命中科室指定审核人。
+     *
+     * @return 实际迁移行数（为 0 抛异常，提示本周没有待审核的排班）
+     */
+    int auditWeek(StaffScheduleWeekActionDTO dto);
+
+    /**
+     * 待我审批（聚合）：返回当前登录人作为指定审核人的待审核排班（全院岗位 + 护理）。
+     * 系统管理员看全院的待审；普通审核人只看本科室主档指定的那几个科室/病区。
+     */
+    PageResult<StaffScheduleVO> pendingApprovalPage(StaffSchedulePendingQueryDTO dto);
+
+    /**
+     * 排班单元候选（页面按单元过滤、整周提交审核时选单元用）。
+     *
+     * @param orgType 单元类型（1-科室 2-病区 3-全院）；为空则三类全给
+     */
+    List<StaffScheduleVO.UnitOption> unitSelectList(Integer orgType);
 }

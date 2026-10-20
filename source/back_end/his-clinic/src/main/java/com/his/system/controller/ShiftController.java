@@ -43,9 +43,9 @@ public class ShiftController {
 
     /**
      * 班次字典分页：名称模糊查询，按开始时间升序、同一开始时间按主键稳定排序。
-     * 用于「排班」页「班次字典」签的表格。
+     * 用于「班次字典」独立维护页（排班中心下）的表格。
      */
-    @PreAuthorize("hasAuthority('staff:schedule:list')")
+    @PreAuthorize("hasAuthority('shift:dict:list')")
     @Operation(summary = "班次分页查询（关键词=名称模糊；排序 start_time + id 二级键）")
     @PostMapping("/listPage")
     public Result<PageResult<ShiftVO>> listPage(@Valid @RequestBody ShiftPageQueryDTO dto) {
@@ -54,9 +54,9 @@ public class ShiftController {
 
     /**
      * 新增或修改班次：完整建条，时长由起止时间推导、同科室重名与跨零点在 service 拦下。
-     * 用于「班次字典」签新增班次，以及需要连带改适用范围的整条覆盖修改。
+     * 用于「班次字典」独立维护页新增班次，以及需要连带改适用范围的整条覆盖修改。
      */
-    @PreAuthorize("hasAuthority('staff:schedule:add')")
+    @PreAuthorize("hasAuthority('shift:dict:add')")
     @Operation(summary = "新增/修改班次（时长按起止时间重算，同名同科室防重）")
     @PostMapping("/shiftUpsert")
     public Result<Void> shiftUpsert(@Valid @RequestBody ShiftUpsertDTO dto) {
@@ -68,7 +68,7 @@ public class ShiftController {
      * 删除班次：逻辑删，历史排班上已落的班次名不受影响。
      * 供班次字典维护作废不再使用的班次；界面当前只给停用，未接该动作。
      */
-    @PreAuthorize("hasAuthority('staff:schedule:delete')")
+    @PreAuthorize("hasAuthority('shift:dict:delete')")
     @Operation(summary = "删除班次（逻辑删）")
     @DeleteMapping("/deleteById")
     public Result<Void> deleteById(@RequestParam Long id) {
@@ -77,9 +77,9 @@ public class ShiftController {
 
     /**
      * 班次改名：只动名称一列，起止时间/适用科室/班次类型等铺底口径不可改；名字未变按幂等成功。
-     * 用于「班次字典」签已有班次的编辑弹框。
+     * 用于「班次字典」独立维护页已有班次的编辑弹框。
      */
-    @PreAuthorize("hasAuthority('staff:schedule:edit')")
+    @PreAuthorize("hasAuthority('shift:dict:edit')")
     @Operation(summary = "班次改名（维护界面：只改名称，时间/科室/类型不可改）")
     @PostMapping("/rename")
     public Result<Void> rename(@RequestParam Long id, @RequestParam String shiftName) {
@@ -89,9 +89,9 @@ public class ShiftController {
 
     /**
      * 班次启用/停用：只动状态一列，重复提交同一状态按幂等成功。
-     * 用于「班次字典」签编辑弹框的状态开关；停用后该班次不再参与新排班，历史行保留。
+     * 用于「班次字典」独立维护页编辑弹框的状态开关；停用后该班次不再参与新排班，历史行保留。
      */
-    @PreAuthorize("hasAuthority('staff:schedule:edit')")
+    @PreAuthorize("hasAuthority('shift:dict:edit')")
     @Operation(summary = "班次启用/停用（维护界面：只改状态，名称/时间/科室/类型不可改）")
     @PostMapping("/updateStatus")
     public Result<Void> updateStatus(@RequestParam Long id, @RequestParam Integer status) {

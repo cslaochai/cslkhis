@@ -13,6 +13,7 @@
  *
  * 未知码值渲染「未知(n)」，绝不回落成某个合法值（未知[x] 是 bug 的线索，假数据不是）。
  */
+import {PUBLISH_DRAFT, PUBLISH_PENDING, isPublishEffective} from './publishStatus'
 
 /** 排班单元类型（biz_staff_schedule.org_type） */
 export const ORG_UNIT_TYPE_TEXT = { 1: '科室', 2: '病区', 3: '全院' }
@@ -67,6 +68,8 @@ export const SCHEDULE_SOURCE_TEXT = { 1: '手工', 2: '模板', 3: '复制周期
 /** 排班变更类型（biz_schedule_change_log.action_type） */
 export const SCHEDULE_CHANGE_TYPE_TEXT = {
   1: '换班', 2: '代班', 3: '停班', 4: '加号', 5: '减号', 6: '出诊变更',
+  7: '提交审核', 8: '审核发布', 9: '驳回', 10: '整周提交', 11: '整周审核发布',
+  12: '撤回', 13: '进入调班',
 }
 
 /** 值守责任范围（biz_duty_post.duty_scope） */
@@ -99,3 +102,18 @@ export const scheduleSourceText = (code) => textOf(SCHEDULE_SOURCE_TEXT, code)
 export const scheduleChangeTypeText = (code) => textOf(SCHEDULE_CHANGE_TYPE_TEXT, code)
 export const dutyScopeText = (code) => textOf(DUTY_SCOPE_TEXT, code)
 export const dutyRoleTypeText = (code) => textOf(DUTY_ROLE_TYPE_TEXT, code)
+
+// ========== 发布态流转（排班保存只到草稿，审核发布后才计在岗） ==========
+// 判定口径与后端 PublishStatusEnum 同源，页面与其拆出的弹框组件共用这一份。
+
+/** 审核发布权限码：独立于排班权限，排班人不能自己把自己排的班发出去 */
+export const PERM_SCHEDULE_AUDIT = 'staff:schedule:audit'
+
+/** 只有草稿能提交审核 */
+export const canSubmitPublish = (row) => !!row?.id && Number(row.publishStatus) === PUBLISH_DRAFT
+/** 只有待审核能审核发布 */
+export const canAuditPublish = (row) => !!row?.id && Number(row.publishStatus) === PUBLISH_PENDING
+/** 已发布/已变更才能进入调班 */
+export const canAdjustPublish = (row) => !!row?.id && isPublishEffective(Number(row.publishStatus))
+/** 撤回：任意态都能回草稿（与后端 recall 的状态机同口径） */
+export const canRecallPublish = (row) => !!row?.id

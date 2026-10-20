@@ -67,6 +67,24 @@ public class DepartmentUpsertDTO {
     private Long deptLeaderId;
 
     /**
+     * 门诊排班审核人ID（sys_employee.id）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long outpatientAuditorId;
+
+    /**
+     * 护理排班审核人ID（sys_employee.id）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long nursingAuditorId;
+
+    /**
+     * 全院岗位排班审核人ID（sys_employee.id）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long scheduleAuditorId;
+
+    /**
      * 是否开放：0-否 1-是
      */
     private Integer isOpen;

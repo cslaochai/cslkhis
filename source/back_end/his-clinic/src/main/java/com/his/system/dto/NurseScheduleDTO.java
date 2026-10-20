@@ -3,13 +3,17 @@ package com.his.system.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.his.common.base.PageParam;
 import com.his.common.validation.AllowedValues;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * 病区护理排班入参（外层空壳 + 内部静态类，同 InpatientLeaveDTO）。
@@ -75,6 +79,46 @@ public class NurseScheduleDTO {
          * 请假事由、调班说明等；长度由服务端截到列宽 500
          */
         private String remark;
+    }
+
+    /**
+     * 批量铺班：共用「状态+班次」× 选中日期 × 多选护士，笛卡尔展开，只填空缺格、已排的跳过不覆盖。
+     * 展开与落库在后端单事务内完成，前端禁止循环调用单格接口。
+     */
+    @Data
+    public static class BatchUpsert {
+        /** 排班单元类型（1-病区 2-门诊科室；空按 1-病区） */
+        @AllowedValues(values = {"1", "2"}, message = "排班单元类型取值不合法")
+        private Integer unitType;
+        /** 排班单元ID（unitType=1 取病区ID，=2 取门诊科室ID） */
+        @NotNull(message = "请选择排班单元")
+        private Long wardId;
+        /** 共用状态（1-上班 2-休息 3-请假 4-培训 5-停班） */
+        @NotNull(message = "请选择排班状态（上班/休息/请假/培训/停班）")
+        @AllowedValues(values = {"1", "2", "3", "4", "5"}, message = "排班状态不合法")
+        private Integer scheduleStatus;
+        /** 共用班次ID：仅状态=1-上班时必填，非上班由服务端置空 */
+        private Long shiftId;
+        /** 铺班日期列表（≤31 天，跨周/跨月分批） */
+        @JsonFormat(pattern = "yyyy-MM-dd")
+        @NotEmpty(message = "排班日期不能为空")
+        @Size(max = 31, message = "一次最多铺 31 天，跨月请分批")
+        private List<LocalDate> scheduleDates;
+        /** 选中的护士（≤100 人） */
+        @Valid
+        @NotEmpty(message = "请选择排班护士")
+        @Size(max = 100, message = "一次最多铺 100 位护士")
+        private List<BatchEmployee> items;
+        /** 统一备注/调班说明，服务端截到列宽 500 */
+        private String remark;
+
+        @Data
+        public static class BatchEmployee {
+            @NotNull(message = "请选择护士")
+            private Long employeeId;
+            /** 护士姓名（前端带上，报错点名用，服务端以员工档案为准复核） */
+            private String nurseName;
+        }
     }
 
     /**

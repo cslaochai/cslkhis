@@ -2,12 +2,16 @@ package com.his.system.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
+import com.his.system.dto.DutyCheckDTO;
 import com.his.system.dto.DutyRosterPageQueryDTO;
 import com.his.system.dto.DutyRosterUpsertDTO;
 import com.his.system.dto.DutySubstituteDTO;
+import com.his.system.dto.DutyWorkloadDTO;
 import com.his.system.service.DutyRosterService;
+import com.his.system.vo.DutyCheckVO;
 import com.his.system.vo.DutyOfficerVO;
 import com.his.system.vo.DutyRosterVO;
+import com.his.system.vo.DutyWorkloadVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -68,9 +72,9 @@ public class DutyRosterController {
     @Operation(summary = "新增或修改总值班排班（同一天+班次+角色重复提交 = 改）")
     @PreAuthorize("hasAuthority('org:duty:edit')")
     @PostMapping("/dutyRosterUpsert")
-    public Result<Long> dutyRosterUpsert(@RequestBody @Valid DutyRosterUpsertDTO upsertDTO) {
-        Long id = dutyRosterService.upsert(upsertDTO);
-        return Result.success(upsertDTO.getId() == null ? "登记成功" : "修改成功", id);
+    public Result<DutyRosterVO> dutyRosterUpsert(@RequestBody @Valid DutyRosterUpsertDTO upsertDTO) {
+        DutyRosterVO row = dutyRosterService.upsert(upsertDTO);
+        return Result.success(upsertDTO.getId() == null ? "登记成功" : "修改成功", row);
     }
 
     /**
@@ -101,11 +105,80 @@ public class DutyRosterController {
      * 删除排班行（唯一键不含删除标志，走物理删）。
      * 用于「总值班排班」页操作列删除。
      */
+    /**
+     * 提交审核：草稿 → 待审核。值班排班人排完后提交，等审核人发布。
+     */
+    @Operation(summary = "提交审核（草稿→待审核）")
+    @PreAuthorize("hasAuthority('org:duty:edit')")
+    @PostMapping("/submit")
+    public Result<Void> submit(@RequestParam Long id) {
+        dutyRosterService.submit(id);
+        return Result.success("已提交审核", null);
+    }
+
+    /**
+     * 审核发布：待审核 → 已发布。审核通过后该值守才进「今日值班表」与「此刻谁负责」。
+     */
+    @Operation(summary = "审核发布（待审核→已发布，此后才对外展示）")
+    @PreAuthorize("hasAuthority('org:duty:audit')")
+    @PostMapping("/auditPublish")
+    public Result<Void> auditPublish(@RequestParam Long id) {
+        dutyRosterService.auditPublish(id);
+        return Result.success("已发布", null);
+    }
+
+    /**
+     * 撤回：任意态 → 草稿。撤回后不再对外展示。
+     */
+    @Operation(summary = "撤回（任意态→草稿，不再对外展示）")
+    @PreAuthorize("hasAuthority('org:duty:edit')")
+    @PostMapping("/recall")
+    public Result<Void> recall(@RequestParam Long id) {
+        dutyRosterService.recall(id);
+        return Result.success("已撤回", null);
+    }
+
+    /**
+     * 进入调班：已发布/已变更 → 调班中（锁定）。改完保存自动转「已变更」直接生效。
+     */
+    @Operation(summary = "进入调班（已发布/已变更→调班中，锁定）")
+    @PreAuthorize("hasAuthority('org:duty:edit')")
+    @PostMapping("/adjustStart")
+    public Result<Void> adjustStart(@RequestParam Long id) {
+        dutyRosterService.adjustStart(id);
+        return Result.success("已进入调班", null);
+    }
+
+    /**
+     * 删除一条值守排班。用于总值班排班页操作列删除按钮。
+     */
     @Operation(summary = "删除排班（唯一键不含 del_flag → 物理删）")
     @PreAuthorize("hasAuthority('org:duty:delete')")
     @DeleteMapping("/deleteById")
     public Result<Void> deleteById(@RequestParam Long id) {
         dutyRosterService.deleteById(id);
         return Result.success("删除成功", null);
+    }
+
+    /**
+     * 月度值班工时：一人一行，白班/夜班/主班/副班次数与总时长（按实际值班人归并）。
+     * 用于「统计校验」页签的工时表。
+     */
+    @Operation(summary = "月度值班工时统计")
+    @PreAuthorize("hasAuthority('org:duty:list')")
+    @PostMapping("/monthWorkload")
+    public Result<DutyWorkloadVO> monthWorkload(@Valid @RequestBody DutyWorkloadDTO dto) {
+        return Result.success(dutyRosterService.monthWorkload(dto));
+    }
+
+    /**
+     * 区间规则校验：连续值班 / 值班频次 / 主班漏排。只列明细不阻断保存。
+     * 用于「统计校验」页签的规则校验表。
+     */
+    @Operation(summary = "区间规则校验（连续值班/值班频次/主班漏排）")
+    @PreAuthorize("hasAuthority('org:duty:list')")
+    @PostMapping("/check")
+    public Result<DutyCheckVO> check(@Valid @RequestBody DutyCheckDTO dto) {
+        return Result.success(dutyRosterService.check(dto));
     }
 }

@@ -73,6 +73,15 @@ public class StaffScheduleUpsertDTO {
     private Integer clinicFlag;
 
     /**
+     * 发布态（0-草稿 1-待审核 2-已发布 3-调班中 4-已变更）。
+     *
+     * <p>写入侧一般不由前端传：护理/全院排班格子由服务端按「新增=草稿、改单=已变更」定，
+     * 医生出诊派生的事实跟随号源行的发布态。留空时不改该列（交给库默认值）。
+     */
+    @AllowedValues(values = {"0", "1", "2", "3", "4"}, message = "发布态取值不合法")
+    private Integer publishStatus;
+
+    /**
      * 备注
      */
     private String remark;

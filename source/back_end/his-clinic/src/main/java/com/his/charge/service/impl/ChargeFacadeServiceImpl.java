@@ -25,6 +25,7 @@ import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.entity.BizInsuranceSettlement;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.entity.BizSettlementBillItem;
+import com.his.common.enums.ClinicDiagnosisTierEnum;
 import com.his.common.enums.InpatientSettleStatusEnum;
 import com.his.charge.mapper.BizInsuranceSettlementMapper;
 import com.his.charge.mapper.BizSettlementBillItemMapper;
@@ -245,19 +246,28 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
             return null;
         }
 
-        BigDecimal diagnosisFee = NumUtil.orZero(command.getDiagnosisFee());
-        List<FeeBookDTO> books = new ArrayList<>(1);
-        if (diagnosisFee.signum() > 0) {
-            // 门诊只出「门诊诊查费」一行（ZCF，编码 011102020010000）。
-            //
-            // 🔑 为什么没有「挂号费」这一行：湘医保发〔2025〕58号（长沙市医保局同文，2026-01-01 执行）
-            // 已废止挂号费等 71 个价格项目，合并为门诊诊查费。继续出 GHF 行 = 多收患者的钱，
-            // 医保稽核与明码标价核查都会抓。command.registFee 保留字段只是历史兼容，不再参与出账。
-            //
-            // 诊查费按丙类：湘医保发〔2025〕58号 支付分类=丙类，医保不报、100% 自付，
-            // 不进职工门诊统筹。甲类行只能压 pool_ratio、没有「先自付 100%」档，
+        // 主项目 + 加收项 双行（湘医保发〔2025〕58号价表结构：主项门诊诊查费 + 职级加收子码）：
+        //   主项门诊诊查费(普通门诊) 011102020010000 = baseFee；
+        //   专家档在主项之上加收对应子码(001/002/003) = surchargeFee，两行同 itemType=1、丙类。
+        //   普通档 surchargeFee=0，只出主项一行；专家档出主项 + 加收两行。
+        //   金额合计 = baseFee + surchargeFee = diagnosisFee（儿童总价），与历史单行口径完全一致，
+        //   不破坏任何按账单总额判定的逻辑（退号、改约比价、医保 split、日结）。
+        //
+        // 🔑 为什么不是「挂号费 + 诊查费」两笔：58号已废止挂号费，门诊唯一费用是门诊诊查费；
+        //   专家溢价是诊查费的「加收项」而非独立费用，故拆 base + 加收而非凭空捏第二笔。
+        BigDecimal baseFee = NumUtil.orZero(command.getBaseFee());
+        BigDecimal surchargeFee = NumUtil.orZero(command.getSurchargeFee());
+        List<FeeBookDTO> books = new ArrayList<>(2);
+        if (baseFee.signum() > 0) {
+            // 诊查费按丙类：湘医保发〔2025〕58号 支付分类=丙类，医保不报、100% 自付，不进职工门诊统筹。
             // 丙类才能表达全自费（规则表 ICR202610180001：self_pay_ratio=100 / pool_ratio=0）
-            books.add(buildBook(command, "门诊诊查费", "ZCF", diagnosisFee, FeeCatalogTypeEnum.CLASS_C.getCode()));
+            books.add(buildBook(command, "门诊诊查费(普通门诊)", "ZCF", baseFee,
+                    FeeCatalogTypeEnum.CLASS_C.getCode()));
+        }
+        if (surchargeFee.signum() > 0) {
+            SurchargeMeta meta = surchargeMeta(command.getDiagnosisTier());
+            books.add(buildBook(command, meta.name, meta.code, surchargeFee,
+                    FeeCatalogTypeEnum.CLASS_C.getCode()));
         }
         if (books.isEmpty()) {
             // 诊查费为 0 却按"未免收"进来：零应收，处理方式与免收一致，别硬出空账单
@@ -366,6 +376,20 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
         return dto;
     }
 
+    /**
+     * 加收项院内码与名称（按职级档位映射）。
+     * 普通档(1/null)不加收，本方法只在 surchargeFee > 0 时调用，对应档位 2/3/4。
+     * 院内码沿用主项前缀 ZCF + 加收标记 + 档位码，国家医保编码见 ClinicDiagnosisTierEnum.getYbCode()。
+     */
+    private static SurchargeMeta surchargeMeta(Integer tier) {
+        ClinicDiagnosisTierEnum e = ClinicDiagnosisTierEnum.ofCode(tier);
+        if (e == null || e == ClinicDiagnosisTierEnum.GENERAL) {
+            // 兜底：正常不会走到这里（surchargeFee>0 已拦截普通档），给出可识别的回落值而非 NPE
+            return new SurchargeMeta("ZCF_ADD_0", "门诊诊查费加收");
+        }
+        return new SurchargeMeta("ZCF_ADD_" + e.getCode(), "门诊诊查费加收(" + e.getLabel() + ")");
+    }
+
     private BillBriefVO toBrief(BizSettlementBill bill) {
         BillBriefVO brief = new BillBriefVO();
         brief.setBillId(bill.getId());
@@ -386,5 +410,16 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
         vo.setFeeNo(row.getFeeNo());
         vo.setAmount(row.getAmount());
         return vo;
+    }
+
+    /** 加收项载体：院内码 + 展示名称 */
+    private static final class SurchargeMeta {
+        private final String code;
+        private final String name;
+
+        private SurchargeMeta(String code, String name) {
+            this.code = code;
+            this.name = name;
+        }
     }
 }

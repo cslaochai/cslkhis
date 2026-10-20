@@ -52,17 +52,18 @@ public class StaffDemandServiceImpl extends ServiceImpl<BizStaffDemandMapper, Bi
         }
         DemandRecalcResult result = new DemandRecalcResult();
         String operator = operatorUser.getRealName();
+        Long operatorId = operatorUser.getEmployeeId();
 
         // 先清窗口内的派生产物：唯一键不含 del_flag，软删行会占键导致下次重算撞重复键
         baseMapper.purgeDerived(startDate, endDate);
 
         Long base = baseMapper.maxDerivedId();
-        result.inpatient = baseMapper.deriveInpatient(startDate, endDate, base, operator,
+        result.inpatient = baseMapper.deriveInpatient(startDate, endDate, base, operator, operatorId,
                 "住院派生：在院患者 × 护理等级工时，与病区核定下限取 MAX");
         result.clinicNurse = baseMapper.deriveClinicNurse(startDate, endDate, base + result.inpatient,
-                operator, "门诊派生：分诊 1 人 + 跟诊 1 人/2 医生，与科室核定下限取 MAX");
+                operator, operatorId, "门诊派生：分诊 1 人 + 跟诊 1 人/2 医生，与科室核定下限取 MAX");
         result.clinicDoctor = baseMapper.deriveClinicDoctor(startDate, endDate,
-                base + result.inpatient + result.clinicNurse, operator,
+                base + result.inpatient + result.clinicNurse, operator, operatorId,
                 "门诊派生：医生需求 = 当日出诊医生数");
         return result;
     }
@@ -90,7 +91,7 @@ public class StaffDemandServiceImpl extends ServiceImpl<BizStaffDemandMapper, Bi
 
         Long id = baseMapper.maxDerivedId() + 1L;
         baseMapper.upsertManual(id, demandDate, orgType, orgId, orgName, staffType, requiredCount,
-                basis, operatorUser.getRealName(), remark);
+                basis, operatorUser.getRealName(), operatorUser.getEmployeeId(), remark);
     }
 
     /**

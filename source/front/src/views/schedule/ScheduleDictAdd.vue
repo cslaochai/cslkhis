@@ -47,7 +47,7 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button v-perm="'outpatient:schedule:add'" :loading="shiftAddSaving" type="primary"
+      <el-button v-perm="'shift:dict:add'" :loading="shiftAddSaving" type="primary"
                  @click="handleShiftAddSubmit">
         确定
       </el-button>

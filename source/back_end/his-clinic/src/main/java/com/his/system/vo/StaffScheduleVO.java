@@ -98,6 +98,17 @@ public class StaffScheduleVO {
     private String attendModeText;
 
     /**
+     * 实际签到时间（HH:mm:ss）。空=该班次尚未签到（计划在岗，未确认实际到岗）。
+     * 由 onDutyAt / erDutyPublic 按 staff_schedule_id 关联 biz_staff_attendance.check_in 带出。
+     */
+    private String checkInTime;
+    /**
+     * 是否已签到到岗（true=签到确认为实际在岗；false/null=仅计划在岗）。
+     * 行业实践「当班医生 = 计划命中 + 已签到」的推导标记。
+     */
+    private Boolean actualOnDuty;
+
+    /**
      * 是否出诊（0-否 1-是）
      */
     private Integer clinicFlag;
@@ -119,6 +130,42 @@ public class StaffScheduleVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long templateId;
 
+    /**
+     * 发布态（0-草稿 1-待审核 2-已发布 3-调班中 4-已变更）
+     */
+    private Integer publishStatus;
+
+    /**
+     * 发布态文案（由 PublishStatusEnum.label 渲染）
+     */
+    private String publishStatusText;
+
     /** 备注 */
     private String remark;
+
+    /**
+     * 排班单元候选（页面按单元过滤 / 整周提交审核时选单元用）。
+     */
+    @Data
+    public static class UnitOption {
+
+        /** 单元ID（科室=科室ID；病区=病区ID；全院=0） */
+        @JsonSerialize(using = ToStringSerializer.class)
+        private Long id;
+
+        /** 单元名称 */
+        private String name;
+
+        /** 所属科室名称（病区有、科室无） */
+        private String deptName;
+
+        public UnitOption() {
+        }
+
+        public UnitOption(Long id, String name, String deptName) {
+            this.id = id;
+            this.name = name;
+            this.deptName = deptName;
+        }
+    }
 }

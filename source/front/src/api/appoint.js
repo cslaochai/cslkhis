@@ -149,6 +149,38 @@ export function deleteSchedule(id) {
     return request.delete('/schedule/deleteById', {params: {scheduleId: id}})
 }
 
+// ========== 排班发布态流转（G-15：草稿→待审核→已发布→调班中→已变更）==========
+
+// 提交审核（草稿→待审核）
+export function scheduleSubmit(scheduleId) {
+    return request.post('/schedule/submit', null, {params: {scheduleId}})
+}
+
+// 审核发布（待审核→已发布，同时出号）
+export function scheduleAuditPublish(scheduleId) {
+    return request.post('/schedule/auditPublish', null, {params: {scheduleId}})
+}
+
+// 撤回（任意态→草稿，已发布的号源一并撤下）
+export function scheduleRecall(scheduleId) {
+    return request.post('/schedule/recall', null, {params: {scheduleId}})
+}
+
+// 进入调班（已发布/已变更→调班中，锁定并冻结号源）
+export function scheduleAdjustStart(scheduleId) {
+    return request.post('/schedule/adjustStart', null, {params: {scheduleId}})
+}
+
+// 整周提交审核：区间内本科室草稿→待审核，body 传 {deptId, startDate, endDate, staffType}，返回提交条数
+export function scheduleSubmitWeek(data) {
+    return request.post('/schedule/submitWeek', data)
+}
+
+// 整周审核发布：区间内本科室待审核→已发布并出号，body 同上，返回发布条数
+export function scheduleAuditWeek(data) {
+    return request.post('/schedule/auditWeek', data)
+}
+
 // ========== 班次字典（biz_shift：医院标准班次，排班/模板「标准班次」下拉的数据源） ==========
 
 // 标准班次列表（deptId 传了 = 该科室适用 + 全院通用；status=1 只取启用）

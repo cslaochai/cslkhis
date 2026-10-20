@@ -146,6 +146,16 @@ public class ScheduleDetailVO {
     private Integer status;
 
     /**
+     * 发布态（0-草稿 1-待审核 2-已发布 3-调班中 4-已变更）；仅已发布/已变更 才出号
+     */
+    private Integer publishStatus;
+
+    /**
+     * 发布态文案（由枚举 label 渲染）
+     */
+    private String publishStatusText;
+
+    /**
      * 就诊状态（0-待开始 1-接诊中 2-暂停）
      */
     private Integer consultStatus;

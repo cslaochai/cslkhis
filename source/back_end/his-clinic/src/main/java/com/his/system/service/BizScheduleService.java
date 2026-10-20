@@ -59,6 +59,11 @@ public interface BizScheduleService extends IService<BizSchedule> {
     NurseScheduleVO.CopyResult copyWeek(NurseScheduleDTO.CopyWeek dto);
 
     /**
+     * 批量铺班：共用「状态+班次」× 选中日期 × 多选护士笛卡尔展开，只填空缺格、已排的跳过不覆盖，单事务。
+     */
+    NurseScheduleVO.BatchResult batchUpsert(NurseScheduleDTO.BatchUpsert dto);
+
+    /**
      * 规则校验（区间；缺省按 weekStart 那一周）
      */
     NurseScheduleVO.CheckResult check(NurseScheduleDTO.CheckQuery query);
@@ -93,4 +98,29 @@ public interface BizScheduleService extends IService<BizSchedule> {
      * 区间告警明细（周矩阵内嵌与 /check 接口共用同一口径）
      */
     List<NurseScheduleVO.Warning> warningsOf(Long wardId, LocalDate startDate, LocalDate endDate);
+
+    // ===== G-15 发布态流转（提交→审核→发布 / 调班 / 撤回）=====
+    /** 提交审核：草稿 → 待审核 */
+    void submit(Long id);
+
+    /** 审核发布：待审核 → 已发布（此后才计在岗） */
+    void auditPublish(Long id);
+
+    /** 撤回：任意态 → 草稿（不计在岗） */
+    void recall(Long id);
+
+    /** 进入调班：已发布/已变更 → 调班中（锁定，改完保存转已变更） */
+    void adjustStart(Long id);
+
+    /**
+     * 整周提交审核：本周本病区/科室的草稿(0) → 待审核(1)，返回迁移条数。
+     * 已发布/已变更/调班中行不动。
+     */
+    int submitWeek(NurseScheduleDTO.MatrixQuery query);
+
+    /**
+     * 整周审核发布：本周本病区/科室的待审核(1) → 已发布(2)，返回迁移条数。
+     * 此后这些行计入在岗；草稿/调班中行不动。
+     */
+    int auditWeek(NurseScheduleDTO.MatrixQuery query);
 }

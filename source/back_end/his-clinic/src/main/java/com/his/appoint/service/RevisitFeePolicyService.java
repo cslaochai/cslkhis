@@ -77,6 +77,12 @@ public interface RevisitFeePolicyService extends IService<RevisitFeePolicy> {
          */
         private BigDecimal diagnosisFee;
         /**
+         * 号源职级加收档位（1-普通 2-副主任医师 3-主任医师 4-知名专家）：
+         * 决定「主项门诊诊查费」之上要不要出加收子项、出哪一档（011102020010001/2/3）。
+         * null = 判不出来，按普通档处理（只出主项）。
+         */
+        private Integer diagnosisTier;
+        /**
          * 患者出生日期：儿童加收 30% 的判定输入（湘医保发〔2025〕58号附件1）。
          * null = 档案缺出生日期 → 不加收（判不出来不猜，见 PediatricSurchargePolicy）。
          */
@@ -102,6 +108,21 @@ public interface RevisitFeePolicyService extends IService<RevisitFeePolicy> {
          * 应收门诊诊查费（已按策略减免）
          */
         private BigDecimal diagnosisFee = BigDecimal.ZERO;
+        /**
+         * 职级加收档位（1-普通 2-副主任医师 3-主任医师 4-知名专家）：透传给收费层，
+         * 决定加收子项的院内码与名称。
+         */
+        private Integer diagnosisTier;
+        /**
+         * 主项门诊诊查费金额（普通档全额，如 9；儿童加收后 = 9×1.3）。
+         * 与 {@link #surchargeFee} 合计 = {@link #diagnosisFee}（儿童总价），二者口径必须一致。
+         */
+        private BigDecimal baseFee = BigDecimal.ZERO;
+        /**
+         * 职级加收项金额（普通档为 0；副主任/主任/知名专家 = 对应加收额，儿童加收后同步 ×1.3）。
+         * 0 表示不出加收子项。
+         */
+        private BigDecimal surchargeFee = BigDecimal.ZERO;
         /**
          * 合计为 0：收费单照样要建，且直接置「已收费」，否则患者签不了到
          */
@@ -137,6 +158,9 @@ public interface RevisitFeePolicyService extends IService<RevisitFeePolicy> {
          */
         private BigDecimal baseDiagnosisFee = BigDecimal.ZERO;
 
+        /**
+         * 本档应收总额（儿童加收后的门诊诊查费）。免收命中时为 0，收费侧据此建 0 元单并直接置已收费。
+         */
         public BigDecimal totalFee() {
             return diagnosisFee;
         }

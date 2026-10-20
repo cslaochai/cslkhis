@@ -4,7 +4,7 @@ import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * 门诊排班变更类型枚举（sql/261，字典 his_clinic_source_change_type）。
+ * 门诊排班变更类型枚举
  *
  * <p>与岗位排班留痕 {@link ScheduleChangeTypeEnum}（换班/代班/停班维度）分开：
  * 门诊号源的变更审计是按「哪个班次的号源/状态被改成了什么」落账，
@@ -48,7 +48,23 @@ public enum ClinicSourceChangeTypeEnum {
     /**
      * 复刻：把源区间排班整体后移复制
      */
-    REPLICATE(9, "复刻");
+    REPLICATE(9, "复刻"),
+    /**
+     * 提交审核：草稿 → 待审核（排班人提交，等审核人发布）
+     */
+    SUBMIT(10, "提交审核"),
+    /**
+     * 审核发布：待审核 → 已发布，并生成号源（审核人通过）
+     */
+    PUBLISH(11, "审核发布"),
+    /**
+     * 撤回：任意态 → 草稿，并清理已生成号源
+     */
+    RECALL(12, "撤回"),
+    /**
+     * 进入调班：已发布/已变更 → 调班中（锁定编辑，号源暂冻结）
+     */
+    ADJUST(13, "进入调班");
 
     private final int code;
     private final String label;

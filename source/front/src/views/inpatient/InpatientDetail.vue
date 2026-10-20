@@ -34,6 +34,75 @@
 
         <div class="rounded-lg border border-slate-200 p-4">
           <div class="mb-3 flex items-center gap-2">
+            <span class="font-semibold text-slate-800">管床团队（主管医生）</span>
+            <el-button v-if="detail.admission?.admitStatus === 1" size="small" type="primary" plain
+                       @click="openBind">指派 / 转交主管医生</el-button>
+          </div>
+          <el-table :data="attendingList" border size="small">
+            <el-table-column label="角色" width="100">
+              <template #default="{ row }">{{ row.relationTypeText }}</template>
+            </el-table-column>
+            <el-table-column label="医生" prop="employeeName" min-width="100"/>
+            <el-table-column label="科室" prop="deptName" min-width="120"/>
+            <el-table-column label="生效时间" prop="effectiveTime" width="160"/>
+            <el-table-column label="失效时间" width="160">
+              <template #default="{ row }">{{ row.expireTime || '—' }}</template>
+            </el-table-column>
+            <el-table-column label="状态" width="80" align="center">
+              <template #default="{ row }">
+                <el-tag :type="row.status === 1 ? 'success' : 'info'" effect="plain" size="small">
+                  {{ row.statusText }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="130" align="center">
+              <template #default="{ row }">
+                <el-button v-if="row.status === 1" link type="warning" size="small"
+                           @click="onEndAttending(row)">结束</el-button>
+                <el-button link type="danger" size="small" @click="onDeleteAttending(row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <p v-if="!attendingList.length" class="py-4 text-center text-xs text-slate-400">
+            尚未指派主管医生
+          </p>
+        </div>
+
+        <div class="rounded-lg border border-slate-200 p-4">
+          <div class="mb-3 flex items-center gap-2">
+            <span class="font-semibold text-slate-800">责任护士</span>
+            <el-button v-if="detail.admission?.admitStatus === 1" size="small" type="primary" plain
+                       @click="openNurseBind">指派 / 转交责任护士</el-button>
+          </div>
+          <el-table :data="nurseList" border size="small">
+            <el-table-column label="护士" prop="nurseName" min-width="100"/>
+            <el-table-column label="科室" prop="deptName" min-width="120"/>
+            <el-table-column label="生效时间" prop="effectiveTime" width="160"/>
+            <el-table-column label="失效时间" width="160">
+              <template #default="{ row }">{{ row.expireTime || '—' }}</template>
+            </el-table-column>
+            <el-table-column label="状态" width="80" align="center">
+              <template #default="{ row }">
+                <el-tag :type="row.status === 1 ? 'success' : 'info'" effect="plain" size="small">
+                  {{ row.statusText }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="130" align="center">
+              <template #default="{ row }">
+                <el-button v-if="row.status === 1" link type="warning" size="small"
+                           @click="onEndNurse(row)">结束</el-button>
+                <el-button link type="danger" size="small" @click="onDeleteNurse(row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <p v-if="!nurseList.length" class="py-4 text-center text-xs text-slate-400">
+            尚未指派责任护士
+          </p>
+        </div>
+
+        <div class="rounded-lg border border-slate-200 p-4">
+          <div class="mb-3 flex items-center gap-2">
             <span class="font-semibold text-slate-800">病案首页</span>
             <el-tag :type="detail.summaryStatusText === '已归档' ? 'success' : 'info'" effect="plain" size="small">
               {{ detail.summaryStatusText }}
@@ -123,13 +192,81 @@
         </div>
       </template>
     </div>
+
+    <el-dialog v-model="bindVisible" title="指派 / 转交管床医生" width="520px" append-to-body>
+      <el-form :model="bindForm" label-width="90px">
+        <el-form-item label="角色">
+          <el-radio-group v-model="bindForm.relationType">
+            <el-radio :value="1">主管</el-radio>
+            <el-radio :value="2">主诊组长</el-radio>
+            <el-radio :value="3">协作</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="医生">
+          <el-select v-model="bindForm.employeeId" filterable placeholder="搜索姓名 / 工号选人"
+                     style="width: 100%">
+            <el-option v-for="e in doctorOptions" :key="e.id"
+                       :label="`${e.empName}（${e.empCode || '无工号'}）${e.deptName ? '·' + e.deptName : ''}`"
+                       :value="e.id"/>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="生效时间">
+          <el-date-picker v-model="bindForm.effectiveTime" type="datetime"
+                          value-format="YYYY-MM-DD HH:mm:ss" placeholder="留空＝从入院时间起算"
+                          style="width: 100%"/>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="bindForm.remark" type="textarea" :rows="2" placeholder="交接说明（可空）"/>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button type="primary" :loading="bindLoading" @click="submitBind">确定</el-button>
+        <el-button @click="bindVisible = false">取消</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="nurseBindVisible" title="指派 / 转交责任护士" width="520px" append-to-body>
+      <el-form :model="nurseBindForm" label-width="90px">
+        <el-form-item label="护士">
+          <el-select v-model="nurseBindForm.nurseId" filterable placeholder="搜索姓名 / 工号选人"
+                     style="width: 100%">
+            <el-option v-for="n in nurseOptions" :key="n.id"
+                       :label="`${n.empName}（${n.empCode || '无工号'}）${n.deptName ? '·' + n.deptName : ''}`"
+                       :value="n.id"/>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="生效时间">
+          <el-date-picker v-model="nurseBindForm.effectiveTime" type="datetime"
+                          value-format="YYYY-MM-DD HH:mm:ss" placeholder="留空＝从当前/入院时刻起算"
+                          style="width: 100%"/>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="nurseBindForm.remark" type="textarea" :rows="2" placeholder="交接说明（可空）"/>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button type="primary" :loading="nurseBindLoading" @click="submitNurseBind">确定</el-button>
+        <el-button @click="nurseBindVisible = false">取消</el-button>
+      </template>
+    </el-dialog>
   </el-drawer>
 </template>
 
 <script setup>
-import {computed, ref, watch} from 'vue';
-import {ElMessage} from 'element-plus';
-import {getInpatientDetail} from '@/api/inpatient';
+import {computed, reactive, ref, watch} from 'vue';
+import {ElMessage, ElMessageBox} from 'element-plus';
+import {
+  bindAttending,
+  bindChargeNurse,
+  deleteAttending,
+  deleteChargeNurse,
+  endAttending,
+  endChargeNurse,
+  getAttendingList,
+  getChargeNurseList,
+  getInpatientDetail
+} from '@/api/inpatient';
+import {getEmployeeList} from '@/api/system';
 import {patientGenderText} from '@/lib/patientGender';
 import {
   admitConditionMap,
@@ -159,14 +296,183 @@ const detail = ref(null);
 // 性别文案统一走 lib/patientGender：0 是历史脏码值，渲染成「未知(0)」而不是"女"
 const genderText = (g) => patientGenderText(g);
 
+// ===== 主管医生管床关系 =====
+const attendingList = ref([]);
+const doctorOptions = ref([]);
+const bindVisible = ref(false);
+const bindLoading = ref(false);
+const bindForm = reactive({
+  relationType: 1,
+  employeeId: null,
+  effectiveTime: '',
+  remark: '',
+});
+
+const loadAttending = async () => {
+  if (!props.id) return;
+  try {
+    const res = await getAttendingList({admissionId: props.id});
+    attendingList.value = res.data || [];
+  } catch (e) {
+    /* 全局拦截器已提示 */
+  }
+};
+
+const loadDoctors = async () => {
+  if (doctorOptions.value.length) return;
+  try {
+    const res = await getEmployeeList({empType: 1});
+    doctorOptions.value = res.data || [];
+  } catch (e) {
+    /* 全局拦截器已提示 */
+  }
+};
+
+const openBind = () => {
+  Object.assign(bindForm, {relationType: 1, employeeId: null, effectiveTime: '', remark: ''});
+  bindVisible.value = true;
+  loadDoctors();
+};
+
+const submitBind = async () => {
+  if (!bindForm.employeeId) {
+    ElMessage.warning('请选择医生');
+    return;
+  }
+  bindLoading.value = true;
+  try {
+    await bindAttending({
+      admissionId: props.id,
+      employeeId: bindForm.employeeId,
+      relationType: bindForm.relationType,
+      effectiveTime: bindForm.effectiveTime || null,
+      remark: bindForm.remark || '',
+    });
+    ElMessage.success('管床关系已保存');
+    bindVisible.value = false;
+    await loadAttending();
+  } catch (e) {
+    /* 全局拦截器已提示 */
+  } finally {
+    bindLoading.value = false;
+  }
+};
+
+const onEndAttending = async (row) => {
+  try {
+    await ElMessageBox.confirm(`结束 ${row.employeeName}（${row.relationTypeText}）的管床关系？结束后留痕不删除。`, '确认结束', {type: 'warning'});
+  } catch {
+    return;
+  }
+  await endAttending(row.id);
+  ElMessage.success('已结束');
+  await loadAttending();
+};
+
+const onDeleteAttending = async (row) => {
+  try {
+    await ElMessageBox.confirm('删除误建的管床关系（物理删除，不可恢复）？', '确认删除', {type: 'error'});
+  } catch {
+    return;
+  }
+  await deleteAttending(row.id);
+  ElMessage.success('已删除');
+  await loadAttending();
+};
+
+// ===== 责任护士关系 =====
+const nurseList = ref([]);
+const nurseOptions = ref([]);
+const nurseBindVisible = ref(false);
+const nurseBindLoading = ref(false);
+const nurseBindForm = reactive({
+  nurseId: null,
+  effectiveTime: '',
+  remark: '',
+});
+
+const loadNurse = async () => {
+  if (!props.id) return;
+  try {
+    const res = await getChargeNurseList({admissionId: props.id});
+    nurseList.value = res.data || [];
+  } catch (e) {
+    /* 全局拦截器已提示 */
+  }
+};
+
+const loadNurses = async () => {
+  if (nurseOptions.value.length) return;
+  try {
+    const res = await getEmployeeList({empType: 2});
+    nurseOptions.value = res.data || [];
+  } catch (e) {
+    /* 全局拦截器已提示 */
+  }
+};
+
+const openNurseBind = () => {
+  Object.assign(nurseBindForm, {nurseId: null, effectiveTime: '', remark: ''});
+  nurseBindVisible.value = true;
+  loadNurses();
+};
+
+const submitNurseBind = async () => {
+  if (!nurseBindForm.nurseId) {
+    ElMessage.warning('请选择责任护士');
+    return;
+  }
+  nurseBindLoading.value = true;
+  try {
+    await bindChargeNurse({
+      admissionId: props.id,
+      nurseId: nurseBindForm.nurseId,
+      effectiveTime: nurseBindForm.effectiveTime || null,
+      remark: nurseBindForm.remark || '',
+    });
+    ElMessage.success('责任护士已保存');
+    nurseBindVisible.value = false;
+    await loadNurse();
+  } catch (e) {
+    /* 全局拦截器已提示 */
+  } finally {
+    nurseBindLoading.value = false;
+  }
+};
+
+const onEndNurse = async (row) => {
+  try {
+    await ElMessageBox.confirm(`结束 ${row.nurseName} 的责任护士关系？结束后留痕。`, '确认结束', {type: 'warning'});
+  } catch {
+    return;
+  }
+  await endChargeNurse(row.id);
+  ElMessage.success('已结束');
+  await loadNurse();
+};
+
+const onDeleteNurse = async (row) => {
+  try {
+    await ElMessageBox.confirm('删除误建的责任护士关系（物理删除，不可恢复）？', '确认删除', {type: 'error'});
+  } catch {
+    return;
+  }
+  await deleteChargeNurse(row.id);
+  ElMessage.success('已删除');
+  await loadNurse();
+};
+
 watch(visible, async (open) => {
   if (!open)
     return;
   detailLoading.value = true;
   detail.value = null;
+  attendingList.value = [];
+  nurseList.value = [];
   try {
     const res = await getInpatientDetail(props.id);
     detail.value = res.data;
+    await Promise.all([loadAttending(), loadNurse()]);
   } catch (e) {
     
     visible.value = false;

@@ -59,3 +59,47 @@ export function dischargeInpatient(data) {
 export function saveInpatientSummary(data) {
     return request.post('/patient/inpatient/summary/save', data)
 }
+
+// ==================== 主管医生管床关系（biz_attending_relation） ====================
+
+// 管床关系列表（status 不传=只看有效；传 0=看已结束历史交接）
+export function getAttendingList(params) {
+    return request.get('/patient/inpatient/attending/list', { params })
+}
+
+// 建立/转交管床关系（主管/主诊组长/协作；唯一负责关系自动让旧记录失效留痕）
+export function bindAttending(data) {
+    return request.post('/patient/inpatient/attending/bind', data)
+}
+
+// 结束管床关系（置失效留痕）
+export function endAttending(id) {
+    return request.post('/patient/inpatient/attending/end', null, { params: { id } })
+}
+
+// 删除误建管床关系（物理删）
+export function deleteAttending(id) {
+    return request.delete('/patient/inpatient/attending/delete', { params: { id } })
+}
+
+// ==================== 责任护士关系（biz_charge_nurse_relation） ====================
+
+// 责任护士关系列表（status 不传=只看有效；传 0=看历史交接）
+export function getChargeNurseList(params) {
+    return request.get('/patient/inpatient/nurse/list', { params })
+}
+
+// 建立/转交责任护士（一次住院一名有效主责，旧记录自动失效留痕）
+export function bindChargeNurse(data) {
+    return request.post('/patient/inpatient/nurse/bind', data)
+}
+
+// 结束责任护士关系（置失效留痕）
+export function endChargeNurse(id) {
+    return request.post('/patient/inpatient/nurse/end', null, { params: { id } })
+}
+
+// 删除误建责任护士关系（物理删）
+export function deleteChargeNurse(id) {
+    return request.delete('/patient/inpatient/nurse/delete', { params: { id } })
+}

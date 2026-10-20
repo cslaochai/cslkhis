@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.his.system.mapper.BizStaffAttendanceMapper">
+
+    <!--
+      计划 vs 实际 的行级明细（原视图 v_staff_worktime 内联）。
+      第一段：有排班计划的行（计划 LEFT JOIN 实际出勤 LEFT JOIN 班次）；
+      第二段：无排班却已登记的出勤（替班/加班/支援/无计划）。
+      排班事实表为 biz_schedule（旧名 biz_staff_schedule 已废弃，勿回写）。
+    -->
+    <sql id="worktimeBase">
+        <![CDATA[
+        SELECT CAST(s.id AS CHAR CHARACTER SET utf8mb4) AS plan_id,
+               CAST(a.id AS CHAR CHARACTER SET utf8mb4) AS attend_id,
+               s.employee_id, s.employee_name, s.schedule_date AS work_date,
+               s.org_type, s.org_id, s.org_name, s.staff_type, s.shift_id,
+               COALESCE(sh.shift_name, '未排班次') AS shift_name,
+               s.duty_status, s.work_minutes AS planned_minutes,
+               a.check_in, a.check_out, a.actual_minutes,
+               a.attendance_status, a.confirm_status,
+               (CASE
+                    WHEN (a.id IS NULL AND s.schedule_date > CURDATE()) THEN 9
+                    WHEN a.id IS NULL THEN 7
+                    WHEN a.attendance_status = 4 THEN 6
+                    WHEN a.attendance_status IN (5, 6, 7) THEN 8
+                    WHEN (a.check_in IS NOT NULL AND sh.id IS NOT NULL
+                           AND a.check_in > (CONCAT(s.schedule_date, ' ', sh.start_time) + INTERVAL sh.late_grace_minutes MINUTE)) THEN 2
+                    WHEN (a.check_out IS NOT NULL AND sh.id IS NOT NULL
+                           AND a.check_out < (CASE WHEN sh.cross_day = 1
+                                                    THEN CONCAT(s.schedule_date, ' ', sh.end_time) + INTERVAL 1 DAY
+                                                    ELSE CONCAT(s.schedule_date, ' ', sh.end_time) END)) THEN 3
+                    WHEN COALESCE(a.actual_minutes, 0) < (s.work_minutes - 15) THEN 4
+                    WHEN COALESCE(a.actual_minutes, 0) > (s.work_minutes + 15) THEN 5
+                    ELSE 1 END) AS diff_type,
+               (CASE
+                    WHEN (a.id IS NULL AND s.schedule_date > CURDATE()) THEN '待出勤（日期未到）'
+                    WHEN a.id IS NULL THEN '未回填（有排班无出勤记录，需科室登记）'
+                    WHEN a.attendance_status = 4 THEN '缺勤（科室已确认）'
+                    WHEN a.attendance_status = 5 THEN '替班'
+                    WHEN a.attendance_status = 6 THEN '加班'
+                    WHEN a.attendance_status = 7 THEN '支援（跨单元出勤）'
+                    WHEN (a.check_in IS NOT NULL AND sh.id IS NOT NULL
+                           AND a.check_in > (CONCAT(s.schedule_date, ' ', sh.start_time) + INTERVAL sh.late_grace_minutes MINUTE)) THEN '迟到'
+                    WHEN (a.check_out IS NOT NULL AND sh.id IS NOT NULL
+                           AND a.check_out < (CASE WHEN sh.cross_day = 1
+                                                    THEN CONCAT(s.schedule_date, ' ', sh.end_time) + INTERVAL 1 DAY
+                                                    ELSE CONCAT(s.schedule_date, ' ', sh.end_time) END)) THEN '早退'
+                    WHEN COALESCE(a.actual_minutes, 0) < (s.work_minutes - 15) THEN '工时不足'
+                    WHEN COALESCE(a.actual_minutes, 0) > (s.work_minutes + 15) THEN '超时/加班'
+                    ELSE '正常' END) AS diff_reason,
+               (COALESCE(a.actual_minutes, 0) - s.work_minutes) AS diff_minutes
+        FROM biz_schedule s
+        LEFT JOIN biz_staff_attendance a
+               ON a.del_flag = 0 AND a.staff_schedule_id = s.id
+        LEFT JOIN biz_shift sh
+               ON sh.id = s.shift_id AND sh.del_flag = 0
+        WHERE s.del_flag = 0 AND s.duty_status = 1 AND s.publish_status IN (2, 4)
+
+        UNION ALL
+
+        SELECT NULL AS plan_id,
+               CAST(a.id AS CHAR CHARACTER SET utf8mb4) AS attend_id,
+               a.employee_id, a.employee_name, a.schedule_date AS work_date,
+               a.org_type, a.org_id, a.org_name, a.staff_type, a.shift_id,
+               COALESCE(sh.shift_name, '未排班次') AS shift_name,
+               NULL AS duty_status, 0 AS planned_minutes,
+               a.check_in, a.check_out, a.actual_minutes,
+               a.attendance_status, a.confirm_status,
+               8 AS diff_type,
+               (CASE a.attendance_status
+                    WHEN 5 THEN '替班'
+                    WHEN 6 THEN '加班（无排班）'
+                    WHEN 7 THEN '支援（跨单元出勤）'
+                    ELSE '无计划的出勤' END) AS diff_reason,
+               COALESCE(a.actual_minutes, 0) AS diff_minutes
+        FROM biz_staff_attendance a
+        LEFT JOIN biz_shift sh
+               ON sh.id = a.shift_id AND sh.del_flag = 0
+        WHERE a.del_flag = 0
+          AND a.schedule_date < (CURDATE() + INTERVAL 1 DAY)
+          AND NOT EXISTS (SELECT 1 FROM biz_schedule s
+                          WHERE s.del_flag = 0 AND s.id = a.staff_schedule_id)
+        ]]>
+    </sql>
+
+    <!-- 单元 × 日 的执行汇总（原视图 v_staff_worktime_summary 内联） -->
+    <sql id="summaryAgg">
+        SELECT w.work_date, w.org_type, w.org_id, MAX(w.org_name) AS org_name, w.staff_type,
+               COUNT(DISTINCT CASE WHEN w.plan_id IS NOT NULL THEN w.employee_id END) AS plan_head,
+               COUNT(DISTINCT CASE WHEN w.diff_type IN (1, 2, 3, 4, 5) THEN w.employee_id END) AS present_head,
+               COUNT(DISTINCT CASE WHEN w.diff_type = 6 THEN w.employee_id END) AS absent_head,
+               COUNT(DISTINCT CASE WHEN w.diff_type = 7 THEN w.employee_id END) AS unrecorded_head,
+               COUNT(DISTINCT CASE WHEN w.diff_type = 8 THEN w.employee_id END) AS extra_head,
+               SUM(w.planned_minutes) AS planned_minutes,
+               SUM(COALESCE(w.actual_minutes, 0)) AS actual_minutes,
+               (SUM(COALESCE(w.actual_minutes, 0)) - SUM(w.planned_minutes)) AS diff_minutes,
+               (CASE WHEN SUM(w.planned_minutes) = 0 THEN NULL
+                      ELSE ROUND(100.0 * SUM(COALESCE(w.actual_minutes, 0)) / SUM(w.planned_minutes), 1) END) AS fulfill_rate
+        FROM (
+            <include refid="worktimeBase"/>
+        ) w
+        GROUP BY w.work_date, w.org_type, w.org_id, w.staff_type
+    </sql>
+
+    <!-- 行级对照（计划 vs 实际），外层按日期/单元/岗位/员工/差异类型过滤 -->
+    <select id="selectComparison" resultType="com.his.system.vo.StaffWorktimeVO">
+        SELECT w.*
+        FROM (
+            <include refid="worktimeBase"/>
+        ) w
+        WHERE w.work_date BETWEEN #{startDate} AND #{endDate}
+        <if test="orgType != null">AND w.org_type = #{orgType}</if>
+        <if test="orgId != null">AND w.org_id = #{orgId}</if>
+        <if test="staffType != null">AND w.staff_type = #{staffType}</if>
+        <if test="employeeId != null">AND w.employee_id = #{employeeId}</if>
+        <if test="diffType != null">AND w.diff_type = #{diffType}</if>
+        ORDER BY w.work_date, w.org_type, w.org_id, w.employee_id
+    </select>
+
+    <!-- 单元 × 日 执行汇总，外层按日期/单元/岗位过滤 -->
+    <select id="selectSummary" resultType="com.his.system.vo.WorktimeSummaryVO">
+        SELECT s.*
+        FROM (
+            <include refid="summaryAgg"/>
+        ) s
+        WHERE s.work_date BETWEEN #{startDate} AND #{endDate}
+        <if test="orgType != null">AND s.org_type = #{orgType}</if>
+        <if test="orgId != null">AND s.org_id = #{orgId}</if>
+        <if test="staffType != null">AND s.staff_type = #{staffType}</if>
+        ORDER BY s.work_date, s.org_type, s.org_id
+    </select>
+
+    <!--
+      编制校准建议（原视图 v_staff_calibration_advice 内联）：
+      取近 14 天（不含今天）的汇总 s，LEFT JOIN 同期需求 g，按单元 × 岗位归因。
+      静态聚合放 CDATA，单元/岗位过滤由外层施加。
+    -->
+    <sql id="adviceAgg">
+        <![CDATA[
+        SELECT s.org_type, s.org_id, MAX(s.org_name) AS org_name, s.staff_type,
+               COUNT(0) AS days_covered,
+               SUM(s.plan_head) AS plan_head_days,
+               SUM(s.present_head) AS present_head_days,
+               SUM(s.unrecorded_head) AS unrecorded_head_days,
+               SUM(s.absent_head) AS absent_head_days,
+               SUM(s.extra_head) AS extra_head_days,
+               SUM(s.planned_minutes) AS planned_minutes,
+               SUM(s.actual_minutes) AS actual_minutes,
+               SUM(s.diff_minutes) AS diff_minutes,
+               ROUND(AVG(g.required_count), 1) AS avg_required,
+               ROUND(AVG(s.present_head), 1) AS avg_present,
+               (CASE WHEN SUM(s.plan_head) = 0 THEN 0
+                     ELSE ROUND(100.0 * SUM(s.unrecorded_head) / SUM(s.plan_head), 1) END) AS unrecorded_rate,
+               (CASE WHEN SUM(s.plan_head) = 0 THEN 4
+                     WHEN SUM(s.unrecorded_head) > (0.3 * SUM(s.plan_head)) THEN 4
+                     WHEN (ROUND(AVG(g.required_count), 1) > ROUND(AVG(s.present_head), 1)
+                           AND SUM(s.diff_minutes) > 0) THEN 1
+                     WHEN ((AVG(g.required_count) * 2) < AVG(s.present_head)
+                           AND SUM(s.diff_minutes) < 0) THEN 3
+                     ELSE 2 END) AS advice_type,
+               (CASE WHEN SUM(s.plan_head) = 0 THEN '近 14 天该单元无「上班」排班，无法评估编制'
+                     WHEN SUM(s.unrecorded_head) > (0.3 * SUM(s.plan_head))
+                         THEN CONCAT('出勤登记不全（未回填 ', SUM(s.unrecorded_head), ' 人次 / 应出勤 ', SUM(s.plan_head),
+                                     ' 人次），先补登出勤再谈编制校准')
+                     WHEN (ROUND(AVG(g.required_count), 1) > ROUND(AVG(s.present_head), 1)
+                           AND SUM(s.diff_minutes) > 0)
+                         THEN CONCAT('实到长期低于需求（需求均 ', ROUND(AVG(g.required_count), 1),
+                                     ' 人 < 实到均 ', ROUND(AVG(s.present_head), 1),
+                                     ' 人）且存在超时工时 ', SUM(s.diff_minutes),
+                                     ' 分钟，疑似由加班填补缺口，建议上调护理编制下限并复核班次载荷')
+                     WHEN ((AVG(g.required_count) * 2) < AVG(s.present_head)
+                           AND SUM(s.diff_minutes) < 0)
+                         THEN CONCAT('实到长期高于需求一倍以上（需求均 ', ROUND(AVG(g.required_count), 1),
+                                     ' 人、实到均 ', ROUND(AVG(s.present_head), 1),
+                                     ' 人）且工时富余，建议核减或调整到人少的班次')
+                     ELSE '实到与需求基本吻合，编制维持现状' END) AS advice_text,
+               (CASE WHEN SUM(s.plan_head) = 0 THEN NULL
+                     WHEN SUM(s.unrecorded_head) > (0.3 * SUM(s.plan_head)) THEN NULL
+                     WHEN (ROUND(AVG(g.required_count), 1) > ROUND(AVG(s.present_head), 1)
+                           AND SUM(s.diff_minutes) > 0)
+                         THEN CEILING(AVG(g.required_count))
+                     ELSE NULL END) AS suggest_min_staff
+        FROM (
+            ]]>
+            <include refid="summaryAgg"/>
+            <![CDATA[
+        ) s
+        LEFT JOIN (
+            SELECT d.demand_date, d.org_type, d.org_id, d.staff_type, d.required_count
+            FROM biz_staff_demand d
+            LEFT JOIN biz_schedule sc
+                   ON sc.schedule_date = d.demand_date AND sc.org_type = d.org_type
+                  AND sc.org_id = d.org_id AND sc.staff_type = d.staff_type
+                  AND sc.duty_status = 1 AND sc.del_flag = 0
+                  AND sc.publish_status IN (2, 4)
+                  AND (d.shift_id = 0 OR sc.shift_id = d.shift_id)
+            WHERE d.del_flag = 0 AND d.status = 1
+            GROUP BY d.id
+        ) g ON g.demand_date = s.work_date
+           AND g.org_type = s.org_type
+           AND g.org_id = s.org_id
+           AND g.staff_type = s.staff_type
+        WHERE s.work_date BETWEEN (CURDATE() - INTERVAL 14 DAY) AND (CURDATE() - INTERVAL 1 DAY)
+        GROUP BY s.org_type, s.org_id, s.staff_type
+        ]]>
+    </sql>
+
+    <select id="selectAdvice" resultType="com.his.system.vo.CalibrationAdviceVO">
+        SELECT a.*
+        FROM (
+            <include refid="adviceAgg"/>
+        ) a
+        WHERE 1 = 1
+        <if test="orgType != null">AND a.org_type = #{orgType}</if>
+        <if test="orgId != null">AND a.org_id = #{orgId}</if>
+        <if test="staffType != null">AND a.staff_type = #{staffType}</if>
+        ORDER BY FIELD(a.advice_type, 1, 3, 4, 2), a.unrecorded_head_days DESC
+    </select>
+
+</mapper>

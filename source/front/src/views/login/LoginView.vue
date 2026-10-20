@@ -87,12 +87,43 @@
             登 录
           </el-button>
         </el-form-item>
+        <!-- 测试账号凭据：前端写死，仅用于演示，不查后端 -->
+        <el-form-item class="cred-item">
+          <el-button class="cred-button" plain size="large" @click="credVisible = true">
+            测试账号凭据
+          </el-button>
+        </el-form-item>
       </el-form>
 
       <p class="role-desc">{{ roles.find((r) => r.key === role)?.desc }}</p>
     </div>
 
     <p class="login-footer">长沙市麓康医院信息管理平台 · 仅限授权人员使用</p>
+
+    <el-dialog
+        v-model="credVisible"
+        title="测试账号凭据（密码统一为 123456）"
+        width="920px"
+        top="6vh"
+    >
+      <div class="cred-body">
+        <el-table :data="credRows" border size="small">
+          <el-table-column label="角色" min-width="150" prop="role"/>
+          <el-table-column label="科室" min-width="110" prop="dept"/>
+          <el-table-column label="账号（姓名）" min-width="220">
+            <template #default="{row}">
+              <div v-for="item in row.accounts" :key="item" class="cred-account">
+                <span class="cred-account-text">{{ item }}</span>
+                <button class="copy-btn" title="复制账号" type="button" @click="handleCopyAccount(item)">
+                  <CopyDocument class="copy-icon"/>
+                </button>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="能做什么" min-width="300" prop="ability"/>
+        </el-table>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -100,9 +131,10 @@
 import {onMounted, reactive, ref} from 'vue'
 import {useRouter} from 'vue-router'
 import {ElMessage} from 'element-plus'
-import {CircleCheck, DataLine, FirstAidKit, Lock, Service, Tickets, User} from '@element-plus/icons-vue'
+import {CircleCheck, CopyDocument, DataLine, FirstAidKit, Lock, Service, Tickets, User} from '@element-plus/icons-vue'
 import {login} from '@/api/system'
 import {encryptPassword} from '@/lib/password'
+import {copyText} from '@/lib/clipboard'
 import {useCurrentPatientStore} from '@/stores/currentPatient'
 import {clearSessionCaches} from '@/lib/session-cache'
 
@@ -114,7 +146,6 @@ const roles = [
   {key: 'doctor', label: '医生', icon: FirstAidKit, desc: '门诊/住院诊疗', roleCode: '10013'},
   {key: 'nurse', label: '护士', icon: DataLine, desc: '护理执行工作站', roleCode: '10014'},
   {key: 'pharmacist', label: '药剂师', icon: Tickets, desc: '审方调配发药', roleCode: '10016'},
-  // 客服岗（sql/223）：接患者转人工工单 + 维护客服台语料，归客户服务中心
   {key: 'service', label: '客服', icon: Service, desc: '工单受理与患者服务', roleCode: '10034'},
   {key: 'admin', label: '系统管理员', icon: CircleCheck, desc: '系统配置管理', roleCode: '10012'},
 ]
@@ -128,6 +159,170 @@ const loginForm = reactive({
   password: '',
   captcha: '',
 })
+
+// ===== 测试账号凭据（前端写死，来源 docs/00-开发文档/198-测试账号与凭据.md，不查后端）=====
+// 按「科室 + 角色」合并：同一科室同一角色的多个账号并到一行，账号列展示 账号(姓名)
+const credVisible = ref(false)
+
+// 三类治疗科室共用的能力描述（文档中的「同上」按岗位角色还原）
+const DOCTOR_ABILITY = '门诊看诊开方、检查检验申请、住院医嘱与病历、手术排期/会诊/转科、床位与病危重通知、死亡证明填写、患者360（限本科室）'
+const NURSE_ABILITY = '护士站医嘱执行与校对、入出院、转科、床位、ICU监护、出院带药、VTE防控、器械清点（限本科室，不能排班）'
+const HEAD_NURSE_ABILITY = '护士全部操作 + 护理排班、门诊排班、员工排班、排班总览、护理质控、不良事件上报、死亡证明审核签发（限本科室）'
+
+const PHARM_ABILITY = '药房发药、住院摆药、静配、药房盘点、中药代煎、麻精专册、库存/采购/入库/调拨/供应商退货、追溯码、抗菌药物处方权（限本科室）'
+const MEDTECH_ABILITY = '检查/检验工作站、标本与报告、输血与血库、病理/内镜/超声/放射/心电、血液净化、检验质控与室间质评、危急值（限本科室）'
+const ER_ABILITY = '急诊中心（分诊-抢救-留观）、医生工作站开方、门诊治疗、慢病建档、我的未报、危急值、患者360（限本科室）'
+
+// 全部账号合并为一张表：每行 = 同一科室 + 同一角色
+const credRows = [
+  // 三个治疗科室（推荐账号）
+  {
+    accounts: ['moyuanhang ( 莫远航 )', 'shijiaming ( 施佳明  )', 'wangsheng ( 王升  )', 'zengjie ( 曾洁 )'],
+    role: '医生',
+    dept: '心血管内科',
+    ability: DOCTOR_ABILITY
+  },
+  {
+    accounts: ['guhanmei ( 顾寒梅  )', 'kangyinuo ( 康一诺  )', 'pengsiqi ( 彭思琪  )'],
+    role: '护士',
+    dept: '心血管内科',
+    ability: NURSE_ABILITY
+  },
+  {
+    accounts: ['caoyumei ( 曹玉梅  )', 'qiuhaotian ( 邱昊天  )'],
+    role: '护士长',
+    dept: '心血管内科',
+    ability: HEAD_NURSE_ABILITY
+  },
+  {
+    accounts: ['chenzeyu ( 陈泽宇  )', 'fanlicheng ( 范立诚  )', 'kangyihang ( 康亦航  )', 'nitian ( 倪天  )'],
+    role: '医生',
+    dept: '神经内科',
+    ability: DOCTOR_ABILITY
+  },
+  {
+    accounts: ['dengxinyi ( 邓心怡  )', 'jinbailu ( 金白露  )'],
+    role: '护士',
+    dept: '神经内科',
+    ability: NURSE_ABILITY
+  },
+  {accounts: ['xuheyu ( 徐和玉  )'], role: '护士长', dept: '神经内科', ability: HEAD_NURSE_ABILITY},
+  {
+    accounts: ['jinxin ( 金欣  )', 'limin ( 李敏  )', 'qinan ( 齐楠  )', 'shijiajie ( 石嘉杰  )'],
+    role: '医生',
+    dept: '肿瘤内科',
+    ability: DOCTOR_ABILITY
+  },
+  {accounts: ['sumin ( 苏敏  )', 'zhuchunyan ( 朱春燕  )'], role: '护士', dept: '肿瘤内科', ability: NURSE_ABILITY},
+  {accounts: ['wenmingzhu ( 温明珠  )'], role: '护士长', dept: '肿瘤内科', ability: HEAD_NURSE_ABILITY},
+  // 其他科室
+  {
+    accounts: ['admin ( 超级管理员  )'],
+    role: '系统管理员',
+    dept: '医院信息系统',
+    ability: '全部业务页面 + 系统管理（用户/角色/菜单/字典/参数/日志审计）'
+  },
+  {
+    accounts: ['lirui ( 李瑞  )'],
+    role: '系统管理员 / 医技人员',
+    dept: '信息科 / 设备科',
+    ability: '切「系统管理员」= 同 admin；切「医技人员」= 只做检查检验与报告'
+  },
+  {
+    accounts: ['fengruchu ( 冯如初  )', 'yuanchenxi ( 袁晨曦  )'],
+    role: '收费员收费员',
+    dept: '财务科',
+    ability: '窗口收费、退费申请、发票管理、财务日结、费用记账、账单与支付流水查询（全院，可跨科室结账单）、住院结算（收预交金、办出院结算——自费与医保同一入口）'
+  },
+  {
+    accounts: ['hanlei ( 韩蕾  )'],
+    role: '收费员收费员 / 医保结算员',
+    dept: '医保科 / 财务科',
+    ability: '切「收费员」= 收费全部 + 住院结算；切「医保结算员」加做医保结算清单、慢特病备案、目录对照、政策配置、合规审核、扣款飞检、渠道对账、资金账户、欠费管控、医保住院结算与2304/2305报盘'
+  },
+  {accounts: ['denghoupu ( 邓厚朴  )'], role: '药剂师', dept: '门诊中药房', ability: PHARM_ABILITY},
+  {accounts: ['dongxinyi ( 董心怡  )'], role: '药剂师', dept: '住院药房', ability: PHARM_ABILITY},
+  {accounts: ['jiangqian ( 江倩  )'], role: '药剂师', dept: '静脉配液中心', ability: PHARM_ABILITY},
+  {accounts: ['jiangzhiyuan ( 蒋致远  )'], role: '药剂师', dept: '门诊西药房', ability: PHARM_ABILITY},
+  {accounts: ['caihanmei ( 蔡寒梅  )'], role: '医技人员', dept: '消毒供应中心', ability: MEDTECH_ABILITY},
+  {accounts: ['kanghui ( 康慧  )'], role: '医技人员', dept: '输血科', ability: MEDTECH_ABILITY},
+  {
+    accounts: ['cenjing ( 岑静  )'],
+    role: '检验技师',
+    dept: '医学检验科',
+    ability: '检验工作站、标本管理、检验项目字典、输血管理、危急值处置（限本科室）'
+  },
+  {
+    accounts: ['xuyan ( 许妍  )'],
+    role: '前台导诊',
+    dept: '院办',
+    ability: '挂号预约（全院科室）、收费结算窗口、结算账单查询、患者管理、患者标签（分诊工作站与就诊总览已收回）'
+  },
+  {accounts: ['chengruotong ( 程若彤  )'], role: '急诊医生', dept: '急诊外科', ability: ER_ABILITY},
+  {accounts: ['donghanmei ( 董寒梅  )'], role: '急诊医生', dept: '急诊内科', ability: ER_ABILITY},
+  {accounts: ['helicheng ( 何立诚  )'], role: '急诊医生', dept: '急诊儿科', ability: ER_ABILITY},
+  {accounts: ['jiangbailu ( 江白露  )'], role: '急诊医生', dept: '肠道门诊', ability: ER_ABILITY},
+  {accounts: ['mojingwen ( 莫静文  )'], role: '急诊医生', dept: '发热门诊', ability: ER_ABILITY},
+  {
+    accounts: ['longyuebai ( 龙月白  )'],
+    role: '护士长',
+    dept: '护理部',
+    ability: HEAD_NURSE_ABILITY + '；落点科室为护理部，四类排班页按护理部口径展示（非某个病区）'
+  },
+  {
+    accounts: ['qiwei ( 齐伟  )'],
+    role: '检查技师',
+    dept: '放射科',
+    ability: '检查工作站、检查预约中心、检查设备与号源、检查项目字典、标本管理、危急值处置（限本科室）'
+  },
+  {
+    accounts: ['kangyao ( 康瑶  )'],
+    role: '病案编码员',
+    dept: '病案室',
+    ability: '门诊病历查阅、患者主索引合并、健康档案与360（不做临床书写）'
+  },
+  {
+    accounts: ['hanyuwei ( 韩雨薇  )'],
+    role: '营养师',
+    dept: '营养科',
+    ability: '营养风险筛查、膳食医嘱执行、订餐配送、营养会诊、营养指标监测（全院）'
+  },
+  {
+    accounts: ['gaoheyu ( 高和玉  )'],
+    role: '行政人员',
+    dept: '总务科',
+    ability: '只有工作台与消息待办，无任何业务页面（用于岗位/权限实验）'
+  },
+  {
+    accounts: ['longjiaming ( 龙佳明  )'],
+    role: '行政人员',
+    dept: '保卫科',
+    ability: '只有工作台与消息待办，无任何业务页面（用于岗位/权限实验）'
+  },
+  {
+    accounts: ['kefulina ( 李娜  )'],
+    role: '客服专员',
+    dept: '客户服务中心',
+    ability: '患者常见问题维护、工单受理'
+  },
+  {
+    accounts: ['tanyiming ( 谭一鸣  )'],
+    role: '医务科',
+    dept: '医务科',
+    ability: '员工排班（全院）、人力配置标准、排班总览；无临床业务页面'
+  },
+]
+
+// 列表文案是「账号 ( 姓名 )」，登录只需要账号本身 → 复制时取括号前的部分
+const handleCopyAccount = async (item) => {
+  const account = item.split('(')[0].trim()
+  const ok = await copyText(account)
+  if (ok) {
+    ElMessage.success(`已复制账号：${account}`)
+  } else {
+    ElMessage.error('复制失败，请手动选择文本')
+  }
+}
 
 const AUTO_FILL_CAPTCHA = true
 const captchaCanvas = ref(null)
@@ -218,8 +413,6 @@ const handleLogin = async () => {
   loading.value = true
   loginError.value = ''
   try {
-    // 口令在提交前先 SM2 加密：HTTP 链路上只能看到密文。
-    // 加密失败（多半是后端换了密钥）直接抛出去，不要退化成明文重试 —— 那等于白做。
     const password = await encryptPassword(loginForm.password)
     const res = await login({
       username: loginForm.username,
@@ -385,6 +578,60 @@ const handleLogin = async () => {
   font-weight: 600;
   letter-spacing: 6px;
   border-radius: 8px;
+}
+
+.cred-item {
+  display: flex;
+  justify-content: center;
+  margin-top: -8px;
+}
+
+.cred-button {
+  border-radius: 8px;
+}
+
+.cred-body {
+  max-height: 68vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.cred-account {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.8;
+  color: #33475B;
+}
+
+.cred-account-text {
+  white-space: nowrap;
+}
+
+.copy-btn {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.copy-btn:hover {
+  color: #1269b5;
+  background: #e8f1fa;
+}
+
+.copy-icon {
+  width: 14px;
+  height: 14px;
 }
 
 .role-desc {

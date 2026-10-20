@@ -184,7 +184,11 @@
                          :value="s.id"/>
             </el-select>
             <p v-if="newAppointment.scheduleId && !slotRows.length && !slotLoading"
-               class="w-full text-xs text-slate-400 mt-1">该号源暂无时间段明细，将按整班次号源挂号</p>
+               class="w-full text-xs text-slate-400 mt-1">
+              {{ selectedSchedulePassed
+                  ? `该号源已过挂号截止时间（开诊前 ${REGIST_CUTOFF_MINUTES} 分钟截止），请重新选择`
+                  : '该号源暂无时间段明细，将按整班次号源挂号' }}
+            </p>
           </el-form-item>
         </template>
 
@@ -372,6 +376,11 @@ const handleScheduleChange = (scheduleId) => {
   newAppointment.value.slotId = null;
   loadSlotRows(scheduleId);
 };
+/** 所选号源本身是否已过截止（无段历史排班的判据；有段时段的截止由段级校验管，不在这里拦） */
+const selectedSchedulePassed = computed(() => {
+  const s = availableSchedules.value.find((x) => (x.id ?? x.doctorName) === newAppointment.value.scheduleId);
+  return !!s && cutoffPassed(s.scheduleDate, s.startTime);
+});
 // 医保类型字典（原来在主页面 onMounted 预加载，拆出后改为打开时懒加载，同一接口同一口径）
 const medicalInsuranceTypes = ref([]);
 const loadMedicalInsuranceTypes = async () => {
@@ -584,8 +593,10 @@ const loadAvailableSchedules = async () => {
     return;
   try {
     const res = await getAvailableSchedule(newAppointment.value.deptId, newAppointment.value.visitDate);
-    // 已过挂号截止（开诊前 10 分钟）的号源不放进候选：当天只留未过时段，历史日期整日清空
-    availableSchedules.value = (res.data || []).filter((s) => !cutoffPassed(s.scheduleDate, s.startTime));
+    // 只滤历史日期，不按班次开始时间滤当天：一个班次（如 08:00~12:00）覆盖多个半小时段，
+    // 班次开始过了截止 ≠ 后面的段（11:30）也过了 —— 段级截止由 loadSlotRows 按段滤。
+    // 旧写法按 s.startTime 滤，会出现「看板 11:30 还亮着预约按钮，弹窗里该日期无可挂号源」。
+    availableSchedules.value = (res.data || []).filter((s) => !dateIsPast(s.scheduleDate));
   } catch (error) {
     console.error('加载号源失败:', error);
   }
@@ -595,20 +606,31 @@ const loadAvailableSchedules = async () => {
  * 与后端 BizAppointServiceImpl.REGIST_CUTOFF_MINUTES 同口径，改动必须两边同步。
  */
 const REGIST_CUTOFF_MINUTES = 10;
-/** 该号源/时间段是否已过挂号截止（开诊前 10 分钟）。dateStr 形如 2026-10-14 */
-const cutoffPassed = (dateStr, startTime) => {
-  const today = new Date();
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+/** 今天（YYYY-MM-DD，本地时区）—— cutoffPassed / dateIsPast 共用的基准 */
+const todayStr = () => {
+  const t = new Date();
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+};
+/** 就诊日是否已是过去日期（与 cutoffPassed 同一个「今天」口径）。dateStr 形如 2026-10-14 */
+const dateIsPast = (dateStr) => {
   if (!dateStr)
     return false;
-  if (dateStr < todayStr)
+  return dateStr < todayStr();
+};
+/** 该号源/时间段是否已过挂号截止（开诊前 10 分钟）。dateStr 形如 2026-10-14 */
+const cutoffPassed = (dateStr, startTime) => {
+  if (!dateStr)
+    return false;
+  const today = todayStr();
+  if (dateStr < today)
     return true;
-  if (dateStr > todayStr)
+  if (dateStr > today)
     return false;
   const m = /^(\d{1,2}):(\d{2})/.exec(String(startTime ?? '').trim());
   if (!m)
     return false;
-  const nowMin = today.getHours() * 60 + today.getMinutes();
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
   return Number(m[1]) * 60 + Number(m[2]) - REGIST_CUTOFF_MINUTES <= nowMin;
 };
 const handleSubmit = async () => {
@@ -647,9 +669,10 @@ const handleSubmit = async () => {
       return;
     }
     // 时间闸兜底：弹窗开着不关（选完号源等半天），号源/段到点失效 —— 提交时再验一次。
-    // 号源候选已按截止过滤，这里只管「列表里还在、但此刻刚过点」的边界。
+    // 无段（历史排班）才按班次开始时间判；有段时段的截止由下面段级校验管，
+    // 不能用班次开始时间（08:00 的班次 11:30 的段）误杀还开放的段。
     const schedSel = availableSchedules.value.find((x) => (x.id ?? x.doctorName) === newAppointment.value.scheduleId);
-    if (schedSel && cutoffPassed(schedSel.scheduleDate, schedSel.startTime)) {
+    if (schedSel && !slotRows.value.length && cutoffPassed(schedSel.scheduleDate, schedSel.startTime)) {
       ElMessage.warning(`该号源已过挂号截止时间（开诊前 ${REGIST_CUTOFF_MINUTES} 分钟截止），请重新选择`);
       return;
     }

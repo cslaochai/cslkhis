@@ -391,7 +391,7 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
     }
 
     /**
-     * 迟到/早退判定。<b>与 sql/214 视图 {@code v_staff_worktime} 的 diff_type 是同一套口径</b>。
+     * 迟到/早退判定。<b>与 BizStaffAttendanceMapper.xml worktimeBase 的 diff_type 是同一套口径</b>。
      *
      * @param plan 这次出勤对应的计划事实（加班/支援这类无计划的传 null，此时不做时间判定）
      */

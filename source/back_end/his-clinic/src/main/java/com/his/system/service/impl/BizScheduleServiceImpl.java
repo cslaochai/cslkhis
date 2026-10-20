@@ -4,14 +4,20 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.enums.NurseScheduleChangeTypeEnum;
 import com.his.common.enums.NurseScheduleUnitTypeEnum;
 import com.his.common.enums.OrgUnitTypeEnum;
+import com.his.common.enums.PublishStatusEnum;
 import com.his.common.enums.StaffDutyStatusEnum;
 import com.his.common.enums.StaffScheduleSourceEnum;
 import com.his.common.enums.StaffTypeEnum;
+import com.his.common.entity.CurrentUser;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.system.dto.NurseScheduleDTO;
+import com.his.system.entity.SysDepartment;
+import com.his.system.mapper.SysDepartmentMapper;
+import com.his.system.utils.UserUtils;
 import com.his.system.dto.StaffPlanRuleUpsertDTO;
 import com.his.system.dto.StaffScheduleUpsertDTO;
 import com.his.system.entity.BizSchedule;
@@ -19,6 +25,7 @@ import com.his.system.entity.BizStaffPlanRule;
 import com.his.system.mapper.BizScheduleMapper;
 import com.his.system.service.DeptScopeService;
 import com.his.system.service.BizScheduleService;
+import com.his.system.service.NurseScheduleLogService;
 import com.his.system.service.StaffPlanRuleService;
 import com.his.system.service.StaffScheduleService;
 import com.his.system.vo.NurseScheduleVO;
@@ -61,6 +68,14 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
     private final StaffPlanRuleService staffPlanRuleService;
 
     private final BizScheduleMapper bizScheduleMapper;
+
+    private final NurseScheduleLogService nurseScheduleLogService;
+
+    /** 科室主档：取科室指定的护理排班审核人 */
+    private final SysDepartmentMapper sysDepartmentMapper;
+
+    /** 全局豁免审核角色：系统管理员 */
+    private static final String ROLE_ADMIN = "10012";
 
     /**
      * 这个护理单元在出勤底座里落的排班单元类型：病区→2，门诊科室→1
@@ -165,7 +180,10 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
 
         List<NurseScheduleVO.Nurse> nurses = bizScheduleMapper.selectNurses(ward.getDeptId(), null, NURSE_LIMIT);
         List<NurseScheduleVO.Cell> cells = selectCells(ward, start, end);
-        cells.forEach(c -> c.setScheduleStatusText(StaffDutyStatusEnum.getLabel(c.getScheduleStatus())));
+        cells.forEach(c -> {
+            c.setScheduleStatusText(StaffDutyStatusEnum.getLabel(c.getScheduleStatus()));
+            c.setPublishStatusText(PublishStatusEnum.getLabel(c.getPublishStatus()));
+        });
         List<NurseScheduleVO.ShiftOption> shifts = bizScheduleMapper.selectNursingShifts();
         shifts.forEach(s -> s.setNight(isNightShift(s.getStartTime())));
 
@@ -186,6 +204,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         matrix.setCells(cells);
         matrix.setStaffing(buildStaffing(ward, start, end, cells));
         matrix.setWarnings(buildWarnings(ward, start, end, nurses, cells));
+        matrix.setPublishSummary(buildPublishSummary(cells));
         return matrix;
     }
 
@@ -198,6 +217,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
                 query.getWardId(), deptId, query.getScheduleStatus(), query.getStartDate(), query.getEndDate(), deptIds);
         for (NurseScheduleVO.Row row : records) {
             row.setScheduleStatusText(StaffDutyStatusEnum.getLabel(row.getScheduleStatus()));
+            row.setPublishStatusText(PublishStatusEnum.getLabel(row.getPublishStatus()));
         }
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -239,6 +259,19 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
                 shift == null ? null : shift.getShiftId(), remark, StaffScheduleSourceEnum.MANUAL,
                 exist == null ? null : exist.getId());
 
+        // 留痕：新增记 CREATE，改格记 UPDATE（带新旧班次/状态快照）
+        BizSchedule snap = new BizSchedule();
+        snap.setScheduleDate(date);
+        snap.setOrgName(ward.getWardName());
+        snap.setDeptName(nurse.getDeptName());
+        snap.setEmployeeName(nurse.getNurseName());
+        String toSnap = cellSnapshot(status, shift == null ? null : shift.getShiftName());
+        String fromSnap = exist == null ? null
+                : cellSnapshot(StaffDutyStatusEnum.fromCode(exist.getScheduleStatus()), exist.getShiftName());
+        nurseScheduleLogService.record(fact.getId(),
+                exist == null ? NurseScheduleChangeTypeEnum.CREATE : NurseScheduleChangeTypeEnum.UPDATE,
+                null, null, snap, fromSnap, toSnap);
+
         LocalDate weekStart = mondayOf(date);
         BigDecimal weekHours = hours(bizScheduleMapper.selectWorkMinutes(nurse.getEmployeeId(), weekStart, weekStart.plusDays(6)));
         NurseScheduleVO.SaveResult result = new NurseScheduleVO.SaveResult();
@@ -273,6 +306,9 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         if (!deptScopeService.canAccessDept(row.getDeptId())) {
             throw new BusinessException("无权删除该病区的排班（不在当前岗位的数据范围内）");
         }
+        // 删格留痕必须在物理清事实前落：row 快照此时还完整，清完旧班次/状态就取不到了
+        nurseScheduleLogService.record(id, NurseScheduleChangeTypeEnum.DELETE, null, null, row,
+                StaffDutyStatusEnum.getLabel(row.getDutyStatus()), "（已删除）");
         // 格子删掉 = 这个人这天在这个单元没班了：按单元清事实（多班次日一并收掉）
         staffScheduleService.purgeDayAttendance(row.getOrgType(), row.getOrgId(), row.getEmployeeId(), row.getScheduleDate());
         NurseScheduleVO.DeleteResult result = new NurseScheduleVO.DeleteResult();
@@ -280,6 +316,150 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         result.setNurseName(row.getEmployeeName());
         result.setScheduleDate(row.getScheduleDate() == null ? null : row.getScheduleDate().toString());
         return result;
+    }
+
+    // ===== G-15 发布态流转（提交→审核→发布 / 调班 / 撤回）=====
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void submit(Long id) {
+        BizSchedule row = requireScheduleRow(id);
+        if (!PublishStatusEnum.DRAFT.getCode().equals(row.getPublishStatus())) {
+            throw new BusinessException("只有草稿状态的排班可以提交审核");
+        }
+        String from = PublishStatusEnum.getLabel(row.getPublishStatus());
+        updatePublishStatus(id, PublishStatusEnum.PENDING.getCode());
+        nurseScheduleLogService.record(id, NurseScheduleChangeTypeEnum.SUBMIT, null, null, row,
+                from, PublishStatusEnum.getLabel(PublishStatusEnum.PENDING.getCode()));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void auditPublish(Long id) {
+        BizSchedule row = requireScheduleRow(id);
+        if (!PublishStatusEnum.PENDING.getCode().equals(row.getPublishStatus())) {
+            throw new BusinessException("只有待审核状态的排班可以审核发布");
+        }
+        assertNursingAuditor(row.getDeptId());
+        String from = PublishStatusEnum.getLabel(row.getPublishStatus());
+        updatePublishStatus(id, PublishStatusEnum.PUBLISHED.getCode());
+        nurseScheduleLogService.record(id, NurseScheduleChangeTypeEnum.PUBLISH, null, null, row,
+                from, PublishStatusEnum.getLabel(PublishStatusEnum.PUBLISHED.getCode()));
+    }
+
+    /**
+     * 护理排班审核人校验：系统管理员(10012)全局豁免；
+     * 其余当前登录人必须是该科室在科室主档指定的护理审核人(nursing_auditor_id)。
+     */
+    private void assertNursingAuditor(Long deptId) {
+        CurrentUser user = UserUtils.getCurrentUser();
+        if (user == null) {
+            throw new BusinessException("未登录或登录已过期，请重新登录");
+        }
+        if (ROLE_ADMIN.equals(user.getCurrentRole())) {
+            return;
+        }
+        SysDepartment dept = deptId == null ? null : sysDepartmentMapper.selectById(deptId);
+        if (dept == null || dept.getNursingAuditorId() == null
+                || !dept.getNursingAuditorId().equals(user.getEmployeeId())) {
+            throw new BusinessException("您不是本科室指定的护理排班审核人，无权审核发布");
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void recall(Long id) {
+        BizSchedule row = requireScheduleRow(id);
+        String from = PublishStatusEnum.getLabel(row.getPublishStatus());
+        // 任意态可撤回回草稿：撤回后不计在岗（在岗聚合只统计 publish_status IN (2,4)）
+        updatePublishStatus(id, PublishStatusEnum.DRAFT.getCode());
+        nurseScheduleLogService.record(id, NurseScheduleChangeTypeEnum.RECALL, null, null, row,
+                from, PublishStatusEnum.getLabel(PublishStatusEnum.DRAFT.getCode()));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void adjustStart(Long id) {
+        BizSchedule row = requireScheduleRow(id);
+        if (!PublishStatusEnum.isEffective(row.getPublishStatus())) {
+            throw new BusinessException("只有已发布/已变更的排班可以进入调班");
+        }
+        String from = PublishStatusEnum.getLabel(row.getPublishStatus());
+        updatePublishStatus(id, PublishStatusEnum.ADJUSTING.getCode());
+        nurseScheduleLogService.record(id, NurseScheduleChangeTypeEnum.ADJUST, null, null, row,
+                from, PublishStatusEnum.getLabel(PublishStatusEnum.ADJUSTING.getCode()));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int submitWeek(NurseScheduleDTO.MatrixQuery query) {
+        NurseScheduleVO.Ward ward = requireUnit(query.getUnitType(), query.getWardId());
+        LocalDate start = mondayOf(query.getWeekStart() == null ? LocalDate.now() : query.getWeekStart());
+        LocalDate end = start.plusDays(6);
+        int moved = bizScheduleMapper.updateWeekPublishStatus(coreOrgTypeOf(ward), ward.getWardId(),
+                start, end, PublishStatusEnum.DRAFT.getCode(), PublishStatusEnum.PENDING.getCode());
+        if (moved == 0) {
+            throw new BusinessException("本周没有待提交的草稿排班（已发布/待审核的不会重复提交）");
+        }
+        nurseScheduleLogService.record(null, NurseScheduleChangeTypeEnum.SUBMIT_WEEK, moved, null,
+                weekSnapshot(ward), "草稿", "待审核");
+        return moved;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int auditWeek(NurseScheduleDTO.MatrixQuery query) {
+        NurseScheduleVO.Ward ward = requireUnit(query.getUnitType(), query.getWardId());
+        assertNursingAuditor(ward.getDeptId());
+        LocalDate start = mondayOf(query.getWeekStart() == null ? LocalDate.now() : query.getWeekStart());
+        LocalDate end = start.plusDays(6);
+        int moved = bizScheduleMapper.updateWeekPublishStatus(coreOrgTypeOf(ward), ward.getWardId(),
+                start, end, PublishStatusEnum.PENDING.getCode(), PublishStatusEnum.PUBLISHED.getCode());
+        if (moved == 0) {
+            throw new BusinessException("本周没有待审核的排班（草稿需先提交，已发布的不会重复发布）");
+        }
+        nurseScheduleLogService.record(null, NurseScheduleChangeTypeEnum.PUBLISH_WEEK, moved, null,
+                weekSnapshot(ward), "待审核", "已发布");
+        return moved;
+    }
+
+    /** 整周动作没有单行可挂：造一条只带单元名/科室名的快照供留痕审计展示 */
+    private BizSchedule weekSnapshot(NurseScheduleVO.Ward ward) {
+        BizSchedule snap = new BizSchedule();
+        snap.setOrgName(ward.getWardName());
+        snap.setDeptName(ward.getDeptName());
+        return snap;
+    }
+
+    /** 格子新旧值快照文本：出勤状态 + 班次（如「上班/白班」「休息」） */
+    private static String cellSnapshot(StaffDutyStatusEnum status, String shiftName) {
+        StringBuilder sb = new StringBuilder(status == null ? "未知" : status.getLabel());
+        if (shiftName != null && !shiftName.isBlank()) {
+            sb.append("/").append(shiftName);
+        }
+        return sb.toString();
+    }
+
+    /** 取一行排班并校验数据范围（跨科室操作一律挡） */
+    private BizSchedule requireScheduleRow(Long id) {
+        if (id == null) {
+            throw new BusinessException("缺少排班行ID");
+        }
+        BizSchedule row = staffScheduleService.getById(id);
+        if (row == null) {
+            throw new BusinessException("排班行不存在或已删除");
+        }
+        if (!deptScopeService.canAccessDept(row.getDeptId())) {
+            throw new BusinessException("无权操作该排班（不在当前岗位的数据范围内）");
+        }
+        return row;
+    }
+
+    private void updatePublishStatus(Long id, Integer publishStatus) {
+        BizSchedule update = new BizSchedule();
+        update.setId(id);
+        update.setPublishStatus(publishStatus);
+        staffScheduleService.updateById(update);
     }
 
     // 内部：校验与工具
@@ -350,6 +530,80 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         result.setSkippedCount(skippedFilled);
         result.setMessage("已复制 " + copied + " 格；目标周已有 " + skippedFilled + " 格未覆盖；来源周空白 "
                 + blankSource + " 格无内容可复制");
+        nurseScheduleLogService.record(null, NurseScheduleChangeTypeEnum.COPY_WEEK, copied,
+                result.getMessage(), weekSnapshot(ward), null, null);
+        return result;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public NurseScheduleVO.BatchResult batchUpsert(NurseScheduleDTO.BatchUpsert dto) {
+        NurseScheduleVO.Ward ward = requireUnit(dto.getUnitType(), dto.getWardId());
+        StaffDutyStatusEnum status = StaffDutyStatusEnum.fromCode(dto.getScheduleStatus());
+        if (status == null) {
+            throw new BusinessException("排班状态取值不合法");
+        }
+
+        NurseScheduleVO.ShiftOption shift = null;
+        if (status == StaffDutyStatusEnum.WORK) {
+            if (dto.getShiftId() == null) {
+                throw new BusinessException("排「上班」必须选班次：不然这一天既没有时段也没有工时");
+            }
+            shift = bizScheduleMapper.selectNursingShift(dto.getShiftId());
+            if (shift == null) {
+                throw new BusinessException("所选班次不存在、已停用或不是病区护理班次（护理班次在班次字典里按「病区护理」册维护）");
+            }
+        }
+
+        // 护士去重（重复选同一人直接挡）+ 逐个复核在册与同科室，报错点名到人
+        Map<Long, NurseScheduleVO.Nurse> nurseMap = new LinkedHashMap<>();
+        for (NurseScheduleDTO.BatchUpsert.BatchEmployee item : dto.getItems()) {
+            if (nurseMap.containsKey(item.getEmployeeId())) {
+                throw new BusinessException("护士重复选择：" + (item.getNurseName() == null ? item.getEmployeeId() : item.getNurseName()));
+            }
+            NurseScheduleVO.Nurse nurse = bizScheduleMapper.selectNurse(item.getEmployeeId());
+            if (nurse == null) {
+                throw new BusinessException("该员工不在在册护理名单里（需为在职的护士/护师/护工，岗位类别是「护理」或「护工护理辅助」）");
+            }
+            if (!Objects.equals(ward.getDeptId(), nurse.getDeptId())) {
+                throw new BusinessException("护士「" + nurse.getNurseName() + "」属于「" + nurse.getDeptName()
+                        + "」，不能排进「" + ward.getWardName() + "」——跨单元支援请先在员工档案调整所属科室");
+            }
+            nurseMap.put(item.getEmployeeId(), nurse);
+        }
+
+        String remark = TextUtil.cut(TextUtil.trimToNull(dto.getRemark()), REMARK_MAX);
+        String toSnap = cellSnapshot(status, shift == null ? null : shift.getShiftName());
+        int created = 0;
+        int skipped = 0;
+        for (NurseScheduleVO.Nurse nurse : nurseMap.values()) {
+            for (LocalDate date : dto.getScheduleDates()) {
+                // 只填空缺格：已排的跳过不覆盖（批量铺是「补位」，不是改他人已定的班）
+                NurseScheduleVO.Cell exist = bizScheduleMapper.selectUnitCell(
+                        nurse.getEmployeeId(), date, coreOrgTypeOf(ward), ward.getWardId());
+                if (exist != null) {
+                    skipped++;
+                    continue;
+                }
+                BizSchedule fact = syncDayAttendance(ward, nurse.getEmployeeId(), date, status,
+                        shift == null ? null : shift.getShiftId(), remark, StaffScheduleSourceEnum.MANUAL, null);
+                BizSchedule snap = new BizSchedule();
+                snap.setScheduleDate(date);
+                snap.setOrgName(ward.getWardName());
+                snap.setDeptName(nurse.getDeptName());
+                snap.setEmployeeName(nurse.getNurseName());
+                nurseScheduleLogService.record(fact.getId(), NurseScheduleChangeTypeEnum.CREATE, null,
+                        "批量铺班", snap, null, toSnap);
+                created++;
+            }
+        }
+
+        NurseScheduleVO.BatchResult result = new NurseScheduleVO.BatchResult();
+        result.setCreatedCount(created);
+        result.setSkippedCount(skipped);
+        result.setMessage("已铺 " + created + " 格（" + nurseMap.size() + " 位护士 × "
+                + dto.getScheduleDates().size() + " 天）"
+                + (skipped > 0 ? "；已有排班跳过 " + skipped + " 格（不覆盖）" : "；无跳过"));
         return result;
     }
 
@@ -375,6 +629,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         core.setDutyStatus(status.getCode());
         core.setShiftId(shiftId);
         core.setRemark(remark);
+        // 发布态交给事实层自己定（新增=草稿、改单按原态迁移），这里不再算一遍第二份口径
         return staffScheduleService.replaceDayAttendance(core, source);
     }
 
@@ -754,6 +1009,33 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
     /**
      * 每日在岗人数明细（矩阵底部「N 人 / 应 M 人」）
      */
+    /**
+     * 本周发布态计数：整周提交/审核发布按钮按 draft/pending 是否大于 0 显隐，
+     * 直接从矩阵已查出的 cells 统计，不再发一条聚合 SQL。
+     */
+    private NurseScheduleVO.PublishSummary buildPublishSummary(List<NurseScheduleVO.Cell> cells) {
+        NurseScheduleVO.PublishSummary summary = new NurseScheduleVO.PublishSummary();
+        if (cells == null) {
+            return summary;
+        }
+        for (NurseScheduleVO.Cell c : cells) {
+            summary.setTotal(summary.getTotal() + 1);
+            Integer ps = c.getPublishStatus();
+            if (PublishStatusEnum.DRAFT.getCode().equals(ps)) {
+                summary.setDraft(summary.getDraft() + 1);
+            } else if (PublishStatusEnum.PENDING.getCode().equals(ps)) {
+                summary.setPending(summary.getPending() + 1);
+            } else if (PublishStatusEnum.PUBLISHED.getCode().equals(ps)) {
+                summary.setPublished(summary.getPublished() + 1);
+            } else if (PublishStatusEnum.ADJUSTING.getCode().equals(ps)) {
+                summary.setAdjusting(summary.getAdjusting() + 1);
+            } else if (PublishStatusEnum.CHANGED.getCode().equals(ps)) {
+                summary.setChanged(summary.getChanged() + 1);
+            }
+        }
+        return summary;
+    }
+
     private List<NurseScheduleVO.Staffing> buildStaffing(NurseScheduleVO.Ward ward, LocalDate start, LocalDate end,
                                                          List<NurseScheduleVO.Cell> cells) {
         List<NurseScheduleVO.Rule> rules = selectEnabledRules(ward.getWardId());

@@ -13,7 +13,7 @@
 
     <artifactId>his-web</artifactId>
     <packaging>jar</packaging>
-    <name>his-core-web</name>
+    <name>his-web</name>
     <description>启动层：应用入口、Spring/MyBatis-Plus/Security 配置、CORS、静态资源、运行配置</description>
 
     <dependencies>
@@ -44,6 +44,8 @@
                 </configuration>
                 <executions>
                     <execution>
+                        <!-- id 必须与父 pom 的同名执行一致，否则两条执行并存、胖 jar 重复打包两遍 -->
+                        <id>repackage</id>
                         <goals>
                             <goal>repackage</goal>
                         </goals>

@@ -169,6 +169,14 @@ public class NurseScheduleVO {
          */
         private String scheduleStatusText;
         /**
+         * 发布态（0-草稿 1-待审核 2-已发布 3-调班中 4-已变更）
+         */
+        private Integer publishStatus;
+        /**
+         * 发布态文案（服务端翻好的中文）
+         */
+        private String publishStatusText;
+        /**
          * 生成来源（1-手工 2-模板 3-复制周期 4-换班）
          */
         private Integer scheduleSource;
@@ -259,6 +267,14 @@ public class NurseScheduleVO {
         private Integer scheduleStatus;
         private String scheduleStatusText;
         /**
+         * 发布态（0-草稿 1-待审核 2-已发布 3-调班中 4-已变更）
+         */
+        private Integer publishStatus;
+        /**
+         * 发布态文案（服务端翻好的中文）
+         */
+        private String publishStatusText;
+        /**
          * 生成来源（1-手工 2-模板 3-复制周期 4-换班）
          */
         private Integer scheduleSource;
@@ -309,6 +325,30 @@ public class NurseScheduleVO {
          * 本周每日每班次在岗人数（矩阵底部「今日 N 人 / 应 M 人」用）
          */
         private List<Staffing> staffing;
+        /**
+         * 本周发布态计数（整周提交/审核发布按钮的显隐与提示用）
+         */
+        private PublishSummary publishSummary;
+    }
+
+    /**
+     * 本周发布态计数：草稿/待审核/已发布/调班中/已变更各多少条
+     */
+    @Data
+    public static class PublishSummary implements Serializable {
+        private static final long serialVersionUID = 1L;
+        /** 草稿(0) */
+        private int draft;
+        /** 待审核(1) */
+        private int pending;
+        /** 已发布(2) */
+        private int published;
+        /** 调班中(3) */
+        private int adjusting;
+        /** 已变更(4) */
+        private int changed;
+        /** 本周排班总行数 */
+        private int total;
     }
 
     /**
@@ -557,6 +597,20 @@ public class NurseScheduleVO {
         /**
          * 消息内容
          */
+        private String message;
+    }
+
+    /**
+     * 批量铺班结果：成功铺了几格、跳过几格（已排/不合法）、汇总说明。
+     */
+    @Data
+    public static class BatchResult implements Serializable {
+        private static final long serialVersionUID = 1L;
+        /** 实际铺成功的格子数 */
+        private Integer createdCount;
+        /** 跳过的格子数（已排不覆盖） */
+        private Integer skippedCount;
+        /** 消息内容 */
         private String message;
     }
 

@@ -1,6 +1,8 @@
 package com.his.system.service;
 
+import com.his.common.base.PageResult;
 import com.his.common.enums.ScheduleChangeTypeEnum;
+import com.his.system.dto.StaffScheduleChangePageQueryDTO;
 import com.his.system.vo.ScheduleChangeLogVO;
 
 import java.util.List;
@@ -26,4 +28,9 @@ public interface ScheduleChangeLogService {
      * 某条排班的变更记录（按变更时间倒序，最新在前）。
      */
     List<ScheduleChangeLogVO> listBySchedule(Long staffScheduleId);
+
+    /**
+     * 变更记录全局分页（跨排班单元回看台账）：按发生时间、动作类型、原/新值班人关键词筛。
+     */
+    PageResult<ScheduleChangeLogVO> pageQuery(StaffScheduleChangePageQueryDTO dto);
 }

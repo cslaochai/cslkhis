@@ -78,6 +78,12 @@
           {{ clinicFlagAllowed ? '只有医生岗的出诊班会生成门诊号源（非医生岗后端会裁掉）' : '听班不放号：人在院外待命' }}
         </span>
       </el-form-item>
+      <el-form-item v-if="needShift" label="发布态">
+        <el-select v-model="formData.publishStatus" style="width: 100%">
+          <el-option :value="PUBLISH_STATUS_DRAFT" label="草稿（提交审核后生效）"/>
+          <el-option :value="PUBLISH_STATUS_PUBLISHED" label="已发布（审核生效，编辑时保持）"/>
+        </el-select>
+      </el-form-item>
       <el-form-item label="备注">
         <el-input v-model="formData.remark" :rows="2" placeholder="如：本周三下午参加院感培训" type="textarea"/>
       </el-form-item>
@@ -109,6 +115,12 @@ import {
 // 出勤排班走 4-全院通用班次册：按岗位类别选本册班次，别把门诊出诊册的班次混进来
 const SHIFT_USE_SCOPE_GENERAL = 4
 
+// 发布态：岗位出勤走审核闭环——新增一律落草稿（后端 resolvePublishStatus 对新增强制草稿，
+// 传已发布也会被压成 0），提交审核 → 科室指定审核人（sys_department.schedule_auditor_id）
+// 审核发布后才计在岗（onDutyAt 只认 2/4）。编辑已发布行时回显原发布态，改单自动转「已变更」。
+const PUBLISH_STATUS_DRAFT = 0
+const PUBLISH_STATUS_PUBLISHED = 2
+
 /**
  * 登记 / 修改排班：后端是同一个 staffScheduleUpsert，
  * row 为空走登记、有值走修改，标题与成功提示跟着变。
@@ -129,7 +141,8 @@ const submitLoading = ref(false)
 const formRef = ref(null)
 const formData = reactive({
   id: null, scheduleDate: null, orgType: 1, orgId: null, employeeId: null, employeePostId: null,
-  shiftId: null, dutyStatus: DUTY_STATUS_WORK, attendMode: 1, clinicFlag: 0, remark: '',
+  shiftId: null, dutyStatus: DUTY_STATUS_WORK, attendMode: 1, clinicFlag: 0,
+  publishStatus: PUBLISH_STATUS_DRAFT, remark: '',
 })
 const rules = {
   scheduleDate: [{required: true, message: '请选择排班日期', trigger: 'change'}],
@@ -213,6 +226,7 @@ const resetForm = () => {
   formData.dutyStatus = DUTY_STATUS_WORK
   formData.attendMode = 1
   formData.clinicFlag = 0
+  formData.publishStatus = PUBLISH_STATUS_DRAFT
   formData.remark = ''
 }
 
@@ -233,6 +247,7 @@ watch(visible, async (open) => {
   formData.dutyStatus = row.dutyStatus
   formData.attendMode = row.attendMode || 1
   formData.clinicFlag = row.clinicFlag ?? 0
+  formData.publishStatus = row.publishStatus ?? PUBLISH_STATUS_DRAFT
   formData.remark = row.remark || ''
   if (row.employeeId && !empOptions.value.some((e) => e.id === row.employeeId)) {
     empOptions.value = [{id: row.employeeId, empName: row.employeeName, deptName: row.deptName}, ...empOptions.value]

@@ -54,8 +54,8 @@ public class InfectiousReportController {
     @Operation(summary = "病种下拉（法定目录，启用项）")
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/disease/selectList")
-    public Result<List<InfectiousReportVO.DiseaseSelectListVO>> diseaseSelectList(@RequestParam(required = false) String keyword) {
-        return Result.success(infectiousReportService.diseaseSelectList(keyword));
+    public Result<List<InfectiousReportVO.DiseaseSelectListVO>> selectList(@RequestParam(required = false) String keyword) {
+        return Result.success(infectiousReportService.selectList(keyword));
     }
 
     /**
