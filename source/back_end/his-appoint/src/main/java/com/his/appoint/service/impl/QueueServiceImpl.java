@@ -8,7 +8,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.appoint.dto.*;
-import com.his.appoint.dto.AppointCheckInUpdateDTO;
+import com.his.spi.dto.AppointCheckInUpdateDTO;
 import com.his.appoint.entity.AppointInfo;
 import com.his.appoint.entity.Queue;
 import com.his.appoint.entity.TriageRecord;
@@ -16,13 +16,13 @@ import com.his.common.enums.*;
 import com.his.appoint.mapper.AppointInfoMapper;
 import com.his.appoint.mapper.QueueMapper;
 import com.his.appoint.mapper.TriageRecordMapper;
-import com.his.appoint.mapper.OpdLogMapper;
+import com.his.appoint.mapper.ClincOpdLogMapper;
 import com.his.appoint.service.QueueService;
 import com.his.appoint.service.DoctorStatusCacheService;
 import com.his.appoint.trigger.DayEndSettleTrigger;
 import com.his.appoint.vo.*;
-import com.his.appoint.vo.PatientQueueVO;
-import com.his.charge.vo.BillBriefVO;
+import com.his.spi.vo.PatientQueueVO;
+import com.his.spi.vo.BillBriefVO;
 import com.his.common.base.PageResult;
 import com.his.common.enums.BillStatusEnum;
 import com.his.common.enums.MedicalInsuranceTypeEnum;
@@ -30,20 +30,19 @@ import com.his.common.enums.SettlementModeEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.patient.service.PatientFacadeService;
-import com.his.charge.service.ChargeFacadeService;
-import com.his.charge.vo.BillBriefVO;
-import com.his.system.entity.BizClinicSource;
+import com.his.spi.service.PatientFacadeService;
+import com.his.spi.service.ChargeFacadeService;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.ClinicRoomBriefVO;
+import com.his.schedule.entity.BizClinicSource;
 import com.his.common.entity.CurrentUser;
-import com.his.system.entity.SysClinicRoom;
-import com.his.system.mapper.BizClinicSourceMapper;
+import com.his.schedule.mapper.BizClinicSourceMapper;
 import com.his.system.service.DeptScopeService;
-import com.his.system.service.BizClinicSourceService;
-import com.his.system.service.InsurancePolicyService;
+import com.his.schedule.service.BizClinicSourceService;
+import com.his.charge.service.InsurancePolicyService;
 import com.his.system.service.RedisSequenceService;
-import com.his.system.service.SysClinicRoomService;
 import com.his.system.utils.UserUtils;
-import com.his.system.vo.OnDutyStaffVO;
+import com.his.schedule.vo.OnDutyStaffVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,21 +63,21 @@ import java.util.stream.Collectors;
 public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements QueueService {
     private final PatientFacadeService patientFacadeService;
 
+    private final ChargeFacadeService chargeFacadeService;
+
     private final BizClinicSourceMapper bizScheduleMapper;
 
     private final RedisSequenceService redisSequenceService;
 
     private final AppointInfoMapper appointInfoMapper;
 
-    private final ChargeFacadeService chargeFacadeService;
-
     private final InsurancePolicyService insurancePolicyService;
 
     private final DoctorStatusCacheService doctorStatusCacheService;
 
-    private final SysClinicRoomService sysClinicRoomService;
+    private final SystemFacadeService systemFacadeService;
 
-    private final OpdLogMapper opdLogMapper;
+    private final ClincOpdLogMapper clincOpdLogMapper;
 
     private final TriageRecordMapper triageRecordMapper;
 
@@ -336,7 +335,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
             BizClinicSourceMapper scheduleMapper = bizScheduleMapper;
             BizClinicSource schedule = scheduleMapper.selectById(scheduleId);
             if (schedule != null && schedule.getRoomId() != null) {
-                SysClinicRoom room = sysClinicRoomService.getById(schedule.getRoomId());
+                ClinicRoomBriefVO room = systemFacadeService.findClinicRoom(schedule.getRoomId());
                 if (room != null && TextUtil.hasText(room.getQueuePrefix())) {
                     prefix = room.getQueuePrefix();
                 }
@@ -1090,7 +1089,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
     public PageResult<OpdLogListVO> listPage(OpdLogPageQueryDTO queryDTO) {
         dayEndSettleTrigger.ensureSettledUpToYesterday();
         Page<OpdLogListVO> page = new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize());
-        IPage<OpdLogListVO> result = opdLogMapper.selectOpdLogPage(page, queryDTO);
+        IPage<OpdLogListVO> result = clincOpdLogMapper.selectOpdLogPage(page, queryDTO);
         List<OpdLogListVO> records = result.getRecords();
         for (OpdLogListVO vo : records) {
             fillLogStatus(vo);
@@ -1100,7 +1099,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
 
     @Override
     public OpdLogStatsVO opdLogStats(OpdLogPageQueryDTO queryDTO) {
-        OpdLogStatsVO stats = opdLogMapper.selectOpdLogStats(queryDTO);
+        OpdLogStatsVO stats = clincOpdLogMapper.selectOpdLogStats(queryDTO);
         if (stats == null) {
             return new OpdLogStatsVO();
         }
@@ -1148,7 +1147,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
             }
         }
         if (roomId != null && !TextUtil.hasText(roomName)) {
-            SysClinicRoom room = sysClinicRoomService.getById(roomId);
+            ClinicRoomBriefVO room = systemFacadeService.findClinicRoom(roomId);
             roomName = room != null ? room.getName() : null;
         }
 

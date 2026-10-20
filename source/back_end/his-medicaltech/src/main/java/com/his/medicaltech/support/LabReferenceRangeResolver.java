@@ -2,8 +2,8 @@ package com.his.medicaltech.support;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.util.TextUtil;
-import com.his.system.entity.SysLaboratoryItemDetail;
-import com.his.system.mapper.SysLaboratoryItemDetailMapper;
+import com.his.medicaltech.entity.SysLaboratoryItemDetail;
+import com.his.medicaltech.mapper.SysLaboratoryItemDetailMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

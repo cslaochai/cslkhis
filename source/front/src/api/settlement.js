@@ -10,11 +10,6 @@ export function getSettlementDetail(id) {
     return request.get('/charge/settlement/getById', {params: {id}})
 }
 
-// 医保预结算
-export function preSettle(id) {
-    return request.post('/charge/settlement/preSettle', null, {params: {id}})
-}
-
 // 正式结算
 export function settle(id) {
     return request.post('/charge/settlement/settle', null, {params: {id}})
@@ -43,15 +38,6 @@ export function getReportById(id) {
 // G7 日对账：本地清单 vs 医保侧账单
 export function reconcileSettlement(data) {
     return request.post('/charge/settlement/reconcile', {billDate: data.billDate})
-}
-
-// 审核结算清单
-export function auditSettlement(data) {
-  return request.post('/charge/settlement/audit', {
-    id: data.id,
-    approved: data.approved,
-    remark: data.remark
-  })
 }
 
 // —— 医保结算清单统计与详情（区别于上面的结算账单接口，走 /charge/settlement）——

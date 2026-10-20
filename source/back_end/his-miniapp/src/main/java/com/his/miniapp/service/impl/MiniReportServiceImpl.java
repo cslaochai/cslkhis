@@ -9,7 +9,7 @@ import com.his.miniapp.dto.ReportPageQueryDTO;
 import com.his.miniapp.service.MiniReportService;
 import com.his.miniapp.util.MiniappPdfStub;
 import com.his.miniapp.vo.MiniReportPdfVO;
-import com.his.patient.service.PatientFacadeService;
+import com.his.spi.service.PatientFacadeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

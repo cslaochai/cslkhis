@@ -19,10 +19,6 @@ export function listDietPlanPage(params) {
   return request.post('/patient/inpatient/diet/planListPage', params)
 }
 
-export function listDietPlanByAdmission(admissionId) {
-  return request.get('/patient/inpatient/diet/planListByAdmission', { params: { admissionId } })
-}
-
 export function upsertDietPlan(data) {
   return request.post('/patient/inpatient/diet/planUpsert', data)
 }
@@ -36,18 +32,10 @@ export function stopDietPlan(data) {
   return request.post('/patient/inpatient/diet/planStop', data)
 }
 
-export function deleteDietPlan(id) {
-  return request.delete('/patient/inpatient/diet/planDeleteById', { params: { id } })
-}
-
 // ========== 订餐配送（426） ==========
 
 export function listMealOrderPage(params) {
   return request.post('/patient/inpatient/diet/mealListPage', params)
-}
-
-export function listMealOrderByPlan(dietPlanId) {
-  return request.get('/patient/inpatient/diet/mealListByPlan', { params: { dietPlanId } })
 }
 
 export function generateMealOrder(data) {

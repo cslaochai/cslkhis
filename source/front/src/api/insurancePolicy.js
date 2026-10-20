@@ -5,11 +5,6 @@ export function getInsurancePolicyList(params) {
   return request.post('/system/insurancePolicy/listPage', params)
 }
 
-// 获取医保政策详情
-export function getInsurancePolicyDetail(id) {
-  return request.get('/system/insurancePolicy/getById', { params: { id } })
-}
-
 // 新增或修改医保政策
 export function insurancePolicyUpsert(data) {
   return request.post('/system/insurancePolicy/insurancePolicyUpsert', data)

@@ -2,6 +2,7 @@ package com.his.system.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
+import com.his.spi.dto.PatientAccountCreateDTO;
 import com.his.system.dto.SysUserPasswordUpsertDTO;
 import com.his.system.dto.SysUserPageQueryDTO;
 import com.his.system.dto.SysUserUpsertDTO;
@@ -86,4 +87,20 @@ public interface SysUserService extends IService<SysUser> {
      * 按角色编码取「编码-名称」对照，编码为空返回空集合
      */
     List<RoleNameVO> selectRoleNames(List<String> roleCodes);
+
+    /**
+     * 开通患者类型登录账号（小程序自助建档时随患者主档一起开户）。
+     *
+     * <p>账号查重与口令加密都在本实现内完成：账号是权限的载体，写权不外放到患者域。
+     *
+     * @return 新账号ID
+     */
+    Long createPatientAccount(PatientAccountCreateDTO createDTO);
+
+    /**
+     * 为指定账号绑定微信 openid（订阅消息发送用，重复绑定以最新为准）。
+     *
+     * <p>openid 已挂在别的账号上时直接拒绝，不做抢占。
+     */
+    void bindOpenid(Long userId, String openid);
 }

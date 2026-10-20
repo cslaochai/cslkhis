@@ -1,12 +1,12 @@
 package com.his.miniapp.controller;
 
-import com.his.appoint.service.AppointFacadeService;
+import com.his.spi.service.RegistFacadeService;
 import com.his.common.base.Result;
-import com.his.emr.dto.PrevisitSubmitDTO;
-import com.his.emr.service.EmrPatientFacadeService;
-import com.his.emr.vo.PrevisitDetailVO;
-import com.his.emr.vo.PrevisitQuestionnaireVO;
-import com.his.patient.service.PatientFacadeService;
+import com.his.spi.dto.PrevisitSubmitDTO;
+import com.his.spi.service.EmrPatientFacadeService;
+import com.his.spi.vo.PrevisitDetailVO;
+import com.his.spi.vo.PrevisitQuestionnaireVO;
+import com.his.spi.service.PatientFacadeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -26,7 +26,7 @@ public class MiniPrevisitController {
 
     private final EmrPatientFacadeService emrPatientFacadeService;
 
-    private final AppointFacadeService appointFacadeService;
+    private final RegistFacadeService registFacadeService;
 
     private final PatientFacadeService patientFacadeService;
 
@@ -48,7 +48,7 @@ public class MiniPrevisitController {
     @PostMapping("/submit")
     public Result<PrevisitDetailVO> submit(@RequestBody @Valid PrevisitSubmitDTO dto) {
         // 归属从挂号记录反查，不看前端传的谁 —— 改 registId 就能替他人填病史
-        Long ownerPatientId = appointFacadeService.patientIdOfRegist(dto.getRegistId());
+        Long ownerPatientId = registFacadeService.patientIdOfRegist(dto.getRegistId());
         if (ownerPatientId == null) {
             return Result.error("挂号记录不存在");
         }
@@ -65,7 +65,7 @@ public class MiniPrevisitController {
     @Operation(summary = "按挂号查已提交的问卷（回显）")
     @GetMapping("/getByRegist")
     public Result<PrevisitDetailVO> getByRegist(@RequestParam Long registId) {
-        Long ownerPatientId = appointFacadeService.patientIdOfRegist(registId);
+        Long ownerPatientId = registFacadeService.patientIdOfRegist(registId);
         if (ownerPatientId == null) {
             return Result.error("挂号记录不存在");
         }

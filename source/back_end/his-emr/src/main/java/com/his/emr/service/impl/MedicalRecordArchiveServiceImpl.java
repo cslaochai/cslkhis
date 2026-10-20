@@ -15,7 +15,6 @@ import com.his.emr.service.MedicalRecordArchiveService;
 import com.his.emr.vo.BizMedicalRecordArchiveVO;
 import com.his.emr.vo.MedicalRecordArchiveCountVO;
 import com.his.emr.vo.MessagePayloadVO;
-import com.his.system.entity.SysMessage;
 import com.his.common.enums.BizTypeEnum;
 import com.his.system.service.DeptScopeService;
 import com.his.system.service.SysMessageService;
@@ -172,10 +171,7 @@ public class MedicalRecordArchiveServiceImpl extends ServiceImpl<BizMedicalRecor
         for (BizMedicalRecordArchive archive : overdueList) {
             try {
                 // 每份病历每天最多一条：这是每日提醒，不是每次调用都发（定时 + 手动补跑共用，必须可重入）
-                long todaySent = sysMessageService.count(new LambdaQueryWrapper<SysMessage>()
-                        .eq(SysMessage::getBizType, BizTypeEnum.EMR_ARCHIVE.getType())
-                        .eq(SysMessage::getBizId, archive.getId())
-                        .ge(SysMessage::getSendTime, sinceToday));
+                long todaySent = sysMessageService.countSentSince(BizTypeEnum.EMR_ARCHIVE.getType(), archive.getId(), sinceToday);
                 if (todaySent > 0) {
                     continue;
                 }

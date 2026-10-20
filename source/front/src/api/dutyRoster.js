@@ -13,11 +13,6 @@ export function getCurrentDutyOfficer() {
   return request.get('/system/dutyRoster/current')
 }
 
-/** 今日排班（白班/夜班 × 主班/副班） */
-export function getTodayDutyList() {
-  return request.get('/system/dutyRoster/todayList')
-}
-
 /** 分页查询排班 */
 export function getDutyRosterListPage(params) {
   return request.post('/system/dutyRoster/listPage', params)

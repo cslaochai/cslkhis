@@ -21,8 +21,7 @@ import com.his.patient.service.PatientGuardianService;
 import com.his.patient.vo.GuardianPatientVO;
 import com.his.patient.vo.SmsSendVO;
 import com.his.common.entity.CurrentUser;
-import com.his.system.entity.SysUser;
-import com.his.system.mapper.SysUserMapper;
+import com.his.spi.service.SystemFacadeService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.service.SmsCodeService;
 import com.his.system.service.SysAuditLogService;
@@ -54,7 +53,7 @@ public class PatientGuardianServiceImpl extends ServiceImpl<BizPatientGuardianMa
 
     private final BizPatientService bizPatientService;
 
-    private final SysUserMapper sysUserMapper;
+    private final SystemFacadeService systemFacadeService;
 
     private final SmsCodeService smsCodeService;
 
@@ -335,14 +334,7 @@ public class PatientGuardianServiceImpl extends ServiceImpl<BizPatientGuardianMa
             throw new BusinessException("openid 不合法");
         }
         // 只更新自己账号的 openid；唯一性冲突（该微信已绑别的账号）直接拒绝，不做抢占
-        if (sysUserMapper.selectCount(new LambdaQueryWrapper<SysUser>()
-                .eq(SysUser::getOpenid, openid)
-                .ne(SysUser::getId, user.getUserId())) > 0) {
-            throw new BusinessException("该微信已绑定其他账号");
-        }
-        sysUserMapper.update(null, new LambdaUpdateWrapper<SysUser>()
-                .eq(SysUser::getId, user.getUserId())
-                .set(SysUser::getOpenid, openid));
+        systemFacadeService.bindOpenid(user.getUserId(), openid);
     }
 
     private CurrentUser requirePatientUser() {

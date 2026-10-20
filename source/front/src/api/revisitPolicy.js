@@ -5,11 +5,6 @@ export function getRevisitFeePolicyList(params) {
   return request.post('/appoint/revisitFeePolicy/listPage', params)
 }
 
-// 获取策略详情
-export function getRevisitFeePolicyDetail(id) {
-  return request.get('/appoint/revisitFeePolicy/getById', { params: { id } })
-}
-
 // 新增或修改策略（后端同一个接口、同一个 :add 权限）
 export function revisitFeePolicyUpsert(data) {
   return request.post('/appoint/revisitFeePolicy/revisitFeePolicyUpsert', data)

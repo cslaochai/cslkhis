@@ -1,4 +1,6 @@
 package com.his.patient.vo;
+import com.his.spi.vo.AdmissionVO;
+import com.his.spi.vo.BedVO;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;

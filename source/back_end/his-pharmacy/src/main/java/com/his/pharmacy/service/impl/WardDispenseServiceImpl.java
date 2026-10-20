@@ -3,7 +3,7 @@ package com.his.pharmacy.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.charge.vo.FeeRecordVO;
+import com.his.spi.vo.FeeRecordVO;
 import com.his.common.base.PageResult;
 import com.his.common.enums.WardDispenseItemStatusEnum;
 import com.his.common.exception.BusinessException;

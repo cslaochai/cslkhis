@@ -20,21 +20,12 @@ export function ampouleReturn(data) {
   return request.post('/narcotic/ampouleReturn', data)
 }
 
-// 处方麻精限量预检：返回违规清单，空数组 = 可以发。
-// 让发药窗口在点「发药」之前就把「限几日/超几日」摆出来，而不是点完才收到一句报错。
-export function checkNarcoticQuota(prescriptionId, overLimitReason) {
-  return request.get('/narcotic/checkPrescription', {
-    params: { prescriptionId, overLimitReason: overLimitReason || undefined },
-  })
-}
-
 // 处方发药前预检（发药窗口主用）：一次拿到
 //   canDispense（有无 BLOCK 级违规）
 //   requiresDualCheck（要不要选复核药师）—— 麻醉药品/第一类精神药品
 //   requiresAmpouleTracking（发完要不要登记空安瓿回收）
 //   controlledDrugs（管制明细清单，含每档限量与处方实际天数）
 //   overLimitReasonRequired（是否只差一个二类精神超量理由）
-// 与 checkNarcoticQuota 的区别：后者在"全部合规"时返回空数组，窗口无法据此判断要不要选复核人。
 export function precheckNarcotic(prescriptionId, overLimitReason) {
   return request.get('/narcotic/precheck', {
     params: { prescriptionId, overLimitReason: overLimitReason || undefined },

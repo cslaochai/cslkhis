@@ -12,16 +12,6 @@ export function dischargeDrugListPage(data) {
   return request.post('/patient/dischargeDrug/listPage', data)
 }
 
-// 按入院次列全部带药单
-export function dischargeDrugListByAdmission(admissionId) {
-  return request.get('/patient/dischargeDrug/selectList', { params: { admissionId } })
-}
-
-// 带药单详情
-export function getDischargeDrugDetail(id) {
-  return request.get('/patient/dischargeDrug/getDetailById', { params: { id } })
-}
-
 // 批量发药（药房岗，单向）
 export function dischargeDrugDispense(ids, remark) {
   return request.post('/patient/dischargeDrug/dispense', { ids, remark })

@@ -2,11 +2,11 @@ package com.his.miniapp.service.impl;
 
 import com.his.system.support.SystemOperatorContext;
 import com.his.system.utils.UserUtils;
-import com.his.appoint.service.AppointFacadeService;
-import com.his.appoint.vo.RegistBriefVO;
-import com.his.charge.dto.BillPayDTO;
-import com.his.charge.dto.PrepayUpsertDTO;
-import com.his.charge.service.ChargeFacadeService;
+import com.his.spi.service.RegistFacadeService;
+import com.his.spi.vo.RegistBriefVO;
+import com.his.spi.dto.BillPayDTO;
+import com.his.spi.dto.PrepayUpsertDTO;
+import com.his.spi.service.ChargeFacadeService;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
@@ -82,7 +82,7 @@ public class MiniPayServiceImpl implements MiniPayService {
 
     private final ChargeFacadeService chargeFacadeService;
 
-    private final AppointFacadeService appointFacadeService;
+    private final RegistFacadeService registFacadeService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -150,7 +150,7 @@ public class MiniPayServiceImpl implements MiniPayService {
      * <p>入参保持全限定名：它是收费域的账本形状，出参是患者端自己维护的展示契约，
      * 两边字段同形但归属不同模块，各改各的。
      */
-    private List<MiniPendingBillItemVO> toPendingBillItems(List<com.his.charge.vo.PendingBillItemVO> details) {
+    private List<MiniPendingBillItemVO> toPendingBillItems(List<com.his.spi.vo.PendingBillItemVO> details) {
         if (details == null) {
             return List.of();
         }
@@ -346,7 +346,7 @@ public class MiniPayServiceImpl implements MiniPayService {
      * 所以患者端支付成功必须落到支付资金流水，否则患者线上付了钱到院仍签不了到。
      */
     private void payRegistBill(PayOrderVO order) {
-        RegistBriefVO regist = appointFacadeService.findRegist(order.getBizId());
+        RegistBriefVO regist = registFacadeService.findRegist(order.getBizId());
         if (regist == null) {
             throw new BusinessException("挂号记录不存在：" + order.getBizId());
         }

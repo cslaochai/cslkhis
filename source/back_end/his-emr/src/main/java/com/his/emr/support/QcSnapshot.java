@@ -4,7 +4,7 @@ import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.common.enums.QcRecordSourceEnum;
-import com.his.patient.vo.InpatientRecordBriefVO;
+import com.his.spi.vo.InpatientRecordBriefVO;
 import com.his.common.enums.InpatientRecordTypeEnum;
 import lombok.Data;
 

@@ -13,11 +13,6 @@ export function getEquipmentDetail(equipmentId) {
   return request.get('/equipment/equipment/getDetailById', { params: { equipmentId } })
 }
 
-// 维保记录分页
-export function maintainListPage(data) {
-  return request.post('/equipment/maintain/listPage', data)
-}
-
 // 维保登记
 export function maintainCreate(data) {
   return request.post('/equipment/maintain/create', data)
@@ -26,11 +21,6 @@ export function maintainCreate(data) {
 // 维保记录删除（录错可删）
 export function maintainDelete(id) {
   return request.delete('/equipment/maintain/deleteById', { params: { id } })
-}
-
-// 计量记录分页
-export function meteringListPage(data) {
-  return request.post('/equipment/metering/listPage', data)
 }
 
 // 计量登记

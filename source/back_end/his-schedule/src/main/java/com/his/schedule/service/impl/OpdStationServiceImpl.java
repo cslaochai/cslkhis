@@ -9,27 +9,25 @@ import com.his.common.enums.OpdStationKindEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.outpatient.dto.OpdAssignPageQueryDTO;
-import com.his.outpatient.dto.OpdAssignUpsertDTO;
+import com.his.schedule.dto.OpdAssignPageQueryDTO;
+import com.his.schedule.dto.OpdAssignUpsertDTO;
 import com.his.schedule.dto.OpdStationPageQueryDTO;
 import com.his.schedule.dto.OpdStationUpsertDTO;
 import com.his.schedule.entity.BizOpdStation;
 import com.his.schedule.entity.BizOpdStationAssignment;
-import com.his.outpatient.entity.BizShift;
-import com.his.outpatient.entity.SysDepartment;
-import com.his.outpatient.entity.SysEmployee;
-import com.his.outpatient.entity.SysWard;
+import com.his.schedule.entity.BizShift;
 import com.his.schedule.mapper.BizOpdStationAssignmentMapper;
 import com.his.schedule.mapper.BizOpdStationMapper;
-import com.his.outpatient.mapper.SysDepartmentMapper;
-import com.his.outpatient.mapper.SysEmployeeMapper;
-import com.his.outpatient.mapper.SysWardMapper;
 import com.his.schedule.service.OpdStationService;
-import com.his.outpatient.service.ShiftService;
-import com.his.outpatient.vo.OpdAssignCandidateVO;
-import com.his.outpatient.vo.OpdAssignVO;
+import com.his.schedule.service.ShiftService;
+import com.his.schedule.vo.OpdAssignCandidateVO;
+import com.his.schedule.vo.OpdAssignVO;
 import com.his.schedule.vo.OpdStationSelectVO;
 import com.his.schedule.vo.OpdStationVO;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.DeptBriefVO;
+import com.his.spi.vo.EmployeeBriefVO;
+import com.his.spi.vo.WardBriefVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -37,7 +35,7 @@ import java.time.LocalDate;
 import java.util.*;
 
 /**
- * 门诊公共工位字典 + 工位派岗服务实现（sql/277）。
+ * 门诊公共工位字典 + 工位派岗服务实现
  */
 @Service
 @RequiredArgsConstructor
@@ -46,9 +44,7 @@ public class OpdStationServiceImpl extends ServiceImpl<BizOpdStationMapper, BizO
 
     private final BizOpdStationAssignmentMapper assignmentMapper;
     private final ShiftService shiftService;
-    private final SysEmployeeMapper sysEmployeeMapper;
-    private final SysDepartmentMapper sysDepartmentMapper;
-    private final SysWardMapper sysWardMapper;
+    private final SystemFacadeService systemFacadeService;
 
     // ---------------------------------------------------------------------
     // 工位字典
@@ -199,8 +195,8 @@ public class OpdStationServiceImpl extends ServiceImpl<BizOpdStationMapper, BizO
     @Override
     public Long upsertAssign(OpdAssignUpsertDTO dto) {
         BizOpdStation station = requireStation(dto.getStationId());
-        SysEmployee employee = sysEmployeeMapper.selectById(dto.getEmployeeId());
-        if (employee == null || employee.getDelFlag() != null && employee.getDelFlag() == 1) {
+        EmployeeBriefVO employee = systemFacadeService.findEmployee(dto.getEmployeeId());
+        if (employee == null) {
             throw new BusinessException("所选员工不存在或已删除");
         }
         // 在岗闸 + 岗位闸：人先被排班层派出上班，工位只是当天把她挪到门诊公共位上。
@@ -353,10 +349,10 @@ public class OpdStationServiceImpl extends ServiceImpl<BizOpdStationMapper, BizO
             return null;
         }
         if (orgType == 2) {
-            SysWard ward = sysWardMapper.selectById(orgId);
+            WardBriefVO ward = systemFacadeService.findWard(orgId);
             return ward == null ? null : ward.getWardName();
         }
-        SysDepartment dept = sysDepartmentMapper.selectById(orgId);
+        DeptBriefVO dept = systemFacadeService.findDepartment(orgId);
         return dept == null ? null : dept.getDeptName();
     }
 

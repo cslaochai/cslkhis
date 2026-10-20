@@ -19,7 +19,7 @@ import com.his.patient.mapper.*;
 import com.his.patient.service.NutritionScreenService;
 import com.his.patient.support.NutritionRules;
 import com.his.patient.vo.NutritionScreenVO;
-import com.his.patient.vo.WardVO;
+import com.his.spi.vo.WardVO;
 import com.his.common.entity.CurrentUser;
 import com.his.system.service.DeptScopeService;
 import com.his.system.utils.UserUtils;

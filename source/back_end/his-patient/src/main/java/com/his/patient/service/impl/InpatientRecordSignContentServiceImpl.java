@@ -12,7 +12,7 @@ import com.his.common.util.TimeUtil;
 import com.his.patient.entity.BizInpatientRecord;
 import com.his.patient.mapper.BizInpatientRecordMapper;
 import com.his.system.service.SignableContentService;
-import com.his.system.vo.SignSubject;
+import com.his.spi.vo.SignSubject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

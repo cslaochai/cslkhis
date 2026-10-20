@@ -7,7 +7,7 @@ import com.his.schedule.service.BizClinicSourceService;
 import com.his.schedule.service.BizClinicSourceSlotService;
 import com.his.schedule.service.ClinicSourceLogService;
 import com.his.schedule.vo.*;
-import com.his.appoint.vo.StopImpactItemVO;
+import com.his.spi.vo.StopImpactItemVO;
 import com.his.common.base.Result;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import io.swagger.v3.oas.annotations.Operation;

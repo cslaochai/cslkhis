@@ -102,7 +102,7 @@
     </sql>
 
     <!-- 行级对照（计划 vs 实际），外层按日期/单元/岗位/员工/差异类型过滤 -->
-    <select id="selectComparison" resultType="com.his.system.vo.StaffWorktimeVO">
+    <select id="selectComparison" resultType="com.his.schedule.vo.StaffWorktimeVO">
         SELECT w.*
         FROM (
             <include refid="worktimeBase"/>
@@ -117,7 +117,7 @@
     </select>
 
     <!-- 单元 × 日 执行汇总，外层按日期/单元/岗位过滤 -->
-    <select id="selectSummary" resultType="com.his.system.vo.WorktimeSummaryVO">
+    <select id="selectSummary" resultType="com.his.schedule.vo.WorktimeSummaryVO">
         SELECT s.*
         FROM (
             <include refid="summaryAgg"/>
@@ -204,7 +204,7 @@
         ]]>
     </sql>
 
-    <select id="selectAdvice" resultType="com.his.system.vo.CalibrationAdviceVO">
+    <select id="selectAdvice" resultType="com.his.schedule.vo.CalibrationAdviceVO">
         SELECT a.*
         FROM (
             <include refid="adviceAgg"/>

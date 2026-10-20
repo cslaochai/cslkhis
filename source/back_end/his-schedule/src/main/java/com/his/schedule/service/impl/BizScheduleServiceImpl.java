@@ -4,31 +4,25 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.enums.NurseScheduleChangeTypeEnum;
-import com.his.common.enums.NurseScheduleUnitTypeEnum;
-import com.his.common.enums.OrgUnitTypeEnum;
-import com.his.common.enums.PublishStatusEnum;
-import com.his.common.enums.StaffDutyStatusEnum;
-import com.his.common.enums.StaffScheduleSourceEnum;
-import com.his.common.enums.StaffTypeEnum;
 import com.his.common.entity.CurrentUser;
+import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.schedule.dto.NurseScheduleDTO;
-import com.his.system.entity.SysDepartment;
-import com.his.system.mapper.SysDepartmentMapper;
-import com.his.system.utils.UserUtils;
 import com.his.schedule.dto.StaffPlanRuleUpsertDTO;
 import com.his.schedule.dto.StaffScheduleUpsertDTO;
 import com.his.schedule.entity.BizSchedule;
 import com.his.schedule.entity.BizStaffPlanRule;
 import com.his.schedule.mapper.BizScheduleMapper;
-import com.his.system.service.DeptScopeService;
 import com.his.schedule.service.BizScheduleService;
 import com.his.schedule.service.NurseScheduleLogService;
 import com.his.schedule.service.StaffPlanRuleService;
 import com.his.schedule.service.StaffScheduleService;
 import com.his.schedule.vo.NurseScheduleVO;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.DeptBriefVO;
+import com.his.system.service.DeptScopeService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -60,22 +54,19 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
      * 病区级规则行的
      */
     private static final long WARD_LEVEL_SHIFT = 0L;
-
-    private final DeptScopeService deptScopeService;
-
-    private final StaffScheduleService staffScheduleService;
-
-    private final StaffPlanRuleService staffPlanRuleService;
-
-    private final BizScheduleMapper bizScheduleMapper;
-
-    private final NurseScheduleLogService nurseScheduleLogService;
-
-    /** 科室主档：取科室指定的护理排班审核人 */
-    private final SysDepartmentMapper sysDepartmentMapper;
-
-    /** 全局豁免审核角色：系统管理员 */
+    /**
+     * 全局豁免审核角色：系统管理员
+     */
     private static final String ROLE_ADMIN = "10012";
+    private final DeptScopeService deptScopeService;
+    private final StaffScheduleService staffScheduleService;
+    private final StaffPlanRuleService staffPlanRuleService;
+    private final BizScheduleMapper bizScheduleMapper;
+    private final NurseScheduleLogService nurseScheduleLogService;
+    /**
+     * 科室主档：取科室指定的护理排班审核人
+     */
+    private final SystemFacadeService systemFacadeService;
 
     /**
      * 这个护理单元在出勤底座里落的排班单元类型：病区→2，门诊科室→1
@@ -151,6 +142,17 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
 
     private static int nvlInt(Integer value) {
         return value == null ? 0 : value;
+    }
+
+    /**
+     * 格子新旧值快照文本：出勤状态 + 班次（如「上班/白班」「休息」）
+     */
+    private static String cellSnapshot(StaffDutyStatusEnum status, String shiftName) {
+        StringBuilder sb = new StringBuilder(status == null ? "未知" : status.getLabel());
+        if (shiftName != null && !shiftName.isBlank()) {
+            sb.append("/").append(shiftName);
+        }
+        return sb.toString();
     }
 
     @Override
@@ -292,6 +294,8 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         return result;
     }
 
+    // ===== G-15 发布态流转（提交→审核→发布 / 调班 / 撤回）=====
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public NurseScheduleVO.DeleteResult deleteById(Long id) {
@@ -317,8 +321,6 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         result.setScheduleDate(row.getScheduleDate() == null ? null : row.getScheduleDate().toString());
         return result;
     }
-
-    // ===== G-15 发布态流转（提交→审核→发布 / 调班 / 撤回）=====
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -359,7 +361,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         if (ROLE_ADMIN.equals(user.getCurrentRole())) {
             return;
         }
-        SysDepartment dept = deptId == null ? null : sysDepartmentMapper.selectById(deptId);
+        DeptBriefVO dept = systemFacadeService.findDepartment(deptId);
         if (dept == null || dept.getNursingAuditorId() == null
                 || !dept.getNursingAuditorId().equals(user.getEmployeeId())) {
             throw new BusinessException("您不是本科室指定的护理排班审核人，无权审核发布");
@@ -423,7 +425,9 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         return moved;
     }
 
-    /** 整周动作没有单行可挂：造一条只带单元名/科室名的快照供留痕审计展示 */
+    /**
+     * 整周动作没有单行可挂：造一条只带单元名/科室名的快照供留痕审计展示
+     */
     private BizSchedule weekSnapshot(NurseScheduleVO.Ward ward) {
         BizSchedule snap = new BizSchedule();
         snap.setOrgName(ward.getWardName());
@@ -431,16 +435,9 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         return snap;
     }
 
-    /** 格子新旧值快照文本：出勤状态 + 班次（如「上班/白班」「休息」） */
-    private static String cellSnapshot(StaffDutyStatusEnum status, String shiftName) {
-        StringBuilder sb = new StringBuilder(status == null ? "未知" : status.getLabel());
-        if (shiftName != null && !shiftName.isBlank()) {
-            sb.append("/").append(shiftName);
-        }
-        return sb.toString();
-    }
-
-    /** 取一行排班并校验数据范围（跨科室操作一律挡） */
+    /**
+     * 取一行排班并校验数据范围（跨科室操作一律挡）
+     */
     private BizSchedule requireScheduleRow(Long id) {
         if (id == null) {
             throw new BusinessException("缺少排班行ID");

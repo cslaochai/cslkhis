@@ -10,7 +10,7 @@ import com.his.pharmacy.vo.DrugTraceScanVO;
 import com.his.pharmacy.vo.DrugTraceUploadResultVO;
 import com.his.pharmacy.vo.DrugTraceVO;
 import com.his.common.entity.CurrentUser;
-import com.his.pharmacy.utils.UserUtils;
+import com.his.system.utils.UserUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

@@ -1,9 +1,9 @@
 package com.his.emr.service;
 
-import com.his.emr.service.SignableContentService;
+import com.his.system.service.SignableContentService;
 import com.his.common.enums.SignSceneEnum;
 import com.his.emr.entity.BizEmrSignature;
-import com.his.emr.entity.SysSignCert;
+import com.his.sign.entity.SysSignCert;
 
 import java.time.LocalDateTime;
 

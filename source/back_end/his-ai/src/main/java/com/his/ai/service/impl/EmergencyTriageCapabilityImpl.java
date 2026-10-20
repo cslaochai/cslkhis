@@ -8,8 +8,8 @@ import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.EmergencyTriageCapability;
 import com.his.ai.vo.EmergencyTriagePromptVariablesVO;
 import com.his.ai.vo.EmergencyTriageResultVO;
-import com.his.appoint.service.AppointFacadeService;
-import com.his.appoint.vo.EmergencyBriefVO;
+import com.his.spi.service.RegistFacadeService;
+import com.his.spi.vo.EmergencyBriefVO;
 import com.his.common.support.EmergencyTriageRules;
 import com.his.common.support.EmergencyTriageRules.RedFlag;
 import com.his.common.support.EmergencyTriageRules.VitalSigns;
@@ -43,7 +43,7 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
 
     private static final String CHANNEL_NONE = "无";
 
-    private final AppointFacadeService appointFacadeService;
+    private final RegistFacadeService registFacadeService;
 
     private final AiExecutionService aiExecutionService;
 
@@ -167,7 +167,7 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
         long start = System.currentTimeMillis();
 
         EmergencyBriefVO entity = dto.getEmergencyId() == null
-                ? null : appointFacadeService.findEmergency(dto.getEmergencyId());
+                ? null : registFacadeService.findEmergency(dto.getEmergencyId());
         if (dto.getEmergencyId() != null && entity == null) {
             throw new BusinessException("急诊记录不存在：" + dto.getEmergencyId());
         }

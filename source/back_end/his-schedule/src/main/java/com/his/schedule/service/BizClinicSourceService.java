@@ -2,7 +2,7 @@ package com.his.schedule.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.schedule.dto.ScheduleSelectQueryDTO;
-import com.his.appoint.vo.StopImpactItemVO;
+import com.his.spi.vo.StopImpactItemVO;
 import com.his.common.enums.StaffScheduleSourceEnum;
 import com.his.schedule.dto.*;
 import com.his.schedule.entity.BizClinicSource;

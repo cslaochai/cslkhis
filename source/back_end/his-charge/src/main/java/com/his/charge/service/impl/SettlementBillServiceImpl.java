@@ -1,10 +1,10 @@
 package com.his.charge.service.impl;
 
-import com.his.charge.vo.BillFeeTypeSumVO;
-import com.his.charge.vo.BizSettlementBillVO;
-import com.his.charge.vo.PendingBillItemVO;
-import com.his.charge.vo.PendingBillVO;
-import com.his.patient.vo.PatientBriefVO;
+import com.his.spi.vo.BillFeeTypeSumVO;
+import com.his.spi.vo.BizSettlementBillVO;
+import com.his.spi.vo.PendingBillItemVO;
+import com.his.spi.vo.PendingBillVO;
+import com.his.spi.vo.PatientBriefVO;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -22,16 +22,16 @@ import com.his.charge.mapper.BizSettlementBillItemMapper;
 import com.his.charge.mapper.BizSettlementBillMapper;
 import com.his.charge.service.*;
 import com.his.charge.vo.*;
-import com.his.charge.vo.PendingBillItemVO;
-import com.his.charge.vo.PendingBillVO;
+import com.his.spi.vo.PendingBillItemVO;
+import com.his.spi.vo.PendingBillVO;
 import com.his.common.base.PageResult;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
-import com.his.patient.service.PatientFacadeService;
-import com.his.patient.vo.PatientBriefVO;
-import com.his.system.service.InsurancePolicyService;
+import com.his.spi.service.PatientFacadeService;
+import com.his.spi.vo.PatientBriefVO;
+import com.his.charge.service.InsurancePolicyService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;

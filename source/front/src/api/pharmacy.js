@@ -7,11 +7,6 @@ export function getStockList(params) {
   return request.post('/pharmacy/stockListPage', params)
 }
 
-// 获取库存详情
-export function getStockDetail(stockId) {
-  return request.get('/pharmacy/getStockById', { params: { stockId } })
-}
-
 // 新增库存
 export function createStock(data) {
   return request.post('/pharmacy/stockUpsert', data)
@@ -25,11 +20,6 @@ export function inboundStock(stockId, quantity) {
 // 出库
 export function outboundStock(stockId, quantity) {
   return request.post('/pharmacy/stockOutbound', { stockId, quantity })
-}
-
-// 查询库存预警列表
-export function getStockWarningList(stockStatus) {
-  return request.post('/pharmacy/stockWarningList', { stockStatus })
 }
 
 // 库存出入库流水分页（drugName 模糊 + changeType 过滤）

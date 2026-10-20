@@ -2,13 +2,13 @@ package com.his.schedule.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.outpatient.dto.OpdAssignPageQueryDTO;
-import com.his.outpatient.dto.OpdAssignUpsertDTO;
+import com.his.schedule.dto.OpdAssignPageQueryDTO;
+import com.his.schedule.dto.OpdAssignUpsertDTO;
 import com.his.schedule.dto.OpdStationPageQueryDTO;
 import com.his.schedule.dto.OpdStationUpsertDTO;
 import com.his.schedule.service.OpdStationService;
-import com.his.outpatient.vo.OpdAssignCandidateVO;
-import com.his.outpatient.vo.OpdAssignVO;
+import com.his.schedule.vo.OpdAssignCandidateVO;
+import com.his.schedule.vo.OpdAssignVO;
 import com.his.schedule.vo.OpdStationSelectVO;
 import com.his.schedule.vo.OpdStationVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,7 +23,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 门诊公共工位字典 + 工位派岗（sql/277）。
+ * 门诊公共工位字典 + 工位派岗
  *
  * <p>回答「A 护士今天被排到总导诊/分诊台/输液室/注射室/采血室哪个位」；
  * 派岗不产出出勤事实，只把当天已排上班的人挪到公共位上，不进工时/缺勤闭环。</p>

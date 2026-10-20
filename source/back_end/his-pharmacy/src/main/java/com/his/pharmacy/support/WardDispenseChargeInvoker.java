@@ -1,9 +1,9 @@
 package com.his.pharmacy.support;
 
-import com.his.charge.dto.FeeBookDTO;
-import com.his.charge.service.ChargeFacadeService;
+import com.his.spi.dto.FeeBookDTO;
+import com.his.spi.service.ChargeFacadeService;
 import com.his.common.enums.FeeCatalogTypeEnum;
-import com.his.charge.vo.FeeRecordVO;
+import com.his.spi.vo.FeeRecordVO;
 import com.his.common.enums.EncounterTypeEnum;
 import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.PaymentItemTypeEnum;

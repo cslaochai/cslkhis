@@ -45,11 +45,6 @@ export function payBill(data) {
     return request.post('/charge/settlementBill/pay', data)
 }
 
-// 按账单退费：feeIds 为空 = 整单退；金额不由前端填（退的是被红冲记账行的净额）
-export function refundBill(data) {
-    return request.post('/charge/settlementBill/refund', data)
-}
-
 export function getBillListPage(data) {
     return request.post('/charge/settlementBill/listPage', data)
 }
@@ -79,11 +74,6 @@ export function createQrPay(data) {
 // 查询支付结果：待支付时后端会向渠道查单并兜底入账，返回账单最新尚需缴
 export function queryQrPayResult(data) {
     return request.post('/charge/qrPay/queryResult', data)
-}
-
-// 关闭支付单（患者放弃付款/换渠道出码时必须关，否则旧码仍可被扫出付款）
-export function closeQrPay(data) {
-    return request.post('/charge/qrPay/close', data)
 }
 
 // 关掉这张账单的待支付码：切到现金或关掉弹层时调。

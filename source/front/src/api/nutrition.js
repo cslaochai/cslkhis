@@ -14,10 +14,6 @@ export function listNutritionScreenPage(params) {
   return request.post('/patient/inpatient/nutrition/screenListPage', params)
 }
 
-export function listNutritionScreenByAdmission(admissionId) {
-  return request.get('/patient/inpatient/nutrition/screenListByAdmission', { params: { admissionId } })
-}
-
 export function upsertNutritionScreen(data) {
   return request.post('/patient/inpatient/nutrition/screenUpsert', data)
 }

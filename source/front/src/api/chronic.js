@@ -18,8 +18,3 @@ export function upsertChronicRecord(data) {
 export function cancelChronicRecord(recordId) {
     return request.post('/chronic/cancel', { recordId })
 }
-
-// 患者的有效慢病档案（长处方开方资格判定用）
-export function getChronicActiveByPatient(patientId) {
-    return request.get('/chronic/activeByPatient', { params: { patientId } })
-}

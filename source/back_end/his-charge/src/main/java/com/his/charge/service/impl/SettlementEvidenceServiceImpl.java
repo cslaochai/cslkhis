@@ -2,21 +2,21 @@ package com.his.charge.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.charge.entity.BizInsuranceSettlement;
-import com.his.appoint.service.AppointFacadeService;
-import com.his.emr.service.EmrFacadeService;
-import com.his.medicaltech.service.MedicalTechFacadeService;
-import com.his.patient.service.PatientFacadeService;
+import com.his.spi.service.EmrFacadeService;
+import com.his.spi.service.MedicalTechFacadeService;
+import com.his.spi.service.PatientFacadeService;
+import com.his.spi.service.RegistFacadeService;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.mapper.BizInsuranceSettlementMapper;
 import com.his.charge.mapper.BizSettlementBillItemMapper;
 import com.his.charge.mapper.BizSettlementBillMapper;
 import com.his.charge.service.SettlementEvidenceService;
 import com.his.charge.support.SettlementEvidence;
-import com.his.medicaltech.vo.LaboratoryRecordBriefVO;
-import com.his.emr.vo.MedicalRecordBriefVO;
-import com.his.patient.vo.PatientBriefVO;
-import com.his.emr.vo.PrescriptionBriefVO;
-import com.his.appoint.vo.RegistBriefVO;
+import com.his.spi.vo.LaboratoryRecordBriefVO;
+import com.his.spi.vo.MedicalRecordBriefVO;
+import com.his.spi.vo.PatientBriefVO;
+import com.his.spi.vo.PrescriptionBriefVO;
+import com.his.spi.vo.RegistBriefVO;
 import com.his.common.enums.BillStatusEnum;
 import com.his.common.enums.EncounterTypeEnum;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +36,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SettlementEvidenceServiceImpl implements SettlementEvidenceService {
 
-    private final AppointFacadeService appointFacadeService;
+    private final RegistFacadeService registFacadeService;
 
     private final PatientFacadeService patientFacadeService;
 
@@ -68,7 +68,7 @@ public class SettlementEvidenceServiceImpl implements SettlementEvidenceService 
 
         // 1. 挂号（锚点）
         Long registId = settlement.getRegistId();
-        RegistBriefVO regist = registId == null ? null : appointFacadeService.findRegist(registId);
+        RegistBriefVO regist = registId == null ? null : registFacadeService.findRegist(registId);
         ev.setRegist(regist);
         if (registId == null) {
             ev.markMissing("清单未关联挂号ID，无法定位就诊依据");

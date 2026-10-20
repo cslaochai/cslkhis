@@ -153,6 +153,11 @@ public class SysDrug extends BaseEntity {
     private Integer specialFlag;
 
     /**
+     * 抗菌药物分级（0-非抗菌药物 1-非限制使用级 2-限制使用级 3-特殊使用级）
+     */
+    private Integer antibioticLevel;
+
+    /**
      * 禁忌症
      */
     private String contraindication;

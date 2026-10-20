@@ -16,10 +16,9 @@ import com.his.patient.mapper.BizChargeNurseRelationMapper;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.service.ChargeNurseRelationService;
 import com.his.patient.vo.ChargeNurseRelationVO;
-import com.his.system.entity.SysDepartment;
-import com.his.system.entity.SysEmployee;
-import com.his.system.mapper.SysDepartmentMapper;
-import com.his.system.mapper.SysEmployeeMapper;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.DeptBriefVO;
+import com.his.spi.vo.EmployeeBriefVO;
 import com.his.system.service.DeptScopeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -43,8 +42,7 @@ public class ChargeNurseRelationServiceImpl
 
     private final BizAdmissionMapper bizAdmissionMapper;
     private final BizPatientMapper bizPatientMapper;
-    private final SysEmployeeMapper sysEmployeeMapper;
-    private final SysDepartmentMapper sysDepartmentMapper;
+    private final SystemFacadeService systemFacadeService;
     private final DeptScopeService deptScopeService;
 
     @Override
@@ -88,7 +86,7 @@ public class ChargeNurseRelationServiceImpl
         }
         deptScopeService.assertDeptAccessible(admission.getDeptId());
 
-        SysEmployee nurse = sysEmployeeMapper.selectById(dto.getNurseId());
+        EmployeeBriefVO nurse = systemFacadeService.findEmployee(dto.getNurseId());
         if (nurse == null) {
             throw new BusinessException("所选护士不存在或已删除");
         }
@@ -210,7 +208,7 @@ public class ChargeNurseRelationServiceImpl
         if (deptId == null) {
             return "";
         }
-        SysDepartment dept = sysDepartmentMapper.selectById(deptId);
+        DeptBriefVO dept = systemFacadeService.findDepartment(deptId);
         return dept == null ? "" : dept.getDeptName();
     }
 

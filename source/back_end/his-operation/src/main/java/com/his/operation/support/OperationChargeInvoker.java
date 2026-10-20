@@ -1,8 +1,8 @@
 package com.his.operation.support;
 
-import com.his.charge.dto.FeeBookDTO;
-import com.his.charge.service.ChargeFacadeService;
-import com.his.charge.vo.FeeRecordVO;
+import com.his.spi.dto.FeeBookDTO;
+import com.his.spi.service.ChargeFacadeService;
+import com.his.spi.vo.FeeRecordVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

@@ -7,11 +7,6 @@ export function getYbInspectionList(params) {
     return request.get('/charge/ybInspection/listPage', {params})
 }
 
-// 批次详情
-export function getYbInspectionDetail(id) {
-    return request.get('/charge/ybInspection/getById', {params: {id}})
-}
-
 // 进行中批次下拉（新建扣款通知时挂批次）
 export function getYbInspectionSelectList() {
     return request.get('/charge/ybInspection/selectList')

@@ -13,7 +13,7 @@ import com.his.ai.vo.Icd10PromptVariablesVO;
 import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.mapper.BizMedicalRecordMapper;
-import com.his.system.entity.SysIcd10;
+import com.his.spi.vo.Icd10BriefVO;
 import com.his.common.enums.Icd10PredictSourceEnum;
 import com.his.common.enums.AiBizTypeEnum;
 import lombok.RequiredArgsConstructor;
@@ -79,7 +79,7 @@ public class Icd10CapabilityImpl implements Icd10Capability {
     private static String formatCandidates(List<Icd10RecallService.RecallHit> hits) {
         StringBuilder builder = new StringBuilder();
         for (Icd10RecallService.RecallHit hit : hits) {
-            SysIcd10 code = hit.code();
+            Icd10BriefVO code = hit.code();
             builder.append(code.getIcdCode()).append(' ').append(code.getIcdName());
             if (TextUtil.hasText(code.getIcdCategory())) {
                 builder.append('（').append(code.getIcdCategory()).append('）');
@@ -123,7 +123,7 @@ public class Icd10CapabilityImpl implements Icd10Capability {
             return vo;
         }
 
-        Map<String, SysIcd10> candidateIndex = Icd10RecallService.indexByCode(hits);
+        Map<String, Icd10BriefVO> candidateIndex = Icd10RecallService.indexByCode(hits);
         Map<String, Integer> scoreIndex = scoreIndex(hits);
 
         Optional<Icd10LlmOutputDTO> llmOutput = callModel(dto, note, hits);
@@ -202,7 +202,7 @@ public class Icd10CapabilityImpl implements Icd10Capability {
      * 这是整个能力最关键的一段代码：模型返回的每一条都必须能在候选集里找到，
      * 找不到就丢弃；找到也<b>不使用模型给的名称</b>，一律换成字典表里的名称。
      */
-    private List<Icd10PredictItemVO> toItems(Icd10LlmOutputDTO output, Map<String, SysIcd10> candidateIndex) {
+    private List<Icd10PredictItemVO> toItems(Icd10LlmOutputDTO output, Map<String, Icd10BriefVO> candidateIndex) {
         List<Icd10PredictItemVO> items = new ArrayList<>();
         Set<String> seen = new LinkedHashSet<>();
 
@@ -213,7 +213,7 @@ public class Icd10CapabilityImpl implements Icd10Capability {
             if (code == null) {
                 continue;
             }
-            SysIcd10 dict = candidateIndex.get(code);
+            Icd10BriefVO dict = candidateIndex.get(code);
             if (dict == null) {
                 log.warn("[AI-ICD] 模型推荐的编码 {} 不在候选集内，已丢弃（疑似幻觉）", code);
                 continue;

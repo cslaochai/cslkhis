@@ -1,17 +1,18 @@
 package com.his.miniapp.controller;
 
 import com.his.appoint.dto.AppointCancelDTO;
-import com.his.appoint.dto.AppointQueryDTO;
-import com.his.appoint.dto.AppointUpsertDTO;
-import com.his.appoint.service.AppointFacadeService;
-import com.his.appoint.vo.BizAppointInfoListVO;
-import com.his.appoint.vo.RegistBriefVO;
+import com.his.spi.dto.AppointQueryDTO;
+import com.his.spi.dto.AppointUpsertDTO;
+import com.his.spi.service.AppointFacadeService;
+import com.his.spi.service.RegistFacadeService;
+import com.his.spi.vo.BizAppointInfoListVO;
+import com.his.spi.vo.RegistBriefVO;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.common.util.TextUtil;
 import com.his.miniapp.dto.PayRefundDTO;
 import com.his.miniapp.service.MiniPayService;
-import com.his.patient.service.PatientFacadeService;
+import com.his.spi.service.PatientFacadeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -30,6 +31,8 @@ import org.springframework.web.bind.annotation.*;
 public class MiniAppointController {
 
     private final AppointFacadeService appointFacadeService;
+
+    private final RegistFacadeService registFacadeService;
 
     private final PatientFacadeService patientFacadeService;
 
@@ -76,7 +79,7 @@ public class MiniAppointController {
     @Operation(summary = "挂号详情")
     @GetMapping("/getDetail")
     public Result<BizAppointInfoListVO> getDetail(@Valid AppointQueryDTO queryDTO) {
-        RegistBriefVO regist = appointFacadeService.findRegist(queryDTO.getPatientId());
+        RegistBriefVO regist = registFacadeService.findRegist(queryDTO.getPatientId());
         if (regist != null && patientFacadeService.patientScopeViolated(regist.getPatientId())) {
             return Result.error("无权查看该挂号");
         }
@@ -92,7 +95,7 @@ public class MiniAppointController {
     public Result<Void> cancel(@RequestBody @Valid AppointCancelDTO appointCancelDTO) {
         Long registId = appointCancelDTO.getRegistId();
         // 归属从挂号记录反查，不看前端传的是谁
-        RegistBriefVO regist = appointFacadeService.findRegist(registId);
+        RegistBriefVO regist = registFacadeService.findRegist(registId);
         if (regist == null) {
             return Result.error("挂号记录不存在");
         }

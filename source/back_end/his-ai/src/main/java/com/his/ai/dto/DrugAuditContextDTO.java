@@ -4,7 +4,7 @@ import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.entity.BizPrescription;
 import com.his.emr.entity.BizPrescriptionDetail;
-import com.his.system.entity.SysDrug;
+import com.his.pharmacy.entity.SysDrug;
 
 import java.util.List;
 import java.util.Map;

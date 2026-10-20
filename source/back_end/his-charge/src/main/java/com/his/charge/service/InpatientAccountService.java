@@ -2,11 +2,11 @@ package com.his.charge.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.charge.dto.InpatientSettlementUpsertDTO;
-import com.his.charge.dto.PrepayPageQueryDTO;
-import com.his.charge.dto.PrepayUpsertDTO;
+import com.his.spi.dto.PrepayPageQueryDTO;
+import com.his.spi.dto.PrepayUpsertDTO;
 import com.his.charge.vo.*;
-import com.his.charge.vo.PrepayBalanceVO;
-import com.his.charge.vo.PrepayVO;
+import com.his.spi.vo.PrepayBalanceVO;
+import com.his.spi.vo.PrepayVO;
 
 import java.math.BigDecimal;
 import java.util.List;

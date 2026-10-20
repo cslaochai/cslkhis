@@ -19,11 +19,6 @@ export function getSupplierSelectList() {
   return request.post('/supplier/selectList')
 }
 
-/** 供应商详情 */
-export function getSupplierDetail(supplierId) {
-  return request.get('/supplier/getById', { params: { supplierId } })
-}
-
 /** 新增/修改供应商 */
 export function upsertSupplier(data) {
   return request.post('/supplier/upsert', data)

@@ -26,10 +26,10 @@ import com.his.medicaltech.service.RadiologyReportService;
 import com.his.medicaltech.vo.RadioReportDetailVO;
 import com.his.medicaltech.vo.RadioReportListVO;
 import com.his.medicaltech.vo.RadioReportTemplateVO;
-import com.his.system.dto.SignCommandDTO;
+import com.his.spi.dto.SignCommandDTO;
 import com.his.system.service.*;
 import com.his.system.utils.UserUtils;
-import com.his.emr.vo.SignatureVO;
+import com.his.spi.vo.SignatureVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -40,6 +40,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import com.his.spi.service.EmrSignatureFacadeService;
 
 /**
  * 放射诊断报告书写台（sql/138）。
@@ -53,7 +54,7 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
     private final BizInspectionRecordMapper bizInspectionRecordMapper;
     private final BizRadioReportTemplateMapper bizRadioReportTemplateMapper;
     private final ExamImageService examImageService;
-    private final EmrSignatureService emrSignatureService;
+    private final EmrSignatureFacadeService emrSignatureFacadeService;
     private final DictCacheService dictCacheService;
     private final SysAuditLogService sysAuditLogService;
     private final SysMessageService sysMessageService;
@@ -431,7 +432,7 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
         cmd.setSignerDeptId(record.getInspectionDeptId());
         cmd.setSignerDeptName(record.getInspectionDeptName());
         try {
-            return emrSignatureService.sign(cmd);
+            return emrSignatureFacadeService.sign(cmd);
         } catch (BusinessException e) {
             throw new BusinessException("检查报告 " + record.getRecordNo() + " " + scene.getLabel()
                     + "失败：" + e.getMessage());

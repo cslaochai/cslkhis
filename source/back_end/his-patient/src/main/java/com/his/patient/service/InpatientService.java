@@ -2,12 +2,12 @@ package com.his.patient.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.patient.dto.*;
-import com.his.patient.dto.InpatientAdmitDTO;
+import com.his.spi.dto.InpatientAdmitDTO;
 import com.his.patient.entity.BizAdmission;
 import com.his.patient.entity.BizInpatientOperation;
 import com.his.patient.vo.*;
-import com.his.patient.vo.BedVO;
-import com.his.patient.vo.WardVO;
+import com.his.spi.vo.BedVO;
+import com.his.spi.vo.WardVO;
 
 import java.util.List;
 

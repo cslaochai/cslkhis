@@ -10,11 +10,25 @@ import com.his.common.exception.BusinessException;
 import com.his.common.util.ShiftCoverUtil;
 import com.his.common.util.TextUtil;
 import com.his.schedule.dto.*;
-import com.his.schedule.entity.*;
-import com.his.schedule.mapper.*;
-import com.his.schedule.service.*;
-import com.his.system.utils.UserUtils;
+import com.his.schedule.entity.BizSchedule;
+import com.his.schedule.entity.BizShift;
+import com.his.schedule.entity.BizStaffAttendance;
+import com.his.schedule.entity.BizStaffPlanRule;
+import com.his.schedule.mapper.BizScheduleMapper;
+import com.his.schedule.mapper.BizStaffAttendanceMapper;
+import com.his.schedule.service.ScheduleChangeLogService;
+import com.his.schedule.service.ShiftService;
+import com.his.schedule.service.StaffPlanRuleService;
+import com.his.schedule.service.StaffScheduleService;
 import com.his.schedule.vo.*;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.DeptBriefVO;
+import com.his.spi.vo.EmployeeBriefVO;
+import com.his.spi.vo.EmployeePostBriefVO;
+import com.his.spi.vo.RoleBriefVO;
+import com.his.spi.vo.WardBriefVO;
+import com.his.system.service.DeptScopeService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,11 +74,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
      */
     private static final Set<Long> ER_DEPT_IDS = Set.of(19580047L, 19580048L, 19580049L, 19580051L);
     private final DeptScopeService deptScopeService;
-    private final SysEmployeeMapper sysEmployeeMapper;
-    private final SysEmployeePostMapper sysEmployeePostMapper;
-    private final SysRoleMapper sysRoleMapper;
-    private final SysDepartmentMapper sysDepartmentMapper;
-    private final SysWardMapper sysWardMapper;
+    private final SystemFacadeService systemFacadeService;
     private final ShiftService shiftService;
     private final StaffPlanRuleService staffPlanRuleService;
     private final ScheduleChangeLogService scheduleChangeLogService;
@@ -174,8 +184,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         if (shift == null || !Objects.equals(shift.getIsNight(), 1)) {
             return;
         }
-        SysEmployee emp = schedule.getEmployeeId() == null ? null
-                : sysEmployeeMapper.selectById(schedule.getEmployeeId());
+        EmployeeBriefVO emp = systemFacadeService.findEmployee(schedule.getEmployeeId());
         if (emp == null || emp.getIsRegistered() == null || Objects.equals(emp.getIsRegistered(), 1)) {
             return;
         }
@@ -671,9 +680,9 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
             Set<Long> empIds = rows.stream().map(BizSchedule::getEmployeeId)
                     .filter(Objects::nonNull).collect(Collectors.toSet());
             Map<Long, Integer> fixedFlags = empIds.isEmpty() ? Collections.emptyMap()
-                    : sysEmployeeMapper.selectBatchIds(empIds).stream()
+                    : systemFacadeService.listEmployeesByIds(empIds).stream()
                     .filter(e -> e.getIsFixed() != null)
-                    .collect(Collectors.toMap(SysEmployee::getId, SysEmployee::getIsFixed, (a, b) -> a));
+                    .collect(Collectors.toMap(EmployeeBriefVO::getId, EmployeeBriefVO::getIsFixed, (a, b) -> a));
             long fixed = fixedFlags.values().stream().filter(v -> Objects.equals(v, 1)).count();
             ErFixedRatioVO vo = new ErFixedRatioVO();
             vo.setDeptId(deptId);
@@ -809,11 +818,11 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
             throw new BusinessException("请选择" + unitType.getLabel());
         }
         if (unitType == OrgUnitTypeEnum.WARD) {
-            SysWard ward = sysWardMapper.selectById(orgId);
+            WardBriefVO ward = systemFacadeService.findWard(orgId);
             if (ward == null || isDisabled(ward.getStatus())) {
                 throw new BusinessException("所选" + unitType.getLabel() + "不存在或已停用");
             }
-            SysDepartment dept = sysDepartmentMapper.selectById(ward.getDeptId());
+            DeptBriefVO dept = systemFacadeService.findDepartment(ward.getDeptId());
             if (dept == null || isDisabled(dept.getStatus())) {
                 throw new BusinessException("病区所属科室不存在或已停用，请先修正主数据");
             }
@@ -823,7 +832,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
             schedule.setDeptName(dept.getDeptName());
             return;
         }
-        SysDepartment dept = sysDepartmentMapper.selectById(orgId);
+        DeptBriefVO dept = systemFacadeService.findDepartment(orgId);
         if (dept == null || isDisabled(dept.getStatus())) {
             throw new BusinessException("所选" + unitType.getLabel() + "不存在或已停用");
         }
@@ -837,14 +846,14 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
      * 排班对象与岗位类别：姓名/工号取员工快照，岗位类别由「人 × 科室 × 角色」上的角色派生。
      */
     private void applyEmployee(BizSchedule schedule, Long employeeId, Long employeePostId) {
-        SysEmployee employee = employeeId == null ? null : sysEmployeeMapper.selectById(employeeId);
+        EmployeeBriefVO employee = systemFacadeService.findEmployee(employeeId);
         if (employee == null) {
             throw new BusinessException("所选排班对象不存在或已删除，请重新选择");
         }
         if (isDisabled(employee.getStatus())) {
             throw new BusinessException("「" + employee.getEmpName() + "」已停用，不能排班");
         }
-        SysEmployeePost post = resolvePost(employee, schedule.getDeptId(), employeePostId);
+        EmployeePostBriefVO post = resolvePost(employee, schedule.getDeptId(), employeePostId);
         schedule.setEmployeeId(employee.getId());
         schedule.setEmpCode(employee.getEmpCode());
         schedule.setEmployeeName(employee.getEmpName());
@@ -852,29 +861,27 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         schedule.setStaffType(staffTypeOf(post, employee));
     }
 
-    private SysEmployeePost resolvePost(SysEmployee employee, Long deptId, Long employeePostId) {
+    private EmployeePostBriefVO resolvePost(EmployeeBriefVO employee, Long deptId, Long employeePostId) {
         if (employeePostId != null) {
-            SysEmployeePost post = sysEmployeePostMapper.selectById(employeePostId);
+            EmployeePostBriefVO post = systemFacadeService.findEmployeePost(employeePostId);
             if (post == null || !Objects.equals(post.getEmployeeId(), employee.getId())) {
                 throw new BusinessException("所选岗位不属于这个人，请重新选择");
             }
             return post;
         }
-        List<SysEmployeePost> posts = sysEmployeePostMapper.selectList(new LambdaQueryWrapper<SysEmployeePost>()
-                .eq(SysEmployeePost::getEmployeeId, employee.getId())
-                .orderByAsc(SysEmployeePost::getId));
+        List<EmployeePostBriefVO> posts = systemFacadeService.listEmployeePosts(employee.getId());
         if (posts.isEmpty()) {
             throw new BusinessException("「" + employee.getEmpName() + "」还没有分配岗位，"
                     + "请先在员工档案里配置岗位（岗位类别决定这个班能不能排给他）");
         }
         if (deptId != null && deptId != ID_NONE) {
-            for (SysEmployeePost post : posts) {
+            for (EmployeePostBriefVO post : posts) {
                 if (Objects.equals(post.getDeptId(), deptId)) {
                     return post;
                 }
             }
         }
-        for (SysEmployeePost post : posts) {
+        for (EmployeePostBriefVO post : posts) {
             if (Objects.equals(YesOrNoEnum.YES.getCode(), post.getIsPrimary())) {
                 return post;
             }
@@ -882,12 +889,12 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         return posts.get(0);
     }
 
-    private Integer staffTypeOf(SysEmployeePost post, SysEmployee employee) {
+    private Integer staffTypeOf(EmployeePostBriefVO post, EmployeeBriefVO employee) {
         if (post == null || post.getRoleId() == null) {
             throw new BusinessException("「" + employee.getEmpName() + "」的岗位没有挂角色，"
                     + "无法判定岗位类别，请先在岗位配置里补齐角色");
         }
-        SysRole role = sysRoleMapper.selectById(post.getRoleId());
+        RoleBriefVO role = systemFacadeService.findRole(post.getRoleId());
         if (role == null) {
             throw new BusinessException("岗位上的角色不存在或已删除，请先修正岗位配置");
         }
@@ -1185,14 +1192,6 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         return ids;
     }
 
-    /**
-     * 一条排班摊开后的时间段
-     */
-    private record TimeRange(LocalDateTime from, LocalDateTime to) {
-    }
-
-    // ==================== 员工排班增强：区间规则校验 / 月度工时（全区岗位通用） ====================
-
     @Override
     public StaffCheckVO check(StaffScheduleCheckDTO dto) {
         LocalDate start = dto.getStartDate();
@@ -1222,6 +1221,8 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         vo.setWarnings(warnings);
         return vo;
     }
+
+    // ==================== 员工排班增强：区间规则校验 / 月度工时（全区岗位通用） ====================
 
     /**
      * 班次冲突：休息/请假/培训/停班仍挂班次，直接算告警。
@@ -1489,9 +1490,6 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         return publishStatus != null && (publishStatus == 2 || publishStatus == 4);
     }
 
-    // ===== 发布态流转（全院岗位排班：提交 → 审核发布 / 驳回 / 撤回 / 调班）=====
-    // 审核动作必须命中科室主档指定的全院岗位排班审核人（系统管理员豁免；orgType=3 全院级仅管理员）。
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void submit(Long id) {
@@ -1503,6 +1501,9 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         scheduleChangeLogService.record(id, ScheduleChangeTypeEnum.SUBMIT, null, null, null, null, null,
                 "草稿 → 待审核");
     }
+
+    // ===== 发布态流转（全院岗位排班：提交 → 审核发布 / 驳回 / 撤回 / 调班）=====
+    // 审核动作必须命中科室主档指定的全院岗位排班审核人（系统管理员豁免；orgType=3 全院级仅管理员）。
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -1593,22 +1594,14 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
             options.add(new StaffScheduleVO.UnitOption(0L, "全院", null));
         }
         if (all || OrgUnitTypeEnum.DEPT.getCode() == orgType) {
-            List<SysDepartment> depts = sysDepartmentMapper.selectList(new LambdaQueryWrapper<SysDepartment>()
-                    .eq(SysDepartment::getDelFlag, 0)
-                    .eq(SysDepartment::getStatus, 1)
-                    .orderByAsc(SysDepartment::getSortOrder)
-                    .orderByAsc(SysDepartment::getId));
-            for (SysDepartment dept : depts) {
+            for (DeptBriefVO dept : systemFacadeService.listEnabledDepartments()) {
                 options.add(new StaffScheduleVO.UnitOption(dept.getId(), dept.getDeptName(), null));
             }
         }
         if (all || OrgUnitTypeEnum.WARD.getCode() == orgType) {
-            List<SysWard> wards = sysWardMapper.selectList(new LambdaQueryWrapper<SysWard>()
-                    .eq(SysWard::getStatus, 1)
-                    .orderByAsc(SysWard::getWardCode)
-                    .orderByAsc(SysWard::getWardId));
+            List<WardBriefVO> wards = systemFacadeService.listEnabledWards();
             Map<Long, String> deptNames = deptNameMapOf(wards);
-            for (SysWard ward : wards) {
+            for (WardBriefVO ward : wards) {
                 options.add(new StaffScheduleVO.UnitOption(ward.getWardId(), ward.getWardName(),
                         deptNames.get(ward.getDeptId())));
             }
@@ -1619,9 +1612,9 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
     /**
      * 病区所属科室名（一次批量查，避免 N+1）
      */
-    private Map<Long, String> deptNameMapOf(List<SysWard> wards) {
+    private Map<Long, String> deptNameMapOf(List<WardBriefVO> wards) {
         Set<Long> deptIds = new HashSet<>();
-        for (SysWard ward : wards) {
+        for (WardBriefVO ward : wards) {
             if (ward.getDeptId() != null) {
                 deptIds.add(ward.getDeptId());
             }
@@ -1629,8 +1622,8 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         if (deptIds.isEmpty()) {
             return Map.of();
         }
-        return sysDepartmentMapper.selectBatchIds(deptIds).stream()
-                .collect(Collectors.toMap(SysDepartment::getId, SysDepartment::getDeptName, (a, b) -> a));
+        return systemFacadeService.listDepartmentsByIds(deptIds).stream()
+                .collect(Collectors.toMap(DeptBriefVO::getId, DeptBriefVO::getDeptName, (a, b) -> a));
     }
 
     /**
@@ -1646,7 +1639,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         if (ROLE_ADMIN.equals(user.getCurrentRole())) {
             return;
         }
-        SysDepartment dept = deptId == null ? null : sysDepartmentMapper.selectById(deptId);
+        DeptBriefVO dept = systemFacadeService.findDepartment(deptId);
         if (dept == null || dept.getScheduleAuditorId() == null
                 || !dept.getScheduleAuditorId().equals(user.getEmployeeId())) {
             throw new BusinessException("您不是本科室指定的全院岗位排班审核人，无权审核发布");
@@ -1702,7 +1695,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
             if (orgId == null) {
                 return null;
             }
-            SysWard ward = sysWardMapper.selectById(orgId);
+            WardBriefVO ward = systemFacadeService.findWard(orgId);
             return ward == null ? null : ward.getDeptId();
         }
         return null;
@@ -1721,10 +1714,8 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         boolean admin = ROLE_ADMIN.equals(user.getCurrentRole());
         Set<Long> deptIds = null;
         if (!admin) {
-            List<SysDepartment> depts = sysDepartmentMapper.selectList(new LambdaQueryWrapper<SysDepartment>()
-                    .eq(SysDepartment::getScheduleAuditorId, user.getEmployeeId())
-                    .eq(SysDepartment::getDelFlag, 0));
-            deptIds = depts.stream().map(SysDepartment::getId).collect(Collectors.toSet());
+            List<DeptBriefVO> depts = systemFacadeService.listDepartmentsByScheduleAuditor(user.getEmployeeId());
+            deptIds = depts.stream().map(DeptBriefVO::getId).collect(Collectors.toSet());
             if (deptIds.isEmpty()) {
                 return PageResult.of(0, dto.getPageNum(), dto.getPageSize(), 0, List.of());
             }
@@ -1746,6 +1737,12 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
             vos.add(toVO(row, shifts.get(row.getShiftId())));
         }
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), vos);
+    }
+
+    /**
+     * 一条排班摊开后的时间段
+     */
+    private record TimeRange(LocalDateTime from, LocalDateTime to) {
     }
 
     /**

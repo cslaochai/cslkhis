@@ -35,18 +35,6 @@ export function markAttendanceAbsent(data) {
   return request.post('/system/staffAttendance/markAbsent', data)
 }
 
-// 签到/签退（幂等：重复刷卡不改最早那次签到时间）
-export function checkInAttendance(data) {
-  return request.post('/system/staffAttendance/checkIn', data)
-}
-export function checkOutAttendance(data) {
-  return request.post('/system/staffAttendance/checkOut', data)
-}
-
-// 科室确认（0-待确认 1-已确认 2-有异议）
-export function confirmAttendance(params) {
-  return request.post('/system/staffAttendance/confirm', null, { params })
-}
 
 // 撤销一条出勤登记
 export function removeAttendance(params) {

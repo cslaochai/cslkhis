@@ -13,7 +13,7 @@ import com.his.medicaltech.dto.WasteDTO;
 import com.his.medicaltech.entity.BizMedicalWaste;
 import com.his.common.enums.WasteStatusEnum;
 import com.his.medicaltech.mapper.BizMedicalWasteMapper;
-import com.his.medicaltech.service.DictCacheService;
+import com.his.system.service.DictCacheService;
 import com.his.medicaltech.service.WasteService;
 import com.his.system.utils.UserUtils;
 import com.his.medicaltech.vo.WasteVO;

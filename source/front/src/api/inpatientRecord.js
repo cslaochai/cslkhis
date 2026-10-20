@@ -41,11 +41,6 @@ export function getInpatientRecordLogs(params) {
     return request.get('/patient/inpatient/record/logs', {params})
 }
 
-// 某份文书的全部修改日志（docType=1 病历 2 护理）
-export function getInpatientRecordLogList(params) {
-    return request.get('/patient/inpatient/record/logList', {params})
-}
-
 // 结构化率统计（admissionId）
 export function getRecordQualityStat(admissionId) {
     return request.get('/patient/inpatient/record/qualityStat', {params: {admissionId}})

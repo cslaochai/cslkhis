@@ -4,7 +4,7 @@ import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * 门诊公共工位类别枚举（sql/277）。
+ * 门诊公共工位类别枚举
  *
  * <p>只覆盖全院公共工位，不含各专科科室自己的分诊台（那类挂科室，后续扩展）。</p>
  */

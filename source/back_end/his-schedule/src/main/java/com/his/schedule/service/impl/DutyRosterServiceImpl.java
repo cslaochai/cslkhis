@@ -10,8 +10,13 @@ import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.schedule.dto.*;
-import com.his.schedule.entity.*;
-import com.his.schedule.mapper.*;
+import com.his.schedule.entity.BizDutyPost;
+import com.his.schedule.entity.BizDutyRoster;
+import com.his.schedule.entity.BizSchedule;
+import com.his.schedule.entity.BizShift;
+import com.his.schedule.mapper.BizDutyPostMapper;
+import com.his.schedule.mapper.BizDutyRosterMapper;
+import com.his.schedule.mapper.BizShiftMapper;
 import com.his.schedule.service.DutyRosterService;
 import com.his.schedule.service.ShiftService;
 import com.his.schedule.service.StaffScheduleService;
@@ -19,6 +24,9 @@ import com.his.schedule.vo.DutyCheckVO;
 import com.his.schedule.vo.DutyOfficerVO;
 import com.his.schedule.vo.DutyRosterVO;
 import com.his.schedule.vo.DutyWorkloadVO;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.DeptBriefVO;
+import com.his.spi.vo.EmployeeBriefVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -63,9 +71,7 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
 
     private final BizShiftMapper bizShiftMapper;
 
-    private final SysEmployeeMapper sysEmployeeMapper;
-
-    private final SysDepartmentMapper sysDepartmentMapper;
+    private final SystemFacadeService systemFacadeService;
 
     /**
      * 当前时刻的总值班（跨自然日的夜班按开始日解析）
@@ -251,7 +257,7 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
     public DutyRosterVO upsert(DutyRosterUpsertDTO dto) {
         DutyShiftTypeEnum shiftType = DutyShiftTypeEnum.fromCode(dto.getShiftType());
         DutyRoleTypeEnum roleType = DutyRoleTypeEnum.fromCode(dto.getRoleType());
-        SysEmployee emp = requireOnDutyEmployee(dto.getEmployeeId());
+        EmployeeBriefVO emp = requireOnDutyEmployee(dto.getEmployeeId());
         BizDutyPost post = resolvePost(dto, roleType);
         if (post != null) {
             assertPostStaffType(post, emp);
@@ -311,7 +317,7 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
     @Transactional(rollbackFor = Exception.class)
     public void substitute(DutySubstituteDTO dto) {
         BizDutyRoster row = requireRow(dto.getId());
-        SysEmployee emp = requireOnDutyEmployee(dto.getSubstituteEmpId());
+        EmployeeBriefVO emp = requireOnDutyEmployee(dto.getSubstituteEmpId());
         // 在岗事实改到承接的人身上：他真的上了这个班，今日在岗名单与工时就得算他的。
         // 排班行上的 employee_id 原样不动 —— 那是「原本排的是谁」的追责凭据。
         transferAttendance(row, emp.getId(), dto.getSubstituteReason().trim());
@@ -337,7 +343,7 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
             throw new BusinessException("该排班未换班，无需撤回");
         }
         transferAttendance(row, row.getEmployeeId(), "取消换班，交回原值班人");
-        SysEmployee origin = sysEmployeeMapper.selectById(row.getEmployeeId());
+        EmployeeBriefVO origin = systemFacadeService.findEmployee(row.getEmployeeId());
         bizDutyRosterMapper.update(null, new LambdaUpdateWrapper<BizDutyRoster>()
                 .eq(BizDutyRoster::getId, row.getId())
                 .set(BizDutyRoster::getSubstituteEmpId, null)
@@ -452,7 +458,7 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
     /**
      * 登记这条值班的在岗事实 —— 值班不是"写在册子上"，它就是这个人的一段真实出勤。
      */
-    private BizSchedule dutyAttendance(LocalDate date, SysEmployee emp, BizShift shift,
+    private BizSchedule dutyAttendance(LocalDate date, EmployeeBriefVO emp, BizShift shift,
                                        BizDutyPost post, String remark, Integer publishStatus) {
         StaffScheduleUpsertDTO core = new StaffScheduleUpsertDTO();
         core.setScheduleDate(date);
@@ -572,7 +578,7 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
     /**
      * 点位要求的岗位类别校验：临床医师值班点位 required_staff_type=1，
      */
-    private void assertPostStaffType(BizDutyPost post, SysEmployee emp) {
+    private void assertPostStaffType(BizDutyPost post, EmployeeBriefVO emp) {
         Integer required = post.getRequiredStaffType();
         if (required == null || required == 0) {
             return;
@@ -728,29 +734,29 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
         if (empId == null) {
             return null;
         }
-        SysEmployee emp = sysEmployeeMapper.selectById(empId);
+        EmployeeBriefVO emp = systemFacadeService.findEmployee(empId);
         return emp == null ? null : emp.getPhone();
     }
 
-    private SysEmployee requireOnDutyEmployee(Long empId) {
-        SysEmployee emp = sysEmployeeMapper.selectById(empId);
-        if (emp == null || (emp.getDelFlag() != null && emp.getDelFlag() == 1)) {
+    private EmployeeBriefVO requireOnDutyEmployee(Long empId) {
+        EmployeeBriefVO emp = systemFacadeService.findEmployee(empId);
+        if (emp == null) {
             throw new BusinessException("值班人不存在");
         }
-        if (!Objects.equals(1, emp.getStatus())) {
+        if (!Objects.equals(EnableStatusEnum.ENABLED.getCode(), emp.getStatus())) {
             throw new BusinessException("值班人「" + emp.getEmpName() + "」不在职（离职/停职员工不能排总值班）");
         }
         return emp;
     }
 
-    private String resolveDeptName(SysEmployee emp) {
+    private String resolveDeptName(EmployeeBriefVO emp) {
         if (TextUtil.hasText(emp.getDeptName())) {
             return emp.getDeptName();
         }
         if (emp.getDeptId() == null) {
             return null;
         }
-        SysDepartment dept = sysDepartmentMapper.selectById(emp.getDeptId());
+        DeptBriefVO dept = systemFacadeService.findDepartment(emp.getDeptId());
         return dept == null ? null : dept.getDeptName();
     }
 

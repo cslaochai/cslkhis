@@ -2,10 +2,6 @@ import request from './request'
 
 // ========== 检查管理 ==========
 
-// 查询检查记录列表
-export function getInspectionRecordList(params) {
-  return request.post('/medicaltech/inspection/list', params)
-}
 // 分页查询检查记录列表
 export function getInspectionRecordListPage(params) {
   return request.post('/medicaltech/inspection/listPage', params)
@@ -101,19 +97,9 @@ export function rejectSpecimen(recordId, reason) {
 
 // ========== 报告管理 ==========
 
-// 查询报告列表
-export function getReportList(params) {
-  return request.post('/medicaltech/report/list', params)
-}
-
 // 获取报告详情
 export function getReportDetail(reportId) {
   return request.get('/medicaltech/report/getById', { params: { reportId } })
-}
-
-// 发布报告
-export function publishReport(reportId, publishBy) {
-  return request.post('/medicaltech/report/publish', { reportId, publishBy })
 }
 
 // ========== 危急值管理 ==========
@@ -172,10 +158,6 @@ export function pathologyUpsert(data) {
 // 标本接收
 export function pathologyReceive(data) {
   return request.post('/medicaltech/pathology/receive', data)
-}
-// 主单流程推进
-export function pathologyProcess(data) {
-  return request.post('/medicaltech/pathology/process', data)
 }
 // 蜡块登记
 export function pathologyBlockUpsert(data) {
@@ -423,10 +405,6 @@ export function getRadioReportListPage(params) {
 export function getRadioReportDetailByRecordId(recordId) {
   return request.get('/medicaltech/radiology/report/getDetailByRecordId', { params: { recordId } })
 }
-// 详情（按报告）
-export function getRadioReportDetailByReportId(reportId) {
-  return request.get('/medicaltech/radiology/report/getDetailByReportId', { params: { reportId } })
-}
 // 保存草稿
 export function saveRadioReportDraft(data) {
   return request.post('/medicaltech/radiology/report/saveDraft', data)
@@ -451,26 +429,12 @@ export function publishRadioReport(reportId) {
 export function getRadioTemplateSelectList(modality) {
   return request.get('/medicaltech/radiology/template/selectList', { params: { modality } })
 }
-// 模板列表（维护用，含停用）
-export function getRadioTemplateList() {
-  return request.get('/medicaltech/radiology/template/list')
-}
-export function radioTemplateUpsert(data) {
-  return request.post('/medicaltech/radiology/template/upsert', data)
-}
-export function radioTemplateDelete(id) {
-  return request.delete('/medicaltech/radiology/template/deleteById', { params: { id } })
-}
 
 // ========== 检查胶片量方与发放（sql/138，菜单 415）==========
 
 // 胶片用量分页。params: { pageNum, pageSize, keyword?, recordId?, filmStatus?, chargeFlag?, startDate?, endDate? }
 export function getExamFilmListPage(params) {
   return request.post('/medicaltech/examFilm/listPage', params)
-}
-// 某一次检查的全部胶片
-export function getExamFilmByRecordId(recordId) {
-  return request.get('/medicaltech/examFilm/listByRecordId', { params: { recordId } })
 }
 // 汇总：张数 / 金额 / 已记账金额（不传日期=今天）
 export function getExamFilmStats(startDate, endDate) {
@@ -524,10 +488,6 @@ export function getEcgDetailByRecordId(recordId) {
 export function ecgCheckIn(recordId) {
   return request.post('/medicaltech/ecg/checkIn', null, { params: { recordId } })
 }
-// 波形采集（设备推送路径）：waveData 为 12 导联 JSON 字符串
-export function ecgCollectWave(data) {
-  return request.post('/medicaltech/ecg/collectWave', data)
-}
 // 模拟采集（演示/联调）：rhythmCode 1窦性 2窦速 3窦缓 4房颤 5室早
 export function ecgSimulateWave(data) {
   return request.post('/medicaltech/ecg/simulateWave', data)
@@ -563,14 +523,4 @@ export function ecgPublish(reportId) {
 // 报告模板下拉（ecgType 可空，空=全部，通用模板始终可选）
 export function getEcgTemplateSelectList(ecgType) {
   return request.get('/medicaltech/ecg/template/selectList', { params: { ecgType } })
-}
-// 模板列表（维护用，含停用）
-export function getEcgTemplateList() {
-  return request.get('/medicaltech/ecg/template/list')
-}
-export function ecgTemplateUpsert(data) {
-  return request.post('/medicaltech/ecg/template/upsert', data)
-}
-export function ecgTemplateDelete(id) {
-  return request.delete('/medicaltech/ecg/template/deleteById', { params: { id } })
 }

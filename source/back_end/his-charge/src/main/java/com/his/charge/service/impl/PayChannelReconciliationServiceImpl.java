@@ -18,7 +18,8 @@ import com.his.common.enums.PayChannelEnum;
 import com.his.common.enums.PaymentMethodEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
-import com.his.pay.config.AlipayProperties;
+import com.his.spi.service.AlipayChannelConfigFacadeService;
+import com.his.spi.vo.AlipayChannelConfigVO;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,12 +47,13 @@ public class PayChannelReconciliationServiceImpl extends ServiceImpl<BizPayChann
         implements PayChannelReconciliationService {
 
     private final BizPaymentTxnMapper bizPaymentTxnMapper;
-    private final AlipayProperties alipayProperties;
+    private final AlipayChannelConfigFacadeService alipayChannelConfigFacadeService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int importChannelBill(Integer channel, LocalDate billDate) {
-        if (!alipayProperties.isEnabled() && Objects.equals(channel, PayChannelEnum.ALIPAY.getCode())) {
+        AlipayChannelConfigVO alipayConfig = alipayChannelConfigFacadeService.getChannelConfig();
+        if (!alipayConfig.isEnabled() && Objects.equals(channel, PayChannelEnum.ALIPAY.getCode())) {
             // 渠道关闭时根本发不出支付宝请求，此时放过去只会在 SDK 那一步炸成 500，
             // 现象与「医院系统坏了」一样，而真因是配置没打开
             throw new BusinessException(
@@ -67,7 +69,7 @@ public class PayChannelReconciliationServiceImpl extends ServiceImpl<BizPayChann
                 log.warn("[微信支付对账] 拉取微信账单完整实现待补");
                 bills = new ArrayList<>();
             } else if (Objects.equals(channel, PayChannelEnum.ALIPAY.getCode())) {
-                bills = fetchAlipayBill(billDate);
+                bills = fetchAlipayBill(billDate, alipayConfig);
             } else {
                 throw new BusinessException("不支持的对账渠道：" + PayChannelEnum.getLabelOrUnknown(channel));
             }
@@ -151,15 +153,15 @@ public class PayChannelReconciliationServiceImpl extends ServiceImpl<BizPayChann
         log.info("[对账] 手工登记渠道流水 channel={} tradeNo={} amount={}", dto.getChannel(), dto.getChannelTradeNo(), dto.getAmount());
     }
 
-    private List<BizPayChannelBill> fetchAlipayBill(LocalDate billDate) throws AlipayApiException {
+    private List<BizPayChannelBill> fetchAlipayBill(LocalDate billDate, AlipayChannelConfigVO alipayConfig) throws AlipayApiException {
         log.info("[支付宝对账] 拉取支付宝账单 date={}", billDate);
 
         AlipayClient client = new DefaultAlipayClient(
-                alipayProperties.getGatewayUrl(),
-                alipayProperties.getAppId(),
-                alipayProperties.getPrivateKey(),
+                alipayConfig.getGatewayUrl(),
+                alipayConfig.getAppId(),
+                alipayConfig.getPrivateKey(),
                 "json", "UTF-8",
-                alipayProperties.getAlipayPublicKey(),
+                alipayConfig.getAlipayPublicKey(),
                 "RSA2"
         );
 

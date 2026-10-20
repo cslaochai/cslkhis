@@ -17,8 +17,8 @@ import com.his.patient.service.PatientHealthProfileService;
 import com.his.patient.support.PatientProfileValidator;
 import com.his.patient.vo.*;
 import com.his.common.entity.CurrentUser;
-import com.his.system.entity.SysDictData;
-import com.his.system.service.DictCacheService;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.DictItemVO;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -67,7 +67,7 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
 
     private final BizPatientContactMapper bizPatientContactMapper;
 
-    private final DictCacheService dictCacheService;
+    private final SystemFacadeService systemFacadeService;
 
     /* ==================== 读 ==================== */
 
@@ -665,8 +665,8 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
 
     /* ---- 与患者关系字典 ---- */
 
-    private List<SysDictData> relationDict() {
-        return dictCacheService.getDictDataByType(RELATION_DICT);
+    private List<DictItemVO> relationDict() {
+        return systemFacadeService.listDictItems(RELATION_DICT);
     }
 
     /**
@@ -678,7 +678,7 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
         }
         return relationDict().stream()
                 .filter(d -> String.valueOf(code).equals(d.getDictValue()))
-                .map(SysDictData::getDictLabel)
+                .map(DictItemVO::getDictLabel)
                 .findFirst()
                 .orElse("");
     }
@@ -704,10 +704,10 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
      * 而且落 null 会让这条联系人彻底没法在页面上维护。
      */
     private Integer relationCode(String text) {
-        List<SysDictData> dict = relationDict();
+        List<DictItemVO> dict = relationDict();
         if (TextUtil.hasText(text) && dict != null) {
             String t = text.trim();
-            for (SysDictData d : dict) {
+            for (DictItemVO d : dict) {
                 if (t.equals(d.getDictLabel()) || t.equals(d.getDictValue())) {
                     try {
                         return Integer.valueOf(d.getDictValue());

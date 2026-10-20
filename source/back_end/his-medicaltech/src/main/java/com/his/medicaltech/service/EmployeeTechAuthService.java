@@ -1,5 +1,6 @@
 package com.his.medicaltech.service;
 
+import com.his.spi.dto.TechAuthGateDTO;
 import com.his.common.base.PageResult;
 import com.his.medicaltech.dto.*;
 import com.his.medicaltech.entity.SysEmployeeTechAuth;

@@ -22,7 +22,6 @@ import com.his.emr.service.ArchiveBorrowService;
 import com.his.emr.vo.ArchiveBorrowStatsVO;
 import com.his.emr.vo.ArchiveBorrowVO;
 import com.his.emr.vo.MessagePayloadVO;
-import com.his.system.entity.SysMessage;
 import com.his.common.enums.BizTypeEnum;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.service.SysMessageService;
@@ -234,10 +233,7 @@ public class ArchiveBorrowServiceImpl extends ServiceImpl<BizArchiveBorrowMapper
         for (BizArchiveBorrow b : overdueList) {
             try {
                 // 每张单每天最多一条：定时 + 手动补跑共用，必须可重入
-                long todaySent = sysMessageService.count(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysMessage>()
-                        .eq(SysMessage::getBizType, BizTypeEnum.ARCHIVE_BORROW.getType())
-                        .eq(SysMessage::getBizId, b.getId())
-                        .ge(SysMessage::getSendTime, sinceToday));
+                long todaySent = sysMessageService.countSentSince(BizTypeEnum.ARCHIVE_BORROW.getType(), b.getId(), sinceToday);
                 if (todaySent > 0) {
                     continue;
                 }

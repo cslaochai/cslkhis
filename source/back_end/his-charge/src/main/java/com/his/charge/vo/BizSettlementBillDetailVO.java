@@ -5,6 +5,7 @@ package com.his.charge.vo;
 
 import com.his.charge.entity.BizPaymentTxn;
 import com.his.charge.entity.BizSettlementBillItem;
+import com.his.spi.vo.BizSettlementBillVO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 

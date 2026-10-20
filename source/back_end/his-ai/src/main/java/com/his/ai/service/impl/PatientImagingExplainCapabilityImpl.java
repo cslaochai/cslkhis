@@ -19,7 +19,7 @@ import com.his.medicaltech.entity.BizReport;
 import com.his.common.enums.ReportStatusEnum;
 import com.his.common.enums.ReportTypeEnum;
 import com.his.medicaltech.mapper.BizReportMapper;
-import com.his.patient.service.PatientFacadeService;
+import com.his.spi.service.PatientFacadeService;
 import com.his.common.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;

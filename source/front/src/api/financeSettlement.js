@@ -63,8 +63,3 @@ export function dayAudit(data) {
 export function reconcile(date) {
   return request.get('/settlement/reconcile', { params: { date } })
 }
-
-/** 科室收入（末行为无科室归属） */
-export function deptIncome(date) {
-  return request.get('/settlement/deptIncome', { params: { date } })
-}

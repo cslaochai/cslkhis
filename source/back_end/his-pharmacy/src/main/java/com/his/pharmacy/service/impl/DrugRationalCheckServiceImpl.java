@@ -12,7 +12,7 @@ import com.his.common.enums.MassUnitEnum;
 import com.his.pharmacy.mapper.SysDrugDoseLimitMapper;
 import com.his.pharmacy.mapper.SysDrugInteractionMapper;
 import com.his.pharmacy.service.DrugRationalCheckService;
-import com.his.pharmacy.support.DosageTextParser;
+import com.his.system.support.DosageTextParser;
 import com.his.pharmacy.vo.DrugRationalGroupVO;
 import com.his.pharmacy.vo.DrugRationalHitVO;
 import lombok.RequiredArgsConstructor;

@@ -5,7 +5,7 @@ import com.his.common.util.NumUtil;
 import com.his.common.support.CanonicalText;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.his.sign.vo.SignSubject;
+import com.his.spi.vo.SignSubject;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.system.service.SignableContentService;

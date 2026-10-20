@@ -2,7 +2,7 @@ package com.his.emr.vo;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.his.system.vo.DrugRationalHitVO;
+import com.his.pharmacy.vo.DrugRationalHitVO;
 import lombok.Data;
 
 import java.util.List;

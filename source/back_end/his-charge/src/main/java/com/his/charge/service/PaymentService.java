@@ -1,7 +1,7 @@
 package com.his.charge.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.his.charge.dto.BillPayDTO;
+import com.his.spi.dto.BillPayDTO;
 import com.his.charge.dto.BillRefundDTO;
 import com.his.charge.dto.PaymentTxnPageQueryDTO;
 import com.his.charge.entity.BizPaymentTxn;

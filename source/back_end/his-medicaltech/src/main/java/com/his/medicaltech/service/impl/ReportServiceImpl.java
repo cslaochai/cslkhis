@@ -1,9 +1,9 @@
 package com.his.medicaltech.service.impl;
 
-import com.his.appoint.service.AppointFacadeService;
-import com.his.charge.service.ChargeFacadeService;
-import com.his.appoint.vo.BizAppointInfoListVO;
-import com.his.charge.vo.BizSettlementBillVO;
+import com.his.spi.service.RegistFacadeService;
+import com.his.spi.service.ChargeFacadeService;
+import com.his.spi.vo.BizAppointInfoListVO;
+import com.his.spi.vo.BizSettlementBillVO;
 import com.his.medicaltech.service.ReportService;
 import com.his.medicaltech.vo.ChargeStatsVO;
 import com.his.medicaltech.vo.DrugStatsVO;
@@ -22,12 +22,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ReportServiceImpl implements ReportService {
 
-    private final AppointFacadeService appointFacadeService;
+    private final RegistFacadeService registFacadeService;
     private final ChargeFacadeService chargeFacadeService;
 
     @Override
     public OutpatientStatsVO getOutpatientStats(String startDate, String endDate) {
-        List<BizAppointInfoListVO> registList = appointFacadeService.listRegists(startDate, endDate);
+        List<BizAppointInfoListVO> registList = registFacadeService.listRegists(startDate, endDate);
 
         long totalCount = registList.size();
         long maleCount = registList.stream().filter(r -> r.getGender() != null && r.getGender() == 1).count();

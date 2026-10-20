@@ -1,9 +1,9 @@
 package com.his.sign.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.sign.dto.SignCertIssueDTO;
+import com.his.spi.dto.SignCertIssueDTO;
 import com.his.sign.dto.SignCertPageQueryDTO;
-import com.his.sign.dto.SignCertRevokeDTO;
+import com.his.spi.dto.SignCertRevokeDTO;
 import com.his.sign.entity.SysSignCert;
 import com.his.sign.vo.SignCertVO;
 

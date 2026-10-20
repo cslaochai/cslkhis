@@ -2,7 +2,7 @@ package com.his.ai.service;
 
 import com.his.ai.dto.Icd10SelectListDTO;
 import com.his.ai.vo.Icd10SelectListVO;
-import com.his.system.entity.SysIcd10;
+import com.his.spi.vo.Icd10BriefVO;
 
 import java.util.List;
 import java.util.Map;
@@ -13,8 +13,8 @@ public interface Icd10RecallService {
     /**
      * 供能力层构造「编码 → 实体」索引，用于输出校验
      */
-    public static Map<String, SysIcd10> indexByCode(List<RecallHit> hits) {
-        Map<String, SysIcd10> index = new ConcurrentHashMap<>();
+    public static Map<String, Icd10BriefVO> indexByCode(List<RecallHit> hits) {
+        Map<String, Icd10BriefVO> index = new ConcurrentHashMap<>();
         for (RecallHit hit : hits) {
             index.put(hit.code().getIcdCode(), hit.code());
         }
@@ -23,17 +23,17 @@ public interface Icd10RecallService {
 
     List<RecallHit> recall(String noteText, Integer topNOverride);
 
-    List<SysIcd10> activeCodes();
+    List<Icd10BriefVO> activeCodes();
 
     void refresh();
 
-    List<SysIcd10> search(String keyword, int limit);
+    List<Icd10BriefVO> search(String keyword, int limit);
 
     List<Icd10SelectListVO> selectOptions(Icd10SelectListDTO selectListDTO);
 
     /**
      * 一次召回命中
      */
-    public record RecallHit(SysIcd10 code, int score) {
+    public record RecallHit(Icd10BriefVO code, int score) {
     }
 }

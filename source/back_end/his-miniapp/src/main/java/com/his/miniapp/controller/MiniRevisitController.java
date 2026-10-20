@@ -1,16 +1,16 @@
 package com.his.miniapp.controller;
 
-import com.his.appoint.dto.AppointUpsertDTO;
-import com.his.appoint.dto.RevisitFeePreviewDTO;
-import com.his.appoint.service.AppointFacadeService;
-import com.his.appoint.vo.BizAppointInfoListVO;
-import com.his.appoint.vo.RevisitFeePreviewVO;
-import com.his.appoint.vo.RevisitRecordSelectVO;
+import com.his.spi.dto.AppointUpsertDTO;
+import com.his.spi.dto.RevisitFeePreviewDTO;
+import com.his.spi.service.AppointFacadeService;
+import com.his.spi.vo.BizAppointInfoListVO;
+import com.his.spi.vo.RevisitFeePreviewVO;
+import com.his.spi.vo.RevisitRecordSelectVO;
 import com.his.common.base.Result;
 import com.his.common.enums.AppointSourceEnum;
 import com.his.common.enums.RevisitSourceEnum;
 import com.his.common.enums.VisitTypeEnum;
-import com.his.patient.service.PatientFacadeService;
+import com.his.spi.service.PatientFacadeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

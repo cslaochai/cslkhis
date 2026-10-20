@@ -1,10 +1,8 @@
 package com.his.appoint.support;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.constant.SystemConfigKeyConst;
 import com.his.common.util.TextUtil;
-import com.his.system.entity.SysConfig;
-import com.his.system.mapper.SysConfigMapper;
+import com.his.spi.service.SystemFacadeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -27,7 +25,7 @@ public class EmergencyObservationPolicy {
 
     private static final long CONFIG_CACHE_TTL_MS = 60_000L;
 
-    private final SysConfigMapper sysConfigMapper;
+    private final SystemFacadeService systemFacadeService;
 
     private volatile int warnHours = DEFAULT_WARN_HOURS;
     private volatile int maxHours = DEFAULT_MAX_HOURS;
@@ -75,11 +73,10 @@ public class EmergencyObservationPolicy {
     }
 
     private void readInto(String key, java.util.function.IntConsumer setter) {
-        SysConfig config = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
-                .eq(SysConfig::getConfigKey, key).last("LIMIT 1"));
-        if (config != null && TextUtil.hasText(config.getConfigValue())) {
+        String value = systemFacadeService.findConfigValue(key);
+        if (TextUtil.hasText(value)) {
             // 配成 0 或负数等于"进留观就报警"，榜会被瞬间填满、真该看的那条反而没人看
-            setter.accept(Math.max(Integer.parseInt(config.getConfigValue().trim()), 1));
+            setter.accept(Math.max(Integer.parseInt(value.trim()), 1));
         }
     }
 

@@ -6,16 +6,6 @@ export function getAnesthesiaVisitListPage(params) {
     return request.get('/patient/inpatient/anesthesia/visitListPage', {params})
 }
 
-// 术前访视详情
-export function getAnesthesiaVisitDetail(visitId) {
-    return request.get('/patient/inpatient/anesthesia/visitGetDetailById', {params: {visitId}})
-}
-
-// 某台手术的术前访视（没有则 data 为 null）
-export function getAnesthesiaVisitByApply(applyId) {
-    return request.get('/patient/inpatient/anesthesia/visitGetByApply', {params: {applyId}})
-}
-
 // 保存术前访视（新增/修改草稿），返回访视单号
 export function saveAnesthesiaVisit(data) {
     return request.post('/patient/inpatient/anesthesia/visitSave', data)
@@ -43,11 +33,6 @@ export function getAnesthesiaRecordDetail(recordId) {
     return request.get('/patient/inpatient/anesthesia/recordGetDetailById', {params: {recordId}})
 }
 
-// 某台手术的麻醉记录单（没有则 data 为 null）
-export function getAnesthesiaRecordByApply(applyId) {
-    return request.get('/patient/inpatient/anesthesia/recordGetByApply', {params: {applyId}})
-}
-
 // 开立麻醉记录单（返回麻醉记录单号）
 export function createAnesthesiaRecord(data) {
     return request.post('/patient/inpatient/anesthesia/recordCreate', data)
@@ -63,19 +48,9 @@ export function addAnesthesiaVital(data) {
     return request.post('/patient/inpatient/anesthesia/addVital', data)
 }
 
-// 生命体征列表
-export function listAnesthesiaVitals(recordId) {
-    return request.get('/patient/inpatient/anesthesia/listVitals', {params: {recordId}})
-}
-
 // 追加一条麻醉用药（仅「记录中」可加）
 export function addAnesthesiaMed(data) {
     return request.post('/patient/inpatient/anesthesia/addMed', data)
-}
-
-// 麻醉用药列表
-export function listAnesthesiaMeds(recordId) {
-    return request.get('/patient/inpatient/anesthesia/listMeds', {params: {recordId}})
 }
 
 // 提交麻醉记录（自动联动计费，返回 OperationChargeSummary）
@@ -105,16 +80,6 @@ export function getPacuListPage(params) {
     return request.get('/patient/inpatient/pacu/listPage', {params})
 }
 
-// PACU 详情
-export function getPacuDetail(pacuId) {
-    return request.get('/patient/inpatient/pacu/getDetailById', {params: {pacuId}})
-}
-
-// 某条麻醉记录的 PACU 复苏单（没有则 data 为 null）
-export function getPacuByRecord(recordId) {
-    return request.get('/patient/inpatient/pacu/getByRecord', {params: {recordId}})
-}
-
 // 入 PACU 登记（返回复苏单号）
 export function enterPacu(data) {
     return request.post('/patient/inpatient/pacu/enter', data)
@@ -128,11 +93,6 @@ export function scorePacu(data) {
 // 出 PACU（自动联动计费）
 export function leavePacu(data) {
     return request.post('/patient/inpatient/pacu/leave', data)
-}
-
-// PACU 计费（失败项重试）
-export function chargePacu(data) {
-    return request.post('/patient/inpatient/pacu/charge', data)
 }
 
 // 在室人数
@@ -152,11 +112,6 @@ export function getFollowupListPage(params) {
 // 随访详情（含并发症字典 adverseItemOptions）
 export function getFollowupDetail(id) {
     return request.get('/patient/inpatient/anesthesiaFollowup/getDetailById', {params: {id}})
-}
-
-// 某条麻醉记录的全部随访（按轮次升序）
-export function getFollowupListByRecord(recordId) {
-    return request.get('/patient/inpatient/anesthesiaFollowup/listByRecord', {params: {recordId}})
 }
 
 // 新增/修改随访草稿（返回随访单号）

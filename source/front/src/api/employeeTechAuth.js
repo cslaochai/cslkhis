@@ -7,16 +7,6 @@ export function getTechAuthListPage(data) {
   return request.post('/system/techAuth/listPage', data)
 }
 
-// 授权详情
-export function getTechAuthById(id) {
-  return request.get('/system/techAuth/getById', { params: { id } })
-}
-
-// 按人查授权（员工档案、开单提示共用，只要登录）
-export function getTechAuthByEmployee(employeeId) {
-  return request.get('/system/techAuth/listByEmployee', { params: { employeeId } })
-}
-
 // 当前登录人的三类授权
 export function getMyTechAuth() {
   return request.get('/system/techAuth/mine')

@@ -12,16 +12,6 @@ import request from './request'
 
 // ========== 运维 ==========
 
-// AI 运行时状态（只读配置快照，不产生模型调用费用）
-export function getAiHealthCheck() {
-    return request.get('/ai/healthCheck')
-}
-
-// 刷新 AI 配置与 ICD 码表缓存
-export function refreshAiConfig() {
-    return request.post('/ai/configRefresh')
-}
-
 // ========== ICD-10 智能编码 ==========
 
 // 推荐 ICD-10 编码
@@ -31,26 +21,9 @@ export function predictIcd10(params) {
     return request.post('/ai/icd10/predict', params)
 }
 
-// 检索 ICD-10 编码下拉选项（纯字典查询，不调用模型）
-export function selectIcd10List(params) {
-    return request.post('/ai/icd10/selectList', params)
-}
-
 // ========== 处方合理性审核 ==========
 
-// 执行处方审核
-// params: { prescriptionId, saveResult? }  saveResult=false 时只审核不落库
-export function executeDrugAudit(params) {
-    return request.post('/ai/drugAudit/execute', params)
-}
-
 // ========== 病历内涵质控 ==========
-
-// 执行病历内涵质控
-// params: { recordId, saveResult? }
-export function executeEmrQc(params) {
-    return request.post('/ai/emrQc/execute', params)
-}
 
 // ========== 调用审计 ==========
 
@@ -169,13 +142,6 @@ export function ingestKnowledgeDoc(params) {
     return request.post('/ai/knowledge/ingest', params)
 }
 
-// 上传知识文件（自动解析；只保存不建索引；支持 pdf/docx/txt/md，≤20MB）
-// formData: { file, title?, category?, version?, sourceName? }  data 为 KnowledgeDocListVO（含 id / chunkCount，不含原文）
-export function uploadKnowledgeFile(formData) {
-    // 与 transcribeVoice 同口径：请求级显式声明 multipart，axios 才会让浏览器自己带 boundary 发原始表单
-    return request.post('/ai/knowledge/upload', formData, {headers: {'Content-Type': 'multipart/form-data'}})
-}
-
 // 批量上传知识文件（异步解析，返回导入任务列表；支持多文件，≤20MB/个）
 // formData: { files: File[] }  data 为 KnowledgeImportTaskVO[]（初始状态均为解析中）
 export function submitKnowledgeImport(formData) {
@@ -264,11 +230,6 @@ export function listKnowledgeQueryLog(params) {
 // params: { id, feedback }
 export function feedbackKnowledgeQueryLog(params) {
     return request.post('/ai/knowledge/queryLog/feedback', params)
-}
-
-// 全量重建向量索引（灾难恢复用，正常流程不再暴露入口）
-export function rebuildKnowledgeIndex() {
-    return request.post('/ai/knowledge/rebuild')
 }
 
 // ========== 知识库离线评测（评测集 + recall@k / MRR） ==========

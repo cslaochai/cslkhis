@@ -7,8 +7,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.NurseScheduleChangeTypeEnum;
 import com.his.common.util.TextUtil;
 import com.his.schedule.dto.NurseScheduleLogQueryDTO;
-import com.his.schedule.entity.BizSchedule;
 import com.his.schedule.entity.BizNurseScheduleLog;
+import com.his.schedule.entity.BizSchedule;
 import com.his.schedule.mapper.BizNurseScheduleLogMapper;
 import com.his.schedule.mapper.BizScheduleMapper;
 import com.his.schedule.service.NurseScheduleLogService;
@@ -28,7 +28,9 @@ import java.util.List;
 public class NurseScheduleLogServiceImpl extends ServiceImpl<BizNurseScheduleLogMapper, BizNurseScheduleLog>
         implements NurseScheduleLogService {
 
-    /** 留痕原因列宽：超长截断，避免原始报错塞进原因列把整笔业务顶成 500 */
+    /**
+     * 留痕原因列宽：超长截断，避免原始报错塞进原因列把整笔业务顶成 500
+     */
     private static final int W_REASON = 200;
 
     private final BizScheduleMapper bizScheduleMapper;

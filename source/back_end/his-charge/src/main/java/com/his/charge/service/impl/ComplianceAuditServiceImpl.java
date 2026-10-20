@@ -4,8 +4,9 @@ package com.his.charge.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.appoint.service.AppointFacadeService;
-import com.his.appoint.vo.RegistBriefVO;
+import com.his.spi.service.RegistFacadeService;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.RegistBriefVO;
 import com.his.charge.config.ComplianceProperties;
 import com.his.charge.dto.*;
 import com.his.charge.entity.*;
@@ -26,9 +27,8 @@ import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
-import com.his.medicaltech.vo.LabResultBriefVO;
-import com.his.system.entity.SysIcd10;
-import com.his.system.mapper.SysIcd10Mapper;
+import com.his.spi.vo.Icd10BriefVO;
+import com.his.spi.vo.LabResultBriefVO;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
@@ -57,9 +57,9 @@ public class ComplianceAuditServiceImpl extends ServiceImpl<BizComplianceAuditMa
 
     private final BizInsuranceSettlementMapper bizInsuranceSettlementMapper;
 
-    private final AppointFacadeService appointFacadeService;
+    private final RegistFacadeService registFacadeService;
 
-    private final SysIcd10Mapper sysIcd10Mapper;
+    private final SystemFacadeService systemFacadeService;
 
     private final BizSettlementDiagnosisMapper bizSettlementDiagnosisMapper;
 
@@ -556,10 +556,9 @@ public class ComplianceAuditServiceImpl extends ServiceImpl<BizComplianceAuditMa
     }
 
     private Set<String> loadEnabledIcdCodes() {
-        List<SysIcd10> list = sysIcd10Mapper.selectList(new LambdaQueryWrapper<SysIcd10>()
-                .eq(SysIcd10::getStatus, 1));
+        List<Icd10BriefVO> list = systemFacadeService.listActiveIcd10();
         Set<String> codes = new HashSet<>();
-        for (SysIcd10 icd : list) {
+        for (Icd10BriefVO icd : list) {
             if (TextUtil.hasText(icd.getIcdCode())) {
                 codes.add(icd.getIcdCode().toUpperCase());
             }
@@ -584,7 +583,7 @@ public class ComplianceAuditServiceImpl extends ServiceImpl<BizComplianceAuditMa
         int window = complianceProperties.getReadmitWindowDays();
         LocalDateTime baseline = null;
         if (settlement.getRegistId() != null) {
-            RegistBriefVO regist = appointFacadeService.findRegist(settlement.getRegistId());
+            RegistBriefVO regist = registFacadeService.findRegist(settlement.getRegistId());
             if (regist != null && regist.getVisitDate() != null) {
                 baseline = TimeUtil.dayStart(regist.getVisitDate());
             }

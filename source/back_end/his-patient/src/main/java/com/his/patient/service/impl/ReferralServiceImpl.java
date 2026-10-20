@@ -17,13 +17,11 @@ import com.his.patient.mapper.BizReferralMapper;
 import com.his.patient.service.ReferralService;
 import com.his.patient.vo.*;
 import com.his.common.entity.CurrentUser;
-import com.his.system.entity.SysConfig;
-import com.his.system.entity.SysMessage;
 import com.his.common.enums.BizTypeEnum;
-import com.his.system.mapper.SysConfigMapper;
+import com.his.spi.service.SystemFacadeService;
 import com.his.system.service.DeptScopeService;
 import com.his.system.service.DictCacheService;
-import com.his.system.service.DutyRosterService;
+import com.his.schedule.service.DutyRosterService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
@@ -62,7 +60,7 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
      */
     private final DutyRosterService dutyRosterService;
     private final SysMessageService sysMessageService;
-    private final SysConfigMapper sysConfigMapper;
+    private final SystemFacadeService systemFacadeService;
     private final DeptScopeService deptScopeService;
 
     /**
@@ -299,16 +297,9 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
 
     private boolean sentWithinHours(Long referralId, Long receiverId, int hours) {
         try {
-            Long cnt = sysMessageService.lambdaQuery()
-                    .eq(SysMessage::getBizType, BizTypeEnum.DUTY_COORD.getType())
-                    .eq(SysMessage::getBizId, referralId)
-                    .eq(SysMessage::getReceiverId, receiverId)
-                    // 只跟「催办类（urgent）」判重：登记时那条 warning 是通知不是催办，
-                    // 把它算进来会让超时催办永远发不出去（同一 bizId 已被"发过"）。
-                    .eq(SysMessage::getSeverity, "urgent")
-                    .ge(SysMessage::getSendTime, LocalDateTime.now().minusHours(hours))
-                    .count();
-            return cnt != null && cnt > 0;
+            // 只跟「催办类（urgent）」判重：登记时那条 warning 是通知不是催办，
+            // 把它算进来会让超时催办永远发不出去（同一 bizId 已被"发过"）。
+            return sysMessageService.sentWithinHours(BizTypeEnum.DUTY_COORD.getType(), referralId, receiverId, "urgent", hours);
         } catch (Exception ex) {
             log.error("[双向转诊] 判重查询失败，本轮跳过 referralId={}：{}", referralId, ex.getMessage());
             return true;
@@ -317,12 +308,11 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
 
     private int dutyReferralHours() {
         try {
-            SysConfig cfg = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
-                    .eq(SysConfig::getConfigKey, SystemConfigKeyConst.DUTY_COORD_REFERRAL_PENDING_HOURS).last("LIMIT 1"));
-            if (cfg == null || !TextUtil.hasText(cfg.getConfigValue())) {
+            String configValue = systemFacadeService.findConfigValue(SystemConfigKeyConst.DUTY_COORD_REFERRAL_PENDING_HOURS);
+            if (!TextUtil.hasText(configValue)) {
                 return DUTY_REFERRAL_HOURS_FALLBACK;
             }
-            int v = Integer.parseInt(cfg.getConfigValue().trim());
+            int v = Integer.parseInt(configValue.trim());
             return v > 0 ? v : DUTY_REFERRAL_HOURS_FALLBACK;
         } catch (Exception ex) {
             return DUTY_REFERRAL_HOURS_FALLBACK;

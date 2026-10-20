@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.patient.dto.NursingAssessmentPageQueryDTO;
 import com.his.patient.entity.BizNursingAssessment;
-import com.his.patient.vo.NursingAssessmentVO;
+import com.his.spi.vo.NursingAssessmentVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;

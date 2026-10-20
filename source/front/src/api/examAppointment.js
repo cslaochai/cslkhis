@@ -42,11 +42,6 @@ export function getExamItemCandidates(params) {
   return request.get('/medicaltech/examDevice/item/selectList', { params })
 }
 
-// 设备详情（含可开展项目）
-export function getExamDeviceDetail(deviceId) {
-  return request.get('/medicaltech/examDevice/getDetailById', { params: { deviceId } })
-}
-
 export function examDeviceUpsert(data) {
   return request.post('/medicaltech/examDevice/deviceUpsert', data)
 }

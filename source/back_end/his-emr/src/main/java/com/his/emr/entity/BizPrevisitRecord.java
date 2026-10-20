@@ -10,7 +10,7 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
- * 患者端预问诊记录（G-05）。
+ * 患者端预问诊记录
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

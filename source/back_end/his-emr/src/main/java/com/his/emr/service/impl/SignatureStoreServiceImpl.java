@@ -1,13 +1,13 @@
 package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.emr.service.SignableContentService;
+import com.his.system.service.SignableContentService;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.enums.SignStatusEnum;
 import com.his.emr.entity.BizEmrSignature;
-import com.his.emr.entity.SysSignCert;
+import com.his.sign.entity.SysSignCert;
 import com.his.emr.mapper.BizEmrSignatureMapper;
-import com.his.emr.mapper.SysSignCertMapper;
+import com.his.sign.mapper.SysSignCertMapper;
 import com.his.emr.service.SignatureStoreService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

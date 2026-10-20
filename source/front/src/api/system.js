@@ -1,9 +1,6 @@
 import request from './request'
 
 // ========== 药品管理 ==========
-export function getDrugListPage(params) {
-    return request.post('/system/drug/listPage', params)
-}
 
 export function getDrugSelectList(params) {
     return request.get('/system/drug/selectList', {params})
@@ -22,11 +19,6 @@ export function getLaboratorySelectList() {
 // 查询科室列表（分页）
 export function getDepartmentList(params) {
     return request.post('/system/department/listPage', params)
-}
-
-// 查询科室列表（不分页）
-export function getDepartmentListAll(params) {
-    return request.post('/system/department/list', params)
 }
 
 // 查询科室树
@@ -140,11 +132,6 @@ export function getEmployeeQualificationList(params) {
     return request.get('/system/employee/qualification/listByEmployee', {params})
 }
 
-// 新增/修改资格证书
-export function upsertEmployeeQualification(data) {
-    return request.post('/system/employee/qualification/qualificationUpsert', data)
-}
-
 // 批量保存资格证书（一个人的多本证书一次提交，展开与事务在后端）
 export function upsertEmployeeQualificationBatch(data) {
     return request.post('/system/employee/qualification/qualificationBatchUpsert', data)
@@ -160,11 +147,6 @@ export function deleteEmployeeQualification(id) {
 // 查询字典类型列表
 export function getDictTypeList() {
     return request.get('/system/dict/type/selectList')
-}
-
-// 获取字典类型详情
-export function getDictTypeDetail(id) {
-    return request.get('/system/dict/type/getById', {params: {typeId: id}})
 }
 
 // 新增字典类型
@@ -208,11 +190,6 @@ export function getDictDataMapList(dictTypes) {
         }
         return res
     })
-}
-
-// 获取字典数据详情
-export function getDictDataDetail(id) {
-    return request.get('/system/dict/data/detail/getById', {params: {dataId: id}})
 }
 
 // 新增字典数据
@@ -298,11 +275,6 @@ export function changePassword(data) {
     return request.post('/auth/changePassword', data)
 }
 
-// 获取当前用户角色列表
-export function getUserRoles() {
-    return request.get('/auth/roles')
-}
-
 // 切换岗位（角色 + 科室成对切换）：后端只认 sys_employee_post 里真实存在的组合，
 // 不允许「医生切到骨科、药剂师也切到骨科」这种两边分别拼出来的身份
 export function switchPost(data) {
@@ -352,11 +324,6 @@ export function saveRoleMenu(data) {
 }
 
 // ========== 菜单管理 ==========
-
-// 查询菜单列表（后端以树形返回）
-export function getMenuList(params) {
-    return request.get('/system/menu/tree', {params})
-}
 
 // 查询菜单树
 export function getMenuTree() {
@@ -467,16 +434,6 @@ export function readMessage(messageId) {
     return request.post('/system/message/read', null, {params: {messageId}})
 }
 
-// 标记所有消息已读
-export function readAllMessages() {
-    return request.post('/system/message/readAll')
-}
-
-// 按业务类型分组统计消息数（抽屉 Tab 徽标用）
-export function getMessageTypeCounts() {
-    return request.get('/system/message/typeCounts')
-}
-
 // ========== ICD-10编码 ==========
 
 // 搜索ICD-10编码
@@ -583,11 +540,6 @@ export function getPatientTagList(params) {
 // 查询患者标签列表（不分页）
 export function getPatientTagListAll(params) {
     return request.post('/system/patientTag/list', params)
-}
-
-// 获取患者标签详情
-export function getPatientTagDetail(id) {
-    return request.get('/system/patientTag/getById', {params: {tagId: id}})
 }
 
 // 新增患者标签

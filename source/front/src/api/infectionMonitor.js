@@ -14,13 +14,11 @@ import request from './request'
 // ---------------- 病例报告卡 ----------------
 export const getCaseStats = () => request.get('/emr/infection/case/stats')
 export const getCaseListPage = (params) => request.post('/emr/infection/case/listPage', params)
-export const getCaseDetail = (id) => request.get('/emr/infection/case/getDetailById', { params: { id } })
 export const caseUpsert = (data) => request.post('/emr/infection/case/upsert', data)
 export const caseAudit = (data) => request.post('/emr/infection/case/audit', data)
 
 // ---------------- 目标性监测 ----------------
 export const getMonitorListPage = (params) => request.post('/emr/infection/monitor/listPage', params)
-export const getMonitorDetail = (id) => request.get('/emr/infection/monitor/getDetailById', { params: { id } })
 export const monitorAdd = (data) => request.post('/emr/infection/monitor/add', data)
 export const monitorPunchDaily = (data) => request.post('/emr/infection/monitor/punchDaily', data)
 export const monitorRemove = (data) => request.post('/emr/infection/monitor/remove', data)

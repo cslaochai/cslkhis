@@ -1,12 +1,16 @@
 package com.his.emr.controller;
 
+import com.his.spi.dto.SignCertIssueDTO;
+import com.his.spi.dto.SignCertRevokeDTO;
+import com.his.spi.vo.SignVerifyVO;
+import com.his.spi.vo.SignatureVO;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.emr.dto.*;
 import com.his.emr.service.EmrSignatureService;
-import com.his.emr.service.SignCertService;
+import com.his.sign.service.SignCertService;
 import com.his.emr.service.SignatureCenterService;
-import com.his.emr.service.TsaService;
+import com.his.sign.service.TsaService;
 import com.his.emr.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -16,6 +20,18 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.his.sign.dto.SignCertPageQueryDTO;
+import com.his.sign.dto.TsaStatusUpsertDTO;
+import com.his.sign.dto.TsaTimeSourceDTO;
+import com.his.sign.dto.TsaTokenPageQueryDTO;
+import com.his.sign.dto.TsaTokenVerifyDTO;
+import com.his.sign.vo.SignCaProbeOutboundVO;
+import com.his.sign.vo.SignCaStatusVO;
+import com.his.sign.vo.SignCertSelectListVO;
+import com.his.sign.vo.SignCertVO;
+import com.his.sign.vo.TsaStatusVO;
+import com.his.sign.vo.TsaTokenVO;
+import com.his.sign.vo.TsaTokenVerifyVO;
 
 /**
  * 电子签名与时间戳（P5.5）。

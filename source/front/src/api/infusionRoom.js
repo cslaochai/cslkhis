@@ -10,11 +10,6 @@ export function getInfusionBoard() {
   return request({ url: '/medicaltech/infusionRoom/board', method: 'get' })
 }
 
-/** 座位图（含占用输液单摘要） */
-export function listInfusionSeats() {
-  return request({ url: '/medicaltech/infusionRoom/seats', method: 'get' })
-}
-
 /** 座位新增/修改（占用中不可改） */
 export function upsertInfusionSeat(data) {
   return request({ url: '/medicaltech/infusionRoom/seatUpsert', method: 'post', data })

@@ -31,11 +31,6 @@ export function getOperationApplyDetail(applyId) {
     return request.get('/patient/inpatient/operationApply/getDetailById', {params: {applyId}})
 }
 
-// 某次住院的全部手术申请（按发生顺序升序）
-export function getOperationApplyListByAdmission(admissionId) {
-    return request.get('/patient/inpatient/operationApply/listByAdmission', {params: {admissionId}})
-}
-
 // 发起/修改手术申请（返回手术申请单号；修改仅限「待排期」）
 export function saveOperationApply(data) {
     return request.post('/patient/inpatient/operationApply/save', data)
@@ -96,11 +91,6 @@ export function getOperationRoomUtilization(from, to) {
 // 全部手术间（含停用，管理页用；总表列只渲染启用中的）
 export function getOperationRoomAll() {
     return request.get('/patient/inpatient/operationRoom/listAll')
-}
-
-// 启用中的手术间（下拉候选；参照数据，登录即可）
-export function getOperationRoomEnabled() {
-    return request.get('/patient/inpatient/operationRoom/selectList')
 }
 
 // 新增/修改手术间

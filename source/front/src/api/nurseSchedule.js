@@ -20,11 +20,6 @@ export function getNurseUnitSelectList(params) {
   return request.get('/nursing/schedule/unitSelectList', { params })
 }
 
-// 护士下拉：该排班单元所属科室的在册护士（护士/护师）
-export function getNurseSelectList(params) {
-  return request.get('/nursing/schedule/nurseSelectList', { params })
-}
-
 // ========== 周矩阵排班 ==========
 
 // 周矩阵：行=在册护士 列=周一至周日，一次带回 cells + 本周告警 + 每日每班次在岗人数

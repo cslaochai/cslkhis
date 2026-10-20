@@ -10,7 +10,6 @@ import com.his.common.enums.MedicalInsuranceTypeEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.enums.PatientMergeStatusEnum;
-import com.his.common.enums.QueueStatusEnum;
 import com.his.system.service.RedisSequenceService;
 import com.his.common.util.SensitiveMaskUtil;
 import com.his.common.util.TextUtil;
@@ -24,15 +23,15 @@ import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.mapper.BizPatientTagRelationMapper;
 import com.his.patient.service.*;
 import com.his.patient.support.PatientProfileValidator;
-import com.his.appoint.entity.Queue;
-import com.his.appoint.mapper.QueueMapper;
-import com.his.appoint.vo.TodayVisitVO;
+import com.his.spi.dto.PatientAccountCreateDTO;
+import com.his.spi.service.RegistFacadeService;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.PatientTagBriefVO;
+import com.his.spi.vo.TodayVisitVO;
 import com.his.common.enums.PatientSearchScopeModeEnum;
 import com.his.patient.support.PatientSearchScopeResolver;
 import com.his.patient.vo.*;
 import com.his.common.entity.CurrentUser;
-import com.his.system.entity.SysPatientTag;
-import com.his.system.entity.SysUser;
 import com.his.common.enums.MaskEnum;
 import com.his.system.service.*;
 import com.his.system.support.FieldSpec;
@@ -42,7 +41,6 @@ import com.his.system.vo.SysPatientTagVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -99,7 +97,6 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
     );
     private final RedisSequenceService redisSequenceService;
     private final BizPatientTagRelationMapper bizPatientTagRelationMapper;
-    private final PatientTagService patientTagService;
     /**
      * 健康档案六组的唯一写入口。建档时把主档的「过敏史 / 既往病史 / 联系人」文本
      * 落成结构化明细并回算投影，见 {@code syncAfterPatientSave}。
@@ -108,8 +105,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
     /**
      * 患者自助注册写登录账号用：建档后同步开通患者类型的登录账号。
      */
-    private final SysUserService sysUserService;
-    private final PasswordEncoder passwordEncoder;
+    private final SystemFacadeService systemFacadeService;
     /**
      * 注册口令传输加密：前端提交的是 SM2 密文（与登录同一对公钥），这里还原成明文再交 BCrypt 落库。
      * 注册是初始口令第一次上网的场合，和登录一样不能收明文 —— 留明文口子等于登录加密白做。
@@ -124,12 +120,12 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
      */
     private final BizPatientTagRelationService bizPatientTagRelationService;
     /**
-     * 「今日就诊」提供者（实现在就诊域 his-appoint）。
+     * 「今日就诊」事实端口（实现在就诊域 his-appoint 的 spi 适配器，只读挂号队列行）。
      *
-     * <p>接口在公共模块 his-system、实现由依赖本模块的就诊域注册；
-     * 就诊域为编译期强依赖（his-web 聚合引入），实现缺失直接启动失败。
+     * <p>端口契约在公共模块 his-core-spi，实现由 his-web 聚合引入；
+     * 实现缺失直接启动失败，不做静默降级。
      */
-    private final QueueMapper queueMapper;
+    private final RegistFacadeService registFacadeService;
     /**
      * 「要不要看今日就诊」的判定（按当前登录角色的岗位性质）。
      *
@@ -319,12 +315,10 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
         }
 
         // 查询预置的静态标签
-        LambdaQueryWrapper<SysPatientTag> tagWrapper = new LambdaQueryWrapper<>();
-        tagWrapper.in(SysPatientTag::getTagName, "老年", "儿童", "幼儿");
-        List<SysPatientTag> staticTags = patientTagService.list(tagWrapper);
+        List<PatientTagBriefVO> staticTags = systemFacadeService.listPatientTagsByNames(List.of("老年", "儿童", "幼儿"));
 
         Map<String, Long> tagNameToIdMap = new HashMap<>();
-        for (SysPatientTag tag : staticTags) {
+        for (PatientTagBriefVO tag : staticTags) {
             tagNameToIdMap.put(tag.getTagName(), tag.getTagId());
         }
 
@@ -540,62 +534,12 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
      */
     private Map<Long, TodayVisitVO> loadTodayVisits() {
         try {
-            Map<Long, TodayVisitVO> visits = todayVisits();
+            Map<Long, TodayVisitVO> visits = registFacadeService.todayVisits();
             return visits != null ? visits : Collections.emptyMap();
         } catch (Exception e) {
             log.warn("今日就诊信息获取失败，本次患者搜索按普通模式返回（不置顶/不标注）：{}", e.getMessage());
             return Collections.emptyMap();
         }
-    }
-
-    private Map<Long, TodayVisitVO> todayVisits() {
-        LambdaQueryWrapper<Queue> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Queue::getVisitDate, LocalDate.now())
-                .in(Queue::getQueueStatus,
-                        QueueStatusEnum.WAITING.getCode(),
-                        QueueStatusEnum.CONSULTING.getCode(),
-                        QueueStatusEnum.COMPLETED.getCode())
-                .orderByDesc(Queue::getArriveTime);
-        List<Queue> list = queueMapper.selectList(wrapper);
-        if (list == null || list.isEmpty()) {
-            return Collections.emptyMap();
-        }
-
-        CurrentUser currentUser = UserUtils.getCurrentUser();
-        Long myEmpId = currentUser != null ? currentUser.getEmployeeId() : null;
-        Long myDeptId = currentUser != null ? currentUser.getDeptId() : null;
-
-        Map<Long, TodayVisitVO> result = new HashMap<>();
-        for (Queue q : list) {
-            if (q.getPatientId() == null) {
-                continue;
-            }
-            TodayVisitVO visit = toTodayVisit(q, myEmpId, myDeptId);
-            TodayVisitVO exist = result.get(q.getPatientId());
-            if (exist == null) {
-                result.put(q.getPatientId(), visit);
-                continue;
-            }
-            if (Boolean.TRUE.equals(visit.getMine()) && !Boolean.TRUE.equals(exist.getMine())) {
-                result.put(q.getPatientId(), visit);
-            }
-        }
-        return result;
-    }
-
-    private TodayVisitVO toTodayVisit(Queue q, Long myEmpId, Long myDeptId) {
-        TodayVisitVO visit = new TodayVisitVO();
-        visit.setPatientId(q.getPatientId());
-        visit.setStatus(q.getQueueStatus());
-        QueueStatusEnum status = q.getQueueStatus() == null
-                ? null : QueueStatusEnum.fromCode(q.getQueueStatus());
-        visit.setStatusText(status != null ? status.getLabel() : "状态(" + q.getQueueStatus() + ")");
-        visit.setDeptName(q.getDeptName());
-        visit.setDoctorName(q.getDoctorName());
-        visit.setQueueNo(q.getSequenceNo() != null ? q.getSequenceNo() + " 号" : null);
-        visit.setMine((myEmpId != null && myEmpId.equals(q.getDoctorId()))
-                || (myDeptId != null && myDeptId.equals(q.getDeptId())));
-        return visit;
     }
 
     /**
@@ -757,9 +701,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
             throw new BusinessException("该身份证已建档，请直接登录");
         }
         // 手机号账号唯一
-        LambdaQueryWrapper<SysUser> uExist = new LambdaQueryWrapper<>();
-        uExist.eq(SysUser::getUserName, dto.getPhone()).last("LIMIT 1");
-        if (sysUserService.count(uExist) > 0) {
+        if (systemFacadeService.accountNameExists(dto.getPhone())) {
             throw new BusinessException("该手机号已注册");
         }
 
@@ -789,22 +731,18 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
         this.save(patient);
 
         // 2) 登录账号（患者类型）
-        SysUser user = new SysUser();
-        user.setUserName(dto.getPhone());
-        user.setPassword(passwordEncoder.encode(rawPassword));
-        user.setRealName(dto.getPatientName());
-        user.setUserType(3);
-        user.setPatientId(patient.getId());
-        user.setStatus(1);
-        user.setCreateBy("mini-register");
-        user.setCreateTime(LocalDateTime.now());
-        sysUserService.save(user);
+        PatientAccountCreateDTO account = new PatientAccountCreateDTO();
+        account.setUserName(dto.getPhone());
+        account.setPassword(rawPassword);
+        account.setRealName(dto.getPatientName());
+        account.setPatientId(patient.getId());
+        Long userId = systemFacadeService.createPatientAccount(account);
 
         PatientRegisterVO vo = new PatientRegisterVO();
         vo.setPatientId(patient.getId());
-        vo.setUserId(user.getId());
+        vo.setUserId(userId);
         vo.setPatientNo(patient.getPatientNo());
-        vo.setUsername(user.getUserName());
+        vo.setUsername(dto.getPhone());
         return vo;
     }
 

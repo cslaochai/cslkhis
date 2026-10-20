@@ -42,19 +42,9 @@ export function listQcRuleMetric(dimension) {
   })
 }
 
-// 某质控单的问题明细
-export function listQcIssues(qcId) {
-  return request.get('/emr/qualityControl/listIssueByQc', { params: { qcId } })
-}
-
 // 待质控病历候选分页（必须先选 recordSource）
 export function listQcCandidatePage(params) {
   return request.get('/emr/qualityControl/listCandidatePage', { params })
-}
-
-// 维度字典
-export function getQcDimensionDict() {
-  return request.get('/emr/qualityControl/dimensionDict')
 }
 
 // 质控类型字典（0-综合 1~3-三维度 4-AI内涵质控）

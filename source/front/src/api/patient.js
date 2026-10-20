@@ -5,18 +5,6 @@ export function getPatientList(params) {
     return request.post('/patient/listPage', params)
 }
 
-// 搜索患者（keyword 四字段 OR 匹配：姓名/患者号/手机号/身份证号）
-export function searchPatient(keyword) {
-    return request.post('/patient/listPage', {keyword, pageNum: 1, pageSize: 50})
-        .then(res => {
-            // 后端返回分页结构 {total, records}，视图期望数组，这里做一层适配
-            if (res && res.data && Array.isArray(res.data.records)) {
-                return {...res, data: res.data.records}
-            }
-            return res
-        })
-}
-
 // 获取患者详情
 export function getPatientDetail(id) {
     return request.get('/patient/getById', {params: {patientId: id}})
@@ -25,11 +13,6 @@ export function getPatientDetail(id) {
 // 获取患者完整信息（同时带回过敏史/既往疾病史/手术外伤史/家族史）
 export function getPatientFullDetail(id) {
     return request.get('/patient/getDetailById', {params: {patientId: id}})
-}
-
-// 根据患者号查询
-export function getPatientByNo(patientNo) {
-    return request.get('/patient/getByNo', {params: {patientNo}})
 }
 
 // 新增患者
@@ -65,11 +48,6 @@ export function removePatientTag(params) {
     return request.post('/patient/tag/delete', params)
 }
 
-// 批量添加患者标签
-export function batchAddPatientTags(patientId, tags) {
-    return request.post('/patient/tag/batchAdd', {patientId, tagDTOs: tags})
-}
-
 // ==================== 健康档案（六组） ====================
 //
 // 统一形状：查询一律 POST {patientId} → 明细数组；写一律 POST xxxUpsert（id 空=新增）；
@@ -102,20 +80,12 @@ export function deletePastDisease(id) {
     return request.delete('/patient/pastDisease/deleteById', {params: {id}})
 }
 
-export function getSurgeryHistoryList(patientId) {
-    return request.post('/patient/surgeryHistory/list', {patientId})
-}
-
 export function saveSurgeryHistory(data) {
     return request.post('/patient/surgeryHistory/surgeryHistoryUpsert', data)
 }
 
 export function deleteSurgeryHistory(id) {
     return request.delete('/patient/surgeryHistory/deleteById', {params: {id}})
-}
-
-export function getFamilyHistoryList(patientId) {
-    return request.post('/patient/familyHistory/list', {patientId})
 }
 
 export function saveFamilyHistory(data) {
@@ -126,21 +96,12 @@ export function deleteFamilyHistory(id) {
     return request.delete('/patient/familyHistory/deleteById', {params: {id}})
 }
 
-// 用药史（此前后端无此链路，是六组里唯一「能看不能维护」的一组）
-export function getMedicationHistoryList(patientId) {
-    return request.post('/patient/medication/list', {patientId})
-}
-
 export function saveMedicationHistory(data) {
     return request.post('/patient/medication/medicationUpsert', data)
 }
 
 export function deleteMedicationHistory(id) {
     return request.delete('/patient/medication/deleteById', {params: {id}})
-}
-
-export function getPatientContactList(patientId) {
-    return request.post('/patient/contact/list', {patientId})
 }
 
 // 新增或修改联系人。relationship 传的是**码值**（字典 sys_patient_relation），

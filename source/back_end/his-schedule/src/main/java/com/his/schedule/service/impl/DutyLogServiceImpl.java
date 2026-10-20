@@ -7,6 +7,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.constant.DictTypeConst;
+import com.his.common.enums.BizTypeEnum;
+import com.his.common.enums.DutyLogStatusEnum;
 import com.his.common.enums.DutyShiftTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
@@ -14,18 +16,16 @@ import com.his.schedule.dto.DutyLogHandoverDTO;
 import com.his.schedule.dto.DutyLogPageQueryDTO;
 import com.his.schedule.dto.DutyLogUpsertDTO;
 import com.his.schedule.entity.BizDutyLog;
-import com.his.system.entity.SysEmployee;
-import com.his.common.enums.BizTypeEnum;
-import com.his.common.enums.DutyLogStatusEnum;
 import com.his.schedule.mapper.BizDutyLogMapper;
-import com.his.system.mapper.SysEmployeeMapper;
-import com.his.schedule.service.DictCacheService;
 import com.his.schedule.service.DutyLogService;
 import com.his.schedule.service.DutyRosterService;
-import com.his.schedule.service.SysMessageService;
-import com.his.system.utils.UserUtils;
 import com.his.schedule.vo.DutyLogVO;
 import com.his.schedule.vo.DutyOfficerVO;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.EmployeeBriefVO;
+import com.his.system.service.DictCacheService;
+import com.his.system.service.SysMessageService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -49,7 +49,7 @@ public class DutyLogServiceImpl extends ServiceImpl<BizDutyLogMapper, BizDutyLog
     private static final int DEFAULT_BACK_DAYS = 7;
     private final DictCacheService dictCacheService;
     private final BizDutyLogMapper bizDutyLogMapper;
-    private final SysEmployeeMapper sysEmployeeMapper;
+    private final SystemFacadeService systemFacadeService;
     private final DutyRosterService dutyRosterService;
     private final SysMessageService sysMessageService;
 
@@ -117,8 +117,8 @@ public class DutyLogServiceImpl extends ServiceImpl<BizDutyLogMapper, BizDutyLog
             empId = cur.getEmployeeId();
             empName = cur.getEmployeeName();
         } else {
-            SysEmployee emp = sysEmployeeMapper.selectById(empId);
-            if (emp == null || (emp.getDelFlag() != null && emp.getDelFlag() == 1)) {
+            EmployeeBriefVO emp = systemFacadeService.findEmployee(empId);
+            if (emp == null) {
                 throw new BusinessException("值班人不存在");
             }
             empName = emp.getEmpName();
@@ -195,8 +195,8 @@ public class DutyLogServiceImpl extends ServiceImpl<BizDutyLogMapper, BizDutyLog
         Long nextEmpId = dto.getHandoverEmpId();
         String nextEmpName;
         if (nextEmpId != null) {
-            SysEmployee emp = sysEmployeeMapper.selectById(nextEmpId);
-            if (emp == null || (emp.getDelFlag() != null && emp.getDelFlag() == 1)) {
+            EmployeeBriefVO emp = systemFacadeService.findEmployee(nextEmpId);
+            if (emp == null) {
                 throw new BusinessException("接班人不存在");
             }
             nextEmpName = emp.getEmpName();

@@ -1,6 +1,8 @@
 package com.his.charge.service.impl;
 
-import com.his.charge.dto.BillPayDTO;
+import com.his.spi.dto.BillPayDTO;
+import com.his.spi.dto.ChannelNotifyRecordDTO;
+import com.his.spi.dto.PayOrderCreateDTO;
 import com.his.charge.dto.QrPayCreateDTO;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.service.PaymentService;
@@ -14,10 +16,14 @@ import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.PayQrCodeUtils;
 import com.his.common.util.TextUtil;
-import com.his.pay.service.*;
-import com.his.pay.support.AggregatedQrSupport;
-import com.his.pay.support.PayQrCodeCache;
-import com.his.pay.vo.PayOrderVO;
+import com.his.spi.service.PayChannelFacadeService;
+import com.his.spi.service.PayOrderFacadeService;
+import com.his.spi.service.PayRateLimitFacadeService;
+import com.his.spi.service.QrPaySupportFacadeService;
+import com.his.spi.vo.AggPaidInfoVO;
+import com.his.spi.vo.ChannelTradeStateVO;
+import com.his.spi.vo.PayOrderCreateResultVO;
+import com.his.spi.vo.PayOrderInfoVO;
 import com.his.system.support.SystemOperatorContext;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -75,7 +81,7 @@ public class QrPayServiceImpl implements QrPayService {
 
     /**
      * 出码间隔闸（key = 前缀 + 账单ID）、收银员配额闸、查单节流闸，
-     * Redis 口径与 fail-open 策略统一收口在 {@link PayRateLimitService}，本类只定阈值与 key。
+     * Redis 口径与 fail-open 策略统一收口在 {@link PayRateLimitFacadeService}，本类只定阈值与 key。
      */
     private static final String ISSUE_GATE_KEY_PREFIX = "his:pay:qr:issue:";
     private static final String ISSUE_QUOTA_KEY_PREFIX = "his:pay:qr:quota:";
@@ -85,25 +91,19 @@ public class QrPayServiceImpl implements QrPayService {
 
     private final PaymentService paymentService;
 
-    private final PayOrderService payOrderService;
+    private final PayOrderFacadeService payOrderFacadeService;
 
-    private final AlipayChannelService alipayChannelService;
-
-    private final WxPayChannelService wxPayChannelService;
-
-    private final PayNotifyLogService payNotifyLogService;
-
-    private final PayRateLimitService payRateLimitService;
+    private final PayRateLimitFacadeService payRateLimitFacadeService;
 
     /**
-     * 码串缓存（按支付单号，聚合码一张单一个号，天然一对一）
+     * 渠道侧动作出口：验签、主动查单、状态判定与通知留痕，收款事实只认这一层的答案
      */
-    private final PayQrCodeCache payQrCodeCache;
+    private final PayChannelFacadeService payChannelFacadeService;
 
     /**
-     * 聚合支付码支撑：拼网关 URL、模拟模式下的收款登记与查单
+     * 聚合码出码与码串缓存出口（码串按支付单号缓存，聚合码一张单一个号，天然一对一）
      */
-    private final AggregatedQrSupport aggregatedQrSupport;
+    private final QrPaySupportFacadeService qrPaySupportFacadeService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -123,11 +123,11 @@ public class QrPayServiceImpl implements QrPayService {
         // 第 1 道：这张账单是不是已经有一张活着的聚合码？有就直接本地重画。
         // 位置必须在节流闸之前 —— 收银员点刷新、重开收款弹层、从现金切回扫码，最终都走这里；
         // 任何一次被闸拦下，都是把「码就在手里」说成「你点太快了」（现场看到的就是这句）。
-        // 聚合码的渠道为 null，复用按「本账单的聚合待支付单」匹配（见 PayOrderServiceImpl）
-        PayOrderVO reusable = payOrderService.reusablePending(
+        // 聚合码的渠道为 null，复用按「本账单的聚合待支付单」匹配（判据与建单同源，收在支付单端口实现里）
+        PayOrderInfoVO reusable = payOrderFacadeService.reusablePending(
                 PayOrderBizTypeEnum.OUTPATIENT_PAY.getCode(), bill.getId(), null, unpaid);
         if (reusable != null) {
-            String cachedQrCode = payQrCodeCache.get(reusable.getPayNo());
+            String cachedQrCode = qrPaySupportFacadeService.getQrCode(reusable.getPayNo());
             if (TextUtil.hasText(cachedQrCode)) {
                 return toCreateVO(bill, reusable, cachedQrCode);
             }
@@ -136,37 +136,48 @@ public class QrPayServiceImpl implements QrPayService {
         // 第 2 道 间隔闸：只有真要去生成码才需要理由。key 按账单（一张账单只有一张聚合码），
         // 点刷新、重开弹层、现金切回扫码都走第 1 道缓存，走不到这里
         String gateKey = issueGateKey(bill.getId());
-        Long retryAfter = payRateLimitService.intervalRetryAfter(gateKey, QR_ISSUE_INTERVAL_SECONDS);
+        Long retryAfter = payRateLimitFacadeService.intervalRetryAfter(gateKey, QR_ISSUE_INTERVAL_SECONDS);
         if (retryAfter != null) {
             throw new BusinessException("收款码正在重新生成，请 " + retryAfter + " 秒后再试");
         }
 
         // 第 3 道 人员配额：按收银员封顶次数，账单维度的间隔闸管不到「换个账单继续刷」
-        payRateLimitService.assertQuota(ISSUE_QUOTA_KEY_PREFIX + UserUtils.getCurrentUser().getEmployeeId(),
+        payRateLimitFacadeService.assertQuota(ISSUE_QUOTA_KEY_PREFIX + UserUtils.getCurrentUser().getEmployeeId(),
                 QR_ISSUE_QUOTA_PER_WINDOW, QR_ISSUE_QUOTA_WINDOW_SECONDS, "出码");
 
         // 本次没真把码出来就得把间隔闸的窗口退回去：建单、出码、画图任一步失败都不能让收银员干等 20 秒
         try {
-            // 聚合码：渠道为 null，渠道在支付时由网关识别确定
-            PayOrderService.CreateResult created = payOrderService.createPending(new PayOrderService.CreateSpec(
-                    PayOrderBizTypeEnum.OUTPATIENT_PAY.getCode(), bill.getId(),
-                    bill.getPatientId(), bill.getPatientName(), unpaid, null,
-                    "收费台扫码收款（聚合码）账单 " + bill.getBillNo()));
-            PayOrderVO order = created.order();
+            PayOrderCreateResultVO created = payOrderFacadeService.createPending(aggregateOrderSpec(bill, unpaid));
+            PayOrderInfoVO order = created.getOrder();
 
             // 复用命中的单：码串在缓存里，取回本地画图，不再生成
-            String qrCode = created.reused() ? payQrCodeCache.get(order.getPayNo()) : null;
+            String qrCode = created.isReused() ? qrPaySupportFacadeService.getQrCode(order.getPayNo()) : null;
             if (!TextUtil.hasText(qrCode)) {
                 // 聚合码 = 医院聚合收款页地址 + 支付单号，不进任何渠道预下单
-                qrCode = aggregatedQrSupport.buildQrContent(order.getPayNo());
-                payQrCodeCache.put(order.getPayNo(), qrCode);
+                qrCode = qrPaySupportFacadeService.buildQrContent(order.getPayNo());
+                qrPaySupportFacadeService.putQrCode(order.getPayNo(), qrCode);
             }
 
             return toCreateVO(bill, order, qrCode);
         } catch (RuntimeException e) {
-            payRateLimitService.release(gateKey);
+            payRateLimitFacadeService.release(gateKey);
             throw e;
         }
+    }
+
+    /**
+     * 聚合码建单入参：渠道留空，聚合码在患者扫码付款时才由网关识别确定渠道。
+     */
+    private PayOrderCreateDTO aggregateOrderSpec(BizSettlementBill bill, BigDecimal unpaid) {
+        PayOrderCreateDTO spec = new PayOrderCreateDTO();
+        spec.setBizType(PayOrderBizTypeEnum.OUTPATIENT_PAY.getCode());
+        spec.setBizId(bill.getId());
+        spec.setPatientId(bill.getPatientId());
+        spec.setPatientName(bill.getPatientName());
+        spec.setAmount(unpaid);
+        spec.setChannel(null);
+        spec.setRemark("收费台扫码收款（聚合码）账单 " + bill.getBillNo());
+        return spec;
     }
 
     /**
@@ -181,11 +192,11 @@ public class QrPayServiceImpl implements QrPayService {
             throw new BusinessException("缺少账单");
         }
         int bizType = PayOrderBizTypeEnum.OUTPATIENT_PAY.getCode();
-        for (PayOrderVO pending : payOrderService.listPendingByBiz(bizType, billId)) {
-            payRateLimitService.release(issueGateKey(billId));
-            payQrCodeCache.evict(pending.getPayNo());
+        for (PayOrderInfoVO pending : payOrderFacadeService.listPendingByBiz(bizType, billId)) {
+            payRateLimitFacadeService.release(issueGateKey(billId));
+            qrPaySupportFacadeService.evictQrCode(pending.getPayNo());
         }
-        payOrderService.closePendingByBiz(bizType, billId);
+        payOrderFacadeService.closePendingByBiz(bizType, billId);
     }
 
     /**

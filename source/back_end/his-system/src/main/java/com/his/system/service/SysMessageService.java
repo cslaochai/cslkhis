@@ -8,6 +8,7 @@ import com.his.system.vo.MessageTypeCountVO;
 import com.his.system.vo.SysMessageVO;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -89,4 +90,32 @@ public interface SysMessageService extends IService<SysMessage> {
      * 开单医生也可能有兜底接收人的消息，升级时一个都不能漏。
      */
     List<Long> receiverIdsOfBiz(String bizType, Long bizId);
+
+    /**
+     * 把某业务对象名下「待处理」的待办消息批量置为目标处理状态。
+     *
+     * <p>业务侧动作闭环收件箱用（会诊取消、危急值处置完成），
+     * 联动失败不回滚业务单据，由调用方按日志处理。
+     *
+     * @param targetStatus 目标处理状态（1-已处理 2-已关闭）
+     */
+    void closeTodoByBiz(String bizType, Long bizId, Integer targetStatus);
+
+    /**
+     * 同一业务单对同一收件人在时窗内是否发过指定紧急度的消息。
+     *
+     * <p>催办类动作用它判重：永久判重会让「催过一次就永远不再催」，
+     * 而挂住的等床/转诊单恰恰会越挂越久。
+     *
+     * @param severity 紧急度（催办传 urgent，只跟催办类判重，别把通知型算进来）
+     * @param hours    时窗（小时）
+     */
+    boolean sentWithinHours(String bizType, Long bizId, Long receiverId, String severity, int hours);
+
+    /**
+     * 某业务对象自指定时刻起已发的消息条数。
+     *
+     * <p>定时与手动补跑共用同一个催办入口时用它保证「每张单每天最多催一次」的可重入。
+     */
+    long countSentSince(String bizType, Long bizId, LocalDateTime since);
 }

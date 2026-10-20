@@ -6,7 +6,7 @@ import com.his.patient.dto.*;
 import com.his.patient.service.DietPlanService;
 import com.his.patient.service.MealOrderService;
 import com.his.patient.vo.*;
-import com.his.patient.vo.WardVO;
+import com.his.spi.vo.WardVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

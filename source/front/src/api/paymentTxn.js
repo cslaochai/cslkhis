@@ -9,8 +9,3 @@ import request from './request'
 export function getPaymentTxnListPage(data) {
     return request.post('/charge/paymentTxn/listPage', data)
 }
-
-// 某张账单的全部收/退流水
-export function listTxnsByBill(billId) {
-    return request.get('/charge/paymentTxn/listByBill', {params: {billId}})
-}

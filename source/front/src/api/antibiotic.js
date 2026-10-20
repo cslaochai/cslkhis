@@ -46,11 +46,6 @@ export function upsertAntibioticAuth(data) {
     return request.post('/antibiotic/authUpsert', data)
 }
 
-// 开方前越权自检（当前登录医师）：传药品 id 数组（API 层包成 DTO 入参形状，视图层零改动）
-export function checkAntibioticAuthority(drugIds) {
-    return request.post('/antibiotic/checkAuthority', {drugIds})
-}
-
 // ========== 使用监测 ==========
 
 export function listAntibioticStatsPage(params) {

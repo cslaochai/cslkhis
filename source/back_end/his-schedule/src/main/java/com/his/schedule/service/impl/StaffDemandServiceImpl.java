@@ -1,17 +1,17 @@
 package com.his.schedule.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.entity.CurrentUser;
 import com.his.common.enums.OrgUnitTypeEnum;
 import com.his.common.enums.StaffDemandSourceEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.schedule.entity.BizStaffDemand;
-import com.his.common.entity.CurrentUser;
 import com.his.schedule.mapper.BizStaffDemandMapper;
 import com.his.schedule.service.StaffDemandService;
-import com.his.system.utils.UserUtils;
 import com.his.schedule.vo.StaffDemandGapVO;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

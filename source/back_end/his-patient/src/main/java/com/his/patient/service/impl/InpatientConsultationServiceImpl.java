@@ -1,7 +1,6 @@
 package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -16,12 +15,11 @@ import com.his.patient.mapper.*;
 import com.his.patient.service.InpatientConsultationService;
 import com.his.patient.vo.ConsultationVO;
 import com.his.patient.vo.InpatientConsultInvitePayloadVO;
-import com.his.patient.vo.WardVO;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.EmployeeBriefVO;
+import com.his.spi.vo.WardVO;
 import com.his.common.entity.CurrentUser;
-import com.his.system.entity.SysEmployee;
-import com.his.system.entity.SysMessage;
 import com.his.common.enums.BizTypeEnum;
-import com.his.system.mapper.SysEmployeeMapper;
 import com.his.system.service.DeptScopeService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
@@ -67,7 +65,7 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
 
     private final SysBedMapper sysBedMapper;
 
-    private final SysEmployeeMapper sysEmployeeMapper;
+    private final SystemFacadeService systemFacadeService;
 
     private final DeptScopeService deptScopeService;
 
@@ -184,16 +182,14 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
      */
     private void notifyNewConsultation(BizConsultation entity, BizAdmission admission) {
         try {
-            List<SysEmployee> receivers = new java.util.ArrayList<>();
+            List<EmployeeBriefVO> receivers = new java.util.ArrayList<>();
             if (entity.getDoctorId() != null && entity.getDoctorId() != DOCTOR_UNSPECIFIED) {
-                SysEmployee specified = sysEmployeeMapper.selectById(entity.getDoctorId());
+                EmployeeBriefVO specified = systemFacadeService.findEmployee(entity.getDoctorId());
                 if (specified != null && Integer.valueOf(1).equals(specified.getStatus())) {
                     receivers.add(specified);
                 }
             } else {
-                receivers = sysEmployeeMapper.selectList(new LambdaQueryWrapper<SysEmployee>()
-                        .eq(SysEmployee::getDeptId, entity.getToDeptId())
-                        .eq(SysEmployee::getStatus, 1));
+                receivers = systemFacadeService.listActiveEmployeesByDept(entity.getToDeptId());
             }
             if (receivers.isEmpty()) {
                 log.warn("[会诊] 未找到会诊方收件人，站内信跳过 consultationNo={} toDeptId={} doctorId={}",
@@ -220,7 +216,7 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
             payload.setReason(entity.getReason());
             payload.setUrgent(urgent);
             String payloadJson = cn.hutool.json.JSONUtil.toJsonStr(payload);
-            for (SysEmployee receiver : receivers) {
+            for (EmployeeBriefVO receiver : receivers) {
                 sysMessageService.sendSystemMessage(receiver.getId(),
                         receiver.getEmpName() == null ? "站内用户" : receiver.getEmpName(),
                         title, content,
@@ -465,11 +461,7 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
      */
     private void closeConsultTodo(Long consultationId, int targetStatus) {
         try {
-            sysMessageService.update(new LambdaUpdateWrapper<SysMessage>()
-                    .eq(SysMessage::getBizType, BizTypeEnum.CONSULT.getType())
-                    .eq(SysMessage::getBizId, consultationId)
-                    .eq(SysMessage::getHandleStatus, 0)
-                    .set(SysMessage::getHandleStatus, targetStatus));
+            sysMessageService.closeTodoByBiz(BizTypeEnum.CONSULT.getType(), consultationId, targetStatus);
         } catch (Exception ex) {
             // 闭环联动失败不回滚业务：会诊状态是对的，只是收件箱滞后
             log.warn("[会诊] 待办消息闭环失败 consultationId={} targetStatus={}", consultationId, targetStatus, ex);

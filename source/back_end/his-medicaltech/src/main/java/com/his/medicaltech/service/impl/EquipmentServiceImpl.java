@@ -19,7 +19,7 @@ import com.his.medicaltech.entity.SysEquipment;
 import com.his.medicaltech.mapper.BizEquipmentMaintainMapper;
 import com.his.medicaltech.mapper.BizEquipmentMeteringMapper;
 import com.his.medicaltech.mapper.SysEquipmentMapper;
-import com.his.medicaltech.service.DictCacheService;
+import com.his.system.service.DictCacheService;
 import com.his.medicaltech.service.EquipmentService;
 import com.his.system.utils.UserUtils;
 import com.his.medicaltech.vo.EquipmentVO;

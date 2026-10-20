@@ -30,11 +30,11 @@ import com.his.medicaltech.support.LabCriticalValueRules;
 import com.his.medicaltech.vo.BizCriticalValueVO;
 import com.his.medicaltech.vo.CriticalValueMessagePayloadVO;
 import com.his.medicaltech.vo.CriticalValueStatsVO;
-import com.his.system.entity.*;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.EmployeeBriefVO;
+import com.his.spi.vo.UserBriefVO;
 import com.his.common.enums.BizTypeEnum;
-import com.his.system.mapper.SysConfigMapper;
-import com.his.system.mapper.SysEmployeeMapper;
-import com.his.system.mapper.SysUserMapper;
+import com.his.common.enums.MessageHandleStatusEnum;
 import com.his.system.service.DeptScopeService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
@@ -71,11 +71,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
 
     private final SysMessageService sysMessageService;
 
-    private final SysConfigMapper sysConfigMapper;
-
-    private final SysUserMapper sysUserMapper;
-
-    private final SysEmployeeMapper sysEmployeeMapper;
+    private final SystemFacadeService systemFacadeService;
 
     private final com.his.medicaltech.mapper.BizLaboratoryRecordMapper recordMapper;
     private final DeptScopeService deptScopeService;
@@ -272,17 +268,12 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
      */
     private Receiver fallbackReceiver() {
         try {
-            SysConfig config = sysConfigMapper.selectOne(
-                    new LambdaQueryWrapper<SysConfig>()
-                            .eq(SysConfig::getConfigKey, SystemConfigKeyConst.LAB_CRITICAL_VALUE_FALLBACK_RECEIVER)
-                            .last("LIMIT 1"));
-            if (config == null || !TextUtil.hasText(config.getConfigValue())) {
+            String raw = systemFacadeService.findConfigValue(SystemConfigKeyConst.LAB_CRITICAL_VALUE_FALLBACK_RECEIVER);
+            if (!TextUtil.hasText(raw)) {
                 return null;
             }
-            String raw = config.getConfigValue().trim();
-            SysUser user = sysUserMapper.selectOne(new LambdaQueryWrapper<SysUser>()
-                    .eq(SysUser::getUserName, raw)
-                    .last("LIMIT 1"));
+            raw = raw.trim();
+            UserBriefVO user = systemFacadeService.findUserByName(raw);
             if (user != null) {
                 if (user.getEmpId() == null) {
                     log.warn("[危急值] 兜底接收人 {} 没有关联员工档案，无法接收站内信", raw);
@@ -450,11 +441,8 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
             // 消息侧待办联动：危急值处置完成 → 该危急值的站内信 handle_status 置 1。
             // 缺了这一步，医生在消息工作台处置完了，收件箱里还挂着「待处理」。
             // 收件箱里可能有 fallback 接收人的消息，全部联动（都指向同一次危急值）。
-            sysMessageService.update(new LambdaUpdateWrapper<SysMessage>()
-                    .eq(SysMessage::getBizType, BizTypeEnum.CRITICAL.getType())
-                    .eq(SysMessage::getBizId, entity.getId())
-                    .eq(SysMessage::getHandleStatus, 0)
-                    .set(SysMessage::getHandleStatus, 1));
+            sysMessageService.closeTodoByBiz(BizTypeEnum.CRITICAL.getType(), entity.getId(),
+                    MessageHandleStatusEnum.PROCESSED.getCode());
         }
         return ok;
     }
@@ -555,16 +543,13 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
     private List<Long> findDeptLeaders(List<Long> receiverIds) {
         List<Long> leaders = new ArrayList<>();
         for (Long id : receiverIds) {
-            SysEmployee doctor = sysEmployeeMapper.selectById(id);
+            EmployeeBriefVO doctor = systemFacadeService.findEmployee(id);
             if (doctor == null || doctor.getDeptId() == null) {
                 continue;
             }
-            List<SysEmployee> candidates = sysEmployeeMapper.selectList(
-                    new LambdaQueryWrapper<SysEmployee>()
-                            .eq(SysEmployee::getDeptId, doctor.getDeptId())
-                            .in(SysEmployee::getTitle, EmpTitleCode.SENIOR)
-                            .eq(SysEmployee::getStatus, 1));
-            for (SysEmployee e : candidates) {
+            List<EmployeeBriefVO> candidates = systemFacadeService.listActiveEmployeesByTitles(
+                    doctor.getDeptId(), EmpTitleCode.SENIOR);
+            for (EmployeeBriefVO e : candidates) {
                 if (e.getId() != null && !receiverIds.contains(e.getId()) && !leaders.contains(e.getId())) {
                     leaders.add(e.getId());
                 }
@@ -582,7 +567,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
     private int sendEscalation(Long receiverId, String title, String content,
                                BizCriticalValue entity, int toLeader) {
         try {
-            SysEmployee emp = sysEmployeeMapper.selectById(receiverId);
+            EmployeeBriefVO emp = systemFacadeService.findEmployee(receiverId);
             String name = emp != null && TextUtil.hasText(emp.getEmpName()) ? emp.getEmpName() : "站内用户";
             boolean ok = sysMessageService.sendSystemMessage(
                     receiverId, name, title, content,
@@ -696,10 +681,9 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         }
         int minutes = DEADLINE_FALLBACK_MINUTES;
         try {
-            SysConfig config = sysConfigMapper.selectOne(
-                    new LambdaQueryWrapper<SysConfig>().eq(SysConfig::getConfigKey, SystemConfigKeyConst.LAB_CRITICAL_VALUE_DEADLINE_MINUTES).last("LIMIT 1"));
-            if (config != null && TextUtil.hasText(config.getConfigValue())) {
-                minutes = Integer.parseInt(config.getConfigValue().trim());
+            String value = systemFacadeService.findConfigValue(SystemConfigKeyConst.LAB_CRITICAL_VALUE_DEADLINE_MINUTES);
+            if (TextUtil.hasText(value)) {
+                minutes = Integer.parseInt(value.trim());
             }
         } catch (Exception ex) {
             log.warn("[危急值] 读取处置时限配置失败，使用默认 {} 分钟", DEADLINE_FALLBACK_MINUTES);

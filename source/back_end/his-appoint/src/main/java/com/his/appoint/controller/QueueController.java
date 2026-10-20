@@ -1,7 +1,7 @@
 package com.his.appoint.controller;
 
 import com.his.appoint.dto.*;
-import com.his.appoint.dto.AppointCheckInUpdateDTO;
+import com.his.spi.dto.AppointCheckInUpdateDTO;
 import com.his.appoint.service.QueueService;
 import com.his.appoint.vo.*;
 import com.his.common.base.PageResult;

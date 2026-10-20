@@ -1,11 +1,9 @@
 package com.his.appoint.support;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.constant.SystemConfigKeyConst;
 import com.his.common.enums.EmergencyTriageLevelEnum;
 import com.his.common.util.TextUtil;
-import com.his.system.entity.SysConfig;
-import com.his.system.mapper.SysConfigMapper;
+import com.his.spi.service.SystemFacadeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -41,7 +39,7 @@ public class EmergencyWaitPolicy {
      */
     private static final int SEVERE_EXTRA_MINUTES = 30;
 
-    private final SysConfigMapper sysConfigMapper;
+    private final SystemFacadeService systemFacadeService;
 
     private final Map<Integer, Integer> cache = new ConcurrentHashMap<>();
     private final AtomicLong cacheLoadedAt = new AtomicLong(0L);
@@ -87,28 +85,17 @@ public class EmergencyWaitPolicy {
             return;
         }
         try {
-            java.util.List<SysConfig> rows = sysConfigMapper.selectList(
-                    new LambdaQueryWrapper<SysConfig>().likeRight(SysConfig::getConfigKey, SystemConfigKeyConst.EMERGENCY_WAIT_DEADLINE_LEVEL_PREFIX));
-            for (SysConfig row : rows) {
-                Integer level = levelOfKey(row.getConfigKey());
-                if (level != null && TextUtil.hasText(row.getConfigValue())) {
-                    cache.put(level, Integer.parseInt(row.getConfigValue().trim()));
+            // 级别键是封闭集合（EmergencyTriageLevelEnum 的 1~4 级），逐键取值，不再按前缀捞整表行
+            for (EmergencyTriageLevelEnum level : EmergencyTriageLevelEnum.values()) {
+                String value = systemFacadeService.findConfigValue(
+                        SystemConfigKeyConst.EMERGENCY_WAIT_DEADLINE_LEVEL_PREFIX + level.getCode());
+                if (TextUtil.hasText(value)) {
+                    cache.put(level.getCode(), Integer.parseInt(value.trim()));
                 }
             }
         } catch (Exception ignored) {
             // 配置读不到就用默认值：兜底判定不能因为参数表出问题而失效
         }
         cacheLoadedAt.set(now);
-    }
-
-    private Integer levelOfKey(String key) {
-        if (key == null || !key.startsWith(SystemConfigKeyConst.EMERGENCY_WAIT_DEADLINE_LEVEL_PREFIX)) {
-            return null;
-        }
-        try {
-            return Integer.parseInt(key.substring(SystemConfigKeyConst.EMERGENCY_WAIT_DEADLINE_LEVEL_PREFIX.length()));
-        } catch (NumberFormatException ex) {
-            return null;
-        }
     }
 }

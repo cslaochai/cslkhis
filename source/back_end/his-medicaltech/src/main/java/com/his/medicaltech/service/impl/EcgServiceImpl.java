@@ -18,10 +18,10 @@ import com.his.medicaltech.support.EcgWaveSimulator;
 import com.his.medicaltech.vo.EcgDetailVO;
 import com.his.medicaltech.vo.EcgListVO;
 import com.his.medicaltech.vo.EcgTemplateVO;
-import com.his.system.dto.SignCommandDTO;
+import com.his.spi.dto.SignCommandDTO;
 import com.his.system.service.*;
 import com.his.system.utils.UserUtils;
-import com.his.emr.vo.SignatureVO;
+import com.his.spi.vo.SignatureVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -32,6 +32,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import com.his.spi.service.EmrSignatureFacadeService;
 
 /**
  * 心电工作站（sql/173）。
@@ -46,7 +47,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
 
     private final BizInspectionRecordMapper bizInspectionRecordMapper;
 
-    private final EmrSignatureService emrSignatureService;
+    private final EmrSignatureFacadeService emrSignatureFacadeService;
 
     private final DictCacheService dictCacheService;
 
@@ -627,7 +628,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         cmd.setSignerDeptId(record.getInspectionDeptId());
         cmd.setSignerDeptName(record.getInspectionDeptName());
         try {
-            return emrSignatureService.sign(cmd);
+            return emrSignatureFacadeService.sign(cmd);
         } catch (BusinessException e) {
             throw new BusinessException("心电报告 " + record.getRecordNo() + " " + scene.getLabel()
                     + "失败：" + e.getMessage());

@@ -12,7 +12,7 @@ import com.his.ai.vo.FollowupComposeVO;
 import com.his.common.util.TextUtil;
 import com.his.common.enums.FollowupTypeEnum;
 import com.his.emr.service.ChronicRecordService;
-import com.his.emr.vo.ChronicRecordListVO;
+import com.his.spi.vo.ChronicRecordListVO;
 import com.his.common.enums.AiExpressionSourceEnum;
 import com.his.common.enums.AiBizTypeEnum;
 import lombok.RequiredArgsConstructor;

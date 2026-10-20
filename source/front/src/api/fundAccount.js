@@ -15,11 +15,6 @@ export function getFundAccountListPage(data) {
     return request.post('/charge/fundAccount/listPage', data)
 }
 
-// 分页查询账户流水（按账户或按患者跨账户）
-export function getFundTxnListPage(data) {
-    return request.post('/charge/fundAccount/txnListPage', data)
-}
-
 // 某账户的全部有效流水（详情弹框一次给全）
 export function listFundTxnsByAccount(accountId) {
     return request.get('/charge/fundAccount/listByAccount', {params: {accountId}})

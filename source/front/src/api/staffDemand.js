@@ -18,8 +18,3 @@ export function getStaffDemandGapList(params) {
 export function recalcStaffDemand(params) {
   return request.post('/system/staffDemand/recalc', null, { params })
 }
-
-// 护士长手工调整需求人数：写为手工来源，后续重算不再覆盖
-export function adjustStaffDemand(params) {
-  return request.post('/system/staffDemand/adjust', null, { params })
-}

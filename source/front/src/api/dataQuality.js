@@ -23,16 +23,6 @@ export function getQualitySummary() {
   return request.get('/report/quality/getSummary')
 }
 
-// 规则清单（可按维度过滤）
-export function getQualityRuleList(params) {
-  return request.get('/report/quality/getRuleList', { params })
-}
-
-// 维度字典
-export function getQualityDimensionDict() {
-  return request.get('/report/quality/dimensionDict')
-}
-
 // 问题清单（分页；dimension / ruleCode / severity / keyword 可空）
 export function listQualityIssuePage(params) {
   return request.get('/report/quality/listIssuePage', { params })

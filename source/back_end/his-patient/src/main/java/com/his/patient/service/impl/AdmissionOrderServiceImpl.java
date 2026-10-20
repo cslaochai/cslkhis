@@ -21,8 +21,7 @@ import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.service.AdmissionOrderService;
 import com.his.patient.service.BedCenterService;
 import com.his.patient.vo.AdmissionOrderVO;
-import com.his.system.entity.SysConfig;
-import com.his.system.mapper.SysConfigMapper;
+import com.his.spi.service.SystemFacadeService;
 import com.his.system.service.DeptScopeService;
 import com.his.system.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
@@ -52,7 +51,7 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
 
     private final BizPatientMapper bizPatientMapper;
 
-    private final SysConfigMapper sysConfigMapper;
+    private final SystemFacadeService systemFacadeService;
 
     private final BedCenterService bedCenterService;
 
@@ -274,23 +273,22 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
      * 有效期天数：读系统参数，缺失或非法一律回落 7 天（不回落成"永久有效"）
      */
     private int validDays() {
-        SysConfig config = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
-                .eq(SysConfig::getConfigKey, SystemConfigKeyConst.ADMISSION_ORDER_VALID_DAYS));
-        if (config == null || !TextUtil.hasText(config.getConfigValue())) {
+        String configValue = systemFacadeService.findConfigValue(SystemConfigKeyConst.ADMISSION_ORDER_VALID_DAYS);
+        if (!TextUtil.hasText(configValue)) {
             log.warn("未配置 {}，住院证有效期按兜底值 {} 天", SystemConfigKeyConst.ADMISSION_ORDER_VALID_DAYS, VALID_DAYS_FALLBACK);
             return VALID_DAYS_FALLBACK;
         }
         try {
-            int days = Integer.parseInt(config.getConfigValue().trim());
+            int days = Integer.parseInt(configValue.trim());
             if (days <= 0) {
                 log.warn("配置 {} = {} 非法（必须为正数），按兜底值 {} 天",
-                        SystemConfigKeyConst.ADMISSION_ORDER_VALID_DAYS, config.getConfigValue(), VALID_DAYS_FALLBACK);
+                        SystemConfigKeyConst.ADMISSION_ORDER_VALID_DAYS, configValue, VALID_DAYS_FALLBACK);
                 return VALID_DAYS_FALLBACK;
             }
             return days;
         } catch (NumberFormatException e) {
             log.warn("配置 {} = {} 不是数字，按兜底值 {} 天",
-                    SystemConfigKeyConst.ADMISSION_ORDER_VALID_DAYS, config.getConfigValue(), VALID_DAYS_FALLBACK);
+                    SystemConfigKeyConst.ADMISSION_ORDER_VALID_DAYS, configValue, VALID_DAYS_FALLBACK);
             return VALID_DAYS_FALLBACK;
         }
     }

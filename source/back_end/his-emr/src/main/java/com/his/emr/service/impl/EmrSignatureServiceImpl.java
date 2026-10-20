@@ -1,27 +1,28 @@
 package com.his.emr.service.impl;
 
 
+import com.his.spi.vo.SignSubject;
+import com.his.spi.vo.SignVerifyVO;
+import com.his.spi.vo.SignatureVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.common.constant.SystemConfigKeyConst;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
-import com.his.emr.config.SignProperties;
-import com.his.emr.dto.SignCommandDTO;
+import com.his.spi.dto.SignCommandDTO;
 import com.his.emr.dto.SignaturePageQueryDTO;
 import com.his.emr.entity.BizEmrSignature;
-import com.his.emr.entity.SysSignCert;
+import com.his.sign.entity.SysSignCert;
 import com.his.emr.mapper.BizEmrSignatureMapper;
-import com.his.emr.mapper.BizTsaTokenMapper;
-import com.his.emr.mapper.SignConfigMapper;
-import com.his.emr.mapper.SysSignCertMapper;
+import com.his.sign.mapper.BizTsaTokenMapper;
+import com.his.sign.service.TsaService;
+import com.his.sign.mapper.SysSignCertMapper;
 import com.his.emr.service.*;
-import com.his.emr.utils.SignCryptoUtil;
+import com.his.sign.utils.SignCryptoUtil;
 import com.his.emr.vo.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +35,11 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import com.his.sign.service.SignCertService;
+import com.his.sign.service.TsaChannelService;
+import com.his.system.service.RedisSequenceService;
+import com.his.system.service.SignCoverageService;
+import com.his.system.service.SignableContentService;
 
 /**
  * 电子签名服务实现（his-common 通用层）。
@@ -54,13 +60,11 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
 
     private final SignatureStoreService signatureStoreService;
 
-    private final SignProperties signProperties;
-
-    private final SignConfigMapper signConfigMapper;
-
     private final RedisSequenceService redisSequenceService;
 
     private final TsaChannelService tsaChannelService;
+
+    private final TsaService tsaService;
 
     private final BizTsaTokenMapper tsaTokenMapper;
 
@@ -68,16 +72,6 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
 
     private final List<SignCoverageService> coverageProviders;
 
-    private static Integer intValue(String s) {
-        if (!TextUtil.hasText(s)) {
-            return null;
-        }
-        try {
-            return Integer.valueOf(s.trim());
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
 
     /**
      * 支持 "yyyy-MM-dd" 与 "yyyy-MM-dd HH:mm:ss"；只给日期时，起始补 00:00:00、结束补 23:59:59
@@ -188,7 +182,7 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
 
         // 可信时间戳（G6）：配置了 TSA 且适配器在线，就在签名时刻之后盖一枚令牌。
         // 盖章失败（网络/服务异常）不允许签名失败：TSA 通道已收敛成 null，这里降级本机时钟。
-        int effectiveTs = effectiveTimeSource();
+        int effectiveTs = tsaService.effectiveTimeSource();
         TsaChannelService.Stamp stamp = effectiveTs == TimeSourceEnum.TSA.getCode() ? tsaChannelService.stamp(digest) : null;
         if (stamp != null) {
             e.setTimeSource(TimeSourceEnum.TSA.getCode());
@@ -590,7 +584,7 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
         vo.setTsaName(tsaChannelService.readyName());
         vo.setTsaTokenCount(tsaTokenMapper.selectCount(null));
 
-        TimeSourceEnum ts = TimeSourceEnum.fromCode(effectiveTimeSource());
+        TimeSourceEnum ts = TimeSourceEnum.fromCode(tsaService.effectiveTimeSource());
         if (ts != null && ts == TimeSourceEnum.TSA) {
             vo.setTimeSourceNote("签名时间来源：可信时间戳（" + (vo.getTsaName() == null ? "TSA" : vo.getTsaName())
                     + " —— 本地内置信任根：令牌结构真实、可对抗本机时钟篡改；非外部 CA/TSA，不对外声称法律效力）");
@@ -609,28 +603,6 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
         return vo;
     }
 
-    @Override
-    public int effectiveTimeSource() {
-        Integer cfg = intValue(signConfigMapper.selectValue(SystemConfigKeyConst.SIGN_TIME_SOURCE));
-        TimeSourceEnum ts = TimeSourceEnum.fromCode(cfg != null ? cfg : signProperties.getTimeSource());
-        if (ts == null) {
-            ts = TimeSourceEnum.LOCAL;
-        }
-        if (ts == TimeSourceEnum.TSA) {
-            // 适配器在线才允许写 3 —— 没有 TSA 实现就降级：写 3 等于给可随手修改的时间盖上"可信时间戳"的章
-            if (tsaChannelService.available()) {
-                return TimeSourceEnum.TSA.getCode();
-            }
-            log.warn("配置 sign.time_source=3（第三方 TSA），但当前部署未接入 TSA 服务，"
-                    + "签名时间来源已降级为「本机时钟」——宁可承认不可信，也不谎报可信");
-            return TimeSourceEnum.LOCAL.getCode();
-        }
-        if (ts == TimeSourceEnum.HOSPITAL_NTP) {
-            log.warn("配置 sign.time_source=2（院内授时服务器），但当前未接入授时服务，已降级为「本机时钟」");
-            return TimeSourceEnum.LOCAL.getCode();
-        }
-        return ts.getCode();
-    }
 
     // C-非 web 入参：SignCommandDTO 由 EmrServiceImpl/PrescriptionServiceImpl/SignatureCenterServiceImpl(system)、InpatientRecordServiceImpl/InpatientOrderServiceImpl/InpatientLeaveServiceImpl/CriticalNoticeServiceImpl(his-patient)、RadiologyReportServiceImpl/MedicalTechServiceImpl/EcgServiceImpl(his-medicaltech) 现场构造并直调，Bean Validation 不覆盖，保留
     private void validateCommand(SignCommandDTO cmd) {

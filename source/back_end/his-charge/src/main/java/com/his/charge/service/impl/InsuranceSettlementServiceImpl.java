@@ -6,20 +6,19 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.charge.entity.*;
-import com.his.appoint.entity.AppointInfo;
-import com.his.appoint.mapper.AppointInfoMapper;
-import com.his.emr.service.EmrFacadeService;
-import com.his.patient.service.PatientFacadeService;
+import com.his.spi.service.RegistFacadeService;
+import com.his.spi.service.EmrFacadeService;
+import com.his.spi.service.PatientFacadeService;
 import com.his.common.enums.InsuranceReportStatusEnum;
 import com.his.common.enums.InsuranceReportTypeEnum;
 import com.his.charge.mapper.*;
 import com.his.charge.service.InsuranceChannelService;
 import com.his.charge.service.InsuranceSettlementService;
 import com.his.charge.vo.*;
-import com.his.patient.vo.AdmissionBriefVO;
-import com.his.emr.vo.MedicalRecordBriefVO;
-import com.his.patient.vo.PatientBriefVO;
-import com.his.appoint.vo.RegistBriefVO;
+import com.his.spi.vo.AdmissionBriefVO;
+import com.his.spi.vo.MedicalRecordBriefVO;
+import com.his.spi.vo.PatientBriefVO;
+import com.his.spi.vo.RegistBriefVO;
 import com.his.common.base.PageResult;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
@@ -56,7 +55,7 @@ public class InsuranceSettlementServiceImpl
     private static final BigDecimal HUNDRED = new BigDecimal("100");
 
     private final PatientFacadeService patientFacadeService;
-    private final AppointInfoMapper appointInfoMapper;
+    private final RegistFacadeService registFacadeService;
     private final BizSettlementBillMapper bizSettlementBillMapper;
     private final BizSettlementBillItemMapper bizSettlementBillItemMapper;
     private final BizPaymentTxnMapper bizPaymentTxnMapper;
@@ -961,34 +960,7 @@ public class InsuranceSettlementServiceImpl
     }
 
     private RegistBriefVO findRegist(Long registId) {
-        if (registId == null) {
-            return null;
-        }
-        return toBrief(appointInfoMapper.selectById(registId));
+        return registFacadeService.findRegist(registId);
     }
 
-    private RegistBriefVO toBrief(AppointInfo e) {
-        if (e == null) {
-            return null;
-        }
-        RegistBriefVO brief = new RegistBriefVO();
-        brief.setId(e.getId());
-        brief.setRegistNo(e.getRegistNo());
-        brief.setPatientId(e.getPatientId());
-        brief.setPatientName(e.getPatientName());
-        brief.setGender(e.getGender());
-        brief.setAge(e.getAge());
-        brief.setDeptId(e.getDeptId());
-        brief.setDeptName(e.getDeptName());
-        brief.setDoctorId(e.getDoctorId());
-        brief.setDoctorName(e.getDoctorName());
-        brief.setVisitType(e.getVisitType());
-        brief.setVisitDate(e.getVisitDate());
-        brief.setPatientNo(e.getPatientNo());
-        brief.setRegistStatus(e.getRegistStatus());
-        brief.setBillId(e.getBillId());
-        brief.setMedicalInsuranceType(e.getMedicalInsuranceType());
-        brief.setMedicalInsuranceNo(e.getMedicalInsuranceNo());
-        return brief;
-    }
 }

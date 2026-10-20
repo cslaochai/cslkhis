@@ -5,8 +5,8 @@ import com.his.ai.dto.Icd10SelectListDTO;
 import com.his.ai.service.Icd10RecallService;
 import com.his.ai.vo.Icd10SelectListVO;
 import com.his.common.util.TextUtil;
-import com.his.system.entity.SysIcd10;
-import com.his.system.service.Icd10Service;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.Icd10BriefVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -50,11 +50,11 @@ public class Icd10RecallServiceImpl implements Icd10RecallService {
     private static final Pattern NOISE = Pattern.compile(
             "[\\s　,，。、;；:：!！?？\"'“”‘’()（）\\[\\]【】{}<>《》\\-—_/\\\\|*#~`+=$%^&]+");
 
-    private final Icd10Service icd10Service;
+    private final SystemFacadeService systemFacadeService;
 
     private final AiConfigProvider aiConfigProvider;
 
-    private static Icd10SelectListVO toOption(SysIcd10 entity) {
+    private static Icd10SelectListVO toOption(Icd10BriefVO entity) {
         Icd10SelectListVO vo = new Icd10SelectListVO();
         vo.setIcdCode(entity.getIcdCode());
         vo.setIcdName(entity.getIcdName());
@@ -100,7 +100,7 @@ public class Icd10RecallServiceImpl implements Icd10RecallService {
      * @param topNOverride 召回上限覆盖，null 时取配置值
      */
     public List<RecallHit> recall(String noteText, Integer topNOverride) {
-        List<SysIcd10> all = activeCodes();
+        List<Icd10BriefVO> all = activeCodes();
         if (all.isEmpty()) {
             log.warn("[AI-ICD] sys_icd10 无启用编码，推荐将返回空结果");
             return List.of();
@@ -108,7 +108,7 @@ public class Icd10RecallServiceImpl implements Icd10RecallService {
 
         String note = normalize(noteText);
         List<RecallHit> scored = new ArrayList<>(all.size());
-        for (SysIcd10 code : all) {
+        for (Icd10BriefVO code : all) {
             scored.add(new RecallHit(code, scoreCode(code, note)));
         }
         scored.sort(Comparator
@@ -144,30 +144,30 @@ public class Icd10RecallServiceImpl implements Icd10RecallService {
     /**
      * 取全部启用编码。
      *
-     * <p>实现委托给 his-system 的 {@link Icd10Service}：码表读取与缓存全系统只此一份，
+     * <p>实现委托给系统域的 {@code Icd10Service}（经 {@code SystemFacadeService} 端口）：码表读取与缓存全系统只此一份，
      * 避免本类与 {@code /system/icd10/selectList} 各查一遍库、各给一套顺序。</p>
      */
-    public List<SysIcd10> activeCodes() {
-        return icd10Service.activeCodes();
+    public List<Icd10BriefVO> activeCodes() {
+        return systemFacadeService.listActiveIcd10();
     }
 
     /**
      * 让码表缓存立即失效（码表变更后调用）
      */
     public void refresh() {
-        icd10Service.refreshCache();
+        systemFacadeService.refreshIcd10Cache();
     }
 
     /**
      * 按关键词检索编码，供下拉框使用（不产生模型调用）。
      *
-     * <p>委托 {@link Icd10Service#search}，与 {@code /system/icd10/selectList} 同一套相关性排序。
+     * <p>委托系统域的 {@code Icd10Service#search}（经 {@code SystemFacadeService} 端口），与 {@code /system/icd10/selectList} 同一套相关性排序。
      * 旧实现是「遍历全表、命中即收、收满 limit 就停」，在 4 万条码表下有两个问题：
      * ① 结果顺序由 sort_order 决定而非相关性，输入「肺炎」可能前 20 条全是无关的
      * 「XX并发肺炎」；② 首次缓存未命中要全表加载 + 线性扫描，实测首击 1.8s。</p>
      */
-    public List<SysIcd10> search(String keyword, int limit) {
-        return icd10Service.search(keyword, limit);
+    public List<Icd10BriefVO> search(String keyword, int limit) {
+        return systemFacadeService.searchIcd10(keyword, limit);
     }
 
     /**
@@ -192,7 +192,7 @@ public class Icd10RecallServiceImpl implements Icd10RecallService {
     /**
      * 单个编码与病历文本的字面关联度
      */
-    private int scoreCode(SysIcd10 code, String note) {
+    private int scoreCode(Icd10BriefVO code, String note) {
         if (!TextUtil.hasText(note)) {
             return 0;
         }

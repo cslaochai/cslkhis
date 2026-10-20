@@ -13,6 +13,7 @@ import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.SensitiveMaskUtil;
 import com.his.common.util.TextUtil;
+import com.his.spi.dto.PatientAccountCreateDTO;
 import com.his.system.dto.SysUserPasswordUpsertDTO;
 import com.his.system.dto.SysUserPageQueryDTO;
 import com.his.system.dto.SysUserUpsertDTO;
@@ -52,6 +53,11 @@ import java.util.stream.Collectors;
 public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> implements SysUserService {
 
     public static final String DEFAULT_PASSWORD = "123456";
+
+    /**
+     * 小程序自助建档开出的账号，操作人列的渠道标记
+     */
+    private static final String MINI_REGISTER_OPERATOR = "mini-register";
 
     /**
      * 对象类型：系统用户
@@ -448,5 +454,49 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             vo.setRoleName(role.getRoleName());
             return vo;
         }).toList();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long createPatientAccount(PatientAccountCreateDTO createDTO) {
+        String userName = TextUtil.trimToNull(createDTO.getUserName());
+        if (userName == null) {
+            throw new BusinessException("登录账号不能为空");
+        }
+        if (this.count(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getUserName, userName)) > 0) {
+            throw new BusinessException("该手机号已注册");
+        }
+        SysUser user = new SysUser();
+        user.setUserName(userName);
+        user.setPassword(passwordEncoder.encode(createDTO.getPassword()));
+        user.setRealName(createDTO.getRealName());
+        user.setUserType(UserTypeEnum.PATIENT.getCode());
+        user.setPatientId(createDTO.getPatientId());
+        user.setStatus(EnableStatusEnum.ENABLED.getCode());
+        // 自助注册是匿名动作：没有登录态可填，操作人列记开户渠道而不是假姓名
+        user.setCreateBy(MINI_REGISTER_OPERATOR);
+        user.setCreateTime(LocalDateTime.now());
+        this.save(user);
+        return user.getId();
+    }
+
+    @Override
+    public void bindOpenid(Long userId, String openid) {
+        if (userId == null) {
+            throw new BusinessException("未获取到当前登录用户");
+        }
+        if (!TextUtil.hasText(openid) || openid.length() > 64) {
+            throw new BusinessException("openid 不合法");
+        }
+        String value = openid.trim();
+        if (this.count(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getOpenid, value)
+                .ne(SysUser::getId, userId)) > 0) {
+            throw new BusinessException("该微信已绑定其他账号");
+        }
+        this.update(new LambdaUpdateWrapper<SysUser>()
+                .eq(SysUser::getId, userId)
+                .set(SysUser::getOpenid, value));
     }
 }

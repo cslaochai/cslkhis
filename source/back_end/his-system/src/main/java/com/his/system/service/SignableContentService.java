@@ -1,6 +1,6 @@
 package com.his.system.service;
 
-import com.his.system.vo.SignSubject;
+import com.his.spi.vo.SignSubject;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 

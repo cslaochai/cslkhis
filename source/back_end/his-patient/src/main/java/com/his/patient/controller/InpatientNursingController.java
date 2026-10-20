@@ -6,7 +6,7 @@ import com.his.patient.dto.*;
 import com.his.patient.service.InpatientNursingService;
 import com.his.patient.vo.*;
 import com.his.common.vo.CodeOptionVO;
-import com.his.patient.vo.NursingAssessmentVO;
+import com.his.spi.vo.NursingAssessmentVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -81,8 +81,6 @@ public class InpatientNursingController {
     public Result<List<CodeOptionVO>> typeOptions() {
         return Result.success(inpatientNursingService.typeOptions());
     }
-
-    // G14 护理完整体
 
     /**
      * 体温单批量录入：一次测量动作覆盖多个在院患者，任一行不合法整批拒绝。

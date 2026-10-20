@@ -1,17 +1,21 @@
 package com.his.emr.service.impl;
 
+import com.his.spi.dto.SignCertIssueDTO;
+import com.his.spi.dto.SignCertRevokeDTO;
+import com.his.spi.dto.SignCommandDTO;
+import com.his.spi.vo.SignatureVO;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.emr.config.SignProperties;
+import com.his.sign.config.SignProperties;
 import com.his.emr.dto.*;
 import com.his.common.entity.CurrentUser;
 import com.his.emr.service.EmrSignatureService;
-import com.his.emr.service.ExternalCaChannelService;
-import com.his.emr.service.SignCertService;
+import com.his.sign.service.ExternalCaChannelService;
+import com.his.sign.service.SignCertService;
 import com.his.emr.service.SignatureCenterService;
-import com.his.emr.utils.KeyPairFactory;
-import com.his.emr.utils.UserUtils;
+import com.his.sign.utils.KeyPairFactory;
+import com.his.system.utils.UserUtils;
 import com.his.emr.vo.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -19,6 +23,11 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.his.sign.vo.SignCaProbeOutboundVO;
+import com.his.sign.vo.SignCaStatusVO;
+import com.his.sign.vo.SignCertSelectListVO;
+import com.his.sign.vo.SignCertVO;
+import com.his.sign.vo.SignOptionVO;
 
 /**
  * 签名中心出参与命令装配。

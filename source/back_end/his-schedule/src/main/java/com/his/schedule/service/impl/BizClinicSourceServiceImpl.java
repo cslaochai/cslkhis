@@ -2,12 +2,7 @@ package com.his.schedule.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.schedule.dto.ScheduleSelectQueryDTO;
-import com.his.appoint.entity.AppointInfo;
-import com.his.appoint.mapper.AppointInfoMapper;
-import com.his.appoint.mapper.QueueMapper;
-import com.his.appoint.service.AppointService;
-import com.his.appoint.vo.StopImpactItemVO;
+import com.his.common.entity.CurrentUser;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
@@ -17,19 +12,18 @@ import com.his.schedule.dto.*;
 import com.his.schedule.entity.BizClinicSource;
 import com.his.schedule.entity.BizSchedule;
 import com.his.schedule.entity.BizShift;
-import com.his.system.entity.SysDepartment;
-import com.his.system.mapper.SysDepartmentMapper;
-import com.his.common.entity.CurrentUser;
 import com.his.schedule.mapper.BizClinicSourceMapper;
 import com.his.schedule.mapper.BizScheduleMapper;
-import com.his.system.service.DeptScopeService;
 import com.his.schedule.service.*;
+import com.his.schedule.vo.*;
+import com.his.spi.service.AppointFacadeService;
+import com.his.spi.service.RegistFacadeService;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.DeptBriefVO;
+import com.his.spi.vo.StopImpactItemVO;
+import com.his.system.service.DeptScopeService;
+import com.his.system.service.SysClinicRoomService;
 import com.his.system.utils.UserUtils;
-import com.his.schedule.vo.BizClinicSourceBatchResultVO;
-import com.his.schedule.vo.DutyRosterVO;
-import com.his.schedule.vo.OnDutyStaffVO;
-import com.his.schedule.vo.ScheduleDetailVO;
-import com.his.schedule.vo.ScheduleSelectListVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.dao.DuplicateKeyException;
@@ -52,38 +46,29 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
      * 复刻的默认后移天数（一周）
      */
     private static final int REPLICATE_DEFAULT_OFFSET = 7;
-
-    private final DeptScopeService deptScopeService;
-
-    private final BizClinicSourceSlotService bizScheduleSlotService;
-
-    private final SysClinicRoomService sysClinicRoomService;
-
-    private final ShiftService shiftService;
-
-    private final StaffScheduleService staffScheduleService;
-
-    private final BizClinicSourceMapper clinicSourceMapper;
-
-    private final BizScheduleMapper bizScheduleMapper;
-
-    private final QueueMapper queueMapper;
-
-    private final AppointInfoMapper appointInfoMapper;
-
-    private final AppointService appointService;
-
-    private final ClinicSourceLogService clinicSourceLogService;
-
-    /** 值班白班并入「此刻在岗医生」聚合：门诊结束后仍能找到科室兜底值班人 */
-    private final DutyRosterService dutyRosterService;
-
-    /** 科室主档：取科室指定的门诊/护理排班审核人 */
-    private final SysDepartmentMapper sysDepartmentMapper;
-
-    /** 全局豁免审核角色：系统管理员、门诊办（不绑科室也能审） */
+    /**
+     * 全局豁免审核角色：系统管理员、门诊办（不绑科室也能审）
+     */
     private static final String ROLE_ADMIN = "10012";
     private static final String ROLE_OUTPATIENT_OFFICE = "10035";
+    private final DeptScopeService deptScopeService;
+    private final BizClinicSourceSlotService bizScheduleSlotService;
+    private final SysClinicRoomService sysClinicRoomService;
+    private final ShiftService shiftService;
+    private final StaffScheduleService staffScheduleService;
+    private final BizClinicSourceMapper clinicSourceMapper;
+    private final BizScheduleMapper bizScheduleMapper;
+    private final AppointFacadeService appointFacadeService;
+    private final RegistFacadeService registFacadeService;
+    private final ClinicSourceLogService clinicSourceLogService;
+    /**
+     * 值班白班并入「此刻在岗医生」聚合：门诊结束后仍能找到科室兜底值班人
+     */
+    private final DutyRosterService dutyRosterService;
+    /**
+     * 科室主档：取科室指定的门诊/护理排班审核人
+     */
+    private final SystemFacadeService systemFacadeService;
 
     @Override
     public List<BizClinicSource> listPage(ScheduleQueryDTO queryDTO) {
@@ -318,8 +303,8 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
                 clinicSourceMapper.updateById(schedule);
             }
         }
-        queueMapper.updateRoomBySchedule(schedule.getId(), today, roomId, roomName);
-        appointInfoMapper.updateRoomBySchedule(schedule.getId(), today, roomId, roomName);
+        registFacadeService.updateQueueRoomBySchedule(schedule.getId(), today, roomId, roomName);
+        registFacadeService.updateAppointRoomBySchedule(schedule.getId(), today, roomId, roomName);
     }
 
     @Override
@@ -787,7 +772,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         int ok = 0;
         for (Long id : registIds) {
             try {
-                if (appointService.cancelRegist(id, cancelReason)) {
+                if (appointFacadeService.cancelRegist(id, cancelReason)) {
                     ok++;
                 }
             } catch (Exception ignored) {
@@ -804,28 +789,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
     }
 
     private List<StopImpactItemVO> listRegsBySchedule(Long scheduleId) {
-        if (scheduleId == null) {
-            return List.of();
-        }
-        List<AppointInfo> regs = appointInfoMapper.selectList(
-                new LambdaQueryWrapper<AppointInfo>()
-                        .eq(AppointInfo::getScheduleId, scheduleId)
-                        .notIn(AppointInfo::getRegistStatus,
-                                AppointStatusEnum.CANCELLED.getCode(), AppointStatusEnum.OVERDUE.getCode())
-                        .orderByAsc(AppointInfo::getRegistStatus)
-                        .orderByAsc(AppointInfo::getSlotTime));
-        return regs.stream().map(r -> {
-            StopImpactItemVO vo = new StopImpactItemVO();
-            vo.setRegistId(r.getId());
-            vo.setPatientId(r.getPatientId());
-            vo.setPatientName(r.getPatientName());
-            vo.setPatientNo(r.getPatientNo());
-            vo.setPhone(r.getPhone());
-            vo.setRegistSource(r.getRegistSource());
-            vo.setRegistStatus(r.getRegistStatus());
-            vo.setSlotTime(r.getSlotTime());
-            return vo;
-        }).toList();
+        return registFacadeService.listRegsBySchedule(scheduleId);
     }
 
     // ===== G-15 发布态流转（提交→审核→发布 / 调班 / 撤回）=====
@@ -841,7 +805,9 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         doSubmit(existing);
     }
 
-    /** 草稿 → 待审核（单条与整周提交共用） */
+    /**
+     * 草稿 → 待审核（单条与整周提交共用）
+     */
     private void doSubmit(BizClinicSource existing) {
         if (!PublishStatusEnum.DRAFT.getCode().equals(existing.getPublishStatus())) {
             throw new BusinessException("只有草稿状态的排班可以提交审核");
@@ -883,7 +849,9 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         doAudit(existing);
     }
 
-    /** 待审核 → 已发布（单条与整周发布共用）：补号段 + 同步出勤事实 + 留痕 */
+    /**
+     * 待审核 → 已发布（单条与整周发布共用）：补号段 + 同步出勤事实 + 留痕
+     */
     private void doAudit(BizClinicSource existing) {
         if (!PublishStatusEnum.PENDING.getCode().equals(existing.getPublishStatus())) {
             throw new BusinessException("只有待审核状态的排班可以审核发布");
@@ -916,7 +884,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         if (ROLE_ADMIN.equals(role) || ROLE_OUTPATIENT_OFFICE.equals(role)) {
             return;
         }
-        SysDepartment dept = schedule.getDeptId() == null ? null : sysDepartmentMapper.selectById(schedule.getDeptId());
+        DeptBriefVO dept = systemFacadeService.findDepartment(schedule.getDeptId());
         if (dept == null || dept.getOutpatientAuditorId() == null
                 || !dept.getOutpatientAuditorId().equals(user.getEmployeeId())) {
             throw new BusinessException("您不是本科室指定的门诊排班审核人，无权审核发布");

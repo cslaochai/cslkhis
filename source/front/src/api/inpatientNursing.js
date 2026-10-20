@@ -12,10 +12,6 @@ export function getNursingRecordListPage(params) {
     return request.get('/patient/inpatient/nursing/listPage', {params})
 }
 
-export function getNursingRecordDetail(id) {
-    return request.get('/patient/inpatient/nursing/detail', {params: {id}})
-}
-
 // 录入/修改护理文书（id 为空 = 新增；因三测单按时点唯一，measureTime 必填）
 export function saveNursingRecord(data) {
     return request.post('/patient/inpatient/nursing/save', data)

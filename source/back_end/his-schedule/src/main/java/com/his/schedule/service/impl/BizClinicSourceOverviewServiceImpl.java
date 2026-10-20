@@ -52,9 +52,9 @@ public class BizClinicSourceOverviewServiceImpl extends ServiceImpl<BizClinicSou
         return vo;
     }
 
-    private List<OverviewStaffTypeDayVO> toStaffTypeDays(List<com.his.system.vo.StaffTypeDayWorkingVO> list) {
+    private List<OverviewStaffTypeDayVO> toStaffTypeDays(List<com.his.schedule.vo.StaffTypeDayWorkingVO> list) {
         List<OverviewStaffTypeDayVO> vos = new ArrayList<>(list.size());
-        for (com.his.system.vo.StaffTypeDayWorkingVO row : list) {
+        for (com.his.schedule.vo.StaffTypeDayWorkingVO row : list) {
             OverviewStaffTypeDayVO vo = new OverviewStaffTypeDayVO();
             vo.setStaffType(row.getStaffType());
             vo.setScheduleDate(row.getScheduleDate());
@@ -109,7 +109,7 @@ public class BizClinicSourceOverviewServiceImpl extends ServiceImpl<BizClinicSou
         for (int i = 0; i < WEEK_DAYS; i++) {
             LocalDate date = begin.plusDays(i);
             for (DutyShiftTypeEnum shift : DutyShiftTypeEnum.values()) {
-                com.his.system.vo.DutyOfficerVO officer = dutyRosterService.officerOf(date, shift.getCode());
+                com.his.schedule.vo.DutyOfficerVO officer = dutyRosterService.officerOf(date, shift.getCode());
                 OverviewDutyDayVO vo = new OverviewDutyDayVO();
                 vo.setDutyDate(date);
                 vo.setShiftType(shift.getCode());

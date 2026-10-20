@@ -2,9 +2,11 @@ package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.enums.MessageHandleStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.system.dto.MessagePageQueryDTO;
@@ -178,5 +180,37 @@ public class SysMessageServiceImpl extends ServiceImpl<SysMessageMapper, SysMess
             }
         }
         return List.copyOf(ids);
+    }
+
+    @Override
+    public void closeTodoByBiz(String bizType, Long bizId, Integer targetStatus) {
+        if (bizType == null || bizId == null || targetStatus == null) {
+            return;
+        }
+        this.update(new LambdaUpdateWrapper<SysMessage>()
+                .eq(SysMessage::getBizType, bizType)
+                .eq(SysMessage::getBizId, bizId)
+                .eq(SysMessage::getHandleStatus, MessageHandleStatusEnum.PENDING.getCode())
+                .set(SysMessage::getHandleStatus, targetStatus));
+    }
+
+    @Override
+    public boolean sentWithinHours(String bizType, Long bizId, Long receiverId, String severity, int hours) {
+        Long cnt = this.count(new LambdaQueryWrapper<SysMessage>()
+                .eq(SysMessage::getBizType, bizType)
+                .eq(SysMessage::getBizId, bizId)
+                .eq(SysMessage::getReceiverId, receiverId)
+                .eq(SysMessage::getSeverity, severity)
+                .ge(SysMessage::getSendTime, LocalDateTime.now().minusHours(hours)));
+        return cnt != null && cnt > 0;
+    }
+
+    @Override
+    public long countSentSince(String bizType, Long bizId, LocalDateTime since) {
+        Long cnt = this.count(new LambdaQueryWrapper<SysMessage>()
+                .eq(SysMessage::getBizType, bizType)
+                .eq(SysMessage::getBizId, bizId)
+                .ge(SysMessage::getSendTime, since));
+        return cnt == null ? 0L : cnt;
     }
 }

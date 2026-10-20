@@ -21,11 +21,6 @@ export function listTemplatePage(data) {
   return request({ url: '/survey/template/listPage', method: 'post', data })
 }
 
-/** 模板下拉（scene 可选；只回启用的） */
-export function selectTemplateList(scene) {
-  return request({ url: '/survey/template/selectList', method: 'get', params: { scene } })
-}
-
 /** 模板详情（含题目清单） */
 export function getTemplateDetail(id) {
   return request({ url: '/survey/template/getDetailById', method: 'get', params: { id } })

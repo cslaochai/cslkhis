@@ -137,11 +137,6 @@ export function getOrderDictListPage(params) {
     return request.get('/patient/inpatient/order/dict/listPage', {params})
 }
 
-// 启用的字典项（下拉用）
-export function getOrderDictSelectList(dictType) {
-    return request.get('/patient/inpatient/order/dict/selectList', {params: {dictType}})
-}
-
 // 新增/修改字典项（新增和修改同一接口、同一个 :add 权限码）
 export function upsertOrderDict(data) {
     return request.post('/patient/inpatient/order/dict/upsert', data)
@@ -156,11 +151,6 @@ export function deleteOrderDictById(id, dictType) {
 // 与个人模板共用一张表，差别只在 scope：1-个人 2-科室 3-全院。
 // 可见范围由服务端按「全院 ∪ 本科室 ∪ 本人」切，前端传任何 id 都越不出去；
 // 列表行带 editable —— 按钮能不能点由它决定，不做「点了才报错」。
-
-// 组套下拉候选（开立弹窗「套用组套」：可见的全院 + 本科室 + 自己的）
-export function getOrderSetSelectList() {
-    return request.get('/patient/inpatient/order/set/selectList')
-}
 
 // 组套分页（管理页：keyword / scope / orderType / pageNum / pageSize）
 export function getOrderSetListPage(params) {

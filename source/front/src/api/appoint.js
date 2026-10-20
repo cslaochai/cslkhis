@@ -102,11 +102,6 @@ export function getScheduleSlotsBatch(scheduleIds) {
     return request.post('/schedule/slotListBatch', {scheduleIds: scheduleIds || []})
 }
 
-// 查询今日本科室排班（诊室+医生+就诊状态）
-export function getTodaySchedule() {
-    return request.get('/schedule/today')
-}
-
 /**
  * 今日在岗（sql/196）—— 排班的下游出口。
  * 排班表是「计划」，业务真正要问的是「此刻这个科室谁在班」。全岗位混排，看 staffType 分流。
@@ -119,16 +114,6 @@ export function getOnDutyStaff(params) {
     return request.post('/schedule/onDuty', params)
 }
 
-// 更新就诊状态（0-待开始 1-接诊中 2-暂停）
-export function updateConsultStatus(scheduleId, consultStatus) {
-    return request.post('/schedule/updateConsultStatus', {scheduleId, consultStatus})
-}
-
-// 新增排班
-export function createSchedule(data) {
-    return request.post('/schedule/scheduleUpsert', data)
-}
-
 // 批量新增排班：整批（人×日）一次提交，展开与事务全部在后端完成，前端禁止循环调单条接口
 export function createScheduleBatch(data) {
     return request.post('/schedule/batchUpsert', data)
@@ -137,11 +122,6 @@ export function createScheduleBatch(data) {
 // 复刻排班：把源区间内正常排班整体后移 dayOffset 天，单事务落库
 export function replicateSchedule(data) {
     return request.post('/schedule/replicate', data)
-}
-
-// 修改排班
-export function updateSchedule(data) {
-    return request.post('/schedule/scheduleUpsert', data)
 }
 
 // 删除排班
@@ -267,11 +247,6 @@ export function updateScheduleStatus(scheduleId, status) {
 
 // ========== 排班模板（周模板，按星期几配置固定班次） ==========
 
-// 模板列表
-export function getScheduleTemplateList(params) {
-    return request.get('/scheduleTemplate/list', {params})
-}
-
 // 模板分页查询（关键词=科室/医生/诊室/备注；deptId/weekDay/status 精确过滤）
 export function getScheduleTemplateListPage(data) {
     return request.post('/scheduleTemplate/listPage', data)
@@ -322,11 +297,6 @@ export function addScheduleSource(scheduleId, addNum, reason) {
     return request.post('/schedule/addSource', {scheduleId, addNum, reason})
 }
 
-// 段级号源编辑（每段号源/预约池/停用状态，Σ段写回主表并留痕）
-export function saveScheduleSlots(scheduleId, slots) {
-    return request.post('/schedule/slotUpsert', {scheduleId, slots})
-}
-
 // 过号处理
 export function overdueQueue(id, reason) {
     return request.post('/queue/overdueQueue', {id, reason})
@@ -352,11 +322,6 @@ export function rejoinQueue(id) {
     return request.post('/queue/rejoinQueue', null, {params: {queueId: id}})
 }
 
-// 查询医生接诊状态
-export function getDoctorStatus(doctorId) {
-    return request.post('/queue/getDoctorStatus', {doctorId})
-}
-
 // 读取当前登录医生的接诊状态（0 空闲 / 1 接诊中 / 2 暂离），医生 id 由服务端取，前端不传
 export function getCurrentDoctorStatus() {
     return request.get('/queue/doctorStatus/current')
@@ -367,22 +332,7 @@ export function setDoctorStatus(status) {
     return request.post('/queue/doctorStatus/set', {status})
 }
 
-// 批量查询医生接诊状态
-export function batchGetDoctorStatus(doctorIds) {
-    return request.post('/queue/batchGetDoctorStatus', {doctorIds})
-}
-
-// 查询科室下各医生的诊室信息及就诊中患者
-export function getDoctorConsultingInfo() {
-    return request.get('/queue/doctor/consulting')
-}
-
 // ========== 分诊台统计接口 ==========
-
-// 获取分诊台统计数据
-export function getStatsCard() {
-    return request.get('/queue/statsCard')
-}
 
 // 获取当前就诊中的患者
 export function getConsultingPatients() {
@@ -392,11 +342,6 @@ export function getConsultingPatients() {
 // 获取复诊等候超时患者
 export function getRevisitTimeoutPatients() {
     return request.get('/queue/revisitTimeout')
-}
-
-// 获取医生接诊统计
-export function getDoctorStats() {
-    return request.get('/queue/doctorStats')
 }
 
 // ========== 门诊分诊（分诊卡） ==========

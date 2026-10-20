@@ -1,8 +1,8 @@
 package com.his.medicaltech.service.impl;
 
-import com.his.patient.service.PatientFacadeService;
-import com.his.patient.vo.PatientMasterVO;
-import com.his.patient.vo.PatientProfileScoreVO;
+import com.his.spi.service.PatientFacadeService;
+import com.his.spi.vo.PatientMasterVO;
+import com.his.spi.vo.PatientProfileScoreVO;
 import com.his.common.enums.AppointStatusEnum;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.SysGenderEnum;

@@ -2,12 +2,12 @@ package com.his.charge.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.charge.dto.InpatientSettlementUpsertDTO;
-import com.his.charge.dto.PrepayPageQueryDTO;
-import com.his.charge.dto.PrepayUpsertDTO;
+import com.his.spi.dto.PrepayPageQueryDTO;
+import com.his.spi.dto.PrepayUpsertDTO;
 import com.his.charge.service.InpatientAccountService;
 import com.his.charge.vo.*;
-import com.his.charge.vo.PrepayBalanceVO;
-import com.his.charge.vo.PrepayVO;
+import com.his.spi.vo.PrepayBalanceVO;
+import com.his.spi.vo.PrepayVO;
 import com.his.common.base.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

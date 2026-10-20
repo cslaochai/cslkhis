@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.charge.dto.BillPayDTO;
+import com.his.spi.dto.BillPayDTO;
 import com.his.charge.dto.BillRefundDTO;
 import com.his.charge.dto.BillVoidDTO;
 import com.his.charge.dto.PaymentTxnPageQueryDTO;
@@ -24,7 +24,8 @@ import com.his.common.mq.event.ChargeBillPaidEvent;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
-import com.his.pay.service.ChargePayChannelService;
+import com.his.spi.service.PayChannelFacadeService;
+import com.his.spi.vo.MicroPayResultVO;
 import com.his.system.service.IdempotentGuardService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
@@ -94,7 +95,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
 
     private final InsuranceSettlementService insuranceSettlementService;
 
-    private final ChargePayChannelService chargePayChannelService;
+    private final PayChannelFacadeService payChannelFacadeService;
 
     private final HisMqPublisher mqPublisher;
 
@@ -604,17 +605,17 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         // 扫码支付：调真实渠道
         String channelTxnNo = item.getChannelTxnNo();
         if (payMethod.channelBacked() && TextUtil.hasText(item.getAuthCode())) {
-            ChargePayChannelService.PayResult result = chargePayChannelService.microPay(
+            MicroPayResultVO result = payChannelFacadeService.microPay(
                     item.getAuthCode(),
                     bill.getBillNo(),
                     amount,
                     "门诊缴费-" + bill.getBillNo(),
                     payMethod.getCode() == 2 ? 1 : 2  // 2-微信→channel=1, 3-支付宝→channel=2
             );
-            if (!result.success()) {
-                throw new BusinessException("支付失败: " + result.errMsg());
+            if (!result.isSuccess()) {
+                throw new BusinessException("支付失败: " + result.getErrMsg());
             }
-            channelTxnNo = result.channelTxnNo();
+            channelTxnNo = result.getChannelTxnNo();
         }
 
         String txnNo = redisSequenceService.generatePayTxnNo();

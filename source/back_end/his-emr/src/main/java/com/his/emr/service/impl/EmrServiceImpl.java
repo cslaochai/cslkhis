@@ -1,6 +1,6 @@
 package com.his.emr.service.impl;
 
-import com.his.emr.vo.MyMedicalRecordVO;
+import com.his.spi.vo.MyMedicalRecordVO;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.extra.qrcode.QrCodeUtil;
 import cn.hutool.extra.qrcode.QrConfig;
@@ -12,14 +12,14 @@ import com.his.appoint.entity.AppointInfo;
 import com.his.appoint.entity.Queue;
 import com.his.appoint.mapper.AppointInfoMapper;
 import com.his.appoint.mapper.QueueMapper;
-import com.his.appoint.service.AppointFacadeService;
-import com.his.charge.dto.FeeBookDTO;
-import com.his.charge.service.ChargeFacadeService;
-import com.his.charge.vo.FeeRecordVO;
-import com.his.charge.vo.FeeTypeSumVO;
+import com.his.spi.service.QueueFacadeService;
+import com.his.spi.dto.FeeBookDTO;
+import com.his.spi.service.ChargeFacadeService;
+import com.his.spi.vo.FeeRecordVO;
+import com.his.spi.vo.FeeTypeSumVO;
 import com.his.common.base.PageResult;
-import com.his.medicaltech.vo.ExecStatusVO;
-import com.his.system.dto.SignCommandDTO;
+import com.his.spi.vo.ExecStatusVO;
+import com.his.spi.dto.SignCommandDTO;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.emr.service.EmrSignatureService;
@@ -28,10 +28,11 @@ import com.his.common.support.TcmGramUnits;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
-import com.his.system.vo.SignatureVO;
-import com.his.medicaltech.service.MedicalTechFacadeService;
+import com.his.spi.vo.SignatureVO;
+import com.his.spi.service.MedicalTechFacadeService;
+import com.his.spi.vo.LabItemVO;
 import com.his.appoint.vo.AppointBriefVO;
-import com.his.patient.vo.PatientBriefVO;
+import com.his.spi.vo.PatientBriefVO;
 import com.his.emr.dto.*;
 import com.his.emr.entity.*;
 import com.his.emr.mapper.*;
@@ -39,16 +40,12 @@ import com.his.emr.service.AiDraftDiffService;
 import com.his.emr.service.EmrService;
 import com.his.emr.service.QualityControlService;
 import com.his.emr.vo.*;
-import com.his.patient.service.PatientFacadeService;
+import com.his.spi.service.PatientFacadeService;
 import com.his.pharmacy.service.AntibioticService;
 import com.his.pharmacy.service.PharmacyService;
 import com.his.common.entity.CurrentUser;
-import com.his.system.entity.SysDrug;
-import com.his.system.entity.SysInspectionItem;
-import com.his.system.entity.SysLaboratoryItem;
-import com.his.system.mapper.SysDrugMapper;
-import com.his.system.mapper.SysInspectionItemMapper;
-import com.his.system.mapper.SysLaboratoryItemMapper;
+import com.his.pharmacy.entity.SysDrug;
+import com.his.pharmacy.mapper.SysDrugMapper;
 import com.his.system.service.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -89,14 +86,11 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
 
     private final PatientFacadeService patientFacadeService;
 
-    private final SysInspectionItemMapper sysInspectionItemMapper;
-    private final SysLaboratoryItemMapper sysLaboratoryItemMapper;
-
     private final SysDrugMapper sysDrugMapper;
 
     private final EmrSignatureService emrSignatureService;
     private final RedisSequenceService redisSequenceService;
-    private final AppointFacadeService appointFacadeService;
+    private final QueueFacadeService queueFacadeService;
 
     private final BizMedicalRecordArchiveMapper bizMedicalRecordArchiveMapper;
 
@@ -622,7 +616,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     public BizInspectionApplyVO upsertInspectionApply(InspectionApplyUpsertDTO dto) {
         AppointBriefVO appoint = requireAppoint(dto.getRegistId());
         PatientBriefVO patient = requirePatient(dto.getPatientId());
-        SysInspectionItem item = sysInspectionItemMapper.selectById(dto.getInspectionItemId());
+        LabItemVO item = medicalTechFacadeService.findInspectionItem(dto.getInspectionItemId());
         if (item == null) {
             throw new BusinessException("检查项目不存在: " + dto.getInspectionItemId());
         }
@@ -670,7 +664,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     public BizLaboratoryApplyVO upsertLaboratoryApply(LaboratoryApplyUpsertDTO dto) {
         AppointBriefVO appoint = requireAppoint(dto.getRegistId());
         PatientBriefVO patient = requirePatient(dto.getPatientId());
-        SysLaboratoryItem item = sysLaboratoryItemMapper.selectById(dto.getLaboratoryItemId());
+        LabItemVO item = medicalTechFacadeService.findLabItem(dto.getLaboratoryItemId());
         if (item == null) {
             throw new BusinessException("检验项目不存在: " + dto.getLaboratoryItemId());
         }
@@ -1238,7 +1232,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             if (exists != null && exists > 0) {
                 continue;
             }
-            SysInspectionItem item = sysInspectionItemMapper.selectById(dto.getItemId());
+            LabItemVO item = medicalTechFacadeService.findInspectionItem(dto.getItemId());
             if (item == null) {
                 throw new BusinessException("检查项目不存在: " + dto.getItemId());
             }
@@ -1275,7 +1269,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             if (exists != null && exists > 0) {
                 continue;
             }
-            SysLaboratoryItem item = sysLaboratoryItemMapper.selectById(dto.getItemId());
+            LabItemVO item = medicalTechFacadeService.findLabItem(dto.getItemId());
             if (item == null) {
                 throw new BusinessException("检验项目不存在: " + dto.getItemId());
             }
@@ -1585,7 +1579,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             Long doctorId = completeVisit(recordSaveDTO.getRegistId(), recordSaveDTO.getQueueId());
             // 清除医生接诊状态缓存
             if (doctorId != null) {
-                appointFacadeService.finishConsulting(doctorId);
+                queueFacadeService.finishConsulting(doctorId);
             }
 
             //提交病历

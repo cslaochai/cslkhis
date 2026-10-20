@@ -17,13 +17,13 @@ import com.his.patient.mapper.*;
 import com.his.patient.service.BedCenterService;
 import com.his.patient.service.InpatientService;
 import com.his.patient.vo.*;
-import com.his.system.entity.SysConfig;
-import com.his.system.mapper.SysConfigMapper;
-import com.his.system.service.DutyRosterService;
+import com.his.schedule.service.DutyRosterService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
 import com.his.schedule.vo.DutyOfficerVO;
+import com.his.spi.dto.InpatientAdmitDTO;
+import com.his.spi.service.SystemFacadeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -77,7 +77,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
 
     private final BizAdmissionMapper bizAdmissionMapper;
 
-    private final SysConfigMapper sysConfigMapper;
+    private final SystemFacadeService systemFacadeService;
     /**
      * 收治复写入院主流程：不重写一套 admit，否则两条入口各推进一步就会打架
      */
@@ -477,16 +477,9 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
      */
     private boolean sentWithinHours(String bizType, Long bizId, Long receiverId, int hours) {
         try {
-            Long cnt = sysMessageService.lambdaQuery()
-                    .eq(com.his.system.entity.SysMessage::getBizType, bizType)
-                    .eq(com.his.system.entity.SysMessage::getBizId, bizId)
-                    .eq(com.his.system.entity.SysMessage::getReceiverId, receiverId)
-                    // 只跟「催办类（urgent）」判重：跨科调配那条 warning 是通知不是催办，
-                    // 把它算进来会让等床催办永远发不出去（同一 waitId 已被"发过"）。
-                    .eq(com.his.system.entity.SysMessage::getSeverity, "urgent")
-                    .ge(com.his.system.entity.SysMessage::getSendTime, LocalDateTime.now().minusHours(hours))
-                    .count();
-            return cnt != null && cnt > 0;
+            // 只跟「催办类（urgent）」判重：跨科调配那条 warning 是通知不是催办，
+            // 把它算进来会让等床催办永远发不出去（同一 waitId 已被"发过"）。
+            return sysMessageService.sentWithinHours(bizType, bizId, receiverId, "urgent", hours);
         } catch (Exception ex) {
             // 判重查询失败不能当成"没发过"（会变成每轮狂发），也不能当成"发过"（会永远不催）：
             // 按"已发过"处理更安全，下一轮再试。
@@ -500,12 +493,11 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
      */
     private int dutyBedWaitHours() {
         try {
-            SysConfig cfg = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
-                    .eq(SysConfig::getConfigKey, SystemConfigKeyConst.DUTY_COORD_BED_WAIT_HOURS).last("LIMIT 1"));
-            if (cfg == null || !TextUtil.hasText(cfg.getConfigValue())) {
+            String configValue = systemFacadeService.findConfigValue(SystemConfigKeyConst.DUTY_COORD_BED_WAIT_HOURS);
+            if (!TextUtil.hasText(configValue)) {
                 return DUTY_BED_WAIT_HOURS_FALLBACK;
             }
-            int v = Integer.parseInt(cfg.getConfigValue().trim());
+            int v = Integer.parseInt(configValue.trim());
             return v > 0 ? v : DUTY_BED_WAIT_HOURS_FALLBACK;
         } catch (Exception ex) {
             return DUTY_BED_WAIT_HOURS_FALLBACK;
@@ -1189,12 +1181,11 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
      */
     private int maxWaitDays() {
         try {
-            SysConfig config = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
-                    .eq(SysConfig::getConfigKey, SystemConfigKeyConst.BED_WAIT_MAX_DAYS));
-            if (config == null || !TextUtil.hasText(config.getConfigValue())) {
+            String configValue = systemFacadeService.findConfigValue(SystemConfigKeyConst.BED_WAIT_MAX_DAYS);
+            if (!TextUtil.hasText(configValue)) {
                 return MAX_WAIT_DAYS_FALLBACK;
             }
-            int days = Integer.parseInt(config.getConfigValue().trim());
+            int days = Integer.parseInt(configValue.trim());
             return days > 0 ? days : MAX_WAIT_DAYS_FALLBACK;
         } catch (Exception e) {
             log.warn("配置 {} 读取失败，按兜底值 {} 天", SystemConfigKeyConst.BED_WAIT_MAX_DAYS, MAX_WAIT_DAYS_FALLBACK);

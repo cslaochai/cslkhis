@@ -1,12 +1,17 @@
 package com.his.emr.service;
 
-import com.his.emr.dto.SignCertIssueDTO;
-import com.his.emr.dto.SignCertRevokeDTO;
+import com.his.spi.vo.SignatureVO;
+import com.his.spi.dto.SignCertIssueDTO;
+import com.his.spi.dto.SignCertRevokeDTO;
 import com.his.emr.dto.SignatureInvalidateDTO;
 import com.his.emr.dto.SignatureSignDTO;
 import com.his.emr.vo.*;
 
 import java.util.List;
+import com.his.sign.vo.SignCaProbeOutboundVO;
+import com.his.sign.vo.SignCaStatusVO;
+import com.his.sign.vo.SignCertSelectListVO;
+import com.his.sign.vo.SignCertVO;
 
 /**
  * 签名中心（运维/审计界面）的出参与命令装配。

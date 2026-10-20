@@ -1,6 +1,6 @@
 package com.his.medicaltech.vo;
 
-import com.his.appoint.vo.BizAppointInfoListVO;
+import com.his.spi.vo.BizAppointInfoListVO;
 import lombok.Data;
 
 import java.util.List;

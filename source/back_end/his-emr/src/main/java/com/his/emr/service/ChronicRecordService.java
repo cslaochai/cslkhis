@@ -4,8 +4,8 @@ import com.his.common.base.PageResult;
 import com.his.emr.dto.ChronicCancelDTO;
 import com.his.emr.dto.ChronicPageQueryDTO;
 import com.his.emr.dto.ChronicUpsertDTO;
-import com.his.emr.vo.ChronicMyRecordsVO;
-import com.his.emr.vo.ChronicRecordListVO;
+import com.his.spi.vo.ChronicMyRecordsVO;
+import com.his.spi.vo.ChronicRecordListVO;
 
 import java.util.List;
 

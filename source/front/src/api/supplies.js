@@ -7,11 +7,6 @@ export function getConsumableList(params) {
   return request.post('/supplies/consumableListPage', params)
 }
 
-// 耗材详情
-export function getConsumableById(id) {
-  return request.get('/supplies/getConsumableById', { params: { id } })
-}
-
 // 字典新增/修改（id 空=新增）
 export function consumableUpsert(data) {
   return request.post('/supplies/consumableUpsert', data)

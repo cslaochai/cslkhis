@@ -1,12 +1,12 @@
 package com.his.emr.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.emr.dto.SignCommandDTO;
+import com.his.spi.dto.SignCommandDTO;
 import com.his.emr.dto.SignaturePageQueryDTO;
 import com.his.emr.vo.ObjectSignatureVO;
-import com.his.emr.vo.SignVerifyVO;
+import com.his.spi.vo.SignVerifyVO;
 import com.his.emr.vo.SignatureSummaryVO;
-import com.his.emr.vo.SignatureVO;
+import com.his.spi.vo.SignatureVO;
 
 import java.util.List;
 
@@ -63,9 +63,4 @@ public interface EmrSignatureService {
      * 用于签名中心页面顶部的概览卡片区。
      */
     SignatureSummaryVO summary();
-
-    /**
-     * 最终生效的时间来源。
-     */
-    int effectiveTimeSource();
 }

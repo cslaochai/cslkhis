@@ -3,7 +3,7 @@ package com.his.drgdip.support;
 import java.util.List;
 
 /**
- * 年龄单位约定（与首页 age_unit 列、{@code com.his.patient.enums.AgeUnitEnum} 同义，此处内联以避免
+ * 年龄单位约定（与首页 age_unit 列、{@code com.his.common.enums.AgeUnitEnum} 同义，此处内联以避免
  * 分组引擎对 his-patient 领域模块产生编译期依赖；分组器只关心「年 / 天」两种量纲判定）。
  */
 final class AgeUnit {

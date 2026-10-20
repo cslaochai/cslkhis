@@ -2,7 +2,7 @@ package com.his.emr.controller;
 
 import com.his.common.base.Result;
 import com.his.emr.service.PrevisitRecordService;
-import com.his.emr.vo.PrevisitDetailVO;
+import com.his.spi.vo.PrevisitDetailVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

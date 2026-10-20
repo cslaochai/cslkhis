@@ -16,7 +16,7 @@ import com.his.charge.entity.SysPriceChangeHistory;
 import com.his.charge.mapper.PriceMapper;
 import com.his.charge.mapper.SysPriceChangeHistoryMapper;
 import com.his.charge.service.PriceService;
-import com.his.charge.utils.UserUtils;
+import com.his.system.utils.UserUtils;
 import com.his.charge.vo.PriceChangeHistoryVO;
 import com.his.charge.vo.PriceItemVO;
 import lombok.RequiredArgsConstructor;

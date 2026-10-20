@@ -106,7 +106,7 @@ public interface AiCapabilityKeys {
     public static final String KNOWLEDGE_QA = "knowledge_qa";
 
     /**
-     * 预问诊病史摘要（G-05）。
+     * 预问诊病史摘要
      * <p>
      * 患者提交的问卷是结构化量表（题目结构由 PrevisitQuestionnaireSupport 版本化），
      * 模型只做一件事：把量表答案凝成一段 ≤200 字的「就诊用病史摘要」给医生看，

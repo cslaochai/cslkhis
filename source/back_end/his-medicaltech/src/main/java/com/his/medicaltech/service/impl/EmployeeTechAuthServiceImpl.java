@@ -1,5 +1,6 @@
 package com.his.medicaltech.service.impl;
 
+import com.his.spi.dto.TechAuthGateDTO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -16,11 +17,11 @@ import com.his.common.util.TextUtil;
 import com.his.medicaltech.dto.*;
 import com.his.medicaltech.entity.BizTechAuthOverride;
 import com.his.medicaltech.mapper.BizTechAuthOverrideMapper;
-import com.his.medicaltech.entity.SysEmployee;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.EmployeeBriefVO;
 import com.his.medicaltech.entity.SysEmployeeTechAuth;
-import com.his.medicaltech.mapper.SysEmployeeMapper;
 import com.his.medicaltech.mapper.SysEmployeeTechAuthMapper;
-import com.his.medicaltech.service.DictCacheService;
+import com.his.system.service.DictCacheService;
 import com.his.medicaltech.service.EmployeeTechAuthService;
 import com.his.system.utils.UserUtils;
 import com.his.medicaltech.vo.EmployeeTechAuthVO;
@@ -51,7 +52,7 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
     private final DictCacheService dictCacheService;
     private final SysEmployeeTechAuthMapper sysEmployeeTechAuthMapper;
     private final BizTechAuthOverrideMapper bizTechAuthOverrideMapper;
-    private final SysEmployeeMapper sysEmployeeMapper;
+    private final SystemFacadeService systemFacadeService;
 
     // 一、台账查询
 
@@ -108,7 +109,7 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
             throw new BusinessException("有效期至不能早于生效日期");
         }
 
-        SysEmployee emp = sysEmployeeMapper.selectById(dto.getEmployeeId());
+        EmployeeBriefVO emp = systemFacadeService.findEmployee(dto.getEmployeeId());
         if (emp == null) {
             throw new BusinessException("员工不存在");
         }
@@ -251,7 +252,7 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
             vo.setMessage("当前登录人没有关联员工档案，无法判定技术授权，请先在系统管理里补员工的员工档案");
             return vo;
         }
-        SysEmployee emp = sysEmployeeMapper.selectById(employeeId);
+        EmployeeBriefVO emp = systemFacadeService.findEmployee(employeeId);
         vo.setEmployeeName(emp == null ? null : emp.getEmpName());
         if (emp == null) {
             vo.setMessage("操作者（员工ID " + employeeId + "）档案不存在，无法判定技术授权");
@@ -380,9 +381,7 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
         if (name == null) {
             return null;
         }
-        LambdaQueryWrapper<SysEmployee> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(SysEmployee::getEmpName, name);
-        List<SysEmployee> hits = sysEmployeeMapper.selectList(wrapper);
+        List<EmployeeBriefVO> hits = systemFacadeService.listEmployeesByName(name);
         if (hits.isEmpty()) {
             throw new BusinessException("未找到医师「" + name + "」的员工档案，无法校验技术授权（请先在系统管理→员工档案建档，或改由选择具体员工）");
         }

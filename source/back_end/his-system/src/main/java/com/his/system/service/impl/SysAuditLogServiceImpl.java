@@ -25,6 +25,29 @@ public class SysAuditLogServiceImpl extends ServiceImpl<SysAuditLogMapper, SysAu
 
     private final HisMqPublisher mqPublisher;
 
+    /**
+     * 消费端落库：事件字段逐个搬到审计行
+     */
+    @Override
+    public void saveFromEvent(AuditLogEvent event) {
+        SysAuditLog row = new SysAuditLog();
+        row.setUserId(event.getUserId());
+        row.setUserName(event.getUserName());
+        row.setModule(event.getModule());
+        row.setOperation(event.getOperation());
+        row.setTargetType(event.getTargetType());
+        row.setTargetId(event.getTargetId());
+        row.setContent(event.getContent());
+        row.setIp(event.getIp());
+        row.setStatus(event.getStatus());
+        row.setErrorMsg(event.getErrorMsg());
+        row.setCreateById(event.getCreateById());
+        row.setCreateBy(event.getCreateBy());
+        row.setUpdateById(event.getCreateById());
+        row.setUpdateBy(event.getCreateBy());
+        this.save(row);
+    }
+
     private static String currentIp() {
         if (!(RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attrs)) {
             return null;

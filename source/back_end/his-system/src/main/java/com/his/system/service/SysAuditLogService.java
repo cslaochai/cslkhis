@@ -1,5 +1,6 @@
 package com.his.system.service;
 
+import com.his.common.mq.event.AuditLogEvent;
 
 /**
  * 业务操作审计服务：记下「谁、在哪个模块、对哪个对象做了什么、成没成」。
@@ -15,4 +16,12 @@ public interface SysAuditLogService {
      * @param success    本次动作成没成；false 时 errorMsg 写清为什么没成
      */
     void record(Long userId, String userName, String module, String operation, String targetType, Object targetId, String content, boolean success, String errorMsg);
+
+    /**
+     * 把审计事件落库：只供 MQ 消费线程调用，审计行的写入收口在本服务。
+     *
+     * <p>消费线程没有登录态，操作人与时间一律取生产者侧拍好的事件快照，
+     * 不能靠自动填充（填充取不到当前用户会直接跳过这些列）。
+     */
+    void saveFromEvent(AuditLogEvent event);
 }

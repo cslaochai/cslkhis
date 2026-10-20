@@ -14,10 +14,6 @@ export function listVteRiskPage(params) {
   return request.post('/patient/inpatient/vte/riskListPage', params)
 }
 
-export function listVtePreventPage(params) {
-  return request.post('/patient/inpatient/vte/preventListPage', params)
-}
-
 export function listVtePreventByAdmission(admissionId) {
   return request.get('/patient/inpatient/vte/preventListByAdmission', { params: { admissionId } })
 }
@@ -40,16 +36,8 @@ export function listVteEventPage(params) {
   return request.post('/patient/inpatient/vte/eventListPage', params)
 }
 
-export function listVteEventByAdmission(admissionId) {
-  return request.get('/patient/inpatient/vte/eventListByAdmission', { params: { admissionId } })
-}
-
 export function upsertVteEvent(data) {
   return request.post('/patient/inpatient/vte/eventUpsert', data)
-}
-
-export function deleteVteEvent(id) {
-  return request.delete('/patient/inpatient/vte/eventDeleteById', { params: { id } })
 }
 
 export function previewVteStats(statMonth) {

@@ -34,11 +34,6 @@ export function getChronicRegDetail(id) {
     return request.get('/charge/ybChronic/regGetById', {params: {id}})
 }
 
-// 患者在用门特资格（医生站/收费判断能否走门特）
-export function getActiveChronicRegOfPatient(patientId) {
-    return request.get('/charge/ybChronic/regActiveOfPatient', {params: {patientId}})
-}
-
 // 备案汇总
 export function getChronicRegSummary() {
     return request.get('/charge/ybChronic/regSummary')

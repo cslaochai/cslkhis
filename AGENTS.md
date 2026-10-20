@@ -182,16 +182,28 @@
   `OpenAiChatResponseDTO.id`）、`openid`、前端自取 `sessionId`、审计 `targetId`。
 - **类级 `@PreAuthorize` 禁用**（见 §8），`@PreAuthorize` 一律标方法。
 
-## 5. 模块依赖：禁止 spi/gateway 间接层，一律强制依赖
+## 5. 模块依赖：跨模块只走 his-core-spi 端口，模块内强制依赖
 
-- **角色包黑名单**（模块根与分层目录都不许出现）：`spi` `gateway` `capability` `provider` `rule` `evidence` `client` `llm`
-  `prompt` `sign` `qc` `audit`。一律删除，内容按 §4.1 归位。
-- **依赖只写死**：A 需要 B → `@Resource private BService bService;`。禁「接口定义在 A、实现在 B」的 SPI 反转，禁
-  `List<XxxProvider>` / `ObjectProvider` 策略收集器注入，禁运行期 `ApplicationContext.getBean()`。理由：间接层抹掉「谁调谁」，Spring
-  注入失败报启动期 `NoSuchBeanDefinition`，与业务错误隔一整个进程。
+- **跨模块访问唯一形态**：契约（接口 + 跨域 VO/DTO）放 `his-core-spi`（`com.his.spi.{service,vo,dto}`），实现类放**表的宿主模块**
+  `com.his.<模块>.spi`。`spi` 因此从下面黑名单解禁，且只用于「端口」这一个用途；其余角色包照样禁用。
+- **角色包黑名单**（模块根与分层目录都不许出现）：
+  `gateway` `capability` `provider` `rule` `evidence` `client` `llm` `prompt` `sign` `qc` `audit`。一律删除，内容按 §4.1 归位。
+- **禁跨模块 import `entity`/`mapper`**：跨域出参一律 `XxxBriefVO`/`XxxListVO`，实体→VO 的转换只在宿主模块的 spi
+  实现里发生。判据：按模块 `grep -rhoE "import com\.his\.[a-z]+\.(entity|mapper)\." <模块>/src/main/java`
+  ，命中只允许是本模块自己。
+- **端口实现必须是叶子**（2026-10-20 踩出来的）：`com.his.<模块>.spi` 的适配器只许依赖本模块 mapper
+  与无跨模块依赖的 support，**不许注入本模块的编排 Service**。`@RequiredArgsConstructor` 是构造器注入，适配器一牵编排服务，调用方就跟着拖入整张服务图——实测把「无依赖的
+  mapper 边」换成「编排 facade 边」，当场造出 7 个 Bean 环，`sqlSessionFactory` 起不来、应用直接启动失败。
+- **一个模块按聚合切多个端口**：取数端口（如 `RegistFacadeService`：mapper 级读 + 诊室级联改写，实现只注入
+  mapper）与编排端口（`AppointFacadeService`：建单/退号/退款）、`QueueFacadeService`（签到/我的排队）分开放；*
+  *纯读取方一律依赖取数端口**。
+- **模块内跨类调用写死依赖**：A 需要 B → `@Resource private BService bService;`；禁「接口定义在 A、实现在 B」的 SPI
+  反转（跨模块的端口不算反转：契约与实现都按上两条归位），禁 `List<XxxProvider>` / `ObjectProvider` 策略收集器注入，禁运行期
+  `ApplicationContext.getBean()`。理由：间接层抹掉「谁调谁」，Spring 注入失败报启动期 `NoSuchBeanDefinition`，与业务错误隔一整个进程。
     - ⚠ 现存唯一豁免（§4.2 Map 豁免①同一处）：`WorkbenchMetricProvider` + 7 个实现方（前端卡片注册表是真动态结构）。除它以外新代码一律直接依赖。
-- **循环依赖唯一解法是上提公共能力**：抽第三个 `XxxService`（放真正拥有事实的模块 = 谁写这张表谁拥有），双方单向依赖；或把双向要碰的状态写入归一到一方。禁
-  `@Lazy`、禁事件替代调用、禁为此复活 SPI。
+- **循环依赖唯一解法是改依赖方向**：纯读取被编排端口牵住 → 拆叶子取数端口；两边都要写同一状态 → 写入归一到表的宿主；或抽第三个
+  `XxxService` 放真正拥有事实的模块。禁 `@Lazy`、禁事件替代调用。
+  判据（启动前静态扫）：`python workspace/_scan_bean_cycles.py` → `TOTAL cycles: 0`。
 - **外部渠道/医保/支付收口**：统一具体 `XxxChannelService`（调用方直接依赖具体类），联调期模拟在该 service
   内部按配置分支。不要「接口 + Mock 实现」两层。
 

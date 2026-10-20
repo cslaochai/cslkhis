@@ -1,13 +1,14 @@
 package com.his.emr.service.impl;
 
-import com.his.emr.vo.BizFollowupTaskVO;
+import com.his.spi.vo.BizFollowupTaskVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.appoint.dto.AppointUpsertDTO;
-import com.his.appoint.service.AppointFacadeService;
-import com.his.appoint.vo.BizAppointInfoListVO;
-import com.his.appoint.vo.RegistBriefVO;
+import com.his.spi.dto.AppointUpsertDTO;
+import com.his.spi.service.AppointFacadeService;
+import com.his.spi.service.RegistFacadeService;
+import com.his.spi.vo.BizAppointInfoListVO;
+import com.his.spi.vo.RegistBriefVO;
 import com.his.common.enums.*;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
@@ -66,6 +67,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
             AppointStatusEnum.NO_SHOW.getCode());
     private final DeptScopeService deptScopeService;
     private final AppointFacadeService appointFacadeService;
+    private final RegistFacadeService registFacadeService;
 
     private final BizFollowupTaskMapper bizFollowupTaskMapper;
 
@@ -450,7 +452,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
             throw new BusinessException("已取消的随访任务不再生成复诊号");
         }
         if (task.getRevisitAppointId() != null) {
-            RegistBriefVO previous = appointFacadeService.findRegist(task.getRevisitAppointId());
+            RegistBriefVO previous = registFacadeService.findRegist(task.getRevisitAppointId());
             // 只挡「那张号还有效」：已退号/过号/爽约的号作废了，患者确实还得再约一次，
             // 一刀切拦住会让这个任务永久卡死，只能去库里改数据。
             if (previous != null && !REGENERABLE_APPOINT_STATUS.contains(previous.getRegistStatus())) {

@@ -4,31 +4,24 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.enums.EnableStatusEnum;
-import com.his.common.enums.OrgUnitTypeEnum;
-import com.his.common.enums.PublishStatusEnum;
-import com.his.common.enums.StaffDutyStatusEnum;
-import com.his.common.enums.StaffTypeEnum;
+import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.schedule.dto.StaffPlanRulePageQueryDTO;
 import com.his.schedule.dto.StaffPlanRuleUpsertDTO;
 import com.his.schedule.entity.BizSchedule;
-import com.his.schedule.entity.BizStaffAttendance;
-import com.his.schedule.entity.BizStaffDemand;
+import com.his.schedule.entity.BizShift;
 import com.his.schedule.entity.BizStaffPlanRule;
-import com.his.system.entity.SysDepartment;
-import com.his.system.entity.SysEmployee;
-import com.his.system.entity.SysWard;
 import com.his.schedule.mapper.BizScheduleMapper;
 import com.his.schedule.mapper.BizStaffPlanRuleMapper;
-import com.his.system.mapper.SysDepartmentMapper;
-import com.his.system.mapper.SysWardMapper;
 import com.his.schedule.service.ShiftService;
 import com.his.schedule.service.StaffPlanRuleService;
 import com.his.schedule.vo.StaffPlanRuleVO;
 import com.his.schedule.vo.StaffShortfallVO;
 import com.his.schedule.vo.StaffWorkingGroupVO;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.DeptBriefVO;
+import com.his.spi.vo.WardBriefVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -60,9 +53,7 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
 
     private final ShiftService shiftService;
 
-    private final SysWardMapper sysWardMapper;
-
-    private final SysDepartmentMapper sysDepartmentMapper;
+    private final SystemFacadeService systemFacadeService;
 
     private static boolean isNight(BizShift shift) {
         return shift.getIsNight() != null && shift.getIsNight() == 1;
@@ -461,10 +452,10 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
             return OrgUnitTypeEnum.HOSPITAL.getLabel();
         }
         if (OrgUnitTypeEnum.WARD.getCode() == orgType) {
-            SysWard ward = sysWardMapper.selectById(orgId);
+            WardBriefVO ward = systemFacadeService.findWard(orgId);
             return ward == null ? null : ward.getWardName();
         }
-        SysDepartment dept = sysDepartmentMapper.selectById(orgId);
+        DeptBriefVO dept = systemFacadeService.findDepartment(orgId);
         return dept == null ? null : dept.getDeptName();
     }
 

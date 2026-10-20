@@ -10,13 +10,13 @@ import com.his.schedule.dto.StaffScheduleChangePageQueryDTO;
 import com.his.schedule.entity.BizClinicSourceChangeLog;
 import com.his.schedule.entity.BizSchedule;
 import com.his.schedule.entity.BizShift;
-import com.his.system.entity.SysEmployee;
 import com.his.schedule.mapper.BizClinicSourceChangeLogMapper;
 import com.his.schedule.mapper.BizScheduleMapper;
-import com.his.system.mapper.SysEmployeeMapper;
 import com.his.schedule.service.ScheduleChangeLogService;
 import com.his.schedule.service.ShiftService;
 import com.his.schedule.vo.ScheduleChangeLogVO;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.EmployeeBriefVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -38,7 +38,7 @@ public class ScheduleChangeLogServiceImpl extends ServiceImpl<BizClinicSourceCha
     private static final int W_REASON = 200;
 
     private final ShiftService shiftService;
-    private final SysEmployeeMapper sysEmployeeMapper;
+    private final SystemFacadeService systemFacadeService;
     private final BizScheduleMapper bizScheduleMapper;
 
     @Override
@@ -98,18 +98,7 @@ public class ScheduleChangeLogServiceImpl extends ServiceImpl<BizClinicSourceCha
      * 关键词 → 员工ID集合（姓名或工号模糊匹配，两侧都查）
      */
     private Set<Long> employeeIdsOf(String keyword) {
-        List<SysEmployee> employees = sysEmployeeMapper.selectList(
-                new LambdaQueryWrapper<SysEmployee>()
-                        .and(w -> w.like(SysEmployee::getEmpName, keyword)
-                                .or().like(SysEmployee::getEmpCode, keyword))
-                        .select(SysEmployee::getId));
-        Set<Long> ids = new HashSet<>();
-        for (SysEmployee e : employees) {
-            if (e.getId() != null) {
-                ids.add(e.getId());
-            }
-        }
-        return ids;
+        return new HashSet<>(systemFacadeService.searchEmployeeIds(keyword));
     }
 
     private List<ScheduleChangeLogVO> toVOs(List<BizClinicSourceChangeLog> rows) {
@@ -123,14 +112,14 @@ public class ScheduleChangeLogServiceImpl extends ServiceImpl<BizClinicSourceCha
                 scheduleIds.add(row.getStaffScheduleId());
             }
         }
-        Map<Long, SysEmployee> employees = employeesOf(empIds);
+        Map<Long, EmployeeBriefVO> employees = employeesOf(empIds);
         Map<Long, BizShift> shifts = shiftService.mapByIds(shiftIds);
         Map<Long, BizSchedule> schedules = scheduleIds.isEmpty()
                 // 整周级留痕没有单行（staff_schedule_id 为空）→ 空表 + 空键，
                 // Map.of().get(null) 会抛 NPE，必须用 Collections.emptyMap()
                 ? Collections.emptyMap()
                 : bizScheduleMapper.selectBatchIds(scheduleIds).stream()
-                        .collect(Collectors.toMap(BizSchedule::getId, s -> s, (a, b) -> a));
+                .collect(Collectors.toMap(BizSchedule::getId, s -> s, (a, b) -> a));
         List<ScheduleChangeLogVO> vos = new ArrayList<>(rows.size());
         for (BizClinicSourceChangeLog row : rows) {
             ScheduleChangeLogVO vo = new ScheduleChangeLogVO();
@@ -140,8 +129,8 @@ public class ScheduleChangeLogServiceImpl extends ServiceImpl<BizClinicSourceCha
             vo.setActionTypeText(ScheduleChangeTypeEnum.getLabel(row.getActionType()));
             vo.setFromEmployeeId(row.getFromEmployeeId());
             vo.setToEmployeeId(row.getToEmployeeId());
-            SysEmployee from = employees.get(row.getFromEmployeeId());
-            SysEmployee to = employees.get(row.getToEmployeeId());
+            EmployeeBriefVO from = employees.get(row.getFromEmployeeId());
+            EmployeeBriefVO to = employees.get(row.getToEmployeeId());
             vo.setFromEmployeeName(from == null ? null : from.getEmpName());
             vo.setToEmployeeName(to == null ? null : to.getEmpName());
             vo.setFromShiftId(row.getFromShiftId());
@@ -165,15 +154,15 @@ public class ScheduleChangeLogServiceImpl extends ServiceImpl<BizClinicSourceCha
         return vos;
     }
 
-    private Map<Long, SysEmployee> employeesOf(Collection<Long> ids) {
+    private Map<Long, EmployeeBriefVO> employeesOf(Collection<Long> ids) {
         if (ids.isEmpty()) {
             // 必须用 Collections.emptyMap()：Map.of() 的 get(null) 直接抛 NPE，
             // 而调用方拿「行上的原/新值班人（审批类留痕为空）」来取，空表 + 空键就整页 500。
             // 审批留痕（提交审核/审核发布/驳回/整周动作）本来就没有原/新值班人，必然踩这条。
             return Collections.emptyMap();
         }
-        return sysEmployeeMapper.selectBatchIds(ids).stream()
-                .collect(Collectors.toMap(SysEmployee::getId, e -> e));
+        return systemFacadeService.listEmployeesByIds(ids).stream()
+                .collect(Collectors.toMap(EmployeeBriefVO::getId, e -> e));
     }
 
     private void collect(Set<Long> target, Long... ids) {

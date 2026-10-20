@@ -11,7 +11,9 @@ import com.his.appoint.entity.Queue;
 import com.his.common.enums.*;
 import com.his.appoint.mapper.*;
 import com.his.appoint.service.EmergencyService;
-import com.his.system.service.StaffScheduleService;
+import com.his.schedule.entity.BizShift;
+import com.his.schedule.mapper.BizShiftMapper;
+import com.his.schedule.service.StaffScheduleService;
 import com.his.appoint.support.EmergencyObservationPolicy;
 import com.his.appoint.support.EmergencyWaitPolicy;
 import com.his.appoint.vo.*;
@@ -26,22 +28,24 @@ import com.his.common.support.EmpTitleCode;
 import com.his.common.util.ShiftCoverUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
-import com.his.patient.dto.InpatientAdmitDTO;
-import com.his.patient.dto.EmergencyPatientCreateDTO;
-import com.his.patient.service.PatientFacadeService;
-import com.his.patient.vo.PatientMasterVO;
-import com.his.patient.vo.BedVO;
-import com.his.patient.vo.WardVO;
-import com.his.system.entity.*;
+import com.his.spi.dto.InpatientAdmitDTO;
+import com.his.spi.dto.EmergencyPatientCreateDTO;
+import com.his.spi.service.PatientFacadeService;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.PatientMasterVO;
+import com.his.spi.vo.BedVO;
+import com.his.spi.vo.WardVO;
+import com.his.spi.vo.DeptBriefVO;
+import com.his.spi.vo.EmployeeBriefVO;
+import com.his.spi.vo.UserBriefVO;
 import com.his.common.enums.BizTypeEnum;
-import com.his.system.mapper.*;
 import com.his.system.service.DeptScopeService;
 import com.his.common.constant.SystemConfigKeyConst;
-import com.his.system.service.DutyRosterService;
+import com.his.schedule.service.DutyRosterService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
-import com.his.system.vo.DutyOfficerVO;
-import com.his.system.vo.StaffScheduleVO;
+import com.his.schedule.vo.DutyOfficerVO;
+import com.his.schedule.vo.StaffScheduleVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -77,13 +81,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
 
     private final EmergencyObservationPolicy obsPolicy;
 
-    private final SysEmployeeMapper sysEmployeeMapper;
-
-    private final SysUserMapper sysUserMapper;
-
-    private final SysConfigMapper sysConfigMapper;
-
-    private final SysDepartmentMapper sysDepartmentMapper;
+    private final SystemFacadeService systemFacadeService;
 
     private final DutyRosterService dutyRosterService;
 
@@ -227,7 +225,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
         // dept_name 是 NOT NULL 无默认值的快照列：只传 deptId 的调用原先直接 500
         // （报「系统内部错误」，连原因都不透出）。科室名属于参照数据，服务端按 ID 补齐比信任客户端更稳。
         if (!TextUtil.hasText(emergency.getDeptName())) {
-            SysDepartment dept = sysDepartmentMapper.selectById(emergency.getDeptId());
+            DeptBriefVO dept = systemFacadeService.findDepartment(emergency.getDeptId());
             if (dept == null) {
                 throw new BusinessException("接诊科室不存在：" + emergency.getDeptId());
             }
@@ -319,7 +317,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
             // 「有医生 ID、没有医生名」的行，列表按医生名判定 → 明明是派好了单，
             // 界面却显示成「待派单」。参照数据一律服务端按 ID 补齐。
             if (!TextUtil.hasText(emergency.getDoctorName())) {
-                SysEmployee doctor = sysEmployeeMapper.selectById(emergency.getDoctorId());
+                EmployeeBriefVO doctor = systemFacadeService.findEmployee(emergency.getDoctorId());
                 if (doctor == null) {
                     throw new BusinessException("接诊医生不存在：" + emergency.getDoctorId());
                 }
@@ -858,7 +856,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
                                  long waitMinutes, int targetMinutes, String levelText) {
         String receiverName = "站内用户";
         try {
-            SysEmployee emp = sysEmployeeMapper.selectById(receiverId);
+            EmployeeBriefVO emp = systemFacadeService.findEmployee(receiverId);
             if (emp != null && TextUtil.hasText(emp.getEmpName())) {
                 receiverName = emp.getEmpName();
             }
@@ -891,11 +889,8 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
         if (deptId == null) {
             return List.of();
         }
-        return sysEmployeeMapper.selectList(new LambdaQueryWrapper<SysEmployee>()
-                        .eq(SysEmployee::getDeptId, deptId)
-                        .in(SysEmployee::getTitle, EmpTitleCode.SENIOR)
-                        .eq(SysEmployee::getStatus, 1))
-                .stream().map(SysEmployee::getId).filter(Objects::nonNull).distinct().collect(Collectors.toList());
+        return systemFacadeService.listActiveEmployeesByTitles(deptId, EmpTitleCode.SENIOR)
+                .stream().map(EmployeeBriefVO::getId).filter(Objects::nonNull).distinct().collect(Collectors.toList());
     }
 
     /**
@@ -905,15 +900,12 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
      */
     private Receiver fallbackReceiver() {
         try {
-            SysConfig config = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
-                    .eq(SysConfig::getConfigKey, SystemConfigKeyConst.EMERGENCY_WAIT_FALLBACK_RECEIVER)
-                    .last("LIMIT 1"));
-            if (config == null || !TextUtil.hasText(config.getConfigValue())) {
+            String raw = systemFacadeService.findConfigValue(SystemConfigKeyConst.EMERGENCY_WAIT_FALLBACK_RECEIVER);
+            if (!TextUtil.hasText(raw)) {
                 return null;
             }
-            String raw = config.getConfigValue().trim();
-            SysUser user = sysUserMapper.selectOne(new LambdaQueryWrapper<SysUser>()
-                    .eq(SysUser::getUserName, raw).last("LIMIT 1"));
+            raw = raw.trim();
+            UserBriefVO user = systemFacadeService.findUserByName(raw);
             if (user != null) {
                 if (user.getEmpId() == null) {
                     log.warn("[急诊候诊] 兜底接收人 {} 没有关联员工档案，无法接收站内信", raw);
@@ -1008,29 +1000,27 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
         Long scopeDeptId = resolveHandoverDeptId(deptId);
         deptScopeService.assertDeptAccessible(scopeDeptId);
         // 先取本科室在职员工，再把"此刻在岗"的标记出来并排前面
-        LinkedHashMap<Long, SysEmployee> employees = new LinkedHashMap<>();
-        sysEmployeeMapper.selectList(new LambdaQueryWrapper<SysEmployee>()
-                        .eq(SysEmployee::getDeptId, scopeDeptId)
-                        .eq(SysEmployee::getStatus, 1))
+        LinkedHashMap<Long, EmployeeBriefVO> employees = new LinkedHashMap<>();
+        systemFacadeService.listActiveEmployeesByDept(scopeDeptId)
                 .forEach(emp -> employees.putIfAbsent(emp.getId(), emp));
         Set<Long> onDutyIds = new LinkedHashSet<>();
         for (ErDuty schedule : onDutySchedules(scopeDeptId)) {
             Long doctorId = schedule.getDoctorId();
             // 排班医生未必挂本科室（跨科支援），下拉里要有他，否则"在岗"是假信息
-            employees.computeIfAbsent(doctorId, id -> sysEmployeeMapper.selectById(id));
+            employees.computeIfAbsent(doctorId, id -> systemFacadeService.findEmployee(id));
             onDutyIds.add(doctorId);
         }
         return employees.entrySet().stream()
                 .filter(e -> e.getKey() != null && e.getValue() != null)
                 .filter(e -> !e.getKey().equals(fromEmpId))
                 .sorted(Comparator
-                        .comparing((Map.Entry<Long, SysEmployee> e) -> !onDutyIds.contains(e.getKey()))
+                        .comparing((Map.Entry<Long, EmployeeBriefVO> e) -> !onDutyIds.contains(e.getKey()))
                         .thenComparing(e -> e.getValue().getEmpName() == null ? "" : e.getValue().getEmpName()))
                 .map(e -> toCandidate(e.getValue(), onDutyIds.contains(e.getKey()) ? "当前在岗" : "本科室"))
                 .collect(Collectors.toList());
     }
 
-    private EmergencyTakeCandidateVO toCandidate(SysEmployee emp, String sourceText) {
+    private EmergencyTakeCandidateVO toCandidate(EmployeeBriefVO emp, String sourceText) {
         EmergencyTakeCandidateVO vo = new EmergencyTakeCandidateVO();
         vo.setEmpId(emp.getId());
         vo.setEmpName(emp.getEmpName());
@@ -1045,12 +1035,12 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
         Long fromEmpId = requireCurrentEmployee();
         String fromEmpName = UserUtils.getCurrentUser().getRealName();
         if (!TextUtil.hasText(fromEmpName)) {
-            SysEmployee me = sysEmployeeMapper.selectById(fromEmpId);
+            EmployeeBriefVO me = systemFacadeService.findEmployee(fromEmpId);
             fromEmpName = me == null ? String.valueOf(fromEmpId) : me.getEmpName();
         }
         Long deptId = resolveHandoverDeptId(submitDTO.getDeptId());
         deptScopeService.assertDeptAccessible(deptId);
-        SysDepartment dept = sysDepartmentMapper.selectById(deptId);
+        DeptBriefVO dept = systemFacadeService.findDepartment(deptId);
         if (dept == null) {
             throw new BusinessException("交班科室不存在：" + deptId);
         }
@@ -1058,14 +1048,14 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
         if (submitDTO.getTakeEmpId() != null && submitDTO.getTakeEmpId().equals(fromEmpId)) {
             throw new BusinessException("接班人不能是交出人本人：交给自己等于没有交接");
         }
-        SysEmployee takeEmp = requireActiveEmployee(submitDTO.getTakeEmpId(), "接班人");
+        EmployeeBriefVO takeEmp = requireActiveEmployee(submitDTO.getTakeEmpId(), "接班人");
 
         LinkedHashMap<Long, Emergency> scope = this.list(handoverScope(deptId, fromEmpId)).stream()
                 .collect(Collectors.toMap(Emergency::getId, e -> e, (a, b) -> a, LinkedHashMap::new));
         LinkedHashMap<Long, EmergencyHandoverItemDTO> submitted = matchHandoverItems(submitDTO.getItems(), scope);
 
         // 接续责任人：明细没单独指定就归整单接班人
-        LinkedHashMap<Long, SysEmployee> takers = new LinkedHashMap<>();
+        LinkedHashMap<Long, EmployeeBriefVO> takers = new LinkedHashMap<>();
         takers.put(takeEmp.getId(), takeEmp);
         LinkedHashMap<Long, Long> takeOf = new LinkedHashMap<>();
         for (EmergencyHandoverItemDTO item : submitDTO.getItems()) {
@@ -1104,7 +1094,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
 
         for (Emergency emergency : scope.values()) {
             EmergencyHandoverItemDTO item = submitted.get(emergency.getId());
-            SysEmployee taker = takers.get(takeOf.get(emergency.getId()));
+            EmployeeBriefVO taker = takers.get(takeOf.get(emergency.getId()));
             emergencyHandoverItemMapper.insert(toHandoverItem(handover, emergency, item, taker, fromEmpId));
             transferResponsibility(emergency, taker, fromEmpId);
         }
@@ -1148,7 +1138,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
     }
 
     private EmergencyHandoverItem toHandoverItem(EmergencyHandover handover, Emergency emergency,
-                                                 EmergencyHandoverItemDTO item, SysEmployee taker, Long fromEmpId) {
+                                                 EmergencyHandoverItemDTO item, EmployeeBriefVO taker, Long fromEmpId) {
         EmergencyHandoverItem row = new EmergencyHandoverItem();
         row.setHandoverId(handover.getId());
         row.setEmergencyId(emergency.getId());
@@ -1177,7 +1167,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
      * 别人的行不碰。挂号单与叫号队列同步换人 —— 医生站叫号按候诊队列的医师ID=我收口，
      * 只改急诊记录的话接班人在工作站上看不见接手的人，"交到了他手上"就是空话。
      */
-    private void transferResponsibility(Emergency emergency, SysEmployee taker, Long fromEmpId) {
+    private void transferResponsibility(Emergency emergency, EmployeeBriefVO taker, Long fromEmpId) {
         if (emergency.getDoctorId() != null && !emergency.getDoctorId().equals(fromEmpId)) {
             return;
         }
@@ -1236,12 +1226,12 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
      */
     private void notifyTakers(EmergencyHandover handover, LinkedHashMap<Long, Emergency> scope,
                               LinkedHashMap<Long, EmergencyHandoverItemDTO> submitted,
-                              LinkedHashMap<Long, Long> takeOf, LinkedHashMap<Long, SysEmployee> takers) {
+                              LinkedHashMap<Long, Long> takeOf, LinkedHashMap<Long, EmployeeBriefVO> takers) {
         LinkedHashMap<Long, List<Emergency>> byTaker = new LinkedHashMap<>();
         scope.values().forEach(e -> byTaker
                 .computeIfAbsent(takeOf.get(e.getId()), id -> new ArrayList<>()).add(e));
         byTaker.forEach((takerId, list) -> {
-            SysEmployee taker = takers.get(takerId);
+            EmployeeBriefVO taker = takers.get(takerId);
             String detail = list.stream()
                     .map(e -> {
                         BizEmergencyVO computed = toVO(e);
@@ -1405,7 +1395,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
     }
 
     private String employeeNameOf(Long empId) {
-        SysEmployee emp = sysEmployeeMapper.selectById(empId);
+        EmployeeBriefVO emp = systemFacadeService.findEmployee(empId);
         return emp != null && TextUtil.hasText(emp.getEmpName()) ? emp.getEmpName() : "站内用户";
     }
 
@@ -1479,16 +1469,16 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
         return myDeptId;
     }
 
-    private SysEmployee requireActiveEmployee(Long empId, String label) {
+    private EmployeeBriefVO requireActiveEmployee(Long empId, String label) {
         // C-非 web 入参：整单接班人与明细推导出的接续医生共用此工具，后者不是 HTTP 参数绑定，Bean Validation 不覆盖，保留
         if (empId == null) {
             throw new BusinessException(label + "不能为空");
         }
-        SysEmployee emp = sysEmployeeMapper.selectById(empId);
+        EmployeeBriefVO emp = systemFacadeService.findEmployee(empId);
         if (emp == null) {
             throw new BusinessException(label + "不存在：" + empId);
         }
-        if (emp.getStatus() != null && emp.getStatus() != 1) {
+        if (emp.getStatus() != null && !Objects.equals(emp.getStatus(), EnableStatusEnum.ENABLED.getCode())) {
             throw new BusinessException(label + "已停用：" + emp.getEmpName());
         }
         return emp;

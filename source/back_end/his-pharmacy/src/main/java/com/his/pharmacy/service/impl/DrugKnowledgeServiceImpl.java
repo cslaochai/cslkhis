@@ -18,7 +18,7 @@ import com.his.pharmacy.mapper.SysDrugInteractionMapper;
 import com.his.pharmacy.mapper.SysDrugMapper;
 import com.his.pharmacy.service.DrugKnowledgeService;
 import com.his.pharmacy.support.DrugComponentPair;
-import com.his.pharmacy.utils.UserUtils;
+import com.his.system.utils.UserUtils;
 import com.his.pharmacy.vo.DoseLimitVO;
 import com.his.pharmacy.vo.DrugInteractionVO;
 import lombok.RequiredArgsConstructor;

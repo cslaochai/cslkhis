@@ -3,6 +3,7 @@ package com.his.emr.vo;
 import lombok.Data;
 
 import java.util.List;
+import com.his.sign.vo.SignOptionVO;
 
 /**
  * 签名中心的下拉选项（全部来自枚举，不查库）。

@@ -26,7 +26,7 @@ import com.his.medicaltech.mapper.BizLaboratoryRecordMapper;
 import com.his.medicaltech.mapper.BizReportMapper;
 import com.his.medicaltech.support.LabAbnormalJudge;
 import com.his.medicaltech.support.LabCriticalValueRules;
-import com.his.patient.service.PatientFacadeService;
+import com.his.spi.service.PatientFacadeService;
 import com.his.common.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import com.his.common.enums.AiExpressionSourceEnum;

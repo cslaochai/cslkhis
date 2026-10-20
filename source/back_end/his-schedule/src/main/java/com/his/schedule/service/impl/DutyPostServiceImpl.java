@@ -11,16 +11,15 @@ import com.his.schedule.dto.DutyPostPageQueryDTO;
 import com.his.schedule.dto.DutyPostUpsertDTO;
 import com.his.schedule.entity.BizDutyPost;
 import com.his.schedule.entity.BizShift;
-import com.his.system.entity.SysDepartment;
-import com.his.system.entity.SysWard;
 import com.his.schedule.mapper.BizDutyPostMapper;
-import com.his.system.mapper.SysDepartmentMapper;
-import com.his.system.mapper.SysWardMapper;
-import com.his.system.service.DeptScopeService;
 import com.his.schedule.service.DutyPostService;
 import com.his.schedule.service.ShiftService;
 import com.his.schedule.vo.DutyPostSelectListVO;
 import com.his.schedule.vo.DutyPostVO;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.DeptBriefVO;
+import com.his.spi.vo.WardBriefVO;
+import com.his.system.service.DeptScopeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -35,8 +34,7 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
     private final DeptScopeService deptScopeService;
 
     private final ShiftService shiftService;
-    private final SysWardMapper sysWardMapper;
-    private final SysDepartmentMapper sysDepartmentMapper;
+    private final SystemFacadeService systemFacadeService;
 
     /**
      * 停用判定：状态为空视为未停用（缺省启用），只有显式停用才拦
@@ -236,12 +234,12 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
             throw new BusinessException("请选择值守点位所属的" + OrgUnitTypeEnum.getLabel(post.getOrgType()));
         }
         if (OrgUnitTypeEnum.WARD.getCode() == post.getOrgType()) {
-            SysWard ward = sysWardMapper.selectById(post.getOrgId());
+            WardBriefVO ward = systemFacadeService.findWard(post.getOrgId());
             if (ward == null || disabled(ward.getStatus())) {
                 throw new BusinessException("所选病区不存在或已停用");
             }
         } else {
-            SysDepartment dept = sysDepartmentMapper.selectById(post.getOrgId());
+            DeptBriefVO dept = systemFacadeService.findDepartment(post.getOrgId());
             if (dept == null || disabled(dept.getStatus())) {
                 throw new BusinessException("所选科室不存在或已停用");
             }
@@ -264,10 +262,10 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
 
     private String unitNameOf(Integer orgType, Long orgId) {
         if (OrgUnitTypeEnum.WARD.getCode() == orgType) {
-            SysWard ward = sysWardMapper.selectById(orgId);
+            WardBriefVO ward = systemFacadeService.findWard(orgId);
             return ward == null ? null : ward.getWardName();
         }
-        SysDepartment dept = sysDepartmentMapper.selectById(orgId);
+        DeptBriefVO dept = systemFacadeService.findDepartment(orgId);
         return dept == null ? null : dept.getDeptName();
     }
 

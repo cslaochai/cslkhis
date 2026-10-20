@@ -34,11 +34,6 @@ export function listDrugTracePage(params) {
   return request.post('/drugTrace/listPage', params)
 }
 
-// 台账详情
-export function getDrugTraceDetail(id) {
-  return request.get('/drugTrace/getDetailById', { params: { id } })
-}
-
 // 对账统计（码状态分布 / 上传分布 / 近30天未核销发药行数）
 export function getDrugTraceReconcile() {
   return request.get('/drugTrace/reconcileStats')

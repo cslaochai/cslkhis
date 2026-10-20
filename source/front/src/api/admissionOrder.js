@@ -15,17 +15,7 @@ export function getAdmissionOrderListPage(params) {
     return request.get('/patient/admissionOrder/listPage', {params})
 }
 
-// 住院证详情
-export function getAdmissionOrderDetail(id) {
-    return request.get('/patient/admissionOrder/detail', {params: {id}})
-}
-
 // 作废住院证（仅「待收治」可作废）
 export function cancelAdmissionOrder(data) {
     return request.post('/patient/admissionOrder/cancel', data)
-}
-
-// 待收治且未过期的证数量
-export function getAdmissionOrderPendingCount() {
-    return request.get('/patient/admissionOrder/pendingCount')
 }

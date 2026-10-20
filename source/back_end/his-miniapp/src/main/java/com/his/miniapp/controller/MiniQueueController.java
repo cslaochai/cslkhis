@@ -1,10 +1,11 @@
 package com.his.miniapp.controller;
 
-import com.his.appoint.dto.AppointCheckInUpdateDTO;
-import com.his.appoint.service.AppointFacadeService;
-import com.his.appoint.vo.PatientQueueVO;
+import com.his.spi.dto.AppointCheckInUpdateDTO;
+import com.his.spi.service.QueueFacadeService;
+import com.his.spi.service.RegistFacadeService;
+import com.his.spi.vo.PatientQueueVO;
 import com.his.common.base.Result;
-import com.his.patient.service.PatientFacadeService;
+import com.his.spi.service.PatientFacadeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -24,7 +25,8 @@ import java.util.List;
 @PreAuthorize("hasAuthority('PATIENT')")
 public class MiniQueueController {
 
-    private final AppointFacadeService appointFacadeService;
+    private final QueueFacadeService queueFacadeService;
+    private final RegistFacadeService registFacadeService;
     private final PatientFacadeService patientFacadeService;
 
     /**
@@ -38,7 +40,7 @@ public class MiniQueueController {
         if (!patientFacadeService.canAccessPatient(patientId)) {
             return Result.error("无权查询该就诊人的排队信息");
         }
-        return Result.success(appointFacadeService.myQueue(patientId));
+        return Result.success(queueFacadeService.myQueue(patientId));
     }
 
     /**
@@ -49,14 +51,14 @@ public class MiniQueueController {
     @PostMapping("/myCheckIn")
     public Result<Void> myCheckIn(@RequestBody @Valid AppointCheckInUpdateDTO updateDTO) {
         // 归属从挂号记录反查，不看前端传的是谁——否则改 registId 就能替他人签到
-        Long ownerPatientId = appointFacadeService.patientIdOfRegist(updateDTO.getRegistId());
+        Long ownerPatientId = registFacadeService.patientIdOfRegist(updateDTO.getRegistId());
         if (ownerPatientId == null) {
             return Result.error("挂号记录不存在");
         }
         if (!patientFacadeService.canAccessPatient(ownerPatientId)) {
             return Result.error("无权为该就诊人签到");
         }
-        boolean success = appointFacadeService.checkInByRegistId(updateDTO);
+        boolean success = queueFacadeService.checkInByRegistId(updateDTO);
         return success ? Result.success() : Result.error("签到失败");
     }
 }

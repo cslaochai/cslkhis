@@ -26,7 +26,7 @@
             <artifactId>his-core-spi</artifactId>
         </dependency>
 
-        <!-- 业务模块 -->
+        <!-- 业务模块（his-web 为启动聚合层，属特例，允许依赖全部业务模块） -->
         <dependency>
             <groupId>com.his</groupId>
             <artifactId>his-system</artifactId>

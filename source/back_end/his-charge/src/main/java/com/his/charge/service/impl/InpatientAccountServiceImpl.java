@@ -13,11 +13,11 @@ import com.his.charge.mapper.BizAlertMapper;
 import com.his.charge.mapper.BizPaymentTxnMapper;
 import com.his.charge.service.*;
 import com.his.charge.vo.*;
-import com.his.charge.dto.BillPayDTO;
-import com.his.charge.dto.PrepayPageQueryDTO;
-import com.his.charge.dto.PrepayUpsertDTO;
-import com.his.charge.vo.PrepayBalanceVO;
-import com.his.charge.vo.PrepayVO;
+import com.his.spi.dto.BillPayDTO;
+import com.his.spi.dto.PrepayPageQueryDTO;
+import com.his.spi.dto.PrepayUpsertDTO;
+import com.his.spi.vo.PrepayBalanceVO;
+import com.his.spi.vo.PrepayVO;
 import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
@@ -25,12 +25,12 @@ import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
-import com.his.patient.service.PatientFacadeService;
-import com.his.patient.vo.AdmissionBriefVO;
-import com.his.patient.vo.PatientBriefVO;
-import com.his.system.entity.SysEmployee;
+import com.his.spi.service.PatientFacadeService;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.AdmissionBriefVO;
+import com.his.spi.vo.EmployeeBriefVO;
+import com.his.spi.vo.PatientBriefVO;
 import com.his.common.enums.BizTypeEnum;
-import com.his.system.mapper.SysEmployeeMapper;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.service.SysMessageService;
@@ -68,12 +68,12 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
     private final BizAlertMapper bizAlertMapper;
     private final RedisSequenceService redisSequenceService;
     private final PatientFacadeService patientFacadeService;
+    private final SystemFacadeService systemFacadeService;
     private final PaymentService paymentService;
     private final FundAccountService fundAccountService;
     private final FeeRecordService feeRecordService;
     private final SettlementBillService settlementBillService;
     private final SysMessageService sysMessageService;
-    private final SysEmployeeMapper sysEmployeeMapper;
     private final DictCacheService dictCacheService;
 
     // 预交金（L3 资金流水 + 住院资金账户）
@@ -500,7 +500,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
             return;
         }
         try {
-            SysEmployee doctor = sysEmployeeMapper.selectById(doctorId);
+            EmployeeBriefVO doctor = systemFacadeService.findEmployee(doctorId);
             String doctorName = doctor != null && TextUtil.hasText(doctor.getEmpName())
                     ? doctor.getEmpName() : "站内用户";
             String patientName = patient != null && TextUtil.hasText(patient.getPatientName())

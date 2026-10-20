@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
- * 门诊公共工位字典新增/修改入参（sql/277）。
+ * 门诊公共工位字典新增/修改入参
  */
 @Data
 public class OpdStationUpsertDTO {

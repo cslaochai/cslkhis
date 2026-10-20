@@ -18,14 +18,13 @@ import com.his.patient.entity.BizInpatientLeave;
 import com.his.patient.mapper.BizInpatientLeaveMapper;
 import com.his.patient.service.InpatientLeaveService;
 import com.his.patient.vo.InpatientLeaveVO;
-import com.his.system.dto.SignCommandDTO;
-import com.his.system.entity.SysConfig;
-import com.his.system.mapper.SysConfigMapper;
+import com.his.spi.dto.SignCommandDTO;
+import com.his.spi.service.SystemFacadeService;
 import com.his.system.service.DeptScopeService;
-import com.his.system.service.EmrSignatureService;
+import com.his.emr.service.EmrSignatureService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
-import com.his.system.vo.SignatureVO;
+import com.his.spi.vo.SignatureVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -61,7 +60,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
     private final BizInpatientLeaveMapper bizInpatientLeaveMapper;
     private final RedisSequenceService redisSequenceService;
     private final EmrSignatureService emrSignatureService;
-    private final SysConfigMapper sysConfigMapper;
+    private final SystemFacadeService systemFacadeService;
 
     // 查询
 
@@ -471,21 +470,20 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
      * 单次请假时长上限：系统参数缺失/非法回落 72，不回落成「无上限」
      */
     private long resolveMaxHours() {
-        SysConfig config = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
-                .eq(SysConfig::getConfigKey, SystemConfigKeyConst.INPATIENT_LEAVE_MAX_HOURS));
-        if (config == null || !TextUtil.hasText(config.getConfigValue())) {
+        String configValue = systemFacadeService.findConfigValue(SystemConfigKeyConst.INPATIENT_LEAVE_MAX_HOURS);
+        if (!TextUtil.hasText(configValue)) {
             log.warn("未配置 {}，请假时长上限按兜底值 {} 小时", SystemConfigKeyConst.INPATIENT_LEAVE_MAX_HOURS, MAX_HOURS_FALLBACK);
             return MAX_HOURS_FALLBACK;
         }
         try {
-            int hours = Integer.parseInt(config.getConfigValue().trim());
+            int hours = Integer.parseInt(configValue.trim());
             if (hours <= 0) {
-                log.warn("配置 {} = {} 非法（必须为正数），按兜底值 {} 小时", SystemConfigKeyConst.INPATIENT_LEAVE_MAX_HOURS, config.getConfigValue(), MAX_HOURS_FALLBACK);
+                log.warn("配置 {} = {} 非法（必须为正数），按兜底值 {} 小时", SystemConfigKeyConst.INPATIENT_LEAVE_MAX_HOURS, configValue, MAX_HOURS_FALLBACK);
                 return MAX_HOURS_FALLBACK;
             }
             return hours;
         } catch (NumberFormatException e) {
-            log.warn("配置 {} = {} 不是数字，按兜底值 {} 小时", SystemConfigKeyConst.INPATIENT_LEAVE_MAX_HOURS, config.getConfigValue(), MAX_HOURS_FALLBACK);
+            log.warn("配置 {} = {} 不是数字，按兜底值 {} 小时", SystemConfigKeyConst.INPATIENT_LEAVE_MAX_HOURS, configValue, MAX_HOURS_FALLBACK);
             return MAX_HOURS_FALLBACK;
         }
     }

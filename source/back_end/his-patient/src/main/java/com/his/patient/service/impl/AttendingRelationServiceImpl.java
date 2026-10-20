@@ -17,10 +17,9 @@ import com.his.patient.mapper.BizAttendingRelationMapper;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.service.AttendingRelationService;
 import com.his.patient.vo.AttendingRelationVO;
-import com.his.system.entity.SysDepartment;
-import com.his.system.entity.SysEmployee;
-import com.his.system.mapper.SysDepartmentMapper;
-import com.his.system.mapper.SysEmployeeMapper;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.DeptBriefVO;
+import com.his.spi.vo.EmployeeBriefVO;
 import com.his.system.service.DeptScopeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -40,8 +39,7 @@ public class AttendingRelationServiceImpl
 
     private final BizAdmissionMapper bizAdmissionMapper;
     private final BizPatientMapper bizPatientMapper;
-    private final SysEmployeeMapper sysEmployeeMapper;
-    private final SysDepartmentMapper sysDepartmentMapper;
+    private final SystemFacadeService systemFacadeService;
     private final DeptScopeService deptScopeService;
 
     @Override
@@ -87,7 +85,7 @@ public class AttendingRelationServiceImpl
             throw new BusinessException("该住院已结束，不能再建立或转交管床关系");
         }
         deptScopeService.assertDeptAccessible(admission.getDeptId());
-        SysEmployee doctor = sysEmployeeMapper.selectById(dto.getEmployeeId());
+        EmployeeBriefVO doctor = systemFacadeService.findEmployee(dto.getEmployeeId());
         if (doctor == null) {
             throw new BusinessException("所选医生不存在或已删除");
         }
@@ -219,7 +217,7 @@ public class AttendingRelationServiceImpl
         if (deptId == null) {
             return "";
         }
-        SysDepartment dept = sysDepartmentMapper.selectById(deptId);
+        DeptBriefVO dept = systemFacadeService.findDepartment(deptId);
         return dept == null ? "" : dept.getDeptName();
     }
 

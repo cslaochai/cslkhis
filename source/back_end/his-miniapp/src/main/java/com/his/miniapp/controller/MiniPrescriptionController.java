@@ -1,9 +1,9 @@
 package com.his.miniapp.controller;
 
-import com.his.emr.service.EmrPatientFacadeService;
+import com.his.spi.service.EmrPatientFacadeService;
 import com.his.common.base.Result;
-import com.his.emr.vo.MyPrescriptionVO;
-import com.his.patient.service.PatientFacadeService;
+import com.his.spi.vo.MyPrescriptionVO;
+import com.his.spi.service.PatientFacadeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

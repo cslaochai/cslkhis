@@ -9,11 +9,10 @@ import com.his.patient.dto.PatientTagUpsertDTO;
 import com.his.patient.entity.BizPatientTagRelation;
 import com.his.patient.mapper.BizPatientTagRelationMapper;
 import com.his.patient.service.BizPatientTagRelationService;
-import com.his.system.entity.SysPatientTag;
-import com.his.system.service.PatientTagService;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.PatientTagBriefVO;
 import com.his.system.vo.SysPatientTagVO;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -25,7 +24,7 @@ public class BizPatientTagRelationServiceImpl
         extends ServiceImpl<BizPatientTagRelationMapper, BizPatientTagRelation>
         implements BizPatientTagRelationService {
 
-    private final PatientTagService patientTagService;
+    private final SystemFacadeService systemFacadeService;
 
     @Override
     public List<Long> listPatientIdsByTagId(Long tagId) {
@@ -47,14 +46,8 @@ public class BizPatientTagRelationServiceImpl
         List<Long> tagIds = relations.stream()
                 .map(BizPatientTagRelation::getTagId)
                 .collect(Collectors.toList());
-        LambdaQueryWrapper<SysPatientTag> tagWrapper = new LambdaQueryWrapper<>();
-        tagWrapper.in(SysPatientTag::getTagId, tagIds);
-        List<SysPatientTag> tags = patientTagService.list(tagWrapper);
-        return tags.stream().map(tag -> {
-            SysPatientTagVO vo = new SysPatientTagVO();
-            BeanUtils.copyProperties(tag, vo);
-            return vo;
-        }).collect(Collectors.toList());
+        List<PatientTagBriefVO> tags = systemFacadeService.listPatientTagsByIds(tagIds);
+        return tags.stream().map(this::toTagVO).collect(Collectors.toList());
     }
 
     @Override
@@ -72,12 +65,9 @@ public class BizPatientTagRelationServiceImpl
         if (tagIds.isEmpty()) {
             return Collections.emptyMap();
         }
-        List<SysPatientTag> tags = patientTagService.listByIds(tagIds);
-        Map<Long, SysPatientTagVO> tagVoMap = tags.stream().map(tag -> {
-            SysPatientTagVO tvo = new SysPatientTagVO();
-            BeanUtils.copyProperties(tag, tvo);
-            return tvo;
-        }).collect(Collectors.toMap(SysPatientTagVO::getTagId, t -> t, (a, b) -> a));
+        List<PatientTagBriefVO> tags = systemFacadeService.listPatientTagsByIds(tagIds);
+        Map<Long, SysPatientTagVO> tagVoMap = tags.stream().map(this::toTagVO)
+                .collect(Collectors.toMap(SysPatientTagVO::getTagId, t -> t, (a, b) -> a));
 
         Map<Long, List<SysPatientTagVO>> tagsMap = new HashMap<>();
         for (BizPatientTagRelation relation : relations) {
@@ -126,5 +116,14 @@ public class BizPatientTagRelationServiceImpl
                 this.save(relation);
             }
         }
+    }
+
+    private SysPatientTagVO toTagVO(PatientTagBriefVO tag) {
+        SysPatientTagVO vo = new SysPatientTagVO();
+        vo.setTagId(tag.getTagId());
+        vo.setTagName(tag.getTagName());
+        vo.setShortName(tag.getShortName());
+        vo.setTagColor(tag.getTagColor());
+        return vo;
     }
 }

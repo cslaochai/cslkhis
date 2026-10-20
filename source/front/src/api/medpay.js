@@ -2,11 +2,6 @@ import request from './request'
 
 // ============ 按病种付费结算（P4，菜单 909）：出院结算账单按 DRG/DIP 计算医保应付与盈亏 ============
 
-// 单条结算（按结算账单ID计算）
-export function medpaySettle(billId) {
-  return request.post('/report/medpay/settle', null, { params: { billId } })
-}
-
 // 批量结算（不传 billIds 默认最近 50 张出院结算账单）
 export function medpaySettleBatch(data) {
   return request.post('/report/medpay/settleBatch', data || {})

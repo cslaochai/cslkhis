@@ -2,7 +2,7 @@ package com.his.schedule.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.schedule.entity.BizOpdStationAssignment;
-import com.his.outpatient.vo.OpdAssignCandidateVO;
+import com.his.schedule.vo.OpdAssignCandidateVO;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;

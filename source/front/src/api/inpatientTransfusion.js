@@ -40,11 +40,6 @@ export function getTransfusionApplyDetail(applyId) {
     return request.get('/patient/inpatient/transfusionApply/getDetailById', {params: {applyId}})
 }
 
-// 某次住院的全部输血申请（按发生顺序升序）
-export function getTransfusionApplyListByAdmission(admissionId) {
-    return request.get('/patient/inpatient/transfusionApply/listByAdmission', {params: {admissionId}})
-}
-
 // 发起/修改输血申请（返回输血单号；修改仅限「待配血」）
 export function saveTransfusionApply(data) {
     return request.post('/patient/inpatient/transfusionApply/save', data)
@@ -108,14 +103,4 @@ export function getTransfusionReactionTypes() {
 // 用血审批（通过/驳回；驳回必填原因；急诊补审同走此口）
 export function approveTransfusion(data) {
     return request.post('/patient/inpatient/transfusionApply/approve', data)
-}
-
-// 某单的审批流水（逐级链，时间正序）
-export function getTransfusionApproveList(applyId) {
-    return request.get('/patient/inpatient/transfusionApply/approveListByApply', {params: {applyId}})
-}
-
-// 审批统计（按状态 + 按级别）
-export function getTransfusionApproveStats() {
-    return request.get('/patient/inpatient/transfusionApply/approveStats')
 }

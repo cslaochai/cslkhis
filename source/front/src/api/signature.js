@@ -29,16 +29,6 @@ export function getSignatureDetail(id) {
   return request.get('/emr/signature/getById', { params: { id } })
 }
 
-// 某对象的签名链（含已作废的，按 chain_no 升序）
-export function listSignatureByBiz(bizType, bizId) {
-  return request.get('/emr/signature/listByBiz', { params: { bizType, bizId } })
-}
-
-// 某对象的签名情况：当前锚点状态 / 签名链 / 能否补签及不能的原因
-export function getObjectSignatureStatus(bizType, bizId) {
-  return request.get('/emr/signature/objectStatus', { params: { bizType, bizId } })
-}
-
 // 签名概览（有效/作废/未校验/验签失败 + 各类型覆盖率 + 时间来源与证书信任说明）
 export function getSignatureSummary() {
   return request.get('/emr/signature/summary')
@@ -59,11 +49,6 @@ export function verifySignatureByBiz(bizType, bizId) {
   return request.post('/emr/signature/verifyByBiz', { bizType, bizId })
 }
 
-// 补签（管理员发起；签名人一律取当前登录用户，必须写明原因）
-export function makeUpSignature(params) {
-  return request.post('/emr/signature/sign', params)
-}
-
 // 作废签名（必须写理由；不改历史行，只追加作废信息并解除内容锁定）
 export function invalidateSignature(signId, reason) {
   return request.post('/emr/signature/invalidate', { signId, reason })
@@ -79,11 +64,6 @@ export function getSignCertList(params) {
 // 证书详情（含公钥 PEM 与指纹）
 export function getSignCertDetail(id) {
   return request.get('/emr/signCert/getById', { params: { id } })
-}
-
-// 有效证书下拉
-export function listSignCertSelect(keyword) {
-  return request.get('/emr/signCert/selectList', { params: keyword ? { keyword } : {} })
 }
 
 // 人工签发证书

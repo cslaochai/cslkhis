@@ -2,15 +2,15 @@ package com.his.miniapp.service.impl;
 
 import com.his.system.utils.UserUtils;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.charge.dto.PrepayPageQueryDTO;
-import com.his.charge.service.ChargeFacadeService;
-import com.his.charge.vo.PrepayBalanceVO;
-import com.his.charge.vo.PrepayVO;
+import com.his.spi.dto.PrepayPageQueryDTO;
+import com.his.spi.service.ChargeFacadeService;
+import com.his.spi.vo.PrepayBalanceVO;
+import com.his.spi.vo.PrepayVO;
 import com.his.common.exception.BusinessException;
 import com.his.miniapp.mapper.MiniAdmissionMapper;
 import com.his.miniapp.service.MiniDepositService;
 import com.his.miniapp.vo.MiniAdmiSelectListVO;
-import com.his.patient.service.PatientFacadeService;
+import com.his.spi.service.PatientFacadeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

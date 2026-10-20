@@ -12,10 +12,9 @@ import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TimeUtil;
-import com.his.emr.entity.BizInspectionApply;
-import com.his.emr.entity.BizLaboratoryApply;
-import com.his.emr.mapper.BizInspectionApplyMapper;
-import com.his.emr.mapper.BizLaboratoryApplyMapper;
+import com.his.spi.service.EmrApplyFacadeService;
+import com.his.spi.vo.InspectionApplyBriefVO;
+import com.his.spi.vo.LaboratoryApplyBriefVO;
 import com.his.medicaltech.dto.LabResultItemSaveDTO;
 import com.his.medicaltech.dto.LabResultSaveDTO;
 import com.his.medicaltech.entity.BizInspectionRecord;
@@ -37,15 +36,15 @@ import com.his.medicaltech.support.LabAbnormalJudge;
 import com.his.medicaltech.support.LabReferenceRange;
 import com.his.medicaltech.support.LabReferenceRangeResolver;
 import com.his.medicaltech.vo.*;
-import com.his.system.dto.SignCommandDTO;
+import com.his.spi.dto.SignCommandDTO;
 import com.his.common.entity.CurrentUser;
 import com.his.common.enums.BizTypeEnum;
 import com.his.system.service.DeptScopeService;
-import com.his.system.service.EmrSignatureService;
+import com.his.spi.service.EmrSignatureFacadeService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
-import com.his.emr.vo.SignatureVO;
+import com.his.spi.vo.SignatureVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -69,12 +68,11 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
     private final BizLaboratoryRecordMapper bizLaboratoryRecordMapper;
     private final BizLabResultMapper bizLabResultMapper;
     private final BizReportMapper bizReportMapper;
-    private final BizInspectionApplyMapper bizInspectionApplyMapper;
-    private final BizLaboratoryApplyMapper bizLaboratoryApplyMapper;
+    private final EmrApplyFacadeService emrApplyFacadeService;
     private final SysMessageService sysMessageService;
     private final LabReferenceRangeResolver labReferenceRangeResolver;
     private final CriticalValueService criticalValueService;
-    private final EmrSignatureService emrSignatureService;
+    private final EmrSignatureFacadeService emrSignatureFacadeService;
     private final RedisSequenceService redisSequenceService;
     private final DeptScopeService deptScopeService;
     /**
@@ -697,7 +695,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         cmd.setSignerDeptId(deptId);
         cmd.setSignerDeptName(deptName);
         try {
-            return emrSignatureService.sign(cmd);
+            return emrSignatureFacadeService.sign(cmd);
         } catch (BusinessException e) {
             throw new BusinessException(bizLabel + " " + bizNo + " " + scene.getLabel() + "失败：" + e.getMessage());
         }
@@ -917,7 +915,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
             return exists.getId();
         }
 
-        BizInspectionApply apply = bizInspectionApplyMapper.selectById(applyId);
+        InspectionApplyBriefVO apply = emrApplyFacadeService.getInspectionApplyById(applyId);
         if (apply == null) {
             throw new BusinessException("未能找到对应的检查申请数据");
         }
@@ -983,7 +981,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
             return exists.getId();
         }
 
-        BizLaboratoryApply apply = bizLaboratoryApplyMapper.selectById(applyId);
+        LaboratoryApplyBriefVO apply = emrApplyFacadeService.getLaboratoryApplyById(applyId);
         if (apply == null) {
             throw new BusinessException("未能找到对应的检验申请数据");
         }

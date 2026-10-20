@@ -29,11 +29,6 @@ export function getTransferDetail(transferId) {
     return request.get('/patient/inpatient/transferRecord/getDetailById', {params: {transferId}})
 }
 
-// 某次住院的转科轨迹（按发生顺序升序，第一条的 fromDept 就是入院科室）
-export function getTransferListByAdmission(admissionId) {
-    return request.get('/patient/inpatient/transferRecord/listByAdmission', {params: {admissionId}})
-}
-
 // 发起转科（返回转科单号；此时未生效，需转入科室接收）
 export function saveTransfer(data) {
     return request.post('/patient/inpatient/transferRecord/save', data)
