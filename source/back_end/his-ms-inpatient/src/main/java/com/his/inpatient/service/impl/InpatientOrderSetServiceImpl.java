@@ -1,0 +1,374 @@
+package com.his.inpatient.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
+import com.his.inpatient.dto.InpatientOrderItemDTO;
+import com.his.inpatient.dto.OrderSetPageQueryDTO;
+import com.his.inpatient.dto.OrderSetUpsertDTO;
+import com.his.inpatient.entity.BizInpatientOrderTemplate;
+import com.his.inpatient.entity.BizInpatientOrderTemplateItem;
+import com.his.common.enums.OrderClassEnum;
+import com.his.common.enums.OrderTypeEnum;
+import com.his.common.enums.TemplateScopeEnum;
+import com.his.inpatient.mapper.BizInpatientOrderTemplateItemMapper;
+import com.his.inpatient.mapper.BizInpatientOrderTemplateMapper;
+import com.his.inpatient.service.InpatientOrderSetService;
+import com.his.inpatient.support.InpatientOrderItemRules;
+import com.his.inpatient.vo.InpatientOrderTemplateItemVO;
+import com.his.inpatient.vo.OrderSetDetailVO;
+import com.his.inpatient.vo.OrderSetListVO;
+import com.his.inpatient.vo.OrderSetSelectListVO;
+import com.his.common.entity.CurrentUser;
+import com.his.common.utils.UserUtils;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.*;
+
+/**
+ * 医嘱组套模板服务实现（sql/142）。
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
+
+    /**
+     * 下拉候选上限：开立弹窗要一屏能扫完，翻找走管理页分页
+     */
+    private static final int SELECT_LIMIT = 50;
+
+    private final BizInpatientOrderTemplateMapper bizInpatientOrderTemplateMapper;
+    private final BizInpatientOrderTemplateItemMapper bizInpatientOrderTemplateItemMapper;
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long upsert(OrderSetUpsertDTO dto) {
+        Integer scope = dto.getScope();
+
+        List<InpatientOrderItemDTO> items = new ArrayList<>();
+        if (dto.getItems() != null) {
+            for (InpatientOrderItemDTO item : dto.getItems()) {
+                if (item != null && TextUtil.hasText(item.getItemName())) {
+                    items.add(item);
+                }
+            }
+        }
+        if (items.isEmpty()) {
+            throw new BusinessException("组套至少包含一条有项目名称的医嘱明细");
+        }
+        // 与个人模板同一份硬规则：放过一条缺途径的药品明细，组套就成了绕过校验的后门
+        for (InpatientOrderItemDTO item : items) {
+            InpatientOrderItemRules.validate(item);
+        }
+
+        // 必填项由 @NotNull 兜底，业务层不再静默按「临时」处理
+        Integer orderType = dto.getOrderType();
+
+        String templateName = dto.getTemplateName().trim();
+        if (templateName.length() > 100) {
+            throw new BusinessException("组套名称不能超过 100 字");
+        }
+
+        CurrentUser user = requireUser();
+        Long empId = user.getEmployeeId();
+        Long deptId = user.getDeptId();
+
+        BizInpatientOrderTemplate template = new BizInpatientOrderTemplate();
+        template.setId(dto.getId());
+        template.setTemplateName(templateName);
+        template.setOrderType(orderType);
+        template.setItemCount(items.size());
+        template.setRemark(trimRemark(dto.getRemark()));
+
+        if (dto.getId() == null) {
+            template.setScope(scope);
+            applyOwner(template, scope, deptId);
+            assertNameNotDuplicated(templateName, null, scope, empId, deptId);
+            bizInpatientOrderTemplateMapper.insert(template);
+        } else {
+            BizInpatientOrderTemplate owned = requireWritable(dto.getId());
+            if (!Objects.equals(scope, owned.getScope())) {
+                throw new BusinessException("组套的共享范围不能修改（要换范围请新建一份）");
+            }
+            // 归属不随修改漂移：组套属于谁、在哪个科室建的，是当时的事实
+            template.setDoctorId(owned.getDoctorId());
+            template.setDoctorName(owned.getDoctorName());
+            template.setDeptId(owned.getDeptId());
+            assertNameNotDuplicated(templateName, owned.getId(), scope, empId, deptId);
+            bizInpatientOrderTemplateMapper.updateById(template);
+        }
+
+        bizInpatientOrderTemplateItemMapper.delete(new LambdaQueryWrapper<BizInpatientOrderTemplateItem>()
+                .eq(BizInpatientOrderTemplateItem::getTemplateId, template.getId()));
+        int sort = 1;
+        for (InpatientOrderItemDTO item : items) {
+            bizInpatientOrderTemplateItemMapper.insert(toItemEntity(template.getId(), sort++, item));
+        }
+
+        log.info("保存医嘱组套 id={} 名称={} scope={} 明细={} 条",
+                template.getId(), templateName, scope, items.size());
+        return template.getId();
+    }
+
+    @Override
+    public OrderSetDetailVO getDetailById(Long id) {
+        BizInpatientOrderTemplate template = requireVisible(id);
+        List<BizInpatientOrderTemplateItem> items = bizInpatientOrderTemplateItemMapper.selectList(
+                new LambdaQueryWrapper<BizInpatientOrderTemplateItem>()
+                        .eq(BizInpatientOrderTemplateItem::getTemplateId, template.getId())
+                        .orderByAsc(BizInpatientOrderTemplateItem::getSortNo));
+
+        OrderSetDetailVO vo = new OrderSetDetailVO();
+        fill(vo, template);
+        List<InpatientOrderTemplateItemVO> itemVOs = new ArrayList<>(items.size());
+        for (BizInpatientOrderTemplateItem item : items) {
+            InpatientOrderTemplateItemVO itemVO = new InpatientOrderTemplateItemVO();
+            BeanUtils.copyProperties(item, itemVO);
+            itemVO.setOrderClassText(OrderClassEnum.getLabel(item.getOrderClass()));
+            itemVOs.add(itemVO);
+        }
+        vo.setItems(itemVOs);
+        return vo;
+    }
+
+    @Override
+    public IPage<OrderSetListVO> listPage(OrderSetPageQueryDTO query) {
+        CurrentUser user = currentUserOrNull();
+        String keyword = TextUtil.hasText(query.getKeyword()) ? query.getKeyword().trim() : null;
+        LambdaQueryWrapper<BizInpatientOrderTemplate> wrapper = visibleWrapper(user)
+                .eq(query.getScope() != null, BizInpatientOrderTemplate::getScope, query.getScope())
+                .eq(query.getOrderType() != null, BizInpatientOrderTemplate::getOrderType, query.getOrderType())
+                .and(keyword != null, w -> w.like(BizInpatientOrderTemplate::getTemplateName, keyword)
+                        .or().like(BizInpatientOrderTemplate::getRemark, keyword))
+                // 分页必须补唯一二级键：同一秒建的组套在翻页时会在两页重复出现
+                .orderByDesc(BizInpatientOrderTemplate::getCreateTime)
+                .orderByDesc(BizInpatientOrderTemplate::getId);
+
+        Map<Long, String> deptNames = new HashMap<>();
+        IPage<OrderSetListVO> page = bizInpatientOrderTemplateMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper)
+                .convert(entity -> {
+                    OrderSetListVO vo = new OrderSetListVO();
+                    fill(vo, entity);
+                    if (entity.getDeptId() != null) {
+                        vo.setDeptName(deptNames.computeIfAbsent(entity.getDeptId(), k -> {
+                            try {
+                                return bizInpatientOrderTemplateMapper.selectDeptName(k);
+                            } catch (Exception e) {
+                                return null;
+                            }
+                        }));
+                    }
+                    return vo;
+                });
+        return page;
+    }
+
+    @Override
+    public List<OrderSetSelectListVO> selectList() {
+        CurrentUser user = currentUserOrNull();
+        List<BizInpatientOrderTemplate> list = bizInpatientOrderTemplateMapper.selectList(visibleWrapper(user)
+                // 全院在前、科室其次、自己的最后：最常用的共享口径先被看到
+                .orderByDesc(BizInpatientOrderTemplate::getScope)
+                .orderByDesc(BizInpatientOrderTemplate::getCreateTime)
+                .last("LIMIT " + SELECT_LIMIT));
+        List<OrderSetSelectListVO> vos = new ArrayList<>(list.size());
+        for (BizInpatientOrderTemplate entity : list) {
+            OrderSetSelectListVO vo = new OrderSetSelectListVO();
+            BeanUtils.copyProperties(entity, vo);
+            vo.setScopeText(TemplateScopeEnum.getLabel(entity.getScope()));
+            vo.setOrderTypeText(OrderTypeEnum.getLabel(entity.getOrderType()));
+            if (entity.getDeptId() != null) {
+                try {
+                    vo.setDeptName(bizInpatientOrderTemplateMapper.selectDeptName(entity.getDeptId()));
+                } catch (Exception e) {
+                    vo.setDeptName(null);
+                }
+            }
+            vos.add(vo);
+        }
+        return vos;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteById(Long id) {
+        BizInpatientOrderTemplate template = requireWritable(id);
+        // 明细无软删列，物理删；主表逻辑删，历史医嘱上「来自组套」的痕迹不受影响
+        bizInpatientOrderTemplateItemMapper.delete(new LambdaQueryWrapper<BizInpatientOrderTemplateItem>()
+                .eq(BizInpatientOrderTemplateItem::getTemplateId, template.getId()));
+        bizInpatientOrderTemplateMapper.deleteById(template.getId());
+        log.info("删除医嘱组套 id={} 名称={} scope={}", template.getId(), template.getTemplateName(), template.getScope());
+    }
+
+    // 内部
+
+    /**
+     * 可见集：全院 ∪ 本科室 ∪ 本人。
+     *
+     * <p>整段包在一个 {@code and(...)} 里 —— 拆成平铺的 or 会与 {@code del_flag=0} 平级，
+     * 软删组套会被捞回来（软删行的 scope 也满足条件）。
+     */
+    private LambdaQueryWrapper<BizInpatientOrderTemplate> visibleWrapper(CurrentUser user) {
+        Long empId = user == null ? null : user.getEmployeeId();
+        Long deptId = user == null ? null : user.getDeptId();
+        return new LambdaQueryWrapper<BizInpatientOrderTemplate>()
+                .and(w -> {
+                    w.eq(BizInpatientOrderTemplate::getScope, TemplateScopeEnum.HOSPITAL.getCode());
+                    if (empId != null) {
+                        w.or(x -> x.eq(BizInpatientOrderTemplate::getScope, TemplateScopeEnum.PERSONAL.getCode())
+                                .eq(BizInpatientOrderTemplate::getDoctorId, empId));
+                    }
+                    if (deptId != null) {
+                        w.or(x -> x.eq(BizInpatientOrderTemplate::getScope, TemplateScopeEnum.DEPT.getCode())
+                                .eq(BizInpatientOrderTemplate::getDeptId, deptId));
+                    }
+                });
+    }
+
+    /**
+     * 取组套并校验可见（不可见的与不存在的回同一句话，避免泄露「这个 id 存在但你看不到」）
+     */
+    private BizInpatientOrderTemplate requireVisible(Long id) {
+        // C-非 web 入参：私有 requireXxx helper，GET 标量与 upsert 修改分支复用同一入口，Bean Validation 不覆盖内部路径，保留
+        if (id == null) {
+            throw new BusinessException("组套ID不能为空");
+        }
+        BizInpatientOrderTemplate template = bizInpatientOrderTemplateMapper.selectOne(visibleWrapper(currentUserOrNull())
+                .eq(BizInpatientOrderTemplate::getId, id));
+        if (template == null) {
+            throw new BusinessException("医嘱组套不存在");
+        }
+        return template;
+    }
+
+    /**
+     * 取组套并校验可写：全院级凭权限码（能进这页即有码），科室级限本科室，个人级限本人
+     */
+    private BizInpatientOrderTemplate requireWritable(Long id) {
+        BizInpatientOrderTemplate template = requireVisible(id);
+        if (Boolean.FALSE.equals(editable(template, requireUser()))) {
+            throw new BusinessException("只能修改或删除自己的个人组套、本科室的科室组套，或全院组套");
+        }
+        return template;
+    }
+
+    private boolean editable(BizInpatientOrderTemplate template, CurrentUser user) {
+        Integer scope = template.getScope();
+        if (Objects.equals(TemplateScopeEnum.HOSPITAL.getCode(), scope)) {
+            return true;
+        }
+        if (user == null) {
+            return false;
+        }
+        if (Objects.equals(TemplateScopeEnum.PERSONAL.getCode(), scope)) {
+            return Objects.equals(user.getEmployeeId(), template.getDoctorId());
+        }
+        if (Objects.equals(TemplateScopeEnum.DEPT.getCode(), scope)) {
+            return template.getDeptId() != null && Objects.equals(user.getDeptId(), template.getDeptId());
+        }
+        return false;
+    }
+
+    /**
+     * 创建时归属服务端定：个人→本人，科室→当前科室，全院→不归属任何个人/科室
+     */
+    private void applyOwner(BizInpatientOrderTemplate template, Integer scope, Long fallbackDeptId) {
+        if (Objects.equals(TemplateScopeEnum.PERSONAL.getCode(), scope)) {
+            CurrentUser owner = requireUser();
+            if (owner.getEmployeeId() == null) {
+                throw new BusinessException("未获取到当前登录医生，无法保存个人组套");
+            }
+            template.setDoctorId(owner.getEmployeeId());
+            template.setDoctorName(owner.getEmployeeName());
+            // 创建时科室是快照，修改时保持原值（fallbackDeptId 传的就是 owned 的 deptId）
+            template.setDeptId(fallbackDeptId);
+        } else if (Objects.equals(TemplateScopeEnum.DEPT.getCode(), scope)) {
+            Long deptId = fallbackDeptId != null ? fallbackDeptId : requireUser().getDeptId();
+            if (deptId == null) {
+                throw new BusinessException("当前账号没有归属科室，无法创建科室组套");
+            }
+            template.setDoctorId(null);
+            template.setDoctorName(null);
+            template.setDeptId(deptId);
+        } else {
+            template.setDoctorId(null);
+            template.setDoctorName(null);
+            template.setDeptId(null);
+        }
+    }
+
+    /**
+     * 同名校验按「归属范围」算：全院看全表，科室看本科室，个人看本人
+     */
+    private void assertNameNotDuplicated(String templateName, Long excludeId, Integer scope, Long empId, Long deptId) {
+        LambdaQueryWrapper<BizInpatientOrderTemplate> wrapper = new LambdaQueryWrapper<BizInpatientOrderTemplate>()
+                .eq(BizInpatientOrderTemplate::getScope, scope)
+                .eq(BizInpatientOrderTemplate::getTemplateName, templateName)
+                .ne(excludeId != null, BizInpatientOrderTemplate::getId, excludeId);
+        if (Objects.equals(TemplateScopeEnum.PERSONAL.getCode(), scope)) {
+            wrapper.eq(BizInpatientOrderTemplate::getDoctorId, empId);
+        } else if (Objects.equals(TemplateScopeEnum.DEPT.getCode(), scope)) {
+            wrapper.eq(BizInpatientOrderTemplate::getDeptId, deptId);
+        }
+        Long hits = bizInpatientOrderTemplateMapper.selectCount(wrapper);
+        if (hits != null && hits > 0) {
+            throw new BusinessException("同范围内已有同名组套「" + templateName + "」，请改个名字或直接修改原组套");
+        }
+    }
+
+    private void fill(OrderSetListVO vo, BizInpatientOrderTemplate entity) {
+        BeanUtils.copyProperties(entity, vo);
+        vo.setScopeText(TemplateScopeEnum.getLabel(entity.getScope()));
+        vo.setOrderTypeText(OrderTypeEnum.getLabel(entity.getOrderType()));
+        vo.setEditable(editable(entity, currentUserOrNull()));
+    }
+
+    private BizInpatientOrderTemplateItem toItemEntity(Long templateId, int sortNo, InpatientOrderItemDTO item) {
+        BizInpatientOrderTemplateItem entity = new BizInpatientOrderTemplateItem();
+        entity.setTemplateId(templateId);
+        entity.setSortNo(sortNo);
+        entity.setOrderClass(item.getOrderClass());
+        entity.setItemCode(TextUtil.hasText(item.getItemCode()) ? item.getItemCode() : null);
+        entity.setItemName(item.getItemName().trim());
+        entity.setSpec(item.getSpec());
+        entity.setUnit(item.getUnit());
+        entity.setDosage(item.getDosage());
+        entity.setDosageUnit(item.getDosageUnit());
+        entity.setRoute(item.getRoute());
+        entity.setFrequency(item.getFrequency());
+        entity.setQuantity(item.getQuantity() != null ? item.getQuantity() : BigDecimal.ONE);
+        entity.setPrice(item.getPrice() != null ? item.getPrice() : BigDecimal.ZERO);
+        return entity;
+    }
+
+    /**
+     * 备注列宽 500，超长直接写库会报 Data too long，把「保存失败」升级成 500
+     */
+    private String trimRemark(String remark) {
+        if (remark == null) {
+            return null;
+        }
+        String trimmed = remark.trim();
+        return trimmed.length() > 500 ? trimmed.substring(0, 500) : trimmed;
+    }
+
+    private CurrentUser requireUser() {
+        CurrentUser user = UserUtils.getCurrentUser();
+        if (user == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        return user;
+    }
+
+    private CurrentUser currentUserOrNull() {
+        return UserUtils.getCurrentUser();
+    }
+}

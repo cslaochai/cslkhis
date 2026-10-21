@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.his.common.enums.UserTypeEnum;
 import com.his.common.entity.CurrentUser;
-import com.his.system.utils.UserUtils;
+import com.his.common.utils.UserUtils;
 import org.apache.ibatis.reflection.MetaObject;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

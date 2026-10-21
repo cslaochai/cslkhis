@@ -1,0 +1,736 @@
+package com.his.outpatient.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.base.PageResult;
+import com.his.common.enums.*;
+import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
+import com.his.outpatient.dto.ScheduleTemplatePageQueryDTO;
+import com.his.outpatient.dto.ScheduleTemplateSlotItemDTO;
+import com.his.outpatient.dto.ScheduleTemplateUpsertDTO;
+import com.his.outpatient.entity.BizClinicSource;
+import com.his.outpatient.entity.BizClinicSourceSlotTemplate;
+import com.his.outpatient.entity.BizClinicSourceTemplate;
+import com.his.outpatient.entity.BizShift;
+import com.his.outpatient.mapper.BizClinicSourceMapper;
+import com.his.outpatient.mapper.BizClinicSourceSlotTemplateMapper;
+import com.his.outpatient.mapper.BizClinicSourceTemplateMapper;
+import com.his.outpatient.service.BizClinicSourceService;
+import com.his.outpatient.service.BizClinicSourceSlotService;
+import com.his.outpatient.service.BizClinicSourceTemplateService;
+import com.his.outpatient.service.ShiftService;
+import com.his.outpatient.vo.ScheduleTemplatePreviewVO;
+import com.his.outpatient.vo.ScheduleTemplateSlotVO;
+import com.his.outpatient.vo.ScheduleTemplateVO;
+import com.his.spi.service.DeptScopeService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+/**
+ * 排班模板服务实现
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class BizClinicSourceTemplateServiceImpl extends ServiceImpl<BizClinicSourceTemplateMapper, BizClinicSourceTemplate>
+        implements BizClinicSourceTemplateService {
+
+    private final BizClinicSourceTemplateMapper bizScheduleTemplateMapper;
+
+    private final BizClinicSourceMapper bizScheduleMapper;
+
+    private final BizClinicSourceSlotTemplateMapper bizScheduleSlotTemplateMapper;
+
+    private final BizClinicSourceSlotService bizScheduleSlotService;
+
+    private final BizClinicSourceService bizScheduleService;
+
+    private final ShiftService shiftService;
+
+    private final DeptScopeService deptScopeService;
+
+    @Override
+    public List<BizClinicSourceTemplate> listTemplates(Long deptId, Integer staffType, Integer weekDay, Integer status) {
+        LambdaQueryWrapper<BizClinicSourceTemplate> wrapper = new LambdaQueryWrapper<>();
+        List<Long> scoped = deptScopeService.scopedDeptIds(deptId);
+        wrapper.in(scoped != null, BizClinicSourceTemplate::getDeptId, scoped)
+                .eq(staffType != null, BizClinicSourceTemplate::getStaffType, staffType)
+                .eq(weekDay != null, BizClinicSourceTemplate::getWeekDay, weekDay)
+                .eq(status != null, BizClinicSourceTemplate::getStatus, status)
+                .orderByAsc(BizClinicSourceTemplate::getDeptId)
+                .orderByAsc(BizClinicSourceTemplate::getDoctorId)
+                .orderByAsc(BizClinicSourceTemplate::getWeekDay)
+                .orderByAsc(BizClinicSourceTemplate::getStartTime);
+        return bizScheduleTemplateMapper.selectList(wrapper);
+    }
+
+    @Override
+    public void fillShiftDisplay(List<ScheduleTemplateVO> voList) {
+        if (voList == null || voList.isEmpty()) {
+            return;
+        }
+        Map<Long, BizShift> shiftMap = shiftService.mapByIds(voList.stream()
+                .map(ScheduleTemplateVO::getShiftId).filter(Objects::nonNull).toList());
+        for (ScheduleTemplateVO vo : voList) {
+            BizShift shift = vo.getShiftId() == null ? null : shiftMap.get(vo.getShiftId());
+            if (shift != null) {
+                vo.setShiftName(shift.getShiftName());
+                vo.setScheduleType(shift.getScheduleType());
+            }
+        }
+    }
+
+    @Override
+    public List<ScheduleTemplateVO> listVO(Long deptId, Integer staffType, Integer weekDay, Integer status) {
+        List<ScheduleTemplateVO> voList = listTemplates(deptId, staffType, weekDay, status).stream()
+                .map(this::convertToVO).toList();
+        fillShiftDisplay(voList);
+        fillSlotConfigs(voList);
+        return voList;
+    }
+
+    @Override
+    public PageResult<ScheduleTemplateVO> pageVO(ScheduleTemplatePageQueryDTO dto) {
+        LambdaQueryWrapper<BizClinicSourceTemplate> wrapper = new LambdaQueryWrapper<>();
+        List<Long> scoped = deptScopeService.scopedDeptIds(dto.getDeptId());
+        wrapper.in(scoped != null, BizClinicSourceTemplate::getDeptId, scoped)
+                .eq(dto.getStaffType() != null, BizClinicSourceTemplate::getStaffType, dto.getStaffType())
+                .eq(dto.getWeekDay() != null, BizClinicSourceTemplate::getWeekDay, dto.getWeekDay())
+                .eq(dto.getStatus() != null, BizClinicSourceTemplate::getStatus, dto.getStatus())
+                .and(TextUtil.hasText(dto.getKeyword()), w -> w
+                        .like(BizClinicSourceTemplate::getDeptName, dto.getKeyword())
+                        .or().like(BizClinicSourceTemplate::getDoctorName, dto.getKeyword())
+                        .or().like(BizClinicSourceTemplate::getRoomName, dto.getKeyword())
+                        .or().like(BizClinicSourceTemplate::getRemark, dto.getKeyword()))
+                // 二级键 id：同星期同班次的行顺序不稳定（分页铁律，防翻页重复+丢行）
+                .orderByAsc(BizClinicSourceTemplate::getWeekDay)
+                .orderByAsc(BizClinicSourceTemplate::getStartTime)
+                .orderByAsc(BizClinicSourceTemplate::getId);
+        Page<BizClinicSourceTemplate> page = this.page(
+                new Page<>(dto.getPageNum(), dto.getPageSize()), wrapper);
+        List<ScheduleTemplateVO> voList = page.getRecords().stream().map(this::convertToVO).toList();
+        fillShiftDisplay(voList);
+        fillSlotConfigs(voList);
+        return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), voList);
+    }
+
+    /**
+     * 段配置与模板主表同事务落库：主表成功而段配置失败时必须整体回滚，
+     * 否则「Σ段=主表」的不变量会留在一半（旧段配新总量，或主表新而段丢失）。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void upsertTemplate(ScheduleTemplateUpsertDTO dto) {
+        BizClinicSourceTemplate template = convertToEntity(dto);
+        boolean success = saveTemplate(template);
+        if (!success) {
+            throw new BusinessException(dto.getId() == null ? "新增失败" : "修改失败");
+        }
+        // slots 语义：null=本次不动；[]=清空（回退半小时均分）；非空=整批替换
+        if (dto.getSlots() != null) {
+            persistSlotConfig(template, dto.getSlots());
+        }
+    }
+
+    private BizClinicSourceTemplate convertToEntity(ScheduleTemplateUpsertDTO dto) {
+        BizClinicSourceTemplate t = new BizClinicSourceTemplate();
+        t.setId(dto.getId());
+        t.setDeptId(dto.getDeptId());
+        t.setDeptName(dto.getDeptName());
+        t.setDoctorId(dto.getDoctorId());
+        t.setDoctorName(dto.getDoctorName());
+        t.setStaffType(dto.getStaffType());
+        t.setWeekDay(dto.getWeekDay());
+        t.setWeekParity(dto.getWeekParity());
+        t.setValidFrom(parseDate(dto.getValidFrom()));
+        t.setValidUntil(parseDate(dto.getValidUntil()));
+        t.setStartTime(dto.getStartTime());
+        t.setEndTime(dto.getEndTime());
+        t.setShiftId(dto.getShiftId());
+        t.setTotalSource(dto.getTotalSource());
+        t.setRoomId(dto.getRoomId());
+        t.setRoomName(dto.getRoomName());
+        t.setRegistFee(dto.getRegistFee());
+        t.setDiagnosisFee(dto.getDiagnosisFee());
+        if (ClinicDiagnosisTierEnum.ofCode(dto.getDiagnosisTier()) == null) {
+            t.setDiagnosisTier(ClinicDiagnosisTierEnum.GENERAL.getCode());
+        } else {
+            t.setDiagnosisTier(dto.getDiagnosisTier());
+        }
+        t.setIsExpert(dto.getIsExpert());
+        t.setExpertFee(dto.getExpertFee());
+        t.setIsAppointment(dto.getIsAppointment());
+        t.setAppointmentSource(dto.getAppointmentSource());
+        t.setStatus(dto.getStatus());
+        t.setRemark(dto.getRemark());
+        return t;
+    }
+
+    private ScheduleTemplateVO convertToVO(BizClinicSourceTemplate t) {
+        if (t == null) {
+            return null;
+        }
+        ScheduleTemplateVO vo = new ScheduleTemplateVO();
+        vo.setId(t.getId());
+        vo.setDeptId(t.getDeptId());
+        vo.setDeptName(t.getDeptName());
+        vo.setDoctorId(t.getDoctorId());
+        vo.setDoctorName(t.getDoctorName());
+        vo.setStaffType(t.getStaffType());
+        vo.setStaffTypeName(StaffTypeEnum.getLabel(t.getStaffType()));
+        vo.setWeekDay(t.getWeekDay());
+        vo.setWeekParity(t.getWeekParity());
+        vo.setValidFrom(t.getValidFrom() != null ? t.getValidFrom().toString() : null);
+        vo.setValidUntil(t.getValidUntil() != null ? t.getValidUntil().toString() : null);
+        vo.setStartTime(t.getStartTime());
+        vo.setEndTime(t.getEndTime());
+        vo.setShiftId(t.getShiftId());
+        vo.setTotalSource(t.getTotalSource());
+        vo.setRoomId(t.getRoomId());
+        vo.setRoomName(t.getRoomName());
+        vo.setRegistFee(t.getRegistFee());
+        vo.setDiagnosisFee(t.getDiagnosisFee());
+        vo.setDiagnosisTier(t.getDiagnosisTier());
+        vo.setIsExpert(t.getIsExpert());
+        vo.setExpertFee(t.getExpertFee());
+        vo.setIsAppointment(t.getIsAppointment());
+        vo.setAppointmentSource(t.getAppointmentSource());
+        vo.setStatus(t.getStatus());
+        vo.setRemark(t.getRemark());
+        vo.setCreateTime(t.getCreateTime());
+        return vo;
+    }
+
+    private LocalDate parseDate(String date) {
+        if (!TextUtil.hasText(date)) {
+            return null;
+        }
+        return LocalDate.parse(date);
+    }
+
+    @Override
+    public boolean saveTemplate(BizClinicSourceTemplate template) {
+        deptScopeService.assertDeptAccessible(template.getDeptId());
+        applyStaffType(template);
+        BizShift shift = shiftService.resolveForScheduling(template.getShiftId(), template.getDeptId());
+        template.setShiftId(shift.getId());
+        template.setStartTime(shift.getStartTime());
+        template.setEndTime(shift.getEndTime());
+        int apptSource = template.getAppointmentSource() == null ? 0 : template.getAppointmentSource();
+        if (apptSource > template.getTotalSource()) {
+            throw new BusinessException("预约号源数不能大于号源总数");
+        }
+        if (apptSource > 0) {
+            template.setIsAppointment(1);
+        }
+        // 时间窗必须有序：生成侧切半小时段依赖 end > start，乱填会在整周生成时才炸
+        if (template.getEndTime().compareTo(template.getStartTime()) <= 0) {
+            throw new BusinessException("结束时间必须晚于开始时间");
+        }
+        // 同医生同星期几同班次拒重（逻辑删不做 DB 唯一键，应用层保证）
+        checkDuplicate(template);
+        if (template.getStatus() == null) {
+            template.setStatus(1);
+        }
+        if (template.getId() == null) {
+            return bizScheduleTemplateMapper.insert(template) > 0;
+        }
+        if (bizScheduleTemplateMapper.selectById(template.getId()) == null) {
+            throw new BusinessException("模板不存在");
+        }
+        return bizScheduleTemplateMapper.updateById(template) > 0;
+    }
+
+    /**
+     * 岗位类别收口
+     */
+    private void applyStaffType(BizClinicSourceTemplate template) {
+        StaffTypeEnum.assertValid(template.getStaffType());
+        if (StaffTypeEnum.hasSource(template.getStaffType())) {
+            // D-业务规则：非空与值域（至少 1）混写，且只在「有号源岗位」分支下成立，不是字段填没填，DTO 注解无法表达，保留
+            if (template.getTotalSource() == null || template.getTotalSource() < 1) {
+                throw new BusinessException("医生模板的号源数量至少为1");
+            }
+            return;
+        }
+        template.setTotalSource(0);
+        template.setAppointmentSource(0);
+        template.setIsAppointment(0);
+        template.setIsExpert(0);
+        template.setExpertFee(BigDecimal.ZERO);
+        template.setRegistFee(BigDecimal.ZERO);
+        template.setDiagnosisFee(BigDecimal.ZERO);
+        template.setDiagnosisTier(ClinicDiagnosisTierEnum.GENERAL.getCode());
+        template.setRoomId(null);
+        template.setRoomName(null);
+    }
+
+    /**
+     * 段级号源配置整批落库：先校验后替换，非法整批拒绝。
+     *
+     * <p>不变量（消费端 {@code ScheduleSlotService#generateFromTemplate} 原样复制段窗与配额，
+     * 不做二次校验，所以 Σ约束、无缝铺满都必须在这里守住）：
+     * 段无缝铺满班次时间窗 + 半小时网格；每段预约池 ≤ 段号源；
+     * Σ段号源=模板号源总数、Σ段预约池=模板预约号源数。
+     */
+    private void persistSlotConfig(BizClinicSourceTemplate template, List<ScheduleTemplateSlotItemDTO> slots) {
+        if (!StaffTypeEnum.hasSource(template.getStaffType())) {
+            throw new BusinessException("出勤模板不放号源，不需要按段细化");
+        }
+        if (slots.isEmpty()) {
+            bizScheduleSlotTemplateMapper.purgeByTemplateId(template.getId());
+            return;
+        }
+        int winStart = minuteOf(template.getStartTime(), "班次开始时间");
+        int winEnd = minuteOf(template.getEndTime(), "班次结束时间");
+        // 班次窗不在半小时整点上时，无缝铺满+半小时网格无解，提前说清楚而不是让用户猜哪段不合法
+        if (winStart % 30 != 0 || winEnd % 30 != 0) {
+            throw new BusinessException("班次时间窗 " + template.getStartTime() + "-" + template.getEndTime()
+                    + " 不是半小时整点，无法按段细化");
+        }
+
+        int sumTotal = 0;
+        int sumAppt = 0;
+        int prevEnd = -1;
+        List<BizClinicSourceSlotTemplate> rows = new ArrayList<>(slots.size());
+        for (int i = 0; i < slots.size(); i++) {
+            ScheduleTemplateSlotItemDTO item = slots.get(i);
+            String what = "第" + (i + 1) + "段";
+            int start = minuteOf(item.getStartTime(), what + "开始时间");
+            int end = minuteOf(item.getEndTime(), what + "结束时间");
+            if (start % 30 != 0 || end % 30 != 0) {
+                throw new BusinessException(what + "起止必须落在半小时整点上");
+            }
+            if (end <= start) {
+                throw new BusinessException(what + "结束时间必须晚于开始时间");
+            }
+            if (prevEnd >= 0 && start != prevEnd) {
+                throw new BusinessException(what + "与上一段必须无缝衔接（上一段结束 " + toHHmm(prevEnd)
+                        + "，本段开始 " + toHHmm(start) + "）");
+            }
+            int segTotal = item.getTotalSource() == null ? 0 : item.getTotalSource();
+            int segAppt = item.getAppointmentSource() == null ? 0 : item.getAppointmentSource();
+            if (segAppt > segTotal) {
+                throw new BusinessException(what + "预约池不能大于该段号源数");
+            }
+            BizClinicSourceSlotTemplate row = new BizClinicSourceSlotTemplate();
+            row.setTemplateId(template.getId());
+            row.setSeq(i + 1);
+            row.setStartTime(toHHmm(start));
+            row.setEndTime(toHHmm(end));
+            row.setTotalSource(segTotal);
+            row.setAppointmentSource(segAppt);
+            rows.add(row);
+            prevEnd = end;
+            sumTotal += segTotal;
+            sumAppt += segAppt;
+        }
+        if (rows.get(0).getStartTime().compareTo(toHHmm(winStart)) != 0
+                || rows.get(rows.size() - 1).getEndTime().compareTo(toHHmm(winEnd)) != 0) {
+            throw new BusinessException("段必须铺满班次时间窗 " + template.getStartTime() + "-" + template.getEndTime()
+                    + "（首段从 " + template.getStartTime() + " 开始、末段到 " + template.getEndTime() + " 结束）");
+        }
+        if (sumTotal != template.getTotalSource()) {
+            throw new BusinessException("各段号源合计 " + sumTotal + " 与号源总数 " + template.getTotalSource() + " 不一致");
+        }
+        int tplAppt = template.getAppointmentSource() == null ? 0 : template.getAppointmentSource();
+        if (sumAppt != tplAppt) {
+            throw new BusinessException("各段预约池合计 " + sumAppt + " 与预约号源数 " + tplAppt + " 不一致");
+        }
+
+        // 校验全过才替换：物理删（uk_tpl_slot 不含 del_flag，软删行会撞唯一键）再按新段插入
+        bizScheduleSlotTemplateMapper.purgeByTemplateId(template.getId());
+        for (BizClinicSourceSlotTemplate row : rows) {
+            bizScheduleSlotTemplateMapper.insert(row);
+        }
+    }
+
+    /**
+     * "HH:mm" → 当日分钟数；段表是 char(5) 的定式存储，格式不在保存侧拦住就会漂进生成链路
+     */
+    private int minuteOf(String hhmm, String what) {
+        if (hhmm == null || !hhmm.matches("^([01]\\d|2[0-3]):[0-5]\\d$")) {
+            throw new BusinessException(what + "格式必须是 HH:mm");
+        }
+        return Integer.parseInt(hhmm.substring(0, 2)) * 60 + Integer.parseInt(hhmm.substring(3, 5));
+    }
+
+    private String toHHmm(int minuteOfDay) {
+        return String.format("%02d:%02d", minuteOfDay / 60, minuteOfDay % 60);
+    }
+
+    /**
+     * 列表/分页出参回填段配置：一次 in 查询带全，无段配置的模板 slots 置空数组
+     * （区分「没配过」与「配了空段」无业务含义，前端统一按未细化处理）
+     */
+    private void fillSlotConfigs(List<ScheduleTemplateVO> voList) {
+        if (voList == null || voList.isEmpty()) {
+            return;
+        }
+        List<BizClinicSourceSlotTemplate> rows = bizScheduleSlotTemplateMapper.selectList(
+                new LambdaQueryWrapper<BizClinicSourceSlotTemplate>()
+                        .in(BizClinicSourceSlotTemplate::getTemplateId,
+                                voList.stream().map(ScheduleTemplateVO::getId).toList())
+                        .orderByAsc(BizClinicSourceSlotTemplate::getTemplateId)
+                        .orderByAsc(BizClinicSourceSlotTemplate::getSeq));
+        if (rows.isEmpty()) {
+            return;
+        }
+        Map<Long, List<ScheduleTemplateSlotVO>> byTemplate = rows.stream()
+                .collect(Collectors.groupingBy(BizClinicSourceSlotTemplate::getTemplateId,
+                        Collectors.mapping(this::convertSlotVO, Collectors.toList())));
+        for (ScheduleTemplateVO vo : voList) {
+            vo.setSlots(byTemplate.get(vo.getId()));
+        }
+    }
+
+    private ScheduleTemplateSlotVO convertSlotVO(BizClinicSourceSlotTemplate r) {
+        ScheduleTemplateSlotVO v = new ScheduleTemplateSlotVO();
+        v.setId(r.getId());
+        v.setSeq(r.getSeq());
+        v.setStartTime(r.getStartTime());
+        v.setEndTime(r.getEndTime());
+        v.setTotalSource(r.getTotalSource());
+        v.setAppointmentSource(r.getAppointmentSource());
+        return v;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteTemplate(Long id) {
+        BizClinicSourceTemplate tpl = bizScheduleTemplateMapper.selectById(id);
+        if (tpl == null) {
+            throw new BusinessException("模板不存在");
+        }
+        deptScopeService.assertDeptAccessible(tpl.getDeptId());
+        boolean ok = bizScheduleTemplateMapper.deleteById(id) > 0;
+        if (ok) {
+            // 模板已逻辑删、不会再生成排班，段配置留着只会被误读成有效配置 → 跟着清掉
+            bizScheduleSlotTemplateMapper.purgeByTemplateId(id);
+        }
+        return ok;
+    }
+
+    @Override
+    public boolean updateStatus(Long id, Integer status) {
+        BizClinicSourceTemplate exist = bizScheduleTemplateMapper.selectById(id);
+        if (exist == null) {
+            throw new BusinessException("模板不存在");
+        }
+        deptScopeService.assertDeptAccessible(exist.getDeptId());
+        BizClinicSourceTemplate tpl = new BizClinicSourceTemplate();
+        tpl.setId(id);
+        tpl.setStatus(status);
+        return bizScheduleTemplateMapper.updateById(tpl) > 0;
+    }
+
+    @Override
+    public String generateForWeek(Integer weekOffset, Long deptId, Integer staffType) {
+        int offset = weekOffset == null ? 1 : weekOffset;
+        LocalDate monday = LocalDate.now().with(DayOfWeek.MONDAY).plusWeeks(offset);
+        LocalDate sunday = monday.plusDays(6);
+        LocalDate today = LocalDate.now();
+        // 整周已过 → 直接拒绝（不是"生成 0 条"）。往历史周造班次会让号源池凭空多出能挂历史号的口子
+        if (sunday.isBefore(today)) {
+            throw new BusinessException("目标周 " + monday + " ~ " + sunday + " 已全部过去，不能为已结束的周次生成排班");
+        }
+
+        List<BizClinicSourceTemplate> templates = loadEnabledTemplates(deptScopeService.scopedDeptIds(deptId), staffType);
+        if (templates.isEmpty()) {
+            return staffType == null
+                    ? "没有启用的排班模板，请先在「排班模板」中配置"
+                    : "没有启用的「" + StaffTypeEnum.getLabel(staffType) + "」岗位排班模板";
+        }
+        List<BizClinicSource> existing = loadWeekSchedules(monday, sunday);
+        Map<Long, BizShift> shiftMap = loadShifts(templates);
+
+        int created = 0;
+        int skippedExist = 0;
+        int skippedOverlap = 0;
+        int skippedParity = 0;
+        int skippedExpired = 0;
+        int skippedPast = 0;
+        int skippedInvalid = 0;
+        for (BizClinicSourceTemplate tpl : templates) {
+            LocalDate date = monday.plusDays(tpl.getWeekDay() - 1);
+            // 本周部分日期已过（周三生成本周）：逐条跳过，周四五六日照常生成
+            if (date.isBefore(today)) {
+                skippedPast++;
+                continue;
+            }
+            if (!inParity(tpl, date)) {
+                skippedParity++;
+                continue;
+            }
+            if (!inValidRange(tpl, date)) {
+                skippedExpired++;
+                continue;
+            }
+            BizShift shift = shiftOf(shiftMap, tpl);
+            if (shift == null) {
+                skippedInvalid++;
+                log.warn("模板 {}（{} {}）未选班次或班次已被删除，无法带出时间段，跳过", tpl.getId(), tpl.getDoctorName(), date);
+                continue;
+            }
+            if (existsSame(existing, tpl.getDoctorId(), date, tpl.getShiftId())) {
+                skippedExist++;
+                continue;
+            }
+            if (hasTimeOverlap(existing, tpl.getDoctorId(), date, shift.getStartTime(), shift.getEndTime())) {
+                skippedOverlap++;
+                continue;
+            }
+            BizClinicSource s = buildSchedule(tpl, shift, date);
+            try {
+                // 出勤事实与手工排班走同一条派生口径；本方法不带事务，一条模板配错只跳过这一条
+                bizScheduleService.bindCoreSchedule(s, StaffScheduleSourceEnum.TEMPLATE);
+            } catch (Exception e) {
+                skippedInvalid++;
+                log.warn("模板 {}（{} {}）挂不上岗位排班事实，跳过：{}", tpl.getId(), tpl.getDoctorName(), date, e.getMessage());
+                continue;
+            }
+            bizScheduleMapper.insert(s);
+            try {
+                // 模板生成的排班默认草稿态，不在此出号；审核发布后由 auditPublish 补齐号段
+                if (StaffTypeEnum.hasSource(s.getStaffType())
+                        && PublishStatusEnum.isEffective(s.getPublishStatus())) {
+                    generateSlotsForSchedule(s, tpl.getId());
+                }
+            } catch (Exception e) {
+                skippedInvalid++;
+                bizScheduleSlotService.physicalDeleteByScheduleId(s.getId());
+                bizScheduleMapper.physicalDeleteById(s.getId());
+                log.warn("模板生成排班失败（{} {} {}）：{}", tpl.getDoctorName(), date,
+                        shift.getStartTime() + "-" + shift.getEndTime(), e.getMessage());
+                continue;
+            }
+            // 加入内存列表：同批次后续模板与它互查（同班次/时间重叠）
+            existing.add(s);
+            created++;
+        }
+
+        int skipped = skippedExist + skippedOverlap + skippedParity + skippedExpired + skippedPast + skippedInvalid;
+        StringBuilder msg = new StringBuilder("按模板生成 ")
+                .append(monday).append(" ~ ").append(sunday)
+                .append(" 排班完成：新增 ").append(created).append(" 条");
+        if (skipped > 0) {
+            msg.append("，跳过 ").append(skipped).append(" 条（")
+                    .append(skippedExist).append(" 条已存在、").append(skippedOverlap).append(" 条时间冲突");
+            if (skippedParity > 0) {
+                msg.append("、").append(skippedParity).append(" 条单双周不匹配");
+            }
+            if (skippedExpired > 0) {
+                msg.append("、").append(skippedExpired).append(" 条不在生效日期");
+            }
+            if (skippedPast > 0) {
+                msg.append("、").append(skippedPast).append(" 条日期已过");
+            }
+            if (skippedInvalid > 0) {
+                msg.append("、").append(skippedInvalid).append(" 条时间/号源配置非法");
+            }
+            msg.append("）");
+        }
+        return msg.toString();
+    }
+
+    /**
+     * 给一条新排班生成时间片段：模板配置了片段（排班模板时段）→ 按配置；
+     * 否则按半小时自动切分均分（余数给前面的段）。Σ段写回主表由 scheduleSlotService 收口。
+     */
+    private void generateSlotsForSchedule(BizClinicSource schedule, Long templateId) {
+        List<BizClinicSourceSlotTemplate> tplSlots = bizScheduleSlotTemplateMapper.selectList(
+                new LambdaQueryWrapper<BizClinicSourceSlotTemplate>()
+                        .eq(BizClinicSourceSlotTemplate::getTemplateId, templateId)
+                        .orderByAsc(BizClinicSourceSlotTemplate::getSeq));
+        if (tplSlots.isEmpty()) {
+            bizScheduleSlotService.generateSlots(schedule.getId(), schedule.getStartTime(), schedule.getEndTime(),
+                    schedule.getTotalSource(), schedule.getAppointmentSource());
+        } else {
+            bizScheduleSlotService.generateFromTemplate(schedule.getId(), tplSlots);
+        }
+    }
+
+    @Override
+    public ScheduleTemplatePreviewVO previewForWeek(Integer weekOffset, Long deptId, Integer staffType) {
+        int offset = weekOffset == null ? 1 : weekOffset;
+        LocalDate monday = LocalDate.now().with(DayOfWeek.MONDAY).plusWeeks(offset);
+        LocalDate sunday = monday.plusDays(6);
+        LocalDate today = LocalDate.now();
+
+        ScheduleTemplatePreviewVO vo = new ScheduleTemplatePreviewVO();
+        vo.setWeekStart(monday.toString());
+        vo.setWeekEnd(sunday.toString());
+
+        List<BizClinicSourceTemplate> templates = loadEnabledTemplates(deptScopeService.scopedDeptIds(deptId), staffType);
+        if (templates.isEmpty()) {
+            return vo;
+        }
+        List<BizClinicSource> existing = loadWeekSchedules(monday, sunday);
+        Map<Long, BizShift> shiftMap = loadShifts(templates);
+
+        for (BizClinicSourceTemplate tpl : templates) {
+            LocalDate date = monday.plusDays(tpl.getWeekDay() - 1);
+            BizShift shift = shiftOf(shiftMap, tpl);
+            String desc = weekDayName(tpl.getWeekDay()) + " " + (shift == null ? "未配班次" : shift.getShiftName()) + " "
+                    + "[" + StaffTypeEnum.getLabel(tpl.getStaffType()) + "] " + tpl.getDoctorName() + " "
+                    + (shift == null ? tpl.getStartTime() + "-" + tpl.getEndTime() : shift.getStartTime() + "-" + shift.getEndTime())
+                    + " " + tpl.getTotalSource() + " 号"
+                    + (tpl.getRoomName() != null ? " " + tpl.getRoomName() : "");
+            if (date.isBefore(today)) {
+                vo.getSkipPast().add(desc);
+            } else if (!inParity(tpl, date)) {
+                vo.getSkipParity().add(desc);
+            } else if (!inValidRange(tpl, date)) {
+                vo.getSkipExpired().add(desc);
+            } else if (shift == null) {
+                vo.getSkipInvalid().add(desc);
+            } else if (existsSame(existing, tpl.getDoctorId(), date, tpl.getShiftId())) {
+                vo.getSkipExist().add(desc);
+            } else if (hasTimeOverlap(existing, tpl.getDoctorId(), date, shift.getStartTime(), shift.getEndTime())) {
+                vo.getSkipOverlap().add(desc);
+            } else {
+                vo.getWillCreate().add(desc);
+            }
+            if (!vo.getDoctorNames().contains(tpl.getDoctorName())) {
+                vo.getDoctorNames().add(tpl.getDoctorName());
+            }
+        }
+        return vo;
+    }
+
+    private List<BizClinicSourceTemplate> loadEnabledTemplates(List<Long> scopedDeptIds, Integer staffType) {
+        LambdaQueryWrapper<BizClinicSourceTemplate> tw = new LambdaQueryWrapper<>();
+        tw.eq(BizClinicSourceTemplate::getStatus, 1);
+        tw.in(scopedDeptIds != null, BizClinicSourceTemplate::getDeptId, scopedDeptIds);
+        tw.eq(staffType != null, BizClinicSourceTemplate::getStaffType, staffType);
+        return bizScheduleTemplateMapper.selectList(tw);
+    }
+
+    private List<BizClinicSource> loadWeekSchedules(LocalDate monday, LocalDate sunday) {
+        return bizScheduleMapper.selectList(new LambdaQueryWrapper<BizClinicSource>()
+                .ge(BizClinicSource::getScheduleDate, monday)
+                .le(BizClinicSource::getScheduleDate, sunday));
+    }
+
+    /**
+     * 单双周匹配：0/null=每周；1=单周（ISO 周号奇数）2=双周（偶数）
+     */
+    private boolean inParity(BizClinicSourceTemplate tpl, LocalDate date) {
+        Integer parity = tpl.getWeekParity();
+        if (parity == null || parity == 0) {
+            return true;
+        }
+        int weekNo = date.get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR);
+        return parity == 1 ? weekNo % 2 == 1 : weekNo % 2 == 0;
+    }
+
+    /**
+     * 生效日期范围：valid_from/valid_until 任一为空视为不限
+     */
+    private boolean inValidRange(BizClinicSourceTemplate tpl, LocalDate date) {
+        if (tpl.getValidFrom() != null && date.isBefore(tpl.getValidFrom())) {
+            return false;
+        }
+        return tpl.getValidUntil() == null || !date.isAfter(tpl.getValidUntil());
+    }
+
+    private String weekDayName(Integer weekDay) {
+        String[] names = {"周一", "周二", "周三", "周四", "周五", "周六", "周日"};
+        return weekDay != null && weekDay >= 1 && weekDay <= 7 ? names[weekDay - 1] : "周" + weekDay;
+    }
+
+    /**
+     * 一批模板对应的班次，一次查库（生成/预览都在循环里要用，不能逐条查）
+     */
+    private Map<Long, BizShift> loadShifts(List<BizClinicSourceTemplate> templates) {
+        return shiftService.mapByIds(templates.stream()
+                .map(BizClinicSourceTemplate::getShiftId).filter(Objects::nonNull).toList());
+    }
+
+    /**
+     * 模板的班次：没选、或班次已被删 → 返回 null，调用方按「配置非法」跳过而不是猜时间
+     */
+    private BizShift shiftOf(Map<Long, BizShift> shiftMap, BizClinicSourceTemplate tpl) {
+        return tpl.getShiftId() == null ? null : shiftMap.get(tpl.getShiftId());
+    }
+
+    /**
+     * 模板 → 排班：时间段与班次以字典为准（模板改过、字典也改过时，字典赢）；
+     * 星期与岗位类别不在这里定，由 {@code ScheduleService#bindCoreSchedule} 从出勤事实带出。
+     */
+    private BizClinicSource buildSchedule(BizClinicSourceTemplate tpl, BizShift shift, LocalDate date) {
+        BizClinicSource s = new BizClinicSource();
+        s.setDeptId(tpl.getDeptId());
+        s.setDeptName(tpl.getDeptName());
+        s.setDoctorId(tpl.getDoctorId());
+        s.setDoctorName(tpl.getDoctorName());
+        s.setStaffType(tpl.getStaffType());
+        s.setScheduleDate(date);
+        s.setStartTime(shift.getStartTime());
+        s.setEndTime(shift.getEndTime());
+        s.setShiftId(shift.getId());
+        s.setTotalSource(tpl.getTotalSource());
+        s.setRoomId(tpl.getRoomId());
+        s.setRoomName(tpl.getRoomName());
+        s.setRegistFee(tpl.getRegistFee());
+        s.setDiagnosisFee(tpl.getDiagnosisFee());
+        s.setDiagnosisTier(tpl.getDiagnosisTier());
+        s.setIsExpert(tpl.getIsExpert());
+        s.setExpertFee(tpl.getExpertFee());
+        s.setIsAppointment(tpl.getIsAppointment());
+        s.setAppointmentSource(tpl.getAppointmentSource());
+        s.setStatus(ScheduleStatusEnum.NORMAL.getCode());
+        bizScheduleService.initNewScheduleRow(s);
+        return s;
+    }
+
+    /**
+     * 同医生同日同班次算「已存在」：口径与模板/排班一致，都看 shift_id
+     */
+    private boolean existsSame(List<BizClinicSource> list, Long doctorId, LocalDate date, Long shiftId) {
+        return list.stream().anyMatch(s ->
+                Objects.equals(s.getDoctorId(), doctorId)
+                        && date.equals(s.getScheduleDate())
+                        && Objects.equals(s.getShiftId(), shiftId));
+    }
+
+    /**
+     * 时间重叠条件：startTime1 < endTime2 且 startTime2 < endTime1
+     */
+    private boolean hasTimeOverlap(List<BizClinicSource> list, Long doctorId, LocalDate date, String start, String end) {
+        if (!TextUtil.hasText(start) || !TextUtil.hasText(end)) {
+            return false;
+        }
+        return list.stream().anyMatch(s ->
+                Objects.equals(s.getDoctorId(), doctorId)
+                        && date.equals(s.getScheduleDate())
+                        && TextUtil.hasText(s.getStartTime()) && TextUtil.hasText(s.getEndTime())
+                        && s.getStartTime().compareTo(end) < 0
+                        && start.compareTo(s.getEndTime()) < 0);
+    }
+
+    private void checkDuplicate(BizClinicSourceTemplate template) {
+        LambdaQueryWrapper<BizClinicSourceTemplate> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(BizClinicSourceTemplate::getDoctorId, template.getDoctorId())
+                .eq(BizClinicSourceTemplate::getWeekDay, template.getWeekDay())
+                .eq(BizClinicSourceTemplate::getShiftId, template.getShiftId())
+                .ne(template.getId() != null, BizClinicSourceTemplate::getId, template.getId());
+        if (bizScheduleTemplateMapper.selectCount(wrapper) > 0) {
+            throw new BusinessException("该" + StaffTypeEnum.getLabel(template.getStaffType())
+                    + "在此星期已排过同一班次");
+        }
+    }
+}

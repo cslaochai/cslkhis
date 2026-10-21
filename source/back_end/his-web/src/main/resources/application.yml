@@ -7,10 +7,10 @@ spring:
       - optional:classpath:config/domain/his-ai.yml
       - optional:classpath:config/domain/his-insurance.yml
       - optional:classpath:config/domain/his-medicaltech.yml
-      - optional:classpath:config/domain/his-sign.yml
+      - optional:classpath:config/domain/his-platform.yml
       - optional:classpath:config/domain/his-sms.yml
       - optional:classpath:config/domain/his-followup.yml
-      - optional:classpath:config/domain/his-pay.yml
+      - optional:classpath:config/domain/his-charge.yml
   application:
     name: his-backend
   servlet:

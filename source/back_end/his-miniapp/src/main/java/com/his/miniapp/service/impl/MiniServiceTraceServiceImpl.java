@@ -1,6 +1,6 @@
 package com.his.miniapp.service.impl;
 
-import com.his.system.utils.UserUtils;
+import com.his.common.utils.UserUtils;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.util.TextUtil;
 import com.his.miniapp.dto.ServiceTraceDTO;

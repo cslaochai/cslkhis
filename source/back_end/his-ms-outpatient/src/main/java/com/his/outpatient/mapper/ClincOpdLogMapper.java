@@ -1,0 +1,25 @@
+package com.his.outpatient.mapper;
+
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.his.outpatient.dto.OpdLogPageQueryDTO;
+import com.his.outpatient.vo.OpdLogListVO;
+import com.his.outpatient.vo.OpdLogStatsVO;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+/**
+ * 门诊日志
+ */
+@Mapper
+public interface ClincOpdLogMapper {
+
+    /**
+     * 门诊日志分页（基表=挂号，LEFT JOIN 队列）。
+     */
+    IPage<OpdLogListVO> selectOpdLogPage(IPage<OpdLogListVO> page, @Param("q") OpdLogPageQueryDTO q);
+
+    /**
+     * 门诊日志统计条，与分页同一套 WHERE，保证「统计跟着筛选走」。
+     */
+    OpdLogStatsVO selectOpdLogStats(@Param("q") OpdLogPageQueryDTO q);
+}

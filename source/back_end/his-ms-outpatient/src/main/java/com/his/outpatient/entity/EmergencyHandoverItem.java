@@ -1,0 +1,116 @@
+package com.his.outpatient.entity;
+
+import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+
+/**
+ * 急诊交班明细（sql/153）——「逐条点名」这一事实的载体。
+ */
+@Data
+@EqualsAndHashCode(callSuper = true)
+@TableName("biz_emergency_handover_item")
+public class EmergencyHandoverItem extends BaseEntity {
+
+    /**
+     * 交班单ID（急诊交班单的ID）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long handoverId;
+
+    /**
+     * 急诊记录ID（急诊记录的ID）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long emergencyId;
+
+    /**
+     * 急诊号
+     */
+    private String emergencyNo;
+
+    /**
+     * 患者ID
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long patientId;
+
+    /**
+     * 患者姓名
+     */
+    private String patientName;
+
+    /**
+     * 分诊级别（快照 1-4）
+     */
+    private Integer triageLevel;
+
+    /**
+     * 交班时该患者的急诊状态（1-候诊 2-诊治中 3-留观，定格）
+     */
+    private Integer emergencyStatus;
+
+    /**
+     * 交班时的负责医生ID（NULL = 交班前在待派单池里无人负责）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long fromDoctorId;
+
+    /**
+     * 交班时的负责医生姓名
+     */
+    private String fromDoctorName;
+
+    /**
+     * 接续责任人（这条现在归谁）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long takeDoctorId;
+
+    /**
+     * 接续责任人姓名
+     */
+    private String takeDoctorName;
+
+    /**
+     * 去向/处置交代（如"继续留观，明晨复查头颅CT"）
+     */
+    private String disposition;
+
+    /**
+     * 逐条补充交代（过敏史/管路/家属联系方式等，截到 300）
+     */
+    private String handoverNote;
+
+    /**
+     * 候诊已等多久（定格；非候诊态为空）
+     */
+    private Long waitMinutes;
+
+    /**
+     * 已留观小时数（定格；未留观为空）
+     */
+    private Long obsHours;
+
+    /**
+     * 超时档位定格：0-未超时 1-超时 2-严重超时
+     */
+    private Integer overdueLevel;
+
+    /**
+     * 逻辑删除标志（0 未删除 1 已删除）
+     */
+    @TableLogic
+    private Integer delFlag;
+
+    /**
+     * 备注
+     */
+    private String remark;
+
+}

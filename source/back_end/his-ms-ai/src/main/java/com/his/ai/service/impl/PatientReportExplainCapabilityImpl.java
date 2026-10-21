@@ -1,0 +1,332 @@
+package com.his.ai.service.impl;
+
+import com.his.ai.constant.AiCapabilityKeys;
+import com.his.ai.dto.AiCallDTO;
+import com.his.ai.dto.PatientReportExplainDTO;
+import com.his.ai.dto.PatientReportLlmOutputDTO;
+import com.his.ai.entity.SysLabPlainItem;
+import com.his.common.enums.LabAbnormalFlagEnum;
+import com.his.common.enums.PatientLabExplainStatusEnum;
+import com.his.ai.mapper.SysLabPlainItemMapper;
+import com.his.ai.service.AiExecutionService;
+import com.his.ai.service.PatientReportExplainCapability;
+import com.his.ai.support.PatientTextGuard;
+import com.his.ai.vo.PatientLabItemPlainVO;
+import com.his.ai.vo.PatientReportExplainPromptVariablesVO;
+import com.his.ai.vo.PatientReportExplainVO;
+import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
+import com.his.common.enums.ReportTypeEnum;
+import com.his.spi.service.AiLabDataFacadeService;
+import com.his.spi.service.PatientFacadeService;
+import com.his.spi.vo.AiLabRecordVO;
+import com.his.spi.vo.AiLabResultRowVO;
+import com.his.spi.vo.AiReportVO;
+import com.his.common.entity.CurrentUser;
+import com.his.common.utils.UserUtils;
+import com.his.common.enums.AiExpressionSourceEnum;
+import com.his.common.enums.AiBizTypeEnum;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+
+/**
+ * 患者端报告解读（大白话版）。
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class PatientReportExplainCapabilityImpl implements PatientReportExplainCapability {
+
+    private static final String TEMPLATE_NAME = "patient-report-explain";
+
+    private static final int OUTPUT_TOKEN_LIMIT = 512;
+
+    private static final int SUMMARY_MAX_LENGTH = 120;
+
+    /**
+     * 固定免责提示。
+     * <p>
+     * 每一份患者可见的解读都必须带上它 —— 少了这句话，「血红蛋白偏低，提示贫血」
+     * 就会被读成诊断结论。这句话不是形式主义，是这个能力能上线的<b>前提条件</b>。
+     */
+    private static final String ADVICE =
+            "以上只是帮你读懂报告上的数字，不能代替医生的诊断。"
+                    + "任何一项有疑问，请以接诊医生的解释为准；"
+                    + "若结果标注为危急值，请立即联系医生或前往急诊。";
+
+    /**
+     * 词典未收录时的兜底文案。
+     * <p>
+     * 不写「可能是…」。写「可能是」患者的反应是去百度验证，而不是去问医生。
+     */
+    private static final String FALLBACK_ABNORMAL = "这项结果不在参考范围内，具体意味着什么需要医生结合你的情况判断。";
+
+    private static final String FALLBACK_UNJUDGED = "这项系统没能自动判断（参考区间不可用），既不能算异常也不能算正常，请让医生核对。";
+
+    private final AiLabDataFacadeService aiLabDataFacadeService;
+
+    private final SysLabPlainItemMapper sysLabPlainItemMapper;
+
+    private final AiExecutionService aiExecutionService;
+
+    private final PatientTextGuard textGuard;
+
+    private final PatientFacadeService patientFacadeService;
+
+    private static Integer toStatus(Integer flag, boolean unjudged) {
+        if (unjudged) {
+            return PatientLabExplainStatusEnum.UNJUDGED.getCode();
+        }
+        LabAbnormalFlagEnum flagEnum = LabAbnormalFlagEnum.fromCode(flag);
+        if (flagEnum == null) {
+            // 空值与脏值都按「正常」显示：患者端只有这一档不触发「联系医生」提示，宁可少说不误报
+            return PatientLabExplainStatusEnum.NORMAL.getCode();
+        }
+        return switch (flagEnum) {
+            case HIGH -> PatientLabExplainStatusEnum.HIGH.getCode();
+            case LOW -> PatientLabExplainStatusEnum.LOW.getCode();
+            case ABNORMAL -> PatientLabExplainStatusEnum.ABNORMAL.getCode();
+            case NORMAL -> PatientLabExplainStatusEnum.NORMAL.getCode();
+        };
+    }
+
+    // ---------------------------------------------------------------- 规则层
+
+    /**
+     * 单项白话说明。
+     * <p>
+     * 危急值优先级最高：不管词典有没有，先把「立即联系医生」说在前面。
+     * 这是代码判定的事实，不是措辞选择。
+     */
+    private static String buildPlainText(Integer status, boolean unjudged, SysLabPlainItem plain,
+                                         String criticalDesc) {
+        if (TextUtil.hasText(criticalDesc)) {
+            return "【需要尽快处理】" + criticalDesc + "。请立即联系接诊医生或前往急诊。";
+        }
+        if (unjudged) {
+            return FALLBACK_UNJUDGED;
+        }
+        if (PatientLabExplainStatusEnum.HIGH.getCode().equals(status)) {
+            return plain == null ? FALLBACK_ABNORMAL : plain.getHighText();
+        }
+        if (PatientLabExplainStatusEnum.LOW.getCode().equals(status)) {
+            return plain == null ? FALLBACK_ABNORMAL : plain.getLowText();
+        }
+        if (PatientLabExplainStatusEnum.ABNORMAL.getCode().equals(status)) {
+            return plain == null ? FALLBACK_ABNORMAL : plain.getHighText();
+        }
+        // 正常：说清这项是查什么的，比说「一切正常」有用；也不必加任何判断
+        if (plain != null && TextUtil.hasText(plain.getWhatIsIt())) {
+            return "你的结果在参考范围内。这项是" + plain.getWhatIsIt() + "。";
+        }
+        return "你的结果在参考范围内。";
+    }
+
+    private static String buildCriticalAlert(int criticalCount, List<String> criticalNames) {
+        StringBuilder builder = new StringBuilder("本次");
+        for (String name : criticalNames) {
+            builder.append('「').append(name).append('」');
+        }
+        builder.append(criticalCount > 1 ? " 共 " + criticalCount + " 项" : "");
+        builder.append("达到危急值，请立即联系接诊医生或前往急诊。");
+        return builder.toString();
+    }
+
+    private static String buildRuleSummary(int total, int abnormal, int unjudged) {
+        StringBuilder builder = new StringBuilder();
+        if (abnormal == 0 && unjudged == 0) {
+            builder.append(String.format("这份报告共 %d 项，结果都在参考范围内。", total));
+            return builder.toString();
+        }
+        builder.append(String.format("这份报告共 %d 项", total));
+        if (abnormal > 0) {
+            builder.append(String.format("，其中 %d 项不在参考范围内", abnormal));
+        }
+        if (unjudged > 0) {
+            builder.append(String.format("，另有 %d 项需要医生核对", unjudged));
+        }
+        builder.append("。下面逐项说明每一项查的是什么、你的结果意味着什么。");
+        return builder.toString();
+    }
+
+    // ---------------------------------------------------------------- 模型层
+
+    public PatientReportExplainVO execute(PatientReportExplainDTO dto) {
+        CurrentUser user = UserUtils.getCurrentUser();
+        if (user == null || user.getPatientId() == null) {
+            throw new BusinessException("未获取到就诊人身份，请重新登录");
+        }
+
+        AiReportVO report = aiLabDataFacadeService.findReport(dto.getReportId());
+        if (report == null) {
+            throw new BusinessException("报告不存在：" + dto.getReportId());
+        }
+        if (patientFacadeService.patientScopeViolated(report.getPatientId())) {
+            // 不区分「报告不存在」和「无权查看」，避免被用来探测报告是否存在
+            throw new BusinessException("报告不存在或无权查看：" + dto.getReportId());
+        }
+        if (report.getReportType() == null || !ReportTypeEnum.LAB_TEST.getCode().equals(report.getReportType())) {
+            throw new BusinessException("目前只对检验报告提供逐项解读；检查报告（CT/B超等）请咨询接诊医生");
+        }
+
+        AiLabRecordVO record = report.getRecordId() == null
+                ? null : aiLabDataFacadeService.findLabRecord(report.getRecordId());
+        if (record == null) {
+            throw new BusinessException("该报告未关联检验记录，无法逐项解读");
+        }
+        List<AiLabResultRowVO> results = aiLabDataFacadeService.listLabResults(record.getId());
+        if (results == null || results.isEmpty()) {
+            throw new BusinessException("该检验记录尚未录入结果，无法解读");
+        }
+
+        Map<String, SysLabPlainItem> dict = loadDictionary();
+
+        PatientReportExplainVO vo = new PatientReportExplainVO();
+        vo.setReportId(report.getId());
+        vo.setReportNo(report.getReportNo());
+        vo.setItemName(record.getLaboratoryItemName());
+        vo.setReportTime(report.getPublishTime() == null ? record.getExecuteTime() : report.getPublishTime());
+
+        List<PatientLabItemPlainVO> items = new ArrayList<>();
+        List<String> criticalNames = new ArrayList<>();
+        int abnormalCount = 0;
+        int unjudgedCount = 0;
+        int criticalCount = 0;
+
+        for (AiLabResultRowVO result : results) {
+            PatientLabItemPlainVO item = new PatientLabItemPlainVO();
+            item.setItemName(result.getLaboratoryItemName());
+            item.setResultValue(result.getResultValue());
+            item.setUnit(result.getResultUnit());
+            item.setReferenceRange(result.getReferenceRange());
+
+            boolean isCritical = Boolean.TRUE.equals(result.getCritical());
+            item.setCritical(isCritical);
+            item.setCriticalDesc(result.getCriticalDesc());
+
+            boolean unjudged = Boolean.TRUE.equals(result.getUnjudged());
+            Integer status = toStatus(result.getAbnormalFlag(), unjudged);
+            item.setStatus(status);
+            item.setStatusText(PatientLabExplainStatusEnum.getLabel(status));
+            item.setArrow(PatientLabExplainStatusEnum.HIGH.getCode().equals(status) ? "↑"
+                    : PatientLabExplainStatusEnum.LOW.getCode().equals(status) ? "↓" : "");
+
+            if (unjudged) {
+                unjudgedCount++;
+            } else if (!PatientLabExplainStatusEnum.NORMAL.getCode().equals(status)) {
+                abnormalCount++;
+            }
+            if (isCritical) {
+                criticalCount++;
+                // 点名到项目：写「本次有 1 项达到危急值」患者还得自己去表里找是哪一项，
+                // 而这条提示存在的唯一目的就是让他立刻行动
+                if (TextUtil.hasText(result.getLaboratoryItemName())
+                        && !criticalNames.contains(result.getLaboratoryItemName())) {
+                    criticalNames.add(result.getLaboratoryItemName());
+                }
+            }
+
+            SysLabPlainItem plain = TextUtil.hasText(result.getLaboratoryItemName())
+                    ? dict.get(result.getLaboratoryItemName().trim()) : null;
+            item.setPlainName(plain == null ? null : plain.getPlainName());
+            item.setWhatIsIt(plain == null ? null : plain.getWhatIsIt());
+            item.setPlainText(buildPlainText(status, unjudged, plain, result.getCriticalDesc()));
+
+            items.add(item);
+        }
+
+        vo.setItems(items);
+        vo.setItemCount(items.size());
+        vo.setAbnormalCount(abnormalCount);
+        vo.setUnjudgedCount(unjudgedCount);
+        vo.setCriticalAlert(criticalCount > 0 ? buildCriticalAlert(criticalCount, criticalNames) : null);
+
+        String ruleSummary = buildRuleSummary(items.size(), abnormalCount, unjudgedCount);
+        vo.setSummary(ruleSummary);
+
+        Optional<PatientReportLlmOutputDTO> llmOutput = callModel(record, items, ruleSummary);
+        if (llmOutput.isPresent()) {
+            String guarded = textGuard.guard(llmOutput.get().getSummary(),
+                    AiCapabilityKeys.PATIENT_REPORT_EXPLAIN);
+            if (TextUtil.hasText(guarded)) {
+                vo.setSummary(TextUtil.cut(guarded, SUMMARY_MAX_LENGTH));
+                vo.setSource(AiExpressionSourceEnum.MODEL.getCode());
+                vo.setDegraded(false);
+            } else {
+                // 模型给了一段越界文案：这正是闸门存在的意义 —— 宁可用朴素措辞，也不放无背书的诊断出去
+                vo.setSource(AiExpressionSourceEnum.RULE.getCode());
+                vo.setDegraded(true);
+                vo.setDegradeReason("模型输出未通过患者文案安全闸，已回落到规则文案");
+            }
+        } else {
+            vo.setSource(AiExpressionSourceEnum.RULE.getCode());
+            vo.setDegraded(true);
+            vo.setDegradeReason(aiExecutionService.degradeReasonOf(AiCapabilityKeys.PATIENT_REPORT_EXPLAIN)
+                    + "；以下解读由检验规则与白话词典生成，不受影响");
+        }
+
+        vo.setAdvice(ADVICE);
+        return vo;
+    }
+
+    private Map<String, SysLabPlainItem> loadDictionary() {
+        List<SysLabPlainItem> all = sysLabPlainItemMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysLabPlainItem>()
+                        .eq(SysLabPlainItem::getStatus, 1));
+        Map<String, SysLabPlainItem> map = new HashMap<>();
+        if (all != null) {
+            for (SysLabPlainItem item : all) {
+                if (TextUtil.hasText(item.getItemName())) {
+                    map.put(item.getItemName().trim(), item);
+                }
+            }
+        }
+        return map;
+    }
+
+    private Optional<PatientReportLlmOutputDTO> callModel(AiLabRecordVO record,
+                                                          List<PatientLabItemPlainVO> items,
+                                                          String ruleSummary) {
+        PatientReportExplainPromptVariablesVO variables = new PatientReportExplainPromptVariablesVO();
+        variables.setItemName(TextUtil.blankToDefault(record.getLaboratoryItemName(), "（未填写）"));
+        variables.setRuleSummary(ruleSummary);
+        variables.setItems(renderItems(items));
+
+        AiCallDTO call = AiCallDTO.builder()
+                .capabilityKey(AiCapabilityKeys.PATIENT_REPORT_EXPLAIN)
+                .templateName(TEMPLATE_NAME)
+                .variables(variables)
+                .bizType(AiBizTypeEnum.REPORT.getCode())
+                .bizId(record.getId())
+                .inputDigest(TextUtil.blankToDefault(record.getPatientName(), "（未填写）") + " | "
+                        + TextUtil.blankToDefault(record.getLaboratoryItemName(), "（未填写）"))
+                .maxTokens(OUTPUT_TOKEN_LIMIT)
+                .build();
+
+        return aiExecutionService.call(call, PatientReportLlmOutputDTO.class);
+    }
+
+    private String renderItems(List<PatientLabItemPlainVO> items) {
+        StringBuilder builder = new StringBuilder();
+        for (PatientLabItemPlainVO item : items) {
+            builder.append("- ").append(TextUtil.blankToDefault(item.getItemName(), "（未填写）"));
+            if (TextUtil.hasText(item.getPlainName())) {
+                builder.append("（俗称").append(item.getPlainName()).append("）");
+            }
+            builder.append(" = ").append(TextUtil.blankToDefault(item.getResultValue(), "（未填写）"));
+            if (TextUtil.hasText(item.getUnit())) {
+                builder.append(' ').append(item.getUnit());
+            }
+            builder.append("（参考 ").append(TextUtil.blankToDefault(item.getReferenceRange(), "（未填写）"))
+                    .append("，").append(item.getStatusText()).append("）");
+            if (TextUtil.hasText(item.getPlainText())) {
+                builder.append(" 已给出的白话说明：").append(item.getPlainText());
+            }
+            builder.append('\n');
+        }
+        return builder.length() == 0 ? "（无）" : builder.toString();
+    }
+}

@@ -9,7 +9,7 @@ import com.his.miniapp.dto.MessagePageDTO;
 import com.his.miniapp.mapper.MiniMessageMapper;
 import com.his.miniapp.service.MiniMessageService;
 import com.his.miniapp.vo.MiniMessageListVO;
-import com.his.system.utils.UserUtils;
+import com.his.common.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

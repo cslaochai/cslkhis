@@ -1,6 +1,6 @@
 package com.his.miniapp.service.impl;
 
-import com.his.system.utils.UserUtils;
+import com.his.common.utils.UserUtils;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.spi.dto.PrepayPageQueryDTO;
 import com.his.spi.service.ChargeFacadeService;

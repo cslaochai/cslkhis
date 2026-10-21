@@ -23,7 +23,7 @@ import com.his.miniapp.vo.MiniServiceDetailVO;
 import com.his.miniapp.vo.MiniServiceLogVO;
 import com.his.miniapp.vo.MiniServiceMessageListVO;
 import com.his.miniapp.vo.MiniTicketStatsVO;
-import com.his.system.utils.UserUtils;
+import com.his.common.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

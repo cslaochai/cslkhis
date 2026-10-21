@@ -1,0 +1,26 @@
+package com.his.inpatient.vo;
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import lombok.Data;
+
+/**
+ * 科室出院例数行（VTE / 营养指标快照按科室枚举时用）
+ */
+@Data
+public class DeptCountRowVO {
+
+    /**
+     * 开单科室ID
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long deptId;
+
+    /**
+     * 开单科室名称
+     */
+    private String deptName;
+
+    /** 出院患者例数 */
+    private Integer patientCount;
+}

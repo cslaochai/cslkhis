@@ -1,0 +1,565 @@
+package com.his.medicaltech.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.base.PageResult;
+import com.his.common.enums.DelFlagEnum;
+import com.his.common.enums.YesOrNoEnum;
+import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
+import com.his.medicaltech.dto.InfusionRoomDTO;
+import com.his.medicaltech.entity.BizInfusionSeat;
+import com.his.medicaltech.entity.BizOutpInfusion;
+import com.his.medicaltech.entity.BizOutpInfusionRound;
+import com.his.medicaltech.entity.BizSkinTest;
+import com.his.common.enums.InfusionSeatStatusEnum;
+import com.his.common.enums.InfusionStatusEnum;
+import com.his.common.enums.SkinTestResultEnum;
+import com.his.medicaltech.mapper.BizInfusionSeatMapper;
+import com.his.medicaltech.mapper.BizOutpInfusionMapper;
+import com.his.medicaltech.mapper.BizOutpInfusionRoundMapper;
+import com.his.medicaltech.mapper.BizSkinTestMapper;
+import com.his.medicaltech.service.InfusionRoomService;
+import com.his.medicaltech.vo.InfusionPatientSnapshotVO;
+import com.his.medicaltech.vo.InfusionRoomVO;
+import com.his.spi.service.RedisSequenceService;
+import com.his.common.utils.UserUtils;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/**
+ * 门诊输液室服务（M10）。
+ */
+@Service
+@RequiredArgsConstructor
+public class InfusionRoomServiceImpl extends ServiceImpl<BizOutpInfusionMapper, BizOutpInfusion> implements InfusionRoomService {
+
+    /**
+     * 皮试判读最小观察窗（分钟）
+     */
+    private static final long SKIN_TEST_OBSERVE_MINUTES = 15;
+
+    private final BizInfusionSeatMapper bizInfusionSeatMapper;
+    private final BizOutpInfusionMapper bizOutpInfusionMapper;
+    private final BizOutpInfusionRoundMapper bizOutpInfusionRoundMapper;
+    private final BizSkinTestMapper bizSkinTestMapper;
+    private final RedisSequenceService redisSequenceService;
+
+    // 座位
+
+    /**
+     * 座位图（含占用输液单摘要）
+     */
+    public List<InfusionRoomVO.Seat> seats() {
+        List<BizInfusionSeat> seats = bizInfusionSeatMapper.selectList(new LambdaQueryWrapper<BizInfusionSeat>()
+                .orderByAsc(BizInfusionSeat::getArea).orderByAsc(BizInfusionSeat::getSeatNo));
+        List<Long> seatIds = seats.stream().map(BizInfusionSeat::getId).toList();
+        Map<Long, BizOutpInfusion> occupying = seatIds.isEmpty() ? Map.of()
+                : bizOutpInfusionMapper.selectList(new LambdaQueryWrapper<BizOutpInfusion>()
+                        .in(BizOutpInfusion::getSeatId, seatIds)
+                        .in(BizOutpInfusion::getStatus,
+                                InfusionStatusEnum.PENDING_TEST.getCode(),
+                                InfusionStatusEnum.WAITING.getCode(),
+                                InfusionStatusEnum.INFUSING.getCode())
+                        .eq(BizOutpInfusion::getDelFlag, DelFlagEnum.NORMAL.getCode()))
+                .stream().collect(Collectors.toMap(BizOutpInfusion::getSeatId, i -> i, (a, b) -> a));
+        return seats.stream().map(s -> {
+            InfusionRoomVO.Seat vo = new InfusionRoomVO.Seat();
+            vo.setId(s.getId());
+            vo.setSeatNo(s.getSeatNo());
+            vo.setArea(s.getArea());
+            vo.setSeatStatus(s.getSeatStatus());
+            vo.setRemark(s.getRemark());
+            BizOutpInfusion inf = occupying.get(s.getId());
+            if (inf != null) {
+                vo.setInfusionId(inf.getId());
+                vo.setPatientName(inf.getPatientName());
+                vo.setInfusionStatus(inf.getStatus());
+            }
+            return vo;
+        }).toList();
+    }
+
+    /**
+     * 座位新增/修改（座位号唯一；占用中的座位不允许改状态）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public InfusionRoomVO.Seat seatUpsert(InfusionRoomDTO.SeatUpsertDTO dto) {
+        if (dto.getSeatStatus() != null && dto.getSeatStatus() == InfusionSeatStatusEnum.OCCUPIED.getCode()) {
+            throw new BusinessException("座位占用由入座流程驱动，不能直接置为占用");
+        }
+        BizInfusionSeat seat;
+        if (dto.getId() != null) {
+            seat = bizInfusionSeatMapper.selectById(dto.getId());
+            if (seat == null || seat.getDelFlag() == DelFlagEnum.DELETED.getCode()) {
+                throw new BusinessException("座位不存在");
+            }
+            if (seat.getSeatStatus() == InfusionSeatStatusEnum.OCCUPIED.getCode()) {
+                throw new BusinessException("座位占用中，请先结束/取消该输液单");
+            }
+            seat.setSeatStatus(dto.getSeatStatus());
+        } else {
+            seat = new BizInfusionSeat();
+            seat.setSeatStatus(dto.getSeatStatus());
+        }
+        Long dupId = bizInfusionSeatMapper.selectCount(new LambdaQueryWrapper<BizInfusionSeat>()
+                .eq(BizInfusionSeat::getSeatNo, dto.getSeatNo())
+                .ne(dto.getId() != null, BizInfusionSeat::getId, dto.getId())
+                .eq(BizInfusionSeat::getDelFlag, DelFlagEnum.NORMAL.getCode()));
+        if (dupId > 0) {
+            throw new BusinessException("座位号已存在（含软删行占用的唯一键，请换号）");
+        }
+        seat.setSeatNo(dto.getSeatNo());
+        seat.setArea(dto.getArea());
+        seat.setRemark(dto.getRemark());
+        seat.setUpdateBy(UserUtils.getCurrentUser().getRealName());
+        if (dto.getId() != null) {
+            bizInfusionSeatMapper.updateById(seat);
+        } else {
+            seat.setCreateBy(UserUtils.getCurrentUser().getRealName());
+            bizInfusionSeatMapper.insert(seat);
+        }
+        InfusionRoomVO.Seat vo = new InfusionRoomVO.Seat();
+        vo.setId(seat.getId());
+        vo.setSeatNo(seat.getSeatNo());
+        vo.setArea(seat.getArea());
+        vo.setSeatStatus(seat.getSeatStatus());
+        vo.setRemark(seat.getRemark());
+        return vo;
+    }
+
+    // 入座
+
+    /**
+     * 入座：建输液单 + 占座。needSkinTest=1 → 待皮试；否则待输注。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public InfusionRoomVO.Infusion admit(InfusionRoomDTO.AdmitDTO dto) {
+        BizInfusionSeat seat = bizInfusionSeatMapper.selectById(dto.getSeatId());
+        if (seat == null || seat.getDelFlag() == DelFlagEnum.DELETED.getCode()) {
+            throw new BusinessException("座位不存在");
+        }
+        if (seat.getSeatStatus() == InfusionSeatStatusEnum.DISABLED.getCode()) {
+            throw new BusinessException("座位已停用");
+        }
+        if (seat.getSeatStatus() == InfusionSeatStatusEnum.OCCUPIED.getCode()) {
+            throw new BusinessException("座位已占用（座位号 " + seat.getSeatNo() + "）");
+        }
+        BizOutpInfusion inf = new BizOutpInfusion();
+        inf.setInfusionNo(nextNo("TZ"));
+        inf.setTreatmentRecordId(dto.getTreatmentRecordId());
+        inf.setPatientId(dto.getPatientId());
+        fillPatientSnapshot(inf);
+        inf.setDrugSummary(dto.getDrugSummary());
+        inf.setSeatId(seat.getId());
+        inf.setSeatNo(seat.getSeatNo());
+        inf.setStatus(Boolean.TRUE.equals(needTest(dto.getNeedSkinTest()))
+                ? InfusionStatusEnum.PENDING_TEST.getCode() : InfusionStatusEnum.WAITING.getCode());
+        inf.setAdverseFlag(YesOrNoEnum.NO.getCode());
+        inf.setNurseId(UserUtils.getCurrentUser().getEmployeeId());
+        inf.setNurseName(UserUtils.getCurrentUser().getRealName());
+        inf.setRemark(dto.getRemark());
+        inf.setCreateBy(inf.getNurseName());
+        bizOutpInfusionMapper.insert(inf);
+
+        seat.setSeatStatus(InfusionSeatStatusEnum.OCCUPIED.getCode());
+        seat.setUpdateBy(inf.getNurseName());
+        // 守卫下沉到 WHERE：两人并发入座时，只有一方能命中「未占用」的座位，防止一座两患者
+        int rows = bizInfusionSeatMapper.update(seat, new LambdaUpdateWrapper<BizInfusionSeat>()
+                .eq(BizInfusionSeat::getId, seat.getId())
+                .ne(BizInfusionSeat::getSeatStatus, InfusionSeatStatusEnum.OCCUPIED.getCode())
+                .ne(BizInfusionSeat::getSeatStatus, InfusionSeatStatusEnum.DISABLED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("座位已占用或已停用（可能刚被他人入座），请刷新后重试");
+        }
+        return toInfusionVO(inf);
+    }
+
+    private boolean needTest(Integer flag) {
+        return flag != null && flag == YesOrNoEnum.YES.getCode();
+    }
+
+    /**
+     * 患者快照（服务端重查，不信任前端）。
+     */
+    private void fillPatientSnapshot(BizOutpInfusion inf) {
+        InfusionPatientSnapshotVO row = bizOutpInfusionMapper.selectPatientSnapshot(inf.getPatientId());
+        if (row == null) {
+            throw new BusinessException("患者不存在（ID " + inf.getPatientId() + "）");
+        }
+        inf.setPatientNo(row.getPatientNo());
+        inf.setPatientName(row.getPatientName());
+        inf.setGender(row.getGender());
+        inf.setAge(row.getAge());
+    }
+
+    // 皮试
+
+    /**
+     * 打皮试：输液单必须处于待皮试；一张输液单一张皮试单。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public InfusionRoomVO.Infusion skinTest(InfusionRoomDTO.SkinTestCreate dto) {
+        BizOutpInfusion inf = mustInfusing(dto.getInfusionId());
+        if (inf.getStatus() != InfusionStatusEnum.PENDING_TEST.getCode()) {
+            throw new BusinessException("输液单当前状态不需要皮试（状态 " + inf.getStatus() + "）");
+        }
+        BizSkinTest st = new BizSkinTest();
+        st.setTestNo(nextNo("PS"));
+        st.setPatientId(inf.getPatientId());
+        st.setPatientName(inf.getPatientName());
+        st.setDrugName(dto.getDrugName());
+        st.setTreatmentRecordId(inf.getTreatmentRecordId());
+        st.setTestTime(TimeUtil.nowSeconds());
+        st.setResult(SkinTestResultEnum.PENDING.getCode());
+        st.setNurseId(UserUtils.getCurrentUser().getEmployeeId());
+        st.setNurseName(UserUtils.getCurrentUser().getRealName());
+        st.setRemark(dto.getRemark());
+        st.setCreateBy(st.getNurseName());
+        bizSkinTestMapper.insert(st);
+
+        inf.setSkinTestId(st.getId());
+        inf.setUpdateBy(st.getNurseName());
+        // 守卫下沉到 WHERE：与开始输注/取消并发时，只有仍「待皮试」的单能挂上皮试单，防止一单两皮试
+        int rows = bizOutpInfusionMapper.update(inf, new LambdaUpdateWrapper<BizOutpInfusion>()
+                .eq(BizOutpInfusion::getId, inf.getId())
+                .eq(BizOutpInfusion::getStatus, InfusionStatusEnum.PENDING_TEST.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("输液单当前状态不需要皮试（状态可能已变化），请刷新后重试");
+        }
+        return toInfusionVO(inf);
+    }
+
+    /**
+     * 皮试判读：观察窗 <15 分钟拒绝；阳性 → 输液单取消 + 释放座位。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public InfusionRoomVO.Infusion skinTestResult(InfusionRoomDTO.SkinTestResult dto) {
+        BizSkinTest st = bizSkinTestMapper.selectById(dto.getSkinTestId());
+        if (st == null || st.getDelFlag() == DelFlagEnum.DELETED.getCode()) {
+            throw new BusinessException("皮试记录不存在");
+        }
+        if (st.getResult() != null && st.getResult() != SkinTestResultEnum.PENDING.getCode()) {
+            throw new BusinessException("皮试已判读（结果 " + st.getResult() + "），判读不可改");
+        }
+        long minutes = Duration.between(st.getTestTime(), LocalDateTime.now()).toMinutes();
+        if (minutes < SKIN_TEST_OBSERVE_MINUTES) {
+            throw new BusinessException("观察不足 " + SKIN_TEST_OBSERVE_MINUTES + " 分钟（已 " + minutes
+                    + " 分钟），不能判读");
+        }
+        st.setResult(dto.getResult());
+        st.setResultTime(TimeUtil.nowSeconds());
+        st.setUpdateBy(UserUtils.getCurrentUser().getRealName());
+        // 守卫下沉到 WHERE：两人同时判读时，只有一方能命中「待判读」，判读结果不可被并发改写
+        int rows = bizSkinTestMapper.update(st, new LambdaUpdateWrapper<BizSkinTest>()
+                .eq(BizSkinTest::getId, st.getId())
+                .eq(BizSkinTest::getResult, SkinTestResultEnum.PENDING.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("皮试已判读（可能刚被他人判读），请刷新后重试");
+        }
+
+        // 皮试表不持有输液单外键（输液单持 skinTestId），反查进行中的输液单
+        BizOutpInfusion inf = bizOutpInfusionMapper.selectOne(new LambdaQueryWrapper<BizOutpInfusion>()
+                .eq(BizOutpInfusion::getSkinTestId, st.getId())
+                .eq(BizOutpInfusion::getDelFlag, DelFlagEnum.NORMAL.getCode())
+                .orderByDesc(BizOutpInfusion::getId)
+                .last("LIMIT 1"));
+        if (inf != null) {
+            if (dto.getResult() == SkinTestResultEnum.POSITIVE.getCode()) {
+                cancelInternal(inf, "皮试阳性（皮试单 " + st.getTestNo() + "）");
+            } else {
+                inf.setStatus(InfusionStatusEnum.WAITING.getCode());
+                inf.setUpdateBy(UserUtils.getCurrentUser().getRealName());
+                // 守卫下沉到 WHERE：皮试阴性推进待输注前，输液单必须仍「待皮试」，防止把已取消的单复活
+                int infRows = bizOutpInfusionMapper.update(inf, new LambdaUpdateWrapper<BizOutpInfusion>()
+                        .eq(BizOutpInfusion::getId, inf.getId())
+                        .eq(BizOutpInfusion::getStatus, InfusionStatusEnum.PENDING_TEST.getCode()));
+                if (infRows == 0) {
+                    throw new BusinessException("输液单状态已变化（可能已被取消），判读结果未生效，请刷新后重试");
+                }
+            }
+        }
+        BizOutpInfusion latest = inf == null ? null : bizOutpInfusionMapper.selectById(inf.getId());
+        return latest == null ? null : toInfusionVO(latest);
+    }
+
+    // 输注
+
+    /**
+     * 开始输注：待输注（或待皮试且皮试阴性）才可开始；写滴速 + 开始时间。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public InfusionRoomVO.Infusion start(InfusionRoomDTO.Start dto) {
+        BizOutpInfusion inf = mustInfusing(dto.getInfusionId());
+        if (inf.getStatus() != InfusionStatusEnum.WAITING.getCode()) {
+            throw new BusinessException("输液单不在待输注状态（状态 " + inf.getStatus() + "）");
+        }
+        if (inf.getSkinTestId() != null) {
+            BizSkinTest st = bizSkinTestMapper.selectById(inf.getSkinTestId());
+            if (st == null || st.getResult() == null || st.getResult() != SkinTestResultEnum.NEGATIVE.getCode()) {
+                throw new BusinessException("皮试未判读阴性，不能开始输注");
+            }
+        }
+        inf.setStatus(InfusionStatusEnum.INFUSING.getCode());
+        inf.setStartTime(TimeUtil.nowSeconds());
+        inf.setDripRate(dto.getDripRate());
+        inf.setUpdateBy(UserUtils.getCurrentUser().getRealName());
+        // 守卫下沉到 WHERE：并发点击开始时，只有仍「待输注」的单能进入输注中
+        int rows = bizOutpInfusionMapper.update(inf, new LambdaUpdateWrapper<BizOutpInfusion>()
+                .eq(BizOutpInfusion::getId, inf.getId())
+                .eq(BizOutpInfusion::getStatus, InfusionStatusEnum.WAITING.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("输液单不在待输注状态（可能刚被并发开始），请刷新后重试");
+        }
+        return toInfusionVO(inf);
+    }
+
+    /**
+     * 巡视：只增不改（输液中才可巡视）。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public InfusionRoomVO.Round round(InfusionRoomDTO.Round dto) {
+        BizOutpInfusion inf = mustInfusing(dto.getInfusionId());
+        if (inf.getStatus() != InfusionStatusEnum.INFUSING.getCode()) {
+            throw new BusinessException("输液单不在输注中（状态 " + inf.getStatus() + "）");
+        }
+        BizOutpInfusionRound r = new BizOutpInfusionRound();
+        r.setInfusionId(inf.getId());
+        r.setRoundTime(TimeUtil.nowSeconds());
+        r.setDripRate(dto.getDripRate());
+        r.setRemainingVolume(dto.getRemainingVolume());
+        r.setNurseId(UserUtils.getCurrentUser().getEmployeeId());
+        r.setNurseName(UserUtils.getCurrentUser().getRealName());
+        r.setRemark(dto.getRemark());
+        r.setCreateBy(r.getNurseName());
+        bizOutpInfusionRoundMapper.insert(r);
+        InfusionRoomVO.Round vo = new InfusionRoomVO.Round();
+        vo.setId(r.getId());
+        vo.setInfusionId(r.getInfusionId());
+        vo.setRoundTime(r.getRoundTime());
+        vo.setDripRate(r.getDripRate());
+        vo.setRemainingVolume(r.getRemainingVolume());
+        vo.setNurseName(r.getNurseName());
+        vo.setRemark(r.getRemark());
+        return vo;
+    }
+
+    /**
+     * 结束输注：adverseFlag=1 时描述必填；释放座位。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public InfusionRoomVO.Infusion finish(InfusionRoomDTO.Finish dto) {
+        BizOutpInfusion inf = mustInfusing(dto.getInfusionId());
+        if (inf.getStatus() != InfusionStatusEnum.INFUSING.getCode()) {
+            throw new BusinessException("输液单不在输注中（状态 " + inf.getStatus() + "）");
+        }
+        // B-条件必填：仅 adverseFlag=1 时描述必填，一刀切的 @NotBlank 会挡掉无不良反应的合法请求，DTO 注解无法表达，保留
+        if (dto.getAdverseFlag() == YesOrNoEnum.YES.getCode() && (!TextUtil.hasText(dto.getAdverseDesc()))) {
+            throw new BusinessException("有不良反应时描述必填");
+        }
+        inf.setStatus(InfusionStatusEnum.FINISHED.getCode());
+        inf.setEndTime(TimeUtil.nowSeconds());
+        inf.setAdverseFlag(dto.getAdverseFlag());
+        inf.setAdverseDesc(dto.getAdverseDesc());
+        inf.setUpdateBy(UserUtils.getCurrentUser().getRealName());
+        // 守卫下沉到 WHERE：与取消/重复结束并发时，只有仍「输注中」的单能结束，防止已取消的单被盖回
+        int rows = bizOutpInfusionMapper.update(inf, new LambdaUpdateWrapper<BizOutpInfusion>()
+                .eq(BizOutpInfusion::getId, inf.getId())
+                .eq(BizOutpInfusion::getStatus, InfusionStatusEnum.INFUSING.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("输液单不在输注中（可能刚被结束/取消），请刷新后重试");
+        }
+        releaseSeat(inf);
+        return toInfusionVO(inf);
+    }
+
+    /**
+     * 取消（1/2/3 态均可）：必须给原因；释放座位。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public InfusionRoomVO.Infusion cancel(InfusionRoomDTO.Cancel dto) {
+        BizOutpInfusion inf = mustInfusing(dto.getInfusionId());
+        if (inf.getStatus() == InfusionStatusEnum.FINISHED.getCode()
+                || inf.getStatus() == InfusionStatusEnum.CANCELLED.getCode()) {
+            throw new BusinessException("输液单已终态，不能取消");
+        }
+        cancelInternal(inf, dto.getCancelReason());
+        return toInfusionVO(bizOutpInfusionMapper.selectById(inf.getId()));
+    }
+
+    private void cancelInternal(BizOutpInfusion inf, String reason) {
+        inf.setStatus(InfusionStatusEnum.CANCELLED.getCode());
+        inf.setCancelReason(TextUtil.cut(reason, 500));
+        inf.setEndTime(TimeUtil.nowSeconds());
+        inf.setUpdateBy(UserUtils.getCurrentUser().getRealName());
+        // 守卫下沉到 WHERE：与结束输注并发时，只有非终态的单能取消，防止取消/结束互相覆盖
+        int rows = bizOutpInfusionMapper.update(inf, new LambdaUpdateWrapper<BizOutpInfusion>()
+                .eq(BizOutpInfusion::getId, inf.getId())
+                .notIn(BizOutpInfusion::getStatus,
+                        InfusionStatusEnum.FINISHED.getCode(), InfusionStatusEnum.CANCELLED.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("输液单已终态，不能取消（可能刚被并发处理），请刷新后重试");
+        }
+        releaseSeat(inf);
+    }
+
+    /**
+     * 释放座位（占用该座的输液单已不在进行态才释放）。
+     */
+    private void releaseSeat(BizOutpInfusion inf) {
+        if (inf.getSeatId() == null) {
+            return;
+        }
+        BizInfusionSeat seat = bizInfusionSeatMapper.selectById(inf.getSeatId());
+        if (seat == null) {
+            return;
+        }
+        Long ongoing = bizOutpInfusionMapper.selectCount(new LambdaQueryWrapper<BizOutpInfusion>()
+                .eq(BizOutpInfusion::getSeatId, seat.getId())
+                .in(BizOutpInfusion::getStatus,
+                        InfusionStatusEnum.PENDING_TEST.getCode(),
+                        InfusionStatusEnum.WAITING.getCode(),
+                        InfusionStatusEnum.INFUSING.getCode())
+                .eq(BizOutpInfusion::getDelFlag, DelFlagEnum.NORMAL.getCode())
+                .ne(BizOutpInfusion::getId, inf.getId()));
+        if (ongoing == 0 && seat.getSeatStatus() == InfusionSeatStatusEnum.OCCUPIED.getCode()) {
+            seat.setSeatStatus(InfusionSeatStatusEnum.FREE.getCode());
+            seat.setUpdateBy(UserUtils.getCurrentUser().getRealName());
+            // 守卫整体下沉到 WHERE：「无在办输液单」与「座位仍占用」一起原子判定，
+            // 防止先查后写之间另一患者刚入座就被本线程把座位置空（一座两患者）
+            int rows = bizInfusionSeatMapper.update(seat, new LambdaUpdateWrapper<BizInfusionSeat>()
+                    .eq(BizInfusionSeat::getId, seat.getId())
+                    .eq(BizInfusionSeat::getSeatStatus, InfusionSeatStatusEnum.OCCUPIED.getCode())
+                    .notExists("SELECT 1 FROM biz_outp_infusion WHERE seat_id = biz_infusion_seat.id AND del_flag = 0"
+                            + " AND id <> " + inf.getId() + " AND status IN ("
+                            + InfusionStatusEnum.PENDING_TEST.getCode() + ","
+                            + InfusionStatusEnum.WAITING.getCode() + ","
+                            + InfusionStatusEnum.INFUSING.getCode() + ")"));
+            if (rows == 0) {
+                return;
+            }
+        }
+    }
+
+    // 查询
+
+    /**
+     * 今日输液单分页（含皮试信息联查）。
+     */
+    public PageResult<InfusionRoomVO.Infusion> listPage(InfusionRoomDTO.InfusionQuery query) {
+        LambdaQueryWrapper<BizOutpInfusion> wrapper = new LambdaQueryWrapper<>();
+        wrapper.apply("DATE(create_time) = {0}", LocalDate.now())
+                .eq(query.getStatus() != null, BizOutpInfusion::getStatus, query.getStatus())
+                .and(TextUtil.hasText(query.getKeyword()), w -> w
+                        .like(BizOutpInfusion::getPatientName, query.getKeyword())
+                        .or().like(BizOutpInfusion::getInfusionNo, query.getKeyword()))
+                .orderByAsc(BizOutpInfusion::getStatus)
+                .orderByDesc(BizOutpInfusion::getId);
+        IPage<BizOutpInfusion> page = bizOutpInfusionMapper.selectPage(
+                new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
+        List<InfusionRoomVO.Infusion> vos = page.getRecords().stream().map(this::toInfusionVO).toList();
+        return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), vos);
+    }
+
+    /**
+     * 巡视记录（时间升序）。
+     */
+    public List<InfusionRoomVO.Round> rounds(Long infusionId) {
+        return bizOutpInfusionRoundMapper.selectList(new LambdaQueryWrapper<BizOutpInfusionRound>()
+                        .eq(BizOutpInfusionRound::getInfusionId, infusionId)
+                        .orderByAsc(BizOutpInfusionRound::getRoundTime))
+                .stream().map(r -> {
+                    InfusionRoomVO.Round vo = new InfusionRoomVO.Round();
+                    vo.setId(r.getId());
+                    vo.setInfusionId(r.getInfusionId());
+                    vo.setRoundTime(r.getRoundTime());
+                    vo.setDripRate(r.getDripRate());
+                    vo.setRemainingVolume(r.getRemainingVolume());
+                    vo.setNurseName(r.getNurseName());
+                    vo.setRemark(r.getRemark());
+                    return vo;
+                }).toList();
+    }
+
+    /**
+     * 今日看板：座位图 + 各状态计数。
+     */
+    public InfusionRoomVO.Board board() {
+        InfusionRoomVO.Board board = new InfusionRoomVO.Board();
+        board.setSeats(seats());
+        List<BizOutpInfusion> today = bizOutpInfusionMapper.selectList(new LambdaQueryWrapper<BizOutpInfusion>()
+                .apply("DATE(create_time) = {0}", LocalDate.now()));
+        board.setPendingTest((int) today.stream().filter(i -> i.getStatus() == InfusionStatusEnum.PENDING_TEST.getCode()).count());
+        board.setWaiting((int) today.stream().filter(i -> i.getStatus() == InfusionStatusEnum.WAITING.getCode()).count());
+        board.setInfusing((int) today.stream().filter(i -> i.getStatus() == InfusionStatusEnum.INFUSING.getCode()).count());
+        board.setFinished((int) today.stream().filter(i -> i.getStatus() == InfusionStatusEnum.FINISHED.getCode()).count());
+        board.setCancelled((int) today.stream().filter(i -> i.getStatus() == InfusionStatusEnum.CANCELLED.getCode()).count());
+        return board;
+    }
+
+    // 工具
+
+    private BizOutpInfusion mustInfusing(Long id) {
+        BizOutpInfusion inf = bizOutpInfusionMapper.selectById(id);
+        if (inf == null || inf.getDelFlag() == DelFlagEnum.DELETED.getCode()) {
+            throw new BusinessException("输液单不存在");
+        }
+        return inf;
+    }
+
+    private InfusionRoomVO.Infusion toInfusionVO(BizOutpInfusion inf) {
+        InfusionRoomVO.Infusion vo = new InfusionRoomVO.Infusion();
+        vo.setId(inf.getId());
+        vo.setInfusionNo(inf.getInfusionNo());
+        vo.setTreatmentRecordId(inf.getTreatmentRecordId());
+        vo.setPatientId(inf.getPatientId());
+        vo.setPatientNo(inf.getPatientNo());
+        vo.setPatientName(inf.getPatientName());
+        vo.setGender(inf.getGender());
+        vo.setAge(inf.getAge());
+        vo.setDrugSummary(inf.getDrugSummary());
+        vo.setSeatId(inf.getSeatId());
+        vo.setSeatNo(inf.getSeatNo());
+        vo.setSkinTestId(inf.getSkinTestId());
+        vo.setStatus(inf.getStatus());
+        vo.setStartTime(inf.getStartTime());
+        vo.setDripRate(inf.getDripRate());
+        vo.setEndTime(inf.getEndTime());
+        vo.setAdverseFlag(inf.getAdverseFlag());
+        vo.setAdverseDesc(inf.getAdverseDesc());
+        vo.setNurseName(inf.getNurseName());
+        vo.setCancelReason(inf.getCancelReason());
+        vo.setCreateTime(inf.getCreateTime());
+        vo.setRemark(inf.getRemark());
+        if (inf.getSkinTestId() != null) {
+            BizSkinTest st = bizSkinTestMapper.selectById(inf.getSkinTestId());
+            if (st != null) {
+                vo.setSkinTestResult(st.getResult());
+                vo.setSkinTestDrug(st.getDrugName());
+            }
+        }
+        return vo;
+    }
+
+    /**
+     * 单号：前缀 + yyyyMMdd + 5 位 Redis 流水（与挂号单号同一套机制）。
+     */
+    private String nextNo(String prefix) {
+        return prefix + LocalDate.now().format(DateFormats.COMPACT_DATE)
+                + String.format("%05d", redisSequenceService.next("INFUSION_" + prefix));
+    }
+
+}

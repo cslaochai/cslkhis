@@ -1,0 +1,33 @@
+package com.his.inpatient.service;
+
+import com.his.inpatient.dto.InfusionActionDTO;
+import com.his.inpatient.vo.InfusionRoundVO;
+import com.his.inpatient.vo.InpatientOrderExecVO;
+
+import java.util.List;
+
+/**
+ * 输液执行闭环（G14）：开始（滴速）→ N 次巡视 → 结束（不良反应）。
+ */
+public interface InpatientInfusionService {
+
+    /**
+     * 开始输注：写执行行开始时间与滴速（仅已执行、静脉类、未开始的执行行）
+     */
+    InpatientOrderExecVO start(InfusionActionDTO dto);
+
+    /**
+     * 巡视：插一条巡视记录（开始后、结束前）
+     */
+    InfusionRoundVO round(InfusionActionDTO dto);
+
+    /**
+     * 结束输注：写执行行结束时间与不良反应（adverseFlag=1 时描述必填）
+     */
+    InpatientOrderExecVO finish(InfusionActionDTO dto);
+
+    /**
+     * 某执行行的巡视记录（时间升序）
+     */
+    List<InfusionRoundVO> rounds(Long execId);
+}

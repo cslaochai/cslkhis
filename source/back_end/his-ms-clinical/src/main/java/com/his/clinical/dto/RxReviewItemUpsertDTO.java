@@ -1,0 +1,37 @@
+package com.his.clinical.dto;
+
+import com.his.common.validation.AllowedValues;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+
+import java.util.List;
+
+/**
+ * 提交点评结论入参。
+ */
+@Data
+public class RxReviewItemUpsertDTO {
+
+    /**
+     * 主键
+     */
+    @NotNull(message = "点评明细不能为空")
+    private Long id;
+
+    /**
+     * 点评结论（1-合理 2-不规范处方 3-用药不适宜处方 4-超常处方）
+     */
+    @NotNull(message = "点评结论不能为空")
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "点评结论不合法")
+    private Integer reviewResult;
+
+    /**
+     * 问题码（11-15不规范 21-27不适宜 31-34超常）
+     */
+    private List<String> problemTypes;
+
+    /**
+     * 点评意见（不合理时必填）
+     */
+    private String reviewOpinion;
+}

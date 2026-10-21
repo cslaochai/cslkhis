@@ -1,0 +1,97 @@
+package com.his.clinical.entity;
+
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.his.common.base.BaseEntity;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import java.time.LocalDate;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+
+
+/**
+ * 院感目标性监测登记（导管相关三类型）。
+ */
+@Data
+@EqualsAndHashCode(callSuper = true)
+@TableName("biz_infection_monitor")
+public class BizInfectionMonitor extends BaseEntity {
+    /** 逻辑删除标志（0 未删除 1 已删除） */
+    @TableLogic
+    private Integer delFlag;
+
+    /** 备注 */
+    private String remark;
+
+
+
+    /**
+     * 监测编号（IMON+yyyyMMdd+4位）
+     */
+    private String monitorNo;
+
+    /**
+     * 患者ID
+     */
+    private Long patientId;
+
+    /**
+     * 患者编号
+     */
+    private String patientNo;
+
+    /**
+     * 患者姓名
+     */
+    private String patientName;
+
+    /**
+     * 监测类型（1尿管CAUTI/2血管导管CLABSI/3呼吸机VAP）
+     */
+    private Integer monitorType;
+
+    /**
+     * 监测科室ID
+     */
+    private Long deptId;
+
+    /**
+     * 监测科室
+     */
+    private String deptName;
+
+    /**
+     * 置入日期
+     */
+    private LocalDate insertDate;
+
+    /**
+     * 拔除日期（拔管时回填）
+     */
+    private LocalDate removeDate;
+
+    /**
+     * 状态（1在管/2已拔管）
+     */
+    private Integer status;
+
+    /**
+     * 感染确认（0否/1是）
+     */
+    private Integer infectionFlag;
+
+    /**
+     * 感染日期（确认感染时必填）
+     */
+    private LocalDate infectionDate;
+
+    /**
+     * 感染部位（his_infection_site）
+     */
+    private String infectionSite;
+
+    /**
+     * 感染诊断
+     */
+    private String infectionDiag;
+}

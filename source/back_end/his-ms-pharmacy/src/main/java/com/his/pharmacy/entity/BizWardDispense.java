@@ -1,0 +1,101 @@
+package com.his.pharmacy.entity;
+
+import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import java.io.Serializable;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+
+/**
+ * 住院摆药单主单（G13）。
+ */
+@Data
+@EqualsAndHashCode(callSuper = true)
+@TableName("biz_ward_dispense")
+public class BizWardDispense extends BaseEntity implements Serializable {
+
+    /**
+     * 摆药单号（WD + yyyyMMdd + 4位流水号）
+     */
+    private String dispenseNo;
+
+    /**
+     * 摆药日期（长期医嘱按日一摆的锚点）
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate dispenseDate;
+
+    /**
+     * 入院ID（一次住院 × 一天一张主单）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long admissionId;
+
+    /**
+     * 患者ID
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long patientId;
+
+    /**
+     * 患者编号
+     */
+    private String patientNo;
+
+    /**
+     * 患者姓名
+     */
+    private String patientName;
+
+    /**
+     * 病区ID
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long wardId;
+
+    /**
+     * 病区名称
+     */
+    private String wardName;
+
+    /**
+     * 入院科室ID
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long deptId;
+
+    /**
+     * 主单状态（聚合派生）:1-待配药 2-配药中 3-已配药 4-已核对 5-已退药
+     */
+    private Integer status;
+
+    /**
+     * 生成人（药房）
+     */
+    private String generateBy;
+
+    /**
+     * 生成时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime generateTime;
+
+    /**
+     * 逻辑删除标志（0 未删除 1 已删除）
+     */
+    @TableLogic
+    private Integer delFlag;
+
+    /**
+     * 备注
+     */
+    private String remark;
+}

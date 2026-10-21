@@ -1,7 +1,7 @@
 package com.his.miniapp.service.impl;
 
-import com.his.system.support.SystemOperatorContext;
-import com.his.system.utils.UserUtils;
+import com.his.common.support.SystemOperatorContext;
+import com.his.common.utils.UserUtils;
 import com.his.spi.service.RegistFacadeService;
 import com.his.spi.vo.RegistBriefVO;
 import com.his.spi.dto.BillPayDTO;

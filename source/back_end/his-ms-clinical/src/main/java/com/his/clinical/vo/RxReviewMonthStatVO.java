@@ -1,0 +1,37 @@
+package com.his.clinical.vo;
+
+import lombok.Data;
+
+import java.io.Serializable;
+
+/**
+ * 处方点评：月度点评原始计数（按明细快照 visit_date 聚合）。
+ */
+@Data
+public class RxReviewMonthStatVO implements Serializable {
+
+    /**
+     * 已点评条数
+     */
+    private Long reviewed;
+
+    /**
+     * 不合理条数（点评结论 2/3/4）
+     */
+    private Long unreasonable;
+
+    /**
+     * 异常条数（点评结论 4）
+     */
+    private Long abnormal;
+
+    /**
+     * 已公示条数
+     */
+    private Long publicized;
+
+    /**
+     * 待点评条数（点评状态 0）
+     */
+    private Long pending;
+}

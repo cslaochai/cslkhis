@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.his</groupId>
+        <artifactId>his-backend</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>his-ms-outpatient</artifactId>
+    <packaging>jar</packaging>
+    <name>his-ms-outpatient</name>
+    <description>门诊模块：挂号/急诊/分诊/队列/复诊费策略 + 排班/出诊/门诊站点/班次/考勤/人力需求</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-core-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-core-spi</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.32</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
