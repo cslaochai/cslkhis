@@ -14,7 +14,7 @@
     <artifactId>his-ms-pharmacy</artifactId>
     <packaging>jar</packaging>
     <name>his-ms-pharmacy</name>
-    <description>药房药库与麻精专册/中药代煎模块</description>
+    <description>药品耗材域：药品字典/库存/调拨/发药与退药/处方调剂/抗菌药物管控/采购/耗材/消毒供应CSSD/静配PIVAS/盘点/药品追溯/麻精专册/中药代煎</description>
 
     <dependencies>
         <dependency>

@@ -21,7 +21,6 @@ public interface BizExamDeviceMapper extends BaseMapper<BizExamDevice> {
     BizExamDevice selectForUpdate(@Param("id") Long id);
 
     /**
-     * device_code 的唯一索引不含 del_flag —— 逻辑删除的那条仍然占着编码位。
      * 不先探出来，@TableLogic 过滤后的重复校验会放行，最后由 DuplicateKey 兜成 500。
      */
     @Select("SELECT COUNT(*) FROM biz_exam_device WHERE device_code = #{code} AND del_flag = 1")

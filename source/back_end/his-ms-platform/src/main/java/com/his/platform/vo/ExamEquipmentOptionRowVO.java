@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
- * 医疗设备台账候选项（BizExamDeviceMapper#selectEquipmentOptions 一行）。
+ * 医疗设备台账候选项
  */
 @Data
 public class ExamEquipmentOptionRowVO implements Serializable {

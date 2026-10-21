@@ -14,7 +14,7 @@
     <artifactId>his-ms-clinical</artifactId>
     <packaging>jar</packaging>
     <name>his-ms-clinical</name>
-    <description>临床病历与专项质控模块（病历/处方/申请/检验检查报告/危急值/签名/护理文书）</description>
+    <description>临床文书域：病历/病案归档/病历质控/临床路径/处方/检查检验申请/慢病/随访/院感/公卫上报/处方点评/不良事件/投诉纠纷/病历签名/单病种/治疗记录</description>
 
     <dependencies>
         <dependency>

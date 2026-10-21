@@ -14,7 +14,7 @@
     <artifactId>his-ms-charge</artifactId>
     <packaging>jar</packaging>
     <name>his-ms-charge</name>
-    <description>收费结算、支付渠道与 DRG/DIP 控费模块</description>
+    <description>收费支付域：记账/结算/优惠/医保目录·对照·结算/支付渠道（微信·支付宝·银联）/退款/票据/班结日结/欠费管控/DRG-DIP分组与模拟/病案申诉</description>
 
     <dependencies>
         <dependency>

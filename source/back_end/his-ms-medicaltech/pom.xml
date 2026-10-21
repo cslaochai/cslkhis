@@ -14,7 +14,7 @@
     <artifactId>his-ms-medicaltech</artifactId>
     <packaging>jar</packaging>
     <name>his-ms-medicaltech</name>
-    <description>医技模块（检验/检查/影像/心电/病理/输血/透析/输液/危急值/质控/报告）</description>
+    <description>医技执行域：检验LIS/检查影像PACS/报告/危急值/心电/病理/内镜/血库输血/透析/门诊输液/医技质控（EQA·LIS）/皮肤试验/医疗废物/医技执行与授权</description>
 
     <dependencies>
         <dependency>

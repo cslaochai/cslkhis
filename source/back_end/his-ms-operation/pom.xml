@@ -14,7 +14,7 @@
     <artifactId>his-ms-operation</artifactId>
     <packaging>jar</packaging>
     <name>his-ms-operation</name>
-    <description>手术麻醉模块（手术申请/手术间/清点/麻醉访视/麻醉记录/PACU/随访/日间手术）</description>
+    <description>手术麻醉域：手术申请/手术间/器械清点/麻醉访视/麻醉记录/PACU复苏/麻醉随访/日间手术/安全核查/麻醉用药</description>
 
     <dependencies>
         <dependency>

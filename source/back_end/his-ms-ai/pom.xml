@@ -14,7 +14,7 @@
     <artifactId>his-ms-ai</artifactId>
     <packaging>jar</packaging>
     <name>his-ms-ai</name>
-    <description>AI 能力模块</description>
+    <description>AI能力域：知识库RAG/智能问答/提示词模板/评测集与评测运行/调用日志/检验检查智能解读</description>
 
     <dependencies>
         <dependency>

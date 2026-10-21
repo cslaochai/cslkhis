@@ -14,7 +14,7 @@
     <artifactId>his-core-spi</artifactId>
     <packaging>jar</packaging>
     <name>his-core-spi</name>
-    <description>服务接口定义模块：跨模块调用的接口契约（实现方在各业务模块）</description>
+    <description>跨模块契约：端口接口与跨域 VO/DTO（业务模块间仅依赖 common 与本模块，实现在各业务模块）</description>
 
     <dependencies>
         <dependency>

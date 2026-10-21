@@ -14,7 +14,7 @@
     <artifactId>his-ms-app</artifactId>
     <packaging>jar</packaging>
     <name>his-ms-app</name>
-    <description>患者端小程序模块</description>
+    <description>患者端小程序：微信登录/挂号预约/自助复诊/缴费支付/报告查询/排队/押金/消息订阅/服务工单/分诊/FAQ</description>
 
     <dependencies>
         <dependency>

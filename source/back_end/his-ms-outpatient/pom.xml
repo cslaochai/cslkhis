@@ -14,7 +14,7 @@
     <artifactId>his-ms-outpatient</artifactId>
     <packaging>jar</packaging>
     <name>his-ms-outpatient</name>
-    <description>门诊模块：挂号/急诊/分诊/队列/复诊费策略 + 排班/出诊/门诊站点/班次/考勤/人力需求</description>
+    <description>门诊域：预约挂号/号源排班/门诊站点/分诊/排队叫号/急诊/值班/班次/考勤/人力需求/复诊费策略</description>
 
     <dependencies>
         <dependency>

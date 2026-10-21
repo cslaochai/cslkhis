@@ -14,7 +14,7 @@
     <artifactId>his-ms-inpatient</artifactId>
     <packaging>jar</packaging>
     <name>his-ms-inpatient</name>
-    <description>住院模块（入出院闭环、医嘱、护理、营养、VTE、死亡证明等）</description>
+    <description>住院域：入院/床位分配与等待/住院医嘱与执行/护理文书与质控/转科/出院与出院带药/住院病历文书/ICU监护/死亡登记/膳食与营养/会诊·转诊/VTE防治/危急值通知</description>
 
     <dependencies>
         <dependency>

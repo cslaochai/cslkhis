@@ -14,7 +14,7 @@
     <artifactId>his-ms-patient</artifactId>
     <packaging>jar</packaging>
     <name>his-ms-patient</name>
-    <description>患者主档与健康档案模块</description>
+    <description>患者域：患者主档/EMPI合并/标签/就诊人/医患关系/过敏史·既往史·家族史·手术史·用药史/体检套餐与结果/在线咨询/远程会诊</description>
 
     <dependencies>
         <dependency>

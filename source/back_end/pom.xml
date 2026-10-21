@@ -16,7 +16,7 @@
     <version>1.0.0</version>
     <packaging>pom</packaging>
     <name>his-backend</name>
-    <description>医疗HIS系统后端</description>
+    <description>医疗HIS系统后端（聚合根：公共底座/跨模块契约/业务域/患者端小程序/启动层）</description>
 
     <properties>
         <java.version>21</java.version>
