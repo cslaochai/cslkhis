@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 医保审核证据判定（G-07）。
+ * 医保审核证据判定
  */
 @Tag(name = "医保审核证据判定")
 @RestController

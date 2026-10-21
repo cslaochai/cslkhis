@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 医保审核证据判定出参（G-07）。
+ * 医保审核证据判定出参
  */
 @Data
 public class InsuranceEvidenceVO {

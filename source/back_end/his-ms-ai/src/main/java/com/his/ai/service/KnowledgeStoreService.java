@@ -21,12 +21,6 @@ import java.util.List;
 public interface KnowledgeStoreService {
 
     /**
-     * 懒加载：确保向量索引就绪（启动不访问向量库，首次使用时按需构建一次；
-     * Milvus 已有数据则跳过，空库则从 doc 全文重新切分灌入）。
-     */
-    void ensureIndexLoaded();
-
-    /**
      * 手工录入/编辑（DTO → 实体组装在 service，Controller 不碰 entity）。
      * 只保存不建索引；更新时清旧向量；每次操作写一条历史快照（新建/编辑）。
      */
@@ -65,7 +59,7 @@ public interface KnowledgeStoreService {
     void deleteById(Long id);
 
     /**
-     * 从 doc 全文重新切分并全量重建 Milvus 向量索引（懒加载自举 / 灾难恢复用，前端不暴露入口）。
+     * 手工全量重建：从 doc 全文重新切分并灌入 Milvus 向量索引（灾难恢复 / 整体重建，经 /rebuild 触发）。
      */
     void rebuild();
 

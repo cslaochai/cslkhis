@@ -12,11 +12,9 @@ import io.milvus.v2.common.DataType;
 import io.milvus.v2.common.IndexParam;
 import io.milvus.v2.service.collection.request.*;
 import io.milvus.v2.service.vector.request.DeleteReq;
-import io.milvus.v2.service.vector.request.QueryReq;
 import io.milvus.v2.service.vector.request.SearchReq;
 import io.milvus.v2.service.vector.request.UpsertReq;
 import io.milvus.v2.service.vector.request.data.FloatVec;
-import io.milvus.v2.service.vector.response.QueryResp;
 import io.milvus.v2.service.vector.response.SearchResp;
 import lombok.extern.slf4j.Slf4j;
 
@@ -161,27 +159,6 @@ public class MilvusVectorStore implements VectorStore {
     @Override
     public void ensureReady() {
         ensureCollection();
-    }
-
-    @Override
-    public boolean hasData() {
-        try {
-            QueryResp resp = client().query(QueryReq.builder()
-                    .collectionName(cfg.getCollectionName())
-                    .filter("chunk_id > 0")
-                    .outputFields(List.of("count(*)"))
-                    .build());
-            List<QueryResp.QueryResult> rows = resp.getQueryResults();
-            if (rows == null || rows.isEmpty()) {
-                return false;
-            }
-            Object count = rows.get(0).getEntity().get("count(*)");
-            return count != null && ((Number) count).longValue() > 0;
-        } catch (Exception ex) {
-            // 探测只用于决定「要不要从全文重建」，失败按无数据处理，不做报错的源头
-            log.warn("[RAG] Milvus hasData 探测失败：{}", ex.getMessage());
-            return false;
-        }
     }
 
     @Override

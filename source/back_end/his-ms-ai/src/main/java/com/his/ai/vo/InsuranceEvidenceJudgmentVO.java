@@ -3,7 +3,7 @@ package com.his.ai.vo;
 import lombok.Data;
 
 /**
- * 医保审核证据判定逐条出参（G-07）。
+ * 医保审核证据判定逐条出参
  */
 @Data
 public class InsuranceEvidenceJudgmentVO {

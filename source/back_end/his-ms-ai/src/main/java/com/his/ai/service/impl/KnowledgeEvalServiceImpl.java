@@ -110,9 +110,6 @@ public class KnowledgeEvalServiceImpl implements KnowledgeEvalService {
         if (cases.isEmpty()) {
             throw new BusinessException("评测集为空，请先添加评测用例");
         }
-        // 懒加载：索引未构建时先全量载入，保证评测可检索
-        knowledgeStoreService.ensureIndexLoaded();
-
         SysKnowledgeEvalRun run = new SysKnowledgeEvalRun();
         run.setStatus(KnowledgeEvalRunStatusEnum.DONE.getCode());
         run.setCaseCount(cases.size());

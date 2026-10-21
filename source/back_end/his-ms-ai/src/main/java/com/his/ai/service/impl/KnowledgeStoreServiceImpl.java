@@ -51,8 +51,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * 索引由 submitRebuild 的单文档重建任务（异步 + 进度轮询）负责；重建任务与导入任务同为进程内存态。
  * 切块事实源为 Milvus 向量库（文本 + 向量 + 元数据整体持久化，重启不丢）；
  * 文档全文留档在 sys_knowledge_doc.content（文本事实源，用于重建与留档）。
- * 索引构建采用懒加载：启动不访问向量库，首次 ask / rebuild / deleteById 时按需就绪一次；
- * Milvus 已有数据则跳过重建，空库则从 doc 全文重新切分灌入。
+ * 启动不访问向量库，首次 ask / rebuild / deleteById 时按需确保集合就绪一次；
+ * 索引不自动重建，空库或缺失由手工全量 /rebuild 或单篇重建处理。
  */
 @Slf4j
 @Service
@@ -67,11 +67,6 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
     private final AiProperties aiProperties;
     private final ResourceLoader resourceLoader;
     private final DocumentParser documentParser;
-
-    /**
-     * 向量索引是否已就绪（懒加载标记，Milvus 有数据或重建成功后置位）
-     */
-    private final AtomicBoolean indexLoaded = new AtomicBoolean(false);
 
     /**
      * 单文档重建任务（内存态；应用重启后任务失效，前端轮询不到时提示重试即可）
@@ -96,35 +91,6 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
      */
     private static long composeChunkId(long docId, int idx) {
         return docId * 10000L + idx;
-    }
-
-    @PreDestroy
-    public void shutdown() {
-        rebuildExecutor.shutdownNow();
-    }
-
-    @Override
-    public void ensureIndexLoaded() {
-        if (indexLoaded.get()) {
-            return;
-        }
-        synchronized (this) {
-            if (indexLoaded.get()) {
-                return;
-            }
-            try {
-                vectorStore.ensureReady();
-                // Milvus 持久化且已有数据：无需重建
-                if (vectorStore.hasData()) {
-                    indexLoaded.set(true);
-                    return;
-                }
-                rebuild();
-                indexLoaded.set(true);
-            } catch (Exception ex) {
-                log.warn("[RAG] 懒加载索引构建失败（可能表尚未创建/向量库不可达），本次按空索引处理：{}", ex.getMessage());
-            }
-        }
     }
 
     @Override
@@ -273,7 +239,6 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
 
     @Override
     public void deleteById(Long id) {
-        ensureIndexLoaded();
         sysKnowledgeDocMapper.deleteById(id); // 逻辑删
         vectorStore.removeByDocId(id);
     }
@@ -281,7 +246,7 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
     @Override
     public void rebuild() {
         vectorStore.clear();
-        // 切块事实源为 Milvus；空库重建从 doc 全文重新切分（与 rebuildDocIndex 同口径，chunkId 规则一致可幂等覆盖）
+        // 手工全量重建：从 doc 全文重新切分灌入（与 rebuildDocIndex 同口径，chunkId 规则一致可幂等覆盖）
         List<SysKnowledgeDoc> docs = sysKnowledgeDocMapper.selectList(null); // del_flag=0 自动生效
         int chunkSize = aiProperties.getRag().getChunkSize();
         int overlap = aiProperties.getRag().getChunkOverlap();
@@ -300,7 +265,6 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
             }
             count += pieces.size();
         }
-        indexLoaded.set(true);
         log.info("[RAG] 索引重建完成，载入切块 {} 条", count);
     }
 
@@ -377,8 +341,7 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
 
     private void doRebuild(RebuildTask t) {
         try {
-            // 懒加载在后台完成（空库时内部已全量重建），单文档重建随后幂等覆盖
-            ensureIndexLoaded();
+            // 先确保集合就绪，再幂等覆盖单篇切块
             SysKnowledgeDoc doc = sysKnowledgeDocMapper.selectById(t.docId);
             if (doc == null) {
                 throw new BusinessException("知识文档不存在");

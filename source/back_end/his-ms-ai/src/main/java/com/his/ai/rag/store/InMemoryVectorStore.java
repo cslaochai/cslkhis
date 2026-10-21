@@ -51,11 +51,6 @@ public class InMemoryVectorStore implements VectorStore {
     }
 
     @Override
-    public boolean hasData() {
-        return !store.isEmpty();
-    }
-
-    @Override
     public List<RetrievedChunk> search(float[] queryVector, int topK) {
         if (queryVector == null || queryVector.length == 0) {
             return List.of();

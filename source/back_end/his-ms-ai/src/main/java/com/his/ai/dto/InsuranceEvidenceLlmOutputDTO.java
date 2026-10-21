@@ -6,7 +6,7 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * 医保审核证据判定模型输出（G-07）。
+ * 医保审核证据判定模型输出
  */
 @Data
 public class InsuranceEvidenceLlmOutputDTO {

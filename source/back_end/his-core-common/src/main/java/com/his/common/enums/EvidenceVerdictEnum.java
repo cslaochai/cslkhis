@@ -5,7 +5,7 @@ import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * 医保审核证据判定结论（G-07）。
+ * 医保审核证据判定结论
  */
 @Getter
 public enum EvidenceVerdictEnum {

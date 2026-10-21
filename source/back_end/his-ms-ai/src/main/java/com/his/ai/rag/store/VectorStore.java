@@ -33,11 +33,4 @@ public interface VectorStore {
      */
     default void ensureReady() {
     }
-
-    /**
-     * 索引中是否已有数据（懒加载决策用）：Milvus 持久化场景返回 true 则无需从 doc 全文重建。
-     */
-    default boolean hasData() {
-        return false;
-    }
 }

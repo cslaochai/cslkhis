@@ -15,8 +15,8 @@ import com.his.ai.service.KnowledgeStoreService;
 import com.his.ai.vo.KnowledgeAskVO;
 import com.his.ai.vo.KnowledgeQaPromptVariablesVO;
 import com.his.ai.vo.KnowledgeSourceVO;
-import com.his.common.util.TextUtil;
 import com.his.common.enums.AiBizTypeEnum;
+import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,7 +36,9 @@ public class KnowledgeQaCapabilityImpl implements KnowledgeQaCapability {
     private static final String TEMPLATE = "knowledge-qa";
     private static final int SNIPPET_MAX = 160;
     private static final int OUTPUT_TOKEN_LIMIT = 1024;
-    /** 观测日志命中文档标题最多记录 5 个 */
+    /**
+     * 观测日志命中文档标题最多记录 5 个
+     */
     private static final int HIT_DOCS_MAX = 5;
 
     private final EmbeddingProviderSelector embeddingSelector;
@@ -49,8 +51,7 @@ public class KnowledgeQaCapabilityImpl implements KnowledgeQaCapability {
     @Override
     public KnowledgeAskVO ask(KnowledgeAskDTO dto) {
         long start = System.currentTimeMillis();
-        // 懒加载：索引未构建时先全量载入一次，保证首次问答可检索
-        knowledgeStoreService.ensureIndexLoaded();
+        // 懒加载：首次问答时确保向量库集合就绪（不自动重建，空库走降级文案）
         KnowledgeAskVO vo = new KnowledgeAskVO();
         vo.setQuestion(dto.getQuestion());
 
@@ -142,7 +143,9 @@ public class KnowledgeQaCapabilityImpl implements KnowledgeQaCapability {
         return vo;
     }
 
-    /** 命中文档标题列表（去重、最多 5 个、分号分隔，VARCHAR(500) 内截断） */
+    /**
+     * 命中文档标题列表（去重、最多 5 个、分号分隔，VARCHAR(500) 内截断）
+     */
     private String hitDocsOf(List<RetrievedChunk> hits) {
         if (hits.isEmpty()) {
             return null;

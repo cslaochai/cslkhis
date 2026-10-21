@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
- * 医保审核证据判定入参（G-07）。
+ * 医保审核证据判定入参
  */
 @Data
 public class InsuranceEvidenceDTO {
