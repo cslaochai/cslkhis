@@ -1,4 +1,4 @@
-package com.his.patient.vo;
+package com.his.spi.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;

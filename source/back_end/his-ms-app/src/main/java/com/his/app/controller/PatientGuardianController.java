@@ -1,10 +1,10 @@
-package com.his.patient.controller;
+package com.his.app.controller;
 
 import com.his.common.base.Result;
-import com.his.patient.dto.*;
-import com.his.patient.service.PatientGuardianService;
-import com.his.patient.vo.GuardianPatientVO;
-import com.his.patient.vo.SmsSendVO;
+import com.his.spi.dto.*;
+import com.his.spi.service.PatientGuardianService;
+import com.his.spi.vo.GuardianPatientVO;
+import com.his.spi.vo.SmsSendVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

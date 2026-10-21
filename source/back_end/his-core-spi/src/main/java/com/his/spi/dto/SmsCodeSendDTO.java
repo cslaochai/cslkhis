@@ -1,4 +1,4 @@
-package com.his.patient.dto;
+package com.his.spi.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -7,10 +7,10 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 新增建档场景发码入参（码发往该手机号，绑定 addPatient 校验）
+ * 短信验证码发送入参（小程序端）。
  */
 @Data
-public class GuardianSendAddCodeDTO implements Serializable {
+public class SmsCodeSendDTO implements Serializable {
 
     /**
      * 联系电话

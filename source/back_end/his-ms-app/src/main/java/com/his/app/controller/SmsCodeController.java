@@ -1,8 +1,8 @@
-package com.his.patient.controller;
+package com.his.app.controller;
 
 import com.his.common.base.Result;
-import com.his.patient.dto.SmsCodeSendDTO;
-import com.his.patient.vo.SmsSendVO;
+import com.his.spi.dto.SmsCodeSendDTO;
+import com.his.spi.vo.SmsSendVO;
 import com.his.spi.service.SmsCodeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

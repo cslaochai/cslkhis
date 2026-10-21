@@ -1,11 +1,11 @@
-package com.his.patient.service;
+package com.his.spi.service;
 
-import com.his.patient.dto.GuardianBindDTO;
-import com.his.patient.dto.GuardianSendAddCodeDTO;
-import com.his.patient.dto.GuardianSendBindCodeDTO;
-import com.his.patient.dto.GuardianUpsertDTO;
-import com.his.patient.vo.GuardianPatientVO;
-import com.his.patient.vo.SmsSendVO;
+import com.his.spi.dto.GuardianBindDTO;
+import com.his.spi.dto.GuardianSendAddCodeDTO;
+import com.his.spi.dto.GuardianSendBindCodeDTO;
+import com.his.spi.dto.GuardianUpsertDTO;
+import com.his.spi.vo.GuardianPatientVO;
+import com.his.spi.vo.SmsSendVO;
 import com.his.common.entity.CurrentUser;
 
 import java.util.List;

@@ -1,4 +1,4 @@
-package com.his.patient.vo;
+package com.his.spi.vo;
 
 import lombok.Data;
 

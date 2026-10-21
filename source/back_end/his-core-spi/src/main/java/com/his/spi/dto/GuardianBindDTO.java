@@ -1,4 +1,4 @@
-package com.his.patient.dto;
+package com.his.spi.dto;
 
 import com.his.common.validation.AllowedValues;
 import jakarta.validation.constraints.NotBlank;

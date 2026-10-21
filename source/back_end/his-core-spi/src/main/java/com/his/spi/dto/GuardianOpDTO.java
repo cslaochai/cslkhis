@@ -1,4 +1,4 @@
-package com.his.patient.dto;
+package com.his.spi.dto;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
