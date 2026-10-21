@@ -40,28 +40,6 @@ public interface NarcoticRegisterMapper extends BaseMapper<BizNarcoticRegister> 
     List<BatchRow> selectDeductBatches(@Param("sourceType") String sourceType, @Param("sourceId") Long sourceId);
 
     /**
-     * 复核人姓名（跨模块读员工）—— 只认**在职且持药学岗位**的员工。
-     *
-     * <p>复核人姓名**由服务端按 ID 反查**，不取前端传值 ——
-     * 双人复核是签名性质的动作，姓名可随手传就等于复核记录可以编。
-     *
-     * <p>⚠ 三个条件都不能少，每一个都对应一个真实的漏判路径：
-     * <ol>
-     *   <li>列名是 {@code emp_name}，**不是 employee_name** —— 裸 SQL 写错列名编译期不报错，
-     *       运行时才 500（本仓挂号单改名那次同类）。</li>
-     *   <li>{@code status = 1} 是**启用**（列注释 0-停用 1-启用）。已停用员工签名没有法律效力。</li>
-     *   <li>{@code emp_type = 4} 是**药剂师** —— 法条要求复核人"具有药师以上技术职称"
-     *       （《医疗用毒性药品管理办法》第9条、《医疗机构麻醉药品、第一类精神药品管理规定》第17条）。
-     *       不加这条，护士、收费员都能当麻精复核人，双人复核就只剩"两个人"的形式。
-     *       ⚠ 岗位判定走 {@code emp_type} 而不是名称：本库 title 是脏数据
-     *       （实测出现 '302'、'101' 这种数字），拿它判岗位会全表误判。</li>
-     * </ol>
-     */
-    @Select("SELECT emp_name FROM sys_employee " +
-            " WHERE id = #{employeeId} AND del_flag = 0 AND status = 1 AND emp_type = 4 LIMIT 1")
-    String selectActivePharmacistName(@Param("employeeId") Long employeeId);
-
-    /**
      * 专册登记号当日已用序号数（生成 NZ+日期+序号用）。
      *
      * <p>必须查库、不能靠进程内自增：序列表有唯一索引，进程内计数器重启归零会导致
