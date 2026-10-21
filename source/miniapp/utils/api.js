@@ -5,7 +5,7 @@ import { getPatientId } from './auth'
  * 集中管理小程序端所有后端调用。
  * 返回值为后端 Result 整体（{code,message,data}），页面自行判断 code。
  *
- * 端点约定（患者端统一走 his-miniapp 聚合模块 /miniapp/**，PATIENT 鉴权一把抓）：
+ * 端点约定（患者端统一走 his-ms-app 聚合模块 /miniapp/**，PATIENT 鉴权一把抓）：
  *  - 认证：/auth/login（账密）、/miniapp/auth/wxLogin（微信口子）、/auth/info、/auth/logout
  *  - 挂号：/miniapp/appoint/*、/miniapp/directory/*（科室/医生/号源）
  *  - 复诊：/miniapp/revisit/*（原病历候选 + 费用预估 + 自助复诊预约）
@@ -23,7 +23,7 @@ export const authApi = {
   logout: () => post('/auth/logout')
 }
 
-// ========== 微信平台口子（his-miniapp；一键登录未真对接暂不上线，仅保留绑定供订阅消息用） ==========
+// ========== 微信平台口子（his-ms-app；一键登录未真对接暂不上线，仅保留绑定供订阅消息用） ==========
 export const wxApi = {
   // 登录态下绑定当前账号的 openid（订阅消息发送依赖）
   bindOpenid: (data) => post('/miniapp/auth/bindOpenid', data)

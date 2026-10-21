@@ -1,0 +1,71 @@
+package com.his.app.dto;
+
+import com.his.common.validation.AllowedValues;
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.Data;
+
+/**
+ * 常见问题新增/修改（后台维护）。
+ */
+@Data
+@Schema(name = "FaqUpsertDTO", description = "常见问题新增或修改")
+public class FaqUpsertDTO {
+
+    /**
+     * 主键（为空则新增）
+     */
+    private Long id;
+
+    /**
+     * 分类编码
+     */
+    @NotBlank(message = "分类编码不能为空")
+    @Size(max = 32, message = "分类编码过长")
+    private String categoryCode;
+
+    /**
+     * 分类名称
+     */
+    @NotBlank(message = "分类名称不能为空")
+    @Size(max = 64, message = "分类名称过长")
+    private String categoryName;
+
+    /**
+     * 问题
+     */
+    @NotBlank(message = "问题不能为空")
+    @Size(max = 200, message = "问题最多200字")
+    private String question;
+
+    /**
+     * 答案
+     */
+    @NotBlank(message = "答案不能为空")
+    @Size(max = 1000, message = "答案最多1000字")
+    private String answer;
+
+    /**
+     * 检索关键词（顿号分隔，含口语同义词）
+     */
+    @Size(max = 500, message = "关键词最多500字")
+    private String keywords;
+
+    /**
+     * 热门（0-否 1-是）
+     */
+    @AllowedValues(values = {"0", "1"}, message = "热门标志取值不合法")
+    private Integer hotFlag;
+
+    /**
+     * 状态（0-停用 1-启用）
+     */
+    @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
+    private Integer status;
+
+    /**
+     * 排序号
+     */
+    private Integer sortOrder;
+}

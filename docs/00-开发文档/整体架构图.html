@@ -91,7 +91,7 @@ graph TB
 
     subgraph "网关层"
         B1[Nginx 反向代理<br/>:3100 管理端]
-        B2[his-miniapp BFF层<br/>患者端聚合接口]
+        B2[his-ms-app BFF层<br/>患者端聚合接口]
     end
 
     subgraph "应用层 - Spring Boot 3.2.5 :8080"
@@ -207,7 +207,7 @@ graph TD
     end
 
     subgraph "BFF层"
-        MINI[his-miniapp<br/>患者端聚合]
+        MINI[his-ms-app<br/>患者端聚合]
     end
 
     subgraph "启动层"
@@ -715,7 +715,7 @@ graph TB
 
         <h2>九、开发规范要点</h2>
         <ol>
-            <li><strong>模块化单体 + 单向分层</strong>：his-common底座 → 业务域 → his-ai → his-miniapp → his-web</li>
+            <li><strong>模块化单体 + 单向分层</strong>：his-common底座 → 业务域 → his-ai → his-ms-app → his-web</li>
             <li><strong>跨模块依赖</strong>：只依赖对方Service，禁止直连Mapper</li>
             <li><strong>主键处理</strong>：入参Long，出参String序列化（ToStringSerializer）</li>
             <li><strong>日期格式</strong>：LocalDateTime用yyyy-MM-dd HH:mm:ss，LocalDate用yyyy-MM-dd</li>
