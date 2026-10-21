@@ -11,7 +11,7 @@ import com.his.spi.dto.PrevisitSubmitDTO;
 import com.his.clinical.entity.BizPrevisitRecord;
 import com.his.clinical.mapper.BizPrevisitRecordMapper;
 import com.his.clinical.service.PrevisitRecordService;
-import com.his.spi.support.PrevisitQuestionnaireSupport;
+import com.his.clinical.support.PrevisitQuestionnaireSupport;
 import com.his.spi.vo.PrevisitDetailVO;
 import com.his.spi.vo.PrevisitQuestionnaireVO;
 import com.his.spi.service.DeptScopeService;

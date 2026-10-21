@@ -1,13 +1,12 @@
 package com.his.spi.vo;
 
-import com.his.spi.support.PrevisitQuestionnaireSupport;
 import lombok.Data;
 
 import java.util.List;
 import java.util.Map;
 
 /**
- * 预问诊量表出参（患者端拉题目，结构由后端 PrevisitQuestionnaireSupport 版本化）
+ * 预问诊量表出参（患者端拉题目，题目结构由 clinical 域 PrevisitQuestionnaireSupport 版本化）
  */
 @Data
 public class PrevisitQuestionnaireVO {
@@ -20,15 +19,27 @@ public class PrevisitQuestionnaireVO {
     /**
      * 主症状清单
      */
-    private List<PrevisitQuestionnaireSupport.Option> mainSymptoms;
+    private List<Option> mainSymptoms;
 
     /**
      * 通用问
      */
-    private List<PrevisitQuestionnaireSupport.Question> commonQuestions;
+    private List<Question> commonQuestions;
 
     /**
      * 主症状追问组（key=主症状 code）
      */
-    private Map<String, List<PrevisitQuestionnaireSupport.Question>> symptomQuestions;
+    private Map<String, List<Question>> symptomQuestions;
+
+    /**
+     * 选项
+     */
+    public record Option(String code, String label) {
+    }
+
+    /**
+     * 问题
+     */
+    public record Question(String key, String label, String type, List<String> options) {
+    }
 }
