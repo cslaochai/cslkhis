@@ -26,7 +26,7 @@ import com.his.spi.vo.WardVO;
 import com.his.spi.dto.SignCommandDTO;
 import com.his.common.entity.CurrentUser;
 import com.his.system.service.DeptScopeService;
-import com.his.emr.service.EmrSignatureService;
+import com.his.spi.service.EmrSignatureFacadeService;
 import com.his.system.utils.UserUtils;
 import com.his.spi.vo.SignatureVO;
 import lombok.RequiredArgsConstructor;
@@ -60,7 +60,7 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
     /**
      * 电子签名（P5.5）：提交即签名、归档补签、签名即锁定
      */
-    private final EmrSignatureService signatureService;
+    private final EmrSignatureFacadeService signatureService;
 
     // 保存（新增 / 修改）
 

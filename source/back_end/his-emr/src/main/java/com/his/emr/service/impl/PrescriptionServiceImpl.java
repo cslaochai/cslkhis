@@ -23,12 +23,11 @@ import com.his.common.enums.RxAuditActionEnum;
 import com.his.emr.mapper.*;
 import com.his.emr.service.PrescriptionService;
 import com.his.emr.vo.*;
-import com.his.pharmacy.dto.DrugRationalGroupDTO;
-import com.his.pharmacy.dto.DrugRationalItemDTO;
+import com.his.spi.dto.DrugRationalCheckItemDTO;
 import com.his.common.enums.BizTypeEnum;
-import com.his.pharmacy.service.DrugRationalCheckService;
+import com.his.spi.service.DrugRationalCheckFacadeService;
+import com.his.spi.vo.DrugRationalCheckHitVO;
 import com.his.system.service.SysMessageService;
-import com.his.pharmacy.vo.DrugRationalGroupVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -56,7 +55,7 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
     private final EmrSignatureService emrSignatureService;
     private final SysMessageService sysMessageService;
     private final BizPrescriptionAuditLogMapper bizPrescriptionAuditLogMapper;
-    private final DrugRationalCheckService drugRationalCheckService;
+    private final DrugRationalCheckFacadeService drugRationalCheckFacadeService;
 
     @Override
     public List<BizPrescriptionVO> getByPatientId(PrescriptionQueryDTO queryDTO) {
@@ -265,28 +264,28 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
                 .stream().collect(Collectors.groupingBy(BizPrescriptionDetail::getPrescriptionId,
                         LinkedHashMap::new, Collectors.toList()));
 
-        List<DrugRationalGroupDTO> groups = new ArrayList<>();
-        for (Long id : ids) {
-            List<BizPrescriptionDetail> details = detailMap.get(id);
-            if (CollectionUtils.isEmpty(details)) {
-                continue;
-            }
-            DrugRationalGroupDTO group = new DrugRationalGroupDTO();
-            group.setGroupId(id);
-            group.setItems(details.stream().map(this::toRationalItem).toList());
-            groups.add(group);
-        }
-
-        Map<Long, DrugRationalGroupVO> checked = drugRationalCheckService.checkGroups(groups).stream()
-                .collect(Collectors.toMap(DrugRationalGroupVO::getGroupId, g -> g, (a, b) -> a));
         List<PrescriptionRationalVO> results = new ArrayList<>(ids.size());
         for (Long id : ids) {
-            DrugRationalGroupVO group = checked.get(id);
+            List<BizPrescriptionDetail> details = detailMap.get(id);
             PrescriptionRationalVO vo = new PrescriptionRationalVO();
             vo.setPrescriptionId(id);
-            vo.setHits(group == null || group.getHits() == null ? Collections.emptyList() : group.getHits());
-            vo.setBlocked(group != null && Boolean.TRUE.equals(group.getBlocked()));
-            vo.setBlockMessage(group == null ? null : group.getBlockMessage());
+            List<DrugRationalCheckHitVO> hits = Collections.emptyList();
+            boolean blocked = false;
+            String blockMessage = null;
+            if (!CollectionUtils.isEmpty(details)) {
+                List<DrugRationalCheckItemDTO> items = details.stream().map(this::toRationalItem).toList();
+                hits = drugRationalCheckFacadeService.check(items);
+                List<String> blockedMsgs = hits.stream()
+                        .filter(h -> Boolean.TRUE.equals(h.getBlocked()))
+                        .map(DrugRationalCheckHitVO::getMessage)
+                        .filter(TextUtil::hasText)
+                        .toList();
+                blocked = !blockedMsgs.isEmpty();
+                blockMessage = blockedMsgs.isEmpty() ? null : String.join("；", blockedMsgs);
+            }
+            vo.setHits(hits);
+            vo.setBlocked(blocked);
+            vo.setBlockMessage(blockMessage);
             results.add(vo);
         }
         return results;
@@ -296,8 +295,8 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
      * 处方明细 → 审查入参：名称与规格取<b>单据快照</b>而不是回查药品字典，
      * 这样知识表改了、字典也改了，一张老处方被重新审查时结论仍然按当时开的那份药算。
      */
-    private DrugRationalItemDTO toRationalItem(BizPrescriptionDetail detail) {
-        DrugRationalItemDTO item = new DrugRationalItemDTO();
+    private DrugRationalCheckItemDTO toRationalItem(BizPrescriptionDetail detail) {
+        DrugRationalCheckItemDTO item = new DrugRationalCheckItemDTO();
         item.setDrugId(detail.getDrugId());
         item.setDrugName(detail.getDrugName());
         item.setGenericName(detail.getGenericName());

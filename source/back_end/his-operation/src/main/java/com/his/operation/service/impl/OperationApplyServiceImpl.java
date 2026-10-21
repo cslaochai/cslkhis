@@ -45,7 +45,7 @@ import com.his.spi.vo.WardVO;
 import com.his.spi.dto.TechAuthGateDTO;
 import com.his.common.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
-import com.his.medicaltech.service.EmployeeTechAuthService;
+import com.his.spi.service.EmployeeTechAuthFacadeService;
 import com.his.system.utils.UserUtils;
 import com.his.system.service.DeptScopeService;
 import com.his.system.service.RedisSequenceService;
@@ -82,7 +82,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
 
     private final PatientFacadeService patientFacadeService;
 
-    private final EmployeeTechAuthService employeeTechAuthService;
+    private final EmployeeTechAuthFacadeService employeeTechAuthService;
 
     private final BizOperationCountMapper bizOperationCountMapper;
 

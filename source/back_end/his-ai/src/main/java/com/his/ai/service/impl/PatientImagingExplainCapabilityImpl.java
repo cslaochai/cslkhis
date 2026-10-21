@@ -15,10 +15,10 @@ import com.his.ai.vo.PatientImagingExplainVO;
 import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.medicaltech.entity.BizReport;
 import com.his.common.enums.ReportStatusEnum;
 import com.his.common.enums.ReportTypeEnum;
-import com.his.medicaltech.mapper.BizReportMapper;
+import com.his.spi.service.AiLabDataFacadeService;
+import com.his.spi.vo.AiReportVO;
 import com.his.spi.service.PatientFacadeService;
 import com.his.common.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
@@ -49,7 +49,7 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
                     + "报告原文请以页面展示为准；有疑问请咨询接诊医生；"
                     + "若报告标注为危急，请立即联系医生或前往急诊。";
 
-    private final BizReportMapper bizReportMapper;
+    private final AiLabDataFacadeService aiLabDataFacadeService;
 
     private final DictCacheService dictCacheService;
 
@@ -68,7 +68,7 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
             throw new BusinessException("未获取到就诊人身份，请重新登录");
         }
 
-        BizReport report = bizReportMapper.selectById(dto.getReportId());
+        AiReportVO report = aiLabDataFacadeService.findReport(dto.getReportId());
         if (report == null) {
             throw new BusinessException("报告不存在：" + dto.getReportId());
         }
@@ -159,7 +159,7 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
      * （「腹部彩超（肝胆胰脾肾）」同时命中「腹部彩超」与「肝胆胰脾」时，
      * 更长的关键词语义更具体）。项目名未命中再看检查方法——有的报告项目名写部位、方法在 examMethod。
      */
-    private SysImagingPlainItem matchDictionary(BizReport report) {
+    private SysImagingPlainItem matchDictionary(AiReportVO report) {
         List<SysImagingPlainItem> all = sysImagingPlainItemMapper.selectList(
                 new LambdaQueryWrapper<SysImagingPlainItem>()
                         .eq(SysImagingPlainItem::getStatus, 1));
@@ -184,7 +184,7 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
         return best;
     }
 
-    private Optional<PatientImagingLlmOutputDTO> callModel(BizReport report, SysImagingPlainItem plain) {
+    private Optional<PatientImagingLlmOutputDTO> callModel(AiReportVO report, SysImagingPlainItem plain) {
         PatientImagingExplainPromptVariablesVO variables = new PatientImagingExplainPromptVariablesVO();
         variables.setItemName(TextUtil.blankToDefault(report.getItemName(), "（未填写）"));
         variables.setExamMethod(TextUtil.blankToDefault(report.getExamMethod(), "（未填写）"));

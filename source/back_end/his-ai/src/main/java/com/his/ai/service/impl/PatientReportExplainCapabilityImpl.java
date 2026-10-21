@@ -1,6 +1,5 @@
 package com.his.ai.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.ai.constant.AiCapabilityKeys;
 import com.his.ai.dto.AiCallDTO;
 import com.his.ai.dto.PatientReportExplainDTO;
@@ -17,16 +16,12 @@ import com.his.ai.vo.PatientReportExplainPromptVariablesVO;
 import com.his.ai.vo.PatientReportExplainVO;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.medicaltech.entity.BizLabResult;
-import com.his.medicaltech.entity.BizLaboratoryRecord;
-import com.his.medicaltech.entity.BizReport;
 import com.his.common.enums.ReportTypeEnum;
-import com.his.medicaltech.mapper.BizLabResultMapper;
-import com.his.medicaltech.mapper.BizLaboratoryRecordMapper;
-import com.his.medicaltech.mapper.BizReportMapper;
-import com.his.medicaltech.support.LabAbnormalJudge;
-import com.his.medicaltech.support.LabCriticalValueRules;
+import com.his.spi.service.AiLabDataFacadeService;
 import com.his.spi.service.PatientFacadeService;
+import com.his.spi.vo.AiLabRecordVO;
+import com.his.spi.vo.AiLabResultRowVO;
+import com.his.spi.vo.AiReportVO;
 import com.his.common.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import com.his.common.enums.AiExpressionSourceEnum;
@@ -71,11 +66,7 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
 
     private static final String FALLBACK_UNJUDGED = "这项系统没能自动判断（参考区间不可用），既不能算异常也不能算正常，请让医生核对。";
 
-    private final BizReportMapper bizReportMapper;
-
-    private final BizLaboratoryRecordMapper bizLaboratoryRecordMapper;
-
-    private final BizLabResultMapper bizLabResultMapper;
+    private final AiLabDataFacadeService aiLabDataFacadeService;
 
     private final SysLabPlainItemMapper sysLabPlainItemMapper;
 
@@ -169,7 +160,7 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
             throw new BusinessException("未获取到就诊人身份，请重新登录");
         }
 
-        BizReport report = bizReportMapper.selectById(dto.getReportId());
+        AiReportVO report = aiLabDataFacadeService.findReport(dto.getReportId());
         if (report == null) {
             throw new BusinessException("报告不存在：" + dto.getReportId());
         }
@@ -181,16 +172,12 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
             throw new BusinessException("目前只对检验报告提供逐项解读；检查报告（CT/B超等）请咨询接诊医生");
         }
 
-        BizLaboratoryRecord record = report.getRecordId() == null
-                ? null : bizLaboratoryRecordMapper.selectById(report.getRecordId());
+        AiLabRecordVO record = report.getRecordId() == null
+                ? null : aiLabDataFacadeService.findLabRecord(report.getRecordId());
         if (record == null) {
             throw new BusinessException("该报告未关联检验记录，无法逐项解读");
         }
-        List<BizLabResult> results = bizLabResultMapper.selectList(
-                new LambdaQueryWrapper<BizLabResult>()
-                        .eq(BizLabResult::getRecordId, record.getId())
-                        .orderByAsc(BizLabResult::getSortOrder)
-                        .orderByAsc(BizLabResult::getId));
+        List<AiLabResultRowVO> results = aiLabDataFacadeService.listLabResults(record.getId());
         if (results == null || results.isEmpty()) {
             throw new BusinessException("该检验记录尚未录入结果，无法解读");
         }
@@ -209,21 +196,18 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
         int unjudgedCount = 0;
         int criticalCount = 0;
 
-        for (BizLabResult result : results) {
+        for (AiLabResultRowVO result : results) {
             PatientLabItemPlainVO item = new PatientLabItemPlainVO();
             item.setItemName(result.getLaboratoryItemName());
             item.setResultValue(result.getResultValue());
             item.setUnit(result.getResultUnit());
             item.setReferenceRange(result.getReferenceRange());
 
-            Optional<LabCriticalValueRules.Hit> critical = LabCriticalValueRules.check(
-                    result.getLaboratoryItemCode(), result.getLaboratoryItemName(),
-                    result.getResultUnit(), result.getResultValue());
-            boolean isCritical = critical.isPresent();
+            boolean isCritical = Boolean.TRUE.equals(result.getCritical());
             item.setCritical(isCritical);
-            critical.ifPresent(hit -> item.setCriticalDesc(hit.description()));
+            item.setCriticalDesc(result.getCriticalDesc());
 
-            boolean unjudged = LabAbnormalJudge.isUnjudged(result.getJudgeNote());
+            boolean unjudged = Boolean.TRUE.equals(result.getUnjudged());
             Integer status = toStatus(result.getAbnormalFlag(), unjudged);
             item.setStatus(status);
             item.setStatusText(PatientLabExplainStatusEnum.getLabel(status));
@@ -249,8 +233,7 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
                     ? dict.get(result.getLaboratoryItemName().trim()) : null;
             item.setPlainName(plain == null ? null : plain.getPlainName());
             item.setWhatIsIt(plain == null ? null : plain.getWhatIsIt());
-            item.setPlainText(buildPlainText(status, unjudged, plain, critical.map(
-                    LabCriticalValueRules.Hit::description).orElse(null)));
+            item.setPlainText(buildPlainText(status, unjudged, plain, result.getCriticalDesc()));
 
             items.add(item);
         }
@@ -291,7 +274,7 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
 
     private Map<String, SysLabPlainItem> loadDictionary() {
         List<SysLabPlainItem> all = sysLabPlainItemMapper.selectList(
-                new LambdaQueryWrapper<SysLabPlainItem>()
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysLabPlainItem>()
                         .eq(SysLabPlainItem::getStatus, 1));
         Map<String, SysLabPlainItem> map = new HashMap<>();
         if (all != null) {
@@ -304,7 +287,7 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
         return map;
     }
 
-    private Optional<PatientReportLlmOutputDTO> callModel(BizLaboratoryRecord record,
+    private Optional<PatientReportLlmOutputDTO> callModel(AiLabRecordVO record,
                                                           List<PatientLabItemPlainVO> items,
                                                           String ruleSummary) {
         PatientReportExplainPromptVariablesVO variables = new PatientReportExplainPromptVariablesVO();

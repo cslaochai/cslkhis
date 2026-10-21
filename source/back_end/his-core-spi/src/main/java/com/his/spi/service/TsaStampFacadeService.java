@@ -1,6 +1,14 @@
 package com.his.spi.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.his.spi.dto.TsaStatusUpsertDTO;
+import com.his.spi.dto.TsaTimeSourceDTO;
+import com.his.spi.dto.TsaTokenPageQueryDTO;
+import com.his.spi.dto.TsaTokenVerifyDTO;
 import com.his.spi.vo.TsaStampVO;
+import com.his.spi.vo.TsaStatusVO;
+import com.his.spi.vo.TsaTokenVerifyVO;
+import com.his.spi.vo.TsaTokenVO;
 
 import java.time.LocalDateTime;
 
@@ -44,4 +52,31 @@ public interface TsaStampFacadeService {
      * 时间戳台账总条数。
      */
     long countTokens();
+
+    // ---------- TSA 运维（状态聚合 / 令牌台账 / 启停 / 时间来源 / 复验） ----------
+
+    /**
+     * TSA 状态聚合：适配器在线、配置与生效时间来源、令牌台账计数。
+     */
+    TsaStatusVO status();
+
+    /**
+     * 令牌台账分页（只增不改的签发流水）。
+     */
+    IPage<TsaTokenVO> listTokenPage(TsaTokenPageQueryDTO query);
+
+    /**
+     * 启停本地 TSA 服务：停用 = 不再签发新令牌，签名侧立即降级本机时钟；历史令牌凭公钥仍可验证。
+     */
+    void updateStatus(TsaStatusUpsertDTO dto);
+
+    /**
+     * 切换签名时间来源：只允许 1（本机时钟）/ 3（可信时间戳）；2（院内授时）未实现，拒绝。
+     */
+    void updateTimeSource(TsaTimeSourceDTO dto);
+
+    /**
+     * 按台账ID复验一枚令牌：签名值 / 摘要 / 时刻三要素重新对一遍，只读不落库。
+     */
+    TsaTokenVerifyVO verifyTokenById(TsaTokenVerifyDTO dto);
 }

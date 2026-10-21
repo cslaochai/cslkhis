@@ -18,19 +18,15 @@ import com.his.common.enums.RuleCheckStatusEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.support.ClinicalTextMatcher;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
-import com.his.emr.entity.BizMedicalRecord;
-import com.his.emr.entity.BizQualityControl;
-import com.his.emr.mapper.BizMedicalRecordMapper;
-import com.his.emr.mapper.BizQualityControlMapper;
-import com.his.common.entity.CurrentUser;
-import com.his.system.utils.UserUtils;
+import com.his.spi.dto.AiQualityControlSaveDTO;
+import com.his.spi.service.AiEmrDataFacadeService;
+import com.his.spi.vo.AiMedicalRecordContentVO;
+import com.his.spi.vo.AiQualityControlWriteVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
 
@@ -41,8 +37,6 @@ import java.util.function.Function;
 @Service
 @RequiredArgsConstructor
 public class EmrQcCapabilityImpl         implements EmrQcCapability {
-
-    private final RedisSequenceService redisSequenceService;
 
     private static final String TEMPLATE_NAME = "emr-qc";
 
@@ -65,17 +59,15 @@ public class EmrQcCapabilityImpl         implements EmrQcCapability {
      * 专科检查缺失 → 1（可接受但不规范）。
      */
     private static final List<RequiredFieldRule> REQUIRED_FIELDS = List.of(
-            new RequiredFieldRule("主诉", BizMedicalRecord::getChiefComplaint, QcSeverityEnum.FATAL.getCode()),
-            new RequiredFieldRule("现病史", BizMedicalRecord::getPresentIllness, QcSeverityEnum.FATAL.getCode()),
-            new RequiredFieldRule("诊断", BizMedicalRecord::getDiagnosis, QcSeverityEnum.FATAL.getCode()),
-            new RequiredFieldRule("既往史", BizMedicalRecord::getPastHistory, QcSeverityEnum.MAJOR.getCode()),
-            new RequiredFieldRule("过敏史", BizMedicalRecord::getAllergyHistory, QcSeverityEnum.MAJOR.getCode()),
-            new RequiredFieldRule("处理意见", BizMedicalRecord::getTreatmentPlan, QcSeverityEnum.MAJOR.getCode()),
-            new RequiredFieldRule("专科检查", BizMedicalRecord::getSpecialistExam, QcSeverityEnum.MINOR.getCode()));
+            new RequiredFieldRule("主诉", AiMedicalRecordContentVO::getChiefComplaint, QcSeverityEnum.FATAL.getCode()),
+            new RequiredFieldRule("现病史", AiMedicalRecordContentVO::getPresentIllness, QcSeverityEnum.FATAL.getCode()),
+            new RequiredFieldRule("诊断", AiMedicalRecordContentVO::getDiagnosis, QcSeverityEnum.FATAL.getCode()),
+            new RequiredFieldRule("既往史", AiMedicalRecordContentVO::getPastHistory, QcSeverityEnum.MAJOR.getCode()),
+            new RequiredFieldRule("过敏史", AiMedicalRecordContentVO::getAllergyHistory, QcSeverityEnum.MAJOR.getCode()),
+            new RequiredFieldRule("处理意见", AiMedicalRecordContentVO::getTreatmentPlan, QcSeverityEnum.MAJOR.getCode()),
+            new RequiredFieldRule("专科检查", AiMedicalRecordContentVO::getSpecialistExam, QcSeverityEnum.MINOR.getCode()));
 
-    private final BizMedicalRecordMapper bizMedicalRecordMapper;
-
-    private final BizQualityControlMapper bizQualityControlMapper;
+    private final AiEmrDataFacadeService aiEmrDataFacadeService;
 
     private final AiExecutionService aiExecutionService;
 
@@ -171,7 +163,7 @@ public class EmrQcCapabilityImpl         implements EmrQcCapability {
     public EmrQcResultVO execute(EmrQcExecuteDTO dto) {
         long start = System.currentTimeMillis();
 
-        BizMedicalRecord record = bizMedicalRecordMapper.selectById(dto.getRecordId());
+        AiMedicalRecordContentVO record = aiEmrDataFacadeService.findMedicalRecord(dto.getRecordId());
         if (record == null) {
             throw new BusinessException("病历不存在或已作废：" + dto.getRecordId());
         }
@@ -210,7 +202,7 @@ public class EmrQcCapabilityImpl         implements EmrQcCapability {
      * 必填项检查。注意判据不是「字段是否为空」，而是「字段是否有实质内容」——
      * 「无」「未见异常」以及「把字段名抄一遍」都算没写。
      */
-    private List<EmrQcIssueVO> checkRequiredFields(BizMedicalRecord record) {
+    private List<EmrQcIssueVO> checkRequiredFields(AiMedicalRecordContentVO record) {
         List<EmrQcIssueVO> issues = new ArrayList<>();
         for (RequiredFieldRule rule : REQUIRED_FIELDS) {
             if (issues.size() >= MAX_HARD_RULE_ISSUES) {
@@ -238,7 +230,7 @@ public class EmrQcCapabilityImpl         implements EmrQcCapability {
         return issues;
     }
 
-    private Optional<EmrQcLlmOutputDTO> callModel(BizMedicalRecord record) {
+    private Optional<EmrQcLlmOutputDTO> callModel(AiMedicalRecordContentVO record) {
         EmrQcPromptVariablesVO variables = new EmrQcPromptVariablesVO();
         variables.setGender(SysGenderEnum.getLabel(record.getGender()));
         variables.setAge(record.getAge() == null ? "（未填写）" : record.getAge() + "岁");
@@ -278,33 +270,25 @@ public class EmrQcCapabilityImpl         implements EmrQcCapability {
     /**
      * 写入质控检查记录，复用已有质控列表页。
      * <p>
-     * 单号前缀用 {@code QCAI}，与既有质控单号区分，避免撞质控单号的唯一索引。
+     * 通过 {@link AiEmrDataFacadeService#saveQualityControl} 落库：质控单号、质控人与质控时间
+     * 由病历域生成，AI 能力只交代结论本身。
      */
-    private void persist(BizMedicalRecord record, EmrQcResultVO vo) {
+    private void persist(AiMedicalRecordContentVO record, EmrQcResultVO vo) {
         try {
-            CurrentUser operatorUser = UserUtils.getCurrentUser();
-            if (operatorUser == null) {
-                throw new BusinessException("当前用户信息不存在");
-            }
-            String operator = operatorUser.getRealName();
-            BizQualityControl qc = new BizQualityControl();
-            qc.setQcNo(redisSequenceService.generateEmrQcNo());
-            qc.setRecordId(record.getId());
-            qc.setPatientId(record.getPatientId());
-            qc.setQcType(RecordQcTypeEnum.AI_INHERENT.getCode());
-            qc.setQcContent("AI 病历内涵质控（完整性 + 规范性 + 逻辑性）");
-            qc.setQcResult(vo.isPass() ? CheckResultEnum.PASS.getCode() : CheckResultEnum.FAIL.getCode());
-            qc.setErrorCount(vo.getIssueCount());
-            qc.setErrorDetail(joinIssues(vo.getIssues(), ERROR_DETAIL_MAX_LENGTH));
-            qc.setQcStatus(RuleCheckStatusEnum.PENDING.getCode());
-            qc.setQcBy(operator);
-            qc.setQcTime(LocalDateTime.now());
-            qc.setCreateBy(operator);
-            qc.setRemark(vo.isDegraded() ? "模型未参与，仅必填项规则结果" : null);
+            AiQualityControlSaveDTO dto = new AiQualityControlSaveDTO();
+            dto.setRecordId(record.getId());
+            dto.setPatientId(record.getPatientId());
+            dto.setQcType(RecordQcTypeEnum.AI_INHERENT.getCode());
+            dto.setQcContent("AI 病历内涵质控（完整性 + 规范性 + 逻辑性）");
+            dto.setQcResult(vo.isPass() ? CheckResultEnum.PASS.getCode() : CheckResultEnum.FAIL.getCode());
+            dto.setErrorCount(vo.getIssueCount());
+            dto.setErrorDetail(joinIssues(vo.getIssues(), ERROR_DETAIL_MAX_LENGTH));
+            dto.setQcStatus(RuleCheckStatusEnum.PENDING.getCode());
+            dto.setRemark(vo.isDegraded() ? "模型未参与，仅必填项规则结果" : null);
 
-            bizQualityControlMapper.insert(qc);
-            vo.setQcId(qc.getId());
-            vo.setQcNo(qc.getQcNo());
+            AiQualityControlWriteVO saved = aiEmrDataFacadeService.saveQualityControl(dto);
+            vo.setQcId(saved.getId());
+            vo.setQcNo(saved.getQcNo());
         } catch (Exception ex) {
             // 质控结论已经拿到了，落库失败不该让质控员看不到结论
             log.error("[AI-病历质控] 质控结果落库失败，结论仍正常返回", ex);
@@ -315,7 +299,7 @@ public class EmrQcCapabilityImpl         implements EmrQcCapability {
      * 必填项规则定义
      */
     private record RequiredFieldRule(String fieldName,
-                                     Function<BizMedicalRecord, String> getter,
+                                     Function<AiMedicalRecordContentVO, String> getter,
                                      int severity) {
     }
 }

@@ -11,7 +11,7 @@ import com.his.ai.vo.FollowupComposePromptVariablesVO;
 import com.his.ai.vo.FollowupComposeVO;
 import com.his.common.util.TextUtil;
 import com.his.common.enums.FollowupTypeEnum;
-import com.his.emr.service.ChronicRecordService;
+import com.his.spi.service.ChronicRecordFacadeService;
 import com.his.spi.vo.ChronicRecordListVO;
 import com.his.common.enums.AiExpressionSourceEnum;
 import com.his.common.enums.AiBizTypeEnum;
@@ -45,7 +45,7 @@ public class FollowupComposeCapabilityImpl implements FollowupComposeCapability 
 
     private final AiExecutionService aiExecutionService;
 
-    private final ChronicRecordService chronicRecordService;
+    private final ChronicRecordFacadeService chronicRecordFacadeService;
 
     private final PatientTextGuard textGuard;
 
@@ -112,7 +112,7 @@ public class FollowupComposeCapabilityImpl implements FollowupComposeCapability 
             diseases.add(dto.getDiagnosis().trim());
         }
         try {
-            for (ChronicRecordListVO record : chronicRecordService.activeList(dto.getPatientId())) {
+            for (ChronicRecordListVO record : chronicRecordFacadeService.activeList(dto.getPatientId())) {
                 if (TextUtil.hasText(record.getDiseaseName())) {
                     diseases.add(record.getDiseaseName().trim());
                 }

@@ -16,8 +16,8 @@ import com.his.common.exception.BusinessException;
 import com.his.system.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
-import com.his.emr.entity.BizInspectionApply;
-import com.his.emr.mapper.BizInspectionApplyMapper;
+import com.his.spi.service.EmrApplyFacadeService;
+import com.his.spi.vo.InspectionApplyBriefVO;
 import com.his.medicaltech.dto.ExamFilmPageQueryDTO;
 import com.his.medicaltech.dto.ExamFilmSpecUpsertDTO;
 import com.his.medicaltech.dto.ExamFilmUpsertDTO;
@@ -61,7 +61,7 @@ public class ExamFilmServiceImpl extends ServiceImpl<BizExamFilmMapper, BizExamF
     private final BizExamFilmMapper bizExamFilmMapper;
     private final BizFilmSpecMapper bizFilmSpecMapper;
     private final BizInspectionRecordMapper bizInspectionRecordMapper;
-    private final BizInspectionApplyMapper bizInspectionApplyMapper;
+    private final EmrApplyFacadeService emrApplyFacadeService;
     private final DictCacheService dictCacheService;
     private final SysAuditLogService sysAuditLogService;
     private final ChargeFacadeService chargeFacadeService;
@@ -173,7 +173,8 @@ public class ExamFilmServiceImpl extends ServiceImpl<BizExamFilmMapper, BizExamF
         BizInspectionRecord record = bizInspectionRecordMapper.selectById(film.getRecordId());
         // 就诊标识只能从申请单上取（检查记录自身没有挂号ID）：取不到就拒绝，
         // 而不是塞一个 0 进去 —— 记出一笔「不知道是谁的就诊」的费用，比报错更糟。
-        BizInspectionApply apply = film.getApplyId() == null ? null : bizInspectionApplyMapper.selectById(film.getApplyId());
+        InspectionApplyBriefVO apply = film.getApplyId() == null
+                ? null : emrApplyFacadeService.getInspectionApplyById(film.getApplyId());
         if (apply == null || apply.getRegistId() == null) {
             throw new BusinessException("找不到该检查对应的就诊/挂号信息，无法记账（申请单缺失或已清理）");
         }

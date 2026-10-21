@@ -26,12 +26,12 @@
             <artifactId>his-core-spi</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.alipay.sdk</groupId>
-            <artifactId>alipay-sdk-java</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.his</groupId>
             <artifactId>his-system</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alipay.sdk</groupId>
+            <artifactId>alipay-sdk-java</artifactId>
         </dependency>
     </dependencies>
 

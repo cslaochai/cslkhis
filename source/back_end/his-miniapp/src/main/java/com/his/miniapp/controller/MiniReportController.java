@@ -2,8 +2,8 @@ package com.his.miniapp.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.medicaltech.vo.BizReportVO;
 import com.his.miniapp.dto.ReportPageQueryDTO;
+import com.his.spi.vo.AiReportVO;
 import com.his.miniapp.service.MiniReportService;
 import com.his.miniapp.vo.MiniReportPdfVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -34,7 +34,7 @@ public class MiniReportController {
      */
     @Operation(summary = "我的报告（分页；只返回已发布）")
     @PostMapping("/list")
-    public Result<PageResult<BizReportVO>> list(@RequestBody @Valid ReportPageQueryDTO dto) {
+    public Result<PageResult<AiReportVO>> list(@RequestBody @Valid ReportPageQueryDTO dto) {
         return Result.success(miniReportService.myReportPage(dto));
     }
 
@@ -44,7 +44,7 @@ public class MiniReportController {
      */
     @Operation(summary = "报告详情（已发布才可见）")
     @GetMapping("/getById")
-    public Result<BizReportVO> getById(@RequestParam Long reportId) {
+    public Result<AiReportVO> getById(@RequestParam Long reportId) {
         return Result.success(miniReportService.myReportDetail(reportId));
     }
 

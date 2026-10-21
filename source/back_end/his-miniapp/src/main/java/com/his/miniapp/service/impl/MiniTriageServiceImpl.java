@@ -3,8 +3,8 @@ package com.his.miniapp.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.schedule.dto.ScheduleSelectQueryDTO;
 import com.his.common.util.NumUtil;
+import com.his.spi.dto.AppointQueryDTO;
 import com.his.common.util.TextUtil;
 import com.his.miniapp.entity.BizTriageRule;
 import com.his.miniapp.mapper.BizTriageRuleMapper;
@@ -133,7 +133,7 @@ public class MiniTriageServiceImpl extends ServiceImpl<BizTriageRuleMapper, BizT
      */
     private int countBookable(Long deptId) {
         try {
-            ScheduleSelectQueryDTO query = new ScheduleSelectQueryDTO();
+            AppointQueryDTO query = new AppointQueryDTO();
             query.setDeptId(deptId);
             return (int) miniDirectoryService.schedules(query).stream()
                     .filter(s -> Integer.valueOf(1).equals(s.getIsAppointment()))

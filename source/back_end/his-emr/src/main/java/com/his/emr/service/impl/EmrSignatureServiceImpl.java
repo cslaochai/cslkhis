@@ -14,15 +14,14 @@ import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.spi.dto.SignCommandDTO;
+import com.his.spi.service.SignCertFacadeService;
+import com.his.spi.service.TsaStampFacadeService;
+import com.his.spi.vo.SignCertBriefVO;
+import com.his.spi.vo.TsaStampVO;
 import com.his.emr.dto.SignaturePageQueryDTO;
 import com.his.emr.entity.BizEmrSignature;
-import com.his.sign.entity.SysSignCert;
 import com.his.emr.mapper.BizEmrSignatureMapper;
-import com.his.sign.mapper.BizTsaTokenMapper;
-import com.his.sign.service.TsaService;
-import com.his.sign.mapper.SysSignCertMapper;
 import com.his.emr.service.*;
-import com.his.sign.utils.SignCryptoUtil;
 import com.his.emr.vo.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,8 +34,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import com.his.sign.service.SignCertService;
-import com.his.sign.service.TsaChannelService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.service.SignCoverageService;
 import com.his.system.service.SignableContentService;
@@ -54,19 +51,13 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
 
     private final BizEmrSignatureMapper bizEmrSignatureMapper;
 
-    private final SysSignCertMapper sysSignCertMapper;
-
-    private final SignCertService signCertService;
+    private final SignCertFacadeService signCertFacadeService;
 
     private final SignatureStoreService signatureStoreService;
 
     private final RedisSequenceService redisSequenceService;
 
-    private final TsaChannelService tsaChannelService;
-
-    private final TsaService tsaService;
-
-    private final BizTsaTokenMapper tsaTokenMapper;
+    private final TsaStampFacadeService tsaStampFacadeService;
 
     private final List<SignableContentService> providers;
 
@@ -119,9 +110,9 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
             throw new BusinessException(block);
         }
 
-        SysSignCert cert = signCertService.ensureActiveCert(cmd.getSignerId(), cmd.getSignerName(),
+        SignCertBriefVO cert = signCertFacadeService.ensureActiveCert(cmd.getSignerId(), cmd.getSignerName(),
                 cmd.getSignerDeptId(), cmd.getSignerDeptName());
-        String privatePem = signCertService.privatePemOf(cert);
+        String privatePem = signCertFacadeService.privatePemOf(cert.getId());
 
         for (int attempt = 1; attempt <= MAX_RETRY; attempt++) {
             BizEmrSignature entity = buildSignature(cmd, scene, subject, cert, privatePem);
@@ -144,13 +135,13 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
 
     // 查询
     private BizEmrSignature buildSignature(SignCommandDTO cmd, SignSceneEnum scene, SignSubject subject,
-                                           SysSignCert cert, String privatePem) {
+                                           SignCertBriefVO cert, String privatePem) {
         BizEmrSignature prev = bizEmrSignatureMapper.selectLastByBiz(cmd.getBizType(), cmd.getBizId());
         String prevDigest = prev == null ? null : prev.getContentDigest();
 
         String content = subject.contentWithPrev(prevDigest);
-        String digest = SignCryptoUtil.sha256Hex(content);
-        String signValue = SignCryptoUtil.sign(privatePem, content);
+        String digest = signCertFacadeService.sha256Hex(content);
+        String signValue = signCertFacadeService.signWithPrivateKey(privatePem, content);
         LocalDateTime now = TimeUtil.nowSeconds();
 
         BizEmrSignature e = new BizEmrSignature();
@@ -173,8 +164,8 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
         e.setSignerTitle(cmd.getSignerTitle());
         e.setCertId(cert.getId());
         e.setCertNo(cert.getCertNo());
-        e.setDigestAlgo(SignCryptoUtil.DIGEST_ALGO);
-        e.setSignAlgo(SignCryptoUtil.SIGN_ALGO);
+        e.setDigestAlgo(signCertFacadeService.digestAlgo());
+        e.setSignAlgo(signCertFacadeService.signAlgo());
         e.setContentDigest(digest);
         e.setSignValue(signValue);
         e.setContentSnapshot(content);
@@ -182,13 +173,13 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
 
         // 可信时间戳（G6）：配置了 TSA 且适配器在线，就在签名时刻之后盖一枚令牌。
         // 盖章失败（网络/服务异常）不允许签名失败：TSA 通道已收敛成 null，这里降级本机时钟。
-        int effectiveTs = tsaService.effectiveTimeSource();
-        TsaChannelService.Stamp stamp = effectiveTs == TimeSourceEnum.TSA.getCode() ? tsaChannelService.stamp(digest) : null;
+        int effectiveTs = tsaStampFacadeService.effectiveTimeSource();
+        TsaStampVO stamp = effectiveTs == TimeSourceEnum.TSA.getCode() ? tsaStampFacadeService.stamp(digest) : null;
         if (stamp != null) {
             e.setTimeSource(TimeSourceEnum.TSA.getCode());
-            e.setTsaSerial(stamp.serial());
-            e.setTsaTime(stamp.tsaTime());
-            e.setTsaToken(stamp.tokenValue());
+            e.setTsaSerial(stamp.getSerial());
+            e.setTsaTime(stamp.getTsaTime());
+            e.setTsaToken(stamp.getTokenValue());
         } else {
             e.setTimeSource(effectiveTs);
             e.setTsaSerial(null);
@@ -240,7 +231,7 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
         vo.setCheckedAt(TimeUtil.nowSeconds());
 
         // 断言一：签名值本身（用签名时留存的内容快照，不用当前内容）
-        SysSignCert cert = sig.getCertId() == null ? null : sysSignCertMapper.selectById(sig.getCertId());
+        SignCertBriefVO cert = sig.getCertId() == null ? null : signCertFacadeService.getCertById(sig.getCertId());
         boolean signatureValid;
         String signFailReason = null;
         if (cert == null) {
@@ -251,8 +242,8 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
             signFailReason = "该签名未留存被签内容快照（历史数据），无法校验签名值";
         } else {
             try {
-                signatureValid = SignCryptoUtil.verify(cert.getPublicKey(), sig.getContentSnapshot(), sig.getSignValue());
-            } catch (SignCryptoUtil.SignException e) {
+                signatureValid = signCertFacadeService.verifySignValue(cert.getPublicKey(), sig.getContentSnapshot(), sig.getSignValue());
+            } catch (Exception e) {
                 signatureValid = false;
                 signFailReason = "验签执行异常：" + e.getMessage();
             }
@@ -293,7 +284,7 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
                 tsaNote = "签名记录标记为 TSA 时间来源，但缺少序列号/授时时刻/令牌（写入侧校验被绕过或数据被删改）";
             } else {
                 try {
-                    tsaValid = tsaChannelService.verifyToken(sig.getTsaSerial(), sig.getContentDigest(),
+                    tsaValid = tsaStampFacadeService.verifyToken(sig.getTsaSerial(), sig.getContentDigest(),
                             sig.getTsaTime(), sig.getTsaToken());
                 } catch (Exception ex) {
                     tsaValid = false;
@@ -557,10 +548,10 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
         vo.setBizTypeTexts(tb.length() == 0 ? "—" : tb.toString());
 
         vo.setCertTotal(certTotal());
-        vo.setCertActive(signCertService.countByStatus(CertStatusEnum.ACTIVE.getCode()));
-        vo.setCertRevoked(signCertService.countByStatus(CertStatusEnum.REVOKED.getCode()));
-        vo.setCertAutoIssued(signCertService.countAutoIssued());
-        vo.setCertEmployeeCount(signCertService.countActiveEmployees());
+        vo.setCertActive(signCertFacadeService.countByStatus(CertStatusEnum.ACTIVE.getCode()));
+        vo.setCertRevoked(signCertFacadeService.countByStatus(CertStatusEnum.REVOKED.getCode()));
+        vo.setCertAutoIssued(signCertFacadeService.countAutoIssued());
+        vo.setCertEmployeeCount(signCertFacadeService.countActiveEmployees());
 
         // 覆盖率：按业务类型分别统计，分母为 0 时显示"—"（不显示 0%，也不显示 100%）
         List<SignatureSummaryVO.Coverage> coverages = new ArrayList<>();
@@ -580,11 +571,11 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
         coverages.sort(Comparator.comparing(SignatureSummaryVO.Coverage::getBizType));
         vo.setCoverages(coverages);
 
-        vo.setTsaAvailable(tsaChannelService.available());
-        vo.setTsaName(tsaChannelService.readyName());
-        vo.setTsaTokenCount(tsaTokenMapper.selectCount(null));
+        vo.setTsaAvailable(tsaStampFacadeService.available());
+        vo.setTsaName(tsaStampFacadeService.readyName());
+        vo.setTsaTokenCount(tsaStampFacadeService.countTokens());
 
-        TimeSourceEnum ts = TimeSourceEnum.fromCode(tsaService.effectiveTimeSource());
+        TimeSourceEnum ts = TimeSourceEnum.fromCode(tsaStampFacadeService.effectiveTimeSource());
         if (ts != null && ts == TimeSourceEnum.TSA) {
             vo.setTimeSourceNote("签名时间来源：可信时间戳（" + (vo.getTsaName() == null ? "TSA" : vo.getTsaName())
                     + " —— 本地内置信任根：令牌结构真实、可对抗本机时钟篡改；非外部 CA/TSA，不对外声称法律效力）");
@@ -654,7 +645,7 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
     }
 
     private long certTotal() {
-        return sysSignCertMapper.selectCount(null);
+        return signCertFacadeService.countAllCerts();
     }
 
     private String nextSignNo() {

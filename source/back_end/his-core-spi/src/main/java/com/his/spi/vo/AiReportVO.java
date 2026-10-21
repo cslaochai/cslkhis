@@ -59,6 +59,16 @@ public class AiReportVO {
     private String itemName;
 
     /**
+     * 申请科室名称（患者端报告列表展示开单科室）
+     */
+    private String applyDeptName;
+
+    /**
+     * 申请医生姓名（患者端报告列表展示开单医生）
+     */
+    private String applyDoctorName;
+
+    /**
      * 检查方法
      */
     private String examMethod;

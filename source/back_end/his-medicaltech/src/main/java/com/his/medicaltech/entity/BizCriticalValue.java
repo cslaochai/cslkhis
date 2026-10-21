@@ -1,5 +1,6 @@
 package com.his.medicaltech.entity;
 
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
@@ -8,7 +9,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
@@ -18,14 +18,6 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_critical_value")
 public class BizCriticalValue extends BaseEntity {
-    /** 逻辑删除标志（0 未删除 1 已删除） */
-    @TableLogic
-    private Integer delFlag;
-
-    /** 备注 */
-    private String remark;
-
-
 
     /**
      * 危急值号
@@ -192,4 +184,15 @@ public class BizCriticalValue extends BaseEntity {
      * 来源（恒为 RULE）
      */
     private String source;
+
+    /**
+     * 逻辑删除标志（0 未删除 1 已删除）
+     */
+    @TableLogic
+    private Integer delFlag;
+
+    /**
+     * 备注
+     */
+    private String remark;
 }

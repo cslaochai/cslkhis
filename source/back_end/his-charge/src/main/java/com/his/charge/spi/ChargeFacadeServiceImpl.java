@@ -33,8 +33,11 @@ import com.his.charge.mapper.BizSettlementBillMapper;
 import com.his.charge.service.FeeRecordService;
 import com.his.charge.service.FundAccountService;
 import com.his.charge.service.InpatientAccountService;
+import com.his.charge.service.InsurancePolicyService;
 import com.his.charge.service.PaymentService;
 import com.his.charge.service.SettlementBillService;
+import com.his.charge.service.ArrearsControlGateService;
+import com.his.spi.vo.ArrearsControlCheckResultVO;
 import com.his.common.enums.*;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
@@ -66,6 +69,10 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
     private final FundAccountService fundAccountService;
 
     private final InpatientAccountService inpatientAccountService;
+
+    private final ArrearsControlGateService arrearsControlGateService;
+
+    private final InsurancePolicyService insurancePolicyService;
 
     private final BizSettlementBillItemMapper bizSettlementBillItemMapper;
 
@@ -309,6 +316,16 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
         return closed;
     }
 
+    // ---------- 挂号试算（收费预估） ----------
+
+    @Override
+    public BigDecimal getCoverageRatio(Integer settlementType, Integer medicalInsuranceType) {
+        // 内部政策服务的险种键为费别名称(String)，端口按费别编码(Integer)入参：
+        // 编码归一回标准费别名称后委托原服务，保留「精确匹配 → 按结算方式兜底、无配置返回 0」原逻辑。
+        String insuranceTypeName = resolveInsuranceTypeName(medicalInsuranceType);
+        return insurancePolicyService.getCoverageRatio(settlementType, insuranceTypeName);
+    }
+
     // ---------- 住院结算状态 ----------
 
     @Override
@@ -341,7 +358,39 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
         return state;
     }
 
+    @Override
+    public ArrearsControlCheckResultVO checkNewOrderArrears(Long admissionId, Collection<Integer> orderClasses) {
+        if (admissionId == null || orderClasses == null || orderClasses.isEmpty()) {
+            return null;
+        }
+        ArrearsControlGateService.CheckResult check = arrearsControlGateService.checkNewOrder(
+                new ArrearsControlGateService.OrderCheck(admissionId, new HashSet<>(orderClasses)));
+        if (check == null || check.isAllowed()) {
+            return null;
+        }
+        ArrearsControlCheckResultVO vo = new ArrearsControlCheckResultVO();
+        vo.setAllowed(false);
+        vo.setReason(check.getReason());
+        return vo;
+    }
+
     // ---------- 内部工具 ----------
+
+    /**
+     * 费别编码（MedicalInsuranceTypeEnum.settlementType）反查标准费别名称，供内部政策服务精确匹配；
+     * 为空或识别不出返回 {@code null}，交由内部服务按结算方式兜底匹配。
+     */
+    private static String resolveInsuranceTypeName(Integer medicalInsuranceType) {
+        if (medicalInsuranceType == null) {
+            return null;
+        }
+        for (MedicalInsuranceTypeEnum e : MedicalInsuranceTypeEnum.values()) {
+            if (medicalInsuranceType.equals(e.getSettlementType())) {
+                return e.getName();
+            }
+        }
+        return null;
+    }
 
     /**
      * 是否已付清：应缴为 0 也算付清（预交金全额抵扣后账单应缴就是 0，没有流水但确实结清了）。

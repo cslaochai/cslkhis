@@ -10,7 +10,6 @@ import com.his.spi.vo.DictItemVO;
 import com.his.spi.vo.EmployeeBriefVO;
 import com.his.spi.vo.EmployeePostBriefVO;
 import com.his.spi.vo.Icd10BriefVO;
-import com.his.spi.vo.PatientTagBriefVO;
 import com.his.spi.vo.RoleBriefVO;
 import com.his.spi.vo.UserBriefVO;
 import com.his.spi.vo.WardBriefVO;
@@ -21,7 +20,6 @@ import com.his.system.entity.SysDictData;
 import com.his.system.entity.SysEmployee;
 import com.his.system.entity.SysEmployeePost;
 import com.his.system.entity.SysIcd10;
-import com.his.system.entity.SysPatientTag;
 import com.his.system.entity.SysRole;
 import com.his.system.entity.SysUser;
 import com.his.system.entity.SysWard;
@@ -30,7 +28,6 @@ import com.his.system.mapper.SysConfigMapper;
 import com.his.system.mapper.SysDepartmentMapper;
 import com.his.system.mapper.SysEmployeePostMapper;
 import com.his.system.mapper.SysEmployeeMapper;
-import com.his.system.mapper.SysPatientTagMapper;
 import com.his.system.mapper.SysRoleMapper;
 import com.his.system.mapper.SysUserMapper;
 import com.his.system.mapper.SysWardMapper;
@@ -69,8 +66,6 @@ public class SystemFacadeServiceImpl implements SystemFacadeService {
     private final SysClinicRoomMapper sysClinicRoomMapper;
 
     private final SysConfigMapper sysConfigMapper;
-
-    private final SysPatientTagMapper sysPatientTagMapper;
 
     private final DictCacheService dictCacheService;
 
@@ -294,23 +289,6 @@ public class SystemFacadeServiceImpl implements SystemFacadeService {
     }
 
     @Override
-    public List<PatientTagBriefVO> listPatientTagsByNames(Collection<String> tagNames) {
-        if (tagNames == null || tagNames.isEmpty()) {
-            return List.of();
-        }
-        return toPatientTagBriefList(sysPatientTagMapper.selectList(
-                new LambdaQueryWrapper<SysPatientTag>().in(SysPatientTag::getTagName, tagNames)));
-    }
-
-    @Override
-    public List<PatientTagBriefVO> listPatientTagsByIds(Collection<Long> tagIds) {
-        if (tagIds == null || tagIds.isEmpty()) {
-            return List.of();
-        }
-        return toPatientTagBriefList(sysPatientTagMapper.selectBatchIds(tagIds));
-    }
-
-    @Override
     public List<DictItemVO> listDictItems(String dictType) {
         List<SysDictData> dictList = dictCacheService.getDictDataByType(dictType);
         if (dictList == null || dictList.isEmpty()) {
@@ -416,19 +394,6 @@ public class SystemFacadeServiceImpl implements SystemFacadeService {
         vo.setDeptId(post.getDeptId());
         vo.setIsPrimary(post.getIsPrimary());
         return vo;
-    }
-
-    private List<PatientTagBriefVO> toPatientTagBriefList(List<SysPatientTag> tags) {
-        List<PatientTagBriefVO> result = new ArrayList<>(tags.size());
-        for (SysPatientTag tag : tags) {
-            PatientTagBriefVO vo = new PatientTagBriefVO();
-            vo.setTagId(tag.getTagId());
-            vo.setTagName(tag.getTagName());
-            vo.setShortName(tag.getShortName());
-            vo.setTagColor(tag.getTagColor());
-            result.add(vo);
-        }
-        return result;
     }
 
     private List<Icd10BriefVO> toIcd10BriefList(List<SysIcd10> codes) {

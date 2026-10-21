@@ -1,33 +1,22 @@
 package com.his.emr.service.impl;
 
-import com.his.spi.dto.SignCertIssueDTO;
-import com.his.spi.dto.SignCertRevokeDTO;
 import com.his.spi.dto.SignCommandDTO;
 import com.his.spi.vo.SignatureVO;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.sign.config.SignProperties;
 import com.his.emr.dto.*;
 import com.his.common.entity.CurrentUser;
 import com.his.emr.service.EmrSignatureService;
-import com.his.sign.service.ExternalCaChannelService;
-import com.his.sign.service.SignCertService;
 import com.his.emr.service.SignatureCenterService;
-import com.his.sign.utils.KeyPairFactory;
 import com.his.system.utils.UserUtils;
-import com.his.emr.vo.*;
+import com.his.emr.vo.OptionItemVO;
+import com.his.emr.vo.SignatureOptionsVO;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import com.his.sign.vo.SignCaProbeOutboundVO;
-import com.his.sign.vo.SignCaStatusVO;
-import com.his.sign.vo.SignCertSelectListVO;
-import com.his.sign.vo.SignCertVO;
-import com.his.sign.vo.SignOptionVO;
 
 /**
  * 签名中心出参与命令装配。
@@ -36,16 +25,10 @@ import com.his.sign.vo.SignOptionVO;
 @RequiredArgsConstructor
 public class SignatureCenterServiceImpl implements SignatureCenterService {
 
-    private final SignProperties signProperties;
-
-    private final ExternalCaChannelService externalCaChannelService;
-
     private final EmrSignatureService emrSignatureService;
 
-    private final SignCertService signCertService;
-
-    private static SignOptionVO opt(Integer code, String text) {
-        return new SignOptionVO(code == null ? null : code.longValue(), text);
+    private static OptionItemVO opt(Integer code, String text) {
+        return new OptionItemVO(code == null ? null : code.longValue(), text);
     }
 
     private static void fillSigner(SignCommandDTO cmd, CurrentUser user) {
@@ -78,23 +61,23 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
     @Override
     public SignatureOptionsVO queryOptions() {
         SignatureOptionsVO vo = new SignatureOptionsVO();
-        List<SignOptionVO> bizTypes = new ArrayList<>();
+        List<OptionItemVO> bizTypes = new ArrayList<>();
         for (SignBizTypeEnum t : SignBizTypeEnum.values()) {
             bizTypes.add(opt(t.getCode(), t.getLabel()));
         }
-        List<SignOptionVO> scenes = new ArrayList<>();
+        List<OptionItemVO> scenes = new ArrayList<>();
         for (SignSceneEnum s : SignSceneEnum.values()) {
             scenes.add(opt(s.getCode(), s.getLabel()));
         }
-        List<SignOptionVO> signStatuses = new ArrayList<>();
+        List<OptionItemVO> signStatuses = new ArrayList<>();
         for (SignStatusEnum s : SignStatusEnum.values()) {
             signStatuses.add(opt(s.getCode(), s.getLabel()));
         }
-        List<SignOptionVO> verifyStatuses = new ArrayList<>();
+        List<OptionItemVO> verifyStatuses = new ArrayList<>();
         for (SignVerifyStatusEnum s : SignVerifyStatusEnum.values()) {
             verifyStatuses.add(opt(s.getCode(), s.getLabel()));
         }
-        List<SignOptionVO> timeSources = new ArrayList<>();
+        List<OptionItemVO> timeSources = new ArrayList<>();
         for (TimeSourceEnum t : TimeSourceEnum.values()) {
             timeSources.add(opt(t.getCode(), t.getLabel()));
         }
@@ -104,11 +87,11 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
         vo.setVerifyStatuses(verifyStatuses);
         vo.setTimeSources(timeSources);
 
-        List<SignOptionVO> certStatuses = new ArrayList<>();
+        List<OptionItemVO> certStatuses = new ArrayList<>();
         for (CertStatusEnum s : CertStatusEnum.values()) {
             certStatuses.add(opt(s.getCode(), s.getLabel()));
         }
-        List<SignOptionVO> issuedModes = new ArrayList<>();
+        List<OptionItemVO> issuedModes = new ArrayList<>();
         for (CertIssuedModeEnum m : CertIssuedModeEnum.values()) {
             issuedModes.add(opt(m.getCode(), m.getLabel()));
         }
@@ -139,64 +122,5 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
             throw new BusinessException("当前用户信息不存在");
         }
         return emrSignatureService.invalidate(dto.getSignId(), dto.getReason(), employeeIdOf(user), nameOf(user));
-    }
-
-    @Override
-    public List<SignCertSelectListVO> certOptions(String keyword) {
-        return signCertService.selectList(keyword).stream().map(c -> {
-            SignCertSelectListVO vo = new SignCertSelectListVO();
-            BeanUtils.copyProperties(c, vo);
-            return vo;
-        }).toList();
-    }
-
-    @Override
-    public SignCertVO issueCert(SignCertIssueDTO dto) {
-        CurrentUser user = UserUtils.getCurrentUser();
-        if (user == null) {
-            throw new BusinessException("当前用户信息不存在");
-        }
-        return signCertService.issue(dto, employeeIdOf(user), nameOf(user));
-    }
-
-    @Override
-    public SignCertVO revokeCert(SignCertRevokeDTO dto) {
-        CurrentUser user = UserUtils.getCurrentUser();
-        if (user == null) {
-            throw new BusinessException("当前用户信息不存在");
-        }
-        return signCertService.revoke(dto, employeeIdOf(user), nameOf(user));
-    }
-
-    @Override
-    public SignCaStatusVO signCaStatus() {
-        SignCaStatusVO status = new SignCaStatusVO();
-        status.setCaMode(signProperties.getCaMode());
-        status.setProviderName(externalCaChannelService.available() ? externalCaChannelService.name() : null);
-        status.setAvailable(externalCaChannelService.available());
-        status.setHint(externalCaChannelService.available()
-                ? "外部 CA 模式：证书签发会先本地生成密钥对、向适配器提交 CSR（当前为控制台打印，提交后中断签发，不回退自签）"
-                : "内部自签模式（G6/G6b 形态）：证书由院内 KeyPairFactory 签发，信任根为院内，不对外声称法律效力");
-        return status;
-    }
-
-    @Override
-    public SignCaProbeOutboundVO probeCaOutbound() {
-        if (!externalCaChannelService.available()) {
-            throw new BusinessException("当前为内部自签模式（his.sign.ca-mode=internal），没有外部 CA 外发动作可探；"
-                    + "配置 external 并重启后可探测");
-        }
-        // 一次性密钥对：只为让探针打印的公钥指纹真实，用完即弃，不落库、不注册
-        KeyPairFactory.KeyPairPem pair = KeyPairFactory.generate();
-        String subjectDn = "CN=CA外发探针（非签名人）, O=长沙市麓康医院";
-        ExternalCaChannelService.IssuedCert issued = externalCaChannelService.issueCert(
-                new ExternalCaChannelService.IssueRequest(subjectDn, pair.publicPem(), 365));
-        SignCaProbeOutboundVO result = new SignCaProbeOutboundVO();
-        result.setProviderName(externalCaChannelService.name());
-        result.setCsrPrinted(true);
-        result.setCertReturned(issued != null);
-        result.setConclusion("CSR 已按适配器口径提交并打印到服务端控制台（[M8真CA口子] 标记段）；"
-                + "未接入真 CA 前不会返回证书，也不会落任何证书记录");
-        return result;
     }
 }

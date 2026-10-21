@@ -17,13 +17,13 @@ import com.his.patient.mapper.*;
 import com.his.patient.service.BedCenterService;
 import com.his.patient.service.InpatientService;
 import com.his.patient.vo.*;
-import com.his.schedule.service.DutyRosterService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
-import com.his.schedule.vo.DutyOfficerVO;
 import com.his.spi.dto.InpatientAdmitDTO;
+import com.his.spi.service.DutyRosterFacadeService;
 import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.DutyOfficerBriefVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -85,7 +85,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
     /**
      * 全院当天谁负责：跨科调配与等床超时的兜底收口人（sql/169）
      */
-    private final DutyRosterService dutyRosterService;
+    private final DutyRosterFacadeService dutyRosterService;
 
     private final SysMessageService sysMessageService;
 
@@ -379,7 +379,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
      * 两条事件共用一个 bizId 会被判重互相吃掉（等床催过之后，真正安排床位的那条通知就发不出来了）。
      */
     private void notifyDutyCrossDept(BizBedWait wait, BizBedAllocate alloc, SysBed bed, String ownDeptName) {
-        DutyOfficerVO duty = dutyRosterService.current();
+        DutyOfficerBriefVO duty = dutyRosterService.current();
         if (duty == null || duty.getEmployeeId() == null) {
             // 今天没排总值班：不静默吞掉 —— 写日志，运维能从日志里看到"协调无人接手"
             log.warn("[床位调配] 跨科调配无人协调：waitNo={} 患者={} 占用 {} {} 床，但当日总值班未排班",
@@ -423,7 +423,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
         if (overdue.isEmpty()) {
             return 0;
         }
-        DutyOfficerVO duty = dutyRosterService.current();
+        DutyOfficerBriefVO duty = dutyRosterService.current();
         if (duty == null || duty.getEmployeeId() == null) {
             log.warn("[等床协调] {} 条等床记录已等待超过 {} 小时，但当日总值班未排班，无法催办", overdue.size(), hours);
             return 0;

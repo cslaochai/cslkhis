@@ -1,6 +1,6 @@
 package com.his.miniapp.controller;
 
-import com.his.appoint.dto.AppointCancelDTO;
+import com.his.miniapp.dto.MiniAppointCancelDTO;
 import com.his.spi.dto.AppointQueryDTO;
 import com.his.spi.dto.AppointUpsertDTO;
 import com.his.spi.service.AppointFacadeService;
@@ -92,7 +92,7 @@ public class MiniAppointController {
      */
     @Operation(summary = "退号（联动已支付挂号费原路退回）")
     @PostMapping("/cancel")
-    public Result<Void> cancel(@RequestBody @Valid AppointCancelDTO appointCancelDTO) {
+    public Result<Void> cancel(@RequestBody @Valid MiniAppointCancelDTO appointCancelDTO) {
         Long registId = appointCancelDTO.getRegistId();
         // 归属从挂号记录反查，不看前端传的是谁
         RegistBriefVO regist = registFacadeService.findRegist(registId);

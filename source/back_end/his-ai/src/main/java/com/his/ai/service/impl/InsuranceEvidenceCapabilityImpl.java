@@ -10,10 +10,10 @@ import com.his.ai.service.InsuranceEvidenceCapability;
 import com.his.ai.vo.InsuranceEvidenceJudgmentVO;
 import com.his.ai.vo.InsuranceEvidencePromptVariablesVO;
 import com.his.ai.vo.InsuranceEvidenceVO;
-import com.his.charge.service.ComplianceAuditService;
-import com.his.charge.vo.ComplianceAuditDetailVO;
-import com.his.charge.vo.ComplianceAuditItemVO;
-import com.his.charge.vo.ComplianceEvidenceNarrativeVO;
+import com.his.spi.service.AiComplianceFacadeService;
+import com.his.spi.vo.ComplianceAuditBriefVO;
+import com.his.spi.vo.ComplianceAuditItemRowVO;
+import com.his.spi.vo.ComplianceEvidenceNarrativeVO;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.common.enums.AiBizTypeEnum;
@@ -55,18 +55,18 @@ public class InsuranceEvidenceCapabilityImpl implements InsuranceEvidenceCapabil
 
     private final AiExecutionService aiExecutionService;
 
-    private final ComplianceAuditService complianceAuditService;
+    private final AiComplianceFacadeService aiComplianceFacadeService;
 
     // ---------------------------------------------------------------- 模型层
 
     @Override
     public InsuranceEvidenceVO execute(InsuranceEvidenceDTO dto) {
-        ComplianceAuditDetailVO detail = complianceAuditService.getAuditDetail(dto.getAuditId());
-        List<ComplianceAuditItemVO> hits = hitItems(detail);
+        ComplianceAuditBriefVO detail = aiComplianceFacadeService.getAuditDetail(dto.getAuditId());
+        List<ComplianceAuditItemRowVO> hits = hitItems(detail);
         if (hits.isEmpty()) {
             throw new BusinessException("该审核没有命中的风险规则，无需证据判定");
         }
-        ComplianceEvidenceNarrativeVO narrative = complianceAuditService.getAiEvidenceNarrative(dto.getAuditId());
+        ComplianceEvidenceNarrativeVO narrative = aiComplianceFacadeService.getAiEvidenceNarrative(dto.getAuditId());
 
         InsuranceEvidenceVO vo = new InsuranceEvidenceVO();
         vo.setAuditId(detail.getId());
@@ -92,7 +92,7 @@ public class InsuranceEvidenceCapabilityImpl implements InsuranceEvidenceCapabil
         return vo;
     }
 
-    private Optional<InsuranceEvidenceLlmOutputDTO> callModel(List<ComplianceAuditItemVO> hits,
+    private Optional<InsuranceEvidenceLlmOutputDTO> callModel(List<ComplianceAuditItemRowVO> hits,
                                                               ComplianceEvidenceNarrativeVO narrative,
                                                               String auditNo) {
         AiCallDTO call = AiCallDTO.builder()
@@ -108,10 +108,10 @@ public class InsuranceEvidenceCapabilityImpl implements InsuranceEvidenceCapabil
 
     // ---------------------------------------------------------------- 清洗层
 
-    private InsuranceEvidencePromptVariablesVO buildVariables(List<ComplianceAuditItemVO> hits,
+    private InsuranceEvidencePromptVariablesVO buildVariables(List<ComplianceAuditItemRowVO> hits,
                                                               ComplianceEvidenceNarrativeVO narrative) {
         StringBuilder hitText = new StringBuilder();
-        for (ComplianceAuditItemVO item : hits) {
+        for (ComplianceAuditItemRowVO item : hits) {
             hitText.append("- 规则码 ").append(item.getRuleCode())
                     .append("｜").append(item.getRuleName())
                     .append("｜规则判定依据：")
@@ -139,7 +139,7 @@ public class InsuranceEvidenceCapabilityImpl implements InsuranceEvidenceCapabil
         return variables;
     }
 
-    private List<ComplianceAuditItemVO> hitItems(ComplianceAuditDetailVO detail) {
+    private List<ComplianceAuditItemRowVO> hitItems(ComplianceAuditBriefVO detail) {
         if (detail.getItems() == null) {
             return new ArrayList<>();
         }
@@ -152,9 +152,9 @@ public class InsuranceEvidenceCapabilityImpl implements InsuranceEvidenceCapabil
      * 按规则码对齐：模型编造的规则码、超出枚举的 verdict 一律丢弃，判定对象不许被模型发明
      */
     private List<InsuranceEvidenceJudgmentVO> mapJudgments(InsuranceEvidenceLlmOutputDTO output,
-                                                           List<ComplianceAuditItemVO> hits) {
-        Map<String, ComplianceAuditItemVO> byCode = new HashMap<>();
-        for (ComplianceAuditItemVO hit : hits) {
+                                                           List<ComplianceAuditItemRowVO> hits) {
+        Map<String, ComplianceAuditItemRowVO> byCode = new HashMap<>();
+        for (ComplianceAuditItemRowVO hit : hits) {
             if (TextUtil.hasText(hit.getRuleCode())) {
                 byCode.putIfAbsent(hit.getRuleCode(), hit);
             }
@@ -164,7 +164,7 @@ public class InsuranceEvidenceCapabilityImpl implements InsuranceEvidenceCapabil
             return judgments;
         }
         for (InsuranceEvidenceLlmOutputDTO.LlmJudgment j : output.getJudgments()) {
-            ComplianceAuditItemVO hit = byCode.get(TextUtil.hasText(j.getRuleCode())
+            ComplianceAuditItemRowVO hit = byCode.get(TextUtil.hasText(j.getRuleCode())
                     ? j.getRuleCode().trim() : "");
             if (hit == null) {
                 continue;

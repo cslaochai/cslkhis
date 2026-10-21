@@ -5,7 +5,7 @@ import com.his.patient.dto.PatientTagBatchUpsertDTO;
 import com.his.patient.dto.PatientTagDelDTO;
 import com.his.patient.dto.PatientTagUpsertDTO;
 import com.his.patient.entity.BizPatientTagRelation;
-import com.his.system.vo.SysPatientTagVO;
+import com.his.patient.vo.SysPatientTagVO;
 
 import java.util.List;
 import java.util.Map;

@@ -5,9 +5,9 @@ import com.his.system.service.SignableContentService;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.enums.SignStatusEnum;
 import com.his.emr.entity.BizEmrSignature;
-import com.his.sign.entity.SysSignCert;
+import com.his.spi.service.SignCertFacadeService;
+import com.his.spi.vo.SignCertBriefVO;
 import com.his.emr.mapper.BizEmrSignatureMapper;
-import com.his.sign.mapper.SysSignCertMapper;
 import com.his.emr.service.SignatureStoreService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,17 +24,16 @@ public class SignatureStoreServiceImpl extends ServiceImpl<BizEmrSignatureMapper
 
     private final BizEmrSignatureMapper bizEmrSignatureMapper;
 
-    private final SysSignCertMapper sysSignCertMapper;
+    private final SignCertFacadeService signCertFacadeService;
 
     @Transactional(rollbackFor = Exception.class)
     public void insertAndAnchor(BizEmrSignature entity, SignableContentService provider, SignSceneEnum scene,
-                                SysSignCert cert) {
+                                SignCertBriefVO cert) {
         bizEmrSignatureMapper.insert(entity);
         provider.applySignAnchor(entity.getBizId(), scene, entity.getId(), entity.getSignedTime());
         if (cert != null) {
-            cert.setLastUsedTime(entity.getSignedTime());
-            cert.setSignCount(cert.getSignCount() == null ? 1 : cert.getSignCount() + 1);
-            sysSignCertMapper.updateById(cert);
+            // 证书使用次数与最近使用时间由签名域台账自行维护，本模块只登记一次使用
+            signCertFacadeService.markCertUsed(cert.getId(), entity.getSignedTime());
         }
     }
 

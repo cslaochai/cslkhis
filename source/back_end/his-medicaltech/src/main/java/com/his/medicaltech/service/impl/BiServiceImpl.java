@@ -3,10 +3,9 @@ package com.his.medicaltech.service.impl;
 import com.his.common.util.NumUtil;
 import com.his.medicaltech.mapper.BiMapper;
 import com.his.medicaltech.service.BiService;
-import com.his.drgdip.support.DrgCodes;
-import com.his.drgdip.support.DrgFacts;
-import com.his.drgdip.support.DrgGrouper;
-import com.his.drgdip.support.DrgSchemeCache;
+import com.his.spi.dto.DrgGroupFactsDTO;
+import com.his.spi.service.DrgGroupFacadeService;
+import com.his.spi.vo.DrgGroupResultVO;
 import com.his.medicaltech.vo.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,8 +25,7 @@ import java.util.Map;
 public class BiServiceImpl implements BiService {
 
     private final BiMapper biMapper;
-    private final DrgGrouper drgGrouper;
-    private final DrgSchemeCache drgSchemeCache;
+    private final DrgGroupFacadeService drgGroupFacadeService;
 
     public BiOverviewVO overview() {
         BiOverviewVO vo = new BiOverviewVO();
@@ -66,8 +64,9 @@ public class BiServiceImpl implements BiService {
     }
 
     /**
-     * 国考四指标（M5，近 30 日窗口）。分组逐条跑 {@link DrgGrouper}（与 DRG 模拟页同一分组器、同一份方案快照），
-     * 样本一次查全（含手术/其他诊断明细拼接串），院内数据量下无性能问题。
+     * 国考四指标（M5，近 30 日窗口）。样本一次查全（含手术/其他诊断明细拼接串），
+     * 批量交给 {@link DrgGroupFacadeService} 入组（分组算法与方案版本留在分组域，整批同一份快照），
+     * 院内数据量下无性能问题。
      */
     public BiNationalVO nationalMetrics() {
         BiNationalVO vo = new BiNationalVO();
@@ -101,19 +100,30 @@ public class BiServiceImpl implements BiService {
             weightByCode.put(g.getDrgCode(), g.getWeight());
         }
         List<BiCodedSummaryRowVO> samples = biMapper.codedSummaries30d();
+        List<DrgGroupFactsDTO> factsList = new ArrayList<>(samples.size());
+        for (BiCodedSummaryRowVO s : samples) {
+            DrgGroupFactsDTO facts = new DrgGroupFactsDTO();
+            facts.setMainDiag(s.getIcdCode());
+            // 编码串按首页原样传，归一与拆分由分组侧完成，调用方不各自抄一份比码口径
+            facts.setMainOperCodes(s.getMainOperCodes());
+            facts.setOtherDiagCodes(s.getOtherDiagCodes());
+            facts.setOtherOperCodes(s.getOtherOperCodes());
+            facts.setGender(s.getGender());
+            facts.setAge(s.getAge());
+            facts.setAgeUnit(s.getAgeUnit());
+            facts.setAdmissionWeightG(s.getAdmissionWeightG());
+            factsList.add(facts);
+        }
+        List<DrgGroupResultVO> groupedResults = drgGroupFacadeService.group(factsList);
         long grouped = 0;
         long weightMissing = 0;
         BigDecimal weightSum = BigDecimal.ZERO;
-        for (BiCodedSummaryRowVO s : samples) {
-            DrgGrouper.GroupResult r = drgGrouper.group(new DrgFacts(s.getIcdCode(),
-                    DrgCodes.split(s.getMainOperCodes()), DrgCodes.split(s.getOtherDiagCodes()),
-                    DrgCodes.split(s.getOtherOperCodes()), s.getGender(), s.getAge(), s.getAgeUnit(),
-                    s.getAdmissionWeightG()), drgSchemeCache.getDefaultVersion());
-            if (!r.grouped()) {
+        for (DrgGroupResultVO r : groupedResults) {
+            if (!r.isGrouped()) {
                 continue;
             }
             grouped++;
-            BigDecimal weight = weightByCode.get(r.drgCode());
+            BigDecimal weight = weightByCode.get(r.getDrgCode());
             if (weight == null) {
                 weightMissing++;
             } else {

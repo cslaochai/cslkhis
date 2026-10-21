@@ -203,7 +203,7 @@ public class PatientVO {
      *
      * <p>列表接口批量查询后回填，单条查询接口同样返回；无标签时为空数组而非 null。
      */
-    private List<com.his.system.vo.SysPatientTagVO> tags;
+    private List<com.his.patient.vo.SysPatientTagVO> tags;
     /**
      * 预约（挂号）次数：挂号信息（原挂号单）中该患者的未删除挂号记录数
      */

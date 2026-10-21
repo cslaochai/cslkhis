@@ -52,4 +52,9 @@ public class LabItemOverviewVO {
      * 未做判定的原因（判定成功时为 null）
      */
     private String judgeNote;
+
+    /**
+     * 是否属于未能自动判定的结果
+     */
+    private Boolean unjudged;
 }

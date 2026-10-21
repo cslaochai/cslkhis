@@ -14,8 +14,8 @@ import com.his.ai.vo.EmrExtractPromptVariablesVO;
 import com.his.ai.vo.EmrExtractResultVO;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.util.TextUtil;
-import com.his.emr.entity.BizMedicalRecord;
-import com.his.emr.mapper.BizMedicalRecordMapper;
+import com.his.spi.service.AiEmrDataFacadeService;
+import com.his.spi.vo.AiMedicalRecordContentVO;
 import com.his.common.enums.AiBasisSourceEnum;
 import com.his.common.enums.AiBizTypeEnum;
 import lombok.RequiredArgsConstructor;
@@ -69,7 +69,7 @@ public class EmrExtractCapabilityImpl implements EmrExtractCapability {
      */
     private static final char[] CN_DIGITS = {'零', '一', '二', '三', '四', '五', '六', '七', '八', '九'};
 
-    private final BizMedicalRecordMapper bizMedicalRecordMapper;
+    private final AiEmrDataFacadeService aiEmrDataFacadeService;
 
     private final AiExecutionService aiExecutionService;
 
@@ -323,7 +323,7 @@ public class EmrExtractCapabilityImpl implements EmrExtractCapability {
         Integer gender = dto.getGender();
         Integer age = dto.getAge();
         if (dto.getRecordId() != null) {
-            BizMedicalRecord record = bizMedicalRecordMapper.selectById(dto.getRecordId());
+            AiMedicalRecordContentVO record = aiEmrDataFacadeService.findMedicalRecord(dto.getRecordId());
             if (record != null) {
                 gender = record.getGender();
                 age = record.getAge();

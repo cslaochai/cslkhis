@@ -6,10 +6,8 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.charge.entity.BizSettlementBill;
-import com.his.charge.mapper.BizFundAccountTxnMapper;
-import com.his.charge.mapper.BizSettlementBillMapper;
 import com.his.spi.vo.SettlementStateVO;
+import com.his.spi.service.ChargeFacadeService;
 import com.his.common.constant.DictTypeConst;
 import com.his.common.enums.AdmissionOrderStatusEnum;
 import com.his.common.enums.AdmitStatusEnum;
@@ -92,15 +90,15 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
 
     private final BedCenterMapper bedCenterMapper;
 
-    private final BizSettlementBillMapper bizSettlementBillMapper;
-
-    private final BizFundAccountTxnMapper bizFundAccountTxnMapper;
-
     private final SysMessageService sysMessageService;
-
     private final DeathCertificateService deathCertificateService;
 
     private final DictCacheService dictCacheService;
+
+    /**
+     * 住院结算状态与预交金余额端口（实现在 his-charge）
+     */
+    private final ChargeFacadeService chargeFacadeService;
 
     /**
      * 时间精度统一到「秒」。
@@ -1261,59 +1259,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
     }
 
     private SettlementStateVO settlementState(Long admissionId) {
-        SettlementStateVO state = new SettlementStateVO();
-        if (admissionId == null) {
-            state.setText("入院ID为空，无法校验结算状态");
-            return state;
-        }
-
-        BizSettlementBill discharge = latestDischargeBill(admissionId);
-        BigDecimal balance = NumUtil.orZero(bizFundAccountTxnMapper.sumAdmissionBalance(admissionId));
-        if (discharge == null) {
-            // 未结算也要把预交金余额带回去：前台靠这句话判断"是没钱结、还是压根没办结算"
-            state.setSettled(false);
-            state.setArrearsAmount(BigDecimal.ZERO);
-            state.setText("尚未办理住院结算（预交金余额 " + balance.toPlainString() + " 元）");
-            return state;
-        }
-
-        boolean paidOff = isPaidOff(discharge);
-        state.setSettled(true);
-        state.setSettlementNo(discharge.getBillNo());
-        state.setArrearsAmount(paidOff ? BigDecimal.ZERO : NumUtil.orZero(discharge.getPayableAmount()).subtract(NumUtil.orZero(discharge.getPaidAmount())));
-        // settle_status 是旧表字段语义，四层后由账单状态推导：1-已结清 2-欠费
-        state.setSettleStatus(paidOff ? InpatientSettleStatusEnum.CLEARED.getCode() : InpatientSettleStatusEnum.ARREARS.getCode());
-        state.setText("已结算（" + (paidOff ? "已结清" : "欠费 " + state.getArrearsAmount().toPlainString() + " 元")
-                + "，账单号 " + discharge.getBillNo() + "，" + BillStatusEnum.getLabel(discharge.getBillStatus())
-                + "，预交金余额 " + balance.toPlainString() + " 元）");
-        return state;
-    }
-
-    private BizSettlementBill latestDischargeBill(Long admissionId) {
-        if (admissionId == null) {
-            return null;
-        }
-        BizSettlementBill latest = null;
-        for (BizSettlementBill bill : bizSettlementBillMapper.selectList(new LambdaQueryWrapper<BizSettlementBill>()
-                .eq(BizSettlementBill::getEncounterType, EncounterTypeEnum.INPATIENT.getCode())
-                .eq(BizSettlementBill::getEncounterId, admissionId)
-                .orderByDesc(BizSettlementBill::getId))) {
-            // 中途结算与门诊账单都不算出院结算；作废的那张是"这次结算撤销了、要重结"，也不算
-            if (!BillTypeEnum.DISCHARGE.getCode().equals(bill.getBillType())
-                    || BillStatusEnum.VOIDED.getCode().equals(bill.getBillStatus())) {
-                continue;
-            }
-            if (latest == null || bill.getId() > latest.getId()) {
-                latest = bill;
-            }
-        }
-        return latest;
-    }
-
-    /**
-     * 是否已付清：应缴为 0 也算付清（预交金全额抵扣后账单应缴就是 0，没有流水但确实结清了）。
-     */
-    private boolean isPaidOff(BizSettlementBill bill) {
-        return NumUtil.orZero(bill.getPayableAmount()).subtract(NumUtil.orZero(bill.getPaidAmount())).compareTo(BigDecimal.ZERO) <= 0;
+        // 结算状态口径归收费域（含预交金余额文案），住院域不再自建账单/流水查询，避免两套口径漂移
+        return chargeFacadeService.state(admissionId);
     }
 }

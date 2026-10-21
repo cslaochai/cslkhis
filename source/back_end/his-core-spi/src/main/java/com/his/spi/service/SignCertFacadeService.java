@@ -1,8 +1,17 @@
 package com.his.spi.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.his.spi.dto.SignCertIssueDTO;
+import com.his.spi.dto.SignCertPageQueryDTO;
+import com.his.spi.dto.SignCertRevokeDTO;
+import com.his.spi.vo.SignCaProbeOutboundVO;
+import com.his.spi.vo.SignCaStatusVO;
 import com.his.spi.vo.SignCertBriefVO;
+import com.his.spi.vo.SignCertSelectListVO;
+import com.his.spi.vo.SignCertVO;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 签名证书端口：证书取用、私钥解密与签名运算的唯一出口，证书事实仍由签名域持有。
@@ -94,4 +103,41 @@ public interface SignCertFacadeService {
      * 签名算法名，落进签名行的算法列。
      */
     String signAlgo();
+
+    // ---------- 证书台账运维（签名中心页面口径，跨模块经本端口暴露） ----------
+
+    /**
+     * 证书台账分页：按持有人、证书状态、签发方式与关键字过滤。
+     */
+    IPage<SignCertVO> listCertPage(SignCertPageQueryDTO query);
+
+    /**
+     * 单张证书详情：含公钥 PEM、指纹与签发信息；证书不存在抛业务异常。
+     */
+    SignCertVO getCertDetail(Long certId);
+
+    /**
+     * 人工签发证书（已有有效证书时拒绝，必须先吊销），返回签发结果。
+     */
+    SignCertVO issueCert(SignCertIssueDTO dto);
+
+    /**
+     * 吊销证书：必须写明理由，只改状态不删行——历史签名仍要靠它的公钥验通。
+     */
+    void revokeCert(SignCertRevokeDTO dto);
+
+    /**
+     * 有效证书下拉选项：按员工姓名 / 证书号模糊查有效证书，供证书与签发人选择。
+     */
+    List<SignCertSelectListVO> listActiveCertOptions(String keyword);
+
+    /**
+     * CA 模式状态：院内自签 / 外部 CA 的实时自检（模式、适配器名、是否就绪、行为提示）。
+     */
+    SignCaStatusVO caStatus();
+
+    /**
+     * 证书机构外发探针：本地生成密钥对并向适配器提交一次 CSR 试跑，回显提交与回执事实，不落库。
+     */
+    SignCaProbeOutboundVO probeCaOutbound();
 }

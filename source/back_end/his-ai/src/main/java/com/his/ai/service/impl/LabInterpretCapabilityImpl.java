@@ -1,6 +1,5 @@
 package com.his.ai.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.ai.constant.AiCapabilityKeys;
 import com.his.ai.dto.AiCallDTO;
 import com.his.ai.dto.LabInterpretExecuteDTO;
@@ -17,13 +16,10 @@ import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
-import com.his.medicaltech.entity.BizLabResult;
-import com.his.medicaltech.entity.BizLaboratoryRecord;
-import com.his.medicaltech.mapper.BizLabResultMapper;
-import com.his.medicaltech.mapper.BizLaboratoryRecordMapper;
-import com.his.medicaltech.support.LabAbnormalJudge;
-import com.his.medicaltech.support.LabCriticalValueRules;
-import com.his.medicaltech.support.LabReferenceRangeParser;
+import com.his.spi.dto.AiLabConclusionSaveDTO;
+import com.his.spi.service.AiLabDataFacadeService;
+import com.his.spi.vo.AiLabRecordVO;
+import com.his.spi.vo.AiLabResultRowVO;
 import com.his.common.enums.AiExpressionSourceEnum;
 import com.his.common.enums.AiBizTypeEnum;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +28,6 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDateTime;
 import java.util.*;
 
 /**
@@ -80,9 +75,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
 
     private static final int CONCLUSION_MAX_LENGTH = 500;
 
-    private final BizLaboratoryRecordMapper bizLaboratoryRecordMapper;
-
-    private final BizLabResultMapper bizLabResultMapper;
+    private final AiLabDataFacadeService aiLabDataFacadeService;
 
     private final AiExecutionService aiExecutionService;
 
@@ -174,7 +167,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
         StringBuilder builder = new StringBuilder(String.format(
                 "%n另有 %d 项未能自动判定（参考区间不可用），未纳入异常统计，需人工核对：", count));
         for (LabItemOverviewVO item : vo.getItems()) {
-            if (LabAbnormalJudge.isUnjudged(item.getJudgeNote())) {
+            if (Boolean.TRUE.equals(item.getUnjudged())) {
                 builder.append(item.getItemName()).append('、');
             }
         }
@@ -273,12 +266,12 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
     public LabInterpretResultVO execute(LabInterpretExecuteDTO dto) {
         long start = System.currentTimeMillis();
 
-        BizLaboratoryRecord record = bizLaboratoryRecordMapper.selectById(dto.getRecordId());
+        AiLabRecordVO record = aiLabDataFacadeService.findLabRecord(dto.getRecordId());
         if (record == null) {
             throw new BusinessException("检验记录不存在：" + dto.getRecordId());
         }
 
-        List<BizLabResult> results = loadResults(record.getId());
+        List<AiLabResultRowVO> results = aiLabDataFacadeService.listLabResults(record.getId());
         if (results.isEmpty()) {
             throw new BusinessException("该检验记录尚未录入结果，无法解读：" + record.getRecordNo());
         }
@@ -292,7 +285,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
         vo.setLaboratoryItemName(record.getLaboratoryItemName());
         vo.setReportTime(record.getExecuteTime());
 
-        // 规则层：逐项概览 + 危急值
+        // 规则层：逐项概览 + 危急值（异常方向/未判定/危急值均由医技域算好随结果给出）
         List<LabItemOverviewVO> items = buildOverview(results);
         vo.setItems(items);
         vo.setItemCount(items.size());
@@ -305,7 +298,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
         // 未判定项既不算异常也不算正常。必须单独计数并显式说明，
         // 否则「共 8 项 / 7 项异常」会让读的人默认剩下那 1 项是正常的。
         vo.setUnjudgedCount((int) items.stream()
-                .filter(item -> LabAbnormalJudge.isUnjudged(item.getJudgeNote()))
+                .filter(item -> Boolean.TRUE.equals(item.getUnjudged()))
                 .count());
 
         // 规则层：历史趋势
@@ -363,32 +356,20 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
 
     // 降级时的规则结论
 
-    private List<BizLabResult> loadResults(Long recordId) {
-        List<BizLabResult> results = bizLabResultMapper.selectList(
-                new LambdaQueryWrapper<BizLabResult>()
-                        .eq(BizLabResult::getRecordId, recordId)
-                        .orderByAsc(BizLabResult::getSortOrder)
-                        .orderByAsc(BizLabResult::getId));
-        return results == null ? List.of() : results;
-    }
-
-    private List<LabItemOverviewVO> buildOverview(List<BizLabResult> results) {
+    private List<LabItemOverviewVO> buildOverview(List<AiLabResultRowVO> results) {
         List<LabItemOverviewVO> items = new ArrayList<>();
-        for (BizLabResult result : results) {
+        for (AiLabResultRowVO result : results) {
             LabItemOverviewVO item = new LabItemOverviewVO();
             item.setItemName(result.getLaboratoryItemName());
             item.setResultValue(result.getResultValue());
             item.setResultUnit(result.getResultUnit());
             item.setReferenceRange(result.getReferenceRange());
             item.setAbnormalFlag(result.getAbnormalFlag());
-            item.setAbnormalFlagText(LabAbnormalJudge.getText(result.getAbnormalFlag(), result.getJudgeNote()));
+            item.setAbnormalFlagText(result.getAbnormalFlagText());
             item.setJudgeNote(result.getJudgeNote());
-
-            Optional<LabCriticalValueRules.Hit> critical = LabCriticalValueRules.check(
-                    result.getLaboratoryItemCode(), result.getLaboratoryItemName(),
-                    result.getResultUnit(), result.getResultValue());
-            item.setCritical(critical.isPresent());
-            critical.ifPresent(hit -> item.setCriticalDesc(hit.description()));
+            item.setCritical(Boolean.TRUE.equals(result.getCritical()));
+            item.setCriticalDesc(result.getCriticalDesc());
+            item.setUnjudged(Boolean.TRUE.equals(result.getUnjudged()));
             items.add(item);
         }
         return items;
@@ -398,32 +379,25 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
      * 历史趋势：同患者、同检验大项目的历史记录，按项目名逐项比较数值。
      * <p>
      * 只纳入能解析出数值的点 —— 定性结果（阴性/阳性）没有「升温降温」可言，
-     * 把「阴性 → 阳性」硬算成趋势只会误导。
+     * 把「阴性 → 阳性」硬算成趋势只会误导。数值由医技域预先解析随结果给出。
      */
-    private List<LabTrendVO> buildTrends(BizLaboratoryRecord current, List<BizLabResult> currentResults) {
-        List<BizLaboratoryRecord> history = bizLaboratoryRecordMapper.selectList(
-                new LambdaQueryWrapper<BizLaboratoryRecord>()
-                        .eq(BizLaboratoryRecord::getPatientId, current.getPatientId())
-                        .eq(current.getLaboratoryItemId() != null,
-                                BizLaboratoryRecord::getLaboratoryItemId, current.getLaboratoryItemId())
-                        .ne(BizLaboratoryRecord::getId, current.getId())
-                        .isNotNull(BizLaboratoryRecord::getExecuteTime)
-                        .orderByDesc(BizLaboratoryRecord::getExecuteTime)
-                        .last("LIMIT " + TREND_HISTORY_LIMIT));
+    private List<LabTrendVO> buildTrends(AiLabRecordVO current, List<AiLabResultRowVO> currentResults) {
+        List<AiLabRecordVO> history = aiLabDataFacadeService.listHistoryLabRecords(
+                current.getPatientId(), current.getLaboratoryItemId(), current.getId(), TREND_HISTORY_LIMIT);
         if (history == null || history.isEmpty()) {
             return List.of();
         }
 
         // 时间升序，让「首次」是真正最早的一次
-        List<BizLaboratoryRecord> ordered = new ArrayList<>(history);
+        List<AiLabRecordVO> ordered = new ArrayList<>(history);
         ordered.add(current);
         ordered.sort(Comparator.comparing(
-                BizLaboratoryRecord::getExecuteTime, Comparator.nullsLast(Comparator.naturalOrder())));
+                AiLabRecordVO::getExecuteTime, Comparator.nullsLast(Comparator.naturalOrder())));
 
-        Map<Long, List<BizLabResult>> resultsByRecord = new HashMap<>();
-        for (BizLaboratoryRecord record : ordered) {
+        Map<Long, List<AiLabResultRowVO>> resultsByRecord = new HashMap<>();
+        for (AiLabRecordVO record : ordered) {
             resultsByRecord.put(record.getId(),
-                    record.getId().equals(current.getId()) ? currentResults : loadResults(record.getId()));
+                    record.getId().equals(current.getId()) ? currentResults : aiLabDataFacadeService.listLabResults(record.getId()));
         }
 
         // 以「项目编码优先、否则项目名」作为跨记录的对齐键
@@ -432,9 +406,9 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
         Map<String, String> labelByKey = new LinkedHashMap<>();
         Map<String, String> unitByKey = new LinkedHashMap<>();
 
-        for (BizLaboratoryRecord record : ordered) {
-            for (BizLabResult result : resultsByRecord.getOrDefault(record.getId(), List.of())) {
-                Double numeric = LabReferenceRangeParser.firstNumber(result.getResultValue());
+        for (AiLabRecordVO record : ordered) {
+            for (AiLabResultRowVO result : resultsByRecord.getOrDefault(record.getId(), List.of())) {
+                Double numeric = result.getNumericValue();
                 if (numeric == null) {
                     continue;
                 }
@@ -478,7 +452,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
         return new ArrayList<>(trends.values());
     }
 
-    private Optional<LabInterpretLlmOutputDTO> callModel(BizLaboratoryRecord record,
+    private Optional<LabInterpretLlmOutputDTO> callModel(AiLabRecordVO record,
                                                          List<LabItemOverviewVO> items,
                                                          List<LabTrendVO> trends) {
         LabInterpretPromptVariablesVO variables = new LabInterpretPromptVariablesVO();
@@ -555,7 +529,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
     private String renderUnjudged(List<LabItemOverviewVO> items) {
         StringBuilder builder = new StringBuilder();
         for (LabItemOverviewVO item : items) {
-            if (LabAbnormalJudge.isUnjudged(item.getJudgeNote())) {
+            if (Boolean.TRUE.equals(item.getUnjudged())) {
                 builder.append("- ").append(item.getItemName()).append(" = ")
                         .append(item.getResultValue());
                 if (TextUtil.hasText(item.getResultUnit())) {
@@ -597,15 +571,17 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
     }
 
     /**
-     * 写回检验记录的结论与建议。只有调用方显式要求时才走到这里。
+     * 写回检验记录的结论与建议。只有调用方显式要求时才走到这里，
+     * 由医技域通过 {@link AiLabDataFacadeService#saveConclusion} 覆盖写。
      */
-    private boolean writeBack(BizLaboratoryRecord record, LabInterpretResultVO vo) {
+    private boolean writeBack(AiLabRecordVO record, LabInterpretResultVO vo) {
         try {
-            record.setDiagnosis(TextUtil.cut(vo.getConclusion(), 2000));
-            record.setSuggestions(vo.getSuggestions() == null || vo.getSuggestions().isEmpty()
+            AiLabConclusionSaveDTO dto = new AiLabConclusionSaveDTO();
+            dto.setRecordId(record.getId());
+            dto.setConclusion(TextUtil.cut(vo.getConclusion(), 2000));
+            dto.setSuggestions(vo.getSuggestions() == null || vo.getSuggestions().isEmpty()
                     ? null : String.join("\n", vo.getSuggestions()));
-            record.setUpdateTime(LocalDateTime.now());
-            bizLaboratoryRecordMapper.updateById(record);
+            aiLabDataFacadeService.saveConclusion(dto);
             return true;
         } catch (Exception ex) {
             log.error("[AI-检验解读] 结论写回失败，草稿仍正常返回", ex);

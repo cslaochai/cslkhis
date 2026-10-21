@@ -7,12 +7,12 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.spi.dto.FeeBookDTO;
 import com.his.spi.vo.FeeRecordVO;
 import com.his.common.constant.DictTypeConst;
-import com.his.charge.service.ArrearsControlGateService;
+import com.his.spi.service.ChargeFacadeService;
 import com.his.spi.dto.SignCommandDTO;
 import com.his.common.enums.*;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
-import com.his.emr.service.EmrSignatureService;
+import com.his.spi.service.EmrSignatureFacadeService;
 import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -32,11 +32,12 @@ import com.his.patient.vo.InpatientOrderVO;
 import com.his.patient.vo.InpatientOrderVerifyNotifyPayloadVO;
 import com.his.spi.vo.WardVO;
 import com.his.spi.dto.TechAuthGateDTO;
+import com.his.spi.vo.ArrearsControlCheckResultVO;
 import com.his.common.entity.CurrentUser;
 import com.his.common.enums.BizTypeEnum;
 import com.his.system.service.DeptScopeService;
 import com.his.system.service.DictCacheService;
-import com.his.medicaltech.service.EmployeeTechAuthService;
+import com.his.spi.service.EmployeeTechAuthFacadeService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -77,13 +78,13 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
 
     private final DietPlanService dietPlanService;
 
-    private final EmrSignatureService emrSignatureService;
+    private final EmrSignatureFacadeService emrSignatureService;
 
     private final SysMessageService sysMessageService;
 
-    private final ArrearsControlGateService arrearsControlService;
+    private final ChargeFacadeService chargeFacadeService;
 
-    private final EmployeeTechAuthService employeeTechAuthService;
+    private final EmployeeTechAuthFacadeService employeeTechAuthService;
 
     private final DictCacheService dictCacheService;
 
@@ -131,8 +132,8 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
                     .map(InpatientOrderItemDTO::getOrderClass)
                     .filter(Objects::nonNull)
                     .collect(java.util.stream.Collectors.toSet());
-            ArrearsControlGateService.CheckResult check =
-                    arrearsControlService.checkNewOrder(new ArrearsControlGateService.OrderCheck(admission.getAdmissionId(), classes));
+            ArrearsControlCheckResultVO check =
+                    chargeFacadeService.checkNewOrderArrears(admission.getAdmissionId(), classes);
             if (check != null && !check.isAllowed()) {
                 throw new BusinessException(check.getReason());
             }

@@ -7,7 +7,6 @@ import com.his.spi.vo.DictItemVO;
 import com.his.spi.vo.EmployeeBriefVO;
 import com.his.spi.vo.EmployeePostBriefVO;
 import com.his.spi.vo.Icd10BriefVO;
-import com.his.spi.vo.PatientTagBriefVO;
 import com.his.spi.vo.RoleBriefVO;
 import com.his.spi.vo.UserBriefVO;
 import com.his.spi.vo.WardBriefVO;
@@ -201,18 +200,6 @@ public interface SystemFacadeService {
      * @return 未配置或值为空白时返回 {@code null}，由调用方决定缺省值
      */
     String findConfigValue(String configKey);
-
-    // ---------- 患者标签 ----------
-
-    /**
-     * 按标签名批量取标签，用于按「老年/儿童」等固定名称挑选自动打标标签。
-     */
-    List<PatientTagBriefVO> listPatientTagsByNames(Collection<String> tagNames);
-
-    /**
-     * 按标签ID批量取标签，用于就诊人列表把标签ID翻译成展示字段。
-     */
-    List<PatientTagBriefVO> listPatientTagsByIds(Collection<Long> tagIds);
 
     // ---------- 字典 ----------
 

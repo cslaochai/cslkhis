@@ -26,6 +26,10 @@
             <artifactId>his-core-spi</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-system</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.github.binarywang</groupId>
             <artifactId>weixin-java-pay</artifactId>
         </dependency>
@@ -40,10 +44,6 @@
         <dependency>
             <groupId>com.github.librepdf</groupId>
             <artifactId>openpdf</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.his</groupId>
-            <artifactId>his-system</artifactId>
         </dependency>
     </dependencies>
 

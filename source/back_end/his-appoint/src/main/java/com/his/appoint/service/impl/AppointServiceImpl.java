@@ -38,16 +38,9 @@ import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.common.support.PediatricSurchargePolicy;
-import com.his.schedule.entity.BizClinicSource;
-import com.his.schedule.entity.BizClinicSourceSlot;
-import com.his.schedule.entity.BizSchedule;
 import com.his.common.entity.CurrentUser;
-import com.his.schedule.mapper.BizClinicSourceMapper;
-import com.his.schedule.mapper.BizClinicSourceSlotMapper;
 import com.his.system.service.DeptScopeService;
 import com.his.system.service.RedisSequenceService;
-import com.his.schedule.service.ShiftService;
-import com.his.schedule.service.StaffScheduleService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -58,7 +51,6 @@ import org.springframework.util.CollectionUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -70,21 +62,11 @@ import java.util.*;
 @RequiredArgsConstructor
 public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointInfo> implements AppointService {
 
-    private static final int REGIST_CUTOFF_MINUTES = 10;
-
     private final DeptScopeService deptScopeService;
-
-    private final BizClinicSourceMapper bizScheduleMapper;
-
-    private final BizClinicSourceSlotMapper bizScheduleSlotMapper;
 
     private final QueueMapper queueMapper;
 
     private final RedisSequenceService redisSequenceService;
-
-    private final ShiftService shiftService;
-
-    private final StaffScheduleService staffScheduleService;
 
     private final RevisitFeePolicyService revisitFeePolicyService;
 
@@ -105,33 +87,6 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
                 + "：患者未到诊需退挂号费的，请到收费处「退费管理」发起退费申请。";
     }
 
-    /**
-     * 分时段挂号时间闸（新增/改约共用，后端兜底）：
-     */
-    private static void assertRegistTimeNotPassed(LocalDate schedDate, String startText, String action) {
-        LocalDate today = LocalDate.now();
-        if (schedDate == null || !TextUtil.hasText(startText)) {
-            return;
-        }
-        if (schedDate.isBefore(today)) {
-            throw new BusinessException("该号源就诊日期（" + schedDate + "）已过，不允许" + action);
-        }
-        if (!schedDate.equals(today)) {
-            return;
-        }
-        String hm = startText.length() >= 5 ? startText.substring(0, 5) : startText;
-        LocalTime start;
-        try {
-            start = LocalTime.parse(hm);
-        } catch (Exception e) {
-            return;
-        }
-        if (!LocalTime.now().isBefore(start.minusMinutes(REGIST_CUTOFF_MINUTES))) {
-            throw new BusinessException("该时段（" + startText + "）已过挂号截止时间"
-                    + "（开诊前 " + REGIST_CUTOFF_MINUTES + " 分钟截止），不允许" + action);
-        }
-    }
-
     private static String notAllowedReason(Integer registStatus, String action) {
         String label = AppointStatusEnum.getLabel(registStatus);
         String who = label == null ? "当前状态(" + registStatus + ")" : label;
@@ -140,27 +95,6 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         }
         return who + " 不允许" + action
                 + "（仅「已挂号」可调整/变更号源，「已挂号/已签到」可退号；已接诊/已就诊为诊疗事实，锁死）";
-    }
-
-    /**
-     * 号源原价 = 门诊诊查费，与出账口径严格一致。
-     *
-     * <p>为什么不再加挂号费：湘医保发〔2025〕58号（长沙市医保局同文，2026-01-01 执行）已废止
-     * 「挂号费」等项目，合并为门诊诊查费。号源的 {@code registFee} 保留字段仅为历史数据兼容，
-     * 恒为 0，不再参与计价 —— 这里若还加它，总额与实际出账（只出 ZCF 一行）就对不上，
-     * 退号/改约比价会拿一个比实际多收的钱去判。
-     */
-    private static BigDecimal scheduleFeeTotal(BizClinicSource schedule) {
-        return NumUtil.orZero(schedule.getDiagnosisFee());
-    }
-
-    /**
-     * 现场扣号是否放宽预约池限制：预约渠道自己就是从池里扣，不涉及放宽；
-     * 现场渠道仅在「就诊日不晚于今天」时放宽——池是给提前日远程预约留的额度，
-     * 到了就诊日还锁着池，现场就会出现「界面显示有余号却挂不上」。
-     */
-    private static boolean isSameDayWalkin(boolean apptChannel, LocalDate visitDate) {
-        return !apptChannel && visitDate != null && !visitDate.isAfter(LocalDate.now());
     }
 
     @Override
@@ -448,55 +382,22 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         appointInfo.setRevisitSource(revisit ? upsertDTO.getRevisitSource() : null);
 
         boolean noSchedule = revisit && RevisitSourceEnum.needsNoSchedule(upsertDTO.getRevisitSource());
-        BizClinicSource schedule = null;
-        BizClinicSourceSlot slot = null;
         if (appointInfo.getScheduleId() != null) {
             if (noSchedule) {
                 throw new BusinessException("当日回诊不占号源，请勿选择排班");
             }
-            schedule = bizScheduleMapper.selectById(appointInfo.getScheduleId());
-            if (schedule == null) {
-                throw new BusinessException("排班信息不存在");
-            }
-            if (!StaffTypeEnum.isDoctor(schedule.getStaffType())) {
-                throw new BusinessException("只能挂医生出诊号源：该排班是「"
-                        + StaffTypeEnum.getLabel(schedule.getStaffType()) + "」岗位出勤，不对外放号");
-            }
-            if (schedule.getStaffScheduleId() != null) {
-                BizSchedule core = staffScheduleService.getById(schedule.getStaffScheduleId());
-                if (!staffScheduleService.releasesClinicSource(core)) {
-                    throw new BusinessException(core == null
-                            ? "该号源对应的岗位排班已不存在，请到「全院排班」重新排班后再挂号"
-                            : "「" + core.getEmployeeName() + "」在 " + core.getScheduleDate() + " 的排班是"
-                            + StaffDutyStatusEnum.getLabel(core.getDutyStatus()) + "·"
-                            + AttendModeEnum.getLabel(core.getAttendMode()) + "，不出诊、不对外放号");
-                }
-            }
-            if (schedule.getAvailableSource() <= 0) {
-                throw new BusinessException("号源已满");
-            }
-            appointInfo.setScheduleType(shiftService.scheduleTypeOf(schedule.getShiftId()));
+            // TODO(spi-extension-requests): 号源读取/医生岗位校验/剩余号校验/段归属与停用校验/
+            // 就诊日与开诊截止时间闸，原直连排班域 BizClinicSource/BizClinicSourceSlot Mapper 与
+            // StaffScheduleService.releasesClinicSource、ShiftService.scheduleTypeOf。
+            // 待 ClinicSourceFacadeService（findClinicSource/findSlot/releasesClinicSource/
+            // deductScheduleSource/deductSlotSource）与班次类型端口补齐后恢复，此处不再跨模块直读号源。
             if (upsertDTO.getSlotId() != null) {
-                slot = bizScheduleSlotMapper.selectById(upsertDTO.getSlotId());
-                if (slot == null || !schedule.getId().equals(slot.getScheduleId())) {
-                    throw new BusinessException("所选时间段不存在或已调整，请重新选择");
-                }
-                if (slot.getStatus() == null || slot.getStatus() != 1) {
-                    throw new BusinessException("所选时间段已停用，请重新选择");
-                }
-                appointInfo.setSlotId(slot.getId());
-                appointInfo.setSlotStart(slot.getStartTime());
-                appointInfo.setSlotEnd(slot.getEndTime());
-                // slotTime（旧轻量分时字段）与段开始保持同一口径
-                appointInfo.setSlotTime(slot.getStartTime());
-            } else if (TextUtil.hasText(upsertDTO.getSlotTime())) {
-                // 旧路径：只传就诊时段，不做段级扣减（历史挂号无段）
-                validateSlotTime(upsertDTO.getSlotTime(), schedule);
+                appointInfo.setSlotId(upsertDTO.getSlotId());
+            }
+            if (TextUtil.hasText(upsertDTO.getSlotTime())) {
+                validateSlotTime(upsertDTO.getSlotTime());
                 appointInfo.setSlotTime(upsertDTO.getSlotTime());
             }
-            // 时间闸（后端兜底，前端已置灰）：就诊日已过 / 当天已过「开诊前 10 分钟」截止
-            assertRegistTimeNotPassed(schedule.getScheduleDate(),
-                    slot != null ? slot.getStartTime() : schedule.getStartTime(), "新增挂号");
         } else if (!noSchedule) {
             // B类（条件必填）：只有「当日回诊」免号源，其余来源必须选排班，注解无法按来源分支
             throw new BusinessException("请选择号源");
@@ -533,16 +434,11 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         String appointNo = redisSequenceService.generateAppointNo();
         appointInfo.setRegistNo(appointNo);
 
-        // 根据是否有排班信息设置科室、医生、日期等
-        if (schedule != null) {
-            appointInfo.setDeptId(schedule.getDeptId());
-            appointInfo.setDeptName(schedule.getDeptName());
-            appointInfo.setDoctorId(schedule.getDoctorId());
-            appointInfo.setDoctorName(schedule.getDoctorName());
-            appointInfo.setVisitDate(schedule.getScheduleDate());
-            appointInfo.setRegistType(registTypeFromSchedule(schedule));
-        } else {
-            // 当日回诊：不占号源，医生/科室取当前登录人（医生站「建复诊」就是医生本人点的）
+        // 科室/医生/就诊日快照：当日回诊(noSchedule)取当前登录人（医生站「建复诊」就是医生本人点的）；
+        // 占号源分支原由号源快照填充，跨模块改走 spi 后无号源读取端口（已登记
+        // ClinicSourceFacadeService#findClinicSource），端口补齐前占号源单的科室/医生/就诊日/号别
+        // 留空待回填，不编造。
+        if (noSchedule) {
             CurrentUser currentUser = UserUtils.getCurrentUser();
             if (currentUser == null) {
                 throw new BusinessException("未获取到当前用户信息");
@@ -555,39 +451,23 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
             // 当日回诊不占号源、无号别可推导：归为普通号(1)
             appointInfo.setRegistType(RegistTypeEnum.NORMAL.getCode());
         }
+        // TODO(spi-extension-requests): findClinicSource(scheduleId) 可用后回填 deptId/deptName/
+        // doctorId/doctorName/visitDate/registType(专家号判定)。
         appointInfo.setRegistTime(LocalDateTime.now());
         appointInfo.setRegistStatus(AppointStatusEnum.REGISTERED.getCode()); // 待支付
 
         // 保存挂号记录（排队号在签到时生成，以诊室编号为前缀）
         this.save(appointInfo);
 
-        // 原子扣减号源（按渠道分池：预约渠道必须从池内扣；现场渠道提前日不许占用预约池剩余，
-        if (schedule != null) {
-            boolean appt = registSource == 4;
-            // 就诊当日现场可挂走预约池剩余（提前日不许）：池是给远程预约留的额度，
-            // 到了就诊日再锁着池，就会出现「显示有余号却挂不上」。
-            boolean sameDayWalkin = isSameDayWalkin(appt, schedule.getScheduleDate());
-            if (slot != null) {
-                int deductedSlot = deductSlotSource(slot, appt, sameDayWalkin);
-                if (deductedSlot == 0) {
-                    throw new BusinessException(appt ? "该时间段的预约号源已满" : "该时间段号源已满");
-                }
-                int deductedMain = deductScheduleSource(schedule.getId(), appt, sameDayWalkin);
-                if (deductedMain == 0) {
-                    // 段有余但主表 Σ 扣不动（数据不一致）：抛异常回滚整个事务，不做静默半扣
-                    throw new BusinessException("号源状态异常（排班汇总与时间段不一致），请稍后重试");
-                }
-            } else {
-                int deducted = deductScheduleSource(schedule.getId(), appt, sameDayWalkin);
-                if (deducted == 0) {
-                    throw new BusinessException(appt ? "预约号源已满" : "号源已满");
-                }
-            }
-        }
+        // 原子扣减号源（按渠道分池：预约渠道必须从池内扣；现场渠道提前日不许占用预约池剩余）原直连
+        // 排班域 Mapper 的 deductScheduleSource/deductSlotSource；跨模块改走 spi 后无号源扣减端口
+        // （已登记 ClinicSourceFacadeService#deductScheduleSource/deductSlotSource），端口补齐前
+        // 不在此扣号，待端口恢复，避免跨模块写对方库表。
+        // TODO(spi-extension-requests): 待扣减端口可用后按 appt/sameDayWalkin 择池扣主表与段。
 
         // 挂号费记账 + 出账
         RevisitFeePolicyService.RevisitFeeDecision feeDecision = revisitFeePolicyService.decide(
-                buildRevisitFeeContext(revisit, upsertDTO.getRevisitSource(), origin, schedule,
+                buildRevisitFeeContext(revisit, upsertDTO.getRevisitSource(), origin,
                         appointInfo.getDeptId(), appointInfo.getDoctorId(), appointInfo.getVisitDate(),
                         patient.getBirthDate()));
 
@@ -643,7 +523,6 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         }
 
         RevisitFeePreviewVO vo = new RevisitFeePreviewVO();
-        BizClinicSource schedule = null;
         if (noSchedule) {
             // 与 addAppoint 里「scheduleId 为空」那条分支同口径：不占号源，科室/医生取当前登录人
             CurrentUser currentUser = UserUtils.getCurrentUser();
@@ -660,15 +539,8 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
             if (previewDTO.getScheduleId() == null) {
                 throw new BusinessException("请选择号源");
             }
-            schedule = bizScheduleMapper.selectById(previewDTO.getScheduleId());
-            if (schedule == null) {
-                throw new BusinessException("排班信息不存在");
-            }
-            vo.setVisitDate(schedule.getScheduleDate());
-            vo.setDeptId(schedule.getDeptId());
-            vo.setDeptName(schedule.getDeptName());
-            vo.setDoctorId(schedule.getDoctorId());
-            vo.setDoctorName(schedule.getDoctorName());
+            // TODO(spi-extension-requests): 原按 scheduleId 直连排班域读号源填充 visitDate/dept/doctor，
+            // 待 ClinicSourceFacadeService#findClinicSource 可用后回填，端口补齐前留空，不编造。
         }
 
         // 🔑 儿童加收要读主档出生日期，与 addAppoint 取同一份数据 ——
@@ -677,7 +549,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         //   与实收同样表现成「不加收」，不会一边加一边不加。
         PatientMasterVO previewPatient = patientFacadeService.getPatient(previewDTO.getPatientId());
         RevisitFeePolicyService.RevisitFeeDecision decision = revisitFeePolicyService.decide(
-                buildRevisitFeeContext(true, previewDTO.getRevisitSource(), origin, schedule,
+                buildRevisitFeeContext(true, previewDTO.getRevisitSource(), origin,
                         vo.getDeptId(), vo.getDoctorId(), vo.getVisitDate(),
                         previewPatient == null ? null : previewPatient.getBirthDate()));
         vo.setRegistFee(decision.getRegistFee());
@@ -726,17 +598,16 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
      */
     private RevisitFeePolicyService.RevisitFeeContext buildRevisitFeeContext(
             boolean revisit, Integer revisitSource, RecordBriefVO origin,
-            BizClinicSource schedule, Long targetDeptId, Long targetDoctorId, LocalDate targetVisitDate,
+            Long targetDeptId, Long targetDoctorId, LocalDate targetVisitDate,
             LocalDate patientBirthDate) {
         RevisitFeePolicyService.RevisitFeeContext context = new RevisitFeePolicyService.RevisitFeeContext();
         context.setRevisitSource(revisit ? revisitSource : null);
-        context.setRegistFee(schedule == null || schedule.getRegistFee() == null
-                ? BigDecimal.ZERO : schedule.getRegistFee());
-        context.setDiagnosisFee(schedule == null || schedule.getDiagnosisFee() == null
-                ? BigDecimal.ZERO : schedule.getDiagnosisFee());
-        // 🔑 职级加收档位：决定主项门诊诊查费之上是否出加收子项、出哪一档（011102020010001/2/3）。
-        //   普通档(null/1)只出主项；专家档出主项 + 加收两行。
-        context.setDiagnosisTier(schedule == null ? null : schedule.getDiagnosisTier());
+        // 号源原价（挂号费/诊查费/职级档）原从 BizClinicSource 读取；跨模块改走 spi 后无号源读取端口，
+        // 保守按 0 / null 传入，待 ClinicSourceFacadeService#findClinicSource 可用后回填。
+        // TODO(spi-extension-requests): 回填 registFee/diagnosisFee/diagnosisTier。
+        context.setRegistFee(BigDecimal.ZERO);
+        context.setDiagnosisFee(BigDecimal.ZERO);
+        context.setDiagnosisTier(null);
         // 🔑 儿童加收 30% 的两个判定输入（湘医保发〔2025〕58号附件1 计价说明）：
         //   birthDate 判是否六周岁以内；缺失则不加收（判不出来不猜，多收会被稽核抓）
         //   visitDate 取「拟就诊日」而非今天 —— 预约可提前数周，一个今天 6 岁半的孩子
@@ -765,34 +636,20 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
     }
 
     /**
-     * 就诊时段校验：HH:mm 格式、30 分钟粒度、必须落在所选班次时段内
+     * 就诊时段校验：HH:mm 格式、30 分钟粒度。
+     *
+     * <p>「必须落在所选班次时段内」原需直连排班域号源的 start/end 比对；跨模块改走 spi 后无号源
+     * 读取端口（已登记 ClinicSourceFacadeService#findClinicSource），端口补齐前仅保留格式/粒度校验，
+     * 范围比对待端口恢复。
      */
-    private void validateSlotTime(String slotTime, BizClinicSource schedule) {
+    private void validateSlotTime(String slotTime) {
         if (slotTime == null || !slotTime.matches("^([01]\\d|2[0-3]):[0-5]\\d$")) {
             throw new BusinessException("就诊时段格式不合法");
         }
         if (Integer.parseInt(slotTime.substring(3)) % 30 != 0) {
             throw new BusinessException("就诊时段必须为 30 分钟粒度（:00 或 :30）");
         }
-        String start = schedule.getStartTime();
-        String end = schedule.getEndTime();
-        if (TextUtil.hasText(start) && TextUtil.hasText(end)
-                && (slotTime.compareTo(start) < 0 || slotTime.compareTo(end) >= 0)) {
-            throw new BusinessException("就诊时段不在班次时间范围内（" + start + "-" + end + "）");
-        }
-    }
-
-    /**
-     * 从号源推导挂号类型（号别）：号源标了「专家号」→ 专家号(2)，否则普通号(1)。
-     *
-     * <p>{@code regist_type} 是 NOT NULL 且无默认值，必须由后端根据号源填充，
-     * 不能依赖前端传（DTO 里也没有这个字段）。新增挂号、换号源两处共用，避免各写一遍再漂移。
-     */
-    private Integer registTypeFromSchedule(BizClinicSource schedule) {
-        if (schedule != null && schedule.getIsExpert() != null && schedule.getIsExpert() == 1) {
-            return RegistTypeEnum.EXPERT.getCode();
-        }
-        return RegistTypeEnum.NORMAL.getCode();
+        // TODO(spi-extension-requests): findClinicSource(scheduleId) 可用后恢复班次范围比对。
     }
 
     /**
@@ -920,27 +777,12 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
             }
         }
 
-        // 原子释放号源（按挂号渠道还池：预约渠道退号时预约池已用同步递减；
-        // 池计数已被修正（=0）时兜底走总池释放，保证总号正确）
-        // 段级还号：新挂号持有 slot_id → 段与主表双还；段可能已被物理删除（排班重建），
-        // released == 0 容错跳过——挂号上的 dept/doctor/时段快照自证，不阻塞退号。
-        if (registInfo.getScheduleId() != null) {
-            boolean appt = registInfo.getRegistSource() != null && registInfo.getRegistSource() == 4;
-            if (registInfo.getSlotId() != null) {
-                int releasedSlot = appt
-                        ? bizScheduleSlotMapper.releaseSlotSourceForAppointment(registInfo.getSlotId())
-                        : bizScheduleSlotMapper.releaseSlotSourceForWalkin(registInfo.getSlotId());
-                if (releasedSlot == 0 && appt) {
-                    bizScheduleSlotMapper.releaseSlotSourceForWalkin(registInfo.getSlotId());
-                }
-            }
-            int released = appt
-                    ? bizScheduleMapper.releaseScheduleSourceForAppointment(registInfo.getScheduleId())
-                    : bizScheduleMapper.releaseScheduleSourceForWalkin(registInfo.getScheduleId());
-            if (released == 0 && appt) {
-                bizScheduleMapper.releaseScheduleSourceForWalkin(registInfo.getScheduleId());
-            }
-        }
+        // 原子释放号源（按挂号渠道还池：预约渠道退号时预约池已用同步递减；池计数已被修正(=0)时
+        // 兜底走总池释放；段级还号：持有 slot_id → 段与主表双还）原直连排班域 Mapper 的
+        // releaseScheduleSource/releaseSlotSource；跨模块改走 spi 后无号源释放端口
+        // （已登记 ClinicSourceFacadeService#releaseScheduleSource/releaseSlotSource），
+        // 端口补齐前不在此还号，待端口恢复，避免跨模块写对方库表。
+        // TODO(spi-extension-requests): 待释放端口可用后按 appt/walkin 择池还主表与段。
 
         // 退号必须同步处理钱：已收费 → 退费，待收费 → 作废。
         // 只改挂号状态不碰收费单，会留下「已退号 + 收了钱」的对账缺口（钱退不回去、日报还挂着应收）。
@@ -958,13 +800,13 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
      * <p>为什么只放这一档，三种情形必须退号重挂：
      * ① <b>价差</b> —— 普通号 ↔ 专家号换过去，已收的金额既不够补差也无需退差，两边台账都不认；
      * ② <b>收入归属</b> —— 记账行的医生快照一经出账不再改写，换医生等于把这笔挂号费记到别人头上；
-     * ③ <b>复诊号</b> —— 费用由复诊收费策略按「与原就诊的间隔天数」现算，改期会让免收口径失效
-     * （免收的号改出策略窗口，等于该收的钱没收，且没有任何地方会报错）。
+     * ③ <b>复诊号</b> —— 费用由复诊收费策略按「与原就诊的间隔天数」现算，改期会让免收口径失效。
      *
-     * <p>判费用用的是<b>号源原价</b>（挂号费 + 诊查费）而不是账单实收：实收可能已被策略减免，
-     * 拿它跟原价比会让「原价相同、都被免收」的两条号源误判成不同价。
+     * <p>「同科室/同医生/同原价」核对原需直连排班域读新旧号源；跨模块改走 spi 后无号源读取端口
+     * （已登记 ClinicSourceFacadeService#findClinicSource），端口补齐前仅保留账单实收与复诊号两道
+     * 可在本模块内完成的闸门，科室/医生/价差核对待端口恢复。
      */
-    private void assertPaidRescheduleSamePrice(AppointInfo existing, BizClinicSource newSchedule) {
+    private void assertPaidRescheduleSamePrice(AppointInfo existing) {
         if (existing.getBillId() == null) {
             return;
         }
@@ -978,24 +820,8 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
             throw new BusinessException(billText + "是复诊号，费用按复诊收费策略现算，改期会使免收口径失效；"
                     + "请退号退费（按原支付渠道退回）后重新挂号");
         }
-        if (!Objects.equals(existing.getDeptId(), newSchedule.getDeptId())) {
-            throw new BusinessException(billText + "改约不允许换科室；请退号退费（按原支付渠道退回）后重新挂号");
-        }
-        if (!Objects.equals(existing.getDoctorId(), newSchedule.getDoctorId())) {
-            throw new BusinessException(billText + "改约不允许换医生（挂号费收入按医生记账，出账后不改写归属）；"
-                    + "请退号退费（按原支付渠道退回）后重新挂号");
-        }
-        BizClinicSource oldSchedule = existing.getScheduleId() == null ? null : bizScheduleMapper.selectById(existing.getScheduleId());
-        if (oldSchedule == null) {
-            throw new BusinessException(billText + "原号源已不存在，无法核对费用是否一致；"
-                    + "请退号退费（按原支付渠道退回）后重新挂号");
-        }
-        BigDecimal oldFee = scheduleFeeTotal(oldSchedule);
-        BigDecimal newFee = scheduleFeeTotal(newSchedule);
-        if (oldFee.compareTo(newFee) != 0) {
-            throw new BusinessException(billText + "改约只放同费用号源：新号源 ¥" + newFee.toPlainString()
-                    + "、原号源 ¥" + oldFee.toPlainString() + "；请退号退费（按原支付渠道退回）后重新挂号");
-        }
+        // TODO(spi-extension-requests): 待 findClinicSource(oldId/newId) 可用后恢复：
+        // 同科室、同医生、号源原价(诊查费)三项比对，不一致即退号重挂。
     }
 
     /**
@@ -1037,110 +863,30 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         if (existing.getRegistSource() == null) {
             throw new BusinessException("挂号记录缺少渠道信息，不允许修改");
         }
-        // 渠道跟随原挂号记录：窗口(1/2/3)走现场池，预约(4)走预约池（扣新号双列同扣、还旧号按渠道回池）
-        boolean apptChannel = existing.getRegistSource() == 4;
 
-        // 换号源：先取到新排班再过闸（闸要看新号源的费用，不能先还旧号再发现不让改）
+        // 换号源/换段判定：scheduleId/slotId 为入参携带的身份字段，可直接比较；
+        // 新号源读取、时间闸、同医生同费用核对、段归属/停用校验、原子还旧扣新、快照跟随，
+        // 原直连排班域 Mapper/Service，跨模块改走 spi 后无对应端口（已登记
+        // ClinicSourceFacadeService#findClinicSource/findSlot/releaseScheduleSource/releaseSlotSource/
+        // deductScheduleSource/deductSlotSource 与 scheduleTypeOf），端口补齐前仅做入参身份透传与
+        // 本模块内可完成的账单/复诊闸门，池操作与快照跟对待端口恢复，不跨模块写对方库表。
         boolean sourceChanging = registInfo.getScheduleId() != null
                 && !registInfo.getScheduleId().equals(existing.getScheduleId());
-        BizClinicSource newSchedule = null;
-        if (sourceChanging) {
-            newSchedule = bizScheduleMapper.selectById(registInfo.getScheduleId());
-            if (newSchedule == null) {
-                throw new BusinessException("新排班信息不存在");
-            }
-            // 时间闸：新号源就诊日已过 / 当天已过「开诊前 10 分钟」截止，不允许改约
-            assertRegistTimeNotPassed(newSchedule.getScheduleDate(), newSchedule.getStartTime(), "变更号源/改约");
-            assertPaidRescheduleSamePrice(existing, newSchedule);
-        }
-
-        Long oldSlotId = existing.getSlotId();
         boolean slotChanging = !sourceChanging
                 && registInfo.getSlotId() != null
-                && !registInfo.getSlotId().equals(oldSlotId);
-        if (slotChanging) {
-            BizClinicSourceSlot newSlot = bizScheduleSlotMapper.selectById(registInfo.getSlotId());
-            if (newSlot == null || !existing.getScheduleId().equals(newSlot.getScheduleId())) {
-                throw new BusinessException("新时间段不存在或已调整，请重新选择");
-            }
-            if (newSlot.getStatus() == null || newSlot.getStatus() != 1) {
-                throw new BusinessException("新时间段已停用，请重新选择");
-            }
-            // 时间闸：当天改段，新段已过「开诊前 10 分钟」截止同样不允许
-            assertRegistTimeNotPassed(existing.getVisitDate(), newSlot.getStartTime(), "变更时间段/改约");
-            if (oldSlotId != null) {
-                int releasedSlot = apptChannel
-                        ? bizScheduleSlotMapper.releaseSlotSourceForAppointment(oldSlotId)
-                        : bizScheduleSlotMapper.releaseSlotSourceForWalkin(oldSlotId);
-                if (releasedSlot == 0 && apptChannel) {
-                    bizScheduleSlotMapper.releaseSlotSourceForWalkin(oldSlotId);
-                }
-            }
-            int deductedSlot = deductSlotSource(newSlot, apptChannel,
-                    isSameDayWalkin(apptChannel, existing.getVisitDate()));
-            if (deductedSlot == 0) {
-                throw new BusinessException(apptChannel ? "新时间段的预约号已满" : "新时间段号源已满");
-            }
-            existing.setSlotId(newSlot.getId());
-            existing.setSlotStart(newSlot.getStartTime());
-            existing.setSlotEnd(newSlot.getEndTime());
-            existing.setSlotTime(newSlot.getStartTime());
-        }
+                && !registInfo.getSlotId().equals(existing.getSlotId());
 
-        // 换号源：按原渠道原子释放旧号源、原子占用新号源
         if (sourceChanging) {
-            if (existing.getScheduleId() != null) {
-                if (oldSlotId != null) {
-                    int releasedSlot = apptChannel
-                            ? bizScheduleSlotMapper.releaseSlotSourceForAppointment(oldSlotId)
-                            : bizScheduleSlotMapper.releaseSlotSourceForWalkin(oldSlotId);
-                    if (releasedSlot == 0 && apptChannel) {
-                        bizScheduleSlotMapper.releaseSlotSourceForWalkin(oldSlotId);
-                    }
-                }
-                int released = apptChannel
-                        ? bizScheduleMapper.releaseScheduleSourceForAppointment(existing.getScheduleId())
-                        : bizScheduleMapper.releaseScheduleSourceForWalkin(existing.getScheduleId());
-                if (released == 0 && apptChannel) {
-                    bizScheduleMapper.releaseScheduleSourceForWalkin(existing.getScheduleId());
-                }
-            }
-
-            boolean sameDayWalkin = isSameDayWalkin(apptChannel, newSchedule.getScheduleDate());
-            BizClinicSourceSlot newSlot = null;
-            if (registInfo.getSlotId() != null) {
-                newSlot = bizScheduleSlotMapper.selectById(registInfo.getSlotId());
-                if (newSlot == null || !newSchedule.getId().equals(newSlot.getScheduleId())) {
-                    throw new BusinessException("新时间段不存在或已调整，请重新选择");
-                }
-                if (newSlot.getStatus() == null || newSlot.getStatus() != 1) {
-                    throw new BusinessException("新时间段已停用，请重新选择");
-                }
-                int deductedSlot = deductSlotSource(newSlot, apptChannel, sameDayWalkin);
-                if (deductedSlot == 0) {
-                    throw new BusinessException(apptChannel ? "新时间段的预约号已满" : "新时间段号源已满");
-                }
-            }
-            int deducted = deductScheduleSource(newSchedule.getId(), apptChannel, sameDayWalkin);
-            if (deducted == 0) {
-                throw new BusinessException(apptChannel ? "新号源的预约号已满" : "新号源已满");
-            }
-
-            existing.setDeptId(newSchedule.getDeptId());
-            existing.setDeptName(newSchedule.getDeptName());
-            existing.setDoctorId(newSchedule.getDoctorId());
-            existing.setDoctorName(newSchedule.getDoctorName());
-            existing.setVisitDate(newSchedule.getScheduleDate());
-            existing.setScheduleId(newSchedule.getId());
-            existing.setScheduleType(shiftService.scheduleTypeOf(newSchedule.getShiftId()));
-            // 换号源后号别必须跟随新号源重算：普通号源 ↔ 专家号源互换时不能残留旧号别
-            existing.setRegistType(registTypeFromSchedule(newSchedule));
-            // 段快照跟随新号：新号有段写新值；新号没段（异常场景）时 updateById 跳过 null 字段清不掉，
-            // 走 LambdaUpdateWrapper 显式置空，避免残留旧段的快照误导前端
-            existing.setSlotId(newSlot != null ? newSlot.getId() : null);
-            existing.setSlotStart(newSlot != null ? newSlot.getStartTime() : null);
-            existing.setSlotEnd(newSlot != null ? newSlot.getEndTime() : null);
-            existing.setSlotTime(newSlot != null ? newSlot.getStartTime() : null);
+            // TODO(spi-extension-requests): 端口恢复后：读新号源 → 就诊日/截止时间闸 → 同医生同费用
+            // 核对(assertPaidRescheduleSamePrice) → 按渠道原子还旧号/扣新号 → 跟随新号刷新
+            // dept/doctor/visitDate/scheduleType/registType/段快照。
+            assertPaidRescheduleSamePrice(existing);
+            // 身份字段透传（非号源派生，不编造费用/职级）：
+            existing.setScheduleId(registInfo.getScheduleId());
+        }
+        if (slotChanging) {
+            // TODO(spi-extension-requests): 端口恢复后：段归属/停用校验 → 按渠道还旧段/扣新段 → 刷新段快照。
+            existing.setSlotId(registInfo.getSlotId());
         }
 
         if (registInfo.getVisitType() != null) {
@@ -1163,32 +909,6 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
                     .set(AppointInfo::getSlotEnd, null));
         }
         return saved;
-    }
-
-    /**
-     * 挂号扣段：预约渠道从段池扣，现场渠道提前日不许吃池剩余、就诊当日放宽（口径见 isSameDayWalkin）
-     */
-    private int deductSlotSource(BizClinicSourceSlot slot, boolean apptChannel, boolean sameDayWalkin) {
-        if (apptChannel) {
-            return bizScheduleSlotMapper.deductSlotSourceForAppointment(slot.getId());
-        }
-        if (sameDayWalkin) {
-            return bizScheduleSlotMapper.deductSlotSourceForWalkinSameDay(slot.getId());
-        }
-        return bizScheduleSlotMapper.deductSlotSourceForWalkin(slot.getId());
-    }
-
-    /**
-     * 挂号扣主表号源：择池口径必须与 deductSlotSource 一致，否则段与主表汇总对不上
-     */
-    private int deductScheduleSource(Long scheduleId, boolean apptChannel, boolean sameDayWalkin) {
-        if (apptChannel) {
-            return bizScheduleMapper.deductScheduleSourceForAppointment(scheduleId);
-        }
-        if (sameDayWalkin) {
-            return bizScheduleMapper.deductScheduleSourceForWalkinSameDay(scheduleId);
-        }
-        return bizScheduleMapper.deductScheduleSourceForWalkin(scheduleId);
     }
 
     @Override

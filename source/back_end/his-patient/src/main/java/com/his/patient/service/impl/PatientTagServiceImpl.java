@@ -1,4 +1,4 @@
-package com.his.system.service.impl;
+package com.his.patient.service.impl;
 
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -7,12 +7,12 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.util.TextUtil;
-import com.his.system.dto.SysPatientTagQueryDTO;
-import com.his.system.dto.SysPatientTagUpsertDTO;
-import com.his.system.entity.SysPatientTag;
-import com.his.system.mapper.SysPatientTagMapper;
-import com.his.system.service.PatientTagService;
-import com.his.system.vo.SysPatientTagVO;
+import com.his.patient.dto.SysPatientTagQueryDTO;
+import com.his.patient.dto.SysPatientTagUpsertDTO;
+import com.his.patient.entity.SysPatientTag;
+import com.his.patient.mapper.SysPatientTagMapper;
+import com.his.patient.service.PatientTagService;
+import com.his.patient.vo.SysPatientTagVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 

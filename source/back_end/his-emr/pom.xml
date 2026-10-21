@@ -30,6 +30,12 @@
             <groupId>com.his</groupId>
             <artifactId>his-system</artifactId>
         </dependency>
+
+        <!-- PDF 导出（openpdf，版本由父 pom dependencyManagement 管理） -->
+        <dependency>
+            <groupId>com.github.librepdf</groupId>
+            <artifactId>openpdf</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

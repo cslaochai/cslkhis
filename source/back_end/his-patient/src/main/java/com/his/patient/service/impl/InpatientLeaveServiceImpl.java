@@ -21,7 +21,7 @@ import com.his.patient.vo.InpatientLeaveVO;
 import com.his.spi.dto.SignCommandDTO;
 import com.his.spi.service.SystemFacadeService;
 import com.his.system.service.DeptScopeService;
-import com.his.emr.service.EmrSignatureService;
+import com.his.spi.service.EmrSignatureFacadeService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import com.his.spi.vo.SignatureVO;
@@ -59,7 +59,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
     private final DeptScopeService deptScopeService;
     private final BizInpatientLeaveMapper bizInpatientLeaveMapper;
     private final RedisSequenceService redisSequenceService;
-    private final EmrSignatureService emrSignatureService;
+    private final EmrSignatureFacadeService emrSignatureService;
     private final SystemFacadeService systemFacadeService;
 
     // 查询

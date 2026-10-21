@@ -1,4 +1,4 @@
-package com.his.system.dto;
+package com.his.patient.dto;
 
 import com.his.common.base.PageParam;
 import lombok.Data;

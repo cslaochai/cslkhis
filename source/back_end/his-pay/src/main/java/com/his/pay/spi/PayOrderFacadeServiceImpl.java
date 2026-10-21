@@ -73,6 +73,26 @@ public class PayOrderFacadeServiceImpl implements PayOrderFacadeService {
         payOrderService.closeExpiredIfPending(payNo);
     }
 
+    @Override
+    public List<PayOrderInfoVO> listRecentByPatient(Long patientId, int limit) {
+        List<PayOrderVO> recent = payOrderService.listRecentByPatient(patientId, limit);
+        List<PayOrderInfoVO> list = new ArrayList<>(recent.size());
+        for (PayOrderVO order : recent) {
+            list.add(toOrderInfo(order));
+        }
+        return list;
+    }
+
+    @Override
+    public PayOrderInfoVO findLatestPaid(Integer bizType, Long bizId) {
+        return toOrderInfo(payOrderService.latestPaidByBiz(bizType, bizId));
+    }
+
+    @Override
+    public void markRefunded(String payNo, String reason) {
+        payOrderService.markRefunded(payNo, reason);
+    }
+
     /**
      * 逐字段显式搬运：跨模块契约的宽度只由本端口决定，源类型以后加列不会把窄接口无声撑宽。
      */

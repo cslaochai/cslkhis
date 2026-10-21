@@ -8,6 +8,7 @@ import com.his.spi.dto.PrepayUpsertDTO;
 import com.his.spi.vo.BillBriefVO;
 import com.his.spi.vo.BillItemVO;
 import com.his.spi.vo.BizSettlementBillVO;
+import com.his.spi.vo.ArrearsControlCheckResultVO;
 import com.his.spi.vo.CancelCommandVO;
 import com.his.spi.vo.FeeRecordVO;
 import com.his.spi.vo.FeeTypeSumVO;
@@ -165,6 +166,19 @@ public interface ChargeFacadeService {
      */
     boolean cancelRegistCharge(CancelCommandVO command);
 
+    // ---------- 挂号试算（收费预估） ----------
+
+    /**
+     * 挂号试算按结算方式 + 医保类型取统筹报销比例（收费预估用，原收费域 InsurancePolicyService 能力）。
+     *
+     * <p>口径与收费域一致：自费/未配置政策返回 0（全额自付）；命中启用政策返回其统筹比例（如 85.00 表示 85%）。
+     *
+     * @param settlementType      结算方式（政策档案结算类型：2-城镇职工医保 3-城乡居民医保 4-公费医疗；1/空=自费无政策）
+     * @param medicalInsuranceType 医保类型编码（费别键，对应医保类型枚举的结算类型）
+     * @return 统筹报销比例；无配置时返回 {@code 0}
+     */
+    BigDecimal getCoverageRatio(Integer settlementType, Integer medicalInsuranceType);
+
     // ---------- 住院结算状态 ----------
 
     /**
@@ -174,4 +188,20 @@ public interface ChargeFacadeService {
      * @return 结算状态；没有任何结算单时返回 {@code settled=false} 的状态对象
      */
     SettlementStateVO state(Long admissionId);
+
+    // ---------- 住院医嘱开立欠费管控（G20） ----------
+
+    /**
+     * 新开医嘱前的欠费管控闸门：策略启用且欠费达停费线时拦截新增的择期类医嘱。
+     *
+     * <p>药品/手术/急救类永不拦截（急救被欠费卡住是医疗事故）；修改/停嘱/取消不拦。
+     * 调用方仅对「新增」医嘱调用。
+     *
+     * @param admissionId  入院ID
+     * @param orderClasses 本次医嘱涉及的医嘱类别集合（1-药品 2-检查 3-检验 4-治疗 5-护理
+     *                     6-手术 7-输血 8-监护 9-其他 10-临床营养）
+     * @return null=策略未启用或无欠费拦截（放行）；非 null 且 {@code allowed=false} 表示被拦截，
+     *         {@code reason} 可直接展示给医生
+     */
+    ArrearsControlCheckResultVO checkNewOrderArrears(Long admissionId, Collection<Integer> orderClasses);
 }

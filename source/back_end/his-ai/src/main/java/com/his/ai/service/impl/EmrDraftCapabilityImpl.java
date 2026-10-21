@@ -10,8 +10,8 @@ import com.his.ai.vo.EmrDraftPromptVariablesVO;
 import com.his.ai.vo.EmrDraftResultVO;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.util.TextUtil;
-import com.his.emr.entity.BizMedicalRecord;
-import com.his.emr.mapper.BizMedicalRecordMapper;
+import com.his.spi.service.AiEmrDataFacadeService;
+import com.his.spi.vo.AiMedicalRecordContentVO;
 import com.his.common.enums.AiBizTypeEnum;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,7 +46,7 @@ public class EmrDraftCapabilityImpl implements EmrDraftCapability {
      */
     private static final String PRESENT_ILLNESS_LABEL = "现病史";
 
-    private final BizMedicalRecordMapper bizMedicalRecordMapper;
+    private final AiEmrDataFacadeService aiEmrDataFacadeService;
 
     private final AiExecutionService aiExecutionService;
 
@@ -157,9 +157,9 @@ public class EmrDraftCapabilityImpl implements EmrDraftCapability {
      * 库里的可能是几分钟前保存的旧值。
      */
     private DraftInput mergeInput(EmrDraftDTO dto) {
-        BizMedicalRecord record = dto.getRecordId() == null
+        AiMedicalRecordContentVO record = dto.getRecordId() == null
                 ? null
-                : bizMedicalRecordMapper.selectById(dto.getRecordId());
+                : aiEmrDataFacadeService.findMedicalRecord(dto.getRecordId());
         return new DraftInput(
                 pick(dto.getGender(), record == null ? null : record.getGender()),
                 pick(dto.getAge(), record == null ? null : record.getAge()),

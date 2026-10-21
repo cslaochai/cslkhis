@@ -11,9 +11,6 @@ import com.his.appoint.entity.Queue;
 import com.his.common.enums.*;
 import com.his.appoint.mapper.*;
 import com.his.appoint.service.EmergencyService;
-import com.his.schedule.entity.BizShift;
-import com.his.schedule.mapper.BizShiftMapper;
-import com.his.schedule.service.StaffScheduleService;
 import com.his.appoint.support.EmergencyObservationPolicy;
 import com.his.appoint.support.EmergencyWaitPolicy;
 import com.his.appoint.vo.*;
@@ -41,11 +38,10 @@ import com.his.spi.vo.UserBriefVO;
 import com.his.common.enums.BizTypeEnum;
 import com.his.system.service.DeptScopeService;
 import com.his.common.constant.SystemConfigKeyConst;
-import com.his.schedule.service.DutyRosterService;
+import com.his.spi.service.DutyRosterFacadeService;
+import com.his.spi.vo.DutyOfficerBriefVO;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
-import com.his.schedule.vo.DutyOfficerVO;
-import com.his.schedule.vo.StaffScheduleVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -83,9 +79,10 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
 
     private final SystemFacadeService systemFacadeService;
 
-    private final DutyRosterService dutyRosterService;
-
-    private final BizShiftMapper bizShiftMapper;
+    /**
+     * 当日总值班（全院协调兜底人）：走 spi DutyRosterFacadeService，不再直连排班域 DutyRosterService。
+     */
+    private final DutyRosterFacadeService dutyRosterFacadeService;
 
     private final EmergencyHandoverMapper emergencyHandoverMapper;
 
@@ -94,8 +91,6 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
     private final RedisSequenceService redisSequenceService;
 
     private final PatientFacadeService patientFacadeService;
-
-    private final StaffScheduleService staffScheduleService;
 
     private final SysMessageService sysMessageService;
 
@@ -346,49 +341,28 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
      * 否则凌晨入院的急诊会被派给已经下班的白班医生。
      */
     private ErDuty pickOnDutySchedule(Long deptId) {
-        List<ErDuty> onDuty = onDutySchedules(deptId);
+        List<ErDuty> onDuty = onDutyErSchedules(deptId);
         return onDuty.stream()
                 .max(Comparator.comparing(s -> ShiftCoverUtil.parseShiftTime(s.getStartTime())))
                 .orElse(null);
     }
 
     /**
-     * 急诊当班医生（此刻在岗）。数据源是<b>岗位排班底座</b> biz_schedule 的急诊科室单元
-     * （org_type=1 + 急诊科 id），不再是门诊号源排班：急诊的「谁在岗」是值班/出勤语义，
-     * 跨零点夜班归开始日，{@link StaffScheduleService#onDutyAt} 已按「昨天+今天」两日捞行并
-     * 用 {@link ShiftCoverUtil#covers} 判覆盖（凌晨 01:00 能命中「昨天 22:00 开班」的夜班行）。
-     * 听班（待命响应、呼叫到岗）不算在岗接诊医生，一律过滤。
+     * 急诊当班医生（此刻在岗）。
+     *
+     * <p>原实现直连排班域 {@code StaffScheduleService.onDutyAt} 捞急诊科室在岗医生（计划命中 + 已签到，
+     * 过滤听班 ON_CALL）。跨模块改走 spi 后，当前 spi 尚无「按科室/岗位取此刻在岗人员」的端口方法，
+     * 已在 spi-extension-requests.txt 登记（DutyRosterFacadeService#listOnDutyStaff）；
+     * 端口补齐前保守返回空列表：派单回退「入待派单池」、在岗下拉为空，不编造当班人。
+     * 消费点只读 ErDuty 的 doctorId/doctorName/shiftId/startTime/endTime。
      */
     private List<ErDuty> onDutyErSchedules(Long deptId) {
         if (deptId == null) {
             return List.of();
         }
-        // 计划在岗（岗位排班 onDutyAt 已带签到标记）
-        List<StaffScheduleVO> plans = staffScheduleService
-                .onDutyAt(LocalDateTime.now(), OrgUnitTypeEnum.DEPT.getCode(),
-                        deptId, StaffTypeEnum.DOCTOR.getCode())
-                .stream()
-                .filter(v -> !Objects.equals(v.getAttendMode(), AttendModeEnum.ON_CALL.getCode()))
-                .collect(Collectors.toList());
-        // 「当班医生 = 计划命中 + 已签到」：有实际到岗（签到）就用实际，无人签到则回退计划，
-        // 保证未启用打卡的环境急诊接诊仍能取到当班医生。
-        List<StaffScheduleVO> actual = plans.stream()
-                .filter(v -> Boolean.TRUE.equals(v.getActualOnDuty()))
-                .collect(Collectors.toList());
-        List<StaffScheduleVO> source = actual.isEmpty() ? plans : actual;
-        return source.stream()
-                .map(v -> new ErDuty(v.getEmployeeId(), v.getEmployeeName(), v.getShiftId(),
-                        v.getStartTime(), v.getEndTime()))
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 该科室此刻在岗（有医生）的急诊排班；deptId 为空一律排除。
-     * 消费点只读 {@link ErDuty} 的 doctorId/doctorName/shiftId/startTime/endTime，
-     * 字段命名与旧门诊排班数据源对齐，调用处无需感知来源切换。
-     */
-    private List<ErDuty> onDutySchedules(Long deptId) {
-        return onDutyErSchedules(deptId);
+        // TODO(spi-extension-requests): 待 DutyRosterFacadeService 提供 listOnDutyStaff(at, orgType, orgId, staffType)
+        // 返回 List<StaffScheduleBriefVO> 后，在此按 actualOnDuty 优先、过滤 ON_CALL 映射为 ErDuty。
+        return List.of();
     }
 
     /**
@@ -541,7 +515,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
     @Override
     public List<EmergencyDutyVO> dutySelectList(Long deptId) {
         deptScopeService.assertDeptAccessible(deptId);
-        return onDutySchedules(deptId).stream().map(s -> {
+        return onDutyErSchedules(deptId).stream().map(s -> {
             EmergencyDutyVO vo = new EmergencyDutyVO();
             vo.setDoctorId(s.getDoctorId());
             vo.setDoctorName(s.getDoctorName());
@@ -785,7 +759,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
         if (emergency.getDoctorId() != null) {
             receivers.add(emergency.getDoctorId());
         } else {
-            onDutySchedules(emergency.getDeptId()).forEach(s -> receivers.add(s.getDoctorId()));
+            onDutyErSchedules(emergency.getDeptId()).forEach(s -> receivers.add(s.getDoctorId()));
             if (receivers.isEmpty()) {
                 receivers.addAll(deptLeaderIds(emergency.getDeptId()));
             }
@@ -803,7 +777,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
             // 交给**当日总值班**做全院协调 —— 在此之前这里直接落到系统参数的静态兜底人，
             // 那个口径的本质是"科室之外没人"，于是下班后/换班时这条链就断了。
             // 总值班是排班表里今天真在岗的那个人（含临时换班），换班不影响链路。
-            DutyOfficerVO duty = dutyRosterService.current();
+            DutyOfficerBriefVO duty = dutyRosterFacadeService.current();
             if (duty != null && duty.getEmployeeId() != null && !alreadySent.contains(duty.getEmployeeId())) {
                 receivers.add(duty.getEmployeeId());
             }
@@ -1004,7 +978,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
         systemFacadeService.listActiveEmployeesByDept(scopeDeptId)
                 .forEach(emp -> employees.putIfAbsent(emp.getId(), emp));
         Set<Long> onDutyIds = new LinkedHashSet<>();
-        for (ErDuty schedule : onDutySchedules(scopeDeptId)) {
+        for (ErDuty schedule : onDutyErSchedules(scopeDeptId)) {
             Long doctorId = schedule.getDoctorId();
             // 排班医生未必挂本科室（跨科支援），下拉里要有他，否则"在岗"是假信息
             employees.computeIfAbsent(doctorId, id -> systemFacadeService.findEmployee(id));
@@ -1349,7 +1323,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
             receivers.add(emergency.getDoctorId());
         }
         // 留观患者往往由值班组共管：主管医生不在（换班/下班）时，当班医生与科室主任一并进阶梯
-        onDutySchedules(emergency.getDeptId()).forEach(s -> receivers.add(s.getDoctorId()));
+        onDutyErSchedules(emergency.getDeptId()).forEach(s -> receivers.add(s.getDoctorId()));
         receivers.addAll(deptLeaderIds(emergency.getDeptId()));
 
         List<Long> alreadySent = sysMessageService.receiverIdsOfBiz(BizTypeEnum.EMERGENCY_OBS.getType(), emergency.getId());
@@ -1357,7 +1331,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
         if (receivers.isEmpty()) {
             // 与候诊升级同一条阶梯的倒数第二级：本科室（主管医生/当班医生/科主任）都催过了，
             // 留给床位的争议（"该转哪个科""哪个科肯收"）只有总值班能跨科拍板。
-            DutyOfficerVO duty = dutyRosterService.current();
+            DutyOfficerBriefVO duty = dutyRosterFacadeService.current();
             if (duty != null && duty.getEmployeeId() != null && !alreadySent.contains(duty.getEmployeeId())) {
                 receivers.add(duty.getEmployeeId());
             }
@@ -1485,18 +1459,14 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
     }
 
     /**
-     * 交出人此刻所在班次名（台账上"白班交的班"要能看出来）；查不到就留空，不编
+     * 交出人此刻所在班次名（台账上"白班交的班"要能看出来）；查不到就留空，不编。
+     *
+     * <p>原实现按 shiftId 直连排班域 BizShiftMapper 取 shiftName。跨模块改走 spi 后当前无
+     * 「按班次ID取班次名」端口，已在 spi-extension-requests.txt 登记；端口补齐前返回 null，
+     * 交班台账班次名留空，不编造。
      */
     private String currentShiftName(Long deptId, Long empId) {
-        for (ErDuty schedule : onDutySchedules(deptId)) {
-            if (!Objects.equals(schedule.getDoctorId(), empId) || schedule.getShiftId() == null) {
-                continue;
-            }
-            BizShift shift = bizShiftMapper.selectById(schedule.getShiftId());
-            if (shift != null) {
-                return shift.getShiftName();
-            }
-        }
+        // TODO(spi-extension-requests): 待排班域端口提供 findShiftBrief(shiftId).getShiftName() 后回填。
         return null;
     }
 

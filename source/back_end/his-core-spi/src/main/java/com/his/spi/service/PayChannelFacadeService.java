@@ -3,6 +3,8 @@ package com.his.spi.service;
 import com.his.spi.dto.ChannelNotifyRecordDTO;
 import com.his.spi.vo.ChannelTradeStateVO;
 import com.his.spi.vo.MicroPayResultVO;
+import com.his.spi.vo.MiniPayUnifiedResultVO;
+import com.his.spi.vo.PayOrderInfoVO;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -63,4 +65,16 @@ public interface PayChannelFacadeService {
      * 实现方保证不抛异常：留痕是旁路证据，写不进去不该打断已经收到钱的入账链路。
      */
     void recordChannelNotify(ChannelNotifyRecordDTO dto);
+
+    /**
+     * 患者端小程序 JSAPI 预下单：微信出 wx.requestPayment 参数（timeStamp/nonceStr/package/signType/paySign），
+     * 支付宝出收银台表单串。入参为支付单快照 + 指定渠道，出参为收银台参数与失败原因。
+     *
+     * <p>只负责「向渠道要拉起支付的参数」，不据此把单据置成已支付；收款结果只来自渠道异步通知或主动查单。
+     * 失败时 {@code payParams} 为空、{@code errMsg} 写明原因，绝不把配置缺失/签名/网络失败误报成成功。
+     *
+     * @param order   支付单快照（单号/金额/业务类型以服务端落库事实为准）
+     * @param channel 收款渠道（1-微信 2-支付宝）
+     */
+    MiniPayUnifiedResultVO unifiedJsapiOrder(PayOrderInfoVO order, Integer channel);
 }

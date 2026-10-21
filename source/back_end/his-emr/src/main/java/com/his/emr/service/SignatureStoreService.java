@@ -3,7 +3,7 @@ package com.his.emr.service;
 import com.his.system.service.SignableContentService;
 import com.his.common.enums.SignSceneEnum;
 import com.his.emr.entity.BizEmrSignature;
-import com.his.sign.entity.SysSignCert;
+import com.his.spi.vo.SignCertBriefVO;
 
 import java.time.LocalDateTime;
 
@@ -18,7 +18,7 @@ public interface SignatureStoreService {
      *
      * @param cert 本次签名使用的证书，可为 null（无证书场景照常落签名行，只是不累计使用数）
      */
-    void insertAndAnchor(BizEmrSignature entity, SignableContentService provider, SignSceneEnum scene, SysSignCert cert);
+    void insertAndAnchor(BizEmrSignature entity, SignableContentService provider, SignSceneEnum scene, SignCertBriefVO cert);
 
     /**
      * 回写一次验签结论：核查状态、核查时刻，并把累计核查次数加一，签名证据列一律不动。

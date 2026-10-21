@@ -8,11 +8,11 @@ import com.his.common.enums.DrugRationalHitTypeEnum;
 import com.his.common.enums.StocktakeDrugTypeEnum;
 import com.his.common.support.ClinicalTextMatcher;
 import com.his.common.util.TextUtil;
-import com.his.emr.entity.BizPrescriptionDetail;
-import com.his.pharmacy.dto.DrugRationalItemDTO;
-import com.his.pharmacy.entity.SysDrug;
-import com.his.pharmacy.service.DrugRationalCheckService;
-import com.his.pharmacy.vo.DrugRationalHitVO;
+import com.his.spi.dto.DrugRationalCheckItemDTO;
+import com.his.spi.service.DrugRationalCheckFacadeService;
+import com.his.spi.vo.AiPrescriptionDetailRowVO;
+import com.his.spi.vo.DrugBriefVO;
+import com.his.spi.vo.DrugRationalCheckHitVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -41,7 +41,7 @@ public class DrugHardRuleChecker {
      * 禁忌描述中的禁忌人群/疾病：「XXX者禁用」「XXX患者禁用」
      */
     private static final Pattern CONDITION_CLAUSE = Pattern.compile("([^，。；;,]{2,20}?)(?:者|患者)禁用");
-    private final DrugRationalCheckService drugRationalCheckService;
+    private final DrugRationalCheckFacadeService drugRationalCheckFacadeService;
 
     private static Set<String> extractAllergens(String contraindication) {
         Set<String> allergens = new LinkedHashSet<>();
@@ -79,7 +79,7 @@ public class DrugHardRuleChecker {
 
     // R2 重复用药（警告级）
 
-    private static SysDrug drugOf(DrugAuditContextDTO context, BizPrescriptionDetail detail) {
+    private static DrugBriefVO drugOf(DrugAuditContextDTO context, AiPrescriptionDetailRowVO detail) {
         if (detail == null || detail.getDrugId() == null || context.drugIndex() == null) {
             return null;
         }
@@ -92,8 +92,8 @@ public class DrugHardRuleChecker {
      * 解析通用名，优先级：药品字典的通用名 → 处方明细的通用名 → 药品名称。
      * 字典是主数据，只有它缺失时才退回单据上的值。
      */
-    private static String resolveGenericName(DrugAuditContextDTO context, BizPrescriptionDetail detail) {
-        SysDrug drug = drugOf(context, detail);
+    private static String resolveGenericName(DrugAuditContextDTO context, AiPrescriptionDetailRowVO detail) {
+        DrugBriefVO drug = drugOf(context, detail);
         if (drug != null && TextUtil.hasText(drug.getGenericName())) {
             return drug.getGenericName().trim();
         }
@@ -107,7 +107,7 @@ public class DrugHardRuleChecker {
      * 中药饮片不参与「同类重复」检查 —— 一张饮片方里多味同类药材是正常组方，
      * 按化学成分归类反而会大面积误报。
      */
-    private static boolean isHerbalPieces(SysDrug drug) {
+    private static boolean isHerbalPieces(DrugBriefVO drug) {
         return drug.getDrugType() != null
                 && drug.getDrugType() == StocktakeDrugTypeEnum.HERBAL.getCode();
     }
@@ -175,8 +175,8 @@ public class DrugHardRuleChecker {
             return;
         }
         String allergyText = context.allergyText();
-        for (BizPrescriptionDetail detail : context.details()) {
-            SysDrug drug = drugOf(context, detail);
+        for (AiPrescriptionDetailRowVO detail : context.details()) {
+            DrugBriefVO drug = drugOf(context, detail);
             if (drug == null) {
                 continue;
             }
@@ -218,11 +218,11 @@ public class DrugHardRuleChecker {
      * 因为没人知道它没在工作。
      */
     private void checkDuplicateDrug(DrugAuditContextDTO context, List<DrugAuditFindingVO> findings) {
-        Map<Long, List<BizPrescriptionDetail>> byDrugId = new LinkedHashMap<>();
+        Map<Long, List<AiPrescriptionDetailRowVO>> byDrugId = new LinkedHashMap<>();
         Map<String, Set<Long>> genericToDrugIds = new LinkedHashMap<>();
         Map<String, Set<String>> genericToNames = new LinkedHashMap<>();
 
-        for (BizPrescriptionDetail detail : context.details()) {
+        for (AiPrescriptionDetailRowVO detail : context.details()) {
             if (detail.getDrugId() != null) {
                 byDrugId.computeIfAbsent(detail.getDrugId(), key -> new ArrayList<>()).add(detail);
             }
@@ -233,8 +233,8 @@ public class DrugHardRuleChecker {
             }
         }
 
-        for (Map.Entry<Long, List<BizPrescriptionDetail>> entry : byDrugId.entrySet()) {
-            List<BizPrescriptionDetail> sameDrug = entry.getValue();
+        for (Map.Entry<Long, List<AiPrescriptionDetailRowVO>> entry : byDrugId.entrySet()) {
+            List<AiPrescriptionDetailRowVO> sameDrug = entry.getValue();
             if (sameDrug.size() < 2) {
                 continue;
             }
@@ -266,8 +266,8 @@ public class DrugHardRuleChecker {
      */
     private void checkDuplicateClass(DrugAuditContextDTO context, List<DrugAuditFindingVO> findings) {
         Map<String, Set<String>> classToDrugNames = new LinkedHashMap<>();
-        for (BizPrescriptionDetail detail : context.details()) {
-            SysDrug drug = drugOf(context, detail);
+        for (AiPrescriptionDetailRowVO detail : context.details()) {
+            DrugBriefVO drug = drugOf(context, detail);
             if (drug == null || isHerbalPieces(drug)) {
                 continue;
             }
@@ -296,8 +296,8 @@ public class DrugHardRuleChecker {
      * 药品字典要求皮试，但处方明细未标记已做皮试。
      */
     private void checkSkinTest(DrugAuditContextDTO context, List<DrugAuditFindingVO> findings) {
-        for (BizPrescriptionDetail detail : context.details()) {
-            SysDrug drug = drugOf(context, detail);
+        for (AiPrescriptionDetailRowVO detail : context.details()) {
+            DrugBriefVO drug = drugOf(context, detail);
             if (drug == null || drug.getIsSkinTest() == null || drug.getIsSkinTest() != 1) {
                 continue;
             }
@@ -321,8 +321,8 @@ public class DrugHardRuleChecker {
             return;
         }
         String conditionText = context.conditionText();
-        for (BizPrescriptionDetail detail : context.details()) {
-            SysDrug drug = drugOf(context, detail);
+        for (AiPrescriptionDetailRowVO detail : context.details()) {
+            DrugBriefVO drug = drugOf(context, detail);
             if (drug == null) {
                 continue;
             }
@@ -355,15 +355,15 @@ public class DrugHardRuleChecker {
     }
 
     /**
-     * 相互作用与剂量上限比对全部下沉到 {@link DrugRationalCheckService}（his-system），
+     * 相互作用与剂量上限比对全部下沉到 {@link DrugRationalCheckFacadeService}（药品域），
      * 本层只做「命中 → 审核项」的翻译。绝不在这儿再写一份匹配逻辑：
      * 审方硬闸（his-emr）与 AI 审核若各判一次，就会出现「AI 说没事、点通过被拒」这种
      * 谁都没错但用户无法理解的结果。
      */
     private void checkKnowledgeBase(DrugAuditContextDTO context, List<DrugAuditFindingVO> findings) {
-        List<DrugRationalItemDTO> items = new ArrayList<>();
-        for (BizPrescriptionDetail detail : context.details()) {
-            DrugRationalItemDTO item = new DrugRationalItemDTO();
+        List<DrugRationalCheckItemDTO> items = new ArrayList<>();
+        for (AiPrescriptionDetailRowVO detail : context.details()) {
+            DrugRationalCheckItemDTO item = new DrugRationalCheckItemDTO();
             item.setDrugId(detail.getDrugId());
             item.setDrugName(detail.getDrugName());
             item.setGenericName(resolveGenericName(context, detail));
@@ -372,7 +372,7 @@ public class DrugHardRuleChecker {
             item.setFrequency(detail.getFrequency());
             items.add(item);
         }
-        for (DrugRationalHitVO hit : drugRationalCheckService.check(items)) {
+        for (DrugRationalCheckHitVO hit : drugRationalCheckFacadeService.check(items)) {
             boolean interaction = DrugRationalHitTypeEnum.INTERACTION.getCode().equals(hit.getHitType());
             String related = interaction
                     ? hit.getDrugNameA() + "、" + hit.getDrugNameB()

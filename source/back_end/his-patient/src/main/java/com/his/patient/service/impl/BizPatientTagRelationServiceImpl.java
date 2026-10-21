@@ -7,11 +7,11 @@ import com.his.patient.dto.PatientTagBatchUpsertDTO;
 import com.his.patient.dto.PatientTagDelDTO;
 import com.his.patient.dto.PatientTagUpsertDTO;
 import com.his.patient.entity.BizPatientTagRelation;
+import com.his.patient.entity.SysPatientTag;
 import com.his.patient.mapper.BizPatientTagRelationMapper;
+import com.his.patient.mapper.SysPatientTagMapper;
 import com.his.patient.service.BizPatientTagRelationService;
-import com.his.spi.service.SystemFacadeService;
-import com.his.spi.vo.PatientTagBriefVO;
-import com.his.system.vo.SysPatientTagVO;
+import com.his.patient.vo.SysPatientTagVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -24,7 +24,7 @@ public class BizPatientTagRelationServiceImpl
         extends ServiceImpl<BizPatientTagRelationMapper, BizPatientTagRelation>
         implements BizPatientTagRelationService {
 
-    private final SystemFacadeService systemFacadeService;
+    private final SysPatientTagMapper sysPatientTagMapper;
 
     @Override
     public List<Long> listPatientIdsByTagId(Long tagId) {
@@ -46,7 +46,7 @@ public class BizPatientTagRelationServiceImpl
         List<Long> tagIds = relations.stream()
                 .map(BizPatientTagRelation::getTagId)
                 .collect(Collectors.toList());
-        List<PatientTagBriefVO> tags = systemFacadeService.listPatientTagsByIds(tagIds);
+        List<SysPatientTag> tags = sysPatientTagMapper.selectBatchIds(tagIds);
         return tags.stream().map(this::toTagVO).collect(Collectors.toList());
     }
 
@@ -65,7 +65,7 @@ public class BizPatientTagRelationServiceImpl
         if (tagIds.isEmpty()) {
             return Collections.emptyMap();
         }
-        List<PatientTagBriefVO> tags = systemFacadeService.listPatientTagsByIds(tagIds);
+        List<SysPatientTag> tags = sysPatientTagMapper.selectBatchIds(tagIds);
         Map<Long, SysPatientTagVO> tagVoMap = tags.stream().map(this::toTagVO)
                 .collect(Collectors.toMap(SysPatientTagVO::getTagId, t -> t, (a, b) -> a));
 
@@ -118,7 +118,7 @@ public class BizPatientTagRelationServiceImpl
         }
     }
 
-    private SysPatientTagVO toTagVO(PatientTagBriefVO tag) {
+    private SysPatientTagVO toTagVO(SysPatientTag tag) {
         SysPatientTagVO vo = new SysPatientTagVO();
         vo.setTagId(tag.getTagId());
         vo.setTagName(tag.getTagName());

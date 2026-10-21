@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.PrescriptionStatusEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.support.TcmGramUnits;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.emr.entity.BizDrugDispensing;
@@ -20,18 +19,13 @@ import com.his.emr.service.TcmDecoctService;
 import com.his.emr.vo.BizDrugDispensingVO;
 import com.his.emr.vo.DrugDispensingCountVO;
 import com.his.emr.vo.NarcoticViolationVO;
-import com.his.pharmacy.dto.StockDeductResultDTO;
-import com.his.pharmacy.service.PharmacyService;
 import com.his.common.entity.CurrentUser;
-import com.his.pharmacy.entity.SysDrug;
-import com.his.pharmacy.mapper.SysDrugMapper;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -43,26 +37,8 @@ import java.util.stream.Collectors;
 public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapper, BizDrugDispensing> implements DrugDispensingService {
 
     private final BizPrescriptionMapper bizPrescriptionMapper;
-    private final PharmacyService pharmacyService;
     private final NarcoticControlService narcoticControlService;
-    private final SysDrugMapper sysDrugMapper;
     private final TcmDecoctService tcmDecoctService;
-
-    /**
-     * 本行该扣/退多少<b>库存档案单位</b>
-     */
-    private BigDecimal stockUnitsOf(BizDrugDispensing dispensing) {
-        BigDecimal quantity = dispensing.getQuantity();
-        if (quantity == null || dispensing.getDrugId() == null) {
-            return quantity;
-        }
-        SysDrug drug = sysDrugMapper.selectById(dispensing.getDrugId());
-        BigDecimal gramPerUnit = drug == null ? null : drug.getGramPerUnit();
-        if (!TcmGramUnits.gramDosed(gramPerUnit)) {
-            return quantity;
-        }
-        return TcmGramUnits.toStockUnits(quantity, gramPerUnit);
-    }
 
     @Override
     public PageResult<BizDrugDispensingVO> selectDispensingPage(Long patientId, String patientName, String prescriptionNo,
@@ -159,8 +135,8 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
             throw new BusinessException("当前状态不允许退药");
         }
         String operatorName = UserUtils.getCurrentUser().getRealName();
-        pharmacyService.restoreStock(dispensing.getDrugId(), stockUnitsOf(dispensing),
-                "dispenseReturn", dispensing.getId(), dispensing.getDispensingNo(), operatorName);
+        // TODO(spi 扩展)：药房侧库存回补（restoreStock）待药品域库存端口开放后接入，当前模块不再直连 PharmacyService
+        // 登记需求见 spi-extension-requests.txt（发药扣减 FEFO / 退药回补库存）
 
         dispensing.setDispensingStatus(DispensingStatusEnum.RETURNED.getCode());
         dispensing.setRemark(reason);
@@ -225,14 +201,8 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
             throw new BusinessException("处方已取消，禁止发药（处方号：" + rx.getPrescriptionNo() + "）");
         }
 
-        // FEFO 扣库存（库存不足整单失败，流水在 his-pharmacy 侧落库）
-        // 扣的是档案单位：饮片行 = 总克数 ÷ gram_per_unit 向上取整，其余与原数量一致
-        BigDecimal stockQuantity = stockUnitsOf(dispensing);
-        StockDeductResultDTO deduct = pharmacyService.deductStockFefo(dispensing.getDrugId(), stockQuantity,
-                "dispensing", dispensing.getId(), dispensing.getDispensingNo(),
-                pharmacistName);
-        dispensing.setStockBefore(deduct.getQuantityBefore());
-        dispensing.setStockAfter(deduct.getQuantityAfter());
+        // TODO(spi 扩展)：FEFO 扣减药房库存（deductStockFefo，库存不足整单失败）待药品域库存端口开放后接入；
+        // 当前模块不再直连 PharmacyService，扣减前后库存列暂不回写。登记需求见 spi-extension-requests.txt。
 
         dispensing.setDispensingStatus(DispensingStatusEnum.DISPENSED.getCode());
         dispensing.setPharmacistId(pharmacistId);

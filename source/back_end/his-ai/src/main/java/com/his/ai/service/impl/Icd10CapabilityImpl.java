@@ -11,8 +11,8 @@ import com.his.ai.vo.Icd10PredictItemVO;
 import com.his.ai.vo.Icd10PredictResultVO;
 import com.his.ai.vo.Icd10PromptVariablesVO;
 import com.his.common.util.TextUtil;
-import com.his.emr.entity.BizMedicalRecord;
-import com.his.emr.mapper.BizMedicalRecordMapper;
+import com.his.spi.service.AiEmrDataFacadeService;
+import com.his.spi.vo.AiMedicalRecordContentVO;
 import com.his.spi.vo.Icd10BriefVO;
 import com.his.common.enums.Icd10PredictSourceEnum;
 import com.his.common.enums.AiBizTypeEnum;
@@ -61,7 +61,7 @@ public class Icd10CapabilityImpl implements Icd10Capability {
 
     private final AiExecutionService aiExecutionService;
 
-    private final BizMedicalRecordMapper bizMedicalRecordMapper;
+    private final AiEmrDataFacadeService aiEmrDataFacadeService;
 
     private static int ruleConfidence(int score) {
         if (score >= 100) {
@@ -159,7 +159,7 @@ public class Icd10CapabilityImpl implements Icd10Capability {
         boolean missingAny = !TextUtil.hasText(chiefComplaint) || !TextUtil.hasText(presentIllness)
                 || !TextUtil.hasText(specialistExam) || !TextUtil.hasText(diagnosis);
         if (dto.getRecordId() != null && missingAny) {
-            BizMedicalRecord record = bizMedicalRecordMapper.selectById(dto.getRecordId());
+            AiMedicalRecordContentVO record = aiEmrDataFacadeService.findMedicalRecord(dto.getRecordId());
             if (record != null) {
                 chiefComplaint = TextUtil.blankToDefault(chiefComplaint, record.getChiefComplaint());
                 presentIllness = TextUtil.blankToDefault(presentIllness, record.getPresentIllness());

@@ -1,8 +1,10 @@
 package com.his.emr.spi;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
+import com.his.common.enums.CdrInspApplyStatusEnum;
 import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizInspectionApply;
 import com.his.emr.entity.BizLaboratoryApply;
@@ -15,6 +17,7 @@ import com.his.spi.vo.LaboratoryApplyBriefVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -56,6 +59,54 @@ public class EmrApplyFacadeServiceImpl implements EmrApplyFacadeService {
         LambdaQueryWrapper<BizInspectionApply> w = new LambdaQueryWrapper<>();
         applyConditions(w, query);
         return bizInspectionApplyMapper.selectCount(w);
+    }
+
+    @Override
+    public int markInspectionBooked(Long applyId, LocalDateTime appointmentTime, String operator) {
+        if (applyId == null) {
+            return 0;
+        }
+        // 占号→已预约(3)：按主键命中推进并回写预约时刻。是否可预约的前置状态
+        // （2-已缴费 / 急诊绿色通道 1-已提交，以及残留 3 无在办单的重约恢复）由调用方
+        // 编排侧校验，此处不叠加 apply_status 守卫，保留重约恢复路径的命中能力；
+        // del_flag=0 由 @TableLogic 自动追加。
+        return bizInspectionApplyMapper.update(null, new LambdaUpdateWrapper<BizInspectionApply>()
+                .eq(BizInspectionApply::getId, applyId)
+                .set(BizInspectionApply::getApplyStatus, CdrInspApplyStatusEnum.BOOKED.getCode())
+                .set(BizInspectionApply::getAppointmentTime, appointmentTime)
+                .set(BizInspectionApply::getUpdateBy, operator)
+                .set(BizInspectionApply::getUpdateTime, LocalDateTime.now().withNano(0)));
+    }
+
+    @Override
+    public int markInspectionArrived(Long applyId, String operator) {
+        if (applyId == null) {
+            return 0;
+        }
+        // 到检→检查中(4)：WHERE 守卫 apply_status=3，仅仍「已预约」的单推进，
+        // 并发重复签到只命中一方，不覆盖已进入执行链或已回退的状态。
+        return bizInspectionApplyMapper.update(null, new LambdaUpdateWrapper<BizInspectionApply>()
+                .eq(BizInspectionApply::getId, applyId)
+                .eq(BizInspectionApply::getApplyStatus, CdrInspApplyStatusEnum.BOOKED.getCode())
+                .set(BizInspectionApply::getApplyStatus, CdrInspApplyStatusEnum.EXAMINING.getCode())
+                .set(BizInspectionApply::getUpdateBy, operator)
+                .set(BizInspectionApply::getUpdateTime, LocalDateTime.now().withNano(0)));
+    }
+
+    @Override
+    public int revertInspectionBooked(Long applyId, Integer prevStatus, String operator) {
+        if (applyId == null || prevStatus == null) {
+            return 0;
+        }
+        // 取消/爽约回退：WHERE 守卫 apply_status=3，按预约前状态精确回退并清空预约时刻；
+        // 已进入执行链(4检查中/5已出报告)的单不被回退。
+        return bizInspectionApplyMapper.update(null, new LambdaUpdateWrapper<BizInspectionApply>()
+                .eq(BizInspectionApply::getId, applyId)
+                .eq(BizInspectionApply::getApplyStatus, CdrInspApplyStatusEnum.BOOKED.getCode())
+                .set(BizInspectionApply::getApplyStatus, prevStatus)
+                .set(BizInspectionApply::getAppointmentTime, null)
+                .set(BizInspectionApply::getUpdateBy, operator)
+                .set(BizInspectionApply::getUpdateTime, LocalDateTime.now().withNano(0)));
     }
 
     private LambdaQueryWrapper<BizInspectionApply> inspectionWrapper(InspectionApplyPageQueryDTO query) {

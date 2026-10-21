@@ -1,7 +1,7 @@
 package com.his.miniapp.service;
 
-import com.his.schedule.dto.ScheduleSelectQueryDTO;
 import com.his.miniapp.vo.MiniDeptSelectListVO;
+import com.his.spi.dto.AppointQueryDTO;
 import com.his.miniapp.vo.MiniDoctorSelectListVO;
 import com.his.miniapp.vo.MiniPatientDetailVO;
 import com.his.miniapp.vo.MiniScheduleSelectVO;
@@ -17,7 +17,7 @@ public interface MiniDirectoryService {
 
     List<MiniDoctorSelectListVO> doctorsByDept(Long deptId);
 
-    List<MiniScheduleSelectVO> schedules(ScheduleSelectQueryDTO queryDTO);
+    List<MiniScheduleSelectVO> schedules(AppointQueryDTO queryDTO);
 
     /**
      * 只允许访问当前账号绑定关系内的就诊人，越权直接拒绝。

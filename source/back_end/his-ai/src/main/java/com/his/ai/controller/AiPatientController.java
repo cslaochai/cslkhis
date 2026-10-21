@@ -4,9 +4,6 @@ import com.his.ai.dto.*;
 import com.his.ai.service.*;
 import com.his.ai.vo.*;
 import com.his.common.base.Result;
-import com.his.pharmacy.dto.PatientMedicationGuideDTO;
-import com.his.pharmacy.service.PatientMedicationGuideCapability;
-import com.his.pharmacy.vo.PatientMedicationGuideVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -31,8 +28,6 @@ public class AiPatientController {
     private final PatientImagingExplainCapability imagingExplainCapability;
 
     private final PatientFeeExplainCapability feeExplainCapability;
-
-    private final PatientMedicationGuideCapability medicationGuideCapability;
 
     private final PatientTriageNormalizeCapability triageNormalizeCapability;
 
@@ -59,12 +54,8 @@ public class AiPatientController {
         return Result.success(feeExplainCapability.execute(dto));
     }
 
-    @Operation(summary = "用药说明（这盒药怎么吃）")
-    @PostMapping("/medicationGuide")
-    @PreAuthorize("hasAuthority('PATIENT')")
-    public Result<PatientMedicationGuideVO> medicationGuide(@Valid @RequestBody PatientMedicationGuideDTO dto) {
-        return Result.success(medicationGuideCapability.execute(dto));
-    }
+    // 用药说明（这盒药怎么吃）待药品域通过 MedicationGuideFacadeService 暴露后接入；
+    // 该能力由 his-pharmacy 提供，AI 模块不得直接依赖其 DTO/VO/Service。
 
     @Operation(summary = "导诊口语归一（把口语整理成症状词）")
     @PostMapping("/triageNormalize")

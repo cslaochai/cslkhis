@@ -1,6 +1,5 @@
 package com.his.ai.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.ai.constant.AiCapabilityKeys;
 import com.his.ai.dto.AiCallDTO;
 import com.his.ai.dto.DrugAuditContextDTO;
@@ -20,29 +19,23 @@ import com.his.common.enums.ClinicalRuleTypeEnum;
 import com.his.common.enums.RuleCheckStatusEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.service.RedisSequenceService;
 import com.his.common.support.ClinicalTextMatcher;
 import com.his.common.util.TextUtil;
-import com.his.emr.entity.BizClinicalRuleCheck;
-import com.his.emr.entity.BizMedicalRecord;
-import com.his.emr.entity.BizPrescription;
-import com.his.emr.entity.BizPrescriptionDetail;
-import com.his.emr.mapper.BizClinicalRuleCheckMapper;
-import com.his.emr.mapper.BizMedicalRecordMapper;
-import com.his.emr.mapper.BizPrescriptionDetailMapper;
-import com.his.emr.mapper.BizPrescriptionMapper;
+import com.his.spi.dto.AiClinicalRuleCheckSaveDTO;
+import com.his.spi.service.AiEmrDataFacadeService;
+import com.his.spi.service.DrugMasterFacadeService;
 import com.his.spi.service.PatientFacadeService;
+import com.his.spi.vo.AiMedicalRecordContentVO;
+import com.his.spi.vo.AiPrescriptionBriefVO;
+import com.his.spi.vo.AiPrescriptionDetailRowVO;
+import com.his.spi.vo.AiRuleCheckWriteVO;
 import com.his.spi.vo.AllergyFactVO;
+import com.his.spi.vo.DrugBriefVO;
 import com.his.spi.vo.PatientMasterVO;
-import com.his.common.entity.CurrentUser;
-import com.his.pharmacy.entity.SysDrug;
-import com.his.pharmacy.mapper.SysDrugMapper;
-import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.*;
 
 /**
@@ -68,23 +61,15 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
 
     private static final int OUTPUT_TOKEN_LIMIT = 1536;
 
-    private final BizPrescriptionMapper bizPrescriptionMapper;
+    private final AiEmrDataFacadeService aiEmrDataFacadeService;
 
-    private final BizPrescriptionDetailMapper bizPrescriptionDetailMapper;
-
-    private final BizMedicalRecordMapper bizMedicalRecordMapper;
+    private final DrugMasterFacadeService drugMasterFacadeService;
 
     private final PatientFacadeService patientFacadeService;
-
-    private final SysDrugMapper sysDrugMapper;
-
-    private final BizClinicalRuleCheckMapper bizClinicalRuleCheckMapper;
 
     private final DrugHardRuleChecker drugHardRuleChecker;
 
     private final AiExecutionService aiExecutionService;
-
-    private final RedisSequenceService redisSequenceService;
 
     private static void appendIfMeaningful(StringBuilder builder, String text, String fieldLabel) {
         if (!TextUtil.hasText(text)) {
@@ -121,8 +106,8 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
     private static String formatPrescriptions(DrugAuditContextDTO context) {
         StringBuilder builder = new StringBuilder();
         int index = 1;
-        for (BizPrescriptionDetail detail : context.details()) {
-            SysDrug drug = detail.getDrugId() == null ? null : context.drugIndex().get(detail.getDrugId());
+        for (AiPrescriptionDetailRowVO detail : context.details()) {
+            DrugBriefVO drug = detail.getDrugId() == null ? null : context.drugIndex().get(detail.getDrugId());
             builder.append(index++).append(". ").append(TextUtil.blankToDefault(detail.getDrugName(), "-"));
             if (TextUtil.hasText(detail.getSpecification())) {
                 builder.append(' ').append(detail.getSpecification());
@@ -183,11 +168,11 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
 
     private static Set<String> knownDrugNames(DrugAuditContextDTO context) {
         Set<String> names = new LinkedHashSet<>();
-        for (BizPrescriptionDetail detail : context.details()) {
+        for (AiPrescriptionDetailRowVO detail : context.details()) {
             if (TextUtil.hasText(detail.getDrugName())) {
                 names.add(detail.getDrugName().trim());
             }
-            SysDrug drug = detail.getDrugId() == null ? null : context.drugIndex().get(detail.getDrugId());
+            DrugBriefVO drug = detail.getDrugId() == null ? null : context.drugIndex().get(detail.getDrugId());
             if (drug != null && TextUtil.hasText(drug.getGenericName())) {
                 names.add(drug.getGenericName().trim());
             }
@@ -249,7 +234,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
     public DrugAuditResultVO execute(DrugAuditExecuteDTO dto) {
         long start = System.currentTimeMillis();
 
-        BizPrescription prescription = bizPrescriptionMapper.selectById(dto.getPrescriptionId());
+        AiPrescriptionBriefVO prescription = aiEmrDataFacadeService.findPrescription(dto.getPrescriptionId());
         if (prescription == null) {
             throw new BusinessException("处方不存在或已作废：" + dto.getPrescriptionId());
         }
@@ -298,26 +283,24 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
      * 一次性把审核需要的数据查齐。注意「只取审核必需的临床字段」——
      * 不查姓名以外的身份信息、不查身份证手机号，从源头减少脱敏压力。
      */
-    private DrugAuditContextDTO buildContext(BizPrescription prescription) {
-        List<BizPrescriptionDetail> details = bizPrescriptionDetailMapper.selectList(
-                new LambdaQueryWrapper<BizPrescriptionDetail>()
-                        .eq(BizPrescriptionDetail::getPrescriptionId, prescription.getId()));
+    private DrugAuditContextDTO buildContext(AiPrescriptionBriefVO prescription) {
+        List<AiPrescriptionDetailRowVO> details = aiEmrDataFacadeService.listPrescriptionDetails(prescription.getId());
 
         Set<Long> drugIds = new LinkedHashSet<>();
-        for (BizPrescriptionDetail detail : details) {
+        for (AiPrescriptionDetailRowVO detail : details) {
             if (detail.getDrugId() != null) {
                 drugIds.add(detail.getDrugId());
             }
         }
-        Map<Long, SysDrug> drugIndex = new LinkedHashMap<>();
+        Map<Long, DrugBriefVO> drugIndex = new LinkedHashMap<>();
         if (!drugIds.isEmpty()) {
-            for (SysDrug drug : sysDrugMapper.selectBatchIds(drugIds)) {
+            for (DrugBriefVO drug : drugMasterFacadeService.listDrugs(drugIds)) {
                 drugIndex.put(drug.getId(), drug);
             }
         }
 
-        BizMedicalRecord record = prescription.getRecordId() == null
-                ? null : bizMedicalRecordMapper.selectById(prescription.getRecordId());
+        AiMedicalRecordContentVO record = prescription.getRecordId() == null
+                ? null : aiEmrDataFacadeService.findMedicalRecord(prescription.getRecordId());
 
         return new DrugAuditContextDTO(prescription, details, drugIndex, record,
                 buildAllergyText(prescription, record),
@@ -330,7 +313,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
      * 只看「有实质内容」的那些 —— 「无」「未见异常」「⚠ 过敏史 *」这类占位内容
      * 既不能证明过敏、也不能证明不过敏，混进来只会制造噪声。
      */
-    private String buildAllergyText(BizPrescription prescription, BizMedicalRecord record) {
+    private String buildAllergyText(AiPrescriptionBriefVO prescription, AiMedicalRecordContentVO record) {
         StringBuilder builder = new StringBuilder();
         if (record != null) {
             appendIfMeaningful(builder, record.getAllergyHistory(), "过敏史");
@@ -357,7 +340,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
      * 处方表的 gender/age/diagnosis 在演示库里大面积为空（49 张处方中 24 张无诊断），
      * 因此必须回落到病历表 —— 这是能不能审出问题的前提，不是可选的优化。
      */
-    private String buildConditionText(BizPrescription prescription, BizMedicalRecord record) {
+    private String buildConditionText(AiPrescriptionBriefVO prescription, AiMedicalRecordContentVO record) {
         StringBuilder builder = new StringBuilder();
         appendIfText(builder, prescription.getDiagnosis());
         if (record != null) {
@@ -368,7 +351,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
         return builder.toString().trim();
     }
 
-    private Optional<DrugAuditLlmOutputDTO> callModel(BizPrescription prescription, DrugAuditContextDTO context,
+    private Optional<DrugAuditLlmOutputDTO> callModel(AiPrescriptionBriefVO prescription, DrugAuditContextDTO context,
                                                       List<DrugAuditFindingVO> hardRuleFindings) {
         DrugAuditPromptVariablesVO variables = new DrugAuditPromptVariablesVO();
         variables.setGender(SysGenderEnum.getLabel(context.gender()));
@@ -427,44 +410,32 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
     /**
      * 写入临床规则校验记录，复用已有的医生工作站校验页。
      * <p>
-     * 这样做的价值：AI 能力不需要新的前端页面就能被医生看到 ——
-     * 结果落在原有的表里，原有的列表页、处理/忽略按钮全部可用。
-     * <p>
-     * 单号前缀刻意用 {@code RCAI}：与人工/既有校验（{@code RC}）区分开，
-     * 既避免撞上校验单号的唯一索引，也便于事后统计 AI 的命中情况。
+     * 通过 {@link AiEmrDataFacadeService#saveRuleCheck} 落库：核查单号、核查人与核查时间
+     * 由病历域生成，AI 能力只交代结论本身，不直接碰病历表。
      */
-    private void persist(BizPrescription prescription, DrugAuditResultVO vo) {
+    private void persist(AiPrescriptionBriefVO prescription, DrugAuditResultVO vo) {
         if (prescription.getRecordId() == null) {
-            log.info("[AI-处方审核] 处方 {} 未关联病历，跳过落库（biz_clinical_rule_check.record_id 非空）",
+            log.info("[AI-处方审核] 处方 {} 未关联病历，跳过落库（核查记录必须挂在病历上）",
                     prescription.getPrescriptionNo());
             return;
         }
         try {
-            CurrentUser operatorUser = UserUtils.getCurrentUser();
-            if (operatorUser == null) {
-                throw new BusinessException("当前用户信息不存在");
-            }
-            String operator = operatorUser.getRealName();
-            BizClinicalRuleCheck check = new BizClinicalRuleCheck();
-            check.setCheckNo(redisSequenceService.generateRuleCheckAiNo());
-            check.setRecordId(prescription.getRecordId());
-            check.setPatientId(prescription.getPatientId());
-            check.setRuleType(ClinicalRuleTypeEnum.MEDICATION_RATIONALITY.getCode());
-            check.setRuleName(RULE_NAME);
-            check.setRuleContent(vo.isDegraded()
+            AiClinicalRuleCheckSaveDTO dto = new AiClinicalRuleCheckSaveDTO();
+            dto.setRecordId(prescription.getRecordId());
+            dto.setPatientId(prescription.getPatientId());
+            dto.setRuleType(ClinicalRuleTypeEnum.MEDICATION_RATIONALITY.getCode());
+            dto.setRuleName(RULE_NAME);
+            dto.setRuleContent(vo.isDegraded()
                     ? "硬规则审核（模型未参与）" : "硬规则审核 + 大模型长尾审核");
-            check.setCheckResult(vo.isPass() ? CheckResultEnum.PASS.getCode() : CheckResultEnum.FAIL.getCode());
-            check.setErrorLevel(vo.getMaxErrorLevel() == 0 ? null : vo.getMaxErrorLevel());
-            check.setErrorDetail(joinDetails(vo.getFindings(), ERROR_DETAIL_MAX_LENGTH));
-            check.setSuggestion(joinSuggestions(vo.getFindings(), SUGGESTION_MAX_LENGTH));
-            check.setCheckStatus(RuleCheckStatusEnum.PENDING.getCode());
-            check.setCheckBy(operator);
-            check.setCheckTime(LocalDateTime.now());
-            check.setCreateBy(operator);
+            dto.setCheckResult(vo.isPass() ? CheckResultEnum.PASS.getCode() : CheckResultEnum.FAIL.getCode());
+            dto.setErrorLevel(vo.getMaxErrorLevel() == 0 ? null : vo.getMaxErrorLevel());
+            dto.setErrorDetail(joinDetails(vo.getFindings(), ERROR_DETAIL_MAX_LENGTH));
+            dto.setSuggestion(joinSuggestions(vo.getFindings(), SUGGESTION_MAX_LENGTH));
+            dto.setCheckStatus(RuleCheckStatusEnum.PENDING.getCode());
 
-            bizClinicalRuleCheckMapper.insert(check);
-            vo.setCheckId(check.getId());
-            vo.setCheckNo(check.getCheckNo());
+            AiRuleCheckWriteVO saved = aiEmrDataFacadeService.saveRuleCheck(dto);
+            vo.setCheckId(saved.getId());
+            vo.setCheckNo(saved.getCheckNo());
         } catch (Exception ex) {
             // 审核结论已经拿到了，落库失败不该让医生看不到结论
             log.error("[AI-处方审核] 审核结果落库失败，结论仍正常返回", ex);

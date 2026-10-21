@@ -1,12 +1,12 @@
-package com.his.system.service;
+package com.his.patient.service;
 
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
-import com.his.system.dto.SysPatientTagQueryDTO;
-import com.his.system.dto.SysPatientTagUpsertDTO;
-import com.his.system.entity.SysPatientTag;
-import com.his.system.vo.SysPatientTagVO;
+import com.his.patient.dto.SysPatientTagQueryDTO;
+import com.his.patient.dto.SysPatientTagUpsertDTO;
+import com.his.patient.entity.SysPatientTag;
+import com.his.patient.vo.SysPatientTagVO;
 
 import java.util.List;
 

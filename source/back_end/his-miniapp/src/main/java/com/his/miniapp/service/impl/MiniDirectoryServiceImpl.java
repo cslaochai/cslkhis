@@ -1,8 +1,5 @@
 package com.his.miniapp.service.impl;
 
-import com.his.schedule.dto.ScheduleSelectQueryDTO;
-import com.his.schedule.service.BizClinicSourceService;
-import com.his.schedule.vo.ClinicSourceVO;
 import com.his.common.exception.BusinessException;
 import com.his.miniapp.mapper.MiniDirectoryMapper;
 import com.his.miniapp.service.MiniDirectoryService;
@@ -10,19 +7,20 @@ import com.his.miniapp.vo.MiniDeptSelectListVO;
 import com.his.miniapp.vo.MiniDoctorSelectListVO;
 import com.his.miniapp.vo.MiniScheduleSelectVO;
 import com.his.miniapp.vo.MiniPatientDetailVO;
+import com.his.spi.dto.AppointQueryDTO;
 import com.his.spi.service.PatientFacadeService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MiniDirectoryServiceImpl implements MiniDirectoryService {
 
     private final MiniDirectoryMapper miniDirectoryMapper;
-    private final BizClinicSourceService bizClinicSourceService;
     private final PatientFacadeService patientFacadeService;
 
     @Override
@@ -36,18 +34,15 @@ public class MiniDirectoryServiceImpl implements MiniDirectoryService {
     }
 
     @Override
-    public List<MiniScheduleSelectVO> schedules(ScheduleSelectQueryDTO queryDTO) {
-        List<ClinicSourceVO> list = bizClinicSourceService.scheduleSelectListUnbounded(queryDTO).stream()
-                .map(source -> {
-                    ClinicSourceVO vo = new ClinicSourceVO();
-                    BeanUtils.copyProperties(source, vo);
-                    return vo;
-                }).toList();
-        return list.stream().map(detail -> {
-            MiniScheduleSelectVO vo = new MiniScheduleSelectVO();
-            BeanUtils.copyProperties(detail, vo);
-            return vo;
-        }).toList();
+    public List<MiniScheduleSelectVO> schedules(AppointQueryDTO queryDTO) {
+        // TODO(spi 扩展) 患者端可挂号源下拉待 AppointFacadeService#listPatientScheduleSources 扩展
+        // （返回 ClinicSourceBriefVO 列表，余号/挂号费/诊查费/时段），见 spi-extension-requests.txt；
+        // 现有端口无此能力，先返回空列表，不直连排班域。
+        log.warn("[挂号目录] 可挂号源端口待扩展，deptId={} doctorId={} visitDate={}",
+                queryDTO == null ? null : queryDTO.getDeptId(),
+                queryDTO == null ? null : queryDTO.getDoctorId(),
+                queryDTO == null ? null : queryDTO.getVisitDate());
+        return List.of();
     }
 
     @Override

@@ -1,9 +1,14 @@
 package com.his.medicaltech.spi;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.base.PageResult;
 import com.his.medicaltech.entity.BizCriticalValue;
 import com.his.medicaltech.entity.BizInspectionRecord;
+import com.his.medicaltech.entity.BizReport;
+import com.his.medicaltech.mapper.BizReportMapper;
 import com.his.spi.service.MedicalTechFacadeService;
+import com.his.spi.vo.AiReportVO;
 import com.his.spi.vo.ExecStatusVO;
 import com.his.spi.vo.InspectionRecordBriefVO;
 import com.his.spi.vo.LabResultBriefVO;
@@ -51,6 +56,7 @@ public class MedicalTechFacadeServiceImpl implements MedicalTechFacadeService {
     private final BizLabResultMapper bizLabResultMapper;
     private final BizInspectionRecordMapper bizInspectionRecordMapper;
     private final BizCriticalValueMapper bizCriticalValueMapper;
+    private final BizReportMapper bizReportMapper;
     private final SysLaboratoryItemMapper sysLaboratoryItemMapper;
     private final SysInspectionItemMapper sysInspectionItemMapper;
     private final MedicalTechService medicalTechService;
@@ -324,6 +330,67 @@ public class MedicalTechFacadeServiceImpl implements MedicalTechFacadeService {
         vo.setItemName(item.getItemName());
         vo.setDeptId(item.getDeptId());
         vo.setPrice(item.getPrice());
+        return vo;
+    }
+
+    /**
+     * 报告状态「已发布」（与发布动作 publishReport 落库的码值一致）
+     */
+    private static final int REPORT_PUBLISHED = 4;
+
+    @Override
+    public PageResult<AiReportVO> myPublishedReportPage(Long patientId, Integer reportType,
+                                                        int pageNum, int pageSize) {
+        if (patientId == null) {
+            return PageResult.of(0, pageNum, pageSize, 0, List.of());
+        }
+        LambdaQueryWrapper<BizReport> wrapper = new LambdaQueryWrapper<BizReport>()
+                .eq(BizReport::getPatientId, patientId)
+                .eq(BizReport::getReportStatus, REPORT_PUBLISHED)
+                .eq(reportType != null, BizReport::getReportType, reportType)
+                .orderByDesc(BizReport::getCreateTime);
+        Page<BizReport> page = bizReportMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
+        List<AiReportVO> records = page.getRecords() == null
+                ? List.of()
+                : page.getRecords().stream().map(this::toAiReportVO).toList();
+        return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
+    }
+
+    @Override
+    public AiReportVO getPublishedReportDetail(Long reportId) {
+        if (reportId == null) {
+            return null;
+        }
+        BizReport report = bizReportMapper.selectById(reportId);
+        // 只对外给已发布报告：草稿/待审核/已作废一律按不存在处理，避免泄露未发布内容
+        if (report == null || !Integer.valueOf(REPORT_PUBLISHED).equals(report.getReportStatus())) {
+            return null;
+        }
+        return toAiReportVO(report);
+    }
+
+    /**
+     * 报告实体 → 患者端/AI 共用的报告摘要（只映射跨端口已声明的列）。
+     */
+    private AiReportVO toAiReportVO(BizReport report) {
+        AiReportVO vo = new AiReportVO();
+        vo.setId(report.getId());
+        vo.setReportNo(report.getReportNo());
+        vo.setReportType(report.getReportType());
+        vo.setReportStatus(report.getReportStatus());
+        vo.setRecordId(report.getRecordId());
+        vo.setPatientId(report.getPatientId());
+        vo.setPatientName(report.getPatientName());
+        vo.setItemName(report.getItemName());
+        vo.setApplyDeptName(report.getApplyDeptName());
+        vo.setApplyDoctorName(report.getApplyDoctorName());
+        vo.setExamMethod(report.getExamMethod());
+        vo.setPositiveFlag(report.getPositiveFlag());
+        vo.setIsCritical(report.getIsCritical());
+        vo.setReportContent(report.getReportContent());
+        vo.setConclusion(report.getConclusion());
+        vo.setSuggestions(report.getSuggestions());
+        vo.setPublishTime(report.getPublishTime());
         return vo;
     }
 }

@@ -1,5 +1,7 @@
 package com.his.spi.service;
 
+import com.his.common.base.PageResult;
+import com.his.spi.vo.AiReportVO;
 import com.his.spi.vo.ExecStatusVO;
 import com.his.spi.vo.InspectionRecordBriefVO;
 import com.his.spi.vo.LabItemVO;
@@ -104,4 +106,23 @@ public interface MedicalTechFacadeService {
      * @return 项目不存在时返回 {@code null}，报错文案由开单方自己决定
      */
     LabItemVO findInspectionItem(Long itemId);
+
+    /**
+     * 患者端「我的报告」分页：只查已发布报告，按患者ID + 报告类型过滤。
+     *
+     * @param patientId 患者ID（为空返回空页）
+     * @param reportType 报告类型（1-检查 2-检验；为空 = 全部）
+     * @param pageNum    页码（从 1 开始）
+     * @param pageSize   每页条数
+     * @return 已发布报告分页；归属校验由调用方在登录态上收口
+     */
+    PageResult<AiReportVO> myPublishedReportPage(Long patientId, Integer reportType, int pageNum, int pageSize);
+
+    /**
+     * 患者端报告详情：按报告ID取单份已发布报告（正文/结论/建议/发布时间/归属患者）。
+     *
+     * @param reportId 报告ID
+     * @return 报告不存在或未发布时返回 {@code null}，报错文案由调用方决定
+     */
+    AiReportVO getPublishedReportDetail(Long reportId);
 }

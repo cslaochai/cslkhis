@@ -1,10 +1,10 @@
 package com.his.ai.dto;
 
 import com.his.common.util.TextUtil;
-import com.his.emr.entity.BizMedicalRecord;
-import com.his.emr.entity.BizPrescription;
-import com.his.emr.entity.BizPrescriptionDetail;
-import com.his.pharmacy.entity.SysDrug;
+import com.his.spi.vo.AiMedicalRecordContentVO;
+import com.his.spi.vo.AiPrescriptionBriefVO;
+import com.his.spi.vo.AiPrescriptionDetailRowVO;
+import com.his.spi.vo.DrugBriefVO;
 
 import java.util.List;
 import java.util.Map;
@@ -12,10 +12,10 @@ import java.util.Map;
 /**
  * 处方审核的输入上下文。
  */
-public record DrugAuditContextDTO(BizPrescription prescription,
-                                  List<BizPrescriptionDetail> details,
-                                  Map<Long, SysDrug> drugIndex,
-                                  BizMedicalRecord record,
+public record DrugAuditContextDTO(AiPrescriptionBriefVO prescription,
+                                  List<AiPrescriptionDetailRowVO> details,
+                                  Map<Long, DrugBriefVO> drugIndex,
+                                  AiMedicalRecordContentVO record,
                                   String allergyText,
                                   String conditionText) {
 

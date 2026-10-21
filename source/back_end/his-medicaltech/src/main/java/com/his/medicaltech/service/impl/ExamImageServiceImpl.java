@@ -6,10 +6,9 @@ import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
-import com.his.emr.entity.BizInspectionApply;
-import com.his.emr.entity.BizLaboratoryApply;
-import com.his.emr.mapper.BizInspectionApplyMapper;
-import com.his.emr.mapper.BizLaboratoryApplyMapper;
+import com.his.spi.service.EmrApplyFacadeService;
+import com.his.spi.vo.InspectionApplyBriefVO;
+import com.his.spi.vo.LaboratoryApplyBriefVO;
 import com.his.medicaltech.config.ExamImageProperties;
 import com.his.medicaltech.dto.ExamImageMockImportDTO;
 import com.his.medicaltech.dto.ExamImageUploadDTO;
@@ -66,9 +65,7 @@ public class ExamImageServiceImpl extends ServiceImpl<BizExamImageMapper, BizExa
 
     private final BizLaboratoryRecordMapper bizLaboratoryRecordMapper;
 
-    private final BizInspectionApplyMapper bizInspectionApplyMapper;
-
-    private final BizLaboratoryApplyMapper bizLaboratoryApplyMapper;
+    private final EmrApplyFacadeService emrApplyFacadeService;
 
     private final MockExamImageSource mockExamImageSource;
 
@@ -196,14 +193,14 @@ public class ExamImageServiceImpl extends ServiceImpl<BizExamImageMapper, BizExa
             throw new BusinessException("申请单不能为空");
         }
         if (type == ReportTypeEnum.INSPECTION) {
-            BizInspectionApply apply = bizInspectionApplyMapper.selectById(applyId);
+            InspectionApplyBriefVO apply = emrApplyFacadeService.getInspectionApplyById(applyId);
             if (apply == null) {
                 throw new BusinessException("检查申请单不存在");
             }
             return new Anchor(applyId, apply.getApplyNo(), apply.getPatientId(), apply.getPatientName(),
                     apply.getInspectionItemName(), apply.getBodyPart());
         }
-        BizLaboratoryApply apply = bizLaboratoryApplyMapper.selectById(applyId);
+        LaboratoryApplyBriefVO apply = emrApplyFacadeService.getLaboratoryApplyById(applyId);
         if (apply == null) {
             throw new BusinessException("检验申请单不存在");
         }

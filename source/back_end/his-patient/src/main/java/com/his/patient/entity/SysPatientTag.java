@@ -1,4 +1,4 @@
-package com.his.system.entity;
+package com.his.patient.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;

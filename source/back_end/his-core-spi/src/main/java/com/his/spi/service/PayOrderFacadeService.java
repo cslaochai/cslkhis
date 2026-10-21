@@ -68,4 +68,23 @@ public interface PayOrderFacadeService {
      * <p>尽力而为：并发里患者刚付掉就什么都不做，不把「钱已进来」报成关单失败。
      */
     void closeExpiredIfPending(String payNo);
+
+    /**
+     * 患者端「我的支付单」：按患者ID取最近 {@code limit} 条支付单（按建单先后倒序），
+     * 供患者端缴费记录列表展示（单号/业务类型/业务单/金额/支付状态/支付时间）。
+     */
+    List<PayOrderInfoVO> listRecentByPatient(Long patientId, int limit);
+
+    /**
+     * 按业务单取最近一条已支付单：下单前幂等查重（已收过款的业务单不再建第二张单）、
+     * 退号/退费时定位要退的原支付单。没有已支付单返回 null，由调用方决定报错还是走新建。
+     */
+    PayOrderInfoVO findLatestPaid(Integer bizType, Long bizId);
+
+    /**
+     * 已支付单置已退款：只翻状态并留退款原因（渠道原路退回由调用方负责）。
+     * 已是已退款的单原样跳过，重复退号/退费通知不会把退款时间覆盖成新的一次；
+     * 不是已支付状态的单拒绝登记，报出来让人查。
+     */
+    void markRefunded(String payNo, String reason);
 }

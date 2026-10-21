@@ -16,7 +16,7 @@ import com.his.patient.service.CriticalNoticeService;
 import com.his.patient.vo.CriticalNoticeVO;
 import com.his.spi.dto.SignCommandDTO;
 import com.his.system.service.DeptScopeService;
-import com.his.emr.service.EmrSignatureService;
+import com.his.spi.service.EmrSignatureFacadeService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import com.his.spi.vo.SignatureVO;
@@ -52,7 +52,7 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
 
     private final BizCriticalNoticeMapper bizCriticalNoticeMapper;
 
-    private final EmrSignatureService emrSignatureService;
+    private final EmrSignatureFacadeService emrSignatureService;
 
     @Override
     public PageResult<CriticalNoticeVO.Row> listPage(CriticalNoticeDTO.PageQuery query) {

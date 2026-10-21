@@ -1,11 +1,11 @@
-package com.his.system.controller;
+package com.his.patient.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.system.dto.SysPatientTagQueryDTO;
-import com.his.system.dto.SysPatientTagUpsertDTO;
-import com.his.system.service.PatientTagService;
-import com.his.system.vo.SysPatientTagVO;
+import com.his.patient.dto.SysPatientTagQueryDTO;
+import com.his.patient.dto.SysPatientTagUpsertDTO;
+import com.his.patient.service.PatientTagService;
+import com.his.patient.vo.SysPatientTagVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

@@ -25,24 +25,17 @@ import com.his.spi.vo.PatientQueueVO;
 import com.his.spi.vo.BillBriefVO;
 import com.his.common.base.PageResult;
 import com.his.common.enums.BillStatusEnum;
-import com.his.common.enums.MedicalInsuranceTypeEnum;
 import com.his.common.enums.SettlementModeEnum;
-import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.spi.service.PatientFacadeService;
 import com.his.spi.service.ChargeFacadeService;
 import com.his.spi.service.SystemFacadeService;
 import com.his.spi.vo.ClinicRoomBriefVO;
-import com.his.schedule.entity.BizClinicSource;
 import com.his.common.entity.CurrentUser;
-import com.his.schedule.mapper.BizClinicSourceMapper;
 import com.his.system.service.DeptScopeService;
-import com.his.schedule.service.BizClinicSourceService;
-import com.his.charge.service.InsurancePolicyService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
-import com.his.schedule.vo.OnDutyStaffVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,13 +58,9 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
 
     private final ChargeFacadeService chargeFacadeService;
 
-    private final BizClinicSourceMapper bizScheduleMapper;
-
     private final RedisSequenceService redisSequenceService;
 
     private final AppointInfoMapper appointInfoMapper;
-
-    private final InsurancePolicyService insurancePolicyService;
 
     private final DoctorStatusCacheService doctorStatusCacheService;
 
@@ -82,8 +71,6 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
     private final TriageRecordMapper triageRecordMapper;
 
     private final DayEndSettleTrigger dayEndSettleTrigger;
-
-    private final BizClinicSourceService bizScheduleService;
 
     private final DeptScopeService deptScopeService;
 
@@ -133,21 +120,14 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
     /**
      * 诊室快照的权威来源 = <b>排班</b>（医生-诊室绑定在排班上，不在分诊台）。
      *
-     * <p>队列行上的诊室ID 是<b>签到入队时</b>写下的排班快照；本次改造之前入队
-     * 的行没有这个快照，读出来是空的。读路径按挂号回查一次排班补齐<b>显示</b>，不回写数据库 ——
-     * 写路径（签到入队 / 改排班）才是入口。诊室是「患者该去哪个房间」，显示成空会让
-     * 护士以为这人没诊室可去。
+     * <p>原实现按 scheduleId 直连排班域 BizClinicSourceMapper 回查 roomId/roomName 补显示、不回写。
+     * 跨模块改走 spi 后，当前 spi 尚无「按号源ID取诊室快照」端口（ClinicSourceFacadeService#findClinicSource
+     * 已在 spi-extension-requests.txt 登记）；端口补齐前不再回查，队列/挂号上已有快照直接沿用，
+     * 缺快照的行诊室列留空，不编造。
      */
     private void fillRoomFromSchedule(BizQueueListVO vo, AppointInfo registInfo) {
-        if (vo.getRoomId() != null || registInfo == null || registInfo.getScheduleId() == null) {
-            return;
-        }
-        BizClinicSource schedule = bizScheduleMapper
-                .selectById(registInfo.getScheduleId());
-        if (schedule != null) {
-            vo.setRoomId(schedule.getRoomId());
-            vo.setRoomName(schedule.getRoomName());
-        }
+        // TODO(spi-extension-requests): 待 ClinicSourceFacadeService#findClinicSource(scheduleId) 返回
+        // ClinicSourceBriefVO（含 roomId/roomName）后，在此回查补齐显示。
     }
 
     @Override
@@ -301,13 +281,10 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
         queue.setArriveTime(LocalDateTime.now());
         queue.setTriageLevel(TriageLevelEnum.NON_URGENT.getCode());
         queue.setTriageStatus(0);
-        BizClinicSource schedule = appointInfo.getScheduleId() != null
-                ? bizScheduleMapper.selectById(appointInfo.getScheduleId())
-                : null;
-        if (schedule != null) {
-            queue.setRoomId(schedule.getRoomId());
-            queue.setRoomName(schedule.getRoomName());
-        }
+        // 诊室快照原由签到时回查排班号源（BizClinicSource.roomId/roomName）写入；
+        // 跨模块改走 spi 后当前无「按号源ID取诊室快照」端口（已登记 ClinicSourceFacadeService#findClinicSource），
+        // 端口补齐前不再回查，队列诊室列沿用挂号/队列已有快照，缺则留空。
+        // TODO(spi-extension-requests): 待 findClinicSource(scheduleId) 可用后回填 roomId/roomName。
         baseMapper.insert(queue);
 
         // 更新挂号状态为已签到
@@ -326,26 +303,18 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
     /**
      * 生成排队号：呼叫代号（1~2 字母，来自诊室） + "-" + 3位当日序号。
      * 例：A001、BA042。不按旧模型的诊室编号（如 "10000101-01"），后者太长不好念。
+     *
+     * <p>原实现按 scheduleId 回查排班号源拿 roomId，再经 SystemFacadeService#findClinicRoom 取呼号前缀。
+     * 跨模块改走 spi 后当前无「按号源ID取诊室快照」端口（已登记 ClinicSourceFacadeService#findClinicSource），
+     * 端口补齐前直接走科室兜底前缀，不回查排班。
      */
     private String generateQueueNo(Long deptId, Long scheduleId) {
-        String prefix = null;
-
-        // 根据排班ID获取诊室信息，取呼叨代号
-        if (scheduleId != null) {
-            BizClinicSourceMapper scheduleMapper = bizScheduleMapper;
-            BizClinicSource schedule = scheduleMapper.selectById(scheduleId);
-            if (schedule != null && schedule.getRoomId() != null) {
-                ClinicRoomBriefVO room = systemFacadeService.findClinicRoom(schedule.getRoomId());
-                if (room != null && TextUtil.hasText(room.getQueuePrefix())) {
-                    prefix = room.getQueuePrefix();
-                }
-            }
-        }
+        // TODO(spi-extension-requests): 待 findClinicSource(scheduleId) 返回 roomId 后，
+        // 再经 systemFacadeService.findClinicRoom(roomId).getQueuePrefix() 取呼号前缀。
+        String prefix;
 
         // 兜底：前缀绝不能为空。队列号用 D{deptId}（如 D19580005），保证不同科室不串号。
-        if (!TextUtil.hasText(prefix)) {
-            prefix = "D" + deptId;
-        }
+        prefix = "D" + deptId;
 
         // 生成序号（当天该诊室的序号，Redis 递增）
         String dateStr = LocalDate.now().toString().replace("-", "").substring(4);
@@ -667,14 +636,11 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
             vo.setInsurancePay(BigDecimal.ZERO);
             vo.setSelfPay(totalFee);
         } else {
-            // 医保联网：先按费别解析出政策险种键（职工2/居民3/公费4）；
-            // 自费、商业保险或无法识别的费别没有统筹政策，比例按 0 处理（全额自付）。
-            MedicalInsuranceTypeEnum typeEnum = MedicalInsuranceTypeEnum.fromCode(dto.getMedicalInsuranceType());
-            Integer policyKey = typeEnum != null && typeEnum.isPoolCovered()
-                    ? typeEnum.getSettlementType() : null;
-            BigDecimal coverageRatio = policyKey == null
-                    ? BigDecimal.ZERO
-                    : insurancePolicyService.getCoverageRatio(policyKey, dto.getMedicalInsuranceType());
+            // 医保联网：统筹比例原由收费域 InsurancePolicyService#getCoverageRatio(settlementType,
+            // medicalInsuranceType) 提供；跨模块改走 spi 后 ChargeFacadeService 暂无该只读端口
+            // （已登记 getCoverageRatio），端口补齐前保守按 0（全额自付）预估，不编造统筹比例。
+            // TODO(spi-extension-requests): 待 ChargeFacadeService#getCoverageRatio 可用后按费别取真实比例。
+            BigDecimal coverageRatio = BigDecimal.ZERO;
             vo.setCoverageRatio(coverageRatio);
 
             // 计算统筹支付
@@ -879,32 +845,12 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
 
     @Override
     public List<DoctorConsultingVO> getDoctorConsultingInfo(Long deptId) {
-        // 查询今日排班，获取科室下的医生
-        BizClinicSourceMapper scheduleMapper = bizScheduleMapper;
-        LambdaQueryWrapper<BizClinicSource> scheduleWrapper = new LambdaQueryWrapper<>();
-        List<Long> scoped = deptScopeService.scopedDeptIds(deptId);
-        scheduleWrapper.in(scoped != null, BizClinicSource::getDeptId, scoped)
-                .eq(BizClinicSource::getScheduleDate, LocalDate.now());
-        List<BizClinicSource> schedules = scheduleMapper.selectList(scheduleWrapper);
-
-        List<DoctorConsultingVO> result = new ArrayList<>();
-        for (BizClinicSource schedule : schedules) {
-            // 从Redis获取医生状态
-            int status = doctorStatusCacheService.getStatus(schedule.getDoctorId());
-
-            // 只返回Redis中有状态记录的医生（状态不为0表示有活动）
-            if (status > 0) {
-                DoctorConsultingVO vo = new DoctorConsultingVO();
-                vo.setScheduleId(schedule.getId());
-                vo.setRoomId(schedule.getRoomId());
-                vo.setRoomName(schedule.getRoomName());
-                vo.setDoctorId(schedule.getDoctorId());
-                vo.setDoctorName(schedule.getDoctorName());
-                vo.setConsultStatus(status);
-                result.add(vo);
-            }
-        }
-        return result;
+        // 原实现直连排班域 BizClinicSourceMapper 捞「今日本科室号源医生」，再叠加 Redis 接诊状态。
+        // 跨模块改走 spi 后当前无「按科室取今日出诊医生/号源」端口（已登记
+        // ClinicSourceFacadeService#listTodayClinicSources）；端口补齐前保守返回空列表，
+        // 接诊状态仍由本地 DoctorStatusCacheService 维护，不编造医生名单。
+        // TODO(spi-extension-requests): 待 listTodayClinicSources(deptIds, date) 可用后恢复装配。
+        return new ArrayList<>();
     }
 
     @Override
@@ -947,21 +893,11 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
         stats.setTotal(appointInfoMapper.selectCount(new LambdaQueryWrapper<AppointInfo>()
                 .in(scoped != null, AppointInfo::getDeptId, scoped)));
 
-        // 从Redis获取坐诊医生数量
-        BizClinicSourceMapper scheduleMapper = bizScheduleMapper;
-        LambdaQueryWrapper<BizClinicSource> scheduleWrapper = new LambdaQueryWrapper<>();
-        scheduleWrapper.in(scoped != null, BizClinicSource::getDeptId, scoped)
-                .eq(BizClinicSource::getScheduleDate, LocalDate.now());
-        List<BizClinicSource> schedules = scheduleMapper.selectList(scheduleWrapper);
-
-        int doctorCount = 0;
-        for (BizClinicSource schedule : schedules) {
-            int status = doctorStatusCacheService.getStatus(schedule.getDoctorId());
-            if (status > 0) {
-                doctorCount++;
-            }
-        }
-        stats.setDoctorCount(doctorCount);
+        // 坐诊医生数量原由「今日本科室号源医生 ∩ Redis 接诊状态」得出；号源名单直连排班域，
+        // 跨模块改走 spi 后无对应只读端口（已登记 ClinicSourceFacadeService#listTodayClinicSources）。
+        // 端口补齐前 doctorCount 保守置 0，不编造出诊人数。
+        // TODO(spi-extension-requests): 待 listTodayClinicSources(deptIds, date) 可用后恢复统计。
+        stats.setDoctorCount(0);
 
         return stats;
     }
@@ -1133,19 +1069,10 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
 
         Long roomId = queue.getRoomId();
         String roomName = queue.getRoomName();
-        if (roomId == null && queue.getRegistId() != null) {
-            AppointInfo regist = appointInfoMapper.selectById(queue.getRegistId());
-            BizClinicSource schedule = regist != null && regist.getScheduleId() != null
-                    ? bizScheduleMapper.selectById(regist.getScheduleId())
-                    : null;
-            if (schedule != null) {
-                roomId = schedule.getRoomId();
-                roomName = schedule.getRoomName();
-                // 顺手把快照补回队列，下次列表/叫号不用再回查
-                queue.setRoomId(roomId);
-                queue.setRoomName(roomName);
-            }
-        }
+        // 原实现：队列无快照时按挂号 scheduleId 回查排班号源补 roomId/roomName。
+        // 跨模块改走 spi 后无「按号源ID取诊室快照」端口（已登记 ClinicSourceFacadeService#findClinicSource），
+        // 端口补齐前只沿用队列已有快照，不再回查排班。
+        // TODO(spi-extension-requests): 待 findClinicSource(scheduleId) 可用后在此补齐并回写队列。
         if (roomId != null && !TextUtil.hasText(roomName)) {
             ClinicRoomBriefVO room = systemFacadeService.findClinicRoom(roomId);
             roomName = room != null ? room.getName() : null;
@@ -1159,9 +1086,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
             bmi = dto.getWeight().divide(h.multiply(h), 1, RoundingMode.HALF_UP);
         }
 
-        CurrentUser currentUser = UserUtils.getCurrentUser();
         LocalDateTime now = LocalDateTime.now();
-        OnDutyStaffVO dutyNurse = pickDutyNurse(queue.getDeptId(), currentUser);
 
         TriageRecord record = new TriageRecord();
         record.setQueueId(queue.getId());
@@ -1184,11 +1109,12 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
         record.setRoomId(roomId);
         record.setRoomName(roomName);
         // 【sql/196】分诊护士 = 当天护理排班上的当班人，不是「谁登的浏览器」。
-        // 以前这里恒等于 currentUser：管理员一分诊，单据上就写着"院长做的分诊"，
-        // 而真正在岗的那个护士一条都记不上——排班表排了半天，业务上一个字都没用上。
-        // 取不到当班护理就落 NULL：身份凭证 ≠ 当班责任，宁缺勿假。
-        record.setTriageNurseId(dutyNurse == null ? null : dutyNurse.getStaffId());
-        record.setTriageNurseName(dutyNurse == null ? null : dutyNurse.getStaffName());
+        // 原实现经 BizClinicSourceService#pickDutyStaff(deptId, NURSE, selfEmpId) 取当班护理；
+        // 跨模块改走 spi 后无对应「按科室取当班护理」端口（已登记 DutyRosterFacadeService#pickDutyStaff，
+        // 返回 DutyStaffBriefVO）。端口补齐前护士ID/姓名落 NULL：身份凭证 ≠ 当班责任，宁缺勿假。
+        // TODO(spi-extension-requests): 待 pickDutyStaff 可用后回填 triageNurseId/triageNurseName。
+        record.setTriageNurseId(null);
+        record.setTriageNurseName(null);
         record.setTriageTime(now);
         record.setRemark(dto.getRemark());
         // 只增不改：重测体温/重新定级是**追加**一条，历史留痕不动
@@ -1346,29 +1272,6 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
      * 前方候诊人数：同科室同医生当日、签到更早且仍候诊中的人数。
      * 医生为空的记录只按科室收窄 —— 位次宁可少报一点，也不能把别的医生的队列算进来虚增。
      */
-    /**
-     * 本次分诊的当班护士 —— 取当天护理排班上此刻在岗的人。
-     *
-     * <p>取值顺序见 {@link BizClinicSourceService#pickDutyStaff}：优先本人（若本人就在当班名单里），
-     * 否则取此刻在岗/当日最近一班。<b>排班查不到就返回 null，不用登录人兜底</b> ——
-     * 分诊是临床动作，责任人必须是真的当班护士；没有当班记录就留空，
-     * 页面上显示「未记录护士」比显示一个没上班的人诚实。
-     *
-     * <p>查排班出错也返回 null：分诊是高频关键动作，不能被排班侧的异常拖死，
-     * 更不能因为查不到人就整条分诊失败。
-     */
-    private OnDutyStaffVO pickDutyNurse(Long deptId, CurrentUser currentUser) {
-        if (deptId == null) {
-            return null;
-        }
-        try {
-            Long selfEmpId = currentUser == null ? null : currentUser.getEmployeeId();
-            return bizScheduleService.pickDutyStaff(deptId, StaffTypeEnum.NURSE.getCode(), selfEmpId);
-        } catch (Exception ex) {
-            return null;
-        }
-    }
-
     private int countAhead(Queue queue) {
         return (int) this.count(new LambdaQueryWrapper<Queue>()
                 .eq(Queue::getDeptId, queue.getDeptId())

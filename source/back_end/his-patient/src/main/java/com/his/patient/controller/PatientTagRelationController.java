@@ -6,7 +6,7 @@ import com.his.patient.dto.PatientTagDelDTO;
 import com.his.patient.dto.PatientTagQueryDTO;
 import com.his.patient.dto.PatientTagUpsertDTO;
 import com.his.patient.service.BizPatientTagRelationService;
-import com.his.system.vo.SysPatientTagVO;
+import com.his.patient.vo.SysPatientTagVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

@@ -8,11 +8,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.appoint.entity.AppointInfo;
-import com.his.appoint.entity.Queue;
-import com.his.appoint.mapper.AppointInfoMapper;
-import com.his.appoint.mapper.QueueMapper;
 import com.his.spi.service.QueueFacadeService;
+import com.his.spi.service.RegistStateFacadeService;
+import com.his.spi.vo.RegistStateRowVO;
+import com.his.spi.vo.QueueStateRowVO;
 import com.his.spi.dto.FeeBookDTO;
 import com.his.spi.service.ChargeFacadeService;
 import com.his.spi.vo.FeeRecordVO;
@@ -31,7 +30,6 @@ import com.his.common.util.TextUtil;
 import com.his.spi.vo.SignatureVO;
 import com.his.spi.service.MedicalTechFacadeService;
 import com.his.spi.vo.LabItemVO;
-import com.his.appoint.vo.AppointBriefVO;
 import com.his.spi.vo.PatientBriefVO;
 import com.his.emr.dto.*;
 import com.his.emr.entity.*;
@@ -41,11 +39,9 @@ import com.his.emr.service.EmrService;
 import com.his.emr.service.QualityControlService;
 import com.his.emr.vo.*;
 import com.his.spi.service.PatientFacadeService;
-import com.his.pharmacy.service.AntibioticService;
-import com.his.pharmacy.service.PharmacyService;
+import com.his.spi.service.DrugMasterFacadeService;
+import com.his.spi.vo.DrugBriefVO;
 import com.his.common.entity.CurrentUser;
-import com.his.pharmacy.entity.SysDrug;
-import com.his.pharmacy.mapper.SysDrugMapper;
 import com.his.system.service.DeptScopeService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -77,16 +73,14 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     private final BizInspectionApplyMapper bizInspectionApplyMapper;
     private final BizLaboratoryApplyMapper bizLaboratoryApplyMapper;
     private final BizMedicalRecordLogMapper bizMedicalRecordLogMapper;
-    private final AppointInfoMapper appointInfoMapper;
-    private final QueueMapper queueMapper;
 
     private final DeptScopeService deptScopeService;
-    private final PharmacyService pharmacyService;
     private final ChargeFacadeService chargeFacadeService;
 
     private final PatientFacadeService patientFacadeService;
 
-    private final SysDrugMapper sysDrugMapper;
+    private final RegistStateFacadeService registStateFacadeService;
+    private final DrugMasterFacadeService drugMasterFacadeService;
 
     private final EmrSignatureService emrSignatureService;
     private final RedisSequenceService redisSequenceService;
@@ -99,7 +93,6 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     private final BizFollowupTaskMapper bizFollowupTaskMapper;
     private final BizChronicRecordMapper bizChronicRecordMapper;
 
-    private final AntibioticService antibioticService;
     private final MedicalTechFacadeService medicalTechFacadeService;
 
     private final AiDraftDiffService aiDraftDiffService;
@@ -356,14 +349,8 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     @Transactional(rollbackFor = Exception.class)
     public boolean addPrescription(BizPrescription prescription) {
         // 抗菌药物处方权闸：必须在落库之前 —— 开出去再拦，处方号已经生成、库存已经锁定，
-        // 那是"事后擦屁股"，不是管控。抛异常让整张处方回滚。
-        List<Long> abxDrugIds = prescription.getDetails() == null ? Collections.emptyList()
-                : prescription.getDetails().stream()
-                .map(BizPrescriptionDetail::getDrugId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        antibioticService.assertCanPrescribe(prescription.getDoctorId(), abxDrugIds);
+        // TODO(spi 扩展)：抗菌药处方权限校验（assertCanPrescribe：医生是否具备开该抗菌药的资质）待药品域资质端口开放后接入；
+        // 当前模块不再直连 AntibioticService。登记需求见 spi-extension-requests.txt。
 
         prescription.setPrescriptionNo(redisSequenceService.generatePrescriptionNo());
         prescription.setPrescriptionStatus(PrescriptionStatusEnum.DRAFT.getCode());
@@ -378,11 +365,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 detail.setPrescriptionNo(prescription.getPrescriptionNo());
                 detail.setDetailStatus(PrescriptionDetailStatusEnum.NORMAL.getCode());
                 this.bizPrescriptionDetailMapper.insert(detail);
-
-                // 锁定库存（按药品跨批次，与发药 FEFO 同一口径）
-                if (detail.getDrugId() != null && detail.getQuantity() != null) {
-                    pharmacyService.lockStockByDrug(detail.getDrugId(), detail.getQuantity());
-                }
+                // TODO(spi 扩展)：处方保存锁定药房库存待药品域库存端口开放后接入（登记需求见 spi-extension-requests.txt）
             }
         }
 
@@ -568,12 +551,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             detailWrapper.eq(BizPrescriptionDetail::getPrescriptionId, prescription.getId());
             List<BizPrescriptionDetail> details = bizPrescriptionDetailMapper.selectList(detailWrapper);
 
-            // 解锁库存（跨批次退回，只退实际锁着的量）
-            for (BizPrescriptionDetail detail : details) {
-                if (detail.getDrugId() != null && detail.getQuantity() != null) {
-                    pharmacyService.unlockStockByDrug(detail.getDrugId(), detail.getQuantity());
-                }
-            }
+            // TODO(spi 扩展)：删除处方前解锁药房库存待药品域库存端口开放后接入（登记需求见 spi-extension-requests.txt）
 
             // 删除处方明细
             bizPrescriptionDetailMapper.delete(detailWrapper);
@@ -614,7 +592,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BizInspectionApplyVO upsertInspectionApply(InspectionApplyUpsertDTO dto) {
-        AppointBriefVO appoint = requireAppoint(dto.getRegistId());
+        RegistStateRowVO appoint = requireAppoint(dto.getRegistId());
         PatientBriefVO patient = requirePatient(dto.getPatientId());
         LabItemVO item = medicalTechFacadeService.findInspectionItem(dto.getInspectionItemId());
         if (item == null) {
@@ -662,7 +640,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BizLaboratoryApplyVO upsertLaboratoryApply(LaboratoryApplyUpsertDTO dto) {
-        AppointBriefVO appoint = requireAppoint(dto.getRegistId());
+        RegistStateRowVO appoint = requireAppoint(dto.getRegistId());
         PatientBriefVO patient = requirePatient(dto.getPatientId());
         LabItemVO item = medicalTechFacadeService.findLabItem(dto.getLaboratoryItemId());
         if (item == null) {
@@ -790,8 +768,8 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         return vos;
     }
 
-    private AppointBriefVO requireAppoint(Long registId) {
-        AppointBriefVO appoint = getAppointBrief(registId);
+    private RegistStateRowVO requireAppoint(Long registId) {
+        RegistStateRowVO appoint = getAppointBrief(registId);
         if (appoint == null) {
             throw new BusinessException("挂号记录不存在");
         }
@@ -806,40 +784,32 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         return patient;
     }
 
-    private AppointBriefVO getAppointBrief(Long registId) {
-        AppointInfo appoint = registId == null ? null : appointInfoMapper.selectById(registId);
-        if (appoint == null) {
-            return null;
-        }
-        AppointBriefVO vo = new AppointBriefVO();
-        BeanUtils.copyProperties(appoint, vo);
-        return vo;
+    private RegistStateRowVO getAppointBrief(Long registId) {
+        return registId == null ? null : registStateFacadeService.getRegistRow(registId);
     }
 
     private Long completeVisit(Long registId, Long queueId) {
-        AppointInfo appoint = registId == null ? null : appointInfoMapper.selectById(registId);
-        if (appoint != null) {
-            appoint.setRegistStatus(AppointStatusEnum.COMPLETED.getCode());
-            int rows = appointInfoMapper.update(appoint, new LambdaUpdateWrapper<AppointInfo>()
-                    .eq(AppointInfo::getId, appoint.getId())
-                    .in(AppointInfo::getRegistStatus,
-                            AppointStatusEnum.ACCEPTED.getCode(), AppointStatusEnum.COMPLETED.getCode()));
-            if (rows == 0) {
+        // 结诊联动（经 SPI 委派 his-appoint）：挂号置「已完成」、队列置「已完成」并回写结束时刻
+        if (registId != null && registStateFacadeService.getRegistRow(registId) != null) {
+            boolean ok = registStateFacadeService.updateRegistStatus(registId,
+                    AppointStatusEnum.COMPLETED.getCode(),
+                    List.of(AppointStatusEnum.ACCEPTED.getCode(), AppointStatusEnum.COMPLETED.getCode()));
+            if (!ok) {
                 throw new BusinessException("该挂号状态已变更，请刷新后重试");
             }
         }
 
-        Queue queue = queueId == null ? null : queueMapper.selectById(queueId);
+        if (queueId == null) {
+            return null;
+        }
+        QueueStateRowVO queue = registStateFacadeService.getQueueRow(queueId);
         if (queue == null) {
             return null;
         }
-        queue.setQueueStatus(QueueStatusEnum.COMPLETED.getCode());
-        queue.setEndTime(LocalDateTime.now());
-        int rows = queueMapper.update(queue, new LambdaUpdateWrapper<Queue>()
-                .eq(Queue::getId, queue.getId())
-                .in(Queue::getQueueStatus,
-                        QueueStatusEnum.CONSULTING.getCode(), QueueStatusEnum.COMPLETED.getCode()));
-        if (rows == 0) {
+        boolean ok = registStateFacadeService.finishQueue(queueId,
+                QueueStatusEnum.COMPLETED.getCode(), LocalDateTime.now(),
+                List.of(QueueStatusEnum.CONSULTING.getCode(), QueueStatusEnum.COMPLETED.getCode()));
+        if (!ok) {
             throw new BusinessException("该队列状态已变更，请刷新后重试");
         }
         return queue.getDoctorId();
@@ -913,7 +883,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     /**
      * 患者 / 科室 / 医生快照 —— 申请单是独立单据，必须自带这些信息，不能靠关联查。
      */
-    private void fillInspectionApplySnapshot(BizInspectionApply apply, AppointBriefVO appoint, PatientBriefVO patient) {
+    private void fillInspectionApplySnapshot(BizInspectionApply apply, RegistStateRowVO appoint, PatientBriefVO patient) {
         apply.setRegistId(appoint.getId());
         apply.setPatientId(patient.getId());
         apply.setPatientNo(patient.getPatientNo());
@@ -927,7 +897,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         apply.setDoctorName(doctorNameOf(appoint));
     }
 
-    private void fillLaboratoryApplySnapshot(BizLaboratoryApply apply, AppointBriefVO appoint, PatientBriefVO patient) {
+    private void fillLaboratoryApplySnapshot(BizLaboratoryApply apply, RegistStateRowVO appoint, PatientBriefVO patient) {
         apply.setRegistId(appoint.getId());
         apply.setPatientId(patient.getId());
         apply.setPatientNo(patient.getPatientNo());
@@ -946,7 +916,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      * <p>不要无脑写 {@code LocalDate.now()} —— 补开单时（今天给 9 月 16 日的挂号补一张检查）
      * 会把申请单的就诊日期写成今天，跟挂号/病历对不上。
      */
-    private LocalDate visitDateOf(AppointBriefVO appoint) {
+    private LocalDate visitDateOf(RegistStateRowVO appoint) {
         return appoint.getVisitDate() != null ? appoint.getVisitDate() : LocalDate.now();
     }
 
@@ -955,7 +925,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      * 取不到再退回挂号记录的医生；两者都空则取 0 触发 NOT NULL 约束暴露问题，
      * 而不是静默写个 0 看起来像正常数据。
      */
-    private Long doctorIdOf(AppointBriefVO appoint) {
+    private Long doctorIdOf(RegistStateRowVO appoint) {
         CurrentUser user = UserUtils.getCurrentUser();
         if (user != null && user.getEmployeeId() != null) {
             return user.getEmployeeId();
@@ -963,7 +933,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         return appoint.getDoctorId();
     }
 
-    private String doctorNameOf(AppointBriefVO appoint) {
+    private String doctorNameOf(RegistStateRowVO appoint) {
         CurrentUser user = UserUtils.getCurrentUser();
         if (user != null && user.getRealName() != null) {
             return user.getRealName();
@@ -1217,7 +1187,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      * <p>这里刻意不做「先删后增」：申请单已经不是病历的附属物了（批次E/E1 起开单即落库），
      * 每次保存病历都重建一遍会把已缴费的单子删掉、让执行记录的 apply_id 悬空。
      */
-    private void ensureInspectionApplies(Long registId, AppointBriefVO appoint, PatientBriefVO patient,
+    private void ensureInspectionApplies(Long registId, RegistStateRowVO appoint, PatientBriefVO patient,
                                          List<MedicalRecordSaveDTO.InspectionApplyDTO> dtos) {
         if (registId == null || CollectionUtils.isEmpty(dtos)) {
             return;
@@ -1254,7 +1224,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         }
     }
 
-    private void ensureLaboratoryApplies(Long registId, AppointBriefVO appoint, PatientBriefVO patient,
+    private void ensureLaboratoryApplies(Long registId, RegistStateRowVO appoint, PatientBriefVO patient,
                                          List<MedicalRecordSaveDTO.LaboratoryApplyDTO> dtos) {
         if (registId == null || CollectionUtils.isEmpty(dtos)) {
             return;
@@ -1337,7 +1307,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         }
 
         // 从挂号表查询挂号信息（科室、医生）（经 SPI 委派 his-appoint）
-        AppointBriefVO appointInfo = getAppointBrief(recordSaveDTO.getRegistId());
+        RegistStateRowVO appointInfo = getAppointBrief(recordSaveDTO.getRegistId());
         if (appointInfo == null) {
             throw new BusinessException("挂号记录不存在");
         }
@@ -1503,7 +1473,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                         detail.setRoute(detailDTO.getRoute());
                         detail.setDuration(detailDTO.getDuration());
                         detail.setDetailStatus(PrescriptionDetailStatusEnum.NORMAL.getCode());
-                        SysDrug drug = sysDrugMapper.selectById(detail.getDrugId());
+                        DrugBriefVO drug = drugMasterFacadeService.findDrug(detail.getDrugId());
                         boolean gramDosed = false;
                         BigDecimal grams = null;
                         if (tcmDecoctionRx) {
@@ -1533,13 +1503,8 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
 
                         this.bizPrescriptionDetailMapper.insert(detail);
 
-                        // 锁定库存：锁的是**档案单位**（kg/袋），不是克数 —— 105g 黄芪要锁 0.11kg
-                        if (detail.getDrugId() != null && detail.getQuantity() != null) {
-                            BigDecimal lockQty = gramDosed
-                                    ? TcmGramUnits.toStockUnits(grams, drug.getGramPerUnit())
-                                    : detail.getQuantity();
-                            pharmacyService.lockStockByDrug(detail.getDrugId(), lockQty);
-                        }
+                        // TODO(spi 扩展)：处方保存锁定药房库存（lockStockByDrug，档案单位）待药品域库存端口开放后接入；
+                        // 当前模块不再直连 PharmacyService。登记需求见 spi-extension-requests.txt。
                     }
 
                     // 更新处方主表的总金额和药品数量
@@ -1717,7 +1682,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      */
     private void generateChargeRecords(BizMedicalRecord record, MedicalRecordSaveDTO recordSaveDTO) {
         // 查询挂号记录获取 registNo（经 SPI 委派 his-appoint）
-        AppointBriefVO appointInfo = getAppointBrief(record.getRegistId());
+        RegistStateRowVO appointInfo = getAppointBrief(record.getRegistId());
         if (Objects.isNull(appointInfo)) {
             throw new BusinessException("未能找到挂号记录");
         }

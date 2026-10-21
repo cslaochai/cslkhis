@@ -7,7 +7,7 @@ import com.his.emr.dto.DrugReturnDTO;
 import com.his.emr.service.DrugDispensingService;
 import com.his.emr.vo.BizDrugDispensingVO;
 import com.his.emr.vo.DrugDispensingCountVO;
-import com.his.pharmacy.dto.DispensingPageQueryDTO;
+import com.his.emr.dto.DispensingPageQueryDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

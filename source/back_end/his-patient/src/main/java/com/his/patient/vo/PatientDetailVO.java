@@ -3,7 +3,7 @@ package com.his.patient.vo;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.his.system.vo.SysPatientTagVO;
+import com.his.patient.vo.SysPatientTagVO;
 import lombok.Data;
 
 import java.math.BigDecimal;

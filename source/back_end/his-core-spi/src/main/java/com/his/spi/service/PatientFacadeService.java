@@ -15,11 +15,13 @@ import com.his.spi.vo.NursingVitalFactVO;
 import com.his.spi.vo.PatientBriefVO;
 import com.his.spi.vo.PatientMasterVO;
 import com.his.spi.vo.PatientProfileScoreVO;
+import com.his.spi.vo.PatientTagBriefVO;
 import com.his.spi.vo.SurgeryOperationVO;
 import com.his.spi.vo.WardNursingFactsVO;
 import com.his.spi.vo.WardVO;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -215,4 +217,20 @@ public interface PatientFacadeService {
      * 凡"按患者维度聚合数据"的地方都必须经过它。
      */
     List<Long> resolvePatientIds(Long patientId);
+
+    // ---------- 患者标签 ----------
+
+    /**
+     * 按标签ID批量取患者标签摘要（主档健康档案打标用）。
+     *
+     * @param tagIds 标签ID集合（可空/空集合，返回空列表）
+     */
+    List<PatientTagBriefVO> listPatientTagsByIds(Collection<Long> tagIds);
+
+    /**
+     * 按标签名批量取患者标签摘要（静态标签点名：老年/儿童/幼儿等）。
+     *
+     * @param tagNames 标签名集合（可空/空集合，返回空列表）
+     */
+    List<PatientTagBriefVO> listPatientTagsByNames(Collection<String> tagNames);
 }

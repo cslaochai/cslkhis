@@ -4,6 +4,7 @@ import com.his.spi.dto.AiLabConclusionSaveDTO;
 import com.his.spi.vo.AiLabRecordVO;
 import com.his.spi.vo.AiLabResultRowVO;
 import com.his.spi.vo.AiReportVO;
+import com.his.spi.vo.JudgeResultVO;
 
 import java.util.List;
 
@@ -66,4 +67,16 @@ public interface AiLabDataFacadeService {
      * @param dto 结论与建议
      */
     void saveConclusion(AiLabConclusionSaveDTO dto);
+
+    /**
+     * 对单个原始检验值独立做一次异常判定 / 危急值判断 / 参考范围数值解析。
+     *
+     * <p>判定口径（异常方向、危急值硬规则、参考区间解析）全仓只有医技域一份，
+     * 调用方不复制这些规则，只消费算好的结论。</p>
+     *
+     * @param laboratoryItemId 检验项目ID（用于取项目编码/名称/单位与参考区间）
+     * @param resultValue     原始检验结果值（可为空，空值按未判定处理）
+     * @return 判定结果；项目不存在时返回未判定结论，不返回 {@code null}
+     */
+    JudgeResultVO judgeValue(Long laboratoryItemId, String resultValue);
 }

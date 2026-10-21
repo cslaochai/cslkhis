@@ -28,7 +28,7 @@ import com.his.spi.vo.PatientMasterVO;
 import com.his.spi.dto.TechAuthGateDTO;
 import com.his.common.entity.CurrentUser;
 import com.his.system.service.DeptScopeService;
-import com.his.medicaltech.service.EmployeeTechAuthService;
+import com.his.spi.service.EmployeeTechAuthFacadeService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -62,7 +62,7 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
 
     private final RedisSequenceService redisSequenceService;
 
-    private final EmployeeTechAuthService employeeTechAuthService;
+    private final EmployeeTechAuthFacadeService employeeTechAuthService;
 
     private final DeptScopeService deptScopeService;
 

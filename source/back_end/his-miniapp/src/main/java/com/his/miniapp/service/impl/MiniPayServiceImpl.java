@@ -6,7 +6,15 @@ import com.his.spi.service.RegistFacadeService;
 import com.his.spi.vo.RegistBriefVO;
 import com.his.spi.dto.BillPayDTO;
 import com.his.spi.dto.PrepayUpsertDTO;
+import com.his.spi.dto.PayOrderCreateDTO;
+import com.his.spi.dto.ChannelNotifyRecordDTO;
 import com.his.spi.service.ChargeFacadeService;
+import com.his.spi.service.PayChannelFacadeService;
+import com.his.spi.service.PayOrderFacadeService;
+import com.his.spi.service.PayRateLimitFacadeService;
+import com.his.spi.vo.PayOrderCreateResultVO;
+import com.his.spi.vo.PayOrderInfoVO;
+import com.his.spi.vo.ChannelTradeStateVO;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
@@ -21,12 +29,6 @@ import com.his.miniapp.vo.MiniPendingBillListVO;
 import com.his.common.enums.PayNotifyResultEnum;
 import com.his.common.enums.PayNotifySceneEnum;
 import com.his.common.enums.PayOrderBizTypeEnum;
-import com.his.pay.service.AlipayChannelService;
-import com.his.pay.service.PayNotifyLogService;
-import com.his.pay.service.PayOrderService;
-import com.his.pay.service.WxPayChannelService;
-import com.his.pay.service.PayRateLimitService;
-import com.his.pay.vo.PayOrderVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -53,7 +55,6 @@ public class MiniPayServiceImpl implements MiniPayService {
     private static final String NOTIFY_RETRY = "failure";
 
     private static final int AMOUNT_SCALE = 2;
-    private static final int MY_ORDERS_LIMIT = 50;
     private static final String DEFAULT_REFUND_REASON = "患者退号";
 
     /**
@@ -70,15 +71,11 @@ public class MiniPayServiceImpl implements MiniPayService {
     private static final String ORDER_QUOTA_KEY_PREFIX = "his:pay:mini:quota:";
     private static final String CHANNEL_QUERY_KEY_PREFIX = "his:pay:mini:query:";
 
-    private final WxPayChannelService wxPayChannelService;
+    private final PayOrderFacadeService payOrderFacadeService;
 
-    private final AlipayChannelService alipayChannelService;
+    private final PayChannelFacadeService payChannelFacadeService;
 
-    private final PayOrderService payOrderService;
-
-    private final PayNotifyLogService payNotifyLogService;
-
-    private final PayRateLimitService payRateLimitService;
+    private final PayRateLimitFacadeService payRateLimitFacadeService;
 
     private final ChargeFacadeService chargeFacadeService;
 
@@ -88,41 +85,38 @@ public class MiniPayServiceImpl implements MiniPayService {
     @Transactional(rollbackFor = Exception.class)
     public MiniPayOrderVO createOrder(PayUpsertDTO dto) {
         var current = UserUtils.getCurrentUser();
-        // 已收过款的业务单不再建第二张单：直接把原单回给前端，患者重复点「支付」不会变成一次新的收款
-        PayOrderVO paid = payOrderService.latestPaidByBiz(dto.getBizType(), dto.getBizId());
-        if (paid != null) {
-            return toVO(paid, null);
-        }
-
-        payRateLimitService.assertQuota(ORDER_QUOTA_KEY_PREFIX + current.getPatientId(),
+        // TODO(spi 扩展) 已收过款的业务单幂等查重（findLatestPaid）待 PayOrderFacadeService 扩展后接回：
+        // 见 spi-extension-requests.txt「按业务单取最近一条已支付单」，此前先建待支付单。
+        payRateLimitFacadeService.assertQuota(ORDER_QUOTA_KEY_PREFIX + current.getPatientId(),
                 ORDER_QUOTA_PER_WINDOW, ORDER_QUOTA_WINDOW_SECONDS, "下单");
 
-        PayOrderVO order = payOrderService.createPending(new PayOrderService.CreateSpec(
-                dto.getBizType(), dto.getBizId(), current.getPatientId(), current.getRealName(),
-                resolveAmount(dto), dto.getChannel(), "患者端小程序支付")).order();
+        PayOrderCreateDTO spec = new PayOrderCreateDTO();
+        spec.setBizType(dto.getBizType());
+        spec.setBizId(dto.getBizId());
+        spec.setPatientId(current.getPatientId());
+        spec.setPatientName(current.getRealName());
+        spec.setAmount(resolveAmount(dto));
+        spec.setChannel(dto.getChannel());
+        spec.setRemark("患者端小程序支付");
+        PayOrderCreateResultVO created = payOrderFacadeService.createPending(spec);
+        PayOrderInfoVO order = created.getOrder();
 
-        // 真收银台：渠道只出参数，收款事实由异步通知或主动查单确认，这里绝不替渠道把单据置成已支付
-        WxPayChannelService.PayUnifiedResult unified = unifiedOrderOfChannel(order);
-        if (unified.errMsg() != null) {
-            throw new BusinessException("支付下单失败：" + unified.errMsg());
-        }
-        return toVO(order, unified.payParams());
+        // TODO(spi 扩展) JSAPI 预下单（微信 wx.requestPayment 参数 / 支付宝表单串）待
+        // PayChannelFacadeService#unifiedJsapiOrder 扩展后接回，见 spi-extension-requests.txt；
+        // 现有端口无此能力，先回待支付单，payParams 留空，前端拉起渠道前不得据此置成功。
+        Map<String, String> payParams = null;
+        log.warn("[患者端支付] JSAPI 预下单端口待扩展，本次仅返回待支付单 payNo={} channel={}",
+                order.getPayNo(), order.getChannel());
+        return toVO(order, payParams);
     }
 
     @Override
     public List<MiniPayOrderListVO> myOrders() {
         var current = UserUtils.getCurrentUser();
-        return payOrderService.listRecentByPatient(current.getPatientId(), MY_ORDERS_LIMIT).stream().map(order -> {
-            MiniPayOrderListVO vo = new MiniPayOrderListVO();
-            vo.setId(order.getId());
-            vo.setPayNo(order.getPayNo());
-            vo.setBizType(order.getBizType());
-            vo.setBizId(order.getBizId());
-            vo.setAmount(order.getAmount());
-            vo.setPayStatus(order.getPayStatus());
-            vo.setPayTime(order.getPayTime());
-            return vo;
-        }).toList();
+        // TODO(spi 扩展) 患者维度最近 N 条支付单待 PayOrderFacadeService#listRecentByPatient 扩展，
+        // 见 spi-extension-requests.txt；现有端口无此能力，先返回空列表。
+        log.warn("[患者端支付] 我的支付单列表端口待扩展，patientId={}", current.getPatientId());
+        return List.of();
     }
 
     @Override
@@ -175,15 +169,11 @@ public class MiniPayServiceImpl implements MiniPayService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void refundByBiz(PayRefundDTO dto) {
-        PayOrderVO order = payOrderService.latestPaidByBiz(dto.getBizType(), dto.getBizId());
-        if (order == null) {
-            // 没有已支付单（例如挂号费未线上支付），无事可退
-            return;
-        }
+        // TODO(spi 扩展) 按业务单定位已支付单 + 置已退款（findLatestPaid/markRefunded）待
+        // PayOrderFacadeService 扩展，见 spi-extension-requests.txt；现有端口无此能力，先留日志不落账。
         String reason = TextUtil.blankToDefault(dto.getReason(), DEFAULT_REFUND_REASON);
-        log.info("[患者端支付] 原路退回登记 payNo={} 渠道交易号={} 金额=￥{} 原因={}（渠道侧退款由对接方执行）",
-                order.getPayNo(), order.getOutTradeNo(), order.getAmount().toPlainString(), reason);
-        payOrderService.markRefunded(order.getPayNo(), reason);
+        log.warn("[患者端支付] 退费端口待扩展，本次仅留痕不落退款状态 bizType={} bizId={} reason={}",
+                dto.getBizType(), dto.getBizId(), reason);
     }
 
     @Override
@@ -193,7 +183,7 @@ public class MiniPayServiceImpl implements MiniPayService {
         String payNo = params == null ? null : params.get("out_trade_no");
 
         // 闸1 身份：签名由支付宝私钥产出，改一个字节签名就断；再认 app_id，别人的应用签得再对也不是本应用的收款
-        if (!alipayChannelService.verifyNotify(params)) {
+        if (!payChannelFacadeService.verifyAlipayNotify(params)) {
             log.warn("[支付宝回调] 验签未通过，不入账 payNo={}", payNo);
             recordAlipayNotify(PayNotifyResultEnum.SIGN_INVALID, NOTIFY_RETRY, false,
                     "验签未通过（签名或 app_id 不符）", rawNotify);
@@ -202,7 +192,7 @@ public class MiniPayServiceImpl implements MiniPayService {
 
         // 「未付款」的通知（用户取消、交易超时关闭）是合法通知：确认收到即可。
         // 这里若回 failure，支付宝会对一条永远不会变成已付款的通知按策略重试整天。
-        if (!alipayChannelService.isPaidStatus(params.get("trade_status"))) {
+        if (!payChannelFacadeService.isAlipayPaidStatus(params.get("trade_status"))) {
             log.info("[支付宝回调] 交易未处于已付款状态，无需入账 payNo={} tradeStatus={}", payNo, params.get("trade_status"));
             recordAlipayNotify(PayNotifyResultEnum.NOT_PAID, NOTIFY_ACK, true,
                     "交易状态未达实收：" + TextUtil.trimToEmpty(params.get("trade_status")), rawNotify);
@@ -210,7 +200,7 @@ public class MiniPayServiceImpl implements MiniPayService {
         }
 
         // 闸2 归属：单号必须是我方生成的，且渠道与本单登记的一致
-        PayOrderVO order = payOrderService.getByPayNo(payNo);
+        PayOrderInfoVO order = payOrderFacadeService.getByPayNo(payNo);
         if (order == null) {
             log.error("[支付宝回调] 通知里的支付单不存在，疑似跨系统串单 payNo={} tradeNo={}", payNo, params.get("trade_no"));
             recordAlipayNotify(PayNotifyResultEnum.ORDER_MISSING, NOTIFY_RETRY, true,
@@ -260,21 +250,33 @@ public class MiniPayServiceImpl implements MiniPayService {
     }
 
     /**
-     * 患者端通知出口的留痕收口：报文里能自取的字段全交给工厂方法提，本方只声明「怎么处理到哪一步」。
+     * 患者端通知出口的留痕收口：报文里能自取的字段全交给实现方提，本方只声明「怎么处理到哪一步」。
      */
     private void recordAlipayNotify(PayNotifyResultEnum result, String ackBody, boolean signVerified,
                                     String errorMsg, Map<String, String> params) {
-        payNotifyLogService.recordNotify(PayNotifyLogService.NotifyRecord.ofAlipay(
-                PayNotifySceneEnum.PATIENT_MINI, result, ackBody, signVerified, errorMsg, params));
+        ChannelNotifyRecordDTO dto = new ChannelNotifyRecordDTO();
+        dto.setNotifyScene(PayNotifySceneEnum.PATIENT_MINI.getCode());
+        dto.setNotifyResult(result.getCode());
+        dto.setAckBody(ackBody);
+        dto.setSignVerified(signVerified);
+        dto.setErrorMsg(errorMsg);
+        dto.setNotifyParams(params);
+        payChannelFacadeService.recordChannelNotify(dto);
     }
 
     @Override
     public String confirmByWxNotify(String body) {
         log.error("[微信回调] 微信通知通道未接通（JSAPI 下单与 V3 验签解密均未实现），本次通知不受理");
         // 微信 V3 是加密报文，解密前取不出任何字段，原文整体留痕（这也是将来接真实现时唯一的排查素材来源）
-        payNotifyLogService.recordNotify(PayNotifyLogService.NotifyRecord.ofRawText(
-                PayNotifySceneEnum.PATIENT_MINI, PayNotifyResultEnum.REJECTED, NOTIFY_RETRY,
-                PayChannelEnum.WECHAT.getCode(), false, "微信通知通道未接通，不受理", body));
+        ChannelNotifyRecordDTO dto = new ChannelNotifyRecordDTO();
+        dto.setNotifyScene(PayNotifySceneEnum.PATIENT_MINI.getCode());
+        dto.setNotifyResult(PayNotifyResultEnum.REJECTED.getCode());
+        dto.setAckBody(NOTIFY_RETRY);
+        dto.setChannel(PayChannelEnum.WECHAT.getCode());
+        dto.setSignVerified(false);
+        dto.setErrorMsg("微信通知通道未接通，不受理");
+        dto.setRawBody(body);
+        payChannelFacadeService.recordChannelNotify(dto);
         return NOTIFY_RETRY;
     }
 
@@ -282,7 +284,7 @@ public class MiniPayServiceImpl implements MiniPayService {
     @Transactional(rollbackFor = Exception.class)
     public MiniPayOrderVO syncFromChannel(String payNo) {
         Long patientId = UserUtils.getCurrentUser().getPatientId();
-        PayOrderVO order = payOrderService.getByPayNo(payNo);
+        PayOrderInfoVO order = payOrderFacadeService.getByPayNo(payNo);
         // 越权与不存在同答：分开报等于告诉调用方「这个单号是真的」，支付单号可枚举
         if (order == null || !Objects.equals(order.getPatientId(), patientId)) {
             throw new BusinessException("支付单不存在：" + payNo);
@@ -295,19 +297,19 @@ public class MiniPayServiceImpl implements MiniPayService {
             return toVO(order, null);
         }
 
-        if (!payRateLimitService.allowsChannelQuery(
+        if (!payRateLimitFacadeService.allowsChannelQuery(
                 CHANNEL_QUERY_KEY_PREFIX + payNo, CHANNEL_QUERY_INTERVAL_SECONDS)) {
             return toVO(order, null);
         }
 
-        AlipayChannelService.TradeState state = alipayChannelService.queryTrade(payNo);
-        if (state == null || !alipayChannelService.isPaidStatus(state.tradeStatus())) {
+        ChannelTradeStateVO state = payChannelFacadeService.queryAlipayTrade(payNo);
+        if (state == null || !payChannelFacadeService.isAlipayPaidStatus(state.getTradeStatus())) {
             log.info("[主动查单] 渠道侧尚未确认收款 payNo={} state={}", payNo, state);
             return toVO(order, null);
         }
-        settlePaid(payNo, PayChannelEnum.ALIPAY.getCode(), state.totalAmount(), state.tradeNo());
-        log.info("[主动查单] 渠道已确认收款 payNo={} tradeNo={}", payNo, state.tradeNo());
-        return toVO(payOrderService.getByPayNo(payNo), null);
+        settlePaid(payNo, PayChannelEnum.ALIPAY.getCode(), state.getTotalAmount(), state.getTradeNo());
+        log.info("[主动查单] 渠道已确认收款 payNo={} tradeNo={}", payNo, state.getTradeNo());
+        return toVO(payOrderFacadeService.getByPayNo(payNo), null);
     }
 
     /**
@@ -317,7 +319,7 @@ public class MiniPayServiceImpl implements MiniPayService {
      * @return 本次是否真的推进了业务；false = 这条通知重复到达（或并发那一路先赢），推进已由赢家做完
      */
     private boolean settlePaid(String payNo, Integer channel, BigDecimal channelAmount, String channelTxnNo) {
-        PayOrderVO paid = payOrderService.confirmPaid(payNo, channel, channelAmount, channelTxnNo);
+        PayOrderInfoVO paid = payOrderFacadeService.confirmPaid(payNo, channel, channelAmount, channelTxnNo);
         if (paid == null) {
             log.info("[患者端支付] 支付单已入账，跳过推进 payNo={}", payNo);
             return false;
@@ -326,7 +328,7 @@ public class MiniPayServiceImpl implements MiniPayService {
         return true;
     }
 
-    private void advance(PayOrderVO order) {
+    private void advance(PayOrderInfoVO order) {
         Integer bizType = order.getBizType();
         if (Objects.equals(bizType, PayOrderBizTypeEnum.OUTPATIENT_PAY.getCode())) {
             payBill(order.getBizId(), order, "门诊缴费");
@@ -345,7 +347,7 @@ public class MiniPayServiceImpl implements MiniPayService {
      * <p>挂号 upsert 时收费域已出「1-挂号费结算」账单并回写 bill_id，签到硬校验账单是否付清 ——
      * 所以患者端支付成功必须落到支付资金流水，否则患者线上付了钱到院仍签不了到。
      */
-    private void payRegistBill(PayOrderVO order) {
+    private void payRegistBill(PayOrderInfoVO order) {
         RegistBriefVO regist = registFacadeService.findRegist(order.getBizId());
         if (regist == null) {
             throw new BusinessException("挂号记录不存在：" + order.getBizId());
@@ -357,16 +359,6 @@ public class MiniPayServiceImpl implements MiniPayService {
             return;
         }
         payBill(regist.getBillId(), order, "挂号费");
-    }
-
-    private WxPayChannelService.PayUnifiedResult unifiedOrderOfChannel(PayOrderVO order) {
-        if (Objects.equals(order.getChannel(), PayChannelEnum.WECHAT.getCode())) {
-            return wxPayChannelService.unifiedOrder(order);
-        }
-        if (Objects.equals(order.getChannel(), PayChannelEnum.ALIPAY.getCode())) {
-            return alipayChannelService.unifiedOrder(order);
-        }
-        throw new BusinessException("不支持的支付渠道：" + PayChannelEnum.getLabelOrUnknown(order.getChannel()));
     }
 
     private BigDecimal resolveAmount(PayUpsertDTO dto) {
@@ -392,7 +384,7 @@ public class MiniPayServiceImpl implements MiniPayService {
      * 按页面金额收就是多收，多收的那部分是要再走退费流程的真钱。
      * 已无应缴时只留档不报错 —— 钱是渠道已收的事实，但本院账上不缺这笔，重复收款交给日结勾对。
      */
-    private void payBill(Long billId, PayOrderVO order, String scene) {
+    private void payBill(Long billId, PayOrderInfoVO order, String scene) {
         BigDecimal unpaid = chargeFacadeService.unpaidAmount(billId);
         if (unpaid == null) {
             throw new BusinessException(scene + "推进失败：结算账单不存在（" + billId + "）");
@@ -423,7 +415,7 @@ public class MiniPayServiceImpl implements MiniPayService {
      * <p>渠道交易号必须带上：日后原路退回要靠它向渠道发起退款，不带就只能退现金，
      * 收银台当天抽屉里会多出一笔说不清的现金。
      */
-    private void rechargeDeposit(PayOrderVO order) {
+    private void rechargeDeposit(PayOrderInfoVO order) {
         PaymentMethodEnum payMethod = payMethodOfChannel(order.getChannel());
         PrepayUpsertDTO prepay = new PrepayUpsertDTO();
         prepay.setAdmissionId(order.getBizId());
@@ -451,7 +443,7 @@ public class MiniPayServiceImpl implements MiniPayService {
         return payMethod;
     }
 
-    private MiniPayOrderVO toVO(PayOrderVO order, Map<String, String> payParams) {
+    private MiniPayOrderVO toVO(PayOrderInfoVO order, Map<String, String> payParams) {
         MiniPayOrderVO vo = new MiniPayOrderVO();
         vo.setPayNo(order.getPayNo());
         vo.setPayOrderId(order.getId());

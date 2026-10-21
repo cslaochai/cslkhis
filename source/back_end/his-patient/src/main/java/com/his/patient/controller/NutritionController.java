@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 营养风险筛查 / 营养会诊 / 营养指标监测（sql/168，菜单 424、427、428）。
+ * 营养风险筛查 / 营养会诊 / 营养指标监测
  */
 @Tag(name = "营养风险筛查与会诊")
 @RestController

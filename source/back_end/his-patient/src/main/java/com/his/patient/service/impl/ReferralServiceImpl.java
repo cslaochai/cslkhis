@@ -21,11 +21,11 @@ import com.his.common.enums.BizTypeEnum;
 import com.his.spi.service.SystemFacadeService;
 import com.his.system.service.DeptScopeService;
 import com.his.system.service.DictCacheService;
-import com.his.schedule.service.DutyRosterService;
+import com.his.spi.service.DutyRosterFacadeService;
 import com.his.system.service.RedisSequenceService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
-import com.his.schedule.vo.DutyOfficerVO;
+import com.his.spi.vo.DutyOfficerBriefVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -58,7 +58,7 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
     /**
      * 全院当天谁负责：转诊挂住没人接时的兜底收口人（sql/169）
      */
-    private final DutyRosterService dutyRosterService;
+    private final DutyRosterFacadeService dutyRosterService;
     private final SysMessageService sysMessageService;
     private final SystemFacadeService systemFacadeService;
     private final DeptScopeService deptScopeService;
@@ -210,7 +210,7 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
      * 过去全靠打电话，打没打、谁接的，事后无从查证。落在待办里，链条才完整。
      */
     private void notifyDutyOnCreate(BizReferral r) {
-        DutyOfficerVO duty = dutyRosterService.current();
+        DutyOfficerBriefVO duty = dutyRosterService.current();
         if (duty == null || duty.getEmployeeId() == null) {
             log.warn("[双向转诊] {} 已登记但当日总值班未排班，转诊协调无人接手", r.getReferralNo());
             return;
@@ -254,7 +254,7 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
         if (pending.isEmpty()) {
             return 0;
         }
-        DutyOfficerVO duty = dutyRosterService.current();
+        DutyOfficerBriefVO duty = dutyRosterService.current();
         if (duty == null || duty.getEmployeeId() == null) {
             log.warn("[双向转诊] {} 条转诊单待确认已超过 {} 小时，但当日总值班未排班，无法催办", pending.size(), hours);
             return 0;

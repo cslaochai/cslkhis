@@ -1,7 +1,7 @@
 package com.his.miniapp.controller;
 
-import com.his.schedule.dto.ScheduleSelectQueryDTO;
 import com.his.common.base.Result;
+import com.his.spi.dto.AppointQueryDTO;
 import com.his.miniapp.service.MiniDirectoryService;
 import com.his.miniapp.vo.MiniDeptSelectListVO;
 import com.his.miniapp.vo.MiniDoctorSelectListVO;
@@ -54,7 +54,7 @@ public class MiniDirectoryController {
      */
     @Operation(summary = "可挂号源（复用排班域 service，患者端原样取数）")
     @PostMapping("/scheduleList")
-    public Result<List<MiniScheduleSelectVO>> scheduleList(@Valid @RequestBody ScheduleSelectQueryDTO queryDTO) {
+    public Result<List<MiniScheduleSelectVO>> scheduleList(@Valid @RequestBody AppointQueryDTO queryDTO) {
         return Result.success(miniDirectoryService.schedules(queryDTO));
     }
 

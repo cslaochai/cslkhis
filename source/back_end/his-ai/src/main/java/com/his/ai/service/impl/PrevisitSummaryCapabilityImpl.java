@@ -13,7 +13,7 @@ import com.his.ai.vo.PrevisitSummaryVO;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.common.enums.PrevisitSummarySourceEnum;
-import com.his.emr.service.PrevisitRecordService;
+import com.his.spi.service.PrevisitSummaryFacadeService;
 import com.his.spi.vo.PrevisitDetailVO;
 import com.his.common.enums.AiExpressionSourceEnum;
 import com.his.common.enums.AiBizTypeEnum;
@@ -47,7 +47,7 @@ public class PrevisitSummaryCapabilityImpl implements PrevisitSummaryCapability 
 
     private final AiExecutionService aiExecutionService;
 
-    private final PrevisitRecordService previsitRecordService;
+    private final PrevisitSummaryFacadeService previsitSummaryFacadeService;
 
     private final ObjectMapper objectMapper;
 
@@ -55,7 +55,7 @@ public class PrevisitSummaryCapabilityImpl implements PrevisitSummaryCapability 
 
     @Override
     public PrevisitSummaryVO execute(PrevisitSummaryDTO dto) {
-        PrevisitDetailVO record = previsitRecordService.getByRegist(dto.getRegistId());
+        PrevisitDetailVO record = previsitSummaryFacadeService.getByRegist(dto.getRegistId());
         if (record == null) {
             throw new BusinessException("预问诊记录不存在，请先完成病史采集");
         }
@@ -81,7 +81,7 @@ public class PrevisitSummaryCapabilityImpl implements PrevisitSummaryCapability 
         }
 
         // 两个来源都落库：医生站报告卡直接读记录，不在这里二次生成
-        previsitRecordService.saveSummary(dto.getRegistId(), vo.getSummary(),
+        previsitSummaryFacadeService.saveSummary(dto.getRegistId(), vo.getSummary(),
                 AiExpressionSourceEnum.MODEL.getCode().equals(vo.getSource())
                         ? PrevisitSummarySourceEnum.MODEL.getCode()
                         : PrevisitSummarySourceEnum.RULE.getCode());

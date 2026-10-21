@@ -9,8 +9,9 @@ import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
 import com.his.system.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
-import com.his.emr.entity.BizInspectionApply;
-import com.his.emr.mapper.BizInspectionApplyMapper;
+import com.his.spi.dto.InspectionApplyPageQueryDTO;
+import com.his.spi.service.EmrApplyFacadeService;
+import com.his.spi.vo.InspectionApplyBriefVO;
 import com.his.medicaltech.dto.ExamApptDTO;
 import com.his.medicaltech.entity.BizExamAppointment;
 import com.his.medicaltech.entity.BizExamDevice;
@@ -50,6 +51,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * 检查预约服务：待预约申请、占号/改约/取消/到检/完成/爽约，以及设备与患者两侧的冲突检测。
@@ -66,14 +68,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
      */
     private static final String SYSTEM_NOSHOW_OPERATOR = "system:examNoShow";
 
-    /**
-     * 待预约事实：active_flag=1 才有在办预约（唯一索引位）
-     */
-    private static final String NO_ACTIVE_APPOINTMENT =
-            "SELECT 1 FROM biz_exam_appointment ea WHERE ea.apply_id = biz_inspection_apply.id "
-                    + "AND ea.active_flag = 1 AND ea.del_flag = 0";
-
-    private final BizInspectionApplyMapper bizInspectionApplyMapper;
+    private final EmrApplyFacadeService emrApplyFacadeService;
     private final SysInspectionItemMapper sysInspectionItemMapper;
     private final BizExamDeviceMapper bizExamDeviceMapper;
     private final BizExamDeviceItemMapper bizExamDeviceItemMapper;
@@ -90,24 +85,38 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
     // 预约台账
 
     public PageResult<ExamApptVO.ApplyVO> pendingListPage(ExamApptDTO.ApplyQuery q) {
-        LambdaQueryWrapper<BizInspectionApply> w = new LambdaQueryWrapper<BizInspectionApply>()
-                .in(BizInspectionApply::getApplyStatus,
-                        CdrInspApplyStatusEnum.SUBMITTED.getCode(), CdrInspApplyStatusEnum.PAID.getCode())
-                .notExists(NO_ACTIVE_APPOINTMENT);
-        String kw = TextUtil.trim(q.getKeyword());
-        w.and(TextUtil.hasText(kw), x -> x.like(BizInspectionApply::getApplyNo, kw)
-                        .or().like(BizInspectionApply::getPatientName, kw)
-                        .or().like(BizInspectionApply::getInspectionItemName, kw))
-                .eq(q.getPatientId() != null, BizInspectionApply::getPatientId, q.getPatientId())
-                .eq(q.getIsEmergency() != null, BizInspectionApply::getIsEmergency, q.getIsEmergency())
-                .ge(q.getStartDate() != null, BizInspectionApply::getVisitDate, q.getStartDate())
-                .le(q.getEndDate() != null, BizInspectionApply::getVisitDate, q.getEndDate())
-                .orderByDesc(BizInspectionApply::getIsEmergency)
-                .orderByAsc(BizInspectionApply::getId);
-        Page<BizInspectionApply> page = bizInspectionApplyMapper.selectPage(
-                new Page<>(q.getPageNum(), q.getPageSize()), w);
-        return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
+        PageResult<InspectionApplyBriefVO> page = emrApplyFacadeService.pageInspectionApply(buildPendingQuery(q));
+        return PageResult.of(page.getTotal(), page.getPageNum(), page.getPageSize(), page.getPages(),
                 toApplyVos(page.getRecords()));
+    }
+
+    /**
+     * 待预约申请筛选：已提交/已缴费，且本模块台账里没有在办预约。
+     * 在办预约占用的申请单ID由本域算出后走 excludeApplyIds 排除（申请单事实归病历域，本域不直查申请单表）。
+     */
+    private InspectionApplyPageQueryDTO buildPendingQuery(ExamApptDTO.ApplyQuery q) {
+        InspectionApplyPageQueryDTO query = new InspectionApplyPageQueryDTO();
+        query.setPageNum(q.getPageNum());
+        query.setPageSize(q.getPageSize());
+        query.setApplyStatusIn(List.of(
+                CdrInspApplyStatusEnum.SUBMITTED.getCode(), CdrInspApplyStatusEnum.PAID.getCode()));
+        query.setKeyword(TextUtil.trim(q.getKeyword()));
+        query.setPatientId(q.getPatientId());
+        query.setIsEmergency(q.getIsEmergency());
+        query.setStartDate(q.getStartDate());
+        query.setEndDate(q.getEndDate());
+        query.setExcludeApplyIds(activeApplyIds());
+        return query;
+    }
+
+    /**
+     * 本模块在办预约（active_flag=1、未删除）占用的申请单ID，供待预约列表与计数排除。
+     */
+    private List<Long> activeApplyIds() {
+        return bizExamAppointmentMapper.selectList(new LambdaQueryWrapper<BizExamAppointment>()
+                        .eq(BizExamAppointment::getActiveFlag, 1))
+                .stream().map(BizExamAppointment::getApplyId)
+                .filter(Objects::nonNull).distinct().toList();
     }
 
     public PageResult<ExamApptVO.ApptVO> listPage(ExamApptDTO.ApptQuery q) {
@@ -176,10 +185,11 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
                 }
             }
         }
-        vo.setPendingApplies(bizInspectionApplyMapper.selectCount(new LambdaQueryWrapper<BizInspectionApply>()
-                .in(BizInspectionApply::getApplyStatus,
-                        CdrInspApplyStatusEnum.SUBMITTED.getCode(), CdrInspApplyStatusEnum.PAID.getCode())
-                .notExists(NO_ACTIVE_APPOINTMENT)));
+        InspectionApplyPageQueryDTO pendingQuery = new InspectionApplyPageQueryDTO();
+        pendingQuery.setApplyStatusIn(List.of(
+                CdrInspApplyStatusEnum.SUBMITTED.getCode(), CdrInspApplyStatusEnum.PAID.getCode()));
+        pendingQuery.setExcludeApplyIds(activeApplyIds());
+        vo.setPendingApplies(emrApplyFacadeService.countInspectionApply(pendingQuery));
         vo.setActiveTotal(bizExamAppointmentMapper.selectCount(new LambdaQueryWrapper<BizExamAppointment>()
                 .eq(BizExamAppointment::getActiveFlag, 1)
                 .in(BizExamAppointment::getStatus,
@@ -196,7 +206,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
 
     @Transactional(rollbackFor = Exception.class)
     public ExamApptVO.ApptDetailVO book(ExamApptDTO.Book dto) {
-        BizInspectionApply apply = requireApply(dto.getApplyId());
+        InspectionApplyBriefVO apply = requireApply(dto.getApplyId());
         int prevStatus = gateApplyStatus(apply);
         String remark = dto.getRemark();
         if (prevStatus == CdrInspApplyStatusEnum.SUBMITTED.getCode()) {
@@ -228,7 +238,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
             throw new BusinessException("仅「已预约」可改约（当前："
                     + dictCacheService.getDicDataLabel(DictTypeConst.EXAM_APPOINT_STATUS, old.getStatus()) + "）");
         }
-        BizInspectionApply apply = requireApply(old.getApplyId());
+        InspectionApplyBriefVO apply = requireApply(old.getApplyId());
         int prevStatus = old.getPrevApplyStatus() == null
                 ? CdrInspApplyStatusEnum.PAID.getCode() : old.getPrevApplyStatus();
         releaseOld(old, "改约：" + dto.getExamDate() + " " + dto.getStartTime() + "，原因：" + dto.getReason(),
@@ -347,7 +357,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
      */
     @Transactional(rollbackFor = Exception.class)
     public ExamApptVO.RecommendVO recommend(ExamApptDTO.Recommend dto) {
-        BizInspectionApply apply = requireApply(dto.getApplyId());
+        InspectionApplyBriefVO apply = requireApply(dto.getApplyId());
         ExamApptVO.RecommendVO vo = new ExamApptVO.RecommendVO();
         vo.setApplyId(apply.getId());
         vo.setItemName(apply.getInspectionItemName());
@@ -421,7 +431,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
         return vo;
     }
 
-    private BizExamAppointment doBook(BizInspectionApply apply, Long deviceId, LocalDate examDate,
+    private BizExamAppointment doBook(InspectionApplyBriefVO apply, Long deviceId, LocalDate examDate,
                                       String startTime, Integer prevStatus, String remark) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
@@ -611,7 +621,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
     /**
      * @return 申请单在预约前应处于的状态（取消时按它精确回退）
      */
-    private int gateApplyStatus(BizInspectionApply apply) {
+    private int gateApplyStatus(InspectionApplyBriefVO apply) {
         int status = apply.getApplyStatus() == null ? 0 : apply.getApplyStatus();
         if (status == CdrInspApplyStatusEnum.BOOKED.getCode()) {
             BizExamAppointment active = bizExamAppointmentMapper.selectOne(new LambdaQueryWrapper<BizExamAppointment>()
@@ -765,9 +775,9 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
         return q;
     }
 
-    private List<ExamApptVO.ApplyVO> toApplyVos(List<BizInspectionApply> applies) {
+    private List<ExamApptVO.ApplyVO> toApplyVos(List<InspectionApplyBriefVO> applies) {
         Map<Long, Integer> deviceCounts = deviceItemCountMap();
-        List<Long> ids = applies.stream().map(BizInspectionApply::getId).toList();
+        List<Long> ids = applies.stream().map(InspectionApplyBriefVO::getId).toList();
         Map<Long, BizExamAppointment> activeByApply = new HashMap<>();
         if (!ids.isEmpty()) {
             for (BizExamAppointment a : bizExamAppointmentMapper.selectList(new LambdaQueryWrapper<BizExamAppointment>()
@@ -777,7 +787,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
             }
         }
         List<ExamApptVO.ApplyVO> out = new ArrayList<>();
-        for (BizInspectionApply a : applies) {
+        for (InspectionApplyBriefVO a : applies) {
             ExamApptVO.ApplyVO v = new ExamApptVO.ApplyVO();
             v.setApplyId(a.getId());
             v.setApplyNo(a.getApplyNo());
@@ -832,8 +842,8 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
         return v;
     }
 
-    private BizInspectionApply requireApply(Long applyId) {
-        BizInspectionApply apply = applyId == null ? null : bizInspectionApplyMapper.selectById(applyId);
+    private InspectionApplyBriefVO requireApply(Long applyId) {
+        InspectionApplyBriefVO apply = emrApplyFacadeService.getInspectionApplyById(applyId);
         if (apply == null) {
             throw new BusinessException("检查申请单不存在：" + applyId);
         }
@@ -863,7 +873,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
         }
     }
 
-    private boolean isEmergency(BizInspectionApply apply) {
+    private boolean isEmergency(InspectionApplyBriefVO apply) {
         return apply.getIsEmergency() != null && apply.getIsEmergency() == 1;
     }
 }

@@ -19,14 +19,15 @@ import com.his.patient.dto.PatientSearchScopeDTO;
 import com.his.patient.dto.PatientUpsertDTO;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.entity.BizPatientTagRelation;
+import com.his.patient.entity.SysPatientTag;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.mapper.BizPatientTagRelationMapper;
+import com.his.patient.mapper.SysPatientTagMapper;
 import com.his.patient.service.*;
 import com.his.patient.support.PatientProfileValidator;
 import com.his.spi.dto.PatientAccountCreateDTO;
 import com.his.spi.service.RegistFacadeService;
 import com.his.spi.service.SystemFacadeService;
-import com.his.spi.vo.PatientTagBriefVO;
 import com.his.spi.vo.TodayVisitVO;
 import com.his.common.enums.PatientSearchScopeModeEnum;
 import com.his.patient.support.PatientSearchScopeResolver;
@@ -37,7 +38,7 @@ import com.his.system.service.*;
 import com.his.system.support.FieldSpec;
 import com.his.system.support.PasswordCipherService;
 import com.his.system.utils.UserUtils;
-import com.his.system.vo.SysPatientTagVO;
+import com.his.patient.vo.SysPatientTagVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -106,6 +107,10 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
      * 患者自助注册写登录账号用：建档后同步开通患者类型的登录账号。
      */
     private final SystemFacadeService systemFacadeService;
+    /**
+     * 患者标签字典读取：按名称/ID 批量取标签（标签定义已随患者标签迁入患者域，本域内部直查 mapper，不再绕道 Facade）。
+     */
+    private final SysPatientTagMapper sysPatientTagMapper;
     /**
      * 注册口令传输加密：前端提交的是 SM2 密文（与登录同一对公钥），这里还原成明文再交 BCrypt 落库。
      * 注册是初始口令第一次上网的场合，和登录一样不能收明文 —— 留明文口子等于登录加密白做。
@@ -314,11 +319,12 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
             return;
         }
 
-        // 查询预置的静态标签
-        List<PatientTagBriefVO> staticTags = systemFacadeService.listPatientTagsByNames(List.of("老年", "儿童", "幼儿"));
+        // 查询预置的静态标签（本域 mapper 直查）
+        List<SysPatientTag> staticTags = sysPatientTagMapper.selectList(
+                new LambdaQueryWrapper<SysPatientTag>().in(SysPatientTag::getTagName, List.of("老年", "儿童", "幼儿")));
 
         Map<String, Long> tagNameToIdMap = new HashMap<>();
-        for (PatientTagBriefVO tag : staticTags) {
+        for (SysPatientTag tag : staticTags) {
             tagNameToIdMap.put(tag.getTagName(), tag.getTagId());
         }
 

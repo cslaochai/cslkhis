@@ -2,7 +2,7 @@ package com.his.emr.vo;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.his.pharmacy.vo.DrugRationalHitVO;
+import com.his.spi.vo.DrugRationalCheckHitVO;
 import lombok.Data;
 
 import java.util.List;
@@ -32,5 +32,5 @@ public class PrescriptionRationalVO {
     /**
      * 全部命中（禁忌 + 慎用 + 剂量提示），禁忌排在最前
      */
-    private List<DrugRationalHitVO> hits;
+    private List<DrugRationalCheckHitVO> hits;
 }
