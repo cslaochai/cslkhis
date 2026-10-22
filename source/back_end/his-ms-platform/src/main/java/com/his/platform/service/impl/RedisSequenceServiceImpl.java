@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDate;
 
@@ -209,7 +210,19 @@ public class RedisSequenceServiceImpl implements RedisSequenceService {
 
     @Override
     public String generatePayOrderNo() {
-        return no(BizCodeConst.PAY_ORDER_NO_PREFIX, BizCodeConst.PAY_ORDER_NO_KEY_PREFIX, 5);
+        // 原格式 PAY+日期+5位序列可被直接枚举（猜出下一笔订单号），虽不构成伪造（伪造靠 RSA2 签名），
+        // 但会放大信息泄露与撞号风险。在「日期」与「序列」之间插入 8 位密码学随机段，使序列值不可推断。
+        // 唯一性仍由 Redis 当日序列（PAY:<日期>）保证，随机段仅作不可枚举的噪音，不引入新的碰撞可能；
+        // 总长度 3+8+8+5 = 24，远小于 biz_pay_order.pay_no 的 varchar(32) 与支付宝 out_trade_no 的 64 位上限。
+        final String base62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        SecureRandom rnd = new SecureRandom();
+        StringBuilder rand = new StringBuilder(8);
+        for (int i = 0; i < 8; i++) {
+            rand.append(base62.charAt(rnd.nextInt(base62.length())));
+        }
+        String date = LocalDate.now().format(DateFormats.COMPACT_DATE);
+        long seq = next(BizCodeConst.PAY_ORDER_NO_KEY_PREFIX);
+        return BizCodeConst.PAY_ORDER_NO_PREFIX + date + rand + String.format("%05d", seq);
     }
 
     @Override

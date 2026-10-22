@@ -22,10 +22,12 @@ import com.his.spi.vo.RecordBriefVO;
 import com.his.spi.vo.PatientMasterVO;
 import com.his.outpatient.dto.AppointBoardQueryDTO;
 import com.his.outpatient.entity.AppointInfo;
+import com.his.outpatient.entity.BizClinicSource;
 import com.his.outpatient.entity.Queue;
 import com.his.common.enums.QueueStatusEnum;
 import com.his.common.enums.RegistTypeEnum;
 import com.his.outpatient.mapper.AppointInfoMapper;
+import com.his.outpatient.mapper.BizClinicSourceMapper;
 import com.his.outpatient.mapper.QueueMapper;
 import com.his.outpatient.service.AppointService;
 import com.his.outpatient.service.RevisitFeePolicyService;
@@ -75,6 +77,8 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
     private final PatientFacadeService patientFacadeService;
 
     private final ChargeFacadeService chargeFacadeService;
+
+    private final BizClinicSourceMapper bizClinicSourceMapper;
 
     private final EmrFacadeService emrFacadeService;
 
@@ -386,11 +390,9 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
             if (noSchedule) {
                 throw new BusinessException("当日回诊不占号源，请勿选择排班");
             }
-            // TODO(spi-extension-requests): 号源读取/医生岗位校验/剩余号校验/段归属与停用校验/
-            // 就诊日与开诊截止时间闸，原直连排班域 BizClinicSource/BizClinicSourceSlot Mapper 与
-            // StaffScheduleService.releasesClinicSource、ShiftService.scheduleTypeOf。
-            // 待 ClinicSourceFacadeService（findClinicSource/findSlot/releasesClinicSource/
-            // deductScheduleSource/deductSlotSource）与班次类型端口补齐后恢复，此处不再跨模块直读号源。
+            // 号源快照回填见下方 !noSchedule 分支（同模块直读 BizClinicSource）。
+            // 待恢复：医生岗位校验/剩余号校验/段归属与停用校验/就诊日与开诊截止时间闸
+            // （releasesClinicSource/scheduleTypeOf）与号源原子扣减（deductScheduleSource/deductSlotSource）。
             if (upsertDTO.getSlotId() != null) {
                 appointInfo.setSlotId(upsertDTO.getSlotId());
             }
@@ -435,9 +437,8 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         appointInfo.setRegistNo(appointNo);
 
         // 科室/医生/就诊日快照：当日回诊(noSchedule)取当前登录人（医生站「建复诊」就是医生本人点的）；
-        // 占号源分支原由号源快照填充，跨模块改走 spi 后无号源读取端口（已登记
-        // ClinicSourceFacadeService#findClinicSource），端口补齐前占号源单的科室/医生/就诊日/号别
-        // 留空待回填，不编造。
+        // 占号源分支经同模块 BizClinicSource 直读回填，不再留空（避免 dept_id/dept_name/visit_date 为 null
+        // 被 MP 整列跳过，撞 NOT NULL 无默认值）。
         if (noSchedule) {
             CurrentUser currentUser = UserUtils.getCurrentUser();
             if (currentUser == null) {
@@ -450,9 +451,26 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
             appointInfo.setVisitDate(LocalDate.now());
             // 当日回诊不占号源、无号别可推导：归为普通号(1)
             appointInfo.setRegistType(RegistTypeEnum.NORMAL.getCode());
+        } else if (appointInfo.getScheduleId() != null) {
+            // 占号源分支：号源快照回填科室/医生/就诊日/号别。
+            // 同模块直读 BizClinicSource（本模块裸 Mapper，不引 SPI 端口以免触发
+            // clinicSourceFacadeServiceImpl → bizClinicSourceServiceImpl → appointFacadeServiceImpl →
+            // appointServiceImpl → clinicSourceFacadeServiceImpl 的类级循环依赖）。
+            // 此前这一段留空，导致 dept_id/dept_name/visit_date 为 null 被 MP 整列跳过，
+            // 撞上 NOT NULL 无默认值 → 新增挂号报 "Field 'dept_id' doesn't have a default value"。
+            BizClinicSource source = bizClinicSourceMapper.selectById(appointInfo.getScheduleId());
+            if (source == null) {
+                throw new BusinessException("所选号源不存在或已停诊，请重新选择号源");
+            }
+            appointInfo.setDeptId(source.getDeptId());
+            appointInfo.setDeptName(source.getDeptName());
+            appointInfo.setDoctorId(source.getDoctorId());
+            appointInfo.setDoctorName(source.getDoctorName());
+            appointInfo.setVisitDate(source.getScheduleDate());
+            // 号别：号源是否专家号 → 专家号(2)，否则普通号(1)
+            appointInfo.setRegistType(source.getIsExpert() != null && source.getIsExpert() == 1
+                    ? RegistTypeEnum.EXPERT.getCode() : RegistTypeEnum.NORMAL.getCode());
         }
-        // TODO(spi-extension-requests): findClinicSource(scheduleId) 可用后回填 deptId/deptName/
-        // doctorId/doctorName/visitDate/registType(专家号判定)。
         appointInfo.setRegistTime(LocalDateTime.now());
         appointInfo.setRegistStatus(AppointStatusEnum.REGISTERED.getCode()); // 待支付
 

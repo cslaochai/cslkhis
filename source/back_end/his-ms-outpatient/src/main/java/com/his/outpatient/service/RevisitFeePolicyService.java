@@ -1,11 +1,11 @@
 package com.his.outpatient.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.his.common.base.PageResult;
 import com.his.outpatient.dto.RevisitFeePolicyPageQueryDTO;
 import com.his.outpatient.dto.RevisitFeePolicyUpsertDTO;
 import com.his.outpatient.entity.RevisitFeePolicy;
 import com.his.outpatient.vo.RevisitFeePolicyVO;
-import com.his.common.base.PageResult;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -44,9 +44,9 @@ public interface RevisitFeePolicyService extends IService<RevisitFeePolicy> {
      */
     void deleteById(Long id);
 
-/**
- * 判定上下文
- */
+    /**
+     * 判定上下文
+     */
     @Data
     class RevisitFeeContext {
         /**
@@ -93,9 +93,9 @@ public interface RevisitFeePolicyService extends IService<RevisitFeePolicy> {
         private LocalDate visitDate;
     }
 
-/**
- * 收费决定
- */
+    /**
+     * 收费决定
+     */
     @Data
     class RevisitFeeDecision {
         /**
