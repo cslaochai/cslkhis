@@ -45,7 +45,7 @@
            @click="pickReevalDue">
         <div class="flex items-center gap-3">
           <div class="rounded-lg bg-orange-50 p-2.5">
-            <RefreshCw class="h-5 w-5 text-orange-600"/>
+            <RefreshRight class="h-5 w-5 text-orange-600"/>
           </div>
           <div>
             <p class="text-lg font-bold text-orange-600">{{ stats.reevalDue || 0 }}</p>
@@ -474,7 +474,7 @@
 
 <script setup>
 import {computed, onMounted, ref} from 'vue';
-import {AlarmClock, Bell, Check, Clock, Plus, Refresh, RefreshCw, Search, Switch, User, Warning} from '@element-plus/icons-vue';
+import {AlarmClock, Bell, Check, Clock, Plus, Refresh, RefreshRight, Search, Switch, User, Warning} from '@element-plus/icons-vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {
   getEmergencyHandoverListPage,
