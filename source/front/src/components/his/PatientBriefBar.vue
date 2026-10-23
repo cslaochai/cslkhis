@@ -28,7 +28,7 @@
       <el-tooltip content="患者主档 / 健康档案 / 历次就诊（跨门诊·住院·医技）" placement="bottom">
         <el-button :icon="Tickets" size="small" @click="emit('open-detail')">患者详情</el-button>
       </el-tooltip>
-      <el-button :icon="Coin" size="small" @click="emit('open-charge')">费用</el-button>
+      <el-button :icon="Coin" size="small" @click="emit('open-charge')">医保</el-button>
     </div>
   </div>
 </template>
