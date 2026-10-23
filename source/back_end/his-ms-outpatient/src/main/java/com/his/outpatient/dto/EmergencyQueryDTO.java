@@ -31,6 +31,13 @@ public class EmergencyQueryDTO extends PageParam {
     private Boolean unassignedOnly;
 
     /**
+     * 只看「我的队列」（true = 接诊医生就是当前登录用户）。
+     * <p>登录态取人，不接受前端传 doctorId——API 直连也不许看别人的队列。
+     * 认领前的患者不在此列（医生去「待派单池」抢单），与 unassignedOnly 互斥。
+     */
+    private Boolean mineOnly;
+
+    /**
      * 只看已超时（true = 候诊中且已候诊超过登记时快照的应接诊时限）
      */
     private Boolean overdueOnly;

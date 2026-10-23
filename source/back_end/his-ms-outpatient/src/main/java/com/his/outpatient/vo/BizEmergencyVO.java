@@ -56,6 +56,20 @@ public class BizEmergencyVO {
     private String emergencyNo;
 
     /**
+     * 急诊号挂号单ID（登记时同步创建的 appoint_info，regist_type=急诊）。
+     * 医生工作站开病历/处方按它关联就诊次；没有挂号单（老数据/旁路插入）时为 null
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long registId;
+
+    /**
+     * 分诊队列ID（登记时同步创建的 queue，按 regist_id 关联）。
+     * 病历/处方 DTO 强校验 queueId，医生站开单必须带上；老数据没有队列时为 null
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long queueId;
+
+    /**
      * 患者ID
      */
     @JsonSerialize(using = ToStringSerializer.class)

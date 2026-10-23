@@ -44,7 +44,7 @@ public class EmergencyController {
         return success ? Result.success("登记成功", null) : Result.error("登记失败");
     }
 
-    @PreAuthorize("hasAuthority('opd:emergency:edit')")
+    @PreAuthorize("hasAnyAuthority('opd:emergency:edit','opd:emergencyDoctor:edit')")
     @Operation(summary = "更新急诊状态（接诊/留观/离院/死亡）")
     @PostMapping("/updateStatus")
     public Result<Void> updateStatus(@RequestBody @Valid EmergencyStatusUpsertDTO statusDTO) {
@@ -52,7 +52,7 @@ public class EmergencyController {
         return success ? Result.success("更新成功", null) : Result.error("更新失败");
     }
 
-    @PreAuthorize("hasAuthority('opd:emergency:edit')")
+    @PreAuthorize("hasAnyAuthority('opd:emergency:edit','opd:emergencyDoctor:edit')")
     @Operation(summary = "急诊转住院（办理入院登记，入院途径=急诊）")
     @PostMapping("/admit")
     public Result<String> admit(@RequestBody @Valid EmergencyAdmitDTO admitDTO) {

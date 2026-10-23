@@ -135,6 +135,19 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
             wrapper.eq(Emergency::getEmergencyStatus, EmergencyStatusEnum.WAITING.getCode())
                     .isNull(Emergency::getDoctorId);
         }
+        boolean mineOnly = Boolean.TRUE.equals(queryDTO.getMineOnly());
+        if (mineOnly && Boolean.TRUE.equals(queryDTO.getUnassignedOnly())) {
+            throw new BusinessException("「我的队列」与「待派单池」不能同时开启，请只保留一个");
+        }
+        if (mineOnly) {
+            // 我的队列：登录态取人（不接受前端传 doctorId，API 直连也看不了别人的队列）。
+            // 急诊医生工作站的两个 tab——「我的候诊」走这里，「待派单池」走上面，认领前不混在一个列表里
+            Long meEmp = UserUtils.getCurrentUser() == null ? null : UserUtils.getCurrentUser().getEmployeeId();
+            if (meEmp == null) {
+                throw new BusinessException("当前账号未绑定员工，无法查询我的队列");
+            }
+            wrapper.eq(Emergency::getDoctorId, meEmp);
+        }
         boolean overdueOnly = Boolean.TRUE.equals(queryDTO.getOverdueOnly());
         boolean reevalDueOnly = Boolean.TRUE.equals(queryDTO.getReevalDueOnly());
         boolean observationBoard = queryDTO.getObservationMinHours() != null;
@@ -155,11 +168,15 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
                     .apply(OBS_OVER_SQL, queryDTO.getObservationMinHours());
         }
 
-        // 只看超时=救火队列、待复评=分诊台的催命榜、留观榜=占床最久优先，三者都是最老的排最前；其余保持新建在前
+        // 只看超时=救火队列、待复评=分诊台的催命榜、留观榜=占床最久优先，三者都是最老的排最前；
+        // 我的队列=危重优先（I级在上，同级别新登记在前）；其余保持新建在前
         if (overdueOnly || reevalDueOnly) {
             wrapper.orderByAsc(Emergency::getAdmissionTime);
         } else if (observationBoard) {
             wrapper.orderByAsc(Emergency::getObservationStartTime);
+        } else if (mineOnly) {
+            wrapper.orderByAsc(Emergency::getTriageLevel)
+                    .orderByDesc(Emergency::getCreateTime);
         } else {
             wrapper.orderByDesc(Emergency::getCreateTime);
         }
@@ -167,7 +184,51 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
         Page<Emergency> page = this.page(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
         List<BizEmergencyVO> records = page.getRecords() == null ? List.of()
                 : page.getRecords().stream().map(this::toVO).collect(Collectors.toList());
+        fillRegistIds(records);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
+    }
+
+    /**
+     * 批量补急诊号挂号单ID与分诊队列ID（供医生工作站开病历/处方关联就诊次）。
+     * <p>急诊登记时同步建了 appoint_info（regist_type=急诊）与 queue，但 emergency 表不存这两个外键，
+     * 按患者取最新一条急诊号——同一天重复登记取最后建的那次。队列按该挂号单的 regist_id 关联
+     * （与 {@code syncAppointAndQueue} 的查找口径一致）。一次 IN 查询，不走 N+1。
+     */
+    private void fillRegistIds(List<BizEmergencyVO> records) {
+        if (records.isEmpty()) {
+            return;
+        }
+        List<Long> patientIds = records.stream().map(BizEmergencyVO::getPatientId)
+                .filter(Objects::nonNull).distinct().collect(Collectors.toList());
+        if (patientIds.isEmpty()) {
+            return;
+        }
+        List<AppointInfo> appts = appointInfoMapper.selectList(new LambdaQueryWrapper<AppointInfo>()
+                .in(AppointInfo::getPatientId, patientIds)
+                .eq(AppointInfo::getRegistType, RegistTypeEnum.EMERGENCY.getCode())
+                .orderByDesc(AppointInfo::getCreateTime));
+        Map<Long, Long> registByPatient = new HashMap<>();
+        for (AppointInfo a : appts) {
+            // create_time 倒序，先见到的是最新一条，只放第一次
+            registByPatient.putIfAbsent(a.getPatientId(), a.getId());
+        }
+        // 队列按挂号单关联：一次 IN 查完这批挂号单的队列（老数据没有队列时不补，保持 null）
+        Map<Long, Long> queueByRegist = new HashMap<>();
+        List<Long> registIds = registByPatient.values().stream()
+                .filter(Objects::nonNull).distinct().collect(Collectors.toList());
+        if (!registIds.isEmpty()) {
+            List<Queue> queues = queueMapper.selectList(new LambdaQueryWrapper<Queue>()
+                    .in(Queue::getRegistId, registIds)
+                    .orderByDesc(Queue::getCreateTime));
+            for (Queue q : queues) {
+                queueByRegist.putIfAbsent(q.getRegistId(), q.getId());
+            }
+        }
+        for (BizEmergencyVO vo : records) {
+            Long registId = registByPatient.get(vo.getPatientId());
+            vo.setRegistId(registId);
+            vo.setQueueId(queueByRegist.get(registId));
+        }
     }
 
     /**
