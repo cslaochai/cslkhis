@@ -6,6 +6,7 @@ import com.his.common.enums.YesOrNoEnum;
 import com.his.common.util.TextUtil;
 import com.his.common.enums.PayNotifyResultEnum;
 import com.his.common.enums.PayNotifySceneEnum;
+import com.his.spi.dto.ChannelNotifyRecordDTO;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -74,4 +75,10 @@ public interface PayNotifyLogService {
      * 不能让「证据没记下」把已经收到钱的入账链路打断。
      */
     void recordNotify(NotifyRecord record);
+
+    /**
+     * 渠道异步通知留痕（接受跨模块契约 DTO 入口）：通知场景/处理结果枚举转换与报文键名提取收口在这里，
+     * 调用方只传原始 DTO，不必各抄一份判空与枚举解析。本方法不抛异常，落库失败只留 warn。
+     */
+    void recordChannelNotify(ChannelNotifyRecordDTO dto);
 }

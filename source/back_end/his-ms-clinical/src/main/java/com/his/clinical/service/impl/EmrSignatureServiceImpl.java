@@ -637,7 +637,7 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
             return null;
         }
         for (SignableContentService p : providers) {
-            if (p.bizType() == SignBizTypeEnum.INPATIENT_RECORD) {
+            if (p.bizType() == t) {
                 return p;
             }
         }

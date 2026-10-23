@@ -58,6 +58,16 @@ public class EmployeeController {
     }
 
     /**
+     * 当前登录员工的档案详情（含签名笔迹）：结诊处方签名、检查检验报告审核弹框引用笔迹时取数。
+     * employeeId 由后端从 token 取，前端不传；非员工账号（患者等）返回 data=null。
+     */
+    @Operation(summary = "获取当前登录员工详情（含签名笔迹）")
+    @GetMapping("/current")
+    public Result<EmployeeVO> current() {
+        return Result.success(sysEmployeeService.currentInfo());
+    }
+
+    /**
      * 新增或修改员工档案：主岗位科室快照随岗位配置一并归一。
      * 用于「员工管理」页新增/编辑弹框保存。
      */

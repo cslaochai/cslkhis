@@ -83,12 +83,32 @@ public interface QueueService extends IService<Queue> {
     boolean recallPatient(Long queueId);
 
     /**
-     * 复诊插队（将复诊患者移到候诊队列最前面）。
+     * 重新入队（2026-10-22 门诊版拆分两种语义）。
      *
-     * @return 插队后的新顺序号 —— 前端要把「已优先，当前第 N 位」原样告诉护士，
-     * 只说「已置为优先」等于没说。
+     * <p>mode=1 <b>置为优先</b>：候诊中的患者（复诊回诊/特殊）由护士提上来，插到该医生候诊队首；
+     * mode=2 <b>过号回队</b>：已过号的患者回来了，排到该医生候诊队尾（不插队）。
+     *
+     * @return 入队后的新顺序号 —— 前端要把「当前排第 N 位」原样告诉护士，
+     * 只说「已入队」等于没说。
      */
-    Integer rejoinQueue(Long queueId);
+    Integer rejoinQueue(Long queueId, Integer mode);
+
+    /**
+     * 调号：候诊中的患者相对当前位置前移/后移 N 位（step 正=后移，负=前移）。
+     * 边界收口到队首/队尾；队列内序号保持连续唯一。
+     *
+     * @return 移动后的新顺序号
+     */
+    Integer moveQueue(Long queueId, Integer step);
+
+    /**
+     * 改派：候诊中的患者改到目标医生/诊室。
+     * <p>重排队号（按目标诊室前缀）、排到目标医生候诊队尾、原医生队列序号顺移、
+     * 挂号快照医生同步；号源不随改派转移（如需换号源走改约）。
+     *
+     * @return 改派后的排队号与序号
+     */
+    QueueReassignVO reassignQueue(Long queueId, Long doctorId, Long roomId);
 
     /**
      * 查询科室下各医生的诊室信息及就诊中患者

@@ -1,8 +1,10 @@
 package com.his.ai.rag.store;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -70,5 +72,35 @@ public class InMemoryVectorStore implements VectorStore {
     private record Entry(long chunkId, long docId, String content, String docTitle,
                          String category, String docVersion, String docSourceName,
                          float[] vector) {
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof Entry e)) {
+                return false;
+            }
+            return chunkId == e.chunkId && docId == e.docId
+                    && Objects.equals(content, e.content)
+                    && Objects.equals(docTitle, e.docTitle)
+                    && Objects.equals(category, e.category)
+                    && Objects.equals(docVersion, e.docVersion)
+                    && Objects.equals(docSourceName, e.docSourceName)
+                    && Arrays.equals(vector, e.vector);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Objects.hash(chunkId, docId, content, docTitle, category,
+                    docVersion, docSourceName);
+            result = 31 * result + Arrays.hashCode(vector);
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return "Entry[chunkId=" + chunkId + ", docId=" + docId + "]";
+        }
     }
 }

@@ -25,7 +25,8 @@ public final class DosageTextParser {
      * 只出现拉丁单位以外还带体积/长度等干扰记法的规格视为不可比
      */
     private static final List<String> SKIP_SPEC_MARKS = List.of("复方", "复合");
-    private static final Pattern SKIP_SPEC_UNITS = Pattern.compile("(?i)\\biu\\b|iu/|[0-9]iu|单位");
+    private static final Pattern SKIP_SPEC_UNITS = Pattern.compile(
+            "\\biu\\b|iu/|[0-9]iu|单位", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
 
     /**
      * 规格里「按件计」的线索，没有它就无法断定那个质量值是单件含量
@@ -143,7 +144,7 @@ public final class DosageTextParser {
             }
             return new BigDecimal("24").divide(h, 4, RoundingMode.HALF_UP).stripTrailingZeros();
         }
-        Matcher count = Pattern.compile("(\\d+|[一二三四五六七八九十]+)(次|回)").matcher(text);
+        Matcher count = Pattern.compile("([0-9一二三四五六七八九十]+)(次|回)").matcher(text);
         if (count.find()) {
             return cnToDecimal(count.group(1));
         }

@@ -22,7 +22,7 @@ public class ExternalCaChannelServiceImpl implements ExternalCaChannelService {
      * 通道名称（状态接口展示）
      */
     public String name() {
-        return "外部CA控制台打印（M8留口子，未接入真CA）";
+        return "外部CA（未接入真机构，当前为控制台打印桩）";
     }
 
     /**

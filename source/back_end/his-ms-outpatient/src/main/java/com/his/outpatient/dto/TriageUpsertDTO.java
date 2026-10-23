@@ -97,11 +97,12 @@ public class TriageUpsertDTO {
     private String chiefComplaint;
 
     /**
-     * 分诊等级（1-危重 2-急症 3-亚急 4-非急）
+     * 分诊等级（1-危重 2-急症 3-亚急 4-非急）。
+     * <p>门诊版可空：门诊分诊台已不做四级分级，前端不再提交；传了仍会校验取值，
+     * 用于保留急诊等特殊场景的兼容调用。
      */
-    @NotNull(message = "分诊等级不能为空")
     @AllowedValues(values = {"1", "2", "3", "4"}, message = "分诊等级取值不合法")
-    @Schema(description = "分诊等级（1-危重 2-急症 3-亚急 4-非急）")
+    @Schema(description = "分诊等级（1-危重 2-急症 3-亚急 4-非急，门诊版可空）")
     private Integer triageLevel;
 
     /**

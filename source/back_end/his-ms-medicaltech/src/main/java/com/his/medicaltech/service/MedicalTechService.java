@@ -87,6 +87,11 @@ public interface MedicalTechService extends IService<BizInspectionRecord> {
     boolean auditInspection(Long recordId, String auditBy);
 
     /**
+     * 检查报告签名 PDF 验签：重算文件 SHA-256 与落库签名值 + 证书公钥比对。
+     */
+    com.his.medicaltech.dto.ReportPdfVerifyVO verifyInspectionReportPdf(Long recordId);
+
+    /**
      * 查询检验记录列表
      */
     PageResult<BizLaboratoryRecord> selectLaboratoryRecordPage(Long patientId, Long laboratoryDeptId, int pageNum, int pageSize);
@@ -134,6 +139,11 @@ public interface MedicalTechService extends IService<BizInspectionRecord> {
      * 审核检验报告
      */
     boolean auditLaboratory(Long recordId, String auditBy);
+
+    /**
+     * 检验报告签名 PDF 验签：重算文件 SHA-256 与落库签名值 + 证书公钥比对。
+     */
+    com.his.medicaltech.dto.ReportPdfVerifyVO verifyLaboratoryReportPdf(Long recordId);
 
     /**
      * 查询报告列表

@@ -12,8 +12,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-
 /**
  * 患者端报告读取（二期）。
  */
@@ -30,25 +28,25 @@ public class MiniReportServiceImpl implements MiniReportService {
         if (!patientFacadeService.canAccessPatient(dto.getPatientId())) {
             throw new BusinessException("无权查询该就诊人的报告");
         }
-        // TODO(spi 扩展) 已发布报告分页待 MedicalTechFacadeService#myPublishedReportPage 扩展，
-        // 见 spi-extension-requests.txt；现有端口无此能力，先返回空页，归属校验仍在本方收口。
-        log.warn("[患者端报告] 报告分页端口待扩展，patientId={} reportType={}", dto.getPatientId(), dto.getReportType());
-        return PageResult.of(0, dto.getPageNum(), dto.getPageSize(), 0, List.of());
+        return medicalTechFacadeService.myPublishedReportPage(
+                dto.getPatientId(), dto.getReportType(), dto.getPageNum(), dto.getPageSize());
     }
 
     @Override
     public AiReportVO myReportDetail(Long reportId) {
-        // TODO(spi 扩展) 报告详情待 MedicalTechFacadeService#getPublishedReportDetail 扩展，
-        // 见 spi-extension-requests.txt；现有端口无此能力，先返回 null（前端按无报告处理）。
-        log.warn("[患者端报告] 报告详情端口待扩展，reportId={}", reportId);
-        return null;
+        AiReportVO report = medicalTechFacadeService.getPublishedReportDetail(reportId);
+        // 端口只保证「已发布」，归属边界仍在本方收口：非本人可读范围按无报告处理
+        if (report == null || !patientFacadeService.canAccessPatient(report.getPatientId())) {
+            return null;
+        }
+        return report;
     }
 
     @Override
     public MiniReportPdfVO reportPdf(Long reportId) {
-        // TODO(spi 扩展) 报告详情与 PDF 取数待 MedicalTechFacadeService 扩展后接回，
-        // 见 spi-extension-requests.txt；现有端口取不到报告，按无权/无报告拒绝出件。
-        log.warn("[患者端报告] 报告 PDF 端口待扩展，reportId={}", reportId);
+        // 报告 PDF 导出依赖文件存储与二进制下发能力，当前仅落文本报告、无文件读取实现，
+        // 暂按无权/无报告拒绝出件，待文件存储建成后再接。
+        log.warn("[患者端报告] 报告 PDF 导出能力未建，reportId={}", reportId);
         return MiniReportPdfVO.deny(403);
     }
 }

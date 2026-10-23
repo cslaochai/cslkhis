@@ -7,6 +7,9 @@
         LEFT JOIN biz_queue q ON q.id = (
         SELECT MAX(q2.id) FROM biz_queue q2 WHERE q2.regist_id = r.id AND q2.del_flag = 0
         )
+        <!-- 挂号费账单状态只读直连（biz_settlement_bill 属收费域，医疗域统计 mapper 同此模式）。
+             bill_id 一对一左连不放大行数；免收号没有账单，b.* 全为 NULL -->
+        LEFT JOIN biz_settlement_bill b ON b.id = r.bill_id AND b.del_flag = 0
         WHERE r.del_flag = 0
     </sql>
 
@@ -22,7 +25,9 @@
         WHEN r.regist_status = 4 THEN 4
         WHEN r.regist_status = 3 THEN 3
         WHEN r.regist_status = 2 THEN 1
-        WHEN r.regist_status = 1 THEN (CASE WHEN r.charge_id IS NULL THEN 0 ELSE 1 END)
+        <!-- 与 QueueServiceImpl#isRegistFeeSettled 同口径：无账单=免收没有欠账，直接待签到；
+             有账单必须 bill_status=3（BillStatusEnum.PAID 已支付）才算结清，否则是未缴费 -->
+        WHEN r.regist_status = 1 THEN (CASE WHEN r.bill_id IS NULL OR b.bill_status = 3 THEN 1 ELSE 0 END)
         ELSE NULL
         END
     </sql>
@@ -76,7 +81,7 @@
         SELECT
         r.id AS regist_id,
         r.regist_no, r.visit_date, r.regist_time, r.regist_status,
-        (r.charge_id IS NOT NULL) AS charged,
+        (r.bill_id IS NOT NULL) AS charged,
         r.patient_id, r.patient_no, r.patient_name, r.gender, r.age,
         r.dept_id, r.dept_name, r.room_id, r.room_name, r.doctor_id, r.doctor_name,
         r.regist_type, r.regist_source, r.slot_time,

@@ -331,6 +331,8 @@ VALUES ('8008', '8', '204', 'admin', 'admin', '1', '1');
 INSERT INTO sys_role_menu (id, role_id, menu_id, create_by, update_by, create_by_id, update_by_id)
 VALUES ('8009', '8', '205', 'admin', 'admin', '1', '1');
 INSERT INTO sys_role_menu (id, role_id, menu_id, create_by, update_by, create_by_id, update_by_id)
+VALUES ('8920610200000000101', '9', '205', 'admin', 'admin', '1', '1');
+INSERT INTO sys_role_menu (id, role_id, menu_id, create_by, update_by, create_by_id, update_by_id)
 VALUES ('8010', '8', '600', 'admin', 'admin', '1', '1');
 INSERT INTO sys_role_menu (id, role_id, menu_id, create_by, update_by, create_by_id, update_by_id)
 VALUES ('8012', '8', '608', 'admin', 'admin', '1', '1');
@@ -1102,6 +1104,8 @@ INSERT INTO sys_role_menu (id, role_id, menu_id, create_by, update_by, create_by
 VALUES ('8900000000000090081', '1', '2010', 'admin', 'admin', '1', '1');
 INSERT INTO sys_role_menu (id, role_id, menu_id, create_by, update_by, create_by_id, update_by_id)
 VALUES ('8900000000000090082', '8', '2010', 'admin', 'admin', '1', '1');
+INSERT INTO sys_role_menu (id, role_id, menu_id, create_by, update_by, create_by_id, update_by_id)
+VALUES ('8920610200000000102', '9', '2010', 'admin', 'admin', '1', '1');
 INSERT INTO sys_role_menu (id, role_id, menu_id, create_by, update_by, create_by_id, update_by_id)
 VALUES ('8900000000000090083', '1', '2011', 'admin', 'admin', '1', '1');
 INSERT INTO sys_role_menu (id, role_id, menu_id, create_by, update_by, create_by_id, update_by_id)

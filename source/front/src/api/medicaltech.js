@@ -37,6 +37,11 @@ export function auditInspection(recordId, auditBy) {
   return request.post('/medicaltech/inspection/audit', { recordId, auditBy })
 }
 
+// 检查报告签名 PDF 验签（文件级数字签名）
+export function verifyInspectionReportPdf(recordId) {
+  return request.get('/medicaltech/inspection/verifyPdf', { params: { recordId } })
+}
+
 // ========== 检验管理 ==========
 
 // 查询检验记录列表
@@ -66,6 +71,11 @@ export function inputLabResult(recordId, data) {
 // 审核检验报告
 export function auditLaboratory(recordId, auditBy) {
   return request.post('/medicaltech/laboratory/audit', { recordId, auditBy })
+}
+
+// 检验报告签名 PDF 验签（文件级数字签名）
+export function verifyLaboratoryReportPdf(recordId) {
+  return request.get('/medicaltech/laboratory/verifyPdf', { params: { recordId } })
 }
 
 // ========== 标本管理 ==========

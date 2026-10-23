@@ -8,7 +8,9 @@ import com.his.app.vo.MiniDoctorSelectListVO;
 import com.his.app.vo.MiniScheduleSelectVO;
 import com.his.app.vo.MiniPatientDetailVO;
 import com.his.spi.dto.AppointQueryDTO;
+import com.his.spi.service.ClinicSourceFacadeService;
 import com.his.spi.service.PatientFacadeService;
+import com.his.spi.vo.ClinicSourceBriefVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,7 @@ public class MiniDirectoryServiceImpl implements MiniDirectoryService {
 
     private final MiniDirectoryMapper miniDirectoryMapper;
     private final PatientFacadeService patientFacadeService;
+    private final ClinicSourceFacadeService clinicSourceFacadeService;
 
     @Override
     public List<MiniDeptSelectListVO> openDepartments() {
@@ -35,14 +38,25 @@ public class MiniDirectoryServiceImpl implements MiniDirectoryService {
 
     @Override
     public List<MiniScheduleSelectVO> schedules(AppointQueryDTO queryDTO) {
-        // TODO(spi 扩展) 患者端可挂号源下拉待 AppointFacadeService#listPatientScheduleSources 扩展
-        // （返回 ClinicSourceBriefVO 列表，余号/挂号费/诊查费/时段），见 spi-extension-requests.txt；
-        // 现有端口无此能力，先返回空列表，不直连排班域。
-        log.warn("[挂号目录] 可挂号源端口待扩展，deptId={} doctorId={} visitDate={}",
-                queryDTO == null ? null : queryDTO.getDeptId(),
-                queryDTO == null ? null : queryDTO.getDoctorId(),
-                queryDTO == null ? null : queryDTO.getVisitDate());
-        return List.of();
+        List<ClinicSourceBriefVO> sources = clinicSourceFacadeService.listPatientScheduleSources(queryDTO);
+        return sources.stream().map(this::toScheduleVO).toList();
+    }
+
+    private MiniScheduleSelectVO toScheduleVO(ClinicSourceBriefVO source) {
+        MiniScheduleSelectVO vo = new MiniScheduleSelectVO();
+        vo.setId(source.getId());
+        vo.setDeptId(source.getDeptId());
+        vo.setDeptName(source.getDeptName());
+        vo.setDoctorId(source.getDoctorId());
+        vo.setDoctorName(source.getDoctorName());
+        vo.setScheduleDate(source.getScheduleDate());
+        vo.setStartTime(source.getStartTime());
+        vo.setEndTime(source.getEndTime());
+        vo.setRegistFee(source.getRegistFee());
+        vo.setDiagnosisFee(source.getDiagnosisFee());
+        vo.setDiagnosisTier(source.getDiagnosisTier());
+        vo.setIsExpert(source.getIsExpert());
+        return vo;
     }
 
     @Override

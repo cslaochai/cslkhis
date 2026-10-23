@@ -14,6 +14,7 @@ import com.his.spi.service.PayOrderFacadeService;
 import com.his.spi.service.PayRateLimitFacadeService;
 import com.his.spi.vo.PayOrderCreateResultVO;
 import com.his.spi.vo.PayOrderInfoVO;
+import com.his.spi.vo.MiniPayUnifiedResultVO;
 import com.his.spi.vo.ChannelTradeStateVO;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
@@ -58,6 +59,11 @@ public class MiniPayServiceImpl implements MiniPayService {
     private static final String DEFAULT_REFUND_REASON = "患者退号";
 
     /**
+     * 「我的支付单」一次取回的最近条数（缴费记录展示，非分页查询）
+     */
+    private static final int MY_ORDER_LIMIT = 50;
+
+    /**
      * 单个患者在一个统计窗口内允许的下单次数上限（防的是连点 / 脚本反复调起渠道收银台）。
      */
     private static final int ORDER_QUOTA_PER_WINDOW = 20;
@@ -85,8 +91,11 @@ public class MiniPayServiceImpl implements MiniPayService {
     @Transactional(rollbackFor = Exception.class)
     public MiniPayOrderVO createOrder(PayUpsertDTO dto) {
         var current = UserUtils.getCurrentUser();
-        // TODO(spi 扩展) 已收过款的业务单幂等查重（findLatestPaid）待 PayOrderFacadeService 扩展后接回：
-        // 见 spi-extension-requests.txt「按业务单取最近一条已支付单」，此前先建待支付单。
+        // 幂等查重：已收过款的业务单不再建第二张支付单
+        PayOrderInfoVO alreadyPaid = payOrderFacadeService.findLatestPaid(dto.getBizType(), dto.getBizId());
+        if (alreadyPaid != null) {
+            throw new BusinessException("该账单已支付，请勿重复付款");
+        }
         payRateLimitFacadeService.assertQuota(ORDER_QUOTA_KEY_PREFIX + current.getPatientId(),
                 ORDER_QUOTA_PER_WINDOW, ORDER_QUOTA_WINDOW_SECONDS, "下单");
 
@@ -101,22 +110,22 @@ public class MiniPayServiceImpl implements MiniPayService {
         PayOrderCreateResultVO created = payOrderFacadeService.createPending(spec);
         PayOrderInfoVO order = created.getOrder();
 
-        // TODO(spi 扩展) JSAPI 预下单（微信 wx.requestPayment 参数 / 支付宝表单串）待
-        // PayChannelFacadeService#unifiedJsapiOrder 扩展后接回，见 spi-extension-requests.txt；
-        // 现有端口无此能力，先回待支付单，payParams 留空，前端拉起渠道前不得据此置成功。
-        Map<String, String> payParams = null;
-        log.warn("[患者端支付] JSAPI 预下单端口待扩展，本次仅返回待支付单 payNo={} channel={}",
-                order.getPayNo(), order.getChannel());
+        // JSAPI 预下单：取微信 wx.requestPayment 参数 / 支付宝表单串；渠道没出参数时 payParams 为空，
+        // 前端拉起渠道前不得据此置成功，收款结果只来自渠道异步通知或主动查单。
+        MiniPayUnifiedResultVO unified = payChannelFacadeService.unifiedJsapiOrder(order, dto.getChannel());
+        Map<String, String> payParams = unified.getPayParams();
+        if (payParams == null && TextUtil.hasText(unified.getErrMsg())) {
+            log.warn("[患者端支付] JSAPI 预下单未出参数 payNo={} channel={} err={}",
+                    order.getPayNo(), order.getChannel(), unified.getErrMsg());
+        }
         return toVO(order, payParams);
     }
 
     @Override
     public List<MiniPayOrderListVO> myOrders() {
         var current = UserUtils.getCurrentUser();
-        // TODO(spi 扩展) 患者维度最近 N 条支付单待 PayOrderFacadeService#listRecentByPatient 扩展，
-        // 见 spi-extension-requests.txt；现有端口无此能力，先返回空列表。
-        log.warn("[患者端支付] 我的支付单列表端口待扩展，patientId={}", current.getPatientId());
-        return List.of();
+        return payOrderFacadeService.listRecentByPatient(current.getPatientId(), MY_ORDER_LIMIT)
+                .stream().map(this::toListVO).toList();
     }
 
     @Override
@@ -169,11 +178,15 @@ public class MiniPayServiceImpl implements MiniPayService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void refundByBiz(PayRefundDTO dto) {
-        // TODO(spi 扩展) 按业务单定位已支付单 + 置已退款（findLatestPaid/markRefunded）待
-        // PayOrderFacadeService 扩展，见 spi-extension-requests.txt；现有端口无此能力，先留日志不落账。
+        // 渠道原路退回由退号/退费编排完成，这里只把本地已支付单置已退款；无已支付单幂等跳过
+        PayOrderInfoVO paid = payOrderFacadeService.findLatestPaid(dto.getBizType(), dto.getBizId());
+        if (paid == null) {
+            return;
+        }
         String reason = TextUtil.blankToDefault(dto.getReason(), DEFAULT_REFUND_REASON);
-        log.warn("[患者端支付] 退费端口待扩展，本次仅留痕不落退款状态 bizType={} bizId={} reason={}",
-                dto.getBizType(), dto.getBizId(), reason);
+        payOrderFacadeService.markRefunded(paid.getPayNo(), reason);
+        log.info("[患者端支付] 已支付单置已退款 payNo={} bizType={} bizId={}",
+                paid.getPayNo(), dto.getBizType(), dto.getBizId());
     }
 
     @Override
@@ -450,6 +463,18 @@ public class MiniPayServiceImpl implements MiniPayService {
         vo.setPayStatus(order.getPayStatus());
         vo.setAmount(order.getAmount());
         vo.setPayParams(payParams);
+        return vo;
+    }
+
+    private MiniPayOrderListVO toListVO(PayOrderInfoVO order) {
+        MiniPayOrderListVO vo = new MiniPayOrderListVO();
+        vo.setId(order.getId());
+        vo.setPayNo(order.getPayNo());
+        vo.setBizType(order.getBizType());
+        vo.setBizId(order.getBizId());
+        vo.setAmount(order.getAmount());
+        vo.setPayStatus(order.getPayStatus());
+        vo.setPayTime(order.getPayTime());
         return vo;
     }
 }

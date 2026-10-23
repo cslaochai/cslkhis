@@ -836,6 +836,12 @@ const openAddFromPanel = async (seed = {}) => {
   newAppointment.value.visitDate = seed.visitDate || '';
   newAppointment.value.doctorId = seed.doctorId ?? null;
   await fetchSchedulesForSeed(seed);
+  // seed 明确带了号源（看板点某一格/某条班次）：优先直接选中，不再只靠医生唯一兜底
+  if (seed.scheduleId && !newAppointment.value.scheduleId) {
+    const hit = availableSchedules.value.find((s) => String(s.id) === String(seed.scheduleId));
+    if (hit)
+      newAppointment.value.scheduleId = hit.id;
+  }
   // 医生列点了「新增」但没指定具体号源：把这位医生的号预先选上（当天多条排班则留给用户挑）
   if (!newAppointment.value.scheduleId && newAppointment.value.doctorId) {
     const hit = availableSchedules.value.filter((s) => s.doctorId === newAppointment.value.doctorId);

@@ -16,6 +16,8 @@ import com.his.spi.dto.FeeBookDTO;
 import com.his.spi.service.ChargeFacadeService;
 import com.his.spi.vo.FeeRecordVO;
 import com.his.spi.vo.FeeTypeSumVO;
+import com.his.spi.vo.BillBriefVO;
+import com.his.spi.vo.QrPayResultVO;
 import com.his.common.base.PageResult;
 import com.his.spi.vo.ExecStatusVO;
 import com.his.spi.dto.SignCommandDTO;
@@ -76,6 +78,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
 
     private final DeptScopeService deptScopeService;
     private final ChargeFacadeService chargeFacadeService;
+    private final com.his.spi.service.QrPayFacadeService qrPayFacadeService;
 
     private final PatientFacadeService patientFacadeService;
 
@@ -96,6 +99,10 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     private final MedicalTechFacadeService medicalTechFacadeService;
 
     private final AiDraftDiffService aiDraftDiffService;
+
+    private final com.his.spi.service.StockFacadeService stockFacadeService;
+
+    private final com.his.spi.service.AntibioticFacadeService antibioticFacadeService;
 
     /**
      * 引导单「取药流程」的判据：本次应收里有没有药品类项目（2-西药 3-中成药 4-中药饮片）。
@@ -348,9 +355,14 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean addPrescription(BizPrescription prescription) {
-        // 抗菌药物处方权闸：必须在落库之前 —— 开出去再拦，处方号已经生成、库存已经锁定，
-        // TODO(spi 扩展)：抗菌药处方权限校验（assertCanPrescribe：医生是否具备开该抗菌药的资质）待药品域资质端口开放后接入；
-        // 当前模块不再直连 AntibioticService。登记需求见 spi-extension-requests.txt。
+        // 抗菌药物处方权闸：必须在落库之前 —— 开出去再拦，处方号已经生成、库存已经锁定。
+        // 目录外药品由端口内部放过，临床侧只把本单全部药品ID上交。
+        List<Long> drugIds = prescription.getDetails() == null ? Collections.emptyList()
+                : prescription.getDetails().stream()
+                .map(BizPrescriptionDetail::getDrugId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        antibioticFacadeService.assertCanPrescribe(prescription.getDoctorId(), drugIds);
 
         prescription.setPrescriptionNo(redisSequenceService.generatePrescriptionNo());
         prescription.setPrescriptionStatus(PrescriptionStatusEnum.DRAFT.getCode());
@@ -365,7 +377,8 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 detail.setPrescriptionNo(prescription.getPrescriptionNo());
                 detail.setDetailStatus(PrescriptionDetailStatusEnum.NORMAL.getCode());
                 this.bizPrescriptionDetailMapper.insert(detail);
-                // TODO(spi 扩展)：处方保存锁定药房库存待药品域库存端口开放后接入（登记需求见 spi-extension-requests.txt）
+                // 开方锁库：跨批次把可用量转锁定量；该药品无批次时端口内部放过，硬闸门在发药扣库
+                stockFacadeService.lockStockByDrug(detail.getDrugId(), detail.getQuantity());
             }
         }
 
@@ -398,6 +411,27 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         } catch (BusinessException e) {
             throw new BusinessException("处方 " + p.getPrescriptionNo() + " 开方签名失败：" + e.getMessage());
         }
+    }
+
+    /** 手写笔迹 PNG dataURL 长度上限（字符数），与病危告知/请假签收同一口径 */
+    private static final int RX_SIGNATURE_MAX = 512 * 1024;
+
+    /**
+     * 校验开方医师手写笔迹（PNG dataURL）。空值放行（老前端/未手写）；
+     * 非空必须是 PNG dataURL 且不超上限，否则整单回滚，不静默落库脏图。
+     */
+    private String validateDoctorSignature(String signature) {
+        if (!TextUtil.hasText(signature)) {
+            return null;
+        }
+        String trimmed = signature.trim();
+        if (!trimmed.startsWith("data:image/png;base64,")) {
+            throw new BusinessException("医师手写签名格式不合法（需 PNG 手写板数据）");
+        }
+        if (trimmed.length() > RX_SIGNATURE_MAX) {
+            throw new BusinessException("医师手写签名图片过大，请清空画板后重新签名");
+        }
+        return trimmed;
     }
 
     /**
@@ -551,7 +585,10 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             detailWrapper.eq(BizPrescriptionDetail::getPrescriptionId, prescription.getId());
             List<BizPrescriptionDetail> details = bizPrescriptionDetailMapper.selectList(detailWrapper);
 
-            // TODO(spi 扩展)：删除处方前解锁药房库存待药品域库存端口开放后接入（登记需求见 spi-extension-requests.txt）
+            // 删方前解锁：按明细把锁定量退回可用量，只退实际锁着的部分
+            for (BizPrescriptionDetail detail : details) {
+                stockFacadeService.unlockStockByDrug(detail.getDrugId(), detail.getQuantity());
+            }
 
             // 删除处方明细
             bizPrescriptionDetailMapper.delete(detailWrapper);
@@ -837,7 +874,8 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     }
 
     /**
-     * 检查申请单开单即签（业务类型=7，场景=申请开立）；签名失败随本事务回滚。
+     * 检查申请单电子签名（业务类型=7，场景=申请开立）：模式A下既用于「结诊统一签名」的新行开单，
+     * 也用于已落库行的重签（作废-补签闭环）；签名失败随本事务回滚。
      */
     private void signInspectionApply(BizInspectionApply apply) {
         SignCommandDTO cmd = new SignCommandDTO();
@@ -859,7 +897,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     }
 
     /**
-     * 检验申请单开单即签（业务类型=8），规则同 {@link #signInspectionApply}。
+     * 检验申请单电子签名（业务类型=8，场景=申请开立），规则同 {@link #signInspectionApply}。
      */
     private void signLaboratoryApply(BizLaboratoryApply apply) {
         SignCommandDTO cmd = new SignCommandDTO();
@@ -1182,13 +1220,22 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     }
 
     /**
-     * 兼容老调用方：病历 DTO 里仍然带着申请单数组时，按 (registId + 项目ID) **幂等补齐**。
+     * 同步检查申请（模式A：申请单随病历保存落库，编辑与落库解耦）。
      *
-     * <p>这里刻意不做「先删后增」：申请单已经不是病历的附属物了（批次E/E1 起开单即落库），
-     * 每次保存病历都重建一遍会把已缴费的单子删掉、让执行记录的 apply_id 悬空。
+     * <p>医生工作台内的编辑（选项目/改部位/改目的/套模板）只停留在本地数组，
+     * 「保存病历 / 结诊」时申请单数组才随病历一起提交到这里：
+     * <ul>
+     *   <li>无 id 的新行：按 (挂号 + 项目) 幂等判重后插入（防止重复开单）；</li>
+     *   <li>有 id 的已落库行：仅当「已提交(1) 且 未签名」时更新内容——已缴费/已取消/已签名行
+     *       跳过并记日志（这些行前端已禁编辑，内容以库为准；单行状态不能阻断整个病历保存）；</li>
+     *   <li>结诊提交（isSubmit=true）：对同步后的申请单统一电子签名（内容最终确认，签名即锁定）。</li>
+     * </ul>
+     *
+     * <p>刻意不做「先删后增」：申请单不是病历的附属物，重建会把已缴费的单子删掉、
+     * 让执行记录的 apply_id 悬空。
      */
     private void ensureInspectionApplies(Long registId, RegistStateRowVO appoint, PatientBriefVO patient,
-                                         List<MedicalRecordSaveDTO.InspectionApplyDTO> dtos) {
+                                         List<MedicalRecordSaveDTO.InspectionApplyDTO> dtos, boolean isSubmit) {
         if (registId == null || CollectionUtils.isEmpty(dtos)) {
             return;
         }
@@ -1196,36 +1243,74 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             if (dto.getItemId() == null) {
                 continue;
             }
-            Long exists = bizInspectionApplyMapper.selectCount(new LambdaQueryWrapper<BizInspectionApply>()
-                    .eq(BizInspectionApply::getRegistId, registId)
-                    .eq(BizInspectionApply::getInspectionItemId, dto.getItemId()));
-            if (exists != null && exists > 0) {
-                continue;
+            BizInspectionApply apply;
+            if (dto.getId() != null) {
+                apply = bizInspectionApplyMapper.selectById(dto.getId());
+                if (apply == null) {
+                    throw new BusinessException("检查申请单不存在或已删除（id=" + dto.getId() + "）");
+                }
+                if (!Objects.equals(registId, apply.getRegistId())) {
+                    throw new BusinessException("检查申请单不属于本次就诊（id=" + dto.getId() + "）");
+                }
+                if (!Objects.equals(ApplyStatusEnum.SUBMITTED.getCode(), apply.getApplyStatus())) {
+                    log.warn("[病历保存] 检查申请单 {} 状态为「{}」，跳过更新（内容以库为准）",
+                            apply.getApplyNo(), ApplyStatusEnum.getLabelOrUnknown(apply.getApplyStatus()));
+                    continue;
+                }
+                if (Objects.equals(ObjectSignStatusEnum.SIGNED.getCode(), apply.getSignStatus())) {
+                    log.warn("[病历保存] 检查申请单 {} 已电子签名（签名即锁定），跳过更新；如需修改请先在「签名中心」作废该签名",
+                            apply.getApplyNo());
+                    continue;
+                }
+                applyInspectionContent(apply, appoint, patient, dto);
+                bizInspectionApplyMapper.updateById(apply);
+            } else {
+                // 幂等判重：同一就诊已开过同项目申请单，不再重复开单
+                Long exists = bizInspectionApplyMapper.selectCount(new LambdaQueryWrapper<BizInspectionApply>()
+                        .eq(BizInspectionApply::getRegistId, registId)
+                        .eq(BizInspectionApply::getInspectionItemId, dto.getItemId()));
+                if (exists != null && exists > 0) {
+                    continue;
+                }
+                apply = new BizInspectionApply();
+                apply.setApplyNo(redisSequenceService.generateInspectionApplyNo());
+                apply.setApplyStatus(ApplyStatusEnum.SUBMITTED.getCode());
+                apply.setSubmitTime(LocalDateTime.now());
+                applyInspectionContent(apply, appoint, patient, dto);
+                bizInspectionApplyMapper.insert(apply);
             }
-            LabItemVO item = medicalTechFacadeService.findInspectionItem(dto.getItemId());
-            if (item == null) {
-                throw new BusinessException("检查项目不存在: " + dto.getItemId());
+            // 结诊提交：内容最终确认，统一签名锁定（已签名行在上面已跳过）
+            if (isSubmit && apply.getId() != null) {
+                signInspectionApply(apply);
             }
-            BizInspectionApply apply = new BizInspectionApply();
-            apply.setApplyNo(redisSequenceService.generateInspectionApplyNo());
-            apply.setApplyStatus(ApplyStatusEnum.SUBMITTED.getCode());
-            apply.setSubmitTime(LocalDateTime.now());
-            fillInspectionApplySnapshot(apply, appoint, patient);
-            apply.setInspectionItemId(item.getId());
-            apply.setInspectionItemCode(item.getItemCode());
-            apply.setInspectionItemName(item.getItemName());
-            apply.setInspectionDeptId(item.getDeptId());
-            apply.setPrice(item.getPrice() == null ? BigDecimal.ZERO : item.getPrice());
-            apply.setBodyPart(dto.getBodyPart());
-            apply.setInspectionPurpose(dto.getPurpose());
-            apply.setClinicalDiagnosis(dto.getClinicalDiagnosis());
-            apply.setIsEmergency(dto.getIsEmergency() == null ? 0 : dto.getIsEmergency());
-            bizInspectionApplyMapper.insert(apply);
         }
     }
 
+    /**
+     * 检查申请内容装配（快照 + 项目档案 + 医生填写项），insert / update 共用同一口径
+     * （与 {@link #upsertInspectionApply} 保持一致）。
+     */
+    private void applyInspectionContent(BizInspectionApply apply, RegistStateRowVO appoint, PatientBriefVO patient,
+                                        MedicalRecordSaveDTO.InspectionApplyDTO dto) {
+        LabItemVO item = medicalTechFacadeService.findInspectionItem(dto.getItemId());
+        if (item == null) {
+            throw new BusinessException("检查项目不存在: " + dto.getItemId());
+        }
+        fillInspectionApplySnapshot(apply, appoint, patient);
+        apply.setInspectionItemId(item.getId());
+        apply.setInspectionItemCode(item.getItemCode());
+        apply.setInspectionItemName(item.getItemName());
+        apply.setInspectionDeptId(item.getDeptId());
+        apply.setPrice(item.getPrice() == null ? BigDecimal.ZERO : item.getPrice());
+        apply.setBodyPart(dto.getBodyPart());
+        apply.setInspectionPurpose(dto.getPurpose());
+        apply.setClinicalDiagnosis(dto.getClinicalDiagnosis());
+        apply.setSpecialRequirements(dto.getSpecialRequirements());
+        apply.setIsEmergency(dto.getIsEmergency() == null ? 0 : dto.getIsEmergency());
+    }
+
     private void ensureLaboratoryApplies(Long registId, RegistStateRowVO appoint, PatientBriefVO patient,
-                                         List<MedicalRecordSaveDTO.LaboratoryApplyDTO> dtos) {
+                                         List<MedicalRecordSaveDTO.LaboratoryApplyDTO> dtos, boolean isSubmit) {
         if (registId == null || CollectionUtils.isEmpty(dtos)) {
             return;
         }
@@ -1233,34 +1318,71 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             if (dto.getItemId() == null) {
                 continue;
             }
-            Long exists = bizLaboratoryApplyMapper.selectCount(new LambdaQueryWrapper<BizLaboratoryApply>()
-                    .eq(BizLaboratoryApply::getRegistId, registId)
-                    .eq(BizLaboratoryApply::getLaboratoryItemId, dto.getItemId()));
-            if (exists != null && exists > 0) {
-                continue;
+            BizLaboratoryApply apply;
+            if (dto.getId() != null) {
+                apply = bizLaboratoryApplyMapper.selectById(dto.getId());
+                if (apply == null) {
+                    throw new BusinessException("检验申请单不存在或已删除（id=" + dto.getId() + "）");
+                }
+                if (!Objects.equals(registId, apply.getRegistId())) {
+                    throw new BusinessException("检验申请单不属于本次就诊（id=" + dto.getId() + "）");
+                }
+                if (!Objects.equals(ApplyStatusEnum.SUBMITTED.getCode(), apply.getApplyStatus())) {
+                    log.warn("[病历保存] 检验申请单 {} 状态为「{}」，跳过更新（内容以库为准）",
+                            apply.getApplyNo(), ApplyStatusEnum.getLabelOrUnknown(apply.getApplyStatus()));
+                    continue;
+                }
+                if (Objects.equals(ObjectSignStatusEnum.SIGNED.getCode(), apply.getSignStatus())) {
+                    log.warn("[病历保存] 检验申请单 {} 已电子签名（签名即锁定），跳过更新；如需修改请先在「签名中心」作废该签名",
+                            apply.getApplyNo());
+                    continue;
+                }
+                applyLaboratoryContent(apply, appoint, patient, dto);
+                bizLaboratoryApplyMapper.updateById(apply);
+            } else {
+                // 幂等判重：同一就诊已开过同项目申请单，不再重复开单
+                Long exists = bizLaboratoryApplyMapper.selectCount(new LambdaQueryWrapper<BizLaboratoryApply>()
+                        .eq(BizLaboratoryApply::getRegistId, registId)
+                        .eq(BizLaboratoryApply::getLaboratoryItemId, dto.getItemId()));
+                if (exists != null && exists > 0) {
+                    continue;
+                }
+                apply = new BizLaboratoryApply();
+                apply.setApplyNo(redisSequenceService.generateLaboratoryApplyNo());
+                apply.setApplyStatus(ApplyStatusEnum.SUBMITTED.getCode());
+                apply.setSubmitTime(LocalDateTime.now());
+                applyLaboratoryContent(apply, appoint, patient, dto);
+                bizLaboratoryApplyMapper.insert(apply);
             }
-            LabItemVO item = medicalTechFacadeService.findLabItem(dto.getItemId());
-            if (item == null) {
-                throw new BusinessException("检验项目不存在: " + dto.getItemId());
+            // 结诊提交：内容最终确认，统一签名锁定（已签名行在上面已跳过）
+            if (isSubmit && apply.getId() != null) {
+                signLaboratoryApply(apply);
             }
-            BizLaboratoryApply apply = new BizLaboratoryApply();
-            apply.setApplyNo(redisSequenceService.generateLaboratoryApplyNo());
-            apply.setApplyStatus(ApplyStatusEnum.SUBMITTED.getCode());
-            apply.setSubmitTime(LocalDateTime.now());
-            fillLaboratoryApplySnapshot(apply, appoint, patient);
-            apply.setLaboratoryItemId(item.getId());
-            apply.setLaboratoryItemCode(item.getItemCode());
-            apply.setLaboratoryItemName(item.getItemName());
-            apply.setLaboratoryDeptId(item.getDeptId());
-            apply.setPrice(item.getPrice() == null ? BigDecimal.ZERO : item.getPrice());
-            apply.setSpecimenType(TextUtil.hasText(dto.getSpecimenType()) ? dto.getSpecimenType()
-                    : (TextUtil.hasText(item.getSpecimenType()) ? item.getSpecimenType() : "血液"));
-            apply.setLaboratoryPurpose(dto.getPurpose());
-            apply.setClinicalDiagnosis(dto.getClinicalDiagnosis());
-            apply.setIsFasting(dto.getIsFasting() == null ? 0 : dto.getIsFasting());
-            apply.setIsEmergency(dto.getIsEmergency() == null ? 0 : dto.getIsEmergency());
-            bizLaboratoryApplyMapper.insert(apply);
         }
+    }
+
+    /**
+     * 检验申请内容装配（快照 + 项目档案 + 医生填写项），insert / update 共用同一口径
+     * （与 {@link #upsertLaboratoryApply} 保持一致）。
+     */
+    private void applyLaboratoryContent(BizLaboratoryApply apply, RegistStateRowVO appoint, PatientBriefVO patient,
+                                        MedicalRecordSaveDTO.LaboratoryApplyDTO dto) {
+        LabItemVO item = medicalTechFacadeService.findLabItem(dto.getItemId());
+        if (item == null) {
+            throw new BusinessException("检验项目不存在: " + dto.getItemId());
+        }
+        fillLaboratoryApplySnapshot(apply, appoint, patient);
+        apply.setLaboratoryItemId(item.getId());
+        apply.setLaboratoryItemCode(item.getItemCode());
+        apply.setLaboratoryItemName(item.getItemName());
+        apply.setLaboratoryDeptId(item.getDeptId());
+        apply.setPrice(item.getPrice() == null ? BigDecimal.ZERO : item.getPrice());
+        apply.setSpecimenType(TextUtil.hasText(dto.getSpecimenType()) ? dto.getSpecimenType()
+                : (TextUtil.hasText(item.getSpecimenType()) ? item.getSpecimenType() : "血液"));
+        apply.setLaboratoryPurpose(dto.getPurpose());
+        apply.setClinicalDiagnosis(dto.getClinicalDiagnosis());
+        apply.setIsFasting(dto.getIsFasting() == null ? 0 : dto.getIsFasting());
+        apply.setIsEmergency(dto.getIsEmergency() == null ? 0 : dto.getIsEmergency());
     }
 
     @Override
@@ -1331,6 +1453,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         bizMedicalRecord.setPastHistory(recordSaveDTO.getPastHistory());
         bizMedicalRecord.setPersonalHistory(recordSaveDTO.getPersonalHistory());
         bizMedicalRecord.setFamilyHistory(recordSaveDTO.getFamilyHistory());
+        bizMedicalRecord.setMarriageHistory(recordSaveDTO.getMarriageHistory());
         bizMedicalRecord.setTemperature(recordSaveDTO.getTemperature());
         bizMedicalRecord.setPulse(recordSaveDTO.getPulse());
         bizMedicalRecord.setRespiration(recordSaveDTO.getRespiration());
@@ -1438,6 +1561,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                     prescription.setReturnCount(inheritedReturnCount);
                 }
                 prescription.setPrescriptionNo(redisSequenceService.generatePrescriptionNo());
+                prescription.setDoctorSignature(validateDoctorSignature(prescriptionDTO.getDoctorSignature()));
                 this.bizPrescriptionMapper.insert(prescription);
 
                 // L7 重提流水（只增）：仅当旧单里存在被退回的处方，本次保存才视为「退回后重提」
@@ -1503,8 +1627,8 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
 
                         this.bizPrescriptionDetailMapper.insert(detail);
 
-                        // TODO(spi 扩展)：处方保存锁定药房库存（lockStockByDrug，档案单位）待药品域库存端口开放后接入；
-                        // 当前模块不再直连 PharmacyService。登记需求见 spi-extension-requests.txt。
+                        // 开方锁库：跨批次把可用量转锁定量；无批次时端口内部放过，硬闸门在发药扣库
+                        stockFacadeService.lockStockByDrug(detail.getDrugId(), detail.getQuantity());
                     }
 
                     // 更新处方主表的总金额和药品数量
@@ -1526,17 +1650,17 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             }
         }
 
-        // 3. 检查申请（批次E/E1 改造）——**不再"先删后增"**。
-        //    申请单在医生"开单那一刻"就已经落库，病历只是它的载体之一：
-        //    每次保存病历都重建申请单，会把已缴费的单子删掉、把执行记录的 apply_id 删成悬空。
-        //    这里只做两件事：① 兼容老调用方（DTO 仍带数组）按 (挂号+项目) 幂等补齐；
+        // 3. 检查申请（模式A）——随病历保存落库，**不做"先删后增"**。
+        //    申请单不是病历的附属物：每次保存病历都重建申请单，会把已缴费的单子删掉、
+        //    把执行记录的 apply_id 删成悬空。这里同步前端提交的申请单数组（无 id 新增、
+        //    有 id 更新），结诊提交（isSubmit=true）时统一电子签名（内容最终确认、签名即锁定）。
         ensureInspectionApplies(recordSaveDTO.getRegistId(), appointInfo, patientInfo,
-                recordSaveDTO.getInspectionApplies());
+                recordSaveDTO.getInspectionApplies(), isSubmit);
         backfillApplyRecord(recordSaveDTO.getRegistId(), recordId, bizMedicalRecord.getRecordNo());
 
         // 4. 检验申请（同 3）
         ensureLaboratoryApplies(recordSaveDTO.getRegistId(), appointInfo, patientInfo,
-                recordSaveDTO.getLaboratoryApplies());
+                recordSaveDTO.getLaboratoryApplies(), isSubmit);
 
         // 5. 如果是结诊，还需要提交病历并生成收费单
         if (isSubmit) {
@@ -1627,6 +1751,15 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             //      处方在本次保存里是"先删后增"重建出来的，到这里必然都是未签名的；
             //      草稿阶段的临时保存不会进这个分支（本块整体在「结诊提交」里）。
             signPrescriptionsOfRecord(bizMedicalRecord);
+
+            // 13c. 结诊文书 PDF：处方签（含医师手写笔迹 + 聚合支付码左上角）。生成失败不阻断结诊提交。
+            //       signOutpatientRecord 已把签名锚点同步回内存实体，此处 updateById 不会覆盖刚落的签名。
+            try {
+                bizMedicalRecord.setRxPdfPath(generateRxPdf(bizMedicalRecord));
+                this.updateById(bizMedicalRecord);
+            } catch (Exception e) {
+                log.error("处方签 PDF 生成异常，跳过 recordNo={}", bizMedicalRecord.getRecordNo(), e);
+            }
         }
 
         return recordId;
@@ -1794,12 +1927,6 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             dir.mkdirs();
         }
 
-        // 打印路径信息用于调试
-        System.out.println("=== PDF生成路径 ===");
-        System.out.println("工作目录: " + uploadBaseDir);
-        System.out.println("绝对路径: " + absolutePath);
-        System.out.println("相对路径: " + relativePath);
-
         // 费用来自 L1 记账行：按项目类型聚合的应收净额，分组求和只由记账层做一次
         List<FeeTypeSumVO> receivables = chargeFacadeService.sumNetGroupByItemType(
                 EncounterTypeEnum.OUTPATIENT.getCode(), record.getRegistId());
@@ -1832,18 +1959,29 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             com.lowagie.text.Font normalFont = new com.lowagie.text.Font(bfChinese, 10, com.lowagie.text.Font.NORMAL);
             com.lowagie.text.Font smallFont = new com.lowagie.text.Font(bfChinese, 8, com.lowagie.text.Font.NORMAL);
 
-            // 标题
+            // 头部表格：左列 = 付款二维码（真实聚合码，位于左上角），右列 = 标题 + 患者信息
+            com.lowagie.text.pdf.PdfPTable headTable = new com.lowagie.text.pdf.PdfPTable(2);
+            headTable.setWidthPercentage(100);
+            headTable.setWidths(new float[]{1.1f, 2.6f});
+            com.lowagie.text.pdf.PdfPCell qrCell = new com.lowagie.text.pdf.PdfPCell();
+            qrCell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+            qrCell.setVerticalAlignment(com.lowagie.text.Element.ALIGN_MIDDLE);
+            qrCell.setPadding(4);
+            renderPayQrCode(record, qrCell, smallFont);
+            com.lowagie.text.pdf.PdfPCell infoCell = new com.lowagie.text.pdf.PdfPCell();
+            infoCell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+            infoCell.setPadding(4);
             com.lowagie.text.Paragraph title = new com.lowagie.text.Paragraph("患者就诊引导单", titleFont);
-            title.setAlignment(com.lowagie.text.Element.ALIGN_CENTER);
-            title.setSpacingAfter(20);
-            document.add(title);
-
-            // 患者基本信息
-            document.add(createParagraph("患者姓名：" + record.getPatientName(), normalFont));
-            document.add(createParagraph("病历号：" + record.getRecordNo(), normalFont));
-            document.add(createParagraph("就诊科室：" + record.getDeptName(), normalFont));
-            document.add(createParagraph("接诊医生：" + record.getDoctorName(), normalFont));
-            document.add(createParagraph("就诊日期：" + record.getVisitDate(), normalFont));
+            title.setSpacingAfter(10);
+            infoCell.addElement(title);
+            infoCell.addElement(createParagraph("患者姓名：" + record.getPatientName(), normalFont));
+            infoCell.addElement(createParagraph("病历号：" + record.getRecordNo(), normalFont));
+            infoCell.addElement(createParagraph("就诊科室：" + record.getDeptName(), normalFont));
+            infoCell.addElement(createParagraph("接诊医生：" + record.getDoctorName(), normalFont));
+            infoCell.addElement(createParagraph("就诊日期：" + record.getVisitDate(), normalFont));
+            headTable.addCell(qrCell);
+            headTable.addCell(infoCell);
+            document.add(headTable);
             document.add(createParagraph(" ", normalFont));
 
             // 诊断信息
@@ -1890,25 +2028,10 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             document.add(createParagraph("  合计：¥" + totalAmount.toPlainString(), headerFont));
             document.add(createParagraph(" ", normalFont));
 
-            // 缴费指引
+            // 缴费指引（二维码已渲染在左上角头部）
             document.add(createParagraph("【缴费指引】", headerFont));
-            document.add(createParagraph("请扫描下方二维码完成在线缴费", normalFont));
+            document.add(createParagraph("请扫描左上角二维码完成在线缴费", normalFont));
             document.add(createParagraph("支持支付方式：微信、支付宝、医保电子凭证", normalFont));
-            document.add(createParagraph(" ", normalFont));
-
-            // 生成付款二维码
-            String paymentUrl = "https://his.example.com/pay?recordNo=" + record.getRecordNo() + "&amount=" + totalAmount.toPlainString();
-            com.lowagie.text.Image qrCode = generateQrCodeImage(paymentUrl, 150, 150);
-            if (qrCode != null) {
-                // 使用 Paragraph 包装图片并居中
-                com.lowagie.text.Paragraph qrParagraph = new com.lowagie.text.Paragraph();
-                qrParagraph.setAlignment(com.lowagie.text.Element.ALIGN_CENTER);
-                qrCode.setAlignment(com.lowagie.text.Element.ALIGN_CENTER);
-                qrCode.setIndentationLeft(0);
-                qrCode.setIndentationRight(0);
-                qrParagraph.add(qrCode);
-                document.add(qrParagraph);
-            }
             document.add(createParagraph(" ", normalFont));
 
             // 取药流程
@@ -1934,14 +2057,9 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
 
             document.close();
 
-            // 检查文件是否生成成功
-            java.io.File pdfFile = new java.io.File(absolutePath);
-            System.out.println("PDF文件是否存在: " + pdfFile.exists());
-            System.out.println("PDF文件大小: " + pdfFile.length() + " bytes");
-
             return relativePath;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("PDF 引导单导出失败 absolutePath={}", absolutePath, e);
             return null;
         }
     }
@@ -1952,21 +2070,216 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         return p;
     }
 
-    private com.lowagie.text.Image generateQrCodeImage(String content, int width, int height) {
+    /**
+     * 结诊文书付款二维码（左上角）：取该就诊第一张待缴账单出<b>真实聚合支付码</b>（复用收费台聚合码，
+     * 患者扫码进入真实缴费闭环）。无待缴账单或出码失败时，单元格显示提示文案，不阻断文书生成。
+     *
+     * @param cell 二维码单元格（PDF 表格左列，即文书左上角）
+     */
+    private void renderPayQrCode(BizMedicalRecord record, com.lowagie.text.pdf.PdfPCell cell, com.lowagie.text.Font smallFont) {
         try {
-            // 使用 Hutool 生成二维码
-            BufferedImage qrImage = QrCodeUtil.generate(content, new QrConfig().setWidth(width).setHeight(height));
-            // 转换为 iText Image
-            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-            javax.imageio.ImageIO.write(qrImage, "png", baos);
-            byte[] bytes = baos.toByteArray();
+            List<BillBriefVO> pendingBills = chargeFacadeService.pendingBillsOfEncounter(
+                    EncounterTypeEnum.OUTPATIENT.getCode(), record.getRegistId());
+            if (pendingBills.isEmpty()) {
+                cell.addElement(createParagraph("本次费用已结清", smallFont));
+                cell.addElement(createParagraph("无需缴费", smallFont));
+                return;
+            }
+            QrPayResultVO payResult = qrPayFacadeService.createQrCode(pendingBills.get(0).getBillId());
+            if (payResult == null || !TextUtil.hasText(payResult.getQrImage())) {
+                cell.addElement(createParagraph("付款码暂不可用", smallFont));
+                cell.addElement(createParagraph("请到收费窗口结算", smallFont));
+                return;
+            }
+            com.lowagie.text.Image image = qrImageOf(payResult.getQrImage(), 130, 130);
+            if (image == null) {
+                cell.addElement(createParagraph("付款码暂不可用", smallFont));
+                cell.addElement(createParagraph("请到收费窗口结算", smallFont));
+                return;
+            }
+            cell.addElement(image);
+            cell.addElement(createParagraph("微信/支付宝扫码缴费", smallFont));
+            cell.addElement(createParagraph("金额：¥" + (payResult.getAmount() != null
+                    ? payResult.getAmount().toPlainString() : "0"), smallFont));
+        } catch (Exception e) {
+            log.warn("结诊文书聚合支付码出码失败，二维码区置空 recordNo={}", record.getRecordNo(), e);
+            cell.addElement(createParagraph("付款码暂不可用", smallFont));
+            cell.addElement(createParagraph("请到收费窗口结算", smallFont));
+        }
+    }
+
+    /**
+     * 把聚合支付返回的二维码 base64（data:image/png;base64,...）转成 openpdf Image。
+     */
+    private com.lowagie.text.Image qrImageOf(String dataUrl, int width, int height) {
+        try {
+            String base64 = dataUrl;
+            int idx = dataUrl.indexOf("base64,");
+            if (idx >= 0) {
+                base64 = dataUrl.substring(idx + "base64,".length());
+            }
+            byte[] bytes = java.util.Base64.getDecoder().decode(base64);
             com.lowagie.text.Image image = com.lowagie.text.Image.getInstance(bytes);
             image.scaleAbsolute(width, height);
             return image;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("聚合码图片解析失败", e);
             return null;
         }
+    }
+
+    /**
+     * 生成处方签 PDF：结诊提交后由开方医师签名（电子签名 + 手写笔迹）锁定，供患者取药/核对。
+     * 二维码（真实聚合码）渲染在左上角，与引导单同口径。
+     *
+     * @return PDF 相对路径（uploads/rx/yyyyMMdd/{recordNo}.pdf）；失败返回 null（不阻断结诊提交）
+     */
+    private String generateRxPdf(BizMedicalRecord record) {
+        List<BizPrescription> prescriptions = bizPrescriptionMapper.selectList(
+                new LambdaQueryWrapper<BizPrescription>()
+                        .eq(BizPrescription::getRecordId, record.getId())
+                        .orderByAsc(BizPrescription::getId));
+        if (prescriptions.isEmpty()) {
+            return null;
+        }
+        // 明细按处方分组一次捞全，避免循环单查
+        List<BizPrescriptionDetail> details = bizPrescriptionDetailMapper.selectList(
+                new LambdaQueryWrapper<BizPrescriptionDetail>()
+                        .in(BizPrescriptionDetail::getPrescriptionId,
+                                prescriptions.stream().map(BizPrescription::getId).collect(Collectors.toList())));
+        Map<Long, List<BizPrescriptionDetail>> detailMap = details.stream()
+                .collect(Collectors.groupingBy(BizPrescriptionDetail::getPrescriptionId));
+
+        String dateDir = LocalDate.now().format(DateFormats.COMPACT_DATE);
+        String relativePath = "uploads/rx/" + dateDir + "/" + record.getRecordNo() + ".pdf";
+        String uploadBaseDir = System.getProperty("user.dir");
+        String absolutePath = uploadBaseDir + "/" + relativePath;
+        java.io.File dir = new java.io.File(uploadBaseDir + "/uploads/rx/" + dateDir);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
+        try {
+            com.lowagie.text.Document document = new com.lowagie.text.Document(com.lowagie.text.PageSize.A4, 36, 36, 36, 36);
+            com.lowagie.text.pdf.PdfWriter.getInstance(document, new java.io.FileOutputStream(absolutePath));
+            document.open();
+
+            com.lowagie.text.pdf.BaseFont bfChinese = com.lowagie.text.pdf.BaseFont.createFont(
+                    "C:/Windows/Fonts/simsun.ttc,0", "Identity-H", com.lowagie.text.pdf.BaseFont.EMBEDDED);
+            com.lowagie.text.Font titleFont = new com.lowagie.text.Font(bfChinese, 18, com.lowagie.text.Font.BOLD);
+            com.lowagie.text.Font headerFont = new com.lowagie.text.Font(bfChinese, 12, com.lowagie.text.Font.BOLD);
+            com.lowagie.text.Font normalFont = new com.lowagie.text.Font(bfChinese, 10, com.lowagie.text.Font.NORMAL);
+            com.lowagie.text.Font smallFont = new com.lowagie.text.Font(bfChinese, 8, com.lowagie.text.Font.NORMAL);
+
+            // 头部表格：左列 = 付款二维码（左上角），右列 = 标题 + 患者信息
+            com.lowagie.text.pdf.PdfPTable headTable = new com.lowagie.text.pdf.PdfPTable(2);
+            headTable.setWidthPercentage(100);
+            headTable.setWidths(new float[]{1.1f, 2.6f});
+            com.lowagie.text.pdf.PdfPCell qrCell = new com.lowagie.text.pdf.PdfPCell();
+            qrCell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+            qrCell.setVerticalAlignment(com.lowagie.text.Element.ALIGN_MIDDLE);
+            qrCell.setPadding(4);
+            renderPayQrCode(record, qrCell, smallFont);
+            com.lowagie.text.pdf.PdfPCell infoCell = new com.lowagie.text.pdf.PdfPCell();
+            infoCell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+            infoCell.setPadding(4);
+            com.lowagie.text.Paragraph title = new com.lowagie.text.Paragraph("处 方 笺", titleFont);
+            title.setSpacingAfter(10);
+            infoCell.addElement(title);
+            infoCell.addElement(createParagraph("患者姓名：" + record.getPatientName(), normalFont));
+            infoCell.addElement(createParagraph("病历号：" + record.getRecordNo(), normalFont));
+            infoCell.addElement(createParagraph("就诊科室：" + record.getDeptName(), normalFont));
+            infoCell.addElement(createParagraph("接诊医生：" + record.getDoctorName(), normalFont));
+            infoCell.addElement(createParagraph("就诊日期：" + record.getVisitDate(), normalFont));
+            headTable.addCell(qrCell);
+            headTable.addCell(infoCell);
+            document.add(headTable);
+            document.add(createParagraph(" ", normalFont));
+
+            if (TextUtil.hasText(record.getDiagnosisName())) {
+                document.add(createParagraph("【诊断】" + record.getDiagnosisName(), normalFont));
+                document.add(createParagraph(" ", normalFont));
+            }
+
+            // 处方明细：按处方类型分块渲染，同一张处方一张表
+            for (BizPrescription prescription : prescriptions) {
+                List<BizPrescriptionDetail> rxDetails = detailMap.getOrDefault(prescription.getId(), List.of());
+                if (rxDetails.isEmpty()) {
+                    continue;
+                }
+                document.add(createParagraph(com.his.common.enums.PrescriptionTypeEnum.getLabel(prescription.getPrescriptionType())
+                        + "处方  " + prescription.getPrescriptionNo(), headerFont));
+                com.lowagie.text.pdf.PdfPTable table = new com.lowagie.text.pdf.PdfPTable(6);
+                table.setWidthPercentage(100);
+                table.setWidths(new float[]{3.4f, 2.2f, 1.0f, 1.8f, 1.6f, 1.2f});
+                addCell(table, "药品名称", headerFont);
+                addCell(table, "规格", headerFont);
+                addCell(table, "数量", headerFont);
+                addCell(table, "用法", headerFont);
+                addCell(table, "频次", headerFont);
+                addCell(table, "天数", headerFont);
+                for (BizPrescriptionDetail d : rxDetails) {
+                    addCell(table, nullToDash(d.getDrugName()), normalFont);
+                    addCell(table, nullToDash(d.getSpecification()), normalFont);
+                    addCell(table, (d.getQuantity() != null ? d.getQuantity().toPlainString() : "-")
+                            + (TextUtil.hasText(d.getUnit()) ? " " + d.getUnit() : ""), normalFont);
+                    addCell(table, nullToDash(d.getUsageDosage()), normalFont);
+                    addCell(table, nullToDash(d.getFrequency()), normalFont);
+                    addCell(table, d.getDuration() != null ? String.valueOf(d.getDuration()) : "-", normalFont);
+                }
+                document.add(table);
+                document.add(createParagraph(" ", normalFont));
+            }
+
+            // 开方医师签名区：电子签名 + 手写笔迹（结诊提交时已随处方落库）
+            BizPrescription signed = prescriptions.stream()
+                    .filter(p -> p.getDoctorSignId() != null)
+                    .findFirst()
+                    .orElse(null);
+            com.lowagie.text.Paragraph signTitle = new com.lowagie.text.Paragraph("【医师签名】", headerFont);
+            signTitle.setSpacingAfter(6);
+            document.add(signTitle);
+            if (signed != null) {
+                if (TextUtil.hasText(signed.getDoctorSignature())) {
+                    com.lowagie.text.Image signImg = qrImageOf(signed.getDoctorSignature(), 160, 60);
+                    if (signImg != null) {
+                        signImg.setSpacingAfter(4);
+                        document.add(signImg);
+                    }
+                }
+                document.add(createParagraph("医师：" + (TextUtil.hasText(signed.getDoctorName()) ? signed.getDoctorName() : record.getDoctorName())
+                        + (signed.getDoctorSignedTime() != null ? "（电子签名 · " + signed.getDoctorSignedTime() + "，可验签）" : "（电子签名，可验签）"), normalFont));
+            } else {
+                document.add(createParagraph("医师：" + record.getDoctorName(), normalFont));
+            }
+
+            document.add(createParagraph(" ", normalFont));
+            document.add(createParagraph("取药流程：请凭本处方笺前往一楼药房取药", smallFont));
+            document.add(createParagraph("取药时间：周一至周五 8:00-17:30", smallFont));
+            document.add(createParagraph(" ", normalFont));
+            document.add(createParagraph("医院地址：湖南省长沙市岳麓区金州大道520号", smallFont));
+            document.add(createParagraph("咨询电话：010-88888888", smallFont));
+
+            document.close();
+            return relativePath;
+        } catch (Exception e) {
+            log.error("处方签 PDF 生成失败 absolutePath={}", absolutePath, e);
+            return null;
+        }
+    }
+
+    /**
+     * 向 PDF 表格追加一个单元格（表头/内容通用）。
+     */
+    private void addCell(com.lowagie.text.pdf.PdfPTable table, String text, com.lowagie.text.Font font) {
+        com.lowagie.text.pdf.PdfPCell cell = new com.lowagie.text.pdf.PdfPCell(new com.lowagie.text.Phrase(
+                text == null ? "" : text, font));
+        cell.setPadding(4);
+        table.addCell(cell);
+    }
+
+    private String nullToDash(String value) {
+        return TextUtil.hasText(value) ? value : "-";
     }
 
     /**

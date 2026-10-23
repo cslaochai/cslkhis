@@ -31,7 +31,12 @@ import com.his.common.util.TextUtil;
 import com.his.spi.service.PatientFacadeService;
 import com.his.spi.service.ChargeFacadeService;
 import com.his.spi.service.SystemFacadeService;
+import com.his.spi.service.ClinicSourceFacadeService;
+import com.his.spi.service.DutyRosterFacadeService;
 import com.his.spi.vo.ClinicRoomBriefVO;
+import com.his.spi.vo.ClinicSourceBriefVO;
+import com.his.spi.vo.EmployeeBriefVO;
+import com.his.spi.vo.DutyStaffBriefVO;
 import com.his.common.entity.CurrentUser;
 import com.his.spi.service.DeptScopeService;
 import com.his.spi.service.RedisSequenceService;
@@ -73,6 +78,10 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
     private final DayEndSettleTrigger dayEndSettleTrigger;
 
     private final DeptScopeService deptScopeService;
+
+    private final ClinicSourceFacadeService clinicSourceFacadeService;
+
+    private final DutyRosterFacadeService dutyRosterFacadeService;
 
     @Override
     public List<BizQueueListVO> getTodayQueueList(QueueTodayQueryDTO queueQueryDTO) {
@@ -118,16 +127,22 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
     }
 
     /**
-     * 诊室快照的权威来源 = <b>排班</b>（医生-诊室绑定在排班上，不在分诊台）。
-     *
-     * <p>原实现按 scheduleId 直连排班域 BizClinicSourceMapper 回查 roomId/roomName 补显示、不回写。
-     * 跨模块改走 spi 后，当前 spi 尚无「按号源ID取诊室快照」端口（ClinicSourceFacadeService#findClinicSource
-     * 已在 spi-extension-requests.txt 登记）；端口补齐前不再回查，队列/挂号上已有快照直接沿用，
-     * 缺快照的行诊室列留空，不编造。
+     * 诊室快照的权威来源
      */
     private void fillRoomFromSchedule(BizQueueListVO vo, AppointInfo registInfo) {
-        // TODO(spi-extension-requests): 待 ClinicSourceFacadeService#findClinicSource(scheduleId) 返回
-        // ClinicSourceBriefVO（含 roomId/roomName）后，在此回查补齐显示。
+        if (vo == null || registInfo == null || registInfo.getScheduleId() == null) {
+            return;
+        }
+        ClinicSourceBriefVO source = clinicSourceFacadeService.findClinicSource(registInfo.getScheduleId());
+        if (source == null) {
+            return;
+        }
+        if (vo.getRoomId() == null) {
+            vo.setRoomId(source.getRoomId());
+        }
+        if (!TextUtil.hasText(vo.getRoomName())) {
+            vo.setRoomName(source.getRoomName());
+        }
     }
 
     @Override
@@ -177,6 +192,8 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
             });
         }
 
+        // 排序口径：门诊行 triage_level 为 null（→4），等价按 sequence_no 纯 FIFO；
+        // 急诊科直录的行带 I~IV 级，仍按级别优先。两套队列共用一张表，排序只此一处。
         wrapper.last("ORDER BY IFNULL(triage_level, 4) ASC, sequence_no ASC");
 
         Page<Queue> page = this.page(new Page<>(queueQueryDTO.getPageNum(), queueQueryDTO.getPageSize()), wrapper);
@@ -279,12 +296,28 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
         queue.setQueueType(QueueTypeEnum.NORMAL.getCode());
         queue.setQueueStatus(QueueStatusEnum.WAITING.getCode());
         queue.setArriveTime(LocalDateTime.now());
-        queue.setTriageLevel(TriageLevelEnum.NON_URGENT.getCode());
-        queue.setTriageStatus(0);
-        // 诊室快照原由签到时回查排班号源（BizClinicSource.roomId/roomName）写入；
-        // 跨模块改走 spi 后当前无「按号源ID取诊室快照」端口（已登记 ClinicSourceFacadeService#findClinicSource），
-        // 端口补齐前不再回查，队列诊室列沿用挂号/队列已有快照，缺则留空。
-        // TODO(spi-extension-requests): 待 findClinicSource(scheduleId) 可用后回填 roomId/roomName。
+        // 门诊无急诊式分级（2026-10-22 收口）：不再默认写 triage_level=4 —— 门诊队列就是
+        // 先到先得，排序只认 sequence_no；triage_level 留 null，listPage/callNext 的
+        // IFNULL(triage_level,4) 排序自然退化成 FIFO，急诊行（急诊科直录）仍按级别优先。
+        // triage_status 列 NOT NULL 无默认值，写 1=可接诊（门诊没有「护士核验」流程，
+        // 急诊分级由 EmergencyServiceImpl 另写 I~IV 级）。
+        queue.setTriageStatus(1);
+        // 叫号次数：新队列初始 0（还没叫过号）。biz_queue.call_count 列无默认值，
+        // 漏 set 会被 MySQL 拒收报 "Field 'call_count' doesn't have a default value"
+        // （急诊建队同口径已 setCallCount(0)，此处与之一致）。
+        queue.setCallCount(0);
+        // 挂号类型快照：biz_queue.regist_type 无默认值，漏 set 会被 MySQL 拒收报
+        // "Field 'regist_type' doesn't have a default value"（500 系统内部错误），
+        // 且前端队列列表的「普通号/专家号」标签正读这一列。历史挂号无类型时兜底普通号。
+        queue.setRegistType(appointInfo.getRegistType() != null
+                ? appointInfo.getRegistType() : RegistTypeEnum.NORMAL.getCode());
+        // 诊室快照：按挂号 scheduleId 回查号源补齐 roomId/roomName，查不到则留空，不编造
+        ClinicSourceBriefVO signedSource = appointInfo.getScheduleId() == null
+                ? null : clinicSourceFacadeService.findClinicSource(appointInfo.getScheduleId());
+        if (signedSource != null) {
+            queue.setRoomId(signedSource.getRoomId());
+            queue.setRoomName(signedSource.getRoomName());
+        }
         baseMapper.insert(queue);
 
         // 更新挂号状态为已签到
@@ -309,14 +342,43 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
      * 端口补齐前直接走科室兜底前缀，不回查排班。
      */
     private String generateQueueNo(Long deptId, Long scheduleId) {
-        // TODO(spi-extension-requests): 待 findClinicSource(scheduleId) 返回 roomId 后，
-        // 再经 systemFacadeService.findClinicRoom(roomId).getQueuePrefix() 取呼号前缀。
-        String prefix;
-
+        String prefix = null;
+        // 优先按号源 → 诊室取呼号前缀；取不到再走科室兜底
+        if (scheduleId != null) {
+            ClinicSourceBriefVO source = clinicSourceFacadeService.findClinicSource(scheduleId);
+            if (source != null && source.getRoomId() != null) {
+                ClinicRoomBriefVO room = systemFacadeService.findClinicRoom(source.getRoomId());
+                if (room != null && TextUtil.hasText(room.getQueuePrefix())) {
+                    prefix = room.getQueuePrefix();
+                }
+            }
+        }
         // 兜底：前缀绝不能为空。队列号用 D{deptId}（如 D19580005），保证不同科室不串号。
-        prefix = "D" + deptId;
+        if (!TextUtil.hasText(prefix)) {
+            prefix = "D" + deptId;
+        }
 
         // 生成序号（当天该诊室的序号，Redis 递增）
+        String dateStr = LocalDate.now().toString().replace("-", "").substring(4);
+        long seq = redisSequenceService.next("queue:room:" + prefix + ":" + dateStr);
+        return prefix + String.format("%03d", seq);
+    }
+
+    /**
+     * 按诊室前缀直接生成排队号（改派换诊室用，没有新号源可回查）。
+     * 取不到诊室前缀时退回科室兜底 D{deptId}，与 {@link #generateQueueNo} 的兜底口径一致。
+     */
+    private String buildQueueNoByRoom(Long deptId, Long roomId) {
+        String prefix = null;
+        if (roomId != null) {
+            ClinicRoomBriefVO room = systemFacadeService.findClinicRoom(roomId);
+            if (room != null && TextUtil.hasText(room.getQueuePrefix())) {
+                prefix = room.getQueuePrefix();
+            }
+        }
+        if (!TextUtil.hasText(prefix)) {
+            prefix = "D" + deptId;
+        }
         String dateStr = LocalDate.now().toString().replace("-", "").substring(4);
         long seq = redisSequenceService.next("queue:room:" + prefix + ":" + dateStr);
         return prefix + String.format("%03d", seq);
@@ -570,8 +632,11 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
             throw new BusinessException("排队记录不存在");
         }
         deptScopeService.assertDeptAccessible(queue.getDeptId());
-        if (queue.getQueueStatus() != QueueStatusEnum.WAITING.getCode() && queue.getQueueStatus() != QueueStatusEnum.CONSULTING.getCode()) {
-            throw new BusinessException("当前状态不允许过号处理");
+        // 过号只受理「候诊中」：过号的真实场景是「叫了没到、人不在」，而就诊中(3)的患者
+        // 已经坐在医生面前 —— 对就诊中过号等于让分诊台把医生正在接诊的患者踢出队列，
+        // 与「分诊台不得抢占/收口医生当前就诊」是同一条红线（叫号权已收归医生工作站）。
+        if (queue.getQueueStatus() != QueueStatusEnum.WAITING.getCode()) {
+            throw new BusinessException("只能对候诊中的患者过号（就诊中的患者由医生工作站处理）");
         }
         // 过号置 OVERDUE(6) 而不是 CANCELLED(5)：5 是"已退号"，混用会让分诊台/门诊日志
         // 把过号患者显示成已退号。过号与退号是两件事，只在 is_overdue 上做标记不够。
@@ -579,11 +644,10 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
         queue.setIsOverdue(1);
         queue.setOverdueTime(LocalDateTime.now());
         queue.setOverdueReason(reason);
-        // 守卫下沉到 WHERE：仅「候诊中/就诊中」可过号，并发完成/退号等状态变更时 0 行失败
+        // 守卫下沉到 WHERE：仅「候诊中」可过号，并发叫号/完成等状态变更时 0 行失败
         int overdue = baseMapper.update(queue, new LambdaUpdateWrapper<Queue>()
                 .eq(Queue::getId, queue.getId())
-                .in(Queue::getQueueStatus,
-                        QueueStatusEnum.WAITING.getCode(), QueueStatusEnum.CONSULTING.getCode()));
+                .eq(Queue::getQueueStatus, QueueStatusEnum.WAITING.getCode()));
         if (overdue == 0) {
             throw new BusinessException("当前状态不允许过号处理，请刷新后重试");
         }
@@ -636,10 +700,9 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
             vo.setInsurancePay(BigDecimal.ZERO);
             vo.setSelfPay(totalFee);
         } else {
-            // 医保联网：统筹比例原由收费域 InsurancePolicyService#getCoverageRatio(settlementType,
-            // medicalInsuranceType) 提供；跨模块改走 spi 后 ChargeFacadeService 暂无该只读端口
-            // （已登记 getCoverageRatio），端口补齐前保守按 0（全额自付）预估，不编造统筹比例。
-            // TODO(spi-extension-requests): 待 ChargeFacadeService#getCoverageRatio 可用后按费别取真实比例。
+            // 医保联网：统筹比例需按费别码值取政策比例；本入参 medicalInsuranceType 为费别名称(String)，
+            // 与 ChargeFacadeService#getCoverageRatio 的码值(Integer)入参未对齐，暂按 0（全额自付）预估，
+            // 不编造统筹比例；真实结算比例以收费域账单为准。
             BigDecimal coverageRatio = BigDecimal.ZERO;
             vo.setCoverageRatio(coverageRatio);
 
@@ -756,22 +819,30 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Integer rejoinQueue(Long queueId) {
+    public Integer rejoinQueue(Long queueId, Integer mode) {
         Queue queue = baseMapper.selectById(queueId);
         if (queue == null) {
             throw new BusinessException("排队记录不存在");
         }
         deptScopeService.assertDeptAccessible(queue.getDeptId());
-        // 两类人走这个入口：
-        // ① 候诊中的复诊患者 —— 护士把他提上来优先看；
-        // ② **已过号**的患者 —— 叫了没来、人又回来了。原先只收候诊中，
-        //    过号(6)的行在分诊台上没有任何出口（按钮都不渲染），患者回来只能干等着，
-        //    最后要么重挂号、要么投诉。过号不是终态，必须能回队。
+        // 两种语义必须分开（2026-10-22 门诊版收口）：
+        // mode=1 置为优先 —— 候诊中的患者（复诊回诊 / 老幼特殊）由护士提上来，**插到队首**；
+        // mode=2 过号回队 —— 叫了没来、人又回来了，**排到队尾**（不插队，避免挤掉正常排队的人）。
+        // 原先两者共用"插队首"，过号患者一回来就顶到第一位，对排在前面的患者不公平（投诉高发点）。
+        int m = mode == null ? 1 : mode;
         Integer st = queue.getQueueStatus();
         boolean waiting = st != null && st.equals(QueueStatusEnum.WAITING.getCode());
         boolean overdue = st != null && st.equals(QueueStatusEnum.OVERDUE.getCode());
-        if (!waiting && !overdue) {
-            throw new BusinessException("只能对候诊中或已过号的患者重新入队");
+        if (m == 1) {
+            if (!waiting) {
+                throw new BusinessException("只能对候诊中的患者置为优先");
+            }
+        } else if (m == 2) {
+            if (!overdue) {
+                throw new BusinessException("只能对已过号的患者执行过号回队");
+            }
+        } else {
+            throw new BusinessException("mode 取值不合法（1-置为优先 2-过号回队）");
         }
         // 跨日的记录不能回队：叫号只取「就诊日 = 今天」的候诊行，把昨天的行改回候诊中
         // 等于制造一行谁都叫不到的记录 —— 页面上看不出异常，患者白等。隔日号请重新挂号。
@@ -780,7 +851,39 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
             throw new BusinessException("该排队记录的就诊日是 " + visitDate + "，已跨日不能回队；"
                     + "请让患者重新挂号（或先办理改约）");
         }
-        if (overdue) {
+        // 取号范围口径：只动**这位医生**的队列（callNext 按 dept + doctorId 取号，医生站列表也按
+        // doctorId 过滤）。原先只按 dept_id 操作会让同科室其他医生的候诊序号被整体挤动。
+        Long doctorId = queue.getDoctorId();
+        int newSeq;
+        if (m == 1) {
+            // ===== 置为优先：插到该医生候诊队首 =====
+            LambdaQueryWrapper<Queue> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(Queue::getDeptId, queue.getDeptId())
+                    .eq(doctorId != null, Queue::getDoctorId, doctorId)
+                    .eq(Queue::getVisitDate, visitDate)
+                    .eq(Queue::getQueueStatus, QueueStatusEnum.WAITING.getCode())
+                    .ne(Queue::getId, queue.getId())
+                    .orderByAsc(Queue::getSequenceNo)
+                    .select(Queue::getSequenceNo)
+                    .last("LIMIT 1");
+            Queue first = baseMapper.selectOne(wrapper);
+            int headSeq = first != null && first.getSequenceNo() != null ? first.getSequenceNo() : 1;
+            // 占到队首：不再用「最小序号 - 1」（反复插队会插到 0/-1；Math.max(0,..) 会把多次插队
+            // 压成并列）。改成把当前候诊行整体后移一位，插队行占住原队首：序号仍唯一且递增。
+            baseMapper.update(null, new LambdaUpdateWrapper<Queue>()
+                    .eq(Queue::getDeptId, queue.getDeptId())
+                    .eq(doctorId != null, Queue::getDoctorId, doctorId)
+                    .eq(Queue::getVisitDate, visitDate)
+                    .eq(Queue::getQueueStatus, QueueStatusEnum.WAITING.getCode())
+                    .ne(Queue::getId, queue.getId())
+                    .ge(Queue::getSequenceNo, headSeq)
+                    .setSql("sequence_no = sequence_no + 1"));
+            queue.setSequenceNo(headSeq);
+            // 优先标记，供大屏与分诊台区分
+            queue.setQueueType(QueueTypeEnum.PRIORITY.getCode());
+            newSeq = headSeq;
+        } else {
+            // ===== 过号回队：排到该医生候诊队尾 =====
             queue.setQueueStatus(QueueStatusEnum.WAITING.getCode());
             // 过号标记要清掉：状态已经是候诊中，is_overdue 还留 1 会让分诊台的
             // 「过号」筛选与统计把这人算进去。过号时间/原因保留，作为发生过的事实留痕。
@@ -794,63 +897,218 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
                     appointInfoMapper.updateById(registInfo);
                 }
             }
+            // 取该医生候诊中当前最大序号 → 排到队尾（+1），不插队
+            LambdaQueryWrapper<Queue> tailWrapper = new LambdaQueryWrapper<>();
+            tailWrapper.eq(Queue::getDeptId, queue.getDeptId())
+                    .eq(doctorId != null, Queue::getDoctorId, doctorId)
+                    .eq(Queue::getVisitDate, visitDate)
+                    .eq(Queue::getQueueStatus, QueueStatusEnum.WAITING.getCode())
+                    .select(Queue::getSequenceNo)
+                    .orderByDesc(Queue::getSequenceNo)
+                    .last("LIMIT 1");
+            Queue tail = baseMapper.selectOne(tailWrapper);
+            int tailSeq = tail != null && tail.getSequenceNo() != null ? tail.getSequenceNo() : 0;
+            queue.setSequenceNo(tailSeq + 1);
+            queue.setQueueType(QueueTypeEnum.NORMAL.getCode());
+            newSeq = tailSeq + 1;
         }
-
-        // 查找**这位医生**当前最小的顺序号（口径必须等于取号范围：callNext 按 dept + doctorId 取号，
-        // 医生站列表也按 doctorId 过滤）。
-        // 原先只按 dept_id 算队首，是同一类「取号范围 ≠ 展示范围」的错：
-        // 同科室还有第二个医生时，A 医生的护士点一次「优先」，B 医生队列里的候诊行
-        // 序号会被整体 +1（他的屏幕上号会莫名往前跳一位），而且「优先」是相对别人队列排的，
-        // A 医生的患者也不一定真占到 A 的队首。
-        Long doctorId = queue.getDoctorId();
-        LambdaQueryWrapper<Queue> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Queue::getDeptId, queue.getDeptId())
-                .eq(doctorId != null, Queue::getDoctorId, doctorId)
-                .eq(Queue::getVisitDate, visitDate)
-                .eq(Queue::getQueueStatus, QueueStatusEnum.WAITING.getCode())
-                .ne(Queue::getId, queue.getId())
-                .orderByAsc(Queue::getSequenceNo)
-                .select(Queue::getSequenceNo)
-                .last("LIMIT 1");
-        Queue first = baseMapper.selectOne(wrapper);
-        int headSeq = first != null && first.getSequenceNo() != null ? first.getSequenceNo() : 1;
-
-        // 占到队首：**不再用「最小序号 - 1」**。那个写法有两个毛病：
-        // ① 反复插队会插到 0、再往下是负数（序号列在「今日就诊」抽屉里是给用户看的，0/-1 像坏数据）；
-        // ② Math.max(...,0) 把多次插队都压成 0 —— 并列之后谁先被叫就看数据库返回顺序，
-        //    护士点一次「优先」未必真的优先。
-        // 改成把当前候诊行整体后移一位，插队行占住原队首的位置：序号仍是唯一且递增的。
-        baseMapper.update(null, new LambdaUpdateWrapper<Queue>()
-                .eq(Queue::getDeptId, queue.getDeptId())
-                .eq(doctorId != null, Queue::getDoctorId, doctorId)
-                .eq(Queue::getVisitDate, visitDate)
-                .eq(Queue::getQueueStatus, QueueStatusEnum.WAITING.getCode())
-                .ne(Queue::getId, queue.getId())
-                .ge(Queue::getSequenceNo, headSeq)
-                .setSql("sequence_no = sequence_no + 1"));
-        queue.setSequenceNo(headSeq);
-        // 同时打上优先队列标记，供大屏与分诊台区分
-        queue.setQueueType(QueueTypeEnum.PRIORITY.getCode());
-        // 守卫下沉到 WHERE：插队写回仅限「候诊中/已过号」原状态，防并发叫号/完成后用陈旧快照复活队列
+        // 守卫下沉到 WHERE：写回仅限「候诊中/已过号」原状态，防并发叫号/完成后用陈旧快照复活队列
         int rejoined = baseMapper.update(queue, new LambdaUpdateWrapper<Queue>()
                 .eq(Queue::getId, queue.getId())
                 .in(Queue::getQueueStatus,
                         QueueStatusEnum.WAITING.getCode(), QueueStatusEnum.OVERDUE.getCode()));
         if (rejoined == 0) {
-            throw new BusinessException("该队列状态已变更，复诊插队失败，请刷新后重试");
+            throw new BusinessException("该队列状态已变更，重新入队失败，请刷新后重试");
         }
-        // 把新序号回给前端 —— 护士要知道「现在排第几」，只说"已置为优先"等于没说
-        return headSeq;
+        // 把新序号回给前端 —— 护士要知道「现在排第几」，只说"已入队"等于没说
+        return newSeq;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Integer moveQueue(Long queueId, Integer step) {
+        Queue queue = baseMapper.selectById(queueId);
+        if (queue == null) {
+            throw new BusinessException("排队记录不存在");
+        }
+        deptScopeService.assertDeptAccessible(queue.getDeptId());
+        if (queue.getQueueStatus() == null
+                || !queue.getQueueStatus().equals(QueueStatusEnum.WAITING.getCode())) {
+            throw new BusinessException("只能对候诊中的患者调号");
+        }
+        if (step == null || step == 0) {
+            throw new BusinessException("移动步数不能为 0");
+        }
+        LocalDate visitDate = queue.getVisitDate() != null ? queue.getVisitDate() : LocalDate.now();
+        Long doctorId = queue.getDoctorId();
+        // 取号范围口径与 callNext/rejoinQueue 一致：只动这位医生同日候诊中的行
+        List<Queue> waiting = baseMapper.selectList(new LambdaQueryWrapper<Queue>()
+                .eq(Queue::getDeptId, queue.getDeptId())
+                .eq(doctorId != null, Queue::getDoctorId, doctorId)
+                .eq(Queue::getVisitDate, visitDate)
+                .eq(Queue::getQueueStatus, QueueStatusEnum.WAITING.getCode())
+                .orderByAsc(Queue::getSequenceNo));
+        if (waiting.size() <= 1) {
+            return queue.getSequenceNo();
+        }
+        int idx = -1;
+        for (int i = 0; i < waiting.size(); i++) {
+            if (waiting.get(i).getId().equals(queue.getId())) {
+                idx = i;
+                break;
+            }
+        }
+        if (idx < 0) {
+            throw new BusinessException("该患者不在候诊队列中，请刷新后重试");
+        }
+        int target = Math.max(0, Math.min(waiting.size() - 1, idx + step));
+        if (target == idx) {
+            return queue.getSequenceNo();
+        }
+        int toSeq = waiting.get(target).getSequenceNo();
+        List<Long> shiftedIds;
+        String shiftSql;
+        if (target > idx) {
+            // 后移：被跨过的行（idx+1..target）整体前移一位
+            shiftedIds = waiting.subList(idx + 1, target + 1).stream()
+                    .map(Queue::getId).collect(Collectors.toList());
+            shiftSql = "sequence_no = sequence_no - 1";
+        } else {
+            // 前移：被跨过的行（target..idx-1）整体后移一位
+            shiftedIds = waiting.subList(target, idx).stream()
+                    .map(Queue::getId).collect(Collectors.toList());
+            shiftSql = "sequence_no = sequence_no + 1";
+        }
+        baseMapper.update(null, new LambdaUpdateWrapper<Queue>()
+                .in(Queue::getId, shiftedIds)
+                .setSql(shiftSql));
+        // 当前行写入目标位置，守卫仅候诊中：防并发叫号/完成后用陈旧快照把已接诊的行再插回去
+        queue.setSequenceNo(toSeq);
+        int updated = baseMapper.update(queue, new LambdaUpdateWrapper<Queue>()
+                .eq(Queue::getId, queue.getId())
+                .eq(Queue::getQueueStatus, QueueStatusEnum.WAITING.getCode()));
+        if (updated == 0) {
+            throw new BusinessException("该队列状态已变更，调号失败，请刷新后重试");
+        }
+        return toSeq;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public QueueReassignVO reassignQueue(Long queueId, Long doctorId, Long roomId) {
+        Queue queue = baseMapper.selectById(queueId);
+        if (queue == null) {
+            throw new BusinessException("排队记录不存在");
+        }
+        deptScopeService.assertDeptAccessible(queue.getDeptId());
+        if (queue.getQueueStatus() == null
+                || !queue.getQueueStatus().equals(QueueStatusEnum.WAITING.getCode())) {
+            throw new BusinessException("只能对候诊中的患者改派");
+        }
+        if (doctorId == null) {
+            throw new BusinessException("目标医生不能为空");
+        }
+        if (doctorId.equals(queue.getDoctorId())
+                && (roomId == null || roomId.equals(queue.getRoomId()))) {
+            throw new BusinessException("目标医生/诊室与当前一致，无需改派");
+        }
+        EmployeeBriefVO doctor = systemFacadeService.findEmployee(doctorId);
+        if (doctor == null) {
+            throw new BusinessException("目标医生不存在");
+        }
+        LocalDate visitDate = queue.getVisitDate() != null ? queue.getVisitDate() : LocalDate.now();
+        // 换诊室 → 按目标诊室前缀重排队号（排队号前缀 = 诊室编号，患者按号找诊室）；
+        // 同诊室换医生 → 号不变、诊室快照不动
+        if (roomId != null && !roomId.equals(queue.getRoomId())) {
+            ClinicRoomBriefVO room = systemFacadeService.findClinicRoom(roomId);
+            if (room == null) {
+                throw new BusinessException("目标诊室不存在");
+            }
+            queue.setRoomId(roomId);
+            queue.setRoomName(room.getName());
+            queue.setQueueNo(buildQueueNoByRoom(queue.getDeptId(), roomId));
+        }
+        // 目标医生候诊队尾
+        int tailSeq = 0;
+        Queue tail = baseMapper.selectOne(new LambdaQueryWrapper<Queue>()
+                .eq(Queue::getDeptId, queue.getDeptId())
+                .eq(Queue::getDoctorId, doctorId)
+                .eq(Queue::getVisitDate, visitDate)
+                .eq(Queue::getQueueStatus, QueueStatusEnum.WAITING.getCode())
+                .select(Queue::getSequenceNo)
+                .orderByDesc(Queue::getSequenceNo)
+                .last("LIMIT 1"));
+        if (tail != null && tail.getSequenceNo() != null) {
+            tailSeq = tail.getSequenceNo();
+        }
+        // 原医生队列中排在后面的候诊行整体前移一位（保持序号连续、无空洞）
+        if (queue.getDoctorId() != null && queue.getSequenceNo() != null) {
+            baseMapper.update(null, new LambdaUpdateWrapper<Queue>()
+                    .eq(Queue::getDeptId, queue.getDeptId())
+                    .eq(Queue::getDoctorId, queue.getDoctorId())
+                    .eq(Queue::getVisitDate, visitDate)
+                    .eq(Queue::getQueueStatus, QueueStatusEnum.WAITING.getCode())
+                    .gt(Queue::getSequenceNo, queue.getSequenceNo())
+                    .setSql("sequence_no = sequence_no - 1"));
+        }
+        queue.setDoctorId(doctorId);
+        queue.setDoctorName(doctor.getEmpName());
+        queue.setSequenceNo(tailSeq + 1);
+        // 改派后按普通队列排（不再保留原优先标记，避免旧状态带到新医生队列）
+        queue.setQueueType(QueueTypeEnum.NORMAL.getCode());
+        int updated = baseMapper.update(queue, new LambdaUpdateWrapper<Queue>()
+                .eq(Queue::getId, queue.getId())
+                .eq(Queue::getQueueStatus, QueueStatusEnum.WAITING.getCode()));
+        if (updated == 0) {
+            throw new BusinessException("该队列状态已变更，改派失败，请刷新后重试");
+        }
+        // 挂号快照医生同步：医生站/结算按挂号取接诊医生，队列改派后必须跟着改，否则
+        // 「医生站里是 A，收费单上写 B」的错位。号源不随改派转移（如需换号源走改约）。
+        if (queue.getRegistId() != null) {
+            AppointInfo regist = appointInfoMapper.selectById(queue.getRegistId());
+            if (regist != null && !doctorId.equals(regist.getDoctorId())) {
+                regist.setDoctorId(doctorId);
+                regist.setDoctorName(doctor.getEmpName());
+                appointInfoMapper.updateById(regist);
+            }
+        }
+        QueueReassignVO vo = new QueueReassignVO();
+        vo.setQueueId(queue.getId());
+        vo.setQueueNo(queue.getQueueNo());
+        vo.setSequenceNo(queue.getSequenceNo());
+        vo.setDoctorId(doctorId);
+        vo.setDoctorName(doctor.getEmpName());
+        vo.setRoomId(queue.getRoomId());
+        vo.setRoomName(queue.getRoomName());
+        return vo;
     }
 
     @Override
     public List<DoctorConsultingVO> getDoctorConsultingInfo(Long deptId) {
-        // 原实现直连排班域 BizClinicSourceMapper 捞「今日本科室号源医生」，再叠加 Redis 接诊状态。
-        // 跨模块改走 spi 后当前无「按科室取今日出诊医生/号源」端口（已登记
-        // ClinicSourceFacadeService#listTodayClinicSources）；端口补齐前保守返回空列表，
-        // 接诊状态仍由本地 DoctorStatusCacheService 维护，不编造医生名单。
-        // TODO(spi-extension-requests): 待 listTodayClinicSources(deptIds, date) 可用后恢复装配。
-        return new ArrayList<>();
+        List<Long> scoped = deptScopeService.scopedDeptIds(deptId);
+        if (scoped == null || scoped.isEmpty()) {
+            return new ArrayList<>();
+        }
+        // 今日出诊号源医生名单来自号源端口；接诊状态仍由本地 Redis 缓存叠加，不编造名单
+        List<ClinicSourceBriefVO> sources = clinicSourceFacadeService.listTodayClinicSources(scoped, LocalDate.now());
+        Map<Long, DoctorConsultingVO> doctorMap = new LinkedHashMap<>();
+        for (ClinicSourceBriefVO source : sources) {
+            Long doctorId = source.getDoctorId();
+            if (doctorId == null) {
+                continue;
+            }
+            DoctorConsultingVO vo = doctorMap.computeIfAbsent(doctorId, k -> {
+                DoctorConsultingVO nv = new DoctorConsultingVO();
+                nv.setDoctorId(doctorId);
+                nv.setDoctorName(source.getDoctorName());
+                nv.setRoomId(source.getRoomId());
+                nv.setRoomName(source.getRoomName());
+                nv.setScheduleId(source.getId());
+                return nv;
+            });
+            vo.setConsultStatus(doctorStatusCacheService.getStatus(doctorId));
+        }
+        return new ArrayList<>(doctorMap.values());
     }
 
     @Override
@@ -893,11 +1151,14 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
         stats.setTotal(appointInfoMapper.selectCount(new LambdaQueryWrapper<AppointInfo>()
                 .in(scoped != null, AppointInfo::getDeptId, scoped)));
 
-        // 坐诊医生数量原由「今日本科室号源医生 ∩ Redis 接诊状态」得出；号源名单直连排班域，
-        // 跨模块改走 spi 后无对应只读端口（已登记 ClinicSourceFacadeService#listTodayClinicSources）。
-        // 端口补齐前 doctorCount 保守置 0，不编造出诊人数。
-        // TODO(spi-extension-requests): 待 listTodayClinicSources(deptIds, date) 可用后恢复统计。
-        stats.setDoctorCount(0);
+        // 坐诊医生数量：今日号源医生去重计数（接诊状态不影响人数），无号源时为 0
+        long doctorCount = clinicSourceFacadeService.listTodayClinicSources(scoped, LocalDate.now())
+                .stream()
+                .map(ClinicSourceBriefVO::getDoctorId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .count();
+        stats.setDoctorCount((int) doctorCount);
 
         return stats;
     }
@@ -1069,10 +1330,18 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
 
         Long roomId = queue.getRoomId();
         String roomName = queue.getRoomName();
-        // 原实现：队列无快照时按挂号 scheduleId 回查排班号源补 roomId/roomName。
-        // 跨模块改走 spi 后无「按号源ID取诊室快照」端口（已登记 ClinicSourceFacadeService#findClinicSource），
-        // 端口补齐前只沿用队列已有快照，不再回查排班。
-        // TODO(spi-extension-requests): 待 findClinicSource(scheduleId) 可用后在此补齐并回写队列。
+        // 队列无诊室快照时，按挂号 scheduleId 回查号源补齐 roomId/roomName；再按 roomId 补诊室名
+        if (roomId == null) {
+            AppointInfo regist = queue.getRegistId() == null
+                    ? null : appointInfoMapper.selectById(queue.getRegistId());
+            if (regist != null && regist.getScheduleId() != null) {
+                ClinicSourceBriefVO source = clinicSourceFacadeService.findClinicSource(regist.getScheduleId());
+                if (source != null) {
+                    roomId = source.getRoomId();
+                    roomName = source.getRoomName();
+                }
+            }
+        }
         if (roomId != null && !TextUtil.hasText(roomName)) {
             ClinicRoomBriefVO room = systemFacadeService.findClinicRoom(roomId);
             roomName = room != null ? room.getName() : null;
@@ -1109,20 +1378,27 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
         record.setRoomId(roomId);
         record.setRoomName(roomName);
         // 【sql/196】分诊护士 = 当天护理排班上的当班人，不是「谁登的浏览器」。
-        // 原实现经 BizClinicSourceService#pickDutyStaff(deptId, NURSE, selfEmpId) 取当班护理；
-        // 跨模块改走 spi 后无对应「按科室取当班护理」端口（已登记 DutyRosterFacadeService#pickDutyStaff，
-        // 返回 DutyStaffBriefVO）。端口补齐前护士ID/姓名落 NULL：身份凭证 ≠ 当班责任，宁缺勿假。
-        // TODO(spi-extension-requests): 待 pickDutyStaff 可用后回填 triageNurseId/triageNurseName。
-        record.setTriageNurseId(null);
-        record.setTriageNurseName(null);
+        // 按科室 + 护理岗取当班责任人（优先本人）；该科室此刻无排班则留空，身份凭证 ≠ 当班责任，宁缺勿假。
+        CurrentUser currentUser = UserUtils.getCurrentUser();
+        DutyStaffBriefVO dutyNurse = dutyRosterFacadeService.pickDutyStaff(
+                queue.getDeptId(), StaffTypeEnum.NURSE.getCode(),
+                currentUser == null ? null : currentUser.getEmployeeId());
+        if (dutyNurse != null) {
+            record.setTriageNurseId(dutyNurse.getStaffId());
+            record.setTriageNurseName(dutyNurse.getStaffName());
+        }
         record.setTriageTime(now);
         record.setRemark(dto.getRemark());
         // 只增不改：重测体温/重新定级是**追加**一条，历史留痕不动
         triageRecordMapper.insert(record);
 
-        // 队列上存「当前生效值」快照，供列表与叫号排序使用
+        // 队列上存「当前生效值」快照，供列表与叫号排序使用。
+        // 门诊版：分级已从分诊卡移除（triage_level 可空），非空才回写，避免把
+        // 急诊直录行已有的 I~IV 级清成 null；triage_status 置 1=护士已处理。
         queue.setTriageStatus(1);
-        queue.setTriageLevel(dto.getTriageLevel());
+        if (dto.getTriageLevel() != null) {
+            queue.setTriageLevel(dto.getTriageLevel());
+        }
         queue.setRoomId(roomId);
         queue.setRoomName(roomName);
         // 守卫下沉到 WHERE：分诊快照仅回写「候诊中/就诊中」队列，防把并发已结束的队列复活
@@ -1388,17 +1664,17 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
         queueStatsVO.setTotal(queueStatsVO.getWaiting() + queueStatsVO.getConsulting()
                 + queueStatsVO.getCompleted() + queueStatsVO.getOverdue());
 
-        // 未核验分级：今日候诊中、护士还没看过（triage_status=0）的人数。
-        // 这**不再**是「叫不出号」的原因 —— 签到即给 4 级默认等级，未核验的照样能接诊。
-        // 它的价值是提醒护士「这几位还没量体征/没定级」，页面文案不能说成「未分诊不能接诊」。
+        // 未核验分级：2026-10-22 门诊收口后，签到/分诊一律写 triage_status=1，
+        // 已没有入口产生 triage_status=0 的行，这个数恒为 0 —— 保留字段仅为接口兼容，
+        // 门诊分诊台不再展示。
         queueStatsVO.setUnTriage(this.count(new LambdaQueryWrapper<Queue>()
                 .in(scoped != null, Queue::getDeptId, scoped)
                 .eq(Queue::getQueueStatus, QueueStatusEnum.WAITING.getCode())
                 .eq(Queue::getVisitDate, LocalDate.now())
                 .eq(Queue::getTriageStatus, 0)));
 
-        // 危重待接诊：今日候诊中 1/2 级的人数。这是唯一还有硬约束的场景
-        // （callSpecific 会拒绝越过他们去叫普通患者），所以必须在统计条上醒目给出。
+        // 危重待接诊：今日候诊中 1/2 级的人数，只可能是急诊科直录的行（门诊行 triage_level
+        // 为 null 不参与）。callSpecific 会拒绝越过他们去叫普通患者，急诊分诊台展示用。
         queueStatsVO.setCriticalWaiting(this.count(new LambdaQueryWrapper<Queue>()
                 .in(scoped != null, Queue::getDeptId, scoped)
                 .eq(Queue::getQueueStatus, QueueStatusEnum.WAITING.getCode())

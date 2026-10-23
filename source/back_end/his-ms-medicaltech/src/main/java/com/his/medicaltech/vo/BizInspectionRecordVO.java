@@ -262,6 +262,32 @@ public class BizInspectionRecordVO {
     private LocalDateTime auditSignedTime;
 
     /**
+     * 签名报告PDF路径（审核通过后生成；详情返回，列表不填充）
+     */
+    private String reportPdfPath;
+
+    /**
+     * 报告PDF文件SHA-256
+     */
+    private String reportPdfHash;
+
+    /**
+     * 报告PDF文件签名值（Base64）
+     */
+    private String reportPdfSign;
+
+    /**
+     * 报告PDF文件签名证书ID
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long reportPdfCertId;
+
+    /**
+     * 报告PDF文件签名时刻
+     */
+    private LocalDateTime reportPdfSignedTime;
+
+    /**
      * 检查项目类型（检查项目字典的项目类型：1-放射 2-超声 3-心电图 4-内镜 5-其他；查不到为 null）。
      *
      * <p>sql/138 分岗用：前端靠它决定这一行给技师的按钮是「拍片完成」还是「录入」。

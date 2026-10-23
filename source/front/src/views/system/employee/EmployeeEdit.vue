@@ -94,6 +94,23 @@
           </el-radio-group>
         </el-form-item>
       </div>
+      <!-- 签名笔迹：员工档案预维护，结诊处方签名与检查检验报告审核时直接引用（不每次手写） -->
+      <el-form-item label-width="0">
+        <div class="w-full">
+          <div class="mb-2 flex items-center gap-1.5">
+            <span class="h-3.5 w-1 rounded bg-blue-500"></span>
+            <span class="text-sm font-semibold text-slate-700">签名笔迹</span>
+            <span class="text-xs text-gray-400">结诊处方与检查检验报告审核时引用，无需每次手写</span>
+          </div>
+          <div v-if="formData.id" class="mb-1 flex items-center gap-3">
+            <span class="text-xs text-slate-500">
+              {{ signImageSaved ? '已维护签名笔迹，可直接在板上重签更新' : '尚未维护签名笔迹' }}
+            </span>
+            <el-button v-if="signImageSaved" link type="primary" @click="clearSignImage">清除笔迹</el-button>
+          </div>
+          <SignaturePad ref="signPadRef" :width="440" :height="150"/>
+        </div>
+      </el-form-item>
       <div class="grid">
         <el-form-item label-width="0">
           <div class="w-full">
@@ -209,10 +226,11 @@
 </template>
 
 <script lang="js" setup>
-import {computed, reactive, ref, watch} from 'vue'
+import {computed, nextTick, reactive, ref, watch} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Plus} from '@element-plus/icons-vue'
 import EmployeePostTable from '@/components/his/EmployeePostTable.vue'
+import SignaturePad from '@/components/his/SignaturePad.vue'
 import {checkPosts, postsFromApi, postsToPayload} from '@/lib/employeePost'
 import {getDictLabelByValue} from '@/lib/employeeDict'
 import {
@@ -293,6 +311,7 @@ const formData = reactive({
   phone: '',
   email: '',
   status: 1,
+  signImage: '',
 })
 
 const rules = {
@@ -331,8 +350,19 @@ const resetForm = () => {
   formData.phone = ''
   formData.email = ''
   formData.status = 1
+  formData.signImage = ''
   postRows.value = []
   certRows.value = []
+}
+
+// 签名笔迹画板：编辑回显时预填已维护笔迹；提交时取画板当前内容
+const signPadRef = ref(null)
+const signImageSaved = ref(false)
+
+const clearSignImage = () => {
+  signPadRef.value?.clear()
+  formData.signImage = ''
+  signImageSaved.value = false
 }
 
 watch(visible, async (open) => {
@@ -359,8 +389,16 @@ watch(visible, async (open) => {
       formData.phone = data.phone || ''
       formData.email = data.email || ''
       formData.status = data.status ?? 1
+      // 签名笔迹回显：有则预填到画板（可重签更新）；清空画板后保存 = 清除笔迹
+      formData.signImage = data.signImage || ''
+      signImageSaved.value = !!data.signImage
       postRows.value = postsFromApi(data.posts)
       loadCertRows(data.id)
+      nextTick(() => {
+        if (formData.signImage) {
+          signPadRef.value?.setImage(formData.signImage)
+        }
+      })
     }
   } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
     
@@ -395,8 +433,11 @@ const handleSubmit = async () => {
   submitLoading.value = true
   try {
     // 组装提交数据（角色与科室不再分开传，只有岗位这一份口径）
+    // 签名笔迹取画板当前内容：非空 = 维护/更新笔迹；空 = 清除（新增时为空提交）
+    const signData = signPadRef.value?.confirm() || ''
     const submitData = {
       ...formData,
+      signImage: signData,
       posts: postsToPayload(postRows.value),
     }
 

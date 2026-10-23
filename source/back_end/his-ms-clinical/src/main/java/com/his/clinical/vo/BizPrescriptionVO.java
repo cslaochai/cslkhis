@@ -218,6 +218,11 @@ public class BizPrescriptionVO {
     private LocalDateTime doctorSignedTime;
 
     /**
+     * 开方医师手写笔迹（PNG dataURL，视觉落款；验签以电子证书签名为准）
+     */
+    private String doctorSignature;
+
+    /**
      * 审方药师签名ID（为空 = 未审方）
      */
     @JsonSerialize(using = ToStringSerializer.class)

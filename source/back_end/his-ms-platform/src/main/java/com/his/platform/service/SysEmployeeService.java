@@ -31,6 +31,12 @@ public interface SysEmployeeService {
     EmployeeVO getInfo(Long id);
 
     /**
+     * 取当前登录员工的档案详情（含签名笔迹），供结诊处方签名、检查检验报告审核引用笔迹。
+     * 从登录态取 employeeId，不收参数；取不到登录员工时返回 null（患者账号等场景）。
+     */
+    EmployeeVO currentInfo();
+
+    /**
      * @return 面向用户的操作结果文案（新增/修改两条路文案不同）
      */
     String upsert(EmployeeUpsertDTO upsertDTO);

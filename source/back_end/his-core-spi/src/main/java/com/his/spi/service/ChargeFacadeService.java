@@ -101,6 +101,14 @@ public interface ChargeFacadeService {
      */
     List<PendingBillVO> pendingBills(Long patientId);
 
+    /**
+     * 某次就诊的待缴账单（未结清的账单：1-待支付 / 2-部分支付 / 6-挂账欠费）。
+     * 用于结诊文书（引导单/处方签）出聚合支付码：患者扫码付本次就诊待缴费用。
+     *
+     * @return 无账单或全部结清时返回空列表
+     */
+    List<BillBriefVO> pendingBillsOfEncounter(Integer encounterType, Long encounterId);
+
     // ---------- 账单读侧（费用解释 / 报表） ----------
 
     /**

@@ -134,6 +134,7 @@ CREATE TABLE `biz_prescription`
     `doctor_name`            varchar(50)  NOT NULL COMMENT '医生姓名',
     `doctor_sign_id`         bigint COMMENT '开方医师签名ID',
     `doctor_signed_time`     datetime COMMENT '开方签名时刻',
+    `doctor_signature`       mediumtext COMMENT '开方医师手写笔迹（PNG dataURL，视觉落款，验签以电子证书签名为准）',
     `prescription_type`      tinyint COMMENT '处方类型（1-西药处方 2-中成药处方 3-中药饮片处方）',
     `prescription_source`    tinyint COMMENT '处方来源（1-门诊处方 2-急诊处方 3-住院处方）',
     `total_amount`           decimal(10, 2) COMMENT '总金额',

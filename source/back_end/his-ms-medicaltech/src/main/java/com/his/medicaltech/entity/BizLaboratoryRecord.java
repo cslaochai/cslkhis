@@ -216,6 +216,32 @@ public class BizLaboratoryRecord extends BaseEntity {
     private LocalDateTime auditSignedTime;
 
     /**
+     * 签名报告PDF路径（审核通过时生成，含报告医师/审核医师签名区与文件级数字签名）
+     */
+    private String reportPdfPath;
+
+    /**
+     * 报告PDF文件SHA-256（验签时重算比对）
+     */
+    private String reportPdfHash;
+
+    /**
+     * 报告PDF文件签名值（Base64，SHA256withRSA）
+     */
+    private String reportPdfSign;
+
+    /**
+     * 报告PDF文件签名证书ID（验签公钥来源）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long reportPdfCertId;
+
+    /**
+     * 报告PDF文件签名时刻
+     */
+    private LocalDateTime reportPdfSignedTime;
+
+    /**
      * 审核时间
      */
     private LocalDateTime auditTime;

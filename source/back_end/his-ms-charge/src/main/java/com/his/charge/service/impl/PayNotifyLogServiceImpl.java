@@ -6,6 +6,10 @@ import com.his.common.util.TextUtil;
 import com.his.charge.entity.BizPayNotifyLog;
 import com.his.charge.mapper.BizPayNotifyLogMapper;
 import com.his.charge.service.PayNotifyLogService;
+import com.his.common.enums.PayNotifyResultEnum;
+import com.his.common.enums.PayNotifySceneEnum;
+import com.his.common.exception.BusinessException;
+import com.his.spi.dto.ChannelNotifyRecordDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -68,5 +72,31 @@ public class PayNotifyLogServiceImpl extends ServiceImpl<BizPayNotifyLogMapper, 
         } catch (Exception e) {
             log.warn("[通知留痕] 落库失败（不影响收款流程）payNo={} err={}", record.payNo(), e.getMessage(), e);
         }
+    }
+
+    @Override
+    public void recordChannelNotify(ChannelNotifyRecordDTO dto) {
+        // 内部指令入口，Bean Validation 不跑，判空只在这里做，缺内容直接报错不兜底
+        if (dto == null) {
+            throw new BusinessException("通知留痕内容不能为空");
+        }
+        PayNotifySceneEnum scene = PayNotifySceneEnum.fromCode(dto.getNotifyScene());
+        if (scene == null) {
+            throw new BusinessException("通知场景取值不合法");
+        }
+        PayNotifyResultEnum result = PayNotifyResultEnum.fromCode(dto.getNotifyResult());
+        if (result == null) {
+            throw new BusinessException("通知处理结果取值不合法");
+        }
+        boolean signVerified = Boolean.TRUE.equals(dto.getSignVerified());
+        // 报文形态决定取哪一种留痕：表单参数走「报文里自取字段」，非表单报文整体留原文。
+        // 键名提取只在渠道层的工厂方法里发生，本类不抄一份，否则两处口径迟早漂移
+        if (dto.getNotifyParams() != null) {
+            recordNotify(PayNotifyLogService.NotifyRecord.ofAlipay(
+                    scene, result, dto.getAckBody(), signVerified, dto.getErrorMsg(), dto.getNotifyParams()));
+            return;
+        }
+        recordNotify(PayNotifyLogService.NotifyRecord.ofRawText(
+                scene, result, dto.getAckBody(), dto.getChannel(), signVerified, dto.getErrorMsg(), dto.getRawBody()));
     }
 }

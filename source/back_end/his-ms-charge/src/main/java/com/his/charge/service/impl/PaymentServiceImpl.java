@@ -24,8 +24,6 @@ import com.his.common.mq.event.ChargeBillPaidEvent;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
-import com.his.spi.service.PayChannelFacadeService;
-import com.his.spi.vo.MicroPayResultVO;
 import com.his.spi.service.IdempotentGuardService;
 import com.his.spi.service.RedisSequenceService;
 import com.his.common.utils.UserUtils;
@@ -95,7 +93,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
 
     private final InsuranceSettlementService insuranceSettlementService;
 
-    private final PayChannelFacadeService payChannelFacadeService;
+    private final ChargePayChannelService chargePayChannelService;
 
     private final HisMqPublisher mqPublisher;
 
@@ -605,17 +603,17 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         // 扫码支付：调真实渠道
         String channelTxnNo = item.getChannelTxnNo();
         if (payMethod.channelBacked() && TextUtil.hasText(item.getAuthCode())) {
-            MicroPayResultVO result = payChannelFacadeService.microPay(
+            ChargePayChannelService.PayResult result = chargePayChannelService.microPay(
                     item.getAuthCode(),
                     bill.getBillNo(),
                     amount,
                     "门诊缴费-" + bill.getBillNo(),
                     payMethod.getCode() == 2 ? 1 : 2  // 2-微信→channel=1, 3-支付宝→channel=2
             );
-            if (!result.isSuccess()) {
-                throw new BusinessException("支付失败: " + result.getErrMsg());
+            if (!result.success()) {
+                throw new BusinessException("支付失败: " + result.errMsg());
             }
-            channelTxnNo = result.getChannelTxnNo();
+            channelTxnNo = result.channelTxnNo();
         }
 
         String txnNo = redisSequenceService.generatePayTxnNo();

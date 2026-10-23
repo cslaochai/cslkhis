@@ -17,6 +17,7 @@ import com.his.spi.vo.InspectionApplyBriefVO;
 import com.his.spi.vo.LaboratoryApplyBriefVO;
 import com.his.medicaltech.dto.LabResultItemSaveDTO;
 import com.his.medicaltech.dto.LabResultSaveDTO;
+import com.his.medicaltech.dto.ReportPdfFileVO;
 import com.his.medicaltech.entity.BizInspectionRecord;
 import com.his.medicaltech.entity.BizLabResult;
 import com.his.medicaltech.entity.BizLaboratoryRecord;
@@ -43,6 +44,7 @@ import com.his.spi.service.DeptScopeService;
 import com.his.spi.service.EmrSignatureFacadeService;
 import com.his.spi.service.RedisSequenceService;
 import com.his.spi.service.SysMessageService;
+import com.his.spi.service.SystemFacadeService;
 import com.his.common.utils.UserUtils;
 import com.his.spi.vo.SignatureVO;
 import lombok.RequiredArgsConstructor;
@@ -76,6 +78,10 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
     private final RedisSequenceService redisSequenceService;
     private final DeptScopeService deptScopeService;
     /**
+     * 员工主数据只读取数端口（签名笔迹引用：审核医师档案预维护的笔迹）
+     */
+    private final SystemFacadeService systemFacadeService;
+    /**
      * 放射分岗（sql/138）：只有它知道某个检查项目是不是放射（检查项目字典的项目类型）
      */
     private final com.his.medicaltech.mapper.RadioReportMapper radioReportMapper;
@@ -83,6 +89,10 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
      * 简化 PACS（sql/137）：详情出参顺带带出影像帧，工作站不必二次请求
      */
     private final com.his.medicaltech.service.ExamImageService examImageService;
+    /**
+     * 报告签名 PDF：审核通过时自动生成（含医师笔迹 + 文件级数字签名）
+     */
+    private final com.his.medicaltech.service.ReportPdfService reportPdfService;
 
     private static String truncateForNote(String text) {
         if (text == null) {
@@ -156,7 +166,10 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         BizReport report = bizReportMapper.selectOne(reportWrapper);
 
         InspectionDetailVO vo = new InspectionDetailVO();
-        vo.setRecord(toInspectionRecordVO(record));
+        BizInspectionRecordVO recordVO = toInspectionRecordVO(record);
+        // 详情带全量报告 PDF 元数据（签名值 text 大字段仅此处回填，供前端验签/下载）
+        recordVO.setReportPdfSign(record.getReportPdfSign());
+        vo.setRecord(recordVO);
         vo.setReport(toReportVO(report));
         vo.setImages(examImageService.listByApply(ReportTypeEnum.INSPECTION.getCode(), record.getApplyId()));
         return vo;
@@ -309,6 +322,22 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         record.setRecordStatus(InsRecordStatusEnum.REVIEWED.getCode()); // 已审核
         this.updateById(record);
 
+        // 审核通过后自动生成签名报告 PDF（含报告医师/审核医师签名区、审核医师手写笔迹 + 文件级数字签名）。
+        // 生成失败不阻断审核：PDF 是交付物不是审核前置条件，失败留日志可在报告页重试。
+        try {
+            ReportPdfFileVO pdfFile = reportPdfService.generateInspectionPdf(record);
+            if (pdfFile != null) {
+                record.setReportPdfPath(pdfFile.getRelativePath());
+                record.setReportPdfHash(pdfFile.getFileHash());
+                record.setReportPdfSign(pdfFile.getSignValue());
+                record.setReportPdfCertId(pdfFile.getCertId());
+                record.setReportPdfSignedTime(pdfFile.getSignedTime());
+                this.updateById(record);
+            }
+        } catch (Exception e) {
+            log.error("检查报告签名 PDF 生成失败 recordNo={}", record.getRecordNo(), e);
+        }
+
         // 更新关联的报告状态为已审核
         LambdaQueryWrapper<BizReport> reportWrapper = new LambdaQueryWrapper<>();
         reportWrapper.eq(BizReport::getRecordId, recordId);
@@ -325,6 +354,28 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
                 "患者 " + record.getPatientName() + " 的" + record.getInspectionItemName() + "检查报告已出，请查看。",
                 recordId);
         return true;
+    }
+
+    @Override
+    public com.his.medicaltech.dto.ReportPdfVerifyVO verifyInspectionReportPdf(Long recordId) {
+        BizInspectionRecord record = this.getById(recordId);
+        if (record == null) {
+            throw new BusinessException("检查记录不存在");
+        }
+        deptScopeService.assertDeptAccessible(record.getInspectionDeptId());
+        return reportPdfService.verifyPdf(record.getReportPdfPath(), record.getReportPdfHash(),
+                record.getReportPdfSign(), record.getReportPdfCertId());
+    }
+
+    @Override
+    public com.his.medicaltech.dto.ReportPdfVerifyVO verifyLaboratoryReportPdf(Long recordId) {
+        BizLaboratoryRecord record = bizLaboratoryRecordMapper.selectById(recordId);
+        if (record == null) {
+            throw new BusinessException("检验记录不存在");
+        }
+        deptScopeService.assertDeptAccessible(record.getLaboratoryDeptId());
+        return reportPdfService.verifyPdf(record.getReportPdfPath(), record.getReportPdfHash(),
+                record.getReportPdfSign(), record.getReportPdfCertId());
     }
 
     @Override
@@ -386,7 +437,10 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         List<BizLabResult> results = bizLabResultMapper.selectList(resultWrapper);
 
         LaboratoryDetailVO result = new LaboratoryDetailVO();
-        result.setRecord(toLaboratoryRecordVO(record));
+        BizLaboratoryRecordVO recordVO = toLaboratoryRecordVO(record);
+        // 详情带全量报告 PDF 元数据（签名值 text 大字段仅此处回填，供前端验签/下载）
+        recordVO.setReportPdfSign(record.getReportPdfSign());
+        result.setRecord(recordVO);
         result.setResults(results.stream().map(this::toLabResultVO).collect(Collectors.toList()));
 
         // 查询关联报告
@@ -407,6 +461,8 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         }
         BizInspectionRecordVO vo = new BizInspectionRecordVO();
         BeanUtils.copyProperties(record, vo);
+        // 报告 PDF 签名值（text 大字段）不进列表/下拉；详情入口（getInspectionDetail）再单独回填
+        vo.setReportPdfSign(null);
         // sql/138：顺带告诉前端这条检查是不是放射（决定技师看到的是「拍片完成」还是「录入」）。
         // 项目字典里查不到的老项目返回 null，前端按「非放射」处理 —— 宁可让它走老流程，
         // 也不要因为字典缺一条就把人卡在"不知道该点哪个"上。
@@ -423,6 +479,8 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         }
         BizLaboratoryRecordVO vo = new BizLaboratoryRecordVO();
         BeanUtils.copyProperties(record, vo);
+        // 报告 PDF 签名值（text 大字段）不进列表/下拉；详情入口（getLaboratoryDetail）再单独回填
+        vo.setReportPdfSign(null);
         return vo;
     }
 
@@ -614,6 +672,25 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         record.setAuditTime(sign.getSignedTime());
         record.setRecordStatus(LabRecordStatusEnum.RELEASED.getCode());
         bizLaboratoryRecordMapper.updateById(record);
+
+        // 审核通过后自动生成签名报告 PDF（检验结果表格 + 审核医师手写笔迹 + 文件级数字签名）。失败不阻断审核。
+        try {
+            List<BizLabResult> results = bizLabResultMapper.selectList(
+                    new LambdaQueryWrapper<BizLabResult>()
+                            .eq(BizLabResult::getRecordId, recordId)
+                            .orderByAsc(BizLabResult::getSortOrder));
+            ReportPdfFileVO pdfFile = reportPdfService.generateLaboratoryPdf(record, results);
+            if (pdfFile != null) {
+                record.setReportPdfPath(pdfFile.getRelativePath());
+                record.setReportPdfHash(pdfFile.getFileHash());
+                record.setReportPdfSign(pdfFile.getSignValue());
+                record.setReportPdfCertId(pdfFile.getCertId());
+                record.setReportPdfSignedTime(pdfFile.getSignedTime());
+                bizLaboratoryRecordMapper.updateById(record);
+            }
+        } catch (Exception e) {
+            log.error("检验报告签名 PDF 生成失败 recordNo={}", record.getRecordNo(), e);
+        }
 
         // 发送通知给开单医生
         sendNotification(record.getApplyDoctorId(), record.getApplyDoctorName(), BizTypeEnum.REPORT.getType(), "检验报告",

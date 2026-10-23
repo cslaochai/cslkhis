@@ -7,6 +7,7 @@ import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.SensitiveMaskUtil;
 import com.his.common.util.TextUtil;
+import com.his.common.utils.UserUtils;
 import com.his.platform.dto.EmployeeQueryDTO;
 import com.his.platform.dto.EmployeeUpsertDTO;
 import com.his.platform.entity.SysEmployee;
@@ -127,7 +128,21 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
     @Override
     public EmployeeVO getInfo(Long id) {
         SysEmployee emp = sysEmployeeMapper.selectById(id);
-        return convertToVO(emp);
+        EmployeeVO vo = convertToVO(emp);
+        // 详情回显才带签名笔迹（base64 大字段）；列表/下拉的 convertToVO 不填它
+        if (vo != null) {
+            vo.setSignImage(emp.getSignImage());
+        }
+        return vo;
+    }
+
+    @Override
+    public EmployeeVO currentInfo() {
+        Long employeeId = UserUtils.getCurrentUser().getEmployeeId();
+        if (employeeId == null) {
+            return null;
+        }
+        return getInfo(employeeId);
     }
 
     @Override
@@ -147,6 +162,7 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
         emp.setSpecialty(upsertDTO.getSpecialty());
         emp.setEducation(upsertDTO.getEducation());
         emp.setAvatar(upsertDTO.getAvatar());
+        emp.setSignImage(upsertDTO.getSignImage());
         emp.setIsExpert(upsertDTO.getIsExpert());
         emp.setExpertPrice(upsertDTO.getExpertPrice());
         emp.setStatus(upsertDTO.getStatus());

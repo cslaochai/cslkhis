@@ -21,6 +21,9 @@ public class RedisSequenceServiceImpl implements RedisSequenceService {
 
     private final StringRedisTemplate stringRedisTemplate;
 
+    /** SecureRandom 线程安全，全局复用，避免每次取号重新播种。 */
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
     @Override
     public long next(String module) {
         String key = module + ":" + LocalDate.now().format(DateFormats.COMPACT_DATE);
@@ -215,10 +218,9 @@ public class RedisSequenceServiceImpl implements RedisSequenceService {
         // 唯一性仍由 Redis 当日序列（PAY:<日期>）保证，随机段仅作不可枚举的噪音，不引入新的碰撞可能；
         // 总长度 3+8+8+5 = 24，远小于 biz_pay_order.pay_no 的 varchar(32) 与支付宝 out_trade_no 的 64 位上限。
         final String base62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-        SecureRandom rnd = new SecureRandom();
         StringBuilder rand = new StringBuilder(8);
         for (int i = 0; i < 8; i++) {
-            rand.append(base62.charAt(rnd.nextInt(base62.length())));
+            rand.append(base62.charAt(SECURE_RANDOM.nextInt(base62.length())));
         }
         String date = LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = next(BizCodeConst.PAY_ORDER_NO_KEY_PREFIX);

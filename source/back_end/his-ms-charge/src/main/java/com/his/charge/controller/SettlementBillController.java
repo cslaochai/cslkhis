@@ -137,7 +137,8 @@ public class SettlementBillController {
      * 用于医生站开方与今日就诊详情回显「患者已收费项目」，避免重复开单重复收费。
      */
     @Operation(summary = "患者维度账单明细（医生站 / 今日就诊回显「患者已收费项目」）：该患者全部账单行快照")
-    @PreAuthorize("hasAuthority('finance:cashier:list')")
+    // 跨岗位共享参照数据（医生站/今日就诊/收费台均读），按 §8.1 口径统一 isAuthenticated()
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/listItemsByPatient")
     public Result<List<BizSettlementBillItemVO>> listItemsByPatient(@RequestParam Long patientId) {
         return Result.success(settlementBillService.listItemsByPatient(patientId));

@@ -102,6 +102,11 @@ public class SysEmployee extends BaseEntity {
     private String avatar;
 
     /**
+     * 签名笔迹（base64 PNG，结诊处方与检查检验报告审核的视觉落款引用）
+     */
+    private String signImage;
+
+    /**
      * 是否专家（0-否 1-是）
      */
     private Integer isExpert;

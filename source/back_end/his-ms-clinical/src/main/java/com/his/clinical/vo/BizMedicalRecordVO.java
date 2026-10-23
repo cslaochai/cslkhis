@@ -152,6 +152,11 @@ public class BizMedicalRecordVO {
     private String familyHistory;
 
     /**
+     * 婚育史
+     */
+    private String marriageHistory;
+
+    /**
      * 过敏史
      */
     private String allergyHistory;

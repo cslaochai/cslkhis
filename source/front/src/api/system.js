@@ -110,6 +110,11 @@ export function getEmployeeDetail(id) {
     return request.get('/system/employee/getById', {params: {id}})
 }
 
+// 获取当前登录员工详情（含签名笔迹，employeeId 由后端从 token 取；非员工账号返回 data=null）
+export function getEmployeeCurrent() {
+    return request.get('/system/employee/current')
+}
+
 // 新增员工
 export function createEmployee(data) {
     return request.post('/system/employee/employeeUpsert', data)

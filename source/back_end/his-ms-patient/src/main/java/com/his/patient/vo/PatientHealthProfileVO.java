@@ -82,6 +82,10 @@ public class PatientHealthProfileVO {
     @Schema(description = "主档既往病史文本（结构化明细的投影）")
     private String medicalHistoryText;
 
+    /** 主档家族史文本（结构化明细的投影，供医生站开病历时预填） */
+    @Schema(description = "主档家族史文本（结构化明细的投影）")
+    private String familyHistoryText;
+
     /** 主档联系人姓名（主要联系人的投影） */
     @Schema(description = "主档联系人姓名（主要联系人的投影）")
     private String contactNameText;

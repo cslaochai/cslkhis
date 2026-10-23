@@ -18,6 +18,8 @@ import com.his.pharmacy.service.NarcoticControlService;
 import com.his.pharmacy.service.TcmDecoctService;
 import com.his.spi.service.PharmacyPrescriptionFacadeService;
 import com.his.spi.vo.PrescriptionPharmacyVO;
+import com.his.pharmacy.service.PharmacyService;
+import com.his.pharmacy.dto.StockDeductResultDTO;
 import com.his.pharmacy.vo.BizDrugDispensingVO;
 import com.his.pharmacy.vo.DrugDispensingCountVO;
 import com.his.pharmacy.vo.NarcoticViolationVO;
@@ -39,6 +41,7 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
     private final PharmacyPrescriptionFacadeService prescriptionFacade;
     private final NarcoticControlService narcoticControlService;
     private final TcmDecoctService tcmDecoctService;
+    private final PharmacyService pharmacyService;
 
     @Override
     public PageResult<BizDrugDispensingVO> selectDispensingPage(Long patientId, String patientName, String prescriptionNo,
@@ -135,8 +138,9 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
             throw new BusinessException("当前状态不允许退药");
         }
         String operatorName = UserUtils.getCurrentUser().getRealName();
-        // TODO(spi 扩展)：药房侧库存回补（restoreStock）待药品域库存端口开放后接入，当前模块不再直连 PharmacyService
-        // 登记需求见 spi-extension-requests.txt（发药扣减 FEFO / 退药回补库存）
+        // 退药回库：并入现有最大批次并落 type=3 退药回库流水（库存宿主在本模块，直调 PharmacyService）
+        pharmacyService.restoreStock(dispensing.getDrugId(), dispensing.getQuantity(),
+                "opdDispense", dispensing.getId(), dispensing.getDispensingNo(), operatorName);
 
         dispensing.setDispensingStatus(DispensingStatusEnum.RETURNED.getCode());
         dispensing.setRemark(reason);
@@ -194,8 +198,12 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
             throw new BusinessException("处方已取消，禁止发药（处方号：" + rx.getPrescriptionNo() + "）");
         }
 
-        // TODO(spi 扩展)：FEFO 扣减药房库存（deductStockFefo，库存不足整单失败）待药品域库存端口开放后接入；
-        // 当前模块不再直连 PharmacyService，扣减前后库存列暂不回写。登记需求见 spi-extension-requests.txt。
+        // FEFO 扣药房库存：先过期先出、跨批次，总可用不足抛异常整单回滚；扣减前后库存写回发药记录
+        StockDeductResultDTO deduct = pharmacyService.deductStockFefo(
+                dispensing.getDrugId(), dispensing.getQuantity(),
+                "opdDispense", dispensing.getId(), dispensing.getDispensingNo(), pharmacistName);
+        dispensing.setStockBefore(deduct.getQuantityBefore());
+        dispensing.setStockAfter(deduct.getQuantityAfter());
 
         dispensing.setDispensingStatus(DispensingStatusEnum.DISPENSED.getCode());
         dispensing.setPharmacistId(pharmacistId);

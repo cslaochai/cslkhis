@@ -119,6 +119,13 @@ public class MedicalRecordSaveDTO {
     private String familyHistory;
 
     /**
+     * 婚育史。**不设 @NotBlank**：国标《病历书写基本规范》门诊病历不要求婚育史，
+     * 男性患者也无生育内容可记；既往/家族/个人史是本院质控口径（前端同样拦），
+     * 婚育史定位是「采集后带入、医生按需填」，不做保存门槛。
+     */
+    private String marriageHistory;
+
+    /**
      * 体温，单位：℃
      */
     private String temperature;
@@ -292,6 +299,12 @@ public class MedicalRecordSaveDTO {
         private Integer decoctFlag;
 
         /**
+         * 开方医师手写笔迹（PNG dataURL，仅视觉落款；验签仍以电子证书签名为准）。
+         * 非必填，长度/格式在服务端校验，不在此加 @Size（避免粘贴大图被 400 提前拒）。
+         */
+        private String doctorSignature;
+
+        /**
          * 处方明细列表
          */
         @Valid
@@ -397,6 +410,11 @@ public class MedicalRecordSaveDTO {
          * 临床诊断
          */
         private String clinicalDiagnosis;
+
+        /**
+         * 特殊要求/注意事项
+         */
+        private String specialRequirements;
 
         /**
          * 是否急诊：0-否 1-是

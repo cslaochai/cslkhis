@@ -14,12 +14,11 @@ import com.his.charge.entity.BizPaymentTxn;
 import com.his.charge.mapper.BizPayChannelBillMapper;
 import com.his.charge.mapper.BizPaymentTxnMapper;
 import com.his.charge.service.PayChannelReconciliationService;
+import com.his.charge.config.AlipayProperties;
 import com.his.common.enums.PayChannelEnum;
 import com.his.common.enums.PaymentMethodEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
-import com.his.spi.service.AlipayChannelConfigFacadeService;
-import com.his.spi.vo.AlipayChannelConfigVO;
 import com.his.common.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,12 +46,12 @@ public class PayChannelReconciliationServiceImpl extends ServiceImpl<BizPayChann
         implements PayChannelReconciliationService {
 
     private final BizPaymentTxnMapper bizPaymentTxnMapper;
-    private final AlipayChannelConfigFacadeService alipayChannelConfigFacadeService;
+    private final AlipayProperties alipayProperties;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int importChannelBill(Integer channel, LocalDate billDate) {
-        AlipayChannelConfigVO alipayConfig = alipayChannelConfigFacadeService.getChannelConfig();
+        AlipayProperties alipayConfig = alipayProperties;
         if (!alipayConfig.isEnabled() && Objects.equals(channel, PayChannelEnum.ALIPAY.getCode())) {
             // 渠道关闭时根本发不出支付宝请求，此时放过去只会在 SDK 那一步炸成 500，
             // 现象与「医院系统坏了」一样，而真因是配置没打开
@@ -153,7 +152,7 @@ public class PayChannelReconciliationServiceImpl extends ServiceImpl<BizPayChann
         log.info("[对账] 手工登记渠道流水 channel={} tradeNo={} amount={}", dto.getChannel(), dto.getChannelTradeNo(), dto.getAmount());
     }
 
-    private List<BizPayChannelBill> fetchAlipayBill(LocalDate billDate, AlipayChannelConfigVO alipayConfig) throws AlipayApiException {
+    private List<BizPayChannelBill> fetchAlipayBill(LocalDate billDate, AlipayProperties alipayConfig) throws AlipayApiException {
         log.info("[支付宝对账] 拉取支付宝账单 date={}", billDate);
 
         AlipayClient client = new DefaultAlipayClient(

@@ -50,6 +50,7 @@ public class OutpatientRecordSignContentServiceImpl extends ServiceImpl<BizMedic
                 .put("pastHistory", r.getPastHistory())
                 .put("personalHistory", r.getPersonalHistory())
                 .put("familyHistory", r.getFamilyHistory())
+                .put("marriageHistory", r.getMarriageHistory())
                 .put("allergyHistory", r.getAllergyHistory())
                 .put("temperature", r.getTemperature())
                 .put("pulse", r.getPulse())

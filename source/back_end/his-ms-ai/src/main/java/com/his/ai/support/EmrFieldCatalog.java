@@ -20,6 +20,7 @@ public final class EmrFieldCatalog {
             new TextField("pastHistory", "既往史", List.of("既往病史", "既往史", "过去史", "既往情况")),
             new TextField("personalHistory", "个人史", List.of("个人史")),
             new TextField("familyHistory", "家族史", List.of("家族病史", "家族史")),
+            new TextField("marriageHistory", "婚育史", List.of("婚育史", "婚产史", "生育史")),
             new TextField("allergyHistory", "过敏史", List.of("药物过敏史", "过敏史", "过敏")),
             new TextField("generalCondition", "一般情况", List.of("一般情况", "一般状况", "全身情况")),
             new TextField("skinMucosa", "皮肤黏膜", List.of("皮肤黏膜", "皮肤粘膜", "皮肤")),

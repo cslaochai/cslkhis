@@ -1,5 +1,13 @@
 <template>
   <div class="login-container">
+    <!-- 顶部横幅：公司 logo + 医院名（与应用主框架 Header 同风格） -->
+    <header class="login-banner">
+      <div class="login-banner-logo-wrap">
+        <img alt="长沙市麓康医院" class="login-banner-logo" src="../../assets/sidebar_logo.png"/>
+      </div>
+      <span class="login-banner-name">长沙市麓康医院</span>
+    </header>
+
     <div class="login-card">
       <!-- 院徽 + 院名 -->
       <div class="login-header">
@@ -9,20 +17,6 @@
       </div>
 
       <div class="login-divider"></div>
-
-      <!-- 角色选择 -->
-      <div class="role-selector">
-        <div
-            v-for="r in roles"
-            :key="r.key"
-            :class="{ active: role === r.key }"
-            class="role-item"
-            @click="role = r.key"
-        >
-          <component :is="r.icon" class="role-icon"/>
-          <span class="role-label">{{ r.label }}</span>
-        </div>
-      </div>
 
       <!-- 登录表单 -->
       <el-form :model="loginForm" @keyup.enter="handleLogin">
@@ -94,11 +88,9 @@
           </el-button>
         </el-form-item>
       </el-form>
-
-      <p class="role-desc">{{ roles.find((r) => r.key === role)?.desc }}</p>
     </div>
 
-    <p class="login-footer">长沙市麓康医院信息管理平台 · 仅限授权人员使用</p>
+    <p class="login-footer">长沙市麓康医院信息管理平台 · 仅限授权人员使用 · V1.0.0</p>
 
     <el-dialog
         v-model="credVisible"
@@ -131,7 +123,7 @@
 import {onMounted, reactive, ref} from 'vue'
 import {useRouter} from 'vue-router'
 import {ElMessage} from 'element-plus'
-import {CircleCheck, CopyDocument, DataLine, FirstAidKit, Lock, Service, Tickets, User} from '@element-plus/icons-vue'
+import {CircleCheck, CopyDocument, Lock, User} from '@element-plus/icons-vue'
 import {login} from '@/api/system'
 import {encryptPassword} from '@/lib/password'
 import {copyText} from '@/lib/clipboard'
@@ -141,16 +133,6 @@ import {clearSessionCaches} from '@/lib/session-cache'
 const router = useRouter()
 const currentPatientStore = useCurrentPatientStore()
 
-const roles = [
-  {key: 'other', label: '其他', icon: User, desc: '登录后进入账号首个角色，可在系统内切换', roleCode: ''},
-  {key: 'doctor', label: '医生', icon: FirstAidKit, desc: '门诊/住院诊疗', roleCode: '10013'},
-  {key: 'nurse', label: '护士', icon: DataLine, desc: '护理执行工作站', roleCode: '10014'},
-  {key: 'pharmacist', label: '药剂师', icon: Tickets, desc: '审方调配发药', roleCode: '10016'},
-  {key: 'service', label: '客服', icon: Service, desc: '工单受理与患者服务', roleCode: '10034'},
-  {key: 'admin', label: '系统管理员', icon: CircleCheck, desc: '系统配置管理', roleCode: '10012'},
-]
-
-const role = ref('other')
 const loading = ref(false)
 const loginError = ref('')
 
@@ -193,6 +175,12 @@ const credRows = [
     role: '护士长',
     dept: '心血管内科',
     ability: HEAD_NURSE_ABILITY
+  },
+  {
+    accounts: ['linxinyi ( 林心怡  )'],
+    role: '分诊护士',
+    dept: '心血管内科',
+    ability: '分诊工作站：队列/呼叫/重呼/过号/复诊优先/分诊卡体征与分级/患者签到，默认诊区=心内科（限本科室）'
   },
   {
     accounts: ['chenzeyu ( 陈泽宇  )', 'fanlicheng ( 范立诚  )', 'kangyihang ( 康亦航  )', 'nitian ( 倪天  )'],
@@ -406,10 +394,6 @@ const handleLogin = async () => {
     return
   }
 
-  // 获取选择的角色编码
-  const selectedRole = roles.find(r => r.key === role.value)
-  const roleCode = selectedRole ? selectedRole.roleCode : ''
-
   loading.value = true
   loginError.value = ''
   try {
@@ -417,7 +401,6 @@ const handleLogin = async () => {
     const res = await login({
       username: loginForm.username,
       password: password,
-      roleCode: roleCode,
     })
 
     if (res.code === 200) {
@@ -454,7 +437,50 @@ const handleLogin = async () => {
   align-items: center;
   justify-content: center;
   background: linear-gradient(180deg, #EAF2F9 0%, #DDEAF4 100%);
-  padding: 24px;
+  /* 顶部留出 64px 横幅的高度，避免登录卡片被横幅压住 */
+  padding: 88px 24px 24px;
+}
+
+/* 顶部横幅：占满整行宽，高度与系统 Header 一致（64px，Ant Design 企业系统顶部导航标准高度） */
+.login-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px;
+  background: linear-gradient(90deg, #0A4376 0%, #0F5FA0 42%, #1179B8 72%, #0E9488 100%);
+  box-shadow: 0 2px 12px rgba(9, 60, 110, 0.28);
+}
+
+.login-banner-logo-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.login-banner-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.login-banner-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 2px;
+  white-space: nowrap;
 }
 
 .login-card {
@@ -497,49 +523,6 @@ const handleLogin = async () => {
   height: 1px;
   background: #E9F0F7;
   margin: 24px 0 20px;
-}
-
-.role-selector {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 20px;
-}
-
-.role-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 10px 2px;
-  border: 1px solid #E3ECF5;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  background: #FAFCFE;
-  white-space: nowrap;
-}
-
-.role-item:hover {
-  border-color: #7FB2DF;
-  background: #F0F7FD;
-}
-
-.role-item.active {
-  border-color: var(--his-primary, #1269B5);
-  background: #E8F1FA;
-  color: #1269B5;
-}
-
-.role-icon {
-  width: 20px;
-  height: 20px;
-}
-
-.role-label {
-  font-size: 12px;
-  font-weight: 500;
 }
 
 .login-input :deep(.el-input__wrapper) {
@@ -632,13 +615,6 @@ const handleLogin = async () => {
 .copy-icon {
   width: 14px;
   height: 14px;
-}
-
-.role-desc {
-  text-align: center;
-  font-size: 12px;
-  color: #9CAFBF;
-  margin: 4px 0 0;
 }
 
 .login-footer {

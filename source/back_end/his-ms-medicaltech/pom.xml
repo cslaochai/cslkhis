@@ -25,6 +25,11 @@
             <groupId>com.his</groupId>
             <artifactId>his-core-spi</artifactId>
         </dependency>
+        <!-- PDF 导出（报告签名 PDF，openpdf 版本由父 pom dependencyManagement 管理，与引导单同栈） -->
+        <dependency>
+            <groupId>com.github.librepdf</groupId>
+            <artifactId>openpdf</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

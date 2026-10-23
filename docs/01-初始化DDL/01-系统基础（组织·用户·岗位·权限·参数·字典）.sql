@@ -166,6 +166,7 @@ CREATE TABLE `sys_employee`
     `specialty`    varchar(200) COMMENT '专业特长',
     `education`    varchar(50) COMMENT '学历',
     `avatar`       varchar(200) COMMENT '头像地址',
+    `sign_image`   longtext COMMENT '签名笔迹（base64 PNG，结诊/报告审核签名引用）',
     `is_expert`    tinyint              COMMENT '是否专家（0-否 1-是）',
     `expert_price` decimal(10, 2)       COMMENT '专家号价格',
     `status`       tinyint              COMMENT '状态（0-停用 1-启用）',

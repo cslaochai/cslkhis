@@ -99,19 +99,29 @@
                class="group cursor-pointer border-y border-slate-100 px-4 py-3 transition-colors hover:bg-slate-50"
                @click="selectPatient(row)"
           >
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <span class="text-sm font-bold text-slate-900">{{ row.patientName }}</span>
-                <span class="rounded bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-600">{{
+            <div class="flex items-center justify-between gap-2">
+              <!-- 姓名单行截断：新疆等地音译长名（15~18 字）在 280px 窄列里若不 truncate 会换行成 2~3 行、
+                   把排队号/状态徽章整块挤掉。名字 flex-1 截断、悬停 title 看全名，徽章 shrink-0 钉住不被挤。 -->
+              <div class="flex min-w-0 flex-1 items-center gap-2">
+                <span class="min-w-0 flex-1 truncate text-sm font-bold text-slate-900"
+                      :title="row.patientName">{{ row.patientName }}</span>
+                <span class="shrink-0 rounded bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-600">{{
                     shortQueueNo(row.queueNo)
                   }}</span>
               </div>
               <span
-                  :class="['rounded px-1.5 py-0.5 text-xs', queueStatusMap[row.queueStatus]?.color || 'bg-slate-100 text-slate-600']">
+                  :class="['shrink-0 rounded px-1.5 py-0.5 text-xs', queueStatusMap[row.queueStatus]?.color || 'bg-slate-100 text-slate-600']">
                 {{ queueStatusMap[row.queueStatus]?.label }}
               </span>
             </div>
             <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+              <!-- 分诊等级：只显示 1/2 级（危重/急症），3/4 级是常态不显示，避免噪音。
+                   排序（callNext ORDER BY triage_level ASC）+ 禁止跳过危重（callSpecific）已是后端硬逻辑，
+                   这里只把「哪个人是危重」在医生端显性化，否则医生看不出为什么下一位跳了号。 -->
+              <span v-if="row.triageLevel === 1"
+                    class="rounded bg-red-500 px-1.5 py-0.5 font-medium text-white">1级·危重</span>
+              <span v-else-if="row.triageLevel === 2"
+                    class="rounded bg-orange-500 px-1.5 py-0.5 font-medium text-white">2级·急症</span>
               <span
                   :class="['rounded px-1.5 py-0.5 font-medium',
                            GENDER_TONE_CLASS[patientAvatarTone(row.gender)]]">
@@ -237,7 +247,7 @@
               <span class="text-sm font-bold text-slate-700">病历</span>
               <span class="text-xs text-slate-400">主诉 / 查体 / 诊断</span>
             </div>
-            <!-- 病历：单列连续表单（真实 HIS 门诊病历是一张自上而下的文书：主诉→现病史→过敏史→既往/个人/家族史→体检→诊断→处置） -->
+            <!-- 病历：单列连续表单（真实 HIS 门诊病历是一张自上而下的文书：主诉→现病史→过敏史→既往/个人/家族/婚育史→体检→诊断→处置） -->
             <div v-if="!recordColCollapsed" class="min-h-0 flex-1 overflow-y-auto p-4 custom-scrollbar record-form">
               <div class="space-y-5">
 
@@ -301,9 +311,17 @@
                       <div class="mb-1 flex items-center justify-between">
                         <label class="text-sm font-bold text-red-700">⚠ 过敏史 <span
                             class="text-red-500">*</span></label>
-                        <el-button v-if="!recordForm.allergyHistory" link type="primary"
-                                   @click="recordForm.allergyHistory = '无'">填写「无」
-                        </el-button>
+                        <div class="flex items-center gap-1">
+                          <el-tag v-if="historySources.allergyHistory" size="small" type="info">
+                            {{ historySourceLabel('allergyHistory') }}
+                          </el-tag>
+                          <el-button v-if="historySources.allergyHistory" link type="danger"
+                                     @click="clearPrefilled('allergyHistory')">清除
+                          </el-button>
+                          <el-button v-if="!recordForm.allergyHistory" link type="primary"
+                                     @click="recordForm.allergyHistory = '无'">填写「无」
+                          </el-button>
+                        </div>
                       </div>
                       <el-input v-model="recordForm.allergyHistory" :rows="2" placeholder="无过敏史请填写 无"
                                 type="textarea"/>
@@ -312,29 +330,71 @@
                       <div>
                         <div class="mb-1 flex items-center justify-between">
                           <label class="text-sm font-medium text-slate-600">既往史</label>
-                          <el-button v-if="!recordForm.pastHistory" link type="primary"
-                                     @click="recordForm.pastHistory = '无'">填写「无」
-                          </el-button>
+                          <div class="flex items-center gap-1">
+                            <el-tag v-if="historySources.pastHistory" size="small" type="info">
+                              {{ historySourceLabel('pastHistory') }}
+                            </el-tag>
+                            <el-button v-if="historySources.pastHistory" link type="danger"
+                                       @click="clearPrefilled('pastHistory')">清除
+                            </el-button>
+                            <el-button v-if="!recordForm.pastHistory" link type="primary"
+                                       @click="recordForm.pastHistory = '无'">填写「无」
+                            </el-button>
+                          </div>
                         </div>
                         <el-input v-model="recordForm.pastHistory" :rows="2" placeholder="既往病史" type="textarea"/>
                       </div>
                       <div>
                         <div class="mb-1 flex items-center justify-between">
                           <label class="text-sm font-medium text-slate-600">个人史</label>
-                          <el-button v-if="!recordForm.personalHistory" link type="primary"
-                                     @click="recordForm.personalHistory = '无'">填写「无」
-                          </el-button>
+                          <div class="flex items-center gap-1">
+                            <el-tag v-if="historySources.personalHistory" size="small" type="info">
+                              {{ historySourceLabel('personalHistory') }}
+                            </el-tag>
+                            <el-button v-if="historySources.personalHistory" link type="danger"
+                                       @click="clearPrefilled('personalHistory')">清除
+                            </el-button>
+                            <el-button v-if="!recordForm.personalHistory" link type="primary"
+                                       @click="recordForm.personalHistory = '无'">填写「无」
+                            </el-button>
+                          </div>
                         </div>
                         <el-input v-model="recordForm.personalHistory" :rows="2" placeholder="个人史" type="textarea"/>
                       </div>
                       <div>
                         <div class="mb-1 flex items-center justify-between">
                           <label class="text-sm font-medium text-slate-600">家族史</label>
-                          <el-button v-if="!recordForm.familyHistory" link type="primary"
-                                     @click="recordForm.familyHistory = '无'">填写「无」
-                          </el-button>
+                          <div class="flex items-center gap-1">
+                            <el-tag v-if="historySources.familyHistory" size="small" type="info">
+                              {{ historySourceLabel('familyHistory') }}
+                            </el-tag>
+                            <el-button v-if="historySources.familyHistory" link type="danger"
+                                       @click="clearPrefilled('familyHistory')">清除
+                            </el-button>
+                            <el-button v-if="!recordForm.familyHistory" link type="primary"
+                                       @click="recordForm.familyHistory = '无'">填写「无」
+                            </el-button>
+                          </div>
                         </div>
                         <el-input v-model="recordForm.familyHistory" :rows="2" placeholder="家族史" type="textarea"/>
+                      </div>
+                      <div>
+                        <div class="mb-1 flex items-center justify-between">
+                          <label class="text-sm font-medium text-slate-600">婚育史</label>
+                          <div class="flex items-center gap-1">
+                            <el-tag v-if="historySources.marriageHistory" size="small" type="info">
+                              {{ historySourceLabel('marriageHistory') }}
+                            </el-tag>
+                            <el-button v-if="historySources.marriageHistory" link type="danger"
+                                       @click="clearPrefilled('marriageHistory')">清除
+                            </el-button>
+                            <el-button v-if="!recordForm.marriageHistory" link type="primary"
+                                       @click="recordForm.marriageHistory = '无'">填写「无」
+                            </el-button>
+                          </div>
+                        </div>
+                        <el-input v-model="recordForm.marriageHistory" :rows="2"
+                                  placeholder="婚育史（如：已婚，生育1子1女；无可填「无」）" type="textarea"/>
                       </div>
                     </div>
                   </div>
@@ -919,9 +979,16 @@
                         <div v-for="p in prescriptionList.filter(p => p.prescriptionType === currentPrescriptionType)"
                              :key="p.id || p.prescriptionType">
                           <div v-if="p.details && p.details.length > 0" class="mb-3">
-                            <div class="mb-2 text-xs text-slate-500">
-                              {{ prescriptionTypeLabel(p.prescriptionType) }}处方 · {{ p.details.length }}种药品
-                              <template v-if="p.prescriptionType === 3 && p.doseCount"> · {{ p.doseCount }}剂</template>
+                            <div class="mb-2 flex items-center justify-between text-xs text-slate-500">
+                              <span>
+                                {{ prescriptionTypeLabel(p.prescriptionType) }}处方 · {{ p.details.length }}种药品
+                                <template v-if="p.prescriptionType === 3 && p.doseCount"> · {{ p.doseCount }}剂</template>
+                              </span>
+                              <el-tooltip v-if="p.doctorSignId" effect="plain"
+                                          :content="`开方医师 ${p.doctorName} · ${p.doctorSignedTime || ''}，签名即锁定`">
+                                <el-tag effect="plain" size="small" type="success">已电子签名·{{ p.doctorName }}</el-tag>
+                              </el-tooltip>
+                              <el-tag v-else effect="plain" size="small" type="info">未签名（结诊时签署）</el-tag>
                             </div>
                             <!-- 医嘱栏对调成 flex-1 主工作区后（2026-09-26 方案A），表格按真实 HIS 处方全列铺开：
                                  药名/规格/厂家/单价/金额是医生开完方核对与患者费用解释要看的东西，
@@ -985,7 +1052,7 @@
                                 <el-tag v-if="item.id" :type="applyTagType(item)" size="small">
                                   {{ item.execStatusText }}
                                 </el-tag>
-                                <el-tag v-else size="small" type="info">选项目后即时开单</el-tag>
+                                <el-tag v-else size="small" type="info">保存病历时开单</el-tag>
                                 <el-tag v-if="item.critical" effect="dark" size="small" type="danger">危急值</el-tag>
                                 <el-tooltip v-if="item.signStatus === 1"
                                             :content="`开单医师 ${item.doctorName} · ${item.signedTime || ''}，签名即锁定`">
@@ -998,11 +1065,6 @@
                                 </el-tag>
                               </div>
                               <div class="flex items-center gap-1">
-                                <el-button v-perm="'opd:doctorWorkstation:edit'" :disabled="!item.id" link size="small"
-                                           type="primary"
-                                           @click="handleSaveInspectionRow(item)">
-                                  保存修改
-                                </el-button>
                                 <el-button v-perm="'opd:doctorWorkstation:delete'" link size="small" type="danger"
                                            @click="handleDeleteInspectionRecord(idx)">
                                   删除
@@ -1013,7 +1075,7 @@
                               <div class="flex items-center gap-1.5">
                                 <label class="text-xs text-slate-600 whitespace-nowrap">检查项目</label>
                                 <el-select v-model="item.inspectionItemName" :loading="inspectionItemLoading"
-                                           filterable
+                                           :disabled="!applyRowEditable(item)" filterable
                                            placeholder="搜索检查项目" style="width: 180px"
                                            @change="(val: any) => handleInspectionItemSelectForRecord(item, val)">
                                   <el-option v-for="opt in inspectionItemResults" :key="opt.id"
@@ -1028,23 +1090,25 @@
                               </div>
                               <div class="flex items-center gap-1.5">
                                 <label class="text-xs text-slate-600 whitespace-nowrap">部位</label>
-                                <el-input v-model="item.bodyPart" placeholder="检查部位" style="width: 150px"/>
+                                <el-input v-model="item.bodyPart" :disabled="!applyRowEditable(item)"
+                                          placeholder="检查部位" style="width: 150px"/>
                               </div>
                               <div class="flex items-center gap-1.5">
                                 <el-switch v-model="item.isEmergency" :active-value="1" :inactive-value="0"
+                                           :disabled="!applyRowEditable(item)"
                                            active-text="急诊" size="small"/>
                               </div>
                             </div>
                             <div class="mt-1.5 flex items-start gap-1.5">
                               <label class="mt-2 text-xs text-slate-600 whitespace-nowrap">注意事项</label>
                               <el-input v-model="item.preparation" :rows="2" placeholder="注意事项（可选）"
-                                        style="width: 400px"
+                                        :disabled="!applyRowEditable(item)" style="width: 400px"
                                         type="textarea"/>
                             </div>
                             <div class="mt-1.5 flex items-center gap-1.5">
                               <label class="text-xs text-slate-600 whitespace-nowrap">检查目的</label>
                               <el-input v-model="item.inspectionPurpose" :rows="2" placeholder="检查目的"
-                                        style="width: 400px"
+                                        :disabled="!applyRowEditable(item)" style="width: 400px"
                                         type="textarea"/>
                             </div>
 
@@ -1053,7 +1117,8 @@
                               <div class="mb-1 text-[10px] font-medium text-slate-500">常用检查</div>
                               <div class="flex flex-wrap gap-1">
                                 <el-button v-for="tpl in myInspectionTemplates" :key="tpl.id" link size="small"
-                                           type="primary" @click="handleApplyInspectionTemplateToRecord(item, tpl)">
+                                           :disabled="!applyRowEditable(item)" type="primary"
+                                           @click="handleApplyInspectionTemplateToRecord(item, tpl)">
                                   {{ tpl.templateName }}
                                 </el-button>
                               </div>
@@ -1148,7 +1213,7 @@
                                 <el-tag v-if="item.id" :type="applyTagType(item)" size="small">
                                   {{ item.execStatusText }}
                                 </el-tag>
-                                <el-tag v-else size="small" type="info">选项目后即时开单</el-tag>
+                                <el-tag v-else size="small" type="info">保存病历时开单</el-tag>
                                 <el-tag v-if="item.critical" effect="dark" size="small" type="danger">危急值</el-tag>
                                 <el-tooltip v-if="item.signStatus === 1"
                                             :content="`开单医师 ${item.doctorName} · ${item.signedTime || ''}，签名即锁定`">
@@ -1161,11 +1226,6 @@
                                 </el-tag>
                               </div>
                               <div class="flex items-center gap-1">
-                                <el-button v-perm="'opd:doctorWorkstation:edit'" :disabled="!item.id" link size="small"
-                                           type="primary"
-                                           @click="handleSaveLaboratoryRow(item)">
-                                  保存修改
-                                </el-button>
                                 <el-button v-perm="'opd:doctorWorkstation:delete'" link size="small" type="danger"
                                            @click="handleDeleteLaboratoryRecord(idx)">
                                   删除
@@ -1176,7 +1236,7 @@
                               <div class="flex items-center gap-4">
                                 <label class="text-xs text-slate-600 whitespace-nowrap">检验项目</label>
                                 <el-select v-model="item.laboratoryItemName" :loading="laboratoryItemLoading"
-                                           filterable
+                                           :disabled="!applyRowEditable(item)" filterable
                                            placeholder="搜索检验项目" style="width: 180px"
                                            @change="(val: any) => handleLaboratoryItemSelectForRecord(item, val)">
                                   <el-option v-for="opt in laboratoryItemResults" :key="opt.id"
@@ -1194,7 +1254,8 @@
                               </div>
                               <div class="flex items-center gap-4">
                                 <label class="text-xs text-slate-600 whitespace-nowrap">标本</label>
-                                <el-select v-model="item.specimenType" placeholder="标本" style="width: 90px">
+                                <el-select v-model="item.specimenType" :disabled="!applyRowEditable(item)"
+                                           placeholder="标本" style="width: 90px">
                                   <el-option label="血液" value="血液"/>
                                   <el-option label="尿液" value="尿液"/>
                                   <el-option label="粪便" value="粪便"/>
@@ -1203,15 +1264,17 @@
                               </div>
                               <div class="mt-1.5 flex items-center gap-4">
                                 <el-switch v-model="item.isFasting" :active-value="1" :inactive-value="0"
+                                           :disabled="!applyRowEditable(item)"
                                            active-text="空腹" size="small"/>
                                 <el-switch v-model="item.isEmergency" :active-value="1" :inactive-value="0"
+                                           :disabled="!applyRowEditable(item)"
                                            active-text="急诊" size="small"/>
                               </div>
                             </div>
                             <div class="mt-1.5 flex items-start gap-4">
                               <label class="mt-2 text-xs text-slate-600 whitespace-nowrap">检验目的</label>
                               <el-input v-model="item.laboratoryPurpose" :rows="2" placeholder="检验目的（可选）"
-                                        style="width: 500px"
+                                        :disabled="!applyRowEditable(item)" style="width: 500px"
                                         type="textarea"/>
                             </div>
 
@@ -1220,7 +1283,8 @@
                               <div class="mb-1 text-[10px] font-medium text-slate-500">常用检验</div>
                               <div class="flex flex-wrap gap-1">
                                 <el-button v-for="tpl in myLaboratoryTemplates" :key="tpl.id" link size="small"
-                                           type="primary" @click="handleApplyLaboratoryTemplateToRecord(item, tpl)">
+                                           :disabled="!applyRowEditable(item)" type="primary"
+                                           @click="handleApplyLaboratoryTemplateToRecord(item, tpl)">
                                   {{ tpl.templateName }}
                                 </el-button>
                               </div>
@@ -1423,7 +1487,7 @@
               <el-icon class="mr-1">
                 <Document/>
               </el-icon>
-              打印指引单
+              结诊文书
             </el-button>
             <el-button type="success" @click="printPrescriptions">
               <el-icon class="mr-1">
@@ -1803,18 +1867,27 @@
     </template>
   </el-dialog>
 
-  <!-- 就诊指引单弹窗 -->
+  <!-- 结诊文书弹窗（引导单 / 处方签，均含左上角聚合支付码） -->
   <el-dialog
       v-model="showGuideSheetDialog"
       :close-on-click-modal="false"
-      title="就诊指引单"
+      title="结诊文书"
       width="960px"
   >
+    <div class="mb-3 flex items-center gap-2">
+      <el-button :type="guideDocTab === 'guide' ? 'primary' : ''" size="small"
+                 @click="guideDocTab = 'guide'">引导单</el-button>
+      <el-button :type="guideDocTab === 'rx' ? 'primary' : ''" size="small"
+                 @click="guideDocTab = 'rx'">处方签</el-button>
+    </div>
     <div class="min-h-[800px]">
       <div v-if="loadingGuide" class="flex items-center justify-center py-10 text-sm text-slate-500">加载中...</div>
-      <iframe v-else-if="guidePdfUrl" :src="guidePdfUrl"
+      <iframe v-else-if="guideDocTab === 'guide' && guidePdfUrl" :src="guidePdfUrl"
               class="h-[800px] w-full border-0"></iframe>
-      <div v-else class="flex items-center justify-center py-10 text-sm text-slate-400">指引单尚未生成，请先提交病历
+      <iframe v-else-if="guideDocTab === 'rx' && rxPdfUrl" :src="rxPdfUrl"
+              class="h-[800px] w-full border-0"></iframe>
+      <div v-else class="flex items-center justify-center py-10 text-sm text-slate-400">
+        {{ guideDocTab === 'guide' ? '指引单尚未生成，请先提交病历' : '处方签尚未生成，结诊提交后自动生成' }}
       </div>
     </div>
     <template #footer>
@@ -2123,7 +2196,7 @@
       </div>
 
       <el-input v-model="extractRawText" :rows="7"
-                placeholder="例：主诉：反复咳嗽3天&#10;现病史：3天前受凉后出现咳嗽，夜间为甚，咳白色粘痰，无发热&#10;既往史：高血压5年，规律服药&#10;T36.8℃ P82次/分 R18次/分 BP130/85mmHg"
+                placeholder="例：主诉：反复咳嗽3天&#10;现病史：3天前受凉后出现咳嗽，夜间为甚，咳白色粘痰，无发热&#10;既往史：高血压5年，规律服药&#10;婚育史：已婚，生育1子&#10;T36.8℃ P82次/分 R18次/分 BP130/85mmHg"
                 type="textarea"/>
 
       <div class="flex items-center justify-between">
@@ -2290,6 +2363,15 @@
     </template>
   </el-dialog>
 
+  <!-- 结诊开方医师手写签名（电子证书签名由后端自动完成，本板仅视觉落款） -->
+  <RxSignDialog
+      v-model="rxSignDialogVisible"
+      :doctor-name="currentPatient?.doctorName || ''"
+      :prescription-count="pendingSubmitData ? pendingSubmitData.prescriptions.length : 0"
+      @confirm="onRxSigned"
+      @cancel="onRxSignCancel"
+  />
+
   <!-- ================= 开住院证（门诊 → 住院的入口） ================= -->
   <DoctorWorkstationAdmissionAdd
       v-model="orderDialogVisible"
@@ -2333,6 +2415,7 @@ import {useCurrentPatientStore} from '@/stores/currentPatient';
 import PageActionBar from '@/components/his/PageActionBar.vue';
 import OrderPanel from '@/components/his/OrderPanel.vue';
 import DoctorWorkstationAdmissionAdd from './DoctorWorkstationAdmissionAdd.vue';
+import RxSignDialog from './RxSignDialog.vue';
 import {
   callNextQueue,
   callPatient,
@@ -2381,16 +2464,14 @@ import {
   getRxTemplates,
   saveDiagTemplates,
   saveDrugPackage,
-  saveInspectionApply,
   saveInspectionTemplate,
-  saveLaboratoryApply,
   saveLaboratoryTemplate,
   saveMedicalRecord,
   saveRxTemplate,
   submitMedicalRecord
 } from '@/api/doctor';
 import {getStockList} from '@/api/pharmacy';
-import {addPatientTag, getPatientDetail, getPatientTags, removePatientTag} from '@/api/patient';
+import {addPatientTag, getPatientDetail, getPatientHealthProfile, getPatientTags, removePatientTag} from '@/api/patient';
 import {getInspectionDetail, getLaboratoryDetail, getLaboratoryRecordList} from '@/api/medicaltech';
 import {listItemsByPatient} from '@/api/settlementBill';
 
@@ -2569,14 +2650,14 @@ const loadInsuranceInfo = async () => {
   const drugTotal = prescriptionList.value.reduce((sum, p) => {
     return sum + (p.details || []).reduce((s, d) => s + (d.amount || 0), 0);
   }, 0);
-  // 计算检查申请费用（批次E/E1：开单即落库，这里只算「已提交未缴费(applyStatus=1)」的金额，
+  // 计算检查申请费用（模式A：本地编辑即计入预估 —— 未落库行(r.id 为空)与「已提交(1)」计入，
   // 已缴费(2)的不重复计入，已取消(6)的不算）
   const inspectionTotal = inspectionRecords.value
-      .filter((r) => r.applyStatus === 1)
+      .filter((r) => r.inspectionItemId && (r.applyStatus === 1 || !r.id))
       .reduce((sum, r) => sum + (r.price || 0), 0);
   // 计算检验申请费用（口径同检查）
   const laboratoryTotal = laboratoryRecords.value
-      .filter((r) => r.applyStatus === 1)
+      .filter((r) => r.laboratoryItemId && (r.applyStatus === 1 || !r.id))
       .reduce((sum, r) => sum + (r.price || 0), 0);
   try {
     const res = await estimateInsurance({
@@ -2634,6 +2715,7 @@ const recordForm = reactive({
   pastHistory: '',
   personalHistory: '',
   familyHistory: '',
+  marriageHistory: '',
   allergyHistory: '',
   temperature: '',
   pulse: '',
@@ -2655,6 +2737,7 @@ const recordForm = reactive({
   diagnosisName: '',
   treatmentPlan: '',
   guidePdfPath: '',
+  rxPdfPath: '',
   recordStatus: 1,
   reviewStatus: 0,
 });
@@ -2695,6 +2778,63 @@ const handleCopyLastExam = async () => {
   } finally {
     copyExamLoading.value = false;
   }
+};
+// ===== 病史带入（既往史/个人史/婚育史/家族史/过敏史）=====
+// 口径：复诊把历史病史预填进表单，医生核对后改。国标《病历书写基本规范》要求复诊病历呈现
+// 「病史」；威海市立医院等标杆做法是预问诊「一诉五史」一键导入，同此思路。
+// 优先级：本次挂号已有病历 > 上次门诊病历原文 > 患者健康档案投影（明细拼的文本）。
+// 三条纪律：① 只填空字段，医生已写的一个字都不覆盖；② 带入值带来源角标，医生一改内容
+//（≠带入原值）角标即消失——角标必须始终说真话；③ 不回写患者主档，档案明细的权威入口是
+// 健康档案维护页，避免 copy-forward 把未核对的内容沉淀成档案。
+const HISTORY_KEYS = ['pastHistory', 'personalHistory', 'marriageHistory', 'familyHistory', 'allergyHistory'];
+// key → 'last'（上次病历）| 'profile'（患者档案）；historyPrefillValue 记带入原值供比对
+const historySources = reactive({});
+const historyPrefillValue = {};
+const historySourceLabel = (key) => (historySources[key] === 'last' ? '上次病历' : '患者档案');
+const clearPrefilled = (key) => {
+  recordForm[key] = '';
+  delete historySources[key];
+  delete historyPrefillValue[key];
+};
+// 医生改动带入值 → 角标消失（只比较「是否还是带入时的原值」，医生自己填的从无角标）
+watch(HISTORY_KEYS.map((k) => () => recordForm[k]), () => {
+  HISTORY_KEYS.forEach((k) => {
+    if (historySources[k] && recordForm[k] !== historyPrefillValue[k]) {
+      delete historySources[k];
+      delete historyPrefillValue[k];
+    }
+  });
+});
+const prefillHistories = async (row) => {
+  const patientId = row?.patientId;
+  if (!patientId) return;
+  // 上次病历 + 患者档案并发拉；单个失败不影响接诊（带入是增强，不是关键路径）
+  const [lastRes, profileRes] = await Promise.all([
+    getEmrRecordList({patientId}).catch(() => null),
+    getPatientHealthProfile(patientId).catch(() => null),
+  ]);
+  // 排除本次就诊（同 registId / 同病历 id），与「复制上次查体」同口径
+  const last = (lastRes?.data || []).find((r) => String(r.registId) !== String(recordForm.registId ?? '')
+      && String(r.id) !== String(recordForm.id ?? ''));
+  const profile = profileRes?.data || null;
+  // 婚育史/个人史档案侧暂无明细组，只从上次病历带入；既往/家族/过敏史档案有投影可兜底
+  const candidates = {
+    pastHistory: [last?.pastHistory, profile?.medicalHistoryText],
+    personalHistory: [last?.personalHistory, null],
+    marriageHistory: [last?.marriageHistory, null],
+    familyHistory: [last?.familyHistory, profile?.familyHistoryText],
+    allergyHistory: [last?.allergyHistory, profile?.allergyHistoryText],
+  };
+  HISTORY_KEYS.forEach((key) => {
+    if (recordForm[key]) return; // 本次已写/已带入，不动
+    const [lastVal, profileVal] = candidates[key];
+    const val = lastVal || profileVal;
+    if (val) {
+      recordForm[key] = val;
+      historyPrefillValue[key] = val;
+      historySources[key] = lastVal ? 'last' : 'profile';
+    }
+  });
 };
 const inspectionRecords = ref([]);
 const laboratoryRecords = ref([]);
@@ -3975,13 +4115,13 @@ const handleInspectionItemSearch = async (query) => {
   }
 };
 /**
- * 检查项目选中 → **立即落库**（批次E/E1）。
+ * 检查项目选中/切换 → 只改本地行数据（模式A：编辑与落库解耦）。
  *
- * 原先只是把项目塞进本地数组，等结诊时随病历一起提交：医生开了单让患者去缴费，
- * 只要没点「保存病历」，收费台就查不到这张申请单；而病历每次保存又是"先删后增"申请单，
- * 已缴费的单子会被连根删掉。现在开单即写库，病历只负责回填 recordId。
+ * 申请单不再"开单即落库"：医生工作台内的选择/编辑都停留在本地数组，
+ * 「保存病历 / 结诊」时随病历一并提交（后端 ensureInspectionApplies 落库，结诊统一签名锁定）。
+ * 这样切换项目不再产生一次写库 + 一次签名，也不会在编辑中途生成待缴费废单。
  */
-const handleInspectionItemSelectForRecord = async (record, val) => {
+const handleInspectionItemSelectForRecord = (record, val) => {
   const item = inspectionItemResults.value.find((i) => i.id === val);
   if (!item)
     return;
@@ -3990,44 +4130,7 @@ const handleInspectionItemSelectForRecord = async (record, val) => {
   record.bodyPart = item.bodyPart || '';
   record.preparation = item.preparation || '';
   record.price = item.price || 0;
-  await persistInspectionRow(record);
-};
-/** 把一条检查申请落库（新增或更新）；成功后用后端返回的 VO 覆盖本地行（含执行状态）。 */
-const persistInspectionRow = async (record) => {
-  if (!currentPatient.value || !record.inspectionItemId)
-    return false;
-  try {
-    const res = await saveInspectionApply({
-      id: record.id || undefined,
-      registId: currentPatient.value.registId,
-      recordId: recordForm.id || undefined,
-      patientId: currentPatient.value.patientId,
-      inspectionItemId: record.inspectionItemId,
-      bodyPart: record.bodyPart,
-      inspectionPurpose: record.inspectionPurpose,
-      clinicalDiagnosis: record.clinicalDiagnosis || recordForm.diagnosis || '',
-      specialRequirements: record.preparation,
-      isEmergency: record.isEmergency ?? 0,
-    });
-    const pendingIdx = record._pendingIdx;
-    Object.assign(record, res.data || {});
-    if (pendingIdx)
-      record._pendingIdx = pendingIdx;
-    loadInsuranceInfo();
-    return true;
-  } catch (error) {
-    
-    return false;
-  }
-};
-/** 编辑过科目/部位/目的之后手动落库（列表行上的「保存修改」）。 */
-const handleSaveInspectionRow = async (record) => {
-  const isNew = !record.id;
-  const ok = await persistInspectionRow(record);
-  if (ok && isNew)
-    ElMessage.success('检查申请已开单（待缴费）');
-  else if (ok)
-    ElMessage.success('检查申请已更新');
+  loadInsuranceInfo();
 };
 const handleInspectionItemSelect = (val) => {
   const item = inspectionItemResults.value.find((i) => i.id === val);
@@ -4062,8 +4165,8 @@ const handleLaboratoryItemSelect = (val) => {
     laboratoryForm.specimenType = item.specimenType || '血液';
   }
 };
-/** 检验项目选中 → 立即落库（批次E/E1），语义同检查。 */
-const handleLaboratoryItemSelectForRecord = async (record, val) => {
+/** 检验项目选中/切换 → 只改本地行数据（模式A），语义同检查。 */
+const handleLaboratoryItemSelectForRecord = (record, val) => {
   const item = laboratoryItemResults.value.find((i) => i.id === val);
   if (!item)
     return;
@@ -4071,42 +4174,7 @@ const handleLaboratoryItemSelectForRecord = async (record, val) => {
   record.laboratoryItemName = item.itemName;
   record.specimenType = item.specimenType || '血液';
   record.price = item.price || 0;
-  await persistLaboratoryRow(record);
-};
-const persistLaboratoryRow = async (record) => {
-  if (!currentPatient.value || !record.laboratoryItemId)
-    return false;
-  try {
-    const res = await saveLaboratoryApply({
-      id: record.id || undefined,
-      registId: currentPatient.value.registId,
-      recordId: recordForm.id || undefined,
-      patientId: currentPatient.value.patientId,
-      laboratoryItemId: record.laboratoryItemId,
-      specimenType: record.specimenType,
-      laboratoryPurpose: record.laboratoryPurpose,
-      clinicalDiagnosis: record.clinicalDiagnosis || recordForm.diagnosis || '',
-      isFasting: record.isFasting ?? 0,
-      isEmergency: record.isEmergency ?? 0,
-    });
-    const pendingIdx = record._pendingIdx;
-    Object.assign(record, res.data || {});
-    if (pendingIdx)
-      record._pendingIdx = pendingIdx;
-    loadInsuranceInfo();
-    return true;
-  } catch (error) {
-    
-    return false;
-  }
-};
-const handleSaveLaboratoryRow = async (record) => {
-  const isNew = !record.id;
-  const ok = await persistLaboratoryRow(record);
-  if (ok && isNew)
-    ElMessage.success('检验申请已开单（待缴费）');
-  else if (ok)
-    ElMessage.success('检验申请已更新');
+  loadInsuranceInfo();
 };
 const handleApplyLaboratoryTemplateToRecord = (record, tpl) => {
   record.laboratoryItemId = tpl.laboratoryItemId;
@@ -4159,6 +4227,7 @@ const selectPatient = async (row) => {
     pastHistory: '',
     personalHistory: '',
     familyHistory: '',
+    marriageHistory: '',
     allergyHistory: '',
     temperature: '',
     pulse: '',
@@ -4203,6 +4272,8 @@ const selectPatient = async (row) => {
   const res = await getByRegistId(params);
   Object.assign(recordForm, res.data);
   examToggled.value = null;
+  // 病史带入：本次病历未写的字段，按「上次门诊病历 > 患者健康档案」预填（异步，不阻塞接诊区其他加载）
+  prefillHistories(row);
   // 四个区块并发加载，统一挂「加载中」标记（各 loader 自己吞异常）
   // （原「既往病历」loader 已随左栏既往页签移除 —— 历史就诊改由患者条上的入口
   //   打开患者详情弹窗，内嵌 CDR 全景时间轴，取数口径也换成患者级的 getPatientCdr）
@@ -4225,7 +4296,11 @@ const loadInspectionRecords = async (params) => {
   try {
     // 获取申请列表用于显示状态
     const applyRes = await getInspectionApplyList(params);
-    inspectionRecords.value = applyRes.data || [];
+    inspectionRecords.value = (applyRes.data || []).map((r) => ({
+      ...r,
+      // 字段归一：服务端 VO 用 specialRequirements，行模板 v-model 用 preparation
+      preparation: r.specialRequirements || '',
+    }));
   } catch (error) {
     inspectionRecords.value = [];
   }
@@ -4308,13 +4383,15 @@ const handleAddPrescription = (type) => {
 const handleCallNext = async () => {
   // 如果有当前就诊患者，先检查是否需要保存
   if (currentCalledPatient.value) {
-    // 批次E/E1：检查检验已开单即落库，不再随病历提交；
-    // 这里只兜「处方明细」和「还没落库的空行」——后者是本地 UI 状态，一并触发保存不会丢数据。
+    // 模式A：检查/检验申请编辑期只留在本地数组、未随病历落库；
+    // 这里兜「处方明细」和「本地申请单行」，一并触发保存（随病历落库）不会丢数据。
+    // 注意不能再用 !recordSaved 挡掉：保存过病历之后新增/修改的申请单行也是本地态，
+    // recordSaved 只代表"保存过"，不代表"当前没有未落库的编辑"。
     const hasUnsavedData = prescriptionForm.details.length > 0
-        || inspectionRecords.value.some(r => !r.id)
-        || laboratoryRecords.value.some(r => !r.id);
-    // 有未保存的数据且病历未提交/审核通过时，自动保存
-    if (hasUnsavedData && !recordSaved.value) {
+        || inspectionRecords.value.length > 0
+        || laboratoryRecords.value.length > 0;
+    // 有未保存的数据就自动保存（保存接口幂等：病历整体覆盖、申请单按 id 增/改，重复保存无害）
+    if (hasUnsavedData) {
       try {
         await handleSaveRecord();
         ElMessage.success('已自动保存当前病历');
@@ -4528,61 +4605,92 @@ const handleComplete = async () => {
   } catch (action) {
     return; // 用户取消
   }
-  try {
-    // 获取患者信息
-    const patient = currentPatient.value;
-    // 构建提交数据
-    const submitData = {
-      // 患者信息
-      patientId: patient.patientId,
-      patientNo: patient.patientNo,
-      patientName: patient.patientName,
-      registId: patient.registId,
-      queueId: patient.id,
-      // 科室医生信息
-      deptId: patient.deptId,
-      deptName: patient.deptName,
-      doctorId: patient.doctorId,
-      doctorName: patient.doctorName,
-      // 病历信息
-      recordId: recordForm.id || null,
-      chiefComplaint: recordForm.chiefComplaint,
-      presentIllness: recordForm.presentIllness,
-      allergyHistory: recordForm.allergyHistory,
-      pastHistory: recordForm.pastHistory,
-      personalHistory: recordForm.personalHistory,
-      familyHistory: recordForm.familyHistory,
-      temperature: recordForm.temperature,
-      pulse: recordForm.pulse,
-      respiration: recordForm.respiration,
-      systolicPressure: recordForm.systolicPressure,
-      diastolicPressure: recordForm.diastolicPressure,
-      generalCondition: recordForm.generalCondition,
-      specialistExam: recordForm.specialistExam,
-      auxiliaryExam: recordForm.auxiliaryExam,
-      diagnosis: recordForm.diagnosis,
-      diagnosisCode: recordForm.diagnosisCode,
-      diagnosisName: recordForm.diagnosisName,
-      treatmentPlan: recordForm.treatmentPlan,
-      // 处方信息（所有处方）
-      prescriptions: buildPrescriptionPayload(),
-      // 检查/检验申请：批次E/E1 起**不再随病历提交** —— 开单那一刻就已经落库了，
-      // 病历保存只负责回填 recordId（后端 backfillApplyRecord）。
-      // 撤单请走列表上的「删除」（后端带缴费/执行/收费引用三重保护），
-      // 而不是"把本地数组里的行去掉"。
-    };
-    // 调用结诊提交接口
-    await submitMedicalRecord(submitData);
-    // 显示成功提示
-    ElMessage.success('结诊成功');
-    // 清空暂存的检查检验数据
-    inspectionRecords.value = [];
-    laboratoryRecords.value = [];
-    // 刷新队列
-    loadData();
-  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  // 获取患者信息并构建提交数据
+  const patient = currentPatient.value;
+  const submitData = {
+    // 患者信息
+    patientId: patient.patientId,
+    patientNo: patient.patientNo,
+    patientName: patient.patientName,
+    registId: patient.registId,
+    queueId: patient.id,
+    // 科室医生信息
+    deptId: patient.deptId,
+    deptName: patient.deptName,
+    doctorId: patient.doctorId,
+    doctorName: patient.doctorName,
+    // 病历信息
+    recordId: recordForm.id || null,
+    chiefComplaint: recordForm.chiefComplaint,
+    presentIllness: recordForm.presentIllness,
+    allergyHistory: recordForm.allergyHistory,
+    pastHistory: recordForm.pastHistory,
+    personalHistory: recordForm.personalHistory,
+    familyHistory: recordForm.familyHistory,
+    marriageHistory: recordForm.marriageHistory,
+    temperature: recordForm.temperature,
+    pulse: recordForm.pulse,
+    respiration: recordForm.respiration,
+    systolicPressure: recordForm.systolicPressure,
+    diastolicPressure: recordForm.diastolicPressure,
+    generalCondition: recordForm.generalCondition,
+    specialistExam: recordForm.specialistExam,
+    auxiliaryExam: recordForm.auxiliaryExam,
+    diagnosis: recordForm.diagnosis,
+    diagnosisCode: recordForm.diagnosisCode,
+    diagnosisName: recordForm.diagnosisName,
+    treatmentPlan: recordForm.treatmentPlan,
+    // 处方信息（所有处方）
+    prescriptions: buildPrescriptionPayload(),
+    // 检查/检验申请（模式A）：随结诊提交落库 + 统一电子签名（内容最终确认、签名即锁定）；
+    // 编辑期只留在本地数组，不产生中间态废单。
+    inspectionApplies: buildInspectionApplyPayload(),
+    laboratoryApplies: buildLaboratoryApplyPayload(),
+  };
+  // 有处方先采医师手写笔迹（视觉落款）；无处方直接提交
+  if (submitData.prescriptions.length > 0) {
+    pendingSubmitData.value = submitData;
+    rxSignature.value = '';
+    rxSignDialogVisible.value = true;
+    return;
   }
+  try {
+    await doSubmitRecord(submitData);
+  } catch (error) /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
+  }
+};
+
+// 实际结诊提交（签名板确认后或无处方时调用）
+const doSubmitRecord = async (submitData) => {
+  await submitMedicalRecord(submitData);
+  ElMessage.success('结诊成功');
+  // 清空暂存的检查检验数据
+  inspectionRecords.value = [];
+  laboratoryRecords.value = [];
+  // 刷新队列
+  loadData();
+};
+
+// 签名板确认：笔迹回填每张处方后提交（电子证书签名由后端自动完成）
+const onRxSigned = async (dataUrl) => {
+  rxSignature.value = dataUrl || '';
+  rxSignDialogVisible.value = false;
+  const data = pendingSubmitData.value;
+  pendingSubmitData.value = null;
+  if (!data) return;
+  data.prescriptions = data.prescriptions.map((rx) => ({...rx, doctorSignature: rxSignature.value}));
+  try {
+    await doSubmitRecord(data);
+  } catch (error) /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
+  }
+};
+
+const onRxSignCancel = () => {
+  rxSignDialogVisible.value = false;
+  pendingSubmitData.value = null;
+  rxSignature.value = '';
 };
 // ========== 建复诊（批次E/E6）==========
 // 位置：检查/检验「结果」条目的操作里 —— 报告回来 → 一键建复诊 → 直接接诊。
@@ -4701,6 +4809,7 @@ const handleSaveRecord = async () => {
       pastHistory: recordForm.pastHistory,
       personalHistory: recordForm.personalHistory,
       familyHistory: recordForm.familyHistory,
+      marriageHistory: recordForm.marriageHistory,
       temperature: recordForm.temperature,
       pulse: recordForm.pulse,
       respiration: recordForm.respiration,
@@ -4722,10 +4831,11 @@ const handleSaveRecord = async () => {
       treatmentPlan: recordForm.treatmentPlan,
       // 处方信息（所有处方）
       prescriptions: buildPrescriptionPayload(),
-      // 检查/检验申请：批次E/E1 起**不再随病历提交** —— 开单那一刻就已经落库了，
-      // 病历保存只负责回填 recordId（后端 backfillApplyRecord）。
-      // 撤单请走列表上的「删除」（后端带缴费/执行/收费引用三重保护），
-      // 而不是"把本地数组里的行去掉"。
+      // 检查/检验申请（模式A）：随病历保存落库 —— 医生工作台内的编辑只停留在本地数组，
+      // 保存/结诊时才把申请单数组提交给后端（无 id 新增、有 id 更新，结诊统一签名锁定）。
+      // 撤单走列表上的「删除」（未落库行本地删；已落库行走后端，带缴费/执行/收费引用三重保护）。
+      inspectionApplies: buildInspectionApplyPayload(),
+      laboratoryApplies: buildLaboratoryApplyPayload(),
     };
     // 调用保存接口
     const res = await saveMedicalRecord(saveData);
@@ -4733,6 +4843,47 @@ const handleSaveRecord = async () => {
       recordForm.id = res.data;
     }
     recordSaved.value = true;
+    // 模式A：保存后申请单已落库，把服务端回的行 id / 状态 merge 回本地行 ——
+    // 否则下次保存时行仍无 id，后端走「新行判重跳过」，对已保存行的修改会静默丢失。
+    // 空白行（未选项目）不匹配服务端，原样保留；本地行结构（_pendingIdx 等）也保留。
+    const applyParams = {
+      patientId: currentPatient.value.patientId,
+      registId: currentPatient.value.registId,
+    };
+    const [insRes, labRes] = await Promise.all([
+      getInspectionApplyList(applyParams),
+      getLaboratoryApplyList(applyParams),
+    ]);
+    const serverIns = insRes.data || [];
+    const serverLab = labRes.data || [];
+    for (const row of inspectionRecords.value) {
+      if (!row.inspectionItemId) {
+        continue;
+      }
+      const server = serverIns.find((s) => s.inspectionItemId === row.inspectionItemId);
+      if (server) {
+        const pendingIdx = row._pendingIdx;
+        Object.assign(row, server);
+        // 字段归一：服务端 VO 用 specialRequirements，行模板 v-model 用 preparation
+        row.preparation = server.specialRequirements || row.preparation || '';
+        if (pendingIdx) {
+          row._pendingIdx = pendingIdx;
+        }
+      }
+    }
+    for (const row of laboratoryRecords.value) {
+      if (!row.laboratoryItemId) {
+        continue;
+      }
+      const server = serverLab.find((s) => s.laboratoryItemId === row.laboratoryItemId);
+      if (server) {
+        const pendingIdx = row._pendingIdx;
+        Object.assign(row, server);
+        if (pendingIdx) {
+          row._pendingIdx = pendingIdx;
+        }
+      }
+    }
     // 草稿会话结束：本次保存已产生 diff 留痕，下次保存不再重复带
     aiDraftAppliedText.value = '';
     ElMessage.success('病历保存成功');
@@ -4826,6 +4977,11 @@ const validateAllPrescriptions = () => {
  * 病历提交用的处方载荷。剂数/煎服方式存在处方头，而当前 tab 的编辑态在 prescriptionForm 上，
  * 所以「正在编的那张」取表单值、其余取各自对象上的值（两处提交站点共用，避免口径漂移）。
  */
+// 结诊医师手写笔迹（PNG dataURL）；电子证书签名由后端自动完成，本值仅视觉落款
+const rxSignature = ref('');
+const rxSignDialogVisible = ref(false);
+const pendingSubmitData = ref(null);
+
 const buildPrescriptionPayload = () => {
   return prescriptionList.value
       .filter((p) => p.details && p.details.length > 0)
@@ -4835,6 +4991,8 @@ const buildPrescriptionPayload = () => {
           prescriptionType: p.prescriptionType || 1,
           doseCount: isCurrent ? prescriptionForm.doseCount : p.doseCount,
           decoctFlag: isCurrent ? prescriptionForm.decoctFlag : p.decoctFlag,
+          // 手写笔迹本次结诊一张，所有处方共用；验签仍以电子证书签名为准
+          doctorSignature: rxSignature.value || null,
           details: p.details.map((d) => ({
             drugId: d.drugId,
             drugName: d.drugName,
@@ -4849,6 +5007,47 @@ const buildPrescriptionPayload = () => {
           })),
         };
       });
+};
+
+/** 模式A：检查申请随病历提交的 payload（只提交已选项目行；无 id 新增、有 id 更新）。 */
+const buildInspectionApplyPayload = () => {
+  return inspectionRecords.value
+      .filter((r) => r.inspectionItemId)
+      .map((r) => ({
+        id: r.id || undefined,
+        itemId: r.inspectionItemId,
+        bodyPart: r.bodyPart,
+        purpose: r.inspectionPurpose,
+        clinicalDiagnosis: r.clinicalDiagnosis || recordForm.diagnosis || '',
+        isEmergency: r.isEmergency ?? 0,
+        specialRequirements: r.preparation,
+      }));
+};
+
+/** 模式A：检验申请随病历提交的 payload（语义同检查）。 */
+const buildLaboratoryApplyPayload = () => {
+  return laboratoryRecords.value
+      .filter((r) => r.laboratoryItemId)
+      .map((r) => ({
+        id: r.id || undefined,
+        itemId: r.laboratoryItemId,
+        specimenType: r.specimenType || '',
+        purpose: r.laboratoryPurpose,
+        clinicalDiagnosis: r.clinicalDiagnosis || recordForm.diagnosis || '',
+        isFasting: r.isFasting ?? 0,
+        isEmergency: r.isEmergency ?? 0,
+      }));
+};
+
+/**
+ * 模式A：申请单行可编辑条件。
+ * 未落库（本地编辑态）可编辑；已落库仅「已提交(1) 且 未签名」可编辑 ——
+ * 已缴费(2)/已取消(6)/已签名行以库为准、禁编辑（后端保存病历对它们也跳过更新）。
+ */
+const applyRowEditable = (item) => {
+  if (!item || !item.id)
+    return true;
+  return item.applyStatus === 1 && item.signStatus !== 1;
 };
 const handleDrugSelectForRecord = (record, val) => {
   const drug = drugResults.value.find((d) => d.id === val);
@@ -4901,25 +5100,24 @@ const handleAddEmptyLaboratory = () => {
   });
 };
 // 批次E/F：删掉了 handleSaveInspection / handleSaveLaboratory。
-// 它们是 E1 之前的「暂存本地数组、等结诊再提交」路径，两个函数都已没有任何调用点，
-// 而它们那句「已添加（结诊后生效）」与现状相反 —— 现在选完项目即刻落库、即刻待缴费。
-// 留着只会让下一个人以为还有第二条开单链路。真正的开单在 handleSaveInspectionRow /
-// submitInspectionApply（选项目即落库）。
+// 批次E/E1 的「选项目即落库」（handleSaveInspectionRow / persistInspectionRow）也已随模式A改造删除：
+// 现在医生工作台内的申请单编辑只留在本地数组，落库统一发生在「保存病历 / 结诊」时
+// （随病历提交，后端 ensureXxx 落库 + 结诊统一签名），不再有第二套开单链路。
 // ========== 删除申请单（批次E/E2：走后端，带保护） ==========
 /**
  * 删除检查申请。
  *
- * 原实现只从本地数组 splice —— 申请单从「开单即落库」之后就是真实存在的单据，
- * 只删界面等于"界面上没了、库里还在"，刷新一下又回来。
- * 现在走后端删除接口，能不能删由后端说了算（已缴费 / 已生成检查记录 /
- * 已被收费单引用 一律拒绝并给原因），前端不自己判状态。
+ * 模式A下分两种：未落库行（本地编辑、id 为空）直接删本地数组；
+ * 已落库行（之前保存病历/结诊产生的真实单据）走后端删除接口，
+ * 能不能删由后端说了算（已缴费 / 已生成检查记录 / 已被收费单引用 一律拒绝并给原因），
+ * 前端不自己判状态 —— 只删界面等于"界面上没了、库里还在"，刷新一下又回来。
  */
 const handleDeleteInspectionRecord = async (idx) => {
   const row = inspectionRecords.value[idx];
   if (!row)
     return;
   if (!row.id) {
-    // 还没落库的空行（选了项目就会立刻落库，所以这只在极端情况下出现）
+    // 未落库的本地编辑行：保存病历前删除只是放弃这一行，不产生任何库数据
     inspectionRecords.value.splice(idx, 1);
     loadInsuranceInfo();
     return;
@@ -5183,28 +5381,21 @@ const handleViewLaboratoryReport = async (item) => {
     
   }
 };
-// ========== 打印指引单 ==========
+// ========== 结诊文书（引导单 / 处方签 PDF） ==========
 const guidePdfUrl = ref('');
+const rxPdfUrl = ref('');
+const guideDocTab = ref('guide');
 const loadingGuide = ref(false);
 const loadGuideContent = async () => {
-  if (!recordForm.guidePdfPath) {
-    guidePdfUrl.value = '';
-    return;
-  }
-  loadingGuide.value = true;
-  try {
-    // 直接使用后端地址访问PDF uploads/guide/20260915/MR202609151809310002.pdf
-    guidePdfUrl.value = `/api/${recordForm.guidePdfPath}`;
-  } catch (e) {
-    guidePdfUrl.value = '';
-  } finally {
-    loadingGuide.value = false;
-  }
+  // 直接使用后端地址访问 PDF（uploads/guide/...、uploads/rx/...）
+  guidePdfUrl.value = recordForm.guidePdfPath ? `/api/${recordForm.guidePdfPath}` : '';
+  rxPdfUrl.value = recordForm.rxPdfPath ? `/api/${recordForm.rxPdfPath}` : '';
 };
 const printGuidePdf = () => {
-  if (!guidePdfUrl.value)
+  const url = guideDocTab.value === 'rx' ? rxPdfUrl.value : guidePdfUrl.value;
+  if (!url)
     return;
-  const printWindow = window.open(guidePdfUrl.value, '_blank');
+  const printWindow = window.open(url, '_blank');
   if (printWindow) {
     printWindow.onload = () => {
       printWindow.print();
@@ -5217,6 +5408,14 @@ watch(() => showGuideSheetDialog.value, (val) => {
 });
 // ========== 打印处方 ==========
 const printPrescriptions = () => {
+  // 结诊后已有后端处方签 PDF（含医师手写笔迹 + 左上角聚合支付码）：直接打开，可打印/下载
+  if (rxPdfUrl.value) {
+    const pdfWindow = window.open(rxPdfUrl.value, '_blank');
+    if (pdfWindow) {
+      pdfWindow.onload = () => pdfWindow.print();
+    }
+    return;
+  }
   const patient = currentPatient.value;
   if (!patient)
     return;
@@ -5231,7 +5430,8 @@ const printPrescriptions = () => {
       table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
       th, td { border: 1px solid #000; padding: 6px 10px; text-align: left; font-size: 13px; }
       th { background: #f5f5f5; }
-      .footer { margin-top: 30px; display: flex; justify-content: space-between; font-size: 13px; }
+      .footer { margin-top: 30px; display: flex; justify-content: space-between; font-size: 13px; align-items: flex-end; }
+      .sign-img img { height: 56px; max-width: 180px; object-fit: contain; }
       @media print { body { padding: 20px; } }
     </style></head><body>
     <div class="header"><h1>处 方 笺</h1></div>
@@ -5244,6 +5444,8 @@ const printPrescriptions = () => {
     </div>
   `;
   const hasAny = prescriptionList.value.some(p => p.details && p.details.length > 0);
+  // 落款取第一张已签处方：医师名/签名时刻来自真实签名锚点，不再硬编码「已签名」
+  const signedRx = prescriptionList.value.find(p => p.doctorSignId && p.details && p.details.length > 0);
   if (!hasAny) {
     html += '<div style="text-align:center;color:#999;padding:40px;">无处方</div>';
   } else {
@@ -5265,10 +5467,23 @@ const printPrescriptions = () => {
       html += '</tbody></table>';
     });
   }
+  const signLine = signedRx
+      ? `医师签名：${signedRx.doctorName || patient.doctorName || ''}（电子签名${signedRx.doctorSignedTime ? ' · ' + signedRx.doctorSignedTime : ''}，可验签）`
+      : '医师签名：（尚未电子签名，结诊提交后生效）';
+  const signDate = signedRx && signedRx.doctorSignedTime
+      ? String(signedRx.doctorSignedTime).slice(0, 10)
+      : new Date().toLocaleDateString('zh-CN');
+  const handwritten = (signedRx && signedRx.doctorSignature) || rxSignature.value || '';
+  const signImage = handwritten
+      ? `<div class="sign-img"><img src="${handwritten}" alt="医师手写签名"/></div>`
+      : '';
   html += `
     <div class="footer">
-      <span>医师签名：${patient.doctorName || ''}（已电子签名·结诊时自动签署，可验签）</span>
-      <span>日期：${new Date().toLocaleDateString('zh-CN')}</span>
+      <div>
+        ${signImage}
+        <div>${signLine}</div>
+      </div>
+      <span>日期：${signDate}</span>
     </div>
     </body></html>`;
   const printWindow = window.open('', '_blank');

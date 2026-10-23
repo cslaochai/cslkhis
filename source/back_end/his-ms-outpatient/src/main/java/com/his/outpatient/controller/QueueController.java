@@ -90,13 +90,14 @@ public class QueueController {
         return Result.success();
     }
 
-    @PreAuthorize("hasAnyAuthority('opd:triage:edit', 'opd:doctorWorkstation:edit')")
+    @PreAuthorize("hasAuthority('opd:doctorWorkstation:edit')")
     @Operation(summary = "叫下一位（返回接诊回执：叫到了谁）")
     @PostMapping("/callNext")
     public Result<QueueCallNextVO> callNext(@Valid @RequestBody QueueCallNextDTO queueCallNextDTO) {
         return Result.success(queueService.callNextByOperator(queueCallNextDTO));
     }
 
+    @PreAuthorize("hasAuthority('opd:triage:edit')")
     @Operation(summary = "过号处理")
     @PostMapping("/overdueQueue")
     public Result<Void> overdueQueue(@Valid @RequestBody QueueOverdueDTO dto) {
@@ -111,14 +112,14 @@ public class QueueController {
         return Result.success(vo);
     }
 
-    @PreAuthorize("hasAnyAuthority('opd:triage:edit', 'opd:doctorWorkstation:edit')")
+    @PreAuthorize("hasAuthority('opd:doctorWorkstation:edit')")
     @Operation(summary = "呼叫患者（返回接诊回执：叫到了谁）")
     @PostMapping("/callPatient")
     public Result<QueueCallNextVO> callPatient(@RequestParam Long queueId) {
         return Result.success(queueService.callPatient(queueId));
     }
 
-    @PreAuthorize("hasAnyAuthority('opd:triage:edit', 'opd:doctorWorkstation:edit')")
+    @PreAuthorize("hasAuthority('opd:doctorWorkstation:edit')")
     @Operation(summary = "重呼患者")
     @PostMapping("/recallPatient")
     public Result<Void> recallPatient(@RequestParam Long queueId) {
@@ -127,11 +128,31 @@ public class QueueController {
     }
 
     @PreAuthorize("hasAuthority('opd:triage:edit')")
-    @Operation(summary = "复诊插队（返回插队后的顺序号）")
+    @Operation(summary = "重新入队：mode=1 置为优先（候诊中插队首）/ mode=2 过号回队（排到队尾），返回新顺序号")
     @PostMapping("/rejoinQueue")
-    public Result<Integer> rejoinQueue(@RequestParam Long queueId) {
-        Integer seq = queueService.rejoinQueue(queueId);
+    public Result<Integer> rejoinQueue(@RequestParam Long queueId,
+                                       @RequestParam(defaultValue = "1") Integer mode) {
+        Integer seq = queueService.rejoinQueue(queueId, mode);
         return Result.success("已入队，当前序号 " + seq, seq);
+    }
+
+    @PreAuthorize("hasAuthority('opd:triage:edit')")
+    @Operation(summary = "调号：候诊中患者相对当前位置前移/后移 N 位（step 正=后移，负=前移），返回新顺序号")
+    @PostMapping("/moveQueue")
+    public Result<Integer> moveQueue(@RequestParam Long queueId,
+                                     @RequestParam Integer step) {
+        Integer seq = queueService.moveQueue(queueId, step);
+        return Result.success("调号完成，当前序号 " + seq, seq);
+    }
+
+    @PreAuthorize("hasAuthority('opd:triage:edit')")
+    @Operation(summary = "改派：候诊中患者改到目标医生/诊室，返回新排队号与顺序号")
+    @PostMapping("/reassignQueue")
+    public Result<QueueReassignVO> reassignQueue(@RequestParam Long queueId,
+                                                 @RequestParam Long doctorId,
+                                                 @RequestParam(required = false) Long roomId) {
+        QueueReassignVO vo = queueService.reassignQueue(queueId, doctorId, roomId);
+        return Result.success("改派完成，新排队号 " + vo.getQueueNo(), vo);
     }
 
     @Operation(summary = "诊室状态")

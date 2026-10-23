@@ -154,6 +154,36 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
         return settlementBillService.pendingBillViews(patientId);
     }
 
+    @Override
+    public List<BillBriefVO> pendingBillsOfEncounter(Integer encounterType, Long encounterId) {
+        if (encounterType == null || encounterId == null) {
+            return Collections.emptyList();
+        }
+        List<BillBriefVO> result = new ArrayList<>();
+        for (BizSettlementBill bill : settlementBillService.listByEncounter(encounterType, encounterId)) {
+            if (!isPendingBillStatus(bill.getBillStatus())) {
+                continue;
+            }
+            BillBriefVO vo = new BillBriefVO();
+            vo.setBillId(bill.getId());
+            vo.setBillNo(bill.getBillNo());
+            vo.setBillStatus(bill.getBillStatus());
+            vo.setPayableAmount(bill.getPayableAmount());
+            vo.setPaidAmount(bill.getPaidAmount());
+            result.add(vo);
+        }
+        return result;
+    }
+
+    /**
+     * 待缴口径：1-待支付 2-部分支付 6-挂账欠费（与 settle 挂账口径一致）；结清/作废/退费不参与出码。
+     */
+    private boolean isPendingBillStatus(Integer billStatus) {
+        return Objects.equals(billStatus, BillStatusEnum.UNPAID.getCode())
+                || Objects.equals(billStatus, BillStatusEnum.PARTIAL_PAID.getCode())
+                || Objects.equals(billStatus, 6);
+    }
+
     // ---------- 账单读侧（费用解释 / 报表） ----------
 
     @Override

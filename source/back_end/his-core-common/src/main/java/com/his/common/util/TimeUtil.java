@@ -7,6 +7,8 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 
 /**
@@ -43,6 +45,10 @@ public final class TimeUtil {
         return day == null ? null : day.atTime(LocalTime.MAX).truncatedTo(ChronoUnit.SECONDS);
     }
 
+    private static ZonedDateTime zone(LocalDateTime time) {
+        return time.atZone(ZoneId.systemDefault());
+    }
+
     /**
      * 区间分钟数：如实反映时间倒挂（结束早于开始返回负数），端点缺失返回 null。
      */
@@ -50,7 +56,7 @@ public final class TimeUtil {
         if (from == null || to == null) {
             return null;
         }
-        return Duration.between(toSeconds(from), toSeconds(to)).toMinutes();
+        return Duration.between(zone(toSeconds(from)), zone(toSeconds(to))).toMinutes();
     }
 
     /**
@@ -68,6 +74,6 @@ public final class TimeUtil {
         if (from == null || to == null) {
             return 0L;
         }
-        return Math.max(0L, Duration.between(toSeconds(from), toSeconds(to)).toHours());
+        return Math.max(0L, Duration.between(zone(toSeconds(from)), zone(toSeconds(to))).toHours());
     }
 }

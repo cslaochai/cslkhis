@@ -317,9 +317,19 @@ export function recallPatient(id) {
     return request.post('/queue/recallPatient', null, {params: {queueId: id}})
 }
 
-// 复诊插队
-export function rejoinQueue(id) {
-    return request.post('/queue/rejoinQueue', null, {params: {queueId: id}})
+// 重新入队：mode=1 置为优先（候诊中插队首）/ mode=2 过号回队（排到队尾），返回新顺序号
+export function rejoinQueue(id, mode = 1) {
+    return request.post('/queue/rejoinQueue', null, {params: {queueId: id, mode}})
+}
+
+// 调号：候诊中患者相对当前位置前移/后移 N 位（step 正=后移，负=前移），返回新顺序号
+export function moveQueue(queueId, step) {
+    return request.post('/queue/moveQueue', null, {params: {queueId, step}})
+}
+
+// 改派：候诊中患者改到目标医生/诊室，返回新排队号与顺序号
+export function reassignQueue(queueId, doctorId, roomId) {
+    return request.post('/queue/reassignQueue', null, {params: {queueId, doctorId, roomId}})
 }
 
 // 读取当前登录医生的接诊状态（0 空闲 / 1 接诊中 / 2 暂离），医生 id 由服务端取，前端不传

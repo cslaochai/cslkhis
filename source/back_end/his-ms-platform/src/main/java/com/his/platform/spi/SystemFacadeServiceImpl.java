@@ -139,6 +139,15 @@ public class SystemFacadeServiceImpl implements SystemFacadeService {
     }
 
     @Override
+    public String getEmployeeSignImage(Long employeeId) {
+        if (employeeId == null) {
+            return null;
+        }
+        SysEmployee employee = sysEmployeeMapper.selectById(employeeId);
+        return employee == null ? null : employee.getSignImage();
+    }
+
+    @Override
     public WardBriefVO findWard(Long wardId) {
         return wardId == null ? null : toWardBrief(sysWardMapper.selectById(wardId));
     }

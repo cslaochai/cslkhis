@@ -76,6 +76,31 @@ const clear = () => {
   empty.value = true
   emit('change', '')
 }
+/**
+ * 预填一张已有签名笔迹（base64 PNG dataURL，如员工档案预维护的笔迹）到画板上。
+ * 图片按画板比例缩放铺满；铺不下的按短边等比。失败（非法 dataURL）时保持画板为空并返回 false。
+ */
+const setImage = (dataUrl) => {
+  if (!dataUrl || !dataUrl.startsWith('data:image/')) return false
+  const img = new Image()
+  img.onload = () => {
+    const cv = canvas.value
+    ctx.clearRect(0, 0, props.width, props.height)
+    ctx.save()
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, props.width, props.height)
+    const scale = Math.min(props.width / img.width, props.height / img.height)
+    const w = img.width * scale
+    const h = img.height * scale
+    ctx.drawImage(img, (props.width - w) / 2, (props.height - h) / 2, w, h)
+    ctx.restore()
+    empty.value = false
+    emit('change', exportPng())
+  }
+  img.onerror = () => { /* 非法图片保持画板为空 */ }
+  img.src = dataUrl
+  return true
+}
 const confirm = () => exportPng()
 const isEmpty = () => empty.value
 
@@ -102,7 +127,7 @@ onMounted(() => {
   guide()
 })
 
-defineExpose({confirm, clear, isEmpty})
+defineExpose({confirm, clear, isEmpty, setImage})
 </script>
 
 <style scoped>

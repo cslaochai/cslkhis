@@ -79,6 +79,14 @@ public interface SystemFacadeService {
      */
     List<Long> searchEmployeeIds(String keyword);
 
+    /**
+     * 取员工预维护的签名笔迹（base64 PNG），供结诊处方、检查检验报告审核做视觉落款引用。
+     *
+     * @param employeeId 员工ID（可空，为空直接返回 null）
+     * @return 未维护或不存在时返回 {@code null}，由调用方决定缺省行为
+     */
+    String getEmployeeSignImage(Long employeeId);
+
     // ---------- 病区 ----------
 
     /**

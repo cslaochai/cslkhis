@@ -265,4 +265,30 @@ public class BizLaboratoryRecordVO {
      * 审核签名时刻
      */
     private LocalDateTime auditSignedTime;
+
+    /**
+     * 签名报告PDF路径（审核通过后生成；详情返回，列表不填充）
+     */
+    private String reportPdfPath;
+
+    /**
+     * 报告PDF文件SHA-256
+     */
+    private String reportPdfHash;
+
+    /**
+     * 报告PDF文件签名值（Base64）
+     */
+    private String reportPdfSign;
+
+    /**
+     * 报告PDF文件签名证书ID
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long reportPdfCertId;
+
+    /**
+     * 报告PDF文件签名时刻
+     */
+    private LocalDateTime reportPdfSignedTime;
 }

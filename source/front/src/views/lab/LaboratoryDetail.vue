@@ -203,6 +203,21 @@
             </div>
           </div>
         </div>
+        <!-- 签名报告 PDF：审核通过后自动生成，含医师手写笔迹 + 文件级数字签名 -->
+        <div v-if="selectedOrder?.reportPdfPath" class="rounded-lg border border-slate-200 p-4">
+          <div class="mb-1 flex items-center justify-between">
+            <p class="text-sm font-medium text-slate-700">签名报告 PDF</p>
+            <div class="flex items-center gap-2">
+              <el-button size="small" type="primary" @click="openReportPdf">查看 / 下载</el-button>
+              <el-button size="small" :loading="verifying" @click="verifyReportPdf">验签</el-button>
+            </div>
+          </div>
+          <p class="text-xs text-slate-400">已由审核医师数字签名（文件级），PDF 内含医师手写签名笔迹</p>
+          <p v-if="verifyResult" class="mt-2 text-xs"
+             :class="verifyResult.valid ? 'text-emerald-600' : 'text-red-500'">
+            {{ verifyResult.message }}
+          </p>
+        </div>
       </div>
     </template>
   </el-dialog>
@@ -211,7 +226,7 @@
 <script setup>
 import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
-import {getLaboratoryDetail} from '@/api/medicaltech';
+import {getLaboratoryDetail, verifyLaboratoryReportPdf} from '@/api/medicaltech';
 import {executeLabInterpret} from '@/api/ai';
 import {abnormalTagType, abnormalText} from '@/lib/lab';
 
@@ -250,11 +265,35 @@ const loadResults = async () => {
   if (!props.order) return;
   try {
     const res = await getLaboratoryDetail(props.order.id);
+    if (res.data?.record) {
+      // 报告 PDF 元数据（列表行不带签名值大字段）随详情补齐
+      selectedOrder.value = {...selectedOrder.value, ...res.data.record};
+    }
     if (res.data?.results) {
       selectedOrder.value.results = res.data.results;
     }
   } catch (e) {
     console.error('加载详情失败', e);
+  }
+};
+
+const verifying = ref(false);
+const verifyResult = ref(null);
+
+const openReportPdf = () => {
+  if (!selectedOrder.value?.reportPdfPath) return;
+  window.open(`/api/${selectedOrder.value.reportPdfPath}`, '_blank');
+};
+
+const verifyReportPdf = async () => {
+  if (!selectedOrder.value?.id) return;
+  verifying.value = true;
+  verifyResult.value = null;
+  try {
+    const res = await verifyLaboratoryReportPdf(selectedOrder.value.id);
+    verifyResult.value = res.data;
+  } finally {
+    verifying.value = false;
   }
 };
 

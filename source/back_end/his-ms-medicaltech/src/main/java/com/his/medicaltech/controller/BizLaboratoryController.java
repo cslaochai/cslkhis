@@ -96,4 +96,13 @@ public class BizLaboratoryController {
         boolean success = medicalTechService.auditLaboratory(auditDTO.getRecordId(), auditDTO.getAuditBy());
         return success ? Result.success("审核成功", null) : Result.error("审核失败");
     }
+
+    /**
+     * 检验报告签名 PDF 验签：重算文件 SHA-256 与落库签名值 + 证书公钥比对。
+     */
+    @Operation(summary = "检验报告签名 PDF 验签")
+    @GetMapping("/verifyPdf")
+    public Result<com.his.medicaltech.dto.ReportPdfVerifyVO> verifyLaboratoryPdf(@RequestParam Long recordId) {
+        return Result.success(medicalTechService.verifyLaboratoryReportPdf(recordId));
+    }
 }

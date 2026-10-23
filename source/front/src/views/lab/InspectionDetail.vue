@@ -41,14 +41,31 @@
 
         <!-- 影像展示（sql/137：真影像帧，挂在申请单上；详情弹框只读） -->
         <ExamImagePanel :apply-id="order.applyId" :biz-type="1" readonly/>
+
+        <!-- 签名报告 PDF：审核通过后自动生成，含医师手写笔迹 + 文件级数字签名 -->
+        <div v-if="order.reportPdfPath" class="rounded-lg border border-slate-200 p-4">
+          <div class="mb-1 flex items-center justify-between">
+            <p class="text-sm font-medium text-slate-700">签名报告 PDF</p>
+            <div class="flex items-center gap-2">
+              <el-button size="small" type="primary" @click="openReportPdf">查看 / 下载</el-button>
+              <el-button size="small" :loading="verifying" @click="verifyReportPdf">验签</el-button>
+            </div>
+          </div>
+          <p class="text-xs text-slate-400">已由审核医师数字签名（文件级），PDF 内含医师手写签名笔迹</p>
+          <p v-if="verifyResult" class="mt-2 text-xs"
+             :class="verifyResult.valid ? 'text-emerald-600' : 'text-red-500'">
+            {{ verifyResult.message }}
+          </p>
+        </div>
       </div>
     </template>
   </el-dialog>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import {computed, ref} from 'vue';
 import ExamImagePanel from '@/components/his/ExamImagePanel.vue';
+import {verifyInspectionReportPdf} from '@/api/medicaltech';
 
 const props = defineProps({
   // v-model 控制显隐
@@ -63,4 +80,24 @@ const visible = computed({
   get: () => props.modelValue,
   set: (v) => emit('update:modelValue', v),
 });
+
+const verifying = ref(false);
+const verifyResult = ref(null);
+
+const openReportPdf = () => {
+  if (!props.order?.reportPdfPath) return;
+  window.open(`/api/${props.order.reportPdfPath}`, '_blank');
+};
+
+const verifyReportPdf = async () => {
+  if (!props.order?.id) return;
+  verifying.value = true;
+  verifyResult.value = null;
+  try {
+    const res = await verifyInspectionReportPdf(props.order.id);
+    verifyResult.value = res.data;
+  } finally {
+    verifying.value = false;
+  }
+};
 </script>

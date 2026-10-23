@@ -132,6 +132,11 @@ public class BizMedicalRecord extends BaseEntity {
     private String familyHistory;
 
     /**
+     * 婚育史
+     */
+    private String marriageHistory;
+
+    /**
      * 过敏史
      */
     private String allergyHistory;
@@ -265,6 +270,11 @@ public class BizMedicalRecord extends BaseEntity {
      * 患者引导单PDF路径
      */
     private String guidePdfPath;
+
+    /**
+     * 处方签PDF路径（结诊提交时生成，含开方医师签名笔迹与聚合支付码）
+     */
+    private String rxPdfPath;
 
     /**
      * 处方数量（非数据库字段）

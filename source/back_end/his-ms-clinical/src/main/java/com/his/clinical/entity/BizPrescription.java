@@ -117,6 +117,11 @@ public class BizPrescription extends BaseEntity {
     private LocalDateTime doctorSignedTime;
 
     /**
+     * 开方医师手写笔迹（PNG dataURL，视觉落款；验签以电子证书签名为准）
+     */
+    private String doctorSignature;
+
+    /**
      * 处方类型（1-西药处方 2-中成药处方 3-中药饮片处方）
      */
     private Integer prescriptionType;

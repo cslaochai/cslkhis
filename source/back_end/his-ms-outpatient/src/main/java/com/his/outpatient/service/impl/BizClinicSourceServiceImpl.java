@@ -8,21 +8,22 @@ import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
 import com.his.common.util.ShiftCoverUtil;
 import com.his.common.util.TextUtil;
+import com.his.common.utils.UserUtils;
 import com.his.outpatient.dto.*;
+import com.his.outpatient.entity.AppointInfo;
 import com.his.outpatient.entity.BizClinicSource;
 import com.his.outpatient.entity.BizSchedule;
 import com.his.outpatient.entity.BizShift;
+import com.his.outpatient.mapper.AppointInfoMapper;
 import com.his.outpatient.mapper.BizClinicSourceMapper;
 import com.his.outpatient.mapper.BizScheduleMapper;
+import com.his.outpatient.mapper.QueueMapper;
 import com.his.outpatient.service.*;
 import com.his.outpatient.vo.*;
-import com.his.spi.service.AppointFacadeService;
-import com.his.spi.service.RegistFacadeService;
+import com.his.spi.service.DeptScopeService;
 import com.his.spi.service.SystemFacadeService;
 import com.his.spi.vo.DeptBriefVO;
 import com.his.spi.vo.StopImpactItemVO;
-import com.his.spi.service.DeptScopeService;
-import com.his.common.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.dao.DuplicateKeyException;
@@ -56,8 +57,9 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
     private final StaffScheduleService staffScheduleService;
     private final BizClinicSourceMapper clinicSourceMapper;
     private final BizScheduleMapper bizScheduleMapper;
-    private final AppointFacadeService appointFacadeService;
-    private final RegistFacadeService registFacadeService;
+    private final AppointService appointService;
+    private final AppointInfoMapper appointInfoMapper;
+    private final QueueMapper queueMapper;
     private final ClinicSourceLogService clinicSourceLogService;
     /**
      * 值班白班并入「此刻在岗医生」聚合：门诊结束后仍能找到科室兜底值班人
@@ -301,8 +303,8 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
                 clinicSourceMapper.updateById(schedule);
             }
         }
-        registFacadeService.updateQueueRoomBySchedule(schedule.getId(), today, roomId, roomName);
-        registFacadeService.updateAppointRoomBySchedule(schedule.getId(), today, roomId, roomName);
+        queueMapper.updateRoomBySchedule(schedule.getId(), today, roomId, roomName);
+        appointInfoMapper.updateRoomBySchedule(schedule.getId(), today, roomId, roomName);
     }
 
     @Override
@@ -770,7 +772,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         int ok = 0;
         for (Long id : registIds) {
             try {
-                if (appointFacadeService.cancelRegist(id, cancelReason)) {
+                if (appointService.cancelRegist(id, cancelReason)) {
                     ok++;
                 }
             } catch (Exception ignored) {
@@ -787,7 +789,28 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
     }
 
     private List<StopImpactItemVO> listRegsBySchedule(Long scheduleId) {
-        return registFacadeService.listRegsBySchedule(scheduleId);
+        if (scheduleId == null) {
+            return List.of();
+        }
+        List<AppointInfo> regs = appointInfoMapper.selectList(
+                new LambdaQueryWrapper<AppointInfo>()
+                        .eq(AppointInfo::getScheduleId, scheduleId)
+                        .notIn(AppointInfo::getRegistStatus,
+                                AppointStatusEnum.CANCELLED.getCode(), AppointStatusEnum.OVERDUE.getCode())
+                        .orderByAsc(AppointInfo::getRegistStatus)
+                        .orderByAsc(AppointInfo::getSlotTime));
+        return regs.stream().map(r -> {
+            StopImpactItemVO vo = new StopImpactItemVO();
+            vo.setRegistId(r.getId());
+            vo.setPatientId(r.getPatientId());
+            vo.setPatientName(r.getPatientName());
+            vo.setPatientNo(r.getPatientNo());
+            vo.setPhone(r.getPhone());
+            vo.setRegistSource(r.getRegistSource());
+            vo.setRegistStatus(r.getRegistStatus());
+            vo.setSlotTime(r.getSlotTime());
+            return vo;
+        }).toList();
     }
 
     // ===== G-15 发布态流转（提交→审核→发布 / 调班 / 撤回）=====

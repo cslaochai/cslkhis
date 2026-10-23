@@ -255,6 +255,19 @@
             <h4 class="mb-2 text-sm font-bold text-slate-700">审核意见</h4>
             <el-input v-model="auditRemark" :rows="3" placeholder="请输入审核意见（可选）..." type="textarea"/>
           </div>
+
+          <!-- 审核医师签名：引用员工档案预维护的签名笔迹（后端审核时自动落库） -->
+          <div class="rounded-lg border border-slate-200 p-4">
+            <h4 class="mb-2 text-sm font-bold text-slate-700">审核医师签名</h4>
+            <div v-if="auditSignLoading" class="text-xs text-slate-400">正在加载当前登录医师的签名笔迹…</div>
+            <div v-else-if="auditSignImage" class="flex items-center gap-3">
+              <img :src="auditSignImage" alt="审核医师签名笔迹" class="h-12 rounded border border-slate-200 bg-white"/>
+              <span class="text-xs text-slate-500">将引用当前登录医师（员工档案）预维护的签名笔迹完成审核</span>
+            </div>
+            <div v-else class="text-xs text-amber-600">
+              当前登录医师在员工档案未维护签名笔迹，本次审核仅完成电子证书签名（无笔迹落款）
+            </div>
+          </div>
         </div>
       </template>
       <template #footer>
@@ -282,6 +295,7 @@ import {
   receiveSpecimen
 } from '@/api/medicaltech';
 import {patientGenderText} from '@/lib/patientGender';
+import {getEmployeeCurrent} from '@/api/system';
 import {abnormalTagType, abnormalText} from '@/lib/lab';
 import {getLaboratoryItemDetailList} from '@/api/system';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
@@ -295,6 +309,9 @@ const showDetailDialog = ref(false);
 const showResultDialog = ref(false);
 const showAuditDialog = ref(false);
 const auditRemark = ref('');
+// 当前登录医师档案预维护的签名笔迹（审核弹框预览用）
+const auditSignImage = ref('');
+const auditSignLoading = ref(false);
 const loading = ref(false);
 const orders = ref([]);
 const pagination = ref({
@@ -412,8 +429,17 @@ const handleCurrentChange = (val) => {
   pagination.value.pageNum = val;
   loadData();
 };
-const handleViewDetail = (row) => {
+const handleViewDetail = async (row) => {
   selectedOrder.value = row;
+  // 详情弹框展示审核医师签名笔迹：列表行不带这个大字段，需取详情补齐
+  try {
+    const res = await getLaboratoryDetail(row.id);
+    if (res.data?.record) {
+      selectedOrder.value = {...row, ...res.data.record};
+    }
+  } catch (e) {
+    console.error('加载检验详情失败', e);
+  }
   showDetailDialog.value = true;
 };
 const handleReceiveSpecimen = async (row) => {
@@ -540,6 +566,18 @@ const handleSubmitResult = async () => {
 const handleAudit = async (row) => {
   selectedOrder.value = {...row};
   auditRemark.value = '';
+  auditSignImage.value = '';
+  auditSignLoading.value = true;
+  // 审核签名笔迹：打开审核弹框时引用当前登录医师档案预维护的笔迹（后端审核时落库，这里仅预览）
+  getEmployeeCurrent().then((res) => {
+    if (res.code === 200 && res.data?.signImage) {
+      auditSignImage.value = res.data.signImage;
+    }
+  }).catch(() => {
+    auditSignImage.value = '';
+  }).finally(() => {
+    auditSignLoading.value = false;
+  });
   // 加载检验结果
   try {
     const res = await getLaboratoryDetail(row.id);

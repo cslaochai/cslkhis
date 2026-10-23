@@ -20,18 +20,21 @@ public final class EmergencyTriageRules {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
+    /** 大小写不敏感 + Unicode 大小写折叠（覆盖非 ASCII 字母）。 */
+    private static final int IGNORE_CASE = Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE;
+
     private static final Pattern TEXT_TEMP = Pattern.compile(
-            "(?:T|体温)[:：]?\\s*(\\d+(?:\\.\\d+)?)", Pattern.CASE_INSENSITIVE);
+            "(?:T|体温)[:：]?\\s*(\\d+(?:\\.\\d+)?)", IGNORE_CASE);
     private static final Pattern TEXT_PULSE = Pattern.compile(
-            "(?:P|HR|脉搏|心率)[:：]?\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
+            "(?:P|HR|脉搏|心率)[:：]?\\s*(\\d+)", IGNORE_CASE);
     private static final Pattern TEXT_RESP = Pattern.compile(
-            "(?:R|RR|呼吸)[:：]?\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
+            "(?:R|RR|呼吸)[:：]?\\s*(\\d+)", IGNORE_CASE);
     private static final Pattern TEXT_BP = Pattern.compile(
-            "(?:BP|血压)[:：]?\\s*(\\d+)\\s*/\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
+            "(?:BP|血压)[:：]?\\s*(\\d+)\\s*/\\s*(\\d+)", IGNORE_CASE);
     private static final Pattern TEXT_SPO2 = Pattern.compile(
-            "(?:SpO2|SPO2|血氧饱和度|血氧)[:：]?\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
+            "(?:SpO2|血氧饱和度|血氧)[:：]?\\s*(\\d+)", IGNORE_CASE);
     private static final Pattern TEXT_GCS = Pattern.compile(
-            "(?:GCS|格拉斯哥)[:：]?\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
+            "(?:GCS|格拉斯哥)[:：]?\\s*(\\d+)", IGNORE_CASE);
 
     /**
      * 绿色通道关键词。命中即可显著缩短「识别 → 启动」的时间，

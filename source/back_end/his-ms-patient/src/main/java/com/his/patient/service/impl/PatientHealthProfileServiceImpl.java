@@ -102,6 +102,7 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
 
         vo.setAllergyHistoryText(patient.getAllergyHistory());
         vo.setMedicalHistoryText(patient.getMedicalHistory());
+        vo.setFamilyHistoryText(buildFamilyHistoryText(patientId));
         vo.setContactNameText(patient.getContactName());
         vo.setContactPhoneText(patient.getContactPhone());
         vo.setContactRelationText(patient.getContactRelation());
@@ -172,6 +173,35 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
                     BeanUtils.copyProperties(e, vo);
                     return vo;
                 }).collect(Collectors.toList());
+    }
+
+    /**
+     * 家族史明细 → 文本投影（供医生站开病历时预填「家族史」输入框）。
+     * 拼接口径与 CDR 行摘要一致：关系 + 健康状况 + 遗传病。
+     * 只有关系没有内容的行整体跳过——预填出一串「父亲：」「母亲：」空骨架，
+     * 医生还得逐条删，不如不填。
+     */
+    private String buildFamilyHistoryText(Long patientId) {
+        String text = listFamilies(patientId).stream()
+                .map(f -> {
+                    boolean hasContent = TextUtil.hasText(f.getHealthStatus())
+                            || TextUtil.hasText(f.getHereditaryDisease());
+                    if (!hasContent) {
+                        return null;
+                    }
+                    String rel = TextUtil.hasText(f.getRelationship()) ? f.getRelationship() : "亲属";
+                    StringBuilder sb = new StringBuilder(rel);
+                    if (TextUtil.hasText(f.getHealthStatus())) {
+                        sb.append('：').append(f.getHealthStatus());
+                    }
+                    if (TextUtil.hasText(f.getHereditaryDisease())) {
+                        sb.append("，遗传病：").append(f.getHereditaryDisease());
+                    }
+                    return sb.toString();
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.joining("；"));
+        return TextUtil.hasText(text) ? text : null;
     }
 
     private List<PatientContactVO> listContacts(Long patientId) {

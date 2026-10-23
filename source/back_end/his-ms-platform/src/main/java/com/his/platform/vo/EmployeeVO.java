@@ -96,6 +96,11 @@ public class EmployeeVO {
     private String avatar;
 
     /**
+     * 签名笔迹（base64 PNG；仅详情/当前登录人接口输出，列表与下拉不返回这个大字段）
+     */
+    private String signImage;
+
+    /**
      * 是否专家：0-否 1-是
      */
     private Integer isExpert;

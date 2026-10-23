@@ -95,6 +95,11 @@ public class EmployeeUpsertDTO {
     private String avatar;
 
     /**
+     * 签名笔迹（base64 PNG，员工档案预维护，结诊/报告审核签名时引用）
+     */
+    private String signImage;
+
+    /**
      * 是否专家：0-否 1-是
      */
     @AllowedValues(values = {"0", "1"}, message = "是否专家取值不合法")

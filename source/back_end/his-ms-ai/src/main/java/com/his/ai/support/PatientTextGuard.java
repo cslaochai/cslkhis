@@ -35,7 +35,8 @@ public class PatientTextGuard {
             Pattern.compile("剂量|用量|每次\\d|一日\\d|一天\\d|每日\\d"),
             Pattern.compile("建议[你您]?(吃|用|买|服)"),
             Pattern.compile("开[一点一]?[药方]"),
-            Pattern.compile("\\d+(\\.\\d+)?\\s*(mg|g|ml|ug|iu|片|粒|支|袋|瓶)", Pattern.CASE_INSENSITIVE)
+            Pattern.compile("\\d+(\\.\\d+)?\\s*(mg|g|ml|ug|iu|片|粒|支|袋|瓶)",
+                    Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE)
     );
 
     /**

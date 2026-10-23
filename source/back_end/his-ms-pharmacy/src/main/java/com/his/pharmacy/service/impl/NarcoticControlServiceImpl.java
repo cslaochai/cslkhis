@@ -55,7 +55,7 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
     /**
      * 「N次/N剂」里的数量，兼容阿拉伯数字与中文数字
      */
-    private static final Pattern P_TIMES = Pattern.compile("([0-9]+|[一二两三四五六七八九十]+)\\s*(?:次|剂)");
+    private static final Pattern P_TIMES = Pattern.compile("([0-9一二两三四五六七八九十]+)\\s*(?:次|剂)");
     /**
      * 「每N小时」
      */

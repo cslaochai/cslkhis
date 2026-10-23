@@ -91,13 +91,14 @@ public class Queue extends BaseEntity {
 
     /**
      * 分诊状态（0-未经护士核验 1-已核验）。
-     * <p>签到入队时写 0 并同时给 4 级默认等级，所以 0 不再意味「不能接诊」，
-     * 只表示这份分级还没经分诊护士看过。
+     * <p>2026-10-22 门诊收口后，门诊签到/分诊一律写 1（门诊无核验流程），
+     * 已无入口产生 0；急诊分级由急诊模块另写 I~IV 级。
      */
     private Integer triageStatus;
 
     /**
      * 分诊等级（1-危重 2-急症 3-亚急 4-非急），数字越小越优先。
+     * <p>门诊行不再赋值（null），排序按 sequence_no FIFO；仅急诊科直录的行带值。
      */
     private Integer triageLevel;
 

@@ -126,11 +126,11 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         // 没有主口令就不签发：宁可不发证，也不让私钥明文落库
         keyProtectorUtil.requireSecret();
 
-        // M8 留口子：外部 CA 模式下先本地生成密钥对、把 Subject+公钥交给 CA 适配器
-        //（PKCS#10 常规流程：私钥不出本地，CA 只签公钥）。当前适配器是控制台打印，
-        // 打印 CSR 后返回 null —— 中断签发，绝不静默回退院内自签（那等于伪造信任根）。
+        // 外部 CA 模式：本地先生成密钥对（私钥不出本地），把 Subject+公钥交给 CA 适配器提交 CSR。
+        // 适配器未返回证书必须中断签发，绝不静默回退院内自签（那等于伪造信任根）；
+        // 返回后直接结束，保证不会落到下方院内自签分支。
         if (externalCaChannelService.available()) {
-            issueViaExternalCa(empName, deptName, validDays);
+            return issueViaExternalCa(empName, deptName, validDays);
         }
 
         KeyPairFactory.KeyPairPem pair = KeyPairFactory.generate();
@@ -180,9 +180,13 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
     // 查询
 
     /**
-     * 外部 CA 签发路径（M8 留口子）：本地生成密钥对 → 提交 CSR。
-     * 实现会在打印后返回 null → 抛异常中断；接入真 CA 后，在 TODO 处
-     * 用 {@code issued.certPem()} 替代自签公钥落库（私钥托管/签名链/验签均不变）。
+     * 外部 CA 签发路径：本地生成密钥对（私钥不出本地）→ 组 Subject+公钥提交 CSR。
+     *
+     * <p>当前适配器未对接真 CA、返回 null，签发在此中断，绝不回退院内自签。
+     * 真 CA 到位后只需补两处：① {@code ExternalCaChannelServiceImpl#issueCert} 写厂商
+     * SDK/REST 外发与回执解析；② 本方法拿到 {@code issued} 后校验证书链，按现有
+     * 证书行口径落库（公钥/指纹/私钥托管/有效期/状态沿用，CA 回执的序列号/机构/证书 PEM
+     * 需先给 sys_sign_cert 补列）。默认 {@code his.sign.ca-mode=internal} 走院内自签，不受影响。
      */
     private SysSignCert issueViaExternalCa(String empName, String deptName,
                                            int validDays) {
@@ -196,9 +200,8 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
             throw new BusinessException("外部 CA（" + externalCaChannelService.name() + "）未返回证书，签发已中断；"
                     + "未接入真 CA 前请将 his.sign.ca-mode 改回 internal 使用院内自签");
         }
-        // 拿到证书也故意不落库：M8 只留出口子形态，真 CA 到位前必须中断，
-        // 免得发出一张「看起来是真 CA」却没人验证过的证书。
-        throw new BusinessException("外部 CA 签发落库尚未接入（M8 留口子）：拿到 CA 证书后在 SignCertServiceImpl.issueViaExternalCa 补齐落库");
+        // 真 CA 到位后在此补证书链校验与落库（见方法 javadoc）；当前适配器恒返回 null，不可达
+        throw new BusinessException("外部 CA 签发落库尚未接入：拿到 CA 证书后在 issueViaExternalCa 补齐校验与落库");
     }
 
     @Override
