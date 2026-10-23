@@ -83,39 +83,35 @@ public class MedicalRecordSaveDTO {
     // 病历正文
 
     /**
-     * 主诉
+     * 主诉。**不设 @NotBlank**：临时保存允许草稿部分落库，结诊必填由 service 结诊门槛校验
+     * （AGENTS.md §4.3 豁免③业务规则，EmrServiceImpl.requireSubmitFields），
+     * 口径与前端 handleComplete requiredFields 一致。
      */
-    @NotBlank(message = "主诉不能为空")
     private String chiefComplaint;
 
     /**
-     * 现病史
+     * 现病史。同上，草稿可留空，结诊门槛校验。
      */
-    @NotBlank(message = "现病史不能为空")
     private String presentIllness;
 
     /**
-     * 过敏史
+     * 过敏史。同上，草稿可留空，结诊门槛校验。
      */
-    @NotBlank(message = "过敏史不能为空")
     private String allergyHistory;
 
     /**
-     * 既往史
+     * 既往史。同上，草稿可留空，结诊门槛校验。
      */
-    @NotBlank(message = "既往史不能为空")
     private String pastHistory;
 
     /**
-     * 个人史
+     * 个人史。同上，草稿可留空，结诊门槛校验。
      */
-    @NotBlank(message = "个人史不能为空")
     private String personalHistory;
 
     /**
-     * 家族史
+     * 家族史。同上，草稿可留空，结诊门槛校验。
      */
-    @NotBlank(message = "家族史不能为空")
     private String familyHistory;
 
     /**
@@ -201,9 +197,8 @@ public class MedicalRecordSaveDTO {
     private String auxiliaryExam;
 
     /**
-     * 诊断（诊断结论原文）
+     * 诊断（诊断结论原文）。同上，草稿可留空，结诊门槛校验。
      */
-    @NotBlank(message = "诊断不能为空")
     private String diagnosis;
 
     /**

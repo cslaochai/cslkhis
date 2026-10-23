@@ -14,7 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
@@ -204,8 +203,6 @@ public class Icd10ServiceImpl extends ServiceImpl<SysIcd10Mapper, SysIcd10> impl
                 item.setIcdName(icd.getIcdName());
                 item.setIcdCategory(icd.getIcdCategory());
                 item.setScore(score);
-                item.setDrgWeight(BigDecimal.valueOf(estimateDrgWeight(icd.getIcdCode())));
-                item.setEstimatedCost(BigDecimal.valueOf(estimateCost(icd.getIcdCode())));
                 predictions.add(item);
             }
         }
@@ -272,33 +269,5 @@ public class Icd10ServiceImpl extends ServiceImpl<SysIcd10Mapper, SysIcd10> impl
         list.add(new String[]{"内分泌", "糖尿病", "血糖", "甲状腺", "甲亢"});
         list.add(new String[]{"传染", "发热", "发烧", "感染", "炎症", "病毒"});
         return list;
-    }
-
-    /**
-     * 根据ICD编码估算DRG权重（简化版）
-     */
-    private double estimateDrgWeight(String icdCode) {
-        if (icdCode == null) {
-            return 1.0;
-        }
-        String major = icdCode.length() >= 3 ? icdCode.substring(0, 3) : icdCode;
-        return switch (major) {
-            case "I21", "I63", "J18", "K80", "K85" -> 2.5;
-            case "E11", "E10" -> 1.8;
-            case "I10", "I11" -> 1.2;
-            case "J20", "J06" -> 0.8;
-            case "K29", "K35" -> 1.5;
-            case "M54", "M17" -> 1.3;
-            case "N20", "N39" -> 1.1;
-            default -> 1.0;
-        };
-    }
-
-    /**
-     * 根据ICD编码估算费用（简化版，单位：元）
-     */
-    private double estimateCost(String icdCode) {
-        double weight = estimateDrgWeight(icdCode);
-        return Math.round(weight * 5000 * 100.0) / 100.0;
     }
 }

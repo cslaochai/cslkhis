@@ -56,6 +56,16 @@ public class EmergencyHandoverPendingVO {
     private String triageLevelText;
 
     /**
+     * MEWS 评分（0-14；交班时要能看出谁「分数不对但级别不高」）
+     */
+    private Integer mewsScore;
+
+    /**
+     * 待复评标记（true = 接班后这条首先要去复评）
+     */
+    private Boolean reevalDue;
+
+    /**
      * 急诊状态（1-候诊 2-诊治中 3-留观 4-转住院 5-离院 6-死亡）
      */
     private Integer emergencyStatus;

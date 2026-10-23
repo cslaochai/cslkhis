@@ -63,6 +63,7 @@ public interface BizAdmissionOrderMapper extends BaseMapper<BizAdmissionOrder> {
               AND (#{q.orderStatus} IS NULL OR o.order_status = #{q.orderStatus})
               AND (#{q.applyDeptId} IS NULL OR o.apply_dept_id = #{q.applyDeptId})
               AND (#{q.sourceDeptId} IS NULL OR o.source_dept_id = #{q.sourceDeptId})
+              AND (#{q.sourceDoctorId} IS NULL OR o.source_doctor_id = #{q.sourceDoctorId})
               AND (#{q.registId} IS NULL OR o.regist_id = #{q.registId})
               AND (#{q.patientId} IS NULL OR o.patient_id = #{q.patientId})
               AND (#{q.registNo} IS NULL OR #{q.registNo} = '' OR o.regist_no = #{q.registNo})

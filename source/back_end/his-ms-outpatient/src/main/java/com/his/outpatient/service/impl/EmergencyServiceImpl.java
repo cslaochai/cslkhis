@@ -14,6 +14,8 @@ import com.his.outpatient.service.EmergencyService;
 import com.his.outpatient.service.DutyRosterService;
 import com.his.outpatient.support.EmergencyObservationPolicy;
 import com.his.outpatient.support.EmergencyWaitPolicy;
+import com.his.common.support.EmergencyMewsRules;
+import com.his.common.support.EmergencyTriageRules;
 import com.his.outpatient.vo.*;
 import com.his.common.base.PageResult;
 import com.his.common.enums.EmergencyAssignTypeEnum;
@@ -68,9 +70,21 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
      */
     private static final String OBS_OVER_SQL = "TIMESTAMPDIFF(HOUR, observation_start_time, NOW()) >= {0}";
 
+    /**
+     * 待复评判定式（读时算，不落列）：候诊中 ∧ 入急诊已超过应接诊时限 ∧
+     * 距上次复评（从未复评则从入急诊算）又已经过一个时限。
+     * <p>分诊规范的原话是「候诊时间超过 X 后，应再次进行评估及分级」——所以两个条件都要：
+     * 只判「超时」会催已经复评过的人，只判「复评间隔」会漏掉从没复评过的人。
+     */
+    private static final String REEVAL_DUE_SQL = "emergency_status = 1 "
+            + "AND TIMESTAMPDIFF(MINUTE, admission_time, NOW()) > IFNULL(target_see_minutes, {0}) "
+            + "AND (last_reeval_time IS NULL OR TIMESTAMPDIFF(MINUTE, last_reeval_time, NOW()) >= IFNULL(target_see_minutes, {0}))";
+
     // 无人可发待办时的兜底接收人（用户名或员工ID）的 key 收口在 SystemConfigConstKey.EMERGENCY_WAIT_FALLBACK_RECEIVER
 
     private final QueueMapper queueMapper;
+
+    private final EmergencyReevalMapper emergencyReevalMapper;
 
     private final AppointInfoMapper appointInfoMapper;
 
@@ -122,6 +136,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
                     .isNull(Emergency::getDoctorId);
         }
         boolean overdueOnly = Boolean.TRUE.equals(queryDTO.getOverdueOnly());
+        boolean reevalDueOnly = Boolean.TRUE.equals(queryDTO.getReevalDueOnly());
         boolean observationBoard = queryDTO.getObservationMinHours() != null;
         if (overdueOnly && observationBoard) {
             throw new BusinessException("「只看超时候诊」与「留观榜」不能同时开启，请只保留一个");
@@ -130,13 +145,18 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
             wrapper.eq(Emergency::getEmergencyStatus, EmergencyStatusEnum.WAITING.getCode())
                     .apply(OVERDUE_SQL, waitPolicy.deadlineMinutes(null));
         }
+        // 待复评是「超时且又超一个时限没复评」：严格子集，与「只看超时」并行不冲突，
+        // 但单独勾选时也要按最老的排最前（它和救火队列一样是催命榜）
+        if (reevalDueOnly) {
+            wrapper.apply(REEVAL_DUE_SQL, waitPolicy.deadlineMinutes(null));
+        }
         if (observationBoard) {
             wrapper.eq(Emergency::getEmergencyStatus, EmergencyStatusEnum.OBSERVATION.getCode())
                     .apply(OBS_OVER_SQL, queryDTO.getObservationMinHours());
         }
 
-        // 只看超时=救火队列、留观榜=占床最久优先，两者都是最老的排最前；其余保持新建在前
-        if (overdueOnly) {
+        // 只看超时=救火队列、待复评=分诊台的催命榜、留观榜=占床最久优先，三者都是最老的排最前；其余保持新建在前
+        if (overdueOnly || reevalDueOnly) {
             wrapper.orderByAsc(Emergency::getAdmissionTime);
         } else if (observationBoard) {
             wrapper.orderByAsc(Emergency::getObservationStartTime);
@@ -180,7 +200,30 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
         vo.setObsHours(obsHoursOf(entity));
         vo.setObsLevel(obsLevelOf(entity));
         vo.setObsLevelText(EmergencyObservationPolicy.levelText(vo.getObsLevel()));
+        // 分诊三件套：意识文案 / MEWS 快照 / 待复评标记。意识文案走枚举出口（null=「未采」），
+        // 不许前端把 null 显示成空白——「没采」和「采了但正常」在看板上必须长得不一样
+        vo.setConsciousnessText(EmergencyConsciousnessEnum.getLabel(entity.getConsciousness()));
+        vo.setReevalDue(reevalDueOf(entity, vo.getWaitMinutes()));
         return vo;
+    }
+
+    /**
+     * 待复评判定（读时算）：候诊中 ∧ 已过应接诊时限 ∧ 距上次复评（或入急诊）又已过一个时限。
+     * 与 {@link #REEVAL_DUE_SQL} 同一口径——列表筛选、统计卡片、行内徽章三处必须同源，
+     * 否则分诊台会看到「筛出来 3 个人、卡片说 5 个」。
+     */
+    private Boolean reevalDueOf(Emergency entity, Long waitMinutes) {
+        if (!waitingNow(entity) || waitMinutes == null || entity.getAdmissionTime() == null) {
+            return Boolean.FALSE;
+        }
+        int target = entity.getTargetSeeMinutes() == null
+                ? waitPolicy.deadlineMinutes(null) : Math.max(entity.getTargetSeeMinutes(), 0);
+        if (waitMinutes <= target) {
+            return Boolean.FALSE;
+        }
+        LocalDateTime since = entity.getLastReevalTime() == null ? entity.getAdmissionTime() : entity.getLastReevalTime();
+        long sinceMinutes = Math.max(0, Duration.between(since, LocalDateTime.now()).toMinutes());
+        return sinceMinutes >= target;
     }
 
     private boolean waitingNow(Emergency entity) {
@@ -223,6 +266,10 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
             // 根据分诊级别自动分配区域
             emergency.setZone(getZoneByLevel(emergency.getTriageLevel()));
         }
+        // MEWS 登记即算（WS/T 810—2022 五项版）。前端评分卡只是预览，
+        // 入库存的一律是服务端按同一份规则算出来的分——两端各算一套必然对不上账
+        emergency.setMewsScore(mewsScoreOf(emergency.getVitalSigns(), emergency.getConsciousness()));
+        emergency.setReevalCount(0);
         // dept_name 是 NOT NULL 无默认值的快照列：只传 deptId 的调用原先直接 500
         // （报「系统内部错误」，连原因都不透出）。科室名属于参照数据，服务端按 ID 补齐比信任客户端更稳。
         if (!TextUtil.hasText(emergency.getDeptName())) {
@@ -361,20 +408,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
      * 消费点只读 ErDuty 的 doctorId/doctorName/shiftId/startTime/endTime。
      */
     private List<ErDuty> onDutyErSchedules(Long deptId) {
-        if (deptId == null) {
-            return List.of();
-        }
-        List<com.his.spi.vo.StaffScheduleBriefVO> rows = dutyRosterFacadeService.listOnDutyStaff(
-                LocalDateTime.now(), 1, deptId, StaffTypeEnum.DOCTOR.getCode());
-        List<ErDuty> result = new ArrayList<>(rows.size());
-        for (com.his.spi.vo.StaffScheduleBriefVO row : rows) {
-            if (row.getEmployeeId() == null) {
-                continue;
-            }
-            result.add(new ErDuty(row.getEmployeeId(), row.getEmployeeName(),
-                    row.getShiftId(), row.getStartTime(), row.getEndTime()));
-        }
-        return result;
+        return onDutyStaffSchedules(deptId, StaffTypeEnum.DOCTOR.getCode());
     }
 
     /**
@@ -685,6 +719,12 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
                 .isNull(Emergency::getDoctorId);
         stats.setUnassignedWaiting(this.count(poolWrapper));
 
+        // 待复评（分诊台催命榜）：候诊超时应接诊时限且又超一个时限未复评
+        LambdaQueryWrapper<Emergency> reevalWrapper = waitingBase();
+        reevalWrapper.in(scoped != null, Emergency::getDeptId, scoped)
+                .apply(REEVAL_DUE_SQL, waitPolicy.deadlineMinutes(null));
+        stats.setReevalDue(this.count(reevalWrapper));
+
         // 留观两档：48 小时是"该开始张罗去向"，72 小时是"必须定下来"。
         // 分开数是为了让值班的人一眼看出差多少 —— 只有一个"超时限"时，刚过 48 的人以为不着急。
         stats.setObsOverWarn(countObservationOver(obsPolicy.warnHours(), scoped));
@@ -965,6 +1005,8 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
         vo.setAge(entity.getAge());
         vo.setTriageLevel(entity.getTriageLevel());
         vo.setTriageLevelText(EmergencyTriageLevelEnum.getLabel(entity.getTriageLevel()));
+        vo.setMewsScore(entity.getMewsScore());
+        vo.setReevalDue(computed.getReevalDue());
         vo.setEmergencyStatus(entity.getEmergencyStatus());
         vo.setEmergencyStatusText(EmergencyStatusEnum.getLabel(entity.getEmergencyStatus()));
         vo.setDeptName(entity.getDeptName());
@@ -1138,6 +1180,9 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
         row.setPatientId(emergency.getPatientId());
         row.setPatientName(emergency.getPatientName());
         row.setTriageLevel(emergency.getTriageLevel());
+        row.setMewsScore(emergency.getMewsScore());
+        // 交班时待复评的行要显式定格：接班的人第一件事是去复评，不是接着等
+        row.setReevalDue(reevalDueOf(emergency, waitMinutesOf(emergency)));
         row.setEmergencyStatus(emergency.getEmergencyStatus());
         row.setFromDoctorId(emergency.getDoctorId());
         row.setFromDoctorName(emergency.getDoctorName());
@@ -1395,6 +1440,280 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
     private String employeeNameOf(Long empId) {
         EmployeeBriefVO emp = systemFacadeService.findEmployee(empId);
         return emp != null && TextUtil.hasText(emp.getEmpName()) ? emp.getEmpName() : "站内用户";
+    }
+
+    // ==================== 分诊复评（MEWS + 候诊超时复评） ====================
+
+    /**
+     * MEWS 现算（登记与复评共用）：JSON/文本体征 + 意识码值 → 总分。
+     * 解析失败/全缺项时按 0 分收口——评分是辅助，缺项不能把登记流程堵死，
+     * 但界面必须提示「意识未采」，这件事由出参的 consciousnessMissing 负责。
+     */
+    private int mewsScoreOf(String vitalSigns, Integer consciousness) {
+        return EmergencyMewsRules.score(new EmergencyMewsRules.MewsInput(
+                EmergencyTriageRules.parse(vitalSigns), consciousness)).score();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void reevaluate(EmergencyReevalDTO reevalDTO) {
+        Emergency emergency = this.getById(reevalDTO.getId());
+        if (emergency == null) {
+            throw new BusinessException("急诊记录不存在");
+        }
+        deptScopeService.assertDeptAccessible(emergency.getDeptId());
+        if (!waitingNow(emergency)) {
+            // 只给候诊中的人复评：已接诊的患者归医生管（级别调整走医生站），
+            // 已闭环的再改级别是在篡改历史定级
+            throw new BusinessException("仅候诊中的急诊可以复评分级（已接诊或已闭环的记录不能改级）");
+        }
+        Integer before = emergency.getTriageLevel();
+        Integer after = reevalDTO.getTriageLevel();
+        // 只升不降：数字越小越危重，「升级」= 新级别数值 ≤ 原级别。
+        // 前端禁用降级选项只是第一道，这里是无路可绕的第二道（API 直连、脚本调用都拦得住）
+        if (after == null || before != null && after > before) {
+            throw new BusinessException("复评只升不降：不能将分诊级别调轻（当前 "
+                    + EmergencyTriageLevelEnum.getLabel(before) + "）");
+        }
+
+        // 体征：传了用新的（复测），没传沿用登记的——两种情况都写进流水，台账能看出有没有复测
+        String vitalSigns = TextUtil.hasText(reevalDTO.getVitalSigns())
+                ? reevalDTO.getVitalSigns() : emergency.getVitalSigns();
+        int mews = mewsScoreOf(vitalSigns, reevalDTO.getConsciousness());
+
+        boolean upgraded = before == null || after < before;
+        emergency.setTriageLevel(after);
+        emergency.setZone(getZoneByLevel(after));
+        // 时限快照跟着新级别重算：III 级等成 I 级，应接诊时限从 30 分钟变 0（即刻），
+        // 不重算的话升级了个寂寞——超时判定还在按老级别放水
+        emergency.setTargetSeeMinutes(waitPolicy.deadlineMinutes(after));
+        emergency.setConsciousness(reevalDTO.getConsciousness());
+        emergency.setVitalSigns(vitalSigns);
+        emergency.setMewsScore(mews);
+        emergency.setLastReevalTime(LocalDateTime.now());
+        emergency.setReevalCount((emergency.getReevalCount() == null ? 0 : emergency.getReevalCount()) + 1);
+        // 守卫下沉到 WHERE：仅候诊中可复评，并发接诊时后到者 0 行失败
+        boolean changed = this.update(emergency, new LambdaUpdateWrapper<Emergency>()
+                .eq(Emergency::getId, emergency.getId())
+                .eq(Emergency::getEmergencyStatus, EmergencyStatusEnum.WAITING.getCode()));
+        if (!changed) {
+            throw new BusinessException("该急诊记录状态已变更（可能已被接诊），请刷新后重试");
+        }
+
+        EmergencyReeval history = new EmergencyReeval();
+        history.setEmergencyId(emergency.getId());
+        history.setEmergencyNo(emergency.getEmergencyNo());
+        history.setPatientName(emergency.getPatientName());
+        history.setTriageLevelBefore(before);
+        history.setTriageLevelAfter(after);
+        history.setMewsScore(mews);
+        history.setConsciousness(reevalDTO.getConsciousness());
+        history.setVitalSigns(vitalSigns);
+        // 原因先截后存：入参层不加 @Size，超长写库会撞 Data too long → 复评失败还看不出原因
+        history.setReason(TextUtil.cut(reevalDTO.getReason().trim(), 500));
+        emergencyReevalMapper.insert(history);
+
+        // 队列行的分级同步：医生站叫号按 triage_level 排序，级别调了队列不调，
+        // 「I 级心梗排在 IV 级扭伤前面」在升级这一刻就悄悄失效了
+        syncQueueTriageLevel(emergency, after);
+
+        if (upgraded) {
+            notifyLevelUpgrade(emergency, before, after, history.getReason());
+        }
+        log.info("[急诊分诊] 复评：{} {}（{} → {}，MEWS {}），原因：{}",
+                emergency.getEmergencyNo(), emergency.getPatientName(),
+                EmergencyTriageLevelEnum.getLabel(before), EmergencyTriageLevelEnum.getLabel(after),
+                mews, history.getReason());
+    }
+
+    /**
+     * 复评后把叫号队列行的分级改掉（只改候诊中的队列行；已接诊的队列行不碰）
+     */
+    private void syncQueueTriageLevel(Emergency emergency, Integer after) {
+        Queue queue = findEmergencyQueueOf(emergency);
+        if (queue == null || !Objects.equals(queue.getQueueStatus(), QueueStatusEnum.WAITING.getCode())) {
+            return;
+        }
+        queue.setTriageLevel(after);
+        queue.setTriageStatus(after != null ? 1 : 0);
+        queueMapper.updateById(queue);
+    }
+
+    @Override
+    public List<EmergencyReevalVO> reevalList(Long emergencyId) {
+        if (emergencyId == null) {
+            return List.of();
+        }
+        return emergencyReevalMapper.selectList(new LambdaQueryWrapper<EmergencyReeval>()
+                        .eq(EmergencyReeval::getEmergencyId, emergencyId)
+                        .orderByAsc(EmergencyReeval::getId))
+                .stream().map(this::toReevalVO).collect(Collectors.toList());
+    }
+
+    private EmergencyReevalVO toReevalVO(EmergencyReeval row) {
+        EmergencyReevalVO vo = new EmergencyReevalVO();
+        vo.setId(row.getId());
+        vo.setEmergencyId(row.getEmergencyId());
+        vo.setEmergencyNo(row.getEmergencyNo());
+        vo.setPatientName(row.getPatientName());
+        vo.setTriageLevelBefore(row.getTriageLevelBefore());
+        vo.setTriageLevelBeforeText(EmergencyTriageLevelEnum.getLabel(row.getTriageLevelBefore()));
+        vo.setTriageLevelAfter(row.getTriageLevelAfter());
+        vo.setTriageLevelAfterText(EmergencyTriageLevelEnum.getLabel(row.getTriageLevelAfter()));
+        vo.setUpgraded(row.getTriageLevelBefore() == null
+                || row.getTriageLevelAfter() != null && row.getTriageLevelAfter() < row.getTriageLevelBefore());
+        vo.setMewsScore(row.getMewsScore());
+        vo.setConsciousness(row.getConsciousness());
+        vo.setConsciousnessText(EmergencyConsciousnessEnum.getLabel(row.getConsciousness()));
+        vo.setVitalSigns(row.getVitalSigns());
+        vo.setReason(row.getReason());
+        vo.setCreateBy(row.getCreateBy());
+        vo.setCreateTime(row.getCreateTime());
+        return vo;
+    }
+
+    /**
+     * 复评到期待办：受众是**当班护理**（分诊台），不是医生。
+     * <p>与 {@link #escalateOverdue} 的分工：那条催「有人来接诊」，这条催「该重新分级了」。
+     * 分诊规范要求候诊超时须再次评估——没人接诊和没人复评是两条独立的失职，
+     * 合成一条信只会让分诊台以为医生那边在动。
+     * <p>可重入：同一条急诊对同一收件人只催一次（{@code receiverIdsOfBiz} 判重）。
+     * 真正的闭环动作是「复评」——复评后 last_reeval_time 刷新，这条自然不再被扫到。
+     */
+    @Override
+    public int escalateReeval() {
+        LambdaQueryWrapper<Emergency> wrapper = waitingBase();
+        wrapper.apply(REEVAL_DUE_SQL, waitPolicy.deadlineMinutes(null))
+                .orderByAsc(Emergency::getAdmissionTime);
+        List<Emergency> due = this.list(wrapper);
+        int sent = 0;
+        for (Emergency emergency : due) {
+            try {
+                sent += escalateReevalOne(emergency);
+            } catch (Exception ex) {
+                // 单条失败不中断整批：与候诊升级同一姿态，一条炸了不能拖累其他条
+                log.error("[急诊分诊] {} 复评到期提醒失败：{}", emergency.getEmergencyNo(), ex.getMessage(), ex);
+            }
+        }
+        if (sent > 0) {
+            log.warn("[急诊分诊] 复评到期提醒完成：本次发出 {} 条待办", sent);
+        }
+        return sent;
+    }
+
+    private int escalateReevalOne(Emergency emergency) {
+        long waitMinutes = emergency.getAdmissionTime() == null ? 0
+                : Duration.between(emergency.getAdmissionTime(), LocalDateTime.now()).toMinutes();
+        int target = emergency.getTargetSeeMinutes() == null
+                ? waitPolicy.deadlineMinutes(emergency.getTriageLevel()) : emergency.getTargetSeeMinutes();
+
+        // 当班护理（排班端口 staff_type=2）。没有护理排班的科室直接落空，
+        // 由下面的兜底接收人接住——不编造「分诊台」这个人
+        Set<Long> receivers = new LinkedHashSet<>();
+        onDutyStaffSchedules(emergency.getDeptId(), StaffTypeEnum.NURSE.getCode())
+                .forEach(s -> receivers.add(s.getDoctorId()));
+
+        List<Long> alreadySent = sysMessageService.receiverIdsOfBiz(BizTypeEnum.EMERGENCY_REEVAL.getType(), emergency.getId());
+        receivers.removeAll(alreadySent);
+        if (receivers.isEmpty()) {
+            Receiver fallback = fallbackReceiver();
+            if (fallback != null && !alreadySent.contains(fallback.employeeId())) {
+                receivers.add(fallback.employeeId());
+            }
+        }
+        if (receivers.isEmpty()) {
+            return 0;
+        }
+
+        String levelText = EmergencyTriageLevelEnum.getLabel(emergency.getTriageLevel());
+        String title = "急诊待复评：" + emergency.getPatientName() + "（" + levelText + "）";
+        String content = String.format(
+                "急诊 %s 已候诊 %s，超过应接诊时限 %s 分钟仍未接诊，按分诊规范应再次评估分级。"
+                        + "请到分诊台复评：重采意识与生命体征，级别只升不降；"
+                        + "若已接诊请忽略本提醒。",
+                emergency.getEmergencyNo(), humanWait(waitMinutes), target);
+
+        EmergencyReevalDuePayloadVO payload = new EmergencyReevalDuePayloadVO();
+        payload.setPatientName(emergency.getPatientName());
+        payload.setEmergencyNo(emergency.getEmergencyNo());
+        payload.setTriageLevelText(levelText);
+        payload.setDeptName(emergency.getDeptName());
+        payload.setWaitMinutes(waitMinutes);
+        payload.setTargetSeeMinutes(target);
+        payload.setMewsScore(emergency.getMewsScore());
+
+        int sent = 0;
+        for (Long receiverId : receivers) {
+            if (sysMessageService.sendSystemMessage(
+                    receiverId, employeeNameOf(receiverId), title, content,
+                    BizTypeEnum.EMERGENCY_REEVAL.getType(), emergency.getId(),
+                    // warning：当天必须处理，但不与危急值抢 urgent
+                    "warning", cn.hutool.json.JSONUtil.toJsonStr(payload), 0)) {
+                sent++;
+            }
+        }
+        return sent;
+    }
+
+    /**
+     * 级别上调通知：受众是**医生**（负责医生，无主则当班医生）。
+     * <p>III 级等成 I 级意味着处置方式从「排队」变成「立即抢救」——这条信等不得，
+     * 所以它和给护士的「到期待办」分成两个 BizType，避免判重时互相吞掉。
+     */
+    private void notifyLevelUpgrade(Emergency emergency, Integer before, Integer after, String reason) {
+        Set<Long> receivers = new LinkedHashSet<>();
+        if (emergency.getDoctorId() != null) {
+            receivers.add(emergency.getDoctorId());
+        } else {
+            onDutyErSchedules(emergency.getDeptId()).forEach(s -> receivers.add(s.getDoctorId()));
+        }
+        if (receivers.isEmpty()) {
+            return;
+        }
+        List<Long> alreadySent = sysMessageService.receiverIdsOfBiz(
+                BizTypeEnum.EMERGENCY_REEVAL_UPGRADE.getType(), emergency.getId());
+        receivers.removeAll(alreadySent);
+        if (receivers.isEmpty()) {
+            return;
+        }
+        String content = String.format(
+                "急诊 %s 患者 %s 的分诊级别由 %s 上调为 %s（MEWS %s 分）。原因：%s。"
+                        + "请立即评估处置优先级。",
+                emergency.getEmergencyNo(), emergency.getPatientName(),
+                EmergencyTriageLevelEnum.getLabel(before), EmergencyTriageLevelEnum.getLabel(after),
+                emergency.getMewsScore() == null ? "-" : emergency.getMewsScore(), reason);
+        for (Long receiverId : receivers) {
+            sysMessageService.sendSystemMessage(
+                    receiverId, employeeNameOf(receiverId),
+                    "急诊分诊升级：" + emergency.getPatientName() + "（"
+                            + EmergencyTriageLevelEnum.getLabel(before) + " → "
+                            + EmergencyTriageLevelEnum.getLabel(after) + "）",
+                    content, BizTypeEnum.EMERGENCY_REEVAL_UPGRADE.getType(), emergency.getId(),
+                    // 升级到 I/II 级是 urgent：这已经不是催办，是抢救令
+                    EmergencyTriageLevelEnum.isRedZone(after) ? "urgent" : "warning",
+                    null, 0);
+        }
+    }
+
+    /**
+     * 按岗位类别取此刻在岗排班（医生/护理共用）。急诊派单、复评提醒两处消费同一出口，
+     * 免得「谁在岗」在同一个时刻算出两份名单。
+     */
+    private List<ErDuty> onDutyStaffSchedules(Long deptId, Integer staffType) {
+        if (deptId == null) {
+            return List.of();
+        }
+        List<com.his.spi.vo.StaffScheduleBriefVO> rows = dutyRosterFacadeService.listOnDutyStaff(
+                LocalDateTime.now(), 1, deptId, staffType);
+        List<ErDuty> result = new ArrayList<>(rows.size());
+        for (com.his.spi.vo.StaffScheduleBriefVO row : rows) {
+            if (row.getEmployeeId() == null) {
+                continue;
+            }
+            result.add(new ErDuty(row.getEmployeeId(), row.getEmployeeName(),
+                    row.getShiftId(), row.getStartTime(), row.getEndTime()));
+        }
+        return result;
     }
 
     /**

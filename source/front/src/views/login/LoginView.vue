@@ -84,7 +84,7 @@
         <!-- 测试账号凭据：前端写死，仅用于演示，不查后端 -->
         <el-form-item class="cred-item">
           <el-button class="cred-button" plain size="large" @click="credVisible = true">
-            测试账号凭据
+            测试账号
           </el-button>
         </el-form-item>
       </el-form>
@@ -441,7 +441,8 @@ const handleLogin = async () => {
   padding: 88px 24px 24px;
 }
 
-/* 顶部横幅：占满整行宽，高度与系统 Header 一致（64px，Ant Design 企业系统顶部导航标准高度） */
+/* 顶部横幅：占满整行宽，高度与系统 Header 一致（64px，Ant Design 企业系统顶部导航标准高度）。
+   底色与系统顶栏取同一个令牌——它是顶栏的镜像，各写一份必然漂移（曾各自留过一版渐变）。 */
 .login-banner {
   position: fixed;
   top: 0;
@@ -453,8 +454,8 @@ const handleLogin = async () => {
   align-items: center;
   gap: 12px;
   padding: 0 24px;
-  background: linear-gradient(90deg, #0A4376 0%, #0F5FA0 42%, #1179B8 72%, #0E9488 100%);
-  box-shadow: 0 2px 12px rgba(9, 60, 110, 0.28);
+  background: var(--his-header-bg);
+  box-shadow: var(--his-chrome-shadow);
 }
 
 .login-banner-logo-wrap {

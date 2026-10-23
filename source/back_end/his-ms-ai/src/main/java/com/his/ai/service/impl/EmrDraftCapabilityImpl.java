@@ -213,7 +213,6 @@ public class EmrDraftCapabilityImpl implements EmrDraftCapability {
                 .variables(variables)
                 .bizType(AiBizTypeEnum.MEDICAL_RECORD.getCode())
                 .bizId(dto.getRecordId())
-                // 只把主诉作为摘要 —— 病历全文没必要为了审计再存一遍
                 .inputDigest(TextUtil.blankToDefault(input.chiefComplaint(), "（未填写）"))
                 .maxTokens(OUTPUT_TOKEN_LIMIT)
                 .build();

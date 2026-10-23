@@ -51,6 +51,16 @@ public class EmergencyHandoverItem extends BaseEntity {
     private Integer triageLevel;
 
     /**
+     * MEWS 评分（交班时定格 0-14）
+     */
+    private Integer mewsScore;
+
+    /**
+     * 交班时是否待复评（定格：候诊超时限且又超一个时限未复评——接班的人要继续盯着）
+     */
+    private Boolean reevalDue;
+
+    /**
      * 交班时该患者的急诊状态（1-候诊 2-诊治中 3-留观，定格）
      */
     private Integer emergencyStatus;

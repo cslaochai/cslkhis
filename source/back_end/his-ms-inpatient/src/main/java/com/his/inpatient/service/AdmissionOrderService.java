@@ -25,6 +25,13 @@ public interface AdmissionOrderService {
     IPage<AdmissionOrderVO> listPage(AdmissionOrderPageQueryDTO query);
 
     /**
+     * 当前登录医生所开住院证分页（门诊医生站「我开的住院证」）。
+     * <p>开证医生取自身份（sourceDoctorId = 当前员工ID），不收前端参数、不做拟收治科室数据范围叠加——
+     * 本人开的证不论拟收治科室都应可见，包括已收治与已作废。
+     */
+    IPage<AdmissionOrderVO> myListPage(AdmissionOrderPageQueryDTO query);
+
+    /**
      * 住院证详情
      */
     AdmissionOrderVO detail(Long id);

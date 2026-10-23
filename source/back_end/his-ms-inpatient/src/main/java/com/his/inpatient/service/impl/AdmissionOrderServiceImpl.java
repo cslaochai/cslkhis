@@ -8,10 +8,12 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.constant.SystemConfigKeyConst;
+import com.his.common.entity.CurrentUser;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
+import com.his.common.utils.UserUtils;
 import com.his.inpatient.dto.AdmissionOrderCancelDTO;
 import com.his.inpatient.dto.AdmissionOrderPageQueryDTO;
 import com.his.inpatient.dto.AdmissionOrderUpsertDTO;
@@ -160,6 +162,21 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
         Page<AdmissionOrderVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<Long> deptIds = deptScopeService.scopedDeptIds(query.getApplyDeptId());
         IPage<AdmissionOrderVO> result = bizAdmissionOrderMapper.selectOrderPage(page, query, deptIds);
+        result.getRecords().forEach(this::decorate);
+        return result;
+    }
+
+    @Override
+    public IPage<AdmissionOrderVO> myListPage(AdmissionOrderPageQueryDTO query) {
+        CurrentUser currentUser = UserUtils.getCurrentUser();
+        if (currentUser == null || currentUser.getEmployeeId() == null) {
+            // 取不到操作人就是报错，不塞默认值（UserUtils 口径）
+            throw new BusinessException("无法识别当前操作人");
+        }
+        query.setSourceDoctorId(currentUser.getEmployeeId());
+        Page<AdmissionOrderVO> page = new Page<>(query.getPageNum(), query.getPageSize());
+        // 本人开的证按开证医生精确收口即可，不再叠加拟收治科室数据范围（deptIds=null 不限制）
+        IPage<AdmissionOrderVO> result = bizAdmissionOrderMapper.selectOrderPage(page, query, null);
         result.getRecords().forEach(this::decorate);
         return result;
     }

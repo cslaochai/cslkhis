@@ -60,3 +60,18 @@ export function getEmergencyHandoverListPage(params) {
 export function getEmergencyHandoverDetail(id) {
   return request.get('/emergency/handoverGetDetailById', { params: { id } })
 }
+
+/** MEWS 实时算分（只算不存；入库存的分以登记/复评时服务端重算为准） */
+export function getEmergencyMewsScore(data) {
+  return request.post('/emergency/mewsScore', data)
+}
+
+/** 分诊复评：候诊中再次评估分级（只升不降，留痕，上调即通知医生） */
+export function reevaluateEmergency(data) {
+  return request.post('/emergency/reevaluate', data)
+}
+
+/** 复评流水（按急诊记录，时间正序） */
+export function getEmergencyReevalList(emergencyId) {
+  return request.get('/emergency/reevalList', { params: { emergencyId } })
+}

@@ -5,6 +5,8 @@ import com.his.outpatient.service.EmergencyService;
 import com.his.outpatient.vo.*;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
+import com.his.common.support.EmergencyMewsRules;
+import com.his.common.support.EmergencyTriageRules;
 import com.his.spi.vo.BedVO;
 import com.his.spi.vo.WardVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -135,5 +137,51 @@ public class EmergencyController {
     @PreAuthorize("hasAuthority('opd:emergency:list')")
     public Result<EmergencyHandoverDetailVO> handoverGetDetailById(@RequestParam Long id) {
         return Result.success(emergencyService.handoverDetailById(id));
+    }
+
+    /**
+     * MEWS 实时算分（WS/T 810—2022 五项版：心率/收缩压/呼吸/体温/意识）。
+     * 纯规则计算不落库——登记弹框边填边看分，入库存的分一律以登记/复评时服务端重算为准。
+     */
+    @Operation(summary = "MEWS 实时算分（只算不存，登记/复评时服务端重算）")
+    @PostMapping("/mewsScore")
+    @PreAuthorize("isAuthenticated()")
+    public Result<EmergencyMewsRules.MewsResult> mewsScore(@RequestBody @Valid EmergencyMewsQueryDTO queryDTO) {
+        EmergencyMewsRules.MewsResult result = EmergencyMewsRules.score(new EmergencyMewsRules.MewsInput(
+                EmergencyTriageRules.parse(queryDTO.getVitalSigns()), queryDTO.getConsciousness()));
+        return Result.success(result);
+    }
+
+    /**
+     * 分诊复评：候诊中的急诊再次评估分级（只升不降），
+     * 同步重算区域/应接诊时限/MEWS 并落复评流水；级别上调时通知负责医生。
+     */
+    @Operation(summary = "分诊复评（只升不降，留病，上调即通知医生）")
+    @PostMapping("/reevaluate")
+    @PreAuthorize("hasAuthority('opd:emergency:reeval')")
+    public Result<Void> reevaluate(@RequestBody @Valid EmergencyReevalDTO reevalDTO) {
+        emergencyService.reevaluate(reevalDTO);
+        return Result.success("复评成功", null);
+    }
+
+    /**
+     * 复评流水（按急诊记录，时间正序）
+     */
+    @Operation(summary = "复评流水（这个人的级别为什么改过，在这里查）")
+    @GetMapping("/reevalList")
+    @PreAuthorize("hasAuthority('opd:emergency:list')")
+    public Result<List<EmergencyReevalVO>> reevalList(@RequestParam Long emergencyId) {
+        return Result.success(emergencyService.reevalList(emergencyId));
+    }
+
+    /**
+     * 复评到期提醒补跑（定时任务同一入口，返回本次发出的待办条数）。
+     * 与 escalateOverdue 的分工：那条催医生接诊，这条催分诊台复评。
+     */
+    @Operation(summary = "复评到期提醒补跑（发给当班护理，返回待办条数）")
+    @PostMapping("/escalateReeval")
+    @PreAuthorize("hasAuthority('opd:emergency:reeval')")
+    public Result<Integer> escalateReeval() {
+        return Result.success("复评提醒扫描完成", emergencyService.escalateReeval());
     }
 }

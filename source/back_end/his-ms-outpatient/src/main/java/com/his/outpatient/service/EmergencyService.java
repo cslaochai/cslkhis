@@ -104,4 +104,30 @@ public interface EmergencyService extends IService<Emergency> {
      * @return 本次实际发出的待办条数
      */
     int escalateObservation();
+
+    // 分诊复评（WS/T 810—2022 MEWS + 《急诊预检分诊专家共识》动态复评）
+
+    /**
+     * 分诊复评：候诊中的急诊可再次评估分级。
+     * <ul>
+     *   <li>新级别只升不降（数值变小 = 更危重），降级一律拒绝；</li>
+     *   <li>同步重算 zone / 应接诊时限快照 / MEWS，并落一条复评流水（前后级别 + 体征 + 原因 + 操作人）；</li>
+     *   <li>级别上调时给负责医生（无主则给当班医生）发升级待办。</li>
+     * </ul>
+     */
+    void reevaluate(EmergencyReevalDTO reevalDTO);
+
+    /**
+     * 复评流水（按急诊记录，时间正序）——「这个人的级别为什么从 III 变成 I」在这里查
+     */
+    List<EmergencyReevalVO> reevalList(Long emergencyId);
+
+    /**
+     * 复评到期待办：对「候诊超时应接诊时限且又超一个时限未复评」的急诊，
+     * 给该科室此刻在岗的护理写站内信待办（无在岗护理则回落系统参数兜底接收人）。
+     * 与候诊升级（催医生接诊）是两件事、两条信，可重入。
+     *
+     * @return 本次实际发出的待办条数
+     */
+    int escalateReeval();
 }

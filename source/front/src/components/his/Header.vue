@@ -1,7 +1,6 @@
 <template>
   <header
-      class="sticky top-0 z-30 flex h-16 items-center justify-between px-6"
-      style="background: linear-gradient(90deg, #0A4376 0%, #0F5FA0 42%, #1179B8 72%, #0E9488 100%); box-shadow: 0 2px 12px rgba(9, 60, 110, 0.28);"
+      class="his-header sticky top-0 z-30 flex h-16 items-center justify-between px-6"
   >
     <!-- 左侧：Logo + 企业名 + 菜单伸缩 + 面包屑 -->
     <div class="flex items-center gap-4">
@@ -18,7 +17,7 @@
           :style="sidebarCollapsed
             ? {width: '64px', marginLeft: '-24px', justifyContent: 'center'}
             : {width: '232px'}"
-          class="flex shrink-0 items-center gap-3 border-r border-white/30 no-underline transition-all duration-300"
+          class="brand-slot flex shrink-0 items-center gap-3 border-r border-white/30 no-underline transition-all duration-300"
           title="返回首页"
           to="/"
       >
@@ -135,12 +134,12 @@
       </div>
 
       <!-- 用户角色 -->
-      <div class="rounded bg-white/20 px-2.5 py-1 text-sm font-medium text-white">
+      <div class="text-sm text-white/90">
         {{ currentRoleLabel }}
       </div>
 
       <!-- 所属科室 -->
-      <div v-if="userDeptName" class="rounded bg-white/20 px-2.5 py-1 text-sm font-medium text-white">
+      <div v-if="userDeptName" class="text-sm text-white/90">
         {{ userDeptName }}
       </div>
 
@@ -1329,7 +1328,7 @@ const handleLogout = async () => {
 <style scoped>
 /* ---------- 面包屑图标 ----------
    el-icon 的 svg 用 fill="currentColor"，一旦 text-white/70 这类的透明度写法没生效，
-   就会退回继承链上的默认色（nav 上没设 color → 黑），图标直接压在渐变底上。
+   就会退回继承链上的默认色（nav 上没设 color → 黑），图标直接压在深色底上。
    这里把色值钉死在 svg 自身，并给 nav 兜一个基础色，不再依赖继承。 */
 .breadcrumb-nav {
   color: #fff;
@@ -1362,7 +1361,7 @@ const handleLogout = async () => {
 
 /* ---------- 当前患者常驻条（真实 HIS 顶部的「现在给谁看病」） ----------
    这一条是开医嘱/开药/开检查前的最后一道防错提示，必须一眼能看见：
-   加深底色 + 亮描边 + 投影让它从渐变 header 上「浮」出来，姓名加粗放大，
+   加深底色 + 亮描边 + 投影让它从纯色 header 上「浮」出来，姓名加粗放大，
    「当前患者」四个字做成白底蓝字小标签（纯文字太淡，扫过去会漏掉）。 */
 .cp-chip {
   display: flex;

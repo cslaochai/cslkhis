@@ -1184,6 +1184,8 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
                 DoctorConsultingVO newVo = new DoctorConsultingVO();
                 newVo.setDoctorId(doctorId);
                 newVo.setDoctorName(queue.getDoctorName());
+                newVo.setRoomId(queue.getRoomId());
+                newVo.setRoomName(queue.getRoomName());
                 newVo.setConsultingPatients(new ArrayList<>());
                 return newVo;
             });
@@ -1196,6 +1198,8 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
             patientVO.setPatientNo(queue.getPatientNo());
             patientVO.setDoctorId(doctorId);
             patientVO.setDoctorName(queue.getDoctorName());
+            patientVO.setRoomId(queue.getRoomId());
+            patientVO.setRoomName(queue.getRoomName());
             vo.getConsultingPatients().add(patientVO);
         }
 

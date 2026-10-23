@@ -99,6 +99,12 @@ public class EmergencyStatsVO {
     private Long unassignedWaiting;
 
     /**
+     * 待复评人数（候诊超时应接诊时限且又超过一个时限未复评——分诊台该动起来的信号）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long reevalDue;
+
+    /**
      * 留观超预警档人数（默认 &ge;48 小时：该开始张罗去向）
      */
     @JsonSerialize(using = ToStringSerializer.class)

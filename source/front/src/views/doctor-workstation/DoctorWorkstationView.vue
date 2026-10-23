@@ -74,7 +74,15 @@
       <div class="flex min-h-0 flex-1 flex-col rounded-lg border border-slate-200 bg-white shadow-sm">
         <div class="flex shrink-0 items-center gap-1 border-b border-slate-200 px-2 py-2">
           <span class="pl-1 text-sm font-bold text-slate-700">候诊 {{ waitingCount }}</span>
-          <span class="ml-auto text-xs text-slate-400">{{ new Date().toLocaleDateString('zh-CN') }}</span>
+          <span class="text-xs text-slate-400">已诊 {{ stats.called }}</span>
+          <span class="ml-auto flex items-center gap-2">
+            <el-button :icon="RefreshRight" link size="small" @click="loadData">刷新
+            </el-button>
+            <el-button v-perm="'opd:doctorWorkstation:list'" link size="small" type="primary"
+                       @click="myAdmissionListVisible = true">我开的住院证
+            </el-button>
+            <span class="text-xs text-slate-400">{{ new Date().toLocaleDateString('zh-CN') }}</span>
+          </span>
         </div>
         <!-- 搜索框 -->
         <div class=" border-slate-100 px-4 py-2">
@@ -84,7 +92,7 @@
         <!-- 过滤按钮 -->
         <div class="flex items-center gap-1 border-slate-100 px-4 py-2">
           <el-button
-              v-for="f in [{ label: '全部', value: 'all' }, { label: '候诊', value: 'waiting' }, { label: '急诊', value: 'emergency' }]"
+              v-for="f in [{ label: '全部', value: 'all' }, { label: '候诊', value: 'waiting' }, { label: '就诊中', value: 'consulting' }]"
               :key="f.value" :plain="queueFilter !== f.value" :type="queueFilter === f.value ? 'primary' : ''"
               class="!rounded-md"
               size="small"
@@ -158,6 +166,13 @@
                          @click.stop="handleCallSpecific(row)">
                 呼叫
               </el-button>
+              <!-- 过号：叫了没到、人不在（分诊台同款接口 overdueQueue，仅候诊中可过号，置 6-已过号）。
+                   与分诊台互斥由后端守卫：同一患者两边同时操作时 0 行失败并报「状态不允许过号」 -->
+              <el-button v-if="row.queueStatus === 2" class="opacity-0 group-hover:opacity-100 transition-opacity"
+                         link size="small" type="danger"
+                         @click.stop="handleOverdue(row)">
+                过号
+              </el-button>
               <!-- 回诊：叫下一位时被自动收口（队列 4）但病历并未结诊提交（挂号单不是 4）的行，
                    允许本人重新叫回就诊中 —— 检查结果回来后看第二眼是门诊高频动作 -->
               <el-button v-if="row.queueStatus === 4 && row.registStatus !== 4"
@@ -165,6 +180,13 @@
                          type="warning"
                          @click.stop="handleCallSpecific(row)">
                 回诊
+              </el-button>
+              <!-- 回队：已过号的患者回来了 → 重新排队（后端 mode=2 排到候诊队尾，不插队，
+                   避免挤掉正常排队的人；过号标记保留留痕） -->
+              <el-button v-if="row.queueStatus === 6" class="opacity-0 group-hover:opacity-100 transition-opacity"
+                         link size="small" type="warning"
+                         @click.stop="handleRejoin(row)">
+                回队
               </el-button>
             </div>
           </div>
@@ -226,7 +248,7 @@
 
         <div class="flex min-h-0 flex-1 gap-3">
           <!-- 次栏：病历（对调后的固定 520px 单列文书，真实 HIS 口径：模板化低频录入，不与医嘱抢宽度） -->
-          <div :class="recordColCollapsed ? 'w-9' : 'w-[520px]'"
+          <div :class="recordColCollapsed ? 'w-9' : 'w-[600px]'"
                class="relative flex min-w-0 shrink-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition-all duration-200">
             <!-- 标题行 = 折叠开关（只在 ≤1600px 可点，见脚本里的 COMPACT_BREAKPOINT）；宽屏退化为纯标题 -->
             <button v-if="compactViewport" :class="recordCollapsed ? 'flex-col px-1 py-2' : 'px-3 py-2'"
@@ -247,12 +269,32 @@
               <span class="text-sm font-bold text-slate-700">病历</span>
               <span class="text-xs text-slate-400">主诉 / 查体 / 诊断</span>
             </div>
-            <!-- 病历：单列连续表单（真实 HIS 门诊病历是一张自上而下的文书：主诉→现病史→过敏史→既往/个人/家族/婚育史→体检→诊断→处置） -->
-            <div v-if="!recordColCollapsed" class="min-h-0 flex-1 overflow-y-auto p-4 custom-scrollbar record-form">
+            <!-- 病历：单列连续表单（真实 HIS 门诊病历是一张自上而下的文书：主诉→现病史→过敏史→既往/个人/家族/婚育史→体检→诊断→处置，
+                 医生一路往下写、不切换视图；左侧竖排定位导航点哪段滚到哪段，不用手动找） -->
+            <div v-if="!recordColCollapsed" class="flex min-h-0 flex-1">
+              <!-- 左侧段落定位：主诉病史 / 体格检查 / 诊断治疗，点击平滑滚动到对应段 -->
+              <div class="flex w-9 shrink-0 flex-col items-center gap-5 border-r border-slate-200 bg-slate-50 py-4">
+                <button
+                    class="flex h-14 w-full items-center justify-center text-xs font-medium text-slate-500 transition-colors hover:bg-white hover:text-[#1269B5] [writing-mode:vertical-rl]"
+                    title="主诉与病史" type="button"
+                    @click="scrollToRecordSection('chief')">主诉病史
+                </button>
+                <button
+                    class="flex h-14 w-full items-center justify-center text-xs font-medium text-slate-500 transition-colors hover:bg-white hover:text-[#1269B5] [writing-mode:vertical-rl]"
+                    title="体格检查" type="button"
+                    @click="scrollToRecordSection('exam')">体格检查
+                </button>
+                <button
+                    class="flex h-14 w-full items-center justify-center text-xs font-medium text-slate-500 transition-colors hover:bg-white hover:text-[#1269B5] [writing-mode:vertical-rl]"
+                    title="诊断与治疗" type="button"
+                    @click="scrollToRecordSection('diag')">诊断治疗
+                </button>
+              </div>
+              <div class="min-h-0 flex-1 overflow-y-auto p-4 custom-scrollbar record-form">
               <div class="space-y-5">
 
                 <!-- 第一节：主诉与病史 -->
-                <section>
+                <section ref="chiefSection" class="scroll-mt-3">
                   <div class="mb-2 flex items-center justify-between">
                     <h3 class="text-base font-bold text-slate-800">主诉与病史</h3>
                     <el-button link type="primary" @click="openExtractDialog">
@@ -285,7 +327,10 @@
                     </div>
                     <div>
                       <label class="mb-1 block text-sm font-medium text-slate-600">主诉 <span
-                          class="text-red-500">*</span></label>
+                          class="text-red-500">*</span>
+                        <span v-if="triageChiefComplaintValue.value"
+                              class="ml-1 rounded bg-sky-100 px-1.5 py-0.5 text-xs text-sky-600">分诊主诉</span>
+                      </label>
                       <el-input v-model="recordForm.chiefComplaint" :rows="2" placeholder="请输入主诉" type="textarea"/>
                     </div>
                     <div>
@@ -402,46 +447,45 @@
 
                 <div class="border-t border-slate-100"></div>
 
-                <!-- 第二节：体格检查 —— 门诊多数患者不逐系统查体，默认折叠；任一项有内容自动展开 -->
-                <section>
-                  <button
-                      class="flex w-full cursor-pointer items-center justify-between rounded-md px-1 py-1 text-left transition-colors hover:bg-slate-50"
-                      type="button"
-                      @click="examToggled = !examVisible">
-                    <span class="text-base font-bold text-slate-800">体格检查
-                      <span v-if="!examVisible" class="ml-1 text-xs font-normal text-slate-400">未填 · 点击展开</span>
-                    </span>
-                    <span class="flex items-center gap-1 text-xs text-slate-400">
-                      {{ examVisible ? '收起' : '展开' }}
-                      <el-icon :class="examVisible ? 'rotate-180' : ''" class="transition-transform">
-                        <ArrowDown/>
-                      </el-icon>
-                    </span>
-                  </button>
-                  <div v-show="examVisible" class="mt-2 space-y-3">
-                    <div class="flex items-center justify-between">
-                      <span class="text-xs text-slate-400">生命体征为当次实测，不提供快捷填充</span>
+                <!-- 第二节：体格检查 -->
+                <section ref="examSection" class="scroll-mt-3">
+                  <div class="mb-2 text-base font-bold text-slate-800">体格检查</div>
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-end">
                       <el-button :loading="copyExamLoading" link size="small" type="primary"
                                  @click="handleCopyLastExam">复制上次查体
                       </el-button>
                     </div>
                     <div>
-                      <div class="mb-1 flex items-center justify-between">
-                        <label class="text-sm font-medium text-slate-600">生命体征 <span
-                            class="text-red-500">*</span></label>
+                      <!-- 生命体征：label 与输入框分离（单位进 label），label 样式与查体字段一致；
+                           分诊带入角标挂在体温旁（分诊带入的第一个必填项） -->
+                      <div class="grid grid-cols-2 gap-x-3 gap-y-2">
+                        <div>
+                          <label class="mb-1 block text-sm font-medium text-slate-600">体温 <span
+                              class="text-red-500">*</span>（℃）
+                            <span v-if="triagePrefilled"
+                                  class="ml-1 rounded bg-sky-100 px-1.5 py-0.5 text-xs text-sky-600">分诊带入</span>
+                          </label>
+                          <el-input v-model="recordForm.temperature" size="small"/>
+                        </div>
+                        <div>
+                          <label class="mb-1 block text-sm font-medium text-slate-600">脉搏（次/分）</label>
+                          <el-input v-model="recordForm.pulse" size="small"/>
+                        </div>
+                        <div>
+                          <label class="mb-1 block text-sm font-medium text-slate-600">呼吸（次/分）</label>
+                          <el-input v-model="recordForm.respiration" size="small"/>
+                        </div>
+                        <div>
+                          <label class="mb-1 block text-sm font-medium text-slate-600">收缩压 <span
+                              class="text-red-500">*</span>（mmHg）</label>
+                          <el-input v-model="recordForm.systolicPressure" size="small"/>
+                        </div>
+                        <div>
+                          <label class="mb-1 block text-sm font-medium text-slate-600">舒张压（mmHg）</label>
+                          <el-input v-model="recordForm.diastolicPressure" size="small"/>
+                        </div>
                       </div>
-                      <div class="grid grid-cols-2 gap-2">
-                        <el-input v-model="recordForm.temperature" placeholder="体温 ℃" size="small"/>
-                        <el-input v-model="recordForm.pulse" placeholder="脉搏 次/分" size="small"
-                        />
-                        <el-input v-model="recordForm.respiration" placeholder="呼吸 次/分" size="small"
-                        />
-                        <el-input v-model="recordForm.systolicPressure" placeholder="收缩压 mmHg" size="small"
-                        />
-                      </div>
-                      <el-input v-model="recordForm.diastolicPressure" class="mt-2" placeholder="舒张压 mmHg"
-                                size="small"
-                      />
                     </div>
                     <div>
                       <div class="mb-1 flex items-center justify-between">
@@ -450,7 +494,9 @@
                                    @click="recordForm.generalCondition = '正常'">填写「正常」
                         </el-button>
                       </div>
-                      <el-input v-model="recordForm.generalCondition" placeholder="发育、营养、神志等" size="small"
+                      <el-input v-model="recordForm.generalCondition" :autosize="{ minRows: 2, maxRows: 6 }"
+                                placeholder="发育、营养、神志等"
+                                type="textarea"
                       />
                     </div>
                     <div>
@@ -460,7 +506,7 @@
                                    @click="recordForm.skinMucosa = '正常'">填写「正常」
                         </el-button>
                       </div>
-                      <el-input v-model="recordForm.skinMucosa" :autosize="{ minRows: 1, maxRows: 6 }"
+                      <el-input v-model="recordForm.skinMucosa" :autosize="{ minRows: 2, maxRows: 6 }"
                                 placeholder="皮肤颜色、湿度等"
                                 type="textarea"
                       />
@@ -472,7 +518,7 @@
                                    @click="recordForm.headNeck = '正常'">填写「正常」
                         </el-button>
                       </div>
-                      <el-input v-model="recordForm.headNeck" :autosize="{ minRows: 1, maxRows: 6 }"
+                      <el-input v-model="recordForm.headNeck" :autosize="{ minRows: 2, maxRows: 6 }"
                                 placeholder="头颅、眼、耳等"
                                 type="textarea"
                       />
@@ -484,7 +530,7 @@
                                    @click="recordForm.chestLung = '正常'">填写「正常」
                         </el-button>
                       </div>
-                      <el-input v-model="recordForm.chestLung" :autosize="{ minRows: 1, maxRows: 6 }"
+                      <el-input v-model="recordForm.chestLung" :autosize="{ minRows: 2, maxRows: 6 }"
                                 placeholder="胸廓、叩诊、听诊等"
                                 type="textarea"
                       />
@@ -496,7 +542,7 @@
                                    @click="recordForm.heart = '正常'">填写「正常」
                         </el-button>
                       </div>
-                      <el-input v-model="recordForm.heart" :autosize="{ minRows: 1, maxRows: 6 }"
+                      <el-input v-model="recordForm.heart" :autosize="{ minRows: 2, maxRows: 6 }"
                                 placeholder="心率、心律等"
                                 type="textarea"
                       />
@@ -508,7 +554,7 @@
                                    @click="recordForm.abdomen = '正常'">填写「正常」
                         </el-button>
                       </div>
-                      <el-input v-model="recordForm.abdomen" :autosize="{ minRows: 1, maxRows: 6 }"
+                      <el-input v-model="recordForm.abdomen" :autosize="{ minRows: 2, maxRows: 6 }"
                                 placeholder="压痛、肝脾等"
                                 type="textarea"
                       />
@@ -520,7 +566,7 @@
                                    @click="recordForm.spineLimbs = '正常'">填写「正常」
                         </el-button>
                       </div>
-                      <el-input v-model="recordForm.spineLimbs" :autosize="{ minRows: 1, maxRows: 6 }"
+                      <el-input v-model="recordForm.spineLimbs" :autosize="{ minRows: 2, maxRows: 6 }"
                                 placeholder="脊柱、关节等"
                                 type="textarea"
                       />
@@ -532,7 +578,7 @@
                                    @click="recordForm.nervousSystem = '正常'">填写「正常」
                         </el-button>
                       </div>
-                      <el-input v-model="recordForm.nervousSystem" :autosize="{ minRows: 1, maxRows: 6 }"
+                      <el-input v-model="recordForm.nervousSystem" :autosize="{ minRows: 2, maxRows: 6 }"
                                 placeholder="生理反射等"
                                 type="textarea"
                       />
@@ -544,7 +590,7 @@
                                    @click="recordForm.specialistExam = '正常'">填写「正常」
                         </el-button>
                       </div>
-                      <el-input v-model="recordForm.specialistExam" :autosize="{ minRows: 1, maxRows: 6 }"
+                      <el-input v-model="recordForm.specialistExam" :autosize="{ minRows: 2, maxRows: 6 }"
                                 placeholder="专科检查所见"
                                 type="textarea"
                       />
@@ -555,7 +601,7 @@
                 <div class="border-t border-slate-100"></div>
 
                 <!-- 第三节：诊断与治疗 -->
-                <section>
+                <section ref="diagSection" class="scroll-mt-3">
                   <div class="mb-2 text-base font-bold text-slate-800">诊断与治疗</div>
                   <div class="space-y-3">
                     <div><label class="mb-1 block text-sm font-medium text-slate-600">诊断 <span
@@ -625,15 +671,7 @@
                               <span class="text-xs font-medium text-slate-900">{{ item.icdName }}</span>
                             </div>
                           </div>
-                          <div class="mt-1 flex items-center gap-3 text-[10px] text-slate-500">
-                            <span class="text-emerald-600">DRG {{ item.drgWeight }}</span>
-                            <span class="font-medium text-amber-600">¥{{ item.estimatedCost }}</span>
-                          </div>
                         </div>
-                      </div>
-                      <div v-if="icdPredictions.length > 0"
-                           class="mt-1.5 rounded bg-amber-50 px-2 py-1 text-[10px] text-amber-700">
-                        ⚠ 低编结算不足，高编触发审核
                       </div>
                     </div>
 
@@ -663,6 +701,7 @@
                 </section>
               </div>
             </div>
+            </div>
             <!-- 病历已提交水印（折叠态不渲染：36px 竖条上 giant 旋转文字会被裁成色块） -->
             <div v-if="recordForm.recordStatus === 2 && !recordColCollapsed"
                  class="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
@@ -680,24 +719,12 @@
           </div>
 
           <!--
-            主栏：**一整张卡**，flex-1 吃剩余宽度 —— 医嘱是医生的主工作区（真实 HIS 口径：
-            开药检索表要摊药名/规格/单位/单价/库存/用法用量等十几列，病历只是窄条文书）。
-            下面的处方/检查申请/检验申请/辅助诊疗/用药安全审查全是它标题下的分节，不是并列小卡。
-            （老王 2026-09-21：原来标题单独一张卡、下面每块又各是一张卡，中间还留 12px 缝，
-              看着像五件互不相干的东西；医生要的是「一栏医嘱、里面分节」。）
-            边界只由这张卡给：内部各节只用一条分隔线（见 OrderPanel.vue），不再各自带边框。
+            处置工作区（真实 HIS 门诊医生站：右侧就是处置操作区，功能块直接可见，没有「医嘱」大标题包裹）：
+            去掉外层「医嘱」父卡（多余层级），处方/检查申请/检验申请/辅助诊疗/用药安全审查
+            五张功能卡各自独立、直接平铺，各自可折叠（OrderPanel/自定义卡均自带边框）。
             本栏常驻不可折叠；窄屏逃生门在病历栏上（见 COMPACT_BREAKPOINT）。
           -->
-          <div
-              class="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-            <!-- 标题栏与左栏「病历」同构：bg-slate-50 + border-b + px-3 py-2 + 右侧一句话说明 -->
-            <div
-                class="flex w-full shrink-0 items-center justify-between border-b border-slate-200 bg-slate-50 px-3 py-2">
-              <span class="text-sm font-bold text-slate-700">医嘱</span>
-              <span class="truncate text-xs text-slate-400">处方 / 检查申请 / 检验申请</span>
-            </div>
-            <!-- 内容区与左栏「病历」同构：p-3 + 分节之间 12px（那里是 gap-3，这里是 space-y-3） -->
-            <div class="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 custom-scrollbar">
+          <div class="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto p-3 custom-scrollbar">
               <OrderPanel :count-text="prescriptionList.length + ' 张'" title="处方">
                 <div>
                   <!-- 三个处方类型 tab -->
@@ -1093,11 +1120,6 @@
                                 <el-input v-model="item.bodyPart" :disabled="!applyRowEditable(item)"
                                           placeholder="检查部位" style="width: 150px"/>
                               </div>
-                              <div class="flex items-center gap-1.5">
-                                <el-switch v-model="item.isEmergency" :active-value="1" :inactive-value="0"
-                                           :disabled="!applyRowEditable(item)"
-                                           active-text="急诊" size="small"/>
-                              </div>
                             </div>
                             <div class="mt-1.5 flex items-start gap-1.5">
                               <label class="mt-2 text-xs text-slate-600 whitespace-nowrap">注意事项</label>
@@ -1266,9 +1288,6 @@
                                 <el-switch v-model="item.isFasting" :active-value="1" :inactive-value="0"
                                            :disabled="!applyRowEditable(item)"
                                            active-text="空腹" size="small"/>
-                                <el-switch v-model="item.isEmergency" :active-value="1" :inactive-value="0"
-                                           :disabled="!applyRowEditable(item)"
-                                           active-text="急诊" size="small"/>
                               </div>
                             </div>
                             <div class="mt-1.5 flex items-start gap-4">
@@ -1455,7 +1474,6 @@
                   </div>
                 </div>
               </div>
-            </div>
           </div>
         </div>
 
@@ -2111,7 +2129,6 @@
       </el-select>
       <el-input v-model="inspectionTemplateForm.bodyPart" placeholder="检查部位（可选）"/>
       <el-input v-model="inspectionTemplateForm.inspectionPurpose" placeholder="检查目的（可选）"/>
-      <el-switch v-model="inspectionTemplateForm.isEmergency" :active-value="1" :inactive-value="0" active-text="急诊"/>
     </div>
     <template #footer>
       <el-button type="primary" @click="handleSaveInspectionTemplate">保存</el-button>
@@ -2175,7 +2192,6 @@
       </el-select>
       <el-input v-model="laboratoryTemplateForm.sampleType" placeholder="标本类型（可选）"/>
       <el-input v-model="laboratoryTemplateForm.inspectionPurpose" placeholder="检验目的（可选）"/>
-      <el-switch v-model="laboratoryTemplateForm.isEmergency" :active-value="1" :inactive-value="0" active-text="急诊"/>
     </div>
     <template #footer>
       <el-button type="primary" @click="handleSaveLaboratoryTemplate">保存</el-button>
@@ -2379,10 +2395,13 @@
       :diagnosis-name="recordForm.diagnosisName"
       :patient="currentPatient"
       :patient-detail="patientDetail"/>
+
+  <!-- ================= 我开的住院证（本人开证记录 + 自助作废） ================= -->
+  <DoctorWorkstationAdmissionList v-model="myAdmissionListVisible"/>
 </template>
 
 <script setup>
-import {computed, onMounted, onUnmounted, reactive, ref, watch} from 'vue';
+import {computed, nextTick, onMounted, onUnmounted, reactive, ref, watch} from 'vue';
 import {useRoute} from 'vue-router';
 import {patientAvatarTone, patientGenderText} from '@/lib/patientGender';
 import {
@@ -2415,6 +2434,7 @@ import {useCurrentPatientStore} from '@/stores/currentPatient';
 import PageActionBar from '@/components/his/PageActionBar.vue';
 import OrderPanel from '@/components/his/OrderPanel.vue';
 import DoctorWorkstationAdmissionAdd from './DoctorWorkstationAdmissionAdd.vue';
+import DoctorWorkstationAdmissionList from './DoctorWorkstationAdmissionList.vue';
 import RxSignDialog from './RxSignDialog.vue';
 import {
   callNextQueue,
@@ -2424,7 +2444,10 @@ import {
   getCurrentDoctorStatus,
   getQueueStats,
   getTodayQueueList,
+  getTriageByQueueId,
+  overdueQueue,
   recallPatient,
+  rejoinQueue,
   setDoctorStatus
 } from '@/api/appoint';
 import {
@@ -2440,7 +2463,7 @@ import {
 } from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {getByRegistId, getEmrRecordList} from '@/api/emr';
-import {draftEmrText, extractEmrText, transcribeVoice} from '@/api/ai';
+import {draftEmrText, extractEmrText, predictIcd10 as predictIcd10Ai, transcribeVoice} from '@/api/ai';
 import {localDateStr, shortQueueNo} from '@/lib/utils';
 import {QUEUE_STATUS, queueVisitBadgeOf} from '@/lib/statusColor';
 import {
@@ -2687,8 +2710,7 @@ const filteredQueue = computed(() => {
     list = list.filter((q) => q.queueStatus === 2);
   else if (queueFilter.value === 'consulting')
     list = list.filter((q) => q.queueStatus === 3);
-  else if (queueFilter.value === 'emergency')
-    list = list.filter((q) => q.registType === 3);
+  // 门急诊分开：急诊号走急诊工作站，门诊工作台不再提供急诊筛选（急诊标记的旧申请单仍显示，见行内急诊 tag）
   // 排序与「该接哪一条」（pickQueueRow）共用 compareQueueRow，口径只有一处：
   // 就诊中 > 候诊中 > 已完成 > 已过号 > 已退号。
   // 两处各写一套的后果是「列表第一行排的是复诊，顶栏搜索却选中了初诊那条」。
@@ -2741,13 +2763,19 @@ const recordForm = reactive({
   recordStatus: 1,
   reviewStatus: 0,
 });
-// 体格检查分节折叠态：null=自动（任一项目有内容就展开），true/false=用户手动覆盖；切患者回自动
+// 体格检查分节字段清单（复制上次查体只搬查体所见，生命体征列在排除项里，见 handleCopyLastExam）
 const EXAM_FIELDS = ['temperature', 'pulse', 'respiration', 'systolicPressure', 'diastolicPressure',
   'generalCondition', 'skinMucosa', 'headNeck', 'chestLung', 'heart', 'abdomen', 'spineLimbs', 'nervousSystem',
   'specialistExam'];
-const examHasContent = computed(() => EXAM_FIELDS.some((k) => !!recordForm[k]));
-const examToggled = ref(null);
-const examVisible = computed(() => examToggled.value ?? examHasContent.value);
+// 病历左侧段落定位：主诉病史 / 体格检查 / 诊断治疗，点击平滑滚动到对应段（段带 scroll-mt-3 留白，
+// 避免滚到段首贴顶；滚动容器是病历内容区自身 overflow-y-auto）
+const recordSectionRefs = {chief: ref(null), exam: ref(null), diag: ref(null)};
+const scrollToRecordSection = (key) => {
+  nextTick(() => {
+    const el = recordSectionRefs[key]?.value;
+    if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'});
+  });
+};
 // 复制上次查体：真实 HIS 复诊高频动作。只搬 EXAM_FIELDS（查体所见），
 // 生命体征是当次实测数据、质控禁止拷贝，所以不在复制范围内。
 const copyExamLoading = ref(false);
@@ -2773,7 +2801,6 @@ const handleCopyLastExam = async () => {
     copied.forEach((k) => {
       recordForm[k] = last[k];
     });
-    examToggled.value = true;
     ElMessage.success(`已复制 ${last.visitDate || '上次'} 的查体所见（${copied.length} 项），请核对修改`);
   } finally {
     copyExamLoading.value = false;
@@ -2835,6 +2862,69 @@ const prefillHistories = async (row) => {
       historySources[key] = lastVal ? 'last' : 'profile';
     }
   });
+};
+// ===== 分诊带入（生命体征 + 主诉）=====
+// 口径：分诊台（预检分诊）登记的**当次**生命体征与主诉，接诊时自动带入病历的
+// 体格检查-生命体征区与主诉（与「复制上次查体」不同：分诊值是本次就诊实测，质控允许）。
+// 纪律与 prefillHistories 一致：① 只填空字段，病历已保存/医生已写的一律不覆盖；
+// ② 带入值带「分诊」角标，医生一改内容角标即消失；③ 不回写分诊记录（分诊记录只增不改）。
+const TRIAGE_PREFILL_KEYS = [
+  {formKey: 'temperature', triageKey: 'temperature', label: '体温'},
+  {formKey: 'pulse', triageKey: 'pulse', label: '脉搏'},
+  {formKey: 'respiration', triageKey: 'respiration', label: '呼吸'},
+  {formKey: 'systolicPressure', triageKey: 'systolicBp', label: '收缩压'},
+  {formKey: 'diastolicPressure', triageKey: 'diastolicBp', label: '舒张压'},
+];
+// formKey → 分诊带入原值（角标比对用，与 historyPrefillValue 同模式）
+const triagePrefillValue = {};
+const triageSources = reactive({});
+const triagePrefilled = computed(() => Object.keys(triageSources).length > 0);
+// 体征：医生改动带入值 → 角标消失（只比较「是否还是带入时的原值」）
+watch(TRIAGE_PREFILL_KEYS.map((m) => () => recordForm[m.formKey]), () => {
+  TRIAGE_PREFILL_KEYS.forEach((m) => {
+    if (triageSources[m.formKey] && recordForm[m.formKey] !== triagePrefillValue[m.formKey]) {
+      delete triageSources[m.formKey];
+      delete triagePrefillValue[m.formKey];
+    }
+  });
+});
+// 主诉角标：独立标记（与体征分开，医生改了主诉即消失）
+const triageChiefComplaintValue = reactive({value: ''});
+watch(() => recordForm.chiefComplaint, (v) => {
+  if (triageChiefComplaintValue.value && v !== triageChiefComplaintValue.value) {
+    triageChiefComplaintValue.value = '';
+  }
+});
+const loadTriagePrefill = async (queueId) => {
+  // 换患者先清角标（本次没有带入则不显示；带入后由上面的 watch 清除）
+  TRIAGE_PREFILL_KEYS.forEach((m) => {
+    delete triageSources[m.formKey];
+    delete triagePrefillValue[m.formKey];
+  });
+  triageChiefComplaintValue.value = '';
+  if (!queueId) return;
+  try {
+    // 分诊卡回显（当前生效值 + 历史）：只取 latest（本次就诊最新一次分诊登记）
+    const res = await getTriageByQueueId(queueId);
+    const latest = res?.data?.latest;
+    if (!latest) return;
+    TRIAGE_PREFILL_KEYS.forEach((m) => {
+      const v = latest[m.triageKey];
+      // 只填空字段：病历已有内容（含刚加载的已保存病历）一律不覆盖
+      if (v !== null && v !== undefined && v !== '' && !recordForm[m.formKey]) {
+        const val = String(v);
+        recordForm[m.formKey] = val;
+        triagePrefillValue[m.formKey] = val;
+        triageSources[m.formKey] = true;
+      }
+    });
+    if (latest.chiefComplaint && !recordForm.chiefComplaint) {
+      recordForm.chiefComplaint = latest.chiefComplaint;
+      triageChiefComplaintValue.value = latest.chiefComplaint;
+    }
+  } catch (error) {
+    // 分诊数据读取失败不阻断接诊，仅失去自动带入（医生可手填）
+  }
 };
 const inspectionRecords = ref([]);
 const laboratoryRecords = ref([]);
@@ -3708,6 +3798,9 @@ const handlePredictIcd = async () => {
   }
 };
 const handleSelectPrediction = (item) => {
+  // diagnosis 是诊断下拉（必填项）的 v-model，只写 code/name 不回填它，
+  // 选中预测结果后输入框仍是空的——必填校验照样拦，医生白点一次
+  recordForm.diagnosis = item.icdName;
   recordForm.diagnosisCode = item.icdCode;
   recordForm.diagnosisName = item.icdName;
   showPrediction.value = false;
@@ -4015,13 +4108,14 @@ const handleAiDiagnosis = async () => {
   }
   aiDiagnosisLoading.value = true;
   try {
-    const res = await predictIcd10({
+    const res = await predictIcd10Ai({
       chiefComplaint: recordForm.chiefComplaint || '',
       presentIllness: recordForm.presentIllness || '',
       specialistExam: recordForm.specialistExam || '',
       diagnosis: recordForm.diagnosis || '',
     });
-    // 后端返回 Result<Icd10PredictVO>：候选在 predictions 里，不是顶层数组
+    // his-ms-ai 契约：Result<Icd10PredictResultVO>，候选在 predictions 里；
+    // degraded=true 表示模型未参与、规则降级，界面必须如实显示（ai.js 约定）
     const payload = res.data || {};
     // 置信度只认后端返回值（模型或规则给出的分值）。后端没返回就不显示，
     // 严禁前端按数组下标编造百分比 —— 医生会当真，这是安全问题不是展示问题。
@@ -4049,17 +4143,6 @@ const handleAdoptAiDiagnosis = (item) => {
 const handleViewAiGuide = (item) => {
   aiGuideData.value = item;
   aiGuideDialogVisible.value = true;
-};
-// 监听主诉/现病史变化，自动触发AI推荐
-let aiDebounceTimer = null;
-const triggerAiDiagnosis = () => {
-  if (aiDebounceTimer)
-    clearTimeout(aiDebounceTimer);
-  aiDebounceTimer = setTimeout(() => {
-    if (recordForm.chiefComplaint || recordForm.presentIllness) {
-      handleAiDiagnosis();
-    }
-  }, 1500);
 };
 // ========== CDSS用药安全审查 ==========
 const cdssAlerts = ref([]);
@@ -4271,9 +4354,10 @@ const selectPatient = async (row) => {
   // 尝试加载已有的病历
   const res = await getByRegistId(params);
   Object.assign(recordForm, res.data);
-  examToggled.value = null;
   // 病史带入：本次病历未写的字段，按「上次门诊病历 > 患者健康档案」预填（异步，不阻塞接诊区其他加载）
   prefillHistories(row);
+  // 分诊带入：分诊台预检登记的当次生命体征与主诉 → 体格检查生命体征区/主诉（只填空字段，见 loadTriagePrefill）
+  loadTriagePrefill(row.id);
   // 四个区块并发加载，统一挂「加载中」标记（各 loader 自己吞异常）
   // （原「既往病历」loader 已随左栏既往页签移除 —— 历史就诊改由患者条上的入口
   //   打开患者详情弹窗，内嵌 CDR 全景时间轴，取数口径也换成患者级的 getPatientCdr）
@@ -4380,14 +4464,23 @@ const handleAddPrescription = (type) => {
   ElMessage.success(`已创建${prescriptionTypeLabel(type)}处方`);
 };
 // ========== 叫下一位 ==========
+// 未落库判定（呼叫前自动保存）：病历文本任一字段非空 / 任一处方有明细 / 申请单数组非空。
+// 病历文本必须在判定内 —— 只填了主诉/查体/诊断（没开药没开单）也要落库，否则叫号收口后丢数据。
+const RECORD_TEXT_KEYS_FOR_AUTOSAVE = ['chiefComplaint', 'presentIllness', 'allergyHistory',
+  'pastHistory', 'personalHistory', 'familyHistory', 'marriageHistory', 'temperature', 'pulse',
+  'respiration', 'systolicPressure', 'diastolicPressure', 'generalCondition', 'skinMucosa', 'headNeck',
+  'chestLung', 'heart', 'abdomen', 'spineLimbs', 'nervousSystem', 'specialistExam', 'auxiliaryExam',
+  'diagnosis', 'diagnosisCode', 'diagnosisName', 'treatmentPlan'];
 const handleCallNext = async () => {
   // 如果有当前就诊患者，先检查是否需要保存
   if (currentCalledPatient.value) {
     // 模式A：检查/检验申请编辑期只留在本地数组、未随病历落库；
-    // 这里兜「处方明细」和「本地申请单行」，一并触发保存（随病历落库）不会丢数据。
+    // 这里兜「病历文本 + 全部处方明细 + 本地申请单行」，一并触发保存（随病历落库）不会丢数据。
     // 注意不能再用 !recordSaved 挡掉：保存过病历之后新增/修改的申请单行也是本地态，
     // recordSaved 只代表"保存过"，不代表"当前没有未落库的编辑"。
-    const hasUnsavedData = prescriptionForm.details.length > 0
+    const hasRecordText = RECORD_TEXT_KEYS_FOR_AUTOSAVE.some((k) => !!recordForm[k]);
+    const hasPendingRx = prescriptionList.value.some((rx) => (rx.details?.length ?? 0) > 0);
+    const hasUnsavedData = hasRecordText || hasPendingRx
         || inspectionRecords.value.length > 0
         || laboratoryRecords.value.length > 0;
     // 有未保存的数据就自动保存（保存接口幂等：病历整体覆盖、申请单按 id 增/改，重复保存无害）
@@ -4396,7 +4489,18 @@ const handleCallNext = async () => {
         await handleSaveRecord();
         ElMessage.success('已自动保存当前病历');
       } catch (e) {
-        // 保存失败不阻断呼叫
+        // 保存失败必须阻断叫号：静默放行 = 未保存内容（含处方）在收口后直接丢失。
+        // 给医生显式二选一：返回修改 / 确认放弃未保存内容直接叫号。
+        try {
+          await ElMessageBox.confirm(
+              `<div style="line-height:1.7">当前病历自动保存失败：<span style="color:#dc2626">${escapeHtml(e?.message || '未知错误')}</span><br>` +
+              '未保存的修改将在结束本就诊后丢失，请先返回完善，或明确确认放弃。',
+              '自动保存失败',
+              {confirmButtonText: '放弃保存，直接叫号', cancelButtonText: '返回修改', type: 'warning', dangerouslyUseHTMLString: true}
+          );
+        } catch (cancel) {
+          return; // 医生选择返回修改，不叫号
+        }
       }
     }
   }
@@ -4488,6 +4592,35 @@ const handleCallSpecific = async (row) => {
     
   }
 };
+// ========== 过号 / 过号回队 ==========
+// 过号是「叫了没到、人不在」：医生站行内操作，与分诊台同一接口（overdueQueue），
+// 后端守卫只受理候诊中(2)，置 6-已过号；过号后行仍留在「全部」列表里（状态徽章=已过号），
+// 患者回来由医生行内「回队」或分诊台 rejoinQueue mode=2 排回候诊队尾。
+const handleOverdue = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+        `确认将 ${row.patientName}（${shortQueueNo(row.queueNo)}）标记为过号？过号后可随时回队。`,
+        '过号处理', {confirmButtonText: '确认过号', cancelButtonText: '取消', type: 'warning'});
+  } catch {
+    return;
+  }
+  try {
+    await overdueQueue(row.id);
+    ElMessage.success(`已标记过号：${row.patientName}`);
+    await loadData();
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
+  }
+};
+const handleRejoin = async (row) => {
+  try {
+    await rejoinQueue(row.id, 2);
+    ElMessage.success(`已回队：${row.patientName} 排到候诊队尾`);
+    await loadData();
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+    
+  }
+};
 // ========== 暂离诊室 / 恢复接诊 ==========
 // 语义是医生自己的接诊状态（Redis DoctorStatusCacheService：0 空闲 / 1 接诊中 / 2 暂离），
 // 不是「暂停某个患者」。暂离后叫号与分诊台可据此提示该诊室医生暂离。
@@ -4514,6 +4647,14 @@ const handlePause = async () => {
 const handleComplete = async () => {
   if (!currentPatient.value)
     return;
+  // 前置状态校验：只有 3-就诊中 / 4-已就诊（呼叫下一位自动收口、未结诊的回诊）允许结诊；
+  // 其他状态（候诊/过号/取消/失效）结诊必撞后端乐观锁（"该队列/挂号状态已变更"），先拦下并刷新。
+  const qs = currentPatient.value.queueStatus;
+  if (qs !== 3 && qs !== 4) {
+    await loadData();
+    ElMessage.warning('该患者当前不在就诊中，无法结诊，已为你刷新队列，请核对后重试');
+    return;
+  }
   // 检查病历必填项
   const requiredFields = [
     {field: recordForm.chiefComplaint, label: '主诉', value: 'chiefComplaint'},
@@ -4663,13 +4804,22 @@ const handleComplete = async () => {
 
 // 实际结诊提交（签名板确认后或无处方时调用）
 const doSubmitRecord = async (submitData) => {
-  await submitMedicalRecord(submitData);
-  ElMessage.success('结诊成功');
-  // 清空暂存的检查检验数据
-  inspectionRecords.value = [];
-  laboratoryRecords.value = [];
-  // 刷新队列
-  loadData();
+  try {
+    await submitMedicalRecord(submitData);
+    ElMessage.success('结诊成功');
+    // 清空暂存的检查检验数据
+    inspectionRecords.value = [];
+    laboratoryRecords.value = [];
+    // 刷新队列
+    loadData();
+  } catch (error) {
+    // 乐观锁冲突（挂号/队列状态已被并发操作变更）：具体原因已由全局拦截器提示，
+    // 这里自动刷新队列并引导重试，不静默也不让医生对着过期状态干瞪眼。
+    if (String(error?.message || '').includes('状态已变更')) {
+      await loadData();
+      ElMessage.info('就诊状态已被其他操作变更，已为你刷新队列，请核对后重试');
+    }
+  }
 };
 
 // 签名板确认：笔迹回填每张处方后提交（电子证书签名由后端自动完成）
@@ -5538,6 +5688,8 @@ const loadAllLaboratoryItems = async () => {
 // 表单、拟诊预填与提交都在 DoctorWorkstationAdmissionAdd.vue 里，这里只留打开入口。
 // ------------------------------------------------------------------
 const orderDialogVisible = ref(false);
+// 我开的住院证（列表 + 自助作废在 DoctorWorkstationAdmissionList.vue 里）
+const myAdmissionListVisible = ref(false);
 const openOrderDialog = () => {
   if (!currentPatient.value)
     return ElMessage.warning('请先呼叫患者');

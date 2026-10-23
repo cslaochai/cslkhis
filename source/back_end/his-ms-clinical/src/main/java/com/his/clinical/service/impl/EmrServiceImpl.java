@@ -136,12 +136,14 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         // 医生站一选中患者就崩、既往/处方/检查全不加载，而且拿不到 recordId 还会继续堆新病历。
         // 这里取最新一份，不抛异常；真正的收敛在 saveMedicalRecord 的按 registId 续写。
         BizMedicalRecord one = latestByRegistId(registId);
+        BizMedicalRecordVO vo;
         if (Objects.isNull(one)) {
-            return new BizMedicalRecordVO();
-        }
-        BizMedicalRecordVO vo = BeanUtil.copyProperties(one, BizMedicalRecordVO.class);
-        if (patientFacadeService.patientScopeViolated(vo.getPatientId())) {
-            throw new BusinessException("无权查看该病历");
+            vo = new BizMedicalRecordVO();
+        } else {
+            vo = BeanUtil.copyProperties(one, BizMedicalRecordVO.class);
+            if (patientFacadeService.patientScopeViolated(vo.getPatientId())) {
+                throw new BusinessException("无权查看该病历");
+            }
         }
         return vo;
     }
@@ -1385,9 +1387,48 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         apply.setIsEmergency(dto.getIsEmergency() == null ? 0 : dto.getIsEmergency());
     }
 
+    /**
+     * 结诊必填门槛（业务规则，AGENTS.md §4.3 豁免③）：临时保存（recordSave）允许草稿部分落库，
+     * 结诊提交（recordSubmitDirect）才强校验临床必填。口径与前端 handleComplete requiredFields
+     * 逐字一致（主诉/现病史/过敏史/既往史/个人史/家族史/体温/收缩压/诊断）；改前端必同步本方法。
+     */
+    private void requireSubmitFields(MedicalRecordSaveDTO dto) {
+        if (!TextUtil.hasText(dto.getChiefComplaint())) {
+            throw new BusinessException("主诉不能为空");
+        }
+        if (!TextUtil.hasText(dto.getPresentIllness())) {
+            throw new BusinessException("现病史不能为空");
+        }
+        if (!TextUtil.hasText(dto.getAllergyHistory())) {
+            throw new BusinessException("过敏史不能为空");
+        }
+        if (!TextUtil.hasText(dto.getPastHistory())) {
+            throw new BusinessException("既往史不能为空");
+        }
+        if (!TextUtil.hasText(dto.getPersonalHistory())) {
+            throw new BusinessException("个人史不能为空");
+        }
+        if (!TextUtil.hasText(dto.getFamilyHistory())) {
+            throw new BusinessException("家族史不能为空");
+        }
+        if (!TextUtil.hasText(dto.getTemperature())) {
+            throw new BusinessException("体温不能为空");
+        }
+        if (!TextUtil.hasText(dto.getSystolicPressure())) {
+            throw new BusinessException("收缩压不能为空");
+        }
+        if (!TextUtil.hasText(dto.getDiagnosis())) {
+            throw new BusinessException("诊断不能为空");
+        }
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long saveMedicalRecord(MedicalRecordSaveDTO recordSaveDTO, boolean isSubmit) {
+        // 结诊门槛：草稿可部分保存，提交时临床必填必须齐全（见 requireSubmitFields）
+        if (isSubmit) {
+            requireSubmitFields(recordSaveDTO);
+        }
         CurrentUser currentUser = UserUtils.getCurrentUser();
         BizMedicalRecord bizMedicalRecord;
         // 一次就诊 = 一份病历。前端如果因为历史脏数据（同 registId 多份，getByRegistId 曾直接 500）

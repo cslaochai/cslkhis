@@ -1,8 +1,7 @@
 <template>
   <aside
       :class="sidebarCollapsed ? 'w-16' : 'w-64'"
-      class="fixed left-0 top-16 z-40 flex flex-col border-r border-white/10 text-white transition-all duration-300"
-      style="background: linear-gradient(180deg, #0A3D6B 0%, #0B4F8A 60%, #0E5F8F 100%); height: calc(100vh - 64px); box-shadow: 2px 0 10px rgba(9, 47, 84, 0.18);"
+      class="his-sidebar fixed left-0 top-16 z-40 flex flex-col border-r border-white/10 text-white transition-all duration-300"
   >
     <!-- Navigation -->
     <nav class="flex-1 overflow-y-auto px-2 py-3 custom-scrollbar">
@@ -231,7 +230,9 @@ watch(menuCacheEpoch, () => {
   transition: max-width 0.3s ease;
 }
 
-/* 激活项左侧青绿指示条 */
+/* 激活项左侧白色指示条：底色是纯色 chrome，选中态只靠「亮条 + 半透明白底」两级表达，
+   不再用青绿——--his-teal 是护理/健康语义色，占在选中态上会让「这一项被选中」和「护理类」混成一件事。
+   半透明白底由元素上的 bg-white/[0.16] 提供，这里不叠第二层背景。 */
 .sidebar-item-active::before {
   content: '';
   position: absolute;
@@ -241,11 +242,7 @@ watch(menuCacheEpoch, () => {
   width: 3px;
   height: 60%;
   border-radius: 0 3px 3px 0;
-  background: linear-gradient(180deg, #2DD4BF, #0E9488);
-}
-
-.sidebar-item-active {
-  background-image: linear-gradient(90deg, rgba(14, 148, 136, 0.25), rgba(255, 255, 255, 0.08));
+  background: #fff;
 }
 
 .custom-scrollbar::-webkit-scrollbar {

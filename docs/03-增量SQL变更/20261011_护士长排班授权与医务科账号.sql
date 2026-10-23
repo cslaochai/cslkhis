@@ -78,7 +78,7 @@ INSERT IGNORE INTO sys_employee (id, emp_code, emp_name, emp_type, gender, birth
                                  dept_id, dept_name, title, position, specialty, education, avatar, is_expert, expert_price,
                                  status, create_by, create_time, update_by, update_time, del_flag, remark, create_by_id, update_by_id)
 VALUES (8900000000000080001, 'YW001', '谭一鸣', 6, 1, '1979-06-15', '2010-07-01', '430103197906152015', '13800008001',
-        'tanyiming@cslk-his.local', '19580077', '医务科', '副主任科员', '医务科管理岗', '医疗质量与人力调配管理', '本科',
+        'tanyiming@cslk-his.local', '19580077', '医务科', '517', '47', '医疗质量与人力调配管理', '3',
         NULL, 0, 0.00, 1, 'admin', NOW(), 'admin', NOW(), 0, '医务科测试账号（岗位出勤/人力标准/排班总览）', 1, 1);
 
 INSERT IGNORE INTO sys_user (id, user_name, password, real_name, emp_id, user_type, patient_id, openid, avatar,

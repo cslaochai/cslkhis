@@ -106,6 +106,15 @@ public class BizEmergencyUpsertDTO {
     private String vitalSigns;
 
     /**
+     * 意识状态（1-清楚 2-对声音有反应 3-对疼痛有反应 4-无反应）。
+     * MEWS 必采项：缺项按 0 分计会压低总分、低估危险性，所以登记侧必填，
+     * 不允许「没注意」——老幼/聋哑/醉酒无法评估时选最接近的档并在主诉里说明。
+     */
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "意识状态取值不合法")
+    @NotNull(message = "意识状态不能为空")
+    private Integer consciousness;
+
+    /**
      * 初步诊断
      */
     private String diagnosis;

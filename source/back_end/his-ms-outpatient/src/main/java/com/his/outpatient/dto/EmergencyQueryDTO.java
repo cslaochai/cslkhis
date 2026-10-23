@@ -36,6 +36,12 @@ public class EmergencyQueryDTO extends PageParam {
     private Boolean overdueOnly;
 
     /**
+     * 只看待复评（true = 候诊中 ∧ 已过应接诊时限 ∧ 距上次复评（或入急诊）又已过一个时限）。
+     * 分诊规范要求候诊超时须再次评估分级——这是「复评」的到期口径，与「催医生接诊」是两件事
+     */
+    private Boolean reevalDueOnly;
+
+    /**
      * 留观榜（非空 = 只看留观中且已留观 &ge; 该小时数；0=全部在观，48/72 由统计卡带入）
      */
     private Integer observationMinHours;

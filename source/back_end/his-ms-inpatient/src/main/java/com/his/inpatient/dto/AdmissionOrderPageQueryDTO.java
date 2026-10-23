@@ -27,6 +27,11 @@ public class AdmissionOrderPageQueryDTO extends PageParam {
     private Long sourceDeptId;
 
     /**
+     * 开证医生ID（按开证医生过滤；"我开的证"由后端从登录态取，不信任前端传参）
+     */
+    private Long sourceDoctorId;
+
+    /**
      * 患者姓名 / 住院证号模糊查询
      */
     private String keyword;

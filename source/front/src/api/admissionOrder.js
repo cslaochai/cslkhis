@@ -15,6 +15,11 @@ export function getAdmissionOrderListPage(params) {
     return request.get('/patient/admissionOrder/listPage', {params})
 }
 
+// 我开的住院证分页（门诊医生站；开证医生由后端从登录态取，前端不传）
+export function getMyAdmissionOrderListPage(params) {
+    return request.get('/patient/admissionOrder/myListPage', {params})
+}
+
 // 作废住院证（仅「待收治」可作废）
 export function cancelAdmissionOrder(data) {
     return request.post('/patient/admissionOrder/cancel', data)

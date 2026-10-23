@@ -25,6 +25,11 @@ public enum BizTypeEnum {
     // emg-ho：有人交班给自己 → 催「接手」，一次性投递（一次交班一条），不参与重发判重阶梯。
     EMERGENCY_OBS("emg-obs", "急诊留观超时限"),
     EMERGENCY_HANDOVER("emg-ho", "急诊交班接收"),
+    // emg-reeval：候诊超过应接诊时限仍未接诊 → 催分诊台复评（受众：当班护理；只升不降）。
+    // emg-reeval-up：复评时级别上调 → 通知负责医生/当班医生（受众：医生；与到期待办分开计数，
+    // 否则同一条急诊先催过护士就会把医生的升级通知吞掉）。
+    EMERGENCY_REEVAL("emg-reeval", "急诊分诊复评到期"),
+    EMERGENCY_REEVAL_UPGRADE("emg-reeval-up", "急诊分诊级别上调"),
 
     /* ---------- 住院域 ---------- */
     ADMIT("admit", "入院收治通知"),

@@ -2,10 +2,11 @@ package com.his.platform.vo;
 
 import lombok.Data;
 
-import java.math.BigDecimal;
-
 /**
- * ICD-10智能预测出参
+ * ICD-10智能预测出参。
+ *
+ * 只回编码候选本身：权重/费率/费用属医保结算口径（DRG=权重×费率、DIP=分值×点值），
+ * 统筹区未下发时按自家铁律放 NULL 不编造（同 MedpaySettleServiceImpl），预测入口不碰。
  */
 @Data
 public class Icd10PredictVO {
@@ -29,14 +30,4 @@ public class Icd10PredictVO {
      * 匹配得分，越高越相关
      */
     private int score;
-
-    /**
-     * DRG权重
-     */
-    private BigDecimal drgWeight;
-
-    /**
-     * 预估费用，单位：元
-     */
-    private BigDecimal estimatedCost;
 }

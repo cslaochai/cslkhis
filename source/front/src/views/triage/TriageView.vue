@@ -71,7 +71,9 @@
               <div class="min-w-0 flex-1">
                 <div class="truncate text-sm font-medium text-slate-800">{{ row.patientName }}</div>
                 <div class="truncate text-xs text-slate-400">
-                  {{ row.registNo }} · {{ statusOf(REGIST_TYPE, row.registType).label }} · {{ row.doctorName || '未指定医生' }}
+                  {{ row.registNo }} · {{ statusOf(REGIST_TYPE, row.registType).label }} · {{
+                    row.doctorName || '未指定医生'
+                  }}
                 </div>
               </div>
               <el-button link size="small" type="primary" @click="doCheckIn(row)">签到</el-button>
@@ -107,13 +109,14 @@
                 <div class="min-w-0">
                   <div class="truncate text-sm font-medium text-slate-800">{{ p.patientName }}</div>
                   <div class="truncate text-xs text-slate-400">
-                    {{ shortQueueNo(p.queueNo) }} · {{ room.roomName || '未分配诊室' }} · {{ room.doctorName }}
+                    {{ shortQueueNo(p.queueNo) }} · {{ p.roomName || '未分配诊室' }} · {{ p.doctorName }}
                   </div>
                 </div>
               </div>
             </template>
-            <div v-if="consultingLoading && consulting.every((r: any) => !r.consultingPatients || r.consultingPatients.length === 0)"
-                 class="py-5 text-center text-xs text-slate-400">
+            <div
+                v-if="consultingLoading && consulting.every((r: any) => !r.consultingPatients || r.consultingPatients.length === 0)"
+                class="py-5 text-center text-xs text-slate-400">
               就诊中患者加载中…
             </div>
             <div v-else-if="consulting.every((r: any) => !r.consultingPatients || r.consultingPatients.length === 0)"
@@ -138,7 +141,7 @@
           </div>
           <div class="mt-2">
             <el-button size="small" type="warning" plain @click="filterTimeout">
-              查看候诊队列（超时行标红）
+              查看候诊队列
             </el-button>
           </div>
         </div>
@@ -192,7 +195,6 @@
             height="100%"
             highlight-current-row
             row-key="id"
-            :row-class-name="timeoutRowClass"
             @current-change="onRowChange"
         >
           <el-table-column align="center" label="序" type="index" width="52"/>
@@ -247,10 +249,6 @@
           </el-table-column>
           <el-table-column fixed="right" label="操作" width="150">
             <template #default="{ row }">
-              <!-- 叫号（呼叫/重呼）只在医生工作站发起：分诊台的呼叫与医生「接诊下一位」是同一套
-                   抢占语义（closeConsultingOf 收口上一位），护士误点会把医生正在接诊的患者强制置
-                   「已就诊」——当前患者被顶掉、处方/病历编辑区当场锁死。分诊台保留的是
-                   「不动就诊中」的队列管理权：过号 / 置为优先 / 重新入队；调号与改派在右栏。 -->
               <el-button v-if="row.queueStatus === 2" link type="warning"
                          @click.stop="handleOverdue(row)">过号
               </el-button>
@@ -288,7 +286,7 @@
         </div>
       </div>
 
-      <!-- 右栏：操作卡（头固定 + 内容滚动 + 底部操作条固定） -->
+      <!-- 右栏：操作卡（头固定 + 内容滚动；顺序：信息网格 → 分诊登记[含保存] → 队列调度 → 留痕） -->
       <div class="flex w-[var(--his-order-col-w)] flex-shrink-0 flex-col gap-3">
         <template v-if="selected">
           <div class="flex min-h-0 flex-1 flex-col rounded-lg border border-slate-200 bg-white shadow-sm">
@@ -352,45 +350,8 @@
                 </div>
               </div>
 
-              <!-- 队列调度（候诊中/过号） -->
-              <div v-if="selected.queueStatus === 2 || selected.queueStatus === 6"
-                   class="rounded border border-blue-100 bg-blue-50 p-2">
-                <div class="mb-1.5 text-xs font-semibold text-blue-700">队列调度</div>
-                <template v-if="selected.queueStatus === 2">
-                  <div class="mb-1.5 flex items-center justify-between text-xs text-slate-500">
-                    <span>调号（相对当前位置）</span>
-                    <span>移动步数</span>
-                  </div>
-                  <div class="mb-2 flex items-center gap-1.5">
-                    <el-button class="flex-1" size="small" @click="handleMove(-moveStep)">前移</el-button>
-                    <el-input-number v-model="moveStep" :max="10" :min="1" size="small" style="width: 62px"/>
-                    <el-button class="flex-1" size="small" @click="handleMove(moveStep)">后移</el-button>
-                  </div>
-                  <!-- 置为优先：主操作，占满一行 -->
-                  <el-button class="w-full" size="small" type="danger" @click="handleRejoin(selected, 1)">
-                    置为优先（插队首）
-                  </el-button>
-                  <div class="mt-1.5 flex items-center gap-1.5">
-                    <el-button class="flex-1" size="small" type="warning" plain @click="handleOverdue(selected)">过号</el-button>
-                    <el-button class="flex-1" size="small" type="primary" plain @click="openReassign(selected)">改派医生/诊室</el-button>
-                  </div>
-                </template>
-                <template v-else>
-                  <div class="mb-1.5 text-xs text-slate-500">
-                    过号患者本人已回来：重新排回候诊队列<b>队尾</b>（不插队，避免挤掉正常排队的人）
-                  </div>
-                  <el-button class="w-full" size="small" type="danger" @click="handleRejoin(selected, 2)">
-                    过号回队（队尾）
-                  </el-button>
-                </template>
-              </div>
-              <div v-else-if="selected.queueStatus === 3"
-                   class="rounded border border-slate-200 bg-slate-50 p-2 text-xs text-slate-500">
-                医生接诊中，队列操作不可用；叫号与接诊在医生工作站。
-              </div>
-
-              <!-- 分诊登记（门诊不做四级分级，仅体征 + 主诉） -->
-              <div class="border-t border-slate-100 pt-2.5">
+              <!-- 分诊登记（门诊不做四级分级，仅体征） -->
+              <div class="rounded border border-slate-200 p-2">
                 <div class="mb-1.5 text-xs font-semibold text-slate-500">分诊登记（可选）</div>
                 <div class="mb-1 text-xs text-slate-400">生命体征</div>
                 <div class="grid grid-cols-2 gap-2">
@@ -416,48 +377,70 @@
                   </div>
                   <div>
                     <label class="mb-1 block text-xs text-slate-500">收缩压(mmHg)</label>
-                    <el-input-number v-model="form.systolicBp" :max="400" :min="0" class="w-full" controls-position="right"
+                    <el-input-number v-model="form.systolicBp" :max="400" :min="0" class="w-full"
+                                     controls-position="right"
                                      size="small"/>
                   </div>
                   <div>
                     <label class="mb-1 block text-xs text-slate-500">舒张压(mmHg)</label>
-                    <el-input-number v-model="form.diastolicBp" :max="300" :min="0" class="w-full" controls-position="right"
+                    <el-input-number v-model="form.diastolicBp" :max="300" :min="0" class="w-full"
+                                     controls-position="right"
                                      size="small"/>
                   </div>
                 </div>
-                <div class="mb-1 mt-2 text-xs text-slate-400">其他</div>
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="mb-1 block text-xs text-slate-500">身高(cm)</label>
-                    <el-input-number v-model="form.height" :max="300" :min="0" :step="0.1" class="w-full"
-                                     controls-position="right" size="small"/>
+                <div class="mt-2 flex gap-2 border-t border-slate-100 pt-2">
+                  <el-button v-perm="['opd:triage:add', 'opd:triage:edit']" :loading="saving" class="flex-1"
+                             type="primary" @click="handleSaveTriage">保存分诊
+                  </el-button>
+                  <el-button @click="clearForm">清空</el-button>
+                </div>
+              </div>
+
+              <!-- 队列调度（候诊中/过号） -->
+              <div v-if="selected.queueStatus === 2 || selected.queueStatus === 6"
+                   class="rounded border border-blue-100 bg-blue-50 p-2">
+                <div class="mb-1.5 text-xs font-semibold text-blue-700">队列调度</div>
+                <template v-if="selected.queueStatus === 2">
+                  <div class="mb-1.5 flex items-center justify-between text-xs text-slate-500">
+                    <span>调号（相对当前位置）</span>
+                    <span>移动步数</span>
                   </div>
-                  <div>
-                    <label class="mb-1 block text-xs text-slate-500">体重(kg)</label>
-                    <el-input-number v-model="form.weight" :max="500" :min="0" :step="0.1" class="w-full"
-                                     controls-position="right" size="small"/>
+                  <div class="mb-2 flex items-center gap-1.5">
+                    <el-button class="flex-1" size="small" @click="handleMove(-moveStep)">前移</el-button>
+                    <el-input-number v-model="moveStep" :max="10" :min="1" size="small" style="width: 88px"/>
+                    <el-button class="flex-1" size="small" @click="handleMove(moveStep)">后移</el-button>
                   </div>
-                </div>
-                <div class="mt-2 flex items-center justify-between rounded bg-slate-50 px-2 py-1.5 text-xs">
-                  <span class="text-slate-500">BMI</span>
-                  <span class="font-semibold text-slate-700">{{ bmiPreview ?? '填身高体重后自动计算' }}</span>
-                </div>
-                <div class="mt-2">
-                  <label class="mb-1 block text-xs text-slate-500">疼痛评分（0~10）</label>
-                  <el-input-number v-model="form.painScore" :max="10" :min="0" class="w-full" controls-position="right"
-                                   size="small"/>
-                </div>
-                <div class="mt-2">
-                  <label class="mb-1 block text-xs text-slate-500">主诉</label>
-                  <el-input v-model="form.chiefComplaint" :rows="2" maxlength="500" placeholder="患者自述的主要症状"
-                            show-word-limit type="textarea"/>
-                </div>
+                  <!-- 置为优先：主操作，占满一行 -->
+                  <el-button class="w-full" size="small" type="danger" @click="handleRejoin(selected, 1)">
+                    置为优先（插队首）
+                  </el-button>
+                  <div class="mt-1.5 flex items-center gap-1.5">
+                    <el-button class="flex-1" size="small" type="warning" plain @click="handleOverdue(selected)">过号
+                    </el-button>
+                    <el-button class="flex-1" size="small" type="primary" plain @click="openReassign(selected)">
+                      改派医生/诊室
+                    </el-button>
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="mb-1.5 text-xs text-slate-500">
+                    过号患者本人已回来：重新排回候诊队列<b>队尾</b>（不插队，避免挤掉正常排队的人）
+                  </div>
+                  <el-button class="w-full" size="small" type="danger" @click="handleRejoin(selected, 2)">
+                    过号回队（队尾）
+                  </el-button>
+                </template>
+              </div>
+              <div v-else-if="selected.queueStatus === 3"
+                   class="rounded border border-slate-200 bg-slate-50 p-2 text-xs text-slate-500">
+                医生接诊中，队列操作不可用；叫号与接诊在医生工作站。
               </div>
 
               <!-- 分诊留痕 -->
               <div v-if="triageHistory.length > 0" class="rounded bg-slate-50 p-2">
                 <div class="mb-1 text-xs font-medium text-slate-500">分诊记录</div>
-                <div v-for="(h, i) in triageHistory" :key="h.id" class="flex items-baseline gap-1.5 text-xs text-slate-500">
+                <div v-for="(h, i) in triageHistory" :key="h.id"
+                     class="flex items-baseline gap-1.5 text-xs text-slate-500">
                   <span :class="i === 0 ? 'font-medium text-slate-700' : ''">{{ i === 0 ? '当前' : '历史' }}</span>
                   <span>{{ h.triageTime }}</span>
                   <span>{{ h.triageNurseName || '未记录护士' }}</span>
@@ -466,13 +449,6 @@
               </div>
             </div>
 
-            <!-- 底部操作条：固定，保存始终可见 -->
-            <div class="flex items-center gap-2 border-t border-slate-200 bg-slate-50 px-3 py-2">
-              <el-button v-perm="['opd:triage:add', 'opd:triage:edit']" :loading="saving" class="flex-1"
-                         type="primary" @click="handleSaveTriage">保存分诊
-              </el-button>
-              <el-button @click="clearForm">清空</el-button>
-            </div>
           </div>
         </template>
 
@@ -533,7 +509,7 @@
  * 布局按用户拍板的三栏式：
  * - 左栏【监控】常驻：当前就诊中 / 候诊超时 / 复诊等候超时，不随选中行切换；
  * - 中栏【FIFO 队列】最宽：先到先得，去掉四级分级列；
- * - 右栏【操作卡】：点行出现（队列调度：前移/后移/置为优先/过号/改派 + 分诊体征主诉），未选中给引导。
+ * - 右栏【操作卡】：点行出现（队列调度：前移/后移/置为优先/过号/改派 + 分诊体征），未选中给引导。
  *
  * 关键口径（2026-10-22 门诊收口）：
  * - 门诊**不做急诊式四级分级**：签到不再默认写 4 级，队列按 sequence_no 纯 FIFO；
@@ -623,7 +599,6 @@ const waitText = (row) => {
 /** 候诊超时判定：候诊中且已等候 > 30 分钟（与 stats.timeout 同口径，不落状态列） */
 const isTimeoutRow = (row) => row.queueStatus === 2 && waitMinutes(row) >= 30;
 /** 行样式：超时行整行标红（背景淡红 + 字体红），护士扫一眼即知谁等了太久 */
-const timeoutRowClass = ({row}) => (isTimeoutRow(row) ? 'timeout-row' : '');
 // ========== 列表 ==========
 const buildParams = () => {
   const params = {
@@ -755,7 +730,6 @@ const filterTimeout = () => {
     statusFilter.value.push(2);
   pagination.value.pageNum = 1;
   loadList();
-  ElMessage.info(`候诊超时 ${stats.value.timeout ?? 0} 人（等候超 30 分钟），超时行已标红`);
 };
 // ========== 行操作 ==========
 // 叫号（呼叫/重呼）不在分诊台：与医生「接诊下一位」同语义会收口医生当前就诊，见操作列注释。
@@ -877,8 +851,7 @@ const saving = ref(false);
 const form = ref({
   temperature: null, pulse: null, respiration: null,
   systolicBp: null, diastolicBp: null, spo2: null,
-  height: null, weight: null, painScore: null,
-  chiefComplaint: '', remark: '',
+  remark: '',
 });
 const onRowChange = async (row) => {
   if (!row)
@@ -890,8 +863,7 @@ const openTriage = async (row) => {
   form.value = {
     temperature: null, pulse: null, respiration: null,
     systolicBp: null, diastolicBp: null, spo2: null,
-    height: null, weight: null, painScore: null,
-    chiefComplaint: '', remark: '',
+    remark: '',
   };
   triageHistory.value = [];
   try {
@@ -907,10 +879,6 @@ const openTriage = async (row) => {
         systolicBp: latest.systolicBp ?? null,
         diastolicBp: latest.diastolicBp ?? null,
         spo2: latest.spo2 ?? null,
-        height: latest.height ?? null,
-        weight: latest.weight ?? null,
-        painScore: latest.painScore ?? null,
-        chiefComplaint: latest.chiefComplaint || '',
         remark: '',
       };
     }
@@ -922,19 +890,9 @@ const clearForm = () => {
   form.value = {
     temperature: null, pulse: null, respiration: null,
     systolicBp: null, diastolicBp: null, spo2: null,
-    height: null, weight: null, painScore: null,
-    chiefComplaint: '', remark: '',
+    remark: '',
   };
 };
-/** 仅用于即时展示；落库由后端算（两边算法必须一致，前端只是不让护士瞪着空格等） */
-const bmiPreview = computed(() => {
-  const h = Number(form.value.height);
-  const w = Number(form.value.weight);
-  if (!h || !w || h <= 0)
-    return null;
-  const m = h / 100;
-  return (w / (m * m)).toFixed(1);
-});
 const handleSaveTriage = async () => {
   if (!selected.value) {
     ElMessage.warning('请先在中间队列中选择患者');
@@ -945,10 +903,9 @@ const handleSaveTriage = async () => {
     // 门诊版不带 triageLevel：后端已支持可空（传了才校验、非空才回写队列）
     const payload = {
       queueId: selected.value.id,
-      chiefComplaint: form.value.chiefComplaint || undefined,
       remark: form.value.remark || undefined,
     };
-    for (const k of ['temperature', 'pulse', 'respiration', 'systolicBp', 'diastolicBp', 'spo2', 'height', 'weight', 'painScore']) {
+    for (const k of ['temperature', 'pulse', 'respiration', 'systolicBp', 'diastolicBp', 'spo2']) {
       if (form.value[k] !== null && form.value[k] !== '' && form.value[k] !== undefined) {
         payload[k] = form.value[k];
       }
@@ -1039,8 +996,4 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* 候诊超时行整行标红：与 stats.timeout 同口径（>30 分钟），覆盖 el-table 默认行底色 */
-:deep(.timeout-row td.el-table__cell) {
-  background-color: #fef2f2;
-}
 </style>

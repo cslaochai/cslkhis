@@ -38,6 +38,21 @@
           </div>
         </div>
       </div>
+      <!-- 待复评：候诊超时应接诊时限且又超一个时限没复评——分诊台的催命榜。
+           与「超时未接诊」的分工：那个催医生接诊，这个催护士重新分级。 -->
+      <div class="cursor-pointer rounded-lg border-2 border-orange-200 bg-white p-4 shadow-sm"
+           data-testid="emg-stat-reeval"
+           @click="pickReevalDue">
+        <div class="flex items-center gap-3">
+          <div class="rounded-lg bg-orange-50 p-2.5">
+            <RefreshCw class="h-5 w-5 text-orange-600"/>
+          </div>
+          <div>
+            <p class="text-lg font-bold text-orange-600">{{ stats.reevalDue || 0 }}</p>
+            <p class="text-xs text-slate-500">待复评</p>
+          </div>
+        </div>
+      </div>
       <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div class="flex items-center gap-3">
           <div class="rounded-lg bg-purple-50 p-2.5">
@@ -148,6 +163,11 @@
         <el-checkbox v-model="searchForm.overdueOnly" data-testid="emg-filter-overdue" @change="onOverdueOnlyChange">
           只看超时 {{ stats.overdueWaiting || 0 }}
         </el-checkbox>
+        <!-- 待复评是「超时且又超一个时限没复评」的子集：和留观榜互斥（一个是催接诊、一个是催分级，
+             都不该被「占床最久」的排序盖掉），和「只看超时」并行不冲突 -->
+        <el-checkbox v-model="searchForm.reevalDueOnly" data-testid="emg-filter-reeval" @change="onReevalDueChange">
+          只看待复评 {{ stats.reevalDue || 0 }}
+        </el-checkbox>
         <!-- 留观榜：换的是"看谁"，不参与任何写动作；空=不启用 -->
         <el-select v-model="searchForm.obsBoardHours" class="!w-44" clearable
                    data-testid="emg-filter-obsboard" placeholder="留观榜" @change="onObsBoardChange">
@@ -187,12 +207,27 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column align="center" label="分诊" width="110">
+        <el-table-column align="center" label="分诊" width="150">
           <template #default="{ row }">
             <span
                 :class="['inline-block rounded border px-2 py-0.5 text-xs font-medium', triageLevelMap[row.triageLevel]?.color || '']">
               {{ triageLevelMap[row.triageLevel]?.label }}
             </span>
+            <!-- MEWS 与「分数不对但级别不高」的兜底：分高但级别轻的人要能被看见 -->
+            <span v-if="row.mewsScore != null"
+                  :class="['ml-1 inline-block rounded px-1.5 py-0.5 text-xs font-bold',
+                           row.mewsScore >= 9 ? 'bg-red-100 text-red-700'
+                           : row.mewsScore >= 5 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500']"
+                  data-testid="emg-mews-badge">
+              MEWS {{ row.mewsScore }}
+            </span>
+            <!-- 待复评徽章：分诊规范要求候诊超时须再次评估分级 -->
+            <el-tooltip v-if="row.reevalDue" content="候诊已超应接诊时限且又超一个时限未复评，请重新评估分级" placement="top">
+              <span class="ml-1 inline-block rounded border border-orange-300 bg-orange-50 px-1.5 py-0.5 text-xs font-bold text-orange-600"
+                    data-testid="emg-reeval-badge">
+                待复评
+              </span>
+            </el-tooltip>
           </template>
         </el-table-column>
         <el-table-column label="主诉" min-width="180" show-overflow-tooltip>
@@ -281,8 +316,12 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column fixed="right" label="操作" width="170">
+        <el-table-column fixed="right" label="操作" width="220">
           <template #default="{ row }">
+            <el-button v-if="row.emergencyStatus === 1" v-perm="'opd:emergency:reeval'" link size="small" type="warning"
+                       data-testid="emg-btn-reeval" @click="openReeval(row)">
+              复评
+            </el-button>
             <el-button v-if="row.emergencyStatus === 1" v-perm="'opd:emergency:edit'" link size="small" type="primary"
                        @click="handleStatusChange(row, 2)">
               接诊
@@ -336,6 +375,14 @@
         v-model="obsVisible"
         :row="obsRow"
         :wards="wards"
+        @saved="reloadAfterSave"
+    />
+
+    <!-- 分诊复评：候诊超时再次评估分级（只升不降，留痕） -->
+    <EmergencyReevalEdit
+        v-model="reevalVisible"
+        :row="reevalRow"
+        :triage-level-map="triageLevelMap"
         @saved="reloadAfterSave"
     />
 
@@ -427,7 +474,7 @@
 
 <script setup>
 import {computed, onMounted, ref} from 'vue';
-import {AlarmClock, Bell, Check, Clock, Plus, Refresh, Search, Switch, User, Warning} from '@element-plus/icons-vue';
+import {AlarmClock, Bell, Check, Clock, Plus, Refresh, RefreshCw, Search, Switch, User, Warning} from '@element-plus/icons-vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {
   getEmergencyHandoverListPage,
@@ -444,6 +491,7 @@ import EmergencyAdmitEdit from './EmergencyAdmitEdit.vue';
 import EmergencyHandoverDetail from './EmergencyHandoverDetail.vue';
 import EmergencyHandoverEdit from './EmergencyHandoverEdit.vue';
 import EmergencyObsEdit from './EmergencyObsEdit.vue';
+import EmergencyReevalEdit from './EmergencyReevalEdit.vue';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 
 const GENDER_DOT = {male: 'bg-blue-500', female: 'bg-pink-500', unknown: 'bg-slate-400'};
@@ -455,9 +503,10 @@ const searchForm = ref({
   keyword: '',
   triageLevel: null,
   emergencyStatus: null,
-  // 两个「只看」是兜底看板的入口：待派单池 = 没人负责的，超时 = 该被追问的
+  // 三个「只看」是兜底看板的入口：待派单池 = 没人负责的，超时 = 该被追问的，待复评 = 该重新分级的
   unassignedOnly: false,
   overdueOnly: false,
+  reevalDueOnly: false,
   // 留观榜：null=不看，0=全部在观，其余为统计卡带出的阈值（小时数由后端配置决定，前端不写死）
   obsBoardHours: null,
 });
@@ -500,6 +549,8 @@ const loadData = async () => {
       params.unassignedOnly = true;
     if (searchForm.value.overdueOnly)
       params.overdueOnly = true;
+    if (searchForm.value.reevalDueOnly)
+      params.reevalDueOnly = true;
     // 0 是有效值（=全部在观），所以只判空，不能用真值判断
     if (searchForm.value.obsBoardHours != null)
       params.observationMinHours = searchForm.value.obsBoardHours;
@@ -527,13 +578,19 @@ const handleSearch = () => {
 const handleReset = () => {
   searchForm.value = {
     keyword: '', triageLevel: null, emergencyStatus: null,
-    unassignedOnly: false, overdueOnly: false, obsBoardHours: null,
+    unassignedOnly: false, overdueOnly: false, reevalDueOnly: false, obsBoardHours: null,
   };
   handleSearch();
 };
 /** 超时看的是「还在等的」，留观榜看的是「已经躺着的」，两个口径互斥（后端也会直接拒绝），所以开一个就关另一个 */
 const onOverdueOnlyChange = () => {
   if (searchForm.value.overdueOnly)
+    searchForm.value.obsBoardHours = null;
+  handleSearch();
+};
+/** 待复评同样与留观榜互斥：它是候诊队列的催命榜，不能被「占床最久」的排序盖掉 */
+const onReevalDueChange = () => {
+  if (searchForm.value.reevalDueOnly)
     searchForm.value.obsBoardHours = null;
   handleSearch();
 };
@@ -550,9 +607,23 @@ const pickObsBoard = (hours) => {
   if (hours == null)
     return;
   searchForm.value.obsBoardHours = searchForm.value.obsBoardHours === hours ? null : hours;
-  if (searchForm.value.obsBoardHours != null)
+  if (searchForm.value.obsBoardHours != null) {
     searchForm.value.overdueOnly = false;
+    searchForm.value.reevalDueOnly = false;
+  }
   handleSearch();
+};
+/** 点「待复评」卡片 = 勾上「只看待复评」（再点一次取消） */
+const pickReevalDue = () => {
+  searchForm.value.reevalDueOnly = !searchForm.value.reevalDueOnly;
+  onReevalDueChange();
+};
+// 分诊复评弹框
+const reevalVisible = ref(false);
+const reevalRow = ref(null);
+const openReeval = (row) => {
+  reevalRow.value = row;
+  reevalVisible.value = true;
 };
 /** 档位标签把小时数写出来：只说「超时限」会让人猜是哪一档 */
 const obsBoardOptions = computed(() => {

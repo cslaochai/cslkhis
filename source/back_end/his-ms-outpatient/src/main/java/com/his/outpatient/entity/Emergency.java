@@ -121,6 +121,27 @@ public class Emergency extends BaseEntity {
     private String vitalSigns;
 
     /**
+     * 意识状态（1-清楚 2-对声音有反应 3-对疼痛有反应 4-无反应），
+     * MEWS 五项必采项之一，见 {@link com.his.common.enums.EmergencyConsciousnessEnum}
+     */
+    private Integer consciousness;
+
+    /**
+     * MEWS 评分（0-14，登记/复评时按 WS/T 810—2022 五项版现算快照）
+     */
+    private Integer mewsScore;
+
+    /**
+     * 最近一次分诊复评时间（复评到期判定的起算点；从未复评为 NULL）
+     */
+    private LocalDateTime lastReevalTime;
+
+    /**
+     * 分诊复评次数（含本次登记后的历次复评，从 0 起）
+     */
+    private Integer reevalCount;
+
+    /**
      * 初步诊断
      */
     private String diagnosis;

@@ -4,6 +4,7 @@
       v-model="visible"
       :title="dialogTitle"
       width="980px"
+      :destroy-on-close="true"
       @close="visible = false"
   >
     <el-form
@@ -369,7 +370,13 @@ watch(visible, async (open) => {
   if (!open) return
   resetForm()
   await loadRefs()
-  if (!props.row) return
+  if (!props.row) {
+    // 新增：无历史签名。弹框关闭默认不销毁内容（destroy-on-close=false），
+    // canvas 像素会残留上一位员工签名，必须显式清空（结构性已加 destroy-on-close，这里再兜底）
+    await nextTick()
+    signPadRef.value?.clear()
+    return
+  }
   try {
     const res = await getEmployeeDetail(props.row.id)
     if (res.code === 200 && res.data) {
@@ -394,14 +401,16 @@ watch(visible, async (open) => {
       signImageSaved.value = !!data.signImage
       postRows.value = postsFromApi(data.posts)
       loadCertRows(data.id)
-      nextTick(() => {
-        if (formData.signImage) {
-          signPadRef.value?.setImage(formData.signImage)
-        }
-      })
     }
   } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+
+  }
+  // 每次打开先清空白板再按需预填：弹框关闭不销毁画板，不清空会残留上一位员工签名
+  // 并随保存写库（串签名）。放最后保证无论详情是否取到都先清板
+  await nextTick()
+  signPadRef.value?.clear()
+  if (formData.signImage) {
+    signPadRef.value?.setImage(formData.signImage)
   }
 })
 

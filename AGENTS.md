@@ -627,22 +627,31 @@ grep -E "(//|\*+ ).*\b(biz|sys)_[a-z_]{3,}" --include=*.java -rn source/back_end
 
 ## 15. 数据库默认值铁律（§25 全量落地）
 
-- **铁律两半**：① 非 `del_flag` 的 `NOT NULL` 列一律禁 `DEFAULT`；② `del_flag` 必须写 `tinyint NOT NULL DEFAULT '0'`
-  （可空+默认同样违规——这半条曾被判据盲区放过，97 张表反复漏）。
-- **为什么**：`DEFAULT` 只在列被省略时触发；MP 默认策略对 null 字段直接省列 → `DEFAULT` 静默生效，漏传被填成合法业务值（
-  `org_type DEFAULT '1'` → 按该列过滤漏收/错收），比报错更糟。去掉默认后漏传报 `1364`（fail loud），DTO `@NotNull` +
-  `@AllowedValues` 前移 400 拦住。
-- **`create_time`/`update_time` 禁 DB 默认**：由 `BaseEntity` fill 注解 + `MetaObjectHandler` 填（305 个 create_time 只有
-  162 个带默认，不能指望 DB 兜底）。
-- **`DEFAULT NULL` 一律删**：`NOT NULL DEFAULT NULL` 自相矛盾；可空列上是冗余噪音。
-- 判据：`node workspace/_gate_del_flag_and_notnull_default.mjs` 必须 `GATE PASS`；
-  `grep -rn "DEFAULT NULL" docs/01-初始化DDL docs/03-增量SQL变更` 为 0。⚠ 别用 `grep "NOT NULL DEFAULT"` 当判据（抓不到缺
-  NOT NULL 那半）。已执行：DDL 侧 + 活库 1649 条 DROP DEFAULT + 97 条 del_flag 补 NOT NULL，回查全 0；防回归跑
-  `python workspace/_gen_drop_default_sql.py` 回查 = 0。
-- **fail-loud 后续**：insert 路径必须真给 NOT NULL 无默认列赋值。判据只查 `IS_NULLABLE='NO' AND COLUMN_DEFAULT IS NULL`
-  （4288 列；可空列有隐式默认 NULL，不会报 1364，拉进来只会虚报）。清单核对用 `node workspace/_probe_notnull_unfilled.mjs`
-  。排班域初值统一在 `BizClinicSourceServiceImpl.initNewScheduleRow`（addSchedule 与模板生成共用），判据
-  `node workspace/_gate_schedule_domain_defaults.mjs` → `TOTAL unfilled = 0`。
+- **铁律两半（2026-10-23 改口径）**：① **只有「姓名/操作人」一族 NOT NULL 列禁 `DEFAULT`**——列名 `name`、`*_name`、`*_by`
+  与 `create_by`/`update_by`/`create_by_id`/`update_by_id`（实测 1507 列 / 334 表）。理由是这些列一旦带默认值，漏填就被静默洗成
+  空串/0，「谁做的、叫什么」再也查不回来；去掉默认后漏填报 `1364`（fail loud）。② `del_flag` 必须
+  `tinyint NOT NULL DEFAULT '0'`（可空+默认同样违规——这半条曾被判据盲区放过，97 张表反复漏）。
+- **其余 `NOT NULL` 列的 `DEFAULT` 是刻意保留的**（状态位/数量/金额/`create_time DEFAULT (now())` 等业务初值），**不要再批量
+  DROP DEFAULT**——那是一条会改变 insert 成败的口径，2026-10-23 已由用户明确否决旧铁律。要单独收某一列，按列逐处拍板。
+- **`create_time`/`update_time`**：DB 上保留 `DEFAULT (now())` 作兜底，但代码侧仍必须由 `BaseEntity` fill 注解 +
+  `MetaObjectHandler` 写（历史库里 305 个 create_time 只有 162 个带默认，不能指望 DB）。
+- **`DEFAULT NULL` 一律删**：`NOT NULL DEFAULT NULL` 自相矛盾；可空列上是冗余噪音，基线统一不写。
+- 判据：`python workspace/_reorg_docs_baseline.py verify` → 结论行「基线违规 = 0，行数不通过 = 0，内容不通过 = 0」。它在临时库
+  `hn_biz_his_baseline_chk` 里把 01+02 全量回放（2026-10-23 实测 342 建表 / 762 铺底语句，与活库逐表行数、逐表 CRC32 内容一致），
+  跑完自动删临时库；`sys_user` 的 `last_login_time`/`last_login_ip`/`login_count`
+  是登录态，每次登录都变，比对里按 `VOLATILE_COLS` 豁免。旧的一条命令初始化路径：`python workspace/_reorg_docs_baseline.py import --schema <库名>`。
+  ⚠ 旧判据脚本
+  `workspace/_gate_del_flag_and_notnull_default.mjs`、`_gen_drop_default_sql.py`、`_probe_notnull_unfilled.mjs`
+  已不在仓库，且它们的前提（全部 NOT NULL 列禁默认）已作废，别照着重写。
+- **活库现状与旧记录不符（2026-10-23 复查）**：dev 库仍有 3777 个非 `del_flag` 的 `NOT NULL` 列带 `DEFAULT`（旧记录写的
+  「活库 1649 条 DROP DEFAULT、回查全 0」没落到这个库上）。其中姓名/操作人那 1507 列是新口径下的真违规，收敛脚本已生成但未执行：
+  `docs/03-增量SQL变更/20261023_姓名与操作人NOT_NULL列剥掉DEFAULT.sql`（⚠ 289 号文件按当时的指令给这些列**补回**了默认，与本口径冲突，执行收敛脚本即撤销那一部分）。
+- **执行收敛脚本前先跑判据**：`python workspace/_probe_strip_default_safety.py`。2026-10-23 实测：334 张表全部有实体声明这些列、无裸
+  SQL 漏列（`create_by_id`
+  一类审计列要么挂 `BaseEntity` 要么带 fill 注解），唯一例外是 `SignConfigMapper.insertValue` 往 `sys_config`
+  插配置时省略了 4 个操作人列——剥掉默认后这条 INSERT 报 1364，必须先给它补列。
+- **fail-loud 后续**：insert 路径必须真给「无默认的 NOT NULL 列」赋值。排班域初值统一在
+  `BizClinicSourceServiceImpl.initNewScheduleRow`（addSchedule 与模板生成共用）。
 
 ## 16. 业务实体挂 BaseEntity
 

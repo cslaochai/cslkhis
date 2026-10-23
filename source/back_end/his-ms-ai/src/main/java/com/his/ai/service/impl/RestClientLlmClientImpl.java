@@ -9,9 +9,8 @@ import com.his.ai.dto.AiChatRequestDTO;
 import com.his.ai.dto.LlmResultDTO;
 import com.his.ai.dto.OpenAiChatRequestDTO;
 import com.his.ai.dto.OpenAiChatResponseDTO;
-import com.his.common.exception.LlmException;
 import com.his.ai.service.LlmClient;
-import com.his.ai.service.RestClientLlmClient;
+import com.his.common.exception.LlmException;
 import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,13 +32,10 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class RestClientLlmClientImpl implements LlmClient, RestClientLlmClient {
+public class RestClientLlmClientImpl implements LlmClient {
 
-    private static final String CHAT_PATH = "/v1/chat/completions";
     private static final int MAX_CONNECT_TIMEOUT_MS = 5_000;
     private static final int MAX_ERROR_BODY_LENGTH = 500;
-    // 手动解析替代按 Content-Type 转换；与 Spring Boot 自动配置的 ObjectMapper 同口径，未知字段不报错
-    // （推理模型会在 message 里多带 reasoning_content，FAIL_ON_UNKNOWN_PROPERTIES 默认开会把正常响应拒掉）
     private static final ObjectMapper RESPONSE_MAPPER = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
@@ -66,7 +62,7 @@ public class RestClientLlmClientImpl implements LlmClient, RestClientLlmClient {
         guardConfig(properties);
 
         String model = TextUtil.hasText(request.getModel()) ? request.getModel() : properties.getModel();
-        String baseUrl = normalizeBaseUrl(properties.getBaseUrl());
+        String baseUrl = properties.getBaseUrl();
         int effectiveTimeout = timeoutMs > 0 ? timeoutMs : properties.getTimeoutMs();
 
         OpenAiChatRequestDTO body = buildBody(request, model);
@@ -81,7 +77,7 @@ public class RestClientLlmClientImpl implements LlmClient, RestClientLlmClient {
                 // 不依赖响应 Content-Type：部分兼容端点偶发把 JSON 标成 application/octet-stream，
                 // 按 content-type 走 Jackson 转换器会直接抛 UnknownContentType；这里取原始字节按 UTF-8 自行解析
                 String raw = client.post()
-                        .uri(chatPath(baseUrl))
+                        .uri(baseUrl)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.getApiKey())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
@@ -194,20 +190,5 @@ public class RestClientLlmClientImpl implements LlmClient, RestClientLlmClient {
                     + (TextUtil.hasText(detail) ? "：" + detail : ""), ex);
         }
         return new LlmException("模型服务不可达：" + ex.getMessage(), ex);
-    }
-
-    /**
-     * 兼容两种常见写法：填 https://api.deepseek.com 或直接填 .../v1
-     */
-    private String normalizeBaseUrl(String baseUrl) {
-        String value = baseUrl.trim();
-        while (value.endsWith("/")) {
-            value = value.substring(0, value.length() - 1);
-        }
-        return value;
-    }
-
-    private String chatPath(String normalizedBaseUrl) {
-        return normalizedBaseUrl.endsWith("/v1") ? "/chat/completions" : CHAT_PATH;
     }
 }

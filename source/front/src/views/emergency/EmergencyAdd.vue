@@ -83,13 +83,49 @@
             <el-option v-for="(v, k) in triageLevelMap" :key="k" :label="v.label" :value="Number(k)"/>
           </el-select>
         </el-form-item>
-        <el-form-item label="接诊科室">
-          <el-select v-model="addForm.deptId" class="w-full" clearable filterable placeholder="选择科室"
-                     @change="handleDeptChange">
-            <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id"/>
+        <el-form-item label="意识状态" required>
+          <el-select v-model="addForm.consciousness" class="w-full" placeholder="必选：MEWS 五项之一">
+            <el-option v-for="c in CONSCIOUSNESS_OPTIONS" :key="c.value" :label="c.label" :value="c.value"/>
           </el-select>
+          <div class="mt-1 text-xs text-slate-400">
+            老幼/聋哑/醉酒无法评估时选最接近的档，并在主诉里说明
+          </div>
         </el-form-item>
       </div>
+
+      <!-- MEWS 评分（确定性规则，WS/T 810—2022 五项版）。
+           与下面的 AI 建议分工：这张卡是纯规则算分，永远有结果；
+           AI 建议只在没有红旗征象时补充严重程度判断。两者都只作参考，级别由人工定。 -->
+      <div class="mb-4 rounded-lg border border-slate-200 bg-slate-50/60 p-3" data-testid="emg-mews-card">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-slate-700">MEWS 评分</p>
+            <p class="mt-0.5 text-xs text-slate-400">
+              WS/T 810—2022 五项版（心率/收缩压/呼吸/体温/意识）· ≥9 极高危 · 5-8 高危 · &lt;5 平诊
+            </p>
+          </div>
+          <span v-if="mews" :class="['rounded border px-2 py-0.5 text-xs font-bold', mewsLevelClass(mews.levelText)]">
+            {{ mews.score }} 分 · {{ mews.levelText }}
+          </span>
+          <span v-else class="text-xs text-slate-400">填体征/意识后自动算分</span>
+        </div>
+        <div v-if="mews" class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+          <span v-for="it in mews.items" :key="it.name"
+                :class="it.score >= 2 ? 'font-bold text-red-600' : it.score === 1 ? 'text-amber-600' : 'text-slate-500'">
+            {{ it.name }} {{ it.valueText }}（{{ it.score }}分）
+          </span>
+        </div>
+        <p v-if="mews?.consciousnessMissing" class="mt-1 text-xs text-amber-600">
+          意识未采：缺项按 0 分计会压低总分、低估危险性，请先选意识状态
+        </p>
+      </div>
+
+      <el-form-item label="接诊科室">
+        <el-select v-model="addForm.deptId" class="w-full" clearable filterable placeholder="选择科室"
+                   @change="handleDeptChange">
+          <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id"/>
+        </el-select>
+      </el-form-item>
 
       <!-- AI 分诊建议 -->
       <div class="mb-4 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
@@ -226,7 +262,7 @@
 <script setup>
 import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
-import {getEmergencyDutySelectList, registerEmergency} from '@/api/emergency';
+import {getEmergencyDutySelectList, getEmergencyMewsScore, registerEmergency} from '@/api/emergency';
 import {getDepartmentSelectList} from '@/api/system';
 import {suggestEmergencyTriage} from '@/api/ai';
 import PatientSelect from '@/components/his/PatientSelect.vue';
@@ -265,12 +301,20 @@ const addForm = ref({
   idCard: '',
   chiefComplaint: '',
   triageLevel: 3,
+  // 意识是 MEWS 必采项：缺项按 0 分计会压低总分，所以登记侧必选（后端 @NotNull 同口径）
+  consciousness: null,
   deptId: null,
   doctorId: null,
   // 只在「当前无在岗医生」时出现输入框；留空时后端兜底成「当日该科室无在岗排班医生」
   unassignedReason: '',
 });
 
+const CONSCIOUSNESS_OPTIONS = [
+  {value: 1, label: '清楚'},
+  {value: 2, label: '对声音有反应'},
+  {value: 3, label: '对疼痛有反应'},
+  {value: 4, label: '无反应'},
+];
 const departments = ref([]);
 const employeeList = ref([]);
 
@@ -337,12 +381,45 @@ const vitalForm = ref({
 });
 const triageSuggestion = ref(null);
 const triageSuggesting = ref(false);
+
+// ==================== MEWS 实时评分 ====================
+//
+// 算分走后端接口（/emergency/mewsScore），前端不镜像规则：评分表改一格，
+// 两边静默不一致的代价是分诊台上"分数不对但级别不高"的人被漏掉。
+// 防抖 400ms：el-input-number 连续点加减不会把接口打满。
+const mews = ref(null);
+let mewsTimer = null;
+const mewsLevelClass = (level) => {
+  if (level === '极高危')
+    return 'bg-red-100 text-red-700 border-red-300';
+  if (level === '高危')
+    return 'bg-amber-100 text-amber-700 border-amber-300';
+  return 'bg-emerald-100 text-emerald-700 border-emerald-300';
+};
+const runMews = async () => {
+  try {
+    const res = await getEmergencyMewsScore({
+      vitalSigns: buildVitalSigns(),
+      consciousness: addForm.value.consciousness || undefined,
+    });
+    mews.value = res.data || null;
+  } catch (error)  /* 算分失败不堵登记：分是辅助，级别由人工定 */{
+    mews.value = null;
+  }
+};
+watch([vitalForm, () => addForm.value.consciousness], () => {
+  if (mewsTimer)
+    clearTimeout(mewsTimer);
+  mewsTimer = setTimeout(runMews, 400);
+}, {deep: true});
+
 const resetVitalForm = () => {
   vitalForm.value = {
     temperature: null, pulse: null, respiratory: null,
     systolic: null, diastolic: null, spo2: null,
   };
   triageSuggestion.value = null;
+  mews.value = null;
 };
 /** 只把填了值的项放进 JSON，空值不能当成 0（0 是一个结论） */
 const buildVitalSigns = () => {
@@ -417,8 +494,8 @@ watch(visible, async (open) => {
     return;
   addForm.value = {
     patientId: null, patientName: '', patientNo: '', gender: null, age: 0,
-    phone: '', idCard: '', chiefComplaint: '', triageLevel: 3, deptId: null, doctorId: null,
-    unassignedReason: '',
+    phone: '', idCard: '', chiefComplaint: '', triageLevel: 3, consciousness: null,
+    deptId: null, doctorId: null, unassignedReason: '',
   };
   addMode.value = 'existing';
   employeeList.value = [];
@@ -456,6 +533,12 @@ const handleAddSubmit = async () => {
   }
   if (!addForm.value.chiefComplaint) {
     ElMessage.warning('请填写主诉');
+    return;
+  }
+  // 意识必选（两种患者来源都一样）：MEWS 缺项按 0 分计会压低总分，
+  // 「没注意」和「评估过是清楚的」在台账上必须是两件事
+  if (!addForm.value.consciousness) {
+    ElMessage.warning('请选择意识状态');
     return;
   }
   try {

@@ -37,8 +37,18 @@
       </el-table-column>
       <el-table-column label="分诊/状态" width="110">
         <template #default="{ row }">
-          <div class="text-xs text-slate-700">{{ row.triageLevelText }}</div>
+          <div class="text-xs text-slate-700">
+            {{ row.triageLevelText }}
+            <span v-if="row.mewsScore != null"
+                  :class="['ml-1 rounded px-1 py-0.5 text-xs font-bold',
+                           row.mewsScore >= 9 ? 'bg-red-100 text-red-700'
+                           : row.mewsScore >= 5 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500']">
+              {{ row.mewsScore }}
+            </span>
+          </div>
           <div class="text-xs text-slate-400">{{ row.emergencyStatusText }}</div>
+          <!-- 待复评的行接班后第一件事是去复评，不是接着等 -->
+          <div v-if="row.reevalDue" class="text-xs font-bold text-orange-600">待复评</div>
         </template>
       </el-table-column>
       <el-table-column label="现负责" width="90">

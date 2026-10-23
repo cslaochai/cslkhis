@@ -81,7 +81,14 @@ const clear = () => {
  * 图片按画板比例缩放铺满；铺不下的按短边等比。失败（非法 dataURL）时保持画板为空并返回 false。
  */
 const setImage = (dataUrl) => {
-  if (!dataUrl || !dataUrl.startsWith('data:image/')) return false
+  if (!dataUrl || !dataUrl.startsWith('data:image/')) {
+    // 空或非法：清空画板并回到待手写态，避免复用画板时残留上一位签名笔迹
+    ctx.clearRect(0, 0, props.width, props.height)
+    guide()
+    empty.value = true
+    emit('change', '')
+    return false
+  }
   const img = new Image()
   img.onload = () => {
     const cv = canvas.value

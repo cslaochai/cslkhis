@@ -169,6 +169,37 @@ public class BizEmergencyVO {
     private String vitalSigns;
 
     /**
+     * 意识状态（1-清楚 2-对声音有反应 3-对疼痛有反应 4-无反应）
+     */
+    private Integer consciousness;
+
+    /**
+     * 意识状态文案（未采时明确说「未采」，不按 0 分悄悄算完）
+     */
+    private String consciousnessText;
+
+    /**
+     * MEWS 评分（0-14；登记/复评时快照，不是读时现算——级别定了分就定了，事后翻账要能复核）
+     */
+    private Integer mewsScore;
+
+    /**
+     * 最近一次分诊复评时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime lastReevalTime;
+
+    /**
+     * 分诊复评次数
+     */
+    private Integer reevalCount;
+
+    /**
+     * 待复评标记（true = 候诊超时应接诊时限且又超过一个时限未复评；只对候诊中有意义）
+     */
+    private Boolean reevalDue;
+
+    /**
      * 初步诊断
      */
     private String diagnosis;

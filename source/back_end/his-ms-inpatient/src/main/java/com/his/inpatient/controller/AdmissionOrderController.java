@@ -49,6 +49,17 @@ public class AdmissionOrderController {
     }
 
     /**
+     * 当前登录医生所开住院证分页（门诊医生站「我开的住院证」）。
+     * 开证医生取自身份，不收前端参数。
+     */
+    @PreAuthorize("hasAuthority('opd:doctorWorkstation:list')")
+    @Operation(summary = "我开的住院证分页（门诊医生站）")
+    @GetMapping("/myListPage")
+    public Result<IPage<AdmissionOrderVO>> myListPage(@Valid AdmissionOrderPageQueryDTO query) {
+        return Result.success(admissionOrderService.myListPage(query));
+    }
+
+    /**
      * 取单张住院证的拟收治科室、拟诊与有效期等内容。
      * 供入院登记前核对住院证信息时取数。
      */

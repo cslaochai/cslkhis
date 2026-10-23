@@ -1,0 +1,103 @@
+# 02-铺底基础数据（新库初始化用）
+
+- 一个表一个文件，按 `../01-初始化DDL` 的领域分子目录；目录内 `00_import.sql` 汇总，根目录 `00_import_all.sql` 串全部领域。
+- 共 92 张表。生成：`python workspace/_reorg_docs_baseline.py seed`（2026-10-23 自 dev 库按主键序导出，单语句 500 行）
+- 前置：先跑 `../01-初始化DDL/*.sql` 建表，再 `cd` 到本目录执行 `mysql --default-character-set=utf8mb4 库名 < 00_import_all.sql`。
+- **不含运行数据**：`biz_clinic_source`（排班）、`biz_clinic_source_slot`（号源）、`biz_schedule`（排班实例）——新环境由排班发布功能生成，不铺底。
+- `biz_clinic_source_slot_template` 是主数据模板：dev 库当前 0 行，按原铺底保留，不以库清空。
+- DRG 大批量目录（`biz_drg_set` 等 26 万行）仍在 `../03-增量SQL变更/239-DRG2.0-3.0整体数据铺底.sql`，不并进来。
+
+| 领域目录 | 表 | 铺底行数 |
+|---|---|---|
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_config | 34 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_department | 96 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_dict_data | 1863 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_dict_type | 408 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_employee | 516 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_employee_post | 518 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_employee_qualification | 571 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_employee_tech_auth | 126 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_menu | 519 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_role | 27 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_role_menu | 1413 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_sign_cert | 14 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_tsa_server | 1 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_user | 491 |
+| 03-空间与设备主数据（病区·床位·诊室·手术间·设备） | biz_infusion_seat | 23 |
+| 03-空间与设备主数据（病区·床位·诊室·手术间·设备） | sys_bed | 1070 |
+| 03-空间与设备主数据（病区·床位·诊室·手术间·设备） | sys_clinic_room | 120 |
+| 03-空间与设备主数据（病区·床位·诊室·手术间·设备） | sys_equipment | 90 |
+| 03-空间与设备主数据（病区·床位·诊室·手术间·设备） | sys_operation_room | 6 |
+| 03-空间与设备主数据（病区·床位·诊室·手术间·设备） | sys_ward | 49 |
+| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | biz_dip_aux | 4 |
+| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | biz_dip_disease | 13 |
+| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | biz_shift | 21 |
+| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_checkup_package | 10 |
+| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_checkup_package_item | 73 |
+| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_consumable | 125 |
+| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_diagnosis | 82 |
+| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_drug | 550 |
+| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_drug_dose_limit | 34 |
+| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_drug_interaction | 91 |
+| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_drug_price_history | 20 |
+| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_icd10 | 61725 |
+| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_icd9cm3 | 13947 |
+| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_infectious_disease | 30 |
+| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_inspection_item | 105 |
+| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_laboratory_item | 110 |
+| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_laboratory_item_detail | 156 |
+| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_price_change_history | 12 |
+| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_single_disease | 16 |
+| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_supplier | 29 |
+| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_treatment_item | 103 |
+| 05-医保（目录·对照·备案·结算·审核） | biz_yb_catalog | 72 |
+| 05-医保（目录·对照·备案·结算·审核） | biz_yb_catalog_rule | 38 |
+| 05-医保（目录·对照·备案·结算·审核） | biz_yb_chronic_catalog | 23 |
+| 05-医保（目录·对照·备案·结算·审核） | biz_yb_mapping | 45 |
+| 05-医保（目录·对照·备案·结算·审核） | biz_yb_policy | 18 |
+| 07-预约挂号·排班·分诊·叫号 | biz_clinic_source_slot_template | carry-over |
+| 07-预约挂号·排班·分诊·叫号 | biz_clinic_source_template | 17 |
+| 07-预约挂号·排班·分诊·叫号 | biz_opd_station | 5 |
+| 07-预约挂号·排班·分诊·叫号 | biz_revisit_fee_policy | 5 |
+| 07-预约挂号·排班·分诊·叫号 | biz_staff_plan_rule | 125 |
+| 07-预约挂号·排班·分诊·叫号 | biz_triage_rule | 30 |
+| 08-门诊病历与处方 | biz_diag_template | 4 |
+| 08-门诊病历与处方 | biz_rx_template | 9 |
+| 08-门诊病历与处方 | biz_rx_template_detail | 22 |
+| 09-住院与医嘱（入出转·会诊·床位调度） | biz_inpatient_order_template | 13 |
+| 09-住院与医嘱（入出转·会诊·床位调度） | biz_inpatient_order_template_item | 65 |
+| 10-护理（文书·评估·排班·质控） | sys_nursing_qc_item | 26 |
+| 12-检验LIS（申请·结果·质控·室间质评） | biz_laboratory_template | 13 |
+| 12-检验LIS（申请·结果·质控·室间质评） | biz_lis_qc_plan | 13 |
+| 12-检验LIS（申请·结果·质控·室间质评） | sys_lab_plain_item | 52 |
+| 13-检查影像与报告（PACS·预约·心电·病理·内镜） | biz_ecg_template | 7 |
+| 13-检查影像与报告（PACS·预约·心电·病理·内镜） | biz_exam_device | 8 |
+| 13-检查影像与报告（PACS·预约·心电·病理·内镜） | biz_exam_device_item | 111 |
+| 13-检查影像与报告（PACS·预约·心电·病理·内镜） | biz_exam_slot | 147 |
+| 13-检查影像与报告（PACS·预约·心电·病理·内镜） | biz_film_spec | 7 |
+| 13-检查影像与报告（PACS·预约·心电·病理·内镜） | biz_inspection_template | 11 |
+| 13-检查影像与报告（PACS·预约·心电·病理·内镜） | biz_radio_report_template | 8 |
+| 13-检查影像与报告（PACS·预约·心电·病理·内镜） | sys_imaging_plain_item | 31 |
+| 14-手术麻醉与日间手术 | biz_day_surgery_item | 19 |
+| 15-输血与血库 | biz_blood_inventory | 16 |
+| 17-药房药库（采购·库存·发药·调拨·盘点·静配） | biz_drug_package | 6 |
+| 17-药房药库（采购·库存·发药·调拨·盘点·静配） | biz_drug_package_detail | 17 |
+| 17-药房药库（采购·库存·发药·调拨·盘点·静配） | biz_drug_stock | 415 |
+| 18-耗材与消毒供应（CSSD） | biz_consumable_stock | 24 |
+| 19-收费四层（记账·结算·支付·票据） | biz_arrears_policy | 1 |
+| 19-收费四层（记账·结算·支付·票据） | biz_fund_account | 10 |
+| 21-专项质控与专科管理（路径·抗菌药物·VTE·营养·体检·透析·监护） | biz_pathway | 19 |
+| 21-专项质控与专科管理（路径·抗菌药物·VTE·营养·体检·透析·监护） | biz_pathway_step | 156 |
+| 22-互联网医院·随访·满意度·消息与工作台 | biz_survey_item | 8 |
+| 22-互联网医院·随访·满意度·消息与工作台 | biz_survey_template | 5 |
+| 22-互联网医院·随访·满意度·消息与工作台 | sys_ai_prompt_template | 30 |
+| 22-互联网医院·随访·满意度·消息与工作台 | sys_ai_qa_column | 8367 |
+| 22-互联网医院·随访·满意度·消息与工作台 | sys_ai_qa_relation | 360 |
+| 22-互联网医院·随访·满意度·消息与工作台 | sys_ai_qa_schema | 328 |
+| 22-互联网医院·随访·满意度·消息与工作台 | sys_ai_qa_semantic | 17 |
+| 22-互联网医院·随访·满意度·消息与工作台 | sys_alert_rule | 25 |
+| 22-互联网医院·随访·满意度·消息与工作台 | sys_faq | 80 |
+| 22-互联网医院·随访·满意度·消息与工作台 | sys_knowledge_doc | 12 |
+| 22-互联网医院·随访·满意度·消息与工作台 | sys_workbench_layout | 8 |
+| 22-互联网医院·随访·满意度·消息与工作台 | sys_workbench_role | 134 |
+| 22-互联网医院·随访·满意度·消息与工作台 | sys_workbench_widget | 38 |

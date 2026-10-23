@@ -41,4 +41,15 @@ public class ConsultingPatientVO {
      * 医生姓名
      */
     private String doctorName;
+
+    /**
+     * 诊室ID
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long roomId;
+
+    /**
+     * 诊室名称
+     */
+    private String roomName;
 }
