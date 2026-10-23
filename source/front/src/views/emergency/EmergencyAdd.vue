@@ -75,7 +75,7 @@
       <el-form-item label="主诉" required>
         <!-- 主诉一改就作废旧建议：否则可能采纳一条针对别的主诉算出来的级别 -->
         <el-input v-model="addForm.chiefComplaint" :rows="2" placeholder="请输入主诉" type="textarea"
-                  @input="triageSuggestion = null"/>
+                  @input="triageSuggestion = null; addForm.greenChannel = '无'"/>
       </el-form-item>
       <div class="grid grid-cols-2 gap-4">
         <el-form-item label="分诊级别" required>
@@ -92,6 +92,15 @@
           </div>
         </el-form-item>
       </div>
+
+      <el-form-item label="绿色通道">
+        <el-select v-model="addForm.greenChannel" class="w-full" placeholder="选择绿色通道">
+          <el-option v-for="c in GREEN_CHANNEL_OPTIONS" :key="c.value" :label="c.label" :value="c.value"/>
+        </el-select>
+        <div class="mt-1 text-xs text-slate-400">
+          胸痛 / 卒中 / 创伤类主诉经「获取建议」会自动识别并预填，可手动调整。绿通患者将优先启动对应救治通道。
+        </div>
+      </el-form-item>
 
       <!-- MEWS 评分（确定性规则，WS/T 810—2022 五项版）。
            与下面的 AI 建议分工：这张卡是纯规则算分，永远有结果；
@@ -201,6 +210,11 @@
             <el-tag v-if="triageSuggestion.suggestedGreenChannel" size="small" type="success">
               {{ triageSuggestion.suggestedGreenChannel }}
             </el-tag>
+            <el-button
+                v-if="triageSuggestion.suggestedGreenChannel && triageSuggestion.suggestedGreenChannel !== '无' && addForm.greenChannel !== triageSuggestion.suggestedGreenChannel"
+                size="small" type="success" @click="addForm.greenChannel = triageSuggestion.suggestedGreenChannel">
+              采纳绿通
+            </el-button>
             <span class="text-slate-500">
               当前已选 {{ triageLevelMap[addForm.triageLevel]?.label }}
             </span>
@@ -301,6 +315,8 @@ const addForm = ref({
   idCard: '',
   chiefComplaint: '',
   triageLevel: 3,
+  // 绿色通道：登记即落库，默认「无」。AI 建议识别到胸痛/卒中/创伤时会被自动采纳，护士可改。
+  greenChannel: '无',
   // 意识是 MEWS 必采项：缺项按 0 分计会压低总分，所以登记侧必选（后端 @NotNull 同口径）
   consciousness: null,
   deptId: null,
@@ -314,6 +330,12 @@ const CONSCIOUSNESS_OPTIONS = [
   {value: 2, label: '对声音有反应'},
   {value: 3, label: '对疼痛有反应'},
   {value: 4, label: '无反应'},
+];
+const GREEN_CHANNEL_OPTIONS = [
+  {value: '胸痛中心', label: '胸痛中心'},
+  {value: '卒中中心', label: '卒中中心'},
+  {value: '创伤中心', label: '创伤中心'},
+  {value: '无', label: '无'},
 ];
 const departments = ref([]);
 const employeeList = ref([]);
@@ -448,6 +470,10 @@ const runTriageSuggest = async () => {
       age: addForm.value.age || undefined,
     });
     triageSuggestion.value = res.data;
+    // 绿通由确定性关键词识别（不依赖 AI）：识别到胸痛/卒中/创伤时自动预填，护士可改
+    if (res.data?.suggestedGreenChannel && res.data.suggestedGreenChannel !== '无') {
+      addForm.value.greenChannel = res.data.suggestedGreenChannel;
+    }
   } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
     
   } finally {
@@ -495,6 +521,7 @@ watch(visible, async (open) => {
   addForm.value = {
     patientId: null, patientName: '', patientNo: '', gender: null, age: 0,
     phone: '', idCard: '', chiefComplaint: '', triageLevel: 3, consciousness: null,
+    greenChannel: '无',
     deptId: null, doctorId: null, unassignedReason: '',
   };
   addMode.value = 'existing';
