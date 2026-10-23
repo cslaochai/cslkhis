@@ -599,6 +599,7 @@ CREATE TABLE `biz_rx_template` (
   `id` bigint NOT NULL,
   `doctor_id` bigint NOT NULL DEFAULT '0' COMMENT '医生ID',
   `template_name` varchar(100) NOT NULL COMMENT '模板名称',
+  `prescription_type` tinyint COMMENT '处方类型（1-西药 2-中成药 3-中药饮片）',
   `drug_count` int COMMENT '药品数量',
   `total_amount` decimal(10,2) COMMENT '总金额',
   `create_by` varchar(64) NOT NULL COMMENT '创建人',

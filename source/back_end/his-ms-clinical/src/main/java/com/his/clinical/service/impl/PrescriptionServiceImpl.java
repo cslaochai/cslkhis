@@ -24,6 +24,7 @@ import com.his.clinical.mapper.*;
 import com.his.clinical.service.PrescriptionService;
 import com.his.clinical.vo.*;
 import com.his.spi.dto.DrugRationalCheckItemDTO;
+import com.his.spi.vo.DrugRationalCheckHitVO;
 import com.his.common.enums.BizTypeEnum;
 import com.his.spi.service.DrugRationalCheckFacadeService;
 import com.his.spi.vo.DrugRationalCheckHitVO;
@@ -289,6 +290,15 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
             results.add(vo);
         }
         return results;
+    }
+
+    @Override
+    public List<DrugRationalCheckHitVO> rationalCheckDraft(List<DrugRationalCheckItemDTO> items) {
+        if (CollectionUtils.isEmpty(items)) {
+            return Collections.emptyList();
+        }
+        // 与 rationalCheck 共用药品域同一套判定：只读、不落库，命中即实时返回
+        return drugRationalCheckFacadeService.check(items);
     }
 
     /**

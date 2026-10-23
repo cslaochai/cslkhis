@@ -7,6 +7,8 @@ import com.his.clinical.entity.BizInspectionApply;
 import com.his.clinical.entity.BizLaboratoryApply;
 import com.his.clinical.entity.BizMedicalRecord;
 import com.his.clinical.vo.BizPrescriptionVO;
+import com.his.spi.dto.DrugRationalCheckItemDTO;
+import com.his.spi.vo.DrugRationalCheckHitVO;
 import com.his.spi.vo.MyPrescriptionVO;
 import com.his.clinical.vo.PrescriptionRationalVO;
 
@@ -48,6 +50,18 @@ public interface PrescriptionService extends IService<BizMedicalRecord> {
      * 不允许出现「界面说能过、后端不给过」两套口径。
      */
     List<PrescriptionRationalVO> rationalCheck(List<Long> prescriptionIds);
+
+    /**
+     * 开方实时审方（前置审方）：按<b>未保存的处方行数据</b>即时比对相互作用与剂量上限。
+     *
+     * <p>只读、不落库：医生工作台每次处方明细变化（防抖）调用，把命中实时摊给医生；
+     * 与 {@link #rationalCheck} 共用药品域同一套判定（{@code DrugRationalCheckFacadeService}），
+     * 不会出现「开方时没提示、提交后又说不行」两套口径。
+     *
+     * @param items 药品行（名称与规格取行上快照，与保存后单据快照同源）
+     * @return 命中列表，禁忌级排在最前；无命中返回空列表
+     */
+    List<DrugRationalCheckHitVO> rationalCheckDraft(List<DrugRationalCheckItemDTO> items);
 
     /**
      * 查询检查申请列表（不分页）

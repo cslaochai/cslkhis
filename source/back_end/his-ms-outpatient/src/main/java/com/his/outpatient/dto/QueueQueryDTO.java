@@ -1,6 +1,7 @@
 package com.his.outpatient.dto;
 
 import com.his.common.base.PageParam;
+import com.his.common.validation.AllowedValues;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -55,4 +56,11 @@ public class QueueQueryDTO extends PageParam {
      * 查询结束时间（yyyy-MM-dd HH:mm:ss）
      */
     private String endTime;
+
+    /**
+     * 号别集合（逗号分隔，1-普通号 2-专家号 3-急诊号 4-免费号；不传 = 全部号别）。
+     * 门诊分诊台传 "1,2" 只管门诊号；医生工作站不传，叫号/候诊数必须含急诊行。
+     */
+    @AllowedValues(values = {"1", "2", "3", "4"}, separator = ",", message = "号别取值不合法")
+    private String registTypes;
 }

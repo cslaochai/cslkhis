@@ -947,6 +947,8 @@ const handleCurrentChange = (val) => {
 };
 const buildQueryParams = (withPaging = true) => {
   const params = {};
+  // 本页是门诊预约管理，只管普通号/专家号；急诊直录单不经本页签到/退号，号别口径由后端按参数过滤
+  params.registTypes = '1,2';
   if (withPaging) {
     params.pageNum = pagination.value.pageNum;
     params.pageSize = pagination.value.pageSize;
@@ -1274,7 +1276,7 @@ const loadDesk = async () => {
   try {
     const days = deskDateList();
     deskDays.value = days;
-    const params = {startDate: days[0], endDate: days[days.length - 1]};
+    const params = {startDate: days[0], endDate: days[days.length - 1], registTypes: '1,2'};
     if (!isAllDept(deskDeptId.value))
       params.deptId = deskDeptId.value;
     if (deskDoctorId.value)

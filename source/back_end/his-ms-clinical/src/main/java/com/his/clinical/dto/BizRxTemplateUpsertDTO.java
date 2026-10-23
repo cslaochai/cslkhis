@@ -26,6 +26,11 @@ public class BizRxTemplateUpsertDTO {
     private String templateName;
 
     /**
+     * 处方类型（1-西药 2-中成药 3-中药饮片），保存时由前端传当前 tab 类型
+     */
+    private Integer prescriptionType;
+
+    /**
      * 药品数量
      */
     private Integer drugCount;

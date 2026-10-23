@@ -1,6 +1,7 @@
 package com.his.clinical.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.clinical.dto.BizDiagTemplateUpsertDTO;
@@ -12,6 +13,8 @@ import com.his.clinical.service.OtherTemplateService;
 import com.his.clinical.vo.*;
 import com.his.common.entity.CurrentUser;
 import com.his.common.utils.UserUtils;
+import com.his.spi.service.DrugMasterFacadeService;
+import com.his.spi.vo.DrugBriefVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -19,7 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,6 +34,7 @@ public class OtherTemplateServiceImpl extends ServiceImpl<BizDiagTemplateMapper,
     private final BizDiagTemplateMapper bizDiagTemplateMapper;
     private final BizRxTemplateMapper bizRxTemplateMapper;
     private final BizRxTemplateDetailMapper bizRxTemplateDetailMapper;
+    private final DrugMasterFacadeService drugMasterFacadeService;
 
     // 常用诊断
 
@@ -100,13 +106,53 @@ public class OtherTemplateServiceImpl extends ServiceImpl<BizDiagTemplateMapper,
         if (list == null) {
             return new ArrayList<>();
         }
+        // 历史模板类型归一：prescription_type 为空的旧模板，按明细首味药 drugType 推断回填，
+        // 否则前端「常用药品」按处方类型 tab 过滤全部落空（NULL 不参与过滤，切换 tab 看不到变化）
+        normalizeRxTemplateType(list);
         return list.stream().map(this::toRxVO).collect(Collectors.toList());
+    }
+
+    /** 对 prescription_type 为空的模板：取明细首味药查药品主数据推断类型（1西药 2中成药 3饮片）并回写库 */
+    private void normalizeRxTemplateType(List<BizRxTemplate> templates) {
+        Set<Long> needInfer = templates.stream()
+                .filter(t -> t.getPrescriptionType() == null)
+                .map(BizRxTemplate::getId)
+                .collect(Collectors.toCollection(HashSet::new));
+        if (needInfer.isEmpty()) {
+            return;
+        }
+        for (Long templateId : needInfer) {
+            List<BizRxTemplateDetail> details = bizRxTemplateDetailMapper.selectList(
+                    new LambdaQueryWrapper<BizRxTemplateDetail>()
+                            .eq(BizRxTemplateDetail::getTemplateId, templateId)
+                            .orderByAsc(BizRxTemplateDetail::getId)
+            );
+            Integer type = details.stream()
+                    .map(BizRxTemplateDetail::getDrugId)
+                    .map(drugMasterFacadeService::findDrug)
+                    .filter(d -> d != null && d.getDrugType() != null)
+                    .map(DrugBriefVO::getDrugType)
+                    .findFirst()
+                    .orElse(null);
+            if (type != null) {
+                templates.stream()
+                        .filter(t -> templateId.equals(t.getId()))
+                        .findFirst()
+                        .ifPresent(t -> t.setPrescriptionType(type));
+                bizRxTemplateMapper.update(null, new LambdaUpdateWrapper<BizRxTemplate>()
+                        .eq(BizRxTemplate::getId, templateId)
+                        .set(BizRxTemplate::getPrescriptionType, type));
+            }
+        }
     }
 
     @Override
     public BizRxTemplateVO getRxTemplateDetail(Long templateId) {
         BizRxTemplate tpl = bizRxTemplateMapper.selectById(templateId);
         if (tpl != null) {
+            if (tpl.getPrescriptionType() == null) {
+                normalizeRxTemplateType(java.util.Collections.singletonList(tpl));
+            }
             tpl.setDetails(bizRxTemplateDetailMapper.selectList(
                     new LambdaQueryWrapper<BizRxTemplateDetail>()
                             .eq(BizRxTemplateDetail::getTemplateId, templateId)

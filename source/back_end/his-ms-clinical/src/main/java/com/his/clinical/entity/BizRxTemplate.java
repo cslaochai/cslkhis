@@ -39,6 +39,10 @@ public class BizRxTemplate extends BaseEntity {
      */
     private String templateName;
     /**
+     * 处方类型（1-西药 2-中成药 3-中药饮片）；空=旧数据未标注，前端不参与 tab 过滤
+     */
+    private Integer prescriptionType;
+    /**
      * 药品数量
      */
     private Integer drugCount;

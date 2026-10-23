@@ -42,6 +42,7 @@ import com.his.spi.service.DeptScopeService;
 import com.his.spi.service.RedisSequenceService;
 import com.his.common.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -161,6 +162,8 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
         }
         wrapper.eq(queueQueryDTO.getDoctorId() != null, Queue::getDoctorId, queueQueryDTO.getDoctorId());
         wrapper.eq(Boolean.TRUE.equals(queueQueryDTO.getUnTriageOnly()), Queue::getTriageStatus, 0);
+        wrapper.in(StringUtils.isNoneBlank(queueQueryDTO.getRegistTypes()), Queue::getRegistType,
+                StringUtils.split(queueQueryDTO.getRegistTypes(), ","));
 
         // 日期口径分两种：visit_date 是「今天该看谁」，arrive_time 是「今天几点到的」。
         // 跨日遗留的队列（昨天入队今天还没走完）只有前者能正确排除。
@@ -416,6 +419,22 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
         return 0;
     }
 
+    /**
+     * 叫号抢占成功后把挂号行镜像推到「已接诊」：结诊的乐观校验以挂号行为准（期望 3/4），
+     * 不推的话普通门诊就诊中=队列3/挂号2，结诊恒报「挂号状态已变更」。
+     * 已接诊(3)/回诊路径 0 行属正常，不阻断叫号。
+     */
+    private void markRegistAccepted(Queue queue) {
+        if (queue.getRegistId() == null) {
+            return;
+        }
+        appointInfoMapper.update(null, new LambdaUpdateWrapper<AppointInfo>()
+                .eq(AppointInfo::getId, queue.getRegistId())
+                .in(AppointInfo::getRegistStatus,
+                        AppointStatusEnum.REGISTERED.getCode(), AppointStatusEnum.CHECKED_IN.getCode())
+                .set(AppointInfo::getRegistStatus, AppointStatusEnum.ACCEPTED.getCode()));
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public QueueCallNextVO callNext(Long deptId, Long doctorId) {
@@ -437,7 +456,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
             if (mineWaiting != null && mineWaiting > 0) {
                 throw new BusinessException("您今日有 " + mineWaiting + " 位候诊患者但未能取号，请刷新队列");
             }
-            throw new BusinessException("您当前没有候诊患者（患者需先在分诊站签到入队）");
+            throw new BusinessException("您当前没有候诊患者");
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -451,6 +470,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
         if (baseMapper.update(null, grab) == 0) {
             throw new BusinessException("该患者刚被分诊台或其他终端接走，请刷新队列后重试");
         }
+        markRegistAccepted(queue);
 
         // 抢占成功后再收上一位：同一医生同一时刻只允许一条「就诊中」。
         Queue previous = closeConsultingOf(deptId, doctorId, queue.getId());
@@ -502,6 +522,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
         if (baseMapper.update(null, grab) == 0) {
             throw new BusinessException("该患者刚被其他终端接走，请刷新队列后重试");
         }
+        markRegistAccepted(queue);
         Queue previous = closeConsultingOf(queue.getDeptId(), queue.getDoctorId(), queue.getId());
         if (queue.getDoctorId() != null) {
             doctorStatusCacheService.startConsulting(queue.getDoctorId());
@@ -777,6 +798,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
         if (baseMapper.update(null, grab) == 0) {
             throw new BusinessException("该患者刚被分诊台或其他终端接走，请刷新队列后重试");
         }
+        markRegistAccepted(queue);
 
         // 旧实现把「上一位就诊中」改回**候诊中(2)**，等于把刚看完的人重新塞回候诊队列
         // （下次「接诊下一位」会再叫到他一次）；而且用 selectOne 取上一位，
@@ -1454,13 +1476,30 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
     @Override
     public List<BizQueueListVO> listPaidUnchecked(Long deptId, LocalDate visitDate) {
         List<Long> scoped = deptScopeService.scopedDeptIds(deptId);
+        LocalDate date = visitDate != null ? visitDate : LocalDate.now();
         LambdaQueryWrapper<AppointInfo> appointWrapper = new LambdaQueryWrapper<>();
         appointWrapper.in(scoped != null, AppointInfo::getDeptId, scoped)
                 .eq(AppointInfo::getRegistStatus, AppointStatusEnum.REGISTERED.getCode())
-                .eq(visitDate != null, AppointInfo::getVisitDate, visitDate);
+                // 急诊号不进门诊分诊台：急诊登记即入队、由急诊医生直接接诊（状态机 1→3，
+                // 不经「已签到」这一档），把它放进门诊待签到只会让护士白点。
+                .ne(AppointInfo::getRegistType, RegistTypeEnum.EMERGENCY.getCode())
+                .eq(AppointInfo::getVisitDate, date);
         List<AppointInfo> appoints = appointInfoMapper.selectList(appointWrapper);
+        if (appoints.isEmpty()) {
+            return new ArrayList<>();
+        }
+        // 「待签到」的判据必须和 checkInByRegistId 的幂等键同源（biz_queue 的 regist_id + visit_date）：
+        // 只要今日队列里已有行，再点签到必报「该患者已签到」，名单就成了清不掉的死循环。
+        Set<Long> queuedRegistIds = baseMapper.selectList(new LambdaQueryWrapper<Queue>()
+                        .select(Queue::getRegistId)
+                        .eq(Queue::getVisitDate, date)
+                        .in(Queue::getRegistId, appoints.stream().map(AppointInfo::getId).collect(Collectors.toList())))
+                .stream().map(Queue::getRegistId).collect(Collectors.toSet());
         List<BizQueueListVO> result = new ArrayList<>();
         for (AppointInfo appoint : appoints) {
+            if (queuedRegistIds.contains(appoint.getId())) {
+                continue;
+            }
             // 挂号状态「已挂号」只说明还没签到，还得确认钱真的收了 ——
             // 未缴费也能挂号（挂完去收费处），把没交钱的人放进「待签到」会让护士白叫。
             // 免收的号没有账单，属于"没有欠账"，必须照常放进来（旧口径用 isNotNull(charge_id) 把他们整体筛掉了）。
@@ -1643,24 +1682,21 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
             dateEnd = today + " 23:59:59";
         }
         // 统计口径必须走枚举：WAITING(2)/CALLED(3)/COMPLETED(4)/OVERDUE(6)
-        // 之前 completed 数的是 5(已退号)、overdue 数的是 4(已就诊)，完全反了
-        queueStatsVO.setWaiting(this.count(new LambdaQueryWrapper<Queue>()
-                .in(scoped != null, Queue::getDeptId, scoped)
+        // 之前 completed 数的是 5(已退号)、overdue 数的是 4(已就诊)，完全反了。
+        // 号别过滤与 listPage 同口径（分诊台传 "1,2" 时徽标数与列表行数一致），底座见 queueCountWrapper。
+        queueStatsVO.setWaiting(this.count(queueCountWrapper(scoped, queueQueryDTO.getRegistTypes())
                 .eq(Queue::getQueueStatus, QueueStatusEnum.WAITING.getCode())
                 .ge(Queue::getArriveTime, dateStart)
                 .le(Queue::getArriveTime, dateEnd)));
-        queueStatsVO.setConsulting(this.count(new LambdaQueryWrapper<Queue>()
-                .in(scoped != null, Queue::getDeptId, scoped)
+        queueStatsVO.setConsulting(this.count(queueCountWrapper(scoped, queueQueryDTO.getRegistTypes())
                 .eq(Queue::getQueueStatus, QueueStatusEnum.CONSULTING.getCode())
                 .ge(Queue::getArriveTime, dateStart)
                 .le(Queue::getArriveTime, dateEnd)));
-        queueStatsVO.setCompleted(this.count(new LambdaQueryWrapper<Queue>()
-                .in(scoped != null, Queue::getDeptId, scoped)
+        queueStatsVO.setCompleted(this.count(queueCountWrapper(scoped, queueQueryDTO.getRegistTypes())
                 .eq(Queue::getQueueStatus, QueueStatusEnum.COMPLETED.getCode())
                 .ge(Queue::getArriveTime, dateStart)
                 .le(Queue::getArriveTime, dateEnd)));
-        queueStatsVO.setOverdue(this.count(new LambdaQueryWrapper<Queue>()
-                .in(scoped != null, Queue::getDeptId, scoped)
+        queueStatsVO.setOverdue(this.count(queueCountWrapper(scoped, queueQueryDTO.getRegistTypes())
                 .eq(Queue::getQueueStatus, QueueStatusEnum.OVERDUE.getCode())
                 .ge(Queue::getArriveTime, dateStart)
                 .le(Queue::getArriveTime, dateEnd)));
@@ -1671,28 +1707,35 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
         // 未核验分级：2026-10-22 门诊收口后，签到/分诊一律写 triage_status=1，
         // 已没有入口产生 triage_status=0 的行，这个数恒为 0 —— 保留字段仅为接口兼容，
         // 门诊分诊台不再展示。
-        queueStatsVO.setUnTriage(this.count(new LambdaQueryWrapper<Queue>()
-                .in(scoped != null, Queue::getDeptId, scoped)
+        queueStatsVO.setUnTriage(this.count(queueCountWrapper(scoped, queueQueryDTO.getRegistTypes())
                 .eq(Queue::getQueueStatus, QueueStatusEnum.WAITING.getCode())
                 .eq(Queue::getVisitDate, LocalDate.now())
                 .eq(Queue::getTriageStatus, 0)));
 
         // 危重待接诊：今日候诊中 1/2 级的人数，只可能是急诊科直录的行（门诊行 triage_level
         // 为 null 不参与）。callSpecific 会拒绝越过他们去叫普通患者，急诊分诊台展示用。
-        queueStatsVO.setCriticalWaiting(this.count(new LambdaQueryWrapper<Queue>()
-                .in(scoped != null, Queue::getDeptId, scoped)
+        queueStatsVO.setCriticalWaiting(this.count(queueCountWrapper(scoped, queueQueryDTO.getRegistTypes())
                 .eq(Queue::getQueueStatus, QueueStatusEnum.WAITING.getCode())
                 .eq(Queue::getVisitDate, LocalDate.now())
                 .le(Queue::getTriageLevel, TriageLevelEnum.EMERGENCY.getCode())));
 
         // 候诊超时：现算，不落状态列
-        queueStatsVO.setTimeout(this.count(new LambdaQueryWrapper<Queue>()
-                .in(scoped != null, Queue::getDeptId, scoped)
+        queueStatsVO.setTimeout(this.count(queueCountWrapper(scoped, queueQueryDTO.getRegistTypes())
                 .eq(Queue::getQueueStatus, QueueStatusEnum.WAITING.getCode())
                 .eq(Queue::getVisitDate, LocalDate.now())
                 .le(Queue::getArriveTime, LocalDateTime.now().minusMinutes(30))));
 
         return queueStatsVO;
+    }
+
+    /**
+     * stats 各状态计数的公共底座：科室收口 + 号别过滤，保证徽标与列表口径不分叉。
+     */
+    private LambdaQueryWrapper<Queue> queueCountWrapper(List<Long> scoped, String registTypes) {
+        return new LambdaQueryWrapper<Queue>()
+                .in(scoped != null, Queue::getDeptId, scoped)
+                .in(StringUtils.isNoneBlank(registTypes), Queue::getRegistType,
+                        StringUtils.split(registTypes, ","));
     }
 
     @Override

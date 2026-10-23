@@ -2,22 +2,12 @@
   <header
       class="his-header sticky top-0 z-30 flex h-16 items-center justify-between px-6"
   >
-    <!-- 左侧：Logo + 企业名 + 菜单伸缩 + 面包屑 -->
     <div class="flex items-center gap-4">
-      <!--
-        品牌位 = 「回首页」入口（真实 HIS 惯例：点医院标识回主菜单，不再另配一个图标按钮）。
-        Logo 常驻（收起态它是唯一的医院标识，不能一起藏掉），只把医院名收掉。
-        宽度与侧栏同口径（展开 256 / 收起 64），右边框就是那条分割线 ——
-        于是它始终压在侧栏的右边界上，两种状态都不错位。
-        收起态额外把 header 的 24px 左内边距抵消掉（marginLeft:-24），
-        让盒子从 x=0 起算并居中放 Logo —— 这样 Logo 正好落在 64px 图标条的中轴上，
-        与侧栏收起后的菜单图标、底部箭头同一条竖线。
-      -->
       <router-link
           :style="sidebarCollapsed
             ? {width: '64px', marginLeft: '-24px', justifyContent: 'center'}
             : {width: '232px'}"
-          class="brand-slot flex shrink-0 items-center gap-3 border-r border-white/30 no-underline transition-all duration-300"
+          class="flex shrink-0 items-center gap-3 border-r border-white/30 no-underline transition-all duration-300"
           title="返回首页"
           to="/"
       >
@@ -133,14 +123,9 @@
         <span>{{ displayName }}</span>
       </div>
 
-      <!-- 用户角色 -->
+      <!-- 当前岗位：科室在前、角色在后（心血管内科 · 医生），科室缺失时只留角色 -->
       <div class="text-sm text-white/90">
-        {{ currentRoleLabel }}
-      </div>
-
-      <!-- 所属科室 -->
-      <div v-if="userDeptName" class="text-sm text-white/90">
-        {{ userDeptName }}
+        {{ currentPostLabel }}
       </div>
 
       <div class="h-6 w-px bg-white/30"/>
@@ -1029,6 +1014,8 @@ const currentRoleLabel = computed(() => {
   if (!userInfo.value.currentRole) return '未选择角色'
   return roleNameOf(userInfo.value.currentRole)
 })
+
+const currentPostLabel = computed(() => [userDeptName.value, currentRoleLabel.value].filter(Boolean).join(' · '))
 
 const handleCommand = (command) => {
   switch (command) {

@@ -21,6 +21,11 @@ export function rationalCheckPrescriptions(prescriptionIds) {
     return request.post('/prescription/rationalCheck', {prescriptionIds})
 }
 
+// 开方实时审方（前置审方）：医生工作台处方行未保存时按行数据即时审查；返回 [{hitType, blocked, drugNameA, drugNameB, message, suggestion}]
+export function rationalCheckDraft(items) {
+    return request.post('/prescription/rationalCheckDraft', {items})
+}
+
 // 查询检查申请列表（按挂号取本次就诊，返回带 execStatusText / critical / canDelete）
 export function getInspectionApplyList(params) {
     return request.get('/inspection/getByPatientId', {params})
@@ -77,9 +82,9 @@ export function getDiagTemplates() {
     return request.get('/doctor/template/diagList')
 }
 
-// 保存常用诊断模板
-export function saveDiagTemplates(data) {
-    return request.post('/doctor/template/saveDiag', data)
+// 保存常用诊断模板（后端契约是 {templates: [...]} 对象，页面传裸数组在此包一层）
+export function saveDiagTemplates(templates) {
+    return request.post('/doctor/template/saveDiag', {templates})
 }
 
 // 删除常用诊断模板

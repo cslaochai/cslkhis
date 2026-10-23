@@ -6,10 +6,12 @@ import com.his.clinical.dto.PrescriptionAuditDTO;
 import com.his.clinical.dto.PrescriptionQueryDTO;
 import com.his.clinical.dto.PrescriptionPageQueryDTO;
 import com.his.clinical.dto.PrescriptionRationalQueryDTO;
+import com.his.clinical.dto.DrugRationalDraftQueryDTO;
 import com.his.clinical.service.PrescriptionService;
 import com.his.clinical.vo.BizPrescriptionVO;
 import com.his.clinical.vo.PrescriptionRationalVO;
 import com.his.spi.service.PatientFacadeService;
+import com.his.spi.vo.DrugRationalCheckHitVO;
 import com.his.common.entity.CurrentUser;
 import com.his.common.utils.UserUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -84,5 +86,17 @@ public class PrescriptionController {
     @PostMapping("/rationalCheck")
     public Result<List<PrescriptionRationalVO>> rationalCheck(@Valid @RequestBody PrescriptionRationalQueryDTO queryDTO) {
         return Result.success(prescriptionService.rationalCheck(queryDTO.getPrescriptionIds()));
+    }
+
+    /**
+     * 开方实时审方（前置审方）：医生工作台处方行未保存时按行数据即时比对，命中实时提示。
+     * 只读、不落库，与 rationalCheck 共用药品域同一套判定。
+     */
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "开方实时审方（处方行数据，不落库）")
+    @PostMapping("/rationalCheckDraft")
+    public Result<List<DrugRationalCheckHitVO>> rationalCheckDraft(
+            @Valid @RequestBody DrugRationalDraftQueryDTO queryDTO) {
+        return Result.success(prescriptionService.rationalCheckDraft(queryDTO.getItems()));
     }
 }

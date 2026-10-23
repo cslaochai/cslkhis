@@ -5,28 +5,20 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.outpatient.dto.AppointCancelDTO;
-import com.his.spi.dto.AppointQueryDTO;
-import com.his.spi.dto.AppointUpsertDTO;
-import com.his.spi.dto.RevisitFeePreviewDTO;
-import com.his.spi.service.ChargeFacadeService;
-import com.his.spi.service.EmrFacadeService;
-import com.his.spi.service.PatientFacadeService;
-import com.his.spi.vo.BizAppointInfoListVO;
-import com.his.spi.vo.RevisitFeePreviewVO;
-import com.his.spi.vo.RevisitRecordSelectVO;
-import com.his.spi.vo.BillBriefVO;
-import com.his.spi.vo.CancelCommandVO;
-import com.his.spi.vo.RegistChargeCommandVO;
-import com.his.spi.vo.RecordBriefVO;
-import com.his.spi.vo.PatientMasterVO;
+import com.his.common.base.PageResult;
+import com.his.common.entity.CurrentUser;
+import com.his.common.enums.*;
+import com.his.common.exception.BusinessException;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
+import com.his.common.utils.UserUtils;
 import com.his.outpatient.dto.AppointBoardQueryDTO;
+import com.his.outpatient.dto.AppointCancelDTO;
 import com.his.outpatient.entity.AppointInfo;
 import com.his.outpatient.entity.BizClinicSource;
 import com.his.outpatient.entity.BizClinicSourceSlot;
 import com.his.outpatient.entity.Queue;
-import com.his.common.enums.QueueStatusEnum;
-import com.his.common.enums.RegistTypeEnum;
 import com.his.outpatient.mapper.AppointInfoMapper;
 import com.his.outpatient.mapper.BizClinicSourceMapper;
 import com.his.outpatient.mapper.BizClinicSourceSlotMapper;
@@ -35,19 +27,14 @@ import com.his.outpatient.service.AppointService;
 import com.his.outpatient.service.RevisitFeePolicyService;
 import com.his.outpatient.trigger.DayEndSettleTrigger;
 import com.his.outpatient.vo.AppointStatusCountVO;
-import com.his.common.base.PageResult;
-import com.his.common.enums.*;
-import com.his.common.exception.BusinessException;
-import com.his.common.util.NumUtil;
-import com.his.common.util.TextUtil;
-import com.his.common.util.TimeUtil;
-import com.his.common.support.PediatricSurchargePolicy;
-import com.his.common.entity.CurrentUser;
-import com.his.spi.service.DeptScopeService;
-import com.his.spi.service.RedisSequenceService;
-import com.his.common.utils.UserUtils;
+import com.his.spi.dto.AppointQueryDTO;
+import com.his.spi.dto.AppointUpsertDTO;
+import com.his.spi.dto.RevisitFeePreviewDTO;
+import com.his.spi.service.*;
+import com.his.spi.vo.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -133,6 +120,8 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
                 .eq(queryDTO.getDoctorId() != null, AppointInfo::getDoctorId, queryDTO.getDoctorId())
                 .eq(queryDTO.getVisitDate() != null, AppointInfo::getVisitDate, queryDTO.getVisitDate())
                 .eq(queryDTO.getRegistStatus() != null, AppointInfo::getRegistStatus, queryDTO.getRegistStatus())
+                .in(StringUtils.isNoneBlank(queryDTO.getRegistTypes()), AppointInfo::getRegistType,
+                        StringUtils.split(queryDTO.getRegistTypes(), ","))
                 .ge(queryDTO.getBeginTime() != null, AppointInfo::getCreateTime, queryDTO.getBeginTime())
                 .le(queryDTO.getEndTime() != null, AppointInfo::getCreateTime, queryDTO.getEndTime());
         applyDeptScope(wrapper, queryDTO.getDeptId());
@@ -192,6 +181,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         scoped.setVisitDate(queryDTO.getVisitDate());
         scoped.setBeginTime(queryDTO.getBeginTime());
         scoped.setEndTime(queryDTO.getEndTime());
+        scoped.setRegistTypes(queryDTO.getRegistTypes());
         scoped.setRegistStatus(status);
         return this.count(buildFilter(scoped));
     }
@@ -242,12 +232,13 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
     @Override
     public List<BizAppointInfoListVO> boardList(AppointBoardQueryDTO queryDTO) {
         dayEndSettleTrigger.ensureSettledUpToYesterday();
+
+
         LambdaQueryWrapper<AppointInfo> wrapper = new LambdaQueryWrapper<>();
         wrapper.between(AppointInfo::getVisitDate, queryDTO.getStartDate(), queryDTO.getEndDate())
                 .eq(queryDTO.getDeptId() != null, AppointInfo::getDeptId, queryDTO.getDeptId())
                 .eq(queryDTO.getDoctorId() != null, AppointInfo::getDoctorId, queryDTO.getDoctorId())
-                // 排序要**全序**（同一格内患者顺序稳定）：就诊日 → 班次 → 挂号时间 → id。
-                // 最后一项是唯一键，同秒并列行才不会在两次请求间换位置（listPage 同样吃过这个亏）。
+                .in(StringUtils.isNoneBlank(queryDTO.getRegistTypes()), AppointInfo::getRegistType, StringUtils.split(queryDTO.getRegistTypes(), ","))
                 .orderByAsc(AppointInfo::getVisitDate)
                 .orderByAsc(AppointInfo::getScheduleId)
                 .orderByAsc(AppointInfo::getCreateTime)
@@ -679,17 +670,23 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         return originId.equals(targetId);
     }
 
-    /** 是否预约渠道（4-预约挂号）；其余 1窗口/2自助/3网上 均为现场渠道。 */
+    /**
+     * 是否预约渠道（4-预约挂号）；其余 1窗口/2自助/3网上 均为现场渠道。
+     */
     private boolean isAppointmentChannel(Integer registSource) {
         return registSource != null && registSource == AppointSourceEnum.APPOINTMENT.getCode();
     }
 
-    /** 就诊日在今天及以前：预约池不再被远程预约占用，现场可直接扣总余号；提前日才受预约池限制。 */
+    /**
+     * 就诊日在今天及以前：预约池不再被远程预约占用，现场可直接扣总余号；提前日才受预约池限制。
+     */
     private boolean isSameDayOrPast(LocalDate scheduleDate) {
         return scheduleDate == null || !scheduleDate.isAfter(LocalDate.now());
     }
 
-    /** 按渠道原子扣主表；返回受影响行数，0 = 号满。 */
+    /**
+     * 按渠道原子扣主表；返回受影响行数，0 = 号满。
+     */
     private int deductSchedule(Long scheduleId, Integer registSource, boolean sameDayOrPast) {
         if (isAppointmentChannel(registSource)) {
             return bizClinicSourceMapper.deductScheduleSourceForAppointment(scheduleId);
@@ -699,7 +696,9 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
                 : bizClinicSourceMapper.deductScheduleSourceForWalkin(scheduleId);
     }
 
-    /** 按渠道原子扣段；返回受影响行数，0 = 该时段已满。 */
+    /**
+     * 按渠道原子扣段；返回受影响行数，0 = 该时段已满。
+     */
     private int deductSlot(Long slotId, Integer registSource, boolean sameDayOrPast) {
         if (isAppointmentChannel(registSource)) {
             return bizClinicSourceSlotMapper.deductSlotSourceForAppointment(slotId);
@@ -709,7 +708,9 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
                 : bizClinicSourceSlotMapper.deductSlotSourceForWalkin(slotId);
     }
 
-    /** 退号/换号归还主表（按渠道还预约池或总池）；SQL 自带 used_source>0 守卫，重复归还不会减成负数。 */
+    /**
+     * 退号/换号归还主表（按渠道还预约池或总池）；SQL 自带 used_source>0 守卫，重复归还不会减成负数。
+     */
     private void releaseSchedule(Long scheduleId, Integer registSource) {
         if (scheduleId == null) {
             return;
@@ -721,7 +722,9 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         }
     }
 
-    /** 退号/换号归还段（按渠道还预约池或总池）。 */
+    /**
+     * 退号/换号归还段（按渠道还预约池或总池）。
+     */
     private void releaseSlot(Long slotId, Integer registSource) {
         if (slotId == null) {
             return;
@@ -752,7 +755,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
                     && TextUtil.hasText(source.getStartTime())
                     && TextUtil.hasText(source.getEndTime())
                     && (slotTime.compareTo(source.getStartTime()) < 0
-                        || slotTime.compareTo(source.getEndTime()) > 0)) {
+                    || slotTime.compareTo(source.getEndTime()) > 0)) {
                 throw new BusinessException("就诊时段不在所选号源的开诊时间内，请重新选择");
             }
         }

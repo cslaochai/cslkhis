@@ -608,6 +608,8 @@ const buildParams = () => {
     deptId: deptId.value || undefined,
     doctorId: doctorId.value || undefined,
     keyword: keyword.value.trim() || undefined,
+    // 门诊分诊台只管普通号/专家号；急诊直录行归急诊工作站管理（登记即入队，不经分诊签到）
+    registTypes: '1,2',
   };
   if (statusFilter.value.length > 0)
     params.queueStatuses = statusFilter.value.join(',');
@@ -627,7 +629,11 @@ const loadList = async () => {
 };
 const loadStats = async () => {
   try {
-    const res = await getQueueStats({deptId: deptId.value || undefined, visitDate: visitDate.value || undefined});
+    const res = await getQueueStats({
+      deptId: deptId.value || undefined,
+      visitDate: visitDate.value || undefined,
+      registTypes: '1,2',
+    });
     stats.value = res.data || {};
   } catch (error) {
     console.error('加载统计失败:', error);

@@ -64,6 +64,11 @@ public class BizRxTemplateVO {
     private String templateName;
 
     /**
+     * 处方类型（1-西药 2-中成药 3-中药饮片）；空=旧数据未标注
+     */
+    private Integer prescriptionType;
+
+    /**
      * 药品数量
      */
     private Integer drugCount;

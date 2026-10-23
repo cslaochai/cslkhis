@@ -28,11 +28,6 @@
     --his-shadow-sm: 0 1px 3px rgba(11, 79, 138, 0.06), 0 1px 2px rgba(11, 79, 138, 0.04);
     --his-shadow-md: 0 4px 14px rgba(11, 79, 138, 0.08), 0 2px 4px rgba(11, 79, 138, 0.04);
     --his-radius: 10px;
-
-    /* chrome 两层：顶栏是「全局层」，侧栏是「导航层」，同色相但差一档明度才读得出两个面。
-       原为 4 段蓝→青渐变，右端亮度约为左端三倍，而右侧正是消息/姓名/切换岗位的高频操作区；
-       青绿同时是 --his-teal 的护理语义色，被装饰占用后读不出含义。
-       ⚠ 两个值必须同色相、只差明度：拉成两个色相就又回到渐变那个问题。 */
     --his-header-bg: var(--his-primary-deep);
     --his-sidebar-bg: #0A3D6B;
     --his-chrome-shadow: 0 1px 0 rgba(255, 255, 255, 0.10), 0 2px 10px rgba(6, 45, 84, 0.16);
@@ -89,7 +84,7 @@ body {
     background: #9FBEDB;
 }
 
-/* ---------- 顶栏 / 侧栏骨架：同色相两档明度，靠明度分层不靠色相 ---------- */
+/* ---------- 顶栏 / 侧栏骨架：各守一块纯色，顶栏最深、侧栏暗一档 ---------- */
 .his-header {
     background: var(--his-header-bg);
     box-shadow: var(--his-chrome-shadow);
@@ -98,17 +93,7 @@ body {
 .his-sidebar {
     height: calc(100vh - var(--his-header-h));
     background: var(--his-sidebar-bg);
-    box-shadow: 2px 0 10px rgba(4, 26, 46, 0.22);
-}
-
-/* 品牌格归「导航层」：底色跟侧栏同一块并撑满顶栏高度，左上角于是是一整条深色导航柱，
-   顶栏的浅色只覆盖内容区上方。不这么做的话侧栏在 logo 下方仍是蓝色，眼睛会把品牌格
-   并进那一列，读成「logo 这块比右侧顶栏高一截」（实测品牌格仅 32px 高、居中于 64px 顶栏）。
-   ⚠ 用 height 而不是 self-stretch：品牌格挂在「左侧容器」里，不是 header 的直接 flex 子项，
-   align-self 只对左侧容器生效，撑不到 64。 */
-.brand-slot {
-    height: var(--his-header-h);
-    background: var(--his-sidebar-bg);
+    box-shadow: 2px 0 10px rgba(6, 45, 84, 0.16);
 }
 
 /* ============================================================
