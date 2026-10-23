@@ -184,8 +184,107 @@
       </div>
     </div>
 
-    <!-- 急诊列表 -->
-    <div class="rounded-lg border border-slate-200 bg-white shadow-sm" data-testid="emg-table">
+    <!-- 视图切换：看板（默认，真实 HIS 急诊分诊台主界面形态：分区卡片）/ 列表（明细台账） -->
+    <div class="flex items-center gap-3">
+      <el-radio-group v-model="viewMode" data-testid="emg-view-switch">
+        <el-radio-button value="board" data-testid="emg-view-board">看板</el-radio-button>
+        <el-radio-button value="list" data-testid="emg-view-list">列表</el-radio-button>
+      </el-radio-group>
+      <span class="text-xs text-slate-400">看板按三区（红/黄/绿）分区、I 级置顶；列表为全部明细台账</span>
+    </div>
+
+    <!-- 三区看板：分区卡片（红区抢救 / 黄区急症 / 绿区非急症），区内按级别升序、同级按候诊时长降序 -->
+    <div v-if="viewMode === 'board'" class="space-y-4" data-testid="emg-board">
+      <div v-for="zone in boardZones" :key="zone.key"
+           class="rounded-lg border-2 bg-white shadow-sm" :class="zone.border">
+        <div class="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
+          <div class="flex items-center gap-2">
+            <span class="inline-block h-3 w-3 rounded-full" :class="zone.dot"></span>
+            <span class="text-sm font-bold" :class="zone.text">{{ zone.label }}</span>
+            <span class="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">{{ zone.items.length }} 人</span>
+          </div>
+          <span class="text-xs text-slate-400">{{ zone.hint }}</span>
+        </div>
+        <div v-if="zone.items.length === 0" class="py-8 text-center text-sm text-slate-400">本区暂无患者</div>
+        <div v-else class="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div v-for="row in zone.items" :key="row.id"
+               :data-testid="'emg-card-' + row.id"
+               class="rounded-lg border bg-white p-3 shadow-sm transition hover:shadow-md" :class="cardBorder(row)">
+            <!-- 头部：患者 + 急诊号 + 状态 -->
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span :class="['inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white', GENDER_DOT[patientAvatarTone(row.gender)]]">
+                  {{ patientGenderSymbol(row.gender) }}
+                </span>
+                <div>
+                  <div class="text-sm font-bold text-slate-900">{{ row.patientName }}
+                    <span class="text-xs font-normal text-slate-400">{{ row.age }}岁</span></div>
+                  <div class="font-mono text-xs text-slate-400">{{ row.emergencyNo }}</div>
+                </div>
+              </div>
+              <span :class="['inline-block rounded px-1.5 py-0.5 text-xs font-bold', statusMap[row.emergencyStatus]?.color || '']">
+                {{ statusMap[row.emergencyStatus]?.label || '未知' }}
+              </span>
+            </div>
+            <!-- 分级 + MEWS + 待复评 + 绿通 -->
+            <div class="mt-2 flex flex-wrap items-center gap-1">
+              <span :class="['inline-block rounded border px-1.5 py-0.5 text-xs font-medium', triageLevelMap[row.triageLevel]?.color || '']">
+                {{ triageLevelMap[row.triageLevel]?.label }}
+              </span>
+              <span v-if="row.mewsScore != null" data-testid="emg-mews-badge"
+                    :class="['inline-block rounded px-1.5 py-0.5 text-xs font-bold',
+                             row.mewsScore >= 9 ? 'bg-red-100 text-red-700' : row.mewsScore >= 5 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500']">
+                MEWS {{ row.mewsScore }}
+              </span>
+              <span v-if="row.reevalDue" data-testid="emg-reeval-badge" class="inline-block rounded border border-orange-300 bg-orange-50 px-1.5 py-0.5 text-xs font-bold text-orange-600">
+                待复评
+              </span>
+              <span v-if="row.greenChannel" class="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-xs font-medium text-emerald-600">
+                {{ row.greenChannel }}
+              </span>
+            </div>
+            <!-- 主诉 -->
+            <div class="mt-2 truncate text-xs text-slate-600" :title="row.chiefComplaint">{{ row.chiefComplaint || '—' }}</div>
+            <!-- 底部：等候 + 医生 + 操作 -->
+            <div class="mt-2 flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
+              <div class="text-xs">
+                <span :class="['font-medium', row.overdueLevel === 2 ? 'text-red-600' : row.overdueLevel === 1 ? 'text-red-500' : 'text-slate-500']">
+                  {{ waitText(row) }}
+                </span>
+                <span v-if="row.doctorName" class="ml-1 text-slate-400">{{ row.doctorName }}</span>
+                <span v-else class="ml-1 text-amber-600">待派单</span>
+              </div>
+              <div class="flex flex-wrap justify-end gap-1">
+                <el-button v-if="row.emergencyStatus === 1" v-perm="'opd:emergency:reeval'" link size="small" type="warning"
+                           data-testid="emg-btn-reeval" @click="openReeval(row)">复评</el-button>
+                <el-button v-if="row.emergencyStatus === 1" v-perm="'opd:emergency:edit'" link size="small" type="primary"
+                           @click="handleStatusChange(row, 2)">接诊</el-button>
+                <el-button v-if="row.emergencyStatus === 2" v-perm="'opd:emergency:edit'" link size="small" type="warning"
+                           @click="openObs(row)">留观</el-button>
+                <el-button v-if="row.emergencyStatus === 2 || row.emergencyStatus === 3" v-perm="'opd:emergency:edit'" link size="small" type="success"
+                           @click="openAdmit(row)">转住院</el-button>
+                <el-button v-if="row.emergencyStatus <= 3" v-perm="'opd:emergency:edit'" link size="small" type="info"
+                           @click="handleStatusChange(row, 5)">离院</el-button>
+                <el-button v-if="row.emergencyStatus <= 3" v-perm="'opd:emergency:edit'" link size="small" type="danger"
+                           @click="handleStatusChange(row, 6)">死亡</el-button>
+                <el-button link size="small" type="default" data-testid="emg-btn-detail"
+                           @click="toggleExpand(row)">{{ expandedId === row.id ? '收起' : '详情' }}</el-button>
+                <el-button v-perm="'opd:emergency:edit'" link size="small" type="primary" data-testid="emg-btn-transfer"
+                           @click="openTransfer(row)">转归</el-button>
+              </div>
+              <!-- 展开区：就诊时间轴 + MEWS 趋势（真实 HIS 急诊患者详情面板标配） -->
+              <div v-if="expandedId === row.id" class="mt-2 space-y-2 border-t border-slate-100 pt-2">
+                <EmergencyTimeline :row="row"/>
+                <EmergencyMewsTrend :points="mewsPoints(row)"/>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 急诊列表（明细台账，可切换查看） -->
+    <div v-if="viewMode === 'list'" class="rounded-lg border border-slate-200 bg-white shadow-sm" data-testid="emg-table">
       <el-table v-loading="loading" :data="emergencyList" style="width: 100%">
         <el-table-column class-name="font-mono text-sm" label="急诊号" width="170">
           <template #default="{ row }">
@@ -469,6 +568,9 @@
 
     <!-- 交班单明细 -->
     <EmergencyHandoverDetail v-model="hoDetailVisible" :id="hoDetailId"/>
+
+    <!-- 一键转归面板 -->
+    <EmergencyTransferEdit v-model="transferVisible" :row="transferRow" :wards="wards" @saved="reloadAfterSave"/>
   </div>
 </template>
 
@@ -479,6 +581,7 @@ import {ElMessage, ElMessageBox} from 'element-plus';
 import {
   getEmergencyHandoverListPage,
   getEmergencyList,
+  getEmergencyReevalList,
   getEmergencyStats,
   getEmergencyWardSelectList,
   updateEmergencyStatus
@@ -492,6 +595,9 @@ import EmergencyHandoverDetail from './EmergencyHandoverDetail.vue';
 import EmergencyHandoverEdit from './EmergencyHandoverEdit.vue';
 import EmergencyObsEdit from './EmergencyObsEdit.vue';
 import EmergencyReevalEdit from './EmergencyReevalEdit.vue';
+import EmergencyTimeline from './EmergencyTimeline.vue';
+import EmergencyMewsTrend from './EmergencyMewsTrend.vue';
+import EmergencyTransferEdit from './EmergencyTransferEdit.vue';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 
 const GENDER_DOT = {male: 'bg-blue-500', female: 'bg-pink-500', unknown: 'bg-slate-400'};
@@ -499,6 +605,32 @@ const GENDER_DOT = {male: 'bg-blue-500', female: 'bg-pink-500', unknown: 'bg-sla
 const loading = ref(false);
 const emergencyList = ref([]);
 const stats = ref({});
+// 视图模式：看板（默认，真实 HIS 急诊分诊台主界面）/ 列表
+const viewMode = ref('board');
+/** 三区看板分组：按 zone 分块，区内 I 级置顶、同级按候诊时长降序（等最久优先） */
+const boardZones = computed(() => {
+  const groups = {'红区': [], '黄区': [], '绿区': []};
+  for (const r of (emergencyList.value || [])) {
+    const z = r.zone === '红区' ? '红区' : r.zone === '黄区' ? '黄区' : '绿区';
+    groups[z].push(r);
+  }
+  const defs = [
+    {key: '红区', label: '红区 · 抢救', border: 'border-red-200', dot: 'bg-red-500', text: 'text-red-700', hint: 'I/II 级，立即处置'},
+    {key: '黄区', label: '黄区 · 急症', border: 'border-amber-200', dot: 'bg-amber-500', text: 'text-amber-700', hint: 'III 级，优先候诊'},
+    {key: '绿区', label: '绿区 · 非急症', border: 'border-emerald-200', dot: 'bg-emerald-500', text: 'text-emerald-700', hint: 'IV 级，常规候诊'},
+  ];
+  return defs.map(d => {
+    const items = (groups[d.key] || []).slice().sort((a, b) => {
+      const la = a.triageLevel || 9, lb = b.triageLevel || 9;
+      if (la !== lb) return la - lb;
+      return (b.waitMinutes || 0) - (a.waitMinutes || 0);
+    });
+    return {...d, items};
+  });
+});
+/** 卡片描边与分区同色 */
+const cardBorder = (row) => row.zone === '红区' ? 'border-red-200'
+  : row.zone === '黄区' ? 'border-amber-200' : 'border-emerald-200';
 const searchForm = ref({
   keyword: '',
   triageLevel: null,
@@ -652,6 +784,39 @@ const handleAdd = () => {
 /** 弹框保存后统一刷新：列表与统计卡必须同一口径，少刷一个就是「数字和表格不一致」 */
 const reloadAfterSave = async () => {
   await Promise.all([loadData(), loadStats()]);
+};
+// 卡片展开：时间轴 + MEWS 趋势（详情面板）。复评流水拉一次缓存，避免反复请求
+const expandedId = ref(null);
+const reevalMap = ref({});
+const toggleExpand = async (row) => {
+  if (expandedId.value === row.id) {
+    expandedId.value = null;
+    return;
+  }
+  expandedId.value = row.id;
+  if (!reevalMap.value[row.id]) {
+    try {
+      const res = await getEmergencyReevalList(row.id);
+      reevalMap.value = {...reevalMap.value, [row.id]: res.data || []};
+    } catch {
+      reevalMap.value = {...reevalMap.value, [row.id]: []};
+    }
+  }
+};
+/** MEWS 趋势点：复评历史 + 当前分（单点=无复评，仅有当前值） */
+const mewsPoints = (row) => {
+  const list = reevalMap.value[row.id] || [];
+  const pts = list.map(r => ({t: (r.createTime || '').slice(5, 16), score: r.mewsScore}));
+  if (row.mewsScore != null)
+    pts.push({t: '当前', score: row.mewsScore});
+  return pts;
+};
+// 一键转归面板
+const transferVisible = ref(false);
+const transferRow = ref(null);
+const openTransfer = (row) => {
+  transferRow.value = row;
+  transferVisible.value = true;
 };
 // 状态变更（接诊/离院/死亡这类无需补料的流转）
 const handleStatusChange = async (row, newStatus) => {
