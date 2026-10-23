@@ -181,6 +181,7 @@
                    @click="openHandover">交班清零
         </el-button>
         <el-button v-perm="'opd:emergency:add'" :icon="Plus" type="danger" @click="handleAdd">急诊登记</el-button>
+        <el-button v-perm="'opd:emergency:add'" :icon="CopyDocument" type="warning" data-testid="emg-btn-batch-add" @click="openBatch">批量登记</el-button>
       </div>
     </div>
 
@@ -271,6 +272,8 @@
                            @click="toggleExpand(row)">{{ expandedId === row.id ? '收起' : '详情' }}</el-button>
                 <el-button v-perm="'opd:emergency:edit'" link size="small" type="primary" data-testid="emg-btn-transfer"
                            @click="openTransfer(row)">转归</el-button>
+                <el-button v-perm="'opd:emergency:edit'" link size="small" type="default" data-testid="emg-btn-wristband"
+                           @click="openWristband(row)">腕带</el-button>
               </div>
               <!-- 展开区：就诊时间轴 + MEWS 趋势（真实 HIS 急诊患者详情面板标配） -->
               <div v-if="expandedId === row.id" class="mt-2 space-y-2 border-t border-slate-100 pt-2">
@@ -442,6 +445,8 @@
                        @click="handleStatusChange(row, 6)">
               死亡
             </el-button>
+            <el-button v-perm="'opd:emergency:edit'" link size="small" type="default" data-testid="emg-btn-wristband-list"
+                       @click="openWristband(row)">腕带</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -465,6 +470,20 @@
     <EmergencyAdd
         v-model="addVisible"
         :gender-dot="GENDER_DOT"
+        :triage-level-map="triageLevelMap"
+        @saved="reloadAfterSave"
+    />
+
+    <!-- 分诊腕带打印（纯前端，零后端改动） -->
+    <EmergencyWristband
+        v-model="wristbandVisible"
+        :row="wristbandRow"
+        :triage-level-map="triageLevelMap"
+    />
+
+    <!-- 群伤 / 批量登记（循环调现有 register，零后端新接口） -->
+    <EmergencyBatchAdd
+        v-model="batchVisible"
         :triage-level-map="triageLevelMap"
         @saved="reloadAfterSave"
     />
@@ -576,7 +595,7 @@
 
 <script setup>
 import {computed, onMounted, ref} from 'vue';
-import {AlarmClock, Bell, Check, Clock, Plus, Refresh, RefreshRight, Search, Switch, User, Warning} from '@element-plus/icons-vue';
+import {AlarmClock, Bell, Check, Clock, CopyDocument, Plus, Refresh, RefreshRight, Search, Switch, User, Warning} from '@element-plus/icons-vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {
   getEmergencyHandoverListPage,
@@ -598,6 +617,8 @@ import EmergencyReevalEdit from './EmergencyReevalEdit.vue';
 import EmergencyTimeline from './EmergencyTimeline.vue';
 import EmergencyMewsTrend from './EmergencyMewsTrend.vue';
 import EmergencyTransferEdit from './EmergencyTransferEdit.vue';
+import EmergencyWristband from './EmergencyWristband.vue';
+import EmergencyBatchAdd from './EmergencyBatchAdd.vue';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 
 const GENDER_DOT = {male: 'bg-blue-500', female: 'bg-pink-500', unknown: 'bg-slate-400'};
@@ -780,6 +801,20 @@ const handleCurrentChange = (val) => {
 // 新增急诊
 const handleAdd = () => {
   addVisible.value = true;
+};
+
+// 群伤 / 批量登记
+const batchVisible = ref(false);
+const openBatch = () => {
+  batchVisible.value = true;
+};
+
+// 分诊腕带打印
+const wristbandVisible = ref(false);
+const wristbandRow = ref({});
+const openWristband = (row) => {
+  wristbandRow.value = row || {};
+  wristbandVisible.value = true;
 };
 /** 弹框保存后统一刷新：列表与统计卡必须同一口径，少刷一个就是「数字和表格不一致」 */
 const reloadAfterSave = async () => {

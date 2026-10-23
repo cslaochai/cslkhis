@@ -20,6 +20,10 @@
       <el-select v-model="defaultLevel" class="!w-40" @change="applyDefaultLevel">
         <el-option v-for="(v, k) in triageLevelMap" :key="k" :label="v.label" :value="Number(k)"/>
       </el-select>
+      <span class="text-sm text-slate-600">默认意识</span>
+      <el-select v-model="defaultConsciousness" class="!w-40">
+        <el-option v-for="c in consciousnessOptions" :key="c.value" :label="c.label" :value="c.value"/>
+      </el-select>
       <el-button :icon="Plus" @click="addRow">增行</el-button>
       <span class="ml-auto text-sm" :class="resultTextClass">{{ resultText }}</span>
     </div>
@@ -117,10 +121,18 @@ const greenOptions = [
   {value: '创伤中心', label: '创伤中心'},
   {value: '无', label: '无'},
 ]
+// 意识状态码值与 BizEmergencyUpsertDTO.consciousness（@NotNull @AllowedValues 1-4）一致
+const consciousnessOptions = [
+  {value: 1, label: '清楚'},
+  {value: 2, label: '对声音有反应'},
+  {value: 3, label: '对疼痛有反应'},
+  {value: 4, label: '无反应'},
+]
 
 const departments = ref([])
 const defaultDeptId = ref(null)
 const defaultLevel = ref(3) // 群伤多为轻症，默认 III 级，行可覆盖
+const defaultConsciousness = ref(1) // 群伤伤员多清醒，默认「清楚」，顶部可改
 const submitting = ref(false)
 const rows = ref([])
 
@@ -144,14 +156,17 @@ const applyDefaultLevel = () => {
   })
 }
 
-const pendingCount = computed(() => rows.value.filter((r) => r.status !== 'success').length)
+// 只登记「有填写的行」：默认铺 5 行空白，群伤常只填几人，空白行应被忽略而非阻止整批
+const isActive = (r) => !!(r.name || r.gender != null || (r.age != null && r.age !== '') || r.chiefComplaint)
+const activeRows = computed(() => rows.value.filter(isActive))
+const pendingCount = computed(() => activeRows.value.filter((r) => r.status !== 'success').length)
 const canSubmit = computed(() => !!defaultDeptId.value && rows.value.length > 0)
 const successCount = computed(() => rows.value.filter((r) => r.status === 'success').length)
 const failCount = computed(() => rows.value.filter((r) => r.status === 'fail').length)
 const resultText = computed(() => {
   if (submitting.value) return '登记中…'
   if (successCount.value === 0 && failCount.value === 0) return ''
-  return `成功 ${successCount.value} / 共 ${rows.value.length}` + (failCount.value ? `，失败 ${failCount.value}（可重试）` : '')
+  return `成功 ${successCount.value} / 共 ${activeRows.value.length}` + (failCount.value ? `，失败 ${failCount.value}（可重试）` : '')
 })
 const resultTextClass = computed(() => (failCount.value ? 'text-red-600' : 'text-green-600'))
 
@@ -174,11 +189,16 @@ const submitAll = async () => {
     ElMessage.warning('请先选择接诊科室')
     return
   }
+  const active = activeRows.value
+  if (active.length === 0) {
+    ElMessage.warning('请至少填写一行患者信息')
+    return
+  }
   // 前置校验：姓名 / 性别 / 年龄必须齐，缺的标红
-  rows.value.forEach((r) => {
+  active.forEach((r) => {
     r.touched = true
   })
-  const invalid = rows.value.some(
+  const invalid = active.some(
       (r) => !r.name || r.gender == null || r.age == null || r.age === '',
   )
   if (invalid) {
@@ -189,7 +209,7 @@ const submitAll = async () => {
   submitting.value = true
   let ok = 0
   let bad = 0
-  for (const r of rows.value) {
+  for (const r of active) {
     if (r.status === 'success') {
       ok++
       continue
@@ -202,6 +222,7 @@ const submitAll = async () => {
       chiefComplaint: r.chiefComplaint || '',
       triageLevel: r.triageLevel != null ? Number(r.triageLevel) : defaultLevel.value,
       greenChannel: r.greenChannel || '无',
+      consciousness: Number(defaultConsciousness.value),
       deptId: defaultDeptId.value,
     }
     try {
