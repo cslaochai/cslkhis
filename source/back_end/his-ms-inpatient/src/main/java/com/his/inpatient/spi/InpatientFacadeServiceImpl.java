@@ -128,6 +128,15 @@ public class InpatientFacadeServiceImpl implements InpatientFacadeService {
     }
 
     @Override
+    public Long getAdmissionDeptId(Long admissionId) {
+        if (admissionId == null) {
+            return null;
+        }
+        BizAdmission admission = bizAdmissionMapper.selectById(admissionId);
+        return admission == null ? null : admission.getDeptId();
+    }
+
+    @Override
     public DeptRefVO findDeptByOrderNo(String orderNo) {
         if (!TextUtil.hasText(orderNo)) {
             return null;

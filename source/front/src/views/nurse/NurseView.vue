@@ -25,10 +25,18 @@
         </el-icon>
         交接班摘要
       </el-radio-button>
+      <!-- 床旁结算按按钮码收：没有 nur:bedside:settle 的账号（如门诊分诊护士）看不到这个工作区 -->
+      <el-radio-button v-perm="'nur:bedside:settle'" value="bedside">
+        <el-icon class="mr-1">
+          <Wallet/>
+        </el-icon>
+        床旁结算
+      </el-radio-button>
     </el-radio-group>
     <InpatientOrderWorkspace v-if="view === 'order'" mode="nurse"/>
     <NursingRecordWorkspace v-else-if="view === 'nursing'"/>
     <BedMapWorkspace v-else-if="view === 'bedmap'"/>
+    <BedsideSettlementWorkspace v-else-if="view === 'bedside'"/>
     <NursingHandoverWorkspace v-else/>
   </div>
 </template>
@@ -48,7 +56,8 @@
  * 自动化验证与"默认落在待校对页签"这个口径都会被外层抢走。
  */
 import {ref} from 'vue';
-import {ChatDotRound, EditPen, FirstAidKit, Grid} from '@element-plus/icons-vue';
+import {ChatDotRound, EditPen, FirstAidKit, Grid, Wallet} from '@element-plus/icons-vue';
+import BedsideSettlementWorkspace from '@/components/his/BedsideSettlementWorkspace.vue';
 import InpatientOrderWorkspace from '@/components/his/InpatientOrderWorkspace.vue';
 import NursingRecordWorkspace from '@/components/his/NursingRecordWorkspace.vue';
 import BedMapWorkspace from '@/components/his/BedMapWorkspace.vue';

@@ -32,6 +32,18 @@ public interface InpatientFacadeService {
     AdmissionBriefVO findAdmission(Long admissionId);
 
     /**
+     * 按入院ID取入院所属科室（病区）。
+     *
+     * <p>给跨模块的<b>数据权限门禁</b>用：床旁结算等病区场景要判断"这次入院是不是当前岗位的病房"，
+     * 只凭一次入参就放行写操作等于把科室范围让给前端传。入院摘要有口径不含 deptId，
+     * 单独开这个方法而不是往 AdmissionBriefVO 里塞字段——那会让所有拿摘要的调用方都被动多带一列。
+     *
+     * @param admissionId 入院ID（可空，为空直接返回 null）
+     * @return 不存在时返回 {@code null}；调用方必须把 null 当"无权"处理，不得兜底放行
+     */
+    Long getAdmissionDeptId(Long admissionId);
+
+    /**
      * 按住院医嘱单号反查开单科室（收费明细的科室归属反查入口）。
      *
      * <p>用<b>单号</b>而不是 ID：记账行的 {@code sourceId} 在不同来源语义不统一
