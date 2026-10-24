@@ -9,6 +9,11 @@ export function getChronicRecordList(params) {
     return request.post('/chronic/listPage', params)
 }
 
+// 患者有效慢病档案（已认定且未作废；长处方资格判定用，后端 /chronic/activeByPatient）
+export function getChronicActiveByPatient(patientId) {
+    return request.get('/chronic/activeByPatient', { params: { patientId } })
+}
+
 // 慢病建档（建档即认定）
 export function upsertChronicRecord(data) {
     return request.post('/chronic/upsert', data)

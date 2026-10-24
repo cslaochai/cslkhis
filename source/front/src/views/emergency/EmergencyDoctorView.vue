@@ -181,6 +181,24 @@
                         <el-option :value="2" label="自煎"/>
                       </el-select>
                     </template>
+                    <!-- 慢病长处方（处方级）：仅西药/中成药；患者须有已认定慢病档案（服务端强校验，此处只做 disabled 预检） -->
+                    <template v-if="currentRxType !== 3">
+                      <span class="text-xs text-slate-500" data-testid="emg-doc-longrx-label">慢病长处方</span>
+                      <el-switch v-model="rxDraft.isLongPrescription" :disabled="!chronicQualified"
+                                 data-testid="emg-doc-longrx-switch" size="small"/>
+                      <template v-if="rxDraft.isLongPrescription">
+                        <span class="text-xs text-slate-500">天数</span>
+                        <el-input-number v-model="rxDraft.longPrescriptionDays" :min="1" :max="90" size="small"
+                                         class="!w-24" data-testid="emg-doc-longrx-days"/>
+                        <span class="text-[10px] text-slate-400">1~90 天</span>
+                      </template>
+                      <el-tooltip v-else-if="!chronicQualified" effect="dark" content="该患者无已认定的慢病档案，不能开慢病长处方">
+                        <span class="text-[10px] text-amber-600" data-testid="emg-doc-longrx-nochronic">无慢病档案</span>
+                      </el-tooltip>
+                      <el-tooltip v-else effect="dark" :content="'已认定：' + chronicDiseaseText">
+                        <span class="text-[10px] text-slate-400">{{ chronicDiseaseText }}</span>
+                      </el-tooltip>
+                    </template>
                     <el-button :icon="Plus" size="small" data-testid="emg-doc-rx-add-row" @click="addRxRow">加一行</el-button>
                   </div>
 
@@ -192,7 +210,7 @@
                             :remote-method="searchDrug" :loading="drugLoading" size="small"
                             placeholder="输入药品名搜索" @change="onDrugPicked(row)"
                         >
-                          <el-option v-for="d in drugResults" :key="d.id" :value="d.id"
+                          <el-option v-for="d in drugResults" :key="d.id" :value="d.drugId"
                                      :label="d.drugName + (d.specification ? '（' + d.specification + '）' : '')"/>
                         </el-select>
                       </template>
@@ -279,6 +297,7 @@ import {getPrescriptionList, saveMedicalRecord, submitMedicalRecord} from '@/api
 import {getByRegistId} from '@/api/emr';
 import {getPatientFullDetail} from '@/api/patient';
 import {getStockList} from '@/api/pharmacy';
+import {getChronicActiveByPatient} from '@/api/chronic';
 import {PATIENT_GENDER_OPTIONS} from '@/lib/patientGender';
 import {useCurrentPatientStore} from '@/stores/currentPatient';
 
@@ -360,11 +379,14 @@ const selectPatient = async (row) => {
     gender: row.gender, age: row.age,
   });
   try {
-    const [detail, recordRes, rxRes] = await Promise.all([
+    const [detail, recordRes, rxRes, chronicRes] = await Promise.all([
       getPatientFullDetail(row.patientId),
       row.registId ? getByRegistId({patientId: row.patientId, registId: row.registId}) : Promise.resolve({data: null}),
       row.registId ? getPrescriptionList({patientId: row.patientId, registId: row.registId}) : Promise.resolve({data: []}),
+      getChronicActiveByPatient(row.patientId),
     ]);
+    chronicRecords.value = chronicRes.data || [];
+    chronicQualified.value = chronicRecords.value.length > 0;
     patientDetail.value = detail.data || null;
     if (recordRes.data) Object.assign(recordForm, recordRes.data);
     // rxLoaded 是固定引用的数组：只改内容不改引用（rxDetailCount computed 盯着它）
@@ -405,10 +427,30 @@ const onTransferSaved = () => {
   reloadQueue();
 };
 
+// ---------- 慢病长处方资格（患者切换即查；服务端才是最终权威，此处只为开关 disabled 预检） ----------
+const chronicQualified = ref(false);
+const chronicRecords = ref([]);
+const chronicDiseaseText = computed(() => chronicRecords.value.map((r) => r.diseaseName).filter(Boolean).join('、'));
+const loadChronicQualification = async (patientId) => {
+  chronicQualified.value = false;
+  chronicRecords.value = [];
+  if (!patientId) return;
+  try {
+    const res = await getChronicActiveByPatient(patientId);
+    chronicRecords.value = res.data || [];
+    chronicQualified.value = chronicRecords.value.length > 0;
+  } catch (e) {
+    // 资格查询失败不当有资格（开关禁用）；真漏判由服务端保存时拦，不假装能开
+    chronicQualified.value = false;
+  }
+};
+
 // ---------- 处方 ----------
 const currentRxType = ref(1);
 const rxLoaded = []; // 已从服务端加载的处方列表（三个类型各一张）
-const rxDraft = reactive({doseCount: 7, decoctFlag: null, details: []});
+const rxDraft = reactive({doseCount: 7, decoctFlag: null, details: [],
+  // 慢病长处方（处方级）：患者有已认定慢病档案才允许开；天数 1~90，服务端强校验
+  isLongPrescription: false, longPrescriptionDays: 28});
 const drugResults = ref([]);
 const drugLoading = ref(false);
 const rxErrors = ref([]);
@@ -420,6 +462,8 @@ const bindRxDraft = () => {
   rxDraft.details = found?.details ? JSON.parse(JSON.stringify(found.details)) : [];
   rxDraft.doseCount = found?.doseCount || 7;
   rxDraft.decoctFlag = found?.decoctFlag ?? null;
+  rxDraft.isLongPrescription = found?.isLongPrescription === 1;
+  rxDraft.longPrescriptionDays = found?.longPrescriptionDays > 0 ? found.longPrescriptionDays : 28;
 };
 
 const switchRxTab = () => {
@@ -432,12 +476,15 @@ const flushRxDraft = () => {
   let found = rxLoaded.find((p) => p.prescriptionType === currentRxType.value);
   if (!found) {
     if (!rxDraft.details.length) return;
-    found = {prescriptionType: currentRxType.value, diagnosis: '', usageInstruction: '', details: []};
+    found = {prescriptionType: currentRxType.value, diagnosis: '', usageInstruction: '', details: [],
+      isLongPrescription: 0, longPrescriptionDays: null};
     rxLoaded.push(found);
   }
   found.details = rxDraft.details;
   found.doseCount = rxDraft.doseCount;
   found.decoctFlag = rxDraft.decoctFlag;
+  found.isLongPrescription = rxDraft.isLongPrescription ? 1 : 0;
+  found.longPrescriptionDays = rxDraft.isLongPrescription ? rxDraft.longPrescriptionDays : null;
 };
 
 const addRxRow = () => {
@@ -454,7 +501,7 @@ const searchDrug = async (query) => {
 };
 
 const onDrugPicked = (row) => {
-  const drug = drugResults.value.find((d) => d.id === row.drugId);
+  const drug = drugResults.value.find((d) => d.drugId === row.drugId);
   if (drug) {
     row.drugName = drug.drugName;
     row.specification = drug.specification || '';
@@ -493,6 +540,9 @@ const buildRxPayload = () => {
         prescriptionType: p.prescriptionType || 1,
         doseCount: p.doseCount,
         decoctFlag: p.decoctFlag,
+        // 长处方（处方级）：关时天数置空由后端落 NO；饮片不开长处方（天数撞剂数上限）
+        isLongPrescription: p.isLongPrescription === 1,
+        longPrescriptionDays: p.isLongPrescription === 1 ? p.longPrescriptionDays : null,
         details: p.details.map((d) => ({
           drugId: d.drugId, drugName: d.drugName, specification: d.specification, unit: d.unit,
           singleDosage: d.singleDosage, frequency: d.frequency, route: d.route,

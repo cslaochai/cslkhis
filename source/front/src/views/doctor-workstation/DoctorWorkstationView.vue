@@ -224,7 +224,14 @@
                          @open-detail="showPatientDetail = true">
         </PatientBriefBar>
 
-        <div class="flex min-h-0 flex-1 gap-3">
+        <div class="relative flex min-h-0 flex-1 gap-3">
+          <!-- 病历已提交水印：覆盖病历/处方/费用三栏（结诊=病历提交+处方签名+L1记账，三块都是只读态） -->
+          <div v-if="recordForm.recordStatus === 2"
+               class="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
+            <div class="rotate-[-30deg] text-5xl font-black text-red-500/15 select-none">
+              病历已提交
+            </div>
+          </div>
           <!-- 次栏：病历（对调后的固定 520px 单列文书，真实 HIS 口径：模板化低频录入，不与医嘱抢宽度） -->
           <div :class="recordColCollapsed ? 'w-9' : 'w-[560px]'"
                class="relative flex min-w-0 shrink-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition-all duration-200">
@@ -679,14 +686,7 @@
               </div>
             </div>
             </div>
-            <!-- 病历已提交水印（折叠态不渲染：36px 竖条上 giant 旋转文字会被裁成色块） -->
-            <div v-if="recordForm.recordStatus === 2 && !recordColCollapsed"
-                 class="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
-              <div class="rotate-[-30deg] text-4xl font-black text-red-500/20 select-none">
-                病历已提交
-              </div>
-            </div>
-            <!-- 已审核水印 -->
+            <!-- 已审核水印（只盖病历区：审核是病历文书的状态） -->
             <div v-if="recordForm.reviewStatus === 2 && !recordColCollapsed"
                  class="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
               <div class="rotate-[-30deg] text-4xl font-black text-emerald-500/20 select-none">
@@ -731,6 +731,27 @@
                       </el-radio>
                     </el-radio-group>
                   </div>
+                  <!-- 慢病长处方（处方级）：仅西药/中成药；患者须有已认定慢病档案（服务端强校验，
+                       这里只做开关 disabled 预检）。饮片不开长处方：90 天剂量撞剂数 30 上限，开了必被拒 -->
+                  <div v-if="currentPatient.queueStatus === 3 && currentPrescriptionType !== 3"
+                       class="mb-2 mt-2 flex items-center justify-end gap-2 rounded-md bg-slate-50 px-3 py-2">
+                    <label class="text-xs text-slate-600" data-testid="ws-longrx-label">慢病长处方</label>
+                    <el-switch v-model="prescriptionForm.isLongPrescription" :disabled="!chronicQualified"
+                               data-testid="ws-longrx-switch" size="small"/>
+                    <template v-if="prescriptionForm.isLongPrescription">
+                      <label class="text-xs text-slate-600">天数<span class="text-red-500">*</span></label>
+                      <el-input-number v-model="prescriptionForm.longPrescriptionDays" :max="90" :min="1"
+                                       controls-position="right" data-testid="ws-longrx-days" size="small"
+                                       style="width: 100px"/>
+                      <span class="text-[10px] text-slate-400">1~90 天，限长期用药慢病患者</span>
+                    </template>
+                    <span v-else-if="chronicQualified" class="text-[10px] text-slate-400">
+                      已认定：{{ chronicDiseaseText }}
+                    </span>
+                    <span v-else class="text-[10px] text-amber-600" data-testid="ws-longrx-nochronic">
+                      该患者无已认定的慢病档案，不能开慢病长处方
+                    </span>
+                  </div>
                   <div class="flex min-h-0 flex-1 flex-col space-y-2 py-1">
                     <!-- 处方明细 -->
                     <div class="flex min-h-0 flex-1 flex-col space-y-2 overflow-y-auto">
@@ -766,7 +787,7 @@
                                          @change="(val: any) => handleDrugSelectForRecord(row, val)">
                                 <el-option v-for="drug in drugResults" :key="drug.id"
                                            :label="currentPrescriptionType === 3 ? drug.drugName : `${drug.drugName} (${drug.specification})`"
-                                           :value="drug.id">
+                                           :value="drug.drugId">
                                   <div class="flex items-center justify-between">
                                     <span class="text-sm font-medium text-slate-900">{{ drug.drugName }}</span>
                                     <span class="text-xs text-slate-400">{{ currentPrescriptionType === 3 ? `¥${drug.retailPrice}/${drug.unit}` : (drug.dosageForm || drug.specification) }}</span>
@@ -905,6 +926,7 @@
                               <span>
                                 {{ prescriptionTypeLabel(p.prescriptionType) }}处方 · {{ p.details.length }}种药品
                                 <template v-if="p.prescriptionType === 3 && p.doseCount"> · {{ p.doseCount }}剂</template>
+                                <template v-if="p.isLongPrescription === 1"> · 长处方{{ p.longPrescriptionDays }}天</template>
                               </span>
                               <el-tooltip v-if="p.doctorSignId" effect="plain"
                                           :content="`开方医师 ${p.doctorName} · ${p.doctorSignedTime || ''}，签名即锁定`">
@@ -2331,6 +2353,7 @@ import {
 import {getStockList} from '@/api/pharmacy';
 import {addPatientTag, getPatientDetail, getPatientHealthProfile, getPatientTags, removePatientTag} from '@/api/patient';
 import {getInspectionDetail, getLaboratoryDetail, getLaboratoryRecordList} from '@/api/medicaltech';
+import {getChronicActiveByPatient} from '@/api/chronic';
 
 const GENDER_TONE_CLASS = {
   male: 'bg-blue-50 text-blue-600',
@@ -2423,6 +2446,23 @@ const consumeSwitch = () => {
     applyPendingSwitch();
 };
 watch(() => currentPatientStore.switchedAt, consumeSwitch);
+// ========== 慢病长处方资格（患者切换即查；服务端才是最终权威，此处只为开关 disabled 预检） ==========
+const chronicQualified = ref(false);
+const chronicRecords = ref([]);
+const chronicDiseaseText = computed(() => chronicRecords.value.map((r) => r.diseaseName).filter(Boolean).join('、'));
+const loadChronicQualification = async (patientId) => {
+  chronicQualified.value = false;
+  chronicRecords.value = [];
+  if (!patientId) return;
+  try {
+    const res = await getChronicActiveByPatient(patientId);
+    chronicRecords.value = res.data || [];
+    chronicQualified.value = chronicRecords.value.length > 0;
+  } catch (e) {
+    // 资格查询失败不当有资格（开关禁用）；真漏判由服务端结诊时拦，不假装能开
+    chronicQualified.value = false;
+  }
+};
 const currentPatient = ref(null);
 const activeTab = ref('record');
 const queueSearch = ref('');
@@ -2803,6 +2843,9 @@ const prescriptionForm = reactive({
   // 中药饮片方专属，挂在处方头（一张方一个剂数，不是每味药一个）
   doseCount: 7,
   decoctFlag: null,
+  // 慢病长处方（处方级）：患者有已认定慢病档案才允许开；天数 1~90
+  isLongPrescription: false,
+  longPrescriptionDays: 28,
   details: [],
 });
 const newDrug = reactive({
@@ -2929,6 +2972,8 @@ const bindPrescriptionForm = () => {
   prescriptionForm.details = p?.details || [];
   prescriptionForm.doseCount = p?.doseCount > 0 ? p.doseCount : 7;
   prescriptionForm.decoctFlag = p?.decoctFlag ?? 2;
+  prescriptionForm.isLongPrescription = p?.isLongPrescription === 1;
+  prescriptionForm.longPrescriptionDays = p?.longPrescriptionDays > 0 ? p.longPrescriptionDays : 28;
 };
 // 剂数一改，整张方的克数与金额跟着重算（只是本地预估，真实金额后端按 4 位单价算）
 watch(() => prescriptionForm.doseCount, () => {
@@ -4150,11 +4195,11 @@ const handleDrugSearch = async (query) => {
   }
 };
 const handleDrugSelect = (val) => {
-  const drug = drugResults.value.find((d) => d.id === val);
+  const drug = drugResults.value.find((d) => d.drugId === val);
   if (drug) {
     newDrug.drugName = drug.drugName;
     newDrug.specification = drug.specification || '';
-    newDrug.drugId = drug.id;
+    newDrug.drugId = drug.drugId;
     newDrug.drugCode = drug.drugCode;
     newDrug.unit = drug.unit || '盒';
     newDrug.price = drug.retailPrice || 0;
@@ -4284,6 +4329,7 @@ const selectPatient = async (row) => {
   previsitInfo.value = null;
   aiDraftAppliedText.value = '';
   loadPrevisit(row.registId);
+  loadChronicQualification(row.patientId);
   // 重置所有表单
   const baseInfo = {
     patientId: row.patientId, patientNo: row.patientNo, patientName: row.patientName,
@@ -4429,6 +4475,8 @@ watch(currentPrescriptionType, (_, oldType) => {
     oldPrescription.details = [...prescriptionForm.details];
     oldPrescription.doseCount = prescriptionForm.doseCount;
     oldPrescription.decoctFlag = prescriptionForm.decoctFlag;
+    oldPrescription.isLongPrescription = prescriptionForm.isLongPrescription ? 1 : 0;
+    oldPrescription.longPrescriptionDays = prescriptionForm.isLongPrescription ? prescriptionForm.longPrescriptionDays : null;
   }
   // 加载新类型的处方数据
   bindPrescriptionForm();
@@ -4445,6 +4493,8 @@ const handleAddPrescription = (type) => {
     prescriptionType: type,
     diagnosis: '',
     usageInstruction: '',
+    isLongPrescription: 0,
+    longPrescriptionDays: null,
     details: [],
   };
   prescriptionList.value.push(newPrescription);
@@ -5154,6 +5204,10 @@ const buildPrescriptionPayload = () => {
           prescriptionType: p.prescriptionType || 1,
           doseCount: isCurrent ? prescriptionForm.doseCount : p.doseCount,
           decoctFlag: isCurrent ? prescriptionForm.decoctFlag : p.decoctFlag,
+          // 长处方（处方级）：当前 tab 取编辑态、其余取卡上值；关闭时天数置空由后端落 NO
+          isLongPrescription: isCurrent ? prescriptionForm.isLongPrescription : p.isLongPrescription === 1,
+          longPrescriptionDays: (isCurrent ? prescriptionForm.isLongPrescription : p.isLongPrescription === 1)
+              ? (isCurrent ? prescriptionForm.longPrescriptionDays : p.longPrescriptionDays) : null,
           // 手写笔迹本次结诊一张，所有处方共用；验签仍以电子证书签名为准
           doctorSignature: rxSignature.value || null,
           details: p.details.map((d) => ({
@@ -5213,9 +5267,9 @@ const applyRowEditable = (item) => {
   return item.applyStatus === 1 && item.signStatus !== 1;
 };
 const handleDrugSelectForRecord = (record, val) => {
-  const drug = drugResults.value.find((d) => d.id === val);
+  const drug = drugResults.value.find((d) => d.drugId === val);
   if (drug) {
-    record.drugId = drug.id;
+    record.drugId = drug.drugId;
     record.drugCode = drug.drugCode;
     record.drugName = drug.drugName;
     record.specification = drug.specification || '';
@@ -5612,9 +5666,10 @@ const printPrescriptions = () => {
   if (!hasAny) {
     html += '<div style="text-align:center;color:#999;padding:40px;">无处方</div>';
   } else {
-    prescriptionList.value.forEach(p => {
-      if (!p.details || p.details.length === 0)
-        return;
+    // 普通处方（西药+中成药）一页，中药饮片另起一页（《处方管理办法》要求饮片单独开具）
+    const normalRxs = prescriptionList.value.filter(p => p.details?.length && p.prescriptionType !== 3);
+    const herbalRxs = prescriptionList.value.filter(p => p.details?.length && p.prescriptionType === 3);
+    normalRxs.forEach(p => {
       html += `<div class="rx-title">${prescriptionTypeLabel(p.prescriptionType)}处方</div>`;
       html += `<table><thead><tr><th>药品名称</th><th>规格</th><th>数量</th><th>用法</th><th>频次</th><th>天数</th></tr></thead><tbody>`;
       p.details.forEach((d) => {
@@ -5629,9 +5684,34 @@ const printPrescriptions = () => {
       });
       html += '</tbody></table>';
     });
+    if (herbalRxs.length) {
+      html += `<div style="page-break-before:always;"></div>
+        <div class="header"><h1>中药处方笺</h1></div>
+        <div class="info">
+          <span>患者：${patient.patientName}</span>
+          <span>性别：${patientGenderText(patient.gender)}</span>
+          <span>年龄：${patient.age}岁</span>
+          <span>科室：${patient.deptName}</span>
+        </div>`;
+      herbalRxs.forEach(p => {
+        html += `<div class="rx-title">中药饮片处方</div>`;
+        html += `<table><thead><tr><th>药品名称</th><th>规格</th><th>数量</th><th>用法</th><th>频次</th><th>天数</th></tr></thead><tbody>`;
+        p.details.forEach((d) => {
+          html += `<tr>
+            <td>${d.drugName || '-'}</td>
+            <td>${d.specification || '-'}</td>
+            <td>${d.quantity || '-'} ${d.unit || ''}</td>
+            <td>${d.route || '-'}</td>
+            <td>${d.frequency || '-'}</td>
+            <td>${d.duration || '-'}</td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+      });
+    }
   }
   const signLine = signedRx
-      ? `医师签名：${signedRx.doctorName || patient.doctorName || ''}（电子签名${signedRx.doctorSignedTime ? ' · ' + signedRx.doctorSignedTime : ''}，可验签）`
+      ? `医师签名：${signedRx.doctorName || patient.doctorName || ''}（电子签名${signedRx.doctorSignedTime ? ' · ' + String(signedRx.doctorSignedTime).replace('T', ' ') : ''}，可验签）`
       : '医师签名：（尚未电子签名，结诊提交后生效）';
   const signDate = signedRx && signedRx.doctorSignedTime
       ? String(signedRx.doctorSignedTime).slice(0, 10)

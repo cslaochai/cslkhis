@@ -265,6 +265,17 @@ public class BizPrescriptionVO {
     private Integer returnCount;
 
     /**
+     * 是否慢病长处方（0-否 1-是；保存时后端按患者已认定慢病档案 + 天数 1~90 强校验，
+     * 见 EmrServiceImpl 长处方分支。历史处方回读医生站用，改方时保持原状）
+     */
+    private Integer isLongPrescription;
+
+    /**
+     * 长处方用药天数（1~90，仅 isLongPrescription=1 有值）
+     */
+    private Integer longPrescriptionDays;
+
+    /**
      * 处方明细列表
      */
     private List<BizPrescriptionDetailVO> details;
