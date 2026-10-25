@@ -48,16 +48,8 @@
 import {computed, reactive, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
 import {opdStationUpsert} from '@/api/opdStation'
+import {STATION_KIND_OPTIONS} from '@/lib/opdStation'
 import {STAFF_TYPE_OPTIONS} from '@/lib/scheduleShift'
-
-const STATION_KIND_OPTIONS = [
-  {label: '总导诊', value: 1},
-  {label: '门诊分诊台', value: 2},
-  {label: '输液室', value: 3},
-  {label: '注射室', value: 4},
-  {label: '采血室', value: 5},
-  {label: '其他', value: 9},
-]
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},

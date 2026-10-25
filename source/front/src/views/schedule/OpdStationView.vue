@@ -153,18 +153,10 @@ import {Delete, Edit, Plus, Refresh, Search} from '@element-plus/icons-vue'
 import {
   deleteOpdAssign, deleteOpdStation, getOpdAssignPage, getOpdStationPage, getOpdStationSelectList,
 } from '@/api/opdStation'
+import {STATION_KIND_OPTIONS} from '@/lib/opdStation'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import OpdStationEdit from './OpdStationEdit.vue'
 import OpdAssignEdit from './OpdAssignEdit.vue'
-
-const STATION_KIND_OPTIONS = [
-  {label: '总导诊', value: 1},
-  {label: '门诊分诊台', value: 2},
-  {label: '输液室', value: 3},
-  {label: '注射室', value: 4},
-  {label: '采血室', value: 5},
-  {label: '其他', value: 9},
-]
 
 const activeTab = ref('station')
 

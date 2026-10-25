@@ -110,7 +110,6 @@
             批量驳回
           </el-button>
           <el-button :icon="Refresh" @click="loadClinicData">刷新</el-button>
-          <span class="text-sm text-slate-500">共 {{ clinicPagination.total }} 条待审 · 审核人＝科室主档指定的「门诊审核人」，管理员/门诊办可审全部科室</span>
         </div>
 
         <el-card class="table-card" shadow="never">
