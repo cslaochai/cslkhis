@@ -70,11 +70,6 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
      * 签到时间展示格式
      */
     private static final DateTimeFormatter ATTENDANCE_TIME_FMT = DateTimeFormatter.ofPattern("HH:mm:ss");
-    /**
-     * 急诊科室单元ID（19580047 急危重症中心 + 19580048 急诊内科 / 49 急诊外科 / 51 急诊儿科）。
-     * 急诊值班资质校验与固定医师占比统计的科室口径收口处。
-     */
-    private static final Set<Long> ER_DEPT_IDS = Set.of(19580047L, 19580048L, 19580049L, 19580051L);
     private final DeptScopeService deptScopeService;
     private final SystemFacadeService systemFacadeService;
     private final ShiftService shiftService;
@@ -270,6 +265,33 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
     }
 
     /**
+     * 急诊科室单元全集：sys_department.dept_type 含 6-急诊科室（字典 his_dept_type，增量 SQL 295）。
+     * <p>含虚父级（如急危重症中心）—— 资质校验要兜住排到父级上的班，漏一个 ID 就是漏一道闸。
+     * 现查不缓存：科室档案上勾「急诊科室」是运行时行为，勾选应立即生效。
+     */
+    private Set<Long> erDeptIds() {
+        return getBaseMapper().selectErDepts(DeptTypeEnum.ER.getCode()).stream()
+                .map(ErDeptRow::getId)
+                .collect(Collectors.toSet());
+    }
+
+    /**
+     * 急诊叶子单元：全集内排除「被其他急诊科室指为父级」的虚父级（如急危重症中心）。
+     * 值班公开表与固定医师占比只按实际出诊单元统计，虚父级不单列 —— 与字典化前口径一致。
+     */
+    private Set<Long> erLeafDeptIds() {
+        List<ErDeptRow> rows = getBaseMapper().selectErDepts(DeptTypeEnum.ER.getCode());
+        if (rows.isEmpty()) {
+            return Collections.emptySet();
+        }
+        Set<Long> parentIds = rows.stream().map(ErDeptRow::getParentId)
+                .filter(Objects::nonNull).collect(Collectors.toSet());
+        return rows.stream().map(ErDeptRow::getId)
+                .filter(id -> !parentIds.contains(id))
+                .collect(Collectors.toSet());
+    }
+
+    /**
      * 值班资质底线校验（《医疗质量安全核心制度要点》国卫医发〔2018〕8号）：
      * 非本机构注册执业人员不得单独值班。
      * <p>落地口径：急诊科室单元 + 医生岗位 + <b>夜班班次</b>（夜间单人值班风险最高）时，
@@ -283,7 +305,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
                 || !Objects.equals(schedule.getOrgType(), OrgUnitTypeEnum.DEPT.getCode())) {
             return;
         }
-        if (!ER_DEPT_IDS.contains(schedule.getOrgId())) {
+        if (!erDeptIds().contains(schedule.getOrgId())) {
             return;
         }
         if (!Objects.equals(schedule.getStaffType(), StaffTypeEnum.DOCTOR.getCode())) {
@@ -749,14 +771,19 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
     }
 
     /**
-     * 急诊值班公开视图：急诊内科/外科/儿科当天已发布（2/4）的医生出勤行，按班次开始时间排序。
+     * 急诊值班公开视图：急诊科室（dept_type 含 6，字典 his_dept_type）当天已发布（2/4）的
+     * 医生出勤行，按班次开始时间排序。虚父级（被其他急诊科室指为父级）不单列。
      * 只读、不按数据范围收口 —— 值班表全院公开是核心制度要求；接口层 isAuthenticated 即可。
      */
     @Override
     public List<StaffScheduleVO> erDutyPublic(LocalDate date) {
+        Set<Long> erDeptIds = erLeafDeptIds();
+        if (erDeptIds.isEmpty()) {
+            return Collections.emptyList();
+        }
         List<BizSchedule> rows = list(new LambdaQueryWrapper<BizSchedule>()
                 .eq(BizSchedule::getScheduleDate, date)
-                .in(BizSchedule::getDeptId, List.of(19580048L, 19580049L, 19580051L))
+                .in(BizSchedule::getDeptId, erDeptIds)
                 .eq(BizSchedule::getStaffType, StaffTypeEnum.DOCTOR.getCode())
                 .eq(BizSchedule::getDutyStatus, StaffDutyStatusEnum.WORK.getCode())
                 .in(BizSchedule::getPublishStatus,
@@ -772,18 +799,15 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
 
     /**
      * 急诊固定医师占比（评审口径：固定急诊医师 ≥ 在岗急诊医师 75%，卫医政发〔2009〕50号）。
-     * 按急诊内科/外科/儿科分别统计当天已发布（2/4）在岗医生中 is_fixed=1 的占比；
-     * 急危重症中心为虚父级，不单列。未维护 is_fixed（NULL）的员工不计入固定数 ——
+     * 按急诊叶子科室（dept_type 含 6，排除虚父级）分别统计当天已发布（2/4）在岗医生中
+     * is_fixed=1 的占比；未维护 is_fixed（NULL）的员工不计入固定数 ——
      * 档案维护越全，口径越接近真实。
      */
     @Override
     public List<ErFixedRatioVO> erFixedRatio(LocalDate date) {
         LocalDate day = date == null ? LocalDate.now() : date;
         List<ErFixedRatioVO> result = new ArrayList<>();
-        for (Long deptId : ER_DEPT_IDS) {
-            if (Objects.equals(deptId, 19580047L)) {
-                continue;
-            }
+        for (Long deptId : erLeafDeptIds()) {
             List<BizSchedule> rows = list(new LambdaQueryWrapper<BizSchedule>()
                     .eq(BizSchedule::getScheduleDate, day)
                     .eq(BizSchedule::getDeptId, deptId)

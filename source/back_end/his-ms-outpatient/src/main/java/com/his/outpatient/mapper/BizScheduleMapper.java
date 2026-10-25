@@ -2,6 +2,7 @@ package com.his.outpatient.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.his.outpatient.dto.ErDeptRow;
 import com.his.outpatient.dto.NurseDutyRow;
 import com.his.outpatient.dto.StaffCheckRow;
 import com.his.outpatient.vo.NurseScheduleVO;
@@ -126,6 +127,23 @@ public interface BizScheduleMapper extends BaseMapper<BizSchedule> {
             """)
     List<NurseScheduleVO.Ward> selectDeptOptions(@Param("deptIds") List<Long> deptIds,
                                                  @Param("keyword") String keyword);
+
+    /**
+     * 急诊科室单元（sys_department.dept_type 含指定类型码，字典 his_dept_type）。
+     * <p>跨模块只读主数据，按仓库铁律走本模块裸 SQL，必带 del_flag=0。
+     * dept_type 是逗号分隔多值串，匹配用 FIND_IN_SET 而非等值。
+     * <p>为什么现查而不是常量/缓存：科室档案上勾「急诊科室」是运行时行为，
+     * 现查才能让勾选立即对值班公开表与资质校验生效，也不留换库失效的魔数。
+     *
+     * @param deptTypeCode 科室类型码（DeptTypeEnum.ER = "6"）
+     */
+    @Select("""
+            SELECT t.id AS id, t.parent_id AS parentId
+              FROM sys_department t
+             WHERE t.del_flag = 0 AND FIND_IN_SET(#{deptTypeCode}, t.dept_type) > 0
+             ORDER BY t.id
+            """)
+    List<ErDeptRow> selectErDepts(@Param("deptTypeCode") String deptTypeCode);
 
     /**
      * 护士候选（矩阵的行轴）：按工号定序，行序稳定，复制上周才认得出「同一个人」
