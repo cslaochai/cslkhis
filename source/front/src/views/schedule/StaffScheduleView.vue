@@ -59,10 +59,11 @@
               <el-option v-for="o in DUTY_STATUS_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
             </el-select>
           </el-form-item>
-          <el-form-item label="仅出诊">
-            <el-select v-model="searchForm.clinicFlag" clearable placeholder="全部">
+          <el-form-item label="出诊过滤">
+            <el-select v-model="searchForm.clinicFlag" placeholder="默认非出诊" :clearable="false">
+              <el-option :value="0" label="非出诊（默认）"/>
               <el-option :value="1" label="出诊班"/>
-              <el-option :value="0" label="非出诊"/>
+              <el-option :value="-1" label="全部（含出诊）"/>
             </el-select>
           </el-form-item>
           <el-form-item label="关键词">
@@ -472,7 +473,8 @@ const onDutyLoading = ref(false)
 
 const searchForm = ref({
   startDate: null, endDate: null, orgType: null, orgId: null, staffType: null, dutyStatus: null,
-  clinicFlag: null, keyword: '',
+  // 默认非出诊：医生门诊出诊行归门诊排班页管理，员工排班页默认不展示（可选「全部（含出诊）」切回）
+  clinicFlag: 0, keyword: '',
 })
 
 // ---------------- 排班单元候选（科室/病区/全院） ----------------
@@ -503,6 +505,8 @@ const loadData = async () => {
   try {
     const res = await getStaffScheduleListPage({
       ...searchForm.value,
+      // -1 是「全部（含出诊）」的哨兵值（el-option 禁绑 null），发请求时映射回 null=不过滤
+      clinicFlag: searchForm.value.clinicFlag === -1 ? null : searchForm.value.clinicFlag,
       pageNum: pagination.value.pageNum,
       pageSize: pagination.value.pageSize,
     })
@@ -536,7 +540,7 @@ const handleSearch = () => {
 const handleReset = () => {
   searchForm.value = {
     startDate: null, endDate: null, orgType: null, orgId: null, staffType: null, dutyStatus: null,
-    clinicFlag: null, keyword: '',
+    clinicFlag: 0, keyword: '',
   }
   unitOptions.value = []
   handleSearch()
