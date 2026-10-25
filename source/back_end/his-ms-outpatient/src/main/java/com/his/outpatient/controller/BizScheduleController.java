@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.outpatient.dto.NurseScheduleDTO;
+import com.his.outpatient.dto.NurseScheduleFileRejectDTO;
 import com.his.outpatient.dto.NurseScheduleLogQueryDTO;
 import com.his.outpatient.service.BizScheduleService;
 import com.his.outpatient.service.NurseScheduleLogService;
@@ -64,6 +65,16 @@ public class BizScheduleController {
                                                                @RequestParam Long unitId,
                                                                @RequestParam(required = false) String keyword) {
         return Result.success(bizScheduleService.nurseSelectList(unitType, unitId, keyword));
+    }
+
+    /**
+     * 病区护理班次（use_scope=2）下拉，供护理排班模板明细行选班次用。
+     */
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "病区护理班次下拉（use_scope=2，供模板明细行选班次）")
+    @GetMapping("/nursingShifts")
+    public Result<List<NurseScheduleVO.ShiftOption>> nursingShifts() {
+        return Result.success(bizScheduleService.nursingShiftOptions());
     }
 
     /**
@@ -163,6 +174,30 @@ public class BizScheduleController {
     public Result<Integer> auditWeek(@RequestBody @Valid NurseScheduleDTO.MatrixQuery dto) {
         int moved = bizScheduleService.auditWeek(dto);
         return Result.success("已发布 " + moved + " 条", moved);
+    }
+
+    /**
+     * 周备案：护理部对片区已发布的本周排班确认留档（待备案→已备案），不阻塞在岗生效。
+     * 用于病区护理排班页周头部的「备案」动作。
+     */
+    @PreAuthorize("hasAuthority('nursing:schedule:file')")
+    @Operation(summary = "周备案（本周待备案→已备案，留档不阻塞生效）")
+    @PostMapping("/fileWeek")
+    public Result<Void> fileWeek(@RequestBody @Valid NurseScheduleDTO.MatrixQuery dto) {
+        bizScheduleService.fileWeek(dto);
+        return Result.success("已备案", null);
+    }
+
+    /**
+     * 周备案退回：本周备案置已退回，并把该周本单元的已发布/已变更护理排班整批打回草稿重排。
+     * 用于病区护理排班页周头部的「退回」动作，护理部抽查发现问题的处置入口。
+     */
+    @PreAuthorize("hasAuthority('nursing:schedule:file')")
+    @Operation(summary = "周备案退回（本周→已退回，生效排班整批打回草稿）")
+    @PostMapping("/fileRejectWeek")
+    public Result<Integer> fileRejectWeek(@RequestBody @Valid NurseScheduleFileRejectDTO dto) {
+        int reverted = bizScheduleService.fileRejectWeek(dto);
+        return Result.success("已退回，" + reverted + " 条排班打回草稿", reverted);
     }
 
     /**

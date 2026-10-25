@@ -78,6 +78,12 @@
                 <el-button @click="shiftWeek(1)">下一周<span class="px-0.5 text-base leading-none">›</span></el-button>
                 <el-button link type="primary" @click="goThisWeek">回本周</el-button>
               </div>
+              <!-- 本周备案态：文案唯一来源是后端 filingStatusText（枚举渲染），前端只按码值上色 -->
+              <el-tag v-if="filingStatusText" :type="filingStatusTagType(filingStatus)" effect="plain" size="large"
+                      data-testid="ns-filing-status"
+                      :title="`本周护理部备案态：${filingStatusText}`">
+                备案：{{ filingStatusText }}
+              </el-tag>
               <span class="ml-auto flex items-center gap-2">
               <el-button :icon="Refresh" :loading="matrixLoading" type="primary" @click="reloadAll">查询</el-button>
               <el-button v-perm="PERM_ADD" :icon="MagicStick" type="primary" plain @click="handleGenerateFromTemplate">按模板生成下周</el-button>
@@ -93,7 +99,20 @@
                          data-testid="ns-submit-week" @click="doSubmitWeek">整周提交审核</el-button>
               <el-button v-perm="PERM_AUDIT" type="success" :disabled="!pubSummary.pending"
                          data-testid="ns-audit-week" @click="doAuditWeek">整周审核发布</el-button>
+              <!-- 第三档·护理部备案：不阻塞在岗（审核发布即生效），只做留痕与事后退回 -->
+              <el-button v-perm="PERM_FILE" :disabled="!canFileWeek(filingStatus)" type="primary" plain
+                         data-testid="ns-file-week" @click="doFileWeek">整周备案</el-button>
+              <el-button v-perm="PERM_FILE" :disabled="!canRejectFileWeek(filingStatus)" type="danger" plain
+                         data-testid="ns-file-reject-week" @click="doRejectFileWeek">退回重排</el-button>
             </span>
+            </div>
+
+            <!-- 备案退回横幅：退回 = 本周已发布行整批回草稿、立刻不计在岗，必须让护士长一进页面就看到 -->
+            <div v-if="isWeekFileRejected(filingStatus)"
+                 class="flex flex-wrap items-center gap-2 border-b border-red-100 bg-red-50 px-4 py-2 text-sm"
+                 data-testid="ns-file-reject-tip">
+              <span class="font-medium text-red-700">护理部已退回</span>
+              <span class="text-red-600">退回后本周排班已回草稿、不再计入在岗，请重新排班后整周提交。</span>
             </div>
 
             <!-- 人力缺口提示：只显示哪天缺人，其他统计放排班总览 -->
@@ -134,7 +153,7 @@
                     <span :class="d === today ? 'font-semibold text-blue-700' : ''">{{ dayHead(d) }}</span>
                   </template>
                   <template #default="{ row }">
-                    <div :class="['cell-box', { 'is-today': d === today, 'is-readonly': !canAdd }]"
+                    <div :class="['cell-box', { 'is-today': d === today, 'is-readonly': !canOpenCell }]"
                          data-testid="ns-cell" @click="openCell(row, d)">
                       <template v-if="row.dayCells[i]">
                     <span v-if="row.dayCells[i].scheduleStatus === 1"
@@ -185,9 +204,7 @@
 
         <!-- ===================== 排班模板 ===================== -->
         <el-tab-pane label="排班模板" name="template">
-          <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <el-empty description="排班模板：预设常用排班模式（APN / 8-4 / 小组制等），一键应用到本周"/>
-          </div>
+          <NurseScheduleTemplatePanel ref="templatePanel"/>
         </el-tab-pane>
 
         <!-- ===================== 派岗记录 ===================== -->
@@ -249,9 +266,10 @@
       </ul>
     </el-dialog>
 
-    <!-- 点格排班弹窗：表单与保存在 NurseScheduleCellEdit；发布态动作回传本页执行 -->
+    <!-- 点格排班弹窗：表单与保存在 NurseScheduleCellEdit；发布态动作回传本页执行。
+         只有审核权（片区科护士长）时按只读渲染：表单禁用，footer 只出「审核发布」这一族动作 -->
     <NurseScheduleCellEdit v-model="cellVisible" :row="cellRow" :shifts="shifts" :status-options="statusOptions"
-                           :unit-type="unitType" :station-options="stationOptions"
+                           :unit-type="unitType" :station-options="stationOptions" :read-only="!canAdd"
                            :source-org-name="matrix?.deptName || ''"
                            @delete="removeCell" @saved="loadMatrix"
                            @transition="onCellTransition"/>
@@ -311,7 +329,7 @@
 </template>
 
 <script setup>
-import {computed, onMounted, onUnmounted, reactive, ref, watch} from 'vue';
+import {computed, nextTick, onMounted, onUnmounted, reactive, ref, watch} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {CopyDocument, MagicStick, Plus, Refresh} from '@element-plus/icons-vue';
 import {
@@ -323,6 +341,7 @@ import {
   copyNurseScheduleWeek,
   deleteNurseScheduleCell,
   deleteNurseScheduleRule,
+  fileWeekNurseSchedule,
   getNurseMonthWorkload,
   getNurseScheduleRuleList,
   getNurseUnitSelectList,
@@ -330,6 +349,7 @@ import {
   listNurseScheduleLogPage,
   listNurseSchedulePage,
   recallNurseSchedule,
+  rejectFileWeekNurseSchedule,
   submitNurseSchedule,
   submitWeekNurseSchedule,
 } from '@/api/nurseSchedule';
@@ -343,11 +363,23 @@ import {hasPerm} from '@/lib/perm';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
 import {batchDays} from '@/lib/scheduleDate';
 import {publishStatusTagType} from '@/lib/publishStatus';
-import {PERM_ADD, PERM_AUDIT, PERM_EDIT,} from '@/lib/nurseSchedule';
+import {
+  canFileWeek,
+  canRejectFileWeek,
+  filingStatusTagType,
+  hasFilingRow,
+  isWeekFileRejected,
+  PERM_ADD,
+  PERM_AUDIT,
+  PERM_EDIT,
+  PERM_FILE,
+} from '@/lib/nurseSchedule';
 // 拆分出的弹框组件
 import NurseScheduleCellEdit from './NurseScheduleCellEdit.vue';
 import NurseScheduleRuleEdit from './NurseScheduleRuleEdit.vue';
 import NurseScheduleAttendDetail from './NurseScheduleAttendDetail.vue';
+// 护理排班模板（周模板 + 班次实用排班模式 + 套用到周）面板
+import NurseScheduleTemplatePanel from './NurseScheduleTemplatePanel.vue';
 
 const activeTab = ref('matrix');
 /** 排班状态字典（1上班/2休息/3请假/4培训/5停排），矩阵格与筛选下拉共用 */
@@ -378,6 +410,8 @@ const wardId = ref(null);
 // 下拉的 value 必须把类型一起带上，否则「门诊科室的 id」会被当成「病区的 id」。
 const unitType = ref(1);
 const activeNurseTab = ref('matrix');
+/** 排班模板面板（嵌入「排班模板」签，供顶部「按模板生成下周」唤起其套用弹窗） */
+const templatePanel = ref(null);
 const showWarnings = ref(false);
 const filterNurseId = ref(null);
 
@@ -597,8 +631,12 @@ const matrixRows = computed(() => (matrix.value?.nurses || []).map((n) => ({
   ...n,
   dayCells: (matrix.value?.days || []).map((d) => cellOf(n.employeeId, d) || null),
 })));
-/** 是否有排班写权限：决定格子显示 + 号、可否点开编辑，只读态不诱导点击 */
+/** 是否有排班写权限（病区护士长）：决定格子显示 + 号与弹框表单可否编辑 */
 const canAdd = computed(() => hasPerm(PERM_ADD));
+/** 是否有审核发布权限（片区科护士长）：格子要点开得开，但只能走审核动作、不能改班次 */
+const canAudit = computed(() => hasPerm(PERM_AUDIT));
+/** 格子可否点开：维护权或审核权任一即可——只有审核权的人也要能进格子做单条审核发布 */
+const canOpenCell = computed(() => canAdd.value || canAudit.value);
 /** 本周是否一行排班都没有：用于空周引导条（已加载、有在册护士，但格子全空） */
 const weekEmpty = computed(() =>
     !!matrix.value && (matrix.value.nurses || []).length > 0 &&
@@ -686,12 +724,19 @@ watch(activeTab, (t) => {
 const cellVisible = ref(false);
 const cellRow = ref(null);
 const openCell = (nurse, date) => {
-  if (!hasPerm(PERM_ADD)) {
-    ElMessage.info('当前岗位没有排班权限（nursing:schedule:add），矩阵为只读');
+  // 只有「既无维护权、又无审核权」才拦：以前只判 PERM_ADD，结果拿着审核权的片区科护士长
+  // 点不开格子，弹框里那条单格「审核发布」按钮永远出不来（待审核只能整周发，个别格没法处理）
+  if (!canOpenCell.value) {
+    ElMessage.info('当前岗位既没有排班维护权（nursing:schedule:add）也没有审核发布权（nursing:schedule:audit），矩阵为只读');
     return;
   }
   const cell = cellOf(nurse.employeeId, date);
   const st = stationOf(nurse.employeeId, date);
+  // 空格子没有任何一行排班可审：只有审核权的人点空格不必弹一个全禁用的框
+  if (!canAdd.value && !cell) {
+    ElMessage.info(`${nurse.nurseName || ''} ${date} 还没有排班记录：编制班次由病区护士长完成，本岗位只能审核已提交的排班`);
+    return;
+  }
   cellRow.value = {
     wardId: wardId.value,
     employeeId: String(nurse.employeeId),
@@ -796,10 +841,55 @@ const doAuditWeek = async () => {
   }
 };
 
-// ---------------- 复制上周 ----------------
+// ---------------- 第三档·护理部备案（片区审核发布即生效，备案只留痕、不阻塞在岗） ----------------
+/** 本周备案态：null = 该周还没进备案环节（没备案行），两个备案按钮都不给点 */
+const filingStatus = computed(() => (hasFilingRow(matrix.value?.filingStatus) ? Number(matrix.value.filingStatus) : null));
+/** 备案态文案唯一来源是后端 filingStatusText（枚举渲染），前端不抄第二份码表 */
+const filingStatusText = computed(() => (filingStatus.value === null ? '' : (matrix.value?.filingStatusText || '')));
+const filingWeekLabel = () => `${matrix.value?.wardName || matrix.value?.deptName || '本单元'} ${weekStart.value} ~ ${weekEnd.value}`;
+const doFileWeek = async () => {
+  try {
+    await ElMessageBox.confirm(`对 ${filingWeekLabel()} 这一周做护理部备案留痕。备案不改变在岗口径——片区审核发布时已计在岗，备案只表明护理部已收阅。确定备案？`, '整周备案', {type: 'warning'});
+  } catch {
+    return;
+  }
+  try {
+    const res = await fileWeekNurseSchedule(weekPayload());
+    ElMessage.success(res.message || '已备案');
+    await reloadAll();
+  } catch {
+    /* 错误已由全局拦截器统一提示 */
+  }
+};
+const doRejectFileWeek = async () => {
+  let opinion = '';
+  try {
+    const {value} = await ElMessageBox.prompt(
+        `退回 ${filingWeekLabel()} 这一周：本周已发布/已变更的排班会整批打回草稿，立刻不再计入在岗，需病区护士长重新排班后整周提交。退回原因必填，会随备案留痕给护士长。`,
+        '整周退回重排',
+        {
+          inputPlaceholder: '如：周三夜班仅 1 人，与人力标准不符',
+          inputValidator: (v) => (v && v.trim() ? true : '退回原因不能为空'),
+          inputErrorMessage: '退回原因不能为空',
+        });
+    opinion = String(value).trim();
+  } catch {
+    return;
+  }
+  try {
+    const res = await rejectFileWeekNurseSchedule({...weekPayload(), opinion});
+    ElMessage.success(res.message || '已退回，本周排班已回草稿');
+    await reloadAll();
+  } catch {
+    /* 错误已由全局拦截器统一提示 */
+  }
+};
+
+// ---------------- 按模板生成下周（唤起排班模板面板的套用弹窗） ----------------
 const handleGenerateFromTemplate = async () => {
-  // 占位：后续接入模板生成接口
-  ElMessage.info('按模板生成下周排班功能开发中...');
+  activeNurseTab.value = 'template';
+  await nextTick();
+  templatePanel.value?.openApply();
 };
 const doCopyWeek = async () => {
   const source = addDays(weekStart.value, -7);

@@ -1,6 +1,6 @@
 -- 领域：16-急诊与全院总值班
--- 库：hn_biz_his    表数：6
--- 说明：DDL 快照（dev 库 SHOW CREATE TABLE 于 2026-10-23 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
+-- 库：hn_biz_his    表数：7
+-- 说明：DDL 快照（dev 库 SHOW CREATE TABLE 于 2026-10-25 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
 -- 口径：姓名/名称快照列与操作人列（create_by·update_by·*_by·*_name·name）不留 DEFAULT，漏填直接报错；其余 NOT NULL 列保留库上的 DEFAULT。
 
 -- ----------------------------
@@ -131,6 +131,10 @@ CREATE TABLE `biz_emergency` (
   `unassigned_reason` varchar(200) COMMENT '未派单原因',
   `target_see_minutes` int COMMENT '该分诊级别的应接诊时限',
   `vital_signs` text COMMENT '生命体征',
+  `consciousness` tinyint COMMENT '意识状态（1-清楚 2-对声音有反应 3-对疼痛有反应 4-无反应）',
+  `mews_score` int COMMENT 'MEWS 评分（0-14，WS/T 810—2022 五项版现算快照）',
+  `last_reeval_time` datetime COMMENT '最近一次分诊复评时间',
+  `reeval_count` int NOT NULL DEFAULT '0' COMMENT '分诊复评次数',
   `diagnosis` text COMMENT '初步诊断',
   `treatment` text COMMENT '处理措施',
   `emergency_status` tinyint COMMENT '急诊状态（1-候诊 2-诊治中 3-留观 4-转住院 5-离院 6-死亡）',
@@ -207,6 +211,8 @@ CREATE TABLE `biz_emergency_handover_item` (
   `patient_id` bigint NOT NULL DEFAULT '0' COMMENT '患者ID',
   `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
   `triage_level` tinyint COMMENT '分诊级别',
+  `mews_score` int COMMENT 'MEWS 评分（交班时定格）',
+  `reeval_due` tinyint COMMENT '交班时是否待复评（0-否 1-是）',
   `emergency_status` tinyint NOT NULL DEFAULT '0' COMMENT '交班时该患者的急诊状态（1-候诊 2-诊治中 3-留观）',
   `from_doctor_id` bigint COMMENT '交班时的负责医生ID',
   `from_doctor_name` varchar(50) COMMENT '交班时的负责医生姓名（快照）',
@@ -230,3 +236,30 @@ CREATE TABLE `biz_emergency_handover_item` (
   KEY `idx_hi_emergency` (`emergency_id`),
   KEY `idx_hi_take` (`take_doctor_id`,`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='急诊交班明细';
+
+-- ----------------------------
+-- biz_emergency_reeval  急诊分诊复评流水
+-- ----------------------------
+CREATE TABLE `biz_emergency_reeval` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `emergency_id` bigint NOT NULL COMMENT '急诊记录ID',
+  `emergency_no` varchar(32) NOT NULL COMMENT '急诊号（快照）',
+  `patient_name` varchar(50) NOT NULL COMMENT '患者姓名（快照）',
+  `triage_level_before` tinyint COMMENT '复评前分诊级别（1-I级濒危 2-II级危重 3-III级急症 4-IV级非急症）',
+  `triage_level_after` tinyint NOT NULL COMMENT '复评后分诊级别（只升不降）',
+  `mews_score` int COMMENT '复评时 MEWS 评分（0-14）',
+  `consciousness` tinyint COMMENT '复评时意识状态（1-清楚 2-对声音有反应 3-对疼痛有反应 4-无反应）',
+  `vital_signs` text COMMENT '复评时生命体征（JSON 快照）',
+  `reason` varchar(500) NOT NULL COMMENT '复评原因',
+  `create_by` varchar(64) NOT NULL COMMENT '创建人',
+  `create_time` datetime NOT NULL DEFAULT (now()) COMMENT '创建时间',
+  `update_by` varchar(64) NOT NULL COMMENT '更新人',
+  `update_time` datetime NOT NULL DEFAULT (now()) COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) COMMENT '备注',
+  `create_by_id` bigint NOT NULL COMMENT '创建人ID',
+  `update_by_id` bigint NOT NULL COMMENT '更新人ID',
+  PRIMARY KEY (`id`),
+  KEY `idx_reeval_emergency` (`emergency_id`),
+  KEY `idx_reeval_no` (`emergency_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='急诊分诊复评流水';

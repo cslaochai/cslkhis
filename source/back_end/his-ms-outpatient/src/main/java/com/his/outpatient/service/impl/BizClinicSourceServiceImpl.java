@@ -873,6 +873,14 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         doAudit(existing);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void auditPublishBatch(List<Long> ids) {
+        for (Long id : ids) {
+            auditPublish(id);
+        }
+    }
+
     /**
      * 待审核 → 已发布（单条与整周发布共用）：补号段 + 同步出勤事实 + 留痕
      */

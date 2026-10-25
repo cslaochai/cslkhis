@@ -136,9 +136,10 @@ export function scheduleSubmit(scheduleId) {
     return request.post('/schedule/submit', null, {params: {scheduleId}})
 }
 
-// 审核发布（待审核→已发布，同时出号）
-export function scheduleAuditPublish(scheduleId) {
-    return request.post('/schedule/auditPublish', null, {params: {scheduleId}})
+// 审核发布（待审核→已发布，同时出号，支持批量）
+export function scheduleAuditPublish(scheduleIds) {
+    const ids = Array.isArray(scheduleIds) ? scheduleIds : [scheduleIds]
+    return request.post('/schedule/auditPublish', null, {params: {scheduleIds: ids}})
 }
 
 // 撤回（任意态→草稿，已发布的号源一并撤下）

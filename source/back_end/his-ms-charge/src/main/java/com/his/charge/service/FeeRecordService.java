@@ -98,6 +98,12 @@ public interface FeeRecordService extends IService<BizFeeRecord> {
     List<FeeTypeSumVO> sumNetGroupByItemType(Integer encounterType, Long encounterId);
 
     /**
+     * 某次就诊按项目类型分组的未结算应收净额（fee_status IN 1,2）：
+     * 患者引导单"还要交多少钱、花在哪"用，排除挂号时已收的诊查费。
+     */
+    List<FeeTypeSumVO> sumPendingGroupByItemType(Integer encounterType, Long encounterId);
+
+    /**
      * 某次就诊发生过的记账行明细（含红冲负行，不问结算状态）：住院日清单的事实来源。
      */
     List<BizFeeRecord> listNetByEncounter(Integer encounterType, Long encounterId);

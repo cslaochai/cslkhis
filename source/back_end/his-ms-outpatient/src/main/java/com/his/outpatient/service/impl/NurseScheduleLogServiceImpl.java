@@ -106,4 +106,30 @@ public class NurseScheduleLogServiceImpl extends ServiceImpl<BizNurseScheduleLog
         result.setRecords(vos);
         return result;
     }
+
+    @Override
+    public Long latestSubmitterId(Long scheduleId, String orgName) {
+        if (scheduleId != null) {
+            BizNurseScheduleLog row = lambdaQuery()
+                    .eq(BizNurseScheduleLog::getScheduleId, scheduleId)
+                    .eq(BizNurseScheduleLog::getActionType, NurseScheduleChangeTypeEnum.SUBMIT.getCode())
+                    .orderByDesc(BizNurseScheduleLog::getOccurTime).orderByDesc(BizNurseScheduleLog::getId)
+                    .last("LIMIT 1").one();
+            if (row != null && row.getCreateById() != null) {
+                return row.getCreateById();
+            }
+        }
+        // 整周提交没有单行可挂，只能按单元名快照回溯最近一条整周提交留痕
+        if (TextUtil.hasText(orgName)) {
+            BizNurseScheduleLog row = lambdaQuery()
+                    .eq(BizNurseScheduleLog::getOrgName, orgName)
+                    .eq(BizNurseScheduleLog::getActionType, NurseScheduleChangeTypeEnum.SUBMIT_WEEK.getCode())
+                    .orderByDesc(BizNurseScheduleLog::getOccurTime).orderByDesc(BizNurseScheduleLog::getId)
+                    .last("LIMIT 1").one();
+            if (row != null) {
+                return row.getCreateById();
+            }
+        }
+        return null;
+    }
 }

@@ -107,6 +107,9 @@ public interface BizClinicSourceService extends IService<BizClinicSource> {
     /** 审核发布：待审核 → 已发布，并生成号源 */
     void auditPublish(Long id);
 
+    /** 批量审核发布：循环调用单条逻辑，单事务 */
+    void auditPublishBatch(List<Long> ids);
+
     /** 撤回：任意态 → 草稿，并清理号源 */
     void recall(Long id);
 

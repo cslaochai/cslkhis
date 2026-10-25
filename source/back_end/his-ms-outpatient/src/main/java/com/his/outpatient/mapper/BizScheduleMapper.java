@@ -382,6 +382,24 @@ public interface BizScheduleMapper extends BaseMapper<BizSchedule> {
                                 @Param("fromStatus") Integer fromStatus, @Param("toStatus") Integer toStatus);
 
     /**
+     * 整周批量迁移发布态（生效两态 → 指定原态集合版）：护理部备案退回专用，
+     * 把本周本单元内「已发布/已变更」的护理行整批打回草稿；调班中(3)的行不动，让它按调班流程走完。
+     * 与 {@link #updateWeekPublishStatus} 的区别只有原态是生效态的集合，不是单一状态。
+     *
+     * @return 实际迁移行数
+     */
+    @Update("UPDATE biz_schedule SET publish_status = #{toStatus} "
+            + "WHERE del_flag = 0 AND staff_type IN (2, 7) "
+            + "AND org_type = #{orgType} AND org_id = #{orgId} "
+            + "AND schedule_date BETWEEN #{startDate} AND #{endDate} "
+            + "AND publish_status IN (#{fromStatusA}, #{fromStatusB})")
+    int revertWeekEffectiveToDraft(@Param("orgType") Integer orgType, @Param("orgId") Long orgId,
+                                   @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate,
+                                   @Param("fromStatusA") Integer fromStatusA,
+                                   @Param("fromStatusB") Integer fromStatusB,
+                                   @Param("toStatus") Integer toStatus);
+
+    /**
      * 整周批量迁移发布态（全区岗位通用版）：与 {@link #updateWeekPublishStatus} 的唯一区别是
      * 不过滤 staff_type，覆盖医生/护理/医技/药学/收费/行政等全部岗位类别。
      * 用于「全院岗位排班」整周提交/整周审核发布。

@@ -1971,8 +1971,8 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             dir.mkdirs();
         }
 
-        // 费用来自 L1 记账行：按项目类型聚合的应收净额，分组求和只由记账层做一次
-        List<FeeTypeSumVO> receivables = chargeFacadeService.sumNetGroupByItemType(
+        // 费用来自 L1 记账行：按项目类型聚合的**未结算**净额（排除挂号时已收的诊查费）
+        List<FeeTypeSumVO> receivables = chargeFacadeService.sumPendingGroupByItemType(
                 EncounterTypeEnum.OUTPATIENT.getCode(), record.getRegistId());
 
         BigDecimal totalAmount = BigDecimal.ZERO;
@@ -2132,10 +2132,10 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             List<BillBriefVO> pendingBills = chargeFacadeService.pendingBillsOfEncounter(
                     EncounterTypeEnum.OUTPATIENT.getCode(), record.getRegistId());
             if (pendingBills.isEmpty()) {
-                // 没有待缴账单：按 L1 实际未结算金额区分"真无应收"和"异常漏账"
+                // 没有待缴账单：按 L1 未结算金额区分"真无应收"和"异常漏账"
                 BigDecimal dueAmount = BigDecimal.ZERO;
                 try {
-                    List<FeeTypeSumVO> receivables = chargeFacadeService.sumNetGroupByItemType(
+                    List<FeeTypeSumVO> receivables = chargeFacadeService.sumPendingGroupByItemType(
                             EncounterTypeEnum.OUTPATIENT.getCode(), record.getRegistId());
                     for (FeeTypeSumVO r : receivables) {
                         dueAmount = dueAmount.add(r.getAmount() != null ? r.getAmount() : BigDecimal.ZERO);
@@ -2301,11 +2301,15 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                               BizPrescription signed, String pageTitle,
                               com.lowagie.text.Font titleFont, com.lowagie.text.Font headerFont,
                               com.lowagie.text.Font normalFont, com.lowagie.text.Font smallFont) throws Exception {
-        // 头部：处方签不画付款二维码（只有引导单上有聚合码），直接放标题 + 患者前记
+        // 头部：处方签不画付款二维码（只有引导单上有聚合码），直接放标题 + 患者前记。
+        // 注意：PdfPCell 不能直接 document.add()（会被静默丢弃），必须包进单列 PdfPTable 才会渲染。
+        com.lowagie.text.pdf.PdfPTable headTable = new com.lowagie.text.pdf.PdfPTable(1);
+        headTable.setWidthPercentage(100);
         com.lowagie.text.pdf.PdfPCell infoCell = new com.lowagie.text.pdf.PdfPCell();
         infoCell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
         infoCell.setPadding(4);
         com.lowagie.text.Paragraph title = new com.lowagie.text.Paragraph(pageTitle, titleFont);
+        title.setAlignment(com.lowagie.text.Element.ALIGN_CENTER);
         title.setSpacingAfter(10);
         infoCell.addElement(title);
         infoCell.addElement(createParagraph("姓名：" + record.getPatientName()
@@ -2315,7 +2319,8 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 + "    病历号：" + record.getRecordNo(), normalFont));
         infoCell.addElement(createParagraph("临床诊断：" + (TextUtil.hasText(record.getDiagnosisName()) ? record.getDiagnosisName() : "-"), normalFont));
         infoCell.addElement(createParagraph("开具日期：" + record.getVisitDate(), normalFont));
-        document.add(infoCell);
+        headTable.addCell(infoCell);
+        document.add(headTable);
         document.add(createParagraph(" ", normalFont));
 
         // Rp 标示（处方正文起首，法规附件1要求）

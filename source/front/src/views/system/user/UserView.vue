@@ -5,11 +5,11 @@
     <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
       <div class="flex items-start justify-between gap-4">
         <el-form :model="searchForm" inline>
-          <el-form-item label="用户名">
+          <el-form-item label="用户名/姓名">
             <el-input
                 v-model="searchForm.userName"
                 clearable
-                placeholder="请输入用户名"
+                placeholder="请输入用户名或姓名"
                 style="width: 180px"
                 @keyup.enter="handleSearch"
             />

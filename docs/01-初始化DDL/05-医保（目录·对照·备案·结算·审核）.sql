@@ -1,6 +1,6 @@
 -- 领域：05-医保（目录·对照·备案·结算·审核）
 -- 库：hn_biz_his    表数：17
--- 说明：DDL 快照（dev 库 SHOW CREATE TABLE 于 2026-10-23 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
+-- 说明：DDL 快照（dev 库 SHOW CREATE TABLE 于 2026-10-25 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
 -- 口径：姓名/名称快照列与操作人列（create_by·update_by·*_by·*_name·name）不留 DEFAULT，漏填直接报错；其余 NOT NULL 列保留库上的 DEFAULT。
 
 -- ----------------------------

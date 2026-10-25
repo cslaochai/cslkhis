@@ -4,9 +4,8 @@
 --       其余 NOT NULL 列的 DEFAULT 是刻意保留的，不在本文件范围。
 -- 匹配规则：列名 = name 或以 _name / _by 结尾，或属于 create_by/update_by/create_by_id/update_by_id。
 -- 基线 docs/01-初始化DDL 已按剥完的形状落文件；本文件用于让 dev 库追上同一形状，未执行。
--- 执行前必修：SignConfigMapper.insertValue 往 sys_config 插配置时省略了 create_by/update_by/create_by_id/update_by_id
---       四列，剥掉默认后这条 INSERT 直接报 1364（TSA 签名配置自举失败）。
--- 生成：2026-10-23（workspace/_reorg_docs_baseline.py ddl）
+-- 执行前必修：SignConfigMapper.insertValue 往 sys_config 插配置时省略了 create_by/update_by/create_by_id/update_by_id 四列，剥掉默认后这条 INSERT 直接报 1364（TSA 签名配置自举失败）。
+-- 生成：2026-10-25（workspace/_reorg_docs_baseline.py ddl）
 -- ============================================================
 
 ALTER TABLE `biz_tech_auth_override` MODIFY COLUMN `employee_name` varchar(50) NOT NULL COMMENT '越权操作者姓名（快照）';

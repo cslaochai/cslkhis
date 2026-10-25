@@ -12,7 +12,7 @@ import lombok.EqualsAndHashCode;
 public class SysUserPageQueryDTO extends PageParam {
 
     /**
-     * 用户名（登录账号），模糊匹配
+     * 用户名（登录账号）或真实姓名，模糊匹配
      */
     private String userName;
 

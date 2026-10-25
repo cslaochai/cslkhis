@@ -1,5 +1,7 @@
 package com.his.outpatient.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -9,10 +11,13 @@ import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.outpatient.dto.NurseScheduleDTO;
+import com.his.outpatient.dto.NurseScheduleFileRejectDTO;
 import com.his.outpatient.dto.StaffPlanRuleUpsertDTO;
 import com.his.outpatient.dto.StaffScheduleUpsertDTO;
+import com.his.outpatient.entity.BizNurseScheduleFiling;
 import com.his.outpatient.entity.BizSchedule;
 import com.his.outpatient.entity.BizStaffPlanRule;
+import com.his.outpatient.mapper.BizNurseScheduleFilingMapper;
 import com.his.outpatient.mapper.BizScheduleMapper;
 import com.his.outpatient.service.BizScheduleService;
 import com.his.outpatient.service.NurseScheduleLogService;
@@ -31,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
 import java.util.*;
@@ -58,13 +64,25 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
      * 全局豁免审核角色：系统管理员
      */
     private static final String ROLE_ADMIN = "10012";
+    /**
+     * 沿科室树上溯找审核节点的最大层数（科室树实际深度远小于此，只作失控保险）
+     */
+    private static final int DEPT_CHAIN_MAX = 32;
+    /**
+     * 备案退回原因列宽
+     */
+    private static final int OPINION_MAX = 200;
     private final DeptScopeService deptScopeService;
     private final StaffScheduleService staffScheduleService;
     private final StaffPlanRuleService staffPlanRuleService;
     private final BizScheduleMapper bizScheduleMapper;
     private final NurseScheduleLogService nurseScheduleLogService;
     /**
-     * 科室主档：取科室指定的护理排班审核人
+     * 周备案台账：审核发布生成待备案、护理部备案/退回回写
+     */
+    private final BizNurseScheduleFilingMapper bizNurseScheduleFilingMapper;
+    /**
+     * 科室主档：取护理片区（大科）节点配置的护理排班审核人
      */
     private final SystemFacadeService systemFacadeService;
 
@@ -175,6 +193,13 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
     }
 
     @Override
+    public List<NurseScheduleVO.ShiftOption> nursingShiftOptions() {
+        List<NurseScheduleVO.ShiftOption> shifts = bizScheduleMapper.selectNursingShifts();
+        shifts.forEach(s -> s.setNight(isNightShift(s.getStartTime())));
+        return shifts;
+    }
+
+    @Override
     public NurseScheduleVO.Matrix weekMatrix(NurseScheduleDTO.MatrixQuery query) {
         NurseScheduleVO.Ward ward = requireUnit(query.getUnitType(), query.getWardId());
         LocalDate start = mondayOf(query.getWeekStart() == null ? LocalDate.now() : query.getWeekStart());
@@ -207,6 +232,11 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         matrix.setStaffing(buildStaffing(ward, start, end, cells));
         matrix.setWarnings(buildWarnings(ward, start, end, nurses, cells));
         matrix.setPublishSummary(buildPublishSummary(cells));
+        BizNurseScheduleFiling filing = selectFiling(unitTypeOf(ward), ward.getWardId(), start);
+        if (filing != null) {
+            matrix.setFilingStatus(filing.getFilingStatus());
+            matrix.setFilingStatusText(NurseScheduleFilingStatusEnum.getLabel(filing.getFilingStatus()));
+        }
         return matrix;
     }
 
@@ -343,29 +373,114 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
             throw new BusinessException("只有待审核状态的排班可以审核发布");
         }
         assertNursingAuditor(row.getDeptId());
+        assertNotSelfAudit(resolveRowSubmitter(row));
         String from = PublishStatusEnum.getLabel(row.getPublishStatus());
         updatePublishStatus(id, PublishStatusEnum.PUBLISHED.getCode());
         nurseScheduleLogService.record(id, NurseScheduleChangeTypeEnum.PUBLISH, null, null, row,
                 from, PublishStatusEnum.getLabel(PublishStatusEnum.PUBLISHED.getCode()));
+        markWeekFilingPending(nurseUnitTypeOf(row.getOrgType()), row.getOrgId(), row.getOrgName(),
+                row.getDeptId(), row.getDeptName(), mondayOf(row.getScheduleDate()));
     }
 
     /**
-     * 护理排班审核人校验：系统管理员(10012)全局豁免；
-     * 其余当前登录人必须是该科室在科室主档指定的护理审核人(nursing_auditor_id)。
+     * 片区审核闸：从科室沿科室树逐级上溯（含起点），第一个配了审核人的节点即所属护理片区，
+     * 当前登录人必须是该节点配置的审核人；系统管理员全局豁免。
      */
     private void assertNursingAuditor(Long deptId) {
+        CurrentUser user = requireCurrentUser();
+        if (ROLE_ADMIN.equals(user.getCurrentRole())) {
+            return;
+        }
+        Long auditorId = resolveNursingAuditorId(deptId);
+        if (auditorId == null) {
+            throw new BusinessException("本科室未配置护理排班审核人，请在科室主档的护理片区节点指定");
+        }
+        if (!auditorId.equals(user.getEmployeeId())) {
+            throw new BusinessException("您不是本科室所属护理片区指定的排班审核人，无权审核发布");
+        }
+    }
+
+    /**
+     * 自审闸：排班的编制提交人不能自己审核发布；
+     * 定位不到编制人（历史数据无留痕）时放行，系统管理员豁免。
+     */
+    private void assertNotSelfAudit(Long submitterId) {
+        if (submitterId == null) {
+            return;
+        }
+        CurrentUser user = requireCurrentUser();
+        if (ROLE_ADMIN.equals(user.getCurrentRole())) {
+            return;
+        }
+        if (submitterId.equals(user.getEmployeeId())) {
+            throw new BusinessException("本科室排班须由他人审核，不能自审自排");
+        }
+    }
+
+    /**
+     * 单行编制提交人：优先取该行最近一次提交留痕的操作人，
+     * 查不到留痕再退到行创建人/更新人（老数据没走过留痕链也有个可对的人）。
+     */
+    private Long resolveRowSubmitter(BizSchedule row) {
+        Long submitter = nurseScheduleLogService.latestSubmitterId(row.getId(), row.getOrgName());
+        if (submitter != null) {
+            return submitter;
+        }
+        return row.getCreateById() == null ? row.getUpdateById() : row.getCreateById();
+    }
+
+    /**
+     * 整周编制提交人：整周提交留痕没有单行可挂，按单元名快照找最近一次整周提交的操作人；
+     * 找不到再取本周任一待审核行的创建人/更新人兜底。
+     */
+    private Long resolveWeekSubmitter(NurseScheduleVO.Ward ward, LocalDate start, LocalDate end) {
+        Long submitter = nurseScheduleLogService.latestSubmitterId(null, ward.getWardName());
+        if (submitter != null) {
+            return submitter;
+        }
+        BizSchedule sample = getOne(new LambdaQueryWrapper<BizSchedule>()
+                .eq(BizSchedule::getOrgType, coreOrgTypeOf(ward))
+                .eq(BizSchedule::getOrgId, ward.getWardId())
+                .in(BizSchedule::getStaffType, StaffTypeEnum.NURSE.getCode(), StaffTypeEnum.NURSING_ASSISTANT.getCode())
+                .eq(BizSchedule::getPublishStatus, PublishStatusEnum.PENDING.getCode())
+                .between(BizSchedule::getScheduleDate, start, end)
+                .orderByAsc(BizSchedule::getId)
+                .last("LIMIT 1"), false);
+        if (sample == null) {
+            return null;
+        }
+        return sample.getCreateById() == null ? sample.getUpdateById() : sample.getCreateById();
+    }
+
+    /**
+     * 沿上级链找护理排班审核人：从本级科室起（含本级）逐级向上，第一个配置了审核人的节点获胜；
+     * parent_id=0 为机构根，visited 集合防配置成环。
+     */
+    private Long resolveNursingAuditorId(Long deptId) {
+        Set<Long> visited = new HashSet<>();
+        Long current = deptId;
+        for (int depth = 0; depth < DEPT_CHAIN_MAX && current != null && current != 0L && visited.add(current); depth++) {
+            DeptBriefVO dept = systemFacadeService.findDepartment(current);
+            if (dept == null) {
+                return null;
+            }
+            if (dept.getNursingAuditorId() != null) {
+                return dept.getNursingAuditorId();
+            }
+            current = dept.getParentId();
+        }
+        return null;
+    }
+
+    /**
+     * 当前登录人（审核闸/自审闸/备案经办人快照都依赖它）
+     */
+    private CurrentUser requireCurrentUser() {
         CurrentUser user = UserUtils.getCurrentUser();
         if (user == null) {
             throw new BusinessException("未登录或登录已过期，请重新登录");
         }
-        if (ROLE_ADMIN.equals(user.getCurrentRole())) {
-            return;
-        }
-        DeptBriefVO dept = systemFacadeService.findDepartment(deptId);
-        if (dept == null || dept.getNursingAuditorId() == null
-                || !dept.getNursingAuditorId().equals(user.getEmployeeId())) {
-            throw new BusinessException("您不是本科室指定的护理排班审核人，无权审核发布");
-        }
+        return user;
     }
 
     @Override
@@ -415,6 +530,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         assertNursingAuditor(ward.getDeptId());
         LocalDate start = mondayOf(query.getWeekStart() == null ? LocalDate.now() : query.getWeekStart());
         LocalDate end = start.plusDays(6);
+        assertNotSelfAudit(resolveWeekSubmitter(ward, start, end));
         int moved = bizScheduleMapper.updateWeekPublishStatus(coreOrgTypeOf(ward), ward.getWardId(),
                 start, end, PublishStatusEnum.PENDING.getCode(), PublishStatusEnum.PUBLISHED.getCode());
         if (moved == 0) {
@@ -422,7 +538,140 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         }
         nurseScheduleLogService.record(null, NurseScheduleChangeTypeEnum.PUBLISH_WEEK, moved, null,
                 weekSnapshot(ward), "待审核", "已发布");
+        markWeekFilingPending(unitTypeOf(ward), ward.getWardId(), ward.getWardName(),
+                ward.getDeptId(), ward.getDeptName(), start);
         return moved;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void fileWeek(NurseScheduleDTO.MatrixQuery query) {
+        NurseScheduleVO.Ward ward = requireUnit(query.getUnitType(), query.getWardId());
+        LocalDate start = mondayOf(query.getWeekStart() == null ? LocalDate.now() : query.getWeekStart());
+        CurrentUser user = requireCurrentUser();
+
+        BizNurseScheduleFiling filing = selectFiling(unitTypeOf(ward), ward.getWardId(), start);
+        if (filing == null) {
+            throw new BusinessException("本周还没有备案记录，须先由片区科护士长审核发布");
+        }
+        if (NurseScheduleFilingStatusEnum.REJECTED.getCode().equals(filing.getFilingStatus())) {
+            throw new BusinessException("本周备案已被退回，护理单元重新排班发布后再来备案");
+        }
+        if (NurseScheduleFilingStatusEnum.FILED.getCode().equals(filing.getFilingStatus())) {
+            throw new BusinessException("本周已备案，无需重复操作");
+        }
+
+        // 乐观闸「仍为待备案」防两个护理部经办同时点备案；带实体走 update 才触发审计字段回填
+        BizNurseScheduleFiling update = new BizNurseScheduleFiling();
+        update.setFilingStatus(NurseScheduleFilingStatusEnum.FILED.getCode());
+        update.setFilerId(user.getEmployeeId());
+        update.setFilerName(user.getRealName());
+        update.setFilingTime(LocalDateTime.now());
+        int rows = bizNurseScheduleFilingMapper.update(update, new LambdaUpdateWrapper<BizNurseScheduleFiling>()
+                .eq(BizNurseScheduleFiling::getId, filing.getId())
+                .eq(BizNurseScheduleFiling::getFilingStatus, NurseScheduleFilingStatusEnum.PENDING.getCode()));
+        if (rows == 0) {
+            throw new BusinessException("本周备案状态已变化，请刷新后重试");
+        }
+        nurseScheduleLogService.record(null, NurseScheduleChangeTypeEnum.FILING, 1, null,
+                weekSnapshot(ward), NurseScheduleFilingStatusEnum.getLabel(filing.getFilingStatus()),
+                NurseScheduleFilingStatusEnum.getLabel(NurseScheduleFilingStatusEnum.FILED.getCode()));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int fileRejectWeek(NurseScheduleFileRejectDTO dto) {
+        NurseScheduleVO.Ward ward = requireUnit(dto.getUnitType(), dto.getWardId());
+        LocalDate start = mondayOf(dto.getWeekStart() == null ? LocalDate.now() : dto.getWeekStart());
+        LocalDate end = start.plusDays(6);
+
+        BizNurseScheduleFiling filing = selectFiling(unitTypeOf(ward), ward.getWardId(), start);
+        if (filing == null) {
+            throw new BusinessException("本周还没有备案记录，须先由片区科护士长审核发布");
+        }
+        if (NurseScheduleFilingStatusEnum.REJECTED.getCode().equals(filing.getFilingStatus())) {
+            throw new BusinessException("本周已被退回，无需重复操作（重排发布后会自动回到待备案）");
+        }
+        String opinion = TextUtil.cut(TextUtil.trimToNull(dto.getOpinion()), OPINION_MAX);
+
+        // 退回清掉备案经办：台账上「已退回」不该再挂着一次没做成的备案签名
+        BizNurseScheduleFiling update = new BizNurseScheduleFiling();
+        update.setFilingStatus(NurseScheduleFilingStatusEnum.REJECTED.getCode());
+        update.setOpinion(opinion);
+        int rows = bizNurseScheduleFilingMapper.update(update, new LambdaUpdateWrapper<BizNurseScheduleFiling>()
+                .eq(BizNurseScheduleFiling::getId, filing.getId())
+                .ne(BizNurseScheduleFiling::getFilingStatus, NurseScheduleFilingStatusEnum.REJECTED.getCode())
+                .set(BizNurseScheduleFiling::getFilerId, null)
+                .set(BizNurseScheduleFiling::getFilerName, null)
+                .set(BizNurseScheduleFiling::getFilingTime, null));
+        if (rows == 0) {
+            throw new BusinessException("本周备案状态已变化，请刷新后重试");
+        }
+        // 生效两态整批打回草稿（调班中行不动，让它按调班流程走完）；退回后自然不计在岗
+        int reverted = bizScheduleMapper.revertWeekEffectiveToDraft(coreOrgTypeOf(ward), ward.getWardId(),
+                start, end, PublishStatusEnum.PUBLISHED.getCode(), PublishStatusEnum.CHANGED.getCode(),
+                PublishStatusEnum.DRAFT.getCode());
+        nurseScheduleLogService.record(null, NurseScheduleChangeTypeEnum.FILING_REJECT, reverted, opinion,
+                weekSnapshot(ward), NurseScheduleFilingStatusEnum.getLabel(filing.getFilingStatus()),
+                NurseScheduleFilingStatusEnum.getLabel(NurseScheduleFilingStatusEnum.REJECTED.getCode()));
+        return reverted;
+    }
+
+    /**
+     * 审核发布后登记/回落周备案：新周插一条待备案；已备案/已退回的周被再次发布
+     * （调班重排场景）强制回落待备案并清备案经办，护理部必须重新备案。
+     */
+    private void markWeekFilingPending(int unitType, Long wardId, String wardName,
+                                       Long deptId, String deptName, LocalDate weekStart) {
+        LocalDate weekEnd = weekStart.plusDays(6);
+        BizNurseScheduleFiling exist = selectFiling(unitType, wardId, weekStart);
+        if (exist == null) {
+            BizNurseScheduleFiling insert = new BizNurseScheduleFiling();
+            insert.setUnitType(unitType);
+            insert.setWardId(wardId);
+            insert.setWardName(wardName);
+            insert.setDeptId(deptId);
+            insert.setDeptName(deptName);
+            insert.setWeekStart(weekStart);
+            insert.setWeekEnd(weekEnd);
+            insert.setFilingStatus(NurseScheduleFilingStatusEnum.PENDING.getCode());
+            bizNurseScheduleFilingMapper.insert(insert);
+            return;
+        }
+        if (NurseScheduleFilingStatusEnum.PENDING.getCode().equals(exist.getFilingStatus())) {
+            return;
+        }
+        BizNurseScheduleFiling update = new BizNurseScheduleFiling();
+        update.setWardName(wardName);
+        update.setDeptName(deptName);
+        update.setWeekEnd(weekEnd);
+        update.setFilingStatus(NurseScheduleFilingStatusEnum.PENDING.getCode());
+        bizNurseScheduleFilingMapper.update(update, new LambdaUpdateWrapper<BizNurseScheduleFiling>()
+                .eq(BizNurseScheduleFiling::getId, exist.getId())
+                .set(BizNurseScheduleFiling::getFilerId, null)
+                .set(BizNurseScheduleFiling::getFilerName, null)
+                .set(BizNurseScheduleFiling::getFilingTime, null)
+                .set(BizNurseScheduleFiling::getOpinion, null));
+    }
+
+    /**
+     * 按业务唯一键（单元类型 × 护理单元 × 周起始日）取备案行
+     */
+    private BizNurseScheduleFiling selectFiling(int unitType, Long wardId, LocalDate weekStart) {
+        return bizNurseScheduleFilingMapper.selectOne(new LambdaQueryWrapper<BizNurseScheduleFiling>()
+                .eq(BizNurseScheduleFiling::getUnitType, unitType)
+                .eq(BizNurseScheduleFiling::getWardId, wardId)
+                .eq(BizNurseScheduleFiling::getWeekStart, weekStart)
+                .orderByAsc(BizNurseScheduleFiling::getId)
+                .last("LIMIT 1"));
+    }
+
+    /**
+     * 出勤底座的排班单元类型反推护理排班单元：2-病区→1-病区，其余→2-门诊科室
+     */
+    private static int nurseUnitTypeOf(Integer orgType) {
+        return Objects.equals(orgType, OrgUnitTypeEnum.WARD.getCode())
+                ? NurseScheduleUnitTypeEnum.WARD.getCode() : NurseScheduleUnitTypeEnum.CLINIC.getCode();
     }
 
     /**

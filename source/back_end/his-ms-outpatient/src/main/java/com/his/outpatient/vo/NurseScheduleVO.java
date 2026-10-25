@@ -329,6 +329,14 @@ public class NurseScheduleVO {
          * 本周发布态计数（整周提交/审核发布按钮的显隐与提示用）
          */
         private PublishSummary publishSummary;
+        /**
+         * 本周备案态（0-待备案 1-已备案 2-已退回；null=本周还没有备案记录，护理部按钮不可用）
+         */
+        private Integer filingStatus;
+        /**
+         * 备案态文案（由枚举 label 渲染）
+         */
+        private String filingStatusText;
     }
 
     /**

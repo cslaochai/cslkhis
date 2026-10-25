@@ -1,4 +1,4 @@
--- sys_menu  铺底数据：519 行（按主键序 自 dev 库 2026-10-23 导出）
+-- sys_menu  铺底数据：525 行（按主键序 自 dev 库 2026-10-25 导出）
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 START TRANSACTION;
@@ -10,9 +10,9 @@ VALUES
 (200, '门（急）诊管理', 0, 20, 1, '/opd', NULL, 'opd', 'FirstAidKit', NULL, 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (201, '挂号预约', 200, 1, 2, '/appointments', 'appointments/AppointmentsView', 'opd.appointments', 'Ticket', 'opd:appointments:list', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (202, '分诊工作站', 200, 2, 2, '/triage', 'triage/TriageView', 'opd.triage', 'Filter', 'opd:triage:list', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
-(203, '医生工作站', 200, 3, 2, '/doctor-workstation', 'doctor-workstation/DoctorWorkstationView', 'opd.doctorWorkstation', 'FirstAidKit', 'opd:doctorWorkstation:list', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
+(203, '医生工作站', 200, 3, 2, '/doctor-workstation', 'doctor-workstation/DoctorWorkstationView', 'opd.doctorWorkstation', 'FirstAidKit', 'opd:doctorWorkstation:list', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-10-23 19:08:18', 0, NULL, 1, 1),
 (204, '就诊总览', 200, 4, 2, '/today-visits', 'today-visits/TodayVisitsView', 'opd.todayVisits', 'Notebook', 'opd:todayVisits:list', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'system', '2026-09-26 16:10:18', 0, NULL, 1, 1),
-(205, '急诊工作站', 200, 5, 2, '/emergency', 'emergency/EmergencyView', 'opd.emergency', 'Phone', 'opd:emergency:list', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
+(205, '急诊护士工作站', 200, 5, 2, '/emergency', 'emergency/EmergencyView', 'opd.emergency', 'Phone', 'opd:emergency:list', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-10-23 19:07:45', 0, NULL, 1, 1),
 (206, '门诊治疗站', 200, 6, 2, '/treatment-station', 'treatment/TreatmentStationView', 'opd.treatmentStation', 'FirstAidKit', 'opd:treatmentStation:list', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (207, '门诊日志', 200, 21, 2, '/outpatient-log', 'outpatient-log/OutpatientLogView', 'opd.outpatientLog', 'Document', 'opd:outpatientLog:list', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (208, '慢病建档与长处方认定', 200, 20, 2, '/chronic-record', 'chronic/ChronicRecordView', 'opd.chronicRecord', 'Files', 'opd:chronicRecord:list', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'system', '2026-09-29 11:29:20', 0, NULL, 1, 1),
@@ -167,9 +167,9 @@ VALUES
 (2004, '挂号预约-删除', 201, 3, 3, NULL, NULL, 'opd.appointments:delete', NULL, 'opd:appointments:delete', 0, 1, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (2005, '分诊工作站-新增', 202, 1, 3, NULL, NULL, 'opd.triage:add', NULL, 'opd:triage:add', 0, 1, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (2006, '分诊工作站-修改', 202, 2, 3, NULL, NULL, 'opd.triage:edit', NULL, 'opd:triage:edit', 0, 1, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
-(2007, '医生工作站-新增', 203, 1, 3, NULL, NULL, 'opd.doctorWorkstation:add', NULL, 'opd:doctorWorkstation:add', 0, 1, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
-(2008, '医生工作站-修改', 203, 2, 3, NULL, NULL, 'opd.doctorWorkstation:edit', NULL, 'opd:doctorWorkstation:edit', 0, 1, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
-(2009, '医生工作站-删除', 203, 3, 3, NULL, NULL, 'opd.doctorWorkstation:delete', NULL, 'opd:doctorWorkstation:delete', 0, 1, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
+(2007, '医生工作站-新增', 203, 1, 3, NULL, NULL, 'opd.doctorWorkstation:add', NULL, 'opd:doctorWorkstation:add', 0, 1, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-10-23 19:08:18', 0, NULL, 1, 1),
+(2008, '医生工作站-修改', 203, 2, 3, NULL, NULL, 'opd.doctorWorkstation:edit', NULL, 'opd:doctorWorkstation:edit', 0, 1, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-10-23 19:08:18', 0, NULL, 1, 1),
+(2009, '医生工作站-删除', 203, 3, 3, NULL, NULL, 'opd.doctorWorkstation:delete', NULL, 'opd:doctorWorkstation:delete', 0, 1, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-10-23 19:08:18', 0, NULL, 1, 1),
 (2010, '急诊工作站-新增', 205, 1, 3, NULL, NULL, 'opd.emergency:add', NULL, 'opd:emergency:add', 0, 1, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (2011, '急诊工作站-修改', 205, 2, 3, NULL, NULL, 'opd.emergency:edit', NULL, 'opd:emergency:edit', 0, 1, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (2012, '门诊治疗站-新增', 206, 1, 3, NULL, NULL, 'opd.treatmentStation:add', NULL, 'opd:treatmentStation:add', 0, 1, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
@@ -415,6 +415,7 @@ VALUES
 (2604, '处方点评-删除', 515, 3, 3, NULL, NULL, 'pharmacy.rxReview.delete', NULL, 'pharmacy:rxReview:delete', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (2605, '处方点评-导出', 515, 4, 3, NULL, NULL, 'pharmacy.rxReview.export', NULL, 'pharmacy:rxReview:export', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (2606, '处方点评-约谈', 515, 5, 3, NULL, NULL, 'pharmacy.rxReview.talk', NULL, 'pharmacy:rxReview:talk', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
+(2607, '急诊工作站-分诊复评', 205, 4, 3, NULL, NULL, 'opd.emergency:reeval', NULL, 'opd:emergency:reeval', 0, 0, 0, 1, 'admin', '2026-10-23 13:42:43', 'admin', '2026-10-23 13:42:43', 0, '候诊超时再次评估分级（只升不降，留痕）', 1, 1),
 (2610, '技术授权-新增/修改', 805, 1, 3, NULL, NULL, 'org.techAuth.add', NULL, 'org:techAuth:add', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (2611, '技术授权-审批/驳回/收回', 805, 2, 3, NULL, NULL, 'org.techAuth.edit', NULL, 'org:techAuth:edit', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (2612, '技术授权-删除', 805, 3, 3, NULL, NULL, 'org.techAuth.delete', NULL, 'org:techAuth:delete', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
@@ -495,18 +496,18 @@ VALUES
 (2936, '值班点位配置', 2945, 7, 2, '/duty-post', 'views/duty/DutyPostView.vue', 'org:dutyPost', 'Aim', 'org:duty:list', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'sql230', '2026-10-04 16:52:20', 0, NULL, 1, 1),
 (2937, '人力配置标准', 2945, 5, 2, '/staff-plan-rule', 'views/schedule/StaffPlanRuleView.vue', 'org:staffPlanRule', 'Tools', 'staff:planRule:list', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-10-11 18:18:40', 0, NULL, 1, 1),
 (2938, '排班总览', 2945, 1, 2, '/schedule-overview', 'views/schedule/ScheduleOverview.vue', 'org:scheduleOverview', 'TrendCharts', 'schedule:overview:list', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'sql230', '2026-10-04 16:52:20', 0, NULL, 1, 1),
-(2939, '班次字典', 2945, 8, 2, '/shift-dict', 'schedule/ShiftDictView', 'org.shiftDict', 'Clock', 'shift:dict:list', 0, 0, 1, 1, 'admin', '2026-10-19 18:01:31', 'admin', '2026-10-19 18:01:31', 0, '全院标准班次（门诊/护理/值守/通用四册）唯一维护入口，20261019 自门诊排班签拆出', 1, 1),
+(2939, '排班字典管理', 2945, 8, 2, '/shift-dict', 'schedule/ShiftDictView', 'org.shiftDict', 'Clock', 'shift:dict:list', 0, 0, 1, 1, 'admin', '2026-10-19 18:01:31', 'admin', '2026-10-19 18:01:31', 0, '全院标准班次（门诊/护理/值守/通用四册）唯一维护入口，20261019 自门诊排班签拆出', 1, 1),
 (2940, 'AI 运营问数', 1200, 46, 2, '/ai-operation-qa', 'views/ai/OperationQaView.vue', 'ai.operationQa', 'DataAnalysis', 'ai:operationQa:list', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (2941, '问数查询', 1200, 1, 3, '', '', 'ai.operationQa.ask', '', 'ai:operationQa:ask', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (2942, 'RAG知识库', 1100, 45, 2, '/ai-admin', 'views/ai/AiAdminView.vue', 'ai.admin', 'Monitor', 'ai:admin:list', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-10-13 10:09:51', 0, NULL, 1, 1),
 (2943, '知识库维护', 2942, 1, 3, '', '', 'ai.knowledge', '', 'ai:knowledge:manage', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (2944, '问数配置', 1200, 2, 3, '', '', 'ai.operationQa.config', '', 'ai:operationQa:config', 0, 0, 1, 1, 'admin', '2026-10-12 22:58:00', 'admin', '2026-10-12 22:58:00', 0, NULL, 1, 1),
 (2945, '排班值守中心', 0, 45, 1, '/schedule-center', NULL, 'org:scheduleCenter', 'Calendar', NULL, 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
-(2946, '知识图谱', 1100, 44, 2, '/knowledge-graph', 'views/ai/KnowledgeGraphView.vue', NULL, NULL, 'ai:operationQa:config', 1, 0, 1, 1, 'admin', '2026-10-13 10:22:48', 'admin', '2026-10-13 10:22:48', 0, NULL, 1, 1),
-(2950, '我的未报', 200, 22, 2, '/my-unreported', 'outpatient-log/MyUnreportedView', 'opd.myUnreported', 'Bell', 'opd:outpatientLog:mine', 0, 0, 1, 1, 'admin', '2026-10-10 16:06:37', 'admin', '2026-10-10 16:06:37', 0, '医生自查本人应报未报（后端强制本人，非全院台账）', 1, 1);
+(2946, '知识图谱', 1100, 44, 2, '/knowledge-graph', 'views/ai/KnowledgeGraphView.vue', NULL, NULL, 'ai:operationQa:config', 1, 0, 1, 1, 'admin', '2026-10-13 10:22:48', 'admin', '2026-10-13 10:22:48', 0, NULL, 1, 1);
 INSERT INTO `sys_menu` (`id`, `menu_name`, `parent_id`, `sort_order`, `menu_type`, `path`, `component`, `menu_key`, `icon`, `permission`, `is_frame`, `is_cache`, `is_visible`, `status`, `create_by`, `create_time`, `update_by`, `update_time`, `del_flag`, `remark`, `create_by_id`, `update_by_id`)
 VALUES
-(2960, '门诊工位派岗', 2945, 8, 2, '/opd-station', 'schedule/OpdStationView', 'org.opdStation:list', NULL, 'opd:station:list', 0, 0, 1, 1, 'admin', '2026-10-19 12:46:39', 'admin', '2026-10-19 18:06:57', 0, '公共工位字典 + 按日派岗/借调登记', 1, 1),
+(2950, '我的未报', 200, 22, 2, '/my-unreported', 'outpatient-log/MyUnreportedView', 'opd.myUnreported', 'Bell', 'opd:outpatientLog:mine', 0, 0, 1, 1, 'admin', '2026-10-10 16:06:37', 'admin', '2026-10-10 16:06:37', 0, '医生自查本人应报未报（后端强制本人，非全院台账）', 1, 1),
+(2960, '门诊工位派岗', 2945, 8, 2, '/opd-station', 'schedule/OpdStationView', 'org.opdStation:list', NULL, 'opd:station:list', 0, 0, 1, 1, 'admin', '2026-10-19 12:46:39', 'admin', '2026-10-25 15:43:50', 0, '公共工位字典 + 按日派岗/借调登记', 1, 1),
 (2980, '门诊排班-审核发布', 804, 4, 3, NULL, NULL, 'outpatient.schedule:audit', NULL, 'outpatient:schedule:audit', 0, 1, 0, 1, 'admin', '2026-10-19 13:10:29', 'admin', '2026-10-19 13:10:29', 0, 'G-15 排班发布态：待审核→已发布的审核动作（独立审核人）', 1, 1),
 (2981, '病区护理排班-审核发布', 331, 4, 3, '', '', 'nursing.schedule:audit', '', 'nursing:schedule:audit', 0, 0, 1, 1, 'admin', '2026-10-19 13:10:29', 'admin', '2026-10-19 13:10:29', 0, 'G-15 排班发布态：待审核→已发布的审核动作（独立审核人）', 1, 1),
 (2982, '总值班排班-审核发布', 806, 4, 3, NULL, NULL, 'org.duty:audit', NULL, 'org:duty:audit', 0, 1, 0, 1, 'admin', '2026-10-19 13:10:29', 'admin', '2026-10-19 13:10:29', 0, 'G-15 排班发布态：待审核→已发布的审核动作（独立审核人）', 1, 1),
@@ -524,5 +525,10 @@ VALUES
 (29602, '门诊工位-撤销/删除', 2960, 2, 3, NULL, NULL, 'org.opdStation:delete', NULL, 'opd:station:delete', 0, 1, 0, 1, 'admin', '2026-10-19 12:46:39', 'admin', '2026-10-19 12:46:39', 0, '撤销派岗 / 删除工位字典行（物理删）', 1, 1),
 (29603, '员工排班-审核发布', 2935, 4, 3, NULL, NULL, 'org.staffSchedule:audit', NULL, 'staff:schedule:audit', 0, 1, 0, 1, 'admin', '2026-10-20 10:27:30', 'admin', '2026-10-20 10:27:30', 0, '全院岗位排班：待审核→已发布 / 驳回（科室指定审核人）', 1, 1),
 (29604, '排班审批中心', 2945, 5, 2, '/schedule-approve', 'views/schedule/ScheduleApproveView.vue', 'org.scheduleApprove', 'Stamp', 'staff:schedule:audit', 0, 0, 1, 1, 'admin', '2026-10-20 10:27:30', 'admin', '2026-10-20 10:27:30', 0, '待我审批：全院岗位排班的待审聚合（逐条/批量审核发布与驳回）', 1, 1),
-(29605, '急诊值班', 2945, 6, 2, '/er-duty', 'views/schedule/ErDutyView.vue', 'org.erDuty', 'FirstAidKit', 'schedule:erDuty:view', 0, 1, 1, 1, 'admin', '2026-10-20 10:54:39', 'admin', '2026-10-20 10:54:39', 0, '急诊值班表（公开只读）：急诊三科当天已发布医生值班，全院可查', 1, 1);
+(29605, '急诊值班', 2945, 6, 2, '/er-duty', 'views/schedule/ErDutyView.vue', 'org.erDuty', 'FirstAidKit', 'schedule:erDuty:view', 0, 1, 1, 1, 'admin', '2026-10-20 10:54:39', 'admin', '2026-10-20 10:54:39', 0, '急诊值班表（公开只读）：急诊三科当天已发布医生值班，全院可查', 1, 1),
+(29606, '急诊医生工作站', 200, 5, 2, '/emergency-doctor', 'emergency/EmergencyDoctorView', 'opd.emergencyDoctor', 'Monitor', 'opd:emergencyDoctor:list', NULL, NULL, 1, 1, 'admin', '2026-10-23 19:20:43', 'admin', '2026-10-23 19:20:43', 0, NULL, 0, 0),
+(29607, '急诊医生工作站-接诊转归', 200, 1, 3, NULL, NULL, 'opd.emergencyDoctor:edit', NULL, 'opd:emergencyDoctor:edit', NULL, NULL, 0, 1, 'admin', '2026-10-23 19:20:43', 'admin', '2026-10-23 19:20:43', 0, NULL, 0, 0),
+(29608, '护士工作站-床旁结算', 303, 1, 3, NULL, NULL, 'nur:bedside:settle', NULL, 'nur:bedside:settle', NULL, NULL, 0, 1, 'admin', '2026-10-24 16:32:49', 'admin', '2026-10-24 16:32:49', 0, NULL, 0, 0),
+(29609, '排班历史查询', 2945, 10, 2, '/schedule-history', 'views/schedule/ScheduleHistoryView.vue', 'org:scheduleHistory', 'Document', 'schedule:history:list', 0, 0, 1, 1, 'admin', '2026-10-25 12:27:47', '', '2026-10-25 12:27:47', 0, NULL, 1, 0),
+(29610, '护理排班-备案', 331, 5, 3, '', '', 'nursing.schedule:file', '', 'nursing:schedule:file', 0, 1, 1, 1, 'sql295', '2026-10-25 16:30:34', 'sql295', '2026-10-25 16:30:34', 0, '护理部对护理片区已发布周次的备案与退回（不阻塞在岗生效）', 1, 1);
 COMMIT;

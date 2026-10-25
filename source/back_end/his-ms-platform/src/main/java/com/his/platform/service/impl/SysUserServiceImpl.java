@@ -199,7 +199,11 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     @Override
     public PageResult<SysUser> selectUserPage(String userName, Long deptId, Integer status, int pageNum, int pageSize) {
         LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(TextUtil.hasText(userName), SysUser::getUserName, userName)
+        // 用户名条件同时按登录账号与真实姓名模糊匹配：用户管理页按姓名找人更常见（郑明远 vs zhengmingyuan）
+        // and 嵌套保证与 status 条件正确组合为 (user_name LIKE ? OR real_name LIKE ?) AND status = ?
+        wrapper.and(TextUtil.hasText(userName), w -> w
+                        .like(SysUser::getUserName, userName)
+                        .or().like(SysUser::getRealName, userName))
                 .eq(status != null, SysUser::getStatus, status)
                 .orderByDesc(SysUser::getCreateTime);
 

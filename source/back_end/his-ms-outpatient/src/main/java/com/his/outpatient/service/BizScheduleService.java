@@ -3,6 +3,7 @@ package com.his.outpatient.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
 import com.his.outpatient.dto.NurseScheduleDTO;
+import com.his.outpatient.dto.NurseScheduleFileRejectDTO;
 import com.his.outpatient.entity.BizSchedule;
 import com.his.outpatient.vo.NurseScheduleVO;
 
@@ -103,7 +104,10 @@ public interface BizScheduleService extends IService<BizSchedule> {
     /** 提交审核：草稿 → 待审核 */
     void submit(Long id);
 
-    /** 审核发布：待审核 → 已发布（此后才计在岗） */
+    /**
+     * 审核发布：待审核 → 已发布（此后才计在岗）。片区审核闸 + 自审闸通过后生效，
+     * 成功后该周进入护理部待备案。
+     */
     void auditPublish(Long id);
 
     /** 撤回：任意态 → 草稿（不计在岗） */
@@ -120,7 +124,28 @@ public interface BizScheduleService extends IService<BizSchedule> {
 
     /**
      * 整周审核发布：本周本病区/科室的待审核(1) → 已发布(2)，返回迁移条数。
-     * 此后这些行计入在岗；草稿/调班中行不动。
+     * 此后这些行计入在岗；草稿/调班中行不动。片区审核闸 + 自审闸通过后生效，
+     * 成功后该周进入护理部待备案（调班后再次发布会把已备案的周回落为待备案）。
      */
     int auditWeek(NurseScheduleDTO.MatrixQuery query);
+
+    /**
+     * 周备案：护理部对片区已发布的本周排班确认留档（0-待备案 → 1-已备案），不阻塞在岗生效。
+     * 用于病区护理排班页周头部的「备案」动作。
+     */
+    void fileWeek(NurseScheduleDTO.MatrixQuery query);
+
+    /**
+     * 周备案退回：本周备案置 2-已退回，并把该周本单元内已发布/已变更的护理排班整批打回
+     * 0-草稿（退回后不计在岗，由护士长重排再整周提交）。
+     * 用于病区护理排班页周头部的「退回」动作，护理部抽查发现问题的处置入口。
+     *
+     * @return 打回草稿的排班条数
+     */
+    int fileRejectWeek(NurseScheduleFileRejectDTO dto);
+
+    /**
+     * 病区护理班次（use_scope=2）下拉，供护理排班模板明细行选班次用。
+     */
+    List<NurseScheduleVO.ShiftOption> nursingShiftOptions();
 }

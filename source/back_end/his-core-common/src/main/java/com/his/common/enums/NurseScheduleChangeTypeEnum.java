@@ -4,7 +4,7 @@ import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * 护理排班审批与变更类型枚举（280 留痕表 biz_nurse_schedule_log，字典 his_nurse_schedule_change_type）。
+ * 护理排班审批与变更类型枚举（护理排班留痕的动作码，字典 his_nurse_schedule_change_type）。
  *
  * <p>与门诊号源留痕 {@link ClinicSourceChangeTypeEnum}、岗位换班留痕分开：护理周排班的审计粒度是
  * 「哪个护士哪天的格子被排/改/删，以及整行/整周的提交、审核发布、撤回、调班」，码值语义独立。
@@ -31,7 +31,13 @@ public enum NurseScheduleChangeTypeEnum {
     /** 整周发布：本周待审核一次性 → 已发布 */
     PUBLISH_WEEK(9, "整周发布"),
     /** 复制上周：把来源周格子铺到目标周空缺 */
-    COPY_WEEK(10, "复制上周");
+    COPY_WEEK(10, "复制上周"),
+    /** 套用模板：把排班模板明细铺到目标周空缺，来源=TEMPLATE */
+    APPLY_TEMPLATE(11, "套用模板"),
+    /** 备案：护理部对片区已发布的护理单元周次确认留档（不阻塞在岗生效） */
+    FILING(12, "备案"),
+    /** 备案退回：护理部退回已发布周次，该周生效行整批打回草稿重排 */
+    FILING_REJECT(13, "备案退回");
 
     private final int code;
     private final String label;

@@ -67,6 +67,12 @@ public interface ChargeFacadeService {
      */
     List<FeeTypeSumVO> sumNetGroupByItemType(Integer encounterType, Long encounterId);
 
+    /**
+     * 某次就诊按项目类型分组的<b>未结算</b>应收净额（fee_status IN 待结算,已锁定）：
+     * 患者引导单"还要交多少钱、花在哪"用，排除挂号时已收的诊查费。
+     */
+    List<FeeTypeSumVO> sumPendingGroupByItemType(Integer encounterType, Long encounterId);
+
     // ---------- 账单与收款 ----------
 
     /**

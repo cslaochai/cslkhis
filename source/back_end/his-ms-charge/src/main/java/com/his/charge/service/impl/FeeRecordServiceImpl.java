@@ -187,6 +187,11 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
     }
 
     @Override
+    public List<FeeTypeSumVO> sumPendingGroupByItemType(Integer encounterType, Long encounterId) {
+        return baseMapper.sumPendingGroupByItemType(encounterType, encounterId);
+    }
+
+    @Override
     public List<BizFeeRecord> listNetByEncounter(Integer encounterType, Long encounterId) {
         return baseMapper.selectNetByEncounter(encounterType, encounterId);
     }

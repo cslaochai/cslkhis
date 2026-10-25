@@ -157,7 +157,8 @@ const ER_ABILITY = '急诊中心（分诊-抢救-留观）、医生工作站开�
 
 const SCHEDULE_PLANNER_ABILITY = '门诊排班 维护与提交（限本科室）；无审核权限（审核分离，演示「排班员排班 → 门诊办审核」链路）'
 const SCHEDULE_AUDITOR_ABILITY = '排班审批中心：员工排班 + 门诊排班双页签，可审核发布 / 驳回（留痕）；门诊排班全局可见（演示审核人）'
-const SCHEDULE_NURSING_AUDITOR_ABILITY = '护理排班审核发布（全院，按科室 nursing_auditor_id 收口）；护理排班维护；排班总览（演示护理二级审核「护士长排 → 护理部审」）'
+const SCHEDULE_NURSING_AREA_AUDITOR_ABILITY = '护理排班审核发布（本科室排班须他人编制，不能自审自排）；排班总览'
+const SCHEDULE_NURSING_FILING_ABILITY = '护理排班整周备案与退回（全院，按护理片区备案留痕）；不参与排班与审核'
 
 // 全部账号合并为一张表：每行 = 同一科室 + 同一角色；排班流程账号按「排班员 → 审核人」流程顺序置顶
 const credRows = [
@@ -169,16 +170,24 @@ const credRows = [
     ability: SCHEDULE_PLANNER_ABILITY
   },
   {
+    accounts: ['caoyumei ( 曹玉梅  )', 'qiuhaotian ( 邱昊天  )'],
+    role: '护士长',
+    dept: '心血管内科',
+    ability: HEAD_NURSE_ABILITY
+  },
+  {
     accounts: ['liumin ( 刘敏 )'],
     role: '门诊办',
     dept: '医院信息系统',
     ability: SCHEDULE_AUDITOR_ABILITY + '；心血管内科排班审核人'
   },
+  // 护理三级链第二档：科护士长，审核发布片区内病区的整周排班
+  {accounts: ['yangshuhua ( 杨淑华 )'], role: '科护士长', dept: '心血管内科', ability: SCHEDULE_NURSING_AREA_AUDITOR_ABILITY},
   {
     accounts: ['chenhuilan ( 陈慧兰 )'],
-    role: '护理部排班审核',
+    role: '护理部主任',
     dept: '护理部',
-    ability: SCHEDULE_NURSING_AUDITOR_ABILITY
+    ability: SCHEDULE_NURSING_FILING_ABILITY
   },
   {
     accounts: ['tanyiming ( 谭一鸣 )'],
@@ -186,9 +195,15 @@ const credRows = [
     dept: '医务科',
     ability: '员工排班（全院）、人力配置标准、排班总览；无临床业务页面'
   },
+  {
+    accounts: ['xuyan ( 许妍  )'],
+    role: '前台导诊',
+    dept: '院办',
+    ability: '挂号预约（全院科室）、收费结算窗口、结算账单查询、患者管理、患者标签（分诊工作站与就诊总览已收回）'
+  },
   // 三个治疗科室（推荐账号）
   {
-    accounts: ['moyuanhang ( 莫远航 )', 'shijiaming ( 施佳明  )', 'wangsheng ( 王升  )', 'zengjie ( 曾洁 )'],
+    accounts: ['moyuanhang ( 莫远航 )', 'shijiaming ( 施佳明  )', 'wangsheng ( 王升  )', 'zengjie ( 曾洁 )', 'zhengmingyuan ( 郑明远 )'],
     role: '医生',
     dept: '心血管内科',
     ability: DOCTOR_ABILITY
@@ -198,12 +213,6 @@ const credRows = [
     role: '护士',
     dept: '心血管内科',
     ability: NURSE_ABILITY
-  },
-  {
-    accounts: ['caoyumei ( 曹玉梅  )', 'qiuhaotian ( 邱昊天  )'],
-    role: '护士长',
-    dept: '心血管内科',
-    ability: HEAD_NURSE_ABILITY
   },
   {
     accounts: ['linxinyi ( 林心怡  )'],
@@ -268,12 +277,6 @@ const credRows = [
     role: '检验技师',
     dept: '医学检验科',
     ability: '检验工作站、标本管理、检验项目字典、输血管理、危急值处置（限本科室）'
-  },
-  {
-    accounts: ['xuyan ( 许妍  )'],
-    role: '前台导诊',
-    dept: '院办',
-    ability: '挂号预约（全院科室）、收费结算窗口、结算账单查询、患者管理、患者标签（分诊工作站与就诊总览已收回）'
   },
   {accounts: ['chengruotong ( 程若彤  )'], role: '急诊医生', dept: '急诊外科', ability: ER_ABILITY},
   {accounts: ['donghanmei ( 董寒梅  )'], role: '急诊医生', dept: '急诊内科', ability: ER_ABILITY},

@@ -67,13 +67,19 @@
                        :label="`${e.empName}（${e.title || '无职称'}）`" :value="e.id"/>
           </el-select>
         </el-form-item>
-        <el-form-item label="护理审核人">
+        <el-form-item v-if="isNursingAreaNode" label="护理审核人">
           <el-select v-model="formData.nursingAuditorId" :fit-input-width="false" class="w-full" clearable
                      filterable
-                     placeholder="审本科室护理排班的指定人">
+                     placeholder="审本片区内各科室护理排班的指定人">
             <el-option v-for="e in employeeList" :key="e.id"
                        :label="`${e.empName}（${e.title || '无职称'}）`" :value="e.id"/>
           </el-select>
+        </el-form-item>
+        <!-- 口径：护理排班三级链的审核权在片区（大科）节点，末级病区/临床科室不再单独指定 -->
+        <el-form-item v-else label="护理审核人">
+          <p class="my-0 text-xs leading-5 text-slate-500">
+            本科室是末级科室，不单独配置审核人，由所属护理片区统一指定审核人。
+          </p>
         </el-form-item>
       </div>
       <div class="grid grid-cols-2 gap-4">
@@ -146,6 +152,26 @@ const rules = {
 };
 
 const employeeList = ref([]);
+
+/**
+ * 科室树里「被别的科室当父节点」的那批 id（护理片区/大科）。
+ * 口径来自现有 deptTree，不新增接口：叶子判定 = 本节点在树上有下级，与后端
+ * 「护理审核人只配在有下级的片区节点、末级科室往上找」同一事实。
+ */
+const areaDeptIds = computed(() => {
+  const ids = new Set();
+  const walk = (nodes) => {
+    (nodes || []).forEach((n) => {
+      const kids = (n.children || []).filter((c) => c && c.id !== undefined && c.id !== null);
+      if (kids.length) ids.add(String(n.id));
+      walk(kids);
+    });
+  };
+  walk(props.deptTree);
+  return ids;
+});
+/** 当前编辑的是不是护理片区/大科节点：只有它才配护理排班审核人（新增科室还没有下级，按末级处理） */
+const isNursingAreaNode = computed(() => !!formData.id && areaDeptIds.value.has(String(formData.id)));
 const loadEmployeeList = async () => {
   try {
     const res = await getEmployeeList({});

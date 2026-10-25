@@ -1,6 +1,6 @@
 -- 领域：04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码）
 -- 库：hn_biz_his    表数：27
--- 说明：DDL 快照（dev 库 SHOW CREATE TABLE 于 2026-10-23 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
+-- 说明：DDL 快照（dev 库 SHOW CREATE TABLE 于 2026-10-25 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
 -- 口径：姓名/名称快照列与操作人列（create_by·update_by·*_by·*_name·name）不留 DEFAULT，漏填直接报错；其余 NOT NULL 列保留库上的 DEFAULT。
 
 -- ----------------------------
@@ -213,6 +213,11 @@ CREATE TABLE `biz_shift` (
   `remark` varchar(500) COMMENT '备注',
   `create_by_id` bigint NOT NULL COMMENT '创建人ID',
   `update_by_id` bigint NOT NULL COMMENT '更新人ID',
+  `shift_code` varchar(16) COMMENT '班次业务短码（AM/PM/N/E/R，对接考勤机/薪资用）',
+  `short_name` varchar(4) COMMENT '排班图显示缩写（如 夜/休/听）',
+  `color` varchar(7) COMMENT '排班图颜色HEX（如 #F56C6C）',
+  `count_work_hours` tinyint NOT NULL DEFAULT '1' COMMENT '是否计工时（1-是 0-否）',
+  `count_night_allowance` tinyint NOT NULL DEFAULT '0' COMMENT '是否计夜班津贴（1-是 0-否）',
   PRIMARY KEY (`id`),
   KEY `idx_shift_dept` (`dept_id`),
   KEY `idx_shift_status` (`status`)

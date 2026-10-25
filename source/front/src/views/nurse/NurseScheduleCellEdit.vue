@@ -1,7 +1,11 @@
 <template>
   <!-- 点格排班弹窗 -->
   <el-dialog v-model="visible" destroy-on-close title="排班" width="460px">
-    <el-form label-position="left" @submit.prevent>
+    <!-- 只读态：只有审核发布权（片区科护士长）时表单整体禁用，footer 只留审核动作，编制归病区护士长 -->
+    <p v-if="readOnly" class="mb-2 text-xs text-slate-500" data-testid="ns-cell-readonly-tip">
+      当前岗位只有审核发布权：班次与状态由病区护士长编制，这里只核对并提交结论。
+    </p>
+    <el-form label-position="left" :disabled="readOnly" @submit.prevent>
       <div class="grid grid-cols-2 gap-4">
         <el-form-item label="护士">
           <el-input :model-value="form.nurseName" disabled/>
@@ -66,10 +70,10 @@
                    @click="emit('transition', { action: 'recall', row: { ...form } })">撤回
         </el-button>
       </div>
-      <el-button v-if="form.id" v-perm="PERM_DELETE" :icon="Delete" plain type="danger"
+      <el-button v-if="form.id && !readOnly" v-perm="PERM_DELETE" :icon="Delete" plain type="danger"
                  @click="emit('delete', { ...form })">删除该格
       </el-button>
-      <el-button v-perm="PERM_ADD" :loading="saving" data-testid="ns-cell-save" type="primary" @click="save">
+      <el-button v-if="!readOnly" v-perm="PERM_ADD" :loading="saving" data-testid="ns-cell-save" type="primary" @click="save">
         保存
       </el-button>
       <el-button @click="visible = false">取消</el-button>
@@ -113,6 +117,8 @@ const props = defineProps({
   // 公共工位下拉（兼派用）与借出方单元名（派岗表 sourceOrgName 快照）
   stationOptions: {type: Array, default: () => []},
   sourceOrgName: {type: String, default: ''},
+  // 只读渲染：父页面按「有没有排班维护权」传入，禁用表单并收起保存/删除，只留发布态动作
+  readOnly: {type: Boolean, default: false},
 });
 
 const emit = defineEmits(['update:modelValue', 'saved', 'delete', 'transition']);

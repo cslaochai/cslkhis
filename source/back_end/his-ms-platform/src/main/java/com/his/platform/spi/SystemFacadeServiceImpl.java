@@ -362,6 +362,7 @@ public class SystemFacadeServiceImpl implements SystemFacadeService {
         DeptBriefVO vo = new DeptBriefVO();
         vo.setId(department.getId());
         vo.setDeptCode(department.getDeptCode());
+        vo.setParentId(department.getParentId());
         vo.setDeptName(department.getDeptName());
         vo.setDeptType(department.getDeptType());
         vo.setStatus(department.getStatus());

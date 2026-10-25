@@ -437,7 +437,10 @@
                 <section ref="examSection" class="scroll-mt-3">
                   <div class="mb-2 text-base font-bold text-slate-800">体格检查</div>
                   <div class="space-y-2">
-                    <div class="flex items-center justify-end">
+                    <div class="flex items-center justify-end gap-2">
+                      <el-button link size="small" type="primary"
+                                 @click="handleExamAllNormal">一键正常
+                      </el-button>
                       <el-button :loading="copyExamLoading" link size="small" type="primary"
                                  @click="handleCopyLastExam">复制上次查体
                       </el-button>
@@ -689,19 +692,18 @@
             </div>
             </div>
 
-          <!-- 病历已提交水印：覆盖病历+处方+申请单整个右侧工作区 -->
+          <!-- 病历已提交水印：只覆盖右侧工作区（absolute 随容器定位，同下方「已审核」水印），左上→中央→右下斜向三枚 -->
           <div v-if="recordForm.recordStatus === 2 && !recordColCollapsed"
-               class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center">
-            <div class="rotate-[-30deg] text-5xl font-black text-red-500/20 select-none">
-              病历已提交
-            </div>
+               class="pointer-events-none absolute inset-0 z-50 overflow-hidden">
+            <div class="absolute left-[8%] top-[10%] rotate-[-30deg] whitespace-nowrap text-4xl font-black text-red-500/40 select-none">病历已提交</div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-[-30deg] whitespace-nowrap text-4xl font-black text-red-500/40 select-none">病历已提交</div>
+            <div class="absolute bottom-[10%] right-[8%] rotate-[-30deg] whitespace-nowrap text-4xl font-black text-red-500/40 select-none">病历已提交</div>
           </div>
 
           <!-- 结诊提交中全屏遮罩 -->
           <div v-if="submitting" class="fixed inset-0 z-[100] flex items-center justify-center bg-white/70">
             <div class="text-center">
               <div class="text-lg font-bold text-blue-600 mb-2">正在结诊提交...</div>
-              <div class="text-sm text-slate-500">电子签名 + 记账 + 状态收口，请稍候</div>
             </div>
           </div>
             <!-- 已审核水印 -->
@@ -713,17 +715,8 @@
             </div>
           </div>
 
-          <!--
-            医嘱处置区：**无父节点卡壳**，三张开单卡（处方/检查申请/检验申请）直接平铺在医嘱区
-            滚动容器里，各自白底边框；辅助诊疗 + 用药安全审查在右侧第三栏（决策支持栏，见下）。
-            第一张「处方」卡贴容器顶 → 与左栏「病历」标题同一水平线；卡间距 12px（gap-3），
-            左右无内边距（卡片占满父节点宽度），仅底部留白。滚动只在医嘱区内。
-            本栏常驻不可折叠；窄屏逃生门在病历栏上（见 COMPACT_BREAKPOINT）。
-          -->
           <div class="flex min-w-0 flex-1 flex-col gap-3 pb-3">
               <OrderPanel noCollapse fill class="flex-[1.3] min-h-0" :count-text="prescriptionList.length + ' 张'" title="处方">
-                <!-- 处方卡高度做大（flex-[1.3]：医嘱栏三卡权重 1.3:0.85:0.85，处方最高），内容区最小 240px，空处方时卡也不塌成矮条；
-                     模板入口统一收敛到底部动作条「模板维护」（五类模板一个弹窗，左侧分类、右侧列表） -->
                 <div class="flex min-h-0 flex-1 flex-col">
                   <!-- 三个处方类型 tab -->
                   <el-tabs v-model="currentPrescriptionType" class="!mb-0">
@@ -731,9 +724,6 @@
                     <el-tab-pane :name="2" label="中成药"/>
                     <el-tab-pane :name="3" label="中药饮片"/>
                   </el-tabs>
-                  <!-- 当前处方操作栏（结诊中）：只保留饮片方的剂数/煎服方式（整张方的属性，后端存
-                       biz_prescription.dose_count/decoct_flag，一剂药里 12 味不可能各开各的剂数）；
-                       「使用模板」已上移到处方标题右侧、「新增药品」在表格顶部 -->
                   <div v-if="currentPatient.queueStatus === 3 && currentPrescriptionType === 3"
                        class="mb-2 mt-2 flex items-center justify-end gap-2 rounded-md bg-slate-50 px-3 py-2">
                     <label class="text-xs text-slate-600" data-testid="ws-dose-label">剂数<span
@@ -749,8 +739,6 @@
                       </el-radio>
                     </el-radio-group>
                   </div>
-                  <!-- 慢病长处方（处方级）：仅西药/中成药；患者须有已认定慢病档案（服务端强校验，
-                       这里只做开关 disabled 预检）。饮片不开长处方：90 天剂量撞剂数 30 上限，开了必被拒 -->
                   <div v-if="currentPatient.queueStatus === 3 && currentPrescriptionType !== 3"
                        class="mb-2 mt-2 flex items-center justify-end gap-2 rounded-md bg-slate-50 px-3 py-2">
                     <label class="text-xs text-slate-600" data-testid="ws-longrx-label">慢病长处方</label>
@@ -805,7 +793,7 @@
                                          @change="(val: any) => handleDrugSelectForRecord(row, val)">
                                 <el-option v-for="drug in drugResults" :key="drug.id"
                                            :label="currentPrescriptionType === 3 ? drug.drugName : `${drug.drugName} (${drug.specification})`"
-                                           :value="drug.drugId">
+                                           :value="drug.id">
                                   <div class="flex items-center justify-between">
                                     <span class="text-sm font-medium text-slate-900">{{ drug.drugName }}</span>
                                     <span class="text-xs text-slate-400">{{ currentPrescriptionType === 3 ? `¥${drug.retailPrice}/${drug.unit}` : (drug.dosageForm || drug.specification) }}</span>
@@ -947,7 +935,7 @@
                                 <template v-if="p.isLongPrescription === 1"> · 长处方{{ p.longPrescriptionDays }}天</template>
                               </span>
                               <el-tooltip v-if="p.doctorSignId" effect="plain"
-                                          :content="`开方医师 ${p.doctorName} · ${p.doctorSignedTime || ''}，签名即锁定`">
+                                          :content="`开方医师 ${p.doctorName} · ${p.doctorSignedTime ? String(p.doctorSignedTime).slice(0, 16).replace('T', ' ') : ''}，签名即锁定`">
                                 <el-tag effect="plain" size="small" type="success">已电子签名·{{ p.doctorName }}</el-tag>
                               </el-tooltip>
                               <el-tag v-else effect="plain" size="small" type="info">未签名（结诊时签署）</el-tag>
@@ -2682,6 +2670,15 @@ const onRecordScroll = () => {
 };
 // 复制上次查体：真实 HIS 复诊高频动作。只搬 EXAM_FIELDS（查体所见），
 // 生命体征是当次实测数据、质控禁止拷贝，所以不在复制范围内。
+// 一键正常：把所有查体所见字段（不含生命体征，数值项不能填「正常」）置为「正常」。
+// 与「复制上次查体」同一份字段清单口径（EXAM_FIELDS 去掉生命体征 5 项）。
+const handleExamAllNormal = () => {
+  const textFields = EXAM_FIELDS.filter((k) => !['temperature', 'pulse', 'respiration', 'systolicPressure', 'diastolicPressure'].includes(k));
+  textFields.forEach((k) => {
+    recordForm[k] = '正常';
+  });
+  ElMessage.success(`体格检查已一键设为正常（${textFields.length} 项），请核对`);
+};
 const copyExamLoading = ref(false);
 const handleCopyLastExam = async () => {
   const patientId = currentPatient.value?.patientId;
@@ -4180,11 +4177,6 @@ const handleViewAiGuide = (item) => {
 const cdssAlerts = ref([]);
 const checkDrugSafety = () => {
   cdssAlerts.value = [];
-  // 上一版在这里写死了三条药物相互作用 + 一条剂量提醒，并在界面上渲染成「用药安全审查 · 警告 N」。
-  // 但处方要到结诊提交（saveMedicalRecord）才落库、才有 prescriptionId，
-  // 而审核接口 POST /ai/drugAudit/execute 必须按 prescriptionId 由服务端回查明细
-  //（这样设计正是为了防止「前端传什么就审什么」），所以开方过程中前端无从审查。
-  // 假结论已删除：这里不再产出任何审查结果，只保留调用点占位。
 };
 // ========== 药品搜索 ==========
 const handleDrugSearch = async (query) => {
@@ -4203,11 +4195,12 @@ const handleDrugSearch = async (query) => {
   }
 };
 const handleDrugSelect = (val) => {
-  const drug = drugResults.value.find((d) => d.drugId === val);
+  // selectList 出参主键字段是 id（无 drugId）
+  const drug = drugResults.value.find((d) => String(d.id) === String(val));
   if (drug) {
     newDrug.drugName = drug.drugName;
     newDrug.specification = drug.specification || '';
-    newDrug.drugId = drug.drugId;
+    newDrug.drugId = drug.id;
     newDrug.drugCode = drug.drugCode;
     newDrug.unit = drug.unit || '盒';
     newDrug.price = drug.retailPrice || 0;
@@ -4511,8 +4504,6 @@ const handleAddPrescription = (type) => {
   ElMessage.success(`已创建${prescriptionTypeLabel(type)}处方`);
 };
 // ========== 叫下一位 ==========
-// 未落库判定（呼叫前自动保存）：病历文本任一字段非空 / 任一处方有明细 / 申请单数组非空。
-// 病历文本必须在判定内 —— 只填了主诉/查体/诊断（没开药没开单）也要落库，否则叫号收口后丢数据。
 const RECORD_TEXT_KEYS_FOR_AUTOSAVE = ['chiefComplaint', 'presentIllness', 'allergyHistory',
   'pastHistory', 'personalHistory', 'familyHistory', 'marriageHistory', 'temperature', 'pulse',
   'respiration', 'systolicPressure', 'diastolicPressure', 'generalCondition', 'skinMucosa', 'headNeck',
@@ -4521,10 +4512,6 @@ const RECORD_TEXT_KEYS_FOR_AUTOSAVE = ['chiefComplaint', 'presentIllness', 'alle
 const handleCallNext = async () => {
   // 如果有当前就诊患者，先检查是否需要保存
   if (currentCalledPatient.value) {
-    // 模式A：检查/检验申请编辑期只留在本地数组、未随病历落库；
-    // 这里兜「病历文本 + 全部处方明细 + 本地申请单行」，一并触发保存（随病历落库）不会丢数据。
-    // 注意不能再用 !recordSaved 挡掉：保存过病历之后新增/修改的申请单行也是本地态，
-    // recordSaved 只代表"保存过"，不代表"当前没有未落库的编辑"。
     const hasRecordText = RECORD_TEXT_KEYS_FOR_AUTOSAVE.some((k) => !!recordForm[k]);
     const hasPendingRx = prescriptionList.value.some((rx) => (rx.details?.length ?? 0) > 0);
     const hasUnsavedData = hasRecordText || hasPendingRx
@@ -4565,10 +4552,6 @@ const handleCallNext = async () => {
   // 呼叫下一位
   try {
     // 接诊对象一律以服务端回执为准，前端不猜。
-    // 原先的写法是「叫完号 → 等 500ms → 重拉列表 → 取 queueStatus=3 的第一条」：
-    // 分诊台在这 500ms 里插队/退号/呼叫，猜出来的行与后端实际叫到的就不是同一个人 ——
-    // 屏幕显示 A、病历挂到 B 的诊次上。按钮叫「接诊下一位」，接到谁由队列说了算，
-    // 但「接到的是谁」必须由服务端原样告知。
     const res = await callNextQueue({});
     const called = res?.data;
     if (!called || !called.id) {
@@ -4624,7 +4607,6 @@ const handleCallSpecific = async (row) => {
       type: 'warning'
     });
     // 呼叫指定患者：接诊对象用服务端回执，前端不再「等 500ms 再猜」。
-    // 后端会自动收掉本医生的上一位「就诊中」（同一位医生同一时刻只能有一条）。
     const res = await callPatient(row.id);
     const called = res?.data || row;
     if (called?.previousPatientName) {
@@ -4638,9 +4620,6 @@ const handleCallSpecific = async (row) => {
   }
 };
 // ========== 过号 / 过号回队 ==========
-// 过号是「叫了没到、人不在」：医生站行内操作，与分诊台同一接口（overdueQueue），
-// 后端守卫只受理候诊中(2)，置 6-已过号；过号后行仍留在「全部」列表里（状态徽章=已过号），
-// 患者回来由医生行内「回队」或分诊台 rejoinQueue mode=2 排回候诊队尾。
 const handleOverdue = async (row) => {
   try {
     await ElMessageBox.confirm(
@@ -4667,8 +4646,6 @@ const handleRejoin = async (row) => {
   }
 };
 // ========== 暂离诊室 / 恢复接诊 ==========
-// 语义是医生自己的接诊状态（Redis DoctorStatusCacheService：0 空闲 / 1 接诊中 / 2 暂离），
-// 不是「暂停某个患者」。暂离后叫号与分诊台可据此提示该诊室医生暂离。
 const doctorPaused = ref(false);
 const loadDoctorStatus = async () => {
   try {
@@ -4693,7 +4670,6 @@ const handleComplete = async () => {
   if (!currentPatient.value)
     return;
   // 前置状态校验：只有 3-就诊中 / 4-已就诊（呼叫下一位自动收口、未结诊的回诊）允许结诊；
-  // 其他状态（候诊/过号/取消/失效）结诊必撞后端乐观锁（"该队列/挂号状态已变更"），先拦下并刷新。
   const qs = currentPatient.value.queueStatus;
   if (qs !== 3 && qs !== 4) {
     await loadData();
@@ -4875,6 +4851,9 @@ const doSubmitRecord = async (submitData) => {
   try {
     await submitMedicalRecord(submitData);
     ElMessage.success('结诊成功');
+    // 异步预生成就诊文书（引导单/处方签 PDF）：不 await、不阻塞结诊流程，
+    // 生成完成后自动弹出「结诊文书」供医生打印给患者（缴费二维码在引导单左上角）
+    prepGuideDocs();
     // 清空暂存的检查检验数据
     inspectionRecords.value = [];
     laboratoryRecords.value = [];
@@ -5278,9 +5257,10 @@ const applyRowEditable = (item) => {
   return item.applyStatus === 1 && item.signStatus !== 1;
 };
 const handleDrugSelectForRecord = (record, val) => {
-  const drug = drugResults.value.find((d) => d.drugId === val);
+  // selectList 出参主键字段是 id（无 drugId），选中值 val 即 drug.id（Long 序列化为字符串）
+  const drug = drugResults.value.find((d) => String(d.id) === String(val));
   if (drug) {
-    record.drugId = drug.drugId;
+    record.drugId = drug.id;
     record.drugCode = drug.drugCode;
     record.drugName = drug.drugName;
     record.specification = drug.specification || '';
@@ -5634,6 +5614,35 @@ watch(() => showGuideSheetDialog.value, (val) => {
   if (val)
     loadGuideContent();
 });
+// ========== 结诊成功 → 异步预生成就诊文书并自动弹出 ==========
+// 结诊接口返回后在前端 fire-and-forget 调 printVisitDocs 预生成 PDF（不阻塞结诊流程，
+// 生成失败静默，医生仍可手动点「打印就诊文书」兜底）；生成完自动弹「结诊文书」弹窗。
+// 防串台：异步返回时若已切换到下一位患者（recordForm.id 变化），丢弃本次结果。
+const prepGuideDocs = async () => {
+  const targetRecordId = recordForm.id;
+  if (!targetRecordId)
+    return;
+  try {
+    const res = await printVisitDocs(targetRecordId);
+    if (recordForm.id !== targetRecordId)
+      return; // 医生已切到下一位患者，不污染当前表单
+    const data = res.data || {};
+    if (data.guidePdfPath)
+      recordForm.guidePdfPath = data.guidePdfPath;
+    // 处方签 PDF 可能有两份（普通 + 饮片），弹窗单 iframe 优先展示饮片方（更特殊），
+    // 全部文书仍可走底部「打印就诊文书」拿到
+    if (data.rxHerbalPdfPath || data.rxNormalPdfPath)
+      recordForm.rxPdfPath = data.rxHerbalPdfPath || data.rxNormalPdfPath;
+    if (recordForm.id !== targetRecordId)
+      return;
+    if (recordForm.guidePdfPath || recordForm.rxPdfPath) {
+      guideDocTab.value = 'guide';
+      showGuideSheetDialog.value = true;
+    }
+  } catch (error) {
+    console.error('预生成就诊文书失败（医生仍可手动打印）', error);
+  }
+};
 // ========== 打印就诊文书（引导单 + 处方签，点按钮才现场生成 PDF） ==========
 const printingDocs = ref(false);
 const submitting = ref(false);
@@ -5760,7 +5769,7 @@ const printPrescriptions = () => {
     }
   }
   const signLine = signedRx
-      ? `医师签名：${signedRx.doctorName || patient.doctorName || ''}（电子签名${signedRx.doctorSignedTime ? ' · ' + signedRx.doctorSignedTime : ''}，可验签）`
+      ? `医师签名：${signedRx.doctorName || patient.doctorName || ''}（电子签名${signedRx.doctorSignedTime ? ' · ' + String(signedRx.doctorSignedTime).slice(0, 16).replace('T', ' ') : ''}，可验签）`
       : '医师签名：（尚未电子签名，结诊提交后生效）';
   const signDate = signedRx && signedRx.doctorSignedTime
       ? String(signedRx.doctorSignedTime).slice(0, 10)
@@ -5789,11 +5798,13 @@ const printPrescriptions = () => {
 const loadAllDrugs = async () => {
   drugLoading.value = true;
   try {
-    const types = [1, 2, 3];
-    await Promise.all(types.map(async (type) => {
-      const res = await getDrugSelectList({drugType: type});
-      drugResultsByType[type].value = res.data || [];
-    }));
+    // 一次拉全部类型（不传 drugType = 全量字典），按类型分组：
+    // 原来 3 次全量请求（西药/中成药/饮片各一次），接口慢时下拉要好几次才出得来
+    const res = await getDrugSelectList({});
+    const all = res.data || [];
+    drugResultsByType[1].value = all.filter(d => d.drugType === 1);
+    drugResultsByType[2].value = all.filter(d => d.drugType === 2);
+    drugResultsByType[3].value = all.filter(d => d.drugType === 3);
   } catch (error) {
     console.error('加载药品列表失败:', error);
   } finally {
@@ -5879,13 +5890,6 @@ onUnmounted(() => {
 // ========== 批次B 三栏同屏：右栏医嘱面板折叠 / 费用抽屉 ==========
 const recordCollapsed = ref(false);
 const showChargeDrawer = ref(false);
-// 病历栏折叠只在**窄屏**才有意义。布局对调后（2026-09-26，用户：「医嘱面板可以做大一点，
-// 病历占的太多了」）医嘱栏才是 flex-1 主工作区 —— 真实 HIS 的开药检索表要摊十几列，
-// 病历是模板化低频录入，520px 单列文书够用。
-// 断点是算出来的：固定占位 = 侧边栏 256 + 页面左右留白 48 + 队列列 300 + 病历列 520 + 两个 12px 缝 24 = 1148，
-// 医嘱列 = 视口 - 1148；医嘱栏改造前就是 480px 固定宽，视口 ≥1628 时它已经不比当年窄，
-// 不该再有折叠开关。取 1640：此时医嘱列 492px；再窄才给「收起病历」的逃生门（折后病历 36px，医嘱列多出 484px）。
-// （队列列 2026-09-26 由 264 加宽到 300：急诊短号+三字姓名+「就诊中」徽章同排，264 下名字被 truncate 吃掉半个字）
 const COMPACT_BREAKPOINT = 1640;
 const compactViewport = ref(false);
 const syncCompactViewport = () => {

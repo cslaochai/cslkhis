@@ -108,6 +108,11 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
         return feeRecordService.sumNetGroupByItemType(encounterType, encounterId);
     }
 
+    @Override
+    public List<FeeTypeSumVO> sumPendingGroupByItemType(Integer encounterType, Long encounterId) {
+        return feeRecordService.sumPendingGroupByItemType(encounterType, encounterId);
+    }
+
     // ---------- 账单与收款 ----------
 
     @Override

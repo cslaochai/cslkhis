@@ -59,13 +59,13 @@ public class BizClinicSourceController {
 
     /**
      * 审核发布：待审核 → 已发布，并生成号源。
-     * 审核人审核通过后此排班才正式生效、对外出号。
+     * 审核人审核通过后此排班才正式生效、对外出号。支持批量（传多个 id）。
      */
     @PreAuthorize("hasAuthority('outpatient:schedule:audit')")
-    @Operation(summary = "审核发布（待审核→已发布，并出号）")
+    @Operation(summary = "审核发布（待审核→已发布，并出号，支持批量）")
     @PostMapping("/auditPublish")
-    public Result<Void> auditPublish(@RequestParam Long scheduleId) {
-        bizScheduleService.auditPublish(scheduleId);
+    public Result<Void> auditPublish(@RequestParam List<Long> scheduleIds) {
+        bizScheduleService.auditPublishBatch(scheduleIds);
         return Result.success();
     }
 

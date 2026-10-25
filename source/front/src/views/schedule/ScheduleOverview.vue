@@ -385,7 +385,7 @@ const loadLogs = async () => {
 }
 
 // ---------------- 全岗位工时 Tab ----------------
-const workloadMonth = ref(new Date().toISOString().slice(0, 7) + '-01')
+const workloadMonth = ref(new Date().toISOString().slice(0, 7))
 const workloadLoading = ref(false)
 const workloadRows = ref([])
 const loadWorkload = async () => {

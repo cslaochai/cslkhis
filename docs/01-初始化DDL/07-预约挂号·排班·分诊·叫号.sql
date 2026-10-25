@@ -1,6 +1,6 @@
 -- 领域：07-预约挂号·排班·分诊·叫号
--- 库：hn_biz_his    表数：19
--- 说明：DDL 快照（dev 库 SHOW CREATE TABLE 于 2026-10-23 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
+-- 库：hn_biz_his    表数：24
+-- 说明：DDL 快照（dev 库 SHOW CREATE TABLE 于 2026-10-25 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
 -- 口径：姓名/名称快照列与操作人列（create_by·update_by·*_by·*_name·name）不留 DEFAULT，漏填直接报错；其余 NOT NULL 列保留库上的 DEFAULT。
 
 -- ----------------------------
@@ -270,6 +270,37 @@ CREATE TABLE `biz_clinic_source_template` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='排班周模板';
 
 -- ----------------------------
+-- biz_nurse_schedule_filing  护理排班周备案
+-- ----------------------------
+CREATE TABLE `biz_nurse_schedule_filing` (
+  `id` bigint NOT NULL COMMENT '主键',
+  `unit_type` tinyint NOT NULL COMMENT '排班单元类型（1-病区 2-门诊科室）',
+  `ward_id` bigint NOT NULL COMMENT '护理单元ID',
+  `ward_name` varchar(128) COMMENT '护理单元名称（快照）',
+  `dept_id` bigint COMMENT '所属科室ID',
+  `dept_name` varchar(128) COMMENT '所属科室名称（快照）',
+  `week_start` date NOT NULL COMMENT '周起始日（周一）',
+  `week_end` date NOT NULL COMMENT '周结束日（周日）',
+  `filing_status` tinyint NOT NULL DEFAULT '0' COMMENT '备案态（0-待备案 1-已备案 2-已退回）',
+  `filer_id` bigint COMMENT '备案人ID',
+  `filer_name` varchar(64) COMMENT '备案人姓名（快照）',
+  `filing_time` datetime COMMENT '备案时间',
+  `opinion` varchar(200) COMMENT '备案意见/退回原因',
+  `create_by` varchar(64) COMMENT '创建人',
+  `create_time` datetime COMMENT '创建时间',
+  `update_by` varchar(64) COMMENT '更新人',
+  `update_time` datetime COMMENT '更新时间',
+  `create_by_id` bigint COMMENT '创建人ID',
+  `update_by_id` bigint COMMENT '更新人ID',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_unit_week` (`unit_type`,`ward_id`,`week_start`),
+  KEY `idx_week_start` (`week_start`),
+  KEY `idx_filing_status` (`filing_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='护理排班周备案';
+
+-- ----------------------------
 -- biz_nurse_schedule_log  护理排班审批与变更留痕
 -- ----------------------------
 CREATE TABLE `biz_nurse_schedule_log` (
@@ -298,6 +329,108 @@ CREATE TABLE `biz_nurse_schedule_log` (
   KEY `idx_occur_time` (`occur_time`),
   KEY `idx_dept_date` (`dept_name`,`schedule_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='护理排班审批与变更留痕';
+
+-- ----------------------------
+-- biz_nurse_schedule_template  护理排班模板（周模板：护士×星期几的固定出勤）
+-- ----------------------------
+CREATE TABLE `biz_nurse_schedule_template` (
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
+  `name` varchar(100) NOT NULL COMMENT '模板名称（如「内科一组周模板」）',
+  `unit_type` tinyint NOT NULL DEFAULT '1' COMMENT '排班单元类型（1-病区 2-门诊科室；空按1-病区）',
+  `ward_id` bigint NOT NULL DEFAULT '0' COMMENT '排班单元ID（unit_type=1 取病区ID，=2 取门诊科室ID）',
+  `ward_name` varchar(128) NOT NULL COMMENT '排班单元名称（快照）',
+  `week_parity` tinyint NOT NULL DEFAULT '0' COMMENT '单双周（0-每周 1-单周 2-双周，按 ISO 周号奇偶）',
+  `valid_from` date COMMENT '生效起始日期（空=不限）',
+  `valid_until` date COMMENT '生效截止日期（空=不限）',
+  `scope` tinyint NOT NULL DEFAULT '0' COMMENT '共享范围（0-个人 1-权限组共享）',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态（0-停用 1-启用）',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除；手动维护，便于已删除统计）',
+  `remark` varchar(500) COMMENT '备注',
+  `create_by` varchar(64) NOT NULL COMMENT '创建人',
+  `create_time` datetime NOT NULL DEFAULT (now()) COMMENT '创建时间',
+  `update_by` varchar(64) NOT NULL COMMENT '更新人',
+  `update_time` datetime NOT NULL DEFAULT (now()) COMMENT '更新时间',
+  `create_by_id` bigint NOT NULL COMMENT '创建人ID',
+  `update_by_id` bigint NOT NULL COMMENT '更新人ID',
+  PRIMARY KEY (`id`),
+  KEY `idx_unit` (`unit_type`,`ward_id`),
+  KEY `idx_del_status` (`del_flag`,`status`),
+  KEY `idx_scope` (`scope`,`del_flag`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='护理排班模板（周模板：护士×星期几的固定出勤）';
+
+-- ----------------------------
+-- biz_nurse_schedule_template_apply  护理排班模板套用记录（审计，只写不删）
+-- ----------------------------
+CREATE TABLE `biz_nurse_schedule_template_apply` (
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
+  `template_id` bigint COMMENT '套用模板ID',
+  `template_name` varchar(128) COMMENT '套用模板名称（快照）',
+  `unit_type` tinyint COMMENT '排班单元类型（1-病区 2-门诊科室）',
+  `ward_id` bigint COMMENT '排班单元ID',
+  `ward_name` varchar(128) COMMENT '排班单元名称（快照）',
+  `apply_week_start` date COMMENT '套用目标周起始（周一）',
+  `apply_week_end` date COMMENT '套用目标周结束（周日）',
+  `applied_by_id` bigint COMMENT '操作人ID',
+  `applied_by_name` varchar(50) COMMENT '操作人姓名',
+  `generated_count` int NOT NULL DEFAULT '0' COMMENT '实际生成排班格数',
+  `skipped_count` int NOT NULL DEFAULT '0' COMMENT '跳过格数（已排/日期已过/单双周不匹配/不在生效期/班次失效等）',
+  `status` tinyint NOT NULL DEFAULT '0' COMMENT '状态（0-成功 1-部分跳过）',
+  `remark` varchar(500) COMMENT '备注（含套用汇总说明）',
+  `create_by` varchar(64) NOT NULL COMMENT '创建人',
+  `create_time` datetime NOT NULL DEFAULT (now()) COMMENT '创建时间',
+  `update_by` varchar(64) NOT NULL COMMENT '更新人',
+  `update_time` datetime NOT NULL DEFAULT (now()) COMMENT '更新时间',
+  `create_by_id` bigint NOT NULL COMMENT '创建人ID',
+  `update_by_id` bigint NOT NULL COMMENT '更新人ID',
+  PRIMARY KEY (`id`),
+  KEY `idx_template` (`template_id`),
+  KEY `idx_ward` (`ward_id`,`apply_week_start`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='护理排班模板套用记录（审计，只写不删）';
+
+-- ----------------------------
+-- biz_nurse_schedule_template_item  护理排班模板明细（护士×星期几×出勤/班次）
+-- ----------------------------
+CREATE TABLE `biz_nurse_schedule_template_item` (
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
+  `template_id` bigint NOT NULL COMMENT '所属模板ID',
+  `employee_id` bigint NOT NULL COMMENT '护士ID',
+  `employee_name` varchar(50) NOT NULL COMMENT '护士姓名（快照，报错点名用）',
+  `week_day` tinyint NOT NULL COMMENT '星期几（1-周一 … 7-周日）',
+  `schedule_status` tinyint NOT NULL COMMENT '出勤状态（1-上班 2-休息 3-请假 4-培训 5-停班）',
+  `shift_id` bigint COMMENT '班次ID（仅状态=1-上班时有效；非上班由服务端强制置空）',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除；手动维护）',
+  `remark` varchar(500) COMMENT '备注',
+  `create_by` varchar(64) NOT NULL COMMENT '创建人',
+  `create_time` datetime NOT NULL DEFAULT (now()) COMMENT '创建时间',
+  `update_by` varchar(64) NOT NULL COMMENT '更新人',
+  `update_time` datetime NOT NULL DEFAULT (now()) COMMENT '更新时间',
+  `create_by_id` bigint NOT NULL COMMENT '创建人ID',
+  `update_by_id` bigint NOT NULL COMMENT '更新人ID',
+  PRIMARY KEY (`id`),
+  KEY `idx_template` (`template_id`),
+  KEY `idx_del` (`del_flag`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='护理排班模板明细（护士×星期几×出勤/班次）';
+
+-- ----------------------------
+-- biz_nurse_schedule_template_rule  护理排班模板规则（班次实用排班模式：APN/8-8/小组）
+-- ----------------------------
+CREATE TABLE `biz_nurse_schedule_template_rule` (
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
+  `rule_name` varchar(100) NOT NULL COMMENT '模式名称（如「APN 三班倒」）',
+  `rule_code` varchar(50) NOT NULL COMMENT '模式编码（APN / 8-8 / GROUP，业务约定）',
+  `pattern_detail` text COMMENT '班次模式明细（JSON：由哪些班次组成、排班结构说明；前端只读）',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态（0-停用 1-启用）',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除；手动维护）',
+  `remark` varchar(500) COMMENT '备注',
+  `create_by` varchar(64) NOT NULL COMMENT '创建人',
+  `create_time` datetime NOT NULL DEFAULT (now()) COMMENT '创建时间',
+  `update_by` varchar(64) NOT NULL COMMENT '更新人',
+  `update_time` datetime NOT NULL DEFAULT (now()) COMMENT '更新时间',
+  `create_by_id` bigint NOT NULL COMMENT '创建人ID',
+  `update_by_id` bigint NOT NULL COMMENT '更新人ID',
+  PRIMARY KEY (`id`),
+  KEY `idx_del` (`del_flag`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='护理排班模板规则（班次实用排班模式：APN/8-8/小组）';
 
 -- ----------------------------
 -- biz_opd_station  门诊公共工位字典

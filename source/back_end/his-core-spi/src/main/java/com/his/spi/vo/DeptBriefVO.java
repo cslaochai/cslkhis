@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 科室主数据摘要：跨模块只读取科室的名称、类型、启用状态与三类排班审核人。
+ * 科室主数据摘要：跨模块只读取科室的名称、类型、启用状态、上级科室与三类排班审核人。
  */
 @Data
 @NoArgsConstructor
@@ -22,6 +22,12 @@ public class DeptBriefVO {
      * 科室编码
      */
     private String deptCode;
+
+    /**
+     * 上级科室ID（0=机构根；护理排班审核沿此逐级上溯到片区节点）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long parentId;
 
     /**
      * 科室名称

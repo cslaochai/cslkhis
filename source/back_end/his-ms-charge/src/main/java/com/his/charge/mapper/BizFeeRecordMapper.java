@@ -59,6 +59,23 @@ public interface BizFeeRecordMapper extends BaseMapper<BizFeeRecord> {
                                              @Param("encounterId") Long encounterId);
 
     /**
+     * 某次就诊按项目类型分组的<b>未结算</b>应收净额（fee_status IN 1待结算,2已锁定，含红冲负行）。
+     *
+     * <p>与 {@link #sumNetGroupByItemType} 的区别：排除已结算(3)和已红冲(4)。
+     * 患者引导单要的是"还要交多少钱、花在哪"，挂号时已收的诊查费不该再列出来。
+     */
+    @Select("""
+            SELECT r.item_type AS itemType, IFNULL(SUM(r.amount), 0) AS amount
+            FROM biz_fee_record r
+            WHERE r.del_flag = 0 AND r.fee_status IN (1, 2)
+              AND r.encounter_type = #{encounterType} AND r.encounter_id = #{encounterId}
+            GROUP BY r.item_type
+            ORDER BY r.item_type
+            """)
+    List<FeeTypeSumVO> sumPendingGroupByItemType(@Param("encounterType") Integer encounterType,
+                                                 @Param("encounterId") Long encounterId);
+
+    /**
      * 某次就诊发生过的记账行明细（含红冲负行，排除已全额红冲的一对）。
      *
      * <p>日清单要的就是这张清单：不问结算状态（进没进账单、钱收没收都改变不了"这天发生过这笔费用"），

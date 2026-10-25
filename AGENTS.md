@@ -488,6 +488,17 @@ public enum XxxEnum {
   `deptIdsOfEmployee` 按**当前角色**取），前端不传科室参数、不给「全部科室」开关。
 - **配置入口只有两处**（系统管理→用户管理/员工档案），共用 `EmployeePostTable.vue` + `lib/employeePost.js`；别处要配岗位接同一套。
 
+### 11.1 护理排班三级链（病区编制 → 片区审核 → 护理部备案）
+
+- **审核权唯一落点 = 片区/大科节点**：`sys_department.nursing_auditor_id` 只配在「有下级」的节点上，配到末级科室不生效——后端 `resolveNursingAuditorId`
+  沿 `parent_id` 上溯（含本级、上限 32 层、`visited` 防环）取第一个非空值。前端 `DepartmentsEdit` 同口径：末级科室不给下拉。角色 30/`10040`
+  科护士长 `data_scope=4`（本部门及以下，`DeptScopeServiceImpl.expandWithDescendants` BFS 展开片区子树）。
+- **三角色分离 + 自审闸**：护士长(10) 编制提交、科护士长(30) 审核发布、护理部(29) 备案/退回，权限码互不重叠；`assertNotSelfAudit`
+  拒「提交人自己审核发布」（编制人定位不到的历史行放行、admin 10012 豁免）。
+- **备案是与行发布态正交的周维度**：`biz_nurse_schedule_filing.filing_status` 0-待备案 1-已备案 2-已退回，挂 `(unit_type, ward_id, week_start)`。**在岗口径永远只有 `publish_status IN (2,4)`，禁止掺备案态**——否则护理部不备案就等于全病区没人上班。审核发布即生效，备案只是留痕闸。
+- **退回才动行**：备案退回把该周生效行整批打回 0-草稿（当场不计在岗），护士长重排后重新整周提交；已退回周不许直接再备案。
+- **本表唯一键不含 `del_flag`**：业务只 upsert，清理走物理删（`purgeXxx`）。留痕码 12-备案 13-备案退回（字典 `his_nurse_schedule_change_type` 与枚举 label 逐字一致）。
+
 ## 12. 操作人取值（2026-10-06 全仓收口）
 
 - **`UserUtils` 只有一个方法 `getCurrentUser()`**。不新增 `getCurrentEmployeeId()`/`getCurrentEmployeeName()`/

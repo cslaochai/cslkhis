@@ -20,6 +20,14 @@ export function getNurseUnitSelectList(params) {
   return request.get('/nursing/schedule/unitSelectList', { params })
 }
 
+// 该排班单元所属科室的在册护士（护士/护师）候选下拉，供排班模板明细行选护士用
+// 后端 /nursing/schedule/nurseSelectList：unitType(可选) / unitId(必填) / keyword(可选)
+export function getNurseSelectList(unitType, unitId, keyword) {
+  return request.get('/nursing/schedule/nurseSelectList', {
+    params: { unitType, unitId, keyword }
+  })
+}
+
 // ========== 周矩阵排班 ==========
 
 // 周矩阵：行=在册护士 列=周一至周日，一次带回 cells + 本周告警 + 每日每班次在岗人数
@@ -83,6 +91,16 @@ export function submitWeekNurseSchedule(data) {
 // 整周审核发布：本周待审核 → 已发布（此后计在岗；入参 { unitType, wardId, weekStart }）
 export function auditWeekNurseSchedule(data) {
   return request.post('/nursing/schedule/auditWeek', data)
+}
+
+// 整周备案：本周备案态 待备案 → 已备案（护理部留痕，不改变在岗口径；入参 { unitType, wardId, weekStart }）
+export function fileWeekNurseSchedule(data) {
+  return request.post('/nursing/schedule/fileWeek', data)
+}
+
+// 整周备案退回：待备案/已备案 → 已退回，本周已发布行整批打回草稿（入参同备案，另带 opinion 退回原因）
+export function rejectFileWeekNurseSchedule(data) {
+  return request.post('/nursing/schedule/fileRejectWeek', data)
 }
 
 // ========== 规则校验 / 工时 / 台账 ==========

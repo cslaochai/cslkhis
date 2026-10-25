@@ -23,7 +23,7 @@ public interface SystemFacadeService {
     // ---------- 科室 ----------
 
     /**
-     * 按科室ID取科室摘要（含三类排班审核人）。
+     * 按科室ID取科室摘要（含上级科室与三类排班审核人，供沿科室树上溯定位护理片区审核节点）。
      *
      * @param deptId 科室ID（可空，为空直接返回 null）
      * @return 不存在或已删除时返回 {@code null}，报错文案由调用方决定

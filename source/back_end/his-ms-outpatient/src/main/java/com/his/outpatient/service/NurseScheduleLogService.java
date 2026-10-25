@@ -32,4 +32,14 @@ public interface NurseScheduleLogService {
      * 分页查询（按发生时间倒序）。
      */
     IPage<NurseScheduleLogVO> pageByQuery(NurseScheduleLogQueryDTO query);
+
+    /**
+     * 查最近一次「提交审核」动作的提交人（员工档案ID）：先按排班行查单行提交留痕，
+     * 查不到再按排班单元名查整周提交留痕。用于审核发布前的自审闸定位编制人。
+     *
+     * @param scheduleId 排班行ID（整周审核传 null，只走单元名回溯）
+     * @param orgName    排班单元名称（病区/门诊科室名快照）
+     * @return 提交留痕的经办员工ID；没有任何提交留痕时返回 {@code null}，由调用方决定回退口径
+     */
+    Long latestSubmitterId(Long scheduleId, String orgName);
 }

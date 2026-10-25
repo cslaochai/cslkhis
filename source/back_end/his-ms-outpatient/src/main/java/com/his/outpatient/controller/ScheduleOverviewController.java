@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 
 /**
@@ -49,7 +50,8 @@ public class ScheduleOverviewController {
     @Operation(summary = "全岗位月度工时统计")
     @GetMapping("/workloadMonthly")
     public Result<List<WorkloadStatVO>> workloadMonthly(
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate monthStart) {
-        return Result.success(workloadStatService.monthlyStats(monthStart));
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth monthStart) {
+        // 入参是“月份”，统一转成当月首日再走既有统计逻辑
+        return Result.success(workloadStatService.monthlyStats(monthStart.atDay(1)));
     }
 }
