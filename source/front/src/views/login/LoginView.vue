@@ -142,7 +142,7 @@ const loginForm = reactive({
   captcha: '',
 })
 
-// ===== 测试账号凭据（前端写死，来源 docs/00-开发文档/198-测试账号与凭据.md，不查后端）=====
+// ===== 测试账号凭据（前端写死，仅用于演示，不查后端）=====
 // 按「科室 + 角色」合并：同一科室同一角色的多个账号并到一行，账号列展示 账号(姓名)
 const credVisible = ref(false)
 
@@ -155,8 +155,30 @@ const PHARM_ABILITY = '药房发药、住院摆药、静配、药房盘点、中
 const MEDTECH_ABILITY = '检查/检验工作站、标本与报告、输血与血库、病理/内镜/超声/放射/心电、血液净化、检验质控与室间质评、危急值（限本科室）'
 const ER_ABILITY = '急诊中心（分诊-抢救-留观）、医生工作站开方、门诊治疗、慢病建档、我的未报、危急值、患者360（限本科室）'
 
-// 全部账号合并为一张表：每行 = 同一科室 + 同一角色
+const SCHEDULE_PLANNER_ABILITY = '员工排班 / 门诊排班 / 护理排班 维护与提交（限本科室），排班总览；无审核权限（审核分离，演示「排班员排班 → 门诊办审核」链路）'
+const SCHEDULE_AUDITOR_ABILITY = '排班审批中心：员工排班 + 门诊排班双页签，可审核发布 / 驳回（留痕）；门诊排班全局可见（演示审核人）'
+
+// 全部账号合并为一张表：每行 = 同一科室 + 同一角色；排班流程账号按「排班员 → 审核人」流程顺序置顶
 const credRows = [
+  // 排班流程（推荐演示链路：排班员 → 审核人 → 全院）
+  {
+    accounts: ['wanghaitao ( 王海涛 )'],
+    role: '科室排班员',
+    dept: '心血管内科',
+    ability: SCHEDULE_PLANNER_ABILITY
+  },
+  {
+    accounts: ['liumin ( 刘敏 )'],
+    role: '门诊办',
+    dept: '医院信息系统',
+    ability: SCHEDULE_AUDITOR_ABILITY + '；心血管内科排班审核人'
+  },
+  {
+    accounts: ['tanyiming ( 谭一鸣 )'],
+    role: '医务科',
+    dept: '医务科',
+    ability: '员工排班（全院）、人力配置标准、排班总览；无临床业务页面'
+  },
   // 三个治疗科室（推荐账号）
   {
     accounts: ['moyuanhang ( 莫远航 )', 'shijiaming ( 施佳明  )', 'wangsheng ( 王升  )', 'zengjie ( 曾洁 )'],
@@ -292,12 +314,6 @@ const credRows = [
     role: '客服专员',
     dept: '客户服务中心',
     ability: '患者常见问题维护、工单受理'
-  },
-  {
-    accounts: ['tanyiming ( 谭一鸣  )'],
-    role: '医务科',
-    dept: '医务科',
-    ability: '员工排班（全院）、人力配置标准、排班总览；无临床业务页面'
   },
 ]
 

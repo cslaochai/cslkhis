@@ -704,7 +704,7 @@ grep -E "(//|\*+ ).*\b(biz|sys)_[a-z_]{3,}" --include=*.java -rn source/back_end
 
 | 类别     | 例子                                      | 落点                                          | 入库 |
 |--------|-----------------------------------------|---------------------------------------------|----|
-| 系统登录账号 | `sys_user` 480 个账号（口令统一 123456）         | `docs/测试账号与凭据.md`                           | ✅  |
+| 系统登录账号 | `sys_user` 480 个账号（口令统一 123456）         | 登录页「测试账号」弹窗（`LoginView.vue` `credRows` 前端写死） | ✅  |
 | 环境凭据   | MySQL/Redis/Gitea/JWT secret/支付私钥/工具链口令 | `workspace/环境凭据.md` + `application-dev.yml` | ❌  |
 
 - **`application.yml` 与 `config/domain/*.yml` 只放占位**：`${HIS_DB_PASSWORD:}` 等。真值落 `application-dev.yml`
